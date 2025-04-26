@@ -669,6 +669,7 @@ class HadesGC final : public GCBase {
     /// \pre gcMutex_ must be held before calling this function.
     /// \post This function either successfully allocates, or reports OOM.
     GCCell *alloc(uint32_t sz);
+    GCCell *allocSlow(uint32_t sz);
 
     /// Allocate objects that are larger than FixedSizeHeapSegment::maxSize().
     /// \tparam If Yes, failed allocation returns nullptr.
@@ -920,6 +921,16 @@ class HadesGC final : public GCBase {
 
     /// Contains dummy heads for the segment level freelists for each bucket.
     std::array<SegmentBucket, kNumFreelistBuckets> buckets_{};
+
+    /// A FreelistCell that has been set aside as an arena to try allocating
+    /// from before we fall back to a full freelist search. This may be null if
+    /// no such chunk is set.
+    FreelistCell *allocChunk_ = nullptr;
+
+    /// A pointer to the first SegmentBucket for the segment that allocChunk_ is
+    /// in. This is necessary so we can return any leftover portion of
+    /// allocChunk to the freelist_. Only valid if allocChunk_ is non-null.
+    SegmentBucket *allocChunkBaseBucket_;
 
     /// Tracks the current progress of sweeping.
     struct SweepIterator {

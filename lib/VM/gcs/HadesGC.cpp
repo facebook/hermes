@@ -9,6 +9,7 @@
 
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/Statistic.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/CheckHeapWellFormedAcceptor.h"
 #include "hermes/VM/FillerCell.h"
@@ -21,6 +22,15 @@
 #include <array>
 #include <functional>
 #include <stack>
+
+#define DEBUG_TYPE "hadesgc"
+
+HERMES_SLOW_STATISTIC(
+    NumOldGenAlloc,
+    "NumOldGenAlloc: Number of old gen allocations");
+HERMES_SLOW_STATISTIC(
+    NumOldGenAllocSlow,
+    "NumOldGenAllocSlow: Number of old gen allocation slow paths");
 
 // In ASAN builds, poison the memory outside of the FreelistCell so that
 // accesses are flagged as illegal while it is in the freelist.
@@ -981,6 +991,10 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
       segBucket->head = nullptr;
     }
   }
+
+  // If allocChunk is in this segment, it may get coalesced, so delete it first.
+  if (segments_[sweepIterator_.segNumber].contains(allocChunk_))
+    allocChunk_ = nullptr;
 
   char *freeRangeStart = nullptr, *freeRangeEnd = nullptr;
   size_t mergedCells = 0;
@@ -2417,6 +2431,20 @@ void *HadesGC::allocLongLived(uint32_t sz) {
 }
 
 GCCell *HadesGC::OldGen::alloc(uint32_t sz) {
+  ++NumOldGenAlloc;
+  // First try to allocate out of the allocChunk_.
+  if (LLVM_LIKELY(
+          allocChunk_ &&
+          allocChunk_->getAllocatedSize() >= sz + minAllocationSize())) {
+    auto *newCell = allocChunk_->carve(sz);
+    __asan_unpoison_memory_region(newCell, sz);
+    return finishAlloc(newCell, sz);
+  }
+  ++NumOldGenAllocSlow;
+  return allocSlow(sz);
+}
+
+GCCell *HadesGC::OldGen::allocSlow(uint32_t sz) {
   assert(
       isSizeHeapAligned(sz) &&
       "Should be aligned before entering this function");
@@ -2498,24 +2526,10 @@ uint32_t HadesGC::OldGen::getFreelistBucket(uint32_t size) {
 }
 
 GCCell *HadesGC::OldGen::search(uint32_t sz) {
-  size_t bucket = getFreelistBucket(sz);
-  if (bucket < kNumSmallFreelistBuckets) {
-    // Fast path: There already exists a size bucket for this alloc. Check if
-    // there's a free cell to take and exit.
-    if (auto *segBucket = buckets_[bucket].next) {
-      assert(freelistBucketBitArray_.at(bucket));
-      FreelistCell *cell = removeCellFromFreelist(bucket, segBucket);
-      assert(
-          cell->getAllocatedSize() == sz &&
-          "Size bucket should be an exact match");
-      return finishAlloc(cell, sz);
-    }
-    // Make sure we start searching at the smallest possible size that could fit
-    bucket = getFreelistBucket(sz + minAllocationSize());
-  }
   // Once we're examining the rest of the free list, it's a first-fit algorithm.
   // This approach approximates finding the smallest possible fit.
-  bucket = freelistBucketBitArray_.findNextSetBitFrom(bucket);
+  size_t bucket =
+      freelistBucketBitArray_.findNextSetBitFrom(getFreelistBucket(sz));
   for (; bucket < kNumFreelistBuckets;
        bucket = freelistBucketBitArray_.findNextSetBitFrom(bucket + 1)) {
     auto *segBucket = buckets_[bucket].next;
@@ -2540,26 +2554,29 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
             "Found an incorrectly sized block in this bucket");
         // Check if the size is large enough that the cell could be split.
         if (cellSize >= sz + minAllocationSize()) {
+          // Remove the free cell from the freelist.
+          removeCellFromFreelist(prevLoc, bucket, segBucket);
           // Split the free cell. In order to avoid initializing
           // soon-to-be-unused values like the size and the next pointer, copy
           // the return path here.
           auto newCell = cell->carve(sz);
-          // Since the size of cell has changed, we may need to add it to a
-          // different free list bucket.
-          auto newBucket = getFreelistBucket(cell->getAllocatedSize());
-          assert(newBucket <= bucket && "Split cell must be smaller.");
-          if (newBucket != bucket) {
-            removeCellFromFreelist(prevLoc, bucket, segBucket);
-            // Since the buckets for each segment are stored contiguously in
-            // memory, we can compute the address of the SegmentBucket for
-            // newBucket in this segment relative to the current SegmentBucket.
-            auto diff = bucket - newBucket;
-            addCellToFreelist(cell, segBucket - diff);
+
+          // We are going to populate a new allocChunk_, so if one already
+          // exists, return it to the freelist. It may make sense to only
+          // selectively replace the existing allocChunk_ based on some
+          // heuristic in the future.
+          if (allocChunk_) {
+            addCellToFreelist(
+                allocChunk_,
+                allocChunkBaseBucket_ +
+                    getFreelistBucket(allocChunk_->getAllocatedSize()));
           }
-          // Because we carved newCell out before removing cell from the
-          // freelist, newCell is still poisoned (regardless of whether the
-          // conditional above executed). Unpoison it.
-          __asan_unpoison_memory_region(newCell, sz);
+          // The remainder of the free cell will serve as the new allocChunk_.
+          allocChunk_ = cell;
+          ASAN_POISON_FREE_CELL(allocChunk_);
+          // Since the buckets for each segment are stored contiguously in
+          // memory, we can compute the base bucket relative to the current one.
+          allocChunkBaseBucket_ = segBucket - bucket;
           return finishAlloc(newCell, sz);
         } else if (cellSize == sz) {
           // Exact match, take it.
@@ -3290,6 +3307,10 @@ FixedSizeHeapSegment HadesGC::OldGen::popSegment() {
 
   auto oldSeg = std::move(segments_.back());
   segments_.pop_back();
+
+  // If the allocChunk_ is in the segment we are removing, clear it.
+  if (oldSeg.contains(allocChunk_))
+    allocChunk_ = nullptr;
   return oldSeg;
 }
 
@@ -3494,6 +3515,11 @@ void HadesGC::OldGen::verifyFreelists() {
     // Records every free cell encountered while traversing the freelists. This
     // is used to ensure that a FreelistCell is always found in a freelist.
     llvh::DenseSet<const FreelistCell *> freeCells;
+
+    // The allocChunk_ will not be encountered in the freelists, so make sure we
+    // record it.
+    if (segments_[seg].contains(allocChunk_))
+      freeCells.insert(allocChunk_);
 
     const auto &segBuckets = segmentBuckets_[seg];
     for (size_t bucket = 0; bucket < kNumFreelistBuckets; bucket++) {
