@@ -607,38 +607,43 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
   }
 };
 
-void HadesGC::MarkWorklist::enqueue(GCCell *cell) {
-  if (LLVM_UNLIKELY(chunkIndex_ == pushChunk_.size())) {
+void HadesGC::barrierEnqueue(GCCell *cell) {
+  if (LLVM_UNLIKELY(
+          markState_->barrierChunkIndex_ ==
+          markState_->barrierPushChunk_.size())) {
     // Once the chunk is full, move it to the pull chunks.
-    flushPushChunk();
+    flushBarrierPushChunk();
   }
-  pushChunk_[chunkIndex_++] = cell;
+  markState_->barrierPushChunk_[markState_->barrierChunkIndex_++] = cell;
 }
 
-llvh::SmallVector<GCCell *, 0> HadesGC::MarkWorklist::drain() {
+llvh::SmallVector<GCCell *, 0> HadesGC::drainBarrierWorklist() {
   llvh::SmallVector<GCCell *, 0> cells;
   // Move the list (in O(1) time) to a local variable, and then release the
   // lock. This unblocks the mutator faster.
-  std::lock_guard<Mutex> lk{mtx_};
-  std::swap(cells, worklist_);
-  assert(worklist_.empty() && "worklist isn't cleared out");
+  std::lock_guard<Mutex> lk{markState_->barrierWorklistMtx_};
+  std::swap(cells, markState_->barrierWorklist_);
+  assert(markState_->barrierWorklist_.empty() && "worklist isn't cleared out");
   // Keep the previously allocated size to minimise allocations
-  worklist_.reserve(cells.size());
+  markState_->barrierWorklist_.reserve(cells.size());
   return cells;
 }
 
-void HadesGC::MarkWorklist::flushPushChunk() {
-  std::lock_guard<Mutex> lk{mtx_};
-  worklist_.insert(
-      worklist_.end(), pushChunk_.data(), pushChunk_.data() + chunkIndex_);
+void HadesGC::flushBarrierPushChunk() {
+  std::lock_guard<Mutex> lk{markState_->barrierWorklistMtx_};
+  markState_->barrierWorklist_.insert(
+      markState_->barrierWorklist_.end(),
+      markState_->barrierPushChunk_.data(),
+      markState_->barrierPushChunk_.data() + markState_->barrierChunkIndex_);
   // Reset the level and refill the same buffer.
-  chunkIndex_ = 0;
+  markState_->barrierChunkIndex_ = 0;
 }
 
 #ifndef NDEBUG
-bool HadesGC::MarkWorklist::empty() {
-  std::lock_guard<Mutex> lk{mtx_};
-  return chunkIndex_ == 0 && worklist_.empty();
+bool HadesGC::isBarrierWorklistEmpty() {
+  std::lock_guard<Mutex> lk{markState_->barrierWorklistMtx_};
+  return markState_->barrierChunkIndex_ == 0 &&
+      markState_->barrierWorklist_.empty();
 }
 #endif
 
@@ -821,7 +826,7 @@ bool HadesGC::incrementalMark(size_t markLimit) {
   MarkAcceptor acceptor(*this);
 
   // Pull any new items off the global worklist.
-  auto cells = markState_->globalWorklist.drain();
+  auto cells = drainBarrierWorklist();
   for (GCCell *cell : cells) {
     assert(cell->isValid() && "Invalid cell received off the global worklist");
     assert(
@@ -1759,7 +1764,7 @@ void HadesGC::completeMarking() {
   ogMarkingBarriers_ = false;
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
-  markState_->globalWorklist.flushPushChunk();
+  flushBarrierPushChunk();
   {
     MarkAcceptor acceptor{*this};
     // Remark any roots that may have changed without executing barriers.
@@ -1768,15 +1773,13 @@ void HadesGC::completeMarking() {
   }
   // Drain the marking queue.
   incrementalMark(std::numeric_limits<size_t>::max());
-  assert(
-      markState_->globalWorklist.empty() && "Marking worklist wasn't drained");
+  assert(isBarrierWorklistEmpty() && "Marking worklist wasn't drained");
   markWeakMapEntrySlots();
   // Update the compactee tracking pointers so that the next YG collection will
   // do a compaction.
   compactee_.evacStart = compactee_.start;
   compactee_.evacStartCP = compactee_.startCP;
-  assert(
-      markState_->globalWorklist.empty() && "Marking worklist wasn't drained");
+  assert(isBarrierWorklistEmpty() && "Marking worklist wasn't drained");
   // Reset weak roots to null after full reachability has been
   // determined.
   markState_->markedSymbols |= markState_->writeBarrierMarkedSymbols;
@@ -2088,7 +2091,7 @@ void HadesGC::snapshotWriteBarrierInternal(GCCell *oldValue) {
     HERMES_SLOW_ASSERT(
         dbgContains(oldValue) &&
         "Non-heap pointer encountered in snapshotWriteBarrier");
-    markState_->globalWorklist.enqueue(oldValue);
+    barrierEnqueue(oldValue);
   }
 }
 
@@ -2101,7 +2104,7 @@ void HadesGC::snapshotWriteBarrierInternal(CompressedPointer oldValue) {
     HERMES_SLOW_ASSERT(
         dbgContains(ptr) &&
         "Non-heap pointer encountered in snapshotWriteBarrier");
-    markState_->globalWorklist.enqueue(ptr);
+    barrierEnqueue(ptr);
   }
 }
 

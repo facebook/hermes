@@ -963,44 +963,20 @@ class HadesGC final : public GCBase {
   };
 
  private:
-  /// A worklist of cells that need to be marked by the GC. The mutator enqueues
-  /// work from the write barrier, and marking drains it.
-  /// TODO: Consider moving to something lock free and/or fixed size to improve
-  ///       performance.
-  class MarkWorklist {
-    /// A fixed size local buffer that the mutator can push elements onto
-    /// without needing to acquire the lock. This allows us to batch writes
-    /// before acquiring the lock and pushing them onto worklist_.
-    static constexpr size_t kChunkSize = 128;
-    std::array<GCCell *, kChunkSize> pushChunk_;
+  /// Enqueue the cell \p cell for the marker to process.
+  /// This can only be called by the mutator.
+  void barrierEnqueue(GCCell *cell);
 
-    /// The index in pushChunk_ at which the next element will be written.
-    unsigned chunkIndex_{0};
+  /// Empty and return the current worklist
+  llvh::SmallVector<GCCell *, 0> drainBarrierWorklist();
 
-    /// Mutex protecting worklist_, allowing it to be accessed from the GC
-    /// thread.
-    Mutex mtx_;
+  /// While the world is stopped, move the push chunk to the list of pull
+  /// chunks to finish draining the mark worklist.
+  /// WARN: This can only be called by the mutator.
+  void flushBarrierPushChunk();
 
-    /// The list of objects for the GC to mark.
-    /// Use a SmallVector of size 0 since it is more aggressive with PODs
-    llvh::SmallVector<GCCell *, 0> worklist_;
-
-   public:
-    /// Adds an element to the end of the queue.
-    void enqueue(GCCell *cell);
-
-    /// Empty and return the current worklist
-    llvh::SmallVector<GCCell *, 0> drain();
-
-    /// While the world is stopped, move the push chunk to the list of pull
-    /// chunks to finish draining the mark worklist. WARN: This can only be
-    /// called by the mutator.
-    void flushPushChunk();
-
-    /// WARN: This can only be called from the mutator.
-    bool empty();
-  };
-
+  /// WARN: This can only be called from the mutator.
+  bool isBarrierWorklistEmpty();
   /// The maximum number of bytes that the heap can hold. Once this amount has
   /// been filled up, OOM will occur. When creating new segment, we allow an
   /// extra buffer with size AlignedHeapSegment::kSegmentUnitSize.
@@ -1098,11 +1074,26 @@ class HadesGC final : public GCBase {
     /// to ensure that pointers modified in write barriers are handled.
     std::stack<GCCell *, std::vector<GCCell *>> localWorklist;
 
+    /// A fixed size local buffer that the mutator can push elements onto
+    /// without needing to acquire the lock. This allows us to batch writes
+    /// before acquiring the lock and pushing them onto worklist_.
+    static constexpr size_t kBarrierChunkSize = 128;
+    std::array<GCCell *, kBarrierChunkSize> barrierPushChunk_;
+
+    /// The index in pushChunk_ at which the next element will be written.
+    unsigned barrierChunkIndex_{0};
+
+    /// Mutex protecting barrierWorklist_, allowing it to be accessed from the
+    /// GC thread.
+    Mutex barrierWorklistMtx_;
+
     /// A worklist that other threads may add to as objects to be marked and
     /// considered alive. These objects will *not* have their mark bits set,
     /// because the mutator can't be modifying mark bits at the same time as the
     /// marker thread.
-    MarkWorklist globalWorklist;
+    /// Use a SmallVector of size 0 since it is more aggressive with PODs
+    /// Protected by barrierWorklistMtx_.
+    llvh::SmallVector<GCCell *, 0> barrierWorklist_;
 
     /// markedSymbols_ represents which symbols have been proven live so far in
     /// a collection. True means that it is live, false means that it could
