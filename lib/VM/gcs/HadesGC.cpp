@@ -413,7 +413,6 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
   EvacAcceptor(HadesGC &gc)
       : gc{gc},
         pointerBase_{gc.getPointerBase()},
-        copyListHead_{nullptr},
         isTrackingIDs_{gc.isTrackingIDs()} {}
 
   ~EvacAcceptor() override {}
@@ -582,31 +581,19 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
     return evacuatedBytes_;
   }
 
-  CopyListCell *pop() {
-    if (!copyListHead_) {
-      return nullptr;
-    } else {
-      CopyListCell *const cell =
-          static_cast<CopyListCell *>(copyListHead_.getNonNull(pointerBase_));
-      assert(
-          AlignedHeapSegment::getCellMarkBit(cell) &&
-          "Discovered unmarked object");
-      copyListHead_ = cell->next_;
-      return cell;
-    }
-  }
-
   /// Set the current cell being visited.
   void setCurrentCell(const GCCell *cell) {
     if constexpr (CompactionEnabled)
       currentCell_ = cell;
   }
 
+  /// The copy list is a linked list managed implicitly in the body of each
+  /// copied YG object. This points to the first node in the list.
+  AssignableCompressedPointer copyListHead{nullptr};
+
  private:
   HadesGC &gc;
   PointerBase &pointerBase_;
-  /// The copy list is managed implicitly in the body of each copied YG object.
-  AssignableCompressedPointer copyListHead_;
   const bool isTrackingIDs_;
   uint64_t evacuatedBytes_{0};
 
@@ -615,8 +602,8 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
   const GCCell *currentCell_{nullptr};
 
   void push(CopyListCell *cell) {
-    cell->next_ = copyListHead_;
-    copyListHead_ = CompressedPointer::encodeNonNull(cell, pointerBase_);
+    cell->next_ = copyListHead;
+    copyListHead = CompressedPointer::encodeNonNull(cell, pointerBase_);
   }
 };
 
@@ -2622,7 +2609,15 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
   // collection.
   scanDirtyCards(acceptor);
   // Iterate through the copy list to find new pointers.
-  while (CopyListCell *const copyCell = acceptor.pop()) {
+  auto &pb = getPointerBase();
+  while (acceptor.copyListHead) {
+    // Pop copyCell from the copy list.
+    auto *copyCell = (CopyListCell *)acceptor.copyListHead.getNonNull(pb);
+    assert(
+        AlignedHeapSegment::getCellMarkBit(copyCell) &&
+        "Discovered unmarked object");
+    acceptor.copyListHead = copyCell->next_;
+
     assert(
         copyCell->hasMarkedForwardingPointer() && "Discovered unmarked object");
     assert(
@@ -2630,8 +2625,7 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
         "Unexpected object in YG collection");
     // Update the pointers inside the forwarded object, since the old
     // object is only there for the forwarding pointer.
-    GCCell *const cell =
-        copyCell->getMarkedForwardingPointer().getNonNull(getPointerBase());
+    GCCell *const cell = copyCell->getMarkedForwardingPointer().getNonNull(pb);
     acceptor.setCurrentCell(cell);
     markCell(acceptor, cell);
   }
