@@ -31,9 +31,10 @@ function ctor_this_test() {
 // CHECK:function ctor_this_test(): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %use_this(): functionCode
-// CHECK-NEXT:  %1 = CreateThisInst (:object) %0: object, %0: object, %use_this(): functionCode
-// CHECK-NEXT:  %2 = CallInst (:object) %0: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %1: object, 12: number
-// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) %1: any
+// CHECK-NEXT:  %3 = CallInst (:object) %0: object, %use_this(): functionCode, true: boolean, empty: any, undefined: undefined, %2: object, 12: number
+// CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
 
 // CHECK:function use_this(k: any): object
