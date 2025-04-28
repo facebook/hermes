@@ -102,11 +102,11 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   static constexpr char numberedSegmentFmt[] = "XYZ:HeapSegment:%d";
   static constexpr std::string_view ygSegmentName = "XYZ:HeapSegment:YG";
 
-  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
+  const auto &customData = testCrashMgr->customData();
   uint32_t numHeapSegmentsYG = 0;
   uint32_t numHeapSegmentsNumbered = 0;
   int32_t keyNum;
-  for (const auto &[key, payload] : contextualCustomData) {
+  for (const auto &[key, payload] : customData) {
     // Keeps track whether key represents an FixedSizeHeapSegment so that
     // payload can be validated below.
     bool validatePayload = false;
@@ -160,10 +160,10 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
     rt.makeHandle(SegmentCell::create(rt));
   }
 
-  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(4, contextualCustomData.size());
+  const auto &customData = testCrashMgr->customData();
+  EXPECT_EQ(5, customData.size());
   // Make sure the value for YG is the actual YG segment.
-  const std::string ygAddress = contextualCustomData.at("XYZ:HeapSegment:YG");
+  const std::string ygAddress = customData.at("XYZ:HeapSegment:YG");
   char *ptr = nullptr, *ptrEnd = nullptr;
   int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p:%p", &ptr, &ptrEnd);
   EXPECT_EQ(numArgsWritten, 2);
@@ -172,9 +172,9 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   EXPECT_EQ(ptrEnd, ptr + FixedSizeHeapSegment::kSize);
 
   // Test if all the segments are numbered correctly.
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:1"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:2"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:3"), 1);
 }
 #endif
 
