@@ -1085,7 +1085,7 @@ LIRReifyArgumentsStrictInst *IRBuilder::createLIRReifyArgumentsStrictInst(
 CreateThisInst *IRBuilder::createCreateThisInst(
     Value *closure,
     Value *newTarget) {
-  auto inst = new CreateThisInst(closure, newTarget);
+  auto inst = new CreateThisInst(closure, newTarget, getEmptySentinel());
   insert(inst);
   return inst;
 }

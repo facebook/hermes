@@ -181,11 +181,6 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
   // to avoid going back and forth between the corresponding loads.
   llvh::SmallPtrSet<Instruction *, 2> visited{};
 
-  // Instructions that are known to be dead and can be eliminated. This has to
-  // be a set because the same instructions may be visited multiple times during
-  // the user traversal below.
-  llvh::SmallPtrSet<Instruction *, 2> toDestroy{};
-
   worklist.push_back(
       {create,
        true,
@@ -237,6 +232,8 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
              CTI->getNewTarget() == closureInst) &&
             "Unknown user");
         if (CTI->getClosure() == closureInst) {
+          if (isAlwaysClosure)
+            CTI->setFunctionCode(F);
           if (funcExpectsThisInConstruct) {
             // If the function must receive an object, then we know that the
             // CreateThis will produce an object. Note that it may also throw,
@@ -247,13 +244,6 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
             // If a function does not expect any `this`, then we know that
             // CreateThis will always produce undefined, or throw (as above).
             CTI->replaceAllUsesWith(builder.getLiteralUndefined());
-            // If we know the closure operand is actually a closure, then we
-            // know CreateThis cannot throw, so we can remove it.
-            // TODO: Extend this to remove CreateThis even if it is not known to
-            //       be a closure, by detecting a subsequent call or speculative
-            //       inlining check that would throw instead.
-            if (isAlwaysClosure)
-              toDestroy.insert(CTI);
           }
         }
         // CreateThis leaks the closure passed as the new target because the
@@ -422,10 +412,6 @@ void analyzeCreateCallable(BaseCreateCallableInst *create) {
       F->getAttributesRef(M)._allCallsitesKnownInStrictMode = false;
     }
   }
-
-  // Delete instructions that are no longer needed.
-  for (auto *inst : toDestroy)
-    inst->eraseFromParent();
 }
 
 /// Find and register any callsites that can be found which call \p F.
@@ -466,6 +452,15 @@ void analyzeFunctionCallsites(Function *F) {
       assert(
           GCSI->getFunctionCode() == F &&
           "invalid use of Function as operand of GetClosureScopeInst");
+      continue;
+    }
+
+    if (auto *CTI = llvh::dyn_cast<CreateThisInst>(user)) {
+      // Ignore uses in CreateThisInst.
+      (void)CTI;
+      assert(
+          CTI->getFunctionCode() == F &&
+          "invalid use of Function as operand of CreateThisInst");
       continue;
     }
 

@@ -55,7 +55,7 @@ function test_builtin(a) {
 // CHECK:function test_new(bar: any): object
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {loc0}    %0 = LoadParamInst (:any) %bar: any
-// CHECK-NEXT:  {loc1}    %1 = CreateThisInst (:undefined|object) {loc0} %0: any, {loc0} %0: any
+// CHECK-NEXT:  {loc1}    %1 = CreateThisInst (:undefined|object) {loc0} %0: any, {loc0} %0: any, empty: any
 // CHECK-NEXT:  {stack[0]}  %2 = LIRLoadConstInst (:number) 13: number
 // CHECK-NEXT:  {stack[1]}  %3 = LIRLoadConstInst (:number) 12: number
 // CHECK-NEXT:  {stack[2]}  %4 = LIRLoadConstInst (:number) 11: number

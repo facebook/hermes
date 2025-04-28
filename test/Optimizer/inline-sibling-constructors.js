@@ -62,7 +62,7 @@ function outer() {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
 // CHECK-NEXT:  %3 = LoadParamInst (:any) %z: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:object) %0: environment, [%VS0.Point]: object
-// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, %4: object
+// CHECK-NEXT:  %5 = CreateThisInst (:object) %4: object, %4: object, %Point(): functionCode
 // CHECK-NEXT:       CacheNewObjectInst %5: object, %4: object, "x": string, "y": string, "z": string
 // CHECK-NEXT:       StorePropertyStrictInst %1: any, %5: object, "x": string
 // CHECK-NEXT:       StorePropertyStrictInst %2: any, %5: object, "y": string

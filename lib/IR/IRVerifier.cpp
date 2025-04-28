@@ -253,7 +253,8 @@ bool Verifier::visitFunction(const Function &F) {
         (*user),
         llvh::isa<BaseCallInst>(user) ||
             llvh::isa<BaseCreateLexicalChildInst>(user) ||
-            llvh::isa<GetClosureScopeInst>(user),
+            llvh::isa<GetClosureScopeInst>(user) ||
+            llvh::isa<CreateThisInst>(user),
         "Function can only be an operand to certain instructions");
   }
 

@@ -73,7 +73,7 @@ function foo(sink) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS0.MyCons]: undefined|object
-// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: undefined|object, %1: undefined|object
+// CHECK-NEXT:  %2 = CreateThisInst (:object) %1: undefined|object, %1: undefined|object, empty: any
 // CHECK-NEXT:  %3 = TypeOfIsInst (:boolean) %1: undefined|object, typeOfIs(Function)
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
@@ -88,7 +88,7 @@ function foo(sink) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %1 = LoadFrameInst (:undefined|object) %0: environment, [%VS0.MyClass]: undefined|object
-// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: undefined|object, %1: undefined|object
+// CHECK-NEXT:  %2 = CreateThisInst (:undefined|object) %1: undefined|object, %1: undefined|object, empty: any
 // CHECK-NEXT:  %3 = TypeOfIsInst (:boolean) %1: undefined|object, typeOfIs(Function)
 // CHECK-NEXT:       CondBranchInst %3: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
@@ -96,7 +96,7 @@ function foo(sink) {
 // CHECK-NEXT:%BB2:
 // CHECK-NEXT:  %6 = LoadFrameInst (:object) %0: environment, [%VS0.?MyClass]: object
 // CHECK-NEXT:  %7 = LoadParentNoTrapsInst (:null|object) %6: object
-// CHECK-NEXT:  %8 = CreateThisInst (:undefined|object) %7: null|object, %1: undefined|object
+// CHECK-NEXT:  %8 = CreateThisInst (:undefined|object) %7: null|object, %1: undefined|object, empty: any
 // CHECK-NEXT:  %9 = CallInst (:any) %7: null|object, empty: any, false: boolean, empty: any, %1: undefined|object, %8: undefined|object
 // CHECK-NEXT:  %10 = GetConstructedObjectInst (:object) %8: undefined|object, %9: any
 // CHECK-NEXT:        ThrowIfThisInitializedInst empty: empty
@@ -121,7 +121,7 @@ function foo(sink) {
 // CHECK-NEXT:  %1 = GetNewTargetInst (:object) %new.target: object
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %0: environment, [%VS0.?MyClass]: object
 // CHECK-NEXT:  %3 = LoadParentNoTrapsInst (:null|object) %2: object
-// CHECK-NEXT:  %4 = CreateThisInst (:undefined|object) %3: null|object, %1: object
+// CHECK-NEXT:  %4 = CreateThisInst (:undefined|object) %3: null|object, %1: object, empty: any
 // CHECK-NEXT:  %5 = CallInst (:any) %3: null|object, empty: any, false: boolean, empty: any, %1: object, %4: undefined|object
 // CHECK-NEXT:  %6 = GetConstructedObjectInst (:object) %4: undefined|object, %5: any
 // CHECK-NEXT:       ThrowIfThisInitializedInst empty: empty

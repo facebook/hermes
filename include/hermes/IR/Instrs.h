@@ -4636,12 +4636,13 @@ class CreateThisInst : public Instruction {
   void operator=(const CreateThisInst &) = delete;
 
  public:
-  enum { ClosureIdx, NewTargetIdx };
+  enum { ClosureIdx, NewTargetIdx, FunctionCodeIdx };
 
-  explicit CreateThisInst(Value *closure, Value *newTarget)
+  explicit CreateThisInst(Value *closure, Value *newTarget, Value *functionCode)
       : Instruction(ValueKind::CreateThisInstKind) {
     pushOperand(closure);
     pushOperand(newTarget);
+    pushOperand(functionCode);
   }
   explicit CreateThisInst(
       const CreateThisInst *src,
@@ -4654,6 +4655,12 @@ class CreateThisInst : public Instruction {
   Value *getNewTarget() const {
     return getOperand(NewTargetIdx);
   }
+  Value *getFunctionCode() const {
+    return getOperand(FunctionCodeIdx);
+  }
+  void setFunctionCode(Function *F) {
+    setOperand(F, FunctionCodeIdx);
+  }
 
   static bool hasOutput() {
     return true;
@@ -4663,8 +4670,17 @@ class CreateThisInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    // This instruction will fetch the .prototype property on the newTarget. If
-    // it's a proxy, that can execute JS.
+    // If we know we are calling a legacy class constructor, then we know this
+    // instruction is a no-op because it will just produce undefined.
+    if (Function *F = llvh::dyn_cast<Function>(getFunctionCode()))
+      if (F->getDefinitionKind() ==
+              Function::DefinitionKind::ES6BaseConstructor ||
+          F->getDefinitionKind() ==
+              Function::DefinitionKind::ES6DerivedConstructor) {
+        return SideEffect{}.setIdempotent();
+      }
+    // Otherwise, this instruction will fetch the .prototype property on the
+    // newTarget. If it's a proxy, that can execute JS.
     return SideEffect::createExecute();
   }
 

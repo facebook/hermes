@@ -434,10 +434,10 @@ Effects | Unknown
 CreateThisInst | _
 --- | --- |
 Description | Creates the object to be used as the `this` parameter of a construct call.
-Example | %0 = CreateThisInst %closure, %newtarget
-Arguments | %closure is the closure that will be invoked as a constructor, it may be any value, and the instruction will throw if it is not a valid callable. %newtarget is the new.target value to use for the call, it must either be the same value as %closure, or a valid callable.
-Semantics | The instruction is responsible for preparing the `this` parameter of a construct call. In normal cases, this means creating an object with its parent set to the .prototype of %newtarget. However, there are some functions which are responsible for making their own this. In these cases, this instruction returns undefined.
-Effects | May read and write memory.
+Example | %0 = CreateThisInst %closure, %newtarget, %functionCode
+Arguments | %closure is the closure that will be invoked as a constructor, it may be any value, and the instruction will throw if it is not a valid callable. %newtarget is the new.target value to use for the call, it must either be the same value as %closure, or a valid callable. %functionCode is the IR function that is known to be associated with the closure operand, or EmptySentinel.
+Semantics | The instruction is responsible for preparing the `this` parameter of a construct call. If %closure is a legacy class constructor, the instruction does not do anything and immediately produces undefined, since those constructors handle creating `this` internally. Otherwise, this the instruction determines the `new.target` to use for retrieving the `.prototype` (which may involve iterating over bound functions), reads the `.prototype` from it, and creates an object with that value as its parent.
+Effects | May execute JS if %closure is not a legacy class constructor.
 
 ### CallInst
 

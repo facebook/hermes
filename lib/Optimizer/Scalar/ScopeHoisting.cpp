@@ -90,6 +90,8 @@ static bool hoistFunctionToTopLevel(Function *F) {
         continue;
       BCI->setEnvironment(builder.getEmptySentinel());
       changed = true;
+    } else if (llvh::isa<CreateThisInst>(U)) {
+      // Do nothing, CreateThisInst is not affected by the parent scope.
     } else {
       assert(llvh::isa<GetClosureScopeInst>(U) && "Unknown user of function.");
       assert(!U->hasUsers() && "Trying to eliminate parent that is used.");
@@ -192,6 +194,8 @@ static bool tryHoistFunction(Function *F) {
       builder.setInsertionPoint(BCI);
       BCI->setEnvironment(builder.createResolveScopeInst(
           newParentVarScope, oldParentVarScope, env));
+    } else if (llvh::isa<CreateThisInst>(U)) {
+      // Do nothing, CreateThisInst is not affected by the parent scope.
     } else {
       // The only other known user is GetClosureScopeInst. Update it to produce
       // the new parent.
