@@ -19,6 +19,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 
 #include <cstring>
 #include <random>
@@ -381,6 +382,11 @@ hermesInternalHasES6Class(void *, Runtime &runtime, NativeArgs args) {
 CallResult<HermesValue>
 hermesInternalUseEngineQueue(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(runtime.hasMicrotaskQueue());
+}
+
+CallResult<HermesValue> hermesInternalResetTimezoneCache(void *, Runtime &runtime, NativeArgs args) {
+  runtime.getJSLibStorage()->localTimeOffsetCache.reset();
+  return HermesValue::encodeUndefinedValue();
 }
 
 /// \code
@@ -774,6 +780,7 @@ Handle<JSObject> createHermesInternalObject(
       P::enablePromiseRejectionTracker,
       hermesInternalEnablePromiseRejectionTracker);
   defineInternMethod(P::useEngineQueue, hermesInternalUseEngineQueue);
+  defineInternMethod(P::resetTimezoneCache, hermesInternalResetTimezoneCache);
 
 #ifdef HERMES_ENABLE_FUZZILLI
   defineInternMethod(P::fuzzilli, hermesInternalFuzzilli);
