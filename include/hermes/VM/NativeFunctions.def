@@ -108,7 +108,6 @@ NATIVE_FUNCTION(dataViewPrototypeByteOffset)
 
 NATIVE_FUNCTION(dateConstructor_RJS)
 NATIVE_FUNCTION(dateNow)
-NATIVE_FUNCTION(resetCache)
 NATIVE_FUNCTION(dateParse_RJS)
 NATIVE_FUNCTION(datePrototypeGetterHelper)
 NATIVE_FUNCTION(datePrototypeGetTime)
