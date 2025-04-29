@@ -1036,28 +1036,30 @@ static inline HermesValue getByIdWithReceiver_RJS(
     //(void)NumGetByIdDict;
 #endif
 
-    // If we have a cache hit, reuse the cached offset and immediately
-    // return the property.
-    if (LLVM_LIKELY(cacheEntry && cacheEntry->clazz == clazzPtr)) {
-      //++NumGetByIdCacheHits;
-      return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
-          .unboxToHV(runtime);
-    }
+    if (LLVM_LIKELY(cacheEntry)) {
+      // If we have a cache hit, reuse the cached offset and immediately
+      // return the property.
+      if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+        //++NumGetByIdCacheHits;
+        return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
+            .unboxToHV(runtime);
+      }
 
-    // See if it's a proto cache hit.
-    if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {
-      // Proxy, HostObject and lazy objects have special hidden classes, so they
-      // should never match the cached class.
-      assert(!obj->getFlags().proxyObject);
-      assert(!obj->getFlags().hostObject);
-      assert(!obj->getFlags().lazyObject);
-      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
-      if (LLVM_LIKELY(parentGCPtr)) {
-        JSObject *parent = parentGCPtr.getNonNull(runtime);
-        if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
-          return JSObject::getNamedSlotValueUnsafe(
-                     parent, runtime, cacheEntry->slot)
-              .unboxToHV(runtime);
+      // See if it's a proto cache hit.
+      if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {
+        // Proxy, HostObject and lazy objects have special hidden classes, so
+        // they should never match the cached class.
+        assert(!obj->getFlags().proxyObject);
+        assert(!obj->getFlags().hostObject);
+        assert(!obj->getFlags().lazyObject);
+        const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();
+        if (LLVM_LIKELY(parentGCPtr)) {
+          JSObject *parent = parentGCPtr.getNonNull(runtime);
+          if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
+            return JSObject::getNamedSlotValueUnsafe(
+                       parent, runtime, cacheEntry->slot)
+                .unboxToHV(runtime);
+          }
         }
       }
     }
