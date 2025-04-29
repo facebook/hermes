@@ -1601,7 +1601,7 @@ void JSObject::staticAsserts() {
 /// * a Number which corresponds to an array index
 /// \param[out] beginIndex beginning of the range of indices storing names
 /// \param[out] endIndex end (exclusive) of the range of indices storing names
-CallResult<Handle<BigStorage>> getForInPropertyNames(
+CallResult<Handle<ArrayStorage>> getForInPropertyNames(
     Runtime &runtime,
     Handle<JSObject> obj,
     uint32_t &beginIndex,

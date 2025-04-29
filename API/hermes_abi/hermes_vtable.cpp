@@ -645,7 +645,7 @@ HermesABIArrayOrError get_object_property_names(
   if (propsRes == vm::ExecutionStatus::EXCEPTION)
     return abi::createArrayOrError(HermesABIErrorCodeJSError);
 
-  vm::Handle<vm::SegmentedArray> props = *propsRes;
+  vm::Handle<vm::ArrayStorage> props = *propsRes;
   size_t length = endIndex - beginIndex;
 
   auto retRes = vm::JSArray::create(runtime, length, length);
@@ -657,8 +657,7 @@ HermesABIArrayOrError get_object_property_names(
 
   // Convert each property name to a string and store it in the result array.
   for (size_t i = 0; i < length; ++i) {
-    vm::PseudoHandle<> name =
-        vm::createPseudoHandle(props->at(runtime, beginIndex + i));
+    vm::PseudoHandle<> name = vm::createPseudoHandle(props->at(beginIndex + i));
     vm::StringPrimitive *asString;
     if (name->isString()) {
       asString = name->getString();

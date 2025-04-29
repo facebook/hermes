@@ -485,7 +485,7 @@ ExecutionStatus Interpreter::caseGetPNameList(
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<BigStorage> arr = *cr;
+  Handle<ArrayStorage> arr = *cr;
   O3REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(beginIndex);
   O4REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(endIndex);
   // Write the result last in case it is the same register as one of the in/out
@@ -507,10 +507,10 @@ ExecutionStatus Interpreter::caseGetNextPName(
   LocalsRAII lraii{runtime, &lv};
 
   assert(
-      vmisa<BigStorage>(O2REG(GetNextPName)) &&
-      "GetNextPName's second op must be BigStorage");
+      vmisa<ArrayStorage>(O2REG(GetNextPName)) &&
+      "GetNextPName's second op must be PropStorage");
   auto obj = Handle<JSObject>::vmcast(&O3REG(GetNextPName));
-  auto arr = Handle<BigStorage>::vmcast(&O2REG(GetNextPName));
+  auto arr = Handle<ArrayStorage>::vmcast(&O2REG(GetNextPName));
   uint32_t idx = O4REG(GetNextPName).getNumber();
   uint32_t size = O5REG(GetNextPName).getNumber();
 
@@ -518,10 +518,10 @@ ExecutionStatus Interpreter::caseGetNextPName(
   uint32_t startIdx = 0;
   uint32_t numObjProps = 0;
   if (LLVM_LIKELY(size > 2)) {
-    lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(runtime, 2));
+    lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(2));
     if (lv.cachedClass.get()) {
-      startIdx = arr->at(runtime, 0).getNumberAs<uint32_t>();
-      numObjProps = arr->at(runtime, 1).getNumberAs<uint32_t>();
+      startIdx = arr->at(0).getNumberAs<uint32_t>();
+      numObjProps = arr->at(1).getNumberAs<uint32_t>();
     }
   }
 
@@ -529,7 +529,7 @@ ExecutionStatus Interpreter::caseGetNextPName(
   MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
   // Loop until we find a property which is present.
   while (LLVM_LIKELY(idx < size)) {
-    lv.tmp = arr->at(runtime, idx);
+    lv.tmp = arr->at(idx);
     // If there's no caching, lv.cachedClass is nullptr and the comparison will
     // fail.
     if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&

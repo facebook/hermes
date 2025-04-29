@@ -3169,7 +3169,7 @@ namespace {
 CallResult<uint32_t> appendAllPropertyKeys(
     Handle<JSObject> obj,
     Runtime &runtime,
-    MutableHandle<BigStorage> &arr,
+    MutableHandle<ArrayStorage> &arr,
     uint32_t beginIndex,
     OwnKeysFlags okFlags) {
   struct : public Locals {
@@ -3247,10 +3247,9 @@ CallResult<uint32_t> appendAllPropertyKeys(
     auto marker = gcScope.createMarker();
     if (first && beginIndex > 0) {
       arr->set(
-          runtime,
           1,
-          HermesValue::encodeTrustedNumberValue(
-              enumerableProps->getEndIndex()));
+          HermesValue::encodeTrustedNumberValue(enumerableProps->getEndIndex()),
+          runtime.getHeap());
     }
     for (unsigned i = 0, e = enumerableProps->getEndIndex(); i < e; ++i) {
       gcScope.flushToMarker(marker);
@@ -3272,7 +3271,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       if (!needDedup) {
         // If no dedup is needed, add it directly.
         if (LLVM_UNLIKELY(
-                BigStorage::push_back(arr, runtime, lv.prop) ==
+                ArrayStorage::push_back(arr, runtime, lv.prop) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -3306,7 +3305,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       }
       if (LLVM_LIKELY(!dupFound)) {
         if (LLVM_UNLIKELY(
-                BigStorage::push_back(arr, runtime, lv.prop) ==
+                ArrayStorage::push_back(arr, runtime, lv.prop) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -3339,7 +3338,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
 ExecutionStatus setProtoClasses(
     Runtime &runtime,
     Handle<JSObject> obj,
-    MutableHandle<BigStorage> &arr) {
+    MutableHandle<ArrayStorage> &arr) {
   // Layout of a JSArray stored in the for-in cache:
   // [numProtos, numObjProps, class(obj),
   // class(proto(obj)), class(proto(proto(obj))), ..., null,
@@ -3357,12 +3356,12 @@ ExecutionStatus setProtoClasses(
   // Push entries 0 and 1 (we'll fill them in later).
   clazz = HermesValue::encodeTrustedNumberValue(0);
   if (LLVM_UNLIKELY(
-          BigStorage::push_back(arr, runtime, clazz) ==
+          ArrayStorage::push_back(arr, runtime, clazz) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(
-          BigStorage::push_back(arr, runtime, clazz) ==
+          ArrayStorage::push_back(arr, runtime, clazz) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3379,7 +3378,7 @@ ExecutionStatus setProtoClasses(
     }
     clazz = HermesValue::encodeObjectValue(head->getClass(runtime));
     if (LLVM_UNLIKELY(
-            BigStorage::push_back(arr, runtime, clazz) ==
+            ArrayStorage::push_back(arr, runtime, clazz) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3388,13 +3387,13 @@ ExecutionStatus setProtoClasses(
   }
   clazz = HermesValue::encodeNullValue();
   if (LLVM_UNLIKELY(
-          BigStorage::push_back(arr, runtime, clazz) ==
+          ArrayStorage::push_back(arr, runtime, clazz) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
   arr->set(
-      runtime, 0, HermesValue::encodeTrustedNumberValue(arr->size(runtime)));
+      0, HermesValue::encodeTrustedNumberValue(arr->size()), runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -3411,12 +3410,12 @@ ExecutionStatus setProtoClasses(
 uint32_t matchesProtoClasses(
     Runtime &runtime,
     Handle<JSObject> obj,
-    Handle<BigStorage> arr) {
+    Handle<ArrayStorage> arr) {
   MutableHandle<JSObject> head(runtime, obj->getParent(runtime));
   // Skip the counts and object's own class.
   uint32_t i = 3;
   while (head.get()) {
-    HermesValue protoCls = arr->at(runtime, i++);
+    auto protoCls = arr->at(i++);
     if (protoCls.isNull() || protoCls.getObject() != head->getClass(runtime) ||
         head->isProxyObject()) {
       return 0;
@@ -3424,7 +3423,7 @@ uint32_t matchesProtoClasses(
     head = head->getParent(runtime);
   }
   // The chains must both end at the same point.
-  if (head || !arr->at(runtime, i++).isNull()) {
+  if (head || !arr->at(i++).isNull()) {
     return 0;
   }
   assert(i > 0 && "success should be positive");
@@ -3433,7 +3432,7 @@ uint32_t matchesProtoClasses(
 
 } // namespace
 
-CallResult<Handle<BigStorage>> getForInPropertyNames(
+CallResult<Handle<ArrayStorage>> getForInPropertyNames(
     Runtime &runtime,
     Handle<JSObject> obj,
     uint32_t &beginIndex,
@@ -3441,14 +3440,14 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   Handle<HiddenClass> clazz(runtime, obj->getClass(runtime));
 
   // Fast case: Check the cache.
-  MutableHandle<BigStorage> arr(runtime);
+  MutableHandle<ArrayStorage> arr(runtime);
   if (obj->shouldCacheForIn(runtime)) {
     arr = clazz->getForInCache(runtime);
     if (arr) {
       beginIndex = matchesProtoClasses(runtime, obj, arr);
       if (beginIndex) {
         // Cache is valid for this object, so use it.
-        endIndex = arr->size(runtime);
+        endIndex = arr->size();
         return arr;
       }
       // Invalid for this object. We choose to clear the cache since the
@@ -3462,16 +3461,16 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   // Slow case: Build the array of properties.
   auto ownPropEstimate = clazz->getNumProperties();
   auto arrRes = obj->shouldCacheForIn(runtime)
-      ? BigStorage::createLongLived(runtime, ownPropEstimate)
-      : BigStorage::create(runtime, ownPropEstimate);
+      ? ArrayStorage::createLongLived(runtime, ownPropEstimate)
+      : ArrayStorage::create(runtime, ownPropEstimate);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  arr = std::move(*arrRes);
+  arr = vmcast<ArrayStorage>(*arrRes);
   if (setProtoClasses(runtime, obj, arr) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  beginIndex = arr->size(runtime);
+  beginIndex = arr->size();
   // If obj or any of its prototypes are unsuitable for caching, then
   // beginIndex is 0 and we return an array with only the property names.
   bool canCache = beginIndex;

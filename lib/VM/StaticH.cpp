@@ -2060,9 +2060,9 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     SHLegacyValue *sizeVal) {
   Runtime &runtime = getRuntime(shr);
   assert(
-      vmisa<BigStorage>(*toPHV(props)) &&
-      "GetNextPName's props must be BigStorage");
-  Handle<BigStorage> arr = Handle<BigStorage>::vmcast(toPHV(props));
+      vmisa<ArrayStorage>(*toPHV(props)) &&
+      "GetNextPName's props must be ArrayStorage");
+  Handle<ArrayStorage> arr = Handle<ArrayStorage>::vmcast(toPHV(props));
   Handle obj = Handle<JSObject>::vmcast(toPHV(base));
   auto result =
       [&runtime, arr, obj, indexVal, sizeVal]() -> CallResult<HermesValue> {
@@ -2080,10 +2080,10 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     uint32_t startIdx = 0;
     uint32_t numObjProps = 0;
     if (LLVM_LIKELY(size > 2)) {
-      lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(runtime, 2));
+      lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(2));
       if (lv.cachedClass.get()) {
-        startIdx = arr->at(runtime, 0).getNumberAs<uint32_t>();
-        numObjProps = arr->at(runtime, 1).getNumberAs<uint32_t>();
+        startIdx = arr->at(0).getNumberAs<uint32_t>();
+        numObjProps = arr->at(1).getNumberAs<uint32_t>();
       }
     }
 
@@ -2091,7 +2091,7 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
     // Loop until we find a property which is present.
     while (idx < size) {
-      lv.tmp = arr->at(runtime, idx);
+      lv.tmp = arr->at(idx);
       // If there's no caching, lv.cachedClass is nullptr and the comparison
       // will fail.
       if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&

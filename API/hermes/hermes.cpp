@@ -2257,16 +2257,15 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
   vm::GCScope gcScope(runtime_);
   uint32_t beginIndex;
   uint32_t endIndex;
-  vm::CallResult<vm::Handle<vm::SegmentedArray>> cr =
+  vm::CallResult<vm::Handle<vm::ArrayStorage>> cr =
       vm::getForInPropertyNames(runtime_, handle(obj), beginIndex, endIndex);
   checkStatus(cr.getStatus());
-  vm::Handle<vm::SegmentedArray> arr = *cr;
+  vm::Handle<vm::ArrayStorage> arr = *cr;
   size_t length = endIndex - beginIndex;
 
   auto ret = createArray(length);
   for (size_t i = 0; i < length; ++i) {
-    vm::PseudoHandle<> name =
-        vm::createPseudoHandle(arr->at(runtime_, beginIndex + i));
+    vm::PseudoHandle<> name = vm::createPseudoHandle(arr->at(beginIndex + i));
     if (name->isString()) {
       ret.setValueAtIndex(
           *this, i, valueFromHermesValue(name.getHermesValue()));

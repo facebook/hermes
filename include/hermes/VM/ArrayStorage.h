@@ -313,6 +313,11 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
       Runtime &runtime,
       size_type capacity);
 
+  /// Decrease the size to zero.
+  void clear(Runtime &runtime) {
+    resizeWithinCapacity(this, runtime, 0);
+  }
+
   /// Change the size of the storage to \p newSize. If the new size is larger,
   /// the additional elements are initialized to "empty". This may cause a
   /// reallocation when the new size exceeds the capacity. If the new size is

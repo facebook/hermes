@@ -461,14 +461,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 #ifndef HERMES_ENABLE_DEBUGGER
   static_assert(!SingleStep, "can't use single-step mode without the debugger");
 #endif
-  // Make sure that the cache can use an optimization by avoiding a branch to
-  // access the property storage.
-  static_assert(
-      HiddenClass::kDictionaryThreshold <=
-          SegmentedArray::kValueToSegmentThreshold,
-      "Cannot avoid branches in cache check if the dictionary "
-      "crossover point is larger than the inline storage");
-
   CodeBlock *curCodeBlock = state.codeBlock;
   const Inst *ip = nullptr;
   // Points to the first local register in the current frame.
