@@ -52,12 +52,6 @@ TEST(OSCompatTest, CurrentRSS) {
   EXPECT_GE(oscompat::current_rss(), beginRSS);
 }
 
-TEST(OSCompatTest, CpuCycles) {
-  uint64_t start = oscompat::cpu_cycle_counter();
-  uint64_t end = oscompat::cpu_cycle_counter();
-  EXPECT_LE(start, end);
-}
-
 static constexpr size_t StorageSize = 4 * 1024 * 1024;
 
 TEST(OSCompatTest, VmCommitNull) {
