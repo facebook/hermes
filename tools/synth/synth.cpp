@@ -8,6 +8,7 @@
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
+#include <hermes/VM/JIT/Config.h>
 #include <hermes/VM/RuntimeFlags.h>
 #include <hermes/hermes.h>
 #include <hermes/hermes_tracing.h>
@@ -236,6 +237,18 @@ int main(int argc, char **argv) {
       llvh::errs() << "Warning: -basic-block-profiling and -reps set.  "
                    << "Profiling info will be written separately after "
                    << "each rep, which probably isn't what you want.\n";
+    }
+
+#if !HERMESVM_JIT
+    if (cl::flags.EnableJIT) {
+      llvh::errs() << "JIT is not enabled in this build\n";
+      return EXIT_FAILURE;
+    }
+#endif
+
+    if (cl::flags.DumpJITCode || cl::flags.ForceJIT) {
+      llvh::errs() << "synth does not support -Xforce-jit or -Xdump-jitcode\n";
+      return EXIT_FAILURE;
     }
 
     // These are not config parameters: just set them according to the
