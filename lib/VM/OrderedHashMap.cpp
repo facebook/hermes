@@ -103,7 +103,7 @@ OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     uint32_t bucket,
     HermesValue key) {
   assert(
-      hashTable_.getNonNull(runtime)->size(runtime) == capacity_ &&
+      hashTable_.getNonNull(runtime)->size() == capacity_ &&
       "Inconsistent capacity");
   [[maybe_unused]] const uint32_t firstBucket = bucket;
 
@@ -111,12 +111,12 @@ OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
   NoHandleScope noHandle{runtime};
 
   // We can deref the handles because we are in NoAllocScope.
-  SegmentedArraySmall *hashTable = hashTable_.getNonNull(runtime);
+  StorageType *hashTable = hashTable_.getNonNull(runtime);
   const uint32_t mask = capacity_ - 1;
 
   // Each bucket must be either empty, deleted (Null) or BucketType.
   while (true) {
-    auto shv = hashTable->at(runtime, bucket);
+    auto shv = hashTable->at(bucket);
     if (shv.isEmpty()) {
       break;
     }
@@ -155,21 +155,20 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   self->capacity_ = newCapacity;
 
   // Create a new hash table.
-  auto arrRes = SegmentedArraySmall::create(runtime, newCapacity, newCapacity);
+  auto arrRes = StorageType::create(runtime, newCapacity, newCapacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
   // Now re-add all entries to the hash table.
   NoAllocScope noAlloc{runtime};
-  auto newHashTableHandle =
-      runtime.makeHandle<SegmentedArraySmall>(std::move(*arrRes));
+  auto newHashTableHandle = runtime.makeHandle<StorageType>(std::move(*arrRes));
   MutableHandle<> keyHandle{runtime};
 
   NoHandleScope noHandle{runtime};
 
   // We can deref the handles because we are in NoAllocScope.
-  SegmentedArraySmall *newHashTable = newHashTableHandle.get();
+  StorageType *newHashTable = newHashTableHandle.get();
   OrderedHashMapBase<BucketType, Derived> *rawSelf = *self;
   const uint32_t mask = rawSelf->capacity_ - 1;
   auto entry = rawSelf->firstIterationEntry_.get(runtime);
@@ -178,14 +177,16 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
       keyHandle = entry->key.unboxToHV(runtime);
       uint32_t bucket = hashToBucket(rawSelf->capacity_, runtime, keyHandle);
       [[maybe_unused]] const uint32_t firstBucket = bucket;
-      while (!newHashTable->at(runtime, bucket).isEmpty()) {
+      while (!newHashTable->at(bucket).isEmpty()) {
         // Find another bucket if it is not empty.
         bucket = (bucket + 1) & mask;
         assert(firstBucket != bucket && "Hash table is full!");
       }
       // Set the new entry to the bucket.
       newHashTable->set(
-          runtime, bucket, SmallHermesValue::encodeObjectValue(entry, runtime));
+          bucket,
+          SmallHermesValue::encodeObjectValue(entry, runtime),
+          runtime.getHeap());
     }
     entry = entry->nextIterationEntry.get(runtime);
   }
@@ -193,8 +194,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   rawSelf->deletedCount_ = 0;
   rawSelf->hashTable_.setNonNull(runtime, newHashTable, runtime.getHeap());
   assert(
-      rawSelf->hashTable_.getNonNull(runtime)->size(runtime) ==
-          rawSelf->capacity_ &&
+      rawSelf->hashTable_.getNonNull(runtime)->size() == rawSelf->capacity_ &&
       "Inconsistent capacity");
   return ExecutionStatus::RETURNED;
 }
@@ -330,9 +330,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
 
   // Set the newly inserted entry as the front of this bucket chain.
   rawSelf->hashTable_.getNonNull(runtime)->set(
-      runtime,
       bucket,
-      SmallHermesValue::encodeObjectValue(*newMapEntry, runtime));
+      SmallHermesValue::encodeObjectValue(*newMapEntry, runtime),
+      runtime.getHeap());
 
   if (!rawSelf->firstIterationEntry_) {
     // If we are inserting the first ever element, update
@@ -426,17 +426,17 @@ void OrderedHashMapBase<BucketType, Derived>::clear(
 
   // Clear the hash table.
   for (unsigned i = 0; i < self->capacity_; ++i) {
-    auto shv = self->hashTable_.getNonNull(runtime)->at(runtime, i);
+    auto shv = self->hashTable_.getNonNull(runtime)->at(i);
     // Delete every element reachable from the hash table.
     if (shv.isObject()) {
       vmcast<BucketType>(shv.getObject(runtime))->markDeleted(runtime);
     }
     // Clear every element in the hash table.
     self->hashTable_.getNonNull(runtime)->setNonPtr(
-        runtime, i, SmallHermesValue::encodeEmptyValue());
+        i, SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
   }
   // Resize the hash table to the initial size.
-  SegmentedArraySmall::resizeWithinCapacity(
+  StorageType::resizeWithinCapacity(
       self->hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
   self->capacity_ = INITIAL_CAPACITY;
 
