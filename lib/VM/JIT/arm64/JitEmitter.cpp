@@ -439,8 +439,8 @@ class Emit_sh_shv_decode {
 #ifdef HERMESVM_BOXED_DOUBLES
   const a64::GpX xInOut;
   asmjit::Label ptrLab;
-#endif
   const asmjit::Label &doneLab;
+#endif
 #ifndef NDEBUG
   bool restEmitted = false;
 #endif
@@ -455,7 +455,7 @@ class Emit_sh_shv_decode {
     ptrLab = a.newLabel();
   }
 #else
-      : doneLab(doneLab) {
+  {
   }
 #endif
 
