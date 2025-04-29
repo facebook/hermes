@@ -3386,7 +3386,7 @@ void HadesGC::addSegmentExtentToCrashManager(
       "%p:%p",
       seg.lowLim(),
       seg.lowLim() + segSize);
-  crashMgr_->setContextualCustomData(segmentName.c_str(), segmentExtentBuffer);
+  crashMgr_->setCustomData(segmentName.c_str(), segmentExtentBuffer);
 
 #ifdef HERMESVM_PLATFORM_LOGGING
   hermesLog(
@@ -3404,7 +3404,7 @@ void HadesGC::removeSegmentExtentFromCrashManager(
     return;
   }
   const std::string segmentName = name_ + ":HeapSegment:" + extraName;
-  crashMgr_->removeContextualCustomData(segmentName.c_str());
+  crashMgr_->removeCustomData(segmentName.c_str());
 }
 
 #ifdef HERMES_SLOW_DEBUG
