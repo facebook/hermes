@@ -2060,9 +2060,9 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     SHLegacyValue *sizeVal) {
   Runtime &runtime = getRuntime(shr);
   assert(
-      vmisa<ArrayStorage>(*toPHV(props)) &&
-      "GetNextPName's props must be ArrayStorage");
-  Handle<ArrayStorage> arr = Handle<ArrayStorage>::vmcast(toPHV(props));
+      vmisa<ArrayStorageSmall>(*toPHV(props)) &&
+      "GetNextPName's props must be ArrayStorageSmall");
+  auto arr = Handle<ArrayStorageSmall>::vmcast(toPHV(props));
   Handle obj = Handle<JSObject>::vmcast(toPHV(base));
   auto result =
       [&runtime, arr, obj, indexVal, sizeVal]() -> CallResult<HermesValue> {
@@ -2080,10 +2080,11 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     uint32_t startIdx = 0;
     uint32_t numObjProps = 0;
     if (LLVM_LIKELY(size > 2)) {
-      lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(2));
-      if (lv.cachedClass.get()) {
-        startIdx = arr->at(0).getNumberAs<uint32_t>();
-        numObjProps = arr->at(1).getNumberAs<uint32_t>();
+      auto clazzSHV = arr->at(2);
+      if (clazzSHV.isObject()) {
+        lv.cachedClass = vmcast<HiddenClass>(clazzSHV.getObject(runtime));
+        startIdx = arr->at(0).getNumberAs<uint32_t>(runtime);
+        numObjProps = arr->at(1).getNumberAs<uint32_t>(runtime);
       }
     }
 
@@ -2091,7 +2092,6 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
     // Loop until we find a property which is present.
     while (idx < size) {
-      lv.tmp = arr->at(idx);
       // If there's no caching, lv.cachedClass is nullptr and the comparison
       // will fail.
       if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&
@@ -2100,17 +2100,19 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
         propObj = obj;
         break;
       }
-      if (lv.tmp->isSymbol()) {
+      auto tmpSHV = arr->at(idx);
+      if (tmpSHV.isSymbol()) {
         // NOTE: This call is safe because we immediately discard desc,
         // so it can't outlive the SymbolID.
         NamedPropertyDescriptor desc;
         propObj = JSObject::getNamedDescriptorUnsafe(
-            obj, runtime, lv.tmp->getSymbol(), desc);
+            obj, runtime, tmpSHV.getSymbol(), desc);
       } else {
         assert(
-            (lv.tmp->isNumber() || lv.tmp->isString()) &&
+            (tmpSHV.isNumber() || tmpSHV.isString()) &&
             "GetNextPName must be symbol, string, number");
         ComputedPropertyDescriptor desc;
+        lv.tmp = tmpSHV.unboxToHV(runtime);
         ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
             obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
         if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
@@ -2122,14 +2124,16 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
       ++idx;
     }
     if (idx < size) {
+      auto tmpSHV = arr->at(idx);
       // We must return the property as a string
-      if (lv.tmp->isNumber()) {
-        auto strRes = numberToStringPrimitive(runtime, lv.tmp->getNumber());
+      if (tmpSHV.isNumber()) {
+        auto strRes =
+            numberToStringPrimitive(runtime, tmpSHV.getNumber(runtime));
         if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
         lv.tmp = strRes->getHermesValue();
-      } else if (lv.tmp->isSymbol()) {
+      } else if (tmpSHV.isSymbol()) {
         // for-in enumeration only returns numbers and strings.
         // In most cases (i.e. non-Proxy), we keep the symbol around instead
         // and convert here, so that the above getNamedDescriptor call is
@@ -2137,15 +2141,15 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
         // we don't have to check isUniqued and can convert to string
         // unconditionally.
         assert(
-            lv.tmp->getSymbol().isUniqued() &&
+            tmpSHV.getSymbol().isUniqued() &&
             "Symbol primitives (non-uniqued) can't be used in for-in, "
             "not even by Proxy");
         lv.tmp = HermesValue::encodeStringValue(
-            runtime.getStringPrimFromSymbolID(lv.tmp->getSymbol()));
+            runtime.getStringPrimFromSymbolID(tmpSHV.getSymbol()));
       } else {
         assert(
-            lv.tmp->isString() &&
-            "GetNextPName must be symbol, string, number");
+            tmpSHV.isString() && "GetNextPName must be symbol, string, number");
+        lv.tmp = vm::HermesValue::encodeStringValue(tmpSHV.getString(runtime));
       }
       *indexVal = HermesValue::encodeTrustedNumberValue(idx + 1);
       return lv.tmp.get();

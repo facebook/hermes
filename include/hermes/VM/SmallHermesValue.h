@@ -86,6 +86,11 @@ class SmallHermesValueAdaptor : protected HermesValue {
     llvm_unreachable("SmallHermesValueAdaptor does not have boxed doubles.");
   }
 
+  template <class T>
+  inline T getNumberAs(PointerBase &) const {
+    return HermesValue::getNumberAs<T>();
+  }
+
   HermesValue toHV(PointerBase &) const {
     return *this;
   }
@@ -105,6 +110,13 @@ class SmallHermesValueAdaptor : protected HermesValue {
   }
   GCCell *getObject(PointerBase &) const {
     return static_cast<GCCell *>(HermesValue::getObject());
+  }
+  CompressedPointer getObject() const {
+    assert(
+        sizeof(uintptr_t) == sizeof(CompressedPointer::RawType) &&
+        "Adaptor should not be used when compressed pointers are enabled.");
+    uintptr_t rawPtr = reinterpret_cast<uintptr_t>(HermesValue::getObject());
+    return CompressedPointer::fromRaw(rawPtr);
   }
   StringPrimitive *getString(PointerBase &) const {
     return HermesValue::getString();
@@ -369,11 +381,34 @@ class HermesValue32 {
     assert(isObject());
     return getPointer(pb);
   }
+  CompressedPointer getObject() const {
+    assert(isObject());
+    return getPointer();
+  }
 
   inline BigIntPrimitive *getBigInt(PointerBase &pb) const;
   inline StringPrimitive *getString(PointerBase &pb) const;
   inline double getNumber(PointerBase &pb) const;
   inline double getBoxedDouble(PointerBase &pb) const;
+
+  template <class T>
+  inline typename std::enable_if<std::is_integral<T>::value, T>::type
+  getNumberAs(PointerBase &pb) const {
+    double num = getNumber(pb);
+    assert(
+        num >= std::numeric_limits<T>::min() &&
+        // The cast is to ignore the following warning:
+        // implicit conversion from 'int64_t' to 'double' changes value.
+        num <= (double)std::numeric_limits<T>::max() && (T)num == num &&
+        "value not representable as type");
+    return num;
+  }
+
+  template <class T>
+  inline typename std::enable_if<!std::is_integral<T>::value, T>::type
+  getNumberAs(PointerBase &pb) const {
+    return getNumber(pb);
+  }
 
   CompressedPointer getPointer() const {
     assert(isPointer());

@@ -314,11 +314,11 @@ class HiddenClass final : public GCCell {
   }
 
   /// \return The for-in cache if one has been set, otherwise nullptr.
-  ArrayStorage *getForInCache(Runtime &runtime) const {
+  ArrayStorageSmall *getForInCache(Runtime &runtime) const {
     return forInCache_.get(runtime);
   }
 
-  void setForInCache(ArrayStorage *arr, Runtime &runtime) {
+  void setForInCache(ArrayStorageSmall *arr, Runtime &runtime) {
     forInCache_.set(runtime, arr, runtime.getHeap());
   }
 
@@ -587,7 +587,7 @@ class HiddenClass final : public GCCell {
 
   /// Cache that contains for-in property names for objects of this class.
   /// Never used in dictionary mode.
-  GCPointer<ArrayStorage> forInCache_{};
+  GCPointer<ArrayStorageSmall> forInCache_{};
 
   /// Computes the updated class flags for a class with flags \p flags for when
   /// a property is added or updated with property flags \p pf and based on

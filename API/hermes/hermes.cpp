@@ -2257,31 +2257,33 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
   vm::GCScope gcScope(runtime_);
   uint32_t beginIndex;
   uint32_t endIndex;
-  vm::CallResult<vm::Handle<vm::ArrayStorage>> cr =
+  vm::CallResult<vm::Handle<vm::ArrayStorageSmall>> cr =
       vm::getForInPropertyNames(runtime_, handle(obj), beginIndex, endIndex);
   checkStatus(cr.getStatus());
-  vm::Handle<vm::ArrayStorage> arr = *cr;
+  vm::Handle<vm::ArrayStorageSmall> arr = *cr;
   size_t length = endIndex - beginIndex;
 
   auto ret = createArray(length);
   for (size_t i = 0; i < length; ++i) {
-    vm::PseudoHandle<> name = vm::createPseudoHandle(arr->at(beginIndex + i));
-    if (name->isString()) {
+    vm::SmallHermesValue name = arr->at(beginIndex + i);
+    if (name.isString()) {
       ret.setValueAtIndex(
-          *this, i, valueFromHermesValue(name.getHermesValue()));
-    } else if (name->isSymbol()) {
+          *this,
+          i,
+          valueFromHermesValue(
+              vm::HermesValue::encodeStringValue(name.getString(runtime_))));
+    } else if (name.isSymbol()) {
       // May allocate. 'name' must not be used afterwards.
       vm::StringPrimitive *str =
-          runtime_.getStringPrimFromSymbolID(name->getSymbol());
-      name.invalidate();
+          runtime_.getStringPrimFromSymbolID(name.getSymbol());
       ret.setValueAtIndex(
           *this,
           i,
           valueFromHermesValue(vm::HermesValue::encodeStringValue(str)));
-    } else if (name->isNumber()) {
+    } else if (name.isNumber()) {
       std::string s;
       llvh::raw_string_ostream os(s);
-      os << static_cast<size_t>(name->getNumber());
+      os << static_cast<size_t>(name.getNumber(runtime_));
       ret.setValueAtIndex(
           *this, i, jsi::String::createFromAscii(*this, os.str()));
     } else {

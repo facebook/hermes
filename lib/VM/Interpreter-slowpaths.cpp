@@ -485,7 +485,7 @@ ExecutionStatus Interpreter::caseGetPNameList(
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<ArrayStorage> arr = *cr;
+  Handle<ArrayStorageSmall> arr = *cr;
   O3REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(beginIndex);
   O4REG(GetPNameList) = HermesValue::encodeTrustedNumberValue(endIndex);
   // Write the result last in case it is the same register as one of the in/out
@@ -507,10 +507,10 @@ ExecutionStatus Interpreter::caseGetNextPName(
   LocalsRAII lraii{runtime, &lv};
 
   assert(
-      vmisa<ArrayStorage>(O2REG(GetNextPName)) &&
-      "GetNextPName's second op must be PropStorage");
+      vmisa<ArrayStorageSmall>(O2REG(GetNextPName)) &&
+      "GetNextPName's second op must be ArrayStorageSmall");
   auto obj = Handle<JSObject>::vmcast(&O3REG(GetNextPName));
-  auto arr = Handle<ArrayStorage>::vmcast(&O2REG(GetNextPName));
+  auto arr = Handle<ArrayStorageSmall>::vmcast(&O2REG(GetNextPName));
   uint32_t idx = O4REG(GetNextPName).getNumber();
   uint32_t size = O5REG(GetNextPName).getNumber();
 
@@ -518,10 +518,11 @@ ExecutionStatus Interpreter::caseGetNextPName(
   uint32_t startIdx = 0;
   uint32_t numObjProps = 0;
   if (LLVM_LIKELY(size > 2)) {
-    lv.cachedClass = dyn_vmcast<HiddenClass>(arr->at(2));
-    if (lv.cachedClass.get()) {
-      startIdx = arr->at(0).getNumberAs<uint32_t>();
-      numObjProps = arr->at(1).getNumberAs<uint32_t>();
+    auto clazzSHV = arr->at(2);
+    if (clazzSHV.isObject()) {
+      lv.cachedClass = vmcast<HiddenClass>(clazzSHV.getObject(runtime));
+      startIdx = arr->at(0).getNumberAs<uint32_t>(runtime);
+      numObjProps = arr->at(1).getNumberAs<uint32_t>(runtime);
     }
   }
 
@@ -529,7 +530,6 @@ ExecutionStatus Interpreter::caseGetNextPName(
   MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
   // Loop until we find a property which is present.
   while (LLVM_LIKELY(idx < size)) {
-    lv.tmp = arr->at(idx);
     // If there's no caching, lv.cachedClass is nullptr and the comparison will
     // fail.
     if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&
@@ -538,17 +538,19 @@ ExecutionStatus Interpreter::caseGetNextPName(
       propObj = obj;
       break;
     }
-    if (lv.tmp->isSymbol()) {
+    auto tmpSHV = arr->at(idx);
+    if (tmpSHV.isSymbol()) {
       // NOTE: This call is safe because we immediately discard desc,
       // so it can't outlive the SymbolID.
       NamedPropertyDescriptor desc;
       propObj = JSObject::getNamedDescriptorUnsafe(
-          obj, runtime, lv.tmp->getSymbol(), desc);
+          obj, runtime, tmpSHV.getSymbol(), desc);
     } else {
       assert(
-          (lv.tmp->isNumber() || lv.tmp->isString()) &&
+          (tmpSHV.isNumber() || tmpSHV.isString()) &&
           "GetNextPName must be symbol, string, number");
       ComputedPropertyDescriptor desc;
+      lv.tmp = tmpSHV.unboxToHV(runtime);
       ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
           obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
       if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
@@ -560,14 +562,15 @@ ExecutionStatus Interpreter::caseGetNextPName(
     ++idx;
   }
   if (LLVM_LIKELY(idx < size)) {
+    auto tmpSHV = arr->at(idx);
     // We must return the property as a string
-    if (lv.tmp->isNumber()) {
-      auto strRes = numberToStringPrimitive(runtime, lv.tmp->getNumber());
+    if (tmpSHV.isNumber()) {
+      auto strRes = numberToStringPrimitive(runtime, tmpSHV.getNumber(runtime));
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       lv.tmp = strRes->getHermesValue();
-    } else if (LLVM_LIKELY(lv.tmp->isSymbol())) {
+    } else if (LLVM_LIKELY(tmpSHV.isSymbol())) {
       // for-in enumeration only returns numbers and strings.
       // In most cases (i.e. non-Proxy), we keep the symbol around instead
       // and convert here, so that the above getNamedDescriptor call is faster.
@@ -575,11 +578,15 @@ ExecutionStatus Interpreter::caseGetNextPName(
       // So we don't have to check isUniqued and can convert to string
       // unconditionally.
       assert(
-          lv.tmp->getSymbol().isUniqued() &&
+          tmpSHV.getSymbol().isUniqued() &&
           "Symbol primitives (non-uniqued) can't be used in for-in, "
           "not even by Proxy");
       lv.tmp = HermesValue::encodeStringValue(
-          runtime.getStringPrimFromSymbolID(lv.tmp->getSymbol()));
+          runtime.getStringPrimFromSymbolID(tmpSHV.getSymbol()));
+    } else {
+      assert(
+          tmpSHV.isString() && "GetNextPName must be symbol, string, number");
+      lv.tmp = vm::HermesValue::encodeStringValue(tmpSHV.getString(runtime));
     }
     O4REG(GetNextPName) = HermesValue::encodeTrustedNumberValue(idx + 1);
     // Write the result last in case it is the same register as O4REG.
