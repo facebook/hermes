@@ -36,8 +36,7 @@ struct GCBasicsTest : public ::testing::Test {
 };
 
 // Hades doesn't report its stats the same way as other GCs.
-#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES) && \
-    !defined(HERMESVM_GC_RUNTIME)
+#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES)
 TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
@@ -246,7 +245,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   wr2.releaseSlot();
   wr3.releaseSlot();
 }
-#endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
+#endif // !NDEBUG && !HERMESVM_GC_HADES
 
 TEST_F(GCBasicsTest, WeakRootTest) {
   GCScope scope{rt};

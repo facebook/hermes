@@ -60,10 +60,6 @@ class GCCell;
 class JSObject;
 class JSWeakMapImplBase;
 
-#ifdef HERMESVM_GC_RUNTIME
-#define RUNTIME_GC_KINDS GC_KIND(HadesGC)
-#endif
-
 /// Used by XorPtr to separate encryption keys between uses.
 enum XorPtrKeyID {
   ArrayBufferData,
@@ -1141,64 +1137,6 @@ class GCBase {
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) = 0;
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) = 0;
 
-#ifdef HERMESVM_GC_RUNTIME
-  /// Default implementations for read and write barriers: do nothing.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value);
-  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
-  void writeBarrierForLargeObj(
-      const GCCell *owningObj,
-      const GCHermesValueInLargeObj *loc,
-      HermesValue value);
-  void writeBarrierForLargeObj(
-      const GCCell *owningObj,
-      const GCSmallHermesValueInLargeObj *loc,
-      SmallHermesValue value);
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
-  void writeBarrierForLargeObj(
-      const GCCell *owningObj,
-      const GCPointerBase *loc,
-      const GCCell *value);
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
-  void constructorWriteBarrier(
-      const GCSmallHermesValue *loc,
-      SmallHermesValue value);
-  void constructorWriteBarrierForLargeObj(
-      const GCCell *owningObj,
-      const GCHermesValueInLargeObj *loc,
-      HermesValue value);
-  void constructorWriteBarrierForLargeObj(
-      const GCCell *owningObj,
-      const GCSmallHermesValueInLargeObj *loc,
-      SmallHermesValue value);
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
-  void constructorWriteBarrierForLargeObj(
-      const GCCell *owningObj,
-      const GCPointerBase *loc,
-      const GCCell *value);
-  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
-  void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
-  void constructorWriteBarrierRange(
-      const GCCell *owningObj,
-      const GCHermesValueBase *start,
-      uint32_t numHVs);
-  void constructorWriteBarrierRange(
-      const GCCell *owningObj,
-      const GCSmallHermesValueBase *start,
-      uint32_t numHVs);
-  void snapshotWriteBarrier(const GCHermesValueBase *loc);
-  void snapshotWriteBarrier(const GCSmallHermesValueBase *loc);
-  void snapshotWriteBarrier(const GCPointerBase *loc);
-  void snapshotWriteBarrier(const GCSymbolID *symbol);
-  void snapshotWriteBarrierRange(
-      const GCHermesValueBase *start,
-      uint32_t numHVs);
-  void snapshotWriteBarrierRange(
-      const GCSmallHermesValueBase *start,
-      uint32_t numHVs);
-  void weakRefReadBarrier(HermesValue value);
-  void weakRefReadBarrier(GCCell *value);
-#endif
-
   /// @name Marking APIs
   /// @{
 
@@ -1541,23 +1479,6 @@ class GCBase {
 #endif
 
  private:
-#ifdef HERMESVM_GC_RUNTIME
-  /// Use the kind tag of the GC to statically call a function with one of the
-  /// available runtime GCs.
-  template <typename Func>
-  auto runtimeGCDispatch(Func f) {
-    switch (getKind()) {
-#define GC_KIND(kind)          \
-  case GCBase::HeapKind::kind: \
-    return f(llvh::cast<kind>(this));
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-      default:
-        llvm_unreachable("No other valid GC for RuntimeGC");
-    }
-  }
-#endif
-
   template <typename T, XorPtrKeyID K>
   friend class XorPtr;
 

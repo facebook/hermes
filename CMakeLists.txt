@@ -92,7 +92,7 @@ set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
 
 set(HERMESVM_GCKIND HADES
   CACHE STRING
-  "HermesVM GC type: MALLOC, HADES or RUNTIME")
+  "HermesVM GC type: MALLOC, HADES")
 
 # Hermes VM opcode stats profiling
 set(HERMESVM_PROFILER_OPCODE OFF CACHE BOOL
@@ -395,8 +395,8 @@ elseif(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_PREFER32")
     # Box doubles on 32-bit systems.
     set(HERMESVM_BOXED_DOUBLES ON)
   else()
-    # Compressed pointers are only enabled on 64 bit systems with Hades GC or Runtime GC.
-    if (HERMESVM_GCKIND MATCHES HADES|RUNTIME)
+    # Compressed pointers are only enabled on 64 bit systems with Hades GC.
+    if (HERMESVM_GCKIND MATCHES HADES)
       set(HERMESVM_COMPRESSED_POINTERS ON)
       set(HERMESVM_BOXED_DOUBLES ON)
       if(HERMESVM_ALLOW_CONTIGUOUS_HEAP)

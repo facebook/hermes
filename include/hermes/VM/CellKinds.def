@@ -28,7 +28,7 @@
 
 CELL_KIND(Uninitialized)
 CELL_KIND(FillerCell)
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+#ifdef HERMESVM_GC_HADES
 CELL_KIND(Freelist)
 #endif
 CELL_KIND(DynamicUTF16StringPrimitive)

@@ -89,17 +89,7 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
       !!VTable::getVTable(T::getCellKind())->finalize_ ==
           (hasFinalizer == HasFinalizer::Yes) &&
       "hasFinalizer should be set iff the cell has a finalizer.");
-#ifdef HERMESVM_GC_RUNTIME
-  T *ptr = runtimeGCDispatch([&](auto *gc) {
-    return gc->template makeAImpl<
-        T,
-        fixedSize,
-        hasFinalizer,
-        longLived,
-        canBeLarge,
-        mayFail>(size, std::forward<Args>(args)...);
-  });
-#else
+
   T *ptr = static_cast<GC *>(this)
                ->makeAImpl<
                    T,
@@ -108,7 +98,6 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
                    longLived,
                    canBeLarge,
                    mayFail>(size, std::forward<Args>(args)...);
-#endif
 #if !defined(NDEBUG) || defined(HERMES_MEMORY_INSTRUMENTATION)
   if constexpr (mayFail == MayFail::Yes) {
     // If it fails, a nullptr is allowed and simply return it to the caller.

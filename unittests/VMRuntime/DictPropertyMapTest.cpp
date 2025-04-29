@@ -138,49 +138,4 @@ TEST_F(DictPropertyMapTest, CreateOverCapacityTest) {
       DictPropertyMap::create(runtime, DictPropertyMap::getMaxCapacity() + 1));
 }
 
-TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
-  // Hades can't handle doing a span of large allocations, because it has
-  // fragmentation in its heap space.
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  // Don't do the test if it requires too many properties. Just cross our
-  // fingers and hope it works.
-  auto const maxCapacity = DictPropertyMap::getMaxCapacity();
-  if (maxCapacity > 500000)
-    return;
-
-  auto res = DictPropertyMap::create(runtime);
-  ASSERT_RETURNED(res);
-  MutableHandle<DictPropertyMap> map{runtime, res->get()};
-
-  MutableHandle<> value{runtime};
-  NamedPropertyDescriptor desc(PropertyFlags{}, 0);
-
-  auto marker = gcScope.createMarker();
-  for (unsigned i = 0; i < maxCapacity; ++i) {
-    value.set(HermesValue::encodeTrustedNumberValue(i));
-    auto symRes = valueToSymbolID(runtime, value);
-    ASSERT_RETURNED(symRes);
-    ASSERT_RETURNED(DictPropertyMap::add(map, runtime, **symRes, desc));
-
-    gcScope.flushToMarker(marker);
-  }
-
-  value.set(HermesValue::encodeTrustedNumberValue(maxCapacity));
-  auto symRes = valueToSymbolID(runtime, value);
-  ASSERT_RETURNED(symRes);
-  ASSERT_EQ(
-      ExecutionStatus::EXCEPTION,
-      DictPropertyMap::add(map, runtime, **symRes, desc));
-  runtime.clearThrownValue();
-
-  // Try it again.
-  value.set(HermesValue::encodeTrustedNumberValue(maxCapacity + 1));
-  symRes = valueToSymbolID(runtime, value);
-  ASSERT_RETURNED(symRes);
-  ASSERT_EQ(
-      ExecutionStatus::EXCEPTION,
-      DictPropertyMap::add(map, runtime, **symRes, desc));
-  runtime.clearThrownValue();
-#endif
-}
 } // namespace

@@ -24,62 +24,20 @@ class GCStorage {
       std::shared_ptr<CrashManager> crashMgr,
       std::shared_ptr<StorageProvider> provider,
       experiments::VMExperimentFlags vmExperimentFlags)
-#ifndef HERMESVM_GC_RUNTIME
       : heap_(
             gcCallbacks,
             pointerBase,
             gcConfig,
             crashMgr,
             provider,
-            vmExperimentFlags) {
-  }
-#else
-  {
-    GCBase::HeapKind heapKind = GCBase::HeapKind::HadesGC;
-    GC *heap;
-    switch (heapKind) {
-#define GC_KIND(kind)            \
-  case GCBase::HeapKind::kind:   \
-    heap = new (&storage_) kind( \
-        gcCallbacks,             \
-        pointerBase,             \
-        gcConfig,                \
-        crashMgr,                \
-        provider,                \
-        vmExperimentFlags);      \
-    break;
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-      default:
-        llvm_unreachable("No other valid GC for RuntimeGC");
-    }
-    assert(heap == get() && "Cannot safely cast buffer to GC");
-    (void)heap;
-  }
-
-  ~GCStorage() {
-    get()->~GC();
-  }
-#endif
+            vmExperimentFlags) {}
 
   GC *get() {
-#ifdef HERMESVM_GC_RUNTIME
-    return reinterpret_cast<GC *>(&storage_);
-#else
     return &heap_;
-#endif
   }
 
  private:
-#ifdef HERMESVM_GC_RUNTIME
-  std::aligned_storage<std::max({
-#define GC_KIND(kind) sizeof(kind),
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-  })>::type storage_;
-#else
   GC heap_;
-#endif
 };
 
 } // namespace vm

@@ -705,7 +705,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               Edge{HeapSnapshot::EdgeType::Weak, "weak", secondDummy.id}}));
 }
 
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+#ifdef HERMESVM_GC_HADES
 // This test relies on the implementation details of Hades GC.
 TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
   // The GC Heap can have at most two segments.
