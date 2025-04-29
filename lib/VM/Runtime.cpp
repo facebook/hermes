@@ -844,7 +844,7 @@ void Runtime::assertTopCodeBlockContainsIP(const inst::Inst *ip) const {
 void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Do array capacity histogram.
   // Map from array size to number of arrays that are that size.
-  // Arrays includes ArrayStorage and SegmentedArray.
+  // Arrays includes ArrayStorage.
   std::map<std::pair<size_t, size_t>, std::pair<size_t, size_t>>
       arraySizeToCountAndWastedSlots;
   auto printTable = [&os](const std::map<
@@ -906,41 +906,6 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   });
   if (arraySizeToCountAndWastedSlots.empty()) {
     os << "\tNo ArrayStorages\n\n";
-  } else {
-    printTable(arraySizeToCountAndWastedSlots);
-  }
-
-  os << "Array Census for SegmentedArray:\n";
-  arraySizeToCountAndWastedSlots.clear();
-  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
-    if (cell->getKind() == CellKind::SegmentedArrayKind) {
-      SegmentedArray *arr = vmcast<SegmentedArray>(cell);
-      const auto key =
-          std::make_pair(arr->totalCapacityOfSpine(), arr->getAllocatedSize());
-      arraySizeToCountAndWastedSlots[key].first++;
-      arraySizeToCountAndWastedSlots[key].second +=
-          arr->totalCapacityOfSpine() - arr->size(*this);
-    }
-  });
-  if (arraySizeToCountAndWastedSlots.empty()) {
-    os << "\tNo SegmentedArrays\n\n";
-  } else {
-    printTable(arraySizeToCountAndWastedSlots);
-  }
-
-  os << "Array Census for Segment:\n";
-  arraySizeToCountAndWastedSlots.clear();
-  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
-    if (cell->getKind() == CellKind::SegmentKind) {
-      SegmentedArray::Segment *seg = vmcast<SegmentedArray::Segment>(cell);
-      const auto key = std::make_pair(seg->length(), seg->getAllocatedSize());
-      arraySizeToCountAndWastedSlots[key].first++;
-      arraySizeToCountAndWastedSlots[key].second +=
-          SegmentedArray::Segment::kMaxLength - seg->length();
-    }
-  });
-  if (arraySizeToCountAndWastedSlots.empty()) {
-    os << "\tNo Segments\n\n";
   } else {
     printTable(arraySizeToCountAndWastedSlots);
   }
