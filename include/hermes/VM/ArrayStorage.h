@@ -162,27 +162,19 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
     return ArrayStorageBase<HVType>::template getTrailingObjects<GCHVType>();
   }
 
-  /// This enum is not needed here but is used for compatibility with
-  /// SegmentedArray. It is intended to indicate that we know beforehand that
-  /// an element is in the "inline storage". All storage here is "inline".
-  enum class Inline { No, Yes };
-
   /// \return the element at index \p index
-  template <Inline inl = Inline::No>
   HVType at(size_type index) const {
     assert(index < size() && "index out of range");
     return data()[index];
   }
 
   /// \return the element at index \p index
-  template <Inline inl = Inline::No>
   void set(size_type index, HVType val, GC &gc) {
     assert(index < size() && "index out of range");
     data()[index].set(val, this, gc);
   }
 
   /// \return the element at index \p index
-  template <Inline inl = Inline::No>
   void setNonPtr(size_type index, HVType val, GC &gc) {
     assert(index < size() && "index out of range");
     data()[index].setNonPtr(val, gc);
