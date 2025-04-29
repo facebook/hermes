@@ -121,7 +121,7 @@ jobs:
         xcode-version: 16.2
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
-      uses: actions/cache@v4.0.0
+      uses: actions/cache@v4
       with:
         key: v4-repo-${{ github.sha }}
         path: |-
@@ -169,7 +169,7 @@ jobs:
         xcode-version: 16.2
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
-      uses: actions/cache@v4.0.0
+      uses: actions/cache@v4
       with:
         key: v4-repo-${{ github.sha }}
         path: |-
@@ -233,7 +233,7 @@ jobs:
         xcode-version: 16.2
     - uses: actions/checkout@v4.1.0
     - name: Cache setup
-      uses: actions/cache@v4.0.0
+      uses: actions/cache@v4
       with:
         key: v4-repo-${{ github.sha }}
         path: |-
