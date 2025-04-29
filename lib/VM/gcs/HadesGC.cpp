@@ -48,6 +48,7 @@ static const char *kGCName =
     kConcurrentGC ? "hades (concurrent)" : "hades (incremental)";
 
 static const char *kCompacteeNameForCrashMgr = "COMPACT";
+static const char *kYGNameForCrashMgr = "YG";
 
 // We have a target max pause time of 50ms.
 static constexpr size_t kTargetMaxPauseMs = 50;
@@ -1199,6 +1200,7 @@ HadesGC::HadesGC(
 }
 
 HadesGC::~HadesGC() {
+  crashMgr_->removeCustomData("HermesGC");
   // finalizeAll calls waitForCollectionToFinish, so there should be no ongoing
   // collection.
   assert(
@@ -1859,6 +1861,10 @@ void HadesGC::finalizeAll() {
   // the OG, and some not. Only finalize objects that have not been promoted to
   // OG, and let the OG finalize the promoted objects.
   finalizeYoungGenObjects();
+  // Remove contextual custom data entries for YG.
+  removeSegmentExtentFromCrashManager(kYGNameForCrashMgr);
+  removeSegmentExtentFromCrashManager(std::to_string(
+      AlignedHeapSegment::getSegmentIndexFromStart(youngGen_.lowLim())));
 
   // If we are in the middle of a YG collection, some objects may have already
   // been promoted to the OG. Assume that any remaining external memory in the
@@ -1869,16 +1875,27 @@ void HadesGC::finalizeAll() {
     assert(cell->isValid() && "Invalid cell in finalizeAll");
     cell->getVT()->finalizeIfExists(cell, *this);
   };
-  if (compactee_.segment)
+  if (compactee_.segment) {
     forCompactedObjsInSegment(
         *compactee_.segment, finalizeCallback, getPointerBase());
+    auto segIndex = AlignedHeapSegment::getSegmentIndexFromStart(
+        compactee_.segment->lowLim());
+    removeSegmentExtentFromCrashManager(std::to_string(segIndex));
+    removeSegmentExtentFromCrashManager(kCompacteeNameForCrashMgr);
+  }
 
   oldGen_.forAllSegments(
-      [&finalizeCallback](auto &&seg) {
+      [this, &finalizeCallback](auto &&seg) {
         forAllObjsInSegment(seg, finalizeCallback);
+        auto segIndex =
+            AlignedHeapSegment::getSegmentIndexFromStart(seg.lowLim());
+        removeSegmentExtentFromCrashManager(std::to_string(segIndex));
       },
-      [&finalizeCallback](auto &&seg) {
+      [this, &finalizeCallback](auto &&seg) {
         finalizeCallback(reinterpret_cast<GCCell *>(seg.start()));
+        auto segIndex =
+            AlignedHeapSegment::getSegmentIndexFromStart(seg.lowLim());
+        removeSegmentExtentFromCrashManager(std::to_string(segIndex));
       });
 }
 
@@ -2870,7 +2887,7 @@ bool HadesGC::promoteYoungGenToOldGen() {
 
 FixedSizeHeapSegment HadesGC::setYoungGen(FixedSizeHeapSegment seg) {
   addSegmentExtentToCrashManager(
-      seg, FixedSizeHeapSegment::storageSize(), "YG");
+      seg, FixedSizeHeapSegment::storageSize(), kYGNameForCrashMgr);
   youngGenFinalizables_.clear();
   std::swap(youngGen_, seg);
   youngGenCP_ = CompressedPointer::encodeNonNull(
@@ -3285,11 +3302,6 @@ void HadesGC::OldGen::addSegment(FixedSizeHeapSegment seg) {
     auto bucket = getFreelistBucket(sz);
     addCellToFreelist(res.ptr, sz, &segmentBuckets_.back()[bucket]);
   }
-
-  gc_.addSegmentExtentToCrashManager(
-      newSeg,
-      FixedSizeHeapSegment::storageSize(),
-      std::to_string(numSegments()));
 }
 
 FixedSizeHeapSegment HadesGC::OldGen::popSegment() {
