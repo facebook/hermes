@@ -64,9 +64,9 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<staticProto>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "staticProto"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "staticProto"
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<dynamicProto>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "dynamicProto"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "dynamicProto"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<staticProto>(1 params, 2 registers, 0 numbers, 1 non-pointers):

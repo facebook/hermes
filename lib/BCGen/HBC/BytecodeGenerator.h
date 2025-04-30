@@ -297,15 +297,20 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// Set to true by calling bytecodeGenerationComplete.
   bool complete_{false};
 
-  /// Highest accessed property cache indices in this function.
-  uint8_t highestReadCacheIndex_{0};
-  uint8_t highestWriteCacheIndex_{0};
+  /// Sizes of the read and write property caches in this function.
+  /// Note that the size is reported as 255 when it is 255, or when it is 256
+  /// (i.e., when we're using index 255, the "sticky" overflow index).  It's not
+  /// worth expanding the width of these fields to 2 bytes for this case;
+  /// instead, we will just conservatively allocate a 256-element cache when the
+  /// size is 255.  This wastes at most one cache slot in a rare case.
+  uint8_t readCacheSize_{0};
+  uint8_t writeCacheSize_{0};
+  /// The size of the private name cache index in this function.  (Same comment
+  /// as above applies when the size is 255.
+  uint8_t privateNameCacheSize_{0};
 
   /// Number of cache new object entries for this function.
   uint8_t numCacheNewObject_{0};
-
-  /// Highest accessed private name cache index in this function.
-  uint8_t highestPrivateNameCacheIndex_{0};
 
   /// The jump table for this function (if any)
   /// this vector consists of jump table for each SwitchImm instruction,
@@ -517,23 +522,23 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
     return frameSize_;
   }
 
-  void setHighestReadCacheIndex(uint8_t sz) {
+  void setReadCacheSize(uint8_t sz) {
     assert(
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    this->highestReadCacheIndex_ = sz;
+    this->readCacheSize_ = sz;
   }
-  void setHighestWriteCacheIndex(uint8_t sz) {
+  void setWriteCacheSize(uint8_t sz) {
     assert(
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    this->highestWriteCacheIndex_ = sz;
+    this->writeCacheSize_ = sz;
   }
-  void setHighestPrivateNameCacheIndex(uint8_t sz) {
+  void setPrivateNameCacheSize(uint8_t sz) {
     assert(
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    this->highestPrivateNameCacheIndex_ = sz;
+    this->privateNameCacheSize_ = sz;
   }
 
   void setNumCacheNewObject(uint8_t sz) {

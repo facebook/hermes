@@ -143,13 +143,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    GetGlobalObject   r1
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    CreateClosure     r2, r0, Function<foo>
-// CHKBC-NEXT:    PutByIdLoose      r1, r2, 1, "foo"
+// CHKBC-NEXT:    PutByIdLoose      r1, r2, 0, "foo"
 // CHKBC-NEXT:    CreateClosure     r2, r0, Function<shadows>
-// CHKBC-NEXT:    PutByIdLoose      r1, r2, 2, "shadows"
+// CHKBC-NEXT:    PutByIdLoose      r1, r2, 1, "shadows"
 // CHKBC-NEXT:    CreateClosure     r2, r0, Function<checkNonStaticBuiltin>
-// CHKBC-NEXT:    PutByIdLoose      r1, r2, 3, "checkNonStaticBui"...
-// CHKBC-NEXT:    TryGetById        r2, r1, 1, "print"
-// CHKBC-NEXT:    GetByIdShort      r3, r1, 2, "foo"
+// CHKBC-NEXT:    PutByIdLoose      r1, r2, 2, "checkNonStaticBui"...
+// CHKBC-NEXT:    TryGetById        r2, r1, 0, "print"
+// CHKBC-NEXT:    GetByIdShort      r3, r1, 1, "foo"
 // CHKBC-NEXT:    NewObjectWithBuffer r1, 0, 0
 // CHKBC-NEXT:    Call2             r1, r3, r0, r1
 // CHKBC-NEXT:    Call2             r1, r2, r0, r1
@@ -165,9 +165,9 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHKBC-NEXT:    NewObjectWithBuffer r3, 1, 17
 // CHKBC-NEXT:    GetGlobalObject   r1
-// CHKBC-NEXT:    TryGetById        r1, r1, 1, "print"
+// CHKBC-NEXT:    TryGetById        r1, r1, 0, "print"
 // CHKBC-NEXT:    PutOwnBySlotIdx   r3, r1, 0
-// CHKBC-NEXT:    GetByIdShort      r2, r3, 2, "keys"
+// CHKBC-NEXT:    GetByIdShort      r2, r3, 1, "keys"
 // CHKBC-NEXT:    LoadConstString   r1, "evil"
 // CHKBC-NEXT:    Call2             r1, r2, r3, r1
 // CHKBC-NEXT:    LoadConstUndefined r0
@@ -176,8 +176,8 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0036, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r1
-// CHKBC-NEXT:    TryGetById        r3, r1, 1, "HermesInternal"
-// CHKBC-NEXT:    GetByIdShort      r2, r3, 2, "concat"
+// CHKBC-NEXT:    TryGetById        r3, r1, 0, "HermesInternal"
+// CHKBC-NEXT:    GetByIdShort      r2, r3, 1, "concat"
 // CHKBC-NEXT:    LoadConstString   r1, "hello"
 // CHKBC-NEXT:    Call2             r1, r2, r3, r1
 // CHKBC-NEXT:    LoadConstUndefined r0

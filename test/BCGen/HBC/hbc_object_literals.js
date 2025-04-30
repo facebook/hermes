@@ -348,19 +348,19 @@ function obj7() {
 // BCGEN-NEXT:    GetGlobalObject   r2
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<obj1>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "obj1"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 0, "obj1"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<obj2>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "obj2"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "obj2"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<obj3>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "obj3"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "obj3"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<obj4>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "obj4"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "obj4"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<obj5>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 5, "obj5"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "obj5"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<obj6>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 6, "obj6"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 5, "obj6"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<obj7>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 7, "obj7"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 6, "obj7"
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<obj1>(1 params, 3 registers, 0 numbers, 1 non-pointers):

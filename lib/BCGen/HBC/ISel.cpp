@@ -8,6 +8,7 @@
 #include "ISel.h"
 
 #include "BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/MovElimination.h"
@@ -51,6 +52,12 @@ STATISTIC(
 STATISTIC(
     NumPutCacheSlots,
     "Number of cache slots allocated for all put property instructions");
+STATISTIC(
+    NumFunctionsWithWriteCache,
+    "Number of functions with at least one put property instruction");
+STATISTIC(
+    NumFunctionsWithReadCache,
+    "Number of functions with at least one get property instruction");
 
 /// Given a list of basic blocks \p blocks linearized into the order they will
 /// be generated, \return the set of those basic blocks containing backwards
@@ -200,9 +207,9 @@ class HBCISel {
   void verifyCall(BaseCallInst *Inst);
 
   /// The last emitted property cache index.
-  uint8_t lastPropertyReadCacheIndex_{0};
-  uint8_t lastPropertyWriteCacheIndex_{0};
-  uint8_t lastPrivateNameCacheIndex_{0};
+  uint8_t nextPropertyReadCacheIndex_{0};
+  uint8_t nextPropertyWriteCacheIndex_{0};
+  uint8_t nextPrivateNameCacheIndex_{0};
 
   /// The next index to use for CacheNewObject.
   uint8_t numCacheNewObject_{0};
@@ -551,10 +558,16 @@ void HBCISel::addDebugLexicalInfo() {
 }
 
 void HBCISel::populatePropertyCachingInfo() {
-  BCFGen_->setHighestReadCacheIndex(lastPropertyReadCacheIndex_);
-  BCFGen_->setHighestWriteCacheIndex(lastPropertyWriteCacheIndex_);
+  BCFGen_->setReadCacheSize(nextPropertyReadCacheIndex_);
+  BCFGen_->setWriteCacheSize(nextPropertyWriteCacheIndex_);
   BCFGen_->setNumCacheNewObject(numCacheNewObject_);
-  BCFGen_->setHighestPrivateNameCacheIndex(lastPrivateNameCacheIndex_);
+  BCFGen_->setPrivateNameCacheSize(nextPrivateNameCacheIndex_);
+  if (nextPropertyReadCacheIndex_ > 0) {
+    NumFunctionsWithReadCache++;
+  }
+  if (nextPropertyWriteCacheIndex_ > 0) {
+    NumFunctionsWithWriteCache++;
+  }
 }
 
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
@@ -2436,8 +2449,6 @@ uint8_t HBCISel::acquirePrivateNameCacheIndex(
     Value *privateName,
     PrivateNameOperationKind k) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
-  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
-  uint8_t dummyZero = 0;
   Value *cacheKey = privateName;
   // Ideally we want to be returning the same cache index (when reuse is true)
   // for usages of the same private name. Most usages of private names will be
@@ -2448,21 +2459,25 @@ uint8_t HBCISel::acquirePrivateNameCacheIndex(
   if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(privateName)) {
     cacheKey = LFI->getLoadVariable();
   }
-  auto &idx = reuse ? privateNameCacheIdx_[{cacheKey, (int)k}] : dummyZero;
-  if (idx) {
-    ++NumCachedNodes;
-    return idx;
+  if (reuse) {
+    auto iter = privateNameCacheIdx_.find({cacheKey, (int)k});
+    if (iter != privateNameCacheIdx_.end()) {
+      ++NumCachedNodes;
+      return iter->second;
+    }
   }
 
-  if (LLVM_UNLIKELY(
-          lastPrivateNameCacheIndex_ == std::numeric_limits<uint8_t>::max())) {
+  if (LLVM_UNLIKELY(nextPrivateNameCacheIndex_ == PROPERTY_CACHING_DISABLED)) {
     ++NumUncachedNodes;
     return PROPERTY_CACHING_DISABLED;
   }
 
   ++NumCachedNodes;
   ++NumCacheSlots;
-  idx = ++lastPrivateNameCacheIndex_;
+  uint8_t idx = nextPrivateNameCacheIndex_++;
+  if (reuse) {
+    privateNameCacheIdx_[{cacheKey, (int)k}] = idx;
+  }
   return idx;
 }
 
@@ -2470,39 +2485,40 @@ uint8_t HBCISel::acquirePropertyReadCacheIndex(
     Identifier prop,
     PropCacheKind k) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
-  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
-  uint8_t dummyZero = 0;
-  auto &idx = reuse ? propertyReadCacheIndexForId_[{prop, (int)k}] : dummyZero;
-  if (idx) {
-    ++NumCachedNodes;
-    return idx;
+  if (reuse) {
+    auto iter = propertyReadCacheIndexForId_.find({prop, (int)k});
+    if (iter != propertyReadCacheIndexForId_.end()) {
+      ++NumCachedNodes;
+      return iter->second;
+    }
   }
 
-  if (LLVM_UNLIKELY(
-          lastPropertyReadCacheIndex_ == std::numeric_limits<uint8_t>::max())) {
+  if (LLVM_UNLIKELY(nextPropertyReadCacheIndex_ == PROPERTY_CACHING_DISABLED)) {
     ++NumUncachedNodes;
     return PROPERTY_CACHING_DISABLED;
   }
 
   ++NumCachedNodes;
   ++NumCacheSlots;
-  idx = ++lastPropertyReadCacheIndex_;
+  int8_t idx = nextPropertyReadCacheIndex_++;
+  if (reuse) {
+    propertyReadCacheIndexForId_[{prop, (int)k}] = idx;
+  }
   return idx;
 }
 
 uint8_t HBCISel::acquirePropertyWriteCacheIndex(Identifier prop) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
-  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
-  uint8_t dummyZero = 0;
-  auto &idx = reuse ? propertyWriteCacheIndexForId_[prop] : dummyZero;
-  if (idx) {
-    ++NumCachedNodes;
-    return idx;
+  if (reuse) {
+    auto iter = propertyWriteCacheIndexForId_.find(prop);
+    if (iter != propertyWriteCacheIndexForId_.end()) {
+      ++NumCachedNodes;
+      return iter->second;
+    }
   }
 
   if (LLVM_UNLIKELY(
-          lastPropertyWriteCacheIndex_ ==
-          std::numeric_limits<uint8_t>::max())) {
+          nextPropertyWriteCacheIndex_ == PROPERTY_CACHING_DISABLED)) {
     ++NumUncachedNodes;
     return PROPERTY_CACHING_DISABLED;
   }
@@ -2510,7 +2526,10 @@ uint8_t HBCISel::acquirePropertyWriteCacheIndex(Identifier prop) {
   ++NumCachedNodes;
   ++NumCacheSlots;
   ++NumPutCacheSlots;
-  idx = ++lastPropertyWriteCacheIndex_;
+  uint8_t idx = nextPropertyWriteCacheIndex_++;
+  if (reuse) {
+    propertyWriteCacheIndexForId_[prop] = idx;
+  }
   return idx;
 }
 

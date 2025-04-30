@@ -41,13 +41,13 @@ y = x;
 // STRICT-NEXT:    DeclareGlobalVar  "x"
 // STRICT-NEXT:    GetGlobalObject   r3
 // STRICT-NEXT:    LoadConstUInt8    r0, 5
-// STRICT-NEXT:    PutByIdStrict     r3, r0, 1, "x"
-// STRICT-NEXT:    TryGetById        r4, r3, 1, "foo"
-// STRICT-NEXT:    GetByIdShort      r2, r3, 2, "x"
+// STRICT-NEXT:    PutByIdStrict     r3, r0, 0, "x"
+// STRICT-NEXT:    TryGetById        r4, r3, 0, "foo"
+// STRICT-NEXT:    GetByIdShort      r2, r3, 1, "x"
 // STRICT-NEXT:    LoadConstUndefined r1
 // STRICT-NEXT:    Call2             r2, r4, r1, r2
-// STRICT-NEXT:    GetByIdShort      r2, r3, 2, "x"
-// STRICT-NEXT:    TryPutByIdStrict  r3, r2, 2, "y"
+// STRICT-NEXT:    GetByIdShort      r2, r3, 1, "x"
+// STRICT-NEXT:    TryPutByIdStrict  r3, r2, 1, "y"
 // STRICT-NEXT:    Ret               r2
 
 // STRICT:Debug filename table:
@@ -94,13 +94,13 @@ y = x;
 // NONSTRICT-NEXT:    DeclareGlobalVar  "x"
 // NONSTRICT-NEXT:    GetGlobalObject   r3
 // NONSTRICT-NEXT:    LoadConstUInt8    r0, 5
-// NONSTRICT-NEXT:    PutByIdLoose      r3, r0, 1, "x"
-// NONSTRICT-NEXT:    TryGetById        r4, r3, 1, "foo"
-// NONSTRICT-NEXT:    GetByIdShort      r2, r3, 2, "x"
+// NONSTRICT-NEXT:    PutByIdLoose      r3, r0, 0, "x"
+// NONSTRICT-NEXT:    TryGetById        r4, r3, 0, "foo"
+// NONSTRICT-NEXT:    GetByIdShort      r2, r3, 1, "x"
 // NONSTRICT-NEXT:    LoadConstUndefined r1
 // NONSTRICT-NEXT:    Call2             r2, r4, r1, r2
-// NONSTRICT-NEXT:    GetByIdShort      r2, r3, 2, "x"
-// NONSTRICT-NEXT:    PutByIdLoose      r3, r2, 2, "y"
+// NONSTRICT-NEXT:    GetByIdShort      r2, r3, 1, "x"
+// NONSTRICT-NEXT:    PutByIdLoose      r3, r2, 1, "y"
 // NONSTRICT-NEXT:    Ret               r2
 
 // NONSTRICT:Debug filename table:

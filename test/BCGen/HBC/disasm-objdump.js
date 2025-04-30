@@ -13,7 +13,7 @@ print("hello");
 //CHECK-LABEL:Disassembly of section .text:
 //CHECK-LABEL:00000000000000b4 <_0>:
 //CHECK-NEXT:000000b4:{{.*}}GetGlobalObject {{.*}}%r1
-//CHECK-NEXT:000000b6:{{.*}}TryGetById {{.*}}%r2, %r1, $0x1, $0x02
+//CHECK-NEXT:000000b6:{{.*}}TryGetById {{.*}}%r2, %r1, $0x0, $0x02
 //CHECK-NEXT:000000bc:{{.*}}LoadConstString {{.*}}%r1, $0x01
 //CHECK-NEXT:000000c0:{{.*}}LoadConstUndefined {{.*}}%r0
 //CHECK-NEXT:000000c2:{{.*}}Call2 {{.*}}%r1, %r2, %r0, %r1

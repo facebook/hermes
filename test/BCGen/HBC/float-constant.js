@@ -45,13 +45,13 @@ var z = 0.0;
 // CHECK-NEXT:    DeclareGlobalVar  "z"
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstDouble   r0, 3.14
-// CHECK-NEXT:    PutByIdLoose      r2, r0, 1, "w"
+// CHECK-NEXT:    PutByIdLoose      r2, r0, 0, "w"
 // CHECK-NEXT:    LoadConstDouble   r0, -0.00056
-// CHECK-NEXT:    PutByIdLoose      r2, r0, 2, "x"
+// CHECK-NEXT:    PutByIdLoose      r2, r0, 1, "x"
 // CHECK-NEXT:    LoadConstDouble   r0, 12345670.89
-// CHECK-NEXT:    PutByIdLoose      r2, r0, 3, "y"
+// CHECK-NEXT:    PutByIdLoose      r2, r0, 2, "y"
 // CHECK-NEXT:    LoadConstZero     r0
-// CHECK-NEXT:    PutByIdLoose      r2, r0, 4, "z"
+// CHECK-NEXT:    PutByIdLoose      r2, r0, 3, "z"
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Ret               r1
 

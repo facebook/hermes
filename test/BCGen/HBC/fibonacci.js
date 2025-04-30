@@ -41,7 +41,7 @@ function fibonacci(num) {
 // CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 0<Reg8>
 // CHECK-NEXT:[@ 9] CreateClosure 1<Reg8>, 0<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 14] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 14] PutByIdLoose 2<Reg8>, 1<Reg8>, 0<UInt8>, 1<UInt16>
 // CHECK-NEXT:[@ 20] Ret 0<Reg8>
 
 // CHECK:Function<fibonacci>(2 params, 15 registers, 2 numbers, 1 non-pointers):
@@ -50,11 +50,11 @@ function fibonacci(num) {
 // CHECK-NEXT:[@ 3] LoadConstUInt8 1<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 6] JLessEqual 45<Addr8>, 5<Reg8>, 1<Reg8>
 // CHECK-NEXT:[@ 10] GetGlobalObject 3<Reg8>
-// CHECK-NEXT:[@ 12] GetByIdShort 4<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 12] GetByIdShort 4<Reg8>, 3<Reg8>, 0<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 17] Sub 0<Reg8>, 5<Reg8>, 1<Reg8>
 // CHECK-NEXT:[@ 21] LoadConstUndefined 2<Reg8>
 // CHECK-NEXT:[@ 23] Call2 4<Reg8>, 4<Reg8>, 2<Reg8>, 0<Reg8>
-// CHECK-NEXT:[@ 28] GetByIdShort 3<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 28] GetByIdShort 3<Reg8>, 3<Reg8>, 0<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 33] LoadConstUInt8 0<Reg8>, 2<UInt8>
 // CHECK-NEXT:[@ 36] Sub 0<Reg8>, 5<Reg8>, 0<Reg8>
 // CHECK-NEXT:[@ 40] Call2 3<Reg8>, 3<Reg8>, 2<Reg8>, 0<Reg8>

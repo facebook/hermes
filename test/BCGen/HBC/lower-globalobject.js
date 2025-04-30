@@ -62,13 +62,13 @@ function foo() {
 // CHKBC-NEXT:    GetGlobalObject   r2
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<foo>
-// CHKBC-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 0, "foo"
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 numbers, 0 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
-// CHKBC-NEXT:    GetByIdShort      r0, r0, 1, "x"
+// CHKBC-NEXT:    GetByIdShort      r0, r0, 0, "x"
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Debug filename table:

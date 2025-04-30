@@ -58,7 +58,7 @@ function foo() {
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "foo"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(1 params, 12 registers, 1 numbers, 0 non-pointers):
@@ -67,8 +67,8 @@ function foo() {
 // CHECK-NEXT:    LoadConstInt      r0, 1234
 // CHECK-NEXT:    StoreNPToEnvironment r1, 0, r0
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    TryGetById        r2, r2, 1, "Object"
-// CHECK-NEXT:    CreateThisForNew  r3, r2, 2
+// CHECK-NEXT:    TryGetById        r2, r2, 0, "Object"
+// CHECK-NEXT:    CreateThisForNew  r3, r2, 1
 // CHECK-NEXT:    Mov               r4, r3
 // CHECK-NEXT:    Construct         r2, r2, 1
 // CHECK-NEXT:    SelectObject      r2, r3, r2
@@ -86,11 +86,11 @@ function foo() {
 // CHECK-NEXT:    AddN              r0, r1, r0
 // CHECK-NEXT:    StoreNPToEnvironment r3, 0, r0
 // CHECK-NEXT:    GetGlobalObject   r4
-// CHECK-NEXT:    TryGetById        r6, r4, 1, "print"
+// CHECK-NEXT:    TryGetById        r6, r4, 0, "print"
 // CHECK-NEXT:    LoadFromEnvironment r5, r3, 1
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Call2             r5, r6, r2, r5
-// CHECK-NEXT:    TryGetById        r4, r4, 1, "print"
+// CHECK-NEXT:    TryGetById        r4, r4, 0, "print"
 // CHECK-NEXT:    LoadFromEnvironment r3, r3, 2
 // CHECK-NEXT:    Call2             r3, r4, r2, r3
 // CHECK-NEXT:    Ret               r2

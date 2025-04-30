@@ -141,15 +141,15 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    GetGlobalObject   r2
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo1>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "foo1"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 0, "foo1"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo2>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "foo2"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "foo2"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo3>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "foo3"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "foo3"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo4>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "foo4"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "foo4"
 // BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo5>
-// BCGEN-NEXT:    PutByIdLoose      r2, r1, 5, "foo5"
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "foo5"
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo1>(2 params, 10 registers, 0 numbers, 1 non-pointers):

@@ -34,9 +34,9 @@ Math['function-name-stripped'] = 123;
 // CHECK:Function<function-name-stripped>(1 params, 2 registers, 1 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    TryGetById        r1, r1, 1, "Math"
+// CHECK-NEXT:    TryGetById        r1, r1, 0, "Math"
 // CHECK-NEXT:    LoadConstUInt8    r0, 123
-// CHECK-NEXT:    PutByIdStrict     r1, r0, 1, "function-name-str"...
+// CHECK-NEXT:    PutByIdStrict     r1, r0, 0, "function-name-str"...
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Debug filename table:

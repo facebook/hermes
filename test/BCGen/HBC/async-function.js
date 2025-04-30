@@ -82,15 +82,15 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    DeclareGlobalVar  "simpleAsyncFE"
 // CHECK-NEXT:    CreateClosure     r1, r2, NCFunction<simpleReturn>
 // CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    PutByIdLoose      r3, r1, 1, "simpleReturn"
+// CHECK-NEXT:    PutByIdLoose      r3, r1, 0, "simpleReturn"
 // CHECK-NEXT:    CreateClosure     r1, r2, NCFunction<simpleAwait>
 // CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    PutByIdLoose      r3, r1, 2, "simpleAwait"
+// CHECK-NEXT:    PutByIdLoose      r3, r1, 1, "simpleAwait"
 // CHECK-NEXT:    LoadConstUndefined r3
 // CHECK-NEXT:    Mov               r1, r3
 // CHECK-NEXT:    CreateClosure     r2, r2, NCFunction<simpleAsyncFE>
 // CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    PutByIdLoose      r3, r2, 3, "simpleAsyncFE"
+// CHECK-NEXT:    PutByIdLoose      r3, r2, 2, "simpleAsyncFE"
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):

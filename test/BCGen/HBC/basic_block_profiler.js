@@ -53,13 +53,13 @@ try {
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstFalse    r1
-// CHECK-NEXT:    PutByIdStrict     r2, r1, 1, "condition"
+// CHECK-NEXT:    PutByIdStrict     r2, r1, 0, "condition"
 // CHECK-NEXT:L8:
 // CHECK-NEXT:    ProfilePoint      6
 // CHECK-NEXT:L6:
 // CHECK-NEXT:    ProfilePoint      4
-// CHECK-NEXT:    TryGetById        r4, r2, 1, "print"
-// CHECK-NEXT:    GetByIdShort      r5, r2, 2, "condition"
+// CHECK-NEXT:    TryGetById        r4, r2, 0, "print"
+// CHECK-NEXT:    GetByIdShort      r5, r2, 1, "condition"
 // CHECK-NEXT:    LoadConstString   r1, "no"
 // CHECK-NEXT:    JmpFalse          L1, r5
 // CHECK-NEXT:    ProfilePoint      3
@@ -69,22 +69,22 @@ try {
 // CHECK-NEXT:    Call2             r0, r4, r3, r1
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    ProfilePoint      1
-// CHECK-NEXT:    TryGetById        r4, r2, 1, "print"
+// CHECK-NEXT:    TryGetById        r4, r2, 0, "print"
 // CHECK-NEXT:    LoadConstString   r1, "rethrowing"
 // CHECK-NEXT:    Call2             r0, r4, r3, r1
 // CHECK-NEXT:    Jmp               L3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    Catch             r1
 // CHECK-NEXT:    ProfilePoint      5
-// CHECK-NEXT:    TryGetById        r5, r2, 1, "print"
+// CHECK-NEXT:    TryGetById        r5, r2, 0, "print"
 // CHECK-NEXT:    LoadConstString   r4, "rethrowing"
 // CHECK-NEXT:    Call2             r0, r5, r3, r4
 // CHECK-NEXT:    Throw             r1
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    Catch             r1
 // CHECK-NEXT:    ProfilePoint      8
-// CHECK-NEXT:    TryGetById        r2, r2, 1, "print"
-// CHECK-NEXT:    GetByIdShort      r1, r1, 3, "stack"
+// CHECK-NEXT:    TryGetById        r2, r2, 0, "print"
+// CHECK-NEXT:    GetByIdShort      r1, r1, 2, "stack"
 // CHECK-NEXT:    Call2             r0, r2, r3, r1
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    ProfilePoint      7

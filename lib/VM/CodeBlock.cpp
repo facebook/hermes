@@ -128,18 +128,24 @@ std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
         {bytecode, header.getBytecodeSizeInBytes()}, header.getFrameSize());
 #endif
 
-  // Compute size needed for caching from the highest accessed indices.
-  // If the highest access index is 0, that function does not use this cache at
-  // all so there is no reason to allocate it. If the function does access the
-  // cache we need to allocate an extra slot for the no-cache indicator.
-  auto sizeComputer = [](uint8_t highest) -> uint32_t {
-    return highest == 0 ? 0 : highest + 1;
+  // Compute size needed for caches.  The bytecode instructions have
+  // one byte for cache indices.  If the number of cache entries
+  // needed in a function reaches 256, we reserve index 255 to mean
+  // "overflow", don't cache -- the cache size won't grow beyond 256.
+  // But we only have one byte in the function header for the size.
+  // So we encode 256 as 255: a size of 255 could mean that there are
+  // actually 255 elements, or that there are 256.  Here we make sure
+  // that the cache is big enough in that case, by conservatively
+  // adding one element when the size is 255.
+  auto sizeComputer = [](uint8_t size) -> uint32_t {
+    static_assert(hbc::PROPERTY_CACHING_DISABLED == 255);
+    return size == hbc::PROPERTY_CACHING_DISABLED ? 256 : size;
   };
 
-  uint32_t readCacheSize = sizeComputer(header.getHighestReadCacheIndex());
-  uint32_t writeCacheSize = sizeComputer(header.getHighestWriteCacheIndex());
+  uint32_t readCacheSize = sizeComputer(header.getReadCacheSize());
+  uint32_t writeCacheSize = sizeComputer(header.getWriteCacheSize());
   uint32_t privateNameCacheSize =
-      sizeComputer(header.getHighestPrivateNameCacheIndex());
+      sizeComputer(header.getPrivateNameCacheSize());
 
   bool isCodeBlockLazy = !bytecode;
   if (isCodeBlockLazy) {

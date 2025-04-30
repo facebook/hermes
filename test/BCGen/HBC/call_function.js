@@ -39,8 +39,8 @@ foo(0,0,1);
 // CHECK-NEXT:    GetGlobalObject   r3
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    CreateClosure     r4, r2, Function<foo>
-// CHECK-NEXT:    PutByIdStrict     r3, r4, 1, "foo"
-// CHECK-NEXT:    GetByIdShort      r3, r3, 1, "foo"
+// CHECK-NEXT:    PutByIdStrict     r3, r4, 0, "foo"
+// CHECK-NEXT:    GetByIdShort      r3, r3, 0, "foo"
 // CHECK-NEXT:    LoadConstUInt8    r1, 1
 // CHECK-NEXT:    LoadConstZero     r0
 // CHECK-NEXT:    Call4             r3, r3, r2, r0, r0, r1

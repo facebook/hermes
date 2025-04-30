@@ -40,7 +40,7 @@ function foo(fn, x) {
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<foo>
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "foo"
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Mov               r1, r2
 // CHECK-NEXT:    Ret               r1

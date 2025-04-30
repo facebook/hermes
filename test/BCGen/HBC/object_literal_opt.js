@@ -73,7 +73,7 @@ function foo(p) {
 // CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 0<Reg8>
 // CHECK-NEXT:[@ 9] CreateClosure 1<Reg8>, 0<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 14] PutByIdLoose 2<Reg8>, 1<Reg8>, 1<UInt8>, 5<UInt16>
+// CHECK-NEXT:[@ 14] PutByIdLoose 2<Reg8>, 1<Reg8>, 0<UInt8>, 5<UInt16>
 // CHECK-NEXT:[@ 20] CreateClosure 1<Reg8>, 0<Reg8>, 2<UInt16>
 // CHECK-NEXT:[@ 25] Call1 1<Reg8>, 1<Reg8>, 0<Reg8>
 // CHECK-NEXT:[@ 29] Ret 1<Reg8>

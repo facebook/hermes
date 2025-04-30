@@ -73,7 +73,7 @@ function require(modIdx) {
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<require>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "require"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "require"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<require>(2 params, 18 registers, 1 numbers, 1 non-pointers):
@@ -87,9 +87,9 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r1
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r8, r2, 1, "require"
-// CHECK-NEXT:    TryGetById        r7, r2, 2, "mod"
-// CHECK-NEXT:    TryGetById        r2, r2, 3, "exports"
+// CHECK-NEXT:    GetByIdShort      r8, r2, 0, "require"
+// CHECK-NEXT:    TryGetById        r7, r2, 1, "mod"
+// CHECK-NEXT:    TryGetById        r2, r2, 2, "exports"
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    CreateClosure     r3, r1, Function<modFact1>
 // CHECK-NEXT:    LoadConstUndefined r10
@@ -99,9 +99,9 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r2
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r8, r2, 1, "require"
-// CHECK-NEXT:    TryGetById        r7, r2, 2, "mod"
-// CHECK-NEXT:    TryGetById        r2, r2, 3, "exports"
+// CHECK-NEXT:    GetByIdShort      r8, r2, 0, "require"
+// CHECK-NEXT:    TryGetById        r7, r2, 1, "mod"
+// CHECK-NEXT:    TryGetById        r2, r2, 2, "exports"
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    CreateClosure     r3, r1, Function<modFact0>
 // CHECK-NEXT:    LoadConstUndefined r10
@@ -115,7 +115,7 @@ function require(modIdx) {
 // CHECK-NEXT:    LoadParam         r1, 4
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r2, r0, Function<bar>
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "bar"
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 0, "bar"
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<modFact1>(5 params, 13 registers, 0 numbers, 1 non-pointers):
@@ -124,9 +124,9 @@ function require(modIdx) {
 // CHECK-NEXT:    LoadConstUndefined r5
 // CHECK-NEXT:    LoadParam         r2, 2
 // CHECK-NEXT:    CallRequire       r3, r2, 0
-// CHECK-NEXT:    GetByIdShort      r2, r3, 1, "bar"
+// CHECK-NEXT:    GetByIdShort      r2, r3, 0, "bar"
 // CHECK-NEXT:    Call1             r2, r2, r3
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "x"
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 0, "x"
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<bar>(1 params, 1 registers, 1 numbers, 0 non-pointers):

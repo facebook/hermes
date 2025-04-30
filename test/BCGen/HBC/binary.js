@@ -64,18 +64,18 @@ function foo() { return; }
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<binary>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "binary"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "binary"
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "foo"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<binary>(1 params, 13 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r3, r2, 1, "foo"
+// CHECK-NEXT:    GetByIdShort      r3, r2, 0, "foo"
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Call1             r3, r3, r1
-// CHECK-NEXT:    GetByIdShort      r2, r2, 1, "foo"
+// CHECK-NEXT:    GetByIdShort      r2, r2, 0, "foo"
 // CHECK-NEXT:    Call1             r2, r2, r1
 // CHECK-NEXT:    Eq                r1, r3, r2
 // CHECK-NEXT:    Neq               r1, r3, r2
