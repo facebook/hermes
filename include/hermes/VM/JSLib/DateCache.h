@@ -101,6 +101,10 @@ class LocalTimeOffsetCache {
     needsToReset_ = false;
   }
 
+  void needsToReset() {
+    needsToReset_ = true;
+  }
+
   /// Compute local timezone offset (DST included).
   /// \param timeMs time in milliseconds.
   /// \param timeType whether \p timeMs is UTC or local time.
