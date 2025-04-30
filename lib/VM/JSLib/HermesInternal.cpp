@@ -385,7 +385,7 @@ hermesInternalUseEngineQueue(void *, Runtime &runtime, NativeArgs args) {
 }
 
 CallResult<HermesValue> hermesInternalResetTimezoneCache(void *, Runtime &runtime, NativeArgs args) {
-  runtime.getJSLibStorage()->localTimeOffsetCache.needsToReset();
+  runtime.getJSLibStorage()->localTimeOffsetCache.reset();
   return HermesValue::encodeUndefinedValue();
 }
 
