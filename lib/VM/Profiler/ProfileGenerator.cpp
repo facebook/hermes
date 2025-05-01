@@ -83,9 +83,9 @@ static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
       RuntimeModule *module = frame.jsFrame.module;
       hbc::BCProvider *bcProvider = module->getBytecode();
 
+      uint32_t scriptId = module->getScriptID();
       std::string functionName =
           getJSFunctionName(bcProvider, frame.jsFrame.functionId);
-      std::optional<uint32_t> scriptId = std::nullopt;
       std::optional<std::string> url = std::nullopt;
       std::optional<uint32_t> lineNumber = std::nullopt;
       std::optional<uint32_t> columnNumber = std::nullopt;
@@ -94,8 +94,8 @@ static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
           bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
       if (sourceLocOpt.hasValue()) {
         // Bundle has debug info.
-        scriptId = sourceLocOpt.getValue().filenameId;
-        url = bcProvider->getDebugInfo()->getUTF8FilenameByID(scriptId.value());
+        auto filenameId = sourceLocOpt.getValue().filenameId;
+        url = bcProvider->getDebugInfo()->getUTF8FilenameByID(filenameId);
 
         // hbc::DebugSourceLocation is 1-based, but initializes line and column
         // fields with 0 by default.
