@@ -20,6 +20,31 @@ namespace facebook {
 namespace hermes {
 namespace sampling_profiler {
 
+/// Helper-class that represents a pair of iterators, which form a range to
+/// iterate over.
+template <typename Iterator>
+class Range {
+ public:
+  Range(Iterator begin, Iterator end) : begin_(begin), end_(end) {}
+
+  Iterator begin() const {
+    return begin_;
+  }
+  Iterator end() const {
+    return end_;
+  }
+
+ private:
+  Iterator begin_;
+  Iterator end_;
+};
+
+/// Helper for creating Range and deducing the type based on input.
+template <typename Iterator>
+Range<Iterator> makeRange(Iterator begin, Iterator end) {
+  return Range<Iterator>(begin, end);
+}
+
 /// JavaScript function frame. Guaranteed to have function name, potentially
 /// an empty string, if function is anonymous or if function names were filtered
 /// out during bytecode compilation. Could have scriptId, url, line and column
@@ -156,6 +181,9 @@ using ProfileSampleCallStackFrame = std::variant<
 /// time.
 class HERMES_EXPORT ProfileSample {
  public:
+  using CallStackFrameIterator =
+      std::vector<ProfileSampleCallStackFrame>::const_iterator;
+
   ProfileSample(
       uint64_t timestamp,
       uint64_t threadId,
@@ -175,10 +203,15 @@ class HERMES_EXPORT ProfileSample {
     return threadId_;
   }
 
-  /// \return a snapshot of the call stack. The first element of the vector is
-  /// the lowest frame in the stack.
-  const std::vector<ProfileSampleCallStackFrame> &getCallStack() const {
-    return callStack_;
+  /// \return a pair of iterators that can be used for iterating over call stack
+  /// frames, the order will be from callee to caller.
+  Range<CallStackFrameIterator> getCallStackFramesRange() const {
+    return makeRange(callStack_.begin(), callStack_.end());
+  }
+
+  /// \return the number of frames inside the call stack of this sample.
+  size_t getCallStackFramesCount() const {
+    return callStack_.size();
   }
 
  private:
@@ -194,12 +227,20 @@ class HERMES_EXPORT ProfileSample {
 /// Contains relevant information about the sampled trace from start to finish.
 class HERMES_EXPORT Profile {
  public:
+  using SampleIterator = std::vector<ProfileSample>::const_iterator;
+
   explicit Profile(std::vector<ProfileSample> samples)
       : samples_(std::move(samples)) {}
 
-  /// \return list of recorded samples, should be chronologically sorted.
-  const std::vector<ProfileSample> &getSamples() const {
-    return samples_;
+  /// \return a pair of iterators that can be used for iterating over recorded
+  /// samples, will happen in chronological order.
+  Range<SampleIterator> getSamplesRange() const {
+    return makeRange(samples_.begin(), samples_.end());
+  }
+
+  /// \return the number of recorded samples.
+  size_t getSamplesCount() const {
+    return samples_.size();
   }
 
  private:
