@@ -13,49 +13,26 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace facebook {
 namespace hermes {
 namespace sampling_profiler {
 
-/// Represents a single frame inside the captured sample stack.
-/// Base struct for different kinds of frames.
-struct HERMES_EXPORT ProfileSampleCallStackFrame {
-  /// Represents type of frame inside of recorded call stack.
-  enum class Kind {
-    JSFunction, /// JavaScript function frame.
-    NativeFunction, /// Native built-in functions, like arrayPrototypeMap.
-    HostFunction, /// Native functions, defined by Host, a.k.a. Host functions.
-    Suspend, /// Frame that suspends the execution of the VM: GC or Debugger.
-  };
-
+/// JavaScript function frame. Guaranteed to have function name, potentially
+/// an empty string, if function is anonymous or if function names were filtered
+/// out during bytecode compilation. Could have scriptId, url, line and column
+/// numbers, if debug source location is available.
+class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
  public:
-  explicit ProfileSampleCallStackFrame(const Kind kind) : kind_(kind) {}
-
-  /// \return type of the call stack frame.
-  Kind getKind() const {
-    return kind_;
-  }
-
- private:
-  Kind kind_;
-};
-
-/// Extends ProfileSampleCallStackFrame with an information about JavaScript
-/// function frame: function name, and possibly scriptId, url, line and column
-/// numbers.
-struct HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame
-    : public ProfileSampleCallStackFrame {
   explicit ProfileSampleCallStackJSFunctionFrame(
       const std::string &functionName,
       const std::optional<uint32_t> &scriptId = std::nullopt,
       const std::optional<std::string> &url = std::nullopt,
       const std::optional<uint32_t> &lineNumber = std::nullopt,
       const std::optional<uint32_t> &columnNumber = std::nullopt)
-      : ProfileSampleCallStackFrame(
-            ProfileSampleCallStackFrame::Kind::JSFunction),
-        functionName_(functionName),
+      : functionName_(functionName),
         scriptId_(scriptId),
         url_(url),
         lineNumber_(lineNumber),
@@ -110,15 +87,13 @@ struct HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame
   std::optional<uint32_t> columnNumber_;
 };
 
-/// Extends ProfileSampleCallStackFrame with a function name.
-struct HERMES_EXPORT ProfileSampleCallStackNativeFunctionFrame
-    : public ProfileSampleCallStackFrame {
+/// Native (Hermes) function frame. Example: implementation of a built-in
+/// Array.prototype.map.
+class HERMES_EXPORT ProfileSampleCallStackNativeFunctionFrame {
  public:
   explicit ProfileSampleCallStackNativeFunctionFrame(
       const std::string &functionName)
-      : ProfileSampleCallStackFrame(
-            ProfileSampleCallStackFrame::Kind::NativeFunction),
-        functionName_(functionName) {}
+      : functionName_(functionName) {}
 
   /// \return name of the function that represents call frame.
   const std::string &getFunctionName() const {
@@ -129,15 +104,13 @@ struct HERMES_EXPORT ProfileSampleCallStackNativeFunctionFrame
   std::string functionName_;
 };
 
-/// Extends ProfileSampleCallStackFrame with a function name.
-struct HERMES_EXPORT ProfileSampleCallStackHostFunctionFrame
-    : public ProfileSampleCallStackFrame {
+/// Host function frame. Native functions defined by the integrator. Example:
+/// for React Native, this could be performance.measure or console.log.
+class HERMES_EXPORT ProfileSampleCallStackHostFunctionFrame {
  public:
   explicit ProfileSampleCallStackHostFunctionFrame(
       const std::string &functionName)
-      : ProfileSampleCallStackFrame(
-            ProfileSampleCallStackFrame::Kind::HostFunction),
-        functionName_(functionName) {}
+      : functionName_(functionName) {}
 
   /// \return name of the function that represents call frame.
   const std::string &getFunctionName() const {
@@ -148,9 +121,10 @@ struct HERMES_EXPORT ProfileSampleCallStackHostFunctionFrame
   std::string functionName_;
 };
 
-/// Extends ProfileSampleCallStackFrame with a suspend frame information.
-struct HERMES_EXPORT ProfileSampleCallStackSuspendFrame
-    : public ProfileSampleCallStackFrame {
+/// Frame that suspends the execution of the VM: could be GC, Debugger or
+/// combination of them.
+class HERMES_EXPORT ProfileSampleCallStackSuspendFrame {
+ public:
   /// Subtype of the Suspend frame.
   enum class SuspendFrameKind {
     GC, /// Frame that suspends the execution of the VM due to GC.
@@ -158,11 +132,9 @@ struct HERMES_EXPORT ProfileSampleCallStackSuspendFrame
     Multiple, /// Multiple suspensions have occurred.
   };
 
- public:
   explicit ProfileSampleCallStackSuspendFrame(
       const SuspendFrameKind suspendFrameKind)
-      : ProfileSampleCallStackFrame(ProfileSampleCallStackFrame::Kind::Suspend),
-        suspendFrameKind_(suspendFrameKind) {}
+      : suspendFrameKind_(suspendFrameKind) {}
 
   /// \return subtype of the suspend frame.
   SuspendFrameKind getSuspendFrameKind() const {
@@ -173,14 +145,21 @@ struct HERMES_EXPORT ProfileSampleCallStackSuspendFrame
   SuspendFrameKind suspendFrameKind_;
 };
 
+/// Variant of all possible call stack frames options.
+using ProfileSampleCallStackFrame = std::variant<
+    ProfileSampleCallStackSuspendFrame,
+    ProfileSampleCallStackNativeFunctionFrame,
+    ProfileSampleCallStackHostFunctionFrame,
+    ProfileSampleCallStackJSFunctionFrame>;
+
 /// A pair of a timestamp and a snapshot of the call stack at this point in
 /// time.
-struct HERMES_EXPORT ProfileSample {
+class HERMES_EXPORT ProfileSample {
  public:
   ProfileSample(
       uint64_t timestamp,
       uint64_t threadId,
-      std::vector<ProfileSampleCallStackFrame *> callStack)
+      std::vector<ProfileSampleCallStackFrame> callStack)
       : timestamp_(timestamp),
         threadId_(threadId),
         callStack_(std::move(callStack)) {}
@@ -198,7 +177,7 @@ struct HERMES_EXPORT ProfileSample {
 
   /// \return a snapshot of the call stack. The first element of the vector is
   /// the lowest frame in the stack.
-  const std::vector<ProfileSampleCallStackFrame *> &getCallStack() const {
+  const std::vector<ProfileSampleCallStackFrame> &getCallStack() const {
     return callStack_;
   }
 
@@ -209,11 +188,11 @@ struct HERMES_EXPORT ProfileSample {
   uint64_t threadId_;
   /// Snapshot of the call stack. The first element of the vector is
   /// the lowest frame in the stack.
-  std::vector<ProfileSampleCallStackFrame *> callStack_;
+  std::vector<ProfileSampleCallStackFrame> callStack_;
 };
 
 /// Contains relevant information about the sampled trace from start to finish.
-struct HERMES_EXPORT Profile {
+class HERMES_EXPORT Profile {
  public:
   explicit Profile(std::vector<ProfileSample> samples)
       : samples_(std::move(samples)) {}

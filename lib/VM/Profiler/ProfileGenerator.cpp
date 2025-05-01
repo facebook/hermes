@@ -63,25 +63,21 @@ formatSuspendFrameKind(SamplingProfiler::SuspendFrameInfo::Kind kind) {
 }
 
 /// Format VM-level frame to public interface.
-static fhsp::ProfileSampleCallStackFrame *formatCallStackFrame(
+static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
     const SamplingProfiler::StackFrame &frame,
     const SamplingProfiler &samplingProfiler) {
   switch (frame.kind) {
-    case SamplingProfiler::StackFrame::FrameKind::SuspendFrame: {
-      return new fhsp::ProfileSampleCallStackSuspendFrame{
-          formatSuspendFrameKind(frame.suspendFrame.kind),
-      };
-    }
+    case SamplingProfiler::StackFrame::FrameKind::SuspendFrame:
+      return fhsp::ProfileSampleCallStackSuspendFrame(
+          formatSuspendFrameKind(frame.suspendFrame.kind));
 
     case SamplingProfiler::StackFrame::FrameKind::NativeFunction:
-      return new fhsp::ProfileSampleCallStackNativeFunctionFrame{
-          samplingProfiler.getNativeFunctionName(frame),
-      };
+      return fhsp::ProfileSampleCallStackNativeFunctionFrame(
+          samplingProfiler.getNativeFunctionName(frame));
 
     case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
-      return new fhsp::ProfileSampleCallStackHostFunctionFrame{
-          samplingProfiler.getNativeFunctionName(frame),
-      };
+      return fhsp::ProfileSampleCallStackHostFunctionFrame(
+          samplingProfiler.getNativeFunctionName(frame));
 
     case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
       RuntimeModule *module = frame.jsFrame.module;
@@ -113,13 +109,8 @@ static fhsp::ProfileSampleCallStackFrame *formatCallStackFrame(
         }
       }
 
-      return new fhsp::ProfileSampleCallStackJSFunctionFrame{
-          functionName,
-          scriptId,
-          url,
-          lineNumber,
-          columnNumber,
-      };
+      return fhsp::ProfileSampleCallStackJSFunctionFrame(
+          functionName, scriptId, url, lineNumber, columnNumber);
     }
 
     default:
@@ -137,16 +128,16 @@ static fhsp::ProfileSampleCallStackFrame *formatCallStackFrame(
   for (const SamplingProfiler::StackTrace &sampledStack : sampledStacks) {
     uint64_t timestamp = convertTimestampToMicroseconds(sampledStack.timeStamp);
 
-    std::vector<fhsp::ProfileSampleCallStackFrame *> callFrames;
+    std::vector<fhsp::ProfileSampleCallStackFrame> callFrames;
     callFrames.reserve(sampledStack.stack.size());
     for (const SamplingProfiler::StackFrame &frame : sampledStack.stack) {
       callFrames.emplace_back(formatCallStackFrame(frame, sp));
     }
 
-    samples.emplace_back(timestamp, sampledStack.tid, callFrames);
+    samples.emplace_back(timestamp, sampledStack.tid, std::move(callFrames));
   }
 
-  return fhsp::Profile{samples};
+  return fhsp::Profile(std::move(samples));
 }
 
 } // namespace vm
