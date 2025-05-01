@@ -192,6 +192,13 @@ class SmallHermesValueAdaptor : protected HermesValue {
   static constexpr SmallHermesValueAdaptor encodeEmptyValue() {
     return SmallHermesValueAdaptor{HermesValue::encodeEmptyValue()};
   }
+
+  /// Create a SmallHermesValue that has the raw representation 0. This value
+  /// must never become visible to user code, and is guaranteed to be ignored by
+  /// the GC.
+  static constexpr SmallHermesValueAdaptor encodeRawZeroValueUnsafe() {
+    return SmallHermesValueAdaptor{HermesValue::fromRaw(0)};
+  }
 };
 using SmallHermesValue = SmallHermesValueAdaptor;
 
@@ -482,6 +489,13 @@ class HermesValue32 {
   }
   static constexpr HermesValue32 encodeEmptyValue() {
     return bitsToCompressedHV64(HermesValue::encodeEmptyValue().getRaw());
+  }
+
+  /// Create a SmallHermesValue that has the raw representation 0. This value
+  /// must never become visible to user code, and is guaranteed to be ignored by
+  /// the GC.
+  static constexpr HermesValue32 encodeRawZeroValueUnsafe() {
+    return HermesValue32{0};
   }
 
  protected:
