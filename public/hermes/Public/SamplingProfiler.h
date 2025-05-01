@@ -53,7 +53,7 @@ class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
  public:
   explicit ProfileSampleCallStackJSFunctionFrame(
       const std::string &functionName,
-      const std::optional<uint32_t> &scriptId = std::nullopt,
+      uint32_t scriptId,
       const std::optional<std::string> &url = std::nullopt,
       const std::optional<uint32_t> &lineNumber = std::nullopt,
       const std::optional<uint32_t> &columnNumber = std::nullopt)
@@ -68,13 +68,9 @@ class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
     return functionName_;
   }
 
-  bool hasScriptId() const {
-    return scriptId_.has_value();
-  }
-
   /// \return id of the corresponding script in the VM.
   uint32_t getScriptId() const {
-    return scriptId_.value();
+    return scriptId_;
   }
 
   bool hasUrl() const {
@@ -106,7 +102,7 @@ class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
 
  private:
   std::string functionName_;
-  std::optional<uint32_t> scriptId_;
+  uint32_t scriptId_;
   std::optional<std::string> url_;
   std::optional<uint32_t> lineNumber_;
   std::optional<uint32_t> columnNumber_;
