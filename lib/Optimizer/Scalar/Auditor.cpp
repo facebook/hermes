@@ -40,6 +40,9 @@ STATISTIC(
     CallsOther,
     "Number of call instructions: callee obtained in other ways");
 STATISTIC(Calls, "Number of call instructions of all kinds");
+STATISTIC(GetParentScopes, "Number of GetParentScopeInst instructions");
+STATISTIC(ResolveScopes, "Number of ResolveScopeInst instructions");
+STATISTIC(GetClosureScopes, "Number of GetClosureScopeInst instructions");
 STATISTIC(Functions, "Number of functions");
 
 STATISTIC(TypeUndefined, "Number of instructions with type undefined");
@@ -51,7 +54,7 @@ STATISTIC(TypeObject, "Number of instructions with type object");
 STATISTIC(TypeAny, "Number of instructions with type any");
 STATISTIC(TypeOther, "Number of instructions with type other");
 
-static void auditCallInstructions(Function *F) {
+static void auditInstructions(Function *F) {
   for (BasicBlock &BB : *F) {
     for (Instruction &II : BB) {
       if (II.getKind() == ValueKind::CallInstKind) {
@@ -87,6 +90,12 @@ static void auditCallInstructions(Function *F) {
             CallsOther += 1;
             break;
         }
+      } else if (II.getKind() == ValueKind::GetParentScopeInstKind) {
+        GetParentScopes++;
+      } else if (II.getKind() == ValueKind::ResolveScopeInstKind) {
+        ResolveScopes++;
+      } else if (II.getKind() == ValueKind::GetClosureScopeInstKind) {
+        GetClosureScopes++;
       }
     }
   }
@@ -122,7 +131,7 @@ static void auditInferredTypes(Function *F) {
 bool Auditor::runOnFunction(Function *F) {
   LLVM_DEBUG(dbgs() << "Auditing calls in " << F->getInternalNameStr() << "\n");
 
-  auditCallInstructions(F);
+  auditInstructions(F);
 
   LLVM_DEBUG(
       dbgs() << "Auditing instruction return types in "
