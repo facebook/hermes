@@ -1406,6 +1406,13 @@ class ESTreeIRGen {
   /// \return \c iterResult.value
   Value *emitIteratorValueSlow(Value *iterResult);
 
+  /// A helper called only from \c emitIteratorCloseSlow or
+  /// emitAsyncIteratorCloseSlow. It performs the actual work.
+  void _emitIteratorCloseImpl(
+      IteratorRecordSlow iteratorRecord,
+      bool ignoreInnerException,
+      bool isAsyncIterator);
+
   /// ES2018 7.4.6 IteratorClose
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorclose
   ///
@@ -1413,6 +1420,16 @@ class ESTreeIRGen {
   ///     iterator.return() method will be ignored and its result will not be
   ///     checked whether it is an object.
   void emitIteratorCloseSlow(
+      IteratorRecordSlow iteratorRecord,
+      bool ignoreInnerException);
+
+  /// ES2018 7.4.7 AsyncIteratorClose
+  /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-asynciteratorclose
+  ///
+  /// \param ignoreInnerException if set, exceptions thrown by the \c
+  ///     async iterator.return() method will be ignored and its result will not
+  ///     be checked whether it is an object.
+  void emitAsyncIteratorCloseSlow(
       IteratorRecordSlow iteratorRecord,
       bool ignoreInnerException);
 

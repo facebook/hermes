@@ -1,0 +1,22 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: %hermes -Xenable-tdz -Xes6-block-scoping -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xenable-tdz -Xes6-block-scoping -O %s | %FileCheck --match-full-lines %s
+
+(async function test() {
+let x;
+for await (let [y, z = ()=>y] of [[x = ()=>y,]]) {
+    print(y);
+    print(z());
+    try { x(); } catch(e) { print(e); }
+}
+})();
+
+// CHECK:      function x() { [bytecode] }
+// CHECK-NEXT: function x() { [bytecode] }
+// CHECK-NEXT: ReferenceError: accessing an uninitialized variable

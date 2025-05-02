@@ -980,6 +980,21 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
 
 void ESTreeIRGen::genAsyncForOfStatement(
     ESTree::ForOfStatementNode *forOfStmt) {
+  auto *outerScope = curFunction()->curScope;
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(forOfStmt);
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *initScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
+    curFunction()->curScope = initScope;
+  }
+
   emitScopeDeclarations(forOfStmt->getScope());
 
   auto *function = Builder.getInsertionBlock()->getParent();
@@ -1004,6 +1019,14 @@ void ESTreeIRGen::genAsyncForOfStatement(
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 
   Builder.setInsertionBlock(bodyBlock);
+
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope->getVariableScope(), outerScope);
+    curFunction()->curScope = innerScope;
+  }
+
   auto *nextValue = emitIteratorValueSlow(nextResult);
 
   emitTryCatchScaffolding(
@@ -1028,7 +1051,7 @@ void ESTreeIRGen::genAsyncForOfStatement(
               // the iterator.
               if (cfc == ControlFlowChange::Break ||
                   continueTarget != getNextBlock)
-                emitIteratorCloseSlow(iteratorRecord, false);
+                emitAsyncIteratorCloseSlow(iteratorRecord, false);
             }};
 
         // Note: obtaining the value is not protected, but storing it is.
@@ -1043,9 +1066,12 @@ void ESTreeIRGen::genAsyncForOfStatement(
       // emitHandler.
       [this, &iteratorRecord](BasicBlock *) {
         auto *catchReg = Builder.createCatchInst();
-        emitIteratorCloseSlow(iteratorRecord, true);
+        emitAsyncIteratorCloseSlow(iteratorRecord, true);
         Builder.createThrowInst(catchReg);
       });
+
+  // Restore the outer scope for subsequent code.
+  curFunction()->curScope = outerScope;
 
   Builder.setInsertionBlock(exitBlock);
 }
