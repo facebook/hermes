@@ -35,9 +35,11 @@ class SimpleBytecodeBuilder {
     /// The opcodes.
     std::vector<opcode_atom_t> opcodes;
     /// Header field for number of read cache slots.
-    uint8_t highestReadCacheIndex;
+    uint8_t readCacheSize;
     /// Header field for number of write cache slots.
-    uint8_t highestWriteCacheIndex;
+    uint8_t writeCacheSize;
+    /// Header field for number of private name cache slots.
+    uint8_t privateNameCacheSize;
     /// Offset of the debug info, if not 0.
     uint32_t infoOffset = 0;
 
@@ -45,13 +47,15 @@ class SimpleBytecodeBuilder {
         uint32_t paramCount,
         uint32_t frameSize,
         std::vector<opcode_atom_t> &&opcodes,
-        uint8_t highestReadCacheIndex = 0,
-        uint8_t highestWriteCacheIndex = 0)
+        uint8_t readCacheSize = 0,
+        uint8_t writeCacheSize = 0,
+        uint8_t privateNameCacheSize = 0)
         : paramCount(paramCount),
           frameSize(frameSize),
           opcodes(std::move(opcodes)),
-          highestReadCacheIndex(highestReadCacheIndex),
-          highestWriteCacheIndex(highestWriteCacheIndex) {
+          readCacheSize(readCacheSize),
+          writeCacheSize(writeCacheSize),
+          privateNameCacheSize(privateNameCacheSize) {
       assert(paramCount > 0 && "paramCount must include 'this'");
     }
   };

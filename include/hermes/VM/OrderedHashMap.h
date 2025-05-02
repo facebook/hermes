@@ -9,8 +9,8 @@
 #define HERMES_VM_ORDERED_HASHMAP_H
 
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/SegmentedArray.h"
 
 #include <vector>
 
@@ -142,6 +142,7 @@ template <typename BucketType, typename Derived>
 class OrderedHashMapBase {
  public:
   using Entry = BucketType;
+  using StorageType = ArrayStorageSmall;
 
   static void buildMetadata(const GCCell *cell, Metadata::Builder &mb);
 
@@ -194,13 +195,14 @@ class OrderedHashMapBase {
   static ExecutionStatus initializeStorage(
       Handle<Derived> self,
       Runtime &runtime) {
-    auto arrRes = SegmentedArraySmall::create(
-        runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
+    auto arrRes =
+        StorageType::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    self->hashTable_.set(runtime, arrRes->get(), runtime.getHeap());
+    auto *arr = vmcast<StorageType>(*arrRes);
+    self->hashTable_.set(runtime, arr, runtime.getHeap());
     return ExecutionStatus::RETURNED;
   }
 
@@ -215,7 +217,7 @@ class OrderedHashMapBase {
  private:
   /// The hashtable, with size always equal to capacity_. The number of
   /// reachable entries from hashTable_ should be equal to size_.
-  GCPointer<SegmentedArraySmall> hashTable_{nullptr};
+  GCPointer<StorageType> hashTable_{nullptr};
 
   /// The first entry ever inserted. We need this entry to begin an iteration.
   GCPointer<BucketType> firstIterationEntry_{nullptr};
@@ -223,12 +225,9 @@ class OrderedHashMapBase {
   /// The last entry inserted. We need it to add new elements afterwards.
   GCPointer<BucketType> lastIterationEntry_{nullptr};
 
-  /// Maximum capacity cannot exceed the maximum capacity of the underlying
-  /// ArrayStorage.
-  // It needs to be less than 1/4th the max 32-bit integer in order to use an
-  // integer-based load factor check of 0.75.
-  static constexpr uint32_t MAX_CAPACITY =
-      std::min(SegmentedArraySmall::maxElements(), UINT32_MAX / 4);
+  /// Maximum capacity needs to be less than 1/4th the max 32-bit integer in
+  /// order to use an integer-based load factor check of 0.75.
+  static constexpr uint32_t MAX_CAPACITY = UINT32_MAX / 4;
 
   /// Capacity of the hash table.
   uint32_t capacity_{INITIAL_CAPACITY};
@@ -308,7 +307,7 @@ class OrderedHashMapBase {
   deleteBucket(Handle<Derived> self, Runtime &runtime, uint32_t bucket) {
     /// Use NullValue to indicate that the bucket is deleted.
     self->hashTable_.getNonNull(runtime)->set(
-        runtime, bucket, SmallHermesValue::encodeNullValue());
+        bucket, SmallHermesValue::encodeNullValue(), runtime.getHeap());
   }
 
   /// Helper function for inserting key or key/value pair into the container.

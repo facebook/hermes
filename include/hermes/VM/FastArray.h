@@ -10,7 +10,6 @@
 
 #include "hermes/VM/IterationKind.h"
 #include "hermes/VM/JSObject.h"
-#include "hermes/VM/SegmentedArray.h"
 
 namespace hermes {
 namespace vm {

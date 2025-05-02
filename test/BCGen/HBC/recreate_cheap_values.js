@@ -23,8 +23,8 @@ function negzero(f) {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "poszero": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "negzero": string
-// CHECK-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
-// CHECK-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}      %2 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {np0}     %3 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %poszero(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "poszero": string
 // CHECK-NEXT:  {r0}      %6 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %negzero(): functionCode
@@ -34,8 +34,8 @@ function negzero(f) {
 
 // CHECK:function poszero(f: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {n0}      %0 = HBCLoadConstInst (:number) 0: number
-// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {n0}      %0 = LIRLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %2 = LoadParamInst (:any) %f: any
 // CHECK-NEXT:  {r3}      %3 = ImplicitMovInst (:undefined) {np0} %1: undefined
 // CHECK-NEXT:  {r2}      %4 = ImplicitMovInst (:number) {n0} %0: number
@@ -46,8 +46,8 @@ function negzero(f) {
 
 // CHECK:function negzero(f: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {n0}      %0 = HBCLoadConstInst (:number) -0: number
-// CHECK-NEXT:  {np0}     %1 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {n0}      %0 = LIRLoadConstInst (:number) -0: number
+// CHECK-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}      %2 = LoadParamInst (:any) %f: any
 // CHECK-NEXT:  {r3}      %3 = ImplicitMovInst (:undefined) {np0} %1: undefined
 // CHECK-NEXT:  {r2}      %4 = ImplicitMovInst (:number) {n0} %0: number

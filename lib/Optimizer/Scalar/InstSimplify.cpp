@@ -995,6 +995,31 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
+  OptValue<Value *> simplifyCreateThisInst(CreateThisInst *CTI) {
+    auto *F = llvh::dyn_cast<Function>(CTI->getFunctionCode());
+    if (!F)
+      return nullptr;
+    // If we know we are calling a legacy class constructor, we can replace all
+    // the users with undefined.
+    if (F->getDefinitionKind() ==
+            Function::DefinitionKind::ES6BaseConstructor ||
+        F->getDefinitionKind() ==
+            Function::DefinitionKind::ES6DerivedConstructor) {
+      return builder_.getLiteralUndefined();
+    }
+    // We know we are calling a constructor that expects to receive a this
+    // object allocated by the caller. Emit the instructions to do that
+    // directly.
+    // Note that CreateThisInst does not currently test for whether the callee
+    // can be called as a constructor, so it is semantically equivalent to
+    // replace it even in cases where the callee cannot be called as a
+    // constructor.
+    builder_.setInsertionPoint(CTI);
+    auto *proto = builder_.createLoadPropertyInst(
+        CTI->getClosure(), builder_.getLiteralString("prototype"));
+    return builder_.createAllocObjectLiteralInst({}, proto);
+  }
+
   /// Try to simplify the instruction \p I.
   /// \returns one of:
   ///   - nullptr if the instruction cannot be simplified.
@@ -1045,6 +1070,8 @@ class InstSimplifyImpl {
         return simplifyResolveScopeInst(cast<ResolveScopeInst>(I));
       case ValueKind::TypeOfInstKind:
         return simplifyTypeOf(cast<TypeOfInst>(I));
+      case ValueKind::CreateThisInstKind:
+        return simplifyCreateThisInst(cast<CreateThisInst>(I));
 
       default:
         // TODO: handle other kinds of instructions.

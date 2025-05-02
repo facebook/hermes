@@ -24,6 +24,10 @@
 
 #include "repl.h"
 
+#ifdef HERMES_ENABLE_PERF_PROF
+#include <fcntl.h>
+#endif
+
 using namespace hermes;
 
 namespace {
@@ -144,6 +148,29 @@ static int executeHBCBytecodeFromCL(
   options.sampleProfiling = flags.SampleProfiling;
   options.sampleProfilingFreq = flags.SampleProfilingFreq;
   options.heapTimeline = flags.HeapTimeline;
+#ifdef HERMES_ENABLE_PERF_PROF
+  std::string jitdumpFile;
+  if (flags.PerfProf) {
+    llvh::raw_string_ostream sos{jitdumpFile};
+    // jitdump uses uint32_t for pid.
+    sos << llvh::format(
+        "%s/jit-%d.dump",
+        flags.PerfProfDir.c_str(),
+        (uint32_t)oscompat::process_id());
+    options.perfProfJitDumpFd =
+        open(sos.str().c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
+    if (options.perfProfJitDumpFd == -1)
+      hermes_fatal("Failed to open jitdump file: " + jitdumpFile);
+    llvh::SmallString<256> debugInfoFile;
+    if (std::error_code error = llvh::sys::fs::createUniqueFile(
+            llvh::Twine(flags.PerfProfDir) + "/debuginfo-%%%%%%%%.txt",
+            options.perfProfDebugInfoFd,
+            debugInfoFile)) {
+      hermes_fatal("Fail to create debuginfo file for perf jitdump");
+    }
+    options.perfProfDebugInfoFile = debugInfoFile.str();
+  }
+#endif
 
   bool success;
   if (flags.Repeat <= 1) {
@@ -162,6 +189,16 @@ static int executeHBCBytecodeFromCL(
           &info.filename);
     }
   }
+#ifdef HERMES_ENABLE_PERF_PROF
+  if (flags.PerfProf) {
+    if (close(options.perfProfJitDumpFd) == -1)
+      hermes_fatal("Fail to close jitdump file: " + jitdumpFile);
+    if (close(options.perfProfDebugInfoFd) == -1)
+      hermes_fatal(
+          "Fail to close debuginfo file: " + options.perfProfDebugInfoFile);
+  }
+
+#endif
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -198,6 +235,9 @@ int main(int argc, char **argv) {
   // down LLVM in its destructor. We can use "llvm_shutdown_obj" to do the same.
   llvh::llvm_shutdown_obj Y;
 #endif
+
+  // Enable the microtask queue in the CLI by default.
+  flags.MicrotaskQueue.setInitialValue(true);
 
   llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");

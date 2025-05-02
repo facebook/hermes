@@ -58,7 +58,8 @@ struct OptimizationSettings {
 
   /// Maximum number of instructions (in addition to parameter handling)
   /// that is allowed for inlining of small functions.
-  unsigned inlineMaxSize{1};
+  static constexpr unsigned kDefaultInlineMaxSize = 50;
+  unsigned inlineMaxSize{kDefaultInlineMaxSize};
 
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
@@ -76,6 +77,11 @@ struct OptimizationSettings {
   /// Whether to use old Mem2Reg pass instead of SimpleMem2Reg. This may produce
   /// better code for irreducible CFGs.
   bool useLegacyMem2Reg{false};
+
+  /// Whether to use a more complicated condition to prevent recursive inlining
+  /// (which will prevent unbounded code growth in "opt-to-fixed-point"
+  /// compilations).
+  bool limitRecursiveInlining{false};
 };
 
 enum class DebugInfoSetting {
@@ -494,6 +500,10 @@ class Context {
 
   bool getMetroRequireOpt() const {
     return optimizationSettings_.metroRequireOpt;
+  }
+
+  bool getLimitRecursiveInlining() const {
+    return optimizationSettings_.limitRecursiveInlining;
   }
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {

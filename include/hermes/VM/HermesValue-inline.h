@@ -31,16 +31,39 @@ inline PinnedHermesValue &PinnedHermesValue::operator=(PseudoHandle<T> &&hv) {
 
 template <typename HVType>
 template <typename NeedsBarriers>
-GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc) : HVType{hv} {
+GCHermesValueImpl<HVType>::GCHermesValueImpl(HVType hv, GC &gc)
+    : GCHermesValueBaseImpl<HVType>{hv} {
   assert(!hv.isPointer() || hv.getPointer());
-  if (NeedsBarriers::value)
+  if (NeedsBarriers::value) {
     gc.constructorWriteBarrier(this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrierInCtor(this, hv) &&
+        "Can't skip write barriers for this GCHermesValueBase and target value");
+  }
 }
 
 template <typename HVType>
 template <typename NeedsBarriers>
-GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t)
-    : HVType{hv} {
+GCHermesValueInLargeObjImpl<HVType>::GCHermesValueInLargeObjImpl(
+    HVType hv,
+    const GCCell *owningObj,
+    GC &gc)
+    : GCHermesValueBaseImpl<HVType>{hv} {
+  assert(!hv.isPointer() || hv.getPointer());
+  if (NeedsBarriers::value) {
+    gc.constructorWriteBarrierForLargeObj(owningObj, this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrierInCtor(this, hv) &&
+        "This GCHermesValueBase construction cannot skip write barrier");
+  }
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+GCHermesValueImpl<HVType>::GCHermesValueImpl(HVType hv, GC &gc, std::nullptr_t)
+    : GCHermesValueBaseImpl<HVType>(hv) {
   assert(!hv.isPointer());
   // No need to invoke any write barriers here, since the old value is
   // uninitialized (so the snapshot barrier does not apply), and the new value
@@ -49,7 +72,7 @@ GCHermesValueBase<HVType>::GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t)
 
 template <typename HVType>
 template <typename NeedsBarriers>
-inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
+inline void GCHermesValueImpl<HVType>::set(HVType hv, GC &gc) {
   if (hv.isPointer()) {
     HERMES_SLOW_ASSERT(
         gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
@@ -62,14 +85,48 @@ inline void GCHermesValueBase<HVType>::set(HVType hv, GC &gc) {
 }
 
 template <typename HVType>
-void GCHermesValueBase<HVType>::setNonPtr(HVType hv, GC &gc) {
+template <typename NeedsBarriers>
+GCHermesValueInLargeObjImpl<HVType>::GCHermesValueInLargeObjImpl(
+    HVType hv,
+    GC &gc,
+    std::nullptr_t)
+    : GCHermesValueBaseImpl<HVType>(hv) {
+  assert(!hv.isPointer());
+  // No need to invoke any write barriers here, since the old value is
+  // uninitialized (so the snapshot barrier does not apply), and the new value
+  // is not a pointer (so the generational/relocation barrier does not apply).
+}
+
+template <typename HVType>
+template <typename NeedsBarriers>
+inline void GCHermesValueInLargeObjImpl<HVType>::set(
+    HVType hv,
+    const GCCell *owningObj,
+    GC &gc) {
+  if (hv.isPointer()) {
+    HERMES_SLOW_ASSERT(
+        gc.validPointer(hv.getPointer(gc.getPointerBase())) &&
+        "Setting an invalid pointer into a GCHermesValue");
+  }
+  if constexpr (NeedsBarriers::value) {
+    gc.writeBarrierForLargeObj(owningObj, this, hv);
+  } else {
+    assert(
+        !gc.needsWriteBarrier(this, hv) &&
+        "Can't skip write barriers for this GCHermesValueBase and target value");
+  }
+  HVType::setNoBarrier(hv);
+}
+
+template <typename HVType>
+void GCHermesValueBaseImpl<HVType>::setNonPtr(HVType hv, GC &gc) {
   assert(!hv.isPointer());
   gc.snapshotWriteBarrier(this);
   HVType::setNoBarrier(hv);
 }
 
 template <typename HVType>
-void GCHermesValueBase<HVType>::unreachableWriteBarrier(GC &gc) {
+void GCHermesValueBaseImpl<HVType>::unreachableWriteBarrier(GC &gc) {
   // Hades needs a snapshot barrier executed when something becomes unreachable.
   gc.snapshotWriteBarrier(this);
 }
@@ -77,7 +134,7 @@ void GCHermesValueBase<HVType>::unreachableWriteBarrier(GC &gc) {
 /*static*/
 template <typename HVType>
 template <typename InputIt>
-inline void GCHermesValueBase<HVType>::fill(
+inline void GCHermesValueImpl<HVType>::fill(
     InputIt start,
     InputIt end,
     HVType fill,
@@ -96,7 +153,27 @@ inline void GCHermesValueBase<HVType>::fill(
 /*static*/
 template <typename HVType>
 template <typename InputIt>
-inline void GCHermesValueBase<HVType>::uninitialized_fill(
+inline void GCHermesValueInLargeObjImpl<HVType>::fill(
+    InputIt start,
+    InputIt end,
+    HVType fill,
+    const GCCell *owningObj,
+    GC &gc) {
+  if (fill.isPointer()) {
+    for (auto cur = start; cur != end; ++cur) {
+      cur->set(fill, owningObj, gc);
+    }
+  } else {
+    for (auto cur = start; cur != end; ++cur) {
+      cur->setNonPtr(fill, gc);
+    }
+  }
+}
+
+/*static*/
+template <typename HVType>
+template <typename InputIt>
+inline void GCHermesValueImpl<HVType>::uninitialized_fill(
     InputIt start,
     InputIt end,
     HVType fill,
@@ -104,29 +181,45 @@ inline void GCHermesValueBase<HVType>::uninitialized_fill(
   if (fill.isPointer()) {
     for (auto cur = start; cur != end; ++cur) {
       // Use the constructor write barrier. Assume it needs barriers.
-      new (&*cur) GCHermesValueBase<HVType>(fill, gc);
+      new (&*cur) GCHermesValueImpl<HVType>(fill, gc);
     }
   } else {
     for (auto cur = start; cur != end; ++cur) {
       // Use a constructor that doesn't handle pointer values.
-      new (&*cur) GCHermesValueBase<HVType>(fill, gc, nullptr);
+      new (&*cur) GCHermesValueImpl<HVType>(fill, gc, nullptr);
+    }
+  }
+}
+
+/*static*/
+template <typename HVType>
+template <typename InputIt>
+inline void GCHermesValueInLargeObjImpl<HVType>::uninitialized_fill(
+    InputIt start,
+    InputIt end,
+    HVType fill,
+    const GCCell *owningObj,
+    GC &gc) {
+  if (fill.isPointer()) {
+    for (auto cur = start; cur != end; ++cur) {
+      // Use the constructor write barrier. Assume it needs barriers.
+      new (&*cur) GCHermesValueInLargeObjImpl<HVType>(fill, owningObj, gc);
+    }
+  } else {
+    for (auto cur = start; cur != end; ++cur) {
+      // Use a constructor that doesn't handle pointer values.
+      new (&*cur) GCHermesValueInLargeObjImpl<HVType>(fill, gc, nullptr);
     }
   }
 }
 
 template <typename HVType>
 template <typename InputIt, typename OutputIt>
-inline OutputIt GCHermesValueBase<HVType>::copy(
+inline OutputIt GCHermesValueImpl<HVType>::copy(
     InputIt first,
     InputIt last,
     OutputIt result,
     GC &gc) {
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  static_assert(
-      !std::is_same<InputIt, GCHermesValueBase *>::value ||
-          !std::is_same<OutputIt, GCHermesValueBase *>::value,
-      "Pointer arguments must invoke pointer overload.");
-#endif
   for (; first != last; ++first, (void)++result) {
     result->set(*first, gc);
   }
@@ -135,53 +228,26 @@ inline OutputIt GCHermesValueBase<HVType>::copy(
 
 template <typename HVType>
 template <typename InputIt, typename OutputIt>
-inline OutputIt GCHermesValueBase<HVType>::uninitialized_copy(
+inline OutputIt GCHermesValueInLargeObjImpl<HVType>::copy(
     InputIt first,
     InputIt last,
     OutputIt result,
+    const GCCell *owningObj,
     GC &gc) {
-  static_assert(
-      !std::is_same<InputIt, GCHermesValueBase *>::value ||
-          !std::is_same<OutputIt, GCHermesValueBase *>::value,
-      "Pointer arguments must invoke pointer overload.");
   for (; first != last; ++first, (void)++result) {
-    new (&*result) GCHermesValueBase<HVType>(*first, gc);
+    result->set(*first, owningObj, gc);
   }
   return result;
 }
 
-// Specializations using memmove can't be used in Hades, because the concurrent
-// write barrier needs strict control over how assignments are done to HV fields
-// which need to be atomically updated.
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
 /// Specialization for raw pointers to do a ranged write barrier.
 template <typename HVType>
-inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::copy(
-    GCHermesValueBase<HVType> *first,
-    GCHermesValueBase<HVType> *last,
-    GCHermesValueBase<HVType> *result,
-    GC &gc) {
-  // We must use "raw" function such as memmove here, rather than a
-  // function like std::copy (or copy_backward) that respects
-  // constructors and operator=.  For HermesValue, those require the
-  // contents not to contain pointers.  The range write barrier
-  // before the copies ensure that sufficient barriers are
-  // performed.
-  gc.writeBarrierRange(result, last - first);
-  std::memmove(
-      reinterpret_cast<void *>(result),
-      first,
-      (last - first) * sizeof(GCHermesValueBase<HVType>));
-  return result + (last - first);
-}
-#endif
-
-/// Specialization for raw pointers to do a ranged write barrier.
-template <typename HVType>
-inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
-    GCHermesValueBase<HVType> *first,
-    GCHermesValueBase<HVType> *last,
-    GCHermesValueBase<HVType> *result,
+inline GCHermesValueBaseImpl<HVType> *
+GCHermesValueBaseImpl<HVType>::uninitialized_copy(
+    GCHermesValueBaseImpl<HVType> *first,
+    GCHermesValueBaseImpl<HVType> *last,
+    GCHermesValueBaseImpl<HVType> *result,
+    const GCCell *owningObj,
     GC &gc) {
 #ifndef NDEBUG
   uintptr_t fromFirst = reinterpret_cast<uintptr_t>(first),
@@ -194,7 +260,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
       "Uninitialized range cannot overlap with an initialized one.");
 #endif
 
-  gc.constructorWriteBarrierRange(result, last - first);
+  gc.constructorWriteBarrierRange(owningObj, result, last - first);
   // memcpy is fine for an uninitialized copy.
   std::memcpy(
       reinterpret_cast<void *>(result), first, (last - first) * sizeof(HVType));
@@ -203,7 +269,7 @@ inline GCHermesValueBase<HVType> *GCHermesValueBase<HVType>::uninitialized_copy(
 
 template <typename HVType>
 template <typename InputIt, typename OutputIt>
-inline OutputIt GCHermesValueBase<HVType>::copy_backward(
+inline OutputIt GCHermesValueImpl<HVType>::copy_backward(
     InputIt first,
     InputIt last,
     OutputIt result,
@@ -215,9 +281,23 @@ inline OutputIt GCHermesValueBase<HVType>::copy_backward(
 }
 
 template <typename HVType>
-inline void GCHermesValueBase<HVType>::rangeUnreachableWriteBarrier(
-    GCHermesValueBase<HVType> *first,
-    GCHermesValueBase<HVType> *last,
+template <typename InputIt, typename OutputIt>
+inline OutputIt GCHermesValueInLargeObjImpl<HVType>::copy_backward(
+    InputIt first,
+    InputIt last,
+    OutputIt result,
+    const GCCell *owningObj,
+    GC &gc) {
+  while (first != last) {
+    (--result)->set(*--last, owningObj, gc);
+  }
+  return result;
+}
+
+template <typename HVType>
+inline void GCHermesValueBaseImpl<HVType>::rangeUnreachableWriteBarrier(
+    GCHermesValueBaseImpl<HVType> *first,
+    GCHermesValueBaseImpl<HVType> *last,
     GC &gc) {
   gc.snapshotWriteBarrierRange(first, last - first);
 }

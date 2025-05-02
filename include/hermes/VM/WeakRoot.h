@@ -10,6 +10,7 @@
 
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCDecl.h"
+#include "hermes/VM/SymbolID.h"
 
 namespace hermes {
 namespace vm {
@@ -61,6 +62,15 @@ class WeakRootBase : protected CompressedPointer {
 
 /// A wrapper around a pointer meant to be used as a weak root. It adds a read
 /// barrier so that the GC is aware when the field is read.
+///
+/// The read barrier needs to execute if you are potentially reading the value
+/// out and storing it in a strong reference. If you are just reading it to
+/// compare it to something, or if it's just being moved around, there is no
+/// need for a read barrier.
+///
+/// The purpose of the read barrier is to inform the GC that the value stored
+/// inside the WeakRoot must now be treated as if it is alive, because we might
+/// store it somewhere.
 template <typename T>
 class WeakRoot final : public WeakRootBase {
  public:
@@ -89,6 +99,23 @@ class WeakRoot final : public WeakRootBase {
   WeakRoot &operator=(CompressedPointer ptr) {
     WeakRootBase::operator=(ptr);
     return *this;
+  }
+};
+
+/// A SymbolID which is weakly held and is known to the GC.
+class WeakRootSymbolID final : protected SymbolID {
+ public:
+  constexpr WeakRootSymbolID() : SymbolID() {}
+
+  explicit WeakRootSymbolID(SymbolID id) : SymbolID(id) {}
+
+  using SymbolID::operator=;
+  using SymbolID::operator==;
+  using SymbolID::isInvalid;
+
+  inline SymbolID get(GC &gc);
+  inline SymbolID getNoBarrierUnsafe() {
+    return (SymbolID)(*this);
   }
 };
 

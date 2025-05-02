@@ -667,6 +667,10 @@ union Attributes {
     flags_ = 0;
   }
 
+  llvh::hash_code hash() {
+    return flags_;
+  }
+
   /// \return a string describing the attributes if there are any.
   /// If there are no attributes, returns "".
   /// If there are attributes returns, e.g. "[allCallsitesKnownInStrictMode]".
@@ -777,7 +781,7 @@ class Value {
   /// The only instructions which set the type in the constructor are
   /// those with inherent types (see \c Instruction::getInherentType),
   /// and those which are simply copying the types from a single operand
-  /// (e.g. MovInst, HBCLoadConstInst).
+  /// (e.g. MovInst, LIRLoadConstInst).
   /// All other Instruction types will be set during inference in TypeInference.
   void setType(Type type) {
 #ifndef NDEBUG
@@ -1585,7 +1589,8 @@ class Instruction
   }
 
   /// Return the hash code the this instruction.
-  llvh::hash_code getHashCode() const;
+  /// (The instruction cannot be a Phi, since that might have loops.)
+  llvh::hash_code getSimpleHashCode() const;
 
   /// Return true if \p RHS is equal to this instruction.
   bool isIdenticalTo(const Instruction *RHS) const;
@@ -1919,6 +1924,14 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// and have cleared it in preparation for lowering steps.
   OptValue<uint32_t> statementCount_{0};
 
+  /// The two fields below are used only in "opt-to-fixed-point" compilation
+  /// mode.
+
+  /// The set of functions that have been inlined into this one.
+  llvh::DenseSet<Function *> inlinedInto_;
+  /// The set of functions that this function has been inlined into.
+  llvh::DenseSet<Function *> inlinedBy_;
+
  protected:
   explicit Function(
       ValueKind kind,
@@ -1940,7 +1953,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// \returns whether this is the top level function (i.e. global scope).
   bool isGlobalScope() const;
 
-  /// \return whether this is a anonymous function.
+  /// \return whether this is an anonymous function.
   bool isAnonymous() const {
     return originalOrInferredName_.str().empty();
   }
@@ -2081,6 +2094,25 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   void setNoInline() {
     customDirectives_.noInline = true;
   }
+
+  /// The four inlining-related functions below are used only in
+  /// "opt-to-fixed-point" compilation mode.
+
+  /// The set of functions that have been inlined into this one.
+  llvh::DenseSet<Function *> &inlinedInto() {
+    return inlinedInto_;
+  };
+  const llvh::DenseSet<Function *> &inlinedInto() const {
+    return inlinedInto_;
+  };
+
+  /// The set of functions that this function has been inlined into.
+  llvh::DenseSet<Function *> &inlinedBy() {
+    return inlinedBy_;
+  };
+  const llvh::DenseSet<Function *> &inlinedBy() const {
+    return inlinedBy_;
+  };
 
   OptValue<uint32_t> getStatementCount() const {
     return statementCount_;
@@ -2732,6 +2764,11 @@ class Module : public Value {
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::ModuleKind;
   }
+
+  /// The hash_code of the Module.  This is intended to detect changes made
+  /// by optimization passes; aspects not changed by such passes may
+  /// not be included in the hash value.
+  llvh::hash_code hash() const;
 
  private:
   /// Calculate the CJS module function graph, if it hasn't been calculated yet.

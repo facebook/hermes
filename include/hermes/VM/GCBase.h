@@ -17,6 +17,7 @@
 #include "hermes/Support/CheckedMalloc.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/StatsAccumulator.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/AllocOptions.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/CellKind.h"
@@ -27,7 +28,7 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/SlotAcceptor.h"
+#include "hermes/VM/RootAcceptor.h"
 #include "hermes/VM/SlotVisitor.h"
 #include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/StackTracesTree-NoRuntime.h"
@@ -59,10 +60,6 @@ class GCCell;
 class JSObject;
 class JSWeakMapImplBase;
 
-#ifdef HERMESVM_GC_RUNTIME
-#define RUNTIME_GC_KINDS GC_KIND(HadesGC)
-#endif
-
 /// Used by XorPtr to separate encryption keys between uses.
 enum XorPtrKeyID {
   ArrayBufferData,
@@ -85,11 +82,11 @@ enum XorPtrKeyID {
 ///
 ///   template <
 ///     typename T,
-///     bool fixedSize = true,
-///     HasFinalizer hasFinalizer = HasFinalizer::No,
-///     LongLived longLived = LongLived::No,
+///     bool fixedSize,
+///     HasFinalizer hasFinalizer,
+///     LongLived longLived,
 ///     class... Args>
-/// inline T *makeA(uint32_t size, Args &&... args);
+/// inline T *makeAImpl(uint32_t size, Args &&... args);
 ///
 /// In some GCs, objects can have associated memory allocated outside the heap,
 /// and this memory can influence GC initiation and heap sizing heuristics.
@@ -107,8 +104,11 @@ enum XorPtrKeyID {
 /// logging.
 ///   void collect(std::string cause);
 ///
-/// The maximum size of any one allocation allowable by the GC in any state.
-///   static constexpr uint32_t maxAllocationSizeImpl();
+/// The maximum size of an normal allocation (compared to large allocation)
+/// allowable by the GC in any state.
+///   static constexpr uint32_t maxNormalAllocationSize();
+/// The minimum size of an allocation allowable by the GC in any state.
+///   static constexpr uint32_t minAllocationSize();
 ///
 /// Mark a pointer to a GCCell.
 ///   template <class T> void mark(T *&ptr);
@@ -177,6 +177,11 @@ enum XorPtrKeyID {
 ///   mapped value.
 ///     void weakRefReadBarrier(HermesValue value);
 ///
+///   The given symbol has just been allocated, ensure that it is treated as
+///   live. Symbols are special because they are allocated by the
+///   IdentifierTable, but are marked by the GC.
+///     void symbolAllocationBarrier(SymbolID sym);
+///
 ///   We copied HermesValues into the given region.  Note that \p numHVs is
 ///   the number of HermesValues in the the range, not the char length.
 ///   Do any necessary barriers.
@@ -185,24 +190,32 @@ enum XorPtrKeyID {
 ///         const GCSmallHermesValue *start, uint32_t
 ///         numHVs);
 ///     void constructorWriteBarrierRange(
-///         const GCHermesValue *start,
+///         const GCHermesValueBase *start,
 ///         uint32_t numHVs);
 ///     void constructorWriteBarrierRange(
-///         const GCSmallHermesValue *start,
+///         const GCSmallHermesValueBase *start,
 ///         uint32_t numHVs);
 ///
 ///   The given loc or region is about to be overwritten, but the new value is
 ///   not important. Perform any necessary barriers.
-///     void snapshotWriteBarrier(const GCHermesValue *loc);
-///     void snapshotWriteBarrier(const GCSmallHermesValue *loc);
+///     void snapshotWriteBarrier(const GCHermesValueBase *loc);
+///     void snapshotWriteBarrier(const GCSmallHermesValueBase *loc);
 ///     void snapshotWriteBarrier(const GCPointerBase *loc);
 ///     void snapshotWriteBarrier(const GCSymboldID *symbol);
 ///     void snapshotWriteBarrierRange(
-///         const GCHermesValue *start,
+///         const GCHermesValueBase *start,
 ///         uint32_t numHVs);
 ///     void snapshotWriteBarrierRange(
-///         const GCSmallHermesValue *start,
+///         const GCSmallHermesValueBase *start,
 ///         uint32_t numHVs);
+///
+///   The above barriers may have a variant with "ForLargeObj" suffix, which is
+///   used when the heap location may be from a GCCell of a kind that supports
+///   large allocation. This variant is less efficient since it has to load the
+///   cards array through pointer in SHSegmentInfo, instead of the inline array
+///   field in CardTable structure. Because of this, these variant write
+///   barriers need a pointer to the start of the object in order to locate the
+///   card table for an object that is larger than the unit segment size.
 ///
 ///   In debug builds: is a write barrier necessary for a write of the given
 ///   GC pointer \p value to the given \p loc?
@@ -214,20 +227,6 @@ enum XorPtrKeyID {
 /// location passed to mark will contain the final, correct, pointer value
 /// after the mark call.
 ///   bool isUpdatingPointers() const;
-///
-/// It must also have the inner type:
-///   class Size;
-/// Which provides at least these functions publicly:
-///   Constructor from either a GCConfig or the min and max heap size.
-///     explicit Size(const GCConfig &conf);
-///     Size(gcheapsize_t min, gcheapsize_t max);
-///   Return the minimum amount of bytes holdable by this heap.
-///     gcheapsize_t min() const;
-///   Return the maximum amount of bytes holdable by this heap.
-///     gcheapsize_t max() const;
-///   Return the total amount of bytes of storage this GC will require.
-///   This will be a multiple of FixedSizeHeapSegment::storageSize().
-///     gcheapsize_t storageFootprint() const;
 ///
 class GCBase {
  public:
@@ -247,7 +246,7 @@ class GCBase {
     /// via allocLongLived) are required to be scanned.  A generational
     /// collector, for example, might take advantage of this.
     virtual void markRoots(
-        RootAndSlotAcceptorWithNames &acceptor,
+        RootAcceptorWithNames &acceptor,
         bool markLongLived = true) = 0;
 
     /// Callback that will be invoked by the GC to mark all weak roots in the
@@ -266,20 +265,18 @@ class GCBase {
     /// \c markRoots, to be faster it should try to mark only things that would
     /// not have been properly doing barriers.
     virtual void markRootsForCompleteMarking(
-        RootAndSlotAcceptorWithNames &acceptor) = 0;
+        RootAcceptorWithNames &acceptor) = 0;
 
     /// \return one higher than the largest symbol in the identifier table. This
     /// enables the GC to size its internal structures for symbol marking.
     /// Optionally invoked at the beginning of a garbage collection.
     virtual unsigned getSymbolsEnd() const = 0;
 
-    /// If any symbols are marked by the IdentifierTable, clear that marking.
-    /// Optionally invoked at the beginning of some collections.
-    virtual void unmarkSymbols() = 0;
-
     /// Free all symbols which are not marked as \c true in \p markedSymbols.
-    /// Optionally invoked at the end of a garbage collection.
-    virtual void freeSymbols(const llvh::BitVector &markedSymbols) = 0;
+    /// Optionally invoked at the end of a garbage collection. The function may
+    /// set additional bits in \p markedSymbols to reflect the fact that some
+    /// symbols were not freed.
+    virtual void freeSymbols(llvh::BitVector &markedSymbols) = 0;
 
     /// Prints any statistics maintained in the Runtime about GC to \p
     /// os.  At present, this means the breakdown of markRoots time by
@@ -357,7 +354,7 @@ class GCBase {
 
    public:
     GCCallbacksWrapper(RT &runtime) : runtime_(runtime) {}
-    void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived)
+    void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived)
         override {
       runtime_.markRoots(acceptor, markLongLived);
     }
@@ -365,17 +362,13 @@ class GCBase {
         override {
       runtime_.markWeakRoots(weakAcceptor, markLongLived);
     }
-    void markRootsForCompleteMarking(
-        RootAndSlotAcceptorWithNames &acceptor) override {
+    void markRootsForCompleteMarking(RootAcceptorWithNames &acceptor) override {
       runtime_.markRootsForCompleteMarking(acceptor);
     }
     unsigned getSymbolsEnd() const override {
       return runtime_.getSymbolsEnd();
     }
-    void unmarkSymbols() override {
-      runtime_.unmarkSymbols();
-    }
-    void freeSymbols(const llvh::BitVector &markedSymbols) override {
+    void freeSymbols(llvh::BitVector &markedSymbols) override {
       runtime_.freeSymbols(markedSymbols);
     }
     void printRuntimeGCStats(JSONEmitter &json) const override {
@@ -667,7 +660,6 @@ class GCBase {
 #include "hermes/VM/RootSections.def"
       IdentifierTableLookupVector,
       IdentifierTableHashTable,
-      IdentifierTableMarkedSymbols,
       JSIHermesValueList,
       JSIWeakHermesValueList,
       WeakRefSlotStorage,
@@ -906,6 +898,8 @@ class GCBase {
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
 
@@ -914,6 +908,8 @@ class GCBase {
       bool fixedSize = true,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeA(uint32_t size, Args &&...args);
 
@@ -1009,16 +1005,6 @@ class GCBase {
   virtual bool validPointer(const void *ptr) const = 0;
 #endif
 
-#ifdef HERMESVM_GC_RUNTIME
-  inline static constexpr uint32_t minAllocationSizeImpl();
-
-  inline static constexpr uint32_t maxAllocationSizeImpl();
-#endif
-
-  inline static constexpr uint32_t minAllocationSize();
-
-  inline static constexpr uint32_t maxAllocationSize();
-
   /// Dump detailed heap contents to the given output stream, \p os.
   virtual void dump(llvh::raw_ostream &os, bool verbose = false);
 
@@ -1034,9 +1020,7 @@ class GCBase {
   virtual void forAllObjs(const std::function<void(GCCell *)> &callback) = 0;
 
   /// \return true if the pointer lives in the young generation.
-  virtual bool inYoungGen(const void *p) const {
-    return false;
-  }
+  virtual bool inYoungGen(const GCCell *) const = 0;
 
   /// Returns whether an external allocation of the given \p size fits
   /// within the maximum heap size. (Note that this does not guarantee that the
@@ -1069,13 +1053,20 @@ class GCBase {
   }
   virtual bool dbgContains(const void *ptr) const = 0;
   virtual void trackReachable(CellKind kind, unsigned sz) {}
-  virtual bool needsWriteBarrier(const GCHermesValue *loc, HermesValue value)
-      const = 0;
   virtual bool needsWriteBarrier(
-      const GCSmallHermesValue *loc,
+      const GCHermesValueBase *loc,
+      HermesValue value) const = 0;
+  virtual bool needsWriteBarrier(
+      const GCSmallHermesValueBase *loc,
       SmallHermesValue value) const = 0;
   virtual bool needsWriteBarrier(const GCPointerBase *loc, GCCell *value)
       const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCHermesValueBase *loc,
+      HermesValue value) const = 0;
+  virtual bool needsWriteBarrierInCtor(
+      const GCSmallHermesValueBase *loc,
+      SmallHermesValue value) const = 0;
   /// \}
 #endif
 
@@ -1145,36 +1136,6 @@ class GCBase {
   /// Inform the GC about external memory retained by objects.
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) = 0;
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) = 0;
-
-#ifdef HERMESVM_GC_RUNTIME
-  /// Default implementations for read and write barriers: do nothing.
-  void writeBarrier(const GCHermesValue *loc, HermesValue value);
-  void writeBarrier(const GCSmallHermesValue *loc, SmallHermesValue value);
-  void writeBarrier(const GCPointerBase *loc, const GCCell *value);
-  void constructorWriteBarrier(const GCHermesValue *loc, HermesValue value);
-  void constructorWriteBarrier(
-      const GCSmallHermesValue *loc,
-      SmallHermesValue value);
-  void constructorWriteBarrier(const GCPointerBase *loc, const GCCell *value);
-  void writeBarrierRange(const GCHermesValue *start, uint32_t numHVs);
-  void writeBarrierRange(const GCSmallHermesValue *start, uint32_t numHVs);
-  void constructorWriteBarrierRange(
-      const GCHermesValue *start,
-      uint32_t numHVs);
-  void constructorWriteBarrierRange(
-      const GCSmallHermesValue *start,
-      uint32_t numHVs);
-  void snapshotWriteBarrier(const GCHermesValue *loc);
-  void snapshotWriteBarrier(const GCSmallHermesValue *loc);
-  void snapshotWriteBarrier(const GCPointerBase *loc);
-  void snapshotWriteBarrier(const GCSymbolID *symbol);
-  void snapshotWriteBarrierRange(const GCHermesValue *start, uint32_t numHVs);
-  void snapshotWriteBarrierRange(
-      const GCSmallHermesValue *start,
-      uint32_t numHVs);
-  void weakRefReadBarrier(HermesValue value);
-  void weakRefReadBarrier(GCCell *value);
-#endif
 
   /// @name Marking APIs
   /// @{
@@ -1326,7 +1287,7 @@ class GCBase {
   /// are required to be marked.  In this collector, such objects will
   /// be allocated in the old gen, and references to them need not be
   /// marked during young-gen collection.
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived) {
+  void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
     gcCallbacks_.markRoots(acceptor, markLongLived);
   }
 
@@ -1518,23 +1479,6 @@ class GCBase {
 #endif
 
  private:
-#ifdef HERMESVM_GC_RUNTIME
-  /// Use the kind tag of the GC to statically call a function with one of the
-  /// available runtime GCs.
-  template <typename Func>
-  auto runtimeGCDispatch(Func f) {
-    switch (getKind()) {
-#define GC_KIND(kind)          \
-  case GCBase::HeapKind::kind: \
-    return f(llvh::cast<kind>(this));
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-      default:
-        llvm_unreachable("No other valid GC for RuntimeGC");
-    }
-  }
-#endif
-
   template <typename T, XorPtrKeyID K>
   friend class XorPtr;
 

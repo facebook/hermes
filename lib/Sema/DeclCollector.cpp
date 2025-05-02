@@ -14,8 +14,8 @@ using namespace hermes::ESTree;
 namespace hermes {
 namespace sema {
 
-/* static */ std::unique_ptr<DeclCollector> DeclCollector::run(
-    ESTree::FunctionLikeNode *root,
+/* static */ std::unique_ptr<DeclCollector> DeclCollector::runCommon(
+    ESTree::Node *root,
     const sema::Keywords &kw,
     unsigned recursionDepth,
     const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {

@@ -28,25 +28,25 @@ bool ensureModuleExportCovered(
     Runtime &runtime,
     ArrayStorage *&exports,
     uint32_t modIndex) {
-  // If \p modIndex is bigger than the largest possible cache size, don't
-  // try to expand.
-  if (modIndex >= ArrayStorage::maxElements()) {
+  // Check if incrementing modIndex to get the size would overflow.
+  if (LLVM_UNLIKELY(
+          static_cast<ArrayStorage::size_type>(modIndex) ==
+          std::numeric_limits<ArrayStorage::size_type>::max())) {
     return false;
   }
-
   // If we need to alloc or resize, a size that makes modIndex a legal index.
   ArrayStorage::size_type newSize =
       static_cast<ArrayStorage::size_type>(modIndex) + 1;
 
   // First ensure that the moduleExports_ array is allocated.
   if (!exports) {
-    // ArrayStorage::create only throws if the requested size is greater than
-    // ArrayStorage::maxElements.  (Note that OOM is fatal error, not an
-    // exception.)  The test above on modIndex proves that we avoid this case,
-    // so no allocation failure can happen here.
-    exports = vmcast<ArrayStorage>(
-        runtime.ignoreAllocationFailure(ArrayStorage::create(runtime, newSize))
-            .getObject(runtime));
+    auto newArr = ArrayStorage::create(runtime, newSize);
+    // If \p modIndex is too large, or the available heap memory is low, the
+    // allocation may fail, return false and leave the old array unchanged.
+    if (LLVM_UNLIKELY(newArr == ExecutionStatus::EXCEPTION)) {
+      return false;
+    }
+    exports = vmcast<ArrayStorage>(*newArr);
   }
 
   if (modIndex < exports->size()) {

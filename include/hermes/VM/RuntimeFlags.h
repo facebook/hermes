@@ -235,6 +235,24 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::init(0),
       llvh::cl::ValueRequired};
 
+#ifdef HERMES_ENABLE_PERF_PROF
+  llvh::cl::opt<bool> PerfProf{
+      "Xperf-prof",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("Enable perf profiling support"),
+      llvh::cl::init(false)};
+
+  llvh::cl::opt<std::string> PerfProfDir{
+      "Xperf-prof-dir",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc(
+          "Directory path for generated perf supplementary data, default is /tmp"),
+      llvh::cl::init("/tmp"),
+      llvh::cl::ValueRequired};
+#endif
+
   llvh::cl::opt<bool> JITCrashOnError{
       "Xjit-crash-on-error",
       llvh::cl::Hidden,

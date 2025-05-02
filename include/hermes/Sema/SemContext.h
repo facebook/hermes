@@ -300,6 +300,9 @@ class FunctionInfo {
   /// True if this function came from a program node.
   bool isProgramNode = false;
 
+  /// True if this function came from a static block node.
+  bool isStaticBlock = false;
+
   /// Lazy compilation: the parent binding table scope of this function.
   /// Eager/eval compilation: the binding table scope of this function.
   /// In both cases, we're storing the parent of the code we want to eventually
@@ -537,6 +540,15 @@ class SemContext {
   const BindingTableTy &getBindingTable() const {
     return root_->bindingTable_;
   }
+
+  /// This is an opaque data blob that SemContext will own, but never use. This
+  /// is useful for IRGen to put information that it needs across lazy
+  /// compilation invocations. Conceptually this could be modeled as a
+  /// unique_ptr since SemContext owns this. But, given that we don't want to
+  /// know the type of the underlying data, it's better to use a shared_ptr.
+  /// Then we remain ignorant of the type but still call the correct deleter
+  /// function.
+  std::shared_ptr<void> customData;
 
  private:
   /// The parent SemContext of this SemContext.

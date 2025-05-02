@@ -46,6 +46,11 @@ struct RuntimeOffsets {
   static constexpr uint32_t kindAndSizeKind = KindAndSize::kNumSizeBits / 8;
 
   static constexpr uint32_t boxedDoubleValue = offsetof(BoxedDouble, value_);
+
+  static constexpr uint32_t stringPrimitiveLengthAndFlags =
+      offsetof(StringPrimitive, lengthAndFlags_);
+  static constexpr uint32_t stringPrimitiveLengthMask =
+      StringPrimitive::LENGTH_MASK;
 };
 
 #pragma GCC diagnostic pop

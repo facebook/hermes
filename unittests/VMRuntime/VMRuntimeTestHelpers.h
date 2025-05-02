@@ -36,6 +36,7 @@ static constexpr uint32_t kInitHeapSize = 1 << 16;
 static constexpr uint32_t kMaxHeapSize = 1 << 19;
 static constexpr uint32_t kInitHeapLarge = 1 << 20;
 static constexpr uint32_t kMaxHeapLarge = 1 << 24;
+static constexpr uint32_t kExtremeHeapLarge = 1 << 28;
 
 static const GCConfig::Builder kTestGCConfigBaseBuilder =
     GCConfig::Builder().withSanitizeConfig(
@@ -61,6 +62,12 @@ static const GCConfig kTestGCConfigLarge =
         .withMaxHeapSize(kMaxHeapLarge)
         .build();
 
+static const GCConfig kTestGCConfigExtremeLarge =
+    GCConfig::Builder(kTestGCConfigBuilder)
+        .withInitHeapSize(kInitHeapLarge)
+        .withMaxHeapSize(kExtremeHeapLarge)
+        .build();
+
 static const RuntimeConfig kTestRTConfigSmallHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigSmall).build();
 
@@ -72,6 +79,9 @@ static const RuntimeConfig kTestRTConfig =
 
 static const RuntimeConfig kTestRTConfigLargeHeap =
     RuntimeConfig::Builder().withGCConfig(kTestGCConfigLarge).build();
+
+static const RuntimeConfig kTestRTConfigExtremeLargeHeap =
+    RuntimeConfig::Builder().withGCConfig(kTestGCConfigExtremeLarge).build();
 
 template <typename T>
 ::testing::AssertionResult isException(
@@ -143,6 +153,12 @@ class LargeHeapRuntimeTestFixture : public RuntimeTestFixtureBase {
  public:
   LargeHeapRuntimeTestFixture()
       : RuntimeTestFixtureBase(kTestRTConfigLargeHeap) {}
+};
+
+class ExtremeLargeHeapRuntimeTestFixture : public RuntimeTestFixtureBase {
+ public:
+  ExtremeLargeHeapRuntimeTestFixture()
+      : RuntimeTestFixtureBase(kTestRTConfigExtremeLargeHeap) {}
 };
 
 /// Configuration for the GC which fixes a size -- \p sz -- for the heap, and
@@ -282,7 +298,8 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
   /// Provide the correct storage provider based on build modes.
   /// All decorator StorageProviders must wrap the one returned from this
   /// function.
-  static std::unique_ptr<StorageProvider> defaultProvider();
+  static std::unique_ptr<StorageProvider> defaultProvider(
+      uint64_t providerSize = 128 << 20);
 
   ~DummyRuntime();
 
@@ -300,10 +317,13 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args) {
-    return getHeap().makeAVariable<T, hasFinalizer, longLived>(
-        size, std::forward<Args>(args)...);
+    return getHeap()
+        .makeAVariable<T, hasFinalizer, longLived, canBeLarge, mayFail>(
+            size, std::forward<Args>(args)...);
   }
 
   GC &getHeap() {
@@ -312,11 +332,11 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
 
   void collect();
 
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool);
+  void markRoots(RootAcceptorWithNames &acceptor, bool);
 
   void markWeakRoots(WeakRootAcceptor &weakAcceptor, bool);
 
-  void markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &acceptor);
+  void markRootsForCompleteMarking(RootAcceptorWithNames &acceptor);
 
   unsigned int getSymbolsEnd() const {
     return 0;

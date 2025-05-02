@@ -645,7 +645,7 @@ HermesABIArrayOrError get_object_property_names(
   if (propsRes == vm::ExecutionStatus::EXCEPTION)
     return abi::createArrayOrError(HermesABIErrorCodeJSError);
 
-  vm::Handle<vm::SegmentedArray> props = *propsRes;
+  vm::Handle<vm::ArrayStorageSmall> props = *propsRes;
   size_t length = endIndex - beginIndex;
 
   auto retRes = vm::JSArray::create(runtime, length, length);
@@ -657,28 +657,26 @@ HermesABIArrayOrError get_object_property_names(
 
   // Convert each property name to a string and store it in the result array.
   for (size_t i = 0; i < length; ++i) {
-    vm::PseudoHandle<> name =
-        vm::createPseudoHandle(props->at(runtime, beginIndex + i));
-    vm::StringPrimitive *asString;
-    if (name->isString()) {
-      asString = name->getString();
-    } else if (name->isSymbol()) {
+    vm::SmallHermesValue name = props->at(beginIndex + i);
+    if (name.isString()) {
+      vm::JSArray::unsafeSetExistingElementAt(*ret, runtime, i, name);
+    } else if (name.isSymbol()) {
       // May allocate. 'name' must not be used afterwards.
-      asString = runtime.getStringPrimFromSymbolID(name->getSymbol());
-      name.invalidate();
+      vm::StringPrimitive *asString =
+          runtime.getStringPrimFromSymbolID(name.getSymbol());
+      auto strName = vm::SmallHermesValue::encodeStringValue(asString, runtime);
+      vm::JSArray::unsafeSetExistingElementAt(*ret, runtime, i, strName);
     } else {
-      assert(name->isNumber());
-      nameHnd = name.getHermesValue();
+      assert(name.isNumber());
+      nameHnd =
+          vm::HermesValue::encodeTrustedNumberValue(name.getNumber(runtime));
       auto asStrRes = vm::toString_RJS(runtime, nameHnd);
       if (asStrRes == vm::ExecutionStatus::EXCEPTION)
         return abi::createArrayOrError(HermesABIErrorCodeJSError);
-      asString = asStrRes->get();
+      auto strName =
+          vm::SmallHermesValue::encodeStringValue(asStrRes->get(), runtime);
+      vm::JSArray::unsafeSetExistingElementAt(*ret, runtime, i, strName);
     }
-    vm::JSArray::unsafeSetExistingElementAt(
-        *ret,
-        runtime,
-        i,
-        vm::SmallHermesValue::encodeStringValue(asString, runtime));
   }
 
   return hart->createArrayOrError(ret.getHermesValue());

@@ -41,7 +41,7 @@ function foo(a, b, c) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.c]: any
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS1.a]: any
-// CHECK-NEXT:        DefineNewOwnPropertyInst %9: any, %8: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst %9: any, %8: object, "a": string, true: boolean
 // CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.b]: any
 // CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.copyDataProperties]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: object, %11: any
 // CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS1.c]: any

@@ -48,7 +48,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
 
   // Hades needs a manually triggered full collection, since full collections
   // are started at the end of a YG GC.
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+#ifdef HERMESVM_GC_HADES
   rt.collect();
 #endif
 
@@ -58,7 +58,7 @@ TEST(GCFragmentationTest, TestCoalescing) {
       rt.makeHandle(EighthCell::create(rt));
   }
 
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+#ifdef HERMESVM_GC_HADES
   rt.collect();
 #endif
 

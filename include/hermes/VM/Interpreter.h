@@ -87,15 +87,6 @@ class Interpreter {
       Runtime &runtime,
       PinnedHermesValue *callTarget);
 
-  /// Fast path to get primitive value \p base's own properties by name \p id
-  /// without boxing.
-  /// Primitive own properties are properties fetching values from primitive
-  /// value itself.
-  /// Currently the only primitive own property is String.prototype.length.
-  /// If the fast path property does not exist, return Empty.
-  static PseudoHandle<>
-  tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id);
-
   /// Implement OpCode::GetById/TryGetById when the base is not an object.
   static CallResult<PseudoHandle<>> getByIdTransientWithReceiver_RJS(
       Runtime &runtime,
@@ -106,12 +97,6 @@ class Interpreter {
   getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id) {
     return getByIdTransientWithReceiver_RJS(runtime, base, id, base);
   }
-
-  /// Fast path for getByValTransient() -- avoid boxing for \p base if it is
-  /// string primitive and \p nameHandle is an array index.
-  /// If the property does not exist, return Empty.
-  static PseudoHandle<>
-  getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle);
 
   /// Implement OpCode::GetByVal when the base is not an object.
   static CallResult<PseudoHandle<>> getByValTransientWithReceiver_RJS(
@@ -154,12 +139,14 @@ class Interpreter {
       InterpreterState &state);
 
   /// Constructs an object via literal buffers in the bytecode file.
+  /// \param parent the parent of the newly created object.
   /// \param shapeTableIndex the index of the shape element.
   /// \param valBufferOffset the first element of the val buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
   static CallResult<PseudoHandle<>> createObjectFromBuffer(
       Runtime &runtime,
       CodeBlock *curCodeBlock,
+      Handle<JSObject> parent,
       unsigned shapeTableIndex,
       unsigned valBufferOffset);
 
@@ -284,6 +271,12 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
+  static ExecutionStatus caseNewObjectWithBufferAndParent(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      const inst::Inst *ip);
+
   /// Interpreter implementation for creating a RegExp object. Unlike the other
   /// out-of-line cases, this takes a CodeBlock* and does not return an
   /// ExecutionStatus.
@@ -316,6 +309,19 @@ class Interpreter {
       CodeBlock *curCodeBlock,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
+
+  /// Create a unique symbol value.
+  static ExecutionStatus caseCreatePrivateName(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
+  /// Create a unique symbol value.
+  static ExecutionStatus casePrivateIsIn(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      const Inst *ip);
 
   /// Evaluate callBuiltin and store the result in the register stack. it must
   /// must be invoked with CallBuiltin or CallBuiltinLong. \p op3 contains the

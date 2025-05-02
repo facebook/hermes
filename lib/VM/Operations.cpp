@@ -1714,8 +1714,14 @@ CallResult<Handle<JSArray>> iterableToArray(
     }
     // CreateArrayFromList: 3.a Perform ! CreateDataPropertyOrThrow(array, !
     // ToString(𝔽(n)), e).
-    JSArray::setElementAt(
-        array, runtime, n, runtime.makeHandle(std::move(*nextValueRes)));
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(
+                array,
+                runtime,
+                n,
+                runtime.makeHandle(std::move(*nextValueRes))) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
     // CreateArrayFromList: 3.b Set n to n + 1.
     n++;
   }

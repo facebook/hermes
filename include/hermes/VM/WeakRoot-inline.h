@@ -36,6 +36,12 @@ T *WeakRoot<T>::get(PointerBase &base, GC &gc) const {
   return static_cast<T *>(WeakRootBase::get(base, gc));
 }
 
+SymbolID WeakRootSymbolID::get(GC &gc) {
+  SymbolID id = (SymbolID)(*this);
+  gc.weakRefReadBarrier(id);
+  return id;
+}
+
 } // namespace vm
 } // namespace hermes
 

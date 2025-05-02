@@ -247,13 +247,6 @@ bool StringPrimitive::sliceEquals(
       castToUTF16Ref(start, length), other->castToUTF16Ref());
 }
 
-bool StringPrimitive::equals(const StringPrimitive *other) const {
-  if (this == other) {
-    return true;
-  }
-  return sliceEquals(0, getStringLength(), other);
-}
-
 bool StringPrimitive::equals(const StringView &other) const {
   if (isASCII()) {
     return other.equals(castToASCIIRef());

@@ -99,6 +99,11 @@ bool SemanticResolver::runLazy(
       (llvh::isa<ESTree::ArrowFunctionExpressionNode>(rootNode) &&
        parentHadSuperBinding);
 
+  // If we restarting compilation in an arrow function nested in a static block,
+  // ban all usages of `arguments` as an identifier.
+  forbidArgumentsAsIdentifier_ =
+      semCtx_.nearestNonArrow(semInfo)->isStaticBlock;
+
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{
       *this, rootNode, semInfo, FunctionContext::LazyTag{}};
@@ -922,12 +927,21 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
     // ES14.0 15.7.1
     // It is a Syntax Error if Initializer is present and ContainsArguments of
     // Initializer is true.
-    llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
+    llvh::SaveAndRestore<bool> oldForbidArguments{
+        forbidSpecialArgumentsReference_, true};
     FunctionContext funcCtx(
         *this,
         node->_static
             ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
             : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo());
+    // We need to make sure that the special `arguments` object is declared so
+    // that we can detect usages of it, and correctly error out since field
+    // initializers are not allowed to reference `arguments`. If we didn't do
+    // this then a class in the global scope would allow a field initializer to
+    // reference `arguments`, since it would treat it as a normal identifier.
+    // This will insert the `arguments` identifer into the binding table scope
+    // which is created by the class declaration / expression node.
+    declareArguments();
     visitESTreeNode(*this, node->_value, node);
   } else if (!typed_) {
     // Create the these initializers even if no value initializer is present, in
@@ -959,12 +973,14 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
     // ES14.0 15.7.1
     // It is a Syntax Error if Initializer is present and ContainsArguments of
     // Initializer is true.
-    llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
+    llvh::SaveAndRestore<bool> oldForbidArguments{
+        forbidSpecialArgumentsReference_, true};
     FunctionContext funcCtx(
         *this,
         node->_static
             ? curClassContext_->getOrCreateStaticElementsInitFunctionInfo()
             : curClassContext_->getOrCreateInstanceElementsInitFunctionInfo());
+    declareArguments();
     visitESTreeNode(*this, node->_value, node);
   } else if (!typed_) {
     // Create the these initializers even if no value initializer is present, in
@@ -979,14 +995,35 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
 }
 
 void SemanticResolver::visit(StaticBlockNode *node) {
-  if (compile_)
-    sm_.error(node->getSourceRange(), "class static blocks are not supported");
+  // Initialize the static elements info even though we don't use it as the
+  // function info for the static block itself. IRGen needs this info to
+  // generate IR for any static elements.
+  curClassContext_->getOrCreateStaticElementsInitFunctionInfo();
+  // StaticBlockNodes should be treated as if they are actually a function-level
+  // scope. For example, `var` declarations do not get hoisted up to the
+  // function that the class resides in, but rather to this static block scope.
+  auto *staticBlockInfo = curClassContext_->createStaticBlockFunctionInfo(node);
+  FunctionContext funcCtx(*this, node, staticBlockInfo);
+  ScopeRAII scope{*this, node, /* isFunctionBodyScope */ true};
+  processCollectedDeclarations(node);
+  if (astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+    // Store the current scope, for compiling children of this static block node
+    // in 'eval'.
+    staticBlockInfo->bindingTableScope = bindingTable_.getCurrentScope();
+  }
+
   // ES14.0 15.7.1
   // It is a Syntax Error if ClassStaticBlockStatementList Contains await is
   // true.
   llvh::SaveAndRestore<bool> oldForbidAwait{forbidAwaitExpression_, true};
-  // Disallow arguments usage in static blocks.
-  llvh::SaveAndRestore<bool> oldForbidArguments{forbidArguments_, true};
+  // Using await as an identifier is forbidden.
+  llvh::SaveAndRestore<bool> oldForbidAwaitIdent{
+      forbidAwaitAsIdentifier_, true};
+  // Disallow 'arguments' usage as an identifier in static blocks.
+  llvh::SaveAndRestore<bool> oldForbidArgumentsAsIdentifier{
+      forbidArgumentsAsIdentifier_, true};
+  // Static blocks can always reference super.
+  llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, true};
   visitESTreeChildren(*this, node);
 }
 
@@ -1004,6 +1041,12 @@ void SemanticResolver::visit(
   // If computed property, the key expression needs to be resolved.
   if (node->_computed)
     visitESTreeNode(*this, node->_key, node);
+
+  // If there are private instance methods, we will need to make an instance
+  // elements intializer function.
+  if (llvh::isa<PrivateNameNode>(node->_key) && !node->_static) {
+    curClassContext_->getOrCreateInstanceElementsInitFunctionInfo();
+  }
 
   // Visit the body.
   visitESTreeNode(*this, node->_value, node);
@@ -1553,13 +1596,17 @@ void SemanticResolver::visitFunctionLike(
       consKind,
       curFunctionInfo()->customDirectives};
 
+  bool isArrow = llvh::isa<ArrowFunctionExpressionNode>(node);
   // Arrow functions should inherit their current super binding. All other
   // functions can only reference super properties if it was defined as a
   // method.
-  bool newCanRefSuper = llvh::isa<ArrowFunctionExpressionNode>(node)
-      ? canReferenceSuper_
-      : node->isMethodDefinition;
+  bool newCanRefSuper = isArrow ? canReferenceSuper_ : node->isMethodDefinition;
   llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, newCanRefSuper};
+  // Arrow functions should inherit forbidArgumentsAsIdentifier_, all other
+  // functions should reset it to false.
+  llvh::SaveAndRestore<bool> oldForbidArgumentsAsIdentifier{
+      forbidArgumentsAsIdentifier_,
+      isArrow ? forbidArgumentsAsIdentifier_ : false};
   visitFunctionLikeInFunctionContext(node, id, body, params);
 }
 
@@ -1701,9 +1748,10 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
   // Forbidden-ness of 'arguments' passes through arrow functions because they
   // use the same 'arguments'.
   llvh::SaveAndRestore<bool> oldForbidArguments{
-      forbidArguments_,
-      llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) ? forbidArguments_
-                                                           : false};
+      forbidSpecialArgumentsReference_,
+      llvh::isa<ESTree::ArrowFunctionExpressionNode>(node)
+          ? forbidSpecialArgumentsReference_
+          : false};
 
   // Visit the parameters before we have hoisted the body declarations.
   // If there's a parameter named arguments, then the parameter init expressions
@@ -1836,7 +1884,7 @@ Decl *SemanticResolver::resolveIdentifier(
 
   // Is this the "arguments" object?
   if (decl && decl->special == Decl::Special::Arguments) {
-    if (forbidArguments_)
+    if (forbidSpecialArgumentsReference_)
       sm_.error(identifier->getSourceRange(), "invalid use of 'arguments'");
     curFunctionInfo()->usesArguments = true;
   }
@@ -1846,6 +1894,13 @@ Decl *SemanticResolver::resolveIdentifier(
     sm_.error(
         identifier->getSourceRange(),
         "await is not a valid identifier name in an async function");
+  }
+
+  if (LLVM_UNLIKELY(identifier->_name == kw_.identArguments) &&
+      forbidArgumentsAsIdentifier_) {
+    sm_.error(
+        identifier->getSourceRange(),
+        "invalid use of 'arguments' as an identifier");
   }
 
   // Resolved the identifier to a declaration, done.
@@ -2794,6 +2849,26 @@ FunctionContext::FunctionContext(
 
 FunctionContext::FunctionContext(
     SemanticResolver &resolver,
+    ESTree::StaticBlockNode *node,
+    FunctionInfo *newFunctionInfo)
+    : resolver_(resolver),
+      prevContext_(resolver.curFunctionContext_),
+      semInfo(newFunctionInfo),
+      node(nullptr),
+      decls(DeclCollector::run(
+          node,
+          resolver.keywords(),
+          resolver.recursionDepth_,
+          [&resolver](ESTree::Node *n) {
+            // Inform the resolver that we have gone too deep.
+            resolver.recursionDepth_ = 0;
+            resolver.recursionDepthExceeded(n);
+          })) {
+  resolver.curFunctionContext_ = this;
+}
+
+FunctionContext::FunctionContext(
+    SemanticResolver &resolver,
     ESTree::FunctionLikeNode *node,
     FunctionInfo *semInfoLazy,
     LazyTag)
@@ -2858,7 +2933,7 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
       resolver_.curScope_,
       /*strict*/ true,
       CustomDirectives{});
-  // This is callled for the side effect of associating the new scope with
+  // This is called for the side effect of associating the new scope with
   // implicitCtor.  We don't need the value now, but we will later.
   (void)resolver_.semCtx_.newScope(implicitCtor, resolver_.curScope_);
   classDecoration->implicitCtorFunctionInfo = implicitCtor;
@@ -2874,7 +2949,7 @@ FunctionInfo *ClassContext::getOrCreateInstanceElementsInitFunctionInfo() {
         resolver_.curScope_,
         /*strict*/ true,
         CustomDirectives{});
-    // This is callled for the side effect of associating the new scope with
+    // This is called for the side effect of associating the new scope with
     // fieldInitFunc.  We don't need the value now, but we will later.
     (void)resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);
     classDecoration->instanceElementsInitFunctionInfo = fieldInitFunc;
@@ -2892,12 +2967,26 @@ FunctionInfo *ClassContext::getOrCreateStaticElementsInitFunctionInfo() {
         resolver_.curScope_,
         /*strict*/ true,
         CustomDirectives{});
-    // This is callled for the side effect of associating the new scope with
+    // This is called for the side effect of associating the new scope with
     // staticFieldInitFunc.  We don't need the value now, but we will later.
     (void)resolver_.semCtx_.newScope(staticFieldInitFunc, resolver_.curScope_);
     classDecoration->staticElementsInitFunctionInfo = staticFieldInitFunc;
   }
   return classDecoration->staticElementsInitFunctionInfo;
+}
+
+FunctionInfo *ClassContext::createStaticBlockFunctionInfo(
+    StaticBlockNode *node) {
+  FunctionInfo *staticBlockFunc = resolver_.semCtx_.newFunction(
+      FuncIsArrow::No,
+      FunctionInfo::ConstructorKind::None,
+      resolver_.curFunctionInfo(),
+      resolver_.curScope_,
+      /*strict*/ true,
+      CustomDirectives{});
+  staticBlockFunc->isStaticBlock = true;
+  node->functionInfo = staticBlockFunc;
+  return staticBlockFunc;
 }
 
 ClassContext::~ClassContext() {

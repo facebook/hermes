@@ -382,7 +382,10 @@ CallResult<HermesValue> createDynamicFunction(
         return ExecutionStatus::EXCEPTION;
       }
       auto param = runtime.makeHandle(std::move(*strRes));
-      JSArray::setElementAt(params, runtime, i, param);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(params, runtime, i, param) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
       size.add(param->getStringLength());
     }
 

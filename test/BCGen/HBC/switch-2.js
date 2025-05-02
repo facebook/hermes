@@ -107,9 +107,9 @@ function f(x) {
 // CHECK-NEXT:[@ 10] GetGlobalObject 2<Reg8>
 // CHECK-NEXT:[@ 12] LoadConstUndefined 0<Reg8>
 // CHECK-NEXT:[@ 14] CreateClosure 1<Reg8>, 0<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 19] PutByIdStrict 2<Reg8>, 1<Reg8>, 1<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 19] PutByIdStrict 2<Reg8>, 1<Reg8>, 0<UInt8>, 1<UInt16>
 // CHECK-NEXT:[@ 25] CreateClosure 1<Reg8>, 0<Reg8>, 2<UInt16>
-// CHECK-NEXT:[@ 30] PutByIdStrict 2<Reg8>, 1<Reg8>, 2<UInt8>, 2<UInt16>
+// CHECK-NEXT:[@ 30] PutByIdStrict 2<Reg8>, 1<Reg8>, 1<UInt8>, 2<UInt16>
 // CHECK-NEXT:[@ 36] Ret 0<Reg8>
 
 // CHECK:Function<g>(1 params, 1 registers, 0 numbers, 1 non-pointers):
@@ -145,7 +145,7 @@ function f(x) {
 // CHECK-NEXT:[@ 109] LoadConstInt 0<Reg8>, 362<Imm32>
 // CHECK-NEXT:[@ 115] Ret 0<Reg8>
 // CHECK-NEXT:[@ 117] GetGlobalObject 3<Reg8>
-// CHECK-NEXT:[@ 119] GetByIdShort 3<Reg8>, 3<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 119] GetByIdShort 3<Reg8>, 3<Reg8>, 0<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 124] LoadConstUndefined 1<Reg8>
 // CHECK-NEXT:[@ 126] Call1 3<Reg8>, 3<Reg8>, 1<Reg8>
 // CHECK-NEXT:[@ 130] LoadConstInt 0<Reg8>, 342<Imm32>
@@ -174,7 +174,7 @@ function f(x) {
 // CHECK-NEXT:[@ 230] LoadConstInt 0<Reg8>, 2332<Imm32>
 // CHECK-NEXT:[@ 236] Ret 0<Reg8>
 // CHECK-NEXT:[@ 238] GetGlobalObject 2<Reg8>
-// CHECK-NEXT:[@ 240] GetByIdShort 2<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 240] GetByIdShort 2<Reg8>, 2<Reg8>, 0<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 245] LoadConstUndefined 1<Reg8>
 // CHECK-NEXT:[@ 247] Call1 2<Reg8>, 2<Reg8>, 1<Reg8>
 // CHECK-NEXT:[@ 251] LoadConstInt 0<Reg8>, 342<Imm32>
@@ -186,7 +186,7 @@ function f(x) {
 // CHECK-NEXT:[@ 272] LoadConstInt 0<Reg8>, 342<Imm32>
 // CHECK-NEXT:[@ 278] Ret 0<Reg8>
 // CHECK-NEXT:[@ 280] GetGlobalObject 2<Reg8>
-// CHECK-NEXT:[@ 282] GetByIdShort 2<Reg8>, 2<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 282] GetByIdShort 2<Reg8>, 2<Reg8>, 0<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 287] LoadConstUndefined 1<Reg8>
 // CHECK-NEXT:[@ 289] Call1 2<Reg8>, 2<Reg8>, 1<Reg8>
 // CHECK-NEXT:[@ 293] Ret 1<Reg8>

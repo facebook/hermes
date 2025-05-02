@@ -116,10 +116,12 @@ var obj = {
 // CHECK-NEXT:                Decl %d.21 'A' ClassExprName
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.21
+// CHECK-NEXT:                Decl %d.22 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.22
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.23
+// CHECK-NEXT:                Decl %d.23 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.24
 // CHECK-NEXT:        Func strict

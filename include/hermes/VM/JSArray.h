@@ -10,7 +10,6 @@
 
 #include "hermes/VM/IterationKind.h"
 #include "hermes/VM/JSObject.h"
-#include "hermes/VM/SegmentedArray.h"
 
 namespace hermes {
 namespace vm {
@@ -33,7 +32,7 @@ class ArrayImpl : public JSObject {
   using size_type = uint32_t;
   /// StorageType is the underlying storage that JSArray uses to put the values
   /// into.
-  using StorageType = SegmentedArraySmall;
+  using StorageType = ArrayStorageSmall;
 
   /// Resize the internal storage. The ".length" property is not affected. It
   /// does \b NOT check for read-only properties.
@@ -45,18 +44,12 @@ class ArrayImpl : public JSObject {
   /// Update the element at index \p index. If necessary, the array will be
   /// resized, but if it is an \c JSArray, it's \c .length property will not
   /// be affected.
-  /// Note that even though the underlying \c setOwnIndexed() interface defines
-  /// failure modes, our concrete implementation can never fail.
-  static void setElementAt(
+  [[nodiscard]] static ExecutionStatus setElementAt(
       Handle<ArrayImpl> selfHandle,
       Runtime &runtime,
       size_type index,
       Handle<> value) {
-    auto result = _setOwnIndexedImpl(selfHandle, runtime, index, value);
-    (void)result;
-    assert(
-        result != ExecutionStatus::EXCEPTION && *result &&
-        "JSArrayImpl::setElementAt() failing");
+    return _setOwnIndexedImpl(selfHandle, runtime, index, value).getStatus();
   }
 
   /// Update an array element, which must exist in storage. Elements with value
@@ -73,10 +66,10 @@ class ArrayImpl : public JSObject {
     assert(!self->flags_.noExtend && "this array cannot be extended");
 
     assert(
-        index >= self->beginIndex_ && index < self->endIndex_ &&
+        index >= self->beginIndex_ && index < self->getEndIndex() &&
         "array index out of range");
-    self->getIndexedStorage(runtime)->set(
-        runtime, index - self->beginIndex_, value);
+    self->getIndexedStorageUnsafe(runtime)->set(
+        index - self->beginIndex_, value, runtime.getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
@@ -94,17 +87,27 @@ class ArrayImpl : public JSObject {
     return beginIndex_;
   }
 
+  /// \return the number of elements contained in the storage, starting from
+  /// \p beginIndex_.
+  size_type getElemCount() const {
+    return elemCount_;
+  }
+
   /// \return 1 + the index of the last element contained in the storage.
   size_type getEndIndex() const {
-    return endIndex_;
+    return beginIndex_ + elemCount_;
   }
 
   /// Return the value at index \p index, or \c empty if the index is not
   /// contained in the storage.
   const SmallHermesValue at(Runtime &runtime, size_type index) const {
-    return index >= beginIndex_ && index < endIndex_
-        ? getIndexedStorage(runtime)->at(runtime, index - beginIndex_)
-        : SmallHermesValue::encodeEmptyValue();
+    // Optimized range check: index should be
+    // [beginIndex_, beginIndex_+elemCount_). If we subtract beginIndex_ from
+    // index, values smaller than beginIndex_ will wrap around to the top of the
+    // range, so we can use a single comparison.
+    index -= beginIndex_;
+    return index < elemCount_ ? getIndexedStorageUnsafe(runtime)->at(index)
+                              : SmallHermesValue::encodeEmptyValue();
   }
 
   /// Return the value at index \p index.
@@ -114,8 +117,13 @@ class ArrayImpl : public JSObject {
 
   /// Get a pointer to the indexed storage for this array. The returned value
   /// may be null if there is no indexed storage.
-  StorageType *getIndexedStorage(PointerBase &base) const {
+  StorageType *getIndexedStorageNullable(PointerBase &base) const {
     return indexedStorage_.get(base);
+  }
+  /// Get a pointer to the indexed storage for this array. The indexed storage
+  /// must not be null.
+  StorageType *getIndexedStorageUnsafe(PointerBase &base) const {
+    return indexedStorage_.getNonNull(base);
   }
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
@@ -214,14 +222,14 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, which must be valid.
   const SmallHermesValue unsafeAt(Runtime &runtime, size_type index) const {
-    return getIndexedStorage(runtime)->at(runtime, index - beginIndex_);
+    return getIndexedStorageUnsafe(runtime)->at(index - beginIndex_);
   }
 
  private:
   /// The first index contained in the storage.
   uint32_t beginIndex_{0};
-  /// One past the last index contained in the storage.
-  uint32_t endIndex_{0};
+  /// Number of elements in the storage starting from \p beginIndex_.
+  uint32_t elemCount_{0};
   /// The indexed storage for this array.
   GCPointer<StorageType> indexedStorage_;
 };

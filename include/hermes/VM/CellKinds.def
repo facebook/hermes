@@ -28,7 +28,7 @@
 
 CELL_KIND(Uninitialized)
 CELL_KIND(FillerCell)
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+#ifdef HERMESVM_GC_HADES
 CELL_KIND(Freelist)
 #endif
 CELL_KIND(DynamicUTF16StringPrimitive)
@@ -44,10 +44,6 @@ CELL_KIND(Domain)
 CELL_KIND(HiddenClass)
 CELL_KIND(ArrayStorage)
 CELL_KIND(ArrayStorageSmall)
-CELL_KIND(SegmentedArray)
-CELL_KIND(SegmentedArraySmall)
-CELL_KIND(Segment)
-CELL_KIND(SegmentSmall)
 CELL_KIND(PropertyAccessor)
 CELL_KIND(Environment)
 CELL_KIND(HashMapEntry)
@@ -56,8 +52,9 @@ CELL_KIND(BoxedDouble)
 CELL_KIND(NativeState)
 CELL_KIND(BigIntPrimitive)
 
-// Dummy object used only in tests.
+// DummyObject/LargeDummyObject used only in tests.
 CELL_KIND(DummyObject)
+CELL_KIND(LargeDummyObject)
 
 CELL_CLASS(JSObject, "Object")
 CELL_CLASS(DecoratedObject, "DecoratedObject")
@@ -112,8 +109,8 @@ CELL_KIND(FinalizableNativeFunction)
 CELL_KIND(NativeConstructor)
 // *NativeFunction end*, including JSCallableProxy
 CELL_CLASS(JSCallableProxy, "CallableProxy")
-CELL_KIND(NativeJSDerivedClass)
-CELL_KIND(JSDerivedClass)
+CELL_KIND(NativeJSClass)
+CELL_KIND(JSClass)
 // Expects a made `this` parameter.
 CELL_CLASS(JSFunction, "Function")
 CELL_KIND(NativeJSFunction)
@@ -134,13 +131,14 @@ CELL_RANGE(Callable, BoundFunction, NativeJSFunction)
 // allowed to be called as a constructor at all.
 CELL_RANGE(CallableUnknownMakesThis, BoundFunction, FinalizableNativeFunction)
 // These callables make their own `this` when called as a constructor.
-CELL_RANGE(CallableMakesThis, NativeConstructor, JSDerivedClass)
+CELL_RANGE(CallableMakesThis, NativeConstructor, JSClass)
 // These callables expect a populated `this` when called as a constructor.
 CELL_RANGE(CallableExpectsThis, JSFunction, NativeJSFunction)
 
-CELL_RANGE(CodeBlockFunction, JSDerivedClass, JSFunction)
+CELL_RANGE(CodeBlockFunction, JSClass, JSFunction)
 CELL_RANGE(NativeFunction, NativeFunction, JSCallableProxy)
-CELL_RANGE(TypedArrayBase, Int8Array, BigUint64Array)
+CELL_RANGE(TypedArrayBase, Uint8Array, BigInt64Array)
+CELL_RANGE(NoAllocTypedArray, Uint8Array, Float64Array)
 CELL_RANGE(WeakMapImplBase, JSWeakMap, JSWeakSet)
 CELL_RANGE(
     StringPrimitive,

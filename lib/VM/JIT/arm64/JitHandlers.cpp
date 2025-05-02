@@ -100,7 +100,36 @@ SHLegacyValue _interpreter_create_object_from_buffer(
     uint32_t valBufferOffset) {
   Runtime &runtime = getRuntime(shr);
   CallResult<PseudoHandle<>> res = Interpreter::createObjectFromBuffer(
-      runtime, (CodeBlock *)codeBlock, shapeTableIndex, valBufferOffset);
+      runtime,
+      (CodeBlock *)codeBlock,
+      runtime.objectPrototype,
+      shapeTableIndex,
+      valBufferOffset);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
+SHLegacyValue _interpreter_create_object_from_buffer_with_parent(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  Runtime &runtime = getRuntime(shr);
+  auto *parentPHV = toPHV(parent);
+  Handle<JSObject> parentHandle = parentPHV->isObject()
+      ? Handle<JSObject>::vmcast(parentPHV)
+      : parentPHV->isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  CallResult<PseudoHandle<>> res = Interpreter::createObjectFromBuffer(
+      runtime,
+      (CodeBlock *)codeBlock,
+      parentHandle,
+      shapeTableIndex,
+      valBufferOffset);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     _sh_throw_current(shr);
   }

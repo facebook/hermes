@@ -10,7 +10,6 @@
 
 #include "hermes/VM/GCBase.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 
 namespace hermes {
 namespace vm {
@@ -19,19 +18,30 @@ namespace vm {
 
 /// An acceptor for checking that the heap is full of valid objects, with
 /// pointers to valid objects.
-struct CheckHeapWellFormedAcceptor final : public RootAndSlotAcceptorDefault,
-                                           public WeakAcceptorDefault {
-  using RootAndSlotAcceptorDefault::accept;
-  using WeakAcceptorDefault::acceptWeak;
-
+struct CheckHeapWellFormedAcceptor final : public RootAcceptor,
+                                           public WeakRootAcceptor {
   explicit CheckHeapWellFormedAcceptor(GCBase &gc);
 
+  /// Root acceptors.
   void accept(GCCell *&ptr) override;
+  void accept(PinnedHermesValue &hv) override;
+  void acceptNullable(PinnedHermesValue &hv) override;
+  void accept(const RootSymbolID &sym) override;
+  void acceptWeak(WeakRootBase &ptr) override;
+  void acceptWeakSym(WeakRootSymbolID &ws) override;
+
+  /// Heap acceptors.
+  void accept(GCPointerBase &ptr);
+  void accept(GCHermesValueBase &hv);
+  void accept(GCSmallHermesValueBase &hv);
+  void accept(const GCSymbolID &sym);
+
+  /// Internal acceptors.
   void accept(const GCCell *ptr);
-  void acceptWeak(GCCell *&ptr) override;
-  void acceptHV(HermesValue &hv) override;
-  void acceptSHV(SmallHermesValue &hv) override;
-  void acceptSym(SymbolID sym) override;
+  void acceptWeak(GCCell *&ptr);
+  void acceptHV(HermesValue &hv);
+  void acceptSHV(SmallHermesValue &hv);
+  void acceptSym(SymbolID sym);
 
   GCBase &gc;
 };

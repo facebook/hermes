@@ -8,6 +8,7 @@
 #define DEBUG_TYPE "class"
 #include "hermes/VM/HiddenClass.h"
 
+#include "hermes/Support/Statistic.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/JSArray.h"
@@ -18,6 +19,16 @@
 #include "llvh/Support/Debug.h"
 
 using llvh::dbgs;
+
+HERMES_SLOW_STATISTIC(
+    NumHCFindProperty,
+    "NumHCFindProperty: Number of HiddenClass property lookups.");
+HERMES_SLOW_STATISTIC(
+    NumHCInitPropMap,
+    "NumHCInitPropMap: Number of HiddenClass map initializations.");
+HERMES_SLOW_STATISTIC(
+    NumHCMapSteal,
+    "NumHCMapSteal: Number of map steals from parent HiddenClass.");
 
 namespace hermes {
 namespace vm {
@@ -95,6 +106,7 @@ void TransitionMap::uncleanMakeLarge(Runtime &runtime) {
 const VTable HiddenClass::vt{
     CellKind::HiddenClassKind,
     cellSize<HiddenClass>(),
+    /* allowLargeAlloc */ false,
     _finalizeImpl,
     _mallocSizeImpl,
     nullptr
@@ -267,6 +279,7 @@ OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     SymbolID name,
     PropertyFlags expectedFlags,
     NamedPropertyDescriptor &desc) {
+  ++NumHCFindProperty;
   // Lazily create the property map.
   if (LLVM_UNLIKELY(!self->propertyMap_)) {
     // If expectedFlags is valid, we can check if there is an outgoing
@@ -395,7 +408,7 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
     // but not consume until we are sure (which is less efficient, but more
     // robust). T31555339.
     SlotIndex newSlot = DictPropertyMap::allocatePropertySlot(
-        selfHandle->propertyMap_.get(runtime), runtime);
+        selfHandle->propertyMap_.getNonNull(runtime), runtime);
 
     if (LLVM_UNLIKELY(
             addToPropertyMap(
@@ -415,40 +428,14 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   auto existingChild =
       selfHandle->transitionMap_.lookup(runtime, {name, propertyFlags});
   if (LLVM_LIKELY(existingChild)) {
-    auto childHandle = runtime.makeHandle(existingChild);
-    // If the child doesn't have a property map, but we do, update our map and
-    // move it to the child.
-    if (!childHandle->propertyMap_ && selfHandle->propertyMap_) {
-      LLVM_DEBUG(
-          dbgs() << "Adding property " << runtime.formatSymbolID(name)
-                 << " to Class:" << selfHandle->getDebugAllocationId()
-                 << " transitions Map to existing Class:"
-                 << childHandle->getDebugAllocationId() << "\n");
+    LLVM_DEBUG(
+        dbgs() << "Adding property " << runtime.formatSymbolID(name)
+               << " to Class:" << selfHandle->getDebugAllocationId()
+               << " transitions to existing Class:"
+               << existingChild->getDebugAllocationId() << "\n");
 
-      if (LLVM_UNLIKELY(
-              addToPropertyMap(
-                  selfHandle,
-                  runtime,
-                  name,
-                  NamedPropertyDescriptor(
-                      propertyFlags, selfHandle->numProperties_)) ==
-              ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      childHandle->propertyMap_.set(
-          runtime, selfHandle->propertyMap_, runtime.getHeap());
-    } else {
-      LLVM_DEBUG(
-          dbgs() << "Adding property " << runtime.formatSymbolID(name)
-                 << " to Class:" << selfHandle->getDebugAllocationId()
-                 << " transitions to existing Class:"
-                 << childHandle->getDebugAllocationId() << "\n");
-    }
-
-    // In any case, clear our own map.
-    selfHandle->propertyMap_.setNull(runtime.getHeap());
-
-    return std::make_pair(childHandle, selfHandle->numProperties_);
+    return std::make_pair(
+        runtime.makeHandle(existingChild), selfHandle->numProperties_);
   }
 
   // Do we need to convert to dictionary?
@@ -501,7 +488,8 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
 
   if (selfHandle->propertyMap_) {
     assert(
-        !DictPropertyMap::find(selfHandle->propertyMap_.get(runtime), name) &&
+        !DictPropertyMap::find(
+            selfHandle->propertyMap_.getNonNull(runtime), name) &&
         "Adding an existing property to hidden class");
 
     LLVM_DEBUG(
@@ -563,7 +551,7 @@ Handle<HiddenClass> HiddenClass::updateProperty(
       selfHandle->propertyMap_ && "propertyMap must exist in updateProperty()");
 
   auto *descPair = DictPropertyMap::getDescriptorPair(
-      selfHandle->propertyMap_.get(runtime), pos);
+      selfHandle->propertyMap_.getNonNull(runtime), pos);
   // If the property flags didn't change, do nothing.
   if (descPair->second.flags == newFlags)
     return selfHandle;
@@ -671,8 +659,8 @@ Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
             curHandle->propertyMap_ &&
             "propertyMap must exist after updateOwnProperty()");
 
-        auto found =
-            DictPropertyMap::find(curHandle->propertyMap_.get(runtime), id);
+        auto found = DictPropertyMap::find(
+            curHandle->propertyMap_.getNonNull(runtime), id);
         assert(found && "property not found during enumeration");
         curHandle = *updateProperty(curHandle, runtime, *found, newFlags);
       });
@@ -837,7 +825,7 @@ ExecutionStatus HiddenClass::addToPropertyMap(
 
   // Add the new field to the property map.
   MutableHandle<DictPropertyMap> updatedMap{
-      runtime, selfHandle->propertyMap_.get(runtime)};
+      runtime, selfHandle->propertyMap_.getNonNull(runtime)};
 
   if (LLVM_UNLIKELY(
           DictPropertyMap::add(updatedMap, runtime, name, desc) ==
@@ -853,6 +841,7 @@ void HiddenClass::initializeMissingPropertyMap(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
   assert(!selfHandle->propertyMap_ && "property map is already initialized");
+  ++NumHCInitPropMap;
 
   // Check whether we can steal our parent's map. If we can, we only need
   // to add or update a single property.
@@ -914,6 +903,7 @@ void HiddenClass::initializeMissingPropertyMap(
 void HiddenClass::stealPropertyMapFromParent(
     Handle<HiddenClass> selfHandle,
     Runtime &runtime) {
+  ++NumHCMapSteal;
   // Most of this method uses raw pointers.
   NoAllocScope noAlloc(runtime);
   auto *self = *selfHandle;
@@ -955,18 +945,17 @@ void HiddenClass::stealPropertyMapFromParent(
   // Our class is updating the flags of an existing property. So we need
   // to find it and update it.
 
+  auto *propMap = self->propertyMap_.getNonNull(runtime);
   assert(
-      self->numProperties_ == self->propertyMap_.getNonNull(runtime)->size() &&
+      self->numProperties_ == propMap->size() &&
       "propertyMap->size() must match HiddenClass::numProperties in "
       "flag update transition");
 
-  auto pos =
-      DictPropertyMap::find(self->propertyMap_.get(runtime), self->symbolID_);
+  auto pos = DictPropertyMap::find(propMap, self->symbolID_);
   assert(pos && "property must exist in flag update transition");
   auto tmpFlags = self->propertyFlags_;
   tmpFlags.flagsTransition = 0;
-  DictPropertyMap::getDescriptorPair(self->propertyMap_.get(runtime), *pos)
-      ->second.flags = tmpFlags;
+  DictPropertyMap::getDescriptorPair(propMap, *pos)->second.flags = tmpFlags;
 }
 
 } // namespace vm

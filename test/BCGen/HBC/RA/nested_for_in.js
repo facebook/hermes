@@ -26,20 +26,20 @@ for (var i=0 ; i < 3; ++i) {
 // CHECK-NEXT:                 DeclareGlobalVarInst "x": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "y": string
 // CHECK-NEXT:                 DeclareGlobalVarInst "i": string
-// CHECK-NEXT:  {r2}      %4 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r2}      %4 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %5 = AllocArrayInst (:object) 0: number
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %5: object, {r2} %4: object, "a": string
 // CHECK-NEXT:  {r0}      %7 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %7: object, {r2} %4: object, "x": string
 // CHECK-NEXT:  {r0}      %9 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %9: object, {r2} %4: object, "y": string
-// CHECK-NEXT:  {n0}     %11 = HBCLoadConstInst (:number) 0: number
+// CHECK-NEXT:  {n0}     %11 = LIRLoadConstInst (:number) 0: number
 // CHECK-NEXT:                 StorePropertyLooseInst {n0} %11: number, {r2} %4: object, "i": string
 // CHECK-NEXT:  {r0}     %13 = LoadPropertyInst (:any) {r2} %4: object, "i": string
-// CHECK-NEXT:  {n1}     %14 = HBCLoadConstInst (:number) 3: number
+// CHECK-NEXT:  {n1}     %14 = LIRLoadConstInst (:number) 3: number
 // CHECK-NEXT:  {np0}    %15 = BinaryLessThanInst (:boolean) {r0} %13: any, {n1} %14: number
-// CHECK-NEXT:  {r0}     %16 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:  {n0}     %17 = HBCLoadConstInst (:number) 2: number
+// CHECK-NEXT:  {r0}     %16 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {n0}     %17 = LIRLoadConstInst (:number) 2: number
 // CHECK-NEXT:  {r0}     %18 = MovInst (:undefined) {r0} %16: undefined
 // CHECK-NEXT:                 CondBranchInst {np0} %15: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:

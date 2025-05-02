@@ -299,6 +299,8 @@ class IRBuilder {
 
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
+  CreatePrivateNameInst *createCreatePrivateNameInst(LiteralString *descStr);
+
   CreateClassInst *createCreateClassInst(
       BaseScopeInst *scope,
       Function *code,
@@ -416,6 +418,9 @@ class IRBuilder {
       Value *object,
       Value *property,
       Value *receiver);
+  LoadOwnPrivateFieldInst *createLoadOwnPrivateFieldInst(
+      Value *object,
+      Value *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       LiteralString *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
@@ -457,10 +462,14 @@ class IRBuilder {
       Value *object,
       Value *property,
       PropEnumerable isEnumerable);
-  DefineNewOwnPropertyInst *createDefineNewOwnPropertyInst(
+  StoreOwnPrivateFieldInst *createStoreOwnPrivateFieldInst(
       Value *storedValue,
       Value *object,
-      Literal *property);
+      Value *property);
+  AddOwnPrivateFieldInst *createAddOwnPrivateFieldInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
 
   DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,
@@ -533,7 +542,7 @@ class IRBuilder {
   ThrowIfThisInitializedInst *createThrowIfThisInitializedInst(
       Value *subclassCheckedThis);
 
-  HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
+  LIRGetGlobalObjectInst *createLIRGetGlobalObjectInst();
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
@@ -617,7 +626,7 @@ class IRBuilder {
       const SwitchImmInst::ValueListType &values,
       const SwitchImmInst::BasicBlockListType &blocks);
 
-  HBCLoadConstInst *createHBCLoadConstInst(Literal *value);
+  LIRLoadConstInst *createLIRLoadConstInst(Literal *value);
 
   LoadParamInst *createLoadParamInst(JSDynamicParam *param);
 
@@ -627,26 +636,26 @@ class IRBuilder {
 
   LIRGetThisNSInst *createLIRGetThisNSInst();
 
-  HBCGetArgumentsPropByValLooseInst *createHBCGetArgumentsPropByValLooseInst(
+  LIRGetArgumentsPropByValLooseInst *createLIRGetArgumentsPropByValLooseInst(
       Value *index,
       AllocStackInst *lazyReg);
-  HBCGetArgumentsPropByValStrictInst *createHBCGetArgumentsPropByValStrictInst(
+  LIRGetArgumentsPropByValStrictInst *createLIRGetArgumentsPropByValStrictInst(
       Value *index,
       AllocStackInst *lazyReg);
 
-  HBCGetArgumentsLengthInst *createHBCGetArgumentsLengthInst(
+  LIRGetArgumentsLengthInst *createLIRGetArgumentsLengthInst(
       Value *lazyRegValue);
 
-  HBCReifyArgumentsLooseInst *createHBCReifyArgumentsLooseInst(
+  LIRReifyArgumentsLooseInst *createLIRReifyArgumentsLooseInst(
       AllocStackInst *lazyReg);
-  HBCReifyArgumentsStrictInst *createHBCReifyArgumentsStrictInst(
+  LIRReifyArgumentsStrictInst *createLIRReifyArgumentsStrictInst(
       AllocStackInst *lazyReg);
 
   CreateThisInst *createCreateThisInst(Value *closure, Value *newTarget);
 
   GetConstructedObjectInst *createGetConstructedObjectInst(
-      CreateThisInst *thisValue,
-      CallInst *constructorReturnValue);
+      Instruction *thisValue,
+      Value *constructorReturnValue);
 
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 
@@ -657,10 +666,11 @@ class IRBuilder {
   GetBuiltinClosureInst *createGetBuiltinClosureInst(
       BuiltinMethod::Enum builtinIndex);
 
-  HBCSpillMovInst *createHBCSpillMovInst(Instruction *value);
+  LIRSpillMovInst *createLIRSpillMovInst(Instruction *value);
 
-  HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
-      HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
+  LIRAllocObjectFromBufferInst *createLIRAllocObjectFromBufferInst(
+      Value *parentObj,
+      LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
 
   HBCCompareBranchInst *createHBCCompareBranchInst(
       Value *left,
@@ -717,9 +727,6 @@ class IRBuilder {
 
   LoadParentNoTrapsInst *createLoadParentNoTrapsInst(Value *object);
   TypedLoadParentInst *createTypedLoadParentInst(Value *object);
-  TypedStoreParentInst *createTypedStoreParentInst(
-      Value *storedValue,
-      Value *object);
 
   FUnaryMathInst *createFUnaryMathInst(ValueKind kind, Value *arg);
   FBinaryMathInst *

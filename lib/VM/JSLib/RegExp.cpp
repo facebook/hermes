@@ -455,6 +455,9 @@ static void createGroupsObject(
 
   HiddenClass::forEachProperty(
       clazzHandle, runtime, [&](SymbolID id, NamedPropertyDescriptor desc) {
+        assert(
+            !desc.flags.privateName &&
+            "private name not expected in regex mapping object");
         auto groupIdx =
             JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
                 .getNumber(runtime);
@@ -534,6 +537,9 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
         mappingObjClazz,
         runtime,
         [&](SymbolID id, NamedPropertyDescriptor desc) {
+          assert(
+              !desc.flags.privateName &&
+              "private name not expected in regex mapping object");
           auto groupIdx =
               JSObject::getNamedSlotValueUnsafe(*mappingObj, runtime, desc.slot)
                   .getNumber(runtime);
@@ -712,7 +718,11 @@ CallResult<Handle<JSArray>> directRegExpExec(
     gcScope.flushToMarker(marker);
     if (!mg) {
       // Match groups that did not match anything become undefined.
-      JSArray::setElementAt(A, runtime, idx, Runtime::getUndefinedValue());
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(
+                  A, runtime, idx, Runtime::getUndefinedValue()) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     } else {
       assert(
           mg->location + mg->length >= mg->location &&
@@ -723,8 +733,14 @@ CallResult<Handle<JSArray>> directRegExpExec(
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      JSArray::setElementAt(
-          A, runtime, idx, runtime.makeHandle<StringPrimitive>(*strRes));
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(
+                  A,
+                  runtime,
+                  idx,
+                  runtime.makeHandle<StringPrimitive>(*strRes)) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
     idx++;
   }
@@ -1450,8 +1466,7 @@ regExpPrototypeSymbolMatch(void *, Runtime &runtime, NativeArgs args) {
     auto resultObj = Handle<JSObject>::vmcast(result);
     // 1. Let matchStr be ToString(Get(result, "0")).
     // 2. ReturnIfAbrupt(matchStr).
-    auto propRes2 = JSObject::getComputed_RJS(
-        resultObj, runtime, HandleRootOwner::getZeroValue());
+    auto propRes2 = getIndexed_RJS(runtime, resultObj, 0);
     if (propRes2 == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1463,7 +1478,10 @@ regExpPrototypeSymbolMatch(void *, Runtime &runtime, NativeArgs args) {
     matchStr = strRes2->get();
     // 3. Let status be CreateDataProperty(A, ToString(n), matchStr).
     // 4. Assert: status is true.
-    JSArray::setElementAt(A, runtime, n, matchStr);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(A, runtime, n, matchStr) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
     // 5. If matchStr is the empty String, then
     if (matchStr->getStringLength() == 0) {
       // a. Let thisIndex be ToLength(Get(rx, "lastIndex")).
@@ -1655,10 +1673,6 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
     result = vmcast<JSObject>(execRes.getValue());
     // i. Append result to the end of results.
     if (LLVM_UNLIKELY(
-            resultsHandle->size() == ArrayStorageSmall::maxElements())) {
-      return runtime.raiseRangeError("Out of memory for regexp results.");
-    }
-    if (LLVM_UNLIKELY(
             ArrayStorageSmall::push_back(resultsHandle, runtime, result) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1670,8 +1684,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       // iii. Else,
       // 1. Let matchStr be ToString(Get(result, "0")).
       // 2. ReturnIfAbrupt(matchStr).
-      propRes = JSObject::getComputed_RJS(
-          result, runtime, HandleRootOwner::getZeroValue());
+      propRes = getIndexed_RJS(runtime, result, 0);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1713,7 +1726,6 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
   uint32_t nextSourcePosition = 0;
   // 16. Repeat, for each result in results,
   MutableHandle<> valueHandle{runtime};
-  MutableHandle<> nHandle{runtime};
   for (uint32_t i = 0, size = resultsHandle->size(); i < size; ++i) {
     GCScopeMarkerRAII marker1{runtime};
     result = vmcast<JSObject>(resultsHandle->at(i).getObject(runtime));
@@ -1735,8 +1747,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
     nCaptures = nCaptures > 0 ? nCaptures - 1 : 0;
     // d. Let matched be ToString(Get(result, "0")).
     // e. ReturnIfAbrupt(matched).
-    propRes = JSObject::getComputed_RJS(
-        result, runtime, HandleRootOwner::getZeroValue());
+    propRes = getIndexed_RJS(runtime, result, 0);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1771,9 +1782,6 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
     // Match the type of nCaptures.
     uint64_t n = 1;
     // k. Let captures be an empty List.
-    if (LLVM_UNLIKELY(nCaptures > ArrayStorageSmall::maxElements())) {
-      return runtime.raiseRangeError("Out of memory for capture groups.");
-    }
     arrRes = ArrayStorageSmall::create(runtime, nCaptures);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1786,8 +1794,7 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
       GCScopeMarkerRAII marker2{runtime};
       // i. Let capN be Get(result, ToString(n)).
       // ii. ReturnIfAbrupt(capN).
-      nHandle = HermesValue::encodeTrustedNumberValue(n);
-      propRes = JSObject::getComputed_RJS(result, runtime, nHandle);
+      propRes = getIndexed_RJS(runtime, result, n);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -2045,7 +2052,10 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
     }
     // c. Perform CreateDataProperty(A, "0", S).
     // Didn't match S, so add it to the array and return.
-    (void)JSArray::setElementAt(A, runtime, 0, S);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(A, runtime, 0, S) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
     if (LLVM_UNLIKELY(
             JSArray::setLengthProperty(A, runtime, 1) ==
             ExecutionStatus::EXCEPTION))
@@ -2123,7 +2133,10 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
       }
       tmpHandle = *strRes;
       // 2. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T).
-      JSArray::setElementAt(A, runtime, lengthA, tmpHandle);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(A, runtime, lengthA, tmpHandle) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
       // 3. Set lengthA to lengthA + 1.
       ++lengthA;
 
@@ -2152,8 +2165,11 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
         // b. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA),
         // nextCapture).
         if (!range) {
-          JSArray::setElementAt(
-              A, runtime, lengthA, Runtime::getUndefinedValue());
+          if (LLVM_UNLIKELY(
+                  JSArray::setElementAt(
+                      A, runtime, lengthA, Runtime::getUndefinedValue()) ==
+                  ExecutionStatus::EXCEPTION))
+            return ExecutionStatus::EXCEPTION;
         } else {
           if (LLVM_UNLIKELY(
                   (strRes = StringPrimitive::slice(
@@ -2161,11 +2177,14 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
                   ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }
-          JSArray::setElementAt(
-              A,
-              runtime,
-              lengthA,
-              runtime.makeHandle<StringPrimitive>(*strRes));
+          if (LLVM_UNLIKELY(
+                  JSArray::setElementAt(
+                      A,
+                      runtime,
+                      lengthA,
+                      runtime.makeHandle<StringPrimitive>(*strRes)) ==
+                  ExecutionStatus::EXCEPTION))
+            return ExecutionStatus::EXCEPTION;
         }
         // d. Let lengthA be lengthA +1.
         ++lengthA;
@@ -2193,7 +2212,10 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
   }
   tmpHandle = *elementStrRes;
   // 21. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T).
-  JSArray::setElementAt(A, runtime, lengthA, tmpHandle);
+  if (LLVM_UNLIKELY(
+          JSArray::setElementAt(A, runtime, lengthA, tmpHandle) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
   ++lengthA;
 
   if (LLVM_UNLIKELY(

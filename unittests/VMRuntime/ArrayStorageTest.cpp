@@ -15,77 +15,90 @@ namespace {
 
 using ArrayStorageTest = RuntimeTestFixture;
 
-TEST_F(ArrayStorageTest, ShiftTest) {
-  MutableHandle<ArrayStorage> st(runtime);
-  st = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, 4));
+/// This is a test that exposed a bug in the removed shift() function. It is
+/// good to still keep it as it can exercise different code paths in the new
+/// resize()/resizeLeft() function.
+TEST_F(ArrayStorageTest, ResizeTest) {
+  using StorageType = ArrayStorageSmall;
+  using HVType = SmallHermesValue;
 
-  // Resize to one element: "."
-  (void)ArrayStorage::resize(st, runtime, 1);
-  ASSERT_EQ(1u, st->size());
-  ASSERT_EQ(4u, st->capacity());
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(0));
-  st->setNonPtr(0, 1.0_hd, runtime.getHeap());
-  // "1"
-  ASSERT_EQ(1.0_hd, st->at(0));
+  struct : Locals {
+    PinnedValue<StorageType> arr;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  MutableHandle<StorageType> arrHandle{lv.arr};
 
-  // Resize to two elements: "1."
-  (void)ArrayStorage::resize(st, runtime, 2);
-  ASSERT_EQ(2u, st->size());
-  ASSERT_EQ(4u, st->capacity());
-  ASSERT_EQ(1.0_hd, st->at(0));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(1));
-  // "12"
-  st->setNonPtr(1, 2.0_hd, runtime.getHeap());
+  // Create a new ArrayStorage.
+  lv.arr = vmcast<StorageType>(*StorageType::create(runtime, 1));
+  // Size is 900, capacity is 900.
+  StorageType::resize(arrHandle, runtime, 900);
+  // arr[10] = 1
+  lv.arr->set(10, HVType::encodeNumberValue(1, runtime), runtime.getHeap());
+  // Insert 90 elements at the left, new size will be 990, capacity will be
+  // 1800.
+  // Copy elements from [0, 900) in old array to [90, 990) in new array.
+  StorageType::resizeLeft(arrHandle, runtime, 990);
+  ASSERT_EQ(lv.arr->at(100).getNumber(runtime), 1);
+  // Assert some elements at boundary and in the middle are correct Empty.
+  ASSERT_TRUE(lv.arr->at(101).isEmpty());
+  ASSERT_TRUE(lv.arr->at(950).isEmpty());
+  ASSERT_TRUE(lv.arr->at(989).isEmpty());
+  // Size becomes 1234, while capacity is still 1800. Elements between 990 and
+  // 1234 are initialized to Empty, elements after 1234 are uninitialized.
+  StorageType::resize(arrHandle, runtime, 1234);
+  ASSERT_EQ(lv.arr->at(100).getNumber(runtime), 1);
+  // Assert some elements at boundary and in the middle are correct Empty.
+  ASSERT_TRUE(lv.arr->at(101).isEmpty());
+  ASSERT_TRUE(lv.arr->at(1000).isEmpty());
+  ASSERT_TRUE(lv.arr->at(1233).isEmpty());
+  // The capacity is large enough, so it will only move elements towards right
+  // with offset of 5.
+  StorageType::resizeLeft(arrHandle, runtime, 1239);
+  ASSERT_EQ(lv.arr->at(105).getNumber(runtime), 1);
+  // Assert some elements at boundary and in the middle are correct Empty.
+  ASSERT_TRUE(lv.arr->at(0).isEmpty());
+  ASSERT_TRUE(lv.arr->at(106).isEmpty());
+  ASSERT_TRUE(lv.arr->at(1230).isEmpty());
+  ASSERT_TRUE(lv.arr->at(1238).isEmpty());
+}
 
-  // Resize "12" to ".12."
-  (void)ArrayStorage::shift(st, runtime, 0, 1, 4);
-  ASSERT_EQ(4u, st->size());
-  ASSERT_EQ(4u, st->capacity());
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(0));
-  ASSERT_EQ(1.0_hd, st->at(1));
-  ASSERT_EQ(2.0_hd, st->at(2));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(3));
+TEST_F(ArrayStorageTest, RandomResizeTest) {
+  using StorageType = ArrayStorageSmall;
 
-  // Resize ".12." to "12"
-  (void)ArrayStorage::shift(st, runtime, 1, 0, 2);
-  ASSERT_EQ(2u, st->size());
-  ASSERT_EQ(4u, st->capacity());
-  ASSERT_EQ(1.0_hd, st->at(0));
-  ASSERT_EQ(2.0_hd, st->at(1));
-  // We want to check that resize() doesn't do more work than it has to, so we
-  // are checking that the element which remained outside of size is the same.
-  ASSERT_EQ(2.0_hd, st->data()[2]);
+  auto randomInt = [] {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    static std::uniform_int_distribution<> uniformDist(0, 1000);
+    return (StorageType::size_type)uniformDist(gen);
+  };
 
-  // Move it to the right again. "12" -> "...1".
-  (void)ArrayStorage::shift(st, runtime, 0, 3, 4);
-  ASSERT_EQ(4u, st->size());
-  ASSERT_EQ(4u, st->capacity());
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(0));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(1));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(2));
-  ASSERT_EQ(1.0_hd, st->at(3));
+  struct : Locals {
+    PinnedValue<StorageType> arr;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  MutableHandle<StorageType> arrHandle{lv.arr};
 
-  // "...1" -> "1..."
-  (void)ArrayStorage::shift(st, runtime, 3, 0, 4);
-  ASSERT_EQ(4u, st->size());
-  ASSERT_EQ(4u, st->capacity());
-  ASSERT_EQ(1.0_hd, st->at(0));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(1));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(2));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(3));
-  // "12.."
-  st->setNonPtr(1, 2.0_hd, runtime.getHeap());
+  for (int i = 0; i < 1000; ++i) {
+    GCScopeMarkerRAII marker{runtime};
 
-  // Now let's do a reallocation. Resize to 6. "12.." -> "...12."
-  (void)ArrayStorage::shift(st, runtime, 0, 3, 6);
-  ASSERT_EQ(6u, st->size());
-  ASSERT_EQ(8u, st->capacity());
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(0));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(1));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(2));
-  ASSERT_EQ(1.0_hd, st->at(3));
-  ASSERT_EQ(2.0_hd, st->at(4));
-  ASSERT_EQ(HermesValue::encodeEmptyValue(), st->at(5));
+    auto size = randomInt();
+    // We need to make sure capacity is always >= size.
+    lv.arr = vmcast<StorageType>(
+        *StorageType::create(runtime, size + randomInt(), size));
+
+    StorageType::resize(arrHandle, runtime, randomInt());
+    StorageType::resizeLeft(arrHandle, runtime, randomInt());
+    // The object creation below will move array when handlesan is enabled. Note
+    // that in MallocGC, when moving live objects, it does trimming as well,
+    // which affects the capacity of the array, and may expose potential bugs.
+    // Same applies to collect() call.
+    (void)JSObject::create(runtime);
+    StorageType::resizeLeft(arrHandle, runtime, randomInt());
+    StorageType::resize(arrHandle, runtime, randomInt());
+    runtime.collect("test");
+    StorageType::resize(arrHandle, runtime, randomInt());
+    StorageType::resizeLeft(arrHandle, runtime, randomInt());
+  }
 }
 
 TEST_F(ArrayStorageTest, PushBackTest) {
@@ -127,28 +140,38 @@ TEST_F(ArrayStorageTest, AllowTrimming) {
   EXPECT_EQ(st->size(), st->capacity());
 }
 
-using ArrayStorageBigHeapTest = LargeHeapRuntimeTestFixture;
+using ArrayStorageBigHeapTest = ExtremeLargeHeapRuntimeTestFixture;
 
-#ifndef HERMESVM_GC_MALLOC
-// The following test allocates gigantic arrays on non-NCGen GCs.
-TEST_F(ArrayStorageBigHeapTest, AllocMaxSizeArray) {
-  // Should succeed, allocations up to maxElements are allowed.
-  auto res = ArrayStorage::create(
-      runtime, ArrayStorage::maxElements(), ArrayStorage::maxElements());
-  EXPECT_EQ(res, ExecutionStatus::RETURNED)
-      << "Allocating a max size array failed";
+TEST_F(ArrayStorageBigHeapTest, AllocLarge) {
+  // 1M elements would need > 4MB in HV32, > 8MB in HV64. Both cases trigger
+  // large allocation.
+  using StorageType = ArrayStorageSmall;
+  using HVType = SmallHermesValue;
 
-  // Try to push an additional element, which should fail.
-  auto h = runtime.makeMutableHandle(vmcast<ArrayStorage>(*res));
-  auto res2 = ArrayStorage::push_back(h, runtime, runtime.getUndefinedValue());
-  EXPECT_EQ(res2, ExecutionStatus::EXCEPTION)
-      << "Array cannot grow beyond max size";
+  constexpr size_t sz = 1024 * 1024;
+  struct : Locals {
+    PinnedValue<StorageType> st;
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  lv.st = vmcast<StorageType>(*StorageType::create(runtime, 1024 * 1024));
+  MutableHandle<StorageType> st{lv.st};
+  StorageType::resize(st, runtime, sz);
+  lv.obj = JSObject::create(runtime);
+  lv.st->set(
+      sz - 1,
+      HVType::encodeHermesValue(lv.obj.getHermesValue(), runtime),
+      runtime.getHeap());
+  // Force the created object to move.
+  runtime.collect("test");
+  auto val = lv.st->at(sz - 1);
+  // It should be accessible and returning the same object pointer.
+  EXPECT_EQ(lv.obj.get(), val.getPointer(runtime));
 }
-#endif
 
 TEST_F(ArrayStorageBigHeapTest, AllocLargeArrayThrowsRangeError) {
-  // Should fail with a RangeError for allocations above the maxElements.
-  auto res = ArrayStorage::create(runtime, ArrayStorage::maxElements() + 1);
+  // Attempt to allocate an array so big that it fails and throws a range error.
+  auto res = ArrayStorage::create(runtime, 1024 * 1024 * 1024);
   EXPECT_EQ(res, ExecutionStatus::EXCEPTION)
       << "Allocating an array slightly larger than its max size should throw";
   HermesValue hv = runtime.getThrownValue();

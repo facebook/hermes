@@ -36,7 +36,7 @@ size_t sh_unit_additional_memory_size(const SHUnit *unit);
 /// Mark the non-weak roots owned by this unit.
 void sh_unit_mark_roots(
     SHUnit *unit,
-    RootAndSlotAcceptorWithNames &acceptor,
+    RootAcceptorWithNames &acceptor,
     bool markLongLived);
 
 /// Mark the long lived weak roots owned by this unit.

@@ -44,7 +44,7 @@ function foo (a) {
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "foo"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(2 params, 16 registers, 3 numbers, 1 non-pointers):
@@ -61,7 +61,7 @@ function foo (a) {
 // CHECK-NEXT:    JmpTrue           L2, r4
 // CHECK-NEXT:L1:
 // CHECK-NEXT:    GetGlobalObject   r4
-// CHECK-NEXT:    TryGetById        r5, r4, 1, "print"
+// CHECK-NEXT:    TryGetById        r5, r4, 0, "print"
 // CHECK-NEXT:    LoadConstString   r4, "This\x0ais \u0435"...
 // CHECK-NEXT:    LoadConstUndefined r3
 // CHECK-NEXT:    Call3             r4, r5, r3, r4, r1

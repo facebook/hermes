@@ -445,7 +445,7 @@ class BoundFunction final : public Callable {
  private:
   /// Return a pointer to the stored arguments, including \c this. \c this is
   /// at index 0, followed by the rest.
-  GCHermesValue *getArgsWithThis(PointerBase &runtime) {
+  ArrayStorage::iterator getArgsWithThis(PointerBase &runtime) {
     return argStorage_.getNonNull(runtime)->begin();
   }
 
@@ -483,7 +483,7 @@ class NativeJSFunction : public Callable {
   static bool classof(const GCCell *cell) {
     switch (cell->getKind()) {
       case CellKind::NativeJSFunctionKind:
-      case CellKind::NativeJSDerivedClassKind:
+      case CellKind::NativeJSClassKind:
         return true;
       default:
         return false;
@@ -614,13 +614,13 @@ class NativeJSFunction : public Callable {
   }
 };
 
-/// This is a specific kind of NativeJSFunction: a derived class. Derived means
-/// that the class was declared with the "extends" keyword.
-class NativeJSDerivedClass : public NativeJSFunction {
+/// A NativeJSClass is a special kind of NativeJSFunction that is used to
+/// implement class constructors.
+class NativeJSClass : public NativeJSFunction {
   static constexpr auto kHasFinalizer = HasFinalizer::No;
 
  public:
-  NativeJSDerivedClass(
+  NativeJSClass(
       Runtime &runtime,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz,
@@ -639,14 +639,14 @@ class NativeJSDerivedClass : public NativeJSFunction {
   static const CallableVTable vt;
 
   static constexpr CellKind getCellKind() {
-    return CellKind::NativeJSDerivedClassKind;
+    return CellKind::NativeJSClassKind;
   }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::NativeJSDerivedClassKind;
+    return cell->getKind() == CellKind::NativeJSClassKind;
   }
 
-  /// Create an instance of NativeJSDerivedClass.
-  static Handle<NativeJSDerivedClass> create(
+  /// Create an instance of NativeJSClass.
+  static Handle<NativeJSClass> create(
       Runtime &runtime,
       Handle<JSObject> parentHandle,
       Handle<Environment> parentEnvHandle,
@@ -1134,13 +1134,13 @@ class JSFunction : public Callable {
 #endif
 };
 
-/// This is a specific kind of JSFunction: a derived class. Derived means that
-/// the class was declared with the "extends" keyword.
-class JSDerivedClass : public JSFunction {
+/// A JSClass is a special kind of JSFunction that is used to implement class
+/// constructors.
+class JSClass : public JSFunction {
   static constexpr auto kHasFinalizer = HasFinalizer::No;
 
  public:
-  JSDerivedClass(
+  JSClass(
       Runtime &runtime,
       Handle<Domain> domain,
       Handle<JSObject> parent,
@@ -1151,13 +1151,13 @@ class JSDerivedClass : public JSFunction {
   static const CallableVTable vt;
 
   static constexpr CellKind getCellKind() {
-    return CellKind::JSDerivedClassKind;
+    return CellKind::JSClassKind;
   }
   static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::JSDerivedClassKind;
+    return cell->getKind() == CellKind::JSClassKind;
   }
-  /// Create an instance of JSDerivedClass.
-  static PseudoHandle<JSDerivedClass> create(
+  /// Create an instance of JSClass.
+  static PseudoHandle<JSClass> create(
       Runtime &runtime,
       Handle<Domain> domain,
       Handle<JSObject> parentHandle,

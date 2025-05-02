@@ -85,6 +85,10 @@ bool tryPromoteObject(
     }
     if (auto *LP = llvh::dyn_cast<TypedLoadParentInst>(U)) {
       assert(LP->getObject() == alloc && "Load from a different object");
+      // The parent must be specified in the AllocObjectLiteralInst for us to
+      // guarantee that a LoadStack for it will be preceded by a StoreStack.
+      if (llvh::isa<EmptySentinel>(alloc->getParentObject()))
+        return false;
       continue;
     }
 
@@ -93,12 +97,6 @@ bool tryPromoteObject(
     if (auto *S = llvh::dyn_cast<PrStoreInst>(U)) {
       if (S->getStoredValue() != alloc) {
         assert(S->getObject() == alloc && "Unknown usage of object.");
-        continue;
-      }
-    }
-    if (auto *SP = llvh::dyn_cast<TypedStoreParentInst>(U)) {
-      if (SP->getStoredValue() != alloc) {
-        assert(SP->getObject() == alloc && "Unknown usage of object.");
         continue;
       }
     }
@@ -137,6 +135,13 @@ bool tryPromoteObject(
 
   auto *parentLoc =
       builder.createAllocStackInst("[parent]", Type::createAnyType());
+  // If a parent is specified, initialize the parent stack location. Note that
+  // if no parent is specified in the AllocObjectLiteralInst, we cannot have any
+  // loads here, so the IR will still be valid. Technically, if the parent is
+  // not specified, we know it will be Object.prototype, but we don't have a way
+  // of retrieving that here.
+  if (!llvh::isa<EmptySentinel>(alloc->getParentObject()))
+    builder.createStoreStackInst(alloc->getParentObject(), parentLoc);
   auto numericPropName = builder.createIdentifier("[numeric prop]");
   for (size_t i = 0; i < numElems; ++i) {
     auto *LS = llvh::dyn_cast<LiteralString>(alloc->getKey(i));
@@ -190,10 +195,6 @@ bool tryPromoteObject(
     if (auto *S = llvh::dyn_cast<PrStoreInst>(U)) {
       builder.createStoreStackInst(
           S->getStoredValue(), stackLocs[S->getPropIndex()]);
-      continue;
-    }
-    if (auto *SP = llvh::dyn_cast<TypedStoreParentInst>(U)) {
-      builder.createStoreStackInst(SP->getStoredValue(), parentLoc);
       continue;
     }
 

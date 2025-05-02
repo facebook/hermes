@@ -47,8 +47,8 @@ test_one(1,2,3)
 // CHECK-NEXT:[@ 5] GetGlobalObject 4<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 3<Reg8>
 // CHECK-NEXT:[@ 9] CreateClosure 5<Reg8>, 3<Reg8>, 1<UInt16>
-// CHECK-NEXT:[@ 14] PutByIdLoose 4<Reg8>, 5<Reg8>, 1<UInt8>, 1<UInt16>
-// CHECK-NEXT:[@ 20] GetByIdShort 4<Reg8>, 4<Reg8>, 1<UInt8>, 1<UInt8>
+// CHECK-NEXT:[@ 14] PutByIdLoose 4<Reg8>, 5<Reg8>, 0<UInt8>, 1<UInt16>
+// CHECK-NEXT:[@ 20] GetByIdShort 4<Reg8>, 4<Reg8>, 0<UInt8>, 1<UInt8>
 // CHECK-NEXT:[@ 25] LoadConstUInt8 0<Reg8>, 3<UInt8>
 // CHECK-NEXT:[@ 28] LoadConstUInt8 1<Reg8>, 2<UInt8>
 // CHECK-NEXT:[@ 31] LoadConstUInt8 2<Reg8>, 1<UInt8>

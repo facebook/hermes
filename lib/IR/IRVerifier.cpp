@@ -92,8 +92,6 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
   LLVM_NODISCARD bool visitBasicBlock(const BasicBlock &BB);
   LLVM_NODISCARD bool visitVariableScope(const VariableScope &VS);
 
-  LLVM_NODISCARD bool visitBaseDefineOwnPropertyInst(
-      const BaseDefineOwnPropertyInst &Inst);
   LLVM_NODISCARD bool visitBaseCreateLexicalChildInst(
       const BaseCreateLexicalChildInst &Inst);
   LLVM_NODISCARD bool visitBaseCreateCallableInst(
@@ -234,6 +232,8 @@ bool Verifier::visitModule(const Module &M) {
   }
   for (auto &VS : M.getVariableScopes())
     ReturnIfNot(visitVariableScope(VS));
+  // Ensure that we can compute the hash of a module successfully.
+  (void)M.hash();
   return true;
 }
 
@@ -253,7 +253,8 @@ bool Verifier::visitFunction(const Function &F) {
         (*user),
         llvh::isa<BaseCallInst>(user) ||
             llvh::isa<BaseCreateLexicalChildInst>(user) ||
-            llvh::isa<GetClosureScopeInst>(user),
+            llvh::isa<GetClosureScopeInst>(user) ||
+            llvh::isa<CreateThisInst>(user),
         "Function can only be an operand to certain instructions");
   }
 
@@ -739,6 +740,18 @@ bool Verifier::visitAddEmptyStringInst(const AddEmptyStringInst &Inst) {
   return true;
 }
 
+bool Verifier::visitCreatePrivateNameInst(const CreatePrivateNameInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      llvh::isa<LiteralString>(Inst.getSingleOperand()),
+      "CreatePrivateNameInst must take in a literal string");
+  AssertIWithMsg(
+      Inst,
+      Inst.getType().isPrivateNameType(),
+      "CreatePrivateNameInst must return a private name type");
+  return true;
+}
+
 bool Verifier::visitAllocStackInst(const AllocStackInst &Inst) {
   AssertIWithMsg(
       Inst,
@@ -937,7 +950,7 @@ bool Verifier::visitCallInst(const CallInst &Inst) {
 bool Verifier::visitHBCCallWithArgCountInst(
     const HBCCallWithArgCountInst &Inst) {
   // NumArgumentsLiteral is not always a number literal. For example, it will be
-  // lowered into HBCLoadConstant.
+  // lowered into LIRLoadConstInst.
   if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getNumArgumentsLiteral())) {
     AssertIWithMsg(
         Inst,
@@ -986,6 +999,14 @@ bool Verifier::visitLoadPropertyWithReceiverInst(
     const LoadPropertyWithReceiverInst &Inst) {
   return true;
 }
+bool Verifier::visitLoadOwnPrivateFieldInst(
+    const LoadOwnPrivateFieldInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getProperty()->getType().isPrivateNameType(),
+      "LoadOwnPrivateFieldInst must be loading a private name");
+  return true;
+}
 bool Verifier::visitTryLoadGlobalPropertyInst(
     const TryLoadGlobalPropertyInst &Inst) {
   return true;
@@ -1024,40 +1045,27 @@ bool Verifier::visitTryStoreGlobalPropertyStrictInst(
   return true;
 }
 
-bool Verifier::visitBaseDefineOwnPropertyInst(
-    const BaseDefineOwnPropertyInst &Inst) {
+bool Verifier::visitDefineOwnPropertyInst(const DefineOwnPropertyInst &Inst) {
   AssertIWithMsg(
       Inst,
       llvh::isa<LiteralBool>(
           Inst.getOperand(DefineOwnPropertyInst::IsEnumerableIdx)),
-      "BaseDefineOwnPropertyInst::IsEnumerable must be a boolean literal");
+      "DefineOwnPropertyInst::IsEnumerable must be a boolean literal");
   return true;
 }
-bool Verifier::visitDefineOwnPropertyInst(const DefineOwnPropertyInst &Inst) {
-  return visitBaseDefineOwnPropertyInst(Inst);
+bool Verifier::visitStoreOwnPrivateFieldInst(
+    const StoreOwnPrivateFieldInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getProperty()->getType().isPrivateNameType(),
+      "AddOwnPrivatePropertyInst::Property must be a private name");
+  return true;
 }
-bool Verifier::visitDefineNewOwnPropertyInst(
-    const DefineNewOwnPropertyInst &Inst) {
-  ReturnIfNot(visitBaseDefineOwnPropertyInst(Inst));
+bool Verifier::visitAddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &Inst) {
   AssertIWithMsg(
       Inst,
-      Inst.getObject()->getType().isObjectType(),
-      "DefineNewOwnPropertyInst::Object must be known to be an object");
-  if (auto *LN = llvh::dyn_cast<LiteralNumber>(Inst.getProperty())) {
-    AssertIWithMsg(
-        Inst,
-        LN->convertToArrayIndex().hasValue(),
-        "DefineNewOwnPropertyInst::Property can only be an index-like number");
-  } else {
-    AssertIWithMsg(
-        Inst,
-        llvh::isa<LiteralString>(Inst.getProperty()),
-        "DefineNewOwnPropertyInst::Property must be a string or number literal");
-  }
-  AssertIWithMsg(
-      Inst,
-      Inst.getIsEnumerable(),
-      "DefineNewOwnPropertyInst::IsEnumerable must be true");
+      Inst.getProperty()->getType().isPrivateNameType(),
+      "AddOwnPrivateFieldInst::Property must be a private name");
   return true;
 }
 
@@ -1426,12 +1434,12 @@ bool Verifier::visitHBCProfilePointInst(const HBCProfilePointInst &Inst) {
   return true;
 }
 
-bool Verifier::visitHBCAllocObjectFromBufferInst(
-    const hermes::HBCAllocObjectFromBufferInst &Inst) {
+bool Verifier::visitLIRAllocObjectFromBufferInst(
+    const hermes::LIRAllocObjectFromBufferInst &Inst) {
   AssertIWithMsg(
       Inst,
       Inst.getKeyValuePairCount() > 0,
-      "Cannot allocate an empty HBCAllocObjectFromBufferInst");
+      "Cannot allocate an empty LIRAllocObjectFromBufferInst");
   return true;
 }
 
@@ -1445,12 +1453,12 @@ bool Verifier::visitAllocTypedObjectInst(
   return true;
 }
 
-bool Verifier::visitHBCGetGlobalObjectInst(const HBCGetGlobalObjectInst &Inst) {
+bool Verifier::visitLIRGetGlobalObjectInst(const LIRGetGlobalObjectInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
 
-bool Verifier::visitHBCLoadConstInst(hermes::HBCLoadConstInst const &Inst) {
+bool Verifier::visitLIRLoadConstInst(hermes::LIRLoadConstInst const &Inst) {
   // Nothing to verify at this point.
   return true;
 }
@@ -1494,28 +1502,28 @@ bool Verifier::visitLIRGetThisNSInst(const LIRGetThisNSInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
-bool Verifier::visitHBCGetArgumentsPropByValLooseInst(
-    const HBCGetArgumentsPropByValLooseInst &Inst) {
+bool Verifier::visitLIRGetArgumentsPropByValLooseInst(
+    const LIRGetArgumentsPropByValLooseInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
-bool Verifier::visitHBCGetArgumentsPropByValStrictInst(
-    const HBCGetArgumentsPropByValStrictInst &Inst) {
+bool Verifier::visitLIRGetArgumentsPropByValStrictInst(
+    const LIRGetArgumentsPropByValStrictInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
-bool Verifier::visitHBCGetArgumentsLengthInst(
-    const HBCGetArgumentsLengthInst &Inst) {
+bool Verifier::visitLIRGetArgumentsLengthInst(
+    const LIRGetArgumentsLengthInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
-bool Verifier::visitHBCReifyArgumentsLooseInst(
-    const HBCReifyArgumentsLooseInst &Inst) {
+bool Verifier::visitLIRReifyArgumentsLooseInst(
+    const LIRReifyArgumentsLooseInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
-bool Verifier::visitHBCReifyArgumentsStrictInst(
-    const HBCReifyArgumentsStrictInst &Inst) {
+bool Verifier::visitLIRReifyArgumentsStrictInst(
+    const LIRReifyArgumentsStrictInst &Inst) {
   // Nothing to verify at this point.
   return true;
 }
@@ -1527,7 +1535,7 @@ bool Verifier::visitGetConstructedObjectInst(
   return true;
 }
 
-bool Verifier::visitHBCSpillMovInst(const HBCSpillMovInst &Inst) {
+bool Verifier::visitLIRSpillMovInst(const LIRSpillMovInst &Inst) {
   return true;
 }
 bool Verifier::visitUnreachableInst(const UnreachableInst &Inst) {
@@ -1641,17 +1649,6 @@ bool Verifier::visitTypedLoadParentInst(const TypedLoadParentInst &Inst) {
       Inst,
       Inst.getObject()->getType().isObjectType(),
       "input object value must be of object type");
-  return true;
-}
-bool Verifier::visitTypedStoreParentInst(const TypedStoreParentInst &Inst) {
-  AssertIWithMsg(
-      Inst,
-      Inst.getObject()->getType().isObjectType(),
-      "input object value must be of object type");
-  AssertIWithMsg(
-      Inst,
-      Inst.getStoredValue()->getType().isObjectType(),
-      "stored value must be an object");
   return true;
 }
 

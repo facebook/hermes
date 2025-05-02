@@ -59,7 +59,7 @@ var obj = {
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<set d>
 // CHECK-NEXT:    DefineOwnGetterSetterByVal r2, r3, r0, r1, 1
 // CHECK-NEXT:    GetGlobalObject   r1
-// CHECK-NEXT:    PutByIdLoose      r1, r2, 1, "obj"
+// CHECK-NEXT:    PutByIdLoose      r1, r2, 0, "obj"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<get b>(1 params, 1 registers, 0 numbers, 1 non-pointers):

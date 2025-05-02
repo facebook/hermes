@@ -23,8 +23,8 @@ function foo() {
 
 // REORDER:function foo(): undefined
 // REORDER-NEXT:%BB0:
-// REORDER-NEXT:  {n3}      %0 = HBCLoadConstInst (:number) 1: number
-// REORDER-NEXT:  {n7}      %1 = HBCLoadConstInst (:number) 10: number
+// REORDER-NEXT:  {n3}      %0 = LIRLoadConstInst (:number) 1: number
+// REORDER-NEXT:  {n7}      %1 = LIRLoadConstInst (:number) 10: number
 // REORDER-NEXT:  {n4}      %2 = MovInst (:number) {n3} %0: number
 // REORDER-NEXT:  {n5}      %3 = MovInst (:number) {n4} %2: number
 // REORDER-NEXT:                 BranchInst %BB1
@@ -37,7 +37,7 @@ function foo() {
 // REORDER-NEXT:  {n1}     %10 = MovInst (:number) {n1} %8: number
 // REORDER-NEXT:                 BranchInst %BB4
 // REORDER-NEXT:%BB2:
-// REORDER-NEXT:  {np0}    %12 = HBCLoadConstInst (:undefined) undefined: undefined
+// REORDER-NEXT:  {np0}    %12 = LIRLoadConstInst (:undefined) undefined: undefined
 // REORDER-NEXT:                 ReturnInst {np0} %12: undefined
 // REORDER-NEXT:%BB3:
 // REORDER-NEXT:  {n4}     %14 = FAddInst (:number) {n6} %7: number, {n3} %0: number
@@ -54,8 +54,8 @@ function foo() {
 
 // NO-REORDER:function foo(): undefined
 // NO-REORDER-NEXT:%BB0:
-// NO-REORDER-NEXT:  {n3}      %0 = HBCLoadConstInst (:number) 1: number
-// NO-REORDER-NEXT:  {n2}      %1 = HBCLoadConstInst (:number) 10: number
+// NO-REORDER-NEXT:  {n3}      %0 = LIRLoadConstInst (:number) 1: number
+// NO-REORDER-NEXT:  {n2}      %1 = LIRLoadConstInst (:number) 10: number
 // NO-REORDER-NEXT:  {n1}      %2 = MovInst (:number) {n3} %0: number
 // NO-REORDER-NEXT:  {n0}      %3 = MovInst (:number) {n1} %2: number
 // NO-REORDER-NEXT:                 BranchInst %BB1
@@ -68,7 +68,7 @@ function foo() {
 // NO-REORDER-NEXT:  {n7}     %10 = MovInst (:number) {n7} %8: number
 // NO-REORDER-NEXT:                 BranchInst %BB4
 // NO-REORDER-NEXT:%BB2:
-// NO-REORDER-NEXT:  {np0}    %12 = HBCLoadConstInst (:undefined) undefined: undefined
+// NO-REORDER-NEXT:  {np0}    %12 = LIRLoadConstInst (:undefined) undefined: undefined
 // NO-REORDER-NEXT:                 ReturnInst {np0} %12: undefined
 // NO-REORDER-NEXT:%BB3:
 // NO-REORDER-NEXT:  {n1}     %14 = FAddInst (:number) {n4} %7: number, {n3} %0: number

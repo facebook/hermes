@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use juno_ast::node_cast;
 use juno_ast::GCLock;
 use juno_ast::Node;
+use juno_ast::node_cast;
 use juno_support::atom_table::Atom;
 use juno_support::declare_opaque_id;
 use juno_support::source_manager::SourceId;

@@ -48,7 +48,7 @@ function simple(x, y) {
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<simple>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "simple"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "simple"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<simple>(3 params, 3 registers, 0 numbers, 1 non-pointers):
@@ -57,9 +57,9 @@ function simple(x, y) {
 // CHECK-NEXT:    GetNewTarget      r1
 // CHECK-NEXT:    CacheNewObject    r2, r1, 0, 0
 // CHECK-NEXT:    LoadParam         r1, 1
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "x"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "x"
 // CHECK-NEXT:    LoadParam         r1, 2
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "y"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "y"
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    Ret               r0
 

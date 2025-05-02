@@ -107,9 +107,9 @@ function f(x) {
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<g>
-// CHECK-NEXT:    PutByIdStrict     r2, r1, 1, "g"
+// CHECK-NEXT:    PutByIdStrict     r2, r1, 0, "g"
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<f>
-// CHECK-NEXT:    PutByIdStrict     r2, r1, 2, "f"
+// CHECK-NEXT:    PutByIdStrict     r2, r1, 1, "f"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<g>(1 params, 1 registers, 0 numbers, 1 non-pointers):
@@ -158,7 +158,7 @@ function f(x) {
 // CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L5:
 // CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    GetByIdShort      r3, r3, 1, "g"
+// CHECK-NEXT:    GetByIdShort      r3, r3, 0, "g"
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Call1             r3, r3, r1
 // CHECK-NEXT:    LoadConstInt      r0, 342
@@ -200,7 +200,7 @@ function f(x) {
 // CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L22:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r2, r2, 1, "g"
+// CHECK-NEXT:    GetByIdShort      r2, r2, 0, "g"
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Call1             r2, r2, r1
 // CHECK-NEXT:    LoadConstInt      r0, 342
@@ -216,7 +216,7 @@ function f(x) {
 // CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L23:
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    GetByIdShort      r2, r2, 1, "g"
+// CHECK-NEXT:    GetByIdShort      r2, r2, 0, "g"
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Call1             r2, r2, r1
 // CHECK-NEXT:    Ret               r1

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This optimization collects DefineNewOwnPropertyInsts and merges them into a
+/// This optimization collects DefineOwnPropertyInsts and merges them into a
 /// single AllocObjectLiteral.
 //===----------------------------------------------------------------------===//
 
@@ -20,13 +20,15 @@
 #include "hermes/IR/Instrs.h"
 #include "hermes/Optimizer/PassManager/Pass.h"
 
+#include "llvh/ADT/MapVector.h"
+
 #define DEBUG_TYPE "objectmergenewstores"
 
 namespace hermes {
 namespace {
 
-/// Define a type for managing lists of DefineNewOwnPropertyInsts.
-using StoreList = llvh::SmallVector<DefineNewOwnPropertyInst *, 4>;
+/// Define a type for managing lists of DefineOwnPropertyInst.
+using StoreList = llvh::SmallVector<DefineOwnPropertyInst *, 4>;
 /// Define a type for mapping a given basic block to the stores to a given
 /// AllocObjectLiteralInst in that basic block.
 using BlockUserMap = llvh::DenseMap<BasicBlock *, StoreList>;
@@ -36,17 +38,38 @@ using BlockUserMap = llvh::DenseMap<BasicBlock *, StoreList>;
 StoreList collectStores(
     AllocObjectLiteralInst *allocInst,
     const BlockUserMap &userBasicBlockMap,
-    const DominanceInfo &DI) {
+    const DominanceInfo &DI,
+    const LoopAnalysis &loops) {
   // Sort the basic blocks that contain users of allocInst by dominance.
   auto sortedBlocks = orderBlocksByDominance(
       DI, allocInst->getParent(), [&userBasicBlockMap](BasicBlock *BB) {
         return userBasicBlockMap.find(BB) != userBasicBlockMap.end();
       });
-  // Iterate over the sorted blocks to collect DefineNewOwnPropertyInst users
-  // until we encounter a nullptr indicating we should stop.
+  // Iterate over the sorted blocks to collect DefineOwnPropertyInst users
+  // until we encounter a nullptr or a store in an inner loop, indicating we
+  // should stop.
   StoreList instrs;
+  bool isAllocInLoop = loops.isBlockInLoop(allocInst->getParent());
+  // If the alloc is in a loop, record its header so we can compare it against
+  // that of the stores.
+  BasicBlock *allocLoopHeader;
+  if (isAllocInLoop)
+    allocLoopHeader = loops.getLoopHeader(allocInst->getParent());
   for (BasicBlock *BB : sortedBlocks) {
-    for (DefineNewOwnPropertyInst *I : userBasicBlockMap.find(BB)->second) {
+    bool isBlockInLoop = loops.isBlockInLoop(BB);
+    // If one is in a loop and the other is not, merging is not possible.
+    if (isAllocInLoop != isBlockInLoop)
+      return instrs;
+
+    // If they are in a loop, it must be the same one. Note that we have to
+    // check for a null loop header before testing for equality, because a null
+    // header just means the header cannot be determined, making it unsafe to
+    // proceed.
+    if (isAllocInLoop)
+      if (!allocLoopHeader || loops.getLoopHeader(BB) != allocLoopHeader)
+        return instrs;
+
+    for (auto *I : userBasicBlockMap.at(BB)) {
       // If I is null, we cannot consider additional stores.
       if (!I)
         return instrs;
@@ -56,7 +79,28 @@ StoreList collectStores(
   return instrs;
 }
 
-/// Merge DefineNewOwnPropertyInsts into a single AllocObjectLiteralInst.
+/// Normalize \p key, which is known to be either LiteralNumber or
+/// LiteralString, so that index-like keys produce a LiteralNumber and all other
+/// keys produce a LiteralString.
+Literal *normalizeKey(IRBuilder &builder, Literal *key) {
+  if (auto *LS = llvh::dyn_cast<LiteralString>(key)) {
+    // If this is an index-like string, convert it to a number.
+    if (auto idx = toArrayIndex(LS->getValue().str()))
+      return builder.getLiteralNumber(*idx);
+  } else {
+    // If this is a number that is not index-like, convert it to a string.
+    auto *LN = llvh::cast<LiteralNumber>(key);
+    if (!doubleToArrayIndex(LN->getValue())) {
+      char buf[NUMBER_TO_STRING_BUF_SIZE];
+      size_t sz =
+          numberToString(LN->getValue(), buf, NUMBER_TO_STRING_BUF_SIZE);
+      return builder.getLiteralString(llvh::StringRef{buf, sz});
+    }
+  }
+  return key;
+}
+
+/// Merge DefineOwnPropertyInsts into a single AllocObjectLiteralInst.
 /// Non-literal values are set with placeholders and later patched with the
 /// correct value.
 /// \p allocInst the instruction to transform
@@ -74,17 +118,36 @@ bool mergeStoresToObjectLiteral(
 
   Function *F = allocInst->getParent()->getParent();
   IRBuilder builder(F);
+
+  // Map from a key to the last store for that key. Entries are added to the map
+  // in the same order that properties are added to the object.
+  llvh::MapVector<Literal *, DefineOwnPropertyInst *> finalStoresMV;
+  for (auto *store : users) {
+    // Normalize the keys, this ensures we don't end up with multiple entries
+    // for the same key.
+    auto *key =
+        normalizeKey(builder, llvh::cast<Literal>(store->getProperty()));
+
+    auto [it, inserted] = finalStoresMV.insert({key, store});
+    // There is an existing entry for a store with this key, that store must be
+    // deleted before we proceed.
+    if (!inserted) {
+      // Delete the old store, and replace it with the new one.
+      it->second->eraseFromParent();
+      it->second = store;
+    }
+  }
+
+  auto finalStores = finalStoresMV.takeVector();
+
   AllocObjectLiteralInst::ObjectPropertyMap propMap;
-  // Keep track of if we have encountered a numeric key yet.
+  // Keep track of if we have encountered a numeric key yet. Note that since
+  // everything is normalized above, a key is a LiteralNumber if and only if it
+  // is index-like.
   bool hasSeenNumericKey = false;
-  for (uint32_t i = 0; i < size; ++i) {
-    DefineNewOwnPropertyInst *I = users[i];
-    Literal *propKey = llvh::cast<Literal>(I->getProperty());
+  for (uint32_t i = 0, e = finalStores.size(); i < e; ++i) {
+    auto [propKey, I] = finalStores[i];
     auto *propVal = I->getStoredValue();
-    // If the key is an index-like string, normalize it to a number.
-    if (auto *LS = llvh::dyn_cast<LiteralString>(propKey))
-      if (auto idx = toArrayIndex(LS->getValue().str()))
-        propKey = builder.getLiteralNumber(*idx);
     hasSeenNumericKey |= llvh::isa<LiteralNumber>(propKey);
     if (auto *literalVal = llvh::dyn_cast<Literal>(propVal)) {
       propMap.push_back({propKey, literalVal});
@@ -125,31 +188,38 @@ bool mergeNewStores(Function *F) {
   /// store to \p A. If so, append it to \p stores, if not, append nullptr to
   /// indicate that subsequent users in the basic block should not be
   /// considered.
-  auto tryAdd =
-      [](AllocObjectLiteralInst *A, Instruction *U, StoreList &stores) {
-        // If the store list has been terminated by a nullptr, we have already
-        // encountered a non-define new user of A in this block. Ignore this
-        // user.
-        if (!stores.empty() && !stores.back())
-          return;
-        auto *newDef = llvh::dyn_cast<DefineNewOwnPropertyInst>(U);
-        if (!newDef || newDef->getStoredValue() == A ||
-            !newDef->getIsEnumerable()) {
-          // A user that's not a DefineNewOwnPropertyInst storing into the
-          // object created by allocInst. We have to stop processing here. Note
-          // that we check the stored value instead of the target object so that
-          // we omit the case where an object is stored into itself. While it
-          // should technically be safe, this maintains the invariant that stop
-          // as soon the allocated object is used as something other than the
-          // target of a DefineNewOwnPropertyInst.
-          stores.push_back(nullptr);
-        } else {
+  auto tryAdd = [](AllocObjectLiteralInst *A,
+                   Instruction *U,
+                   StoreList &stores) {
+    // If the store list has been terminated by a nullptr, we have already
+    // encountered a non-define user of A in this block. Ignore this
+    // user.
+    if (!stores.empty() && !stores.back())
+      return;
+
+    if (auto *BDOP = llvh::dyn_cast<DefineOwnPropertyInst>(U)) {
+      // Note that we check the stored value instead of the target object so
+      // that we omit the case where an object is stored into itself. While
+      // it should technically be safe, this maintains the invariant that
+      // stop as soon the allocated object is used as something other than
+      // the target of a DefineOwnPropertyInst.
+      if (BDOP->getStoredValue() != A && BDOP->getIsEnumerable()) {
+        // Check that the key is a literal number or string.
+        Value *key = BDOP->getProperty();
+        if (llvh::isa<LiteralNumber>(key) || llvh::isa<LiteralString>(key)) {
           assert(
-              newDef->getObject() == A &&
-              "DefineNew using allocInst must use it as object or value");
-          stores.push_back(newDef);
+              BDOP->getObject() == A &&
+              "BDOP using allocInst must use it as object, value, or key");
+          stores.push_back(BDOP);
+          return;
         }
-      };
+      }
+    }
+
+    // A user that's not a define with a literal property storing into the
+    // object created by allocInst. We have to stop processing here.
+    stores.push_back(nullptr);
+  };
 
   // For each basic block, collect an ordered list of stores into
   // AllocObjectInsts that should be considered for lowering into a buffer.
@@ -161,7 +231,7 @@ bool mergeNewStores(Function *F) {
         continue;
       for (size_t i = 0; i < I.getNumOperands(); ++i) {
         if (auto *A = llvh::dyn_cast<AllocObjectLiteralInst>(I.getOperand(i))) {
-          // For now, we only consider merging DefineNewOwnPropertyInsts that
+          // For now, we only consider merging DefineOwnPropertyInsts that
           // are writing into an empty object to start.
           if (A->getKeyValuePairCount() == 0)
             tryAdd(A, &I, allocUsers[A][&BB]);
@@ -197,10 +267,11 @@ bool mergeNewStores(Function *F) {
 
   bool changed = false;
   DominanceInfo DI(F);
+  LoopAnalysis loops(F, DI);
   for (const auto &[A, userBasicBlockMap] : allocUsers) {
     // Collect the stores that are guaranteed to execute before any other user
     // of this object.
-    auto stores = collectStores(A, userBasicBlockMap, DI);
+    auto stores = collectStores(A, userBasicBlockMap, DI, loops);
     changed |= mergeStoresToObjectLiteral(A, stores);
   }
 

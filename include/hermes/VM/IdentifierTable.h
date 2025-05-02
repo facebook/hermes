@@ -111,13 +111,15 @@ class IdentifierTable {
   /// Register a lazy ASCII identifier from a bytecode module or as predefined
   /// identifier.
   /// This function should only be called during initialization of a module.
-  SymbolID registerLazyIdentifier(ASCIIRef str);
-  SymbolID registerLazyIdentifier(ASCIIRef str, uint32_t hash);
+  SymbolID registerLazyIdentifier(Runtime &runtime, ASCIIRef str);
+  SymbolID
+  registerLazyIdentifier(Runtime &runtime, ASCIIRef str, uint32_t hash);
 
   /// Register a lazy UTF16 identifier from a bytecode module or as predefined
   /// identifier.
-  SymbolID registerLazyIdentifier(UTF16Ref str);
-  SymbolID registerLazyIdentifier(UTF16Ref str, uint32_t hash);
+  SymbolID registerLazyIdentifier(Runtime &runtime, UTF16Ref str);
+  SymbolID
+  registerLazyIdentifier(Runtime &runtime, UTF16Ref str, uint32_t hash);
 
   /// \return the SymbolID of the string primitive \p str.
   CallResult<Handle<SymbolID>> getSymbolHandleFromPrimitive(
@@ -144,14 +146,13 @@ class IdentifierTable {
   void reserve(uint32_t count) {
     lookupVector_.reserve(count);
     hashTable_.reserve(count);
-    markedSymbols_.reserve(count);
   }
 
   /// \return an estimate of the size of additional memory used by this
   /// IdentifierTable.
   size_t additionalMemorySize() const {
     return lookupVector_.capacity() * sizeof(LookupEntry) +
-        hashTable_.additionalMemorySize() + markedSymbols_.getMemorySize();
+        hashTable_.additionalMemorySize();
   }
 
   /// Mark all identifiers for the garbage collector.
@@ -177,13 +178,10 @@ class IdentifierTable {
     return lookupVector_.size();
   }
 
-  /// Remove the mark bit from each symbol.
-  void unmarkSymbols();
-
-  /// Invoked at the end of a GC to free all unmarked symbols.
-  void freeUnmarkedSymbols(
-      const llvh::BitVector &markedSymbols,
-      GC::IDTracker &gc);
+  /// Invoked at the end of a GC to free all unmarked symbols. The function may
+  /// set additional bits in \p markedSymbols to reflect the fact that some
+  /// symbols were not freed.
+  void freeUnmarkedSymbols(llvh::BitVector &markedSymbols, GC::IDTracker &gc);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier
@@ -392,9 +390,6 @@ class IdentifierTable {
   /// the number of identifiers initialized from the module.
   ConservativeVector<LookupEntry> lookupVector_;
 
-  /// A bit vector representing if a symbol is new since the last collection.
-  llvh::BitVector markedSymbols_;
-
   /// The hash table.
   detail::IdentifierHashTable hashTable_{};
 
@@ -419,10 +414,6 @@ class IdentifierTable {
     return lookupVector_[id];
   }
 
-  /// Marks a symbol as being read, which will ensure it isn't garbage collected
-  /// if a GC is ongoing.
-  void symbolReadBarrier(uint32_t id);
-
   /// Create or lookup a SymbolID from a string \str. If \p primHandle is not
   /// null, it is assumed to be backing str.
   /// \param str Required. The string to to use.
@@ -439,11 +430,17 @@ class IdentifierTable {
 
   /// Internal implementation of registerLazyIdentifier().
   template <typename T>
-  SymbolID registerLazyIdentifierImpl(llvh::ArrayRef<T> str, uint32_t hash);
+  SymbolID registerLazyIdentifierImpl(
+      Runtime &runtime,
+      llvh::ArrayRef<T> str,
+      uint32_t hash);
 
   /// Allocate a new SymbolID, and set it to \p str. Update the hash table
   /// location \p hashTableIndex with the ID. \return the new ID.
-  uint32_t allocIDAndInsert(uint32_t hashTableIndex, StringPrimitive *str);
+  uint32_t allocIDAndInsert(
+      Runtime &runtime,
+      uint32_t hashTableIndex,
+      StringPrimitive *str);
 
   /// Free the symbol with the specified index \p index.
   /// The specified symbol must be a valid one (not previously freed).

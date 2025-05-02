@@ -5,9 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -fno-inline -Xforce-jit -Xdump-jitcode=2 -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -fno-inline %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -fno-inline -Xforce-jit -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
+// Test the JStrictEqual instruction (and the inverse).
 function equal(x, y) {
   if (x === y) {
     return 123;
@@ -15,13 +17,49 @@ function equal(x, y) {
     return 456;
   }
 }
+function nequal(x, y) {
+  if (x !== y) {
+    return 123;
+  } else {
+    return 456;
+  }
+}
+function check(x, y) {
+  return [equal(x, y) === 123, nequal(x, y) === 123];
+}
 
-print(equal(1, 1));
-// CHECK: JIT successfully compiled FunctionID 1, 'equal'
-// CHECK-NEXT: 123
-print(equal(1, 2));
-// CHECK-NEXT: 456
-print(equal('a', 'a'));
-// CHECK-NEXT: 123
-print(equal('a', 'b'));
-// CHECK-NEXT: 456
+print(check(undefined, undefined));
+// CHECK: true,false
+print(check(undefined, null));
+// CHECK: false,true
+print(check(undefined, {}));
+// CHECK: false,true
+print(check(1, 1));
+// CHECK: true,false
+print(check(1, 2));
+// CHECK-NEXT: false,true
+print(check(1, NaN));
+// CHECK-NEXT: false,true
+print(check(NaN, NaN));
+// CHECK-NEXT: false,true
+print(check(NaN, 'a'));
+// CHECK-NEXT: false,true
+print(check('a', NaN));
+// CHECK-NEXT: false,true
+print(check('ab', 'ab'));
+// CHECK-NEXT: true,false
+globalThis.a = 'a';
+print(check('ab', globalThis.a + 'b'));
+// CHECK-NEXT: true,false
+print(check('a', 'b'));
+// CHECK-NEXT: false,true
+print(check('a', 'bc'));
+// CHECK-NEXT: false,true
+print(check({}, 'a'));
+// CHECK-NEXT: false,true
+print(check('a', {}));
+// CHECK-NEXT: false,true
+print(check({}, {}));
+// CHECK-NEXT: false,true
+print(check(Math, Math));
+// CHECK-NEXT: true,false

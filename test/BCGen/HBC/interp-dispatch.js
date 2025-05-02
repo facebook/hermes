@@ -56,9 +56,9 @@ print(bench(4e6, 100))
 // CHECK-NEXT:    GetGlobalObject   r3
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    CreateClosure     r4, r2, Function<bench>
-// CHECK-NEXT:    PutByIdStrict     r3, r4, 1, "bench"
-// CHECK-NEXT:    TryGetById        r4, r3, 1, "print"
-// CHECK-NEXT:    GetByIdShort      r3, r3, 2, "bench"
+// CHECK-NEXT:    PutByIdStrict     r3, r4, 0, "bench"
+// CHECK-NEXT:    TryGetById        r4, r3, 0, "print"
+// CHECK-NEXT:    GetByIdShort      r3, r3, 1, "bench"
 // CHECK-NEXT:    LoadConstUInt8    r0, 100
 // CHECK-NEXT:    LoadConstInt      r1, 4000000
 // CHECK-NEXT:    Call3             r3, r3, r2, r1, r0

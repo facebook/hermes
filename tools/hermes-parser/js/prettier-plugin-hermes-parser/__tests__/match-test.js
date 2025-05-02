@@ -229,6 +229,11 @@ describe('Match expression', () => {
          {foo: 1 | 2 | 3 as y} => y,
          {foo: (1 | 2 | 3) as y} => y,
          {foo: [1] as const y} => y,
+         {foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong} => 1,
+         [{foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong}] => 1,
+         [null, {foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong}] => 1,
+         {bork: {foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong}} => 1,
+         {bar: looooooooooooooooooooooooooooooooooong, baz: loooooooooooooooooooooooong} | null | undefined => 1,
        };
       `),
     ).toMatchInlineSnapshot(`
@@ -239,6 +244,32 @@ describe('Match expression', () => {
         {foo: (1 | 2 | 3) as y} => y,
         {foo: (1 | 2 | 3) as y} => y,
         {foo: [1] as const y} => y,
+        | {foo: 1, bar: 2, baz: 3}
+        | {bar: 4, baz: 5, baz: 6}
+        | {baz: loooooooooong, bar: loooooooong} => 1,
+        [
+          | {foo: 1, bar: 2, baz: 3}
+          | {bar: 4, baz: 5, baz: 6}
+          | {baz: loooooooooong, bar: loooooooong},
+        ] => 1,
+        [
+          null,
+          (
+            | {foo: 1, bar: 2, baz: 3}
+            | {bar: 4, baz: 5, baz: 6}
+            | {baz: loooooooooong, bar: loooooooong}
+          ),
+        ] => 1,
+        {
+          bork:
+            | {foo: 1, bar: 2, baz: 3}
+            | {bar: 4, baz: 5, baz: 6}
+            | {baz: loooooooooong, bar: loooooooong},
+        } => 1,
+        {
+          bar: looooooooooooooooooooooooooooooooooong,
+          baz: loooooooooooooooooooooooong,
+        } | null | undefined => 1,
       };
       "
     `);
@@ -335,10 +366,12 @@ describe('Match expression', () => {
               [33333333333333333333],
           },
         ] => 1,
-        fooooooooooooooooooooooooo |
-        loooooooooooooooooooooooooooooooooooooooooooooooooooooong => 1,
-        (fooooooooooooooooooooooooo |
-        loooooooooooooooooooooooooooooooooooooooooooooooooooooong) as foo => 1,
+        | fooooooooooooooooooooooooo
+        | loooooooooooooooooooooooooooooooooooooooooooooooooooooong => 1,
+        (
+          | fooooooooooooooooooooooooo
+          | loooooooooooooooooooooooooooooooooooooooooooooooooooooong
+        ) as foo => 1,
       };
       "
     `);
@@ -462,12 +495,12 @@ describe('Match statement', () => {
         {
           type: 'GenericTypeAnnotation',
           id:
-            {type: 'Identifier', name: 'React$Element'} |
-            {
-              type: 'QualifiedTypeIdentifier',
-              qualification: {type: 'Identifier', name: 'React'},
-              name: 'Element',
-            },
+            | {type: 'Identifier', name: 'React$Element'}
+            | {
+                type: 'QualifiedTypeIdentifier',
+                qualification: {type: 'Identifier', name: 'React'},
+                name: 'Element',
+              },
           typeParameters:
             {
               params:

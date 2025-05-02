@@ -10,6 +10,7 @@
 
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase.h"
+#include "hermes/VM/GCCell-inline.h"
 
 #include "hermes/Support/Algorithms.h"
 
@@ -23,8 +24,8 @@ template <
     class... Args>
 T *GCBase::makeAFixed(Args &&...args) {
   static_assert(
-      cellSize<T>() >= minAllocationSize() &&
-          cellSize<T>() <= maxAllocationSize(),
+      cellSize<T>() >= GC::minAllocationSize() &&
+          cellSize<T>() <= GC::maxNormalAllocationSize(),
       "Cell size outside legal range.");
   assert(
       VTable::getVTable(T::getCellKind())->size && "Cell is not fixed size.");
@@ -36,16 +37,32 @@ template <
     typename T,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 T *GCBase::makeAVariable(uint32_t size, Args &&...args) {
+  // For now, when mayFail == MayFail::Yes, we must have canBeLarge ==
+  // CanBeLarge::Yes.
+  static_assert(
+      (mayFail == MayFail::No) || (canBeLarge == CanBeLarge::Yes),
+      "Only large allocation can actually fail");
+  assert(
+      ((canBeLarge == CanBeLarge::No) ||
+       VTable::getVTable(T::getCellKind())->allowLargeAlloc) &&
+      "T must support large allocation when canBeLarge is Yes");
   // If size is greater than the max, we should OOM.
   assert(
       size >= GC::minAllocationSize() && "Cell size is smaller than minimum");
   assert(
       !VTable::getVTable(T::getCellKind())->size &&
       "Cell is not variable size.");
-  return makeA<T, false /* fixedSize */, hasFinalizer, longLived>(
-      heapAlignSize(size), std::forward<Args>(args)...);
+  return makeA<
+      T,
+      false /* fixedSize */,
+      hasFinalizer,
+      longLived,
+      canBeLarge,
+      mayFail>(heapAlignSize(size), std::forward<Args>(args)...);
 }
 
 template <
@@ -53,59 +70,48 @@ template <
     bool fixedSize,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 T *GCBase::makeA(uint32_t size, Args &&...args) {
+  // For now, when mayFail == MayFail::Yes, we must have canBeLarge ==
+  // CanBeLarge::Yes.
+  static_assert(
+      (mayFail == MayFail::No) || (canBeLarge == CanBeLarge::Yes),
+      "Only large allocation can actually fail");
+  assert(
+      ((canBeLarge == CanBeLarge::No) ||
+       VTable::getVTable(T::getCellKind())->allowLargeAlloc) &&
+      "T must support large allocation when canBeLarge is Yes");
   assert(
       isSizeHeapAligned(size) && "Size must be aligned before reaching here");
   assert(
       !!VTable::getVTable(T::getCellKind())->finalize_ ==
           (hasFinalizer == HasFinalizer::Yes) &&
       "hasFinalizer should be set iff the cell has a finalizer.");
-#ifdef HERMESVM_GC_RUNTIME
-  T *ptr = runtimeGCDispatch([&](auto *gc) {
-    return gc->template makeA<T, fixedSize, hasFinalizer, longLived>(
-        size, std::forward<Args>(args)...);
-  });
-#else
-  T *ptr =
-      static_cast<GC *>(this)->makeA<T, fixedSize, hasFinalizer, longLived>(
-          size, std::forward<Args>(args)...);
+
+  T *ptr = static_cast<GC *>(this)
+               ->makeAImpl<
+                   T,
+                   fixedSize,
+                   hasFinalizer,
+                   longLived,
+                   canBeLarge,
+                   mayFail>(size, std::forward<Args>(args)...);
+#if !defined(NDEBUG) || defined(HERMES_MEMORY_INSTRUMENTATION)
+  if constexpr (mayFail == MayFail::Yes) {
+    // If it fails, a nullptr is allowed and simply return it to the caller.
+    if (LLVM_UNLIKELY(!ptr))
+      return nullptr;
+  }
 #endif
 #ifndef NDEBUG
   ptr->setDebugAllocationIdInGC(nextObjectID());
 #endif
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-  newAlloc(ptr, size);
+  newAlloc(ptr, ptr->getAllocatedSizeSlow());
 #endif
   return ptr;
-}
-
-#ifdef HERMESVM_GC_RUNTIME
-constexpr uint32_t GCBase::maxAllocationSizeImpl() {
-  // Return the lesser of the two GC options' max allowed sizes.
-  return std::min({
-#define GC_KIND(kind) kind::maxAllocationSizeImpl(),
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-  });
-}
-
-constexpr uint32_t GCBase::minAllocationSizeImpl() {
-  // Return the greater of the two GC options' min allowed sizes.
-  return std::max({
-#define GC_KIND(kind) kind::minAllocationSizeImpl(),
-      RUNTIME_GC_KINDS
-#undef GC_KIND
-  });
-}
-#endif
-
-constexpr uint32_t GCBase::maxAllocationSize() {
-  return std::min(GC::maxAllocationSizeImpl(), GCCell::maxSize());
-}
-
-constexpr uint32_t GCBase::minAllocationSize() {
-  return GC::minAllocationSizeImpl();
 }
 
 template <typename Acceptor>

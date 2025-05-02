@@ -12,7 +12,9 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/ExpectedPageSize.h"
-#include "hermes/VM/GCCell.h"
+#include "hermes/VM/GCConcurrency.h"
+#include "hermes/VM/sh_config.h"
+#include "hermes/VM/sh_segment_info.h"
 
 #include "llvh/Support/MathExtras.h"
 
@@ -20,6 +22,8 @@
 
 namespace hermes {
 namespace vm {
+
+class GCCell;
 
 /// Supports the following query:  Given a card in the heap that intersects
 /// with the used portion of its segment, find its "crossing object" -- the
@@ -77,7 +81,7 @@ class CardBoundaryTable {
 
   /// \return The first boundary that could be crossed by a suitably large
   /// allocation starting at \p level.
-  inline Boundary nextBoundary(const char *level) const;
+  static inline Boundary nextBoundary(const char *level);
 
   /// An allocation of [start, end) has crossed at least one card boundary.
   /// Update the boundaries table appropriately to describe the allocation.
@@ -109,6 +113,12 @@ class CardBoundaryTable {
   ///
   /// \pre start is card-aligned.
   void verifyBoundaries(char *start, char *level) const;
+
+  /// Find the object that owns the memory at \p loc.
+  GCCell *findObjectContaining(
+      const char *lowLim,
+      const char *hiLim,
+      const void *loc) const;
 #endif // HERMES_SLOW_DEBUG
 
 #ifndef UNIT_TEST
@@ -124,7 +134,7 @@ class CardBoundaryTable {
   /// the logic for callers that are using this function to generate an open
   /// interval of card indices. See \c dirtyCardsForAddressRange for an example
   /// of how this is used.
-  size_t addressToIndex(const void *addr) const LLVM_NO_SANITIZE("null") {
+  static size_t addressToIndex(const void *addr) LLVM_NO_SANITIZE("null") {
     auto addrPtr = reinterpret_cast<const char *>(addr);
     auto *lowLim = storageStart(addr);
     assert(
@@ -138,7 +148,7 @@ class CardBoundaryTable {
   /// \pre \p index is bounded:
   ///
   ///     0 <= index <= getEndIndex()
-  const char *indexToAddress(const char *lowLim, size_t index) const {
+  static const char *indexToAddress(const char *lowLim, size_t index) {
     assert(
         index <= (kSegmentUnitSize >> kLogCardSize) &&
         "index must be within the index range");
@@ -199,7 +209,7 @@ inline CardBoundaryTable::Boundary::Boundary(size_t index, const char *address)
     : index_(index), address_(address) {}
 
 inline CardBoundaryTable::Boundary CardBoundaryTable::nextBoundary(
-    const char *level) const {
+    const char *level) {
   assert(level != nullptr);
   size_t ix = addressToIndex(level - 1) + 1;
   const char *addr = indexToAddress(storageStart(level), ix);

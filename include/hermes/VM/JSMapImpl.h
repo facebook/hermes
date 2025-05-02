@@ -190,11 +190,17 @@ class JSMapIteratorImpl final : public JSObject {
             }
             Handle<JSArray> arrHandle = runtime.makeHandle(std::move(*arrRes));
             value = self->itr_.getNonNull(runtime)->key.unboxToHV(runtime);
-            JSArray::setElementAt(arrHandle, runtime, 0, value);
+            if (LLVM_UNLIKELY(
+                    JSArray::setElementAt(arrHandle, runtime, 0, value) ==
+                    ExecutionStatus::EXCEPTION))
+              return ExecutionStatus::EXCEPTION;
             if constexpr (std::is_same_v<HashMapEntryType, HashMapEntry>) {
               value = self->itr_.getNonNull(runtime)->value.unboxToHV(runtime);
             }
-            JSArray::setElementAt(arrHandle, runtime, 1, value);
+            if (LLVM_UNLIKELY(
+                    JSArray::setElementAt(arrHandle, runtime, 1, value) ==
+                    ExecutionStatus::EXCEPTION))
+              return ExecutionStatus::EXCEPTION;
             value = arrHandle.getHermesValue();
             break;
           };

@@ -75,10 +75,10 @@ function *args() {
 // CHECK-NEXT:    DeclareGlobalVar  "args"
 // CHECK-NEXT:    CreateClosure     r2, r1, NCFunction<loop>
 // CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    PutByIdLoose      r3, r2, 1, "loop"
+// CHECK-NEXT:    PutByIdLoose      r3, r2, 0, "loop"
 // CHECK-NEXT:    CreateClosure     r1, r1, NCFunction<args>
 // CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 2, "args"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "args"
 // CHECK-NEXT:    LoadConstUndefined r2
 // CHECK-NEXT:    Mov               r1, r2
 // CHECK-NEXT:    Ret               r1
@@ -149,7 +149,7 @@ function *args() {
 // CHECK-NEXT:    LoadFromEnvironment r7, r2, 3
 // CHECK-NEXT:    JmpTrue           L5, r7
 // CHECK-NEXT:    GetGlobalObject   r7
-// CHECK-NEXT:    TryGetById        r7, r7, 1, "y"
+// CHECK-NEXT:    TryGetById        r7, r7, 0, "y"
 // CHECK-NEXT:    JmpTrueLong       L6, r7
 // CHECK-NEXT:    JmpLong           L7
 // CHECK-NEXT:L5:
@@ -187,7 +187,7 @@ function *args() {
 // CHECK-NEXT:    LoadConstZero     r6
 // CHECK-NEXT:    StoreNPToEnvironment r7, 1, r6
 // CHECK-NEXT:    GetGlobalObject   r7
-// CHECK-NEXT:    TryGetById        r7, r7, 1, "y"
+// CHECK-NEXT:    TryGetById        r7, r7, 0, "y"
 // CHECK-NEXT:    JmpTrue           L6, r7
 // CHECK-NEXT:L7:
 // CHECK-NEXT:    LoadConstUInt8    r7, 3

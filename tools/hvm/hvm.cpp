@@ -79,6 +79,10 @@ int main(int argc, char **argv) {
   llvh::sys::PrintStackTraceOnErrorSignal("hvm");
   llvh::PrettyStackTraceProgram X(argc, argv);
   llvh::llvm_shutdown_obj Y;
+
+  // Enable the microtask queue in the CLI by default.
+  flags.MicrotaskQueue.setInitialValue(true);
+
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes VM driver\n");
 
   llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> FileBufOrErr =

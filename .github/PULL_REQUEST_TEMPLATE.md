@@ -9,6 +9,12 @@
   3. Ensure it builds and the test suite passes. [tips](https://github.com/facebook/hermes/blob/HEAD/doc/BuildingAndRunning.md)
   4. Format your code with `.../hermes/utils/format.sh`
   5. If you haven't already, complete the CLA.
+
+  Note: We kindly request that pull requests address more than just a single typo.
+  While we sincerely appreciate your attention to detail, we would be most grateful
+  if typo fixes were batched together to include several corrections. This helps our
+  maintainers focus on substantive contributions to the codebase. Thank you for your
+  understanding and cooperation!
 -->
 
 ## Summary

@@ -211,14 +211,14 @@ class Parser {
 
     /// If this is an Alternation, the list of alternatives
     /// Ignored for group elements.
-    std::vector<NodeList> alternatives;
+    std::vector<NodeList> alternatives{};
 
     // True if this lookaround represents a negative lookaround. Ignored for
     // non-lookarounds
-    bool negateLookaround;
+    bool negateLookaround{false};
 
     // True if this lookaround is a lookahead. Ignored for non-lookarounds.
-    bool forwardLookaround;
+    bool forwardLookaround{false};
 
     explicit ParseStackElement(Type type) : type(type) {}
   };

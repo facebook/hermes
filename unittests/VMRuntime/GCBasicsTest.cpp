@@ -11,6 +11,7 @@
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/LargeDummyObject.h"
 #include "hermes/VM/WeakRef.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
@@ -25,6 +26,7 @@ using namespace hermes::vm;
 namespace {
 
 using testhelpers::DummyObject;
+using testhelpers::LargeDummyObject;
 
 struct GCBasicsTest : public ::testing::Test {
   std::shared_ptr<DummyRuntime> runtime;
@@ -34,8 +36,7 @@ struct GCBasicsTest : public ::testing::Test {
 };
 
 // Hades doesn't report its stats the same way as other GCs.
-#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES) && \
-    !defined(HERMESVM_GC_RUNTIME)
+#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES)
 TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
@@ -244,7 +245,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   wr2.releaseSlot();
   wr3.releaseSlot();
 }
-#endif // !NDEBUG && !HERMESVM_GC_HADES && !HERMESVM_GC_RUNTIME
+#endif // !NDEBUG && !HERMESVM_GC_HADES
 
 TEST_F(GCBasicsTest, WeakRootTest) {
   GCScope scope{rt};
@@ -394,6 +395,125 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   // There should have been one old gen collection.
   EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
 }
+#endif // #ifdef HERMESVM_GC_MALLOC
+
+TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
+  // An object with this size requires large allocation support to successfully
+  // allocate within HadesGC. This should fit into a JumboHeapSegment with size
+  // of 2 * kSegmentUnitSize.
+  static constexpr size_t kLargeCellSize =
+      JumboHeapSegment::computeActualCellSize(
+          AlignedHeapSegment::kSegmentUnitSize);
+  // For 32-bit platforms, or 64-bit platforms using MallocGC or HadesGC without
+  // compressed pointers, we set the maximum heap size to slightly larger than
+  // triple GCCell::maxNormalSize() to test allocating cells larger than this
+  // limit. In other cases where GCCell::maxNormalSize() equals UINT32_MAX, we
+  // don't support allocations beyond that size, so we use a reasonably large
+  // heap size to ensure the remaining tests can execute properly.
+  static constexpr size_t kMaxHeapSize =
+      GCCell::maxNormalSize() >= (std::numeric_limits<uint32_t>::max() / 2)
+      ? 1UL << 25
+      : (GCCell::maxNormalSize() * 3 + 8);
+  const GCConfig kGCConfig = TestGCConfigFixedSize(kMaxHeapSize);
+  auto runtime = DummyRuntime::create(kGCConfig);
+  DummyRuntime &rt = *runtime;
+  GCScope scope{rt};
+
+  GCBase::HeapInfo heapInfo;
+  // Test that YG/OG objects bytes are still correctly tracked.
+  {
+    GCScopeMarkerRAII marker{scope};
+    uint64_t expectedTotalAllocBytes = 0;
+    static constexpr uint32_t kHalfYGSize = FixedSizeHeapSegment::maxSize() / 2;
+    rt.makeHandle<LargeDummyObject>(
+        LargeDummyObject::create(kLargeCellSize, rt.getHeap()));
+    expectedTotalAllocBytes += kLargeCellSize;
+    rt.makeHandle(LargeDummyObject::create(kHalfYGSize, rt.getHeap()));
+    expectedTotalAllocBytes += kHalfYGSize;
+    for (int i = 0; i < 10; ++i) {
+      LargeDummyObject::create(kHalfYGSize, rt.getHeap());
+      expectedTotalAllocBytes += kHalfYGSize;
+    }
+    rt.getHeap().getHeapInfo(heapInfo);
+    ASSERT_EQ(heapInfo.totalAllocatedBytes, expectedTotalAllocBytes);
+  }
+  // Clear all objects in heap.
+  rt.collect();
+
+  uint64_t prevTotalAllocBytes = 0;
+  // Test that large allocation in case of insufficient space returns nullptr,
+  // and allocation with size larger than GCCell::maxNormalSize() works as
+  // expected.
+  {
+    GCScopeMarkerRAII marker{scope};
+    // Add a few extra bytes to ensure that the third allocation below fails due
+    // to insufficient heap space.
+    rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3 + 8, rt.getHeap()));
+    auto dummy2 =
+        rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()));
+    ASSERT_NE(dummy2.get(), nullptr);
+#ifdef HERMESVM_GC_MALLOC
+    auto expectedSize = heapAlignSize(kMaxHeapSize / 3);
+#else
+    auto expectedSize =
+        JumboHeapSegment::computeActualCellSize(kMaxHeapSize / 3);
 #endif
+    // The above allocation may have size larger than GCCell::maxNormalSize(),
+    // assert that we can still get correct cell size.
+    ASSERT_EQ(dummy2->getAllocatedSizeSlow(), expectedSize);
+    // No enough space, this allocation should fail and return nullptr.
+    ASSERT_EQ(
+        LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()), nullptr);
+    rt.getHeap().getHeapInfo(heapInfo);
+    prevTotalAllocBytes = heapInfo.totalAllocatedBytes;
+  }
+  // Full collection should free all large objects allocated above, otherwise,
+  // next large object allocation will fail.
+  rt.collect();
+
+  {
+    GCScopeMarkerRAII marker{scope};
+    // Create a LargeCell with CanBeLarge::Yes should now succeed.
+    auto large =
+        rt.makeHandle(LargeDummyObject::create(kLargeCellSize, rt.getHeap()));
+    EXPECT_NE(large.get(), nullptr);
+    EXPECT_EQ(large->getAllocatedSizeSlow(), kLargeCellSize);
+    rt.getHeap().getHeapInfo(heapInfo);
+    // allocatedBytes should be equal to size of the only object above.
+    ASSERT_EQ(heapInfo.allocatedBytes, kLargeCellSize);
+    ASSERT_EQ(
+        heapInfo.totalAllocatedBytes, kLargeCellSize + prevTotalAllocBytes);
+
+    auto obj1 = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
+    large->hv.set(
+        SmallHermesValue::encodeObjectValue(*obj1, rt), *large, rt.getHeap());
+    auto obj2 = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
+    large->ptrToNormalObj.setNonNull(rt, rt.getHeap(), *obj2, *large);
+
+    rt.collect();
+    // Ensure pointer fields of large object are correctly updated after
+    // collection.
+    ASSERT_EQ(large->hv.getPointer(rt), *obj1);
+    ASSERT_EQ(large->ptrToNormalObj.get(rt), *obj2);
+
+    // Set the two handles to two new objects, and run collection. The pointer
+    // fields of large object must dirty corresponding cards (since they point
+    // to YG objects allocated below), otherwise, the pointed objects will be
+    // freed.
+    auto tmpSHV = SmallHermesValue::encodeObjectValue(
+        DummyObject::create(rt.getHeap(), rt), rt);
+    large->hv.set(tmpSHV, *large, rt.getHeap());
+    auto tmpObj = DummyObject::create(rt.getHeap(), rt);
+    large->ptrToNormalObj.setNonNull(rt, rt.getHeap(), tmpObj, *large);
+    rt.collect();
+    ASSERT_TRUE(large->hv.getPointer(rt)->isValid());
+    ASSERT_TRUE(large->ptrToNormalObj.get(rt)->isValid());
+  }
+  // Clear all objects in heap.
+  rt.collect();
+  rt.getHeap().getHeapInfo(heapInfo);
+  // The large object should be correctly freed now.
+  ASSERT_EQ(heapInfo.allocatedBytes, 0);
+}
 
 } // namespace

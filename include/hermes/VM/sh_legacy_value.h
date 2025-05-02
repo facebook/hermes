@@ -136,7 +136,9 @@ typedef int32_t HVTagType;
 
 /// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
 /// word.
-/// If tag < FirstTag, the encoded value is a double.
+/// We define them in the enum as negative numbers, with the last tag being -1.
+/// They range from -7 to -1 (signed).
+/// If in an unsigned comparison: tag < FirstTag, the encoded value is a double.
 enum HVTag {
   HVTag_First = (HVTagType)(int8_t)0xf9,
   HVTag_EmptyInvalid = HVTag_First,
@@ -245,7 +247,7 @@ static inline SHLegacyValue _sh_ljs_bool(bool b) {
 }
 
 static inline SHLegacyValue _sh_ljs_object(void *p) {
-  return _sh_ljs_encode_raw_tag((uint64_t)p, HVTag_Object);
+  return _sh_ljs_encode_raw_tag((uint64_t)(uintptr_t)p, HVTag_Object);
 }
 
 static inline SHLegacyValue _sh_ljs_undefined() {
@@ -298,7 +300,7 @@ static inline double _sh_ljs_get_double(SHLegacyValue v) {
 }
 static inline void *_sh_ljs_get_pointer(SHLegacyValue v) {
   // Mask out the tag.
-  return (void *)(v.raw & kHV_DataMask);
+  return (void *)(uintptr_t)(v.raw & kHV_DataMask);
 }
 static inline void *_sh_ljs_get_native_pointer(SHLegacyValue v) {
   return (void *)(uintptr_t)v.raw;

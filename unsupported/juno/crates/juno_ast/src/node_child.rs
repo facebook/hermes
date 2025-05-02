@@ -16,15 +16,15 @@ use juno_support::source_manager::SourceId;
 use juno_support::source_manager::SourceLoc;
 use juno_support::source_manager::SourceRange;
 
-use crate::builder;
-use crate::context::NodeListElement;
-use crate::template;
 use crate::GCLock;
 use crate::Node;
 use crate::Path;
 use crate::TransformResult;
 use crate::Visitor;
 use crate::VisitorMut;
+use crate::builder;
+use crate::context::NodeListElement;
+use crate::template;
 
 /// Metadata common to all AST nodes.
 ///

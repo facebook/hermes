@@ -71,6 +71,15 @@ static std::vector<LiteralString *> getPropsForCaching(
     thisUsersBlocks.insert(user->getParent());
   }
 
+  // Order the blocks containing users of 'this' such that each block dominates
+  // all other blocks that use 'this'. Note that it is important that we start
+  // the traversal at the entry block rather than the block containing the load
+  // of 'this'. This handles two important cases where 'this' may not dominate
+  // the instruction that leaks it:
+  // 1. Phi instructions using 'this' that are not dominated by the block
+  //    containing the load of 'this'.
+  // 2. Return instructions, which implicitly use 'this' because the caller can
+  //    observe the state of the object at the point we return.
   auto orderedBlocks = orderBlocksByDominance(
       domInfo, entryBlock, [&thisUsersBlocks](BasicBlock *block) -> bool {
         // Must dominate all returns as well, because the caller can read the
@@ -93,31 +102,30 @@ static std::vector<LiteralString *> getPropsForCaching(
       if (!thisUsers.count(&inst))
         continue;
 
-      LiteralString *propKey = nullptr;
-      size_t objIdx;
-      if (auto *SPI = llvh::dyn_cast<StorePropertyInst>(&inst)) {
-        propKey = llvh::dyn_cast<LiteralString>(SPI->getProperty());
-        objIdx = StorePropertyInst::ObjectIdx;
-      } else if (auto *DOPI = llvh::dyn_cast<DefineOwnPropertyInst>(&inst)) {
-        propKey = llvh::dyn_cast<LiteralString>(DOPI->getProperty());
-        objIdx = DefineOwnPropertyInst::ObjectIdx;
-      }
-      if (!propKey) {
-        // Property name is not a literal string, bail.
+      StorePropertyInst *store = llvh::dyn_cast<StorePropertyInst>(&inst);
+
+      // 'this' used outside of a StorePropertyInst, bail.
+      if (!store)
         return props;
-      }
+
+      auto *prop = llvh::dyn_cast<LiteralString>(store->getProperty());
+
+      // Property name is not a literal string, bail.
+      if (!prop)
+        return props;
 
       // Check if "this" is being used in a non-Object operand position.
-      for (uint32_t i = 0, e = inst.getNumOperands(); i < e; ++i) {
-        if (i != objIdx && inst.getOperand(i) == thisParam) {
+      for (uint32_t i = 0, e = store->getNumOperands(); i < e; ++i) {
+        if (i != StorePropertyInst::ObjectIdx &&
+            store->getOperand(i) == thisParam) {
           return props;
         }
       }
 
       // Valid store for caching, append to the list if it's new.
-      if (!seenProps.count(propKey)) {
-        props.push_back(propKey);
-        seenProps.insert(propKey);
+      if (!seenProps.count(prop)) {
+        props.push_back(prop);
+        seenProps.insert(prop);
       }
     }
   }

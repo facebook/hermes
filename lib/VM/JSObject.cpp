@@ -12,6 +12,7 @@
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
@@ -26,6 +27,7 @@ const ObjectVTable JSObject::vt{
     VTable(
         CellKind::JSObjectKind,
         cellSize<JSObject>(),
+        /* allowLargeAlloc */ false,
         nullptr,
         nullptr,
         nullptr
@@ -84,10 +86,6 @@ PseudoHandle<JSObject> JSObject::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-PseudoHandle<JSObject> JSObject::create(Runtime &runtime) {
-  return create(runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
-}
-
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     unsigned propertyCount) {
@@ -99,6 +97,7 @@ PseudoHandle<JSObject> JSObject::create(
 
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
+    Handle<JSObject> parentHandle,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
   obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap());
@@ -107,14 +106,6 @@ PseudoHandle<JSObject> JSObject::create(
   if (LLVM_UNLIKELY(
           obj->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
     obj->flags_.fastIndexProperties = false;
-  return obj;
-}
-
-PseudoHandle<JSObject> JSObject::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    Handle<HiddenClass> clazz) {
-  PseudoHandle<JSObject> obj = JSObject::create(runtime, clazz);
   obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap());
   return obj;
 }
@@ -232,7 +223,7 @@ CallResult<bool> JSObject::setParent(
   return true;
 }
 
-void JSObject::allocateNewSlotStorage(
+ExecutionStatus JSObject::allocateNewSlotStorage(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     SlotIndex newSlotIndex,
@@ -241,7 +232,7 @@ void JSObject::allocateNewSlotStorage(
   if (LLVM_LIKELY(newSlotIndex < DIRECT_PROPERTY_SLOTS)) {
     auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
     selfHandle->directProps()[newSlotIndex].set(shv, runtime.getHeap());
-    return;
+    return ExecutionStatus::RETURNED;
   }
 
   // Make the slot index relative to the indirect storage.
@@ -263,7 +254,11 @@ void JSObject::allocateNewSlotStorage(
         newSlotIndex == selfHandle->propStorage_.getNonNull(runtime)->size() &&
         "allocated slot must be at end");
     auto hnd = runtime.makeMutableHandle(selfHandle->propStorage_);
-    PropStorage::resize(hnd, runtime, newSlotIndex + 1);
+    if (LLVM_UNLIKELY(
+            PropStorage::resize(hnd, runtime, newSlotIndex + 1) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    };
     selfHandle->propStorage_.setNonNull(runtime, *hnd, runtime.getHeap());
   }
 
@@ -283,6 +278,7 @@ void JSObject::allocateNewSlotStorage(
   // If we don't need to resize, just store it directly.
   selfHandle->propStorage_.getNonNull(runtime)->set(
       newSlotIndex, shv, runtime.getHeap());
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<PseudoHandle<>> JSObject::getNamedPropertyValue_RJS(
@@ -443,31 +439,36 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
         continue;
 
       tmpHandle = HermesValue::encodeTrustedNumberValue(i);
-      JSArray::setElementAt(array, runtime, index++, tmpHandle);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(array, runtime, index++, tmpHandle) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
       marker.flush();
     }
 
     numIndexed = index;
 
-    HiddenClass::forEachProperty(
+    bool result = HiddenClass::forEachPropertyWhile(
         runtime.makeHandle(selfHandle->clazz_),
         runtime,
-        [&runtime,
-         okFlags,
+        [okFlags,
          array,
          hostObjectSymbolCount,
          &index,
          &indexNames,
          &tmpHandle,
-         &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+         &dedupSet](
+            Runtime &runtime, SymbolID id, NamedPropertyDescriptor desc) {
+          if (desc.flags.privateName)
+            return true;
           if (!isPropertyNamePrimitive(id)) {
-            return;
+            return true;
           }
 
           // If specified, check whether it is enumerable.
           if (!okFlags.getIncludeNonEnumerable()) {
             if (!desc.flags.enumerable)
-              return;
+              return true;
           }
 
           // Host properties might overlap with the ones recognized by the
@@ -484,7 +485,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
               runtime.getIdentifierTable().getStringView(runtime, id));
           if (LLVM_UNLIKELY(propNameAsIndex)) {
             indexNames.push_back(*propNameAsIndex);
-            return;
+            return true;
           }
 
           if (okFlags.getKeepSymbols()) {
@@ -493,30 +494,31 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
             tmpHandle = HermesValue::encodeStringValue(
                 runtime.getStringPrimFromSymbolID(id));
           }
-          JSArray::setElementAt(array, runtime, index++, tmpHandle);
+          return JSArray::setElementAt(array, runtime, index++, tmpHandle) !=
+              ExecutionStatus::EXCEPTION;
         });
+
+    if (LLVM_UNLIKELY(!result))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Now iterate the named properties again, including only Symbols.
   if (okFlags.getIncludeSymbols()) {
     MutableHandle<SymbolID> idHandle{runtime};
-    HiddenClass::forEachProperty(
+    bool result = HiddenClass::forEachPropertyWhile(
         runtime.makeHandle(selfHandle->clazz_),
         runtime,
-        [&runtime,
-         okFlags,
-         array,
-         &index,
-         &idHandle,
-         hostObjectSymbolCount,
-         &dedupSet](SymbolID id, NamedPropertyDescriptor desc) {
+        [okFlags, array, &index, &idHandle, hostObjectSymbolCount, &dedupSet](
+            Runtime &runtime, SymbolID id, NamedPropertyDescriptor desc) {
+          if (desc.flags.privateName)
+            return true;
           if (!isSymbolPrimitive(id)) {
-            return;
+            return true;
           }
           // If specified, check whether it is enumerable.
           if (!okFlags.getIncludeNonEnumerable()) {
             if (!desc.flags.enumerable)
-              return;
+              return true;
           }
 
           // Keep track of hidden class properties for deduplication purposes.
@@ -525,8 +527,11 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
           }
 
           idHandle = id;
-          JSArray::setElementAt(array, runtime, index++, idHandle);
+          return JSArray::setElementAt(array, runtime, index++, idHandle) !=
+              ExecutionStatus::EXCEPTION;
         });
+    if (LLVM_UNLIKELY(!result))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Iterate over HostObject properties and append them to the array. Do not
@@ -575,7 +580,10 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
         tmpHandle = HermesValue::encodeStringValue(
             runtime.getStringPrimFromSymbolID(id));
       }
-      JSArray::setElementAt(array, runtime, index++, tmpHandle);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(array, runtime, index++, tmpHandle) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     }
   }
 
@@ -610,7 +618,10 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
     --last;
     --toLast;
     tmpHandle = array->at(runtime, last).unboxToHV(runtime);
-    JSArray::setElementAt(array, runtime, toLast, tmpHandle);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, toLast, tmpHandle) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Now we need to merge the indexes in indexNames and the array
@@ -640,7 +651,10 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
     }
 
     --toLast;
-    JSArray::setElementAt(array, runtime, toLast, tmpHandle);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, toLast, tmpHandle) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
 
   return array;
@@ -2144,8 +2158,8 @@ ExecutionStatus JSObject::defineNewOwnProperty(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
   assert(
-      !selfHandle->flags_.proxyObject &&
-      "definedNewOwnProperty cannot be used with proxy objects");
+      (!selfHandle->flags_.proxyObject || propertyFlags.privateName) &&
+      "cannot define non-private properties on Proxy");
   assert(
       !(propertyFlags.accessor && !valueOrAccessor.get().isPointer()) &&
       "accessor must be non-empty");
@@ -2401,6 +2415,55 @@ CallResult<bool> JSObject::defineOwnComputed(
     return ExecutionStatus::EXCEPTION;
   return defineOwnComputedPrimitive(
       selfHandle, runtime, *converted, dpFlags, valueOrAccessor, opFlags);
+}
+
+CallResult<HermesValue> JSObject::getPrivateField(
+    Handle<JSObject> selfHandle,
+    Runtime &runtime,
+    Handle<SymbolID> privateName,
+    PrivateNameCacheEntry *cacheEntry) {
+  NamedPropertyDescriptor desc;
+  // 1. Let entry be PrivateElementFind(O, P).
+  auto pos = findProperty(selfHandle, runtime, *privateName, desc);
+  // 2. If entry is empty, throw a TypeError exception.
+  if (!pos.hasValue()) {
+    return runtime.raiseTypeErrorForValue(
+        privateName, "Private property does not exist: ");
+  }
+  // This must be a private field since methods and accessors are not stored
+  // directly in the instance. So just directly return it.
+  if (cacheEntry && !selfHandle->getClass(runtime)->isDictionaryNoCache()) {
+    cacheEntry->clazz = selfHandle->getClassGCPtr();
+    cacheEntry->slot = desc.slot;
+    cacheEntry->nameVal = *privateName;
+  }
+  return getNamedSlotValueUnsafe(*selfHandle, runtime, desc).unboxToHV(runtime);
+}
+
+ExecutionStatus JSObject::setPrivateField(
+    Handle<JSObject> selfHandle,
+    Runtime &runtime,
+    Handle<SymbolID> privateName,
+    Handle<> valueHandle,
+    PrivateNameCacheEntry *cacheEntry) {
+  NamedPropertyDescriptor desc;
+  // 1. Let entry be PrivateElementFind(O, P).
+  auto pos = findProperty(selfHandle, runtime, *privateName, desc);
+  // 2. If entry is empty, throw a TypeError exception.
+  if (!pos.hasValue()) {
+    return runtime.raiseTypeErrorForValue(
+        privateName, "Private property does not exist: ");
+  }
+  // This must be a private field since methods and accessors are not stored
+  // directly in the instance. So just directly set it.
+  if (cacheEntry && !selfHandle->getClass(runtime)->isDictionaryNoCache()) {
+    cacheEntry->clazz = selfHandle->getClassGCPtr();
+    cacheEntry->slot = desc.slot;
+    cacheEntry->nameVal = static_cast<RootSymbolID>(*privateName);
+  }
+  auto shv = SmallHermesValue::encodeHermesValue(*valueHandle, runtime);
+  setNamedSlotValueUnsafe(*selfHandle, runtime, desc, shv);
+  return ExecutionStatus::RETURNED;
 }
 
 std::string JSObject::getNameIfExists(PointerBase &base) {
@@ -2805,24 +2868,36 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor) {
   assert(
+      propertyFlags.privateName ||
       !selfHandle->flags_.proxyObject &&
-      "Internal properties cannot be added to Proxy objects");
+          "Internal non-private properties cannot be added to Proxy objects");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   // Add a new property to the class.
   // TODO: if we check for OOM here in the future, we must undo the slot
   // allocation.
-  auto addResult = HiddenClass::addProperty(
-      runtime.makeHandle(selfHandle->clazz_), runtime, name, propertyFlags);
+  lv.clazz = selfHandle->clazz_.get(runtime);
+  auto addResult =
+      HiddenClass::addProperty(lv.clazz, runtime, name, propertyFlags);
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  selfHandle->clazz_.setNonNull(runtime, *addResult->first, runtime.getHeap());
+  lv.clazz = *addResult->first;
+  selfHandle->clazz_.setNonNull(runtime, *lv.clazz, runtime.getHeap());
 
-  allocateNewSlotStorage(
-      selfHandle, runtime, addResult->second, valueOrAccessor);
+  if (LLVM_UNLIKELY(
+          allocateNewSlotStorage(
+              selfHandle, runtime, addResult->second, valueOrAccessor) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   // If this is an index-like property, we need to clear the fast path flags.
-  if (LLVM_UNLIKELY(
-          selfHandle->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
+  if (LLVM_UNLIKELY(lv.clazz->getHasIndexLikeProperties()))
     selfHandle->flags_.fastIndexProperties = false;
 
   return ExecutionStatus::RETURNED;
@@ -3094,7 +3169,7 @@ namespace {
 CallResult<uint32_t> appendAllPropertyKeys(
     Handle<JSObject> obj,
     Runtime &runtime,
-    MutableHandle<BigStorage> &arr,
+    MutableHandle<ArrayStorageSmall> &arr,
     uint32_t beginIndex,
     OwnKeysFlags okFlags) {
   struct : public Locals {
@@ -3111,10 +3186,25 @@ CallResult<uint32_t> appendAllPropertyKeys(
   // before we start to look at any prototype.
   bool needDedup = false;
   lv.head = obj;
+
+  // Make sure we can store SymbolID::RawType in DenseSet.
+  assert(
+      llvh::DenseMapInfo<SymbolID::RawType>::getEmptyKey() >=
+          SymbolID::FIRST_INVALID_ID &&
+      "can't store SymbolID::RawType in DenseSet");
+  assert(
+      llvh::DenseMapInfo<SymbolID::RawType>::getTombstoneKey() >=
+          SymbolID::FIRST_INVALID_ID &&
+      "can't store SymbolID::RawType in DenseSet");
+
   // Keep track of the unique props we have seen so far. The props may be
   // strings (SymbolIDs) or index names.
   llvh::SmallDenseSet<SymbolID::RawType, 8> dedupNames;
-  llvh::SmallDenseSet<uint32_t, 8> dedupIdxNames;
+  // Store uint64_t in the set here to avoid collisions between tombstone/empty
+  // keys and real indices.
+  // In reality, all inserted keys will be valid array indices, meaning they
+  // will fit in 32 bits.
+  llvh::SmallDenseSet<uint64_t, 8> dedupIdxNames;
   // Add the current value of prop and/or propIdHandle to correct set(s).
   // Always called after property is added to \c arr, so the symbols in
   // dedupNames stay alive.
@@ -3156,11 +3246,9 @@ CallResult<uint32_t> appendAllPropertyKeys(
     auto enumerableProps = *cr;
     auto marker = gcScope.createMarker();
     if (first && beginIndex > 0) {
-      arr->set(
-          runtime,
-          1,
-          HermesValue::encodeTrustedNumberValue(
-              enumerableProps->getEndIndex()));
+      auto endIndex = SmallHermesValue::encodeNumberValue(
+          enumerableProps->getEndIndex(), runtime);
+      arr->set(1, endIndex, runtime.getHeap());
     }
     for (unsigned i = 0, e = enumerableProps->getEndIndex(); i < e; ++i) {
       gcScope.flushToMarker(marker);
@@ -3173,8 +3261,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       } else if (lv.prop->isString()) {
         CallResult<Handle<SymbolID>> symRes =
             runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
-                runtime,
-                runtime.makeHandle<StringPrimitive>(lv.prop->getString()));
+                runtime, createPseudoHandle(lv.prop->getString()));
         if (LLVM_UNLIKELY(symRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -3183,7 +3270,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       if (!needDedup) {
         // If no dedup is needed, add it directly.
         if (LLVM_UNLIKELY(
-                BigStorage::push_back(arr, runtime, lv.prop) ==
+                ArrayStorageSmall::push_back(arr, runtime, lv.prop) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -3217,7 +3304,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       }
       if (LLVM_LIKELY(!dupFound)) {
         if (LLVM_UNLIKELY(
-                BigStorage::push_back(arr, runtime, lv.prop) ==
+                ArrayStorageSmall::push_back(arr, runtime, lv.prop) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -3250,7 +3337,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
 ExecutionStatus setProtoClasses(
     Runtime &runtime,
     Handle<JSObject> obj,
-    MutableHandle<BigStorage> &arr) {
+    MutableHandle<ArrayStorageSmall> &arr) {
   // Layout of a JSArray stored in the for-in cache:
   // [numProtos, numObjProps, class(obj),
   // class(proto(obj)), class(proto(proto(obj))), ..., null,
@@ -3268,12 +3355,12 @@ ExecutionStatus setProtoClasses(
   // Push entries 0 and 1 (we'll fill them in later).
   clazz = HermesValue::encodeTrustedNumberValue(0);
   if (LLVM_UNLIKELY(
-          BigStorage::push_back(arr, runtime, clazz) ==
+          ArrayStorageSmall::push_back(arr, runtime, clazz) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (LLVM_UNLIKELY(
-          BigStorage::push_back(arr, runtime, clazz) ==
+          ArrayStorageSmall::push_back(arr, runtime, clazz) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -3290,7 +3377,7 @@ ExecutionStatus setProtoClasses(
     }
     clazz = HermesValue::encodeObjectValue(head->getClass(runtime));
     if (LLVM_UNLIKELY(
-            BigStorage::push_back(arr, runtime, clazz) ==
+            ArrayStorageSmall::push_back(arr, runtime, clazz) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -3299,13 +3386,13 @@ ExecutionStatus setProtoClasses(
   }
   clazz = HermesValue::encodeNullValue();
   if (LLVM_UNLIKELY(
-          BigStorage::push_back(arr, runtime, clazz) ==
+          ArrayStorageSmall::push_back(arr, runtime, clazz) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  arr->set(
-      runtime, 0, HermesValue::encodeTrustedNumberValue(arr->size(runtime)));
+  auto endIndex = SmallHermesValue::encodeNumberValue(arr->size(), runtime);
+  arr->set(0, endIndex, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -3322,20 +3409,20 @@ ExecutionStatus setProtoClasses(
 uint32_t matchesProtoClasses(
     Runtime &runtime,
     Handle<JSObject> obj,
-    Handle<BigStorage> arr) {
+    Handle<ArrayStorageSmall> arr) {
   MutableHandle<JSObject> head(runtime, obj->getParent(runtime));
   // Skip the counts and object's own class.
   uint32_t i = 3;
   while (head.get()) {
-    HermesValue protoCls = arr->at(runtime, i++);
-    if (protoCls.isNull() || protoCls.getObject() != head->getClass(runtime) ||
+    auto protoCls = arr->at(i++);
+    if (protoCls.isNull() || protoCls.getObject() != head->getClassGCPtr() ||
         head->isProxyObject()) {
       return 0;
     }
     head = head->getParent(runtime);
   }
   // The chains must both end at the same point.
-  if (head || !arr->at(runtime, i++).isNull()) {
+  if (head || !arr->at(i++).isNull()) {
     return 0;
   }
   assert(i > 0 && "success should be positive");
@@ -3344,7 +3431,7 @@ uint32_t matchesProtoClasses(
 
 } // namespace
 
-CallResult<Handle<BigStorage>> getForInPropertyNames(
+CallResult<Handle<ArrayStorageSmall>> getForInPropertyNames(
     Runtime &runtime,
     Handle<JSObject> obj,
     uint32_t &beginIndex,
@@ -3352,14 +3439,14 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   Handle<HiddenClass> clazz(runtime, obj->getClass(runtime));
 
   // Fast case: Check the cache.
-  MutableHandle<BigStorage> arr(runtime);
+  MutableHandle<ArrayStorageSmall> arr(runtime);
   if (obj->shouldCacheForIn(runtime)) {
     arr = clazz->getForInCache(runtime);
     if (arr) {
       beginIndex = matchesProtoClasses(runtime, obj, arr);
       if (beginIndex) {
         // Cache is valid for this object, so use it.
-        endIndex = arr->size(runtime);
+        endIndex = arr->size();
         return arr;
       }
       // Invalid for this object. We choose to clear the cache since the
@@ -3373,16 +3460,16 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
   // Slow case: Build the array of properties.
   auto ownPropEstimate = clazz->getNumProperties();
   auto arrRes = obj->shouldCacheForIn(runtime)
-      ? BigStorage::createLongLived(runtime, ownPropEstimate)
-      : BigStorage::create(runtime, ownPropEstimate);
+      ? ArrayStorageSmall::createLongLived(runtime, ownPropEstimate)
+      : ArrayStorageSmall::create(runtime, ownPropEstimate);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  arr = std::move(*arrRes);
+  arr = vmcast<ArrayStorageSmall>(*arrRes);
   if (setProtoClasses(runtime, obj, arr) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  beginIndex = arr->size(runtime);
+  beginIndex = arr->size();
   // If obj or any of its prototypes are unsuitable for caching, then
   // beginIndex is 0 and we return an array with only the property names.
   bool canCache = beginIndex;
@@ -3407,6 +3494,20 @@ CallResult<Handle<BigStorage>> getForInPropertyNames(
     clazz->setForInCache(*arr, runtime);
   }
   return arr;
+}
+
+CallResult<PseudoHandle<>> getIndexedWithReceiver_RJS(
+    Runtime &runtime,
+    Handle<JSObject> srcHandle,
+    uint64_t index,
+    Handle<> receiver) {
+  if (auto optRes = tryFastGetComputedMayAlloc(runtime, *srcHandle, index))
+    return createPseudoHandle(*optRes);
+
+  PinnedValue hvIndex = PinnedHermesValue::encodeTrustedNumberValue(index);
+  // TODO: call a less general function?
+  return JSObject::getComputedWithReceiver_RJS(
+      srcHandle, runtime, hvIndex, receiver);
 }
 
 } // namespace vm

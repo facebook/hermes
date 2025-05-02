@@ -167,13 +167,13 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    GetGlobalObject   r2
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_int_int>
-// CHKBC-NEXT:    PutByIdLoose      r2, r1, 1, "test_int_int"
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 0, "test_int_int"
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_int_uint>
-// CHKBC-NEXT:    PutByIdLoose      r2, r1, 2, "test_int_uint"
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 1, "test_int_uint"
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_uint_uint>
-// CHKBC-NEXT:    PutByIdLoose      r2, r1, 3, "test_uint_uint"
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 2, "test_uint_uint"
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<test_could_be_int>
-// CHKBC-NEXT:    PutByIdLoose      r2, r1, 4, "test_could_be_int"
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 3, "test_could_be_int"
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<test_int_int>(3 params, 4 registers, 2 numbers, 1 non-pointers):

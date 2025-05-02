@@ -405,6 +405,8 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
 
     if (curFunction()->hasLegacyClassContext()) {
       if (functionKind == Function::DefinitionKind::ES6BaseConstructor) {
+        // Initialize `this` for the function.
+        emitLegacyBaseClassThisInit();
         // We only need to generate this here for base classes. It's not
         // required for derived because they generate this call after calling
         // super().
@@ -687,22 +689,24 @@ Function *ESTreeIRGen::genAsyncFunction(
 }
 
 void ESTreeIRGen::initCaptureStateInES5FunctionHelper() {
+  auto defKind = curFunction()->function->getDefinitionKind();
+  bool isLegacyClassConstructor = curFunction()->hasLegacyClassContext() &&
+      (defKind == Function::DefinitionKind::ES6DerivedConstructor ||
+       defKind == Function::DefinitionKind::ES6BaseConstructor);
   // Capture "this", "new.target" and "arguments" if there are inner arrows.
-  // Also capture state in derived class constructors, so we can handle `this`
-  // correctly in debugger evals.
+  // Also capture state in class constructors if debugging is enabled. We do
+  // this because we have to generate the eval function as an arrow function in
+  // order to correctly look up `this`, and that arrow function will require the
+  // full captured state.
   if (!(curFunction()->getSemInfo()->containsArrowFunctions ||
         ((Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) &&
-         curFunction()->getSemInfo()->constructorKind ==
-             sema::FunctionInfo::ConstructorKind::Derived)))
+         isLegacyClassConstructor)))
     return;
 
   auto *scope = curFunction()->curScope->getVariableScope();
 
-  // `this` is managed separately in the case of a legacy derived class
-  // constructor.
-  if (!(curFunction()->function->getDefinitionKind() ==
-            Function::DefinitionKind::ES6DerivedConstructor &&
-        curFunction()->hasLegacyClassContext())) {
+  // `this` is managed separately in the case of a legacy class constructor.
+  if (!isLegacyClassConstructor) {
     auto *th = Builder.createVariable(
         scope,
         genAnonymousLabelName("this"),
@@ -1107,10 +1111,15 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
   Builder.setLocation(SourceErrorManager::convertEndToLocation(
       Builder.getFunction()->getSourceRange()));
   if (returnValue) {
-    if (curFunction()->hasLegacyClassContext() &&
-        curFunction()->getSemInfo()->constructorKind ==
-            sema::FunctionInfo::ConstructorKind::Derived) {
-      returnValue = genLegacyDerivedConstructorRet(nullptr, returnValue);
+    if (curFunction()->hasLegacyClassContext()) {
+      if (curFunction()->getSemInfo()->constructorKind ==
+          sema::FunctionInfo::ConstructorKind::Derived) {
+        returnValue = genLegacyDerivedConstructorRet(nullptr, returnValue);
+      } else if (
+          curFunction()->getSemInfo()->constructorKind ==
+          sema::FunctionInfo::ConstructorKind::Base) {
+        returnValue = genLegacyBaseConstructorRet(nullptr, returnValue);
+      }
     }
     Builder.createReturnInst(returnValue);
   } else {

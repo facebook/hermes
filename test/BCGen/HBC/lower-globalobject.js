@@ -20,8 +20,8 @@ function foo() {
 // CHKRA-NEXT:%BB0:
 // CHKRA-NEXT:                 DeclareGlobalVarInst "x": string
 // CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHKRA-NEXT:  {r1}      %2 = HBCGetGlobalObjectInst (:object)
-// CHKRA-NEXT:  {np0}     %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r1}      %2 = LIRGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {np0}     %3 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKRA-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %foo(): functionCode
 // CHKRA-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "foo": string
 // CHKRA-NEXT:                 ReturnInst {np0} %3: undefined
@@ -29,7 +29,7 @@ function foo() {
 
 // CHKRA:function foo(): any
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  {r0}      %0 = HBCGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r0}      %0 = LIRGetGlobalObjectInst (:object)
 // CHKRA-NEXT:  {r0}      %1 = LoadPropertyInst (:any) {r0} %0: object, "x": string
 // CHKRA-NEXT:                 ReturnInst {r0} %1: any
 // CHKRA-NEXT:function_end
@@ -62,13 +62,13 @@ function foo() {
 // CHKBC-NEXT:    GetGlobalObject   r2
 // CHKBC-NEXT:    LoadConstUndefined r0
 // CHKBC-NEXT:    CreateClosure     r1, r0, Function<foo>
-// CHKBC-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 0, "foo"
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 numbers, 0 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
-// CHKBC-NEXT:    GetByIdShort      r0, r0, 1, "x"
+// CHKBC-NEXT:    GetByIdShort      r0, r0, 0, "x"
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Debug filename table:

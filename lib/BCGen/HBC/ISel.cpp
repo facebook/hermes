@@ -8,6 +8,7 @@
 #include "ISel.h"
 
 #include "BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/MovElimination.h"
@@ -38,8 +39,6 @@ void HVMRegisterAllocator::allocateCallInst(BaseCallInst *I) {
 
 namespace {
 
-#define INCLUDE_HBC_INSTRS
-
 STATISTIC(NumJumpPass, "Number of passes to resolve all jump targets");
 STATISTIC(
     NumUncachedNodes,
@@ -53,6 +52,12 @@ STATISTIC(
 STATISTIC(
     NumPutCacheSlots,
     "Number of cache slots allocated for all put property instructions");
+STATISTIC(
+    NumFunctionsWithWriteCache,
+    "Number of functions with at least one put property instruction");
+STATISTIC(
+    NumFunctionsWithReadCache,
+    "Number of functions with at least one get property instruction");
 
 /// Given a list of basic blocks \p blocks linearized into the order they will
 /// be generated, \return the set of those basic blocks containing backwards
@@ -202,8 +207,9 @@ class HBCISel {
   void verifyCall(BaseCallInst *Inst);
 
   /// The last emitted property cache index.
-  uint8_t lastPropertyReadCacheIndex_{0};
-  uint8_t lastPropertyWriteCacheIndex_{0};
+  uint8_t nextPropertyReadCacheIndex_{0};
+  uint8_t nextPropertyWriteCacheIndex_{0};
+  uint8_t nextPrivateNameCacheIndex_{0};
 
   /// The next index to use for CacheNewObject.
   uint8_t numCacheNewObject_{0};
@@ -217,6 +223,13 @@ class HBCISel {
       propertyReadCacheIndexForId_;
   llvh::DenseMap<Identifier, uint8_t> propertyWriteCacheIndexForId_;
 
+  /// This enum is used to provide extra, distinguishing information to the
+  /// private name operations that would otherwise share a cache index.
+  enum class PrivateNameOperationKind : uint8_t { ReadWrite = 0, In };
+  /// Map from property name & kind to the private name cache index for that
+  /// name.
+  llvh::DenseMap<std::pair<Value *, int>, uint8_t> privateNameCacheIdx_;
+
   /// Compute and return the index to use for caching the read/write of a
   /// property with the given identifier name.
   /// \param k is the kind of property read cache being acquired.
@@ -224,6 +237,14 @@ class HBCISel {
       Identifier prop,
       PropCacheKind k = PropCacheKind::NormalIdentifier);
   uint8_t acquirePropertyWriteCacheIndex(Identifier prop);
+
+  /// Compute and return the index to use for caching some operation involving a
+  /// private name.
+  /// \param privateName is the symbol value of the private name.
+  /// \k is the kind of operation being performed.
+  uint8_t acquirePrivateNameCacheIndex(
+      Value *privateName,
+      PrivateNameOperationKind k);
 
   /// A cache mapping from buffer ID to filelname+source map.
   FileAndSourceMapIdCache &fileAndSourceMapIdCache_;
@@ -241,14 +262,12 @@ class HBCISel {
 
 /// This is the header declaration for all of the methods that emit opcodes
 /// for specific high-level IR instructions.
-#define INCLUDE_HBC_INSTRS
 #define DEF_VALUE(CLASS, PARENT) \
   void generate##CLASS(CLASS *Inst, BasicBlock *next);
 #define BEGIN_VALUE(CLASS, PARENT) DEF_VALUE(CLASS, PARENT)
 #include "hermes/IR/ValueKinds.def"
 #undef DEF_VALUE
 #undef MARK_VALUE
-#undef INCLUDE_HBC_INSTRS
 
  public:
   /// C'tor.
@@ -539,9 +558,16 @@ void HBCISel::addDebugLexicalInfo() {
 }
 
 void HBCISel::populatePropertyCachingInfo() {
-  BCFGen_->setHighestReadCacheIndex(lastPropertyReadCacheIndex_);
-  BCFGen_->setHighestWriteCacheIndex(lastPropertyWriteCacheIndex_);
+  BCFGen_->setReadCacheSize(nextPropertyReadCacheIndex_);
+  BCFGen_->setWriteCacheSize(nextPropertyWriteCacheIndex_);
   BCFGen_->setNumCacheNewObject(numCacheNewObject_);
+  BCFGen_->setPrivateNameCacheSize(nextPrivateNameCacheIndex_);
+  if (nextPropertyReadCacheIndex_ > 0) {
+    NumFunctionsWithReadCache++;
+  }
+  if (nextPropertyWriteCacheIndex_ > 0) {
+    NumFunctionsWithWriteCache++;
+  }
 }
 
 void HBCISel::generateDirectEvalInst(DirectEvalInst *Inst, BasicBlock *next) {
@@ -570,6 +596,15 @@ void HBCISel::generateToPropertyKeyInst(
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getSingleOperand());
   BCFGen_->emitToPropertyKey(dst, src);
+}
+
+void HBCISel::generateCreatePrivateNameInst(
+    CreatePrivateNameInst *Inst,
+    BasicBlock *next) {
+  auto dst = encodeValue(Inst);
+  auto *descStr = llvh::cast<LiteralString>(Inst->getSingleOperand());
+  auto id = BCFGen_->getIdentifierID(descStr);
+  BCFGen_->emitCreatePrivateName(dst, id);
 }
 
 void HBCISel::generateAsNumberInst(AsNumberInst *Inst, BasicBlock *next) {
@@ -811,6 +846,14 @@ void HBCISel::generateBinaryOperatorInst(
     case ValueKind::BinaryInInstKind: // "in"
       BCFGen_->emitIsIn(res, left, right);
       break;
+    case ValueKind::BinaryPrivateInInstKind: // #privateName "in"
+      BCFGen_->emitPrivateIsIn(
+          res,
+          left,
+          right,
+          acquirePrivateNameCacheIndex(
+              Inst->getRightHandSide(), PrivateNameOperationKind::In));
+      break;
     case ValueKind::BinaryInstanceOfInstKind: // instanceof
       BCFGen_->emitInstanceOf(res, left, right);
       break;
@@ -976,39 +1019,26 @@ void HBCISel::generateDefineOwnPropertyInst(
       objReg, valueReg, propReg, Inst->getIsEnumerable());
 }
 
-void HBCISel::generateDefineNewOwnPropertyInst(
-    DefineNewOwnPropertyInst *Inst,
+void HBCISel::generateStoreOwnPrivateFieldInst(
+    StoreOwnPrivateFieldInst *Inst,
     BasicBlock *next) {
-  auto valueReg = encodeValue(Inst->getStoredValue());
   auto objReg = encodeValue(Inst->getObject());
+  auto valueReg = encodeValue(Inst->getStoredValue());
   auto prop = Inst->getProperty();
-  assert(Inst->getIsEnumerable() && "must be enumerable");
+  auto propReg = encodeValue(prop);
+  uint32_t privateNameCacheIdx = acquirePrivateNameCacheIndex(
+      Inst->getProperty(), PrivateNameOperationKind::ReadWrite);
+  BCFGen_->emitPutOwnPrivateBySym(
+      objReg, valueReg, privateNameCacheIdx, propReg);
+}
 
-  if (auto *numProp = llvh::dyn_cast<LiteralNumber>(prop)) {
-    uint32_t index = *numProp->convertToArrayIndex();
-    if (index <= UINT8_MAX) {
-      BCFGen_->emitDefineOwnByIndex(objReg, valueReg, index);
-    } else {
-      BCFGen_->emitDefineOwnByIndexL(objReg, valueReg, index);
-    }
-    return;
-  }
-
-  auto strProp = cast<LiteralString>(prop);
-  auto id = BCFGen_->getIdentifierID(strProp);
-  if (id <= UINT16_MAX) {
-    BCFGen_->emitDefineOwnById(
-        objReg,
-        valueReg,
-        acquirePropertyWriteCacheIndex(strProp->getValue()),
-        id);
-  } else {
-    BCFGen_->emitDefineOwnByIdLong(
-        objReg,
-        valueReg,
-        acquirePropertyWriteCacheIndex(strProp->getValue()),
-        id);
-  }
+void HBCISel::generateAddOwnPrivateFieldInst(
+    AddOwnPrivateFieldInst *Inst,
+    BasicBlock *next) {
+  auto objReg = encodeValue(Inst->getObject());
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto symReg = encodeValue(Inst->getProperty());
+  BCFGen_->emitAddOwnPrivateBySym(objReg, valueReg, symReg);
 }
 
 void HBCISel::generateDefineOwnGetterSetterInst(
@@ -1083,6 +1113,18 @@ void HBCISel::generateLoadPropertyInst(
 
   auto propReg = encodeValue(prop);
   BCFGen_->emitGetByVal(resultReg, objReg, propReg);
+}
+void HBCISel::generateLoadOwnPrivateFieldInst(
+    LoadOwnPrivateFieldInst *Inst,
+    BasicBlock *next) {
+  auto resultReg = encodeValue(Inst);
+  auto objReg = encodeValue(Inst->getObject());
+  auto prop = Inst->getProperty();
+  auto propReg = encodeValue(prop);
+  uint32_t privateNameCacheIdx = acquirePrivateNameCacheIndex(
+      Inst->getProperty(), PrivateNameOperationKind::ReadWrite);
+  BCFGen_->emitGetOwnPrivateBySym(
+      resultReg, objReg, privateNameCacheIdx, propReg);
 }
 
 void HBCISel::generateLoadPropertyWithReceiverInst(
@@ -1159,7 +1201,7 @@ void HBCISel::generateAllocObjectLiteralInst(
   auto result = encodeValue(Inst);
   assert(
       Inst->getKeyValuePairCount() == 0 &&
-      "AllocObjectLiteralInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+      "AllocObjectLiteralInst with properties should be lowered to LIRAllocObjectFromBufferInst");
   if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObject(result);
   } else {
@@ -1173,7 +1215,7 @@ void HBCISel::generateAllocTypedObjectInst(
   auto result = encodeValue(Inst);
   assert(
       Inst->getKeyValuePairCount() == 0 &&
-      "AllocTypedObjectInst with properties should be lowered to HBCAllocObjectFromBufferInst");
+      "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
   if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
     BCFGen_->emitNewObject(result);
   } else {
@@ -1226,13 +1268,20 @@ void HBCISel::generateCreateFunctionInst(
   }
 }
 
-void HBCISel::generateHBCAllocObjectFromBufferInst(
-    HBCAllocObjectFromBufferInst *Inst,
+void HBCISel::generateLIRAllocObjectFromBufferInst(
+    LIRAllocObjectFromBufferInst *Inst,
     BasicBlock *next) {
   auto result = encodeValue(Inst);
   auto buffIdxs =
       BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  if (buffIdxs.shapeTableIdx <= UINT16_MAX &&
+  if (!llvh::isa<EmptySentinel>(Inst->getParentObject())) {
+    BCFGen_->emitNewObjectWithBufferAndParent(
+        result,
+        encodeValue(Inst->getParentObject()),
+        buffIdxs.shapeTableIdx,
+        buffIdxs.valueBufferOffset);
+  } else if (
+      buffIdxs.shapeTableIdx <= UINT16_MAX &&
       buffIdxs.valueBufferOffset <= UINT16_MAX) {
     BCFGen_->emitNewObjectWithBuffer(
         result, buffIdxs.shapeTableIdx, buffIdxs.valueBufferOffset);
@@ -1704,8 +1753,8 @@ void HBCISel::generateGetClosureScopeInst(
   BCFGen_->emitGetClosureEnvironment(output, closure);
 }
 
-void HBCISel::generateHBCLoadConstInst(
-    hermes::HBCLoadConstInst *Inst,
+void HBCISel::generateLIRLoadConstInst(
+    hermes::LIRLoadConstInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   Literal *literal = Inst->getConst();
@@ -1831,8 +1880,8 @@ void HBCISel::generateHBCProfilePointInst(
   BCFGen_->emitProfilePoint(Inst->getPointIndex());
 }
 
-void HBCISel::generateHBCGetGlobalObjectInst(
-    hermes::HBCGetGlobalObjectInst *Inst,
+void HBCISel::generateLIRGetGlobalObjectInst(
+    hermes::LIRGetGlobalObjectInst *Inst,
     hermes::BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   BCFGen_->emitGetGlobalObject(dstReg);
@@ -1858,37 +1907,37 @@ void HBCISel::generateCoerceThisNSInst(
   auto src = encodeValue(Inst->getSingleOperand());
   BCFGen_->emitCoerceThisNS(dst, src);
 }
-void HBCISel::generateHBCGetArgumentsLengthInst(
-    hermes::HBCGetArgumentsLengthInst *Inst,
+void HBCISel::generateLIRGetArgumentsLengthInst(
+    hermes::LIRGetArgumentsLengthInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsLength(output, reg);
 }
-void HBCISel::generateHBCGetArgumentsPropByValLooseInst(
-    hermes::HBCGetArgumentsPropByValLooseInst *Inst,
+void HBCISel::generateLIRGetArgumentsPropByValLooseInst(
+    hermes::LIRGetArgumentsPropByValLooseInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto index = encodeValue(Inst->getIndex());
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsPropByValLoose(output, index, reg);
 }
-void HBCISel::generateHBCGetArgumentsPropByValStrictInst(
-    hermes::HBCGetArgumentsPropByValStrictInst *Inst,
+void HBCISel::generateLIRGetArgumentsPropByValStrictInst(
+    hermes::LIRGetArgumentsPropByValStrictInst *Inst,
     hermes::BasicBlock *next) {
   auto output = encodeValue(Inst);
   auto index = encodeValue(Inst->getIndex());
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitGetArgumentsPropByValStrict(output, index, reg);
 }
-void HBCISel::generateHBCReifyArgumentsLooseInst(
-    hermes::HBCReifyArgumentsLooseInst *Inst,
+void HBCISel::generateLIRReifyArgumentsLooseInst(
+    hermes::LIRReifyArgumentsLooseInst *Inst,
     hermes::BasicBlock *next) {
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitReifyArgumentsLoose(reg);
 }
-void HBCISel::generateHBCReifyArgumentsStrictInst(
-    hermes::HBCReifyArgumentsStrictInst *Inst,
+void HBCISel::generateLIRReifyArgumentsStrictInst(
+    hermes::LIRReifyArgumentsStrictInst *Inst,
     hermes::BasicBlock *next) {
   auto reg = encodeValue(Inst->getLazyRegister());
   BCFGen_->emitReifyArgumentsStrict(reg);
@@ -1916,7 +1965,7 @@ void HBCISel::generateGetConstructedObjectInst(
   auto constructed = encodeValue(Inst->getConstructorReturnValue());
   BCFGen_->emitSelectObject(output, thisValue, constructed);
 }
-void HBCISel::generateHBCSpillMovInst(HBCSpillMovInst *Inst, BasicBlock *next) {
+void HBCISel::generateLIRSpillMovInst(LIRSpillMovInst *Inst, BasicBlock *next) {
   auto dst = encodeValue(Inst);
   auto src = encodeValue(Inst->getValue());
   emitMovIfNeeded(dst, src);
@@ -2188,13 +2237,6 @@ void HBCISel::generateGetNativeRuntimeInst(
     hermes::BasicBlock *next) {
   hermes_fatal("GetNativeRuntimeInst not supported.");
 }
-void HBCISel::generateTypedStoreParentInst(
-    TypedStoreParentInst *Inst,
-    BasicBlock *) {
-  auto storedValue = encodeValue(Inst->getStoredValue());
-  auto object = encodeValue(Inst->getObject());
-  BCFGen_->emitTypedStoreParent(storedValue, object);
-}
 void HBCISel::generateLIRDeadValueInst(LIRDeadValueInst *, BasicBlock *) {
   hermes_fatal("LIRDeadValueInst not supported.");
 }
@@ -2403,43 +2445,80 @@ void HBCISel::run(SourceMapGenerator *outSourceMap) {
   BCFGen_->bytecodeGenerationComplete();
 }
 
-uint8_t HBCISel::acquirePropertyReadCacheIndex(
-    Identifier prop,
-    PropCacheKind k) {
+uint8_t HBCISel::acquirePrivateNameCacheIndex(
+    Value *privateName,
+    PrivateNameOperationKind k) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
-  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
-  uint8_t dummyZero = 0;
-  auto &idx = reuse ? propertyReadCacheIndexForId_[{prop, (int)k}] : dummyZero;
-  if (idx) {
-    ++NumCachedNodes;
-    return idx;
+  Value *cacheKey = privateName;
+  // Ideally we want to be returning the same cache index (when reuse is true)
+  // for usages of the same private name. Most usages of private names will be
+  // via a LoadFrame. Each LoadFrame is a different instruction, so we would
+  // never get matches on those `Value*`s. So instead, use the underlying
+  // variable as the Value* key, as that will be shared across different
+  // LoadFrames.
+  if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(privateName)) {
+    cacheKey = LFI->getLoadVariable();
+  }
+  if (reuse) {
+    auto iter = privateNameCacheIdx_.find({cacheKey, (int)k});
+    if (iter != privateNameCacheIdx_.end()) {
+      ++NumCachedNodes;
+      return iter->second;
+    }
   }
 
-  if (LLVM_UNLIKELY(
-          lastPropertyReadCacheIndex_ == std::numeric_limits<uint8_t>::max())) {
+  if (LLVM_UNLIKELY(nextPrivateNameCacheIndex_ == PROPERTY_CACHING_DISABLED)) {
     ++NumUncachedNodes;
     return PROPERTY_CACHING_DISABLED;
   }
 
   ++NumCachedNodes;
   ++NumCacheSlots;
-  idx = ++lastPropertyReadCacheIndex_;
+  uint8_t idx = nextPrivateNameCacheIndex_++;
+  if (reuse) {
+    privateNameCacheIdx_[{cacheKey, (int)k}] = idx;
+  }
+  return idx;
+}
+
+uint8_t HBCISel::acquirePropertyReadCacheIndex(
+    Identifier prop,
+    PropCacheKind k) {
+  const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
+  if (reuse) {
+    auto iter = propertyReadCacheIndexForId_.find({prop, (int)k});
+    if (iter != propertyReadCacheIndexForId_.end()) {
+      ++NumCachedNodes;
+      return iter->second;
+    }
+  }
+
+  if (LLVM_UNLIKELY(nextPropertyReadCacheIndex_ == PROPERTY_CACHING_DISABLED)) {
+    ++NumUncachedNodes;
+    return PROPERTY_CACHING_DISABLED;
+  }
+
+  ++NumCachedNodes;
+  ++NumCacheSlots;
+  int8_t idx = nextPropertyReadCacheIndex_++;
+  if (reuse) {
+    propertyReadCacheIndexForId_[{prop, (int)k}] = idx;
+  }
   return idx;
 }
 
 uint8_t HBCISel::acquirePropertyWriteCacheIndex(Identifier prop) {
   const bool reuse = F_->getContext().getOptimizationSettings().reusePropCache;
-  // Zero is reserved for indicating no-cache, so cannot be a value in the map.
-  uint8_t dummyZero = 0;
-  auto &idx = reuse ? propertyWriteCacheIndexForId_[prop] : dummyZero;
-  if (idx) {
-    ++NumCachedNodes;
-    return idx;
+  if (reuse) {
+    auto iter = propertyWriteCacheIndexForId_.find(prop);
+    if (iter != propertyWriteCacheIndexForId_.end()) {
+      ++NumCachedNodes;
+      return iter->second;
+    }
   }
 
   if (LLVM_UNLIKELY(
-          lastPropertyWriteCacheIndex_ ==
-          std::numeric_limits<uint8_t>::max())) {
+          nextPropertyWriteCacheIndex_ == PROPERTY_CACHING_DISABLED)) {
     ++NumUncachedNodes;
     return PROPERTY_CACHING_DISABLED;
   }
@@ -2447,7 +2526,10 @@ uint8_t HBCISel::acquirePropertyWriteCacheIndex(Identifier prop) {
   ++NumCachedNodes;
   ++NumCacheSlots;
   ++NumPutCacheSlots;
-  idx = ++lastPropertyWriteCacheIndex_;
+  uint8_t idx = nextPropertyWriteCacheIndex_++;
+  if (reuse) {
+    propertyWriteCacheIndexForId_[prop] = idx;
+  }
   return idx;
 }
 

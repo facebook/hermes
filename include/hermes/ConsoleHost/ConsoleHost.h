@@ -151,6 +151,16 @@ struct ExecuteOptions {
   /// Dump JIT'ed code.
   unsigned dumpJITCode{0};
 
+  /// The jitdump file descriptor used for perf profiling.
+  int perfProfJitDumpFd{-1};
+
+  /// The debug information file path used for perf profiling. This serves as a
+  /// fake "source file" that we use for storing debug information from the JIT.
+  std::string perfProfDebugInfoFile;
+
+  /// The file descriptor for writing the above debug information file.
+  int perfProfDebugInfoFd{-1};
+
   /// Fatally crash on any JIT compilation error.
   bool jitCrashOnError{false};
 

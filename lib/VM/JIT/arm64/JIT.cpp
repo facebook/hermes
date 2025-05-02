@@ -92,9 +92,11 @@ class JITContext::Compiler {
         em_(jc.impl_->jr,
             jc.getDumpJITCode(),
             jc.getEmitAsserts(),
+            jc.perfJitDump_.get(),
             codeBlock,
             codeBlock->readPropertyCache(),
             codeBlock->writePropertyCache(),
+            codeBlock->privateNameCache(),
             // TODO: is getFrameSize() the right thing to call?
             codeBlock->getFrameSize(),
             [this](std::string &&message) {
@@ -280,6 +282,14 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 
   codeBlock_->setJITCompiled(em_.addToRuntime(jc_.impl_->jr));
 
+  if (jc_.perfJitDump_) {
+    // Write the JIT dump for this function.
+    jc_.perfJitDump_->writeCodeLoadRecord(
+        reinterpret_cast<const char *>(codeBlock_->getJITCompiled()),
+        em_.code.codeSize(),
+        codeBlock_->getNameString());
+  }
+
   if (LLVM_UNLIKELY(usedSize == memoryLimit)) {
     // Disable compilation for the future because we've hit the limit,
     // but this function is fine.
@@ -367,9 +377,9 @@ inline void JITContext::Compiler::emitLoadConstDouble(
     em_.loadConstBits64(FR(inst->op1), val, type, #NAME); \
   }
 
-EMIT_LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::UnknownNonPtr);
-EMIT_LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::UnknownNonPtr);
-EMIT_LOAD_CONST(Null, _sh_ljs_null().raw, FRType::UnknownNonPtr);
+EMIT_LOAD_CONST(Empty, _sh_ljs_empty().raw, FRType::OtherNonPtr);
+EMIT_LOAD_CONST(Undefined, _sh_ljs_undefined().raw, FRType::OtherNonPtr);
+EMIT_LOAD_CONST(Null, _sh_ljs_null().raw, FRType::OtherNonPtr);
 EMIT_LOAD_CONST(True, _sh_ljs_bool(true).raw, FRType::Bool);
 EMIT_LOAD_CONST(False, _sh_ljs_bool(false).raw, FRType::Bool);
 
@@ -732,6 +742,23 @@ inline void JITContext::Compiler::emitDelByVal(const inst::DelByValInst *inst) {
   em_.delByVal(FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4);
 }
 
+inline void JITContext::Compiler::emitAddOwnPrivateBySym(
+    const inst::AddOwnPrivateBySymInst *inst) {
+  em_.addOwnPrivateBySym(FR(inst->op1), FR(inst->op3), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitGetOwnPrivateBySym(
+    const inst::GetOwnPrivateBySymInst *inst) {
+  em_.getOwnPrivateBySym(
+      FR(inst->op1), FR(inst->op2), FR(inst->op4), inst->op3);
+}
+
+inline void JITContext::Compiler::emitPutOwnPrivateBySym(
+    const inst::PutOwnPrivateBySymInst *inst) {
+  em_.putOwnPrivateBySym(
+      FR(inst->op1), FR(inst->op4), FR(inst->op2), inst->op3);
+}
+
 inline void JITContext::Compiler::emitGetByIndex(
     const inst::GetByIndexInst *inst) {
   em_.getByIndex(FR(inst->op1), FR(inst->op2), inst->op3);
@@ -794,11 +821,6 @@ inline void JITContext::Compiler::emitLoadParentNoTraps(
 inline void JITContext::Compiler::emitTypedLoadParent(
     const inst::TypedLoadParentInst *inst) {
   em_.typedLoadParent(FR(inst->op1), FR(inst->op2));
-}
-
-inline void JITContext::Compiler::emitTypedStoreParent(
-    const inst::TypedStoreParentInst *inst) {
-  em_.typedStoreParent(FR(inst->op1), FR(inst->op2));
 }
 
 inline void JITContext::Compiler::emitRet(const inst::RetInst *inst) {
@@ -1039,6 +1061,12 @@ EMIT_NEW_OBJECT_WITH_BUFFER(NewObjectWithBufferLong)
 
 #undef EMIT_NEW_OBJECT_WITH_BUFFER
 
+void JITContext::Compiler::emitNewObjectWithBufferAndParent(
+    const inst::NewObjectWithBufferAndParentInst *inst) {
+  em_.newObjectWithBufferAndParent(
+      FR(inst->op1), FR(inst->op2), inst->op3, inst->op4);
+}
+
 inline void JITContext::Compiler::emitNewArray(const inst::NewArrayInst *inst) {
   em_.newArray(FR(inst->op1), inst->op2);
 }
@@ -1096,6 +1124,16 @@ inline void JITContext::Compiler::emitGetNextPName(
 inline void JITContext::Compiler::emitToPropertyKey(
     const inst::ToPropertyKeyInst *inst) {
   em_.toPropertyKey(FR(inst->op1), FR(inst->op2));
+}
+
+inline void JITContext::Compiler::emitCreatePrivateName(
+    const inst::CreatePrivateNameInst *inst) {
+  em_.createPrivateName(FR(inst->op1), ID(inst->op2));
+}
+
+inline void JITContext::Compiler::emitPrivateIsIn(
+    const inst::PrivateIsInInst *inst) {
+  em_.privateIsIn(FR(inst->op1), FR(inst->op2), FR(inst->op3), inst->op4);
 }
 
 inline void JITContext::Compiler::emitIteratorBegin(

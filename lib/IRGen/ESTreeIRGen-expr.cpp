@@ -1052,10 +1052,14 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     }
     Mod->getContext().getSourceErrorManager().error(
         mem->getSourceRange(), "invalid tuple access");
+  };
+  Value *loadProp;
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(mem))) {
+    loadProp = emitPrivateLookup(baseValue, propValue, PN);
+  } else {
+    loadProp = Builder.createLoadPropertyInst(baseValue, propValue);
   }
-
-  return MemberExpressionResult{
-      Builder.createLoadPropertyInst(baseValue, propValue), nullptr, baseValue};
+  return MemberExpressionResult{loadProp, nullptr, baseValue};
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
@@ -1195,7 +1199,11 @@ void ESTreeIRGen::emitMemberStore(
         mem->getSourceRange(), "invalid tuple access");
   }
 
-  Builder.createStorePropertyInst(storedValue, baseValue, propValue);
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(mem))) {
+    emitPrivateStore(baseValue, storedValue, propValue, PN);
+  } else {
+    Builder.createStorePropertyInst(storedValue, baseValue, propValue);
+  }
 }
 
 ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
@@ -1262,7 +1270,12 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
   Value *result = nullptr;
   switch (op) {
     case MemberExpressionOperation::Load:
-      result = Builder.createLoadPropertyInst(baseValue, prop);
+      if (auto *PN =
+              llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(mem))) {
+        result = emitPrivateLookup(baseValue, prop, PN);
+      } else {
+        result = Builder.createLoadPropertyInst(baseValue, prop);
+      }
       break;
     case MemberExpressionOperation::Delete:
       result = Builder.createDeletePropertyInst(baseValue, prop);
@@ -1491,12 +1504,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     Builder.createStoreFrameInst(curFunction()->curScope, Obj, capturedObj);
   }
 
-  // haveSeenComputedProp tracks whether we have processed a computed property.
-  // Once we do, for all future properties, we can no longer generate
-  // DefineNewOwnPropertyInst because the computed property could have already
-  // defined any property.
-  bool haveSeenComputedProp = false;
-
   // Initialize all properties. We check whether the value of each property
   // will be overwritten (by comparing against what we have saved in propMap).
   // In that case we still compute the value (it could have side effects), but
@@ -1508,7 +1515,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       genBuiltinCall(
           BuiltinMethod::HermesBuiltin_copyDataProperties,
           {Obj, genExpression(spread->_argument)});
-      haveSeenComputedProp = true;
       continue;
     }
 
@@ -1548,7 +1554,6 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
         Builder.createDefineOwnPropertyInst(
             value, Obj, key, IRBuilder::PropEnumerable::Yes);
       }
-      haveSeenComputedProp = true;
       continue;
     }
 
@@ -1586,16 +1591,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       if (propValue->state == PropertyValue::None) {
         // This value is going to be overwritten, but insert a placeholder in
         // order to maintain insertion order.
-        if (haveSeenComputedProp) {
-          Builder.createDefineOwnPropertyInst(
-              Builder.getLiteralNull(),
-              Obj,
-              Key,
-              IRBuilder::PropEnumerable::Yes);
-        } else {
-          Builder.createDefineNewOwnPropertyInst(
-              Builder.getLiteralNull(), Obj, Key);
-        }
+        Builder.createDefineOwnPropertyInst(
+            Builder.getLiteralNull(), Obj, Key, IRBuilder::PropEnumerable::Yes);
         propValue->state = PropertyValue::Placeholder;
       }
     };
@@ -1650,13 +1647,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       assert(
           propValue->state != PropertyValue::IRGenerated &&
           "IR can only be generated once");
-      if (haveSeenComputedProp ||
-          propValue->state == PropertyValue::Placeholder) {
-        Builder.createDefineOwnPropertyInst(
-            value, Obj, Key, IRBuilder::PropEnumerable::Yes);
-      } else {
-        Builder.createDefineNewOwnPropertyInst(value, Obj, Key);
-      }
+      Builder.createDefineOwnPropertyInst(
+          value, Obj, Key, IRBuilder::PropEnumerable::Yes);
       propValue->state = PropertyValue::IRGenerated;
     } else {
       maybeInsertPlaceholder();
@@ -1715,7 +1707,7 @@ Value *ESTreeIRGen::genTypedObjectExpr(
         "Missing stored value in typechecked object literal");
     // Use a literal if possible, otherwise use the default init value.
     // Avoid putting non-literals here because we want to emit PrStore
-    // instead of DefineNewOwnPropertyInst.
+    // instead of DefineOwnPropertyInst.
     Value *initValue = nullptr;
     if (llvh::isa<Literal>(it->second.first)) {
       initValue = it->second.first;
@@ -2089,10 +2081,20 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
     return LHS;
   }
 
-  Value *LHS = genExpression(bin->_left);
+  ValueKind kind;
+  Value *LHS;
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(bin->_left)) {
+    // If we are seeing the form `#privateName in val`, generate a different
+    // kind of `in` operator.
+    assert(bin->_operator->str() == "in");
+    kind = ValueKind::BinaryPrivateInInstKind;
+    LHS = genPrivateNameValue(llvh::cast<ESTree::IdentifierNode>(PN->_id));
+  } else {
+    kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
+    LHS = genExpression(bin->_left);
+  }
   Value *RHS = genExpression(bin->_right);
 
-  ValueKind kind = BinaryOperatorInst::parseOperator(bin->_operator->str());
   Instruction *res = Builder.createBinaryOperatorInst(LHS, RHS, kind);
 
   // If the binary operator is a comparison, set the result type to boolean.
@@ -2104,6 +2106,7 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
   if ((kind >= ValueKind::BinaryEqualInstKind &&
        kind <= ValueKind::BinaryGreaterThanOrEqualInstKind) ||
       kind == ValueKind::BinaryInInstKind ||
+      kind == ValueKind::BinaryPrivateInInstKind ||
       kind == ValueKind::BinaryInstanceOfInstKind) {
     res->setType(Type::createBoolean());
   }
@@ -2485,6 +2488,22 @@ Value *ESTreeIRGen::genIdentifierExpression(
   return emitLoad(Var, afterTypeOf);
 }
 
+Value *ESTreeIRGen::genPrivateNameValue(ESTree::IdentifierNode *Iden) {
+  sema::Decl *decl = semCtx_.getExpressionDecl(Iden);
+  assert(decl && "identifier must be resolved");
+  assert(
+      sema::Decl::isKindPrivateName(decl->kind) &&
+      "must refer to a private name");
+  // Fields each have their own name value.
+  if (decl->kind == sema::Decl::Kind::PrivateField) {
+    return emitLoad(getDeclData(decl), false);
+  }
+  // Methods and accessors all share the same class brand symbol as their "name
+  // value".
+  auto *entry = getDeclDataPrivate<PrivateNameFunctionTable::BaseEntry>(decl);
+  return emitLoad(entry->classBrand, false);
+}
+
 Value *ESTreeIRGen::genMetaProperty(ESTree::MetaPropertyNode *MP) {
   // Recognize "new.target"
   if (cast<ESTree::IdentifierNode>(MP->_meta)->_name == kw_.identNew) {
@@ -2701,9 +2720,13 @@ Value *ESTreeIRGen::genThisExpression() {
   }
   // Generators may be used as arrows in async arrow functions, in which case
   // they should load from the captured this.
+  // Untyped base class constructors create `this` internally, so they also have
+  // to access `this` as a Variable.
   auto funcDefKind = curFunction()->function->getDefinitionKind();
   if ((funcDefKind == Function::DefinitionKind::ES6Arrow) ||
-      (funcDefKind == Function::DefinitionKind::GeneratorInnerArrow)) {
+      (funcDefKind == Function::DefinitionKind::GeneratorInnerArrow) ||
+      (curFunction()->hasLegacyClassContext() &&
+       funcDefKind == Function::DefinitionKind::ES6BaseConstructor)) {
     assert(
         curFunction()->capturedState.thisVal &&
         "arrow function must have a captured this");

@@ -31,10 +31,10 @@ function foo(x) {
 // CHECK-NEXT:  {r0}      %2 = DeclareGlobalVarInst "b": string
 // CHECK-NEXT:  {r0}      %3 = DeclareGlobalVarInst "foo": string
 // CHECK-NEXT:  {r1}      %4 = CreateFunctionInst (:object) {r1} %0: environment, %VS0: any, %foo(): functionCode
-// CHECK-NEXT:  {r2}      %5 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r2}      %5 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %6 = StorePropertyLooseInst {r1} %4: object, {r2} %5: object, "foo": string
 // CHECK-NEXT:  {r1}      %7 = AllocStackInst (:any) $?anon_0_ret: any
-// CHECK-NEXT:  {r2}      %8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r2}      %8 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r1}      %9 = MovInst (:undefined) {r2} %8: undefined
 // CHECK-NEXT:  {r1}     %10 = LoadStackInst (:any) {r1} %7: any
 // CHECK-NEXT:  {r0}     %11 = ReturnInst {r1} %10: any
@@ -53,17 +53,17 @@ function foo(x) {
 // CHECK-NEXT:  {r1}      %4 = LoadFrameInst (:any) {r1} %1: environment, [%VS1.x]: any
 // CHECK-NEXT:  {r0}      %5 = CondBranchInst {r1} %4: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  {r1}      %6 = HBCLoadConstInst (:number) 10: number
-// CHECK-NEXT:  {r2}      %7 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r1}      %6 = LIRLoadConstInst (:number) 10: number
+// CHECK-NEXT:  {r2}      %7 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}      %8 = StorePropertyLooseInst {r1} %6: number, {r2} %7: object, "a": string
 // CHECK-NEXT:  {r0}      %9 = BranchInst %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  {r1}     %10 = HBCLoadConstInst (:number) 10: number
-// CHECK-NEXT:  {r2}     %11 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {r1}     %10 = LIRLoadConstInst (:number) 10: number
+// CHECK-NEXT:  {r2}     %11 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {r0}     %12 = StorePropertyLooseInst {r1} %10: number, {r2} %11: object, "b": string
 // CHECK-NEXT:  {r0}     %13 = BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  {r1}     %14 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {r1}     %14 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:  {r0}     %15 = ReturnInst {r1} %14: undefined
 // CHECK-NEXT:function_end
 
@@ -72,8 +72,8 @@ function foo(x) {
 // CHKOPT-NEXT:                 DeclareGlobalVarInst "a": string
 // CHKOPT-NEXT:                 DeclareGlobalVarInst "b": string
 // CHKOPT-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHKOPT-NEXT:  {r1}      %3 = HBCGetGlobalObjectInst (:object)
-// CHKOPT-NEXT:  {np0}     %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKOPT-NEXT:  {r1}      %3 = LIRGetGlobalObjectInst (:object)
+// CHKOPT-NEXT:  {np0}     %4 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKOPT-NEXT:  {r0}      %5 = CreateFunctionInst (:object) {np0} %4: undefined, empty: any, %foo(): functionCode
 // CHKOPT-NEXT:                 StorePropertyLooseInst {r0} %5: object, {r1} %3: object, "foo": string
 // CHKOPT-NEXT:                 ReturnInst {np0} %4: undefined
@@ -81,8 +81,8 @@ function foo(x) {
 
 // CHKOPT:function foo(x: any): undefined
 // CHKOPT-NEXT:%BB0:
-// CHKOPT-NEXT:  {n0}      %0 = HBCLoadConstInst (:number) 10: number
-// CHKOPT-NEXT:  {r0}      %1 = HBCGetGlobalObjectInst (:object)
+// CHKOPT-NEXT:  {n0}      %0 = LIRLoadConstInst (:number) 10: number
+// CHKOPT-NEXT:  {r0}      %1 = LIRGetGlobalObjectInst (:object)
 // CHKOPT-NEXT:  {r1}      %2 = LoadParamInst (:any) %x: any
 // CHKOPT-NEXT:                 CondBranchInst {r1} %2: any, %BB1, %BB2
 // CHKOPT-NEXT:%BB1:
@@ -92,6 +92,6 @@ function foo(x) {
 // CHKOPT-NEXT:                 StorePropertyLooseInst {n0} %0: number, {r0} %1: object, "b": string
 // CHKOPT-NEXT:                 BranchInst %BB3
 // CHKOPT-NEXT:%BB3:
-// CHKOPT-NEXT:  {np0}     %8 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKOPT-NEXT:  {np0}     %8 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKOPT-NEXT:                 ReturnInst {np0} %8: undefined
 // CHKOPT-NEXT:function_end

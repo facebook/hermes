@@ -156,7 +156,9 @@ class ContiguousVAStorageProvider final : public StorageProvider {
     // Reset all bits for this storage.
     int startIndex = (static_cast<char *>(storage) - start_) / kSegmentUnitSize;
     statusBits_.reset(startIndex, startIndex + numUnits);
-    if (startIndex < firstFreeBit_)
+    // This delete could happen right after the last piece of memory is used, so
+    // firstFreeBit_ could be -1.
+    if ((startIndex < firstFreeBit_) || (firstFreeBit_ == -1))
       firstFreeBit_ = startIndex;
   }
 
@@ -205,7 +207,9 @@ llvh::ErrorOr<void *> VMAllocateStorageProvider::newStorageImpl(
   void *mem = *result;
   assert(isAligned(mem));
   (void)&isAligned;
+#ifdef HERMESVM_ALLOW_HUGE_PAGES
   oscompat::vm_hugepage(mem, sz);
+#endif
   // Name the memory region on platforms that support naming.
   oscompat::vm_name(mem, sz, name);
   return mem;

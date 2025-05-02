@@ -402,7 +402,7 @@ CLFlag Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
 cl::opt<unsigned> InlineMaxSize(
     "Xinline-max-size",
-    cl::init(1),
+    cl::init(50),
     cl::desc("Suppress inlining of functions larger than the given size"),
     cl::Hidden,
     cl::cat(CompilerCategory));

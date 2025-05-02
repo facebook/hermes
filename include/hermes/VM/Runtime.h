@@ -336,6 +336,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       typename T,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
+      CanBeLarge canBeLarge = CanBeLarge::No,
+      MayFail mayFail = MayFail::No,
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
 
@@ -908,10 +910,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     return hasIntl_;
   }
 
-  bool hasArrayBuffer() const {
-    return hasArrayBuffer_;
-  }
-
   bool hasMicrotaskQueue() const {
     return hasMicrotaskQueue_;
   }
@@ -989,7 +987,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// indicates whether root data structures that contain only
   /// references to long-lived objects (allocated directly as long lived)
   /// are required to be scanned.
-  void markRoots(RootAndSlotAcceptorWithNames &acceptor, bool markLongLived);
+  void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived);
 
   /// Called by the GC during collections that may reset weak references. This
   /// method informs the GC of all runtime weak roots.
@@ -1001,7 +999,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   void markDomainRefInRuntimeModules(WeakRootAcceptor &weakRootAcceptor);
 
   /// See documentation on \c GCBase::GCCallbacks.
-  void markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &acceptor);
+  void markRootsForCompleteMarking(RootAcceptorWithNames &acceptor);
 
   /// Visits every entry in the identifier table and calls acceptor with
   /// the entry and its id as arguments. This is intended to be used only for
@@ -1023,13 +1021,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Optionally invoked at the beginning of a garbage collection.
   unsigned getSymbolsEnd() const;
 
-  /// If any symbols are marked by the IdentifierTable, clear that marking.
-  /// Optionally invoked at the beginning of some collections.
-  void unmarkSymbols();
-
   /// Called by the GC at the end of a collection to free all symbols not set in
-  /// markedSymbols.
-  void freeSymbols(const llvh::BitVector &markedSymbols);
+  /// markedSymbols. The function may set additional bits in \p markedSymbols to
+  /// reflect the fact that some symbols were not freed.
+  void freeSymbols(llvh::BitVector &markedSymbols);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier
@@ -1149,9 +1144,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Set to true if we should enable ECMA-402 Intl APIs.
   const bool hasIntl_;
-
-  /// Set to true if we should enable ArrayBuffer, DataView and typed arrays.
-  const bool hasArrayBuffer_;
 
   /// Set to true if we are using microtasks.
   const bool hasMicrotaskQueue_;
@@ -2048,6 +2040,8 @@ template <
     typename T,
     HasFinalizer hasFinalizer,
     LongLived longLived,
+    CanBeLarge canBeLarge,
+    MayFail mayFail,
     class... Args>
 T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
 #ifndef NDEBUG
@@ -2057,8 +2051,9 @@ T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
   // CAPTURE_IP* macros in the interpreter loop.
   (void)getCurrentIP();
 #endif
-  return getHeap().makeAVariable<T, hasFinalizer, longLived>(
-      size, std::forward<Args>(args)...);
+  return getHeap()
+      .makeAVariable<T, hasFinalizer, longLived, canBeLarge, mayFail>(
+          size, std::forward<Args>(args)...);
 }
 
 template <typename T>

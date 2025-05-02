@@ -31,6 +31,7 @@ const ObjectVTable JSError::vt{
     VTable(
         CellKind::JSErrorKind,
         cellSize<JSError>(),
+        /* allowLargeAlloc */ false,
         JSError::_finalizeImpl,
         JSError::_mallocSizeImpl),
     JSError::_getOwnIndexedRangeImpl,
@@ -852,7 +853,10 @@ CallResult<HermesValue> JSError::constructCallSitesArray(
     }
     auto callSite = runtime.makeHandle(*callSiteRes);
 
-    JSArray::setElementAt(array, runtime, callSiteIndex++, callSite);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, callSiteIndex++, callSite) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
 
     gcScope.flushToMarker(marker);
   }

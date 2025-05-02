@@ -85,8 +85,8 @@ function foo(o) {
 // CHKLIR:function global(): undefined
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:       DeclareGlobalVarInst "foo": string
-// CHKLIR-NEXT:  %1 = HBCGetGlobalObjectInst (:object)
-// CHKLIR-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKLIR-NEXT:  %1 = LIRGetGlobalObjectInst (:object)
+// CHKLIR-NEXT:  %2 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %3 = CreateFunctionInst (:object) %2: undefined, empty: any, %foo(): functionCode
 // CHKLIR-NEXT:       StorePropertyLooseInst %3: object, %1: object, "foo": string
 // CHKLIR-NEXT:       ReturnInst %2: undefined
@@ -97,9 +97,9 @@ function foo(o) {
 // CHKLIR:function foo(o: any): object
 // CHKLIR-NEXT:%BB0:
 // CHKLIR-NEXT:  %0 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
-// CHKLIR-NEXT:  %1 = HBCLoadConstInst (:number) 0: number
+// CHKLIR-NEXT:  %1 = LIRLoadConstInst (:number) 0: number
 // CHKLIR-NEXT:       StoreFrameInst %0: environment, %1: number, [%VS0.cnt]: number
-// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHKLIR-NEXT:  %3 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHKLIR-NEXT:  %4 = LoadParamInst (:any) %o: any
 // CHKLIR-NEXT:  %5 = HBCCallNInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, %3: undefined
 // CHKLIR-NEXT:       StoreFrameInst %0: environment, %3: undefined, [%VS0.flag2]: undefined|number
@@ -113,7 +113,7 @@ function foo(o) {
 // CHKLIR-NEXT:  %1 = LoadFrameInst (:undefined|boolean) %0: environment, [%VS0.flag]: undefined|boolean
 // CHKLIR-NEXT:       CondBranchInst %1: undefined|boolean, %BB2, %BB1
 // CHKLIR-NEXT:%BB1:
-// CHKLIR-NEXT:  %3 = HBCLoadConstInst (:boolean) true: boolean
+// CHKLIR-NEXT:  %3 = LIRLoadConstInst (:boolean) true: boolean
 // CHKLIR-NEXT:       BranchInst %BB2
 // CHKLIR-NEXT:%BB2:
 // CHKLIR-NEXT:  %5 = PhiInst (:undefined|boolean) %1: undefined|boolean, %BB0, %3: boolean, %BB1
@@ -121,7 +121,7 @@ function foo(o) {
 // CHKLIR-NEXT:  %7 = LoadFrameInst (:undefined|number) %0: environment, [%VS0.flag1]: undefined|number
 // CHKLIR-NEXT:       CondBranchInst %7: undefined|number, %BB4, %BB3
 // CHKLIR-NEXT:%BB3:
-// CHKLIR-NEXT:  %9 = HBCLoadConstInst (:number) 1: number
+// CHKLIR-NEXT:  %9 = LIRLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:        BranchInst %BB4
 // CHKLIR-NEXT:%BB4:
 // CHKLIR-NEXT:  %11 = PhiInst (:undefined|number) %7: undefined|number, %BB2, %9: number, %BB3
@@ -129,13 +129,13 @@ function foo(o) {
 // CHKLIR-NEXT:  %13 = LoadFrameInst (:undefined|number) %0: environment, [%VS0.flag2]: undefined|number
 // CHKLIR-NEXT:        CondBranchInst %13: undefined|number, %BB6, %BB5
 // CHKLIR-NEXT:%BB5:
-// CHKLIR-NEXT:  %15 = HBCLoadConstInst (:number) 2: number
+// CHKLIR-NEXT:  %15 = LIRLoadConstInst (:number) 2: number
 // CHKLIR-NEXT:        BranchInst %BB6
 // CHKLIR-NEXT:%BB6:
 // CHKLIR-NEXT:  %17 = PhiInst (:undefined|number) %13: undefined|number, %BB4, %15: number, %BB5
 // CHKLIR-NEXT:        StoreFrameInst %0: environment, %17: undefined|number, [%VS0.flag2]: undefined|number
 // CHKLIR-NEXT:  %19 = LoadFrameInst (:number) %0: environment, [%VS0.cnt]: number
-// CHKLIR-NEXT:  %20 = HBCLoadConstInst (:number) 1: number
+// CHKLIR-NEXT:  %20 = LIRLoadConstInst (:number) 1: number
 // CHKLIR-NEXT:  %21 = FAddInst (:number) %19: number, %20: number
 // CHKLIR-NEXT:        StoreFrameInst %0: environment, %21: number, [%VS0.cnt]: number
 // CHKLIR-NEXT:        ReturnInst %21: number

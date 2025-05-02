@@ -52,8 +52,10 @@ inline void EnableStatistics() {}
 // HERMES_SLOW_STATISTIC are Statistics which are only enabled if
 // HERMES_SLOW_DEBUG is defined or HERMES_FORCE_SLOW_STATS is defined.
 #if defined(HERMES_SLOW_DEBUG) || defined(HERMES_FORCE_SLOW_STATS)
+#define HERMES_SLOW_STATISTIC_ENABLED 1
 #define HERMES_SLOW_STATISTIC(Name, Desc) STATISTIC(Name, Desc)
 #else
+#define HERMES_SLOW_STATISTIC_ENABLED 0
 #define HERMES_SLOW_STATISTIC(Name, Desc) static hermes::DummyCounter Name;
 #endif
 

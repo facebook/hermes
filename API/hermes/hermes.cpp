@@ -101,7 +101,12 @@ void hermesFatalErrorHandler(
     bool /*gen_crash_diag*/) {
   // Actually crash and let breakpad handle the reporting.
   if (sApiFatalHandler) {
-    sApiFatalHandler(reason);
+    try {
+      sApiFatalHandler(reason);
+    } catch (...) {
+      // Catch the exception and do nothing as the fatal handler must not throw
+      // exceptions.
+    }
   } else {
 #ifdef HERMES_IS_MOBILE_BUILD
     *((volatile int *)nullptr) = 42;
@@ -820,7 +825,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
         size_t i = 0;
         for (auto &name : names) {
           tmpHandle = phv(name).getSymbol();
-          vm::JSArray::setElementAt(arrayHandle, rt_.runtime_, i++, tmpHandle);
+          if (LLVM_UNLIKELY(
+                  vm::JSArray::setElementAt(
+                      arrayHandle, rt_.runtime_, i++, tmpHandle) ==
+                  vm::ExecutionStatus::EXCEPTION))
+            return vm::ExecutionStatus::EXCEPTION;
         }
 
         return arrayHandle;
@@ -2248,32 +2257,33 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
   vm::GCScope gcScope(runtime_);
   uint32_t beginIndex;
   uint32_t endIndex;
-  vm::CallResult<vm::Handle<vm::SegmentedArray>> cr =
+  vm::CallResult<vm::Handle<vm::ArrayStorageSmall>> cr =
       vm::getForInPropertyNames(runtime_, handle(obj), beginIndex, endIndex);
   checkStatus(cr.getStatus());
-  vm::Handle<vm::SegmentedArray> arr = *cr;
+  vm::Handle<vm::ArrayStorageSmall> arr = *cr;
   size_t length = endIndex - beginIndex;
 
   auto ret = createArray(length);
   for (size_t i = 0; i < length; ++i) {
-    vm::PseudoHandle<> name =
-        vm::createPseudoHandle(arr->at(runtime_, beginIndex + i));
-    if (name->isString()) {
+    vm::SmallHermesValue name = arr->at(beginIndex + i);
+    if (name.isString()) {
       ret.setValueAtIndex(
-          *this, i, valueFromHermesValue(name.getHermesValue()));
-    } else if (name->isSymbol()) {
+          *this,
+          i,
+          valueFromHermesValue(
+              vm::HermesValue::encodeStringValue(name.getString(runtime_))));
+    } else if (name.isSymbol()) {
       // May allocate. 'name' must not be used afterwards.
       vm::StringPrimitive *str =
-          runtime_.getStringPrimFromSymbolID(name->getSymbol());
-      name.invalidate();
+          runtime_.getStringPrimFromSymbolID(name.getSymbol());
       ret.setValueAtIndex(
           *this,
           i,
           valueFromHermesValue(vm::HermesValue::encodeStringValue(str)));
-    } else if (name->isNumber()) {
+    } else if (name.isNumber()) {
       std::string s;
       llvh::raw_string_ostream os(s);
-      os << static_cast<size_t>(name->getNumber());
+      os << static_cast<size_t>(name.getNumber(runtime_));
       ret.setValueAtIndex(
           *this, i, jsi::String::createFromAscii(*this, os.str()));
     } else {
@@ -2367,10 +2377,7 @@ jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {
         "getValueAtIndex: index ", i, " is out of bounds [0, ", size(arr), ")");
   }
 
-  auto res = vm::JSObject::getComputed_RJS(
-      handle(arr),
-      runtime_,
-      runtime_.makeHandle(vm::HermesValue::encodeTrustedNumberValue(i)));
+  auto res = vm::getIndexed_RJS(runtime_, handle(arr), i);
   checkStatus(res.getStatus());
 
   return valueFromHermesValue(res->get());
@@ -2699,7 +2706,6 @@ vm::RuntimeConfig hardenedHermesRuntimeConfig() {
   vm::RuntimeConfig::Builder config;
   // Disable optional JS features.
   config.withEnableEval(false);
-  config.withArrayBuffer(false);
   config.withES6Proxy(false);
   config.withEnableHermesInternal(false);
   config.withEnableHermesInternalTestMethods(false);

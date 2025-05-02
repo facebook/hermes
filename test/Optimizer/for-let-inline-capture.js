@@ -67,26 +67,25 @@ function foo_body_escaping_capture(sink) {
 // CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  %2 = PhiInst (:boolean) true: boolean, %BB0, false: boolean, %BB3
-// CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %8: number, %BB3
+// CHECK-NEXT:  %3 = PhiInst (:number) 0: number, %BB0, %7: number, %BB3
 // CHECK-NEXT:  %4 = CreateScopeInst (:environment) %VS0: any, empty: any
 // CHECK-NEXT:       StoreFrameInst %4: environment, %3: number, [%VS0.i]: number
 // CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB5
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = PhiInst (:number) %3: number, %BB1, %17: number, %BB5
-// CHECK-NEXT:  %8 = PhiInst (:number) %3: number, %BB1, %17: number, %BB5
-// CHECK-NEXT:  %9 = FLessThanInst (:boolean) %8: number, 10: number
-// CHECK-NEXT:        CondBranchInst %9: boolean, %BB3, %BB4
+// CHECK-NEXT:  %7 = PhiInst (:number) %3: number, %BB1, %16: number, %BB5
+// CHECK-NEXT:  %8 = FLessThanInst (:boolean) %7: number, 10: number
+// CHECK-NEXT:       CondBranchInst %8: boolean, %BB3, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %4: environment, %VS0: any, %f(): functionCode
-// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: object
-// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: number
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %4: environment, %VS0: any, %f(): functionCode
+// CHECK-NEXT:  %11 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %10: object
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: number
 // CHECK-NEXT:        BranchInst %BB1
 // CHECK-NEXT:%BB4:
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %17 = FAddInst (:number) %3: number, 2: number
-// CHECK-NEXT:        StoreFrameInst %4: environment, %17: number, [%VS0.i]: number
+// CHECK-NEXT:  %16 = FAddInst (:number) %3: number, 2: number
+// CHECK-NEXT:        StoreFrameInst %4: environment, %16: number, [%VS0.i]: number
 // CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 

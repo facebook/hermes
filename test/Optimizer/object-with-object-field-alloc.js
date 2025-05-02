@@ -38,22 +38,19 @@ new Foo();
 // CHECK-NEXT:       StoreFrameInst %0: environment, %1: object, [%VS0.?O.prototype]: object
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
 // CHECK-NEXT:       StorePropertyStrictInst %1: object, %3: object, "prototype": string
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
-// CHECK-NEXT:  %6 = AllocTypedObjectInst (:object) empty: any
-// CHECK-NEXT:       StorePropertyStrictInst %6: object, %5: object, "prototype": string
-// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) "o0": string, uninit: uninit, "o1": string, uninit: uninit, "o2": string, uninit: uninit
-// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: object, %6: object
-// CHECK-NEXT:  %10 = CallInst (:undefined) %5: object, %Foo(): functionCode, true: boolean, empty: any, %5: object, %8: object
-// CHECK-NEXT:  %11 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:        ReturnInst %11: undefined
+// CHECK-NEXT:  %5 = AllocTypedObjectInst (:object) empty: any
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
+// CHECK-NEXT:       StorePropertyStrictInst %5: object, %6: object, "prototype": string
+// CHECK-NEXT:  %8 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       ReturnInst %8: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:base constructor O(): undefined [typed]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCLoadConstInst (:number) 7: number
+// CHECK-NEXT:  %0 = LIRLoadConstInst (:number) 7: number
 // CHECK-NEXT:  %1 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:       PrStoreInst %0: number, %1: object, 0: number, "i": string, true: boolean
-// CHECK-NEXT:  %3 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  %3 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:       ReturnInst %3: undefined
 // CHECK-NEXT:function_end
 
@@ -62,19 +59,16 @@ new Foo();
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %1: environment, [%VS0.?O.prototype]: object
-// CHECK-NEXT:  %3 = HBCAllocObjectFromBufferInst (:object) "i": string, 0: number
-// CHECK-NEXT:  %4 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: object, %2: object
-// CHECK-NEXT:  %5 = HBCLoadConstInst (:number) 7: number
-// CHECK-NEXT:       PrStoreInst %5: number, %3: object, 0: number, "i": string, true: boolean
+// CHECK-NEXT:  %3 = LIRAllocObjectFromBufferInst (:object) %2: object, "i": string, 0: number
+// CHECK-NEXT:  %4 = LIRLoadConstInst (:number) 7: number
+// CHECK-NEXT:       PrStoreInst %4: number, %3: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:       PrStoreInst %3: object, %0: object, 0: number, "o0": string, false: boolean
-// CHECK-NEXT:  %8 = HBCAllocObjectFromBufferInst (:object) "i": string, 0: number
-// CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: object, %2: object
-// CHECK-NEXT:        PrStoreInst %5: number, %8: object, 0: number, "i": string, true: boolean
-// CHECK-NEXT:        PrStoreInst %8: object, %0: object, 1: number, "o1": string, false: boolean
-// CHECK-NEXT:  %12 = HBCAllocObjectFromBufferInst (:object) "i": string, 0: number
-// CHECK-NEXT:  %13 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: object, %2: object
-// CHECK-NEXT:        PrStoreInst %5: number, %12: object, 0: number, "i": string, true: boolean
-// CHECK-NEXT:        PrStoreInst %12: object, %0: object, 2: number, "o2": string, false: boolean
-// CHECK-NEXT:  %16 = HBCLoadConstInst (:undefined) undefined: undefined
-// CHECK-NEXT:        ReturnInst %16: undefined
+// CHECK-NEXT:  %7 = LIRAllocObjectFromBufferInst (:object) %2: object, "i": string, 0: number
+// CHECK-NEXT:       PrStoreInst %4: number, %7: object, 0: number, "i": string, true: boolean
+// CHECK-NEXT:       PrStoreInst %7: object, %0: object, 1: number, "o1": string, false: boolean
+// CHECK-NEXT:  %10 = LIRAllocObjectFromBufferInst (:object) %2: object, "i": string, 0: number
+// CHECK-NEXT:        PrStoreInst %4: number, %10: object, 0: number, "i": string, true: boolean
+// CHECK-NEXT:        PrStoreInst %10: object, %0: object, 2: number, "o2": string, false: boolean
+// CHECK-NEXT:  %13 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:        ReturnInst %13: undefined
 // CHECK-NEXT:function_end

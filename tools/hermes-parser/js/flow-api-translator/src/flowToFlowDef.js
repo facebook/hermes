@@ -1549,7 +1549,7 @@ function convertFunctionParameters(
   context: TranslationContext,
 ): TranslatedFunctionParametersResults {
   return params.reduce<TranslatedFunctionParametersResults>(
-    ([resultParams, restParam, paramsDeps], param) => {
+    ([resultParams, restParam, paramsDeps], param, index) => {
       switch (param.type) {
         case 'Identifier':
         case 'ArrayPattern':
@@ -1557,6 +1557,8 @@ function convertFunctionParameters(
           const [resultParam, deps] = convertBindingNameToFunctionTypeParam(
             param,
             context,
+            index,
+            false,
           );
           return [
             [...resultParams, resultParam],
@@ -1568,6 +1570,8 @@ function convertFunctionParameters(
           const [resultParam, deps] = convertBindingNameToFunctionTypeParam(
             param.left,
             context,
+            index,
+            true,
           );
           return [
             [...resultParams, resultParam],
@@ -1587,6 +1591,8 @@ function convertFunctionParameters(
             // $FlowFixMe[incompatible-call] I dont think these other cases are possible
             param.argument,
             context,
+            index,
+            false,
           );
           return [resultParams, resultParam, [...paramsDeps, ...deps]];
         }
@@ -1599,8 +1605,10 @@ function convertFunctionParameters(
 function convertBindingNameToFunctionTypeParam(
   pat: BindingName,
   context: TranslationContext,
+  index: number,
+  isAssignment: boolean,
 ): TranslatedResult<FunctionTypeParam> {
-  const name = pat.type === 'Identifier' ? pat.name : null;
+  const name = pat.type === 'Identifier' ? pat.name : `$$PARAM_${index}$$`;
   const [resultParamTypeAnnotation, paramDeps] = convertTypeAnnotation(
     pat.typeAnnotation,
     pat,
@@ -1610,7 +1618,8 @@ function convertBindingNameToFunctionTypeParam(
     t.FunctionTypeParam({
       name: name != null ? t.Identifier({name}) : null,
       typeAnnotation: resultParamTypeAnnotation,
-      optional: pat.type === 'Identifier' ? pat.optional : false,
+      optional:
+        isAssignment || (pat.type === 'Identifier' ? pat.optional : false),
     }),
     paramDeps,
   ];

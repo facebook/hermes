@@ -43,7 +43,17 @@ class DeclCollector
       ESTree::FunctionLikeNode *root,
       const sema::Keywords &kw,
       unsigned recursionDepth,
-      const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
+      const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {
+    return runCommon(root, kw, recursionDepth, recursionDepthExceeded);
+  }
+  /// Overload for static block nodes.
+  static std::unique_ptr<DeclCollector> run(
+      ESTree::StaticBlockNode *root,
+      const sema::Keywords &kw,
+      unsigned recursionDepth,
+      const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {
+    return runCommon(root, kw, recursionDepth, recursionDepthExceeded);
+  }
 
   /// Clone \p declCollector.
   /// Called from ESTreeClone after the body of the function has been cloned,
@@ -123,6 +133,13 @@ class DeclCollector
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded)
       : Base(recursionDepth, recursionDepthExceeded), root_(root), kw_(kw) {}
+
+  /// Generic run method shared for the different supported AST nodes.
+  static std::unique_ptr<DeclCollector> runCommon(
+      ESTree::Node *root,
+      const sema::Keywords &kw,
+      unsigned recursionDepth,
+      const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
 
   /// Actually run the root node.
   void runImpl();

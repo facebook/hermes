@@ -56,8 +56,8 @@ function accessorObjectLiteral(func) {
 // IRGEN-NEXT:       DeclareGlobalVarInst "numericPlaceholder": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "estimateBestNumElement": string
 // IRGEN-NEXT:       DeclareGlobalVarInst "accessorObjectLiteral": string
-// IRGEN-NEXT:  %5 = HBCGetGlobalObjectInst (:object)
-// IRGEN-NEXT:  %6 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:  %5 = LIRGetGlobalObjectInst (:object)
+// IRGEN-NEXT:  %6 = LIRLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:  %7 = CreateFunctionInst (:object) %6: undefined, empty: any, %emitAllocObjectLiteral(): functionCode
 // IRGEN-NEXT:       StorePropertyLooseInst %7: object, %5: object, "emitAllocObjectLiteral": string
 // IRGEN-NEXT:  %9 = CreateFunctionInst (:object) %6: undefined, empty: any, %nestedAllocObjectLiteral(): functionCode
@@ -73,46 +73,46 @@ function accessorObjectLiteral(func) {
 
 // IRGEN:function emitAllocObjectLiteral(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 1: number, "b": string, 2: number, "c": string, 3: number, "d": string, 4: number, 5: number, 5: number, 6: number, 6: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, 1: number, "b": string, 2: number, "c": string, 3: number, "d": string, 4: number, 5: number, 5: number, 6: number, 6: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function nestedAllocObjectLiteral(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, null: null, "c": string, "hello": string, "d": string, null: null
-// IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 1: number, 100: number, 2: number, 200: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, 10: number, "b": string, null: null, "c": string, "hello": string, "d": string, null: null
+// IRGEN-NEXT:  %1 = LIRAllocObjectFromBufferInst (:object) empty: any, 1: number, 100: number, 2: number, 200: number
 // IRGEN-NEXT:       PrStoreInst %1: object, %0: object, 1: number, "b": string, false: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function numericPlaceholder(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, 42: number, null: null, "c": string, "hello": string, "d": string, null: null
-// IRGEN-NEXT:  %1 = HBCAllocObjectFromBufferInst (:object) 1: number, 100: number, 2: number, 200: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, 10: number, 42: number, null: null, "c": string, "hello": string, "d": string, null: null
+// IRGEN-NEXT:  %1 = LIRAllocObjectFromBufferInst (:object) empty: any, 1: number, 100: number, 2: number, 200: number
 // IRGEN-NEXT:       DefineOwnPropertyInst %1: object, %0: object, 42: number, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function estimateBestNumElement(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 1: number, "b": string, 1: number, "c": string, 1: number, "d": string, 1: number, "e": string, 1: number, "f": string, undefined: undefined, "g": string, undefined: undefined, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, undefined: undefined, "m": string, undefined: undefined, "n": string, undefined: undefined, 1: number, 42: number, 2: number, 42: number
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, 1: number, "b": string, 1: number, "c": string, 1: number, "d": string, 1: number, "e": string, 1: number, "f": string, undefined: undefined, "g": string, undefined: undefined, "h": string, 1: number, "i": string, 1: number, "j": string, 1: number, "k": string, 1: number, "l": string, undefined: undefined, "m": string, undefined: undefined, "n": string, undefined: undefined, 1: number, 42: number, 2: number, 42: number
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function accessorObjectLiteral(func: any): object
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCAllocObjectFromBufferInst (:object) "a": string, 10: number, "b": string, "test-str": string
-// IRGEN-NEXT:  %1 = HBCLoadConstInst (:string) "c": string
-// IRGEN-NEXT:  %2 = HBCLoadConstInst (:undefined) undefined: undefined
+// IRGEN-NEXT:  %0 = LIRAllocObjectFromBufferInst (:object) empty: any, "a": string, 10: number, "b": string, "test-str": string
+// IRGEN-NEXT:  %1 = LIRLoadConstInst (:string) "c": string
+// IRGEN-NEXT:  %2 = LIRLoadConstInst (:undefined) undefined: undefined
 // IRGEN-NEXT:  %3 = CreateFunctionInst (:object) %2: undefined, empty: any, %"get c"(): functionCode
 // IRGEN-NEXT:       DefineOwnGetterSetterInst %3: object, %2: undefined, %0: object, %1: string, true: boolean
-// IRGEN-NEXT:  %5 = HBCLoadConstInst (:null) null: null
-// IRGEN-NEXT:       DefineNewOwnPropertyInst %5: null, %0: object, "d": string, true: boolean
+// IRGEN-NEXT:  %5 = LIRLoadConstInst (:null) null: null
+// IRGEN-NEXT:       DefineOwnPropertyInst %5: null, %0: object, "d": string, true: boolean
 // IRGEN-NEXT:       ReturnInst %0: object
 // IRGEN-NEXT:function_end
 
 // IRGEN:function "get c"(): number
 // IRGEN-NEXT:%BB0:
-// IRGEN-NEXT:  %0 = HBCLoadConstInst (:number) 42: number
+// IRGEN-NEXT:  %0 = LIRLoadConstInst (:number) 42: number
 // IRGEN-NEXT:       ReturnInst %0: number
 // IRGEN-NEXT:function_end

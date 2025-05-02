@@ -293,6 +293,25 @@ TEST(StorageProviderTest, ContiguousProviderFreeTest) {
   provider->deleteStorage(s3, sz3);
 }
 
+TEST(StorageProviderTest, ContiguousProviderFreeOnFullTest) {
+  auto provider =
+      GetStorageProvider(StorageProviderType::ContiguousVAProvider, SIZE * 2);
+
+  auto result = provider->newStorage(SIZE);
+  ASSERT_TRUE(result);
+  auto *s1 = *result;
+  result = provider->newStorage(SIZE);
+  ASSERT_TRUE(result);
+  // This should correctly free the memory.
+  provider->deleteStorage(*result, SIZE);
+  result = provider->newStorage(SIZE);
+  ASSERT_TRUE(result);
+  auto *s2 = *result;
+
+  provider->deleteStorage(s1, SIZE);
+  provider->deleteStorage(s2, SIZE);
+}
+
 /// StorageGuard will free storage on scope exit.
 class StorageGuard final {
  public:

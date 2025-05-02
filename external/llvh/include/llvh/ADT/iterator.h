@@ -268,6 +268,10 @@ public:
     return *static_cast<DerivedT *>(this);
   }
 
+  friend bool operator==(const DerivedT &L, const DerivedT &R) {
+    return L.I == R.I;
+  }
+
   bool operator==(const DerivedT &RHS) const { return I == RHS.I; }
   bool operator<(const DerivedT &RHS) const {
     static_assert(

@@ -46,14 +46,16 @@ function f(i) {
 // CHECK-NEXT:                Decl %d.10 'A1' ClassExprName
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.8
-// CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.14 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    FunctionDeclaration

@@ -100,10 +100,6 @@ class AlignedHeapSegment {
     static constexpr size_t kInlineCardTableSize =
         kSegmentUnitSize >> kLogCardSize;
 
-    /// Set the protection mode of paddedGuardPage_ (if system page size allows
-    /// it).
-    void protectGuardPage(oscompat::ProtectMode mode);
-
     /// Get the segment size from SHSegmentInfo. This is only used in debug code
     /// or when clearing the entire card table.
     size_t getSegmentSize() const {
@@ -178,18 +174,20 @@ class AlignedHeapSegment {
 
     static constexpr size_t kMetadataSize = sizeof(inlineCardsArray_) +
         sizeof(boundaryTable_) + sizeof(MarkBitArray);
-    /// Padding to ensure that the guard page is aligned to a page boundary.
-    static constexpr size_t kGuardPagePadding =
-        llvh::alignTo<pagesize::kExpectedPageSize>(kMetadataSize) -
-        kMetadataSize;
-
-    /// Memory made inaccessible through protectGuardPage, for security and
-    /// earlier detection of corruption. Padded to contain at least one full
-    /// aligned page.
-    char paddedGuardPage_[pagesize::kExpectedPageSize + kGuardPagePadding];
-
-    static constexpr size_t kMetadataAndGuardSize =
-        kMetadataSize + sizeof(paddedGuardPage_);
+    /// The minimum prefix space size (space before allocRegion_) to ensure that
+    /// there is enough mapped unused space to store PrefixHeader. See the
+    /// comment of kFirstUsedIndex for more details.
+    static constexpr size_t kMinimumPrefixSize =
+        sizeof(PrefixHeader) * Contents::kCardSize;
+    /// If kMetadataSize <= kMinimumPrefixSize, add necessary padding bytes.
+    /// Otherwise, make sure that it's aligned to kCardSize because allocRegion_
+    /// needs to be aligned to that. Note that we use kMetadataSize+1 because
+    /// kMetadataSize may already be aligned to kCardSize and cause kPaddingSize
+    /// to be zero.
+    static constexpr size_t kPaddingSize = kMetadataSize < kMinimumPrefixSize
+        ? (llvh::alignTo<kMinimumPrefixSize>(kMetadataSize) - kMetadataSize)
+        : (llvh::alignTo<kCardSize>(kMetadataSize + 1) - kMetadataSize);
+    [[maybe_unused]] char padding_[kPaddingSize];
 
     /// The first byte of the allocation region, which extends past the "end" of
     /// the struct, to the end of the memory region that contains it.
@@ -200,11 +198,6 @@ class AlignedHeapSegment {
     static_assert(
         sizeof(inlineCardsArray_[0]) == 1,
         "Validate assumption that card table entries are one byte");
-
-    /// The total space at the start of Contents taken up by the
-    /// metadata and guard page in the Contents struct.
-    static constexpr size_t kCardTableUnusedPrefixBytes =
-        Contents::kMetadataAndGuardSize / Contents::kCardSize;
 
    public:
     /// A prefix of every segment is occupied by auxiliary data structures:
@@ -221,29 +214,21 @@ class AlignedHeapSegment {
     /// bits. And this index must be larger than the size of prefix space that
     /// we repurposed, to avoid corrupting it when clearing/dirtying bits.
     static constexpr size_t kFirstUsedIndex = sizeof(PrefixHeader);
-
-    static_assert(
-        Contents::kFirstUsedIndex <= kCardTableUnusedPrefixBytes,
-        "The first used index in card table should be smaller than the total unused space");
   };
-
-  static_assert(
-      offsetof(Contents, paddedGuardPage_) == Contents::kMetadataSize,
-      "Should not need padding after metadata.");
 
   /// The offset from the beginning of a segment of the allocatable region.
   static constexpr size_t kOffsetOfAllocRegion{
       offsetof(Contents, allocRegion_)};
 
+  /// Currently kCardSize % kHeapAlign is 0, so this check is a bit redundant to
+  /// the next check, but let's keep it to prevent a bad change in either
+  /// kHeapAlign or kCardSize.
   static_assert(
       isSizeHeapAligned(kOffsetOfAllocRegion),
       "Allocation region must start at a heap aligned offset");
-
   static_assert(
-      (offsetof(Contents, paddedGuardPage_) + Contents::kGuardPagePadding) %
-              pagesize::kExpectedPageSize ==
-          0,
-      "Guard page must be aligned to likely page size");
+      (kOffsetOfAllocRegion & (Contents::kCardSize - 1)) == 0,
+      "Allocation region needs to be card aligned");
 
   ~AlignedHeapSegment();
 
@@ -252,6 +237,18 @@ class AlignedHeapSegment {
   /// kSegmentUnitSize.
   char *lowLim() const {
     return lowLim_;
+  }
+
+  /// Gets the segment size from SHSegmentInfo. This should only be used when
+  /// we only have a GCCell pointer and don't know its owning segment.
+  static size_t getSegmentSize(const GCCell *cell) {
+    return contents(alignedStorageStart(cell))->getSegmentSize();
+  }
+
+  /// Return the maximum allocation size for the heap segment that contains
+  /// \p cell.
+  static size_t maxSize(const GCCell *cell) {
+    return getSegmentSize(cell) - kOffsetOfAllocRegion;
   }
 
   /// Returns the address at which the first allocation in this segment would
@@ -407,6 +404,17 @@ class AlignedHeapSegment {
     return (cp - base) >> LogHeapAlign;
   }
 
+  /// Return true if objects \p a and \p b live in the same segment. This is
+  /// used to check if a pointer field in an object points to another object in
+  /// the same segment (so that we don't need to dirty the cards -- we only need
+  /// to dirty cards that might contain old-to-young pointers, which must cross
+  /// segments). This also works for large segments, since there is only one
+  /// cell in those segments (i.e., \p a and \p b would be the same).
+  static bool containedInSameSegment(const GCCell *a, const GCCell *b) {
+    return (reinterpret_cast<uintptr_t>(a) ^ reinterpret_cast<uintptr_t>(b)) <
+        kSegmentUnitSize;
+  }
+
   /// Returns the index of the segment containing \p lowLim, which is required
   /// to be the start of its containing segment.  (This can allow extra
   /// efficiency, in cases where the segment start has already been computed.)
@@ -539,11 +547,84 @@ class AlignedHeapSegment {
 
 /// JumboHeapSegment has custom storage size that must be a multiple of
 /// kSegmentUnitSize. Each such segment can only allocate a single object that
-/// occupies the entire allocation space. Therefore, the inline MarkBitArray is
-/// large enough, while card status array needs to be allocated separately. The
-/// card boundary table is unused, since the GCCell always lives at the start
-/// of the allocation region.
-class JumboHeapSegment : public AlignedHeapSegment {};
+/// may occupy the entire allocation space at most. Therefore, the inline
+/// MarkBitArray is large enough, while CardStatus array needs to be allocated
+/// separately. The card boundary table is not needed for JumboHeapSegment.
+class JumboHeapSegment : public AlignedHeapSegment {
+  /// Size of this segment.
+  size_t segmentSize_{0};
+
+ public:
+  /// Construct a null JumboHeapSegment (one that does not own memory).
+  JumboHeapSegment() = default;
+  /// \c JumboHeapSegment is movable and assignable, but not copyable.
+  JumboHeapSegment(JumboHeapSegment &&) = default;
+  JumboHeapSegment &operator=(JumboHeapSegment &&) = default;
+  JumboHeapSegment(const JumboHeapSegment &) = delete;
+  JumboHeapSegment &operator=(const JumboHeapSegment &) = delete;
+
+  /// Create a JumboHeapSegment by allocating memory with \p provider.
+  static llvh::ErrorOr<JumboHeapSegment>
+  create(StorageProvider *provider, const char *name, size_t segmentSize);
+
+  /// Allocate memory of maxSize() from this segment.
+  void *alloc() {
+    assert(
+        level() == start() &&
+        "Only one GCCell may be allocated in this segment, at the start.");
+    auto *cell = reinterpret_cast<GCCell *>(start());
+    // After allocation, level_ should point to the end.
+    level_ = hiLim();
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    // Unpoison the entire allocation region.
+    __asan_unpoison_memory_region(cell, maxSize());
+#endif
+    return cell;
+  }
+
+  /// Compute a suitable segment size to hold the object with size
+  /// \p targetObjSize. It adds the size of the metadata and aligns to
+  /// kSegmentUnitSize, which is required when creating a segment storage.
+  /// Note: On a 64bit platform, \p targetObjSize could be as large as 2^32-1,
+  /// hence the segment size could be larger than 4GB.
+  static constexpr size_t computeSegmentSize(uint32_t targetObjSize) {
+    return llvh::alignTo<kSegmentUnitSize>(
+        targetObjSize + kOffsetOfAllocRegion);
+  }
+
+  /// Compute the actual allocation size for \p targetObjSize. This is
+  /// essentially the `maxSize()` of the JumboHeapSegment with size derived from
+  /// computeSegmentSize().
+  static constexpr size_t computeActualCellSize(uint32_t targetObjSize) {
+    return computeSegmentSize(targetObjSize) - kOffsetOfAllocRegion;
+  }
+
+  /// The maximum size of allocation region for this segment.
+  size_t maxSize() const {
+    return segmentSize_ - kOffsetOfAllocRegion;
+  }
+
+  /// Returns the storage size, in bytes, of a \c FixedSizeHeapSegment.
+  size_t storageSize() const {
+    return segmentSize_;
+  }
+
+  /// Returns the address that is the upper bound of the segment.
+  char *hiLim() const {
+    return lowLim() + storageSize();
+  }
+
+  /// \return \c true if and only if \p ptr is within the memory range owned by
+  /// this segment.
+  bool contains(const void *ptr) const {
+    return start() <= ptr && ptr < hiLim();
+  }
+
+ private:
+  JumboHeapSegment(StorageProvider *provider, void *lowLim, size_t segmentSize)
+      : AlignedHeapSegment(provider, lowLim, segmentSize),
+        segmentSize_(segmentSize) {}
+};
 
 /// FixedSizeHeapSegment has fixed storage size kSegmentUnitSize. Its
 /// card status and boundary arrays and MarkBitArray are stored inline right
@@ -641,29 +722,6 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
         Contents::CardStatus::Dirty, std::memory_order_relaxed);
   }
 
-  /// Make the card table entries for cards that intersect the given address
-  /// range dirty. The range is a closed interval [low, high].
-  /// \pre \p low and \p high are required to be addresses covered by the card
-  /// table.
-  static void dirtyCardsForAddressRange(const void *low, const void *high) {
-    auto *segContents = contents(storageStart(low));
-    high = reinterpret_cast<const char *>(high) + Contents::kCardSize - 1;
-    cleanOrDirtyRange(
-        segContents,
-        addressToCardIndex(segContents, low),
-        addressToCardIndex(segContents, high),
-        Contents::CardStatus::Dirty);
-  }
-
-  /// Returns whether the card table entry for the given address is dirty.
-  /// \pre \p addr is required to be an address covered by the card table.
-  static bool isCardForAddressDirty(const void *addr) {
-    auto *segContents = contents(storageStart(addr));
-    return segContents->prefixHeader_
-               .cards_[addressToCardIndex(segContents, addr)]
-               .load(std::memory_order_relaxed) == Contents::CardStatus::Dirty;
-  }
-
   /// Find the head of the first cell that extends into the card at index
   /// \p cardIdx.
   /// \return A cell such that
@@ -678,13 +736,12 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
   static void setCellHead(const GCCell *cellStart, const size_t sz) {
     const char *start = reinterpret_cast<const char *>(cellStart);
     const char *end = start + sz;
-    auto *segContents = contents(storageStart(cellStart));
-    auto &boundaryTable = segContents->boundaryTable_;
-    auto boundary = boundaryTable.nextBoundary(start);
+    auto boundary = CardBoundaryTable::nextBoundary(start);
     // If this object crosses a card boundary, then update boundaries
     // appropriately.
     if (boundary.address() < end) {
-      boundaryTable.updateBoundaries(&boundary, start, end);
+      auto *segContents = contents(storageStart(cellStart));
+      segContents->boundaryTable_.updateBoundaries(&boundary, start, end);
     }
   }
 
@@ -770,6 +827,16 @@ class FixedSizeHeapSegment : public AlignedHeapSegment {
 
   /// Checks that dead values are present in the [start, end) range.
   static void checkUnwritten(char *start, char *end);
+#endif
+
+#ifdef HERMES_SLOW_DEBUG
+  /// Find the object containing \p loc.
+  static GCCell *findObjectContaining(const void *loc) {
+    auto *lowLim = static_cast<char *>(storageStart(loc));
+    auto *hiLim = lowLim + kSize;
+    return contents(lowLim)->boundaryTable_.findObjectContaining(
+        lowLim, hiLim, loc);
+  }
 #endif
 
  private:

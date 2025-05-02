@@ -54,12 +54,13 @@ const char *UnaryOperatorInst::opStringRepr[] =
     {"void", "-", "~", "!", "++", "--"};
 
 const char *BinaryOperatorInst::opStringRepr[] = {
-    "==", "!=", "===", "!==", "<", "<=", ">", ">=", "<<", ">>", ">>>",
-    "+",  "-",  "*",   "/",   "%", "|",  "^", "&",  "**", "in", "instanceof"};
+    "==", "!=", "===", "!==", "<",  "<=", ">",         ">=",
+    "<<", ">>", ">>>", "+",   "-",  "*",  "/",         "%",
+    "|",  "^",  "&",   "**",  "in", "in", "instanceof"};
 
 const char *BinaryOperatorInst::assignmentOpStringRepr[] = {
-    "",   "",   "",   "",   "",   "",   "",   "",   "<<=", ">>=", ">>>=",
-    "+=", "-=", "*=", "/=", "%=", "|=", "^=", "&=", "**=", "",    ""};
+    "",   "",   "",   "",   "",   "",   "",   "",    "<<=", ">>=", ">>>=", "+=",
+    "-=", "*=", "/=", "%=", "|=", "^=", "&=", "**=", "",    "",    ""};
 
 ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
   for (int i = 0; i < HERMES_IR_CLASS_LENGTH(UnaryOperatorInst); ++i) {
@@ -115,6 +116,10 @@ SideEffect BinaryOperatorInst::getBinarySideEffect(
     case ValueKind::BinaryInInstKind:
     case ValueKind::BinaryInstanceOfInstKind:
       return SideEffect::createExecute();
+
+    // Checking for a private property cannot execute any JS, but it can throw.
+    case ValueKind::BinaryPrivateInInstKind:
+      return SideEffect{}.setThrow();
 
     // Strict equality does not throw or have other side effects (per
     // ES5 11.9.6).
@@ -442,7 +447,10 @@ class InstructionHashConstructor
 };
 } // namespace
 
-llvh::hash_code Instruction::getHashCode() const {
+llvh::hash_code Instruction::getSimpleHashCode() const {
+  assert(
+      getKind() != ValueKind::PhiInstKind &&
+      "Simple hash code doesn't handle Phi's, because they allow loops.");
   llvh::hash_code hc =
       llvh::hash_combine((unsigned)getKind(), getNumOperands());
 

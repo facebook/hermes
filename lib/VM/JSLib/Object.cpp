@@ -474,8 +474,11 @@ CallResult<HermesValue> getOwnPropertyKeysAsStrings(
     assert(
         status != ExecutionStatus::EXCEPTION &&
         "toString() on property name cannot fail");
-    JSArray::setElementAt(
-        array, runtime, i, runtime.makeHandle(std::move(*status)));
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(
+                array, runtime, i, runtime.makeHandle(std::move(*status))) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
   return array.getHermesValue();
 }
@@ -891,8 +894,16 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
         return ExecutionStatus::EXCEPTION;
       }
       entry = entryRes->getHermesValue();
-      JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 0, name);
-      JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 1, value);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(
+                  Handle<JSArray>::vmcast(entry), runtime, 0, name) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(
+                  Handle<JSArray>::vmcast(entry), runtime, 1, value) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     } else if (kind == EnumerableOwnPropertiesKind::Value) {
       entry = value.getHermesValue();
     } else {
@@ -903,7 +914,10 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
     }
 
     // The element must exist because we just read it.
-    JSArray::setElementAt(properties, runtime, targetIdx++, entry);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(properties, runtime, targetIdx++, entry) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Set length at the end only, because properties may be shorter than

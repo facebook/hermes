@@ -1315,7 +1315,11 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
         continue;
       }
     }
-    JSArray::setElementAt(resultHandle, runtime, resultIndex++, elemHandle);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(
+                resultHandle, runtime, resultIndex++, elemHandle) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
   assert(
       (!okFlags.getIncludeNonEnumerable() || resultIndex == count) &&
@@ -1429,8 +1433,8 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
                         JSMap::insert(lv.map, runtime, valHandle, valHandle) ==
                         ExecutionStatus::EXCEPTION))
                   return ExecutionStatus::EXCEPTION;
-                JSArray::setElementAt(trapResult, runtime, index, valHandle);
-                return ExecutionStatus::RETURNED;
+                return JSArray::setElementAt(
+                    trapResult, runtime, index, valHandle);
               }) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

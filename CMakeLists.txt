@@ -35,13 +35,6 @@ if(POLICY CMP0022)
   cmake_policy(SET CMP0022 NEW)
 endif()
 
-# Allow reading the LOCATION property of a target to determine the eventual
-# location of build targets. This is needed when building the debugging symbols
-# bundles for Apple platforms.
-if (POLICY CMP0026)
-  cmake_policy(SET CMP0026 OLD)
-endif()
-
 # Require a build type
 if ((NOT GENERATOR_IS_MULTI_CONFIG) AND (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL ""))
     message(FATAL_ERROR "Please set CMAKE_BUILD_TYPE")
@@ -99,7 +92,7 @@ set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
 
 set(HERMESVM_GCKIND HADES
   CACHE STRING
-  "HermesVM GC type: MALLOC, HADES or RUNTIME")
+  "HermesVM GC type: MALLOC, HADES")
 
 # Hermes VM opcode stats profiling
 set(HERMESVM_PROFILER_OPCODE OFF CACHE BOOL
@@ -275,8 +268,6 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
 set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
-set(HERMES_BUILD_NODE_HERMES OFF CACHE BOOL "Whether to build node-hermes")
-
 set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
 
 set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
@@ -404,8 +395,8 @@ elseif(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_PREFER32")
     # Box doubles on 32-bit systems.
     set(HERMESVM_BOXED_DOUBLES ON)
   else()
-    # Compressed pointers are only enabled on 64 bit systems with Hades GC or Runtime GC.
-    if (HERMESVM_GCKIND MATCHES HADES|RUNTIME)
+    # Compressed pointers are only enabled on 64 bit systems with Hades GC.
+    if (HERMESVM_GCKIND MATCHES HADES)
       set(HERMESVM_COMPRESSED_POINTERS ON)
       set(HERMESVM_BOXED_DOUBLES ON)
       if(HERMESVM_ALLOW_CONTIGUOUS_HEAP)
@@ -782,10 +773,6 @@ if(HERMES_ENABLE_TEST_SUITE)
     emhermesc
     )
 
-  if(HERMES_BUILD_NODE_HERMES)
-    list(APPEND HERMES_TEST_DEPS node-hermes)
-  endif()
-
   set(coverage_directory "")
   if (HERMES_ENABLE_CODE_COVERAGE)
     set(coverage_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/coverage)
@@ -810,11 +797,10 @@ if(HERMES_ENABLE_TEST_SUITE)
     slow_debug=$<IF:$<CONFIG:Debug>,${HERMES_SLOW_DEBUG},OFF>
     debug_options=$<IF:$<CONFIG:Debug>,ON,OFF>
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
-    node_hermes_enabled_flag=${HERMES_BUILD_NODE_HERMES}
-    node-hermes=${HERMES_TOOLS_OUTPUT_DIR}/node-hermes
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
+    asan=${HERMES_ENABLE_ADDRESS_SANITIZER}
     coverage=${coverage_directory}
     shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
     check_native_stack=${HERMES_CHECK_NATIVE_STACK}

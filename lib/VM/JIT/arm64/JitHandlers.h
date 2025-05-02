@@ -52,6 +52,12 @@ SHLegacyValue _interpreter_create_object_from_buffer(
     SHCodeBlock *codeBlock,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset);
+SHLegacyValue _interpreter_create_object_from_buffer_with_parent(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
 
 /// Wrapper around Interpreter::createArrayFromBuffer.
 SHLegacyValue _interpreter_create_array_from_buffer(

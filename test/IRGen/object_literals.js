@@ -118,9 +118,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 10: number, %4: object, "prop1": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 10: number, %4: object, "prop1": string, true: boolean
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 10: number, %6: object, "prop1": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 10: number, %6: object, "prop1": string, true: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -133,12 +133,12 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 4: number, %4: object, "d": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 5: number, %4: object, "5": string, true: boolean
-// CHECK-NEXT:        DefineNewOwnPropertyInst 6: number, %4: object, "6": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 4: number, %4: object, "d": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 5: number, %4: object, "5": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 6: number, %4: object, "6": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
@@ -151,13 +151,13 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 100: number, %6: object, "1": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 200: number, %6: object, "2": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst %6: object, %4: object, "b": string, true: boolean
-// CHECK-NEXT:        DefineNewOwnPropertyInst "hello": string, %4: object, "c": string, true: boolean
-// CHECK-NEXT:        DefineNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 100: number, %6: object, "1": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 200: number, %6: object, "2": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst %6: object, %4: object, "b": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst "hello": string, %4: object, "c": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst null: null, %4: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
@@ -170,10 +170,10 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "d": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst 4: number, %4: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
@@ -199,9 +199,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
 // CHECK-NEXT:  %8 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %9 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object, %8: object
 // CHECK-NEXT:        ReturnInst %4: object
@@ -217,9 +217,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS7.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) %4: object
-// CHECK-NEXT:       DefineNewOwnPropertyInst 1: number, %5: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 2: number, %5: object, "b": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 3: number, %5: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 1: number, %5: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 2: number, %5: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 3: number, %5: object, "c": string, true: boolean
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 
@@ -232,9 +232,9 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS8.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 1: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 2: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 3: number, %4: object, "c": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst 4: number, %4: object, "test": string, true: boolean
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
@@ -249,8 +249,8 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS9.func]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS9.obj]: any
 // CHECK-NEXT:  %5 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 10: number, %5: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst 20: number, %5: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 10: number, %5: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 20: number, %5: object, "b": string, true: boolean
 // CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS9.obj]: any
 // CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) empty: any
 // CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS9.obj]: any
@@ -268,10 +268,10 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS10.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst null: null, %4: object, "c": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "c": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "d": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst 10086: number, %4: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
@@ -285,11 +285,11 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS11.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:       DefineNewOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS11: any, %"get c"(): functionCode
 // CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %4: object, "c": string, true: boolean
-// CHECK-NEXT:       DefineNewOwnPropertyInst null: null, %4: object, "d": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 

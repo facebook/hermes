@@ -16,10 +16,10 @@ use hermes_estree::VariableDeclarationKind;
 use hermes_utils::PointerAddress;
 use indexmap::IndexMap;
 
+use crate::ScopeManagerView;
 use crate::scope_view::DeclarationView;
 use crate::scope_view::ReferenceView;
 use crate::scope_view::ScopeView;
-use crate::ScopeManagerView;
 
 pub struct ScopeManager {
     root: ScopeId,

@@ -47,6 +47,21 @@ struct ReadPropertyCacheEntry {
   SlotIndex slot{0};
 };
 
+/// A cache entry used for all private name operations, e.g. reads, stores and
+/// `in` checks using a private name.
+struct PrivateNameCacheEntry {
+  /// Cached class.
+  WeakRoot<HiddenClass> clazz{nullptr};
+
+  /// Cached symbol value.
+  WeakRootSymbolID nameVal{};
+
+  /// Cached property index. In the case of reads and stores, this is the offset
+  /// where the property can be found. For existence checks, like the `in`
+  /// operator, this is just a boolean.
+  SlotIndex slot{0};
+};
+
 static_assert(
     sizeof(SHWritePropertyCacheEntry) == sizeof(WritePropertyCacheEntry));
 static_assert(
@@ -63,6 +78,16 @@ static_assert(
 static_assert(
     offsetof(SHReadPropertyCacheEntry, slot) ==
     offsetof(ReadPropertyCacheEntry, slot));
+static_assert(sizeof(SHPrivateNameCacheEntry) == sizeof(PrivateNameCacheEntry));
+static_assert(
+    offsetof(SHPrivateNameCacheEntry, clazz) ==
+    offsetof(PrivateNameCacheEntry, clazz));
+static_assert(
+    offsetof(SHPrivateNameCacheEntry, nameVal) ==
+    offsetof(PrivateNameCacheEntry, nameVal));
+static_assert(
+    offsetof(SHPrivateNameCacheEntry, slot) ==
+    offsetof(PrivateNameCacheEntry, slot));
 
 } // namespace vm
 } // namespace hermes

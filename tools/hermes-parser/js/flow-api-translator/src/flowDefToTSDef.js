@@ -35,11 +35,14 @@ const DUMMY_LOC: FlowESTree.SourceLocation = {
   end: {line: 1, column: 0},
 };
 
+type LooseOmit<O: interface {}, K: $Keys<$FlowFixMe>> = Pick<
+  O,
+  Exclude<$Keys<O>, K>,
+>;
 function constructFlowNode<T: FlowESTree.BaseNode>(
-  node: $Diff<T, FlowESTree.BaseNode>,
+  node: LooseOmit<NoInfer<T>, 'parent'>,
 ): T {
-  // $FlowFixMe[prop-missing]
-  return node;
+  return (node: $FlowFixMe);
 }
 
 const cloneJSDocCommentsToNewNode =
@@ -2173,6 +2176,19 @@ const getTransforms = (
           return unsupportedAnnotation(node, fullTypeName);
         }
 
+        case '$ArrayBufferView': {
+          // `$ArrayBufferView` => `ArrayBufferView`
+          return {
+            type: 'TSTypeReference',
+            loc: DUMMY_LOC,
+            typeName: {
+              type: 'Identifier',
+              loc: DUMMY_LOC,
+              name: 'ArrayBufferView',
+            },
+          };
+        }
+
         case '$ArrayLike': {
           // `$ArrayLike<T>` => `ArrayLike<T>`
           return {
@@ -3495,8 +3511,8 @@ const getTransforms = (
         type T = { ...T1, ...T2, ...T3, b: string  };
         // becomes
         type T =
-          & Omit<T1, keyof (T2 | T3 | { b: string })>
-          & Omit<T2, keyof (T3 | { b: string })>
+          & Omit<T1, keyof T2 | keyof T3 | keyof { b: string }>
+          & Omit<T2, keyof T3 | keyof { b: string }>
           & Omit<T3, keyof { b: string }>
           & { b: string };
         ```
@@ -3577,14 +3593,22 @@ const getTransforms = (
               params: [
                 currentType,
                 {
-                  type: 'TSTypeOperator',
+                  type: 'TSUnionType',
                   loc: DUMMY_LOC,
-                  operator: 'keyof',
-                  typeAnnotation: {
-                    type: 'TSUnionType',
-                    loc: DUMMY_LOC,
-                    types: [...remainingTypes, objectType],
-                  },
+                  types: [
+                    ...remainingTypes.map(t => ({
+                      type: 'TSTypeOperator',
+                      loc: DUMMY_LOC,
+                      operator: 'keyof',
+                      typeAnnotation: t,
+                    })),
+                    {
+                      type: 'TSTypeOperator',
+                      loc: DUMMY_LOC,
+                      operator: 'keyof',
+                      typeAnnotation: objectType,
+                    },
+                  ],
                 },
               ],
             },

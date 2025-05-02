@@ -85,12 +85,33 @@ class JSTypedArrayBase : public JSObject {
     return buffer_.get(runtime);
   }
 
-  uint8_t *begin(Runtime &runtime) {
+  uint8_t *data(Runtime &runtime) {
     return buffer_.getNonNull(runtime)->getDataBlock(runtime) + offset_;
   }
-  uint8_t *end(Runtime &runtime) {
-    return begin(runtime) + getByteLength();
+  uint8_t *dataEnd(Runtime &runtime) {
+    return data(runtime) + getByteLength();
   }
+
+  // Return true if the specified cell is a TypedArray that does not require
+  // allocation for the read. In practice this includes the Bigint arrays.
+  static bool isNoAllocTypedArray(GCCell *cell) {
+    return kindInRange(
+        cell->getKind(),
+        CellKind::NoAllocTypedArrayKind_first,
+        CellKind::NoAllocTypedArrayKind_last);
+  }
+
+  /// Polymorphic access to the data in the TypedArray.
+  /// This function also handles the case where it is used in the interpreter
+  /// loop, so optionally it saves and restores the instruction pointer.
+  inline static HermesValue
+  polyReadMayAlloc(JSTypedArrayBase *self, Runtime &runtime, size_type index);
+
+  /// Polymorphic access to the data in the TypedArray but only for arrays
+  /// that satisfy the isNoAllocTypedArray() condition. This function never
+  /// allocates.
+  inline static HermesValue
+  polyReadNoAlloc(JSTypedArrayBase *self, Runtime &runtime, size_type index);
 
   /// \return Whether this JSTypedArrayBase is attached to some buffer.
   bool attached(Runtime &runtime) const {
@@ -207,6 +228,165 @@ class JSTypedArrayBase : public JSObject {
       Metadata::Builder &mb);
 };
 
+#ifdef NDEBUG
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+#endif
+inline HermesValue JSTypedArrayBase::polyReadMayAlloc(
+    JSTypedArrayBase *self,
+    Runtime &runtime,
+    size_type index) {
+  assert(self->attached(runtime) && "at() requires a JSArrayBuffer");
+  assert(
+      index < self->getLength() &&
+      "That index is out of bounds of this TypedArray");
+
+  uint8_t *dataPtr = self->data(runtime);
+  switch (self->getKind()) {
+    case CellKind::Int8ArrayKind:
+      return HermesValue::encodeTrustedNumberValue(
+          reinterpret_cast<int8_t *>(dataPtr)[index]);
+    case CellKind::Uint8ArrayKind:
+    case CellKind::Uint8ClampedArrayKind:
+      return HermesValue::encodeTrustedNumberValue(
+          reinterpret_cast<uint8_t *>(dataPtr)[index]);
+    case CellKind::Int16ArrayKind:
+      return HermesValue::encodeTrustedNumberValue(
+          reinterpret_cast<int16_t *>(dataPtr)[index]);
+    case CellKind::Uint16ArrayKind:
+      return HermesValue::encodeTrustedNumberValue(
+          reinterpret_cast<uint16_t *>(dataPtr)[index]);
+    case CellKind::Int32ArrayKind:
+      return HermesValue::encodeTrustedNumberValue(
+          reinterpret_cast<int32_t *>(dataPtr)[index]);
+    case CellKind::Uint32ArrayKind:
+      return HermesValue::encodeTrustedNumberValue(
+          reinterpret_cast<uint32_t *>(dataPtr)[index]);
+    case CellKind::Float32ArrayKind:
+      return HermesValue::encodeUntrustedNumberValue(
+          reinterpret_cast<float *>(dataPtr)[index]);
+    case CellKind::Float64ArrayKind:
+      return HermesValue::encodeUntrustedNumberValue(
+          reinterpret_cast<double *>(dataPtr)[index]);
+    case CellKind::BigInt64ArrayKind: {
+      // Bigint allocation doesn't allocate handles.
+      NoHandleScope noHandleScope(runtime);
+      auto cr = BigIntPrimitive::fromSigned(
+          runtime, reinterpret_cast<int64_t *>(dataPtr)[index]);
+      if (LLVM_UNLIKELY(cr.getStatus() == ExecutionStatus::EXCEPTION))
+        hermes_fatal("Failed to encode BigInt in polyReadMayAlloc");
+      return *cr;
+    }
+    case CellKind::BigUint64ArrayKind: {
+      // Bigint allocation doesn't consume handles.
+      NoHandleScope noHandleScope(runtime);
+      auto cr = BigIntPrimitive::fromUnsigned(
+          runtime, reinterpret_cast<uint64_t *>(dataPtr)[index]);
+      if (LLVM_UNLIKELY(cr.getStatus() == ExecutionStatus::EXCEPTION))
+        hermes_fatal("Failed to encode BigInt in polyReadMayAlloc");
+      return *cr;
+    }
+    default:
+      llvm_unreachable("Unknown TypedArray kind");
+  }
+}
+
+#ifdef NDEBUG
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+#endif
+inline HermesValue JSTypedArrayBase::polyReadNoAlloc(
+    JSTypedArrayBase *self,
+    Runtime &runtime,
+    size_type index) {
+  assert(
+      isNoAllocTypedArray(self) &&
+      "polyReadNoAlloc() requires a no-alloc TypedArray");
+  assert(self->attached(runtime) && "at() requires a JSArrayBuffer");
+  assert(
+      index < self->getLength() &&
+      "That index is out of bounds of this TypedArray");
+
+  uint8_t *dataPtr = self->data(runtime);
+
+  CellKind kind = self->getKind();
+
+  // Instead of a computed goto/switch, use a small series of conditional
+  // branches to differentiate between integer and fp arrays, and between
+  // element sizes in each group.
+  // Once we have the integer element size, we load it and compute both an
+  // unsigned and a sign extended version. Then we choose the correct one based
+  // on the lowest bit of the cell kind, using a conditional move.
+  // The low bit of cell kind is arranged so that it is always different for
+  // signed and unsigned versions within the same size.
+
+  // Assert the ordering of the CellKind enum.
+  static_assert(
+      CellKind::Uint8ArrayKind < CellKind::Int8ArrayKind &&
+          CellKind::Int8ArrayKind < CellKind::Uint8ClampedArrayKind &&
+          CellKind::Uint8ClampedArrayKind < CellKind::Uint16ArrayKind &&
+          CellKind::Uint16ArrayKind < CellKind::Int16ArrayKind &&
+          CellKind::Int16ArrayKind < CellKind::Uint32ArrayKind &&
+          CellKind::Uint32ArrayKind < CellKind::Int32ArrayKind &&
+          CellKind::Int32ArrayKind < CellKind::Float32ArrayKind &&
+          CellKind::Float32ArrayKind < CellKind::Float64ArrayKind,
+      "CellKind ordering is not correct");
+  // Assert that signed and unsigned versions of the same size have different
+  // low bit.
+  static_assert(
+      ((int)CellKind::Uint8ArrayKind & 1) !=
+              ((int)CellKind::Int8ArrayKind & 1) &&
+          ((int)CellKind::Uint8ClampedArrayKind & 1) !=
+              ((int)CellKind::Int8ArrayKind & 1) &&
+          ((int)CellKind::Uint16ArrayKind & 1) !=
+              ((int)CellKind::Int16ArrayKind & 1) &&
+          ((int)CellKind::Uint32ArrayKind & 1) !=
+              ((int)CellKind::Int32ArrayKind & 1),
+      "CellKind ordering is not correct");
+
+  if (kind <= CellKind::Int16ArrayKind) {
+    if (kind <= CellKind::Uint8ClampedArrayKind) {
+      // 8-bit
+      constexpr unsigned uBitValue = (unsigned)CellKind::Uint8ArrayKind & 1;
+      int32_t u = reinterpret_cast<uint8_t *>(dataPtr)[index];
+      int32_t s = int32_t(uint32_t(u) << 24) >> 24;
+      return HermesValue::encodeTrustedNumberValue(
+          ((unsigned)kind & 1) == uBitValue ? u : s);
+    } else {
+      // 16-bit
+      constexpr unsigned uBitValue = (unsigned)CellKind::Uint16ArrayKind & 1;
+      int32_t u = reinterpret_cast<uint16_t *>(dataPtr)[index];
+      int32_t s = int32_t(uint32_t(u) << 16) >> 16;
+      return HermesValue::encodeTrustedNumberValue(
+          ((unsigned)kind & 1) == uBitValue ? u : s);
+    }
+  } else {
+    // kind >= CellKind::Uint32ArrayKind
+    if (kind <= CellKind::Int32ArrayKind) {
+      // 32-bit
+      constexpr unsigned uBitValue = (unsigned)CellKind::Uint32ArrayKind & 1;
+      if constexpr (sizeof(size_t) > 4) {
+        int32_t s = reinterpret_cast<uint32_t *>(dataPtr)[index];
+        uint32_t u = s;
+        return HermesValue::encodeTrustedNumberValue(
+            ((unsigned)kind & 1) == uBitValue ? (int64_t)u : (int64_t)s);
+      } else {
+        int32_t s = reinterpret_cast<uint32_t *>(dataPtr)[index];
+        uint32_t u = s;
+        return HermesValue::encodeTrustedNumberValue(
+            ((unsigned)kind & 1) == uBitValue ? (double)u : (double)s);
+      }
+    } else {
+      // Float32 or Float64
+      if (kind == CellKind::Float32ArrayKind) {
+        return HermesValue::encodeUntrustedNumberValue(
+            reinterpret_cast<float *>(dataPtr)[index]);
+      } else {
+        return HermesValue::encodeUntrustedNumberValue(
+            reinterpret_cast<double *>(dataPtr)[index]);
+      }
+    }
+  }
+}
+
 /// JSTypedArray is a collection with array semantics (random access indexing),
 /// but stores a typed value with a known size, and has a static total size.
 ///
@@ -215,8 +395,6 @@ class JSTypedArrayBase : public JSObject {
 template <typename T, CellKind C>
 class JSTypedArray final : public JSTypedArrayBase {
  public:
-  using iterator = T *;
-
   static const ObjectVTable vt;
 
   static constexpr CellKind getCellKind() {
@@ -230,18 +408,19 @@ class JSTypedArray final : public JSTypedArrayBase {
       Runtime &runtime,
       Handle<JSObject> prototype);
 
-  iterator begin(Runtime &runtime) {
-    return reinterpret_cast<T *>(JSTypedArrayBase::begin(runtime));
+  T *begin(Runtime &runtime) {
+    return reinterpret_cast<T *>(data(runtime));
   }
-  iterator end(Runtime &runtime) {
+  T *end(Runtime &runtime) {
     return begin(runtime) + length_;
   }
 
-  /// Retrieve the \p i'th element of the buffer.
+  /// Monomorphic access to the \p i'th element of the buffer. This is
+  /// implemented for each TypedArray subclass.
   /// \pre
   ///   This cannot be called on a detached TypedArray.
   ///   i must be less than the length of the TypedArray.
-  T &at(Runtime &runtime, size_type i) {
+  T &monoAt(Runtime &runtime, size_type i) {
     assert(attached(runtime) && "at() requires a JSArrayBuffer");
     assert(i < getLength() && "That index is out of bounds of this TypedArray");
     return begin(runtime)[i];

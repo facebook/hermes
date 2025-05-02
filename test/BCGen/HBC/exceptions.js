@@ -53,7 +53,7 @@ function foo(a) {
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r1, r0, Function<foo>
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "foo"
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "foo"
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(2 params, 12 registers, 0 numbers, 0 non-pointers):

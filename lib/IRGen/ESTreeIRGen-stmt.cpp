@@ -1185,10 +1185,15 @@ void ESTreeIRGen::genReturnStatement(ESTree::ReturnStatementNode *RetStmt) {
   genFinallyBeforeControlChange(
       curFunction()->surroundingTry, nullptr, ControlFlowChange::Break);
 
-  if (curFunction()->hasLegacyClassContext() &&
-      curFunction()->getSemInfo()->constructorKind ==
-          sema::FunctionInfo::ConstructorKind::Derived) {
-    Value = genLegacyDerivedConstructorRet(RetStmt, Value);
+  if (curFunction()->hasLegacyClassContext()) {
+    if (curFunction()->getSemInfo()->constructorKind ==
+        sema::FunctionInfo::ConstructorKind::Derived) {
+      Value = genLegacyDerivedConstructorRet(RetStmt, Value);
+    } else if (
+        curFunction()->getSemInfo()->constructorKind ==
+        sema::FunctionInfo::ConstructorKind::Base) {
+      Value = genLegacyBaseConstructorRet(RetStmt, Value);
+    }
   }
 
   Builder.createReturnInst(Value);

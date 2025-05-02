@@ -137,6 +137,10 @@ class LocalTimeOffsetCache {
 
     /// \return whether this is a valid interval.
     bool isEmpty() const {
+      assert(
+          (startMs <= endMs ||
+           (startMs == kMaxEpochTimeInMs && endMs == -kMaxEpochTimeInMs)) &&
+          "Ill-formed DSTCacheEntry");
       return startMs > endMs;
     }
 

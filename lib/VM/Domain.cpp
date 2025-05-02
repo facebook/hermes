@@ -18,6 +18,7 @@ namespace vm {
 const VTable Domain::vt{
     CellKind::DomainKind,
     cellSize<Domain>(),
+    /* allowLargeAlloc */ false,
     _finalizeImpl,
     _mallocSizeImpl,
     nullptr

@@ -68,7 +68,10 @@ CallResult<HermesValue> localesToJS(
       return ExecutionStatus::EXCEPTION;
     }
     name = *nameRes;
-    JSArray::setElementAt(array, runtime, index++, name);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, index++, name) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
   return array.getHermesValue();
 }
@@ -172,7 +175,10 @@ CallResult<HermesValue> partsToJS(
     if (LLVM_UNLIKELY(partRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    JSArray::setElementAt(array, runtime, index++, *partRes);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, index++, *partRes) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
   return array.getHermesValue();
 }

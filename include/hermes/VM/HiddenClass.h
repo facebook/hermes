@@ -13,7 +13,6 @@
 #include "hermes/VM/DictPropertyMap.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/PropertyDescriptor.h"
-#include "hermes/VM/SegmentedArray.h"
 #include "hermes/VM/WeakValueMap.h"
 
 #include <functional>
@@ -22,14 +21,8 @@
 namespace hermes {
 namespace vm {
 
-/// The storage type used for properties. Its size may be restricted depending
-/// on the current configuration, for example because it must fit in a single
-/// heap segment.
+/// The storage type used for properties.
 using PropStorage = ArrayStorageSmall;
-
-/// The storage type used for large arrays that don't necessarily fit in a
-/// single heap segment.
-using BigStorage = SegmentedArray;
 
 /// Flags associated with a hidden class.
 struct ClassFlags {
@@ -321,11 +314,11 @@ class HiddenClass final : public GCCell {
   }
 
   /// \return The for-in cache if one has been set, otherwise nullptr.
-  BigStorage *getForInCache(Runtime &runtime) const {
+  ArrayStorageSmall *getForInCache(Runtime &runtime) const {
     return forInCache_.get(runtime);
   }
 
-  void setForInCache(BigStorage *arr, Runtime &runtime) {
+  void setForInCache(ArrayStorageSmall *arr, Runtime &runtime) {
     forInCache_.set(runtime, arr, runtime.getHeap());
   }
 
@@ -594,7 +587,7 @@ class HiddenClass final : public GCCell {
 
   /// Cache that contains for-in property names for objects of this class.
   /// Never used in dictionary mode.
-  GCPointer<BigStorage> forInCache_{};
+  GCPointer<ArrayStorageSmall> forInCache_{};
 
   /// Computes the updated class flags for a class with flags \p flags for when
   /// a property is added or updated with property flags \p pf and based on

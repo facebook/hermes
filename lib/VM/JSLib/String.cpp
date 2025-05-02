@@ -12,6 +12,7 @@
 #include "JSLibInternal.h"
 
 #include "hermes/Platform/Unicode/PlatformUnicode.h"
+#include "hermes/VM/CallResult.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/SmallXString.h"
@@ -2509,7 +2510,10 @@ stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
   // 11. If separator is undefined, then
   if (LLVM_UNLIKELY(separator->isUndefined())) {
     // a. Perform ! CreateDataPropertyOrThrow(A, "0", S).
-    (void)JSArray::setElementAt(A, runtime, 0, S);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(A, runtime, 0, S) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
     if (LLVM_UNLIKELY(
             JSArray::setLengthProperty(A, runtime, 1) ==
             ExecutionStatus::EXCEPTION))
@@ -2528,7 +2532,10 @@ stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
       return A.getHermesValue();
     }
     // c. Perform ! CreateDataPropertyOrThrow(A, "0", S).
-    (void)JSArray::setElementAt(A, runtime, 0, S);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(A, runtime, 0, S) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
     if (LLVM_UNLIKELY(
             JSArray::setLengthProperty(A, runtime, 1) ==
             ExecutionStatus::EXCEPTION))
@@ -2601,7 +2608,10 @@ stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
       }
       tmpHandle = *strRes;
       // 2. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T)
-      JSArray::setElementAt(A, runtime, lengthA, tmpHandle);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(A, runtime, lengthA, tmpHandle) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
       // 3. Set lengthA to lengthA + 1.
       ++lengthA;
 
@@ -2633,7 +2643,10 @@ stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
   }
   tmpHandle = *elementStrRes;
   // 16. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T).
-  JSArray::setElementAt(A, runtime, lengthA, tmpHandle);
+  if (LLVM_UNLIKELY(
+          JSArray::setElementAt(A, runtime, lengthA, tmpHandle) ==
+          ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
   ++lengthA;
 
   if (LLVM_UNLIKELY(

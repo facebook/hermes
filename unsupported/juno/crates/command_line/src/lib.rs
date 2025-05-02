@@ -19,8 +19,6 @@ mod opt;
 mod parser;
 
 pub use cl::CommandLine;
-pub use opt::parse_bool;
-pub use opt::parse_disallowed;
 pub use opt::EnumDesc;
 pub use opt::ExpectedValue;
 pub use opt::Hidden;
@@ -28,4 +26,6 @@ pub use opt::Opt;
 pub use opt::OptDesc;
 pub use opt::OptHolder;
 pub use opt::OptValue;
+pub use opt::parse_bool;
+pub use opt::parse_disallowed;
 pub use parser::CommandLineIntent;

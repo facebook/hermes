@@ -21,32 +21,27 @@ var o;
 
 o = {__proto__: proto1, a: 10}
 print(Object.getPrototypeOf(o) === proto1);
-//CHKBC: NewObjectWithBuffer r
-//CHKBC: CallBuiltin
+//CHKBC: NewObjectWithBufferAndParent r
 //CHECK: true
 
 o = {__proto__: null, a: 10}
 print(Object.getPrototypeOf(o) === null);
-//CHKBC: NewObjectWithBuffer r
-//CHKBC: CallBuiltin
+//CHKBC: NewObjectWithBufferAndParent r
 //CHECK-NEXT: true
 
 o = {__proto__: 10, a: 10}
 print(Object.getPrototypeOf(o) === Object.prototype);
-//CHKBC: NewObjectWithBuffer r
-//CHKBC: CallBuiltin
+//CHKBC: NewObjectWithBufferAndParent r
 //CHECK-NEXT: true
 
 o = {__proto__: undefined, a: 10}
 print(Object.getPrototypeOf(o) === Object.prototype);
-//CHKBC: NewObjectWithBuffer r
-//CHKBC: CallBuiltin
+//CHKBC: NewObjectWithBufferAndParent r
 //CHECK-NEXT: true
 
 o = {__proto__: "proto", a: 10}
 print(Object.getPrototypeOf(o) === Object.prototype);
-//CHKBC: NewObjectWithBuffer r
-//CHKBC: CallBuiltin
+//CHKBC: NewObjectWithBufferAndParent r
 //CHECK-NEXT: true
 
 o = {b: 20, __proto__: getProtoX(proto2)}

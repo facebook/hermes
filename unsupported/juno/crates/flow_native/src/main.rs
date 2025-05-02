@@ -5,15 +5,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::convert::TryFrom;
 use std::fmt;
 use std::fs::File;
-use std::io::stdout;
 use std::io::BufWriter;
 use std::io::Write;
+use std::io::stdout;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::exit;
@@ -24,8 +24,8 @@ use command_line::CommandLine;
 use command_line::Opt;
 use command_line::OptDesc;
 use juno::ast;
-use juno::ast::node_cast;
 use juno::ast::NodeRc;
+use juno::ast::node_cast;
 use juno::hparser;
 use juno::hparser::ParserDialect;
 use juno::resolve_dependency;
@@ -36,11 +36,11 @@ use juno::sema::FunctionInfoId;
 use juno::sema::LexicalScopeId;
 use juno::sema::Resolution;
 use juno::sema::SemContext;
+use juno_support::NullTerminatedBuf;
 use juno_support::atom_table::Atom;
 use juno_support::atom_table::AtomU16;
 use juno_support::source_manager::SourceId;
 use juno_support::source_manager::SourceRange;
-use juno_support::NullTerminatedBuf;
 
 struct Options {
     /// Input file to parse.

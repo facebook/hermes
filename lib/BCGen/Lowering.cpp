@@ -154,25 +154,27 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   IRBuilder builder(F);
   uint32_t size = allocInst->getKeyValuePairCount();
 
-  // Should not create HBCAllocObjectFromBufferInst for an object with 0
+  // Should not create LIRAllocObjectFromBufferInst for an object with 0
   // properties.
   if (size == 0) {
     return false;
   }
 
-  // Replace AllocObjectLiteral with HBCAllocObjectFromBufferInst
+  // Replace AllocObjectLiteral with LIRAllocObjectFromBufferInst
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPointAfter(allocInst);
-  HBCAllocObjectFromBufferInst::ObjectPropertyMap propMap;
+  LIRAllocObjectFromBufferInst::ObjectPropertyMap propMap;
 
   bool hasSeenNumericProp = false;
   for (unsigned i = 0; i < size; i++) {
     Literal *propKey = allocInst->getKey(i);
+#ifndef NDEBUG
     if (auto *keyStr = llvh::dyn_cast<LiteralString>(propKey)) {
       assert(
           !toArrayIndex(keyStr->getValue().str()).hasValue() &&
           "LiteralString that looks like an array index should have been converted to a number.");
     }
+#endif
     Value *propVal = allocInst->getValue(i);
     bool isNumericKey = llvh::isa<LiteralNumber>(propKey);
     hasSeenNumericProp |= isNumericKey;
@@ -208,19 +210,12 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
     }
   }
 
-  // Emit HBCAllocObjectFromBufferInst.
+  // Emit LIRAllocObjectFromBufferInst.
   // First, we reset insertion location.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createHBCAllocObjectFromBufferInst(propMap);
-
-  // HBCAllocObjectFromBuffer does not take a prototype argument. So if the
-  // object has a prototype set, make an explicit call to set it.
-  if (!llvh::isa<EmptySentinel>(allocInst->getParentObject())) {
-    builder.createCallBuiltinInst(
-        BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
-        {alloc, allocInst->getParentObject()});
-  }
+  auto *alloc = builder.createLIRAllocObjectFromBufferInst(
+      allocInst->getParentObject(), propMap);
 
   allocInst->replaceAllUsesWith(alloc);
   allocInst->eraseFromParent();
@@ -259,7 +254,7 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
       } else if (llvh::isa<StorePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StorePropertyInst::PropertyIdx);
-      } else if (llvh::isa<BaseDefineOwnPropertyInst>(&Inst)) {
+      } else if (llvh::isa<DefineOwnPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, DefineOwnPropertyInst::PropertyIdx);
       } else if (llvh::isa<DeletePropertyInst>(&Inst)) {

@@ -1246,11 +1246,11 @@ HermesValue Debugger::evalInFrame(
 
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
 
-  // If we are debugging inside of a derived class constuctor, we make an arrow
+  // If we are debugging inside of a class constuctor, we make an arrow
   // function for the eval expression. It would be invalid to call that arrow
   // function with a non-undefined new.target.
   Handle<> newTarget =
-      vmisa<JSDerivedClass>(*frameInfo->frame->getCalleeClosureHandleUnsafe())
+      vmisa<JSClass>(*frameInfo->frame->getCalleeClosureHandleUnsafe())
       ? Runtime::getUndefinedValue()
       : Handle<>(&frameInfo->frame->getNewTargetRef());
 

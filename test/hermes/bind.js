@@ -108,3 +108,16 @@ new barBound();
   new boundA2();
 //CHECK-NEXT: true
 })();
+
+
+function baz() {}
+
+Object.setPrototypeOf(baz, foo);
+var bazBound = baz.bind(null);
+print(Object.getPrototypeOf(bazBound) === Object.getPrototypeOf(baz));
+//CHECK-NEXT: true
+
+Object.setPrototypeOf(baz, null);
+var bazBound = Function.prototype.bind.apply(baz, bar);
+print(Object.getPrototypeOf(bazBound));
+//CHECK-NEXT: null

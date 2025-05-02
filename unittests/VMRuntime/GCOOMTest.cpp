@@ -23,7 +23,7 @@ namespace {
 
 TEST(GCOOMDeathTest, SuperSegment) {
   auto fn = [] {
-    using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
+    using SuperSegmentCell = EmptyCell<GC::maxNormalAllocationSize() * 2>;
     auto runtime = DummyRuntime::create(kTestGCConfig);
     SuperSegmentCell::create(*runtime);
   };

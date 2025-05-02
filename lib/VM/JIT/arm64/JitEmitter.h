@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/JIT/PerfJitDump.h"
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -377,9 +378,12 @@ class Emitter {
   /// Offset in RODATA of the pointer to the start of the read property
   /// cache.
   int32_t roOfsReadPropertyCachePtr_;
-  /// Offset in RODATA of the pointer to the start of the read property
+  /// Offset in RODATA of the pointer to the start of the write property
   /// cache.
   int32_t roOfsWritePropertyCachePtr_;
+  /// Offset in RODATA of the pointer to the start of the private name
+  /// cache.
+  int32_t roOfsPrivateNameCachePtr_;
 
   unsigned gpSaveCount_ = 0;
   unsigned vecSaveCount_ = 0;
@@ -396,9 +400,11 @@ class Emitter {
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
       bool emitAsserts,
+      PerfJitDump *perfJitDump,
       CodeBlock *codeBlock,
       ReadPropertyCacheEntry *readPropertyCache,
       WritePropertyCacheEntry *writePropertyCache,
+      PrivateNameCacheEntry *privateNameCache,
       uint32_t numFrameRegs,
       const std::function<void(std::string &&message)> &longjmpError);
 
@@ -577,6 +583,10 @@ class Emitter {
 
   void toPropertyKey(FR frRes, FR frVal);
 
+  void privateIsIn(FR frRes, FR frPrivateName, FR frTarget, uint8_t cacheIdx);
+
+  void createPrivateName(FR frRes, SHSymbolID symID);
+
 #define DECL_COMPARE(                                                   \
     methodName, commentStr, slowCall, condCode, invSlow, passArgsByVal) \
   void methodName(FR rRes, FR rLeft, FR rRight) {                       \
@@ -608,16 +618,15 @@ class Emitter {
       false,
       false)
   DECL_COMPARE(equal, "Eq", _sh_ljs_equal_rjs, kEQ, false, false)
-  DECL_COMPARE(strictEqual, "StrictEq", _sh_ljs_strict_equal, kEQ, false, true)
   DECL_COMPARE(notEqual, "Neq", _sh_ljs_equal_rjs, kNE, true, false)
-  DECL_COMPARE(
-      strictNotEqual,
-      "StrictNeq",
-      _sh_ljs_strict_equal,
-      kNE,
-      true,
-      true)
 #undef DECL_COMPARE
+
+  void strictEqual(FR frRes, FR frLeft, FR frRight) {
+    strictEqualImpl(false, frRes, frLeft, frRight);
+  }
+  void strictNotEqual(FR frRes, FR frLeft, FR frRight) {
+    strictEqualImpl(true, frRes, frLeft, frRight);
+  }
 
 #define DECL_JCOND(                                                      \
     methodName, forceNum, passArgsByVal, commentStr, slowCall, condCode) \
@@ -660,13 +669,15 @@ class Emitter {
       _sh_ljs_less_equal_rjs,
       kLS)
   DECL_JCOND(jEqual, false, false, "eq", _sh_ljs_equal_rjs, kEQ)
-  DECL_JCOND(jStrictEqual, false, true, "strict_eq", _sh_ljs_strict_equal, kEQ)
 #undef DECL_JCOND
 
   void
   jmpTypeOfIs(const asmjit::Label &target, FR frInput, TypeOfIsTypes types);
 
   void typeOfIs(FR frRes, FR frInput, TypeOfIsTypes types);
+
+  void
+  jStrictEqual(bool invert, const asmjit::Label &target, FR frLeft, FR frRight);
 
   void switchImm(
       FR frInput,
@@ -745,6 +756,12 @@ class Emitter {
 
   void delByVal(FR frRes, FR frTarget, FR frKey, bool strict);
 
+  void addOwnPrivateBySym(FR frTarget, FR frKey, FR frValue);
+
+  void getOwnPrivateBySym(FR frRes, FR frTarget, FR frKey, uint8_t cacheIdx);
+
+  void putOwnPrivateBySym(FR frTarget, FR frKey, FR frValue, uint8_t cacheIdx);
+
   void instanceOf(FR frRes, FR frLeft, FR frRight);
   void isIn(FR frRes, FR frLeft, FR frRight);
 
@@ -754,6 +771,11 @@ class Emitter {
   void newObjectWithParent(FR frRes, FR frParent);
   void newObjectWithBuffer(
       FR frRes,
+      uint32_t shapeTableIndex,
+      uint32_t valBufferOffset);
+  void newObjectWithBufferAndParent(
+      FR frRes,
+      FR frParent,
       uint32_t shapeTableIndex,
       uint32_t valBufferOffset);
 
@@ -848,7 +870,6 @@ class Emitter {
 
   void loadParentNoTraps(FR frRes, FR frObj);
   void typedLoadParent(FR frRes, FR frObj);
-  void typedStoreParent(FR frStoredValue, FR frObj);
 
  private:
   /// Create an a64::Mem to a specifc frame register.
@@ -1006,6 +1027,14 @@ class Emitter {
   bool isFRKnownNumber(FR fr) const {
     return isFRKnownType(fr, FRType::Number);
   }
+  /// \return true if the FR is currently known to contain a number.
+  bool isFRKnownBool(FR fr) const {
+    return isFRKnownType(fr, FRType::Bool);
+  }
+  /// \return true if the FR is currently known to contain an OtherNonPtr.
+  bool isFRKnownOtherNonPtr(FR fr) const {
+    return isFRKnownType(fr, FRType::OtherNonPtr);
+  }
 
   /// Get the current bytecode IP in \p xOut.
   void getBytecodeIP(const a64::GpX &xOut);
@@ -1160,6 +1189,8 @@ class Emitter {
       const char *slowCallName,
       bool invSlow,
       bool passArgsByVal);
+
+  void strictEqualImpl(bool invert, FR frRes, FR frLeft, FR frRight);
 
   void jCond(
       bool forceNumber,

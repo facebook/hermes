@@ -118,6 +118,15 @@ hash_code hash_value(const std::pair<T, U> &arg);
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg);
 
+/// Compute a hash_code for a double.
+/// Note that without this, hash_value for a double will still *compile*
+/// on 64-bit platoforms: the hash_value(size_t) constructor above is not
+/// declared "explicit".  So the double value will be coerced to a size_t,
+/// and then that hash_value constructor will be called.  The problem is
+/// that this is a poor hash value: many distinct doubles will map to the
+/// same integer value.  This version uses all the bits of the double
+/// in computing the hash.
+inline hash_code hash_value(double arg);
 
 /// Override the execution seed with a fixed value.
 ///
@@ -653,6 +662,12 @@ hash_code hash_value(const std::pair<T, U> &arg) {
 template <typename T>
 hash_code hash_value(const std::basic_string<T> &arg) {
   return hash_combine_range(arg.begin(), arg.end());
+}
+
+// Declared and documented above, but defined here so that any of the hashing
+// infrastructure is available.
+inline hash_code hash_value(double arg) {
+  return hash_value(llvh::DoubleToBits(arg));
 }
 
 } // namespace llvh

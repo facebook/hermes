@@ -44,16 +44,26 @@ class TestCrashManager : public CrashManager {
   void setHeapInfo(const HeapInformation & /*heapInfo*/) override {}
 
   void setCustomData(const char *key, const char *value) override {
-    customData_[std::string(key)] = std::string(value);
+    auto result = customData_.emplace(key, value);
+    if (llvh::StringRef(key).endswith(":YG")) {
+      // This happens when the YG segment is promoted to OG and YG is reset to
+      // a new segment.
+      result.first->second = value;
+    } else {
+      assert(
+          result.second && "No duplicate keys allowed, except for YG segment");
+    }
   }
   void setContextualCustomData(const char *key, const char *value) override {
-    contextualCustomData_[std::string(key)] = std::string(value);
+    contextualCustomData_[std::string{key}] = std::string{value};
   }
   void removeCustomData(const char *key) override {
-    customData_.erase(std::string(key));
+    auto nRemoved = customData_.erase(std::string(key));
+    assert(nRemoved == 1 && "key must exist");
   }
   void removeContextualCustomData(const char *key) override {
-    contextualCustomData_.erase(std::string(key));
+    auto nRemoved = contextualCustomData_.erase(std::string(key));
+    assert(nRemoved == 1 && "key must exist");
   }
 
   const std::unordered_map<std::string, std::string> &customData() {
@@ -102,11 +112,11 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   static constexpr char numberedSegmentFmt[] = "XYZ:HeapSegment:%d";
   static constexpr std::string_view ygSegmentName = "XYZ:HeapSegment:YG";
 
-  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
+  const auto &customData = testCrashMgr->customData();
   uint32_t numHeapSegmentsYG = 0;
   uint32_t numHeapSegmentsNumbered = 0;
   int32_t keyNum;
-  for (const auto &[key, payload] : contextualCustomData) {
+  for (const auto &[key, payload] : customData) {
     // Keeps track whether key represents an FixedSizeHeapSegment so that
     // payload can be validated below.
     bool validatePayload = false;
@@ -121,13 +131,15 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
     }
 
     if (validatePayload) {
-      void *ptr = nullptr;
-      int numArgsWritten = std::sscanf(payload.c_str(), "%p", &ptr);
-      EXPECT_EQ(numArgsWritten, 1);
+      char *ptr = nullptr, *ptrEnd = nullptr;
+      int numArgsWritten = std::sscanf(payload.c_str(), "%p:%p", &ptr, &ptrEnd);
+      EXPECT_EQ(numArgsWritten, 2);
       // The pointer value itself doesn't matter, as long as it is one of the
       // segments in the heap. That would require exposing more GC APIs though,
       // so just check that it was parsed as non-null.
       EXPECT_NE(ptr, nullptr);
+      // There should be no JumboHeapSegment in this test.
+      EXPECT_EQ(ptrEnd, ptr + FixedSizeHeapSegment::kSize);
     }
   }
   EXPECT_EQ(1, numHeapSegmentsYG);
@@ -158,19 +170,67 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
     rt.makeHandle(SegmentCell::create(rt));
   }
 
-  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(4, contextualCustomData.size());
+  const auto &customData = testCrashMgr->customData();
+  EXPECT_EQ(5, customData.size());
   // Make sure the value for YG is the actual YG segment.
-  const std::string ygAddress = contextualCustomData.at("XYZ:HeapSegment:YG");
-  void *ptr = nullptr;
-  int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p", &ptr);
-  EXPECT_EQ(numArgsWritten, 1);
+  const std::string ygAddress = customData.at("XYZ:HeapSegment:YG");
+  char *ptr = nullptr, *ptrEnd = nullptr;
+  int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p:%p", &ptr, &ptrEnd);
+  EXPECT_EQ(numArgsWritten, 2);
   EXPECT_TRUE(rt.getHeap().inYoungGen(ptr));
+  // There should be no JumboHeapSegment in this test.
+  EXPECT_EQ(ptrEnd, ptr + FixedSizeHeapSegment::kSize);
 
   // Test if all the segments are numbered correctly.
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:1"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:2"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:3"), 1);
+}
+
+TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
+  // Turn on the "direct to OG" allocation feature.
+  GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
+                          .withName("XYZ")
+                          .withInitHeapSize(1 << 22)
+                          .withMaxHeapSize(1 << 25)
+                          .build();
+  auto testCrashMgr = std::make_shared<TestCrashManager>();
+  auto runtime = DummyRuntime::create(
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
+  DummyRuntime &rt = *runtime;
+  const auto &customData = testCrashMgr->customData();
+  {
+    GCScope scope{rt};
+
+    rt.makeHandle(SegmentCell::createLongLived(rt));
+    rt.makeHandle(SegmentCell::createLongLived(rt));
+    auto h3 = rt.makeMutableHandle(SegmentCell::createLongLived(rt));
+    // YG segment (two entries) + 3 OG segments created above + GCKind entry.
+    EXPECT_EQ(6, customData.size());
+
+    h3.set(nullptr);
+    // The segment for h3 will be compacted.
+    rt.collect();
+    // Make sure we don't remove the wrong entry.
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:2"), 1);
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:3"), 1);
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:4"), 0);
+  }
+
+  {
+    GCScope scope{rt};
+    rt.makeHandle(SegmentCell::create(rt));
+    rt.makeHandle(SegmentCell::createLongLived(rt));
+    // Trigger a YG collection, which starts an OG collection and prepares
+    // compaction.
+    rt.makeHandle(SegmentCell::create(rt));
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:COMPACT"), 1);
+  }
+
+  // Release the runtime.
+  runtime.reset();
+  // All custom data should be removed.
+  EXPECT_EQ(0, customData.size());
 }
 #endif
 

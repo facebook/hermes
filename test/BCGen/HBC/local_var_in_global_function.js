@@ -33,8 +33,8 @@ print(e);
 // RA-NEXT:%BB0:
 // RA-NEXT:                 DeclareGlobalVarInst "inner": string
 // RA-NEXT:                 DeclareGlobalVarInst "e": string
-// RA-NEXT:  {r0}      %2 = HBCGetGlobalObjectInst (:object)
-// RA-NEXT:  {r1}      %3 = HBCLoadConstInst (:string) "global": string
+// RA-NEXT:  {r0}      %2 = LIRGetGlobalObjectInst (:object)
+// RA-NEXT:  {r1}      %3 = LIRLoadConstInst (:string) "global": string
 // RA-NEXT:                 StorePropertyLooseInst {r1} %3: string, {r0} %2: object, "e": string
 // RA-NEXT:                 TryStartInst %BB1, %BB2
 // RA-NEXT:%BB1:
@@ -45,7 +45,7 @@ print(e);
 // RA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %2: object, "local": string
 // RA-NEXT:  {r3}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
 // RA-NEXT:  {r1}     %12 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "local": string
-// RA-NEXT:  {r2}     %13 = HBCLoadConstInst (:undefined) undefined: undefined
+// RA-NEXT:  {r2}     %13 = LIRLoadConstInst (:undefined) undefined: undefined
 // RA-NEXT:  {r1}     %14 = HBCCallNInst (:any) {r1} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined
 // RA-NEXT:  {r1}     %15 = HBCCallNInst (:any) {r3} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r1} %14: any
 // RA-NEXT:  {r1}     %16 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
@@ -53,7 +53,7 @@ print(e);
 // RA-NEXT:  {r0}     %18 = HBCCallNInst (:any) {r1} %16: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r0} %17: any
 // RA-NEXT:                 ReturnInst {r0} %18: any
 // RA-NEXT:%BB2:
-// RA-NEXT:  {r1}     %20 = HBCLoadConstInst (:string) "local": string
+// RA-NEXT:  {r1}     %20 = LIRLoadConstInst (:string) "local": string
 // RA-NEXT:                 ThrowInst {r1} %20: string, %BB1
 // RA-NEXT:function_end
 

@@ -29,6 +29,8 @@ class StringView;
 /// use of strings should not need to worry about the precise type of
 /// StringPrimitive, and use it directly in favor of the exact subclass.
 class StringPrimitive : public VariableSizeRuntimeCell {
+  friend RuntimeOffsets;
+
  protected:
   // Fields:
 
@@ -136,7 +138,10 @@ class StringPrimitive : public VariableSizeRuntimeCell {
   /// Strings whose length is at least this size are always allocated as
   /// "external" strings, outside the JS heap. Note that there may be external
   /// strings smaller than this length.
-  static constexpr uint32_t EXTERNAL_STRING_THRESHOLD = 64 * 1024;
+  /// This is literally 1/64 of the unit segment size, so that in builds with
+  /// small segment size, we won't allocate a too large string in the heap.
+  static constexpr uint32_t EXTERNAL_STRING_THRESHOLD =
+      std::min<size_t>(AlignedHeapSegment::kSegmentUnitSize >> 6, 64 * 1024);
 
   /// Strings whose length is smaller than this will never be externally
   /// allocated. This is to protect against a small string optimization which
@@ -255,7 +260,13 @@ class StringPrimitive : public VariableSizeRuntimeCell {
       const StringPrimitive *other) const;
 
   /// \return true if the other string is identical to this one.
-  bool equals(const StringPrimitive *other) const;
+  bool equals(const StringPrimitive *other) const {
+    if (this == other)
+      return true;
+    if (getStringLength() != other->getStringLength())
+      return false;
+    return sliceEquals(0, getStringLength(), other);
+  }
 
   /// \return true if the other string view has identical content as self.
   bool equals(const StringView &other) const;
@@ -402,7 +413,7 @@ class StringPrimitive : public VariableSizeRuntimeCell {
 
   /// \return the unique id.
   /// This requires and asserts that the string is uniqued.
-  SymbolID getUniqueID() const;
+  SymbolID getUniqueID(Runtime &runtime) const;
 
   /// Mark this string as not uniqued. This is used by IdentifierTable when
   /// the associated SymbolID is garbage collected.
@@ -458,8 +469,9 @@ class SymbolStringPrimitive : public StringPrimitive {
   }
 
   /// \return the unique id.
-  SymbolID getUniqueID() const {
+  SymbolID getUniqueID(Runtime &runtime) const {
     assert(isUniqued() && "StringPrimitive is not uniqued");
+    runtime.getHeap().weakRefReadBarrier(weakUniqueID_);
     return weakUniqueID_;
   }
 };
@@ -838,6 +850,7 @@ template <typename T, bool Uniqued>
 const VTable DynamicStringPrimitive<T, Uniqued>::vt = VTable(
     DynamicStringPrimitive<T, Uniqued>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     nullptr,
     nullptr,
     nullptr
@@ -865,6 +878,7 @@ template <typename T>
 const VTable ExternalStringPrimitive<T>::vt = VTable(
     ExternalStringPrimitive<T>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     ExternalStringPrimitive<T>::_finalizeImpl,
     ExternalStringPrimitive<T>::_mallocSizeImpl,
     nullptr
@@ -886,6 +900,7 @@ template <typename T>
 const VTable BufferedStringPrimitive<T>::vt = VTable(
     BufferedStringPrimitive<T>::getCellKind(),
     0,
+    /* allowLargeAlloc */ false,
     nullptr, // finalize.
     nullptr, // mallocSize
     nullptr
@@ -1097,9 +1112,9 @@ inline char16_t *StringPrimitive::castToUTF16PointerForWrite() {
   }
 }
 
-inline SymbolID StringPrimitive::getUniqueID() const {
+inline SymbolID StringPrimitive::getUniqueID(Runtime &runtime) const {
   assert(this->isUniqued() && "StringPrimitive is not uniqued");
-  return vmcast<SymbolStringPrimitive>(this)->getUniqueID();
+  return vmcast<SymbolStringPrimitive>(this)->getUniqueID(runtime);
 }
 
 inline char16_t StringPrimitive::at(uint32_t index) const {

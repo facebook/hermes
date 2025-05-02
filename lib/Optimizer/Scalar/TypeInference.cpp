@@ -213,6 +213,7 @@ static Type inferBinaryInst(BinaryOperatorInst *BOI) {
     case ValueKind::BinaryGreaterThanInstKind:
     case ValueKind::BinaryGreaterThanOrEqualInstKind:
     case ValueKind::BinaryInInstKind:
+    case ValueKind::BinaryPrivateInInstKind:
     case ValueKind::BinaryInstanceOfInstKind:
       // Notice that the spec says that comparison of NaN should return
       // "Undefined" but all VMs return 'false'. We decided to conform to the
@@ -368,7 +369,6 @@ class TypeInferenceImpl {
     // It's possible that inference will result in the same type being
     // assigned.
     switch (inst->getKind()) {
-#define INCLUDE_HBC_INSTRS
 #define DEF_VALUE(CLASS, PARENT)                  \
   case ValueKind::CLASS##Kind:                    \
     inferredTy = infer##CLASS(cast<CLASS>(inst)); \
@@ -449,6 +449,9 @@ class TypeInferenceImpl {
     }
     return Type::unionTy(Type::createString(), Type::createSymbol());
   }
+  Type inferCreatePrivateNameInst(CreatePrivateNameInst *inst) {
+    return *inst->getInherentType();
+  }
   Type inferAsNumberInst(AsNumberInst *inst) {
     return *inst->getInherentType();
   }
@@ -511,7 +514,7 @@ class TypeInferenceImpl {
     Type T = inst->getLoadVariable()->getType();
     return T;
   }
-  Type inferHBCLoadConstInst(HBCLoadConstInst *inst) {
+  Type inferLIRLoadConstInst(LIRLoadConstInst *inst) {
     return inst->getSingleOperand()->getType();
   }
   Type inferLoadParamInst(LoadParamInst *inst) {
@@ -522,21 +525,21 @@ class TypeInferenceImpl {
       HBCResolveParentEnvironmentInst *inst) {
     return *inst->getInherentType();
   }
-  Type inferHBCGetArgumentsLengthInst(HBCGetArgumentsLengthInst *inst) {
-    return *inst->getInherentType();
+  Type inferLIRGetArgumentsLengthInst(LIRGetArgumentsLengthInst *inst) {
+    return Type::createAnyType();
   }
   Type inferHBCReifyArgumentsInst(HBCReifyArgumentsInst *inst) {
     hermes_fatal("This is not a concrete instruction");
   }
-  Type inferHBCReifyArgumentsLooseInst(HBCReifyArgumentsLooseInst *inst) {
+  Type inferLIRReifyArgumentsLooseInst(LIRReifyArgumentsLooseInst *inst) {
     // Does not return a value, uses a lazy register instead.
     return Type::createNoType();
   }
-  Type inferHBCReifyArgumentsStrictInst(HBCReifyArgumentsStrictInst *inst) {
+  Type inferLIRReifyArgumentsStrictInst(LIRReifyArgumentsStrictInst *inst) {
     // Does not return a value, uses a lazy register instead.
     return Type::createNoType();
   }
-  Type inferHBCSpillMovInst(HBCSpillMovInst *inst) {
+  Type inferLIRSpillMovInst(LIRSpillMovInst *inst) {
     return inst->getSingleOperand()->getType();
   }
 
@@ -568,7 +571,10 @@ class TypeInferenceImpl {
   Type inferDefineOwnPropertyInst(DefineOwnPropertyInst *inst) {
     return Type::createNoType();
   }
-  Type inferDefineNewOwnPropertyInst(DefineNewOwnPropertyInst *inst) {
+  Type inferStoreOwnPrivateFieldInst(StoreOwnPrivateFieldInst *inst) {
+    return Type::createNoType();
+  }
+  Type inferAddOwnPrivateFieldInst(AddOwnPrivateFieldInst *inst) {
     return Type::createNoType();
   }
 
@@ -585,6 +591,9 @@ class TypeInferenceImpl {
     return Type::createAnyType();
   }
   Type inferLoadPropertyWithReceiverInst(LoadPropertyWithReceiverInst *inst) {
+    return Type::createAnyType();
+  }
+  Type inferLoadOwnPrivateFieldInst(LoadOwnPrivateFieldInst *inst) {
     return Type::createAnyType();
   }
   Type inferTryLoadGlobalPropertyInst(TryLoadGlobalPropertyInst *inst) {
@@ -812,7 +821,7 @@ class TypeInferenceImpl {
 
   // These are target dependent instructions:
 
-  Type inferHBCGetGlobalObjectInst(HBCGetGlobalObjectInst *inst) {
+  Type inferLIRGetGlobalObjectInst(LIRGetGlobalObjectInst *inst) {
     return *inst->getInherentType();
   }
   Type inferHBCCreateFunctionEnvironmentInst(
@@ -828,18 +837,18 @@ class TypeInferenceImpl {
   Type inferHBCGetArgumentsPropByValInst(HBCGetArgumentsPropByValInst *inst) {
     hermes_fatal("This is not a concrete instruction");
   }
-  Type inferHBCGetArgumentsPropByValLooseInst(
-      HBCGetArgumentsPropByValLooseInst *inst) {
+  Type inferLIRGetArgumentsPropByValLooseInst(
+      LIRGetArgumentsPropByValLooseInst *inst) {
     return Type::createAnyType();
   }
-  Type inferHBCGetArgumentsPropByValStrictInst(
-      HBCGetArgumentsPropByValStrictInst *inst) {
+  Type inferLIRGetArgumentsPropByValStrictInst(
+      LIRGetArgumentsPropByValStrictInst *inst) {
     return Type::createAnyType();
   }
   Type inferGetConstructedObjectInst(GetConstructedObjectInst *inst) {
     return *inst->getInherentType();
   }
-  Type inferHBCAllocObjectFromBufferInst(HBCAllocObjectFromBufferInst *inst) {
+  Type inferLIRAllocObjectFromBufferInst(LIRAllocObjectFromBufferInst *inst) {
     return *inst->getInherentType();
   }
   Type inferHBCProfilePointInst(HBCProfilePointInst *inst) {
@@ -870,9 +879,6 @@ class TypeInferenceImpl {
     hermes_fatal("typed instruction");
   }
   Type inferTypedLoadParentInst(TypedLoadParentInst *inst) {
-    hermes_fatal("typed instruction");
-  }
-  Type inferTypedStoreParentInst(TypedStoreParentInst *inst) {
     hermes_fatal("typed instruction");
   }
   Type inferNativeCallInst(NativeCallInst *inst) {

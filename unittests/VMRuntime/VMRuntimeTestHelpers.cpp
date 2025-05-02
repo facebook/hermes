@@ -56,13 +56,25 @@ std::shared_ptr<DummyRuntime> DummyRuntime::create(
 }
 
 std::shared_ptr<DummyRuntime> DummyRuntime::create(const GCConfig &gcConfig) {
+#ifdef HERMESVM_CONTIGUOUS_HEAP
+  // Allow some extra segments for the runtime, and as a buffer for the GC.
+  // This is consistent to VM::Runtime.
+  uint64_t providerSize = std::min<uint64_t>(
+      1ULL << 32,
+      (uint64_t)gcConfig.getMaxHeapSize() +
+          FixedSizeHeapSegment::storageSize() * 4);
+  return create(gcConfig, defaultProvider(providerSize));
+#else
   return create(gcConfig, defaultProvider());
+#endif
 }
 
-std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider() {
+std::unique_ptr<StorageProvider> DummyRuntime::defaultProvider(
+    uint64_t providerSize) {
 #ifdef HERMESVM_CONTIGUOUS_HEAP
-  return StorageProvider::contiguousVAProvider(128 << 20);
+  return StorageProvider::contiguousVAProvider(providerSize);
 #else
+  (void)providerSize;
   return StorageProvider::mmapProvider();
 #endif
 }
@@ -71,7 +83,7 @@ void DummyRuntime::collect() {
   getHeap().collect("test");
 }
 
-void DummyRuntime::markRoots(RootAndSlotAcceptorWithNames &acceptor, bool) {
+void DummyRuntime::markRoots(RootAcceptorWithNames &acceptor, bool) {
   // DummyRuntime doesn't care what root section it is, but it needs one for
   // snapshot tests.
   acceptor.beginRootSection(RootAcceptor::Section::Custom);
@@ -86,8 +98,7 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor, bool) {
 }
 
 // Dummy runtime doesn't need to mark anything during complete marking.
-void DummyRuntime::markRootsForCompleteMarking(RootAndSlotAcceptorWithNames &) {
-}
+void DummyRuntime::markRootsForCompleteMarking(RootAcceptorWithNames &) {}
 
 std::string DummyRuntime::convertSymbolToUTF8(SymbolID) {
   return "";

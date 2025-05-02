@@ -74,7 +74,7 @@ struct CompileJSOptions {
   bool optimize{true};
   /// Maximum number of instructions (in addition to parameter handling)
   /// that is allowed for inlining of small functions.
-  unsigned inlineMaxSize{1};
+  unsigned inlineMaxSize{50};
   /// If true, the bytecode will be interruptable.
   bool emitAsyncBreakCheck{false};
   /// If true, debugging information will be generated in the bytecode.

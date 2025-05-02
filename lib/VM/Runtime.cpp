@@ -285,7 +285,6 @@ Runtime::Runtime(
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
       hasES6BlockScoping_(runtimeConfig.getES6BlockScoping()),
       hasIntl_(runtimeConfig.getIntl()),
-      hasArrayBuffer_(runtimeConfig.getArrayBuffer()),
       hasMicrotaskQueue_(runtimeConfig.getMicrotaskQueue()),
       shouldRandomizeMemoryLayout_(runtimeConfig.getRandomizeMemoryLayout()),
       bytecodeWarmupPercent_(runtimeConfig.getBytecodeWarmupPercent()),
@@ -414,22 +413,24 @@ Runtime::Runtime(
     // are actually populated.
     lazyObjectClass = clazz;
 
-    for (unsigned i = 1; i <= std::max(
-                                  {JSObject::numOverlapSlots<JSProxy>(),
-                                   JSObject::numOverlapSlots<JSCallableProxy>(),
-                                   JSObject::numOverlapSlots<HostObject>()});
-         ++i) {
-      auto addResult = HiddenClass::reserveSlot(clazz, *this);
-      assert(
-          addResult != ExecutionStatus::EXCEPTION &&
-          "Could not possibly grow larger than the limit");
-      clazz = *addResult->first;
+    constexpr unsigned maxNumOverlapSlots = std::max(
+        {JSObject::numOverlapSlots<JSProxy>(),
+         JSObject::numOverlapSlots<JSCallableProxy>(),
+         JSObject::numOverlapSlots<HostObject>()});
+    for (unsigned i = 0;; ++i) {
       if (i == JSObject::numOverlapSlots<JSProxy>())
         proxyClass = clazz;
       if (i == JSObject::numOverlapSlots<JSCallableProxy>())
         callableProxyClass = clazz;
       if (i == JSObject::numOverlapSlots<HostObject>())
         hostObjectClass = clazz;
+      if (i == maxNumOverlapSlots)
+        break;
+      auto addResult = HiddenClass::reserveSlot(clazz, *this);
+      assert(
+          addResult != ExecutionStatus::EXCEPTION &&
+          "Could not possibly grow larger than the limit");
+      clazz = *addResult->first;
     }
   }
 
@@ -549,9 +550,7 @@ class Runtime::MarkRootsPhaseTimer {
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
 
-void Runtime::markRoots(
-    RootAndSlotAcceptorWithNames &acceptor,
-    bool markLongLived) {
+void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
   // The body of markRoots should be sequence of blocks, each of which starts
   // with the declaration of an appropriate RootSection instance.
   {
@@ -761,8 +760,7 @@ void Runtime::markDomainRefInRuntimeModules(WeakRootAcceptor &acceptor) {
   }
 }
 
-void Runtime::markRootsForCompleteMarking(
-    RootAndSlotAcceptorWithNames &acceptor) {
+void Runtime::markRootsForCompleteMarking(RootAcceptorWithNames &acceptor) {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
   MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::SamplingProfiler);
   acceptor.beginRootSection(RootAcceptor::Section::SamplingProfiler);
@@ -846,7 +844,7 @@ void Runtime::assertTopCodeBlockContainsIP(const inst::Inst *ip) const {
 void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Do array capacity histogram.
   // Map from array size to number of arrays that are that size.
-  // Arrays includes ArrayStorage and SegmentedArray.
+  // Arrays includes ArrayStorage.
   std::map<std::pair<size_t, size_t>, std::pair<size_t, size_t>>
       arraySizeToCountAndWastedSlots;
   auto printTable = [&os](const std::map<
@@ -899,7 +897,8 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
     if (cell->getKind() == CellKind::ArrayStorageKind) {
       ArrayStorage *arr = vmcast<ArrayStorage>(cell);
-      const auto key = std::make_pair(arr->capacity(), arr->getAllocatedSize());
+      const auto key =
+          std::make_pair(arr->capacity(), arr->getAllocatedSizeSlow());
       arraySizeToCountAndWastedSlots[key].first++;
       arraySizeToCountAndWastedSlots[key].second +=
           arr->capacity() - arr->size();
@@ -911,49 +910,14 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
     printTable(arraySizeToCountAndWastedSlots);
   }
 
-  os << "Array Census for SegmentedArray:\n";
-  arraySizeToCountAndWastedSlots.clear();
-  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
-    if (cell->getKind() == CellKind::SegmentedArrayKind) {
-      SegmentedArray *arr = vmcast<SegmentedArray>(cell);
-      const auto key =
-          std::make_pair(arr->totalCapacityOfSpine(), arr->getAllocatedSize());
-      arraySizeToCountAndWastedSlots[key].first++;
-      arraySizeToCountAndWastedSlots[key].second +=
-          arr->totalCapacityOfSpine() - arr->size(*this);
-    }
-  });
-  if (arraySizeToCountAndWastedSlots.empty()) {
-    os << "\tNo SegmentedArrays\n\n";
-  } else {
-    printTable(arraySizeToCountAndWastedSlots);
-  }
-
-  os << "Array Census for Segment:\n";
-  arraySizeToCountAndWastedSlots.clear();
-  getHeap().forAllObjs([&arraySizeToCountAndWastedSlots](GCCell *cell) {
-    if (cell->getKind() == CellKind::SegmentKind) {
-      SegmentedArray::Segment *seg = vmcast<SegmentedArray::Segment>(cell);
-      const auto key = std::make_pair(seg->length(), seg->getAllocatedSize());
-      arraySizeToCountAndWastedSlots[key].first++;
-      arraySizeToCountAndWastedSlots[key].second +=
-          SegmentedArray::Segment::kMaxLength - seg->length();
-    }
-  });
-  if (arraySizeToCountAndWastedSlots.empty()) {
-    os << "\tNo Segments\n\n";
-  } else {
-    printTable(arraySizeToCountAndWastedSlots);
-  }
-
   os << "Array Census for JSArray:\n";
   arraySizeToCountAndWastedSlots.clear();
   getHeap().forAllObjs([&arraySizeToCountAndWastedSlots, this](GCCell *cell) {
     if (JSArray *arr = dyn_vmcast<JSArray>(cell)) {
-      JSArray::StorageType *storage = arr->getIndexedStorage(*this);
-      const auto capacity = storage ? storage->totalCapacityOfSpine() : 0;
-      const auto sz = storage ? storage->size(*this) : 0;
-      const auto key = std::make_pair(capacity, arr->getAllocatedSize());
+      JSArray::StorageType *storage = arr->getIndexedStorageNullable(*this);
+      const auto capacity = storage ? storage->capacity() : 0;
+      const auto sz = storage ? storage->size() : 0;
+      const auto key = std::make_pair(capacity, arr->getAllocatedSizeSlow());
       arraySizeToCountAndWastedSlots[key].first++;
       arraySizeToCountAndWastedSlots[key].second += capacity - sz;
     }
@@ -972,11 +936,7 @@ unsigned Runtime::getSymbolsEnd() const {
   return identifierTable_.getSymbolsEnd();
 }
 
-void Runtime::unmarkSymbols() {
-  identifierTable_.unmarkSymbols();
-}
-
-void Runtime::freeSymbols(const llvh::BitVector &markedSymbols) {
+void Runtime::freeSymbols(llvh::BitVector &markedSymbols) {
   identifierTable_.freeUnmarkedSymbols(markedSymbols, getHeap().getIDTracker());
 }
 
@@ -1609,7 +1569,7 @@ void Runtime::initPredefinedStrings() {
       "Arrays should have same length");
   for (uint32_t idx = 0; idx < strCount; idx++) {
     SymbolID sym = identifierTable_.registerLazyIdentifier(
-        ASCIIRef{&buffer[offset], strLengths[idx]}, hashes[idx]);
+        *this, ASCIIRef{&buffer[offset], strLengths[idx]}, hashes[idx]);
 
     assert(sym == Predefined::getSymbolID((Predefined::Str)registered++));
     (void)sym;

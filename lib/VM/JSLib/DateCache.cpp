@@ -144,11 +144,17 @@ int LocalTimeOffsetCache::daylightSavingOffsetInMs(int64_t utcTimeMs) {
   // kDSTDeltaMs].
 
   before->epoch = bumpEpoch();
+  // If before->endMs gets too large, we need to make sure it won't overflow
+  // kMaxEpochTimeInMs after extending it.
   int64_t newAfterStart = before->endMs < kMaxEpochTimeInMs - kDSTDeltaMs
       ? before->endMs + kDSTDeltaMs
       : kMaxEpochTimeInMs;
-  // If after starts too late, extend it to newAfterStart or recompute it.
-  if (newAfterStart < after->startMs) {
+  // We need to handle two cases here:
+  // 1. If after starts too late, recompute it or extend it to newAfterStart.
+  // 2. If after is empty, its startMs would be kMaxEpochTimeInMs. And if
+  // newAfterStart is also capped to kMaxEpochTimeInMs, we would need to
+  // recompute the after entry.
+  if (newAfterStart <= after->startMs) {
     int dstOffset = computeDaylightSaving(newAfterStart);
     extendOrRecomputeCacheEntry(after, newAfterStart, dstOffset);
   } else {

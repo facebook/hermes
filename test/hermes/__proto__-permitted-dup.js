@@ -22,7 +22,7 @@ var o;
 o = {__proto__: proto1, a: 10, __proto__(x,y) { return x + y;}}
 print(Object.getPrototypeOf(o) === proto1);
 print(o.__proto__(35,7));
-//CHKBC: NewObjectWithBuffer r
+//CHKBC: NewObjectWithBufferAndParent r
 //CHECK: true
 //CHECK-NEXT: 42
 

@@ -292,7 +292,8 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   if (flags_.persistent) {
     // Registering a lazy identifier does not allocate, so we do not need a
     // GC scope.
-    id = runtime_.getIdentifierTable().registerLazyIdentifier(str, hash);
+    id = runtime_.getIdentifierTable().registerLazyIdentifier(
+        runtime_, str, hash);
   } else {
     // Accessing a symbol non-lazily may allocate in the GC heap, so add a scope
     // marker.
@@ -325,7 +326,7 @@ void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
     // Only mark a CodeBlock is its non-null, and has not been scanned
     // previously in this top-level markRoots invocation.
     if (cbPtr != nullptr && cbPtr->getRuntimeModule() == this) {
-      cbPtr->markCachedHiddenClasses(runtime_, acceptor);
+      cbPtr->markWeakElementsInCaches(runtime_, acceptor);
     }
   }
   for (auto &entry : objectLiteralHiddenClasses_) {

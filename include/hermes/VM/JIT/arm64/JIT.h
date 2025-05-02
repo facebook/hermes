@@ -9,6 +9,7 @@
 #define HERMES_VM_JIT_ARM64_JIT_H
 
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/JIT/PerfJitDump.h"
 
 namespace hermes {
 namespace vm {
@@ -71,6 +72,22 @@ class JITContext {
     return dumpJITCode_;
   }
 
+  /// Construct data structure used for perf profiling support. This should be
+  /// called only when PerfProf is enabled and perf JITContext.
+  /// \param jitdumpFd The file descriptor of the opened jitdump file.
+  /// \param commentFd The file descriptor of the opended \p commentFile.
+  /// \param commentFile The path of the file to store the comments.
+  void initPerfProfData(
+      int jitdumpFd,
+      int commentFd,
+      const std::string &commentFile) {
+    assert(
+        !perfJitDump_ &&
+        "perfJitDump_ should be constructed once per JITContext");
+    perfJitDump_ =
+        std::make_unique<PerfJitDump>(jitdumpFd, commentFd, commentFile);
+  }
+
   /// Set the flag to fatally crash on JIT compilation errors.
   void setCrashOnError(bool crash) {
     crashOnError_ = crash;
@@ -124,6 +141,9 @@ class JITContext {
   /// Whether to force jitting of all functions.
   /// If true, ignores the default exec threshold completely.
   bool forceJIT_{false};
+
+  /// Generate jitdump for all jitted functions.
+  std::unique_ptr<PerfJitDump> perfJitDump_{};
 
   /// The JIT threshold for function execution count.
   /// Lowered based on the loop depth before deciding whether to JIT.

@@ -57,15 +57,15 @@ var z = [{}];
 // CHECK-NEXT:    LoadConstNull     r1
 // CHECK-NEXT:    DefineOwnByIndex  r3, r1, 5
 // CHECK-NEXT:    GetGlobalObject   r4
-// CHECK-NEXT:    PutByIdLoose      r4, r3, 1, "x"
+// CHECK-NEXT:    PutByIdLoose      r4, r3, 0, "x"
 // CHECK-NEXT:    NewArrayWithBuffer r3, 5, 3, 11
 // CHECK-NEXT:    LoadConstUInt8    r0, 5
-// CHECK-NEXT:    PutByIdLoose      r3, r0, 2, "length"
-// CHECK-NEXT:    PutByIdLoose      r4, r3, 3, "y"
+// CHECK-NEXT:    PutByIdLoose      r3, r0, 1, "length"
+// CHECK-NEXT:    PutByIdLoose      r4, r3, 2, "y"
 // CHECK-NEXT:    NewArray          r3, 1
 // CHECK-NEXT:    NewObject         r5
 // CHECK-NEXT:    DefineOwnByIndex  r3, r5, 0
-// CHECK-NEXT:    PutByIdLoose      r4, r3, 4, "z"
+// CHECK-NEXT:    PutByIdLoose      r4, r3, 3, "z"
 // CHECK-NEXT:    Ret               r2
 
 // CHECK:Debug filename table:

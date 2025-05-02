@@ -180,7 +180,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   instGen.emitLoadConstDoubleDirect(1, 2);
   instGen.emitSubN(2, 0, 1);
   instGen.emitGetGlobalObject(0);
-  instGen.emitGetById(1, 0, 1, printID);
+  instGen.emitGetById(1, 0, 0, printID);
   instGen.emitLoadConstUndefined(3);
   instGen.emitMov(
       static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::ThisArg), 3);
@@ -575,7 +575,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   BytecodeInstructionGenerator instGen;
 
   instGen.emitGetGlobalObject(0);
-  instGen.emitGetById(1, 0, 1, getSPID);
+  instGen.emitGetById(1, 0, 0, getSPID);
   instGen.emitCall(0, 1, 0);
   instGen.emitRet(0);
 

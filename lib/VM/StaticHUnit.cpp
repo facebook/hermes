@@ -188,14 +188,14 @@ static void sh_unit_init_symbols(Runtime &runtime, SHUnit *unit) {
       // TODO: HACK HACK: if the hash is 0, calculate it.
       uint32_t hash = stringData[2] ? stringData[2] : hashString(str);
       id = runtime.getIdentifierTable()
-               .registerLazyIdentifier(str, hash)
+               .registerLazyIdentifier(runtime, str, hash)
                .unsafeGetRaw();
     } else {
       auto str = ASCIIRef{unit->ascii_pool + stringData[0], stringData[1]};
       // TODO: HACK HACK: if the hash is 0, calculate it.
       uint32_t hash = stringData[2] ? stringData[2] : hashString(str);
       id = runtime.getIdentifierTable()
-               .registerLazyIdentifier(str, hash)
+               .registerLazyIdentifier(runtime, str, hash)
                .unsafeGetRaw();
     }
     unit->symbols[symIndex] = id;
@@ -214,7 +214,7 @@ size_t hermes::vm::sh_unit_additional_memory_size(const SHUnit *unit) {
 
 void hermes::vm::sh_unit_mark_roots(
     SHUnit *unit,
-    RootAndSlotAcceptorWithNames &acceptor,
+    RootAcceptorWithNames &acceptor,
     bool markLongLived) {
   for (auto &it : unit->runtime_ext->templateMap) {
     acceptor.acceptPtr(it.second);
@@ -249,6 +249,15 @@ void hermes::vm::sh_unit_mark_long_lived_weak_roots(
     if (prop.clazz) {
       acceptor.acceptWeak(prop.clazz);
     }
+  }
+  for (auto &prop : llvh::makeMutableArrayRef(
+           reinterpret_cast<PrivateNameCacheEntry *>(
+               unit->num_private_name_cache_entries),
+           unit->num_private_name_cache_entries)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
+    acceptor.acceptWeakSym(prop.nameVal);
   }
 
   for (auto &entry : llvh::makeMutableArrayRef(

@@ -83,6 +83,16 @@ class JITContext {
     return 0;
   }
 
+  /// Construct data structure used for perf profiling support. This should be
+  /// called only when PerfProf is enabled and perf JITContext.
+  /// \param jitdumpFd The file descriptor of the opened jitdump file.
+  /// \param commentFd The file descriptor of the opended \p commentFile.
+  /// \param commentFile The path of the file to store the comments.
+  void initPerfProfData(
+      int jitdumpFd,
+      int commentFd,
+      const std::string &commentFile) {}
+
   /// Set the flag to fatally crash on JIT compilation errors.
   void setCrashOnError(bool crash) {}
 

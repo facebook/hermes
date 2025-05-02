@@ -22,10 +22,10 @@ function foo (a, b) {
 // CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:                 DeclareGlobalVarInst "foo": string
-// CHECK-NEXT:  {loc1}    %1 = HBCGetGlobalObjectInst (:object)
+// CHECK-NEXT:  {loc1}    %1 = LIRGetGlobalObjectInst (:object)
 // CHECK-NEXT:  {loc0}    %2 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
 // CHECK-NEXT:                 StorePropertyLooseInst {loc0} %2: object, {loc1} %1: object, "foo": string
-// CHECK-NEXT:  {np0}     %4 = HBCLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:  {np0}     %4 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %4: undefined
 // CHECK-NEXT:function_end
 

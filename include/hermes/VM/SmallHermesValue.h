@@ -86,6 +86,11 @@ class SmallHermesValueAdaptor : protected HermesValue {
     llvm_unreachable("SmallHermesValueAdaptor does not have boxed doubles.");
   }
 
+  template <class T>
+  inline T getNumberAs(PointerBase &) const {
+    return HermesValue::getNumberAs<T>();
+  }
+
   HermesValue toHV(PointerBase &) const {
     return *this;
   }
@@ -105,6 +110,13 @@ class SmallHermesValueAdaptor : protected HermesValue {
   }
   GCCell *getObject(PointerBase &) const {
     return static_cast<GCCell *>(HermesValue::getObject());
+  }
+  CompressedPointer getObject() const {
+    assert(
+        sizeof(uintptr_t) == sizeof(CompressedPointer::RawType) &&
+        "Adaptor should not be used when compressed pointers are enabled.");
+    uintptr_t rawPtr = reinterpret_cast<uintptr_t>(HermesValue::getObject());
+    return CompressedPointer::fromRaw(rawPtr);
   }
   StringPrimitive *getString(PointerBase &) const {
     return HermesValue::getString();
@@ -179,6 +191,13 @@ class SmallHermesValueAdaptor : protected HermesValue {
   }
   static constexpr SmallHermesValueAdaptor encodeEmptyValue() {
     return SmallHermesValueAdaptor{HermesValue::encodeEmptyValue()};
+  }
+
+  /// Create a SmallHermesValue that has the raw representation 0. This value
+  /// must never become visible to user code, and is guaranteed to be ignored by
+  /// the GC.
+  static constexpr SmallHermesValueAdaptor encodeRawZeroValueUnsafe() {
+    return SmallHermesValueAdaptor{HermesValue::fromRaw(0)};
   }
 };
 using SmallHermesValue = SmallHermesValueAdaptor;
@@ -369,11 +388,34 @@ class HermesValue32 {
     assert(isObject());
     return getPointer(pb);
   }
+  CompressedPointer getObject() const {
+    assert(isObject());
+    return getPointer();
+  }
 
   inline BigIntPrimitive *getBigInt(PointerBase &pb) const;
   inline StringPrimitive *getString(PointerBase &pb) const;
   inline double getNumber(PointerBase &pb) const;
   inline double getBoxedDouble(PointerBase &pb) const;
+
+  template <class T>
+  inline typename std::enable_if<std::is_integral<T>::value, T>::type
+  getNumberAs(PointerBase &pb) const {
+    double num = getNumber(pb);
+    assert(
+        num >= std::numeric_limits<T>::min() &&
+        // The cast is to ignore the following warning:
+        // implicit conversion from 'int64_t' to 'double' changes value.
+        num <= (double)std::numeric_limits<T>::max() && (T)num == num &&
+        "value not representable as type");
+    return num;
+  }
+
+  template <class T>
+  inline typename std::enable_if<!std::is_integral<T>::value, T>::type
+  getNumberAs(PointerBase &pb) const {
+    return getNumber(pb);
+  }
 
   CompressedPointer getPointer() const {
     assert(isPointer());
@@ -449,6 +491,13 @@ class HermesValue32 {
     return bitsToCompressedHV64(HermesValue::encodeEmptyValue().getRaw());
   }
 
+  /// Create a SmallHermesValue that has the raw representation 0. This value
+  /// must never become visible to user code, and is guaranteed to be ignored by
+  /// the GC.
+  static constexpr HermesValue32 encodeRawZeroValueUnsafe() {
+    return HermesValue32{0};
+  }
+
  protected:
   /// Performs an assignment without a barrier, in cases where the RHS
   /// value may contain an object pointer.  WARNING: this is very
@@ -466,7 +515,16 @@ static_assert(
     std::is_trivial<SmallHermesValue>::value,
     "SmallHermesValue must be trivial");
 
-using GCSmallHermesValue = GCHermesValueBase<SmallHermesValue>;
+/// Base type for GC aware SmallHermesValues. This should only be used when we
+/// don't need to handle large allocation specially.
+using GCSmallHermesValueBase = GCHermesValueBaseImpl<SmallHermesValue>;
+
+/// GCSmallHermesValue stored in a normal object.
+using GCSmallHermesValue = GCHermesValueImpl<SmallHermesValue>;
+
+/// GCSmallHermesValue stored in an object that supports large allocation.
+using GCSmallHermesValueInLargeObj =
+    GCHermesValueInLargeObjImpl<SmallHermesValue>;
 
 } // end namespace vm
 } // end namespace hermes
