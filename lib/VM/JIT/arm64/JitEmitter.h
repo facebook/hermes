@@ -1216,6 +1216,7 @@ class Emitter {
           SHLegacyValue *value),
       const char *shImplName);
 
+  class GetByIdImpl;
   void getByIdImpl(
       FR frRes,
       SHSymbolID symID,

@@ -3591,79 +3591,137 @@ void Emitter::putOwnPrivateBySym(
       _sh_ljs_put_own_private_by_sym);
 }
 
-void Emitter::getByIdImpl(
-    FR frRes,
-    SHSymbolID symID,
-    FR frSource,
-    uint8_t cacheIdx,
-    const char *name,
-    SHLegacyValue (*shImpl)(
-        SHRuntime *shr,
-        const SHLegacyValue *source,
-        SHSymbolID symID,
-        SHReadPropertyCacheEntry *propCacheEntry),
-    const char *shImplName) {
-  comment(
-      "// %s r%u, r%u, cache %u, symID %u",
-      name,
-      frRes.index(),
-      frSource.index(),
-      cacheIdx,
-      symID);
+class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
+  Emitter &_;
+  a64::Assembler &a;
 
-  asmjit::Label slowPathLab;
+  FR frRes;
+  SHSymbolID symID;
+  FR frSource;
+  uint8_t cacheIdx;
+  const char *name;
+  SHLegacyValue (*shImpl)(
+      SHRuntime *shr,
+      const SHLegacyValue *source,
+      SHSymbolID symID,
+      SHReadPropertyCacheEntry *propCacheEntry);
+  const char *shImplName;
+
   asmjit::Label contLab;
   HWReg hwRes;
 
-  // All temporaries will potentially be clobbered by the slow path.
-  syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
-  // Ensure the source register is in memory for the slow path.
-  syncToFrame(frSource);
+ public:
+  GetByIdImpl(
+      Emitter &emitter,
+      FR frRes,
+      SHSymbolID symID,
+      FR frSource,
+      uint8_t cacheIdx,
+      const char *name,
+      SHLegacyValue (*shImpl)(
+          SHRuntime *shr,
+          const SHLegacyValue *source,
+          SHSymbolID symID,
+          SHReadPropertyCacheEntry *propCacheEntry),
+      const char *shImplName)
+      : _(emitter),
+        a(emitter.a),
+        frRes(frRes),
+        symID(symID),
+        frSource(frSource),
+        cacheIdx(cacheIdx),
+        name(name),
+        shImpl(shImpl),
+        shImplName(shImplName) {}
 
-  if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
+  void run() {
+    _.comment(
+        "// %s r%u, r%u, cache %u, symID %u",
+        name,
+        frRes.index(),
+        frSource.index(),
+        cacheIdx,
+        symID);
+
+    // All temporaries will potentially be clobbered by the slow path.
+    _.syncAllFRTempExcept(frRes != frSource ? frRes : FR{});
+    // Ensure the source register is in memory for the slow path.
+    _.syncToFrame(frSource);
+
+    if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
+      emitFastPath();
+    } else {
+      // All temporaries will be clobbered.
+      _.freeAllFRTempExcept({});
+
+      // Remember the result register.
+      hwRes = _.getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+    }
+
+    a.mov(a64::x0, xRuntime);
+    _.loadFrameAddr(a64::x1, frSource);
+    a.mov(a64::w2, symID);
+    if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
+      a.mov(a64::x3, 0);
+    } else {
+      a.ldr(a64::x3, a64::Mem(_.roDataLabel_, _.roOfsReadPropertyCachePtr_));
+      if (cacheIdx != 0)
+        a.add(a64::x3, a64::x3, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
+    }
+    _.callThunkWithSavedIP((void *)shImpl, shImplName);
+
+    _.movHWFromHW<false>(hwRes, HWReg::gpX(0));
+    _.frUpdatedWithHW(frRes, hwRes);
+
+    if (contLab.isValid())
+      a.bind(contLab);
+  }
+
+ private:
+  void emitFastPath() {
     // Label for indirect property access.
     asmjit::Label indirectLab = a.newLabel();
-    slowPathLab = a.newLabel();
+    asmjit::Label slowPathLab = a.newLabel();
     contLab = a.newLabel();
 
     // We don't need the other temporaries.
-    freeAllFRTempExcept(frSource);
+    _.freeAllFRTempExcept(frSource);
 
     // We need the source in a GPx register.
-    HWReg hwSourceGpx = getOrAllocFRInGpX(frSource, true);
+    HWReg hwSourceGpx = _.getOrAllocFRInGpX(frSource, true);
 
     // Here we start allocating and freeing registers. It is important to
-    // realize that this doesn't generate any code, it only updates metadata,
-    // marking registers as used or free. So, we have to perform a series of
-    // register allocs and frees, ahead of time, based on our understanding of
-    // how the live ranges of these registers overlap. Then we just use the
-    // recorded registers at the right time.
+    // realize that this doesn't generate any code, it only updates
+    // metadata, marking registers as used or free. So, we have to perform a
+    // series of register allocs and frees, ahead of time, based on our
+    // understanding of how the live ranges of these registers overlap. Then
+    // we just use the recorded registers at the right time.
 
     // xTemp1 will contain the input object.
-    HWReg hwTemp1Gpx = allocTempGpX();
+    HWReg hwTemp1Gpx = _.allocTempGpX();
     auto xTemp1 = hwTemp1Gpx.a64GpX();
-    // Free frSource before allocating more temporaries, because we won't need
-    // it at the same time as them.
-    freeFRTemp(frSource);
+    // Free frSource before allocating more temporaries, because we won't
+    // need it at the same time as them.
+    _.freeFRTemp(frSource);
 
     // Get register assignments for the rest of the temporaries.
-    HWReg hwTemp2Gpx = allocTempGpX();
-    HWReg hwTemp3Gpx = allocTempGpX();
-    HWReg hwTemp4Gpx = allocTempGpX();
+    HWReg hwTemp2Gpx = _.allocTempGpX();
+    HWReg hwTemp3Gpx = _.allocTempGpX();
+    HWReg hwTemp4Gpx = _.allocTempGpX();
     auto xTemp2 = hwTemp2Gpx.a64GpX();
     auto xTemp3 = hwTemp3Gpx.a64GpX();
     auto xTemp4 = hwTemp4Gpx.a64GpX();
 
     // Now that we have recorded their registers, mark all temp registers as
     // free.
-    freeReg(hwTemp1Gpx);
-    freeReg(hwTemp2Gpx);
-    freeReg(hwTemp3Gpx);
-    freeReg(hwTemp4Gpx);
+    _.freeReg(hwTemp1Gpx);
+    _.freeReg(hwTemp2Gpx);
+    _.freeReg(hwTemp3Gpx);
+    _.freeReg(hwTemp4Gpx);
 
-    // Allocate the result register. Note that it can overlap the temps we just
-    // freed.
-    hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+    // Allocate the result register. Note that it can overlap the temps we
+    // just freed.
+    hwRes = _.getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
 
     // Finally we begin code generation for the fast path.
 
@@ -3677,7 +3735,7 @@ void Emitter::getByIdImpl(
     emit_load_cp(a, xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
 
     // xTemp3 points to the start of read property cache.
-    a.ldr(xTemp3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
+    a.ldr(xTemp3, a64::Mem(_.roDataLabel_, _.roOfsReadPropertyCachePtr_));
     // xTemp4 = cacheEntry->clazz.
     emit_load_cp(
         a,
@@ -3703,7 +3761,8 @@ void Emitter::getByIdImpl(
     a.cmp(xTemp4.w(), HERMESVM_DIRECT_PROPERTY_SLOTS);
     a.b_hs(indirectLab);
 
-    // Shift by 2 or 3 bits depending on whether properties are 4 or 8 bytes.
+    // Shift by 2 or 3 bits depending on whether properties are 4 or 8
+    // bytes.
     constexpr size_t kPropShiftAmt = sizeof(SHGCSmallHermesValue) == 4 ? 2 : 3;
     // Load from a direct slot.
     a.add(xTemp3, xTemp1, offsetof(SHJSObjectAndDirectProps, directProps));
@@ -3740,31 +3799,23 @@ void Emitter::getByIdImpl(
     a.b(contLab);
 
     a.bind(slowPathLab);
-  } else {
-    // All temporaries will be clobbered.
-    freeAllFRTempExcept({});
-
-    // Remember the result register.
-    hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   }
+};
 
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frSource);
-  a.mov(a64::w2, symID);
-  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
-    a.mov(a64::x3, 0);
-  } else {
-    a.ldr(a64::x3, a64::Mem(roDataLabel_, roOfsReadPropertyCachePtr_));
-    if (cacheIdx != 0)
-      a.add(a64::x3, a64::x3, sizeof(SHReadPropertyCacheEntry) * cacheIdx);
-  }
-  callThunkWithSavedIP((void *)shImpl, shImplName);
-
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
-
-  if (contLab.isValid())
-    a.bind(contLab);
+void Emitter::getByIdImpl(
+    FR frRes,
+    SHSymbolID symID,
+    FR frSource,
+    uint8_t cacheIdx,
+    const char *name,
+    SHLegacyValue (*shImpl)(
+        SHRuntime *shr,
+        const SHLegacyValue *source,
+        SHSymbolID symID,
+        SHReadPropertyCacheEntry *propCacheEntry),
+    const char *shImplName) {
+  GetByIdImpl(*this, frRes, symID, frSource, cacheIdx, name, shImpl, shImplName)
+      .run();
 }
 
 void Emitter::getByIdWithReceiver(
