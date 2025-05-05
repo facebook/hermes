@@ -387,7 +387,7 @@ class DictPropertyMap final
   /// Search the hash table for \p symbolID. If found, return true and the
   /// and a pointer to the hash pair. If not found, return false and a pointer
   /// to the hash pair where it ought to be inserted.
-  std::pair<bool, HashPair *> static lookupEntryFor(
+  static inline std::pair<bool, HashPair *> lookupEntryFor(
       DictPropertyMap *self,
       SymbolID symbolID);
 
@@ -562,6 +562,44 @@ inline DictPropertyMap::DescriptorPair *DictPropertyMap::getDescriptorPair(
   auto *res = self->getDescriptorPairs() + descIndex;
   assert(hashPair->mayBe(res->first) && "accessing incorrect descriptor pair");
   return res;
+}
+
+inline std::pair<bool, DictPropertyMap::HashPair *>
+DictPropertyMap::lookupEntryFor(DictPropertyMap *self, SymbolID symbolID) {
+  size_type const mask = self->hashCapacity_ - 1;
+  size_type index = hash(symbolID) & mask;
+
+  // Probing step.
+  size_type step = 1;
+  // Save the address of the start of the table to avoid recalculating it.
+  HashPair *const tableStart = self->getHashPairs();
+  // The first deleted entry we found.
+  HashPair *deleted = nullptr;
+
+  assert(symbolID.isValid() && "looking for an invalid SymbolID");
+
+  for (;;) {
+    HashPair *curEntry = tableStart + index;
+
+    if (curEntry->isValid()) {
+      if (self->isMatch(curEntry, symbolID))
+        return {true, curEntry};
+    } else if (curEntry->isEmpty()) {
+      // If we encountered an empty pair, the search is over - we failed.
+      // Return either this entry or a deleted one, if we encountered one.
+
+      return {false, deleted ? deleted : curEntry};
+    } else {
+      assert(curEntry->isDeleted() && "unexpected HashPair state");
+      // The first time we encounter a deleted entry, record it so we can
+      // potentially reuse it for insertion.
+      if (!deleted)
+        deleted = curEntry;
+    }
+
+    index = (index + step) & mask;
+    ++step;
+  }
 }
 
 inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(

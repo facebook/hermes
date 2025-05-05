@@ -10,9 +10,6 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/VM/SymbolID-inline.h"
 
-HERMES_SLOW_STATISTIC(NumDictLookups, "Number of dictionary lookups");
-HERMES_SLOW_STATISTIC(NumExtraHashProbes, "Number of extra hash probes");
-
 namespace hermes {
 namespace vm {
 
@@ -66,48 +63,6 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
         " fails to allocate");
   }
   return createPseudoHandle(cell);
-}
-
-std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
-    DictPropertyMap *self,
-    SymbolID symbolID) {
-  ++NumDictLookups;
-
-  size_type const mask = self->hashCapacity_ - 1;
-  size_type index = hash(symbolID) & mask;
-
-  // Probing step.
-  size_type step = 1;
-  // Save the address of the start of the table to avoid recalculating it.
-  HashPair *const tableStart = self->getHashPairs();
-  // The first deleted entry we found.
-  HashPair *deleted = nullptr;
-
-  assert(symbolID.isValid() && "looking for an invalid SymbolID");
-
-  for (;;) {
-    HashPair *curEntry = tableStart + index;
-
-    if (curEntry->isValid()) {
-      if (self->isMatch(curEntry, symbolID))
-        return {true, curEntry};
-    } else if (curEntry->isEmpty()) {
-      // If we encountered an empty pair, the search is over - we failed.
-      // Return either this entry or a deleted one, if we encountered one.
-
-      return {false, deleted ? deleted : curEntry};
-    } else {
-      assert(curEntry->isDeleted() && "unexpected HashPair state");
-      // The first time we encounter a deleted entry, record it so we can
-      // potentially reuse it for insertion.
-      if (!deleted)
-        deleted = curEntry;
-    }
-
-    ++NumExtraHashProbes;
-    index = (index + step) & mask;
-    ++step;
-  }
 }
 
 ExecutionStatus DictPropertyMap::grow(
