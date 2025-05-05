@@ -1198,16 +1198,19 @@ function convertClassMember(
         );
 
         return [
-          t.ObjectTypePropertySignature({
-            // $FlowFixMe[incompatible-call]
-            key: asDetachedNode<
-              ClassPropertyNameComputed | ClassPropertyNameNonComputed,
-            >(member.key),
-            value: resultTypeAnnotation,
-            optional: member.optional,
-            static: member.static,
-            variance: member.variance,
-          }),
+          inheritComments(
+            member,
+            t.ObjectTypePropertySignature({
+              // $FlowFixMe[incompatible-call]
+              key: asDetachedNode<
+                ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+              >(member.key),
+              value: resultTypeAnnotation,
+              optional: member.optional,
+              static: member.static,
+              variance: member.variance,
+            }),
+          ),
           deps,
         ];
       }
@@ -1219,16 +1222,19 @@ function convertClassMember(
       );
 
       return [
-        t.ObjectTypePropertySignature({
-          // $FlowFixMe[incompatible-call]
-          key: asDetachedNode<
-            ClassPropertyNameComputed | ClassPropertyNameNonComputed,
-          >(member.key),
-          value: resultTypeAnnotation,
-          optional: member.optional,
-          static: member.static,
-          variance: member.variance,
-        }),
+        inheritComments(
+          member,
+          t.ObjectTypePropertySignature({
+            // $FlowFixMe[incompatible-call]
+            key: asDetachedNode<
+              ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+            >(member.key),
+            value: resultTypeAnnotation,
+            optional: member.optional,
+            static: member.static,
+            variance: member.variance,
+          }),
+        ),
         deps,
       ];
     }
@@ -1269,28 +1275,34 @@ function convertClassMember(
         const kind = member.kind;
 
         return [
-          t.ObjectTypeAccessorSignature({
+          inheritComments(
+            member,
+            t.ObjectTypeAccessorSignature({
+              // $FlowFixMe[incompatible-call]
+              key: asDetachedNode<
+                ClassPropertyNameComputed | ClassPropertyNameNonComputed,
+              >(newKey),
+              value: resultValue,
+              static: member.static,
+              kind,
+            }),
+          ),
+          deps,
+        ];
+      }
+
+      return [
+        inheritComments(
+          member,
+          t.ObjectTypeMethodSignature({
             // $FlowFixMe[incompatible-call]
             key: asDetachedNode<
               ClassPropertyNameComputed | ClassPropertyNameNonComputed,
             >(newKey),
             value: resultValue,
             static: member.static,
-            kind,
           }),
-          deps,
-        ];
-      }
-
-      return [
-        t.ObjectTypeMethodSignature({
-          // $FlowFixMe[incompatible-call]
-          key: asDetachedNode<
-            ClassPropertyNameComputed | ClassPropertyNameNonComputed,
-          >(newKey),
-          value: resultValue,
-          static: member.static,
-        }),
+        ),
         deps,
       ];
     }

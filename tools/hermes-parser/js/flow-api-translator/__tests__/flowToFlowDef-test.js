@@ -392,9 +392,11 @@ describe('flowToFlowDef', () => {
     it('property', async () => {
       await expectTranslate(
         `export class A {
+           /** foo documentation */
            foo: string = '';
          }`,
         `declare export class A {
+           /** foo documentation */
            foo: string;
          }`,
       );
@@ -448,11 +450,15 @@ describe('flowToFlowDef', () => {
     it('method', async () => {
       await expectTranslate(
         `export class A {
+           /** foo documentation */
            foo() {}
+           /** static bar documentation */
            static bar() {}
          }`,
         `declare export class A {
+           /** foo documentation */
            foo(): void;
+           /** static bar documentation */
            static bar(): void;
          }`,
       );
