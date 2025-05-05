@@ -32,15 +32,16 @@ static std::string getJSFunctionName(
   return bcProvider->getStringRefFromID(functionHeader.getFunctionName()).str();
 }
 
-static OptValue<hbc::DebugSourceLocation> getSourceLocation(
+static OptValue<hbc::DebugSourceLocation> getFunctionDefinitionSourceLocation(
     hbc::BCProvider *bcProvider,
-    uint32_t funcId,
-    uint32_t opcodeOffset) {
+    uint32_t funcId) {
   const hbc::DebugOffsets *debugOffsets = bcProvider->getDebugOffsets(funcId);
   if (debugOffsets &&
       debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
+    // 0-offset is specified to get the location of the function definition, the
+    // start of it.
     return bcProvider->getDebugInfo()->getLocationForAddress(
-        debugOffsets->sourceLocations, opcodeOffset);
+        debugOffsets->sourceLocations, 0 /* opcodeOffset */);
   }
   return llvh::None;
 }
@@ -90,8 +91,9 @@ static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
       std::optional<uint32_t> lineNumber = std::nullopt;
       std::optional<uint32_t> columnNumber = std::nullopt;
 
-      OptValue<hbc::DebugSourceLocation> sourceLocOpt = getSourceLocation(
-          bcProvider, frame.jsFrame.functionId, frame.jsFrame.offset);
+      OptValue<hbc::DebugSourceLocation> sourceLocOpt =
+          getFunctionDefinitionSourceLocation(
+              bcProvider, frame.jsFrame.functionId);
       if (sourceLocOpt.hasValue()) {
         // Bundle has debug info.
         auto filenameId = sourceLocOpt.getValue().filenameId;

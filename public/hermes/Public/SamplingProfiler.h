@@ -82,21 +82,23 @@ class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
     return url_.value();
   }
 
-  bool hasLineNumber() const {
+  bool hasFunctionLineNumber() const {
     return lineNumber_.has_value();
   }
 
-  /// \return 1-based line number of the corresponding call frame.
-  uint32_t getLineNumber() const {
+  /// \return 1-based line number of the location where the function definition
+  /// starts.
+  uint32_t getFunctionLineNumber() const {
     return lineNumber_.value();
   }
 
-  bool hasColumnNumber() const {
+  bool hasFunctionColumnNumber() const {
     return columnNumber_.has_value();
   }
 
-  /// \return 1-based column number of the corresponding call frame.
-  uint32_t getColumnNumber() const {
+  /// \return 1-based column number of the location where the function
+  /// definition starts.
+  uint32_t getFunctionColumnNumber() const {
     return columnNumber_.value();
   }
 
