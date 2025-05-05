@@ -21,9 +21,6 @@
 using llvh::dbgs;
 
 HERMES_SLOW_STATISTIC(
-    NumHCFindProperty,
-    "NumHCFindProperty: Number of HiddenClass property lookups.");
-HERMES_SLOW_STATISTIC(
     NumHCInitPropMap,
     "NumHCInitPropMap: Number of HiddenClass map initializations.");
 HERMES_SLOW_STATISTIC(
@@ -273,39 +270,35 @@ void HiddenClass::forEachPropertyNoAlloc(
   }
 }
 
-OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
+OptValue<HiddenClass::PropertyPos> HiddenClass::findPropertyNoMap(
     PseudoHandle<HiddenClass> self,
     Runtime &runtime,
     SymbolID name,
     PropertyFlags expectedFlags,
     NamedPropertyDescriptor &desc) {
-  ++NumHCFindProperty;
-  // Lazily create the property map.
-  if (LLVM_UNLIKELY(!self->propertyMap_)) {
-    // If expectedFlags is valid, we can check if there is an outgoing
-    // transition with name and the flags. The presence of such a transition
-    // indicates that this is a new property and we don't have to build the map
-    // in order to look for it (since we wouldn't find it anyway).
-    if (expectedFlags.isValid()) {
-      Transition t{name, expectedFlags};
-      if (self->transitionMap_.containsKey(t, runtime.getHeap())) {
-        LLVM_DEBUG(
-            dbgs()
-            << "Property " << runtime.formatSymbolID(name)
-            << " NOT FOUND in Class:" << self->getDebugAllocationId()
-            << " due to existing transition to Class:"
-            << self->transitionMap_.lookup(runtime, t)->getDebugAllocationId()
-            << "\n");
-        return llvh::None;
-      }
+  assert(!self->propertyMap_ && "property map must not exist");
+  // If expectedFlags is valid, we can check if there is an outgoing
+  // transition with name and the flags. The presence of such a transition
+  // indicates that this is a new property and we don't have to build the map
+  // in order to look for it (since we wouldn't find it anyway).
+  if (expectedFlags.isValid()) {
+    Transition t{name, expectedFlags};
+    if (self->transitionMap_.containsKey(t, runtime.getHeap())) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Property " << runtime.formatSymbolID(name)
+          << " NOT FOUND in Class:" << self->getDebugAllocationId()
+          << " due to existing transition to Class:"
+          << self->transitionMap_.lookup(runtime, t)->getDebugAllocationId()
+          << "\n");
+      return llvh::None;
     }
-
-    auto selfHandle = runtime.makeHandle(std::move(self));
-    initializeMissingPropertyMap(selfHandle, runtime);
-    self = selfHandle;
   }
 
-  auto *propMap = self->propertyMap_.getNonNull(runtime);
+  auto selfHandle = runtime.makeHandle(std::move(self));
+  initializeMissingPropertyMap(selfHandle, runtime);
+
+  auto *propMap = selfHandle->propertyMap_.getNonNull(runtime);
   {
     // propMap is a raw pointer.  We assume that find does no allocation.
     NoAllocScope noAlloc(runtime);

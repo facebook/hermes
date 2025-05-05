@@ -375,7 +375,7 @@ class HiddenClass final : public GCCell {
   ///   property with these precise flags. If found in the transition table,
   ///   we don't need to create a property map.
   /// \return the "position" of the property, if found.
-  static OptValue<PropertyPos> findProperty(
+  static inline OptValue<PropertyPos> findProperty(
       PseudoHandle<HiddenClass> self,
       Runtime &runtime,
       SymbolID name,
@@ -517,6 +517,15 @@ class HiddenClass final : public GCCell {
       Runtime &runtime,
       bool noCache = false);
 
+  /// Like findProperty, but for the case where we know that propertyMap_ is
+  /// null. This serves as the out-of-line slow path for findProperty.
+  static OptValue<PropertyPos> findPropertyNoMap(
+      PseudoHandle<HiddenClass> self,
+      Runtime &runtime,
+      SymbolID name,
+      PropertyFlags expectedFlags,
+      NamedPropertyDescriptor &desc);
+
   /// Add a new property pair (\p name and \p desc) to the property map (which
   /// must have been initialized).
   static ExecutionStatus addToPropertyMap(
@@ -654,6 +663,32 @@ inline ClassFlags HiddenClass::computeFlags(
   // has been set, all subsequent classes must have this property marked.
   flags.mayHaveAccessor |= pf.accessor;
   return flags;
+}
+
+inline OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
+    PseudoHandle<HiddenClass> self,
+    Runtime &runtime,
+    SymbolID name,
+    PropertyFlags expectedFlags,
+    NamedPropertyDescriptor &desc) {
+  if (LLVM_UNLIKELY(!self->propertyMap_)) {
+    return findPropertyNoMap(
+        std::move(self), runtime, name, expectedFlags, desc);
+  }
+
+  auto *propMap = self->propertyMap_.getNonNull(runtime);
+  {
+    // propMap is a raw pointer.  We assume that find does no allocation.
+    NoAllocScope noAlloc(runtime);
+    auto found = DictPropertyMap::find(propMap, name);
+    if (!found)
+      return llvh::None;
+    // Technically, the last use of propMap occurs before the call here, so
+    // it would be legal for the call to allocate.  If that were ever the case,
+    // we would move "found" out of scope, and terminate the NoAllocScope here.
+    desc = DictPropertyMap::getDescriptorPair(propMap, *found)->second;
+    return *found;
+  }
 }
 
 } // namespace vm
