@@ -18,6 +18,8 @@
 #include "llvh/ADT/SetOperations.h"
 #include "llvh/Support/Debug.h"
 
+STATISTIC(NumRedundantStores, "Redundant stores eliminated");
+
 /// This pass tries to deduplicate loads and delete unobservable stores to frame
 /// variables.
 ///
@@ -258,6 +260,7 @@ class FunctionLoadStoreOptimizer {
         if (!inserted) {
           // There is a previous store, if it was to the same scope, delete it.
           if (it->second->getScope() == SF->getScope()) {
+            NumRedundantStores++;
             destroyer.add(it->second);
             changed = true;
           }
