@@ -1255,12 +1255,11 @@ static CallResult<HermesValue> arrayPrototypePushFastPath(
     JSArray::unsafeSetExistingElementAt(*arr, runtime, i + len, shv);
   }
 
-  if (LLVM_UNLIKELY(
-          JSArray::setLengthProperty(
-              arr, runtime, finalLen, PropOpFlags().plusThrowOnError()) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+  auto shv = SmallHermesValue::encodeNumberValue(finalLen, runtime);
+  // Since we have already checked that the hidden class is unchanged, and
+  // updated the storage end index, we can just directly store the new length to
+  // the corresponding slot in the JSArray.
+  JSArray::putLengthUnsafe(*arr, runtime, shv);
 
   return HermesValue::encodeTrustedNumberValue(finalLen);
 }

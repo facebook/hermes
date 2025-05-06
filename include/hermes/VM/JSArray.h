@@ -376,13 +376,15 @@ class JSArray final : public ArrayImpl {
       NeedsBarrier needsBarrier)
       : ArrayImpl(runtime, *parent, *clazz, needsBarrier) {}
 
- private:
-  /// A helper to update the named '.length' property.
+  /// Write \p newLength directly to the length property of the array. The
+  /// caller must have already checked that the length is writable, and that the
+  /// end index does not need to be updated.
   static void
-  putLength(JSArray *self, Runtime &runtime, SmallHermesValue newLength) {
+  putLengthUnsafe(JSArray *self, Runtime &runtime, SmallHermesValue newLength) {
     setDirectSlotValue<lengthPropIndex()>(self, newLength, runtime.getHeap());
   }
 
+ private:
   /// Update the JavaScript '.length' property, which also resizes the array.
   /// The writability of the property \b MUST already have been checked.
   /// If not sure, use \c putNamed().

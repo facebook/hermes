@@ -581,7 +581,7 @@ CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
         runtime, vmcast<StorageType>(*arrRes), runtime.getHeap());
   }
   auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
-  putLength(lv.self.get(), runtime, shv);
+  putLengthUnsafe(lv.self.get(), runtime, shv);
 
   return PseudoHandle<JSArray>::create(*lv.self);
 }
@@ -682,7 +682,9 @@ CallResult<bool> JSArray::setLength(
   const auto currentLength = getLength(*selfHandle, runtime);
   if (LLVM_LIKELY(newLength >= currentLength)) {
     auto shv = SmallHermesValue::encodeNumberValue(newLength, runtime);
-    putLength(*selfHandle, runtime, shv);
+    // The caller must have already checked that the length property is
+    // writable, so we can just write directly to it.
+    putLengthUnsafe(*selfHandle, runtime, shv);
     return true;
   }
 
@@ -777,7 +779,7 @@ CallResult<bool> JSArray::setLength(
     }
   }
   auto shv = SmallHermesValue::encodeNumberValue(adjustedLength, runtime);
-  putLength(*selfHandle, runtime, shv);
+  putLengthUnsafe(*selfHandle, runtime, shv);
 
   if (adjustedLength != newLength) {
     if (opFlags.getThrowOnError()) {
