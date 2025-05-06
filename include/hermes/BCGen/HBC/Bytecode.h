@@ -235,6 +235,9 @@ class BytecodeModule {
   /// RuntimeModules in a Domain).
   uint32_t segmentID_;
 
+  /// The number of StringSwitchImm instructions in the BytecodeModule.
+  uint32_t numStringSwitchImm_{0};
+
   /// Table which indicates where to find the different CommonJS modules.
   /// Mapping from {filename ID => function index}.
   std::vector<std::pair<uint32_t, uint32_t>> cjsModuleTable_{};
@@ -398,6 +401,17 @@ class BytecodeModule {
   }
   uint32_t getSegmentID() const {
     return segmentID_;
+  }
+
+  /// Returns the total number of StringSwitchImm instructions in the module.
+  uint32_t getNumStringSwitchImmInstrs() const {
+    return numStringSwitchImm_;
+  }
+  /// Notes that a new StringSwitchImm instruction has been created.
+  /// Counts the number created, returning a unique 0-based index for
+  /// each such instruction.
+  uint32_t addStringSwitchImmInstr() {
+    return numStringSwitchImm_++;
   }
 
   void addCJSModule(uint32_t functionID, uint32_t nameID) {

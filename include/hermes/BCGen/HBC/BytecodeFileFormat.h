@@ -430,6 +430,25 @@ struct DebugFileRegion {
 
 LLVM_PACKED_END
 
+/// The information for a case in a string switch table.  (Note:
+/// instances of this in the bytecode file are always aligned to the
+/// struct's alignment, and thus don't need to be packed.)
+struct StringSwitchTableCase {
+  /// Index in the string table of the string case label.
+  uint32_t caseLabelStringID;
+  /// target to branch to for the case.
+  int32_t target;
+
+  StringSwitchTableCase(uint32_t caseLabelStringID, int32_t target)
+      : caseLabelStringID(caseLabelStringID), target(target) {}
+};
+
+/// A function may have jump tables and/or string switch tables appended.
+/// If both are present, the jump table comes first.  We add padding to
+/// ensure that the first table, of whichever kind, is aligned.  Therefore,
+/// the alignment constraint of both tables must be the same.
+static_assert(alignof(StringSwitchTableCase) == sizeof(uint32_t));
+
 /// Visit each segment in a bytecode file in order.
 /// This function defines the order of the bytecode file segments.
 template <typename Visitor>

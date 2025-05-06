@@ -155,6 +155,13 @@ class BytecodeModuleGenerator {
     bm_.setGlobalFunctionIndex(index);
   }
 
+  /// Notes that a new StringSwitchImm instruction has been created.
+  /// Counts the number created, returning a unique 0-based index for
+  /// each such instruction.
+  uint32_t addStringSwitchImmInstr() {
+    return bm_.addStringSwitchImmInstr();
+  }
+
   /// \returns the index of the string in this module's string table if it
   /// exists.  If the string does not exist will trigger an assertion failure
   /// if assertions are enabled.
@@ -313,9 +320,14 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   uint8_t numCacheNewObject_{0};
 
   /// The jump table for this function (if any)
-  /// this vector consists of jump table for each SwitchImm instruction,
+  /// this vector consists of jump table for each UIntSwitchImm instruction,
   /// laid out sequentially. Each entry is a relative jump.
   std::vector<uint32_t> jumpTable_{};
+
+  /// The string switch table for this function (if any).
+  /// this vector consists of the string switch tables for each StringSwitchImm
+  /// instruction, laid out sequentially.
+  std::vector<StringSwitchTableCase> stringSwitchTable_{};
 
   explicit BytecodeFunctionGenerator(
       BytecodeModuleGenerator &BMGen,
@@ -483,14 +495,13 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// with \p newVal.
   void updateJumpTarget(offset_t loc, int newVal, int bytes);
 
-  /// Update the jump table offset of a SwitchImm instruction during
+  /// Update the jump/switch table offset of a SwitchImm instruction during
   /// jump relocation.
   /// \param loc location of the instruction
-  /// \param jumpTableOffset the offset into the jump table;
-  /// \param ip offset will be computed relative to this position in bytecode
-  ///   vector.
-  void
-  updateJumpTableOffset(offset_t loc, uint32_t jumpTableOffset, uint32_t cs);
+  /// \param tableOffset offset of the location to be updated in table section.
+  /// \param instLoc offset will be computed relative to this position in
+  ///   bytecode vector.
+  void updateTableOffset(offset_t loc, uint32_t tableOffset, uint32_t instLoc);
 
   /// Change the opcode of a long jump instruction into a short jump.
   inline void longToShortJump(offset_t loc) {
@@ -556,6 +567,22 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
     assert(!jumpTable.empty() && "invoked with no jump table");
 
     jumpTable_ = std::move(jumpTable);
+  }
+
+  /// The size of the jump table.
+  size_t jumpTableSize() const {
+    return jumpTable_.size();
+  }
+
+  /// Set the string switch table for this function, if any.
+  void setStringSwitchTable(
+      std::vector<StringSwitchTableCase> &&stringSwitchTable) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    assert(!stringSwitchTable.empty() && "invoked with no string switch table");
+
+    stringSwitchTable_ = std::move(stringSwitchTable);
   }
 
   /// Signal that bytecode generation is finalized.

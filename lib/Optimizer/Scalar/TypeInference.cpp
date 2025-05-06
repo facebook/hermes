@@ -748,6 +748,9 @@ class TypeInferenceImpl {
   Type inferUIntSwitchImmInst(UIntSwitchImmInst *inst) {
     return Type::createNoType();
   }
+  Type inferStringSwitchImmInst(StringSwitchImmInst *inst) {
+    return Type::createNoType();
+  }
   Type inferSaveAndYieldInst(SaveAndYieldInst *inst) {
     return Type::createNoType();
   }

@@ -3013,6 +3013,9 @@ tailCall:
         ip = IPADD(ip->iUIntSwitchImm.op3);
         DISPATCH;
       }
+      CASE(StringSwitchImm) {
+        hermes_fatal("StringSwitchImm instruction not yet implemented.");
+      }
       LOAD_CONST(
           LoadConstUInt8,
           HermesValue::encodeTrustedNumberValue(ip->iLoadConstUInt8.op2));

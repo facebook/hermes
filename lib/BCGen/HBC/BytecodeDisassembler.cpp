@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 
+#include "BytecodeGenerator.h"
 #include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
@@ -463,6 +464,35 @@ void switchJumpTableForEach(const inst::Inst *inst, F f) {
       (const uint8_t *)inst + jumpTargetOffset);
   }
 }
+
+template <typename F>
+void stringSwitchTableForEach(const inst::Inst *inst, F f) {
+  assert(
+      inst->opCode == inst::OpCode::StringSwitchImm &&
+      "expected StringSwitchImm");
+  unsigned size = inst->iStringSwitchImm.op5;
+  /// Get the current StringSwitchImm instruction's subview [start,
+  /// end] start pointer from primary string switch table. This is the
+  /// same computation done by the interpreter to figure out the start
+  /// of the jump table view.
+  const auto *curStringSwitchTableView =
+      reinterpret_cast<const StringSwitchTableCase *>(llvh::alignAddr(
+          (const uint8_t *)inst + inst->iStringSwitchImm.op3,
+          alignof(StringSwitchTableCase)));
+
+  for (unsigned curStringSwitchTableViewOffset = 0;
+       curStringSwitchTableViewOffset < size;
+       curStringSwitchTableViewOffset++) {
+    const StringSwitchTableCase &stringSwitchCase =
+        curStringSwitchTableView[curStringSwitchTableViewOffset];
+
+    f(curStringSwitchTableViewOffset,
+      stringSwitchCase.target,
+      stringSwitchCase.caseLabelStringID,
+      (const uint8_t *)inst + stringSwitchCase.target);
+  }
+}
+
 } // namespace
 
 void BytecodeVisitor::visitInstructionsInFunction(unsigned funcId) {
@@ -491,12 +521,24 @@ void BytecodeVisitor::visitInstructionsInBody(
     preVisitInstruction(md.opCode, ip, instLength);
 
     // Visit branch targets of the SwitchImm instructions.
-    if (op == OpCode::UIntSwitchImm && visitSwitchImmTargets) {
-      switchJumpTableForEach(
-          (inst::Inst const *)ip,
-          [this](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
-            this->visitSwitchImmTargets(jmpIdx, offset, dest);
-          });
+    if (visitSwitchImmTargets) {
+      if (op == OpCode::UIntSwitchImm) {
+        switchJumpTableForEach(
+            (inst::Inst const *)ip,
+            [this](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
+              this->visitSwitchImmTargets(jmpIdx, offset, dest);
+            });
+      } else if (op == OpCode::StringSwitchImm) {
+        stringSwitchTableForEach(
+            (inst::Inst const *)ip,
+            [this](
+                uint32_t jmpIdx,
+                int32_t offset,
+                StringID label,
+                const uint8_t *dest) {
+              this->visitSwitchImmTargets(jmpIdx, offset, dest);
+            });
+      }
     }
 
     const uint8_t *operandBuf = ip + sizeof(op);
@@ -617,6 +659,10 @@ void JumpTargetsVisitor::preVisitInstruction(
     case OpCode::UIntSwitchImm:
       // Decode jump table of UIntSwitchImm instruction.
       uintSwitchImmInsts_.push_back((inst::Inst const *)ip);
+      break;
+    case OpCode::StringSwitchImm:
+      // Decode string switch table of StringSwitchImm instruction.
+      stringSwitchImmInsts_.push_back((inst::Inst const *)ip);
       break;
 
     case OpCode::Ret:
@@ -845,15 +891,24 @@ class DisassembleVisitor : public BytecodeVisitor {
  private:
   raw_ostream &os_;
   std::vector<inst::Inst const *> uintSwitchImmInsts_{};
+  std::vector<inst::Inst const *> stringSwitchImmInsts_{};
 
  protected:
   void preVisitInstruction(OpCode opcode, const uint8_t *ip, int length) {
     int offset = ip - bcProvider_->getBytecode(funcId_);
     assert(offset >= 0);
     os_ << "[@ " << offset << "] " << getOpCodeString(opcode);
-    if (opcode == OpCode::UIntSwitchImm) {
-      const inst::Inst *inst = (inst::Inst const *)ip;
-      uintSwitchImmInsts_.push_back(inst);
+    switch (opcode) {
+      case OpCode::UIntSwitchImm: {
+        uintSwitchImmInsts_.push_back((inst::Inst const *)ip);
+        break;
+      }
+      case OpCode::StringSwitchImm: {
+        stringSwitchImmInsts_.push_back((inst::Inst const *)ip);
+        break;
+      }
+      default:
+        break;
     }
   }
 
@@ -894,6 +949,9 @@ class DisassembleVisitor : public BytecodeVisitor {
 
   std::vector<inst::Inst const *> &getUIntSwitchImmInstructions() {
     return uintSwitchImmInsts_;
+  }
+  std::vector<inst::Inst const *> &getStringSwitchImmInstructions() {
+    return stringSwitchImmInsts_;
   }
 };
 
@@ -1058,7 +1116,23 @@ void BytecodeDisassembler::disassembleFunctionPretty(
           });
     }
   }
-
+  auto stringSwitchImmInsts = jumpVisitor.getStringSwitchImmInstructions();
+  if (!stringSwitchImmInsts.empty()) {
+    OS << "\n " << "String Switch Tables: \n";
+    for (auto *inst : stringSwitchImmInsts) {
+      OS << "  " << "offset " << inst->iStringSwitchImm.op3 << "\n";
+      stringSwitchTableForEach(
+          inst,
+          [&](uint32_t idx,
+              int32_t offset,
+              StringID label,
+              const uint8_t *dest) {
+            OS << "   ";
+            disassembleVisitor.dumpOperandString(label, OS);
+            OS << " : " << "L" << jumpTargets[dest] << "\n";
+          });
+    }
+  }
   OS << "\n";
   disassembleExceptionHandlersPretty(funcId, jumpTargets, OS);
 }
@@ -1070,14 +1144,32 @@ void BytecodeDisassembler::disassembleFunctionRaw(
   disassembleVisitor.visitInstructionsInFunction(funcId);
 
   // Print out switch jump tables, if any.
-  auto &uintSwitchInsts = disassembleVisitor.getUIntSwitchImmInstructions();
-  if (!uintSwitchInsts.empty()) {
+  auto &uintSwitchImmInsts = disassembleVisitor.getUIntSwitchImmInstructions();
+  if (!uintSwitchImmInsts.empty()) {
     OS << "\n " << "Jump Tables: \n";
-    for (auto *inst : uintSwitchInsts) {
+    for (auto *inst : uintSwitchImmInsts) {
       OS << "  " << "offset " << inst->iUIntSwitchImm.op2 << "\n";
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
             OS << "   " << jmpIdx << " : " << offset << "\n";
+          });
+    }
+  }
+
+  // Print out switch jump tables, if any.
+  auto &stringSwitchImmInsts =
+      disassembleVisitor.getStringSwitchImmInstructions();
+  if (!stringSwitchImmInsts.empty()) {
+    OS << "\n " << "String switch Tables: \n";
+    for (auto *inst : stringSwitchImmInsts) {
+      OS << "  " << "offset " << inst->iStringSwitchImm.op3 << "\n";
+      stringSwitchTableForEach(
+          inst,
+          [&](uint32_t idx,
+              int32_t offset,
+              StringID caseLabel,
+              const uint8_t *dest) {
+            OS << "   " << idx << " : " << offset << "\n";
           });
     }
   }

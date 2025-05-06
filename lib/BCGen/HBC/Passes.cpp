@@ -15,10 +15,13 @@
 #include "hermes/BCGen/MovElimination.h"
 #include "hermes/BCGen/RegAlloc.h"
 #include "hermes/IR/IRUtils.h"
+#include "hermes/Support/Statistic.h"
 
 #include "llvh/ADT/SetVector.h"
 
 #define DEBUG_TYPE "hbc-backend"
+
+STATISTIC(StringSwitchImmInstrs, "Number of StringSwitchImm instructions");
 
 namespace hermes {
 namespace hbc {
@@ -827,6 +830,10 @@ bool SpillRegisters::runOnFunction(Function *F) {
 }
 
 bool LowerSwitchIntoJumpTables::runOnFunction(Function *F) {
+  TEMP_enableStringSwitchImm_ = F->getParent()
+                                    ->getContext()
+                                    .getCodeGenerationSettings()
+                                    .TEMP_enableStringSwitchImm;
   bool changed = false;
   llvh::SmallVector<SwitchInst *, 4> switches;
   // Collect all switch instructions.
@@ -854,58 +861,104 @@ bool LowerSwitchIntoJumpTables::lowerIntoJumpTable(SwitchInst *switchInst) {
   uint32_t minValue = 0;
   uint32_t maxValue = 0;
 
-  llvh::SmallVector<LiteralNumber *, 8> values;
+  bool allUInt32 = true;
+  llvh::SmallVector<LiteralNumber *, 8> uint32Values;
+  bool allString = true;
+  llvh::SmallVector<LiteralString *, 8> stringValues;
   llvh::SmallVector<BasicBlock *, 8> blocks;
 
   for (unsigned i = 0; i != numCases; ++i) {
     auto casePair = switchInst->getCasePair(i);
     auto *lit = casePair.first;
-    auto *num = llvh::dyn_cast<LiteralNumber>(lit);
-    if (!num)
-      return false;
+    if (allUInt32) {
+      auto *num = llvh::dyn_cast<LiteralNumber>(lit);
+      if (num) {
+        // Check whether it is representable as uint32.
+        if (auto ival = num->isIntTypeRepresentible<uint32_t>()) {
+          uint32Values.push_back(num);
+          blocks.push_back(casePair.second);
 
-    // Check whether it is representable as uint32.
-    if (auto ival = num->isIntTypeRepresentible<uint32_t>()) {
-      values.push_back(num);
-      blocks.push_back(casePair.second);
-
-      if (i == 0) {
-        minValue = maxValue = ival.getValue();
+          if (i == 0) {
+            minValue = maxValue = ival.getValue();
+          } else {
+            minValue = std::min(minValue, ival.getValue());
+            maxValue = std::max(maxValue, ival.getValue());
+          }
+        } else {
+          allUInt32 = false;
+        }
       } else {
-        minValue = std::min(minValue, ival.getValue());
-        maxValue = std::max(maxValue, ival.getValue());
+        allUInt32 = false;
       }
-    } else {
+    }
+
+    if (allString) {
+      if (auto *str = llvh::dyn_cast<LiteralString>(lit)) {
+        stringValues.push_back(str);
+        blocks.push_back(casePair.second);
+      } else {
+        allString = false;
+      }
+    }
+
+    if (!allString && !allUInt32) {
       return false;
     }
   }
+  assert(
+      (allString ^ allUInt32) &&
+      "Should be exactly one of all-string or all-uint32");
 
-  assert(minValue <= maxValue && "Minimum cannot exceed maximum");
-  uint32_t range = maxValue - minValue;
-  // We can't generate a table for a zero-sized range.
-  if (range == 0)
-    return false;
+  if (allUInt32) {
+    assert(minValue <= maxValue && "Minimum cannot exceed maximum");
+    uint32_t range = maxValue - minValue;
+    // We can't generate a table for a zero-sized range.
+    if (range == 0)
+      return false;
 
-  // The number of cases is range + 1, which must fit in a uint32.
-  if (range == std::numeric_limits<uint32_t>::max())
-    return false;
+    // The number of cases is range + 1, which must fit in a uint32.
+    if (range == std::numeric_limits<uint32_t>::max())
+      return false;
 
-  // Check the "denseness" of the cases.
-  // Don't convert small switches.
-  if (range / numCases > 5 || numCases < 10)
-    return false;
+    // Check the "denseness" of the cases.
+    // Don't convert small switches.
+    if (range / numCases > 5 || numCases < 10)
+      return false;
 
-  builder.setInsertionPoint(switchInst);
-  auto *uintSwitchImmInst = builder.createUIntSwitchImmInst(
-      switchInst->getInputValue(),
-      switchInst->getDefaultDestination(),
-      builder.getLiteralNumber(minValue),
-      builder.getLiteralNumber(range + 1),
-      values,
-      blocks);
+    builder.setInsertionPoint(switchInst);
+    auto *uintSwitchImmInst = builder.createUIntSwitchImmInst(
+        switchInst->getInputValue(),
+        switchInst->getDefaultDestination(),
+        builder.getLiteralNumber(minValue),
+        builder.getLiteralNumber(range + 1),
+        uint32Values,
+        blocks);
 
-  switchInst->replaceAllUsesWith(uintSwitchImmInst);
-  switchInst->eraseFromParent();
+    switchInst->replaceAllUsesWith(uintSwitchImmInst);
+    switchInst->eraseFromParent();
+  } else if (TEMP_enableStringSwitchImm_) {
+    // For now, generation of StringSwitchImm is gated by a flag.
+    // This will be removed in the next diff, which implements the
+    // bytecode instruction in the runtime.
+    assert(allString && "See above -- must be one of the choices.");
+
+    // Don't convert small switches.
+    if (stringValues.size() < 10)
+      return false;
+
+    builder.setInsertionPoint(switchInst);
+    auto *strSwitchImmInst = builder.createStringSwitchImmInst(
+        switchInst->getInputValue(),
+        switchInst->getDefaultDestination(),
+        builder.getLiteralNumber(stringValues.size()),
+        stringValues,
+        blocks);
+
+    StringSwitchImmInstrs++;
+
+    switchInst->replaceAllUsesWith(strSwitchImmInst);
+    switchInst->eraseFromParent();
+  }
   return true;
 }
 

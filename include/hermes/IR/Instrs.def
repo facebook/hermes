@@ -204,6 +204,7 @@ END_VALUE(HBCFCompareBranchInst)
 
 BEGIN_TERMINATOR(BaseSwitchImmInst, TerminatorInst)
 DEF_VALUE(UIntSwitchImmInst, BaseSwitchImmInst)
+DEF_VALUE(StringSwitchImmInst, BaseSwitchImmInst)
 END_TERMINATOR(BaseSwitchImmInst)
 
 TERMINATOR(SaveAndYieldInst, TerminatorInst)

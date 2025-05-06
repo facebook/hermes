@@ -831,9 +831,9 @@ OPERAND_STRING_ID(CreateRegExp, 3)
 /// input or to the default block if out of range (or not right type)
 /// Arg 1 is the value to be branched upon
 /// Arg 2 is the relative offset of the jump table to be used by this
-/// instruction. Jump tables are appended to the bytecode. Arg 3 is the relative
-/// offset for the "default" jump. Arg 4 is the unsigned min value, if arg 1 is
-/// less than this value jmp to
+///   instruction. Jump tables are appended to the bytecode.
+/// Arg 3 is the relative offset for the "default" jump.
+/// Arg 4 is the unsigned min value, if arg 1 is/ less than this value jmp to
 ///   default block
 /// Arg 5 is the unsigned max value, if arg 1 is greater than this value jmp to
 ///   default block.
@@ -843,6 +843,21 @@ OPERAND_STRING_ID(CreateRegExp, 3)
 /// wasting space when compiling denses switches that do not start at zero. Note
 /// that Arg2 is *unaligned* it is dynamically aligned at runtime.
 DEFINE_OPCODE_5(UIntSwitchImm, Reg8, UInt32, Addr32, UInt32, UInt32)
+
+/// All-string switch (switch all of whose case labels are string literals).
+/// Arg 1 is the value to be branched upon
+/// Arg 2 is a global index for this StringSwitchImm instruction in the
+/// bytecode file.
+/// Arg 3 is the relative offset of the string switch table.  A string switch
+///   table is a sequence of pairs:
+///   <UInt32 string table index, UInt32 jump targets>
+/// Arg 4 is the relative offset for the "default" jump.
+/// Arg 5 is the size of the string switch table.
+///
+/// Given the above, the jump table entry for a given value (that is in range)
+/// is located at offset ip + arg3.  Note that Arg3 is *unaligned*; it is
+/// dynamically aligned at runtime.
+DEFINE_OPCODE_5(StringSwitchImm, Reg8, UInt32, UInt32, Addr32, UInt32)
 
 /// Create a generator.
 /// Arg1 is the register in which to store the generator.

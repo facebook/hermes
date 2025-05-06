@@ -186,36 +186,50 @@ void BytecodeFunctionGenerator::updateJumpTarget(
   }
 }
 
-void BytecodeFunctionGenerator::updateJumpTableOffset(
+void BytecodeFunctionGenerator::updateTableOffset(
     offset_t loc,
-    uint32_t jumpTableOffset,
+    uint32_t tableOffset,
     uint32_t instLoc) {
   assert(opcodes_.size() > instLoc && "invalid switchimm offset");
 
   // The offset is not aligned, but will be aligned when read in the
   // interpreter.
   updateJumpTarget(
-      loc,
-      opcodes_.size() + jumpTableOffset * sizeof(uint32_t) - instLoc,
-      sizeof(uint32_t));
+      loc, opcodes_.size() + tableOffset - instLoc, sizeof(uint32_t));
 }
 
 void BytecodeFunctionGenerator::bytecodeGenerationComplete() {
   assert(!complete_ && "Can only call bytecodeGenerationComplete once");
   complete_ = true;
   bytecodeSize_ = opcodes_.size();
-
   // Add the jump tables inline with the opcodes, as a 4-byte aligned section at
   // the end of the opcode array.
+  uint32_t alignedOpcodes = llvh::alignTo<sizeof(uint32_t)>(bytecodeSize_);
+  // The alignment constraints of jump tables and string switch tables are the
+  // same:
+  static_assert(alignof(StringSwitchTableCase) == sizeof(uint32_t));
+  uint32_t stringSwitchTableStart = alignedOpcodes;
   if (!jumpTable_.empty()) {
-    uint32_t alignedOpcodes = llvh::alignTo<sizeof(uint32_t)>(bytecodeSize_);
     uint32_t jumpTableBytes = jumpTable_.size() * sizeof(uint32_t);
+    stringSwitchTableStart += jumpTableBytes;
     opcodes_.reserve(alignedOpcodes + jumpTableBytes);
     opcodes_.resize(alignedOpcodes, 0);
     const opcode_atom_t *jumpTableStart =
         reinterpret_cast<opcode_atom_t *>(jumpTable_.data());
     opcodes_.insert(
         opcodes_.end(), jumpTableStart, jumpTableStart + jumpTableBytes);
+  }
+  if (!stringSwitchTable_.empty()) {
+    uint32_t stringSwitchTableBytes =
+        stringSwitchTable_.size() * sizeof(StringSwitchTableCase);
+    opcodes_.reserve(stringSwitchTableStart + stringSwitchTableBytes);
+    opcodes_.resize(stringSwitchTableStart, 0);
+    const opcode_atom_t *stringSwitchTableStart =
+        reinterpret_cast<opcode_atom_t *>(stringSwitchTable_.data());
+    opcodes_.insert(
+        opcodes_.end(),
+        stringSwitchTableStart,
+        stringSwitchTableStart + stringSwitchTableBytes);
   }
 }
 

@@ -88,7 +88,8 @@ class BytecodeVisitor {
   postVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length) {}
 
   /// Called while decoding tables containing jump offsets associated with
-  /// SwitchImm instructions, such as the UIntSwitchImm instruction.
+  /// SwitchImm instructions, such as the UIntSwitchImm or StringSwitchImm
+  /// instructions.
   /// \p idx: index into the switch's table.
   /// \p offset: switch branch's offset relative to current ip.
   /// \p dest: pointer to current switch branch target.
@@ -134,6 +135,8 @@ class JumpTargetsVisitor : public BytecodeVisitor {
   // Remember all SwitchImm so we can loop through their associated jump tables.
   // These are the UIntSwitchImm instructions.
   std::vector<inst::Inst const *> uintSwitchImmInsts_{};
+  // These are the StringSwitchImm instructions.
+  std::vector<inst::Inst const *> stringSwitchImmInsts_{};
   // Maps from jump_target_ip => label_number.
   JumpTargetsTy jumpTargets_{};
 
@@ -176,6 +179,9 @@ class JumpTargetsVisitor : public BytecodeVisitor {
   llvh::ArrayRef<inst::Inst const *> getUIntSwitchImmInstructions() {
     return uintSwitchImmInsts_;
   }
+  llvh::ArrayRef<inst::Inst const *> getStringSwitchImmInstructions() {
+    return stringSwitchImmInsts_;
+  }
 };
 
 /// Visitor to disassemble a function in pretty mode:
@@ -194,11 +200,6 @@ class PrettyDisassembleVisitor : public BytecodeVisitor {
   DisassemblyOptions options_;
 
  private:
-  /// Dump a string table entry referenced by an opcode operand. It is truncated
-  /// to about 16 characters (by appending "...") and all non-ASCII values are
-  /// escaped.
-  void dumpOperandString(StringID stringID, raw_ostream &OS);
-
   /// Dump the bigint table entry referenced by an opcode operand. It is
   /// truncated to about 8 uint8_t (by appending "...") at the end.
   void dumpOperandBigInt(BigIntID bigintID, raw_ostream &OS);
@@ -239,6 +240,11 @@ class PrettyDisassembleVisitor : public BytecodeVisitor {
   JumpTargetsTy &getJumpTargets() {
     return jumpTargets_;
   }
+
+  /// Dump a string table entry referenced by an opcode operand. It is truncated
+  /// to about 16 characters (by appending "...") and all non-ASCII values are
+  /// escaped.
+  void dumpOperandString(StringID stringID, raw_ostream &OS);
 };
 
 class BytecodeSectionWalker {

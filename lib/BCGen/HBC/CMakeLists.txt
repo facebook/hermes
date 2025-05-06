@@ -8,7 +8,7 @@ add_hermes_library(hermesHBCBackend
   ISel.cpp ISel.h
   Bytecode.cpp
   BytecodeStream.cpp
-  BytecodeGenerator.cpp
+  BytecodeGenerator.cpp BytecodeGenerator.h
   BCProvider.cpp
   BCProviderFromSrc.cpp
   BytecodeDisassembler.cpp

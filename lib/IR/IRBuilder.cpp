@@ -1007,6 +1007,18 @@ UIntSwitchImmInst *IRBuilder::createUIntSwitchImmInst(
   return inst;
 }
 
+StringSwitchImmInst *IRBuilder::createStringSwitchImmInst(
+    Value *input,
+    BasicBlock *defaultBlock,
+    LiteralNumber *size,
+    const StringSwitchImmInst::ValueListType &values,
+    const StringSwitchImmInst::BasicBlockListType &blocks) {
+  auto inst =
+      new StringSwitchImmInst(input, defaultBlock, size, values, blocks);
+  insert(inst);
+  return inst;
+}
+
 DirectEvalInst *IRBuilder::createDirectEvalInst(
     Value *evalText,
     bool strictCaller) {

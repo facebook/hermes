@@ -1368,6 +1368,13 @@ bool Verifier::visitUIntSwitchImmInst(const hermes::UIntSwitchImmInst &Inst) {
   return true;
 }
 
+bool Verifier::visitStringSwitchImmInst(
+    const hermes::StringSwitchImmInst &Inst) {
+  ReturnIfNot(visitSwitchLikeInst(Inst));
+  // No checking of the cases is necessary for string switches.
+  return true;
+}
+
 bool Verifier::visitDebuggerInst(DebuggerInst const &Inst) {
   // Nothing to verify at this point.
   return true;

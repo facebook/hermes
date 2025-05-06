@@ -50,6 +50,9 @@ struct CodeGenerationSettings {
   StringSetVector noDumpFunctions;
   // Time the optimizer by phases.
   bool timeCompiler{false};
+  // TEMPORARY: will be deleted in next diff in stack.  So we can test
+  // StringSwitch codegen before we implement it in the interpreter.
+  bool TEMP_enableStringSwitchImm{false};
 };
 
 struct OptimizationSettings {

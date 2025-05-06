@@ -413,6 +413,27 @@ UIntSwitchImmInst::UIntSwitchImmInst(
   }
 }
 
+StringSwitchImmInst::StringSwitchImmInst(
+    Value *input,
+    BasicBlock *defaultBlock,
+    LiteralNumber *size,
+    const ValueListType &values,
+    const BasicBlockListType &blocks)
+    : BaseSwitchImmInst(
+          ValueKind::StringSwitchImmInstKind,
+          input,
+          defaultBlock,
+          size) {
+  assert(blocks.size() && "Empty switch statement (no cases?)");
+  assert(values.size() == blocks.size() && "Block-value pairs mismatch");
+
+  // Push the switch targets.
+  for (size_t i = 0, e = values.size(); i < e; ++i) {
+    pushOperand(values[i]);
+    pushOperand(blocks[i]);
+  }
+}
+
 BasicBlock *BaseSwitchImmInst::getSuccessorImpl(unsigned idx) const {
   assert(idx < getNumSuccessorsImpl() && "getSuccessor out of bound!");
   if (idx == 0)

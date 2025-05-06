@@ -92,6 +92,8 @@ class HBCISel {
       DebugInfo,
       // Jump table dispatch
       JumpTableDispatch,
+      // String switch table dispatch
+      StringSwitchDispatch,
     };
 
     /// The current location of this relocation.
@@ -118,6 +120,26 @@ class HBCISel {
     /// The i'th index indicates which basic block should be jumped to for value
     /// i
     std::vector<BasicBlock *> table;
+  };
+
+  /// Info for a case of an all-string-case switch statement.
+  struct StringSwitchCase {
+    StringID label;
+    BasicBlock *target;
+  };
+
+  /// Info about a StringSwitchImm instruction, for use during jump relocation.
+  struct StringSwitchImmInfo {
+    /// Offset of the instruction
+    uint32_t offset;
+
+    /// Block to jump to when no matching case is found.
+    BasicBlock *defaultTarget;
+
+    /// The actual string switch table.
+    /// The i'th index is a pair of the string label and basic block should be
+    /// jumped to for the ith case.
+    std::vector<StringSwitchCase> table;
   };
 
   /// The function that we are compiling.
@@ -152,8 +174,16 @@ class HBCISel {
 
   /// Map from UIntSwitchImm -> (inst offset, default block, jump table).
   llvh::DenseMap<UIntSwitchImmInst *, UIntSwitchImmInfo> uintSwitchImmInfo_{};
-  using switchInfoEntry = llvh::
+  using uintSwitchInfoEntry = llvh::
       DenseMap<UIntSwitchImmInst *, UIntSwitchImmInfo>::iterator::value_type;
+
+  /// Map from StringSwitchImm -> (inst offset, default block, string switch
+  /// table).
+  llvh::DenseMap<StringSwitchImmInst *, StringSwitchImmInfo>
+      stringSwitchImmInfo_{};
+  using stringSwitchInfoEntry =
+      llvh::DenseMap<StringSwitchImmInst *, StringSwitchImmInfo>::iterator::
+          value_type;
 
   /// Saved identifier of "__proto__" for fast comparisons.
   Identifier protoIdent_{};
@@ -172,11 +202,17 @@ class HBCISel {
   /// Add a UIntSwitchImm (jump table) switch to relocation list.
   void registerUIntSwitchImm(offset_t loc, UIntSwitchImmInst *target);
 
+  /// Add a StringSwitchImm (string switch table) switch to relocation list.
+  void registerStringSwitchImm(offset_t loc, StringSwitchImmInst *target);
+
   /// Resolve all exception handlers.
   void resolveExceptionHandlers();
 
   /// Generate the jump table into the final representation.
   void generateJumpTable();
+
+  /// Generate the string switch table into the final representation.
+  void generateStringSwitchTable();
 
   /// Conveniently extract file/line/column from a SMLoc.
   /// Associate the source map script ID with the filename ID in the Module.
@@ -314,6 +350,11 @@ void HBCISel::registerUIntSwitchImm(offset_t loc, UIntSwitchImmInst *inst) {
       {loc, Relocation::RelocationType::JumpTableDispatch, inst});
 }
 
+void HBCISel::registerStringSwitchImm(offset_t loc, StringSwitchImmInst *inst) {
+  relocations_.push_back(
+      {loc, Relocation::RelocationType::StringSwitchDispatch, inst});
+}
+
 void HBCISel::resolveRelocations() {
   bool changed;
   do {
@@ -358,7 +399,7 @@ void HBCISel::resolveRelocations() {
         case Relocation::DebugInfo:
           // Nothing, just keep track of the location.
           break;
-        case Relocation::JumpTableDispatch:
+        case Relocation::JumpTableDispatch: {
           auto &uintSwitchImmInfo =
               uintSwitchImmInfo_[cast<UIntSwitchImmInst>(pointer)];
           // update default target jmp
@@ -367,6 +408,17 @@ void HBCISel::resolveRelocations() {
           BCFGen_->updateJumpTarget(loc + 1 + 1 + 4, defaultOffset, 4);
           uintSwitchImmInfo_[cast<UIntSwitchImmInst>(pointer)].offset = loc;
           break;
+        }
+        case Relocation::StringSwitchDispatch: {
+          auto &stringSwitchImmInfo =
+              stringSwitchImmInfo_[cast<StringSwitchImmInst>(pointer)];
+          // update default target jmp
+          BasicBlock *defaultBlock = stringSwitchImmInfo.defaultTarget;
+          int defaultOffset = basicBlockMap_[defaultBlock].first - loc;
+          BCFGen_->updateJumpTarget(loc + 1 + 1 + 4 + 4, defaultOffset, 4);
+          stringSwitchImmInfo_[cast<StringSwitchImmInst>(pointer)].offset = loc;
+          break;
+        }
       }
 
       NumJumpPass++;
@@ -419,14 +471,56 @@ void HBCISel::generateJumpTable() {
       res.push_back(basicBlockMap_[entry.table[jmpIdx]].first - entry.offset);
     }
 
-    BCFGen_->updateJumpTableOffset(
+    BCFGen_->updateTableOffset(
         // Offset is located two bytes from begining of instruction.
         entry.offset + 1 + 1,
-        startOfTable,
+        startOfTable * sizeof(uint32_t),
         entry.offset);
   }
 
   BCFGen_->setJumpTable(std::move(res));
+}
+
+void HBCISel::generateStringSwitchTable() {
+  using StringSwitchInfoEntry =
+      llvh::DenseMap<StringSwitchImmInst *, StringSwitchImmInfo>::iterator::
+          value_type;
+
+  if (stringSwitchImmInfo_.empty())
+    return;
+
+  std::vector<StringSwitchTableCase> res{};
+
+  // Sort the string switch table entries so iteration order is deterministic.
+  llvh::SmallVector<StringSwitchInfoEntry, 1> infoVector{
+      stringSwitchImmInfo_.begin(), stringSwitchImmInfo_.end()};
+  std::sort(
+      infoVector.begin(),
+      infoVector.end(),
+      [](StringSwitchInfoEntry &a, StringSwitchInfoEntry &b) {
+        return a.second.offset < b.second.offset;
+      });
+
+  // Fix up all StringSwitchImm instructions with correct offset.
+  for (auto &tuple : infoVector) {
+    auto entry = tuple.second;
+    uint32_t startOfTable = res.size();
+    for (const StringSwitchCase &stringSwitchCase : entry.table) {
+      res.emplace_back(
+          stringSwitchCase.label,
+          basicBlockMap_[stringSwitchCase.target].first - entry.offset);
+    }
+    BCFGen_->updateTableOffset(
+        // Offset is located 6 bytes from begining of instruction.
+        // (Opcode, value register, global index).
+        entry.offset + 1 + 1 + 4,
+        // baseOffset is the byte size of the jump table.
+        BCFGen_->jumpTableSize() * sizeof(uint32_t) +
+            startOfTable * sizeof(StringSwitchTableCase),
+        entry.offset);
+  }
+
+  BCFGen_->setStringSwitchTable(std::move(res));
 }
 
 bool HBCISel::getDebugSourceLocation(
@@ -2081,6 +2175,34 @@ void HBCISel::generateUIntSwitchImmInst(
   uintSwitchImmInfo_[Inst] = {0, Inst->getDefaultDestination(), jmpTable};
 }
 
+void HBCISel::generateStringSwitchImmInst(
+    hermes::StringSwitchImmInst *Inst,
+    hermes::BasicBlock *next) {
+  uint32_t size = Inst->getSize();
+
+  std::vector<StringSwitchCase> stringSwitchTable;
+  stringSwitchTable.resize(size);
+
+  // fill string switch table entries.
+  for (uint32_t caseIdx = 0; caseIdx < Inst->getNumCasePair(); caseIdx++) {
+    auto casePair = Inst->getCasePair(caseIdx);
+    auto &caseInTable = stringSwitchTable[caseIdx];
+    caseInTable.label = BCFGen_->getStringID(casePair.first);
+    caseInTable.target = casePair.second;
+  }
+
+  registerStringSwitchImm(
+      BCFGen_->emitStringSwitchImm(
+          encodeValue(Inst->getInputValue()),
+          BCFGen_->getBytecodeModuleGenerator().addStringSwitchImmInstr(),
+          0,
+          0,
+          stringSwitchTable.size()),
+      Inst);
+  stringSwitchImmInfo_[Inst] = {
+      0, Inst->getDefaultDestination(), stringSwitchTable};
+}
+
 void HBCISel::generateLoadParentNoTrapsInst(
     LoadParentNoTrapsInst *Inst,
     BasicBlock *) {
@@ -2447,6 +2569,7 @@ void HBCISel::run(SourceMapGenerator *outSourceMap) {
   resolveExceptionHandlers();
   addDebugSourceLocationInfo(outSourceMap);
   generateJumpTable();
+  generateStringSwitchTable();
   addDebugLexicalInfo();
   populatePropertyCachingInfo();
   BCFGen_->bytecodeGenerationComplete();

@@ -626,6 +626,13 @@ class IRBuilder {
       const UIntSwitchImmInst::ValueListType &values,
       const BaseSwitchImmInst::BasicBlockListType &blocks);
 
+  StringSwitchImmInst *createStringSwitchImmInst(
+      Value *input,
+      BasicBlock *defaultBlock,
+      LiteralNumber *size,
+      const StringSwitchImmInst::ValueListType &values,
+      const BaseSwitchImmInst::BasicBlockListType &blocks);
+
   LIRLoadConstInst *createLIRLoadConstInst(Literal *value);
 
   LoadParamInst *createLoadParamInst(JSDynamicParam *param);

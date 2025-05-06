@@ -1926,6 +1926,9 @@ class InstrGen {
   void generateUIntSwitchImmInst(UIntSwitchImmInst &inst) {
     unimplemented(inst);
   }
+  void generateStringSwitchImmInst(StringSwitchImmInst &inst) {
+    unimplemented(inst);
+  }
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {
     unimplemented(inst);
   }

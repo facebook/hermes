@@ -4058,6 +4058,52 @@ class UIntSwitchImmInst : public BaseSwitchImmInst {
   }
 };
 
+class StringSwitchImmInst : public BaseSwitchImmInst {
+  StringSwitchImmInst(const StringSwitchImmInst &) = delete;
+  void operator=(const StringSwitchImmInst &) = delete;
+
+ public:
+  enum { FirstCaseIdx = BaseSwitchImmInst::SizeIdx + 1 };
+
+  using ValueListType = llvh::SmallVector<LiteralString *, 8>;
+
+  /// Returns the n'th pair of value-basicblock that represent a case
+  /// destination.
+  std::pair<LiteralString *, BasicBlock *> getCasePair(unsigned i) const {
+    // The values and labels are twined together. Find the index of the pair
+    // that we are fetching and return the two values.
+    unsigned base = i * 2 + FirstCaseIdx;
+    return std::make_pair(
+        cast<LiteralString>(getOperand(base)),
+        cast<BasicBlock>(getOperand(base + 1)));
+  }
+
+  /// \returns the destination of the default target.
+  BasicBlock *getDefaultDestination() const {
+    return cast<BasicBlock>(getOperand(DefaultBlockIdx));
+  }
+
+  /// \p input is the discriminator value.
+  /// \p defaultBlock is the block to jump to if nothing matches.
+  /// \p minValue the smallest (integer) value of all switch cases.
+  /// \p size     the difference between minValue and the largest value + 1.
+  explicit StringSwitchImmInst(
+      Value *input,
+      BasicBlock *defaultBlock,
+      LiteralNumber *size,
+      const ValueListType &values,
+      const BasicBlockListType &blocks);
+  explicit StringSwitchImmInst(
+      const StringSwitchImmInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseSwitchImmInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::StringSwitchImmInstKind;
+  }
+};
+
 // Now that we've declared the two subtypes of SwitchImmInst, we can implement
 // this function.
 /* static */
@@ -4065,6 +4111,8 @@ unsigned BaseSwitchImmInst::getFirstCaseIdx() const {
   ValueKind kind = getKind();
   if (kind == ValueKind::UIntSwitchImmInstKind) {
     return UIntSwitchImmInst::FirstCaseIdx;
+  } else if (kind == ValueKind::StringSwitchImmInstKind) {
+    return StringSwitchImmInst::FirstCaseIdx;
   }
   assert(false && "Unknown SwitchImmInst subtype.\n");
   return 0;
