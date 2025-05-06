@@ -40,4 +40,20 @@ namespace llvh {
   }
 }
 
+#ifdef __GNUC__
+
+namespace llvh::sys {
+    inline void MemoryFence() {
+      __sync_synchronize();
+    }
+    inline cas_flag CompareAndSwap(volatile cas_flag* ptr,
+                            cas_flag new_value,
+                            cas_flag old_value) {
+      return __sync_val_compare_and_swap(ptr, old_value, new_value);
+    }
+
+}
+
+#endif
+
 #endif
