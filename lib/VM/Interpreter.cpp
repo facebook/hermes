@@ -626,11 +626,11 @@ tailCall:
   // Update function executionCount_ count
   curCodeBlock->incrementExecutionCount();
 
-  if (!SingleStep) {
 #ifndef NDEBUG
-    runtime.invalidateCurrentIP();
+  runtime.invalidateCurrentIP();
 #endif
 
+  if (!SingleStep) {
 #ifndef NDEBUG
     LLVM_DEBUG(
         dbgs() << "function entry: stackLevel=" << runtime.getStackLevel()
@@ -695,6 +695,7 @@ tailCall:
 #define DISPATCH                                \
   BEFORE_OP_CODE;                               \
   if (SingleStep) {                             \
+    runtime.setCurrentIP(ip);                   \
     state.codeBlock = curCodeBlock;             \
     state.offset = CUROFFSET;                   \
     return HermesValue::encodeUndefinedValue(); \
@@ -707,6 +708,7 @@ tailCall:
 #define DEFAULT_CASE default:
 #define DISPATCH                                \
   if (SingleStep) {                             \
+    runtime.setCurrentIP(ip);                   \
     state.codeBlock = curCodeBlock;             \
     state.offset = CUROFFSET;                   \
     return HermesValue::encodeUndefinedValue(); \
@@ -3288,6 +3290,7 @@ tailCall:
     if (SingleStep) {
       // If we're single stepping, don't bother with any more checks,
       // and simply signal that we should continue execution with an exception.
+      runtime.setCurrentIP(ip);
       state.codeBlock = curCodeBlock;
       state.offset = CUROFFSET;
       return ExecutionStatus::EXCEPTION;
