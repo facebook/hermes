@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+
+import argparse
+import math  # Needed for infinity when sorting N/A values
+import os
+import re
+import statistics
+import subprocess
+import sys
+
+from scipy.stats import ttest_ind
+
+# --- Configuration ---
+OLD_EXE = os.environ.get("OLD_EXE", "./sh-old")
+NEW_EXE = os.environ.get("NEW_EXE", "./sh-new")
+ARGS = os.environ.get("ARGS", "-w -Xjit").split(" ")
+# -------------------
+
+
+def find_first_score(output_text):
+    """Finds the first line matching 'Name: Score' and returns the score as float."""
+    pattern = re.compile(r":?\s*(\d+(?:\.\d+)?)\s*$")
+    for line in output_text.strip().split("\n"):
+        match = pattern.search(line.strip())
+        if match:
+            try:
+                return float(match.group(1))
+            except (ValueError, IndexError):
+                continue
+    return None
+
+
+def run_command(executable, args, filename):
+    """Runs the command and returns the completed process object."""
+    cmd = [executable] + args + [filename]
+    env = os.environ.copy()
+    env["PATH"] = f".:{env.get('PATH', '')}"
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        check=False,  # Don't raise error on non-zero exit
+        env=env,
+    )
+    return result
+
+
+def format_change_line(avg_pct, stdev_pct, num_valid_runs):
+    """Formats the 'Change: ...' line based on calculated values."""
+    if avg_pct is None:
+        # Handle cases where no valid data could be gathered
+        if num_valid_runs == 0:
+            return "Change: N/A (No valid score pairs found)"
+        else:  # Should mean avg_old was 0
+            return (
+                f"Change: N/A (Average OLD score is 0 from {num_valid_runs} valid runs)"
+            )
+    elif stdev_pct is not None:
+        return f"Change: {avg_pct:+.1f}% +/- {stdev_pct:.1f}% (from {num_valid_runs} valid runs)"
+    else:  # Only average is available (1 valid run)
+        return f"Change: {avg_pct:+.1f}% (from {num_valid_runs} valid run, +/- N/A)"
+
+
+def print_summary_table(title, confidence, summary_data):
+    """Prints an ASCII table from the collected summary data."""
+    if not summary_data:
+        print(f"\n--- {title} ---")
+        print("No data to display.")
+        return
+
+    # Determine column widths
+    max_name_len = (
+        max(len(item["name"]) for item in summary_data) if summary_data else 10
+    )
+    # Fixed widths for numbers are often cleaner
+    avg_width = 10  # e.g., "+100.5%"
+    std_width = 10  # e.g., "+/- 10.5%"
+    conf_width = 15  # e.g., "+/- 10.5%"
+    runs_width = 12  # e.g., "(10 runs)"
+    confidence = round(confidence * 100)
+
+    # Header
+    print(f"\n--- {title} ---")
+    header = f"+-{'-' * max_name_len}-+-{'-' * avg_width}-+-{'-' * conf_width}-+-{'-' * std_width}-+-{'-' * runs_width}-+"
+    print(header)
+    print(
+        f"| {'Benchmark'.ljust(max_name_len)} | {'Avg Change'.rjust(avg_width)} | {(str(confidence) + '% interval').rjust(conf_width)} | {'Stdev'.rjust(std_width)} | {'Valid Runs'.rjust(runs_width)} |"
+    )
+    print(header)
+
+    # Data Rows
+    for item in summary_data:
+        name = item["name"].ljust(max_name_len)
+        avg_str = f"{item['avg_pct']:+.1f}%" if item["avg_pct"] is not None else "N/A"
+        avg_str = avg_str.rjust(avg_width)
+        (conf_low, conf_high) = item["ttest"]
+        conf_str = (
+            f"{conf_low:+.1f}% - {conf_high:+.1f}%" if conf_low is not None else "N/A"
+        )
+        conf_str = conf_str.rjust(conf_width)
+        std_str = (
+            f"+/- {item['stdev_pct']:.1f}%" if item["stdev_pct"] is not None else "N/A"
+        )
+        std_str = std_str.rjust(std_width)
+        runs_str = f"({item['runs']} runs)"
+        runs_str = runs_str.rjust(runs_width)
+
+        print(f"| {name} | {avg_str} | {conf_str} | {std_str} | {runs_str} |")
+
+    # Footer
+    print(header)
+
+
+# --- Main Script ---
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Run OLD and NEW versions of a benchmark multiple times and compare."
+    )
+    parser.add_argument(
+        "-n",
+        "--runs",
+        type=int,
+        default=1,
+        help="Number of times to run each benchmark (default: 1)",
+    )
+    parser.add_argument(
+        "-c",
+        "--confidence",
+        type=float,
+        default=0.95,
+        help="Confidence limit (default: 0.95)",
+    )
+    parser.add_argument(
+        "benchmarks",
+        metavar="BENCHMARK.JS",
+        nargs="+",  # Require at least one benchmark file
+        help="Path to the benchmark file(s) to run.",
+    )
+    args = parser.parse_args()
+
+    if args.runs <= 0:
+        print("Error: Number of runs must be positive.", file=sys.stderr)
+        sys.exit(1)
+
+    # Store summary results here
+    summary_results = []
+
+    for filename in args.benchmarks:
+        print(f"--- Running benchmark: {filename} ({args.runs} runs) ---")
+        old_scores = []
+        new_scores = []
+        individual_pct_changes = []
+
+        # --- Run OLD and NEW multiple times ---
+        for i in range(args.runs):
+            # --- OLD RUN ---
+            print(f"OLD {filename} (Run {i+1}/{args.runs})")  # Announce before running
+            old_result = run_command(OLD_EXE, ARGS, filename)
+            print(old_result.stdout, end="")  # Print the output immediately
+            old_score = find_first_score(old_result.stdout)
+
+            # --- NEW RUN ---
+            print(f"NEW {filename} (Run {i+1}/{args.runs})")  # Announce before running
+            new_result = run_command(NEW_EXE, ARGS, filename)
+            print(new_result.stdout, end="")  # Print the output immediately
+            new_score = find_first_score(new_result.stdout)
+
+            # --- Store results from this run pair ---
+            if old_score is not None and new_score is not None:
+                old_scores.append(old_score)
+                new_scores.append(new_score)
+                if old_score != 0:
+                    pct_change = ((new_score - old_score) / old_score) * 100
+                    individual_pct_changes.append(pct_change)
+                # else: Handle old score = 0 case if needed for individual changes
+            else:
+                # Optionally warn if scores weren't found for this specific run
+                print(
+                    f"Warning: Score pair not found for {filename} run {i+1}/{args.runs}."
+                )
+
+            print("-" * 20)  # Separator between individual runs
+
+        # --- Calculate Averages and Standard Deviation for this benchmark ---
+        num_valid_pairs = len(individual_pct_changes)
+        avg_percentage_change = None
+        stdev_percentage_change = None
+        confidence_interval = None
+
+        if num_valid_pairs > 0:
+            # Ensure lists aren't empty before calling mean/stdev
+            if old_scores and new_scores:
+                avg_old = statistics.mean(old_scores)
+                avg_new = statistics.mean(new_scores)
+                if avg_old != 0:
+                    avg_percentage_change = ((avg_new - avg_old) / avg_old) * 100
+                    if num_valid_pairs >= 2:
+                        try:
+                            stdev_percentage_change = statistics.stdev(
+                                individual_pct_changes
+                            )
+                        except statistics.StatisticsError:
+                            # Handle potential errors if list is unexpectedly small
+                            stdev_percentage_change = None
+                    if num_valid_pairs >= 2:
+                        ttest = ttest_ind(new_scores, old_scores)
+                        (low, high) = ttest.confidence_interval(args.confidence)
+                        (pct_low, pct_high) = (
+                            low / avg_old * 100,
+                            high / avg_old * 100,
+                        )
+                    else:
+                        (pct_low, pct_high) = (None, None)
+
+        # else: No valid runs, values remain None
+
+        # --- Print the immediate summary line for this benchmark ---
+        change_output_line = format_change_line(
+            avg_percentage_change, stdev_percentage_change, num_valid_pairs
+        )
+        print(
+            f"Summary for {filename}: {change_output_line}"
+        )  # Make it clear this is the summary line
+        print()  # Empty line before next benchmark or final tables
+
+        # --- Store results for final tables ---
+        summary_results.append(
+            {
+                "name": filename,
+                "avg_pct": avg_percentage_change,
+                "stdev_pct": stdev_percentage_change,
+                "ttest": (pct_low, pct_high),
+                "runs": num_valid_pairs,
+            }
+        )
+
+    # --- Print Final Summary Tables ---
+    print("=" * 60)
+    print("Overall Benchmark Summary")
+    print("=" * 60)
+
+    # 1. Table in Original Order
+    print_summary_table("Results (Original Order)", args.confidence, summary_results)
+
+    # 2. Table Sorted by Average Change (Descending)
+    sorted_summary = sorted(
+        summary_results,
+        key=lambda item: item.get("avg_pct")
+        if item.get("avg_pct") is not None
+        else -math.inf,
+        reverse=True,
+    )
+    print_summary_table(
+        "Results (Sorted by Avg Change Descending)", args.confidence, sorted_summary
+    )
+
+    print("\nBenchmark Comparison Complete.")
