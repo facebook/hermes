@@ -2002,7 +2002,7 @@ const Inst *doStringSwitchImm(
     StringPrimitive *strVal = O1REG(StringSwitchImm).getString();
     auto iter = runtimeTable.find(strVal);
     if (iter != runtimeTable.end()) {
-      return IPADD(iter->second);
+      return IPADD(iter->second.bytecodeOffset);
     }
   }
   // Wrong type or not found, jump to default.

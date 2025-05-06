@@ -59,12 +59,23 @@ union RuntimeModuleFlags {
   RuntimeModuleFlags() : flags(0) {}
 };
 
+struct SwitchTargets {
+  // The offset of the basic block target corresponding to this switch case.
+  // The offset is relative to the address of the StringSwitchImm instruction.
+  int32_t bytecodeOffset = 0;
+  // The (absolute) address of the JIT code for the basic block target
+  // corresponding to this switch case.
+  void *jitCodeTarget = 0;
+};
+
 /// This DenseMap specialization is used at runtime to map string values
 /// used in switch statements to the proper branch target.  Note that
 /// it cannot use pointer equality -- the StringPrimitiveValueDenseMapInfo
 /// trait compares StringPrimitives by their values.
-using StringSwitchDenseMap = llvh::
-    DenseMap<StringPrimitive *, int32_t, StringPrimitiveValueDenseMapInfo>;
+using StringSwitchDenseMap = llvh::DenseMap<
+    StringPrimitive *,
+    SwitchTargets,
+    StringPrimitiveValueDenseMapInfo>;
 
 /// This class is used to store the non-instruction information needed to
 /// execute code. The RuntimeModule owns a BytecodeModule, from which it copies

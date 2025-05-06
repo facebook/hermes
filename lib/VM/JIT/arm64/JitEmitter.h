@@ -15,6 +15,7 @@
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/JIT/PerfJitDump.h"
+#include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -679,12 +680,30 @@ class Emitter {
   void
   jStrictEqual(bool invert, const asmjit::Label &target, FR frLeft, FR frRight);
 
-  void switchImm(
+  void uintSwitchImm(
       FR frInput,
       const asmjit::Label &defaultLabel,
       llvh::ArrayRef<const asmjit::Label *> labels,
       uint32_t minVal,
       uint32_t maxVal);
+
+  /// Information for a case of a StringSwitchImm instruction.
+  struct StringSwitchCase {
+    // The string id of the case label.
+    uint32_t caseLabelStringId;
+    // A JIT label for the start of JITted code for the the basic block
+    // corresponding to the case.
+    const asmjit::Label *target;
+
+    StringSwitchCase(uint32_t caseLabelStringId, const asmjit::Label *target)
+        : caseLabelStringId(caseLabelStringId), target(target) {}
+  };
+
+  void stringSwitchImm(
+      FR frInput,
+      const StringSwitchDenseMap &table,
+      const asmjit::Label &defaultLabel,
+      llvh::ArrayRef<StringSwitchCase> cases);
 
   void getByVal(FR frRes, FR frSource, FR frKey);
   void getByIndex(FR frRes, FR frSource, uint32_t key);

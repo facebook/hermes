@@ -18,6 +18,7 @@
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StackFrame.h"
 #include "hermes/VM/StaticHUtils.h"
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
 
 #define DEBUG_TYPE "jit"
 
@@ -350,6 +351,22 @@ SHLegacyValue _jit_dispatch_call(
   }
 
   return res->getHermesValue();
+}
+
+void *_jit_string_switch_imm_table_lookup(
+    StringSwitchDenseMap *table,
+    SHLegacyValue *switchValueLegacy) {
+  PinnedHermesValue *switchValue = toPHV(switchValueLegacy);
+  if (!switchValue->isString()) {
+    // Not a string; should branch to the default case.
+    return nullptr;
+  }
+  auto iter = table->find(switchValue->getString());
+  if (iter == table->end()) {
+    // Not found; branch to the default case.
+    return nullptr;
+  }
+  return iter->second.jitCodeTarget;
 }
 
 } // namespace hermes::vm

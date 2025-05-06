@@ -399,7 +399,7 @@ void RuntimeModule::initializeStringSwitchImmTable(
     const hbc::StringSwitchTableCase &switchCase = cases[i];
     StringPrimitive *strPrim =
         getStringPrimFromStringIDMayAllocate(switchCase.caseLabelStringID);
-    table[strPrim] = switchCase.target;
+    table[strPrim].bytecodeOffset = switchCase.target;
   }
 }
 

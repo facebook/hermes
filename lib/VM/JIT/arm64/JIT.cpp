@@ -14,6 +14,7 @@
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/VM/JIT/DiscoverBB.h"
 #include "hermes/VM/RuntimeModule.h"
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
 
 #define DEBUG_TYPE "jit"
 
@@ -85,6 +86,13 @@ class JITContext::Compiler {
   Error error_ = Error::NoError;
   /// In case of "other" error, the error message is recorded here.
   std::string otherErrorMessage_{};
+
+  /// For string switch imm instructions, the labels to be resolved, and fixed
+  /// up in the switch's runtime table, when compilation is complete.
+  llvh::DenseMap<
+      const inst::StringSwitchImmInst *,
+      std::vector<Emitter::StringSwitchCase>>
+      stringSwitchImmTargetLabels_;
 
  public:
   Compiler(JITContext &jc, CodeBlock *codeBlock)
@@ -190,7 +198,28 @@ JITCompiledFunctionPtr JITContext::compileImpl(
 
 JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlock() {
   if (_sh_setjmp(errorJmpBuf_) == 0) {
-    return compileCodeBlockImpl();
+    auto res = compileCodeBlockImpl();
+
+    // Translate now-bound labels to targets.
+    uint64_t funcStart = reinterpret_cast<uint64_t>(res);
+    RuntimeModule *runtimeModule = codeBlock_->getRuntimeModule();
+    for (const auto &[inst, cases] : stringSwitchImmTargetLabels_) {
+      assert(
+          inst->op2 < runtimeModule->numStringSwitchImmTables() &&
+          "String Switch index out of range.");
+      StringSwitchDenseMap &table =
+          runtimeModule->getStringSwitchImmTables()[inst->op2];
+      for (const auto &switchCase : cases) {
+        StringPrimitive *strPrim =
+            runtimeModule->getStringPrimFromStringIDMayAllocate(
+                switchCase.caseLabelStringId);
+        table.at(strPrim).jitCodeTarget =
+            reinterpret_cast<uint8_t *>(funcStart) +
+            em_.code.labelOffset(*switchCase.target);
+      }
+    }
+
+    return res;
   } else {
     // We arrive here on error.
 
@@ -329,7 +358,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
 
 EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
-EMIT_UNIMPLEMENTED(StringSwitchImm)
 
 #undef EMIT_UNIMPLEMENTED
 
@@ -605,13 +633,57 @@ inline void JITContext::Compiler::emitUIntSwitchImm(
     int32_t offset = *loc;
     jumpTableLabels.push_back(&bbLabelFromInst(inst, offset));
   }
-
-  em_.switchImm(
+  em_.uintSwitchImm(
       FR(inst->op1),
       bbLabelFromInst(inst, inst->op3),
       jumpTableLabels,
       min,
       max);
+}
+
+inline void JITContext::Compiler::emitStringSwitchImm(
+    const inst::StringSwitchImmInst *inst) {
+  uint32_t entries = inst->op5;
+
+  // Calculate the offset into the bytecode where the jump table for
+  // this SwitchImm starts.
+  const hbc::StringSwitchTableCase *tablestart =
+      (const hbc::StringSwitchTableCase *)llvh::alignAddr(
+          (const uint8_t *)inst + inst->op3, sizeof(uint32_t));
+
+  // Initialize the string switch table, if necessary.
+  assert(
+      inst->op2 < codeBlock_->getRuntimeModule()->numStringSwitchImmTables() &&
+      "String Switch index out of range.");
+  StringSwitchDenseMap &table =
+      codeBlock_->getRuntimeModule()->getStringSwitchImmTables()[inst->op2];
+  if (table.size() == 0) {
+    codeBlock_->getRuntimeModule()->initializeStringSwitchImmTable(
+        table, tablestart, inst->op5);
+  }
+
+  std::vector<Emitter::StringSwitchCase> switchTableLabels{};
+  switchTableLabels.reserve(entries);
+
+  // Add a label for each offset in the table.
+  for (uint32_t i = 0; i < entries; ++i) {
+    const hbc::StringSwitchTableCase &stringSwitchCase = tablestart[i];
+    switchTableLabels.emplace_back(
+        stringSwitchCase.caseLabelStringID,
+        &bbLabelFromInst(inst, stringSwitchCase.target));
+  }
+
+  em_.stringSwitchImm(
+      FR(inst->op1),
+      table,
+      bbLabelFromInst(inst, inst->op4),
+      switchTableLabels);
+
+  // Save the labels, so we can record them in the runtime table when the
+  // compilation is complete.
+  [[maybe_unused]] auto [_, res] = stringSwitchImmTargetLabels_.try_emplace(
+      inst, std::move(switchTableLabels));
+  assert(res);
 }
 
 inline void JITContext::Compiler::emitTryGetByIdLong(

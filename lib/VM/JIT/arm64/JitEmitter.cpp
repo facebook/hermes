@@ -4244,13 +4244,14 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
   emit_sh_ljs_bool(a, xRes);
 }
 
-void Emitter::switchImm(
+void Emitter::uintSwitchImm(
     FR frInput,
     const asmjit::Label &defaultLabel,
     llvh::ArrayRef<const asmjit::Label *> labels,
     uint32_t minVal,
     uint32_t maxVal) {
-  comment("// switchImm r%u, min %u, max %u", frInput.index(), minVal, maxVal);
+  comment(
+      "// uintSwitchImm r%u, min %u, max %u", frInput.index(), minVal, maxVal);
 
   asmjit::Error err;
 
@@ -4334,6 +4335,32 @@ void Emitter::switchImm(
   for (const asmjit::Label *label : labels) {
     a.embedLabelDelta(*label, tableLab, /* size */ 4);
   }
+
+  // Do this always, since this could be the end of the BB.
+  freeAllFRTempExcept({});
+}
+
+void Emitter::stringSwitchImm(
+    FR frInput,
+    const StringSwitchDenseMap &table,
+    const asmjit::Label &defaultLabel,
+    llvh::ArrayRef<StringSwitchCase> cases) {
+  comment("// stringSwitchImm r%u, size %zu", frInput.index(), cases.size());
+
+  // End of the basic block.
+  syncAllFRTempExcept({});
+
+  a.mov(a64::x0, &table);
+  loadFrameAddr(a64::x1, frInput);
+
+  EMIT_RUNTIME_CALL_WITHOUT_SAVED_IP(
+      *this,
+      void *(*)(StringSwitchDenseMap *, SHLegacyValue *),
+      _jit_string_switch_imm_table_lookup);
+
+  a.cbz(a64::x0, defaultLabel);
+  // Otherwise, branch to the address that was returned.
+  a.br(a64::x0);
 
   // Do this always, since this could be the end of the BB.
   freeAllFRTempExcept({});

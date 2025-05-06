@@ -13,6 +13,7 @@
 typedef struct SHRuntime SHRuntime;
 typedef struct SHRuntimeModule SHRuntimeModule;
 typedef struct SHCodeBlock SHCodeBlock;
+class StringSwitchDenseMap;
 
 namespace hermes::vm {
 
@@ -125,5 +126,13 @@ void *_jit_find_catch_target(
 /// Call the closure stored in the outgoing registers of the current frame. The
 /// caller is responsible for setting up the outgoing registers.
 SHLegacyValue _jit_dispatch_call(SHRuntime *, SHLegacyValue *callTargetSHLV);
+
+/// Assumes that \p table is an initialized string switch runtime table.
+/// If \p switchValue is found as a case in that table, returns the
+/// corresponding JIT code target for that case.  Otherwise, returns nullptr.
+/// (This assumes that nullptr is not a valid branch target.)
+void *_jit_string_switch_imm_table_lookup(
+    StringSwitchDenseMap *table,
+    SHLegacyValue *switchValue);
 
 } // namespace hermes::vm

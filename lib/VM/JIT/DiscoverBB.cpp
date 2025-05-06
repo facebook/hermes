@@ -75,6 +75,32 @@ void discoverBasicBlocks(
       continue;
     }
 
+    if (decoded.meta.opCode == OpCode::StringSwitchImm) {
+      uint32_t entries = decoded.operandValue[4].integer;
+
+      // Calculate the offset into the bytecode where the jump table for
+      // this SwitchImm starts.
+      const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
+          (const uint8_t *)ip + decoded.operandValue[2].integer,
+          sizeof(uint32_t));
+
+      auto *stringSwitchTable =
+          reinterpret_cast<const hbc::StringSwitchTableCase *>(tablestart);
+
+      // Add a label for each offset in the table.
+      for (uint32_t i = 0; i < entries; ++i) {
+        addLabel(ip + stringSwitchTable[i].target);
+      }
+
+      int32_t defaultOffset = decoded.operandValue[3].integer;
+      addLabel(ip + defaultOffset);
+
+      ip += decoded.meta.size;
+      // Switch is a branch. Add the next instruction as a label.
+      addLabel(ip);
+      continue;
+    }
+
     for (unsigned i = 0; i < decoded.meta.numOperands; ++i) {
       int32_t offset;
       if (decoded.meta.operandType[i] == OperandType::Addr8 ||
