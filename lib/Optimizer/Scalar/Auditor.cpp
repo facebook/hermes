@@ -8,8 +8,10 @@
 #define DEBUG_TYPE "auditor"
 
 #include "hermes/Optimizer/Scalar/Auditor.h"
+
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/Support/Debug.h"
@@ -53,6 +55,10 @@ STATISTIC(TypeNumber, "Number of instructions with type number");
 STATISTIC(TypeObject, "Number of instructions with type object");
 STATISTIC(TypeAny, "Number of instructions with type any");
 STATISTIC(TypeOther, "Number of instructions with type other");
+
+#if !defined(NDEBUG) || LLVM_FORCE_ENABLE_STATS
+STATISTIC(NumTryCatchFunctions, "Number of Functions with try/catch");
+#endif
 
 static void auditInstructions(Function *F) {
   for (BasicBlock &BB : *F) {
@@ -140,6 +146,12 @@ bool Auditor::runOnFunction(Function *F) {
   auditInferredTypes(F);
 
   Functions++;
+
+#if !defined(NDEBUG) || LLVM_FORCE_ENABLE_STATS
+  if (functionHasTryCatch(F)) {
+    NumTryCatchFunctions++;
+  }
+#endif
 
   return false;
 }

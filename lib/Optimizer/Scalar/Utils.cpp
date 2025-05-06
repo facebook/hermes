@@ -284,6 +284,15 @@ bool deleteUnusedFunctionsAndVariables(Module *M) {
   return changed;
 }
 
+bool functionHasTryCatch(Function *F) {
+  for (const auto &BB : *F) {
+    if (llvh::isa<TryStartInst>(BB.getTerminator())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace hermes
 
 #undef DEBUG_TYPE

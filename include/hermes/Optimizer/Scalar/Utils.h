@@ -75,5 +75,9 @@ bool deleteUnusedVariables(Module *M);
 /// remaining uses.
 /// \return true if anything was deleted, false otherwise.
 bool deleteUnusedFunctionsAndVariables(Module *M);
+
+/// Returns whether \p F has a try/catch.
+bool functionHasTryCatch(Function *F);
+
 } // namespace hermes
 #endif // HERMES_OPTIMIZER_SCALAR_UTILS_H

@@ -528,11 +528,8 @@ bool Inlining::runOnModule(Module *M) {
   // Find functions with try/catch blocks, to avoid inlining into them.
   llvh::DenseSet<Function *> functionsWithTryCatch{};
   for (Function *FC : functionOrder) {
-    for (auto &BB : *FC) {
-      if (llvh::isa<TryStartInst>(BB.getTerminator())) {
-        functionsWithTryCatch.insert(FC);
-        break;
-      }
+    if (functionHasTryCatch(FC)) {
+      functionsWithTryCatch.insert(FC);
     }
   }
 
