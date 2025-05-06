@@ -33,6 +33,7 @@
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
@@ -3014,7 +3015,17 @@ tailCall:
         DISPATCH;
       }
       CASE(StringSwitchImm) {
-        hermes_fatal("StringSwitchImm instruction not yet implemented.");
+        // While it can't invoke any JS code, doStringSwitchImm (when
+        // it calls initializeStringSwitchImmTable) invokes operations
+        // that check that the current IP is set.  Thus, we must
+        // capture it here.  Note that we can't assign to ip directly
+        // within CAPTURE_IP_ASSIGN, because that assigns the original
+        // IP back to ip after evaluating the expression, so it would
+        // overwrite the new value.
+        CAPTURE_IP_ASSIGN(
+            const Inst *newIp, doStringSwitchImm(curCodeBlock, frameRegs, ip));
+        ip = newIp;
+        DISPATCH;
       }
       LOAD_CONST(
           LoadConstUInt8,

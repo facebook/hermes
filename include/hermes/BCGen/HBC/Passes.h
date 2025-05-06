@@ -194,9 +194,6 @@ class LowerSwitchIntoJumpTables : public FunctionPass {
   bool runOnFunction(Function *F) override;
 
  private:
-  // TEMPORARY: will be deleted in next diff in stack.  So we can test
-  // StringSwitch codegen before we implement it in the interpreter.
-  bool TEMP_enableStringSwitchImm_ = false;
   bool lowerIntoJumpTable(SwitchInst *switchInst);
 };
 

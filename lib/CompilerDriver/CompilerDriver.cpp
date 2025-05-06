@@ -370,13 +370,6 @@ opt<bool> PrintCompilerTiming(
     desc("Turn on compiler timing output."),
     init(false));
 
-// TEMPORARY: will be deleted in next diff in stack.  So we can test
-// StringSwitch codegen before we implement it in the interpreter.
-opt<bool> TEMP_enableStringSwitchImm(
-    "TEMP_enableStringSwitchImm",
-    desc("Temporary: Compiler generates StringSwitchImm."),
-    init(false));
-
 static list<std::string> IncludeGlobals(
     "include-globals",
     desc("Include the definitions of global properties (can be "
@@ -1097,7 +1090,6 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.noDumpFunctions.insert(
       cl::NoDumpFunctions.begin(), cl::NoDumpFunctions.end());
   codeGenOpts.timeCompiler = cl::PrintCompilerTiming;
-  codeGenOpts.TEMP_enableStringSwitchImm = cl::TEMP_enableStringSwitchImm;
 
   OptimizationSettings optimizationOpts;
 

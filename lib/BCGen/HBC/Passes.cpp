@@ -830,10 +830,6 @@ bool SpillRegisters::runOnFunction(Function *F) {
 }
 
 bool LowerSwitchIntoJumpTables::runOnFunction(Function *F) {
-  TEMP_enableStringSwitchImm_ = F->getParent()
-                                    ->getContext()
-                                    .getCodeGenerationSettings()
-                                    .TEMP_enableStringSwitchImm;
   bool changed = false;
   llvh::SmallVector<SwitchInst *, 4> switches;
   // Collect all switch instructions.
@@ -936,7 +932,7 @@ bool LowerSwitchIntoJumpTables::lowerIntoJumpTable(SwitchInst *switchInst) {
 
     switchInst->replaceAllUsesWith(uintSwitchImmInst);
     switchInst->eraseFromParent();
-  } else if (TEMP_enableStringSwitchImm_) {
+  } else {
     // For now, generation of StringSwitchImm is gated by a flag.
     // This will be removed in the next diff, which implements the
     // bytecode instruction in the runtime.

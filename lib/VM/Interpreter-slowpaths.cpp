@@ -20,6 +20,7 @@
 #include "hermes/VM/SerializedLiteralOperations.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
 
 #include "Interpreter-internal.h"
 
@@ -1976,6 +1977,36 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
       v);
 
   return createPseudoHandle(HermesValue::encodeObjectValue(*arr));
+}
+
+const Inst *doStringSwitchImm(
+    CodeBlock *curCodeBlock,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip) {
+  if (LLVM_LIKELY(O1REG(StringSwitchImm).isString())) {
+    RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+    auto *runtimeTables = runtimeModule->getStringSwitchImmTables();
+    assert(
+        ip->iStringSwitchImm.op2 < runtimeModule->numStringSwitchImmTables() &&
+        "String Switch index out of range.");
+    StringSwitchDenseMap &runtimeTable =
+        runtimeTables[ip->iStringSwitchImm.op2];
+    if (LLVM_UNLIKELY(runtimeTable.empty())) {
+      const auto *bytecodeTable =
+          reinterpret_cast<const hbc::StringSwitchTableCase *>(llvh::alignAddr(
+              (const uint8_t *)ip + ip->iStringSwitchImm.op3,
+              alignof(hbc::StringSwitchTableCase)));
+      runtimeModule->initializeStringSwitchImmTable(
+          runtimeTable, bytecodeTable, ip->iStringSwitchImm.op5);
+    }
+    StringPrimitive *strVal = O1REG(StringSwitchImm).getString();
+    auto iter = runtimeTable.find(strVal);
+    if (iter != runtimeTable.end()) {
+      return IPADD(iter->second);
+    }
+  }
+  // Wrong type or not found, jump to default.
+  return IPADD(ip->iStringSwitchImm.op4);
 }
 
 } // namespace vm

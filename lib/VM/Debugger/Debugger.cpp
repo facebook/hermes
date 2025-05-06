@@ -34,7 +34,8 @@ namespace fhd = ::facebook::hermes::debugger;
 // These instructions won't recursively invoke the interpreter,
 // and we also can't easily determine where they will jump to.
 static inline bool shouldSingleStep(OpCode opCode) {
-  return opCode == OpCode::Throw || opCode == OpCode::UIntSwitchImm;
+  return opCode == OpCode::Throw || opCode == OpCode::UIntSwitchImm ||
+      opCode == OpCode::StringSwitchImm;
 }
 
 static StringView getFunctionName(

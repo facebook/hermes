@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -TEMP_enableStringSwitchImm -O -dump-lir %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=LIR
-// RUN: %hermesc -TEMP_enableStringSwitchImm -O -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBC
+// RUN: %hermesc -O -dump-lir %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=LIR
+// RUN: %hermesc -O -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBC
 
 // Show that a sufficiently large switch with all string case labels generates
 // a special IR and bytecode instruction, and that the bytecode file includes a

@@ -18,6 +18,7 @@
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
 namespace hermes {
@@ -122,6 +123,7 @@ void RuntimeModule::initializeWithoutCJSModulesMayAllocate(
   // Initialize the object literal hidden class cache.
   auto numObjShapes = bcProvider_->getObjectShapeTable().size();
   objectLiteralHiddenClasses_.resize(numObjShapes);
+  stringSwitchImmTables_.resize(bcProvider_->getNumStringSwitchImmInstrs());
 }
 
 ExecutionStatus RuntimeModule::initializeMayAllocate(
@@ -131,6 +133,19 @@ ExecutionStatus RuntimeModule::initializeMayAllocate(
     return ExecutionStatus::EXCEPTION;
   }
   return ExecutionStatus::RETURNED;
+}
+
+void RuntimeModule::initAfterLazyCompilation() {
+  importStringIDMapMayAllocate();
+  initializeFunctionMap();
+  // Initialize the object literal hidden class cache.
+  auto numObjShapes = bcProvider_->getObjectShapeTable().size();
+  objectLiteralHiddenClasses_.resize(numObjShapes);
+  assert(
+      bcProvider_->getNumStringSwitchImmInstrs() >=
+          stringSwitchImmTables_.size() &&
+      "Number of string switches detected should only grow.");
+  stringSwitchImmTables_.resize(bcProvider_->getNumStringSwitchImmInstrs());
 }
 
 CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
@@ -316,6 +331,11 @@ void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
         acceptor.accept(symbol);
       }
     }
+    for (auto &table : stringSwitchImmTables_) {
+      for (auto &[str, _] : table) {
+        acceptor.acceptPtr(str);
+      }
+    }
   }
 
   acceptor.acceptPtr(moduleExports_);
@@ -366,6 +386,21 @@ void RuntimeModule::setModuleExport(
     uint32_t modIndex,
     Handle<> modExport) {
   module_export_cache::set(runtime, moduleExports_, modIndex, modExport);
+}
+
+void RuntimeModule::initializeStringSwitchImmTable(
+    StringSwitchDenseMap &table,
+    const hbc::StringSwitchTableCase *cases,
+    uint32_t size) {
+  assert(
+      table.empty() &&
+      "precondition -- should only be called with empty table.");
+  for (unsigned i = 0; i < size; i++) {
+    const hbc::StringSwitchTableCase &switchCase = cases[i];
+    StringPrimitive *strPrim =
+        getStringPrimFromStringIDMayAllocate(switchCase.caseLabelStringID);
+    table[strPrim] = switchCase.target;
+  }
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

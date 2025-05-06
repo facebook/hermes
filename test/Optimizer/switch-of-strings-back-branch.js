@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -TEMP_enableStringSwitchImm -O -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBC
-// RUN: %hermesc -TEMP_enableStringSwitchImm -O -dump-bytecode -pretty=false %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBCRAW
+// RUN: %hermesc -O -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBC
+// RUN: %hermesc -O -dump-bytecode -pretty=false %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBCRAW
 
 // Verify that switches that do backward branches correctly generate negative
 // offsets.  This is shown by the negative offset for case "4" in the

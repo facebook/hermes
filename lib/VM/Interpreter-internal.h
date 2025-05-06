@@ -187,6 +187,14 @@ ExecutionStatus doPutByIdSlowPath_RJS(
     bool strictMode,
     bool tryProp);
 
+/// Handle a StringSwitchImm instruction (which must be the kind of \p ip).
+/// Expects the Interpreter's current CodeBlock and frameRegisters in the first
+/// two arguments.  Returns the address of the next instruction to execute.
+const Inst *doStringSwitchImm(
+    CodeBlock *curCodeBlock,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip);
+
 } // namespace vm
 } // namespace hermes
 #endif // HERMES_VM_INTERPRETER_INTERNAL_H

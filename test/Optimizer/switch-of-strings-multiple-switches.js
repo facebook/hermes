@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -TEMP_enableStringSwitchImm -O -dump-lir %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=LIR
-// RUN: %hermesc -TEMP_enableStringSwitchImm -O -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBC
+// RUN: %hermesc -O -dump-lir %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=LIR
+// RUN: %hermesc -O -dump-bytecode %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=HBC
 
 // This test ensure that the string tables are created correctly when
 // there are multiple switches in a function, including by a UInt
