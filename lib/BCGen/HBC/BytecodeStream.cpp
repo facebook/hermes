@@ -143,6 +143,7 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
       BM.getLiteralValueBufferSize(),
       BM.getObjectKeyBufferSize(),
       static_cast<uint32_t>(BM.getObjectShapeTable().size()),
+      BM.getNumStringSwitchImmInstrs(),
       BM.getSegmentID(),
       cjsModuleCount,
       static_cast<uint32_t>(BM.getFunctionSourceTable().size()),

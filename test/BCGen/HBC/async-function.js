@@ -31,6 +31,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  BigInt count: 0
 // CHECK-NEXT:  String Kind Entry count: 2
 // CHECK-NEXT:  RegExp count: 0
+// CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0

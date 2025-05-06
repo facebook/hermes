@@ -128,6 +128,11 @@ class BCProviderBase {
   llvh::ArrayRef<RegExpTableEntry> regExpTable_{};
   llvh::ArrayRef<uint8_t> regExpStorage_{};
 
+  /// The number of StringSwitchImm instructions in the bytecode
+  /// module.  Needed to size a table of per-instruction hash tables
+  /// used at runtime.
+  uint32_t numStringSwitchImmInstrs_;
+
   /// The segment ID corresponding to the bytecode module.
   uint32_t segmentID_;
 
@@ -207,6 +212,9 @@ class BCProviderBase {
   }
   llvh::ArrayRef<unsigned char> getRegExpStorage() const {
     return regExpStorage_;
+  }
+  uint32_t getNumStringSwitchImmInstrs() const {
+    return numStringSwitchImmInstrs_;
   }
   uint32_t getSegmentID() const {
     return segmentID_;

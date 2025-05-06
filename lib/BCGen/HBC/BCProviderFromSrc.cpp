@@ -75,6 +75,8 @@ void BCProviderFromSrc::setBytecodeModuleRefs() {
   objKeyBuffer_ = module_->getObjectKeyBuffer();
   objShapeTable_ = module_->getObjectShapeTable();
 
+  numStringSwitchImmInstrs_ = module_->getNumStringSwitchImmInstrs();
+
   segmentID_ = module_->getSegmentID();
   cjsModuleTable_ = module_->getCJSModuleTable();
   cjsModuleTableStatic_ = module_->getCJSModuleTableStatic();

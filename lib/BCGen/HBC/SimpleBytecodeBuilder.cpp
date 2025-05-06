@@ -105,6 +105,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
       0,
       0,
       0,
+      0,
       debugOffset,
       options};
   // Write BytecodeFileHeader to the buffer.

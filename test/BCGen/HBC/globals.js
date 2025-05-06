@@ -22,6 +22,7 @@ y = x;
 // STRICT-NEXT:  BigInt count: 0
 // STRICT-NEXT:  String Kind Entry count: 2
 // STRICT-NEXT:  RegExp count: 0
+// STRICT-NEXT:  StringSwitchImm count: 0
 // STRICT-NEXT:  Segment ID: 0
 // STRICT-NEXT:  CommonJS module count: 0
 // STRICT-NEXT:  CommonJS module count (static): 0
@@ -75,6 +76,7 @@ y = x;
 // NONSTRICT-NEXT:  BigInt count: 0
 // NONSTRICT-NEXT:  String Kind Entry count: 2
 // NONSTRICT-NEXT:  RegExp count: 0
+// NONSTRICT-NEXT:  StringSwitchImm count: 0
 // NONSTRICT-NEXT:  Segment ID: 0
 // NONSTRICT-NEXT:  CommonJS module count: 0
 // NONSTRICT-NEXT:  CommonJS module count (static): 0

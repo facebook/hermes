@@ -115,6 +115,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:  BigInt count: 0
 // BCGEN-NEXT:  String Kind Entry count: 2
 // BCGEN-NEXT:  RegExp count: 0
+// BCGEN-NEXT:  StringSwitchImm count: 0
 // BCGEN-NEXT:  Segment ID: 0
 // BCGEN-NEXT:  CommonJS module count: 0
 // BCGEN-NEXT:  CommonJS module count (static): 0

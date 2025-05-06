@@ -91,6 +91,7 @@ struct BytecodeFileHeader {
   uint32_t literalValueBufferSize;
   uint32_t objKeyBufferSize;
   uint32_t objShapeTableCount; // Number of elements in the shape table.
+  uint32_t numStringSwitchImms; // Number of StringSwitchImm instructions.
   uint32_t segmentID; // The ID of this segment.
   uint32_t cjsModuleCount; // Number of modules.
   uint32_t functionSourceCount; // Number of function sources preserved.
@@ -99,7 +100,7 @@ struct BytecodeFileHeader {
 
   // Insert any padding to make function headers that follow this file header
   // less likely to cross cache lines.
-  uint8_t padding[19];
+  uint8_t padding[15];
 
   BytecodeFileHeader(
       uint64_t magic,
@@ -120,6 +121,7 @@ struct BytecodeFileHeader {
       uint32_t literalValueBufferSize,
       uint32_t objKeyBufferSize,
       uint32_t objShapeTableCount,
+      uint32_t numStringSwitchImms,
       uint32_t segmentID,
       uint32_t cjsModuleCount,
       uint32_t functionSourceCount,
@@ -143,6 +145,7 @@ struct BytecodeFileHeader {
         literalValueBufferSize(literalValueBufferSize),
         objKeyBufferSize(objKeyBufferSize),
         objShapeTableCount(objShapeTableCount),
+        numStringSwitchImms(numStringSwitchImms),
         segmentID(segmentID),
         cjsModuleCount(cjsModuleCount),
         functionSourceCount(functionSourceCount),

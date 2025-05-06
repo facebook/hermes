@@ -568,6 +568,7 @@ BCProviderFromBuffer::BCProviderFromBuffer(
   functionCount_ = fileHeader->functionCount;
   globalFunctionIndex_ = fileHeader->globalCodeIndex;
   debugInfoOffset_ = fileHeader->debugInfoOffset;
+  numStringSwitchImmInstrs_ = fileHeader->numStringSwitchImms;
   functionHeaders_ = fields.functionHeaders.data();
   stringKinds_ = fields.stringKinds;
   identifierHashes_ = fields.identifierHashes;

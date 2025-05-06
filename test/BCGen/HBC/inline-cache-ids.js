@@ -136,6 +136,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:  BigInt count: 0
 // CHECK-NEXT:  String Kind Entry count: 3
 // CHECK-NEXT:  RegExp count: 0
+// CHECK-NEXT:  StringSwitchImm count: 0
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0

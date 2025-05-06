@@ -97,6 +97,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  BigInt count: 0
 // CHKBC-NEXT:  String Kind Entry count: 2
 // CHKBC-NEXT:  RegExp count: 0
+// CHKBC-NEXT:  StringSwitchImm count: 0
 // CHKBC-NEXT:  Segment ID: 0
 // CHKBC-NEXT:  CommonJS module count: 0
 // CHKBC-NEXT:  CommonJS module count (static): 0
