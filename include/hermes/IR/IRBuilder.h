@@ -618,13 +618,13 @@ class IRBuilder {
       LiteralNumber *numLevels,
       JSSpecialParam *parentScopeParam);
 
-  SwitchImmInst *createSwitchImmInst(
+  UIntSwitchImmInst *createUIntSwitchImmInst(
       Value *input,
       BasicBlock *defaultBlock,
       LiteralNumber *minValue,
       LiteralNumber *size,
-      const SwitchImmInst::ValueListType &values,
-      const SwitchImmInst::BasicBlockListType &blocks);
+      const UIntSwitchImmInst::ValueListType &values,
+      const BaseSwitchImmInst::BasicBlockListType &blocks);
 
   LIRLoadConstInst *createLIRLoadConstInst(Literal *value);
 

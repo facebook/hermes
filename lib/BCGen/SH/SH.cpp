@@ -1923,7 +1923,7 @@ class InstrGen {
   void generateHBCCmpBrTypeOfIsInst(HBCCmpBrTypeOfIsInst &inst) {
     unimplemented(inst);
   }
-  void generateSwitchImmInst(SwitchImmInst &inst) {
+  void generateUIntSwitchImmInst(UIntSwitchImmInst &inst) {
     unimplemented(inst);
   }
   void generateSaveAndYieldInst(SaveAndYieldInst &inst) {

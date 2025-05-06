@@ -47,7 +47,7 @@ void discoverBasicBlocks(
       continue;
     }
 
-    if (decoded.meta.opCode == OpCode::SwitchImm) {
+    if (decoded.meta.opCode == OpCode::UIntSwitchImm) {
       uint32_t min = decoded.operandValue[3].integer;
       uint32_t max = decoded.operandValue[4].integer;
       // Max is inclusive, so add 1 to get the number of entries.

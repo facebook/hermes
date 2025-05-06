@@ -87,12 +87,13 @@ class BytecodeVisitor {
   virtual void
   postVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length) {}
 
-  /// Called while decoding jump table of SwitchImm instruction.
-  /// \p jmpIdx: index into the switch jump table.
+  /// Called while decoding tables containing jump offsets associated with
+  /// SwitchImm instructions, such as the UIntSwitchImm instruction.
+  /// \p idx: index into the switch's table.
   /// \p offset: switch branch's offset relative to current ip.
   /// \p dest: pointer to current switch branch target.
   virtual void
-  visitSwitchImmTargets(uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {}
+  visitSwitchImmTargets(uint32_t idx, int32_t offset, const uint8_t *dest) {}
 
   /// Called while visiting operand.
   /// \p ip: pointer to current instruction in memory.
@@ -131,7 +132,8 @@ class JumpTargetsVisitor : public BytecodeVisitor {
 
   unsigned labelNumber_{0};
   // Remember all SwitchImm so we can loop through their associated jump tables.
-  std::vector<inst::Inst const *> switchInsts_{};
+  // These are the UIntSwitchImm instructions.
+  std::vector<inst::Inst const *> uintSwitchImmInsts_{};
   // Maps from jump_target_ip => label_number.
   JumpTargetsTy jumpTargets_{};
 
@@ -153,10 +155,8 @@ class JumpTargetsVisitor : public BytecodeVisitor {
   void preVisitInstruction(inst::OpCode opcode, const uint8_t *ip, int length)
       override;
 
-  void visitSwitchImmTargets(
-      uint32_t jmpIdx,
-      int32_t offset,
-      const uint8_t *dest) override {
+  void visitSwitchImmTargets(uint32_t idx, int32_t offset, const uint8_t *dest)
+      override {
     createOrSetLabel(dest);
   }
 
@@ -173,8 +173,8 @@ class JumpTargetsVisitor : public BytecodeVisitor {
   JumpTargetsTy &getJumpTargets() {
     return jumpTargets_;
   }
-  std::vector<inst::Inst const *> &getSwitchIntructions() {
-    return switchInsts_;
+  llvh::ArrayRef<inst::Inst const *> getUIntSwitchImmInstructions() {
+    return uintSwitchImmInsts_;
   }
 };
 

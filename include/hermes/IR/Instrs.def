@@ -202,7 +202,10 @@ DEF_TAG(HBCFCmpBrGreaterThanInst, HBCFCompareBranchInst)
 DEF_TAG(HBCFCmpBrGreaterThanOrEqualInst, HBCFCompareBranchInst)
 END_VALUE(HBCFCompareBranchInst)
 
-TERMINATOR(SwitchImmInst, TerminatorInst)
+BEGIN_TERMINATOR(BaseSwitchImmInst, TerminatorInst)
+DEF_VALUE(UIntSwitchImmInst, BaseSwitchImmInst)
+END_TERMINATOR(BaseSwitchImmInst)
+
 TERMINATOR(SaveAndYieldInst, TerminatorInst)
 
 TERMINATOR(HBCCmpBrTypeOfIsInst, TerminatorInst)

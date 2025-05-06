@@ -206,7 +206,7 @@ function switch_neg(x) {
 // CHECK:function jump_table(x: any): undefined|string
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r0}      %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:                 SwitchImmInst {r0} %0: any, %BB1, 0: number, 11: number, 0: number, %BB2, 1: number, %BB3, 2: number, %BB4, 3: number, %BB5, 4: number, %BB6, 5: number, %BB7, 6: number, %BB8, 8: number, %BB9, 9: number, %BB10, 10: number, %BB11
+// CHECK-NEXT:                 UIntSwitchImmInst {r0} %0: any, %BB1, 11: number, 0: number, 0: number, %BB2, 1: number, %BB3, 2: number, %BB4, 3: number, %BB5, 4: number, %BB6, 5: number, %BB7, 6: number, %BB8, 8: number, %BB9, 9: number, %BB10, 10: number, %BB11
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  {np0}     %2 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %2: undefined
@@ -272,7 +272,7 @@ function switch_neg(x) {
 // CHECK:function switch_uint32(x: any): number
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  {r0}      %0 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:                 SwitchImmInst {r0} %0: any, %BB1, 2147483648: number, 10: number, 2147483648: number, %BB2, 2147483649: number, %BB2, 2147483650: number, %BB2, 2147483651: number, %BB2, 2147483652: number, %BB2, 2147483653: number, %BB2, 2147483654: number, %BB2, 2147483655: number, %BB2, 2147483656: number, %BB2, 2147483657: number, %BB2
+// CHECK-NEXT:                 UIntSwitchImmInst {r0} %0: any, %BB1, 10: number, 2147483648: number, 2147483648: number, %BB2, 2147483649: number, %BB2, 2147483650: number, %BB2, 2147483651: number, %BB2, 2147483652: number, %BB2, 2147483653: number, %BB2, 2147483654: number, %BB2, 2147483655: number, %BB2, 2147483656: number, %BB2, 2147483657: number, %BB2
 // CHECK-NEXT:%BB1:
 // CHECK-NEXT:  {n0}      %2 = LIRLoadConstInst (:number) 1: number
 // CHECK-NEXT:                 ReturnInst {n0} %2: number

@@ -105,8 +105,9 @@ class HBCISel {
     Value *pointer;
   };
 
-  /// Info about a jump table instruction used during jump relocation.
-  struct SwitchImmInfo {
+  /// Info about a UIntSwitchImm (jump table) instruction, for use during jump
+  /// relocation.
+  struct UIntSwitchImmInfo {
     /// Offset of the instruction
     uint32_t offset;
 
@@ -149,10 +150,10 @@ class HBCISel {
   /// Bytecode generation options.
   const BytecodeGenerationOptions &bytecodeGenerationOptions_;
 
-  /// Map from SwitchImm -> (inst offset, default block, jump table).
-  llvh::DenseMap<SwitchImmInst *, SwitchImmInfo> switchImmInfo_{};
-  using switchInfoEntry =
-      llvh::DenseMap<SwitchImmInst *, SwitchImmInfo>::iterator::value_type;
+  /// Map from UIntSwitchImm -> (inst offset, default block, jump table).
+  llvh::DenseMap<UIntSwitchImmInst *, UIntSwitchImmInfo> uintSwitchImmInfo_{};
+  using switchInfoEntry = llvh::
+      DenseMap<UIntSwitchImmInst *, UIntSwitchImmInfo>::iterator::value_type;
 
   /// Saved identifier of "__proto__" for fast comparisons.
   Identifier protoIdent_{};
@@ -168,8 +169,8 @@ class HBCISel {
   /// Add long jump instruction to the relocation list.
   void registerLongJump(offset_t loc, BasicBlock *target);
 
-  /// Add a jump table switch to relocation list.
-  void registerSwitchImm(offset_t loc, SwitchImmInst *target);
+  /// Add a UIntSwitchImm (jump table) switch to relocation list.
+  void registerUIntSwitchImm(offset_t loc, UIntSwitchImmInst *target);
 
   /// Resolve all exception handlers.
   void resolveExceptionHandlers();
@@ -308,7 +309,7 @@ void HBCISel::registerLongJump(offset_t loc, BasicBlock *target) {
       {loc, Relocation::RelocationType::LongJumpType, target});
 }
 
-void HBCISel::registerSwitchImm(offset_t loc, SwitchImmInst *inst) {
+void HBCISel::registerUIntSwitchImm(offset_t loc, UIntSwitchImmInst *inst) {
   relocations_.push_back(
       {loc, Relocation::RelocationType::JumpTableDispatch, inst});
 }
@@ -358,12 +359,13 @@ void HBCISel::resolveRelocations() {
           // Nothing, just keep track of the location.
           break;
         case Relocation::JumpTableDispatch:
-          auto &switchImmInfo = switchImmInfo_[cast<SwitchImmInst>(pointer)];
+          auto &uintSwitchImmInfo =
+              uintSwitchImmInfo_[cast<UIntSwitchImmInst>(pointer)];
           // update default target jmp
-          BasicBlock *defaultBlock = switchImmInfo.defaultTarget;
+          BasicBlock *defaultBlock = uintSwitchImmInfo.defaultTarget;
           int defaultOffset = basicBlockMap_[defaultBlock].first - loc;
           BCFGen_->updateJumpTarget(loc + 1 + 1 + 4, defaultOffset, 4);
-          switchImmInfo_[cast<SwitchImmInst>(pointer)].offset = loc;
+          uintSwitchImmInfo_[cast<UIntSwitchImmInst>(pointer)].offset = loc;
           break;
       }
 
@@ -391,25 +393,25 @@ void HBCISel::resolveExceptionHandlers() {
 }
 
 void HBCISel::generateJumpTable() {
-  using SwitchInfoEntry =
-      llvh::DenseMap<SwitchImmInst *, SwitchImmInfo>::iterator::value_type;
+  using UIntSwitchInfoEntry = llvh::
+      DenseMap<UIntSwitchImmInst *, UIntSwitchImmInfo>::iterator::value_type;
 
-  if (switchImmInfo_.empty())
+  if (uintSwitchImmInfo_.empty())
     return;
 
   std::vector<uint32_t> res{};
 
   // Sort the jump table entries so iteration order is deterministic.
-  llvh::SmallVector<SwitchInfoEntry, 1> infoVector{
-      switchImmInfo_.begin(), switchImmInfo_.end()};
+  llvh::SmallVector<UIntSwitchInfoEntry, 1> infoVector{
+      uintSwitchImmInfo_.begin(), uintSwitchImmInfo_.end()};
   std::sort(
       infoVector.begin(),
       infoVector.end(),
-      [](SwitchInfoEntry &a, SwitchInfoEntry &b) {
+      [](UIntSwitchInfoEntry &a, UIntSwitchInfoEntry &b) {
         return a.second.offset < b.second.offset;
       });
 
-  // Fix up all SwitchImm instructions with correct offset.
+  // Fix up all UIntSwitchImm instructions with correct offset.
   for (auto &tuple : infoVector) {
     auto entry = tuple.second;
     uint32_t startOfTable = res.size();
@@ -1385,6 +1387,11 @@ void HBCISel::generateThrowIfThisInitializedInst(
 void HBCISel::generateSwitchInst(SwitchInst *Inst, BasicBlock *next) {
   llvm_unreachable("SwitchInst should have been lowered");
 }
+void HBCISel::generateBaseSwitchImmInst(
+    BaseSwitchImmInst *Inst,
+    BasicBlock *next) {
+  llvm_unreachable("Not a concrete instruction");
+}
 void HBCISel::generateSaveAndYieldInst(
     SaveAndYieldInst *Inst,
     BasicBlock *next) {
@@ -2043,8 +2050,8 @@ void HBCISel::generateCreateClassInst(CreateClassInst *Inst, BasicBlock *next) {
   }
 }
 
-void HBCISel::generateSwitchImmInst(
-    hermes::SwitchImmInst *Inst,
+void HBCISel::generateUIntSwitchImmInst(
+    hermes::UIntSwitchImmInst *Inst,
     hermes::BasicBlock *next) {
   uint32_t min = Inst->getMinValue();
   uint32_t size = Inst->getSize();
@@ -2067,11 +2074,11 @@ void HBCISel::generateSwitchImmInst(
       jmpTable[idx] = Inst->getDefaultDestination();
   }
 
-  registerSwitchImm(
-      BCFGen_->emitSwitchImm(
+  registerUIntSwitchImm(
+      BCFGen_->emitUIntSwitchImm(
           encodeValue(Inst->getInputValue()), 0, 0, min, max),
       Inst);
-  switchImmInfo_[Inst] = {0, Inst->getDefaultDestination(), jmpTable};
+  uintSwitchImmInfo_[Inst] = {0, Inst->getDefaultDestination(), jmpTable};
 }
 
 void HBCISel::generateLoadParentNoTrapsInst(

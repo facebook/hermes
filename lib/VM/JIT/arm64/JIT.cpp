@@ -583,8 +583,8 @@ EMIT_JMP_BUILTIN_IS(JmpBuiltinIsNotLong, true)
 
 #undef EMIT_JMP_BUILTIN_IS
 
-inline void JITContext::Compiler::emitSwitchImm(
-    const inst::SwitchImmInst *inst) {
+inline void JITContext::Compiler::emitUIntSwitchImm(
+    const inst::UIntSwitchImmInst *inst) {
   uint32_t min = inst->op4;
   uint32_t max = inst->op5;
   // Max is inclusive, so add 1 to get the number of entries.

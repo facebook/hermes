@@ -742,7 +742,10 @@ class TypeInferenceImpl {
   Type inferHBCCmpBrTypeOfIsInst(HBCCmpBrTypeOfIsInst *inst) {
     return Type::createNoType();
   }
-  Type inferSwitchImmInst(SwitchImmInst *inst) {
+  Type inferSwitchImmInst(BaseSwitchImmInst *inst) {
+    hermes_fatal("This is not a concrete instruction");
+  }
+  Type inferUIntSwitchImmInst(UIntSwitchImmInst *inst) {
     return Type::createNoType();
   }
   Type inferSaveAndYieldInst(SaveAndYieldInst *inst) {

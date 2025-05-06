@@ -2985,30 +2985,32 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(SwitchImm) {
-        if (LLVM_LIKELY(O1REG(SwitchImm).isNumber())) {
-          double numVal = O1REG(SwitchImm).getNumber();
+      CASE(UIntSwitchImm) {
+        if (LLVM_LIKELY(O1REG(UIntSwitchImm).isNumber())) {
+          double numVal = O1REG(UIntSwitchImm).getNumber();
           uint32_t uintVal = (uint32_t)numVal;
           if (LLVM_LIKELY(numVal == uintVal) && // Only integers.
-              LLVM_LIKELY(uintVal >= ip->iSwitchImm.op4) && // Bounds checking.
-              LLVM_LIKELY(uintVal <= ip->iSwitchImm.op5)) // Bounds checking.
+              LLVM_LIKELY(
+                  uintVal >= ip->iUIntSwitchImm.op4) && // Bounds checking.
+              LLVM_LIKELY(
+                  uintVal <= ip->iUIntSwitchImm.op5)) // Bounds checking.
           {
             // Calculate the offset into the bytecode where the jump table for
             // this SwitchImm starts.
             const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
-                (const uint8_t *)ip + ip->iSwitchImm.op2, sizeof(uint32_t));
+                (const uint8_t *)ip + ip->iUIntSwitchImm.op2, sizeof(uint32_t));
 
             // Read the offset from the table.
             // Must be signed to account for backwards branching.
             const int32_t *loc =
-                (const int32_t *)tablestart + uintVal - ip->iSwitchImm.op4;
+                (const int32_t *)tablestart + uintVal - ip->iUIntSwitchImm.op4;
 
             ip = IPADD(*loc);
             DISPATCH;
           }
         }
         // Wrong type or out of range, jump to default.
-        ip = IPADD(ip->iSwitchImm.op3);
+        ip = IPADD(ip->iUIntSwitchImm.op3);
         DISPATCH;
       }
       LOAD_CONST(

@@ -96,7 +96,7 @@ class BasicBlockRangeVisitor : public hermes::hbc::BytecodeVisitor {
   }
 
   void preVisitInstruction(OpCode opcode, const uint8_t *ip, int length) {
-    isBranchInst_ = opcode == OpCode::SwitchImm;
+    isBranchInst_ = opcode == OpCode::UIntSwitchImm;
   }
 
   void

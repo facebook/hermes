@@ -1354,7 +1354,9 @@ bool Verifier::visitSwitchInst(const hermes::SwitchInst &Inst) {
   return visitSwitchLikeInst(Inst);
 }
 
-bool Verifier::visitSwitchImmInst(const hermes::SwitchImmInst &Inst) {
+bool Verifier::visitUIntSwitchImmInst(const hermes::UIntSwitchImmInst &Inst) {
+  // For integer jump tables (SwitchImmInst, above), we assert that the
+  // LiteralNumber is a UInt32.
   ReturnIfNot(visitSwitchLikeInst(Inst));
   for (unsigned idx = 0, e = Inst.getNumCasePair(); idx < e; ++idx) {
     AssertIWithMsg(
@@ -1362,6 +1364,7 @@ bool Verifier::visitSwitchImmInst(const hermes::SwitchImmInst &Inst) {
         Inst.getCasePair(idx).first->isUInt32Representible(),
         "case value must be a uint32");
   }
+
   return true;
 }
 

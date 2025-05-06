@@ -143,10 +143,14 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<CreateRegExpInst>(Inst))
     return true;
 
-  if (llvh::isa<SwitchImmInst>(Inst) &&
-      (opIndex == SwitchImmInst::MinValueIdx ||
-       opIndex == SwitchImmInst::SizeIdx ||
-       opIndex >= SwitchImmInst::FirstCaseIdx))
+  if (auto *baseSwitchImm = llvh::dyn_cast<BaseSwitchImmInst>(Inst)) {
+    if (opIndex == BaseSwitchImmInst::SizeIdx ||
+        opIndex >= baseSwitchImm->getFirstCaseIdx())
+      return true;
+  }
+
+  if (llvh::isa<UIntSwitchImmInst>(Inst) &&
+      opIndex == UIntSwitchImmInst::MinValueIdx)
     return true;
 
   /// CallBuiltin's callee, new.target, "this" should always be literals.
@@ -892,7 +896,7 @@ bool LowerSwitchIntoJumpTables::lowerIntoJumpTable(SwitchInst *switchInst) {
     return false;
 
   builder.setInsertionPoint(switchInst);
-  auto *switchImmInst = builder.createSwitchImmInst(
+  auto *uintSwitchImmInst = builder.createUIntSwitchImmInst(
       switchInst->getInputValue(),
       switchInst->getDefaultDestination(),
       builder.getLiteralNumber(minValue),
@@ -900,7 +904,7 @@ bool LowerSwitchIntoJumpTables::lowerIntoJumpTable(SwitchInst *switchInst) {
       values,
       blocks);
 
-  switchInst->replaceAllUsesWith(switchImmInst);
+  switchInst->replaceAllUsesWith(uintSwitchImmInst);
   switchInst->eraseFromParent();
   return true;
 }

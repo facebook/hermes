@@ -434,24 +434,25 @@ void BytecodeDisassembler::disassembleExceptionHandlersPretty(
 
 namespace {
 
-/// Given a SwitchImm instruction, loop through each entry of the associated
+/// Given a UIntSwitchImm instruction, loop through each entry of the associated
 /// jump table.
 /// F: (current index into primary jump table, jump target offset, destination
 /// instruction) -> void.
 template <typename F>
 void switchJumpTableForEach(const inst::Inst *inst, F f) {
-  assert(inst->opCode == inst::OpCode::SwitchImm && "expected SwitchImm");
-  unsigned start = inst->iSwitchImm.op4;
-  unsigned end = inst->iSwitchImm.op5;
+  assert(
+      inst->opCode == inst::OpCode::UIntSwitchImm && "expected UIntSwitchImm");
+  unsigned start = inst->iUIntSwitchImm.op4;
+  unsigned end = inst->iUIntSwitchImm.op5;
   assert(start < end);
   unsigned numberOfEntries = end - start;
 
-  /// Get the current SwitchImm instruction's subview [start, end] start pointer
-  /// from primary jump table. This is the same computation done by the
-  /// interpreter to figure out the start of the jump table view.
+  /// Get the current UIntSwitchImm instruction's subview [start, end]
+  /// start pointer from primary jump table. This is the same computation done
+  /// by the interpreter to figure out the start of the jump table view.
   const auto *curJmpTableView =
       reinterpret_cast<const uint32_t *>(llvh::alignAddr(
-          (const uint8_t *)inst + inst->iSwitchImm.op2, sizeof(uint32_t)));
+          (const uint8_t *)inst + inst->iUIntSwitchImm.op2, sizeof(uint32_t)));
 
   for (unsigned curJmpTableViewOffset = 0;
        curJmpTableViewOffset <= numberOfEntries;
@@ -489,8 +490,8 @@ void BytecodeVisitor::visitInstructionsInBody(
     auto instLength = md.size;
     preVisitInstruction(md.opCode, ip, instLength);
 
-    // Visit branch targets of the SwitchImm instruction.
-    if (op == OpCode::SwitchImm && visitSwitchImmTargets) {
+    // Visit branch targets of the SwitchImm instructions.
+    if (op == OpCode::UIntSwitchImm && visitSwitchImmTargets) {
       switchJumpTableForEach(
           (inst::Inst const *)ip,
           [this](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
@@ -613,9 +614,9 @@ void JumpTargetsVisitor::preVisitInstruction(
     const uint8_t *ip,
     int length) {
   switch (opcode) {
-    case OpCode::SwitchImm:
-      // Decode jump table of SwitchImm instruction.
-      switchInsts_.push_back((inst::Inst const *)ip);
+    case OpCode::UIntSwitchImm:
+      // Decode jump table of UIntSwitchImm instruction.
+      uintSwitchImmInsts_.push_back((inst::Inst const *)ip);
       break;
 
     case OpCode::Ret:
@@ -843,16 +844,16 @@ void PrettyDisassembleVisitor::printSourceLineForOffset(uint32_t opcodeOffset) {
 class DisassembleVisitor : public BytecodeVisitor {
  private:
   raw_ostream &os_;
-  std::vector<inst::Inst const *> switchInsts_{};
+  std::vector<inst::Inst const *> uintSwitchImmInsts_{};
 
  protected:
   void preVisitInstruction(OpCode opcode, const uint8_t *ip, int length) {
     int offset = ip - bcProvider_->getBytecode(funcId_);
     assert(offset >= 0);
     os_ << "[@ " << offset << "] " << getOpCodeString(opcode);
-    if (opcode == OpCode::SwitchImm) {
+    if (opcode == OpCode::UIntSwitchImm) {
       const inst::Inst *inst = (inst::Inst const *)ip;
-      switchInsts_.push_back(inst);
+      uintSwitchImmInsts_.push_back(inst);
     }
   }
 
@@ -891,8 +892,8 @@ class DisassembleVisitor : public BytecodeVisitor {
       raw_ostream &os)
       : BytecodeVisitor(bcProvider), os_(os) {}
 
-  std::vector<inst::Inst const *> &getSwitchIntructions() {
-    return switchInsts_;
+  std::vector<inst::Inst const *> &getUIntSwitchImmInstructions() {
+    return uintSwitchImmInsts_;
   }
 };
 
@@ -1046,11 +1047,11 @@ void BytecodeDisassembler::disassembleFunctionPretty(
   disassembleVisitor.visitInstructionsInFunction(funcId);
 
   // Print out switch jump tables, if any.
-  auto &switchInsts = jumpVisitor.getSwitchIntructions();
-  if (!switchInsts.empty()) {
+  auto uintSwitchImmInsts = jumpVisitor.getUIntSwitchImmInstructions();
+  if (!uintSwitchImmInsts.empty()) {
     OS << "\n " << "Jump Tables: \n";
-    for (auto *inst : switchInsts) {
-      OS << "  " << "offset " << inst->iSwitchImm.op2 << "\n";
+    for (auto *inst : uintSwitchImmInsts) {
+      OS << "  " << "offset " << inst->iUIntSwitchImm.op2 << "\n";
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
             OS << "   " << jmpIdx << " : " << "L" << jumpTargets[dest] << "\n";
@@ -1069,11 +1070,11 @@ void BytecodeDisassembler::disassembleFunctionRaw(
   disassembleVisitor.visitInstructionsInFunction(funcId);
 
   // Print out switch jump tables, if any.
-  auto &switchInsts = disassembleVisitor.getSwitchIntructions();
-  if (!switchInsts.empty()) {
+  auto &uintSwitchInsts = disassembleVisitor.getUIntSwitchImmInstructions();
+  if (!uintSwitchInsts.empty()) {
     OS << "\n " << "Jump Tables: \n";
-    for (auto *inst : switchInsts) {
-      OS << "  " << "offset " << inst->iSwitchImm.op2 << "\n";
+    for (auto *inst : uintSwitchInsts) {
+      OS << "  " << "offset " << inst->iUIntSwitchImm.op2 << "\n";
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
             OS << "   " << jmpIdx << " : " << offset << "\n";

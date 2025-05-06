@@ -381,15 +381,16 @@ class UsageCounter : public BytecodeVisitor {
     }
   }
 
-  void visitSwitchImm(const inst::Inst *inst) {
-    assert(inst->opCode == inst::OpCode::SwitchImm);
+  void visitUIntSwitchImm(const inst::Inst *inst) {
+    assert(inst->opCode == inst::OpCode::UIntSwitchImm);
 
     const auto *curJmpTableView =
         reinterpret_cast<const uint32_t *>(llvh::alignAddr(
-            (const uint8_t *)inst + inst->iSwitchImm.op2, sizeof(uint32_t)));
+            (const uint8_t *)inst + inst->iUIntSwitchImm.op2,
+            sizeof(uint32_t)));
 
-    unsigned start = inst->iSwitchImm.op4;
-    unsigned end = inst->iSwitchImm.op5;
+    unsigned start = inst->iUIntSwitchImm.op4;
+    unsigned end = inst->iUIntSwitchImm.op5;
     assert(start < end && "Jump table spans negative range");
     unsigned count = end - start + 1;
 
@@ -411,8 +412,8 @@ class UsageCounter : public BytecodeVisitor {
 
     // Count non-string misc references
     switch (opcode) {
-      case OpCode::SwitchImm:
-        visitSwitchImm(inst);
+      case OpCode::UIntSwitchImm:
+        visitUIntSwitchImm(inst);
         break;
       case OpCode::NewObjectWithBuffer: {
         ShapeTableEntry shapeInfo =

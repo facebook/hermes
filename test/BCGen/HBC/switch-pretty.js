@@ -119,7 +119,7 @@ function f(x) {
 // CHECK:Function<f>(2 params, 12 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r2, 1
-// CHECK-NEXT:    SwitchImm         r2, 292, L18, 0, 16
+// CHECK-NEXT:    UIntSwitchImm     r2, 292, L18, 0, 16
 // CHECK-NEXT:L17:
 // CHECK-NEXT:    LoadConstInt      r0, 3352
 // CHECK-NEXT:    Ret               r0
@@ -176,7 +176,7 @@ function f(x) {
 // CHECK-NEXT:    LoadConstUInt8    r0, 32
 // CHECK-NEXT:    Ret               r0
 // CHECK-NEXT:L18:
-// CHECK-NEXT:    SwitchImm         r2, 199, L23, 1, 14
+// CHECK-NEXT:    UIntSwitchImm     r2, 199, L23, 1, 14
 // CHECK-NEXT:L30:
 // CHECK-NEXT:    LoadConstInt      r0, 3342
 // CHECK-NEXT:    Ret               r0

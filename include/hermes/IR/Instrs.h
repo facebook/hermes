@@ -3934,33 +3934,26 @@ class HBCResolveParentEnvironmentInst : public BaseScopeInst {
   }
 };
 
-class SwitchImmInst : public TerminatorInst {
-  SwitchImmInst(const SwitchImmInst &) = delete;
-  void operator=(const SwitchImmInst &) = delete;
+/// Superclass for "immediate" switch instructions: those that have a list
+/// of pairs of constant case-value types (for some consistent type), and
+/// BasicBlock jump targets.
+class BaseSwitchImmInst : public TerminatorInst {
+  BaseSwitchImmInst(const BaseSwitchImmInst &) = delete;
+  void operator=(const BaseSwitchImmInst &) = delete;
 
  public:
-  enum { InputIdx, DefaultBlockIdx, MinValueIdx, SizeIdx, FirstCaseIdx };
-
-  using ValueListType = llvh::SmallVector<LiteralNumber *, 8>;
+  enum { InputIdx, DefaultBlockIdx, SizeIdx };
   using BasicBlockListType = llvh::SmallVector<BasicBlock *, 8>;
+
+  /// \returns the first case index (which depends on the subtype).
+  inline unsigned getFirstCaseIdx() const;
 
   /// \returns the number of switch case values.
   unsigned getNumCasePair() const {
     // The number of cases is computed as the total number of operands, minus
     // the input value and the default basic block. Take this number and divide
     // it in two, because we are counting pairs.
-    return (getNumOperands() - FirstCaseIdx) / 2;
-  }
-
-  /// Returns the n'th pair of value-basicblock that represent a case
-  /// destination.
-  std::pair<LiteralNumber *, BasicBlock *> getCasePair(unsigned i) const {
-    // The values and lables are twined together. Find the index of the pair
-    // that we are fetching and return the two values.
-    unsigned base = i * 2 + FirstCaseIdx;
-    return std::make_pair(
-        cast<LiteralNumber>(getOperand(base)),
-        cast<BasicBlock>(getOperand(base + 1)));
+    return (getNumOperands() - getFirstCaseIdx()) / 2;
   }
 
   /// \returns the destination of the default target.
@@ -3973,27 +3966,27 @@ class SwitchImmInst : public TerminatorInst {
     return getOperand(InputIdx);
   }
 
-  uint32_t getMinValue() const {
-    return cast<LiteralNumber>(getOperand(MinValueIdx))->asUInt32();
-  }
-
   uint32_t getSize() const {
     return cast<LiteralNumber>(getOperand(SizeIdx))->asUInt32();
   }
 
+  BasicBlock *getSwitchTarget(unsigned i) const {
+    // The values and labels are twined together. Find the index of the pair
+    // that we are fetching and return the jump target.
+    unsigned base = i * 2 + getFirstCaseIdx();
+    return cast<BasicBlock>(getOperand(base + 1));
+  }
+
   /// \p input is the discriminator value.
   /// \p defaultBlock is the block to jump to if nothing matches.
-  /// \p minValue the smallest (integer) value of all switch cases.
   /// \p size     the difference between minValue and the largest value + 1.
-  explicit SwitchImmInst(
+  explicit BaseSwitchImmInst(
+      ValueKind kind,
       Value *input,
       BasicBlock *defaultBlock,
-      LiteralNumber *minValue,
-      LiteralNumber *size,
-      const ValueListType &values,
-      const BasicBlockListType &blocks);
-  explicit SwitchImmInst(
-      const SwitchImmInst *src,
+      LiteralNumber *size);
+  explicit BaseSwitchImmInst(
+      const BaseSwitchImmInst *src,
       llvh::ArrayRef<Value *> operands)
       : TerminatorInst(src, operands) {}
 
@@ -4009,8 +4002,7 @@ class SwitchImmInst : public TerminatorInst {
   }
 
   static bool classof(const Value *V) {
-    ValueKind kind = V->getKind();
-    return kind == ValueKind::SwitchImmInstKind;
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), BaseSwitchImmInst);
   }
 
   unsigned getNumSuccessorsImpl() const {
@@ -4019,6 +4011,64 @@ class SwitchImmInst : public TerminatorInst {
   BasicBlock *getSuccessorImpl(unsigned idx) const;
   void setSuccessorImpl(unsigned idx, BasicBlock *B);
 };
+
+class UIntSwitchImmInst : public BaseSwitchImmInst {
+  UIntSwitchImmInst(const UIntSwitchImmInst &) = delete;
+  void operator=(const UIntSwitchImmInst &) = delete;
+
+ public:
+  enum { MinValueIdx = BaseSwitchImmInst::SizeIdx + 1, FirstCaseIdx };
+
+  using ValueListType = llvh::SmallVector<LiteralNumber *, 8>;
+
+  /// Returns the n'th pair of value-basicblock that represent a case
+  /// destination.
+  std::pair<LiteralNumber *, BasicBlock *> getCasePair(unsigned i) const {
+    // The values and labels are twined together. Find the index of the pair
+    // that we are fetching and return the two values.
+    unsigned base = i * 2 + FirstCaseIdx;
+    return std::make_pair(
+        cast<LiteralNumber>(getOperand(base)),
+        cast<BasicBlock>(getOperand(base + 1)));
+  }
+
+  uint32_t getMinValue() const {
+    return cast<LiteralNumber>(getOperand(MinValueIdx))->asUInt32();
+  }
+
+  /// \p input is the discriminator value.
+  /// \p defaultBlock is the block to jump to if nothing matches.
+  /// \p minValue the smallest (integer) value of all switch cases.
+  /// \p size     the difference between minValue and the largest value + 1.
+  explicit UIntSwitchImmInst(
+      Value *input,
+      BasicBlock *defaultBlock,
+      LiteralNumber *minValue,
+      LiteralNumber *size,
+      const ValueListType &values,
+      const BasicBlockListType &blocks);
+  explicit UIntSwitchImmInst(
+      const UIntSwitchImmInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseSwitchImmInst(src, operands) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::UIntSwitchImmInstKind;
+  }
+};
+
+// Now that we've declared the two subtypes of SwitchImmInst, we can implement
+// this function.
+/* static */
+unsigned BaseSwitchImmInst::getFirstCaseIdx() const {
+  ValueKind kind = getKind();
+  if (kind == ValueKind::UIntSwitchImmInstKind) {
+    return UIntSwitchImmInst::FirstCaseIdx;
+  }
+  assert(false && "Unknown SwitchImmInst subtype.\n");
+  return 0;
+}
 
 class HBCCmpBrTypeOfIsInst : public TerminatorInst {
   HBCCmpBrTypeOfIsInst(const HBCCmpBrTypeOfIsInst &) = delete;

@@ -994,15 +994,15 @@ IRBuilder::createHBCResolveParentEnvironmentInst(
   return inst;
 }
 
-SwitchImmInst *IRBuilder::createSwitchImmInst(
+UIntSwitchImmInst *IRBuilder::createUIntSwitchImmInst(
     Value *input,
     BasicBlock *defaultBlock,
     LiteralNumber *minValue,
     LiteralNumber *size,
-    const SwitchImmInst::ValueListType &values,
-    const SwitchImmInst::BasicBlockListType &blocks) {
-  auto inst =
-      new SwitchImmInst(input, defaultBlock, minValue, size, values, blocks);
+    const UIntSwitchImmInst::ValueListType &values,
+    const UIntSwitchImmInst::BasicBlockListType &blocks) {
+  auto inst = new UIntSwitchImmInst(
+      input, defaultBlock, minValue, size, values, blocks);
   insert(inst);
   return inst;
 }

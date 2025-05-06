@@ -842,7 +842,7 @@ OPERAND_STRING_ID(CreateRegExp, 3)
 /// is located at offset ip + arg2 + arg1 - arg4. We subtract arg4 to avoid
 /// wasting space when compiling denses switches that do not start at zero. Note
 /// that Arg2 is *unaligned* it is dynamically aligned at runtime.
-DEFINE_OPCODE_5(SwitchImm, Reg8, UInt32, Addr32, UInt32, UInt32)
+DEFINE_OPCODE_5(UIntSwitchImm, Reg8, UInt32, Addr32, UInt32, UInt32)
 
 /// Create a generator.
 /// Arg1 is the register in which to store the generator.

@@ -119,7 +119,7 @@ function f(x) {
 // CHECK:Function<f>(2 params, 12 registers, 1 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
 // CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
-// CHECK-NEXT:[@ 3] SwitchImm 2<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
+// CHECK-NEXT:[@ 3] UIntSwitchImm 2<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
 // CHECK-NEXT:[@ 21] LoadConstInt 0<Reg8>, 3352<Imm32>
 // CHECK-NEXT:[@ 27] Ret 0<Reg8>
 // CHECK-NEXT:[@ 29] LoadConstInt 0<Reg8>, 3523<Imm32>
@@ -158,7 +158,7 @@ function f(x) {
 // CHECK-NEXT:[@ 157] Ret 0<Reg8>
 // CHECK-NEXT:[@ 159] LoadConstUInt8 0<Reg8>, 32<UInt8>
 // CHECK-NEXT:[@ 162] Ret 0<Reg8>
-// CHECK-NEXT:[@ 164] SwitchImm 2<Reg8>, 199<UInt32>, 116<Addr32>, 1<UInt32>, 14<UInt32>
+// CHECK-NEXT:[@ 164] UIntSwitchImm 2<Reg8>, 199<UInt32>, 116<Addr32>, 1<UInt32>, 14<UInt32>
 // CHECK-NEXT:[@ 182] LoadConstInt 0<Reg8>, 3342<Imm32>
 // CHECK-NEXT:[@ 188] Ret 0<Reg8>
 // CHECK-NEXT:[@ 190] LoadConstInt 0<Reg8>, 3254<Imm32>

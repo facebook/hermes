@@ -112,11 +112,16 @@ bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<CreateRegExpInst>(Inst))
     return true;
 
-  if (llvh::isa<SwitchImmInst>(Inst) &&
-      (opIndex == SwitchImmInst::MinValueIdx ||
-       opIndex == SwitchImmInst::SizeIdx ||
-       opIndex >= SwitchImmInst::FirstCaseIdx))
+  if (auto *baseSwitchImm = llvh::dyn_cast<BaseSwitchImmInst>(Inst)) {
+    if (opIndex == BaseSwitchImmInst::SizeIdx ||
+        opIndex >= baseSwitchImm->getFirstCaseIdx())
+      return true;
+  }
+
+  if (llvh::isa<UIntSwitchImmInst>(Inst) &&
+      opIndex == UIntSwitchImmInst::MinValueIdx) {
     return true;
+  }
 
   /// CallBuiltin's callee, new.target, "this" should always be literals.
   if (llvh::isa<CallBuiltinInst>(Inst) &&
