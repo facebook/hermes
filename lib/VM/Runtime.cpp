@@ -274,7 +274,7 @@ Runtime::Runtime(
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
       traceMode(runtimeConfig.getSynthTraceMode()),
       gcCallbacksWrapper_(*this),
-      heapStorage_(
+      heap_(
           gcCallbacksWrapper_,
           *this,
           runtimeConfig.getGCConfig(),

@@ -31,7 +31,7 @@ DummyRuntime::DummyRuntime(
     std::shared_ptr<StorageProvider> storageProvider,
     std::shared_ptr<CrashManager> crashMgr)
     : gcCallbacksWrapper_(*this),
-      gcStorage_{
+      heap_{
           gcCallbacksWrapper_,
           *this,
           gcConfig,

@@ -24,7 +24,6 @@
 #include "hermes/VM/Debugger/Debugger.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/GCBase-inline.h"
-#include "hermes/VM/GCStorage.h"
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/IdentifierTable.h"
@@ -404,7 +403,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   FormatSymbolID formatSymbolID(SymbolID id);
 
   GC &getHeap() {
-    return *heapStorage_.get();
+    return heap_;
   }
 
   /// @}
@@ -1125,7 +1124,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
  private:
   GCBase::GCCallbacksWrapper<Runtime> gcCallbacksWrapper_;
-  GCStorage heapStorage_;
+  GC heap_;
 
   std::vector<std::function<void(GC *, RootAcceptor &)>> customMarkRootFuncs_;
   std::vector<std::function<void(GC *, WeakRootAcceptor &)>>

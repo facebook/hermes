@@ -277,7 +277,7 @@ inline HermesValue operator"" _hd(long double d) {
 class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
  private:
   GCBase::GCCallbacksWrapper<DummyRuntime> gcCallbacksWrapper_;
-  GCStorage gcStorage_;
+  GC heap_;
 
  public:
   std::vector<WeakRoot<GCCell> *> weakRoots{};
@@ -327,7 +327,7 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
   }
 
   GC &getHeap() {
-    return *gcStorage_.get();
+    return heap_;
   }
 
   void collect();
