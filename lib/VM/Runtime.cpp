@@ -353,7 +353,7 @@ Runtime::Runtime(
   // Allocate the "reserved" registers in the root frame.
   allocStack(
       StackFrameLayout::CalleeExtraRegistersAtStart,
-      HermesValue::encodeUndefinedValue());
+      HermesValue::encodeRawZeroValueUnsafe());
 
   // Initialize Predefined Strings.
   // This function does not do any allocations.
@@ -1982,6 +1982,7 @@ void Runtime::allocStack(uint32_t count, HermesValue initValue) {
   // constants are propagated into initValue, which enables clang to use
   // memset_pattern_16. This ends up being a significant loss as it is an
   // indirect call.
+  assert(initValue.getRaw() == 0 && "Init value must always be the same.");
   auto *oldStackPointer = stackPointer_;
   allocUninitializedStack(count);
   // Initialize the new registers.

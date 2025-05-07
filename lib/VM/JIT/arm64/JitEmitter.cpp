@@ -1127,15 +1127,15 @@ void Emitter::frameSetup(
   a.str(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::stackPointer));
   a.str(xFrame, a64::Mem(xRuntime, RuntimeOffsets::currentFrame));
 
-  // Fill it with undefined.
-  a.mov(a64::x0, _sh_ljs_undefined().raw);
-  a.dup(a64::v0.d2(), a64::x0);
+  static_assert(
+      HERMESVALUE_VERSION == 2, "Raw zero value must be ignored by GC");
   // Initialize the pointer to the current set of registers.
   a.mov(a64::x0, xFrame);
   size_t regsToFill = totalRegsToAlloc;
-  // Fill the registers with undefined in groups of 4, then 2, then 1.
+  // Fill the registers with zero in groups of 4, then 2, then 1.
   // If there are more than 32 registers, start with a loop.
   if (regsToFill > 32) {
+    a.movi(a64::v0.d2(), 0);
     // We will fill 4 registers on each iteration.
     unsigned loopBytes = llvh::alignDown(regsToFill, 4) * sizeof(SHLegacyValue);
     // Initialize the loop limit in x1.
@@ -1153,7 +1153,8 @@ void Emitter::frameSetup(
     a.b_lo(loop);
 
     regsToFill %= 4;
-  } else {
+  } else if (regsToFill >= 4) {
+    a.movi(a64::v0.d2(), 0);
     // If the number of registers is small, just fill them directly.
     while (regsToFill >= 4) {
       a.stp(a64::v0, a64::v0, a64::Mem(a64::x0).post(32));
@@ -1162,12 +1163,12 @@ void Emitter::frameSetup(
   }
   // Fill any excess registers.
   if (regsToFill >= 2) {
-    a.str(a64::v0, a64::Mem(a64::x0).post(16));
+    a.stp(a64::xzr, a64::xzr, a64::Mem(a64::x0).post(16));
     regsToFill -= 2;
   }
   if (regsToFill > 0) {
     assert(regsToFill == 1 && "All regs must be filled");
-    a.str(a64::d0, a64::Mem(a64::x0));
+    a.str(a64::xzr, a64::Mem(a64::x0));
   }
 
   // Create the slow path for throwing a register stack overflow.

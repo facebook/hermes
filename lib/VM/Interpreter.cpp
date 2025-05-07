@@ -570,7 +570,7 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
             curCodeBlock->getFrameSize() +
                 StackFrameLayout::CalleeExtraRegistersAtStart,
-            HermesValue::encodeUndefinedValue()))) {
+            HermesValue::encodeRawZeroValueUnsafe()))) {
       return runtime.raiseStackOverflow(
           Runtime::StackOverflowKind::JSRegisterStack);
     }
@@ -1277,7 +1277,7 @@ tailCall:
         if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
                 calleeBlock->getFrameSize() +
                     StackFrameLayout::CalleeExtraRegistersAtStart,
-                HermesValue::encodeUndefinedValue()))) {
+                HermesValue::encodeRawZeroValueUnsafe()))) {
           CAPTURE_IP(runtime.raiseStackOverflow(
               Runtime::StackOverflowKind::JSRegisterStack));
           goto exception;

@@ -284,6 +284,13 @@ class HermesValue : public HermesValueBase {
         llvh::DoubleToBits(std::numeric_limits<double>::quiet_NaN()));
   }
 
+  /// Create a HermesValue that has the raw representation 0. This value must
+  /// never become visible to user code, and is guaranteed to be ignored by the
+  /// GC.
+  static constexpr HermesValue encodeRawZeroValueUnsafe() {
+    return HermesValue{0};
+  }
+
   /// Keeping tag constant, make a new HermesValue with \p val stored in it.
   inline HermesValue updatePointer(void *val) const {
     assert(isPointer());
