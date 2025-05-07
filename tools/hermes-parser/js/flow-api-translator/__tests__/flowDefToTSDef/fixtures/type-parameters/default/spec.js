@@ -9,3 +9,4 @@
  */
 
 type T1<A = B> = A;
+type T2 = T1<>;
