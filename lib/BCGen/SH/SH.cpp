@@ -484,7 +484,7 @@ class InstrGen {
       uint32_t &nextWriteCacheIdx,
       uint32_t &nextReadCacheIdx,
       uint32_t &nextPrivateNameCacheIdx,
-      const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs)
+      const llvh::MapVector<TryStartInst *, uint32_t> &tryIDs)
       : os_(os),
         ra_(ra),
         bbMap_(bbMap),
@@ -541,7 +541,7 @@ class InstrGen {
 
   /// Map from TryStart to an ID for the try/catch.
   /// Set the tryState to the ID when entering the try, restore it when leaving.
-  const llvh::DenseMap<TryStartInst *, uint32_t> &tryIDs_;
+  const llvh::MapVector<TryStartInst *, uint32_t> &tryIDs_;
 
   /// Map from BasicBlock to the TryStartInst that encloses it, nullptr if none.
   /// If empty, there's no try in the entire function.
@@ -2608,7 +2608,7 @@ void generateFunction(
   unsigned bbCounter = 0;
   llvh::DenseMap<BasicBlock *, unsigned> bbMap;
   // Map from TryStart to an ID for that try/catch.
-  llvh::DenseMap<TryStartInst *, uint32_t> tryIDs{};
+  llvh::MapVector<TryStartInst *, uint32_t> tryIDs{};
   // Start counting at 1 because 0 is reserved for blocks without a try.
   uint32_t tryIDCounter = 1;
 
@@ -2616,7 +2616,7 @@ void generateFunction(
     bbMap[B] = bbCounter;
     bbCounter++;
     if (auto *tryStart = llvh::dyn_cast<TryStartInst>(B->getTerminator())) {
-      tryIDs.try_emplace(tryStart, tryIDCounter);
+      tryIDs[tryStart] = tryIDCounter;
       ++tryIDCounter;
     }
   }
