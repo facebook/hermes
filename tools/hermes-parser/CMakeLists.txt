@@ -7,19 +7,21 @@ if (EMSCRIPTEN)
   add_hermes_tool(hermes-parser-wasm
     hermes-parser-wasm.cpp
     HermesParserJSSerializer.cpp
+    HermesParserDiagHandler.cpp
     ${ALL_HEADER_FILES}
     )
 
   target_link_libraries(hermes-parser-wasm
     hermesAST
     hermesParser
+    hermesSema
     LLVHSupport
   )
 
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s NODERAWFS=0 -s WASM=1")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s ALLOW_MEMORY_GROWTH=1")
   target_link_options(hermes-parser-wasm PRIVATE
-    "SHELL: -s EXPORTED_RUNTIME_METHODS=[cwrap,ccall]")
+    "SHELL: -s EXPORTED_RUNTIME_METHODS=[cwrap,ccall,HEAP8,HEAPU8,HEAP16,HEAPU16,HEAP32,HEAPU32,HEAPF32,HEAP64,HEAPU64,HEAPF64]")
   target_link_options(hermes-parser-wasm PRIVATE
     "SHELL: -s EXPORTED_FUNCTIONS=[_malloc,_free]")
   target_link_options(hermes-parser-wasm PRIVATE "SHELL: -s MODULARIZE=1")
