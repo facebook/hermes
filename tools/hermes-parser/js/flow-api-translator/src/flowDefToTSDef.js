@@ -4048,7 +4048,12 @@ const getTransforms = (
       return {
         type: 'TSTypeParameterInstantiation',
         loc: DUMMY_LOC,
-        params: node.params.map(transformTypeAnnotationType),
+        params:
+          // Empty parameters in Flow are valid, but TS requires at least one parameter.
+          // This ensures empty type parameters are not created in TS
+          node.params.length === 0
+            ? null
+            : node.params.map(transformTypeAnnotationType),
       };
     },
     UnionTypeAnnotation(
