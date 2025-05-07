@@ -56,16 +56,29 @@ yarn babel-node "$THIS_DIR/genTransformNodeTypes.js"
 # Create fresh dist directory for each package, and copy source files in
 for package in "${PACKAGES[@]}"; do
   PACKAGE_DIR="$THIS_DIR/../$package"
-  rm -rf "$PACKAGE_DIR/dist"
+  DIST_DIR="$PACKAGE_DIR/dist"
+  SRC_DIR="$PACKAGE_DIR/src"
 
-  cp -r "$PACKAGE_DIR/src" "$PACKAGE_DIR/dist"
+  # Clean dist
+  rm -rf "$DIST_DIR"
+  cp -r "$SRC_DIR" "$DIST_DIR"
 
   # There is no system for flow to emit flow declarations for files
   # So we rename all the JS files to .js.flow so they are treated like flow declarations
-  find "$PACKAGE_DIR/dist" -type f -name "*.js" -exec grep -q " @flow" {} \; -exec rename --no-overwrite ".js" ".js.flow" {} \;
+  find "$DIST_DIR" -type f -name "*.js" | while read -r file; do
+    # Check if file contains flow annotation
+    if grep -q " @flow" "$file"; then
+      # Create a new file with .js.flow extension
+      new_file="${file}.flow"
+      # Only proceed if the destination doesn't already exist
+      if [ ! -f "$new_file" ]; then
+        cp "$file" "$new_file"
+      fi
+    fi
+  done
 
   # Copy just the JS files again
-  (cd "$PACKAGE_DIR/src" && find . -type f -name '*.js' -exec cp --parents -t ../dist {} +)
+  rsync -a --include="*/" --include="*.js" --exclude="*" "$SRC_DIR" "$DIST_DIR"
 done
 
 # Generate source code that only applies to dist directory
