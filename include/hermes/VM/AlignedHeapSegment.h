@@ -62,6 +62,8 @@ class StorageProvider;
 /// invariant ensures that we can always get the card status and boundary table
 /// from a valid GCCell pointer.
 class AlignedHeapSegment {
+  friend struct RuntimeOffsets;
+
  protected:
   /// The provider that created this segment. It will be used to properly
   /// destroy this.
@@ -631,6 +633,8 @@ class JumboHeapSegment : public AlignedHeapSegment {
 /// before the allocation region. This is used for all allocations in YoungGen
 /// and normal object allocations in OldGen.
 class FixedSizeHeapSegment : public AlignedHeapSegment {
+  friend struct RuntimeOffsets;
+
   /// The upper limit of the space that we can currently allocated into;
   /// this may be decreased when externally allocated memory is credited to
   /// the generation owning this space.

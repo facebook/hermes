@@ -53,6 +53,8 @@ namespace vm {
 /// NOTE: Currently HadesGC is only a stub, meant to get things to compile.
 /// It will be filled out to actually work later.
 class HadesGC final : public GCBase {
+  friend struct RuntimeOffsets;
+
  public:
   /// Initialize the GC with the give \p gcCallbacks and \p gcConfig.
   /// maximum size.

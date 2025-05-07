@@ -51,6 +51,21 @@ struct RuntimeOffsets {
       offsetof(StringPrimitive, lengthAndFlags_);
   static constexpr uint32_t stringPrimitiveLengthMask =
       StringPrimitive::LENGTH_MASK;
+
+#ifdef HERMESVM_GC_HADES
+  static constexpr uint32_t runtimeHadesYGLevel =
+      offsetof(Runtime, heap_.youngGen_.level_);
+  static constexpr uint32_t runtimeHadesYGEnd =
+      offsetof(Runtime, heap_.youngGen_.effectiveEnd_);
+#endif
+
+#ifndef NDEBUG
+  static constexpr uint32_t runtimeDebugAllocCounter =
+      offsetof(Runtime, heap_.debugAllocationCounter_);
+  static constexpr uint32_t gcCellDebugAllocId =
+      offsetof(GCCell, _debugAllocationId_);
+  static constexpr uint32_t gcCellMagicValue = GCCell::kMagic;
+#endif
 };
 
 #pragma GCC diagnostic pop

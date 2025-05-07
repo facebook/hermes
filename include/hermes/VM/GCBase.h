@@ -229,6 +229,8 @@ enum XorPtrKeyID {
 ///   bool isUpdatingPointers() const;
 ///
 class GCBase {
+  friend struct RuntimeOffsets;
+
  public:
   static const char kNaturalCauseForAnalytics[];
   static const char kHandleSanCauseForAnalytics[];
@@ -498,6 +500,8 @@ class GCBase {
   /// object ID. When disabled old allocations continue to be tracked but
   /// no new allocations get a stack-trace.
   struct AllocationLocationTracker final {
+    friend struct RuntimeOffsets;
+
     explicit AllocationLocationTracker(GCBase *gc);
 
     /// Returns true if tracking is enabled for new allocations.
@@ -587,6 +591,8 @@ class GCBase {
   };
 
   class SamplingAllocationLocationTracker final {
+    friend struct RuntimeOffsets;
+
    public:
     explicit inline SamplingAllocationLocationTracker(GCBase *gc) : gc_(gc) {}
 

@@ -412,6 +412,17 @@ void emit_load_cp(
 #endif
 }
 
+/// Store the compressed pointer in \p val to \p mem.
+void emit_store_cp(
+    a64::Assembler &a,
+    const a64::GpX &val,
+    const a64::Mem &mem) {
+  if constexpr (sizeof(CompressedPointer) == 4)
+    a.str(val.w(), mem);
+  else
+    a.str(val, mem);
+}
+
 /// Load a SmallHermesValue from \p mem.
 void emit_load_shv(
     a64::Assembler &a,
@@ -2248,6 +2259,60 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
+}
+
+void Emitter::allocInYoung(
+    CellKind kind,
+    uint32_t sz,
+    const a64::GpX &xOut,
+    const a64::GpX &xTemp1,
+    const a64::GpX &xTemp2,
+    const asmjit::Label &slowPathLab) {
+#ifdef HERMESVM_GC_HADES
+  // Load the current YG level and end address.
+  a.ldr(xOut, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGLevel));
+  a.ldr(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGEnd));
+
+  // Ensure the size is aligned as required.
+  sz = heapAlignSize(sz);
+
+  // Try to increment the heap level by the size of the object.
+  a.add(xTemp2, xOut, sz);
+  a.cmp(xTemp2, xTemp1);
+  a.b_hi(slowPathLab);
+
+  // Allocating succeeded, update the level.
+  a.str(xTemp2, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGLevel));
+
+  // Initialize the fields on GCCell.
+#ifndef NDEBUG
+  // cell->magic = GCCell::kMagic
+  a.mov(xTemp1, RuntimeOffsets::gcCellMagicValue);
+  static_assert(sizeof(SHGCCell::magic) == 2);
+  a.strh(xTemp1.w(), a64::Mem(xOut, offsetof(SHGCCell, magic)));
+
+  // cell->debugAllocationId = heap->debugAllocationCounter_++;
+  a.ldr(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeDebugAllocCounter));
+  static_assert(sizeof(SHGCCell::debugAllocationId) == 4);
+  a.str(xTemp1.w(), a64::Mem(xOut, offsetof(SHGCCell, debugAllocationId)));
+  a.add(xTemp1, xTemp1, 1);
+  a.str(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeDebugAllocCounter));
+#endif
+
+  // Load the KindAndSize into a register.
+  KindAndSize ks{kind, sz};
+  CompressedPointer::RawType rawKS;
+  static_assert(sizeof(ks) == sizeof(rawKS));
+  memcpy(&rawKS, &ks, sizeof(ks));
+  // Note that this is almost always a "cheap constant".
+  loadBits64InGp(xTemp1, rawKS, "KindAndSize");
+
+  // KindAndSize has the same size as a compressed pointer, so store it as one.
+  emit_store_cp(a, xTemp1, a64::Mem(xOut, offsetof(SHGCCell, kindAndSize)));
+#else
+  // MallocGC does not support inline allocation.
+  a.b(slowPathLab);
+#endif
 }
 
 void Emitter::newObject(FR frRes) {

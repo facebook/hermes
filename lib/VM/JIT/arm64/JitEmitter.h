@@ -1278,6 +1278,22 @@ class Emitter {
   void reifyArgumentsImpl(FR frLazyReg, bool strict, const char *name);
 
   void throwIfEmptyUndefinedImpl(FR frRes, FR frInput, bool empty);
+
+  /// Emit the code to perform an allocation in the young generation, populating
+  /// the fields of the new GCCell.
+  /// \param kind is the CellKind of object to allocate.
+  /// \param sz is the size of the object to allocate.
+  /// \param xOut is the register to store the address of the new object.
+  /// \param xTemp1 is a temporary register.
+  /// \param xTemp2 is a temporary register.
+  /// \param slowPathLab is the label to jump to if the allocation fails.
+  void allocInYoung(
+      CellKind kind,
+      uint32_t sz,
+      const a64::GpX &xOut,
+      const a64::GpX &xTemp1,
+      const a64::GpX &xTemp2,
+      const asmjit::Label &slowPathLab);
 }; // class Emitter
 
 } // namespace hermes::vm::arm64
