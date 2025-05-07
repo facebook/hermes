@@ -58,11 +58,12 @@ class TestCrashManager : public CrashManager {
     contextualCustomData_[std::string{key}] = std::string{value};
   }
   void removeCustomData(const char *key) override {
-    auto nRemoved = customData_.erase(std::string(key));
+    [[maybe_unused]] auto nRemoved = customData_.erase(std::string(key));
     assert(nRemoved == 1 && "key must exist");
   }
   void removeContextualCustomData(const char *key) override {
-    auto nRemoved = contextualCustomData_.erase(std::string(key));
+    [[maybe_unused]] auto nRemoved =
+        contextualCustomData_.erase(std::string(key));
     assert(nRemoved == 1 && "key must exist");
   }
 
