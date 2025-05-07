@@ -400,6 +400,14 @@ void emit_sh_cp_decode_non_null(a64::Assembler &a, const a64::GpX &xInOut) {
 #endif
 }
 
+/// Given a pointer in \p xInOut that is known to be non-null, compress it and
+/// place the result in \p xInOut.
+void emit_sh_cp_encode_non_null(a64::Assembler &a, const a64::GpX &xInOut) {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+  a.sub(xInOut, xInOut, xRuntime);
+#endif
+}
+
 /// Load a compressed pointer from \p mem.
 void emit_load_cp(
     a64::Assembler &a,
@@ -630,6 +638,69 @@ void emit_stringprim_get_length_and_flags(
   emit_sh_ljs_get_pointer(a, xOut, xIn);
   a.ldr(
       xOut.w(), a64::Mem(xOut, RuntimeOffsets::stringPrimitiveLengthAndFlags));
+}
+
+/// Emit code to initialize the fields on a JSObject.
+/// \param xObj contains a pointer to the object to initialise.
+/// \param xParent contains a compressed pointer to the parent object.
+/// \param xTemp is a temporary register for use by the emitted code.
+void emit_jsobject_init(
+    a64::Assembler &a,
+    const a64::GpX &xObj,
+    const a64::GpX &xParent,
+    const a64::GpX &xTemp) {
+  // obj->flags = 0
+  a.str(a64::wzr, a64::Mem(xObj, offsetof(SHJSObject, flags)));
+
+  // Load the hidden class compressed pointer into xTemp.
+  static_assert(
+      JSObject::numOverlapSlots<JSObject>() == 0,
+      "Cannot use 0 property root class.");
+  a.ldr(xTemp, a64::Mem(xRuntime, RuntimeOffsets::runtimeRootClazzes));
+  emit_sh_ljs_get_pointer(a, xTemp, xTemp);
+  emit_sh_cp_encode_non_null(a, xTemp);
+
+  // Store the parent and hidden class.
+  // obj->parent = xParent
+  // obj->clazz = xTemp
+  static_assert(
+      offsetof(SHJSObject, clazz) - offsetof(SHJSObject, parent) ==
+          sizeof(CompressedPointer),
+      "clazz and parent must be adjacent to use stp");
+  if constexpr (sizeof(CompressedPointer) == 4)
+    a.stp(xParent.w(), xTemp.w(), a64::Mem(xObj, offsetof(SHJSObject, parent)));
+  else
+    a.stp(xParent, xTemp, a64::Mem(xObj, offsetof(SHJSObject, parent)));
+
+  // obj->propStorage = nullptr
+  // obj->directProps[N] = SmallHermesValue::encodeRawZeroValue()
+
+  // Assert that the number of bytes we need to zero is just 6x the size of a
+  // compressed pointer so we can initialize them efficiently.
+  static_assert(
+      sizeof(CompressedPointer) +
+          sizeof(SmallHermesValue) * HERMESVM_DIRECT_PROPERTY_SLOTS ==
+      sizeof(CompressedPointer) * 6);
+  if constexpr (sizeof(CompressedPointer) == 4) {
+    // If compressed pointers are enabled, we store 4 * 6 = 24 bytes of zeroes
+    // to zero out the propStorage and direct property fields.
+    a.stp(
+        a64::xzr, a64::xzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
+    a.str(a64::xzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage) + 16));
+  } else {
+    // If compressed pointers are disabled, we store 8 * 6 = 48 bytes of zeroes
+    // to zero out the propStorage and direct property fields.
+    a.stp(
+        a64::xzr, a64::xzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
+    a.stp(
+        a64::xzr,
+        a64::xzr,
+        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + 16));
+    a.stp(
+        a64::xzr,
+        a64::xzr,
+        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + 32));
+  }
 }
 
 class OurErrorHandler : public asmjit::ErrorHandler {
@@ -2319,11 +2390,60 @@ void Emitter::newObject(FR frRes) {
   comment("// NewObject r%u", frRes.index());
   syncAllFRTempExcept(frRes);
   freeAllFRTempExcept({});
-  a.mov(a64::x0, xRuntime);
-  EMIT_RUNTIME_CALL(*this, SHLegacyValue(*)(SHRuntime *), _sh_ljs_new_object);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+
+  // Allocate the result register.
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+  auto xRes = hwRes.a64GpX();
+
+  // Allocate temporary registers, note that these must be different from the
+  // result as we will use all of them together.
+  HWReg hwTemp1 = allocTempGpX();
+  HWReg hwTemp2 = allocTempGpX();
+  auto xTemp1 = hwTemp1.a64GpX();
+  auto xTemp2 = hwTemp2.a64GpX();
+  freeReg(hwTemp1);
+  freeReg(hwTemp2);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  // Allocate the object.
+  allocInYoung(
+      CellKind::JSObjectKind,
+      cellSize<JSObject>(),
+      xRes,
+      xTemp1,
+      xTemp2,
+      slowPathLab);
+
+  // Get the parent.
+  a.ldr(xTemp1, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
+  emit_sh_ljs_get_pointer(a, xTemp1, xTemp1);
+  emit_sh_cp_encode_non_null(a, xTemp1);
+
+  emit_jsobject_init(a, xRes, /* xParent */ xTemp1, /* xTemp */ xTemp2);
+
+  // Add the object tag to the result.
+  emit_sh_ljs_object(a, xRes);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .hwRes = hwRes,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment("// Slow path: NewObject r%u", sl.frRes.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         EMIT_RUNTIME_CALL(
+             em, SHLegacyValue(*)(SHRuntime *), _sh_ljs_new_object);
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::newObjectWithParent(FR frRes, FR frParent) {

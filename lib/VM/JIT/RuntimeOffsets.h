@@ -66,6 +66,9 @@ struct RuntimeOffsets {
       offsetof(GCCell, _debugAllocationId_);
   static constexpr uint32_t gcCellMagicValue = GCCell::kMagic;
 #endif
+
+  static constexpr uint32_t runtimeRootClazzes =
+      offsetof(Runtime, rootClazzes_);
 };
 
 #pragma GCC diagnostic pop
