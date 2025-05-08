@@ -79,11 +79,11 @@ bool tryPromoteObject(
 
   for (auto *U : alloc->getUsers()) {
     // Loading from the object does not escape.
-    if (auto *L = llvh::dyn_cast<PrLoadInst>(U)) {
+    if ([[maybe_unused]] auto *L = llvh::dyn_cast<PrLoadInst>(U)) {
       assert(L->getObject() == alloc && "Load from a different object");
       continue;
     }
-    if (auto *LP = llvh::dyn_cast<TypedLoadParentInst>(U)) {
+    if ([[maybe_unused]] auto *LP = llvh::dyn_cast<TypedLoadParentInst>(U)) {
       assert(LP->getObject() == alloc && "Load from a different object");
       // The parent must be specified in the AllocObjectLiteralInst for us to
       // guarantee that a LoadStack for it will be preceded by a StoreStack.
