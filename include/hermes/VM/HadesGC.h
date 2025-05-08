@@ -180,6 +180,26 @@ class HadesGC final : public GCBase {
       class... Args>
   LLVM_ATTRIBUTE_NOINLINE T *makeASlowCanBeLarge(uint32_t size, Args &&...args);
 
+  /// \return the maximum number of bytes that can be allocated at once in the
+  /// young gen.
+  static constexpr inline uint32_t maxYoungGenAllocationSize() {
+    return FixedSizeHeapSegment::maxSize();
+  }
+
+  /// Allocate two young gen objects of the size \p size1 + \p size2.
+  /// Calls the constructors of types T1 and T2 with the arguments \p t1Args and
+  /// \p t2Args respectively.
+  /// \pre the TOTAL size must be able to fit in the young gen
+  ///  (can be checked with canAllocateInYoungGen(size)).
+  /// \post both result pointers are in the young gen.
+  /// \return a pointer to size1 size T1, and a pointer to size2 size T2.
+  template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+  inline std::pair<T1 *, T2 *> make2YoungGenUnsafeImpl(
+      uint32_t size1,
+      std::tuple<T1Args...> t1Args,
+      uint32_t size2,
+      std::tuple<T2Args...> t2Args);
+
   /// Force a garbage collection cycle.
   /// (Part of general GC API defined in GCBase.h).
   void collect(std::string cause, bool canEffectiveOOM = false) override;
@@ -1599,6 +1619,53 @@ T *HadesGC::makeASlowCanBeLarge(uint32_t size, Args &&...args) {
       return nullptr;
   }
   return constructCellCanBeLarge<T>(ptr, size, std::forward<Args>(args)...);
+}
+
+template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+std::pair<T1 *, T2 *> HadesGC::make2YoungGenUnsafeImpl(
+    uint32_t size1,
+    std::tuple<T1Args...> t1Args,
+    uint32_t size2,
+    std::tuple<T2Args...> t2Args) {
+  assert(noAllocLevel_ == 0 && "No allocs allowed right now.");
+
+  if (shouldSanitizeHandles()) {
+    auto lk = ensureBackgroundTaskPaused();
+    // The best way to sanitize uses of raw pointers outside handles is to force
+    // the entire heap to move, and ASAN poison the old heap. That is too
+    // expensive to do, even with sampling, for Hades. It also doesn't test the
+    // more interesting aspect of Hades which is concurrent background
+    // collections. So instead, do a youngGenCollection which force-starts an
+    // oldGenCollection if one is not already running.
+    youngGenCollection(
+        kHandleSanCauseForAnalytics, /*forceOldGenCollection*/ true);
+  }
+
+  uint32_t totalSize = size1 + size2;
+
+  assert(
+      ((uint64_t)size1 + (uint64_t)size2) <
+          (uint64_t)maxYoungGenAllocationSize() &&
+      "must be able to allocate in young gen");
+
+  AllocResult res = youngGen().alloc(totalSize);
+  void *t1Void = LLVM_UNLIKELY(!res.success)
+      ? allocSlow<CanBeLarge::No, MayFail::No>(totalSize)
+      : res.ptr;
+  void *t2Void = ((uint8_t *)t1Void + size1);
+
+  T1 *t1Res = llvh::apply_tuple(
+      [t1Void, size1](auto &&...args) -> T1 * {
+        return constructCell<T1>(t1Void, size1, args...);
+      },
+      t1Args);
+  T2 *t2Res = llvh::apply_tuple(
+      [t2Void, size2](auto &&...args) -> T2 * {
+        return constructCell<T2>(t2Void, size2, args...);
+      },
+      t2Args);
+
+  return {t1Res, t2Res};
 }
 
 /// \}

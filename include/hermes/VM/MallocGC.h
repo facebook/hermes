@@ -125,6 +125,8 @@ class MallocGC final : public GCBase {
   /// alive.
   /// This should be empty between collections.
   llvh::DenseSet<CellHeader *> newPointers_;
+  /// Whether to temporarily suppress handle-san collections.
+  bool suppressHandleSan_ = false;
   /// maxSize_ is the absolute highest amount of memory that MallocGC is allowed
   /// to allocate.
   const gcheapsize_t maxSize_;
@@ -170,6 +172,26 @@ class MallocGC final : public GCBase {
   /// still exceed the max heap size.  But if it fails, the allocation can never
   /// succeed.)
   bool canAllocExternalMemory(uint32_t size) override;
+
+  /// \return the maximum number of bytes that can be allocated at once in the
+  /// young gen.
+  static constexpr inline uint32_t maxYoungGenAllocationSize() {
+    return std::numeric_limits<uint32_t>::max();
+  }
+
+  /// Allocate two young gen objects of the size \p size1 + \p size2.
+  /// Calls the constructors of types T1 and T2 with the arguments \p t1Args and
+  /// \p t2Args respectively.
+  /// \pre the TOTAL size must be able to fit in the young gen
+  ///  (can be checked with canAllocateInYoungGen(size)).
+  /// \post both result pointers are in the young gen.
+  /// \return a pointer to size1 size T1, and a pointer to size2 size T2.
+  template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+  inline std::pair<T1 *, T2 *> make2YoungGenUnsafeImpl(
+      uint32_t size1,
+      std::tuple<T1Args...> t1Args,
+      uint32_t size2,
+      std::tuple<T2Args...> t2Args);
 
   /// Collect all of the dead objects and symbols in the heap. Also invalidate
   /// weak pointers that point to dead objects.
@@ -397,6 +419,50 @@ inline void MallocGC::initCell(GCCell *cell, uint32_t size) {
   // For debugging, fill with a dead value.
   std::fill_n(reinterpret_cast<char *>(cell), size, kInvalidHeapValue);
 #endif
+}
+
+template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
+    uint32_t size1,
+    std::tuple<T1Args...> t1Args,
+    uint32_t size2,
+    std::tuple<T2Args...> t2Args) {
+  uint32_t totalSize = size1 + size2;
+
+  // Prevent collection from occurring between the two allocations below.
+  if (totalSize > sizeLimit_ - allocatedBytes_) {
+    collectBeforeAlloc(kNaturalCauseForAnalytics, totalSize);
+  }
+  if (totalSize > sizeLimit_ - allocatedBytes_) {
+    oom(make_error_code(OOMError::MaxHeapReached));
+  }
+
+  // Need to capture and explicitly use 'this'.
+  // If it's not captured, compiler errors because 'makeA' needs 'this'.
+  // If it is captured but not used explicitly, compiler warns due to
+  //   -Wunused-lambda-capture.
+  // Might be due to apply_tuple.
+  T1 *t1 = llvh::apply_tuple(
+      [this, size1](auto &&...args) -> T1 * {
+        return this->makeA<T1>(size1, args...);
+      },
+      t1Args);
+
+  // This allocation won't cause collection because we checked above that
+  // there's enough space. The only thing that could cause a collection is
+  // handle-san so we suppressed it.
+  suppressHandleSan_ = true;
+  T2 *t2 = llvh::apply_tuple(
+      [this, size2](auto &&...args) -> T2 * {
+        return this->makeA<T2>(size2, args...);
+      },
+      t2Args);
+  suppressHandleSan_ = false;
+
+  assert(CellHeader::from(t1)->inYoungGen && "allocation must be in young gen");
+  assert(CellHeader::from(t2)->inYoungGen && "allocation must be in young gen");
+
+  return {t1, t2};
 }
 
 /// @}

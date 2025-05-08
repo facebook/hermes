@@ -89,10 +89,56 @@ PseudoHandle<JSObject> JSObject::create(
 PseudoHandle<JSObject> JSObject::create(
     Runtime &runtime,
     unsigned propertyCount) {
-  auto self = create(runtime);
+  unsigned numIndirectSlots = propertyCount <= DIRECT_PROPERTY_SLOTS
+      ? 0
+      : propertyCount - DIRECT_PROPERTY_SLOTS;
+  if (numIndirectSlots == 0) {
+    // No indirect storage needed, so just pass through to create.
+    return create(runtime);
+  }
 
-  return runtime.ignoreAllocationFailure(
-      JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
+  auto propStorageSize =
+      heapAlignSize(PropStorage::allocationSize(numIndirectSlots));
+  if (LLVM_UNLIKELY(propertyCount > maxYoungGenAllocationPropCount())) {
+    // The object and property storage together are too big to fit in the young
+    // gen together, so allocate them separately.
+    auto self = create(runtime);
+    return runtime.ignoreAllocationFailure(
+        JSObject::allocatePropStorage(std::move(self), runtime, propertyCount));
+  }
+
+  static_assert(
+      heapAlignSize(
+          PropStorage::allocationSize(
+              maxYoungGenAllocationPropCount() - DIRECT_PROPERTY_SLOTS) +
+              heapAlignSize(cellSize<JSObject>()) <=
+          GC::maxYoungGenAllocationSize()),
+      "maxYoungGenAllocationPropCount too large");
+
+  // Otherwise, allocate both parts together.
+  // This ensures both the object and the property storage are in the young gen.
+
+  auto parent = Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  auto clazz =
+      runtime.getHiddenClassForPrototype(*parent, numOverlapSlots<JSObject>());
+
+  auto [obj, storage] = runtime.make2YoungGenUnsafe<JSObject, PropStorage>(
+      cellSize<JSObject>(),
+      std::tuple<
+          Runtime &,
+          Handle<JSObject>,
+          Handle<HiddenClass>,
+          GCPointerBase::NoBarriers>(
+          runtime, parent, clazz, GCPointerBase::NoBarriers()),
+      propStorageSize,
+      std::tuple{});
+
+  NoAllocScope noAlloc{runtime};
+
+  PropStorage::resizeWithinCapacity(storage, runtime, numIndirectSlots);
+  obj->propStorage_.set(runtime, storage, runtime.getHeap());
+
+  return JSObjectInit::initToPseudoHandle(runtime, obj);
 }
 
 PseudoHandle<JSObject> JSObject::create(

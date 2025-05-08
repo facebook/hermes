@@ -355,6 +355,13 @@ class JSObject : public GCCell {
         cell->getKind(), CellKind::ObjectKind_first, CellKind::ObjectKind_last);
   }
 
+  /// \return the maximum number of properties for which an object can be
+  /// allocated entirely at once in the GC young gen.
+  /// This is useful because we know that all property slots can be written to
+  /// without a write barrier until another allocation happens after the
+  /// JSObject.
+  static constexpr inline uint32_t maxYoungGenAllocationPropCount();
+
   /// Attempts to allocate a JSObject with the given prototype.
   /// If allocation fails, the GC declares an OOM.
   static PseudoHandle<JSObject> create(

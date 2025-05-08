@@ -587,7 +587,7 @@ GCCell *MallocGC::alloc(uint32_t size) {
   assert(
       isSizeHeapAligned(size) &&
       "Call to alloc must use a size aligned to HeapAlign");
-  if (shouldSanitizeHandles()) {
+  if (shouldSanitizeHandles() && !suppressHandleSan_) {
     collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
   }
   // Check for memory pressure conditions to do a collection.

@@ -88,6 +88,21 @@ enum XorPtrKeyID {
 ///     class... Args>
 /// inline T *makeAImpl(uint32_t size, Args &&... args);
 ///
+/// Allocate two young gen objects of the size \p size1 + \p size2.
+/// Calls the constructors of types T1 and T2 with the arguments \p t1Args and
+/// \p t2Args respectively.
+/// \pre the TOTAL size must be able to fit in the young gen
+///  (can be checked with canAllocateInYoungGen(size)).
+/// \post both result pointers are in the young gen.
+/// \return a pointer to size1 size T1, and a pointer to size2 size T2.
+///
+/// template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+/// inline std::pair<T1 *, T2 *> make2YoungGenUnsafeImpl(
+///     uint32_t size1,
+///     std::tuple<T1Args...> t1Args,
+///     uint32_t size2,
+///     std::tuple<T2Args...> t2Args);
+///
 /// In some GCs, objects can have associated memory allocated outside the heap,
 /// and this memory can influence GC initiation and heap sizing heuristics.
 /// This method tests whether an external memory allocation is too large (e.g.,
@@ -918,6 +933,20 @@ class GCBase {
       MayFail mayFail = MayFail::No,
       class... Args>
   T *makeA(uint32_t size, Args &&...args);
+
+  /// Allocate two young gen objects of the size \p size1 + \p size2.
+  /// Calls the constructors of types T1 and T2 with the arguments \p t1Args and
+  /// \p t2Args respectively.
+  /// \pre the TOTAL size must be able to fit in the young gen
+  ///  (can be checked with canAllocateInYoungGen(size)).
+  /// \post both result pointers are in the young gen.
+  /// \return a pointer to size1 size T1, and a pointer to size2 size T2.
+  template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+  inline std::pair<T1 *, T2 *> make2YoungGenUnsafe(
+      uint32_t size1,
+      std::tuple<T1Args...> t1Args,
+      uint32_t size2,
+      std::tuple<T2Args...> t2Args);
 
   /// Name to identify this heap in logs.
   const std::string &getName() const {

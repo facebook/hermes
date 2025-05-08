@@ -340,6 +340,20 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
       class... Args>
   T *makeAVariable(uint32_t size, Args &&...args);
 
+  /// Allocate two young gen objects of the size \p size1 + \p size2.
+  /// Calls the constructors of types T1 and T2 with the arguments \p t1Args and
+  /// \p t2Args respectively.
+  /// \pre the TOTAL size must be able to fit in the young gen
+  ///  (can be checked with GC::canAllocateInYoungGen(size)).
+  /// \post both result pointers are in the young gen.
+  /// \return a pointer to size1 size T1, and a pointer to size2 size T2.
+  template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+  inline std::pair<T1 *, T2 *> make2YoungGenUnsafe(
+      uint32_t size1,
+      std::tuple<T1Args...> t1Args,
+      uint32_t size2,
+      std::tuple<T2Args...> t2Args);
+
   /// Used as a placeholder for places where we should be checking for OOM
   /// but aren't yet.
   /// TODO: do something when there is an uncaught exception, e.g. print
@@ -2053,6 +2067,22 @@ T *Runtime::makeAVariable(uint32_t size, Args &&...args) {
   return getHeap()
       .makeAVariable<T, hasFinalizer, longLived, canBeLarge, mayFail>(
           size, std::forward<Args>(args)...);
+}
+
+template <typename T1, typename T2, typename... T1Args, typename... T2Args>
+std::pair<T1 *, T2 *> Runtime::make2YoungGenUnsafe(
+    uint32_t size1,
+    std::tuple<T1Args...> t1Args,
+    uint32_t size2,
+    std::tuple<T2Args...> t2Args) {
+#ifndef NDEBUG
+  // We always call getCurrentIP() in a debug build as this has the effect of
+  // asserting the IP is correctly set (not invalidated) at this point. This
+  // allows us to leverage our whole test-suite to find missing cases of
+  // CAPTURE_IP* macros in the interpreter loop.
+  (void)getCurrentIP();
+#endif
+  return getHeap().make2YoungGenUnsafe<T1, T2>(size1, t1Args, size2, t2Args);
 }
 
 template <typename T>

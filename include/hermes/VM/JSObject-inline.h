@@ -12,6 +12,13 @@
 
 namespace hermes::vm {
 
+constexpr inline uint32_t JSObject::maxYoungGenAllocationPropCount() {
+  return PropStorage::capacityForAllocationSize(
+             GC::maxYoungGenAllocationSize() -
+             heapAlignSize(cellSize<JSObject>())) +
+      DIRECT_PROPERTY_SLOTS;
+}
+
 template <typename IndexType>
 #ifdef NDEBUG
 LLVM_ATTRIBUTE_ALWAYS_INLINE
