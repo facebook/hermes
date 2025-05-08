@@ -2499,16 +2499,89 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
   comment("// NewObjectWithParent r%u, r%u", frRes.index(), frParent.index());
   syncAllFRTempExcept(frRes != frParent ? frRes : FR());
   syncToFrame(frParent);
+  auto hwParent = getOrAllocFRInGpX(frParent, true);
+  auto hwNewObjPtr = allocTempGpX();
+  auto hwTemp1 = allocTempGpX();
+  auto hwTemp2 = allocTempGpX();
+  auto xParent = hwParent.a64GpX();
+  auto xNewObjPtr = hwNewObjPtr.a64GpX();
+  auto xTemp1 = hwTemp1.a64GpX();
+  auto xTemp2 = hwTemp2.a64GpX();
   freeAllFRTempExcept({});
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frParent);
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
-      _sh_ljs_new_object_with_parent);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  freeReg(hwNewObjPtr);
+  freeReg(hwTemp1);
+  freeReg(hwTemp2);
+
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  allocInYoung(
+      CellKind::JSObjectKind,
+      cellSize<JSObject>(),
+      xNewObjPtr,
+      xTemp1,
+      xTemp2,
+      slowPathLab);
+
+  // Compute what the parent should be.
+  auto decodeObjParentLab = a.newLabel();
+  auto parentDoneLab = a.newLabel();
+
+  // Check if the parent is an object.
+  emit_sh_ljs_is_object(a, xTemp1, xParent);
+  a.b_eq(decodeObjParentLab);
+
+  // Check if the parent is null.
+  emit_sh_ljs_is_null(a, xTemp1, xParent);
+  // At this point, the parent is no longer useful, so we are free to overwrite
+  // it. Set it to zero so we store nullptr if the parent is JS null.
+  a.mov(xParent, 0);
+  a.b_eq(parentDoneLab);
+
+  // The parent is not an object or null, so get Object.prototype.
+  a.ldr(xParent, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
+
+  // Extract the parent object pointer from the HermesValue in xParent.
+  a.bind(decodeObjParentLab);
+  emit_sh_ljs_get_pointer(a, xParent, xParent);
+  emit_sh_cp_encode_non_null(a, xParent);
+
+  a.bind(parentDoneLab);
+
+  // Initialize the object.
+  emit_jsobject_init(a, xNewObjPtr, xParent, xTemp1);
+
+  auto hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+
+  // Move the object into the result register as a HermesValue.
+  emit_sh_ljs_object2(a, hwRes.a64GpX(), xNewObjPtr);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .frInput1 = frParent,
+       .hwRes = hwRes,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: NewObjectWithParent r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+
+         EMIT_RUNTIME_CALL(
+             em,
+             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+             _sh_ljs_new_object_with_parent);
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::newObjectWithBuffer(
