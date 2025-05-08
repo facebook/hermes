@@ -9,6 +9,7 @@
 #define HERMES_VM_IDENTIFIERTABLE_H
 
 #include "hermes/ADT/PtrOrInt.h"
+#include "hermes/ADT/TransparentConservativeVector.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/GC.h"
@@ -361,34 +362,10 @@ class IdentifierTable {
     }
   };
 
-  /// A vector that expands its capacity less aggressively.
-  template <typename T>
-  class ConservativeVector : private std::vector<T> {
-    using Base = std::vector<T>;
-
-   public:
-    using Base::Base;
-    using Base::capacity;
-    using Base::reserve;
-    using Base::size;
-    using Base::operator[];
-    using Base::begin;
-    using Base::end;
-    using Base::resize;
-
-    void emplace_back() {
-      auto cap = capacity();
-      if (size() == cap) {
-        reserve(cap + cap / 4);
-      }
-      Base::emplace_back();
-    }
-  };
-  /// Stores all the entries referenced from the hash table, plus free slots.
-  /// Use ConservativeVector, to waste less space in the common case where
-  /// the number of identifiers created dynamically is small compared to
+  /// Use TransparentConservativeVector, to waste less space in the common case
+  /// where the number of identifiers created dynamically is small compared to
   /// the number of identifiers initialized from the module.
-  ConservativeVector<LookupEntry> lookupVector_;
+  TransparentConservativeVector<LookupEntry> lookupVector_;
 
   /// The hash table.
   detail::IdentifierHashTable hashTable_{};
