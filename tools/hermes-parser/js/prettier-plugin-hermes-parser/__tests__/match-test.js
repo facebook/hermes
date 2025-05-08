@@ -95,6 +95,26 @@ describe('Match expression', () => {
     `);
   });
 
+  test('JSX body', async () => {
+    expect(
+      format(`
+       const e = match (x) {
+         1 => <div />,
+         loooooooooooooooooooooooooooooooooooooooooong => <MyComponent><span>Some children inside</span></MyComponent>,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "const e = match (x) {
+        1 => <div />,
+        loooooooooooooooooooooooooooooooooooooooooong =>
+          <MyComponent>
+            <span>Some children inside</span>
+          </MyComponent>,
+      };
+      "
+    `);
+  });
+
   test('patterns: core', async () => {
     expect(
       format(`

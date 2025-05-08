@@ -5746,7 +5746,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return true;
       case "JSXFragment":
       case "JSXElement":
-        return key === "callee" || key === "left" && parent.type === "BinaryExpression" && parent.operator === "<" || !isArrayOrTupleExpression(parent) && parent.type !== "ArrowFunctionExpression" && parent.type !== "AssignmentExpression" && parent.type !== "AssignmentPattern" && parent.type !== "BinaryExpression" && parent.type !== "NewExpression" && parent.type !== "ConditionalExpression" && parent.type !== "ExpressionStatement" && parent.type !== "JsExpressionRoot" && parent.type !== "JSXAttribute" && parent.type !== "JSXElement" && parent.type !== "JSXExpressionContainer" && parent.type !== "JSXFragment" && parent.type !== "LogicalExpression" && !isCallExpression(parent) && !isObjectProperty(parent) && parent.type !== "ReturnStatement" && parent.type !== "ThrowStatement" && parent.type !== "TypeCastExpression" && parent.type !== "VariableDeclarator" && parent.type !== "YieldExpression";
+        return key === "callee" || key === "left" && parent.type === "BinaryExpression" && parent.operator === "<" || !isArrayOrTupleExpression(parent) && parent.type !== "ArrowFunctionExpression" && parent.type !== "AssignmentExpression" && parent.type !== "AssignmentPattern" && parent.type !== "BinaryExpression" && parent.type !== "NewExpression" && parent.type !== "ConditionalExpression" && parent.type !== "ExpressionStatement" && parent.type !== "JsExpressionRoot" && parent.type !== "JSXAttribute" && parent.type !== "JSXElement" && parent.type !== "JSXExpressionContainer" && parent.type !== "JSXFragment" && parent.type !== "LogicalExpression" && !isCallExpression(parent) && !isObjectProperty(parent) && parent.type !== "ReturnStatement" && parent.type !== "ThrowStatement" && parent.type !== "TypeCastExpression" && parent.type !== "VariableDeclarator" && parent.type !== "YieldExpression" && parent.type !== "MatchExpressionCase";
       case "TSInstantiationExpression":
         return key === "object" && isMemberExpression(parent);
       case "MatchOrPattern":
@@ -6343,7 +6343,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return hardline;
   }
-  var NO_WRAP_PARENTS = /* @__PURE__ */ new Set(["ArrayExpression", "TupleExpression", "JSXAttribute", "JSXElement", "JSXExpressionContainer", "JSXFragment", "ExpressionStatement", "CallExpression", "OptionalCallExpression", "ConditionalExpression", "JsExpressionRoot"]);
+  var NO_WRAP_PARENTS = /* @__PURE__ */ new Set(["ArrayExpression", "TupleExpression", "JSXAttribute", "JSXElement", "JSXExpressionContainer", "JSXFragment", "ExpressionStatement", "CallExpression", "OptionalCallExpression", "ConditionalExpression", "JsExpressionRoot", "MatchExpressionCase"]);
   function maybeWrapJsxElementInParens(path, elem, options2) {
     const {
       parent
