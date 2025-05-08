@@ -14,12 +14,12 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
-#include "hermes/VM/JSLib/JSLibStorage.h"
 
 #include <cstring>
 #include <random>
@@ -384,7 +384,8 @@ hermesInternalUseEngineQueue(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(runtime.hasMicrotaskQueue());
 }
 
-CallResult<HermesValue> hermesInternalResetTimezoneCache(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue>
+hermesInternalResetTimezoneCache(void *, Runtime &runtime, NativeArgs args) {
   runtime.getJSLibStorage()->localTimeOffsetCache.reset();
   return HermesValue::encodeUndefinedValue();
 }
