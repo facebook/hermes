@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include "hermes/VM/HermesValue.h"
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/static_h.h"
 
@@ -16,6 +17,11 @@ typedef struct SHCodeBlock SHCodeBlock;
 class StringSwitchDenseMap;
 
 namespace hermes::vm {
+
+class Runtime;
+class CodeBlock;
+class RuntimeModule;
+class PinnedHermesValue;
 
 /// Create a JSFunction closure. The properties of the function (name, etc.)
 /// will be populated lazily.
@@ -95,6 +101,16 @@ void _sh_print_function_entry_exit(bool enter, const char *msg);
 /// Concat two values that are known to be strings.
 SHLegacyValue
 _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right);
+
+/// Create a new empty object for the given shape table index.
+/// The properties will have to be populated by the caller afterwards.
+/// \param tmp a FR pointer on the JS stack used to avoid having to allocate
+///   Locals internally. May be overwritten.
+HermesValue _jit_new_empty_object_for_buffer(
+    Runtime &runtime,
+    CodeBlock *codeBlock,
+    uint32_t shapeTableIndex,
+    PinnedHermesValue *tmp);
 
 #ifdef HERMESVM_PROFILER_BB
 /// Register BB execution for BB profiler based on the current callee CodeBlock.

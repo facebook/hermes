@@ -191,8 +191,8 @@ class JITContext::Compiler {
 
 JITCompiledFunctionPtr JITContext::compileImpl(
     Runtime &runtime,
-    CodeBlock *codeBlock_) {
-  Compiler compiler(*this, codeBlock_);
+    CodeBlock *codeBlock) {
+  Compiler compiler(*this, codeBlock);
   return compiler.compileCodeBlock();
 }
 

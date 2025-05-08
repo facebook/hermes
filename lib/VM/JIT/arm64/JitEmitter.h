@@ -912,6 +912,12 @@ class Emitter {
   template <typename REG>
   void loadBits64InGp(const REG &dest, uint64_t bits, const char *constName);
 
+  /// Load a SmallHermesValue into a Gp.
+  void loadSmallHermesValueInGpX(
+      a64::GpX &dest,
+      SmallHermesValue shv,
+      const char *constName);
+
   void _loadFrame(HWReg dest, FR rFrom) {
     // FIXME: check if the offset fits
     if (dest.isGpX())
@@ -1294,6 +1300,14 @@ class Emitter {
       const a64::GpX &xTemp1,
       const a64::GpX &xTemp2,
       const asmjit::Label &slowPathLab);
+
+  /// Slow version of newObjectWithBuffer.
+  /// Used temporarily while full functionality is being added to
+  /// newObjectWithBuffer.
+  void newObjectWithBufferSlow(
+      FR frRes,
+      uint32_t shapeTableIndex,
+      uint32_t valBufferOffset);
 }; // class Emitter
 
 } // namespace hermes::vm::arm64

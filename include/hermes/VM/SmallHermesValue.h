@@ -194,6 +194,10 @@ class SmallHermesValueAdaptor : protected HermesValue {
   static constexpr SmallHermesValueAdaptor encodeEmptyValue() {
     return SmallHermesValueAdaptor{HermesValue::encodeEmptyValue()};
   }
+  /// Encode the double \p d as an inline HermesValue.
+  static SmallHermesValueAdaptor encodeInlineDoubleValueUnsafe(double d) {
+    return SmallHermesValueAdaptor{HermesValue::encodeTrustedNumberValue(d)};
+  }
 
   /// Create a SmallHermesValue that has the raw representation 0. This value
   /// must never become visible to user code, and is guaranteed to be ignored by
@@ -485,6 +489,15 @@ class HermesValue32 {
   /// inline and doubles will be allocated on the heap. Always treat this
   /// function as though it may allocate.
   inline static HermesValue32 encodeNumberValue(double d, Runtime &runtime);
+
+  /// Encode the double \p d as an inline HermesValue32.
+  /// Convenient because it doesn't require a Runtime reference.
+  /// \pre \p d can be inlined in a HermesValue32.
+  static HermesValue32 encodeInlineDoubleValueUnsafe(double d) {
+    assert(canInlineDouble(d) && "Value out of range.");
+    HermesValue hv = HermesValue::encodeTrustedNumberValue(d);
+    return bitsToCompressedHV64(hv.getRaw());
+  }
 
   inline static HermesValue32 encodeObjectValue(GCCell *ptr, PointerBase &pb);
   static HermesValue32 encodeObjectValue(CompressedPointer cp) {

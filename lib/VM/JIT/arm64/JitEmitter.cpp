@@ -13,10 +13,12 @@
 
 #include "../RuntimeOffsets.h"
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
+#include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Interpreter.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/StaticHUtils.h"
 
 #define DEBUG_TYPE "jit"
@@ -441,6 +443,18 @@ void emit_load_shv(
 #else
   a.ldr(dest, mem);
 #endif
+}
+
+/// Store a SmallHermesValue to \p mem.
+void emit_store_shv(
+    a64::Assembler &a,
+    const a64::GpX &val,
+    const a64::Mem &mem) {
+  if constexpr (sizeof(SmallHermesValue) == 4) {
+    a.str(val.w(), mem);
+  } else {
+    a.str(val, mem);
+  }
 }
 
 /// A class implementing SmallHermesValue to HermesValue decoding.
@@ -2058,6 +2072,17 @@ void Emitter::loadBits64InGp(
   }
 }
 
+void Emitter::loadSmallHermesValueInGpX(
+    a64::GpX &dest,
+    SmallHermesValue shv,
+    const char *constName) {
+  if constexpr (sizeof(SmallHermesValue) == 4) {
+    a.mov(dest.w(), shv.getRaw());
+  } else {
+    loadBits64InGp(dest, shv.getRaw(), constName);
+  }
+}
+
 void Emitter::loadConstBits64(
     FR frRes,
     uint64_t bits,
@@ -2463,6 +2488,191 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
 }
 
 void Emitter::newObjectWithBuffer(
+    FR frRes,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  ShapeTableEntry shapeInfo = codeBlock_->getRuntimeModule()
+                                  ->getBytecode()
+                                  ->getObjectShapeTable()[shapeTableIndex];
+
+  // If the object and the property storage can't be guaranteed to be in the
+  // young gen, bail.
+  // TODO: Fix this once we can inline write barriers.
+  if (shapeInfo.numProps > JSObject::maxYoungGenAllocationPropCount()) {
+    newObjectWithBufferSlow(frRes, shapeTableIndex, valBufferOffset);
+    return;
+  }
+
+  // Simple visitor to check if the fast path is possible.
+  struct {
+    void visitStringID(StringID id) {
+      // TODO: Implement fast loading for string values.
+      // Requires materializing the StringPrimitive at JIT compile time,
+      // and then reading it in the emitted code.
+      fast = false;
+    }
+    void visitNumber(double d) {
+      // TODO: Implement fast loading for boxed double values.
+      if (!SmallHermesValue::canInlineDouble(d))
+        fast = false;
+    }
+    void visitNull() {}
+    void visitUndefined() {}
+    void visitBool(bool) {}
+    bool fast = true;
+  } fastPathCheckVisitor{};
+
+  SerializedLiteralParser::parse(
+      codeBlock_->getRuntimeModule()
+          ->getBytecode()
+          ->getLiteralValueBuffer()
+          .slice(valBufferOffset),
+      shapeInfo.numProps,
+      fastPathCheckVisitor);
+
+  // If we can't use the fast path, fall back to the slow path.
+  if (!fastPathCheckVisitor.fast) {
+    newObjectWithBufferSlow(frRes, shapeTableIndex, valBufferOffset);
+    return;
+  }
+
+  // Fast path: we can create the object directly.
+  comment(
+      "// NewObjectWithBuffer r%u, %u, %u",
+      frRes.index(),
+      shapeTableIndex,
+      valBufferOffset);
+
+  // Create the object.
+  // TODO: Inline a fast path here for the JSObject creation and cached
+  // HiddenClass retrieval.
+  syncAllFRTempExcept(frRes);
+  freeAllFRTempExcept({});
+  a.mov(a64::x0, xRuntime);
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
+  a.mov(a64::w2, shapeTableIndex);
+  loadFrameAddr(a64::x3, frRes);
+  EMIT_RUNTIME_CALL(
+      *this,
+      HermesValue(*)(Runtime &, CodeBlock *, uint32_t, PinnedHermesValue *),
+      _jit_new_empty_object_for_buffer);
+
+  // Store the HermesValue encoded result and never update it again.
+  // From here on we'll just populate the values via a raw pointer to the
+  // JSObject.
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  movHWFromHW<false>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+
+  // Populate the values of the object.
+  HWReg hwObj = allocTempGpX();
+  HWReg hwTmp = allocTempGpX();
+  a64::GpX xObj = hwObj.a64GpX();
+  a64::GpX xTmp = hwTmp.a64GpX();
+  freeReg(hwObj);
+  freeReg(hwTmp);
+
+  // xObj starts as the raw pointer to the object,
+  // but may be updated to point to property storage if there's more than
+  // DIRECT_PROPERTY_SLOTS values to populate.
+  emit_sh_ljs_get_pointer(a, xObj, hwRes.a64GpX());
+
+  // Store each of the values to the object at xObj.
+  // No write barrier required because the object and property storage were
+  // allocated in the young gen.
+  // TODO: Add strings and figure out what to do about write barriers.
+  struct {
+    Emitter &em;
+    a64::GpX &xObj;
+    a64::GpX &xTmp;
+
+    /// Iteration counter.
+    /// Index of the next value to be inserted into the object.
+    size_t i = 0;
+
+    // \return the offset from xObj where we'll place the property.
+    //   xObj either points to the JSObject or to indirect property storage
+    //   depending on the value of \c i.
+    size_t currentOffset() const {
+      if (i < JSObject::DIRECT_PROPERTY_SLOTS) {
+        return offsetof(SHJSObjectAndDirectProps, directProps) +
+            i * sizeof(SHGCSmallHermesValue);
+      } else {
+        // If we're reading from indirect storage, offset by the number of
+        // direct property slots.
+        auto storageSlot = i - JSObject::DIRECT_PROPERTY_SLOTS;
+        return offsetof(SHArrayStorageSmall, storage) +
+            storageSlot * sizeof(SHGCSmallHermesValue);
+      }
+    }
+
+    /// Store a simple SmallHermesValue into the current offset in the object.
+    void storeVal(SmallHermesValue val) {
+      em.loadSmallHermesValueInGpX(xTmp, val, "object literal buffer val");
+      emit_store_shv(em.a, xTmp, a64::Mem(xObj, currentOffset()));
+    };
+
+    /// Advance internal state to the next slot, updating the counter and any
+    /// registers so that they have the correct state for the next element.
+    void advance() {
+      ++i;
+
+      // xObj was set to the JSObject itself initially.
+      // If we are transitioning into indirect storage, switch xObj to point to
+      // the indirect property storage.
+      if (i == JSObject::DIRECT_PROPERTY_SLOTS) {
+#ifdef HERMESVM_GC_HADES
+        // In Hades, we know that the objects were bump allocated immediately
+        // next to each other, so we can just advance xObj.
+        em.a.add(xObj, xObj, cellSize<JSObject>());
+#else
+        // In other GCs, just read the propStorage pointer.
+        emit_load_cp(
+            em.a, xObj, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
+        emit_sh_cp_decode_non_null(em.a, xObj);
+#endif
+      }
+    }
+
+    void visitStringID(StringID id) {
+      assert(false && "string not supported in fast path");
+      advance();
+    }
+    void visitNumber(double d) {
+      em.comment("    ; number: %lf", d);
+      assert(
+          SmallHermesValue::canInlineDouble(d) &&
+          "boxed doubles not supported in fast path");
+      storeVal(SmallHermesValue::encodeInlineDoubleValueUnsafe(d));
+      advance();
+    }
+    void visitNull() {
+      em.comment("    ; null");
+      storeVal(SmallHermesValue::encodeNullValue());
+      advance();
+    }
+    void visitUndefined() {
+      em.comment("    ; undefined");
+      storeVal(SmallHermesValue::encodeUndefinedValue());
+      advance();
+    }
+    void visitBool(bool b) {
+      em.comment("    ; bool: %d", b);
+      storeVal(SmallHermesValue::encodeBoolValue(b));
+      advance();
+    }
+  } emittingVisitor{*this, xObj, xTmp};
+
+  SerializedLiteralParser::parse(
+      codeBlock_->getRuntimeModule()
+          ->getBytecode()
+          ->getLiteralValueBuffer()
+          .slice(valBufferOffset),
+      shapeInfo.numProps,
+      emittingVisitor);
+}
+
+void Emitter::newObjectWithBufferSlow(
     FR frRes,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {

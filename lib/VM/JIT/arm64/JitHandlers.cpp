@@ -233,6 +233,36 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right) {
   return *result;
 }
 
+HermesValue _jit_new_empty_object_for_buffer(
+    Runtime &runtime,
+    CodeBlock *codeBlock,
+    uint32_t shapeTableIndex,
+    PinnedHermesValue *tmp) {
+  // Get or create the HiddenClass.
+  // TODO: Inline the fast path completely into the JIT emitted code once we can
+  // also inline the allocation.
+  CallResult<HiddenClass *> clazzRes = Interpreter::getHiddenClassForBuffer(
+      runtime,
+      codeBlock,
+      Handle<JSObject>::vmcast(&runtime.objectPrototype),
+      shapeTableIndex);
+  if (LLVM_UNLIKELY(clazzRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(&runtime);
+  HiddenClass *clazz = *clazzRes;
+
+  // Construct the object.
+  *tmp = HermesValue::encodeObjectValue(clazz);
+  PseudoHandle<JSObject> result = JSObject::create(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime.objectPrototype),
+      Handle<HiddenClass>::vmcast(toPHV(tmp)));
+  assert(
+      runtime.getHeap().inYoungGen(result.get()) &&
+      "New object is not in young gen");
+
+  return result.getHermesValue();
+}
+
 #ifdef HERMESVM_PROFILER_BB
 void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex) {
   Runtime &runtime = getRuntime(shr);

@@ -1794,14 +1794,12 @@ ExecutionStatus doPutByIdSlowPath_RJS(
   return ExecutionStatus::RETURNED;
 }
 
-CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
+CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
     Handle<JSObject> parent,
-    unsigned shapeTableIndex,
-    unsigned valBufferOffset) {
+    unsigned shapeTableIndex) {
   RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
-
   HiddenClass *clazz;
   if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
           runtime, shapeTableIndex)) {
@@ -1844,13 +1842,28 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     }
   }
 
+  return clazz;
+}
+
+CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    Handle<JSObject> parent,
+    unsigned shapeTableIndex,
+    unsigned valBufferOffset) {
   struct : public Locals {
     PinnedValue<JSObject> obj;
     PinnedValue<HiddenClass> clazz;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
-  lv.clazz = clazz;
+  CallResult<HiddenClass *> clazzRes =
+      getHiddenClassForBuffer(runtime, curCodeBlock, parent, shapeTableIndex);
+  if (LLVM_UNLIKELY(clazzRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.clazz = *clazzRes;
+
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.

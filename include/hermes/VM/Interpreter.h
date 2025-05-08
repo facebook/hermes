@@ -138,6 +138,14 @@ class Interpreter {
       Runtime &runtime,
       InterpreterState &state);
 
+  /// \return the HiddenClass for a new object created from the \p
+  ///   shapeTableIndex.
+  static CallResult<HiddenClass *> getHiddenClassForBuffer(
+      Runtime &runtime,
+      CodeBlock *curCodeBlock,
+      Handle<JSObject> parent,
+      unsigned shapeTableIndex);
+
   /// Constructs an object via literal buffers in the bytecode file.
   /// \param parent the parent of the newly created object.
   /// \param shapeTableIndex the index of the shape element.
