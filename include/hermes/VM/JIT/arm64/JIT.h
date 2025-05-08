@@ -39,9 +39,15 @@ class JITContext {
   JITContext(const JITContext &) = delete;
   void operator=(const JITContext &) = delete;
 
-  /// Compile a function to native code and return the native pointer. If the
-  /// function was previously compiled, return the existing body. If it cannot
-  /// be compiled, return nullptr.
+  /// \return whether \p codeBlock should be JIT compiled.
+  /// \pre codeBlock does not already have a JITCompiledFunctionPtr.
+  /// Does not allocate.
+  inline bool shouldCompile(CodeBlock *codeBlock);
+
+  /// Compile a function to native code and return the native pointer.
+  /// \pre codeBlock does not already have a JITCompiledFunctionPtr.
+  /// \pre shouldCompile() must be true.
+  /// \return the native pointer, nullptr if compilation failed.
   inline JITCompiledFunctionPtr compile(Runtime &runtime, CodeBlock *codeBlock);
 
   /// \return true if JIT compilation is enabled.
@@ -151,16 +157,13 @@ class JITContext {
 };
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE
-inline JITCompiledFunctionPtr JITContext::compile(
-    Runtime &runtime,
-    CodeBlock *codeBlock) {
-  auto ptr = codeBlock->getJITCompiled();
-  if (LLVM_LIKELY(ptr))
-    return ptr;
+inline bool JITContext::shouldCompile(CodeBlock *codeBlock) {
+  assert(!codeBlock->getJITCompiled() && "already compiled");
+
   if (LLVM_LIKELY(!enabled_))
-    return nullptr;
+    return false;
   if (LLVM_LIKELY(codeBlock->getDontJIT()))
-    return nullptr;
+    return false;
 
   uint32_t loopDepth = codeBlock->getFunctionHeader().getLoopDepth();
   // It's possible that if the loop depth is too high, we will set the
@@ -171,8 +174,17 @@ inline JITCompiledFunctionPtr JITContext::compile(
       forceJIT_ ? 0 : (defaultExecThreshold_ >> (loopDepth * 2));
 
   if (LLVM_LIKELY(codeBlock->getExecutionCount() < execThreshold))
-    return nullptr;
+    return false;
 
+  return true;
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE
+inline JITCompiledFunctionPtr JITContext::compile(
+    Runtime &runtime,
+    CodeBlock *codeBlock) {
+  assert(!codeBlock->getJITCompiled() && "already compiled");
+  assert(shouldCompile(codeBlock) && "should not be compiled");
   return compileImpl(runtime, codeBlock);
 }
 

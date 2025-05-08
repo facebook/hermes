@@ -26,6 +26,8 @@ struct RuntimeOffsets {
   static constexpr uint32_t currentIP = offsetof(Runtime, currentIP_);
   static constexpr uint32_t globalObject = offsetof(Runtime, global_);
   static constexpr uint32_t thrownValue = offsetof(Runtime, thrownValue_);
+  static constexpr uint32_t identifierTable =
+      offsetof(Runtime, identifierTable_);
   static constexpr uint32_t shLocals = offsetof(Runtime, shLocals);
   static constexpr uint32_t builtins = offsetof(Runtime, builtins_);
   static constexpr uint32_t nativeStackHigh =
@@ -69,6 +71,16 @@ struct RuntimeOffsets {
 
   static constexpr uint32_t runtimeRootClazzes =
       offsetof(Runtime, rootClazzes_);
+
+  using IdentifierTableLookupEntryType = IdentifierTable::LookupEntry;
+  using IdentifierTableLookupVectorType =
+      decltype(IdentifierTable::lookupVector_);
+  static constexpr uint32_t identifierTableLookupVector =
+      offsetof(IdentifierTable, lookupVector_);
+  static constexpr uint32_t identifierTableLookupEntrySize =
+      sizeof(IdentifierTable::LookupEntry);
+  static constexpr uint32_t identifierTableLookupEntryStrPrim =
+      offsetof(IdentifierTable::LookupEntry, strPrim_);
 };
 
 #pragma GCC diagnostic pop

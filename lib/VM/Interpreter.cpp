@@ -545,9 +545,35 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   }
 
   if (!SingleStep) {
-    if (auto jitPtr = runtime.jitContext_.compile(runtime, curCodeBlock)) {
-      return JSFunction::_jittedCall(jitPtr, runtime);
+#ifdef HERMESVM_JIT
+    {
+      JITCompiledFunctionPtr jitPtr = curCodeBlock->getJITCompiled();
+      if (!jitPtr && runtime.jitContext_.shouldCompile(curCodeBlock)) {
+        // JIT compilation may allocate on the GC heap, e.g. to populate
+        // StringPrimitives in the IdentifierTable.
+        auto *oldCurrentIP = runtime.getCurrentIP();
+        // If there's a frame currently on the stack with a CodeBlock,
+        // then use its first opcode as the IP.
+        // Otherwise, use nullptr.
+        if (runtime.getCurrentFrame() != *runtime.getStackFrames().end()) {
+          runtime.setCurrentIP(
+              runtime.getCurrentFrame().getCalleeCodeBlock()
+                  ? (Inst const *)runtime.getCurrentFrame()
+                        .getCalleeCodeBlock()
+                        ->begin()
+                  : nullptr);
+        } else {
+          runtime.setCurrentIP(nullptr);
+        }
+        jitPtr = runtime.jitContext_.compile(runtime, curCodeBlock);
+        // Restore the currentIP field so nothing else is affected.
+        runtime.setCurrentIP(oldCurrentIP);
+      }
+      if (jitPtr) {
+        return JSFunction::_jittedCall(jitPtr, runtime);
+      }
     }
+#endif
 
     // If the interpreter was invoked indirectly from another JS function, the
     // caller's IP may not have been saved to the stack frame. Ensure that it is
@@ -1250,7 +1276,15 @@ tailCall:
           }
         }
 
-        if (auto jitPtr = runtime.jitContext_.compile(runtime, calleeBlock)) {
+#ifdef HERMESVM_JIT
+        JITCompiledFunctionPtr jitPtr = calleeBlock->getJITCompiled();
+        if (!jitPtr && runtime.jitContext_.shouldCompile(calleeBlock)) {
+          // JIT compilation may allocate on the GC heap, e.g. to populate
+          // StringPrimitives in the IdentifierTable.
+          CAPTURE_IP_ASSIGN(
+              jitPtr, runtime.jitContext_.compile(runtime, calleeBlock));
+        }
+        if (jitPtr) {
           CAPTURE_IP_ASSIGN(
               auto rres, JSFunction::_jittedCall(jitPtr, runtime));
           if (LLVM_UNLIKELY(rres == ExecutionStatus::EXCEPTION))
@@ -1262,6 +1296,7 @@ tailCall:
           ip = nextIP;
           DISPATCH;
         }
+#endif
 
         // Check for invalid invocation.
         bool isCtorCall = !HermesValue::fromRaw(callNewTarget).isUndefined();

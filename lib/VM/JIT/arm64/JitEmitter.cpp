@@ -17,6 +17,7 @@
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/Callable.h"
+#include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/StaticHUtils.h"
@@ -153,6 +154,29 @@ void emit_sh_ljs_is_double(
       "numbers must be lower than HVTag_First << kHV_NumDataBits");
   a.mov(xTmp, ((uint64_t)HVTag_First << kHV_NumDataBits));
   a.cmp(xInput, xTmp);
+}
+
+/// Encode a string pointer into a tagged string (SHLegacyValue).
+/// The same register is used for input and output.
+[[maybe_unused]] void emit_sh_ljs_string(
+    a64::Assembler &a,
+    const a64::GpX &inOut) {
+  static_assert(
+      HERMESVALUE_VERSION == 2,
+      "HVTag_Str << kHV_NumDataBits is 0x1101...0000... and can be encoded as a logical immediate");
+  a.movk(inOut, (uint16_t)HVTag_Str, kHV_NumDataBits);
+}
+
+/// Encode a string pointer into a tagged string (SmallHermesValue).
+/// The same register is used for input and output.
+void emit_shv_string(a64::Assembler &a, const a64::GpX &inOut) {
+#ifdef HERMESVM_BOXED_DOUBLES
+  static_assert(
+      SmallHermesValue::kVersion == 1, "String tagging requires simple or");
+  a.orr(inOut, inOut, HermesValue32::Tag::String);
+#else
+  emit_sh_ljs_string(a, inOut);
+#endif
 }
 
 /// Emit code to check whether the input reg is an object, using the specified
@@ -2505,12 +2529,7 @@ void Emitter::newObjectWithBuffer(
 
   // Simple visitor to check if the fast path is possible.
   struct {
-    void visitStringID(StringID id) {
-      // TODO: Implement fast loading for string values.
-      // Requires materializing the StringPrimitive at JIT compile time,
-      // and then reading it in the emitted code.
-      fast = false;
-    }
+    void visitStringID(StringID) {}
     void visitNumber(double d) {
       // TODO: Implement fast loading for boxed double values.
       if (!SmallHermesValue::canInlineDouble(d))
@@ -2580,7 +2599,6 @@ void Emitter::newObjectWithBuffer(
   // Store each of the values to the object at xObj.
   // No write barrier required because the object and property storage were
   // allocated in the young gen.
-  // TODO: Add strings and figure out what to do about write barriers.
   struct {
     Emitter &em;
     a64::GpX &xObj;
@@ -2635,7 +2653,50 @@ void Emitter::newObjectWithBuffer(
     }
 
     void visitStringID(StringID id) {
-      assert(false && "string not supported in fast path");
+      em.comment("    ; string");
+      RuntimeModule *runtimeModule = em.codeBlock_->getRuntimeModule();
+      Runtime &runtime = runtimeModule->getRuntime();
+      SymbolID symID = runtimeModule->getSymbolIDFromStringIDMayAllocate(id);
+
+      // Force allocation of the StringPrimitive at JIT time.
+      // StringPrimitive won't be freed because RuntimeModule keeps the symbols
+      // in stringIDMap_ alive and StringPrimitives with live symbols aren't
+      // freed.
+      [[maybe_unused]] StringPrimitive *strPrim =
+          runtime.getStringPrimFromSymbolID(symID);
+      assert(strPrim && "must be allocated");
+
+      // xTmp = identifierTable_.lookupVector_.ptr
+      static_assert(
+          std::is_same_v<
+              RuntimeOffsets::IdentifierTableLookupVectorType,
+              TransparentConservativeVector<
+                  RuntimeOffsets::IdentifierTableLookupEntryType>>,
+          "lookupVector_ must be transparent");
+      em.a.ldr(
+          xTmp,
+          a64::Mem(
+              xRuntime,
+              RuntimeOffsets::identifierTable +
+                  RuntimeOffsets::identifierTableLookupVector +
+                  TransparentConservativeVector<
+                      RuntimeOffsets::IdentifierTableLookupEntryType>::
+                      dataPointerOffset()));
+      // xTmp = xTmp[symID.index].strPrim_
+      em.a.ldr(
+          xTmp,
+          a64::Mem(
+              xTmp,
+              (symID.unsafeGetIndex() *
+               RuntimeOffsets::identifierTableLookupEntrySize) +
+                  RuntimeOffsets::identifierTableLookupEntryStrPrim));
+      // Encode compressed pointer and wrap with StringTag.
+      // We know it's not null because we allocated it at JIT compile time.
+      emit_sh_cp_encode_non_null(em.a, xTmp);
+      emit_shv_string(em.a, xTmp);
+      // Store to storage.
+      emit_store_shv(em.a, xTmp, a64::Mem(xObj, currentOffset()));
+
       advance();
     }
     void visitNumber(double d) {

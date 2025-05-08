@@ -70,6 +70,7 @@ class StringView;
 class IdentifierTable {
   friend class detail::IdentifierHashTable;
   friend class HadesGC;
+  friend struct RuntimeOffsets;
 
  public:
   /// Initialize the identifier table.
@@ -229,6 +230,8 @@ class IdentifierTable {
   ///   Note that FREE_LIST_END is not a unique value, but it should only
   ///   be used when the union is nullptr, so that's not a problem.
   class LookupEntry {
+    friend struct RuntimeOffsets;
+
     static constexpr uint32_t LAZY_STRING_PRIM_TAG = (uint32_t)(1 << 30) - 1;
     static constexpr uint32_t NON_LAZY_STRING_PRIM_TAG =
         LAZY_STRING_PRIM_TAG - 1;

@@ -58,9 +58,16 @@ class JITContext {
   JITContext(const JITContext &) = delete;
   void operator=(const JITContext &) = delete;
 
-  /// Compile a function to native code and return the native pointer. If the
-  /// function was previously compiled, return the existing body. If it cannot
-  /// be compiled, return nullptr.
+  /// \return whether \p codeBlock should be JIT compiled.
+  /// \pre codeBlock does not already have a JITCompiledFunctionPtr.
+  /// Does not allocate.
+  inline bool shouldCompile(CodeBlock *codeBlock) {
+    return false;
+  }
+
+  /// Compile a function to native code and return the native pointer.
+  /// \pre shouldCompile() must be true.
+  /// \return the native pointer, nullptr if compilation failed.
   inline JITCompiledFunctionPtr compile(
       Runtime &runtime,
       CodeBlock *codeBlock) {
