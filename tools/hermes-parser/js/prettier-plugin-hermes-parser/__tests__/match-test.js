@@ -427,13 +427,28 @@ describe('Match expression', () => {
 });
 
 describe('Match statement', () => {
-  test('empty', async () => {
+  test('no cases', async () => {
     expect(
       format(`
        match (x) {};
       `),
     ).toMatchInlineSnapshot(`
       "match (x) {
+      }
+      "
+    `);
+  });
+
+  test('empty body', async () => {
+    expect(
+      format(`
+       match (x) {
+         1 => {}
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "match (x) {
+        1 => {}
       }
       "
     `);
