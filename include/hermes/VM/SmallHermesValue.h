@@ -15,6 +15,8 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SymbolID.h"
 
+#include "llvh/Support/MathExtras.h"
+
 #include <cassert>
 #include <cmath>
 #include <cstdint>
@@ -199,6 +201,10 @@ class SmallHermesValueAdaptor : protected HermesValue {
   static constexpr SmallHermesValueAdaptor encodeRawZeroValueUnsafe() {
     return SmallHermesValueAdaptor{HermesValue::fromRaw(0)};
   }
+
+  static bool canInlineDouble(double d) {
+    return true;
+  }
 };
 using SmallHermesValue = SmallHermesValueAdaptor;
 
@@ -287,6 +293,28 @@ class HermesValue32 {
     RawType p = ptr.getRaw();
     validatePointer(p);
     return fromRaw(p | static_cast<RawType>(tag));
+  }
+
+  /// Whether the given HV (represented as bits) will be encoded as a
+  /// compressed HV64 directly. If it can't be encoded, it will require a heap
+  /// allocation to encode as a boxed double.
+  /// \pre \p hv is a number or compressible.
+  /// \return true if the double can be encoded as a compressed HV64.
+  static bool canInlineCompressibleOrNumberHV64(HermesValue hv) {
+    assert(hv.isNumberOrCompressible() && "hv must be number or compressible");
+#ifdef HERMESVM_SANITIZE_HANDLES
+    // If Handle-San is enabled, always box doubles on the heap. This ensures
+    // that callers have to treat a HermesValue32 containing a number as a
+    // pointer.
+    // Non-number HermesValues can be compressed.
+    return !hv.isNumber();
+#else
+    constexpr uint64_t kShiftAmount = 64 - kNumValueBits;
+    // If hvRaw is the part that would go into the HV32 value, followed
+    // by zeros (i.e., it's equal to a value of kNumValueBits bits
+    // right-shifted to the top of the 64 bit value), then we can compress.
+    return (llvh::isShiftedUInt<kNumValueBits, kShiftAmount>(hv.getRaw()));
+#endif
   }
 
   uint64_t compressedHV64ToBits() const {
@@ -496,6 +524,15 @@ class HermesValue32 {
   /// the GC.
   static constexpr HermesValue32 encodeRawZeroValueUnsafe() {
     return HermesValue32{0};
+  }
+
+  /// Whether the given double can be encoded as a compressed HV64 directly.
+  /// If it can't be encoded, it will require a heap allocation to encode as a
+  /// boxed double.
+  /// \return true if the double can be encoded as a compressed HV64.
+  static bool canInlineDouble(double d) {
+    return canInlineCompressibleOrNumberHV64(
+        HermesValue::encodeTrustedNumberValue(d));
   }
 
  protected:

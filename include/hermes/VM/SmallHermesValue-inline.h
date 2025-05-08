@@ -135,22 +135,10 @@ double HermesValue32::getBoxedDouble(PointerBase &pb) const {
     Runtime &runtime) {
   const uint64_t hvRaw = hv.getRaw();
 
-#ifdef HERMESVM_SANITIZE_HANDLES
-  // If Handle-San is enabled, always box doubles on the heap. This ensures that
-  // callers have to treat a HermesValue32 containing a number as a pointer.
-  if (!hv.isNumber())
-    return bitsToCompressedHV64(hvRaw);
-#else
-  constexpr uint64_t kShiftAmount = 64 - kNumValueBits;
-  // If hvRaw is the part that would go into the HV32 value, followed
-  // by zeros (i.e., it's equal to a value of kNumValueBits bits
-  // right-shifted to the top of the 64 bit value), then we can compress.
-  // (Note: the double parens after LLVM_LIKELY below are for macro args.)
-  if (LLVM_LIKELY((llvh::isShiftedUInt<kNumValueBits, kShiftAmount>(hvRaw))))
+  if (LLVM_LIKELY(canInlineCompressibleOrNumberHV64(hv)))
     return bitsToCompressedHV64(hvRaw);
 
   assert(hv.isNumber() && "Must be compressible or number HV64");
-#endif
 
   return encodePointerImpl(
       BoxedDouble::create(hv.getNumber(), runtime), Tag::BoxedDouble, runtime);
