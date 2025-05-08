@@ -78,6 +78,26 @@ describe('Match expression', () => {
     `);
   });
 
+  test('long guards', async () => {
+    expect(
+      format(`
+       const e = match (x) {
+         LoooongEnumBlorpType.Foo | LoooongEnumBlorpType.Bar if (loooong.bortLongBaz > 0) => 1,
+         LoooongEnumBlorpType.LooongFoo | LoooongEnumBlorpType.LooongBar | LoooongEnumBlorpType.LooongBaz if (loooooooooooooooooong.bortLongBaz > looooooooooooong) => 1,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "const e = match (x) {
+        LoooongEnumBlorpType.Foo | LoooongEnumBlorpType.Bar
+          if (loooong.bortLongBaz > 0) => 1,
+        | LoooongEnumBlorpType.LooongFoo
+        | LoooongEnumBlorpType.LooongBar
+        | LoooongEnumBlorpType.LooongBaz
+          if (loooooooooooooooooong.bortLongBaz > looooooooooooong) => 1,
+      };
+      "
+    `);
+  });
   test('sequence expressions: always with parens', async () => {
     expect(
       format(`
@@ -316,31 +336,32 @@ describe('Match expression', () => {
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        2 if (f(
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          10,
-          11,
-          12,
-          13,
-          14,
-          15,
-          16,
-          17,
-          18,
-          19,
-          20,
-          21,
-          22,
-          23,
-        )) => true,
+        2
+          if (f(
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+          )) => true,
         fooooooooooooooooooooooooooooo =>
           fooooooooooooooooooooooooooooooooooooooooooooooooooooooo,
         foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong => true,

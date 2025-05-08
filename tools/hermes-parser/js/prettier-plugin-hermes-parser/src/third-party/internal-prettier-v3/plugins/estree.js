@@ -10998,7 +10998,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const body = node.type === "MatchStatementCase" ? [" ", print3("body")] : indent([line, print3("body"), ","]);
     return [
       print3("pattern"),
-      node.guard ? [" if (", print3("guard"), ")"] : "",
+      node.guard ? group([indent([line, "if (", print3("guard"), ")"])]) : "",
       group([" =>", comment, body])
     ];
   }
