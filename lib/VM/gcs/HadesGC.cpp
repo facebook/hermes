@@ -2611,11 +2611,13 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
   return nullptr;
 }
 
-template <typename Acceptor>
-void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
+template <bool CompactionEnabled>
+uint64_t HadesGC::youngGenEvacuateImpl(bool doCompaction) {
+  assert((!doCompaction || CompactionEnabled) && "Compaction is disabled");
+  EvacAcceptor<CompactionEnabled> acceptor{*this};
   // Marking each object puts it onto an embedded free list.
   {
-    DroppingAcceptor<Acceptor> nameAcceptor{acceptor};
+    DroppingAcceptor nameAcceptor{acceptor};
     markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
   }
 
@@ -2656,6 +2658,8 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
   // Mark weak roots. We only need to update the long lived weak roots if we are
   // evacuating part of the OG.
   markWeakRoots(acceptor, /*markLongLived*/ doCompaction);
+
+  return acceptor.evacuatedBytes();
 }
 
 void HadesGC::youngGenCollection(
@@ -2704,15 +2708,11 @@ void HadesGC::youngGenCollection(
     auto &yg = youngGen();
 
     if (compactee_.segment) {
-      EvacAcceptor<true> acceptor{*this};
-      youngGenEvacuateImpl(acceptor, doCompaction);
       // The remaining bytes after the collection is just the number of bytes
       // that were evacuated.
-      heapBytes.after = acceptor.evacuatedBytes();
+      heapBytes.after = youngGenEvacuateImpl<true>(doCompaction);
     } else {
-      EvacAcceptor<false> acceptor{*this};
-      youngGenEvacuateImpl(acceptor, false);
-      heapBytes.after = acceptor.evacuatedBytes();
+      heapBytes.after = youngGenEvacuateImpl<false>(false);
     }
     // Inform trackers about objects that died during this YG collection.
     if (isTrackingIDs()) {

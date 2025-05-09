@@ -1297,8 +1297,14 @@ class HadesGC final : public GCBase {
   ///   allocations.
   void youngGenCollection(std::string cause, bool forceOldGenCollection);
 
-  template <typename Acceptor>
-  void youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction);
+  /// Implementation to actually do the YG collection. Mark roots, scan dirty
+  /// cards, and evacuate reachable objects.
+  /// \tparam CompactionEnabled Whether there is a compaction candidate.
+  /// \param doCompaction Whether to actually do a compaction. This can only be
+  ///   true if CompactionEnabled is true.
+  /// \return the number of bytes evacuated.
+  template <bool CompactionEnabled>
+  uint64_t youngGenEvacuateImpl(bool doCompaction);
 
   /// In the "no GC before TTI" mode, move the Young Gen heap segment to the
   /// Old Gen without scanning for garbage.
