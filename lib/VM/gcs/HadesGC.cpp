@@ -2615,16 +2615,17 @@ void HadesGC::youngGenEvacuateImpl(Acceptor &acceptor, bool doCompaction) {
   {
     DroppingAcceptor<Acceptor> nameAcceptor{acceptor};
     markRoots(nameAcceptor, /*markLongLived*/ doCompaction);
-
-    // Mark the values in WeakMap entries as roots for the purposes of young gen
-    // collection. This is slightly suboptimal since some of the keys or maps
-    // may be dead, but we still end up evacuating their corresponding value.
-    // This is done for simplicity, since it lets us avoid needing to iterate to
-    // a fixed point as is done during a full collection.
-    weakMapEntrySlots_.forEach([&nameAcceptor](WeakMapEntrySlot &slot) {
-      nameAcceptor.accept(slot.mappedValue);
-    });
   }
+
+  // Mark the values in WeakMap entries as roots for the purposes of young gen
+  // collection. This is slightly suboptimal since some of the keys or maps
+  // may be dead, but we still end up evacuating their corresponding value.
+  // This is done for simplicity, since it lets us avoid needing to iterate to
+  // a fixed point as is done during a full collection.
+  weakMapEntrySlots_.forEach([&acceptor](WeakMapEntrySlot &slot) {
+    acceptor.accept(slot.mappedValue);
+  });
+
   // Find old-to-young pointers, as they are considered roots for YG
   // collection.
   scanDirtyCards(acceptor);
