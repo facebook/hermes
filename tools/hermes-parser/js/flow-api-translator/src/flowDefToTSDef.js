@@ -854,10 +854,9 @@ const getTransforms = (
         type: 'TSClassImplements',
         loc: DUMMY_LOC,
         expression: transform.Identifier(node.id, false),
-        typeParameters:
-          node.typeParameters == null
-            ? undefined
-            : transform.TypeParameterInstantiation(node.typeParameters),
+        typeParameters: transform.TypeParameterInstantiation(
+          node.typeParameters,
+        ),
       };
     },
     DeclareClass(
@@ -1068,10 +1067,9 @@ const getTransforms = (
             : superClass.id.type === 'QualifiedTypeIdentifier'
             ? transform.QualifiedTypeIdentifier(superClass.id)
             : transform.Identifier((superClass.id: $FlowFixMe), false),
-        superTypeParameters:
-          superClass?.typeParameters == null
-            ? undefined
-            : transform.TypeParameterInstantiation(superClass.typeParameters),
+        superTypeParameters: transform.TypeParameterInstantiation(
+          superClass?.typeParameters,
+        ),
         typeParameters:
           node.typeParameters == null
             ? undefined
@@ -3081,10 +3079,9 @@ const getTransforms = (
           node.id.type === 'Identifier'
             ? transform.Identifier(node.id, false)
             : transform.QualifiedTypeIdentifier(node.id),
-        typeParameters:
-          node.typeParameters == null
-            ? undefined
-            : transform.TypeParameterInstantiation(node.typeParameters),
+        typeParameters: transform.TypeParameterInstantiation(
+          node.typeParameters,
+        ),
       };
     },
     Identifier(
@@ -3221,10 +3218,9 @@ const getTransforms = (
           node.id.type === 'QualifiedTypeIdentifier'
             ? transform.QualifiedTypeIdentifier(node.id)
             : transform.Identifier(node.id, false),
-        typeParameters:
-          node.typeParameters == null
-            ? undefined
-            : transform.TypeParameterInstantiation(node.typeParameters),
+        typeParameters: transform.TypeParameterInstantiation(
+          node.typeParameters,
+        ),
       };
     },
     InterfaceTypeAnnotation(
@@ -3243,10 +3239,9 @@ const getTransforms = (
               loc: DUMMY_LOC,
               // Bug: ex.id can be qualified
               typeName: transform.Identifier((ex.id: $FlowFixMe), false),
-              typeParameters:
-                ex.typeParameters == null
-                  ? undefined
-                  : transform.TypeParameterInstantiation(ex.typeParameters),
+              typeParameters: transform.TypeParameterInstantiation(
+                ex.typeParameters,
+              ),
             })),
             transform.ObjectTypeAnnotation(node.body),
           ],
@@ -4043,8 +4038,14 @@ const getTransforms = (
       };
     },
     TypeParameterInstantiation(
-      node: FlowESTree.TypeParameterInstantiation,
-    ): TSESTree.TSTypeParameterInstantiation {
+      node: ?FlowESTree.TypeParameterInstantiation,
+    ): TSESTree.TSTypeParameterInstantiation | void {
+      // Empty parameters in Flow are valid, but TS requires at least one parameter.
+      // This ensures empty type parameters are not created in TS
+      if (node == null || node.params.length === 0) {
+        return undefined;
+      }
+
       return {
         type: 'TSTypeParameterInstantiation',
         loc: DUMMY_LOC,
@@ -4189,10 +4190,12 @@ const getTransforms = (
     // $FlowExpectedError[missing-local-annot]
     transform[key] = (node, ...args) => {
       const result = originalFn(node, ...args);
-      if (Array.isArray(result)) {
-        cloneJSDocCommentsToNewNode(node, result[0]);
-      } else {
-        cloneJSDocCommentsToNewNode(node, result);
+      if (node != null && result != null) {
+        if (Array.isArray(result)) {
+          cloneJSDocCommentsToNewNode(node, result[0]);
+        } else {
+          cloneJSDocCommentsToNewNode(node, result);
+        }
       }
       return result;
     };
