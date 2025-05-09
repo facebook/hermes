@@ -2464,6 +2464,25 @@ void Emitter::allocInYoung(
   a.cmp(xTemp2, xTemp1);
   a.b_hi(slowPathLab);
 
+#if LLVM_ADDRESS_SANITIZER_BUILD
+  // Save all the temporary registers in pairs.
+  static_assert((kGPTemp.second - kGPTemp.first + 1) % 2 == 0);
+  for (unsigned i = kGPTemp.first; i <= kGPTemp.second; i += 2)
+    a.stp(a64::x(i + 1), a64::x(i), a64::Mem(a64::sp).pre(-16));
+
+  a.mov(a64::x0, xOut);
+  a.mov(a64::x1, sz);
+  // Unpoison the newly allocated memory.
+  EMIT_RUNTIME_CALL_WITHOUT_THUNK_AND_SAVED_IP(
+      *this,
+      void (*)(void const volatile *, size_t),
+      __asan_unpoison_memory_region);
+
+  // Restore the temporary registers.
+  for (int i = kGPTemp.second; i >= kGPTemp.first; i -= 2)
+    a.ldp(a64::x(i), a64::x(i - 1), a64::Mem(a64::sp).post(16));
+#endif
+
   // Allocating succeeded, update the level.
   a.str(xTemp2, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGLevel));
 
