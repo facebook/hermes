@@ -1510,6 +1510,8 @@ void HadesGC::collectOGInBackground() {
   assert(
       !backgroundTaskActive_ && "Should only have one active task at a time");
   assert(kConcurrentGC && "Background work can only be done in concurrent GC");
+  // Only Mark and Sweep phases can actually run in the background task.
+  assert(concurrentPhase_ == Phase::Mark || concurrentPhase_ == Phase::Sweep);
 
   backgroundTaskActive_ = true;
 
@@ -3332,6 +3334,27 @@ void HadesGC::OldGen::setTargetSizeBytes(size_t targetSizeBytes) {
 
 void HadesGC::yieldToOldGen() {
   assert(inGC() && "Must be in GC when yielding to old gen");
+
+  // While we are both on the mutator and holding gcMutex_, check invariants.
+#ifndef NDEBUG
+  if (concurrentPhase_ == Phase::Mark) {
+    assert(ogMarkingBarriers_ && "Barriers are not running");
+    assert(markState_ && "Mark state is not set");
+    assert((!kConcurrentGC || backgroundTaskActive_) && "BG thread is dead");
+  } else if (concurrentPhase_ == Phase::CompleteMarking) {
+    assert(ogMarkingBarriers_ && "Barriers are not running");
+    assert(markState_ && "Mark state is not set");
+  } else if (concurrentPhase_ == Phase::Sweep) {
+    assert(!ogMarkingBarriers_ && "Barriers are running");
+    assert(!markState_ && "Mark state is set");
+    assert((!kConcurrentGC || backgroundTaskActive_) && "BG thread is dead");
+  } else {
+    assert(concurrentPhase_ == Phase::None && "No other phase");
+    assert(!ogMarkingBarriers_ && "Barriers are running");
+    assert(!markState_ && "Mark state is set");
+  }
+#endif
+
   if (!kConcurrentGC && concurrentPhase_ != Phase::None) {
     // If there is an ongoing collection, update the drain rate befor
     // collecting.
