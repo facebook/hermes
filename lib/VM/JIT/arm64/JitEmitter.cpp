@@ -3285,20 +3285,77 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
 
   syncAllFRTempExcept(frRes != frParent ? frRes : FR{});
   syncToFrame(frParent);
+  auto hwParent = getOrAllocFRInGpX(frParent, true);
+  auto hwTemp1 = allocTempGpX();
+  auto hwTemp2 = allocTempGpX();
+  auto hwNewEnvPtr = allocTempGpX();
+  auto hwTempV = allocTempVecD();
+
+  auto xTemp1 = hwTemp1.a64GpX();
+  auto xTemp2 = hwTemp2.a64GpX();
+  auto xNewEnvPtr = hwNewEnvPtr.a64GpX();
+  auto vTemp = hwTempV.a64VecD().v();
+
+  freeReg(hwTemp1);
+  freeReg(hwTemp2);
+  freeReg(hwNewEnvPtr);
+  freeReg(hwTempV);
+
   freeAllFRTempExcept({});
 
-  a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frParent);
-  a.mov(a64::w2, size);
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
 
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *, uint32_t),
-      _sh_ljs_create_environment);
+  allocInYoung(
+      CellKind::EnvironmentKind,
+      Environment::allocationSize(size),
+      xNewEnvPtr,
+      xTemp1,
+      xTemp2,
+      slowPathLab);
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  // Load a compressed pointer to the parent environment in xTemp1.
+  emit_sh_ljs_get_pointer(a, xTemp1, hwParent.a64GpX());
+  emit_sh_cp_encode_non_null(a, xTemp1);
+
+  emit_environment_init(
+      a, xNewEnvPtr, /* xParentEnv */ xTemp1, xTemp2, vTemp, size);
+
+  // Finally, allocate the result register.
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+
+  emit_sh_ljs_object2(a, hwRes.a64GpX(), xNewEnvPtr);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .frInput1 = frParent,
+       .hwRes = hwRes,
+       .sizeOrIdx = size,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: CreateEnvironment r%u, r%u",
+             sl.frRes.index(),
+             sl.frInput1.index());
+         em.a.bind(sl.slowPathLab);
+
+         em.a.mov(a64::x0, xRuntime);
+         em.loadFrameAddr(a64::x1, sl.frInput1);
+         em.a.mov(a64::w2, sl.sizeOrIdx);
+
+         EMIT_RUNTIME_CALL(
+             em,
+             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *, uint32_t),
+             _sh_ljs_create_environment);
+
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::getParentEnvironment(FR frRes, uint32_t level) {
