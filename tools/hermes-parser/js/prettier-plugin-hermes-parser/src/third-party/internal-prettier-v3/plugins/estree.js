@@ -3344,7 +3344,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/language-js/comments/handle-comments.js
   function handleOwnLineComment(context) {
-    return [handleIgnoreComments, handleConditionalExpressionComments, handleLastFunctionArgComments, handleLastComponentArgComments, handleMemberExpressionComments, handleIfStatementComments, handleWhileComments, handleTryStatementComments, handleClassComments, handleForComments, handleUnionTypeComments, handleOnlyComments, handleModuleSpecifiersComments, handleAssignmentPatternComments, handleMethodNameComments, handleLabeledStatementComments, handleBreakAndContinueStatementComments, handleNestedConditionalExpressionComments, handleCommentsInDestructuringPattern].some((fn) => fn(context));
+    return [handleIgnoreComments, handleConditionalExpressionComments, handleLastFunctionArgComments, handleLastComponentArgComments, handleMemberExpressionComments, handleIfStatementComments, handleWhileComments, handleTryStatementComments, handleClassComments, handleForComments, handleUnionTypeComments, handleMatchOrPatternComments, handleOnlyComments, handleModuleSpecifiersComments, handleAssignmentPatternComments, handleMethodNameComments, handleLabeledStatementComments, handleBreakAndContinueStatementComments, handleNestedConditionalExpressionComments, handleCommentsInDestructuringPattern].some((fn) => fn(context));
   }
   function handleEndOfLineComment(context) {
     return [handleClosureTypeCastComments, handleLastFunctionArgComments, handleConditionalExpressionComments, handleModuleSpecifiersComments, handleIfStatementComments, handleWhileComments, handleTryStatementComments, handleClassComments, handleLabeledStatementComments, handleCallExpressionComments, handlePropertyComments, handleOnlyComments, handleVariableDeclaratorComments, handleBreakAndContinueStatementComments, handleSwitchDefaultCaseComments, handleLastUnionElementInExpression].some((fn) => fn(context));
@@ -3739,6 +3739,29 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
+  function handleMatchOrPatternComments({
+    comment,
+    precedingNode,
+    enclosingNode,
+    followingNode
+  }) {
+    if (enclosingNode && enclosingNode.type === "MatchOrPattern") {
+      if (isPrettierIgnoreComment(comment)) {
+        followingNode.prettierIgnore = true;
+        comment.unignore = true;
+      }
+      if (precedingNode) {
+        addTrailingComment(precedingNode, comment);
+        return true;
+      }
+      return false;
+    }
+    if (followingNode && followingNode.type === "MatchOrPattern" && isPrettierIgnoreComment(comment)) {
+      followingNode.types[0].prettierIgnore = true;
+      comment.unignore = true;
+    }
+    return false;
+  }
   function handlePropertyComments({
     comment,
     enclosingNode
@@ -3947,7 +3970,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       node,
       parent
     } = path;
-    return (isJsxElement(node) || parent && (parent.type === "JSXSpreadAttribute" || parent.type === "JSXSpreadChild" || isUnionType(parent) || (parent.type === "ClassDeclaration" || parent.type === "ClassExpression") && parent.superClass === node)) && (!hasNodeIgnoreComment(node) || isUnionType(parent));
+    return (isJsxElement(node) || parent && (parent.type === "JSXSpreadAttribute" || parent.type === "JSXSpreadChild" || isUnionType(parent) || parent.type === "MatchOrPattern" || (parent.type === "ClassDeclaration" || parent.type === "ClassExpression") && parent.superClass === node)) && (!hasNodeIgnoreComment(node) || isUnionType(parent));
   }
   function isGap(text, {
     parser

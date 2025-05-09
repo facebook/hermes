@@ -65,6 +65,7 @@ function handleOwnLineComment(context) {
     handleImportSpecifierComments,
     handleForComments,
     handleUnionTypeComments,
+    handleMatchOrPatternComments,
     handleOnlyComments,
     handleImportDeclarationComments,
     handleAssignmentPatternComments,
@@ -679,6 +680,36 @@ function handleUnionTypeComments({
     followingNode &&
     (followingNode.type === 'UnionTypeAnnotation' ||
       followingNode.type === 'TSUnionType') &&
+    isPrettierIgnoreComment(comment)
+  ) {
+    followingNode.types[0].prettierIgnore = true;
+    comment.unignore = true;
+  }
+
+  return false;
+}
+
+function handleMatchOrPatternComments({
+  comment,
+  precedingNode,
+  enclosingNode,
+  followingNode,
+}) {
+  if (enclosingNode && enclosingNode.type === 'MatchOrPattern') {
+    if (isPrettierIgnoreComment(comment)) {
+      followingNode.prettierIgnore = true;
+      comment.unignore = true;
+    }
+    if (precedingNode) {
+      addTrailingComment(precedingNode, comment);
+      return true;
+    }
+    return false;
+  }
+
+  if (
+    followingNode &&
+    followingNode.type === 'MatchOrPattern' &&
     isPrettierIgnoreComment(comment)
   ) {
     followingNode.types[0].prettierIgnore = true;

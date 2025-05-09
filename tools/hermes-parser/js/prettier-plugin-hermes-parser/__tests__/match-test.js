@@ -445,6 +445,31 @@ describe('Match expression', () => {
       "
     `);
   });
+
+  test('comments in multiline or patterns', async () => {
+    expect(
+      format(`
+       const e = match (x) {
+         // aaa
+         | looooooooooooooooooooong
+         // bbb
+         | mooooooooooooooooooooong
+         // ccc
+         | boooooooooooooooooooooog => 1,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "const e = match (x) {
+        // aaa
+        | looooooooooooooooooooong
+        // bbb
+        | mooooooooooooooooooooong
+        // ccc
+        | boooooooooooooooooooooog => 1,
+      };
+      "
+    `);
+  });
 });
 
 describe('Match statement', () => {
