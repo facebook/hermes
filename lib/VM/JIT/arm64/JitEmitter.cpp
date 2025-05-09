@@ -741,6 +741,69 @@ void emit_jsobject_init(
   }
 }
 
+/// Emit code to initialize the fields of a newly created environment.
+/// \param xNewEnvPtr contains a pointer to the object to initialise.
+/// \param xParentEnv contains a compressed pointer to the parent environment.
+/// \param xTemp is a temporary register for use by the emitted code.
+/// \param vTemp is a temporary vector register for use by the emitted code.
+/// \param size is the number of slots in the new environment.
+void emit_environment_init(
+    a64::Assembler &a,
+    const a64::GpX &xNewEnvPtr,
+    const a64::GpX &xParentEnv,
+    const a64::GpX &xTemp,
+    const a64::VecV &vTemp,
+    uint32_t size) {
+  // Store the size and parent to the first two fields.
+  a.mov(xTemp, size);
+  if constexpr (sizeof(CompressedPointer) == 4) {
+    a.stp(
+        xParentEnv.w(),
+        xTemp.w(),
+        a64::Mem(xNewEnvPtr, offsetof(SHEnvironment, parentEnvironment)));
+  } else {
+    a.str(
+        xParentEnv,
+        a64::Mem(xNewEnvPtr, offsetof(SHEnvironment, parentEnvironment)));
+    a.str(xTemp.w(), a64::Mem(xNewEnvPtr, offsetof(SHEnvironment, size)));
+  }
+
+  // Load undefined.
+  a.mov(xTemp, _sh_ljs_undefined().raw);
+
+  auto slotsToFill = size;
+  // Before we fill 4 at a time, make sure any excess slots are filled.
+  if (slotsToFill % 2) {
+    a.str(xTemp, a64::Mem(xNewEnvPtr, offsetof(SHEnvironment, slots)));
+    --slotsToFill;
+  }
+  if (slotsToFill % 4) {
+    auto slotOffs = sizeof(SHLegacyValue) * (size - slotsToFill);
+    a.stp(
+        xTemp,
+        xTemp,
+        a64::Mem(xNewEnvPtr, offsetof(SHEnvironment, slots) + slotOffs));
+    slotsToFill -= 2;
+  }
+
+  // The remaining number of slots must be a multiple of 4, which we can fill 4
+  // at a time.
+  assert((slotsToFill % 4) == 0 && "Remaining slots must be multiple of 4");
+  if (slotsToFill) {
+    // Copy the value into a vector register, so we can fill faster.
+    a.dup(vTemp.d2(), xTemp);
+
+    auto slotOffs = sizeof(SHLegacyValue) * (size - slotsToFill);
+    // Initialize the pointer to the slots.
+    a.add(xTemp, xNewEnvPtr, offsetof(SHEnvironment, slots) + slotOffs);
+
+    // Fill the slots with undefined 4 at a time.
+    for (; slotsToFill; slotsToFill -= 4)
+      a.stp(vTemp, vTemp, a64::Mem(xTemp).post(32));
+  }
+  assert(slotsToFill == 0 && "All slots must be filled");
+}
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
   std::function<void(std::string &&message)> const longjmpError_;
@@ -3141,18 +3204,76 @@ void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
   syncAllFRTempExcept({});
   freeAllFRTempExcept({});
 
-  a.mov(a64::x0, xRuntime);
-  a.mov(a64::x1, xFrame);
-  a.mov(a64::w2, size);
+  // Allocate the result register.
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+  auto xRes = hwRes.a64GpX();
 
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
-      _sh_ljs_create_function_environment);
+  // Allocate some temporaries.
+  HWReg hwTemp1 = allocTempGpX();
+  HWReg hwTemp2 = allocTempGpX();
+  auto hwTempV = allocTempVecD();
+  auto xTemp1 = hwTemp1.a64GpX();
+  auto xTemp2 = hwTemp2.a64GpX();
+  auto vTemp = hwTempV.a64VecD().v();
+  freeReg(hwTemp1);
+  freeReg(hwTemp2);
+  freeReg(hwTempV);
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
+  // Try to allocate the new environment cell.
+  allocInYoung(
+      CellKind::EnvironmentKind,
+      Environment::allocationSize(size),
+      xRes,
+      xTemp1,
+      xTemp2,
+      slowPathLab);
+
+  // Get the current closure pointer.
+  a.ldur(
+      xTemp1,
+      a64::Mem(
+          xFrame,
+          (int)StackFrameLayout::CalleeClosureOrCB *
+              (int)sizeof(SHLegacyValue)));
+  emit_sh_ljs_get_pointer(a, xTemp1, xTemp1);
+
+  // xTemp1 = closure->environment
+  emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHCallable, environment)));
+
+  // Initialize the environment cell.
+  emit_environment_init(a, xRes, /* xParentEnv */ xTemp1, xTemp2, vTemp, size);
+
+  // Encode the cell as a HermesValue.
+  emit_sh_ljs_object(a, xRes);
+
+  a.bind(contLab);
+
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .hwRes = hwRes,
+       .sizeOrIdx = size,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: CreateFunctionEnvironment r%u", sl.frRes.index());
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.a.mov(a64::x1, xFrame);
+         em.a.mov(a64::w2, sl.sizeOrIdx);
+
+         EMIT_RUNTIME_CALL(
+             em,
+             SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+             _sh_ljs_create_function_environment);
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {

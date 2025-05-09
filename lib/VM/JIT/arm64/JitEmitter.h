@@ -326,6 +326,8 @@ class Emitter {
     bool invert;
     /// Whether to pass arguments by value to the slow path.
     bool passArgsByVal;
+    /// Some number or index that needs to be passed to the slow path.
+    unsigned sizeOrIdx;
 
     /// Pointer to the slow path function that must be called.
     void *slowCall;
