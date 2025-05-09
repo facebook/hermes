@@ -2161,10 +2161,8 @@ void HadesGC::relocationWriteBarrier(const void *loc, const void *value) {
   // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
   // pointers. But do dirty cards for compactee->yg pointers, since compaction
   // may not happen in the next YG.
-  if (FixedSizeHeapSegment::containedInSame(loc, value)) {
-    return;
-  }
-  if (inYoungGen(value) || compactee_.contains(value)) {
+  if (inYoungGen(value) ||
+      (compactee_.contains(value) && !compactee_.contains(loc))) {
     // Only dirty a card if it's an old-to-young or old-to-compactee pointer.
     // This is fine to do since the GC never modifies card tables outside of
     // allocation.
@@ -2182,10 +2180,8 @@ void HadesGC::relocationWriteBarrierForLargeObj(
   // Do not dirty cards for compactee->compactee, yg->yg, or yg->compactee
   // pointers. But do dirty cards for compactee->yg pointers, since compaction
   // may not happen in the next YG.
-  if (AlignedHeapSegment::containedInSameSegment(owningObj, value)) {
-    return;
-  }
-  if (inYoungGen(value) || compactee_.contains(value)) {
+  if (inYoungGen(value) ||
+      (compactee_.contains(value) && !compactee_.contains(loc))) {
     // Only dirty a card if it's an old-to-young or old-to-compactee pointer.
     // This is fine to do since the GC never modifies card tables outside of
     // allocation.
