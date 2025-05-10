@@ -713,32 +713,37 @@ void emit_jsobject_init(
   // obj->propStorage = nullptr
   // obj->directProps[N] = SmallHermesValue::encodeRawZeroValue()
 
-  // Assert that the number of bytes we need to zero is just 6x the size of a
-  // compressed pointer so we can initialize them efficiently.
-  static_assert(
-      sizeof(CompressedPointer) +
-          sizeof(SmallHermesValue) * HERMESVM_DIRECT_PROPERTY_SLOTS ==
-      sizeof(CompressedPointer) * 6);
-  if constexpr (sizeof(CompressedPointer) == 4) {
-    // If compressed pointers are enabled, we store 4 * 6 = 24 bytes of zeroes
-    // to zero out the propStorage and direct property fields.
-    a.stp(
-        a64::xzr, a64::xzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
-    a.str(a64::xzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage) + 16));
-  } else {
-    // If compressed pointers are disabled, we store 8 * 6 = 48 bytes of zeroes
-    // to zero out the propStorage and direct property fields.
-    a.stp(
-        a64::xzr, a64::xzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
-    a.stp(
-        a64::xzr,
-        a64::xzr,
-        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + 16));
-    a.stp(
-        a64::xzr,
-        a64::xzr,
-        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + 32));
+  // We want to zero the rest of the object. To simplify things, we align the
+  // size to the heap alignment of 8 bytes, which ensures that the end of the
+  // fill region is aligned to 8 bytes.
+  constexpr size_t bytesToZero =
+      heapAlignSize(cellSize<JSObject>()) - offsetof(SHJSObject, propStorage);
+  size_t zeroedBytes = 0;
+  static_assert(bytesToZero % 4 == 0, "Must be a multiple of 4");
+
+  // If there is some amount that is not a multiple of 8, store that first.
+  if (bytesToZero & 4) {
+    a.str(a64::wzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
+    zeroedBytes += 4;
   }
+
+  // Now store any amount that is not a multiple of 16. Note that since the end
+  // of the fill region is aligned to 8 bytes, we know all further stores will
+  // be aligned to 8 bytes.
+  if (bytesToZero & 8) {
+    a.str(
+        a64::xzr,
+        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + zeroedBytes));
+    zeroedBytes += 8;
+  }
+  // Store the rest as multiples of 16.
+  for (; zeroedBytes < bytesToZero; zeroedBytes += 16) {
+    a.stp(
+        a64::xzr,
+        a64::xzr,
+        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + zeroedBytes));
+  }
+  assert(zeroedBytes == bytesToZero && "Did not zero the whole object");
 }
 
 /// Emit code to initialize the fields of a newly created environment.
