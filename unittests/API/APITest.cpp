@@ -1442,6 +1442,51 @@ TEST_P(HermesRuntimeTest, CreateObjectWithPrototype) {
   EXPECT_THROW(Object::create(*rt, Value(1)), JSError);
 }
 
+TEST_P(HermesRuntimeTest, SetRuntimeData) {
+  UUID uuid1{0xe67ab3d6, 0x09a0, 0x11f0, 0xa641, 0x325096b39f47};
+  auto str = std::make_shared<std::string>("hello world");
+  rt->setRuntimeData(uuid1, str);
+
+  UUID uuid2{0xa12f99fc, 0x09a2, 0x11f0, 0x84de, 0x325096b39f47};
+  auto obj1 = std::make_shared<Object>(*rt);
+  rt->setRuntimeData(uuid2, obj1);
+
+  auto storedStr =
+      std::static_pointer_cast<std::string>(rt->getRuntimeData(uuid1));
+  auto storedObj = std::static_pointer_cast<Object>(rt->getRuntimeData(uuid2));
+  EXPECT_EQ(storedStr, str);
+  EXPECT_EQ(storedObj, obj1);
+
+  // Override the existing value at uuid1
+  auto weakOldStr = std::weak_ptr<std::string>(str);
+  str = std::make_shared<std::string>("goodbye world");
+  rt->setRuntimeData(uuid1, str);
+  storedStr = std::static_pointer_cast<std::string>(rt->getRuntimeData(uuid1));
+  EXPECT_EQ(str, storedStr);
+  // Verify that the old data was not held on after it was deleted
+  EXPECT_EQ(weakOldStr.use_count(), 0);
+
+  auto rt2 = makeHermesRuntime();
+  UUID uuid3{0x16f55892, 0x1034, 0x11f0, 0x8f65, 0x325096b39f47};
+  auto obj2 = std::make_shared<Object>(*rt2);
+  rt2->setRuntimeData(uuid3, obj2);
+
+  auto storedObj2 =
+      std::static_pointer_cast<Object>(rt2->getRuntimeData(uuid3));
+  EXPECT_EQ(storedObj2, obj2);
+
+  // UUID 1 is for data in the first hermes runtime, so we expect nullptr here
+  EXPECT_FALSE(rt2->getRuntimeData(uuid1));
+
+  // Verify that when the runtime gets destroyed, the custom data is also
+  // released.
+  auto weakObj2 = std::weak_ptr<Object>(obj2);
+  obj2.reset();
+  storedObj2.reset();
+  rt2.reset();
+  EXPECT_EQ(weakObj2.use_count(), 0);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,

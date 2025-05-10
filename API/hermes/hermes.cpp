@@ -160,6 +160,21 @@ void throwHermesNotCompiledWithSamplingProfilerSupport() {
       "Hermes was not compiled with SamplingProfiler support");
 }
 #endif // !HERMESVM_SAMPLING_PROFILER_AVAILABLE
+
+struct UUIDInfo : llvh::DenseMapInfo<jsi::UUID> {
+  static inline jsi::UUID getEmptyKey() {
+    return jsi::UUID{};
+  }
+  static inline jsi::UUID getTombstoneKey() {
+    return jsi::UUID{0xffffffff, 0xffff, 0xffff, 0xffff, 0xfffffffffff};
+  }
+  static inline bool isEqual(const jsi::UUID &a, const jsi::UUID &b) {
+    return a == b;
+  }
+  static unsigned getHashValue(const jsi::UUID &Val) {
+    return jsi::UUID::Hash()(Val);
+  }
+};
 } // namespace
 
 HermesRuntime::~HermesRuntime() {}
@@ -255,6 +270,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
     // This must be done before we check hermesValues_ below.
     debugger_.reset();
 #endif
+    // Free the resources in the custom data map
+    for (auto [_, entry] : dataMap_) {
+      auto *deleter = entry.second;
+      deleter(entry.first);
+    }
   }
 
   // This should only be called once by the factory.
@@ -717,6 +737,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Value *args,
       size_t count) override;
 
+  void setRuntimeDataImpl(
+      const jsi::UUID &uuid,
+      const void *data,
+      void (*deleter)(const void *data)) override;
+  const void *getRuntimeDataImpl(const jsi::UUID &uuid) override;
+
   bool strictEquals(const jsi::Symbol &a, const jsi::Symbol &b) const override;
   bool strictEquals(const jsi::BigInt &a, const jsi::BigInt &b) const override;
   bool strictEquals(const jsi::String &a, const jsi::String &b) const override;
@@ -1137,6 +1163,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   /// Compilation flags used by prepareJavaScript().
   ::hermes::hbc::CompileFlags compileFlags_{};
+  /// Custom data stored by the user of the runtime.
+  llvh::DenseMap<
+      jsi::UUID,
+      std::pair<const void *, void (*)(const void *data)>,
+      UUIDInfo>
+      dataMap_;
 };
 
 bool HermesRuntime::isHermesBytecode(const uint8_t *data, size_t len) {
@@ -2540,6 +2572,24 @@ jsi::Value HermesRuntimeImpl::callAsConstructor(
   vm::HermesValue resultHValue =
       resultValue.isObject() ? resultValue : thisArg.getHermesValue();
   return valueFromHermesValue(resultHValue);
+}
+
+void HermesRuntimeImpl::setRuntimeDataImpl(
+    const jsi::UUID &uuid,
+    const void *data,
+    void (*deleter)(const void *data)) {
+  if (auto it = dataMap_.find(uuid); it != dataMap_.end()) {
+    // Free the data currently keyed at UUID
+    auto oldData = it->second.first;
+    auto oldDataDeleter = it->second.second;
+    oldDataDeleter(oldData);
+  }
+  dataMap_[uuid] = {data, deleter};
+}
+
+const void *HermesRuntimeImpl::getRuntimeDataImpl(const jsi::UUID &uuid) {
+  auto entry = dataMap_.lookup(uuid);
+  return entry.first;
 }
 
 bool HermesRuntimeImpl::strictEquals(const jsi::Symbol &a, const jsi::Symbol &b)
