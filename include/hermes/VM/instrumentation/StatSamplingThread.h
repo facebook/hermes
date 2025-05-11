@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_SAMPLINGTHREAD_H
 #define HERMES_VM_SAMPLINGTHREAD_H
 
+#include "hermes/Support/FakeThreads.h"
 #include "hermes/VM/instrumentation/ProcessStats.h"
 
 #include <chrono>
