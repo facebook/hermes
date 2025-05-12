@@ -17,11 +17,10 @@
 // enablePromiseRejectionTracker
 // enqueueJob
 // useEngineQueue
-// resetTimezoneCache
-var SAFE_FIELDS_COUNT = 8;
+var SAFE_FIELDS_COUNT = 7;
 
 // Check that we can disable unsafe fields of HermesInternal.
-print(Object.getOwnPropertyNames(HermesInternal).length);
+print(Object.getOwnPropertyNames(HermesInternal).length)
 print(Object.getOwnPropertyNames(HermesInternal).length !== SAFE_FIELDS_COUNT);
 //CHKHIE: true
 //CHKHID: false
@@ -37,7 +36,7 @@ print(typeof HermesInternal.detachArrayBuffer);
 
 // Check that safe fields such as HermesInternal.concat is
 // kept around even when HermesInternal is diabled.
-print(typeof HermesInternal.concat);
+print(typeof HermesInternal.concat)
 //CHKHIE-NEXT: function
 //CHKHID-NEXT: function
 //CHKIME-NEXT: function

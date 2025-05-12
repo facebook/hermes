@@ -176,7 +176,6 @@ NATIVE_FUNCTION(hermesInternalTTRCReached)
 NATIVE_FUNCTION(hermesInternalSetPromiseRejectionTrackingHook)
 NATIVE_FUNCTION(hermesInternalEnablePromiseRejectionTracker)
 NATIVE_FUNCTION(hermesInternalUseEngineQueue)
-NATIVE_FUNCTION(hermesInternalResetTimezoneCache)
 NATIVE_FUNCTION(hermesInternalEnqueueJob)
 NATIVE_FUNCTION(hermesInternalDrainJobs)
 
