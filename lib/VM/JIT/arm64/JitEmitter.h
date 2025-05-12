@@ -920,6 +920,16 @@ class Emitter {
       SmallHermesValue shv,
       const char *constName);
 
+  /// Load the StringPrimitive for \p id as a pointer into \p xOut.
+  /// The StringPrimitive must already be known to be allocated in the
+  /// IdentifierTable at JIT time.
+  /// \param xTemp is a temporary register, must not be the same as \p xOut.
+  ///   xTemp may not be modified in practice, based on the value of \p id.
+  void loadConstStringInGpX(
+      SymbolID id,
+      const a64::GpX &xOut,
+      const a64::GpX &xTemp);
+
   void _loadFrame(HWReg dest, FR rFrom) {
     // FIXME: check if the offset fits
     if (dest.isGpX())

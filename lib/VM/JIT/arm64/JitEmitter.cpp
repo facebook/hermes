@@ -2175,6 +2175,40 @@ void Emitter::loadSmallHermesValueInGpX(
   }
 }
 
+void Emitter::loadConstStringInGpX(
+    SymbolID id,
+    const a64::GpX &xOut,
+    const a64::GpX &xTemp) {
+  assert(xOut != xTemp);
+  static_assert(
+      std::is_same_v<
+          RuntimeOffsets::IdentifierTableLookupVectorType,
+          TransparentConservativeVector<
+              RuntimeOffsets::IdentifierTableLookupEntryType>>,
+      "lookupVector_ must be transparent");
+  a.ldr(
+      xOut,
+      a64::Mem(
+          xRuntime,
+          RuntimeOffsets::identifierTable +
+              RuntimeOffsets::identifierTableLookupVector +
+              TransparentConservativeVector<
+                  RuntimeOffsets::IdentifierTableLookupEntryType>::
+                  dataPointerOffset()));
+  // xOut = xOut[symID.index].strPrim_
+  size_t offset =
+      (id.unsafeGetIndex() * RuntimeOffsets::identifierTableLookupEntrySize) +
+      RuntimeOffsets::identifierTableLookupEntryStrPrim;
+  asmjit::Error err;
+  EXPECT_ERROR(
+      asmjit::kErrorInvalidDisplacement,
+      err = a.ldr(xOut, a64::Mem(xOut, offset)));
+  if (err) {
+    a.mov(xTemp, offset);
+    a.ldr(xOut, a64::Mem(xOut, xTemp));
+  }
+}
+
 void Emitter::loadConstBits64(
     FR frRes,
     uint64_t bits,
@@ -2746,10 +2780,13 @@ void Emitter::newObjectWithBuffer(
   // Populate the values of the object.
   HWReg hwObj = allocTempGpX();
   HWReg hwTmp = allocTempGpX();
+  HWReg hwTmp2 = allocTempGpX();
   a64::GpX xObj = hwObj.a64GpX();
   a64::GpX xTmp = hwTmp.a64GpX();
+  a64::GpX xTmp2 = hwTmp2.a64GpX();
   freeReg(hwObj);
   freeReg(hwTmp);
+  freeReg(hwTmp2);
 
   // xObj starts as the raw pointer to the object,
   // but may be updated to point to property storage if there's more than
@@ -2763,6 +2800,7 @@ void Emitter::newObjectWithBuffer(
     Emitter &em;
     a64::GpX &xObj;
     a64::GpX &xTmp;
+    a64::GpX &xTmp2;
 
     /// Iteration counter.
     /// Index of the next value to be inserted into the object.
@@ -2827,29 +2865,7 @@ void Emitter::newObjectWithBuffer(
       assert(strPrim && "must be allocated");
 
       // xTmp = identifierTable_.lookupVector_.ptr
-      static_assert(
-          std::is_same_v<
-              RuntimeOffsets::IdentifierTableLookupVectorType,
-              TransparentConservativeVector<
-                  RuntimeOffsets::IdentifierTableLookupEntryType>>,
-          "lookupVector_ must be transparent");
-      em.a.ldr(
-          xTmp,
-          a64::Mem(
-              xRuntime,
-              RuntimeOffsets::identifierTable +
-                  RuntimeOffsets::identifierTableLookupVector +
-                  TransparentConservativeVector<
-                      RuntimeOffsets::IdentifierTableLookupEntryType>::
-                      dataPointerOffset()));
-      // xTmp = xTmp[symID.index].strPrim_
-      em.a.ldr(
-          xTmp,
-          a64::Mem(
-              xTmp,
-              (symID.unsafeGetIndex() *
-               RuntimeOffsets::identifierTableLookupEntrySize) +
-                  RuntimeOffsets::identifierTableLookupEntryStrPrim));
+      em.loadConstStringInGpX(symID, xTmp, xTmp2);
       // Encode compressed pointer and wrap with StringTag.
       // We know it's not null because we allocated it at JIT compile time.
       emit_sh_cp_encode_non_null(em.a, xTmp);
@@ -2882,7 +2898,7 @@ void Emitter::newObjectWithBuffer(
       storeVal(SmallHermesValue::encodeBoolValue(b));
       advance();
     }
-  } emittingVisitor{*this, xObj, xTmp};
+  } emittingVisitor{*this, xObj, xTmp, xTmp2};
 
   SerializedLiteralParser::parse(
       codeBlock_->getRuntimeModule()
