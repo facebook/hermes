@@ -28,6 +28,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
@@ -1070,6 +1071,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   /// Concrete declarations of HermesRuntime methods.
   void sampledTraceToStreamInDevToolsFormat(std::ostream &stream) override;
+  void resetTimezoneCache() override;
   sampling_profiler::Profile dumpSampledTraceToProfile() override;
   void loadSegment(
       std::unique_ptr<const jsi::Buffer> buffer,
@@ -1125,6 +1127,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
 bool HermesRuntime::isHermesBytecode(const uint8_t *data, size_t len) {
   return hbc::BCProviderFromBuffer::isBytecodeStream(
       llvh::ArrayRef<uint8_t>(data, len));
+}
+
+void HermesRuntimeImpl::resetTimezoneCache() {
+  auto *rt = this->getVMRuntimeUnsafe();
+  assert(rt != nullptr);
+  rt->getJSLibStorage()->localTimeOffsetCache.reset();
 }
 
 uint32_t HermesRuntime::getBytecodeVersion() {

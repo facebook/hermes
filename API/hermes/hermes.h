@@ -111,6 +111,9 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Disable code coverage profiler.
   static void disableCodeCoverageProfiler();
 
+  /// Reset timezone cache
+  virtual void resetTimezoneCache() = 0;
+
   /// Define a destructor to serve as the key function.
   ~HermesRuntime() override;
 
