@@ -2231,20 +2231,19 @@ void Emitter::loadConstString(
     uint32_t stringID) {
   comment("// LoadConstString r%u, stringID %u", frRes.index(), stringID);
 
-  syncAllFRTempExcept(frRes);
-  freeAllFRTempExcept({});
+  Runtime &runtime = runtimeModule->getRuntime();
+  SymbolID symID = runtimeModule->getSymbolIDFromStringIDMayAllocate(stringID);
+  [[maybe_unused]] StringPrimitive *strPrim =
+      runtime.getStringPrimFromSymbolID(symID);
+  assert(strPrim && "must be allocated");
 
-  a.mov(a64::x0, xRuntime);
-  loadBits64InGp(a64::x1, (uint64_t)runtimeModule, "RuntimeModule");
-  a.mov(a64::w2, stringID);
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, SHRuntimeModule *, uint32_t),
-      _sh_ljs_get_bytecode_string);
+  HWReg hwRes = getOrAllocFRInGpX(frRes, false);
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+  HWReg hwTmp = allocTempGpX();
+  freeReg(hwTmp);
 
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
-  movHWFromHW<true>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  loadConstStringInGpX(symID, hwRes.a64GpX(), hwTmp.a64GpX());
+  emit_sh_ljs_string(a, hwRes.a64GpX());
 }
 
 void Emitter::loadConstBigInt(
