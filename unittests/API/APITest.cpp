@@ -14,10 +14,7 @@
 #include <hermes_sandbox/HermesSandboxRuntime.h>
 #include <jsi/instrumentation.h>
 #include <jsi/test/testlib.h>
-#include <hermes/VM/JSLib/DateCache.h>
-#include <hermes/VM/JSLib/DateUtil.h>
 
-#include <cstdlib>
 #include <atomic>
 #include <tuple>
 
@@ -104,17 +101,6 @@ TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
 TEST_P(HermesRuntimeTest, ResetTimezoneCache) {
   if (auto *hrt = dynamic_cast<HermesRuntime *>(rt.get())) {
     EXPECT_NO_THROW({ hrt->resetTimezoneCache(); });
-    // hermes::vm::LocalTimeOffsetCache localTimeOffsetCache;
-    // hermes::oscompat::set_env("TZ", "America/Los_Angeles");
-    // ::tzset();
-    // hrt->resetTimezoneCache();
-    // EXPECT_EQ(1530435600000, hermes::vm::localTime(1530460800000, localTimeOffsetCache));
-    // EXPECT_EQ(1530460800000, hermes::vm::utcTime(1530435600000, localTimeOffsetCache));
-    // hermes::oscompat::set_env("TZ", "America/New_York");
-    // ::tzset();
-    // hrt->resetTimezoneCache();
-    // EXPECT_EQ(1530446400000, hermes::vm::localTime(1530460800000, localTimeOffsetCache));
-    // EXPECT_EQ(1530460800000, hermes::vm::utcTime(1530446400000, localTimeOffsetCache));
   }
 }
 
