@@ -164,6 +164,7 @@ export function deepCloneNode<T: ESNode>(
   node: T,
   newProps: {...},
 ): DetachedNode<T> {
+  // $FlowFixMe[unsafe-object-assign]
   const clone: DetachedNode<T> = Object.assign(
     JSON.parse(
       JSON.stringify(node, (key, value) => {
