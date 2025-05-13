@@ -9,8 +9,8 @@ if(IMPORT_HOST_COMPILERS)
   set(shermes_EXE imported-shermes)
   set(hermesc_EXE imported-hermesc)
 else()
-  set(shermes_EXE shermes)
-  set(hermesc_EXE hermesc)
+  set(shermes_EXE ${HERMES_TOOLS_OUTPUT_DIR}/shermes)
+  set(hermesc_EXE ${HERMES_TOOLS_OUTPUT_DIR}/hermesc)
 endif()
 
 # Concatenate all JS files into one source file for compilation.
