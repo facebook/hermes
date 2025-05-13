@@ -1969,7 +1969,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
       // emitNormalCleanup.
       []() {},
       // emitHandler.
-      [this, exitBlock, result, &iteratorRecord, &resumeGenTryStartBB](
+      [this, exitBlock, result, &iteratorRecord, &resumeGenTryStartBB, Y](
           BasicBlock *getNextBlock) {
         auto *catchReg = Builder.createCatchInst();
 
@@ -2024,7 +2024,7 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         // going to terminate the yield* loop. But first we need to give
         // iterator a chance to clean up.
         Builder.setInsertionBlock(noThrowMethodBB);
-        emitIteratorCloseSlow(iteratorRecord, false);
+        emitIteratorCloseSlow(Y, iteratorRecord, false);
         Builder.createThrowTypeErrorInst(Builder.getLiteralString(
             "yield* delegate must have a .throw() method"));
       });

@@ -621,6 +621,7 @@ Value *ESTreeIRGen::emitIteratorValueSlow(Value *iterResult) {
 }
 
 void ESTreeIRGen::_emitIteratorCloseImpl(
+    ESTree::Node* astNode,
     hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
     bool ignoreInnerException,
     bool isAsyncIterator) {
@@ -641,14 +642,25 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
     emitTryCatchScaffolding(
         noReturn,
         // emitBody.
-        [this, returnMethod, &iteratorRecord, isAsyncIterator](BasicBlock * /*catchBlock*/) {
-          auto *callResult = Builder.createCallInst(
-              returnMethod,
-              /* newTarget */ Builder.getLiteralUndefined(),
-              iteratorRecord.iterator,
-              {});
-          if(isAsyncIterator)
-            genYieldOrAwaitExpr(callResult);
+        [this, returnMethod, &iteratorRecord, isAsyncIterator, astNode](BasicBlock * catchBlock) {
+          SurroundingTry thisTry{
+            curFunction(),
+            astNode,
+            catchBlock,
+            {},
+            [this, &iteratorRecord, isAsyncIterator, returnMethod](
+                ESTree::Node *,
+                ControlFlowChange cfc,
+                BasicBlock *continueTarget) {
+              auto *callResult = Builder.createCallInst(
+                  returnMethod,
+                  /* newTarget */ Builder.getLiteralUndefined(),
+                  iteratorRecord.iterator,
+                  {});
+              if (isAsyncIterator)
+                genYieldOrAwaitExpr(callResult);
+            }
+          };
         },
         // emitNormalCleanup.
         []() {},
@@ -675,15 +687,17 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
 }
 
 void ESTreeIRGen::emitIteratorCloseSlow(
+    ESTree::Node* astNode,
     hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
     bool ignoreInnerException) {
-  _emitIteratorCloseImpl(iteratorRecord, ignoreInnerException, false);
+  _emitIteratorCloseImpl(astNode, iteratorRecord, ignoreInnerException, false);
 }
 
 void ESTreeIRGen::emitAsyncIteratorCloseSlow(
+    ESTree::Node* astNode,
     hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
     bool ignoreInnerException) {
-  _emitIteratorCloseImpl(iteratorRecord, ignoreInnerException, true);
+  _emitIteratorCloseImpl(astNode, iteratorRecord, ignoreInnerException, true);
 }
 
 ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {

@@ -1040,7 +1040,7 @@ void ESTreeIRGen::genAsyncForOfStatement(
             forOfStmt,
             catchBlock,
             {},
-            [this, &iteratorRecord, getNextBlock](
+            [this, &iteratorRecord, getNextBlock, forOfStmt](
                 ESTree::Node *,
                 ControlFlowChange cfc,
                 BasicBlock *continueTarget) {
@@ -1051,7 +1051,7 @@ void ESTreeIRGen::genAsyncForOfStatement(
               // the iterator.
               if (cfc == ControlFlowChange::Break ||
                   continueTarget != getNextBlock)
-                emitAsyncIteratorCloseSlow(iteratorRecord, false);
+                emitAsyncIteratorCloseSlow(forOfStmt, iteratorRecord, false);
             }};
 
         // Note: obtaining the value is not protected, but storing it is.
@@ -1064,9 +1064,9 @@ void ESTreeIRGen::genAsyncForOfStatement(
       // emitNormalCleanup.
       []() {},
       // emitHandler.
-      [this, &iteratorRecord](BasicBlock *) {
+      [this, &iteratorRecord, forOfStmt](BasicBlock *) {
         auto *catchReg = Builder.createCatchInst();
-        emitAsyncIteratorCloseSlow(iteratorRecord, true);
+        emitAsyncIteratorCloseSlow(forOfStmt, iteratorRecord, true);
         Builder.createThrowInst(catchReg);
       });
 
