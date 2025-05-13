@@ -431,6 +431,8 @@ void SemanticResolver::visit(ESTree::AssignmentExpressionNode *assignment) {
 
     for (auto *e : list) {
       visitESTreeNode(*this, e->_left, e);
+      if (LLVM_UNLIKELY(recursionDepth_ == 0))
+        return;
       validateAssignmentTarget(e->_left);
     }
     visitESTreeNode(*this, list.back()->_right, list.back());
@@ -438,12 +440,16 @@ void SemanticResolver::visit(ESTree::AssignmentExpressionNode *assignment) {
   }
 
   visitESTreeNode(*this, assignment->_left, assignment);
+  if (LLVM_UNLIKELY(recursionDepth_ == 0))
+    return;
   validateAssignmentTarget(assignment->_left);
   visitESTreeNode(*this, assignment->_right, assignment);
 }
 
 void SemanticResolver::visit(ESTree::UpdateExpressionNode *node) {
   visitESTreeChildren(*this, node);
+  if (LLVM_UNLIKELY(recursionDepth_ == 0))
+    return;
   if (!isLValue(node->_argument)) {
     sm_.error(
         node->_argument->getSourceRange(),
@@ -499,6 +505,8 @@ void SemanticResolver::visit(
 void SemanticResolver::visit(ESTree::SwitchStatementNode *node) {
   // Visit the discriminant before creating a new scope.
   visitESTreeNode(*this, node->_discriminant, node);
+  if (LLVM_UNLIKELY(recursionDepth_ == 0))
+    return;
 
   node->setLabelIndex(curFunctionInfo()->allocateLabel());
 
@@ -544,6 +552,8 @@ void SemanticResolver::visitForInOf(
     processDeclarations(*declsOpt);
   }
   visitESTreeNode(*this, left, node);
+  if (LLVM_UNLIKELY(recursionDepth_ == 0))
+    return;
 
   // Ensure the initializer is valid.
   if (auto *vd = llvh::dyn_cast<VariableDeclarationNode>(left)) {
@@ -866,6 +876,8 @@ void SemanticResolver::visit(ESTree::ClassDeclarationNode *node) {
     llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
     ClassContext classCtx(*this, node);
     visitESTreeChildren(*this, node);
+    if (LLVM_UNLIKELY(recursionDepth_ == 0))
+      return;
     curClassContext_->createImplicitConstructorFunctionInfo();
   } else {
     // In untyped mode, create an additional scope & variable for the class
@@ -902,6 +914,8 @@ void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
     // Otherwise, no extra scope needed, just move on.
     visitESTreeChildren(*this, node);
   }
+  if (LLVM_UNLIKELY(recursionDepth_ == 0))
+    return;
   curClassContext_->createImplicitConstructorFunctionInfo();
 }
 
@@ -963,6 +977,8 @@ void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
     // Computed keys cannot reference super.
     llvh::SaveAndRestore<bool> oldCanRefSuper{canReferenceSuper_, false};
     visitESTreeNode(*this, node->_key, node);
+    if (LLVM_UNLIKELY(recursionDepth_ == 0))
+      return;
   }
 
   // Visit the init expression, since it needs to be resolved.
@@ -1043,6 +1059,8 @@ void SemanticResolver::visit(
   // If computed property, the key expression needs to be resolved.
   if (node->_computed)
     visitESTreeNode(*this, node->_key, node);
+  if (LLVM_UNLIKELY(recursionDepth_ == 0))
+    return;
 
   // If there are private instance methods, we will need to make an instance
   // elements intializer function.
@@ -1116,6 +1134,8 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
             // Therefore, we return explicitly after, so we don't visit the
             // children again below.
             visitESTreeChildren(*this, node);
+            if (LLVM_UNLIKELY(recursionDepth_ == 0))
+              return;
             visitModuleExport(node);
             return;
           } else if (propIdent->_name == kw_.identImport) {
@@ -1738,6 +1758,8 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
         forbidAwaitAsIdentifier_, forbidAwaitAsIdentifier};
 
     visitESTreeNodeList(*this, getParams(node), node);
+    if (LLVM_UNLIKELY(recursionDepth_ == 0))
+      return;
   };
 
   // Do not visit the identifier node, because that would try to resolve it
@@ -1842,6 +1864,8 @@ void SemanticResolver::visitFunctionBodyAfterParamsVisited(
 
   // Finally visit the body.
   visitESTreeNode(*this, body, node);
+  if (LLVM_UNLIKELY(recursionDepth_ == 0))
+    return;
 
   // Check for local eval and run the unresolver pass in non-strict mode.
   // TODO: enable this when non-strict direct eval is supported.
