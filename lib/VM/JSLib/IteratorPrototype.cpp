@@ -22,6 +22,7 @@ void populateIteratorPrototype(Runtime &runtime) {
   auto iteratorFunc = NativeFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       iteratorPrototypeIterator,
       Predefined::getSymbolID(Predefined::squareSymbolIterator),

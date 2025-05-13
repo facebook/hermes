@@ -144,12 +144,15 @@ proxyRevocable(void *, Runtime &runtime, NativeArgs args) {
   }
   // 2. Let steps be the algorithm steps defined in Proxy Revocation Functions.
   // 3. Let revoker be CreateBuiltinFunction(steps, « [[RevocableProxy]] »).
-  Handle<NativeFunction> revoker = NativeFunction::createWithoutPrototype(
+  Handle<NativeFunction> revoker = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       proxyRevocationSteps,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
+      Runtime::makeNullHandle<JSObject>(),
       ProxySlotIndexes::COUNT);
   // 4. Set revoker.[[RevocableProxy]] to p.
   auto shv =

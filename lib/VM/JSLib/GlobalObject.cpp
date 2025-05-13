@@ -291,8 +291,15 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       [&](SymbolID name, NativeFunctionPtr functionPtr, unsigned paramCount) {
         gcScope.clearAllHandles();
 
-        auto func = NativeFunction::createWithoutPrototype(
-            runtime, nullptr, functionPtr, name, paramCount);
+        auto func = NativeFunction::create(
+            runtime,
+            runtime.functionPrototype,
+            Runtime::makeNullHandle<Environment>(),
+            nullptr,
+            functionPtr,
+            name,
+            paramCount,
+            Runtime::makeNullHandle<JSObject>());
         runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
             runtime.getGlobal(), runtime, name, normalDPF, func));
         return func;
@@ -351,6 +358,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.functionPrototype = NativeFunction::create(
       runtime,
       runtime.objectPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       emptyFunction,
       Predefined::getSymbolID(Predefined::emptyString),
@@ -368,6 +376,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   auto throwTypeErrorFunction = NativeFunction::create(
       runtime,
       runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       (void *)TypeErrorKind::RestrictedProperty,
       throwTypeError,
       Predefined::getSymbolID(Predefined::emptyString),
@@ -734,6 +743,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.requireFunction = NativeFunction::create(
       runtime,
       runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       require,
       Predefined::getSymbolID(Predefined::require),

@@ -21,12 +21,15 @@ using NativeFunctionTest = RuntimeTestFixture;
 
 TEST_F(NativeFunctionTest, AdditionalSlots) {
   GCScope scope{runtime, "NativeFunctionTest"};
-  auto handle = NativeFunction::createWithoutPrototype(
+  auto handle = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       nullptr,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
+      Runtime::makeNullHandle<JSObject>(),
       numAdditionalSlotsForTest<NativeFunction>());
   testAdditionalSlots(runtime, handle);
 }

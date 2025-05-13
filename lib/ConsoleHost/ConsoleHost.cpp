@@ -311,8 +311,15 @@ void installConsoleBindings(
                               void *context,
                               unsigned paramCount) -> void {
     vm::GCScopeMarkerRAII marker{runtime};
-    auto func = vm::NativeFunction::createWithoutPrototype(
-        runtime, context, functionPtr, name, paramCount);
+    auto func = vm::NativeFunction::create(
+        runtime,
+        runtime.functionPrototype,
+        vm::Runtime::makeNullHandle<vm::Environment>(),
+        context,
+        functionPtr,
+        name,
+        paramCount,
+        vm::Runtime::makeNullHandle<vm::JSObject>());
     auto res = vm::JSObject::defineOwnProperty(
         runtime.getGlobal(), runtime, name, normalDPF, func);
     (void)res;

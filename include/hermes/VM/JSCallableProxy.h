@@ -46,6 +46,7 @@ class JSCallableProxy : public NativeFunction {
             runtime,
             parent,
             clazz,
+            Runtime::makeNullHandle<Environment>(),
             nullptr /* context */,
             &JSCallableProxy::_proxyNativeCall) {}
 

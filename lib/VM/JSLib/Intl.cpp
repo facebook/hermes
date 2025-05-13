@@ -768,12 +768,15 @@ intlCollatorPrototypeCompareGetter(void *, Runtime &runtime, NativeArgs args) {
     return boundCompare.getHermesValue();
   }
 
-  Handle<NativeFunction> compare = NativeFunction::createWithoutPrototype(
+  Handle<NativeFunction> compare = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlCollatorCompare,
       Predefined::getSymbolID(Predefined::emptyString),
       2,
+      Runtime::makeNullHandle<JSObject>(),
       static_cast<unsigned int>(CollatorCompareSlotIndexes::COUNT));
   setCollator(compare, runtime, collatorHandle);
 
@@ -1042,12 +1045,15 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
     return boundFormat.getHermesValue();
   }
 
-  Handle<NativeFunction> format = NativeFunction::createWithoutPrototype(
+  Handle<NativeFunction> format = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlDateTimeFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
       1,
+      Runtime::makeNullHandle<JSObject>(),
       static_cast<unsigned int>(DTFFormatSlotIndexes::COUNT));
   setDateTimeFormat(format, runtime, dateTimeFormatHandle);
 
@@ -1307,12 +1313,15 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
     return boundFormat.getHermesValue();
   }
 
-  Handle<NativeFunction> format = NativeFunction::createWithoutPrototype(
+  Handle<NativeFunction> format = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlNumberFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
       1,
+      Runtime::makeNullHandle<JSObject>(),
       static_cast<unsigned int>(NFFormatSlotIndexes::COUNT));
   setNumberFormat(format, runtime, numberFormatHandle);
 

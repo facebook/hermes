@@ -57,7 +57,13 @@ class FinalizableNativeFunction final : public NativeFunction {
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
-      : NativeFunction(runtime, parent, clazz, context, functionPtr),
+      : NativeFunction(
+            runtime,
+            parent,
+            clazz,
+            Runtime::makeNullHandle<Environment>(),
+            context,
+            functionPtr),
         finalizePtr_(finalizePtr) {}
 
  protected:

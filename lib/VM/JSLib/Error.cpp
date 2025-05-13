@@ -55,6 +55,7 @@ Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
   auto getter = NativeFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       errorStackGetter,
       Predefined::getSymbolID(Predefined::emptyString),
@@ -64,6 +65,7 @@ Handle<NativeConstructor> createErrorConstructor(Runtime &runtime) {
   auto setter = NativeFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       errorStackSetter,
       Predefined::getSymbolID(Predefined::emptyString),

@@ -197,13 +197,15 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "print"), printID);
   ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "result="), resultID);
 
-  auto printFn = runtime.makeHandle<NativeFunction>(
-      *NativeFunction::createWithoutPrototype(
-          runtime,
-          nullptr,
-          print,
-          Predefined::getSymbolID(Predefined::emptyString),
-          0));
+  auto printFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
+      runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
+      nullptr,
+      print,
+      Predefined::getSymbolID(Predefined::emptyString),
+      0,
+      Runtime::makeNullHandle<JSObject>()));
 
   // Define the 'print' function.
   (void)JSObject::putNamed_RJS(
@@ -584,13 +586,15 @@ TEST_F(InterpreterTest, FrameSizeTest) {
 
   ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "getSP"), getSPID);
 
-  auto getSPFn = runtime.makeHandle<NativeFunction>(
-      *NativeFunction::createWithoutPrototype(
-          runtime,
-          nullptr,
-          getSP,
-          Predefined::getSymbolID(Predefined::emptyString),
-          0));
+  auto getSPFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
+      runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
+      nullptr,
+      getSP,
+      Predefined::getSymbolID(Predefined::emptyString),
+      0,
+      Runtime::makeNullHandle<JSObject>()));
 
   // Define the 'getSP' function.
   (void)JSObject::putNamed_RJS(

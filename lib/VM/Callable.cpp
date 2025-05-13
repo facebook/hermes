@@ -1151,43 +1151,6 @@ std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
 Handle<NativeFunction> NativeFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
-    void *context,
-    NativeFunctionPtr functionPtr,
-    SymbolID name,
-    unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
-    unsigned additionalSlotCount) {
-  size_t reservedSlots =
-      numOverlapSlots<NativeFunction>() + additionalSlotCount;
-  auto *cell = runtime.makeAFixed<NativeFunction>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
-      context,
-      functionPtr);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  // Allocate a propStorage if the number of additional slots requires it.
-  runtime.ignoreAllocationFailure(
-      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
-
-  auto st = defineNameLengthAndPrototype(
-      selfHandle,
-      runtime,
-      name,
-      paramCount,
-      prototypeObjectHandle,
-      Callable::WritablePrototype::Yes);
-  (void)st;
-  assert(
-      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
-
-  return selfHandle;
-}
-
-Handle<NativeFunction> NativeFunction::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
     Handle<Environment> parentEnvHandle,
     void *context,
     NativeFunctionPtr functionPtr,

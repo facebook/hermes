@@ -71,6 +71,7 @@ NativeFunction *defineMethod(
   auto method = NativeFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      Runtime::makeNullHandle<Environment>(),
       context,
       nativeFunctionPtr,
       methodName,
@@ -156,6 +157,7 @@ void defineAccessor(
     auto funcRes = NativeFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime.functionPrototype),
+        Runtime::makeNullHandle<Environment>(),
         context,
         getterFunc,
         getterFuncName,
@@ -184,6 +186,7 @@ void defineAccessor(
     auto funcRes = NativeFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime.functionPrototype),
+        Runtime::makeNullHandle<Environment>(),
         context,
         setterFunc,
         setterFuncName,

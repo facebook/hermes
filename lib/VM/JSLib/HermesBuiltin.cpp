@@ -889,6 +889,7 @@ void createHermesBuiltins(Runtime &runtime) {
     auto method = NativeFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime.functionPrototype),
+        Runtime::makeNullHandle<Environment>(),
         nullptr /* context */,
         func,
         Predefined::getSymbolID(symID),

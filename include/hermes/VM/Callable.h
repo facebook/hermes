@@ -757,25 +757,6 @@ class NativeFunction : public Callable {
 
   /// Create an instance of NativeFunction.
   /// \param parentHandle object to use as [[Prototype]].
-  /// \param context the context to be passed to the function
-  /// \param functionPtr the native function
-  /// \param name the name property of the function.
-  /// \param paramCount number of parameters (excluding `this`)
-  /// \param prototypeObjectHandle if non-null, set as prototype property.
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
-  static Handle<NativeFunction> create(
-      Runtime &runtime,
-      Handle<JSObject> parentHandle,
-      void *context,
-      NativeFunctionPtr functionPtr,
-      SymbolID name,
-      unsigned paramCount,
-      Handle<JSObject> prototypeObjectHandle,
-      unsigned additionalSlotCount = 0);
-
-  /// Create an instance of NativeFunction.
-  /// \param parentHandle object to use as [[Prototype]].
   /// \param parentEnvHandle the parent environment
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
@@ -794,60 +775,6 @@ class NativeFunction : public Callable {
       unsigned paramCount,
       Handle<JSObject> prototypeObjectHandle,
       unsigned additionalSlotCount = 0);
-
-  /// Create an instance of NativeFunction.
-  /// The prototype property will be null.
-  /// \param parentHandle object to use as [[Prototype]].
-  /// \param context the context to be passed to the function
-  /// \param functionPtr the native function
-  /// \param name the name property of the function.
-  /// \param paramCount number of parameters (excluding `this`)
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
-  static Handle<NativeFunction> createWithoutPrototype(
-      Runtime &runtime,
-      Handle<JSObject> parentHandle,
-      void *context,
-      NativeFunctionPtr functionPtr,
-      SymbolID name,
-      unsigned paramCount,
-      unsigned additionalSlotCount = 0) {
-    return create(
-        runtime,
-        parentHandle,
-        context,
-        functionPtr,
-        name,
-        paramCount,
-        runtime.makeNullHandle<JSObject>(),
-        additionalSlotCount);
-  }
-
-  /// Create an instance of NativeFunction
-  /// The [[Prototype]] will be Function.prototype.
-  /// The prototype property wil be null;
-  /// \param context the context to be passed to the function
-  /// \param functionPtr the native function
-  /// \param name the name property of the function.
-  /// \param paramCount number of parameters (excluding `this`)
-  /// \param additionalSlotCount internal slots to reserve within the
-  /// object (defaults to zero).
-  static Handle<NativeFunction> createWithoutPrototype(
-      Runtime &runtime,
-      void *context,
-      NativeFunctionPtr functionPtr,
-      SymbolID name,
-      unsigned paramCount,
-      unsigned additionalSlotCount = 0) {
-    return createWithoutPrototype(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.functionPrototype),
-        context,
-        functionPtr,
-        name,
-        paramCount,
-        additionalSlotCount);
-  }
 
   /// \return the value in an additional slot.
   /// \param index must be less than the \c additionalSlotCount passed to
@@ -872,16 +799,6 @@ class NativeFunction : public Callable {
         self, runtime, numOverlapSlots<NativeFunction>() + index, value);
   }
 
- public:
-  NativeFunction(
-      Runtime &runtime,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      void *context,
-      NativeFunctionPtr functionPtr)
-      : Callable(runtime, *parent, *clazz),
-        context_(context),
-        functionPtr_(functionPtr) {}
   NativeFunction(
       Runtime &runtime,
       Handle<JSObject> parent,
@@ -937,6 +854,7 @@ class NativeConstructor final : public NativeFunction {
         parentHandle,
         runtime.getHiddenClassForPrototype(
             *parentHandle, numOverlapSlots<NativeConstructor>()),
+        Runtime::makeNullHandle<Environment>(),
         context,
         functionPtr);
     return JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -975,16 +893,6 @@ class NativeConstructor final : public NativeFunction {
       Runtime &runtime,
       Handle<Callable> newTarget,
       Handle<JSObject> nativeCtorProto);
-
- private:
- public:
-  NativeConstructor(
-      Runtime &runtime,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      void *context,
-      NativeFunctionPtr functionPtr)
-      : NativeFunction(runtime, parent, clazz, context, functionPtr) {}
 
   NativeConstructor(
       Runtime &runtime,
