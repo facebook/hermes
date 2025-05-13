@@ -1195,16 +1195,20 @@ Handle<NativeFunction> NativeFunction::create(
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
     unsigned additionalSlotCount) {
+  size_t reservedSlots =
+      numOverlapSlots<NativeFunction>() + additionalSlotCount;
   auto *cell = runtime.makeAFixed<NativeFunction>(
       runtime,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeFunction>() + additionalSlotCount),
+      runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
       parentEnvHandle,
       context,
       functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+
+  // Allocate a propStorage if the number of additional slots requires it.
+  runtime.ignoreAllocationFailure(
+      JSObject::allocatePropStorage(selfHandle, runtime, reservedSlots));
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,
