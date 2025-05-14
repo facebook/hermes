@@ -39,14 +39,14 @@ namespace {
 
 class HermesRuntimeTestBase {
  public:
-  HermesRuntimeTestBase(std::unique_ptr<Runtime> rt) : rt(std::move(rt)) {}
+  HermesRuntimeTestBase(std::shared_ptr<Runtime> rt) : rt(std::move(rt)) {}
 
  protected:
   Value eval(const char *code) {
     return rt->global().getPropertyAsFunction(*rt, "eval").call(*rt, code);
   }
 
-  std::unique_ptr<Runtime> rt;
+  std::shared_ptr<Runtime> rt;
 };
 
 /// TODO: Run these tests against all jsi::Runtimes implemented on top of
