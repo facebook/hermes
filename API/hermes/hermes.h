@@ -155,13 +155,21 @@ class HERMES_EXPORT ISetFatalHandler : public jsi::ICast {
   ~ISetFatalHandler() = default;
 };
 
-class HermesRuntimeImpl;
-
-/// Represents a Hermes JS runtime.
-class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
+/// Interface for Hermes-specific runtime methods.The actual implementations of
+/// the pure virtual methods are provided by a class internal to the .cpp file,
+/// which is created by the factory.
+class HERMES_EXPORT IHermes : public jsi::ICast {
  public:
-  /// Define a destructor to serve as the key function.
-  ~HermesRuntime() override;
+  static constexpr jsi::UUID uuid{
+      0xe85cfa22,
+      0xdfae,
+      0x11ef,
+      0xa6f7,
+      0x325096b39f47};
+
+  /// Return a ICast pointer to an object that be cast into the interface
+  /// IHermesRootAPI. This root API object has static lifetime.
+  virtual ICast *getHermesRootAPI() = 0;
 
   /// Serialize the sampled stack to the format expected by DevTools'
   /// Profiler.stop return type.
@@ -286,19 +294,37 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// This function is considered unsafe and unstable.
   /// Direct use of a vm::Runtime should be avoided as the lower level APIs are
   /// unsafe and they can change without notice.
-  virtual ::hermes::vm::Runtime *getVMRuntimeUnsafe() const = 0;
+  virtual void *getVMRuntimeUnsafe() const = 0;
 
- private:
-  // Only HermesRuntimeImpl can subclass this.
-  HermesRuntime() = default;
-  friend class HermesRuntimeImpl;
+ protected:
+  ~IHermes() = default;
+};
 
-  friend struct ::HermesTestHelper;
+/// Interface for methods that are exposed for test purposes.
+class HERMES_EXPORT IHermesTestHelpers : public jsi::ICast {
+ public:
+  static constexpr jsi::UUID uuid{
+      0x664e489a,
+      0xf941,
+      0x11ef,
+      0xa44c,
+      0x325096b39f47};
+
   virtual size_t rootsListLengthForTests() const = 0;
 
-  // Do not add any members here.  This ensures that there are no
-  // object size inconsistencies.  All data should be in the impl
-  // class in the .cpp file.
+ protected:
+  ~IHermesTestHelpers() = default;
+};
+
+class HermesRuntime : public jsi::Runtime, public IHermes {
+ public:
+  /// Similar to jsi::Runtime, HermesRuntime is treated as an object, rather
+  /// than a pure interface. This is to prevent breaking usages of
+  /// HermesRuntime prior to the introduction of jsi::IRuntime, IHermes, and
+  /// other interfaces.
+  ~HermesRuntime() override = default;
+
+  using jsi::Runtime::castInterface;
 };
 
 /// Returns a pointer to an object that can be cast into IHermesRootAPI, which
