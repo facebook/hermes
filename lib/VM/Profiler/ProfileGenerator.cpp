@@ -9,8 +9,6 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
-namespace fhsp = ::facebook::hermes::sampling_profiler;
-
 namespace hermes {
 namespace vm {
 
@@ -63,10 +61,15 @@ formatSuspendFrameKind(SamplingProfiler::SuspendFrameInfo::Kind kind) {
   }
 }
 
-/// Format VM-level frame to public interface.
-static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
-    const SamplingProfiler::StackFrame &frame,
-    const SamplingProfiler &samplingProfiler) {
+} // namespace
+
+ProfileGenerator::ProfileGenerator(
+    const SamplingProfiler &samplingProfiler,
+    const std::vector<SamplingProfiler::StackTrace> &sampledStacks)
+    : samplingProfiler_(samplingProfiler), sampledStacks_(sampledStacks) {}
+
+fhsp::ProfileSampleCallStackFrame ProfileGenerator::processStackFrame(
+    const SamplingProfiler::StackFrame &frame) {
   switch (frame.kind) {
     case SamplingProfiler::StackFrame::FrameKind::SuspendFrame:
       return fhsp::ProfileSampleCallStackSuspendFrame(
@@ -74,33 +77,24 @@ static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
 
     case SamplingProfiler::StackFrame::FrameKind::NativeFunction:
       return fhsp::ProfileSampleCallStackNativeFunctionFrame(
-          samplingProfiler.getNativeFunctionName(frame));
+          getNativeFunctionName(frame));
 
     case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
       return fhsp::ProfileSampleCallStackHostFunctionFrame(
-          samplingProfiler.getNativeFunctionName(frame));
+          getNativeFunctionName(frame));
 
     case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
       RuntimeModule *module = frame.jsFrame.module;
-      hbc::BCProvider *bcProvider = module->getBytecode();
+      auto [functionName, scriptURL, sourceLocOpt] =
+          getJSFunctionDetails(frame.jsFrame);
 
       uint32_t scriptId = module->getScriptID();
-      std::string functionName =
-          getJSFunctionName(bcProvider, frame.jsFrame.functionId);
-      std::optional<std::string> url = std::nullopt;
       std::optional<uint32_t> lineNumber = std::nullopt;
       std::optional<uint32_t> columnNumber = std::nullopt;
 
-      OptValue<hbc::DebugSourceLocation> sourceLocOpt =
-          getFunctionDefinitionSourceLocation(
-              bcProvider, frame.jsFrame.functionId);
       if (sourceLocOpt.hasValue()) {
-        // Bundle has debug info.
-        auto filenameId = sourceLocOpt.getValue().filenameId;
-        url = bcProvider->getDebugInfo()->getFilenameByID(filenameId);
-
-        // hbc::DebugSourceLocation is 1-based, but initializes line and column
-        // fields with 0 by default.
+        // hbc::DebugSourceLocation is 1-based, but initializes line and
+        // column fields with 0 by default.
         uint32_t line = sourceLocOpt.getValue().line;
         uint32_t column = sourceLocOpt.getValue().column;
         if (line != 0) {
@@ -112,7 +106,7 @@ static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
       }
 
       return fhsp::ProfileSampleCallStackJSFunctionFrame(
-          functionName, scriptId, url, lineNumber, columnNumber);
+          functionName, scriptId, scriptURL, lineNumber, columnNumber);
     }
 
     default:
@@ -120,20 +114,67 @@ static fhsp::ProfileSampleCallStackFrame formatCallStackFrame(
   }
 }
 
-} // namespace
+std::string ProfileGenerator::getNativeFunctionName(
+    const SamplingProfiler::StackFrame &frame) {
+  assert(
+      (frame.kind == SamplingProfiler::StackFrame::FrameKind::NativeFunction ||
+       frame.kind ==
+           SamplingProfiler::StackFrame::FrameKind::
+               FinalizableNativeFunction) &&
+      "Expected only NativeFunction or FinalizableNativeFunction frame");
 
-/* static */ fhsp::Profile ProfileGenerator::generate(
-    const SamplingProfiler &sp,
-    const std::vector<SamplingProfiler::StackTrace> &sampledStacks) {
+  auto it = nativeFunctionNameCache_.find(frame.nativeFrame);
+  if (it != nativeFunctionNameCache_.end()) {
+    return it->second;
+  }
+
+  std::string nativeFunctionName =
+      samplingProfiler_.getNativeFunctionName(frame);
+  nativeFunctionNameCache_.try_emplace(frame.nativeFrame, nativeFunctionName);
+
+  return nativeFunctionName;
+}
+
+ProfileGenerator::JSFunctionFrameDetailsCacheValue
+ProfileGenerator::getJSFunctionDetails(
+    const SamplingProfiler::JSFunctionFrameInfo &frameInfo) {
+  JSFunctionFrameDetailsKey key(frameInfo.module, frameInfo.functionId);
+  auto it = jsFunctionFrameCache_.find(key);
+  if (it != jsFunctionFrameCache_.end()) {
+    return it->second;
+  }
+
+  RuntimeModule *runtimeModule = frameInfo.module;
+  hbc::BCProvider *bcProvider = runtimeModule->getBytecode();
+  std::string functionName =
+      getJSFunctionName(bcProvider, frameInfo.functionId);
+
+  OptValue<hbc::DebugSourceLocation> debugSourceLocation =
+      getFunctionDefinitionSourceLocation(bcProvider, frameInfo.functionId);
+  std::optional<std::string> sourceScriptURL = std::nullopt;
+  if (debugSourceLocation.hasValue()) {
+    // Bundle has debug info.
+    auto filenameId = debugSourceLocation.getValue().filenameId;
+    sourceScriptURL = bcProvider->getDebugInfo()->getFilenameByID(filenameId);
+  }
+
+  auto valueToCache =
+      std::make_tuple(functionName, sourceScriptURL, debugSourceLocation);
+  jsFunctionFrameCache_.try_emplace(key, valueToCache);
+
+  return valueToCache;
+}
+
+fhsp::Profile ProfileGenerator::generate() {
   std::vector<fhsp::ProfileSample> samples;
-  samples.reserve(sampledStacks.size());
-  for (const SamplingProfiler::StackTrace &sampledStack : sampledStacks) {
+  samples.reserve(sampledStacks_.size());
+  for (const SamplingProfiler::StackTrace &sampledStack : sampledStacks_) {
     uint64_t timestamp = convertTimestampToMicroseconds(sampledStack.timeStamp);
 
     std::vector<fhsp::ProfileSampleCallStackFrame> callFrames;
     callFrames.reserve(sampledStack.stack.size());
     for (const SamplingProfiler::StackFrame &frame : sampledStack.stack) {
-      callFrames.emplace_back(formatCallStackFrame(frame, sp));
+      callFrames.push_back(processStackFrame(frame));
     }
 
     samples.emplace_back(timestamp, sampledStack.tid, std::move(callFrames));
