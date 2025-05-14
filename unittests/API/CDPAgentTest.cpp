@@ -3014,11 +3014,6 @@ TEST_F(CDPAgentTest, DebuggerDeactivateBreakpointsWhileDisabled) {
   // Now hitting debugger statement on line #3.
   auto pausedNotification =
       ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
-  if (pausedNotification.callFrames[0].location.lineNumber == 2) {
-    FAIL()
-        << "Debugger paused on the breakpoint at line #2. Expected to skip this breakpoint and pause on the debugger statement on line #3. ";
-    return;
-  }
 
   // Re-enable breakpoints
   sendRequest(
