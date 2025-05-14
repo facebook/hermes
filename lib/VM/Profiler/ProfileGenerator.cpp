@@ -114,7 +114,7 @@ fhsp::ProfileSampleCallStackFrame ProfileGenerator::processStackFrame(
   }
 }
 
-std::string ProfileGenerator::getNativeFunctionName(
+fhsp::StringEntry ProfileGenerator::getNativeFunctionName(
     const SamplingProfiler::StackFrame &frame) {
   assert(
       (frame.kind == SamplingProfiler::StackFrame::FrameKind::NativeFunction ||
@@ -130,9 +130,11 @@ std::string ProfileGenerator::getNativeFunctionName(
 
   std::string nativeFunctionName =
       samplingProfiler_.getNativeFunctionName(frame);
-  nativeFunctionNameCache_.try_emplace(frame.nativeFrame, nativeFunctionName);
+  auto nativeFunctionNameEntry = storeString(nativeFunctionName);
+  nativeFunctionNameCache_.try_emplace(
+      frame.nativeFrame, nativeFunctionNameEntry);
 
-  return nativeFunctionName;
+  return nativeFunctionNameEntry;
 }
 
 ProfileGenerator::JSFunctionFrameDetailsCacheValue
@@ -148,24 +150,52 @@ ProfileGenerator::getJSFunctionDetails(
   hbc::BCProvider *bcProvider = runtimeModule->getBytecode();
   std::string functionName =
       getJSFunctionName(bcProvider, frameInfo.functionId);
+  auto functionNameEntry = storeString(functionName);
 
   OptValue<hbc::DebugSourceLocation> debugSourceLocation =
       getFunctionDefinitionSourceLocation(bcProvider, frameInfo.functionId);
-  std::optional<std::string> sourceScriptURL = std::nullopt;
+  std::optional<std::string> maybeSourceScriptURL = std::nullopt;
   if (debugSourceLocation.hasValue()) {
     // Bundle has debug info.
     auto filenameId = debugSourceLocation.getValue().filenameId;
-    sourceScriptURL = bcProvider->getDebugInfo()->getFilenameByID(filenameId);
+    maybeSourceScriptURL =
+        bcProvider->getDebugInfo()->getFilenameByID(filenameId);
   }
 
-  auto valueToCache =
-      std::make_tuple(functionName, sourceScriptURL, debugSourceLocation);
+  std::optional<fhsp::StringEntry> maybeSourceScriptURLEntry = std::nullopt;
+  if (maybeSourceScriptURL.has_value()) {
+    std::string sourceScriptURL = maybeSourceScriptURL.value();
+    llvh::StringRef sourceScriptURLCacheKey = sourceScriptURL;
+
+    auto sourceScriptURLCacheIt =
+        sourceScriptURLCache_.find(sourceScriptURLCacheKey);
+    if (sourceScriptURLCacheIt != sourceScriptURLCache_.end()) {
+      maybeSourceScriptURLEntry.emplace(sourceScriptURLCacheIt->second);
+    } else {
+      fhsp::StringEntry sourceScriptURLEntry = storeString(sourceScriptURL);
+      sourceScriptURLCache_.try_emplace(
+          sourceScriptURLCacheKey, sourceScriptURLEntry);
+      maybeSourceScriptURLEntry.emplace(sourceScriptURLEntry);
+    }
+  }
+
+  auto valueToCache = std::make_tuple(
+      functionNameEntry, maybeSourceScriptURLEntry, debugSourceLocation);
   jsFunctionFrameCache_.try_emplace(key, valueToCache);
 
   return valueToCache;
 }
 
+fhsp::StringEntry ProfileGenerator::storeString(const std::string &str) {
+  auto offset = stringStorage_->size();
+  stringStorage_->push_back(std::move(str));
+
+  return fhsp::StringEntry(*stringStorage_.get(), offset);
+};
+
 fhsp::Profile ProfileGenerator::generate() {
+  stringStorage_ = std::make_unique<std::vector<std::string>>();
+
   std::vector<fhsp::ProfileSample> samples;
   samples.reserve(sampledStacks_.size());
   for (const SamplingProfiler::StackTrace &sampledStack : sampledStacks_) {
@@ -180,7 +210,7 @@ fhsp::Profile ProfileGenerator::generate() {
     samples.emplace_back(timestamp, sampledStack.tid, std::move(callFrames));
   }
 
-  return fhsp::Profile(std::move(samples));
+  return fhsp::Profile(std::move(samples), std::move(stringStorage_));
 }
 
 } // namespace vm
