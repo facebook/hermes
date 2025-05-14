@@ -348,7 +348,8 @@ jsi::Value TracingRuntime::evaluateJavaScript(
     const std::string &sourceURL) {
   ::hermes::SHA1 sourceHash{};
   bool sourceIsBytecode = false;
-  if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
+  auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  if (api->isHermesBytecode(buffer->data(), buffer->size())) {
     sourceHash = ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
         llvh::makeArrayRef(buffer->data(), buffer->size()));
     sourceIsBytecode = true;

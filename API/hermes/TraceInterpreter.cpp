@@ -305,10 +305,11 @@ TraceInterpreter::getSourceHashToBundleMap(
     bundles.emplace_back(bufConvert(std::move(buf)));
   }
 
+  auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   if (isBytecode) {
     *isBytecode = true;
     for (const auto &bundle : bundles) {
-      if (!HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
+      if (!api->isHermesBytecode(bundle->data(), bundle->size())) {
         // If any of the buffers are source code, don't turn on I/O tracking.
         *isBytecode = false;
         break;
@@ -321,7 +322,7 @@ TraceInterpreter::getSourceHashToBundleMap(
       sourceHashToBundle;
   for (auto &bundle : bundles) {
     ::hermes::SHA1 sourceHash{};
-    if (HermesRuntime::isHermesBytecode(bundle->data(), bundle->size())) {
+    if (api->isHermesBytecode(bundle->data(), bundle->size())) {
       sourceHash =
           ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
               llvh::makeArrayRef(bundle->data(), bundle->size()));
@@ -622,7 +623,8 @@ std::string TraceInterpreter::executeRecordsWithMarkerOptions() {
       break;
     case ExecuteOptions::MarkerAction::SAMPLE_TIME:
       if (dynamic_cast<HermesRuntime *>(&rt_)) {
-        HermesRuntime::enableSamplingProfiler();
+        auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+        api->enableSamplingProfiler();
       }
       break;
     default:
@@ -736,8 +738,8 @@ void TraceInterpreter::executeRecords() {
           // Copy the shared pointer to the buffer in case this file is
           // executed multiple times.
           auto bundle = it->second;
-          if (!HermesRuntime::isHermesBytecode(
-                  bundle->data(), bundle->size())) {
+          auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+          if (!api->isHermesBytecode(bundle->data(), bundle->size())) {
             llvh::errs()
                 << "Note: You are running from source code, not HBC bytecode.\n"
                 << "      This run will reflect dev performance, not production.\n";
@@ -1313,8 +1315,9 @@ void TraceInterpreter::checkMarker(const std::string &marker) {
       break;
     case ExecuteOptions::MarkerAction::SAMPLE_TIME:
       if (dynamic_cast<HermesRuntime *>(&rt_)) {
-        HermesRuntime::dumpSampledTraceToFile(options_.profileFileName);
-        HermesRuntime::disableSamplingProfiler();
+        auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+        api->dumpSampledTraceToFile(options_.profileFileName);
+        api->disableSamplingProfiler();
       } else {
         llvh::errs() << "CPU sampling requested from non-Hermes runtime\n";
       }

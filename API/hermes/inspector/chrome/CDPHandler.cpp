@@ -991,17 +991,19 @@ void CDPHandlerImpl::handle(
 }
 
 void CDPHandlerImpl::handle(const m::profiler::StartRequest &req) {
-  enqueueFunc([this, req]() {
-    HermesRuntime::enableSamplingProfiler();
+  auto *hermesRootAPI = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  enqueueFunc([this, req, &hermesRootAPI]() {
+    hermesRootAPI->enableSamplingProfiler();
     sendResponseToClient(m::makeOkResponse(req.id));
   });
 }
 
 void CDPHandlerImpl::handle(const m::profiler::StopRequest &req) {
-  enqueueFunc([this, req]() {
+  auto *hermesRootAPI = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  enqueueFunc([this, req, &hermesRootAPI]() {
     HermesRuntime *hermesRT = &runtime_;
 
-    HermesRuntime::disableSamplingProfiler();
+    hermesRootAPI->disableSamplingProfiler();
 
     std::ostringstream profileStream;
     hermesRT->sampledTraceToStreamInDevToolsFormat(profileStream);

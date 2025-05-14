@@ -9,7 +9,10 @@
 #include <jsi/jsi.h>
 
 using facebook::hermes::HermesRuntime;
+using facebook::hermes::IHermesRootAPI;
+using facebook::hermes::makeHermesRootAPI;
 using facebook::hermes::makeHermesRuntime;
+using facebook::jsi::castInterface;
 using facebook::jsi::HostObject;
 using facebook::jsi::JSIException;
 using facebook::jsi::Object;
@@ -29,7 +32,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // for validity (for performance purposes).
   // Discard inputs that would be interpreted as bytecode to avoid reporting
   // those as errors.
-  if (HermesRuntime::isHermesBytecode(data, size)) {
+  auto *hermesRoot = castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  if (hermesRoot->isHermesBytecode(data, size)) {
     return 0;
   }
 
