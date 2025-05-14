@@ -256,7 +256,15 @@ std::string TraceInterpreter::execAndGetStats(
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options) {
   // If there is a trace, don't write it out, not used here.
-  return execWithRuntime(traceFile, bytecodeFiles, options, makeHermesRuntime);
+  return execWithRuntime(
+      traceFile,
+      bytecodeFiles,
+      options,
+      [](const ::hermes::vm::RuntimeConfig &config) {
+        auto hermesRoot =
+            jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+        return hermesRoot->makeHermesRuntime(config);
+      });
 }
 
 /* static */
@@ -264,7 +272,7 @@ std::string TraceInterpreter::execWithRuntime(
     const std::string &traceFile,
     const std::vector<std::string> &bytecodeFiles,
     const ExecuteOptions &options,
-    const std::function<std::unique_ptr<jsi::Runtime>(
+    const std::function<std::shared_ptr<jsi::Runtime>(
         const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime) {
   auto errorOrFile = llvh::MemoryBuffer::getFile(traceFile);
   if (!errorOrFile) {
@@ -405,12 +413,12 @@ TraceInterpreter::getSourceHashToBundleMap(
 }
 
 /* static */
-std::tuple<std::string, std::unique_ptr<jsi::Runtime>>
+std::tuple<std::string, std::shared_ptr<jsi::Runtime>>
 TraceInterpreter::execFromMemoryBuffer(
     std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
     std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
     const ExecuteOptions &options,
-    const std::function<std::unique_ptr<jsi::Runtime>(
+    const std::function<std::shared_ptr<jsi::Runtime>(
         const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime) {
   auto [trace, rtConfigBuilder, gcConfigBuilder] =
       parseSynthTrace(std::move(traceBuf));
@@ -425,7 +433,7 @@ TraceInterpreter::execFromMemoryBuffer(
       rtConfigBuilder, gcConfigBuilder, options, codeIsMmapped, isBytecode);
 
   std::vector<std::string> repGCStats(options.reps);
-  std::unique_ptr<jsi::Runtime> rt;
+  std::shared_ptr<jsi::Runtime> rt;
   for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
     ::hermes::vm::instrumentation::PerfEvents::begin();
     rt = createRuntime(rtConfig);
@@ -617,26 +625,24 @@ std::string TraceInterpreter::executeRecordsWithMarkerOptions() {
        !options_.profileFileName.empty()) &&
       "If the action isn't none, need a profile output file");
   switch (options_.action) {
-    case ExecuteOptions::MarkerAction::TIMELINE:
-      if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-        // Start tracking heap objects right before interpreting the trace.
-        // No need to handle fragment callbacks, as this is not live profiling
-        // being given to Chrome, it's just going to a file.
-        hermesRuntime->instrumentation().startTrackingHeapObjectStackTraces(
-            nullptr);
-      }
+    case ExecuteOptions::MarkerAction::TIMELINE: {
+      // Start tracking heap objects right before interpreting the trace.
+      // No need to handle fragment callbacks, as this is not live profiling
+      // being given to Chrome, it's just going to a file.
+      rt_.instrumentation().startTrackingHeapObjectStackTraces(nullptr);
       break;
-    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY:
-      if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-        hermesRuntime->instrumentation().startHeapSampling(1 << 15);
-      }
+    }
+    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY: {
+      rt_.instrumentation().startHeapSampling(1 << 15);
       break;
-    case ExecuteOptions::MarkerAction::SAMPLE_TIME:
-      if (dynamic_cast<HermesRuntime *>(&rt_)) {
-        auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+    }
+    case ExecuteOptions::MarkerAction::SAMPLE_TIME: {
+      if (auto *hrt = castInterface<IHermes>(&rt_)) {
+        auto *api = jsi::castInterface<IHermesRootAPI>(hrt->getHermesRootAPI());
         api->enableSamplingProfiler();
       }
       break;
+    }
     default:
       // Do nothing.
       break;
@@ -1292,40 +1298,30 @@ void TraceInterpreter::checkMarker(const std::string &marker) {
     return;
   }
   switch (options_.action) {
-    case ExecuteOptions::MarkerAction::SNAPSHOT:
-      if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
-        hermesRT->instrumentation().createSnapshotToFile(
-            options_.profileFileName);
-      } else {
-        llvh::errs() << "Heap snapshot requested from non-Hermes runtime\n";
-      }
+    case ExecuteOptions::MarkerAction::SNAPSHOT: {
+      rt_.instrumentation().createSnapshotToFile(options_.profileFileName);
       break;
-    case ExecuteOptions::MarkerAction::TIMELINE:
-      if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
-        hermesRT->instrumentation().stopTrackingHeapObjectStackTraces();
-        hermesRT->instrumentation().createSnapshotToFile(
-            options_.profileFileName);
-      } else {
-        llvh::errs() << "Heap timeline requested from non-Hermes runtime\n";
-      }
+    }
+    case ExecuteOptions::MarkerAction::TIMELINE: {
+      rt_.instrumentation().stopTrackingHeapObjectStackTraces();
+      rt_.instrumentation().createSnapshotToFile(options_.profileFileName);
       break;
-    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY:
-      if (HermesRuntime *hermesRT = dynamic_cast<HermesRuntime *>(&rt_)) {
-        std::ofstream stream(options_.profileFileName);
-        hermesRT->instrumentation().stopHeapSampling(stream);
-      } else {
-        llvh::errs() << "Heap sampling requested from non-Hermes runtime\n";
-      }
+    }
+    case ExecuteOptions::MarkerAction::SAMPLE_MEMORY: {
+      std::ofstream stream(options_.profileFileName);
+      rt_.instrumentation().stopHeapSampling(stream);
       break;
-    case ExecuteOptions::MarkerAction::SAMPLE_TIME:
-      if (dynamic_cast<HermesRuntime *>(&rt_)) {
-        auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+    }
+    case ExecuteOptions::MarkerAction::SAMPLE_TIME: {
+      if (auto *hrt = castInterface<IHermes>(&rt_)) {
+        auto *api = jsi::castInterface<IHermesRootAPI>(hrt->getHermesRootAPI());
         api->dumpSampledTraceToFile(options_.profileFileName);
         api->disableSamplingProfiler();
       } else {
         llvh::errs() << "CPU sampling requested from non-Hermes runtime\n";
       }
       break;
+    }
     case ExecuteOptions::MarkerAction::NONE:
       // Nothing extra needs to be done for the None case. Handle here to avoid
       // warnings.
@@ -1377,7 +1373,7 @@ std::string TraceInterpreter::printStats() {
 #ifdef HERMESVM_PROFILER_OPCODE
   stats += "\n";
   std::ostringstream os;
-  if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
+  if (auto *hermesRuntime = castInterface<IHermes>(&rt_)) {
     hermesRuntime->dumpOpcodeStats(os);
   } else {
     throw std::runtime_error("Unable to cast runtime into HermesRuntime");

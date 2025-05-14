@@ -23,7 +23,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   using RD = RuntimeDecorator<jsi::Runtime>;
 
   TracingRuntime(
-      std::unique_ptr<jsi::Runtime> runtime,
+      std::shared_ptr<jsi::Runtime> runtime,
       const ::hermes::vm::RuntimeConfig &conf,
       std::unique_ptr<llvh::raw_ostream> traceStream);
 
@@ -195,7 +195,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
 
   SynthTrace::TimeSinceStart getTimeSinceStart() const;
 
-  std::unique_ptr<jsi::Runtime> runtime_;
+  std::shared_ptr<jsi::Runtime> runtime_;
   SynthTrace trace_;
   std::deque<jsi::Function> savedFunctions;
   const SynthTrace::TimePoint startTime_{std::chrono::steady_clock::now()};
@@ -232,7 +232,7 @@ class TracingHermesRuntime final : public TracingRuntime {
   /// \p rollbackAction is invoked if the runtime is destructed prior to
   /// completion of tracing. It may or may not invoked if completion failed.
   TracingHermesRuntime(
-      std::unique_ptr<HermesRuntime> runtime,
+      std::shared_ptr<HermesRuntime> runtime,
       const ::hermes::vm::RuntimeConfig &runtimeConfig,
       std::unique_ptr<llvh::raw_ostream> traceStream,
       std::function<std::string()> commitAction,
@@ -280,7 +280,7 @@ class TracingHermesRuntime final : public TracingRuntime {
 /// The return value of \p traceCompletionCallback indicates whether the
 /// invocation completed successfully.
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
+    std::shared_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     const std::string &traceScratchPath,
     const std::string &traceResultPath,
@@ -291,7 +291,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 /// The \p forReplay parameter indicates whether the runtime is being used
 /// in trace replay.  (Its behavior can differ slightly in that case.)
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
+    std::shared_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvh::raw_ostream> traceStream,
     bool forReplay = false);
