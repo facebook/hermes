@@ -205,22 +205,23 @@ TEST_F(HermesRuntimeTestMethodsTest, DetachedArrayBuffer) {
 }
 
 TEST_P(HermesRuntimeTest, BytecodeTest) {
+  auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
   const uint8_t shortBytes[] = {1, 2, 3};
-  EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, 0));
-  EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, sizeof(shortBytes)));
+  EXPECT_FALSE(api->isHermesBytecode(shortBytes, 0));
+  EXPECT_FALSE(api->isHermesBytecode(shortBytes, sizeof(shortBytes)));
   uint8_t longBytes[1024];
   memset(longBytes, 'H', sizeof(longBytes));
-  EXPECT_FALSE(HermesRuntime::isHermesBytecode(longBytes, sizeof(longBytes)));
+  EXPECT_FALSE(api->isHermesBytecode(longBytes, sizeof(longBytes)));
 
   std::string bytecode;
   ASSERT_TRUE(hermes::compileJS("x = 1", bytecode));
-  EXPECT_TRUE(HermesRuntime::isHermesBytecode(
+  EXPECT_TRUE(api->isHermesBytecode(
       reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
   evaluateSourceOrBytecode(
       std::unique_ptr<StringBuffer>(new StringBuffer(bytecode)), "");
   EXPECT_EQ(rt->global().getProperty(*rt, "x").getNumber(), 1);
 
-  EXPECT_EQ(HermesRuntime::getBytecodeVersion(), hermes::hbc::BYTECODE_VERSION);
+  EXPECT_EQ(api->getBytecodeVersion(), hermes::hbc::BYTECODE_VERSION);
 }
 
 TEST(HermesRuntimePreparedJavaScriptTest, BytecodeTest) {
@@ -274,6 +275,7 @@ c.doSomething(a, 15);
     "mappings": ";AAAA,IAAM,CAAC,GAAW,EAAE,CAAC;AACrB;IAEI,iBAAY,GAAW;QACnB,IAAI,CAAC,GAAG,GAAG,GAAG,CAAC;IACnB,CAAC;IACD,6BAAW,GAAX,UAAY,CAAS,EAAE,CAAS;QAC5B,UAAU,CAAC,GAAG,GAAG,CAAC,GAAG,CAAC,GAAG,IAAI,CAAC,GAAG,CAAC;IACtC,CAAC;IACL,cAAC;AAAD,CAAC,AARD,IAQC;AACD,IAAM,CAAC,GAAG,IAAI,OAAO,CAAC,CAAC,CAAC,CAAC;AACzB,CAAC,CAAC,WAAW,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC"
   })#";
 
+  auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
   std::string bytecode;
   ASSERT_TRUE(hermes::compileJS(
       TestSource,
@@ -283,7 +285,7 @@ c.doSomething(a, 15);
       true,
       nullptr,
       std::optional<std::string_view>(TestSourceMap)));
-  EXPECT_TRUE(HermesRuntime::isHermesBytecode(
+  EXPECT_TRUE(api->isHermesBytecode(
       reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
   try {
     evaluateSourceOrBytecode(
