@@ -652,15 +652,16 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
                 ESTree::Node *,
                 ControlFlowChange cfc,
                 BasicBlock *continueTarget) {
-              auto *callResult = Builder.createCallInst(
-                  returnMethod,
-                  /* newTarget */ Builder.getLiteralUndefined(),
-                  iteratorRecord.iterator,
-                  {});
-              if (isAsyncIterator)
-                genYieldOrAwaitExpr(callResult);
             }
           };
+
+          auto *callResult = Builder.createCallInst(
+              returnMethod,
+              /* newTarget */ Builder.getLiteralUndefined(),
+              iteratorRecord.iterator,
+              {});
+          if (isAsyncIterator)
+            genYieldOrAwaitExpr(callResult);
         },
         // emitNormalCleanup.
         []() {},
