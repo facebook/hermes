@@ -119,42 +119,41 @@ jobs:
 
   test-linux-armv7:
     runs-on: ubuntu-24.04-arm
+    container:
+      image: arm32v7/ubuntu:noble
+      # Run the container with stack size limit of 4MB. When running tests in the container,
+      # `ulimit -s` command can't change the stack size limit anymore (even with the
+      # SYS_RESOURCE capability).
+      options: --ulimit stack=4194304
     steps:
-      - uses: actions/checkout@v4.1.0
-        with:
-          path: hermes
-      - name: Build with docker
-        uses: addnab/docker-run-action@v3
-        with:
-          image: arm32v7/ubuntu:noble
-          # Run the container with stack size limit of 4MB. When running tests in the container,
-          # `ulimit -s` command can't change the stack size limit anymore (even with the
-          # SYS_RESOURCE capability).
-          options: -v ${{github.workspace}}/hermes:/hermes --ulimit stack=4194304
-          run: |-
-            set -xe
-            # Setup dependencies
+      # checkout action has problem running on container, currently using v1 can bypass it,
+      # see https://github.com/actions/checkout/issues/334.
+      - uses: actions/checkout@v1
+      - name: Setup dependencies
+        run: |-
             apt update
             apt install -y git openssh-client cmake clang-16 build-essential \
                 libreadline-dev libicu-dev zip python3 ninja-build
             # Check out test262 at a pinned revision to reduce flakiness
+            cd ..
             git clone https://github.com/tc39/test262
             cd test262
             git checkout 62626e083bd506124aac6c799464d76c2c42851b
-            cd -
+      - name: Run tests on ARMv7
+        run: |-
+          cd ..
+          export CC=clang-16
+          export CXX=clang++-16
+          cmake -S hermes -GNinja -B build -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
+          cmake --build build --target check-hermes all
 
-            export CC=clang-16
-            export CXX=clang++-16
-            cmake -S hermes -GNinja -B build -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
-            cmake --build build --target check-hermes all
-
-            cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON \
-              -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug \
-              -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
-            cmake --build ./build_intl
-            # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
-            # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
-            # main ones.
-            # cmake --build ./build_intl --target check-hermes
-            python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin
+          cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON \
+            -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
+          cmake --build ./build_intl
+          # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
+          # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
+          # main ones.
+          # cmake --build ./build_intl --target check-hermes
+          python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin
