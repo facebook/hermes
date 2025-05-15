@@ -13,8 +13,8 @@
 namespace facebook {
 namespace hermes {
 
-std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
+std::shared_ptr<jsi::Runtime> makeTracingHermesRuntime(
+    std::shared_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     const std::string &traceScratchPath,
     const std::string &traceResultPath,
@@ -32,8 +32,8 @@ std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
   return hermesRuntime;
 }
 
-std::unique_ptr<jsi::Runtime> makeTracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
+std::shared_ptr<jsi::Runtime> makeTracingHermesRuntime(
+    std::shared_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvh::raw_ostream> traceStream,
     bool forReplay) {

@@ -151,18 +151,18 @@ class TraceInterpreter final {
       const std::string &traceFile,
       const std::vector<std::string> &bytecodeFiles,
       const ExecuteOptions &options,
-      const std::function<std::unique_ptr<jsi::Runtime>(
+      const std::function<std::shared_ptr<jsi::Runtime>(
           const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime);
 
   /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.
   /// \return Tuple of GC stats and the runtime instance used for replaying.
-  static std::tuple<std::string, std::unique_ptr<jsi::Runtime>>
+  static std::tuple<std::string, std::shared_ptr<jsi::Runtime>>
   execFromMemoryBuffer(
       std::unique_ptr<llvh::MemoryBuffer> &&traceBuf,
       std::vector<std::unique_ptr<llvh::MemoryBuffer>> &&codeBufs,
       const ExecuteOptions &options,
-      const std::function<std::unique_ptr<jsi::Runtime>(
+      const std::function<std::shared_ptr<jsi::Runtime>(
           const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime);
 
  private:

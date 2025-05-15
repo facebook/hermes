@@ -333,9 +333,12 @@ int main(int argc, char **argv) {
           options,
           [stream = std::ref(os)](
               const ::hermes::vm::RuntimeConfig &config) mutable {
+            auto *hermesRoot =
+                facebook::jsi::castInterface<facebook::hermes::IHermesRootAPI>(
+                    facebook::hermes::makeHermesRootAPI());
             auto &st = stream.get();
             return facebook::hermes::makeTracingHermesRuntime(
-                facebook::hermes::makeHermesRuntime(config),
+                hermesRoot->makeHermesRuntime(config),
                 config,
                 std::move(st),
                 /* forReplay */ true);

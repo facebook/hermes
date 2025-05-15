@@ -255,8 +255,9 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
   std::string result;
   auto resultStream = std::make_unique<llvh::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
+  auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
-      makeHermesRuntime(conf), conf, std::move(resultStream)));
+      hermesRoot->makeHermesRuntime(conf), conf, std::move(resultStream)));
 
   rt->flushAndDisableTrace();
 
@@ -321,8 +322,9 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
   std::string result;
   auto resultStream = std::make_unique<llvh::raw_string_ostream>(result);
   const ::hermes::vm::RuntimeConfig conf;
+  auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   std::unique_ptr<TracingHermesRuntime> rt(makeTracingHermesRuntime(
-      makeHermesRuntime(conf),
+      hermesRoot->makeHermesRuntime(conf),
       conf,
       std::move(resultStream),
       /* forReplay */ true));
