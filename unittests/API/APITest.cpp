@@ -22,12 +22,12 @@ using namespace facebook::jsi;
 using namespace facebook::hermes;
 
 struct HermesTestHelper {
-  static size_t rootsListLength(const HermesRuntime &rt) {
+  static size_t rootsListLength(const IHermesTestHelpers &rt) {
     return rt.rootsListLengthForTests();
   }
 
   static int64_t calculateRootsListChange(
-      const HermesRuntime &rt,
+      const IHermesTestHelpers &rt,
       std::function<void(void)> f) {
     auto before = rootsListLength(rt);
     f();
@@ -376,28 +376,31 @@ TEST(HermesRuntimeDeathTest, ValueTest) {
 #endif
 
 TEST(HermesRootsTest, DontGrowWhenMoveObjectOutOfValue) {
-  auto rt = makeHermesRuntime();
+  std::shared_ptr<HermesRuntime> rt = makeHermesRuntime();
   Value val = Object(*rt);
   // Keep the object alive during measurement.
   std::unique_ptr<Object> obj;
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    obj = std::make_unique<Object>(std::move(val).getObject(*rt));
-  });
+  auto helperRt = dynamicInterfaceCast<IHermesTestHelpers>(rt);
+  auto rootsDelta = HermesTestHelper::calculateRootsListChange(
+      *helperRt,
+      [&]() { obj = std::make_unique<Object>(std::move(val).getObject(*rt)); });
   EXPECT_EQ(rootsDelta, 0);
 }
 
 TEST(HermesRootsTest, DontGrowWhenCloneObject) {
-  auto rt = makeHermesRuntime();
+  std::shared_ptr<HermesRuntime> rt = makeHermesRuntime();
   Value val = Object(*rt);
   constexpr int kCloneCount = 1000;
   // Keep the objects alive during measurement.
   std::vector<Object> objects;
   objects.reserve(kCloneCount);
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    for (size_t i = 0; i < kCloneCount; i++) {
-      objects.push_back(val.getObject(*rt));
-    }
-  });
+  auto helperRt = dynamicInterfaceCast<IHermesTestHelpers>(rt);
+  auto rootsDelta =
+      HermesTestHelper::calculateRootsListChange(*helperRt, [&]() {
+        for (size_t i = 0; i < kCloneCount; i++) {
+          objects.push_back(val.getObject(*rt));
+        }
+      });
   EXPECT_EQ(rootsDelta, 0);
 }
 

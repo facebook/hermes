@@ -177,14 +177,12 @@ class HermesRootAPI final : public IHermesRootAPI, public ISetFatalHandler {
   void disableCodeCoverageProfiler() override;
 };
 
-HermesRuntime::~HermesRuntime() {}
-
+namespace {
 class HermesRuntimeImpl final : public HermesRuntime,
+                                private IHermesTestHelpers,
                                 private InstallHermesFatalErrorHandler,
                                 private jsi::Instrumentation {
  public:
-  static constexpr uint32_t kSentinelNativeValue = 0x6ef71fe1;
-
   HermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
       : hermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
         weakHermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
@@ -603,8 +601,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
       std::string sourceURL);
 
-  // Concrete declarations of jsi::Runtime pure virtual methods
+  ICast *castInterface(const jsi::UUID &interfaceUUID) override;
 
+  // Concrete declarations of jsi::Runtime pure virtual methods
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       std::string sourceURL) override;
@@ -1098,6 +1097,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   LLVM_ATTRIBUTE_NORETURN void throwJSErrorWithMessage(Args &&...args);
 
   /// Concrete declarations of HermesRuntime methods.
+  ICast *getHermesRootAPI() override;
   void sampledTraceToStreamInDevToolsFormat(std::ostream &stream) override;
   sampling_profiler::Profile dumpSampledTraceToProfile() override;
   void loadSegment(
@@ -1136,7 +1136,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const std::string &sourceURL) override;
   jsi::Value evaluateSHUnit(SHUnit *(*shUnitCreator)()) override;
   SHRuntime *getSHRuntime() noexcept override;
-  ::hermes::vm::Runtime *getVMRuntimeUnsafe() const override;
+  void *getVMRuntimeUnsafe() const override;
   size_t rootsListLengthForTests() const override;
 
   ManagedValues<vm::PinnedHermesValue> hermesValues_;
@@ -1146,10 +1146,12 @@ class HermesRuntimeImpl final : public HermesRuntime,
   friend class debugger::Debugger;
   std::unique_ptr<debugger::Debugger> debugger_;
   ::hermes::vm::experiments::VMExperimentFlags vmExperimentFlags_{0};
+  friend struct ::HermesTestHelper;
 
   /// Compilation flags used by prepareJavaScript().
   ::hermes::hbc::CompileFlags compileFlags_{};
 };
+} // namespace
 
 jsi::ICast *HermesRootAPI::castInterface(const jsi::UUID &interfaceUUID) {
   if (interfaceUUID == IHermesRootAPI::uuid) {
@@ -1324,6 +1326,20 @@ class BufferAdapter final : public ::hermes::Buffer {
   std::shared_ptr<const jsi::Buffer> buf_;
 };
 } // namespace
+
+jsi::ICast *HermesRuntimeImpl::getHermesRootAPI() {
+  return makeHermesRootAPI();
+}
+
+jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
+  if (interfaceUUID == IHermesTestHelpers::uuid) {
+    return static_cast<IHermesTestHelpers *>(this);
+  }
+  if (interfaceUUID == IHermes::uuid) {
+    return static_cast<IHermes *>(this);
+  }
+  return nullptr;
+}
 
 sampling_profiler::Profile HermesRuntimeImpl::dumpSampledTraceToProfile() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
@@ -1524,7 +1540,7 @@ SHRuntime *HermesRuntimeImpl::getSHRuntime() noexcept {
   ::hermes::hermes_fatal("getSHRuntime called on non-SH runtime");
 }
 
-::hermes::vm::Runtime *HermesRuntimeImpl::getVMRuntimeUnsafe() const {
+void *HermesRuntimeImpl::getVMRuntimeUnsafe() const {
   return rt_.get();
 }
 
@@ -2728,36 +2744,8 @@ jsi::ICast *makeHermesRootAPI() {
 
 std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig) {
-  // This is insurance against someone adding data members to
-  // HermesRuntime.  If on some weird platform it fails, it can be
-  // updated or removed.
-  static_assert(
-      sizeof(HermesRuntime) == sizeof(void *),
-      "HermesRuntime should only include a vtable ptr");
-
-#if defined(HERMESVM_PLATFORM_LOGGING)
-  auto ret = std::make_unique<HermesRuntimeImpl>(
-      runtimeConfig.rebuild()
-          .withGCConfig(runtimeConfig.getGCConfig()
-                            .rebuild()
-                            .withShouldRecordStats(true)
-                            .build())
-          .build());
-#else
-  auto ret = std::make_unique<HermesRuntimeImpl>(runtimeConfig);
-#endif
-
-#ifdef HERMES_ENABLE_DEBUGGER
-  // Only HermesRuntime can create a debugger instance.  This requires
-  // the setter and not using make_unique, so the call to new is here
-  // in this function, which is a friend of debugger::Debugger.
-  ret->setDebugger(std::unique_ptr<debugger::Debugger>(
-      new debugger::Debugger(ret.get(), ret->runtime_)));
-#else
-  ret->setDebugger(std::make_unique<debugger::Debugger>());
-#endif
-
-  return ret;
+  auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  return api->makeHermesRuntime(runtimeConfig);
 }
 
 std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
