@@ -160,67 +160,6 @@ class HermesRuntimeImpl;
 /// Represents a Hermes JS runtime.
 class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
  public:
-  static bool isHermesBytecode(const uint8_t *data, size_t len);
-  // Returns the supported bytecode version.
-  static uint32_t getBytecodeVersion();
-  // (EXPERIMENTAL) Issues madvise calls for portions of the given
-  // bytecode file that will likely be used when loading the bytecode
-  // file and running its global function.
-  static void prefetchHermesBytecode(const uint8_t *data, size_t len);
-  // Returns whether the data is valid HBC with more extensive checks than
-  // isHermesBytecode and returns why it isn't in errorMessage (if nonnull)
-  // if not.
-  static bool hermesBytecodeSanityCheck(
-      const uint8_t *data,
-      size_t len,
-      std::string *errorMessage = nullptr);
-
-  /// Sets a global fatal handler that is shared across all active Hermes
-  /// runtimes. Setting fatal handler in multiple places will override the
-  /// previous fatal handler set by this functionality.
-  /// The fatal handler must not throw exceptions, as Hermes is compiled without
-  /// exceptions.
-  static void setFatalHandler(void (*handler)(const std::string &));
-
-  // Assuming that \p data is valid HBC bytecode data, returns a pointer to the
-  // first element of the epilogue, data append to the end of the bytecode
-  // stream. Return pair contain ptr to data and header.
-  static std::pair<const uint8_t *, size_t> getBytecodeEpilogue(
-      const uint8_t *data,
-      size_t len);
-
-  /// Enable sampling profiler.
-  /// Starts a separate thread that polls VM state with \p meanHzFreq frequency.
-  /// Any subsequent call to \c enableSamplingProfiler() is ignored until
-  /// next call to \c disableSamplingProfiler()
-  static void enableSamplingProfiler(double meanHzFreq = 100);
-
-  /// Disable the sampling profiler
-  static void disableSamplingProfiler();
-
-  /// Dump sampled stack trace to the given file name.
-  static void dumpSampledTraceToFile(const std::string &fileName);
-
-  /// Dump sampled stack trace to the given stream.
-  static void dumpSampledTraceToStream(std::ostream &stream);
-
-  /// Return the executed JavaScript function info.
-  /// This information holds the segmentID, Virtualoffset and sourceURL.
-  /// This information is needed specifically to be able to symbolicate non-CJS
-  /// bundles correctly. This API will be simplified later to simply return a
-  /// segmentID and virtualOffset, when we are able to only support CJS bundles.
-  static std::unordered_map<std::string, std::vector<std::string>>
-  getExecutedFunctions();
-
-  /// \return whether code coverage profiler is enabled or not.
-  static bool isCodeCoverageProfilerEnabled();
-
-  /// Enable code coverage profiler.
-  static void enableCodeCoverageProfiler();
-
-  /// Disable code coverage profiler.
-  static void disableCodeCoverageProfiler();
-
   /// Define a destructor to serve as the key function.
   ~HermesRuntime() override;
 
@@ -231,12 +170,6 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// Dump sampled stack trace for a given runtime to a data structure that can
   /// be used by third parties.
   virtual sampling_profiler::Profile dumpSampledTraceToProfile() = 0;
-
-  // The base class declares most of the interesting methods.  This
-  // just declares new methods which are specific to HermesRuntime.
-  // The actual implementations of the pure virtual methods are
-  // provided by a class internal to the .cpp file, which is created
-  // by the factory.
 
   /// Load a new segment into the Runtime.
   /// The \param context must be a valid RequireContext retrieved from JS
