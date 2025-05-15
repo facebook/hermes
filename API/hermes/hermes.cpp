@@ -28,6 +28,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
+#include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSLib/RuntimeJSONUtils.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
@@ -1099,6 +1100,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   /// Concrete declarations of HermesRuntime methods.
   ICast *getHermesRootAPI() override;
   void sampledTraceToStreamInDevToolsFormat(std::ostream &stream) override;
+  void resetTimezoneCache() override;
   sampling_profiler::Profile dumpSampledTraceToProfile() override;
   void loadSegment(
       std::unique_ptr<const jsi::Buffer> buffer,
@@ -1351,6 +1353,10 @@ sampling_profiler::Profile HermesRuntimeImpl::dumpSampledTraceToProfile() {
 #else
   throwHermesNotCompiledWithSamplingProfilerSupport();
 #endif // HERMESVM_SAMPLING_PROFILER_AVAILABLE
+}
+
+void HermesRuntimeImpl::resetTimezoneCache() {
+  runtime_.getJSLibStorage()->localTimeOffsetCache.reset();
 }
 
 void HermesRuntimeImpl::sampledTraceToStreamInDevToolsFormat(
