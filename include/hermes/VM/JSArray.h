@@ -93,6 +93,13 @@ class ArrayImpl : public JSObject {
     return elemCount_;
   }
 
+  /// Set the elemCount_.
+  /// Unsafe: caller must ensure that the number of elements in the storage are
+  /// the same as the final elemCount.
+  void setElemCountUnsafe(uint32_t elemCount) {
+    elemCount_ = elemCount;
+  }
+
   /// \return 1 + the index of the last element contained in the storage.
   size_type getEndIndex() const {
     return beginIndex_ + elemCount_;

@@ -2954,6 +2954,30 @@ arrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
   return lv.O.getHermesValue();
 }
 
+static CallResult<HermesValue>
+arrayPrototypePopFastPath(Runtime &runtime, Handle<JSArray> arr, uint32_t len) {
+  if (LLVM_UNLIKELY(len == 0)) {
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  // May allocate, do the encoding outside NoAllocScope.
+  auto newLen = SmallHermesValue::encodeNumberValue(len - 1, runtime);
+
+  // Perform the actual pop.
+  NoAllocScope noAlloc{runtime};
+  auto *storage = arr->getIndexedStorageUnsafe(runtime);
+  SmallHermesValue shv = storage->pop_back(runtime);
+  // Set the elemCount to the end of the storage, which we know is correct
+  // because we just popped to len-1 elements and we've already checked the
+  // bounds of the storage in the fast path check.
+  assert(storage->size() == len - 1 && arr->getBeginIndex() == 0);
+  arr->setElemCountUnsafe(len - 1);
+  // We've already checked that the length is not readonly.
+  JSArray::putLengthUnsafe(*arr, runtime, newLen);
+
+  return shv.unboxToHV(runtime);
+}
+
 CallResult<HermesValue>
 arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
   struct : Locals {
@@ -2964,22 +2988,39 @@ arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
   LocalsRAII lraii{runtime, &lv};
 
   GCScope gcScope(runtime);
-  auto res = toObject(runtime, args.getThisHandle());
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+
+  uint64_t len;
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
+    // Fast path for getting the length.
+    JSArray *arr = vmcast<JSArray>(args.getThisArg());
+    len = JSArray::getLength(arr, runtime);
+
+    if (arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
+      return arrayPrototypePopFastPath(
+          runtime, args.vmcastThis<JSArray>(), len);
+    }
+
+    // Fast path check failed, populate the O Local so it can be used in the
+    // slow path.
+    lv.O = args.vmcastThis<JSObject>();
+  } else {
+    auto res = toObject(runtime, args.getThisHandle());
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.O = vmcast<JSObject>(*res);
+    auto propRes = JSObject::getNamed_RJS(
+        lv.O, runtime, Predefined::getSymbolID(Predefined::length));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.lenProp = std::move(*propRes);
+    auto intRes = toLengthU64(runtime, lv.lenProp);
+    if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    len = *intRes;
   }
-  lv.O = vmcast<JSObject>(*res);
-  auto propRes = JSObject::getNamed_RJS(
-      lv.O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.lenProp = std::move(*propRes);
-  auto intRes = toLengthU64(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  uint64_t len = *intRes;
 
   if (len == 0) {
     lv.lenProp = HermesValue::encodeTrustedNumberValue(0);
@@ -2996,9 +3037,8 @@ arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
   }
 
   lv.lenProp = HermesValue::encodeTrustedNumberValue(len - 1);
-  if (LLVM_UNLIKELY(
-          (propRes = getIndexed_RJS(runtime, lv.O, len - 1)) ==
-          ExecutionStatus::EXCEPTION)) {
+  CallResult<PseudoHandle<>> propRes = getIndexed_RJS(runtime, lv.O, len - 1);
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.element = std::move(*propRes);
