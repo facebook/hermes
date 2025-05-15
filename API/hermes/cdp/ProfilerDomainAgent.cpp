@@ -24,12 +24,14 @@ ProfilerDomainAgent::ProfilerDomainAgent(
       runtime_(runtime) {}
 
 void ProfilerDomainAgent::start(const m::profiler::StartRequest &req) {
-  HermesRuntime::enableSamplingProfiler();
+  auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  api->enableSamplingProfiler();
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
 void ProfilerDomainAgent::stop(const m::profiler::StopRequest &req) {
-  HermesRuntime::disableSamplingProfiler();
+  auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  api->disableSamplingProfiler();
 
   std::ostringstream profileStream;
   runtime_.sampledTraceToStreamInDevToolsFormat(profileStream);

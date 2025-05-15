@@ -39,11 +39,12 @@ struct SynthTraceTest : public ::testing::Test {
                 ::hermes::vm::SynthTraceMode::TracingAndReplaying)
             .withMicrotaskQueue(true)
             .build();
+    auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
     // We pass "forReplay = true" below, to prevent the TracingHermesRuntime
     // from interactions it does automatically on non-replay runs.
     // We don't need those for these tests.
     return makeTracingHermesRuntime(
-        makeHermesRuntime(config),
+        hermesRoot->makeHermesRuntime(config),
         config,
         /* traceStream */ nullptr,
         /* forReplay */ true);
@@ -1312,13 +1313,15 @@ struct SynthTraceRuntimeTest : public ::testing::Test {
                    .withSynthTraceMode(
                        ::hermes::vm::SynthTraceMode::TracingAndReplaying)
                    .withMicrotaskQueue(true)
-                   .build()),
-        traceRt(makeTracingHermesRuntime(
-            makeHermesRuntime(config),
-            config,
-            /* traceStream */
-            std::make_unique<llvh::raw_string_ostream>(traceResult),
-            /* forReplay */ false)) {}
+                   .build()) {
+    auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+    traceRt = makeTracingHermesRuntime(
+        hermesRoot->makeHermesRuntime(config),
+        config,
+        /* traceStream */
+        std::make_unique<llvh::raw_string_ostream>(traceResult),
+        /* forReplay */ false);
+  }
 
   static jsi::Value eval(jsi::Runtime &rt, std::string code) {
     return rt.global().getPropertyAsFunction(rt, "eval").call(rt, code);
@@ -1333,7 +1336,10 @@ struct SynthTraceRuntimeTest : public ::testing::Test {
 struct SynthTraceEnvironmentTest : public SynthTraceRuntimeTest {
   std::unique_ptr<jsi::Runtime> plainRt;
 
-  SynthTraceEnvironmentTest() : plainRt(makeHermesRuntime(config)) {}
+  SynthTraceEnvironmentTest() {
+    auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+    plainRt = hermesRoot->makeHermesRuntime(config);
+  }
 
   std::vector<jsi::Runtime *> runtimes() {
     return {plainRt.get(), traceRt.get()};
@@ -1357,7 +1363,7 @@ TEST_F(SynthTraceEnvironmentTest, NonDeterministicFunctionNames) {
 /// @name Synth trace replay tests
 /// @{
 struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
-  std::unique_ptr<jsi::Runtime> replayRt;
+  std::shared_ptr<jsi::Runtime> replayRt;
   std::vector<std::string> sources;
 
   jsi::Value evalCompiled(jsi::Runtime &rt, std::string source) {
@@ -1385,7 +1391,11 @@ struct SynthTraceReplayTest : public SynthTraceRuntimeTest {
         llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
         std::move(sources), // codeBufs
         options, // ExecuteOptions
-        makeHermesRuntime);
+        [](const ::hermes::vm::RuntimeConfig &config) {
+          auto *hermesRoot =
+              jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+          return hermesRoot->makeHermesRuntime(config);
+        });
     replayRt = std::move(rt);
   }
 };
@@ -1562,7 +1572,11 @@ TEST_F(SynthTraceRuntimeTest, WarmUpAndRepeatReplay) {
       llvh::MemoryBuffer::getMemBuffer(traceResult), // traceBuf
       {}, // codeBufs
       options, // ExecuteOptions
-      makeHermesRuntime);
+      [](const ::hermes::vm::RuntimeConfig &config) {
+        auto *hermesRoot =
+            jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+        return hermesRoot->makeHermesRuntime(config);
+      });
 
   {
     EXPECT_EQ(
@@ -1589,6 +1603,7 @@ TEST_F(SynthTraceRuntimeTest, TraceWhileReplaying) {
 
   std::string previousResult = traceResult;
 
+  auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   for (int i = 0; i < 5; i++) {
     tracing::TraceInterpreter::ExecuteOptions options;
     options.useTraceConfig = true;
@@ -1599,9 +1614,9 @@ TEST_F(SynthTraceRuntimeTest, TraceWhileReplaying) {
         llvh::MemoryBuffer::getMemBuffer(previousResult),
         {}, // codeBufs
         options, // ExecuteOptions
-        [&newResult](const ::hermes::vm::RuntimeConfig &config) {
+        [&newResult, &hermesRoot](const ::hermes::vm::RuntimeConfig &config) {
           return makeTracingHermesRuntime(
-              makeHermesRuntime(config),
+              hermesRoot->makeHermesRuntime(config),
               config,
               std::make_unique<llvh::raw_string_ostream>(newResult),
               true // forReplay
@@ -2469,7 +2484,7 @@ function main() {
   }
 
   return inlineable1();
-}  
+}
 main();
   )";
 
@@ -2518,8 +2533,9 @@ TEST(SynthTraceReplayTestNoFixture, ExternalMemoryTest) {
         ::hermes::vm::RuntimeConfig::Builder()
             .withSynthTraceMode(::hermes::vm::SynthTraceMode::Tracing)
             .build());
+    auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
     std::unique_ptr<TracingHermesRuntime> traceRt = makeTracingHermesRuntime(
-        makeHermesRuntime(config),
+        hermesRoot->makeHermesRuntime(config),
         config,
         std::make_unique<llvh::raw_string_ostream>(traceResult),
         /* forReplay */ false);
@@ -2543,7 +2559,7 @@ TEST(SynthTraceReplayTestNoFixture, ExternalMemoryTest) {
    public:
     using RD = RuntimeDecorator<jsi::Runtime>;
     ReplayRuntime(
-        std::unique_ptr<jsi::Runtime> runtime,
+        std::shared_ptr<jsi::Runtime> runtime,
         const ::hermes::vm::RuntimeConfig &conf)
         : jsi::RuntimeDecorator<jsi::Runtime>(*runtime),
           runtime_(std::move(runtime)) {}
@@ -2557,7 +2573,7 @@ TEST(SynthTraceReplayTestNoFixture, ExternalMemoryTest) {
     std::vector<size_t> amounts;
 
    private:
-    std::unique_ptr<jsi::Runtime> runtime_;
+    std::shared_ptr<jsi::Runtime> runtime_;
   };
 
   // Replaying
@@ -2570,8 +2586,10 @@ TEST(SynthTraceReplayTestNoFixture, ExternalMemoryTest) {
       options,
       [](const ::hermes::vm::RuntimeConfig &config)
           -> std::unique_ptr<jsi::Runtime> {
+        auto *hermesRoot =
+            jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
         return std::make_unique<ReplayRuntime>(
-            makeHermesRuntime(config), config);
+            hermesRoot->makeHermesRuntime(config), config);
       });
 
   auto replayRt = dynamic_cast<ReplayRuntime *>(rt.get());

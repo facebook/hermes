@@ -21,7 +21,7 @@ namespace hermes {
 namespace tracing {
 
 TracingRuntime::TracingRuntime(
-    std::unique_ptr<jsi::Runtime> runtime,
+    std::shared_ptr<jsi::Runtime> runtime,
     const ::hermes::vm::RuntimeConfig &conf,
     std::unique_ptr<llvh::raw_ostream> traceStream)
     : RuntimeDecorator<jsi::Runtime>(*runtime),
@@ -348,7 +348,8 @@ jsi::Value TracingRuntime::evaluateJavaScript(
     const std::string &sourceURL) {
   ::hermes::SHA1 sourceHash{};
   bool sourceIsBytecode = false;
-  if (HermesRuntime::isHermesBytecode(buffer->data(), buffer->size())) {
+  auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  if (api->isHermesBytecode(buffer->data(), buffer->size())) {
     sourceHash = ::hermes::hbc::BCProviderFromBuffer::getSourceHashFromBytecode(
         llvh::makeArrayRef(buffer->data(), buffer->size()));
     sourceIsBytecode = true;
@@ -1073,7 +1074,7 @@ SynthTrace::TimeSinceStart TracingRuntime::getTimeSinceStart() const {
 }
 
 TracingHermesRuntime::TracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> runtime,
+    std::shared_ptr<HermesRuntime> runtime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvh::raw_ostream> traceStream,
     std::function<std::string()> commitAction,
@@ -1181,7 +1182,7 @@ void addRecordMarker(TracingRuntime &tracingRuntime) {
 } // namespace
 
 static std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntimeImpl(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
+    std::shared_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvh::raw_ostream> traceStream,
     std::function<std::string()> commitAction,
@@ -1207,7 +1208,7 @@ static std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntimeImpl(
 }
 
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
+    std::shared_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     const std::string &traceScratchPath,
     const std::string &traceResultPath,
@@ -1269,7 +1270,7 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 }
 
 std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
-    std::unique_ptr<HermesRuntime> hermesRuntime,
+    std::shared_ptr<HermesRuntime> hermesRuntime,
     const ::hermes::vm::RuntimeConfig &runtimeConfig,
     std::unique_ptr<llvh::raw_ostream> traceStream,
     bool forReplay) {

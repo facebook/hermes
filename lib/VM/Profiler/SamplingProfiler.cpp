@@ -212,8 +212,9 @@ void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
 facebook::hermes::sampling_profiler::Profile SamplingProfiler::dumpAsProfile() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
 
+  ProfileGenerator profileGenerator(*this, sampledStacks_);
   facebook::hermes::sampling_profiler::Profile profile =
-      ProfileGenerator::generate(*this, sampledStacks_);
+      profileGenerator.generate();
 
   clear();
   return profile;

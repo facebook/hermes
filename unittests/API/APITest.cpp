@@ -22,12 +22,12 @@ using namespace facebook::jsi;
 using namespace facebook::hermes;
 
 struct HermesTestHelper {
-  static size_t rootsListLength(const HermesRuntime &rt) {
+  static size_t rootsListLength(const IHermesTestHelpers &rt) {
     return rt.rootsListLengthForTests();
   }
 
   static int64_t calculateRootsListChange(
-      const HermesRuntime &rt,
+      const IHermesTestHelpers &rt,
       std::function<void(void)> f) {
     auto before = rootsListLength(rt);
     f();
@@ -39,14 +39,14 @@ namespace {
 
 class HermesRuntimeTestBase {
  public:
-  HermesRuntimeTestBase(std::unique_ptr<Runtime> rt) : rt(std::move(rt)) {}
+  HermesRuntimeTestBase(std::shared_ptr<Runtime> rt) : rt(std::move(rt)) {}
 
  protected:
   Value eval(const char *code) {
     return rt->global().getPropertyAsFunction(*rt, "eval").call(*rt, code);
   }
 
-  std::unique_ptr<Runtime> rt;
+  std::shared_ptr<Runtime> rt;
 };
 
 /// TODO: Run these tests against all jsi::Runtimes implemented on top of
@@ -214,22 +214,23 @@ TEST_F(HermesRuntimeTestMethodsTest, DetachedArrayBuffer) {
 }
 
 TEST_P(HermesRuntimeTest, BytecodeTest) {
+  auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
   const uint8_t shortBytes[] = {1, 2, 3};
-  EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, 0));
-  EXPECT_FALSE(HermesRuntime::isHermesBytecode(shortBytes, sizeof(shortBytes)));
+  EXPECT_FALSE(api->isHermesBytecode(shortBytes, 0));
+  EXPECT_FALSE(api->isHermesBytecode(shortBytes, sizeof(shortBytes)));
   uint8_t longBytes[1024];
   memset(longBytes, 'H', sizeof(longBytes));
-  EXPECT_FALSE(HermesRuntime::isHermesBytecode(longBytes, sizeof(longBytes)));
+  EXPECT_FALSE(api->isHermesBytecode(longBytes, sizeof(longBytes)));
 
   std::string bytecode;
   ASSERT_TRUE(hermes::compileJS("x = 1", bytecode));
-  EXPECT_TRUE(HermesRuntime::isHermesBytecode(
+  EXPECT_TRUE(api->isHermesBytecode(
       reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
   evaluateSourceOrBytecode(
       std::unique_ptr<StringBuffer>(new StringBuffer(bytecode)), "");
   EXPECT_EQ(rt->global().getProperty(*rt, "x").getNumber(), 1);
 
-  EXPECT_EQ(HermesRuntime::getBytecodeVersion(), hermes::hbc::BYTECODE_VERSION);
+  EXPECT_EQ(api->getBytecodeVersion(), hermes::hbc::BYTECODE_VERSION);
 }
 
 TEST(HermesRuntimePreparedJavaScriptTest, BytecodeTest) {
@@ -283,6 +284,7 @@ c.doSomething(a, 15);
     "mappings": ";AAAA,IAAM,CAAC,GAAW,EAAE,CAAC;AACrB;IAEI,iBAAY,GAAW;QACnB,IAAI,CAAC,GAAG,GAAG,GAAG,CAAC;IACnB,CAAC;IACD,6BAAW,GAAX,UAAY,CAAS,EAAE,CAAS;QAC5B,UAAU,CAAC,GAAG,GAAG,CAAC,GAAG,CAAC,GAAG,IAAI,CAAC,GAAG,CAAC;IACtC,CAAC;IACL,cAAC;AAAD,CAAC,AARD,IAQC;AACD,IAAM,CAAC,GAAG,IAAI,OAAO,CAAC,CAAC,CAAC,CAAC;AACzB,CAAC,CAAC,WAAW,CAAC,CAAC,EAAE,EAAE,CAAC,CAAC"
   })#";
 
+  auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
   std::string bytecode;
   ASSERT_TRUE(hermes::compileJS(
       TestSource,
@@ -292,7 +294,7 @@ c.doSomething(a, 15);
       true,
       nullptr,
       std::optional<std::string_view>(TestSourceMap)));
-  EXPECT_TRUE(HermesRuntime::isHermesBytecode(
+  EXPECT_TRUE(api->isHermesBytecode(
       reinterpret_cast<const uint8_t *>(bytecode.data()), bytecode.size()));
   try {
     evaluateSourceOrBytecode(
@@ -380,28 +382,31 @@ TEST(HermesRuntimeDeathTest, ValueTest) {
 #endif
 
 TEST(HermesRootsTest, DontGrowWhenMoveObjectOutOfValue) {
-  auto rt = makeHermesRuntime();
+  std::shared_ptr<HermesRuntime> rt = makeHermesRuntime();
   Value val = Object(*rt);
   // Keep the object alive during measurement.
   std::unique_ptr<Object> obj;
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    obj = std::make_unique<Object>(std::move(val).getObject(*rt));
-  });
+  auto helperRt = dynamicInterfaceCast<IHermesTestHelpers>(rt);
+  auto rootsDelta = HermesTestHelper::calculateRootsListChange(
+      *helperRt,
+      [&]() { obj = std::make_unique<Object>(std::move(val).getObject(*rt)); });
   EXPECT_EQ(rootsDelta, 0);
 }
 
 TEST(HermesRootsTest, DontGrowWhenCloneObject) {
-  auto rt = makeHermesRuntime();
+  std::shared_ptr<HermesRuntime> rt = makeHermesRuntime();
   Value val = Object(*rt);
   constexpr int kCloneCount = 1000;
   // Keep the objects alive during measurement.
   std::vector<Object> objects;
   objects.reserve(kCloneCount);
-  auto rootsDelta = HermesTestHelper::calculateRootsListChange(*rt, [&]() {
-    for (size_t i = 0; i < kCloneCount; i++) {
-      objects.push_back(val.getObject(*rt));
-    }
-  });
+  auto helperRt = dynamicInterfaceCast<IHermesTestHelpers>(rt);
+  auto rootsDelta =
+      HermesTestHelper::calculateRootsListChange(*helperRt, [&]() {
+        for (size_t i = 0; i < kCloneCount; i++) {
+          objects.push_back(val.getObject(*rt));
+        }
+      });
   EXPECT_EQ(rootsDelta, 0);
 }
 
