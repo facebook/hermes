@@ -262,6 +262,15 @@ CallResult<bool> JSObject::setParent(
       break;
     }
   }
+
+  // Changing the parent may result in adding a setter/readonly property in the
+  // parent chain that would prevent adding the property to the cached
+  // HiddenClass.
+  // We must break the cache, so increment the epoch.
+  if (LLVM_UNLIKELY(self->flags_.isAddPropertyCacheParent)) {
+    runtime.incParentCacheEpoch();
+  }
+
   // 9.
   self->parent_.set(runtime, parent, runtime.getHeap());
   // 10.

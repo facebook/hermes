@@ -413,10 +413,19 @@ typedef union {
     /// This flag indicates this is a proxy exotic Object
     uint32_t proxyObject : 1;
 
+    /// This flag is set when any other objects which contain this object in
+    /// their parent chain are cached in the AddPropertyCache.
+    ///
+    /// If the flag is set, then changing the parent or HiddenClass of this
+    /// object will increment the parentCacheEpoch in Runtime.
+    /// Note that property adds are not cached if any object in the parent chain
+    /// is in dictionary mode.
+    uint32_t isAddPropertyCacheParent : 1;
+
     /// A non-zero object id value, assigned lazily. It is 0 before it is
     /// assigned. If an object started out as lazy, the objectID is the lazy
     /// object index used to identify when it gets initialized.
-    uint32_t objectID : 24;
+    uint32_t objectID : 23;
   };
   uint32_t bits;
 } SHObjectFlags;

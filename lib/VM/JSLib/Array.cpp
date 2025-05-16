@@ -353,6 +353,7 @@ static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
   res.hostObject = 0;
   res.lazyObject = 0;
   res.proxyObject = 0;
+  res.isAddPropertyCacheParent = 0;
   res.objectID = 0;
 }
 

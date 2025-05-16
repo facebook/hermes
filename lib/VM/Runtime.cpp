@@ -784,6 +784,15 @@ std::string Runtime::convertSymbolToUTF8(SymbolID id) {
   return identifierTable_.convertSymbolToUTF8(id);
 }
 
+void Runtime::invalidateAllAddCacheEntries() {
+  for (auto &rm : runtimeModuleList_) {
+    for (size_t i = 0, e = rm.numAddCacheEntries(); i < e; ++i) {
+      AddPropertyCacheEntry &entry = rm.getAddCacheEntry(i);
+      entry.startClazz = CompressedPointer(nullptr);
+    }
+  }
+}
+
 void Runtime::printRuntimeGCStats(JSONEmitter &json) const {
   const unsigned kNumPhases =
       static_cast<unsigned>(RootAcceptor::Section::NumSections);

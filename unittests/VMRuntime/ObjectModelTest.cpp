@@ -879,4 +879,31 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   EXPECT_PROPERTY_FLAG(FALSE, obj, *cHnd, configurable);
 }
 
+TEST_F(ObjectModelTest, ParentCacheEpochTest) {
+  auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
+
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<JSObject> parent;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.parent = JSObject::create(runtime);
+  lv.obj = JSObject::create(runtime, lv.parent);
+  uint32_t idx = *runtimeModule->allocateAddCacheEntry();
+  AddPropertyCacheEntry &entry = runtimeModule->getAddCacheEntry(idx);
+  entry.parent = lv.obj->getParentGCPtr();
+  entry.startClazz = lv.obj->getClassGCPtr();
+  entry.setParentEpochAndSlot(runtime.getParentCacheEpoch(), 5);
+
+  // Ensure that these get invalidated by incrementing.
+  runtime.testSetParentCacheEpoch(AddPropertyCacheEntry::kMaxParentEpoch - 2);
+  EXPECT_EQ(
+      AddPropertyCacheEntry::kMaxParentEpoch - 1,
+      runtime.incParentCacheEpoch());
+  EXPECT_TRUE(entry.startClazz);
+  EXPECT_EQ(1, runtime.incParentCacheEpoch());
+  EXPECT_FALSE(entry.startClazz);
+}
+
 } // namespace

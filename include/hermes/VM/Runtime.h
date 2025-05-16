@@ -612,6 +612,37 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Returns trailing data for all runtime modules.
   std::vector<llvh::ArrayRef<uint8_t>> getEpilogues();
 
+  /// \return the parent cache epoch.
+  uint32_t getParentCacheEpoch() const {
+    return parentCacheEpoch_;
+  }
+
+#ifdef UNIT_TEST
+  /// Unsafe function to use for testing the overflow mechanism.
+  void testSetParentCacheEpoch(uint32_t epoch) {
+    parentCacheEpoch_ = epoch;
+  }
+#endif
+
+  /// Increment the parent cache epoch.
+  /// If this causes overflow, invalidate ALL PutById cache entries that have
+  /// stored an epoch (i.e. represent a HiddenClass transition).
+  /// \return the new value of the parent cache epoch.
+  uint32_t incParentCacheEpoch() {
+    ++parentCacheEpoch_;
+    if (LLVM_UNLIKELY(
+            parentCacheEpoch_ == AddPropertyCacheEntry::kMaxParentEpoch)) {
+      // Overflow.
+      invalidateAllAddCacheEntries();
+      parentCacheEpoch_ = 1;
+    }
+    return parentCacheEpoch_;
+  }
+
+  /// Iterate all AddPropertyCacheEntry in all RuntimeModules,
+  /// and set their startClazz to nullptr, invalidating them.
+  void invalidateAllAddCacheEntries();
+
   void printHeapStats(llvh::raw_ostream &os);
 
   /// Write IO tracking (aka HBC page access) info to the supplied
@@ -1314,6 +1345,17 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// ScriptIDs to use for new RuntimeModules coming in.
   facebook::hermes::debugger::ScriptID nextScriptId_{1};
+
+  /// An epoch used to invalidate property write cache entries.
+  /// Incremented whenever a cached object's parent changes its parent or its
+  /// HiddenClass, because those operations could introduce parent chain changes
+  /// that prevent adding the property the way that was cached.
+  ///
+  /// If this number rolls over from kMaxParentEpoch to 0 (unlikely),
+  /// invalidate ALL property write caches.
+  /// Start at 1 to make it easier to debug (0 is the default in the cache
+  /// entry).
+  uint32_t parentCacheEpoch_ = 1;
 
   /// Store a key for the function that is executed if a crash occurs.
   /// This key will be unregistered in the destructor.

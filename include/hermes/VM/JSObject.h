@@ -1411,6 +1411,13 @@ class JSObject : public GCCell {
   void updateClass(Runtime &runtime, HiddenClass *clazz) {
     assert(clazz && "clazz cannot be null");
     clazzDoNotAccessDirectly_.setNonNull(runtime, clazz, runtime.getHeap());
+
+    // Changing the HiddenClass may result in adding a setter/readonly property
+    // in the parent chain that would prevent adding the property to the cached
+    // HiddenClass.
+    // We must break the cache, so increment the epoch.
+    if (LLVM_UNLIKELY(flags_.isAddPropertyCacheParent))
+      runtime.incParentCacheEpoch();
   }
 
   /// Allocate storage for a new slot after the slot index itself has been
