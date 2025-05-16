@@ -9,6 +9,7 @@
 #if HERMESVM_JIT
 #include "JitHandlers.h"
 
+#include "../../JSLib/JSLibInternal.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Interpreter.h"
@@ -337,6 +338,28 @@ void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex) {
   runtime.getBasicBlockExecutionInfo().executeBlock(codeBlock, pointIndex);
 }
 #endif
+
+HermesValue
+_jit_direct_eval(Runtime &runtime, PinnedHermesValue *text, bool strictCaller) {
+  if (!text->isString()) {
+    return *text;
+  }
+
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII gcMarker{runtime};
+    cr = vm::directEval(
+        runtime,
+        Handle<StringPrimitive>::vmcast(text),
+        strictCaller,
+        nullptr,
+        false);
+  }
+  if (cr == ExecutionStatus::EXCEPTION)
+    _sh_throw_current(&runtime);
+
+  return *cr;
+}
 
 void _sh_throw_invalid_construct(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);

@@ -443,6 +443,8 @@ class Emitter {
   /// Emit profiling information if profiling is enabled.
   void profilePoint(uint16_t point);
 
+  void directEval(FR frRes, FR frText, bool strictCaller);
+
   /// Call a JS function.
   void call(FR frRes, FR frCallee, uint32_t argc);
   void callN(FR frRes, FR frCallee, llvh::ArrayRef<FR> args);

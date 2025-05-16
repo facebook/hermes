@@ -356,7 +356,6 @@ JITCompiledFunctionPtr JITContext::Compiler::compileCodeBlockImpl() {
     _sh_longjmp(errorJmpBuf_, 1);                                              \
   }
 
-EMIT_UNIMPLEMENTED(DirectEval)
 EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 
 #undef EMIT_UNIMPLEMENTED
@@ -364,6 +363,11 @@ EMIT_UNIMPLEMENTED(AsyncBreakCheck)
 inline void JITContext::Compiler::emitUnreachable(
     const inst::UnreachableInst *inst) {
   em_.unreachable();
+}
+
+inline void JITContext::Compiler::emitDirectEval(
+    const inst::DirectEvalInst *inst) {
+  em_.directEval(FR(inst->op1), FR(inst->op2), (bool)inst->op3);
 }
 
 inline void JITContext::Compiler::emitProfilePoint(

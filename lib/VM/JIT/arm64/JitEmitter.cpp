@@ -2046,6 +2046,25 @@ void Emitter::profilePoint(uint16_t pointIndex) {
 #endif
 }
 
+void Emitter::directEval(FR frRes, FR frText, bool strictCaller) {
+  comment("// DirectEval r%u, r%u", frRes.index(), frText.index());
+  syncAllFRTempExcept({});
+  syncToFrame(frText);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frText);
+  a.mov(a64::w2, strictCaller);
+  EMIT_RUNTIME_CALL(
+      *this,
+      HermesValue(*)(Runtime &, PinnedHermesValue *, bool),
+      _jit_direct_eval);
+
+  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+  movHWFromHW<true>(hwRes, HWReg::gpX(0));
+  frUpdatedWithHW(frRes, hwRes);
+}
+
 void Emitter::catchInst(FR frRes) {
   comment("// Catch r%u", frRes.index());
 

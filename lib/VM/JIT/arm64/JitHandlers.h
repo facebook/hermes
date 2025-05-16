@@ -117,6 +117,10 @@ HermesValue _jit_new_empty_object_for_buffer(
 void _interpreter_register_bb_execution(SHRuntime *shr, uint16_t pointIndex);
 #endif
 
+/// Run the direct eval on \p text and return the result.
+HermesValue
+_jit_direct_eval(Runtime &runtime, PinnedHermesValue *text, bool strictCaller);
+
 /// Only valid to call from the longjmp catch handler in the JIT,
 /// prior to running the Catch instruction itself.
 /// At this point the C++ stack has been restored, but the Runtime register
