@@ -809,6 +809,15 @@ void emit_environment_init(
   assert(slotsToFill == 0 && "All slots must be filled");
 }
 
+/// \return true if i is a valid immediate offset to use in an stp instruction
+/// storing two GpX registers, false otherwise. Note that the limits are
+/// different if storing GpW registers, or vector registers.
+bool isStpGpXImm(int i) {
+  // These restrictions are from:
+  // https://developer.arm.com/documentation/ddi0602/2025-03/Base-Instructions/STP--Store-pair-of-registers-
+  return (i % 8 == 0) && i <= 504 && i >= -512;
+}
+
 class OurErrorHandler : public asmjit::ErrorHandler {
   asmjit::Error &expectedError_;
   std::function<void(std::string &&message)> const longjmpError_;
@@ -1741,6 +1750,33 @@ void Emitter::syncAllFRTempExcept(FR exceptFR) {
     // Note that it is valid to have no local reg even if the frame is not up to
     // date, because the FR may be uninitialized.
     if (state.localGpX) {
+      // Check if the next register is also a local gpx that is not up to date.
+      // If so, we can write them both together.
+      if (i < e - 1) {
+        auto &nextState = frameRegs_[i + 1];
+        // Compute the offset so we can check if it is a valid stp immediate.
+        auto ofs =
+            (i + hbc::StackFrameLayout::FirstLocal) * sizeof(SHLegacyValue);
+        // Check that the next register also needs to be stored.
+        if (!nextState.globalReg && !nextState.frameUpToDate &&
+            nextState.localGpX && isStpGpXImm(ofs)) {
+          comment(
+              "    ; sync: x%u, x%u (r%u, r%u)",
+              state.localGpX.indexInClass(),
+              nextState.localGpX.indexInClass(),
+              i,
+              i + 1);
+          // Store both registers together with stp.
+          a.stp(
+              state.localGpX.a64GpX(),
+              nextState.localGpX.a64GpX(),
+              frA64Mem(FR{i}));
+          state.frameUpToDate = true;
+          nextState.frameUpToDate = true;
+          ++i;
+          continue;
+        }
+      }
       comment("    ; sync: x%u (r%u)", state.localGpX.indexInClass(), i);
       _storeHWToFrame(fr, state.localGpX);
     } else if (state.localVecD) {
