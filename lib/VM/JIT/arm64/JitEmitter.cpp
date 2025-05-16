@@ -1709,53 +1709,43 @@ void Emitter::syncToFrame(FR fr) {
 }
 
 void Emitter::syncAllFRTempExcept(FR exceptFR) {
-  for (unsigned i = kGPTemp.first; i <= kGPTemp.second; ++i) {
-    HWReg hwReg(i, HWReg::GpX{});
-    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
-    if (!fr.isValid() || fr == exceptFR)
+  for (unsigned i = 0, e = frameRegs_.size(); i < e; ++i) {
+    auto &state = frameRegs_[i];
+    FR fr{i};
+    if (fr == exceptFR)
       continue;
 
-    FRState &frState = frameRegs_[fr.index()];
-    assert(frState.localGpX == hwReg && "tmpreg not bound to FR localreg");
-    if (frState.globalReg) {
-      if (!frState.globalRegUpToDate) {
-        comment("    ; sync: x%u (r%u)", i, fr.index());
-        movHWFromHW<false>(frState.globalReg, hwReg);
-        frState.globalRegUpToDate = true;
+    // If there is a global reg, just sync to that if needed.
+    if (state.globalReg) {
+      if (state.globalRegUpToDate)
+        continue;
+      // Note that it is valid to have no local reg even if the global reg is
+      // not up to date, because the FR may be uninitialized.
+      if (state.localGpX) {
+        comment("    ; sync: x%u (r%u)", state.localGpX.indexInClass(), i);
+        movHWFromHW<false>(state.globalReg, HWReg{state.localGpX});
+        state.globalRegUpToDate = true;
+      } else if (state.localVecD) {
+        comment("    ; sync: d%u (r%u)", state.localVecD.indexInClass(), i);
+        movHWFromHW<false>(state.globalReg, HWReg{state.localVecD});
+        state.globalRegUpToDate = true;
       }
-    } else {
-      if (!frState.frameUpToDate) {
-        comment("    ; sync: x%u (r%u)", i, fr.index());
-        _storeHWToFrame(fr, hwReg);
-      }
+      continue;
     }
-  }
 
-  for (unsigned i = kVecTemp1.first; i <= kVecTemp2.second; ++i) {
-    if (i > kVecTemp1.second && i < kVecTemp2.first)
+    // There is no global reg, we must sync to the frame. If the frame is
+    // already up to date, we can skip this FR.
+    if (state.frameUpToDate)
       continue;
 
-    HWReg hwReg(i, HWReg::VecD{});
-    FR fr = hwRegs_[hwReg.combinedIndex()].contains;
-    if (!fr.isValid() || fr == exceptFR)
-      continue;
-
-    FRState &frState = frameRegs_[fr.index()];
-    assert(frState.localVecD == hwReg && "tmpreg not bound to FR localreg");
-    // If there is a local GpX, it already synced the value.
-    if (frState.localGpX)
-      continue;
-    if (frState.globalReg) {
-      if (!frState.globalRegUpToDate) {
-        comment("    ; sync d%u (r%u)", i, fr.index());
-        movHWFromHW<false>(frState.globalReg, hwReg);
-        frState.globalRegUpToDate = true;
-      }
-    } else {
-      if (!frState.frameUpToDate) {
-        comment("    ; sync d%u (r%u)", i, fr.index());
-        _storeHWToFrame(fr, hwReg);
-      }
+    // Note that it is valid to have no local reg even if the frame is not up to
+    // date, because the FR may be uninitialized.
+    if (state.localGpX) {
+      comment("    ; sync: x%u (r%u)", state.localGpX.indexInClass(), i);
+      _storeHWToFrame(fr, state.localGpX);
+    } else if (state.localVecD) {
+      comment("    ; sync: d%u (r%u)", state.localVecD.indexInClass(), i);
+      _storeHWToFrame(fr, state.localVecD);
     }
   }
 }
