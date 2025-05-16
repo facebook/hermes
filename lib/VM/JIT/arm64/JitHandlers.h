@@ -143,6 +143,16 @@ void *_jit_find_catch_target(
 /// caller is responsible for setting up the outgoing registers.
 SHLegacyValue _jit_dispatch_call(SHRuntime *, SHLegacyValue *callTargetSHLV);
 
+void _jit_put_by_id(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *base,
+    SHLegacyValue *value,
+    uint8_t cacheIdx,
+    SHSymbolID symID,
+    bool strictMode,
+    bool tryProp);
+
 /// Assumes that \p table is an initialized string switch runtime table.
 /// If \p switchValue is found as a case in that table, returns the
 /// corresponding JIT code target for that case.  Otherwise, returns nullptr.

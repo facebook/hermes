@@ -5163,17 +5163,12 @@ void Emitter::putByIdImpl(
     SHSymbolID symID,
     FR frValue,
     uint8_t cacheIdx,
-    const char *name,
-    void (*shImpl)(
-        SHRuntime *shr,
-        SHLegacyValue *target,
-        SHSymbolID symID,
-        SHLegacyValue *value,
-        SHWritePropertyCacheEntry *propCacheEntry),
-    const char *shImplName) {
+    bool strictMode,
+    bool tryProp) {
   comment(
-      "// %s r%u, r%u, cache %u, symID %u",
-      name,
+      "// %sPutById%s r%u, r%u, cache %u, symID %u",
+      tryProp ? "Try" : "",
+      strictMode ? "Strict" : "Loose",
       frTarget.index(),
       frValue.index(),
       cacheIdx,
@@ -5185,17 +5180,25 @@ void Emitter::putByIdImpl(
   freeAllFRTempExcept({});
 
   a.mov(a64::x0, xRuntime);
-  loadFrameAddr(a64::x1, frTarget);
-  a.mov(a64::w2, symID);
+  loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
+  loadFrameAddr(a64::x2, frTarget);
   loadFrameAddr(a64::x3, frValue);
-  if (cacheIdx == hbc::PROPERTY_CACHING_DISABLED) {
-    a.mov(a64::x4, 0);
-  } else {
-    a.ldr(a64::x4, a64::Mem(roDataLabel_, roOfsWritePropertyCachePtr_));
-    if (cacheIdx != 0)
-      a.add(a64::x4, a64::x4, sizeof(SHWritePropertyCacheEntry) * cacheIdx);
-  }
-  callThunkWithSavedIP((void *)shImpl, shImplName);
+  a.mov(a64::w4, cacheIdx);
+  a.mov(a64::w5, symID);
+  a.mov(a64::w6, strictMode);
+  a.mov(a64::w7, tryProp);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(
+          SHRuntime *shr,
+          SHCodeBlock *codeBlock,
+          SHLegacyValue *base,
+          SHLegacyValue *value,
+          uint8_t cacheIdx,
+          SHSymbolID symID,
+          bool strictMode,
+          bool tryProp),
+      _jit_put_by_id);
 }
 
 asmjit::Label Emitter::newPrefLabel(const char *pref, size_t index) {

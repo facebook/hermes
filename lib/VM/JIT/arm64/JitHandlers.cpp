@@ -13,6 +13,7 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StackFrame-inline.h"
@@ -261,6 +262,51 @@ HermesValue _jit_new_empty_object_for_buffer(
       "New object is not in young gen");
 
   return result.getHermesValue();
+}
+
+void _jit_put_by_id(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *shBase,
+    SHLegacyValue *shValue,
+    uint8_t cacheIdx,
+    SHSymbolID symID,
+    bool strictMode,
+    bool tryProp) {
+  Runtime &runtime = getRuntime(shr);
+  CodeBlock *curCodeBlock = (CodeBlock *)codeBlock;
+  Handle<> value{toPHV(shValue)};
+  SmallHermesValue shv = SmallHermesValue::encodeHermesValue(*value, runtime);
+
+  if (HermesValue base = *toPHV(shBase); LLVM_LIKELY(base.isObject())) {
+    auto *obj = vmcast<JSObject>(base);
+    auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+
+    CompressedPointer clazzPtr{obj->getClassGCPtr()};
+    // If we have a cache hit, reuse the cached offset and immediately
+    // return the property.
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+      JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
+      return;
+    }
+  }
+
+  ExecutionStatus status;
+  {
+    GCScopeMarkerRAII marker{runtime};
+    status = Interpreter::putByIdSlowPath_RJS(
+        runtime,
+        curCodeBlock,
+        toPHV(shBase),
+        toPHV(shValue),
+        cacheIdx,
+        SymbolID::unsafeCreate(symID),
+        strictMode,
+        tryProp);
+  }
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
 }
 
 #ifdef HERMESVM_PROFILER_BB
