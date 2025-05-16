@@ -80,8 +80,14 @@ HERMES_SLOW_STATISTIC(
     NumPutById,
     "NumPutById: Number of property 'write by id' accesses");
 HERMES_SLOW_STATISTIC(
+    NumPutByIdSlowPaths,
+    "NumPutByIdSlowPaths: Number of property 'write by id' slow paths");
+HERMES_SLOW_STATISTIC(
     NumPutByIdCacheHits,
     "NumPutByIdCacheHits: Number of property 'write by id' cache hits");
+HERMES_SLOW_STATISTIC(
+    NumPutByIdTransitionHits,
+    "NumPutByIdTransitionHits: Number of property 'write by id' transition hits");
 
 HERMES_SLOW_STATISTIC(
     NumNativeFunctionCalls,
@@ -2062,7 +2068,31 @@ tailCall:
           ip = nextIP;
           DISPATCH;
         }
+
+        // Now check against the AddPropertyCacheEntry to ensure we can still
+        // use the cached information.
+        // NOTE: Need to check resultClazz in all cases because it's a
+        // weak reference that may have been freed even if the add cache is
+        // valid.
+        const auto &addCacheEntry =
+            curCodeBlock->getRuntimeModule()->getAddCacheEntry(
+                cacheEntry->getAddCacheIndex());
+        if (LLVM_LIKELY(addCacheEntry.startClazz == clazzPtr) &&
+            LLVM_LIKELY(addCacheEntry.resultClazz) &&
+            LLVM_LIKELY(
+                addCacheEntry.getParentEpoch() ==
+                runtime.getParentCacheEpoch()) &&
+            LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+          HiddenClass *resultClazz =
+              addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
+          ++NumPutByIdTransitionHits;
+          CAPTURE_IP(JSObject::addNewOwnPropertyInSlot(
+              obj, runtime, resultClazz, addCacheEntry.getSlot(), shv));
+          ip = nextIP;
+          DISPATCH;
+        }
       }
+      ++NumPutByIdSlowPaths;
       CAPTURE_IP_ASSIGN(
           ExecutionStatus res,
           doPutByIdSlowPath_RJS(

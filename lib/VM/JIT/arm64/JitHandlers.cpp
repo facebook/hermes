@@ -290,6 +290,26 @@ void _jit_put_by_id(
           obj, runtime, cacheEntry->getSlot(), shv);
       return;
     }
+
+    // Now check against the AddPropertyCacheEntry to ensure we can still
+    // use the cached information.
+    // NOTE: Need to check resultClazz in all cases because it's a
+    // weak reference that may have been freed even if the add cache is
+    // valid.
+    const auto &addCacheEntry =
+        curCodeBlock->getRuntimeModule()->getAddCacheEntry(
+            cacheEntry->getAddCacheIndex());
+    if (LLVM_LIKELY(addCacheEntry.startClazz == clazzPtr) &&
+        LLVM_LIKELY(addCacheEntry.resultClazz) &&
+        LLVM_LIKELY(
+            addCacheEntry.getParentEpoch() == runtime.getParentCacheEpoch()) &&
+        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+      HiddenClass *resultClazz =
+          addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
+      JSObject::addNewOwnPropertyInSlot(
+          obj, runtime, resultClazz, addCacheEntry.getSlot(), shv);
+      return;
+    }
   }
 
   ExecutionStatus status;

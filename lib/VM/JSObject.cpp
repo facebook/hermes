@@ -3057,6 +3057,68 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   return ExecutionStatus::RETURNED;
 }
 
+void JSObject::addNewOwnPropertyInSlot(
+    JSObject *self,
+    Runtime &runtime,
+    HiddenClass *clazz,
+    SlotIndex slot,
+    SmallHermesValue value) {
+  assert(self && clazz && "must have a HiddenClass to transition to");
+  self->updateClass(runtime, clazz);
+
+  if (slot < JSObject::DIRECT_PROPERTY_SLOTS) {
+    NoAllocScope noAlloc{runtime};
+    JSObject::setNamedSlotValueDirectUnsafe(self, runtime, slot, value);
+    return;
+  }
+
+  uint32_t indirectSlot = slot - JSObject::DIRECT_PROPERTY_SLOTS;
+
+  if (LLVM_LIKELY(self->propStorage_)) {
+    NoAllocScope noAlloc{runtime};
+    PropStorage *storage = self->propStorage_.getNonNull(runtime);
+    assert(
+        indirectSlot == storage->size() && "must be adding the next property");
+    if (LLVM_LIKELY(indirectSlot < storage->capacity())) {
+      storage->pushWithinCapacity(runtime, value);
+      return;
+    }
+  }
+
+  // Slow path, must allocate.
+  struct : public Locals {
+    PinnedValue<JSObject> self;
+    PinnedValue<> value;
+    PinnedValue<PropStorage> storage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  GCScopeMarkerRAII marker{runtime};
+
+  lv.self = self;
+  lv.value = value.unboxToHV(runtime);
+
+  // Load and modify storage, then store it back into self.
+  if (!lv.self->propStorage_) {
+    assert(indirectSlot == 0 && "allocated slot must be at end");
+    auto arrRes = runtime.ignoreAllocationFailure(
+        PropStorage::create(runtime, DEFAULT_PROPERTY_CAPACITY));
+    lv.storage = vmcast<PropStorage>(arrRes);
+    // It's likely that the capacity will be enough to use pushWithinCapacity,
+    // but encoding the value back into SHV may allocate and trim the storage.
+    // Avoid problems by using push_back.
+    MutableHandle mutStorage{lv.storage};
+    lv.storage->push_back(mutStorage, runtime, lv.value);
+  } else {
+    lv.storage = lv.self->propStorage_.getNonNull(runtime);
+    // We know that the capacity is already not high enough due to above checks,
+    // so don't do the check twice. Just call the slow path.
+    MutableHandle mutStorage{lv.storage};
+    PropStorage::pushBackSlowPath(mutStorage, runtime, lv.value);
+  }
+
+  lv.self->propStorage_.setNonNull(runtime, *lv.storage, runtime.getHeap());
+}
+
 CallResult<bool> JSObject::updateOwnProperty(
     Handle<JSObject> selfHandle,
     Runtime &runtime,

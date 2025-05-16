@@ -370,6 +370,20 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
     resizeWithinCapacity(self, runtime.getHeap(), newSize);
   }
 
+  /// Append the given element to the end when the capacity has been exhausted
+  /// and a reallocation is needed.
+  ///
+  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
+  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
+  /// if allocation is required. Caller needs to take the updated handle value
+  /// after the call to update their own pointers.
+  /// \param runtime The Runtime.
+  /// \param value The value to append.
+  static ExecutionStatus pushBackSlowPath(
+      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      Runtime &runtime,
+      Handle<> value);
+
  private:
   AtomicIfConcurrentGC<size_type> size_{0};
 
@@ -386,20 +400,6 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   static ExecutionStatus throwAllocationFailure(
       Runtime &runtime,
       size_type capacity);
-
-  /// Append the given element to the end when the capacity has been exhausted
-  /// and a reallocation is needed.
-  ///
-  /// \param[in,out] selfHandle The ArrayStorageBase to be modified. Note the
-  /// MutableHandle will be updated to point to a new allocated ArrayStorageBase
-  /// if allocation is required. Caller needs to take the updated handle value
-  /// after the call to update their own pointers.
-  /// \param runtime The Runtime.
-  /// \param value The value to append.
-  static ExecutionStatus pushBackSlowPath(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
-      Runtime &runtime,
-      Handle<> value);
 
   /// Append the contents of the given ArrayStorage \p other to this
   /// ArrayStorage when the capacity has been exhausted and a reallocation is

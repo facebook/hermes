@@ -1804,7 +1804,11 @@ ExecutionStatus Interpreter::putByIdSlowPath_RJS(
       runtime,
       id,
       Handle<>(value),
-      !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist());
+      !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
+      cacheIdx != hbc::PROPERTY_CACHING_DISABLED
+          ? curCodeBlock->getRuntimeModule()
+          : nullptr,
+      cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry : nullptr);
   if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

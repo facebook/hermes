@@ -483,6 +483,21 @@ class JSObject : public GCCell {
     updateClass(runtime, clazz);
   }
 
+  /// Set the HiddenClass of \p self to \p clazz and write \p value to index \p
+  /// slot.
+  /// Used by PutById caching path.
+  /// May reallocate the property storage if it needs to expand.
+  /// \param clazz the HiddenClass to transition to, non-null.
+  /// \return true if the HiddenClass was able to be transitioned and the new
+  /// property was added, false if reallocation is required, in which case the
+  /// caller must call the potentially allocating transitionHiddenClassSlowPath.
+  static void addNewOwnPropertyInSlot(
+      JSObject *self,
+      Runtime &runtime,
+      HiddenClass *clazz,
+      SlotIndex slot,
+      SmallHermesValue value);
+
   /// \return the object ID. Assign one if not yet exist. This ID can be used
   /// in Set or Map where hashing is required. We don't assign object an ID
   /// until we actually need it. An exception is lazily created objects where
