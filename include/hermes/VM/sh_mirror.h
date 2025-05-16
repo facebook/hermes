@@ -28,7 +28,7 @@ typedef struct SHUnit SHUnit;
 
 typedef struct SHWritePropertyCacheEntry {
   SHCompressedPointerRawType clazz;
-  uint32_t slot;
+  uint32_t slotAndAddCacheIndex;
 } SHWritePropertyCacheEntry;
 
 typedef struct SHReadPropertyCacheEntry {

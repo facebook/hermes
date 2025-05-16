@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef PROJECT_PROPERTYCACHE_H
-#define PROJECT_PROPERTYCACHE_H
+#pragma once
 
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/SymbolID.h"
@@ -20,12 +19,64 @@ using SlotIndex = uint32_t;
 class HiddenClass;
 
 /// A cache entry for property writes.
+/// If clazz is populated, then it's the class for the property write when
+/// modifying an existing property.
+/// If a property add is cached, it will be stored in _slotAndAddCacheIndex,
+/// and the add cache index will be nonzero.
+/// The property add start/result classes can be found in the RuntimeModule list
+/// of AddPropertyCacheEntry.
 struct WritePropertyCacheEntry {
   /// Cached class.
   WeakRoot<HiddenClass> clazz{nullptr};
 
-  /// Cached property index.
-  SlotIndex slot{0};
+  /// Cached property index and addCache index.
+  /// Low 8 bits: slot.
+  /// High 24 bits: addCache index. 0 is reserved and entry is never stored to.
+  uint32_t _slotAndAddCacheIndex{0};
+
+  /// Can store 8-bit slot.
+  static constexpr SlotIndex kMaxSlot = 0xff;
+
+  /// Can store 24-bit add cache index.
+  static constexpr uint32_t kMaxAddCacheIndex = (1 << 24) - 1;
+
+  /// Mask for the slot value at the bottom byte.
+  static constexpr uint32_t kSlotMask = 0xff;
+
+  /// \return the slot.
+  SlotIndex getSlot() const {
+    // Mask to one byte will result in a single-byte load from memory.
+    return _slotAndAddCacheIndex & kSlotMask;
+  }
+  /// \return the add cache index.
+  uint32_t getAddCacheIndex() const {
+    // Clear out the top bit because that's not part of the index.
+    return (_slotAndAddCacheIndex >> 8);
+  }
+  /// \return whether there is an associated addCacheIndex which holds valid
+  /// cached data.
+  bool hasAddCacheIndex() const {
+    return getAddCacheIndex() != 0;
+  }
+
+  /// Set the slot. Does not affect the addCacheIndex.
+  /// \pre slot <= kMaxSlot
+  void setSlot(SlotIndex slot) {
+    assert(slot <= kMaxSlot && "slot too large");
+    // Clear everything that's not the index, then add the slot.
+    // Masking slot even though we know it's a no-op due to the above assert
+    // allows for better codegen (strb on ARM64).
+    _slotAndAddCacheIndex =
+        (_slotAndAddCacheIndex & ~kSlotMask) | (slot & 0xff);
+  }
+
+  /// Set the add cache index. Does not affect the slot.
+  /// \pre slot <= kMaxSlot
+  void setAddCacheIndex(uint32_t addCacheIndex) {
+    assert(addCacheIndex <= kMaxAddCacheIndex && "index too large");
+    _slotAndAddCacheIndex =
+        (_slotAndAddCacheIndex & kSlotMask) | (addCacheIndex << 8);
+  }
 };
 
 /// A cache entry for property reads.
@@ -68,8 +119,8 @@ static_assert(
     offsetof(SHWritePropertyCacheEntry, clazz) ==
     offsetof(WritePropertyCacheEntry, clazz));
 static_assert(
-    offsetof(SHWritePropertyCacheEntry, slot) ==
-    offsetof(WritePropertyCacheEntry, slot));
+    offsetof(SHWritePropertyCacheEntry, slotAndAddCacheIndex) ==
+    offsetof(WritePropertyCacheEntry, _slotAndAddCacheIndex));
 static_assert(
     sizeof(SHReadPropertyCacheEntry) == sizeof(ReadPropertyCacheEntry));
 static_assert(
@@ -91,4 +142,3 @@ static_assert(
 
 } // namespace vm
 } // namespace hermes
-#endif // PROJECT_PROPERTYCACHE_H

@@ -827,7 +827,8 @@ static inline void putById_RJS(
     // return the property.
     if (LLVM_LIKELY(cacheEntry && cacheEntry->clazz == clazzPtr)) {
       //++NumPutByIdCacheHits;
-      JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
+      JSObject::setNamedSlotValueUnsafe(
+          obj, runtime, cacheEntry->getSlot(), shv);
       return;
     }
     NamedPropertyDescriptor desc;
@@ -842,7 +843,8 @@ static inline void putById_RJS(
       // those cases.
       HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
       if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
-          LLVM_LIKELY(cacheEntry)) {
+          LLVM_LIKELY(cacheEntry) &&
+          LLVM_LIKELY(desc.slot <= WritePropertyCacheEntry::kMaxSlot)) {
 #ifdef HERMES_SLOW_DEBUG
         // if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
         //   ++NumPutByIdCacheEvicts;
@@ -851,7 +853,7 @@ static inline void putById_RJS(
 #endif
         // Cache the class and property slot.
         cacheEntry->clazz = clazzPtr;
-        cacheEntry->slot = desc.slot;
+        cacheEntry->setSlot(desc.slot);
       }
 
       // This must be valid because an own property was already found.
@@ -1324,7 +1326,7 @@ extern "C" void _sh_ljs_define_own_by_id(
   // If we have a cache hit, reuse the cached offset and immediately write to
   // the property.
   if (LLVM_LIKELY(cacheEntry && cacheEntry->clazz == clazzPtr)) {
-    JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
+    JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->getSlot(), shv);
     return;
   }
   NamedPropertyDescriptor desc;
@@ -1336,10 +1338,11 @@ extern "C" void _sh_ljs_define_own_by_id(
     // cacheIdx == 0 indicates no caching so don't update the cache in
     // those cases.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) && LLVM_LIKELY(cacheEntry)) {
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) && LLVM_LIKELY(cacheEntry) &&
+        LLVM_LIKELY(desc.slot <= WritePropertyCacheEntry::kMaxSlot)) {
       // Cache the class and property slot.
       cacheEntry->clazz = clazzPtr;
-      cacheEntry->slot = desc.slot;
+      cacheEntry->setSlot(desc.slot);
     }
 
     // This must be valid because an own property was already found.

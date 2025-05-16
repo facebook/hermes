@@ -211,7 +211,7 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
   auto *cacheEntry = &fixedWritePropCache_[static_cast<int>(id)];
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-    JSObject::setNamedSlotValueUnsafe(*obj, *this, cacheEntry->slot, shv);
+    JSObject::setNamedSlotValueUnsafe(*obj, *this, cacheEntry->getSlot(), shv);
     return ExecutionStatus::RETURNED;
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
@@ -221,10 +221,14 @@ ExecutionStatus Runtime::putNamedThrowOnError(
   if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
       desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
-    if (LLVM_LIKELY(!clazz->isDictionaryNoCache())) {
+    if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
+        LLVM_LIKELY(desc.slot <= WritePropertyCacheEntry::kMaxSlot)) {
       // Cache the class and property slot.
+      assert(
+          cacheEntry->getAddCacheIndex() == 0 &&
+          "fixedWritePropCache_ has no corresponding add cache");
       cacheEntry->clazz = clazzPtr;
-      cacheEntry->slot = desc.slot;
+      cacheEntry->setSlot(desc.slot);
     }
     JSObject::setNamedSlotValueUnsafe(*obj, *this, desc.slot, shv);
     return ExecutionStatus::RETURNED;

@@ -2058,7 +2058,7 @@ tailCall:
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumPutByIdCacheHits;
           JSObject::setNamedSlotValueUnsafe(
-              obj, runtime, cacheEntry->slot, shv);
+              obj, runtime, cacheEntry->getSlot(), shv);
           ip = nextIP;
           DISPATCH;
         }
@@ -2159,7 +2159,7 @@ tailCall:
         // write the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           JSObject::setNamedSlotValueUnsafe(
-              obj, runtime, cacheEntry->slot, shv);
+              obj, runtime, cacheEntry->getSlot(), shv);
           ip = NEXTINST(DefineOwnById);
           DISPATCH;
         }
@@ -2189,7 +2189,7 @@ tailCall:
         // write the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           JSObject::setNamedSlotValueUnsafe(
-              obj, runtime, cacheEntry->slot, shv);
+              obj, runtime, cacheEntry->getSlot(), shv);
           ip = NEXTINST(DefineOwnByIdLong);
           DISPATCH;
         }

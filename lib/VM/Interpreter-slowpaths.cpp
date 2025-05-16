@@ -243,9 +243,10 @@ ExecutionStatus Interpreter::defineOwnByIdSlowPath(
     // enabled cache index.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
     if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
-        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED) &&
+        LLVM_LIKELY(desc.slot <= WritePropertyCacheEntry::kMaxSlot)) {
       cacheEntry->clazz = clazzPtr;
-      cacheEntry->slot = desc.slot;
+      cacheEntry->setSlot(desc.slot);
     }
     // This must be valid because an own property was already found.
     JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, valueToStore);
@@ -1779,7 +1780,8 @@ ExecutionStatus Interpreter::putByIdSlowPath_RJS(
     // those cases.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
     if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
-        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED) &&
+        LLVM_LIKELY(desc.slot <= WritePropertyCacheEntry::kMaxSlot)) {
 #ifdef HERMES_SLOW_DEBUG
       if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
         ++NumPutByIdCacheEvicts;
@@ -1787,8 +1789,9 @@ ExecutionStatus Interpreter::putByIdSlowPath_RJS(
       (void)NumPutByIdCacheEvicts;
 #endif
       // Cache the class and property slot.
+      // Preserve the addCacheIndex if the slot hasn't changed.
       cacheEntry->clazz = clazzPtr;
-      cacheEntry->slot = desc.slot;
+      cacheEntry->setSlot(desc.slot);
     }
 
     // This must be valid because an own property was already found.

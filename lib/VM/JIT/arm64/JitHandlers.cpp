@@ -286,7 +286,8 @@ void _jit_put_by_id(
     // If we have a cache hit, reuse the cached offset and immediately
     // return the property.
     if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-      JSObject::setNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot, shv);
+      JSObject::setNamedSlotValueUnsafe(
+          obj, runtime, cacheEntry->getSlot(), shv);
       return;
     }
   }

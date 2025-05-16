@@ -52,6 +52,7 @@ set(RTSources
   ObjectModelTest.cpp
   OperationsTest.cpp
   PredefinedStringsTest.cpp
+  PropertyCacheTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
   SamplingHeapProfilerTest.cpp
