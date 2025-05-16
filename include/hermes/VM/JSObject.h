@@ -1028,7 +1028,9 @@ class JSObject : public GCCell {
       Runtime &runtime,
       SymbolID name,
       Handle<> valueHandle,
-      PropOpFlags opFlags = PropOpFlags());
+      PropOpFlags opFlags = PropOpFlags(),
+      RuntimeModule *runtimeModule = nullptr,
+      WritePropertyCacheEntry *cacheEntry = nullptr);
 
   /// like putNamed, but with a receiver
   static CallResult<bool> putNamedWithReceiver_RJS(
@@ -1037,7 +1039,9 @@ class JSObject : public GCCell {
       SymbolID name,
       Handle<> valueHandle,
       Handle<> receiver,
-      PropOpFlags opFlags = PropOpFlags());
+      PropOpFlags opFlags = PropOpFlags(),
+      RuntimeModule *runtimeModule = nullptr,
+      WritePropertyCacheEntry *cacheEntry = nullptr);
 
   /// putNamedOrIndexed sets a property with a SymbolID which may be index-like.
   static CallResult<bool> putNamedOrIndexed(
@@ -1457,14 +1461,18 @@ class JSObject : public GCCell {
       SymbolID name,
       DefinePropertyFlags dpFlags,
       Handle<> valueOrAccessor,
-      PropOpFlags opFlags);
+      PropOpFlags opFlags,
+      RuntimeModule *runtimeModule = nullptr,
+      WritePropertyCacheEntry *cacheEntry = nullptr);
   /// Performs the actual adding of the property for \c addOwnProperty()
   static ExecutionStatus addOwnPropertyImpl(
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       SymbolID name,
       PropertyFlags propertyFlags,
-      Handle<> valueOrAccessor);
+      Handle<> valueOrAccessor,
+      RuntimeModule *runtimeModule,
+      WritePropertyCacheEntry *cacheEntry);
 
   /// ES5.1 8.12.9.
   static CallResult<bool> updateOwnProperty(
@@ -2104,9 +2112,18 @@ inline CallResult<bool> JSObject::putNamed_RJS(
     Runtime &runtime,
     SymbolID name,
     Handle<> valueHandle,
-    PropOpFlags opFlags) {
+    PropOpFlags opFlags,
+    RuntimeModule *runtimeModule,
+    WritePropertyCacheEntry *cacheEntry) {
   return putNamedWithReceiver_RJS(
-      selfHandle, runtime, name, valueHandle, selfHandle, opFlags);
+      selfHandle,
+      runtime,
+      name,
+      valueHandle,
+      selfHandle,
+      opFlags,
+      runtimeModule,
+      cacheEntry);
 }
 
 inline CallResult<bool> JSObject::putComputed_RJS(

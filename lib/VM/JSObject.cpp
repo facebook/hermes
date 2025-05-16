@@ -1462,7 +1462,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
     SymbolID name,
     Handle<> valueHandle,
     Handle<> receiver,
-    PropOpFlags opFlags) {
+    PropOpFlags opFlags,
+    RuntimeModule *runtimeModule,
+    WritePropertyCacheEntry *cacheEntry) {
   NamedPropertyDescriptor desc;
 
   // Look for the property in this object or along the prototype chain.
@@ -1640,7 +1642,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       name,
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
       valueHandle,
-      opFlags);
+      opFlags,
+      runtimeModule,
+      cacheEntry);
 }
 
 CallResult<bool> JSObject::putNamedOrIndexed(
@@ -2226,7 +2230,13 @@ ExecutionStatus JSObject::defineNewOwnProperty(
       "new property is already defined");
 
   return addOwnPropertyImpl(
-      selfHandle, runtime, name, propertyFlags, valueOrAccessor);
+      selfHandle,
+      runtime,
+      name,
+      propertyFlags,
+      valueOrAccessor,
+      /* runtimeModule */ nullptr,
+      /* cacheEntry */ nullptr);
 }
 
 CallResult<bool> JSObject::defineOwnComputedPrimitive(
@@ -2376,8 +2386,13 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
     if (LLVM_UNLIKELY(
             addOwnPropertyImpl(
-                selfHandle, runtime, id, updateStatus->second, value) ==
-            ExecutionStatus::EXCEPTION))
+                selfHandle,
+                runtime,
+                id,
+                updateStatus->second,
+                value,
+                /* runtimeModule */ nullptr,
+                /* cacheEntry */ nullptr) == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     return true;
   }
@@ -2876,7 +2891,9 @@ CallResult<bool> JSObject::addOwnProperty(
     SymbolID name,
     DefinePropertyFlags dpFlags,
     Handle<> valueOrAccessor,
-    PropOpFlags opFlags) {
+    PropOpFlags opFlags,
+    RuntimeModule *runtimeModule,
+    WritePropertyCacheEntry *cacheEntry) {
   /// Can we add more properties?
   if (!selfHandle->isExtensible() && !opFlags.getInternalForce()) {
     if (opFlags.getThrowOnError()) {
@@ -2907,8 +2924,13 @@ CallResult<bool> JSObject::addOwnProperty(
 
   if (LLVM_UNLIKELY(
           addOwnPropertyImpl(
-              selfHandle, runtime, name, flags, valueOrAccessor) ==
-          ExecutionStatus::EXCEPTION)) {
+              selfHandle,
+              runtime,
+              name,
+              flags,
+              valueOrAccessor,
+              runtimeModule,
+              cacheEntry) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -2920,7 +2942,9 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     Runtime &runtime,
     SymbolID name,
     PropertyFlags propertyFlags,
-    Handle<> valueOrAccessor) {
+    Handle<> valueOrAccessor,
+    RuntimeModule *runtimeModule,
+    WritePropertyCacheEntry *cacheEntry) {
   assert(
       propertyFlags.privateName ||
       !selfHandle->flags_.proxyObject &&
