@@ -35,6 +35,9 @@ RuntimeModule::RuntimeModule(
       flags_(flags),
       sourceURL_(sourceURL),
       scriptID_(scriptID) {
+  // Reserve add cache entry 0 as an "always miss" entry.
+  addCacheEntries_.emplace_back();
+
   runtime_.addRuntimeModule(this);
   Domain::addRuntimeModule(domain, runtime, this);
 }
@@ -320,6 +323,15 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   return id;
 }
 
+OptValue<uint32_t> RuntimeModule::allocateAddCacheEntry() {
+  if (addCacheEntries_.size() < WritePropertyCacheEntry::kMaxAddCacheIndex) {
+    uint32_t index = addCacheEntries_.size();
+    addCacheEntries_.emplace_back();
+    return index;
+  }
+  return llvh::None;
+}
+
 void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   for (auto &it : templateMap_) {
     acceptor.acceptPtr(it.second);
@@ -341,16 +353,32 @@ void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
   acceptor.acceptPtr(moduleExports_);
 }
 
-void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
-  for (auto &cbPtr : functionMap_) {
-    // Only mark a CodeBlock is its non-null, and has not been scanned
-    // previously in this top-level markRoots invocation.
-    if (cbPtr != nullptr && cbPtr->getRuntimeModule() == this) {
-      cbPtr->markWeakElementsInCaches(runtime_, acceptor);
+void RuntimeModule::markWeakRoots(
+    WeakRootAcceptor &acceptor,
+    bool markLongLived) {
+  if (markLongLived) {
+    for (auto &cbPtr : functionMap_) {
+      // Only mark a CodeBlock is its non-null, and has not been scanned
+      // previously in this top-level markRoots invocation.
+      if (cbPtr != nullptr && cbPtr->getRuntimeModule() == this) {
+        cbPtr->markWeakElementsInCaches(runtime_, acceptor);
+      }
+    }
+    for (auto &entry : objectLiteralHiddenClasses_) {
+      acceptor.acceptWeak(entry);
     }
   }
-  for (auto &entry : objectLiteralHiddenClasses_) {
-    acceptor.acceptWeak(entry);
+
+  if (markLongLived) {
+    for (auto &entry : addCacheEntries_) {
+      acceptor.acceptWeak(entry.startClazz);
+      acceptor.acceptWeak(entry.resultClazz);
+      acceptor.acceptWeak(entry.parent);
+    }
+  } else {
+    for (auto &entry : addCacheEntries_) {
+      acceptor.acceptWeak(entry.parent);
+    }
   }
 }
 
@@ -376,6 +404,7 @@ void RuntimeModule::setCachedLiteralHiddenClass(
 
 size_t RuntimeModule::additionalMemorySize() const {
   return stringIDMap_.capacity() * sizeof(SymbolID) +
+      addCacheEntries_.capacity_in_bytes() +
       objectLiteralHiddenClasses_.size() * sizeof(WeakRoot<HiddenClass>) +
       templateMap_.getMemorySize();
 }

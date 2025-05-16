@@ -13,6 +13,8 @@
 
 namespace hermes::vm {
 
+struct AddPropertyCacheEntry;
+
 inline Runtime &getRuntime(SHRuntime *shr) {
   return *static_cast<Runtime *>(shr);
 }
@@ -39,10 +41,11 @@ void sh_unit_mark_roots(
     RootAcceptorWithNames &acceptor,
     bool markLongLived);
 
-/// Mark the long lived weak roots owned by this unit.
-void sh_unit_mark_long_lived_weak_roots(
+/// Mark the short lived weak roots owned by this unit.
+void sh_unit_mark_weak_roots(
     SHUnit *unit,
-    WeakRootAcceptor &acceptor);
+    WeakRootAcceptor &acceptor,
+    bool markLongLived);
 
 } // namespace hermes::vm
 

@@ -16,6 +16,7 @@ namespace hermes {
 namespace vm {
 using SlotIndex = uint32_t;
 
+class JSObject;
 class HiddenClass;
 
 /// A cache entry for property writes.
@@ -111,6 +112,47 @@ struct PrivateNameCacheEntry {
   /// where the property can be found. For existence checks, like the `in`
   /// operator, this is just a boolean.
   SlotIndex slot{0};
+};
+
+/// A cache entry for adding a property and transitioning the HiddenClass.
+/// Stored in a list in RuntimeModule to save memory in WritePropertyCacheEntry.
+/// In order to hit this cache entry:
+/// * The startClazz must match the pre-PutById class of the object
+/// * The parent must be the same as the cached parent
+/// * The current Runtime parentCacheEpoch must be the same as the cached
+///   parentEpoch field.
+struct AddPropertyCacheEntry {
+  /// Maximum parent epoch, it only holds 24 bits.
+  static constexpr uint32_t kMaxParentEpoch = (1 << 24) - 1;
+
+  /// The starting HiddenClass to transition from.
+  WeakRoot<HiddenClass> startClazz{nullptr};
+
+  /// The result HiddenClass to transition to.
+  WeakRoot<HiddenClass> resultClazz{nullptr};
+
+  /// The parent object pointer at the point the add was cached.
+  WeakRoot<JSObject> parent{nullptr};
+
+  /// Low 8 bits: slot.
+  /// High 24 bits: The parent epoch at the point the add was cached.
+  uint32_t _parentEpochAndSlot{0};
+
+  /// \return the cached parentEpoch.
+  uint32_t getParentEpoch() const {
+    return _parentEpochAndSlot >> 8;
+  }
+
+  /// \return the cached slot.
+  uint32_t getSlot() const {
+    return _parentEpochAndSlot & 0xff;
+  }
+
+  /// Set both the parentEpoch and slot.
+  void setParentEpochAndSlot(uint32_t parentEpoch, uint32_t slot) {
+    assert(slot <= 0xff && "slot too large");
+    _parentEpochAndSlot = (parentEpoch << 8) | (slot & 0xff);
+  }
 };
 
 static_assert(

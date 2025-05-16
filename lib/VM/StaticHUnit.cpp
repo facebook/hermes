@@ -5,22 +5,18 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "SHUnitExt.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PropertyCache.h"
 #include "hermes/VM/StaticHUtils.h"
 
 #include <cstdarg>
 
 using namespace hermes;
 using namespace hermes::vm;
-
-/// Data associated with SHUnit, but fully managed by the runtime.
-struct SHUnitExt {
-  /// A map from template object ids to template objects.
-  llvh::DenseMap<uint32_t, JSObject *> templateMap{};
-};
 
 static void sh_unit_init_symbols(Runtime &runtime, SHUnit *unit);
 static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit);
@@ -209,7 +205,8 @@ void hermes::vm::sh_unit_done(Runtime &runtime, SHUnit *unit) {
 
 size_t hermes::vm::sh_unit_additional_memory_size(const SHUnit *unit) {
   return sizeof(unit->runtime_ext) +
-      unit->runtime_ext->templateMap.getMemorySize();
+      unit->runtime_ext->templateMap.getMemorySize() +
+      unit->runtime_ext->addCacheEntries.capacity_in_bytes();
 }
 
 void hermes::vm::sh_unit_mark_roots(
@@ -231,40 +228,66 @@ void hermes::vm::sh_unit_mark_roots(
   }
 }
 
-void hermes::vm::sh_unit_mark_long_lived_weak_roots(
+void hermes::vm::sh_unit_mark_weak_roots(
     SHUnit *unit,
-    WeakRootAcceptor &acceptor) {
-  for (auto &prop : llvh::makeMutableArrayRef(
-           reinterpret_cast<ReadPropertyCacheEntry *>(unit->read_prop_cache),
-           unit->num_read_prop_cache_entries)) {
-    if (prop.clazz)
-      acceptor.acceptWeak(prop.clazz);
-    if (prop.negMatchClazz) {
-      acceptor.acceptWeak(prop.negMatchClazz);
+    WeakRootAcceptor &acceptor,
+    bool markLongLived) {
+  if (markLongLived) {
+    for (auto &prop : llvh::makeMutableArrayRef(
+             reinterpret_cast<ReadPropertyCacheEntry *>(unit->read_prop_cache),
+             unit->num_read_prop_cache_entries)) {
+      if (prop.clazz)
+        acceptor.acceptWeak(prop.clazz);
+      if (prop.negMatchClazz) {
+        acceptor.acceptWeak(prop.negMatchClazz);
+      }
     }
-  }
-  for (auto &prop : llvh::makeMutableArrayRef(
-           reinterpret_cast<WritePropertyCacheEntry *>(unit->write_prop_cache),
-           unit->num_write_prop_cache_entries)) {
-    if (prop.clazz) {
-      acceptor.acceptWeak(prop.clazz);
+    for (auto &prop : llvh::makeMutableArrayRef(
+             reinterpret_cast<WritePropertyCacheEntry *>(
+                 unit->write_prop_cache),
+             unit->num_write_prop_cache_entries)) {
+      if (prop.clazz) {
+        acceptor.acceptWeak(prop.clazz);
+      }
     }
-  }
-  for (auto &prop : llvh::makeMutableArrayRef(
-           reinterpret_cast<PrivateNameCacheEntry *>(
-               unit->num_private_name_cache_entries),
-           unit->num_private_name_cache_entries)) {
-    if (prop.clazz) {
-      acceptor.acceptWeak(prop.clazz);
+    for (auto &prop : llvh::makeMutableArrayRef(
+             reinterpret_cast<PrivateNameCacheEntry *>(
+                 unit->num_private_name_cache_entries),
+             unit->num_private_name_cache_entries)) {
+      if (prop.clazz) {
+        acceptor.acceptWeak(prop.clazz);
+      }
+      acceptor.acceptWeakSym(prop.nameVal);
     }
-    acceptor.acceptWeakSym(prop.nameVal);
+
+    for (auto &entry : llvh::makeMutableArrayRef(
+             reinterpret_cast<WeakRootBase *>(unit->object_literal_class_cache),
+             unit->obj_shape_table_count)) {
+      acceptor.acceptWeak(entry);
+    }
   }
 
-  for (auto &entry : llvh::makeMutableArrayRef(
-           reinterpret_cast<WeakRootBase *>(unit->object_literal_class_cache),
-           unit->obj_shape_table_count)) {
-    acceptor.acceptWeak(entry);
+  if (markLongLived) {
+    for (auto &entry : unit->runtime_ext->addCacheEntries) {
+      acceptor.acceptWeak(entry.startClazz);
+      acceptor.acceptWeak(entry.resultClazz);
+      acceptor.acceptWeak(entry.parent);
+    }
+  } else {
+    for (auto &entry : unit->runtime_ext->addCacheEntries) {
+      acceptor.acceptWeak(entry.parent);
+    }
   }
+}
+
+OptValue<uint32_t> hermes::vm::sh_unit_allocate_add_cache_entry(SHUnit *unit) {
+  auto &entries = unit->runtime_ext->addCacheEntries;
+  if (entries.size() < WritePropertyCacheEntry::kMaxAddCacheIndex) {
+    uint32_t index = entries.size();
+    entries.emplace_back();
+    return index;
+  }
+  return llvh::None;
 }
 
 extern "C" SHLegacyValue _sh_get_template_object(

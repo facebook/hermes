@@ -158,6 +158,11 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// A vector of cached hidden classes.
   std::vector<WeakRoot<HiddenClass>> objectLiteralHiddenClasses_;
 
+  /// Vector of AddPropertyCacheEntry, where each element is lazily allocated
+  /// whenever a CodeBlock needs a new entry.
+  /// Stored in a central location here for easier marking of roots.
+  TransparentConservativeVector<AddPropertyCacheEntry> addCacheEntries_;
+
   /// A map from template object ids to template objects.
   llvh::DenseMap<uint32_t, JSObject *> templateMap_;
 
@@ -352,11 +357,30 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
     return scriptID_;
   }
 
+  /// Allocate a new AddPropertyCacheEntry.
+  /// \return the index of the new entry, but if there's already too many to
+  /// allocate a new entry, return llvh::None.
+  /// Never returns 0.
+  /// The entry index will be at most
+  /// WritePropertyCacheEntry::kMaxAddCacheIndex.
+  OptValue<uint32_t> allocateAddCacheEntry();
+
+  /// \return the number of add cache entries.
+  size_t numAddCacheEntries() const {
+    return addCacheEntries_.size();
+  }
+
+  /// \return the add cache entry at \p index. Reference is invalidated upon
+  /// calling allocateAddCacheEntry.
+  AddPropertyCacheEntry &getAddCacheEntry(uint32_t index) {
+    return addCacheEntries_[index];
+  }
+
   /// Mark the non-weak roots owned by this RuntimeModule.
   void markRoots(RootAcceptor &acceptor, bool markLongLived);
 
-  /// Mark the long lived weak roots owned by this RuntimeModule.
-  void markLongLivedWeakRoots(WeakRootAcceptor &acceptor);
+  /// Mark the weak roots owned by this RuntimeModule.
+  void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived);
 
   /// Mark the weak reference to the Domain which owns this RuntimeModule.
   void markDomainRef(WeakRootAcceptor &acceptor) {

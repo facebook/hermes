@@ -728,12 +728,12 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
     for (auto &entry : fixedReadPropCache_) {
       acceptor.acceptWeak(entry.clazz);
     }
-    for (auto &rm : runtimeModuleList_)
-      rm.markLongLivedWeakRoots(acceptor);
-    for (SHUnit *unit : units)
-      if (unit)
-        sh_unit_mark_long_lived_weak_roots(unit, acceptor);
   }
+  for (auto &rm : runtimeModuleList_)
+    rm.markWeakRoots(acceptor, markLongLived);
+  for (SHUnit *unit : units)
+    if (unit)
+      sh_unit_mark_weak_roots(unit, acceptor, markLongLived);
   for (auto &fn : customMarkWeakRootFuncs_)
     fn(&getHeap(), acceptor);
   acceptor.endRootSection();
