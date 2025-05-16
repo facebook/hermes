@@ -57,7 +57,7 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const JSObject *>(cell);
   mb.setVTable(&JSObject::vt);
   mb.addField("parent", &self->parent_);
-  mb.addField("class", &self->clazz_);
+  mb.addField("class", &self->clazzDoNotAccessDirectly_);
   mb.addField("propStorage", &self->propStorage_);
 
   // Declare the direct properties.
@@ -146,11 +146,10 @@ PseudoHandle<JSObject> JSObject::create(
     Handle<JSObject> parentHandle,
     Handle<HiddenClass> clazz) {
   auto obj = JSObject::create(runtime, clazz->getNumProperties());
-  obj->clazz_.setNonNull(runtime, *clazz, runtime.getHeap());
+  obj->updateClass(runtime, *clazz);
   // If the hidden class has index like property, we need to clear the fast path
   // flag.
-  if (LLVM_UNLIKELY(
-          obj->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()))
+  if (LLVM_UNLIKELY(obj->getClass(runtime)->getHasIndexLikeProperties()))
     obj->flags_.fastIndexProperties = false;
   obj->parent_.set(runtime, parentHandle.get(), runtime.getHeap());
   return obj;
@@ -426,8 +425,8 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   // Estimate the capacity of the output array.  This estimate is only
   // reasonable for the non-symbol case.
   const uint32_t capacity = okFlags.getIncludeNonSymbols()
-      ? (selfHandle->clazz_.getNonNull(runtime)->getNumProperties() +
-         range.second - range.first)
+      ? (selfHandle->getClass(runtime)->getNumProperties() + range.second -
+         range.first)
       : 0;
 
   auto arrayRes = JSArray::create(runtime, capacity, 0);
@@ -495,7 +494,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
     numIndexed = index;
 
     bool result = HiddenClass::forEachPropertyWhile(
-        runtime.makeHandle(selfHandle->clazz_),
+        runtime.makeHandle(selfHandle->getClassGCPtr()),
         runtime,
         [okFlags,
          array,
@@ -552,7 +551,7 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   if (okFlags.getIncludeSymbols()) {
     MutableHandle<SymbolID> idHandle{runtime};
     bool result = HiddenClass::forEachPropertyWhile(
-        runtime.makeHandle(selfHandle->clazz_),
+        runtime.makeHandle(selfHandle->getClassGCPtr()),
         runtime,
         [okFlags, array, &index, &idHandle, hostObjectSymbolCount, &dedupSet](
             Runtime &runtime, SymbolID id, NamedPropertyDescriptor desc) {
@@ -2015,8 +2014,8 @@ CallResult<bool> JSObject::deleteNamed(
 
   // Perform the actual deletion.
   auto newClazz = HiddenClass::deleteProperty(
-      runtime.makeHandle(selfHandle->clazz_), runtime, *pos);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime, *pos);
+  selfHandle->updateClass(runtime, *newClazz);
 
   return true;
 }
@@ -2115,8 +2114,8 @@ CallResult<bool> JSObject::deleteComputed(
 
     // Remove the property descriptor.
     auto newClazz = HiddenClass::deleteProperty(
-        runtime.makeHandle(selfHandle->clazz_), runtime, *pos);
-    selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+        runtime.makeHandle(selfHandle->getClassGCPtr()), runtime, *pos);
+    selfHandle->updateClass(runtime, *newClazz);
   } else if (LLVM_UNLIKELY(selfHandle->flags_.proxyObject)) {
     CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
     if (key == ExecutionStatus::EXCEPTION)
@@ -2214,7 +2213,7 @@ ExecutionStatus JSObject::defineNewOwnProperty(
       "writable must not be set with accessors");
   assert(
       !HiddenClass::debugIsPropertyDefined(
-          selfHandle->clazz_.get(runtime), runtime, name) &&
+          selfHandle->getClass(runtime), runtime, name) &&
       "new property is already defined");
 
   return addOwnPropertyImpl(
@@ -2280,7 +2279,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // has an index-like name.
 
   // First check if a named property with the same name exists.
-  if (selfHandle->clazz_.getNonNull(runtime)->getHasIndexLikeProperties()) {
+  if (selfHandle->getClass(runtime)->getHasIndexLikeProperties()) {
     LAZY_TO_IDENTIFIER(runtime, nameValHandle, id);
 
     NamedPropertyDescriptor desc;
@@ -2630,7 +2629,7 @@ void JSObject::_snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap) {
   }
 
   HiddenClass::forEachPropertyNoAlloc(
-      self->clazz_.get(gc.getPointerBase()),
+      self->getClass(gc.getPointerBase()),
       gc.getPointerBase(),
       [self, &gc, &snap](SymbolID id, NamedPropertyDescriptor desc) {
         if (InternalProperty::isInternal(id)) {
@@ -2753,8 +2752,8 @@ ExecutionStatus JSObject::seal(Handle<JSObject> selfHandle, Runtime &runtime) {
     return ExecutionStatus::RETURNED;
 
   auto newClazz = HiddenClass::makeAllNonConfigurable(
-      runtime.makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime);
+  selfHandle->updateClass(runtime, *newClazz);
 
   selfHandle->flags_.sealed = true;
 
@@ -2778,8 +2777,8 @@ ExecutionStatus JSObject::freeze(
     return ExecutionStatus::RETURNED;
 
   auto newClazz = HiddenClass::makeAllReadOnly(
-      runtime.makeHandle(selfHandle->clazz_), runtime);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime);
+  selfHandle->updateClass(runtime, *newClazz);
 
   selfHandle->flags_.frozen = true;
   selfHandle->flags_.sealed = true;
@@ -2794,12 +2793,12 @@ void JSObject::updatePropertyFlagsWithoutTransitions(
     PropertyFlags flagsToSet,
     OptValue<llvh::ArrayRef<SymbolID>> props) {
   auto newClazz = HiddenClass::updatePropertyFlagsWithoutTransitions(
-      runtime.makeHandle(selfHandle->clazz_),
+      runtime.makeHandle(selfHandle->getClassGCPtr()),
       runtime,
       flagsToClear,
       flagsToSet,
       props);
-  selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+  selfHandle->updateClass(runtime, *newClazz);
 }
 
 CallResult<bool> JSObject::isExtensible(
@@ -2820,7 +2819,7 @@ bool JSObject::isSealed(PseudoHandle<JSObject> self, Runtime &runtime) {
   auto selfHandle = runtime.makeHandle(std::move(self));
 
   if (!HiddenClass::areAllNonConfigurable(
-          runtime.makeHandle(selfHandle->clazz_), runtime)) {
+          runtime.makeHandle(selfHandle->getClassGCPtr()), runtime)) {
     return false;
   }
 
@@ -2845,7 +2844,7 @@ bool JSObject::isFrozen(PseudoHandle<JSObject> self, Runtime &runtime) {
   auto selfHandle = runtime.makeHandle(std::move(self));
 
   if (!HiddenClass::areAllReadOnly(
-          runtime.makeHandle(selfHandle->clazz_), runtime)) {
+          runtime.makeHandle(selfHandle->getClassGCPtr()), runtime)) {
     return false;
   }
 
@@ -2926,14 +2925,14 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   // Add a new property to the class.
   // TODO: if we check for OOM here in the future, we must undo the slot
   // allocation.
-  lv.clazz = selfHandle->clazz_.get(runtime);
+  lv.clazz = selfHandle->getClass(runtime);
   auto addResult =
       HiddenClass::addProperty(lv.clazz, runtime, name, propertyFlags);
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.clazz = *addResult->first;
-  selfHandle->clazz_.setNonNull(runtime, *lv.clazz, runtime.getHeap());
+  selfHandle->updateClass(runtime, *lv.clazz);
 
   if (LLVM_UNLIKELY(
           allocateNewSlotStorage(
@@ -2975,11 +2974,11 @@ CallResult<bool> JSObject::updateOwnProperty(
   if (updateStatus->second != desc.flags) {
     desc.flags = updateStatus->second;
     auto newClazz = HiddenClass::updateProperty(
-        runtime.makeHandle(selfHandle->clazz_),
+        runtime.makeHandle(selfHandle->getClassGCPtr()),
         runtime,
         propertyPos,
         desc.flags);
-    selfHandle->clazz_.setNonNull(runtime, *newClazz, runtime.getHeap());
+    selfHandle->updateClass(runtime, *newClazz);
   }
 
   if (updateStatus->first == PropertyUpdateStatus::done)

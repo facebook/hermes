@@ -284,7 +284,9 @@ class JSObject : public GCCell {
 
   /// The dynamically derived "class" of the object, describing its fields in
   /// order.
-  GCPointer<HiddenClass> clazz_{};
+  /// Modification of this field *MUST* be done via setClass within JSObject
+  /// methods, it should not be accessed directly within JSObject itself.
+  GCPointer<HiddenClass> clazzDoNotAccessDirectly_{};
 
   /// Storage for property values.
   GCPointer<PropStorage> propStorage_{};
@@ -300,7 +302,11 @@ class JSObject : public GCCell {
       HiddenClass *clazz,
       NeedsBarriers needsBarriers)
       : parent_(runtime, parent, runtime.getHeap(), needsBarriers),
-        clazz_(runtime, clazz, runtime.getHeap(), needsBarriers),
+        clazzDoNotAccessDirectly_(
+            runtime,
+            clazz,
+            runtime.getHeap(),
+            needsBarriers),
         propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
@@ -312,7 +318,11 @@ class JSObject : public GCCell {
       Handle<HiddenClass> clazz,
       NeedsBarriers needsBarriers)
       : parent_(runtime, *parent, runtime.getHeap(), needsBarriers),
-        clazz_(runtime, *clazz, runtime.getHeap(), needsBarriers),
+        clazzDoNotAccessDirectly_(
+            runtime,
+            *clazz,
+            runtime.getHeap(),
+            needsBarriers),
         propStorage_(nullptr) {
     // Direct property slots are initialized by initDirectPropStorage.
   }
@@ -451,24 +461,26 @@ class JSObject : public GCCell {
 
   /// \return the hidden class of this object.
   HiddenClass *getClass(PointerBase &base) const {
-    return clazz_.getNonNull(base);
+    return clazzDoNotAccessDirectly_.getNonNull(base);
   }
 
   /// \return the hidden class of this object.
   const GCPointer<HiddenClass> &getClassGCPtr() const {
-    return clazz_;
+    return clazzDoNotAccessDirectly_;
   }
 
-  /// Set the hidden class of this object to \p clazz. This does not allocate
+  /// Update the hidden class of this object to \p clazz. This does not allocate
   /// indirect property storage, and must only be used when the current and new
   /// hidden classes do not have more properties than the direct storage. Note
   /// that if used incorrectly, this can create completely invalid objects.
-  void setClassNoAllocPropStorageUnsafe(Runtime &runtime, HiddenClass *clazz) {
+  void updateClassNoAllocPropStorageUnsafe(
+      Runtime &runtime,
+      HiddenClass *clazz) {
     // Check that there is no prop storage already allocated, and the new class
     // does not require it.
     assert(!propStorage_);
     assert(clazz->getNumProperties() <= DIRECT_PROPERTY_SLOTS);
-    clazz_.set(runtime, clazz, runtime.getHeap());
+    updateClass(runtime, clazz);
   }
 
   /// \return the object ID. Assign one if not yet exist. This ID can be used
@@ -514,9 +526,7 @@ class JSObject : public GCCell {
   getInternalProperty(JSObject *self, PointerBase &base, SlotIndex index) {
     assert(
         HiddenClass::debugIsPropertyDefined(
-            self->clazz_.get(base),
-            base,
-            InternalProperty::getSymbolID(index)) &&
+            self->getClass(base), base, InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
     return getNamedSlotValueUnsafe(self, base, index);
   }
@@ -528,7 +538,7 @@ class JSObject : public GCCell {
       SmallHermesValue value) {
     assert(
         HiddenClass::debugIsPropertyDefined(
-            self->clazz_.get(runtime),
+            self->getClass(runtime),
             runtime,
             InternalProperty::getSymbolID(index)) &&
         "internal slot must be reserved");
@@ -1395,6 +1405,14 @@ class JSObject : public GCCell {
     return static_cast<const ObjectVTable *>(GCCell::getVT());
   }
 
+  /// Update the hidden class of this object to \p clazz.
+  /// This does not allocate indirect property storage, it is an internal API.
+  /// \param clazz the new class, must not be null.
+  void updateClass(Runtime &runtime, HiddenClass *clazz) {
+    assert(clazz && "clazz cannot be null");
+    clazzDoNotAccessDirectly_.setNonNull(runtime, clazz, runtime.getHeap());
+  }
+
   /// Allocate storage for a new slot after the slot index itself has been
   /// allocated by the hidden class.
   /// Note that slot storage is never truly released once allocated. Released
@@ -1593,7 +1611,9 @@ constexpr size_t JSObject::cellSizeJSObject() {
 void JSObject::staticAsserts() {
   static_assert(sizeof(JSObject) == sizeof(SHJSObject));
   static_assert(offsetof(JSObject, flags_) == offsetof(SHJSObject, flags));
-  static_assert(offsetof(JSObject, clazz_) == offsetof(SHJSObject, clazz));
+  static_assert(
+      offsetof(JSObject, clazzDoNotAccessDirectly_) ==
+      offsetof(SHJSObject, clazz));
   static_assert(
       offsetof(JSObject, propStorage_) == offsetof(SHJSObject, propStorage));
   llvm_unreachable("staticAsserts must never be called.");
@@ -1679,7 +1699,7 @@ bool JSObject::forEachOwnPropertyWhile(
   }
 
   return HiddenClass::forEachPropertyWhile(
-      runtime.makeHandle(selfHandle->clazz_), runtime, namedCB);
+      runtime.makeHandle(selfHandle->getClassGCPtr()), runtime, namedCB);
 }
 
 inline ExecutionStatus JSObject::allocatePropStorage(
@@ -1996,7 +2016,7 @@ inline OptValue<bool> JSObject::tryGetOwnNamedDescriptorFast(
     SymbolID name,
     NamedPropertyDescriptor &desc) {
   return HiddenClass::tryFindPropertyFast(
-      self->clazz_.getNonNull(runtime), runtime, name, desc);
+      self->getClass(runtime), runtime, name, desc);
 }
 
 inline OptValue<SmallHermesValue>
@@ -2126,7 +2146,7 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
     PropertyFlags expectedFlags,
     NamedPropertyDescriptor &desc) {
   auto ret = HiddenClass::findProperty(
-      createPseudoHandle(selfHandle->clazz_.getNonNull(runtime)),
+      createPseudoHandle(selfHandle->getClass(runtime)),
       runtime,
       name,
       expectedFlags,
@@ -2138,8 +2158,8 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
 }
 
 inline bool JSObject::shouldCacheForIn(Runtime &runtime) const {
-  return !clazz_.getNonNull(runtime)->isDictionary() &&
-      !flags_.indexedStorage && !flags_.hostObject && !flags_.proxyObject;
+  return !getClass(runtime)->isDictionary() && !flags_.indexedStorage &&
+      !flags_.hostObject && !flags_.proxyObject;
 }
 
 /// Attempt to get the value of an indexed property from an object cheaply,

@@ -721,8 +721,8 @@ CallResult<bool> JSArray::setLength(
     }
   }
 
-  if (LLVM_UNLIKELY(selfHandle->clazz_.getNonNull(runtime)
-                        ->getHasIndexLikeProperties())) {
+  if (LLVM_UNLIKELY(
+          selfHandle->getClass(runtime)->getHasIndexLikeProperties())) {
     // Uh-oh. We are making the array smaller and we have index-like named
     // properties, so we may have to delete some of them: the ones greater or
     // equal to 'newLength'.
@@ -738,7 +738,7 @@ CallResult<bool> JSArray::setLength(
     GCScope scope{runtime};
 
     HiddenClass::forEachProperty(
-        runtime.makeHandle(selfHandle->clazz_),
+        runtime.makeHandle(selfHandle->getClassGCPtr()),
         runtime,
         [&runtime, &adjustedLength, &toBeDeleted, &scope](
             SymbolID id, NamedPropertyDescriptor desc) {

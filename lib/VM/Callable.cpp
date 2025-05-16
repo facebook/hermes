@@ -138,7 +138,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         *inferredParent(
             runtime, (FuncKind)codeBlock->getHeaderFlags().getKind()),
         numOverlapSlots<JSFunction>());
-    jsFun->setClassNoAllocPropStorageUnsafe(runtime, *newClass);
+    jsFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
 
     // Create empty object for prototype.
     auto prototypeParent = Callable::isGeneratorFunction(*jsFun)
@@ -171,7 +171,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
         *inferredParent(runtime, (FuncKind)nativeFun->getFunctionInfo()->kind),
         numOverlapSlots<NativeJSFunction>());
-    nativeFun->setClassNoAllocPropStorageUnsafe(runtime, *newClass);
+    nativeFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
 
     auto prototypeParent = Callable::isGeneratorFunction(*nativeFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
