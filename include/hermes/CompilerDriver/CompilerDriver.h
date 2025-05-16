@@ -102,5 +102,6 @@ extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
 extern llvh::cl::list<std::string> InputFilenames;
 extern llvh::cl::opt<bool> OptimizedEval;
 extern llvh::cl::opt<bool> PrintCompilerTiming;
+extern llvh::cl::opt<bool> EnableAsyncGenerators;
 } // namespace cl
 #endif

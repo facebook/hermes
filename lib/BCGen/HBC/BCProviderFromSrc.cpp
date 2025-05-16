@@ -7,6 +7,7 @@
 
 #include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 
+#include "hermes/AST/TransformAST.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IRGen/IRGen.h"
@@ -134,6 +135,7 @@ BCProviderFromSrc::create(
   context->setStrictMode(compileFlags.strict);
   context->setEnableEval(true);
   context->setEnableES6BlockScoping(compileFlags.enableES6BlockScoping);
+  context->setEnableAsyncGenerators(compileFlags.enableAsyncGenerators);
   context->setPreemptiveFunctionCompilationThreshold(
       compileFlags.preemptiveFunctionCompilationThreshold);
   context->setPreemptiveFileCompilationThreshold(
@@ -206,6 +208,12 @@ BCProviderFromSrc::create(
     useStaticBuiltinDetected = parser.getUseStaticBuiltin();
     parser.registerMagicURLs();
   }
+
+  if (!parsed)
+    return {nullptr, getErrorString()};
+
+  parsed = llvh::cast<ESTree::ProgramNode>(
+      hermes::transformASTForCompilation(*context, *parsed));
 
   if (!parsed ||
       !hermes::sema::resolveAST(*context, *semCtx, *parsed, declFileList)) {
