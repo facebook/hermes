@@ -1045,6 +1045,7 @@ class JSObject : public GCCell {
       Handle<> valueHandle,
       PropOpFlags opFlags = PropOpFlags(),
       RuntimeModule *runtimeModule = nullptr,
+      SHUnit *unit = nullptr,
       WritePropertyCacheEntry *cacheEntry = nullptr);
 
   /// like putNamed, but with a receiver
@@ -1056,6 +1057,7 @@ class JSObject : public GCCell {
       Handle<> receiver,
       PropOpFlags opFlags = PropOpFlags(),
       RuntimeModule *runtimeModule = nullptr,
+      SHUnit *unit = nullptr,
       WritePropertyCacheEntry *cacheEntry = nullptr);
 
   /// putNamedOrIndexed sets a property with a SymbolID which may be index-like.
@@ -1478,6 +1480,7 @@ class JSObject : public GCCell {
       Handle<> valueOrAccessor,
       PropOpFlags opFlags,
       RuntimeModule *runtimeModule = nullptr,
+      SHUnit *unit = nullptr,
       WritePropertyCacheEntry *cacheEntry = nullptr);
   /// Performs the actual adding of the property for \c addOwnProperty()
   static ExecutionStatus addOwnPropertyImpl(
@@ -1487,6 +1490,7 @@ class JSObject : public GCCell {
       PropertyFlags propertyFlags,
       Handle<> valueOrAccessor,
       RuntimeModule *runtimeModule,
+      SHUnit *unit,
       WritePropertyCacheEntry *cacheEntry);
 
   /// Try to cache property addition.
@@ -1496,15 +1500,20 @@ class JSObject : public GCCell {
   /// \param self the object the property is added to
   /// \param runtimeModule the runtimeModule in which to allocate an
   ///   AddPropertyCacheEntry.
+  /// \param unit the SHUnit in which to allocate AddPropertyCacheEntry.
   /// \param writeCacheEntry the existing cache entry (non-null)
   /// \param startClazz the HiddenClass prior to adding the property
   /// \param slot the slot index at which the property will be added
   /// \param resultClazz the HiddenClass after adding the property (must not be
   ///   in dictionary mode)
+  /// \pre At most one of runtimeModule and unit is non-null.
+  /// \pre If writeCacheEntry is non-null, at least one of runtimeModule and
+  ///   unit is non-null.
   static void tryCacheAddProperty(
       JSObject *self,
       Runtime &runtime,
       RuntimeModule *runtimeModule,
+      SHUnit *unit,
       WritePropertyCacheEntry *writeCacheEntry,
       HiddenClass *startClazz,
       SlotIndex slot,
@@ -2150,6 +2159,7 @@ inline CallResult<bool> JSObject::putNamed_RJS(
     Handle<> valueHandle,
     PropOpFlags opFlags,
     RuntimeModule *runtimeModule,
+    SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
   return putNamedWithReceiver_RJS(
       selfHandle,
@@ -2159,6 +2169,7 @@ inline CallResult<bool> JSObject::putNamed_RJS(
       selfHandle,
       opFlags,
       runtimeModule,
+      unit,
       cacheEntry);
 }
 

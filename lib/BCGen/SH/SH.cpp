@@ -1204,7 +1204,7 @@ class InstrGen {
         os_ << "_sh_ljs_put_by_id_strict_rjs";
       else
         os_ << "_sh_ljs_put_by_id_loose_rjs";
-      os_ << "(shr,&";
+      os_ << "(shr, shUnit, &";
       generateRegister(*inst.getObject());
       os_ << ", ";
       genStringConstWriteIC(LS, inst.getStoredValue()) << ");\n";
@@ -1239,7 +1239,7 @@ class InstrGen {
     else
       os_ << "_sh_ljs_try_put_by_id_loose_rjs(";
 
-    os_ << "shr, ";
+    os_ << "shr, shUnit, ";
     generateRegisterPtr(*inst.getObject());
     os_ << ", ";
     auto prop = inst.getProperty();

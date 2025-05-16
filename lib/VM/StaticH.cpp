@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "SHUnitExt.h"
 #include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
@@ -794,6 +795,7 @@ extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
 template <bool tryProp, bool strictMode>
 static inline void putById_RJS(
     Runtime &runtime,
+    SHUnit *unit,
     const PinnedHermesValue *target,
     SymbolID symID,
     const PinnedHermesValue *value,
@@ -831,6 +833,26 @@ static inline void putById_RJS(
           obj, runtime, cacheEntry->getSlot(), shv);
       return;
     }
+
+    // Now check against the AddPropertyCacheEntry to ensure we can still
+    // use the cached information.
+    // NOTE: Need to check resultClazz in all cases because it's a
+    // weak reference that may have been freed even if the add cache is
+    // valid.
+    const auto &addCacheEntry =
+        sh_unit_get_add_cache_entry(unit, cacheEntry->getAddCacheIndex());
+    if (LLVM_LIKELY(addCacheEntry.startClazz == clazzPtr) &&
+        LLVM_LIKELY(addCacheEntry.resultClazz) &&
+        LLVM_LIKELY(
+            addCacheEntry.getParentEpoch() == runtime.getParentCacheEpoch()) &&
+        LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+      HiddenClass *resultClazz =
+          addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
+      JSObject::addNewOwnPropertyInSlot(
+          obj, runtime, resultClazz, addCacheEntry.getSlot(), shv);
+      return;
+    }
+
     NamedPropertyDescriptor desc;
     OptValue<bool> hasOwnProp =
         JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, symID, desc);
@@ -890,12 +912,14 @@ static inline void putById_RJS(
 
 extern "C" void _sh_ljs_put_by_id_loose_rjs(
     SHRuntime *shr,
+    SHUnit *unit,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
     SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, false>(
       getRuntime(shr),
+      unit,
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
@@ -904,12 +928,14 @@ extern "C" void _sh_ljs_put_by_id_loose_rjs(
 
 extern "C" void _sh_ljs_put_by_id_strict_rjs(
     SHRuntime *shr,
+    SHUnit *unit,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
     SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<false, true>(
       getRuntime(shr),
+      unit,
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
@@ -918,12 +944,14 @@ extern "C" void _sh_ljs_put_by_id_strict_rjs(
 
 extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
     SHRuntime *shr,
+    SHUnit *unit,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
     SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
+      unit,
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),
@@ -932,12 +960,14 @@ extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
 
 extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
     SHRuntime *shr,
+    SHUnit *unit,
     SHLegacyValue *target,
     SHSymbolID symID,
     SHLegacyValue *value,
     SHWritePropertyCacheEntry *propCacheEntry) {
   putById_RJS<true, true>(
       getRuntime(shr),
+      unit,
       toPHV(target),
       SymbolID::unsafeCreate(symID),
       toPHV(value),

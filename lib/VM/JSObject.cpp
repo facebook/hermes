@@ -7,6 +7,7 @@
 
 #include "hermes/VM/JSObject.h"
 
+#include "SHUnitExt.h"
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
@@ -17,6 +18,7 @@
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/StaticHUtils.h"
 
 #include "llvh/ADT/DenseSet.h"
 
@@ -1464,6 +1466,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
     Handle<> receiver,
     PropOpFlags opFlags,
     RuntimeModule *runtimeModule,
+    SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
   NamedPropertyDescriptor desc;
 
@@ -1644,6 +1647,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       valueHandle,
       opFlags,
       runtimeModule,
+      unit,
       cacheEntry);
 }
 
@@ -2236,6 +2240,7 @@ ExecutionStatus JSObject::defineNewOwnProperty(
       propertyFlags,
       valueOrAccessor,
       /* runtimeModule */ nullptr,
+      /* unit */ nullptr,
       /* cacheEntry */ nullptr);
 }
 
@@ -2392,6 +2397,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
                 updateStatus->second,
                 value,
                 /* runtimeModule */ nullptr,
+                /* unit */ nullptr,
                 /* cacheEntry */ nullptr) == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     return true;
@@ -2893,6 +2899,7 @@ CallResult<bool> JSObject::addOwnProperty(
     Handle<> valueOrAccessor,
     PropOpFlags opFlags,
     RuntimeModule *runtimeModule,
+    SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
   /// Can we add more properties?
   if (!selfHandle->isExtensible() && !opFlags.getInternalForce()) {
@@ -2930,6 +2937,7 @@ CallResult<bool> JSObject::addOwnProperty(
               flags,
               valueOrAccessor,
               runtimeModule,
+              unit,
               cacheEntry) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -2941,12 +2949,16 @@ void JSObject::tryCacheAddProperty(
     JSObject *self,
     Runtime &runtime,
     RuntimeModule *runtimeModule,
+    SHUnit *unit,
     WritePropertyCacheEntry *writeCacheEntry,
     HiddenClass *startClazz,
     SlotIndex slot,
     HiddenClass *resultClazz) {
   assert(writeCacheEntry && !resultClazz->isDictionary());
   assert(startClazz != resultClazz && "must be a transition");
+  assert(
+      ((unit != nullptr) ^ (runtimeModule != nullptr)) &&
+      "unable to determine where to allocate AddPropertyCacheEntry");
 
   // We know the slot fits because the result HC isn't a dictionary.
   static_assert(
@@ -2970,7 +2982,8 @@ void JSObject::tryCacheAddProperty(
   uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
   if (addCacheIndex == 0) {
     // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
-    if (auto optIdx = runtimeModule->allocateAddCacheEntry()) {
+    if (auto optIdx = runtimeModule ? runtimeModule->allocateAddCacheEntry()
+                                    : sh_unit_allocate_add_cache_entry(unit)) {
       addCacheIndex = *optIdx;
       writeCacheEntry->setAddCacheIndex(addCacheIndex);
     } else {
@@ -2984,8 +2997,9 @@ void JSObject::tryCacheAddProperty(
       addCacheIndex != 0);
 
   // Populate AddPropertyCacheEntry.
-  AddPropertyCacheEntry &addCacheEntry =
-      runtimeModule->getAddCacheEntry(addCacheIndex);
+  AddPropertyCacheEntry &addCacheEntry = runtimeModule
+      ? runtimeModule->getAddCacheEntry(addCacheIndex)
+      : sh_unit_get_add_cache_entry(unit, addCacheIndex);
   addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
   addCacheEntry.startClazz =
       CompressedPointer::encodeNonNull(startClazz, runtime);
@@ -3007,6 +3021,7 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
     PropertyFlags propertyFlags,
     Handle<> valueOrAccessor,
     RuntimeModule *runtimeModule,
+    SHUnit *unit,
     WritePropertyCacheEntry *cacheEntry) {
   assert(
       propertyFlags.privateName ||
@@ -3048,6 +3063,7 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
         *selfHandle,
         runtime,
         runtimeModule,
+        unit,
         cacheEntry,
         *lv.startClazz,
         slot,
