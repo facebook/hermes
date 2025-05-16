@@ -2937,6 +2937,69 @@ CallResult<bool> JSObject::addOwnProperty(
   return true;
 }
 
+void JSObject::tryCacheAddProperty(
+    JSObject *self,
+    Runtime &runtime,
+    RuntimeModule *runtimeModule,
+    WritePropertyCacheEntry *writeCacheEntry,
+    HiddenClass *startClazz,
+    SlotIndex slot,
+    HiddenClass *resultClazz) {
+  assert(writeCacheEntry && !resultClazz->isDictionary());
+  assert(startClazz != resultClazz && "must be a transition");
+
+  // We know the slot fits because the result HC isn't a dictionary.
+  static_assert(
+      HiddenClass::kDictionaryThreshold < WritePropertyCacheEntry::kMaxSlot);
+  assert(slot <= WritePropertyCacheEntry::kMaxSlot);
+
+  NoAllocScope noAlloc{runtime};
+
+  // If any parents are dictionaries, they won't have their HiddenClass change
+  // when properties are modified. Parent cache epoch is incremented when the
+  // HiddenClass changes, so we can't cache this add.
+  // Perform this check up here to avoid allocating an unused add cache entry if
+  // the check fails.
+  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
+       cur = cur->getParent(runtime)) {
+    if (cur->getClass(runtime)->isDictionary())
+      return;
+  }
+
+  uint32_t parentCacheEpoch = runtime.getParentCacheEpoch();
+  uint32_t addCacheIndex = writeCacheEntry->getAddCacheIndex();
+  if (addCacheIndex == 0) {
+    // Need to allocate a new AddPropertyCacheEntry in the RuntimeModule.
+    if (auto optIdx = runtimeModule->allocateAddCacheEntry()) {
+      addCacheIndex = *optIdx;
+      writeCacheEntry->setAddCacheIndex(addCacheIndex);
+    } else {
+      // Might fail if we're out of bits to use for the index.
+      return;
+    }
+  }
+
+  assert(
+      writeCacheEntry->getAddCacheIndex() == addCacheIndex &&
+      addCacheIndex != 0);
+
+  // Populate AddPropertyCacheEntry.
+  AddPropertyCacheEntry &addCacheEntry =
+      runtimeModule->getAddCacheEntry(addCacheIndex);
+  addCacheEntry.setParentEpochAndSlot(parentCacheEpoch, slot);
+  addCacheEntry.startClazz =
+      CompressedPointer::encodeNonNull(startClazz, runtime);
+  addCacheEntry.resultClazz =
+      CompressedPointer::encodeNonNull(resultClazz, runtime);
+  addCacheEntry.parent = self->getParentGCPtr();
+
+  // Mark everything along the prototype chain as a cached parent.
+  for (JSObject *cur = self->getParent(runtime); cur != nullptr;
+       cur = cur->getParent(runtime)) {
+    cur->flags_.isAddPropertyCacheParent = 1;
+  }
+}
+
 ExecutionStatus JSObject::addOwnPropertyImpl(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
@@ -2951,21 +3014,23 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
           "Internal non-private properties cannot be added to Proxy objects");
 
   struct : public Locals {
-    PinnedValue<HiddenClass> clazz;
+    PinnedValue<HiddenClass> startClazz;
+    PinnedValue<HiddenClass> resultClazz;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
   // Add a new property to the class.
   // TODO: if we check for OOM here in the future, we must undo the slot
   // allocation.
-  lv.clazz = selfHandle->getClass(runtime);
+  lv.startClazz = selfHandle->getClass(runtime);
   auto addResult =
-      HiddenClass::addProperty(lv.clazz, runtime, name, propertyFlags);
+      HiddenClass::addProperty(lv.startClazz, runtime, name, propertyFlags);
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.clazz = *addResult->first;
-  selfHandle->updateClass(runtime, *lv.clazz);
+  lv.resultClazz = *addResult->first;
+  SlotIndex slot = addResult->second;
+  selfHandle->updateClass(runtime, *lv.resultClazz);
 
   if (LLVM_UNLIKELY(
           allocateNewSlotStorage(
@@ -2975,8 +3040,19 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   }
 
   // If this is an index-like property, we need to clear the fast path flags.
-  if (LLVM_UNLIKELY(lv.clazz->getHasIndexLikeProperties()))
+  if (LLVM_UNLIKELY(lv.resultClazz->getHasIndexLikeProperties()))
     selfHandle->flags_.fastIndexProperties = false;
+
+  if (cacheEntry && !lv.resultClazz->isDictionary()) {
+    tryCacheAddProperty(
+        *selfHandle,
+        runtime,
+        runtimeModule,
+        cacheEntry,
+        *lv.startClazz,
+        slot,
+        *lv.resultClazz);
+  }
 
   return ExecutionStatus::RETURNED;
 }

@@ -1474,6 +1474,27 @@ class JSObject : public GCCell {
       RuntimeModule *runtimeModule,
       WritePropertyCacheEntry *cacheEntry);
 
+  /// Try to cache property addition.
+  /// May fail if unable to allocate an AddPropertyCacheEntry, e.g.
+  /// On success, sets isAddPropertyCacheParent flag for the parent of \p self
+  /// and all parents transitively.
+  /// \param self the object the property is added to
+  /// \param runtimeModule the runtimeModule in which to allocate an
+  ///   AddPropertyCacheEntry.
+  /// \param writeCacheEntry the existing cache entry (non-null)
+  /// \param startClazz the HiddenClass prior to adding the property
+  /// \param slot the slot index at which the property will be added
+  /// \param resultClazz the HiddenClass after adding the property (must not be
+  ///   in dictionary mode)
+  static void tryCacheAddProperty(
+      JSObject *self,
+      Runtime &runtime,
+      RuntimeModule *runtimeModule,
+      WritePropertyCacheEntry *writeCacheEntry,
+      HiddenClass *startClazz,
+      SlotIndex slot,
+      HiddenClass *resultClazz);
+
   /// ES5.1 8.12.9.
   static CallResult<bool> updateOwnProperty(
       Handle<JSObject> selfHandle,
