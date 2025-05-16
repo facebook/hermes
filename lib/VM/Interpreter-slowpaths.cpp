@@ -1731,25 +1731,39 @@ ExecutionStatus doPutByIdSlowPath_RJS(
     uint32_t idVal,
     bool strictMode,
     bool tryProp) {
-  auto id = ID(idVal);
-  if (LLVM_UNLIKELY(!O1REG(PutByIdLoose).isObject())) {
+  return Interpreter::putByIdSlowPath_RJS(
+      runtime,
+      curCodeBlock,
+      &O1REG(PutByIdLoose),
+      &O2REG(PutByIdLoose),
+      ip->iPutByIdLoose.op3,
+      ID(idVal),
+      strictMode,
+      tryProp);
+}
+
+ExecutionStatus Interpreter::putByIdSlowPath_RJS(
+    Runtime &runtime,
+    CodeBlock *curCodeBlock,
+    PinnedHermesValue *base,
+    PinnedHermesValue *value,
+    uint8_t cacheIdx,
+    SymbolID id,
+    bool strictMode,
+    bool tryProp) {
+  if (LLVM_UNLIKELY(!base->isObject())) {
     ++NumPutByIdTransient;
     assert(!tryProp && "TryPutById can only be used on the global object");
     auto retStatus = Interpreter::putByIdTransient_RJS(
-        runtime,
-        Handle<>(&O1REG(PutByIdLoose)),
-        ID(idVal),
-        Handle<>(&O2REG(PutByIdLoose)),
-        strictMode);
+        runtime, Handle<>(base), id, Handle<>(value), strictMode);
     if (retStatus == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     return ExecutionStatus::RETURNED;
   }
 
-  auto shv = SmallHermesValue::encodeHermesValue(O2REG(PutByIdLoose), runtime);
-  auto *obj = vmcast<JSObject>(O1REG(PutByIdLoose));
-  auto cacheIdx = ip->iPutByIdLoose.op3;
+  auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
+  auto *obj = vmcast<JSObject>(*base);
   auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
   CompressedPointer clazzPtr{obj->getClassGCPtr()};
 
@@ -1783,10 +1797,10 @@ ExecutionStatus doPutByIdSlowPath_RJS(
   }
   const PropOpFlags defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);
   auto putRes = JSObject::putNamed_RJS(
-      Handle<JSObject>::vmcast(&O1REG(PutByIdLoose)),
+      Handle<JSObject>::vmcast(base),
       runtime,
       id,
-      Handle<>(&O2REG(PutByIdLoose)),
+      Handle<>(value),
       !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist());
   if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

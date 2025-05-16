@@ -109,6 +109,20 @@ class Interpreter {
     return getByValTransientWithReceiver_RJS(runtime, base, name, base);
   }
 
+  /// Implement the slow path for PutById.
+  /// \param base HermesValue to store into.
+  /// \param value HermesValue to store.
+  /// \param idVal the name of the property.
+  static ExecutionStatus putByIdSlowPath_RJS(
+      Runtime &runtime,
+      CodeBlock *curCodeBlock,
+      PinnedHermesValue *base,
+      PinnedHermesValue *value,
+      uint8_t cacheIdx,
+      SymbolID id,
+      bool strictMode,
+      bool tryProp);
+
   /// Implement OpCode::PutById/TryPutById when the base is not an object.
   static ExecutionStatus putByIdTransient_RJS(
       Runtime &runtime,
