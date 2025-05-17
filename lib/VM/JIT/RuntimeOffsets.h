@@ -81,6 +81,9 @@ struct RuntimeOffsets {
       sizeof(IdentifierTable::LookupEntry);
   static constexpr uint32_t identifierTableLookupEntryStrPrim =
       offsetof(IdentifierTable::LookupEntry, strPrim_);
+
+  static constexpr uint32_t runtimeJitCounters =
+      offsetof(Runtime, jitContext_.counters_);
 };
 
 #pragma GCC diagnostic pop

@@ -14,6 +14,7 @@
 #include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JIT/PerfJitDump.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/static_h.h"
@@ -290,6 +291,8 @@ class Emitter {
   unsigned const dumpJitCode_;
   /// Whether to emit asserts in the JIT'ed code.
   bool const emitAsserts_;
+  /// Whether to emit counters in the JIT'ed code.
+  bool const emitCounters_;
 
 #ifndef ASMJIT_NO_LOGGING
   std::unique_ptr<asmjit::Logger> logger_{};
@@ -403,6 +406,7 @@ class Emitter {
       asmjit::JitRuntime &jitRT,
       unsigned dumpJitCode,
       bool emitAsserts,
+      bool emitCounters,
       PerfJitDump *perfJitDump,
       CodeBlock *codeBlock,
       ReadPropertyCacheEntry *readPropertyCache,
@@ -1310,6 +1314,9 @@ class Emitter {
       FR frRes,
       uint32_t shapeTableIndex,
       uint32_t valBufferOffset);
+
+  /// If counters are enabled, emit code to increment \p counter.
+  void emitIncrementCounter(JitCounter counter);
 }; // class Emitter
 
 } // namespace hermes::vm::arm64

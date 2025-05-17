@@ -35,6 +35,16 @@ JITContext::JITContext(bool enable) : enabled_(enable) {
 
 JITContext::~JITContext() = default;
 
+void JITContext::dumpCounters(llvh::raw_ostream &os) {
+  static constexpr const char *kCounterNames[] = {
+#define COUNTER_NAME(name) #name,
+      JIT_COUNTERS(COUNTER_NAME)
+#undef COUNTER_NAME
+  };
+  for (unsigned i = 0; i < (unsigned)JitCounter::_Last; ++i)
+    os << kCounterNames[i] << ": " << counters_[i] << "\n";
+}
+
 // Calculate the address of the next instruction given the name of the
 // current one.
 #define NEXTINST(name) ((const inst::Inst *)(&ip->i##name + 1))
@@ -100,6 +110,7 @@ class JITContext::Compiler {
         em_(jc.impl_->jr,
             jc.getDumpJITCode(),
             jc.getEmitAsserts(),
+            jc.counters_.get() != nullptr,
             jc.perfJitDump_.get(),
             codeBlock,
             codeBlock->readPropertyCache(),

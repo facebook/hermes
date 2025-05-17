@@ -962,6 +962,7 @@ Emitter::Emitter(
     asmjit::JitRuntime &jitRT,
     unsigned dumpJitCode,
     bool emitAsserts,
+    bool emitCounters,
     PerfJitDump *perfJitDump,
     CodeBlock *codeBlock,
     ReadPropertyCacheEntry *readPropertyCache,
@@ -971,6 +972,7 @@ Emitter::Emitter(
     const std::function<void(std::string &&message)> &longjmpError)
     : dumpJitCode_(dumpJitCode),
       emitAsserts_(emitAsserts),
+      emitCounters_(emitCounters),
       frameRegs_(numFrameRegs),
       codeBlock_(codeBlock) {
   errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(
@@ -1504,6 +1506,22 @@ void Emitter::callWithoutThunk(void *fn, const char *name) {
   comment("// call %s", name);
   loadBits64InGp(a64::x16, (uint64_t)fn, name);
   a.blr(a64::x16);
+}
+
+void Emitter::emitIncrementCounter(JitCounter counter) {
+  if (!emitCounters_)
+    return;
+  // Push some registers onto the stack so we can use them.
+  a.stp(a64::x0, a64::x1, a64::Mem(a64::sp).pre(-16));
+
+  // Increment the counter.
+  a.ldr(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::runtimeJitCounters));
+  a.ldr(a64::x1, a64::Mem(a64::x0, (unsigned)counter * sizeof(uint64_t)));
+  a.add(a64::x1, a64::x1, 1);
+  a.str(a64::x1, a64::Mem(a64::x0, (unsigned)counter * sizeof(uint64_t)));
+
+  // Pop the saved values back off the stack.
+  a.ldp(a64::x0, a64::x1, a64::Mem(a64::sp).post(16));
 }
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
@@ -5677,6 +5695,7 @@ void Emitter::emitROData() {
 void Emitter::callImpl(FR frRes, FR frCallee) {
   uint32_t nRegs = frameRegs_.size();
 
+  emitIncrementCounter(JitCounter::NumCall);
   FR calleeFrameArg{nRegs + hbc::StackFrameLayout::CalleeClosureOrCB};
 
   // Store the callee to the right location in the frame, if it isn't already
@@ -5784,6 +5803,7 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
              sl.frRes.index(),
              sl.frInput1.index());
          em.a.bind(sl.slowPathLab);
+         em.emitIncrementCounter(JitCounter::NumCallSlow);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(
              a64::x1,

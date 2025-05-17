@@ -34,6 +34,15 @@ class TransparentOwningPtr {
   TransparentOwningPtr(TransparentOwningPtr &&) = delete;
   TransparentOwningPtr &operator=(TransparentOwningPtr &&) = delete;
 
+  /// Replace the managed pointer with \p newPtr.
+  void reset(T *newPtr) {
+    if (ptr) {
+      Deleter deleter;
+      deleter(ptr);
+    }
+    ptr = newPtr;
+  }
+
   /// Destroy this TransparentOwningPtr, freeing the owned pointer.
   ~TransparentOwningPtr() {
     if (ptr) {

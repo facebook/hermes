@@ -167,6 +167,9 @@ struct ExecuteOptions {
   /// Emit asserts in JIT'ed code
   bool jitEmitAsserts{false};
 
+  /// Emit counters in JIT'ed code.
+  bool jitEmitCounters{false};
+
   /// If non-null, holds statistics for every garbage collection that occurs.
   const std::vector<::hermes::vm::GCAnalyticsEvent> *gcAnalyticsEvents{nullptr};
 

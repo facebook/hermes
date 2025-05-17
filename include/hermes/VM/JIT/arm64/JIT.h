@@ -8,11 +8,14 @@
 #ifndef HERMES_VM_JIT_ARM64_JIT_H
 #define HERMES_VM_JIT_ARM64_JIT_H
 
+#include "hermes/ADT/TransparentOwningPtr.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/JIT/PerfJitDump.h"
 
 namespace hermes {
 namespace vm {
+struct RuntimeOffsets;
+
 namespace arm64 {
 
 namespace DumpJitCode {
@@ -25,9 +28,24 @@ enum : unsigned {
 };
 }
 
+/// List of counters that can be incremented from JIT emitted code.
+#define JIT_COUNTERS(X) \
+  X(NumCall)            \
+  X(NumCallSlow)
+
+/// Enum with an entry for each JIT counter. This is used to index into the list
+/// of counters.
+enum class JitCounter : unsigned {
+#define COUNTER_NAME(name) name,
+  JIT_COUNTERS(COUNTER_NAME)
+#undef COUNTER_NAME
+      _Last,
+};
+
 /// All state related to JIT compilation.
 class JITContext {
   class Compiler;
+  friend RuntimeOffsets;
 
  public:
   /// Construct a JIT context. No executable memory is allocated before it is
@@ -119,6 +137,18 @@ class JITContext {
     emitAsserts_ = emitAsserts;
   }
 
+  /// Enable emitting counters in the JIT'ed code. For simplicity, counters
+  /// cannot be disabled once enabled, because we may have already emitted code
+  /// that increments the counters, and that code may continue to run.
+  void enableEmitCounters() {
+    assert(!counters_.get() && "Enabling counters twice");
+    counters_.reset((uint64_t *)checkedCalloc(
+        (unsigned)JitCounter::_Last, sizeof(uint64_t)));
+  }
+
+  /// Dump the counters to the given stream. Counters must be enabled.
+  void dumpCounters(llvh::raw_ostream &os);
+
   /// \return true if we should emit asserts in the JIT'ed code.
   bool getEmitAsserts() {
     return emitAsserts_;
@@ -154,6 +184,9 @@ class JITContext {
   /// The JIT threshold for function execution count.
   /// Lowered based on the loop depth before deciding whether to JIT.
   uint32_t defaultExecThreshold_ = 1 << 5;
+
+  /// Array of counters for use by the emitted code.
+  TransparentOwningPtr<uint64_t, llvh::FreeDeleter> counters_;
 };
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE

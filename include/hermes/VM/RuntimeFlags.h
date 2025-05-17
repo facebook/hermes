@@ -274,6 +274,13 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::init(true)
 #endif
   };
+
+  llvh::cl::opt<bool> JITEmitCounters{
+      "Xjit-emit-counters",
+      llvh::cl::Hidden,
+      llvh::cl::cat(RuntimeCategory),
+      llvh::cl::desc("Whether to emit counters in JIT compiled code"),
+      llvh::cl::init(false)};
 };
 
 /// All command line runtime options relevant to the VM, including options
