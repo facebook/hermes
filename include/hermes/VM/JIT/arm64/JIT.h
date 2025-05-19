@@ -137,13 +137,14 @@ class JITContext {
     emitAsserts_ = emitAsserts;
   }
 
-  /// Enable emitting counters in the JIT'ed code. For simplicity, counters
-  /// cannot be disabled once enabled, because we may have already emitted code
-  /// that increments the counters, and that code may continue to run.
-  void enableEmitCounters() {
-    assert(!counters_.get() && "Enabling counters twice");
-    counters_.reset((uint64_t *)checkedCalloc(
-        (unsigned)JitCounter::_Last, sizeof(uint64_t)));
+  /// Set whether we should emit counters in the JIT'ed code.
+  void setEmitCounters(bool emitCounters) {
+    assert(
+        (emitCounters || !counters_.get()) && "Can't disable enabled counters");
+    if (emitCounters && !counters_.get()) {
+      counters_.reset((uint64_t *)checkedCalloc(
+          (unsigned)JitCounter::_Last, sizeof(uint64_t)));
+    }
   }
 
   /// Dump the counters to the given stream. Counters must be enabled.

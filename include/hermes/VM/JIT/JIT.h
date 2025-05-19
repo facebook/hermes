@@ -123,8 +123,8 @@ class JITContext {
   /// Set the flag to emit asserts in the JIT'ed code.
   void setEmitAsserts(bool emitAsserts) {}
 
-  /// Enable emitting counters in the JIT'ed code.
-  void enableEmitCounters() {}
+  /// Set whether we should emit counters in the JIT'ed code.
+  void setEmitCounters(bool emitCounters) {}
 
   /// Dump the counters to the given stream. Counters must be enabled.
   void dumpCounters(llvh::raw_ostream &) {}
