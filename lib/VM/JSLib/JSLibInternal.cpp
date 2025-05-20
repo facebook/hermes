@@ -112,7 +112,14 @@ NativeFunction *defineMethod(
     unsigned paramCount) {
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   return defineMethod(
-      runtime, objectHandle, name, context, nativeFunctionPtr, paramCount, dpf);
+      runtime,
+      objectHandle,
+      name,
+      name,
+      context,
+      nativeFunctionPtr,
+      paramCount,
+      dpf);
 }
 
 void defineAccessor(

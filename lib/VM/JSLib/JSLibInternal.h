@@ -83,36 +83,6 @@ NativeFunction *defineMethod(
     DefinePropertyFlags dpf);
 
 /// Define a method in an object instance.
-/// Currently, it's only used to define global %HermesInternal object in
-/// createHermesInternalObject(), with different flags, i.e. writable = 0 and
-/// configurable = 0.
-/// \param objectHandle the instance where the method is defined.
-/// \param name the key in objectHandle to insert the method at.
-/// \param context the context to pass to the native function.
-/// \param nativeFunctionPtr the native function implementing the method.
-/// \param paramCount the number of declared method parameters
-/// \param dpf the flags to set on the newly defined property.
-/// \return the new NativeFunction.
-inline NativeFunction *defineMethod(
-    Runtime &runtime,
-    Handle<JSObject> objectHandle,
-    SymbolID name,
-    void *context,
-    NativeFunctionPtr nativeFunctionPtr,
-    unsigned paramCount,
-    DefinePropertyFlags dpf) {
-  return defineMethod(
-      runtime,
-      objectHandle,
-      name,
-      name,
-      context,
-      nativeFunctionPtr,
-      paramCount,
-      dpf);
-}
-
-/// Define a method in an object instance.
 /// \param objectHandle the instance where the method is defined.
 /// \param name the name of the method.
 /// \param context the context to pass to the native function.

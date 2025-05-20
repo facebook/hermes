@@ -706,6 +706,7 @@ Handle<JSObject> createHermesInternalObject(
             runtime,
             intern,
             Predefined::getSymbolID(symID),
+            Predefined::getSymbolID(symID),
             nullptr /* context */,
             func,
             count,
@@ -720,6 +721,7 @@ Handle<JSObject> createHermesInternalObject(
         (void)defineMethod(
             runtime,
             intern,
+            *symHandle,
             *symHandle,
             nullptr /* context */,
             func,
@@ -791,6 +793,7 @@ Handle<JSObject> createHermesInternalObject(
     (void)defineMethod(
         runtime,
         intern,
+        Predefined::getSymbolID(P::getInstrumentedStats),
         Predefined::getSymbolID(P::getInstrumentedStats),
         nullptr /* context */,
         hermesInternalGetInstrumentedStats,

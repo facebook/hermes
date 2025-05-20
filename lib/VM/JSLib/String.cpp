@@ -171,6 +171,7 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
       runtime,
       stringPrototype,
       Predefined::getSymbolID(Predefined::trimStart),
+      Predefined::getSymbolID(Predefined::trimStart),
       ctx,
       stringPrototypeTrimStart,
       0,
@@ -178,6 +179,7 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
   lv.trimEnd = defineMethod(
       runtime,
       stringPrototype,
+      Predefined::getSymbolID(Predefined::trimEnd),
       Predefined::getSymbolID(Predefined::trimEnd),
       ctx,
       stringPrototypeTrimEnd,
