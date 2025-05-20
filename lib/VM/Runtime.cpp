@@ -355,9 +355,7 @@ Runtime::Runtime(
   // Setup the "root" stack frame.
   setCurrentFrameToTopOfStack();
   // Allocate the "reserved" registers in the root frame.
-  allocStack(
-      StackFrameLayout::CalleeExtraRegistersAtStart,
-      HermesValue::encodeRawZeroValueUnsafe());
+  allocStack(StackFrameLayout::CalleeExtraRegistersAtStart);
 
   // Initialize Predefined Strings.
   // This function does not do any allocations.
@@ -1990,16 +1988,15 @@ bool Runtime::symbolEqualsToStringPrim(SymbolID id, StringPrimitive *strPrim) {
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-void Runtime::allocStack(uint32_t count, HermesValue initValue) {
-  // Note: it is important that allocStack be defined out-of-line. If inline,
-  // constants are propagated into initValue, which enables clang to use
-  // memset_pattern_16. This ends up being a significant loss as it is an
-  // indirect call.
-  assert(initValue.getRaw() == 0 && "Init value must always be the same.");
-  auto *oldStackPointer = stackPointer_;
-  allocUninitializedStack(count);
-  // Initialize the new registers.
-  std::uninitialized_fill_n(oldStackPointer, count, initValue);
+void Runtime::initStackOutOfLine(
+    HermesValue *base,
+    uint32_t count,
+    HermesValue initValue) {
+  // We have to pass initValue as a parameter to prevent constant propagation
+  // that would turn this into a call to memset. However, it should always have
+  // the same value.
+  assert(initValue.getRaw() == 0 && "initValue must be 0");
+  std::uninitialized_fill_n(base, count, initValue);
 }
 
 void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {

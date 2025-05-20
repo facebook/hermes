@@ -601,8 +601,7 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     // fails, we want the exception to come from the call site.
     if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
             curCodeBlock->getFrameSize() +
-                StackFrameLayout::CalleeExtraRegistersAtStart,
-            HermesValue::encodeRawZeroValueUnsafe()))) {
+            StackFrameLayout::CalleeExtraRegistersAtStart))) {
       return runtime.raiseStackOverflow(
           Runtime::StackOverflowKind::JSRegisterStack);
     }
@@ -1317,8 +1316,7 @@ tailCall:
         // Allocate the registers for the new frame.
         if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
                 calleeBlock->getFrameSize() +
-                    StackFrameLayout::CalleeExtraRegistersAtStart,
-                HermesValue::encodeRawZeroValueUnsafe()))) {
+                StackFrameLayout::CalleeExtraRegistersAtStart))) {
           CAPTURE_IP(runtime.raiseStackOverflow(
               Runtime::StackOverflowKind::JSRegisterStack));
           goto exception;

@@ -729,8 +729,7 @@ class NativeFunction : public Callable {
     auto newFrame = runtime.setCurrentFrameToTopOfStack();
     // Allocate the "reserved" registers in the new frame.
     if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
-            StackFrameLayout::CalleeExtraRegistersAtStart,
-            HermesValue::encodeRawZeroValueUnsafe()))) {
+            StackFrameLayout::CalleeExtraRegistersAtStart))) {
       // Restore the stack before raising the overflow.
       runtime.restoreStackAndPreviousFrame(newFrame);
       return runtime.raiseStackOverflow(

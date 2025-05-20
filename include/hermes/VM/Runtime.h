@@ -516,18 +516,14 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// \return the new stack pointer.
   inline PinnedHermesValue *allocUninitializedStack(uint32_t count);
 
-  /// Allocate stack space for \p registers and initialize them with
-  /// \p initValue.
-  /// See implementation for why this is not inlined.
-  LLVM_ATTRIBUTE_NOINLINE
-  void allocStack(uint32_t count, HermesValue initValue);
+  /// Allocate stack space for \p registers and initialize them.
+  inline void allocStack(uint32_t count);
 
   /// Check whether <tt>count + STACK_RESERVE</tt> stack registers are available
   /// and allocate \p count registers.
   /// \param count number of registers to allocate.
-  /// \param initValue initialize the allocated registers with this value.
   /// \return \c true if allocation was successful.
-  inline bool checkAndAllocStack(uint32_t count, HermesValue initValue);
+  inline bool checkAndAllocStack(uint32_t count);
 
   /// Pop the specified number of elements from the stack.
   inline void popStack(uint32_t count);
@@ -1166,6 +1162,18 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Write a JS stack trace as part of a \c crashCallback() run.
   void crashWriteCallStack(JSONEmitter &json);
+
+  /// Initialize the given stack space. This is defined out-of-line to prevent
+  /// the compiler from emitting a call to a libc routine for zeroing the
+  /// memory, which would be an indirect call.
+  /// \param base the starting address of the space to initialize.
+  /// \param count the number of HermesValues to initialize.
+  /// \param initValue the value to initialize the stack with. This must always
+  ///   be zero, but it has to be passed as a parameter to prevent constant
+  ///   propagation into the implementation, which would result in a libc call.
+  LLVM_ATTRIBUTE_NOINLINE
+  void
+  initStackOutOfLine(HermesValue *base, uint32_t count, HermesValue initValue);
 
  private:
   GCBase::GCCallbacksWrapper<Runtime> gcCallbacksWrapper_;
@@ -2221,11 +2229,18 @@ inline PinnedHermesValue *Runtime::allocUninitializedStack(uint32_t count) {
   return stackPointer_ += count;
 }
 
-inline bool Runtime::checkAndAllocStack(uint32_t count, HermesValue initValue) {
+inline bool Runtime::checkAndAllocStack(uint32_t count) {
   if (!checkAvailableStack(count))
     return false;
-  allocStack(count, initValue);
+  allocStack(count);
   return true;
+}
+
+inline void Runtime::allocStack(uint32_t count) {
+  auto *fillPtr = stackPointer_;
+  allocUninitializedStack(count);
+  // Initialize the new registers.
+  initStackOutOfLine(fillPtr, count, HermesValue::encodeRawZeroValueUnsafe());
 }
 
 inline void Runtime::popStack(uint32_t count) {
