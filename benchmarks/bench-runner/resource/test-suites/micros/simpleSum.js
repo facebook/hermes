@@ -21,7 +21,7 @@ function doSumNTimes(n) {
     return sum;
 }
 
-var start = new Date();
+var start = Date.now();
 print(doSumNTimes(10000));
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

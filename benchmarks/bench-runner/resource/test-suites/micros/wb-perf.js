@@ -41,7 +41,7 @@ function wbPerf(n) {
     return ygObj.p.x + ogObj.p.x;
 }
 
-var start = new Date();
+var start = Date.now();
 print(wbPerf(200));
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

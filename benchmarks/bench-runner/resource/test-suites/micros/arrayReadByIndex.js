@@ -36,7 +36,7 @@ function run(numTimes, innerNumTimes) {
     return totalSum;
 }
 
-var start = new Date();
+var start = Date.now();
 print(run(10000, 1000));
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

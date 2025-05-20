@@ -28,7 +28,7 @@ function allocNTimes(n) {
     }
 }
 
-var start = new Date();
+var start = Date.now();
 print(allocNTimes(100));
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

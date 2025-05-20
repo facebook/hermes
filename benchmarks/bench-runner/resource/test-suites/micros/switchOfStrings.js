@@ -1,4 +1,4 @@
-var start = new Date();
+var start = Date.now();
 (function () {
   function stringSwitch(s) {
     switch (s) {
@@ -71,5 +71,5 @@ var start = new Date();
   }
   print(sum);
 })();
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

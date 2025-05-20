@@ -1,4 +1,4 @@
-var start = new Date();
+var start = Date.now();
 var val = (function () {
   var proto = {x: 7};
   var o = Object.create(proto);
@@ -24,6 +24,6 @@ var val = (function () {
   }
   return sum;
 }());
-var end = new Date();
+var end = Date.now();
 print("val: " + val);
 print("Time: " + (end - start));

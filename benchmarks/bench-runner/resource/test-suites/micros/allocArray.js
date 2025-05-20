@@ -54,7 +54,7 @@ function allocNTimes(n) {
     return sum;
 }
 
-var start = new Date();
+var start = Date.now();
 print(allocNTimes(500));
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

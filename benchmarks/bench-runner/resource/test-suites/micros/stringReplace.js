@@ -7,7 +7,7 @@
  * @format
  */
 
-var start = new Date();
+var start = Date.now();
 (function() {
   USE_REPLACE_FUNC = false;
   function letterF() {
@@ -25,6 +25,6 @@ var start = new Date();
 
   print('done');
 })();
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));
 

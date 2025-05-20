@@ -7,7 +7,7 @@
  * @format
  */
 
-var start = new Date();
+var start = Date.now();
 
 var numIter = 4000;
 var len = 1000;
@@ -21,5 +21,5 @@ for (var i = 0; i < numIter; i++) {
 
 print('done');
 
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

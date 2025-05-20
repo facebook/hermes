@@ -35,7 +35,7 @@ function access16NTimes(n) {
     return sum;
 }
 
-var start = new Date();
+var start = Date.now();
 print(access16NTimes(10000000));
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

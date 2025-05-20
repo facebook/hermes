@@ -24,7 +24,7 @@ function bench (lc, fc) {
     return res;
 }
 
-var start = new Date();
+var start = Date.now();
 logger(bench(4e6, 100))
-var end = new Date();
+var end = Date.now();
 print("Time: " + (end - start));

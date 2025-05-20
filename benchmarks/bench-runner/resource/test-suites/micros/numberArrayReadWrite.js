@@ -23,14 +23,14 @@ function doTest(outer, arrSize) {
         arr0.push(i);
         arr1.push(i);
     }
-    var start = new Date();
+    var start = Date.now();
     for (var i = 0; i < outer; i++) {
         copy(arr0, arr1, arrSize);
         var tmpArr = arr0;
         arr0 = arr1;
         arr1 = tmpArr;
     }
-    var end = new Date();
+    var end = Date.now();
     print("Time: " + (end - start))
 }
 doTest(10000, 10000);
