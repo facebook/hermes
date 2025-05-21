@@ -916,7 +916,6 @@
     },
     {
       "paths": [
-        "test262/test/built-ins/Set/prototype/symmetricDifference/",
         "test262/test/built-ins/Set/prototype/union/"
       ],
       "comment": "Set composition methods. These will be removed from the skiplist as they are added. T222048563"

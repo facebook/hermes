@@ -246,6 +246,7 @@ STR(intersection, "intersection")
 STR(isDisjointFrom, "isDisjointFrom")
 STR(isSubsetOf, "isSubsetOf")
 STR(isSupersetOf, "isSupersetOf")
+STR(symmetricDifference, "symmetricDifference")
 
 STR(Number, "Number")
 STR(MAX_VALUE, "MAX_VALUE")

@@ -127,6 +127,14 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       setPrototypeIsSupersetOf,
       1);
 
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::symmetricDifference),
+      nullptr,
+      setPrototypeSymmetricDifference,
+      1);
+
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
@@ -951,6 +959,103 @@ setPrototypeIsSupersetOf(void *, Runtime &runtime, NativeArgs args) {
   }
   // 8. Return true
   return HermesValue::encodeBoolValue(true);
+}
+
+// ES16 24.2.4.15 Set.prototype.symmetricDifference
+CallResult<HermesValue>
+setPrototypeSymmetricDifference(void *, Runtime &runtime, NativeArgs args) {
+  // 1. Let O be the this value
+  // 2. Perform ?RequireInternalSlot(O, [[SetData]])
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Non-set `this` object called on Set.prototype.symmetricDifference");
+  }
+  struct : Locals {
+    PinnedValue<Callable> otherHasMethod;
+    PinnedValue<Callable> otherKeysMethod;
+    PinnedValue<JSSet> resultSet;
+    PinnedValue<> tmp;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 3. Let otherRec be ?GetSetRecord(other)
+  double otherSize = 0;
+  auto other = args.getArgHandle(0);
+  auto otherRecRes = getSetRecord(
+      runtime, other, &otherSize, &lv.otherHasMethod, &lv.otherKeysMethod);
+  if (LLVM_UNLIKELY(otherRecRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 4. Let keysIters be ?GetIteratorFromMethod(otherRec.[[SetObject]],
+  // otherRec.[[Keys]])
+  auto keysIterRes = getCheckedIterator(
+      runtime, other, llvh::Optional<Handle<Callable>>(lv.otherKeysMethod));
+  if (LLVM_UNLIKELY(keysIterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto keysIterRecord = *keysIterRes;
+
+  // 5. Let resultSetData be a copy of O.[[SetData]]
+  lv.resultSet = JSSet::create(runtime, runtime.setPrototype);
+  if (LLVM_UNLIKELY(
+          JSSet::initializeStorage(lv.resultSet, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(
+          setFromSetFastPath(runtime, lv.resultSet, selfHandle) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 6. Let next be NON-STARTED
+  // 7. Repeat, while next is not DONE,
+  for (;;) {
+    GCScopeMarkerRAII marker{runtime};
+    // a. Set next to ?IteratorStepValue(keysIter)
+    auto stepValRes = iteratorStepValue(runtime, keysIterRecord, &lv.tmp);
+    if (LLVM_UNLIKELY(stepValRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // b. If next is not DONE, then
+    if (!*stepValRes) {
+      break;
+    }
+
+    // i. Set next to CanonicalizeKeyedCollection(next)
+    lv.tmp = canonicalizeKeyedCollectionKey(*lv.tmp);
+    // ii. Let resultIndex be SetDataIndex(resultSetData, next)
+    // iii. If resultIndex is NOT-FOUND, let alreadyInResult be false. Otherwise
+    //      let alreadyInResult be true.
+    auto alreadyInResult = lv.resultSet->has(runtime, *lv.tmp);
+
+    // iv. If SetDataHas(O.[[SetData]], next) is true, then
+    // v. Else,
+    if (selfHandle->has(runtime, *lv.tmp)) {
+      // 1. If alreadyInResult is true, then set resultSetData[resultIndex] to
+      // EMPTY
+      if (alreadyInResult) {
+        JSSet::erase(lv.resultSet, runtime, lv.tmp);
+      }
+    } else {
+      // If alreadyInResult is false, append next to resultSetData
+      if (!alreadyInResult) {
+        if (LLVM_UNLIKELY(
+                JSSet::insert(lv.resultSet, runtime, lv.tmp) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      }
+    }
+  }
+
+  // Step 8 and 9 are performed when we created our returned Set via
+  // JSSet::create
+  // 8. Let result be OrdinaryObjectCreate(%Set.prototype%, «[[SetData]]»)
+  // 9. Set result.[[SetData]] to resultSetData
+  return lv.resultSet.getHermesValue();
 }
 } // namespace vm
 } // namespace hermes
