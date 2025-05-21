@@ -916,7 +916,6 @@
     },
     {
       "paths": [
-        "test262/test/built-ins/Set/prototype/isDisjointFrom/",
         "test262/test/built-ins/Set/prototype/isSubsetOf/",
         "test262/test/built-ins/Set/prototype/isSupersetOf/",
         "test262/test/built-ins/Set/prototype/symmetricDifference/",

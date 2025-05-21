@@ -103,6 +103,14 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       setPrototypeIntersection,
       1);
 
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::isDisjointFrom),
+      nullptr,
+      setPrototypeIsDisjointFrom,
+      1);
+
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
@@ -706,6 +714,99 @@ setPrototypeIntersection(void *, Runtime &runtime, NativeArgs args) {
     }
   }
   return lv.resultSet.getHermesValue();
+}
+
+// ES16 24.2.4.10 Set.prototype.isDisjointFrom
+CallResult<HermesValue>
+setPrototypeIsDisjointFrom(void *, Runtime &runtime, NativeArgs args) {
+  // 1. Let O be the this value
+  // 2. Perform ?RequireInternalSlot(0, [[SetData]])
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Non-Set `this` object called on Set.prototype.isDisjointFrom");
+  }
+
+  struct : Locals {
+    PinnedValue<Callable> otherHasMethod;
+    PinnedValue<Callable> otherKeysMethod;
+    PinnedValue<> tmp;
+    PinnedValue<HashSetEntry> entry;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 3. Let otherRec be ?GetSetRecord(other)
+  double otherSize = 0;
+  auto other = args.getArgHandle(0);
+  auto otherRecRes = getSetRecord(
+      runtime, other, &otherSize, &lv.otherHasMethod, &lv.otherKeysMethod);
+  if (otherRecRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto thisSize = selfHandle->size();
+  if (thisSize <= otherSize) {
+    // 4. If SetDataSize(O.[[SetData]]) <= otherRec.[[Size]], then
+    // a. Let thisSize be the number of elements in O.[[SetData]]
+    // b. Let index be 0
+    // c. Repeat, while index < thisSize
+    //   i. Let e be O.[[SetData]][index]
+    //   ii. Set index to index + 1
+    //   iii. If e is not EMPTY, then
+    for (lv.entry = selfHandle->iteratorNext(runtime); lv.entry.get();
+         lv.entry = selfHandle->iteratorNext(runtime, lv.entry.get())) {
+      GCScopeMarkerRAII marker{runtime};
+      // 1. Let inOther be ToBoolean(?Call(otherRec.[[Has]],
+      //    otherRec.[[SetObject]], e))
+      auto hasRes = Callable::executeCall1(
+          lv.otherHasMethod, runtime, other, lv.entry->key.unboxToHV(runtime));
+      if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // 2. If inOther is true, then return false
+      if (toBoolean(hasRes->get())) {
+        return HermesValue::encodeBoolValue(false);
+      }
+    }
+  } else {
+    // 5. Else,
+    // a. Let keysIter be ?GetIteratorFromMethod(otherRec.[[SetObject]],
+    // otherRec.[[Keys]])
+    auto keysIterRes = getCheckedIterator(
+        runtime, other, llvh::Optional<Handle<Callable>>(lv.otherKeysMethod));
+    if (LLVM_UNLIKELY(keysIterRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto keysIterRecord = *keysIterRes;
+    // b. Let next be NOT-STARTED
+    // c. Repeat, while next is not DONE,
+    for (;;) {
+      GCScopeMarkerRAII marker{runtime};
+      // i. Set next to ?IteratorStepValue(keysIter)
+      auto stepValRes = iteratorStepValue(runtime, keysIterRecord, &lv.tmp);
+      if (LLVM_UNLIKELY(stepValRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // ii. If next is not DONE, then
+      if (!*stepValRes) {
+        break;
+      }
+
+      // 1. If SetDataHas(O.[[SetData]], next) is true, then
+      if (selfHandle->has(runtime, *lv.tmp)) {
+        // a. Perform ?IteratorClose(keysIters, NormalCompletion(UNUSED))
+        auto closeRes = iteratorClose(
+            runtime, keysIterRecord.iterator, Runtime::getEmptyValue());
+        if (LLVM_UNLIKELY(closeRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        // b. Return false
+        return HermesValue::encodeBoolValue(false);
+      }
+    }
+  }
+  // 6. Return true
+  return HermesValue::encodeBoolValue(true);
 }
 } // namespace vm
 } // namespace hermes
