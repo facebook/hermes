@@ -859,6 +859,37 @@ setPrototypeIsDisjointFrom(void *, Runtime &runtime, NativeArgs args) {
   }
 
   auto thisSize = selfHandle->size();
+
+  // Possible fast-path scenarios when the other object is a Set:
+  // 1. The size of `this` Set <= the size of other AND other.has is unmodified
+  // 2. Else, the size of `this` Set > the size of other AND other.keys is
+  // unmodified.
+  // In these cases, the elements of the Set will not be modified,
+  // and we can directly iterate over the Set to derive the result.
+  if (auto *otherSet = dyn_vmcast<JSSet>(*other); LLVM_LIKELY(otherSet)) {
+    NoAllocScope noAlloc{runtime};
+
+    bool fastPath = false;
+    if (thisSize <= otherSize) {
+      fastPath = lv.otherHasMethod.getHermesValue().getRaw() ==
+          runtime.setPrototypeHas.getHermesValue().getRaw();
+    } else {
+      fastPath = lv.otherKeysMethod.getHermesValue().getRaw() ==
+          runtime.setPrototypeValues.getHermesValue().getRaw();
+    }
+    if (LLVM_LIKELY(fastPath)) {
+      const JSSet *setToIterate =
+          thisSize <= otherSize ? *selfHandle : otherSet;
+      const JSSet *setToCheck = thisSize <= otherSize ? otherSet : *selfHandle;
+      for (auto entry = setToIterate->iteratorNext(runtime); entry;
+           entry = setToIterate->iteratorNext(runtime, entry)) {
+        if (setToCheck->has(runtime, entry->key.unboxToHV(runtime))) {
+          return HermesValue::encodeBoolValue(false);
+        }
+      }
+      return HermesValue::encodeBoolValue(true);
+    }
+  }
   if (thisSize <= otherSize) {
     // 4. If SetDataSize(O.[[SetData]]) <= otherRec.[[Size]], then
     // a. Let thisSize be the number of elements in O.[[SetData]]

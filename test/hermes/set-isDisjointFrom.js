@@ -25,6 +25,30 @@ disjoint = s1.isDisjointFrom(s2);
 print(disjoint);
 // CHECK-NEXT: true
 
+s2.has = function (val) {
+    print("called has with val: ", val);
+    return true;
+}
+disjoint = s1.isDisjointFrom(s2);
+// CHECK-NEXT: called has with val: 0
+
+// s2.has will always return true, so even if s1 and s2 are disjoint sets,
+// expect the returned value to be false
+print(disjoint)
+// CHECK-NEXT: false
+
+s2 = new Set([2, 3]);
+s2.keys = function () {
+    print("called keys");
+    return [0, 1].values();
+}
+disjoint = s1.isDisjointFrom(s2);
+// CHECK-NEXT: called keys
+// s2.keys will iterate through [0, 1] instead of the its elements [2, 3], so
+// the expected result is false, even if the two sets are disjoint
+print(disjoint);
+// CHECK-NEXT: false
+
 s1 = new Set([1, 3]);
 // set-like object that encapulates the value [2, 4, 6] with size 3
 var setLikeObj = {
