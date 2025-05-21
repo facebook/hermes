@@ -916,13 +916,11 @@
     },
     {
       "paths": [
-        "test262/test/built-ins/Set/prototype/intersection/",
         "test262/test/built-ins/Set/prototype/isDisjointFrom/",
         "test262/test/built-ins/Set/prototype/isSubsetOf/",
         "test262/test/built-ins/Set/prototype/isSupersetOf/",
         "test262/test/built-ins/Set/prototype/symmetricDifference/",
         "test262/test/built-ins/Set/prototype/union/",
-        "test262/test/staging/set-methods/",
         "test262/test/staging/set-is-subset-table-receiver-cleared.js",
         "test262/test/staging/set-is-subset-on-set-like.js",
         "test262/test/staging/set-is-subset-table-transition.js"
