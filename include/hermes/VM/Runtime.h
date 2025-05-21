@@ -1681,7 +1681,7 @@ struct Locals {
 };
 
 /// RAII class to push/pop a Locals struct within a scope.
-class LocalsRAII {
+class [[nodiscard]] LocalsRAII {
   Runtime &runtime_;
   Locals *locals_;
 
