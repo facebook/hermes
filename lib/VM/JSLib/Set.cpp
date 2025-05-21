@@ -119,6 +119,14 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       setPrototypeIsSubsetOf,
       1);
 
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::isSupersetOf),
+      nullptr,
+      setPrototypeIsSupersetOf,
+      1);
+
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
@@ -871,6 +879,76 @@ setPrototypeIsSubsetOf(void *, Runtime &runtime, NativeArgs args) {
     }
   }
 
+  // 8. Return true
+  return HermesValue::encodeBoolValue(true);
+}
+
+// ES16 24.2.4.12
+CallResult<HermesValue>
+setPrototypeIsSupersetOf(void *, Runtime &runtime, NativeArgs args) {
+  // 1. Let O be the this value
+  // 2. Perform ?RequireInternalSlot(O, [[SetData]])
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Non-set `this` object called on Set.prototype.isSupersetOf");
+  }
+  struct : Locals {
+    PinnedValue<Callable> otherHasMethod;
+    PinnedValue<Callable> otherKeysMethod;
+    PinnedValue<> tmp;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 3. Let otherRec be ?GetSetRecord(other)
+  double otherSize = 0;
+  auto other = args.getArgHandle(0);
+  auto otherRecRes = getSetRecord(
+      runtime, other, &otherSize, &lv.otherHasMethod, &lv.otherKeysMethod);
+  if (LLVM_UNLIKELY(otherRecRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 4. If SetDataSize(O.[[SetData]]) < otherRec.[[Size]], return false
+  auto thisSize = selfHandle->size();
+  if (thisSize < otherSize) {
+    return HermesValue::encodeBoolValue(false);
+  }
+
+  // 5. Let keysIter be ?GetIteratorFromMethod(otherRec.[[SetObject]],
+  // otherRec.[[Keys]])
+  auto keysIterRes = getCheckedIterator(
+      runtime, other, llvh::Optional<Handle<Callable>>(lv.otherKeysMethod));
+  if (LLVM_UNLIKELY(keysIterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto keysIterRecord = *keysIterRes;
+  // 6. Let next be NON-STARTED
+  // 7. Repeat, while next is not DONE
+  for (;;) {
+    GCScopeMarkerRAII marker{runtime};
+    // a. Set next to ?IteratorStepValue(keysIter)
+    auto stepValRes = iteratorStepValue(runtime, keysIterRecord, &lv.tmp);
+    if (LLVM_UNLIKELY(stepValRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // b. If next is not DONE, then
+    if (!*stepValRes) {
+      break;
+    }
+
+    // i. If SetDataHas(O.[[SetData]], next) is false, then
+    if (!selfHandle->has(runtime, *lv.tmp)) {
+      // 1. Perform ?IteratorClose(keysIter, NormalCompletion(UNUSED))
+      auto closeRes = iteratorClose(
+          runtime, keysIterRecord.iterator, Runtime::getEmptyValue());
+      if (LLVM_UNLIKELY(closeRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // 2. Return false
+      return HermesValue::encodeBoolValue(false);
+    }
+  }
   // 8. Return true
   return HermesValue::encodeBoolValue(true);
 }
