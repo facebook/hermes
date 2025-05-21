@@ -111,6 +111,14 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       setPrototypeIsDisjointFrom,
       1);
 
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::isSubsetOf),
+      nullptr,
+      setPrototypeIsSubsetOf,
+      1);
+
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
@@ -806,6 +814,64 @@ setPrototypeIsDisjointFrom(void *, Runtime &runtime, NativeArgs args) {
     }
   }
   // 6. Return true
+  return HermesValue::encodeBoolValue(true);
+}
+
+// ES16 24.2.4.11 Set.prototype.isSubsetOf
+CallResult<HermesValue>
+setPrototypeIsSubsetOf(void *, Runtime &runtime, NativeArgs args) {
+  // Let O be the this value
+  // Perform ?RequireInternalSlot(O, [[SetData]])
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Non-set `this` object called on Set.prototypee.isSubsetOf");
+  }
+  struct : Locals {
+    PinnedValue<Callable> otherHasMethod;
+    PinnedValue<Callable> otherKeysMethod;
+    PinnedValue<HashSetEntry> entry;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 3. Let otherRec be ?GetSetRecord(other)
+  double otherSize = 0;
+  auto other = args.getArgHandle(0);
+  auto otherRecRes = getSetRecord(
+      runtime, other, &otherSize, &lv.otherHasMethod, &lv.otherKeysMethod);
+  if (LLVM_UNLIKELY(otherRecRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto thisSize = selfHandle->size();
+  // 4. If SetDataSize(O.[[SetData]]) > otherRec.[[Size]], return false
+  if (thisSize > otherSize) {
+    return HermesValue::encodeBoolValue(false);
+  }
+
+  // 5. Let thisSize be the number of elements in O.[[SetData]]
+  // 6. Let index be 0
+  // 7. Repeat, while index < thisSize
+  //   a. Let e be O.[[SetData]][index]
+  //   b. Set index to index + 1
+  //   c. If e is not EMPTY, then
+  for (lv.entry = selfHandle->iteratorNext(runtime); lv.entry.get();
+       lv.entry = selfHandle->iteratorNext(runtime, lv.entry.get())) {
+    GCScopeMarkerRAII marker{runtime};
+    // i. Let inOther be ToBoolean(?Call(otherRec.[[Has]],
+    //    otherRec.[[SetObject]], e))
+    auto hasRes = Callable::executeCall1(
+        lv.otherHasMethod, runtime, other, lv.entry->key.unboxToHV(runtime));
+    if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    // ii. If inOther is false, return false
+    if (!toBoolean(hasRes->get())) {
+      return HermesValue::encodeBoolValue(false);
+    }
+  }
+
+  // 8. Return true
   return HermesValue::encodeBoolValue(true);
 }
 } // namespace vm

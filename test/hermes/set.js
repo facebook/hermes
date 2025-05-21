@@ -21,7 +21,7 @@ print(Object.getOwnPropertyNames(Set.prototype).sort(function(a,b) {
     if (a === b) return 0;
     if (a > b) return 1;
 }));
-//CHECK-NEXT: add,clear,constructor,delete,difference,entries,forEach,has,intersection,isDisjointFrom,keys,size,values
+//CHECK-NEXT: add,clear,constructor,delete,difference,entries,forEach,has,intersection,isDisjointFrom,isSubsetOf,keys,size,values
 print(Set.prototype.keys === Set.prototype.values);
 //CHECK-NEXT: true
 print(Set.prototype.keys.name, Set.prototype.values.name);
