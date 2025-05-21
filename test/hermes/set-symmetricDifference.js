@@ -31,6 +31,19 @@ symDiff = s1.symmetricDifference(s2);
 print(symDiff.size);
 // CHECK-NEXT: 0
 
+s1 = new Set([0, 1]);
+s2 = new Set([2, 3]);
+s2.keys = function () {
+    print("called keys");
+    return [0, 1].values();
+}
+symDiff = s1.symmetricDifference(s2);
+// CHECK-NEXT: called keys
+// s2.keys will iterate over [0, 1] instead of the set elements [2, 3]
+// so the expected result should be empty
+print(symDiff.size);
+// CHECK-NEXT: 0
+
 s1 = new Set([1, 2, 3, 5]);
 // set-like object that encapulates the value [0, 2] with size 2
 var setLikeObj = {

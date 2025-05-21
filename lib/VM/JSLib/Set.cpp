@@ -1126,6 +1126,47 @@ setPrototypeSymmetricDifference(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  lv.resultSet = JSSet::create(runtime, runtime.setPrototype);
+  if (LLVM_UNLIKELY(
+          JSSet::initializeStorage(lv.resultSet, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Fast-path: If the other object is a Set and its keys property is
+  // unmodified, then the elements of the Set will not be modified. We can
+  // directly iterate over the other Set to derive our resulting Set.
+  auto otherSet = Handle<JSSet>::dyn_vmcast(other);
+  const bool originalKeys = lv.otherKeysMethod.getHermesValue().getRaw() ==
+      runtime.setPrototypeValues.getHermesValue().getRaw();
+  if (LLVM_LIKELY(otherSet && originalKeys)) {
+    if (LLVM_UNLIKELY(
+            setFromSetFastPath(runtime, lv.resultSet, selfHandle) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto forEachRes = JSSet::forEachNative(
+        otherSet,
+        runtime,
+        [&lv, &selfHandle](Runtime &runtime, Handle<HashSetEntry> entry) {
+          lv.tmp = entry->key.unboxToHV(runtime);
+          if (selfHandle->has(runtime, *lv.tmp)) {
+            JSSet::erase(lv.resultSet, runtime, lv.tmp);
+          } else {
+            if (LLVM_UNLIKELY(
+                    JSSet::insert(lv.resultSet, runtime, lv.tmp) ==
+                    ExecutionStatus::EXCEPTION)) {
+              return ExecutionStatus::EXCEPTION;
+            }
+          }
+          return ExecutionStatus::RETURNED;
+        });
+    if (LLVM_UNLIKELY(forEachRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return lv.resultSet.getHermesValue();
+  }
+
   // 4. Let keysIters be ?GetIteratorFromMethod(otherRec.[[SetObject]],
   // otherRec.[[Keys]])
   auto keysIterRes = getCheckedIterator(
@@ -1136,12 +1177,6 @@ setPrototypeSymmetricDifference(void *, Runtime &runtime, NativeArgs args) {
   auto keysIterRecord = *keysIterRes;
 
   // 5. Let resultSetData be a copy of O.[[SetData]]
-  lv.resultSet = JSSet::create(runtime, runtime.setPrototype);
-  if (LLVM_UNLIKELY(
-          JSSet::initializeStorage(lv.resultSet, runtime) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
   if (LLVM_UNLIKELY(
           setFromSetFastPath(runtime, lv.resultSet, selfHandle) ==
           ExecutionStatus::EXCEPTION)) {
