@@ -1044,6 +1044,23 @@ setPrototypeIsSupersetOf(void *, Runtime &runtime, NativeArgs args) {
     return HermesValue::encodeBoolValue(false);
   }
 
+  // Fast-path: If the other object is a Set and its keys property is
+  // unmodified, then the elements of the Set will not be modified. We can
+  // directly iterate over the other Set to check if it is in the `this` Set.
+  auto *otherSet = dyn_vmcast<JSSet>(*other);
+  const bool originalKeys = lv.otherKeysMethod.getHermesValue().getRaw() ==
+      runtime.setPrototypeValues.getHermesValue().getRaw();
+  if (LLVM_LIKELY(otherSet && originalKeys)) {
+    NoAllocScope noAlloc{runtime};
+    for (auto entry = otherSet->iteratorNext(runtime); entry;
+         entry = otherSet->iteratorNext(runtime, entry)) {
+      if (!selfHandle->has(runtime, entry->key.unboxToHV(runtime))) {
+        return HermesValue::encodeBoolValue(false);
+      }
+    }
+    return HermesValue::encodeBoolValue(true);
+  }
+
   // 5. Let keysIter be ?GetIteratorFromMethod(otherRec.[[SetObject]],
   // otherRec.[[Keys]])
   auto keysIterRes = getCheckedIterator(

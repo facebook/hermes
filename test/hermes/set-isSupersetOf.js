@@ -31,6 +31,18 @@ print(superset);
 // CHECK-NEXT: false
 
 s1 = new Set([0, 1]);
+s2 = new Set([0, 1]);
+s2.keys = function() {
+  print("called keys");
+  return [2, 3].values();
+}
+superset = s1.isSupersetOf(s2);
+// CHECK-NEXT: called keys
+// s2.has will iterate through [2, 3] instead of its elements [1, 2]
+// Thus, the expected result will be false, even if s1 is a superset of s2
+print(superset);
+// CHECK-NEXT: false
+
 // set-like object that encapulates the value [0, 1, 2] with size 3
 var setLikeObj = {
   size: 3,
