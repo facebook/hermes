@@ -87,6 +87,14 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       setPrototypeValues,
       0);
 
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::difference),
+      nullptr,
+      setPrototypeDifference,
+      1);
+
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
@@ -458,6 +466,118 @@ setIteratorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   return *cr;
+}
+
+// ES16 24.2.4.5 Set.prototype.difference(other)
+CallResult<HermesValue>
+setPrototypeDifference(void *, Runtime &runtime, NativeArgs args) {
+  // 1. Let O be this value
+  // 2. Perform ?RequireInternalSlot(O, [[SetData]])
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Non-Set `this` object called on Set.prototype.difference");
+  }
+
+  struct : Locals {
+    PinnedValue<Callable> otherHasMethod;
+    PinnedValue<Callable> otherKeysMethod;
+    PinnedValue<JSSet> resultSet;
+    PinnedValue<> tmp;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 3. Let otherRec be ?GetSetRecord(other)
+  auto other = args.getArgHandle(0);
+  double otherSize = 0;
+  auto res = getSetRecord(
+      runtime, other, &otherSize, &lv.otherHasMethod, &lv.otherKeysMethod);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 4. Let resultSetData be a copy of O.[[SetData]]
+  lv.resultSet = JSSet::create(runtime, runtime.setPrototype);
+  if (LLVM_UNLIKELY(
+          JSSet::initializeStorage(lv.resultSet, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(
+          setFromSetFastPath(runtime, lv.resultSet, selfHandle) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  };
+
+  uint32_t thisSize = selfHandle->size();
+  if (thisSize <= otherSize) {
+    // 5. If SetDataSize(O.[[SetData]]) <= otherRec.[[Size]])
+    // a. Let thisSize be the number of elements in O.[[SetData]]
+    // b. Let index be 0
+    // c. Repeat while index < thisSize
+    //   i. Let e be resultSetData[index]
+    //   ii. If e is not EMPTY, then
+    //   iii. Set index to index + 1
+    auto forEachRes = JSSet::forEachNative(
+        lv.resultSet,
+        runtime,
+        [&lv, &other](Runtime &runtime, Handle<HashSetEntry> entry) {
+          lv.tmp = entry->key.unboxToHV(runtime);
+          // ii.1. let inOther be ?ToBoolean(?Call(otherRec.[[Has]],
+          // otherRec.[[SetObject]], e))
+          auto hasRes = Callable::executeCall1(
+              lv.otherHasMethod, runtime, other, *lv.tmp);
+          if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          // ii.2. If inOther is true, then set resultSetData[index] to EMPTY
+          if (toBoolean(hasRes->get())) {
+            JSSet::erase(lv.resultSet, runtime, lv.tmp);
+          }
+          return ExecutionStatus::RETURNED;
+        });
+    if (LLVM_UNLIKELY(forEachRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  } else {
+    // 6. Else,
+    // a. Let keysIter be ?GetIteratorFromMethod(otherRec.[[SetObject]],
+    // otherRec.[[Keys]])
+    // b. Let next be NOT-STARTED
+    auto keysIterRes = getCheckedIterator(
+        runtime, other, llvh::Optional<Handle<Callable>>(lv.otherKeysMethod));
+    if (LLVM_UNLIKELY(keysIterRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto keysIteratorRecord = *keysIterRes;
+    // c. Repeat, while next is not DONE
+    for (;;) {
+      GCScopeMarkerRAII marker{runtime};
+      // i. Set next to ?IteratorStepValue(keysIters)
+      auto stepValRes = iteratorStepValue(runtime, keysIteratorRecord, &lv.tmp);
+      if (LLVM_UNLIKELY(stepValRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      // ii. If next is not DONE, then
+      if (!*stepValRes) {
+        break;
+      }
+
+      // 1. Set next to CanonicalizeKeyedCollectionKey(next)
+      lv.tmp = canonicalizeKeyedCollectionKey(*lv.tmp);
+      // 2. Let valueIndex be SetDataIndex(resultSetData, next)
+      // 3. If valueIndex is not NOT-FOUND, then
+      //   a. Set resultSetData[valueIndex] to EMPTY
+      JSSet::erase(lv.resultSet, runtime, lv.tmp);
+    }
+  }
+  // Step 7 and 8 are performed when we created our returned Set via
+  // JSSet::create
+  // 7. Let result be OrdinaryObjectCreate(%Set.prototype%, «[[SetData]]»)
+  // 8. Set result.[[SetData]] to resultSetData
+
+  // 9. Return result
+  return lv.resultSet.getHermesValue();
 }
 } // namespace vm
 } // namespace hermes

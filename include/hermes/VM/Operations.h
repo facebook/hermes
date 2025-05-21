@@ -368,6 +368,17 @@ CallResult<Handle<JSObject>> iteratorStep(
     Runtime &runtime,
     const CheckedIteratorRecord &iteratorRecord);
 
+/// ES16 7.4.10
+/// \param iteratorRecord the iterator to get the next value from
+/// \param[out] value the pointer in which the next available value will be
+/// stored
+/// \return false instead of DONE if the iterator has reached its end, or
+/// true if the next value is available
+CallResult<bool> iteratorStepValue(
+    Runtime &runtime,
+    const CheckedIteratorRecord &iteratorRecord,
+    PinnedValue<> *value);
+
 /// ES sec-iteratorclose
 /// \param completion the thrown value to complete this operation with, empty if
 /// not thrown.
@@ -535,6 +546,23 @@ ExecutionStatus setTemplateObjectProps(
     Handle<JSObject> templateObj,
     Handle<JSObject> rawObj);
 
+/// ES16 24.2.1.2 GetSetRecord(obj)
+/// For the given object, store the SetRecord fields in the provided pointers
+/// \p size, \p hasMethod, and \p keysMethod.
+ExecutionStatus getSetRecord(
+    Runtime &runtime,
+    Handle<> obj,
+    double *size,
+    PinnedValue<Callable> *hasMethod,
+    PinnedValue<Callable> *keysMethod);
+
+// ES16 24.5.1 CanonicalizeKeyedCollectionKey(key)
+inline HermesValue canonicalizeKeyedCollectionKey(HermesValue key) {
+  if (key.isNumber() && key.getNumber() == 0) {
+    return HermesValue::encodeTrustedNumberValue(0);
+  }
+  return key;
+}
 } // namespace vm
 } // namespace hermes
 

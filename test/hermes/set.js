@@ -17,11 +17,11 @@ print(Set.length);
 //CHECK-NEXT: 0
 
 print(Object.getOwnPropertyNames(Set.prototype).sort(function(a,b) {
-  if (a < b) return -1;
-  if (a === b) return 0;
-  if (a > b) return 1;
+    if (a < b) return -1;
+    if (a === b) return 0;
+    if (a > b) return 1;
 }));
-//CHECK-NEXT: add,clear,constructor,delete,entries,forEach,has,keys,size,values
+//CHECK-NEXT: add,clear,constructor,delete,difference,entries,forEach,has,keys,size,values
 print(Set.prototype.keys === Set.prototype.values);
 //CHECK-NEXT: true
 print(Set.prototype.keys.name, Set.prototype.values.name);
@@ -39,11 +39,11 @@ print(s.size, s.has(1), s.has(2));
 
 var a = [1, 2, 3];
 a[Symbol.iterator] = function() {
-  return {
-    next() {
+    return {
+        next() {
       return { value: undefined, done: true };
+        }
     }
-  }
 }
 var s = new Set(a);
 print(s.size);
@@ -51,20 +51,20 @@ print(s.size);
 
 var s = new Set([1, 2, 3]);
 s[Symbol.iterator] = function() {
-  return {
-    next() {
+    return {
+        next() {
       return { value: undefined, done: true };
+        }
     }
-  }
 }
 var s = new Set(s);
 print(s.size);
 // CHECK-NEXT: 0
 
 try {
-  Set();
+    Set();
 } catch (e) {
-  print(e);
+    print(e);
 }
 //CHECK-NEXT: TypeError: Constructor Set requires 'new'
 
@@ -83,173 +83,173 @@ var fs = new Set();
 fs.add(fo);
 
 function testAdd(o1, o2, o3) {
-  var s = new Set();
-  print("testAdd");
+    var s = new Set();
+    print("testAdd");
 //CHECK-LABEL: testAdd
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 0
-  s.add(undefined);
-  s.add("abc");
-  s.add("def");
-  s.add("abc");
-  s.add("def");
+    s.add(undefined);
+    s.add("abc");
+    s.add("def");
+    s.add("abc");
+    s.add("def");
   s.add(1/-Infinity);
-  s.add(o1);
-  s.add(o2);
-  s.add(o3);
-  var o11 = o1, o22 = o2, o33 = o3;
-  s.add(o11);
-  s.add(o22);
-  s.add(o33);
-  print(s.size);
-  //CHECK-NEXT: 7
-  return s;
+    s.add(o1);
+    s.add(o2);
+    s.add(o3);
+    var o11 = o1, o22 = o2, o33 = o3;
+    s.add(o11);
+    s.add(o22);
+    s.add(o33);
+    print(s.size);
+    //CHECK-NEXT: 7
+    return s;
 }
 
 function testHas(s, o1, o2, o3) {
-  print("testHas");
+    print("testHas");
 //CHECK-LABEL: testHas
-  print(s.has(0));
+    print(s.has(0));
 //CHECK-NEXT: true
-  print(s.has(1));
+    print(s.has(1));
 //CHECK-NEXT: false
-  print(s.has("abc"));
+    print(s.has("abc"));
 //CHECK-NEXT: true
-  print(s.has("a"));
+    print(s.has("a"));
 //CHECK-NEXT: false
-  print(s.has("def"));
+    print(s.has("def"));
 //CHECK-NEXT: true
-  print(s.has());
+    print(s.has());
 //CHECK-NEXT: true
-  print(s.has(null));
+    print(s.has(null));
 //CHECK-NEXT: false
-  print(s.has(o1));
+    print(s.has(o1));
 //CHECK-NEXT: true
-  print(s.has(o2));
+    print(s.has(o2));
 //CHECK-NEXT: true
-  print(s.has(o3));
+    print(s.has(o3));
 //CHECK-NEXT: true
-  print(s.has({}));
+    print(s.has({}));
 //CHECK-NEXT: false
-  var o4 = o2;
-  print(s.has(o4));
+    var o4 = o2;
+    print(s.has(o4));
 //CHECK-NEXT: true
 }
 
 function testDelete(s, o1, o2, o3) {
-  print("testDelete");
+    print("testDelete");
 //CHECK-LABEL: testDelete
-  print(s.delete(0));
+    print(s.delete(0));
 //CHECK-NEXT: true
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 6
-  print(s.delete(1));
+    print(s.delete(1));
 //CHECK-NEXT: false
-  print(s.delete("abc"));
+    print(s.delete("abc"));
 //CHECK-NEXT: true
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 5
-  print(s.delete("a"));
+    print(s.delete("a"));
 //CHECK-NEXT: false
-  print(s.delete("def"));
+    print(s.delete("def"));
 //CHECK-NEXT: true
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 4
-  print(s.delete());
+    print(s.delete());
 //CHECK-NEXT: true
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 3
-  print(s.delete(null));
+    print(s.delete(null));
 //CHECK-NEXT: false
-  print(s.delete(o1));
+    print(s.delete(o1));
 //CHECK-NEXT: true
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 2
-  var o4 = o2;
-  print(s.delete(o4));
+    var o4 = o2;
+    print(s.delete(o4));
 //CHECK-NEXT: true
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 1
-  print(s.delete(o3));
+    print(s.delete(o3));
 //CHECK-NEXT: true
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 0
-  print(s.delete({}));
+    print(s.delete({}));
 //CHECK-NEXT: false
 
-  print(s.has(0));
+    print(s.has(0));
 //CHECK-NEXT: false
-  print(s.has("abc"));
+    print(s.has("abc"));
 //CHECK-NEXT: false
-  print(s.has("def"));
+    print(s.has("def"));
 //CHECK-NEXT: false
-  print(s.has());
+    print(s.has());
 //CHECK-NEXT: false
-  print(s.has(o1));
+    print(s.has(o1));
 //CHECK-NEXT: false
-  print(s.has(o2));
+    print(s.has(o2));
 //CHECK-NEXT: false
-  print(s.has(o3));
+    print(s.has(o3));
 //CHECK-NEXT: false
 }
 
 function testClear(o1, o2, o3) {
-  var s = testAdd(o1, o2, o3);
+    var s = testAdd(o1, o2, o3);
 
-  print("testClear");
+    print("testClear");
 //CHECK-LABEL: testClear
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 7
-  s.clear();
-  print(s.size);
+    s.clear();
+    print(s.size);
 //CHECK-NEXT: 0
 }
 
 function testIteration() {
-  s = new Set();
-  s.add(1);
-  s.add({});
-  s.add(undefined);
-  s.add("abc");
+    s = new Set();
+    s.add(1);
+    s.add({});
+    s.add(undefined);
+    s.add("abc");
 
-  print("testIteration");
+    print("testIteration");
 //CHECK-LABEL: testIteration
-  var keys = s.keys();
-  print(keys.__proto__);
+    var keys = s.keys();
+    print(keys.__proto__);
 //CHECK-NEXT: [object Set Iterator]
-  print(keys[Symbol.iterator]());
+    print(keys[Symbol.iterator]());
 //CHECK-NEXT: [object Set Iterator]
-  print(Object.getOwnPropertyNames(keys.__proto__));
+    print(Object.getOwnPropertyNames(keys.__proto__));
 //CHECK-NEXT: next
-  while (true) {
-    var e = keys.next();
-    print(e.value);
-    if (e.done) break;
-  }
+    while (true) {
+        var e = keys.next();
+        print(e.value);
+        if (e.done) break;
+    }
 //CHECK-NEXT: 1
 //CHECK-NEXT: [object Object]
 //CHECK-NEXT: undefined
 //CHECK-NEXT: abc
 //CHECK-NEXT: undefined
 
-  var values = s.values();
-  while (true) {
-    var e = values.next();
-    print(e.value);
-    if (e.done) break;
-  }
+    var values = s.values();
+    while (true) {
+        var e = values.next();
+        print(e.value);
+        if (e.done) break;
+    }
 //CHECK-NEXT: 1
 //CHECK-NEXT: [object Object]
 //CHECK-NEXT: undefined
 //CHECK-NEXT: abc
 //CHECK-NEXT: undefined
 
-  var entries = s.entries();
-  while (true) {
-    var e = entries.next();
-    print(e.value);
-    if (e.done) break;
-  }
+    var entries = s.entries();
+    while (true) {
+        var e = entries.next();
+        print(e.value);
+        if (e.done) break;
+    }
 //CHECK-NEXT: 1,1
 //CHECK-NEXT: [object Object],[object Object]
 //CHECK-NEXT: ,
@@ -258,18 +258,18 @@ function testIteration() {
 }
 
 function testForEach() {
-  function callbackFn(key, value, s) {
-    print(key, value, s.size);
-  }
-  s = new Set();
-  s.add(1);
-  s.add({});
-  s.add(undefined);
-  s.add("abc");
+    function callbackFn(key, value, s) {
+        print(key, value, s.size);
+    }
+    s = new Set();
+    s.add(1);
+    s.add({});
+    s.add(undefined);
+    s.add("abc");
 
-  print("testForEach");
+    print("testForEach");
 //CHECK-LABEL: testForEach
-  s.forEach(callbackFn);
+    s.forEach(callbackFn);
 //CHECK-NEXT: 1 1 4
 //CHECK-NEXT: [object Object] [object Object] 4
 //CHECK-NEXT: undefined undefined 4
@@ -277,119 +277,119 @@ function testForEach() {
 }
 
 function testMutatedIteration() {
-  print("testMutatedIteration");
+    print("testMutatedIteration");
 //CHECK-LABEL: testMutatedIteration
-  var s = new Set();
-  s.add(0);
-  var keys = s.keys();
-  for (var i = 0; i < 5; ++i) {
-    print(keys.next().value);
-    s.delete(0);
+    var s = new Set();
     s.add(0);
-  }
+    var keys = s.keys();
+    for (var i = 0; i < 5; ++i) {
+        print(keys.next().value);
+        s.delete(0);
+        s.add(0);
+    }
 //CHECK-NEXT: 0
 //CHECK-NEXT: 0
 //CHECK-NEXT: 0
 //CHECK-NEXT: 0
 //CHECK-NEXT: 0
-  s = new Set();
-  for (var i = 1; i < 10; ++i) s.add(i);
+    s = new Set();
+    for (var i = 1; i < 10; ++i) s.add(i);
   s.forEach(function(k, e, ss) { print(k); ss.clear(); });
-  print(s.size);
+    print(s.size);
 //CHECK-NEXT: 1
 //CHECK-NEXT: 0
 }
 
 function testRehash() {
-  print("testRehash");
+    print("testRehash");
 //CHECK-LABEL: testRehash
 
-  // Simple expand
-  var s = new Set();
-  for (var i = 0; i < 100; ++i) s.add(i);
-  for (var i = 0; i < 100; ++i) {
-    if (!s.has(i)) throw new Error();
-  }
-  print(s.size);
+    // Simple expand
+    var s = new Set();
+    for (var i = 0; i < 100; ++i) s.add(i);
+    for (var i = 0; i < 100; ++i) {
+        if (!s.has(i)) throw new Error();
+    }
+    print(s.size);
 //CHECK-NEXT: 100
 
-  // Simple shrink
-  for (var i = 0; i < 100; ++i) s.delete(i);
-  print(s.size);
+    // Simple shrink
+    for (var i = 0; i < 100; ++i) s.delete(i);
+    print(s.size);
 //CHECK-NEXT: 0
 
-  // Iterating and adding
-  var keys = s.keys();
-  for (var i = 0; i < 100; ++i) {
-    s.add(i);
-  }
-  for (var i = 0; i < 100; ++i) {
-    if (keys.next().value != i) throw new Error();
-  }
+    // Iterating and adding
+    var keys = s.keys();
+    for (var i = 0; i < 100; ++i) {
+        s.add(i);
+    }
+    for (var i = 0; i < 100; ++i) {
+        if (keys.next().value != i) throw new Error();
+    }
 
-  // Iterating and deleting
-  keys = s.keys();
-  for (var i = 0; i < 50; ++i) s.delete(i);
-  print(keys.next().value);
+    // Iterating and deleting
+    keys = s.keys();
+    for (var i = 0; i < 50; ++i) s.delete(i);
+    print(keys.next().value);
 //CHECK-NEXT: 50
-  s.clear();
-  s.add(0);
-  print(keys.next().value);
+    s.clear();
+    s.add(0);
+    print(keys.next().value);
 //CHECK-NEXT: 0
 
-  s = new Set();
-  s.add(0);
-  keys = s.keys();
-  keys.next(); // keys now pointing to 0.
-  s.clear();
-  s.add(1);
-  print(keys.next().value);
+    s = new Set();
+    s.add(0);
+    keys = s.keys();
+    keys.next(); // keys now pointing to 0.
+    s.clear();
+    s.add(1);
+    print(keys.next().value);
 //CHECK-NEXT: 1
-  s.delete(1);
-  s.add(2);
-  print(keys.next().value);
+    s.delete(1);
+    s.add(2);
+    print(keys.next().value);
 //CHECK-NEXT: 2
 }
 
 function testZero() {
-  print("testZero");
+    print("testZero");
 //CHECK-LABEL: testZero
 
-  var s = new Set();
-  s.add(-0);
-  print(s.has(-0));
-  print(s.has(+0));
-  print(Object.is(-0, [...s][0]));
-  print(Object.is(+0, [...s][0]));
+    var s = new Set();
+    s.add(-0);
+    print(s.has(-0));
+    print(s.has(+0));
+    print(Object.is(-0, [...s][0]));
+    print(Object.is(+0, [...s][0]));
 //CHECK-NEXT: true
 //CHECK-NEXT: true
 //CHECK-NEXT: false
 //CHECK-NEXT: true
 
-  var s = new Set();
-  s.add(+0);
-  print(s.has(-0));
-  print(s.has(+0));
-  print(Object.is(-0, [...s][0]));
-  print(Object.is(+0, [...s][0]));
+    var s = new Set();
+    s.add(+0);
+    print(s.has(-0));
+    print(s.has(+0));
+    print(Object.is(-0, [...s][0]));
+    print(Object.is(+0, [...s][0]));
 //CHECK-NEXT: true
 //CHECK-NEXT: true
 //CHECK-NEXT: false
 //CHECK-NEXT: true
 
-  // -0 at both key and value should be normalized to +0.
-  var s = new Set();
-  s.add(-0);
-  var [k, v] = s.entries().next().value;
-  print(Object.is(-0, k));
-  print(Object.is(-0, v));
+    // -0 at both key and value should be normalized to +0.
+    var s = new Set();
+    s.add(-0);
+    var [k, v] = s.entries().next().value;
+    print(Object.is(-0, k));
+    print(Object.is(-0, v));
 //CHECK-NEXT: false
 //CHECK-NEXT: false
 
-  // delete -0 should work
-  print(s.delete(-0));
+    // delete -0 should work
+    print(s.delete(-0));
 //CHECK-NEXT: true
-  print(s.size === 0);
+    print(s.size === 0);
 //CHECK-NEXT: true
 }
 
@@ -436,14 +436,14 @@ try { new Set([1,2,3]) } catch (e) { print('caught', e.name) }
 // CHECK-NEXT: caught TypeError
 var arr = [[1,2], [3,4]];
 Set.prototype.add = function(v) {
-  oldAdd.call(this, v);
-  arr.length = 1;
+    oldAdd.call(this, v);
+    arr.length = 1;
 }
 print(new Set(arr).size);
 // CHECK-NEXT: 1
 Set.prototype.add = function(v) {
-  oldAdd.call(this, v);
-  Set.prototype.add = 10;
+    oldAdd.call(this, v);
+    Set.prototype.add = 10;
 }
 var s = new Set([1,2,3]);
 print(s.size, s.has(1));

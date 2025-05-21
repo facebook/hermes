@@ -74,7 +74,6 @@
       "paths": [
         "test262/test/language/statements/debugger/statement.js",
         "mjsunit/es6/math-log1p.js"
-
       ],
       "comment": "These tests fail with shermes for now."
     },
@@ -917,7 +916,6 @@
     },
     {
       "paths": [
-        "test262/test/built-ins/Set/prototype/difference/",
         "test262/test/built-ins/Set/prototype/intersection/",
         "test262/test/built-ins/Set/prototype/isDisjointFrom/",
         "test262/test/built-ins/Set/prototype/isSubsetOf/",

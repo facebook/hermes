@@ -1611,6 +1611,34 @@ CallResult<Handle<JSObject>> iteratorStep(
   return result;
 }
 
+CallResult<bool> iteratorStepValue(
+    Runtime &runtime,
+    const CheckedIteratorRecord &iteratorRecord,
+    PinnedValue<> *value) {
+  // 1. Let result be ?IteratorStep(iteratorRecord)
+  auto stepRes = iteratorStep(runtime, iteratorRecord);
+  if (LLVM_UNLIKELY(stepRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. If result is DONE, then return DONE
+  // In our implementation, return false when we hit the end of the iterator
+  if (!*stepRes) {
+    return false;
+  }
+
+  // 3. Let value be Completion(IteratorValue(result))
+  // 4. If value is a throw completion, then
+  //   a. Set iteratorRecord.[[Done]] to true
+  auto valueRes = iteratorValue(runtime, *stepRes);
+  if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 5. Return ?value
+  *value = std::move(*valueRes);
+  return true;
+}
+
 ExecutionStatus iteratorClose(
     Runtime &runtime,
     Handle<JSObject> iterator,
@@ -2497,6 +2525,89 @@ ExecutionStatus setTemplateObjectProps(
         "Failed to set 'length' property on the raw object read-only.");
   }
   JSObject::preventExtensions(templateObj.get());
+
+  return ExecutionStatus::RETURNED;
+}
+
+ExecutionStatus getSetRecord(
+    Runtime &runtime,
+    Handle<> obj,
+    double *size,
+    PinnedValue<Callable> *hasMethod,
+    PinnedValue<Callable> *keysMethod) {
+  // 1. If obj is not an Object, throw a TypeError exception
+  if (LLVM_UNLIKELY(!vmisa<JSObject>(*obj))) {
+    return runtime.raiseTypeError("getSetRecord argument is not an Object");
+  }
+  struct : public Locals {
+    PinnedValue<> tmp;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // 2. Let rawSize be ?Get(obj, "size")
+  auto rawSizeRes = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(obj),
+      runtime,
+      Predefined::getSymbolID(Predefined::size));
+  if (LLVM_UNLIKELY(rawSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*rawSizeRes);
+
+  // 3. Let numSize be ?ToNumber(rawSize)
+  // 4. NOTE: If rawSize is undefined, then numSize will be NaN.
+  auto numSizeRes = toNumber_RJS(runtime, lv.tmp);
+  if (LLVM_UNLIKELY(numSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*numSizeRes);
+  // 5. If numSize is NaN, throw a TypeError exception
+  if (lv.tmp->isNaN()) {
+    return runtime.raiseTypeError("Size of the object cannot be NaN");
+  }
+  // 6. Let intSize be !ToIntegerOrInfinity(numSize)
+  auto intSizeRes = toIntegerOrInfinity(runtime, lv.tmp);
+  if (LLVM_UNLIKELY(intSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  lv.tmp = std::move(*intSizeRes);
+  // 7. If intSize < 0, throw a RangeError
+  if (lv.tmp->getNumber() < 0) {
+    return runtime.raiseRangeError("Size of the object cannot be negative");
+  }
+  *size = lv.tmp->getNumber();
+
+  // 8. Let has be ?Get(obj, "has")
+  auto hasRes = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(obj),
+      runtime,
+      Predefined::getSymbolID(Predefined::has));
+  if (hasRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*hasRes);
+  // 9. If IsCallable(has) is false, throw a TypeError exception
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*lv.tmp))) {
+    return runtime.raiseTypeError(
+        "has property of the object must be callable");
+  }
+  *hasMethod = vmcast<Callable>(*lv.tmp);
+
+  // 10. Let has be ?Get(obj, "keys")
+  auto keysRes = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(obj),
+      runtime,
+      Predefined::getSymbolID(Predefined::keys));
+  if (keysRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*keysRes);
+  // 11. If IsCallable(keys) is false, throw a TypeError exception
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*lv.tmp))) {
+    return runtime.raiseTypeError(
+        "keys property of the object must be callable");
+  }
+  *keysMethod = vmcast<Callable>(*lv.tmp);
 
   return ExecutionStatus::RETURNED;
 }

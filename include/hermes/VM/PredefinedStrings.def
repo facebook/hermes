@@ -241,6 +241,7 @@ STR(values, "values")
 STR(next, "next")
 STR(done, "done")
 STR(returnStr, "return")
+STR(difference, "difference")
 
 STR(Number, "Number")
 STR(MAX_VALUE, "MAX_VALUE")
