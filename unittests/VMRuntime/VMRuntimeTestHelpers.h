@@ -267,7 +267,7 @@ inline const GCConfig TestGCConfigFixedSize(
 /// Get the global object.
 #define GET_GLOBAL(predefinedId) GET_VALUE(runtime.getGlobal(), predefinedId)
 
-inline HermesValue operator"" _hd(long double d) {
+inline HermesValue operator""_hd(long double d) {
   return HermesValue::encodeTrustedNumberValue(d);
 }
 

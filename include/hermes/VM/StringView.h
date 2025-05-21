@@ -219,7 +219,7 @@ class StringView {
 // probably not worth it.
 #ifndef NDEBUG
   StringView(const StringView &other) {
-    ::memcpy(this, &other, sizeof(*this));
+    ::memcpy((void *)this, &other, sizeof(*this));
     if (isHandle_)
       new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
   }
@@ -228,7 +228,7 @@ class StringView {
     if (this != &other) {
       if (isHandle_)
         strPrim().~Handle<StringPrimitive>();
-      ::memcpy(this, &other, sizeof(*this));
+      ::memcpy((void *)this, &other, sizeof(*this));
       if (isHandle_)
         new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
     }

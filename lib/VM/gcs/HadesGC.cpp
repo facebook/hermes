@@ -501,7 +501,7 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
         AlignedHeapSegment::getCellMarkBit(newCell) &&
         "Cell must be marked when it is allocated into the old gen");
     // Copy the contents of the existing cell over before modifying it.
-    std::memcpy(newCell, cell, cellSize);
+    std::memcpy((void *)newCell, cell, cellSize);
     assert(newCell->isValid() && "Cell was copied incorrectly");
     evacuatedBytes_ += cellSize;
     CopyListCell *const copyCell = static_cast<CopyListCell *>(cell);

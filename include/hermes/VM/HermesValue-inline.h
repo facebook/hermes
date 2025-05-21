@@ -314,7 +314,8 @@ inline void GCHermesValueUtil::copyToPinned(
           sizeof(GCHermesValue) == sizeof(HermesValue) &&
           sizeof(HermesValue) == 8,
       "memcpy between different layouts");
-  std::memcpy(result, first, (last - first) * sizeof(PinnedHermesValue));
+  std::memcpy(
+      (void *)result, first, (last - first) * sizeof(PinnedHermesValue));
 }
 
 } // namespace vm
