@@ -29,6 +29,22 @@ union.forEach(value => {
 // CHECK-NEXT: 5 false false
 // CHECK-NEXT: 4 false false
 
+s1 = new Set([0, 1, 2])
+s2.keys = function () {
+    print("called keys");
+    return [4, 3, 2].values();
+}
+union = s1.union(s2);
+// CHECK-NEXT: called keys
+union.forEach(value => {
+    print(value);
+});
+// CHECK-NEXT: 0
+// CHECK-NEXT: 1
+// CHECK-NEXT: 2
+// CHECK-NEXT: 4
+// CHECK-NEXT: 3
+
 s1 = new Set([1, 3]);
 // set-like object that encapulates the value [0, 2] with size 2
 var setLikeObj = {
