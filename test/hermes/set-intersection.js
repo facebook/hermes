@@ -30,6 +30,52 @@ print(intersect.size);
 // CHECK-NEXT: 0
 
 s1 = new Set([1, 2]);
+s2 = new Set([2, 1]);
+intersect = s1.intersection(s2);
+// s1.size <= s2.size, so the result order is derived from iterating through s1
+intersect.forEach(value => {
+    print(value);
+});
+// CHECK-NEXT: 1
+// CHECK-NEXT: 2
+
+s1 = new Set([1, 2, 3, 4]);
+s2 = new Set([5, 3, 1]);
+intersect = s1.intersection(s2);
+// s1.size > s2.size, so the result order is derived from iterating through s2
+intersect.forEach(value => {
+    print(value);
+});
+// CHECK-NEXT: 3
+// CHECK-NEXT: 1
+
+s2.keys = function () {
+    print("called keys");
+    return [2, 4].values();
+};
+intersect = s1.intersection(s2);
+// CHECK-NEXT: called keys
+// s2.keys was overwritten to iterate through [2, 4]
+// instead of its actual elements [5, 3, 1]
+intersect.forEach(value => {
+    print(value);
+});
+// CHECK-NEXT: 2
+// CHECK-NEXT: 4
+
+s1 = new Set([1, 2]);
+s2 = new Set([1, 2]);
+s2.has = function (val) {
+    print("called has with val: ", val);
+    return false;
+}
+intersect = s1.intersection(s2);
+// CHECK-NEXT: called has with val: 1
+// CHECK-NEXT: called has with val: 2
+// s2.has will always return false, so resulting set must be empty
+print(intersect.size);
+// CHECK-NEXT: 0
+
 // set-like object that encapulates the value [0, 2] with size 2
 var setLikeObj = {
     size: 2,

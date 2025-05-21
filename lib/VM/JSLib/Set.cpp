@@ -700,6 +700,49 @@ setPrototypeIntersection(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   auto thisSize = selfHandle->size();
+
+  // When the other object is Set, it is possible to have a fast-path where the
+  // elements of the Set will not be modified, and we can directly iterate over
+  // the set to derive the resulting Set.
+  // Note the order of the resulting Set is consistent with the smaller set.
+  if (auto otherSet = Handle<JSSet>::dyn_vmcast(other); LLVM_LIKELY(otherSet)) {
+    const auto &setToIterate = thisSize <= otherSize ? selfHandle : otherSet;
+    const auto &setToCheck = thisSize <= otherSize ? otherSet : selfHandle;
+    bool fastPath = false;
+    // Fast-path 1: If the size of `this` Set <= the size of other AND
+    // other.has is unmodified.
+    if (thisSize <= otherSize) {
+      fastPath = lv.otherHasMethod.getHermesValue().getRaw() ==
+          runtime.setPrototypeHas.getHermesValue().getRaw();
+    } else {
+      // Fast-path 2: The size of `this` Set > the size of other AND other.keys
+      // is unmodified
+      fastPath = lv.otherKeysMethod.getHermesValue().getRaw() ==
+          runtime.setPrototypeValues.getHermesValue().getRaw();
+    }
+
+    if (LLVM_LIKELY(fastPath)) {
+      auto forEachRes = JSSet::forEachNative(
+          setToIterate,
+          runtime,
+          [&lv, &setToCheck](Runtime &runtime, Handle<HashSetEntry> entry) {
+            lv.tmp = entry->key.unboxToHV(runtime);
+            if (setToCheck->has(runtime, *lv.tmp)) {
+              if (LLVM_UNLIKELY(
+                      JSSet::insert(lv.resultSet, runtime, lv.tmp) ==
+                      ExecutionStatus::EXCEPTION)) {
+                return ExecutionStatus::EXCEPTION;
+              }
+            }
+            return ExecutionStatus::RETURNED;
+          });
+      if (LLVM_UNLIKELY(forEachRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return lv.resultSet.getHermesValue();
+    }
+  }
+
   if (thisSize <= otherSize) {
     // 5. If SetDataSize(O.[[SetData]]) <= otherRec.[[Size]]
     // a. Let thisSize be the number of elements in O.[[SetData]]
