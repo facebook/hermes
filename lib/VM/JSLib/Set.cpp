@@ -61,7 +61,7 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       setPrototypeForEach,
       1);
 
-  defineMethod(
+  runtime.setPrototypeHas = defineMethod(
       runtime,
       setPrototype,
       Predefined::getSymbolID(Predefined::has),
@@ -551,13 +551,52 @@ setPrototypeDifference(void *, Runtime &runtime, NativeArgs args) {
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  uint32_t thisSize = selfHandle->size();
+  // Possible fast-path scenarios when the other object is a Set:
+  // 1. The size of `this` Set <= the size of other AND other.has is unmodified
+  // 2. Else, the size of `this` Set > the size of other AND other.keys is
+  // unmodified.
+  // In these cases, the elements of the Set will not be modified,
+  // and we can directly iterate over the Set to derive the resulting Set.
+  if (auto otherSet = Handle<JSSet>::dyn_vmcast(other); LLVM_LIKELY(otherSet)) {
+    bool fastPath = false;
+    if (thisSize <= otherSize) {
+      fastPath = lv.otherHasMethod.getHermesValue().getRaw() ==
+          runtime.setPrototypeHas.getHermesValue().getRaw();
+    } else {
+      fastPath = lv.otherKeysMethod.getHermesValue().getRaw() ==
+          runtime.setPrototypeValues.getHermesValue().getRaw();
+    }
+    if (LLVM_LIKELY(fastPath)) {
+      auto forEachRes = JSSet::forEachNative(
+          selfHandle,
+          runtime,
+          [&lv, &otherSet](Runtime &runtime, Handle<HashSetEntry> entry) {
+            lv.tmp = entry->key.unboxToHV(runtime);
+            if (!otherSet->has(runtime, *lv.tmp)) {
+              if (LLVM_UNLIKELY(
+                      JSSet::insert(lv.resultSet, runtime, lv.tmp) ==
+                      ExecutionStatus::EXCEPTION)) {
+                return ExecutionStatus::EXCEPTION;
+              }
+            }
+            return ExecutionStatus::RETURNED;
+          });
+      if (LLVM_UNLIKELY(forEachRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return lv.resultSet.getHermesValue();
+    }
+  }
+
+  // Slow path
   if (LLVM_UNLIKELY(
           setFromSetFastPath(runtime, lv.resultSet, selfHandle) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   };
 
-  uint32_t thisSize = selfHandle->size();
   if (thisSize <= otherSize) {
     // 5. If SetDataSize(O.[[SetData]]) <= otherRec.[[Size]])
     // a. Let thisSize be the number of elements in O.[[SetData]]

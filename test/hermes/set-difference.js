@@ -25,9 +25,50 @@ diff.forEach(value => {
 // CHECK-NEXT: [object Object] true
 
 s1 = new Set([6, 5, 4]);
-diff = s1.difference(s2)
+diff = s1.difference(s2);
 print(diff.size);
 // CHECK-NEXT: 0
+
+s2 = new Set([2, 4]);
+diff = s1.difference(s2);
+diff.forEach(value => {
+    print(value);
+});
+// CHECK-NEXT: 6
+// CHECK-NEXT: 5
+
+s1 = new Set([1, 2]);
+s2 = new Set([1, 2]);
+
+diff = s1.difference(s2);
+print(diff.size);
+// CHECK-NEXT: 0
+
+s2.has = function() {
+    return false;
+}
+diff = s1.difference(s2);
+// s2.has was overwritten to always return false, so the expected results
+// should be everything in s1
+diff.forEach(value => {
+    print(value)
+})
+// CHECK-NEXT: 1
+// CHECK-NEXT: 2
+
+s1 = new Set([1, 2, 3]);
+s2 = new Set([1, 2]);
+s2.keys = function() {
+    return [3, 4].values();
+}
+diff = s1.difference(s2);
+// s2.keys has been overwritten to iterate through [3, 4], so the expected results
+// should contain [1, 2]
+diff.forEach(value => {
+    print(value);
+})
+// CHECK-NEXT: 1
+// CHECK-NEXT: 2
 
 s1 = new Set([1, 2]);
 // set-like object that encapulates the value [0, 2] with size 2
