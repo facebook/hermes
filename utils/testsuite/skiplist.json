@@ -913,12 +913,6 @@
         "test/annexB/built-ins/RegExp/legacy-accessors/rightContext/this-subclass-constructor.js"
       ],
       "comment": "Noncompliant GetLegacyRegExpStaticProperty (T209498741)"
-    },
-    {
-      "paths": [
-        "test262/test/built-ins/Set/prototype/union/"
-      ],
-      "comment": "Set composition methods. These will be removed from the skiplist as they are added. T222048563"
     }
   ],
   "skip_list": [
