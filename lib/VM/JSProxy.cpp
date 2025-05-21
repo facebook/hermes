@@ -1425,7 +1425,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
                       valHandle,
                       " ownKeys trap result element is not String or Symbol");
                 }
-                if (JSMap::has(lv.map, runtime, valHandle)) {
+                if (lv.map->has(runtime, *valHandle)) {
                   return runtime.raiseTypeErrorForValue(
                       "ownKeys trap result has duplicate ", valHandle, "");
                 }

@@ -318,22 +318,20 @@ mapPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 mapPrototypeGet(void *, Runtime &runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>();
-  if (LLVM_UNLIKELY(!selfHandle)) {
+  auto *self = dyn_vmcast<JSMap>(args.getThisArg());
+  if (LLVM_UNLIKELY(!self)) {
     return runtime.raiseTypeError("Non-Map object called on Map.prototype.get");
   }
-  return JSMap::get(selfHandle, runtime, args.getArgHandle(0))
-      .unboxToHV(runtime);
+  return self->get(runtime, args.getArg(0)).unboxToHV(runtime);
 }
 
 CallResult<HermesValue>
 mapPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSMap>();
-  if (LLVM_UNLIKELY(!selfHandle)) {
+  auto *self = dyn_vmcast<JSMap>(args.getThisArg());
+  if (LLVM_UNLIKELY(!self)) {
     return runtime.raiseTypeError("Non-Map object called on Map.prototype.has");
   }
-  return HermesValue::encodeBoolValue(
-      JSMap::has(selfHandle, runtime, args.getArgHandle(0)));
+  return HermesValue::encodeBoolValue(self->has(runtime, args.getArg(0)));
 }
 
 CallResult<HermesValue>

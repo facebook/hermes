@@ -392,12 +392,11 @@ setPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue>
 setPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
-  auto selfHandle = args.dyncastThis<JSSet>();
-  if (LLVM_UNLIKELY(!selfHandle)) {
+  auto *self = dyn_vmcast<JSSet>(args.getThisArg());
+  if (LLVM_UNLIKELY(!self)) {
     return runtime.raiseTypeError("Non-Set object called on Set.prototype.has");
   }
-  return HermesValue::encodeBoolValue(
-      JSSet::has(selfHandle, runtime, args.getArgHandle(0)));
+  return HermesValue::encodeBoolValue(self->has(runtime, args.getArg(0)));
 }
 
 CallResult<HermesValue>

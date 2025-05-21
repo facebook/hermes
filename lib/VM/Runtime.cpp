@@ -1949,37 +1949,40 @@ void Runtime::clearKeptObjects() {
   keptObjects_ = nullptr;
 }
 
-uint64_t Runtime::gcStableHashHermesValue(Handle<HermesValue> value) {
-  switch (value->getTag()) {
+uint64_t Runtime::gcStableHashHermesValue(HermesValue value) {
+  switch (value.getTag()) {
     case HermesValue::Tag::Object: {
-      // For objects, because pointers can move, we need a unique ID
-      // that does not change for each object.
-      return JSObject::getObjectID(vmcast<JSObject>(*value), *this);
+      return gcStableHashJSObject(vmcast<JSObject>(value));
     }
     case HermesValue::Tag::BigInt: {
       // For bigints, we hash the string content.
-      auto bytes = Handle<BigIntPrimitive>::vmcast(value)->getRawDataCompact();
+      auto bytes = vmcast<BigIntPrimitive>(value)->getRawDataCompact();
       return llvh::hash_combine_range(bytes.begin(), bytes.end());
     }
     case HermesValue::Tag::Str: {
       // For strings, we hash the string content.
-      auto strHandle = Handle<StringPrimitive>::vmcast(value);
-      return strHandle->getOrComputeHash();
+      return vmcast<StringPrimitive>(value)->getOrComputeHash();
     }
     default:
-      assert(!value->isPointer() && "Unhandled pointer type");
-      if (value->isNumber()) {
+      assert(!value.isPointer() && "Unhandled pointer type");
+      if (value.isNumber()) {
         // We need to check for NaNs because they may differ in the sign bit,
         // but they should have the same hash value.
-        if (LLVM_UNLIKELY(value->isNaN()))
+        if (LLVM_UNLIKELY(value.isNaN()))
           return llvh::hash_value(HermesValue::encodeNaNValue().getRaw());
         // To normalize -0 to 0.
-        if (value->getNumber() == 0)
+        if (value.getNumber() == 0)
           return 0;
       }
       // For everything else, we just take advantage of HermesValue.
-      return llvh::hash_value(value->getRaw());
+      return llvh::hash_value(value.getRaw());
   }
+}
+
+uint64_t Runtime::gcStableHashJSObject(JSObject *object) {
+  // For objects, because pointers can move, we need a unique ID
+  // that does not change for each object.
+  return JSObject::getObjectID(vmcast<JSObject>(object), *this);
 }
 
 bool Runtime::symbolEqualsToStringPrim(SymbolID id, StringPrimitive *strPrim) {

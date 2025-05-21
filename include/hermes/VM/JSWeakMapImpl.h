@@ -45,7 +45,7 @@ class WeakRefKey {
       JSWeakMapImplBase *ownerMapPtr)
       : slot_(
             runtime.getHeap().allocWeakMapEntrySlot(*key, value, ownerMapPtr)),
-        hash_(runtime.gcStableHashHermesValue(key)) {}
+        hash_(runtime.gcStableHashJSObject(*key)) {}
 
   /// \return a pointer to the key object with read barrier. This should not be
   /// called when the weak ref key object is collected.
@@ -139,7 +139,7 @@ struct WeakRefLookupKey {
 
   WeakRefLookupKey(Runtime &runtime, Handle<JSObject> keyObj)
       : refCellPtr(CompressedPointer::encode(*keyObj, runtime)),
-        hash(runtime.gcStableHashHermesValue(keyObj)) {}
+        hash(runtime.gcStableHashJSObject(*keyObj)) {}
 };
 
 /// Enable using WeakRefKey in DenseMap.

@@ -101,7 +101,7 @@ std::pair<BucketType *, uint32_t>
 OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     Runtime &runtime,
     uint32_t bucket,
-    HermesValue key) {
+    HermesValue key) const {
   assert(
       hashTable_.getNonNull(runtime)->size() == capacity_ &&
       "Inconsistent capacity");
@@ -175,7 +175,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   while (entry) {
     if (!entry->isDeleted()) {
       keyHandle = entry->key.unboxToHV(runtime);
-      uint32_t bucket = hashToBucket(rawSelf->capacity_, runtime, keyHandle);
+      uint32_t bucket = hashToBucket(rawSelf->capacity_, runtime, *keyHandle);
       [[maybe_unused]] const uint32_t firstBucket = bucket;
       while (!newHashTable->at(bucket).isEmpty()) {
         // Find another bucket if it is not empty.
@@ -201,23 +201,22 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
 
 template <typename BucketType, typename Derived>
 bool OrderedHashMapBase<BucketType, Derived>::has(
-    Handle<Derived> self,
     Runtime &runtime,
-    Handle<> key) {
-  self->assertInitialized();
-  auto bucket = hashToBucket(self->capacity_, runtime, key);
-  return self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
+    HermesValue key) const {
+  NoAllocScope noAlloc{runtime};
+  assertInitialized();
+  auto bucket = hashToBucket(capacity_, runtime, key);
+  return lookupInBucket(runtime, bucket, key).first;
 }
 
 template <typename BucketType, typename Derived>
 SmallHermesValue OrderedHashMapBase<BucketType, Derived>::get(
-    Handle<Derived> self,
     Runtime &runtime,
-    Handle<> key) {
-  self->assertInitialized();
-  auto bucket = hashToBucket(self->capacity_, runtime, key);
-  auto *entry =
-      self->lookupInBucket(runtime, bucket, key.getHermesValue()).first;
+    HermesValue key) const {
+  NoAllocScope noAlloc{runtime};
+  assertInitialized();
+  auto bucket = hashToBucket(capacity_, runtime, key);
+  auto *entry = lookupInBucket(runtime, bucket, key).first;
   if (!entry) {
     return SmallHermesValue::encodeUndefinedValue();
   }
@@ -232,7 +231,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
     Handle<> key,
     Handle<> value) {
   self->assertInitialized();
-  uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
 
   // Find the bucket for this key. It the entry already exists, update the value
   // and return.
@@ -261,7 +260,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
     Runtime &runtime,
     Handle<> key) {
   self->assertInitialized();
-  uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
 
   // Find the bucket for this key. It the entry already exists, then return.
   {
@@ -292,7 +291,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
     }
 
     // Find a new empty bucket after rehash.
-    bucket = hashToBucket(self->capacity_, runtime, key);
+    bucket = hashToBucket(self->capacity_, runtime, *key);
     BucketType *entry = nullptr;
     std::tie(entry, bucket) =
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
@@ -365,7 +364,7 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
     Runtime &runtime,
     Handle<> key) {
   self->assertInitialized();
-  uint32_t bucket = hashToBucket(self->capacity_, runtime, key);
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
   BucketType *entry = nullptr;
   std::tie(entry, bucket) =
       self->lookupInBucket(runtime, bucket, key.getHermesValue());

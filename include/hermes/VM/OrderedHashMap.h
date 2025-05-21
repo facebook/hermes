@@ -146,13 +146,16 @@ class OrderedHashMapBase {
 
   static void buildMetadata(const GCCell *cell, Metadata::Builder &mb);
 
+  /// This method takes in a runtime to compute the hash for key, but does not
+  /// allocate. Thus, it is safe to take in HermesValue here.
   /// \return true if the map contains a given HermesValue.
-  static bool has(Handle<Derived> self, Runtime &runtime, Handle<> key);
+  bool has(Runtime &runtime, HermesValue key) const;
 
+  /// This method takes in a runtime to compute the hash for key, but does not
+  /// allocate. Thus, it is safe to take in HermesValue here.
   /// Lookup \p key in the table and \return the value if exists.
   /// Otherwise \return undefined.
-  static SmallHermesValue
-  get(Handle<Derived> self, Runtime &runtime, Handle<> key);
+  SmallHermesValue get(Runtime &runtime, HermesValue key) const;
 
   /// Insert a key/value pair, if not already existing. Function enabled only if
   /// this is a Map.
@@ -241,7 +244,7 @@ class OrderedHashMapBase {
 
   /// Hash a HermesValue to an index to our hash table.
   static uint32_t
-  hashToBucket(uint32_t capacity, Runtime &runtime, Handle<> key) {
+  hashToBucket(uint32_t capacity, Runtime &runtime, HermesValue key) {
     auto hash = runtime.gcStableHashHermesValue(key);
     assert((capacity & (capacity - 1)) == 0 && "capacity_ must be power of 2");
     return hash & (capacity - 1);
@@ -255,7 +258,7 @@ class OrderedHashMapBase {
   /// nullptr if the key doesn't exist. In that case, the index is the index of
   /// the available bucket for the give key.
   std::pair<BucketType *, uint32_t>
-  lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key);
+  lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key) const;
 
   /// Adjust the capacity of the hashtable and rehash.
   /// The new capacity will be calculated by nextCapacity().

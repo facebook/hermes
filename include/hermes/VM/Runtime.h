@@ -488,7 +488,11 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Compute a hash value of a given HermesValue that is guaranteed to
   /// be stable with a moving GC. It however does not guarantee to be
   /// a perfect hash for strings.
-  uint64_t gcStableHashHermesValue(Handle<HermesValue> value);
+  uint64_t gcStableHashHermesValue(HermesValue value);
+
+  /// Compute a hash value of a given JSObject that is guaranteed to
+  /// be stable with a moving GC.
+  uint64_t gcStableHashJSObject(JSObject *object);
 
   /// @name Public VM State
   /// @{
