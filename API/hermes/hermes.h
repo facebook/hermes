@@ -179,6 +179,9 @@ class HERMES_EXPORT IHermes : public jsi::ICast {
   /// be used by third parties.
   virtual sampling_profiler::Profile dumpSampledTraceToProfile() = 0;
 
+  /// Reset timezone cache
+  virtual void resetTimezoneCache() = 0;
+
   /// Load a new segment into the Runtime.
   /// The \param context must be a valid RequireContext retrieved from JS
   /// using `require.context`.
