@@ -613,7 +613,7 @@ extern "C" SHLegacyValue _sh_ljs_create_environment(
   GCScopeMarkerRAII marker{runtime};
   return Environment::create(runtime, parentHandle, size);
   // #ifdef HERMES_ENABLE_DEBUGGER
-  //   framePtr.getDebugEnvironmentRef() = *res;
+  //   framePtr.getEnvironmentRef() = *res;
   // #endif
 }
 

@@ -39,18 +39,18 @@ StackFramePtrT<isConst>::getCalleeCodeBlock() const {
 }
 
 template <bool isConst>
-inline Handle<Environment> StackFramePtrT<isConst>::getDebugEnvironmentHandle()
+inline Handle<Environment> StackFramePtrT<isConst>::getEnvironmentHandle()
     const {
-  return getDebugEnvironmentRef().isUndefined()
+  return getEnvironmentRef().isUndefined()
       ? HandleRootOwner::makeNullHandle<Environment>()
-      : Handle<Environment>::vmcast_or_null(&getDebugEnvironmentRef());
+      : Handle<Environment>::vmcast_or_null(&getEnvironmentRef());
 }
 
 template <bool isConst>
-inline Environment *StackFramePtrT<isConst>::getDebugEnvironment() const {
-  return getDebugEnvironmentRef().isUndefined()
+inline Environment *StackFramePtrT<isConst>::getEnvironment() const {
+  return getEnvironmentRef().isUndefined()
       ? nullptr
-      : vmcast_or_null<Environment>(getDebugEnvironmentRef());
+      : vmcast_or_null<Environment>(getEnvironmentRef());
 }
 
 } // namespace vm
