@@ -92,9 +92,9 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newSelfHandle = runtime.makeHandle<ArrayStorageBase<HVType>>(*arrRes);
 
-  auto *newSelf = newSelfHandle.get();
+  NoAllocScope noAllocs{runtime};
+  auto *newSelf = vmcast<ArrayStorageBase>(*arrRes);
 
   // Copy the existing data.
   auto *self = selfHandle.get();
@@ -128,7 +128,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
   newSelf->size_.store(toLast, std::memory_order_release);
 
   // Update the handle.
-  selfHandle = newSelfHandle.get();
+  selfHandle = newSelf;
 
   return ExecutionStatus::RETURNED;
 }
