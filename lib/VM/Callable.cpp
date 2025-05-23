@@ -792,13 +792,19 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
   // Keep track of the total arg count.
   auto totalArgCount = originalArgCount;
 
+#ifndef NDEBUG
   auto callerFrame = runtime.getCurrentFrame();
+#endif
+  struct : Locals {
+    PinnedValue<> savedThisArg;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   // We must preserve the "thisArg" passed to us by the caller because it is in
   // a register that is not supposed to be modified by a call. Copy it to the
   // scratch register in the caller's frame.
   // Note that since there is only one scratch reg, we must process all chained
   // bound calls in one go (which is more efficient anyway).
-  callerFrame.getScratchRef() = originalCalleeFrame.getThisArgRef();
+  lv.savedThisArg = originalCalleeFrame.getThisArgRef();
 
   // Pop the stack down to the first argument, erasing the call frame - we don't
   // need the call frame since we will build a new one.
@@ -875,7 +881,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
     newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
-        ? static_cast<HermesValue>(callerFrame.getScratchRef())
+        ? *lv.savedThisArg
         : self->getArgsWithThis(runtime)[0];
 
     res =
@@ -904,8 +910,7 @@ bail:
       HermesValue::encodeEmptyValue());
 
   // Restore "thisArg" and clear the scratch register to avoid a leak.
-  originalCalleeFrame.getThisArgRef() = callerFrame.getScratchRef();
-  callerFrame.getScratchRef() = HermesValue::encodeUndefinedValue();
+  originalCalleeFrame.getThisArgRef() = *lv.savedThisArg;
 
   return res;
 }

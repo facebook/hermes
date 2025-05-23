@@ -84,9 +84,7 @@ namespace hbc {
 struct StackFrameLayout {
   enum {
     /// Offset of the first local register.
-    FirstLocal = 2,
-    /// A scratch register for use by the VM.
-    Scratch = 1,
+    FirstLocal = 1,
     /// The environment associated with the callee's stack frame, that is, the
     /// Environment created by the last CreateEnvironment instruction to execute
     /// in the callee's stack frame. It is null if debugging support is not
@@ -131,7 +129,7 @@ struct StackFrameLayout {
 
     /// The number of additional registers the callee needs to allocate in the
     /// beginning of its frame.
-    CalleeExtraRegistersAtStart = Scratch - DebugEnvironment + 1,
+    CalleeExtraRegistersAtStart = FirstLocal - DebugEnvironment,
   };
 
   /// Calculate the number of register slots needed for an outgoing call: it

@@ -102,7 +102,6 @@ class StackFramePtrT {
 
   // Declare convenience accessors to the underlying HermesValue slots.
   _HERMESVM_DEFINE_STACKFRAME_REF(FirstLocal)
-  _HERMESVM_DEFINE_STACKFRAME_REF(Scratch)
   _HERMESVM_DEFINE_STACKFRAME_REF(DebugEnvironment)
   _HERMESVM_DEFINE_STACKFRAME_REF(PreviousFrame)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedIP)
