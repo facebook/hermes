@@ -3034,6 +3034,93 @@ TEST_F(CDPAgentTest, DebuggerDeactivateBreakpointsWhileDisabled) {
   ensureNotification(waitForMessage(), "Debugger.resumed");
 }
 
+TEST_F(CDPAgentTest, DebuggerPersistsBreakpointsActiveState) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  std::string script = R"(
+    debugger;      // line 1
+    x=100          //      2
+    debugger;      //      3
+    x=101;         //      4
+  )";
+
+  scheduleScript(script, kDefaultUrl);
+  expectNotification("Debugger.scriptParsed");
+
+  // Expect the debugger statement on line #1 to trigger
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // First, create breakpoints that will be persisted.
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 2);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{2}});
+
+  sendRequest(
+      "Debugger.setBreakpointByUrl", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", kDefaultUrl);
+        json.emitKeyValue("lineNumber", 4);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {{4}});
+
+  // Disable Debugger domain
+  sendAndCheckResponse("Debugger.disable", msgId++);
+
+  // Disable breakpoints before enabling debugger
+  sendRequest(
+      "Debugger.setBreakpointsActive", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("active", false);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Preserve breakpoints
+  preserveStateAndResetTestEnv(false);
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(script, kDefaultUrl);
+  expectNotification("Debugger.scriptParsed");
+
+  expectNotification("Debugger.breakpointResolved");
+  expectNotification("Debugger.breakpointResolved");
+
+  // Expect the debugger statement on line #1 to trigger
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // Resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Expect the breakpoint on line #2 to be skipped.
+  // Now hitting debugger statement on line #3.
+  auto pausedNotification =
+      ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  // Re-enable breakpoints
+  sendRequest(
+      "Debugger.setBreakpointsActive", msgId, [](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("active", true);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Resume
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Expect the breakpoint on line #4 to trigger
+  ensurePaused(waitForMessage(), "other", {{"global", 4, 1}});
+
+  // Continue and exit
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+}
+
 TEST_F(CDPAgentTest, DebuggerActivateBreakpoints) {
   int msgId = 1;
 

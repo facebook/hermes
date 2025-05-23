@@ -280,7 +280,7 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Whether the currently installed breakpoints actually take effect. If
   /// they're supposed to be inactive, then debugger agent will automatically
   /// resume execution when breakpoints are hit.
-  bool breakpointsActive_ = true;
+  bool breakpointsActive_;
 
   /// Whether Debugger.enable was received and wasn't disabled by receiving
   /// Debugger.disable

@@ -20,6 +20,7 @@ namespace cdp {
 using namespace facebook::hermes::debugger;
 
 static const char *const kBreakpointsKey = "breakpoints";
+static const char *const kBreakpointsActiveKey = "breakpointsActive";
 
 enum class PausedNotificationReason { kException, kOther, kStep };
 
@@ -40,6 +41,18 @@ DebuggerDomainAgent::DebuggerDomainAgent(
       state_(state),
       enabled_(false),
       paused_(false) {
+  std::unique_ptr<StateValue> breakpointsActiveStateValue =
+      state_.getCopy({kBreakpointsActiveKey});
+  if (breakpointsActiveStateValue) {
+    BooleanStateValue *boolStateValue =
+        dynamic_cast<BooleanStateValue *>(breakpointsActiveStateValue.get());
+    breakpointsActive_ = boolStateValue->value;
+  } else {
+    // If the flag is not persisted in the state, then we default to true
+    // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=450-454;drc=27d34700b83f381c62e3a348de2e6dfdc08364b8
+    breakpointsActive_ = true;
+  }
+
   std::unique_ptr<StateValue> value = state_.getCopy({kBreakpointsKey});
   if (value) {
     DictionaryStateValue *dict =
@@ -653,9 +666,19 @@ void DebuggerDomainAgent::removeBreakpoint(
 
 void DebuggerDomainAgent::setBreakpointsActive(
     const m::debugger::SetBreakpointsActiveRequest &req) {
-  // We don't check for `enabled_` here because V8 allows
-  // `setBreakpointsActive` to be called while debugger is disabled:
-  // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=562-563;drc=db2ef55b78602346f67f7f015ec6ebb9e554d228
+  // DomainState modifications are commited on Transaction destruction. With
+  // sendResponseToClient being called prior to scope exit, in the test
+  // environment this could cause a race condition.
+  {
+    // We don't check for `enabled_` here because V8 allows
+    // `setBreakpointsActive` to be called while debugger is disabled:
+    // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=562-563;drc=db2ef55b78602346f67f7f015ec6ebb9e554d228
+    BooleanStateValue breakpointsActiveStateValue;
+    breakpointsActiveStateValue.value = req.active;
+    DomainState::Transaction transaction = state_.transaction();
+    transaction.add({kBreakpointsActiveKey}, breakpointsActiveStateValue);
+  }
+
   breakpointsActive_ = req.active;
   sendResponseToClient(m::makeOkResponse(req.id));
 }
