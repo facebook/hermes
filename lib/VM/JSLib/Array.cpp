@@ -1275,7 +1275,8 @@ arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  GCScope gcScope(runtime);
+  // Ensure the fast path does not leak any handles.
+  NoLeakHandleScope noLeaks{runtime};
 
   // 3. Let items be a List whose elements are, in left to right order, the
   // arguments that were passed to this function invocation.
@@ -1295,7 +1296,14 @@ arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
     }
 
     lv.len = HermesValue::encodeTrustedNumberValue(len);
-  } else {
+  }
+
+  // The slow path may create additional handles, so create a GCScope to avoid
+  // leaking them.
+  GCScope gcScope(runtime);
+
+  // If the fast path did not populate the length, then get it the slow way.
+  if (!lv.len->isNumber()) {
     // Slow path, used when pushing onto non-array objects.
     // 1. Let O be ? ToObject(this value).
     auto objRes = toObject(runtime, args.getThisHandle());
@@ -2988,7 +2996,8 @@ arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  GCScope gcScope(runtime);
+  // Ensure the fast path does not leak any handles.
+  NoLeakHandleScope noLeaks{runtime};
 
   uint64_t len;
   if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
@@ -3004,7 +3013,14 @@ arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
     // Fast path check failed, populate the O Local so it can be used in the
     // slow path.
     lv.O = args.vmcastThis<JSObject>();
-  } else {
+  }
+
+  // The slow path may create additional handles, so create a GCScope to avoid
+  // leaking them.
+  GCScope gcScope(runtime);
+
+  // If the fast path has not populated the object, do that now.
+  if (!*lv.O) {
     auto res = toObject(runtime, args.getThisHandle());
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
