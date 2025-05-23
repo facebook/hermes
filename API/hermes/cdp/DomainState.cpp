@@ -22,6 +22,13 @@ std::unique_ptr<StateValue> DictionaryStateValue::copy() const {
   return dict;
 }
 
+std::unique_ptr<StateValue> BooleanStateValue::copy() const {
+  auto stateValue = std::make_unique<BooleanStateValue>();
+  stateValue->value = value;
+
+  return stateValue;
+}
+
 DomainState::DomainState() : dict_(std::make_unique<DictionaryStateValue>()) {}
 
 DomainState::DomainState(std::unique_ptr<DictionaryStateValue> dict)
