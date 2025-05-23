@@ -727,14 +727,13 @@ class NativeFunction : public Callable {
 
     runtime.saveCallerIPInStackFrame();
     auto newFrame = runtime.setCurrentFrameToTopOfStack();
-    // Allocate the "reserved" registers in the new frame.
-    if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
-            StackFrameLayout::CalleeExtraRegistersAtStart))) {
-      // Restore the stack before raising the overflow.
-      runtime.restoreStackAndPreviousFrame(newFrame);
-      return runtime.raiseStackOverflow(
-          Runtime::StackOverflowKind::JSRegisterStack);
-    }
+    // We don't need to allocate CalleeExtraRegistersAtStart here because the
+    // only register is DebugEnvironment, which is not useful in a
+    // NativeFunction.
+    static_assert(
+        StackFrameLayout::FirstLocal - 1 ==
+            StackFrameLayout::DebugEnvironment &&
+        StackFrameLayout::CalleeExtraRegistersAtStart == 1);
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
     auto t1 = HERMESVM_RDTSC();
