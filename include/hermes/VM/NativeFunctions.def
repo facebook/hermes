@@ -164,6 +164,7 @@ NATIVE_FUNCTION(hermesInternalIsProxy)
 NATIVE_FUNCTION(hermesInternalHasPromise)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
+NATIVE_FUNCTION(hermesInternalHasAsyncGenerators)
 
 NATIVE_FUNCTION(hermesInternalSetPromiseRejectionTrackingHook)
 NATIVE_FUNCTION(hermesInternalEnablePromiseRejectionTracker)
