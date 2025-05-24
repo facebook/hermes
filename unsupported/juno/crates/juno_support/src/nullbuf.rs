@@ -79,7 +79,7 @@ impl NullTerminatedBuf {
     /// # Safety
     /// It is not really unsafe, but is intended to be used in an unsafe context.
     pub unsafe fn as_c_char_ptr(&self) -> *const c_char {
-        self.as_ptr() as *const c_char
+        unsafe { self.as_ptr() as *const c_char }
     }
 
     pub fn as_bytes(&self) -> &[u8] {
