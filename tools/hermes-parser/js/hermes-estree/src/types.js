@@ -830,7 +830,6 @@ export type AssignmentOperator =
   | '|='
   | '^='
   | '&='
-  // not yet supported, but future proofing
   | '||='
   | '&&='
   | '??=';
