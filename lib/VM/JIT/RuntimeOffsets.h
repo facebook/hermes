@@ -29,7 +29,10 @@ struct RuntimeOffsets {
   static constexpr uint32_t identifierTable =
       offsetof(Runtime, identifierTable_);
   static constexpr uint32_t shLocals = offsetof(Runtime, shLocals);
+
+  using BuiltinsType = decltype(Runtime::builtins_);
   static constexpr uint32_t builtins = offsetof(Runtime, builtins_);
+
   static constexpr uint32_t nativeStackHigh =
       offsetof(Runtime, overflowGuard_) +
       offsetof(StackOverflowGuard, nativeStackHigh);

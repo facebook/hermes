@@ -859,6 +859,25 @@ class OurErrorHandler : public asmjit::ErrorHandler {
   }
 };
 
+/// Helper function to load a pointer to the builtin closure with index
+/// \p builtinIndex and place it in \p xRes.
+void emit_load_builtin_closure(
+    a64::Assembler &a,
+    const a64::GpX &xRes,
+    uint32_t builtinIndex) {
+  static_assert(
+      std::is_same_v<
+          TransparentOwningPtr<Callable *, llvh::FreeDeleter>,
+          RuntimeOffsets::BuiltinsType>,
+      "builtins_ is a list of Callable *");
+  static_assert(
+      offsetof(TransparentOwningPtr<Callable *>, ptr) == 0,
+      "TransparentOwningPtr must be transparent");
+
+  a.ldr(xRes, a64::Mem(xRuntime, RuntimeOffsets::builtins));
+  a.ldr(xRes, a64::Mem(xRes, builtinIndex * sizeof(Callable *)));
+}
+
 /// This macro is used to catch and handle low probability instructing encoding
 /// errors - i.e. when an immediate operand doesn't fit in the instruction
 /// encoding. It causes Asmjit to just return an error code instead of
@@ -6040,18 +6059,11 @@ void Emitter::getBuiltinClosure(FR frRes, uint32_t builtinIndex) {
       "// GetBuiltinClosure r%u, %s",
       frRes.index(),
       getBuiltinMethodName(builtinIndex));
-  syncAllFRTempExcept(frRes);
-  freeAllFRTempExcept(frRes);
-
-  a.mov(a64::x0, xRuntime);
-  a.mov(a64::w1, builtinIndex);
-  EMIT_RUNTIME_CALL(
-      *this,
-      SHLegacyValue(*)(SHRuntime *, uint32_t),
-      _sh_ljs_get_builtin_closure);
-  HWReg hwRes = getOrAllocFRInAnyReg(frRes, false);
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
-  frUpdatedWithHW(frRes, hwRes);
+  auto hwRes = getOrAllocFRInGpX(frRes, false);
+  frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
+  // Load the closure pointer and add the object tag.
+  emit_load_builtin_closure(a, hwRes.a64GpX(), builtinIndex);
+  emit_sh_ljs_object(a, hwRes.a64GpX());
 }
 
 void Emitter::arithUnop(
@@ -6746,18 +6758,7 @@ void Emitter::jmpBuiltinIs(
   freeAllFRTempExcept({});
 
   // Load builtin pointer.
-  static_assert(
-      std::is_same_v<
-          TransparentOwningPtr<Callable *, llvh::FreeDeleter>,
-          decltype(Runtime::builtins_)>,
-      "builtins_ is a list of Callable *");
-  static_assert(
-      offsetof(TransparentOwningPtr<Callable *>, ptr) == 0,
-      "TransparentOwningPtr must be transparent");
-  a.ldr(hwBuiltin.a64GpX(), a64::Mem(xRuntime, RuntimeOffsets::builtins));
-  a.ldr(
-      hwBuiltin.a64GpX(),
-      a64::Mem(hwBuiltin.a64GpX(), builtinIndex * sizeof(Callable *)));
+  emit_load_builtin_closure(a, hwBuiltin.a64GpX(), builtinIndex);
 
   // Encode an object HermesValue.
   emit_sh_ljs_object(a, hwBuiltin.a64GpX());
