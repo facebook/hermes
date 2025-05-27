@@ -75,19 +75,16 @@ describe('Literal', () => {
             value: new RegExp('foo', 'g'),
           },
         },
-        // we don't yet emit the bigint value
         {
           type: 'ExpressionStatement',
           expression: {
-            // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
             value: BigInt(4321),
           },
         },
         {
           type: 'ExpressionStatement',
           expression: {
-            // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
-            value: BigInt(1234),
+            value: 1_2_34n,
           },
         },
       ],
