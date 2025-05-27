@@ -1991,8 +1991,8 @@ bool Runtime::symbolEqualsToStringPrim(SymbolID id, StringPrimitive *strPrim) {
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-void Runtime::initStackOutOfLine(
-    HermesValue *base,
+void Runtime::_initStackWithZeroesHelper(
+    PinnedHermesValue *base,
     uint32_t count,
     HermesValue initValue) {
   // We have to pass initValue as a parameter to prevent constant propagation
