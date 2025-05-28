@@ -9,6 +9,7 @@
 #define HERMES_VM_NATIVEARGS_H
 
 #include "hermes/VM/Handle.h"
+#include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/HandleRootOwner.h"
 
 namespace hermes {

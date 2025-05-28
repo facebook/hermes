@@ -48,78 +48,83 @@ struct RootAcceptor;
 class HandleRootOwner {
  public:
   /// Convenience function to create a Handle.
-  Handle<HermesValue> makeHandle(HermesValue value);
+  inline Handle<HermesValue> makeHandle(HermesValue value);
 
   /// Convenience function to create a Handle from a pointer.
   template <class T>
-  Handle<T> makeHandle(T *p);
+  inline Handle<T> makeHandle(T *p);
 
   /// Convenience function to create typed Handle given a HermesValue.
   template <class T>
-  Handle<T> makeHandle(HermesValue value);
+  inline Handle<T> makeHandle(HermesValue value);
 
   /// Convenience function to create a Handle<SymbolID>.
-  Handle<SymbolID> makeHandle(SymbolID value);
+  inline Handle<SymbolID> makeHandle(SymbolID value);
 
   /// Create a Handle from a valid PseudoHandle and invalidate the latter.
   template <class T>
-  Handle<T> makeHandle(PseudoHandle<T> &&pseudo);
+  inline Handle<T> makeHandle(PseudoHandle<T> &&pseudo);
 
   /// Create a Handle from a valid PseudoHandle by vmcasting from HermesValue
   /// and invalidate the PseudoHandle<HermesValue>.
   template <class T>
-  Handle<T> makeHandle(PseudoHandle<HermesValue> &&pseudo);
+  inline Handle<T> makeHandle(PseudoHandle<HermesValue> &&pseudo);
 
   /// Convenience function to create a MutableHandle.
-  MutableHandle<HermesValue> makeMutableHandle(HermesValue value);
+  inline MutableHandle<HermesValue> makeMutableHandle(HermesValue value);
   /// Convenience function to create a MutableHandle from a pointer.
   template <class T>
-  MutableHandle<T> makeMutableHandle(T *p);
+  inline MutableHandle<T> makeMutableHandle(T *p);
 
   /// Make a null pointer of the specified type. This is more efficient that
   /// other methods because it doesn't allocate a handle.
   template <class T>
-  static Handle<T> makeNullHandle();
+  static inline Handle<T> makeNullHandle();
 
   /// An efficient way to pass undefined to a function accepting Handle.
-  static Handle<HermesValue> getUndefinedValue();
+  static inline Handle<HermesValue> getUndefinedValue();
 
   /// An efficient way to pass null to a function accepting Handle.
-  static Handle<HermesValue> getNullValue();
+  static inline Handle<HermesValue> getNullValue();
 
   /// An efficient way to pass empty to a function accepting Handle.
-  static Handle<HermesValue> getEmptyValue();
+  static inline Handle<HermesValue> getEmptyValue();
 
   /// An efficient way to pass bools to a function accepting Handle.
-  static Handle<HermesValue> getBoolValue(bool b);
+  static inline Handle<HermesValue> getBoolValue(bool b);
 
   /// An efficient way to pass 0 to a function accepting Handle.
-  static Handle<HermesValue> getZeroValue();
+  static inline Handle<HermesValue> getZeroValue();
 
   /// An efficient way to pass 1 to a function accepting Handle.
-  static Handle<HermesValue> getOneValue();
+  static inline Handle<HermesValue> getOneValue();
 
   /// An efficient way to pass -1 to a function accepting Handle.
-  static Handle<HermesValue> getNegOneValue();
+  static inline Handle<HermesValue> getNegOneValue();
 
  protected:
   /// Used for efficient construction of Handle<>(..., nullptr).
-  static const PinnedHermesValue nullPointer_;
+  static constexpr PinnedHermesValue nullPointer_{
+      HermesValue::encodeNullptrObjectValueUnsafe()};
   /// Used for efficient construction of Handle(undefined).
-  static const PinnedHermesValue undefinedValue_;
+  static constexpr PinnedHermesValue undefinedValue_{
+      HermesValue::encodeUndefinedValue()};
   /// Used for efficient construction of Handle(null).
-  static const PinnedHermesValue nullValue_;
+  static constexpr PinnedHermesValue nullValue_{HermesValue::encodeNullValue()};
   /// Used for efficient construction of Handle(empty).
-  static const PinnedHermesValue emptyValue_;
+  static constexpr PinnedHermesValue emptyValue_{
+      HermesValue::encodeEmptyValue()};
   /// Used for efficient construction of Handle(bool).
-  static const PinnedHermesValue trueValue_;
-  static const PinnedHermesValue falseValue_;
+  static constexpr PinnedHermesValue trueValue_{
+      HermesValue::encodeBoolValue(true)};
+  static constexpr PinnedHermesValue falseValue_{
+      HermesValue::encodeBoolValue(false)};
   /// Used for efficient construction of Handle(0).
-  static const PinnedHermesValue zeroValue_;
+  static constexpr PinnedHermesValue zeroValue_{HVConstants::kZero};
   /// Used for efficient construction of Handle(1).
-  static const PinnedHermesValue oneValue_;
+  static constexpr PinnedHermesValue oneValue_{HVConstants::kOne};
   /// Used for efficient construction of Handle(-1).
-  static const PinnedHermesValue negOneValue_;
+  static constexpr PinnedHermesValue negOneValue_{HVConstants::kNegOne};
 
   void markGCScopes(RootAcceptor &acceptor);
 
