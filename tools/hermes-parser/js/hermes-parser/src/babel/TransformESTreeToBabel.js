@@ -406,26 +406,28 @@ function mapProgram(node: Program): BabelFile {
   };
   const range = [0, endRange];
 
-  const babelComments = program.comments.map(comment => {
-    switch (comment.type) {
-      case 'Line': {
-        return {
-          type: 'CommentLine',
-          value: comment.value,
-          loc: comment.loc,
-          range: comment.range,
-        };
+  const babelComments: $ReadOnlyArray<BabelComment> = program.comments.map(
+    comment => {
+      switch (comment.type) {
+        case 'Line': {
+          return {
+            type: 'CommentLine',
+            value: comment.value,
+            loc: comment.loc,
+            range: comment.range,
+          };
+        }
+        case 'Block': {
+          return {
+            type: 'CommentBlock',
+            value: comment.value,
+            loc: comment.loc,
+            range: comment.range,
+          };
+        }
       }
-      case 'Block': {
-        return {
-          type: 'CommentBlock',
-          value: comment.value,
-          loc: comment.loc,
-          range: comment.range,
-        };
-      }
-    }
-  });
+    },
+  );
 
   // Rename root node to File node and move Program node under program property
   return {

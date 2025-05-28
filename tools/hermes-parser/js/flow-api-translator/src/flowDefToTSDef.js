@@ -63,7 +63,7 @@ let shouldAddReactImport: boolean | null = null;
 
 // Returns appropriate Identifier for `React` import.
 // If a global is in use, set a flag to indicate that we should add the import.
-function getReactIdentifier(hasReactImport: boolean) {
+function getReactIdentifier(hasReactImport: boolean): TSESTree.EntityName {
   if (shouldAddReactImport !== false) {
     shouldAddReactImport = !hasReactImport;
   }
@@ -411,7 +411,7 @@ const getTransforms = (
       }
     }
 
-    const bodyRepresentationType =
+    const bodyRepresentationType: TSESTree.TypeNode =
       body.type === 'EnumNumberBody'
         ? {type: 'TSNumberKeyword', loc: DUMMY_LOC}
         : {type: 'TSStringKeyword', loc: DUMMY_LOC};
@@ -930,7 +930,7 @@ const getTransforms = (
               cloneJSDocCommentsToNewNode(member, newNode);
               classMembers.push(newNode);
             } else {
-              const [key, computed] = (() => {
+              const [key, computed] = ((): [TSESTree.PropertyName, boolean] => {
                 const _key = member.key;
                 if (_key.type === 'Identifier' && _key.name.startsWith('@@')) {
                   const name = _key.name.slice(2);
@@ -1373,7 +1373,10 @@ const getTransforms = (
             }: TSESTree.ExportNamedDeclarationWithoutSourceWithMultiple);
           }
 
-          const declarations = (() => {
+          const declarations = ((): Array<{
+            declaration: TSESTree.NamedExportDeclarations,
+            exportKind: TSESTree.ExportKind,
+          }> => {
             switch (node.declaration.type) {
               case 'DeclareClass':
                 return [
@@ -1952,7 +1955,7 @@ const getTransforms = (
       })();
 
       const mainExport = {
-        type: 'ExportNamedDeclaration',
+        type: ('ExportNamedDeclaration': 'ExportNamedDeclaration'),
         loc: DUMMY_LOC,
         assertions: [],
         declaration: exportedDeclaration,
@@ -2899,7 +2902,7 @@ const getTransforms = (
               );
             }
 
-            const newParams = (() => {
+            const newParams = ((): $ReadOnlyArray<TSESTree.TypeNode> => {
               if (params.length === 1) {
                 return assertHasExactlyNTypeParameters(1);
               }
@@ -3132,12 +3135,12 @@ const getTransforms = (
     ): Array<DeclarationOrUnsupported<TSESTree.ImportDeclaration>> {
       const importKind = node.importKind;
 
-      const specifiers = [];
+      const specifiers: Array<TSESTree.ImportClause> = [];
       const unsupportedSpecifiers: Array<TSESTree.TSTypeAliasDeclaration> = [];
       node.specifiers.forEach(spec => {
         let id = (() => {
           if (node.importKind === 'typeof' || spec.importKind === 'typeof') {
-            const id = {
+            const id: TSESTree.Identifier = {
               type: 'Identifier',
               loc: DUMMY_LOC,
               name: getPlaceholderNameForTypeofImport(),
@@ -3564,7 +3567,7 @@ const getTransforms = (
         const tsBody = members
           .sort((a, b) => a.start - b.start)
           .map(({node}) => node);
-        const objectType = {
+        const objectType: TSESTree.TypeNode = {
           type: 'TSTypeLiteral',
           loc: DUMMY_LOC,
           members: tsBody,
@@ -3884,7 +3887,7 @@ const getTransforms = (
             element.variance != null &&
             element.variance.kind === 'plus',
         );
-      const elems = node.types.map(element => {
+      const elems = node.types.map((element): TSESTree.TypeNode => {
         switch (element.type) {
           case 'TupleTypeLabeledElement':
             if (!allReadOnly && element.variance != null) {
@@ -3922,7 +3925,7 @@ const getTransforms = (
         }
       });
 
-      const elementTypes = node.inexact
+      const elementTypes: Array<TSESTree.TypeNode> = node.inexact
         ? [
             ...elems,
             {
@@ -4151,7 +4154,7 @@ const getTransforms = (
 
       // TS cannot support `renderType` so we always use ReactNode as the return type.
       const hasReactImport = isReactImport(node, 'React');
-      const returnType = {
+      const returnType: TSESTree.TSTypeAnnotation = {
         type: 'TSTypeAnnotation',
         loc: DUMMY_LOC,
         // If no rendersType we assume its ReactNode type.

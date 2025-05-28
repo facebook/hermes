@@ -11,10 +11,12 @@
 'use strict';
 
 import type {
+  BlockStatement,
   ESNode,
   Expression,
   Identifier,
   JSXIdentifier,
+  Program,
   StringLiteral,
 } from 'hermes-estree';
 import type {ClassFieldInitializerScope} from './ClassFieldInitializerScope';
@@ -66,7 +68,7 @@ function isStrictScope(scope: Scope, isMethodDefinition: boolean): boolean {
     return false;
   }
 
-  const body = (() => {
+  const body = ((): false | Program | BlockStatement => {
     if (scope.type === ScopeType.Function) {
       if (scope.block.type === 'ArrowFunctionExpression') {
         if (scope.block.body.type !== 'BlockStatement') {

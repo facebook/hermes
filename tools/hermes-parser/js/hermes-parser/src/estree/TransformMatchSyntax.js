@@ -18,6 +18,7 @@ import type {ParserOptions} from '../ParserOptions';
 import type {
   BinaryExpression,
   BreakStatement,
+  DestructuringObjectProperty,
   ESNode,
   Expression,
   Identifier,
@@ -279,7 +280,7 @@ function analyzePattern(
       const [id, kind] =
         target.type === 'MatchBindingPattern'
           ? [target.id, target.kind]
-          : [target, 'const'];
+          : [target, ('const': 'const')];
       checkDuplicateBindingName(seenBindingNames, pattern, id.name);
       checkBindingKind(pattern, kind);
       const binding: Binding = {type: 'id', key, kind, id};
@@ -491,7 +492,7 @@ function testsOfCondition(
         operator: '===',
         ...etc(),
       };
-      const notNull = {
+      const notNull: BinaryExpression = {
         type: 'BinaryExpression',
         left: expressionOfKey(root, key),
         right: nullLiteral(),
@@ -563,7 +564,7 @@ function statementsOfBindings(
         const destructuring: ObjectPattern = {
           type: 'ObjectPattern',
           properties: exclude
-            .map(prop =>
+            .map((prop): DestructuringObjectProperty =>
               prop.type === 'Identifier'
                 ? {
                     type: 'Property',
@@ -737,7 +738,7 @@ function mapMatchExpression(node: MatchExpression): Expression {
   // If the original argument is simple, no need for a new variable.
   const statements: Array<Statement> = analyses.map(
     ({conditions, bindings, guard, body}) => {
-      const returnNode = {
+      const returnNode: Statement = {
         type: 'ReturnStatement',
         argument: body,
         ...etc(),

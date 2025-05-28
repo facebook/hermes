@@ -24,7 +24,7 @@ import * as TransformESTreeToBabel from './babel/TransformESTreeToBabel';
 import * as StripFlowTypes from './estree/StripFlowTypes';
 
 const DEFAULTS = {
-  flow: 'detect',
+  flow: ('detect': 'detect'),
 };
 
 function getOptions(options?: ParserOptions = {...DEFAULTS}) {

@@ -19,9 +19,7 @@ import type {
 
 import {InvalidStatementError} from '../../Errors';
 
-export function getStatementParent(
-  target: ModuleDeclaration | Statement,
-): $ReadOnly<
+type StatementParent = $ReadOnly<
   | {
       type: 'single',
       parent: StatementParentSingle,
@@ -33,7 +31,11 @@ export function getStatementParent(
       key: string,
       targetIndex: number,
     },
-> {
+>;
+
+export function getStatementParent(
+  target: ModuleDeclaration | Statement,
+): StatementParent {
   function assertValidStatementLocation<T: $ReadOnly<interface {type: string}>>(
     parentWithType: T,
     ...invalidKeys: $ReadOnlyArray<$Keys<T>>
@@ -63,7 +65,7 @@ export function getStatementParent(
   }
 
   const parent = target.parent;
-  const result = (() => {
+  const result: StatementParent = (() => {
     switch (parent.type) {
       case 'IfStatement': {
         assertValidStatementLocation(parent, 'test');

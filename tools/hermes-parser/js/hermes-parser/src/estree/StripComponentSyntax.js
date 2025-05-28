@@ -32,6 +32,7 @@ import type {
   SourceLocation,
   Position,
   ObjectPattern,
+  ObjectTypeAnnotation,
   Identifier,
   Range,
   RestElement,
@@ -139,7 +140,7 @@ function createPropsTypeAnnotation(
     typeProperties.unshift(spread);
   }
 
-  const propTypeObj = {
+  const propTypeObj: ObjectTypeAnnotation = {
     type: 'ObjectTypeAnnotation',
     callProperties: [],
     properties: typeProperties,
@@ -238,7 +239,7 @@ function mapComponentParameters(
 
   const propsProperties = paramsWithoutRef.flatMap(mapComponentParameter);
 
-  let props = null;
+  let props: null | ObjectPattern | Identifier = null;
   if (propsProperties.length === 0) {
     if (refParam == null) {
       throw new Error(
@@ -460,7 +461,7 @@ type ForwardRefDetails = {
 function createForwardRefWrapper(
   originalComponent: ComponentDeclaration,
 ): ForwardRefDetails {
-  const internalCompId = {
+  const internalCompId: Identifier = {
     type: 'Identifier',
     name: `${originalComponent.id.name}_withRef`,
     optional: false,
@@ -578,7 +579,7 @@ function mapComponentDeclaration(
     forwardRefDetails = createForwardRefWrapper(node);
   }
 
-  const comp = {
+  const comp: FunctionDeclaration = {
     type: 'FunctionDeclaration',
     id:
       forwardRefDetails != null
@@ -636,7 +637,7 @@ function mapDeclareHook(node: DeclareHook): DeclareFunction {
 }
 
 function mapHookDeclaration(node: HookDeclaration): FunctionDeclaration {
-  const comp = {
+  const comp: FunctionDeclaration = {
     type: 'FunctionDeclaration',
     id: node.id && shallowCloneNode(node.id),
     __hookDeclaration: true,

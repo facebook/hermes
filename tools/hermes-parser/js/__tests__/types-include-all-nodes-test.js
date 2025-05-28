@@ -114,7 +114,7 @@ const typesThatShouldBeSkipped = new Set([
 const propertiesThatShouldBeSkipped = new Map([
   [
     'TemplateElement',
-    new Set([
+    new Set<string>([
       // hermes declares these directly on the node - but ESTree declares them on
       // a nested object under the `value` property.
       'cooked',
@@ -134,7 +134,7 @@ const propertiesThatShouldBeSkipped = new Map([
 const propertiesWithIncorrectOptionalFlagInHermes = new Map([
   [
     'ImportDeclaration',
-    new Set([
+    new Set<string>([
       // hermes has this marked as optional, but it always returns an array
       // https://www.internalfb.com/code/fbsource/[03317c92fabb32841bec7d90d297595d7392f6ea]/xplat/hermes/lib/Parser/JSParserImpl.cpp?lines=5846%2C5859-5860
       'assertions',
@@ -142,7 +142,7 @@ const propertiesWithIncorrectOptionalFlagInHermes = new Map([
   ],
   [
     'ImportSpecifier',
-    new Set([
+    new Set<string>([
       // hermes has this marked as non-optional, but it will emit `null` instead of `'value'` for import
       // specifiers with no explicit kind token
       'importKind',
@@ -150,7 +150,7 @@ const propertiesWithIncorrectOptionalFlagInHermes = new Map([
   ],
   [
     'InterfaceTypeAnnotation',
-    new Set([
+    new Set<string>([
       // hermes has this marked as optional, but it will throw if the body is missing
       // https://www.internalfb.com/code/fbsource/[03317c92fabb32841bec7d90d297595d7392f6ea]/xplat/hermes/lib/Parser/JSParserImpl-flow.cpp?lines=268-269
       'body',
@@ -158,7 +158,7 @@ const propertiesWithIncorrectOptionalFlagInHermes = new Map([
   ],
   [
     'YieldExpression',
-    new Set([
+    new Set<string>([
       // hermes has this marked as optional, but it always emits a boolean
       // https://www.internalfb.com/code/fbsource/[cf84f54840c93b8b2c5dbefb137bc8925c636a65]/xplat/hermes/lib/Parser/JSParserImpl.cpp?lines=4203
       'delegate',

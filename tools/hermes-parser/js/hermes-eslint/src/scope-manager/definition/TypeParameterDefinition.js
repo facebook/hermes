@@ -28,7 +28,7 @@ class TypeParameterDefinition extends DefinitionBase<
     // for each definition. TypeParameter nodes do not actually contain an
     // Identifier node, so we create a fake one with the correct name,
     // location, and parent so that it is still usable with the ScopeManager.
-    const id = {
+    const id: Identifier = {
       type: 'Identifier',
       loc: node.loc,
       name: node.name,

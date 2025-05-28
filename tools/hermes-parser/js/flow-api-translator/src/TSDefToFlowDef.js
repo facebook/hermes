@@ -96,7 +96,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     return buildCodeFrame(node, message, code, false);
   }
   function addErrorComment(node: FlowESTree.ESNode, message: string): void {
-    const comment = {
+    const comment: TSESTree.Comment = {
       type: 'Block',
       loc: DUMMY_LOC,
       value: `*${EOL} * ${message.replace(

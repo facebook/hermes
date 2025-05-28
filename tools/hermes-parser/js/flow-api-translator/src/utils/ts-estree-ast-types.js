@@ -350,7 +350,7 @@ export interface ExportDefaultDeclaration extends BaseNode {
    */
   +exportKind: ExportKind;
 }
-type ExportKind = ExportAndImportKind;
+export type ExportKind = ExportAndImportKind;
 export type ExportNamedDeclaration =
   | ExportNamedDeclarationWithoutSourceWithMultiple
   | ExportNamedDeclarationWithoutSourceWithSingle
