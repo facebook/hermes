@@ -114,7 +114,7 @@ TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
   auto strRes = StringPrimitive::create(
       runtime, ASCIIRef{asciiStr.c_str(), asciiStr.length()});
   ASSERT_FALSE(isException(strRes));
-  lv.str = vmcast<StringPrimitive>(*strRes);
+  lv.str.castAndSetHermesValue<StringPrimitive>(*strRes);
   MutableHandle<StringPrimitive> str{lv.str};
 
   // Init PV and weak symbol for A.
@@ -186,7 +186,8 @@ TEST_F(SymbolIDRuntimeTest, SymbolAllocDuringGC) {
     PinnedValue<SymbolID> curSym;
   } lv;
   LocalsRAII lraii{runtime, &lv};
-  lv.strongSymbols = vmcast<ArrayStorage>(*ArrayStorage::create(runtime, 4));
+  lv.strongSymbols.castAndSetHermesValue<ArrayStorage>(
+      *ArrayStorage::create(runtime, 4));
   MutableHandle<ArrayStorage> strongSymbols(lv.strongSymbols);
 
   GCScopeMarkerRAII marker{runtime};

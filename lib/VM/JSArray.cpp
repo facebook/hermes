@@ -144,7 +144,7 @@ ExecutionStatus ArrayImpl::setStorageEndIndex(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    lv.storage = vmcast<StorageType>(*arrRes);
+    lv.storage.castAndSetHermesValue<StorageType>(*arrRes);
     selfHandle->setIndexedStorage(runtime, lv.storage.get(), runtime.getHeap());
     selfHandle->beginIndex_ = 0;
     selfHandle->elemCount_ = newLength;
@@ -215,7 +215,7 @@ CallResult<bool> ArrayImpl::_setOwnIndexedImpl(
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    lv.storage = vmcast<StorageType>(*arrRes);
+    lv.storage.castAndSetHermesValue<StorageType>(*arrRes);
     const auto shv = SmallHermesValue::encodeHermesValue(*value, runtime);
     self = vmcast<ArrayImpl>(selfHandle.get());
 

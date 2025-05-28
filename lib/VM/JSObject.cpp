@@ -3043,7 +3043,7 @@ ExecutionStatus JSObject::addOwnPropertyImpl(
   if (LLVM_UNLIKELY(addResult == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.resultClazz = *addResult->first;
+  lv.resultClazz = addResult->first;
   SlotIndex slot = addResult->second;
   selfHandle->updateClass(runtime, *lv.resultClazz);
 
@@ -3118,7 +3118,7 @@ void JSObject::addNewOwnPropertyInSlot(
     assert(indirectSlot == 0 && "allocated slot must be at end");
     auto arrRes = runtime.ignoreAllocationFailure(
         PropStorage::create(runtime, DEFAULT_PROPERTY_CAPACITY));
-    lv.storage = vmcast<PropStorage>(arrRes);
+    lv.storage.castAndSetHermesValue<PropStorage>(arrRes);
     // It's likely that the capacity will be enough to use pushWithinCapacity,
     // but encoding the value back into SHV may allocate and trim the storage.
     // Avoid problems by using push_back.

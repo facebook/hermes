@@ -479,7 +479,7 @@ ExecutionStatus Interpreter::caseGetPNameList(
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  lv.obj = vmcast<JSObject>(O2REG(GetPNameList));
+  lv.obj.castAndSetHermesValue<JSObject>(O2REG(GetPNameList));
   uint32_t beginIndex;
   uint32_t endIndex;
   MutableHandle<JSObject> obj{lv.obj};
@@ -962,7 +962,8 @@ CallResult<HermesValue> Interpreter::createThisImpl(
       return ExecutionStatus::EXCEPTION;
     }
     if ((*newTargetProtoRes)->isObject()) {
-      lv.newTargetPrototype = vmcast<JSObject>(newTargetProtoRes->get());
+      lv.newTargetPrototype.castAndSetHermesValue<JSObject>(
+          newTargetProtoRes->get());
     } else {
       lv.newTargetPrototype = runtime.objectPrototype;
     }

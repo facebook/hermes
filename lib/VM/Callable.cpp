@@ -661,7 +661,7 @@ CallResult<HermesValue> BoundFunction::create(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.arrStorage = vmcast<ArrayStorage>(*arrRes);
+  lv.arrStorage.castAndSetHermesValue<ArrayStorage>(*arrRes);
   MutableHandle<ArrayStorage> arrHandle(lv.arrStorage);
   if (argCountWithThis) {
     for (unsigned i = 0; i != argCountWithThis; ++i) {

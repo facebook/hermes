@@ -551,7 +551,7 @@ arrayPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
     PinnedValue<Callable> func;
   } lv;
   LocalsRAII lraii{runtime, &lv};
-  lv.array = vmcast<JSObject>(objRes.getValue());
+  lv.array.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed_RJS(
       lv.array, runtime, Predefined::getSymbolID(Predefined::join));
@@ -559,7 +559,7 @@ arrayPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   if (vmisa<Callable>(propRes->getHermesValue())) {
-    lv.func = vmcast<Callable>(propRes->getHermesValue());
+    lv.func.castAndSetHermesValue<Callable>(propRes->getHermesValue());
     return Callable::executeCall0(lv.func, runtime, lv.array)
         .toCallResultHermesValue();
   } else {
@@ -588,7 +588,7 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  lv.array = vmcast<JSObject>(objRes.getValue());
+  lv.array.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   auto emptyString = runtime.getPredefinedStringHandle(Predefined::emptyString);
 
@@ -648,7 +648,7 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
               ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      lv.elementObj = vmcast<JSObject>(objRes.getValue());
+      lv.elementObj.castAndSetHermesValue<JSObject>(objRes.getValue());
 
       // Retrieve the toLocaleString function.
       if (LLVM_UNLIKELY(
@@ -660,7 +660,7 @@ arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
         return ExecutionStatus::EXCEPTION;
       }
       if (vmisa<Callable>(propRes->get())) {
-        lv.func = vmcast<Callable>(propRes->get());
+        lv.func.castAndSetHermesValue<Callable>(propRes->get());
         // If ECMA 402 is implemented, it provides a superseding
         // definition of Array.prototype.toLocaleString.  The only
         // difference between these two definitions is that in ECMA
@@ -760,7 +760,7 @@ arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   // 2. Let len be ? LengthOfArrayLike(O).
   auto lenRes = lengthOfArrayLike(
@@ -825,7 +825,7 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   // Need a signed type here to account for uint32 and -1.
   int64_t argCount = args.getArgCount();
@@ -874,7 +874,7 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
     }
     if (*spreadable) {
       // 7.d. If spreadable is true, then
-      lv.obj = vmcast<JSObject>(*lv.tmp);
+      lv.obj.castAndSetHermesValue<JSObject>(*lv.tmp);
       bool isArray = vmisa<JSArray>(*lv.obj);
       uint64_t len;
       if (LLVM_LIKELY(isArray)) {
@@ -1025,7 +1025,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   if (runtime.insertVisitedObject(*lv.O)) {
     return HermesValue::encodeStringValue(
@@ -1118,7 +1118,7 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
     auto arrRes = JSArray::StorageType::create(runtime, len, len);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
-    lv.strings = vmcast<JSArray::StorageType>(*arrRes);
+    lv.strings.castAndSetHermesValue<JSArray::StorageType>(*arrRes);
 
     auto marker = gcScope.createMarker();
     // Call toString on the remaining elements of the array.
@@ -1310,7 +1310,7 @@ arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    lv.O = vmcast<JSObject>(*objRes);
+    lv.O.castAndSetHermesValue<JSObject>(*objRes);
     lv.arr = nullptr;
     auto propRes = JSObject::getNamed_RJS(
         lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -1806,7 +1806,7 @@ arrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -1855,7 +1855,7 @@ arrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -2094,7 +2094,7 @@ arrayPrototypeFlat(void *ctx, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*ORes);
+  lv.O.castAndSetHermesValue<JSObject>(*ORes);
 
   // 2. Let sourceLen be ? ToLength(? Get(O, "length")).
   CallResult<PseudoHandle<>> lenRes = JSObject::getNamed_RJS(
@@ -2159,7 +2159,7 @@ arrayPrototypeFlatMap(void *ctx, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*ORes);
+  lv.O.castAndSetHermesValue<JSObject>(*ORes);
 
   // 2. Let sourceLen be ? ToLength(? Get(O, "length")).
   CallResult<PseudoHandle<>> lenRes = JSObject::getNamed_RJS(
@@ -2213,7 +2213,7 @@ arrayPrototypeIterator(void *ctx, Runtime &runtime, NativeArgs args) {
     PinnedValue<JSObject> O;
   } lv;
   LocalsRAII lraii{runtime, &lv};
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
   return JSArrayIterator::create(runtime, lv.O, kind).getHermesValue();
 }
 
@@ -2235,7 +2235,7 @@ arrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -2472,15 +2472,15 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
 
   uint64_t len;
   if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
-    lv.O = vmcast<JSObject>(args.getThisArg());
-    lv.OArray = vmcast<JSArray>(args.getThisArg());
+    lv.O.castAndSetHermesValue<JSObject>(args.getThisArg());
+    lv.OArray.castAndSetHermesValue<JSArray>(args.getThisArg());
     len = JSArray::getLength(vmcast<JSArray>(args.getThisArg()), runtime);
   } else {
     auto objRes = toObject(runtime, args.getThisHandle());
     if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    lv.O = vmcast<JSObject>(*objRes);
+    lv.O.castAndSetHermesValue<JSObject>(*objRes);
     auto propRes = JSObject::getNamed_RJS(
         lv.O, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -2806,7 +2806,7 @@ arrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*oRes);
+  lv.O.castAndSetHermesValue<JSObject>(*oRes);
 
   // 3. Let len be ToLength(Get(O, "length")).
   // 4. ReturnIfAbrupt(len).
@@ -3025,7 +3025,7 @@ arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    lv.O = vmcast<JSObject>(*res);
+    lv.O.castAndSetHermesValue<JSObject>(*res);
     auto propRes = JSObject::getNamed_RJS(
         lv.O, runtime, Predefined::getSymbolID(Predefined::length));
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -3096,7 +3096,7 @@ arrayPrototypeShift(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -3226,7 +3226,7 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.obj = vmcast<JSObject>(*objRes);
+  lv.obj.castAndSetHermesValue<JSObject>(*objRes);
 
   // Array length is less than 2^32, length of array-like object is less than
   // 2^53.
@@ -3453,7 +3453,7 @@ arrayPrototypeUnshift(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -3593,7 +3593,7 @@ everySomeHelper(Runtime &runtime, NativeArgs args, const bool every) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -3696,7 +3696,7 @@ arrayPrototypeMap(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(objRes.getValue());
+  lv.O.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -3791,7 +3791,7 @@ arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -3890,7 +3890,7 @@ arrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
   // Get the length.
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -3963,7 +3963,7 @@ findHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   // Get the length.
   auto propRes = JSObject::getNamed_RJS(
@@ -4050,7 +4050,7 @@ reduceHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto propRes = JSObject::getNamed_RJS(
       lv.O, runtime, Predefined::getSymbolID(Predefined::length));
@@ -4220,7 +4220,7 @@ arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*objRes);
+  lv.O.castAndSetHermesValue<JSObject>(*objRes);
 
   auto marker = gcScope.createMarker();
 
@@ -4352,7 +4352,7 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*oRes);
+  lv.O.castAndSetHermesValue<JSObject>(*oRes);
 
   // 2. Let len be ? ToLength(? Get(O, "length")).
   auto lenPropRes = JSObject::getNamed_RJS(
@@ -4437,7 +4437,7 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*oRes);
+  lv.O.castAndSetHermesValue<JSObject>(*oRes);
 
   // 2. Let len be ? LengthOfArrayLike(O).
   auto jsArr = vmisa<JSArray>(*lv.O) ? Handle<JSArray>::vmcast(&lv.O)
@@ -4593,7 +4593,7 @@ arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*oRes);
+  lv.O.castAndSetHermesValue<JSObject>(*oRes);
 
   // 2. Let len be ? LengthOfArrayLike(O).
   auto lenRes = lengthOfArrayLike(
@@ -4747,7 +4747,7 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(oRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.O = vmcast<JSObject>(*oRes);
+  lv.O.castAndSetHermesValue<JSObject>(*oRes);
 
   // 2. Let len be ? LengthOfArrayLike(O).
   auto lenRes = lengthOfArrayLike(
@@ -4946,7 +4946,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
     if (LLVM_UNLIKELY(!vmisa<Callable>(mapfnArg))) {
       return runtime.raiseTypeError("Mapping function is not callable.");
     }
-    lv.mapfn = vmcast<Callable>(mapfnArg);
+    lv.mapfn.castAndSetHermesValue<Callable>(mapfnArg);
     // b. If thisArg was supplied, let T be thisArg; else let T be undefined.
     if (args.getArgCount() >= 3) {
       lv.T = args.getArg(2);
@@ -5073,7 +5073,7 @@ CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.arrayLike = vmcast<JSObject>(*objRes);
+  lv.arrayLike.castAndSetHermesValue<JSObject>(*objRes);
   // 10. Let len be ToLength(Get(arrayLike, "length")).
   // 11. ReturnIfAbrupt(len).
   auto propRes = JSObject::getNamed_RJS(

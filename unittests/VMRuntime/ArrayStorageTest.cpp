@@ -29,7 +29,7 @@ TEST_F(ArrayStorageTest, ResizeTest) {
   MutableHandle<StorageType> arrHandle{lv.arr};
 
   // Create a new ArrayStorage.
-  lv.arr = vmcast<StorageType>(*StorageType::create(runtime, 1));
+  lv.arr.castAndSetHermesValue<StorageType>(*StorageType::create(runtime, 1));
   // Size is 900, capacity is 900.
   StorageType::resize(arrHandle, runtime, 900);
   // arr[10] = 1
@@ -83,7 +83,7 @@ TEST_F(ArrayStorageTest, RandomResizeTest) {
 
     auto size = randomInt();
     // We need to make sure capacity is always >= size.
-    lv.arr = vmcast<StorageType>(
+    lv.arr.castAndSetHermesValue<StorageType>(
         *StorageType::create(runtime, size + randomInt(), size));
 
     StorageType::resize(arrHandle, runtime, randomInt());
@@ -154,7 +154,8 @@ TEST_F(ArrayStorageBigHeapTest, AllocLarge) {
     PinnedValue<JSObject> obj;
   } lv;
   LocalsRAII lraii{runtime, &lv};
-  lv.st = vmcast<StorageType>(*StorageType::create(runtime, 1024 * 1024));
+  lv.st.castAndSetHermesValue<StorageType>(
+      *StorageType::create(runtime, 1024 * 1024));
   MutableHandle<StorageType> st{lv.st};
   StorageType::resize(st, runtime, sz);
   lv.obj = JSObject::create(runtime);

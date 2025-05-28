@@ -33,6 +33,30 @@ class MutableHandle;
 template <typename T>
 class PinnedValue;
 
+/// A helper type, specialized on whether we are casting to a cell or a
+/// non-cell.
+template <typename T, bool isCell = HermesValueTraits<T>::is_cell>
+struct HermesValueCast {
+  /// In debug mode, check that the value is of the correct type and assert
+  /// if it isn't.
+  static void assertValid(HermesValue x) {
+#ifndef NDEBUG
+    (void)vmcast<T>(x);
+#endif
+  }
+};
+
+template <typename T>
+struct HermesValueCast<T, false> {
+  /// In debug mode, check that the value is of the correct type and assert
+  /// if it isn't.
+  static void assertValid(HermesValue x) {
+#ifndef NDEBUG
+    (void)HermesValueTraits<T>::decode(x);
+#endif
+  }
+};
+
 /// This class is used in performance-sensitive context in situations where we
 /// want to encode in the function signature that allocations may be performed,
 /// potentially moving the object, but we don't want to incur the cost of
@@ -215,6 +239,19 @@ class PinnedValue : private PinnedHermesValue {
     return *this;
   }
 
+  /// Assign the HermesValue \p val to this PinnedValue, asserting that it
+  /// has type U which is compatible with T. This allows assigning a HermesValue
+  /// with a known type to the PinnedValue without having to extract a
+  /// pointer/symbol from it only to then re-encode it.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  void castAndSetHermesValue(HermesValue val) {
+    HermesValueCast<U>::assertValid(val);
+    setNoBarrier(val);
+  }
+
   value_type get() const {
     return traits_type::decode(*this);
   }
@@ -332,30 +369,6 @@ static_assert(
         sizeof(HandleBase) == sizeof(void *),
     "Handle must fit in a register and be trivially copyable");
 #endif
-
-/// A helper type, specialized on whether we are casting to a cell or a
-/// non-cell.
-template <typename T, bool isCell = HermesValueTraits<T>::is_cell>
-struct HermesValueCast {
-  /// In debug mode, check that the value is of the correct type and assert
-  /// if it isn't.
-  static void assertValid(HermesValue x) {
-#ifndef NDEBUG
-    (void)vmcast<T>(x);
-#endif
-  }
-};
-
-template <typename T>
-struct HermesValueCast<T, false> {
-  /// In debug mode, check that the value is of the correct type and assert
-  /// if it isn't.
-  static void assertValid(HermesValue x) {
-#ifndef NDEBUG
-    (void)HermesValueTraits<T>::decode(x);
-#endif
-  }
-};
 
 /// A HermesValue in the current GCScope which is trackable by the GC and will
 /// be correctly marked and updated if objects are moved. The value is valid

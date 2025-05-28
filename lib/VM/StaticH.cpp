@@ -2062,7 +2062,7 @@ extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
       PinnedValue<JSObject> obj;
     } lv;
     LocalsRAII lraii{runtime, &lv};
-    lv.obj = vmcast<JSObject>(*toPHV(base));
+    lv.obj.castAndSetHermesValue<JSObject>(*toPHV(base));
     uint32_t beginIndex;
     uint32_t endIndex;
     MutableHandle<JSObject> obj{lv.obj};
