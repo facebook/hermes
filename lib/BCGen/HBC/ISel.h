@@ -27,8 +27,7 @@ void runHBCISel(
     BytecodeFunctionGenerator *BCFGen,
     HVMRegisterAllocator &RA,
     const BytecodeGenerationOptions &options,
-    FileAndSourceMapIdCache &debugIdCache,
-    SourceMapGenerator *outSourceMap);
+    FileAndSourceMapIdCache &debugIdCache);
 
 } // namespace hbc
 } // namespace hermes

@@ -69,9 +69,6 @@ class BytecodeModuleGenerator {
   /// Options controlling bytecode generation.
   BytecodeGenerationOptions options_;
 
-  /// The source map generator to use (nullptr if none).
-  SourceMapGenerator *sourceMapGen_;
-
   /// Base bytecode used in delta optimizing mode.
   /// When it is not null and optimization is turned on, we optimize for the
   /// delta.
@@ -103,14 +100,12 @@ class BytecodeModuleGenerator {
       Module *M,
       FileAndSourceMapIdCache &debugIdCache,
       BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults(),
-      SourceMapGenerator *sourceMapGen = nullptr,
       std::unique_ptr<BCProviderBase> baseBCProvider = nullptr)
       : bm_(bcModule),
         M_(M),
         debugInfoGenerator_(bm_.getDebugInfo()),
         debugIdCache_(debugIdCache),
         options_(options),
-        sourceMapGen_(sourceMapGen),
         baseBCProvider_(std::move(baseBCProvider)) {
     bm_.getBytecodeOptionsMut().setStaticBuiltins(
         options_.staticBuiltinsEnabled);
@@ -359,7 +354,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
       HVMRegisterAllocator &RA,
       BytecodeGenerationOptions options,
       FileAndSourceMapIdCache &debugCache,
-      SourceMapGenerator *sourceMapGen,
       DebugInfoGenerator &debugInfoGenerator);
 
   /// \return the generator for the current BytecodeModule.

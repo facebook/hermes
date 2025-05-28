@@ -94,7 +94,6 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     HVMRegisterAllocator &RA,
     BytecodeGenerationOptions options,
     FileAndSourceMapIdCache &debugCache,
-    SourceMapGenerator *sourceMapGen,
     DebugInfoGenerator &debugInfoGenerator) {
   BytecodeFunctionGenerator funcGen{BMGen, RA.getMaxHVMRegisterUsage()};
 
@@ -103,7 +102,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     F->moveToCompiledFunctionList();
     funcGen.bytecodeGenerationComplete();
   } else {
-    runHBCISel(F, &funcGen, RA, options, debugCache, sourceMapGen);
+    runHBCISel(F, &funcGen, RA, options, debugCache);
     if (funcGen.hasEncodingError()) {
       F->getParent()->getContext().getSourceErrorManager().error(
           F->getSourceRange().Start, "Error encoding bytecode");
@@ -525,7 +524,6 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
             RA,
             options_,
             debugIdCache_,
-            sourceMapGen_,
             debugInfoGenerator_);
     if (!func)
       return false;

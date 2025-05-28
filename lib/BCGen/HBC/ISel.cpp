@@ -228,7 +228,7 @@ class HBCISel {
       unsigned bufId);
 
   /// Add applicable debug info.
-  void addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap);
+  void addDebugSourceLocationInfo();
   void addDebugLexicalInfo();
 
   /// Populate Property caching metadata to the function.
@@ -326,7 +326,7 @@ class HBCISel {
   }
 
   /// Generate the bytecode stream for the function.
-  void run(SourceMapGenerator *outSourceMap);
+  void run();
 };
 
 unsigned HBCISel::encodeValue(Value *value) {
@@ -589,7 +589,7 @@ inline FileAndSourceMapId HBCISel::obtainFileAndSourceMapId(
   return it->second;
 }
 
-void HBCISel::addDebugSourceLocationInfo(SourceMapGenerator *outSourceMap) {
+void HBCISel::addDebugSourceLocationInfo() {
   bool needDebugStatementNo =
       F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL ||
       F_->getContext().getDebugInfoSetting() == DebugInfoSetting::SOURCE_MAP;
@@ -2540,7 +2540,7 @@ void HBCISel::generateInst(Instruction *ii, BasicBlock *next) {
   }
 }
 
-void HBCISel::run(SourceMapGenerator *outSourceMap) {
+void HBCISel::run() {
   auto PO = postOrderAnalysis(F_);
 
   /// The order of the blocks is reverse-post-order, which is a simply
@@ -2567,7 +2567,7 @@ void HBCISel::run(SourceMapGenerator *outSourceMap) {
 
   resolveRelocations();
   resolveExceptionHandlers();
-  addDebugSourceLocationInfo(outSourceMap);
+  addDebugSourceLocationInfo();
   generateJumpTable();
   generateStringSwitchTable();
   addDebugLexicalInfo();
@@ -2670,9 +2670,8 @@ void runHBCISel(
     BytecodeFunctionGenerator *BCFGen,
     HVMRegisterAllocator &RA,
     const BytecodeGenerationOptions &options,
-    FileAndSourceMapIdCache &debugIdCache,
-    SourceMapGenerator *outSourceMap) {
-  HBCISel{F, BCFGen, RA, options, debugIdCache}.run(outSourceMap);
+    FileAndSourceMapIdCache &debugIdCache) {
+  HBCISel{F, BCFGen, RA, options, debugIdCache}.run();
 }
 
 } // namespace hbc

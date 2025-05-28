@@ -126,7 +126,6 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
     hermes::OptValue<uint32_t> segment = llvh::None,
-    SourceMapGenerator *sourceMap = nullptr,
     std::unique_ptr<BCProviderBase> baseBCProvider = nullptr);
 
 /// Generate bytecode for a lazy function and mutate the BytecodeModule

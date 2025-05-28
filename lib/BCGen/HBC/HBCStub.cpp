@@ -38,7 +38,6 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
     hermes::OptValue<uint32_t> segment,
-    SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   return nullptr;
 }

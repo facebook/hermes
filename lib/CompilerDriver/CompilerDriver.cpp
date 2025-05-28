@@ -1822,7 +1822,6 @@ CompileResult generateBytecodeForSerialization(
             M->getTopLevelFunction(),
             genOptions,
             segment,
-            sourceMapGenOrNull,
             std::move(baseBCProvider));
 
     if (bytecodeModule) {

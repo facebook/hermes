@@ -62,7 +62,7 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   llvh::SmallVector<char, 0> bytecodeVector;
   llvh::raw_svector_ostream OS(bytecodeVector);
   std::unique_ptr<BytecodeModule> BM = generateBytecodeModule(
-      &M, M.getTopLevelFunction(), bytecodeGenOpts, llvh::None, sourceMapGen);
+      &M, M.getTopLevelFunction(), bytecodeGenOpts, llvh::None);
   assert(BM != nullptr && "Failed to generate bytecode module");
 
   if (bytecodeGenOpts.format == OutputFormatKind::EmitBundle) {

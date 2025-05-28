@@ -55,7 +55,6 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
     Function *entryPoint,
     const BytecodeGenerationOptions &options,
     hermes::OptValue<uint32_t> segment,
-    SourceMapGenerator *sourceMapGen,
     std::unique_ptr<BCProviderBase> baseBCProvider) {
   PerfSection perf("Bytecode Generation");
   auto bm = std::make_unique<BytecodeModule>();
@@ -63,12 +62,7 @@ std::unique_ptr<BytecodeModule> generateBytecodeModule(
 
   bool success =
       BytecodeModuleGenerator{
-          *bm,
-          M,
-          debugIdCache,
-          options,
-          sourceMapGen,
-          std::move(baseBCProvider)}
+          *bm, M, debugIdCache, options, std::move(baseBCProvider)}
           .generate(entryPoint, segment);
 
   return success ? std::move(bm) : nullptr;
@@ -81,7 +75,7 @@ bool generateBytecodeFunctionLazy(
     uint32_t lazyFuncID,
     FileAndSourceMapIdCache &debugIdCache,
     const BytecodeGenerationOptions &options) {
-  return BytecodeModuleGenerator{bm, M, debugIdCache, options, nullptr, nullptr}
+  return BytecodeModuleGenerator{bm, M, debugIdCache, options, nullptr}
       .generateLazyFunctions(lazyFunc, lazyFuncID);
 }
 
@@ -93,9 +87,8 @@ std::unique_ptr<BytecodeModule> generateBytecodeModuleForEval(
   auto bm = std::make_unique<BytecodeModule>();
   FileAndSourceMapIdCache debugIdCache{};
 
-  bool success =
-      BytecodeModuleGenerator{*bm, M, debugIdCache, options, nullptr, nullptr}
-          .generateForEval(entryPoint);
+  bool success = BytecodeModuleGenerator{*bm, M, debugIdCache, options, nullptr}
+                     .generateForEval(entryPoint);
 
   return success ? std::move(bm) : nullptr;
 }
