@@ -34,7 +34,7 @@ describe('ImportExpression', () => {
           {
             "directive": null,
             "expression": {
-              "attributes": null,
+              "options": null,
               "source": {
                 "literalType": "string",
                 "raw": "'foo'",

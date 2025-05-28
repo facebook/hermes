@@ -20,7 +20,7 @@ import('foo')
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": null
+// CHECK-NEXT:         "options": null
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
@@ -41,7 +41,7 @@ import('foo')
 // CHECK-NEXT:             "type": "StringLiteral",
 // CHECK-NEXT:             "value": "foo"
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "attributes": null
+// CHECK-NEXT:           "options": null
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "operator": "+"
 // CHECK-NEXT:       },
@@ -73,7 +73,7 @@ function func() {
 // CHECK-NEXT:                     "type": "StringLiteral",
 // CHECK-NEXT:                     "value": "foo"
 // CHECK-NEXT:                   },
-// CHECK-NEXT:                   "attributes": null
+// CHECK-NEXT:                   "options": null
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "property": {
 // CHECK-NEXT:                   "type": "Identifier",

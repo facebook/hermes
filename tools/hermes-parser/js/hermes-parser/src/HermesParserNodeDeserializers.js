@@ -376,7 +376,7 @@ function deserializeImportExpression() {
     type: 'ImportExpression',
     loc: this.addEmptyLoc(),
     source: this.deserializeNode(),
-    attributes: this.deserializeNode(),
+    options: this.deserializeNode(),
   };
 }
 function deserializeCallExpressionLikeFirst() {

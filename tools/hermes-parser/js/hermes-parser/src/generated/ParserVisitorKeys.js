@@ -364,7 +364,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   },
   ImportExpression: {
     source: 'Node',
-    attributes: 'Node',
+    options: 'Node',
   },
   ImportNamespaceSpecifier: {
     local: 'Node',

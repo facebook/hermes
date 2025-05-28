@@ -288,7 +288,7 @@ ESTREE_NODE_1_ARGS(
 ESTREE_NODE_2_ARGS(
     ImportExpression, Base,
     NodePtr, source, false,
-    NodePtr, attributes, true)
+    NodePtr, options, true)
 
 ESTREE_FIRST(CallExpressionLike, Base)
 ESTREE_NODE_3_ARGS(

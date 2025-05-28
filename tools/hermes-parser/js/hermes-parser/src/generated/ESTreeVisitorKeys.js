@@ -165,7 +165,7 @@ module.exports = {
   ImportAttribute: ['key', 'value'],
   ImportDeclaration: ['specifiers', 'source', 'assertions'],
   ImportDefaultSpecifier: ['local'],
-  ImportExpression: ['source', 'attributes'],
+  ImportExpression: ['source', 'options'],
   ImportNamespaceSpecifier: ['local'],
   ImportSpecifier: ['imported', 'local'],
   IndexedAccessType: ['objectType', 'indexType'],

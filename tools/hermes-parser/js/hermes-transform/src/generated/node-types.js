@@ -686,7 +686,7 @@ export type ImportDefaultSpecifierProps = {
 
 export type ImportExpressionProps = {
   +source: MaybeDetachedNode<ImportExpressionType['source']>,
-  +attributes?: ?MaybeDetachedNode<ImportExpressionType['attributes']>,
+  +options?: ?MaybeDetachedNode<ImportExpressionType['options']>,
 };
 
 export type ImportNamespaceSpecifierProps = {
@@ -2368,7 +2368,7 @@ export function ImportExpression(props: {
   const node = detachedProps<ImportExpressionType>((props.parent: $FlowFixMe), {
     type: 'ImportExpression',
     source: asDetachedNodeForCodeGen(props.source),
-    attributes: asDetachedNodeForCodeGen(props.attributes),
+    options: asDetachedNodeForCodeGen(props.options),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;

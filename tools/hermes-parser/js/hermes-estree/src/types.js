@@ -1047,7 +1047,7 @@ export interface ImportAttribute extends BaseNode {
   +key: Identifier;
   +value: StringLiteral;
 
-  +parent: ImportDeclaration | ImportExpression;
+  +parent: ImportDeclaration;
 }
 
 export interface ImportSpecifier extends BaseNode {
@@ -1062,7 +1062,7 @@ export interface ImportSpecifier extends BaseNode {
 export interface ImportExpression extends BaseNode {
   +type: 'ImportExpression';
   +source: Expression;
-  +attributes: $ReadOnlyArray<ImportAttribute> | null;
+  +options: Expression | null;
 }
 
 export interface ImportDefaultSpecifier extends BaseNode {

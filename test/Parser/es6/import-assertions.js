@@ -174,7 +174,7 @@ import('foo', 1);
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": {
+// CHECK-NEXT:         "options": {
 // CHECK-NEXT:           "type": "NumericLiteral",
 // CHECK-NEXT:           "value": 1,
 // CHECK-NEXT:           "raw": "1"
@@ -192,7 +192,7 @@ import('foo', 1,);
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": {
+// CHECK-NEXT:         "options": {
 // CHECK-NEXT:           "type": "NumericLiteral",
 // CHECK-NEXT:           "value": 1,
 // CHECK-NEXT:           "raw": "1"
