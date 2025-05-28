@@ -2241,7 +2241,7 @@ inline PinnedHermesValue *Runtime::allocUninitializedStack(uint32_t count) {
 }
 
 inline bool Runtime::checkAndAllocStack(uint32_t count) {
-  if (!checkAvailableStack(count))
+  if (LLVM_UNLIKELY(!checkAvailableStack(count)))
     return false;
   allocStack(count);
   return true;
