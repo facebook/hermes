@@ -449,10 +449,6 @@ class BytecodeModule {
     return debugInfo_;
   }
 
-  void setDebugInfo(DebugInfo info) {
-    debugInfo_ = std::move(info);
-  }
-
   /// Initialize the literal buffers.
   void initializeSerializedLiterals(
       std::vector<unsigned char> &&literalValueBuffer,
