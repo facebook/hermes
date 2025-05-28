@@ -2257,6 +2257,13 @@ inline void Runtime::allocStack(uint32_t count) {
 inline void Runtime::initStackWithZeroes(
     PinnedHermesValue *base,
     uint32_t count) {
+  // If count is a constant, let the compiler decide how to initialize it.
+  if (HERMES_BUILTIN_CONSTANT_P(count)) {
+    std::uninitialized_fill_n(
+        base, count, HermesValue::encodeRawZeroValueUnsafe());
+    return;
+  }
+
 #if defined(__aarch64__) && defined(__GNUC__)
   auto *lim = base + count;
   // Fill the first count % 3 elements so we can fill 4 at a time in the loop.

@@ -52,17 +52,15 @@ inline int32_t truncateToInt32(double d) {
   // NOTE: this implementation should be consistent with _sh_to_int32_double()
   // in VM/static_h.h
 
-  // Use __builtin_constant_p() for better perf and to avoid UB caused by
+  // Use HERMES_BUILTIN_CONSTANT_P for better perf and to avoid UB caused by
   // constant propagation.
-#if defined(__GNUC__)
-  if (__builtin_constant_p(d)) {
+  if (HERMES_BUILTIN_CONSTANT_P(d)) {
     // Be aggressive on constant path, use the maximum precision bits
     // of double type for range check.
     if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53))
       return (int32_t)(int64_t)d;
     return truncateToInt32SlowPath(d);
   }
-#endif
 
   if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
     int64_t fast;

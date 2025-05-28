@@ -108,6 +108,19 @@
 #define HERMES_LIMIT_STACK_DEPTH
 #endif
 
+/// __builtin_constant_p allows us to determine if a value is a compile time
+/// constant. It is not available on all compilers so define a wrapper.
+#ifdef __has_builtin
+#if __has_builtin(__builtin_constant_p)
+#define HERMES_BUILTIN_CONSTANT_P(x) __builtin_constant_p(x)
+#endif
+#endif
+
+/// If the compiler does not support __builtin_constant_p, always produce false.
+#ifndef HERMES_BUILTIN_CONSTANT_P
+#define HERMES_BUILTIN_CONSTANT_P(x) false
+#endif
+
 #if LLVM_THREAD_SANITIZER_BUILD
 // tsan detects these exact functions by name.
 #ifdef __cplusplus
