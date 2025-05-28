@@ -234,9 +234,6 @@ class HBCISel {
   /// Populate Property caching metadata to the function.
   void populatePropertyCachingInfo();
 
-  /// Emit instructions at the entry block to handle several special cases.
-  void initialize() {}
-
   /// Emit a mov, or none if it would be a no-op.
   void emitMovIfNeeded(param_t dest, param_t src);
 
@@ -2463,10 +2460,6 @@ void HBCISel::generateBB(BasicBlock *BB, BasicBlock *next) {
   relocations_.push_back(
       {begin_loc, Relocation::RelocationType::BasicBlockType, BB});
   basicBlockMap_[BB] = std::make_pair(begin_loc, next);
-
-  if (BB == &F_->front()) {
-    initialize();
-  }
 
   // Emit an async break check before the terminator if necessary.
   // We do this at the end of the block so that we come after any
