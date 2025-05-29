@@ -447,9 +447,11 @@ class Handle : public HandleBase {
   }
 
   /// \return true if it contains a non-null pointer.
-  /// I couldn't find a way to disable this operator for non-pointers.
+  template <
+      typename U = T,
+      typename = typename std::enable_if<HermesValueTraits<U>::is_cell>::type>
   explicit operator bool() const {
-    return handleRef()->isPointer() && handleRef()->getPointer();
+    return handleRef()->getPointer();
   }
 
   typename HermesValueTraits<T>::arrow_type operator->() const {
