@@ -122,7 +122,7 @@
  * </ul>
  * <p>
  * It is also possible to change or set the symbols used for a particular
- * locale like the currency symbol, the grouping seperator , monetary seperator
+ * locale like the currency symbol, the grouping separator , monetary separator
  * etc by making use of functions unum_setSymbols() and unum_getSymbols().
  */
 
@@ -771,7 +771,7 @@ unum_parseToUFormattable(const UNumberFormat* fmt,
  * @param localized TRUE if the pattern is localized, FALSE otherwise.
  * @param pattern The new pattern
  * @param patternLength The length of pattern, or -1 if null-terminated.
- * @param parseError A pointer to UParseError to recieve information
+ * @param parseError A pointer to UParseError to receive information
  * about errors occurred during parsing, or NULL if no parse error
  * information is desired.
  * @param status A pointer to an input-output UErrorCode.

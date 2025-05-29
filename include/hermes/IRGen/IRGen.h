@@ -60,7 +60,7 @@ struct LazyCompilationData {
 /// Lowers an ESTree program into Hermes IR in \p M.
 /// \param declFileList a list of parsed global property definition files.
 /// \param scopeChain identifiers in the environment, if compiling for local
-/// eval. \returns True if an error occured and a message was emitted.
+/// eval. \returns True if an error occurred and a message was emitted.
 bool generateIRFromESTree(
     ESTree::NodePtr node,
     Module *M,

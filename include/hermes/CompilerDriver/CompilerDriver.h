@@ -30,9 +30,9 @@ enum CompileStatus {
   InputFileError,
   /// An output file could not be written.
   OutputFileError,
-  /// An error occured during optimization.
+  /// An error occurred during optimization.
   OptimizationFailed,
-  /// An error occured in the backend during/after IR lowering.
+  /// An error occurred in the backend during/after IR lowering.
   BackendError,
 };
 

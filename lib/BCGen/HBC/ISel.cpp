@@ -196,7 +196,7 @@ void HBCISel::generateJumpTable() {
     }
 
     BCFGen_->updateJumpTableOffset(
-        // Offset is located two bytes from begining of instruction.
+        // Offset is located two bytes from beginning of instruction.
         entry.offset + 1 + 1,
         startOfTable,
         entry.offset);

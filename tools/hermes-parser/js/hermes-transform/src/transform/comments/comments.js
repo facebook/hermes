@@ -262,7 +262,7 @@ export function appendCommentToSource(
   switch (comment.type) {
     case 'Block': {
       // Prettier decides if a newline is necessary between the comment and its node by looking
-      // to see if a newline seperates them in the source text. We can trick prettier into
+      // to see if a newline separates them in the source text. We can trick prettier into
       // formatting how we want for new comments by placing the range such that a newline
       // will (OWN_LINE) or will not (INLINE) be found when searching from the specified range
       // position.

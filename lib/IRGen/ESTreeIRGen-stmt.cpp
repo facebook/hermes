@@ -746,7 +746,7 @@ void ESTreeIRGen::genConstSwitchStmt(
     } else {
       auto *lit = caseLiterals[caseIndex];
 
-      // Only generate the case and block if this is the first occurence of the
+      // Only generate the case and block if this is the first occurrence of the
       // value.
       if (valueSet.insert(lit).second) {
         values.push_back(lit);

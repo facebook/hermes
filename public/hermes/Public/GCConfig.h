@@ -24,7 +24,7 @@
 namespace hermes {
 namespace vm {
 
-/// A type big enough to accomodate the entire allocated address space.
+/// A type big enough to accommodate the entire allocated address space.
 /// Individual allocations are always 'uint32_t', but on a 64-bit machine we
 /// might want to accommodate a larger total heap (or not, in which case we keep
 /// it 32-bit).

@@ -182,7 +182,7 @@ typedef enum {
 
 /**
  * Function pointer for error callback in the codepage to unicode direction.
- * Called when an error has occured in conversion to unicode, or on open/close of the callback (see reason).
+ * Called when an error has occurred in conversion to unicode, or on open/close of the callback (see reason).
  * @param context Pointer to the callback's private data
  * @param args Information about the conversion in progress
  * @param codeUnits Points to 'length' bytes of the concerned codepage sequence
@@ -205,7 +205,7 @@ typedef void (U_EXPORT2 *UConverterToUCallback) (
 
 /**
  * Function pointer for error callback in the unicode to codepage direction.
- * Called when an error has occured in conversion from unicode, or on open/close of the callback (see reason).
+ * Called when an error has occurred in conversion from unicode, or on open/close of the callback (see reason).
  * @param context Pointer to the callback's private data
  * @param args Information about the conversion in progress
  * @param codeUnits Points to 'length' UChars of the concerned Unicode sequence
@@ -351,7 +351,7 @@ ucnv_compareNames(const char *name1, const char *name2);
  *          ucnv_getAlias for a complete list that is available.
  *          If this parameter is NULL, the default converter will be used.
  * @param err outgoing error status <TT>U_MEMORY_ALLOCATION_ERROR, U_FILE_ACCESS_ERROR</TT>
- * @return the created Unicode converter object, or <TT>NULL</TT> if an error occured
+ * @return the created Unicode converter object, or <TT>NULL</TT> if an error occurred
  * @see ucnv_openU
  * @see ucnv_openCCSID
  * @see ucnv_getAvailableName
@@ -384,7 +384,7 @@ ucnv_open(const char *converterName, UErrorCode *err);
  * @param err outgoing error status <TT>U_MEMORY_ALLOCATION_ERROR, 
  *        U_FILE_ACCESS_ERROR</TT>
  * @return the created Unicode converter object, or <TT>NULL</TT> if an 
- *        error occured
+ *        error occurred
  * @see ucnv_open
  * @see ucnv_openCCSID
  * @see ucnv_close
@@ -450,7 +450,7 @@ ucnv_openU(const UChar *name,
  * @param platform the platform in which the codepage number exists
  * @param err error status <TT>U_MEMORY_ALLOCATION_ERROR, U_FILE_ACCESS_ERROR</TT>
  * @return the created Unicode converter object, or <TT>NULL</TT> if an error
- *   occured.
+ *   occurred.
  * @see ucnv_open
  * @see ucnv_openU
  * @see ucnv_close
@@ -487,7 +487,7 @@ ucnv_openCCSID(int32_t codepage,
  * @param packageName name of the package (equivalent to 'path' in udata_open() call)
  * @param converterName name of the data item to be used, without suffix.
  * @param err outgoing error status <TT>U_MEMORY_ALLOCATION_ERROR, U_FILE_ACCESS_ERROR</TT>
- * @return the created Unicode converter object, or <TT>NULL</TT> if an error occured
+ * @return the created Unicode converter object, or <TT>NULL</TT> if an error occurred
  * @see udata_open
  * @see ucnv_open
  * @see ucnv_safeClone
