@@ -7057,17 +7057,30 @@ ESTree::ExpressionStatementNode *JSParserImpl::parseDirective() {
   if (!lexer_.isCurrentTokenADirective())
     return nullptr;
 
-  // Allocate a StringLiteralNode for the directive.
+  // Allocate a StringLiteralNode for the string expression.
   auto *strLit = setLocation(
       tok_,
       tok_,
       new (context_) ESTree::StringLiteralNode(tok_->getStringLiteral()));
   auto endLoc = tok_->getEndLoc();
 
+  // The directive is the raw input string excluding the quotes. We want to
+  // avoid a second string "uniquing", so we only do it if the raw string length
+  // is different.
+  UniqueString *rawDirective;
+  SMRange rawRng = tok_->getSourceRange();
+  size_t rawLength = rawRng.End.getPointer() - rawRng.Start.getPointer() - 2;
+  if (LLVM_LIKELY(rawLength == tok_->getStringLiteral()->str().size())) {
+    rawDirective = tok_->getStringLiteral();
+  } else {
+    rawDirective = lexer_.getIdentifier(
+        llvh::StringRef(rawRng.Start.getPointer() + 1, rawLength));
+  }
+
   // Actually process the directive. Note that we want to do that before we
   // have consumed any more tokens - strictness can affect the interpretation
   // of tokens.
-  processDirective(strLit->_value);
+  processDirective(rawDirective);
 
   advance(JSLexer::AllowDiv);
 
@@ -7079,7 +7092,7 @@ ESTree::ExpressionStatementNode *JSParserImpl::parseDirective() {
   return setLocation(
       strLit,
       endLoc,
-      new (context_) ESTree::ExpressionStatementNode(strLit, strLit->_value));
+      new (context_) ESTree::ExpressionStatementNode(strLit, rawDirective));
 }
 
 namespace {

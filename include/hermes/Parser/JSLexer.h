@@ -96,11 +96,6 @@ class Token {
   /// - The raw string of a JSXText.
   UniqueString *rawString_{nullptr};
 
-  /// If the current token is a string literal, this flag indicates whether it
-  /// contains any escapes or new line continuations. We need this in order to
-  /// detect directives.
-  bool stringLiteralContainsEscapes_ = false;
-
   Token(const Token &) = delete;
   const Token &operator=(const Token &) = delete;
 
@@ -167,10 +162,6 @@ class Token {
   UniqueString *getStringLiteralRawValue() const {
     assert(getKind() == TokenKind::string_literal);
     return rawString_;
-  }
-  bool getStringLiteralContainsEscapes() const {
-    assert(getKind() == TokenKind::string_literal);
-    return stringLiteralContainsEscapes_;
   }
 
   /// \return whether the template literal token contains a NotEscapeSequence,
@@ -267,16 +258,14 @@ class Token {
     kind_ = TokenKind::private_identifier;
     ident_ = ident;
   }
-  void setStringLiteral(UniqueString *literal, bool containsEscapes) {
+  void setStringLiteral(UniqueString *literal) {
     kind_ = TokenKind::string_literal;
     stringLiteral_ = literal;
-    stringLiteralContainsEscapes_ = containsEscapes;
   }
   void setJSXStringLiteral(UniqueString *literal, UniqueString *raw) {
     kind_ = TokenKind::string_literal;
     stringLiteral_ = literal;
     rawString_ = raw;
-    stringLiteralContainsEscapes_ = false;
   }
   void setRegExpLiteral(RegExpLiteral *literal) {
     kind_ = TokenKind::regexp_literal;

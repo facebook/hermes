@@ -837,11 +837,8 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
 #endif
 
 bool JSLexer::isCurrentTokenADirective() {
-  // The current token must be a string literal without escapes.
-  if (token_.getKind() != TokenKind::string_literal ||
-      token_.getStringLiteralContainsEscapes()) {
+  if (token_.getKind() != TokenKind::string_literal)
     return false;
-  }
 
   const char *ptr = curCharPtr_;
 
@@ -1843,10 +1840,6 @@ void JSLexer::scanString() {
   assert(*curCharPtr_ == '\'' || *curCharPtr_ == '"');
   char quoteCh = *curCharPtr_++;
 
-  // Track whether we encounter any escapes or new line continuations. We need
-  // that information in order to detect directives.
-  bool escapes = false;
-
   tmpStorage_.clear();
 
   for (;;) {
@@ -1854,7 +1847,6 @@ void JSLexer::scanString() {
       ++curCharPtr_;
       break;
     } else if (!JSX && *curCharPtr_ == '\\') {
-      escapes = true;
       ++curCharPtr_;
       switch ((unsigned char)*curCharPtr_) {
         case '\'':
@@ -1986,7 +1978,7 @@ void JSLexer::scanString() {
     }
   }
 breakLoop:
-  token_.setStringLiteral(getStringLiteral(tmpStorage_.str()), escapes);
+  token_.setStringLiteral(getStringLiteral(tmpStorage_.str()));
 }
 
 void JSLexer::scanTemplateLiteral() {
