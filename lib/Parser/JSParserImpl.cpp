@@ -7065,16 +7065,15 @@ ESTree::ExpressionStatementNode *JSParserImpl::parseDirective() {
   auto endLoc = tok_->getEndLoc();
 
   // The directive is the raw input string excluding the quotes. We want to
-  // avoid a second string "uniquing", so we only do it if the raw string length
-  // is different.
+  // avoid a second string "uniquing", so we only do it if there are escapes.
   UniqueString *rawDirective;
-  SMRange rawRng = tok_->getSourceRange();
-  size_t rawLength = rawRng.End.getPointer() - rawRng.Start.getPointer() - 2;
-  if (LLVM_LIKELY(rawLength == tok_->getStringLiteral()->str().size())) {
+  if (LLVM_LIKELY(!tok_->getStringLiteralContainsEscapes())) {
     rawDirective = tok_->getStringLiteral();
   } else {
-    rawDirective = lexer_.getIdentifier(
-        llvh::StringRef(rawRng.Start.getPointer() + 1, rawLength));
+    auto rng = tok_->getSourceRange();
+    rawDirective = lexer_.getIdentifier(llvh::StringRef(
+        rng.Start.getPointer() + 1,
+        rng.End.getPointer() - rng.Start.getPointer() - 2));
   }
 
   // Actually process the directive. Note that we want to do that before we

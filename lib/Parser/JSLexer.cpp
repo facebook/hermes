@@ -1840,6 +1840,10 @@ void JSLexer::scanString() {
   assert(*curCharPtr_ == '\'' || *curCharPtr_ == '"');
   char quoteCh = *curCharPtr_++;
 
+  // Track whether we encounter any escapes or new line continuations. We need
+  // that information in order to detect directives.
+  bool escapes = false;
+
   tmpStorage_.clear();
 
   for (;;) {
@@ -1847,6 +1851,7 @@ void JSLexer::scanString() {
       ++curCharPtr_;
       break;
     } else if (!JSX && *curCharPtr_ == '\\') {
+      escapes = true;
       ++curCharPtr_;
       switch ((unsigned char)*curCharPtr_) {
         case '\'':
@@ -1978,7 +1983,7 @@ void JSLexer::scanString() {
     }
   }
 breakLoop:
-  token_.setStringLiteral(getStringLiteral(tmpStorage_.str()));
+  token_.setStringLiteral(getStringLiteral(tmpStorage_.str()), escapes);
 }
 
 void JSLexer::scanTemplateLiteral() {
