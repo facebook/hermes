@@ -98,6 +98,12 @@ TEST_P(HermesRuntimeTest, StrictHostFunctionBindTest) {
                   .getBool());
 }
 
+TEST_P(HermesRuntimeTest, ResetTimezoneCache) {
+  if (auto *hrt = dynamic_cast<HermesRuntime *>(rt.get())) {
+    EXPECT_NO_THROW({ hrt->resetTimezoneCache(); });
+  }
+}
+
 TEST_P(HermesRuntimeTest, DescriptionTest) {
   // Minimally, if the description doesn't include "Hermes", something
   // is wrong.
