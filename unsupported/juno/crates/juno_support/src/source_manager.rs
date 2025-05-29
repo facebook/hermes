@@ -136,7 +136,7 @@ impl SourceManager {
     /// The result reference must never escape.
     #[allow(clippy::mut_from_ref)]
     unsafe fn inner_mut(&self) -> &mut Inner {
-        &mut *self.inner.get()
+        unsafe { &mut *self.inner.get() }
     }
 
     /// Gain access to the inner object.
@@ -144,7 +144,7 @@ impl SourceManager {
     /// # Safety
     /// The result reference must never escape.
     unsafe fn inner(&self) -> &Inner {
-        &mut *self.inner.get()
+        unsafe { &mut *self.inner.get() }
     }
 
     /// Number of errors that have been reported.

@@ -7,7 +7,7 @@
 
 use std::mem;
 
-extern "C" {
+unsafe extern "C" {
     /// \param m the number to convert
     /// \param dest output buffer
     /// \param destSize size of dest, at least NUMBER_TO_STRING_BUF_SIZE

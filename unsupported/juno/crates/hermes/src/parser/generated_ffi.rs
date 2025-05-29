@@ -293,7 +293,7 @@ pub enum NodeKind {
     _CoverLast,
 }
 
-extern "C" {
+unsafe extern "C" {
     // Program
     pub fn hermes_get_Program_body(node: NodePtr) -> NodeListRef;
     // FunctionExpression

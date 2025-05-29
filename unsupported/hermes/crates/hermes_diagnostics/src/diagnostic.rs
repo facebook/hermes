@@ -129,7 +129,7 @@ impl Diagnostic {
         self
     }
 
-    pub fn message(&self) -> &impl DiagnosticDisplay {
+    pub fn message(&self) -> &(impl DiagnosticDisplay + use<>) {
         &self.0.message
     }
 
@@ -141,7 +141,7 @@ impl Diagnostic {
         self.0.span
     }
 
-    pub fn get_data(&self) -> &[impl DiagnosticDisplay] {
+    pub fn get_data(&self) -> &[impl DiagnosticDisplay + use<>] {
         &self.0.data
     }
 

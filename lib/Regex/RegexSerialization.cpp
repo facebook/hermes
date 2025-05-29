@@ -86,7 +86,7 @@ void dumpInstruction(
     const regex::MatchChar16Insn *insn,
     llvh::raw_ostream &OS) {
   OS << "MatchChar16: ";
-  char32_t c = insn->c;
+  char32_t c = static_cast<char32_t>(insn->c);
   OS << llvh::format_hex(c, 4);
 }
 
@@ -147,7 +147,7 @@ void dumpInstruction(
     const regex::MatchCharICase16Insn *insn,
     llvh::raw_ostream &OS) {
   OS << "MatchCharICase16: ";
-  char32_t c = insn->c;
+  char32_t c = static_cast<char32_t>(insn->c);
   OS << llvh::format_hex(c, 4);
 }
 

@@ -345,7 +345,6 @@ HERMES_EXPORT jsi::ICast *makeHermesRootAPI();
 ///
 /// Can serve as a starting point with tweaks to re-enable needed features:
 ///   auto conf = hardenedHermesRuntimeConfig().rebuild();
-///   conf.withArrayBuffer(true);
 ///   ...
 ///   auto runtime = makeHermesRuntime(conf.build());
 HERMES_EXPORT ::hermes::vm::RuntimeConfig hardenedHermesRuntimeConfig();

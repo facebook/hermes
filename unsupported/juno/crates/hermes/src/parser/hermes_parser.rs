@@ -207,7 +207,7 @@ struct ParserContext {
     _unused: i32,
 }
 
-extern "C" {
+unsafe extern "C" {
     /// Note: source[len-1] must be 0.
     fn hermes_parser_parse(
         flags: ParserFlags,
