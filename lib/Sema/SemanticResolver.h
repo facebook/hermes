@@ -225,9 +225,9 @@ class SemanticResolver
   void visitForInOf(
       ESTree::LoopStatementNode *node,
       ESTree::ScopeDecorationBase *scopeDeco,
-      ESTree::Node *left,
-      ESTree::Node *right,
-      ESTree::Node *body);
+      ESTree::Node *&left,
+      ESTree::Node *&right,
+      ESTree::Node *&body);
 
   void visit(ESTree::ForStatementNode *node);
 
@@ -350,7 +350,7 @@ class SemanticResolver
   void visitFunctionLike(
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
-      ESTree::Node *body,
+      ESTree::Node *&body,
       ESTree::NodeList &params,
       ESTree::Node *parent);
   /// Visit a function-like node with the FunctionContext already created.
@@ -358,7 +358,7 @@ class SemanticResolver
   void visitFunctionLikeInFunctionContext(
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
-      ESTree::Node *body,
+      ESTree::Node *&body,
       ESTree::NodeList &params);
 
   /// Visit the rest of the function body having visited the params already.
@@ -367,13 +367,13 @@ class SemanticResolver
   void visitFunctionBodyAfterParamsVisited(
       ESTree::FunctionLikeNode *node,
       ESTree::IdentifierNode *id,
-      ESTree::Node *body,
+      ESTree::Node *&body,
       ESTree::BlockStatementNode *blockBody,
       bool hasParameterNamedArguments);
 
   void visitFunctionExpression(
       ESTree::FunctionExpressionNode *node,
-      ESTree::Node *body,
+      ESTree::Node *&body,
       ESTree::NodeList &params,
       ESTree::Node *parent);
 

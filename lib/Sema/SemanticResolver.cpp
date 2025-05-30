@@ -107,11 +107,12 @@ bool SemanticResolver::runLazy(
   // Run the resolver on the function body.
   FunctionContext newFuncCtx{
       *this, rootNode, semInfo, FunctionContext::LazyTag{}};
+  Node *blockStatment = ESTree::getBlockStatement(rootNode);
   visitFunctionLikeInFunctionContext(
       rootNode,
       llvh::cast_or_null<ESTree::IdentifierNode>(
           ESTree::getIdentifier(rootNode)),
-      ESTree::getBlockStatement(rootNode),
+      blockStatment,
       ESTree::getParams(rootNode));
 
   return sm_.getErrorCount() == 0;
@@ -536,9 +537,9 @@ void SemanticResolver::visit(ESTree::ForOfStatementNode *node) {
 void SemanticResolver::visitForInOf(
     ESTree::LoopStatementNode *node,
     ESTree::ScopeDecorationBase *scopeDeco,
-    ESTree::Node *left,
-    ESTree::Node *right,
-    ESTree::Node *body) {
+    ESTree::Node *&left,
+    ESTree::Node *&right,
+    ESTree::Node *&body) {
   node->setLabelIndex(curFunctionInfo()->allocateLabel());
 
   llvh::SaveAndRestore<LoopStatementNode *> saveLoop(
@@ -1596,7 +1597,7 @@ void SemanticResolver::visit(ESTree::TSAsExpressionNode *node) {
 void SemanticResolver::visitFunctionLike(
     ESTree::FunctionLikeNode *node,
     ESTree::IdentifierNode *id,
-    ESTree::Node *body,
+    ESTree::Node *&body,
     ESTree::NodeList &params,
     ESTree::Node *parent) {
   FunctionInfo::ConstructorKind consKind = FunctionInfo::ConstructorKind::None;
@@ -1635,7 +1636,7 @@ void SemanticResolver::visitFunctionLike(
 void SemanticResolver::visitFunctionLikeInFunctionContext(
     ESTree::FunctionLikeNode *node,
     ESTree::IdentifierNode *id,
-    ESTree::Node *body,
+    ESTree::Node *&body,
     ESTree::NodeList &params) {
   if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
     sm_.error(node->getSourceRange(), "async generators are unsupported");
@@ -1823,7 +1824,7 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
 void SemanticResolver::visitFunctionBodyAfterParamsVisited(
     ESTree::FunctionLikeNode *node,
     ESTree::IdentifierNode *id,
-    ESTree::Node *body,
+    ESTree::Node *&body,
     ESTree::BlockStatementNode *blockBody,
     bool hasParameterNamedArguments) {
   // Do not visit the identifier node, because that would try to resolve it
@@ -1885,7 +1886,7 @@ void SemanticResolver::visitFunctionBodyAfterParamsVisited(
 
 void SemanticResolver::visitFunctionExpression(
     ESTree::FunctionExpressionNode *node,
-    ESTree::Node *body,
+    ESTree::Node *&body,
     ESTree::NodeList &params,
     ESTree::Node *parent) {
   if (ESTree::IdentifierNode *ident =
