@@ -2739,6 +2739,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       if (!optKey)
         return None;
 
+      SMLoc parenLoc = tok_->getStartLoc();
       if (!eat(
               TokenKind::l_paren,
               JSLexer::AllowRegExp,
@@ -2793,7 +2794,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           false,
           false);
       funcExpr->isMethodDefinition = true;
-      setLocation(startLoc, block.getValue(), funcExpr);
+      setLocation(parenLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
           optKey.getValue(), funcExpr, getIdent_, computed, false, false);
@@ -2847,6 +2848,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
       llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, false);
 
       ESTree::NodeList params;
+      SMLoc parenLoc = tok_->getStartLoc();
       eat(TokenKind::l_paren,
           JSLexer::AllowRegExp,
           "in setter declaration",
@@ -2904,7 +2906,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           false,
           false);
       funcExpr->isMethodDefinition = true;
-      setLocation(startLoc, block.getValue(), funcExpr);
+      setLocation(parenLoc, block.getValue(), funcExpr);
 
       auto *node = new (context_) ESTree::PropertyNode(
           optKey.getValue(), funcExpr, setIdent_, computed, false, false);
@@ -3046,6 +3048,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
 #endif
 
     // (
+    SMLoc parenLoc = tok_->getStartLoc();
     if (!need(
             TokenKind::l_paren,
             "in method definition",
@@ -3094,7 +3097,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
         generator,
         async);
     funcExpr->isMethodDefinition = true;
-    setLocation(startLoc, optBody.getValue(), funcExpr);
+    setLocation(parenLoc, optBody.getValue(), funcExpr);
 
     value = funcExpr;
   } else {

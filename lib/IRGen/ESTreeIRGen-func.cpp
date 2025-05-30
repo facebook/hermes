@@ -188,13 +188,15 @@ Value *ESTreeIRGen::genArrowFunctionExpression(
 /// Get the function range for \p functionNode, with its parent \p parentNode.
 /// This is done to support lazy compilation. When restarting the compilation,
 /// we need to start parsing at the identifier for the function of the class
-/// method. By default, the source location for the function expression node
-/// starts at the first, left parenthesis.
+/// method or object property method.
+/// The source location for the function expression node for methods
+/// starts at the first left parenthesis.
 /// \param parentNode may be null.
 static SMRange getFunctionRange(
     ESTree::FunctionLikeNode *functionNode,
     ESTree::Node *parentNode) {
-  if (llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parentNode)) {
+  if (llvh::dyn_cast_or_null<ESTree::MethodDefinitionNode>(parentNode) ||
+      llvh::dyn_cast_or_null<ESTree::PropertyNode>(parentNode)) {
     return parentNode->getSourceRange();
   }
   return functionNode->getSourceRange();

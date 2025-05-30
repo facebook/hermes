@@ -824,6 +824,9 @@ class ESTreeIRGen {
   /// We currently provide names for functions that are assigned to a variable,
   /// or functions that are assigned to an object key. These are a subset of
   /// ES6, but not all of it.
+  /// WARNING: Do not call this for function expressions that are methods on
+  /// classes or object literals, because it passes nullptr as the parent of the
+  /// FunctionExpressionNode.
   Value *genExpression(ESTree::Node *expr, Identifier nameHint = Identifier{});
 
   /// A helper called only from \c genExpression. It performs the actual work.
@@ -1140,8 +1143,9 @@ class ESTreeIRGen {
   ///   ES5Function by default, but may also be ES6Constructor.
   /// \param homeObject will be set as the homeObject in the CapturedState of
   /// the function \p FE we are going to generate.
-  /// \param parentNode can optionally be set to the parent AST node of the
-  ///  function node.
+  /// \param parentNode can be set to the parent AST node of the
+  ///  function node. REQUIRED if the function is a method on a class or object
+  ///  literal.
   Value *genFunctionExpression(
       ESTree::FunctionExpressionNode *FE,
       Identifier nameHint,

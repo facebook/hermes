@@ -1357,47 +1357,43 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     enum { None, Placeholder, IRGenerated } state{None};
     /// The value, if this is a regular property
     ESTree::Node *valueNode{};
+    /// Getter PropertyNode, if this is an accessor property.
+    ESTree::PropertyNode *getterProp{};
     /// Getter accessor, if this is an accessor property.
     ESTree::FunctionExpressionNode *getterNode{};
+    /// Setter PropertyNode, if this is an accessor property.
+    ESTree::PropertyNode *setterProp{};
     /// Setter accessor, if this is an accessor property.
     ESTree::FunctionExpressionNode *setterNode{};
-
-    SMRange getSourceRange() {
-      if (valueNode) {
-        return valueNode->getSourceRange();
-      }
-
-      if (getterNode) {
-        return getterNode->getSourceRange();
-      }
-
-      if (setterNode) {
-        return setterNode->getSourceRange();
-      }
-
-      llvm_unreachable("Unset node has no location info");
-    }
 
     void setValue(ESTree::Node *val) {
       isAccessor = false;
       valueNode = val;
       getterNode = setterNode = nullptr;
     }
-    void setGetter(ESTree::FunctionExpressionNode *get) {
+    void setGetter(
+        ESTree::FunctionExpressionNode *get,
+        ESTree::PropertyNode *prop) {
       if (!isAccessor) {
         valueNode = nullptr;
         setterNode = nullptr;
+        setterProp = nullptr;
         isAccessor = true;
       }
       getterNode = get;
+      getterProp = prop;
     }
-    void setSetter(ESTree::FunctionExpressionNode *set) {
+    void setSetter(
+        ESTree::FunctionExpressionNode *set,
+        ESTree::PropertyNode *prop) {
       if (!isAccessor) {
         valueNode = nullptr;
         getterNode = nullptr;
+        getterProp = nullptr;
         isAccessor = true;
       }
       setterNode = set;
+      setterProp = prop;
     }
   };
 
@@ -1453,9 +1449,11 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
     PropertyValue *propValue = &propMap[propName];
     if (prop->_kind->str() == "get") {
-      propValue->setGetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
+      propValue->setGetter(
+          cast<ESTree::FunctionExpressionNode>(prop->_value), prop);
     } else if (prop->_kind->str() == "set") {
-      propValue->setSetter(cast<ESTree::FunctionExpressionNode>(prop->_value));
+      propValue->setSetter(
+          cast<ESTree::FunctionExpressionNode>(prop->_value), prop);
     } else {
       assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
       // We record the propValue if this is a regular property
@@ -1528,14 +1526,26 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       // TODO (T46136220): Set the .name property for anonymous functions that
       // are values for computed property keys.
       auto *key = genExpression(prop->_key);
-      auto *value = prop->_method
-          ? genFunctionExpression(
-                llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
-                Identifier{},
-                nullptr,
-                Function::DefinitionKind::ES6Method,
-                capturedObj)
-          : genExpression(prop->_value, Identifier{});
+      Value *value;
+      if (prop->_method) {
+        value = genFunctionExpression(
+            llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
+            Identifier{},
+            nullptr,
+            Function::DefinitionKind::ES6Method,
+            capturedObj,
+            prop);
+      } else if (prop->_kind->str() == "set" || prop->_kind->str() == "get") {
+        value = genFunctionExpression(
+            llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
+            Identifier{},
+            /* superClassNode */ nullptr,
+            Function::DefinitionKind::ES5Function,
+            /* homeObject */ nullptr,
+            /* parentNode */ prop);
+      } else {
+        value = genExpression(prop->_value, Identifier{});
+      }
       if (prop->_kind->str() == "get") {
         Builder.createDefineOwnGetterSetterInst(
             value,
@@ -1611,15 +1621,25 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       Value *setter = Builder.getLiteralUndefined();
 
       if (propValue->getterNode) {
-        getter = genExpression(
+        assert(propValue->getterProp && "PropertyNode must exist");
+        getter = genFunctionExpression(
             propValue->getterNode,
-            Builder.createIdentifier("get " + keyStr.str()));
+            Builder.createIdentifier("get " + keyStr.str()),
+            /* superClassNode */ nullptr,
+            Function::DefinitionKind::ES5Function,
+            /* homeObject */ nullptr,
+            /* parentNode */ propValue->getterProp);
       }
 
       if (propValue->setterNode) {
-        setter = genExpression(
+        assert(propValue->setterProp && "PropertyNode must exist");
+        setter = genFunctionExpression(
             propValue->setterNode,
-            Builder.createIdentifier("set " + keyStr.str()));
+            Builder.createIdentifier("set " + keyStr.str()),
+            /* superClassNode */ nullptr,
+            Function::DefinitionKind::ES5Function,
+            /* homeObject */ nullptr,
+            /* parentNode */ propValue->setterProp);
       }
 
       Builder.createDefineOwnGetterSetterInst(
@@ -1639,7 +1659,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
               nameHint,
               nullptr,
               Function::DefinitionKind::ES6Method,
-              capturedObj)
+              capturedObj,
+              prop)
         : genExpression(prop->_value, nameHint);
 
     // Only store the value if it won't be overwritten.
