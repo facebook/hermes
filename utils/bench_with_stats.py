@@ -8,8 +8,6 @@ import statistics
 import subprocess
 import sys
 
-from scipy.stats import ttest_ind
-
 # --- Configuration ---
 OLD_EXE = os.environ.get("OLD_EXE", "./sh-old")
 NEW_EXE = os.environ.get("NEW_EXE", "./sh-new")
@@ -59,6 +57,115 @@ def format_change_line(avg_pct, stdev_pct, num_valid_runs):
         return f"Change: {avg_pct:+.1f}% +/- {stdev_pct:.1f}% (from {num_valid_runs} valid runs)"
     else:  # Only average is available (1 valid run)
         return f"Change: {avg_pct:+.1f}% (from {num_valid_runs} valid run, +/- N/A)"
+
+
+def manual_ttest_confidence_interval(data1, data2, confidence=0.95):
+    """Calculate confidence interval manually without scipy dependency."""
+    if len(data1) < 2 or len(data2) < 2:
+        return (None, None)
+
+    # t-distribution critical values for common confidence levels and degrees of freedom
+    t_values = {
+        0.90: {
+            1: 6.314,
+            2: 2.920,
+            3: 2.353,
+            4: 2.132,
+            5: 2.015,
+            6: 1.943,
+            7: 1.895,
+            8: 1.860,
+            9: 1.833,
+            10: 1.812,
+            15: 1.753,
+            20: 1.725,
+            25: 1.708,
+            30: 1.697,
+            40: 1.684,
+            60: 1.671,
+            120: 1.658,
+            float("inf"): 1.645,
+        },
+        0.95: {
+            1: 12.706,
+            2: 4.303,
+            3: 3.182,
+            4: 2.776,
+            5: 2.571,
+            6: 2.447,
+            7: 2.365,
+            8: 2.306,
+            9: 2.262,
+            10: 2.228,
+            15: 2.131,
+            20: 2.086,
+            25: 2.060,
+            30: 2.042,
+            40: 2.021,
+            60: 2.000,
+            120: 1.980,
+            float("inf"): 1.960,
+        },
+        0.99: {
+            1: 63.657,
+            2: 9.925,
+            3: 5.841,
+            4: 4.604,
+            5: 4.032,
+            6: 3.707,
+            7: 3.499,
+            8: 3.355,
+            9: 3.250,
+            10: 3.169,
+            15: 2.947,
+            20: 2.845,
+            25: 2.787,
+            30: 2.750,
+            40: 2.704,
+            60: 2.660,
+            120: 2.617,
+            float("inf"): 2.576,
+        },
+    }
+
+    n1, n2 = len(data1), len(data2)
+    df = n1 + n2 - 2  # degrees of freedom
+
+    # Get t-critical value
+    if confidence not in t_values:
+        return (None, None)
+
+    t_table = t_values[confidence]
+    t_crit = None
+
+    # Find appropriate t-critical value for degrees of freedom
+    for deg_freedom in sorted(t_table.keys()):
+        if df <= deg_freedom:
+            t_crit = t_table[deg_freedom]
+            break
+
+    if t_crit is None:
+        # Use infinity value for very large df
+        t_crit = t_table[float("inf")]
+
+    # Calculate means and variances
+    mean1, mean2 = statistics.mean(data1), statistics.mean(data2)
+    var1 = statistics.variance(data1) if len(data1) > 1 else 0
+    var2 = statistics.variance(data2) if len(data2) > 1 else 0
+
+    # Pooled variance and standard error
+    pooled_var = ((n1 - 1) * var1 + (n2 - 1) * var2) / df
+    se = math.sqrt(pooled_var * (1 / n1 + 1 / n2))
+
+    if se == 0:
+        return (None, None)
+
+    # Difference of means and margin of error
+    # Note: data1=new_scores, data2=old_scores, so mean1-mean2 = new-old
+    diff = mean1 - mean2
+    margin = t_crit * se
+
+    return (diff - margin, diff + margin)
 
 
 def print_summary_table(title, confidence, summary_data):
@@ -203,12 +310,16 @@ if __name__ == "__main__":
                             # Handle potential errors if list is unexpectedly small
                             stdev_percentage_change = None
                     if num_valid_pairs >= 2:
-                        ttest = ttest_ind(new_scores, old_scores)
-                        (low, high) = ttest.confidence_interval(args.confidence)
-                        (pct_low, pct_high) = (
-                            low / avg_old * 100,
-                            high / avg_old * 100,
+                        (low, high) = manual_ttest_confidence_interval(
+                            new_scores, old_scores, args.confidence
                         )
+                        if low is not None and high is not None:
+                            (pct_low, pct_high) = (
+                                low / avg_old * 100,
+                                high / avg_old * 100,
+                            )
+                        else:
+                            (pct_low, pct_high) = (None, None)
                     else:
                         (pct_low, pct_high) = (None, None)
 
