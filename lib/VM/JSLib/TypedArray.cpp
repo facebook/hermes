@@ -208,7 +208,7 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
     if ((propRes = getIndexed_RJS(runtime, arrayLike, i)) ==
         ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
-    PinnedValue iValue = HermesValue::encodeTrustedNumberValue(i);
+    PinnedValue<> iValue = HermesValue::encodeTrustedNumberValue(i);
     if (JSTypedArray<T, C>::putComputed_RJS(
             self, runtime, iValue, runtime.makeHandle(std::move(*propRes))) ==
         ExecutionStatus::EXCEPTION) {
@@ -692,7 +692,7 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
     // d. Else, let mappedValue be kValue (already done by initializer).
     auto mappedValue = runtime.makeHandle(std::move(*propRes));
     // e. Perform ? Set(targetObj, Pk, mappedValue, true).
-    PinnedValue kVal = HermesValue::encodeTrustedNumberValue(k);
+    PinnedValue<> kVal = HermesValue::encodeTrustedNumberValue(k);
     if (JSObject::putComputed_RJS(*targetObj, runtime, kVal, mappedValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;

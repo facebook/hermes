@@ -4504,7 +4504,7 @@ arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
     GCScopeMarkerRAII marker{runtime};
     // It is OK to have a PinnedValue here, because we are only storing a number
     // in it.
-    PinnedValue fromV = HermesValue::encodeTrustedNumberValue(from);
+    PinnedValue<> fromV = HermesValue::encodeTrustedNumberValue(from);
     CallResult<PseudoHandle<>> propRes =
         JSObject::getComputed_RJS(lv.O, runtime, fromV);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
@@ -4557,7 +4557,7 @@ static inline CallResult<uint32_t> arrayCopyHelper(
       return ExecutionStatus::EXCEPTION;
     lv.fromValue = std::move(*propRes);
 
-    PinnedValue toIndex =
+    PinnedValue<> toIndex =
         HermesValue::encodeTrustedNumberValue(toStartIndex + i);
     if (LLVM_UNLIKELY(
             JSObject::defineOwnComputedPrimitive(
@@ -4821,7 +4821,7 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
     }
 
     // 9d. Perform ! CreateDataPropertyOrThrow(A, Pk, fromValue).
-    PinnedValue kVal = HermesValue::encodeTrustedNumberValue(k);
+    PinnedValue<> kVal = HermesValue::encodeTrustedNumberValue(k);
     if (LLVM_UNLIKELY(
             JSObject::defineOwnComputedPrimitive(
                 lv.A,

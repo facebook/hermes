@@ -3736,7 +3736,7 @@ CallResult<PseudoHandle<>> getIndexedWithReceiver_RJS(
   if (auto optRes = tryFastGetComputedMayAlloc(runtime, *srcHandle, index))
     return createPseudoHandle(*optRes);
 
-  PinnedValue hvIndex = PinnedHermesValue::encodeTrustedNumberValue(index);
+  PinnedValue<> hvIndex = PinnedHermesValue::encodeTrustedNumberValue(index);
   // TODO: call a less general function?
   return JSObject::getComputedWithReceiver_RJS(
       srcHandle, runtime, hvIndex, receiver);
