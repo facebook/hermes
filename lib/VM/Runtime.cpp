@@ -287,6 +287,7 @@ Runtime::Runtime(
           runtimeConfig.getVMExperimentFlags()),
       jitContext_(runtimeConfig.getEnableJIT()),
       hasES6Proxy_(runtimeConfig.getES6Proxy()),
+      hasAsyncGenerators_(runtimeConfig.getEnableAsyncGenerators()),
       hasES6BlockScoping_(runtimeConfig.getES6BlockScoping()),
       hasIntl_(runtimeConfig.getIntl()),
       hasMicrotaskQueue_(runtimeConfig.getMicrotaskQueue()),
