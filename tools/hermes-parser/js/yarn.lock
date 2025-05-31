@@ -3003,10 +3003,10 @@ flatted@^3.1.0:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.2.2.tgz#64bfed5cb68fe3ca78b3eb214ad97b63bedce561"
   integrity sha512-JaTY/wtrcSyvXJl4IMFHPKyFur1sE9AUqc0QnhOaJ0CxHtAoIV8pYDzeEfAaNEtGkOfq4gr3LBFmdXW5mOQFnA==
 
-flow-bin@^0.272.1:
-  version "0.272.1"
-  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.272.1.tgz#f41606635b16b81bdcae9ad26d6206b757f6d7ae"
-  integrity sha512-z92T2QkPszdBu65VU//qcLg4NjRmHyK9dzfe7gg2qY1yGFvQ9jiHu3S351ozFStgeIyaL01xzbapFJsFFy+VDA==
+flow-bin@^0.272.2:
+  version "0.272.2"
+  resolved "https://registry.yarnpkg.com/flow-bin/-/flow-bin-0.272.2.tgz#918fc58dc7a99725a83314f453d3e49a56aebdc5"
+  integrity sha512-Rf8UG1biRBUGGh6qN7Ua2Y2lJRpR8Pbzby5kfHQ5m5SgjC5eOPw3Qjbrheb9ec5oU4L1gCOXRYbkbpr02PRUBw==
 
 flow-enums-runtime@^0.0.6:
   version "0.0.6"
