@@ -11,7 +11,8 @@ import sys
 # --- Configuration ---
 OLD_EXE = os.environ.get("OLD_EXE", "./sh-old")
 NEW_EXE = os.environ.get("NEW_EXE", "./sh-new")
-ARGS = os.environ.get("ARGS", "-w -Xjit").split(" ")
+OLD_ARGS = os.environ.get("OLD_ARGS", os.environ.get("ARGS", "-w -Xjit")).split(" ")
+NEW_ARGS = os.environ.get("NEW_ARGS", os.environ.get("ARGS", "-w -Xjit")).split(" ")
 # -------------------
 
 
@@ -262,13 +263,13 @@ if __name__ == "__main__":
         for i in range(args.runs):
             # --- OLD RUN ---
             print(f"OLD {filename} (Run {i+1}/{args.runs})")  # Announce before running
-            old_result = run_command(OLD_EXE, ARGS, filename)
+            old_result = run_command(OLD_EXE, OLD_ARGS, filename)
             print(old_result.stdout, end="")  # Print the output immediately
             old_score = find_first_score(old_result.stdout)
 
             # --- NEW RUN ---
             print(f"NEW {filename} (Run {i+1}/{args.runs})")  # Announce before running
-            new_result = run_command(NEW_EXE, ARGS, filename)
+            new_result = run_command(NEW_EXE, NEW_ARGS, filename)
             print(new_result.stdout, end="")  # Print the output immediately
             new_score = find_first_score(new_result.stdout)
 
