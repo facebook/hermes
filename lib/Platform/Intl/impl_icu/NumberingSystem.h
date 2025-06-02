@@ -16,8 +16,20 @@ namespace hermes {
 namespace platform_intl {
 namespace impl_icu {
 
+/**
+ * Returns the default numbering system identifier for the given locale.
+ * @param localeICU ICU locale string
+ * @return numbering system identifier or "latn" if there is no such information
+ * for the given locale.
+ */
 std::u16string getDefaultNumberingSystem(const std::string &localeICU);
 
+/**
+ * Returns all known numbering system identifiers from ICU library. Excludes
+ * the ones disallowed by the spec:
+ * https://tc39.es/ecma402/#sec-intl.numberformat-internal-slots
+ * @return a set of all known and allowed numbering system identifiers.
+ */
 const std::unordered_set<std::u16string> &getAvailableNumberingSystems();
 
 } // namespace impl_icu

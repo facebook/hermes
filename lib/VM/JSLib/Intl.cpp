@@ -251,6 +251,10 @@ struct OptionData {
 constexpr OptionData kSupportedLocalesOfOptions[] = {
     {u"localeMatcher", platform_intl::Option::Kind::String, 0}};
 
+// The ordering of the options defined in each of the below arrays needs to
+// follow the same order that they are read in the spec. There are test262 tests
+// that check for the read / resolve order of options.
+
 constexpr OptionData kCollatorOptions[] = {
     {u"usage", platform_intl::Option::Kind::String, 0},
     {u"localeMatcher", platform_intl::Option::Kind::String, 0},
@@ -1027,6 +1031,16 @@ CallResult<double> dateNowValue(Runtime &runtime, NativeArgs args) {
 }
 
 #ifdef HERMES_INTL_FORMAT_RANGE
+/**
+ * Returns the argument at the given index as a double if the argument is a
+ * valid JS Date value.
+ * @param runtime Runtime context
+ * @param args list of arguments passed to Intl.DateTimeFormat.formatRange /
+ * formatRangeToParts API call
+ * @param argIndex index of the argument to be converted
+ * @return the argument at the given index as a double if the argument is a
+ * valid JS Date value, ExecutionStatus::EXCEPTION otherwise.
+ */
 CallResult<double> dateValue(Runtime &runtime, NativeArgs args, int argIndex) {
   // ECMA 402 11.3.5 & 11.3.6
   // 4.a. Let x be ? ToNumber(date).

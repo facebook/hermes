@@ -114,12 +114,14 @@ class DateTimeFormat : public platform_intl::DateTimeFormat {
    * See https://tc39.es/ecma402/#sec-formatdatetimerange.
    *
    * @param runtime runtime object
-   * @param startDate start of date range, an epoch date value
-   * @param endDate end of date range, an epoch date value
+   * @param startUtcMs start of date range, an epoch date value
+   * @param endUtcMs end of date range, an epoch date value
    * @return a formatted date-time range string
    */
-  vm::CallResult<std::u16string>
-  formatRange(vm::Runtime &runtime, double startDate, double endDate) noexcept;
+  vm::CallResult<std::u16string> formatRange(
+      vm::Runtime &runtime,
+      double startUtcMs,
+      double endUtcMs) noexcept;
 
   /**
    * Formats a date range to a vector of objects containing the formatted
@@ -129,28 +131,35 @@ class DateTimeFormat : public platform_intl::DateTimeFormat {
    * See https://tc39.es/ecma402/#sec-formatdatetimerangetoparts.
    *
    * @param runtime runtime object
-   * @param startDate start of date range, an epoch date value
-   * @param endDate end of date range, an epoch date value
+   * @param startUtcMs start of date range, an epoch date value
+   * @param endUtcMs end of date range, an epoch date value
    * @return a vector of formatted date-time range string parts
    */
   vm::CallResult<std::vector<Part>> formatRangeToParts(
       vm::Runtime &runtime,
-      double startDate,
-      double endDate) noexcept;
+      double startUtcMs,
+      double endUtcMs) noexcept;
 
  private:
   enum class DateTimeComponent : int { DATE, TIME, ALL, ANY };
 
-  // Corresponds to table headers of
-  // https://tc39.es/ecma402/#table-datetimeformat-components.
-  // Additionally, include the date time format component's corresponding
-  // icu skeleton symbol.
+  /**
+   * Corresponds to table headers of
+   * https://tc39.es/ecma402/#table-datetimeformat-components.
+   * Additionally, include the date time format component's corresponding
+   * icu skeleton symbol.
+   */
   struct DateTimeFormatComponent {
     const std::u16string_view property_;
     const llvh::ArrayRef<const char16_t *> values_;
     std::optional<Option> resolvedValue_;
     const char16_t icuSkeletonSymbol;
   };
+  /**
+   * There are exactly 11 date-time format components corresponding to the table
+   * referenced above.
+   */
+  static constexpr std::size_t DATE_TIME_FORMAT_COMPONENT_COUNT = 11;
 
   /**
    * SymbolFindResult is used to store the search result of a symbol
@@ -270,10 +279,11 @@ class DateTimeFormat : public platform_intl::DateTimeFormat {
   std::optional<std::u16string> resolvedHourCycle_;
   std::optional<std::u16string> resolvedDateStyle_;
   std::optional<std::u16string> resolvedTimeStyle_;
-  std::unique_ptr<UDateFormat, decltype(&udat_close)> dateFormat_;
+  std::unique_ptr<UDateFormat, decltype(&udat_close)> icuDateFormat_;
   std::unique_ptr<UDateIntervalFormat, decltype(&udtitvfmt_close)>
-      dateIntervalFormat_;
-  std::array<DateTimeFormatComponent, 11> dateTimeFormatComponents_;
+      icuDateIntervalFormat_;
+  std::array<DateTimeFormatComponent, DATE_TIME_FORMAT_COMPONENT_COUNT>
+      dateTimeFormatComponents_;
 };
 
 } // namespace impl_icu

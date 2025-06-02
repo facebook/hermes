@@ -22,6 +22,8 @@ std::string convertBCP47toICULocale(std::u16string_view localeBCP47) {
   std::string localeICU(16, char());
   int32_t bufferSize = localeICU.size();
   int32_t resultLength = 0;
+  // The loop is executed at most twice. If the buffer is not big enough the
+  // first time, the buffer is resized to the required size for the second time.
   while ((resultLength = uloc_forLanguageTag(
               localeBCP47Str.c_str(),
               localeICU.data(),
@@ -47,6 +49,8 @@ std::string convertICUtoBCP47Locale(const char *localeICU) {
   std::string localeBCP47(16, char());
   int32_t bufferSize = localeBCP47.size();
   int32_t resultLength = 0;
+  // The loop is executed at most twice. If the buffer is not big enough the
+  // first time, the buffer is resized to the required size for the second time.
   while (
       (resultLength = uloc_toLanguageTag(
            localeICU, localeBCP47.data(), localeBCP47.size(), true, &status)) >

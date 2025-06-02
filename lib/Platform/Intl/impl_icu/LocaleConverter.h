@@ -24,7 +24,7 @@ std::string convertBCP47toICULocale(std::u16string_view localeBCP47);
 
 /**
  * Converts ICU locale to BCP47 locale.
- * @param localeBCP47 ICU locale to convert
+ * @param localeICU ICU locale to convert
  * @return a BCP47 locale
  */
 std::string convertICUtoBCP47Locale(const char *localeICU);

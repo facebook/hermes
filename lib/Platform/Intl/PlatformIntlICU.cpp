@@ -138,18 +138,18 @@ DateTimeFormat::formatToParts(double jsTimeValue) noexcept {
 
 vm::CallResult<std::u16string> DateTimeFormat::formatRange(
     vm::Runtime &runtime,
-    double startDate,
-    double endDate) noexcept {
+    double startUtcMs,
+    double endUtcMs) noexcept {
   return static_cast<impl_icu::DateTimeFormat *>(this)->formatRange(
-      runtime, startDate, endDate);
+      runtime, startUtcMs, endUtcMs);
 }
 
 vm::CallResult<std::vector<Part>> DateTimeFormat::formatRangeToParts(
     vm::Runtime &runtime,
-    double startDate,
-    double endDate) noexcept {
+    double startUtcMs,
+    double endUtcMs) noexcept {
   return static_cast<impl_icu::DateTimeFormat *>(this)->formatRangeToParts(
-      runtime, startDate, endDate);
+      runtime, startUtcMs, endUtcMs);
 }
 
 namespace {

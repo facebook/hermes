@@ -21,8 +21,8 @@ namespace platform_intl {
 namespace impl_icu {
 
 DateTimeFormat::DateTimeFormat()
-    : dateFormat_(nullptr, &udat_close),
-      dateIntervalFormat_(nullptr, &udtitvfmt_close),
+    : icuDateFormat_(nullptr, &udat_close),
+      icuDateIntervalFormat_(nullptr, &udtitvfmt_close),
       // Corresponde to the table
       // https://tc39.es/ecma402/#table-datetimeformat-components.
       dateTimeFormatComponents_{
@@ -249,8 +249,9 @@ vm::ExecutionStatus DateTimeFormat::createDateTimeFormat(
     // resolvedLocale_ may not yet include calendar extension
     // if calendar is specified through options parameter.
     // Add the extension to internalLocale if that's the case.
-    if (extensionMap.find(constants::extension_key::ca) == extensionMap.end()) {
-      extensionMap.emplace(constants::extension_key::ca, resolvedCalendar_);
+    if (extensionMap
+            .try_emplace(constants::extension_key::ca, resolvedCalendar_)
+            .second) {
       resolvedBCP47Locale.updateExtensionMap(extensionMap);
       internalLocale = resolvedBCP47Locale.getCanonicalizedLocaleId();
     }
@@ -268,9 +269,9 @@ vm::ExecutionStatus DateTimeFormat::createDateTimeFormat(
     // resolvedLocale_ may not yet include numbering system extension
     // if numbering system is specified through options parameter.
     // Add the extension to internalLocale if that's the case.
-    if (extensionMap.find(constants::extension_key::nu) == extensionMap.end()) {
-      extensionMap.emplace(
-          constants::extension_key::nu, resolvedNumberingSystem_);
+    if (extensionMap
+            .try_emplace(constants::extension_key::nu, resolvedNumberingSystem_)
+            .second) {
       resolvedBCP47Locale.updateExtensionMap(extensionMap);
       internalLocale = resolvedBCP47Locale.getCanonicalizedLocaleId();
     }
@@ -338,8 +339,9 @@ vm::ExecutionStatus DateTimeFormat::createDateTimeFormat(
   //
   // Therefore, add 'hc' extension to internalLocale.
   if (resolvedHourCycle_.has_value() &&
-      extensionMap.find(constants::extension_key::hc) == extensionMap.end()) {
-    extensionMap.emplace(constants::extension_key::hc, *resolvedHourCycle_);
+      extensionMap
+          .try_emplace(constants::extension_key::hc, *resolvedHourCycle_)
+          .second) {
     resolvedBCP47Locale.updateExtensionMap(extensionMap);
     internalLocale = resolvedBCP47Locale.getCanonicalizedLocaleId();
   }
@@ -738,7 +740,7 @@ vm::ExecutionStatus DateTimeFormat::createDateTimeFormat(
   // 52. Set dateTimeFormat.[[RangePatterns]] to rangePatterns.
   // 53. Return dateTimeFormat.
   UErrorCode status = U_ZERO_ERROR;
-  dateFormat_.reset(udat_open(
+  icuDateFormat_.reset(udat_open(
       UDAT_PATTERN,
       UDAT_PATTERN,
       localeICU.c_str(),
@@ -747,19 +749,19 @@ vm::ExecutionStatus DateTimeFormat::createDateTimeFormat(
       bestFormatPattern.data(),
       bestFormatPattern.size(),
       &status));
-  if (U_FAILURE(status) || !dateFormat_) {
+  if (U_FAILURE(status) || !icuDateFormat_) {
     return runtime.raiseError(
         "Internal error: unable to create DateTimeFormat instance");
   }
 
-  dateIntervalFormat_.reset(udtitvfmt_open(
+  icuDateIntervalFormat_.reset(udtitvfmt_open(
       localeICU.c_str(),
       bestFormatSkeleton.data(),
       bestFormatSkeleton.size(),
       internalTimeZone.data(),
       internalTimeZone.size(),
       &status));
-  if (U_FAILURE(status) || !dateIntervalFormat_) {
+  if (U_FAILURE(status) || !icuDateIntervalFormat_) {
     return runtime.raiseError(
         "Internal error: unable to create DateTimeFormat instance for range formatting");
   }
@@ -1295,7 +1297,7 @@ std::u16string DateTimeFormat::format(double value) noexcept {
   int32_t bufferSize = output.size();
   int32_t resultLength = 0;
   while ((resultLength = udat_format(
-              dateFormat_.get(),
+              icuDateFormat_.get(),
               value,
               output.data(),
               bufferSize,
@@ -1325,7 +1327,7 @@ std::vector<Part> DateTimeFormat::formatToParts(double value) noexcept {
   int32_t bufferSize = formattedStr.size();
   int32_t resultLength = 0;
   while ((resultLength = udat_formatForFields(
-              dateFormat_.get(),
+              icuDateFormat_.get(),
               value,
               formattedStr.data(),
               bufferSize,
@@ -1428,16 +1430,16 @@ std::u16string DateTimeFormat::icuDateFieldTypeToPartType(int32_t fieldType) {
 
 vm::CallResult<std::u16string> DateTimeFormat::formatRange(
     vm::Runtime &runtime,
-    double startDate,
-    double endDate) noexcept {
+    double startUtcMs,
+    double endUtcMs) noexcept {
   UErrorCode status = U_ZERO_ERROR;
   std::u16string output(256, char16_t());
   int32_t bufferSize = output.size();
   int32_t resultLength = 0;
   while ((resultLength = udtitvfmt_format(
-              dateIntervalFormat_.get(),
-              startDate,
-              endDate,
+              icuDateIntervalFormat_.get(),
+              startUtcMs,
+              endUtcMs,
               output.data(),
               bufferSize,
               nullptr,
@@ -1456,8 +1458,8 @@ vm::CallResult<std::u16string> DateTimeFormat::formatRange(
 
 vm::CallResult<std::vector<Part>> DateTimeFormat::formatRangeToParts(
     vm::Runtime &runtime,
-    double startDate,
-    double endDate) noexcept {
+    double startUtcMs,
+    double endUtcMs) noexcept {
   UErrorCode status = U_ZERO_ERROR;
   std::unique_ptr<UFormattedDateInterval, decltype(&udtitvfmt_closeResult)>
       formattedDateInterval(
@@ -1466,17 +1468,17 @@ vm::CallResult<std::vector<Part>> DateTimeFormat::formatRangeToParts(
 // ICU 67
 #if U_ICU_VERSION_MAJOR_NUM >= 67
   udtitvfmt_formatToResult(
-      dateIntervalFormat_.get(),
-      startDate,
-      endDate,
+      icuDateIntervalFormat_.get(),
+      startUtcMs,
+      endUtcMs,
       formattedDateInterval.get(),
       &status);
 #else
   udtitvfmt_formatToResult(
-      dateIntervalFormat_.get(),
+      icuDateIntervalFormat_.get(),
       formattedDateInterval.get(),
-      startDate,
-      endDate,
+      startUtcMs,
+      endUtcMs,
       &status);
 #endif
   if (U_FAILURE(status)) {
