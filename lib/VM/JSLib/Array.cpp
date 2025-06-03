@@ -1260,7 +1260,7 @@ static CallResult<HermesValue> arrayPrototypePushFastPath(
   // Expand the array to make room for the new items.
   // Length property will be set at the end.
   if (LLVM_UNLIKELY(
-          JSArray::setStorageEndIndex(arr, runtime, finalLen) ==
+          JSArray::increaseStorageEndIndex(arr, runtime, finalLen) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

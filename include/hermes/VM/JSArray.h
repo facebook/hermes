@@ -41,6 +41,31 @@ class ArrayImpl : public JSObject {
       Runtime &runtime,
       uint32_t newLength);
 
+  /// Set the size of the storage to be \p newLength which must >= the current
+  /// size. The ".length" property is not affected. It does \b NOT check for
+  /// read-only properties.
+  static ExecutionStatus increaseStorageEndIndex(
+      Handle<ArrayImpl> selfHandle,
+      Runtime &runtime,
+      uint32_t newLength) {
+    assert(
+        newLength >= selfHandle->beginIndex_ + selfHandle->elemCount_ &&
+        "Must be growing");
+    // Check if the storage has already been initialized.
+    if (LLVM_LIKELY(selfHandle->indexedStorage_)) {
+      auto newElemCount = newLength - selfHandle->beginIndex_;
+      auto *indexedStorage = selfHandle->getIndexedStorageUnsafe(runtime);
+      // If the storage has sufficient capacity, just increase the size inline.
+      if (LLVM_LIKELY(newElemCount <= indexedStorage->capacity())) {
+        selfHandle->elemCount_ = newElemCount;
+        StorageType::growWithinCapacity(indexedStorage, runtime, newElemCount);
+        return ExecutionStatus::RETURNED;
+      }
+    }
+    // Fall back to the general case.
+    return setStorageEndIndex(selfHandle, runtime, newLength);
+  }
+
   /// Update the element at index \p index. If necessary, the array will be
   /// resized, but if it is an \c JSArray, it's \c .length property will not
   /// be affected.

@@ -370,6 +370,21 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
     resizeWithinCapacity(self, runtime.getHeap(), newSize);
   }
 
+  /// Set the size to \p newSize, which must be >= \c size_ and <= the capacity.
+  static void growWithinCapacity(
+      ArrayStorageBase *self,
+      Runtime &runtime,
+      size_type newSize) {
+    const auto sz = self->size();
+    GCHVType::uninitialized_fill(
+        self->data() + sz,
+        self->data() + newSize,
+        HVType::encodeEmptyValue(),
+        self,
+        runtime.getHeap());
+    self->size_.store(newSize, std::memory_order_release);
+  }
+
   /// Append the given element to the end when the capacity has been exhausted
   /// and a reallocation is needed.
   ///
