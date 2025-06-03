@@ -581,10 +581,8 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     }
 #endif
 
-    // If the interpreter was invoked indirectly from another JS function, the
-    // caller's IP may not have been saved to the stack frame. Ensure that it is
-    // correctly recorded.
-    runtime.saveCallerIPInStackFrame();
+    // Ensure the IP was correctly saved before we create the new frame.
+    runtime.validateSavedIPBeforeCall();
 
     // Check for invalid invocation. This is done before setting up the stack so
     // the exception appears to come from the call site.

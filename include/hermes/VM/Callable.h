@@ -724,7 +724,8 @@ class NativeFunction : public Callable {
           Runtime::StackOverflowKind::NativeStack);
     }
 
-    runtime.saveCallerIPInStackFrame();
+    // Ensure the IP was correctly saved before we create the new frame.
+    runtime.validateSavedIPBeforeCall();
     auto newFrame = runtime.setCurrentFrameToTopOfStack();
     // We don't need to allocate CalleeExtraRegistersAtStart here because the
     // only register is DebugEnvironment, which is not useful in a

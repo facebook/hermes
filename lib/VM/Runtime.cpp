@@ -852,6 +852,23 @@ void Runtime::assertTopCodeBlockContainsIP(const inst::Inst *ip) const {
       assert(codeBlock->contains(ip) && "IP not in CodeBlock");
 }
 
+void Runtime::validateSavedIPBeforeCall() const {
+  // If this is the first frame, there is nothing to save.
+  if (currentFrame_ == StackFramePtr(registerStackStart_))
+    return;
+
+  auto *codeBlock = currentFrame_.getCalleeCodeBlock();
+  // If the current function is not bytecode, the IP does not need to be saved.
+  if (!codeBlock)
+    return;
+
+  auto *ip = StackFramePtr(stackPointer_).getSavedIP();
+  // Validate that the IP is correct.
+  assert(ip && "Saved IP is null");
+  assert(codeBlock->contains(ip) && "Saved IP not in CodeBlock");
+  assert(ip == getCurrentIP() && "IP mismatch");
+}
+
 void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Do array capacity histogram.
   // Map from array size to number of arrays that are that size.

@@ -1541,28 +1541,16 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
 #ifdef NDEBUG
   void invalidateCurrentIP() {}
+  void validateSavedIPBeforeCall() const {}
 #else
   void invalidateCurrentIP() {
     currentIP_ = (const inst::Inst *)kInvalidCurrentIP;
   }
+  /// Validate that the saved IP in the outgoing call registers of the current
+  /// frame has been correctly populated. This must be called when the frame and
+  /// stack pointers still represent to the caller frame.
+  void validateSavedIPBeforeCall() const;
 #endif
-
-  /// Save the return address in the caller in the stack frame.
-  /// This needs to be called at the beginning of a function call, before the
-  /// stack frame is set up. \c stackPointer_ should be at the end of the caller
-  /// frame, pointing to the first register of the callee frame that is about to
-  /// be set up.
-  void saveCallerIPInStackFrame() {
-    StackFramePtr newFrame(stackPointer_);
-#ifndef NDEBUG
-    assert(
-        (!newFrame.getSavedIP() ||
-         ((uintptr_t)currentIP_ != kInvalidCurrentIP &&
-          newFrame.getSavedIP() == currentIP_)) &&
-        "The ip should either be null or already have the expected value");
-#endif
-    newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(getCurrentIP());
-  }
 
  private:
 #ifdef HERMES_MEMORY_INSTRUMENTATION

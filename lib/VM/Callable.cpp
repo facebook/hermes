@@ -49,10 +49,8 @@ _callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
 
   StackFramePtr newFrame{runtime.getStackPointer()};
 
-  auto *callerIP = runtime.getCurrentIP();
-  // If the caller is a JSFunction, we have to ensure that its IP is saved so we
-  // can use it for stack traces.
-  newFrame.getSavedIPRef() = HermesValue::encodeNativePointer(callerIP);
+  // Ensure the IP was correctly saved before we create the new frame.
+  runtime.validateSavedIPBeforeCall();
 
   // If we call into the JIT (either directly or transitively), it may modify
   // the saved IP. Make sure the IP is restored before we return to the caller.
