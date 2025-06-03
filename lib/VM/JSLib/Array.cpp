@@ -373,10 +373,11 @@ static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
 ///
 /// \return whether we can use the fast path for Array methods on \p arr.
 static bool arrayFastPathCheck(
-    PointerBase &runtime,
+    Runtime &runtime,
     JSArray *arr,
     HiddenClass *arrayClass,
     uint32_t len) {
+  NoAllocScope noAlloc{runtime};
   assert(arr && "arr must be non-null");
 
   // To use the fast path, the object has to be an array with fast index
@@ -420,9 +421,33 @@ static bool arrayFastPathCheck(
   if (arr->getBeginIndex() != 0 || arr->getElemCount() != len)
     return false;
 
+  JSArray *arrParent = *runtime.arrayPrototype;
+
+  // If the parent has been modified, bail.
+  if (LLVM_UNLIKELY(arr->getParent(runtime) != arrParent))
+    return false;
+
+  // If there are any indexed properties in the parent we can't use the fast
+  // path. We check this specially because Array.prototype is itself
+  // an array that starts with no actual indexed properties.
+  //
+  // NOTE: It may be possible to use the fast path if the indexed properties
+  // don't overlap with the array's own indexed range, but that seems
+  // unnecessary to check for now given that this check is really to make sure
+  // that Array.prototype isn't filled with properties, and keeping track of
+  // the upper bound on the length here takes more effort and is potentially
+  // error-prone.
+  if (LLVM_UNLIKELY(arrParent->getElemCount()))
+    return false;
+
+  // If the parent has any index-like properties, bail.
+  if (LLVM_UNLIKELY(arrParent->getClass(runtime)->getHasIndexLikeProperties()))
+    return false;
+
   // Check if there are any index-like properties in any parent.
   // If so, we can't use the fast path.
-  for (JSObject *curParent = arr->getParent(runtime); curParent != nullptr;
+  for (JSObject *curParent = arrParent->getParent(runtime);
+       curParent != nullptr;
        curParent = curParent->getParent(runtime)) {
     // Any index-like properties in the parent means we can't use the fast path
     // because we might trigger an accessor or have to check property flags.
@@ -430,19 +455,10 @@ static bool arrayFastPathCheck(
             curParent->getClass(runtime)->getHasIndexLikeProperties()))
       return false;
 
-    auto [beginParent, endParent] =
-        JSObject::getOwnIndexedRange(curParent, runtime);
-    // If there are any indexed properties in the parent we can't use the fast
-    // path. We check this specially because Array.prototype is itself
-    // an array that starts with no actual indexed properties.
-    //
-    // NOTE: It may be possible to use the fast path if the indexed properties
-    // don't overlap with the array's own indexed range, but that seems
-    // unnecessary to check for now given that this check is really to make sure
-    // that Array.prototype isn't filled with properties, and keeping track of
-    // the upper bound on the length here takes more effort and is potentially
-    // error-prone.
-    if (LLVM_UNLIKELY(beginParent < endParent))
+    // Unlike the immediate parent, we do not expect any parent further up the
+    // chain to have indexed storage. Disqualify anything with indexed storage,
+    // since actually checking the "indexed range" is costly.
+    if (LLVM_UNLIKELY(curParent->getFlags().indexedStorage))
       return false;
   }
 
