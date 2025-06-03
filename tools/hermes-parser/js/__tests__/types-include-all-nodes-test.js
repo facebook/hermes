@@ -130,6 +130,13 @@ const propertiesThatShouldBeSkipped = new Map([
       'flags',
     ]),
   ],
+  [
+    'BlockStatement',
+    new Set<string>([
+      // This is a hermes-specific property.
+      'implicit',
+    ]),
+  ],
 ]);
 const propertiesWithIncorrectOptionalFlagInHermes = new Map([
   [

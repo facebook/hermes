@@ -182,8 +182,10 @@ function deserializeBlockStatement() {
     type: 'BlockStatement',
     loc: this.addEmptyLoc(),
     body: this.deserializeNodeList(),
+    implicit: this.deserializeBoolean(),
   };
 }
+
 function deserializeStaticBlock() {
   return {
     type: 'StaticBlock',
@@ -2130,6 +2132,7 @@ module.exports = [
   deserializeDebuggerStatement,
   deserializeEmptyStatement,
   deserializeBlockStatement,
+
   deserializeStaticBlock,
   deserializeBreakStatement,
   deserializeContinueStatement,

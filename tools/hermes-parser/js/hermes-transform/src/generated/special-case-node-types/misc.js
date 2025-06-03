@@ -10,12 +10,14 @@
 
 import type {
   ArrowFunctionExpression as ArrowFunctionExpressionType,
+  BlockStatement as BlockStatementType,
   ClassDeclaration as ClassDeclarationType,
   DeclareFunction as DeclareFunctionType,
   ESNode,
   FunctionTypeAnnotation as FunctionTypeAnnotationType,
   Identifier as IdentifierType,
   InterpreterDirective as InterpreterDirectiveType,
+  Statement as StatementType,
   Token as TokenType,
   Comment as CommentType,
   TemplateElement as TemplateElementType,
@@ -233,6 +235,22 @@ export function MemberExpression(props: {
     property: asDetachedNode(props.property),
     computed: props.computed,
     optional: props.optional ?? false,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+// Ignore the hermes-specific `implicit` property.
+export type BlockStatementProps = {
+  +body: $ReadOnlyArray<MaybeDetachedNode<StatementType>>,
+};
+export function BlockStatement(props: {
+  ...$ReadOnly<BlockStatementProps>,
+  +parent?: ESNode,
+}): DetachedNode<BlockStatementType> {
+  const node = detachedProps<BlockStatementType>(props.parent, {
+    type: 'BlockStatement',
+    body: props.body.map(n => asDetachedNode(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;

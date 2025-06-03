@@ -35,7 +35,6 @@ import type {
   BigIntLiteralTypeAnnotation as BigIntLiteralTypeAnnotationType,
   BigIntTypeAnnotation as BigIntTypeAnnotationType,
   BinaryExpression as BinaryExpressionType,
-  BlockStatement as BlockStatementType,
   BooleanLiteralTypeAnnotation as BooleanLiteralTypeAnnotationType,
   BooleanTypeAnnotation as BooleanTypeAnnotationType,
   BreakStatement as BreakStatementType,
@@ -267,10 +266,6 @@ export type BinaryExpressionProps = {
   +left: MaybeDetachedNode<BinaryExpressionType['left']>,
   +right: MaybeDetachedNode<BinaryExpressionType['right']>,
   +operator: BinaryExpressionType['operator'],
-};
-
-export type BlockStatementProps = {
-  +body: $ReadOnlyArray<MaybeDetachedNode<BlockStatementType['body'][number]>>,
 };
 
 export type BooleanLiteralTypeAnnotationProps = {
@@ -1426,18 +1421,6 @@ export function BinaryExpression(props: {
     left: asDetachedNodeForCodeGen(props.left),
     right: asDetachedNodeForCodeGen(props.right),
     operator: props.operator,
-  });
-  setParentPointersInDirectChildren((node: $FlowFixMe));
-  return node;
-}
-
-export function BlockStatement(props: {
-  ...BlockStatementProps,
-  +parent?: ESNode,
-}): DetachedNode<BlockStatementType> {
-  const node = detachedProps<BlockStatementType>((props.parent: $FlowFixMe), {
-    type: 'BlockStatement',
-    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;

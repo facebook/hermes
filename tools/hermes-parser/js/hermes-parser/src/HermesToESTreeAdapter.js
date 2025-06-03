@@ -92,6 +92,8 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
       case 'CallExpression':
       case 'OptionalCallExpression':
         return this.mapChainExpression(node);
+      case 'BlockStatement':
+        return this.mapBlockStatement(node);
       default:
         return this.mapNodeDefault(node);
     }
@@ -423,5 +425,13 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     const node = super.mapExportAllDeclaration(nodeUnprocessed);
     node.exported = node.exported ?? null;
     return node;
+  }
+
+  mapBlockStatement(node: HermesNode): HermesNode {
+    if (node.implicit && node.body.length) {
+      return this.mapNode(node.body[0]);
+    }
+    delete node.implicit;
+    return this.mapNodeDefault(node);
   }
 }
