@@ -635,6 +635,7 @@ void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<BoundFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const BoundFunction *>(cell);
+  mb.setJitCall(BoundFunction::_jitCallImpl);
   mb.setVTable(&BoundFunction::vt);
   mb.addField("target", &self->target_);
   mb.addField("argStorage", &self->argStorage_);
@@ -920,6 +921,16 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
   return _boundCall(vmcast<BoundFunction>(selfHandle.get()), runtime);
 }
 
+HermesValue BoundFunction::_jitCallImpl(Runtime *runtime, JSObject *self) {
+  auto res = [&] {
+    GCScopeMarkerRAII marker{*runtime};
+    return _boundCall(vmcast<BoundFunction>(self), *runtime);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(runtime);
+  return res->get();
+}
+
 //===----------------------------------------------------------------------===//
 // class NativeJSFunction
 
@@ -955,6 +966,7 @@ const CallableVTable NativeJSFunction::vt{
 void NativeJSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSFunction>());
   CallableBuildMeta(cell, mb);
+  mb.setJitCall(NativeJSFunction::_jitCallImpl);
   mb.setVTable(&NativeJSFunction::vt);
 }
 
@@ -1045,6 +1057,11 @@ CallResult<PseudoHandle<>> NativeJSFunction::_callImpl(
   // a GCScope to ensure safety.
   GCScope gcScope{runtime};
   return _nativeCall(vmcast<NativeJSFunction>(selfHandle.get()), runtime);
+}
+
+HermesValue NativeJSFunction::_jitCallImpl(Runtime *runtime, JSObject *self) {
+  SHLegacyValue res = vmcast<NativeJSFunction>(self)->functionPtr_(runtime);
+  return *toPHV(&res);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1140,6 +1157,7 @@ const CallableVTable NativeFunction::vt{
 void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeFunction>());
   CallableBuildMeta(cell, mb);
+  mb.setJitCall(&NativeFunction::_jitCallImpl);
   mb.setVTable(&NativeFunction::vt);
 }
 
@@ -1193,6 +1211,37 @@ CallResult<PseudoHandle<>> NativeFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
   return _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
+}
+
+HermesValue NativeFunction::_jitCallImpl(Runtime *rt, JSObject *self) {
+  Runtime &runtime = *rt;
+  auto newFrame = runtime.setCurrentFrameToTopOfStack();
+  auto res = [&]() -> CallResult<HermesValue> {
+    ScopedNativeDepthTracker depthTracker{runtime};
+    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+      return runtime.raiseStackOverflow(
+          Runtime::StackOverflowKind::NativeStack);
+    }
+
+    // We don't need to allocate CalleeExtraRegistersAtStart here because the
+    // only register is DebugEnvironment, which is not useful in a
+    // NativeFunction.
+    static_assert(
+        StackFrameLayout::FirstLocal - 1 ==
+            StackFrameLayout::DebugEnvironment &&
+        StackFrameLayout::CalleeExtraRegistersAtStart == 1);
+
+    GCScopeMarkerRAII marker{runtime};
+    auto *nfSelf = vmcast<NativeFunction>(self);
+    return nfSelf->functionPtr_(
+        nfSelf->context_, runtime, newFrame.getNativeArgs());
+  }();
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(rt);
+
+  runtime.restoreStackAndPreviousFrame(newFrame);
+  return *res;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1347,6 +1396,7 @@ void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
   mb.addField("domain", &self->domain_);
+  mb.setJitCall(JSFunction::_jitCallImpl);
   mb.setVTable(&JSFunction::vt);
 }
 
@@ -1417,6 +1467,19 @@ CallResult<PseudoHandle<>> JSFunction::_callImpl(
     return ExecutionStatus::EXCEPTION;
 
   return createPseudoHandle(*result);
+}
+
+HermesValue JSFunction::_jitCallImpl(Runtime *runtime, JSObject *self) {
+  auto *jsSelf = vmcast<JSFunction>(self);
+
+  if (auto *jitPtr = jsSelf->getCodeBlock()->getJITCompiled())
+    return jitPtr(runtime);
+
+  CallResult<HermesValue> result = jsSelf->_interpret(*runtime);
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(runtime);
+
+  return *result;
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION

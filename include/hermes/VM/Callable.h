@@ -452,11 +452,19 @@ class BoundFunction final : public Callable {
   static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime &runtime);
+
+  /// Call a BoundFunction with arguments already on the stack, using the native
+  /// calling convention.
+  static HermesValue _jitCallImpl(Runtime *runtime, JSObject *self);
 };
 
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
 class NativeJSFunction : public Callable {
+  friend void NativeJSFunctionBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+
  protected:
   /// Pointer to the actual code.
   const NativeJSFunctionPtr functionPtr_;
@@ -603,6 +611,10 @@ class NativeJSFunction : public Callable {
       Handle<Callable> selfHandle,
       Runtime &runtime);
 
+  /// Call a NativeJSFunction with arguments already on the stack, using the
+  /// native calling convention.
+  static HermesValue _jitCallImpl(Runtime *runtime, JSObject *self);
+
  private:
   /// Dummy function for static asserts that may need private fields.
   static inline void staticAsserts() {
@@ -661,6 +673,10 @@ typedef CallResult<HermesValue> (
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
 class NativeFunction : public Callable {
+  friend void NativeFunctionBuildMeta(
+      const GCCell *cell,
+      Metadata::Builder &mb);
+
  protected:
   /// Context to be passed to the native function.
   void *const context_;
@@ -817,6 +833,10 @@ class NativeFunction : public Callable {
   static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime &runtime);
+
+  /// Call a NativeFunction with arguments already on the stack, using the
+  /// native calling convention.
+  static HermesValue _jitCallImpl(Runtime *runtime, JSObject *self);
 };
 
 /// A NativeFunction to be used as a constructor for native objects other than
@@ -1031,6 +1051,10 @@ class JSFunction : public Callable {
   static CallResult<PseudoHandle<>> _callImpl(
       Handle<Callable> selfHandle,
       Runtime &runtime);
+
+  /// Call a JSFunction with arguments already on the stack, using the native
+  /// calling convention.
+  static HermesValue _jitCallImpl(Runtime *runtime, JSObject *self);
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
