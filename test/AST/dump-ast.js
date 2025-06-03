@@ -800,7 +800,8 @@ switch (foo()) {
 // CHECK-FULL-NEXT:              "arguments": []
 // CHECK-FULL-NEXT:            }
 // CHECK-FULL-NEXT:          }
-// CHECK-FULL-NEXT:        ]
+// CHECK-FULL-NEXT:        ],
+// CHECK-FULL-NEXT:        "implicit": false
 // CHECK-FULL-NEXT:      },
 // CHECK-FULL-NEXT:      "typeParameters": null,
 // CHECK-FULL-NEXT:      "returnType": null,

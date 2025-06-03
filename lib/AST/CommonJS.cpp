@@ -12,8 +12,8 @@ namespace hermes {
 ESTree::FunctionExpressionNode *wrapCJSModule(
     std::shared_ptr<Context> &context,
     ESTree::ProgramNode *program) {
-  auto *moduleBlock =
-      new (*context) ESTree::BlockStatementNode(std::move(program->_body));
+  auto *moduleBlock = new (*context)
+      ESTree::BlockStatementNode(std::move(program->_body), false);
   moduleBlock->setSourceRange(program->getSourceRange());
   moduleBlock->setDebugLoc(program->getDebugLoc());
 

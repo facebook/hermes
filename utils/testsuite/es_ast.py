@@ -16,6 +16,7 @@ from .utils import TestCaseResult, TestResultCode
 OMITTED_KEYS = {
     # Keys in Hermes
     "ArrayExpression": {"trailingComma"},
+    "BlockStatement": {"implicit"},
     # Some literals support "raw" and others don't.
     # esprima doesn't distinguish.
     "EnumStringBody": {"hasUnknownMembers"},

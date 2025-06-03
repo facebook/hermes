@@ -517,7 +517,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
-      decl->_body = new (context_) ESTree::BlockStatementNode({});
+      decl->_body = new (context_) ESTree::BlockStatementNode({}, false);
       node = decl;
     } else {
       auto *expr = new (context_) ESTree::FunctionExpressionNode(
@@ -530,7 +530,7 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
           isGenerator,
           isAsync);
       // Initialize the node with a blank body.
-      expr->_body = new (context_) ESTree::BlockStatementNode({});
+      expr->_body = new (context_) ESTree::BlockStatementNode({}, false);
       node = expr;
     }
 
@@ -767,7 +767,7 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseFunctionBody(
       }
 
       auto *body =
-          new (context_) ESTree::BlockStatementNode(std::move(stmtList));
+          new (context_) ESTree::BlockStatementNode(std::move(stmtList), false);
       body->isLazyFunctionBody = true;
       // Set params based on what they were at the _start_ of the function's
       // source, not what they are now, because they might have changed.
@@ -969,7 +969,7 @@ Optional<ESTree::BlockStatementNode *> JSParserImpl::parseBlock(
   auto *body = setLocation(
       startLoc,
       tok_,
-      new (context_) ESTree::BlockStatementNode(std::move(stmtList)));
+      new (context_) ESTree::BlockStatementNode(std::move(stmtList), false));
   if (!eat(
           TokenKind::r_brace,
           grammarContext,
@@ -1633,7 +1633,8 @@ Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement(
   /// ES2022 B.3.3 allows FunctionDeclaration as consequent and alternate.
   /// These FunctionDeclarations are supposed to be processed precisely as if
   /// they were surrounded by BlockStatement, including function promotion.
-  /// To allow this, surround them with a synthetic BlockStatement.
+  /// To allow this, surround them with a synthetic BlockStatement and set the
+  /// 'implicit' flag to true to indicate that it wasn't in the original source.
   auto parseStatementOrFunctionDeclaration =
       [this, param]() -> Optional<ESTree::Node *> {
     if (check(TokenKind::rw_function)) {
@@ -1655,7 +1656,8 @@ Optional<ESTree::IfStatementNode *> JSParserImpl::parseIfStatement(
       return setLocation(
           *optFunction,
           *optFunction,
-          new (context_) ESTree::BlockStatementNode(std::move(stmts)));
+          new (context_) ESTree::BlockStatementNode(
+              std::move(stmts), /* implicit */ true));
     }
     auto optStatement = parseStatement(param.get(ParamReturn));
     if (!optStatement)

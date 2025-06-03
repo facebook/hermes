@@ -169,7 +169,17 @@ ESTREE_LAST(LoopStatement)
 
 ESTREE_NODE_0_ARGS(DebuggerStatement, Statement)
 ESTREE_NODE_0_ARGS(EmptyStatement, Statement)
-ESTREE_NODE_1_ARGS(BlockStatement, Statement, NodeList, body, false)
+// The Hermes Parser inserts implicit BlockStatements in certain cases,
+// notably around function declarations used directly as the body of 'if'.
+// This is done to ensure semantics are the same as if there were braces,
+// or in arrow function expression bodies.
+// The 'implicit' flag indicates whether the block statement was implicitly
+// added.
+ESTREE_NODE_2_ARGS(BlockStatement, Statement,
+    NodeList, body, false,
+    NodeBoolean, implicit, false
+)
+ESTREE_IGNORE_IF_EMPTY(BlockStatement, implicit)
 ESTREE_NODE_1_ARGS(StaticBlock, Statement, NodeList, body, false)
 ESTREE_NODE_1_ARGS(BreakStatement, Statement, NodePtr, label, true)
 ESTREE_NODE_1_ARGS(ContinueStatement, Statement, NodePtr, label, true)

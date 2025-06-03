@@ -18,8 +18,8 @@ ESTree::ProgramNode *wrapInIIFE(
     std::shared_ptr<Context> &context,
     ESTree::ProgramNode *program) {
   // Function body should be the given program body.
-  auto *funcBody =
-      new (*context) ESTree::BlockStatementNode(std::move(program->_body));
+  auto *funcBody = new (*context)
+      ESTree::BlockStatementNode(std::move(program->_body), false);
   funcBody->setSourceRange(program->getSourceRange());
   funcBody->setDebugLoc(program->getDebugLoc());
 

@@ -37,6 +37,7 @@ const char *SimpleESTreeProgram =
     "          \"body\": {"
     "            \"type\": \"BlockStatement\","
     "            \"body\": [], "
+    "            \"implicit\": false, "
     "          },  "
     "          \"generator\": false,"
     "          \"async\": false"
@@ -75,7 +76,7 @@ TEST(ESTreeTest, EmptyTest) {
 TEST(ESTreeTest, LabelDecorationBaseTest) {
   Context context;
   auto *node = new (context) ESTree::WhileStatementNode(
-      new (context) ESTree::BlockStatementNode({}),
+      new (context) ESTree::BlockStatementNode({}, false),
       new (context) ESTree::EmptyStatementNode());
   EXPECT_TRUE(
       ESTree::getDecoration<ESTree::LabelDecorationBase>(node) != nullptr);

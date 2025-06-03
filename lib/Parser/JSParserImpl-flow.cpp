@@ -1848,7 +1848,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareModuleFlow(SMLoc start) {
   ESTree::Node *body = setLocation(
       bodyStart,
       bodyEnd,
-      new (context_) ESTree::BlockStatementNode(std::move(declarations)));
+      new (context_)
+          ESTree::BlockStatementNode(std::move(declarations), false));
 
   return setLocation(
       start, body, new (context_) ESTree::DeclareModuleNode(id, body));
@@ -1896,7 +1897,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareNamespaceFlow(SMLoc start) {
   ESTree::Node *body = setLocation(
       bodyStart,
       bodyEnd,
-      new (context_) ESTree::BlockStatementNode(std::move(declarations)));
+      new (context_)
+          ESTree::BlockStatementNode(std::move(declarations), false));
 
   return setLocation(
       start, body, new (context_) ESTree::DeclareNamespaceNode(id, body));

@@ -252,7 +252,8 @@ void SemanticResolver::visit(
     ESTree::NodeList stmtList;
     stmtList.push_back(*retStmt);
 
-    auto *blockStmt = new (astContext_) BlockStatementNode(std::move(stmtList));
+    auto *blockStmt =
+        new (astContext_) BlockStatementNode(std::move(stmtList), true);
     blockStmt->copyLocationFrom(arrowFunc->_body);
 
     arrowFunc->_body = blockStmt;
@@ -789,7 +790,7 @@ void SemanticResolver::visit(ESTree::TryStatementNode *tryStatement) {
     ESTree::NodeList stmtList;
     stmtList.push_back(*nestedTry);
     tryStatement->_block =
-        new (astContext_) BlockStatementNode(std::move(stmtList));
+        new (astContext_) BlockStatementNode(std::move(stmtList), false);
     tryStatement->_block->copyLocationFrom(nestedTry);
     tryStatement->_handler = nullptr;
   }
