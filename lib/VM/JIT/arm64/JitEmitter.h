@@ -375,6 +375,11 @@ class Emitter {
   /// Invalid if there's no try/catch in the function.
   asmjit::Label catchTableLabel_{};
 
+  /// Label to branch to when attempting to call a non-object. The callee and
+  /// saved IP must already be in the right position on the stack. This is
+  /// initialized lazily by the first call, and shared across all calls.
+  asmjit::Label nonObjCallLabel_{};
+
   /// The bytecode codeblock.
   CodeBlock *const codeBlock_;
 

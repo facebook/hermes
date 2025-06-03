@@ -143,9 +143,9 @@ void *_jit_find_catch_target(
 /// Throw a register stack overflow exception.
 [[noreturn]] void _sh_throw_register_stack_overflow(SHRuntime *shr);
 
-/// Call the closure stored in the outgoing registers of the current frame. The
-/// caller is responsible for setting up the outgoing registers.
-SHLegacyValue _jit_dispatch_call(SHRuntime *, SHLegacyValue *callTargetSHLV);
+/// Raise an exception that the target of a call is not callable. The outgoing
+/// registers must already have been set up.
+[[noreturn]] void _jit_throw_non_object_call(SHRuntime *shr);
 
 /// Calls the builtin with index \p builtinMethodID. The new frame is at the top
 /// of the stack. The arguments (excluding 'this') must be populated.

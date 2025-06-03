@@ -425,52 +425,17 @@ void *_jit_find_catch_target(
   _sh_throw_current(shr);
 }
 
-SHLegacyValue _jit_dispatch_call(
-    SHRuntime *shr,
-    SHLegacyValue *callTargetSHLV) {
-  Runtime &runtime = getRuntime(shr);
-
-  auto *callTarget = toPHV(callTargetSHLV);
-  if (vmisa<JSFunction>(*callTarget)) {
-    JSFunction *jsFunc = vmcast<JSFunction>(*callTarget);
-    assert(
-        !jsFunc->getCodeBlock()->getJITCompiled() &&
-        "Calls to JITted code should go directly.");
-    CallResult<HermesValue> result = jsFunc->_interpret(runtime);
-    if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
-      _sh_throw_current(getSHRuntime(runtime));
-
-    return result.getValue();
-  }
-
-  if (vmisa<NativeJSFunction>(*callTarget)) {
-    return NativeJSFunction::_legacyCall(
-        getSHRuntime(runtime), vmcast<NativeJSFunction>(*callTarget));
-  }
-
-  CallResult<PseudoHandle<>> res{ExecutionStatus::EXCEPTION};
+void _jit_throw_non_object_call(SHRuntime *shr) {
   {
-    GCScopeMarkerRAII marker{runtime};
-    if (vmisa<NativeFunction>(*callTarget)) {
-      auto *native = vmcast<NativeFunction>(*callTarget);
-      res = NativeFunction::_nativeCall(native, runtime);
-    } else if (vmisa<BoundFunction>(*callTarget)) {
-      auto *bound = vmcast<BoundFunction>(*callTarget);
-      res = BoundFunction::_boundCall(bound, runtime);
-    } else if (vmisa<Callable>(*callTarget)) {
-      auto callable = Handle<Callable>::vmcast(callTarget);
-      res = callable->call(callable, runtime);
-    } else {
-      res = runtime.raiseTypeErrorForValue(
-          Handle<>(callTarget), " is not a function");
-    }
+    Runtime &runtime = getRuntime(shr);
+    // The call target is in the register stack's callee slot.
+    auto *callTarget =
+        &StackFramePtr(runtime.getStackPointer()).getCalleeClosureOrCBRef();
+    assert(!callTarget->isObject() && "Must be non-object");
+    (void)runtime.raiseTypeErrorForValue(
+        Handle<>(callTarget), " is not a function");
   }
-
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    _sh_throw_current(getSHRuntime(runtime));
-  }
-
-  return res->getHermesValue();
+  _sh_throw_current(shr);
 }
 
 SHLegacyValue _jit_call_builtin(
