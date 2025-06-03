@@ -1402,6 +1402,9 @@ class JSObject : public GCCell {
       Runtime &runtime,
       ObjectVTable::CheckAllOwnIndexedMode mode);
 
+  /// Implements jitCall for non-callable objects, which just throws.
+  static HermesValue _jitCallImpl(Runtime *runtime, JSObject *self);
+
   /// Allocate an instance of property storage with the specified size.
   static inline ExecutionStatus allocatePropStorage(
       Handle<JSObject> selfHandle,

@@ -60,6 +60,13 @@ void buildMetadataTable() {
 #include "hermes/VM/CellKinds.def"
 #undef CELL_KIND
     };
+
+    VTable::jitCallArray = {
+#define CELL_KIND(name) \
+  Metadata::metadataTable[static_cast<uint8_t>(CellKind::name##Kind)].jitCall,
+#include "hermes/VM/CellKinds.def"
+#undef CELL_KIND
+    };
   });
 }
 

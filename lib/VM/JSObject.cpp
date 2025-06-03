@@ -58,6 +58,7 @@ void JSObjectBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
   const auto *self = static_cast<const JSObject *>(cell);
   mb.setVTable(&JSObject::vt);
+  mb.setJitCall(&JSObject::_jitCallImpl);
   mb.addField("parent", &self->parent_);
   mb.addField("class", &self->clazzDoNotAccessDirectly_);
   mb.addField("propStorage", &self->propStorage_);
@@ -2748,6 +2749,19 @@ bool JSObject::_checkAllOwnIndexedImpl(
     Runtime & /*runtime*/,
     ObjectVTable::CheckAllOwnIndexedMode /*mode*/) {
   return true;
+}
+
+HermesValue JSObject::_jitCallImpl(Runtime *runtime, JSObject *self) {
+  {
+    struct : Locals {
+      PinnedValue<JSObject> target;
+    } lv;
+    LocalsRAII lraii{*runtime, &lv};
+    lv.target = self;
+    // Throw an exception because this object is not callable.
+    (void)runtime->raiseTypeErrorForValue(lv.target, " is not a function");
+  }
+  _sh_throw_current(runtime);
 }
 
 void JSObject::preventExtensions(JSObject *self) {

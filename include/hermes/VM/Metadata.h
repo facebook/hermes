@@ -149,6 +149,10 @@ struct Metadata final {
       vtp_ = vtp;
     }
 
+    void setJitCall(ObjectJitCallPtr jitCall) {
+      jitCall_ = jitCall;
+    }
+
     /// Build creates a Metadata, and destroys this builder.
     Metadata build();
 
@@ -176,6 +180,10 @@ struct Metadata final {
 
     /// The VTable pointer for the cell that this metadata describes.
     const VTable *vtp_{nullptr};
+
+    /// The jitCall pointer for the cell that this metadata describes. This is
+    /// only non-null for JSObject subtypes.
+    ObjectJitCallPtr jitCall_{nullptr};
 
     friend Metadata;
   };
@@ -214,6 +222,9 @@ struct Metadata final {
 
   /// The VTable pointer for the cell that this metadata describes.
   const VTable *vtp{};
+
+  /// The jitCall function for this cell.
+  ObjectJitCallPtr jitCall{};
 
   /// Static array storing the Metadata corresponding to each CellKind. This is
   /// initialized by buildMetadataTable.
