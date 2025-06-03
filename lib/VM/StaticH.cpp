@@ -481,7 +481,7 @@ static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
       res = NativeFunction::_nativeCall(native, runtime);
     } else if (vmisa<BoundFunction>(*callTarget)) {
       auto *bound = vmcast<BoundFunction>(*callTarget);
-      res = BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
+      res = BoundFunction::_boundCall(bound, runtime);
     } else if (vmisa<Callable>(*callTarget)) {
       auto callable = Handle<Callable>::vmcast(callTarget);
       res = callable->call(callable, runtime);

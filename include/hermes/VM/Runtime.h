@@ -1869,7 +1869,7 @@ class ScopedNativeCallFrame {
     frame_ = StackFramePtr::initFrame(
         stack,
         runtime.currentFrame_,
-        nullptr,
+        runtime.getCurrentIP(),
         nullptr,
         nullptr,
         argCount,

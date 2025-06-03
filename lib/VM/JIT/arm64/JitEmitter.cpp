@@ -5931,12 +5931,10 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
   // subtract 1.
   a.mov(a64::w2, argc - 1);
   a.mov(a64::w3, builtinIndex);
-  // NOTE: _sh_ljs_call_builtin does not itself populate the SavedIP field, but
-  // it will be populated by NativeFunction::_nativeCall.
   EMIT_RUNTIME_CALL(
       *this,
       SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t, uint32_t),
-      _sh_ljs_call_builtin);
+      _jit_call_builtin);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);

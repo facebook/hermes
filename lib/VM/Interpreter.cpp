@@ -269,7 +269,7 @@ CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     auto *bound = vmcast<BoundFunction>(*callTarget);
     ++NumBoundFunctionCalls;
     // Call the bound function.
-    return BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
+    return BoundFunction::_boundCall(bound, runtime);
   } else {
     return runtime.raiseTypeErrorForValue(
         Handle<>(callTarget), " is not a function");

@@ -456,7 +456,7 @@ SHLegacyValue _jit_dispatch_call(
       res = NativeFunction::_nativeCall(native, runtime);
     } else if (vmisa<BoundFunction>(*callTarget)) {
       auto *bound = vmcast<BoundFunction>(*callTarget);
-      res = BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
+      res = BoundFunction::_boundCall(bound, runtime);
     } else if (vmisa<Callable>(*callTarget)) {
       auto callable = Handle<Callable>::vmcast(callTarget);
       res = callable->call(callable, runtime);
@@ -470,6 +470,34 @@ SHLegacyValue _jit_dispatch_call(
     _sh_throw_current(getSHRuntime(runtime));
   }
 
+  return res->getHermesValue();
+}
+
+SHLegacyValue _jit_call_builtin(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    uint32_t argCount,
+    uint32_t builtinMethodID) {
+  auto res = [&]() {
+    Runtime &runtime = getRuntime(shr);
+    StackFramePtr newFrame(runtime.getStackPointer());
+    newFrame.getPreviousFrameRef() = HermesValue::encodeNativePointer(frame);
+    newFrame.getSavedIPRef() =
+        HermesValue::encodeNativePointer(runtime.getCurrentIP());
+    newFrame.getSavedCodeBlockRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getSHLocalsRef() = HermesValue::encodeNativePointer(nullptr);
+    newFrame.getArgCountRef() = HermesValue::encodeNativeUInt32(argCount);
+    newFrame.getNewTargetRef() = HermesValue::encodeUndefinedValue();
+
+    auto callee =
+        vmcast<NativeFunction>(runtime.getBuiltinCallable(builtinMethodID));
+    newFrame.getCalleeClosureOrCBRef() = HermesValue::encodeObjectValue(callee);
+
+    GCScopeMarkerRAII marker{runtime};
+    return NativeFunction::_nativeCall(callee, runtime);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
   return res->getHermesValue();
 }
 

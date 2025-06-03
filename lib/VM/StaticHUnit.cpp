@@ -142,7 +142,7 @@ static SHLegacyValue sh_unit_run(SHRuntime *shr, SHUnit *unit) {
   auto frame = StackFramePtr::initFrame(
       runtime.getStackPointer(),
       runtime.getCurrentFrame(),
-      nullptr,
+      runtime.getCurrentIP(),
       nullptr,
       nullptr,
       0,

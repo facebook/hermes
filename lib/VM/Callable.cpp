@@ -768,7 +768,6 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
 
 CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     BoundFunction *self,
-    const Inst *ip,
     Runtime &runtime) {
   ScopedNativeDepthTracker depthTracker{runtime};
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -872,7 +871,7 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     auto newCalleeFrame = StackFramePtr::initFrame(
         stack,
         runtime.getCurrentFrame(),
-        ip,
+        runtime.getCurrentIP(),
         nullptr,
         nullptr,
         totalArgCount,
@@ -902,7 +901,7 @@ bail:
   StackFramePtr::initFrame(
       originalCalleeFrame.ptr(),
       StackFramePtr{},
-      ip,
+      runtime.getCurrentIP(),
       nullptr,
       nullptr,
       0,
@@ -920,7 +919,7 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
     Runtime &runtime) {
   // Pass `nullptr` as the IP because this function is never called
   // from the interpreter, which should use `_boundCall` directly.
-  return _boundCall(vmcast<BoundFunction>(selfHandle.get()), nullptr, runtime);
+  return _boundCall(vmcast<BoundFunction>(selfHandle.get()), runtime);
 }
 
 //===----------------------------------------------------------------------===//

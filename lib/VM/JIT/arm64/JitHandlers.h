@@ -147,6 +147,14 @@ void *_jit_find_catch_target(
 /// caller is responsible for setting up the outgoing registers.
 SHLegacyValue _jit_dispatch_call(SHRuntime *, SHLegacyValue *callTargetSHLV);
 
+/// Calls the builtin with index \p builtinMethodID. The new frame is at the top
+/// of the stack. The arguments (excluding 'this') must be populated.
+SHLegacyValue _jit_call_builtin(
+    SHRuntime *shr,
+    SHLegacyValue *frame,
+    uint32_t argCount,
+    uint32_t builtinMethodID);
+
 void _jit_put_by_id(
     SHRuntime *shr,
     SHCodeBlock *codeBlock,
