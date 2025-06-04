@@ -589,14 +589,12 @@ void emit_load_shv(
 }
 
 /// Store a SmallHermesValue to \p mem.
-void emit_store_shv(
-    a64::Assembler &a,
-    const a64::GpX &val,
-    const a64::Mem &mem) {
+asmjit::Error
+emit_store_shv(a64::Assembler &a, const a64::GpX &val, const a64::Mem &mem) {
   if constexpr (sizeof(SmallHermesValue) == 4) {
-    a.str(val.w(), mem);
+    return a.str(val.w(), mem);
   } else {
-    a.str(val, mem);
+    return a.str(val, mem);
   }
 }
 
@@ -2763,7 +2761,12 @@ void Emitter::bumpAllocAndUnpoison(
   a.ldr(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGEnd));
 
   // Try to increment the heap level by the size of the object.
-  a.add(xTemp2, xOut, sz);
+  if (a64::Utils::isAddSubImm(sz)) {
+    a.add(xTemp2, xOut, sz);
+  } else {
+    a.mov(xTemp2, sz);
+    a.add(xTemp2, xOut, xTemp2);
+  }
   a.cmp(xTemp2, xTemp1);
   a.b_hi(slowPathLab);
 
@@ -3084,6 +3087,10 @@ void Emitter::newObjectWithBuffer(
     a64::GpX &xObj;
     a64::GpX &xTmp;
     a64::GpX &xTmp2;
+    /// Needed by the convenient EXPECT_ERROR macro, which expects to be able to
+    /// use the Emitter::expectedError_ field (using implicit 'this').
+    /// Reference it directly here so the macro keeps working.
+    asmjit::Error &expectedError_ = em.expectedError_;
 
     /// Iteration counter.
     /// Index of the next value to be inserted into the object.
@@ -3108,8 +3115,15 @@ void Emitter::newObjectWithBuffer(
     /// Store a simple SmallHermesValue into the current offset in the object.
     void storeVal(SmallHermesValue val) {
       em.loadSmallHermesValueInGpX(xTmp, val, "object literal buffer val");
-      emit_store_shv(em.a, xTmp, a64::Mem(xObj, currentOffset()));
-    };
+      asmjit::Error err;
+      EXPECT_ERROR(
+          asmjit::kErrorInvalidDisplacement,
+          err = emit_store_shv(em.a, xTmp, a64::Mem(xObj, currentOffset())));
+      if (err) {
+        em.a.mov(xTmp2, currentOffset());
+        emit_store_shv(em.a, xTmp, a64::Mem(xObj, xTmp2));
+      }
+    }
 
     /// Advance internal state to the next slot, updating the counter and any
     /// registers so that they have the correct state for the next element.
