@@ -17,6 +17,21 @@ namespace vm {
 /// A common implementation of "Array-like" objects.
 class ArrayImpl : public JSObject {
   using Super = JSObject;
+
+ public:
+  using size_type = uint32_t;
+  /// StorageType is the underlying storage that JSArray uses to put the values
+  /// into.
+  using StorageType = ArrayStorageSmall;
+
+ private:
+  /// The first index contained in the storage.
+  uint32_t beginIndex_{0};
+  /// Number of elements in the storage starting from \p beginIndex_.
+  uint32_t elemCount_{0};
+  /// The indexed storage for this array.
+  GCPointer<StorageType> indexedStorage_;
+
   friend void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
@@ -29,10 +44,6 @@ class ArrayImpl : public JSObject {
 
   /// @name API for C++ users.
   /// @{
-  using size_type = uint32_t;
-  /// StorageType is the underlying storage that JSArray uses to put the values
-  /// into.
-  using StorageType = ArrayStorageSmall;
 
   /// Resize the internal storage. The ".length" property is not affected. It
   /// does \b NOT check for read-only properties.
@@ -256,14 +267,6 @@ class ArrayImpl : public JSObject {
   const SmallHermesValue unsafeAt(Runtime &runtime, size_type index) const {
     return getIndexedStorageUnsafe(runtime)->at(index - beginIndex_);
   }
-
- private:
-  /// The first index contained in the storage.
-  uint32_t beginIndex_{0};
-  /// Number of elements in the storage starting from \p beginIndex_.
-  uint32_t elemCount_{0};
-  /// The indexed storage for this array.
-  GCPointer<StorageType> indexedStorage_;
 };
 
 class Arguments final : public ArrayImpl {
@@ -442,6 +445,16 @@ class JSArray final : public ArrayImpl {
 class JSArrayIterator : public JSObject {
   using Super = JSObject;
 
+  /// [[IteratedObject]]
+  /// This is null if iteration has been completed.
+  GCPointer<JSObject> iteratedObject_;
+
+  /// [[ArrayIteratorNextIndex]]
+  uint64_t nextIndex_{0};
+
+  /// [[ArrayIterationKind]]
+  IterationKind iterationKind_;
+
   friend void JSArrayIteratorBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
@@ -474,17 +487,6 @@ class JSArrayIterator : public JSObject {
       : JSObject(runtime, *parent, *clazz),
         iteratedObject_(runtime, *iteratedObject, runtime.getHeap()),
         iterationKind_(iterationKind) {}
-
- private:
-  /// [[IteratedObject]]
-  /// This is null if iteration has been completed.
-  GCPointer<JSObject> iteratedObject_;
-
-  /// [[ArrayIteratorNextIndex]]
-  uint64_t nextIndex_{0};
-
-  /// [[ArrayIterationKind]]
-  IterationKind iterationKind_;
 };
 
 } // namespace vm

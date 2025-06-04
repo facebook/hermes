@@ -39,28 +39,6 @@ static constexpr uint32_t cellSize() {
 
 /// This class stores a CellKind and the size of a cell in 32 bits.
 class KindAndSize {
- public:
-  size_t getSize() const {
-    return size_;
-  }
-  CellKind getKind() const {
-    return static_cast<CellKind>(kind_);
-  }
-  const VTable *getVT() const {
-    return VTable::vtableArray[kind_];
-  }
-  KindAndSize() = default;
-  KindAndSize(CellKind kind, size_t sz)
-      : size_(sz), kind_(static_cast<uint8_t>(kind)) {
-    assert((sz & 1) == 0 && "LSB of size must always be zero.");
-    assert(sz <= maxSize() && "Size is too large.");
-  }
-
-  static constexpr uint32_t maxSize() {
-    return (1ULL << kNumSizeBits) - 1;
-  }
-
- private:
   friend struct RuntimeOffsets;
   using RawType = CompressedPointer::RawType;
   static constexpr size_t kNumBits = sizeof(RawType) * 8;
@@ -81,6 +59,27 @@ class KindAndSize {
   RawType size_ : kNumSizeBits;
   /// The CellKind of the cell.
   RawType kind_ : kNumKindBits;
+
+ public:
+  size_t getSize() const {
+    return size_;
+  }
+  CellKind getKind() const {
+    return static_cast<CellKind>(kind_);
+  }
+  const VTable *getVT() const {
+    return VTable::vtableArray[kind_];
+  }
+  KindAndSize() = default;
+  KindAndSize(CellKind kind, size_t sz)
+      : size_(sz), kind_(static_cast<uint8_t>(kind)) {
+    assert((sz & 1) == 0 && "LSB of size must always be zero.");
+    assert(sz <= maxSize() && "Size is too large.");
+  }
+
+  static constexpr uint32_t maxSize() {
+    return (1ULL << kNumSizeBits) - 1;
+  }
 };
 
 static_assert(
