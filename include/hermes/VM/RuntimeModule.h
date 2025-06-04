@@ -156,7 +156,8 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   facebook::hermes::debugger::ScriptID scriptID_;
 
   /// A vector of cached hidden classes.
-  std::vector<WeakRoot<HiddenClass>> objectLiteralHiddenClasses_;
+  TransparentConservativeVector<WeakRoot<HiddenClass>>
+      objectLiteralHiddenClasses_;
 
   /// Vector of AddPropertyCacheEntry, where each element is lazily allocated
   /// whenever a CodeBlock needs a new entry.

@@ -834,49 +834,79 @@ void emit_stringprim_get_length_and_flags(
 /// Emit code to initialize the fields on a JSObject.
 /// \param xObj contains a pointer to the object to initialise.
 /// \param xParent contains a compressed pointer to the parent object.
-/// \param xTemp is a temporary register for use by the emitted code.
+/// \param xTempOrPropStorageOpt is a temporary register. It may contain
+///   a pointer to the PropStorage. If \p HasPropStorage is true, it's
+///   used to initialize the PropStorage, otherwise it's used as a temporary
+///   register.
+///   Either way, the value in xTempOrPropStorageOpt WILL be overwritten.
+/// \param xClazzOpt if invalid will use the default JSObject HiddenClass,
+///   otherwise a compressed pointer to the HiddenClass of the new object.
 void emit_jsobject_init(
     a64::Assembler &a,
     const a64::GpX &xObj,
     const a64::GpX &xParent,
-    const a64::GpX &xTemp) {
+    const a64::GpX &xTempOrPropStorageOpt,
+    bool hasPropStorage,
+    const a64::GpX &xClazzOpt = a64::GpX{}) {
   // obj->flags = 0
   a.str(a64::wzr, a64::Mem(xObj, offsetof(SHJSObject, flags)));
 
-  // Load the hidden class compressed pointer into xTemp.
-  static_assert(
-      JSObject::numOverlapSlots<JSObject>() == 0,
-      "Cannot use 0 property root class.");
-  a.ldr(xTemp, a64::Mem(xRuntime, RuntimeOffsets::runtimeRootClazzes));
-  emit_sh_ljs_get_pointer(a, xTemp, xTemp);
-  emit_sh_cp_encode_non_null(a, xTemp);
+  if (hasPropStorage) {
+    emit_sh_cp_encode_non_null(a, xTempOrPropStorageOpt);
+    emit_store_cp(
+        a,
+        xTempOrPropStorageOpt,
+        a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
+  }
+
+  // No longer need the propStorage pointer. Alias for clarity.
+  const a64::GpX &xTemp = xTempOrPropStorageOpt;
+
+  if (!xClazzOpt.isValid()) {
+    // Load the hidden class compressed pointer into xClazz.
+    static_assert(
+        JSObject::numOverlapSlots<JSObject>() == 0,
+        "Cannot use 0 property root class.");
+    a.ldr(xTemp, a64::Mem(xRuntime, RuntimeOffsets::runtimeRootClazzes));
+    emit_sh_ljs_get_pointer(a, xTemp, xTemp);
+    emit_sh_cp_encode_non_null(a, xTemp);
+  }
+
+  const a64::GpX &xClazz = xClazzOpt.isValid() ? xClazzOpt : xTemp;
 
   // Store the parent and hidden class.
   // obj->parent = xParent
-  // obj->clazz = xTemp
+  // obj->clazz = xClazz (may be the same as xTemp).
+  assert(xClazz.isValid());
   static_assert(
       offsetof(SHJSObject, clazz) - offsetof(SHJSObject, parent) ==
           sizeof(CompressedPointer),
       "clazz and parent must be adjacent to use stp");
   if constexpr (sizeof(CompressedPointer) == 4)
-    a.stp(xParent.w(), xTemp.w(), a64::Mem(xObj, offsetof(SHJSObject, parent)));
+    a.stp(
+        xParent.w(), xClazz.w(), a64::Mem(xObj, offsetof(SHJSObject, parent)));
   else
-    a.stp(xParent, xTemp, a64::Mem(xObj, offsetof(SHJSObject, parent)));
+    a.stp(xParent, xClazz, a64::Mem(xObj, offsetof(SHJSObject, parent)));
 
-  // obj->propStorage = nullptr
+  // If !hasPropStorage, obj->propStorage = nullptr.
+
   // obj->directProps[N] = SmallHermesValue::encodeRawZeroValue()
 
   // We want to zero the rest of the object. To simplify things, we align the
   // size to the heap alignment of 8 bytes, which ensures that the end of the
   // fill region is aligned to 8 bytes.
-  constexpr size_t bytesToZero =
-      heapAlignSize(cellSize<JSObject>()) - offsetof(SHJSObject, propStorage);
+  // Start the fill at propStorage if HasPropStorage is false,
+  // otherwise start after propStorage in the directProps.
+  size_t startZeroOffset = hasPropStorage
+      ? offsetof(SHJSObjectAndDirectProps, directProps)
+      : offsetof(SHJSObject, propStorage);
+  size_t bytesToZero = heapAlignSize(cellSize<JSObject>()) - startZeroOffset;
   size_t zeroedBytes = 0;
-  static_assert(bytesToZero % 4 == 0, "Must be a multiple of 4");
+  assert(bytesToZero % 4 == 0 && "Must be a multiple of 4");
 
   // If there is some amount that is not a multiple of 8, store that first.
   if (bytesToZero & 4) {
-    a.str(a64::wzr, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
+    a.str(a64::wzr, a64::Mem(xObj, startZeroOffset));
     zeroedBytes += 4;
   }
 
@@ -884,17 +914,12 @@ void emit_jsobject_init(
   // of the fill region is aligned to 8 bytes, we know all further stores will
   // be aligned to 8 bytes.
   if (bytesToZero & 8) {
-    a.str(
-        a64::xzr,
-        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + zeroedBytes));
+    a.str(a64::xzr, a64::Mem(xObj, startZeroOffset + zeroedBytes));
     zeroedBytes += 8;
   }
   // Store the rest as multiples of 16.
   for (; zeroedBytes < bytesToZero; zeroedBytes += 16) {
-    a.stp(
-        a64::xzr,
-        a64::xzr,
-        a64::Mem(xObj, offsetof(SHJSObject, propStorage) + zeroedBytes));
+    a.stp(a64::xzr, a64::xzr, a64::Mem(xObj, startZeroOffset + zeroedBytes));
   }
   assert(zeroedBytes == bytesToZero && "Did not zero the whole object");
 }
@@ -2842,6 +2867,34 @@ void Emitter::allocInYoung(
   initGCCell(kind, sz, xOut, xTemp1);
 }
 
+void Emitter::alloc2InYoung(
+    CellKind kind1,
+    uint32_t sz1,
+    CellKind kind2,
+    uint32_t sz2,
+    const a64::GpX &xOut1,
+    const a64::GpX &xOut2,
+    const a64::GpX &xTemp,
+    const asmjit::Label &slowPathLab) {
+  // Ensure the size is aligned as required.
+  sz1 = heapAlignSize(sz1);
+  sz2 = heapAlignSize(sz2);
+  bumpAllocAndUnpoison(
+      sz1 + sz2, xOut1, /* xTemp1 */ xOut2, /*xTemp2 */ xTemp, slowPathLab);
+
+  // Initialize first cell.
+  initGCCell(kind1, sz1, xOut1, xTemp);
+
+  // Place the pointer to the second cell in xTemp1 and initialize the GCCell.
+  if (a64::Utils::isAddSubImm(sz1)) {
+    a.add(xOut2, xOut1, sz1);
+  } else {
+    a.mov(xTemp, sz1);
+    a.add(xOut2, xOut1, xTemp);
+  }
+  initGCCell(kind2, sz2, xOut2, xTemp);
+}
+
 void Emitter::newObject(FR frRes) {
   comment("// NewObject r%u", frRes.index());
   syncAllFRTempExcept(frRes);
@@ -2878,7 +2931,8 @@ void Emitter::newObject(FR frRes) {
   emit_sh_ljs_get_pointer(a, xTemp1, xTemp1);
   emit_sh_cp_encode_non_null(a, xTemp1);
 
-  emit_jsobject_init(a, xRes, /* xParent */ xTemp1, /* xTemp */ xTemp2);
+  emit_jsobject_init(
+      a, xRes, /* xParent */ xTemp1, /* xTempOrPropStorageOpt */ xTemp2, false);
 
   // Add the object tag to the result.
   emit_sh_ljs_object(a, xRes);
@@ -2956,7 +3010,7 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
   a.bind(parentDoneLab);
 
   // Initialize the object.
-  emit_jsobject_init(a, xNewObjPtr, xParent, xTemp1);
+  emit_jsobject_init(a, xNewObjPtr, xParent, xTemp1, false);
 
   auto hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes, FRType::Pointer);
@@ -3042,42 +3096,117 @@ void Emitter::newObjectWithBuffer(
       shapeTableIndex,
       valBufferOffset);
 
-  // Create the object.
-  // TODO: Inline a fast path here for the JSObject creation and cached
-  // HiddenClass retrieval.
+  asmjit::Label slowPathLab = newSlowPathLabel();
+  asmjit::Label contLab = newContLabel();
+
   syncAllFRTempExcept(frRes);
   freeAllFRTempExcept({});
-  a.mov(a64::x0, xRuntime);
-  loadBits64InGp(a64::x1, (uint64_t)codeBlock_, "CodeBlock");
-  a.mov(a64::w2, shapeTableIndex);
-  loadFrameAddr(a64::x3, frRes);
-  EMIT_RUNTIME_CALL(
-      *this,
-      HermesValue(*)(Runtime &, CodeBlock *, uint32_t, PinnedHermesValue *),
-      _jit_new_empty_object_for_buffer);
 
-  // Store the HermesValue encoded result and never update it again.
-  // From here on we'll just populate the values via a raw pointer to the
-  // JSObject.
   HWReg hwRes = getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
-  movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
 
-  // Populate the values of the object.
   HWReg hwObj = allocTempGpX();
+  HWReg hwClazz = allocTempGpX();
   HWReg hwTmp = allocTempGpX();
   HWReg hwTmp2 = allocTempGpX();
   a64::GpX xObj = hwObj.a64GpX();
+  a64::GpX xClazz = hwClazz.a64GpX();
   a64::GpX xTmp = hwTmp.a64GpX();
   a64::GpX xTmp2 = hwTmp2.a64GpX();
   freeReg(hwObj);
+  freeReg(hwClazz);
   freeReg(hwTmp);
   freeReg(hwTmp2);
 
-  // xObj starts as the raw pointer to the object,
-  // but may be updated to point to property storage if there's more than
-  // DIRECT_PROPERTY_SLOTS values to populate.
-  emit_sh_ljs_get_pointer(a, xObj, hwRes.a64GpX());
+  // Load the HiddenClass from the cache.
+#ifdef HERMESVM_GC_HADES
+  // First check the read barrier.
+  a.ldrb(
+      xTmp.w(),
+      a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesOGMarkingBarriers));
+  a.cbnz(xTmp.w(), slowPathLab);
+#endif
+  // Load the HC from the cache.
+  static_assert(
+      std::is_same_v<
+          TransparentConservativeVector<WeakRoot<HiddenClass>>,
+          RuntimeOffsets::RuntimeModuleObjectLiteralHiddenClassesType>,
+      "objectLiteralHiddenClasses_ must be transparent");
+  loadBits64InGp(
+      xClazz, (uint64_t)codeBlock_->getRuntimeModule(), "RuntimeModule");
+  a.ldr(
+      xClazz,
+      a64::Mem(
+          xClazz, RuntimeOffsets::runtimeModuleObjectLiteralHiddenClasses));
+  emit_load_cp(
+      a,
+      xClazz,
+      a64::Mem(xClazz, shapeTableIndex * sizeof(WeakRoot<HiddenClass>)));
+  // If the HC isn't cached, slow path.
+  a.cbz(xClazz, slowPathLab);
+
+  // Create the object.
+  const unsigned numIndirectSlots =
+      shapeInfo.numProps <= JSObject::DIRECT_PROPERTY_SLOTS
+      ? 0
+      : shapeInfo.numProps - JSObject::DIRECT_PROPERTY_SLOTS;
+  if (numIndirectSlots > 0) {
+    // Need indirect property storage, so allocate 2 cells.
+    // We know that both together should be able to fit in young gen if there's
+    // space due to the above checks.
+    // PropStorage will be in xTmp2.
+    alloc2InYoung(
+        CellKind::JSObjectKind,
+        cellSize<JSObject>(),
+        PropStorage::getCellKind(),
+        PropStorage::allocationSize(numIndirectSlots),
+        /* xOut1 */ xObj,
+        /* xOut2 */ xTmp2,
+        xTmp,
+        slowPathLab);
+  } else {
+    allocInYoung(
+        CellKind::JSObjectKind,
+        cellSize<JSObject>(),
+        xObj,
+        xTmp,
+        xTmp2,
+        slowPathLab);
+  }
+
+  // Get the parent.
+  a.ldr(xTmp, a64::Mem(xRuntime, offsetof(Runtime, objectPrototype)));
+  emit_sh_ljs_get_pointer(a, xTmp, xTmp);
+  emit_sh_cp_encode_non_null(a, xTmp);
+
+  // Initialize the JSObject to have the correct parent/HC.
+  emit_jsobject_init(
+      a,
+      xObj,
+      /* xParent */ xTmp,
+      /* xTempOrPropStorageOpt */ xTmp2,
+      numIndirectSlots > 0,
+      /* xClazz */ xClazz);
+
+  if (numIndirectSlots > 0) {
+    // The parent in xTmp is no longer needed.
+    // Populate the size.
+    a.mov(xTmp, numIndirectSlots);
+    a.str(
+        xTmp,
+        a64::Mem(
+            xObj,
+            heapAlignSize(cellSize<JSObject>()) +
+                offsetof(SHArrayStorageSmall, size)));
+  }
+
+  // Come back from the slow path with xObj having the JSObject pointer.
+  a.bind(contLab);
+
+  // Store the HermesValue encoded result and never update it again.
+  // From here on we'll just populate the values via a raw pointer to the
+  // JSObject in xObj.
+  emit_sh_ljs_object2(a, hwRes.a64GpX(), xObj);
 
   // Store each of the values to the object at xObj.
   // No write barrier required because the object and property storage were
@@ -3134,12 +3263,10 @@ void Emitter::newObjectWithBuffer(
       // If we are transitioning into indirect storage, switch xObj to point to
       // the indirect property storage.
       if (i == JSObject::DIRECT_PROPERTY_SLOTS) {
+        // We know alloc2InYoung succeded so we can just advance the pointer.
 #ifdef HERMESVM_GC_HADES
-        // In Hades, we know that the objects were bump allocated immediately
-        // next to each other, so we can just advance xObj.
-        em.a.add(xObj, xObj, cellSize<JSObject>());
+        em.a.add(xObj, xObj, heapAlignSize(cellSize<JSObject>()));
 #else
-        // In other GCs, just read the propStorage pointer.
         emit_load_cp(
             em.a, xObj, a64::Mem(xObj, offsetof(SHJSObject, propStorage)));
         emit_sh_cp_decode_non_null(em.a, xObj);
@@ -3204,6 +3331,37 @@ void Emitter::newObjectWithBuffer(
           .slice(valBufferOffset),
       shapeInfo.numProps,
       emittingVisitor);
+
+  // This slow path only allocates the new object.
+  // Property population is always done in JIT-emitted code specialized for this
+  // shape table entry.
+  slowPaths_.push_back(
+      {.slowPathLab = slowPathLab,
+       .contLab = contLab,
+       .frRes = frRes,
+       .hwRes = hwObj,
+       .sizeOrIdx = shapeTableIndex,
+       .emittingIP = emittingIP,
+       .emit = [](Emitter &em, SlowPath &sl) {
+         em.comment(
+             "// Slow path: NewObjectWithBuffer r%u, %u, %u",
+             sl.frRes.index(),
+             sl.sizeOrIdx,
+             sl.sizeOrIdx2);
+         em.a.bind(sl.slowPathLab);
+         em.a.mov(a64::x0, xRuntime);
+         em.loadBits64InGp(a64::x1, (uint64_t)em.codeBlock_, "CodeBlock");
+         em.a.mov(a64::w2, sl.sizeOrIdx);
+         em.loadFrameAddr(a64::x3, sl.frRes);
+         EMIT_RUNTIME_CALL(
+             em,
+             JSObject *
+                 (*)(Runtime &, CodeBlock *, uint32_t, PinnedHermesValue *),
+             _jit_new_empty_object_for_buffer);
+         // Move into xObj.
+         em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
+         em.a.b(sl.contLab);
+       }});
 }
 
 void Emitter::newObjectWithBufferSlow(

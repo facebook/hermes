@@ -20,6 +20,7 @@ namespace hermes::vm {
 
 class Runtime;
 class CodeBlock;
+class JSObject;
 class RuntimeModule;
 class PinnedHermesValue;
 
@@ -106,7 +107,7 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right);
 /// The properties will have to be populated by the caller afterwards.
 /// \param tmp a FR pointer on the JS stack used to avoid having to allocate
 ///   Locals internally. May be overwritten.
-HermesValue _jit_new_empty_object_for_buffer(
+JSObject *_jit_new_empty_object_for_buffer(
     Runtime &runtime,
     CodeBlock *codeBlock,
     uint32_t shapeTableIndex,

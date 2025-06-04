@@ -46,6 +46,10 @@ struct RuntimeOffsets {
 
   static constexpr uint32_t runtimeModuleModuleCache =
       offsetof(RuntimeModule, moduleExports_);
+  using RuntimeModuleObjectLiteralHiddenClassesType =
+      decltype(RuntimeModule::objectLiteralHiddenClasses_);
+  static constexpr uint32_t runtimeModuleObjectLiteralHiddenClasses =
+      offsetof(RuntimeModule, objectLiteralHiddenClasses_);
 
   /// Can't use offsetof here because KindAndSize uses bitfields.
   static constexpr uint32_t kindAndSizeKind = KindAndSize::kNumSizeBits / 8;
@@ -64,6 +68,8 @@ struct RuntimeOffsets {
       offsetof(Runtime, heap_.youngGen_.level_);
   static constexpr uint32_t runtimeHadesYGEnd =
       offsetof(Runtime, heap_.youngGen_.effectiveEnd_);
+  static constexpr uint32_t runtimeHadesOGMarkingBarriers =
+      offsetof(Runtime, heap_.ogMarkingBarriers_);
 #endif
 
 #ifndef NDEBUG

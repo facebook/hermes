@@ -235,7 +235,7 @@ _sh_ljs_string_add(SHRuntime *shr, SHLegacyValue *left, SHLegacyValue *right) {
   return *result;
 }
 
-HermesValue _jit_new_empty_object_for_buffer(
+JSObject *_jit_new_empty_object_for_buffer(
     Runtime &runtime,
     CodeBlock *codeBlock,
     uint32_t shapeTableIndex,
@@ -262,7 +262,7 @@ HermesValue _jit_new_empty_object_for_buffer(
       runtime.getHeap().inYoungGen(result.get()) &&
       "New object is not in young gen");
 
-  return result.getHermesValue();
+  return result.get();
 }
 
 void _jit_put_by_id(

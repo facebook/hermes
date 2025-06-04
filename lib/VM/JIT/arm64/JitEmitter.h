@@ -335,6 +335,8 @@ class Emitter {
     bool passArgsByVal;
     /// Some number or index that needs to be passed to the slow path.
     unsigned sizeOrIdx;
+    /// Another number or index that needs to be passed to the slow path.
+    unsigned sizeOrIdx2;
 
     /// Pointer to the slow path function that must be called.
     void *slowCall;
@@ -1336,6 +1338,26 @@ class Emitter {
       const a64::GpX &xOut,
       const a64::GpX &xTemp1,
       const a64::GpX &xTemp2,
+      const asmjit::Label &slowPathLab);
+
+  /// Emit the code to perform an allocation in the young generation, populating
+  /// the fields of the new GCCell.
+  /// \param kind1 is the CellKind of object 1 to allocate.
+  /// \param sz1 is the size of the object 1 to allocate.
+  /// \param kind2 is the CellKind of object 2 to allocate.
+  /// \param sz2 is the size of the object 2 to allocate.
+  /// \param xOut1 is the register to store the address of the first object.
+  /// \param xOut2 is the register to store the address of the second object.
+  /// \param xTemp is a temporary register.
+  /// \param slowPathLab is the label to jump to if the allocation fails.
+  void alloc2InYoung(
+      CellKind kind1,
+      uint32_t sz1,
+      CellKind kind2,
+      uint32_t sz2,
+      const a64::GpX &xOut1,
+      const a64::GpX &xOut2,
+      const a64::GpX &xTemp,
       const asmjit::Label &slowPathLab);
 
   /// Slow version of newObjectWithBuffer.
