@@ -12,6 +12,7 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/DictPropertyMap.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/PropertyDescriptor.h"
 #include "hermes/VM/WeakValueMap.h"
 
@@ -281,6 +282,15 @@ class HiddenClass final : public GCCell {
   bool isKnownLeaf() const {
     return transitionMap_.isKnownEmpty();
   }
+
+#if HERMESVM_JIT
+  uint16_t getLazyJITId() const {
+    return lazyJITId_;
+  }
+  void setLazyJITId(uint16_t id) {
+    lazyJITId_ = id;
+  }
+#endif
 
   /// \return the number of own properties described by this hidden class.
   /// This corresponds to the size of the property map, if it is initialized.
@@ -561,6 +571,8 @@ class HiddenClass final : public GCCell {
 #endif
 
  private:
+  friend struct RuntimeOffsets;
+
   /// The symbol that was added when transitioning to this hidden class.
   const GCSymbolID symbolID_;
   /// The flags of the added symbol.
@@ -568,6 +580,13 @@ class HiddenClass final : public GCCell {
 
   /// Flags associated with this hidden class.
   ClassFlags flags_{};
+
+#if HERMESVM_JIT
+  /// A unique identifier for this hidden class, lazily assigned by the JIT,
+  /// when it needs to keep track of the hidden class cheaply.
+  /// 0 means not assigned yet.
+  uint16_t lazyJITId_ = 0;
+#endif
 
   /// Total number of properties encoded in the entire chain from this class
   /// to the root. Note that some transitions do not introduce a new property,

@@ -10,6 +10,7 @@
 #include "hermes/VM/JIT/arm64/JIT.h"
 
 #include "JitEmitter.h"
+#include "JitImpl.h"
 
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/VM/JIT/DiscoverBB.h"
@@ -21,11 +22,6 @@
 namespace hermes {
 namespace vm {
 namespace arm64 {
-
-class JITContext::Impl {
- public:
-  asmjit::JitRuntime jr{};
-};
 
 JITContext::JITContext(bool enable) : enabled_(enable) {
   if (!enable)
@@ -43,6 +39,14 @@ void JITContext::dumpCounters(llvh::raw_ostream &os) {
   };
   for (unsigned i = 0; i < (unsigned)JitCounter::_Last; ++i)
     os << kCounterNames[i] << ": " << counters_[i] << "\n";
+}
+
+void JITContext::markRoots(
+    RootAcceptorWithNames &acceptor,
+    bool markLongLived) {
+  if (!impl_)
+    return;
+  acceptor.accept(impl_->usedHCs);
 }
 
 // Calculate the address of the next instruction given the name of the
@@ -67,6 +71,7 @@ void JITContext::dumpCounters(llvh::raw_ostream &os) {
 #endif
 
 class JITContext::Compiler {
+  /// JITContext that owns this compiler.
   JITContext &jc_;
   /// The implementation of the assembly emitter.
   Emitter em_;
@@ -105,19 +110,15 @@ class JITContext::Compiler {
       stringSwitchImmTargetLabels_;
 
  public:
-  Compiler(JITContext &jc, CodeBlock *codeBlock)
+  Compiler(Runtime &runtime, JITContext &jc, CodeBlock *codeBlock)
       : jc_(jc),
-        em_(jc.impl_->jr,
+        em_(runtime,
+            *jc.impl_,
             jc.getDumpJITCode(),
             jc.getEmitAsserts(),
             jc.counters_.get() != nullptr,
             jc.perfJitDump_.get(),
             codeBlock,
-            codeBlock->readPropertyCache(),
-            codeBlock->writePropertyCache(),
-            codeBlock->privateNameCache(),
-            // TODO: is getFrameSize() the right thing to call?
-            codeBlock->getFrameSize(),
             [this](std::string &&message) {
               otherErrorMessage_ = std::move(message);
               error_ = Error::Other;
@@ -203,7 +204,7 @@ class JITContext::Compiler {
 JITCompiledFunctionPtr JITContext::compileImpl(
     Runtime &runtime,
     CodeBlock *codeBlock) {
-  Compiler compiler(*this, codeBlock);
+  Compiler compiler(runtime, *this, codeBlock);
   return compiler.compileCodeBlock();
 }
 

@@ -48,6 +48,8 @@ class JITContext {
   friend RuntimeOffsets;
 
  public:
+  class Impl;
+
   /// Construct a JIT context. No executable memory is allocated before it is
   /// needed.
   /// \param enable whether JIT is enabled.
@@ -155,13 +157,20 @@ class JITContext {
     return emitAsserts_;
   }
 
+  /// Called by the GC at the beginning of a collection. This method informs the
+  /// GC of all runtime roots.  The \p markLongLived argument
+  /// indicates whether root data structures that contain only
+  /// references to long-lived objects (allocated directly as long lived)
+  /// are required to be scanned.
+  void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived);
+
  private:
   /// Slow path that actually performs the compilation of the specified
   /// CodeBlock.
   JITCompiledFunctionPtr compileImpl(Runtime &runtime, CodeBlock *codeBlock);
 
  private:
-  class Impl;
+  /// Only initialized if JIT is enabled.
   std::unique_ptr<Impl> impl_{};
 
   /// Whether JIT compilation is enabled.

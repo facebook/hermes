@@ -57,6 +57,8 @@ struct RuntimeOffsets {
   static constexpr uint32_t stringPrimitiveLengthMask =
       StringPrimitive::LENGTH_MASK;
 
+  static constexpr uint32_t hiddenClassLazyJITId =
+      offsetof(HiddenClass, lazyJITId_);
 #ifdef HERMESVM_GC_HADES
   static constexpr uint32_t runtimeHadesYGLevel =
       offsetof(Runtime, heap_.youngGen_.level_);

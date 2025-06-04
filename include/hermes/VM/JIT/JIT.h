@@ -133,6 +133,13 @@ class JITContext {
   bool getEmitAsserts() {
     return false;
   }
+
+  /// Called by the GC at the beginning of a collection. This method informs the
+  /// GC of all runtime roots.  The \p markLongLived argument
+  /// indicates whether root data structures that contain only
+  /// references to long-lived objects (allocated directly as long lived)
+  /// are required to be scanned.
+  void markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {}
 };
 
 } // namespace vm

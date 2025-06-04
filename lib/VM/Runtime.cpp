@@ -596,6 +596,7 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
     acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
     for (auto &rm : runtimeModuleList_)
       rm.markRoots(acceptor, markLongLived);
+    jitContext_.markRoots(acceptor, markLongLived);
     acceptor.endRootSection();
   }
 

@@ -16,6 +16,7 @@
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JIT/PerfJitDump.h"
+#include "hermes/VM/JIT/arm64/JIT.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/static_h.h"
 
@@ -287,6 +288,9 @@ class TempRegAlloc {
 };
 
 class Emitter {
+  Runtime &runtime_;
+  JITContext::Impl &jitImpl_;
+
   /// Level of dumping JIT code. Bit 0 indicates code printing on or off.
   unsigned const dumpJitCode_;
   /// Whether to emit asserts in the JIT'ed code.
@@ -408,16 +412,13 @@ class Emitter {
   /// Create an Emitter, but do not emit any actual code.
   /// Use \c enter to set up the stack frame before emitting the actual code.
   explicit Emitter(
-      asmjit::JitRuntime &jitRT,
+      Runtime &runtime,
+      JITContext::Impl &jitImpl,
       unsigned dumpJitCode,
       bool emitAsserts,
       bool emitCounters,
       PerfJitDump *perfJitDump,
       CodeBlock *codeBlock,
-      ReadPropertyCacheEntry *readPropertyCache,
-      WritePropertyCacheEntry *writePropertyCache,
-      PrivateNameCacheEntry *privateNameCache,
-      uint32_t numFrameRegs,
       const std::function<void(std::string &&message)> &longjmpError);
 
   /// Add the jitted function to the JIT runtime and return a pointer to it.
@@ -1322,6 +1323,12 @@ class Emitter {
 
   /// If counters are enabled, emit code to increment \p counter.
   void emitIncrementCounter(JitCounter counter);
+
+  /// Initialize or obtain an existing lazy JIT ID for the given hidden class.
+  /// NOTE: this call performs GC allocations, to the HC might move. The raw
+  /// pointer MUST NOT be used after this call.
+  /// \return 0 if too many IDs have been assigned.
+  uint16_t initHCLazyIDMayAlloc(HiddenClass *hc);
 }; // class Emitter
 
 } // namespace hermes::vm::arm64

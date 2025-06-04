@@ -8,6 +8,7 @@
 #include "hermes/VM/JIT/Config.h"
 #if HERMESVM_JIT
 #include "JitEmitter.h"
+#include "JitImpl.h"
 
 #include "JitHandlers.h"
 
@@ -16,6 +17,7 @@
 #include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Interpreter.h"
@@ -1129,26 +1131,27 @@ static bool isCheapConst(uint64_t k) {
   } while (0)
 
 Emitter::Emitter(
-    asmjit::JitRuntime &jitRT,
+    Runtime &runtime,
+    JITContext::Impl &jitImpl,
     unsigned dumpJitCode,
     bool emitAsserts,
     bool emitCounters,
     PerfJitDump *perfJitDump,
     CodeBlock *codeBlock,
-    ReadPropertyCacheEntry *readPropertyCache,
-    WritePropertyCacheEntry *writePropertyCache,
-    PrivateNameCacheEntry *privateNameCache,
-    uint32_t numFrameRegs,
     const std::function<void(std::string &&message)> &longjmpError)
-    : dumpJitCode_(dumpJitCode),
+    : runtime_(runtime),
+      jitImpl_(jitImpl),
+      dumpJitCode_(dumpJitCode),
       emitAsserts_(emitAsserts),
       emitCounters_(emitCounters),
-      frameRegs_(numFrameRegs),
+      frameRegs_(codeBlock->getFrameSize()),
       codeBlock_(codeBlock) {
+  // Prevent warning.
+  (void)runtime_;
   errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(
       new OurErrorHandler(expectedError_, longjmpError));
 
-  code.init(jitRT.environment(), jitRT.cpuFeatures());
+  code.init(jitImpl.jr.environment(), jitImpl.jr.cpuFeatures());
   code.setErrorHandler(errorHandler_.get());
 
 #ifndef ASMJIT_NO_LOGGING
@@ -1167,12 +1170,12 @@ Emitter::Emitter(
   returnLabel_ = a.newNamedLabel("leave");
 
   // Save read/write property cache addresses.
-  roOfsReadPropertyCachePtr_ =
-      uint64Const((uint64_t)readPropertyCache, "readPropertyCache");
-  roOfsWritePropertyCachePtr_ =
-      uint64Const((uint64_t)writePropertyCache, "writePropertyCache");
+  roOfsReadPropertyCachePtr_ = uint64Const(
+      (uint64_t)codeBlock->readPropertyCache(), "readPropertyCache");
+  roOfsWritePropertyCachePtr_ = uint64Const(
+      (uint64_t)codeBlock->writePropertyCache(), "writePropertyCache");
   roOfsPrivateNameCachePtr_ =
-      uint64Const((uint64_t)privateNameCache, "privateNameCache");
+      uint64Const((uint64_t)codeBlock->privateNameCache(), "privateNameCache");
 }
 
 void Emitter::enter(uint32_t numCount, uint32_t npCount) {
@@ -1692,6 +1695,39 @@ void Emitter::emitIncrementCounter(JitCounter counter) {
 
   // Pop the saved values back off the stack.
   a.ldp(a64::x0, a64::x1, a64::Mem(a64::sp).post(16));
+}
+
+uint16_t Emitter::initHCLazyIDMayAlloc(HiddenClass *hc) {
+  uint16_t id = hc->getLazyJITId();
+  // Assign a new ID to the HC if we have to.
+  if (id != 0)
+    return id;
+
+  // Too many IDs. Fail.
+  if (jitImpl_.prevHCId == JITContext::Impl::kHCIdOverflow)
+    return 0;
+
+  id = ++jitImpl_.prevHCId;
+  hc->setLazyJITId(id);
+
+  struct : Locals {
+    PinnedValue<HiddenClass> hc;
+  } lv;
+  LocalsRAII lraii{runtime_, &lv};
+  lv.hc = hc;
+
+  if (jitImpl_.usedHCs.isUndefined()) {
+    // We would like to use a long-lived object, but we can't, because
+    // ArrayStorage cannot be long-lived: it can be allocated that way
+    // initially, but when it grows, it is allocated "normally".
+    jitImpl_.usedHCs = runtime_.ignoreAllocationFailure(
+        ArrayStorageSmall::create(runtime_, 8));
+  }
+
+  auto mh = MutableHandle<ArrayStorageSmall>::vmcast(&jitImpl_.usedHCs);
+  ArrayStorageSmall::push_back(mh, runtime_, lv.hc);
+
+  return id;
 }
 
 void Emitter::loadFrameAddr(a64::GpX dst, FR frameReg) {
