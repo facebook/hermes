@@ -337,18 +337,116 @@ void emit_sh_ljs_bool_const(a64::Assembler &a, const a64::GpX &out, bool val) {
   }
 }
 
+/// Maximum natural offset (+1) that can be encoded in a load/store instruction
+/// for a given operand width. The instruction contains a 12-bit unsigned
+/// offset which is multiplied by the size of the load, so the maximum offset is
+/// 2^12 * \c width.
+///
+/// https://developer.arm.com/documentation/ddi0602/2024-06/Base-Instructions/LDR--immediate---Load-register--immediate--?lang=en
+/// https://developer.arm.com/documentation/ddi0602/2024-06/Base-Instructions/LDRH--immediate---Load-register-halfword--immediate--?lang=en
+/// https://developer.arm.com/documentation/ddi0602/2024-06/Base-Instructions/LDRB--immediate---Load-register-byte--immediate--?lang=en
+constexpr inline uint32_t maxNaturalBaseOffset(unsigned width) {
+  return (1 << 12) * width;
+}
+
+/// Maximum offset (+1) that can be encoded in a load instruction, i.e. can be
+/// loaded by \c emit_load_from_base_offset() without requiring an extra
+/// register.
+constexpr uint32_t kMaxInlineBaseOffset = maxNaturalBaseOffset(8);
+
+/// Load a value with the specified width from the base register with an
+/// unsigned immediate offset. The wrapper is necessary since the immediate
+/// offset for loads is limited to 12-bits and may not always be sufficient, in
+/// which case we need to use alternate techniques. The base and destination
+/// registers must not be the same, since in rare cases we need to use the
+/// destination register as scratch.
+///
+/// \param WIDTH The width of the load, in bytes. Must be one of 1, 2, 4, or 8.
+/// \param INLINE_LOAD If true, the offset must be less than or equal to
+///   \c kMaxInlineBaseOffset, and the load will always be emitted without
+///   needing a temporary register.
+/// \param destReg The destination register to load the value into.
+/// \param baseReg The base register to calculate the load address.
+/// \param tmpReg A temporary register that must be different from \p baseReg,
+///   but could be the same as \p destReg. This is only needed when
+///   \c INLINE_LOAD is false, pass {} otherwise.
+/// \param offset The offset to add to the base register. Must be aligned to
+///   WIDTH.
+template <unsigned WIDTH, bool INLINE_LOAD = false>
+void emit_load_from_base_offset(
+    a64::Assembler &a,
+    const a64::GpX &destReg,
+    const a64::GpX &baseReg,
+    const a64::GpX &tmpReg,
+    uint32_t offset) {
+  static_assert(
+      WIDTH == 1 || WIDTH == 2 || WIDTH == 4 || WIDTH == 8,
+      "Unsupported width for load");
+  assert(
+      (INLINE_LOAD || tmpReg.isValid()) &&
+      "Temporary register must be valid when INLINE_LOAD is false");
+  assert(
+      (INLINE_LOAD || tmpReg != baseReg) &&
+      "tmpReg must not be the same as baseReg when INLINE_LOAD is false");
+  // Assert that the offset is aligned to the load width.
+  assert(offset % WIDTH == 0 && "Offset must be aligned to the load width");
+
+  // Maximum offset (+1) that can be used when loading a value with this width.
+  constexpr uint32_t kMaxNaturalOffset = maxNaturalBaseOffset(WIDTH);
+
+  if (offset < kMaxNaturalOffset) {
+    // The offset fits in the natural range for the load width.
+    if constexpr (WIDTH == 1) {
+      a.ldrb(destReg.w(), a64::Mem(baseReg, offset));
+    } else if constexpr (WIDTH == 2) {
+      a.ldrh(destReg.w(), a64::Mem(baseReg, offset));
+    } else if constexpr (WIDTH == 4) {
+      a.ldr(destReg.w(), a64::Mem(baseReg, offset));
+    } else {
+      a.ldr(destReg, a64::Mem(baseReg, offset));
+    }
+  } else if (offset < kMaxInlineBaseOffset) {
+    // The offset fits in the range for a 64-bit load.
+    a.ldr(destReg, a64::Mem(baseReg, offset & ~(uint32_t)7));
+    a.ubfx(destReg, destReg, (offset & 7) * 8, WIDTH * 8);
+  } else if constexpr (!INLINE_LOAD) {
+    // We must perform an explicit addition.
+    a.mov(tmpReg, offset / WIDTH);
+    if constexpr (WIDTH == 1) {
+      a.ldrb(destReg.w(), a64::Mem(baseReg, tmpReg));
+    } else if constexpr (WIDTH == 2) {
+      a.ldrh(
+          destReg.w(),
+          a64::Mem(baseReg, tmpReg, a64::Shift(a64::ShiftOp::kLSL, 1)));
+    } else if constexpr (WIDTH == 4) {
+      a.ldr(
+          destReg.w(),
+          a64::Mem(baseReg, tmpReg, a64::Shift(a64::ShiftOp::kLSL, 2)));
+    } else {
+      a.ldr(
+          destReg,
+          a64::Mem(baseReg, tmpReg, a64::Shift(a64::ShiftOp::kLSL, 3)));
+    }
+  } else {
+    a.reportError(
+        asmjit::kErrorInvalidImmediate,
+        "emit_load_from_base_offset(): offset is too large for INLINE_LOAD=true");
+  }
+}
+
 /// For a register containing a pointer to a GCCell, retrieve its CellKind (a
 /// single byte) and store it in \p wOut.
 /// \p wOut and \p xIn may refer to the same register.
 void emit_gccell_get_kind(
     a64::Assembler &a,
-    const a64::GpW &wOut,
+    const a64::GpX &xOut,
     const a64::GpX &xIn) {
-  a.ldrb(
-      wOut,
-      a64::Mem(
-          xIn,
-          offsetof(SHGCCell, kindAndSize) + RuntimeOffsets::kindAndSizeKind));
+  emit_load_from_base_offset<1, true>(
+      a,
+      xOut,
+      xIn,
+      {},
+      offsetof(SHGCCell, kindAndSize) + RuntimeOffsets::kindAndSizeKind);
 }
 
 /// For a register \p wIn that contains a CellKind, check whether it falls
@@ -434,6 +532,23 @@ void emit_sh_cp_encode_non_null(a64::Assembler &a, const a64::GpX &xInOut) {
 #endif
 }
 
+/// Similar to \c emit_sh_cp_decode_non_null(), but used when the input register
+/// needs to be preserved. It returns the result register which must then be
+/// used by the caller.
+/// The result register is either \p xIn or \p xMayBeRes.
+[[nodiscard]] [[maybe_unused]] const a64::GpX &
+emit_sh_cp_decode_non_null_preserve_input(
+    a64::Assembler &a,
+    const a64::GpX &xMayBeRes,
+    const a64::GpX &xIn) {
+  if constexpr (sizeof(SmallHermesValue) == 4) {
+    a.add(xMayBeRes, xRuntime, xIn);
+    return xMayBeRes;
+  } else {
+    return xIn;
+  }
+}
+
 /// Load a compressed pointer from \p mem.
 void emit_load_cp(
     a64::Assembler &a,
@@ -462,11 +577,11 @@ void emit_load_shv(
     a64::Assembler &a,
     const a64::GpX &dest,
     const a64::Mem &mem) {
-#ifdef HERMESVM_COMPRESSED_POINTERS
-  a.ldr(dest.w(), mem);
-#else
-  a.ldr(dest, mem);
-#endif
+  if constexpr (sizeof(SmallHermesValue) == 4) {
+    a.ldr(dest.w(), mem);
+  } else {
+    a.ldr(dest, mem);
+  }
 }
 
 /// Store a SmallHermesValue to \p mem.
@@ -478,6 +593,20 @@ void emit_store_shv(
     a.str(val.w(), mem);
   } else {
     a.str(val, mem);
+  }
+}
+
+/// Emit a comparison with an immediate.
+[[maybe_unused]] void emit_cmp_imm32(
+    a64::Assembler &a,
+    const a64::GpW &wReg,
+    uint32_t imm32,
+    const a64::GpW &wTmpReg) {
+  if (a64::Utils::isAddSubImm(imm32)) {
+    a.cmp(wReg, imm32);
+  } else {
+    a.mov(wTmpReg, imm32);
+    a.cmp(wReg, wTmpReg);
   }
 }
 
@@ -4858,7 +4987,7 @@ void Emitter::jmpTypeOfIs(
     else
       a.b_ne(target);
     emit_sh_ljs_get_pointer(a, hwTemp.a64GpX(), hwInput.a64GpX());
-    emit_gccell_get_kind(a, wTemp, xTemp);
+    emit_gccell_get_kind(a, xTemp, xTemp);
     emit_cellkind_in_range(
         a,
         wTemp,
@@ -4879,7 +5008,7 @@ void Emitter::jmpTypeOfIs(
     else
       a.b_ne(target);
     emit_sh_ljs_get_pointer(a, xTemp, xInput);
-    emit_gccell_get_kind(a, wTemp, xTemp);
+    emit_gccell_get_kind(a, xTemp, xTemp);
     emit_cellkind_in_range(
         a,
         wTemp,
@@ -5027,7 +5156,7 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
       a.b_ne(objectDoneLab);
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
-    emit_gccell_get_kind(a, wTemp, xTemp);
+    emit_gccell_get_kind(a, xTemp, xTemp);
     emit_cellkind_in_range(
         a,
         wTemp,
@@ -5050,7 +5179,7 @@ void Emitter::typeOfIs(FR frRes, FR frInput, TypeOfIsTypes origTypes) {
       a.b_ne(functionDoneLab);
     }
     emit_sh_ljs_get_pointer(a, xTemp, xInputTemp);
-    emit_gccell_get_kind(a, wTemp, xTemp);
+    emit_gccell_get_kind(a, xTemp, xTemp);
     emit_cellkind_in_range(
         a,
         wTemp,
@@ -5806,7 +5935,7 @@ void Emitter::callImpl(FR frRes, FR frCallee) {
   // sync'd and we are done with hwCallee. We keep the callee in x1 so that we
   // don't have to move it in the slow path.
   emit_sh_ljs_get_pointer(a, a64::x1, hwCallee.a64GpX());
-  emit_gccell_get_kind(a, a64::w0, a64::x1);
+  emit_gccell_get_kind(a, a64::x0, a64::x1);
 
   // Check if it is a JSFunction.
   emit_cellkind_in_range(
