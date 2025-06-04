@@ -12,6 +12,7 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/TS2Flow.h"
+#include "hermes/AST/TransformAST.h"
 #include "hermes/AST2JS/AST2JS.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
@@ -328,6 +329,13 @@ opt<bool> ES6BlockScoping(
     "Xes6-block-scoping",
     init(false),
     desc("Enable support for ES6 block scoping"),
+    Hidden,
+    cat(CompilerCategory));
+
+opt<bool> EnableAsyncGenerators(
+    "Xasync-generators",
+    init(false),
+    desc("Enable support for async generators"),
     Hidden,
     cat(CompilerCategory));
 
@@ -868,6 +876,10 @@ ESTree::NodePtr parseJS(
   }
 #endif
 
+  parsedAST = hermes::transformASTForCompilation(*context, parsedAST);
+  if (!parsedAST)
+    return nullptr;
+
   // If we are executing in typed mode and not script, then wrap the program.
   if (shouldWrapInIIFE) {
     parsedAST = wrapInIIFE(context, llvh::cast<ESTree::ProgramNode>(parsedAST));
@@ -1125,6 +1137,7 @@ std::shared_ptr<Context> createContext(
   context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
   context->setEnableEval(cl::EnableEval);
   context->setEnableES6BlockScoping(cl::ES6BlockScoping);
+  context->setEnableAsyncGenerators(cl::EnableAsyncGenerators);
   context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 

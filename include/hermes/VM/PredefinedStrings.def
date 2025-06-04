@@ -437,6 +437,7 @@ STR(HermesInternal, "HermesInternal")
 STR(detachArrayBuffer, "detachArrayBuffer")
 STR(createHeapSnapshot, "createHeapSnapshot")
 STR(hasPromise, "hasPromise")
+STR(hasAsyncGenerators, "hasAsyncGenerators")
 STR(useEngineQueue, "useEngineQueue")
 STR(enqueueJob, "enqueueJob")
 STR(drainJobs, "drainJobs")
@@ -470,6 +471,7 @@ STR(fileName, "fileName")
 STR(setPromiseRejectionTrackingHook, "setPromiseRejectionTrackingHook")
 STR(enablePromiseRejectionTracker, "enablePromiseRejectionTracker")
 STR(spawnAsync, "spawnAsync") /* NOLINT */
+STR(makeAsyncIterator, "makeAsyncIterator") /* NOLINT */
 
 STR(SHBuiltin, "$SHBuiltin")
 

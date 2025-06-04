@@ -162,6 +162,7 @@ bool resolveAST(
     flow::FlowContext *flowContext,
     ESTree::ProgramNode *root,
     const DeclarationFileListTy &ambientDecls) {
+
   PerfSection validation("Resolving JavaScript global AST");
   // Resolve the entire AST.
   DeclCollectorMapTy declCollectorMap{};

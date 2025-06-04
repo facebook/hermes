@@ -13,6 +13,7 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/NativeContext.h"
 #include "hermes/AST/TS2Flow.h"
+#include "hermes/AST/TransformAST.h"
 #include "hermes/IR/IRVerifier.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/PassManager.h"
@@ -322,6 +323,13 @@ cl::opt<bool> ES6BlockScoping{
     "Xes6-block-scoping",
     llvh::cl::Hidden,
     llvh::cl::desc("Enable support for ES6 block scoping"),
+    llvh::cl::init(false),
+    llvh::cl::cat(CompilerCategory)};
+
+cl::opt<bool> EnableAsyncGenerators{
+    "Xasync-generators",
+    llvh::cl::Hidden,
+    llvh::cl::desc("Enable support for async generators"),
     llvh::cl::init(false),
     llvh::cl::cat(CompilerCategory)};
 
@@ -647,6 +655,7 @@ std::shared_ptr<Context> createContext() {
   context->setStrictMode(cli::Typed || cli::StrictMode);
   context->setEnableEval(cli::EnableEval);
   context->setEnableES6BlockScoping(cli::ES6BlockScoping);
+  context->setEnableAsyncGenerators(cli::EnableAsyncGenerators);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
@@ -804,6 +813,11 @@ ESTree::NodePtr parseJS(
     }
   }
 #endif
+
+  parsedAST = llvh::cast<ESTree::ProgramNode>(
+      hermes::transformASTForCompilation(*context, parsedAST));
+  if (!parsedAST)
+    return nullptr;
 
   // If we are executing in typed mode and not script, then wrap the program.
   if (shouldWrapInIIFE) {

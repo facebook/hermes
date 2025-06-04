@@ -570,12 +570,33 @@ Value *ESTreeIRGen::emitIteratorSymbol() {
       "iterator");
 }
 
+Value *ESTreeIRGen::emitAsyncIteratorSymbol() {
+  return Builder.createLoadPropertyInst(
+      Builder.createGetBuiltinClosureInst(BuiltinMethod::globalThis_Symbol),
+      "asyncIterator");
+}
+
 ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
   auto *method = Builder.createLoadPropertyInst(obj, emitIteratorSymbol());
   auto *iterator = Builder.createCallInst(
       method, /* newTarget */ Builder.getLiteralUndefined(), obj, {});
 
   emitEnsureObject(iterator, "iterator is not an object");
+  auto *nextMethod = Builder.createLoadPropertyInst(iterator, "next");
+
+  return {iterator, nextMethod};
+}
+
+ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetAsyncIteratorSlow(
+    Value *obj) {
+  auto *makeAsyncIterator = Builder.createGetBuiltinClosureInst(
+      BuiltinMethod::HermesBuiltin_makeAsyncIterator);
+
+  auto *iterator = Builder.createCallInst(
+      makeAsyncIterator,
+      Builder.getLiteralUndefined(),
+      Builder.getLiteralUndefined(),
+      {obj});
   auto *nextMethod = Builder.createLoadPropertyInst(iterator, "next");
 
   return {iterator, nextMethod};

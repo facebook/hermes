@@ -242,6 +242,9 @@ class Context {
   /// Whether to parse TypeScript syntax.
   bool parseTS_{false};
 
+  /// Whether to enable support for async generators
+  bool enableAsyncGenerators_{false};
+
   /// Whether to enable support for ES6 block scoping.
   /// TODO: This is intended to provide a temporary way to configure block
   ///       scoping until we have debugger support for it.
@@ -431,6 +434,14 @@ class Context {
   }
   bool getParseTS() const {
     return parseTS_;
+  }
+
+  void setEnableAsyncGenerators(bool enableAsyncGenerators) {
+    enableAsyncGenerators_ = enableAsyncGenerators;
+  }
+
+  bool getEnableAsyncGenerators() const {
+    return enableAsyncGenerators_;
   }
 
   void setEnableES6BlockScoping(bool enableES6BlockScoping) {
