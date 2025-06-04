@@ -197,20 +197,31 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(GCCategory),
       llvh::cl::init(false)};
 
-  llvh::cl::opt<bool> EnableJIT{
-      "Xjit",
-      llvh::cl::Hidden,
-      llvh::cl::cat(RuntimeCategory),
-      llvh::cl::desc("enable JIT compilation"),
-      llvh::cl::init(false)};
+  enum class JITMode {
+    // JIT is ON with default thresholds.
+    On,
+    // Every function is JIT compiled immediately, ignoring thresholds.
+    Force,
+    // JIT is OFF, no JIT compilation is performed.
+    Off,
+  };
 
-  llvh::cl::opt<bool> ForceJIT{
-      "Xforce-jit",
+  llvh::cl::opt<JITMode> JIT{
+      "Xjit",
+      llvh::cl::ValueOptional,
       llvh::cl::Hidden,
       llvh::cl::ZeroOrMore,
       llvh::cl::cat(RuntimeCategory),
-      llvh::cl::desc("force JIT compilation of every function"),
-      llvh::cl::init(false)};
+      llvh::cl::desc("JIT mode (default off)"),
+      llvh::cl::init(JITMode::Off),
+      values(
+          clEnumValN(JITMode::On, "", "JIT is on"),
+          clEnumValN(JITMode::On, "on", "JIT is on"),
+          clEnumValN(
+              JITMode::Force,
+              "force",
+              "force JIT compilation of every function"),
+          clEnumValN(JITMode::Off, "off", "JIT is disabled"))};
 
   llvh::cl::opt<uint32_t> JITThreshold{
       "Xjit-threshold",

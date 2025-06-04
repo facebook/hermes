@@ -49,8 +49,8 @@ jobs:
         include:
           - os: macos-15
             cmake_flags: "-DHERMESVM_ALLOW_JIT=2"
-            lit_flags: "-Xforce-jit"
-            test_runner_flags: "--vm-args='-Xforce-jit'"
+            lit_flags: "-Xjit=force"
+            test_runner_flags: "--vm-args='-Xjit=force'"
     runs-on: ${{ matrix.os }}
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
@@ -86,8 +86,8 @@ jobs:
         include:
           - os: ubuntu-24.04-arm
             cmake_flags: "-DHERMESVM_ALLOW_JIT=2"
-            lit_flags: "-Xforce-jit"
-            test_runner_flags: "--vm-args='-Xforce-jit'"
+            lit_flags: "-Xjit=force"
+            test_runner_flags: "--vm-args='-Xjit=force'"
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4.1.0

@@ -22,7 +22,7 @@ different flags (e.g., -g for call graph).
 each JIT'ed function.
 3. Reporting the trace.
 ```bash
-perf record -g -k mono -e cycles:u ./bin/hermes ~/js/test.js -Xforce-jit \
+perf record -g -k mono -e cycles:u ./bin/hermes ~/js/test.js -Xjit=force \
   -Xperf-prof -Xperf-prof-dir ./
 perf inject -j -i perf.data -o perf.data.jitted
 perf report -i perf.data.jitted --call-graph=fractal,callee --children

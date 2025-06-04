@@ -240,14 +240,15 @@ int main(int argc, char **argv) {
     }
 
 #if !HERMESVM_JIT
-    if (cl::flags.EnableJIT) {
+    if (cl::flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off) {
       llvh::errs() << "JIT is not enabled in this build\n";
       return EXIT_FAILURE;
     }
 #endif
 
-    if (cl::flags.DumpJITCode || cl::flags.ForceJIT) {
-      llvh::errs() << "synth does not support -Xforce-jit or -Xdump-jitcode\n";
+    if (cl::flags.DumpJITCode ||
+        cl::flags.JIT == cli::VMOnlyRuntimeFlags::JITMode::Force) {
+      llvh::errs() << "synth does not support -Xjit=force or -Xdump-jitcode\n";
       return EXIT_FAILURE;
     }
 
@@ -265,7 +266,7 @@ int main(int argc, char **argv) {
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
     options.forceGCBeforeStats = cl::flags.GCBeforeStats;
-    options.enableJIT = cl::flags.EnableJIT;
+    options.enableJIT = cl::flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     options.basicBlockProfiling = cl::flags.BasicBlockProfiling;

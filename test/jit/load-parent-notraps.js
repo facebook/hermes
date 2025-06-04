@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -fno-inline -Xforce-jit -Xdump-jitcode=2 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -fno-inline -Xjit=force -Xdump-jitcode=2 %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
 const obj1 = { prop: 1 };

@@ -74,7 +74,7 @@ static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
 #if !HERMESVM_JIT
-  if (flags.DumpJITCode || flags.EnableJIT || flags.ForceJIT) {
+  if (flags.DumpJITCode || flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off) {
     llvh::errs() << "JIT is not enabled in this build\n";
     return EXIT_FAILURE;
   }
@@ -113,7 +113,9 @@ static int executeHBCBytecodeFromCL(
       vm::RuntimeConfig::Builder()
           .withGCConfig(gcConfigBuilder.build())
           .withMaxNumRegisters(flags.MaxNumRegisters)
-          .withEnableJIT(flags.DumpJITCode || flags.EnableJIT || flags.ForceJIT)
+          .withEnableJIT(
+              flags.DumpJITCode ||
+              flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off)
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
           .withOptimizedEval(cl::OptimizedEval)
@@ -137,7 +139,7 @@ static int executeHBCBytecodeFromCL(
 
   options.stopAfterInit = false;
   options.timeLimit = flags.ExecutionTimeLimit;
-  options.forceJIT = flags.ForceJIT;
+  options.forceJIT = flags.JIT == cli::VMOnlyRuntimeFlags::JITMode::Force;
   options.jitThreshold = flags.JITThreshold;
   options.jitMemoryLimit = flags.JITMemoryLimit;
   options.dumpJITCode = flags.DumpJITCode;

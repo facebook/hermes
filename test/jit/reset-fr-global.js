@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xforce-jit -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xjit=force -Xjit-crash-on-error %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
 // Test that frameUpToDate for global regs is reset between basic blocks.

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xforce-jit=0 -fno-inline -Xjit -Xjit-crash-on-error -Xdump-jitcode=2 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xjit=on -fno-inline -Xjit -Xjit-crash-on-error -Xdump-jitcode=2 %s | %FileCheck --match-full-lines %s
 // REQUIRES: jit
 
 // Demonstrate the various JIT levels.
