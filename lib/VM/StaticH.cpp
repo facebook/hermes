@@ -1070,7 +1070,8 @@ static inline HermesValue getByIdWithReceiver_RJS(
       // return the property.
       if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
         //++NumGetByIdCacheHits;
-        return JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)
+        return JSObject::getNamedSlotValueUnsafe(
+                   obj, runtime, cacheEntry->getSlot())
             .unboxToHV(runtime);
       }
 
@@ -1086,7 +1087,7 @@ static inline HermesValue getByIdWithReceiver_RJS(
           JSObject *parent = parentGCPtr.getNonNull(runtime);
           if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {
             return JSObject::getNamedSlotValueUnsafe(
-                       parent, runtime, cacheEntry->slot)
+                       parent, runtime, cacheEntry->getSlot())
                 .unboxToHV(runtime);
           }
         }
@@ -1104,7 +1105,8 @@ static inline HermesValue getByIdWithReceiver_RJS(
       // those cases.
       HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
       if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
-          LLVM_LIKELY(cacheEntry)) {
+          LLVM_LIKELY(cacheEntry) &&
+          LLVM_LIKELY(desc.slot <= ReadPropertyCacheEntry::kMaxSlot)) {
 #ifdef HERMES_SLOW_DEBUG
         // if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
         //   ++NumGetByIdCacheEvicts;
@@ -1113,7 +1115,7 @@ static inline HermesValue getByIdWithReceiver_RJS(
 #endif
         // Cache the class, id and property slot.
         cacheEntry->clazz = clazzPtr;
-        cacheEntry->slot = desc.slot;
+        cacheEntry->setSlot(desc.slot);
       }
 
       assert(

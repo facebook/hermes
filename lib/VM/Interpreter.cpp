@@ -1897,9 +1897,9 @@ tailCall:
      * the property. */                                                       \
     if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {                         \
       ++NumGetByIdCacheHits;                                                  \
-      O1REG(name) =                                                           \
-          JSObject::getNamedSlotValueUnsafe(obj, runtime, cacheEntry->slot)   \
-              .unboxToHV(runtime);                                            \
+      O1REG(name) = JSObject::getNamedSlotValueUnsafe(                        \
+                        obj, runtime, cacheEntry->getSlot())                  \
+                        .unboxToHV(runtime);                                  \
       ip = NEXTINST(name);                                                    \
       DISPATCH;                                                               \
     }                                                                         \
@@ -1916,7 +1916,7 @@ tailCall:
           ++NumGetByIdProtoHits;                                              \
           /* We've already checked that this isn't a Proxy. */                \
           O1REG(name) = JSObject::getNamedSlotValueUnsafe(                    \
-                            parent, runtime, cacheEntry->slot)                \
+                            parent, runtime, cacheEntry->getSlot())           \
                             .unboxToHV(runtime);                              \
           ip = NEXTINST(name);                                                \
           DISPATCH;                                                           \
@@ -1973,9 +1973,10 @@ tailCall:
           // return the property.
           if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
             ++NumGetByIdCacheHits;
-            O1REG(GetByIdWithReceiverLong) = JSObject::getNamedSlotValueUnsafe(
-                                                 obj, runtime, cacheEntry->slot)
-                                                 .unboxToHV(runtime);
+            O1REG(GetByIdWithReceiverLong) =
+                JSObject::getNamedSlotValueUnsafe(
+                    obj, runtime, cacheEntry->getSlot())
+                    .unboxToHV(runtime);
             ip = NEXTINST(GetByIdWithReceiverLong);
             DISPATCH;
           }

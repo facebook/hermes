@@ -610,6 +610,28 @@ void emit_store_shv(
   }
 }
 
+/// Load the slot16 from a cache entry.
+/// \param xResReg The register to load the slot16 into.
+/// \param xPropCacheReg The register containing the pointer to the start of
+///   the read property cache, which must not be the same as \p xResReg.
+/// \param cacheIdx The index of the cache entry to load.
+void emit_load_slot16(
+    a64::Assembler &a,
+    const a64::GpX &xResReg,
+    const a64::GpX &xPropCacheReg,
+    uint8_t cacheIdx) {
+  assert(
+      xPropCacheReg != xResReg &&
+      "xPropCacheReg must not be the same as xResReg");
+  emit_load_from_base_offset<2>(
+      a,
+      xResReg,
+      xPropCacheReg,
+      xResReg,
+      sizeof(SHReadPropertyCacheEntry) * cacheIdx +
+          offsetof(SHReadPropertyCacheEntry, _slot16));
+}
+
 /// A class implementing SmallHermesValue to HermesValue decoding.
 /// Given a SmallHermesValue in \p xInOut, decompress it and place the result in
 /// \p xInOut. Jump to \p doneLab if decoding is done early (but not in the
@@ -4708,12 +4730,7 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
     a.b_ne(slowPathLab);
 
     // Hidden class matches. Fetch the slot in xTemp4
-    a.ldr(
-        xTemp4.w(),
-        a64::Mem(
-            xTemp3,
-            sizeof(SHReadPropertyCacheEntry) * cacheIdx +
-                offsetof(SHReadPropertyCacheEntry, slot)));
+    emit_load_slot16(a, xTemp4, xTemp3, cacheIdx);
 
     // Is it an indirect slot?
     a.cmp(xTemp4.w(), HERMESVM_DIRECT_PROPERTY_SLOTS);

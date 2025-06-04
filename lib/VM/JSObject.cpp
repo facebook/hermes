@@ -1174,9 +1174,10 @@ CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
     assert(!selfHandle->getFlags().lazyObject);
 
     // Populate the cache if requested.
-    if (cacheEntry && !propObj->getClass(runtime)->isDictionaryNoCache()) {
+    if (cacheEntry && desc.slot <= ReadPropertyCacheEntry::kMaxSlot &&
+        !propObj->getClass(runtime)->isDictionaryNoCache()) {
       cacheEntry->clazz = propObj->getClassGCPtr();
-      cacheEntry->slot = desc.slot;
+      cacheEntry->setSlot(desc.slot);
       if (selfHandle->getParent(runtime) == propObj &&
           !selfHandle->getClass(runtime)->isDictionary()) {
         // Property found on an object in the prototype chain.  The proto

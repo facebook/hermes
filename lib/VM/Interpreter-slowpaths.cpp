@@ -944,7 +944,7 @@ CallResult<HermesValue> Interpreter::createThisImpl(
   // return the property.
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     auto shvPrototype = JSObject::getNamedSlotValueUnsafe(
-        *lv.newTarget, runtime, cacheEntry->slot);
+        *lv.newTarget, runtime, cacheEntry->getSlot());
     if (LLVM_LIKELY(shvPrototype.isObject())) {
       lv.newTargetPrototype = vmcast<JSObject>(shvPrototype.getObject(runtime));
     } else {
@@ -1453,7 +1453,8 @@ ExecutionStatus doGetByIdSlowPath_RJS(
     // those cases.
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
     if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
-        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
+        LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED) &&
+        LLVM_LIKELY(desc.slot <= ReadPropertyCacheEntry::kMaxSlot)) {
 #ifdef HERMES_SLOW_DEBUG
       if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
         ++NumGetByIdCacheEvicts;
@@ -1462,7 +1463,7 @@ ExecutionStatus doGetByIdSlowPath_RJS(
 #endif
       // Cache the class, id and property slot.
       cacheEntry->clazz = clazzPtr;
-      cacheEntry->slot = desc.slot;
+      cacheEntry->setSlot(desc.slot);
     }
 
     assert(

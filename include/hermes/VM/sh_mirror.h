@@ -34,7 +34,8 @@ typedef struct SHWritePropertyCacheEntry {
 typedef struct SHReadPropertyCacheEntry {
   SHCompressedPointerRawType clazz;
   SHCompressedPointerRawType negMatchClazz;
-  uint32_t slot;
+  uint16_t _slot16;
+  uint8_t numChanges;
 } SHReadPropertyCacheEntry;
 
 typedef struct SHPrivateNameCacheEntry {

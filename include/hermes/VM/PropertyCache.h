@@ -93,10 +93,32 @@ struct ReadPropertyCacheEntry {
   /// read has the same HiddenClass, it also won't have the property.
   WeakRoot<HiddenClass> negMatchClazz{nullptr};
 
+  /// Can store 16-bit slot.
+  static constexpr SlotIndex kMaxSlot = 0xffff;
+
   /// Cached property index: in the object if \p clazz is the object's
   /// HiddenClass, or in the object's prototype if \p clazz is the
   /// prototype's HiddenClass.
-  SlotIndex slot{0};
+  /// Do not use this directly, use getSlot()/setSlot() instead.
+  uint16_t _slot16{0};
+
+  /// How many times the successfully cached property info has changed. Note
+  /// that this doesn't count the times when the cache didn't hit or something
+  /// couldn't be cached.
+  uint8_t numGoodChanges{0};
+
+  /// \return the cached property index.
+  uint16_t getSlot() const {
+    return _slot16 & kMaxSlot;
+  }
+
+  /// Set the cached slot and increment the number of changes.
+  /// \pre slot <= kMaxSlot
+  void setSlot(SlotIndex slot) {
+    assert(slot <= kMaxSlot && "slot too large");
+    _slot16 = slot;
+    numGoodChanges += numGoodChanges < 255;
+  }
 };
 
 /// A cache entry used for all private name operations, e.g. reads, stores and
@@ -169,8 +191,11 @@ static_assert(
     offsetof(SHReadPropertyCacheEntry, clazz) ==
     offsetof(ReadPropertyCacheEntry, clazz));
 static_assert(
-    offsetof(SHReadPropertyCacheEntry, slot) ==
-    offsetof(ReadPropertyCacheEntry, slot));
+    offsetof(SHReadPropertyCacheEntry, _slot16) ==
+    offsetof(ReadPropertyCacheEntry, _slot16));
+static_assert(
+    offsetof(SHReadPropertyCacheEntry, numChanges) ==
+    offsetof(ReadPropertyCacheEntry, numGoodChanges));
 static_assert(sizeof(SHPrivateNameCacheEntry) == sizeof(PrivateNameCacheEntry));
 static_assert(
     offsetof(SHPrivateNameCacheEntry, clazz) ==

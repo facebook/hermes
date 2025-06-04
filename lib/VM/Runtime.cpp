@@ -182,7 +182,7 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
     // The slot is cached, so it is safe to use the Internal function.
     return createPseudoHandle(
-        JSObject::getNamedSlotValueUnsafe(*obj, *this, cacheEntry->slot)
+        JSObject::getNamedSlotValueUnsafe(*obj, *this, cacheEntry->getSlot())
             .unboxToHV(*this));
   }
   auto sym = Predefined::getSymbolID(fixedPropCacheNames[static_cast<int>(id)]);
@@ -194,10 +194,12 @@ CallResult<PseudoHandle<>> Runtime::getNamed(
   if (LLVM_LIKELY(hasOwnProp && *hasOwnProp) && !desc.flags.accessor &&
       desc.flags.writable && !desc.flags.internalSetter) {
     HiddenClass *clazz = vmcast<HiddenClass>(clazzPtr.getNonNull(*this));
-    if (LLVM_LIKELY(!clazz->isDictionaryNoCache())) {
+    if (LLVM_LIKELY(
+            !clazz->isDictionaryNoCache() &&
+            desc.slot <= ReadPropertyCacheEntry::kMaxSlot)) {
       // Cache the class, id and property slot.
       cacheEntry->clazz = clazzPtr;
-      cacheEntry->slot = desc.slot;
+      cacheEntry->setSlot(desc.slot);
     }
     return JSObject::getNamedSlotValue(createPseudoHandle(*obj), *this, desc);
   }
