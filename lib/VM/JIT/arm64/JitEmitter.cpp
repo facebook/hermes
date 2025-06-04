@@ -23,8 +23,13 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/StaticHUtils.h"
+#include "llvh/ADT/Statistic.h"
 
 #define DEBUG_TYPE "jit"
+
+STATISTIC(
+    JITNumGetByIdSpec,
+    "JITNumGetByIdSpec: number of GetById specialized fast paths emitted");
 
 // Disable warnings about missing designated initializers since they occur often
 // when we construct SlowPaths.
@@ -160,9 +165,7 @@ void emit_sh_ljs_is_double(
 
 /// Encode a string pointer into a tagged string (SHLegacyValue).
 /// The same register is used for input and output.
-[[maybe_unused]] void emit_sh_ljs_string(
-    a64::Assembler &a,
-    const a64::GpX &inOut) {
+void emit_sh_ljs_string(a64::Assembler &a, const a64::GpX &inOut) {
   static_assert(
       HERMESVALUE_VERSION == 2,
       "HVTag_Str << kHV_NumDataBits is 0x1101...0000... and can be encoded as a logical immediate");
@@ -538,8 +541,7 @@ void emit_sh_cp_encode_non_null(a64::Assembler &a, const a64::GpX &xInOut) {
 /// needs to be preserved. It returns the result register which must then be
 /// used by the caller.
 /// The result register is either \p xIn or \p xMayBeRes.
-[[nodiscard]] [[maybe_unused]] const a64::GpX &
-emit_sh_cp_decode_non_null_preserve_input(
+[[nodiscard]] const a64::GpX &emit_sh_cp_decode_non_null_preserve_input(
     a64::Assembler &a,
     const a64::GpX &xMayBeRes,
     const a64::GpX &xIn) {
@@ -599,7 +601,7 @@ void emit_store_shv(
 }
 
 /// Emit a comparison with an immediate.
-[[maybe_unused]] void emit_cmp_imm32(
+void emit_cmp_imm32(
     a64::Assembler &a,
     const a64::GpW &wReg,
     uint32_t imm32,
@@ -1146,8 +1148,6 @@ Emitter::Emitter(
       emitCounters_(emitCounters),
       frameRegs_(codeBlock->getFrameSize()),
       codeBlock_(codeBlock) {
-  // Prevent warning.
-  (void)runtime_;
   errorHandler_ = std::unique_ptr<asmjit::ErrorHandler>(
       new OurErrorHandler(expectedError_, longjmpError));
 
@@ -4624,7 +4624,12 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
   const char *shImplName;
 
   asmjit::Label contLab;
+  asmjit::Label slowPathLab;
   HWReg hwRes;
+  a64::GpX xTemp1;
+  a64::GpX xTemp2;
+  a64::GpX xTemp3;
+  a64::GpX xTemp4;
 
  public:
   GetByIdImpl(
@@ -4665,7 +4670,10 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
     _.syncToFrame(frSource);
 
     if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED) {
+      slowPathLab = a.newLabel();
+      contLab = a.newLabel();
       emitFastPath();
+      a.bind(slowPathLab);
     } else {
       // All temporaries will be clobbered.
       _.freeAllFRTempExcept({});
@@ -4694,11 +4702,46 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
   }
 
  private:
+  /// Load a SHV from a given slot in an object.
+  ///
+  /// \param resReg The register to load the SHV into.
+  /// \param objReg The register containing the object pointer.
+  /// \param tmpReg A temporary register which might be needed if the slot is
+  ///   too large to fit in an immediate load. It must not be the same as
+  ///   \p objReg, but can be the same as \p resReg.
+  /// \param slot The slot index to load from the object.
+  void emitLoadFromSlot(
+      const a64::GpX &resReg,
+      const a64::GpX &objReg,
+      const a64::GpX &tmpReg,
+      SlotIndex slot) {
+    assert(tmpReg != objReg && "tmpReg and objReg must be different");
+    if (slot < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+      emit_load_from_base_offset<sizeof(SHGCSmallHermesValue), true>(
+          a,
+          resReg,
+          objReg,
+          {},
+          offsetof(SHJSObjectAndDirectProps, directProps) +
+              slot * sizeof(SHGCSmallHermesValue));
+    } else {
+      emit_load_cp(
+          a, objReg, a64::Mem(objReg, offsetof(SHJSObject, propStorage)));
+      emit_sh_cp_decode_non_null(a, objReg);
+      emit_load_from_base_offset<sizeof(SmallHermesValue), false>(
+          a,
+          resReg,
+          objReg,
+          tmpReg,
+          offsetof(SHArrayStorageSmall, storage) +
+              (slot - HERMESVM_DIRECT_PROPERTY_SLOTS) *
+                  sizeof(SHGCSmallHermesValue));
+    }
+  }
+
   void emitFastPath() {
     // Label for indirect property access.
     asmjit::Label indirectLab = a.newLabel();
-    asmjit::Label slowPathLab = a.newLabel();
-    contLab = a.newLabel();
 
     // We don't need the other temporaries.
     _.freeAllFRTempExcept(frSource);
@@ -4715,7 +4758,7 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
 
     // xTemp1 will contain the input object.
     HWReg hwTemp1Gpx = _.allocTempGpX();
-    auto xTemp1 = hwTemp1Gpx.a64GpX();
+    xTemp1 = hwTemp1Gpx.a64GpX();
     // Free frSource before allocating more temporaries, because we won't
     // need it at the same time as them.
     _.freeFRTemp(frSource);
@@ -4724,9 +4767,9 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
     HWReg hwTemp2Gpx = _.allocTempGpX();
     HWReg hwTemp3Gpx = _.allocTempGpX();
     HWReg hwTemp4Gpx = _.allocTempGpX();
-    auto xTemp2 = hwTemp2Gpx.a64GpX();
-    auto xTemp3 = hwTemp3Gpx.a64GpX();
-    auto xTemp4 = hwTemp4Gpx.a64GpX();
+    xTemp2 = hwTemp2Gpx.a64GpX();
+    xTemp3 = hwTemp3Gpx.a64GpX();
+    xTemp4 = hwTemp4Gpx.a64GpX();
 
     // Now that we have recorded their registers, mark all temp registers as
     // free.
@@ -4749,6 +4792,29 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
 
     // xTemp2 is the hidden class.
     emit_load_cp(a, xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
+
+    Emit_sh_shv_decode shvDecode(a, hwRes.a64GpX(), contLab);
+
+    // Optionally emit a very fast path specialized for the cache entry, if the
+    // entry had exactly one successful match.
+    if (ReadPropertyCacheEntry *cacheEntry =
+            _.codeBlock_->getReadCacheEntry(cacheIdx);
+        cacheEntry->numGoodChanges == 1) {
+      if (cacheEntry->clazz.getNoBarrierUnsafe() &&
+          !cacheEntry->negMatchClazz.getNoBarrierUnsafe()) {
+        ++JITNumGetByIdSpec;
+        emitObjectSpecialization(shvDecode, cacheEntry);
+      } else if (
+          cacheEntry->clazz.getNoBarrierUnsafe() &&
+          cacheEntry->negMatchClazz.getNoBarrierUnsafe()) {
+        ++JITNumGetByIdSpec;
+        emitParentSpecialization(shvDecode, cacheEntry);
+        // We don't try other things after parent specialization.
+        return;
+      }
+    }
+
+    _.comment("// Read property cache");
 
     // xTemp3 points to the start of read property cache.
     a.ldr(xTemp3, a64::Mem(_.roDataLabel_, _.roOfsReadPropertyCachePtr_));
@@ -4782,7 +4848,6 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
         hwRes.a64GpX(),
         a64::Mem(
             xTemp3, xTemp4, a64::Shift(a64::ShiftOp::kLSL, kPropShiftAmt)));
-    Emit_sh_shv_decode shvDecode(a, hwRes.a64GpX(), contLab);
     shvDecode.emitFirstCase(a);
     a.b(contLab);
 
@@ -4808,8 +4873,81 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
             xTemp1, xTemp4, a64::Shift(a64::ShiftOp::kLSL, kPropShiftAmt)));
     shvDecode.emitAll(a);
     a.b(contLab);
+  }
 
-    a.bind(slowPathLab);
+  /// Emit a specialization for accessing a property on the object.
+  void emitObjectSpecialization(
+      Emit_sh_shv_decode &shvDecode,
+      ReadPropertyCacheEntry *cacheEntry) {
+    // Obtain the HC ID.
+    auto clazzID = _.initHCLazyIDMayAlloc(
+        cacheEntry->clazz.getNoBarrierUnsafe(_.runtime_));
+    if (!clazzID)
+      return;
+
+    _.comment("// Get from object specialization");
+
+    asmjit::Label failSpecLab = a.newLabel();
+
+    // Decode the HC compressed pointer.
+    const auto &xReg =
+        emit_sh_cp_decode_non_null_preserve_input(a, xTemp3, xTemp2);
+    // xTemp3 = hc->lazyJITId
+    a.ldrh(xTemp3.w(), a64::Mem(xReg, RuntimeOffsets::hiddenClassLazyJITId));
+
+    emit_cmp_imm32(a, xTemp3.w(), clazzID, xTemp4.w());
+    a.b_ne(failSpecLab);
+    // A match. Just load the property directly.
+    emitLoadFromSlot(hwRes.a64GpX(), xTemp1, xTemp4, cacheEntry->getSlot());
+    shvDecode.emitFirstCase(a);
+    a.b(contLab);
+    a.bind(failSpecLab);
+  }
+
+  /// Emit a specialization for accessing a property on the parent.
+  /// Does not preserve temps. Assumes no fast path runs after it.
+  void emitParentSpecialization(
+      Emit_sh_shv_decode &shvDecode,
+      ReadPropertyCacheEntry *cacheEntry) {
+    // Obtain the HC IDs for the object's class and the parent class.
+    auto clazzID = _.initHCLazyIDMayAlloc(
+        cacheEntry->negMatchClazz.getNoBarrierUnsafe(_.runtime_));
+    if (!clazzID)
+      return;
+    auto parentClsID = _.initHCLazyIDMayAlloc(
+        cacheEntry->clazz.getNoBarrierUnsafe(_.runtime_));
+    if (!parentClsID)
+      return;
+
+    _.comment("// Get from parent specialization");
+
+    asmjit::Label failSpecLab = a.newLabel();
+
+    emit_sh_cp_decode_non_null(a, xTemp2);
+    // xTemp2 = hc->lazyJITId
+    a.ldrh(xTemp2.w(), a64::Mem(xTemp2, RuntimeOffsets::hiddenClassLazyJITId));
+    // if object class mismatch, fail.
+    emit_cmp_imm32(a, xTemp2.w(), clazzID, xTemp4.w());
+    a.b_ne(failSpecLab);
+
+    // Get the parent.
+    emit_load_cp(a, xTemp1, a64::Mem(xTemp1, offsetof(SHJSObject, parent)));
+    // If no parent, fail.
+    a.cbz(xTemp1, failSpecLab);
+    emit_sh_cp_decode_non_null(a, xTemp1);
+    // Get the parent's hidden class.
+    emit_load_cp(a, xTemp2, a64::Mem(xTemp1, offsetof(SHJSObject, clazz)));
+    emit_sh_cp_decode_non_null(a, xTemp2);
+    // xTemp2 = hc->lazyJITId
+    a.ldrh(xTemp2.w(), a64::Mem(xTemp2, RuntimeOffsets::hiddenClassLazyJITId));
+    // if parent class mismatch, fail.
+    emit_cmp_imm32(a, xTemp2.w(), parentClsID, xTemp4.w());
+    a.b_ne(failSpecLab);
+    // A match. Just load the property directly.
+    emitLoadFromSlot(hwRes.a64GpX(), xTemp1, xTemp4, cacheEntry->getSlot());
+    shvDecode.emitAll(a);
+    a.b(contLab);
+    a.bind(failSpecLab);
   }
 };
 
