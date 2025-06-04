@@ -1297,6 +1297,31 @@ class Emitter {
 
   void throwIfEmptyUndefinedImpl(FR frRes, FR frInput, bool empty);
 
+  /// Bump allocate \p sz bytes on the GC heap and store the result in \p xOut.
+  /// If not possible, jump to the \p slowPathLab.
+  /// \param sz is the aligned number of bytes to bump the pointer by.
+  /// \param xOut is the register to store the address of the new object.
+  /// \param xTemp1 is a temporary register.
+  /// \param xTemp2 is a temporary register.
+  /// \param slowPathLab is the label to jump to if the allocation fails.
+  void bumpAllocAndUnpoison(
+      uint32_t sz,
+      const a64::GpX &xOut,
+      const a64::GpX &xTemp1,
+      const a64::GpX &xTemp2,
+      const asmjit::Label &slowPathLab);
+
+  /// Initialize a GCCell at the pointer given.
+  /// \param kind the CellKind to populate.
+  /// \param sz the aligned total size of the cell.
+  /// \param xCell pointer to the start of the cell.
+  /// \param xTemp1 is a temporary, must not be the same as xCell.
+  void initGCCell(
+      CellKind kind,
+      uint32_t sz,
+      const a64::GpX &xCell,
+      const a64::GpX &xTemp1);
+
   /// Emit the code to perform an allocation in the young generation, populating
   /// the fields of the new GCCell.
   /// \param kind is the CellKind of object to allocate.

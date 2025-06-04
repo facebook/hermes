@@ -2751,8 +2751,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
        }});
 }
 
-void Emitter::allocInYoung(
-    CellKind kind,
+void Emitter::bumpAllocAndUnpoison(
     uint32_t sz,
     const a64::GpX &xOut,
     const a64::GpX &xTemp1,
@@ -2762,9 +2761,6 @@ void Emitter::allocInYoung(
   // Load the current YG level and end address.
   a.ldr(xOut, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGLevel));
   a.ldr(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGEnd));
-
-  // Ensure the size is aligned as required.
-  sz = heapAlignSize(sz);
 
   // Try to increment the heap level by the size of the object.
   a.add(xTemp2, xOut, sz);
@@ -2792,18 +2788,28 @@ void Emitter::allocInYoung(
 
   // Allocating succeeded, update the level.
   a.str(xTemp2, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGLevel));
+#else
+  // MallocGC does not support inline allocation.
+  a.b(slowPathLab);
+#endif
+}
 
+void Emitter::initGCCell(
+    CellKind kind,
+    uint32_t sz,
+    const a64::GpX &xCell,
+    const a64::GpX &xTemp1) {
   // Initialize the fields on GCCell.
 #ifndef NDEBUG
   // cell->magic = GCCell::kMagic
   a.mov(xTemp1, RuntimeOffsets::gcCellMagicValue);
   static_assert(sizeof(SHGCCell::magic) == 2);
-  a.strh(xTemp1.w(), a64::Mem(xOut, offsetof(SHGCCell, magic)));
+  a.strh(xTemp1.w(), a64::Mem(xCell, offsetof(SHGCCell, magic)));
 
   // cell->debugAllocationId = heap->debugAllocationCounter_++;
   a.ldr(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeDebugAllocCounter));
   static_assert(sizeof(SHGCCell::debugAllocationId) == 4);
-  a.str(xTemp1.w(), a64::Mem(xOut, offsetof(SHGCCell, debugAllocationId)));
+  a.str(xTemp1.w(), a64::Mem(xCell, offsetof(SHGCCell, debugAllocationId)));
   a.add(xTemp1, xTemp1, 1);
   a.str(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeDebugAllocCounter));
 #endif
@@ -2817,11 +2823,20 @@ void Emitter::allocInYoung(
   loadBits64InGp(xTemp1, rawKS, "KindAndSize");
 
   // KindAndSize has the same size as a compressed pointer, so store it as one.
-  emit_store_cp(a, xTemp1, a64::Mem(xOut, offsetof(SHGCCell, kindAndSize)));
-#else
-  // MallocGC does not support inline allocation.
-  a.b(slowPathLab);
-#endif
+  emit_store_cp(a, xTemp1, a64::Mem(xCell, offsetof(SHGCCell, kindAndSize)));
+}
+
+void Emitter::allocInYoung(
+    CellKind kind,
+    uint32_t sz,
+    const a64::GpX &xOut,
+    const a64::GpX &xTemp1,
+    const a64::GpX &xTemp2,
+    const asmjit::Label &slowPathLab) {
+  // Ensure the size is aligned as required.
+  sz = heapAlignSize(sz);
+  bumpAllocAndUnpoison(sz, xOut, xTemp1, xTemp2, slowPathLab);
+  initGCCell(kind, sz, xOut, xTemp1);
 }
 
 void Emitter::newObject(FR frRes) {
