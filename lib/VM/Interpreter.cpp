@@ -2147,7 +2147,7 @@ tailCall:
             LLVM_LIKELY(O2REG(GetByVal).isObject())) {
           ++NumGetByValObjInd;
           if (HERMES_SLOW_STATISTIC_ENABLED) {
-            if (vmisa<JSArray>(O2REG(GetByVal)))
+            if (vmisa<ArrayImpl>(O2REG(GetByVal)))
               ++NumGetByValArrInd;
             else if (vmisa<JSTypedArrayBase>(O2REG(GetByVal)))
               ++NumGetByValTAInd;

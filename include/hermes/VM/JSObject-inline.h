@@ -35,14 +35,14 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE
   // 32-bit.
 
   // Fast path for JSArray
-  if (vmisa<JSArray>(obj)) {
+  if (vmisa<ArrayImpl>(obj)) {
     // Make sure it is a valid array index (< 0xFFFF'FFFFu).
     if (index < 0xFFFF'FFFFu) {
       // We don't need to check for fast index properties here, because if there
       // are non-fast ones, the corresponding slot will be empty.
-      auto *jsArray = vmcast<JSArray>(obj);
+      auto *jsArray = vmcast<ArrayImpl>(obj);
       SmallHermesValue shv = jsArray->at(runtime, index);
-      if (!shv.isEmpty())
+      if (LLVM_LIKELY(!shv.isEmpty()))
         return shv.unboxToHV(runtime);
     }
   }
@@ -90,14 +90,14 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE
   // 32-bit.
 
   // Fast path for JSArray
-  if (vmisa<JSArray>(obj)) {
+  if (vmisa<ArrayImpl>(obj)) {
     // Make sure it is a valid array index (< 0xFFFF'FFFFu).
     if (index < 0xFFFF'FFFFu) {
       // We don't need to check for fast index properties here, because if there
       // are non-fast ones, the corresponding slot will be empty.
-      auto *jsArray = vmcast<JSArray>(obj);
+      auto *jsArray = vmcast<ArrayImpl>(obj);
       SmallHermesValue shv = jsArray->at(runtime, index);
-      if (!shv.isEmpty())
+      if (LLVM_LIKELY(!shv.isEmpty()))
         return shv.unboxToHV(runtime);
     }
   }
