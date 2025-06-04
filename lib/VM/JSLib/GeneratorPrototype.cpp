@@ -80,8 +80,8 @@ static CallResult<Handle<JSGeneratorObject>> generatorValidate(
 
 // The logic for ES6.0 25.3.1.(2|3|4) is handled by the inner
 // function. All we have to do here is give it the proper action and value.
-CallResult<HermesValue>
-generatorPrototypeResume(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> generatorPrototypeResume(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto generatorRes = generatorValidate(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(generatorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

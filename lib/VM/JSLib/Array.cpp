@@ -465,8 +465,8 @@ static bool arrayFastPathCheck(
   return true;
 }
 
-CallResult<HermesValue>
-arrayConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // NativeConstructors create their own this when called with new. The array
   // constructor also creates a new JSArray when it's called normally. So, we
   // will always create a new JSArray when called.
@@ -546,8 +546,8 @@ arrayConstructor(void *, Runtime &runtime, NativeArgs args) {
   return lv.self.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayIsArray(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayIsArray(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   CallResult<bool> res = isArray(runtime, dyn_vmcast<JSObject>(args.getArg(0)));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -556,8 +556,8 @@ arrayIsArray(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES5.1 15.4.4.5.
-CallResult<HermesValue>
-arrayPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -584,8 +584,8 @@ arrayPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   }
 }
 
-CallResult<HermesValue>
-arrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
@@ -763,8 +763,8 @@ lengthOfArrayLike(Runtime &runtime, Handle<JSObject> O, Handle<JSArray> jsArr) {
 }
 
 // 23.1.3.1
-CallResult<HermesValue>
-arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeAt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
   } lv;
@@ -822,8 +822,8 @@ arrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   return propRes->getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeConcat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> A;
@@ -1023,8 +1023,8 @@ arrayPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES5.1 15.4.4.5.
-CallResult<HermesValue>
-arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -1282,8 +1282,8 @@ static CallResult<HermesValue> arrayPrototypePushFastPath(
 }
 
 /// ES9.0 22.1.3.18.
-CallResult<HermesValue>
-arrayPrototypePush(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypePush(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> arr;
@@ -1804,8 +1804,8 @@ CallResult<HermesValue> sortSparse(
 } // anonymous namespace
 
 /// ES5.1 15.4.4.11.
-CallResult<HermesValue>
-arrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Null if not a callable compareFn.
   auto compareFn = Handle<Callable>::dyn_vmcast(args.getArgHandle(0));
   if (!args.getArg(0).isUndefined() && !compareFn) {
@@ -1855,8 +1855,8 @@ arrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
   return lv.O.getHermesValue();
 }
 
-inline CallResult<HermesValue>
-arrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
+inline CallResult<HermesValue> arrayPrototypeForEach(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -2096,8 +2096,8 @@ static CallResult<uint64_t> flattenIntoArray(
   return targetIndex;
 }
 
-CallResult<HermesValue>
-arrayPrototypeFlat(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeFlat(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> len;
@@ -2161,8 +2161,8 @@ arrayPrototypeFlat(void *ctx, Runtime &runtime, NativeArgs args) {
   return lv.A.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeFlatMap(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeFlatMap(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> len;
@@ -2215,8 +2215,8 @@ arrayPrototypeFlatMap(void *ctx, Runtime &runtime, NativeArgs args) {
   return lv.A.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeIterator(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeIterator(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
   assert(
       kind < IterationKind::NumKinds &&
@@ -2233,8 +2233,8 @@ arrayPrototypeIterator(void *ctx, Runtime &runtime, NativeArgs args) {
   return JSArrayIterator::create(runtime, lv.O, kind).getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeSlice(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -2467,8 +2467,8 @@ static CallResult<HermesValue> arrayPrototypeSpliceFastPath(
   return A.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeSplice(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> OArray;
@@ -2802,8 +2802,8 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
   return lv.A.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeCopyWithin(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -3003,8 +3003,8 @@ arrayPrototypePopFastPath(Runtime &runtime, Handle<JSArray> arr, uint32_t len) {
   return shv.unboxToHV(runtime);
 }
 
-CallResult<HermesValue>
-arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypePop(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -3093,8 +3093,8 @@ arrayPrototypePop(void *, Runtime &runtime, NativeArgs args) {
   return lv.element.get();
 }
 
-CallResult<HermesValue>
-arrayPrototypeShift(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeShift(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -3450,8 +3450,8 @@ indexOfHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   return HermesValue::encodeTrustedNumberValue(-1);
 }
 
-CallResult<HermesValue>
-arrayPrototypeUnshift(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeUnshift(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -3580,13 +3580,13 @@ arrayPrototypeUnshift(void *, Runtime &runtime, NativeArgs args) {
   return newLen;
 }
 
-CallResult<HermesValue>
-arrayPrototypeIndexOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeIndexOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return indexOfHelper(runtime, args, false);
 }
 
-CallResult<HermesValue>
-arrayPrototypeLastIndexOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeLastIndexOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return indexOfHelper(runtime, args, true);
 }
 
@@ -3684,18 +3684,18 @@ everySomeHelper(Runtime &runtime, NativeArgs args, const bool every) {
   return HermesValue::encodeBoolValue(every);
 }
 
-CallResult<HermesValue>
-arrayPrototypeEvery(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeEvery(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return everySomeHelper(runtime, args, true);
 }
 
-CallResult<HermesValue>
-arrayPrototypeSome(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeSome(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return everySomeHelper(runtime, args, false);
 }
 
-CallResult<HermesValue>
-arrayPrototypeMap(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeMap(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -3789,8 +3789,8 @@ arrayPrototypeMap(void *, Runtime &runtime, NativeArgs args) {
   return lv.A.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeFilter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -3891,8 +3891,8 @@ arrayPrototypeFilter(void *, Runtime &runtime, NativeArgs args) {
   return lv.A.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeFill(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -4037,13 +4037,13 @@ findHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
                    : HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeFind(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeFind(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return findHelper(ctx, false, runtime, args);
 }
 
-CallResult<HermesValue>
-arrayPrototypeFindLast(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeFindLast(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return findHelper(ctx, true, runtime, args);
 }
 
@@ -4187,19 +4187,19 @@ reduceHelper(Runtime &runtime, NativeArgs args, const bool reverse) {
   return lv.accumulator.get();
 }
 
-CallResult<HermesValue>
-arrayPrototypeReduce(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeReduce(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return reduceHelper(runtime, args, false);
 }
 
-CallResult<HermesValue>
-arrayPrototypeReduceRight(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeReduceRight(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return reduceHelper(runtime, args, true);
 }
 
 /// ES10.0 22.1.3.23.
-CallResult<HermesValue>
-arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeReverse(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Fast path for a JSArray with a contiguous storage and no numeric props
   // in the prototype.
   if (auto *arr = llvh::dyn_vmcast<JSArray>(args.getThisArg())) {
@@ -4354,8 +4354,8 @@ arrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
   return lv.O.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeIncludes(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> lenProp;
@@ -4440,8 +4440,8 @@ arrayPrototypeIncludes(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES14.0 23.1.3.33
-CallResult<HermesValue>
-arrayPrototypeToReversed(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeToReversed(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> A;
@@ -4594,8 +4594,8 @@ static inline CallResult<uint32_t> arrayCopyHelper(
 }
 
 /// ES14.0 23.1.3.35
-CallResult<HermesValue>
-arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeToSpliced(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
   struct : Locals {
     PinnedValue<JSObject> O;
@@ -4748,8 +4748,8 @@ arrayPrototypeToSpliced(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES14.0 23.1.3.39
-CallResult<HermesValue>
-arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayPrototypeWith(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> A;
@@ -4857,7 +4857,8 @@ arrayPrototypeWith(void *, Runtime &runtime, NativeArgs args) {
   return lv.A.getHermesValue();
 }
 
-CallResult<HermesValue> arrayOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<JSObject> A;
     PinnedValue<> k;
@@ -4936,7 +4937,8 @@ CallResult<HermesValue> arrayOf(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6.0 22.1.2.1 Array.from ( items [ , mapfn [ , thisArg ] ] )
-CallResult<HermesValue> arrayFrom(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayFrom(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : Locals {
     PinnedValue<Callable> mapfn;
     PinnedValue<> T;

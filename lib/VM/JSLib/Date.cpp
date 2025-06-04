@@ -410,8 +410,8 @@ static CallResult<double> makeTimeFromArgs_RJS(
       makeTime(fields[h], fields[min], fields[s], fields[milli]));
 }
 
-CallResult<HermesValue>
-dateConstructor_RJS(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dateConstructor_RJS(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (!args.isConstructorCall()) {
     llvh::SmallString<32> str{};
     double t = curTime();
@@ -491,8 +491,8 @@ dateConstructor_RJS(void *, Runtime &runtime, NativeArgs args) {
   return JSDate::create(runtime, finalDate, lv.selfParent).getHermesValue();
 }
 
-CallResult<HermesValue>
-dateParse_RJS(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dateParse_RJS(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -503,7 +503,8 @@ dateParse_RJS(void *, Runtime &runtime, NativeArgs args) {
       runtime.getJSLibStorage()->localTimeOffsetCache));
 }
 
-CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // With less than 2 arguments, this is implementation-dependent behavior.
   // We define the behavior that test262 expects here.
   if (args.getArgCount() == 0) {
@@ -526,12 +527,14 @@ CallResult<HermesValue> dateUTC_RJS(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(timeClip(*cr));
 }
 
-CallResult<HermesValue> dateNow(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dateNow(void *, Runtime &runtime) {
   return HermesValue::encodeTrustedNumberValue(curTime());
 }
 
-CallResult<HermesValue>
-datePrototypeToStringHelper(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeToStringHelper(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   static ToStringOptions toStringOptions[] = {
       {dateTimeString, false, false},
       {dateString, false, false},
@@ -570,8 +573,7 @@ datePrototypeToStringHelper(void *ctx, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> datePrototypeToLocaleStringHelper(
     void *ctx,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
   assert(
       (uint64_t)ctx < (uint64_t)ToLocaleStringKind::NumKinds &&
       "dataPrototypeToLocaleString with wrong kind as context");
@@ -586,8 +588,10 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
           (size_t)ToLocaleStringKind::NumKinds &&
       "toLocaleStringFunctions has wrong number of elements");
   return toLocaleStringFunctions[(uint64_t)ctx](
-      /* unused */ ctx, runtime, args);
+      /* unused */ ctx, runtime);
 #else
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
   static ToLocaleStringOptions toLocaleStringOptions[] = {
       {datetimeToLocaleString},
       {dateToLocaleString},
@@ -616,8 +620,8 @@ CallResult<HermesValue> datePrototypeToLocaleStringHelper(
 #endif
 }
 
-CallResult<HermesValue>
-datePrototypeGetTime(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeGetTime(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime.raiseTypeError(
@@ -627,8 +631,8 @@ datePrototypeGetTime(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(date->getPrimitiveValue());
 }
 
-CallResult<HermesValue>
-datePrototypeGetterHelper(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeGetterHelper(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   static GetterOptions getterOptions[] = {
       {GetterOptions::Field::FULL_YEAR, false},
       {GetterOptions::Field::YEAR, false},
@@ -706,8 +710,8 @@ datePrototypeGetterHelper(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 /// Set the [[PrimitiveValue]] to the given time.
-CallResult<HermesValue>
-datePrototypeSetTime_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetTime_RJS(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -723,8 +727,10 @@ datePrototypeSetTime_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 /// Set the milliseconds as provided and return the new time value.
-CallResult<HermesValue>
-datePrototypeSetMilliseconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetMilliseconds_RJS(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -751,8 +757,10 @@ datePrototypeSetMilliseconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Takes 2 arguments: seconds, milliseconds.
 /// Set the seconds, optionally milliseconds, and return the new time.
-CallResult<HermesValue>
-datePrototypeSetSeconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetSeconds_RJS(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -790,8 +798,10 @@ datePrototypeSetSeconds_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Takes 3 arguments: minutes, seconds, milliseconds.
 /// Set the minutes, optionally seconds and milliseconds, return time.
-CallResult<HermesValue>
-datePrototypeSetMinutes_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetMinutes_RJS(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -838,8 +848,8 @@ datePrototypeSetMinutes_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Takes 4 arguments: hours, minutes, seconds, milliseconds.
 /// Set the hours, optionally minutes, seconds, and milliseconds, return time.
-CallResult<HermesValue>
-datePrototypeSetHours_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetHours_RJS(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -895,8 +905,8 @@ datePrototypeSetHours_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 /// Set the date of the month and return the new time.
-CallResult<HermesValue>
-datePrototypeSetDate_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetDate_RJS(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -923,8 +933,8 @@ datePrototypeSetDate_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Takes 2 arguments: month and date.
 /// Set the month, optionally the date of the month, return the time.
-CallResult<HermesValue>
-datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -960,8 +970,10 @@ datePrototypeSetMonth_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 
 /// Takes 3 arguments: full year, month and date.
 /// Set the full year, optionally the month and date, return the time.
-CallResult<HermesValue>
-datePrototypeSetFullYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetFullYear_RJS(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool isUTC = static_cast<bool>(ctx);
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
@@ -1011,8 +1023,8 @@ datePrototypeSetFullYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
 /// Takes one argument: the partial (or full) year.
 /// Per spec, adds 1900 if the year is between 0 and 99.
 /// Sets the year to the new year and returns the time.
-CallResult<HermesValue>
-datePrototypeSetYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSetYear_RJS(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDate>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -1044,8 +1056,8 @@ datePrototypeSetYear_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(d);
 }
 
-CallResult<HermesValue>
-datePrototypeToJSON_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeToJSON_RJS(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.getThisHandle();
   auto objRes = toObject(runtime, selfHandle);
   if (objRes == ExecutionStatus::EXCEPTION) {
@@ -1074,8 +1086,10 @@ datePrototypeToJSON_RJS(void *ctx, Runtime &runtime, NativeArgs args) {
   return Callable::executeCall0(toISO, runtime, O).toCallResultHermesValue();
 }
 
-CallResult<HermesValue>
-datePrototypeSymbolToPrimitive(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> datePrototypeSymbolToPrimitive(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto O = args.dyncastThis<JSObject>();
   if (LLVM_UNLIKELY(!O)) {
     return runtime.raiseTypeError(

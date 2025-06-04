@@ -67,8 +67,8 @@ Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-generatorFunctionConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> generatorFunctionConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Generator);
 }
 

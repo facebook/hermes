@@ -173,8 +173,8 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-symbolConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.isConstructorCall()) {
     return runtime.raiseTypeError("Symbol is not a constructor");
   }
@@ -200,7 +200,8 @@ symbolConstructor(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeSymbolValue(*symbolRes);
 }
 
-CallResult<HermesValue> symbolFor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolFor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto cr = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -214,8 +215,8 @@ CallResult<HermesValue> symbolFor(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeSymbolValue(*symbolRes);
 }
 
-CallResult<HermesValue>
-symbolKeyFor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolKeyFor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(!args.getArg(0).isSymbol())) {
     return runtime.raiseTypeError("Symbol.keyFor() requires a symbol argument");
   }
@@ -232,8 +233,10 @@ symbolKeyFor(void *, Runtime &runtime, NativeArgs args) {
 
 /// ES10.0 19.4.3.2 get Symbol.prototype.description
 /// TODO(T79770380): make the Symbol(undefined) case spec-conformant.
-CallResult<HermesValue>
-symbolPrototypeDescriptionGetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolPrototypeDescriptionGetter(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   MutableHandle<SymbolID> sym{runtime};
   // 1. Let s be the this value.
   // 2. Let sym be ? thisSymbolValue(s).
@@ -252,8 +255,8 @@ symbolPrototypeDescriptionGetter(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES10 19.4.3.3 Symbol.prototype.toString ( )
-CallResult<HermesValue>
-symbolPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let sym be ? thisSymbolValue(this value).
   MutableHandle<SymbolID> sym{runtime};
   if (args.getThisArg().isSymbol()) {
@@ -274,8 +277,8 @@ symbolPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES10 19.4.3.4 Symbol.prototype.valueOf ( )
-CallResult<HermesValue>
-symbolPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Return ? thisSymbolValue(this value).
   if (args.getThisArg().isSymbol()) {
     return args.getThisArg();

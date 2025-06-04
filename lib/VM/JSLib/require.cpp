@@ -133,7 +133,8 @@ CallResult<HermesValue> runRequireCall(
   return domain->getCachedExports(runtime, cjsModuleOffset).getHermesValue();
 }
 
-CallResult<HermesValue> requireFast(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> requireFast(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   assert(
       runtime.getStackFrames().begin()->getSavedCodeBlock() != nullptr &&
       "requireFast() cannot be called from native");
@@ -192,7 +193,8 @@ static llvh::SmallString<32> canonicalizePath(
   return canonicalPath;
 }
 
-CallResult<HermesValue> require(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> require(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   auto requireContext = args.vmcastThis<RequireContext>();

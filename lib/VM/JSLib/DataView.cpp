@@ -19,8 +19,8 @@ namespace vm {
 /// @{
 
 // ES6 24.2.4.1
-CallResult<HermesValue>
-dataViewPrototypeBuffer(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeBuffer(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -30,8 +30,8 @@ dataViewPrototypeBuffer(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES6 24.2.4.2
-CallResult<HermesValue>
-dataViewPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeByteLength(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -41,8 +41,8 @@ dataViewPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES6 24.2.4.3
-CallResult<HermesValue>
-dataViewPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeByteOffset(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -71,8 +71,8 @@ CallResult<HermesValue> dataViewPrototypeGetEncoder(
 }
 
 template <typename T>
-CallResult<HermesValue>
-dataViewPrototypeGet(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeGet(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -103,8 +103,8 @@ constexpr bool isBigIntCellKind() {
 }
 
 template <typename T, CellKind C>
-CallResult<HermesValue>
-dataViewPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeSet(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -139,15 +139,12 @@ dataViewPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
 }
 } // namespace
 
-#define TYPED_ARRAY(name, type)                                   \
-  CallResult<HermesValue> dataViewPrototypeGet##name(             \
-      void *ctx, Runtime &rt, NativeArgs args) {                  \
-    return dataViewPrototypeGet<type>(ctx, rt, args);             \
-  }                                                               \
-  CallResult<HermesValue> dataViewPrototypeSet##name(             \
-      void *ctx, Runtime &rt, NativeArgs args) {                  \
-    return dataViewPrototypeSet<type, CellKind::name##ArrayKind>( \
-        ctx, rt, args);                                           \
+#define TYPED_ARRAY(name, type)                                                \
+  CallResult<HermesValue> dataViewPrototypeGet##name(void *ctx, Runtime &rt) { \
+    return dataViewPrototypeGet<type>(ctx, rt);                                \
+  }                                                                            \
+  CallResult<HermesValue> dataViewPrototypeSet##name(void *ctx, Runtime &rt) { \
+    return dataViewPrototypeSet<type, CellKind::name##ArrayKind>(ctx, rt);     \
   }
 #define TYPED_ARRAY_NO_CLAMP
 #include "hermes/VM/TypedArrays.def"
@@ -157,8 +154,8 @@ dataViewPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
 /// @}
 
 // ES 2018 24.3.2.1
-CallResult<HermesValue>
-dataViewConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(

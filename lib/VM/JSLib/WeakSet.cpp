@@ -68,8 +68,8 @@ Handle<NativeConstructor> createWeakSetConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
@@ -153,8 +153,8 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-weakSetPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetPrototypeAdd(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto M = args.dyncastThis<JSWeakSet>();
   if (LLVM_UNLIKELY(!M)) {
     return runtime.raiseTypeError(
@@ -176,8 +176,8 @@ weakSetPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
   return M.getHermesValue();
 }
 
-CallResult<HermesValue>
-weakSetPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetPrototypeDelete(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto M = args.dyncastThis<JSWeakSet>();
   if (LLVM_UNLIKELY(!M)) {
     return runtime.raiseTypeError(
@@ -192,8 +192,8 @@ weakSetPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSWeakSet::deleteValue(M, runtime, key));
 }
 
-CallResult<HermesValue>
-weakSetPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetPrototypeHas(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto M = args.dyncastThis<JSWeakSet>();
   if (LLVM_UNLIKELY(!M)) {
     return runtime.raiseTypeError(

@@ -41,8 +41,10 @@ void populateRegExpStringIteratorPrototype(Runtime &runtime) {
 }
 
 /// ES11 21.2.7.1.1 %RegExpStringIteratorPrototype%.next ( ) 1-3
-CallResult<HermesValue>
-regExpStringIteratorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpStringIteratorPrototypeNext(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value.
   // 2. If Type(O) is not Object, throw a TypeError exception.
   // 3. If O does not have all of the internal slots of a RegExp String Iterator

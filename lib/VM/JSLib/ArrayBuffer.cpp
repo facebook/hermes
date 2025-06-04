@@ -76,8 +76,8 @@ Handle<NativeConstructor> createArrayBufferConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-arrayBufferConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(
@@ -131,8 +131,8 @@ arrayBufferConstructor(void *, Runtime &runtime, NativeArgs args) {
   return lv.self.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayBufferIsView(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferIsView(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If Type(arg) is not Object, return false.
   // 2. If arg has a [[ViewedArrayBuffer]] internal slot, return true.
   // 3. Return false.
@@ -141,8 +141,10 @@ arrayBufferIsView(void *, Runtime &runtime, NativeArgs args) {
       vmisa<JSDataView>(args.getArg(0)));
 }
 
-CallResult<HermesValue>
-arrayBufferPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferPrototypeByteLength(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSArrayBuffer>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -151,8 +153,8 @@ arrayBufferPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(self->size());
 }
 
-CallResult<HermesValue>
-arrayBufferPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferPrototypeSlice(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto start = args.getArgHandle(0);
   auto end = args.getArgHandle(1);
   // 1. Let O be the this value.

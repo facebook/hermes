@@ -59,8 +59,8 @@ Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime) {
 }
 
 // ES2021 26.1.1.1
-CallResult<HermesValue>
-weakRefConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakRefConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(
@@ -108,8 +108,8 @@ weakRefConstructor(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES2021 26.1.4.1
-CallResult<HermesValue>
-weakRefPrototypeDeref(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakRefPrototypeDeref(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSWeakRef>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(

@@ -339,8 +339,8 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
 }
 
 // ES2024 22.1.1.1 String(value)
-CallResult<HermesValue>
-stringConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   PseudoHandle<StringPrimitive> strPrim;
   // 1. If value is not present, then
   if (args.getArgCount() == 0) {
@@ -406,8 +406,8 @@ stringConstructor(void *, Runtime &runtime, NativeArgs args) {
   return selfRes->getHermesValue();
 }
 
-CallResult<HermesValue>
-stringFromCharCode(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringFromCharCode(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
   uint32_t n = args.getArgCount();
   if (LLVM_LIKELY(n == 1)) {
@@ -435,8 +435,8 @@ stringFromCharCode(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-CallResult<HermesValue>
-stringFromCodePoint(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringFromCodePoint(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let codePoints be a List containing the arguments passed to this
@@ -496,7 +496,8 @@ stringFromCodePoint(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6.0 21.1.2.4 String.raw ( template , ...substitutions )
-CallResult<HermesValue> stringRaw(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringRaw(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let substitutions be a List consisting of all of the arguments passed to
@@ -611,8 +612,8 @@ CallResult<HermesValue> stringRaw(void *, Runtime &runtime, NativeArgs args) {
 /// String.prototype.
 
 /// 22.1.3.1
-CallResult<HermesValue>
-stringPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeAt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
   // 1. Let O be RequireObjectCoercible(this value).
   if (LLVM_UNLIKELY(
@@ -663,8 +664,8 @@ stringPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
   return sliceRes;
 }
 
-CallResult<HermesValue>
-stringPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isString()) {
     return args.getThisArg();
   }
@@ -680,8 +681,8 @@ stringPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
       "String.prototype.toString() called on non-string object");
 }
 
-CallResult<HermesValue>
-stringPrototypeCharCodeAt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeCharCodeAt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<> thisValue{&args.getThisArg()};
   // Call a function that may throw, let the runtime record it.
   if (LLVM_UNLIKELY(
@@ -708,8 +709,8 @@ stringPrototypeCharCodeAt(void *, Runtime &runtime, NativeArgs args) {
       StringPrimitive::createStringView(runtime, S)[position]);
 }
 
-CallResult<HermesValue>
-stringPrototypeCodePointAt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeCodePointAt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be RequireObjectCoercible(this value).
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
@@ -764,8 +765,8 @@ stringPrototypeCodePointAt(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(utf16Decode(first, second));
 }
 
-CallResult<HermesValue>
-stringPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeConcat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
 
   if (LLVM_UNLIKELY(
@@ -831,8 +832,8 @@ stringPrototypeConcat(void *, Runtime &runtime, NativeArgs args) {
   return builder->getStringPrimitive().getHermesValue();
 }
 
-CallResult<HermesValue>
-stringPrototypeSubstring(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeSubstring(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -954,8 +955,8 @@ static CallResult<HermesValue> convertCase(
   return StringPrimitive::create(runtime, buff);
 }
 
-CallResult<HermesValue>
-stringPrototypeToLowerCase(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeToLowerCase(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -969,11 +970,14 @@ stringPrototypeToLowerCase(void *, Runtime &runtime, NativeArgs args) {
       runtime, runtime.makeHandle(std::move(*res)), false, false);
 }
 
-CallResult<HermesValue>
-stringPrototypeToLocaleLowerCase(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeToLocaleLowerCase(
+    void *ctx,
+    Runtime &runtime) {
 #ifdef HERMES_ENABLE_INTL
-  return intlStringPrototypeToLocaleLowerCase(/* unused */ ctx, runtime, args);
+  return intlStringPrototypeToLocaleLowerCase(/* unused */ ctx, runtime);
 #else
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -987,8 +991,8 @@ stringPrototypeToLocaleLowerCase(void *ctx, Runtime &runtime, NativeArgs args) {
 #endif
 }
 
-CallResult<HermesValue>
-stringPrototypeToUpperCase(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeToUpperCase(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1001,11 +1005,14 @@ stringPrototypeToUpperCase(void *, Runtime &runtime, NativeArgs args) {
   return convertCase(runtime, runtime.makeHandle(std::move(*res)), true, false);
 }
 
-CallResult<HermesValue>
-stringPrototypeToLocaleUpperCase(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeToLocaleUpperCase(
+    void *ctx,
+    Runtime &runtime) {
 #ifdef HERMES_ENABLE_INTL
-  return intlStringPrototypeToLocaleUpperCase(/* unused */ ctx, runtime, args);
+  return intlStringPrototypeToLocaleUpperCase(/* unused */ ctx, runtime);
 #else
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1019,8 +1026,8 @@ stringPrototypeToLocaleUpperCase(void *ctx, Runtime &runtime, NativeArgs args) {
 #endif
 }
 
-CallResult<HermesValue>
-stringPrototypeSubstr(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeSubstr(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1093,8 +1100,8 @@ static size_t trimEnd(
   return toTrim;
 }
 
-CallResult<HermesValue>
-stringPrototypeTrim(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeTrim(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1120,8 +1127,8 @@ stringPrototypeTrim(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::slice(runtime, S, beginIdx, endIdx - beginIdx);
 }
 
-CallResult<HermesValue>
-stringPrototypeTrimStart(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeTrimStart(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1146,8 +1153,8 @@ stringPrototypeTrimStart(void *, Runtime &runtime, NativeArgs args) {
       runtime, S, beginIdx, S->getStringLength() - beginIdx);
 }
 
-CallResult<HermesValue>
-stringPrototypeTrimEnd(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeTrimEnd(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -1171,11 +1178,13 @@ stringPrototypeTrimEnd(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::slice(runtime, S, 0, endIdx);
 }
 
-CallResult<HermesValue>
-stringPrototypeLocaleCompare(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeLocaleCompare(
+    void *ctx,
+    Runtime &runtime) {
 #ifdef HERMES_ENABLE_INTL
-  return intlStringPrototypeLocaleCompare(/* unused */ ctx, runtime, args);
+  return intlStringPrototypeLocaleCompare(/* unused */ ctx, runtime);
 #else
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, thisValue) ==
@@ -1206,8 +1215,8 @@ stringPrototypeLocaleCompare(void *ctx, Runtime &runtime, NativeArgs args) {
 #endif
 }
 
-CallResult<HermesValue>
-stringPrototypeNormalize(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeNormalize(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   using platform_unicode::NormalizationForm;
 
   // 1. Let O be RequireObjectCoercible(this value).
@@ -1264,8 +1273,8 @@ stringPrototypeNormalize(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::createEfficient(runtime, ns);
 }
 
-CallResult<HermesValue>
-stringPrototypeRepeat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeRepeat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be RequireObjectCoercible(this value).
   auto O = args.getThisHandle();
   if (LLVM_UNLIKELY(
@@ -1329,8 +1338,10 @@ stringPrototypeRepeat(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6.0 21.1.3.27 String.prototype [ @@iterator ]( )
-CallResult<HermesValue>
-stringPrototypeSymbolIterator(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeSymbolIterator(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be RequireObjectCoercible(this value).
   auto thisValue = args.getThisHandle();
   if (LLVM_UNLIKELY(
@@ -1350,8 +1361,8 @@ stringPrototypeSymbolIterator(void *, Runtime &runtime, NativeArgs args) {
   return JSStringIterator::create(runtime, string).getHermesValue();
 }
 
-CallResult<HermesValue>
-stringPrototypeMatchAll(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeMatchAll(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be ? RequireObjectCoercible(this value).
   auto O = args.getThisHandle();
   if (LLVM_UNLIKELY(
@@ -1603,8 +1614,8 @@ static CallResult<HermesValue> stringIndexOf(
 }
 
 /// ES12 21.1.3.18 String.prototype.replaceAll ( searchValue, replaceValue )
-CallResult<HermesValue>
-stringPrototypeReplaceAll(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeReplaceAll(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let O be ? RequireObjectCoercible(this value).
@@ -1813,8 +1824,8 @@ stringPrototypeReplaceAll(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, result);
 }
 
-CallResult<HermesValue>
-stringPrototypeMatch(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeMatch(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be RequireObjectCoercible(this value).
   // 2. ReturnIfAbrupt(O).
   auto O = args.getThisHandle();
@@ -1875,8 +1886,8 @@ stringPrototypeMatch(void *, Runtime &runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
-CallResult<HermesValue>
-stringPrototypePad(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypePad(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool padStart = (bool)ctx;
 
   // 1. Let O be ? RequireObjectCoercible(this value).
@@ -1983,8 +1994,8 @@ stringPrototypePad(void *ctx, Runtime &runtime, NativeArgs args) {
   return builderRes->getStringPrimitive().getHermesValue();
 }
 
-CallResult<HermesValue>
-stringPrototypeReplace(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeReplace(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be RequireObjectCoercible(this value).
   // 2. ReturnIfAbrupt(O).
   auto O = args.getThisHandle();
@@ -2127,8 +2138,8 @@ stringPrototypeReplace(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, newString);
 }
 
-CallResult<HermesValue>
-stringPrototypeSearch(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeSearch(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be RequireObjectCoercible(this value).
   // 2. ReturnIfAbrupt(O).
   auto O = args.getThisHandle();
@@ -2190,8 +2201,8 @@ stringPrototypeSearch(void *, Runtime &runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
-CallResult<HermesValue>
-stringPrototypeCharAt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeCharAt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<> thisValue{&args.getThisArg()};
   // Call a function that may throw, let the runtime record it.
   if (LLVM_UNLIKELY(
@@ -2221,8 +2232,8 @@ stringPrototypeCharAt(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(result.get());
 }
 
-CallResult<HermesValue>
-stringPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeSlice(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
           ExecutionStatus::EXCEPTION)) {
@@ -2262,8 +2273,8 @@ stringPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::slice(runtime, S, from, span);
 }
 
-CallResult<HermesValue>
-stringPrototypeEndsWith(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeEndsWith(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be RequireObjectCoercible(this value).
   if (LLVM_UNLIKELY(
           checkObjectCoercible(runtime, args.getThisHandle()) ==
@@ -2422,8 +2433,8 @@ static CallResult<HermesValue> splitEmptySep(
 }
 
 // ES11 21.1.3.20 String.prototype.split ( separator, limit )
-CallResult<HermesValue>
-stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeSplit(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let O be ? RequireObjectCoercible(this value).
@@ -2662,8 +2673,8 @@ stringPrototypeSplit(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
     void *ctx,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // If true, perform the startsWith operation.
   // Else, do the standard "includes" operation.
   bool startsWith = static_cast<bool>(ctx);
@@ -2750,16 +2761,16 @@ CallResult<HermesValue> stringPrototypeIncludesOrStartsWith(
       foundIter != SView.end() || searchStrView.empty());
 }
 
-CallResult<HermesValue>
-stringPrototypeIndexOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeIndexOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto searchString = args.getArgHandle(0);
   auto position = args.getArgHandle(1);
   return stringDirectedIndexOf(
       runtime, args.getThisHandle(), searchString, position, false);
 }
 
-CallResult<HermesValue>
-stringPrototypeLastIndexOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringPrototypeLastIndexOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto searchString = args.getArgHandle(0);
   auto position = args.getArgHandle(1);
   return stringDirectedIndexOf(

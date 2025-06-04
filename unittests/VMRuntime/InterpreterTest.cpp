@@ -79,8 +79,8 @@ using namespace hermes::hbc;
 namespace {
 
 /// Convert all arguments to string and print them followed by new line.
-static CallResult<HermesValue>
-print(void *, Runtime &runtime, NativeArgs args) {
+static CallResult<HermesValue> print(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope scope(runtime);
   bool first = true;
 
@@ -525,8 +525,7 @@ TEST_F(InterpreterFunctionTest, TestToString) {
 #if defined(NDEBUG) && !defined(HERMES_UBSAN) && \
     !LLVM_THREAD_SANITIZER_BUILD && !LLVM_ADDRESS_SANITIZER_BUILD
 // Returns the native stack pointer of the callee frame.
-static CallResult<HermesValue>
-getSP(void *, Runtime &runtime, NativeArgs args) {
+static CallResult<HermesValue> getSP(void *, Runtime &runtime) {
   int dummy;
   return HermesValue::encodeNativePointer(&dummy);
 }

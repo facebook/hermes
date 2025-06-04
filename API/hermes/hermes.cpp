@@ -911,8 +911,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
     HFContext(jsi::HostFunctionType hf, HermesRuntimeImpl &hri)
         : hostFunction(std::move(hf)), hermesRuntimeImpl(hri) {}
 
-    static vm::CallResult<vm::HermesValue>
-    func(void *context, vm::Runtime &runtime, vm::NativeArgs hvArgs) {
+    static vm::CallResult<vm::HermesValue> func(
+        void *context,
+        vm::Runtime &runtime) {
+      vm::NativeArgs hvArgs = runtime.getCurrentFrame().getNativeArgs();
       HFContext *hfc = reinterpret_cast<HFContext *>(context);
       HermesRuntimeImpl &rt = hfc->hermesRuntimeImpl;
       assert(&runtime == &rt.runtime_);

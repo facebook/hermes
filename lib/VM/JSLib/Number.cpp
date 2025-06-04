@@ -163,8 +163,8 @@ Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-numberConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   double value = +0.0;
 
   if (args.getArgCount() > 0) {
@@ -209,8 +209,8 @@ numberConstructor(void *, Runtime &runtime, NativeArgs args) {
   return JSNumber::create(runtime, value, lv.selfParent).getHermesValue();
 }
 
-CallResult<HermesValue>
-numberIsFinite(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberIsFinite(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -221,8 +221,8 @@ numberIsFinite(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(std::isfinite(number));
 }
 
-CallResult<HermesValue>
-numberIsInteger(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberIsInteger(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -243,7 +243,8 @@ numberIsInteger(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(integer == number);
 }
 
-CallResult<HermesValue> numberIsNaN(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberIsNaN(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -254,8 +255,8 @@ CallResult<HermesValue> numberIsNaN(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(std::isnan(number));
 }
 
-CallResult<HermesValue>
-numberIsSafeInteger(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberIsSafeInteger(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (!args.getArg(0).isNumber()) {
     // If Type(number) is not Number, return false.
     return HermesValue::encodeBoolValue(false);
@@ -283,8 +284,8 @@ numberIsSafeInteger(void *, Runtime &runtime, NativeArgs args) {
       std::abs(integer) <= ((double)((uint64_t)1 << 53)) - 1);
 }
 
-CallResult<HermesValue>
-numberPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isNumber()) {
     return args.getThisArg();
   }
@@ -296,8 +297,8 @@ numberPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(numPtr->getPrimitiveNumber());
 }
 
-CallResult<HermesValue>
-numberPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   const size_t MIN_RADIX = 2;
   const size_t MAX_RADIX = 36;
 
@@ -349,12 +350,13 @@ numberPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   return resultRes->getHermesValue();
 }
 
-CallResult<HermesValue>
-numberPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberPrototypeToLocaleString(
+    void *ctx,
+    Runtime &runtime) {
 #ifdef HERMES_ENABLE_INTL
-  return intlNumberPrototypeToLocaleString(/* unused */ ctx, runtime, args);
+  return intlNumberPrototypeToLocaleString(/* unused */ ctx, runtime);
 #else
-
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   double number;
 
   // Extract the number from this.
@@ -382,8 +384,8 @@ numberPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
 #endif
 }
 
-CallResult<HermesValue>
-numberPrototypeToFixed(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberPrototypeToFixed(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto intRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -503,8 +505,8 @@ numberPrototypeToFixed(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, m);
 }
 
-CallResult<HermesValue>
-numberPrototypeToExponential(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberPrototypeToExponential(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // The number to make a string toExponential.
   double x;
   if (args.getThisArg().isNumber()) {
@@ -631,8 +633,8 @@ numberPrototypeToExponential(void *, Runtime &runtime, NativeArgs args) {
   return runtime.ignoreAllocationFailure(StringPrimitive::create(runtime, n));
 }
 
-CallResult<HermesValue>
-numberPrototypeToPrecision(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> numberPrototypeToPrecision(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // The number to make a string toPrecision.
   double x;
   if (args.getThisArg().isNumber()) {

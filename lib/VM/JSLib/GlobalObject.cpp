@@ -28,7 +28,8 @@ namespace hermes {
 namespace vm {
 
 /// ES5.1 15.1.2.4
-CallResult<HermesValue> isNaN(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> isNaN(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -37,7 +38,8 @@ CallResult<HermesValue> isNaN(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES5.1 15.1.2.5
-CallResult<HermesValue> isFinite(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> isFinite(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -47,7 +49,7 @@ CallResult<HermesValue> isFinite(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// Needed to construct Function.prototype.
-CallResult<HermesValue> emptyFunction(void *, Runtime &, NativeArgs) {
+CallResult<HermesValue> emptyFunction(void *, Runtime &runtime) {
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -62,7 +64,8 @@ static bool isValidRadixChar(char16_t c, int radix) {
 }
 
 /// ES5.1 15.1.2.2 parseInt(string, radix)
-CallResult<HermesValue> parseInt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> parseInt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // toString(arg0).
   auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -149,7 +152,8 @@ static bool isPrefix(StringView str1, StringView str2) {
 }
 
 /// ES5.1 15.1.2.3 parseFloat(string)
-CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> parseFloat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // toString(arg0).
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -239,13 +243,12 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// Customized global function. gc() forces a GC collect.
-CallResult<HermesValue> gc(void *, Runtime &runtime, NativeArgs) {
+CallResult<HermesValue> gc(void *, Runtime &runtime) {
   runtime.collect("forced");
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-throwTypeError(void *ctx, Runtime &runtime, NativeArgs) {
+CallResult<HermesValue> throwTypeError(void *ctx, Runtime &runtime) {
   static const char *TypeErrorMessage[] = {
       "Restricted property cannot be accessed",
       "Dynamic requires are not allowed after static resolution",

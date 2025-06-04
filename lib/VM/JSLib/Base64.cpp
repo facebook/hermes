@@ -17,7 +17,8 @@ namespace vm {
 /// Create a Base64-encoded ASCII string from an input string expected to have
 /// each character in the range of U+0000 to U+00FF. Error is thrown if any
 /// character is outside of the expected range.
-CallResult<HermesValue> btoa(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> btoa(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -52,7 +53,8 @@ CallResult<HermesValue> btoa(void *, Runtime &runtime, NativeArgs args) {
 
 /// Take a Base64-encoded ASCII string and decode it. Error is thrown if the
 /// input string isn't a valid base64 encoded string.
-CallResult<HermesValue> atob(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> atob(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {

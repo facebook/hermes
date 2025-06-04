@@ -52,7 +52,8 @@ Handle<JSObject> createJSONObject(Runtime &runtime) {
   return json;
 }
 
-CallResult<HermesValue> jsonParse(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> jsonParse(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -63,8 +64,8 @@ CallResult<HermesValue> jsonParse(void *, Runtime &runtime, NativeArgs args) {
       Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
 }
 
-CallResult<HermesValue>
-jsonStringify(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> jsonStringify(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return runtimeJSONStringify(
       runtime,
       args.getArgHandle(0),

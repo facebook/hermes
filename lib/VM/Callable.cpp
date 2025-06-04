@@ -1233,8 +1233,7 @@ HermesValue NativeFunction::_jitCallImpl(Runtime *rt, JSObject *self) {
 
     GCScopeMarkerRAII marker{runtime};
     auto *nfSelf = vmcast<NativeFunction>(self);
-    return nfSelf->functionPtr_(
-        nfSelf->context_, runtime, newFrame.getNativeArgs());
+    return nfSelf->functionPtr_(nfSelf->context_, runtime);
   }();
 
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))

@@ -974,8 +974,10 @@ class HostFunctionWrapper {
     return func_;
   }
 
-  static vm::CallResult<vm::HermesValue>
-  call(void *hfCtx, vm::Runtime &runtime, vm::NativeArgs hvArgs) {
+  static vm::CallResult<vm::HermesValue> call(
+      void *hfCtx,
+      vm::Runtime &runtime) {
+    vm::NativeArgs hvArgs = runtime.getCurrentFrame().getNativeArgs();
     auto *self = static_cast<HostFunctionWrapper *>(hfCtx);
     auto *hart = self->hart_;
     assert(&runtime == hart->rt.get());

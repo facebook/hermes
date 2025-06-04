@@ -599,8 +599,7 @@ CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
 /// @name TypedArrayBase
 /// @{
 
-CallResult<HermesValue>
-typedArrayBaseConstructor(void *, Runtime &runtime, NativeArgs) {
+CallResult<HermesValue> typedArrayBaseConstructor(void *, Runtime &runtime) {
   return runtime.raiseTypeError(
       "TypedArray is abstract, it cannot be constructed");
 }
@@ -608,8 +607,8 @@ typedArrayBaseConstructor(void *, Runtime &runtime, NativeArgs) {
 /// @}
 
 #define TYPED_ARRAY(name, type)                                               \
-  CallResult<HermesValue> name##ArrayConstructor(                             \
-      void *ctx, Runtime &rt, NativeArgs args) {                              \
+  CallResult<HermesValue> name##ArrayConstructor(void *ctx, Runtime &rt) {    \
+    NativeArgs args = rt.getCurrentFrame().getNativeArgs();                   \
     return typedArrayConstructor<type, CellKind::name##ArrayKind>(            \
         ctx, rt, args, &rt.name##ArrayConstructor, &rt.name##ArrayPrototype); \
   }
@@ -617,8 +616,8 @@ typedArrayBaseConstructor(void *, Runtime &runtime, NativeArgs) {
 #undef TYPED_ARRAY
 
 /// ES7 22.2.2.1
-CallResult<HermesValue>
-typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayFrom(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto source = args.getArgHandle(0);
   // 1. Let C be the this value.
   if (!isConstructor(runtime, args.getThisArg())) {
@@ -704,8 +703,8 @@ typedArrayFrom(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES7 22.2.2.2
-CallResult<HermesValue>
-typedArrayOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let len be the actual number of arguments passed to this function.
   uint64_t len = args.getArgCount();
   // 2. Let items be the List of arguments passed to this function. (args is
@@ -752,8 +751,8 @@ typedArrayOf(void *, Runtime &runtime, NativeArgs args) {
 /// @{
 
 /// ES6 22.2.3.1
-CallResult<HermesValue>
-typedArrayPrototypeBuffer(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeBuffer(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -762,8 +761,10 @@ typedArrayPrototypeBuffer(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeObjectValue(self->getBuffer(runtime));
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeByteLength(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -774,8 +775,10 @@ typedArrayPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6 22.2.3.3
-CallResult<HermesValue>
-typedArrayPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeByteOffset(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -787,8 +790,8 @@ typedArrayPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6 23.2.3.1
-CallResult<HermesValue>
-typedArrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeAt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value.
   // 2. Perform ? ValidateTypedArray(O).
   if (LLVM_UNLIKELY(
@@ -842,8 +845,10 @@ typedArrayPrototypeAt(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6 22.2.3.5
-CallResult<HermesValue>
-typedArrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeCopyWithin(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), true) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -923,8 +928,10 @@ typedArrayPrototypeCopyWithin(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES6 22.2.3.7 and 22.2.3.25 (also see Array.prototype.every/some)
-CallResult<HermesValue>
-typedArrayPrototypeEverySome(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeEverySome(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // NOTE: this was implemented as separate from Array.prototype.every to take
   // advantage of the known contiguous memory region.
   GCScope gcScope(runtime);
@@ -968,8 +975,8 @@ typedArrayPrototypeEverySome(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 // ES6 22.2.3.8
-CallResult<HermesValue>
-typedArrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeFill(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1088,18 +1095,20 @@ typedFindHelper(void *ctx, bool reverse, Runtime &runtime, NativeArgs args) {
                : HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeFind(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeFind(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return typedFindHelper(ctx, false, runtime, args);
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeFindLast(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeFindLast(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return typedFindHelper(ctx, true, runtime, args);
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeForEach(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1135,8 +1144,10 @@ typedArrayPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
 }
 
 enum class IndexOfMode { includes, indexOf, lastIndexOf };
-CallResult<HermesValue>
-typedArrayPrototypeIndexOf(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeIndexOf(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   const auto indexOfMode = *reinterpret_cast<const IndexOfMode *>(&ctx);
   // indexOfMode stores Whether this call is "includes", "indexOf", or
   // "lastIndexOf".
@@ -1213,8 +1224,10 @@ typedArrayPrototypeIndexOf(void *ctx, Runtime &runtime, NativeArgs args) {
   return ret();
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeIterator(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeIterator(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   IterationKind kind = *reinterpret_cast<IterationKind *>(&ctx);
   assert(
       kind <= IterationKind::NumKinds &&
@@ -1227,8 +1240,10 @@ typedArrayPrototypeIterator(void *ctx, Runtime &runtime, NativeArgs args) {
   return JSArrayIterator::create(runtime, self, kind).getHermesValue();
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeMapFilter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeMapFilter(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // Whether this call is "map" or "filter".
@@ -1286,8 +1301,8 @@ typedArrayPrototypeMapFilter(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6 22.2.3.17
-CallResult<HermesValue>
-typedArrayPrototypeLength(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeLength(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1297,8 +1312,8 @@ typedArrayPrototypeLength(void *, Runtime &runtime, NativeArgs args) {
       self->attached(runtime) ? self->getLength() : 0);
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeJoin(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // NOTE: there are probably some optimizations that can be made here due to
   // operating on only numbers in typed arrays.
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
@@ -1382,8 +1397,8 @@ typedArrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeReduce(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Whether this call is "reduce" or "reduceRight".
   bool right = static_cast<bool>(ctx);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
@@ -1449,8 +1464,8 @@ typedArrayPrototypeReduce(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 // ES7 22.2.3.22
-CallResult<HermesValue>
-typedArrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeReverse(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1479,8 +1494,8 @@ typedArrayPrototypeReverse(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES7 22.2.3.26
-CallResult<HermesValue>
-typedArrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeSort(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1510,8 +1525,8 @@ typedArrayPrototypeSort(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES7 22.2.3.23
-CallResult<HermesValue>
-typedArrayPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeSet(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1545,8 +1560,8 @@ typedArrayPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES7 22.2.3.24
-CallResult<HermesValue>
-typedArrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeSlice(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1588,8 +1603,8 @@ typedArrayPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES7 22.2.3.27
-CallResult<HermesValue>
-typedArrayPrototypeSubarray(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeSubarray(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (JSTypedArrayBase::validateTypedArray(
           runtime, args.getThisHandle(), false) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1624,8 +1639,8 @@ typedArrayPrototypeSubarray(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto O = args.dyncastThis<JSObject>();
   if (!O) {
     return HermesValue::encodeUndefinedValue();
@@ -1643,8 +1658,10 @@ CallResult<HermesValue> typedArrayPrototypeSymbolToStringTag(
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-typedArrayPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> typedArrayPrototypeToLocaleString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
   if (JSTypedArrayBase::validateTypedArray(runtime, args.getThisHandle()) ==
       ExecutionStatus::EXCEPTION) {

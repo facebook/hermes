@@ -35,8 +35,10 @@ static inline CallResult<Handle<SymbolID>> symbolForCStr(
 }
 
 // ES7 24.1.1.3
-CallResult<HermesValue>
-hermesInternalDetachArrayBuffer(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalDetachArrayBuffer(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto buffer = args.dyncastArg<JSArrayBuffer>(0);
   if (!buffer) {
     return runtime.raiseTypeError(
@@ -50,8 +52,7 @@ hermesInternalDetachArrayBuffer(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-hermesInternalGetEpilogues(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalGetEpilogues(void *, Runtime &runtime) {
   // Create outer array with one element per module.
   auto eps = runtime.getEpilogues();
   auto outerLen = eps.size();
@@ -84,8 +85,8 @@ hermesInternalGetEpilogues(void *, Runtime &runtime, NativeArgs args) {
 
 /// Used for testing, determines how many live values
 /// are in the given WeakMap or WeakSet.
-CallResult<HermesValue>
-hermesInternalGetWeakSize(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalGetWeakSize(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (auto M = args.dyncastArg<JSWeakMap>(0)) {
     return HermesValue::encodeTrustedNumberValue(
         JSWeakMap::debugFreeSlotsAndGetSize(runtime, *M));
@@ -101,8 +102,9 @@ hermesInternalGetWeakSize(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// \return an object containing various instrumented statistics.
-CallResult<HermesValue>
-hermesInternalGetInstrumentedStats(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalGetInstrumentedStats(
+    void *,
+    Runtime &runtime) {
   GCScope gcScope(runtime);
   auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
 
@@ -179,8 +181,9 @@ static const char *getCJSModuleModeDescription(Runtime &runtime) {
 }
 
 /// \return an object mapping keys to runtime property values.
-CallResult<HermesValue>
-hermesInternalGetRuntimeProperties(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalGetRuntimeProperties(
+    void *,
+    Runtime &runtime) {
   GCScope gcScope(runtime);
   auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
   MutableHandle<> tmpHandle{runtime};
@@ -347,8 +350,7 @@ static void logGCStats(Runtime &runtime, const char *msg) {
 }
 #endif
 
-CallResult<HermesValue>
-hermesInternalTTIReached(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalTTIReached(void *, Runtime &runtime) {
   runtime.ttiReached();
 #ifdef HERMESVM_LLVM_PROFILE_DUMP
   __llvm_profile_dump();
@@ -360,33 +362,30 @@ hermesInternalTTIReached(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-hermesInternalTTRCReached(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalTTRCReached(void *, Runtime &runtime) {
   // Currently does nothing, but could change in the future.
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-hermesInternalIsProxy(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalIsProxy(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> obj = args.dyncastArg<JSObject>(0);
   return HermesValue::encodeBoolValue(obj && obj->isProxyObject());
 }
 
-CallResult<HermesValue>
-hermesInternalHasPromise(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalHasPromise(void *, Runtime &runtime) {
   return HermesValue::encodeBoolValue(true);
 }
 
-CallResult<HermesValue>
-hermesInternalUseEngineQueue(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalUseEngineQueue(void *, Runtime &runtime) {
   return HermesValue::encodeBoolValue(runtime.hasMicrotaskQueue());
 }
 
 /// \code
 ///   HermesInternal.enqueueJob = function (func) {}
 /// \endcode
-CallResult<HermesValue>
-hermesInternalEnqueueJob(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalEnqueueJob(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto callable = args.dyncastArg<Callable>(0);
   if (!callable) {
     return runtime.raiseTypeError(
@@ -400,8 +399,7 @@ hermesInternalEnqueueJob(void *, Runtime &runtime, NativeArgs args) {
 ///   HermesInternal.drainJobs = function () {}
 /// \endcode
 /// Throw if the drainJobs throws.
-CallResult<HermesValue>
-hermesInternalDrainJobs(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalDrainJobs(void *, Runtime &runtime) {
   auto drainRes = runtime.drainJobs();
   if (drainRes == ExecutionStatus::EXCEPTION) {
     // No need to rethrow since it's already throw.
@@ -412,8 +410,7 @@ hermesInternalDrainJobs(void *, Runtime &runtime, NativeArgs args) {
 
 /// Gets the current call stack as a JS String value.  Intended (only)
 /// to allow testing of Runtime::callStack() from JS code.
-CallResult<HermesValue>
-hermesInternalGetCallStack(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalGetCallStack(void *, Runtime &runtime) {
   std::string stack = runtime.getCallStackNoAlloc();
   return StringPrimitive::create(runtime, ASCIIRef(stack.data(), stack.size()));
 }
@@ -465,8 +462,10 @@ static CallResult<HermesValue> getCodeBlockFileName(
 /// * virtualOffset (number) - 0 based
 /// * isNative (boolean)
 /// TypeError if func is not a function.
-CallResult<HermesValue>
-hermesInternalGetFunctionLocation(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalGetFunctionLocation(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
 
   auto callable = args.dyncastArg<Callable>(0);
@@ -567,8 +566,8 @@ hermesInternalGetFunctionLocation(void *, Runtime &runtime, NativeArgs args) {
 /// \endcode
 CallResult<HermesValue> hermesInternalSetPromiseRejectionTrackingHook(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   runtime.promiseRejectionTrackingHook_ = args.getArg(0);
   return HermesValue::encodeUndefinedValue();
 }
@@ -579,8 +578,8 @@ CallResult<HermesValue> hermesInternalSetPromiseRejectionTrackingHook(
 /// Enable promise rejection tracking with the given opts.
 CallResult<HermesValue> hermesInternalEnablePromiseRejectionTracker(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto opts = args.getArgHandle(0);
   if (!vmisa<Callable>(*runtime.promiseRejectionTrackingHook_)) {
     return runtime.raiseTypeError(
@@ -614,8 +613,8 @@ CallResult<HermesValue> hermesInternalEnablePromiseRejectionTracker(
 /// ata write file decriptor (REPRL_DWFD). The secong argument "arg" can be an
 /// integer specifying the type of crash (if op is "FUZZILLI_CRASH") or a string
 /// which value will be sent to fuzzilli (if op is "FUZZILLI_PRINT")
-CallResult<HermesValue>
-hermesInternalFuzzilli(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesInternalFuzzilli(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // REPRL = read-eval-print-reset-loop
   // This file descriptor is being opened by Fuzzilli
   constexpr int REPRL_DWFD = 103; // Data write file decriptor
@@ -671,8 +670,8 @@ hermesInternalFuzzilli(void *, Runtime &runtime, NativeArgs args) {
 }
 #endif // HERMES_ENABLE_FUZZILLI
 
-static CallResult<HermesValue>
-hermesInternalIsLazy(void *, Runtime &runtime, NativeArgs args) {
+static CallResult<HermesValue> hermesInternalIsLazy(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto callable = args.dyncastArg<Callable>(0);
   if (!callable) {
     return HermesValue::encodeBoolValue(false);

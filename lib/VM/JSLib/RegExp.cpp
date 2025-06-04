@@ -386,8 +386,8 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
 
 /// ES6 21.2.3.1 RegExp ( pattern, flags )
 // This is just a wrapper of \c regExpConstructorInternal to take NativeArgs.
-CallResult<HermesValue>
-regExpConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<> pattern = args.getArgHandle(0);
   Handle<> flags = args.getArgHandle(1);
   auto regExpRes = regExpConstructorInternal(
@@ -846,8 +846,10 @@ regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S) {
 
 /// Implementation of RegExp.prototype.exec
 /// Returns an Array if a match is found, null if no match is found
-CallResult<HermesValue>
-regExpPrototypeExec(void *, Runtime &runtime, NativeArgs args) {
+/// Helper function for regExpPrototypeExec that takes NativeArgs directly
+static CallResult<HermesValue> regExpPrototypeExecImpl(
+    Runtime &runtime,
+    NativeArgs args) {
   Handle<JSRegExp> regexp = args.dyncastThis<JSRegExp>();
   if (!regexp) {
     return runtime.raiseTypeError(
@@ -872,13 +874,18 @@ regExpPrototypeExec(void *, Runtime &runtime, NativeArgs args) {
   return result.getValue().getHermesValue();
 }
 
+CallResult<HermesValue> regExpPrototypeExec(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  return regExpPrototypeExecImpl(runtime, args);
+}
+
 /// Implementation of RegExp.prototype.test
 /// Returns true if a match is found, false otherwise
 /// TODO optimization: avoid constructing the submatch array. Instead simply
 /// check for a match.
-CallResult<HermesValue>
-regExpPrototypeTest(void *context, Runtime &runtime, NativeArgs args) {
-  CallResult<HermesValue> res = regExpPrototypeExec(context, runtime, args);
+CallResult<HermesValue> regExpPrototypeTest(void *context, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  CallResult<HermesValue> res = regExpPrototypeExecImpl(runtime, args);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
 
@@ -888,8 +895,7 @@ regExpPrototypeTest(void *context, Runtime &runtime, NativeArgs args) {
 
 /// Return the ith capture group in the most recent succesful RegExp search.
 /// If there was no ith capture group, return "".
-CallResult<HermesValue>
-regExpDollarNumberGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpDollarNumberGetter(void *ctx, Runtime &runtime) {
   size_t i = reinterpret_cast<size_t>(ctx);
 
   auto match = runtime.regExpLastMatch;
@@ -910,8 +916,8 @@ regExpDollarNumberGetter(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 // ES8 21.2.5.10
-CallResult<HermesValue>
-regExpSourceGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpSourceGetter(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // "If Type(R) is not Object, throw a TypeError exception"
   if (!args.dyncastThis<JSObject>()) {
     return runtime.raiseTypeError(
@@ -944,8 +950,8 @@ regExpSourceGetter(void *ctx, Runtime &runtime, NativeArgs args) {
 }
 
 // ES8 21.2.5.4, 21.2.5.5, 21.2.5.7
-CallResult<HermesValue>
-regExpFlagPropertyGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpFlagPropertyGetter(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Note in ES8, the standard specifies that the RegExp prototype object is not
   // a RegExp but that these accessors check for it as a special case.
 
@@ -988,8 +994,7 @@ regExpFlagPropertyGetter(void *ctx, Runtime &runtime, NativeArgs args) {
   }
 }
 
-CallResult<HermesValue>
-regExpLeftContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpLeftContextGetter(void *ctx, Runtime &runtime) {
   auto match = runtime.regExpLastMatch;
   if (match.size() >= 1 && *runtime.regExpLastInput) {
     auto strRes = StringPrimitive::slice(
@@ -1004,8 +1009,7 @@ regExpLeftContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
       runtime.getPredefinedString(Predefined::emptyString));
 }
 
-CallResult<HermesValue>
-regExpRightContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpRightContextGetter(void *ctx, Runtime &runtime) {
   auto match = runtime.regExpLastMatch;
   if (match.size() >= 1 && *runtime.regExpLastInput) {
     Handle<StringPrimitive> S{runtime.regExpLastInput};
@@ -1024,8 +1028,7 @@ regExpRightContextGetter(void *ctx, Runtime &runtime, NativeArgs args) {
       runtime.getPredefinedString(Predefined::emptyString));
 }
 
-CallResult<HermesValue>
-regExpInputGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpInputGetter(void *ctx, Runtime &runtime) {
   if (*runtime.regExpLastInput) {
     return runtime.regExpLastInput.getHermesValue();
   }
@@ -1034,8 +1037,7 @@ regExpInputGetter(void *ctx, Runtime &runtime, NativeArgs args) {
       runtime.getPredefinedString(Predefined::emptyString));
 }
 
-CallResult<HermesValue>
-regExpLastMatchGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpLastMatchGetter(void *ctx, Runtime &runtime) {
   auto match = runtime.regExpLastMatch;
   if (match.size() >= 1 && *runtime.regExpLastInput) {
     auto strRes = StringPrimitive::slice(
@@ -1050,8 +1052,7 @@ regExpLastMatchGetter(void *ctx, Runtime &runtime, NativeArgs args) {
       runtime.getPredefinedString(Predefined::emptyString));
 }
 
-CallResult<HermesValue>
-regExpLastParenGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpLastParenGetter(void *ctx, Runtime &runtime) {
   auto match = runtime.regExpLastMatch;
   if (match.size() >= 2 && *runtime.regExpLastInput) {
     const auto &cap = match.back();
@@ -1248,8 +1249,10 @@ CallResult<HermesValue> getSubstitution(
 
 /// ES11 21.2.5.8
 /// TODO(T69340954): make this compliant once we support species constructor.
-CallResult<HermesValue>
-regExpPrototypeSymbolMatchAll(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeSymbolMatchAll(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let R be the this value.
@@ -1332,8 +1335,8 @@ regExpPrototypeSymbolMatchAll(void *, Runtime &runtime, NativeArgs args) {
 
 // ES6 21.2.5.14
 // Note there is no requirement that 'this' be a RegExp object.
-CallResult<HermesValue>
-regExpPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> regexp = args.dyncastThis<JSObject>();
   if (!regexp) {
     return runtime.raiseTypeError(
@@ -1380,8 +1383,8 @@ regExpPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 
 // TODO: consider writing this in JS.
 /// ES6.0 21.2.5.6
-CallResult<HermesValue>
-regExpPrototypeSymbolMatch(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeSymbolMatch(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let rx be the this value.
@@ -1513,8 +1516,8 @@ regExpPrototypeSymbolMatch(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6.0 21.2.5.9
-CallResult<HermesValue>
-regExpPrototypeSymbolSearch(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeSymbolSearch(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let rx be the this value.
@@ -1575,8 +1578,8 @@ regExpPrototypeSymbolSearch(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES6.0 21.2.5.8
-CallResult<HermesValue>
-regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let rx be the this value.
@@ -1947,8 +1950,8 @@ regExpPrototypeSymbolReplace(void *, Runtime &runtime, NativeArgs args) {
 /// Note: this implementation does not fully observe ES6 spec behaviors because
 /// of lack of support for species constructors.
 // TODO(T35212035): make this ES6 compliant once we support species constructor.
-CallResult<HermesValue>
-regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 2. If Type(rx) is not Object, throw a TypeError exception.
@@ -2228,8 +2231,8 @@ regExpPrototypeSymbolSplit(void *, Runtime &runtime, NativeArgs args) {
 
 // ES2022 22.2.5.4
 // Note that we don't yet support unicode.
-CallResult<HermesValue>
-regExpFlagsGetter(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> regExpFlagsGetter(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Let R be the this value.
   // If Type(R) is not Object, throw a TypeError exception
   Handle<JSObject> R = args.dyncastThis<JSObject>();

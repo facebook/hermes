@@ -83,8 +83,8 @@ static llvh::Optional<Handle<JSError>> getErrorFromStackTarget(
   return llvh::None;
 }
 
-CallResult<HermesValue>
-errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> errorStackGetter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
 
   auto targetHandle = args.dyncastThis<JSObject>();
@@ -177,8 +177,8 @@ errorStackGetter(void *, Runtime &runtime, NativeArgs args) {
   return *stackTraceFormatted;
 }
 
-CallResult<HermesValue>
-errorStackSetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> errorStackSetter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

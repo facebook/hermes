@@ -33,8 +33,7 @@ ConsoleHostContext::ConsoleHostContext(vm::Runtime &runtime) {
 }
 
 /// Raises an uncatchable quit exception.
-static vm::CallResult<vm::HermesValue>
-quit(void *, vm::Runtime &runtime, vm::NativeArgs) {
+static vm::CallResult<vm::HermesValue> quit(void *, vm::Runtime &runtime) {
   return runtime.raiseQuitError();
 }
 
@@ -84,9 +83,11 @@ static void printStats(
   os << stats;
 }
 
-static vm::CallResult<vm::HermesValue>
-createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
+static vm::CallResult<vm::HermesValue> createHeapSnapshot(
+    void *,
+    vm::Runtime &runtime) {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   using namespace vm;
   std::string fileName;
   if (args.getArgCount() >= 1 && !args.getArg(0).isUndefined()) {
@@ -128,8 +129,10 @@ createHeapSnapshot(void *, vm::Runtime &runtime, vm::NativeArgs args) {
 #endif // !defined(HERMES_MEMORY_INSTRUMENTATION)
 }
 
-static vm::CallResult<vm::HermesValue>
-loadSegment(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
+static vm::CallResult<vm::HermesValue> loadSegment(
+    void *ctx,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   using namespace hermes::vm;
   const auto *baseFilename = reinterpret_cast<std::string *>(ctx);
 
@@ -167,8 +170,10 @@ loadSegment(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static vm::CallResult<vm::HermesValue>
-setTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
+static vm::CallResult<vm::HermesValue> setTimeout(
+    void *ctx,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
   using namespace hermes::vm;
   Handle<Callable> callable = args.dyncastArg<Callable>(0);
@@ -184,8 +189,10 @@ setTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(taskId);
 }
 
-static vm::CallResult<vm::HermesValue>
-clearTimeout(void *ctx, vm::Runtime &runtime, vm::NativeArgs args) {
+static vm::CallResult<vm::HermesValue> clearTimeout(
+    void *ctx,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   ConsoleHostContext *consoleHost = (ConsoleHostContext *)ctx;
   using namespace hermes::vm;
   if (!args.getArg(0).isNumber()) {

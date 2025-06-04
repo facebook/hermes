@@ -709,8 +709,8 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
 
 } // namespace
 
-CallResult<HermesValue>
-intlCollatorConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceConstructor<platform_intl::Collator>(
       runtime,
       args,
@@ -720,13 +720,15 @@ intlCollatorConstructor(void *, Runtime &runtime, NativeArgs args) {
       static_cast<unsigned int>(CollatorSlotIndexes::COUNT));
 }
 
-CallResult<HermesValue>
-intlCollatorSupportedLocalesOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorSupportedLocalesOf(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceSupportedLocalesOf<platform_intl::Collator>(runtime, args);
 }
 
-CallResult<HermesValue>
-intlCollatorCompare(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorCompare(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *nf = vmcast<NativeFunction>(
       runtime.getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> collatorHandle =
@@ -751,8 +753,10 @@ intlCollatorCompare(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(collator->compare(*xRes, *yRes));
 }
 
-CallResult<HermesValue>
-intlCollatorPrototypeCompareGetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorPrototypeCompareGetter(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> collatorHandle = args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::Collator *> collatorRes =
@@ -787,8 +791,8 @@ intlCollatorPrototypeCompareGetter(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlCollatorPrototypeResolvedOptions(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> collatorHandle = args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::Collator *> collatorRes =
@@ -946,8 +950,10 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
 
 } // namespace
 
-CallResult<HermesValue>
-intlDateTimeFormatConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDateTimeFormatConstructor(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceConstructor<platform_intl::DateTimeFormat>(
       runtime,
       args,
@@ -959,8 +965,8 @@ intlDateTimeFormatConstructor(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlDateTimeFormatSupportedLocalesOf(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceSupportedLocalesOf<platform_intl::DateTimeFormat>(
       runtime, args);
 }
@@ -975,7 +981,7 @@ CallResult<double> dateNowValue(Runtime &runtime, NativeArgs args) {
     // a. Let x be Call(%Date_now%, undefined).
     // Reusing NativeArgs is kind of a hack, but dateNow doesn't use
     // it (or the context arg), so this is ok.
-    CallResult<HermesValue> dateRes = dateNow(nullptr, runtime, args);
+    CallResult<HermesValue> dateRes = dateNow(nullptr, runtime);
     if (LLVM_UNLIKELY(dateRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1001,8 +1007,8 @@ CallResult<double> dateNowValue(Runtime &runtime, NativeArgs args) {
 
 } // namespace
 
-CallResult<HermesValue>
-intlDateTimeFormatFormat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDateTimeFormatFormat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *nf = vmcast<NativeFunction>(
       runtime.getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> dateTimeFormatHandle =
@@ -1025,8 +1031,8 @@ intlDateTimeFormatFormat(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> dateTimeFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1064,8 +1070,8 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeFormatToParts(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> dateTimeFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1087,8 +1093,8 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatToParts(
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeResolvedOptions(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> dateTimeFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1250,8 +1256,8 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
 
 } // namespace
 
-CallResult<HermesValue>
-intlNumberFormatConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberFormatConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceConstructor<platform_intl::NumberFormat>(
       runtime,
       args,
@@ -1261,14 +1267,16 @@ intlNumberFormatConstructor(void *, Runtime &runtime, NativeArgs args) {
       static_cast<unsigned int>(NFSlotIndexes::COUNT));
 }
 
-CallResult<HermesValue>
-intlNumberFormatSupportedLocalesOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberFormatSupportedLocalesOf(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceSupportedLocalesOf<platform_intl::NumberFormat>(
       runtime, args);
 }
 
-CallResult<HermesValue>
-intlNumberFormatFormat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberFormatFormat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *nf = vmcast<NativeFunction>(
       runtime.getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> numberFormatHandle =
@@ -1293,8 +1301,8 @@ intlNumberFormatFormat(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> numberFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1332,8 +1340,8 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> numberFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1358,8 +1366,8 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
 
 CallResult<HermesValue> intlNumberFormatPrototypeResolvedOptions(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> numberFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1478,8 +1486,10 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
 
 } // namespace
 
-CallResult<HermesValue>
-intlDatePrototypeToLocaleDateString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDatePrototypeToLocaleDateString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   JSDate *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime.raiseTypeError(
@@ -1488,8 +1498,10 @@ intlDatePrototypeToLocaleDateString(void *, Runtime &runtime, NativeArgs args) {
   return intlDatePrototypeToSomeLocaleString(runtime, args, date, kDTODate);
 }
 
-CallResult<HermesValue>
-intlDatePrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDatePrototypeToLocaleString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   JSDate *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime.raiseTypeError(
@@ -1499,8 +1511,10 @@ intlDatePrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
       runtime, args, date, kDTODate | kDTOTime);
 }
 
-CallResult<HermesValue>
-intlDatePrototypeToLocaleTimeString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDatePrototypeToLocaleTimeString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   JSDate *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime.raiseTypeError(
@@ -1509,8 +1523,10 @@ intlDatePrototypeToLocaleTimeString(void *, Runtime &runtime, NativeArgs args) {
   return intlDatePrototypeToSomeLocaleString(runtime, args, date, kDTOTime);
 }
 
-CallResult<HermesValue>
-intlNumberPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberPrototypeToLocaleString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   double x;
   if (args.getThisArg().isNumber()) {
     x = args.getThisArg().getNumber();
@@ -1542,8 +1558,10 @@ intlNumberPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::createEfficient(runtime, (*nfRes)->format(x));
 }
 
-CallResult<HermesValue>
-intlStringPrototypeLocaleCompare(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlStringPrototypeLocaleCompare(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime.raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
@@ -1581,8 +1599,8 @@ intlStringPrototypeLocaleCompare(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime.raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
@@ -1609,8 +1627,8 @@ CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
 
 CallResult<HermesValue> intlStringPrototypeToLocaleUpperCase(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime.raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
@@ -1641,8 +1659,10 @@ namespace intl {
 
 namespace { // Intl impl stuff.
 
-vm::CallResult<vm::HermesValue>
-intlGetCanonicalLocales(void *, vm::Runtime &runtime, vm::NativeArgs args) {
+vm::CallResult<vm::HermesValue> intlGetCanonicalLocales(
+    void *,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   vm::CallResult<std::vector<std::u16string>> localesRes =
       vm::normalizeLocales(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(localesRes == vm::ExecutionStatus::EXCEPTION)) {

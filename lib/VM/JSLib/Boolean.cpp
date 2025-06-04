@@ -47,8 +47,8 @@ Handle<NativeConstructor> createBooleanConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-booleanConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> booleanConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool value = toBoolean(args.getArg(0));
 
   if (!args.isConstructorCall()) {
@@ -77,8 +77,8 @@ booleanConstructor(void *, Runtime &runtime, NativeArgs args) {
   return JSBoolean::create(runtime, value, lv.selfParent).getHermesValue();
 }
 
-CallResult<HermesValue>
-booleanPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> booleanPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool value;
   if (args.getThisArg().isBool()) {
     value = args.getThisArg().getBool();
@@ -95,8 +95,8 @@ booleanPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
             : runtime.getPredefinedString(Predefined::falseStr));
 }
 
-CallResult<HermesValue>
-booleanPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> booleanPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isBool()) {
     return args.getThisArg();
   }

@@ -15,8 +15,8 @@
 namespace hermes {
 namespace vm {
 
-CallResult<HermesValue>
-reflectApply(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectApply(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto target = args.dyncastArg<Callable>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not callable");
@@ -36,8 +36,8 @@ reflectApply(void *, Runtime &runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
-CallResult<HermesValue>
-reflectConstruct(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectConstruct(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
   Handle<Callable> target = args.dyncastArg<Callable>(0);
   if (LLVM_UNLIKELY(!target)) {
@@ -87,13 +87,13 @@ CallResult<HermesValue> toHV(CallResult<bool> boolRes) {
 
 } // namespace
 
-CallResult<HermesValue>
-reflectDefineProperty(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectDefineProperty(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return toHV(defineProperty(runtime, args, PropOpFlags()));
 }
 
-CallResult<HermesValue>
-reflectDeleteProperty(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectDeleteProperty(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -102,7 +102,8 @@ reflectDeleteProperty(void *, Runtime &runtime, NativeArgs args) {
   return toHV(JSObject::deleteComputed(target, runtime, args.getArgHandle(1)));
 }
 
-CallResult<HermesValue> reflectGet(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectGet(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -116,8 +117,10 @@ CallResult<HermesValue> reflectGet(void *, Runtime &runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
-CallResult<HermesValue>
-reflectGetOwnPropertyDescriptor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectGetOwnPropertyDescriptor(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -126,8 +129,8 @@ reflectGetOwnPropertyDescriptor(void *, Runtime &runtime, NativeArgs args) {
   return getOwnPropertyDescriptor(runtime, target, args.getArgHandle(1));
 }
 
-CallResult<HermesValue>
-reflectGetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectGetPrototypeOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -136,7 +139,8 @@ reflectGetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
   return getPrototypeOf(runtime, target);
 }
 
-CallResult<HermesValue> reflectHas(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectHas(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -145,8 +149,8 @@ CallResult<HermesValue> reflectHas(void *, Runtime &runtime, NativeArgs args) {
   return toHV(JSObject::hasComputed(target, runtime, args.getArgHandle(1)));
 }
 
-CallResult<HermesValue>
-reflectIsExtensible(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectIsExtensible(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -155,8 +159,8 @@ reflectIsExtensible(void *, Runtime &runtime, NativeArgs args) {
   return toHV(JSObject::isExtensible(createPseudoHandle(*target), runtime));
 }
 
-CallResult<HermesValue>
-reflectOwnKeys(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectOwnKeys(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -171,8 +175,8 @@ reflectOwnKeys(void *, Runtime &runtime, NativeArgs args) {
           .plusIncludeNonEnumerable());
 }
 
-CallResult<HermesValue>
-reflectPreventExtensions(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectPreventExtensions(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -181,7 +185,8 @@ reflectPreventExtensions(void *, Runtime &runtime, NativeArgs args) {
   return toHV(JSObject::preventExtensions(target, runtime));
 }
 
-CallResult<HermesValue> reflectSet(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectSet(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");
@@ -195,8 +200,8 @@ CallResult<HermesValue> reflectSet(void *, Runtime &runtime, NativeArgs args) {
       (args.getArgCount() >= 4) ? args.getArgHandle(3) : target));
 }
 
-CallResult<HermesValue>
-reflectSetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> reflectSetPrototypeOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> target = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!target)) {
     return runtime.raiseTypeError("target is not an object");

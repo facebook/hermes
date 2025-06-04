@@ -73,8 +73,7 @@ CallResult<HermesValue> runRequireCall(
     uint32_t cjsModuleOffset);
 
 /// The [[ThrowTypeError]] internal function.
-CallResult<HermesValue>
-throwTypeError(void *, Runtime &runtime, NativeArgs args);
+CallResult<HermesValue> throwTypeError(void *, Runtime &runtime);
 
 enum class TypeErrorKind {
   RestrictedProperty,

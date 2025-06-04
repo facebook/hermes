@@ -166,104 +166,122 @@ static CallResult<HermesValue> ensureJSCallSiteAndCall(
 }
 } // namespace
 
-CallResult<HermesValue>
-callSitePrototypeGetFunctionName(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetFunctionName(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getFunctionName>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetFileName(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetFileName(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getFileName>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetLineNumber(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetLineNumber(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getLineNumber>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetColumnNumber(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetColumnNumber(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getColumnNumber>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetBytecodeAddress(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetBytecodeAddress(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getBytecodeAddress>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeIsNative(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeIsNative(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::isNative>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetThis(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetThis(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getThis>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetTypeName(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetTypeName(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getTypeName>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetFunction(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetFunction(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getFunction>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetMethodName(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetMethodName(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getMethodName>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetEvalOrigin(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetEvalOrigin(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getEvalOrigin>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeIsToplevel(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeIsToplevel(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::isToplevel>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeIsEval(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeIsEval(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::isEval>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeIsConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeIsConstructor(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::isConstructor>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeIsAsync(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeIsAsync(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::isAsync>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeIsPromiseAll(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeIsPromiseAll(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::isPromiseAll>(
       args.getThisHandle(), runtime);
 }
 
-CallResult<HermesValue>
-callSitePrototypeGetPromiseIndex(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> callSitePrototypeGetPromiseIndex(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return ensureJSCallSiteAndCall<&JSCallSite::getPromiseIndex>(
       args.getThisHandle(), runtime);
 }

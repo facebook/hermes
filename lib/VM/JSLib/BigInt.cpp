@@ -84,8 +84,8 @@ Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-bigintConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // The bigint constructor is not a constructor according to
   // https://262.ecma-international.org/#sec-bigint-constructor
   if (args.isConstructorCall()) {
@@ -105,8 +105,10 @@ bigintConstructor(void *, Runtime &runtime, NativeArgs args) {
   return toBigInt_RJS(runtime, hArg0);
 }
 
-CallResult<HermesValue>
-bigintPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintPrototypeToLocaleString(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto bigint = thisBigIntValue(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(bigint == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -122,8 +124,8 @@ bigintPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
   return res->getHermesValue();
 }
 
-CallResult<HermesValue>
-bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let x be ? thisBigIntValue(this value).
   auto x = thisBigIntValue(runtime, args.getThisHandle());
 
@@ -158,16 +160,16 @@ bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   return BigIntPrimitive::toString(runtime, xHandle, radixMV);
 }
 
-CallResult<HermesValue>
-bigintPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return thisBigIntValue(runtime, args.getThisHandle());
 }
 
 using TruncateOp =
     CallResult<HermesValue> (*)(Runtime &, uint64_t, Handle<BigIntPrimitive>);
 
-CallResult<HermesValue>
-bigintTruncate(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintTruncate(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto bitsRes = toIndex(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(bitsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

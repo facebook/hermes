@@ -40,8 +40,8 @@ void populateArrayIteratorPrototype(Runtime &runtime) {
       dpf);
 }
 
-CallResult<HermesValue>
-arrayIteratorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayIteratorPrototypeNext(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto O = args.dyncastThis<JSArrayIterator>();
   if (LLVM_UNLIKELY(!O)) {
     return runtime.raiseTypeError(

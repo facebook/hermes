@@ -147,7 +147,8 @@ CallResult<HermesValue> directEval(
       singleFunction);
 }
 
-CallResult<HermesValue> eval(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> eval(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
 
   if (!args.getArg(0).isString()) {

@@ -36,8 +36,8 @@ void populateIteratorPrototype(Runtime &runtime) {
       runtime.makeHandle<NativeFunction>(*iteratorFunc));
 }
 
-CallResult<HermesValue>
-iteratorPrototypeIterator(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> iteratorPrototypeIterator(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return args.getThisArg();
 }
 

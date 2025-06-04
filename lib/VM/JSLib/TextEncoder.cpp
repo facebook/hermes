@@ -75,8 +75,8 @@ Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-textEncoderConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> textEncoderConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
@@ -121,8 +121,8 @@ textEncoderConstructor(void *, Runtime &runtime, NativeArgs args) {
   return lv.self.getHermesValue();
 }
 
-CallResult<HermesValue>
-textEncoderPrototypeEncoding(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> textEncoderPrototypeEncoding(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   auto selfHandle = args.dyncastThis<JSObject>();
@@ -146,8 +146,8 @@ textEncoderPrototypeEncoding(void *, Runtime &runtime, NativeArgs args) {
       runtime.getPredefinedString(Predefined::utf8));
 }
 
-CallResult<HermesValue>
-textEncoderPrototypeEncode(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> textEncoderPrototypeEncode(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
   auto selfHandle = args.dyncastThis<JSObject>();
   if (LLVM_UNLIKELY(!selfHandle)) {
@@ -217,8 +217,10 @@ textEncoderPrototypeEncode(void *, Runtime &runtime, NativeArgs args) {
   }
 }
 
-CallResult<HermesValue>
-textEncoderPrototypeEncodeInto(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> textEncoderPrototypeEncodeInto(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
   auto selfHandle = args.dyncastThis<JSObject>();
   if (LLVM_UNLIKELY(!selfHandle)) {

@@ -81,8 +81,8 @@ CallResult<Handle<JSObject>> proxyCreate(
 
 } // namespace
 
-CallResult<HermesValue>
-proxyConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> proxyConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(
@@ -105,8 +105,7 @@ proxyConstructor(void *, Runtime &runtime, NativeArgs args) {
   return proxyRes->getHermesValue();
 }
 
-CallResult<HermesValue>
-proxyRevocationSteps(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> proxyRevocationSteps(void *, Runtime &runtime) {
   // 1. Let p be F.[[RevocableProxy]].
   auto revoker = vmcast<NativeFunction>(
       runtime.getCurrentFrame()->getCalleeClosureUnsafe());
@@ -131,8 +130,8 @@ proxyRevocationSteps(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-proxyRevocable(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> proxyRevocable(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let p be ? ProxyCreate(target, handler).
   CallResult<Handle<JSObject>> proxyRes = proxyCreate(
       runtime,

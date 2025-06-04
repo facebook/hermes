@@ -115,13 +115,13 @@ Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime) {
   return cons;
 }
 
-CallResult<HermesValue>
-functionConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Normal);
 }
 
-CallResult<HermesValue>
-functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   auto func = args.dyncastThis<Callable>();
@@ -230,8 +230,8 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, strBuf);
 } // namespace vm
 
-CallResult<HermesValue>
-functionPrototypeApply(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeApply(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
   auto func = args.dyncastThis<Callable>();
   if (LLVM_UNLIKELY(!func)) {
@@ -261,8 +261,8 @@ functionPrototypeApply(void *, Runtime &runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
-CallResult<HermesValue>
-functionPrototypeCall(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeCall(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto func = args.dyncastThis<Callable>();
   if (LLVM_UNLIKELY(!func)) {
     return runtime.raiseTypeError("Can't call() non-callable");
@@ -283,8 +283,8 @@ functionPrototypeCall(void *, Runtime &runtime, NativeArgs args) {
   return res->getHermesValue();
 }
 
-CallResult<HermesValue>
-functionPrototypeBind(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeBind(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto target = Handle<Callable>::dyn_vmcast(args.getThisHandle());
   if (!target) {
     return runtime.raiseTypeError("Can't bind() a non-callable");
@@ -294,8 +294,10 @@ functionPrototypeBind(void *, Runtime &runtime, NativeArgs args) {
       runtime, target, args.getArgCount(), args.begin());
 }
 
-CallResult<HermesValue>
-functionPrototypeSymbolHasInstance(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeSymbolHasInstance(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   /// 1. Let F be the this value.
   auto F = args.getThisHandle();
   /// 2. Return OrdinaryHasInstance(F, V).

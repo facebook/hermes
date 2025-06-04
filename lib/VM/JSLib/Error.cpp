@@ -274,8 +274,8 @@ static CallResult<HermesValue> constructAggregateErrorObject(
 // Note- the following names for the error and aggregate functions are spelled
 // to exactly match the names in NativeErrorTypes.def. They are used in the
 // ERR_HELPER macro defined above.
-CallResult<HermesValue>
-ErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> ErrorConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return constructErrorObject(
       runtime,
       args,
@@ -286,8 +286,8 @@ ErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // AggregateError has a different constructor body than the other errors.
-CallResult<HermesValue>
-AggregateErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> AggregateErrorConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return constructAggregateErrorObject(
       runtime, args, runtime.AggregateErrorPrototype);
 }
@@ -296,22 +296,22 @@ AggregateErrorConstructor(void *, Runtime &runtime, NativeArgs args) {
 // native calls, and their interface are restricted. No extra parameters
 // can be passed in. We can't use the #ALL_ERROR_TYPE macro since AggregateError
 // requires a different constructor.
-#define NATIVE_ERROR_TYPE(name)                    \
-  CallResult<HermesValue> name##Constructor(       \
-      void *, Runtime &runtime, NativeArgs args) { \
-    return constructErrorObject(                   \
-        runtime,                                   \
-        args,                                      \
-        args.getArgHandle(0),                      \
-        args.getArgHandle(1),                      \
-        &runtime.name##Constructor,                \
-        &runtime.name##Prototype);                 \
+#define NATIVE_ERROR_TYPE(name)                                         \
+  CallResult<HermesValue> name##Constructor(void *, Runtime &runtime) { \
+    NativeArgs args = runtime.getCurrentFrame().getNativeArgs();        \
+    return constructErrorObject(                                        \
+        runtime,                                                        \
+        args,                                                           \
+        args.getArgHandle(0),                                           \
+        args.getArgHandle(1),                                           \
+        &runtime.name##Constructor,                                     \
+        &runtime.name##Prototype);                                      \
   }
 #include "hermes/VM/NativeErrorTypes.def"
 
 /// ES2023 20.5.3.4
-CallResult<HermesValue>
-errorPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> errorPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let O be the this value.
@@ -344,8 +344,8 @@ errorPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 /// If the second argument to captureStackTrace is a function, when collecting
 /// the stack trace all frames above the topmost call to the provided function,
 /// including that call, are left out of the stack trace.
-CallResult<HermesValue>
-errorCaptureStackTrace(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> errorCaptureStackTrace(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Get the target object.
   auto targetHandle = args.dyncastArg<JSObject>(0);
   if (!targetHandle || targetHandle->isHostObject() ||

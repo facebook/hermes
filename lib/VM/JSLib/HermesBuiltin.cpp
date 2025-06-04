@@ -25,8 +25,8 @@ namespace hermes {
 namespace vm {
 
 /// Set the parent of an object failing silently on any error.
-CallResult<HermesValue>
-silentObjectSetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> silentObjectSetPrototypeOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   JSObject *O = dyn_vmcast<JSObject>(args.getArg(0));
   if (!O)
     return HermesValue::encodeUndefinedValue();
@@ -58,8 +58,10 @@ silentObjectSetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
 /// object. \p dup is a boolean, when it is true, cooked strings are the same as
 /// raw strings. Then raw strings are passed. Finally cooked strings are
 /// optionally passed if \p dup is true.
-CallResult<HermesValue>
-hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinGetTemplateObject(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(args.getArgCount() < 3)) {
     return runtime.raiseTypeError("At least three arguments expected");
   }
@@ -157,8 +159,8 @@ hermesBuiltinGetTemplateObject(void *, Runtime &runtime, NativeArgs args) {
 /// \code
 ///   HermesBuiltin.ensureObject = function(value, errorMessage) {...}
 /// \endcode
-CallResult<HermesValue>
-hermesBuiltinEnsureObject(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinEnsureObject(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_LIKELY(args.getArg(0).isObject()))
     return HermesValue::encodeUndefinedValue();
 
@@ -170,8 +172,8 @@ hermesBuiltinEnsureObject(void *, Runtime &runtime, NativeArgs args) {
 /// \code
 ///   HermesBuiltin.getMethod = function(object, property) {...}
 /// \endcode
-CallResult<HermesValue>
-hermesBuiltinGetMethod(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinGetMethod(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return getMethod(runtime, args.getArgHandle(0), args.getArgHandle(1))
       .toCallResultHermesValue();
 }
@@ -181,8 +183,8 @@ hermesBuiltinGetMethod(void *, Runtime &runtime, NativeArgs args) {
 /// \code
 ///   HermesBuiltin.throwTypeError = function(errorMessage) {...}
 /// \endcode
-CallResult<HermesValue>
-hermesBuiltinThrowTypeError(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinThrowTypeError(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return runtime.raiseTypeError(args.getArgHandle(0));
 }
 
@@ -191,8 +193,10 @@ hermesBuiltinThrowTypeError(void *, Runtime &runtime, NativeArgs args) {
 /// \code
 ///   HermesBuiltin.throwReferenceError = function(errorMessage) {...}
 /// \endcode
-CallResult<HermesValue>
-hermesBuiltinThrowReferenceError(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinThrowReferenceError(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return runtime.raiseReferenceError(args.getArgHandle(0));
 }
 
@@ -300,8 +304,10 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
 /// properties of \p excludedItems, into \p target, which must be an object, and
 /// return \p target. If \p excludedItems is not specified, it is assumed
 /// to be empty.
-CallResult<HermesValue>
-hermesBuiltinCopyDataProperties(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinCopyDataProperties(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Assert: Type(target) is Object.
@@ -444,8 +450,8 @@ hermesBuiltinCopyDataProperties(void *, Runtime &runtime, NativeArgs args) {
 /// \endcode
 /// Copy the callers parameters starting from index \c from (where the first
 /// parameter is index 0) into a JSArray.
-CallResult<HermesValue>
-hermesBuiltinCopyRestArgs(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinCopyRestArgs(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScopeMarkerRAII marker{runtime};
 
   // Obtain the caller's stack frame.
@@ -487,8 +493,8 @@ hermesBuiltinCopyRestArgs(void *, Runtime &runtime, NativeArgs args) {
 /// Iterate the iterable source (as if using a for-of) and copy the values from
 /// the spread source into the target array, starting at `nextIndex`.
 /// \return the next empty index in the array to use for additional properties.
-CallResult<HermesValue>
-hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinArraySpread(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScopeMarkerRAII topMarker{runtime};
   Handle<JSArray> target = args.dyncastArg<JSArray>(0);
   // To be safe, check for non-arrays.
@@ -619,8 +625,8 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
 /// Equivalent to fn.apply(thisVal, argArray) if thisVal is provided.
 /// If thisVal is not provided, equivalent to running `new fn` and passing the
 /// arguments in argArray.
-CallResult<HermesValue>
-hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinApply(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScopeMarkerRAII marker{runtime};
 
   Handle<Callable> fn = args.dyncastArg<Callable>(0);
@@ -680,8 +686,8 @@ hermesBuiltinApply(void *, Runtime &runtime, NativeArgs args) {
 /// /endcode
 /// Faster version of Function.prototype.apply which copies the arguments
 /// from the caller to the callee.
-CallResult<HermesValue>
-hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinApplyArguments(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Copy 'arguments' from the caller's stack, then call the callee.
 
   Handle<Callable> fn = args.dyncastArg<Callable>(0);
@@ -740,8 +746,10 @@ hermesBuiltinApplyArguments(void *, Runtime &runtime, NativeArgs args) {
 /// fn, as in the case of a new call. Thus, a direct `super` call may result in
 /// this function being invoked.
 /// `argArray` must be a JSArray with no getters.
-CallResult<HermesValue>
-hermesBuiltinApplyWithNewTarget(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinApplyWithNewTarget(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   assert(
       args.getArgCount() == 4 &&
       "builtinApplyWithNewTarget expected 4 arguments");
@@ -786,8 +794,8 @@ hermesBuiltinApplyWithNewTarget(void *, Runtime &runtime, NativeArgs args) {
 /// non-configurable.
 /// Note that the default exported property on `source` is ignored,
 /// as are non-enumerable properties on `source`.
-CallResult<HermesValue>
-hermesBuiltinExportAll(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinExportAll(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> exports = args.dyncastArg<JSObject>(0);
   if (LLVM_UNLIKELY(!exports)) {
     return runtime.raiseTypeError(
@@ -837,8 +845,8 @@ hermesBuiltinExportAll(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-hermesBuiltinExponentiate(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> hermesBuiltinExponentiate(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   CallResult<HermesValue> res = toNumeric_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -873,8 +881,8 @@ hermesBuiltinExponentiate(void *ctx, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> hermesBuiltinInitRegexNamedGroups(
     void *ctx,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *regexp = dyn_vmcast<JSRegExp>(args.getArg(0));
   auto *groupsObj = dyn_vmcast<JSObject>(args.getArg(1));
   regexp->setGroupNameMappings(runtime, groupsObj);

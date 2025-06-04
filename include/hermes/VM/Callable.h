@@ -668,7 +668,7 @@ class NativeJSClass : public NativeJSFunction {
 
 /// A pointer to native function.
 typedef CallResult<HermesValue> (
-    *NativeFunctionPtr)(void *context, Runtime &runtime, NativeArgs args);
+    *NativeFunctionPtr)(void *context, Runtime &runtime);
 
 /// This class represents a native function callable from JavaScript with
 /// context and the JavaScript arguments.
@@ -755,8 +755,7 @@ class NativeFunction : public Callable {
     auto t1 = HERMESVM_RDTSC();
 #endif
 
-    auto res =
-        self->functionPtr_(self->context_, runtime, newFrame.getNativeArgs());
+    auto res = self->functionPtr_(self->context_, runtime);
 
 #ifdef HERMESVM_PROFILER_NATIVECALL
     self->callDuration_ = HERMESVM_RDTSC() - t1;

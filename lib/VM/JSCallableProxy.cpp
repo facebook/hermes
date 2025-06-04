@@ -57,8 +57,9 @@ void JSCallableProxy::setTargetAndHandler(
   slots_.handler.set(runtime, handler.get(), runtime.getHeap());
 }
 
-CallResult<HermesValue>
-JSCallableProxy::_proxyNativeCall(void *, Runtime &runtime, NativeArgs) {
+CallResult<HermesValue> JSCallableProxy::_proxyNativeCall(
+    void *,
+    Runtime &runtime) {
   GCScope gcScope(runtime);
   // We don't use NativeArgs; the implementations just read the current
   // stack frame directly.

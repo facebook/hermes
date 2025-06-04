@@ -205,8 +205,8 @@ setFromSetFastPath(Runtime &runtime, Handle<JSSet> target, Handle<JSSet> src) {
       });
 }
 
-CallResult<HermesValue>
-setConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
     return runtime.raiseTypeError("Constructor Set requires 'new'");
@@ -370,8 +370,8 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES12 23.2.3.1 Set.prototype.add ( value )
-CallResult<HermesValue>
-setPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeAdd(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError("Non-Set object called on Set.prototype.add");
@@ -391,8 +391,8 @@ setPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
-CallResult<HermesValue>
-setPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeClear(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(
@@ -402,8 +402,8 @@ setPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-setPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeDelete(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(
@@ -413,8 +413,8 @@ setPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
       JSSet::erase(selfHandle, runtime, args.getArgHandle(0)));
 }
 
-CallResult<HermesValue>
-setPrototypeEntries(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeEntries(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(
@@ -426,8 +426,8 @@ setPrototypeEntries(void *, Runtime &runtime, NativeArgs args) {
   return iterator.getHermesValue();
 }
 
-CallResult<HermesValue>
-setPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeForEach(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(
@@ -446,8 +446,8 @@ setPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-setPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeHas(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *self = dyn_vmcast<JSSet>(args.getThisArg());
   if (LLVM_UNLIKELY(!self)) {
     return runtime.raiseTypeError("Non-Set object called on Set.prototype.has");
@@ -455,8 +455,8 @@ setPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(self->has(runtime, args.getArg(0)));
 }
 
-CallResult<HermesValue>
-setPrototypeSizeGetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeSizeGetter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = dyn_vmcast<JSSet>(args.getThisArg());
   if (LLVM_UNLIKELY(!self)) {
     return runtime.raiseTypeError(
@@ -465,8 +465,8 @@ setPrototypeSizeGetter(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeTrustedNumberValue(self->size());
 }
 
-CallResult<HermesValue>
-setPrototypeValues(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeValues(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(
@@ -502,8 +502,8 @@ Handle<JSObject> createSetIteratorPrototype(Runtime &runtime) {
   return parentHandle;
 }
 
-CallResult<HermesValue>
-setIteratorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setIteratorPrototypeNext(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSSetIterator>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(
@@ -517,8 +517,8 @@ setIteratorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES16 24.2.4.5 Set.prototype.difference(other)
-CallResult<HermesValue>
-setPrototypeDifference(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeDifference(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be this value
   // 2. Perform ?RequireInternalSlot(O, [[SetData]])
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -668,8 +668,8 @@ setPrototypeDifference(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES16 24.2.4.9 Set.prototype.intersection
-CallResult<HermesValue>
-setPrototypeIntersection(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeIntersection(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value
   // 2. Perform ?RequireInternalSlot(O, [[SetData]])
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -831,8 +831,8 @@ setPrototypeIntersection(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES16 24.2.4.10 Set.prototype.isDisjointFrom
-CallResult<HermesValue>
-setPrototypeIsDisjointFrom(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeIsDisjointFrom(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value
   // 2. Perform ?RequireInternalSlot(0, [[SetData]])
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -955,8 +955,8 @@ setPrototypeIsDisjointFrom(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES16 24.2.4.11 Set.prototype.isSubsetOf
-CallResult<HermesValue>
-setPrototypeIsSubsetOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeIsSubsetOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Let O be the this value
   // Perform ?RequireInternalSlot(O, [[SetData]])
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -1013,8 +1013,8 @@ setPrototypeIsSubsetOf(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES16 24.2.4.12
-CallResult<HermesValue>
-setPrototypeIsSupersetOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeIsSupersetOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value
   // 2. Perform ?RequireInternalSlot(O, [[SetData]])
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -1100,8 +1100,10 @@ setPrototypeIsSupersetOf(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES16 24.2.4.15 Set.prototype.symmetricDifference
-CallResult<HermesValue>
-setPrototypeSymmetricDifference(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeSymmetricDifference(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value
   // 2. Perform ?RequireInternalSlot(O, [[SetData]])
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -1232,8 +1234,8 @@ setPrototypeSymmetricDifference(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES16 24.2.4.16 Set.prototype.union
-CallResult<HermesValue>
-setPrototypeUnion(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> setPrototypeUnion(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value
   // 2. Perform ?RequireInternalSlot(O, [[SetData]])
   auto selfHandle = args.dyncastThis<JSSet>();

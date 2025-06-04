@@ -57,8 +57,7 @@ class JSCallableProxy : public NativeFunction {
   }
 
  private:
-  static CallResult<HermesValue>
-  _proxyNativeCall(void *, Runtime &runtime, NativeArgs);
+  static CallResult<HermesValue> _proxyNativeCall(void *, Runtime &runtime);
 
   detail::ProxySlots slots_;
 };

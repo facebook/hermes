@@ -130,12 +130,13 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
 };
 
 // Used to inject a no-op function into JS.
-static CallResult<HermesValue> noop(void *, Runtime &runtime, NativeArgs) {
+static CallResult<HermesValue> noop(void *, Runtime &runtime) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
-enableAllocationLocationTracker(void *, Runtime &runtime, NativeArgs) {
+static CallResult<HermesValue> enableAllocationLocationTracker(
+    void *,
+    Runtime &runtime) {
   runtime.enableAllocationLocationTracker();
   // syncWithRuntimeStack adds a native stack frame here, but the interpreter
   // doesn't pop that frame. This seems to only be a problem if
