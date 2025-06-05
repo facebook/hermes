@@ -5763,6 +5763,17 @@ void Emitter::putByIdImpl(
       cacheIdx,
       symID);
 
+  // New non-dictionary objects must not have their propStorage_ capacity
+  // stored out of line, because we want to be able to quickly get property
+  // storage capacity for JIT's cached add property fast path.
+  // Ensure this by making sure that objects will be turned into dictionary
+  // mode before leaving the single young gen segment.
+  // TODO: Actually implement the fast path. This assert just keeps it possible.
+  static_assert(
+      HiddenClass::kDictionaryThreshold <
+          JSObject::maxYoungGenAllocationPropCount(),
+      "dictionary objects must be allocated in a single segment in young gen");
+
   syncAllFRTempExcept({});
   syncToFrame(frTarget);
   syncToFrame(frValue);
