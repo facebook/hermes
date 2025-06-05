@@ -29,21 +29,21 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
                                    ArrayStorageBase<HVType>,
                                    GCHermesValueInLargeObjImpl<HVType>> {
   using GCHVType = GCHermesValueInLargeObjImpl<HVType>;
+
+ public:
+  using size_type = uint32_t;
+  using iterator = GCHVType *;
+
+ private:
+  AtomicIfConcurrentGC<size_type> size_{0};
+
   friend llvh::TrailingObjects<ArrayStorageBase<HVType>, GCHVType>;
   friend void ArrayStorageBuildMeta(const GCCell *cell, Metadata::Builder &mb);
   friend void ArrayStorageSmallBuildMeta(
       const GCCell *cell,
       Metadata::Builder &mb);
 
-  friend void ArrayStorageSerialize(Serializer &s, const GCCell *cell);
-  friend void ArrayStorageDeserialize(Deserializer &d, CellKind kind);
-  friend void ArrayStorageSmallSerialize(Serializer &s, const GCCell *cell);
-  friend void ArrayStorageSmallDeserialize(Deserializer &d, CellKind kind);
-
  public:
-  using size_type = uint32_t;
-  using iterator = GCHVType *;
-
   static const VTable vt;
 
   /// Gets the amount of memory used by this object for a given \p capacity.
@@ -398,9 +398,6 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
       MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
       Runtime &runtime,
       Handle<> value);
-
- private:
-  AtomicIfConcurrentGC<size_type> size_{0};
 
  public:
   ArrayStorageBase() = default;
