@@ -45,6 +45,7 @@ struct ShermesCompileParams {
   OptLevel nativeOptimize = OptLevel::OMax;
   enum class EnableAsserts { off, on };
   EnableAsserts enableAsserts = EnableAsserts::off;
+  bool noHermesLibs = false;
   enum class Lean { off, on };
   Lean lean = Lean::off;
   enum class StaticLink { off, on };

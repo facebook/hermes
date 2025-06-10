@@ -172,6 +172,12 @@ cl::opt<bool> EnableAsserts(
 #endif
     cl::cat(CompilerCategory));
 
+cl::opt<bool> NoHermesLibs(
+    "nohermeslibs",
+    cl::init(false),
+    cl::desc("(default false) Do not use the standard Hermes libraries"),
+    cl::cat(CompilerCategory));
+
 cl::opt<bool> Lean(
     "lean",
     cl::init(false),
@@ -1023,6 +1029,7 @@ bool compileFromCommandLineOptions() {
   params.enableAsserts = cli::EnableAsserts
       ? ShermesCompileParams::EnableAsserts::on
       : ShermesCompileParams::EnableAsserts::off;
+  params.noHermesLibs = cli::NoHermesLibs;
   params.lean = cli::Lean ? ShermesCompileParams::Lean::on
                           : ShermesCompileParams::Lean::off;
   params.staticLink = cli::StaticLink ? ShermesCompileParams::StaticLink::on
