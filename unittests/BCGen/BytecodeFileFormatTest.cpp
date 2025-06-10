@@ -13,6 +13,7 @@
 
 #include "gtest/gtest.h"
 
+#include <iomanip>
 #include <sstream>
 
 // Structs with bit fields can have different layouts between GCC, CLANG,
