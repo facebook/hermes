@@ -707,7 +707,9 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
 
 #ifdef HERMESVM_GC_HADES
 // This test relies on the implementation details of Hades GC.
-TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
+// TODO: Reenable this test once we fix blocking on OG collections in the middle
+//       of a YG collection.
+TEST(HeapSnapshotTest, DISABLED_SnapshotFromCallbackContextRunInMiddleYG) {
   // The GC Heap can have at most two segments.
   const GCConfig testGCConfig =
       GCConfig::Builder(kTestGCConfigBaseBuilder)

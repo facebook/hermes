@@ -2337,7 +2337,9 @@ GCCell *HadesGC::OldGen::allocSlow(uint32_t sz) {
 
   // Can't expand to any more segments, wait for an old gen collection to
   // finish and possibly free up memory.
-  gc_.waitForCollectionToFinish("full heap");
+  // TODO: Re-enable this once we fix it such that compaction cannot become
+  //       enabled halfway through a YG collection.
+  // gc_.waitForCollectionToFinish("full heap");
 
   // Repeat the search in case the collection did free memory.
   if (GCCell *cell = search(sz)) {
