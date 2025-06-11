@@ -122,11 +122,16 @@ class HERMES_EXPORT HermesRuntime : public jsi::Runtime {
   /// be used by third parties.
   virtual sampling_profiler::Profile dumpSampledTraceToProfile() = 0;
 
-  // The base class declares most of the interesting methods.  This
-  // just declares new methods which are specific to HermesRuntime.
-  // The actual implementations of the pure virtual methods are
-  // provided by a class internal to the .cpp file, which is created
-  // by the factory.
+  /// Resets the timezone offset cache used by Hermes for performance
+  /// optimization. Hermes maintains a cached timezone offset to accelerate date
+  /// and time calculations. However, this cache does not automatically detect
+  /// changes to the system timezone. When the system timezone changes, the
+  /// integration layer (e.g., React Native) must call this method to invalidate
+  /// the cache and ensure correct time calculations.
+  ///
+  /// \note Call this method immediately after detecting any timezone change in
+  /// the integrator.
+  virtual void resetTimezoneCache() = 0;
 
   /// Load a new segment into the Runtime.
   /// The \param context must be a valid RequireContext retrieved from JS
