@@ -984,9 +984,8 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     SymbolID name,
-    PropertyFlags expectedFlags,
     NamedPropertyDescriptor &desc) {
-  if (findProperty(selfHandle, runtime, name, expectedFlags, desc))
+  if (findProperty(selfHandle, runtime, name, desc))
     return *selfHandle;
 
   // Check here for host object flag.  This means that "normal" own
@@ -1010,7 +1009,7 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
     // Initialize the object and perform the lookup again.
     JSObject::initializeLazyObject(runtime, selfHandle);
 
-    if (findProperty(selfHandle, runtime, name, expectedFlags, desc))
+    if (findProperty(selfHandle, runtime, name, desc))
       return *selfHandle;
   }
 
@@ -1031,12 +1030,7 @@ JSObject *JSObject::getNamedDescriptorUnsafe(
               !mutableSelfHandle->flags_.hostObject &&
               !mutableSelfHandle->flags_.proxyObject)) {
       findProp:
-        if (findProperty(
-                mutableSelfHandle,
-                runtime,
-                name,
-                PropertyFlags::invalid(),
-                desc)) {
+        if (findProperty(mutableSelfHandle, runtime, name, desc)) {
           assert(
               !selfHandle->flags_.proxyObject &&
               "Proxy object parents should never have own properties");
@@ -1475,12 +1469,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
   // Look for the property in this object or along the prototype chain.
   // `name` will not be freed before this function returns,
   // so it will outlive the lifetime of `desc`.
-  JSObject *propObj = getNamedDescriptorUnsafe(
-      selfHandle,
-      runtime,
-      name,
-      PropertyFlags::defaultNewNamedPropertyFlags(),
-      desc);
+  JSObject *propObj = getNamedDescriptorUnsafe(selfHandle, runtime, name, desc);
 
   // If the property exists (or, we hit a proxy/hostobject on the way
   // up the chain)

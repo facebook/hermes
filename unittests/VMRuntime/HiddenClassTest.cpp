@@ -125,27 +125,22 @@ TEST_F(HiddenClassTest, SmokeTest) {
   // Find all properties in x.
   NamedPropertyDescriptor desc;
   {
-    auto found = HiddenClass::findProperty(
-        x, runtime, *aHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(x, runtime, *aHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(0u, desc.slot);
-    found = HiddenClass::findProperty(
-        x, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
-    found = HiddenClass::findProperty(
-        x, runtime, *cHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *cHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(2u, desc.slot);
-    found = HiddenClass::findProperty(
-        x, runtime, *dHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *dHnd, desc);
     ASSERT_FALSE(found);
   }
 
   {
     // Read-only x.b
-    auto found = HiddenClass::findProperty(
-        x, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(x, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_TRUE(desc.flags.writable);
@@ -156,8 +151,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
     ASSERT_EQ(x->getNumProperties(), newClz->getNumProperties());
     x = *newClz;
 
-    found = HiddenClass::findProperty(
-        x, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_FALSE(desc.flags.writable);
@@ -192,8 +186,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
 
   {
     // Read-only z.b
-    auto found = HiddenClass::findProperty(
-        z, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(z, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_TRUE(desc.flags.writable);
@@ -204,8 +197,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
     ASSERT_EQ(z->getNumProperties(), newClz->getNumProperties());
     z = *newClz;
 
-    found = HiddenClass::findProperty(
-        z, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(z, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_FALSE(desc.flags.writable);
@@ -222,8 +214,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
   // Turn x into a dictionary by erasing x.a
 
   {
-    auto found = HiddenClass::findProperty(
-        x, runtime, *aHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(x, runtime, *aHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(0u, desc.slot);
 
@@ -233,8 +224,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
     ASSERT_TRUE(x1->isDictionary());
     ASSERT_EQ(2u, x1->getNumProperties());
 
-    found = HiddenClass::findProperty(
-        x1, runtime, *aHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x1, runtime, *aHnd, desc);
     ASSERT_FALSE(found);
 
     x = *x1;
@@ -325,8 +315,7 @@ TEST_F(HiddenClassTest, AccessorsTest) {
   {
     // delete y.a
     NamedPropertyDescriptor desc;
-    auto found =
-        HiddenClass::findProperty(y, runtime, *aSym, accessorFlags, desc);
+    auto found = HiddenClass::findProperty(y, runtime, *aSym, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(0u, desc.slot);
     y = HiddenClass::deleteProperty(y, runtime, *found);
@@ -402,30 +391,26 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   ASSERT_EQ(y->getNumProperties(), yClone->getNumProperties());
   ASSERT_TRUE(yClone->isDictionary());
   // Check each property
-  auto found = HiddenClass::findProperty(
-      yClone, runtime, *aHnd, PropertyFlags::invalid(), desc);
+  auto found = HiddenClass::findProperty(yClone, runtime, *aHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(0u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      yClone, runtime, *bHnd, PropertyFlags::invalid(), desc);
+  found = HiddenClass::findProperty(yClone, runtime, *bHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(1u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      yClone, runtime, *cHnd, PropertyFlags::invalid(), desc);
+  found = HiddenClass::findProperty(yClone, runtime, *cHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(2u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
   // Turn y into a dictionary y3 by deleting y.a
-  found = HiddenClass::findProperty(
-      y, runtime, *aHnd, PropertyFlags::invalid(), desc);
+  found = HiddenClass::findProperty(y, runtime, *aHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(0u, desc.slot);
 
@@ -456,22 +441,22 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   ASSERT_EQ(y->getNumProperties(), partlyFrozenSingleton->getNumProperties());
   ASSERT_TRUE(partlyFrozenSingleton->isDictionary());
   // Check each property
-  found = HiddenClass::findProperty(
-      partlyFrozenSingleton, runtime, *aHnd, PropertyFlags::invalid(), desc);
+  found =
+      HiddenClass::findProperty(partlyFrozenSingleton, runtime, *aHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(0u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      partlyFrozenSingleton, runtime, *bHnd, PropertyFlags::invalid(), desc);
+  found =
+      HiddenClass::findProperty(partlyFrozenSingleton, runtime, *bHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(1u, desc.slot);
   ASSERT_TRUE(desc.flags.writable);
   ASSERT_TRUE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      partlyFrozenSingleton, runtime, *cHnd, PropertyFlags::invalid(), desc);
+  found =
+      HiddenClass::findProperty(partlyFrozenSingleton, runtime, *cHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(2u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);

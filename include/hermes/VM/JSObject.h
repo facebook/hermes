@@ -902,20 +902,7 @@ class JSObject : public GCCell {
   /// IMPORTANT: This is unsafe because the caller must ensure \p name will NOT
   /// be freed within the lifetime of \p desc - typically by ensuring \p name
   /// is stored in the string table of the bytecode.
-  /// \param expectedFlags if valid, we are searching for a property which, if
-  ///   not found, we would create with these specific flags. This can speed
-  ///   up the search in the negative case - when the property doesn't exist.
   /// \return the object instance containing the property, or nullptr.
-  static JSObject *getNamedDescriptorUnsafe(
-      Handle<JSObject> selfHandle,
-      Runtime &runtime,
-      SymbolID name,
-      PropertyFlags expectedFlags,
-      NamedPropertyDescriptor &desc);
-
-  /// ES5.1 8.12.2.
-  /// Wrapper around \c getNamedDescriptorUnsafe() passing \c false to \c
-  /// forPutNamed.
   static JSObject *getNamedDescriptorUnsafe(
       Handle<JSObject> selfHandle,
       Runtime &runtime,
@@ -1453,18 +1440,6 @@ class JSObject : public GCCell {
       Runtime &runtime,
       SlotIndex newSlotIndex,
       Handle<> valueHandle);
-
-  /// Look for a property and return a \c PropertyPos identifying it and store
-  /// its descriptor in \p desc.
-  /// \param expectedFlags if valid, we are searching for a property which, if
-  ///   not found, we would create with these specific flags. This can speed
-  ///   up the search in the negative case - when the property doesn't exist.
-  static OptValue<HiddenClass::PropertyPos> findProperty(
-      Handle<JSObject> selfHandle,
-      Runtime &runtime,
-      SymbolID name,
-      PropertyFlags expectedFlags,
-      NamedPropertyDescriptor &desc);
 
   /// Look for a property and return a \c PropertyPos identifying it and store
   /// its descriptor in \p desc.
@@ -2108,11 +2083,7 @@ inline JSObject *JSObject::getNamedDescriptorPredefined(
     Predefined::Str name,
     NamedPropertyDescriptor &desc) {
   return getNamedDescriptorUnsafe(
-      selfHandle,
-      runtime,
-      Predefined::getSymbolID(name),
-      PropertyFlags::invalid(),
-      desc);
+      selfHandle, runtime, Predefined::getSymbolID(name), desc);
 }
 
 inline JSObject *JSObject::getNamedDescriptorPredefined(
@@ -2121,20 +2092,7 @@ inline JSObject *JSObject::getNamedDescriptorPredefined(
     Predefined::Sym name,
     NamedPropertyDescriptor &desc) {
   return getNamedDescriptorUnsafe(
-      selfHandle,
-      runtime,
-      Predefined::getSymbolID(name),
-      PropertyFlags::invalid(),
-      desc);
-}
-
-inline JSObject *JSObject::getNamedDescriptorUnsafe(
-    Handle<JSObject> selfHandle,
-    Runtime &runtime,
-    SymbolID name,
-    NamedPropertyDescriptor &desc) {
-  return getNamedDescriptorUnsafe(
-      selfHandle, runtime, name, PropertyFlags::invalid(), desc);
+      selfHandle, runtime, Predefined::getSymbolID(name), desc);
 }
 
 inline CallResult<PseudoHandle<>> JSObject::getNamed_RJS(
@@ -2209,22 +2167,8 @@ inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
     Runtime &runtime,
     SymbolID name,
     NamedPropertyDescriptor &desc) {
-  return findProperty(
-      selfHandle, runtime, name, PropertyFlags::invalid(), desc);
-}
-
-inline OptValue<HiddenClass::PropertyPos> JSObject::findProperty(
-    Handle<JSObject> selfHandle,
-    Runtime &runtime,
-    SymbolID name,
-    PropertyFlags expectedFlags,
-    NamedPropertyDescriptor &desc) {
   auto ret = HiddenClass::findProperty(
-      createPseudoHandle(selfHandle->getClass(runtime)),
-      runtime,
-      name,
-      expectedFlags,
-      desc);
+      createPseudoHandle(selfHandle->getClass(runtime)), runtime, name, desc);
   assert(
       (desc.flags.privateName || !(selfHandle->flags_.proxyObject && ret)) &&
       "Proxy objects should never have own non-private properties");

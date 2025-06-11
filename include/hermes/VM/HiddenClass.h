@@ -381,15 +381,11 @@ class HiddenClass final : public GCCell {
 
   /// Look for a property in the property map. If the property is found, return
   /// a \c PropertyPos identifying it and store its descriptor in \p desc.
-  /// \param expectedFlags if valid, we can search the transition table for this
-  ///   property with these precise flags. If found in the transition table,
-  ///   we don't need to create a property map.
   /// \return the "position" of the property, if found.
   static inline OptValue<PropertyPos> findProperty(
       PseudoHandle<HiddenClass> self,
       Runtime &runtime,
       SymbolID name,
-      PropertyFlags expectedFlags,
       NamedPropertyDescriptor &desc);
 
   /// Same operation as \p findProperty, but does not do any allocations.
@@ -533,7 +529,6 @@ class HiddenClass final : public GCCell {
       PseudoHandle<HiddenClass> self,
       Runtime &runtime,
       SymbolID name,
-      PropertyFlags expectedFlags,
       NamedPropertyDescriptor &desc);
 
   /// Add a new property pair (\p name and \p desc) to the property map (which
@@ -688,11 +683,9 @@ inline OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
     PseudoHandle<HiddenClass> self,
     Runtime &runtime,
     SymbolID name,
-    PropertyFlags expectedFlags,
     NamedPropertyDescriptor &desc) {
   if (LLVM_UNLIKELY(!self->propertyMap_)) {
-    return findPropertyNoMap(
-        std::move(self), runtime, name, expectedFlags, desc);
+    return findPropertyNoMap(std::move(self), runtime, name, desc);
   }
 
   auto *propMap = self->propertyMap_.getNonNull(runtime);
