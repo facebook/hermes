@@ -274,7 +274,7 @@ class StackFramePtrT {
   /// Create an instance of NativeArgs pointing to the arguments in this
   /// frame.
   NativeArgs getNativeArgs() const {
-    return NativeArgs{argsBegin(), getArgCount(), &getNewTargetRef()};
+    return NativeArgs{argsBegin(), getArgCount()};
   }
 };
 

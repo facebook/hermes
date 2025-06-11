@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_NATIVEARGS_H
 #define HERMES_VM_NATIVEARGS_H
 
+#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/HandleRootOwner.h"
@@ -31,17 +32,11 @@ class NativeArgs final {
   const ConstArgIterator firstArg_;
   /// The number of JavaScript arguments excluding 'this'.
   unsigned const argCount_;
-  /// The \c new.target value of the call.
-  const PinnedHermesValue *const newTarget_;
 
   /// \param firstArg is an iterator to ("arg0", ... "argN").
   /// \param argCount number of JavaScript arguments excluding 'this'
-  /// \param newTarget points to the value of \c new.target in the stack.
-  NativeArgs(
-      ConstArgIterator firstArg,
-      unsigned argCount,
-      const PinnedHermesValue *newTarget)
-      : firstArg_(firstArg), argCount_(argCount), newTarget_(newTarget) {}
+  NativeArgs(ConstArgIterator firstArg, unsigned argCount)
+      : firstArg_(firstArg), argCount_(argCount) {}
 
   template <bool isConst>
   friend class StackFramePtrT;
@@ -51,19 +46,21 @@ class NativeArgs final {
   ///   regular function call, of the callable of the constructor invoked by
   ///   \c new otherwise.
   const PinnedHermesValue &getNewTarget() const {
-    return *newTarget_;
+    static constexpr int kNewTargetOffset =
+        hbc::StackFrameLayout::FirstArg - hbc::StackFrameLayout::NewTarget;
+    return begin()[kNewTargetOffset];
   }
 
   /// \return the value of \c new.target. It is \c undefined if this is a
   ///   regular function call, of the callable of the constructor invoked by
   ///   \c new otherwise.
   Handle<> getNewTargetHandle() const {
-    return Handle<>(newTarget_);
+    return Handle<>(&getNewTarget());
   }
 
   /// \return true if this is a function call.
   bool isFunctionCall() const {
-    return newTarget_->isUndefined();
+    return getNewTarget().isUndefined();
   }
   /// \return true if this is a constructor invocation.
   bool isConstructorCall() const {
