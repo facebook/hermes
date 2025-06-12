@@ -437,14 +437,24 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
     oom(make_error_code(OOMError::MaxHeapReached));
   }
 
+  // NOTE: We use makeAImpl directly here instead of makeA, because we want to
+  // keep the common logic of assigning memory instrumentation IDs (e.g.) in
+  // GCBase, so we don't want to duplicate that logic here.
+
   // Need to capture and explicitly use 'this'.
-  // If it's not captured, compiler errors because 'makeA' needs 'this'.
+  // If it's not captured, compiler errors because 'makeAImpl' needs 'this'.
   // If it is captured but not used explicitly, compiler warns due to
   //   -Wunused-lambda-capture.
   // Might be due to apply_tuple.
   T1 *t1 = llvh::apply_tuple(
       [this, size1](auto &&...args) -> T1 * {
-        return this->makeA<T1>(size1, args...);
+        return this->makeAImpl<
+            T1,
+            /* fixedSize */ true,
+            HasFinalizer::No,
+            LongLived::No,
+            CanBeLarge::No,
+            MayFail::No>(size1, args...);
       },
       t1Args);
 
@@ -454,7 +464,13 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
   suppressHandleSan_ = true;
   T2 *t2 = llvh::apply_tuple(
       [this, size2](auto &&...args) -> T2 * {
-        return this->makeA<T2>(size2, args...);
+        return this->makeAImpl<
+            T2,
+            /* fixedSize */ true,
+            HasFinalizer::No,
+            LongLived::No,
+            CanBeLarge::No,
+            MayFail::No>(size2, args...);
       },
       t2Args);
   suppressHandleSan_ = false;
