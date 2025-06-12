@@ -161,7 +161,6 @@ class HadesGC final : public GCBase {
   /// \return a pointer to the newly created object in the GC heap.
   template <
       typename T,
-      bool fixedSize,
       HasFinalizer hasFinalizer,
       LongLived longLived,
       CanBeLarge canBeLarge,
@@ -1611,7 +1610,6 @@ class HadesGC final : public GCBase {
 
 template <
     typename T,
-    bool fixedSize,
     HasFinalizer hasFinalizer,
     LongLived longLived,
     CanBeLarge canBeLarge,

@@ -29,7 +29,7 @@ T *GCBase::makeAFixed(Args &&...args) {
       "Cell size outside legal range.");
   assert(
       VTable::getVTable(T::getCellKind())->size && "Cell is not fixed size.");
-  return makeA<T, true /* fixedSize */, hasFinalizer, longLived>(
+  return makeA<T, hasFinalizer, longLived>(
       cellSize<T>(), std::forward<Args>(args)...);
 }
 
@@ -56,18 +56,12 @@ T *GCBase::makeAVariable(uint32_t size, Args &&...args) {
   assert(
       !VTable::getVTable(T::getCellKind())->size &&
       "Cell is not variable size.");
-  return makeA<
-      T,
-      false /* fixedSize */,
-      hasFinalizer,
-      longLived,
-      canBeLarge,
-      mayFail>(heapAlignSize(size), std::forward<Args>(args)...);
+  return makeA<T, hasFinalizer, longLived, canBeLarge, mayFail>(
+      heapAlignSize(size), std::forward<Args>(args)...);
 }
 
 template <
     typename T,
-    bool fixedSize,
     HasFinalizer hasFinalizer,
     LongLived longLived,
     CanBeLarge canBeLarge,
@@ -91,13 +85,8 @@ T *GCBase::makeA(uint32_t size, Args &&...args) {
       "hasFinalizer should be set iff the cell has a finalizer.");
 
   T *ptr = static_cast<GC *>(this)
-               ->makeAImpl<
-                   T,
-                   fixedSize,
-                   hasFinalizer,
-                   longLived,
-                   canBeLarge,
-                   mayFail>(size, std::forward<Args>(args)...);
+               ->makeAImpl<T, hasFinalizer, longLived, canBeLarge, mayFail>(
+                   size, std::forward<Args>(args)...);
 #if !defined(NDEBUG) || defined(HERMES_MEMORY_INSTRUMENTATION)
   if constexpr (mayFail == MayFail::Yes) {
     // If it fails, a nullptr is allowed and simply return it to the caller.

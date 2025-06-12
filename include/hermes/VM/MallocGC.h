@@ -158,7 +158,6 @@ class MallocGC final : public GCBase {
   /// \return a pointer to the newly created object in the GC heap.
   template <
       typename T,
-      bool fixedSize,
       HasFinalizer hasFinalizer,
       LongLived longLived,
       CanBeLarge canBeLarge,
@@ -374,7 +373,6 @@ inline bool MallocGC::canAllocExternalMemory(uint32_t size) {
 
 template <
     typename T,
-    bool fixedSize,
     HasFinalizer hasFinalizer,
     LongLived longLived,
     CanBeLarge canBeLarge,
@@ -450,7 +448,6 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
       [this, size1](auto &&...args) -> T1 * {
         return this->makeAImpl<
             T1,
-            /* fixedSize */ true,
             HasFinalizer::No,
             LongLived::No,
             CanBeLarge::No,
@@ -466,7 +463,6 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
       [this, size2](auto &&...args) -> T2 * {
         return this->makeAImpl<
             T2,
-            /* fixedSize */ true,
             HasFinalizer::No,
             LongLived::No,
             CanBeLarge::No,

@@ -74,15 +74,13 @@ enum XorPtrKeyID {
 /// Allocate a new cell of type \p T and size \p size. Instantiate an object of
 /// type \p T in the newly allocated cell, using \p args as the arguments to its
 /// constructor. If necessary perform a GC cycle, which may potentially move
-/// allocated objects. \p fixedSize should indicate whether the allocation is
-/// for a fixed-size, small object; some GCs may allow optimizations on this
-/// basis. \p hasFinalizer must be \p HasFinalizer::Yes if cells of the given
-/// type require a finalizer to be called.
+/// allocated objects.
+/// \p hasFinalizer must be \p HasFinalizer::Yes if cells of
+/// the given type require a finalizer to be called.
 /// \pre size must be heap-aligned.
 ///
 ///   template <
 ///     typename T,
-///     bool fixedSize,
 ///     HasFinalizer hasFinalizer,
 ///     LongLived longLived,
 ///     class... Args>
@@ -926,7 +924,6 @@ class GCBase {
 
   template <
       typename T,
-      bool fixedSize = true,
       HasFinalizer hasFinalizer = HasFinalizer::No,
       LongLived longLived = LongLived::No,
       CanBeLarge canBeLarge = CanBeLarge::No,
