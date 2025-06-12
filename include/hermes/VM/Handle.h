@@ -283,6 +283,8 @@ class PinnedValue : private PinnedHermesValue {
 /// This is the base object factoring out common code from the type-specific
 /// versions.
 class HandleBase {
+  template <typename U>
+  friend class MutableHandle;
 #ifndef NDEBUG
   /// In debug mode we store the GCScope that created us so we can update its
   /// active handle count in our destructor.
@@ -544,9 +546,6 @@ static_assert(
 /// explicit as possible by using this class.
 template <typename T>
 class MutableHandle : public Handle<T> {
-  MutableHandle(const MutableHandle &) = delete;
-  void operator=(const MutableHandle &) = delete;
-
   /// Alias a MutableHandle with a non-movable HermesValue without any checks.
   explicit MutableHandle(PinnedHermesValue *valueAddr, bool dummy)
       : Handle<T>(valueAddr, dummy) {}
@@ -563,6 +562,16 @@ class MutableHandle : public Handle<T> {
   /// Construct a new Handle by aliasing an existing PinnedValue of the same
   /// type.
   /* implicit */ MutableHandle(const PinnedValue<T> &pv) : Handle<T>(pv) {}
+
+  /// Copy constructor.
+  MutableHandle(const MutableHandle &sc) : Handle<T>(sc) {}
+
+  /// Copy constructor from MutableHandle<U> where U is compatible with T.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<T, U>::value>::type>
+  MutableHandle(const MutableHandle<U> &sc) : Handle<T>(sc) {}
 
   /// A move constructor.
   MutableHandle(MutableHandle &&sc) : Handle<T>(std::move(sc)) {}
@@ -591,6 +600,19 @@ class MutableHandle : public Handle<T> {
     *HandleBase::handleRef() = HermesValueTraits<T>::encode(value);
   }
 
+  /// Assign the HermesValue \p val to this MutableHandle, asserting that it
+  /// has type U which is compatible with T. This allows assigning a HermesValue
+  /// with a known type to the PinnedValue without having to extract a
+  /// pointer/symbol from it only to then re-encode it.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  void castAndSetHermesValue(HermesValue val) {
+    HermesValueCast<U>::assertValid(val);
+    *HandleBase::handleRef() = val;
+  }
+
   /// Create a MutableHandle from a pinned HermesValue and assert that the value
   /// has the correct type.
   static MutableHandle<T> vmcast(PinnedHermesValue *valueAddr) {
@@ -612,6 +634,19 @@ class MutableHandle : public Handle<T> {
     // aliased to an input register, so we could inadvertently clobber an input
     // register before we've read it if we used this method on it.
     return MutableHandle<T>(valueAddr, true);
+  }
+
+  /// A version of \c aliasForOutput() that takes a \c MutableHandle<U>.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<T, U>::value>::type>
+  static MutableHandle aliasForOutput(MutableHandle<U> &other) {
+    return MutableHandle(other.handleRef(), true);
+  }
+
+  PinnedHermesValue *unsafeGetPinnedHermesValue() {
+    return HandleBase::handleRef();
   }
 } HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
 
