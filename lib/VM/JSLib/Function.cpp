@@ -27,7 +27,7 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Function.
 
-Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime) {
+HermesValue createFunctionConstructor(Runtime &runtime) {
   auto functionPrototype = Handle<Callable>::vmcast(&runtime.functionPrototype);
 
   auto cons = defineSystemConstructor(
@@ -112,7 +112,7 @@ Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime) {
   (void)res;
   assert(res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
 
-  return cons;
+  return cons.getHermesValue();
 }
 
 CallResult<HermesValue> functionConstructor(void *, Runtime &runtime) {
@@ -124,6 +124,11 @@ CallResult<HermesValue> functionPrototypeToString(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
+  struct : public Locals {
+    PinnedValue<> propValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto func = args.dyncastThis<Callable>();
   if (!func) {
     return runtime.raiseTypeError(
@@ -131,7 +136,7 @@ CallResult<HermesValue> functionPrototypeToString(void *, Runtime &runtime) {
   }
 
   /// Append the current function name to the \p strBuf.
-  auto appendFunctionName = [&func, &runtime](SmallU16String<64> &strBuf) {
+  auto appendFunctionName = [&func, &runtime, &lv](SmallU16String<64> &strBuf) {
     // Extract the name.
     auto propRes = JSObject::getNamed_RJS(
         func, runtime, Predefined::getSymbolID(Predefined::name));
@@ -141,8 +146,8 @@ CallResult<HermesValue> functionPrototypeToString(void *, Runtime &runtime) {
 
     // Convert the name to string, unless it is undefined.
     if (!(*propRes)->isUndefined()) {
-      auto strRes =
-          toString_RJS(runtime, runtime.makeHandle(std::move(*propRes)));
+      lv.propValue = std::move(*propRes);
+      auto strRes = toString_RJS(runtime, Handle<>{lv.propValue});
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }

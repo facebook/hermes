@@ -79,6 +79,7 @@ CallResult<HermesValue> weakSetConstructor(void *, Runtime &runtime) {
   struct : public Locals {
     PinnedValue<JSObject> selfParent;
     PinnedValue<JSWeakSet> self;
+    PinnedValue<Callable> adder;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   if (LLVM_LIKELY(
@@ -112,9 +113,9 @@ CallResult<HermesValue> weakSetConstructor(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto adder =
-      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
-  if (LLVM_UNLIKELY(!adder)) {
+  if (auto callable = dyn_vmcast<Callable>(propRes->getHermesValue())) {
+    lv.adder = callable;
+  } else {
     return runtime.raiseTypeError("Property 'add' for WeakSet is not callable");
   }
 
@@ -144,7 +145,7 @@ CallResult<HermesValue> weakSetConstructor(void *, Runtime &runtime) {
 
     if (LLVM_UNLIKELY(
             Callable::executeCall1(
-                adder, runtime, lv.self, nextValueRes->get()) ==
+                lv.adder, runtime, lv.self, nextValueRes->get()) ==
             ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }

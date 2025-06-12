@@ -25,10 +25,14 @@ CallResult<HermesValue> btoa(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto string = runtime.makeHandle(std::move(*res));
+  struct : public Locals {
+    PinnedValue<StringPrimitive> string;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.string = std::move(*res);
 
   // Figure out the expected encoded length
-  uint64_t expectedLength = ((string->getStringLength() + 2) / 3) * 4;
+  uint64_t expectedLength = ((lv.string->getStringLength() + 2) / 3) * 4;
   bool overflow = expectedLength > std::numeric_limits<uint32_t>::max();
   if (overflow) {
     return runtime.raiseError("String length to convert to base64 is too long");
@@ -40,9 +44,9 @@ CallResult<HermesValue> btoa(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  bool success = string->isASCII()
-      ? base64Encode(string->getStringRef<char>(), *builder)
-      : base64Encode(string->getStringRef<char16_t>(), *builder);
+  bool success = lv.string->isASCII()
+      ? base64Encode(lv.string->getStringRef<char>(), *builder)
+      : base64Encode(lv.string->getStringRef<char16_t>(), *builder);
   if (!success) {
     return runtime.raiseError(
         "Found invalid character when converting to base64");
@@ -61,11 +65,15 @@ CallResult<HermesValue> atob(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto string = runtime.makeHandle(std::move(*res));
+  struct : public Locals {
+    PinnedValue<StringPrimitive> string;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.string = std::move(*res);
 
-  OptValue<uint32_t> expectedLength = string->isASCII()
-      ? base64DecodeOutputLength(string->getStringRef<char>())
-      : base64DecodeOutputLength(string->getStringRef<char16_t>());
+  OptValue<uint32_t> expectedLength = lv.string->isASCII()
+      ? base64DecodeOutputLength(lv.string->getStringRef<char>())
+      : base64DecodeOutputLength(lv.string->getStringRef<char16_t>());
   if (!expectedLength) {
     return runtime.raiseError("Not a valid base64 encoded string length");
   }
@@ -75,9 +83,9 @@ CallResult<HermesValue> atob(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  bool success = string->isASCII()
-      ? base64Decode(string->getStringRef<char>(), *builder)
-      : base64Decode(string->getStringRef<char16_t>(), *builder);
+  bool success = lv.string->isASCII()
+      ? base64Decode(lv.string->getStringRef<char>(), *builder)
+      : base64Decode(lv.string->getStringRef<char16_t>(), *builder);
   if (!success) {
     return runtime.raiseError(
         "Found invalid character when decoding base64 string");

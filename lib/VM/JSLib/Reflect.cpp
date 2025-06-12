@@ -216,14 +216,18 @@ CallResult<HermesValue> reflectSetPrototypeOf(void *, Runtime &runtime) {
       *target, runtime, proto.isObject() ? vmcast<JSObject>(proto) : nullptr));
 }
 
-Handle<JSObject> createReflectObject(Runtime &runtime) {
-  Handle<JSObject> reflect = runtime.makeHandle(JSObject::create(runtime));
+void createReflectObject(Runtime &runtime, MutableHandle<JSObject> result) {
+  struct : public Locals {
+    PinnedValue<JSObject> reflect;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.reflect = JSObject::create(runtime);
 
   auto defineReflectMethod =
       [&](Predefined::Str symID, NativeFunctionPtr func, uint8_t count) {
         (void)defineMethod(
             runtime,
-            reflect,
+            Handle<JSObject>{lv.reflect},
             Predefined::getSymbolID(symID),
             nullptr /* context */,
             func,
@@ -252,12 +256,12 @@ Handle<JSObject> createReflectObject(Runtime &runtime) {
   dpf.configurable = 1;
   defineProperty(
       runtime,
-      reflect,
+      Handle<JSObject>{lv.reflect},
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime.getPredefinedStringHandle(Predefined::Reflect),
       dpf);
 
-  return reflect;
+  result.castAndSetHermesValue<JSObject>(lv.reflect.getHermesValue());
 }
 
 } // namespace vm

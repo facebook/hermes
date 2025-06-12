@@ -92,8 +92,13 @@ CallResult<HermesValue> bigintConstructor(void *, Runtime &runtime) {
     return runtime.raiseTypeError("BigInt is not a constructor");
   }
 
-  auto hArg0 = runtime.makeHandle(args.getArg(0));
-  auto prim = toPrimitive_RJS(runtime, hArg0, PreferredType::NUMBER);
+  struct : public Locals {
+    PinnedValue<> hArg0;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.hArg0 = args.getArg(0);
+  auto prim = toPrimitive_RJS(runtime, lv.hArg0, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(prim == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -102,7 +107,7 @@ CallResult<HermesValue> bigintConstructor(void *, Runtime &runtime) {
     return numberToBigInt(runtime, prim->getNumber());
   }
 
-  return toBigInt_RJS(runtime, hArg0);
+  return toBigInt_RJS(runtime, lv.hArg0);
 }
 
 CallResult<HermesValue> bigintPrototypeToLocaleString(
@@ -114,9 +119,15 @@ CallResult<HermesValue> bigintPrototypeToLocaleString(
     return ExecutionStatus::EXCEPTION;
   }
 
+  struct : public Locals {
+    PinnedValue<> bigintHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Call toString, as JSC does.
   // TODO(T120187933): Format string according to locale.
-  auto res = toString_RJS(runtime, runtime.makeHandle(*bigint));
+  lv.bigintHandle = *bigint;
+  auto res = toString_RJS(runtime, lv.bigintHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -133,7 +144,12 @@ CallResult<HermesValue> bigintPrototypeToString(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  Handle<BigIntPrimitive> xHandle = runtime.makeHandle(x->getBigInt());
+  struct : public Locals {
+    PinnedValue<BigIntPrimitive> xHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.xHandle.castAndSetHermesValue<BigIntPrimitive>(*x);
 
   // 2. If radix is undefined, let radixMV be 10.
   uint32_t radixMV = 10;
@@ -157,7 +173,8 @@ CallResult<HermesValue> bigintPrototypeToString(void *, Runtime &runtime) {
 
   // 5. If radixMV = 10, return ! ToString(x).
   // 6. Return the String representation of x.
-  return BigIntPrimitive::toString(runtime, xHandle, radixMV);
+  return BigIntPrimitive::toString(
+      runtime, Handle<BigIntPrimitive>{lv.xHandle}, radixMV);
 }
 
 CallResult<HermesValue> bigintPrototypeValueOf(void *, Runtime &runtime) {
@@ -181,8 +198,14 @@ CallResult<HermesValue> bigintTruncate(void *ctx, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  struct : public Locals {
+    PinnedValue<BigIntPrimitive> bigintHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.bigintHandle.castAndSetHermesValue<BigIntPrimitive>(*bigint);
   auto op = reinterpret_cast<TruncateOp>(ctx);
-  return (*op)(runtime, bits, runtime.makeHandle(bigint->getBigInt()));
+  return (*op)(runtime, bits, lv.bigintHandle);
 }
 
 } // namespace vm

@@ -17,23 +17,29 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createJSONObject(Runtime &runtime) {
+void createJSONObject(Runtime &runtime, MutableHandle<JSObject> result) {
   auto objRes = JSJSON::create(
       runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
   assert(
       objRes != ExecutionStatus::EXCEPTION && "unable to define JSON object");
-  auto json = runtime.makeHandle<JSJSON>(*objRes);
+
+  struct : public Locals {
+    PinnedValue<JSJSON> json;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.json.castAndSetHermesValue<JSJSON>(*objRes);
 
   defineMethod(
       runtime,
-      json,
+      lv.json,
       Predefined::getSymbolID(Predefined::parse),
       nullptr,
       jsonParse,
       2);
   defineMethod(
       runtime,
-      json,
+      lv.json,
       Predefined::getSymbolID(Predefined::stringify),
       nullptr,
       jsonStringify,
@@ -44,12 +50,12 @@ Handle<JSObject> createJSONObject(Runtime &runtime) {
   dpf.enumerable = 0;
   defineProperty(
       runtime,
-      json,
+      lv.json,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime.getPredefinedStringHandle(Predefined::JSON),
       dpf);
 
-  return json;
+  result.set(lv.json.get());
 }
 
 CallResult<HermesValue> jsonParse(void *, Runtime &runtime) {
@@ -58,9 +64,16 @@ CallResult<HermesValue> jsonParse(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.strHandle.castAndSetHermesValue<StringPrimitive>(res->getHermesValue());
   return runtimeJSONParse(
       runtime,
-      runtime.makeHandle(std::move(*res)),
+      lv.strHandle,
       Handle<Callable>::dyn_vmcast(args.getArgHandle(1)));
 }
 
