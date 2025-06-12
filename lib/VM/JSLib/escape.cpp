@@ -64,12 +64,18 @@ CallResult<HermesValue> escape(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto string = runtime.makeHandle(std::move(*res));
-  auto len = string->getStringLength();
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> string;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.string.castAndSetHermesValue<StringPrimitive>(res->getHermesValue());
+  auto len = lv.string->getStringLength();
   SmallU16String<32> R{};
   R.reserve(len);
 
-  for (char16_t c : StringPrimitive::createStringView(runtime, string)) {
+  for (char16_t c : StringPrimitive::createStringView(runtime, lv.string)) {
     if (noEscape(c)) {
       // Just append.
       R.push_back(c);
@@ -98,13 +104,19 @@ CallResult<HermesValue> unescape(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto strPrim = runtime.makeHandle(std::move(*res));
-  auto len = strPrim->getStringLength();
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strPrim;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.strPrim.castAndSetHermesValue<StringPrimitive>(res->getHermesValue());
+  auto len = lv.strPrim->getStringLength();
   SmallU16String<32> R{};
   R.reserve(len);
 
   uint32_t k = 0;
-  auto str = StringPrimitive::createStringView(runtime, strPrim);
+  auto str = StringPrimitive::createStringView(runtime, lv.strPrim);
   while (k < len) {
     char16_t c = str[k];
     // Resultant char to append to R.
@@ -174,10 +186,11 @@ static bool reservedURISet(char16_t c) {
 /// ES 5.1 15.1.3
 /// Encode abstract method, takes a string and URI encodes it.
 /// \param unescapedSet a function indicating which characters to not escape.
-static CallResult<Handle<StringPrimitive>> encode(
+static ExecutionStatus encode(
     Runtime &runtime,
     Handle<StringPrimitive> strHandle,
-    CharSetFn unescapedSet) {
+    CharSetFn unescapedSet,
+    MutableHandle<StringPrimitive> result) {
   auto str = StringPrimitive::createStringView(runtime, strHandle);
   auto strLen = str.length();
   SmallU16String<32> R{};
@@ -225,7 +238,9 @@ static CallResult<Handle<StringPrimitive>> encode(
   if (LLVM_UNLIKELY(finalStr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return runtime.makeHandle<StringPrimitive>(*finalStr);
+
+  result.castAndSetHermesValue<StringPrimitive>(*finalStr);
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<HermesValue> encodeURI(void *, Runtime &runtime) {
@@ -234,11 +249,22 @@ CallResult<HermesValue> encodeURI(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res =
-      encode(runtime, runtime.makeHandle(std::move(*strRes)), unescapedURISet);
-  if (res == ExecutionStatus::EXCEPTION)
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+    PinnedValue<StringPrimitive> resultHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.strHandle.castAndSetHermesValue<StringPrimitive>(strRes->getHermesValue());
+  if (encode(
+          runtime,
+          lv.strHandle,
+          unescapedURISet,
+          MutableHandle<StringPrimitive>{lv.resultHandle}) ==
+      ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  return res->getHermesValue();
+  return lv.resultHandle.getHermesValue();
 }
 
 CallResult<HermesValue> encodeURIComponent(void *, Runtime &runtime) {
@@ -247,20 +273,32 @@ CallResult<HermesValue> encodeURIComponent(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res =
-      encode(runtime, runtime.makeHandle(std::move(*strRes)), uriUnescaped);
-  if (res == ExecutionStatus::EXCEPTION)
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+    PinnedValue<StringPrimitive> resultHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.strHandle.castAndSetHermesValue<StringPrimitive>(strRes->getHermesValue());
+  if (encode(
+          runtime,
+          lv.strHandle,
+          uriUnescaped,
+          MutableHandle<StringPrimitive>{lv.resultHandle}) ==
+      ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  return res->getHermesValue();
+  return lv.resultHandle.getHermesValue();
 }
 
 /// ES 5.1 15.1.3
 /// Decode abstract method, takes a string and URI decodes it.
 /// \param reservedSet a function indicating which characters to not escape.
-static CallResult<Handle<StringPrimitive>> decode(
+static ExecutionStatus decode(
     Runtime &runtime,
     Handle<StringPrimitive> strHandle,
-    CharSetFn reservedSet) {
+    CharSetFn reservedSet,
+    MutableHandle<StringPrimitive> result) {
   auto str = StringPrimitive::createStringView(runtime, strHandle);
   auto strLen = str.length();
   SmallU16String<32> R{};
@@ -353,8 +391,13 @@ static CallResult<Handle<StringPrimitive>> decode(
     ++itr;
   }
 
-  return runtime.makeHandle<StringPrimitive>(
-      *StringPrimitive::create(runtime, R));
+  auto finalStr = StringPrimitive::create(runtime, R);
+  if (LLVM_UNLIKELY(finalStr == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  result.castAndSetHermesValue<StringPrimitive>(*finalStr);
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<HermesValue> decodeURI(void *, Runtime &runtime) {
@@ -363,11 +406,22 @@ CallResult<HermesValue> decodeURI(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto res =
-      decode(runtime, runtime.makeHandle(std::move(*strRes)), reservedURISet);
-  if (res == ExecutionStatus::EXCEPTION)
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+    PinnedValue<StringPrimitive> resultHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.strHandle.castAndSetHermesValue<StringPrimitive>(strRes->getHermesValue());
+  if (decode(
+          runtime,
+          lv.strHandle,
+          reservedURISet,
+          MutableHandle<StringPrimitive>{lv.resultHandle}) ==
+      ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  return res->getHermesValue();
+  return lv.resultHandle.getHermesValue();
 }
 
 CallResult<HermesValue> decodeURIComponent(void *, Runtime &runtime) {
@@ -376,11 +430,23 @@ CallResult<HermesValue> decodeURIComponent(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+    PinnedValue<StringPrimitive> resultHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.strHandle.castAndSetHermesValue<StringPrimitive>(strRes->getHermesValue());
   auto emptySet = [](char16_t) { return false; };
-  auto res = decode(runtime, runtime.makeHandle(std::move(*strRes)), emptySet);
-  if (res == ExecutionStatus::EXCEPTION)
+  if (decode(
+          runtime,
+          lv.strHandle,
+          emptySet,
+          MutableHandle<StringPrimitive>{lv.resultHandle}) ==
+      ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
-  return res->getHermesValue();
+  return lv.resultHandle.getHermesValue();
 }
 
 } // namespace vm

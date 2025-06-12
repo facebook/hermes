@@ -17,7 +17,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
+HermesValue createMapConstructor(Runtime &runtime) {
   auto mapPrototype = Handle<JSObject>::vmcast(&runtime.mapPrototype);
 
   // Map.prototype.xxx methods.
@@ -128,7 +128,7 @@ Handle<NativeConstructor> createMapConstructor(Runtime &runtime) {
       mapPrototype,
       0);
 
-  return cons;
+  return cons.getHermesValue();
 }
 
 /// Populate the Map with the contents of the source Map.
@@ -141,17 +141,20 @@ mapFromMapFastPath(Runtime &runtime, Handle<JSMap> target, Handle<JSMap> src) {
   // SmallHermesValue unbox/boxing. We should be able to make an
   // OrderedHashMap::clone that initializes based on an existing Map
   // and clones all entries directly somehow.
-  MutableHandle<> keyHandle{runtime};
-  MutableHandle<> valueHandle{runtime};
+  struct : public Locals {
+    PinnedValue<> keyHandle;
+    PinnedValue<> valueHandle;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   return JSMap::forEachNative(
       src,
       runtime,
-      [&target, &keyHandle, &valueHandle](
+      [&target, &lv](
           Runtime &runtime, Handle<HashMapEntry> entry) -> ExecutionStatus {
-        keyHandle = entry->key.unboxToHV(runtime);
-        valueHandle = entry->value.unboxToHV(runtime);
+        lv.keyHandle = entry->key.unboxToHV(runtime);
+        lv.valueHandle = entry->value.unboxToHV(runtime);
         if (LLVM_UNLIKELY(
-                JSMap::insert(target, runtime, keyHandle, valueHandle) ==
+                JSMap::insert(target, runtime, lv.keyHandle, lv.valueHandle) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -291,10 +294,16 @@ CallResult<HermesValue> mapPrototypeEntries(void *, Runtime &runtime) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.entries");
   }
-  auto iterator = runtime.makeHandle(JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
-  iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
-  return iterator.getHermesValue();
+  struct : public Locals {
+    PinnedValue<JSMapIterator> iterator;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.iterator.castAndSetHermesValue<JSMapIterator>(
+      JSMapIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype))
+          .getHermesValue());
+  lv.iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
+  return lv.iterator.getHermesValue();
 }
 
 CallResult<HermesValue> mapPrototypeForEach(void *, Runtime &runtime) {
@@ -342,10 +351,16 @@ CallResult<HermesValue> mapPrototypeKeys(void *, Runtime &runtime) {
         "Non-Map object called on Map.prototype.keys");
   }
 
-  auto iterator = runtime.makeHandle(JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
-  iterator->initializeIterator(runtime, selfHandle, IterationKind::Key);
-  return iterator.getHermesValue();
+  struct : public Locals {
+    PinnedValue<JSMapIterator> iterator;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.iterator.castAndSetHermesValue<JSMapIterator>(
+      JSMapIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype))
+          .getHermesValue());
+  lv.iterator->initializeIterator(runtime, selfHandle, IterationKind::Key);
+  return lv.iterator.getHermesValue();
 }
 
 // ES12 23.1.3.9 Map.prototype.set ( key, value )
@@ -386,18 +401,30 @@ CallResult<HermesValue> mapPrototypeValues(void *, Runtime &runtime) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.values");
   }
-  auto iterator = runtime.makeHandle(JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
-  iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
-  return iterator.getHermesValue();
+  struct : public Locals {
+    PinnedValue<JSMapIterator> iterator;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.iterator.castAndSetHermesValue<JSMapIterator>(
+      JSMapIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype))
+          .getHermesValue());
+  lv.iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
+  return lv.iterator.getHermesValue();
 }
 
-Handle<JSObject> createMapIteratorPrototype(Runtime &runtime) {
-  auto parentHandle = runtime.makeHandle(JSObject::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
+HermesValue createMapIteratorPrototype(Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<JSObject> parentHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.parentHandle.castAndSetHermesValue<JSObject>(
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype))
+          .getHermesValue());
   defineMethod(
       runtime,
-      parentHandle,
+      lv.parentHandle,
       Predefined::getSymbolID(Predefined::next),
       nullptr,
       mapIteratorPrototypeNext,
@@ -408,12 +435,12 @@ Handle<JSObject> createMapIteratorPrototype(Runtime &runtime) {
   dpf.enumerable = 0;
   defineProperty(
       runtime,
-      parentHandle,
+      lv.parentHandle,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime.getPredefinedStringHandle(Predefined::MapIterator),
       dpf);
 
-  return parentHandle;
+  return lv.parentHandle.getHermesValue();
 }
 
 CallResult<HermesValue> mapIteratorPrototypeNext(void *, Runtime &runtime) {

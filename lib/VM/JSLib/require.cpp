@@ -33,13 +33,22 @@ CallResult<HermesValue> runRequireCall(
     }
   }
 
+  struct : public Locals {
+    PinnedValue<JSObject> moduleHandle;
+    PinnedValue<JSObject> module;
+    PinnedValue<JSObject> exports;
+    PinnedValue<JSObject> requireFn;
+    PinnedValue<JSFunction> func;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   if (auto module = domain->getModule(runtime, cjsModuleOffset)) {
     assert(module.get() != nullptr);
+
     // Still initializing, so return the current state of module.exports.
+    lv.moduleHandle = std::move(module);
     auto res = JSObject::getNamed_RJS(
-        runtime.makeHandle(std::move(module)),
-        runtime,
-        Predefined::getSymbolID(Predefined::exports));
+        lv.moduleHandle, runtime, Predefined::getSymbolID(Predefined::exports));
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -48,20 +57,18 @@ CallResult<HermesValue> runRequireCall(
 
   GCScope gcScope{runtime};
   // If not initialized yet, start initializing and set the module object.
-  Handle<JSObject> module = runtime.makeHandle(JSObject::create(runtime));
-  Handle<JSObject> exports = runtime.makeHandle(JSObject::create(runtime));
+  lv.module = JSObject::create(runtime);
+  lv.exports = JSObject::create(runtime);
   if (LLVM_UNLIKELY(
           JSObject::putNamed_RJS(
-              module,
+              lv.module,
               runtime,
               Predefined::getSymbolID(Predefined::exports),
-              exports) == ExecutionStatus::EXCEPTION)) {
+              lv.exports) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  domain->setModule(cjsModuleOffset, runtime, module);
-
-  MutableHandle<JSObject> requireFn{runtime};
+  domain->setModule(cjsModuleOffset, runtime, lv.module);
   if (context) {
     // Slow path.
     // If the context is provided, then it will be used to resolve string
@@ -74,7 +81,7 @@ CallResult<HermesValue> runRequireCall(
     if (LLVM_UNLIKELY(funcRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    requireFn = vmcast<BoundFunction>(*funcRes);
+    lv.requireFn = vmcast<BoundFunction>(*funcRes);
 
     // Set the require.context property.
     PropertyFlags pf = PropertyFlags::defaultNewNamedPropertyFlags();
@@ -82,7 +89,7 @@ CallResult<HermesValue> runRequireCall(
     pf.configurable = 0;
     if (LLVM_UNLIKELY(
             JSObject::defineNewOwnProperty(
-                requireFn,
+                lv.requireFn,
                 runtime,
                 Predefined::getSymbolID(Predefined::context),
                 pf,
@@ -94,28 +101,29 @@ CallResult<HermesValue> runRequireCall(
     // The context must not be provided, and any actual calls to require()
     // should have been turned into requireFast() calls.
     // Calls to require() should throw.
-    requireFn = domain->getThrowingRequire(runtime).get();
+    lv.requireFn = domain->getThrowingRequire(runtime).get();
   }
 
   CodeBlock *codeBlock = domain->getRuntimeModule(runtime, cjsModuleOffset)
                              ->getCodeBlockMayAllocate(domain->getFunctionIndex(
                                  runtime, cjsModuleOffset));
 
-  Handle<JSFunction> func = runtime.makeHandle(JSFunction::create(
+  auto funcRes = JSFunction::create(
       runtime,
       domain,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
       Runtime::makeNullHandle<Environment>(),
-      codeBlock));
+      codeBlock);
+  lv.func = std::move(funcRes);
 
   if (LLVM_UNLIKELY(
           JSFunction::executeCall3(
-              func,
+              lv.func,
               runtime,
-              exports,
-              exports.getHermesValue(),
-              requireFn.getHermesValue(),
-              module.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
+              lv.exports,
+              lv.exports.getHermesValue(),
+              lv.requireFn.getHermesValue(),
+              lv.module.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
     // If initialization of the module throws, reset it so that calling require
     // again may succeed.
     domain->setModule(cjsModuleOffset, runtime, Runtime::getNullValue());
@@ -125,7 +133,7 @@ CallResult<HermesValue> runRequireCall(
   // The module.exports object may have been replaced during initialization,
   // so we have to run getNamed to ensure we pick up the changes.
   auto exportsRes = JSObject::getNamed_RJS(
-      module, runtime, Predefined::getSymbolID(Predefined::exports));
+      lv.module, runtime, Predefined::getSymbolID(Predefined::exports));
   if (LLVM_UNLIKELY(exportsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -197,18 +205,27 @@ CallResult<HermesValue> require(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
+  struct : public Locals {
+    PinnedValue<Domain> domain;
+    PinnedValue<StringPrimitive> dirname;
+    PinnedValue<StringPrimitive> target;
+    PinnedValue<StringPrimitive> dirnameHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto requireContext = args.vmcastThis<RequireContext>();
-  auto domain =
-      runtime.makeHandle(RequireContext::getDomain(runtime, *requireContext));
-  auto dirname =
-      runtime.makeHandle(RequireContext::getDirname(runtime, *requireContext));
+  lv.domain.castAndSetHermesValue<Domain>(HermesValue::encodeObjectValue(
+      RequireContext::getDomain(runtime, *requireContext)));
+  lv.dirname.castAndSetHermesValue<StringPrimitive>(
+      HermesValue::encodeStringValue(
+          RequireContext::getDirname(runtime, *requireContext)));
   auto targetRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(targetRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto target = runtime.makeHandle(std::move(*targetRes));
+  lv.target = std::move(*targetRes);
 
-  auto canonicalPath = canonicalizePath(runtime, dirname, target);
+  auto canonicalPath = canonicalizePath(runtime, lv.dirname, lv.target);
 
   auto targetStrRes = StringPrimitive::create(runtime, canonicalPath);
   if (LLVM_UNLIKELY(targetStrRes == ExecutionStatus::EXCEPTION)) {
@@ -223,10 +240,10 @@ CallResult<HermesValue> require(void *, Runtime &runtime) {
   Handle<SymbolID> targetID = *cr;
 
   // Find the relevant CJS module.
-  OptValue<uint32_t> cjsModuleOffset = domain->getCJSModuleOffset(*targetID);
+  OptValue<uint32_t> cjsModuleOffset = lv.domain->getCJSModuleOffset(*targetID);
   if (LLVM_UNLIKELY(!cjsModuleOffset)) {
     return runtime.raiseTypeError(
-        TwineChar16("Unable to find module: ") + target.get());
+        TwineChar16("Unable to find module: ") + lv.target.get());
   }
 
   llvh::sys::path::remove_filename(
@@ -235,12 +252,13 @@ CallResult<HermesValue> require(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(dirnameRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto dirnameHandle = runtime.makeHandle<StringPrimitive>(*dirnameRes);
+  lv.dirnameHandle.castAndSetHermesValue<StringPrimitive>(*dirnameRes);
 
   auto newRequireContext =
-      RequireContext::create(runtime, domain, dirnameHandle);
+      RequireContext::create(runtime, lv.domain, lv.dirnameHandle);
 
-  return runRequireCall(runtime, newRequireContext, domain, *cjsModuleOffset);
+  return runRequireCall(
+      runtime, newRequireContext, lv.domain, *cjsModuleOffset);
 }
 
 } // namespace vm

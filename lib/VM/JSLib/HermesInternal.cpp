@@ -61,8 +61,12 @@ CallResult<HermesValue> hermesInternalGetEpilogues(void *, Runtime &runtime) {
   if (outerResult == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> outer = runtime.makeHandle(std::move(*outerResult));
-  if (outer->setStorageEndIndex(outer, runtime, outerLen) ==
+  struct : public Locals {
+    PinnedValue<JSArray> outer;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.outer = std::move(*outerResult);
+  if (lv.outer->setStorageEndIndex(lv.outer, runtime, outerLen) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -77,10 +81,10 @@ CallResult<HermesValue> hermesInternalGetEpilogues(void *, Runtime &runtime) {
       auto ta = result.getValue();
       std::memcpy(ta->data(runtime), eps[i].begin(), innerLen);
       const auto shv = SmallHermesValue::encodeObjectValue(*ta, runtime);
-      JSArray::unsafeSetExistingElementAt(*outer, runtime, i, shv);
+      JSArray::unsafeSetExistingElementAt(*lv.outer, runtime, i, shv);
     }
   }
-  return HermesValue::encodeObjectValue(*outer);
+  return HermesValue::encodeObjectValue(*lv.outer);
 }
 
 /// Used for testing, determines how many live values
@@ -106,24 +110,29 @@ CallResult<HermesValue> hermesInternalGetInstrumentedStats(
     void *,
     Runtime &runtime) {
   GCScope gcScope(runtime);
-  auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
+  struct : public Locals {
+    PinnedValue<JSObject> resultHandle;
+    PinnedValue<> valHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.resultHandle = JSObject::create(runtime);
 
   /// Adds \p key with \p val to the resultHandle object.
   auto addToResultHandle = [&](llvh::StringRef key, double v) {
     GCScopeMarkerRAII marker{gcScope};
     HermesValue val = HermesValue::encodeUntrustedNumberValue(v);
-    Handle<> valHandle = runtime.makeHandle(val);
+    lv.valHandle = val;
     auto keySym = symbolForCStr(runtime, key.data());
     if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     return JSObject::defineNewOwnProperty(
-        resultHandle,
+        lv.resultHandle,
         runtime,
         **keySym,
         PropertyFlags::defaultNewNamedPropertyFlags(),
-        valHandle);
+        lv.valHandle);
   };
 
   /// Adds a property to resultHandle. \p key provides its name, and \p val,
@@ -151,7 +160,7 @@ CallResult<HermesValue> hermesInternalGetInstrumentedStats(
   ADD_PROP("js_markStackOverflows", info.numMarkStackOverflows);
 #undef ADD_PROP
 
-  return resultHandle.getHermesValue();
+  return lv.resultHandle.getHermesValue();
 }
 
 /// \return a static string summarising the presence and resolution type of
@@ -185,8 +194,12 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
     void *,
     Runtime &runtime) {
   GCScope gcScope(runtime);
-  auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
-  MutableHandle<> tmpHandle{runtime};
+  struct : public Locals {
+    PinnedValue<JSObject> resultHandle;
+    PinnedValue<> tmpHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.resultHandle = JSObject::create(runtime);
 
   /// Add a property \p value keyed under \p key to resultHandle.
   /// Return an ExecutionStatus.
@@ -196,7 +209,7 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
       return ExecutionStatus::EXCEPTION;
     }
     return JSObject::defineNewOwnProperty(
-        resultHandle,
+        lv.resultHandle,
         runtime,
         **keySym,
         PropertyFlags::defaultNewNamedPropertyFlags(),
@@ -204,41 +217,41 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
   };
 
 #ifdef HERMES_FACEBOOK_BUILD
-  tmpHandle =
+  lv.tmpHandle =
       HermesValue::encodeBoolValue(std::strstr(__FILE__, "hermes-snapshot"));
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "Snapshot VM") ==
+          addProperty(lv.tmpHandle, "Snapshot VM") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 #endif
 
-  tmpHandle =
+  lv.tmpHandle =
       HermesValue::encodeTrustedNumberValue(::hermes::hbc::BYTECODE_VERSION);
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "Bytecode Version") ==
+          addProperty(lv.tmpHandle, "Bytecode Version") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  tmpHandle = HermesValue::encodeBoolValue(true);
+  lv.tmpHandle = HermesValue::encodeBoolValue(true);
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "Static Hermes") ==
+          addProperty(lv.tmpHandle, "Static Hermes") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  tmpHandle = HermesValue::encodeBoolValue(runtime.builtinsAreFrozen());
+  lv.tmpHandle = HermesValue::encodeBoolValue(runtime.builtinsAreFrozen());
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "Builtins Frozen") ==
+          addProperty(lv.tmpHandle, "Builtins Frozen") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  tmpHandle =
+  lv.tmpHandle =
       HermesValue::encodeTrustedNumberValue(runtime.getVMExperimentFlags());
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "VM Experiments") ==
+          addProperty(lv.tmpHandle, "VM Experiments") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -257,9 +270,9 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
   if (LLVM_UNLIKELY(buildModeRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  tmpHandle = *buildModeRes;
+  lv.tmpHandle = *buildModeRes;
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "Build") == ExecutionStatus::EXCEPTION)) {
+          addProperty(lv.tmpHandle, "Build") == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -269,9 +282,9 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
   if (LLVM_UNLIKELY(gcKindRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  tmpHandle = *gcKindRes;
+  lv.tmpHandle = *gcKindRes;
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "GC") == ExecutionStatus::EXCEPTION)) {
+          addProperty(lv.tmpHandle, "GC") == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -281,9 +294,9 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
   if (LLVM_UNLIKELY(relVerRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  tmpHandle = *relVerRes;
+  lv.tmpHandle = *relVerRes;
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "OSS Release Version") ==
+          addProperty(lv.tmpHandle, "OSS Release Version") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -297,9 +310,9 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
 #endif
       ;
 
-  tmpHandle = HermesValue::encodeBoolValue(debuggerEnabled);
+  lv.tmpHandle = HermesValue::encodeBoolValue(debuggerEnabled);
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "Debugger Enabled") ==
+          addProperty(lv.tmpHandle, "Debugger Enabled") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -310,14 +323,14 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
   if (LLVM_UNLIKELY(cjsModuleModeRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  tmpHandle = *cjsModuleModeRes;
+  lv.tmpHandle = *cjsModuleModeRes;
   if (LLVM_UNLIKELY(
-          addProperty(tmpHandle, "CommonJS Modules") ==
+          addProperty(lv.tmpHandle, "CommonJS Modules") ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return resultHandle.getHermesValue();
+  return lv.resultHandle.getHermesValue();
 }
 
 #ifdef HERMESVM_PLATFORM_LOGGING
@@ -473,13 +486,17 @@ CallResult<HermesValue> hermesInternalGetFunctionLocation(
     return runtime.raiseTypeError(
         "Argument to HermesInternal.getFunctionLocation must be callable");
   }
-  auto resultHandle = runtime.makeHandle(JSObject::create(runtime));
-  MutableHandle<> tmpHandle{runtime};
+  struct : public Locals {
+    PinnedValue<JSObject> resultHandle;
+    PinnedValue<> tmpHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.resultHandle = JSObject::create(runtime);
 
   auto codeBlock = getLeafCodeBlock(callable, runtime);
   bool isNative = !codeBlock;
   auto res = JSObject::defineOwnProperty(
-      resultHandle,
+      lv.resultHandle,
       runtime,
       Predefined::getSymbolID(Predefined::isNative),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
@@ -491,45 +508,45 @@ CallResult<HermesValue> hermesInternalGetFunctionLocation(
     OptValue<hbc::DebugSourceLocation> location =
         codeBlock->getSourceLocationForFunction();
     if (location) {
-      tmpHandle = HermesValue::encodeTrustedNumberValue(location->line);
+      lv.tmpHandle = HermesValue::encodeTrustedNumberValue(location->line);
       res = JSObject::defineOwnProperty(
-          resultHandle,
+          lv.resultHandle,
           runtime,
           Predefined::getSymbolID(Predefined::lineNumber),
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          tmpHandle);
+          lv.tmpHandle);
       assert(res != ExecutionStatus::EXCEPTION && "Failed to set lineNumber");
       (void)res;
 
-      tmpHandle = HermesValue::encodeTrustedNumberValue(location->column);
+      lv.tmpHandle = HermesValue::encodeTrustedNumberValue(location->column);
       res = JSObject::defineOwnProperty(
-          resultHandle,
+          lv.resultHandle,
           runtime,
           Predefined::getSymbolID(Predefined::columnNumber),
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          tmpHandle);
+          lv.tmpHandle);
       assert(res != ExecutionStatus::EXCEPTION && "Failed to set columnNumber");
       (void)res;
     } else {
-      tmpHandle = HermesValue::encodeTrustedNumberValue(
+      lv.tmpHandle = HermesValue::encodeTrustedNumberValue(
           codeBlock->getRuntimeModule()->getBytecode()->getSegmentID());
       res = JSObject::defineOwnProperty(
-          resultHandle,
+          lv.resultHandle,
           runtime,
           Predefined::getSymbolID(Predefined::segmentID),
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          tmpHandle);
+          lv.tmpHandle);
       assert(res != ExecutionStatus::EXCEPTION && "Failed to set segmentID");
       (void)res;
 
-      tmpHandle =
+      lv.tmpHandle =
           HermesValue::encodeTrustedNumberValue(codeBlock->getVirtualOffset());
       res = JSObject::defineOwnProperty(
-          resultHandle,
+          lv.resultHandle,
           runtime,
           Predefined::getSymbolID(Predefined::virtualOffset),
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          tmpHandle);
+          lv.tmpHandle);
       assert(
           res != ExecutionStatus::EXCEPTION && "Failed to set virtualOffset");
       (void)res;
@@ -539,18 +556,18 @@ CallResult<HermesValue> hermesInternalGetFunctionLocation(
     if (LLVM_UNLIKELY(fileNameRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    tmpHandle = *fileNameRes;
+    lv.tmpHandle = *fileNameRes;
     res = JSObject::defineOwnProperty(
-        resultHandle,
+        lv.resultHandle,
         runtime,
         Predefined::getSymbolID(Predefined::fileName),
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        tmpHandle);
+        lv.tmpHandle);
     assert(res != ExecutionStatus::EXCEPTION && "Failed to set fileName");
     (void)res;
   }
-  JSObject::preventExtensions(*resultHandle);
-  return resultHandle.getHermesValue();
+  JSObject::preventExtensions(*lv.resultHandle);
+  return lv.resultHandle.getHermesValue();
 }
 
 /// \code
@@ -619,12 +636,18 @@ CallResult<HermesValue> hermesInternalFuzzilli(void *, Runtime &runtime) {
   // This file descriptor is being opened by Fuzzilli
   constexpr int REPRL_DWFD = 103; // Data write file decriptor
 
+  struct : public Locals {
+    PinnedValue<StringPrimitive> operation;
+    PinnedValue<StringPrimitive> print;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto operationRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(operationRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto operation = StringPrimitive::createStringView(
-      runtime, runtime.makeHandle(std::move(*operationRes)));
+  lv.operation = std::move(*operationRes);
+  auto operation = StringPrimitive::createStringView(runtime, lv.operation);
 
   if (operation.equals(createUTF16Ref(u"FUZZILLI_CRASH"))) {
     auto crashTypeRes = toIntegerOrInfinity(runtime, args.getArgHandle(1));
@@ -655,8 +678,8 @@ CallResult<HermesValue> hermesInternalFuzzilli(void *, Runtime &runtime) {
     if (LLVM_UNLIKELY(printRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto print = StringPrimitive::createStringView(
-        runtime, runtime.makeHandle(std::move(*printRes)));
+    lv.print = std::move(*printRes);
+    auto print = StringPrimitive::createStringView(runtime, lv.print);
 
     vm::SmallU16String<32> allocator;
     std::string outputString;
@@ -686,11 +709,16 @@ static CallResult<HermesValue> hermesInternalIsLazy(void *, Runtime &runtime) {
   return HermesValue::encodeBoolValue(codeBlock->isLazy());
 }
 
-Handle<JSObject> createHermesInternalObject(
+HermesValue createHermesInternalObject(
     Runtime &runtime,
     const JSLibFlags &flags) {
   namespace P = Predefined;
-  Handle<JSObject> intern = runtime.makeHandle(JSObject::create(runtime));
+  struct : public Locals {
+    PinnedValue<JSObject> intern;
+    PinnedValue<> propRes;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.intern = JSObject::create(runtime);
   GCScope gcScope{runtime};
 
   DefinePropertyFlags constantDPF =
@@ -703,7 +731,7 @@ Handle<JSObject> createHermesInternalObject(
       [&](Predefined::Str symID, NativeFunctionPtr func, uint8_t count = 0) {
         (void)defineMethod(
             runtime,
-            intern,
+            lv.intern,
             Predefined::getSymbolID(symID),
             Predefined::getSymbolID(symID),
             nullptr /* context */,
@@ -719,7 +747,7 @@ Handle<JSObject> createHermesInternalObject(
             runtime.getIdentifierTable().getSymbolHandle(runtime, ref));
         (void)defineMethod(
             runtime,
-            intern,
+            lv.intern,
             *symHandle,
             *symHandle,
             nullptr /* context */,
@@ -743,12 +771,13 @@ Handle<JSObject> createHermesInternalObject(
   assert(
       propRes != ExecutionStatus::EXCEPTION && !(*propRes)->isUndefined() &&
       "Failed to get String.prototype.concat.");
+  lv.propRes = std::move(*propRes);
   auto putRes = JSObject::defineOwnProperty(
-      intern,
+      lv.intern,
       runtime,
       Predefined::getSymbolID(Predefined::concat),
       constantDPF,
-      runtime.makeHandle(std::move(*propRes)));
+      lv.propRes);
   assert(
       putRes != ExecutionStatus::EXCEPTION && *putRes &&
       "Failed to set HermesInternal.concat.");
@@ -773,8 +802,8 @@ Handle<JSObject> createHermesInternalObject(
 
   // All functions are known to be safe can be defined above this flag check.
   if (!flags.enableHermesInternal) {
-    JSObject::preventExtensions(*intern);
-    return intern;
+    JSObject::preventExtensions(*lv.intern);
+    return lv.intern.getHermesValue();
   }
 
   // HermesInternal functions that are not necessarily required but are
@@ -791,7 +820,7 @@ Handle<JSObject> createHermesInternalObject(
     // overridden for synth trace case. See TracingRuntime.cpp.
     (void)defineMethod(
         runtime,
-        intern,
+        lv.intern,
         Predefined::getSymbolID(P::getInstrumentedStats),
         Predefined::getSymbolID(P::getInstrumentedStats),
         nullptr /* context */,
@@ -817,9 +846,9 @@ Handle<JSObject> createHermesInternalObject(
     defineInternMethodAndSymbol("getCallStack", hermesInternalGetCallStack, 0);
   }
 
-  JSObject::preventExtensions(*intern);
+  JSObject::preventExtensions(*lv.intern);
 
-  return intern;
+  return lv.intern.getHermesValue();
 }
 
 } // namespace vm

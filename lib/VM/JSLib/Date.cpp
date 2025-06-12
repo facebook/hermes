@@ -422,6 +422,12 @@ CallResult<HermesValue> dateConstructor_RJS(void *, Runtime &runtime) {
         StringPrimitive::create(runtime, str));
   }
 
+  struct : public Locals {
+    PinnedValue<> primitiveValue;
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   uint32_t argCount = args.getArgCount();
   double finalDate;
   if (argCount == 0) {
@@ -439,16 +445,16 @@ CallResult<HermesValue> dateConstructor_RJS(void *, Runtime &runtime) {
       if (res == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto v = runtime.makeHandle(res.getValue());
+      lv.primitiveValue = res.getValue();
 
-      if (v->isString()) {
+      if (lv.primitiveValue->isString()) {
         // Call the String -> Date parsing function.
         finalDate = timeClip(parseDate(
             StringPrimitive::createStringView(
-                runtime, Handle<StringPrimitive>::vmcast(v)),
+                runtime, Handle<StringPrimitive>::vmcast(&lv.primitiveValue)),
             runtime.getJSLibStorage()->localTimeOffsetCache));
       } else {
-        auto numRes = toNumber_RJS(runtime, v);
+        auto numRes = toNumber_RJS(runtime, lv.primitiveValue);
         if (numRes == ExecutionStatus::EXCEPTION) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -475,10 +481,6 @@ CallResult<HermesValue> dateConstructor_RJS(void *, Runtime &runtime) {
     return JSDate::create(runtime, finalDate, runtime.datePrototype)
         .getHermesValue();
   }
-  struct : public Locals {
-    PinnedValue<JSObject> selfParent;
-  } lv;
-  LocalsRAII lraii(runtime, &lv);
   CallResult<PseudoHandle<JSObject>> thisParentRes =
       NativeConstructor::parentForNewThis_RJS(
           runtime,
@@ -493,13 +495,18 @@ CallResult<HermesValue> dateConstructor_RJS(void *, Runtime &runtime) {
 
 CallResult<HermesValue> dateParse_RJS(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  struct : public Locals {
+    PinnedValue<StringPrimitive> stringValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  lv.stringValue = std::move(*res);
   return HermesValue::encodeTrustedNumberValue(parseDate(
-      StringPrimitive::createStringView(
-          runtime, runtime.makeHandle(std::move(*res))),
+      StringPrimitive::createStringView(runtime, lv.stringValue),
       runtime.getJSLibStorage()->localTimeOffsetCache));
 }
 
@@ -1058,13 +1065,19 @@ CallResult<HermesValue> datePrototypeSetYear_RJS(void *ctx, Runtime &runtime) {
 
 CallResult<HermesValue> datePrototypeToJSON_RJS(void *ctx, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> propValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto selfHandle = args.getThisHandle();
   auto objRes = toObject(runtime, selfHandle);
   if (objRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
-  auto tvRes = toPrimitive_RJS(runtime, O, PreferredType::NUMBER);
+  lv.O = vmcast<JSObject>(objRes.getValue());
+  auto tvRes = toPrimitive_RJS(runtime, lv.O, PreferredType::NUMBER);
   if (tvRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1073,17 +1086,17 @@ CallResult<HermesValue> datePrototypeToJSON_RJS(void *ctx, Runtime &runtime) {
     return HermesValue::encodeNullValue();
   }
   auto propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::toISOString));
+      lv.O, runtime, Predefined::getSymbolID(Predefined::toISOString));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<Callable> toISO =
-      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
+  lv.propValue = std::move(*propRes);
+  auto toISO = Handle<Callable>::dyn_vmcast(Handle<>{lv.propValue});
   if (!toISO.get()) {
     return runtime.raiseTypeError(
         "toISOString is not callable in Date.prototype.toJSON()");
   }
-  return Callable::executeCall0(toISO, runtime, O).toCallResultHermesValue();
+  return Callable::executeCall0(toISO, runtime, lv.O).toCallResultHermesValue();
 }
 
 CallResult<HermesValue> datePrototypeSymbolToPrimitive(

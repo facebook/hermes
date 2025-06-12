@@ -84,11 +84,14 @@ Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
 
-  MutableHandle<> numberValueHandle{runtime};
+  struct : public Locals {
+    PinnedValue<> numberValueHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   auto setNumberValueProperty = [&](SymbolID name, double value) {
-    numberValueHandle = HermesValue::encodeTrustedNumberValue(value);
+    lv.numberValueHandle = HermesValue::encodeTrustedNumberValue(value);
     auto result = JSObject::defineOwnProperty(
-        cons, runtime, name, constantDPF, numberValueHandle);
+        cons, runtime, name, constantDPF, lv.numberValueHandle);
     assert(
         result != ExecutionStatus::EXCEPTION &&
         "defineOwnProperty() failed on a new object");
@@ -341,9 +344,12 @@ CallResult<HermesValue> numberPrototypeToString(void *, Runtime &runtime) {
   }
 
   // Radix 10 and non-finite values simply call toString.
-  auto resultRes = toString_RJS(
-      runtime,
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(number)));
+  struct : public Locals {
+    PinnedValue<> numberHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.numberHandle = HermesValue::encodeTrustedNumberValue(number);
+  auto resultRes = toString_RJS(runtime, lv.numberHandle);
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -373,9 +379,12 @@ CallResult<HermesValue> numberPrototypeToLocaleString(
 
   // Call toString, as JSC does.
   // TODO: Format string according to locale.
-  auto res = toString_RJS(
-      runtime,
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(number)));
+  struct : public Locals {
+    PinnedValue<> numberHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.numberHandle = HermesValue::encodeTrustedNumberValue(number);
+  auto res = toString_RJS(runtime, lv.numberHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -423,8 +432,12 @@ CallResult<HermesValue> numberPrototypeToFixed(void *, Runtime &runtime) {
   // Account for very large numbers.
   if (std::abs(x) >= 1e21) {
     // toString(x) if abs(x) >= 10^21.
-    auto resultRes = toString_RJS(
-        runtime, runtime.makeHandle(HermesValue::encodeTrustedNumberValue(x)));
+    struct : public Locals {
+      PinnedValue<> xHandle;
+    } lv;
+    LocalsRAII lraii(runtime, &lv);
+    lv.xHandle = HermesValue::encodeTrustedNumberValue(x);
+    auto resultRes = toString_RJS(runtime, lv.xHandle);
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -649,8 +662,12 @@ CallResult<HermesValue> numberPrototypeToPrecision(void *, Runtime &runtime) {
   }
 
   if (args.getArg(0).isUndefined()) {
-    auto xHandle = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(x));
-    auto resultRes = toString_RJS(runtime, xHandle);
+    struct : public Locals {
+      PinnedValue<> xHandle;
+    } lv;
+    LocalsRAII lraii(runtime, &lv);
+    lv.xHandle = HermesValue::encodeTrustedNumberValue(x);
+    auto resultRes = toString_RJS(runtime, lv.xHandle);
     if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

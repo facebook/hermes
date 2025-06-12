@@ -21,23 +21,30 @@ CallResult<HermesValue> asyncFunctionConstructor(void *, Runtime &runtime) {
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Async);
 }
 
-Handle<NativeConstructor> createAsyncFunctionConstructor(Runtime &runtime) {
+HermesValue createAsyncFunctionConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype);
 
   /// 26.7.2 Properties of the AsyncFunction Constructor
   /// has a [[Prototype]] internal slot whose value is %Function%.
-  auto cons = runtime.makeHandle(NativeConstructor::create(
+  auto consRes = NativeConstructor::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionConstructor),
       nullptr,
       asyncFunctionConstructor,
-      1));
+      1);
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.cons.castAndSetHermesValue<NativeConstructor>(consRes.getHermesValue());
 
   /// has a "name" property whose value is "AsyncFunction".
   /// 26.7.2.1 AsyncFunction.length
   /// 26.7.2.2 AsyncFunction.prototype
   auto st = Callable::defineNameLengthAndPrototype(
-      cons,
+      lv.cons,
       runtime,
       Predefined::getSymbolID(Predefined::AsyncFunction),
       1,
@@ -59,7 +66,7 @@ Handle<NativeConstructor> createAsyncFunctionConstructor(Runtime &runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::constructor),
-      cons,
+      lv.cons,
       dpf);
 
   /// 26.7.3.2 AsyncFunction.prototype [ @@toStringTag ]
@@ -71,7 +78,7 @@ Handle<NativeConstructor> createAsyncFunctionConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::AsyncFunction),
       dpf);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 } // namespace vm

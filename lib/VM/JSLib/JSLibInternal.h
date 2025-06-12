@@ -39,10 +39,19 @@ namespace vm {
 /// \param prototypeObjectHandle the object instance to set in the 'prototype'
 ///   property of the constructor.
 /// \param paramCount the number of declared constructor parameters
-/// The second version takes an additional parameter:
 /// \param constructorProtoObjectHandle the prototype to set for the
 ///   constructor function
+/// \param constructorOut a mutable handle to store the created constructor
 /// \return the created constructor function.
+void defineSystemConstructor(
+    Runtime &runtime,
+    SymbolID name,
+    NativeFunctionPtr nativeFunctionPtr,
+    Handle<JSObject> prototypeObjectHandle,
+    Handle<JSObject> constructorProtoObjectHandle,
+    unsigned paramCount,
+    MutableHandle<NativeConstructor> constructorOut);
+
 Handle<NativeConstructor> defineSystemConstructor(
     Runtime &runtime,
     SymbolID name,
@@ -184,7 +193,7 @@ CallResult<HermesValue> directObjectPrototypeToString(
 /// Create and initialize the global Error constructor, as well as all
 /// the native error constructors. Populate the instance and prototype methods.
 #define ALL_ERROR_TYPE(name) \
-  Handle<NativeConstructor> create##name##Constructor(Runtime &runtime);
+  HermesValue create##name##Constructor(Runtime &runtime);
 #include "hermes/VM/NativeErrorTypes.def"
 
 /// Populate the internal CallSite.prototype.
@@ -203,7 +212,7 @@ Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime);
 /// Create and initialize the global Function constructor. Populate the methods
 /// of Function and Function.prototype.
 /// \return the global Function constructor.
-Handle<NativeConstructor> createFunctionConstructor(Runtime &runtime);
+HermesValue createFunctionConstructor(Runtime &runtime);
 
 /// Create and initialize the global Number constructor. Populate the methods
 /// of Number and Number.prototype.
@@ -226,14 +235,14 @@ Handle<JSObject> createMathObject(Runtime &runtime);
 
 /// Create and initialize the global Proxy constructor, populating its methods.
 /// \return the global Proxy constructor.
-Handle<NativeConstructor> createProxyConstructor(Runtime &runtime);
+HermesValue createProxyConstructor(Runtime &runtime);
 
 // Forward declaration.
 class JSLibFlags;
 
 /// Create and initialize the global %HermesInternal object, populating its
 /// value and function properties.
-Handle<JSObject> createHermesInternalObject(
+HermesValue createHermesInternalObject(
     Runtime &runtime,
     const JSLibFlags &jsLibFlags);
 
@@ -247,11 +256,11 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime);
 
 /// Create and initialize the global JSON object, populating its value
 /// and function properties.
-Handle<JSObject> createJSONObject(Runtime &runtime);
+void createJSONObject(Runtime &runtime, MutableHandle<JSObject> result);
 
 /// Create and initialize the global Reflect object, populating its value
 /// and function properties.
-Handle<JSObject> createReflectObject(Runtime &runtime);
+void createReflectObject(Runtime &runtime, MutableHandle<JSObject> result);
 
 /// Create and initialize the global RegExp constructor. Populate the methods
 /// of RegExp and RegExp.prototype.
@@ -260,8 +269,11 @@ Handle<NativeConstructor> createRegExpConstructor(Runtime &runtime);
 
 /// ES6.0 21.2.3.2.3 Runtime Semantics: RegExpCreate ( P, F )
 /// Creates a new RegExp with provided pattern \p P, and flags \p F.
-CallResult<Handle<JSRegExp>>
-regExpCreate(Runtime &runtime, Handle<> P, Handle<> F);
+ExecutionStatus regExpCreate(
+    Runtime &runtime,
+    Handle<> P,
+    Handle<> F,
+    MutableHandle<JSRegExp> regExpOut);
 
 /// ES6.0 21.2.5.2.1
 /// Implemented in RegExp.cpp
@@ -323,7 +335,7 @@ advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
 /// \return the global Array constructor.
 Handle<NativeConstructor> createArrayConstructor(Runtime &runtime);
 
-Handle<NativeConstructor> createArrayBufferConstructor(Runtime &runtime);
+HermesValue createArrayBufferConstructor(Runtime &runtime);
 
 Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime);
 
@@ -343,10 +355,10 @@ Handle<JSObject> createSetIteratorPrototype(Runtime &runtime);
 
 /// Create and initialize the global Map constructor. Populate the methods
 /// of Map.prototype.
-Handle<NativeConstructor> createMapConstructor(Runtime &runtime);
+HermesValue createMapConstructor(Runtime &runtime);
 
 /// Create MapIterator.prototype and populate methods.
-Handle<JSObject> createMapIteratorPrototype(Runtime &runtime);
+HermesValue createMapIteratorPrototype(Runtime &runtime);
 
 /// Create the WeakMap constructor and populate methods.
 Handle<NativeConstructor> createWeakMapConstructor(Runtime &runtime);
@@ -361,10 +373,10 @@ Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime);
 Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime);
 
 /// Create the GeneratorFunction constructor and populate methods.
-Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime);
+HermesValue createGeneratorFunctionConstructor(Runtime &runtime);
 
 /// Create the AsyncFunction constructor and populate methods.
-Handle<NativeConstructor> createAsyncFunctionConstructor(Runtime &runtime);
+HermesValue createAsyncFunctionConstructor(Runtime &runtime);
 
 /// Create the TextEncoder constructor and populate methods.
 Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime);

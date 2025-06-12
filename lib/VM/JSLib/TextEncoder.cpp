@@ -169,12 +169,18 @@ CallResult<HermesValue> textEncoderPrototypeEncode(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> string = runtime.makeHandle(std::move(*strRes));
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> string;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.string.castAndSetHermesValue<StringPrimitive>(strRes->getHermesValue());
 
   // If input string is empty, then the function can return early. This also
   // avoids having to check later before calling std::memcpy to avoid undefined
   // behavior.
-  if (LLVM_UNLIKELY(string->getStringLength() == 0)) {
+  if (LLVM_UNLIKELY(lv.string->getStringLength() == 0)) {
     auto result = Uint8Array::allocate(runtime);
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -182,23 +188,23 @@ CallResult<HermesValue> textEncoderPrototypeEncode(void *, Runtime &runtime) {
     return result->getHermesValue();
   }
 
-  if (string->isASCII()) {
+  if (lv.string->isASCII()) {
     // ASCII string can trivially be converted to UTF-8 because ASCII is a
     // strict subset.
-    auto result = Uint8Array::allocate(runtime, string->getStringLength());
+    auto result = Uint8Array::allocate(runtime, lv.string->getStringLength());
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     Handle<JSTypedArrayBase> typedArray = result.getValue();
-    llvh::ArrayRef<char> strRef = string->getStringRef<char>();
+    llvh::ArrayRef<char> strRef = lv.string->getStringRef<char>();
 
     std::memcpy(
-        typedArray->data(runtime), strRef.data(), string->getStringLength());
+        typedArray->data(runtime), strRef.data(), lv.string->getStringLength());
     return typedArray.getHermesValue();
   } else {
     // Convert UTF-16 to UTF-8
-    llvh::ArrayRef<char16_t> strRef = string->getStringRef<char16_t>();
+    llvh::ArrayRef<char16_t> strRef = lv.string->getStringRef<char16_t>();
     std::string converted;
     bool success = convertUTF16ToUTF8WithReplacements(converted, strRef);
     if (LLVM_UNLIKELY(!success)) {
@@ -242,7 +248,16 @@ CallResult<HermesValue> textEncoderPrototypeEncodeInto(
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> string = runtime.makeHandle(std::move(*strRes));
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> string;
+    PinnedValue<JSObject> obj;
+    PinnedValue<> numReadHandle;
+    PinnedValue<> numWrittenHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.string.castAndSetHermesValue<StringPrimitive>(strRes->getHermesValue());
 
   Handle<Uint8Array> typedArray = args.dyncastArg<Uint8Array>(1);
   if (LLVM_UNLIKELY(!typedArray)) {
@@ -255,22 +270,22 @@ CallResult<HermesValue> textEncoderPrototypeEncodeInto(
   }
 
   PseudoHandle<JSObject> objRes = JSObject::create(runtime, 2);
-  Handle<JSObject> obj = runtime.makeHandle(objRes.get());
+  lv.obj = std::move(objRes);
 
   uint32_t numRead = 0;
   uint32_t numWritten = 0;
 
-  if (LLVM_UNLIKELY(string->getStringLength() == 0)) {
+  if (LLVM_UNLIKELY(lv.string->getStringLength() == 0)) {
     numRead = 0;
     numWritten = 0;
-  } else if (string->isASCII()) {
+  } else if (lv.string->isASCII()) {
     // ASCII string can trivially be converted to UTF-8 because ASCII is a
     // strict subset. However, since the output array size is provided by the
     // caller, we will only copy as much length as provided.
-    llvh::ArrayRef<char> strRef = string->getStringRef<char>();
+    llvh::ArrayRef<char> strRef = lv.string->getStringRef<char>();
 
     uint32_t copiedLength =
-        std::min(string->getStringLength(), typedArray->getLength());
+        std::min(lv.string->getStringLength(), typedArray->getLength());
 
     std::memcpy(typedArray->begin(runtime), strRef.data(), copiedLength);
 
@@ -278,7 +293,7 @@ CallResult<HermesValue> textEncoderPrototypeEncodeInto(
     numWritten = copiedLength;
   } else {
     // Convert UTF-16 to the given Uint8Array
-    llvh::ArrayRef<char16_t> strRef = string->getStringRef<char16_t>();
+    llvh::ArrayRef<char16_t> strRef = lv.string->getStringRef<char16_t>();
     std::pair<uint32_t, uint32_t> result =
         convertUTF16ToUTF8BufferWithReplacements(
             llvh::makeMutableArrayRef<uint8_t>(
@@ -290,32 +305,30 @@ CallResult<HermesValue> textEncoderPrototypeEncodeInto(
 
   // Construct the result JSObject containing information about how much data
   // was converted
-  auto numReadHandle =
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(numRead));
-  auto numWrittenHandle =
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(numWritten));
+  lv.numReadHandle = HermesValue::encodeTrustedNumberValue(numRead);
+  lv.numWrittenHandle = HermesValue::encodeTrustedNumberValue(numWritten);
 
   auto res = JSObject::defineNewOwnProperty(
-      obj,
+      lv.obj,
       runtime,
       Predefined::getSymbolID(Predefined::read),
       PropertyFlags::defaultNewNamedPropertyFlags(),
-      numReadHandle);
+      lv.numReadHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
   res = JSObject::defineNewOwnProperty(
-      obj,
+      lv.obj,
       runtime,
       Predefined::getSymbolID(Predefined::written),
       PropertyFlags::defaultNewNamedPropertyFlags(),
-      numWrittenHandle);
+      lv.numWrittenHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return obj.getHermesValue();
+  return lv.obj.getHermesValue();
 }
 
 } // namespace vm

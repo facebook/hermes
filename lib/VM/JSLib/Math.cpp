@@ -383,13 +383,16 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
 
-  MutableHandle<> numberHandle{runtime};
+  struct : public Locals {
+    PinnedValue<> numberHandle;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
 
   // ES5.1 15.8.1, Math value properties
   auto setMathValueProperty = [&](SymbolID name, double value) {
-    numberHandle = HermesValue::encodeTrustedNumberValue(value);
+    lv.numberHandle = HermesValue::encodeTrustedNumberValue(value);
     auto result = JSObject::defineOwnProperty(
-        math, runtime, name, constantDPF, numberHandle);
+        math, runtime, name, constantDPF, lv.numberHandle);
     assert(
         result != ExecutionStatus::EXCEPTION &&
         "defineOwnProperty() failed on a new object");
