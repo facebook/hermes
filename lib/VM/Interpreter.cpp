@@ -626,8 +626,11 @@ CallResult<HermesValue> Interpreter::interpretFunction(
   });
 
   GCScope gcScope(runtime);
-  // Avoid allocating a handle dynamically by reusing this one.
-  MutableHandle<> tmpHandle(runtime);
+  struct : public Locals {
+    PinnedValue<> tmp;
+  } lv;
+  lv.tmp.clear();
+  LocalsRAII lvraii(runtime, &lv);
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
   CallResult<Handle<Arguments>> resArgs{ExecutionStatus::EXCEPTION};
@@ -637,7 +640,7 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
   // Mark the gcScope so we can clear all allocated handles.
   // Remember how many handles the scope has so we can clear them in the loop.
-  static constexpr unsigned KEEP_HANDLES = 1;
+  static constexpr unsigned KEEP_HANDLES = 0;
   assert(
       gcScope.getHandleCountDbg() == KEEP_HANDLES &&
       "scope has unexpected number of handles");
@@ -703,7 +706,7 @@ tailCall:
     HERMES_SLOW_ASSERT(                                                      \
         gcScope.getHandleCountDbg() == KEEP_HANDLES &&                       \
         "unaccounted handles were created");                                 \
-    HERMES_SLOW_ASSERT(tmpHandle->isUndefined() && "tmpHandle not cleared"); \
+    HERMES_SLOW_ASSERT(lv.tmp.isCleared() && "lv.tmp not cleared");          \
     RECORD_OPCODE_START_TIME;                                                \
     INC_OPCODE_COUNT;                                                        \
     if (EnableCrashTrace) {                                                  \
@@ -1131,7 +1134,7 @@ tailCall:
             O2REG(CoerceThisNS).isNull() || O2REG(CoerceThisNS).isUndefined()) {
           O1REG(CoerceThisNS) = runtime.global_.getHermesValue();
         } else {
-          tmpHandle = O2REG(CoerceThisNS);
+          lv.tmp = O2REG(CoerceThisNS);
           nextIP = NEXTINST(CoerceThisNS);
           goto coerceThisSlowPath;
         }
@@ -1146,7 +1149,7 @@ tailCall:
             FRAME.getThisArgRef().isUndefined()) {
           O1REG(LoadThisNS) = runtime.global_.getHermesValue();
         } else {
-          tmpHandle = FRAME.getThisArgRef();
+          lv.tmp = FRAME.getThisArgRef();
           nextIP = NEXTINST(LoadThisNS);
           goto coerceThisSlowPath;
         }
@@ -1154,12 +1157,12 @@ tailCall:
         DISPATCH;
       }
     coerceThisSlowPath: {
-      CAPTURE_IP(res = toObject(runtime, tmpHandle));
+      CAPTURE_IP(res = toObject(runtime, lv.tmp));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         goto exception;
       }
       O1REG(CoerceThisNS) = res.getValue();
-      tmpHandle.clear();
+      lv.tmp.clear();
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
@@ -1775,7 +1778,7 @@ tailCall:
 #ifdef HERMES_ENABLE_DEBUGGER
         FRAME.getDebugEnvironmentRef() = O1REG(CreateFunctionEnvironment);
 #endif
-        tmpHandle = HermesValue::encodeUndefinedValue();
+        lv.tmp.clear();
         ip = NEXTINST(CreateFunctionEnvironment);
         DISPATCH;
       }
@@ -2121,11 +2124,11 @@ tailCall:
         }
         // Otherwise...
         // This is the "slow path".
-        tmpHandle = HermesValue::encodeTrustedNumberValue(ip->iGetByIndex.op3);
+        lv.tmp = HermesValue::encodeTrustedNumberValue(ip->iGetByIndex.op3);
         CAPTURE_IP(
             resPH = Interpreter::getByValTransient_RJS(
-                runtime, Handle<>(&O2REG(GetByIndex)), tmpHandle));
-        tmpHandle.clear();
+                runtime, Handle<>(&O2REG(GetByIndex)), lv.tmp));
+        lv.tmp.clear();
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -2254,16 +2257,16 @@ tailCall:
         idVal = ip->iDefineOwnByIndex.op3;
       }
     DefineOwnByIndex: {
-      tmpHandle = HermesValue::encodeTrustedNumberValue(idVal);
+      lv.tmp = HermesValue::encodeTrustedNumberValue(idVal);
       CAPTURE_IP(JSObject::defineOwnComputedPrimitive(
           Handle<JSObject>::vmcast(&O1REG(DefineOwnByIndex)),
           runtime,
-          tmpHandle,
+          lv.tmp,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
           Handle<>(&O2REG(DefineOwnByIndex)),
           PropOpFlags().plusThrowOnError()));
       gcScope.flushToSmallCount(KEEP_HANDLES);
-      tmpHandle.clear();
+      lv.tmp.clear();
       ip = nextIP;
       DISPATCH;
     }
@@ -2345,11 +2348,11 @@ tailCall:
                   PreferredType::NONE));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
             goto exception;
-          tmpHandle = res.getValue();
-          CAPTURE_IP_ASSIGN(auto strRes, toString_RJS(runtime, tmpHandle));
+          lv.tmp = res.getValue();
+          CAPTURE_IP_ASSIGN(auto strRes, toString_RJS(runtime, lv.tmp));
           if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
             goto exception;
-          tmpHandle.clear();
+          lv.tmp.clear();
           gcScope.flushToSmallCount(KEEP_HANDLES);
           O1REG(AddEmptyString) = strRes->getHermesValue();
           ip = NEXTINST(AddEmptyString);
@@ -2774,7 +2777,7 @@ tailCall:
         }
         O1REG(NewArrayWithBuffer) = resPH->get();
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        tmpHandle.clear();
+        lv.tmp.clear();
         ip = NEXTINST(NewArrayWithBuffer);
         DISPATCH;
       }
@@ -2792,7 +2795,7 @@ tailCall:
         }
         O1REG(NewArrayWithBufferLong) = resPH->get();
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        tmpHandle.clear();
+        lv.tmp.clear();
         ip = NEXTINST(NewArrayWithBufferLong);
         DISPATCH;
       }
@@ -3362,7 +3365,7 @@ tailCall:
     }
 
     gcScope.flushToSmallCount(KEEP_HANDLES);
-    tmpHandle.clear();
+    lv.tmp.clear();
 
 #ifdef HERMES_ENABLE_DEBUGGER
     if (SingleStep) {
