@@ -25,11 +25,11 @@ TEST_F(HandleTest, AddAndRemoveTest) {
   auto str3 = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"str3"));
 
   {
-    Handle<StringPrimitive> h1(runtime, str1.get());
+    auto h1 = runtime.makeHandle<StringPrimitive>(str1.get());
     {
       GCScope scope(runtime);
-      Handle<StringPrimitive> h2(runtime, str2.get());
-      Handle<StringPrimitive> h3(runtime, str3.get());
+      auto h2 = runtime.makeHandle<StringPrimitive>(str2.get());
+      auto h3 = runtime.makeHandle<StringPrimitive>(str3.get());
 
       ASSERT_EQ(str1, h1);
       ASSERT_EQ(str2, h2);
@@ -64,22 +64,22 @@ TEST_F(HandleTest, AddAndRemoveTest) {
     {
       GCScope scope(runtime);
       // Check mov constructor.
-      Handle<StringPrimitive> h5(Handle<StringPrimitive>(runtime, str2.get()));
+      auto h5 = runtime.makeHandle<StringPrimitive>(str2.get());
       ASSERT_EQ(str2, h5);
     }
   }
 }
 
 TEST_F(HandleTest, ValueAddAndRemoveTest) {
-  auto str1 = Handle<>(runtime, HermesValue::encodeTrustedNumberValue(1));
-  auto str2 = Handle<>(runtime, HermesValue::encodeTrustedNumberValue(2));
-  auto str3 = Handle<>(runtime, HermesValue::encodeTrustedNumberValue(3));
+  auto str1 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(1));
+  auto str2 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(2));
+  auto str3 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(3));
 
   {
     MutableHandle<> h1(runtime, str1.get());
     {
       MutableHandle<> h2(runtime, str2.get());
-      Handle<> h3(runtime, str3.get());
+      auto h3 = runtime.makeHandle(str3.get());
 
       ASSERT_EQ(str1, h1);
       ASSERT_EQ(str2, h2);
@@ -123,22 +123,22 @@ TEST_F(HandleTest, ValueAddAndRemoveTest) {
 
 TEST_F(HandleTest, MarkTest) {
   GCScope gcScope{runtime};
-  Handle<> v1(runtime, HermesValue::encodeTrustedNumberValue(1));
+  auto v1 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(1));
   (void)v1;
-  Handle<> v2(runtime, HermesValue::encodeTrustedNumberValue(2));
+  auto v2 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(2));
   (void)v2;
   ASSERT_EQ(2u, gcScope.getHandleCountDbg());
 
   auto marker = gcScope.createMarker();
 
-  Handle<> v3(runtime, HermesValue::encodeTrustedNumberValue(3));
+  auto v3 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(3));
   (void)v3;
   ASSERT_EQ(3u, gcScope.getHandleCountDbg());
 
   gcScope.flushToMarker(marker);
   ASSERT_EQ(2u, gcScope.getHandleCountDbg());
 
-  Handle<> v4(runtime, HermesValue::encodeTrustedNumberValue(4));
+  auto v4 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(4));
   (void)v4;
   ASSERT_EQ(3u, gcScope.getHandleCountDbg());
 

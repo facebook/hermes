@@ -180,7 +180,7 @@ inline const GCConfig TestGCConfigFixedSize(
 #define EXPECT_STRINGPRIM(str, x)                                           \
   do {                                                                      \
     GCScopeMarkerRAII marker{runtime};                                      \
-    Handle<> xHandle{runtime, x};                                           \
+    auto xHandle = runtime.makeHandle(x);                                   \
     Handle<StringPrimitive> strHandle =                                     \
         StringPrimitive::createNoThrow(runtime, str);                       \
     EXPECT_TRUE(                                                            \

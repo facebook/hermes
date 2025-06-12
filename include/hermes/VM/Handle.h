@@ -392,12 +392,17 @@ class Handle : public HandleBase {
  public:
   using value_type = typename HermesValueTraits<T>::value_type;
 
+ protected:
+  friend class HandleRootOwner;
+  friend class Runtime;
+
   /// Allocate a new handle in the current GCScope
   explicit Handle(HandleRootOwner &runtime, value_type value)
       : HandleBase(runtime, HermesValueTraits<T>::encode(value)){};
   explicit Handle(GCScope *inScope, value_type value)
       : HandleBase(inScope, HermesValueTraits<T>::encode(value)){};
 
+ public:
   /// Create a Handle aliasing a non-movable HermesValue without
   /// allocating a handle.
   explicit Handle(const PinnedHermesValue *valueAddr)

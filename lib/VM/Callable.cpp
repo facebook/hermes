@@ -746,8 +746,8 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
   if (LLVM_UNLIKELY(boundNameSym == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> boundNameHandle(
-      runtime, identifierTable.getStringPrim(runtime, **boundNameSym));
+  Handle<StringPrimitive> boundNameHandle = runtime.makeHandle(
+      identifierTable.getStringPrim(runtime, **boundNameSym));
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
   dpf.enumerable = 0;
