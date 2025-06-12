@@ -164,18 +164,28 @@ ProfileGenerator::getJSFunctionDetails(
 
   std::optional<fhsp::StringEntry> maybeSourceScriptURLEntry = std::nullopt;
   if (maybeSourceScriptURL.has_value()) {
-    std::string sourceScriptURL = maybeSourceScriptURL.value();
-    llvh::StringRef sourceScriptURLCacheKey = sourceScriptURL;
+    const std::string &sourceScriptURL = maybeSourceScriptURL.value();
 
     auto sourceScriptURLCacheIt =
-        sourceScriptURLCache_.find(sourceScriptURLCacheKey);
+        sourceScriptURLCache_.find(llvh::StringRef{sourceScriptURL});
     if (sourceScriptURLCacheIt != sourceScriptURLCache_.end()) {
       maybeSourceScriptURLEntry.emplace(sourceScriptURLCacheIt->second);
     } else {
       fhsp::StringEntry sourceScriptURLEntry = storeString(sourceScriptURL);
-      sourceScriptURLCache_.try_emplace(
-          sourceScriptURLCacheKey, sourceScriptURLEntry);
       maybeSourceScriptURLEntry.emplace(sourceScriptURLEntry);
+
+      // The string from stringStorage_ is referenced here, because it
+      // will outlive sourceScriptURLCache_. The lifetime of
+      // sourceScriptURLCache_ is bound to the lifetime of ProfileGenerator,
+      // whereas stringStorage_'s lifetime is bound to the lifetime of the
+      // Profile object. Once ProfileGenerator::generate() finishes, the
+      // stringStorage_ is moved to the Profile and no longer valid within
+      // ProfileGenerator.
+      std::string_view sourceScriptURLView = sourceScriptURLEntry.getView();
+      sourceScriptURLCache_.try_emplace(
+          llvh::StringRef{
+              sourceScriptURLView.data(), sourceScriptURLView.size()},
+          sourceScriptURLEntry);
     }
   }
 
@@ -188,7 +198,7 @@ ProfileGenerator::getJSFunctionDetails(
 
 fhsp::StringEntry ProfileGenerator::storeString(const std::string &str) {
   auto offset = stringStorage_->size();
-  stringStorage_->push_back(std::move(str));
+  stringStorage_->push_back(str);
 
   return fhsp::StringEntry(*stringStorage_.get(), offset);
 };
