@@ -435,12 +435,25 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
 #endif
 
   InterpreterState state{newCodeBlock, 0};
+  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   if (HERMESVM_CRASH_TRACE &&
       (getVMExperimentFlags() & experiments::CrashTrace)) {
-    return Interpreter::interpretFunction<false, true>(*this, state);
+    res = Interpreter::interpretFunction<false, true>(*this, state);
   } else {
-    return Interpreter::interpretFunction<false, false>(*this, state);
+    res = Interpreter::interpretFunction<false, false>(*this, state);
   }
+
+  // Interpreter::interpretFunction saves/restores its IP via the runtime
+  // whenever a call out is made (see the CAPTURE_IP_* macros). Failing to
+  // preserve the IP across calls to this function disrupts interpreter calls
+  // further up the C++ callstack. Restore the IP in the runtime to the saved IP
+  // of the caller before returning.
+  // Note that we deliberately do not use a scope_exit for this, because we do
+  // not want to attempt to retrieve the IP from the register stack during
+  // unwinding of a C++ exception (if EXCEPTION_ON_OOM is enabled). Doing so
+  // would be incorrect, because the register stack will not have been unwound.
+  setCurrentIP(StackFramePtr(getStackPointer()).getSavedIP());
+  return res;
 }
 
 CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
@@ -610,20 +623,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     frameRegs = &newFrame.getFirstLocalRef();
     ip = (Inst const *)curCodeBlock->begin();
   }
-
-  // The interpreter is re-entrant and also saves/restores its IP via the
-  // runtime whenever a call out is made (see the CAPTURE_IP_* macros). As such,
-  // failure to preserve the IP across calls to interpreterFunction() disrupt
-  // interpreter calls further up the C++ callstack. The scope exit below makes
-  // sure we always do this correctly.
-  auto ipSaver = llvh::make_scope_exit([&runtime] {
-    if (!SingleStep) {
-      // Note that we read relative to the stack pointer, because we will
-      // restore the stack before this runs.
-      runtime.setCurrentIP(
-          StackFramePtr(runtime.getStackPointer()).getSavedIP());
-    }
-  });
 
   GCScope gcScope(runtime);
   struct : public Locals {

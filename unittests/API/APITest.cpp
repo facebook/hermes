@@ -1250,6 +1250,25 @@ globalThis.Error = function (){
 )#");
   EXPECT_THROW(throw JSError(*rt, "Foo"), ::hermes::vm::JSOutOfMemoryError);
 }
+
+TEST_F(HermesRuntimeTestSmallHeap, InterpreterUnwindOOM) {
+  // Test that the interpreter does not attempt to restore the IP in the runtime
+  // during exception unwinding. This would be a unnecessary, and causes
+  // assertion failures because the register stack is not unwound.
+  // It is important in order to reliably test this that the function where the
+  // OOM occurs does not make any calls, or contain any numbers in registers, so
+  // that we reliably get a crash if the interpreter tries to access the SavedIP
+  // slot during unwinding.
+  const char *src = R"#(
+function foo(){
+  let obj = {};
+  let i = "a";
+  while(true) obj[ i += "a" ] = ["a", "b", "c", "d", "e", "f"];
+}
+foo();
+)#";
+  EXPECT_THROW(eval(src), ::hermes::vm::JSOutOfMemoryError);
+}
 #endif
 
 TEST_P(HermesRuntimeTest, NativeExceptionDoesNotUseGlobalError) {
