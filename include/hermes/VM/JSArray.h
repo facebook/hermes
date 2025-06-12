@@ -335,6 +335,15 @@ class JSArray final : public ArrayImpl {
     return cell->getKind() == CellKind::JSArrayKind;
   }
 
+  /// \return the maximum capacity JSArray for which an object and indexed
+  /// storage can be allocated entirely at once in the GC young gen.
+  /// This is useful because we can allocate both the object and the indexed
+  /// storage easily in the JIT.
+  static constexpr inline uint32_t maxYoungGenAllocationCapacity() {
+    return StorageType::capacityForAllocationSize(
+        GC::maxYoungGenAllocationSize() - heapAlignSize(cellSize<JSArray>()));
+  }
+
   static uint32_t getLength(const JSArray *self, PointerBase &pb) {
     return getDirectSlotValue<lengthPropIndex()>(self).getNumber(pb);
   }

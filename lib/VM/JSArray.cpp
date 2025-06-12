@@ -566,20 +566,50 @@ CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  lv.self = JSObjectInit::initToPointer(
-      runtime,
-      runtime.makeAFixed<JSArray>(
-          runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()));
+  if (LLVM_UNLIKELY(capacity > maxYoungGenAllocationCapacity())) {
+    // Make two separate allocations.
+    lv.self = JSObjectInit::initToPointer(
+        runtime,
+        runtime.makeAFixed<JSArray>(
+            runtime,
+            prototypeHandle,
+            classHandle,
+            GCPointerBase::NoBarriers()));
 
-  // Only allocate the storage if capacity is not zero.
-  if (capacity) {
+    // Only allocate the storage if capacity is not zero.
     auto arrRes = StorageType::create(runtime, capacity);
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     lv.self->setIndexedStorage(
         runtime, vmcast<StorageType>(*arrRes), runtime.getHeap());
+  } else if (capacity > 0) {
+    // Allocate both together.
+    auto storageSize = heapAlignSize(StorageType::allocationSize(capacity));
+    auto [self, storage] = runtime.make2YoungGenUnsafe<JSArray, StorageType>(
+        heapAlignSize(cellSize<JSArray>()),
+        std::tuple<
+            Runtime &,
+            Handle<JSObject>,
+            Handle<HiddenClass>,
+            GCPointerBase::NoBarriers>{
+            runtime, prototypeHandle, classHandle, GCPointerBase::NoBarriers()},
+        storageSize,
+        std::tuple{});
+    NoAllocScope noAlloc{runtime};
+    lv.self = JSObjectInit::initToPointer(runtime, self);
+    lv.self->setIndexedStorage(runtime, storage, runtime.getHeap());
+  } else {
+    // capacity == 0, no storage needed.
+    lv.self = JSObjectInit::initToPointer(
+        runtime,
+        runtime.makeAFixed<JSArray>(
+            runtime,
+            prototypeHandle,
+            classHandle,
+            GCPointerBase::NoBarriers()));
   }
+
   auto shv = SmallHermesValue::encodeNumberValue(length, runtime);
   putLengthUnsafe(lv.self.get(), runtime, shv);
 
