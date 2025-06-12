@@ -414,7 +414,7 @@ CallResult<HermesValue> createDynamicFunction(
                  runtime,
                  runtime.makeHandle(Domain::create(runtime)),
                  lv.selfParent,
-                 Handle<Environment>(runtime, nullptr),
+                 runtime.makeNullHandle<Environment>(),
                  runtime.getReturnThisCodeBlock())
           .getHermesValue();
     }
