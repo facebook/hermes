@@ -136,7 +136,6 @@ uint32_t SamplingProfiler::walkRuntimeStack(
 SamplingProfiler::SamplingProfiler(Runtime &runtime)
     : threadID_{oscompat::global_thread_id()}, runtime_{runtime} {
   threadNames_[threadID_] = oscompat::thread_name();
-  sampling_profiler::Sampler::get()->registerRuntime(this);
 }
 
 void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {

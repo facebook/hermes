@@ -49,6 +49,11 @@ struct SamplingProfilerWindows : SamplingProfiler {
         FBLoomTracerType::JAVASCRIPT, disable);
     loomDataPushEnabled_ = true;
 #endif // defined(HERMESVM_ENABLE_LOOM)
+
+    // Note that we cannot register this in the base class constructor, because
+    // all fields must be initialized before we register with the profiling
+    // thread.
+    sampling_profiler::Sampler::get()->registerRuntime(this);
   }
 
   ~SamplingProfilerWindows() override {
