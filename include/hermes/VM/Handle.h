@@ -265,6 +265,13 @@ class PinnedValue : private PinnedHermesValue {
   HermesValue getHermesValue() const {
     return *this;
   }
+
+  void clear() {
+    setNoBarrier(HermesValue::encodeRawZeroValueUnsafe());
+  }
+  bool isCleared() const {
+    return raw == 0;
+  }
 };
 
 /// A HermesValue in the current GCScope which is trackable by the GC and will
