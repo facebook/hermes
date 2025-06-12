@@ -14,18 +14,24 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime) {
+HermesValue createGeneratorFunctionConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
 
-  auto cons = runtime.makeHandle(NativeConstructor::create(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  auto consRes = NativeConstructor::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionConstructor),
       nullptr,
       generatorFunctionConstructor,
-      1));
+      1);
+  lv.cons.castAndSetHermesValue<NativeConstructor>(consRes.getHermesValue());
 
   auto st = Callable::defineNameLengthAndPrototype(
-      cons,
+      lv.cons,
       runtime,
       Predefined::getSymbolID(Predefined::GeneratorFunction),
       1,
@@ -45,7 +51,7 @@ Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::constructor),
-      cons,
+      lv.cons,
       dpf);
 
   // The value of GeneratorFunction.prototype.prototype is the
@@ -64,7 +70,7 @@ Handle<NativeConstructor> createGeneratorFunctionConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::GeneratorFunction),
       dpf);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 CallResult<HermesValue> generatorFunctionConstructor(void *, Runtime &runtime) {

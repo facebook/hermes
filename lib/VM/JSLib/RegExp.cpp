@@ -31,11 +31,12 @@ static CallResult<HermesValue> regExpAlloc(
     Handle<Callable> newTarget);
 
 /// 21.2.3.2.2 Runtime Semantics: RegExpInitialize ( obj, pattern, flags )
-static CallResult<Handle<JSRegExp>> regExpInitialize(
+static ExecutionStatus regExpInitialize(
     Runtime &runtime,
     Handle<> obj,
     Handle<> pattern,
-    Handle<> flags);
+    Handle<> flags,
+    MutableHandle<JSRegExp> regExpOut);
 
 /// ES6.0 21.2.5.2.2
 static CallResult<HermesValue> regExpBuiltinExec(
@@ -227,62 +228,84 @@ static CallResult<HermesValue> regExpAlloc(
 }
 
 /// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags ) 1-4
-static CallResult<Handle<JSRegExp>> regExpInitialize(
+static ExecutionStatus regExpInitialize(
     Runtime &runtime,
     Handle<> obj,
     Handle<> pattern,
-    Handle<> flags) {
+    Handle<> flags,
+    MutableHandle<JSRegExp> regExpOut) {
   auto regExpObj = Handle<JSRegExp>::dyn_vmcast(obj);
   if (LLVM_UNLIKELY(!regExpObj)) {
     return ExecutionStatus::EXCEPTION;
   }
+  struct : public Locals {
+    PinnedValue<StringPrimitive> P;
+    PinnedValue<StringPrimitive> F;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // 1. If pattern is undefined, let P be the empty String.
   // 2. Else, let P be ? ToString(pattern).
-  MutableHandle<StringPrimitive> P = runtime.makeMutableHandle(
-      runtime.getPredefinedString(Predefined::emptyString));
+  lv.P = runtime.getPredefinedString(Predefined::emptyString);
   if (!pattern->isUndefined()) {
     auto strRes = toString_RJS(runtime, pattern);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    P = strRes->get();
+    lv.P = strRes->get();
   }
   // 3. If flags is undefined, let F be the empty String.
   // 4. Else, let F be ? ToString(flags).
-  MutableHandle<StringPrimitive> F = runtime.makeMutableHandle(
-      runtime.getPredefinedString(Predefined::emptyString));
+  lv.F = runtime.getPredefinedString(Predefined::emptyString);
   if (!flags->isUndefined()) {
     auto strRes = toString_RJS(runtime, flags);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    F = strRes->get();
+    lv.F = strRes->get();
   }
-  if (JSRegExp::initialize(regExpObj, runtime, P, F) ==
+  if (JSRegExp::initialize(regExpObj, runtime, lv.P, lv.F) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return regExpObj;
+  regExpOut.castAndSetHermesValue<JSRegExp>(regExpObj.getHermesValue());
+  return ExecutionStatus::RETURNED;
 }
 
 /// ES6.0 21.2.3.2.3 Runtime Semantics: RegExpCreate ( P, F )
-CallResult<Handle<JSRegExp>>
-regExpCreate(Runtime &runtime, Handle<> P, Handle<> F) {
+ExecutionStatus regExpCreate(
+    Runtime &runtime,
+    Handle<> P,
+    Handle<> F,
+    MutableHandle<JSRegExp> regExpOut) {
   auto objRes = regExpAlloc(runtime, runtime.regExpConstructor);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return regExpInitialize(runtime, runtime.makeHandle(objRes.getValue()), P, F);
+  struct : public Locals {
+    PinnedValue<> obj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.obj = objRes.getValue();
+  return regExpInitialize(runtime, lv.obj, P, F, regExpOut);
 }
 
 /// ES2024 22.2.4.1 RegExp ( pattern, flags )
 /// The internals of \c regExpConstructor. It's extracted to allow internal call
 /// sites such as @@MatchAll to construct a new JSRegExp via handles.
-static CallResult<Handle<JSObject>> regExpConstructorInternal(
+static ExecutionStatus regExpConstructorInternal(
     Runtime &runtime,
     Handle<> pattern,
     Handle<> flags,
-    Handle<> NewTarget) {
+    Handle<> NewTarget,
+    MutableHandle<JSObject> resultOut) {
+  struct : public Locals {
+    PinnedValue<> P;
+    PinnedValue<> F;
+    PinnedValue<JSRegExp> regExpResult;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // 1. Let patternIsRegExp be IsRegExp(pattern).
   auto callRes = isRegExp(runtime, pattern);
   if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
@@ -312,15 +335,16 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
         // Note: unfortunately, even at this point it's still unsafe to assume
         // pattern is a JSRegExp, see the objWithRegExpCons from
         // test/hermes/regexp.js for an example of how such assumptions falls.
-        return patternObj;
+        resultOut.castAndSetHermesValue<JSObject>(pattern.getHermesValue());
+        return ExecutionStatus::RETURNED;
       }
     }
   }
 
   // 3. Else, a. Let newTarget be NewTarget. (set above)
 
-  MutableHandle<> P{runtime};
-  MutableHandle<> F{runtime};
+  MutableHandle<> P{lv.P};
+  MutableHandle<> F{lv.F};
   // 4. If pattern is an Object and pattern has a [[RegExpMatcher]] internal
   // slot, then
   if (auto patternAsRegExp = Handle<JSRegExp>::dyn_vmcast(pattern)) {
@@ -376,12 +400,16 @@ static CallResult<Handle<JSObject>> regExpConstructorInternal(
     return ExecutionStatus::EXCEPTION;
   }
   // 8. Return ? RegExpInitialize(O, P, F).
-  auto regExpRes =
-      regExpInitialize(runtime, runtime.makeHandle(objRes.getValue()), P, F);
-  if (LLVM_UNLIKELY(regExpRes == ExecutionStatus::EXCEPTION)) {
+  auto status = regExpInitialize(
+      runtime,
+      runtime.makeHandle(objRes.getValue()),
+      Handle<>(P),
+      Handle<>(F),
+      MutableHandle<JSRegExp>::aliasForOutput(resultOut));
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return Handle<JSObject>(*regExpRes);
+  return ExecutionStatus::RETURNED;
 }
 
 /// ES6 21.2.3.1 RegExp ( pattern, flags )
@@ -390,37 +418,47 @@ CallResult<HermesValue> regExpConstructor(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<> pattern = args.getArgHandle(0);
   Handle<> flags = args.getArgHandle(1);
-  auto regExpRes = regExpConstructorInternal(
-      runtime, pattern, flags, args.getNewTargetHandle());
-  if (LLVM_UNLIKELY(regExpRes == ExecutionStatus::EXCEPTION)) {
+  MutableHandle<JSObject> regExpRes{runtime};
+  auto status = regExpConstructorInternal(
+      runtime, pattern, flags, args.getNewTargetHandle(), regExpRes);
+  if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return regExpRes->getHermesValue();
+  return regExpRes.getHermesValue();
 }
 
 /// Wrapper for regExpConstructorInternal to implement a fast path for
 /// Construct(%RegExp%, « pattern, flags ») and avoid a recompilation in the
 /// common case where \p pattern is a JSRegExp with [[OriginalFlags]] equal to
 /// \p flags.
-static CallResult<Handle<JSRegExp>> regExpConstructorFastCopy(
+static ExecutionStatus regExpConstructorFastCopy(
     Runtime &runtime,
     Handle<> pattern,
-    Handle<StringPrimitive> flags) {
+    Handle<StringPrimitive> flags,
+    MutableHandle<JSRegExp> regExpOut) {
   if (auto R = Handle<JSRegExp>::dyn_vmcast(pattern)) {
-    auto newRegexp = runtime.makeHandle(JSRegExp::create(runtime));
+    regExpOut = JSRegExp::create(runtime);
     if (LLVM_UNLIKELY(
-            JSRegExp::initialize(newRegexp, runtime, R, flags) ==
+            JSRegExp::initialize(regExpOut, runtime, R, flags) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    return newRegexp;
+    return ExecutionStatus::RETURNED;
   }
   auto newRegexpRes = regExpConstructorInternal(
-      runtime, pattern, flags, runtime.regExpConstructor);
+      runtime,
+      pattern,
+      flags,
+      runtime.regExpConstructor,
+      MutableHandle<JSObject>::aliasForOutput(
+          regExpOut.unsafeGetPinnedHermesValue()));
   if (LLVM_UNLIKELY(newRegexpRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return Handle<JSRegExp>::vmcast(*newRegexpRes);
+  assert(
+      vmisa<JSRegExp>(regExpOut.getHermesValue()) &&
+      "regExpConstructorInternal should return a JSRegExp");
+  return ExecutionStatus::RETURNED;
 }
 
 static void createGroupsObject(
@@ -476,6 +514,12 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
     RegExpMatch indices,
     Handle<JSObject> mappingObj,
     bool hasGroups) {
+  struct : public Locals {
+    PinnedValue<> matchIndexPair;
+    PinnedValue<> groups;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // 1. Let n be the number of elements in indices.
   size_t n = indices.size();
   // 2-4 skipped because mappingObj is not list, but an object in our
@@ -492,7 +536,7 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
   // (roughly groupNames in the spec) is not an array, but an object containing
   // group name and index.
 
-  MutableHandle<> matchIndexPair{runtime};
+  MutableHandle<> matchIndexPair{lv.matchIndexPair};
   // 9. For each integer i such that 0 ≤ i < n, in ascending order, do
   for (size_t i = 0; i < n; i++) {
     // a. Let matchIndices be indices[i]
@@ -526,7 +570,7 @@ static CallResult<Handle<JSArray>> makeMatchIndicesIndexPairArray(
 
   // This is done out of order. See note above.
   // 6. If hasGroups is true, then
-  MutableHandle<> groups{runtime};
+  MutableHandle<> groups{lv.groups};
   if (hasGroups) {
     // a. Let groups be OrdinaryObjectCreate(null).
     auto mappingObjClazz = runtime.makeHandle(mappingObj->getClass(runtime));
@@ -576,7 +620,12 @@ CallResult<Handle<JSArray>> directRegExpExec(
     Handle<JSRegExp> regexp,
     Runtime &runtime,
     Handle<StringPrimitive> S) {
-  MutableHandle<JSArray> A{runtime};
+  struct : public Locals {
+    PinnedValue<JSArray> A;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  MutableHandle<JSArray> A{lv.A};
   GCScope gcScope{runtime};
 
   // Let length be the number of code units in S.
@@ -1255,6 +1304,13 @@ CallResult<HermesValue> regExpPrototypeSymbolMatchAll(
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
+  struct : public Locals {
+    PinnedValue<StringPrimitive> S;
+    PinnedValue<StringPrimitive> flags;
+    PinnedValue<JSRegExp> matcher;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // 1. Let R be the this value.
   auto R = args.dyncastThis<JSObject>();
 
@@ -1269,7 +1325,7 @@ CallResult<HermesValue> regExpPrototypeSymbolMatchAll(
   if (strRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime.makeHandle(std::move(*strRes));
+  lv.S = std::move(*strRes);
 
   // 4. Let C be ? SpeciesConstructor(R, %RegExp%).
   // Since species constructors is not supported, C is always %RegExp%.
@@ -1285,17 +1341,17 @@ CallResult<HermesValue> regExpPrototypeSymbolMatchAll(
   if (LLVM_UNLIKELY(flagsStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto flags = runtime.makeHandle(std::move(*flagsStrRes));
+  lv.flags = std::move(*flagsStrRes);
 
   // 6. Let matcher be ? Construct(C, « R, flags »).
   // This is thus equivalent to RegExp(« R, flags »).
   // it is necessary to invoke the 21.2.3.1 RegExp, neither RegExpCreate
   // nor internal JSRegExp creation can shortcut without diverging the spec.
-  auto newRegExpRes = regExpConstructorFastCopy(runtime, R, flags);
+  auto newRegExpRes = regExpConstructorFastCopy(
+      runtime, R, lv.flags, MutableHandle<JSRegExp>{lv.matcher});
   if (newRegExpRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto matcher = *newRegExpRes;
 
   // 7. Let lastIndex be ? ToLength(? Get(R, "lastIndex")).
   auto propRes = JSObject::getNamed_RJS(
@@ -1309,7 +1365,8 @@ CallResult<HermesValue> regExpPrototypeSymbolMatchAll(
   }
   double lastIndex = lenRes->getNumber();
   // 8. Perform ? Set(matcher, "lastIndex", lastIndex, true).
-  if (setLastIndex(matcher, runtime, lastIndex) == ExecutionStatus::EXCEPTION) {
+  if (setLastIndex(lv.matcher, runtime, lastIndex) ==
+      ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -1319,7 +1376,7 @@ CallResult<HermesValue> regExpPrototypeSymbolMatchAll(
   // 12. Else, let fullUnicode be false.
   bool global = false;
   bool fullUnicode = false;
-  auto strView = StringPrimitive::createStringView(runtime, flags);
+  auto strView = StringPrimitive::createStringView(runtime, lv.flags);
   for (auto it = strView.begin(); it < strView.end(); it++) {
     if (*it == 'g')
       global = true;
@@ -1329,7 +1386,7 @@ CallResult<HermesValue> regExpPrototypeSymbolMatchAll(
 
   // 13. Return ! CreateRegExpStringIterator(matcher, S, global, fullUnicode).
   return JSRegExpStringIterator::create(
-             runtime, matcher, S, global, fullUnicode)
+             runtime, lv.matcher, lv.S, global, fullUnicode)
       .getHermesValue();
 }
 
@@ -1384,6 +1441,13 @@ CallResult<HermesValue> regExpPrototypeToString(void *, Runtime &runtime) {
 // TODO: consider writing this in JS.
 /// ES6.0 21.2.5.6
 CallResult<HermesValue> regExpPrototypeSymbolMatch(void *, Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<> propValue;
+    PinnedValue<> result;
+    PinnedValue<StringPrimitive> matchStr;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
@@ -1440,9 +1504,9 @@ CallResult<HermesValue> regExpPrototypeSymbolMatch(void *, Runtime &runtime) {
   uint32_t n = 0;
 
   // g. Repeat,
-  MutableHandle<> propValue{runtime};
-  MutableHandle<> result{runtime};
-  MutableHandle<StringPrimitive> matchStr{runtime};
+  MutableHandle<> propValue{lv.propValue};
+  MutableHandle<> result{lv.result};
+  MutableHandle<StringPrimitive> matchStr{lv.matchStr};
   auto marker = gcScope.createMarker();
   while (true) {
     gcScope.flushToMarker(marker);
@@ -1579,6 +1643,15 @@ CallResult<HermesValue> regExpPrototypeSymbolSearch(void *, Runtime &runtime) {
 
 /// ES6.0 21.2.5.8
 CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<StringPrimitive> replaceValueStr;
+    PinnedValue<ArrayStorageSmall> resultsHandle;
+    PinnedValue<> propValue;
+    PinnedValue<StringPrimitive> matchStr;
+    PinnedValue<JSObject> result;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
@@ -1600,7 +1673,7 @@ CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
   uint32_t lengthS = S->getStringLength();
   // 6. Let functionalReplace be IsCallable(replaceValue).
   Handle<> replaceValue = args.getArgHandle(1);
-  MutableHandle<StringPrimitive> replaceValueStr{runtime};
+  MutableHandle<StringPrimitive> replaceValueStr{lv.replaceValueStr};
   auto replaceFn = Handle<Callable>::dyn_vmcast(replaceValue);
   // 7. If functionalReplace is false, then
   if (!replaceFn) {
@@ -1647,16 +1720,16 @@ CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  MutableHandle<ArrayStorageSmall> resultsHandle{
-      runtime, vmcast<ArrayStorageSmall>(arrRes.getValue())};
+  lv.resultsHandle.castAndSetHermesValue<ArrayStorageSmall>(arrRes.getValue());
+  MutableHandle<ArrayStorageSmall> resultsHandle{lv.resultsHandle};
 
   // 12. Let done be false.
   bool done = false;
 
   // 13. Repeat, while done is false
-  MutableHandle<> propValue{runtime};
-  MutableHandle<StringPrimitive> matchStr{runtime};
-  MutableHandle<JSObject> result{runtime};
+  MutableHandle<> propValue{lv.propValue};
+  MutableHandle<StringPrimitive> matchStr{lv.matchStr};
+  MutableHandle<JSObject> result{lv.result};
   auto stringView = StringPrimitive::createStringView(runtime, S);
   while (!done) {
     GCScopeMarkerRAII marker{runtime};
@@ -1954,6 +2027,14 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
+  struct : public Locals {
+    PinnedValue<StringPrimitive> S;
+    PinnedValue<StringPrimitive> flags;
+    PinnedValue<JSRegExp> splitter;
+    PinnedValue<JSArray> A;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // 2. If Type(rx) is not Object, throw a TypeError exception.
   if (LLVM_UNLIKELY(!vmisa<JSObject>(args.getThisArg()))) {
     return runtime.raiseTypeError(
@@ -1964,7 +2045,7 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto S = runtime.makeHandle(std::move(*strRes));
+  lv.S = std::move(*strRes);
 
   // 5. Let flags be ? ToString(? Get(rx, "flags")).
   auto regexp = Handle<JSObject>::vmcast(args.getThisHandle());
@@ -1978,8 +2059,7 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(flagsStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> flags =
-      runtime.makeHandle(std::move(flagsStrRes.getValue()));
+  lv.flags = std::move(flagsStrRes.getValue());
 
   // 8. If flags contains "y", let newFlags be flags.
   // 9. Else, let newFlags be the string that is the concatenation of flags and
@@ -1987,18 +2067,18 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   // NOTE: We do not follow this part of the spec, instead, we just use flags as
   // newFlags and actually strip the sticky flag. See below.
   // 10. Let splitter be Construct(C, «rx, newFlags»).
-  auto splitterRes = regExpConstructorFastCopy(runtime, regexp, flags);
+  auto splitterRes = regExpConstructorFastCopy(
+      runtime, regexp, lv.flags, MutableHandle<JSRegExp>{lv.splitter});
   if (LLVM_UNLIKELY(splitterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto splitter = *splitterRes;
   // The spec actually tells us to always set the sticky flag to true, but
   // since it is much faster to perform a global search, we set sticky to
   // false and then check the returned index.
-  auto stickyFlags = JSRegExp::getSyntaxFlags(splitter.get());
+  auto stickyFlags = JSRegExp::getSyntaxFlags(lv.splitter.get());
   auto newFlags = stickyFlags;
   newFlags.sticky = 0;
-  JSRegExp::setSyntaxFlags(splitter.get(), newFlags);
+  JSRegExp::setSyntaxFlags(lv.splitter.get(), newFlags);
 
   // 6. If flags contains "u", let unicodeMatching be true.
   // 7. Else, let unicodeMatching be false.
@@ -2009,7 +2089,7 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> A = runtime.makeHandle(std::move(*arrRes));
+  lv.A = std::move(*arrRes);
   // 12. Let lengthA be 0.
   uint32_t lengthA = 0;
 
@@ -2029,7 +2109,7 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   }
 
   // 14. Let size be the length of S.
-  uint32_t size = S->getStringLength();
+  uint32_t size = lv.S->getStringLength();
 
   // 15. Let p be 0.
   // Initialise variable indiciating the end of the last match.
@@ -2038,34 +2118,34 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   // 16. If lim = 0, return A.
   if (lim == 0) {
     // Don't want any elements, so we're done.
-    return A.getHermesValue();
+    return lv.A.getHermesValue();
   }
 
   // 27. If size = 0, then
   if (size == 0) {
     // a. Let z be RegExpExec(splitter, S).
-    auto matchResult = JSRegExp::search(splitter, runtime, S, 0);
+    auto matchResult = JSRegExp::search(lv.splitter, runtime, lv.S, 0);
     if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // b. If z is not null, return A.
     else if (!matchResult->empty()) {
       // Matched the entirety of S, so return the empty array.
-      return A.getHermesValue();
+      return lv.A.getHermesValue();
     }
     // c. Perform CreateDataProperty(A, "0", S).
     // Didn't match S, so add it to the array and return.
     if (LLVM_UNLIKELY(
-            JSArray::setElementAt(A, runtime, 0, S) ==
+            JSArray::setElementAt(lv.A, runtime, 0, lv.S) ==
             ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     if (LLVM_UNLIKELY(
-            JSArray::setLengthProperty(A, runtime, 1) ==
+            JSArray::setLengthProperty(lv.A, runtime, 1) ==
             ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
 
     // d. Return A.
-    return A.getHermesValue();
+    return lv.A.getHermesValue();
   }
 
   // 18. Let q be p.
@@ -2087,7 +2167,7 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
     // Find the next valid match. We know that q < size.
     // the spec only finds matches at q, but we find matches at or
     // after q, so if it fails, we know we're done.
-    auto matchResult = JSRegExp::search(splitter, runtime, S, q);
+    auto matchResult = JSRegExp::search(lv.splitter, runtime, lv.S, q);
     if (LLVM_UNLIKELY(matchResult == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
 
@@ -2120,7 +2200,7 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
       // so we matched with the empty string.
       // We don't want to match the empty string at this location again,
       // so increment q in order to start the next search at the next position.
-      q = advanceStringIndex(S.get(), q, unicodeMatching);
+      q = advanceStringIndex(lv.S.get(), q, unicodeMatching);
     }
     // iv. Else,
     else {
@@ -2130,14 +2210,14 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
       // Found a non-empty string match. Add everything from the last match to
       // the current one to A. This has length q-p because q is the start of the
       // current match, and p was the end (exclusive) of the last match.
-      auto strRes = StringPrimitive::slice(runtime, S, p, q - p);
+      auto strRes = StringPrimitive::slice(runtime, lv.S, p, q - p);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       tmpHandle = *strRes;
       // 2. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T).
       if (LLVM_UNLIKELY(
-              JSArray::setElementAt(A, runtime, lengthA, tmpHandle) ==
+              JSArray::setElementAt(lv.A, runtime, lengthA, tmpHandle) ==
               ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
       // 3. Set lengthA to lengthA + 1.
@@ -2146,10 +2226,10 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
       // 4. If lengthA = lim, return A.
       if (lengthA == lim) {
         if (LLVM_UNLIKELY(
-                JSArray::setLengthProperty(A, runtime, lengthA) ==
+                JSArray::setLengthProperty(lv.A, runtime, lengthA) ==
                 ExecutionStatus::EXCEPTION))
           return ExecutionStatus::EXCEPTION;
-        return A.getHermesValue();
+        return lv.A.getHermesValue();
       }
       // 5. Set p to e.
       // Update p to point to the end of this match, maintaining the
@@ -2170,19 +2250,19 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
         if (!range) {
           if (LLVM_UNLIKELY(
                   JSArray::setElementAt(
-                      A, runtime, lengthA, Runtime::getUndefinedValue()) ==
+                      lv.A, runtime, lengthA, Runtime::getUndefinedValue()) ==
                   ExecutionStatus::EXCEPTION))
             return ExecutionStatus::EXCEPTION;
         } else {
           if (LLVM_UNLIKELY(
                   (strRes = StringPrimitive::slice(
-                       runtime, S, range->location, range->length)) ==
+                       runtime, lv.S, range->location, range->length)) ==
                   ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }
           if (LLVM_UNLIKELY(
                   JSArray::setElementAt(
-                      A,
+                      lv.A,
                       runtime,
                       lengthA,
                       runtime.makeHandle<StringPrimitive>(*strRes)) ==
@@ -2194,10 +2274,10 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
         // e. If lengthA = lim, return A.
         if (lengthA == lim) {
           if (LLVM_UNLIKELY(
-                  JSArray::setLengthProperty(A, runtime, lengthA) ==
+                  JSArray::setLengthProperty(lv.A, runtime, lengthA) ==
                   ExecutionStatus::EXCEPTION))
             return ExecutionStatus::EXCEPTION;
-          return A.getHermesValue();
+          return lv.A.getHermesValue();
         }
       }
       // 10. Set q to p.
@@ -2209,24 +2289,24 @@ CallResult<HermesValue> regExpPrototypeSymbolSplit(void *, Runtime &runtime) {
   // 20. Let T be the String value equal to the substring of S consisting of the
   // code units at indices p (inclusive) through size (exclusive).
   // Add the rest of the string (after the last match) to A.
-  auto elementStrRes = StringPrimitive::slice(runtime, S, p, size - p);
+  auto elementStrRes = StringPrimitive::slice(runtime, lv.S, p, size - p);
   if (LLVM_UNLIKELY(elementStrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   tmpHandle = *elementStrRes;
   // 21. Perform ! CreateDataPropertyOrThrow(A, ! ToString(lengthA), T).
   if (LLVM_UNLIKELY(
-          JSArray::setElementAt(A, runtime, lengthA, tmpHandle) ==
+          JSArray::setElementAt(lv.A, runtime, lengthA, tmpHandle) ==
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   ++lengthA;
 
   if (LLVM_UNLIKELY(
-          JSArray::setLengthProperty(A, runtime, lengthA) ==
+          JSArray::setLengthProperty(lv.A, runtime, lengthA) ==
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   // 22. Return A.
-  return A.getHermesValue();
+  return lv.A.getHermesValue();
 }
 
 // ES2022 22.2.5.4

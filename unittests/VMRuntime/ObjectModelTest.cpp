@@ -68,7 +68,7 @@ TEST_F(ObjectModelTest, SmokeTest) {
   auto prop2ID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop2"));
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
   auto obj1 = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   // Try to get a property which hasn't been defined and expect undefined.
@@ -113,7 +113,7 @@ TEST_F(ObjectModelTest, SimplePrototypeTest) {
       runtime, createUTF16Ref(u"prop2"));
 
   // Create and populate a prototype object.
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
   auto prototypeObj = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   // prototypeObj.prop1 = 10;
@@ -163,7 +163,7 @@ TEST_F(ObjectModelTest, DefineOwnPropertyTest) {
   auto prop2ID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop2"));
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
 
   {
     // Empty flags.
@@ -359,7 +359,7 @@ TEST_F(ObjectModelTest, SimpleReadOnlyTest) {
   auto prop2ID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop2"));
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
   auto obj = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   // Define a read-only property.
@@ -453,7 +453,7 @@ TEST_F(ObjectModelTest, SimpleDeleteTest) {
   auto prop4ID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop4"));
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
   auto obj = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   // Attempt to delete a nonexistent property.
@@ -566,7 +566,7 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
   auto value11 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(11));
   auto value12 = runtime.makeHandle(HermesValue::encodeTrustedNumberValue(12));
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
 
   auto obj1 = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
@@ -662,7 +662,7 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
   auto indexID2 = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"100000000"));
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
   auto nonIndexObj = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   auto indexObjRes = JSArray::create(runtime, 10, 0);
@@ -818,7 +818,7 @@ TEST_F(ObjectModelTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   auto cHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"c"));
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
   auto obj = runtime.makeHandle(JSObject::create(runtime, nullObj));
   ASSERT_TRUE(*JSObject::defineOwnProperty(
       obj,

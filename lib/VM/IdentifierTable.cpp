@@ -123,8 +123,8 @@ StringView IdentifierTable::getStringView(Runtime &runtime, SymbolID id) const {
   if (entry.isStringPrim()) {
     // The const_cast is a mechanical requirement as it's not worth it to
     // add const version constructors for Handle.
-    Handle<StringPrimitive> handle{
-        runtime, const_cast<StringPrimitive *>(entry.getStringPrim())};
+    Handle<StringPrimitive> handle = runtime.makeHandle(
+        const_cast<StringPrimitive *>(entry.getStringPrim()));
     // We know that this string already exists in the identifier table,
     // and hence it's safe to call the const version of getStringView.
     return StringPrimitive::createStringViewMustBeFlat(handle);
@@ -376,7 +376,7 @@ StringPrimitive *IdentifierTable::getExistingStringPrimitiveOrNullWithHash(
   // Read barrier here because a symbol value is getting read out of the hash
   // map.
   runtime.getHeap().weakRefReadBarrier(symID);
-  Handle<SymbolID> sym(runtime, symID);
+  Handle<SymbolID> sym = runtime.makeHandle(symID);
   return getStringPrim(runtime, *sym);
 }
 

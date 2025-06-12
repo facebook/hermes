@@ -1443,7 +1443,8 @@ extern "C" void _sh_ljs_define_own_by_index(
   CallResult<bool> cr{ExecutionStatus::EXCEPTION};
   {
     GCScopeMarkerRAII marker{runtime};
-    Handle<> indexHandle{runtime, HermesValue::encodeTrustedNumberValue(key)};
+    Handle<> indexHandle =
+        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(key));
     cr = JSObject::defineOwnComputedPrimitive(
         Handle<JSObject>::vmcast(toPHV(target)),
         runtime,
@@ -1604,7 +1605,7 @@ static HermesValue delByVal(
     }
     {
       GCScopeMarkerRAII marker{runtime};
-      Handle tmpHandle{runtime, res.getValue()};
+      Handle<> tmpHandle = runtime.makeHandle(res.getValue());
       status = JSObject::deleteComputed(
           Handle<JSObject>::vmcast(tmpHandle),
           runtime,

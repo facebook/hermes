@@ -26,7 +26,7 @@ using std::min;
 /// @name Implementation
 /// @{
 
-Handle<NativeConstructor> createArrayBufferConstructor(Runtime &runtime) {
+HermesValue createArrayBufferConstructor(Runtime &runtime) {
   auto arrayBufferPrototype =
       Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype);
   auto cons = defineSystemConstructor(
@@ -73,7 +73,7 @@ Handle<NativeConstructor> createArrayBufferConstructor(Runtime &runtime) {
       arrayBufferIsView,
       1);
 
-  return cons;
+  return cons.getHermesValue();
 }
 
 CallResult<HermesValue> arrayBufferConstructor(void *, Runtime &runtime) {
@@ -168,6 +168,11 @@ CallResult<HermesValue> arrayBufferPrototypeSlice(void *, Runtime &runtime) {
         "Called ArrayBuffer.prototype.slice on a non-ArrayBuffer");
   }
 
+  struct : public Locals {
+    PinnedValue<JSArrayBuffer> newBuf;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // 5. Let len be the value of O’s [[ArrayBufferByteLength]] internal slot.
   double len = self->size();
   // 6. Let relativeStart be ToIntegerOrInfinity(start).
@@ -209,10 +214,12 @@ CallResult<HermesValue> arrayBufferPrototypeSlice(void *, Runtime &runtime) {
   // 15. Let new be Construct(ctor, «newLen»).
   // 16. ReturnIfAbrupt(new).
 
-  auto newBuf = runtime.makeHandle(JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
+  lv.newBuf.castAndSetHermesValue<JSArrayBuffer>(
+      JSArrayBuffer::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype))
+          .getHermesValue());
 
-  if (JSArrayBuffer::createDataBlock(runtime, newBuf, newLen_int) ==
+  if (JSArrayBuffer::createDataBlock(runtime, lv.newBuf, newLen_int) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -224,7 +231,7 @@ CallResult<HermesValue> arrayBufferPrototypeSlice(void *, Runtime &runtime) {
   // slot < newLen, throw a TypeError exception.
   // 21. NOTE: Side-effects of the above steps may have detached O.
   // 22. If IsDetachedBuffer(O) is true, throw a TypeError exception.
-  if (!self->attached() || !newBuf->attached()) {
+  if (!self->attached() || !lv.newBuf->attached()) {
     return runtime.raiseTypeError("Cannot split with detached ArrayBuffers");
   }
 
@@ -232,9 +239,9 @@ CallResult<HermesValue> arrayBufferPrototypeSlice(void *, Runtime &runtime) {
   // 24. Let toBuf be the value of new’s [[ArrayBufferData]] internal slot.
   // 25. Perform CopyDataBlockBytes(toBuf, 0, fromBuf, first, newLen).
   JSArrayBuffer::copyDataBlockBytes(
-      runtime, *newBuf, 0, *self, first_int, newLen_int);
+      runtime, *lv.newBuf, 0, *self, first_int, newLen_int);
   // 26. Return new.
-  return newBuf.getHermesValue();
+  return lv.newBuf.getHermesValue();
 }
 /// @}
 } // namespace vm

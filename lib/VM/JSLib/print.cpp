@@ -22,6 +22,11 @@ CallResult<HermesValue> print(void *, Runtime &runtime) {
   auto marker = scope.createMarker();
   bool first = true;
 
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   for (Handle<> arg : args.handles()) {
     scope.flushToMarker(marker);
     auto res = toString_RJS(runtime, arg);
@@ -31,8 +36,8 @@ CallResult<HermesValue> print(void *, Runtime &runtime) {
     if (!first)
       llvh::outs() << " ";
     SmallU16String<32> tmp;
-    llvh::outs() << StringPrimitive::createStringView(
-                        runtime, runtime.makeHandle(std::move(*res)))
+    lv.strHandle.castAndSetHermesValue<StringPrimitive>(res->getHermesValue());
+    llvh::outs() << StringPrimitive::createStringView(runtime, lv.strHandle)
                         .getUTF16Ref(tmp);
     first = false;
   }

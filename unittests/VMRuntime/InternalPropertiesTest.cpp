@@ -34,7 +34,7 @@ using InternalPropertiesTest = RuntimeTestFixture;
 TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
   CallResult<PseudoHandle<>> propRes{ExecutionStatus::EXCEPTION};
 
-  Handle<JSObject> nullObj(runtime, nullptr);
+  auto nullObj = runtime.makeHandle<JSObject>(nullptr);
   auto obj = runtime.makeHandle(JSObject::create(runtime, nullObj));
 
   // A key feature of named internal properties is that they may be added to

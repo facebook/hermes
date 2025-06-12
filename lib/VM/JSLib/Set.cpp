@@ -189,15 +189,18 @@ setFromSetFastPath(Runtime &runtime, Handle<JSSet> target, Handle<JSSet> src) {
   // SmallHermesValue unbox/boxing. We should be able to make an
   // OrderedHashMap::clone that initializes based on an existing Set
   // and clones all entries directly somehow.
-  MutableHandle<> keyHandle{runtime};
+  struct : public Locals {
+    PinnedValue<> keyHandle;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   return JSSet::forEachNative(
       src,
       runtime,
-      [&target, &keyHandle](
+      [&target, &lv](
           Runtime &runtime, Handle<HashSetEntry> entry) -> ExecutionStatus {
-        keyHandle = entry->key.unboxToHV(runtime);
+        lv.keyHandle = entry->key.unboxToHV(runtime);
         if (LLVM_UNLIKELY(
-                JSSet::insert(target, runtime, keyHandle) ==
+                JSSet::insert(target, runtime, lv.keyHandle) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -215,6 +218,8 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
   struct : public Locals {
     PinnedValue<JSObject> selfParent;
     PinnedValue<JSSet> self;
+    PinnedValue<HermesValue> tmpHandle;
+    PinnedValue<JSObject> tmpObjHandle;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   if (LLVM_LIKELY(
@@ -280,8 +285,6 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
     if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0); arr &&
         LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
                     runtime.arrayPrototypeValues.getHermesValue().getRaw())) {
-      MutableHandle<HermesValue> tmpHandle{runtime};
-
       for (JSArray::size_type i = 0; i < JSArray::getLength(arr.get(), runtime);
            i++) {
         GCScopeMarkerRAII marker{runtime};
@@ -289,9 +292,9 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
         // Add each element to the set.
         auto element = arr.get()->at(runtime, i);
         if (LLVM_LIKELY(!element.isEmpty())) {
-          tmpHandle = element.unboxToHV(runtime);
+          lv.tmpHandle = element.unboxToHV(runtime);
           if (LLVM_UNLIKELY(
-                  JSSet::insert(lv.self, runtime, tmpHandle) ==
+                  JSSet::insert(lv.self, runtime, lv.tmpHandle) ==
                   ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }
@@ -301,9 +304,9 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
             return ExecutionStatus::EXCEPTION;
           }
 
-          tmpHandle = valueRes->getHermesValue();
+          lv.tmpHandle = valueRes->getHermesValue();
           if (LLVM_UNLIKELY(
-                  JSSet::insert(lv.self, runtime, tmpHandle) ==
+                  JSSet::insert(lv.self, runtime, lv.tmpHandle) ==
                   ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }
@@ -335,7 +338,6 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
   auto iteratorRecord = *iterRes;
 
   // Iterate the array and add every element.
-  MutableHandle<JSObject> tmpHandle{runtime};
   auto marker = gcScope.createMarker();
 
   // Check the length of the array after every iteration,
@@ -351,9 +353,9 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
       // Done with iteration.
       return lv.self.getHermesValue();
     }
-    tmpHandle = vmcast<JSObject>(nextRes->getHermesValue());
+    lv.tmpObjHandle = vmcast<JSObject>(nextRes->getHermesValue());
     auto nextValueRes = JSObject::getNamed_RJS(
-        tmpHandle, runtime, Predefined::getSymbolID(Predefined::value));
+        lv.tmpObjHandle, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextValueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

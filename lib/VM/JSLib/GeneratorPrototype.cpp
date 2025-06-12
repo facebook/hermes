@@ -86,14 +86,20 @@ CallResult<HermesValue> generatorPrototypeResume(void *ctx, Runtime &runtime) {
   if (LLVM_UNLIKELY(generatorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  struct : public Locals {
+    PinnedValue<Callable> innerFunc;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   Action action = *reinterpret_cast<Action *>(&ctx);
-  auto innerFunc = runtime.makeHandle(
-      JSGeneratorObject::getInnerFunction(runtime, generatorRes->get()));
+  lv.innerFunc =
+      JSGeneratorObject::getInnerFunction(runtime, generatorRes->get());
   auto value = args.getArgHandle(0);
   auto valueRes = Callable::executeCall2(
-      innerFunc,
+      lv.innerFunc,
       runtime,
-      innerFunc,
+      lv.innerFunc,
       HermesValue::encodeTrustedNumberValue((uint8_t)action),
       value.getHermesValue());
   if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {

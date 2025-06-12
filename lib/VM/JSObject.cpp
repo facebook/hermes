@@ -3672,7 +3672,7 @@ CallResult<Handle<ArrayStorageSmall>> getForInPropertyNames(
     Handle<JSObject> obj,
     uint32_t &beginIndex,
     uint32_t &endIndex) {
-  Handle<HiddenClass> clazz(runtime, obj->getClass(runtime));
+  Handle<HiddenClass> clazz = runtime.makeHandle(obj->getClass(runtime));
 
   // Fast case: Check the cache.
   MutableHandle<ArrayStorageSmall> arr(runtime);

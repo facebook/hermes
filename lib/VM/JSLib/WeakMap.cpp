@@ -87,6 +87,10 @@ CallResult<HermesValue> weakMapConstructor(void *, Runtime &runtime) {
   struct : public Locals {
     PinnedValue<JSObject> selfParent;
     PinnedValue<JSWeakMap> self;
+    PinnedValue<JSObject> nextItem;
+    PinnedValue<> keyHandle;
+    PinnedValue<> valueHandle;
+    PinnedValue<Callable> adder;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   if (LLVM_LIKELY(
@@ -120,9 +124,9 @@ CallResult<HermesValue> weakMapConstructor(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto adder =
-      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
-  if (LLVM_UNLIKELY(!adder)) {
+  if (auto callable = dyn_vmcast<Callable>(propRes->getHermesValue())) {
+    lv.adder = callable;
+  } else {
     return runtime.raiseTypeError("Property 'set' for WeakMap is not callable");
   }
 
@@ -132,9 +136,6 @@ CallResult<HermesValue> weakMapConstructor(void *, Runtime &runtime) {
   }
   auto iteratorRecord = *iterRes;
 
-  MutableHandle<JSObject> nextItem{runtime};
-  MutableHandle<> keyHandle{runtime};
-  MutableHandle<> valueHandle{runtime};
   auto marker = gcScope.createMarker();
 
   for (;;) {
@@ -156,24 +157,25 @@ CallResult<HermesValue> weakMapConstructor(void *, Runtime &runtime) {
           "WeakMap([iterable]) elements must be objects");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    nextItem = vmcast<JSObject>(nextItemRes->get());
-    auto keyRes = getIndexed_RJS(runtime, nextItem, 0);
+    lv.nextItem = vmcast<JSObject>(nextItemRes->get());
+    auto keyRes = getIndexed_RJS(runtime, lv.nextItem, 0);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    keyHandle = std::move(*keyRes);
-    auto valueRes = getIndexed_RJS(runtime, nextItem, 1);
+    lv.keyHandle = std::move(*keyRes);
+    auto valueRes = getIndexed_RJS(runtime, lv.nextItem, 1);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    valueHandle = std::move(*valueRes);
+    lv.valueHandle = std::move(*valueRes);
     if (LLVM_UNLIKELY(
             Callable::executeCall2(
-                adder,
+                lv.adder,
                 runtime,
                 lv.self,
-                keyHandle.getHermesValue(),
-                valueHandle.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
+                lv.keyHandle.getHermesValue(),
+                lv.valueHandle.getHermesValue()) ==
+            ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
