@@ -504,7 +504,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // populated later.
   runtime.setPrototype = JSObject::create(runtime);
 
-  runtime.setIteratorPrototype = createSetIteratorPrototype(runtime);
+  runtime.setIteratorPrototype.castAndSetHermesValue<JSObject>(
+      createSetIteratorPrototype(runtime));
 
   // "Forward declaration" of Map.prototype. Its properties will be
   // populated later.
@@ -558,7 +559,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.textEncoderPrototype = JSObject::create(runtime);
 
   // Object constructor.
-  runtime.objectConstructor = createObjectConstructor(runtime);
+  runtime.objectConstructor.castAndSetHermesValue<NativeConstructor>(
+      createObjectConstructor(runtime));
 
 // All Error constructors.
 #define ALL_ERROR_TYPE(name)                                          \
@@ -611,7 +613,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 #include "hermes/VM/TypedArrays.def"
 
   // Set constructor.
-  runtime.setConstructor = createSetConstructor(runtime);
+  runtime.setConstructor.castAndSetHermesValue<NativeConstructor>(
+      createSetConstructor(runtime));
 
   // Map constructor.
   runtime.mapConstructor.castAndSetHermesValue<NativeConstructor>(

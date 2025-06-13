@@ -53,10 +53,6 @@ class RuntimeJSONParser {
   /// https://es5.github.io/#x15.12.2
   Handle<Callable> reviver_;
 
-  /// A temporary handle, to avoid creating new handles when a temporary one
-  /// is needed to protect some HermesValue.
-  MutableHandle<> tmpHandle_;
-
   /// How many more nesting levels we allow before error.
   /// Decremented every time a nested level is started,
   /// and incremented again when leaving the nest.
@@ -70,8 +66,7 @@ class RuntimeJSONParser {
       Handle<Callable> reviver)
       : runtime_(runtime),
         lexer_(runtime, std::move(jsonString)),
-        reviver_(reviver),
-        tmpHandle_(runtime) {}
+        reviver_(reviver) {}
 
   /// Parse JSON string through lexer_, create objects using runtime_.
   /// If errors occur, this function will return undefined, and the error
@@ -113,46 +108,52 @@ class JSONStringifyer {
   /// The runtime.
   Runtime &runtime_;
 
-  /// The ReplacerFunction, initialized from the "replacer" argument in
-  /// stringify.
-  MutableHandle<Callable> replacerFunction_;
+  /// Locals struct containing all the handles.
+  struct : public Locals {
+    /// The ReplacerFunction, initialized from the "replacer" argument in
+    /// stringify.
+    PinnedValue<Callable> replacerFunction;
 
-  /// The gap string, which will be used to construct indent.
-  /// Initialized from the "space" argument in stringify.
-  /// gap_ will be nullptr if no gap is specified or if the gap is an empty
-  /// string. This means that if gap_ is not nullptr, it will not be
-  /// an empty string.
-  MutableHandle<StringPrimitive> gap_;
+    /// The gap string, which will be used to construct indent.
+    /// Initialized from the "space" argument in stringify.
+    /// gap will be nullptr if no gap is specified or if the gap is an empty
+    /// string. This means that if gap is not nullptr, it will not be
+    /// an empty string.
+    PinnedValue<StringPrimitive> gap;
 
-  /// The PropertyList, constructed from the "replacer" argument in stringify.
-  MutableHandle<JSArray> propertyList_;
+    /// The PropertyList, constructed from the "replacer" argument in stringify.
+    PinnedValue<JSArray> propertyList;
 
-  /// The stack, used at runtime by operationJA and operationJO to store
-  /// `value_` for recursions.
-  MutableHandle<PropStorage> stackValue_;
+    /// The stack, used at runtime by operationJA and operationJO to store
+    /// `value_` for recursions.
+    PinnedValue<PropStorage> stackValue;
 
-  /// An additional stack just for operationJO to store `K` for recursions.
-  MutableHandle<PropStorage> stackJO_;
+    /// An additional stack just for operationJO to store `K` for recursions.
+    PinnedValue<PropStorage> stackJO;
 
-  /// A temporary handle, to avoid creating new handles when a temporary one
-  /// is needed.
-  /// Note: this should be used with care because it can be shared among
-  /// functions.
-  MutableHandle<> tmpHandle_;
+    /// A temporary handle, to avoid creating new handles when a temporary one
+    /// is needed.
+    /// Note: this should be used with care because it can be shared among
+    /// functions.
+    PinnedValue<> tmpHandle;
 
-  /// A second temporary handle for when the first is taken.
-  MutableHandle<> tmpHandle2_;
+    /// A second temporary handle for when the first is taken.
+    PinnedValue<> tmpHandle2;
 
-  /// Handle used by operationStr to store the value.
-  MutableHandle<> operationStrValue_;
+    /// Handle used by operationStr to store the value.
+    PinnedValue<> operationStrValue;
 
-  /// Handle used by operationJO to store K.
-  MutableHandle<JSArray> operationJOK_;
+    /// Handle used by operationJO to store K.
+    PinnedValue<JSArray> operationJOK;
 
-  /// The holder argument passed to operationStr.
-  /// We define a member variable here to avoid creating a new handle
-  /// each time we are calling operationStr.
-  MutableHandle<JSObject> operationStrHolder_;
+    /// The holder argument passed to operationStr.
+    /// We define a member variable here to avoid creating a new handle
+    /// each time we are calling operationStr.
+    PinnedValue<JSObject> operationStrHolder;
+  } lv_;
+
+  /// RAII manager for the Locals.
+  LocalsRAII lraii_;
 
   /// The current depth of recursion, used at runtime by operationJA and
   /// operationJO. This is used as a stack overflow guard in stringifying. It
@@ -169,30 +170,22 @@ class JSONStringifyer {
 
  public:
   explicit JSONStringifyer(Runtime &runtime)
-      : runtime_(runtime),
-        replacerFunction_(runtime),
-        gap_{runtime, nullptr},
-        propertyList_(runtime),
-        stackValue_(runtime),
-        stackJO_(runtime),
-        tmpHandle_(runtime),
-        tmpHandle2_(runtime),
-        operationStrValue_(runtime),
-        operationJOK_(runtime),
-        operationStrHolder_(runtime) {}
+      : runtime_(runtime), lraii_(runtime, &lv_) {
+    lv_.gap = nullptr;
+  }
 
   LLVM_NODISCARD ExecutionStatus init(Handle<> replacer, Handle<> space) {
     auto arrRes = PropStorage::create(runtime_, 4);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    stackValue_ = vmcast<PropStorage>(*arrRes);
+    lv_.stackValue = vmcast<PropStorage>(*arrRes);
     if (LLVM_UNLIKELY(
             (arrRes = PropStorage::create(runtime_, 4)) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    stackJO_ = vmcast<PropStorage>(*arrRes);
+    lv_.stackJO = vmcast<PropStorage>(*arrRes);
     auto cr = initializeReplacer(replacer);
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -205,11 +198,11 @@ class JSONStringifyer {
 
  private:
   /// Check the type of replacer, initialize
-  /// ReplacerFunction (replacerFunction_) and PropertyList (propertyList_).
-  /// Covers step 3 and 4 in ES5.1 15.12.3.
+  /// ReplacerFunction (lv_.replacerFunction) and PropertyList
+  /// (lv_.propertyList). Covers step 3 and 4 in ES5.1 15.12.3.
   LLVM_NODISCARD ExecutionStatus initializeReplacer(Handle<> replacer);
 
-  /// Check the type of space, initialize gap (gap_).
+  /// Check the type of space, initialize gap (lv_.gap).
   /// Covers step 5, 6, 7, 8 in ES5.1 15.12.3.
   ExecutionStatus initializeSpace(Handle<> space);
 
@@ -218,7 +211,7 @@ class JSONStringifyer {
   /// However if this function is called from operationJA, we
   /// we don't want to convert every index into string.
   /// Hence we leave the key as it is, and convert them to string if needed.
-  /// The holder is always stored in operationStrHolder_ by caller.
+  /// The holder is always stored in lv_.operationStrHolder by caller.
   /// \return whether the result is not undefined.
   CallResult<bool> operationStr(HermesValue key);
 
@@ -227,12 +220,12 @@ class JSONStringifyer {
   void operationQuote(StringView value);
 
   /// Implement the abstract operation JA(value). The value to operate on
-  /// is always the current last element in stackValue_.
+  /// is always the current last element in lv_.stackValue.
   /// It serializes an array.
   ExecutionStatus operationJA();
 
   /// Implement the abstract operation JO(value). The value to operate on
-  /// is always the current last element in stackValue_.
+  /// is always the current last element in lv_.stackValue.
   /// It serializes an object.
   ExecutionStatus operationJO();
 
@@ -258,6 +251,11 @@ class JSONStringifyer {
 } // namespace
 
 CallResult<HermesValue> RuntimeJSONParser::parse() {
+  struct : public Locals {
+    PinnedValue<> parResult;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   // parseValue() requires one token to start with.
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -273,27 +271,31 @@ CallResult<HermesValue> RuntimeJSONParser::parse() {
   }
 
   if (reviver_.get()) {
-    if ((parRes = revive(runtime_.makeHandle(*parRes))) ==
-        ExecutionStatus::EXCEPTION)
+    lv.parResult = *parRes;
+    if ((parRes = revive(lv.parResult)) == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
   }
   return parRes;
 }
 
 CallResult<HermesValue> RuntimeJSONParser::parseValue() {
+  struct : public Locals {
+    PinnedValue<> returnValue;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{
       remainingDepth_, remainingDepth_ - 1};
   if (remainingDepth_ <= 0) {
     return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
 
-  MutableHandle<> returnValue{runtime_};
   switch (lexer_.getCurToken()->getKind()) {
     case JSONTokenKind::String:
-      returnValue = lexer_.getCurToken()->getStrAsPrim().getHermesValue();
+      lv.returnValue = lexer_.getCurToken()->getStrAsPrim().getHermesValue();
       break;
     case JSONTokenKind::Number:
-      returnValue = HermesValue::encodeTrustedNumberValue(
+      lv.returnValue = HermesValue::encodeTrustedNumberValue(
           lexer_.getCurToken()->getNumber());
       break;
     case JSONTokenKind::LBrace: {
@@ -301,7 +303,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
       if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      returnValue = *parRes;
+      lv.returnValue = *parRes;
       break;
     }
     case JSONTokenKind::LSquare: {
@@ -309,17 +311,17 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
       if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      returnValue = *parRes;
+      lv.returnValue = *parRes;
       break;
     }
     case JSONTokenKind::True:
-      returnValue = HermesValue::encodeBoolValue(true);
+      lv.returnValue = HermesValue::encodeBoolValue(true);
       break;
     case JSONTokenKind::False:
-      returnValue = HermesValue::encodeBoolValue(false);
+      lv.returnValue = HermesValue::encodeBoolValue(false);
       break;
     case JSONTokenKind::Null:
-      returnValue = HermesValue::encodeNullValue();
+      lv.returnValue = HermesValue::encodeNullValue();
       break;
 
     default:
@@ -330,10 +332,17 @@ CallResult<HermesValue> RuntimeJSONParser::parseValue() {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return returnValue.getHermesValue();
+  return lv.returnValue.getHermesValue();
 }
 
 CallResult<HermesValue> RuntimeJSONParser::parseArray() {
+  struct : public Locals {
+    PinnedValue<JSArray> array;
+    PinnedValue<> indexValue;
+    PinnedValue<> elementValue;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   assert(
       lexer_.getCurToken()->getKind() == JSONTokenKind::LSquare &&
       "Wrong entrance to parseArray");
@@ -341,13 +350,12 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = runtime_.makeHandle(std::move(*arrRes));
+  lv.array.castAndSetHermesValue<JSArray>(arrRes->getHermesValue());
 
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (lexer_.getCurToken()->getKind() != JSONTokenKind::RSquare) {
-    MutableHandle<> indexValue{runtime_};
     GCScope gcScope{runtime_};
     auto marker = gcScope.createMarker();
 
@@ -359,13 +367,14 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
         return ExecutionStatus::EXCEPTION;
       }
 
-      indexValue = HermesValue::encodeTrustedNumberValue(index);
+      lv.indexValue = HermesValue::encodeTrustedNumberValue(index);
+      lv.elementValue = *parRes;
       (void)JSObject::defineOwnComputedPrimitive(
-          array,
+          lv.array,
           runtime_,
-          indexValue,
+          lv.indexValue,
           DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          runtime_.makeHandle(*parRes));
+          lv.elementValue);
 
       if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
         if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
@@ -383,14 +392,22 @@ CallResult<HermesValue> RuntimeJSONParser::parseArray() {
         "Unexpected break for array parse");
   }
 
-  return array.getHermesValue();
+  return lv.array.getHermesValue();
 }
 
 CallResult<HermesValue> RuntimeJSONParser::parseObject() {
+  struct : public Locals {
+    PinnedValue<JSObject> object;
+    PinnedValue<SymbolID> key;
+    PinnedValue<> propertyValue;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   assert(
       lexer_.getCurToken()->getKind() == JSONTokenKind::LBrace &&
       "Wrong entrance to parseObject");
-  auto object = runtime_.makeHandle(JSObject::create(runtime_));
+  lv.object.castAndSetHermesValue<JSObject>(
+      JSObject::create(runtime_).getHermesValue());
 
   // If the lexer encounters a string in this context, it should treat it as a
   // key string, which means it will store the string as a symbol.
@@ -399,10 +416,9 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
     return ExecutionStatus::EXCEPTION;
   }
   if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
-    return object.getHermesValue();
+    return lv.object.getHermesValue();
   }
 
-  MutableHandle<SymbolID> key{runtime_};
   GCScope gcScope{runtime_};
   auto marker = gcScope.createMarker();
   for (;;) {
@@ -412,7 +428,7 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
             lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
       return lexer_.error("Expect a string key in JSON object");
     }
-    key = lexer_.getCurToken()->getStrAsSymbol().get();
+    lv.key = lexer_.getCurToken()->getStrAsSymbol().get();
 
     if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -431,12 +447,13 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
       return ExecutionStatus::EXCEPTION;
     }
 
+    lv.propertyValue = *parRes;
     (void)JSObject::defineOwnComputedPrimitive(
-        object,
+        lv.object,
         runtime_,
-        key,
+        lv.key,
         DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        runtime_.makeHandle(*parRes));
+        lv.propertyValue);
 
     if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
       if (LLVM_UNLIKELY(
@@ -453,13 +470,19 @@ CallResult<HermesValue> RuntimeJSONParser::parseObject() {
   assert(
       lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace &&
       "Unexpected stop for object parse");
-  return object.getHermesValue();
+  return lv.object.getHermesValue();
 }
 
 CallResult<HermesValue> RuntimeJSONParser::revive(Handle<> value) {
-  auto root = runtime_.makeHandle(JSObject::create(runtime_));
+  struct : public Locals {
+    PinnedValue<JSObject> root;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
+  lv.root.castAndSetHermesValue<JSObject>(
+      JSObject::create(runtime_).getHermesValue());
   auto status = JSObject::defineOwnProperty(
-      root,
+      lv.root,
       runtime_,
       Predefined::getSymbolID(Predefined::emptyString),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
@@ -469,7 +492,7 @@ CallResult<HermesValue> RuntimeJSONParser::revive(Handle<> value) {
       status != ExecutionStatus::EXCEPTION && *status &&
       "defineOwnProperty on new object cannot fail");
   return operationWalk(
-      root, runtime_.getPredefinedStringHandle(Predefined::emptyString));
+      lv.root, runtime_.getPredefinedStringHandle(Predefined::emptyString));
 }
 
 CallResult<HermesValue> RuntimeJSONParser::operationWalk(
@@ -484,19 +507,24 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
     return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
   }
 
+  struct : public Locals {
+    PinnedValue<> tmpHandle;
+    PinnedValue<> valHandle;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   auto propRes = JSObject::getComputed_RJS(holder, runtime_, property);
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  MutableHandle<> tmpHandle{runtime_};
   CallResult<bool> isArrayRes =
       isArray(runtime_, dyn_vmcast<JSObject>(propRes->get()));
   if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto valHandle = runtime_.makeHandle(std::move(*propRes));
+  lv.valHandle = std::move(*propRes);
   if (*isArrayRes) {
-    Handle<JSObject> objHandle = Handle<JSObject>::vmcast(valHandle);
+    Handle<JSObject> objHandle = Handle<JSObject>::vmcast(&lv.valHandle);
     CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(objHandle, runtime_);
     if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -504,15 +532,16 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
 
     GCScopeMarkerRAII marker(runtime_);
     for (uint64_t index = 0, e = *lenRes; index < e; ++index) {
-      tmpHandle = HermesValue::encodeTrustedNumberValue(index);
+      lv.tmpHandle = HermesValue::encodeTrustedNumberValue(index);
       // Note that deleting elements doesn't affect array length.
       if (LLVM_UNLIKELY(
-              filter(objHandle, tmpHandle) == ExecutionStatus::EXCEPTION)) {
+              filter(objHandle, lv.tmpHandle) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       marker.flush();
     }
-  } else if (auto scopedObject = Handle<JSObject>::dyn_vmcast(valHandle)) {
+  } else if (vmisa<JSObject>(lv.valHandle.getHermesValue())) {
+    auto scopedObject = Handle<JSObject>::vmcast(&lv.valHandle);
     auto cr = JSObject::getOwnPropertyNames(scopedObject, runtime_, true);
     if (cr == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -520,9 +549,10 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
     auto keys = *cr;
     GCScopeMarkerRAII marker(runtime_);
     for (uint32_t index = 0, e = keys->getEndIndex(); index < e; ++index) {
-      tmpHandle = keys->at(runtime_, index).unboxToHV(runtime_);
+      lv.tmpHandle = keys->at(runtime_, index).unboxToHV(runtime_);
       if (LLVM_UNLIKELY(
-              filter(scopedObject, tmpHandle) == ExecutionStatus::EXCEPTION)) {
+              filter(scopedObject, lv.tmpHandle) ==
+              ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       marker.flush();
@@ -530,25 +560,34 @@ CallResult<HermesValue> RuntimeJSONParser::operationWalk(
   }
   // We have delayed converting the property to a string if it was index.
   // Now we have to do it because we are passing it to the reviver.
-  tmpHandle = *property;
-  auto strRes = toString_RJS(runtime_, tmpHandle);
+  lv.tmpHandle = *property;
+  auto strRes = toString_RJS(runtime_, lv.tmpHandle);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  tmpHandle = strRes->getHermesValue();
+  lv.tmpHandle = strRes->getHermesValue();
 
   return Callable::executeCall2(
-             reviver_, runtime_, holder, *tmpHandle, *valHandle)
+             reviver_,
+             runtime_,
+             holder,
+             lv.tmpHandle.getHermesValue(),
+             lv.valHandle.getHermesValue())
       .toCallResultHermesValue();
 }
 
 ExecutionStatus RuntimeJSONParser::filter(Handle<JSObject> val, Handle<> key) {
+  struct : public Locals {
+    PinnedValue<> newElement;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   auto jsonRes = operationWalk(val, key);
   if (LLVM_UNLIKELY(jsonRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto newElement = runtime_.makeHandle(*jsonRes);
-  if (newElement->isUndefined()) {
+  lv.newElement = *jsonRes;
+  if (lv.newElement->isUndefined()) {
     if (LLVM_UNLIKELY(
             JSObject::deleteComputed(val, runtime_, key) ==
             ExecutionStatus::EXCEPTION)) {
@@ -561,7 +600,7 @@ ExecutionStatus RuntimeJSONParser::filter(Handle<JSObject> val, Handle<> key) {
                 runtime_,
                 key,
                 DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                newElement) == ExecutionStatus::EXCEPTION)) {
+                lv.newElement) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
   }
@@ -601,7 +640,8 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     return ExecutionStatus::RETURNED;
   // replacer is an object.
 
-  if ((replacerFunction_ = dyn_vmcast<Callable>(*replacer)))
+  lv_.replacerFunction = dyn_vmcast<Callable>(*replacer);
+  if (lv_.replacerFunction.get())
     return ExecutionStatus::RETURNED;
   // replacer is not a callable.
 
@@ -627,7 +667,7 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  propertyList_ = std::move(*arrRes);
+  lv_.propertyList = std::move(*arrRes);
 
   // Iterate through all indexes, in ascending order.
   GCScope gcScope{runtime_};
@@ -644,35 +684,36 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
     // Convert v to string and store into item, if v is string, number, JSString
     // or JSNumber.
     if (v->isString()) {
-      tmpHandle_ = std::move(v);
+      lv_.tmpHandle = std::move(v);
     } else if (
         v->isNumber() || vmisa<JSNumber>(v.get()) || vmisa<JSString>(v.get())) {
-      tmpHandle_ = std::move(v);
-      auto strRes = toString_RJS(runtime_, tmpHandle_);
+      lv_.tmpHandle = std::move(v);
+      auto strRes = toString_RJS(runtime_, lv_.tmpHandle);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      tmpHandle_ = strRes->getHermesValue();
+      lv_.tmpHandle = strRes->getHermesValue();
     } else {
-      tmpHandle_ = HermesValue::encodeUndefinedValue();
+      lv_.tmpHandle = HermesValue::encodeUndefinedValue();
     }
 
-    if (tmpHandle_->isUndefined())
+    if (lv_.tmpHandle->isUndefined())
       continue;
     // We only add item to propertyList if item is not already an element.
     bool exists = false;
-    auto len = propertyList_->getEndIndex();
+    auto len = lv_.propertyList->getEndIndex();
     for (uint32_t i = 0; i < len; ++i) {
-      if (propertyList_->at(runtime_, i)
+      if (lv_.propertyList->at(runtime_, i)
               .getString(runtime_)
-              ->equals(tmpHandle_->getString())) {
+              ->equals(lv_.tmpHandle->getString())) {
         exists = true;
         break;
       }
     }
     if (!exists) {
       if (LLVM_UNLIKELY(
-              JSArray::setElementAt(propertyList_, runtime_, len, tmpHandle_) ==
+              JSArray::setElementAt(
+                  lv_.propertyList, runtime_, len, lv_.tmpHandle) ==
               ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
     }
@@ -681,22 +722,22 @@ ExecutionStatus JSONStringifyer::initializeReplacer(Handle<> replacer) {
 }
 
 ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
-  tmpHandle_ = *space;
-  if (vmisa<JSNumber>(*tmpHandle_)) {
-    auto numRes = toNumber_RJS(runtime_, tmpHandle_);
+  lv_.tmpHandle = *space;
+  if (vmisa<JSNumber>(*lv_.tmpHandle)) {
+    auto numRes = toNumber_RJS(runtime_, lv_.tmpHandle);
     if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    tmpHandle_ = *numRes;
-  } else if (vmisa<JSString>(*tmpHandle_)) {
-    auto strRes = toString_RJS(runtime_, tmpHandle_);
+    lv_.tmpHandle = *numRes;
+  } else if (vmisa<JSString>(*lv_.tmpHandle)) {
+    auto strRes = toString_RJS(runtime_, lv_.tmpHandle);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    tmpHandle_ = strRes->getHermesValue();
+    lv_.tmpHandle = strRes->getHermesValue();
   }
-  if (tmpHandle_->isNumber()) {
-    auto intRes = toIntegerOrInfinity(runtime_, tmpHandle_);
+  if (lv_.tmpHandle->isNumber()) {
+    auto intRes = toIntegerOrInfinity(runtime_, lv_.tmpHandle);
     assert(
         intRes != ExecutionStatus::EXCEPTION &&
         "toInteger on a number cannot throw");
@@ -713,48 +754,56 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      gap_ = strRes->getString();
+      lv_.gap = strRes->getString();
     }
-  } else if (auto str = Handle<StringPrimitive>::dyn_vmcast(tmpHandle_)) {
+  } else if (vmisa<StringPrimitive>(lv_.tmpHandle.getHermesValue())) {
+    auto str = Handle<StringPrimitive>::vmcast(&lv_.tmpHandle);
     if (str->getStringLength() > 10) {
       auto strRes = StringPrimitive::slice(runtime_, str, 0, 10);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      gap_ = strRes->getString();
+      lv_.gap = strRes->getString();
     } else if (str->getStringLength() > 0) {
       // If the string is empty, we don't set the gap.
-      gap_ = str.get();
+      lv_.gap = str.get();
     }
   }
   return ExecutionStatus::RETURNED;
 }
 
 CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
+  struct : public Locals {
+    PinnedValue<> hValueHV;
+    PinnedValue<Callable> toJSON;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   GCScopeMarkerRAII marker{runtime_};
-  tmpHandle_ = key;
+  lv_.tmpHandle = key;
 
   // Str.1: access holder[key].
-  auto propRes =
-      JSObject::getComputed_RJS(operationStrHolder_, runtime_, tmpHandle_);
+  auto propRes = JSObject::getComputed_RJS(
+      lv_.operationStrHolder, runtime_, lv_.tmpHandle);
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  operationStrValue_.set(propRes->get());
+  lv_.operationStrValue = propRes->get();
 
   // Str.2. If Type(value) is Object or BigInt, then
-  MutableHandle<> hValueHV{runtime_, *operationStrValue_};
-  if (vmisa<BigIntPrimitive>(*operationStrValue_)) {
-    CallResult<HermesValue> hObjRes = toObject(runtime_, hValueHV);
+  lv.hValueHV = *lv_.operationStrValue;
+  if (vmisa<BigIntPrimitive>(*lv_.operationStrValue)) {
+    CallResult<HermesValue> hObjRes = toObject(runtime_, lv.hValueHV);
     if (LLVM_UNLIKELY(hObjRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     assert(vmisa<JSBigInt>(*hObjRes) && "if not boxed bigint, then what?!");
     assert(vmisa<JSObject>(*hObjRes) && "if not object, then what?!");
-    hValueHV = std::move(*hObjRes);
+    lv.hValueHV = std::move(*hObjRes);
   }
 
-  if (auto valueObj = Handle<JSObject>::dyn_vmcast(hValueHV)) {
+  if (vmisa<JSObject>(lv.hValueHV.getHermesValue())) {
+    auto valueObj = Handle<JSObject>::vmcast(&lv.hValueHV);
     // Str.2.
     // Str.2.a: check if toJSON exists in value.
     if (LLVM_UNLIKELY(
@@ -762,94 +811,98 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
                  valueObj,
                  runtime_,
                  Predefined::getSymbolID(Predefined::toJSON),
-                 operationStrValue_)) == ExecutionStatus::EXCEPTION)) {
+                 lv_.operationStrValue)) == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // Str.2.b: check if toJSON is a Callable.
-    if (auto toJSON = Handle<Callable>::dyn_vmcast(
-            runtime_.makeHandle(std::move(*propRes)))) {
-      if (!tmpHandle_->isString()) {
+    auto toJSONPseudo = std::move(*propRes);
+    if (vmisa<Callable>(toJSONPseudo.getHermesValue())) {
+      lv.toJSON = vmcast<Callable>(toJSONPseudo.getHermesValue());
+      if (!lv_.tmpHandle->isString()) {
         // Lazily convert key to a string.
-        auto status = toString_RJS(runtime_, tmpHandle_);
+        auto status = toString_RJS(runtime_, lv_.tmpHandle);
         assert(
             status != ExecutionStatus::EXCEPTION &&
             "toString on a property cannot fail");
-        tmpHandle_ = status->getHermesValue();
+        lv_.tmpHandle = status->getHermesValue();
       }
       // Call toJSON with key as argument, value as this.
       auto callRes = Callable::executeCall1(
-          toJSON, runtime_, operationStrValue_, *tmpHandle_);
+          Handle<Callable>::vmcast(&lv.toJSON),
+          runtime_,
+          lv_.operationStrValue,
+          *lv_.tmpHandle);
       if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      operationStrValue_ = std::move(*callRes);
+      lv_.operationStrValue = std::move(*callRes);
     }
   }
 
   // Str.3.
-  if (replacerFunction_) {
+  if (lv_.replacerFunction.get()) {
     // Str.3.a.
-    if (!tmpHandle_->isString()) {
+    if (!lv_.tmpHandle->isString()) {
       // Lazily convert key to a string.
-      auto status = toString_RJS(runtime_, tmpHandle_);
+      auto status = toString_RJS(runtime_, lv_.tmpHandle);
       assert(
           status != ExecutionStatus::EXCEPTION &&
           "toString on a property cannot fail");
-      tmpHandle_ = status->getHermesValue();
+      lv_.tmpHandle = status->getHermesValue();
     }
     // If ReplacerFunction exists, call it with key and value as argument,
     // holder as this.
     auto callRes = Callable::executeCall2(
-        replacerFunction_,
+        lv_.replacerFunction,
         runtime_,
-        operationStrHolder_,
-        *tmpHandle_,
-        *operationStrValue_);
+        lv_.operationStrHolder,
+        *lv_.tmpHandle,
+        *lv_.operationStrValue);
     if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    operationStrValue_ = std::move(*callRes);
+    lv_.operationStrValue = std::move(*callRes);
   }
 
   // Str.4: unbox value if necessary.
   // If Type(value) is Object, then
-  if (vmisa<JSNumber>(*operationStrValue_)) {
+  if (vmisa<JSNumber>(*lv_.operationStrValue)) {
     //  If value has a [[NumberData]] internal slot, then
     //      Set value to ? ToNumber(value).
-    auto numRes = toNumber_RJS(runtime_, operationStrValue_);
+    auto numRes = toNumber_RJS(runtime_, lv_.operationStrValue);
     if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    operationStrValue_ = *numRes;
-  } else if (vmisa<JSString>(*operationStrValue_)) {
+    lv_.operationStrValue = *numRes;
+  } else if (vmisa<JSString>(*lv_.operationStrValue)) {
     //  Else if value has a [[StringData]] internal slot, then
     //      Set value to ? ToString(value).
-    auto strRes = toString_RJS(runtime_, operationStrValue_);
+    auto strRes = toString_RJS(runtime_, lv_.operationStrValue);
     if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    operationStrValue_ = strRes->getHermesValue();
-  } else if (auto *jsBool = dyn_vmcast<JSBoolean>(*operationStrValue_)) {
+    lv_.operationStrValue = strRes->getHermesValue();
+  } else if (auto *jsBool = dyn_vmcast<JSBoolean>(*lv_.operationStrValue)) {
     //  Else if value has a [[BooleanData]] internal slot, then
     //      Set value to value.[[BooleanData]].
-    operationStrValue_ =
+    lv_.operationStrValue =
         HermesValue::encodeBoolValue(jsBool->getPrimitiveBoolean());
-  } else if (auto jsBigInt = dyn_vmcast<JSBigInt>(*operationStrValue_)) {
+  } else if (auto jsBigInt = dyn_vmcast<JSBigInt>(*lv_.operationStrValue)) {
     //  Else if value has a [[BigIntData]] internal slot, then
     //      Set value to value.[[BigIntData]]
     BigIntPrimitive *bigintData =
         JSBigInt::getPrimitiveBigInt(jsBigInt, runtime_);
-    operationStrValue_ = HermesValue::encodeBigIntValue(bigintData);
+    lv_.operationStrValue = HermesValue::encodeBigIntValue(bigintData);
   }
 
   // Str.5.
-  if (operationStrValue_->isNull()) {
+  if (lv_.operationStrValue->isNull()) {
     appendToOutput(Predefined::getSymbolID(Predefined::null));
     return true;
   }
 
-  if (operationStrValue_->isBool()) {
-    if (operationStrValue_->getBool()) {
+  if (lv_.operationStrValue->isBool()) {
+    if (lv_.operationStrValue->getBool()) {
       // Str.6.
       appendToOutput(Predefined::getSymbolID(Predefined::trueStr));
     } else {
@@ -860,16 +913,16 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   }
 
   // Str.8.
-  if (operationStrValue_->isString()) {
+  if (lv_.operationStrValue->isString()) {
     operationQuote(StringPrimitive::createStringView(
-        runtime_, Handle<StringPrimitive>::vmcast(operationStrValue_)));
+        runtime_, Handle<StringPrimitive>::vmcast(&lv_.operationStrValue)));
     return true;
   }
 
   // Str.9.
-  if (operationStrValue_->isNumber()) {
-    if (std::isfinite(operationStrValue_->getNumber())) {
-      auto status = toString_RJS(runtime_, operationStrValue_);
+  if (lv_.operationStrValue->isNumber()) {
+    if (std::isfinite(lv_.operationStrValue->getNumber())) {
+      auto status = toString_RJS(runtime_, lv_.operationStrValue);
       assert(
           status != ExecutionStatus::EXCEPTION &&
           "toString on a number cannot fail");
@@ -881,14 +934,14 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
   }
 
   // Str.10
-  if (vmisa<BigIntPrimitive>(*operationStrValue_)) {
+  if (vmisa<BigIntPrimitive>(*lv_.operationStrValue)) {
     return runtime_.raiseTypeError("Do not know how to serialize a BigInt");
   }
 
   // Str.11.
-  if (vmisa<JSObject>(*operationStrValue_) &&
-      !vmisa<Callable>(*operationStrValue_)) {
-    auto cr = pushValueToStack(*operationStrValue_);
+  if (vmisa<JSObject>(*lv_.operationStrValue) &&
+      !vmisa<Callable>(*lv_.operationStrValue)) {
+    auto cr = pushValueToStack(*lv_.operationStrValue);
 
     if (cr == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
@@ -900,7 +953,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     // handles).
     marker.flush();
     CallResult<bool> isArrayRes =
-        isArray(runtime_, vmcast<JSObject>(*operationStrValue_));
+        isArray(runtime_, vmcast<JSObject>(*lv_.operationStrValue));
     if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -927,6 +980,11 @@ void JSONStringifyer::operationQuote(StringView value) {
 }
 
 ExecutionStatus JSONStringifyer::operationJA() {
+  struct : public Locals {
+    PinnedValue<JSObject> arrayObject;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   GCScopeMarkerRAII marker{runtime_};
 
   // JA.3.
@@ -938,10 +996,10 @@ ExecutionStatus JSONStringifyer::operationJA() {
   }
   depthCount_++;
   output_.push_back(u'[');
-  CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(
-      runtime_.makeHandle(vmcast<JSObject>(
-          stackValue_->at(stackValue_->size() - 1).getObject(runtime_))),
-      runtime_);
+  lv.arrayObject.castAndSetHermesValue<JSObject>(
+      lv_.stackValue->at(lv_.stackValue->size() - 1).unboxToHV(runtime_));
+  CallResult<uint64_t> lenRes =
+      getArrayLikeLength_RJS(lv.arrayObject, runtime_);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -957,8 +1015,8 @@ ExecutionStatus JSONStringifyer::operationJA() {
       indent();
     }
     // JA.8.a.
-    operationStrHolder_ = vmcast<JSObject>(
-        stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
+    lv_.operationStrHolder = vmcast<JSObject>(
+        lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
     // Flush just before the recursion in case any handles were created.
     marker.flush();
     auto status = operationStr(HermesValue::encodeTrustedNumberValue(index));
@@ -994,33 +1052,34 @@ ExecutionStatus JSONStringifyer::operationJO() {
   auto beginningLoc = output_.size();
   indent();
 
-  if (propertyList_) {
+  if (lv_.propertyList.get()) {
     // JO.5.
-    operationJOK_ = propertyList_.get();
+    lv_.operationJOK = lv_.propertyList.get();
   } else {
     // JO.6.
-    tmpHandle_ = HermesValue::encodeObjectValue(
-        stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
-    if (LLVM_LIKELY(!Handle<JSObject>::vmcast(tmpHandle_)->isProxyObject())) {
+    lv_.tmpHandle = HermesValue::encodeObjectValue(
+        lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
+    if (LLVM_LIKELY(
+            !Handle<JSObject>::vmcast(&lv_.tmpHandle)->isProxyObject())) {
       // enumerableOwnProperties_RJS is the spec definition, and is
       // used below on proxies so the correct traps get called.  In
       // the common case of a non-proxy object, we can do less work by
       // calling getOwnPropertyNames.
       auto cr = JSObject::getOwnPropertyNames(
-          Handle<JSObject>::vmcast(tmpHandle_), runtime_, true);
+          Handle<JSObject>::vmcast(&lv_.tmpHandle), runtime_, true);
       if (cr == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      operationJOK_ = **cr;
+      lv_.operationJOK = **cr;
     } else {
       CallResult<HermesValue> ownPropRes = enumerableOwnProperties_RJS(
           runtime_,
-          Handle<JSObject>::vmcast(tmpHandle_),
+          Handle<JSObject>::vmcast(&lv_.tmpHandle),
           EnumerableOwnPropertiesKind::Key);
       if (ownPropRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      operationJOK_ = vmcast<JSArray>(*ownPropRes);
+      lv_.operationJOK = vmcast<JSArray>(*ownPropRes);
     }
   }
 
@@ -1028,7 +1087,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
 
   // JO.8.
   bool hasElement = false;
-  for (uint32_t index = 0, len = operationJOK_->getEndIndex(); index < len;
+  for (uint32_t index = 0, len = lv_.operationJOK->getEndIndex(); index < len;
        ++index) {
     // JO.8.a.
     // We are speculating that the Str operation will not return undefined,
@@ -1043,46 +1102,47 @@ ExecutionStatus JSONStringifyer::operationJO() {
       indent();
     }
 
-    tmpHandle_ = operationJOK_->at(runtime_, index).unboxToHV(runtime_);
-    if (LLVM_UNLIKELY(!tmpHandle_->isString())) {
+    lv_.tmpHandle = lv_.operationJOK->at(runtime_, index).unboxToHV(runtime_);
+    if (LLVM_UNLIKELY(!lv_.tmpHandle->isString())) {
       // property may come from getOwnPropertyNames, which may contain numbers.
-      // getOwnPropertyNames and propertyList_ are both only populated
+      // getOwnPropertyNames and lv_.propertyList are both only populated
       // with strings, numbers, and undefined only.
       // None of them are objects, so toString cannot throw.
-      assert(!tmpHandle_->isObject() && "property name is an object");
-      auto status = toString_RJS(runtime_, tmpHandle_);
+      assert(!lv_.tmpHandle->isObject() && "property name is an object");
+      auto status = toString_RJS(runtime_, lv_.tmpHandle);
       assert(
           status != ExecutionStatus::EXCEPTION &&
           "toString on a property cannot fail");
-      tmpHandle_ = status->getHermesValue();
+      lv_.tmpHandle = status->getHermesValue();
     }
     // tmpHandle now contains property as string.
     // JO.8.b.i
     operationQuote(StringPrimitive::createStringView(
-        runtime_, Handle<StringPrimitive>::vmcast(tmpHandle_)));
+        runtime_, Handle<StringPrimitive>::vmcast(&lv_.tmpHandle)));
     // JO.8.b.ii
     output_.push_back(u':');
     // JO.8.b.iii
-    if (gap_.get()) {
+    if (lv_.gap.get()) {
       output_.push_back(u' ');
     }
 
     // JO.9.a.
-    operationStrHolder_ = vmcast<JSObject>(
-        stackValue_->at(stackValue_->size() - 1).getObject(runtime_));
+    lv_.operationStrHolder = vmcast<JSObject>(
+        lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
 
-    tmpHandle2_ = operationJOK_.getHermesValue();
-    if (PropStorage::push_back(stackJO_, runtime_, tmpHandle2_) ==
+    lv_.tmpHandle2 = lv_.operationJOK.getHermesValue();
+    auto stackJOHandle = MutableHandle<PropStorage>(lv_.stackJO);
+    if (PropStorage::push_back(stackJOHandle, runtime_, lv_.tmpHandle2) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
 
     // Flush just before recursion (propStoragePushBack may create handles).
     marker.flush();
-    auto result = operationStr(*tmpHandle_);
+    auto result = operationStr(*lv_.tmpHandle);
 
-    operationJOK_ =
-        vmcast<JSArray>(stackJO_->pop_back(runtime_).getObject(runtime_));
+    lv_.operationJOK =
+        vmcast<JSArray>(lv_.stackJO->pop_back(runtime_).getObject(runtime_));
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -1110,10 +1170,10 @@ ExecutionStatus JSONStringifyer::operationJO() {
 }
 
 void JSONStringifyer::indent() {
-  if (gap_.get()) {
+  if (lv_.gap.get()) {
     output_.push_back(u'\n');
     for (uint32_t i = 0; i < depthCount_; ++i) {
-      appendToOutput(gap_.get());
+      appendToOutput(lv_.gap.get());
     }
   }
 }
@@ -1121,14 +1181,15 @@ void JSONStringifyer::indent() {
 CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
   assert(vmisa<JSObject>(value) && "Can only push object to stack");
 
-  for (uint32_t i = 0, len = stackValue_->size(); i < len; ++i) {
-    if (stackValue_->at(i).getObject(runtime_) == value.getObject()) {
+  for (uint32_t i = 0, len = lv_.stackValue->size(); i < len; ++i) {
+    if (lv_.stackValue->at(i).getObject(runtime_) == value.getObject()) {
       return false;
     }
   }
 
-  tmpHandle_ = value;
-  if (PropStorage::push_back(stackValue_, runtime_, tmpHandle_) ==
+  lv_.tmpHandle = value;
+  auto stackValueHandle = MutableHandle<PropStorage>(lv_.stackValue);
+  if (PropStorage::push_back(stackValueHandle, runtime_, lv_.tmpHandle) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1136,8 +1197,8 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
 }
 
 void JSONStringifyer::popValueFromStack() {
-  assert(stackValue_->size() && "Cannot pop from an empty stack");
-  stackValue_->pop_back(runtime_);
+  assert(lv_.stackValue->size() && "Cannot pop from an empty stack");
+  lv_.stackValue->pop_back(runtime_);
 }
 
 void JSONStringifyer::appendToOutput(SymbolID identifierID) {
@@ -1154,9 +1215,9 @@ CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {
   output_.clear();
 
   // Step 9, 10 in ES5.1 15.12.3.
-  operationStrHolder_ = JSObject::create(runtime_).get();
+  lv_.operationStrHolder = JSObject::create(runtime_).get();
   auto status = JSObject::defineOwnProperty(
-      operationStrHolder_,
+      lv_.operationStrHolder,
       runtime_,
       Predefined::getSymbolID(Predefined::emptyString),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),

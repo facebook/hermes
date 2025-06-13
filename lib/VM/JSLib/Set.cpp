@@ -17,7 +17,7 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
+HermesValue createSetConstructor(Runtime &runtime) {
   auto setPrototype = Handle<JSObject>::vmcast(&runtime.setPrototype);
 
   // Set.prototype.xxx methods.
@@ -176,7 +176,7 @@ Handle<NativeConstructor> createSetConstructor(Runtime &runtime) {
       setPrototype,
       0);
 
-  return cons;
+  return cons.getHermesValue();
 }
 
 /// Populate the Set with the contents of the source Set.
@@ -220,6 +220,9 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
     PinnedValue<JSSet> self;
     PinnedValue<HermesValue> tmpHandle;
     PinnedValue<JSObject> tmpObjHandle;
+    PinnedValue<Callable> adder;
+    PinnedValue<> iterMethodHandle;
+    PinnedValue<Callable> iterMethod;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   if (LLVM_LIKELY(
@@ -257,33 +260,33 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
   }
 
   // ES6.0 23.2.1.1.7: Cache adder across all iterations of the loop.
-  auto adder =
-      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
+  auto *adder = dyn_vmcast<Callable>(propRes->getHermesValue());
   if (!adder) {
     return runtime.raiseTypeError("Property 'add' for Set is not callable");
   }
+  lv.adder = adder;
 
-  auto iterMethodRes = getMethod(
-      runtime,
-      args.getArgHandle(0),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)));
+  lv.iterMethodHandle = HermesValue::encodeSymbolValue(
+      Predefined::getSymbolID(Predefined::SymbolIterator));
+  auto iterMethodRes =
+      getMethod(runtime, args.getArgHandle(0), lv.iterMethodHandle);
   if (LLVM_UNLIKELY(iterMethodRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (!vmisa<Callable>(iterMethodRes->getHermesValue())) {
     return runtime.raiseTypeError("iterator method is not callable");
   }
-  auto iterMethod = runtime.makeHandle<Callable>(std::move(*iterMethodRes));
+  lv.iterMethod = vmcast<Callable>(iterMethodRes->getHermesValue());
 
   // Fast path
-  const bool originalAdd = adder.getHermesValue().getRaw() ==
+  const bool originalAdd = lv.adder.getHermesValue().getRaw() ==
       runtime.setPrototypeAdd.getHermesValue().getRaw();
   // If the adder is the default one, we can call JSSet::insert directly.
   if (LLVM_LIKELY(originalAdd)) {
     // If the iterable is an array with unmodified iterator,
     // then we can do for-loop.
     if (Handle<JSArray> arr = args.dyncastArg<JSArray>(0); arr &&
-        LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
+        LLVM_LIKELY(lv.iterMethod.getHermesValue().getRaw() ==
                     runtime.arrayPrototypeValues.getHermesValue().getRaw())) {
       for (JSArray::size_type i = 0; i < JSArray::getLength(arr.get(), runtime);
            i++) {
@@ -319,7 +322,7 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
     // If the iterable is a Set with an unmodified iterator,
     // then we can do for-loop.
     if (Handle<JSSet> inputSet = args.dyncastArg<JSSet>(0); inputSet &&
-        LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
+        LLVM_LIKELY(lv.iterMethod.getHermesValue().getRaw() ==
                     runtime.setPrototypeValues.getHermesValue().getRaw())) {
       if (LLVM_UNLIKELY(
               setFromSetFastPath(runtime, lv.self, inputSet) ==
@@ -330,8 +333,8 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
     }
   }
   // Slow path
-  CallResult<CheckedIteratorRecord> iterRes =
-      getCheckedIterator(runtime, args.getArgHandle(0), iterMethod);
+  CallResult<CheckedIteratorRecord> iterRes = getCheckedIterator(
+      runtime, args.getArgHandle(0), Handle<Callable>{lv.iterMethod});
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -362,7 +365,7 @@ CallResult<HermesValue> setConstructor(void *, Runtime &runtime) {
 
     if (LLVM_UNLIKELY(
             Callable::executeCall1(
-                adder, runtime, lv.self, nextValueRes->get()) ==
+                lv.adder, runtime, lv.self, nextValueRes->get()) ==
             ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
@@ -422,10 +425,14 @@ CallResult<HermesValue> setPrototypeEntries(void *, Runtime &runtime) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.entries");
   }
-  auto iterator = runtime.makeHandle(JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
-  iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
-  return iterator.getHermesValue();
+  struct : public Locals {
+    PinnedValue<JSSetIterator> iterator;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.iterator = JSSetIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype));
+  lv.iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
+  return lv.iterator.getHermesValue();
 }
 
 CallResult<HermesValue> setPrototypeForEach(void *, Runtime &runtime) {
@@ -474,18 +481,26 @@ CallResult<HermesValue> setPrototypeValues(void *, Runtime &runtime) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.values");
   }
-  auto iterator = runtime.makeHandle(JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
-  iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
-  return iterator.getHermesValue();
+  struct : public Locals {
+    PinnedValue<JSSetIterator> iterator;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.iterator = JSSetIterator::create(
+      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype));
+  lv.iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
+  return lv.iterator.getHermesValue();
 }
 
-Handle<JSObject> createSetIteratorPrototype(Runtime &runtime) {
-  auto parentHandle = runtime.makeHandle(JSObject::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
+HermesValue createSetIteratorPrototype(Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<JSObject> parentHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.parentHandle = JSObject::create(
+      runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype));
   defineMethod(
       runtime,
-      parentHandle,
+      lv.parentHandle,
       Predefined::getSymbolID(Predefined::next),
       nullptr,
       setIteratorPrototypeNext,
@@ -496,12 +511,12 @@ Handle<JSObject> createSetIteratorPrototype(Runtime &runtime) {
   dpf.enumerable = 0;
   defineProperty(
       runtime,
-      parentHandle,
+      lv.parentHandle,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime.getPredefinedStringHandle(Predefined::SetIterator),
       dpf);
 
-  return parentHandle;
+  return lv.parentHandle.getHermesValue();
 }
 
 CallResult<HermesValue> setIteratorPrototypeNext(void *, Runtime &runtime) {

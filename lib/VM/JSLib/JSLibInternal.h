@@ -183,7 +183,7 @@ ExecutionStatus iteratorCloseAndRethrow(
 /// Create and initialize the global Object constructor. Populate the methods
 /// of Object and Object.prototype.
 /// \return the global Object constructor.
-Handle<NativeConstructor> createObjectConstructor(Runtime &runtime);
+HermesValue createObjectConstructor(Runtime &runtime);
 
 /// Built-in Object.prototype.toString.
 CallResult<HermesValue> directObjectPrototypeToString(
@@ -348,10 +348,10 @@ Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime);
 
 /// Create and initialize the global Set constructor. Populate the methods
 /// of Set.prototype.
-Handle<NativeConstructor> createSetConstructor(Runtime &runtime);
+HermesValue createSetConstructor(Runtime &runtime);
 
 /// Create SetIterator.prototype and populate methods.
-Handle<JSObject> createSetIteratorPrototype(Runtime &runtime);
+HermesValue createSetIteratorPrototype(Runtime &runtime);
 
 /// Create and initialize the global Map constructor. Populate the methods
 /// of Map.prototype.
