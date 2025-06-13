@@ -125,8 +125,10 @@ class MallocGC final : public GCBase {
   /// alive.
   /// This should be empty between collections.
   llvh::DenseSet<CellHeader *> newPointers_;
-  /// Whether to temporarily suppress handle-san collections.
-  bool suppressHandleSan_ = false;
+  /// Whether to temporarily suppress collections. We must verify that we have
+  /// enough space to satisfy all allocations while collections are suppressed,
+  /// so in practice, this just prevents Handle-San from running.
+  bool suppressCollections_ = false;
   /// maxSize_ is the absolute highest amount of memory that MallocGC is allowed
   /// to allocate.
   const gcheapsize_t maxSize_;
@@ -427,9 +429,15 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
     std::tuple<T2Args...> t2Args) {
   uint32_t totalSize = size1 + size2;
 
-  // Prevent collection from occurring between the two allocations below.
+  assert(!suppressCollections_ && "Collections are already suppressed");
   if (totalSize > sizeLimit_ - allocatedBytes_) {
+    // If we need to collect to free up additional space, do so now.
     collectBeforeAlloc(kNaturalCauseForAnalytics, totalSize);
+  } else if (shouldSanitizeHandles()) {
+    // If Handle-San is enabled, then we want to run before the allocations
+    // below. Once we have checked that there is enough space, we cannot
+    // collect, as that may change the size.
+    collectBeforeAlloc(kHandleSanCauseForAnalytics, totalSize);
   }
   if (totalSize > sizeLimit_ - allocatedBytes_) {
     oom(make_error_code(OOMError::MaxHeapReached));
@@ -438,6 +446,11 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
   // NOTE: We use makeAImpl directly here instead of makeA, because we want to
   // keep the common logic of assigning memory instrumentation IDs (e.g.) in
   // GCBase, so we don't want to duplicate that logic here.
+
+  // We have verified that there is enough space to satisfy the allocations, so
+  // suppress collections from Handle-San. This ensures that both objects are in
+  // the "YG", and the size of the heap does not change past this point.
+  suppressCollections_ = true;
 
   // Need to capture and explicitly use 'this'.
   // If it's not captured, compiler errors because 'makeAImpl' needs 'this'.
@@ -455,10 +468,6 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
       },
       t1Args);
 
-  // This allocation won't cause collection because we checked above that
-  // there's enough space. The only thing that could cause a collection is
-  // handle-san so we suppressed it.
-  suppressHandleSan_ = true;
   T2 *t2 = llvh::apply_tuple(
       [this, size2](auto &&...args) -> T2 * {
         return this->makeAImpl<
@@ -469,7 +478,7 @@ std::pair<T1 *, T2 *> MallocGC::make2YoungGenUnsafeImpl(
             MayFail::No>(size2, args...);
       },
       t2Args);
-  suppressHandleSan_ = false;
+  suppressCollections_ = false;
 
   assert(CellHeader::from(t1)->inYoungGen && "allocation must be in young gen");
   assert(CellHeader::from(t2)->inYoungGen && "allocation must be in young gen");

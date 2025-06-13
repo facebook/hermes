@@ -276,6 +276,7 @@ void MallocGC::clearUnmarkedPropertyMaps() {
 #endif
 
 void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
+  assert(!suppressCollections_ && "Collections are suppressed");
   assert(noAllocLevel_ == 0 && "no GC allowed right now");
   using std::chrono::steady_clock;
   LLVM_DEBUG(llvh::dbgs() << "Beginning collection");
@@ -587,7 +588,7 @@ GCCell *MallocGC::alloc(uint32_t size) {
   assert(
       isSizeHeapAligned(size) &&
       "Call to alloc must use a size aligned to HeapAlign");
-  if (shouldSanitizeHandles() && !suppressHandleSan_) {
+  if (shouldSanitizeHandles() && !suppressCollections_) {
     collectBeforeAlloc(kHandleSanCauseForAnalytics, size);
   }
   // Check for memory pressure conditions to do a collection.
