@@ -149,7 +149,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
       return ExecutionStatus::EXCEPTION;
     }
 
-    resizeWithinCapacity(
+    growWithinCapacity(
         vmcast<ArrayStorageBase<HVType>>(*arrRes), runtime, size);
     return arrRes;
   }
