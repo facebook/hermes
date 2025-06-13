@@ -335,10 +335,6 @@ void BytecodeDisassembler::disassembleBigIntStorage(raw_ostream &OS) {
 
   const uint32_t bigintCount = bcProvider_->getBigIntCount();
 
-  assert(
-      bigintTable.empty() == bigintStorage.empty() &&
-      "inconsistent bigint arrays");
-
   if (bigintTable.empty()) {
     return;
   }
