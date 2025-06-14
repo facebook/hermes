@@ -376,12 +376,23 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
       Runtime &runtime,
       size_type newSize) {
     const auto sz = self->size();
-    GCHVType::uninitialized_fill(
-        self->data() + sz,
-        self->data() + newSize,
-        HVType::encodeEmptyValue(),
-        self,
-        runtime.getHeap());
+    // Using GCHVType::uninitialized_fill generates a call to a libc routine to
+    // initialize the memory. However, this is an indirect call, which is
+    // expensive since we know that the number of additional elements is
+    // typically small. Instead, we use our own loop where we block the compiler
+    // from emitting a libc call using an empty asm statement.
+    for (auto cur = self->data() + sz, end = self->data() + newSize; cur != end;
+         ++cur) {
+      // Pass the extra nullptr to select the overload that doesn't handle
+      // pointers.
+      new (&*cur) GCHermesValueInLargeObjImpl<HVType>(
+          HVType::encodeEmptyValue(), runtime.getHeap(), nullptr);
+#ifdef __GNUC__
+      // This empty asm statement tells the compiler that we want each write to
+      // be observable, so it cannot turn the loop into a memset call.
+      asm volatile("" : : : "memory");
+#endif
+    }
     self->size_.store(newSize, std::memory_order_release);
   }
 
