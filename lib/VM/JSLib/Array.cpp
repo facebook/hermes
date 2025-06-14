@@ -377,6 +377,13 @@ static bool checkAndCacheProtoForFastPath(Runtime &runtime) {
   for (JSObject *curParent = arrParent->getParent(runtime);
        curParent != nullptr;
        curParent = curParent->getParent(runtime)) {
+    // If the object may have index-like properties that are not reflected on
+    // the hidden class or indexed storage, bail.
+    if (LLVM_UNLIKELY(
+            curParent->isHostObject() || curParent->isProxyObject() ||
+            curParent->isLazy()))
+      return false;
+
     // Any index-like properties in the parent means we can't use the fast path
     // because we might trigger an accessor or have to check property flags.
     if (LLVM_UNLIKELY(
