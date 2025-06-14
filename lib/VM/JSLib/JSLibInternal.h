@@ -512,7 +512,7 @@ CallResult<HermesValue> addEntriesFromIterable(
 namespace intl {
 
 // TODO T65916424: Consider how we can move this somewhere more modular.
-vm::Handle<vm::JSObject> createIntlObject(vm::Runtime &runtime);
+vm::HermesValue createIntlObject(vm::Runtime &runtime);
 
 } // namespace intl
 #endif

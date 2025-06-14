@@ -276,17 +276,11 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   struct : public Locals {
     PinnedValue<JSObject> tempHandle;
-    PinnedValue<> nanValue;
-    PinnedValue<> infinityValue;
-    PinnedValue<> undefinedValue;
+    PinnedValue<> value;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
   // Initialize constant values
-  lv.nanValue = HermesValue::encodeNaNValue();
-  lv.infinityValue = HermesValue::encodeTrustedNumberValue(
-      std::numeric_limits<double>::infinity());
-  lv.undefinedValue = HermesValue::encodeUndefinedValue();
 
   // Not enumerable, not writable, not configurable.
   DefinePropertyFlags constantDPF =
@@ -331,28 +325,32 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       };
 
   // 15.1.1.1 NaN.
+  lv.value = HermesValue::encodeNaNValue();
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime.getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::NaN),
       constantDPF,
-      lv.nanValue));
+      lv.value));
 
   // 15.1.1.2 Infinity.
+  lv.value = HermesValue::encodeTrustedNumberValue(
+      std::numeric_limits<double>::infinity());
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime.getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::Infinity),
       constantDPF,
-      lv.infinityValue));
+      lv.value));
 
   // 15.1.1.2 undefined.
+  lv.value = HermesValue::encodeUndefinedValue();
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime.getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::undefined),
       constantDPF,
-      lv.undefinedValue));
+      lv.value));
 
   // "Forward declaration" of Object.prototype. Its properties will be populated
   // later.
@@ -796,12 +794,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.
   if (runtime.hasIntl()) {
+    lv.value = intl::createIntlObject(runtime);
     runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
         runtime.getGlobal(),
         runtime,
         Predefined::getSymbolID(Predefined::Intl),
         normalDPF,
-        intl::createIntlObject(runtime)));
+        lv.value));
   }
 #endif
 }
