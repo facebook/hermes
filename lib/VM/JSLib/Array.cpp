@@ -353,8 +353,47 @@ static constexpr void setArrayFastPathObjectFlags(SHObjectFlags &res) {
   res.hostObject = 0;
   res.lazyObject = 0;
   res.proxyObject = 0;
-  res.isAddPropertyCacheParent = 0;
+  res.isCachedUsingEpoch = 0;
   res.objectID = 0;
+}
+
+/// Check that the prototype chain of arrays starting at Array.prototype does
+/// not contain any index-like properties. If it does not, update the epoch in
+/// the runtime so that calling this function can be skipped when the epoch
+/// matches. This is deliberately defined out-of-line because it is a slow path
+/// and we don't want it to affect inlining of arrayFastPathCheck.
+/// \return true if the prototype chain does not contain any index-like
+/// properties, false otherwise.
+static bool checkAndCacheProtoForFastPath(Runtime &runtime) {
+  auto *arrParent = *runtime.arrayPrototype;
+  arrParent->setCachedUsingEpoch();
+
+  // If the parent has any index-like properties, bail.
+  if (LLVM_UNLIKELY(arrParent->getClass(runtime)->getHasIndexLikeProperties()))
+    return false;
+
+  // Check if there are any index-like properties in any parent.
+  // If so, we can't use the fast path.
+  for (JSObject *curParent = arrParent->getParent(runtime);
+       curParent != nullptr;
+       curParent = curParent->getParent(runtime)) {
+    // Any index-like properties in the parent means we can't use the fast path
+    // because we might trigger an accessor or have to check property flags.
+    if (LLVM_UNLIKELY(
+            curParent->getClass(runtime)->getHasIndexLikeProperties()))
+      return false;
+
+    // Unlike the immediate parent, we do not expect any parent further up the
+    // chain to have indexed storage. Disqualify anything with indexed storage,
+    // since actually checking the "indexed range" is costly.
+    if (LLVM_UNLIKELY(curParent->getFlags().indexedStorage))
+      return false;
+
+    curParent->setCachedUsingEpoch();
+  }
+  runtime.setArrayFastPathParentEpoch();
+
+  return true;
 }
 
 /// Check for the fast path for array methods that can be optimized when running
@@ -440,27 +479,8 @@ static bool arrayFastPathCheck(
   if (LLVM_UNLIKELY(arrParent->getElemCount()))
     return false;
 
-  // If the parent has any index-like properties, bail.
-  if (LLVM_UNLIKELY(arrParent->getClass(runtime)->getHasIndexLikeProperties()))
-    return false;
-
-  // Check if there are any index-like properties in any parent.
-  // If so, we can't use the fast path.
-  for (JSObject *curParent = arrParent->getParent(runtime);
-       curParent != nullptr;
-       curParent = curParent->getParent(runtime)) {
-    // Any index-like properties in the parent means we can't use the fast path
-    // because we might trigger an accessor or have to check property flags.
-    if (LLVM_UNLIKELY(
-            curParent->getClass(runtime)->getHasIndexLikeProperties()))
-      return false;
-
-    // Unlike the immediate parent, we do not expect any parent further up the
-    // chain to have indexed storage. Disqualify anything with indexed storage,
-    // since actually checking the "indexed range" is costly.
-    if (LLVM_UNLIKELY(curParent->getFlags().indexedStorage))
-      return false;
-  }
+  if (LLVM_UNLIKELY(!runtime.checkArrayFastPathParentEpoch()))
+    return checkAndCacheProtoForFastPath(runtime);
 
   return true;
 }

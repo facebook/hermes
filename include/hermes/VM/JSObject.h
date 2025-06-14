@@ -434,6 +434,13 @@ class JSObject : public GCCell {
     return flags_.proxyObject;
   }
 
+  /// Record that this object is being used in a form of caching optimisation
+  /// such that any change to its hidden class or parent must update the epoch
+  /// in the runtime.
+  void setCachedUsingEpoch() {
+    flags_.isCachedUsingEpoch = true;
+  }
+
   /// Returns whether the object has any of properties set in \p flags.
   /// \p flags should have only the flags set, not the objectID.
   bool hasFlagIn(SHObjectFlags flags) const {
@@ -1427,7 +1434,7 @@ class JSObject : public GCCell {
     // in the parent chain that would prevent adding the property to the cached
     // HiddenClass.
     // We must break the cache, so increment the epoch.
-    if (LLVM_UNLIKELY(flags_.isAddPropertyCacheParent))
+    if (LLVM_UNLIKELY(flags_.isCachedUsingEpoch))
       runtime.incParentCacheEpoch();
   }
 
@@ -1473,7 +1480,7 @@ class JSObject : public GCCell {
 
   /// Try to cache property addition.
   /// May fail if unable to allocate an AddPropertyCacheEntry, e.g.
-  /// On success, sets isAddPropertyCacheParent flag for the parent of \p self
+  /// On success, sets isCachedUsingEpoch flag for the parent of \p self
   /// and all parents transitively.
   /// \param self the object the property is added to
   /// \param runtimeModule the runtimeModule in which to allocate an

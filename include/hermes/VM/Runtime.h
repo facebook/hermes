@@ -617,6 +617,20 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
     return parentCacheEpoch_;
   }
 
+  /// \return true if the parent cache epoch has not been updated since the
+  /// array fast path prototype check was done.
+  bool checkArrayFastPathParentEpoch() const {
+    assert(
+        arrayFastPathParentCacheEpoch_ <= parentCacheEpoch_ &&
+        "Epoch overflowed without invalidating the cache");
+    return arrayFastPathParentCacheEpoch_ == parentCacheEpoch_;
+  }
+
+  /// Set the epoch to use for array fast path prototype checks.
+  void setArrayFastPathParentEpoch() {
+    arrayFastPathParentCacheEpoch_ = parentCacheEpoch_;
+  }
+
 #ifdef UNIT_TEST
   /// Unsafe function to use for testing the overflow mechanism.
   void testSetParentCacheEpoch(uint32_t epoch) {
@@ -634,6 +648,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
             parentCacheEpoch_ == AddPropertyCacheEntry::kMaxParentEpoch)) {
       // Overflow.
       invalidateAllAddCacheEntries();
+      // Clear the array fast path epoch so it is guaranteed to fail.
+      arrayFastPathParentCacheEpoch_ = 0;
       parentCacheEpoch_ = 1;
     }
     return parentCacheEpoch_;
@@ -1372,9 +1388,14 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   ///
   /// If this number rolls over from kMaxParentEpoch to 0 (unlikely),
   /// invalidate ALL property write caches.
-  /// Start at 1 to make it easier to debug (0 is the default in the cache
-  /// entry).
+  /// Start at 1 so we are guaranteed that 0 is never used and can be used to
+  /// ensure the check fails.
   uint32_t parentCacheEpoch_ = 1;
+
+  /// The epoch when the array prototype was verified to allow us to use fast
+  /// paths in array JSLib functions. If parentCacheEpoch_ is different, we must
+  /// reverify the prototype chain.
+  uint32_t arrayFastPathParentCacheEpoch_ = 0;
 
   /// Store a key for the function that is executed if a crash occurs.
   /// This key will be unregistered in the destructor.

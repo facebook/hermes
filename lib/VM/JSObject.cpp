@@ -270,7 +270,7 @@ CallResult<bool> JSObject::setParent(
   // parent chain that would prevent adding the property to the cached
   // HiddenClass.
   // We must break the cache, so increment the epoch.
-  if (LLVM_UNLIKELY(self->flags_.isAddPropertyCacheParent)) {
+  if (LLVM_UNLIKELY(self->flags_.isCachedUsingEpoch)) {
     runtime.incParentCacheEpoch();
   }
 
@@ -3014,7 +3014,7 @@ void JSObject::tryCacheAddProperty(
   // Mark everything along the prototype chain as a cached parent.
   for (JSObject *cur = self->getParent(runtime); cur != nullptr;
        cur = cur->getParent(runtime)) {
-    cur->flags_.isAddPropertyCacheParent = 1;
+    cur->flags_.isCachedUsingEpoch = 1;
   }
 }
 
