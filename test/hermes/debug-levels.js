@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 %s -emit-binary -out %t.hbc -g3 && %hermes -dump-bytecode %t.hbc | %FileCheck --match-full-lines %s --check-prefix=G3 --check-prefix=SHARED
+// RUN: %hermes -O0 %s -emit-binary -out %t.hbc -Xg3 && %hermes -dump-bytecode %t.hbc | %FileCheck --match-full-lines %s --check-prefix=G3 --check-prefix=SHARED
 // RUN: %hermes -O0 %s -emit-binary -out %t.hbc -g2 && %hermes -dump-bytecode %t.hbc | %FileCheck --match-full-lines %s --check-prefix=G2 --check-prefix=SHARED
 // RUN: %hermes -O0 %s -emit-binary -out %t.hbc -g1 && %hermes -dump-bytecode %t.hbc | %FileCheck --match-full-lines %s --check-prefix=G1 --check-prefix=SHARED
 // RUN: %hermes -O0 %s -emit-binary -out %t.hbc -g0 && %hermes -dump-bytecode %t.hbc | %FileCheck --match-full-lines %s --check-prefix=G0 --check-prefix=SHARED
@@ -23,10 +23,10 @@ function throwingFunction() {throw new Error();}
 // G2-NOT: AsyncBreakCheck
 // G1-NOT: AsyncBreakCheck
 // G0-NOT: AsyncBreakCheck
-// G: AsyncBreakCheck
+// G-NOT: AsyncBreakCheck
 // DEFAULT-NOT: AsyncBreakCheck
 // SOURCEMAP-NOT: AsyncBreakCheck
-// SOURCEMAP-G: AsyncBreakCheck
+// SOURCEMAP-G-NOT: AsyncBreakCheck
 
 // SHARED-LABEL: Debug filename table:
 // G3: 0: {{.*}}/debug-levels.js

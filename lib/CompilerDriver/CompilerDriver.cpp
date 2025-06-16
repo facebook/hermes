@@ -406,15 +406,27 @@ static cl::opt<DebugLevel> DebugInfoLevel(
     cl::desc("Choose debug info level:"),
     cl::init(DebugLevel::g1),
     cl::values(
-        clEnumValN(DebugLevel::g3, "g", "Equivalent to -g3"),
+        clEnumValN(DebugLevel::g2, "g", "Equivalent to -g2"),
         clEnumValN(DebugLevel::g0, "g0", "Do not emit debug info"),
         clEnumValN(DebugLevel::g1, "g1", "Emit location info for backtraces"),
         clEnumValN(
             DebugLevel::g2,
             "g2",
             "Emit location info for all instructions"),
-        clEnumValN(DebugLevel::g3, "g3", "Emit full info for debugging")),
+        clEnumValN(
+            DebugLevel::g2,
+            "g3",
+            "** Deprecated, full debug info cannot be generated via this tool. This behaves the same as -g2 **")),
     cl::cat(CompilerCategory));
+
+opt<bool> Xg3(
+    "Xg3",
+    init(false),
+    desc(
+        "Emit full info for debugging. Since debugging cannot be done through the hermes "
+        "tool directly, this only makes sense to be used in the context of IR/BC tests."),
+    Hidden,
+    cat(CompilerCategory));
 
 static opt<std::string> InputSourceMap(
     "source-map",
@@ -956,6 +968,10 @@ bool validateFlags() {
     err("Error! Cannot use both -strict and -non-strict");
   }
 
+  if (cl::Xg3 && cl::OptimizationLevel == cl::OptLevel::OMax) {
+    err("Error! Full debug info is not compatible with full optimization");
+  }
+
   // Validate bytecode output file.
   if (cl::DumpTarget == EmitBundle && cl::BytecodeOutputFilename.empty() &&
       oscompat::isatty(STDOUT_FILENO)) {
@@ -1196,7 +1212,7 @@ std::shared_ptr<Context> createContext(
   }
 #endif
 
-  if (cl::DebugInfoLevel >= cl::DebugLevel::g3) {
+  if (cl::Xg3) {
     context->setDebugInfoSetting(DebugInfoSetting::ALL);
   } else if (cl::DebugInfoLevel == cl::DebugLevel::g2) {
     context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);

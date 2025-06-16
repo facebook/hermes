@@ -49,7 +49,8 @@ bool compileJS(
     DiagnosticHandler *diagHandler,
     std::optional<std::string_view> sourceMapBuf) {
   hbc::CompileFlags flags{};
-  flags.debug = compileJSOptions.debug;
+  // Debugging is only supported via source, so hardcode this to false.
+  flags.debug = false;
   flags.format = EmitBundle;
   flags.emitAsyncBreakCheck = compileJSOptions.emitAsyncBreakCheck;
   flags.inlineMaxSize = compileJSOptions.inlineMaxSize;
