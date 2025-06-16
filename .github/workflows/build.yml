@@ -517,6 +517,8 @@ jobs:
     steps:
     - name: Install Node
       uses: actions/setup-node@v4.0.2
+      with:
+        node-version: 24
     - name: Install JDK
       uses: actions/setup-java@v3
       with:
@@ -538,7 +540,7 @@ jobs:
         ndk: 27.1.12297006
         cmake: 3.22.1
         script: |
-          cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installHermesRelease
+          cd ../react-native && ./gradlew -PreactNativeArchitectures=x86 :packages:rn-tester:android:app:installRelease
           adb shell am start com.facebook.react.uiapp/.RNTesterActivity
           timeout 30s adb logcat -e "Using Hermes: true" -m 1
   test-e2e-intl:
