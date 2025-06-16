@@ -603,10 +603,12 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.dataViewConstructor = createDataViewConstructor(runtime);
 
   // TypedArrayBase constructor.
-  runtime.typedArrayBaseConstructor = createTypedArrayBaseConstructor(runtime);
+  runtime.typedArrayBaseConstructor.castAndSetHermesValue<NativeConstructor>(
+      createTypedArrayBaseConstructor(runtime));
 
-#define TYPED_ARRAY(name, type)                                             \
-  runtime.name##ArrayConstructor = create##name##ArrayConstructor(runtime); \
+#define TYPED_ARRAY(name, type)                                            \
+  runtime.name##ArrayConstructor.castAndSetHermesValue<NativeConstructor>( \
+      create##name##ArrayConstructor(runtime));                            \
   gcScope.clearAllHandles();
 #include "hermes/VM/TypedArrays.def"
 

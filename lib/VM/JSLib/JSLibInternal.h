@@ -339,10 +339,10 @@ HermesValue createArrayBufferConstructor(Runtime &runtime);
 
 Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime);
 
-Handle<NativeConstructor> createTypedArrayBaseConstructor(Runtime &runtime);
+HermesValue createTypedArrayBaseConstructor(Runtime &runtime);
 
 #define TYPED_ARRAY(name, type) \
-  Handle<NativeConstructor> create##name##ArrayConstructor(Runtime &runtime);
+  HermesValue create##name##ArrayConstructor(Runtime &runtime);
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
