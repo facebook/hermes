@@ -345,16 +345,10 @@ void BytecodeDisassembler::disassembleBigIntStorage(raw_ostream &OS) {
     const auto &entry = bigintTable[i];
     const uint32_t start = entry.offset;
     const uint32_t count = entry.length;
-    OS << " " << i << "[";
-    if (count == 0) {
-      OS << " " << i << "[empty]";
-    } else {
-      auto bytes = bigintStorage.slice(start, count);
-      const uint32_t end = start + count - 1;
-      OS << " " << i << "[" << end << ".." << start
-         << "]: " << bigintMagnitudeToLengthLimitedString(bytes);
-    }
-    OS << "\n";
+    const int64_t end = (int64_t)start + count - 1;
+    auto bytes = bigintStorage.slice(start, count);
+    OS << " " << i << "[" << start << ".." << end
+       << "]: " << bigintMagnitudeToLengthLimitedString(bytes) << "\n";
   }
 
   OS << "\n";
