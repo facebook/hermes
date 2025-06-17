@@ -2080,7 +2080,9 @@ void HadesGC::forAllObjs(const std::function<void(GCCell *)> &callback) {
           skipGarbageCallback(reinterpret_cast<GCCell *>(seg.start()));
       });
   if (compactee_.segment) {
-    if (!compactee_.evacActive())
+    // We have to skip unmarked objects in the compactee if marking has ended,
+    // as described in skipGarbageCallback above.
+    if (concurrentPhase_ != Phase::Sweep && concurrentPhase_ != Phase::None)
       forAllObjsInSegment(*compactee_.segment, callback);
     else
       forAllObjsInSegment(*compactee_.segment, skipGarbageCallback);
@@ -2662,7 +2664,7 @@ void HadesGC::youngGenCollection(
   // handles the rare case where an OG collection was completed during this YG
   // collection, and the compaction will therefore only be completed in the next
   // collection.
-  if (concurrentPhase_ == Phase::None && !compactee_.evacActive()) {
+  if (concurrentPhase_ == Phase::None && !compactee_.segment) {
     // There is no OG collection running, check the tripwire in case this is the
     // first YG after an OG completed.
     checkTripwireAndSubmitStats();
@@ -3455,9 +3457,12 @@ void HadesGC::verifyCardTable() {
     explicit VerifyCardDirtyAcceptor(HadesGC &gc) : gc(gc) {}
 
     void acceptHelper(void *valuePtr, void *locPtr) {
+      // If marking is done, then any pointer from outside the compactee into
+      // the compactee should have a dirty card.
       const bool crossRegionCompacteePtr =
-          !gc.compactee_.evacContains(locPtr) &&
-          gc.compactee_.evacContains(valuePtr);
+          (gc.concurrentPhase_ == Phase::None ||
+           gc.concurrentPhase_ == Phase::Sweep) &&
+          !gc.compactee_.contains(locPtr) && gc.compactee_.contains(valuePtr);
       if (!gc.inYoungGen(locPtr) &&
           (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
         assert(AlignedHeapSegment::isCardForAddressDirty(currentCell, locPtr));
