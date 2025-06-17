@@ -2927,6 +2927,18 @@ FunctionContext::~FunctionContext() {
       resolver_.curFunctionInfo() == semInfo &&
       "FunctionContext out of sync with SemContext");
   resolver_.curFunctionContext_ = prevContext_;
+#ifndef NDEBUG
+  if (node) {
+    if (auto *bodyBlock = getBlockStatement(node);
+        bodyBlock && bodyBlock->isLazyFunctionBody) {
+      // Lazy  functions don't have a set body scope.
+      return;
+    }
+  }
+  assert(
+      semInfo->getFunctionBodyScope() &&
+      "all `FunctionInfo`s should have a set body scope.");
+#endif
 }
 
 UniqueString *FunctionContext::getFunctionName() const {
@@ -2962,8 +2974,10 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
       /*strict*/ true,
       CustomDirectives{});
   // This is called for the side effect of associating the new scope with
-  // implicitCtor.  We don't need the value now, but we will later.
+  // implicitCtor. We don't need the value now, but we will later. Treat this
+  // new scope as the function body scope.
   (void)resolver_.semCtx_.newScope(implicitCtor, resolver_.curScope_);
+  implicitCtor->functionBodyScopeIdx = implicitCtor->scopes.size() - 1;
   classDecoration->implicitCtorFunctionInfo = implicitCtor;
 }
 
@@ -2978,8 +2992,10 @@ FunctionInfo *ClassContext::getOrCreateInstanceElementsInitFunctionInfo() {
         /*strict*/ true,
         CustomDirectives{});
     // This is called for the side effect of associating the new scope with
-    // fieldInitFunc.  We don't need the value now, but we will later.
+    // fieldInitFunc. We don't need the value now, but we will later. Treat this
+    // new scope as the function body scope.
     (void)resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);
+    fieldInitFunc->functionBodyScopeIdx = fieldInitFunc->scopes.size() - 1;
     classDecoration->instanceElementsInitFunctionInfo = fieldInitFunc;
   }
   return classDecoration->instanceElementsInitFunctionInfo;
@@ -2996,8 +3012,11 @@ FunctionInfo *ClassContext::getOrCreateStaticElementsInitFunctionInfo() {
         /*strict*/ true,
         CustomDirectives{});
     // This is called for the side effect of associating the new scope with
-    // staticFieldInitFunc.  We don't need the value now, but we will later.
+    // staticFieldInitFunc. We don't need the value now, but we will later.
+    // Treat this new scope as the function body scope.
     (void)resolver_.semCtx_.newScope(staticFieldInitFunc, resolver_.curScope_);
+    staticFieldInitFunc->functionBodyScopeIdx =
+        staticFieldInitFunc->scopes.size() - 1;
     classDecoration->staticElementsInitFunctionInfo = staticFieldInitFunc;
   }
   return classDecoration->staticElementsInitFunctionInfo;

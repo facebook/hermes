@@ -27,6 +27,11 @@ FunctionContext::FunctionContext(
       oldContext_(irGen->functionContext_),
       builderSaveState_(irGen->Builder),
       function(function) {
+  if (semInfo) {
+    assert(
+        semInfo->getFunctionBodyScope() &&
+        "all `FunctionInfo`s should have a set body scope.");
+  }
   irGen->functionContext_ = this;
 
   // Initialize it to LiteralUndefined by default to avoid corner cases.
