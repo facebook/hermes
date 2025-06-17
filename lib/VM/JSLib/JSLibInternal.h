@@ -265,7 +265,7 @@ void createReflectObject(Runtime &runtime, MutableHandle<JSObject> result);
 /// Create and initialize the global RegExp constructor. Populate the methods
 /// of RegExp and RegExp.prototype.
 /// \return the global RegExp constructor.
-Handle<NativeConstructor> createRegExpConstructor(Runtime &runtime);
+HermesValue createRegExpConstructor(Runtime &runtime);
 
 /// ES6.0 21.2.3.2.3 Runtime Semantics: RegExpCreate ( P, F )
 /// Creates a new RegExp with provided pattern \p P, and flags \p F.
@@ -283,10 +283,11 @@ regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S);
 /// Runs the RegExp.prototype.exec() function (ES5.1 15.10.6.2)
 /// with a this value of \p regexp, with the argument \p S.
 /// \return a new array as the result, null pointer if there were no matches.
-CallResult<Handle<JSArray>> directRegExpExec(
+ExecutionStatus directRegExpExec(
     Handle<JSRegExp> regexp,
     Runtime &runtime,
-    Handle<StringPrimitive> S);
+    Handle<StringPrimitive> S,
+    MutableHandle<JSArray> resultOut);
 
 /// ES6.0 21.1.3.14.1
 /// Implemented in RegExp.cpp

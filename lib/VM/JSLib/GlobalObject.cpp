@@ -590,7 +590,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.dateConstructor = createDateConstructor(runtime);
 
   // RegExp constructor
-  runtime.regExpConstructor = createRegExpConstructor(runtime);
+  runtime.regExpConstructor.castAndSetHermesValue<NativeConstructor>(
+      createRegExpConstructor(runtime));
 
   // Array constructor.
   runtime.arrayConstructor = createArrayConstructor(runtime);
