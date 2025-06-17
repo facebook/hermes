@@ -821,7 +821,8 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
           ? Function::DefinitionKind::ES6DerivedConstructor
           : Function::DefinitionKind::ES6BaseConstructor,
       /* strictMode */ true,
-      funcInfo->customDirectives);
+      funcInfo->customDirectives,
+      classNode->getSourceRange());
   // Class constructors always return an object.
   consFunc->setReturnType(Type::createObject());
 
