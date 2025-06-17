@@ -2223,6 +2223,9 @@ ExecutionStatus JSObject::defineNewOwnProperty(
       !HiddenClass::debugIsPropertyDefined(
           selfHandle->getClass(runtime), runtime, name) &&
       "new property is already defined");
+  // Ensure the object is non-lazy before adding the property.
+  if (selfHandle->isLazy())
+    initializeLazyObject(runtime, selfHandle);
 
   return addOwnPropertyImpl(
       selfHandle,
