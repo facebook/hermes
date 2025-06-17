@@ -120,7 +120,9 @@ TEST_F(ArrayStorageTest, PushBackTest) {
   ASSERT_EQ(5.0_hd, st->at(4));
 }
 
-TEST_F(ArrayStorageTest, AllowTrimming) {
+// ArrayStorage trimming is disabled for now. In the future, we may consider
+// re-enabling it only for specific ArrayStorages (e.g. property storage).
+TEST_F(ArrayStorageTest, DISABLED_AllowTrimming) {
   MutableHandle<ArrayStorage> st(runtime);
   constexpr ArrayStorage::size_type originalCapacity = 8;
   // Create an array and put in an element so its size is 1 and its capacity

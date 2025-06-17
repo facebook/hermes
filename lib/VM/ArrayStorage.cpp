@@ -22,7 +22,9 @@ const VTable ArrayStorageBase<HVType>::vt(
     /* allowLargeAlloc */ true,
     nullptr,
     nullptr,
-    _trimSizeCallback
+    // ArrayStorage trimming is disabled for now. In the future, we may consider
+    // re-enabling it only for specific ArrayStorages (e.g. property storage).
+    /* trimSizeCallback */ nullptr
 #ifdef HERMES_MEMORY_INSTRUMENTATION
     ,
     VTable::HeapSnapshotMetadata{
