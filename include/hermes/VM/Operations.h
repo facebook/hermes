@@ -13,6 +13,7 @@
 #include "hermes/VM/InternalProperty.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringView.h"
 #include "hermes/VM/SymbolID.h"
 
 #include "llvh/ADT/SmallVector.h"
@@ -56,7 +57,15 @@ CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle);
 CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle);
 
 // a variant of toLength which returns a uint64_t
-CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle);
+inline CallResult<uint64_t> toLengthU64(
+    Runtime &runtime,
+    Handle<> valueHandle) {
+  auto res = toLength(runtime, valueHandle);
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return res->getNumber();
+}
 
 /// ES 2018 7.1.17
 CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle);
@@ -171,7 +180,13 @@ inline ExecutionStatus checkObjectCoercible(
 bool isSameValue(HermesValue x, HermesValue y);
 
 /// ES6 7.2.10. The only difference from isSameValue is: +0 == -0.
-bool isSameValueZero(HermesValue x, HermesValue y);
+inline bool isSameValueZero(HermesValue x, HermesValue y) {
+  if (x.isNumber() && y.isNumber() && x.getNumber() == y.getNumber()) {
+    // Takes care of +0 == -0.
+    return true;
+  }
+  return isSameValue(x, y);
+}
 
 /// ES5.1 11.8.1.
 CallResult<bool>
@@ -194,9 +209,13 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle);
 bool strictEqualityTest(HermesValue x, HermesValue y);
 
 /// Convert a string to a uniqued property name.
-CallResult<Handle<SymbolID>> stringToSymbolID(
+inline CallResult<Handle<SymbolID>> stringToSymbolID(
     Runtime &runtime,
-    PseudoHandle<StringPrimitive> strPrim);
+    PseudoHandle<StringPrimitive> strPrim) {
+  // Unique the string.
+  return runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
+      runtime, std::move(strPrim));
+}
 
 /// Convert a value to a uniqued property name.
 CallResult<Handle<SymbolID>> valueToSymbolID(
@@ -210,16 +229,27 @@ HermesValue typeOf(Runtime &runtime, Handle<> valueHandle);
 /// \return true if the type of \p arg corresponds to the flag in \p types.
 bool matchTypeOfIs(HermesValue arg, TypeOfIsTypes types);
 
+/// Fast path for toArrayIndex where we already have the view of the string.
+inline OptValue<uint32_t> toArrayIndex(StringView str) {
+  auto len = str.length();
+  if (str.isASCII()) {
+    const char *ptr = str.castToCharPtr();
+    return hermes::toArrayIndex(ptr, ptr + len);
+  }
+  const char16_t *ptr = str.castToChar16Ptr();
+  return hermes::toArrayIndex(ptr, ptr + len);
+}
+
 /// Convert a string to an array index following ES5.1 15.4.
 /// A property name P (in the form of a String value) is an array index if and
 /// only if ToString(ToUint32(P)) is equal to P and ToUint32(P) is not equal to
 /// 2**32−1.
-OptValue<uint32_t> toArrayIndex(
+inline OptValue<uint32_t> toArrayIndex(
     Runtime &runtime,
-    Handle<StringPrimitive> strPrim);
-
-/// Fast path for toArrayIndex where we already have the view of the string.
-OptValue<uint32_t> toArrayIndex(StringView str);
+    Handle<StringPrimitive> strPrim) {
+  auto view = StringPrimitive::createStringView(runtime, strPrim);
+  return toArrayIndex(view);
+}
 
 /// If it is possible to cheaply verify that \p value is an integer value in
 /// the range [0..2**32-1), return it as an OptValue<uint32_t>. Note that
@@ -244,7 +274,10 @@ inline OptValue<uint32_t> toArrayIndexFastPath(HermesValue value) {
 
 /// \return true if the ToPrimitive function (ES5.1 9.1) performs no conversion.
 /// Primitive types: Undefined, Null, Boolean, Number, and String.
-bool isPrimitive(HermesValue val);
+inline bool isPrimitive(HermesValue val) {
+  assert(!val.isEmpty() && "empty value encountered");
+  return !val.isObject();
+}
 
 /// ES5.1 11.6.1
 CallResult<HermesValue>
@@ -288,7 +321,11 @@ inline char16_t letterToLower(char16_t c) {
 /// Takes a non-empty string (without the leading "0x" if hex) and parses it
 /// as radix \p radix.
 /// \returns the double that results, and NaN on failure.
-double parseIntWithRadix(const StringView str, int radix);
+inline double parseIntWithRadix(const StringView str, int radix) {
+  auto res =
+      hermes::parseIntWithRadix</* AllowNumericSeparator */ false>(str, radix);
+  return res ? res.getValue() : std::numeric_limits<double>::quiet_NaN();
+}
 
 /// ES5.1 9.8.1
 /// Convert \p m to its string value following the JS spec.
@@ -522,11 +559,17 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     DefinePropertyFlags dpFlags,
     Handle<> valueOrAccessor);
 
-/// ES2022 21.2.1.1.1 NumberToBigInt(number)
-CallResult<HermesValue> numberToBigInt(Runtime &runtime, double number);
-
 // ES2022 7.2.6 IsIntegralNumber(argument)
 bool isIntegralNumber(double number);
+
+/// ES2022 21.2.1.1.1 NumberToBigInt(number)
+inline CallResult<HermesValue> numberToBigInt(Runtime &runtime, double number) {
+  if (!isIntegralNumber(number)) {
+    return runtime.raiseRangeError("number is not integral");
+  }
+
+  return BigIntPrimitive::fromDouble(runtime, number);
+}
 
 // ES2022 7.1.13 ToBigInt(argument)
 CallResult<HermesValue> toBigInt_RJS(Runtime &runtime, Handle<> value);

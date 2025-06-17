@@ -37,14 +37,6 @@
 namespace hermes {
 namespace vm {
 
-CallResult<Handle<SymbolID>> stringToSymbolID(
-    Runtime &runtime,
-    PseudoHandle<StringPrimitive> strPrim) {
-  // Unique the string.
-  return runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
-      runtime, std::move(strPrim));
-}
-
 CallResult<Handle<SymbolID>> valueToSymbolID(
     Runtime &runtime,
     Handle<> nameValHnd) {
@@ -127,23 +119,6 @@ bool matchTypeOfIs(HermesValue arg, TypeOfIsTypes types) {
   }
 }
 
-OptValue<uint32_t> toArrayIndex(
-    Runtime &runtime,
-    Handle<StringPrimitive> strPrim) {
-  auto view = StringPrimitive::createStringView(runtime, strPrim);
-  return toArrayIndex(view);
-}
-
-OptValue<uint32_t> toArrayIndex(StringView str) {
-  auto len = str.length();
-  if (str.isASCII()) {
-    const char *ptr = str.castToCharPtr();
-    return hermes::toArrayIndex(ptr, ptr + len);
-  }
-  const char16_t *ptr = str.castToChar16Ptr();
-  return hermes::toArrayIndex(ptr, ptr + len);
-}
-
 bool isSameValue(HermesValue x, HermesValue y) {
   // Check for NaN before checking the tag. We have to do this because NaNs may
   // differ in the sign bit, which may result in the tag comparison below
@@ -171,19 +146,6 @@ bool isSameValue(HermesValue x, HermesValue y) {
 
   // Otherwise they are identical if the raw bits are the same.
   return x.getRaw() == y.getRaw();
-}
-
-bool isSameValueZero(HermesValue x, HermesValue y) {
-  if (x.isNumber() && y.isNumber() && x.getNumber() == y.getNumber()) {
-    // Takes care of +0 == -0.
-    return true;
-  }
-  return isSameValue(x, y);
-}
-
-bool isPrimitive(HermesValue val) {
-  assert(!val.isEmpty() && "empty value encountered");
-  return !val.isObject();
 }
 
 CallResult<HermesValue> ordinaryToPrimitive(
@@ -417,12 +379,6 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
   return createPseudoHandle(result);
 }
 
-double parseIntWithRadix(const StringView str, int radix) {
-  auto res =
-      hermes::parseIntWithRadix</* AllowNumericSeparator */ false>(str, radix);
-  return res ? res.getValue() : std::numeric_limits<double>::quiet_NaN();
-}
-
 /// ES5.1 9.3.1
 static inline double stringToNumber(
     Runtime &runtime,
@@ -602,14 +558,6 @@ CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle) {
     len = highestIntegralDouble;
   }
   return HermesValue::encodeTrustedNumberValue(len);
-}
-
-CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
-  auto res = toLength(runtime, valueHandle);
-  if (res == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  return res->getNumber();
 }
 
 CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
@@ -2374,14 +2322,6 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
     }
   }
   return obj.getHermesValue();
-}
-
-CallResult<HermesValue> numberToBigInt(Runtime &runtime, double number) {
-  if (!isIntegralNumber(number)) {
-    return runtime.raiseRangeError("number is not integral");
-  }
-
-  return BigIntPrimitive::fromDouble(runtime, number);
 }
 
 bool isIntegralNumber(double number) {
