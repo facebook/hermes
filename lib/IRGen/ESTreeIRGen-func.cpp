@@ -820,7 +820,8 @@ void ESTreeIRGen::emitFunctionPrologue(
   if (doEmitDeclarations == DoEmitDeclarations::No)
     return;
 
-  emitParameters(funcNode);
+  if (funcNode)
+    emitParameters(funcNode);
   emitScopeDeclarations(semInfo->getFunctionBodyScope());
 
   // Generate the code for import declarations before generating the rest of the

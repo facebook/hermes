@@ -843,7 +843,7 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
         nullptr,
         entryBB,
         InitES5CaptureState::No,
-        DoEmitDeclarations::No,
+        DoEmitDeclarations::Yes,
         parentScope);
     // Default subclass constructors must call super.
     if (isDerived) {
@@ -923,7 +923,7 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
         nullptr,
         prologueBB,
         InitES5CaptureState::Yes,
-        DoEmitDeclarations::No,
+        DoEmitDeclarations::Yes,
         parentScope);
     auto &LC = curFunction()->legacyClassContext;
     auto *constructorScope =
@@ -1004,9 +1004,8 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
                   nullptr,
                   prologueBB,
                   InitES5CaptureState::Yes,
-                  DoEmitDeclarations::No,
+                  DoEmitDeclarations::Yes,
                   parentScope);
-              emitScopeDeclarations(SB->getScope());
               for (auto &Node : SB->_body) {
                 genStatement(&Node);
               }
@@ -1078,7 +1077,7 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
         nullptr,
         prologueBB,
         InitES5CaptureState::Yes,
-        DoEmitDeclarations::No,
+        DoEmitDeclarations::Yes,
         parentScope);
     auto &LC = curFunction()->legacyClassContext;
     auto *thisParam = curFunction()->jsParams[0];
