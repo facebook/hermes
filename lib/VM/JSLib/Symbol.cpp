@@ -79,6 +79,12 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   defineProperty(
       runtime,
       cons,
+      Predefined::getSymbolID(Predefined::asyncIterator),
+      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolAsyncIterator)),
+      dpf);
+  defineProperty(
+      runtime,
+      cons,
       Predefined::getSymbolID(Predefined::isConcatSpreadable),
       lv.symbolHandle,
       dpf);
