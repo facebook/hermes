@@ -1,3 +1,16 @@
+## 0.29.0
+
+### `hermes-parser`
+- Fix BigInt string conversion
+- Rename `ImportExpression` field `attributes` to `options` to match ESTree
+- No longer wrap function declarations directly in `if` statement bodies with a block statement that is not in source
+- Use left paren location for start of object literal methods
+- Fix parsing of directives that contain escapes
+
+### `flow-api-translator`
+- Keep doc blocks attached to class properties and methods
+- Fix default type parameter generation
+
 ## 0.28.1
 
 ### `hermes-parser`
