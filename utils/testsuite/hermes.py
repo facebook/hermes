@@ -88,7 +88,9 @@ async def run(
             cmd_args += compile_run_args.extra_compile_vm_args.compile_args
     if compile_run_args.disable_handle_san:
         cmd_args += ["-gc-sanitize-handles=0"]
-    env = {"LC_ALL": "en_US.UTF-8"}
+    # Also pass all current environment variables before running the test. This is
+    # useful when setting environment variables for shermes or ASAN options, etc.
+    env = os.environ | {"LC_ALL": "en_US.UTF-8"}
     if sys.platform == "linux":
         env["ICU_DATA"] = compile_run_args.binary_directory
     proc = await create_subprocess_exec(
