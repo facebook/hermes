@@ -310,7 +310,7 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(
-        `"const e = typeof x === "object" && x !== null && x.a === 'a' && x.b === 'b' ? 0 : typeof x === "object" && x !== null && "c" in x && "d" in x ? 1 : typeof x === "object" && x !== null && x[999] === 999 && x['s'] === 's' ? 2 : typeof x === "object" && x !== null ? 3 : 4;"`,
+        `"const e = (typeof x === "object" && x !== null || typeof x === "function") && x.a === 'a' && x.b === 'b' ? 0 : (typeof x === "object" && x !== null || typeof x === "function") && "c" in x && "d" in x ? 1 : (typeof x === "object" && x !== null || typeof x === "function") && x[999] === 999 && x['s'] === 's' ? 2 : typeof x === "object" && x !== null || typeof x === "function" ? 3 : 4;"`,
       );
 
       expect(runMatchExp(output, {a: 'a', b: 'b'})).toBe(0);
@@ -328,12 +328,38 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(
-        `"const e = typeof x === "object" && x !== null && x[0] === 'a' && x[1] === 'b' ? 0 : 1;"`,
+        `"const e = (typeof x === "object" && x !== null || typeof x === "function") && x[0] === 'a' && x[1] === 'b' ? 0 : 1;"`,
       );
 
       expect(runMatchExp(output, {0: 'a', 1: 'b'})).toBe(0);
       expect(runMatchExp(output, ['a', 'b'])).toBe(0);
       expect(runMatchExp(output, ['a'])).toBe(1);
+    });
+
+    test('objects matches classes and functions', async () => {
+      const code = `
+        const e = match (x) {
+          {foo: true, ...} => 0,
+          {...} => 1,
+          _ => 2,
+        };
+      `;
+      const output = await transform(code);
+      expect(output).toMatchInlineSnapshot(
+        `"const e = (typeof x === "object" && x !== null || typeof x === "function") && x.foo === true ? 0 : typeof x === "object" && x !== null || typeof x === "function" ? 1 : 2;"`,
+      );
+
+      expect(runMatchExp(output, () => {})).toBe(1);
+      expect(runMatchExp(output, class {})).toBe(1);
+
+      const arrow = () => {};
+      arrow.foo = true;
+      expect(runMatchExp(output, arrow)).toBe(0);
+
+      class C {
+        static foo = true;
+      }
+      expect(runMatchExp(output, C)).toBe(0);
     });
 
     test('arrays', async () => {
@@ -427,7 +453,7 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(
-        `"const e = Array.isArray(x) && x.length === 1 && (Array.isArray(x[0]) && x[0].length === 1 && x[0][0] === 1 || typeof x[0] === "object" && x[0] !== null && x[0].foo === 2) ? 0 : 1;"`,
+        `"const e = Array.isArray(x) && x.length === 1 && (Array.isArray(x[0]) && x[0].length === 1 && x[0][0] === 1 || (typeof x[0] === "object" && x[0] !== null || typeof x[0] === "function") && x[0].foo === 2) ? 0 : 1;"`,
       );
 
       expect(runMatchExp(output, [[1]])).toBe(0);
@@ -656,7 +682,7 @@ describe('MatchExpression', () => {
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
         "const e = (() => {
-          if (typeof x === "object" && x !== null && x.foo === 1 && "bar" in x && "baz" in x) {
+          if ((typeof x === "object" && x !== null || typeof x === "function") && x.foo === 1 && "bar" in x && "baz" in x) {
             const a = x.bar;
             const baz = x.baz;
             return a + baz;
@@ -682,7 +708,7 @@ describe('MatchExpression', () => {
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
         "const e = (() => {
-          if (typeof x === "object" && x !== null && x.foo === 1 && "bar" in x) {
+          if ((typeof x === "object" && x !== null || typeof x === "function") && x.foo === 1 && "bar" in x) {
             const a = x.bar;
             const {
               foo: $$gen$m0,
@@ -716,16 +742,16 @@ describe('MatchExpression', () => {
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
         "const e = (() => {
-          if (typeof x === "object" && x !== null && "foo" in x && x.foo === undefined) {
+          if ((typeof x === "object" && x !== null || typeof x === "function") && "foo" in x && x.foo === undefined) {
             return true;
           }
 
-          if (typeof x === "object" && x !== null && "bar" in x && x.bar === undefined) {
+          if ((typeof x === "object" && x !== null || typeof x === "function") && "bar" in x && x.bar === undefined) {
             const a = x.bar;
             return true;
           }
 
-          if (typeof x === "object" && x !== null && "baz" in x && (x.baz === 0 || x.baz === undefined)) {
+          if ((typeof x === "object" && x !== null || typeof x === "function") && "baz" in x && (x.baz === 0 || x.baz === undefined)) {
             return true;
           }
 

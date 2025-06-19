@@ -54,6 +54,7 @@ import {
   numberLiteral,
   stringLiteral,
   throwStatement,
+  typeofExpression,
   variableDeclaration,
 } from '../utils/Builders';
 import {createGenID} from '../utils/GenID';
@@ -477,21 +478,16 @@ function testsOfCondition(
       return [isArray, lengthCheck];
     }
     case 'object': {
-      // typeof <x> === 'object' && <x> !== null
+      // (typeof <x> === 'object' && <x> !== null) || typeof <x> === 'function'
       const {key} = condition;
-      const typeofObject: BinaryExpression = {
-        type: 'BinaryExpression',
-        left: {
-          type: 'UnaryExpression',
-          operator: 'typeof',
-          argument: expressionOfKey(root, key),
-          prefix: true,
-          ...etc(),
-        },
-        right: stringLiteral('object'),
-        operator: '===',
-        ...etc(),
-      };
+      const typeofObject = typeofExpression(
+        expressionOfKey(root, key),
+        'object',
+      );
+      const typeofFunction = typeofExpression(
+        expressionOfKey(root, key),
+        'function',
+      );
       const notNull: BinaryExpression = {
         type: 'BinaryExpression',
         left: expressionOfKey(root, key),
@@ -499,7 +495,9 @@ function testsOfCondition(
         operator: '!==',
         ...etc(),
       };
-      return [typeofObject, notNull];
+      return [
+        disjunction([conjunction([typeofObject, notNull]), typeofFunction]),
+      ];
     }
     case 'prop-exists': {
       // <propName> in <x>

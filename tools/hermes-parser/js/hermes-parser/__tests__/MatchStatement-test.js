@@ -336,7 +336,7 @@ describe('MatchStatement', () => {
           break $$gen$m0;
         }
 
-        if (typeof x === "object" && x !== null && x.b === 'b') {
+        if ((typeof x === "object" && x !== null || typeof x === "function") && x.b === 'b') {
           out = 1;
           break $$gen$m0;
         }
@@ -379,7 +379,7 @@ describe('MatchStatement', () => {
           break $$gen$m0;
         }
 
-        if (typeof x === "object" && x !== null && "b" in x) {
+        if ((typeof x === "object" && x !== null || typeof x === "function") && "b" in x) {
           const b = x.b;
           out = b;
           break $$gen$m0;
