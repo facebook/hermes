@@ -1,19 +1,17 @@
 #!/usr/bin/env python3
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
 
 import argparse
 import math  # Needed for infinity when sorting N/A values
 import os
 import re
+import shlex
 import statistics
 import subprocess
 import sys
-
-# --- Configuration ---
-OLD_EXE = os.environ.get("OLD_EXE", "./sh-old")
-NEW_EXE = os.environ.get("NEW_EXE", "./sh-new")
-OLD_ARGS = os.environ.get("OLD_ARGS", os.environ.get("ARGS", "-w -Xjit")).split(" ")
-NEW_ARGS = os.environ.get("NEW_ARGS", os.environ.get("ARGS", "-w -Xjit")).split(" ")
-# -------------------
 
 
 def find_first_score(output_text):
@@ -29,9 +27,9 @@ def find_first_score(output_text):
     return None
 
 
-def run_command(executable, args, filename):
+def run_command(command_parts, filename):
     """Runs the command and returns the completed process object."""
-    cmd = [executable] + args + [filename]
+    cmd = command_parts + [filename]
     env = os.environ.copy()
     env["PATH"] = f".:{env.get('PATH', '')}"
     result = subprocess.run(
@@ -169,6 +167,36 @@ def manual_ttest_confidence_interval(data1, data2, confidence=0.95):
     return (diff - margin, diff + margin)
 
 
+def calculate_geometric_mean(percentages):
+    """Calculate geometric mean of percentage improvements.
+
+    Args:
+        percentages: List of percentage changes (e.g., [10.5, -5.2, 15.3])
+
+    Returns:
+        Geometric mean as a percentage, or None if calculation not possible
+    """
+    if not percentages:
+        return None
+
+    # Convert percentages to multiplicative factors (e.g., +10% -> 1.10)
+    factors = [1 + (p / 100) for p in percentages]
+
+    # Check for non-positive factors (would make geometric mean undefined)
+    if any(f <= 0 for f in factors):
+        return None
+
+    # Calculate geometric mean of factors
+    product = 1.0
+    for f in factors:
+        product *= f
+
+    geo_mean_factor = product ** (1.0 / len(factors))
+
+    # Convert back to percentage change
+    return (geo_mean_factor - 1) * 100
+
+
 def print_summary_table(title, confidence, summary_data):
     """Prints an ASCII table from the collected summary data."""
     if not summary_data:
@@ -218,11 +246,30 @@ def print_summary_table(title, confidence, summary_data):
     # Footer
     print(header)
 
+    # Calculate and display geometric mean if we have valid percentage changes
+    valid_percentages = [
+        item["avg_pct"] for item in summary_data if item["avg_pct"] is not None
+    ]
+
+    if valid_percentages:
+        geo_mean = calculate_geometric_mean(valid_percentages)
+        if geo_mean is not None:
+            print(f"\nGeometric Mean of Changes: {geo_mean:+.1f}%")
+
 
 # --- Main Script ---
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Run OLD and NEW versions of a benchmark multiple times and compare."
+        description="Compare two benchmark implementations by running them multiple times.",
+        epilog='Example: %(prog)s -b "./old-exe -w -Xjit" -b "./new-exe -w -Xjit" benchmark1.js benchmark2.js',
+    )
+    parser.add_argument(
+        "-b",
+        "--binary",
+        action="append",
+        required=True,
+        help='Command to run (including arguments). Must be specified exactly twice. Example: -b "./hermes -w -Xjit"',
+        metavar="COMMAND",
     )
     parser.add_argument(
         "-n",
@@ -246,9 +293,25 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # Validate exactly two binaries
+    if len(args.binary) != 2:
+        print(
+            f"Error: Exactly two -b/--binary arguments required, got {len(args.binary)}.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     if args.runs <= 0:
         print("Error: Number of runs must be positive.", file=sys.stderr)
         sys.exit(1)
+
+    # Parse the command strings into lists
+    old_command = shlex.split(args.binary[0])
+    new_command = shlex.split(args.binary[1])
+
+    print(f"OLD command: {' '.join(old_command)}")
+    print(f"NEW command: {' '.join(new_command)}")
+    print()
 
     # Store summary results here
     summary_results = []
@@ -263,13 +326,13 @@ if __name__ == "__main__":
         for i in range(args.runs):
             # --- OLD RUN ---
             print(f"OLD {filename} (Run {i+1}/{args.runs})")  # Announce before running
-            old_result = run_command(OLD_EXE, OLD_ARGS, filename)
+            old_result = run_command(old_command, filename)
             print(old_result.stdout, end="")  # Print the output immediately
             old_score = find_first_score(old_result.stdout)
 
             # --- NEW RUN ---
             print(f"NEW {filename} (Run {i+1}/{args.runs})")  # Announce before running
-            new_result = run_command(NEW_EXE, NEW_ARGS, filename)
+            new_result = run_command(new_command, filename)
             print(new_result.stdout, end="")  # Print the output immediately
             new_score = find_first_score(new_result.stdout)
 
