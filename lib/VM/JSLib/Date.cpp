@@ -101,14 +101,21 @@ enum class GetterKind {
   NumKinds
 };
 
-Handle<NativeConstructor> createDateConstructor(Runtime &runtime) {
+HermesValue createDateConstructor(Runtime &runtime) {
   auto datePrototype = Handle<JSObject>::vmcast(&runtime.datePrototype);
-  auto cons = defineSystemConstructor(
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Date),
       dateConstructor_RJS,
       datePrototype,
-      7);
+      7,
+      lv.cons);
 
   // Date.prototype.xxx() methods.
   defineMethod(
@@ -351,27 +358,27 @@ Handle<NativeConstructor> createDateConstructor(Runtime &runtime) {
   // Date.xxx() methods.
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::parse),
       nullptr,
       dateParse_RJS,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::UTC),
       nullptr,
       dateUTC_RJS,
       7);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::now),
       nullptr,
       dateNow,
       0);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 /// Takes \p args in UTC time of the form:

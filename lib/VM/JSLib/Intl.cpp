@@ -668,14 +668,21 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
   runtime.intlCollatorPrototype = JSObject::create(runtime);
   Handle<JSObject> prototype{runtime.intlCollatorPrototype};
 
+  struct : public Locals {
+    PinnedValue<NativeConstructor> constructor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Create %Collator% intrinsic.
-  Handle<NativeConstructor> constructor = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Collator),
       intlCollatorConstructor,
       prototype,
-      0);
-  runtime.intlCollator = constructor;
+      0,
+      lv.constructor);
+  runtime.intlCollator.castAndSetHermesValue<NativeConstructor>(
+      lv.constructor.getHermesValue());
 
   {
     DefinePropertyFlags dpf{};
@@ -683,7 +690,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
 
     defineProperty(
         runtime,
-        constructor,
+        lv.constructor,
         Predefined::getSymbolID(Predefined::prototype),
         prototype,
         dpf);
@@ -691,7 +698,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
 
   defineMethod(
       runtime,
-      constructor,
+      lv.constructor,
       Predefined::getSymbolID(Predefined::supportedLocalesOf),
       nullptr,
       intlCollatorSupportedLocalesOf,
@@ -703,7 +710,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       prototype,
       Predefined::getSymbolID(Predefined::constructor),
-      constructor);
+      lv.constructor);
 
   {
     auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -742,7 +749,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       intl,
       Predefined::getSymbolID(Predefined::Collator),
-      constructor);
+      lv.constructor);
 }
 
 } // namespace
@@ -901,14 +908,21 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
   runtime.intlDateTimeFormatPrototype = JSObject::create(runtime);
   Handle<JSObject> prototype{runtime.intlDateTimeFormatPrototype};
 
+  struct : public Locals {
+    PinnedValue<NativeConstructor> constructor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Create %DateTimeFormat% intrinsic.
-  Handle<NativeConstructor> constructor = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::DateTimeFormat),
       intlDateTimeFormatConstructor,
       prototype,
-      0);
-  runtime.intlDateTimeFormat = constructor;
+      0,
+      lv.constructor);
+  runtime.intlDateTimeFormat.castAndSetHermesValue<NativeConstructor>(
+      lv.constructor.getHermesValue());
 
   {
     DefinePropertyFlags dpf{};
@@ -916,7 +930,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
 
     defineProperty(
         runtime,
-        constructor,
+        lv.constructor,
         Predefined::getSymbolID(Predefined::prototype),
         prototype,
         dpf);
@@ -924,7 +938,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
 
   defineMethod(
       runtime,
-      constructor,
+      lv.constructor,
       Predefined::getSymbolID(Predefined::supportedLocalesOf),
       nullptr,
       intlDateTimeFormatSupportedLocalesOf,
@@ -936,7 +950,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       prototype,
       Predefined::getSymbolID(Predefined::constructor),
-      constructor);
+      lv.constructor);
 
   {
     auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -983,7 +997,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       intl,
       Predefined::getSymbolID(Predefined::DateTimeFormat),
-      constructor);
+      lv.constructor);
 }
 
 } // namespace
@@ -1205,14 +1219,21 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
   runtime.intlNumberFormatPrototype = JSObject::create(runtime);
   Handle<JSObject> prototype{runtime.intlNumberFormatPrototype};
 
+  struct : public Locals {
+    PinnedValue<NativeConstructor> constructor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Create %NumberFormat% intrinsic.
-  Handle<NativeConstructor> constructor = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::NumberFormat),
       intlNumberFormatConstructor,
       prototype,
-      0);
-  runtime.intlNumberFormat = constructor;
+      0,
+      lv.constructor);
+  runtime.intlNumberFormat.castAndSetHermesValue<NativeConstructor>(
+      lv.constructor.getHermesValue());
 
   {
     DefinePropertyFlags dpf{};
@@ -1220,7 +1241,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
 
     defineProperty(
         runtime,
-        constructor,
+        lv.constructor,
         Predefined::getSymbolID(Predefined::prototype),
         prototype,
         dpf);
@@ -1228,7 +1249,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
 
   defineMethod(
       runtime,
-      constructor,
+      lv.constructor,
       Predefined::getSymbolID(Predefined::supportedLocalesOf),
       nullptr,
       intlNumberFormatSupportedLocalesOf,
@@ -1240,7 +1261,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       prototype,
       Predefined::getSymbolID(Predefined::constructor),
-      constructor);
+      lv.constructor);
 
   {
     auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -1289,7 +1310,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       intl,
       Predefined::getSymbolID(Predefined::NumberFormat),
-      constructor);
+      lv.constructor);
 }
 
 } // namespace

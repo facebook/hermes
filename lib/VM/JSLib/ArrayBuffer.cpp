@@ -29,12 +29,19 @@ using std::min;
 HermesValue createArrayBufferConstructor(Runtime &runtime) {
   auto arrayBufferPrototype =
       Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype);
-  auto cons = defineSystemConstructor(
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::ArrayBuffer),
       arrayBufferConstructor,
       arrayBufferPrototype,
-      1);
+      1,
+      lv.cons);
 
   // ArrayBuffer.prototype.xxx() methods.
   defineAccessor(
@@ -67,13 +74,13 @@ HermesValue createArrayBufferConstructor(Runtime &runtime) {
   // ArrayBuffer.xxx() methods.
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isView),
       nullptr,
       arrayBufferIsView,
       1);
 
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 CallResult<HermesValue> arrayBufferConstructor(void *, Runtime &runtime) {

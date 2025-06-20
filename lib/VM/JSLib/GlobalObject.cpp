@@ -571,7 +571,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   populateCallSitePrototype(runtime);
 
   // String constructor.
-  runtime.stringConstructor = createStringConstructor(runtime);
+  runtime.stringConstructor.castAndSetHermesValue<NativeConstructor>(
+      createStringConstructor(runtime));
 
   // BigInt constructor.
   createBigIntConstructor(runtime);
@@ -581,27 +582,32 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       createFunctionConstructor(runtime));
 
   // Number constructor.
-  runtime.numberConstructor = createNumberConstructor(runtime);
+  runtime.numberConstructor.castAndSetHermesValue<NativeConstructor>(
+      createNumberConstructor(runtime));
 
   // Boolean constructor.
-  runtime.booleanConstructor = createBooleanConstructor(runtime);
+  runtime.booleanConstructor.castAndSetHermesValue<NativeConstructor>(
+      createBooleanConstructor(runtime));
 
   // Date constructor.
-  runtime.dateConstructor = createDateConstructor(runtime);
+  runtime.dateConstructor.castAndSetHermesValue<NativeConstructor>(
+      createDateConstructor(runtime));
 
   // RegExp constructor
   runtime.regExpConstructor.castAndSetHermesValue<NativeConstructor>(
       createRegExpConstructor(runtime));
 
   // Array constructor.
-  runtime.arrayConstructor = createArrayConstructor(runtime);
+  runtime.arrayConstructor.castAndSetHermesValue<NativeConstructor>(
+      createArrayConstructor(runtime));
 
   // ArrayBuffer constructor.
   runtime.arrayBufferConstructor.castAndSetHermesValue<NativeConstructor>(
       createArrayBufferConstructor(runtime));
 
   // DataView constructor.
-  runtime.dataViewConstructor = createDataViewConstructor(runtime);
+  runtime.dataViewConstructor.castAndSetHermesValue<NativeConstructor>(
+      createDataViewConstructor(runtime));
 
   // TypedArrayBase constructor.
   runtime.typedArrayBaseConstructor.castAndSetHermesValue<NativeConstructor>(
@@ -622,15 +628,18 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       createMapConstructor(runtime));
 
   // WeakMap constructor.
-  runtime.weakMapConstructor = createWeakMapConstructor(runtime);
+  runtime.weakMapConstructor.castAndSetHermesValue<NativeConstructor>(
+      createWeakMapConstructor(runtime));
 
   // WeakSet constructor.
-  runtime.weakSetConstructor = createWeakSetConstructor(runtime);
+  runtime.weakSetConstructor.castAndSetHermesValue<NativeConstructor>(
+      createWeakSetConstructor(runtime));
 
   // Only define WeakRef constructor if microtasks are being used.
   if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {
     // WeakRef constructor.
-    runtime.weakRefConstructor = createWeakRefConstructor(runtime);
+    runtime.weakRefConstructor.castAndSetHermesValue<NativeConstructor>(
+        createWeakRefConstructor(runtime));
   }
 
   // Symbol constructor.
@@ -657,7 +666,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       createAsyncFunctionConstructor(runtime));
 
   // TextEncoder constructor.
-  runtime.textEncoderConstructor = createTextEncoderConstructor(runtime);
+  runtime.textEncoderConstructor.castAndSetHermesValue<NativeConstructor>(
+      createTextEncoderConstructor(runtime));
 
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);

@@ -14,9 +14,14 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime) {
+HermesValue createTextEncoderConstructor(Runtime &runtime) {
   auto textEncoderPrototype =
       Handle<JSObject>::vmcast(&runtime.textEncoderPrototype);
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   // Per https://webidl.spec.whatwg.org/#javascript-binding, @@toStringTag
   // should be writable=false, enumerable=false, and configurable=true.
@@ -59,20 +64,21 @@ Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime) {
       textEncoderPrototypeEncodeInto,
       2);
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::TextEncoder),
       textEncoderConstructor,
       textEncoderPrototype,
-      0);
+      0,
+      lv.cons);
 
   defineProperty(
       runtime,
       textEncoderPrototype,
       Predefined::getSymbolID(Predefined::constructor),
-      cons);
+      lv.cons);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 CallResult<HermesValue> textEncoderConstructor(void *, Runtime &runtime) {

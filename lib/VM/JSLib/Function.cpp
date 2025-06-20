@@ -30,12 +30,18 @@ namespace vm {
 HermesValue createFunctionConstructor(Runtime &runtime) {
   auto functionPrototype = Handle<Callable>::vmcast(&runtime.functionPrototype);
 
-  auto cons = defineSystemConstructor(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Function),
       functionConstructor,
       functionPrototype,
-      1);
+      1,
+      lv.cons);
 
   // Function.prototype.xxx() methods.
   defineMethod(
@@ -112,7 +118,7 @@ HermesValue createFunctionConstructor(Runtime &runtime) {
   (void)res;
   assert(res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
 
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 CallResult<HermesValue> functionConstructor(void *, Runtime &runtime) {

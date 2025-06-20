@@ -20,6 +20,11 @@ namespace vm {
 HermesValue createMapConstructor(Runtime &runtime) {
   auto mapPrototype = Handle<JSObject>::vmcast(&runtime.mapPrototype);
 
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Map.prototype.xxx methods.
   defineMethod(
       runtime,
@@ -121,14 +126,15 @@ HermesValue createMapConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::Map),
       dpf);
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Map),
       mapConstructor,
       mapPrototype,
-      0);
+      0,
+      lv.cons);
 
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 /// Populate the Map with the contents of the source Map.

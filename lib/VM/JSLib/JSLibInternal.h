@@ -42,8 +42,8 @@ namespace vm {
 /// \param constructorProtoObjectHandle the prototype to set for the
 ///   constructor function
 /// \param constructorOut a mutable handle to store the created constructor
-/// \return the created constructor function.
-void defineSystemConstructor(
+/// \return the created constructor function, stored in \p constructorOut.
+Handle<NativeConstructor> defineSystemConstructor(
     Runtime &runtime,
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
@@ -57,15 +57,8 @@ Handle<NativeConstructor> defineSystemConstructor(
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
-    Handle<JSObject> constructorProtoObjectHandle,
-    unsigned paramCount);
-
-Handle<NativeConstructor> defineSystemConstructor(
-    Runtime &runtime,
-    SymbolID name,
-    NativeFunctionPtr nativeFunctionPtr,
-    Handle<JSObject> prototypeObjectHandle,
-    unsigned paramCount);
+    unsigned paramCount,
+    MutableHandle<NativeConstructor> constructorOut);
 
 /// Define a method in an object instance.
 /// Currently, it's only used to define global %HermesInternal object in
@@ -202,12 +195,12 @@ void populateCallSitePrototype(Runtime &runtime);
 /// Create and initialize the global String constructor. Populate the methods
 /// of String and String.prototype.
 /// \return the global String constructor.
-Handle<NativeConstructor> createStringConstructor(Runtime &runtime);
+HermesValue createStringConstructor(Runtime &runtime);
 
 /// Create and initialize the global BigInt constructor. Populate the methods
 /// of BigInt and BigInt.prototype.
 /// \return the global BigInt constructor.
-Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime);
+void createBigIntConstructor(Runtime &runtime);
 
 /// Create and initialize the global Function constructor. Populate the methods
 /// of Function and Function.prototype.
@@ -217,17 +210,17 @@ HermesValue createFunctionConstructor(Runtime &runtime);
 /// Create and initialize the global Number constructor. Populate the methods
 /// of Number and Number.prototype.
 /// \return the global Number constructor.
-Handle<NativeConstructor> createNumberConstructor(Runtime &runtime);
+HermesValue createNumberConstructor(Runtime &runtime);
 
 /// Create and initialize the global Boolean constructor. Populate the methods
 /// of Boolean and Boolean.prototype.
 /// \return the global Boolean constructor.
-Handle<NativeConstructor> createBooleanConstructor(Runtime &runtime);
+HermesValue createBooleanConstructor(Runtime &runtime);
 
 /// Create and initialize the global Date constructor. Populate the methods
 /// of Date and Date.prototype.
 /// \return the global Date constructor.
-Handle<NativeConstructor> createDateConstructor(Runtime &runtime);
+HermesValue createDateConstructor(Runtime &runtime);
 
 /// Create and initialize the global Math object, populating its value
 /// and function properties.
@@ -334,11 +327,11 @@ advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
 /// Create and initialize the global Array constructor. Populate the methods
 /// of Array and Array.prototype.
 /// \return the global Array constructor.
-Handle<NativeConstructor> createArrayConstructor(Runtime &runtime);
+HermesValue createArrayConstructor(Runtime &runtime);
 
 HermesValue createArrayBufferConstructor(Runtime &runtime);
 
-Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime);
+HermesValue createDataViewConstructor(Runtime &runtime);
 
 HermesValue createTypedArrayBaseConstructor(Runtime &runtime);
 
@@ -362,16 +355,16 @@ HermesValue createMapConstructor(Runtime &runtime);
 HermesValue createMapIteratorPrototype(Runtime &runtime);
 
 /// Create the WeakMap constructor and populate methods.
-Handle<NativeConstructor> createWeakMapConstructor(Runtime &runtime);
+HermesValue createWeakMapConstructor(Runtime &runtime);
 
 /// Create the WeakSet constructor and populate methods.
-Handle<NativeConstructor> createWeakSetConstructor(Runtime &runtime);
+HermesValue createWeakSetConstructor(Runtime &runtime);
 
 /// Create the WeakRef constructor and populate methods.
-Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime);
+HermesValue createWeakRefConstructor(Runtime &runtime);
 
 /// Create the Symbol constructor and populate methods.
-Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime);
+void createSymbolConstructor(Runtime &runtime);
 
 /// Create the GeneratorFunction constructor and populate methods.
 HermesValue createGeneratorFunctionConstructor(Runtime &runtime);
@@ -380,7 +373,7 @@ HermesValue createGeneratorFunctionConstructor(Runtime &runtime);
 HermesValue createAsyncFunctionConstructor(Runtime &runtime);
 
 /// Create the TextEncoder constructor and populate methods.
-Handle<NativeConstructor> createTextEncoderConstructor(Runtime &runtime);
+HermesValue createTextEncoderConstructor(Runtime &runtime);
 
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime &runtime);

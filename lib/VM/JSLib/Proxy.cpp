@@ -216,12 +216,13 @@ HermesValue createProxyConstructor(Runtime &runtime) {
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
-  lv.cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Proxy),
       proxyConstructor,
       runtime.makeNullHandle<JSObject>(),
-      2);
+      2,
+      lv.cons);
 
   defineMethod(
       runtime,

@@ -28,6 +28,7 @@ HermesValue createErrorConstructor(Runtime &runtime) {
   struct : public Locals {
     PinnedValue<> nameValue;
     PinnedValue<> messageValue;
+    PinnedValue<NativeConstructor> cons;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
@@ -105,22 +106,23 @@ HermesValue createErrorConstructor(Runtime &runtime) {
 
   assert(*stackRes && "Failed to define stack accessor");
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Error),
       ErrorConstructor,
       errorPrototype,
-      1);
+      1,
+      lv.cons);
 
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::captureStackTrace),
       nullptr,
       errorCaptureStackTrace,
       2);
 
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 // The constructor creation functions have to be expanded from macros because
@@ -129,6 +131,7 @@ HermesValue createErrorConstructor(Runtime &runtime) {
   HermesValue create##error_name##Constructor(Runtime &runtime) {           \
     struct : public Locals {                                                \
       PinnedValue<> nameValue;                                              \
+      PinnedValue<NativeConstructor> cons;                                  \
     } lv;                                                                   \
     LocalsRAII lraii(runtime, &lv);                                         \
     auto errorPrototype =                                                   \
@@ -145,14 +148,15 @@ HermesValue createErrorConstructor(Runtime &runtime) {
         errorPrototype,                                                     \
         Predefined::getSymbolID(Predefined::message),                       \
         runtime.getPredefinedStringHandle(Predefined::emptyString));        \
-    auto cons = defineSystemConstructor(                                    \
+    defineSystemConstructor(                                                \
         runtime,                                                            \
         Predefined::getSymbolID(Predefined::error_name),                    \
         error_name##Constructor,                                            \
         errorPrototype,                                                     \
         Handle<JSObject>::vmcast(&runtime.ErrorConstructor),                \
-        argCount);                                                          \
-    return cons.getHermesValue();                                           \
+        argCount,                                                           \
+        lv.cons);                                                           \
+    return lv.cons.getHermesValue();                                        \
   }
 // The AggregateError constructor takes in two parameters, while all the other
 // Error types take in one.

@@ -18,15 +18,21 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createBooleanConstructor(Runtime &runtime) {
+HermesValue createBooleanConstructor(Runtime &runtime) {
   auto booleanPrototype = Handle<JSBoolean>::vmcast(&runtime.booleanPrototype);
 
-  auto cons = defineSystemConstructor(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Boolean),
       booleanConstructor,
       booleanPrototype,
-      1);
+      1,
+      lv.cons);
 
   // Boolean.prototype.xxx methods.
   defineMethod(
@@ -44,7 +50,7 @@ Handle<NativeConstructor> createBooleanConstructor(Runtime &runtime) {
       booleanPrototypeValueOf,
       0);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 CallResult<HermesValue> booleanConstructor(void *, Runtime &runtime) {

@@ -35,21 +35,23 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// String.
 
-Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
+HermesValue createStringConstructor(Runtime &runtime) {
   struct : public Locals {
     PinnedValue<NativeFunction> trimStart;
     PinnedValue<NativeFunction> trimEnd;
+    PinnedValue<NativeConstructor> cons;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
   Handle<JSString> stringPrototype{runtime.stringPrototype};
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::String),
       stringConstructor,
       stringPrototype,
-      1);
+      1,
+      lv.cons);
 
   // String.prototype.xxx methods.
   void *ctx = nullptr;
@@ -210,21 +212,21 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
   // String.xxx() methods.
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::fromCharCode),
       ctx,
       stringFromCharCode,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::fromCodePoint),
       ctx,
       stringFromCodePoint,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::raw),
       ctx,
       stringRaw,
@@ -335,7 +337,7 @@ Handle<NativeConstructor> createStringConstructor(Runtime &runtime) {
       stringPrototypeIncludesOrStartsWith,
       1);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 // ES2024 22.1.1.1 String(value)

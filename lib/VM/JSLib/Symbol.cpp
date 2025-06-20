@@ -20,26 +20,33 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
+void createSymbolConstructor(Runtime &runtime) {
   auto symbolPrototype = Handle<JSObject>::vmcast(&runtime.symbolPrototype);
 
-  auto cons = defineSystemConstructor(
+  struct : public Locals {
+    PinnedValue<SymbolID> symbolHandle;
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Symbol),
       symbolConstructor,
       symbolPrototype,
-      0);
+      0,
+      lv.cons);
 
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::predefinedFor),
       nullptr,
       symbolFor,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::keyFor),
       nullptr,
       symbolKeyFor,
@@ -55,22 +62,17 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   dpf.setConfigurable = 0;
   dpf.setValue = 1;
 
-  struct : public Locals {
-    PinnedValue<SymbolID> symbolHandle;
-  } lv;
-  LocalsRAII lraii(runtime, &lv);
-
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolHasInstance);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::hasInstance),
       lv.symbolHandle,
       dpf);
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolIterator);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::iterator),
       lv.symbolHandle,
       dpf);
@@ -78,21 +80,21 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isConcatSpreadable),
       lv.symbolHandle,
       dpf);
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolToPrimitive);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::toPrimitive),
       lv.symbolHandle,
       dpf);
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolToStringTag);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::toStringTag),
       lv.symbolHandle,
       dpf);
@@ -100,7 +102,7 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolMatch);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::match),
       lv.symbolHandle,
       dpf);
@@ -108,7 +110,7 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolMatchAll);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::matchAll),
       lv.symbolHandle,
       dpf);
@@ -116,7 +118,7 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolSearch);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::search),
       lv.symbolHandle,
       dpf);
@@ -124,7 +126,7 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolReplace);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::replace),
       lv.symbolHandle,
       dpf);
@@ -132,7 +134,7 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
   lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolSplit);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::split),
       lv.symbolHandle,
       dpf);
@@ -181,8 +183,6 @@ Handle<NativeConstructor> createSymbolConstructor(Runtime &runtime) {
       symbolPrototypeValueOf,
       1,
       dpf);
-
-  return cons;
 }
 
 CallResult<HermesValue> symbolConstructor(void *, Runtime &runtime) {

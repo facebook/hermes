@@ -20,15 +20,21 @@ namespace vm {
 
 //===----------------------------------------------------------------------===//
 
-Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime) {
+HermesValue createWeakRefConstructor(Runtime &runtime) {
   auto weakRefPrototype = Handle<JSObject>::vmcast(&runtime.weakRefPrototype);
 
-  auto cons = defineSystemConstructor(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::WeakRef),
       weakRefConstructor,
       weakRefPrototype,
-      1);
+      1,
+      lv.cons);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -55,7 +61,7 @@ Handle<NativeConstructor> createWeakRefConstructor(Runtime &runtime) {
       weakRefPrototypeDeref,
       0);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 // ES2021 26.1.1.1

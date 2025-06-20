@@ -25,15 +25,8 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
+HermesValue createNumberConstructor(Runtime &runtime) {
   Handle<JSNumber> numberPrototype{runtime.numberPrototype};
-
-  auto cons = defineSystemConstructor(
-      runtime,
-      Predefined::getSymbolID(Predefined::Number),
-      numberConstructor,
-      numberPrototype,
-      1);
 
   defineMethod(
       runtime,
@@ -86,12 +79,22 @@ Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
 
   struct : public Locals {
     PinnedValue<> numberValueHandle;
+    PinnedValue<NativeConstructor> cons;
   } lv;
   LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
+      runtime,
+      Predefined::getSymbolID(Predefined::Number),
+      numberConstructor,
+      numberPrototype,
+      1,
+      lv.cons);
+
   auto setNumberValueProperty = [&](SymbolID name, double value) {
     lv.numberValueHandle = HermesValue::encodeTrustedNumberValue(value);
     auto result = JSObject::defineOwnProperty(
-        cons, runtime, name, constantDPF, lv.numberValueHandle);
+        lv.cons, runtime, name, constantDPF, lv.numberValueHandle);
     assert(
         result != ExecutionStatus::EXCEPTION &&
         "defineOwnProperty() failed on a new object");
@@ -127,43 +130,43 @@ Handle<NativeConstructor> createNumberConstructor(Runtime &runtime) {
 
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isFinite),
       nullptr,
       numberIsFinite,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isInteger),
       nullptr,
       numberIsInteger,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isNaN),
       nullptr,
       numberIsNaN,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isSafeInteger),
       nullptr,
       numberIsSafeInteger,
       1);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::parseInt),
       runtime.parseIntFunction);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::parseFloat),
       runtime.parseFloatFunction);
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 CallResult<HermesValue> numberConstructor(void *, Runtime &runtime) {

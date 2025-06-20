@@ -14,8 +14,13 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createWeakMapConstructor(Runtime &runtime) {
+HermesValue createWeakMapConstructor(Runtime &runtime) {
   auto weakMapPrototype = Handle<JSObject>::vmcast(&runtime.weakMapPrototype);
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   defineMethod(
       runtime,
@@ -59,21 +64,22 @@ Handle<NativeConstructor> createWeakMapConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::WeakMap),
       dpf);
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::WeakMap),
       weakMapConstructor,
       weakMapPrototype,
-      0);
+      0,
+      lv.cons);
 
   // ES6.0 23.3.3.1
   defineProperty(
       runtime,
       weakMapPrototype,
       Predefined::getSymbolID(Predefined::constructor),
-      cons);
+      lv.cons);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 CallResult<HermesValue> weakMapConstructor(void *, Runtime &runtime) {

@@ -28,8 +28,13 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Array.
 
-Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
+HermesValue createArrayConstructor(Runtime &runtime) {
   auto arrayPrototype = Handle<JSArray>::vmcast(&runtime.arrayPrototype);
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   // Array.prototype.xxx methods.
   defineMethod(
@@ -155,16 +160,17 @@ Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
       dpf,
       runtime.arrayPrototypeValues));
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Array),
       arrayConstructor,
       arrayPrototype,
-      1);
+      1,
+      lv.cons);
 
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isArray),
       nullptr,
       arrayIsArray,
@@ -322,20 +328,20 @@ Handle<NativeConstructor> createArrayConstructor(Runtime &runtime) {
 
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::of),
       nullptr,
       arrayOf,
       0);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::from),
       nullptr,
       arrayFrom,
       1);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 /// Populate \p flags with the flags to be used to check for fast path for array

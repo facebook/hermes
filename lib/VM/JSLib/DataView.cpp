@@ -234,14 +234,21 @@ CallResult<HermesValue> dataViewConstructor(void *, Runtime &runtime) {
   return lv.self.getHermesValue();
 }
 
-Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime) {
+HermesValue createDataViewConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.dataViewPrototype);
-  auto cons = defineSystemConstructor(
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::DataView),
       dataViewConstructor,
       proto,
-      1);
+      1,
+      lv.cons);
 
   // DataView.prototype.xxx() methods.
   defineAccessor(
@@ -302,7 +309,7 @@ Handle<NativeConstructor> createDataViewConstructor(Runtime &runtime) {
 
   // DataView.xxx() methods.
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 } // namespace vm

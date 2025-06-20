@@ -28,12 +28,18 @@ namespace vm {
 HermesValue createObjectConstructor(Runtime &runtime) {
   auto objectPrototype = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
-  auto cons = defineSystemConstructor(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Object),
       objectConstructor,
       Handle<JSObject>::vmcast(&runtime.objectPrototype),
-      1);
+      1,
+      lv.cons);
   void *ctx = nullptr;
 
   // Object.prototype.xxx methods.
@@ -120,156 +126,161 @@ HermesValue createObjectConstructor(Runtime &runtime) {
   // Object.xxx() methods.
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getPrototypeOf),
       ctx,
       objectGetPrototypeOf,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor),
       ctx,
       objectGetOwnPropertyDescriptor,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertyDescriptors),
       ctx,
       objectGetOwnPropertyDescriptors,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertyNames),
       ctx,
       objectGetOwnPropertyNames,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertySymbols),
       ctx,
       objectGetOwnPropertySymbols,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::hasOwn),
       ctx,
       objectHasOwn,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::seal),
       ctx,
       objectSeal,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::freeze),
       ctx,
       objectFreeze,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::fromEntries),
       ctx,
       objectFromEntries,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::preventExtensions),
       ctx,
       objectPreventExtensions,
       1);
 
   defineMethod(
-      runtime, cons, Predefined::getSymbolID(Predefined::is), ctx, objectIs, 2);
+      runtime,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::is),
+      ctx,
+      objectIs,
+      2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isSealed),
       ctx,
       objectIsSealed,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isFrozen),
       ctx,
       objectIsFrozen,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isExtensible),
       ctx,
       objectIsExtensible,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::keys),
       ctx,
       objectKeys,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::values),
       ctx,
       objectValues,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::entries),
       ctx,
       objectEntries,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::create),
       ctx,
       objectCreate,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::defineProperty),
       ctx,
       objectDefineProperty,
       3);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::defineProperties),
       ctx,
       objectDefineProperties,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::assign),
       ctx,
       objectAssign,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::setPrototypeOf),
       ctx,
       objectSetPrototypeOf,
       2);
 
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 /// ES2024 20.1.1.1 Object constructor.

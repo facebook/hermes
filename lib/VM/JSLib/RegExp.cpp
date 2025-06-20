@@ -55,12 +55,18 @@ static inline bool thisIsRegExpProto(Runtime &runtime, NativeArgs args) {
 HermesValue createRegExpConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.regExpPrototype);
 
-  auto cons = defineSystemConstructor(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::RegExp),
       regExpConstructor,
       proto,
-      2);
+      2,
+      lv.cons);
 
   defineMethod(
       runtime,
@@ -117,25 +123,25 @@ HermesValue createRegExpConstructor(Runtime &runtime) {
   defineGetter(proto, Predefined::dotAll, regExpFlagPropertyGetter, 's');
   defineGetter(proto, Predefined::hasIndices, regExpFlagPropertyGetter, 'd');
 
-  defineGetter(cons, Predefined::dollar1, regExpDollarNumberGetter, 1);
-  defineGetter(cons, Predefined::dollar2, regExpDollarNumberGetter, 2);
-  defineGetter(cons, Predefined::dollar3, regExpDollarNumberGetter, 3);
-  defineGetter(cons, Predefined::dollar4, regExpDollarNumberGetter, 4);
-  defineGetter(cons, Predefined::dollar5, regExpDollarNumberGetter, 5);
-  defineGetter(cons, Predefined::dollar6, regExpDollarNumberGetter, 6);
-  defineGetter(cons, Predefined::dollar7, regExpDollarNumberGetter, 7);
-  defineGetter(cons, Predefined::dollar8, regExpDollarNumberGetter, 8);
-  defineGetter(cons, Predefined::dollar9, regExpDollarNumberGetter, 9);
-  defineGetter(cons, Predefined::leftContext, regExpLeftContextGetter);
-  defineGetter(cons, Predefined::dollarBacktick, regExpLeftContextGetter);
-  defineGetter(cons, Predefined::rightContext, regExpRightContextGetter);
-  defineGetter(cons, Predefined::dollarApostrophe, regExpRightContextGetter);
-  defineGetter(cons, Predefined::dollarUnderscore, regExpInputGetter);
-  defineGetter(cons, Predefined::input, regExpInputGetter);
-  defineGetter(cons, Predefined::dollarAmpersand, regExpLastMatchGetter);
-  defineGetter(cons, Predefined::lastMatch, regExpLastMatchGetter);
-  defineGetter(cons, Predefined::dollarPlus, regExpLastParenGetter);
-  defineGetter(cons, Predefined::lastParen, regExpLastParenGetter);
+  defineGetter(lv.cons, Predefined::dollar1, regExpDollarNumberGetter, 1);
+  defineGetter(lv.cons, Predefined::dollar2, regExpDollarNumberGetter, 2);
+  defineGetter(lv.cons, Predefined::dollar3, regExpDollarNumberGetter, 3);
+  defineGetter(lv.cons, Predefined::dollar4, regExpDollarNumberGetter, 4);
+  defineGetter(lv.cons, Predefined::dollar5, regExpDollarNumberGetter, 5);
+  defineGetter(lv.cons, Predefined::dollar6, regExpDollarNumberGetter, 6);
+  defineGetter(lv.cons, Predefined::dollar7, regExpDollarNumberGetter, 7);
+  defineGetter(lv.cons, Predefined::dollar8, regExpDollarNumberGetter, 8);
+  defineGetter(lv.cons, Predefined::dollar9, regExpDollarNumberGetter, 9);
+  defineGetter(lv.cons, Predefined::leftContext, regExpLeftContextGetter);
+  defineGetter(lv.cons, Predefined::dollarBacktick, regExpLeftContextGetter);
+  defineGetter(lv.cons, Predefined::rightContext, regExpRightContextGetter);
+  defineGetter(lv.cons, Predefined::dollarApostrophe, regExpRightContextGetter);
+  defineGetter(lv.cons, Predefined::dollarUnderscore, regExpInputGetter);
+  defineGetter(lv.cons, Predefined::input, regExpInputGetter);
+  defineGetter(lv.cons, Predefined::dollarAmpersand, regExpLastMatchGetter);
+  defineGetter(lv.cons, Predefined::lastMatch, regExpLastMatchGetter);
+  defineGetter(lv.cons, Predefined::dollarPlus, regExpLastParenGetter);
+  defineGetter(lv.cons, Predefined::lastParen, regExpLastParenGetter);
 
   defineMethod(
       runtime,
@@ -183,7 +189,7 @@ HermesValue createRegExpConstructor(Runtime &runtime) {
 
   defineGetter(proto, Predefined::flags, regExpFlagsGetter);
 
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 /// ES2022 22.2.5.2.4 GetStringIndex ( S, e )

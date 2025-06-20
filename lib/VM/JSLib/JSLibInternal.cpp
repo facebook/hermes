@@ -19,7 +19,7 @@
 namespace hermes {
 namespace vm {
 
-void defineSystemConstructor(
+Handle<NativeConstructor> defineSystemConstructor(
     Runtime &runtime,
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
@@ -61,25 +61,7 @@ void defineSystemConstructor(
 
   constructorOut.castAndSetHermesValue<NativeConstructor>(
       lv.constructor.getHermesValue());
-}
-
-Handle<NativeConstructor> defineSystemConstructor(
-    Runtime &runtime,
-    SymbolID name,
-    NativeFunctionPtr nativeFunctionPtr,
-    Handle<JSObject> prototypeObjectHandle,
-    Handle<JSObject> constructorProtoObjectHandle,
-    unsigned paramCount) {
-  MutableHandle<NativeConstructor> constructor{runtime};
-  defineSystemConstructor(
-      runtime,
-      name,
-      nativeFunctionPtr,
-      prototypeObjectHandle,
-      constructorProtoObjectHandle,
-      paramCount,
-      constructor);
-  return constructor;
+  return constructorOut;
 }
 
 NativeFunction *defineMethod(
@@ -118,14 +100,16 @@ Handle<NativeConstructor> defineSystemConstructor(
     SymbolID name,
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
-    unsigned paramCount) {
+    unsigned paramCount,
+    MutableHandle<NativeConstructor> constructorOut) {
   return defineSystemConstructor(
       runtime,
       name,
       nativeFunctionPtr,
       prototypeObjectHandle,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      paramCount);
+      paramCount,
+      constructorOut);
 }
 
 NativeFunction *defineMethod(

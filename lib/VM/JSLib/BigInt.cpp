@@ -18,15 +18,21 @@
 namespace hermes {
 namespace vm {
 
-Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime) {
+void createBigIntConstructor(Runtime &runtime) {
   Handle<JSObject> bigintPrototype{runtime.bigintPrototype};
 
-  auto cons = defineSystemConstructor(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::BigInt),
       bigintConstructor,
       bigintPrototype,
-      1);
+      1,
+      lv.cons);
 
   // BigInt.prototype.xxx methods.
   // https://tc39.es/ecma262/#sec-properties-of-the-bigint-prototype-object
@@ -57,14 +63,14 @@ Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime) {
   // https://tc39.es/ecma262/#sec-properties-of-the-bigint-constructor
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::asIntN),
       reinterpret_cast<void *>(&BigIntPrimitive::asIntN),
       bigintTruncate,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::asUintN),
       reinterpret_cast<void *>(&BigIntPrimitive::asUintN),
       bigintTruncate,
@@ -80,8 +86,6 @@ Handle<NativeConstructor> createBigIntConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime.getPredefinedStringHandle(Predefined::BigInt),
       dpf);
-
-  return cons;
 }
 
 CallResult<HermesValue> bigintConstructor(void *, Runtime &runtime) {

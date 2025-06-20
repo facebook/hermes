@@ -20,6 +20,11 @@ namespace vm {
 HermesValue createSetConstructor(Runtime &runtime) {
   auto setPrototype = Handle<JSObject>::vmcast(&runtime.setPrototype);
 
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Set.prototype.xxx methods.
   runtime.setPrototypeAdd = defineMethod(
       runtime,
@@ -169,14 +174,15 @@ HermesValue createSetConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::Set),
       dpf);
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Set),
       setConstructor,
       setPrototype,
-      0);
+      0,
+      lv.cons);
 
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 /// Populate the Set with the contents of the source Set.

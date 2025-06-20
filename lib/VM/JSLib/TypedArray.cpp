@@ -294,19 +294,21 @@ template <typename T, CellKind C, NativeFunctionPtr Ctor>
 HermesValue createTypedArrayConstructor(Runtime &runtime) {
   struct : public Locals {
     PinnedValue<> bytesPerElement;
+    PinnedValue<NativeConstructor> cons;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
   using TA = JSTypedArray<T, C>;
   auto proto = TA::getPrototype(runtime);
 
-  auto cons = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       TA::getName(runtime),
       Ctor,
       proto,
       Handle<JSObject>::vmcast(&runtime.typedArrayBaseConstructor),
-      3);
+      3,
+      lv.cons);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
@@ -325,11 +327,11 @@ HermesValue createTypedArrayConstructor(Runtime &runtime) {
   // %TypedArray%.xxx.
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::BYTES_PER_ELEMENT),
       lv.bytesPerElement,
       dpf);
-  return cons.getHermesValue();
+  return lv.cons.getHermesValue();
 }
 
 /// Implements the loop for map and filter. Template parameter \p MapOrFilter
