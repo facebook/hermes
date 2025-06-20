@@ -2010,18 +2010,6 @@ bool Runtime::symbolEqualsToStringPrim(SymbolID id, StringPrimitive *strPrim) {
   return strPrim->equals(view);
 }
 
-LLVM_ATTRIBUTE_NOINLINE
-void Runtime::_initStackWithZeroesHelper(
-    PinnedHermesValue *base,
-    uint32_t count,
-    HermesValue initValue) {
-  // We have to pass initValue as a parameter to prevent constant propagation
-  // that would turn this into a call to memset. However, it should always have
-  // the same value.
-  assert(initValue.getRaw() == 0 && "initValue must be 0");
-  std::uninitialized_fill_n(base, count, initValue);
-}
-
 void Runtime::dumpCallFrames(llvh::raw_ostream &OS) {
   OS << "== Call Frames ==\n";
   const PinnedHermesValue *next = getStackPointer();

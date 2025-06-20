@@ -1188,20 +1188,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// \param count the number of HermesValues to initialize.
   inline void initStackWithZeroes(PinnedHermesValue *base, uint32_t count);
 
-  /// Helper for initStackWithZeroes on platforms where we do not have an inline
-  /// assembly implementation. This is defined out-of-line to prevent the
-  /// compiler from emitting a libc call to zero memory, which would be an
-  /// indirect call.
-  /// \param base the starting address of the space to initialize.
-  /// \param count the number of HermesValues to initialize.
-  /// \param initValue the value to initialize the stack with. This must always
-  ///   be zero, but it has to be passed as a parameter to prevent constant
-  ///   propagation into the implementation, which would result in a libc call.
-  LLVM_ATTRIBUTE_NOINLINE void _initStackWithZeroesHelper(
-      PinnedHermesValue *base,
-      uint32_t count,
-      HermesValue initValue);
-
  private:
   GCBase::GCCallbacksWrapper<Runtime> gcCallbacksWrapper_;
   GC heap_;
@@ -2266,14 +2252,6 @@ inline void Runtime::allocStack(uint32_t count) {
 inline void Runtime::initStackWithZeroes(
     PinnedHermesValue *base,
     uint32_t count) {
-  // If count is a constant, let the compiler decide how to initialize it.
-  if (HERMES_BUILTIN_CONSTANT_P(count)) {
-    std::uninitialized_fill_n(
-        base, count, HermesValue::encodeRawZeroValueUnsafe());
-    return;
-  }
-
-#if defined(__aarch64__) && defined(__GNUC__)
   auto *lim = base + count;
   // Fill the first count % 3 elements so we can fill 4 at a time in the loop.
   if (count & 1)
@@ -2284,27 +2262,23 @@ inline void Runtime::initStackWithZeroes(
     *(base++) = HermesValue::encodeRawZeroValueUnsafe();
   }
 
-  // Use an assembly loop to store 4 elements at a time.
-  if (base != lim) {
-    asm volatile(
-        // Initialize q0 with zero.
-        "movi v0.16b, #0\n"
-        "1:\n"
-        // Store to fillPtr, and then increment it by 32 bytes.
-        "stp q0, q0, [%0], #32\n"
-        // If fillPtr < lim, loop again.
-        "cmp %0, %1\n"
-        "b.lt 1b\n"
-        : "+r"(base)
-        : "r"(lim)
-        : "v0", "cc", "memory");
+  // Store the remaining elements 4 at a time, allowing the compiler to use
+  // vectorized stores for up to 4 elements at a time. Note that the empty asm
+  // statement at the end of the loop prevents the compiler from storing more
+  // elements together.
+  while (base < lim) {
+    *(base++) = HermesValue::encodeRawZeroValueUnsafe();
+    *(base++) = HermesValue::encodeRawZeroValueUnsafe();
+    *(base++) = HermesValue::encodeRawZeroValueUnsafe();
+    *(base++) = HermesValue::encodeRawZeroValueUnsafe();
+
+#ifdef __GNUC__
+    // This empty asm statement tells the compiler that we want each write to
+    // be observable, so it cannot turn the loop into a memset call.
+    asm volatile("" : : : "memory");
+#endif
   }
   assert(base == lim && "Fill failed");
-#else
-  // We do not have an assembly implementation, call the out-of-line helper.
-  _initStackWithZeroesHelper(
-      base, count, HermesValue::encodeRawZeroValueUnsafe());
-#endif
 }
 
 inline void Runtime::popStack(uint32_t count) {
