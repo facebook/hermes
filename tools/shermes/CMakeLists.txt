@@ -22,6 +22,14 @@ set(SHERMES_CC_INCLUDE_PATH
 set(SHERMES_CC_LIB_PATH "$<TARGET_FILE_DIR:hermesvm>:$<TARGET_FILE_DIR:jsi>:$<TARGET_FILE_DIR:shermes_console>" CACHE STRING
   "Library path when invoking CC")
 
+if (HERMES_ENABLE_ADDRESS_SANITIZER)
+  append("-fsanitize=address" SHERMES_CC_SYSCFLAGS SHERMES_CC_SYSLDFLAGS)
+endif()
+
+if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
+  append("-fsanitize=undefined" SHERMES_CC_SYSCFLAGS SHERMES_CC_SYSLDFLAGS)
+endif()
+
 file(GENERATE
         OUTPUT $<CONFIG>/config.h
         CONTENT "\

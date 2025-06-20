@@ -485,14 +485,14 @@ bool execute(
                  << ", error: " << dlerror() << "\n";
     return false;
   }
-  // Note that main technically takes a non-const char**, but we know it is
-  // never modified.
-  auto *main = (int (*)(int, const char **))dlsym(handle, "main");
+  auto *main = (int (*)(int, char **))dlsym(handle, "main");
   if (!main) {
     llvh::errs() << "dlsym(main) error: " << dlerror() << "\n";
     return false;
   }
-  return !main(args.size(), args.data());
+  // The main function takes a non-const char**, but we know it doesn't actually
+  // modify it, so it is harmless to cast.
+  return !main(args.size(), const_cast<char **>(args.data()));
 }
 
 } // namespace
