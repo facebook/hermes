@@ -18,8 +18,10 @@ namespace jni {
 static jni::local_ref<jbyteArray> metadataParserImpl(
     const uint8_t *data,
     size_t size) {
+  auto *hermesAPI =
+      castInterface<hermes::IHermesRootAPI>(hermes::makeHermesRootAPI());
   std::pair<const uint8_t *, size_t> epiPair =
-      hermes::HermesRuntime::getBytecodeEpilogue(data, size);
+      hermesAPI->getBytecodeEpilogue(data, size);
   size_t epilogueSize = epiPair.second;
   const uint8_t *epilogue = epiPair.first;
   if (epilogueSize == 0) {

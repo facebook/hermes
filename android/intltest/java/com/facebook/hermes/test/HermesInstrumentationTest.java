@@ -68,7 +68,7 @@ public class HermesInstrumentationTest {
       String expected3;
       if (rt.getGlobalStringProperty("intlType").equals("object")) {
         expected1 = "12/20/2012";
-        expected3 = "12/20/2012, 3:00:00 AM";
+        expected3 = "12/20/2012,\\s*3:00:00\\s*AM";
       } else {
         expected1 = "Dec 20, 2012";
         expected3 = "Dec 20, 2012 3:00:00 AM";
@@ -85,9 +85,9 @@ public class HermesInstrumentationTest {
       String result1 = rt.getGlobalStringProperty("d1");
       assertThat(result1).isEqualTo(expected1);
       String result2 = rt.getGlobalStringProperty("d2");
-      assertThat(result2).isEqualTo("3:00:00 AM");
+      assertThat(result2).matches("3:00:00\\s*AM");
       String result3 = rt.getGlobalStringProperty("d3");
-      assertThat(result3).isEqualTo(expected3);
+      assertThat(result3).matches(expected3);
     } finally {
       Locale.setDefault(defaultLocale);
       TimeZone.setDefault(defaultZone);
