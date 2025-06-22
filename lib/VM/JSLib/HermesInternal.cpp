@@ -216,16 +216,6 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
         value);
   };
 
-#ifdef HERMES_FACEBOOK_BUILD
-  lv.tmpHandle =
-      HermesValue::encodeBoolValue(std::strstr(__FILE__, "hermes-snapshot"));
-  if (LLVM_UNLIKELY(
-          addProperty(lv.tmpHandle, "Snapshot VM") ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-#endif
-
   lv.tmpHandle =
       HermesValue::encodeTrustedNumberValue(::hermes::hbc::BYTECODE_VERSION);
   if (LLVM_UNLIKELY(

@@ -316,10 +316,6 @@ Runtime::Runtime(
   assert(
       (void *)this == (void *)(PointerBase *)this &&
       "cast to PointerBase should be no-op");
-#ifdef HERMES_FACEBOOK_BUILD
-  const bool isSnapshot = std::strstr(__FILE__, "hermes-snapshot");
-  crashMgr_->setCustomData("HermesIsSnapshot", isSnapshot ? "true" : "false");
-#endif
   crashMgr_->registerMemory(this, sizeof(Runtime));
   auto maxNumRegisters = runtimeConfig.getMaxNumRegisters();
   if (LLVM_UNLIKELY(maxNumRegisters > kMaxSupportedNumRegisters)) {
