@@ -1314,9 +1314,23 @@ static CallResult<HermesValue> arrayPrototypePushFastPath(
   return HermesValue::encodeTrustedNumberValue(finalLen);
 }
 
-/// ES9.0 22.1.3.18.
-CallResult<HermesValue> arrayPrototypePush(void *, Runtime &runtime) {
+/// Slow path for arrayPrototypePush.
+/// Placed in a separate out-of-line function to reduce the size of the
+/// entrypoint and fast path functions, leading to better codegen,
+/// also to avoid allocating Locals in the fast path.
+///
+/// \param lenOpt if populated, we've already determined that the 'this' value
+/// is a JSArray and retrieved the length.
+LLVM_ATTRIBUTE_NOINLINE
+static CallResult<HermesValue> arrayPrototypePushSlowPath(
+    Runtime &runtime,
+    OptValue<uint32_t> lenOpt) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  uint32_t argCount = args.getArgCount();
+
+  // Ensure the fast path does not leak any handles.
+  NoLeakHandleScope noLeaks{runtime};
+
   struct : Locals {
     PinnedValue<JSObject> O;
     PinnedValue<JSArray> arr;
@@ -1324,35 +1338,15 @@ CallResult<HermesValue> arrayPrototypePush(void *, Runtime &runtime) {
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
-  // Ensure the fast path does not leak any handles.
-  NoLeakHandleScope noLeaks{runtime};
-
-  // 3. Let items be a List whose elements are, in left to right order, the
-  // arguments that were passed to this function invocation.
-  // 4. Let argCount be the number of elements in items.
-  uint32_t argCount = args.getArgCount();
-
-  // 2. Let len be ? ToLength(? Get(O, "length")).
-  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
-    lv.O = args.vmcastThis<JSObject>();
-    lv.arr = args.vmcastThis<JSArray>();
-    // Fast path for getting the length.
-    uint32_t len = JSArray::getLength(*lv.arr, runtime);
-
-    if (LLVM_LIKELY(len < UINT32_MAX - argCount) &&
-        arrayFastPathCheck(runtime, *lv.arr, *runtime.arrayClass, len)) {
-      return arrayPrototypePushFastPath(runtime, lv.arr, len, args);
-    }
-
-    lv.len = HermesValue::encodeTrustedNumberValue(len);
-  }
-
   // The slow path may create additional handles, so create a GCScope to avoid
   // leaking them.
   GCScope gcScope(runtime);
 
   // If the fast path did not populate the length, then get it the slow way.
-  if (!lv.len->isNumber()) {
+  if (lenOpt) {
+    lv.O.castAndSetHermesValue<JSObject>(args.getThisArg());
+    lv.len = HermesValue::encodeTrustedNumberValue(*lenOpt);
+  } else {
     // Slow path, used when pushing onto non-array objects.
     // 1. Let O be ? ToObject(this value).
     auto objRes = toObject(runtime, args.getThisHandle());
@@ -1416,6 +1410,37 @@ CallResult<HermesValue> arrayPrototypePush(void *, Runtime &runtime) {
 
   // 8. Return len.
   return lv.len.get();
+}
+
+/// ES9.0 22.1.3.18.
+CallResult<HermesValue> arrayPrototypePush(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
+  // Ensure the fast path does not leak any handles.
+  NoLeakHandleScope noLeaks{runtime};
+
+  // 3. Let items be a List whose elements are, in left to right order, the
+  // arguments that were passed to this function invocation.
+  // 4. Let argCount be the number of elements in items.
+  uint32_t argCount = args.getArgCount();
+
+  // 2. Let len be ? ToLength(? Get(O, "length")).
+  OptValue<uint32_t> lenOpt = llvh::None;
+  if (LLVM_LIKELY(vmisa<JSArray>(args.getThisArg()))) {
+    // Fast path for getting the length.
+    JSArray *arr = vmcast<JSArray>(args.getThisArg());
+    uint32_t len = JSArray::getLength(arr, runtime);
+
+    if (LLVM_LIKELY(len < UINT32_MAX - argCount) &&
+        arrayFastPathCheck(runtime, arr, *runtime.arrayClass, len)) {
+      return arrayPrototypePushFastPath(
+          runtime, args.vmcastThis<JSArray>(), len, args);
+    }
+
+    lenOpt = len;
+  }
+
+  return arrayPrototypePushSlowPath(runtime, lenOpt);
 }
 
 namespace {
