@@ -128,8 +128,11 @@ cl::opt<DebugLevel> DebugInfoLevel(
             DebugLevel::g2,
             "g2",
             "Emit location info for all instructions"),
-        clEnumValN(DebugLevel::g3, "g3", "Emit full info for debugging"),
-        clEnumValN(DebugLevel::g3, "g", "Equivalent to -g3")),
+        clEnumValN(
+            DebugLevel::g2,
+            "g3",
+            "** Deprecated, full debug info cannot be generated via this tool. This behaves the same as -g2 **"),
+        clEnumValN(DebugLevel::g2, "g", "Equivalent to -g2")),
     cl::cat(CompilerCategory));
 
 cl::opt<std::string> InputSourceMap(
