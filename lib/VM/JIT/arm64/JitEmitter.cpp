@@ -5068,7 +5068,7 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
       ReadPropertyCacheEntry *cacheEntry) {
     // Obtain the HC ID.
     auto clazzID = _.initHCLazyIDMayAlloc(
-        cacheEntry->clazz.getNoBarrierUnsafe(_.runtime_));
+        cacheEntry->clazz.get(_.runtime_, _.runtime_.getHeap()));
     if (!clazzID)
       return;
 
@@ -5098,11 +5098,11 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
       ReadPropertyCacheEntry *cacheEntry) {
     // Obtain the HC IDs for the object's class and the parent class.
     auto clazzID = _.initHCLazyIDMayAlloc(
-        cacheEntry->negMatchClazz.getNoBarrierUnsafe(_.runtime_));
+        cacheEntry->negMatchClazz.get(_.runtime_, _.runtime_.getHeap()));
     if (!clazzID)
       return;
     auto parentClsID = _.initHCLazyIDMayAlloc(
-        cacheEntry->clazz.getNoBarrierUnsafe(_.runtime_));
+        cacheEntry->clazz.get(_.runtime_, _.runtime_.getHeap()));
     if (!parentClsID)
       return;
 
