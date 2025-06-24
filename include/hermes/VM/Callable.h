@@ -340,8 +340,6 @@ class Callable : public JSObject {
       Handle<Environment> env)
       : JSObject(runtime, parent, clazz),
         environment_(runtime, *env, runtime.getHeap()) {}
-  Callable(Runtime &runtime, JSObject *parent, HiddenClass *clazz)
-      : JSObject(runtime, parent, clazz), environment_() {}
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   static std::string _snapshotNameImpl(GCCell *cell, GC &gc);
@@ -437,7 +435,11 @@ class BoundFunction final : public Callable {
       Handle<HiddenClass> clazz,
       Handle<Callable> target,
       Handle<ArrayStorage> argStorage)
-      : Callable(runtime, *parent, *clazz),
+      : Callable(
+            runtime,
+            *parent,
+            *clazz,
+            Runtime::makeNullHandle<Environment>()),
         target_(runtime, *target, runtime.getHeap()),
         argStorage_(runtime, *argStorage, runtime.getHeap()) {}
 
@@ -539,18 +541,6 @@ class NativeJSFunction : public Callable {
 
   /// Create an instance of NativeJSFunction.
   /// \param parentHandle object to use as [[Prototype]].
-  /// \param context the context to be passed to the function
-  /// \param functionPtr the native function
-  /// \param funcInfo pointer to the information describing the function.
-  static Handle<NativeJSFunction> create(
-      Runtime &runtime,
-      Handle<JSObject> parentHandle,
-      NativeJSFunctionPtr functionPtr,
-      const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit);
-
-  /// Create an instance of NativeJSFunction.
-  /// \param parentHandle object to use as [[Prototype]].
   /// \param parentEnvHandle the parent environment
   /// \param context the context to be passed to the function
   /// \param functionPtr the native function
@@ -577,17 +567,6 @@ class NativeJSFunction : public Callable {
       const SHUnit *unit);
 
  public:
-  NativeJSFunction(
-      Runtime &runtime,
-      Handle<JSObject> parent,
-      Handle<HiddenClass> clazz,
-      NativeJSFunctionPtr functionPtr,
-      const SHNativeFuncInfo *funcInfo,
-      const SHUnit *unit)
-      : Callable(runtime, *parent, *clazz),
-        functionPtr_(functionPtr),
-        functionInfo_(funcInfo),
-        unit_(unit) {}
   NativeJSFunction(
       Runtime &runtime,
       Handle<JSObject> parent,

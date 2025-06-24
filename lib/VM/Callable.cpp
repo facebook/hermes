@@ -979,25 +979,6 @@ std::string NativeJSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
 Handle<NativeJSFunction> NativeJSFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
-    NativeJSFunctionPtr functionPtr,
-    const SHNativeFuncInfo *funcInfo,
-    const SHUnit *unit) {
-  auto *cell = runtime.makeAFixed<NativeJSFunction>(
-      runtime,
-      parentHandle,
-      runtime.lazyObjectClass,
-      functionPtr,
-      funcInfo,
-      unit);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  selfHandle->flags_.lazyObject = 1;
-  return selfHandle;
-}
-
-Handle<NativeJSFunction> NativeJSFunction::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
     Handle<Environment> parentEnvHandle,
     NativeJSFunctionPtr functionPtr,
     const SHNativeFuncInfo *funcInfo,
