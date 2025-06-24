@@ -29,7 +29,7 @@ enums=true
 experimental.natural_inference.local_primitive_literals=full
 
 [version]
-^0.273.1
+^0.274.0
 
 [lints]
 untyped-type-import=error
