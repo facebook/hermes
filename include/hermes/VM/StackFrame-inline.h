@@ -41,14 +41,14 @@ StackFramePtrT<isConst>::getCalleeCodeBlock() const {
 template <bool isConst>
 inline Handle<Environment> StackFramePtrT<isConst>::getDebugEnvironmentHandle()
     const {
-  return getDebugEnvironmentRef().isUndefined()
+  return !vmisa<Environment>(getDebugEnvironmentRef())
       ? HandleRootOwner::makeNullHandle<Environment>()
       : Handle<Environment>::vmcast_or_null(&getDebugEnvironmentRef());
 }
 
 template <bool isConst>
 inline Environment *StackFramePtrT<isConst>::getDebugEnvironment() const {
-  return getDebugEnvironmentRef().isUndefined()
+  return !vmisa<Environment>(getDebugEnvironmentRef())
       ? nullptr
       : vmcast_or_null<Environment>(getDebugEnvironmentRef());
 }

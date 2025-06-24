@@ -1,0 +1,5 @@
+exec 12
+break regress-uninit-env.js 23
+continue
+exec 12
+continue
