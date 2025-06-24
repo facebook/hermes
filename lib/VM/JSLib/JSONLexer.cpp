@@ -170,7 +170,7 @@ ExecutionStatus JSONLexer::scanString() {
             runtime_, strRef, hash);
         if (symRes == ExecutionStatus::EXCEPTION)
           return ExecutionStatus::EXCEPTION;
-        token_.setSymbol(*symRes);
+        token_.setSymbol(symRes->get());
         return ExecutionStatus::RETURNED;
       }
       auto strRes =
@@ -178,7 +178,7 @@ ExecutionStatus JSONLexer::scanString() {
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      token_.setString(runtime_.makeHandle<StringPrimitive>(*strRes));
+      token_.setString(vmcast<StringPrimitive>(*strRes));
       return ExecutionStatus::RETURNED;
     } else if (*curCharPtr_ <= '\u001F') {
       return error(u"U+0000 thru U+001F is not allowed in string");

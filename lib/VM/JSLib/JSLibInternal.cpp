@@ -343,6 +343,8 @@ CallResult<HermesValue> createDynamicFunction(
     PinnedValue<JSFunction> function;
     PinnedValue<JSObject> fallbackProto;
     PinnedValue<JSObject> selfParent;
+    PinnedValue<Domain> domain;
+    PinnedValue<StringPrimitive> anonymousStr;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   lv.params = std::move(*arrRes);
@@ -430,9 +432,10 @@ CallResult<HermesValue> createDynamicFunction(
     if (kind == DynamicFunctionKind::Normal && argCount == 1 &&
         isReturnThis(lv.body, runtime)) {
       // If this raises an exception, we still return immediately.
+      lv.domain = Domain::create(runtime);
       return JSFunction::create(
                  runtime,
-                 runtime.makeHandle(Domain::create(runtime)),
+                 lv.domain,
                  lv.selfParent,
                  runtime.makeNullHandle<Environment>(),
                  runtime.getReturnThisCodeBlock())
@@ -500,14 +503,14 @@ CallResult<HermesValue> createDynamicFunction(
   dpf.writable = 0;
 
   // Define the `name` correctly.
+  lv.anonymousStr = runtime.getStringPrimFromSymbolID(
+      Predefined::getSymbolID(Predefined::anonymous));
   if (JSObject::defineOwnProperty(
           lv.function,
           runtime,
           Predefined::getSymbolID(Predefined::name),
           dpf,
-          runtime.makeHandle(runtime.getStringPrimFromSymbolID(
-              Predefined::getSymbolID(Predefined::anonymous)))) ==
-      ExecutionStatus::EXCEPTION) {
+          lv.anonymousStr) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 

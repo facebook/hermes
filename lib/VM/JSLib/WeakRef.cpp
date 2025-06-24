@@ -126,11 +126,16 @@ CallResult<HermesValue> weakRefPrototypeDeref(void *, Runtime &runtime) {
   if (val.isUndefined())
     return val;
 
-  Handle<JSObject> targetHandle = runtime.makeHandle<JSObject>(val);
+  struct : public Locals {
+    PinnedValue<JSObject> targetHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.targetHandle.castAndSetHermesValue<JSObject>(val);
   // If the target is not empty, then
   // 2a. Perform AddToKeptObjects
-  runtime.addToKeptObjects(targetHandle);
-  return targetHandle.getHermesValue();
+  runtime.addToKeptObjects(lv.targetHandle);
+  return lv.targetHandle.getHermesValue();
 }
 
 } // namespace vm

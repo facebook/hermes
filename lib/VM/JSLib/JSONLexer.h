@@ -45,9 +45,6 @@ enum class JSONTokenKind {
 class JSONToken {
   JSONTokenKind kind_{JSONTokenKind::None};
   double numberValue_{};
-  // A string token can be represented as either a StringPrimitive or SymbolID.
-  MutableHandle<StringPrimitive> stringValue_;
-  MutableHandle<SymbolID> symbolValue_;
 
   /// The starting character of this token.
   char16_t firstChar_{};
@@ -55,9 +52,14 @@ class JSONToken {
   JSONToken(const JSONToken &) = delete;
   const JSONToken &operator=(const JSONToken &) = delete;
 
+  struct : public Locals {
+    PinnedValue<StringPrimitive> stringValue;
+    PinnedValue<SymbolID> symbolValue;
+  } lv_;
+  LocalsRAII lraii_;
+
  public:
-  explicit JSONToken(Runtime &runtime)
-      : stringValue_(runtime), symbolValue_(runtime) {}
+  explicit JSONToken(Runtime &runtime) : lraii_(runtime, &lv_) {}
 
   JSONTokenKind getKind() const {
     return kind_;
@@ -70,12 +72,12 @@ class JSONToken {
 
   Handle<StringPrimitive> getStrAsPrim() const {
     assert(getKind() == JSONTokenKind::String);
-    return stringValue_;
+    return lv_.stringValue;
   }
 
   Handle<SymbolID> getStrAsSymbol() const {
     assert(getKind() == JSONTokenKind::String);
-    return symbolValue_;
+    return lv_.symbolValue;
   }
 
   char16_t getFirstChar() const {
@@ -100,13 +102,13 @@ class JSONToken {
     kind_ = JSONTokenKind::Number;
     numberValue_ = number;
   }
-  void setString(Handle<StringPrimitive> str) {
+  void setString(StringPrimitive *str) {
     kind_ = JSONTokenKind::String;
-    stringValue_ = str.get();
+    lv_.stringValue = str;
   }
-  void setSymbol(Handle<SymbolID> sym) {
+  void setSymbol(SymbolID sym) {
     kind_ = JSONTokenKind::String;
-    symbolValue_ = sym;
+    lv_.symbolValue = sym;
   }
 };
 

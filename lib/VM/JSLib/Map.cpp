@@ -178,6 +178,9 @@ CallResult<HermesValue> mapConstructor(void *, Runtime &runtime) {
   struct : public Locals {
     PinnedValue<JSObject> selfParent;
     PinnedValue<JSMap> self;
+    PinnedValue<> adderProp;
+    PinnedValue<SymbolID> iteratorSymbol;
+    PinnedValue<Callable> iterMethod;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   if (LLVM_LIKELY(
@@ -216,23 +219,23 @@ CallResult<HermesValue> mapConstructor(void *, Runtime &runtime) {
   }
 
   // ES6.0 23.1.1.1.7: Cache adder across all iterations of the loop.
-  auto adder =
-      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
+  lv.adderProp = std::move(*propRes);
+  auto adder = Handle<Callable>::dyn_vmcast(Handle<>{lv.adderProp});
   if (!adder) {
     return runtime.raiseTypeError("Property 'set' for Map is not callable");
   }
 
-  auto iterMethodRes = getMethod(
-      runtime,
-      args.getArgHandle(0),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)));
+  lv.iteratorSymbol = Predefined::getSymbolID(Predefined::SymbolIterator);
+  auto iterMethodRes =
+      getMethod(runtime, args.getArgHandle(0), lv.iteratorSymbol);
   if (LLVM_UNLIKELY(iterMethodRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (!vmisa<Callable>(iterMethodRes->getHermesValue())) {
     return runtime.raiseTypeError("iterator method is not callable");
   }
-  auto iterMethod = runtime.makeHandle<Callable>(std::move(*iterMethodRes));
+  lv.iterMethod.castAndSetHermesValue<Callable>(
+      iterMethodRes->getHermesValue());
 
   // Check and run fast path.
   if (LLVM_LIKELY(
@@ -241,7 +244,7 @@ CallResult<HermesValue> mapConstructor(void *, Runtime &runtime) {
     // If the iterable is a Map with the original iterator,
     // then we can do for-loop.
     if (Handle<JSMap> inputMap = args.dyncastArg<JSMap>(0); inputMap &&
-        LLVM_LIKELY(iterMethod.getHermesValue().getRaw() ==
+        LLVM_LIKELY(lv.iterMethod.getHermesValue().getRaw() ==
                     runtime.mapPrototypeEntries.getHermesValue().getRaw())) {
       if (LLVM_UNLIKELY(
               mapFromMapFastPath(runtime, lv.self, inputMap) ==
@@ -258,7 +261,7 @@ CallResult<HermesValue> mapConstructor(void *, Runtime &runtime) {
       runtime,
       lv.self,
       args.getArgHandle(0),
-      iterMethod,
+      Handle<Callable>{lv.iterMethod},
       [&runtime, &self = lv.self, adder](
           Runtime &, Handle<> key, Handle<> value) {
         return Callable::executeCall2(

@@ -17,23 +17,30 @@ namespace hermes {
 namespace vm {
 
 void populateIteratorPrototype(Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<NativeFunction> iteratorFunc;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   auto proto = Handle<JSObject>::vmcast(&runtime.iteratorPrototype);
 
-  auto iteratorFunc = NativeFunction::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
-      nullptr,
-      iteratorPrototypeIterator,
-      Predefined::getSymbolID(Predefined::squareSymbolIterator),
-      0,
-      Runtime::makeNullHandle<JSObject>());
+  lv.iteratorFunc.castAndSetHermesValue<NativeFunction>(
+      NativeFunction::create(
+          runtime,
+          Handle<JSObject>::vmcast(&runtime.functionPrototype),
+          Runtime::makeNullHandle<Environment>(),
+          nullptr,
+          iteratorPrototypeIterator,
+          Predefined::getSymbolID(Predefined::squareSymbolIterator),
+          0,
+          Runtime::makeNullHandle<JSObject>())
+          .getHermesValue());
 
   defineProperty(
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::SymbolIterator),
-      runtime.makeHandle<NativeFunction>(*iteratorFunc));
+      lv.iteratorFunc);
 }
 
 CallResult<HermesValue> iteratorPrototypeIterator(void *, Runtime &runtime) {

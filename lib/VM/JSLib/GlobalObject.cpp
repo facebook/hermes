@@ -678,12 +678,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   }
 
   // Define the global Math object
+  lv.tempHandle.castAndSetHermesValue<JSObject>(createMathObject(runtime));
   runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
       runtime.getGlobal(),
       runtime,
       Predefined::getSymbolID(Predefined::Math),
       normalDPF,
-      createMathObject(runtime)));
+      lv.tempHandle));
 
   // Define the global JSON object
   createJSONObject(runtime, lv.tempHandle);

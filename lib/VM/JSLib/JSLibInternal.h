@@ -224,7 +224,7 @@ HermesValue createDateConstructor(Runtime &runtime);
 
 /// Create and initialize the global Math object, populating its value
 /// and function properties.
-Handle<JSObject> createMathObject(Runtime &runtime);
+HermesValue createMathObject(Runtime &runtime);
 
 /// Create and initialize the global Proxy constructor, populating its methods.
 /// \return the global Proxy constructor.
@@ -437,9 +437,12 @@ CallResult<HermesValue> addEntriesFromIterable(
   }
   auto iteratorRecord = *iterRes;
 
-  MutableHandle<JSObject> nextItem{runtime};
-  MutableHandle<> key{runtime};
-  MutableHandle<> value{runtime};
+  struct : public Locals {
+    PinnedValue<JSObject> nextItem;
+    PinnedValue<> key;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   auto marker = gcScope.createMarker();
 
   // 4. Repeat,
@@ -454,9 +457,10 @@ CallResult<HermesValue> addEntriesFromIterable(
       return target.getHermesValue();
     }
     // c. Let nextItem be ? IteratorValue(next).
-    nextItem = vmcast<JSObject>(nextRes->getHermesValue());
+    lv.nextItem.template castAndSetHermesValue<JSObject>(
+        nextRes->getHermesValue());
     auto nextItemRes = JSObject::getNamed_RJS(
-        nextItem, runtime, Predefined::getSymbolID(Predefined::value));
+        lv.nextItem, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -467,29 +471,30 @@ CallResult<HermesValue> addEntriesFromIterable(
       (void)runtime.raiseTypeError("Iterator value must be an object");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    nextItem = PseudoHandle<JSObject>::vmcast(std::move(*nextItemRes));
+    lv.nextItem.template castAndSetHermesValue<JSObject>(
+        nextItemRes->getHermesValue());
 
     // e. Let k be Get(nextItem, "0").
-    auto keyRes = getIndexed_RJS(runtime, nextItem, 0);
+    auto keyRes = getIndexed_RJS(runtime, lv.nextItem, 0);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       // f. If k is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, k).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    key = std::move(*keyRes);
+    lv.key = std::move(*keyRes);
 
     // g. Let v be Get(nextItem, "1").
-    auto valueRes = getIndexed_RJS(runtime, nextItem, 1);
+    auto valueRes = getIndexed_RJS(runtime, lv.nextItem, 1);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       // h. If v is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, v).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    value = std::move(*valueRes);
+    lv.value = std::move(*valueRes);
 
     // i. Let status be Call(adder, target, « k.[[Value]], v.[[Value]] »).
     if (LLVM_UNLIKELY(
-            adder(runtime, key, value) == ExecutionStatus::EXCEPTION)) {
+            adder(runtime, lv.key, lv.value) == ExecutionStatus::EXCEPTION)) {
       // j. If status is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, status).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);

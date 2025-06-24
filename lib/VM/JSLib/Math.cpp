@@ -371,11 +371,17 @@ CallResult<HermesValue> mathSign(void *, Runtime &runtime) {
   return HermesValue::encodeTrustedNumberValue(std::signbit(x) ? -1 : +1);
 }
 
-Handle<JSObject> createMathObject(Runtime &runtime) {
+HermesValue createMathObject(Runtime &runtime) {
+  struct : public Locals {
+    PinnedValue<> numberHandle;
+    PinnedValue<JSMath> math;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
   auto objRes = JSMath::create(
       runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype));
   assert(objRes != ExecutionStatus::EXCEPTION && "unable to define Math");
-  auto math = runtime.makeHandle<JSMath>(*objRes);
+  lv.math.castAndSetHermesValue<JSMath>(*objRes);
 
   DefinePropertyFlags constantDPF =
       DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -383,16 +389,11 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
   constantDPF.writable = 0;
   constantDPF.configurable = 0;
 
-  struct : public Locals {
-    PinnedValue<> numberHandle;
-  } lv;
-  LocalsRAII lraii{runtime, &lv};
-
   // ES5.1 15.8.1, Math value properties
   auto setMathValueProperty = [&](SymbolID name, double value) {
     lv.numberHandle = HermesValue::encodeTrustedNumberValue(value);
     auto result = JSObject::defineOwnProperty(
-        math, runtime, name, constantDPF, lv.numberHandle);
+        lv.math, runtime, name, constantDPF, lv.numberHandle);
     assert(
         result != ExecutionStatus::EXCEPTION &&
         "defineOwnProperty() failed on a new object");
@@ -408,14 +409,14 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
   setMathValueProperty(Predefined::getSymbolID(Predefined::SQRT2), M_SQRT2);
 
   // ES5.1 15.8.2, Math function properties
-  auto setMathFunctionProperty1Arg = [&runtime, math](
+  auto setMathFunctionProperty1Arg = [&runtime, &lv](
                                          SymbolID name, MathKind kind) {
-    defineMethod(runtime, math, name, (void *)kind, runContextFunc1Arg, 1);
+    defineMethod(runtime, lv.math, name, (void *)kind, runContextFunc1Arg, 1);
   };
 
-  auto setMathFunctionProperty2Arg = [&runtime, math](
+  auto setMathFunctionProperty2Arg = [&runtime, &lv](
                                          SymbolID name, MathKind kind) {
-    defineMethod(runtime, math, name, (void *)kind, runContextFunc2Arg, 2);
+    defineMethod(runtime, lv.math, name, (void *)kind, runContextFunc2Arg, 2);
   };
 
   // We use the C versions of some of these functions from <math.h>
@@ -442,7 +443,7 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::ceil), MathKind::ceil);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::clz32),
       nullptr,
       mathClz32,
@@ -459,14 +460,14 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::floor), MathKind::floor);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::fround),
       nullptr,
       mathFround,
       1);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::hypot),
       nullptr,
       mathHypot,
@@ -483,35 +484,35 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::trunc), MathKind::trunc);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::max),
       nullptr,
       mathMax,
       2);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::min),
       nullptr,
       mathMin,
       2);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::imul),
       nullptr,
       mathImul,
       2);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::pow),
       nullptr,
       mathPow,
       2);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::random),
       nullptr,
       mathRandom,
@@ -520,7 +521,7 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::round), MathKind::round);
   defineMethod(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::sign),
       nullptr,
       mathSign,
@@ -541,12 +542,12 @@ Handle<JSObject> createMathObject(Runtime &runtime) {
   dpf.enumerable = 0;
   defineProperty(
       runtime,
-      math,
+      lv.math,
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime.getPredefinedStringHandle(Predefined::Math),
       dpf);
 
-  return math;
+  return lv.math.getHermesValue();
 }
 
 } // namespace vm
