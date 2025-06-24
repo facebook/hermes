@@ -471,13 +471,15 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
   if (LLVM_UNLIKELY(selfHandle->flags_.hostObject)) {
     assert(
         range.first == range.second && "Host objects cannot own indexed range");
-    auto hostSymbolsRes =
-        vmcast<HostObject>(selfHandle.get())->getHostPropertyNames();
-    if (hostSymbolsRes == ExecutionStatus::EXCEPTION) {
+    // Create a temporary handle to receive the host property names
+    MutableHandle<JSArray> hostSymbolsTemp{runtime};
+    if (vmcast<HostObject>(selfHandle.get())
+            ->getHostPropertyNames(hostSymbolsTemp) ==
+        ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    if ((hostObjectSymbolCount = (**hostSymbolsRes)->getEndIndex()) != 0) {
-      Handle<JSArray> hostSymbols = *hostSymbolsRes;
+    if ((hostObjectSymbolCount = hostSymbolsTemp->getEndIndex()) != 0) {
+      Handle<JSArray> hostSymbols = hostSymbolsTemp;
       hostObjectSymbols = std::move(hostSymbols);
     }
   }
