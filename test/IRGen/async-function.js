@@ -120,7 +120,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS1: any, %?anon_0_simpleReturn?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS1: any, %"?anon_0_simpleReturn 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -128,7 +128,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS2: any, %?anon_0_simpleAwait?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS2: any, %"?anon_0_simpleAwait 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
@@ -136,7 +136,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS3: any, %?anon_0_nonSimpleArrayDestructuring?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS3: any, %"?anon_0_nonSimpleArrayDestructuring 1#"(): functionCode
 // CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
 // CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: object
 // CHECK-NEXT:       ReturnInst %2: object
@@ -146,13 +146,13 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
-// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS4: any, %?anon_0_simpleAsyncFE?inner(): functionCode
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS4: any, %"?anon_0_simpleAsyncFE 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS5 []
 
-// CHECK:generator inner ?anon_0_simpleReturn?inner(): any
+// CHECK:generator inner "?anon_0_simpleReturn 1#"(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
 // CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
@@ -168,7 +168,7 @@ var simpleAsyncFE = async function () {
 
 // CHECK:scope %VS6 [x: any]
 
-// CHECK:generator inner ?anon_0_simpleAwait?inner(): any
+// CHECK:generator inner "?anon_0_simpleAwait 1#"(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
 // CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
@@ -196,7 +196,7 @@ var simpleAsyncFE = async function () {
 
 // CHECK:scope %VS7 [x: any]
 
-// CHECK:generator inner ?anon_0_nonSimpleArrayDestructuring?inner(?anon_2_param: any): any
+// CHECK:generator inner "?anon_0_nonSimpleArrayDestructuring 1#"(?anon_2_param: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
 // CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
@@ -265,7 +265,7 @@ var simpleAsyncFE = async function () {
 
 // CHECK:scope %VS8 [x: any]
 
-// CHECK:generator inner ?anon_0_simpleAsyncFE?inner(): any
+// CHECK:generator inner "?anon_0_simpleAsyncFE 1#"(): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
 // CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean

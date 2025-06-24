@@ -27,7 +27,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:  Bytecode version number: {{.*}}
 // CHECK-NEXT:  Source hash: {{.*}}
 // CHECK-NEXT:  Function count: 10
-// CHECK-NEXT:  String count: 14
+// CHECK-NEXT:  String count: 11
 // CHECK-NEXT:  BigInt count: 0
 // CHECK-NEXT:  String Kind Entry count: 2
 // CHECK-NEXT:  RegExp count: 0
@@ -43,18 +43,15 @@ var simpleAsyncFE = async function () {
 // CHECK:Global String Table:
 // CHECK-NEXT:s0[ASCII, 0..-1]:
 // CHECK-NEXT:s1[ASCII, 0..20]: ?anon_0_simpleAsyncFE
-// CHECK-NEXT:s2[ASCII, 21..47]: ?anon_0_simpleAsyncFE?inner
-// CHECK-NEXT:s3[ASCII, 48..66]: ?anon_0_simpleAwait
-// CHECK-NEXT:s4[ASCII, 67..91]: ?anon_0_simpleAwait?inner
-// CHECK-NEXT:s5[ASCII, 92..111]: ?anon_0_simpleReturn
-// CHECK-NEXT:s6[ASCII, 112..137]: ?anon_0_simpleReturn?inner
-// CHECK-NEXT:s7[ASCII, 138..198]: Generator functions may not be called on executing generators
-// CHECK-NEXT:s8[ASCII, 199..204]: global
-// CHECK-NEXT:i9[ASCII, 205..208] #B553E7BD: done
-// CHECK-NEXT:i10[ASCII, 209..221] #4CCB9499: simpleAsyncFE
-// CHECK-NEXT:i11[ASCII, 222..232] #FD482E4F: simpleAwait
-// CHECK-NEXT:i12[ASCII, 233..244] #EB416734: simpleReturn
-// CHECK-NEXT:i13[ASCII, 245..249] #DF50693D: value
+// CHECK-NEXT:s2[ASCII, 21..39]: ?anon_0_simpleAwait
+// CHECK-NEXT:s3[ASCII, 40..59]: ?anon_0_simpleReturn
+// CHECK-NEXT:s4[ASCII, 60..120]: Generator functions may not be called on executing generators
+// CHECK-NEXT:s5[ASCII, 121..126]: global
+// CHECK-NEXT:i6[ASCII, 127..130] #B553E7BD: done
+// CHECK-NEXT:i7[ASCII, 131..143] #4CCB9499: simpleAsyncFE
+// CHECK-NEXT:i8[ASCII, 144..154] #FD482E4F: simpleAwait
+// CHECK-NEXT:i9[ASCII, 155..166] #EB416734: simpleReturn
+// CHECK-NEXT:i10[ASCII, 167..171] #DF50693D: value
 
 // CHECK:Literal Value Buffer:
 // CHECK-NEXT:[int 1]
@@ -66,8 +63,8 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:[int 2]
 // CHECK-NEXT:false
 // CHECK-NEXT:Object Key Buffer:
-// CHECK-NEXT:[String 13]
-// CHECK-NEXT:[String 9]
+// CHECK-NEXT:[String 10]
+// CHECK-NEXT:[String 6]
 // CHECK-NEXT:Object Shape Table:
 // CHECK-NEXT:0[0, 2]
 // CHECK-NEXT:Function Source Table:
@@ -149,7 +146,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 4, r2
 // CHECK-NEXT:    LoadConstZero     r2
 // CHECK-NEXT:    StoreNPToEnvironment r1, 2, r2
-// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleReturn?inner>
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleReturn>
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<?anon_0_simpleAwait>(1 params, 3 registers, 0 numbers, 0 non-pointers):
@@ -162,7 +159,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 5, r2
 // CHECK-NEXT:    LoadConstZero     r2
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r2
-// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAwait?inner>
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAwait>
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<?anon_0_simpleAsyncFE>(1 params, 3 registers, 0 numbers, 0 non-pointers):
@@ -175,10 +172,10 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    StoreNPToEnvironment r1, 5, r2
 // CHECK-NEXT:    LoadConstZero     r2
 // CHECK-NEXT:    StoreNPToEnvironment r1, 6, r2
-// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAsyncFE?inner>
+// CHECK-NEXT:    CreateGenerator   r1, r1, Function<?anon_0_simpleAsyncFE>
 // CHECK-NEXT:    Ret               r1
 
-// CHECK:Function<?anon_0_simpleReturn?inner>(1 params, 17 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<?anon_0_simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -246,7 +243,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_simpleAwait?inner>(1 params, 20 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<?anon_0_simpleAwait>(1 params, 20 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x002b, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
@@ -356,7 +353,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    CallBuiltin       r0, "HermesBuiltin.throwTypeError", 2
 // CHECK-NEXT:    Unreachable
 
-// CHECK:Function<?anon_0_simpleAsyncFE?inner>(1 params, 20 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<?anon_0_simpleAsyncFE>(1 params, 20 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0037, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1

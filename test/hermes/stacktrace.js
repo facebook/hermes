@@ -224,3 +224,10 @@ object.someMethod.displayName = 'anotherMethod';
 try { object.someMethod(); } catch (e) { print(e.stack); }
 //CHECK-LABEL: Error: oops
 //CHECK-NEXT:     at anotherMethod ({{.*}}stacktrace.js:218:20)
+
+function *gen() {
+  print(new Error().stack);
+}
+gen().next();
+//CHECK-LABEL: Error
+//CHECK-NEXT:     at gen ({{.*}}stacktrace.js:229:18)

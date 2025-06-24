@@ -23,7 +23,7 @@ test().then(() => {
 // CHECK:Break on 'debugger' statement in global: {{.*}}step-in-async.js[2]:15:1
 // CHECK-NEXT:Set breakpoint 1 at {{.*}}step-in-async.js[2]:12:3
 // CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on breakpoint 1 in ?anon_0_test?inner: {{.*}}step-in-async.js[2]:12:3
+// CHECK-NEXT:Break on breakpoint 1 in ?anon_0_test: {{.*}}step-in-async.js[2]:12:3
 // CHECK-NEXT:inside async function
 // CHECK-NEXT:Stepped to global: {{.*}}step-in-async.js[2]:17:12
 // CHECK-NEXT:Continuing execution

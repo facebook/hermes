@@ -33,11 +33,11 @@ function *foo() {
 // CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS0.idx]: number
 // CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS0.generator_state]: number
 // CHECK-NEXT:       StoreFrameInst %0: environment, 0: number, [%VS0.exception_handler_idx]: number
-// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS0: any, %foo?inner(): functionCode
+// CHECK-NEXT:  %4 = CreateGeneratorInst (:object) %0: environment, %VS0: any, %"foo 1#"(): functionCode
 // CHECK-NEXT:       ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:generator inner foo?inner(action: number, value: any): any
+// CHECK:generator inner "foo 1#"(action: number, value: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %value: any
 // CHECK-NEXT:  %1 = LoadParamInst (:number) %action: number
