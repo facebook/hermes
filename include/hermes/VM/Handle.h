@@ -563,8 +563,8 @@ class MutableHandle : public Handle<T> {
   /// type.
   /* implicit */ MutableHandle(const PinnedValue<T> &pv) : Handle<T>(pv) {}
 
-  /// Copy constructor.
-  MutableHandle(const MutableHandle &sc) : Handle<T>(sc) {}
+  MutableHandle(const MutableHandle &sc) = default;
+  MutableHandle(MutableHandle &&sc) = default;
 
   /// Copy constructor from MutableHandle<U> where U is compatible with T.
   template <
@@ -572,9 +572,6 @@ class MutableHandle : public Handle<T> {
       typename =
           typename std::enable_if<IsHermesValueConvertible<T, U>::value>::type>
   MutableHandle(const MutableHandle<U> &sc) : Handle<T>(sc) {}
-
-  /// A move constructor.
-  MutableHandle(MutableHandle &&sc) : Handle<T>(std::move(sc)) {}
 
   MutableHandle &operator=(MutableHandle &&sc) {
     *HandleBase::handleRef() = *sc.handleRef();
@@ -594,6 +591,11 @@ class MutableHandle : public Handle<T> {
   /// Clear the value of the handle so it doesn't prevent an object from GC.
   void clear() {
     set(HermesValueTraits<T>::defaultValue());
+  }
+
+  void set(PseudoHandle<T> &&other) {
+    set(other.get());
+    other.invalidate();
   }
 
   void set(value_type value) {
@@ -641,8 +643,9 @@ class MutableHandle : public Handle<T> {
       typename U,
       typename =
           typename std::enable_if<IsHermesValueConvertible<T, U>::value>::type>
-  static MutableHandle aliasForOutput(MutableHandle<U> &other) {
-    return MutableHandle(other.handleRef(), true);
+  static MutableHandle aliasForOutput(const MutableHandle<U> &other) {
+    return MutableHandle(
+        const_cast<PinnedHermesValue *>(other.handleRef()), true);
   }
 
   PinnedHermesValue *unsafeGetPinnedHermesValue() {
