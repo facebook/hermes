@@ -53,14 +53,16 @@ CallResult<Handle<JSString>> JSString::create(
   pf.enumerable = 0;
   pf.configurable = 0;
 
+  PinnedHermesValue lengthValue =
+      HermesValue::encodeTrustedNumberValue(value->getStringLength());
+
   if (LLVM_UNLIKELY(
           JSObject::defineNewOwnProperty(
               selfHandle,
               runtime,
               Predefined::getSymbolID(Predefined::length),
               pf,
-              runtime.makeHandle(HermesValue::encodeTrustedNumberValue(
-                  value->getStringLength()))) == ExecutionStatus::EXCEPTION)) {
+              Handle<>{&lengthValue}) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -142,9 +144,8 @@ CallResult<bool> JSString::_setOwnIndexedImpl(
 
   // Property indexes beyond the end of the string must be added as named
   // properties.
-  auto vr = valueToSymbolID(
-      runtime,
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index)));
+  PinnedHermesValue indexValue = HermesValue::encodeTrustedNumberValue(index);
+  auto vr = valueToSymbolID(runtime, Handle{&indexValue});
   assert(
       vr != ExecutionStatus::EXCEPTION &&
       "valueToIdentifier() failed for uint32_t value");
@@ -209,18 +210,24 @@ CallResult<HermesValue> JSStringIterator::nextElement(
     Handle<JSStringIterator> self,
     Runtime &runtime) {
   // 4. Let s be the value of the [[IteratedString]] internal slot of O.
-  auto s = runtime.makeHandle(self->iteratedString_);
-  if (!s) {
+  if (!self->iteratedString_) {
     // 5. If s is undefined, return CreateIterResultObject(undefined, true).
     return createIterResultObject(runtime, Runtime::getUndefinedValue(), true)
         .getHermesValue();
   }
 
+  struct : public Locals {
+    PinnedValue<StringPrimitive> s;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.s = self->iteratedString_.get(runtime);
+
   // 6. Let position be the value of the [[StringIteratorNextIndex]] internal
   // slot of O.
   uint32_t position = self->nextIndex_;
   // 7. Let len be the number of elements in s.
-  uint32_t len = s->getStringLength();
+  uint32_t len = lv.s->getStringLength();
 
   if (position >= len) {
     // 8a. Set the value of the [[IteratedString]] internal slot of O to
@@ -234,14 +241,14 @@ CallResult<HermesValue> JSStringIterator::nextElement(
   MutableHandle<StringPrimitive> resultString{runtime};
 
   // 9. Let first be the code unit value at index position in s.
-  char16_t first = s->at(position);
+  char16_t first = lv.s->at(position);
   if (first < 0xd800 || first > 0xdbff || position + 1 == len) {
     // 10. If first < 0xD800 or first > 0xDBFF or position+1 = len,
     // let resultString be the string consisting of the single code unit first.
     resultString = runtime.getCharacterString(first).get();
   } else {
     // 11a. Let second the code unit value at index position+1 in the String S.
-    char16_t second = s->at(position + 1);
+    char16_t second = lv.s->at(position + 1);
     if (second < 0xdc00 || second > 0xdfff) {
       // 11b. If second < 0xDC00 or second > 0xDFFF, let resultString be the
       // string consisting of the single code unit first.

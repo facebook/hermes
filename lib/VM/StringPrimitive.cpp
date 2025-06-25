@@ -670,11 +670,12 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
     appendToCopyableString(contents, right);
   }
 
-  auto storageHnd = runtime.makeHandle<ExternalStringPrimitive<T>>(
+  UsePinnedValueRAII<ExternalStringPrimitive<T>> storage{runtime.hvStorageTmp};
+  storage.template castAndSetHermesValue<ExternalStringPrimitive<T>>(
       runtime.ignoreAllocationFailure(
           ExternalStringPrimitive<T>::create(runtime, std::move(contents))));
 
-  return create(runtime, len, storageHnd);
+  return create(runtime, len, storage);
 }
 
 template <typename T>
@@ -704,8 +705,11 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::append(
       storage, storage->calcExternalMemorySize() - oldExternalMem);
 
   noAlloc.release();
+  UsePinnedValueRAII<ExternalStringPrimitive<T>> storageHandle{
+      runtime.hvStorageTmp};
+  storageHandle = storage;
   return BufferedStringPrimitive<T>::create(
-      runtime, storage->contents_.size(), runtime.makeHandle(storage));
+      runtime, storage->contents_.size(), storageHandle);
 }
 
 PseudoHandle<StringPrimitive> internalConcatStringPrimitives(

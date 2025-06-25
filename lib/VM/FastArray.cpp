@@ -116,15 +116,16 @@ CallResult<HermesValue> FastArray::create(Runtime &runtime, size_t capacity) {
 ExecutionStatus
 FastArray::pushSlow(Handle<FastArray> self, Runtime &runtime, Handle<> val) {
   GCScopeMarkerRAII marker{runtime};
-  auto storage =
-      runtime.makeMutableHandle(self->indexedStorage_.getNonNull(runtime));
+  UsePinnedValueRAII<ArrayStorageSmall> storage{runtime.hvStorageTmp};
+  storage = self->indexedStorage_.getNonNull(runtime);
   if (LLVM_UNLIKELY(
           ArrayStorageSmall::push_back(storage, runtime, val) ==
           ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
-  self->indexedStorage_.setNonNull(runtime, *storage, runtime.getHeap());
-  auto newSz = SmallHermesValue::encodeNumberValue(storage->size(), runtime);
+  self->indexedStorage_.setNonNull(runtime, storage.get(), runtime.getHeap());
+  auto newSz =
+      SmallHermesValue::encodeNumberValue(storage.get()->size(), runtime);
   self->setLength(runtime, newSz);
   return ExecutionStatus::RETURNED;
 }
@@ -133,17 +134,24 @@ ExecutionStatus FastArray::appendSlow(
     Handle<FastArray> self,
     Runtime &runtime,
     Handle<FastArray> other) {
+  struct : public Locals {
+    PinnedValue<ArrayStorageSmall> storage;
+    PinnedValue<ArrayStorageSmall> otherStorage;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   GCScopeMarkerRAII marker{runtime};
-  auto storage =
-      runtime.makeMutableHandle(self->indexedStorage_.getNonNull(runtime));
-  auto otherStorage =
-      runtime.makeHandle(other->indexedStorage_.getNonNull(runtime));
+  lv.storage = self->indexedStorage_.getNonNull(runtime);
+  lv.otherStorage = other->indexedStorage_.getNonNull(runtime);
   if (LLVM_UNLIKELY(
-          ArrayStorageSmall::append(storage, runtime, otherStorage) ==
-          ExecutionStatus::EXCEPTION))
+          ArrayStorageSmall::append(
+              MutableHandle<ArrayStorageSmall>{lv.storage},
+              runtime,
+              lv.otherStorage) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
-  self->indexedStorage_.setNonNull(runtime, *storage, runtime.getHeap());
-  auto newSz = SmallHermesValue::encodeNumberValue(storage->size(), runtime);
+  self->indexedStorage_.setNonNull(
+      runtime, lv.storage.get(), runtime.getHeap());
+  auto newSz = SmallHermesValue::encodeNumberValue(lv.storage->size(), runtime);
   self->setLength(runtime, newSz);
   return ExecutionStatus::RETURNED;
 }

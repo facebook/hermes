@@ -127,6 +127,11 @@ ExecutionStatus JSRegExp::initialize(
     Runtime &runtime,
     Handle<JSRegExp> otherHandle,
     Handle<StringPrimitive> flags) {
+  struct : public Locals {
+    PinnedValue<StringPrimitive> pattern;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   llvh::SmallVector<char16_t, 16> flagsText16;
   flags->appendUTF16String(flagsText16);
 
@@ -135,7 +140,7 @@ ExecutionStatus JSRegExp::initialize(
     return runtime.raiseSyntaxError("Invalid RegExp: Invalid flags");
   }
 
-  auto pattern = runtime.makeHandle(getPattern(otherHandle.get(), runtime));
+  lv.pattern = getPattern(otherHandle.get(), runtime);
 
   // Fast path to avoid recompiling the RegExp if the flags match
   if (LLVM_LIKELY(
@@ -143,12 +148,12 @@ ExecutionStatus JSRegExp::initialize(
     initialize(
         selfHandle,
         runtime,
-        pattern,
+        lv.pattern,
         flags,
         {otherHandle->bytecode_, otherHandle->bytecodeSize_});
     return ExecutionStatus::RETURNED;
   }
-  return initialize(selfHandle, runtime, pattern, flags);
+  return initialize(selfHandle, runtime, lv.pattern, flags);
 }
 
 /// ES11 21.2.3.2.2 RegExpInitialize ( obj, pattern, flags )
@@ -194,12 +199,18 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
     Handle<JSRegExp> selfHandle,
     std::deque<llvh::SmallVector<char16_t, 5>> &orderedNamedGroups,
     regex::ParsedGroupNamesMapping &parsedMappings) {
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<HermesValue> numberValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   GCScope gcScope(runtime);
   if (parsedMappings.size() == 0)
     return ExecutionStatus::RETURNED;
 
   auto objRes = JSObject::create(runtime, parsedMappings.size());
-  auto obj = runtime.makeHandle(objRes.get());
+  lv.obj = objRes.get();
 
   MutableHandle<HermesValue> numberHandle{runtime};
   for (const auto &identifier : orderedNamedGroups) {
@@ -212,7 +223,7 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
     auto idx = parsedMappings[identifier];
     numberHandle.set(HermesValue::encodeTrustedNumberValue(idx));
     auto res = JSObject::defineNewOwnProperty(
-        obj,
+        lv.obj,
         runtime,
         symbolRes->get(),
         PropertyFlags::defaultNewNamedPropertyFlags(),
@@ -221,11 +232,13 @@ ExecutionStatus JSRegExp::initializeGroupNameMappingObj(
       return ExecutionStatus::EXCEPTION;
   }
 
-  selfHandle->groupNameMappings_.set(runtime, *obj, runtime.getHeap());
+  selfHandle->groupNameMappings_.set(runtime, lv.obj.get(), runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
 Handle<JSObject> JSRegExp::getGroupNameMappings(Runtime &runtime) {
+  // TODO: This function returns Handle and needs refactoring to avoid
+  // makeHandle
   if (auto *ptr = vmcast_or_null<JSObject>(groupNameMappings_.get(runtime)))
     return runtime.makeHandle(ptr);
   return Runtime::makeNullHandle<JSObject>();

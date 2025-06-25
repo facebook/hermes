@@ -70,10 +70,15 @@ CallResult<HermesValue> JSCallSite::create(
 CallResult<HermesValue> JSCallSite::getFunctionName(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
-  Handle<JSError> error = runtime.makeHandle(selfHandle->error_);
+  struct : public Locals {
+    PinnedValue<JSError> error;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.error = selfHandle->error_.get(runtime);
 
   auto functionName = JSError::getFunctionNameAtIndex(
-      runtime, error, selfHandle->stackFrameIndex_);
+      runtime, lv.error, selfHandle->stackFrameIndex_);
   return functionName ? functionName.getHermesValue()
                       : HermesValue::encodeNullValue();
 }

@@ -259,13 +259,18 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
     size_type size,
     void *context,
     FinalizeNativeStatePtr finalizePtr) {
+  struct : public Locals {
+    PinnedValue<NativeState> ns;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
   // Set the external finalizer first, so that if it throws, the buffer is not
   // left in an attached state.
-  auto *ns = NativeState::create(runtime, context, finalizePtr);
-  auto res = setExternalFinalizer(runtime, self, runtime.makeHandle(ns));
+  lv.ns = NativeState::create(runtime, context, finalizePtr);
+  auto res = setExternalFinalizer(runtime, self, lv.ns);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
   self->attached_ = true;
