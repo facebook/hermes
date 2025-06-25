@@ -396,6 +396,7 @@ static inline double stringToNumber(
   }
   if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::NegativeInfinity), *strPrim)) {
+    return -std::numeric_limits<double>::infinity();
   }
   if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::NaN), *strPrim)) {
