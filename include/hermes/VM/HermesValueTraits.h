@@ -250,6 +250,12 @@ template <>
 struct HermesValueTraits<StringPrimitive, true>
     : public StringTraitsImpl<StringPrimitive> {};
 template <>
+struct HermesValueTraits<ExternalStringPrimitive<char>, true>
+    : public StringTraitsImpl<ExternalStringPrimitive<char>> {};
+template <>
+struct HermesValueTraits<ExternalStringPrimitive<char16_t>, true>
+    : public StringTraitsImpl<ExternalStringPrimitive<char16_t>> {};
+template <>
 struct HermesValueTraits<BufferedStringPrimitive<char>, true>
     : public StringTraitsImpl<BufferedStringPrimitive<char>> {};
 template <>

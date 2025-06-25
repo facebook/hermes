@@ -754,8 +754,7 @@ class BufferedStringPrimitive final : public StringPrimitive {
       uint32_t length,
       Handle<ExternalStringPrimitive<T>> concatBuffer)
       : StringPrimitive(length) {
-    concatBufferHV_.set(
-        HermesValue::encodeObjectValue(*concatBuffer), runtime.getHeap());
+    concatBufferHV_.set(concatBuffer.getHermesValue(), runtime.getHeap());
     assert(
         concatBuffer->contents_.size() >= length &&
         "length exceeds size of concatenation buffer");
