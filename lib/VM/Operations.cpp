@@ -2073,7 +2073,7 @@ ExecutionStatus toPropertyDescriptor(
     Handle<> obj,
     Runtime &runtime,
     DefinePropertyFlags &flags,
-    MutableHandle<> &valueOrAccessor) {
+    MutableHandle<> valueOrAccessor) {
   GCScopeMarkerRAII gcMarker{runtime};
 
   // Verify that the attributes argument is also an object.
@@ -2126,7 +2126,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    valueOrAccessor = std::move(*propRes);
+    valueOrAccessor.set(std::move(*propRes));
     flags.setValue = true;
   }
 
@@ -2201,8 +2201,8 @@ ExecutionStatus toPropertyDescriptor(
       return runtime.raiseTypeError(
           "Invalid property descriptor. Can't set both accessor and writable.");
     }
-    valueOrAccessor = PropertyAccessor::create(runtime, getterPtr, setterPtr)
-                          .getHermesValue();
+    valueOrAccessor.set(PropertyAccessor::create(runtime, getterPtr, setterPtr)
+                            .getHermesValue());
   }
 
   return ExecutionStatus::RETURNED;

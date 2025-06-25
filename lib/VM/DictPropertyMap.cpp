@@ -66,7 +66,7 @@ CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
 }
 
 ExecutionStatus DictPropertyMap::grow(
-    MutableHandle<DictPropertyMap> &selfHandleRef,
+    MutableHandle<DictPropertyMap> selfHandleRef,
     Runtime &runtime,
     size_type newCapacity) {
   auto res = create(runtime, newCapacity);
@@ -76,7 +76,7 @@ ExecutionStatus DictPropertyMap::grow(
   auto *newSelf = res->get();
   auto *self = *selfHandleRef;
 
-  selfHandleRef = newSelf;
+  selfHandleRef.set(newSelf);
 
   auto *dst = newSelf->getDescriptorPairs();
   size_type count = 0;
@@ -141,7 +141,7 @@ ExecutionStatus DictPropertyMap::grow(
 
 CallResult<std::pair<NamedPropertyDescriptor *, bool>>
 DictPropertyMap::findOrAdd(
-    MutableHandle<DictPropertyMap> &selfHandleRef,
+    MutableHandle<DictPropertyMap> selfHandleRef,
     Runtime &runtime,
     SymbolID id) {
   auto *self = *selfHandleRef;

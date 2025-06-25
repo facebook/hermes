@@ -544,7 +544,7 @@ ExecutionStatus toPropertyDescriptor(
     Handle<> obj,
     Runtime &runtime,
     DefinePropertyFlags &flags,
-    MutableHandle<> &valueOrAccessor);
+    MutableHandle<> valueOrAccessor);
 
 /// ES9 6.2.5.4 FromPropertyDescriptor
 /// \p dpFlags is used to create the property descriptor object.

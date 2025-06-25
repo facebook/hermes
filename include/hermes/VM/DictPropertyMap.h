@@ -251,7 +251,7 @@ class DictPropertyMap final
   /// \return a pair consisting of pointer to the property descriptor and a pool
   ///   denoting whether a new property was added.
   static CallResult<std::pair<NamedPropertyDescriptor *, bool>> findOrAdd(
-      MutableHandle<DictPropertyMap> &selfHandleRef,
+      MutableHandle<DictPropertyMap> selfHandleRef,
       Runtime &runtime,
       SymbolID id);
 
@@ -261,7 +261,7 @@ class DictPropertyMap final
   /// \p selfHandleRef pointer to the self handle, which may be updated if the
   ///     object is re-allocated.
   static ExecutionStatus add(
-      MutableHandle<DictPropertyMap> &selfHandleRef,
+      MutableHandle<DictPropertyMap> selfHandleRef,
       Runtime &runtime,
       SymbolID id,
       NamedPropertyDescriptor desc);
@@ -404,7 +404,7 @@ class DictPropertyMap final
   ///   object handle on output.
   /// \param newCapacity the capacity of the new object's descriptor array.
   static ExecutionStatus grow(
-      MutableHandle<DictPropertyMap> &selfHandleRef,
+      MutableHandle<DictPropertyMap> selfHandleRef,
       Runtime &runtime,
       size_type newCapacity);
 
@@ -617,7 +617,7 @@ inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(
 }
 
 inline ExecutionStatus DictPropertyMap::add(
-    MutableHandle<DictPropertyMap> &selfHandleRef,
+    MutableHandle<DictPropertyMap> selfHandleRef,
     Runtime &runtime,
     SymbolID id,
     NamedPropertyDescriptor desc) {
