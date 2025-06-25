@@ -844,7 +844,9 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
 #define RUNTIME_HV_FIELD(name, type) PinnedValue<type> name{};
 #include "hermes/VM/RuntimeHermesValueFields.def"
-#undef RUNTIME_HV_FIELD
+#define RUNTIME_PHV_FIELD(name) \
+  PinnedHermesValue name{HermesValue::encodeRawZeroValueUnsafe()};
+#include "hermes/VM/RuntimePHVFields.def"
 
   /// Head of the locals list used for VM operations.
   Locals *vmLocals{};

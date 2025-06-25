@@ -588,6 +588,8 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
       acceptor.accept(clazz, "rootClass");
 #define RUNTIME_HV_FIELD(name, type) acceptor.acceptNullablePV(name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
+#define RUNTIME_PHV_FIELD(name) acceptor.acceptNullable(name);
+#include "hermes/VM/RuntimePHVFields.def"
     acceptor.acceptPtr(objectPrototypeRawPtr, "objectPrototype");
     acceptor.acceptPtr(functionPrototypeRawPtr, "functionPrototype");
     for (auto &rm : runtimeModuleList_)
