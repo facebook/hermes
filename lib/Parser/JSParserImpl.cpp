@@ -5271,6 +5271,16 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     return None;
   }
 
+  if (isPrivate && propName == constructorIdent_) {
+    // ClassElementName : PrivateIdentifier
+    // It is a Syntax Error if the StringValue of PrivateIdentifier is
+    // "#constructor".
+    error(
+        {startLoc, funcExpr->getEndLoc()},
+        "constructor method must not be private");
+    return None;
+  }
+
   UniqueString *kind = methodIdent_;
   if (isConstructor) {
     if (special != SpecialKind::None) {
