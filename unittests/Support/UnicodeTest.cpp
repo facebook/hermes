@@ -275,4 +275,8 @@ TEST(UTF16StreamTest, MoveTest) {
   EXPECT_EQ(3, countRemainingCharsInStream(std::move(stream)));
 }
 
+TEST(UTF16StreamTest, IsUnicodeIDStartTest) {
+  EXPECT_TRUE(isUnicodeIDStart(0x2118));
+}
+
 } // end anonymous namespace

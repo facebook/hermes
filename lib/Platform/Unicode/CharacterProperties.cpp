@@ -46,6 +46,29 @@ bool isUnicodeOnlyLetter(uint32_t cp) {
   return lookup(UNICODE_LETTERS, cp);
 }
 
+bool isUnicodeOnlyIDStart(uint32_t cp) {
+  // "any character in the Unicode categories “Uppercase letter (Lu)”,
+  // “Lowercase letter (Ll)”, “Titlecase letter (Lt)”, “Modifier letter (Lm)”,
+  // “Other letter (Lo)”, or “Letter number (Nl)”".
+  // ASCII characters are not "UnicodeOnly" and so we return false.
+  if (cp <= 0x7F)
+    return false;
+
+  // Unicode spec defines ID_Start as:
+  //     Lu + Ll + Lt + Lm + Lo + Nl
+  //   + Other_ID_Start
+  //   - Pattern_Syntax
+  //   - Pattern_White_Space
+  // So check this by checking all UNICODE_LETTERS that aren't
+  // UNICODE_PATTERN_LETTER, and then check for Other_ID_Start.
+  //
+  // UNICODE_PATTERN_LETTER is all ther Pattern_White_Space and Pattern_Syntax
+  // that are also in the Letter categories.
+
+  return (lookup(UNICODE_LETTERS, cp) && !lookup(UNICODE_PATTERN_LETTER, cp)) ||
+      lookup(UNICODE_OTHER_ID_START, cp);
+}
+
 // Special cased due to small number of separate values.
 bool isUnicodeOnlySpace(uint32_t cp) {
   // "Other category “Zs”: Any other Unicode “space separator”"

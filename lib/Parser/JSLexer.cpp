@@ -641,7 +641,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         token_.setStart(curCharPtr_);
         uint32_t ch = decodeUTF8();
 
-        if (isUnicodeOnlyLetter(ch)) {
+        if (isUnicodeOnlyIDStart(ch)) {
           tmpStorage_.clear();
           appendUnicodeToStorage(ch);
           scanIdentifierPartsInContext(grammarContext);

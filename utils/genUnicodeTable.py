@@ -234,6 +234,65 @@ def print_categories(unicode_data_lines):
         run_interval(unicode_data_lines, cat.split())
 
 
+def run_property_select(unicode_data_lines, args):
+    """
+    Output UnicodeRanges for PropList.txt.
+    args[0] is the name of the variable.
+
+    Includes all codepoints that match any property name given,
+    and if any 2-character arg is given, it must match one of the specified
+    category.
+    """
+    name = args[0]
+    include_prop = set()
+    include_cat = set()
+    for arg in args[1:]:
+        if len(arg) == 2:
+            include_cat.add(arg)
+        else:
+            include_prop.add(arg)
+    # Lines in the DerivedCoreProperties file look like:
+    # 0041..005A    ; Alphabetic # L&  [26]
+    # We want to extract the range, provided the property matches.
+    intervals = []
+    for line in unicode_data_lines:
+        fields = line.split()
+        # Skip lines that don't have the property.
+        prop = fields[2] if len(fields) > 2 else None
+        cat = fields[4] if len(fields) > 4 else None
+        if len(include_prop) > 0 and prop not in include_prop:
+            continue
+        if len(include_cat) > 0 and cat not in include_cat:
+            continue
+        # Parse the range, which comes before the ';'
+        range = parse_range(fields[0].strip())
+        intervals.append(range)
+
+    print_template(
+        """
+// static constexpr uint32_t ${name}_SIZE = $interval_count;
+static constexpr UnicodeRange ${name}[] = {
+${intervals}
+};
+    """,
+        name=name,
+        interval_count=len(intervals),
+        intervals="\n".join(
+            "{" + hex(i[0]) + ", " + hex(i[1]) + "}," for i in intervals
+        ),
+    )
+
+
+def print_properties(unicode_data_lines):
+    """Output UnicodeRanges for PropLists."""
+    categories = [
+        "UNICODE_OTHER_ID_START Other_ID_Start",
+        "UNICODE_PATTERN_LETTER Pattern_Syntax Pattern_White_Space L& Ll Lt Lu Lm Lo",
+    ]
+    for cat in categories:
+        run_property_select(unicode_data_lines, cat.split(" "))
+
+
 def get_assigned_codepoints(unicode_data_lines):
     """Gather intervals for all assigned Unicode codepoints."""
     cp_begin = None
@@ -1299,6 +1358,7 @@ if __name__ == "__main__":
     print_header()
 
     print_categories(UnicodeDataFiles.get_lines("UnicodeData.txt"))
+    print_properties(UnicodeDataFiles.get_lines("PropList.txt"))
 
     unicode_properties = UnicodeProperties()
     unicode_properties.gather_general_category_properties()

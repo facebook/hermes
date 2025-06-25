@@ -75,6 +75,8 @@ inline uint32_t utf16SurrogatePairToCodePoint(uint32_t lead, uint32_t trail) {
 
 /// \return true if the codepoint is not ASCII and is a Unicode letter.
 bool isUnicodeOnlyLetter(uint32_t cp);
+/// \return true if the codepoint is not ASCII and is a Unicode ID_Start.
+bool isUnicodeOnlyIDStart(uint32_t cp);
 /// \return true if the codepoint is not ASCII and is a Unicode space.
 bool isUnicodeOnlySpace(uint32_t cp);
 /// \return true if the codepoint is in the Non-Spacing Mark or
@@ -92,7 +94,7 @@ inline bool isASCIIIdentifierStart(uint32_t ch) {
 
 /// \return true if the codepoint has the ID_Start property.
 inline bool isUnicodeIDStart(uint32_t cp) {
-  return isASCIIIdentifierStart(cp) || isUnicodeOnlyLetter(cp);
+  return isASCIIIdentifierStart(cp) || isUnicodeOnlyIDStart(cp);
 }
 
 /// \return true if the codepoint has the ID_Continue property.
