@@ -20,7 +20,7 @@ var x = {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:scope %VS0 []
+// CHECK:scope %VS0 [?obj: object]
 
 // CHECK:function global(): any
 // CHECK-NEXT:%BB0:
@@ -29,17 +29,18 @@ var x = {
 // CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
 // CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %4: object, [%VS0.?obj]: object
 // CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "1": string, true: boolean
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"get a"(): functionCode
-// CHECK-NEXT:       DefineOwnGetterSetterInst %6: object, undefined: undefined, %4: object, "a": string, true: boolean
-// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"get 1"(): functionCode
-// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"set 1"(): functionCode
-// CHECK-NEXT:        DefineOwnGetterSetterInst %8: object, %9: object, %4: object, "1": string, true: boolean
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"get a"(): functionCode
+// CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %4: object, "a": string, true: boolean
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"get 1"(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"set 1"(): functionCode
+// CHECK-NEXT:        DefineOwnGetterSetterInst %9: object, %10: object, %4: object, "1": string, true: boolean
 // CHECK-NEXT:        DefineOwnPropertyInst null: null, %4: object, "b": string, true: boolean
 // CHECK-NEXT:        DefineOwnPropertyInst 12: number, %4: object, "b": string, true: boolean
 // CHECK-NEXT:        StorePropertyLooseInst %4: object, globalObject: object, "x": string
-// CHECK-NEXT:  %14 = LoadStackInst (:any) %2: any
-// CHECK-NEXT:        ReturnInst %14: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS1 []

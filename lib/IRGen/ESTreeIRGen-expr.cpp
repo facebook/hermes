@@ -1408,9 +1408,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   llvh::SmallVector<char, 32> stringStorage;
   /// The optional __proto__ property.
   ESTree::PropertyNode *protoProperty = nullptr;
-  // Keep track of if we've seen a method property. This is used to decide if we
-  // should capture the object literal we are building in a variable.
-  bool hasMethodProp = false;
+  // True if we need to capture the object literal being built into a Variable.
+  // This is in order to support the `super` references.
+  bool shouldCaptureObjForHomeObject = false;
 
   for (auto &P : Expr->_properties) {
     if (llvh::isa<ESTree::SpreadElementNode>(&P)) {
@@ -1422,7 +1422,8 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     stringStorage.clear();
 
     auto *prop = cast<ESTree::PropertyNode>(&P);
-    hasMethodProp |= prop->_method;
+    shouldCaptureObjForHomeObject |= prop->_method ||
+        prop->_kind->str() == "set" || prop->_kind->str() == "get";
     if (prop->_computed) {
       // Can't store any useful information if the name is computed.
       // Just generate the code in the next loop.
@@ -1490,10 +1491,9 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
   // Allocate a new javascript object on the heap.
   auto Obj = Builder.createAllocObjectLiteralInst({}, objectParent);
   Variable *capturedObj = nullptr;
-  // If we see a method, there may be a super property reference. We need to
-  // capture the value of this object literal, which will become the home object
-  // for any methods defined in this literal.
-  if (hasMethodProp) {
+  if (shouldCaptureObjForHomeObject) {
+    // Capture the value of this object literal, which will become the home
+    // object for any methods/accessors defined in this literal.
     capturedObj = Builder.createVariable(
         curFunction()->curScope->getVariableScope(),
         "?obj",
@@ -1541,7 +1541,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Identifier{},
             /* superClassNode */ nullptr,
             Function::DefinitionKind::ES5Function,
-            /* homeObject */ nullptr,
+            /* homeObject */ capturedObj,
             /* parentNode */ prop);
       } else {
         value = genExpression(prop->_value, Identifier{});

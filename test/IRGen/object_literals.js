@@ -259,7 +259,7 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:        ReturnInst %9: object
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS10 [func: any]
+// CHECK:scope %VS10 [func: any, ?obj: object]
 
 // CHECK:function accessorObjectLiteral1(func: any): any
 // CHECK-NEXT:%BB0:
@@ -268,15 +268,16 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS10.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS10.?obj]: object
 // CHECK-NEXT:       DefineOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "c": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "d": string, true: boolean
-// CHECK-NEXT:       DefineOwnPropertyInst 10086: number, %4: object, "c": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 10086: number, %4: object, "c": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS11 [func: any]
+// CHECK:scope %VS11 [func: any, ?obj: object]
 
 // CHECK:function accessorObjectLiteral2(func: any): any
 // CHECK-NEXT:%BB0:
@@ -285,11 +286,12 @@ function accessorObjectLiteral2(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS11.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS11.?obj]: object
 // CHECK-NEXT:       DefineOwnPropertyInst 10: number, %4: object, "a": string, true: boolean
 // CHECK-NEXT:       DefineOwnPropertyInst "test-str": string, %4: object, "b": string, true: boolean
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS11: any, %"get c"(): functionCode
-// CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %4: object, "c": string, true: boolean
-// CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "d": string, true: boolean
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS11: any, %"get c"(): functionCode
+// CHECK-NEXT:       DefineOwnGetterSetterInst %8: object, undefined: undefined, %4: object, "c": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst null: null, %4: object, "d": string, true: boolean
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 

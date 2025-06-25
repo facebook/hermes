@@ -123,7 +123,7 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS4 [func: any]
+// CHECK:scope %VS4 [func: any, ?obj: object]
 
 // CHECK:function protoDupAccessor1(func: any): any
 // CHECK-NEXT:%BB0:
@@ -134,12 +134,13 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS4: any, %"get __proto__"(): functionCode
-// CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %6: object, "__proto__": string, true: boolean
-// CHECK-NEXT:       ReturnInst %6: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS4.?obj]: object
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS4: any, %"get __proto__"(): functionCode
+// CHECK-NEXT:       DefineOwnGetterSetterInst %8: object, undefined: undefined, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS5 [func: any]
+// CHECK:scope %VS5 [func: any, ?obj: object]
 
 // CHECK:function protoDupAccessor2(func: any): any
 // CHECK-NEXT:%BB0:
@@ -150,12 +151,13 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS5.func]: any
 // CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
-// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS5: any, %"set __proto__"(): functionCode
-// CHECK-NEXT:       DefineOwnGetterSetterInst undefined: undefined, %7: object, %6: object, "__proto__": string, true: boolean
-// CHECK-NEXT:       ReturnInst %6: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS5.?obj]: object
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS5: any, %"set __proto__"(): functionCode
+// CHECK-NEXT:       DefineOwnGetterSetterInst undefined: undefined, %8: object, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS6 [func: any]
+// CHECK:scope %VS6 [func: any, ?obj: object]
 
 // CHECK:function protoDupAccessor3(func: any): any
 // CHECK-NEXT:%BB0:
@@ -164,12 +166,13 @@ function protoDupAccessor3(func) {
 // CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.func]: any
 // CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
-// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %1: environment, %VS6: any, %"get __proto__ 1#"(): functionCode
-// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS6: any, %"set __proto__ 1#"(): functionCode
-// CHECK-NEXT:       DefineOwnGetterSetterInst %5: object, %6: object, %4: object, "__proto__": string, true: boolean
-// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS6.func]: any
-// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
-// CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object, %9: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS6.?obj]: object
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS6: any, %"get __proto__ 1#"(): functionCode
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS6: any, %"set __proto__ 1#"(): functionCode
+// CHECK-NEXT:       DefineOwnGetterSetterInst %6: object, %7: object, %4: object, "__proto__": string, true: boolean
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS6.func]: any
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %11 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: object, %10: any
 // CHECK-NEXT:        ReturnInst %4: object
 // CHECK-NEXT:function_end
 
