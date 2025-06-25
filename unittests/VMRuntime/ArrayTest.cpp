@@ -36,13 +36,11 @@ TEST_F(ArrayTest, CppAPITest) {
 
   // Call haveOwnIndexed() and getOwnIndexed() on a element not in the array.
   ComputedPropertyDescriptor desc;
-  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
   ASSERT_FALSE(*lv.array->getOwnComputedPrimitiveDescriptor(
       lv.array,
       runtime,
       runtime.makeHandle(100.0_hd),
       JSObject::IgnoreProxy::No,
-      tmpSymbolStorage,
       desc));
   EXPECT_CALLRESULT_UNDEFINED(lv.array->getComputed_RJS(
       lv.array, runtime, runtime.makeHandle(100.0_hd)));
@@ -54,7 +52,6 @@ TEST_F(ArrayTest, CppAPITest) {
       array,                                                                  \
       runtime,                                                                \
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index)),       \
-      tmpSymbolStorage,                                                       \
       desc));                                                                 \
   EXPECT_CALLRESULT_VALUE(                                                    \
       value,                                                                  \
@@ -62,7 +59,6 @@ TEST_F(ArrayTest, CppAPITest) {
           array,                                                              \
           runtime,                                                            \
           array,                                                              \
-          tmpSymbolStorage,                                                   \
           desc,                                                               \
           runtime.makeHandle(HermesValue::encodeTrustedNumberValue(index)))); \
   EXPECT_CALLRESULT_VALUE(                                                    \
@@ -133,7 +129,6 @@ TEST_F(ArrayTest, CppAPITest) {
       runtime,
       runtime.makeHandle(106.0_hd),
       JSObject::IgnoreProxy::No,
-      tmpSymbolStorage,
       desc));
   EXPECT_CALLRESULT_UNDEFINED(lv.array->getComputed_RJS(
       lv.array, runtime, runtime.makeHandle(106.0_hd)));
@@ -149,7 +144,6 @@ TEST_F(ArrayTest, CppAPITest) {
       runtime,
       runtime.makeHandle(106.0_hd),
       JSObject::IgnoreProxy::No,
-      tmpSymbolStorage,
       desc));
   EXPECT_CALLRESULT_UNDEFINED(lv.array->getComputed_RJS(
       lv.array, runtime, runtime.makeHandle(106.0_hd)));

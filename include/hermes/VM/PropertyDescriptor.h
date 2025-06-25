@@ -203,6 +203,31 @@ inline bool operator==(PropertyDescriptor a, PropertyDescriptor b) {
   return a.flags == b.flags && a.slot == b.slot;
 }
 
+/// A special version of ComputedPropertyDescriptor that encapsulates temporary
+/// storage for a SymbolID that may be needed during the lifetime of the
+/// descriptor. Must be passed by reference.
+struct ComputedPropertyDescWithSymStorage : public ComputedPropertyDescriptor {
+  /// This is a temporary handle sometimes used internally to store SymbolIDs in
+  /// order to make sure they aren't collected for the lifetime of the
+  /// \c ComputedPropertyDescriptor.
+  /// Must not be modified or read by the caller.
+  MutableHandle<SymbolID> _tmpSymbolStorage;
+
+  explicit ComputedPropertyDescWithSymStorage(
+      MutableHandle<SymbolID> tmpSymbolStorage)
+      : ComputedPropertyDescriptor(), _tmpSymbolStorage(tmpSymbolStorage) {}
+
+  ComputedPropertyDescWithSymStorage(
+      const ComputedPropertyDescWithSymStorage &) = delete;
+  ComputedPropertyDescWithSymStorage &operator=(
+      const ComputedPropertyDescWithSymStorage &) = delete;
+
+  /// Return \c ComputedPropertyDescriptor to ignore slicing warnings.
+  const ComputedPropertyDescriptor &get() const {
+    return *this;
+  }
+};
+
 /// @}
 
 } // namespace vm

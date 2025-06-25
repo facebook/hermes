@@ -551,10 +551,10 @@ ExecutionStatus Interpreter::caseGetNextPName(
       assert(
           (tmpSHV.isNumber() || tmpSHV.isString()) &&
           "GetNextPName must be symbol, string, number");
-      ComputedPropertyDescriptor desc;
+      ComputedPropertyDescWithSymStorage desc{tmpPropNameStorage};
       lv.tmp = tmpSHV.unboxToHV(runtime);
       ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
-          obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
+          obj, runtime, lv.tmp, propObj, desc);
       if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }

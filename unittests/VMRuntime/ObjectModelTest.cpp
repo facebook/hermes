@@ -553,6 +553,11 @@ TEST_F(ObjectModelTest, EnvironmentSmokeTest) {
 
 /// Test "computed" methods on a non-array object.
 TEST_F(ObjectModelTest, NonArrayComputedTest) {
+  struct : Locals {
+    PinnedValue<SymbolID> tmpPropNameStorage;
+    PinnedValue<JSObject> propObj;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   GCScope gcScope{runtime, "ObjectModelTest.NonArrayComputedTest", 128};
 
   auto prop1Name = StringPrimitive::createNoThrow(runtime, "prop1");
@@ -592,25 +597,22 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
 
   // Get the two properties computed descriptors and the values using the
   // descriptors.
-  ComputedPropertyDescriptor cdesc;
-  MutableHandle<JSObject> propObjHandle{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  ComputedPropertyDescWithSymStorage cdesc{lv.tmpPropNameStorage};
+  MutableHandle<JSObject> propObjHandle{lv.propObj};
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, index5, propObjHandle, tmpPropNameStorage, cdesc);
+      obj1, runtime, index5, propObjHandle, cdesc);
   ASSERT_TRUE(propObjHandle);
   ASSERT_FALSE(cdesc.flags.indexed);
   ASSERT_EQ(
       value10.get(),
-      JSObject::getComputedSlotValue(obj1, runtime, tmpPropNameStorage, cdesc)
-          ->get());
+      JSObject::getComputedSlotValue(obj1, runtime, cdesc.get())->get());
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, prop1Name, propObjHandle, tmpPropNameStorage, cdesc);
+      obj1, runtime, prop1Name, propObjHandle, cdesc);
   ASSERT_TRUE(propObjHandle);
   ASSERT_FALSE(cdesc.flags.indexed);
   ASSERT_EQ(
       value11.get(),
-      JSObject::getComputedSlotValue(obj1, runtime, tmpPropNameStorage, cdesc)
-          ->get());
+      JSObject::getComputedSlotValue(obj1, runtime, cdesc)->get());
 
   // Use getComputed() to obtain the values.
   EXPECT_CALLRESULT_VALUE(
@@ -629,10 +631,10 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
 
   // Try to get missing properties.
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, index6, propObjHandle, tmpPropNameStorage, cdesc);
+      obj1, runtime, index6, propObjHandle, cdesc);
   ASSERT_FALSE(propObjHandle);
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, prop2Name, propObjHandle, tmpPropNameStorage, cdesc);
+      obj1, runtime, prop2Name, propObjHandle, cdesc);
   ASSERT_FALSE(propObjHandle);
 
   // Delete a missing property.
@@ -642,11 +644,11 @@ TEST_F(ObjectModelTest, NonArrayComputedTest) {
   // Delete existing properties.
   ASSERT_TRUE(*JSObject::deleteComputed(obj1, runtime, index5));
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, index5, propObjHandle, tmpPropNameStorage, cdesc);
+      obj1, runtime, index5, propObjHandle, cdesc);
   ASSERT_FALSE(propObjHandle);
   ASSERT_TRUE(*JSObject::deleteComputed(obj1, runtime, prop1Name));
   JSObject::getComputedPrimitiveDescriptor(
-      obj1, runtime, prop1Name, propObjHandle, tmpPropNameStorage, cdesc);
+      obj1, runtime, prop1Name, propObjHandle, cdesc);
   ASSERT_FALSE(propObjHandle);
 }
 

@@ -210,10 +210,9 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
       // somewhere up in the prototype chain. Since we want to avoid reifying,
       // check which it is:
       MutableHandle<JSObject> inObject{runtime};
-      MutableHandle<SymbolID> inNameTmpStorage{runtime};
-      ComputedPropertyDescriptor desc;
+      ComputedPropertyDescWithSymStorage desc{MutableHandle<SymbolID>{runtime}};
       JSObject::getComputedPrimitiveDescriptor(
-          objectPrototype, runtime, strPrim, inObject, inNameTmpStorage, desc);
+          objectPrototype, runtime, strPrim, inObject, desc);
 
       // If we couldn't find the property, just return 'undefined'.
       if (!inObject)
@@ -223,10 +222,7 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
       // reifying.
       if (!desc.flags.accessor) {
         return JSObject::getComputedSlotValue(
-            createPseudoHandle(inObject.get()),
-            runtime,
-            inNameTmpStorage,
-            desc);
+            createPseudoHandle(inObject.get()), runtime, desc);
       }
     }
 

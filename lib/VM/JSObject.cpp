@@ -385,7 +385,6 @@ CallResult<PseudoHandle<>> JSObject::getComputedPropertyValue_RJS(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     Handle<JSObject> propObj,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor desc,
     Handle<> nameValHandle) {
   if (!propObj) {
@@ -804,6 +803,9 @@ namespace {
 /// perf win.  Note that always_inline seems to be ignored on static
 /// methods, so this function has to be local to the cpp file in order
 /// to be inlined for the perf win.
+///
+/// \p tmpSymbolStorageUnused is not actually used. We pass it around to
+/// ensure that it is still alive from the call that needed it.
 LLVM_ATTRIBUTE_ALWAYS_INLINE
 inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
     Handle<JSObject> selfHandle,
@@ -811,7 +813,6 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
     Handle<> nameValHandle,
     JSObject::IgnoreProxy ignoreProxy,
     SymbolID &id,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor &desc) {
   assert(
       !nameValHandle->isObject() &&
@@ -892,12 +893,7 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
   if (selfHandle->isLazy()) {
     JSObject::initializeLazyObject(runtime, selfHandle);
     return JSObject::getOwnComputedPrimitiveDescriptor(
-        selfHandle,
-        runtime,
-        nameValHandle,
-        ignoreProxy,
-        tmpSymbolStorage,
-        desc);
+        selfHandle, runtime, nameValHandle, ignoreProxy, desc);
   }
 
   assert(selfHandle->isProxyObject() && "descriptor flags are impossible");
@@ -915,41 +911,32 @@ CallResult<bool> JSObject::getOwnComputedPrimitiveDescriptor(
     Runtime &runtime,
     Handle<> nameValHandle,
     JSObject::IgnoreProxy ignoreProxy,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor &desc) {
   SymbolID id{};
 
   return getOwnComputedPrimitiveDescriptorImpl(
-      selfHandle,
-      runtime,
-      nameValHandle,
-      ignoreProxy,
-      id,
-      tmpSymbolStorage,
-      desc);
+      selfHandle, runtime, nameValHandle, ignoreProxy, id, desc);
 }
 
 CallResult<bool> JSObject::getOwnComputedDescriptor(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     Handle<> nameValHandle,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor &desc) {
   auto converted = toPropertyKeyIfObject(runtime, nameValHandle);
   if (LLVM_UNLIKELY(converted == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return JSObject::getOwnComputedPrimitiveDescriptor(
-      selfHandle, runtime, *converted, IgnoreProxy::No, tmpSymbolStorage, desc);
+      selfHandle, runtime, *converted, IgnoreProxy::No, desc);
 }
 
 CallResult<bool> JSObject::getOwnComputedDescriptor(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     Handle<> nameValHandle,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor &desc,
-    MutableHandle<> &valueOrAccessor) {
+    MutableHandle<> valueOrAccessor) {
   auto converted = toPropertyKeyIfObject(runtime, nameValHandle);
   if (LLVM_UNLIKELY(converted == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -959,20 +946,15 @@ CallResult<bool> JSObject::getOwnComputedDescriptor(
   // getOwnComputedPrimitiveDescriptor doesn't pass back the
   // valueOrAccessor.
   CallResult<bool> res = JSObject::getOwnComputedPrimitiveDescriptor(
-      selfHandle,
-      runtime,
-      *converted,
-      IgnoreProxy::Yes,
-      tmpSymbolStorage,
-      desc);
+      selfHandle, runtime, *converted, IgnoreProxy::Yes, desc);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   if (*res) {
     // This is safe because we passed IgnoreProxy::Yes above,
     // meaning that this will return false in proxy cases.
-    valueOrAccessor = getComputedSlotValueUnsafe(
-        createPseudoHandle(selfHandle.get()), runtime, desc);
+    valueOrAccessor.set(getComputedSlotValueUnsafe(
+        createPseudoHandle(selfHandle.get()), runtime, desc));
     return true;
   }
   if (LLVM_UNLIKELY(selfHandle->isProxyObject())) {
@@ -1064,16 +1046,15 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     Handle<> nameValHandle,
-    MutableHandle<JSObject> &propObj,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
-    ComputedPropertyDescriptor &desc) {
+    MutableHandle<JSObject> propObj,
+    ComputedPropertyDescWithSymStorage &desc) {
   assert(
       !nameValHandle->isObject() &&
       "nameValHandle passed to "
       "getComputedPrimitiveDescriptor cannot "
       "be an object");
 
-  propObj = selfHandle.get();
+  propObj.castAndSetHermesValue<JSObject>(selfHandle.getHermesValue());
 
   SymbolID id{};
 
@@ -1082,16 +1063,8 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
     // A proxy is ignored here so we can check the bit later and
     // return it back to the caller for additional processing.
 
-    Handle<JSObject> loopHandle = propObj;
-
     CallResult<bool> res = getOwnComputedPrimitiveDescriptorImpl(
-        loopHandle,
-        runtime,
-        nameValHandle,
-        IgnoreProxy::Yes,
-        id,
-        tmpSymbolStorage,
-        desc);
+        propObj, runtime, nameValHandle, IgnoreProxy::Yes, id, desc);
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1103,18 +1076,18 @@ ExecutionStatus JSObject::getComputedPrimitiveDescriptor(
       desc.flags.hostObject = true;
       desc.flags.writable = true;
       desc.slot = id.unsafeGetRaw();
-      tmpSymbolStorage = id;
+      desc._tmpSymbolStorage.set(id);
       return ExecutionStatus::RETURNED;
     }
     if (LLVM_UNLIKELY(propObj->flags_.proxyObject)) {
       desc.flags.proxyObject = true;
       desc.slot = id.unsafeGetRaw();
-      tmpSymbolStorage = id;
+      desc._tmpSymbolStorage.set(id);
       return ExecutionStatus::RETURNED;
     }
     // This isn't a proxy, so use the faster getParent() instead of
     // getPrototypeOf.
-    propObj = propObj->getParent(runtime);
+    propObj.set(propObj->getParent(runtime));
     // Flush at the end of the loop to allow first iteration to be as fast as
     // possible.
     marker.flush();
@@ -1126,15 +1099,14 @@ ExecutionStatus JSObject::getComputedDescriptor(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     Handle<> nameValHandle,
-    MutableHandle<JSObject> &propObj,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
-    ComputedPropertyDescriptor &desc) {
+    MutableHandle<JSObject> propObj,
+    ComputedPropertyDescWithSymStorage &desc) {
   auto converted = toPropertyKeyIfObject(runtime, nameValHandle);
   if (LLVM_UNLIKELY(converted == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return getComputedPrimitiveDescriptor(
-      selfHandle, runtime, *converted, propObj, tmpSymbolStorage, desc);
+      selfHandle, runtime, *converted, propObj, desc);
 }
 
 CallResult<PseudoHandle<>> JSObject::getNamedWithReceiver_RJS(
@@ -1268,20 +1240,15 @@ CallResult<PseudoHandle<>> JSObject::getComputedWithReceiver_RJS(
   }
   auto nameValPrimitiveHandle = *converted;
 
-  ComputedPropertyDescriptor desc;
+  ComputedPropertyDescWithSymStorage desc{MutableHandle<SymbolID>{runtime}};
 
   // Locate the descriptor. propObj contains the object which may be anywhere
   // along the prototype chain.
   MutableHandle<JSObject> propObj{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   if (LLVM_UNLIKELY(
           getComputedPrimitiveDescriptor(
-              selfHandle,
-              runtime,
-              nameValPrimitiveHandle,
-              propObj,
-              tmpPropNameStorage,
-              desc) == ExecutionStatus::EXCEPTION)) {
+              selfHandle, runtime, nameValPrimitiveHandle, propObj, desc) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -1381,16 +1348,11 @@ CallResult<bool> JSObject::hasComputed(
   }
   auto nameValPrimitiveHandle = *converted;
 
-  ComputedPropertyDescriptor desc;
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  ComputedPropertyDescWithSymStorage desc{MutableHandle<SymbolID>{runtime}};
   MutableHandle<JSObject> propObj{runtime};
   if (getComputedPrimitiveDescriptor(
-          selfHandle,
-          runtime,
-          nameValPrimitiveHandle,
-          propObj,
-          tmpPropNameStorage,
-          desc) == ExecutionStatus::EXCEPTION) {
+          selfHandle, runtime, nameValPrimitiveHandle, propObj, desc) ==
+      ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
   if (!propObj) {
@@ -1560,7 +1522,6 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
   // this object.
 
   MutableHandle<JSObject> receiverHandle{runtime, *selfHandle};
-  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
   if (selfHandle.getHermesValue().getRaw() != receiver->getRaw() ||
       receiverHandle->isHostObject() || receiverHandle->isProxyObject()) {
     if (selfHandle.getHermesValue().getRaw() != receiver->getRaw()) {
@@ -1602,12 +1563,7 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
                 runtime.getStringPrimFromSymbolID(name)))
           : runtime.makeHandle(name);
       CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
-          receiverHandle,
-          runtime,
-          nameValHandle,
-          IgnoreProxy::No,
-          tmpSymbolStorage,
-          desc);
+          receiverHandle, runtime, nameValHandle, IgnoreProxy::No, desc);
       if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -1714,19 +1670,14 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
   }
   auto nameValPrimitiveHandle = *converted;
 
-  ComputedPropertyDescriptor desc;
+  ComputedPropertyDescWithSymStorage desc{MutableHandle<SymbolID>{runtime}};
 
   // Look for the property in this object or along the prototype chain.
   MutableHandle<JSObject> propObj{runtime};
-  MutableHandle<SymbolID> tmpSymbolStorage{runtime};
   if (LLVM_UNLIKELY(
           getComputedPrimitiveDescriptor(
-              selfHandle,
-              runtime,
-              nameValPrimitiveHandle,
-              propObj,
-              tmpSymbolStorage,
-              desc) == ExecutionStatus::EXCEPTION)) {
+              selfHandle, runtime, nameValPrimitiveHandle, propObj, desc) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -1846,7 +1797,6 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
         runtime,
         nameValPrimitiveHandle,
         IgnoreProxy::No,
-        tmpSymbolStorage,
         existingDesc);
     if (LLVM_UNLIKELY(descDefinedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;

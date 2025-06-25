@@ -216,7 +216,6 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
   struct : public Locals {
     PinnedValue<> nextKeyHandle;
     PinnedValue<> propValueHandle;
-    PinnedValue<SymbolID> tmpSymbolStorage;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
@@ -257,13 +256,11 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
           !excludedItems->isProxyObject() &&
           "internal excludedItems object is a proxy");
       ComputedPropertyDescriptor desc;
-      MutableHandle<SymbolID> tmpSymStorage{lv.tmpSymbolStorage};
       CallResult<bool> cr = JSObject::getOwnComputedPrimitiveDescriptor(
           excludedItems,
           runtime,
           lv.nextKeyHandle,
           JSObject::IgnoreProxy::Yes,
-          tmpSymStorage,
           desc);
       if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
         return ExecutionStatus::EXCEPTION;
@@ -273,9 +270,8 @@ CallResult<HermesValue> copyDataPropertiesSlowPath_RJS(
 
     //   i. Let desc be ? from.[[GetOwnProperty]](nextKey).
     ComputedPropertyDescriptor desc;
-    MutableHandle<SymbolID> tmpSymStorage{lv.tmpSymbolStorage};
     CallResult<bool> crb = JSObject::getOwnComputedDescriptor(
-        from, runtime, lv.nextKeyHandle, tmpSymStorage, desc);
+        from, runtime, lv.nextKeyHandle, desc);
     if (LLVM_UNLIKELY(crb == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     //   ii. If desc is not undefined and desc.[[Enumerable]] is true, then
@@ -324,7 +320,6 @@ CallResult<HermesValue> hermesBuiltinCopyDataProperties(
     PinnedValue<JSObject> source;
     PinnedValue<> nameHandle;
     PinnedValue<> valueHandle;
-    PinnedValue<SymbolID> tmpSymbolStorage;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
@@ -387,13 +382,11 @@ CallResult<HermesValue> hermesBuiltinCopyDataProperties(
               !excludedItems->isProxyObject() &&
               "internal excludedItems object is a proxy");
           ComputedPropertyDescriptor xdesc;
-          MutableHandle<SymbolID> tmpSymStorage{lv.tmpSymbolStorage};
           auto cr = JSObject::getOwnComputedPrimitiveDescriptor(
               excludedItems,
               runtime,
               lv.nameHandle,
               JSObject::IgnoreProxy::Yes,
-              tmpSymStorage,
               xdesc);
           if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
             return false;

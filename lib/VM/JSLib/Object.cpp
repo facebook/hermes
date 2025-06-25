@@ -349,14 +349,11 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
   ComputedPropertyDescriptor desc;
   struct : public Locals {
     PinnedValue<> valueOrAccessor;
-    PinnedValue<SymbolID> tmpPropNameStorage;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   {
-    MutableHandle<SymbolID> tmpStorage{lv.tmpPropNameStorage};
-    MutableHandle<> valueAccessor{lv.valueOrAccessor};
     auto result = JSObject::getOwnComputedDescriptor(
-        object, runtime, key, tmpStorage, desc, valueAccessor);
+        object, runtime, key, desc, lv.valueOrAccessor);
     if (result == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -626,7 +623,6 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
     PinnedValue<JSObject> propsHandle;
     PinnedValue<> propValue;
     PinnedValue<> propName;
-    PinnedValue<SymbolID> tmpPropNameStorage;
     PinnedValue<ArrayStorage> valueOrAccessorStorage;
     PinnedValue<> tempValueOrAccessor;
   } lv;
@@ -684,9 +680,8 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
   for (unsigned i = 0, e = numProps; i < e; ++i) {
     lv.propName = propNames->at(runtime, i).unboxToHV(runtime);
     ComputedPropertyDescriptor desc;
-    MutableHandle<SymbolID> tmpStorage{lv.tmpPropNameStorage};
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
-        lv.propsHandle, runtime, lv.propName, tmpStorage, desc);
+        lv.propsHandle, runtime, lv.propName, desc);
     if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -896,7 +891,6 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
     PinnedValue<StringPrimitive> name;
     PinnedValue<> value;
     PinnedValue<> entry;
-    PinnedValue<SymbolID> tmpPropNameStorage;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
@@ -926,14 +920,8 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
     lv.name = lv.names->at(runtime, i).getString(runtime);
     // By calling getString, name is guaranteed to be primitive.
     ComputedPropertyDescriptor desc;
-    MutableHandle<SymbolID> tmpStorage{lv.tmpPropNameStorage};
     CallResult<bool> descRes = JSObject::getOwnComputedPrimitiveDescriptor(
-        objHandle,
-        runtime,
-        lv.name,
-        JSObject::IgnoreProxy::Yes,
-        tmpStorage,
-        desc);
+        objHandle, runtime, lv.name, JSObject::IgnoreProxy::Yes, desc);
     if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1121,7 +1109,6 @@ CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
     PinnedValue<JSObject> fromHandle;
     PinnedValue<> nextKeyHandle;
     PinnedValue<> propValueHandle;
-    PinnedValue<SymbolID> tmpPropNameStorage;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   lv.toHandle.castAndSetHermesValue<JSObject>(objRes.getValue());
@@ -1141,8 +1128,6 @@ CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
   MutableHandle<> nextKeyHandle{lv.nextKeyHandle};
   // Handle for the property value being copied.
   MutableHandle<> propValueHandle{lv.propValueHandle};
-  // Handle for the property value being copied.
-  MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
 
   for (uint32_t argIdx = 1; argIdx < args.getArgCount(); argIdx++) {
     GCScopeMarkerRAII markerOuter(gcScope);
@@ -1185,7 +1170,7 @@ CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
 
       // 5.c.i. Let desc be from.[[GetOwnProperty]](nextKey).
       auto descCr = JSObject::getOwnComputedDescriptor(
-          fromHandle, runtime, nextKeyHandle, tmpPropNameStorage, desc);
+          fromHandle, runtime, nextKeyHandle, desc);
       if (LLVM_UNLIKELY(descCr == ExecutionStatus::EXCEPTION)) {
         // 5.c.ii. ReturnIfAbrupt(desc).
         return ExecutionStatus::EXCEPTION;
@@ -1204,12 +1189,7 @@ CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
       CallResult<PseudoHandle<>> propRes = fromHandle->isProxyObject()
           ? JSObject::getComputed_RJS(fromHandle, runtime, nextKeyHandle)
           : JSObject::getComputedPropertyValue_RJS(
-                fromHandle,
-                runtime,
-                fromHandle,
-                tmpPropNameStorage,
-                desc,
-                nextKeyHandle);
+                fromHandle, runtime, fromHandle, desc, nextKeyHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         // 5.c.iii.2. ReturnIfAbrupt(propValue).
         return ExecutionStatus::EXCEPTION;
@@ -1411,13 +1391,8 @@ CallResult<HermesValue> objectPrototypeValueOf(void *, Runtime &runtime) {
 static CallResult<HermesValue>
 objectHasOwnHelper(Runtime &runtime, Handle<JSObject> O, Handle<> P) {
   ComputedPropertyDescriptor desc;
-  struct : public Locals {
-    PinnedValue<SymbolID> tmpPropNameStorage;
-  } lv;
-  LocalsRAII lraii(runtime, &lv);
-  MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
-  CallResult<bool> hasProp = JSObject::getOwnComputedDescriptor(
-      O, runtime, P, tmpPropNameStorage, desc);
+  CallResult<bool> hasProp =
+      JSObject::getOwnComputedDescriptor(O, runtime, P, desc);
   if (LLVM_UNLIKELY(hasProp == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1526,11 +1501,9 @@ CallResult<HermesValue> objectPrototypePropertyIsEnumerable(
     Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : public Locals {
-    PinnedValue<SymbolID> tmpPropNameStorage;
     PinnedValue<JSObject> objHandle;
   } lv;
   LocalsRAII lraii(runtime, &lv);
-  MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1538,7 +1511,7 @@ CallResult<HermesValue> objectPrototypePropertyIsEnumerable(
   lv.objHandle.castAndSetHermesValue<JSObject>(res.getValue());
   ComputedPropertyDescriptor desc;
   auto status = JSObject::getOwnComputedDescriptor(
-      lv.objHandle, runtime, args.getArgHandle(0), tmpPropNameStorage, desc);
+      lv.objHandle, runtime, args.getArgHandle(0), desc);
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1695,17 +1668,15 @@ CallResult<PropertyAccessor *> lookupAccessor(
   struct : public Locals {
     PinnedValue<JSObject> O;
     PinnedValue<> valueOrAccessor;
-    PinnedValue<SymbolID> tmpPropNameStorage;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   lv.O.castAndSetHermesValue<JSObject>(*res);
   Handle<> key = args.getArgHandle(0);
   do {
     ComputedPropertyDescriptor desc;
-    MutableHandle<SymbolID> tmpPropNameHandle{lv.tmpPropNameStorage};
     MutableHandle<> valueOrAccessorHandle{lv.valueOrAccessor};
     CallResult<bool> definedRes = JSObject::getOwnComputedDescriptor(
-        lv.O, runtime, key, tmpPropNameHandle, desc, valueOrAccessorHandle);
+        lv.O, runtime, key, desc, valueOrAccessorHandle);
     if (LLVM_UNLIKELY(definedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

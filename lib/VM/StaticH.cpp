@@ -2121,8 +2121,6 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
       }
     }
 
-    MutableHandle<JSObject> propObj{lv.propObj};
-    MutableHandle<SymbolID> tmpPropNameStorage{lv.tmpPropNameStorage};
     // Loop until we find a property which is present.
     while (idx < size) {
       // If there's no caching, lv.cachedClass is nullptr and the comparison
@@ -2130,7 +2128,7 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
       if (LLVM_LIKELY(size > 0) && idx - startIdx < numObjProps &&
           LLVM_LIKELY(lv.cachedClass.get() == obj->getClass(runtime))) {
         // Cached.
-        propObj = obj;
+        lv.propObj = obj;
         break;
       }
       auto tmpSHV = arr->at(idx);
@@ -2138,21 +2136,21 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
         // NOTE: This call is safe because we immediately discard desc,
         // so it can't outlive the SymbolID.
         NamedPropertyDescriptor desc;
-        propObj = JSObject::getNamedDescriptorUnsafe(
+        lv.propObj = JSObject::getNamedDescriptorUnsafe(
             obj, runtime, tmpSHV.getSymbol(), desc);
       } else {
         assert(
             (tmpSHV.isNumber() || tmpSHV.isString()) &&
             "GetNextPName must be symbol, string, number");
-        ComputedPropertyDescriptor desc;
+        ComputedPropertyDescWithSymStorage desc{lv.tmpPropNameStorage};
         lv.tmp = tmpSHV.unboxToHV(runtime);
         ExecutionStatus status = JSObject::getComputedPrimitiveDescriptor(
-            obj, runtime, lv.tmp, propObj, tmpPropNameStorage, desc);
+            obj, runtime, lv.tmp, lv.propObj, desc);
         if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
       }
-      if (LLVM_LIKELY(propObj))
+      if (LLVM_LIKELY(lv.propObj.get()))
         break;
       ++idx;
     }

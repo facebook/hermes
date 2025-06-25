@@ -743,7 +743,6 @@ class JSObject : public GCCell {
   static CallResult<PseudoHandle<>> getComputedSlotValue(
       PseudoHandle<JSObject> self,
       Runtime &runtime,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor desc);
 
   /// Load a value using a computed descriptor. Read the value either from
@@ -764,7 +763,6 @@ class JSObject : public GCCell {
   LLVM_NODISCARD static CallResult<bool> setComputedSlotValue(
       Handle<JSObject> selfHandle,
       Runtime &runtime,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor desc,
       Handle<> value);
 
@@ -806,7 +804,6 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       Handle<JSObject> propObj,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor desc,
       Handle<> nameValHandle);
 
@@ -856,7 +853,6 @@ class JSObject : public GCCell {
       Runtime &runtime,
       Handle<> nameValHandle,
       IgnoreProxy ignoreProxy,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc);
 
   /// Provides the functionality of ES9 [[GetOwnProperty]] on selfHandle.  It
@@ -870,7 +866,6 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       Handle<> nameValHandle,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc);
 
   /// Like the other overload, except valueOrAccessor will be set to a value or
@@ -879,9 +874,8 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       Handle<> nameValHandle,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
       ComputedPropertyDescriptor &desc,
-      MutableHandle<> &valueOrAccessor);
+      MutableHandle<> valueOrAccessor);
 
   /// ES5.1 8.12.2.
   /// Extract a descriptor \p desc of a predefined property \p name
@@ -920,10 +914,6 @@ class JSObject : public GCCell {
   /// Extract a descriptor \p desc of a named property \p name in this object
   /// or along the prototype chain.
   /// \param nameValHandle the name of the property. It must be a primitive.
-  /// \param tmpSymbolStorage a temporary handle sometimes used internally
-  ///    to store SymbolIDs in order to make sure they aren't collected.
-  ///    Must not be modified or read by the caller for the lifetime of \p desc,
-  ///    the function makes no guarantees regarding whether it is used.
   /// \param[out] propObj it is set to the object in the prototype chain
   ///   containing the property, or \c null if we didn't find the property.
   /// \param[out] desc if the property was found, set to the property
@@ -932,9 +922,8 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       Handle<> nameValHandle,
-      MutableHandle<JSObject> &propObj,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
-      ComputedPropertyDescriptor &desc);
+      MutableHandle<JSObject> propObj,
+      ComputedPropertyDescWithSymStorage &desc);
 
   /// A wrapper to getComputedPrimitiveDescriptor() in the case when
   /// \p nameValHandle may be an object, in which case we need to call
@@ -943,10 +932,6 @@ class JSObject : public GCCell {
   /// The values of the output parameters are not defined if the call terminates
   /// with an exception.
   /// \param nameValHandle the name of the property.
-  /// \param tmpSymbolStorage a temporary handle sometimes used internally
-  ///    to store SymbolIDs in order to make sure they aren't collected.
-  ///    Must not be modified or read by the caller for the lifetime of \p desc,
-  ///    the function makes no guarantees regarding whether it is used.
   /// \param[out] propObj if the method terminates without an exception, it is
   ///    set to the object in the prototype chain containing the property, or
   ///    \c null if we didn't find the property.
@@ -956,9 +941,8 @@ class JSObject : public GCCell {
       Handle<JSObject> selfHandle,
       Runtime &runtime,
       Handle<> nameValHandle,
-      MutableHandle<JSObject> &propObj,
-      MutableHandle<SymbolID> &tmpSymbolStorage,
-      ComputedPropertyDescriptor &desc);
+      MutableHandle<JSObject> propObj,
+      ComputedPropertyDescWithSymStorage &desc);
 
   /// The following three methods implement ES5.1 8.12.3.
   /// getNamed is an optimized path for getting a property with a SymbolID when
@@ -1962,7 +1946,6 @@ inline void JSObject::setNamedSlotValueIndirectUnsafe(
 inline CallResult<PseudoHandle<>> JSObject::getComputedSlotValue(
     PseudoHandle<JSObject> self,
     Runtime &runtime,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor desc) {
   if (LLVM_LIKELY(desc.flags.indexed)) {
     assert(
@@ -2005,7 +1988,6 @@ inline HermesValue JSObject::getComputedSlotValueUnsafe(
 inline CallResult<bool> JSObject::setComputedSlotValue(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
-    MutableHandle<SymbolID> &tmpSymbolStorage,
     ComputedPropertyDescriptor desc,
     Handle<> value) {
   if (LLVM_LIKELY(desc.flags.indexed)) {
