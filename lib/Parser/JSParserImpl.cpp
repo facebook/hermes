@@ -5262,7 +5262,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   }
 #endif
 
-  if (isStatic && propName == prototypeIdent_) {
+  if (isStatic && !isPrivate && propName == prototypeIdent_) {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
     error(
