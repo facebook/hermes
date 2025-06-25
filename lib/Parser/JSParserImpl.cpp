@@ -2697,7 +2697,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   bool async = false;
   bool method = false;
 
-  if (check(getIdent_)) {
+  if (checkUnescaped(getIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
     SMRange identRng = tok_->getSourceRange();
     advance();
@@ -2802,7 +2802,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           optKey.getValue(), funcExpr, getIdent_, computed, false, false);
       return setLocation(startLoc, block.getValue(), node);
     }
-  } else if (check(setIdent_)) {
+  } else if (checkUnescaped(setIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
     SMRange identRng = tok_->getSourceRange();
     advance();
@@ -2914,7 +2914,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
           optKey.getValue(), funcExpr, setIdent_, computed, false, false);
       return setLocation(startLoc, block.getValue(), node);
     }
-  } else if (check(asyncIdent_)) {
+  } else if (checkUnescaped(asyncIdent_)) {
     UniqueString *ident = tok_->getResWordOrIdentifier();
     SMRange identRng = tok_->getSourceRange();
     advance();

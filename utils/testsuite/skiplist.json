@@ -1228,23 +1228,12 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/object/method-definition/async-meth-escaped-async.js",
-        "test262/test/language/expressions/object/method-definition/escaped-get-e.js",
-        "test262/test/language/expressions/object/method-definition/escaped-get-g.js",
-        "test262/test/language/expressions/object/method-definition/escaped-get-t.js",
-        "test262/test/language/expressions/object/method-definition/escaped-get.js",
-        "test262/test/language/expressions/object/method-definition/escaped-set-e.js",
-        "test262/test/language/expressions/object/method-definition/escaped-set-s.js",
-        "test262/test/language/expressions/object/method-definition/escaped-set-t.js",
-        "test262/test/language/expressions/object/method-definition/escaped-set.js",
         "test262/test/language/expressions/object/method-definition/fn-name-fn.js",
         "test262/test/language/expressions/object/method-definition/fn-name-gen.js",
-        "test262/test/language/expressions/object/method-definition/gen-meth-eval-var-scope-syntax-err.js",
         "test262/test/language/expressions/object/method-definition/generator-name-prop-symbol.js",
-        "test262/test/language/expressions/object/method-definition/meth-eval-var-scope-syntax-err.js",
         "test262/test/language/expressions/object/method-definition/name-name-prop-symbol.js"
       ],
-      "comment": "Once T189947200 and T189947264 are addressed, we should remove these."
+      "comment": "Computed properties on function methods need special names: T208569602"
     },
     {
       "paths": [
@@ -4637,6 +4626,8 @@
         "test262/test/staging/Temporal/UserCalendar/old/calendar-non-trivial-mergefields.js",
         "test262/test/staging/Temporal/UserCalendar/old/calendar-extra-fields.js",
         "test262/test/language/expressions/arrow-function/arrow/capturing-closure-variables-2.js",
+        "test262/test/language/expressions/object/method-definition/gen-meth-eval-var-scope-syntax-err.js",
+        "test262/test/language/expressions/object/method-definition/meth-eval-var-scope-syntax-err.js",
         "test262/test/language/expressions/super/prop-expr-obj-val-from-eval.js",
         "test262/test/language/expressions/super/prop-dot-cls-val-from-eval.js",
         "test262/test/language/expressions/super/prop-dot-obj-val-from-eval.js",

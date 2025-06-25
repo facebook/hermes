@@ -522,6 +522,18 @@ class JSParserImpl {
     return tok_->getKind() == TokenKind::identifier &&
         tok_->getIdentifier() == ident;
   }
+  /// \return true if the current token is the specified identifier
+  /// without any escapes. It checks this by comparing the length of the token
+  /// with the length of the \p ident.
+  bool checkUnescaped(UniqueString *ident) const {
+    if (tok_->getKind() != TokenKind::identifier ||
+        tok_->getIdentifier() != ident)
+      return false;
+    SMRange tokRange = tok_->getSourceRange();
+    assert(tokRange.isValid() && "tokRange not initialized");
+    size_t tokLen = tokRange.End.getPointer() - tokRange.Start.getPointer();
+    return tokLen == ident->str().size();
+  }
   /// Check whether the current token is one of the specified ones. \returns
   /// true if it is.
   bool check(TokenKind kind1, TokenKind kind2) const {
