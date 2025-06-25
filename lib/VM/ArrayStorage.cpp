@@ -63,7 +63,7 @@ void ArrayStorageBase<SmallHermesValue>::staticAsserts() {
 
 template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::ensureCapacity(
-    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+    MutableHandle<ArrayStorageBase<HVType>> selfHandle,
     Runtime &runtime,
     size_type capacity) {
   if (capacity <= selfHandle->capacity())
@@ -75,7 +75,7 @@ ExecutionStatus ArrayStorageBase<HVType>::ensureCapacity(
 
 template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
-    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+    MutableHandle<ArrayStorageBase<HVType>> selfHandle,
     Runtime &runtime,
     size_type minCapacity,
     size_type fromFirst,
@@ -130,7 +130,7 @@ ExecutionStatus ArrayStorageBase<HVType>::reallocateToLarger(
   newSelf->size_.store(toLast, std::memory_order_release);
 
   // Update the handle.
-  selfHandle = newSelf;
+  selfHandle.set(newSelf);
 
   return ExecutionStatus::RETURNED;
 }
@@ -171,7 +171,7 @@ void ArrayStorageBase<HVType>::resizeWithinCapacity(
 
 template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::resizeLeft(
-    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+    MutableHandle<ArrayStorageBase<HVType>> selfHandle,
     Runtime &runtime,
     size_type newSize) {
   if (selfHandle->size() == newSize)
@@ -279,7 +279,7 @@ ExecutionStatus ArrayStorageBase<HVType>::throwAllocationFailure(
 
 template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::pushBackSlowPath(
-    MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+    MutableHandle<ArrayStorageBase<HVType>> selfHandle,
     Runtime &runtime,
     Handle<> value) {
   const auto size = selfHandle->size();
@@ -293,7 +293,7 @@ ExecutionStatus ArrayStorageBase<HVType>::pushBackSlowPath(
 
 template <typename HVType>
 ExecutionStatus ArrayStorageBase<HVType>::appendSlowPath(
-    MutableHandle<ArrayStorageBase> &selfHandle,
+    MutableHandle<ArrayStorageBase> selfHandle,
     Runtime &runtime,
     Handle<ArrayStorageBase> other) {
   auto newSize = selfHandle->size() + other->size();

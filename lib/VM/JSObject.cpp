@@ -21,6 +21,7 @@
 #include "hermes/VM/StaticHUtils.h"
 
 #include "llvh/ADT/DenseSet.h"
+#include "llvh/ADT/ScopeExit.h"
 
 namespace hermes {
 namespace vm {
@@ -303,20 +304,22 @@ ExecutionStatus JSObject::allocateNewSlotStorage(
         PropStorage::create(runtime, DEFAULT_PROPERTY_CAPACITY));
     selfHandle->propStorage_.setNonNull(
         runtime, vmcast<PropStorage>(arrRes), runtime.getHeap());
-  } else if (LLVM_UNLIKELY(
-                 newSlotIndex >=
-                 selfHandle->propStorage_.getNonNull(runtime)->capacity())) {
+  } else if (auto propStoragePtr = selfHandle->propStorage_.getNonNull(runtime);
+             LLVM_UNLIKELY(newSlotIndex >= propStoragePtr->capacity())) {
     // Reallocate the existing one.
     assert(
         newSlotIndex == selfHandle->propStorage_.getNonNull(runtime)->size() &&
         "allocated slot must be at end");
-    auto hnd = runtime.makeMutableHandle(selfHandle->propStorage_);
+
+    UsePinnedValueRAII<PropStorage> propStorageUse{runtime.hvStorageTmp};
+    propStorageUse = propStoragePtr;
     if (LLVM_UNLIKELY(
-            PropStorage::resize(hnd, runtime, newSlotIndex + 1) ==
+            PropStorage::resize(propStorageUse, runtime, newSlotIndex + 1) ==
             ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     };
-    selfHandle->propStorage_.setNonNull(runtime, *hnd, runtime.getHeap());
+    selfHandle->propStorage_.setNonNull(
+        runtime, propStorageUse.get(), runtime.getHeap());
   }
 
   {
@@ -3081,14 +3084,12 @@ void JSObject::addNewOwnPropertyInSlot(
     // It's likely that the capacity will be enough to use pushWithinCapacity,
     // but encoding the value back into SHV may allocate and trim the storage.
     // Avoid problems by using push_back.
-    MutableHandle mutStorage{lv.storage};
-    lv.storage->push_back(mutStorage, runtime, lv.value);
+    lv.storage->push_back(lv.storage, runtime, lv.value);
   } else {
     lv.storage = lv.self->propStorage_.getNonNull(runtime);
     // We know that the capacity is already not high enough due to above checks,
     // so don't do the check twice. Just call the slow path.
-    MutableHandle mutStorage{lv.storage};
-    PropStorage::pushBackSlowPath(mutStorage, runtime, lv.value);
+    PropStorage::pushBackSlowPath(lv.storage, runtime, lv.value);
   }
 
   lv.self->propStorage_.setNonNull(runtime, *lv.storage, runtime.getHeap());
@@ -3360,7 +3361,7 @@ namespace {
 CallResult<uint32_t> appendAllPropertyKeys(
     Handle<JSObject> obj,
     Runtime &runtime,
-    MutableHandle<ArrayStorageSmall> &arr,
+    MutableHandle<ArrayStorageSmall> arr,
     uint32_t beginIndex,
     OwnKeysFlags okFlags) {
   struct : public Locals {
@@ -3528,7 +3529,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
 ExecutionStatus setProtoClasses(
     Runtime &runtime,
     Handle<JSObject> obj,
-    MutableHandle<ArrayStorageSmall> &arr) {
+    MutableHandle<ArrayStorageSmall> arr) {
   // Layout of a JSArray stored in the for-in cache:
   // [numProtos, numObjProps, class(obj),
   // class(proto(obj)), class(proto(proto(obj))), ..., null,

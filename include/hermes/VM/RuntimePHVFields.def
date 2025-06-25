@@ -10,4 +10,6 @@
 #endif
 // Fields to store temporary handles without allocating a Locals structure.
 
+RUNTIME_PHV_FIELD(hvStorageTmp)
+
 #undef RUNTIME_PHV_FIELD

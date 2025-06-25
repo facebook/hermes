@@ -661,15 +661,16 @@ CallResult<HermesValue> BoundFunction::create(
     return ExecutionStatus::EXCEPTION;
   }
   lv.arrStorage.castAndSetHermesValue<ArrayStorage>(*arrRes);
-  MutableHandle<ArrayStorage> arrHandle(lv.arrStorage);
   if (argCountWithThis) {
     for (unsigned i = 0; i != argCountWithThis; ++i) {
-      ArrayStorage::push_back(arrHandle, runtime, Handle<>(&argsWithThis[i]));
+      ArrayStorage::push_back(
+          lv.arrStorage, runtime, Handle<>(&argsWithThis[i]));
     }
   } else {
     // Don't need to worry about resizing since it was created with a capacity
     // of at least 1.
-    ArrayStorage::push_back(arrHandle, runtime, Runtime::getUndefinedValue());
+    ArrayStorage::push_back(
+        lv.arrStorage, runtime, Runtime::getUndefinedValue());
   }
   CallResult<PseudoHandle<JSObject>> protoRes =
       getPrototypeOf(Handle<JSObject>::vmcast(target), runtime);
@@ -684,7 +685,7 @@ CallResult<HermesValue> BoundFunction::create(
       runtime.getHiddenClassForPrototype(
           runtime.functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
       target,
-      arrHandle);
+      lv.arrStorage);
   lv.self = JSObjectInit::initToPointer(runtime, cell);
   if (initializeLengthAndName_RJS(lv.self, runtime, target, argCount) ==
       ExecutionStatus::EXCEPTION) {

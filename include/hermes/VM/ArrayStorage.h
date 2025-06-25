@@ -220,7 +220,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param value The value to append to the ArrayStorage. If this is a
   /// ArrayStorageSmall, the value will be encoded into a SmallHermesValue.
   static ExecutionStatus push_back(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
       Handle<> value) {
     // This must be done before the capacity check, because encodeHermesValue
@@ -280,7 +280,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param runtime The Runtime.
   /// \param other The ArrayStorage to append.
   static ExecutionStatus append(
-      MutableHandle<ArrayStorageBase> &selfHandle,
+      MutableHandle<ArrayStorageBase> selfHandle,
       Runtime &runtime,
       Handle<ArrayStorageBase> other) {
     auto *self = selfHandle.get();
@@ -301,7 +301,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param runtime The Runtime.
   /// \param capacity The capacity to ensure is available.
   static ExecutionStatus ensureCapacity(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
       size_type capacity);
 
@@ -323,7 +323,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param runtime The Runtime.
   /// \param newSize The new size of the ArrayStorage.
   static ExecutionStatus resize(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
       size_type newSize) {
     if (selfHandle->size() == newSize)
@@ -351,7 +351,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param runtime The Runtime.
   /// \param newSize The new size of the ArrayStorage.
   static ExecutionStatus resizeLeft(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
       size_type newSize);
 
@@ -406,7 +406,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param runtime The Runtime.
   /// \param value The value to append.
   static ExecutionStatus pushBackSlowPath(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
       Handle<> value);
 
@@ -435,7 +435,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param runtime The Runtime.
   /// \param other The ArrayStorage to append.
   static ExecutionStatus appendSlowPath(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
       Handle<ArrayStorageBase> other);
 
@@ -464,7 +464,7 @@ class ArrayStorageBase final : public VariableSizeRuntimeCell,
   /// \param toFirst Index where to copy the first element to.
   /// \param toLast Index where to copy the last element to.
   static ExecutionStatus reallocateToLarger(
-      MutableHandle<ArrayStorageBase<HVType>> &selfHandle,
+      MutableHandle<ArrayStorageBase<HVType>> selfHandle,
       Runtime &runtime,
       size_type minCapacity,
       size_type fromFirst,

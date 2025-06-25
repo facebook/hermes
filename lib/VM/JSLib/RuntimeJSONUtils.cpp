@@ -1131,8 +1131,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
         lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
 
     lv_.tmpHandle2 = lv_.operationJOK.getHermesValue();
-    auto stackJOHandle = MutableHandle<PropStorage>(lv_.stackJO);
-    if (PropStorage::push_back(stackJOHandle, runtime_, lv_.tmpHandle2) ==
+    if (PropStorage::push_back(lv_.stackJO, runtime_, lv_.tmpHandle2) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1188,8 +1187,7 @@ CallResult<bool> JSONStringifyer::pushValueToStack(HermesValue value) {
   }
 
   lv_.tmpHandle = value;
-  auto stackValueHandle = MutableHandle<PropStorage>(lv_.stackValue);
-  if (PropStorage::push_back(stackValueHandle, runtime_, lv_.tmpHandle) ==
+  if (PropStorage::push_back(lv_.stackValue, runtime_, lv_.tmpHandle) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
