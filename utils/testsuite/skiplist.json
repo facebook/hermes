@@ -58,6 +58,10 @@
     },
     {
       "paths": [
+        "test262/test/language/statements/class/elements/private-async-generator-method-name.js",
+        "test262/test/language/statements/class/elements/private-static-async-generator-method-name.js",
+        "test262/test/language/expressions/class/elements/private-static-async-generator-method-name.js",
+        "test262/test/language/expressions/class/elements/private-async-generator-method-name.js",
         "test262/test/built-ins/AsyncArrowFunction/is-a-constructor.js",
         "test262/test/built-ins/GeneratorFunction/is-a-constructor.js",
         "test262/test/built-ins/AsyncFunction/is-a-constructor.js"
@@ -112,10 +116,6 @@
         "test262/test/language/statements/class/elements/syntax/early-errors/grammar-static-private-async-meth-constructor.js",
         "test262/test/language/statements/class/elements/syntax/early-errors/grammar-static-private-gen-meth-constructor.js",
         "test262/test/language/statements/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-chained-usage.js",
-        "test262/test/language/statements/class/elements/private-async-generator-method-name.js",
-        "test262/test/language/statements/class/elements/private-static-async-generator-method-name.js",
-        "test262/test/language/expressions/class/elements/private-static-async-generator-method-name.js",
-        "test262/test/language/expressions/class/elements/private-async-generator-method-name.js",
         "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-recursive.js",
         "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-static-private-meth-constructor.js",
         "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-function-expression.js",
@@ -139,15 +139,10 @@
         "test262/test/language/statements/class/elements/static-field-init-with-this.js",
         "test262/test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-2.js",
         "test262/test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-1.js",
-        "test262/test/language/expressions/object/fn-name-class.js",
         "test262/test/language/expressions/class/elements/derived-cls-direct-eval-contains-superproperty-1.js",
         "test262/test/language/expressions/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-2.js",
         "test262/test/language/expressions/class/elements/direct-eval-err-contains-arguments.js",
         "test262/test/language/statements/class/subclass/builtin-objects/ArrayBuffer/regular-subclassing.js",
-        "test262/test/language/statements/class/definition/fn-name-accessor-get.js",
-        "test262/test/language/statements/class/definition/fn-name-gen-method.js",
-        "test262/test/language/statements/class/definition/fn-name-accessor-set.js",
-        "test262/test/language/statements/class/definition/fn-name-method.js",
         "test262/test/language/expressions/class/elements/nested-derived-cls-direct-eval-contains-superproperty-2.js",
         "test262/test/language/statements/class/elements/derived-cls-direct-eval-contains-superproperty-1.js",
         "test262/test/language/statements/class/elements/arrow-body-derived-cls-direct-eval-contains-superproperty-2.js",
@@ -506,10 +501,15 @@
     },
     {
       "paths": [
+        "test262/test/language/expressions/object/fn-name-class.js",
         "test262/test/language/expressions/object/method-definition/fn-name-fn.js",
         "test262/test/language/expressions/object/method-definition/fn-name-gen.js",
         "test262/test/language/expressions/object/method-definition/generator-name-prop-symbol.js",
-        "test262/test/language/expressions/object/method-definition/name-name-prop-symbol.js"
+        "test262/test/language/expressions/object/method-definition/name-name-prop-symbol.js",
+        "test262/test/language/statements/class/definition/fn-name-accessor-get.js",
+        "test262/test/language/statements/class/definition/fn-name-accessor-set.js",
+        "test262/test/language/statements/class/definition/fn-name-gen-method.js",
+        "test262/test/language/statements/class/definition/fn-name-method.js"
       ],
       "comment": "Computed properties on function methods need special names: T208569602"
     },
