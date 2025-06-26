@@ -629,10 +629,42 @@ void HadesGC::barrierEnqueue(GCCell *cell) {
   if (LLVM_UNLIKELY(
           markState_->barrierChunkIndex_ ==
           markState_->barrierPushChunk_.size())) {
-    // Once the chunk is full, move it to the pull chunks.
-    flushBarrierPushChunk();
+    // barrierPushChunk_ is full, we need to flush it.
+    handleFullBarrierChunk();
   }
   markState_->barrierPushChunk_[markState_->barrierChunkIndex_++] = cell;
+}
+
+void HadesGC::handleFullBarrierChunk() {
+  // We introduce a scope here to make sure we release the barrier lock before
+  // calling incremental mark. Otherwise, we might cause a deadlock with the
+  // background thread since it obtains the locks in the opposite order.
+  {
+    std::lock_guard lk{markState_->barrierWorklistMtx_};
+    markState_->barrierWorklist_.insert(
+        markState_->barrierWorklist_.end(),
+        markState_->barrierPushChunk_.begin(),
+        markState_->barrierPushChunk_.end());
+    markState_->barrierChunkIndex_ = 0;
+
+    if (LLVM_LIKELY(
+            markState_->barrierWorklist_.size() <
+            MarkState::kMaxBarrierWorklistSize))
+      return;
+  }
+
+  // The barrier queue is full, call incrementalMark to drain it, but pass a
+  // limit of 0 so it doesn't do any actual marking. We could also consider
+  // doing some marking here to prevent the mark worklist from growing, but that
+  // is less of a concern because (unlike the write barrier) its size is bounded
+  // by the number of objects in the heap.
+  // Note that doing "complete marking" or sweeping here would be risky.
+  // Completing marking involves clearing WeakRoots, and sweeping will perform
+  // trimming since it is running on the mutator. Neither of these are expected
+  // unless there is an allocation.
+  auto lk = ensureBackgroundTaskPaused();
+  incrementalMark(0);
+  assert(markState_->barrierWorklist_.empty() && "Worklist was not emptied");
 }
 
 llvh::SmallVector<GCCell *, 0> HadesGC::drainBarrierWorklist() {
@@ -642,18 +674,20 @@ llvh::SmallVector<GCCell *, 0> HadesGC::drainBarrierWorklist() {
   std::lock_guard<Mutex> lk{markState_->barrierWorklistMtx_};
   std::swap(cells, markState_->barrierWorklist_);
   assert(markState_->barrierWorklist_.empty() && "worklist isn't cleared out");
+  assert(cells.size() <= MarkState::kMaxBarrierWorklistSize && "overflow");
   // Keep the previously allocated size to minimise allocations
   markState_->barrierWorklist_.reserve(cells.size());
   return cells;
 }
 
-void HadesGC::flushBarrierPushChunk() {
-  std::lock_guard<Mutex> lk{markState_->barrierWorklistMtx_};
+void HadesGC::flushPendingBarrierPushChunk() {
+  // NOTE: We do not acquire the lock here, because there must be no running
+  // background thread when this is called.
+  assert(!calledByBackgroundThread());
   markState_->barrierWorklist_.insert(
       markState_->barrierWorklist_.end(),
       markState_->barrierPushChunk_.data(),
       markState_->barrierPushChunk_.data() + markState_->barrierChunkIndex_);
-  // Reset the level and refill the same buffer.
   markState_->barrierChunkIndex_ = 0;
 }
 
@@ -859,7 +893,6 @@ bool HadesGC::incrementalMark(size_t markLimit) {
   }
 
   size_t numMarkedBytes = 0;
-  assert(markLimit && "markLimit must be non-zero!");
   while (!markState_->localWorklist.empty() && numMarkedBytes < markLimit) {
     GCCell *const cell = markState_->localWorklist.top();
     markState_->localWorklist.pop();
@@ -1785,7 +1818,7 @@ void HadesGC::completeMarking() {
   ogMarkingBarriers_ = false;
   // No locks are needed here because the world is stopped and there is only 1
   // active thread.
-  flushBarrierPushChunk();
+  flushPendingBarrierPushChunk();
   {
     MarkAcceptor acceptor{*this};
     // Remark any roots that may have changed without executing barriers.

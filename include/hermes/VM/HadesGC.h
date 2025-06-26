@@ -1032,10 +1032,15 @@ class HadesGC final : public GCBase {
   /// Empty and return the current worklist
   llvh::SmallVector<GCCell *, 0> drainBarrierWorklist();
 
-  /// While the world is stopped, move the push chunk to the list of pull
-  /// chunks to finish draining the mark worklist.
+  /// Flush the full barrier push chunk to the worklist.
+  void handleFullBarrierChunk();
+
+  /// When we are preparing to finish marking, move any elements in the push
+  /// chunk into the worklist to make sure they are marked. This must only be
+  /// called once per collection. The push chunk buffer and index are invalid
+  /// after this operation.
   /// WARN: This can only be called by the mutator.
-  void flushBarrierPushChunk();
+  void flushPendingBarrierPushChunk();
 
   /// WARN: This can only be called from the mutator.
   bool isBarrierWorklistEmpty();
@@ -1148,6 +1153,10 @@ class HadesGC final : public GCBase {
     /// Mutex protecting barrierWorklist_, allowing it to be accessed from the
     /// GC thread.
     Mutex barrierWorklistMtx_;
+
+    /// The maximum allowed size of the barrier worklist. If this is exceeded,
+    /// the mutator needs to block and ensure it is drained.
+    static constexpr auto kMaxBarrierWorklistSize = 16 * kBarrierChunkSize;
 
     /// A worklist that other threads may add to as objects to be marked and
     /// considered alive. These objects will *not* have their mark bits set,
