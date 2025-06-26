@@ -1392,8 +1392,8 @@ Value *ESTreeIRGen::genYieldStarExpr(ESTree::YieldExpressionNode *Y) {
         emitEnsureObject(
             innerResult, "iterator.throw() did not return an object");
         // ii. 5. Let done be ? IteratorComplete(innerResult).
-        auto *done = emitIteratorCompleteSlow(innerResult);
-        Builder.createCondBranchInst(done, isDoneBB, isNotDoneBB);
+        auto *throwDone = emitIteratorCompleteSlow(innerResult);
+        Builder.createCondBranchInst(throwDone, isDoneBB, isNotDoneBB);
 
         // ii. 6. If done is true, then return ? IteratorValue(innerResult).
         Builder.setInsertionBlock(isDoneBB);
