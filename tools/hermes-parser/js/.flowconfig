@@ -25,6 +25,7 @@ module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier
 
 component_syntax=true
 enums=true
+experimental.pattern_matching=true
 
 experimental.natural_inference.local_primitive_literals=full
 
