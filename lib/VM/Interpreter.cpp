@@ -199,7 +199,7 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
     auto strPrim = runtime.makeHandle(std::move(*strRes));
 
     // Check if the string is a valid argument index.
-    if (auto index = toArrayIndex(runtime, strPrim)) {
+    if (auto index = toArrayIndex(*strPrim)) {
       if (*index < frame.getArgCount()) {
         return createPseudoHandle(frame.getArgRef(*index));
       }

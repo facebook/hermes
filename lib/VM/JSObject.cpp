@@ -754,16 +754,17 @@ CallResult<Handle<JSArray>> JSObject::getOwnPropertyKeys(
 
 /// Convert a value to array index, if possible.
 /// \param nameValHandle [Handle<>] the value to convert
-/// \param str [MutableHandle<StringPrimitive>] the string is stored
+/// \param str [StringPrimitive *] the string is stored
 ///   there. Must be initialized to null initially.
 /// \param arrayIndex [OptValue<uint32_t>] the array index is stored
 ///   there.
 #define TO_ARRAY_INDEX(runtime, nameValHandle, str, arrayIndex) \
   do {                                                          \
+    assert(str == nullptr && "must be null");                   \
     arrayIndex = toArrayIndexFastPath(*nameValHandle);          \
     if (!arrayIndex && !nameValHandle->isSymbol()) {            \
       LAZY_TO_STRING(runtime, nameValHandle, str);              \
-      arrayIndex = toArrayIndex(runtime, str);                  \
+      arrayIndex = toArrayIndex(str);                           \
     }                                                           \
   } while (0)
 
@@ -869,7 +870,6 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
           !selfHandle->isLazy() && !selfHandle->isProxyObject())) {
     return false;
   }
-  MutableHandle<StringPrimitive> strPrim{runtime};
 
   // If we have indexed storage, perform potentially expensive conversions
   // to array index and check it.
@@ -878,7 +878,10 @@ inline CallResult<bool> getOwnComputedPrimitiveDescriptorImpl(
     OptValue<uint32_t> arrayIndex;
 
     // Try to convert the property name to an array index.
-    TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
+    {
+      StringPrimitive *strPrim = nullptr;
+      TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
+    }
 
     if (arrayIndex) {
       auto res = JSObject::Helper::getOwnIndexedPropertyFlags(
@@ -1879,7 +1882,7 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
   // and if it is, store it in indexed storage.
   if (receiverHandle->flags_.indexedStorage) {
     OptValue<uint32_t> arrayIndex;
-    MutableHandle<StringPrimitive> strPrim{runtime};
+    StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
     if (arrayIndex) {
       // Check whether we need to update array's ".length" property.
@@ -2007,7 +2010,7 @@ CallResult<bool> JSObject::deleteComputed(
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
   if (selfHandle->flags_.indexedStorage) {
-    MutableHandle<StringPrimitive> strPrim{runtime};
+    StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValPrimitiveHandle, strPrim, arrayIndex);
   }
 
@@ -2233,7 +2236,7 @@ CallResult<bool> JSObject::defineOwnComputedPrimitive(
   // If we have indexed storage, we must attempt to convert the name to array
   // index, even if the conversion is expensive.
   if (selfHandle->flags_.indexedStorage) {
-    MutableHandle<StringPrimitive> strPrim{runtime};
+    StringPrimitive *strPrim = nullptr;
     TO_ARRAY_INDEX(runtime, nameValHandle, strPrim, arrayIndex);
   }
 
@@ -3416,7 +3419,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
       // '3'. Therefore, we attempt to convert this string to a number, and
       // insert the resulting value in the duplicate set.
       lv.tmpString = runtime.getStringPrimFromSymbolID(*propIdHandle);
-      OptValue<uint32_t> strToIdx = toArrayIndex(runtime, lv.tmpString);
+      OptValue<uint32_t> strToIdx = toArrayIndex(*lv.tmpString);
       if (LLVM_UNLIKELY(strToIdx)) {
         dedupIdxNames.insert(*strToIdx);
       }
@@ -3489,7 +3492,7 @@ CallResult<uint32_t> appendAllPropertyKeys(
         // index names, then attempt to convert this string prop to an index and
         // check that number value for duplicates.
         if (LLVM_UNLIKELY(!dupFound && !dedupIdxNames.empty())) {
-          OptValue<uint32_t> propNum = toArrayIndex(runtime, lv.tmpString);
+          OptValue<uint32_t> propNum = toArrayIndex(*lv.tmpString);
           if (LLVM_UNLIKELY(propNum))
             dupFound = dedupIdxNames.count(*propNum);
         }

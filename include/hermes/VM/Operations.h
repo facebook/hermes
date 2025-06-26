@@ -229,7 +229,9 @@ HermesValue typeOf(Runtime &runtime, Handle<> valueHandle);
 /// \return true if the type of \p arg corresponds to the flag in \p types.
 bool matchTypeOfIs(HermesValue arg, TypeOfIsTypes types);
 
-/// Fast path for toArrayIndex where we already have the view of the string.
+/// toArrayIndex where we have the StringView.
+/// Useful if we don't want to materialize a StringPrimitive for a lazy
+/// identifier.
 inline OptValue<uint32_t> toArrayIndex(StringView str) {
   auto len = str.length();
   if (str.isASCII()) {
@@ -244,11 +246,13 @@ inline OptValue<uint32_t> toArrayIndex(StringView str) {
 /// A property name P (in the form of a String value) is an array index if and
 /// only if ToString(ToUint32(P)) is equal to P and ToUint32(P) is not equal to
 /// 2**32−1.
-inline OptValue<uint32_t> toArrayIndex(
-    Runtime &runtime,
-    Handle<StringPrimitive> strPrim) {
-  auto view = StringPrimitive::createStringView(runtime, strPrim);
-  return toArrayIndex(view);
+inline OptValue<uint32_t> toArrayIndex(StringPrimitive *str) {
+  if (str->isASCII()) {
+    auto ref = str->getStringRef<char>();
+    return hermes::toArrayIndex(ref.data(), ref.data() + ref.size());
+  }
+  auto ref = str->getStringRef<char16_t>();
+  return hermes::toArrayIndex(ref.data(), ref.data() + ref.size());
 }
 
 /// If it is possible to cheaply verify that \p value is an integer value in
