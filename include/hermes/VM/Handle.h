@@ -708,7 +708,6 @@ class UsePinnedValueRAII {
   }
   void set(value_type value) {
     phv_ = HermesValueTraits<T>::encode(value);
-    return *this;
   }
 
   value_type get() const {
