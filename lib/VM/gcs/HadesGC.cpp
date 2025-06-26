@@ -411,23 +411,32 @@ template <bool CompactionEnabled>
 class HadesGC::EvacAcceptor final : public RootAcceptor,
                                     public WeakRootAcceptor {
  public:
-  EvacAcceptor(HadesGC &gc)
+  EvacAcceptor(HadesGC &gc, bool doCompaction)
       : gc{gc},
         pointerBase_{gc.getPointerBase()},
-        isTrackingIDs_{gc.isTrackingIDs()} {}
+        isTrackingIDs_{gc.isTrackingIDs()} {
+    if constexpr (CompactionEnabled) {
+      // If we are compacting, populate the compactee start pointer so we
+      // evacuate pointers we find in the compactee segment.
+      if (doCompaction) {
+        compacteeEvacStart = gc.compactee_.start;
+        compacteeEvacStartCP = gc.compactee_.startCP;
+      }
+    } else {
+      assert(!doCompaction && "Compaction is not enabled");
+    }
+  }
 
   ~EvacAcceptor() override {}
 
-  // TODO: Implement a purely CompressedPointer version of this. That will let
-  // us avoid decompressing pointers altogether if they point outside the
-  // YG/compactee.
   inline bool shouldForward(const void *ptr) const {
     return gc.inYoungGen(ptr) ||
-        (CompactionEnabled && gc.compactee_.evacContains(ptr));
+        (CompactionEnabled &&
+         compacteeEvacStart == FixedSizeHeapSegment::storageStart(ptr));
   }
   inline bool shouldForward(CompressedPointer ptr) const {
     return gc.inYoungGen(ptr) ||
-        (CompactionEnabled && gc.compactee_.evacContains(ptr));
+        (CompactionEnabled && compacteeEvacStartCP == ptr.getSegmentStart());
   }
 
   LLVM_NODISCARD GCCell *acceptRoot(GCCell *ptr) {
@@ -597,6 +606,14 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
   PointerBase &pointerBase_;
   const bool isTrackingIDs_;
   uint64_t evacuatedBytes_{0};
+
+  /// If we are currently evacuating the compactee, then these are set to
+  /// gc.compactee_.start and gc.compactee_.startCP. This allows us to
+  /// efficiently check for whether we need to evacuate a cell.
+  void *compacteeEvacStart{
+      reinterpret_cast<void *>(CompacteeState::kInvalidCompacteeStart)};
+  AssignableCompressedPointer compacteeEvacStartCP{
+      CompressedPointer::fromRaw(CompacteeState::kInvalidCompacteeStart)};
 
   /// Current GCCell being visited. For heap locations that could be from a
   /// large object, we need this pointer to get the correct card table.
@@ -1779,10 +1796,6 @@ void HadesGC::completeMarking() {
   incrementalMark(std::numeric_limits<size_t>::max());
   assert(isBarrierWorklistEmpty() && "Marking worklist wasn't drained");
   markWeakMapEntrySlots();
-  // Update the compactee tracking pointers so that the next YG collection will
-  // do a compaction.
-  compactee_.evacStart = compactee_.start;
-  compactee_.evacStartCP = compactee_.startCP;
   assert(isBarrierWorklistEmpty() && "Marking worklist wasn't drained");
   // Reset weak roots to null after full reachability has been
   // determined.
@@ -2339,9 +2352,7 @@ GCCell *HadesGC::OldGen::allocSlow(uint32_t sz) {
 
   // Can't expand to any more segments, wait for an old gen collection to
   // finish and possibly free up memory.
-  // TODO: Re-enable this once we fix it such that compaction cannot become
-  //       enabled halfway through a YG collection.
-  // gc_.waitForCollectionToFinish("full heap");
+  gc_.waitForCollectionToFinish("full heap");
 
   // Repeat the search in case the collection did free memory.
   if (GCCell *cell = search(sz)) {
@@ -2462,7 +2473,7 @@ GCCell *HadesGC::OldGen::search(uint32_t sz) {
 template <bool CompactionEnabled>
 uint64_t HadesGC::youngGenEvacuateImpl(bool doCompaction) {
   assert((!doCompaction || CompactionEnabled) && "Compaction is disabled");
-  EvacAcceptor<CompactionEnabled> acceptor{*this};
+  EvacAcceptor<CompactionEnabled> acceptor{*this, doCompaction};
   // Marking each object puts it onto an embedded free list.
   {
     DroppingAcceptor nameAcceptor{acceptor};
@@ -2480,7 +2491,7 @@ uint64_t HadesGC::youngGenEvacuateImpl(bool doCompaction) {
 
   // Find old-to-young pointers, as they are considered roots for YG
   // collection.
-  scanDirtyCards(acceptor);
+  scanDirtyCards(acceptor, doCompaction);
   // Iterate through the copy list to find new pointers.
   auto &pb = getPointerBase();
   while (acceptor.copyListHead) {
@@ -2494,7 +2505,8 @@ uint64_t HadesGC::youngGenEvacuateImpl(bool doCompaction) {
     assert(
         copyCell->hasMarkedForwardingPointer() && "Discovered unmarked object");
     assert(
-        (inYoungGen(copyCell) || compactee_.evacContains(copyCell)) &&
+        (inYoungGen(copyCell) ||
+         (doCompaction && compactee_.contains(copyCell))) &&
         "Unexpected object in YG collection");
     // Update the pointers inside the forwarded object, since the old
     // object is only there for the forwarding pointer.
@@ -2541,7 +2553,10 @@ void HadesGC::youngGenCollection(
   externalBytes.before = getYoungGenExternalBytes();
   // YG is about to be emptied, add all of the allocations.
   totalAllocatedBytes_ += youngGen().used();
-  const bool doCompaction = compactee_.evacActive();
+
+  const bool doCompaction = compactee_.segment &&
+      (concurrentPhase_ == Phase::Sweep || concurrentPhase_ == Phase::None);
+
   // Attempt to promote the YG segment to OG if the flag is set. If this call
   // fails for any reason, proceed with a GC.
   if (promoteYoungGenToOldGen()) {
@@ -2921,9 +2936,10 @@ void HadesGC::scanDirtyCardsForSegment(
 }
 
 template <bool CompactionEnabled>
-void HadesGC::scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor) {
-  const bool preparingCompaction =
-      CompactionEnabled && !compactee_.evacActive();
+void HadesGC::scanDirtyCards(
+    EvacAcceptor<CompactionEnabled> &acceptor,
+    bool doCompaction) {
+  const bool preparingCompaction = CompactionEnabled && !doCompaction;
   // The acceptors in this loop can grow the old gen by adding another
   // segment, if there's not enough room to evac the YG objects discovered.
   // Since segments are always placed at the end, we can use indices instead

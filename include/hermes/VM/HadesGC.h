@@ -1243,36 +1243,15 @@ class HadesGC final : public GCBase {
       return p.getSegmentStart() == startCP;
     }
 
-    /// \return true if the pointer lives in the segment that is currently being
-    /// evacuated for compaction.
-    bool evacContains(const void *p) const {
-      return evacStart == FixedSizeHeapSegment::storageStart(p);
-    }
-    bool evacContains(CompressedPointer p) const {
-      return p.getSegmentStart() == evacStartCP;
-    }
-
-    /// \return true if the compactee is ready to be evacuated.
-    bool evacActive() const {
-      return evacStart != reinterpret_cast<void *>(kInvalidCompacteeStart);
-    }
-
 #ifndef NDEBUG
     /// \return true if the compactee has not been assigned.
     bool empty() const {
       void *const invalid = reinterpret_cast<void *>(kInvalidCompacteeStart);
-      return evacStart == invalid && start == invalid && !segment;
+      return start == invalid && !segment;
     }
 #endif
 
-    /// The following variables track the state of compactions.
-    /// 1. To trigger a compaction, segment and start should be set at the
-    /// beginning of marking. This ensures that all cards containing pointers to
-    /// the compactee will be dirtied.
-    /// 2. Once marking is done, completeMarking should then set evacStart, so
-    /// that the next YG collection will evacuate the segment.
-    /// 3. On completion, the YG collection will reset all these variables.
-
+    /// The value to set the start pointers below to when there is no compactee.
     /// In order to keep the "contains" check cheap, this can be any non-null
     /// value that cannot correspond to the start of a segment.
     static constexpr uintptr_t kInvalidCompacteeStart = 0x1;
@@ -1282,13 +1261,6 @@ class HadesGC final : public GCBase {
     /// is in the compactee segment.
     void *start{reinterpret_cast<void *>(kInvalidCompacteeStart)};
     AssignableCompressedPointer startCP{
-        CompressedPointer::fromRaw(kInvalidCompacteeStart)};
-
-    /// The start address of the segment that is currently being compacted. When
-    /// this is set, the next YG will evacuate objects in this segment. This is
-    /// always going to be equal to "start" or nullptr.
-    void *evacStart{reinterpret_cast<void *>(kInvalidCompacteeStart)};
-    AssignableCompressedPointer evacStartCP{
         CompressedPointer::fromRaw(kInvalidCompacteeStart)};
 
     /// The segment being compacted. This should be removed from the OG right
@@ -1457,9 +1429,14 @@ class HadesGC final : public GCBase {
 
   /// Find all pointers from OG into the YG/compactee during a YG collection.
   /// This is done quickly through use of write barriers that detect the
-  /// creation of such pointers.
+  /// creation of such pointers. By default cards are cleared after they are
+  /// scanned, but if \p CompactionEnabled is true, and \p doCompaction is
+  /// false, the cards will be preserved, as they may represent pointers into
+  /// the compactee which is not being evacuated yet.
   template <bool CompactionEnabled>
-  void scanDirtyCards(EvacAcceptor<CompactionEnabled> &acceptor);
+  void scanDirtyCards(
+      EvacAcceptor<CompactionEnabled> &acceptor,
+      bool doCompaction);
 
   /// Common logic for doing the Snapshot At The Beginning (SATB) write barrier.
   void snapshotWriteBarrierInternal(GCCell *oldValue);
