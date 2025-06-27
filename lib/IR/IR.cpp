@@ -346,6 +346,13 @@ void Instruction::dump(llvh::raw_ostream &os) const {
   D.visit(*this);
 }
 
+Value *Instruction::getImplicitEnvOperand() const {
+  if (environmentId_ < kFirstScopeCreationIdIndex) {
+    return nullptr;
+  }
+  return getFunction()->environments()[getEnvironmentIDAsIndex()];
+}
+
 Instruction::Instruction(
     const Instruction *src,
     llvh::ArrayRef<Value *> operands)

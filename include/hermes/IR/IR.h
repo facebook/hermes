@@ -1561,6 +1561,11 @@ class Instruction
   void setEnvironmentID(uint32_t enclosingScopeCreationID) {
     environmentId_ = enclosingScopeCreationID;
   }
+  /// Set the environment ID of the instruction to a sentinel value indicating
+  /// there's no valid environment ID information.
+  void clearEnvironmentID() {
+    environmentId_ = 0;
+  }
   uint32_t getEnvironmentID() const {
     return environmentId_;
   }
@@ -1569,6 +1574,8 @@ class Instruction
     assert(environmentId_ >= kFirstScopeCreationIdIndex);
     return environmentId_ - kFirstScopeCreationIdIndex;
   }
+  /// \return the implicit environment operand associated with this instruction.
+  Value *getImplicitEnvOperand() const;
 
   void setLexicalScope(sema::LexicalScope *lexScope) {
     lexicalScope_ = lexScope;

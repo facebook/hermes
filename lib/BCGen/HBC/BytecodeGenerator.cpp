@@ -453,6 +453,24 @@ void BytecodeModuleGenerator::collectStrings() {
   }
 }
 
+/// Iterate over all the instructions in \p F and make sure the environment ID
+/// is valid.
+static void fixupEnvironmentIDs(Function *F) {
+  DominanceInfo D(F);
+  IRBuilder builder(F);
+  // Check for dominance and update IDs to 0 if not matching.
+  for (auto &BB : *F) {
+    for (auto &I : BB) {
+      if (auto *implicitEnvOperand =
+              llvh::dyn_cast_or_null<Instruction>(I.getImplicitEnvOperand())) {
+        if (!D.properlyDominates(implicitEnvOperand, &I)) {
+          I.clearEnvironmentID();
+        }
+      }
+    }
+  }
+}
+
 bool BytecodeModuleGenerator::generateAddedFunctions() {
   BytecodeOptions &bytecodeOptions = bm_.getBytecodeOptionsMut();
   bytecodeOptions.setCjsModulesStaticallyResolved(M_->getCJSModulesResolved());
@@ -487,6 +505,12 @@ bool BytecodeModuleGenerator::generateAddedFunctions() {
           addFunctionSource(functionID, getStringID(*source));
         }
       }
+    }
+
+    // Under full debug info, ensure the environment IDs are all valid. Without
+    // debug info, there are not environment IDs set at all.
+    if (M_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) {
+      fixupEnvironmentIDs(F);
     }
 
     // Run register allocation.

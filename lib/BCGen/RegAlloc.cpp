@@ -629,38 +629,47 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
         updateRegister(&inst, deadReg);
       }
 
-      // Allocate a register to unallocated operands.
+      /// Allocate a register for instruction \p op.
+      auto allocReg =
+          [this, &freeBlockLocals, &blockLocals, bb](Instruction *op) {
+            // Skip if op is not an instruction or already has a register.
+            if (!op || isAllocated(op))
+              return;
+
+            if (op->getParent() != bb) {
+              // Live across blocks, allocate a global regigster.
+              updateRegister(op, file.allocateRegister(RegClass::Other));
+              return;
+            }
+
+            // We know this operand is local because:
+            // 1. The operand is in the same block as this one.
+            // 2. All blocks dominated by this block have been visited.
+            // 3. All users must be dominated by their def, since Phis are
+            //    allocated beforehand.
+            if (!freeBlockLocals.empty()) {
+              updateRegister(op, freeBlockLocals.pop_back_val());
+              return;
+            }
+
+            // No free local register, allocate another one.
+            Register reg = file.allocateRegister(RegClass::Other);
+            assert(reg.getClass() == RegClass::Other);
+            if (blockLocals.size() <= reg.getIndexInClass())
+              blockLocals.resize(reg.getIndexInClass() + 1);
+            blockLocals.set(reg.getIndexInClass());
+            updateRegister(op, reg);
+          };
+
+      // Allocate a register to the operands of the current instruction, and for
+      // its implicit environment operand.
       for (size_t i = 0, e = inst.getNumOperands(); i < e; ++i) {
         auto *op = llvh::dyn_cast<Instruction>(inst.getOperand(i));
-
-        // Skip if op is not an instruction or already has a register.
-        if (!op || isAllocated(op))
-          continue;
-
-        if (op->getParent() != bb) {
-          // Live across blocks, allocate a global regigster.
-          updateRegister(op, file.allocateRegister(RegClass::Other));
-          continue;
-        }
-
-        // We know this operand is local because:
-        // 1. The operand is in the same block as this one.
-        // 2. All blocks dominated by this block have been visited.
-        // 3. All users must be dominated by their def, since Phis are
-        //    allocated beforehand.
-        if (!freeBlockLocals.empty()) {
-          updateRegister(op, freeBlockLocals.pop_back_val());
-          continue;
-        }
-
-        // No free local register, allocate another one.
-        Register reg = file.allocateRegister(RegClass::Other);
-        assert(reg.getClass() == RegClass::Other);
-        if (blockLocals.size() <= reg.getIndexInClass())
-          blockLocals.resize(reg.getIndexInClass() + 1);
-        blockLocals.set(reg.getIndexInClass());
-        updateRegister(op, reg);
+        allocReg(op);
       }
+
+      allocReg(
+          llvh::dyn_cast_or_null<Instruction>(inst.getImplicitEnvOperand()));
     }
   }
 }
@@ -877,20 +886,19 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
             "Livein but also killed in this block?");
       }
 
-      // Extend the lifetime of the operands.
-      for (int i = 0, e = it.getNumOperands(); i < e; i++) {
-        auto instOp = llvh::dyn_cast<Instruction>(it.getOperand(i));
-        if (!instOp)
-          continue;
+      /// Extend the lifetime of \p I.
+      auto extendLifetime = [this, &it, &instOffset](Instruction *I) {
+        if (!I)
+          return;
 
-        if (!hasInstructionNumber(instOp)) {
+        if (!hasInstructionNumber(I)) {
           assert(
               llvh::isa<PhiInst>(&it) &&
               "Only PhiInst should reference values from dead code");
-          continue;
+          return;
         }
 
-        auto operandIdx = getInstructionNumber(instOp);
+        auto operandIdx = getInstructionNumber(I);
         // Extend the lifetime of the interval to reach this instruction.
         // Include this instruction in the interval in order to make sure that
         // the register is not freed before the use.
@@ -901,7 +909,15 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
           auto seg = Segment(operandIdx + 1, instOffset + 1);
           instructionInterval_[operandIdx].add(seg);
         }
+      };
+
+      for (int i = 0, e = it.getNumOperands(); i < e; i++) {
+        auto instOp = llvh::dyn_cast<Instruction>(it.getOperand(i));
+        extendLifetime(instOp);
       }
+
+      extendLifetime(
+          llvh::dyn_cast_or_null<Instruction>(it.getImplicitEnvOperand()));
 
       // Extend the lifetime of the PHI to include the source basic blocks.
       if (auto *P = llvh::dyn_cast<PhiInst>(&it)) {

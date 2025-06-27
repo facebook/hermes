@@ -46,74 +46,74 @@ function test1() {
 // CHECK-NEXT:i3[ASCII, 15..20] #50223B1A: random
 // CHECK-NEXT:i4[ASCII, 21..25] #13935A76: test1
 
-// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
+// CHECK:Function<global>(1 params, 4 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
-// CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
+// CHECK-NEXT:    CreateTopLevelEnvironment r2, 0
 // CHECK-NEXT:    DeclareGlobalVar  "test1"
-// CHECK-NEXT:    CreateClosure     r1, r1, Function<test1>
-// CHECK-NEXT:    GetGlobalObject   r2
-// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "test1"
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Mov               r1, r2
+// CHECK-NEXT:    CreateClosure     r1, r2, Function<test1>
+// CHECK-NEXT:    GetGlobalObject   r3
+// CHECK-NEXT:    PutByIdLoose      r3, r1, 0, "test1"
+// CHECK-NEXT:    LoadConstUndefined r3
+// CHECK-NEXT:    Mov               r1, r3
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<test1>(1 params, 14 registers, 0 numbers, 0 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x001a, lexical 0x0000
 // CHECK-NEXT:    GetParentEnvironment r1, 0
-// CHECK-NEXT:    CreateEnvironment r4, r1, 1
+// CHECK-NEXT:    CreateEnvironment r2, r1, 1
 // CHECK-NEXT:    LoadConstUndefined r1
-// CHECK-NEXT:    StoreNPToEnvironment r4, 0, r1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 0, r1
 // CHECK-NEXT:    LoadConstZero     r1
-// CHECK-NEXT:    StoreNPToEnvironment r4, 0, r1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 0, r1
 // CHECK-NEXT:    LoadConstZero     r1
-// CHECK-NEXT:    StoreNPToEnvironment r4, 0, r1
+// CHECK-NEXT:    StoreNPToEnvironment r2, 0, r1
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:L3:
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    TryGetById        r1, r1, 0, "Math"
-// CHECK-NEXT:    GetByIdShort      r3, r1, 1, "random"
-// CHECK-NEXT:    Call1             r3, r3, r1
+// CHECK-NEXT:    GetByIdShort      r4, r1, 1, "random"
+// CHECK-NEXT:    Call1             r4, r4, r1
 // CHECK-NEXT:    LoadConstUInt8    r1, 3
-// CHECK-NEXT:    StrictEq          r3, r3, r1
+// CHECK-NEXT:    StrictEq          r4, r4, r1
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    JmpTrue           L1, r3
-// CHECK-NEXT:    GetGlobalObject   r3
-// CHECK-NEXT:    TryGetById        r3, r3, 0, "Math"
-// CHECK-NEXT:    GetByIdShort      r1, r3, 1, "random"
-// CHECK-NEXT:    Call1             r1, r1, r3
-// CHECK-NEXT:    LoadConstUInt8    r3, 5
-// CHECK-NEXT:    StrictEq          r1, r1, r3
+// CHECK-NEXT:    JmpTrue           L1, r4
+// CHECK-NEXT:    GetGlobalObject   r4
+// CHECK-NEXT:    TryGetById        r4, r4, 0, "Math"
+// CHECK-NEXT:    GetByIdShort      r1, r4, 1, "random"
+// CHECK-NEXT:    Call1             r1, r1, r4
+// CHECK-NEXT:    LoadConstUInt8    r4, 5
+// CHECK-NEXT:    StrictEq          r1, r1, r4
 // CHECK-NEXT:    JmpTrue           L2, r1
-// CHECK-NEXT:    LoadFromEnvironment r1, r4, 0
+// CHECK-NEXT:    LoadFromEnvironment r1, r2, 0
 // CHECK-NEXT:    ToNumeric         r1, r1
 // CHECK-NEXT:    Inc               r1, r1
-// CHECK-NEXT:    StoreToEnvironment r4, 0, r1
+// CHECK-NEXT:    StoreToEnvironment r2, 0, r1
 // CHECK-NEXT:    Jmp               L3
 // CHECK-NEXT:L2:
 // CHECK-NEXT:    AsyncBreakCheck
 // CHECK-NEXT:    Jmp               L2
 // CHECK-NEXT:L1:
-// CHECK-NEXT:    LoadFromEnvironment r1, r4, 0
-// CHECK-NEXT:    LoadConstUInt8    r3, 10
-// CHECK-NEXT:    Greater           r1, r1, r3
+// CHECK-NEXT:    LoadFromEnvironment r1, r2, 0
+// CHECK-NEXT:    LoadConstUInt8    r4, 10
+// CHECK-NEXT:    Greater           r1, r1, r4
 // CHECK-NEXT:    JmpFalse          L4, r1
 // CHECK-NEXT:L5:
-// CHECK-NEXT:    LoadFromEnvironment r1, r4, 0
+// CHECK-NEXT:    LoadFromEnvironment r1, r2, 0
 // CHECK-NEXT:    ToNumeric         r1, r1
 // CHECK-NEXT:    Dec               r1, r1
-// CHECK-NEXT:    StoreToEnvironment r4, 0, r1
+// CHECK-NEXT:    StoreToEnvironment r2, 0, r1
 // CHECK-NEXT:    AsyncBreakCheck
-// CHECK-NEXT:    LoadFromEnvironment r1, r4, 0
-// CHECK-NEXT:    LoadConstUInt8    r3, 10
-// CHECK-NEXT:    Greater           r1, r1, r3
+// CHECK-NEXT:    LoadFromEnvironment r1, r2, 0
+// CHECK-NEXT:    LoadConstUInt8    r4, 10
+// CHECK-NEXT:    Greater           r1, r1, r4
 // CHECK-NEXT:    JmpTrue           L5, r1
 // CHECK-NEXT:L4:
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    TryGetById        r1, r1, 2, "print"
-// CHECK-NEXT:    LoadFromEnvironment r3, r4, 0
-// CHECK-NEXT:    LoadConstUndefined r2
-// CHECK-NEXT:    Call2             r0, r1, r2, r3
+// CHECK-NEXT:    LoadFromEnvironment r4, r2, 0
+// CHECK-NEXT:    LoadConstUndefined r3
+// CHECK-NEXT:    Call2             r0, r1, r3, r4
 // CHECK-NEXT:    LoadConstUndefined r1
 // CHECK-NEXT:    Ret               r1
 
