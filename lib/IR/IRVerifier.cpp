@@ -54,6 +54,7 @@ class Verifier : public InstructionVisitor<Verifier, bool> {
    public:
     const Function &function;
     bool createArgumentsEncountered = false;
+    bool createScopeEncountered = false;
 
     FunctionState(Verifier *verifier, const Function &function)
         : verifier(verifier),
@@ -325,6 +326,16 @@ bool Verifier::visitFunction(const Function &F) {
       seen.insert(&*II);
     }
   }
+
+  // If we are supporting full debugging, then we require that all functions
+  // have a CreateScopeInst.
+  if (F.getContext().getDebugInfoSetting() == DebugInfoSetting::ALL &&
+      !llvh::isa<GeneratorFunction>(F)) {
+    AssertWithMsg(
+        functionState->createScopeEncountered,
+        "All non-generator functions need to have a CreateScopeInst");
+  }
+
   return verifyTryStructure(F);
 }
 
@@ -555,6 +566,14 @@ bool Verifier::verifyBeforeVisitInstruction(const Instruction &Inst) {
   }
 
   ReturnIfNot(verifyAttributes(&Inst));
+
+  if (Inst.getEnvironmentID() >= Instruction::kFirstScopeCreationIdIndex) {
+    AssertIWithMsg(
+        Inst,
+        Inst.getEnvironmentIDAsIndex() <
+            Inst.getFunction()->environments().size(),
+        "Invalid environment index ID");
+  }
 
   bool const acceptsEmptyType = Inst.acceptsEmptyType();
 
@@ -1416,6 +1435,7 @@ bool Verifier::visitGetParentScopeInst(const GetParentScopeInst &Inst) {
   return true;
 }
 bool Verifier::visitCreateScopeInst(const CreateScopeInst &Inst) {
+  functionState->createScopeEncountered = true;
   return true;
 }
 bool Verifier::visitResolveScopeInst(const ResolveScopeInst &Inst) {

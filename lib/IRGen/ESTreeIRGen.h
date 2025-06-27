@@ -517,6 +517,14 @@ class ESTreeIRGen {
   /// whenever we enter a nested function.
   FunctionContext *functionContext_{};
 
+  /// Make a new CreateScopeInst and update the curScope of the function
+  /// context.
+  CreateScopeInst *makeNewScope(VariableScope *varScope, Value *parentScope);
+
+  /// Set the curScope of the function context, and update the Builder's current
+  /// scope creation ID to match the ID from \p scope.
+  void restoreScope(CreateScopeInst *scope);
+
   /// The type of the key stored in \c compiledEntities_. It is a pair of an
   /// AST node pointer and an extra key, which is a small integer value.
   /// The purpose of the extra key is to enable us to distinguish different

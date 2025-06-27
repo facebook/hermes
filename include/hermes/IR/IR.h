@@ -1457,6 +1457,11 @@ class Instruction
   /// If 0, then there is no corresponding source statement.
   uint32_t statementIndex_{0};
 
+  /// The nearest enclosing environment ID associated with this instruction.
+  /// 0 means no valid ID.
+  /// >= 1 refers to some Value* which can be found in the Function*.
+  uint32_t environmentId_{0};
+
   /// The enclosing lexical scope that existed when this instruction was
   /// created. This is set by the IRBuilder.
   sema::LexicalScope *lexicalScope_{nullptr};
@@ -1489,6 +1494,11 @@ class Instruction
   }
 
  public:
+  /// All scope creation IDs of this value or higher represent an index into a
+  /// list of environments maintained in the Function this instruction belongs
+  /// to.
+  static constexpr uint32_t kFirstScopeCreationIdIndex = 1;
+
   void setOperand(Value *Val, unsigned Index);
   Value *getOperand(unsigned Index) const;
   unsigned getNumOperands() const;
@@ -1546,6 +1556,18 @@ class Instruction
 
   uint32_t getStatementIndex() const {
     return statementIndex_;
+  }
+
+  void setEnvironmentID(uint32_t enclosingScopeCreationID) {
+    environmentId_ = enclosingScopeCreationID;
+  }
+  uint32_t getEnvironmentID() const {
+    return environmentId_;
+  }
+  /// \return an index into the IR `Function`'s environment list.
+  uint32_t getEnvironmentIDAsIndex() const {
+    assert(environmentId_ >= kFirstScopeCreationIdIndex);
+    return environmentId_ - kFirstScopeCreationIdIndex;
   }
 
   void setLexicalScope(sema::LexicalScope *lexScope) {
@@ -1943,6 +1965,14 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// it in preparation for lowering steps.
   OptValue<sema::LexicalScope *> lexicalScope_{nullptr};
 
+  /// The current environment ID.
+  /// If environmentID_ == 0, then there's no information being recorded.
+  /// If environmentID_ >= 1, it represents the most recent environment created
+  /// in the function.
+  /// If environmentID_ is None we've completed IRGen and have cleared it in
+  /// preparation for lowering steps.
+  OptValue<uint32_t> environmentID_{0};
+
   /// The two fields below are used only in "opt-to-fixed-point" compilation
   /// mode.
 
@@ -1950,6 +1980,12 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   llvh::DenseSet<Function *> inlinedInto_;
   /// The set of functions that this function has been inlined into.
   llvh::DenseSet<Function *> inlinedBy_;
+
+  /// List of environments made by this function. Out of IRGen, this list is
+  /// filled only with `CreateScopeInst`s. However, after generators have been
+  /// lowered, this may contain `Variable`s for environments that have been
+  /// spilled.
+  llvh::SmallVector<Value *, 2> environments_;
 
  protected:
   explicit Function(
@@ -2133,6 +2169,10 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return inlinedBy_;
   };
 
+  llvh::SmallVectorImpl<Value *> &environments() {
+    return environments_;
+  };
+
   OptValue<uint32_t> getStatementCount() const {
     return statementCount_;
   }
@@ -2162,6 +2202,21 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   }
   void clearLexicalScope() {
     lexicalScope_ = llvh::None;
+  }
+
+  /// \return the current environmentID of the Function.
+  OptValue<uint32_t> getEnvironmentID() const {
+    return environmentID_;
+  }
+
+  /// Set the current environmentID of the Function to \p envID.
+  void setEnvironmentID(uint32_t envID) {
+    environmentID_ = envID;
+  }
+
+  /// Clear the environmentID, signaling the end of IRGen for this Function.
+  void clearEnvironmentID() {
+    environmentID_ = llvh::None;
   }
 
   auto &getJSDynamicParams() {

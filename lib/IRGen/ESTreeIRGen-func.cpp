@@ -60,6 +60,29 @@ Identifier FunctionContext::genAnonymousLabelName(llvh::StringRef hint) {
 //===----------------------------------------------------------------------===//
 // ESTreeIRGen
 
+CreateScopeInst *ESTreeIRGen::makeNewScope(
+    VariableScope *varScope,
+    Value *parentScope) {
+  auto *newScope = Builder.createCreateScopeInst(varScope, parentScope);
+  curFunction()->curScope = newScope;
+  if (Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) {
+    auto &envs = curFunction()->function->environments();
+    auto idxOfNewScope = envs.size();
+    envs.push_back(newScope);
+    auto newEnvID = idxOfNewScope + Instruction::kFirstScopeCreationIdIndex;
+    newScope->setEnvironmentID(newEnvID);
+    curFunction()->function->setEnvironmentID(newEnvID);
+  }
+  return newScope;
+}
+
+/// Set the curScope of the function context, and update the Builder's current
+/// scope creation ID to match the ID from \p scope.
+void ESTreeIRGen::restoreScope(CreateScopeInst *scope) {
+  curFunction()->curScope = scope;
+  curFunction()->function->setEnvironmentID(scope->getEnvironmentID());
+}
+
 void ESTreeIRGen::genFunctionDeclaration(
     ESTree::FunctionDeclarationNode *func) {
   if (func->_async && func->_generator) {
@@ -817,8 +840,7 @@ void ESTreeIRGen::emitFunctionPrologue(
   // GeneratorFunctions should not have a scope created. It will be created
   // later during a lowering pass.
   if (!llvh::isa<GeneratorFunction>(curFunction()->function)) {
-    curFunction()->curScope = Builder.createCreateScopeInst(
-        Builder.createVariableScope(parentScope), baseScope);
+    makeNewScope(Builder.createVariableScope(parentScope), baseScope);
   }
 
   if (doInitES5CaptureState != InitES5CaptureState::No)
@@ -1393,6 +1415,7 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
 void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
   curFunction()->function->clearStatementCount();
   curFunction()->function->clearLexicalScope();
+  curFunction()->function->clearEnvironmentID();
 
   // Delete any unreachable blocks produced while emitting this function.
   deleteUnreachableBasicBlocks(curFunction()->function);

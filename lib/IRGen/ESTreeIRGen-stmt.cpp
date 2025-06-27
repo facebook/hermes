@@ -308,14 +308,13 @@ void ESTreeIRGen::genWhileLoop(ESTree::WhileStatementNode *loop) {
   if (Mod->getContext().getEnableES6BlockScoping() &&
       !treeDoesNotCapture(loop->_body)) {
     auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
-    auto *bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
-    curFunction()->curScope = bodyScope;
+    makeNewScope(bodyVarScope, outerScope);
   }
 
   genStatement(loop->_body);
 
   // Restore the outer scope.
-  curFunction()->curScope = outerScope;
+  restoreScope(outerScope);
 
   // After executing the content of the body, jump to the post test block.
   Builder.createBranchInst(postTestBlock);
@@ -351,14 +350,13 @@ void ESTreeIRGen::genDoWhileLoop(ESTree::DoWhileStatementNode *loop) {
   if (Mod->getContext().getEnableES6BlockScoping() &&
       !treeDoesNotCapture(loop->_body)) {
     auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
-    auto *bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
-    curFunction()->curScope = bodyScope;
+    makeNewScope(bodyVarScope, outerScope);
   }
 
   genStatement(loop->_body);
 
   // Restore the outer scope.
-  curFunction()->curScope = outerScope;
+  restoreScope(outerScope);
 
   // After executing the content of the body, jump to the post test block.
   Builder.createBranchInst(postTestBlock);
@@ -470,8 +468,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
     // Generate a scope for the body.
     Builder.setInsertionBlock(bodyBlock);
     auto *bodyVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
-    bodyScope = Builder.createCreateScopeInst(bodyVarScope, outerScope);
-    curFunction()->curScope = bodyScope;
+    bodyScope = makeNewScope(bodyVarScope, outerScope);
   }
 
   // Declarations created by the init statement.
@@ -485,7 +482,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   // init, test, and update.
   if (createInnerScopes) {
     // Restore the starting scope and block for emitting the outer vars.
-    curFunction()->curScope = outerScope;
+    restoreScope(outerScope);
     Builder.setInsertionBlock(startingBlock);
 
     for (auto *decl : loop->getScope()->decls) {
@@ -564,7 +561,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   // different statement count.
   // TODO: Determine if they should each also incrementStatementCount.
   Builder.setInsertionBlock(bodyBlock);
-  curFunction()->curScope = bodyScope;
+  restoreScope(bodyScope);
   for (const auto &var : vars) {
     // Copy the outer var into the inner one. We can load directly from the
     // outer var since it is never empty in the body, but we have to use
@@ -580,7 +577,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   Builder.createBranchInst(updateBlock);
 
   // Restore the outer scope before returning.
-  curFunction()->curScope = outerScope;
+  restoreScope(outerScope);
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
@@ -646,8 +643,7 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   auto *loopVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
 
   // Create the scope for the init statement.
-  auto *initScope = Builder.createCreateScopeInst(loopVarScope, outerScope);
-  curFunction()->curScope = initScope;
+  auto *initScope = makeNewScope(loopVarScope, outerScope);
 
   // Declarations created by the init statement.
   Function::ScopedLexicalScopeChange lexScopeChange(
@@ -684,8 +680,7 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   Builder.setLocation(loop->_body->getDebugLoc());
 
   // Create a scope for the loop body.
-  auto *bodyScope = Builder.createCreateScopeInst(loopVarScope, outerScope);
-  curFunction()->curScope = bodyScope;
+  auto *bodyScope = makeNewScope(loopVarScope, outerScope);
 
   // Restore the vars from the stack locations.
   for (const auto &var : vars) {
@@ -741,7 +736,7 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   Builder.createBranchInst(loopBlock);
 
   // Restore the outer scope before returning.
-  curFunction()->curScope = outerScope;
+  restoreScope(outerScope);
 
   // Following statements are inserted to the exit block.
   Builder.setInsertionBlock(exitBlock);
@@ -758,9 +753,8 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   // Create an inner scope for the loop init if needed and set it as the top
   // scope. All loop variables will be declared in this scope.
   if (createInnerScopes) {
-    auto *initScope = Builder.createCreateScopeInst(
+    makeNewScope(
         curFunction()->getOrCreateInnerVariableScope(ForInStmt), outerScope);
-    curFunction()->curScope = initScope;
   }
 
   Function::ScopedLexicalScopeChange lexScopeChange(
@@ -862,9 +856,7 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 
   // Create a scope for the body if needed.
   if (createInnerScopes) {
-    auto *innerScope = Builder.createCreateScopeInst(
-        curFunction()->curScope->getVariableScope(), outerScope);
-    curFunction()->curScope = innerScope;
+    makeNewScope(curFunction()->curScope->getVariableScope(), outerScope);
   }
 
   // The left hand side of For-In statements can be any lhs expression
@@ -881,7 +873,7 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
   Builder.createBranchInst(getNextBlock);
 
   // Restore the outer scope for subsequent code.
-  curFunction()->curScope = outerScope;
+  restoreScope(outerScope);
 
   Builder.setInsertionBlock(exitBlock);
 }
@@ -902,9 +894,8 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
   // Create an inner scope for the loop init if needed and set it as the top
   // scope. All loop variables will be declared in this scope.
   if (createInnerScopes) {
-    auto *initScope = Builder.createCreateScopeInst(
+    makeNewScope(
         curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
-    curFunction()->curScope = initScope;
   }
 
   Function::ScopedLexicalScopeChange lexScopeChange(
@@ -936,9 +927,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
 
   // Create a scope for the body if needed.
   if (createInnerScopes) {
-    auto *innerScope = Builder.createCreateScopeInst(
-        curFunction()->curScope->getVariableScope(), outerScope);
-    curFunction()->curScope = innerScope;
+    makeNewScope(curFunction()->curScope->getVariableScope(), outerScope);
   }
 
   emitTryCatchScaffolding(
@@ -983,7 +972,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
       });
 
   // Restore the outer scope for subsequent code.
-  curFunction()->curScope = outerScope;
+  restoreScope(outerScope);
 
   Builder.setInsertionBlock(exitBlock);
 }
@@ -1003,9 +992,8 @@ void ESTreeIRGen::genForOfFastArrayStatement(
   // Create an inner scope for the loop init if needed and set it as the top
   // scope. All loop variables will be declared in this scope.
   if (createInnerScopes) {
-    auto *innerScope = Builder.createCreateScopeInst(
+    makeNewScope(
         curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
-    curFunction()->curScope = innerScope;
   }
 
   Function::ScopedLexicalScopeChange lexScopeChange(
@@ -1043,9 +1031,7 @@ void ESTreeIRGen::genForOfFastArrayStatement(
 
   // Create a scope for the body if needed.
   if (createInnerScopes) {
-    auto *innerScope = Builder.createCreateScopeInst(
-        curFunction()->curScope->getVariableScope(), outerScope);
-    curFunction()->curScope = innerScope;
+    makeNewScope(curFunction()->curScope->getVariableScope(), outerScope);
   }
 
   // Load the element from the array.
@@ -1079,7 +1065,7 @@ void ESTreeIRGen::genForOfFastArrayStatement(
   Builder.createCondBranchInst(cond2, bodyBlock, exitBlock);
 
   // Restore the outer scope for subsequent code.
-  curFunction()->curScope = outerScope;
+  restoreScope(outerScope);
 
   Builder.setInsertionBlock(exitBlock);
 }

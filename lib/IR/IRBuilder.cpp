@@ -1474,6 +1474,15 @@ void IRBuilder::insert(Instruction *Inst) {
   }
   Inst->setStatementIndex(statement);
 
+  if (auto envIDOpt = getFunction()->getEnvironmentID()) {
+    Inst->setEnvironmentID(*envIDOpt);
+  } else {
+    Inst->setEnvironmentID(
+        InsertionPoint != Block->getInstList().end()
+            ? InsertionPoint->getEnvironmentID()
+            : 0);
+  }
+
   // Set the statement of the new instruction based on the current function's
   // statement counter.
   if (auto lexScope = getFunction()->getLexicalScope()) {
