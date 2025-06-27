@@ -1,3 +1,8 @@
+## 0.29.1
+
+### `hermes-parser`
+- Fix issue with `match` transform when binding pattern has same name as argument
+
 ## 0.29.0
 
 ### `hermes-parser`
