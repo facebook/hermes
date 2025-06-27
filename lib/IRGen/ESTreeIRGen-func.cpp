@@ -1451,6 +1451,11 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
       clsConstructor = curFunction()->legacyClassContext->constructor;
       clsInitFunc = curFunction()->legacyClassContext->instElemInitFuncVar;
     }
+    llvh::SmallVector<VariableScope *, 4> allVarScopes;
+    allVarScopes.push_back(curFunction()->curScope()->getVariableScope());
+    for (auto [_, varScope] : curFunction()->getInnerScopes()) {
+      allVarScopes.push_back(varScope);
+    }
     auto *evalData = Builder.createEvalCompilationDataInst(
         std::move(data),
         shouldCaptureState ? curFunction()->capturedState.thisVal : nullptr,
@@ -1459,7 +1464,7 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
         curFunction()->capturedState.homeObject,
         clsConstructor,
         clsInitFunc,
-        curFunction()->curScope()->getVariableScope());
+        allVarScopes);
     // This is never emitted, it has no location.
     evalData->setLocation({});
 

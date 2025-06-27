@@ -1428,7 +1428,7 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
     Variable *homeObject,
     Variable *classCtxConstructor,
     Variable *classCtxInitFuncVar,
-    VariableScope *funcVarScope) {
+    ArrayRef<VariableScope *> varScopes) {
   auto *inst = new EvalCompilationDataInst(
       std::move(data),
       capturedThis ? static_cast<Value *>(capturedThis) : getEmptySentinel(),
@@ -1440,7 +1440,7 @@ EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
                           : getEmptySentinel(),
       classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
                           : getEmptySentinel(),
-      funcVarScope);
+      varScopes);
   insert(inst);
   return inst;
 }

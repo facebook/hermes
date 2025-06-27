@@ -6365,7 +6365,7 @@ class EvalCompilationDataInst : public Instruction {
       Value *homeObject,
       Value *classCtxConstructor,
       Value *classCtxInitFuncVar,
-      VariableScope *funcVarScope)
+      ArrayRef<VariableScope *> varScopes)
       : Instruction(ValueKind::EvalCompilationDataInstKind), data_(data) {
     assert(
         llvh::isa<EmptySentinel>(capturedThis) ||
@@ -6391,8 +6391,15 @@ class EvalCompilationDataInst : public Instruction {
     // between eval compilation invocations (there's no telling whether they're
     // going to be used or not), instead we just delete them when their owning
     // VariableScopes are destroyed (when they have no users).
-    for (VariableScope *cur = funcVarScope; cur; cur = cur->getParentScope())
-      pushOperand(cur);
+    llvh::DenseSet<VariableScope *> seen;
+    for (VariableScope *VS : varScopes) {
+      for (VariableScope *cur = VS; cur; cur = cur->getParentScope()) {
+        auto [_, inserted] = seen.insert(cur);
+        if (!inserted)
+          break;
+        pushOperand(cur);
+      }
+    }
   }
   explicit EvalCompilationDataInst(
       const EvalCompilationDataInst *src,

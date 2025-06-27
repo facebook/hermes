@@ -141,7 +141,7 @@ class FunctionContext {
   /// unrolling or finally blocks), we don't create multiple scopes. Note that
   /// this is not needed for the function scope, since that is only emitted
   /// once.
-  llvh::DenseMap<ESTree::Node *, VariableScope *> innerScopes_;
+  llvh::MapVector<ESTree::Node *, VariableScope *> innerScopes_;
 
   /// The CreateScopeInst that creates the scope for this function.
   CreateScopeInst *currentScope_{};
@@ -249,6 +249,12 @@ class FunctionContext {
   sema::FunctionInfo *getSemInfo() {
     assert(semInfo_ && "semInfo is not set");
     return semInfo_;
+  }
+
+  /// \return the MapVector containing all inner scopes that were made in this
+  /// function.
+  const llvh::MapVector<ESTree::Node *, VariableScope *> &getInnerScopes() {
+    return innerScopes_;
   }
 
   /// \return true if there is an active typed class context held in this

@@ -783,7 +783,7 @@ class IRBuilder {
       Variable *homeObject,
       Variable *classCtxConstructor,
       Variable *classCtxInitFuncVar,
-      VariableScope *funcVarScope);
+      ArrayRef<VariableScope *> varScopes);
 
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.

@@ -1296,7 +1296,7 @@ Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
 
 VariableScope *FunctionContext::getOrCreateInnerVariableScope(
     ESTree::Node *node) {
-  auto [it, inserted] = innerScopes_.try_emplace(node, nullptr);
+  auto [it, inserted] = innerScopes_.insert({node, nullptr});
   if (inserted)
     it->second =
         irGen_->Builder.createVariableScope(currentScope_->getVariableScope());

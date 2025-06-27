@@ -75,7 +75,7 @@
 
 // CHECK:function foo(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  {r0}      %0 = EvalCompilationDataInst empty: any, undefined: undefined, empty: any, empty: any, empty: any, empty: any, %VS0: any, %VS1: any, %VS2: any
+// CHECK-NEXT:  {r0}      %0 = EvalCompilationDataInst empty: any, undefined: undefined, empty: any, empty: any, empty: any, empty: any, %VS0: any, %VS1: any, %VS2: any, %VS3: any
 // CHECK-NEXT:  {r6}      %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  {r2}      %2 = CreateScopeInst (:environment) %VS0: any, {r6} %1: environment
 // CHECK-NEXT:  {r5}      %3 = LIRLoadConstInst (:undefined) undefined: undefined
