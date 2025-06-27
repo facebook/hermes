@@ -9,6 +9,7 @@
 
 #include "BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
 #include "hermes/BCGen/MovElimination.h"
@@ -590,6 +591,8 @@ void HBCISel::addDebugSourceLocationInfo() {
   bool needDebugStatementNo =
       F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL ||
       F_->getContext().getDebugInfoSetting() == DebugInfoSetting::SOURCE_MAP;
+  bool needsScopingInfo =
+      F_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL;
   auto &manager = F_->getContext().getSourceErrorManager();
   IRBuilder builder(F_);
 
@@ -622,6 +625,34 @@ void HBCISel::addDebugSourceLocationInfo() {
       info.statement = 0;
     }
     info.address = reloc.loc;
+
+    // Set the scoping state for this debug source location.
+    auto envID = inst->getEnvironmentID();
+    auto *lexScope = inst->getLexicalScope();
+    if (!needsScopingInfo || envID == 0 || lexScope == nullptr) {
+      // If we aren't generating scoping info, or the envID/lexical scope wasn't
+      // tracked properly, then there is no scoping information we can generate.
+      // An index of 0 is reserved to indicate no scoping information.
+      info.envIdx = 0;
+    } else {
+      assert(
+          envID >= Instruction::kFirstScopeCreationIdIndex &&
+          "expected valid environment ID");
+      auto *implicitEnvOp = inst->getImplicitEnvOperand();
+      // If the implicit environment operand is a Variable, this means it
+      // was spilled to the parent environment because of the generator
+      // lowering pass.
+      // If the implicit environment operand is an Instruction, it is still
+      // reachable and reserved in a register.
+      DebugScopingInfo debInfo = llvh::isa<Variable>(implicitEnvOp)
+          ? DebugScopingInfo::forSpilledSlot(
+                llvh::cast<Variable>(implicitEnvOp)->getIndexInVariableList(),
+                lexScope)
+          : DebugScopingInfo::forRegister(
+                encodeValue(llvh::cast<Instruction>(implicitEnvOp)), lexScope);
+      info.envIdx = BCFGen_->addScopingInfo(debInfo);
+    }
+
     BCFGen_->addDebugSourceLocation(info);
   }
 

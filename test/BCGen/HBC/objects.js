@@ -58,7 +58,7 @@ function foo(p) {
 // CHECK-NEXT:[@ 20] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 5 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
 // CHECK-NEXT:[@ 0] LoadParam 3<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] NewObjectWithBuffer 2<Reg8>, 0<UInt16>, 0<UInt16>
 // CHECK-NEXT:[@ 9] LoadConstUInt8 0<Reg8>, 1<UInt8>
@@ -85,7 +85,7 @@ function foo(p) {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
-// CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x000b  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 12: line 12 col 9
 // CHECK-NEXT:    bc 18: line 13 col 10
 // CHECK-NEXT:    bc 22: line 14 col 17
@@ -94,4 +94,4 @@ function foo(p) {
 // CHECK-NEXT:    bc 40: line 15 col 12
 // CHECK-NEXT:    bc 48: line 16 col 3
 // CHECK-NEXT:    bc 53: line 17 col 3
-// CHECK-NEXT:  0x0026  end of debug source table
+// CHECK-NEXT:  0x0028  end of debug source table

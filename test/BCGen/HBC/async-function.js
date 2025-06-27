@@ -92,7 +92,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<simpleReturn>(1 params, 17 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0016, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0018, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    Mov               r5, r4
 // CHECK-NEXT:    LoadParam         r4, 0
@@ -107,7 +107,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<simpleAwait>(1 params, 17 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x001d, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0020, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    Mov               r5, r4
 // CHECK-NEXT:    LoadParam         r4, 0
@@ -122,7 +122,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:NCFunction<simpleAsyncFE>(1 params, 17 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0028, lexical 0x0000
 // CHECK-NEXT:    LoadConstUndefined r4
 // CHECK-NEXT:    Mov               r5, r4
 // CHECK-NEXT:    LoadParam         r4, 0
@@ -244,7 +244,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Unreachable
 
 // CHECK:Function<?anon_0_simpleAwait>(1 params, 20 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x002b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0030, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -354,7 +354,7 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    Unreachable
 
 // CHECK:Function<?anon_0_simpleAsyncFE>(1 params, 20 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0037, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x003d, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -477,16 +477,16 @@ var simpleAsyncFE = async function () {
 // CHECK-NEXT:    bc 28: line 10 col 1
 // CHECK-NEXT:    bc 41: line 10 col 1
 // CHECK-NEXT:    bc 59: line 19 col 19
-// CHECK-NEXT:  0x0016  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x0018  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 33: line 10 col 1
-// CHECK-NEXT:  0x001d  function idx 2, starts at line 14 col 1
+// CHECK-NEXT:  0x0020  function idx 2, starts at line 14 col 1
 // CHECK-NEXT:    bc 33: line 14 col 1
-// CHECK-NEXT:  0x0024  function idx 3, starts at line 19 col 21
+// CHECK-NEXT:  0x0028  function idx 3, starts at line 19 col 21
 // CHECK-NEXT:    bc 33: line 19 col 21
-// CHECK-NEXT:  0x002b  function idx 8, starts at line 14 col 1
+// CHECK-NEXT:  0x0030  function idx 8, starts at line 14 col 1
 // CHECK-NEXT:    bc 169: line 15 col 11
 // CHECK-NEXT:    bc 331: line 15 col 11
-// CHECK-NEXT:  0x0037  function idx 9, starts at line 19 col 21
+// CHECK-NEXT:  0x003d  function idx 9, starts at line 19 col 21
 // CHECK-NEXT:    bc 169: line 20 col 11
 // CHECK-NEXT:    bc 331: line 20 col 11
-// CHECK-NEXT:  0x0043  end of debug source table
+// CHECK-NEXT:  0x004a  end of debug source table

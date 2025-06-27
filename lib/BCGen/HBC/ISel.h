@@ -8,6 +8,7 @@
 #ifndef HERMES_BCGEN_HBC_ISEL_H
 #define HERMES_BCGEN_HBC_ISEL_H
 
+#include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/FileAndSourceMapIdCache.h"
 
 namespace hermes {

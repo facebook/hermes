@@ -118,7 +118,7 @@ function f(x) {
 // CHECK-NEXT:[@ 2] Ret 0<Reg8>
 
 // CHECK:Function<f>(2 params, 12 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
 // CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] UIntSwitchImm 2<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
 // CHECK-NEXT:[@ 21] LoadConstInt 0<Reg8>, 3352<Imm32>
@@ -239,11 +239,11 @@ function f(x) {
 // CHECK-NEXT:    bc 5: line 10 col 1
 // CHECK-NEXT:    bc 19: line 10 col 1
 // CHECK-NEXT:    bc 30: line 10 col 1
-// CHECK-NEXT:  0x0010  function idx 2, starts at line 12 col 1
+// CHECK-NEXT:  0x0011  function idx 2, starts at line 12 col 1
 // CHECK-NEXT:    bc 119: line 23 col 13
 // CHECK-NEXT:    bc 126: line 23 col 14
 // CHECK-NEXT:    bc 240: line 58 col 13
 // CHECK-NEXT:    bc 247: line 58 col 14
 // CHECK-NEXT:    bc 282: line 75 col 13
 // CHECK-NEXT:    bc 289: line 75 col 14
-// CHECK-NEXT:  0x002a  end of debug source table
+// CHECK-NEXT:  0x002d  end of debug source table

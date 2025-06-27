@@ -71,7 +71,7 @@ function foo() { return; }
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<binary>(1 params, 13 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    GetByIdShort      r3, r2, 0, "foo"
 // CHECK-NEXT:    LoadConstUndefined r1
@@ -116,7 +116,7 @@ function foo() { return; }
 // CHECK-NEXT:    bc 5: line 10 col 1
 // CHECK-NEXT:    bc 19: line 10 col 1
 // CHECK-NEXT:    bc 30: line 10 col 1
-// CHECK-NEXT:  0x0010  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x0011  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 2: line 11 col 11
 // CHECK-NEXT:    bc 9: line 11 col 14
 // CHECK-NEXT:    bc 13: line 11 col 22
@@ -140,4 +140,4 @@ function foo() { return; }
 // CHECK-NEXT:    bc 86: line 29 col 7
 // CHECK-NEXT:    bc 90: line 30 col 7
 // CHECK-NEXT:    bc 94: line 31 col 7
-// CHECK-NEXT:  0x0059  end of debug source table
+// CHECK-NEXT:  0x005b  end of debug source table

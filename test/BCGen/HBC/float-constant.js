@@ -72,4 +72,4 @@ var z = 0.0;
 // CHECK-NEXT:    bc 48: line 11 col 7
 // CHECK-NEXT:    bc 64: line 12 col 7
 // CHECK-NEXT:    bc 72: line 13 col 7
-// CHECK-NEXT:  0x001c  end of debug source table
+// CHECK-NEXT:  0x001d  end of debug source table

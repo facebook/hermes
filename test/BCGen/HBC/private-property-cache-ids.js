@@ -953,7 +953,7 @@
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Constructor<ManyPrivateProperties>(1 params, 14 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0018, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    GetNewTarget      r2
 // CHECK-NEXT:    GetById           r2, r2, 0, "prototype"
@@ -1484,7 +1484,7 @@
 // CHECK-NEXT:    Unreachable
 
 // CHECK:NCFunction<sum>(1 params, 4 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x001f, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0021, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r2, 0
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    LoadFromEnvironment r1, r0, 0
@@ -2276,9 +2276,9 @@
 // CHECK-NEXT:    bc 2627: line 133 col 16
 // CHECK-NEXT:    bc 2632: line 133 col 16
 // CHECK-NEXT:    bc 2636: line 133 col 8
-// CHECK-NEXT:  0x0018  function idx 1, starts at line 11 col 3
+// CHECK-NEXT:  0x0019  function idx 1, starts at line 11 col 3
 // CHECK-NEXT:    bc 5: line 11 col 3
-// CHECK-NEXT:  0x001f  function idx 2, starts at line 70 col 5
+// CHECK-NEXT:  0x0021  function idx 2, starts at line 70 col 5
 // CHECK-NEXT:    bc 10: line 74 col 15
 // CHECK-NEXT:    bc 19: line 74 col 26
 // CHECK-NEXT:    bc 24: line 74 col 11
@@ -2794,4 +2794,4 @@
 // CHECK-NEXT:    bc 3340: line 74 col 11
 // CHECK-NEXT:    bc 3349: line 128 col 41
 // CHECK-NEXT:    bc 3354: line 74 col 11
-// CHECK-NEXT:  0x078c  end of debug source table
+// CHECK-NEXT:  0x07df  end of debug source table

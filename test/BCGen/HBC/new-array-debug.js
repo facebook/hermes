@@ -45,7 +45,7 @@ function foo() {
 // CHECK-NEXT:[@ 20] Ret 0<Reg8>
 
 // CHECK:Function<foo>(1 params, 2 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
 // CHECK-NEXT:[@ 0] NewArray 0<Reg8>, 3<UInt16>
 // CHECK-NEXT:[@ 4] NewArray 1<Reg8>, 0<UInt16>
 // CHECK-NEXT:[@ 8] DefineOwnByIndex 0<Reg8>, 1<Reg8>, 0<UInt8>
@@ -65,8 +65,8 @@ function foo() {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 11 col 1
 // CHECK-NEXT:    bc 0: line 11 col 1
 // CHECK-NEXT:    bc 14: line 11 col 1
-// CHECK-NEXT:  0x000a  function idx 1, starts at line 11 col 1
+// CHECK-NEXT:  0x000b  function idx 1, starts at line 11 col 1
 // CHECK-NEXT:    bc 8: line 12 col 12
 // CHECK-NEXT:    bc 16: line 12 col 12
 // CHECK-NEXT:    bc 24: line 12 col 12
-// CHECK-NEXT:  0x0017  end of debug source table
+// CHECK-NEXT:  0x0019  end of debug source table

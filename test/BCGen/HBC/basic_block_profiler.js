@@ -122,4 +122,4 @@ try {
 // CHECK-NEXT:    bc 108: line 18 col 3
 // CHECK-NEXT:    bc 114: line 18 col 10
 // CHECK-NEXT:    bc 119: line 18 col 8
-// CHECK-NEXT:  0x003d  end of debug source table
+// CHECK-NEXT:  0x003e  end of debug source table

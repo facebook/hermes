@@ -77,6 +77,8 @@ class BytecodeFunction {
   llvh::Optional<std::string> lazyCompileError_{};
 
  public:
+  std::vector<DebugScopingInfo> scopingInfo;
+
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
       std::vector<opcode_atom_t> &&opcodesAndJumpTables,

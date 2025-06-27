@@ -57,4 +57,4 @@ function foo() {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
-// CHECK-NEXT:  0x000a  end of debug source table
+// CHECK-NEXT:  0x000b  end of debug source table

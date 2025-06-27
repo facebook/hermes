@@ -421,7 +421,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<manyGetByIds>(3 params, 4 registers, 1 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    GetByIdShort      r3, r1, 0, "p0"
 // CHECK-NEXT:    GetByIdShort      r2, r1, 1, "p1"
@@ -946,7 +946,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<manyPutByIds>(4 params, 4 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x074b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x07a2, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:    LoadParam         r1, 3
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "p0"
@@ -1224,7 +1224,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:    bc 5: line 10 col 1
 // CHECK-NEXT:    bc 19: line 10 col 1
 // CHECK-NEXT:    bc 30: line 10 col 1
-// CHECK-NEXT:  0x0010  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x0011  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 3: line 14 col 6
 // CHECK-NEXT:    bc 8: line 14 col 13
 // CHECK-NEXT:    bc 13: line 14 col 5
@@ -1743,7 +1743,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:    bc 2330: line 61 col 7
 // CHECK-NEXT:    bc 2334: line 62 col 11
 // CHECK-NEXT:    bc 2340: line 62 col 7
-// CHECK-NEXT:  0x074b  function idx 2, starts at line 66 col 1
+// CHECK-NEXT:  0x07a2  function idx 2, starts at line 66 col 1
 // CHECK-NEXT:    bc 6: line 68 col 8
 // CHECK-NEXT:    bc 12: line 68 col 20
 // CHECK-NEXT:    bc 18: line 68 col 32
@@ -2003,4 +2003,4 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:    bc 1545: line 124 col 10
 // CHECK-NEXT:    bc 1551: line 125 col 10
 // CHECK-NEXT:    bc 1557: line 126 col 10
-// CHECK-NEXT:  0x0a59  end of debug source table
+// CHECK-NEXT:  0x0ab1  end of debug source table

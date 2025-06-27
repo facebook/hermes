@@ -48,7 +48,7 @@ function foo(a) {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<foo>(2 params, 3 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 1
 // CHECK-NEXT:    LoadParam         r2, 1
@@ -67,6 +67,6 @@ function foo(a) {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 12 col 1
 // CHECK-NEXT:    bc 6: line 12 col 1
 // CHECK-NEXT:    bc 18: line 12 col 1
-// CHECK-NEXT:  0x000a  function idx 1, starts at line 12 col 1
+// CHECK-NEXT:  0x000b  function idx 1, starts at line 12 col 1
 // CHECK-NEXT:    bc 21: line 13 col 13
-// CHECK-NEXT:  0x0011  end of debug source table
+// CHECK-NEXT:  0x0013  end of debug source table

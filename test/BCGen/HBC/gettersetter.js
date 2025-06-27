@@ -92,4 +92,4 @@ var obj = {
 // CHECK-NEXT:    bc 38: line 10 col 11
 // CHECK-NEXT:    bc 53: line 10 col 11
 // CHECK-NEXT:    bc 61: line 10 col 9
-// CHECK-NEXT:  0x0013  end of debug source table
+// CHECK-NEXT:  0x0014  end of debug source table

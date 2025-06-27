@@ -478,4 +478,4 @@ function stringSwitchSeveralSwitches(b, s, i) {
 // HBC-NEXT:  0x0000  function idx 0, starts at line 14 col 1
 // HBC-NEXT:    bc 0: line 14 col 1
 // HBC-NEXT:    bc 14: line 14 col 1
-// HBC-NEXT:  0x000a  end of debug source table
+// HBC-NEXT:  0x000b  end of debug source table

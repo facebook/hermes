@@ -66,7 +66,7 @@ y = x;
 // STRICT-NEXT:    bc 29: line 12 col 4
 // STRICT-NEXT:    bc 34: line 13 col 5
 // STRICT-NEXT:    bc 39: line 13 col 3
-// STRICT-NEXT:  0x0019  end of debug source table
+// STRICT-NEXT:  0x001a  end of debug source table
 
 // NONSTRICT:Bytecode File Information:
 // NONSTRICT-NEXT:  Bytecode version number: {{.*}}
@@ -120,4 +120,4 @@ y = x;
 // NONSTRICT-NEXT:    bc 29: line 12 col 4
 // NONSTRICT-NEXT:    bc 34: line 13 col 5
 // NONSTRICT-NEXT:    bc 39: line 13 col 3
-// NONSTRICT-NEXT:  0x0019  end of debug source table
+// NONSTRICT-NEXT:  0x001a  end of debug source table

@@ -57,7 +57,7 @@ test_one(1,2,3)
 // CHECK-NEXT:[@ 41] Ret 4<Reg8>
 
 // CHECK:Function<test_one>(3 params, 8 registers, 2 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
 // CHECK-NEXT:[@ 0] LoadParam 6<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] Mov 4<Reg8>, 6<Reg8>
 // CHECK-NEXT:[@ 6] GetPNameList 5<Reg8>, 4<Reg8>, 0<Reg8>, 1<Reg8>
@@ -82,8 +82,8 @@ test_one(1,2,3)
 // CHECK-NEXT:    bc 14: line 14 col 1
 // CHECK-NEXT:    bc 20: line 20 col 1
 // CHECK-NEXT:    bc 34: line 20 col 9
-// CHECK-NEXT:  0x0010  function idx 1, starts at line 14 col 1
+// CHECK-NEXT:  0x0011  function idx 1, starts at line 14 col 1
 // CHECK-NEXT:    bc 6: line 15 col 3
 // CHECK-NEXT:    bc 14: line 15 col 3
 // CHECK-NEXT:    bc 26: line 16 col 6
-// CHECK-NEXT:  0x001d  end of debug source table
+// CHECK-NEXT:  0x001f  end of debug source table

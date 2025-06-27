@@ -67,7 +67,7 @@ function foo() {
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x000d, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x000e, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    GetByIdShort      r0, r0, 0, "x"
 // CHKBC-NEXT:    Ret               r0
@@ -83,6 +83,6 @@ function foo() {
 // CHKBC-NEXT:    bc 0: line 11 col 1
 // CHKBC-NEXT:    bc 5: line 11 col 1
 // CHKBC-NEXT:    bc 19: line 11 col 1
-// CHKBC-NEXT:  0x000d  function idx 1, starts at line 13 col 1
+// CHKBC-NEXT:  0x000e  function idx 1, starts at line 13 col 1
 // CHKBC-NEXT:    bc 2: line 14 col 10
-// CHKBC-NEXT:  0x0014  end of debug source table
+// CHKBC-NEXT:  0x0016  end of debug source table

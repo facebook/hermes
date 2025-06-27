@@ -421,4 +421,4 @@ function obj7() {
 // BCGEN-NEXT:    bc 88: line 11 col 1
 // BCGEN-NEXT:    bc 99: line 11 col 1
 // BCGEN-NEXT:    bc 110: line 11 col 1
-// BCGEN-NEXT:  0x002e  end of debug source table
+// BCGEN-NEXT:  0x002f  end of debug source table

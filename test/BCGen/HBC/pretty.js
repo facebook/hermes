@@ -49,7 +49,7 @@ function foo (a) {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(2 params, 16 registers, 3 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    Dec               r4, r4
 // CHECK-NEXT:    LoadConstZero     r0
@@ -78,9 +78,9 @@ function foo (a) {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
-// CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x000b  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 3: line 12 col 12
 // CHECK-NEXT:    bc 13: line 13 col 13
 // CHECK-NEXT:    bc 28: line 14 col 5
 // CHECK-NEXT:    bc 40: line 14 col 10
-// CHECK-NEXT:  0x001a  end of debug source table
+// CHECK-NEXT:  0x001c  end of debug source table

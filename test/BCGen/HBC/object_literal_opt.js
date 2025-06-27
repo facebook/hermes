@@ -100,4 +100,4 @@ function foo(p) {
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
 // CHECK-NEXT:    bc 25: line 25 col 2
-// CHECK-NEXT:  0x000d  end of debug source table
+// CHECK-NEXT:  0x000f  end of debug source table

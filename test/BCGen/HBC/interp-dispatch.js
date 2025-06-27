@@ -67,7 +67,7 @@ print(bench(4e6, 100))
 // CHECK-NEXT:    Ret               r3
 
 // CHECK:Function<bench>(3 params, 15 registers, 14 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0018, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r14, 1
 // CHECK-NEXT:    ToNumber          r8, r14
 // CHECK-NEXT:    LoadParam         r14, 2
@@ -113,7 +113,7 @@ print(bench(4e6, 100))
 // CHECK-NEXT:    bc 26: line 28 col 7
 // CHECK-NEXT:    bc 40: line 28 col 12
 // CHECK-NEXT:    bc 46: line 28 col 6
-// CHECK-NEXT:  0x0017  function idx 1, starts at line 12 col 1
+// CHECK-NEXT:  0x0018  function idx 1, starts at line 12 col 1
 // CHECK-NEXT:    bc 3: line 14 col 10
 // CHECK-NEXT:    bc 9: line 15 col 10
-// CHECK-NEXT:  0x0021  end of debug source table
+// CHECK-NEXT:  0x0023  end of debug source table

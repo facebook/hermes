@@ -53,7 +53,7 @@ function bar() {
 // CHECK-NEXT:[@ 36] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
 // CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] LoadThisNS 1<Reg8>
 // CHECK-NEXT:[@ 5] PutByIdLoose 1<Reg8>, 2<Reg8>, 0<UInt8>, 3<UInt16>
@@ -61,7 +61,7 @@ function bar() {
 // CHECK-NEXT:[@ 13] Ret 0<Reg8>
 
 // CHECK:Function<bar>(1 params, 12 registers, 1 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
 // CHECK-NEXT:[@ 0] GetGlobalObject 1<Reg8>
 // CHECK-NEXT:[@ 2] GetByIdShort 1<Reg8>, 1<Reg8>, 0<UInt8>, 2<UInt8>
 // CHECK-NEXT:[@ 7] CreateThisForNew 2<Reg8>, 1<Reg8>, 1<UInt8>
@@ -83,10 +83,10 @@ function bar() {
 // CHECK-NEXT:    bc 5: line 10 col 1
 // CHECK-NEXT:    bc 19: line 10 col 1
 // CHECK-NEXT:    bc 30: line 10 col 1
-// CHECK-NEXT:  0x0010  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x0011  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 5: line 11 col 10
-// CHECK-NEXT:  0x0017  function idx 2, starts at line 14 col 1
+// CHECK-NEXT:  0x0019  function idx 2, starts at line 14 col 1
 // CHECK-NEXT:    bc 2: line 15 col 14
 // CHECK-NEXT:    bc 7: line 15 col 17
 // CHECK-NEXT:    bc 17: line 15 col 17
-// CHECK-NEXT:  0x0024  end of debug source table
+// CHECK-NEXT:  0x0027  end of debug source table

@@ -157,13 +157,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Ret               r1
 
 // CHKBC:Function<foo>(2 params, 10 registers, 0 numbers, 0 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0022, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
 // CHKBC-NEXT:    LoadParam         r1, 1
 // CHKBC-NEXT:    CallBuiltin       r0, "Object.keys", 2
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<shadows>(1 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x002c, lexical 0x0000
 // CHKBC-NEXT:    NewObjectWithBuffer r3, 1, 17
 // CHKBC-NEXT:    GetGlobalObject   r1
 // CHKBC-NEXT:    TryGetById        r1, r1, 0, "print"
@@ -175,7 +175,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0036, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x003a, lexical 0x0000
 // CHKBC-NEXT:    GetGlobalObject   r1
 // CHKBC-NEXT:    TryGetById        r3, r1, 0, "HermesInternal"
 // CHKBC-NEXT:    GetByIdShort      r2, r3, 1, "concat"
@@ -202,14 +202,14 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    bc 58: line 26 col 7
 // CHKBC-NEXT:    bc 69: line 26 col 10
 // CHKBC-NEXT:    bc 74: line 26 col 6
-// CHKBC-NEXT:  0x0022  function idx 1, starts at line 12 col 1
+// CHKBC-NEXT:  0x0024  function idx 1, starts at line 12 col 1
 // CHKBC-NEXT:    bc 3: line 13 col 23
-// CHKBC-NEXT:  0x0029  function idx 2, starts at line 17 col 1
+// CHKBC-NEXT:  0x002c  function idx 2, starts at line 17 col 1
 // CHKBC-NEXT:    bc 8: line 18 col 25
 // CHKBC-NEXT:    bc 18: line 19 col 16
 // CHKBC-NEXT:    bc 27: line 19 col 16
-// CHKBC-NEXT:  0x0036  function idx 3, starts at line 22 col 1
+// CHKBC-NEXT:  0x003a  function idx 3, starts at line 22 col 1
 // CHKBC-NEXT:    bc 2: line 23 col 3
 // CHKBC-NEXT:    bc 8: line 23 col 24
 // CHKBC-NEXT:    bc 17: line 23 col 24
-// CHKBC-NEXT:  0x0043  end of debug source table
+// CHKBC-NEXT:  0x0048  end of debug source table

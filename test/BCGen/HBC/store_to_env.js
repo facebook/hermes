@@ -63,7 +63,7 @@ function foo() {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(1 params, 12 registers, 1 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
 // CHECK-NEXT:    CreateFunctionEnvironment r1, 3
 // CHECK-NEXT:    LoadConstInt      r0, 1234
 // CHECK-NEXT:    StoreNPToEnvironment r1, 0, r0
@@ -80,7 +80,7 @@ function foo() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<bar>(1 params, 16 registers, 2 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0017, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    LoadFromEnvironment r1, r3, 0
 // CHECK-NEXT:    LoadConstUInt8    r0, 1
@@ -112,13 +112,13 @@ function foo() {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 14: line 10 col 1
-// CHECK-NEXT:  0x000a  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x000b  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 15: line 14 col 21
 // CHECK-NEXT:    bc 21: line 14 col 27
 // CHECK-NEXT:    bc 28: line 14 col 27
-// CHECK-NEXT:  0x0017  function idx 2, starts at line 17 col 18
+// CHECK-NEXT:  0x0019  function idx 2, starts at line 17 col 18
 // CHECK-NEXT:    bc 20: line 21 col 9
 // CHECK-NEXT:    bc 32: line 21 col 14
 // CHECK-NEXT:    bc 37: line 22 col 9
 // CHECK-NEXT:    bc 47: line 22 col 14
-// CHECK-NEXT:  0x0027  end of debug source table
+// CHECK-NEXT:  0x002a  end of debug source table

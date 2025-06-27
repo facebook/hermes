@@ -115,7 +115,7 @@ function *args() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<loop>(2 params, 22 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0010, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -242,7 +242,7 @@ function *args() {
 // CHECK-NEXT:    Unreachable
 
 // CHECK:Function<args>(1 params, 20 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x002b, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -359,15 +359,15 @@ function *args() {
 // CHECK-NEXT:    bc 11: line 10 col 1
 // CHECK-NEXT:    bc 23: line 10 col 1
 // CHECK-NEXT:    bc 36: line 10 col 1
-// CHECK-NEXT:  0x0010  function idx 3, starts at line 10 col 1
+// CHECK-NEXT:  0x0011  function idx 3, starts at line 10 col 1
 // CHECK-NEXT:    bc 114: line 12 col 10
 // CHECK-NEXT:    bc 157: line 13 col 5
 // CHECK-NEXT:    bc 248: line 12 col 10
 // CHECK-NEXT:    bc 284: line 13 col 14
 // CHECK-NEXT:    bc 294: line 13 col 12
 // CHECK-NEXT:    bc 392: line 13 col 5
-// CHECK-NEXT:  0x0029  function idx 4, starts at line 18 col 1
+// CHECK-NEXT:  0x002b  function idx 4, starts at line 18 col 1
 // CHECK-NEXT:    bc 153: line 19 col 3
 // CHECK-NEXT:    bc 219: line 19 col 18
 // CHECK-NEXT:    bc 317: line 19 col 3
-// CHECK-NEXT:  0x0039  end of debug source table
+// CHECK-NEXT:  0x003c  end of debug source table

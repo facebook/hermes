@@ -190,4 +190,4 @@
 // HBC:Debug source table:
 // HBC-NEXT:  0x0000  function idx 0, starts at line 14 col 1
 // HBC-NEXT:    bc 11: line 42 col 22
-// HBC-NEXT:  0x0008  end of debug source table
+// HBC-NEXT:  0x0009  end of debug source table

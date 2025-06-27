@@ -27,6 +27,7 @@ struct FunctionDebugInfoDeserializer {
     functionIndex_ = decode1Int();
     current_.line = decode1Int();
     current_.column = decode1Int();
+    current_.envIdx = decode1Int();
   }
 
   /// \return the next debug location, or None if we reach the end.
@@ -41,9 +42,10 @@ struct FunctionDebugInfoDeserializer {
     }
     current_.address += addressDelta;
 
-    // ldelta encoding: bits 2..32 contain the line delta.
+    // ldelta encoding: bits 3..32 contain the line delta.
     // Bit 0 indicates the presence of location information.
     // Bit 1 indicates the presence of statement information.
+    // Bit 2 indicates the presence of envIdx information.
 
     int64_t lineDelta = decode1Int();
     if ((lineDelta & 1) == 0) {
@@ -53,13 +55,21 @@ struct FunctionDebugInfoDeserializer {
 
     int64_t columnDelta = decode1Int();
     int64_t statementDelta = 0;
-    if ((lineDelta & 2) != 0)
+    if ((lineDelta & 2) != 0) {
       statementDelta = decode1Int();
-    lineDelta >>= 2;
+    }
+
+    int64_t envIdxDelta = 0;
+    if ((lineDelta & 4) != 0) {
+      envIdxDelta = decode1Int();
+    }
+
+    lineDelta >>= 3;
 
     current_.line += lineDelta;
     current_.column += columnDelta;
     current_.statement += statementDelta;
+    current_.envIdx += envIdxDelta;
     return current_;
   }
 
@@ -318,6 +328,13 @@ void DebugInfo::populateSourceMap(
   sourceMap->addFunctionOffsets(std::move(functionOffsets), segmentID);
 }
 
+uint32_t DebugInfoGenerator::addScopingInfo(
+    const DebugScopingInfo &scopingInfo) {
+  // TODO: we should actually attempt to unique these elements.
+  debugInfo_.getScopingInfoMut().push_back(scopingInfo);
+  return debugInfo_.getScopingInfoMut().size();
+}
+
 uint32_t DebugInfoGenerator::appendSourceLocations(
     const DebugSourceLocation &start,
     uint32_t functionIndex,
@@ -344,6 +361,7 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   appendSignedLEB128(sourcesData, functionIndex);
   appendSignedLEB128(sourcesData, start.line);
   appendSignedLEB128(sourcesData, start.column);
+  appendSignedLEB128(sourcesData, start.envIdx);
 
   // The previous real source location that has been emitted.
   const DebugSourceLocation *previous = &start;
@@ -368,18 +386,26 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
       int64_t ldelta = delta(next.line, previous->line);
       int32_t cdelta = delta(next.column, previous->column);
       int32_t sdelta = delta(next.statement, previous->statement);
+      int32_t envIdxDelta = delta(next.envIdx, previous->envIdx);
 
       // Encode the presence of location info as a bit in the line delta,
       // which is usually very small.
-      // ldelta encoding: bits 2..32 contain the line delta.
+      // ldelta encoding: bits 3..32 contain the line delta.
       // Bit 0 indicates the presence of location information.
       // Bit 1 indicates the presence of statement information.
+      // Bit 2 indicates the presence of envIdx information.
       // This is only ever decoded in FunctionDebugInfoDeserializer.
-      ldelta = (ldelta << 2) | ((sdelta != 0) << 1) | 1;
+      ldelta =
+          (ldelta << 3) | ((envIdxDelta != 0) << 2) | ((sdelta != 0) << 1) | 1;
       appendSignedLEB128(sourcesData, ldelta);
       appendSignedLEB128(sourcesData, cdelta);
+
       if (sdelta)
         appendSignedLEB128(sourcesData, sdelta);
+
+      if (envIdxDelta)
+        appendSignedLEB128(sourcesData, envIdxDelta);
+
       previous = &next;
     } else {
       // There is no location.

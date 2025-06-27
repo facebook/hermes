@@ -78,7 +78,7 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<require>(2 params, 18 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000a, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:    LoadConstZero     r0
 // CHECK-NEXT:    JStrictEqual      L1, r0, r2
@@ -112,7 +112,7 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<modFact0>(5 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0027, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r1, 4
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r2, r0, Function<bar>
@@ -120,7 +120,7 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<modFact1>(5 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x002e, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0031, lexical 0x0000
 // CHECK-NEXT:    LoadParam         r1, 4
 // CHECK-NEXT:    LoadConstUndefined r5
 // CHECK-NEXT:    LoadParam         r2, 2
@@ -144,7 +144,7 @@ function require(modIdx) {
 // CHECK-NEXT:  0x0000  function idx 0, starts at line 17 col 1
 // CHECK-NEXT:    bc 0: line 17 col 1
 // CHECK-NEXT:    bc 14: line 17 col 1
-// CHECK-NEXT:  0x000a  function idx 1, starts at line 17 col 1
+// CHECK-NEXT:  0x000b  function idx 1, starts at line 17 col 1
 // CHECK-NEXT:    bc 22: line 36 col 21
 // CHECK-NEXT:    bc 27: line 36 col 30
 // CHECK-NEXT:    bc 33: line 36 col 35
@@ -153,11 +153,11 @@ function require(modIdx) {
 // CHECK-NEXT:    bc 66: line 28 col 30
 // CHECK-NEXT:    bc 72: line 28 col 35
 // CHECK-NEXT:    bc 92: line 28 col 9
-// CHECK-NEXT:  0x0027  function idx 2, starts at line 22 col 7
+// CHECK-NEXT:  0x0029  function idx 2, starts at line 22 col 7
 // CHECK-NEXT:    bc 10: line 26 col 21
-// CHECK-NEXT:  0x002e  function idx 3, starts at line 33 col 7
+// CHECK-NEXT:  0x0031  function idx 3, starts at line 33 col 7
 // CHECK-NEXT:    bc 8: line 34 col 28
 // CHECK-NEXT:    bc 15: line 34 col 35
 // CHECK-NEXT:    bc 20: line 34 col 35
 // CHECK-NEXT:    bc 24: line 34 col 19
-// CHECK-NEXT:  0x003e  end of debug source table
+// CHECK-NEXT:  0x0042  end of debug source table

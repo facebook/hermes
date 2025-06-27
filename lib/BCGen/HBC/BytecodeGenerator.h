@@ -202,6 +202,12 @@ class BytecodeModuleGenerator {
     return debugInfoGenerator_.addFilename(filename);
   }
 
+  /// Add scoping info to the scoping info table.
+  /// \return the index of the scoping info.
+  uint32_t addScopingInfo(const DebugScopingInfo &scopingInfo) {
+    return debugInfoGenerator_.addScopingInfo(scopingInfo);
+  }
+
   /// Set the segment ID for this module.
   void setSegmentID(uint32_t id) {
     bm_.setSegmentID(id);
@@ -420,6 +426,15 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     return BMGen_.addFilename(filename);
+  }
+
+  /// Add scoping info to the scoping info table.
+  /// \return the index of the scoping info.
+  uint32_t addScopingInfo(const DebugScopingInfo &scopingInfo) {
+    assert(
+        !complete_ &&
+        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
+    return BMGen_.addScopingInfo(scopingInfo);
   }
 
   void addExceptionHandler(HBCExceptionHandlerInfo info) {

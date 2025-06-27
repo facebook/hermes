@@ -63,4 +63,4 @@ foo(0,0,1);
 // CHECK-NEXT:    bc 14: line 9 col 1
 // CHECK-NEXT:    bc 20: line 12 col 1
 // CHECK-NEXT:    bc 30: line 12 col 4
-// CHECK-NEXT:  0x0010  end of debug source table
+// CHECK-NEXT:  0x0011  end of debug source table
