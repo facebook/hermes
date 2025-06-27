@@ -1285,8 +1285,8 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
 Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
     VariableScope *targetVarScope) {
   auto [startScope, startVarScope] = getResolveScopeStart(
-      curFunction()->curScope,
-      curFunction()->curScope->getVariableScope(),
+      curFunction()->curScope(),
+      curFunction()->curScope()->getVariableScope(),
       targetVarScope);
   if (startVarScope == targetVarScope)
     return startScope;
@@ -1299,9 +1299,9 @@ VariableScope *FunctionContext::getOrCreateInnerVariableScope(
   auto [it, inserted] = innerScopes_.try_emplace(node, nullptr);
   if (inserted)
     it->second =
-        irGen_->Builder.createVariableScope(curScope->getVariableScope());
+        irGen_->Builder.createVariableScope(currentScope_->getVariableScope());
   assert(
-      it->second->getParentScope() == curScope->getVariableScope() &&
+      it->second->getParentScope() == currentScope_->getVariableScope() &&
       "Inner scope created from multiple contexts");
   return it->second;
 }

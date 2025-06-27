@@ -300,7 +300,7 @@ void ESTreeIRGen::genWhileLoop(ESTree::WhileStatementNode *loop) {
   Builder.setInsertionBlock(bodyBlock);
 
   // Save the outer scope in case we create an inner scope.
-  auto *outerScope = curFunction()->curScope;
+  auto *outerScope = curFunction()->curScope();
 
   // If the body captures, create an inner scope for it. Note that unlike for
   // loops, we don't care whether the test expression captures, since the loop
@@ -345,7 +345,7 @@ void ESTreeIRGen::genDoWhileLoop(ESTree::DoWhileStatementNode *loop) {
   Builder.setInsertionBlock(bodyBlock);
 
   // Save the outer scope in case we create an inner scope.
-  auto *outerScope = curFunction()->curScope;
+  auto *outerScope = curFunction()->curScope();
 
   if (Mod->getContext().getEnableES6BlockScoping() &&
       !treeDoesNotCapture(loop->_body)) {
@@ -458,7 +458,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   llvh::SmallVector<VarMapping, 2> vars{};
 
   // Record the enclosing scope, in case we create an inner scope.
-  auto *outerScope = curFunction()->curScope;
+  auto *outerScope = curFunction()->curScope();
   // Keep track of the scope to use when emitting the body, which is just the
   // enclosing scope if no additional scope is created.
   auto *bodyScope = outerScope;
@@ -637,7 +637,7 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // Initialize the goto labels.
   curFunction()->initLabel(loop, exitBlock, updateBlock);
 
-  auto *outerScope = curFunction()->curScope;
+  auto *outerScope = curFunction()->curScope();
 
   // Create an inner scope for the loop.
   auto *loopVarScope = curFunction()->getOrCreateInnerVariableScope(loop);
@@ -743,7 +743,7 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
 }
 
 void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
-  auto *outerScope = curFunction()->curScope;
+  auto *outerScope = curFunction()->curScope();
 
   // If block scoping is enabled, check if anything in the loop might capture,
   // so we know whether to create inner scopes for the loop.
@@ -856,7 +856,7 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
 
   // Create a scope for the body if needed.
   if (createInnerScopes) {
-    makeNewScope(curFunction()->curScope->getVariableScope(), outerScope);
+    makeNewScope(curFunction()->curScope()->getVariableScope(), outerScope);
   }
 
   // The left hand side of For-In statements can be any lhs expression
@@ -884,7 +884,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
     return genForOfFastArrayStatement(forOfStmt, type);
   }
 
-  auto *outerScope = curFunction()->curScope;
+  auto *outerScope = curFunction()->curScope();
 
   // If block scoping is enabled, check if anything in the loop might capture,
   // so we know whether to create inner scopes for the loop.
@@ -927,7 +927,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
 
   // Create a scope for the body if needed.
   if (createInnerScopes) {
-    makeNewScope(curFunction()->curScope->getVariableScope(), outerScope);
+    makeNewScope(curFunction()->curScope()->getVariableScope(), outerScope);
   }
 
   emitTryCatchScaffolding(
@@ -980,7 +980,7 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
 void ESTreeIRGen::genForOfFastArrayStatement(
     ESTree::ForOfStatementNode *forOfStmt,
     flow::ArrayType *type) {
-  auto *outerScope = curFunction()->curScope;
+  auto *outerScope = curFunction()->curScope();
 
   // If block scoping is enabled, check if anything in the loop might capture,
   // so we know whether to create inner scopes for the loop.
@@ -1031,7 +1031,7 @@ void ESTreeIRGen::genForOfFastArrayStatement(
 
   // Create a scope for the body if needed.
   if (createInnerScopes) {
-    makeNewScope(curFunction()->curScope->getVariableScope(), outerScope);
+    makeNewScope(curFunction()->curScope()->getVariableScope(), outerScope);
   }
 
   // Load the element from the array.

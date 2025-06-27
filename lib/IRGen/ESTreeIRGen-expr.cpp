@@ -1495,11 +1495,11 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     // Capture the value of this object literal, which will become the home
     // object for any methods/accessors defined in this literal.
     capturedObj = Builder.createVariable(
-        curFunction()->curScope->getVariableScope(),
+        curFunction()->curScope()->getVariableScope(),
         "?obj",
         Type::createObject(),
         true);
-    Builder.createStoreFrameInst(curFunction()->curScope, Obj, capturedObj);
+    Builder.createStoreFrameInst(curFunction()->curScope(), Obj, capturedObj);
   }
 
   // Initialize all properties. We check whether the value of each property

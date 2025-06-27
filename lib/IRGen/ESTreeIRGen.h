@@ -143,6 +143,9 @@ class FunctionContext {
   /// once.
   llvh::DenseMap<ESTree::Node *, VariableScope *> innerScopes_;
 
+  /// The CreateScopeInst that creates the scope for this function.
+  CreateScopeInst *currentScope_{};
+
  public:
   /// This is the actual function associated with this context.
   Function *const function;
@@ -216,9 +219,6 @@ class FunctionContext {
   /// their declaring function.
   llvh::DenseSet<Variable *> initializedTDZVars{};
 
-  /// The CreateScopeInst that creates the scope for this function.
-  CreateScopeInst *curScope{};
-
   /// Information about the current enclosing typed class.
   TypedClassContext typedClassContext{};
 
@@ -263,6 +263,13 @@ class FunctionContext {
   /// function context.
   bool hasLegacyClassContext() const {
     return legacyClassContext != nullptr;
+  }
+
+  CreateScopeInst *curScope() const {
+    return currentScope_;
+  }
+  void setCurScope(CreateScopeInst *scope) {
+    currentScope_ = scope;
   }
 
   /// Generate a unique string that represents a temporary value. The string
@@ -338,7 +345,7 @@ class SurroundingTry {
       GenFinalizerCB genFinalizer = {})
       : functionContext_(functionContext),
         outer(functionContext->surroundingTry),
-        scope(functionContext->curScope),
+        scope(functionContext->curScope()),
         node(node),
         catchBlock(catchBlock),
         tryEndLoc(tryEndLoc),

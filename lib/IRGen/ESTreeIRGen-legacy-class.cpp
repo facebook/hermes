@@ -73,12 +73,12 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         if (isStatic) {
           if (!staticBrand) {
             staticBrand = Builder.createVariable(
-                curFunction()->curScope->getVariableScope(),
+                curFunction()->curScope()->getVariableScope(),
                 Twine("?static_brand_") + className.str(),
                 Type::createPrivateName(),
                 /* hidden */ true);
             Builder.createStoreFrameInst(
-                curFunction()->curScope,
+                curFunction()->curScope(),
                 Builder.createCreatePrivateNameInst(
                     Builder.getLiteralString(className)),
                 staticBrand);
@@ -87,12 +87,12 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         }
         if (!instanceBrand) {
           instanceBrand = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
+              curFunction()->curScope()->getVariableScope(),
               Twine("?instance_brand_") + className.str(),
               Type::createPrivateName(),
               /* hidden */ true);
           Builder.createStoreFrameInst(
-              curFunction()->curScope,
+              curFunction()->curScope(),
               Builder.createCreatePrivateNameInst(
                   Builder.getLiteralString(className)),
               instanceBrand);
@@ -112,7 +112,7 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         Variable *nameVar;
         if (!decl->customData) {
           nameVar = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
+              curFunction()->curScope()->getVariableScope(),
               decl->name,
               Type::createPrivateName(),
               /* hidden */ true);
@@ -122,7 +122,7 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         }
         // Initialize private names to their values.
         Builder.createStoreFrameInst(
-            curFunction()->curScope,
+            curFunction()->curScope(),
             Builder.createCreatePrivateNameInst(
                 Builder.getLiteralString(decl->name)),
             nameVar);
@@ -133,7 +133,7 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateNameFunctionTable::SingleFunctionEntry*.
         if (!decl->customData) {
           Variable *methodClosure = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
+              curFunction()->curScope()->getVariableScope(),
               decl->name,
               Type::createObject(),
               /* hidden */ true);
@@ -150,7 +150,7 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateNameFunctionTable::SingleFunctionEntry*.
         if (!decl->customData) {
           Variable *getterClosure = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
+              curFunction()->curScope()->getVariableScope(),
               Twine("?private_get_") + decl->name.str(),
               Type::createObject(),
               /* hidden */ true);
@@ -167,7 +167,7 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateNameFunctionTable::SingleFunctionEntry*.
         if (!decl->customData) {
           Variable *setterClosure = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
+              curFunction()->curScope()->getVariableScope(),
               Twine("?private_set_") + decl->name.str(),
               Type::createObject(),
               /* hidden */ true);
@@ -184,12 +184,12 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         // PrivateNameFunctionTable::GetterSetter*.
         if (!decl->customData) {
           Variable *getterClosure = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
+              curFunction()->curScope()->getVariableScope(),
               Twine("?private_get_") + decl->name.str(),
               Type::createObject(),
               /* hidden */ true);
           Variable *setterClosure = Builder.createVariable(
-              curFunction()->curScope->getVariableScope(),
+              curFunction()->curScope()->getVariableScope(),
               Twine("?private_set_") + decl->name.str(),
               Type::createObject(),
               /* hidden */ true);
@@ -360,7 +360,7 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
                                    : Builder.getEmptySentinel();
 
   emitPrivateNameDeclarations(classNode->getScope(), className);
-  auto *curScope = curFunction()->curScope;
+  auto *curScope = curFunction()->curScope();
   auto *curVarScope = curScope->getVariableScope();
   // Holds the .prototype of the class.
   Variable *clsPrototypeVar = Builder.createVariable(
@@ -390,14 +390,14 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   if (instElemInitFunc) {
     CreateFunctionInst *createInstElemInitFunc =
         Builder.createCreateFunctionInst(
-            curFunction()->curScope, instElemInitFunc);
+            curFunction()->curScope(), instElemInitFunc);
     Variable *instElemInitFuncVar = Builder.createVariable(
-        curFunction()->curScope->getVariableScope(),
+        curFunction()->curScope()->getVariableScope(),
         (llvh::Twine("<instElemInitFunc:") + className.str() + ">"),
         Type::createObject(),
         /* hidden */ true);
     Builder.createStoreFrameInst(
-        curFunction()->curScope, createInstElemInitFunc, instElemInitFuncVar);
+        curFunction()->curScope(), createInstElemInitFunc, instElemInitFuncVar);
     curFunction()->legacyClassContext->instElemInitFuncVar =
         instElemInitFuncVar;
   }
@@ -599,12 +599,12 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   if (Function *staticElementsCode =
           genStaticElementsInitFunction(classNode, className)) {
     CreateFunctionInst *staticElementsFunc = Builder.createCreateFunctionInst(
-        curFunction()->curScope, staticElementsCode);
+        curFunction()->curScope(), staticElementsCode);
     Builder.createCallInst(
         staticElementsFunc,
         staticElementsCode,
         /* calleeIsAlwaysClosure */ Builder.getLiteralBool(true),
-        /* env */ curFunction()->curScope,
+        /* env */ curFunction()->curScope(),
         /*newTarget*/ Builder.getLiteralUndefined(),
         createClass,
         /*args*/ {});
@@ -834,7 +834,7 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
                       isDerived = funcInfo->constructorKind ==
                           sema::FunctionInfo::ConstructorKind::Derived,
                       parentScope =
-                          curFunction()->curScope->getVariableScope()] {
+                          curFunction()->curScope()->getVariableScope()] {
     FunctionContext newFunctionContext{this, consFunc, funcInfo};
     newFunctionContext.superClassNode_ = superClassNode;
     newFunctionContext.legacyClassContext = LC;
@@ -853,7 +853,7 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
     if (isDerived) {
       // All derived constructors must have a captured state `this`.
       curFunction()->capturedState.thisVal = Builder.createVariable(
-          curFunction()->curScope->getVariableScope(),
+          curFunction()->curScope()->getVariableScope(),
           Builder.createIdentifier("?CHECKED_this"),
           Type::createObject(),
           true);
@@ -871,7 +871,7 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
       // Construct call always returns object.
       initializedThisVal->setType(Type::createObject());
       Builder.createStoreFrameInst(
-          curFunction()->curScope,
+          curFunction()->curScope(),
           initializedThisVal,
           newFunctionContext.capturedState.thisVal);
       emitLegacyInstanceElementsInitCall();
@@ -911,7 +911,8 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
                       legacyClassNode = legacyClassNode,
                       typedClassContext = curFunction()->typedClassContext,
                       legacyClassContext = curFunction()->legacyClassContext,
-                      parentScope = curFunction()->curScope->getVariableScope(),
+                      parentScope =
+                          curFunction()->curScope()->getVariableScope(),
                       consName] {
     FunctionContext newFunctionContext{
         this, staticElementsFunc, staticElementsFuncInfo};
@@ -997,7 +998,7 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
              staticBlockFunc,
              typedClassContext = curFunction()->typedClassContext,
              legacyClassContext = curFunction()->legacyClassContext,
-             parentScope = curFunction()->curScope->getVariableScope(),
+             parentScope = curFunction()->curScope()->getVariableScope(),
              SB] {
               FunctionContext newFunctionContext{
                   this, staticBlockFunc, SB->functionInfo};
@@ -1025,12 +1026,12 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
             SB, ExtraKey::Normal, staticBlockFunc, compileStaticBlock);
         CreateFunctionInst *staticBlockClosure =
             Builder.createCreateFunctionInst(
-                curFunction()->curScope, staticBlockFunc);
+                curFunction()->curScope(), staticBlockFunc);
         Builder.createCallInst(
             staticBlockClosure,
             staticBlockFunc,
             /* calleeIsAlwaysClosure */ true,
-            /* env */ curFunction()->curScope,
+            /* env */ curFunction()->curScope(),
             /*newTarget*/ Builder.getLiteralUndefined(),
             genThisExpression(),
             /*args*/ {});
@@ -1072,7 +1073,8 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
                       legacyClassNode = legacyClassNode,
                       typedClassContext = curFunction()->typedClassContext,
                       legacyClassContext = curFunction()->legacyClassContext,
-                      parentScope = curFunction()->curScope->getVariableScope(),
+                      parentScope =
+                          curFunction()->curScope()->getVariableScope(),
                       homeObjectVar] {
     FunctionContext newFunctionContext{this, initFunc, initFuncInfo};
     newFunctionContext.typedClassContext = typedClassContext;
@@ -1204,12 +1206,12 @@ void ESTreeIRGen::emitLegacyBaseClassThisInit() {
 
   // Create a variable for `this` and store the new object we created.
   curFunction()->capturedState.thisVal = Builder.createVariable(
-      curFunction()->curScope->getVariableScope(),
+      curFunction()->curScope()->getVariableScope(),
       Builder.createIdentifier("this"),
       Type::createObject(),
       true);
   Builder.createStoreFrameInst(
-      curFunction()->curScope, newObj, curFunction()->capturedState.thisVal);
+      curFunction()->curScope(), newObj, curFunction()->capturedState.thisVal);
 }
 
 void ESTreeIRGen::emitLegacyInstanceElementsInitCall() {

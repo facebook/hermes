@@ -130,7 +130,7 @@ void ESTreeIRGen::genFinallyBeforeControlChange(
       llvh::SaveAndRestore<SurroundingTry *> trySR{
           curFunction()->surroundingTry, sourceTry->outer};
       // Restore the surrounding scope of the finally block.
-      auto *existingScope = curFunction()->curScope;
+      auto *existingScope = curFunction()->curScope();
       restoreScope(sourceTry->scope);
       sourceTry->genFinalizer(sourceTry->node, cfc, continueTarget);
       restoreScope(existingScope);
