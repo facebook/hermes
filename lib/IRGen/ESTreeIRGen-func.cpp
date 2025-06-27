@@ -116,6 +116,8 @@ Value *ESTreeIRGen::genFunctionExpression(
   }
 
   // This is the possibly empty scope containing the function expression name.
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, FE->getScope());
   emitScopeDeclarations(FE->getScope());
 
   auto *id = llvh::cast_or_null<ESTree::IdentifierNode>(FE->_id);
@@ -248,6 +250,9 @@ NormalFunction *ESTreeIRGen::genCapturingFunction(
     FunctionContext newFunctionContext{
         this, newFunc, functionNode->getSemInfo()};
     newFunctionContext.legacyClassContext = legacyClsCtx;
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     // Propagate captured "this", "new.target" and "arguments" from parents.
     curFunction()->capturedState = capturedState;
@@ -350,6 +355,9 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
     newFunctionContext.typedClassContext = typedClassContext;
     newFunctionContext.capturedState.homeObject = homeObject;
     newFunctionContext.legacyClassContext = legacyClassContext;
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     if (isGeneratorInnerFunction) {
       // ResumeGeneratorInst at the beginning of the function, to allow for the
@@ -508,6 +516,9 @@ Function *ESTreeIRGen::genGeneratorFunction(
                       parentScope,
                       homeObject]() {
     FunctionContext outerFnContext{this, outerFn, functionNode->getSemInfo()};
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     // We pass InitES5CaptureState::No to emitFunctionPrologue because generator
     // functions do not create a scope and so we shouldn't be trying to capture
@@ -643,6 +654,9 @@ Function *ESTreeIRGen::genAsyncFunction(
                       capturedState,
                       isAsyncArrow]() {
     FunctionContext asyncFnContext{this, asyncFn, functionNode->getSemInfo()};
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     InitES5CaptureState shouldCapture = InitES5CaptureState::Yes;
     if (isAsyncArrow) {
@@ -1017,6 +1031,8 @@ void ESTreeIRGen::emitHoistedFunctionDeclaration(
 void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   auto *newFunc = curFunction()->function;
   sema::FunctionInfo *semInfo = funcNode->getSemInfo();
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, semInfo->getParameterScope());
 
   LLVM_DEBUG(llvh::dbgs() << "IRGen function parameters.\n");
 
@@ -1152,8 +1168,6 @@ void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
     }
   }
 
-  curFunction()->function->clearStatementCount();
-
   onCompiledFunction(curFunction()->function);
 }
 
@@ -1182,6 +1196,9 @@ Function *ESTreeIRGen::genFieldInitFunction() {
                           curFunction()->curScope->getVariableScope()] {
     FunctionContext newFunctionContext{this, initFunc, initFuncInfo};
     newFunctionContext.typedClassContext = typedClassContext;
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     auto *prologueBB = Builder.createBasicBlock(initFunc);
     Builder.setInsertionBlock(prologueBB);
@@ -1374,6 +1391,9 @@ Function *ESTreeIRGen::genSyntaxErrorFunction(
 }
 
 void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
+  curFunction()->function->clearStatementCount();
+  curFunction()->function->clearLexicalScope();
+
   // Delete any unreachable blocks produced while emitting this function.
   deleteUnreachableBasicBlocks(curFunction()->function);
 

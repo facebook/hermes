@@ -177,6 +177,8 @@ void ESTreeIRGen::doIt(llvh::StringRef topLevelFunctionName) {
   // Function context for topLevelFunction.
   FunctionContext topLevelFunctionContext{
       this, topLevelFunction, Program->getSemInfo()};
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, Program->getSemInfo()->getFunctionBodyScope());
 
   emitFunctionPrologue(
       Program,

@@ -838,6 +838,9 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
     FunctionContext newFunctionContext{this, consFunc, funcInfo};
     newFunctionContext.superClassNode_ = superClassNode;
     newFunctionContext.legacyClassContext = LC;
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     auto *entryBB = Builder.createBasicBlock(consFunc);
     emitFunctionPrologue(
@@ -916,6 +919,9 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
     newFunctionContext.legacyClassContext = legacyClassContext;
     newFunctionContext.capturedState.homeObject =
         legacyClassContext->constructor;
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     auto *prologueBB = Builder.createBasicBlock(staticElementsFunc);
     Builder.setInsertionBlock(prologueBB);
@@ -995,6 +1001,8 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
              SB] {
               FunctionContext newFunctionContext{
                   this, staticBlockFunc, SB->functionInfo};
+              Function::ScopedLexicalScopeChange lexScopeChange(
+                  curFunction()->function, SB->getScope());
               newFunctionContext.typedClassContext = typedClassContext;
               newFunctionContext.legacyClassContext = legacyClassContext;
               newFunctionContext.capturedState.homeObject =
@@ -1070,6 +1078,9 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
     newFunctionContext.typedClassContext = typedClassContext;
     newFunctionContext.legacyClassContext = legacyClassContext;
     newFunctionContext.capturedState.homeObject = homeObjectVar;
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function,
+        curFunction()->getSemInfo()->getFunctionBodyScope());
 
     auto *prologueBB = Builder.createBasicBlock(initFunc);
     Builder.setInsertionBlock(prologueBB);

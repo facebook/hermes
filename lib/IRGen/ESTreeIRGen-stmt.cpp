@@ -75,6 +75,8 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
 
   // IRGen the content of the block.
   if (auto *BS = llvh::dyn_cast<ESTree::BlockStatementNode>(stmt)) {
+    Function::ScopedLexicalScopeChange lexScopeChange(
+        curFunction()->function, BS->getScope());
     emitScopeDeclarations(BS->getScope());
     for (auto &Node : BS->_body) {
       genStatement(&Node);
@@ -473,6 +475,8 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
   }
 
   // Declarations created by the init statement.
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, loop->getScope());
   emitScopeDeclarations(loop->getScope());
 
   // If we are creating an inner scope, create a copy of each variable in the
@@ -646,6 +650,8 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   curFunction()->curScope = initScope;
 
   // Declarations created by the init statement.
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, loop->getScope());
   emitScopeDeclarations(loop->getScope());
 
   // Generate IR for the loop initialization.
@@ -757,6 +763,8 @@ void ESTreeIRGen::genForInStatement(ESTree::ForInStatementNode *ForInStmt) {
     curFunction()->curScope = initScope;
   }
 
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, ForInStmt->getScope());
   emitScopeDeclarations(ForInStmt->getScope());
 
   // The state of the enumerator. Notice that the instruction writes to the
@@ -899,6 +907,8 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
     curFunction()->curScope = initScope;
   }
 
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, forOfStmt->getScope());
   emitScopeDeclarations(forOfStmt->getScope());
 
   auto *function = Builder.getInsertionBlock()->getParent();
@@ -998,6 +1008,8 @@ void ESTreeIRGen::genForOfFastArrayStatement(
     curFunction()->curScope = innerScope;
   }
 
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, forOfStmt->getScope());
   emitScopeDeclarations(forOfStmt->getScope());
 
   auto *function = Builder.getInsertionBlock()->getParent();
@@ -1138,6 +1150,8 @@ bool ESTreeIRGen::areAllCasesConstant(
 void ESTreeIRGen::genSwitchStatement(ESTree::SwitchStatementNode *switchStmt) {
   LLVM_DEBUG(llvh::dbgs() << "IRGen 'switch' statement.\n");
 
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, switchStmt->getScope());
   emitScopeDeclarations(switchStmt->getScope());
 
   {

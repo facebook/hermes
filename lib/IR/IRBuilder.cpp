@@ -1474,6 +1474,18 @@ void IRBuilder::insert(Instruction *Inst) {
   }
   Inst->setStatementIndex(statement);
 
+  // Set the statement of the new instruction based on the current function's
+  // statement counter.
+  if (auto lexScope = getFunction()->getLexicalScope()) {
+    Inst->setLexicalScope(*lexScope);
+  } else {
+    // Try to inherit the lexical scope of the instruction we're inserting at.
+    Inst->setLexicalScope(
+        InsertionPoint != Block->getInstList().end()
+            ? InsertionPoint->getLexicalScope()
+            : nullptr);
+  }
+
   Inst->setLocation(Location);
 
   return justInsert(Inst);

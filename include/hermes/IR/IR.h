@@ -1457,6 +1457,10 @@ class Instruction
   /// If 0, then there is no corresponding source statement.
   uint32_t statementIndex_{0};
 
+  /// The enclosing lexical scope that existed when this instruction was
+  /// created. This is set by the IRBuilder.
+  sema::LexicalScope *lexicalScope_{nullptr};
+
  protected:
   explicit Instruction(ValueKind kind) : Value(kind), Parent(nullptr) {}
 
@@ -1542,6 +1546,13 @@ class Instruction
 
   uint32_t getStatementIndex() const {
     return statementIndex_;
+  }
+
+  void setLexicalScope(sema::LexicalScope *lexScope) {
+    lexicalScope_ = lexScope;
+  }
+  sema::LexicalScope *getLexicalScope() {
+    return lexicalScope_;
   }
 
   /// A debug utility that dumps the textual representation of the IR to the
@@ -1924,6 +1935,14 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// and have cleared it in preparation for lowering steps.
   OptValue<uint32_t> statementCount_{0};
 
+  /// The current sema::LexicalScope for the IR being generated in this
+  /// function.
+  /// lexicalScope_ can be null, indicating no lexical scope info is
+  /// available.
+  /// If lexicalScope_ is None we've completed IRGen and have cleared
+  /// it in preparation for lowering steps.
+  OptValue<sema::LexicalScope *> lexicalScope_{nullptr};
+
   /// The two fields below are used only in "opt-to-fixed-point" compilation
   /// mode.
 
@@ -2135,6 +2154,16 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     statementCount_ = llvh::None;
   }
 
+  OptValue<sema::LexicalScope *> getLexicalScope() const {
+    return lexicalScope_;
+  }
+  void setLexicalScope(sema::LexicalScope *lexScope) {
+    lexicalScope_ = lexScope;
+  }
+  void clearLexicalScope() {
+    lexicalScope_ = llvh::None;
+  }
+
   auto &getJSDynamicParams() {
     return jsDynamicParams_;
   }
@@ -2228,6 +2257,34 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   static bool classof(const Value *V) {
     return HERMES_IR_KIND_IN_CLASS(V->getKind(), Function);
   }
+
+  /// This is an RAII object that saves and restores the sema::LexicalScope of
+  /// the Function. This can only be used during IRGen, since this expects that
+  /// the lexical scope of the function is never `None` on construction.
+  class ScopedLexicalScopeChange {
+    ScopedLexicalScopeChange(const ScopedLexicalScopeChange &) = delete;
+    void operator=(const ScopedLexicalScopeChange &) = delete;
+
+    Function *F_;
+    sema::LexicalScope *oldLexicalScope_;
+
+   public:
+    explicit ScopedLexicalScopeChange(Function *F, sema::LexicalScope *newScope)
+        : F_(F), oldLexicalScope_(*F->getLexicalScope()) {
+      if (newScope)
+        F->setLexicalScope(newScope);
+    }
+
+    ~ScopedLexicalScopeChange() {
+      // If since the constructor has run, the lexical scope has been cleared
+      // out, we shouldn't attempt to set anything. The lexical scope being set
+      // to `None` indicates the end of IRGen for the function, so we shouldn't
+      // take it out of that state.
+      if (F_->getLexicalScope().hasValue()) {
+        F_->setLexicalScope(oldLexicalScope_);
+      }
+    }
+  };
 };
 
 class NormalFunction final : public Function {
