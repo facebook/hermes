@@ -212,13 +212,15 @@ bool coordsInLazyFunction(
 ///   Passed in as BCProvider to avoid BCProviderFromSrc dependencies in
 ///   CodeBlock (for simplicity).
 /// \param enclosingFuncID the ID of the function enclosing the new eval.
+/// \param lexScope the lexical scope to perform the compilation in.
 /// \return [success, errMsg] where errMsg is only populated when success is
 ///   false.
 std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     std::unique_ptr<Buffer> src,
     hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
-    const CompileFlags &compileFlags);
+    const CompileFlags &compileFlags,
+    void *lexScope);
 
 /// \return a vector of the number of variables at each stack frame depth in
 ///   the function with the given ID, index 0 is the function itself.

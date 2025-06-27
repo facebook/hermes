@@ -45,12 +45,15 @@ void createHermesBuiltins(Runtime &runtime);
 std::unique_ptr<JSLibStorage> createJSLibStorage();
 
 /// eval() entry point. Evaluate the given source \p utf8code within the given
-/// \p environment, using the given \p scopeChain to resolve identifiers.
+/// \p environment. If a local eval is desired, then both codeBlock and
+/// lexicalScope must be set.
+/// \p strictCaller if true, the compiled code will be in strict mode.
 /// \p thisArg is the initial "this" value of the function being evaluated.
 /// \p new.target is the initial "new.target" value of the function being
 /// evaluated.
 /// If \p singleFunction is set, require that the output be only a
 /// single function.
+/// \p lexicalScope the lexical scope to perform the eval in.
 /// \return the result of evaluation.
 CallResult<HermesValue> evalInEnvironment(
     Runtime &runtime,
@@ -60,7 +63,8 @@ CallResult<HermesValue> evalInEnvironment(
     const CodeBlock *codeBlock,
     Handle<> thisArg,
     Handle<> newTarget,
-    bool singleFunction);
+    bool singleFunction,
+    void *lexicalScope);
 
 /// If the target CJS module is not initialized, execute it.
 /// \param context the RequireContext to pass through the require.

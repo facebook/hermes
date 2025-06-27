@@ -122,11 +122,12 @@ bool SemanticResolver::runInScope(
     ESTree::ProgramNode *rootNode,
     sema::FunctionInfo *semInfo,
     bool parentHadSuperBinding) {
+  sema::LexicalScope *lexScope = semCtx_.getParentLexicalScope();
   llvh::SaveAndRestore<BindingTableScopePtrTy> setGlobalScope(
       globalScope_, semCtx_.getBindingTableGlobalScope());
 
-  assert(semInfo->bindingTableScope && "semInfo must have a scope");
-  bindingTable_.activateScope(semInfo->bindingTableScope);
+  assert(lexScope->bindingTableScope && "semInfo must have a scope");
+  bindingTable_.activateScope(lexScope->bindingTableScope);
   auto restoreScope = llvh::make_scope_exit([this]() {
     // Pop the scope to prepare for another run of SemanticResolver.
     bindingTable_.activateScope({});

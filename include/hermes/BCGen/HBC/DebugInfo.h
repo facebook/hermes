@@ -235,6 +235,14 @@ class DebugInfo {
   const std::vector<DebugScopingInfo> &getScopingInfo() const {
     return scopingInfo_;
   }
+  /// \return the debug scoping info specified by \p envIdx. This index is
+  /// 1-based.
+  const DebugScopingInfo &getScopingInfoAt(uint32_t envIdx) const {
+    assert(
+        envIdx &&
+        "envIdx of 0 does not represent an element in the side table.");
+    return scopingInfo_[envIdx - 1];
+  }
 
   DebugFileRegionList &getFilesMut() {
     return files_;

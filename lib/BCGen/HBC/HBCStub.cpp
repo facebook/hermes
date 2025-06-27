@@ -83,7 +83,8 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     std::unique_ptr<Buffer> src,
     hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
-    const CompileFlags &compileFlags) {
+    const CompileFlags &compileFlags,
+    void *lexScope) {
   return {nullptr, "Lean VM does not support bytecode generation"};
 }
 

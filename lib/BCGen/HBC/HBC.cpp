@@ -216,6 +216,8 @@ class EvalThreadData {
   uint32_t const enclosingFuncID;
   /// Input: The CompileFlags to use.
   const CompileFlags &compileFlags;
+  /// Input: the lexical scope to perform the eval in.
+  sema::LexicalScope *lexScope{};
   /// Output: whether the compilation succeeded.
   bool success = false;
   /// Output: Result if success=true.
@@ -227,11 +229,13 @@ class EvalThreadData {
       std::unique_ptr<Buffer> src,
       hbc::BCProviderFromSrc *provider,
       uint32_t enclosingFuncID,
-      const CompileFlags &compileFlags)
+      const CompileFlags &compileFlags,
+      sema::LexicalScope *scope)
       : src(std::move(src)),
         provider(provider),
         enclosingFuncID(enclosingFuncID),
-        compileFlags(compileFlags) {}
+        compileFlags(compileFlags),
+        lexScope(scope) {}
 };
 
 static void compileEvalWorker(void *argPtr) {
@@ -307,8 +311,8 @@ static void compileEvalWorker(void *argPtr) {
   // Make a new SemContext which is a child of the SemContext we're referring
   // to, allowing it to be freed when the eval is complete and the
   // BCProviderFromSrc is destroyed.
-  std::shared_ptr<sema::SemContext> semCtx =
-      std::make_shared<sema::SemContext>(context, provider->shareSemCtx());
+  std::shared_ptr<sema::SemContext> semCtx = std::make_shared<sema::SemContext>(
+      context, provider->shareSemCtx(), data->lexScope);
 
   // A non-null home object means the parent function context could reference
   // super.
@@ -434,7 +438,8 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     std::unique_ptr<Buffer> src,
     hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
-    const CompileFlags &compileFlags) {
+    const CompileFlags &compileFlags,
+    void *lexScope) {
   hbc::BCProviderFromSrc *providerFromSrc =
       llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
   if (!providerFromSrc) {
@@ -444,7 +449,11 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
   }
   // Use this callback-style API to reduce conflicts with stable for now.
   EvalThreadData data{
-      std::move(src), providerFromSrc, enclosingFuncID, compileFlags};
+      std::move(src),
+      providerFromSrc,
+      enclosingFuncID,
+      compileFlags,
+      static_cast<sema::LexicalScope *>(lexScope)};
   compileEvalWorker(&data);
 
   return data.success

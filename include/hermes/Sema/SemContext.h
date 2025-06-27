@@ -311,12 +311,9 @@ class FunctionInfo {
   /// True if this function came from a static block node.
   bool isStaticBlock = false;
 
-  /// Lazy compilation: the parent binding table scope of this function.
-  /// Eager/eval compilation: the binding table scope of this function.
-  /// In both cases, we're storing the parent of the code we want to eventually
-  /// compile - in the case of lazy compilation we're trying to compile this
-  /// function itself, while in eval we're going to compile (potentially many)
-  /// lexical children, so it's convenient to use the same field.
+  /// The parent binding table scope of this function. Storing the parent of the
+  /// code we want to eventually compile for lazy compilation - we're trying to
+  /// compile this function itself,
   BindingTableScopePtrTy bindingTableScope;
 
   /// How many labels have been allocated in this function so far.
@@ -394,9 +391,11 @@ class SemContext {
 
   /// Construct a SemContext with an optional parent.
   /// If a parent is provided, the binding table will be shared with the parent.
+  /// If \parent is non-null, then \p lexScope must also be non-null.
   explicit SemContext(
       Context &astContext,
-      const std::shared_ptr<SemContext> &parent = nullptr);
+      const std::shared_ptr<SemContext> &parent = nullptr,
+      LexicalScope *lexScope = nullptr);
 
   ~SemContext();
 
@@ -549,6 +548,10 @@ class SemContext {
     return root_->bindingTable_;
   }
 
+  LexicalScope *getParentLexicalScope() {
+    return parentLexScope_;
+  }
+
   /// This is an opaque data blob that SemContext will own, but never use. This
   /// is useful for IRGen to put information that it needs across lazy
   /// compilation invocations. Conceptually this could be modeled as a
@@ -564,6 +567,10 @@ class SemContext {
   /// Use shared_ptr because these will form a tree, and the parent can be freed
   /// when it has no users and no children.
   std::shared_ptr<SemContext> parent_;
+
+  /// The parent LexicalScope of this SemContext.
+  /// If null, this SemContext has no parent.
+  LexicalScope *parentLexScope_;
 
   /// Non-owning pointer to the root SemContext,
   /// used for efficiently finding the global scope/global function.

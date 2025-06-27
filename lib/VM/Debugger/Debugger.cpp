@@ -1233,23 +1233,54 @@ HermesValue Debugger::evalInFrame(
   struct : public vm::Locals {
     PinnedValue<> result;
     PinnedValue<> savedThrownValue;
+    PinnedValue<Environment> environment;
   } lv;
   LocalsRAII lraii{runtime_, &lv};
 
-  bool singleFunction = false;
-
-  // Environment may be undefined if it has not been created yet.
-  Handle<Environment> env = frameInfo->frame->getDebugEnvironmentHandle();
-  if (!env) {
-    // TODO: this comes about when we break in a function before its environment
-    // has been created. What we would like to do here is synthesize an
-    // environment with undefined for all locals, since no variables can have
-    // been defined yet, and link it to the parent scope. For now we just bail
-    // out.
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
+  // Trying to eval on a non-bytecode frame doesn't work.
+  if (!cb) {
     return HermesValue::encodeUndefinedValue();
   }
 
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
+  uint32_t offset;
+  if (frame == 0) {
+    // When frame is 0, the correct IP cannot be found anywhere in the
+    // JS call stack. That value only exists as a local variable in the C++
+    // interpreter stack, which is passed through to this point via the
+    // InterpreterState.
+    offset = state.offset;
+  } else {
+    auto savedIPFrameInfoOpt = runtime_.stackFrameInfoByIndex(frame - 1);
+    if (!savedIPFrameInfoOpt) {
+      return HermesValue::encodeUndefinedValue();
+    }
+    offset = cb->getOffsetOf(savedIPFrameInfoOpt->frame->getSavedIP());
+  }
+
+  auto srcLocOpt = cb->getSourceLocation(offset);
+  // This bytecode offset does not have sufficient information needed to perform
+  // a debugger eval here.
+  if (!srcLocOpt || srcLocOpt->envIdx == 0) {
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  const hbc::DebugInfo *debugInfo =
+      cb->getRuntimeModule()->getBytecode()->getDebugInfo();
+  auto &scopingInfo = debugInfo->getScopingInfoAt(srcLocOpt->envIdx);
+  assert(scopingInfo.lexicalScope() && "lexical scope cannot be null");
+  if (scopingInfo.isRegister()) {
+    auto *frameRegs = &frameInfo->frame.getFirstLocalRef();
+    lv.environment = vmcast<Environment>(frameRegs[scopingInfo.getRegister()]);
+  } else {
+    assert(scopingInfo.isSpilledSlot() && "expected spilled slot");
+    Environment *curEnv =
+        frameInfo->frame.getCalleeClosureUnsafe()->getEnvironment(runtime_);
+    lv.environment =
+        vmcast<Environment>(curEnv->slot(scopingInfo.getSpilledSlot()));
+  }
+
+  bool singleFunction = false;
 
   // If we are debugging inside of a class constuctor, we make an arrow
   // function for the eval expression. It would be invalid to call that arrow
@@ -1268,11 +1299,12 @@ HermesValue Debugger::evalInFrame(
       runtime_,
       src,
       false,
-      env,
+      lv.environment,
       cb,
       Handle<>(&frameInfo->frame->getThisArgRef()),
       newTarget,
-      singleFunction);
+      singleFunction,
+      scopingInfo.lexicalScope());
 
   // Check if an exception was thrown.
   if (result.getStatus() == ExecutionStatus::EXCEPTION) {

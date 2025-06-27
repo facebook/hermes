@@ -29,7 +29,8 @@ CallResult<HermesValue> evalInEnvironment(
     const CodeBlock *codeBlock,
     Handle<> thisArg,
     Handle<> newTarget,
-    bool singleFunction) {
+    bool singleFunction,
+    void *lexicalScope) {
   if (!runtime.enableEval) {
     return runtime.raiseEvalUnsupported(utf8code);
   }
@@ -66,6 +67,7 @@ CallResult<HermesValue> evalInEnvironment(
     }
 
     if (codeBlock) {
+      assert(lexicalScope && "lexical scope required for non-global eval");
       assert(
           !singleFunction && "Function constructor must always be global eval");
       // Local eval.
@@ -73,12 +75,18 @@ CallResult<HermesValue> evalInEnvironment(
       std::string error;
       executeInStack(
           runtime.getStackExecutor(),
-          [&newBCProvider, &error, &buffer, codeBlock, compileFlags]() {
+          [&newBCProvider,
+           &error,
+           &buffer,
+           codeBlock,
+           compileFlags,
+           lexicalScope]() {
             std::tie(newBCProvider, error) = hbc::compileEvalModule(
                 std::move(buffer),
                 codeBlock->getRuntimeModule()->getBytecode(),
                 codeBlock->getFunctionID(),
-                compileFlags);
+                compileFlags,
+                lexicalScope);
           });
       if (!newBCProvider) {
         return runtime.raiseSyntaxError(llvh::StringRef(error));
@@ -144,7 +152,8 @@ CallResult<HermesValue> directEval(
       codeBlock,
       runtime.getGlobal(),
       Runtime::getUndefinedValue(),
-      singleFunction);
+      singleFunction,
+      /* lexScope */ nullptr);
 }
 
 CallResult<HermesValue> eval(void *, Runtime &runtime) {

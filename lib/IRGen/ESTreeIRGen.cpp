@@ -208,7 +208,9 @@ void ESTreeIRGen::doIt(llvh::StringRef topLevelFunctionName) {
 
 Function *ESTreeIRGen::doItInScope(EvalCompilationDataInst *evalDataInst) {
   LLVM_DEBUG(llvh::dbgs() << "Processing program in scope.\n");
-  auto *varScope = evalDataInst->getFuncVarScope();
+  sema::LexicalScope *lexScope = semCtx_.getParentLexicalScope();
+  assert(lexScope && "SemCtx parent lexical scope cannot be null");
+  VariableScope *varScope = getLexicalScopeData(lexScope);
   assert(varScope && "eval IRGen cannot have null variable scope");
 
   ESTree::ProgramNode *Program;

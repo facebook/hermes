@@ -54,8 +54,18 @@ LexicalScope::LexicalScope(
 
 SemContext::SemContext(
     Context &astContext,
-    const std::shared_ptr<SemContext> &parent)
-    : kw(astContext), parent_(parent), root_(parent_ ? parent_->root_ : this) {}
+    const std::shared_ptr<SemContext> &parent,
+    LexicalScope *lexScope)
+    : kw(astContext),
+      parent_(parent),
+      parentLexScope_(lexScope),
+      root_(parent_ ? parent_->root_ : this) {
+#ifndef NDEBUG
+  assert(
+      (bool)parent_ == (bool)lexScope &&
+      "parent and lexical scope must both be null or non-null.");
+#endif
+}
 
 SemContext::~SemContext() = default;
 
