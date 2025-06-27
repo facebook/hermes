@@ -1230,8 +1230,12 @@ HermesValue Debugger::evalInFrame(
   if (!frameInfo) {
     return HermesValue::encodeUndefinedValue();
   }
+  struct : public vm::Locals {
+    PinnedValue<> result;
+    PinnedValue<> savedThrownValue;
+  } lv;
+  LocalsRAII lraii{runtime_, &lv};
 
-  MutableHandle<> resultHandle(runtime_);
   bool singleFunction = false;
 
   // Environment may be undefined if it has not been created yet.
@@ -1257,7 +1261,7 @@ HermesValue Debugger::evalInFrame(
 
   // Interpreting code requires that the `thrownValue_` is empty.
   // Save it temporarily so we can restore it after the evalInEnvironment.
-  Handle<> savedThrownValue = runtime_.makeHandle(runtime_.getThrownValue());
+  lv.savedThrownValue = runtime_.getThrownValue();
   runtime_.clearThrownValue();
 
   CallResult<HermesValue> result = evalInEnvironment(
@@ -1272,16 +1276,16 @@ HermesValue Debugger::evalInFrame(
 
   // Check if an exception was thrown.
   if (result.getStatus() == ExecutionStatus::EXCEPTION) {
-    resultHandle = getExceptionAsEvalResult(outMetadata);
+    lv.result = getExceptionAsEvalResult(outMetadata);
   } else {
     assert(
         !result->isEmpty() &&
         "eval result should not be empty unless exception was thrown");
-    resultHandle = *result;
+    lv.result = *result;
   }
 
-  runtime_.setThrownValue(savedThrownValue.getHermesValue());
-  return *resultHandle;
+  runtime_.setThrownValue(lv.savedThrownValue.getHermesValue());
+  return *lv.result;
 }
 
 llvh::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
