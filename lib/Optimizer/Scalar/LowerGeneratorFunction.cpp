@@ -85,6 +85,8 @@ emitReturnIterResultObject(IRBuilder &builder, Value *val, bool done) {
 /// be persisted between generator invocations is lifted to the outer function's
 /// environment.
 class LowerToStateMachine {
+  /// The module.
+  Module *M_;
   /// Outer generator function.
   GeneratorFunction *outer_;
   /// Inner generator function.
@@ -116,7 +118,8 @@ class LowerToStateMachine {
       Module *M,
       GeneratorFunction *outer,
       CreateGeneratorInst *CGI)
-      : outer_(outer),
+      : M_(M),
+        outer_(outer),
         inner_(llvh::cast<NormalFunction>(CGI->getFunctionCode())),
         CGI_(CGI),
         newOuterScope_(nullptr),
@@ -935,6 +938,10 @@ void LowerToStateMachine::moveCrossingValuesToOuter() {
   // additionally into the outer scope in this pass.
   moveInnerPhisToOuter(D);
 
+  // Only spill CreateScopeInst under full debug info. This is to ensure they
+  // can still be reached in debugging.
+  bool forceSpillCreateScope =
+      M_->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL;
   for (BasicBlock &BB : *inner_) {
     for (Instruction &I : BB) {
       // Store the illegal users separately as we cannot modify the users list
@@ -950,7 +957,8 @@ void LowerToStateMachine::moveCrossingValuesToOuter() {
           illegalUsers.push_back(user);
         }
       }
-      if (illegalUsers.empty())
+      if (!(forceSpillCreateScope && llvh::isa<CreateScopeInst>(I)) &&
+          illegalUsers.empty())
         continue;
 
       // The current instruction is used across a BB it does not dominate. Store
@@ -968,6 +976,13 @@ void LowerToStateMachine::moveCrossingValuesToOuter() {
       llvh::DenseMap<BasicBlock *, LoadFrameInst *> loadFramePerBlock;
       moveBuilderAfter(&I, builder_);
       builder_.createStoreFrameInst(getParentOuterScope_, &I, storedValueOfI);
+      // If this is a CreateScopeInst and the create scope has a valid ID
+      // associated with it, we must update the value in the Function's
+      // environment list to be the spilled Variable.
+      if (llvh::isa<CreateScopeInst>(I) &&
+          I.getEnvironmentID() >= Instruction::kFirstScopeCreationIdIndex) {
+        inner_->environments()[I.getEnvironmentIDAsIndex()] = storedValueOfI;
+      }
       for (const auto &user : illegalUsers) {
         auto *userBB = user->getParent();
         LoadFrameInst *&load = loadFramePerBlock[userBB];

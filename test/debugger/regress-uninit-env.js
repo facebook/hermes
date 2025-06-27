@@ -17,7 +17,7 @@ genObj.next();
 genObj.next();
 
 // CHECK: Break on 'debugger' statement in myGen: {{.*}}:13:3
-// CHECK-NEXT: undefined
+// CHECK-NEXT: 12
 
 (function () {
   function foo() {

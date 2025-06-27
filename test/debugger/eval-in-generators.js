@@ -12,7 +12,7 @@
   function *gen1() {
     let x = 50;
     yield x;
-    // The environment can't be tracked across this yield, so we should expect to just get 'undefined'
+    // The environment created to hold `x` should have been spilled across the above yield.
     debugger;
   }
   let genObj = gen1();
@@ -20,5 +20,27 @@
   genObj.next();
 })();
 // CHECK: Break on 'debugger' statement in gen1: {{.*}}:16:5
-// CHECK-NEXT: undefined
+// CHECK-NEXT: 50
+// CHECK-NEXT: Continuing execution
+
+// Combine block scoping and generators.
+(function () {
+  var v1 = 10;
+  function *gen2() {
+    let v2 = 20;
+    for (let i = 0; i < 2; i++){
+      class B {} // Class declaration forces loop to create a new scope / environment.
+      let v3 = 30;
+      yield i;
+      // The environment created to hold `v3` should have been spilled across the above yield.
+      debugger;
+    }
+  }
+  let genObj = gen2();
+  genObj.next();
+  genObj.next();
+})();
+// CHECK: Break on 'debugger' statement in gen2: {{.*}}:36:7
+// CHECK-NEXT: 30
+// CHECK-NEXT: 0
 // CHECK-NEXT: Continuing execution
