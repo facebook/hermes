@@ -1,0 +1,14 @@
+exec var1
+frame 1
+exec outerVar
+frame 2
+exec outerVar
+continue
+frame 1
+exec outerVar
+frame 2
+exec outerVar
+continue
+frame 1
+exec outerVar
+continue
