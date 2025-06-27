@@ -868,6 +868,7 @@ void ESTreeIRGen::emitFunctionPrologue(
 void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
   if (!scope)
     return;
+  setLexicalScopeData(scope, curFunction()->curScope()->getVariableScope());
 
   bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
   for (sema::Decl *decl : scope->decls) {

@@ -207,6 +207,9 @@ class LexicalScope {
   /// it's impossible to know whether local variables are modified.
   bool localEval = false;
 
+  /// Field to be used by any downstream users of LexicalScope.
+  void *customData{nullptr};
+
   /// \param parentFunction must not be null.
   /// \param parentScope may be null.
   LexicalScope(FunctionInfo *parentFunction, LexicalScope *parentScope)

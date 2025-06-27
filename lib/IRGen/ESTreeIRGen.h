@@ -1690,6 +1690,18 @@ class ESTreeIRGen {
   /// Run all tasks in the compilation queue until it is empty.
   void drainCompilationQueue();
 
+  /// \return the customData field of \p lexScope, casted to VariableScope.
+  VariableScope *getLexicalScopeData(sema::LexicalScope *lexScope) {
+    return static_cast<VariableScope *>(lexScope->customData);
+  }
+
+  /// Set the customData field of \p lexScope, to \p varScope.
+  void setLexicalScopeData(
+      sema::LexicalScope *lexScope,
+      VariableScope *varScope) {
+    lexScope->customData = varScope;
+  }
+
   /// Return the non-null expression sema::Decl associated with the identifier.
   sema::Decl *getIDDecl(ESTree::IdentifierNode *id) {
     assert(id && "IdentifierNode cannot be null");
