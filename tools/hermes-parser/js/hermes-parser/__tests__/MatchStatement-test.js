@@ -48,6 +48,47 @@ describe('MatchStatement', () => {
     );
   });
 
+  test('simple and same named binding', async () => {
+    const code = `
+      function f(x) {
+        match (x) {
+          [const x] => {
+            out = x;
+          }
+          const x => {
+            out = x;
+          }
+        }
+      }
+      f(x);
+    `;
+    const output = await transform(code);
+    expect(output).toMatchInlineSnapshot(`
+      "function f(x) {
+        $$gen$m0: {
+          const $$gen$m1 = x;
+
+          if (Array.isArray($$gen$m1) && $$gen$m1.length === 1) {
+            const x = $$gen$m1[0];
+            out = x;
+            break $$gen$m0;
+          }
+
+          {
+            const x = $$gen$m1;
+            out = x;
+            break $$gen$m0;
+          }
+        }
+      }
+
+      f(x);"
+    `);
+
+    expect(runMatchStmt(output, [1])).toBe(1);
+    expect(runMatchStmt(output, 2)).toBe(2);
+  });
+
   test('simple and guards', async () => {
     const code = `
       match (x) {
@@ -297,13 +338,15 @@ describe('MatchStatement', () => {
     const output = await transform(code);
     expect(output).toMatchInlineSnapshot(`
       "$$gen$m0: {
-        if (x === 'a') {
+        const $$gen$m1 = x;
+
+        if ($$gen$m1 === 'a') {
           out = 0;
           break $$gen$m0;
         }
 
         {
-          const a = x;
+          const a = $$gen$m1;
           out = a;
           break $$gen$m0;
         }
@@ -373,20 +416,22 @@ describe('MatchStatement', () => {
     const output = await transform(code);
     expect(output).toMatchInlineSnapshot(`
       "$$gen$m0: {
-        if (Array.isArray(x) && x.length === 1) {
-          const a = x[0];
+        const $$gen$m1 = x;
+
+        if (Array.isArray($$gen$m1) && $$gen$m1.length === 1) {
+          const a = $$gen$m1[0];
           out = a;
           break $$gen$m0;
         }
 
-        if ((typeof x === "object" && x !== null || typeof x === "function") && "b" in x) {
-          const b = x.b;
+        if ((typeof $$gen$m1 === "object" && $$gen$m1 !== null || typeof $$gen$m1 === "function") && "b" in $$gen$m1) {
+          const b = $$gen$m1.b;
           out = b;
           break $$gen$m0;
         }
 
         {
-          const a = x;
+          const a = $$gen$m1;
 
           if (no()) {
             out = a;
@@ -429,23 +474,25 @@ describe('MatchStatement', () => {
     const output = await transform(code);
     expect(output).toMatchInlineSnapshot(`
       "$$gen$m0: {
-        if (Array.isArray(x) && x.length === 1) {
-          const a = x[0];
+        const $$gen$m1 = x;
 
-          $$gen$m1: {
+        if (Array.isArray($$gen$m1) && $$gen$m1.length === 1) {
+          const a = $$gen$m1[0];
+
+          $$gen$m2: {
             if (a === foo) {
               out = 0;
-              break $$gen$m1;
+              break $$gen$m2;
             }
 
             if (a === bar.a) {
               out = 1;
-              break $$gen$m1;
+              break $$gen$m2;
             }
 
             {
               out = 2;
-              break $$gen$m1;
+              break $$gen$m2;
             }
           }
 

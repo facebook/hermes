@@ -701,13 +701,13 @@ function mapMatchExpression(node: MatchExpression): Expression {
   const {argument, cases} = node;
   const {hasBindings, hasWildcard, analyses} = analyzeCases(cases);
 
-  const isSimpleArgument = calculateSimpleArgument(argument);
+  const isSimpleArgument = !hasBindings && calculateSimpleArgument(argument);
   const genRoot: Identifier | null = !isSimpleArgument ? genIdent() : null;
   const root: Expression = genRoot == null ? argument : genRoot;
 
   // No bindings and a simple argument means we can use nested conditional
   // expressions.
-  if (!hasBindings && isSimpleArgument) {
+  if (isSimpleArgument) {
     const wildcardAnalaysis = hasWildcard ? analyses.pop() : null;
     const lastBody =
       wildcardAnalaysis != null
@@ -798,10 +798,10 @@ function mapMatchExpression(node: MatchExpression): Expression {
  */
 function mapMatchStatement(node: MatchStatement): Statement {
   const {argument, cases} = node;
-  const {hasWildcard, analyses} = analyzeCases(cases);
+  const {hasBindings, hasWildcard, analyses} = analyzeCases(cases);
 
   const topLabel: Identifier = genIdent();
-  const isSimpleArgument = calculateSimpleArgument(argument);
+  const isSimpleArgument = !hasBindings && calculateSimpleArgument(argument);
   const genRoot: Identifier | null = !isSimpleArgument ? genIdent() : null;
   const root: Expression = genRoot == null ? argument : genRoot;
 

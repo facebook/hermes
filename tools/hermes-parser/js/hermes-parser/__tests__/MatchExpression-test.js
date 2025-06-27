@@ -393,19 +393,19 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if (x === 1 || x === 2) {
-            const a = x;
+        "const e = ($$gen$m0 => {
+          if ($$gen$m0 === 1 || $$gen$m0 === 2) {
+            const a = $$gen$m0;
             return a;
           }
 
-          if (Array.isArray(x) && x.length === 1 && (x[0] === 3 || x[0] === 4)) {
-            const a = x[0];
+          if (Array.isArray($$gen$m0) && $$gen$m0.length === 1 && ($$gen$m0[0] === 3 || $$gen$m0[0] === 4)) {
+            const a = $$gen$m0[0];
             return -a;
           }
 
           return 3;
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, 1)).toBe(1);
@@ -500,45 +500,78 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if (x === 'a') {
+        "const e = ($$gen$m0 => {
+          if ($$gen$m0 === 'a') {
             return 0;
           }
 
-          if (x === 888) {
+          if ($$gen$m0 === 888) {
             return 1;
           }
 
-          if (x === -999) {
+          if ($$gen$m0 === -999) {
             return 2;
           }
 
-          if (x === foo) {
+          if ($$gen$m0 === foo) {
             return 3;
           }
 
-          if (x === bar.a) {
+          if ($$gen$m0 === bar.a) {
             return 4;
           }
 
-          if (x === 'b') {
+          if ($$gen$m0 === 'b') {
             if (no()) return 5;
           }
 
           {
-            const foo = x;
+            const foo = $$gen$m0;
             if (yes(foo)) return 6;
           }
           {
-            const bar = x;
+            const bar = $$gen$m0;
             return bar;
           }
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, 'a')).toBe(0);
       expect(runMatchExp(output, 'foo')).toBe(3);
       expect(runMatchExp(output, null)).toBe(6);
+    });
+
+    test('simple and same named binding', async () => {
+      const code = `
+        function f(x) {
+          return match (x) {
+            [const x] => x,
+            const x => x,
+          };
+        }
+        const e = f(x);
+      `;
+      const output = await transform(code);
+      expect(output).toMatchInlineSnapshot(`
+        "function f(x) {
+          return ($$gen$m0 => {
+            if (Array.isArray($$gen$m0) && $$gen$m0.length === 1) {
+              const x = $$gen$m0[0];
+              return x;
+            }
+
+            {
+              const x = $$gen$m0;
+              return x;
+            }
+          })(x);
+        }
+
+        const e = f(x);"
+      `);
+
+      expect(runMatchExp(output, [1])).toBe(1);
+      expect(runMatchExp(output, 2)).toBe(2);
     });
 
     test('non-simple argument: call', async () => {
@@ -633,14 +666,14 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if (Array.isArray(x) && x.length === 2 && x[0] === 1) {
-            const a = x[1];
+        "const e = ($$gen$m0 => {
+          if (Array.isArray($$gen$m0) && $$gen$m0.length === 2 && $$gen$m0[0] === 1) {
+            const a = $$gen$m0[1];
             return a;
           }
 
           return 1;
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, [1, 'foo'])).toBe('foo');
@@ -657,14 +690,14 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if (Array.isArray(x) && x.length >= 2 && x[0] === 1 && x[1] === 2) {
-            const rest = x.slice(2);
+        "const e = ($$gen$m0 => {
+          if (Array.isArray($$gen$m0) && $$gen$m0.length >= 2 && $$gen$m0[0] === 1 && $$gen$m0[1] === 2) {
+            const rest = $$gen$m0.slice(2);
             return rest;
           }
 
           return 1;
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, [1, 2])).toStrictEqual([]);
@@ -681,15 +714,15 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if ((typeof x === "object" && x !== null || typeof x === "function") && x.foo === 1 && "bar" in x && "baz" in x) {
-            const a = x.bar;
-            const baz = x.baz;
+        "const e = ($$gen$m0 => {
+          if ((typeof $$gen$m0 === "object" && $$gen$m0 !== null || typeof $$gen$m0 === "function") && $$gen$m0.foo === 1 && "bar" in $$gen$m0 && "baz" in $$gen$m0) {
+            const a = $$gen$m0.bar;
+            const baz = $$gen$m0.baz;
             return a + baz;
           }
 
           return 1;
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, {foo: 1, bar: 'bar', baz: 'baz'})).toBe(
@@ -707,19 +740,19 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if ((typeof x === "object" && x !== null || typeof x === "function") && x.foo === 1 && "bar" in x) {
-            const a = x.bar;
+        "const e = ($$gen$m0 => {
+          if ((typeof $$gen$m0 === "object" && $$gen$m0 !== null || typeof $$gen$m0 === "function") && $$gen$m0.foo === 1 && "bar" in $$gen$m0) {
+            const a = $$gen$m0.bar;
             const {
-              foo: $$gen$m0,
-              bar: $$gen$m1,
+              foo: $$gen$m1,
+              bar: $$gen$m2,
               ...rest
-            } = x;
+            } = $$gen$m0;
             return rest;
           }
 
           return 1;
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, {foo: 1, bar: 2})).toStrictEqual({});
@@ -741,22 +774,22 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if ((typeof x === "object" && x !== null || typeof x === "function") && "foo" in x && x.foo === undefined) {
+        "const e = ($$gen$m0 => {
+          if ((typeof $$gen$m0 === "object" && $$gen$m0 !== null || typeof $$gen$m0 === "function") && "foo" in $$gen$m0 && $$gen$m0.foo === undefined) {
             return true;
           }
 
-          if ((typeof x === "object" && x !== null || typeof x === "function") && "bar" in x && x.bar === undefined) {
-            const a = x.bar;
+          if ((typeof $$gen$m0 === "object" && $$gen$m0 !== null || typeof $$gen$m0 === "function") && "bar" in $$gen$m0 && $$gen$m0.bar === undefined) {
+            const a = $$gen$m0.bar;
             return true;
           }
 
-          if ((typeof x === "object" && x !== null || typeof x === "function") && "baz" in x && (x.baz === 0 || x.baz === undefined)) {
+          if ((typeof $$gen$m0 === "object" && $$gen$m0 !== null || typeof $$gen$m0 === "function") && "baz" in $$gen$m0 && ($$gen$m0.baz === 0 || $$gen$m0.baz === undefined)) {
             return true;
           }
 
           return false;
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, {})).toBe(false);
@@ -777,25 +810,25 @@ describe('MatchExpression', () => {
       `;
       const output = await transform(code);
       expect(output).toMatchInlineSnapshot(`
-        "const e = (() => {
-          if (x === 'a' || x === 'b') {
-            return (() => {
-              if (x === 'a') {
+        "const e = ($$gen$m0 => {
+          if ($$gen$m0 === 'a' || $$gen$m0 === 'b') {
+            return ($$gen$m1 => {
+              if ($$gen$m1 === 'a') {
                 return 0;
               }
 
               {
-                const a = x;
+                const a = $$gen$m1;
                 return a;
               }
-            })();
+            })(x);
           }
 
           {
-            const a = x;
+            const a = $$gen$m0;
             return a;
           }
-        })();"
+        })(x);"
       `);
 
       expect(runMatchExp(output, 'a')).toBe(0);
