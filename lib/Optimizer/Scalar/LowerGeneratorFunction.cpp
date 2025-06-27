@@ -638,6 +638,13 @@ void LowerToStateMachine::lowerToSwitch(
   builder_.createCondBranchInst(
       isExecuting, throwBecauseExecutingBB, checkIfCompletedBB);
 
+  // Transfer the EvalCompilationDataInst from the old beginning BB, if it
+  // exists.
+  if (auto *evalDataInst =
+          llvh::dyn_cast<EvalCompilationDataInst>(&oldBeginBB->front())) {
+    evalDataInst->moveBefore(&newBeginBB->front());
+  }
+
   builder_.setInsertionBlock(throwBecauseExecutingBB);
   builder_.createStoreFrameInst(
       getParentOuterScope_,

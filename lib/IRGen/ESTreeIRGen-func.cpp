@@ -1426,10 +1426,10 @@ void ESTreeIRGen::onCompiledFunction(hermes::Function *F) {
   // Postprocessing for debugging: make the EvalCompilationData
   // and add the function's VariableScope to the data so we can compile REPL
   // commands from the debugger.
-  // Skip generators here, debugging generators is not supported yet.
+  // Skip outer generator functions. It's impossible to be stopped inside of
+  // one, so we don't need to support `eval`ing inside of them.
   if ((Mod->getContext().getDebugInfoSetting() == DebugInfoSetting::ALL) &&
-      !llvh::isa<GeneratorFunction>(F) &&
-      F->getDefinitionKind() != Function::DefinitionKind::GeneratorInner) {
+      !llvh::isa<GeneratorFunction>(F)) {
     BasicBlock &entry = *F->begin();
 
     IRBuilder::ScopedLocationChange slc(Builder, F->getSourceRange().Start);
