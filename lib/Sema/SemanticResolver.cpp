@@ -2810,6 +2810,10 @@ SemanticResolver::ScopeRAII::ScopeRAII(
   if (scopeNode)
     scopeNode->setScope(scope);
 
+  if (resolver_.astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+    scope->bindingTableScope = resolver_.bindingTable_.getCurrentScope();
+  }
+
   if (isFunctionBodyScope) {
     resolver_.curFunctionInfo()->functionBodyScopeIdx =
         resolver_.curFunctionInfo()->scopes.size() - 1;
@@ -2976,7 +2980,11 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
   // This is called for the side effect of associating the new scope with
   // implicitCtor. We don't need the value now, but we will later. Treat this
   // new scope as the function body scope.
-  (void)resolver_.semCtx_.newScope(implicitCtor, resolver_.curScope_);
+  auto *lexScope =
+      resolver_.semCtx_.newScope(implicitCtor, resolver_.curScope_);
+  if (resolver_.astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+    lexScope->bindingTableScope = resolver_.bindingTable_.getCurrentScope();
+  }
   implicitCtor->functionBodyScopeIdx = implicitCtor->scopes.size() - 1;
   classDecoration->implicitCtorFunctionInfo = implicitCtor;
 }
@@ -2994,7 +3002,11 @@ FunctionInfo *ClassContext::getOrCreateInstanceElementsInitFunctionInfo() {
     // This is called for the side effect of associating the new scope with
     // fieldInitFunc. We don't need the value now, but we will later. Treat this
     // new scope as the function body scope.
-    (void)resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);
+    auto *lexScope =
+        resolver_.semCtx_.newScope(fieldInitFunc, resolver_.curScope_);
+    if (resolver_.astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+      lexScope->bindingTableScope = resolver_.bindingTable_.getCurrentScope();
+    }
     fieldInitFunc->functionBodyScopeIdx = fieldInitFunc->scopes.size() - 1;
     classDecoration->instanceElementsInitFunctionInfo = fieldInitFunc;
   }
@@ -3014,7 +3026,11 @@ FunctionInfo *ClassContext::getOrCreateStaticElementsInitFunctionInfo() {
     // This is called for the side effect of associating the new scope with
     // staticFieldInitFunc. We don't need the value now, but we will later.
     // Treat this new scope as the function body scope.
-    (void)resolver_.semCtx_.newScope(staticFieldInitFunc, resolver_.curScope_);
+    auto *lexScope =
+        resolver_.semCtx_.newScope(staticFieldInitFunc, resolver_.curScope_);
+    if (resolver_.astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
+      lexScope->bindingTableScope = resolver_.bindingTable_.getCurrentScope();
+    }
     staticFieldInitFunc->functionBodyScopeIdx =
         staticFieldInitFunc->scopes.size() - 1;
     classDecoration->staticElementsInitFunctionInfo = staticFieldInitFunc;

@@ -207,6 +207,11 @@ class LexicalScope {
   /// it's impossible to know whether local variables are modified.
   bool localEval = false;
 
+  /// The scope in the binding table that this lexical scope is associated with.
+  /// This is used to restore the binding table to this point when performing
+  /// compilation for an eval.
+  BindingTableScopePtrTy bindingTableScope{};
+
   /// Field to be used by any downstream users of LexicalScope.
   void *customData{nullptr};
 
