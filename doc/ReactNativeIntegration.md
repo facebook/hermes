@@ -29,11 +29,20 @@ On Android, once you set the `REACT_NATIVE_OVERRIDE_HERMES_DIR` environment vari
 
 On iOS, once you set the `REACT_NATIVE_OVERRIDE_HERMES_DIR` environment variable, make sure you also:
 
-1. Enable a build from source by installing the pods as follows:
+1. Disable React Native's Default Hermes Pod: Ensure that the `:hermes_enabled` flag is set to `false` in `ios/Podfile`.
+```ruby
+use_react_native!(
+  :path => config[:reactNativePath],
+  :hermes_enabled => false,
+  # ... other configurations
+)
+```
+
+2. Enable a build from source by installing the pods as follows:
 ```bash
 BUILD_FROM_SOURCE=true bundle exec pod install
 ```
-2. Re-run the iOS app with the `yarn ios` command.
+3. Re-run the iOS app with the `yarn ios` command.
 
 ## Reporting native crashes
 
