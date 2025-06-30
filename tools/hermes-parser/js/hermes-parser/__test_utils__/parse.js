@@ -41,14 +41,14 @@ const prettierConfig = Object.freeze({
 
 declare function parse(
   code: string,
-  opts: {...ParserOptions, babel: true},
+  opts: $ReadOnly<{...ParserOptions, babel: true}>,
 ): BabelFile;
 // eslint-disable-next-line no-redeclare
 declare function parse(
   code: string,
   opts?:
-    | {...ParserOptions, babel?: false | void}
-    | {...ParserOptions, babel: false},
+    | $ReadOnly<{...ParserOptions, babel?: false | void}>
+    | $ReadOnly<{...ParserOptions, babel: false}>,
 ): ESTreeProgram;
 // eslint-disable-next-line no-redeclare
 export function parse(code: string, options: ParserOptions) {
@@ -66,12 +66,12 @@ export function parseForSnapshot(
     preserveRange,
     enableExperimentalComponentSyntax,
     enableExperimentalFlowMatchSyntax,
-  }: {
+  }: $ReadOnly<{
     preserveRange?: boolean,
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
     enableExperimentalFlowMatchSyntax?: boolean,
-  } = {},
+  }> = {},
 ): mixed {
   const parseOpts = {
     enableExperimentalComponentSyntax:
@@ -121,12 +121,12 @@ export async function printForSnapshot(
     enableExperimentalComponentSyntax,
     enableExperimentalFlowMatchSyntax,
     reactRuntimeTarget,
-  }: {
+  }: $ReadOnly<{
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
     enableExperimentalFlowMatchSyntax?: boolean,
     reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
-  } = {},
+  }> = {},
 ): Promise<string> {
   const parseOpts = {
     enableExperimentalComponentSyntax:
@@ -150,11 +150,11 @@ export async function printForSnapshot(
 
 export function cleanASTForSnapshot(
   ast: ESNode,
-  options?: {
+  options?: $ReadOnly<{
     preserveRange?: boolean,
     babel?: boolean,
     enforceLocationInformation?: boolean,
-  },
+  }>,
 ): mixed {
   SimpleTraverser.traverse(ast, {
     enter(node) {

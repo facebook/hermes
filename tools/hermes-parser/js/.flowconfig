@@ -28,6 +28,7 @@ enums=true
 experimental.pattern_matching=true
 
 experimental.natural_inference.local_primitive_literals=full
+experimental.natural_inference.local_object_literals=partial
 
 [version]
 ^0.274.2

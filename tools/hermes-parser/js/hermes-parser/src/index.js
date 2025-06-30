@@ -66,14 +66,14 @@ function getOptions(options?: ParserOptions = {...DEFAULTS}) {
 
 declare function parse(
   code: string,
-  opts: {...ParserOptions, babel: true},
+  opts: $ReadOnly<{...ParserOptions, babel: true}>,
 ): BabelFile;
 // eslint-disable-next-line no-redeclare
 declare function parse(
   code: string,
   opts?:
-    | {...ParserOptions, babel?: false | void}
-    | {...ParserOptions, babel: false},
+    | $ReadOnly<{...ParserOptions, babel?: false | void}>
+    | $ReadOnly<{...ParserOptions, babel: false}>,
 ): ESTreeProgram;
 
 // eslint-disable-next-line no-redeclare
