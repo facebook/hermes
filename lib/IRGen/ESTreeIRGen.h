@@ -1696,15 +1696,18 @@ class ESTreeIRGen {
   /// Run all tasks in the compilation queue until it is empty.
   void drainCompilationQueue();
 
-  /// \return the customData field of \p lexScope, casted to VariableScope.
+  /// \return the customData field of \p lexScope, casted to VariableScope. May
+  /// be null.
   VariableScope *getLexicalScopeData(sema::LexicalScope *lexScope) {
     return static_cast<VariableScope *>(lexScope->customData);
   }
 
   /// Set the customData field of \p lexScope, to \p varScope.
+  /// \param varScope cannot be null.
   void setLexicalScopeData(
       sema::LexicalScope *lexScope,
       VariableScope *varScope) {
+    assert(varScope && "cannot set customData to null.");
     lexScope->customData = varScope;
   }
 
