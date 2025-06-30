@@ -3144,6 +3144,15 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyName() {
       return res;
     }
 
+    case TokenKind::bigint_literal: {
+      auto *res = setLocation(
+          tok_,
+          tok_,
+          new (context_) ESTree::BigIntLiteralNode(tok_->getBigIntLiteral()));
+      advance();
+      return res;
+    }
+
     case TokenKind::identifier: {
       auto *res = setLocation(
           tok_,

@@ -148,6 +148,15 @@ llvh::StringRef ESTreeIRGen::propertyKeyAsString(
     return llvh::StringRef(storage.begin(), len);
   }
 
+  // Handle BigInt Literals, because they're a type of NumericLiteral.
+  // ES15 12.9.3
+  if (auto *Lit = llvh::dyn_cast<ESTree::BigIntLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading BigInt Literal \"" << Lit->_bigint->str()
+                     << "\"\n");
+    return Lit->_bigint->str();
+  }
+
   llvm_unreachable("Don't know this kind of property key");
   return llvh::StringRef();
 }
