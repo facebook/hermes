@@ -94,7 +94,7 @@ type A = 42n;
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "BigIntLiteralTypeAnnotation",
-// CHECK-NEXT:         "raw": "42n"
+// CHECK-NEXT:         "raw": "42"
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }
 

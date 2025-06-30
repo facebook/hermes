@@ -184,7 +184,7 @@ enum E {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "init": {
 // CHECK-NEXT:               "type": "BigIntLiteral",
-// CHECK-NEXT:               "bigint": "1n"
+// CHECK-NEXT:               "bigint": "1"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
@@ -195,7 +195,7 @@ enum E {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "init": {
 // CHECK-NEXT:               "type": "BigIntLiteral",
-// CHECK-NEXT:               "bigint": "2n"
+// CHECK-NEXT:               "bigint": "2"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],

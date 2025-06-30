@@ -93,7 +93,7 @@ const e = match (x) {
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "property": {
 // CHECK-NEXT:                    "type": "BigIntLiteral",
-// CHECK-NEXT:                    "bigint": "1n"
+// CHECK-NEXT:                    "bigint": "1"
 // CHECK-NEXT:                  }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "body": {

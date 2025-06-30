@@ -53,13 +53,13 @@ function f8_ok() { 1 * "a"; }
 
 // CHECK:function f1_throws(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryLeftShiftInst (:number) 1n: bigint, 1: number
+// CHECK-NEXT:  %0 = BinaryLeftShiftInst (:number) 1: bigint, 1: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:function f2_throws(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = BinaryAddInst (:number) 1n: bigint, 1: number
+// CHECK-NEXT:  %0 = BinaryAddInst (:number) 1: bigint, 1: number
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

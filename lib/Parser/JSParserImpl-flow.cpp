@@ -2962,7 +2962,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
     }
 
     case TokenKind::bigint_literal: {
-      UniqueString *raw = tok_->getBigIntLiteral();
+      UniqueString *raw = tok_->getBigIntLiteralRawValue();
       return setLocation(
           start,
           advance(JSLexer::GrammarContext::Type).End,

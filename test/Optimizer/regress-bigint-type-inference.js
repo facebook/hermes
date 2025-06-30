@@ -57,5 +57,5 @@
 
 // CHECK:arrow " 1#"(): bigint
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:       ReturnInst 10n: bigint
+// CHECK-NEXT:       ReturnInst 10: bigint
 // CHECK-NEXT:function_end

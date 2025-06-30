@@ -262,18 +262,20 @@ TEST(JSLexerTest, BigIntTest) {
         " 0n"
         " 1n"
         " 1000n"
+        " 12_34n"
         " 1928371289378129381212398n"
         " 0xdeadbeefn"
         " 0b10101100101n",
         sm,
         alloc);
 
-    LEX_EXPECT_BIGINT("0n", lex);
-    LEX_EXPECT_BIGINT("1n", lex);
-    LEX_EXPECT_BIGINT("1000n", lex);
-    LEX_EXPECT_BIGINT("1928371289378129381212398n", lex);
-    LEX_EXPECT_BIGINT("0xdeadbeefn", lex);
-    LEX_EXPECT_BIGINT("0b10101100101n", lex);
+    LEX_EXPECT_BIGINT("0", lex);
+    LEX_EXPECT_BIGINT("1", lex);
+    LEX_EXPECT_BIGINT("1000", lex);
+    LEX_EXPECT_BIGINT("1234", lex);
+    LEX_EXPECT_BIGINT("1928371289378129381212398", lex);
+    LEX_EXPECT_BIGINT("0xdeadbeef", lex);
+    LEX_EXPECT_BIGINT("0b10101100101", lex);
   }
 
   {

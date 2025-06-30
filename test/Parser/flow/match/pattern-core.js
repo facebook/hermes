@@ -111,7 +111,7 @@ const e = match (x) {
 // CHECK-NEXT:                  "type": "MatchLiteralPattern",
 // CHECK-NEXT:                  "literal": {
 // CHECK-NEXT:                    "type": "BigIntLiteral",
-// CHECK-NEXT:                    "bigint": "4n"
+// CHECK-NEXT:                    "bigint": "4"
 // CHECK-NEXT:                  }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "body": {
@@ -172,7 +172,7 @@ const e = match (x) {
 // CHECK-NEXT:                  "type": "MatchUnaryPattern",
 // CHECK-NEXT:                  "argument": {
 // CHECK-NEXT:                    "type": "BigIntLiteral",
-// CHECK-NEXT:                    "bigint": "7n"
+// CHECK-NEXT:                    "bigint": "7"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "operator": "+"
 // CHECK-NEXT:                },
@@ -192,7 +192,7 @@ const e = match (x) {
 // CHECK-NEXT:                  "type": "MatchUnaryPattern",
 // CHECK-NEXT:                  "argument": {
 // CHECK-NEXT:                    "type": "BigIntLiteral",
-// CHECK-NEXT:                    "bigint": "8n"
+// CHECK-NEXT:                    "bigint": "8"
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "operator": "-"
 // CHECK-NEXT:                },

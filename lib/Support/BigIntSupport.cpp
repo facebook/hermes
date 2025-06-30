@@ -631,11 +631,18 @@ class BigIntLiteralParsingToolBox {
     return false;
   }
 
-  bool checkEnd(const char *err) {
+  /// \return true if there are no more characters to be consumed.
+  bool isEnd() {
     auto ch = peek();
     // parsing suceeded if there are no more characters to be consumed, or if
     // the next charater is a null terminator.
-    return (ch && *ch != 0) ? fail(err) : true;
+    return !(ch && *ch != 0);
+  }
+
+  bool checkEnd(const char *err) {
+    // parsing suceeded if there are no more characters to be consumed, or if
+    // the next charater is a null terminator.
+    return isEnd() ? true : fail(err);
   }
 
   template <char c>
@@ -852,28 +859,20 @@ class NumericValueParser
         //    (2) NonDecimalIntegerLiteral BigIntLiteralSuffix
 
         // Try matching (1).
-        if (bigIntLiteralSuffix()) {
+        if (isEnd()) {
           radix_ = 10;
           bigintDigits_ = "0";
-          return checkEnd("trailing data in 0n literal");
+          return true;
         }
 
         // Try matching (2).
         if (nonDecimalIntegerLiteral()) {
-          if (bigIntLiteralSuffix()) {
-            return checkEnd("trailing data in non-decimal literal");
-          }
-
-          return fail("no n suffix in non-decimal");
+          return checkEnd("trailing data in non-decimal literal");
         }
       } else {
         // This must be NonZeroDecimalLiteral BigIntLiteralSuffix
         if (nonZeroDecimalLiteral()) {
-          if (bigIntLiteralSuffix()) {
-            return checkEnd("trailing data in decimal literal");
-          }
-
-          return fail("no n suffix in decimal");
+          return checkEnd("trailing data in decimal literal");
         }
       }
     }
@@ -887,21 +886,11 @@ class NumericValueParser
     while (ch.hasValue()) {
       bigintDigits_.push_back(*ch);
       auto atSep = getCurrentParserState();
-      bool isSep = numericLiteralSeparator();
       ch = lookaheadAndEatIfAnyOf<digits...>();
-      if (isSep && !ch) {
+      if (!ch) {
         restoreParserState(atSep);
       }
     }
-  }
-
- private:
-  bool numericLiteralSeparator() {
-    return lookaheadAndEatIfAnyOf<'_'>().hasValue();
-  }
-
-  bool bigIntLiteralSuffix() {
-    return lookaheadAndEatIfAnyOf<'n'>().hasValue();
   }
 };
 

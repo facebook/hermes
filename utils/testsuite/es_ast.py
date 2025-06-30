@@ -165,7 +165,7 @@ def normalize_hermes_ast(ast: JSON) -> JSON:
             del ast["pattern"]
             del ast["flags"]
         if ast["type"] == "BigIntLiteral":
-            ast["bigint"] = ast["bigint"][:-1]
+            ast["bigint"] = ast["bigint"]
             ast["value"] = None
         ast["type"] = "Literal"
 
