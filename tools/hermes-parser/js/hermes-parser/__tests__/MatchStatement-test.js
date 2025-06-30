@@ -573,4 +573,129 @@ describe('MatchStatement', () => {
 
     expect(runMatchStmt(output, 'xxx')).toBe(0);
   });
+
+  test('yield and yield*', async () => {
+    const code = `
+      function* final() {
+        yield 'end';
+      }
+      function* f() {
+        let index = 0;
+        while (true) {
+          match (index) {
+            const i if (i < x) => {
+              yield i;
+            }
+            _ => {
+              yield* final();
+              break;
+            }
+          }
+          index++;
+        }
+      }
+      const iterable = {[Symbol.iterator]: f};
+      out = [];
+      for (const item of iterable) {
+        out.push(item);
+      }
+    `;
+
+    const output = await transform(code);
+    expect(output).toMatchInlineSnapshot(`
+      "function* final() {
+        yield 'end';
+      }
+
+      function* f() {
+        let index = 0;
+
+        while (true) {
+          $$gen$m0: {
+            const $$gen$m1 = index;
+            {
+              const i = $$gen$m1;
+
+              if (i < x) {
+                yield i;
+                break $$gen$m0;
+              }
+            }
+            {
+              yield* final();
+              break;
+              break $$gen$m0;
+            }
+          }
+
+          index++;
+        }
+      }
+
+      const iterable = {
+        [Symbol.iterator]: f
+      };
+      out = [];
+
+      for (const item of iterable) {
+        out.push(item);
+      }"
+    `);
+
+    expect(runMatchStmt(output, 1)).toEqual([0, 'end']);
+    expect(runMatchStmt(output, 3)).toEqual([0, 1, 2, 'end']);
+  });
+
+  test('await', async () => {
+    const code = `
+      async function val(v) {
+        return v;
+      }
+      async function f() {
+        match (x) {
+          1 => {
+            return await val(1);
+          }
+          2 => {
+            return await val(2);
+          }
+          _ => {
+            return 0;
+          }
+        }
+      }
+      out = f();
+    `;
+    const output = await transform(code);
+    expect(output).toMatchInlineSnapshot(`
+      "async function val(v) {
+        return v;
+      }
+
+      async function f() {
+        $$gen$m0: {
+          if (x === 1) {
+            return await val(1);
+            break $$gen$m0;
+          }
+
+          if (x === 2) {
+            return await val(2);
+            break $$gen$m0;
+          }
+
+          {
+            return 0;
+            break $$gen$m0;
+          }
+        }
+      }
+
+      out = f();"
+    `);
+
+    expect(await runMatchStmt(output, 1)).toBe(1);
+    expect(await runMatchStmt(output, 2)).toBe(2);
+    expect(await runMatchStmt(output, 'xxx')).toBe(0);
+  });
 });
