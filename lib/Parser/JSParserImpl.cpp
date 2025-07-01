@@ -4919,7 +4919,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
-            TokenKind::semi)) {
+            TokenKind::semi,
+            TokenKind::star)) {
       // This was actually a getter.
       special = SpecialKind::Get;
     } else {
@@ -4937,7 +4938,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             TokenKind::r_brace,
             TokenKind::equal,
             TokenKind::colon,
-            TokenKind::semi)) {
+            TokenKind::semi,
+            TokenKind::star)) {
       // If we don't see '(' then this was actually a setter.
       special = SpecialKind::Set;
     } else {
