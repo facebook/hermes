@@ -895,6 +895,7 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
           assert(
               llvh::isa<PhiInst>(&it) &&
               "Only PhiInst should reference values from dead code");
+          (void)it;
           return;
         }
 
