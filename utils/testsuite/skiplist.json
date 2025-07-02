@@ -3,13 +3,11 @@
     {
       "paths": [
         "test262/test/built-ins/Function/prototype/toString/",
-        "test262/test/language/block-scope/",
         "test262/test/language/expressions/async-generator/",
         "test262/test/language/expressions/dynamic-import/",
         "test262/test/language/expressions/import.meta/",
         "test262/test/language/module-code/",
         "test262/test/language/statements/async-generator/",
-        "test262/test/language/statements/let/",
         "mjsunit/debug-",
         "mjsunit/es6/debug-",
         "esprima/test_fixtures/tokenize/",
