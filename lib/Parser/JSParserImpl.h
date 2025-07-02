@@ -562,7 +562,7 @@ class JSParserImpl {
       return true;
     }
 
-    if (check(letIdent_)) {
+    if (checkUnescaped(letIdent_)) {
       if (isStrictMode()) {
         return true;
       }

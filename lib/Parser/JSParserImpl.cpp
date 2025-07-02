@@ -822,7 +822,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *optClass;
   }
 
-  if (checkN(TokenKind::rw_const, letIdent_)) {
+  if (check(TokenKind::rw_const) || checkUnescaped(letIdent_)) {
     auto optLexDecl = parseLexicalDeclaration(ParamIn);
     if (!optLexDecl)
       return None;
@@ -1065,7 +1065,7 @@ Optional<ESTree::VariableDeclarationNode *>
 JSParserImpl::parseLexicalDeclaration(Param param) {
   assert(
       (check(TokenKind::rw_var) || check(TokenKind::rw_const) ||
-       check(letIdent_)) &&
+       checkUnescaped(letIdent_)) &&
       "parseLexicalDeclaration() expects var/const/let");
   bool isConst = check(TokenKind::rw_const);
   auto kindIdent = tok_->getResWordOrIdentifier();
@@ -1543,7 +1543,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
         "declaration not allowed as expression statement");
   }
 
-  if (check(letIdent_)) {
+  if (checkUnescaped(letIdent_)) {
     SMLoc letLoc = advance().Start;
     if (check(TokenKind::l_square)) {
       // let [
@@ -1792,7 +1792,8 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
   ESTree::VariableDeclarationNode *decl = nullptr;
   ESTree::NodePtr expr1 = nullptr;
 
-  if (checkN(TokenKind::rw_var, TokenKind::rw_const, letIdent_)) {
+  if (checkN(TokenKind::rw_var, TokenKind::rw_const) ||
+      checkUnescaped(letIdent_)) {
     // Productions valid here:
     //   for ( var/let/const VariableDeclarationList
     //   for [await] ( var/let/const VariableDeclaration
