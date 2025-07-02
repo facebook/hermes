@@ -100,9 +100,6 @@ class LowerToStateMachine {
   BaseScopeInst *getParentOuterScope_;
   /// Builder used to generate IR.
   IRBuilder builder_;
-  /// Set to true if the resulting function contains try blocks. Used to decide
-  /// whether to run fixupCatchTargets.
-  bool resultContainsTrys_ = false;
 
   /// Represents the GeneratorState internal slot.
   /// ES6.0 25.3.2.
@@ -222,9 +219,7 @@ void LowerToStateMachine::convert() {
   // operations.
   moveCrossingValuesToOuter();
 
-  // If the result contains trys, fixup the throws.
-  if (resultContainsTrys_)
-    fixupCatchTargets(inner_);
+  fixupCatchTargets(inner_);
 }
 
 void LowerToStateMachine::setupScopes() {
@@ -592,10 +587,6 @@ void LowerToStateMachine::lowerToSwitch(
   // Before we modify anything, record the relationship of each block to its
   // enclosing try.
   auto blockToEnclosingTry = findEnclosingTrysPerBlock(inner_);
-  // If there are no existing trys, then we will not create a try of our own.
-  // Instead we simply let all exceptions bubble up out of the inner function,
-  // which is what should happen since there are no trys anywhere.
-  bool hasExistingTrys = blockToEnclosingTry.hasValue();
 
   // This is the main switch that will contain all target blocks of
   // SaveAndYieldInsts and all catch handlers of a try-catch.
@@ -684,55 +675,44 @@ void LowerToStateMachine::lowerToSwitch(
 
   // This switch will be executed when an exception is thrown and is responsible
   // for setting up switchIdx to point to the correct block for the user catch
-  // handler.
+  // handler, or to just rethrow the exception if there is no user catch block.
   SwitchBuilder exceptionSwitch(builder_);
-  Variable *exceptionSwitchIdx = nullptr;
-  // This BB guards the entire execution of user blocks.
-  BasicBlock *surroundingCatchBB = nullptr;
   // The top level catch will propagate the caught error to the user
   // handlers via this value.
-  Variable *thrownValPlaceholder = nullptr;
+  Variable *thrownValPlaceholder = builder_.createVariable(
+      getParentOuterScope_->getVariableScope(),
+      "catchVal",
+      Type::createAnyType(),
+      /* hidden */ true);
   // The default case in the exception handler switch is to simply re-throw the
   // exception. Also mark the generator as completed.
-  BasicBlock *rethrowBB = nullptr;
-  size_t rethrowBBIdx = 0;
-  if (hasExistingTrys) {
-    thrownValPlaceholder = builder_.createVariable(
-        getParentOuterScope_->getVariableScope(),
-        "catchVal",
-        Type::createAnyType(),
-        /* hidden */ true);
-    rethrowBB = builder_.createBasicBlock(inner_);
-    builder_.setInsertionBlock(rethrowBB);
-    builder_.createStoreFrameInst(
-        getParentOuterScope_,
-        builder_.getLiteralNumber((uint8_t)State::Completed),
-        genState);
-    auto loadVal = builder_.createLoadFrameInst(
-        getParentOuterScope_, thrownValPlaceholder);
-    builder_.createThrowInst(loadVal);
-    rethrowBBIdx = exceptionSwitch.getBBIdx(rethrowBB);
-    builder_.setInsertionPoint(CGI_);
-    // Initialize the exception index to rethrow idx, which is equivalent to
-    // being outside of any try body.
-    exceptionSwitchIdx = builder_.createVariable(
-        getParentOuterScope_->getVariableScope(),
-        "exception_handler_idx",
-        Type::createInt32(),
-        /* hidden */ true);
-    builder_.createStoreFrameInst(
-        newOuterScope_,
-        builder_.getLiteralNumber(rethrowBBIdx),
-        exceptionSwitchIdx);
-    // Wrap execution of switch in a try.
-    builder_.setInsertionBlock(executeSwitchBB);
-    surroundingCatchBB = builder_.createBasicBlock(inner_);
-    builder_.createTryStartInst(userCodeSwitchBB, surroundingCatchBB);
-  } else {
-    // Don't wrap execution of switch in a try.
-    builder_.setInsertionBlock(executeSwitchBB);
-    builder_.createBranchInst(userCodeSwitchBB);
-  }
+  BasicBlock *rethrowBB = builder_.createBasicBlock(inner_);
+  builder_.setInsertionBlock(rethrowBB);
+  builder_.createStoreFrameInst(
+      getParentOuterScope_,
+      builder_.getLiteralNumber((uint8_t)State::Completed),
+      genState);
+  auto *loadVal =
+      builder_.createLoadFrameInst(getParentOuterScope_, thrownValPlaceholder);
+  builder_.createThrowInst(loadVal);
+  size_t rethrowBBIdx = exceptionSwitch.getBBIdx(rethrowBB);
+  builder_.setInsertionPoint(CGI_);
+  // Initialize the exception index to rethrow idx, which is equivalent to
+  // being outside of any try body.
+  Variable *exceptionSwitchIdx = builder_.createVariable(
+      getParentOuterScope_->getVariableScope(),
+      "exception_handler_idx",
+      Type::createInt32(),
+      /* hidden */ true);
+  builder_.createStoreFrameInst(
+      newOuterScope_,
+      builder_.getLiteralNumber(rethrowBBIdx),
+      exceptionSwitchIdx);
+  // Wrap execution of switch in a try.
+  builder_.setInsertionBlock(executeSwitchBB);
+  // This BB guards the entire execution of user blocks.
+  BasicBlock *surroundingCatchBB = builder_.createBasicBlock(inner_);
+  builder_.createTryStartInst(userCodeSwitchBB, surroundingCatchBB);
 
   // This holds the mapping of user error handler to the exception switch index
   // that will lead to the execution of that handler.
@@ -878,17 +858,13 @@ void LowerToStateMachine::lowerToSwitch(
   mainSwitch.generate(
       builder_.createLoadFrameInst(getParentOuterScope_, switchIdx));
 
-  if (hasExistingTrys) {
-    // Set the thrown value placeholder variable and execute the switch.
-    builder_.setInsertionBlock(surroundingCatchBB);
-    auto *catchVal = builder_.createCatchInst();
-    builder_.createStoreFrameInst(
-        getParentOuterScope_, catchVal, thrownValPlaceholder);
-    exceptionSwitch.generate(
-        builder_.createLoadFrameInst(getParentOuterScope_, exceptionSwitchIdx));
-  }
-
-  resultContainsTrys_ = hasExistingTrys;
+  // Set the thrown value placeholder variable and execute the switch.
+  builder_.setInsertionBlock(surroundingCatchBB);
+  auto *catchVal = builder_.createCatchInst();
+  builder_.createStoreFrameInst(
+      getParentOuterScope_, catchVal, thrownValPlaceholder);
+  exceptionSwitch.generate(
+      builder_.createLoadFrameInst(getParentOuterScope_, exceptionSwitchIdx));
 }
 
 BasicBlock *LowerToStateMachine::createCompletedStateBlock(
