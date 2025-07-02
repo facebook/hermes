@@ -119,7 +119,7 @@ class SkippedPathsOrFeatures(object):
 
         for cat in cats:
             if self.should_skip_cat(test_or_feature, cat):
-                msg = f"SKIP: {full_test_name} is skipped by {cat.name}"
+                msg = f"SKIP: skipped by {cat.name} ({test_or_feature})"
                 return TestCaseResult(full_test_name, SKIPCAT_TO_RETCODE[cat], msg)
         return None
 
