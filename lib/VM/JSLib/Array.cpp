@@ -2989,7 +2989,11 @@ arrayPrototypePopFastPath(Runtime &runtime, Handle<JSArray> arr, uint32_t len) {
   // We've already checked that the length is not readonly.
   JSArray::putLengthUnsafe(*arr, runtime, newLen);
 
-  return shv.unboxToHV(runtime);
+  // Fast path check has ensured there's no other elements up the prototype
+  // chain that can have values at index-like property names, so if we see
+  // 'empty' in the storage we need to return 'undefined'.
+  return shv.isEmpty() ? HermesValue::encodeUndefinedValue()
+                       : shv.unboxToHV(runtime);
 }
 
 CallResult<HermesValue> arrayPrototypePop(void *, Runtime &runtime) {

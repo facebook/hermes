@@ -29,6 +29,12 @@ Object.defineProperty(a, 'length', {writable: false, value: 1});
 try { a.pop(); } catch (e) { print(e.name); }
 // CHECK-NEXT: TypeError
 
+// Pop 'empty' from an array.
+var a = [1,2];
+delete a[1];
+print(a.pop(), a.length);
+// CHECK-NEXT: undefined 1
+
 // Pop from sparse array.
 var a = [,,,,10,,,,,];
 print(a.pop(), a.length);
