@@ -73,9 +73,8 @@ def generate_test262_source(content: str, suite: PathT, filepath: PathT) -> Test
     negative = test.get("negative", None)
 
     includes = ["sta.js", "assert.js"]
-    if "async" in test:
-        # TODO: Add extra includes for async tests.
-        raise NotImplementedError("async tests are not supported yet")
+    if "async" in flags:
+        includes += ["doneprintHandle.js"]
     includes += test.get("includes", [])
 
     full_src = ""

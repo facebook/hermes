@@ -165,12 +165,7 @@ class Test262Suite(Suite):
             return TestCaseResult(full_test_name, TestResultCode.TEST_SKIPPED, msg)
 
         flags = test_case.flags
-        if "async" in flags:
-            return TestCaseResult(
-                full_test_name,
-                TestResultCode.TEST_SKIPPED,
-                "SKIP: Test has `async` flag",
-            )
+        is_async = "async" in flags
         if "module" in flags:
             return TestCaseResult(
                 full_test_name,
@@ -235,6 +230,7 @@ class Test262Suite(Suite):
             args.shermes,
             args.opt,
             args.timeout,
+            is_async,
             args.extra_compile_vm_args,
         )
         return await compile_and_run(js_sources, compile_run_args)
@@ -295,6 +291,7 @@ class MjsunitSuite(Suite):
             args.shermes,
             args.opt,
             args.timeout,
+            False,
             extra_compile_vm_args,
         )
         return await compile_and_run([js_source], compile_run_args)

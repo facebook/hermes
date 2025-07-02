@@ -55,6 +55,8 @@ class CompileRunArgs(object):
     """Enable optimizer, i.e., use -O flag instead of -O0."""
     timeout: int
     """Timeout (in seconds) for compiling/running each test."""
+    is_async: bool
+    """Whether the test is an async test262 test and needs AsyncTestFailure checked."""
     extra_compile_vm_args: Optional[ExtraCompileVMArgs] = None
     """Extra compile/run arguments given by specific testsuites."""
 
@@ -116,6 +118,8 @@ async def run(
     if stderr:
         output += f"stderr:\n {stderr.decode('utf-8')}"
 
+    stdout_str = stdout.decode("utf-8") if stdout else ""
+
     # Check if the run succeeded
     if proc.returncode:
         # Negative return code means that the subprocess is terminated with a
@@ -134,6 +138,18 @@ async def run(
             # fail, even in lazy mode. This check is conservative, but may still
             # capture some issues in lazy mode.
             msg = f"FAIL: Execution of {base_file_name} threw unexpected error"
+            return TestCaseResult(
+                compile_run_args.test_name, TestResultCode.EXECUTE_FAILED, msg, output
+            )
+        elif compile_run_args.is_async and (
+            "Test262:AsyncTestFailure" in stdout_str
+            or "Test262:AsyncTestComplete" not in stdout_str
+        ):
+            # In the event of a passing test run, this function will be invoked
+            # with the string 'Test262:AsyncTestComplete'. If invoked with a
+            # string that is prefixed with the character sequence
+            # Test262:AsyncTestFailure:, the test must be interpreted as failed.
+            msg = f"FAIL: Execution of async test failed: {stdout_str}"
             return TestCaseResult(
                 compile_run_args.test_name, TestResultCode.EXECUTE_FAILED, msg, output
             )
