@@ -152,6 +152,7 @@ STR(stack, "stack")
 STR(stacktraceTooLong, "Stacktrace too long")
 STR(captureStackTrace, "captureStackTrace")
 STR(prepareStackTrace, "prepareStackTrace")
+STR(isError, "isError")
 #define ALL_ERROR_TYPE(name) STR(name, "" #name)
 #include "hermes/VM/NativeErrorTypes.def"
 

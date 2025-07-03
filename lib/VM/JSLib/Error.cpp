@@ -121,6 +121,13 @@ HermesValue createErrorConstructor(Runtime &runtime) {
       nullptr,
       errorCaptureStackTrace,
       2);
+  defineMethod(
+      runtime,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::isError),
+      nullptr,
+      errorIsError,
+      1);
 
   return lv.cons.getHermesValue();
 }
@@ -436,6 +443,17 @@ CallResult<HermesValue> errorCaptureStackTrace(void *, Runtime &runtime) {
   }
 
   return HermesValue::encodeUndefinedValue();
+}
+
+CallResult<HermesValue> errorIsError(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // NOTE: Error.isError does NOT appear to check for Proxy in the way that
+  // IsArray does, so we just can use vmisa here.
+
+  // 1. If arg is not an Object, return false.
+  // 2. If arg does not have an [[ErrorData]] internal slot, return false.
+  // 3. Return true.
+  return HermesValue::encodeBoolValue(vmisa<JSError>(args.getArg(0)));
 }
 
 } // namespace vm
