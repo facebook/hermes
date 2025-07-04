@@ -30,7 +30,7 @@ experimental.pattern_matching=true
 experimental.natural_inference.local_object_literals=partial
 
 [version]
-^0.274.2
+^0.275.0
 
 [lints]
 untyped-type-import=error
