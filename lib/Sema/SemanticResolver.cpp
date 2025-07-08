@@ -95,6 +95,8 @@ bool SemanticResolver::runLazy(
     }
   });
 
+  curScope_ = semInfo->parentScope;
+
   canReferenceSuper_ = rootNode->isMethodDefinition ||
       (llvh::isa<ESTree::ArrowFunctionExpressionNode>(rootNode) &&
        parentHadSuperBinding);
