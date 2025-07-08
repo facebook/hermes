@@ -507,15 +507,51 @@ VariableInfoAtDepth getVariableInfoAtDepth(
     assert(lexScope && "depth out of bounds");
   }
 
+  /// In order to avoid having to search through the entire `decls` array each
+  /// time, the result of the last call is cached, and used to try to restart
+  /// the search from that point. This struct is the cache information.
+  struct CachedValues {
+    // The lexical scope queried.
+    sema::LexicalScope *lexScope = nullptr;
+    // The variable index queried.
+    uint32_t variableIndex = UINT32_MAX;
+    // The resulting index into the lexical scope's decl that satisfies the
+    // variableIndex search.
+    uint32_t declIdx = UINT32_MAX;
+  };
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::cast<hbc::BCProviderFromSrc>(provider);
+  sema::SemContext *semCtx = providerFromSrc->getSemCtx();
+  if (!semCtx->customData2) {
+    // The lifetime of this cache has to be tied to the lifetime of the
+    // SemContext. A SemContext could be destoryed and allocated again. there's
+    // then a potential for a new LexicalScope in the same place but with
+    // different data. Use shared_ptr to make sure it isn't accessible after the
+    // SemContext is freed.
+    semCtx->customData2 = std::make_shared<CachedValues>();
+  }
+  auto *cache = static_cast<CachedValues *>(semCtx->customData2.get());
+
   const auto &decls = lexScope->decls;
-  // When iterating through the decls, how many user-presentable decls have been
-  // seen.
-  uint32_t listableDeclsSeen = 0;
   // This is how many listable decls we need to find in order to satisfy the
   // search for \p variableIdx.
   uint32_t targetListableDeclsSeen = variableIndex + 1;
+  // The index we found the matching decl. Initialized to out of bounds.
   uint32_t declIdx = 0;
-  for (size_t i = 0, e = decls.size(); i < e; ++i) {
+  // When iterating through the decls, how many user-presentable decls have been
+  // seen.
+  uint32_t listableDeclsSeen;
+  uint32_t beginDeclIdx;
+  // Only reuse the cached values when searching for a subsequent variableIdx on
+  // the same lexical scope as last time.
+  if (lexScope == cache->lexScope && variableIndex > cache->variableIndex) {
+    beginDeclIdx = cache->declIdx;
+    listableDeclsSeen = cache->variableIndex;
+  } else {
+    beginDeclIdx = 0;
+    listableDeclsSeen = 0;
+  }
+  for (size_t i = beginDeclIdx, e = decls.size(); i < e; ++i) {
     if (shouldListDecl(decls[i])) {
       if (++listableDeclsSeen == targetListableDeclsSeen) {
         declIdx = i;
@@ -541,6 +577,10 @@ VariableInfoAtDepth getVariableInfoAtDepth(
     ++varScopeDepth;
   }
   assert(curVS && "target VariableScope could not be reached");
+
+  cache->lexScope = lexScope;
+  cache->variableIndex = variableIndex;
+  cache->declIdx = declIdx;
   return {
       decl->name.str(), varScopeDepth, varForDecl->getIndexInVariableList()};
 }

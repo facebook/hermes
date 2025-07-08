@@ -650,10 +650,10 @@ class ESTreeIRGen {
   /// \return the PrivateNameFunctionTable which is stored in SemContext. Lazily
   /// initialize the table.
   PrivateNameFunctionTable &privateNameTable() {
-    if (!semCtx_.customData) {
-      semCtx_.customData = std::make_shared<PrivateNameFunctionTable>();
+    if (!semCtx_.customData1) {
+      semCtx_.customData1 = std::make_shared<PrivateNameFunctionTable>();
     }
-    return *static_cast<PrivateNameFunctionTable *>(semCtx_.customData.get());
+    return *static_cast<PrivateNameFunctionTable *>(semCtx_.customData1.get());
   }
 
   /// Perform IR generation for a given CJS module.

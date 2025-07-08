@@ -559,7 +559,12 @@ class SemContext {
   /// know the type of the underlying data, it's better to use a shared_ptr.
   /// Then we remain ignorant of the type but still call the correct deleter
   /// function.
-  std::shared_ptr<void> customData;
+  std::shared_ptr<void> customData1;
+
+  /// This is an opaque data blob that SemContext will own, but never use. This
+  /// is used to implement caching for fetching information from
+  /// `LexicalScope`s.
+  std::shared_ptr<void> customData2;
 
  private:
   /// The parent SemContext of this SemContext.
