@@ -1699,7 +1699,7 @@ class ESTreeIRGen {
   /// \return the customData field of \p lexScope, casted to VariableScope. May
   /// be null.
   VariableScope *getLexicalScopeData(sema::LexicalScope *lexScope) {
-    return static_cast<VariableScope *>(lexScope->customData);
+    return getLexicalScopeCustomData(lexScope);
   }
 
   /// Set the customData field of \p lexScope, to \p varScope.
@@ -1752,7 +1752,7 @@ class ESTreeIRGen {
   static Value *getDeclData(sema::Decl *decl) {
     assert(decl);
     assert(decl->customData);
-    return static_cast<Value *>(decl->customData);
+    return getDeclCustomData(decl);
   }
 
   // Add a template overload for the different PrivateNameFunctionTable pointer

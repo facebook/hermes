@@ -1053,6 +1053,14 @@ void Type::print(llvh::raw_ostream &OS) const {
   }
 }
 
+VariableScope *getLexicalScopeCustomData(sema::LexicalScope *lexScope) {
+  return static_cast<VariableScope *>(lexScope->customData);
+}
+
+Value *getDeclCustomData(sema::Decl *decl) {
+  return static_cast<Variable *>(decl->customData);
+}
+
 } // namespace hermes
 
 llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const hermes::Type &T) {

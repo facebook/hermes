@@ -15,6 +15,7 @@
 #include "hermes/AST/NativeContext.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/FrontEndDefs/Typeof.h"
+#include "hermes/Sema/SemContext.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
 
@@ -841,6 +842,14 @@ struct ValueDeleter {
     Value::destroy(V);
   }
 };
+
+/// \return the customData field of \p lexScope, casted to VariableScope. Can
+/// return null.
+VariableScope *getLexicalScopeCustomData(sema::LexicalScope *lexScope);
+
+/// \return the customData field of \p lexScope, casted to Value. Can return
+/// null.
+Value *getDeclCustomData(sema::Decl *decl);
 
 /// This represents a function parameter.
 class Parameter : public Value {
