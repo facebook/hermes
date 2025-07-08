@@ -9,6 +9,15 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
+#include "llvh/ADT/DenseMap.h"
+#include "llvh/ADT/StringRef.h"
+
+#include <memory>
+#include <tuple>
+#include <utility>
+
+namespace fhsp = ::facebook::hermes::sampling_profiler;
+
 namespace hermes {
 namespace vm {
 
@@ -61,166 +70,236 @@ formatSuspendFrameKind(SamplingProfiler::SuspendFrameInfo::Kind kind) {
   }
 }
 
-} // namespace
+class ProfileGenerator {
+  /// NativeFunctionFrameInfo is an alias for size_t, unique identifier for
+  /// native function during sampling.
+  using NativeFunctionNameCache = llvh::
+      DenseMap<SamplingProfiler::NativeFunctionFrameInfo, fhsp::StringEntry>;
 
-ProfileGenerator::ProfileGenerator(
-    const SamplingProfiler &samplingProfiler,
-    const std::vector<SamplingProfiler::StackTrace> &sampledStacks)
-    : samplingProfiler_(samplingProfiler), sampledStacks_(sampledStacks) {}
+  /// Composite key: there is no global identifier on RuntimeModule that can be
+  /// used. The second argument is function identifier, not globally unique,
+  /// only unique for functions inside single RuntimeModule.
+  using JSFunctionFrameDetailsKey = std::pair<RuntimeModule *, uint32_t>;
+  using JSFunctionFrameDetailsCacheValue = std::tuple<
+      fhsp::StringEntry, // Function name.
+      std::optional<fhsp::StringEntry>, // Source script URL.
+      OptValue<hbc::DebugSourceLocation>>;
+  using JSFunctionFrameDetailsCache = llvh::
+      DenseMap<JSFunctionFrameDetailsKey, JSFunctionFrameDetailsCacheValue>;
 
-fhsp::ProfileSampleCallStackFrame ProfileGenerator::processStackFrame(
-    const SamplingProfiler::StackFrame &frame) {
-  switch (frame.kind) {
-    case SamplingProfiler::StackFrame::FrameKind::SuspendFrame:
-      return fhsp::ProfileSampleCallStackSuspendFrame(
-          formatSuspendFrameKind(frame.suspendFrame.kind));
+  /// Cache for source script URLs. The key is llvh::StringRef from original
+  /// std::string, the value is StringEntry that can be supplied to Frame.
+  using SourceScriptURLCache =
+      llvh::DenseMap<llvh::StringRef, fhsp::StringEntry>;
 
-    case SamplingProfiler::StackFrame::FrameKind::NativeFunction:
-      return fhsp::ProfileSampleCallStackNativeFunctionFrame(
-          getNativeFunctionName(frame));
+ public:
+  ProfileGenerator(
+      const SamplingProfiler &samplingProfiler,
+      const std::vector<SamplingProfiler::StackTrace> &sampledStacks)
+      : samplingProfiler_(samplingProfiler), sampledStacks_(sampledStacks) {}
 
-    case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
-      return fhsp::ProfileSampleCallStackHostFunctionFrame(
-          getNativeFunctionName(frame));
+  ProfileGenerator(const ProfileGenerator &) = delete;
+  ProfileGenerator &operator=(const ProfileGenerator &) = delete;
 
-    case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
-      RuntimeModule *module = frame.jsFrame.module;
-      auto [functionName, scriptURL, sourceLocOpt] =
-          getJSFunctionDetails(frame.jsFrame);
+  /// Emit Profile in a single struct.
+  fhsp::Profile generate() {
+    stringStorage_ = std::make_unique<std::vector<std::string>>();
 
-      uint32_t scriptId = module->getScriptID();
-      std::optional<uint32_t> lineNumber = std::nullopt;
-      std::optional<uint32_t> columnNumber = std::nullopt;
+    std::vector<fhsp::ProfileSample> samples;
+    samples.reserve(sampledStacks_.size());
+    for (const SamplingProfiler::StackTrace &sampledStack : sampledStacks_) {
+      uint64_t timestamp =
+          convertTimestampToMicroseconds(sampledStack.timeStamp);
 
-      if (sourceLocOpt.hasValue()) {
-        // hbc::DebugSourceLocation is 1-based, but initializes line and
-        // column fields with 0 by default.
-        uint32_t line = sourceLocOpt.getValue().line;
-        uint32_t column = sourceLocOpt.getValue().column;
-        if (line != 0) {
-          lineNumber = line;
-        }
-        if (column != 0) {
-          columnNumber = column;
-        }
+      std::vector<fhsp::ProfileSampleCallStackFrame> callFrames;
+      callFrames.reserve(sampledStack.stack.size());
+      for (const SamplingProfiler::StackFrame &frame : sampledStack.stack) {
+        callFrames.push_back(processStackFrame(frame));
       }
 
-      return fhsp::ProfileSampleCallStackJSFunctionFrame(
-          functionName, scriptId, scriptURL, lineNumber, columnNumber);
+      samples.emplace_back(timestamp, sampledStack.tid, std::move(callFrames));
     }
 
-    default:
-      llvm_unreachable("Unexpected Frame kind");
-  }
-}
-
-fhsp::StringEntry ProfileGenerator::getNativeFunctionName(
-    const SamplingProfiler::StackFrame &frame) {
-  assert(
-      (frame.kind == SamplingProfiler::StackFrame::FrameKind::NativeFunction ||
-       frame.kind ==
-           SamplingProfiler::StackFrame::FrameKind::
-               FinalizableNativeFunction) &&
-      "Expected only NativeFunction or FinalizableNativeFunction frame");
-
-  auto it = nativeFunctionNameCache_.find(frame.nativeFrame);
-  if (it != nativeFunctionNameCache_.end()) {
-    return it->second;
+    return fhsp::Profile(std::move(samples), std::move(stringStorage_));
   }
 
-  std::string nativeFunctionName =
-      samplingProfiler_.getNativeFunctionName(frame);
-  auto nativeFunctionNameEntry = storeString(nativeFunctionName);
-  nativeFunctionNameCache_.try_emplace(
-      frame.nativeFrame, nativeFunctionNameEntry);
+ private:
+  /// Process single internal stack frame.
+  /// \return public ProfileSampleCallStackFrame instance, which can be used in
+  /// Profile.
+  fhsp::ProfileSampleCallStackFrame processStackFrame(
+      const SamplingProfiler::StackFrame &frame) {
+    switch (frame.kind) {
+      case SamplingProfiler::StackFrame::FrameKind::SuspendFrame:
+        return fhsp::ProfileSampleCallStackSuspendFrame(
+            formatSuspendFrameKind(frame.suspendFrame.kind));
 
-  return nativeFunctionNameEntry;
-}
+      case SamplingProfiler::StackFrame::FrameKind::NativeFunction:
+        return fhsp::ProfileSampleCallStackNativeFunctionFrame(
+            getNativeFunctionName(frame));
 
-ProfileGenerator::JSFunctionFrameDetailsCacheValue
-ProfileGenerator::getJSFunctionDetails(
-    const SamplingProfiler::JSFunctionFrameInfo &frameInfo) {
-  JSFunctionFrameDetailsKey key(frameInfo.module, frameInfo.functionId);
-  auto it = jsFunctionFrameCache_.find(key);
-  if (it != jsFunctionFrameCache_.end()) {
-    return it->second;
-  }
+      case SamplingProfiler::StackFrame::FrameKind::FinalizableNativeFunction:
+        return fhsp::ProfileSampleCallStackHostFunctionFrame(
+            getNativeFunctionName(frame));
 
-  RuntimeModule *runtimeModule = frameInfo.module;
-  hbc::BCProvider *bcProvider = runtimeModule->getBytecode();
-  std::string functionName =
-      getJSFunctionName(bcProvider, frameInfo.functionId);
-  auto functionNameEntry = storeString(functionName);
+      case SamplingProfiler::StackFrame::FrameKind::JSFunction: {
+        RuntimeModule *module = frame.jsFrame.module;
+        auto [functionName, scriptURL, sourceLocOpt] =
+            getJSFunctionDetails(frame.jsFrame);
 
-  OptValue<hbc::DebugSourceLocation> debugSourceLocation =
-      getFunctionDefinitionSourceLocation(bcProvider, frameInfo.functionId);
-  std::optional<std::string> maybeSourceScriptURL = std::nullopt;
-  if (debugSourceLocation.hasValue()) {
-    // Bundle has debug info.
-    auto filenameId = debugSourceLocation.getValue().filenameId;
-    maybeSourceScriptURL =
-        bcProvider->getDebugInfo()->getUTF8FilenameByID(filenameId);
-  }
+        uint32_t scriptId = module->getScriptID();
+        std::optional<uint32_t> lineNumber = std::nullopt;
+        std::optional<uint32_t> columnNumber = std::nullopt;
 
-  std::optional<fhsp::StringEntry> maybeSourceScriptURLEntry = std::nullopt;
-  if (maybeSourceScriptURL.has_value()) {
-    const std::string &sourceScriptURL = maybeSourceScriptURL.value();
+        if (sourceLocOpt.hasValue()) {
+          // hbc::DebugSourceLocation is 1-based, but initializes line and
+          // column fields with 0 by default.
+          uint32_t line = sourceLocOpt.getValue().line;
+          uint32_t column = sourceLocOpt.getValue().column;
+          if (line != 0) {
+            lineNumber = line;
+          }
+          if (column != 0) {
+            columnNumber = column;
+          }
+        }
 
-    auto sourceScriptURLCacheIt =
-        sourceScriptURLCache_.find(llvh::StringRef{sourceScriptURL});
-    if (sourceScriptURLCacheIt != sourceScriptURLCache_.end()) {
-      maybeSourceScriptURLEntry.emplace(sourceScriptURLCacheIt->second);
-    } else {
-      fhsp::StringEntry sourceScriptURLEntry = storeString(sourceScriptURL);
-      maybeSourceScriptURLEntry.emplace(sourceScriptURLEntry);
+        return fhsp::ProfileSampleCallStackJSFunctionFrame(
+            functionName, scriptId, scriptURL, lineNumber, columnNumber);
+      }
 
-      // The string from stringStorage_ is referenced here, because it
-      // will outlive sourceScriptURLCache_. The lifetime of
-      // sourceScriptURLCache_ is bound to the lifetime of ProfileGenerator,
-      // whereas stringStorage_'s lifetime is bound to the lifetime of the
-      // Profile object. Once ProfileGenerator::generate() finishes, the
-      // stringStorage_ is moved to the Profile and no longer valid within
-      // ProfileGenerator.
-      std::string_view sourceScriptURLView = sourceScriptURLEntry.getView();
-      sourceScriptURLCache_.try_emplace(
-          llvh::StringRef{
-              sourceScriptURLView.data(), sourceScriptURLView.size()},
-          sourceScriptURLEntry);
+      default:
+        llvm_unreachable("Unexpected Frame kind");
     }
   }
 
-  auto valueToCache = std::make_tuple(
-      functionNameEntry, maybeSourceScriptURLEntry, debugSourceLocation);
-  jsFunctionFrameCache_.try_emplace(key, valueToCache);
+  /// Retrieves the name of a native function from a given internal stack frame.
+  /// Supports memoization.
+  /// \param frame Internal SamplingProfiler::StackFrame object. Has to be
+  /// either NativeFunction or FinalizableNativeFunction.
+  /// \return A StringEntry object representing the name of the native function
+  /// associated with the provided stack frame.
+  fhsp::StringEntry getNativeFunctionName(
+      const SamplingProfiler::StackFrame &frame) {
+    assert(
+        (frame.kind ==
+             SamplingProfiler::StackFrame::FrameKind::NativeFunction ||
+         frame.kind ==
+             SamplingProfiler::StackFrame::FrameKind::
+                 FinalizableNativeFunction) &&
+        "Expected only NativeFunction or FinalizableNativeFunction frame");
 
-  return valueToCache;
-}
+    auto it = nativeFunctionNameCache_.find(frame.nativeFrame);
+    if (it != nativeFunctionNameCache_.end()) {
+      return it->second;
+    }
 
-fhsp::StringEntry ProfileGenerator::storeString(const std::string &str) {
-  auto offset = stringStorage_->size();
-  stringStorage_->push_back(str);
+    std::string nativeFunctionName =
+        samplingProfiler_.getNativeFunctionName(frame);
+    auto nativeFunctionNameEntry = storeString(nativeFunctionName);
+    nativeFunctionNameCache_.try_emplace(
+        frame.nativeFrame, nativeFunctionNameEntry);
 
-  return fhsp::StringEntry(*stringStorage_.get(), offset);
+    return nativeFunctionNameEntry;
+  }
+
+  /// Obtains detailed information about a JavaScript function from its frame
+  /// info. Supports memoization.
+  /// \param frameInfo Internal SamplingProfiler::JSFunctionFrameInfo object.
+  /// \return A JSFunctionFrameDetailsCacheValue tuple containing:
+  /// - The function name as a StringEntry object.
+  /// - An optional StringEntry object representing the source script URL.
+  /// - An optional DebugSourceLocation object providing the source location.
+  JSFunctionFrameDetailsCacheValue getJSFunctionDetails(
+      const SamplingProfiler::JSFunctionFrameInfo &frameInfo) {
+    JSFunctionFrameDetailsKey key(frameInfo.module, frameInfo.functionId);
+    auto it = jsFunctionFrameCache_.find(key);
+    if (it != jsFunctionFrameCache_.end()) {
+      return it->second;
+    }
+
+    RuntimeModule *runtimeModule = frameInfo.module;
+    hbc::BCProvider *bcProvider = runtimeModule->getBytecode();
+    std::string functionName =
+        getJSFunctionName(bcProvider, frameInfo.functionId);
+    auto functionNameEntry = storeString(functionName);
+
+    OptValue<hbc::DebugSourceLocation> debugSourceLocation =
+        getFunctionDefinitionSourceLocation(bcProvider, frameInfo.functionId);
+    std::optional<std::string> maybeSourceScriptURL = std::nullopt;
+    if (debugSourceLocation.hasValue()) {
+      // Bundle has debug info.
+      auto filenameId = debugSourceLocation.getValue().filenameId;
+      maybeSourceScriptURL =
+          bcProvider->getDebugInfo()->getUTF8FilenameByID(filenameId);
+    }
+
+    std::optional<fhsp::StringEntry> maybeSourceScriptURLEntry = std::nullopt;
+    if (maybeSourceScriptURL.has_value()) {
+      const std::string &sourceScriptURL = maybeSourceScriptURL.value();
+
+      auto sourceScriptURLCacheIt =
+          sourceScriptURLCache_.find(llvh::StringRef{sourceScriptURL});
+      if (sourceScriptURLCacheIt != sourceScriptURLCache_.end()) {
+        maybeSourceScriptURLEntry.emplace(sourceScriptURLCacheIt->second);
+      } else {
+        fhsp::StringEntry sourceScriptURLEntry = storeString(sourceScriptURL);
+        maybeSourceScriptURLEntry.emplace(sourceScriptURLEntry);
+
+        // The string from stringStorage_ is referenced here, because it
+        // will outlive sourceScriptURLCache_. The lifetime of
+        // sourceScriptURLCache_ is bound to the lifetime of ProfileGenerator,
+        // whereas stringStorage_'s lifetime is bound to the lifetime of the
+        // Profile object. Once ProfileGenerator::generate() finishes, the
+        // stringStorage_ is moved to the Profile and no longer valid within
+        // ProfileGenerator.
+        std::string_view sourceScriptURLView = sourceScriptURLEntry.getView();
+        sourceScriptURLCache_.try_emplace(
+            llvh::StringRef{
+                sourceScriptURLView.data(), sourceScriptURLView.size()},
+            sourceScriptURLEntry);
+      }
+    }
+
+    auto valueToCache = std::make_tuple(
+        functionNameEntry, maybeSourceScriptURLEntry, debugSourceLocation);
+    jsFunctionFrameCache_.try_emplace(key, valueToCache);
+
+    return valueToCache;
+  }
+
+  /// Places a std::string into stringStorage_.
+  /// \return StringEntry that can be supplied to Frame.
+  fhsp::StringEntry storeString(const std::string &str) {
+    auto offset = stringStorage_->size();
+    stringStorage_->push_back(str);
+
+    return fhsp::StringEntry(*stringStorage_.get(), offset);
+  }
+
+  /// SamplingProfiler instance expected to outlive ProfileGenerator.
+  const SamplingProfiler &samplingProfiler_;
+  /// Sampled stacks from SamplingProfiler.
+  const std::vector<SamplingProfiler::StackTrace> &sampledStacks_;
+
+  NativeFunctionNameCache nativeFunctionNameCache_{};
+  JSFunctionFrameDetailsCache jsFunctionFrameCache_{};
+  SourceScriptURLCache sourceScriptURLCache_{};
+
+  /// Container for all strings inside the profile that is currently
+  /// being constructed. It will be owned by the profile later. There could be
+  /// duplicates in this storage: the uniqueness of frames is determined by
+  /// internal VM concepts, not by the names of functions and string contents.
+  std::unique_ptr<std::vector<std::string>> stringStorage_;
 };
 
-fhsp::Profile ProfileGenerator::generate() {
-  stringStorage_ = std::make_unique<std::vector<std::string>>();
+} // namespace
 
-  std::vector<fhsp::ProfileSample> samples;
-  samples.reserve(sampledStacks_.size());
-  for (const SamplingProfiler::StackTrace &sampledStack : sampledStacks_) {
-    uint64_t timestamp = convertTimestampToMicroseconds(sampledStack.timeStamp);
-
-    std::vector<fhsp::ProfileSampleCallStackFrame> callFrames;
-    callFrames.reserve(sampledStack.stack.size());
-    for (const SamplingProfiler::StackFrame &frame : sampledStack.stack) {
-      callFrames.push_back(processStackFrame(frame));
-    }
-
-    samples.emplace_back(timestamp, sampledStack.tid, std::move(callFrames));
-  }
-
-  return fhsp::Profile(std::move(samples), std::move(stringStorage_));
+fhsp::Profile generateProfile(
+    const SamplingProfiler &samplingProfiler,
+    const std::vector<SamplingProfiler::StackTrace> &sampledStacks) {
+  ProfileGenerator profileGenerator(samplingProfiler, sampledStacks);
+  return profileGenerator.generate();
 }
 
 } // namespace vm

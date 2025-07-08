@@ -216,9 +216,8 @@ void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
 facebook::hermes::sampling_profiler::Profile SamplingProfiler::dumpAsProfile() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
 
-  ProfileGenerator profileGenerator(*this, sampledStacks_);
   facebook::hermes::sampling_profiler::Profile profile =
-      profileGenerator.generate();
+      generateProfile(*this, sampledStacks_);
 
   clear();
   return profile;
