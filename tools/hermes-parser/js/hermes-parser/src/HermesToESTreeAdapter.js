@@ -76,8 +76,6 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
         return this.mapExportNamedDeclaration(node);
       case 'ExportAllDeclaration':
         return this.mapExportAllDeclaration(node);
-      case 'Property':
-        return this.mapProperty(node);
       case 'FunctionDeclaration':
       case 'FunctionExpression':
       case 'ArrowFunctionExpression':
@@ -212,20 +210,6 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     }
 
     return this.mapNodeDefault(node);
-  }
-
-  mapProperty(nodeUnprocessed: HermesNode): HermesNode {
-    const node = this.mapNodeDefault(nodeUnprocessed);
-
-    if (
-      node.value.type === 'FunctionExpression' &&
-      (node.method || node.kind !== 'init')
-    ) {
-      node.value.loc.start = node.key.loc.end;
-      node.value.range[0] = node.key.range[1];
-    }
-
-    return node;
   }
 
   mapComment(node: HermesNode): HermesNode {
