@@ -11,6 +11,7 @@
 #include "JIT/Config.h"
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/VM/HermesValue.h"
@@ -244,15 +245,18 @@ class CodeBlock final : private llvh::TrailingObjects<
   bool coordsInLazyFunction(SMLoc loc) const;
 
   /// \return a vector representing the number of Variables for each depth
-  ///   of the VariableScope chain.
-  std::vector<uint32_t> getVariableCounts() const;
+  ///   of the VariableScope chain, starting from \p lexicalScope.
+  std::vector<uint32_t> getVariableCounts(void *lexicalScope) const;
 
   /// \param depth the depth of the VariableScope to lookup, 0 is the
   ///   the current CodeBlock.
   /// \param variableIndex the index of the Variable in the VariableScope.
-  /// \return the name of the Variable at a given index at the given depth.
-  llvh::StringRef getVariableNameAtDepth(uint32_t depth, uint32_t variableIndex)
-      const;
+  /// \param lexicalScope holds information on the initial lexical scope.
+  ///   \return a tuple of <var name, env depth, slot in env>.
+  hbc::VariableInfoAtDepth getVariableInfoAtDepth(
+      uint32_t depth,
+      uint32_t variableIndex,
+      void *lexicalScope) const;
 
 #if HERMESVM_JIT
   /// \return true if JIT is disabled for this function.

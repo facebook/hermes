@@ -12,6 +12,7 @@
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Optimizer/PassManager/Pipeline.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
 #include "hermes/Sema/SemResolve.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/PerfSection.h"
@@ -461,62 +462,87 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
       : std::make_pair(std::unique_ptr<BCProviderFromSrc>{}, data.error);
 }
 
+/// \return true if \p decl should be shown when collecting variables.
+static bool shouldListDecl(sema::Decl *decl) {
+  if (decl->special == sema::Decl::Special::Arguments)
+    return false;
+  switch (decl->kind) {
+    case sema::Decl::Kind::Let:
+    case sema::Decl::Kind::Const:
+    case sema::Decl::Kind::Catch:
+    case sema::Decl::Kind::ES5Catch:
+    case sema::Decl::Kind::Var:
+    case sema::Decl::Kind::Parameter:
+      return true;
+    default:
+      return false;
+  }
+}
+
 std::vector<uint32_t> getVariableCounts(
     hbc::BCProvider *provider,
-    uint32_t funcID) {
-  hbc::BCProviderFromSrc *providerFromSrc =
-      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
-  if (!providerFromSrc) {
-    return std::vector<uint32_t>({0});
-  }
-
-  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
-  hbc::BytecodeFunction &bcFunc = bcModule->getFunction(funcID);
-  Function *F = bcFunc.getFunctionIR();
-  if (!F) {
-    // Couldn't find an IR function, possibly unsupported function kind or
-    // compiled without -g.
-    return std::vector<uint32_t>({0});
-  }
-
-  const EvalCompilationDataInst *evalDataInst = F->getEvalCompilationDataInst();
-  if (!evalDataInst) {
-    // No known way to do this, defensive programming.
-    // functionIR is either lazy or has EvalCompilationDataInst, and we can't be
-    // here if the function was lazy.
-    return std::vector<uint32_t>({0});
-  }
-
+    uint32_t funcID,
+    void *lexicalScope) {
+  assert(lexicalScope && "lexical scope cannot be null.");
+  sema::LexicalScope *lexScope =
+      static_cast<sema::LexicalScope *>(lexicalScope);
   std::vector<uint32_t> counts;
-
-  for (auto *cur = evalDataInst->getFuncVarScope(); cur;
-       cur = cur->getParentScope()) {
-    counts.push_back(cur->getNumVisibleVariables());
+  for (auto *cur = lexScope; cur; cur = cur->parentScope) {
+    counts.push_back(llvh::count_if(cur->decls, shouldListDecl));
   }
-
   return counts;
 }
 
-llvh::StringRef getVariableNameAtDepth(
+VariableInfoAtDepth getVariableInfoAtDepth(
     hbc::BCProvider *provider,
     uint32_t funcID,
     uint32_t depth,
-    uint32_t variableIndex) {
-  hbc::BCProviderFromSrc *providerFromSrc =
-      llvh::cast<hbc::BCProviderFromSrc>(provider);
+    uint32_t variableIndex,
+    void *lexicalScope) {
+  sema::LexicalScope *lexScope =
+      static_cast<sema::LexicalScope *>(lexicalScope);
+  auto *beginLexScope = lexScope;
+  for (size_t i = 0; i < depth; i++) {
+    lexScope = lexScope->parentScope;
+    assert(lexScope && "depth out of bounds");
+  }
 
-  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
-  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
-  Function *F = lazyFunc.getFunctionIR();
-  assert(F && "no lazy IR for lazy function");
+  const auto &decls = lexScope->decls;
+  // When iterating through the decls, how many user-presentable decls have been
+  // seen.
+  uint32_t listableDeclsSeen = 0;
+  // This is how many listable decls we need to find in order to satisfy the
+  // search for \p variableIdx.
+  uint32_t targetListableDeclsSeen = variableIndex + 1;
+  uint32_t declIdx = 0;
+  for (size_t i = 0, e = decls.size(); i < e; ++i) {
+    if (shouldListDecl(decls[i])) {
+      if (++listableDeclsSeen == targetListableDeclsSeen) {
+        declIdx = i;
+        break;
+      }
+    }
+  }
+  assert(
+      listableDeclsSeen == targetListableDeclsSeen &&
+      "variable at variableIdx not found");
+  sema::Decl *decl = decls[declIdx];
+  auto *varForDecl = static_cast<Variable *>(getDeclCustomData(decl));
 
-  const EvalCompilationDataInst *evalDataInst = F->getEvalCompilationDataInst();
-  assert(evalDataInst && "function must be eval");
-
-  auto *varScope = llvh::cast<VariableScope>(evalDataInst->getOperand(
-      EvalCompilationDataInst::FuncVarScopeIdx + depth));
-
-  return varScope->getVariables()[variableIndex]->getName().str();
+  // Calculate how many steps is required to get to the target VariableScope.
+  VariableScope *curVS = getLexicalScopeCustomData(beginLexScope);
+  VariableScope *targetVS = getLexicalScopeCustomData(lexScope);
+  assert(curVS && targetVS && "VariableScope must be set for lexical scopes");
+  uint32_t varScopeDepth = 0;
+  for (; curVS; curVS = curVS->getParentScope()) {
+    if (curVS == targetVS) {
+      break;
+    }
+    ++varScopeDepth;
+  }
+  assert(curVS && "target VariableScope could not be reached");
+  return {
+      decl->name.str(), varScopeDepth, varForDecl->getIndexInVariableList()};
 }
 
 } // namespace hbc

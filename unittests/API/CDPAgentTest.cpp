@@ -3793,7 +3793,7 @@ TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
   )");
   expectNotification("Debugger.scriptParsed");
   auto pausedNote = ensurePaused(
-      waitForMessage(), "other", {{"func", 4, 2}, {"global", 5, 1}});
+      waitForMessage(), "other", {{"func", 4, 3}, {"global", 5, 1}});
 
   // Runtime evaluate should not happen while paused.
   int evaluateMsgId = msgId++;

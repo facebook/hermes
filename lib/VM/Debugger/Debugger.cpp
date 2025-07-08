@@ -1102,6 +1102,49 @@ ExecutionStatus Debugger::processInstUnderDebuggerOpCode(
   return ExecutionStatus::RETURNED;
 }
 
+/// \return the debug scoping info at \p frame. Returns None if there's not
+/// valid info that can be found.
+static OptValue<hbc::DebugScopingInfo>
+getScopingInfo(const Runtime &runtime, const CodeBlock *cb, uint32_t frame) {
+  const Inst *curIP;
+  if (frame == 0) {
+    // When frame is 0, the correct IP cannot be found anywhere in the
+    // JS call stack. It's instead saved in the Runtime.
+    curIP = runtime.getCurrentIP();
+  } else {
+    auto savedIPFrameInfoOpt = runtime.stackFrameInfoByIndex(frame - 1);
+    if (!savedIPFrameInfoOpt) {
+      return llvh::None;
+    }
+    curIP = savedIPFrameInfoOpt->frame->getSavedIP();
+  }
+  auto offset = cb->getOffsetOf(curIP);
+  auto srcLocOpt = cb->getSourceLocation(offset);
+  // This bytecode offset does not have valid scoping information.
+  if (!srcLocOpt || srcLocOpt->envIdx == 0) {
+    return llvh::None;
+  }
+  const hbc::DebugInfo *debugInfo =
+      cb->getRuntimeModule()->getBytecode()->getDebugInfo();
+  return debugInfo->getScopingInfoAt(srcLocOpt->envIdx);
+};
+
+/// \return the Environment value described by \p scopingInfo.
+static Environment *getEnvironmentForScopingInfo(
+    Runtime &runtime,
+    const Runtime::StackFrameInfo &frameInfo,
+    const hbc::DebugScopingInfo &scopingInfo) {
+  if (scopingInfo.isRegister()) {
+    auto *frameRegs = &frameInfo.frame.getFirstLocalRef();
+    return vmcast<Environment>(frameRegs[scopingInfo.getRegister()]);
+  } else {
+    assert(scopingInfo.isSpilledSlot() && "expected spilled slot");
+    Environment *curEnv =
+        frameInfo.frame.getCalleeClosureUnsafe()->getEnvironment(runtime);
+    return vmcast<Environment>(curEnv->slot(scopingInfo.getSpilledSlot()));
+  }
+}
+
 auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
   auto frameInfo = runtime_.stackFrameInfoByIndex(frame);
   assert(frameInfo && "Invalid frame");
@@ -1119,8 +1162,15 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
     result.variableCountsByScope_.push_back(0);
     return result;
   }
+  auto scopingInfoOpt = getScopingInfo(runtime_, cb, frame);
+  if (!scopingInfoOpt) {
+    result.variableCountsByScope_.push_back(0);
+    return result;
+  }
+  const auto &scopingInfo = *scopingInfoOpt;
 
-  result.variableCountsByScope_ = cb->getVariableCounts();
+  result.variableCountsByScope_ =
+      cb->getVariableCounts(scopingInfo.lexicalScope());
   return result;
 }
 
@@ -1147,18 +1197,29 @@ HermesValue Debugger::getVariableInFrame(
   const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
   assert(cb && "Unexpectedly null code block");
 
-  if (outName)
-    *outName = cb->getVariableNameAtDepth(scopeDepth, variableIndex);
+  auto scopingInfoOpt = getScopingInfo(runtime_, cb, frame);
+  if (!scopingInfoOpt) {
+    return undefined;
+  }
+  const auto &scopingInfo = *scopingInfoOpt;
 
-  // Descend the environment chain to the desired depth, or stop at null.
+  auto varInfo = cb->getVariableInfoAtDepth(
+      scopeDepth, variableIndex, scopingInfo.lexicalScope());
+
+  if (outName)
+    *outName = varInfo.name;
+
+  // Get the current environment.
+  Environment *env =
+      getEnvironmentForScopingInfo(runtime_, *frameInfo, scopingInfo);
+
+  // Now descend the environment chain to the desired depth, or stop at null.
   // We may get a null environment if it has not been created.
-  MutableHandle<Environment> env(
-      runtime_, frameInfo->frame->getDebugEnvironment());
-  for (uint32_t i = 0; env && i < scopeDepth; i++)
+  for (uint32_t i = 0; env && i < varInfo.envDepth; i++)
     env = env->getParentEnvironment(runtime_);
 
   // Now we can get the variable, or undefined if we have no environment.
-  return env ? env->slot(variableIndex) : undefined;
+  return env ? env->slot(varInfo.slotInEnv) : undefined;
 }
 
 HermesValue Debugger::getThisValue(uint32_t frame) const {
@@ -1243,42 +1304,14 @@ HermesValue Debugger::evalInFrame(
     return HermesValue::encodeUndefinedValue();
   }
 
-  uint32_t offset;
-  if (frame == 0) {
-    // When frame is 0, the correct IP cannot be found anywhere in the
-    // JS call stack. That value only exists as a local variable in the C++
-    // interpreter stack, which is passed through to this point via the
-    // InterpreterState.
-    offset = state.offset;
-  } else {
-    auto savedIPFrameInfoOpt = runtime_.stackFrameInfoByIndex(frame - 1);
-    if (!savedIPFrameInfoOpt) {
-      return HermesValue::encodeUndefinedValue();
-    }
-    offset = cb->getOffsetOf(savedIPFrameInfoOpt->frame->getSavedIP());
-  }
-
-  auto srcLocOpt = cb->getSourceLocation(offset);
-  // This bytecode offset does not have sufficient information needed to perform
-  // a debugger eval here.
-  if (!srcLocOpt || srcLocOpt->envIdx == 0) {
+  auto scopingInfoOpt = getScopingInfo(runtime_, cb, frame);
+  if (!scopingInfoOpt) {
     return HermesValue::encodeUndefinedValue();
   }
+  const auto &scopingInfo = *scopingInfoOpt;
 
-  const hbc::DebugInfo *debugInfo =
-      cb->getRuntimeModule()->getBytecode()->getDebugInfo();
-  auto &scopingInfo = debugInfo->getScopingInfoAt(srcLocOpt->envIdx);
-  assert(scopingInfo.lexicalScope() && "lexical scope cannot be null");
-  if (scopingInfo.isRegister()) {
-    auto *frameRegs = &frameInfo->frame.getFirstLocalRef();
-    lv.environment = vmcast<Environment>(frameRegs[scopingInfo.getRegister()]);
-  } else {
-    assert(scopingInfo.isSpilledSlot() && "expected spilled slot");
-    Environment *curEnv =
-        frameInfo->frame.getCalleeClosureUnsafe()->getEnvironment(runtime_);
-    lv.environment =
-        vmcast<Environment>(curEnv->slot(scopingInfo.getSpilledSlot()));
-  }
+  lv.environment =
+      getEnvironmentForScopingInfo(runtime_, *frameInfo, scopingInfo);
 
   bool singleFunction = false;
 

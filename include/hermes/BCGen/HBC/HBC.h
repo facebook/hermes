@@ -224,19 +224,36 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
 
 /// \return a vector of the number of variables at each stack frame depth in
 ///   the function with the given ID, index 0 is the function itself.
+/// \param lexicalScope a pointer to information regarding the starting lexical
+///   scope to search for variables.
 std::vector<uint32_t> getVariableCounts(
     hbc::BCProvider *provider,
-    uint32_t funcID);
+    uint32_t funcID,
+    void *lexicalScope);
+
+/// Contains information regarding a variable at a particular depth.
+struct VariableInfoAtDepth {
+  /// Name of the variable.
+  llvh::StringRef name{};
+  /// Depth of the environment, starting from some beginning environment.
+  uint32_t envDepth = UINT32_MAX;
+  /// Slot in the environment this variable lives in.
+  uint32_t slotInEnv = UINT32_MAX;
+};
 
 /// \pre \p provider is a BCProviderFromSrc.
-/// \return the name of the variable at frame depth \p depth and index \p
+/// Obtain information of the variable at frame depth \p depth and index \p
 ///   variableIndex for the function at \p funcID, index 0 is the function
 ///   itself.
-llvh::StringRef getVariableNameAtDepth(
+/// \param lexicalScope a pointer to information regarding the starting lexical
+///   scope to search for variables.
+///   \return information on the variable
+VariableInfoAtDepth getVariableInfoAtDepth(
     hbc::BCProvider *provider,
     uint32_t funcID,
     uint32_t depth,
-    uint32_t variableIndex);
+    uint32_t variableIndex,
+    void *lexicalScope);
 
 } // namespace hbc
 } // namespace hermes

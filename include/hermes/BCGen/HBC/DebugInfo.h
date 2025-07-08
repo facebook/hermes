@@ -36,6 +36,8 @@ constexpr uint32_t kInvalidSourceMappingUrlId = 0;
 /// Holds the required state to restore the environment information needed to
 /// perform an eval from the debugger.
 class DebugScopingInfo {
+  friend class OptValue<DebugScopingInfo>;
+
   /// We use int64_t to represent all the possible locations the environment can
   /// reside. There are 2 possible cases for what EnvLocationDescriptor means.
   /// >=0: a register in the current function.
@@ -48,6 +50,7 @@ class DebugScopingInfo {
 
   static constexpr int64_t kFirstRegLocation = 0;
 
+  DebugScopingInfo() = default;
   DebugScopingInfo(int64_t envLocation, void *lexicalScope)
       : envLocation_(envLocation), lexicalScope_(lexicalScope) {}
 

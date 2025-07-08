@@ -492,9 +492,7 @@ TEST_F(DebuggerAPITest, GetScopes) {
   EXPECT_GT(observer.lexicalInfos.size(), 0);
   auto &lexicalInfo = observer.lexicalInfos[0];
   EXPECT_GT(lexicalInfo.getScopesCount(), 0);
-  // TODO: Fix this once we properly report block scopes.
-  // Not disabling so that we remember to fix it once block scoping is enabled.
-  EXPECT_EQ(lexicalInfo.getVariablesCountInScope(0), 5);
+  EXPECT_EQ(lexicalInfo.getVariablesCountInScope(0), 1);
 }
 
 namespace {

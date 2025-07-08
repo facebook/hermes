@@ -90,15 +90,17 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
 
 std::vector<uint32_t> getVariableCounts(
     hbc::BCProvider *provider,
-    uint32_t funcID) {
+    uint32_t funcID,
+    void *lexicalScope) {
   return {0};
 }
 
-llvh::StringRef getVariableNameAtDepth(
+VariableInfoAtDepth getVariableInfoAtDepth(
     hbc::BCProvider *provider,
     uint32_t funcID,
     uint32_t depth,
-    uint32_t variableIndex) {
+    uint32_t variableIndex,
+    void *lexicalScope) {
   hermes_fatal("Lean VM does not support debugging");
 }
 
