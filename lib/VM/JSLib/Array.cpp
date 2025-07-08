@@ -3650,6 +3650,7 @@ static inline CallResult<double> arrayCopyHelper(
   while (i < count) {
     gcScope.flushToMarker(marker);
     auto fromIndex = fromStartIndex + i;
+    fromValueHandle = HermesValue::encodeUndefinedValue();
 
     if (LLVM_LIKELY(fromArr)) {
       const SmallHermesValue elem = fromArr->at(runtime, fromIndex);
