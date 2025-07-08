@@ -74,23 +74,25 @@ class ProfileGenerator {
   /// NativeFunctionFrameInfo is an alias for size_t, unique identifier for
   /// native function during sampling.
   using NativeFunctionNameCache = llvh::
-      DenseMap<SamplingProfiler::NativeFunctionFrameInfo, fhsp::StringEntry>;
+      DenseMap<SamplingProfiler::NativeFunctionFrameInfo, std::string_view>;
 
   /// Composite key: there is no global identifier on RuntimeModule that can be
   /// used. The second argument is function identifier, not globally unique,
   /// only unique for functions inside single RuntimeModule.
   using JSFunctionFrameDetailsKey = std::pair<RuntimeModule *, uint32_t>;
   using JSFunctionFrameDetailsCacheValue = std::tuple<
-      fhsp::StringEntry, // Function name.
-      std::optional<fhsp::StringEntry>, // Source script URL.
+      std::string_view, // Function name.
+      std::optional<std::string_view>, // Source script URL.
       OptValue<hbc::DebugSourceLocation>>;
   using JSFunctionFrameDetailsCache = llvh::
       DenseMap<JSFunctionFrameDetailsKey, JSFunctionFrameDetailsCacheValue>;
 
-  /// Cache for source script URLs. The key is llvh::StringRef from original
-  /// std::string, the value is StringEntry that can be supplied to Frame.
+  /// Cache for source script URLs. The key is llvh::StringRef, the value is the
+  /// std::string_view that points to the raw std::string inside stringStorage_,
+  /// which guarantees the validity of the view as long as the storage is not
+  /// deallocated.
   using SourceScriptURLCache =
-      llvh::DenseMap<llvh::StringRef, fhsp::StringEntry>;
+      llvh::DenseMap<llvh::StringRef, std::string_view>;
 
  public:
   ProfileGenerator(
@@ -103,7 +105,7 @@ class ProfileGenerator {
 
   /// Emit Profile in a single struct.
   fhsp::Profile generate() {
-    stringStorage_ = std::make_unique<std::vector<std::string>>();
+    stringStorage_ = std::make_unique<std::deque<std::string>>();
 
     std::vector<fhsp::ProfileSample> samples;
     samples.reserve(sampledStacks_.size());
@@ -177,9 +179,10 @@ class ProfileGenerator {
   /// Supports memoization.
   /// \param frame Internal SamplingProfiler::StackFrame object. Has to be
   /// either NativeFunction or FinalizableNativeFunction.
-  /// \return A StringEntry object representing the name of the native function
-  /// associated with the provided stack frame.
-  fhsp::StringEntry getNativeFunctionName(
+  /// \return std::string_view pointing to the stored raw std::string that
+  /// represents the name of the native function associated with the provided
+  /// stack frame.
+  std::string_view getNativeFunctionName(
       const SamplingProfiler::StackFrame &frame) {
     assert(
         (frame.kind ==
@@ -196,11 +199,11 @@ class ProfileGenerator {
 
     std::string nativeFunctionName =
         samplingProfiler_.getNativeFunctionName(frame);
-    auto nativeFunctionNameEntry = storeString(nativeFunctionName);
+    auto nativeFunctionNameView = storeString(nativeFunctionName);
     nativeFunctionNameCache_.try_emplace(
-        frame.nativeFrame, nativeFunctionNameEntry);
+        frame.nativeFrame, nativeFunctionNameView);
 
-    return nativeFunctionNameEntry;
+    return nativeFunctionNameView;
   }
 
   /// Obtains detailed information about a JavaScript function from its frame
@@ -234,47 +237,38 @@ class ProfileGenerator {
           bcProvider->getDebugInfo()->getUTF8FilenameByID(filenameId);
     }
 
-    std::optional<fhsp::StringEntry> maybeSourceScriptURLEntry = std::nullopt;
+    std::optional<std::string_view> maybeSourceScriptURLView = std::nullopt;
     if (maybeSourceScriptURL.has_value()) {
       const std::string &sourceScriptURL = maybeSourceScriptURL.value();
 
       auto sourceScriptURLCacheIt =
           sourceScriptURLCache_.find(llvh::StringRef{sourceScriptURL});
       if (sourceScriptURLCacheIt != sourceScriptURLCache_.end()) {
-        maybeSourceScriptURLEntry.emplace(sourceScriptURLCacheIt->second);
+        maybeSourceScriptURLView.emplace(sourceScriptURLCacheIt->second);
       } else {
-        fhsp::StringEntry sourceScriptURLEntry = storeString(sourceScriptURL);
-        maybeSourceScriptURLEntry.emplace(sourceScriptURLEntry);
+        std::string_view sourceScriptURLView = storeString(sourceScriptURL);
+        maybeSourceScriptURLView.emplace(sourceScriptURLView);
 
-        // The string from stringStorage_ is referenced here, because it
-        // will outlive sourceScriptURLCache_. The lifetime of
-        // sourceScriptURLCache_ is bound to the lifetime of ProfileGenerator,
-        // whereas stringStorage_'s lifetime is bound to the lifetime of the
-        // Profile object. Once ProfileGenerator::generate() finishes, the
-        // stringStorage_ is moved to the Profile and no longer valid within
-        // ProfileGenerator.
-        std::string_view sourceScriptURLView = sourceScriptURLEntry.getView();
         sourceScriptURLCache_.try_emplace(
             llvh::StringRef{
                 sourceScriptURLView.data(), sourceScriptURLView.size()},
-            sourceScriptURLEntry);
+            sourceScriptURLView);
       }
     }
 
     auto valueToCache = std::make_tuple(
-        functionNameEntry, maybeSourceScriptURLEntry, debugSourceLocation);
+        functionNameEntry, maybeSourceScriptURLView, debugSourceLocation);
     jsFunctionFrameCache_.try_emplace(key, valueToCache);
 
     return valueToCache;
   }
 
   /// Places a std::string into stringStorage_.
-  /// \return StringEntry that can be supplied to Frame.
-  fhsp::StringEntry storeString(const std::string &str) {
-    auto offset = stringStorage_->size();
+  /// \return std::string_view that can be supplied to Frame. Returned view
+  /// will never be invalidated as long as the storage is not deallocated.
+  std::string_view storeString(const std::string &str) {
     stringStorage_->push_back(str);
-
-    return fhsp::StringEntry(*stringStorage_.get(), offset);
+    return stringStorage_->back();
   }
 
   /// SamplingProfiler instance expected to outlive ProfileGenerator.
@@ -290,7 +284,7 @@ class ProfileGenerator {
   /// being constructed. It will be owned by the profile later. There could be
   /// duplicates in this storage: the uniqueness of frames is determined by
   /// internal VM concepts, not by the names of functions and string contents.
-  std::unique_ptr<std::vector<std::string>> stringStorage_;
+  std::unique_ptr<std::deque<std::string>> stringStorage_;
 };
 
 } // namespace

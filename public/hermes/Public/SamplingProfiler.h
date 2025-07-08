@@ -11,6 +11,7 @@
 #include <hermes/Public/HermesExport.h>
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
@@ -46,25 +47,6 @@ Range<Iterator> makeRange(Iterator begin, Iterator end) {
   return Range<Iterator>(begin, end);
 }
 
-/// A string entry in the Profile that knows how to get a std::string_view to
-/// it. There could be multiple entries in the storage that have the same string
-/// contents: strings are stored for each unique frame, and frame's uniqueness
-/// is determined by the internal VM concepts.
-class StringEntry {
- public:
-  StringEntry(const std::vector<std::string> &stringStorage, size_t entryOffset)
-      : stringStorage_(stringStorage), entryOffset_(entryOffset) {}
-
-  std::string_view getView() const {
-    return stringStorage_.at(entryOffset_);
-  }
-
- private:
-  /// The lifetime of the storage has to be tied to the lifetime of the Profile.
-  const std::vector<std::string> &stringStorage_;
-  size_t entryOffset_;
-};
-
 /// JavaScript function frame. Guaranteed to have function name, potentially
 /// an empty string, if function is anonymous or if function names were filtered
 /// out during bytecode compilation. Could have scriptId, url, line and column
@@ -72,20 +54,20 @@ class StringEntry {
 class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
  public:
   explicit ProfileSampleCallStackJSFunctionFrame(
-      StringEntry functionNameEntry,
+      std::string_view functionName,
       uint32_t scriptId,
-      const std::optional<StringEntry> &scriptUrlEntry = std::nullopt,
+      const std::optional<std::string_view> &scriptUrl = std::nullopt,
       const std::optional<uint32_t> &lineNumber = std::nullopt,
       const std::optional<uint32_t> &columnNumber = std::nullopt)
-      : functionNameEntry_(functionNameEntry),
+      : functionName_(functionName),
         scriptId_(scriptId),
-        scriptUrlEntry_(scriptUrlEntry),
+        scriptUrl_(scriptUrl),
         lineNumber_(lineNumber),
         columnNumber_(columnNumber) {}
 
   /// \return name of the function that represents call frame.
   std::string_view getFunctionName() const {
-    return functionNameEntry_.getView();
+    return functionName_;
   }
 
   /// \return id of the corresponding script in the VM.
@@ -94,12 +76,12 @@ class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
   }
 
   bool hasScriptUrl() const {
-    return scriptUrlEntry_.has_value();
+    return scriptUrl_.has_value();
   }
 
   /// \return source url of the corresponding script in the VM.
   std::string_view getScriptUrl() const {
-    return scriptUrlEntry_.value().getView();
+    return scriptUrl_.value();
   }
 
   bool hasFunctionLineNumber() const {
@@ -123,9 +105,9 @@ class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
   }
 
  private:
-  StringEntry functionNameEntry_;
+  std::string_view functionName_;
   uint32_t scriptId_;
-  std::optional<StringEntry> scriptUrlEntry_;
+  std::optional<std::string_view> scriptUrl_;
   std::optional<uint32_t> lineNumber_;
   std::optional<uint32_t> columnNumber_;
 };
@@ -135,16 +117,16 @@ class HERMES_EXPORT ProfileSampleCallStackJSFunctionFrame {
 class HERMES_EXPORT ProfileSampleCallStackNativeFunctionFrame {
  public:
   explicit ProfileSampleCallStackNativeFunctionFrame(
-      StringEntry functionNameEntry)
-      : functionNameEntry_(functionNameEntry) {}
+      std::string_view functionName)
+      : functionName_(functionName) {}
 
   /// \return name of the function that represents call frame.
   std::string_view getFunctionName() const {
-    return functionNameEntry_.getView();
+    return functionName_;
   }
 
  private:
-  StringEntry functionNameEntry_;
+  std::string_view functionName_;
 };
 
 /// Host function frame. Native functions defined by the integrator. Example:
@@ -152,16 +134,16 @@ class HERMES_EXPORT ProfileSampleCallStackNativeFunctionFrame {
 class HERMES_EXPORT ProfileSampleCallStackHostFunctionFrame {
  public:
   explicit ProfileSampleCallStackHostFunctionFrame(
-      StringEntry functionNameEntry)
-      : functionNameEntry_(functionNameEntry) {}
+      std::string_view functionName)
+      : functionName_(functionName) {}
 
   /// \return name of the function that represents call frame.
   std::string_view getFunctionName() const {
-    return functionNameEntry_.getView();
+    return functionName_;
   }
 
  private:
-  StringEntry functionNameEntry_;
+  std::string_view functionName_;
 };
 
 /// Frame that suspends the execution of the VM: could be GC, Debugger or
@@ -210,18 +192,6 @@ class HERMES_EXPORT ProfileSample {
         threadId_(threadId),
         callStack_(std::move(callStack)) {}
 
-  ProfileSample(ProfileSample &&) = default;
-  ProfileSample &operator=(ProfileSample &&) = default;
-  ProfileSample(const ProfileSample &) = default;
-
-  /// Explicitly deleting the copy assignment operator, because MSVC will
-  /// attempt to generate default implementation for it. It will do so, because
-  /// this struct is dllexport-ed. Compilation with the default implementation
-  /// will fail, because StringEntry is not copy-assignable.
-  ProfileSample &operator=(const ProfileSample &) = delete;
-
-  ~ProfileSample() = default;
-
   /// \return serialized unix timestamp in microseconds granularity. The
   /// moment when this sample was recorded.
   uint64_t getTimestamp() const {
@@ -261,7 +231,7 @@ class HERMES_EXPORT Profile {
 
   Profile(
       std::vector<ProfileSample> samples,
-      std::unique_ptr<std::vector<std::string>> stringStorage)
+      std::unique_ptr<std::deque<std::string>> stringStorage)
       : samples_(std::move(samples)),
         stringStorage_(std::move(stringStorage)) {}
 
@@ -293,7 +263,7 @@ class HERMES_EXPORT Profile {
   /// get std::string_view to the actual string.
   /// The storage lifetime is tied to the lifetime of the Profile. Samples and
   /// Frames should not outlive the Profile.
-  std::unique_ptr<std::vector<std::string>> stringStorage_;
+  std::unique_ptr<std::deque<std::string>> stringStorage_;
 };
 
 } // namespace sampling_profiler
