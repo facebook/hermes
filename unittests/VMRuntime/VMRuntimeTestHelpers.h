@@ -281,6 +281,8 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
 
  public:
   std::vector<WeakRoot<GCCell> *> weakRoots{};
+  /// Head of the locals list used for VM operations.
+  Locals *vmLocals{};
 
   /// Create a DummyRuntime with the default parameters.
   static std::shared_ptr<DummyRuntime> create(const GCConfig &gcConfig);
@@ -393,6 +395,29 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
       const GCConfig &gcConfig,
       std::shared_ptr<StorageProvider> storageProvider,
       std::shared_ptr<CrashManager> crashMgr);
+};
+
+/// RAII class to push/pop a Locals struct within a scope. This is a duplicate
+/// of LocalsRAII in Runtime.h.
+class [[nodiscard]] DummyLocalsRAII {
+  DummyRuntime &runtime_;
+  Locals *locals_;
+
+ public:
+  template <typename T>
+  explicit DummyLocalsRAII(DummyRuntime &runtime, T *locals)
+      : runtime_(runtime), locals_(locals) {
+    locals->prev = runtime_.vmLocals;
+    locals->numLocals =
+        (sizeof(T) - offsetof(Locals, locals)) / sizeof(PinnedHermesValue);
+    runtime_.vmLocals = locals;
+  }
+  ~DummyLocalsRAII() {
+    assert(
+        runtime_.vmLocals == locals_ &&
+        "LocalsRAII must be destroyed in the reverse order of creation");
+    runtime_.vmLocals = locals_->prev;
+  }
 };
 
 /// A DummyRuntimeTestFixtureBase should be used by any test that requires a

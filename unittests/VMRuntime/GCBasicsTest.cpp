@@ -417,18 +417,30 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   const GCConfig kGCConfig = TestGCConfigFixedSize(kMaxHeapSize);
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
-  GCScope scope{rt};
+
+  struct : Locals {
+    PinnedValue<LargeDummyObject> l1;
+    PinnedValue<LargeDummyObject> l2;
+    PinnedValue<DummyObject> o1;
+    PinnedValue<DummyObject> o2;
+
+    void reset() {
+      l1 = nullptr;
+      l2 = nullptr;
+      o1 = nullptr;
+      o2 = nullptr;
+    }
+  } lv;
 
   GCBase::HeapInfo heapInfo;
   // Test that YG/OG objects bytes are still correctly tracked.
   {
-    GCScopeMarkerRAII marker{scope};
+    DummyLocalsRAII lraii{rt, &lv};
     uint64_t expectedTotalAllocBytes = 0;
     static constexpr uint32_t kHalfYGSize = FixedSizeHeapSegment::maxSize() / 2;
-    rt.makeHandle<LargeDummyObject>(
-        LargeDummyObject::create(kLargeCellSize, rt.getHeap()));
+    lv.l1 = LargeDummyObject::create(kLargeCellSize, rt.getHeap());
     expectedTotalAllocBytes += kLargeCellSize;
-    rt.makeHandle(LargeDummyObject::create(kHalfYGSize, rt.getHeap()));
+    lv.l2 = LargeDummyObject::create(kHalfYGSize, rt.getHeap());
     expectedTotalAllocBytes += kHalfYGSize;
     for (int i = 0; i < 10; ++i) {
       LargeDummyObject::create(kHalfYGSize, rt.getHeap());
@@ -440,18 +452,18 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   // Clear all objects in heap.
   rt.collect();
 
+  lv.reset();
   uint64_t prevTotalAllocBytes = 0;
   // Test that large allocation in case of insufficient space returns nullptr,
   // and allocation with size larger than GCCell::maxNormalSize() works as
   // expected.
   {
-    GCScopeMarkerRAII marker{scope};
+    DummyLocalsRAII lraii{rt, &lv};
     // Add a few extra bytes to ensure that the third allocation below fails due
     // to insufficient heap space.
-    rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3 + 8, rt.getHeap()));
-    auto dummy2 =
-        rt.makeHandle(LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()));
-    ASSERT_NE(dummy2.get(), nullptr);
+    lv.l1 = LargeDummyObject::create(kMaxHeapSize / 3 + 8, rt.getHeap());
+    lv.l2 = LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap());
+    ASSERT_NE(lv.l2.get(), nullptr);
 #ifdef HERMESVM_GC_MALLOC
     auto expectedSize = heapAlignSize(kMaxHeapSize / 3);
 #else
@@ -460,7 +472,7 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
 #endif
     // The above allocation may have size larger than GCCell::maxNormalSize(),
     // assert that we can still get correct cell size.
-    ASSERT_EQ(dummy2->getAllocatedSizeSlow(), expectedSize);
+    ASSERT_EQ(lv.l2->getAllocatedSizeSlow(), expectedSize);
     // No enough space, this allocation should fail and return nullptr.
     ASSERT_EQ(
         LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap()), nullptr);
@@ -471,30 +483,30 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   // next large object allocation will fail.
   rt.collect();
 
+  lv.reset();
   {
-    GCScopeMarkerRAII marker{scope};
+    DummyLocalsRAII lraii{rt, &lv};
     // Create a LargeCell with CanBeLarge::Yes should now succeed.
-    auto large =
-        rt.makeHandle(LargeDummyObject::create(kLargeCellSize, rt.getHeap()));
-    EXPECT_NE(large.get(), nullptr);
-    EXPECT_EQ(large->getAllocatedSizeSlow(), kLargeCellSize);
+    lv.l1 = LargeDummyObject::create(kLargeCellSize, rt.getHeap());
+    EXPECT_NE(lv.l1.get(), nullptr);
+    EXPECT_EQ(lv.l1->getAllocatedSizeSlow(), kLargeCellSize);
     rt.getHeap().getHeapInfo(heapInfo);
     // allocatedBytes should be equal to size of the only object above.
     ASSERT_EQ(heapInfo.allocatedBytes, kLargeCellSize);
     ASSERT_EQ(
         heapInfo.totalAllocatedBytes, kLargeCellSize + prevTotalAllocBytes);
 
-    auto obj1 = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
-    large->hv.set(
-        SmallHermesValue::encodeObjectValue(*obj1, rt), *large, rt.getHeap());
-    auto obj2 = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
-    large->ptrToNormalObj.setNonNull(rt, rt.getHeap(), *obj2, *large);
+    lv.o1 = DummyObject::create(rt.getHeap(), rt);
+    lv.l1->hv.set(
+        SmallHermesValue::encodeObjectValue(*lv.o1, rt), *lv.l1, rt.getHeap());
+    lv.o2 = DummyObject::create(rt.getHeap(), rt);
+    lv.l1->ptrToNormalObj.setNonNull(rt, rt.getHeap(), *lv.o2, *lv.l1);
 
     rt.collect();
     // Ensure pointer fields of large object are correctly updated after
     // collection.
-    ASSERT_EQ(large->hv.getPointer(rt), *obj1);
-    ASSERT_EQ(large->ptrToNormalObj.get(rt), *obj2);
+    ASSERT_EQ(lv.l1->hv.getPointer(rt), *lv.o1);
+    ASSERT_EQ(lv.l1->ptrToNormalObj.get(rt), *lv.o2);
 
     // Set the two handles to two new objects, and run collection. The pointer
     // fields of large object must dirty corresponding cards (since they point
@@ -502,12 +514,12 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
     // freed.
     auto tmpSHV = SmallHermesValue::encodeObjectValue(
         DummyObject::create(rt.getHeap(), rt), rt);
-    large->hv.set(tmpSHV, *large, rt.getHeap());
+    lv.l1->hv.set(tmpSHV, *lv.l1, rt.getHeap());
     auto tmpObj = DummyObject::create(rt.getHeap(), rt);
-    large->ptrToNormalObj.setNonNull(rt, rt.getHeap(), tmpObj, *large);
+    lv.l1->ptrToNormalObj.setNonNull(rt, rt.getHeap(), tmpObj, *lv.l1);
     rt.collect();
-    ASSERT_TRUE(large->hv.getPointer(rt)->isValid());
-    ASSERT_TRUE(large->ptrToNormalObj.get(rt)->isValid());
+    ASSERT_TRUE(lv.l1->hv.getPointer(rt)->isValid());
+    ASSERT_TRUE(lv.l1->ptrToNormalObj.get(rt)->isValid());
   }
   // Clear all objects in heap.
   rt.collect();

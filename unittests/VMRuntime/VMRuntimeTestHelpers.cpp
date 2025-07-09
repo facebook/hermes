@@ -88,6 +88,9 @@ void DummyRuntime::markRoots(RootAcceptorWithNames &acceptor, bool) {
   // snapshot tests.
   acceptor.beginRootSection(RootAcceptor::Section::Custom);
   markGCScopes(acceptor);
+  for (Locals *locals = vmLocals; locals; locals = locals->prev)
+    for (size_t i = 0, e = locals->numLocals; i < e; ++i)
+      acceptor.acceptNullable(locals->locals[i]);
   acceptor.endRootSection();
 }
 
