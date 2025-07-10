@@ -27,8 +27,6 @@ component_syntax=true
 enums=true
 experimental.pattern_matching=true
 
-experimental.natural_inference.local_object_literals=partial
-
 [version]
 ^0.275.0
 
