@@ -350,7 +350,10 @@ class JSArray final : public ArrayImpl {
 
   /// Create an instance of Array, with [[Prototype]] initialized with
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
-  /// \p length. Does not allocate the return object's property storage array.
+  /// \p length. Sets the size of the indexed property storage array to \p
+  /// length and sets the elemCount_ to \p length.
+  ///
+  /// Does not allocate the return object's property storage array.
   static CallResult<PseudoHandle<JSArray>> createNoAllocPropStorage(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,

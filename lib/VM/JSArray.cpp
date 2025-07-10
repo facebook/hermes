@@ -577,12 +577,13 @@ CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
             GCPointerBase::NoBarriers()));
 
     // Only allocate the storage if capacity is not zero.
-    auto arrRes = StorageType::create(runtime, capacity);
+    auto arrRes = StorageType::create(runtime, capacity, length);
     if (arrRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
     lv.self->setIndexedStorage(
         runtime, vmcast<StorageType>(*arrRes), runtime.getHeap());
+    lv.self->setElemCountUnsafe(length);
   } else if (capacity > 0) {
     // Allocate both together.
     auto storageSize = heapAlignSize(StorageType::allocationSize(capacity));
@@ -599,6 +600,9 @@ CallResult<PseudoHandle<JSArray>> JSArray::createNoAllocPropStorage(
     NoAllocScope noAlloc{runtime};
     lv.self = JSObjectInit::initToPointer(runtime, self);
     lv.self->setIndexedStorage(runtime, storage, runtime.getHeap());
+
+    StorageType::growWithinCapacity(storage, runtime, length);
+    lv.self->setElemCountUnsafe(length);
   } else {
     // capacity == 0, no storage needed.
     lv.self = JSObjectInit::initToPointer(

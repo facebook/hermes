@@ -1854,13 +1854,12 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer_and_parent(
       runtime, unit, parentHandle, shapeTableIndex, valBufferOffset);
 }
 
-extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t sizeHint) {
+extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t size) {
   Runtime &runtime = getRuntime(shr);
 
-  CallResult<HermesValue> arrayRes = [&runtime, sizeHint]() {
+  CallResult<HermesValue> arrayRes = [&runtime, size]() {
     GCScopeMarkerRAII marker{runtime};
-    return toCallResultHermesValue(
-        JSArray::create(runtime, sizeHint, sizeHint));
+    return toCallResultHermesValue(JSArray::create(runtime, size, size));
   }();
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
