@@ -194,6 +194,10 @@ class LexicalScope {
   /// The enclosing lexical scope (it could be in another function).
   /// Null if this is the root scope.
   LexicalScope *const parentScope{};
+  /// The index in the owning parentFunction's scopes list where this scope
+  /// lives. This is set when this scope is inserted into a FunctionInfo. It's
+  /// not copied into a cloned LexicalScope in ESTreeClone.
+  uint32_t idxInParentFunction;
 
   /// All declarations made in this scope.
   llvh::SmallVector<Decl *, 2> decls{};
@@ -374,6 +378,7 @@ class FunctionInfo {
   }
   /// Add \p scope to the list of scopes in this FunctionInfo.
   void addScope(LexicalScope *scope) {
+    scope->idxInParentFunction = scopes_.size();
     scopes_.push_back(scope);
   }
 };
