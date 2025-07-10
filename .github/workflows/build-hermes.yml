@@ -1,0 +1,76 @@
+name: Build Hermes
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_hermesc_apple:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build HermesC Apple
+        uses: ./.github/actions/build-hermesc-apple
+  build_apple_slices_hermes:
+    runs-on: macos-14
+    needs: build_hermesc_apple
+    env:
+      IOS_DEPLOYMENT_TARGET: "15.1"
+      XROS_DEPLOYMENT_TARGET: "1.0"
+      MAC_DEPLOYMENT_TARGET: "10.15"
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [Debug, Release]
+        slice: [macosx, iphoneos, iphonesimulator, appletvos, appletvsimulator, catalyst, xros, xrsimulator]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Slice
+        uses: ./.github/actions/build-apple-slices-hermes
+        with:
+          flavor: ${{ matrix.flavor }}
+          slice: ${{ matrix.slice }}
+  build_hermes_macos:
+    runs-on: macos-14
+    needs: [build_apple_slices_hermes]
+    continue-on-error: true
+    env:
+      HERMES_TARBALL_ARTIFACTS_DIR: /tmp/hermes/hermes-runtime-darwin
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [Debug, Release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Hermes MacOS
+        uses: ./.github/actions/build-hermes-macos
+        with:
+          flavor: ${{ matrix.flavor }}
+  build_hermesc_linux:
+    runs-on: ubuntu-latest
+    env:
+      HERMES_TARBALL_ARTIFACTS_DIR: /tmp/hermes/hermes-runtime-darwin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build HermesC Linux
+        uses: ./.github/actions/build-hermesc-linux
+  build_hermesc_windows:
+    runs-on: windows-2025
+    env:
+      HERMES_WS_DIR: 'D:\tmp\hermes'
+      HERMES_TARBALL_ARTIFACTS_DIR: 'D:\tmp\hermes\hermes-runtime-darwin'
+      HERMES_OSXBIN_ARTIFACTS_DIR: 'D:\tmp\hermes\osx-bin'
+      ICU_URL: "https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip"
+      MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
+      CMAKE_DIR: 'C:\Program Files\CMake\bin'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build HermesC Windows
+        uses: ./.github/actions/build-hermesc-windows
