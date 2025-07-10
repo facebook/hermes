@@ -6,6 +6,8 @@
  */
 
 // RUN: %shermes -dump-sema -fno-std-globals %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermes -dump-sema -fno-std-globals %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -dump-sema -fno-std-globals %s | %FileCheckOrRegen %s --match-full-lines
 
 try {} catch (e) { let x; }
 

@@ -208,6 +208,7 @@ static opt<OutputFormatKind> DumpTarget(
             DumpTransformedAST,
             "dump-transformed-ast",
             "Dump the transformed AST as text after validation"),
+        clEnumValN(DumpSema, "dump-sema", "Sema tables"),
         clEnumValN(DumpJS, "dump-js", "Dump the AST as JS"),
         clEnumValN(
             DumpTransformedJS,
@@ -266,6 +267,13 @@ static opt<bool> Typed(
 #else
 static constexpr bool Typed = false;
 #endif
+
+CLFlag StdGlobals(
+    'f',
+    "std-globals",
+    true,
+    "registration of standard globals",
+    CompilerCategory);
 
 cl::opt<bool> Script(
     "script",
@@ -919,6 +927,9 @@ ESTree::NodePtr parseJS(
         cl::DumpSourceLocation,
         cl::IncludeRawASTProp ? ESTreeRawProp::Include
                               : ESTreeRawProp::Exclude);
+  }
+  if (cl::DumpTarget == DumpSema) {
+    sema::semDump(llvh::outs(), *context, semCtx, flowContext, parsedAST);
   }
   if (cl::DumpTarget == DumpTransformedJS) {
     hermes::generateJS(llvh::outs(), parsedAST, cl::Pretty /* pretty */);
@@ -1926,11 +1937,13 @@ CompileResult processSourceFiles(
   DeclarationFileListTy declFileList;
 
   // Load the runtime library.
-  if (!loadGlobalDefinition(
-          *context,
-          llvh::MemoryBuffer::getMemBuffer(libhermes),
-          declFileList)) {
-    return LoadGlobalsFailed;
+  if (cl::StdGlobals) {
+    if (!loadGlobalDefinition(
+            *context,
+            llvh::MemoryBuffer::getMemBuffer(libhermes),
+            declFileList)) {
+      return LoadGlobalsFailed;
+    }
   }
 
   // Load the global property definitions.

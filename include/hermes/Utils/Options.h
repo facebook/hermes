@@ -16,6 +16,7 @@ enum OutputFormatKind {
   DumpNone,
   DumpAST,
   DumpTransformedAST,
+  DumpSema,
   DumpJS,
   DumpTransformedJS,
   ViewCFG,
