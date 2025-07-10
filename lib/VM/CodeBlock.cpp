@@ -253,21 +253,24 @@ bool CodeBlock::coordsInLazyFunction(SMLoc loc) const {
       runtimeModule_->getBytecode(), functionID_, loc);
 }
 
-std::vector<uint32_t> CodeBlock::getVariableCounts(void *lexicalScope) const {
+std::vector<uint32_t> CodeBlock::getVariableCounts(
+    uint32_t lexicalScopeIdxInParentFunction) const {
   return hbc::getVariableCounts(
-      runtimeModule_->getBytecode(), functionID_, lexicalScope);
+      runtimeModule_->getBytecode(),
+      functionID_,
+      lexicalScopeIdxInParentFunction);
 }
 
 hbc::VariableInfoAtDepth CodeBlock::getVariableInfoAtDepth(
     uint32_t depth,
     uint32_t variableIndex,
-    void *lexicalScope) const {
+    uint32_t lexicalScopeIdxInParentFunction) const {
   return hbc::getVariableInfoAtDepth(
       runtimeModule_->getBytecode(),
       functionID_,
       depth,
       variableIndex,
-      lexicalScope);
+      lexicalScopeIdxInParentFunction);
 }
 
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {

@@ -245,18 +245,21 @@ class CodeBlock final : private llvh::TrailingObjects<
   bool coordsInLazyFunction(SMLoc loc) const;
 
   /// \return a vector representing the number of Variables for each depth
-  ///   of the VariableScope chain, starting from \p lexicalScope.
-  std::vector<uint32_t> getVariableCounts(void *lexicalScope) const;
+  ///   of the VariableScope chain, starting from \p
+  ///   lexicalScopeIdxInParentFunction.
+  std::vector<uint32_t> getVariableCounts(
+      uint32_t lexicalScopeIdxInParentFunction) const;
 
   /// \param depth the depth of the VariableScope to lookup, 0 is the
   ///   the current CodeBlock.
   /// \param variableIndex the index of the Variable in the VariableScope.
-  /// \param lexicalScope holds information on the initial lexical scope.
+  /// \param lexicalScopeIdxInParentFunction the lexical scope idx to start the
+  ///   search at.
   ///   \return a tuple of <var name, env depth, slot in env>.
   hbc::VariableInfoAtDepth getVariableInfoAtDepth(
       uint32_t depth,
       uint32_t variableIndex,
-      void *lexicalScope) const;
+      uint32_t lexicalScopeIdxInParentFunction) const;
 
 #if HERMESVM_JIT
   /// \return true if JIT is disabled for this function.

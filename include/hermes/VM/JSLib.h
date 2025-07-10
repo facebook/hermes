@@ -53,7 +53,8 @@ std::unique_ptr<JSLibStorage> createJSLibStorage();
 /// evaluated.
 /// If \p singleFunction is set, require that the output be only a
 /// single function.
-/// \p lexicalScope the lexical scope to perform the eval in.
+/// \p lexicalScopeIdxInParentFunction the lexical scope to perform the eval in.
+/// None if performing a non-direct eval.
 /// \return the result of evaluation.
 CallResult<HermesValue> evalInEnvironment(
     Runtime &runtime,
@@ -64,7 +65,7 @@ CallResult<HermesValue> evalInEnvironment(
     Handle<> thisArg,
     Handle<> newTarget,
     bool singleFunction,
-    void *lexicalScope);
+    OptValue<uint32_t> lexicalScopeIdxInParentFunction);
 
 /// If the target CJS module is not initialized, execute it.
 /// \param context the RequireContext to pass through the require.

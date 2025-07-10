@@ -1170,7 +1170,7 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
   const auto &scopingInfo = *scopingInfoOpt;
 
   result.variableCountsByScope_ =
-      cb->getVariableCounts(scopingInfo.lexicalScope());
+      cb->getVariableCounts(scopingInfo.lexicalScopeIdxInParentFunction());
   return result;
 }
 
@@ -1204,7 +1204,11 @@ HermesValue Debugger::getVariableInFrame(
   const auto &scopingInfo = *scopingInfoOpt;
 
   auto varInfo = cb->getVariableInfoAtDepth(
-      scopeDepth, variableIndex, scopingInfo.lexicalScope());
+      scopeDepth, variableIndex, scopingInfo.lexicalScopeIdxInParentFunction());
+
+  if (varInfo.envDepth == UINT32_MAX) {
+    return undefined;
+  }
 
   if (outName)
     *outName = varInfo.name;
@@ -1337,7 +1341,7 @@ HermesValue Debugger::evalInFrame(
       Handle<>(&frameInfo->frame->getThisArgRef()),
       newTarget,
       singleFunction,
-      scopingInfo.lexicalScope());
+      scopingInfo.lexicalScopeIdxInParentFunction());
 
   // Check if an exception was thrown.
   if (result.getStatus() == ExecutionStatus::EXCEPTION) {

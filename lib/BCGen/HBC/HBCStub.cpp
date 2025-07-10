@@ -84,14 +84,14 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags,
-    void *lexScope) {
+    uint32_t lexicalScopeIdxInParentFunction) {
   return {nullptr, "Lean VM does not support bytecode generation"};
 }
 
 std::vector<uint32_t> getVariableCounts(
     hbc::BCProvider *provider,
     uint32_t funcID,
-    void *lexicalScope) {
+    uint32_t lexicalScopeIdxInParentFunction) {
   return {0};
 }
 
@@ -100,7 +100,7 @@ VariableInfoAtDepth getVariableInfoAtDepth(
     uint32_t funcID,
     uint32_t depth,
     uint32_t variableIndex,
-    void *lexicalScope) {
+    uint32_t lexicalScopeIdxInParentFunction) {
   hermes_fatal("Lean VM does not support debugging");
 }
 

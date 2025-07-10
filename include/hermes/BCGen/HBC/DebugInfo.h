@@ -45,19 +45,20 @@ class DebugScopingInfo {
   /// parent environment.
   /// The description of where to find the current scope-producing instruction.
   int64_t envLocation_;
-  /// The pointer to sema::LexicalScope.
-  void *lexicalScope_;
+  /// The idx of a sema::LexicalScope.
+  uint32_t lexicalScopeIdxInParentFunction_;
 
   static constexpr int64_t kFirstRegLocation = 0;
 
   DebugScopingInfo() = default;
-  DebugScopingInfo(int64_t envLocation, void *lexicalScope)
-      : envLocation_(envLocation), lexicalScope_(lexicalScope) {}
+  DebugScopingInfo(int64_t envLocation, uint32_t lexicalScope)
+      : envLocation_(envLocation),
+        lexicalScopeIdxInParentFunction_(lexicalScope) {}
 
  public:
   /// Construct and \return a DebugScopingInfo encoding the given register \p
   /// regNum as the environment location.
-  static DebugScopingInfo forRegister(uint32_t regNum, void *lexicalScope) {
+  static DebugScopingInfo forRegister(uint32_t regNum, uint32_t lexicalScope) {
     assert(regNum < UINT32_MAX);
     return {kFirstRegLocation + static_cast<uint32_t>(regNum), lexicalScope};
   }
@@ -67,7 +68,7 @@ class DebugScopingInfo {
   /// UINT32_MAX.
   static DebugScopingInfo forSpilledSlot(
       uint32_t slotInParentEnv,
-      void *lexicalScope) {
+      uint32_t lexicalScope) {
     assert(slotInParentEnv < UINT32_MAX);
     return {-static_cast<int64_t>(slotInParentEnv + 1), lexicalScope};
   }
@@ -92,9 +93,9 @@ class DebugScopingInfo {
     return static_cast<uint32_t>((-envLocation_) - 1);
   }
 
-  /// \return the lexical scope.
-  void *lexicalScope() const {
-    return lexicalScope_;
+  /// \return the lexical scope idx.
+  uint32_t lexicalScopeIdxInParentFunction() const {
+    return lexicalScopeIdxInParentFunction_;
   }
 };
 

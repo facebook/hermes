@@ -647,9 +647,10 @@ void HBCISel::addDebugSourceLocationInfo() {
       DebugScopingInfo debInfo = llvh::isa<Variable>(implicitEnvOp)
           ? DebugScopingInfo::forSpilledSlot(
                 llvh::cast<Variable>(implicitEnvOp)->getIndexInVariableList(),
-                lexScope)
+                lexScope->idxInParentFunction)
           : DebugScopingInfo::forRegister(
-                encodeValue(llvh::cast<Instruction>(implicitEnvOp)), lexScope);
+                encodeValue(llvh::cast<Instruction>(implicitEnvOp)),
+                lexScope->idxInParentFunction);
       info.envIdx = BCFGen_->addScopingInfo(debInfo);
     }
 

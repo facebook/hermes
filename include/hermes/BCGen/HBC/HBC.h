@@ -212,24 +212,26 @@ bool coordsInLazyFunction(
 ///   Passed in as BCProvider to avoid BCProviderFromSrc dependencies in
 ///   CodeBlock (for simplicity).
 /// \param enclosingFuncID the ID of the function enclosing the new eval.
-/// \param lexScope the lexical scope to perform the compilation in.
-/// \return [success, errMsg] where errMsg is only populated when success is
+/// \param lexicalScopeIdxInParentFunction the lexical scope idx to perform the
+/// compilation in. \return [success, errMsg] where errMsg is only populated
+/// when success is
 ///   false.
 std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     std::unique_ptr<Buffer> src,
     hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags,
-    void *lexScope);
+    uint32_t lexicalScopeIdxInParentFunction);
 
 /// \return a vector of the number of variables at each stack frame depth in
 ///   the function with the given ID, index 0 is the function itself.
-/// \param lexicalScope a pointer to information regarding the starting lexical
+/// \param lexicalScopeIdxInParentFunction the lexical scope idx to perform the
+/// compilation in.
 ///   scope to search for variables.
 std::vector<uint32_t> getVariableCounts(
     hbc::BCProvider *provider,
     uint32_t funcID,
-    void *lexicalScope);
+    uint32_t lexicalScopeIdxInParentFunction);
 
 /// Contains information regarding a variable at a particular depth.
 struct VariableInfoAtDepth {
@@ -245,15 +247,15 @@ struct VariableInfoAtDepth {
 /// Obtain information of the variable at frame depth \p depth and index \p
 ///   variableIndex for the function at \p funcID, index 0 is the function
 ///   itself.
-/// \param lexicalScope a pointer to information regarding the starting lexical
-///   scope to search for variables.
+/// \param lexicalScopeIdxInParentFunction the lexical scope idx to start the
+/// search at.
 ///   \return information on the variable
 VariableInfoAtDepth getVariableInfoAtDepth(
     hbc::BCProvider *provider,
     uint32_t funcID,
     uint32_t depth,
     uint32_t variableIndex,
-    void *lexicalScope);
+    uint32_t lexicalScopeIdxInParentFunction);
 
 } // namespace hbc
 } // namespace hermes

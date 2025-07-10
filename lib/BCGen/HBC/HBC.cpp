@@ -218,7 +218,7 @@ class EvalThreadData {
   /// Input: The CompileFlags to use.
   const CompileFlags &compileFlags;
   /// Input: the lexical scope to perform the eval in.
-  sema::LexicalScope *lexScope{};
+  uint32_t lexicalScopeIdxInParentFunction;
   /// Output: whether the compilation succeeded.
   bool success = false;
   /// Output: Result if success=true.
@@ -231,12 +231,12 @@ class EvalThreadData {
       hbc::BCProviderFromSrc *provider,
       uint32_t enclosingFuncID,
       const CompileFlags &compileFlags,
-      sema::LexicalScope *scope)
+      uint32_t lexicalScopeIdxInParentFunction)
       : src(std::move(src)),
         provider(provider),
         enclosingFuncID(enclosingFuncID),
         compileFlags(compileFlags),
-        lexScope(scope) {}
+        lexicalScopeIdxInParentFunction(lexicalScopeIdxInParentFunction) {}
 };
 
 static void compileEvalWorker(void *argPtr) {
@@ -273,6 +273,9 @@ static void compileEvalWorker(void *argPtr) {
     return;
   }
   const EvalCompilationData &evalData = evalDataInst->getData();
+  auto *funcInfo = evalData.semInfo;
+  sema::LexicalScope *lexScope =
+      funcInfo->getScopes()[data->lexicalScopeIdxInParentFunction];
 
   // Free the AST once we're done compiling this function.
   AllocationScope alloc(context.getAllocator());
@@ -313,7 +316,7 @@ static void compileEvalWorker(void *argPtr) {
   // to, allowing it to be freed when the eval is complete and the
   // BCProviderFromSrc is destroyed.
   std::shared_ptr<sema::SemContext> semCtx = std::make_shared<sema::SemContext>(
-      context, provider->shareSemCtx(), data->lexScope);
+      context, provider->shareSemCtx(), lexScope);
 
   // A non-null home object means the parent function context could reference
   // super.
@@ -440,7 +443,7 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
     hbc::BCProvider *provider,
     uint32_t enclosingFuncID,
     const CompileFlags &compileFlags,
-    void *lexScope) {
+    uint32_t lexicalScopeIdxInParentFunction) {
   hbc::BCProviderFromSrc *providerFromSrc =
       llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
   if (!providerFromSrc) {
@@ -454,7 +457,7 @@ std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
       providerFromSrc,
       enclosingFuncID,
       compileFlags,
-      static_cast<sema::LexicalScope *>(lexScope)};
+      lexicalScopeIdxInParentFunction};
   compileEvalWorker(&data);
 
   return data.success
@@ -479,13 +482,36 @@ static bool shouldListDecl(sema::Decl *decl) {
   }
 }
 
+/// \return the sema::FunctionInfo for function \p funcID, living in \p
+/// BCProvider, or nullptr if none can be found.
+static const sema::FunctionInfo *getFunctionInfo(
+    hbc::BCProvider *provider,
+    uint32_t funcID) {
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
+  if (!providerFromSrc) {
+    return nullptr;
+  }
+  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
+  hbc::BytecodeFunction &bcFunc = bcModule->getFunction(funcID);
+  Function *F = bcFunc.getFunctionIR();
+  if (!F) {
+    return nullptr;
+  }
+  auto &evalData = F->getEvalCompilationDataInst()->getData();
+  return evalData.semInfo;
+}
+
 std::vector<uint32_t> getVariableCounts(
     hbc::BCProvider *provider,
     uint32_t funcID,
-    void *lexicalScope) {
-  assert(lexicalScope && "lexical scope cannot be null.");
+    uint32_t lexicalScopeIdxInParentFunction) {
+  auto *funcInfo = getFunctionInfo(provider, funcID);
+  if (!funcInfo)
+    return std::vector<uint32_t>({0});
   sema::LexicalScope *lexScope =
-      static_cast<sema::LexicalScope *>(lexicalScope);
+      funcInfo->getScopes()[lexicalScopeIdxInParentFunction];
+  assert(lexScope && "lexical scope cannot be null.");
   std::vector<uint32_t> counts;
   for (auto *cur = lexScope; cur; cur = cur->parentScope) {
     counts.push_back(llvh::count_if(cur->decls, shouldListDecl));
@@ -498,9 +524,13 @@ VariableInfoAtDepth getVariableInfoAtDepth(
     uint32_t funcID,
     uint32_t depth,
     uint32_t variableIndex,
-    void *lexicalScope) {
+    uint32_t lexicalScopeIdxInParentFunction) {
+  auto *funcInfo = getFunctionInfo(provider, funcID);
+  if (!funcInfo)
+    return {};
   sema::LexicalScope *lexScope =
-      static_cast<sema::LexicalScope *>(lexicalScope);
+      funcInfo->getScopes()[lexicalScopeIdxInParentFunction];
+  assert(lexScope && "lexical scope cannot be null.");
   auto *beginLexScope = lexScope;
   for (size_t i = 0; i < depth; i++) {
     lexScope = lexScope->parentScope;
