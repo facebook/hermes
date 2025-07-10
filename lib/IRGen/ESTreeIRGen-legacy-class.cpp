@@ -25,14 +25,14 @@ namespace irgen {
 ///
 /// Methods & accessors have an even stronger guarantee. Because these private
 /// elements are installed in bulk before any other user JS runs, and they are
-/// not writable, we can actually store these values out of line- directly on
-/// the instance. Private fields work mostly the same as normal properties, with
-/// the added restrictions that trying to read a private field that doesn't
-/// exist throws. But methods & accessors work very differently. Instead of
-/// adding private methods as own properties to the instance (or the class in
-/// the case of `static`) instead we add a single "private brand". This brand
-/// can be thought of as a seal of approval: having this brand means the object
-/// is allowed to use all methods & accessors granted by this brand.
+/// not writable, we can actually store these values out of line instead of
+/// directly on the instance. Private fields work mostly the same as normal
+/// properties, with the added restrictions that trying to read a private field
+/// that doesn't exist throws. But methods & accessors work very differently.
+/// Instead of adding private methods as own properties to the instance (or the
+/// class in the case of `static`) instead we add a single "private brand". This
+/// brand can be thought of as a seal of approval: having this brand means the
+/// object is allowed to use all methods & accessors granted by this brand.
 ///
 /// Each class defines two private brands then: an instance brand and a static
 /// brand. The class function object gets the static brand immediately on class
