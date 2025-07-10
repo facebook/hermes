@@ -267,9 +267,9 @@ static std::string stackTraceToJSON(
 }
 
 #define ASSERT_RUN_TRACE(code, trace)                                        \
-  ASSERT_TRUE(                                                               \
+  EXPECT_TRUE(                                                               \
       checkTraceMatches(code, llvh::StringRef(trace).trim().str().c_str())); \
-  ASSERT_TRUE(runtime.getStackTracesTree()->isHeadAtRoot())
+  EXPECT_TRUE(runtime.getStackTracesTree()->isHeadAtRoot())
 
 TEST_F(StackTracesTreeTest, BasicOperation) {
   ASSERT_RUN_TRACE(
@@ -750,13 +750,6 @@ function baz() {
           "scriptName": "eval.js",
           "line": 14,
           "col": 13,
-          "children": []
-        },
-        {
-          "name": "global",
-          "scriptName": "eval.js",
-          "line": 14,
-          "col": 2,
           "children": []
         },
         {

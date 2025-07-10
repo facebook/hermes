@@ -36,7 +36,7 @@ function func() {
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
 // CHECK-NEXT:  %3 = AllocArrayInst (:object) 3: number
-// CHECK-NEXT:       DefineOwnPropertyInst "a": string, %3: object, 2: number, true: boolean
+// CHECK-NEXT:       DefineOwnInDenseArrayInst "a": string, %3: object, 2: number
 // CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS1.foo]: any
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

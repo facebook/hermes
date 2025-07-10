@@ -111,6 +111,7 @@ MARK_LAST(TryStoreGlobalPropertyInst)
 MARK_LAST(BaseStorePropertyInst)
 
 DEF_VALUE(DefineOwnPropertyInst, Instruction)
+DEF_VALUE(DefineOwnInDenseArrayInst, Instruction)
 
 DEF_VALUE(DefineOwnGetterSetterInst, Instruction)
 

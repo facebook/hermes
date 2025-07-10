@@ -1947,6 +1947,19 @@ extern "C" void _sh_ljs_cache_new_object(
     uint32_t shapeTableIndex,
     void **cacheEntry) {}
 
+extern "C" void _sh_ljs_define_own_in_dense_array(
+    SHRuntime *shr,
+    SHLegacyValue *array,
+    SHLegacyValue *prop,
+    uint32_t idx) {
+  assert(array && prop);
+  Runtime &runtime = getRuntime(shr);
+  SmallHermesValue shv =
+      SmallHermesValue::encodeHermesValue(*toPHV(prop), runtime);
+  JSArray::unsafeSetExistingElementAt(
+      vmcast<JSArray>(*toPHV(array)), runtime, idx, shv);
+}
+
 extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
 

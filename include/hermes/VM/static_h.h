@@ -849,6 +849,15 @@ SHERMES_EXPORT void _sh_ljs_cache_new_object(
     uint32_t shapeTableIndex,
     void **cacheEntry);
 
+/// Define an own property in a dense JavaScript array at a specific index.
+/// Requires that the array is dense and that the ArrayStorage
+/// underlying it has a size which is greater than the arrayIndex operand.
+SHERMES_EXPORT void _sh_ljs_define_own_in_dense_array(
+    SHRuntime *shr,
+    SHLegacyValue *array,
+    SHLegacyValue *prop,
+    uint32_t idx);
+
 /// \return a newly created fast array with the given \p capacity.
 SHERMES_EXPORT SHLegacyValue
 _sh_new_fastarray(SHRuntime *shr, uint32_t capacity);

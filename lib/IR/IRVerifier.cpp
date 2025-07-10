@@ -1072,6 +1072,10 @@ bool Verifier::visitDefineOwnPropertyInst(const DefineOwnPropertyInst &Inst) {
       "DefineOwnPropertyInst::IsEnumerable must be a boolean literal");
   return true;
 }
+bool Verifier::visitDefineOwnInDenseArrayInst(
+    const DefineOwnInDenseArrayInst &Inst) {
+  return true;
+}
 bool Verifier::visitStoreOwnPrivateFieldInst(
     const StoreOwnPrivateFieldInst &Inst) {
   AssertIWithMsg(

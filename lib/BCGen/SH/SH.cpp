@@ -1303,6 +1303,17 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
+  void generateDefineOwnInDenseArrayInst(DefineOwnInDenseArrayInst &inst) {
+    os_.indent(2);
+    os_ << "_sh_ljs_define_own_in_dense_array(shr, ";
+    generateRegisterPtr(*inst.getArray());
+    os_ << ", ";
+    generateRegisterPtr(*inst.getStoredValue());
+    os_ << ", ";
+    auto *arrayIndex = inst.getArrayIndex();
+    uint32_t index = arrayIndex->asUInt32();
+    os_ << index << ");\n";
+  }
   void generateStoreOwnPrivateFieldInst(StoreOwnPrivateFieldInst &inst) {
     os_.indent(2);
     os_ << "_sh_ljs_put_own_private_by_sym(shr, ";

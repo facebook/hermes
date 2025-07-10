@@ -309,7 +309,9 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
 
   // If we have a variable length array, then we store the next index in
   // a stack location `nextIndex`, to be updated when we encounter spread
-  // elements. Otherwise, we simply count them in `count`.
+  // elements.
+
+  // `count` is the number of elements of the list we've seen so far.
   unsigned count = 0;
   AllocStackInst *nextIndex = nullptr;
   if (variableLength) {
@@ -320,6 +322,8 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
   }
 
   bool consecutive = true;
+  // Whether we've seen the first spread element yet.
+  bool seenSpread = false;
   AllocArrayInst *allocArrayInst = nullptr;
   for (auto &E : list) {
     Value *value{nullptr};
@@ -327,6 +331,7 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
     if (!llvh::isa<ESTree::EmptyNode>(&E)) {
       if (auto *spread = llvh::dyn_cast<ESTree::SpreadElementNode>(&E)) {
         isSpread = true;
+        seenSpread = true;
         value = genExpression(spread->_argument);
       } else {
         value = genExpression(&E);
@@ -358,12 +363,15 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
     if (value) {
       if (consecutive) {
         elements.push_back(value);
+      } else if (!seenSpread) {
+        Builder.createDefineOwnInDenseArrayInst(
+            value, allocArrayInst, Builder.getLiteralNumber(count));
       } else {
+        assert(variableLength && "seen spread so it must be variable length");
         Builder.createDefineOwnPropertyInst(
             value,
             allocArrayInst,
-            variableLength ? cast<Value>(Builder.createLoadStackInst(nextIndex))
-                           : cast<Value>(Builder.getLiteralNumber(count)),
+            cast<Value>(Builder.createLoadStackInst(nextIndex)),
             IRBuilder::PropEnumerable::Yes);
       }
     }
@@ -379,9 +387,8 @@ Value *ESTreeIRGen::genArrayFromElements(ESTree::NodeList &list) {
               Builder.createLoadStackInst(nextIndex),
               Builder.getLiteralNumber(1)),
           nextIndex);
-    } else {
-      count++;
     }
+    count++;
   }
 
   if (!allocArrayInst) {

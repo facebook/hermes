@@ -769,6 +769,8 @@ class Emitter {
   DECL_PUT_BY_ID(tryPutByIdLoose, false, true);
   DECL_PUT_BY_ID(tryPutByIdStrict, true, true);
 
+  void defineOwnInDenseArray(FR frArray, FR frProp, uint32_t idx);
+
   void
   defineOwnById(FR frTarget, SHSymbolID symID, FR frValue, uint8_t cacheIdx);
   void defineOwnByIndex(FR frTarget, FR frValue, uint32_t key);

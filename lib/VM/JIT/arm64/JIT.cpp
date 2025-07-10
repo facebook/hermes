@@ -863,6 +863,14 @@ EMIT_DEFINE_BY_ID(DefineOwnById)
 EMIT_DEFINE_BY_ID(DefineOwnByIdLong)
 #undef EMIT_DEFINE_BY_ID
 
+#define EMIT_DEFINE_OWN_IN_DENSE_ARRAY(op)                                 \
+  inline void JITContext::Compiler::emit##op(const inst::op##Inst *inst) { \
+    em_.defineOwnInDenseArray(FR(inst->op1), FR(inst->op2), inst->op3);    \
+  }
+EMIT_DEFINE_OWN_IN_DENSE_ARRAY(DefineOwnInDenseArray)
+EMIT_DEFINE_OWN_IN_DENSE_ARRAY(DefineOwnInDenseArrayL)
+#undef EMIT_DEFINE_OWN_IN_DENSE_ARRAY
+
 inline void JITContext::Compiler::emitDefineOwnByIndex(
     const inst::DefineOwnByIndexInst *inst) {
   em_.defineOwnByIndex(FR(inst->op1), FR(inst->op2), inst->op3);

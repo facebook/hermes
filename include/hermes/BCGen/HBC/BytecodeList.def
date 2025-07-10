@@ -414,6 +414,18 @@ OPERAND_STRING_ID(DefineOwnByIdLong, 4)
 DEFINE_OPCODE_3(DefineOwnByIndex, Reg8, Reg8, UInt8)
 DEFINE_OPCODE_3(DefineOwnByIndexL, Reg8, Reg8, UInt32)
 
+/// Define an own property in a dense JavaScript array at a specific index.
+/// Requires that the array is dense and that the ArrayStorage
+/// underlying it has a size which is greater than the arrayIndex operand.
+/// Arg1[Arg3] = Arg2;
+/// Arg1 is the dense array object where the property will be defined.
+/// Arg2 is the value to be stored.
+/// Arg3 is the array index where the property will be stored.
+/// NOTE: The "L" version only goes up to 16-bit array indices,
+/// because NewArray only takes UInt16 argument.
+DEFINE_OPCODE_3(DefineOwnInDenseArray, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(DefineOwnInDenseArrayL, Reg8, Reg8, UInt16)
+
 /// Set an own property identified by value.
 /// Arg1 is the destination object.
 /// Arg2 is the value to write.

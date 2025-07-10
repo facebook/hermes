@@ -36,32 +36,32 @@ var exp_then_elision_array = [1, 2, t, t + 1,,,"b"];
 // CHECK-NEXT:                 StorePropertyLooseInst {n0} %9: number, {r1} %6: object, "t": string
 // CHECK-NEXT:  {r2}     %11 = LoadPropertyInst (:any) {r1} %6: object, "t": string
 // CHECK-NEXT:  {r0}     %12 = AllocArrayInst (:object) 5: number
-// CHECK-NEXT:                 DefineOwnPropertyInst {r2} %11: any, {r0} %12: object, 0: number, true: boolean
-// CHECK-NEXT:                 DefineOwnPropertyInst {n0} %9: number, {r0} %12: object, 1: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r2} %11: any, {r0} %12: object, 0: number
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {n0} %9: number, {r0} %12: object, 1: number
 // CHECK-NEXT:  {r2}     %15 = LoadPropertyInst (:any) {r1} %6: object, "t": string
 // CHECK-NEXT:  {r2}     %16 = BinaryAddInst (:string|number) {r2} %15: any, {n0} %9: number
-// CHECK-NEXT:                 DefineOwnPropertyInst {r2} %16: string|number, {r0} %12: object, 2: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r2} %16: string|number, {r0} %12: object, 2: number
 // CHECK-NEXT:  {n1}     %18 = LIRLoadConstInst (:number) 2: number
-// CHECK-NEXT:                 DefineOwnPropertyInst {n1} %18: number, {r0} %12: object, 3: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {n1} %18: number, {r0} %12: object, 3: number
 // CHECK-NEXT:  {r2}     %20 = LoadPropertyInst (:any) {r1} %6: object, "t": string
 // CHECK-NEXT:  {n1}     %21 = LIRLoadConstInst (:number) 3: number
 // CHECK-NEXT:  {r2}     %22 = BinaryAddInst (:string|number) {r2} %20: any, {n1} %21: number
-// CHECK-NEXT:                 DefineOwnPropertyInst {r2} %22: string|number, {r0} %12: object, 4: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r2} %22: string|number, {r0} %12: object, 4: number
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %12: object, {r1} %6: object, "exp_array": string
 // CHECK-NEXT:  {r0}     %25 = AllocArrayInst (:object) 4: number
 // CHECK-NEXT:  {r2}     %26 = LIRLoadConstInst (:string) "b": string
-// CHECK-NEXT:                 DefineOwnPropertyInst {r2} %26: string, {r0} %25: object, 3: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r2} %26: string, {r0} %25: object, 3: number
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %25: object, {r1} %6: object, "elision_array": string
 // CHECK-NEXT:  {r0}     %29 = AllocArrayInst (:object) 6: number, 1: number, 2: number, 3: number
-// CHECK-NEXT:                 DefineOwnPropertyInst {r2} %26: string, {r0} %29: object, 5: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r2} %26: string, {r0} %29: object, 5: number
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %29: object, {r1} %6: object, "const_then_elision_array": string
 // CHECK-NEXT:  {r3}     %32 = LoadPropertyInst (:any) {r1} %6: object, "t": string
 // CHECK-NEXT:  {r0}     %33 = AllocArrayInst (:object) 7: number, 1: number, 2: number
-// CHECK-NEXT:                 DefineOwnPropertyInst {r3} %32: any, {r0} %33: object, 2: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r3} %32: any, {r0} %33: object, 2: number
 // CHECK-NEXT:  {r3}     %35 = LoadPropertyInst (:any) {r1} %6: object, "t": string
 // CHECK-NEXT:  {r3}     %36 = BinaryAddInst (:string|number) {r3} %35: any, {n0} %9: number
-// CHECK-NEXT:                 DefineOwnPropertyInst {r3} %36: string|number, {r0} %33: object, 3: number, true: boolean
-// CHECK-NEXT:                 DefineOwnPropertyInst {r2} %26: string, {r0} %33: object, 6: number, true: boolean
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r3} %36: string|number, {r0} %33: object, 3: number
+// CHECK-NEXT:                 DefineOwnInDenseArrayInst {r2} %26: string, {r0} %33: object, 6: number
 // CHECK-NEXT:                 StorePropertyLooseInst {r0} %33: object, {r1} %6: object, "exp_then_elision_array": string
 // CHECK-NEXT:  {np0}    %40 = LIRLoadConstInst (:undefined) undefined: undefined
 // CHECK-NEXT:                 ReturnInst {np0} %40: undefined

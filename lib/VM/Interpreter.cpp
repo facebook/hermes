@@ -2266,6 +2266,33 @@ tailCall:
       DISPATCH;
     }
 
+      CASE(DefineOwnInDenseArray) {
+        // This instruction only makes sense if we know that the ArrayStorage is
+        // the same size as it was when it was created.
+        assert(JSArray::vt.trimSize_ == nullptr && "trimming must be disabled");
+        ENCODE_HV_AS_SHV(shv, O2REG(DefineOwnInDenseArray));
+        JSArray::unsafeSetExistingElementAt(
+            vmcast<JSArray>(O1REG(DefineOwnInDenseArray)),
+            runtime,
+            ip->iDefineOwnInDenseArray.op3,
+            shv);
+        ip = NEXTINST(DefineOwnInDenseArray);
+        DISPATCH;
+      }
+      CASE(DefineOwnInDenseArrayL) {
+        // This instruction only makes sense if we know that the ArrayStorage is
+        // the same size as it was when it was created.
+        assert(JSArray::vt.trimSize_ == nullptr && "trimming must be disabled");
+        ENCODE_HV_AS_SHV(shv, O2REG(DefineOwnInDenseArrayL));
+        JSArray::unsafeSetExistingElementAt(
+            vmcast<JSArray>(O1REG(DefineOwnInDenseArrayL)),
+            runtime,
+            ip->iDefineOwnInDenseArrayL.op3,
+            shv);
+        ip = NEXTINST(DefineOwnInDenseArrayL);
+        DISPATCH;
+      }
+
       CASE_OUTOFLINE(GetPNameList);
       CASE_OUTOFLINE(GetNextPName);
 

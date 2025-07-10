@@ -65,7 +65,7 @@ var z = [{}];
 // CHECK-NEXT:    PutByIdLoose      r4, r3, 2, "y"
 // CHECK-NEXT:    NewArray          r3, 1
 // CHECK-NEXT:    NewObject         r5
-// CHECK-NEXT:    DefineOwnByIndex  r3, r5, 0
+// CHECK-NEXT:    DefineOwnInDenseArray r3, r5, 0
 // CHECK-NEXT:    PutByIdLoose      r4, r3, 3, "z"
 // CHECK-NEXT:    Ret               r2
 
@@ -85,6 +85,5 @@ var z = [{}];
 // CHECK-NEXT:    bc 37: line 10 col 7
 // CHECK-NEXT:    bc 54: line 11 col 9
 // CHECK-NEXT:    bc 60: line 11 col 7
-// CHECK-NEXT:    bc 72: line 12 col 9
 // CHECK-NEXT:    bc 76: line 12 col 7
-// CHECK-NEXT:  0x0023  end of debug source table
+// CHECK-NEXT:  0x0020  end of debug source table

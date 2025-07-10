@@ -568,6 +568,16 @@ Arguments | %value is the value to be stored. %object *must* be of an object typ
 Semantics | Implements ES15 7.3.8 DefinePropertyOrThrow. The instruction follows the rules of JavaScript *own* property access. The property is created or updated in the instance of the object, regardless of whether the same property already exists earlier in the prototype chain.
 Effects | May read and write memory.
 
+### DefineOwnInDenseArrayInst
+
+DefineOwnInDenseArrayInst | _
+--- | --- |
+Description | Define an *own property* in a dense JavaScript array at a specific index. This is an optimized version for dense array property assignment. Used only when populating newly created array literals.
+Example |   %0 = DefineOwnInDenseArrayInst %value, %array : object, %arrayIndex : LiteralNumber
+Arguments | %value is the value to be stored. %array is the dense array object where the property will be defined. %arrayIndex is a literal number representing the array index where the property will be stored.
+Semantics | This instruction is used for efficient property definition. It requires that the array is dense and that the ArrayStorage underlying it has a size which is greater than the arrayIndex operand. The property is defined directly at the specified index without prototype chain traversal.
+Effects | Writes to heap.
+
 
 ### StoreOwnPrivateFieldInst
 

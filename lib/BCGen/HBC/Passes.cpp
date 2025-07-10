@@ -111,6 +111,12 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
     return false;
   }
 
+  // DefineOwnInDenseArrayInst's arrayIndex operand must remain as a literal.
+  if (llvh::isa<DefineOwnInDenseArrayInst>(Inst) &&
+      opIndex == DefineOwnInDenseArrayInst::ArrayIndexIdx) {
+    return true;
+  }
+
   if (llvh::isa<CreatePrivateNameInst>(Inst)) {
     return opIndex == CreatePrivateNameInst::PropertyIdx;
   }

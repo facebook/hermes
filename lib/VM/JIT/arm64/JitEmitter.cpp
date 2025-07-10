@@ -5846,6 +5846,28 @@ void Emitter::defineOwnById(
       _sh_ljs_define_own_by_id);
 }
 
+void Emitter::defineOwnInDenseArray(FR frArray, FR frProp, uint32_t idx) {
+  comment(
+      "// DefineOwnInDenseArray r%u, r%u, %u",
+      frArray.index(),
+      frProp.index(),
+      idx);
+
+  syncAllFRTempExcept({});
+  syncToFrame(frArray);
+  syncToFrame(frProp);
+  freeAllFRTempExcept({});
+
+  a.mov(a64::x0, xRuntime);
+  loadFrameAddr(a64::x1, frArray);
+  loadFrameAddr(a64::x2, frProp);
+  a.mov(a64::w3, idx);
+  EMIT_RUNTIME_CALL(
+      *this,
+      void (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *, uint32_t),
+      _sh_ljs_define_own_in_dense_array);
+}
+
 void Emitter::defineOwnByIndex(FR frTarget, FR frValue, uint32_t key) {
   comment(
       "// putOwnByIdx r%u, r%u, %u", frTarget.index(), frValue.index(), key);

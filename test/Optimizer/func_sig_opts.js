@@ -112,8 +112,8 @@ function test_async() {
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar1(): functionCode
 // CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %bar2(): functionCode
 // CHECK-NEXT:  %5 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:       DefineOwnPropertyInst %3: object, %5: object, 0: number, true: boolean
-// CHECK-NEXT:       DefineOwnPropertyInst %4: object, %5: object, 1: number, true: boolean
+// CHECK-NEXT:       DefineOwnInDenseArrayInst %3: object, %5: object, 0: number
+// CHECK-NEXT:       DefineOwnInDenseArrayInst %4: object, %5: object, 1: number
 // CHECK-NEXT:       ReturnInst %5: object
 // CHECK-NEXT:function_end
 

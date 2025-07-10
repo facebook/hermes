@@ -663,6 +663,15 @@ DefineOwnPropertyInst *IRBuilder::createDefineOwnPropertyInst(
   insert(SPI);
   return SPI;
 }
+
+DefineOwnInDenseArrayInst *IRBuilder::createDefineOwnInDenseArrayInst(
+    Value *storedValue,
+    Value *object,
+    LiteralNumber *arrayIndex) {
+  auto *inst = new DefineOwnInDenseArrayInst(storedValue, object, arrayIndex);
+  insert(inst);
+  return inst;
+}
 StoreOwnPrivateFieldInst *IRBuilder::createStoreOwnPrivateFieldInst(
     Value *storedValue,
     Value *object,

@@ -1843,6 +1843,55 @@ class DefineOwnPropertyInst : public Instruction {
   }
 };
 
+class DefineOwnInDenseArrayInst : public Instruction {
+  DefineOwnInDenseArrayInst(const DefineOwnInDenseArrayInst &) = delete;
+  void operator=(const DefineOwnInDenseArrayInst &) = delete;
+
+ public:
+  enum { StoredValueIdx, ArrayIdx, ArrayIndexIdx };
+  explicit DefineOwnInDenseArrayInst(
+      Value *storedValue,
+      Value *array,
+      LiteralNumber *arrayIndex)
+      : Instruction(ValueKind::DefineOwnInDenseArrayInstKind) {
+    setType(Type::createNoType());
+    pushOperand(storedValue);
+    pushOperand(array);
+    pushOperand(arrayIndex);
+  }
+
+  Value *getStoredValue() const {
+    return getOperand(StoredValueIdx);
+  }
+  Value *getArray() const {
+    return getOperand(ArrayIdx);
+  }
+  LiteralNumber *getArrayIndex() const {
+    return llvh::cast<LiteralNumber>(getOperand(ArrayIndexIdx));
+  }
+
+  explicit DefineOwnInDenseArrayInst(
+      const DefineOwnInDenseArrayInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect{}.setWriteHeap();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::DefineOwnInDenseArrayInstKind;
+  }
+};
+
 class StoreOwnPrivateFieldInst : public Instruction {
   StoreOwnPrivateFieldInst(const StoreOwnPrivateFieldInst &) = delete;
   void operator=(const StoreOwnPrivateFieldInst &) = delete;

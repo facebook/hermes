@@ -261,6 +261,11 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
+  static ExecutionStatus casePopulateArrayLiteral(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
   static ExecutionStatus caseGetPNameList(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,

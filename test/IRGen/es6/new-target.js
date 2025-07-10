@@ -115,9 +115,9 @@ function func4() {
 // CHECK-NEXT:        StoreFrameInst %3: environment, %14: object, [%VS3.innerArrow1]: any
 // CHECK-NEXT:  %16 = LoadFrameInst (:any) %3: environment, [%VS3.innerFunction]: any
 // CHECK-NEXT:  %17 = AllocArrayInst (:object) 2: number
-// CHECK-NEXT:        DefineOwnPropertyInst %16: any, %17: object, 0: number, true: boolean
+// CHECK-NEXT:        DefineOwnInDenseArrayInst %16: any, %17: object, 0: number
 // CHECK-NEXT:  %19 = LoadFrameInst (:any) %3: environment, [%VS3.innerArrow1]: any
-// CHECK-NEXT:        DefineOwnPropertyInst %19: any, %17: object, 1: number, true: boolean
+// CHECK-NEXT:        DefineOwnInDenseArrayInst %19: any, %17: object, 1: number
 // CHECK-NEXT:        ReturnInst %17: object
 // CHECK-NEXT:function_end
 

@@ -1143,6 +1143,25 @@ void HBCISel::generateDefineOwnPropertyInst(
       objReg, valueReg, propReg, Inst->getIsEnumerable());
 }
 
+void HBCISel::generateDefineOwnInDenseArrayInst(
+    DefineOwnInDenseArrayInst *Inst,
+    BasicBlock *next) {
+  auto valueReg = encodeValue(Inst->getStoredValue());
+  auto objReg = encodeValue(Inst->getArray());
+  LiteralNumber *arrayIndex = Inst->getArrayIndex();
+  uint32_t index = arrayIndex->asUInt32();
+  if (index <= UINT8_MAX) {
+    BCFGen_->emitDefineOwnInDenseArray(objReg, valueReg, index);
+  } else if (index <= UINT16_MAX) {
+    // Dense arrays can only be UINT16_MAX because NewArray doesn't accept
+    // lengths over UINT16_MAX.
+    BCFGen_->emitDefineOwnInDenseArrayL(objReg, valueReg, index);
+  } else {
+    // Fallback: use DefineOwnByIndex.
+    BCFGen_->emitDefineOwnByIndexL(objReg, valueReg, index);
+  }
+}
+
 void HBCISel::generateStoreOwnPrivateFieldInst(
     StoreOwnPrivateFieldInst *Inst,
     BasicBlock *next) {
