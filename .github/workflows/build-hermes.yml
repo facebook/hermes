@@ -51,3 +51,12 @@ jobs:
         uses: ./.github/actions/build-hermes-macos
         with:
           flavor: ${{ matrix.flavor }}
+  build_hermesc_linux:
+    runs-on: ubuntu-latest
+    env:
+      HERMES_TARBALL_ARTIFACTS_DIR: /tmp/hermes/hermes-runtime-darwin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build HermesC Linux
+        uses: ./.github/actions/build-hermesc-linux
