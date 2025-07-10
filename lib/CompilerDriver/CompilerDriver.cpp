@@ -12,6 +12,7 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
 #include "hermes/AST/TS2Flow.h"
+#include "hermes/AST/TransformAST.h"
 #include "hermes/AST2JS/AST2JS.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
@@ -887,6 +888,10 @@ ESTree::NodePtr parseJS(
     }
   }
 #endif
+
+  parsedAST = hermes::transformASTForCompilation(*context, parsedAST);
+  if (!parsedAST)
+    return nullptr;
 
   // If we are executing in typed mode and not script, then wrap the program.
   if (shouldWrapInIIFE) {
