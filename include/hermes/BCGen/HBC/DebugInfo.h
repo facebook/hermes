@@ -97,6 +97,14 @@ class DebugScopingInfo {
   uint32_t lexicalScopeIdxInParentFunction() const {
     return lexicalScopeIdxInParentFunction_;
   }
+
+  /// Friendly representation of this DebugScopingInfo for use in maps as a key.
+  using MapKeyTy = std::pair<int64_t, uint32_t>;
+
+  /// \return the contents of this DebugScopingInfo as a std::pair.
+  MapKeyTy asKey() const {
+    return {envLocation_, lexicalScopeIdxInParentFunction_};
+  }
 };
 
 /// The file name, line and column associated with a bytecode address.
@@ -201,7 +209,10 @@ class DebugInfo {
 
   DebugFileRegionList files_{};
   StreamVector<uint8_t> data_{};
-  std::vector<DebugScopingInfo> scopingInfo_{};
+  /// Side table holding all debug scoping information.
+  std::vector<DebugScopingInfo> scopingInfoTable_{};
+  /// Cache used to de-duplicte entries in the above table.
+  llvh::DenseMap<DebugScopingInfo::MapKeyTy, uint32_t> scopingInfoCache_{};
 
   /// Get source filename as string id.
   OptValue<uint32_t> getFilenameForAddress(uint32_t debugOffset) const;
@@ -233,19 +244,17 @@ class DebugInfo {
 
   DebugInfo &operator=(DebugInfo &&that) = default;
 
-  std::vector<DebugScopingInfo> &getScopingInfoMut() {
-    return scopingInfo_;
+  llvh::DenseMap<DebugScopingInfo::MapKeyTy, uint32_t> &getScopingInfoCache() {
+    return scopingInfoCache_;
   }
-  const std::vector<DebugScopingInfo> &getScopingInfo() const {
-    return scopingInfo_;
+  std::vector<DebugScopingInfo> &getScopingInfoTable() {
+    return scopingInfoTable_;
   }
-  /// \return the debug scoping info specified by \p envIdx. This index is
+  /// \return the element in the scoping info side table for \p envIdx, which is
   /// 1-based.
-  const DebugScopingInfo &getScopingInfoAt(uint32_t envIdx) const {
-    assert(
-        envIdx &&
-        "envIdx of 0 does not represent an element in the side table.");
-    return scopingInfo_[envIdx - 1];
+  DebugScopingInfo getScopingInfoAt(uint32_t envIdx) const {
+    assert(envIdx > 0 && "envIdx of 0 does not represent an element");
+    return scopingInfoTable_[envIdx - 1];
   }
 
   DebugFileRegionList &getFilesMut() {

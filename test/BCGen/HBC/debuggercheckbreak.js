@@ -59,7 +59,7 @@ function test1() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<test1>(1 params, 14 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x001e, lexical 0x0000
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r2, r1, 1
 // CHECK-NEXT:    LoadConstUndefined r1
@@ -132,7 +132,7 @@ function test1() {
 // CHECK-NEXT:    bc 24: line 10 col 1
 // CHECK-NEXT:    bc 29: line 10 col 1
 // CHECK-NEXT:    bc 30: line 21 col 1
-// CHECK-NEXT:  0x0023  function idx 1, starts at line 10 col 1
+// CHECK-NEXT:  0x001e  function idx 1, starts at line 10 col 1
 // CHECK-NEXT:    bc 0: line 10 col 1
 // CHECK-NEXT:    bc 3: line 10 col 1
 // CHECK-NEXT:    bc 12: line 10 col 1
@@ -169,4 +169,4 @@ function test1() {
 // CHECK-NEXT:    bc 154: line 20 col 9
 // CHECK-NEXT:    bc 160: line 20 col 8
 // CHECK-NEXT:    bc 167: line 21 col 1
-// CHECK-NEXT:  0x00c6  end of debug source table
+// CHECK-NEXT:  0x00a5  end of debug source table

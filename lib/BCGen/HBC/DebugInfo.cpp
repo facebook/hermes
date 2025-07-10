@@ -330,9 +330,15 @@ void DebugInfo::populateSourceMap(
 
 uint32_t DebugInfoGenerator::addScopingInfo(
     const DebugScopingInfo &scopingInfo) {
-  // TODO: we should actually attempt to unique these elements.
-  debugInfo_.getScopingInfoMut().push_back(scopingInfo);
-  return debugInfo_.getScopingInfoMut().size();
+  auto &scopingInfoTable = debugInfo_.getScopingInfoTable();
+  // 0 is reserved to mean no scoping info, so start from 1.
+  auto nextID = scopingInfoTable.size() + 1;
+  auto [iter, success] =
+      debugInfo_.getScopingInfoCache().try_emplace(scopingInfo.asKey(), nextID);
+  if (success) {
+    scopingInfoTable.push_back(scopingInfo);
+  }
+  return iter->second;
 }
 
 uint32_t DebugInfoGenerator::appendSourceLocations(
