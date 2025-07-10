@@ -2819,7 +2819,7 @@ SemanticResolver::ScopeRAII::ScopeRAII(
 
   if (isFunctionBodyScope) {
     resolver_.curFunctionInfo()->functionBodyScopeIdx =
-        resolver_.curFunctionInfo()->scopes.size() - 1;
+        resolver_.curFunctionInfo()->getScopes().size() - 1;
     resolver_.functionContext()->bindingTableScopeDepth =
         getBindingScope().getDepth();
   }
@@ -2988,7 +2988,7 @@ void ClassContext::createImplicitConstructorFunctionInfo() {
   if (resolver_.astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
     lexScope->bindingTableScope = resolver_.bindingTable_.getCurrentScope();
   }
-  implicitCtor->functionBodyScopeIdx = implicitCtor->scopes.size() - 1;
+  implicitCtor->functionBodyScopeIdx = implicitCtor->getScopes().size() - 1;
   classDecoration->implicitCtorFunctionInfo = implicitCtor;
 }
 
@@ -3010,7 +3010,7 @@ FunctionInfo *ClassContext::getOrCreateInstanceElementsInitFunctionInfo() {
     if (resolver_.astContext_.getDebugInfoSetting() == DebugInfoSetting::ALL) {
       lexScope->bindingTableScope = resolver_.bindingTable_.getCurrentScope();
     }
-    fieldInitFunc->functionBodyScopeIdx = fieldInitFunc->scopes.size() - 1;
+    fieldInitFunc->functionBodyScopeIdx = fieldInitFunc->getScopes().size() - 1;
     classDecoration->instanceElementsInitFunctionInfo = fieldInitFunc;
   }
   return classDecoration->instanceElementsInitFunctionInfo;
@@ -3035,7 +3035,7 @@ FunctionInfo *ClassContext::getOrCreateStaticElementsInitFunctionInfo() {
       lexScope->bindingTableScope = resolver_.bindingTable_.getCurrentScope();
     }
     staticFieldInitFunc->functionBodyScopeIdx =
-        staticFieldInitFunc->scopes.size() - 1;
+        staticFieldInitFunc->getScopes().size() - 1;
     classDecoration->staticElementsInitFunctionInfo = staticFieldInitFunc;
   }
   return classDecoration->staticElementsInitFunctionInfo;

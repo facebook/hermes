@@ -242,6 +242,10 @@ enum class FuncIsArrow { Yes, No };
 
 /// Semantic information about functions.
 class FunctionInfo {
+  /// All lexical scopes in this function.
+  /// The first one is the function scope.
+  llvh::SmallVector<LexicalScope *, 4> scopes_{};
+
  public:
   /// The function surrounding this function.
   /// Null if this is the root function.
@@ -249,9 +253,6 @@ class FunctionInfo {
   /// The enclosing lexical scope.
   /// Null if this is the root function.
   LexicalScope *const parentScope;
-  /// All lexical scopes in this function.
-  /// The first one is the function scope.
-  llvh::SmallVector<LexicalScope *, 4> scopes{};
   /// A list of imports that need to be hoisted and materialized before we
   /// can generate the rest of the function.
   /// Any line of the file may use the imported values.
@@ -354,8 +355,8 @@ class FunctionInfo {
   /// \pre the functionScopeIdx field has been set.
   /// \return the top-level lexical scope of the function body.
   LexicalScope *getFunctionBodyScope() const {
-    assert(functionBodyScopeIdx < scopes.size() && "functionScopeIdx not set");
-    return scopes[functionBodyScopeIdx];
+    assert(functionBodyScopeIdx < scopes_.size() && "functionScopeIdx not set");
+    return scopes_[functionBodyScopeIdx];
   }
 
   /// \return the lexical scope which contains the parameter declarations,
@@ -363,8 +364,17 @@ class FunctionInfo {
   /// The scope is guaranteed to contain all Parameter Decls, though it may
   /// contain other Decls as well.
   LexicalScope *getParameterScope() const {
-    assert(!scopes.empty() && "no parameter scope added yet");
-    return scopes[0];
+    assert(!scopes_.empty() && "no parameter scope added yet");
+    return scopes_[0];
+  }
+
+  /// \return the list of scopes declared in this FunctionInfo.
+  const llvh::SmallVectorImpl<LexicalScope *> &getScopes() const {
+    return scopes_;
+  }
+  /// Add \p scope to the list of scopes in this FunctionInfo.
+  void addScope(LexicalScope *scope) {
+    scopes_.push_back(scope);
   }
 };
 

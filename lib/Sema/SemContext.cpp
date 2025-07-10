@@ -115,7 +115,7 @@ LexicalScope *SemContext::newScope(
     LexicalScope *parentScope) {
   scopes_.emplace_back(parentFunction, parentScope);
   LexicalScope *res = &scopes_.back();
-  parentFunction->scopes.push_back(res);
+  parentFunction->addScope(res);
   return res;
 }
 
@@ -125,7 +125,7 @@ LexicalScope *SemContext::prepareClonedScope(
     LexicalScope *newParentScope) {
   scopes_.emplace_back(*this, scope, newParentFunction, newParentScope);
   LexicalScope *res = &scopes_.back();
-  newParentFunction->scopes.push_back(res);
+  newParentFunction->addScope(res);
   return res;
 }
 
@@ -179,13 +179,13 @@ Decl *SemContext::funcArgumentsDecl(
     decl = newDeclInScope(
         argumentsName,
         Decl::Kind::UndeclaredGlobalProperty,
-        argumentsFunc->scopes.front());
+        argumentsFunc->getScopes().front());
   } else {
     // Otherwise, regular function-level "arguments" declaration.
     decl = newDeclInScope(
         argumentsName,
         Decl::Kind::Var,
-        argumentsFunc->scopes.front(),
+        argumentsFunc->getScopes().front(),
         Decl::Special::Arguments);
   }
 
@@ -451,8 +451,8 @@ void SemContextDumper::printFunction(
   std::map<const LexicalScope *, llvh::SmallVector<const LexicalScope *, 2>>
       children;
 
-  for (const auto *sc : f.scopes) {
-    if (sc == f.scopes[0])
+  for (const auto *sc : f.getScopes()) {
+    if (sc == f.getScopes()[0])
       continue;
     children[sc->parentScope].push_back(sc);
   }
@@ -470,8 +470,9 @@ void SemContextDumper::printFunction(
           dumpScope(childScope, level + 1);
       };
 
-  dumpScope(f.scopes[0], level + 1);
-  assert(processedCount == f.scopes.size() && "not all scopes were visited");
+  dumpScope(f.getScopes()[0], level + 1);
+  assert(
+      processedCount == f.getScopes().size() && "not all scopes were visited");
 }
 
 void SemContextDumper::printScope(
