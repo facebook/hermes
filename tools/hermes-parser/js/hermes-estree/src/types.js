@@ -1208,6 +1208,8 @@ export interface TypeAlias extends BaseTypeAlias {
 interface BaseOpaqueType extends BaseNode {
   +id: Identifier;
   +supertype: TypeAnnotationType | null;
+  +lowerBound: TypeAnnotationType | null;
+  +upperBound: TypeAnnotationType | null;
   +typeParameters: TypeParameterDeclaration | null;
 }
 export interface OpaqueType extends BaseOpaqueType {

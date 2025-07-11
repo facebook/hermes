@@ -208,6 +208,8 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     typeParameters: 'Node',
     impltype: 'Node',
+    lowerBound: 'Node',
+    upperBound: 'Node',
     supertype: 'Node',
   },
   DeclareTypeAlias: {
@@ -580,6 +582,8 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     typeParameters: 'Node',
     impltype: 'Node',
+    lowerBound: 'Node',
+    upperBound: 'Node',
     supertype: 'Node',
   },
   OptionalIndexedAccessType: {

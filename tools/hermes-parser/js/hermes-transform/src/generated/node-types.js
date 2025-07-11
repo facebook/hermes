@@ -444,6 +444,8 @@ export type DeclareOpaqueTypeProps = {
   +id: MaybeDetachedNode<DeclareOpaqueTypeType['id']>,
   +typeParameters?: ?MaybeDetachedNode<DeclareOpaqueTypeType['typeParameters']>,
   +impltype?: ?MaybeDetachedNode<DeclareOpaqueTypeType['impltype']>,
+  +lowerBound?: ?MaybeDetachedNode<DeclareOpaqueTypeType['lowerBound']>,
+  +upperBound?: ?MaybeDetachedNode<DeclareOpaqueTypeType['upperBound']>,
   +supertype?: ?MaybeDetachedNode<DeclareOpaqueTypeType['supertype']>,
 };
 
@@ -1013,6 +1015,8 @@ export type OpaqueTypeProps = {
   +id: MaybeDetachedNode<OpaqueTypeType['id']>,
   +typeParameters?: ?MaybeDetachedNode<OpaqueTypeType['typeParameters']>,
   +impltype: MaybeDetachedNode<OpaqueTypeType['impltype']>,
+  +lowerBound?: ?MaybeDetachedNode<OpaqueTypeType['lowerBound']>,
+  +upperBound?: ?MaybeDetachedNode<OpaqueTypeType['upperBound']>,
   +supertype?: ?MaybeDetachedNode<OpaqueTypeType['supertype']>,
 };
 
@@ -1820,6 +1824,8 @@ export function DeclareOpaqueType(props: {
       id: asDetachedNodeForCodeGen(props.id),
       typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
       impltype: asDetachedNodeForCodeGen(props.impltype),
+      lowerBound: asDetachedNodeForCodeGen(props.lowerBound),
+      upperBound: asDetachedNodeForCodeGen(props.upperBound),
       supertype: asDetachedNodeForCodeGen(props.supertype),
     },
   );
@@ -3222,6 +3228,8 @@ export function OpaqueType(props: {
     id: asDetachedNodeForCodeGen(props.id),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
     impltype: asDetachedNodeForCodeGen(props.impltype),
+    lowerBound: asDetachedNodeForCodeGen(props.lowerBound),
+    upperBound: asDetachedNodeForCodeGen(props.upperBound),
     supertype: asDetachedNodeForCodeGen(props.supertype),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));

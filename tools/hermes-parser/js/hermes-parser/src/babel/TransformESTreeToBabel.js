@@ -1223,6 +1223,18 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
       }
       return node;
     }
+    case 'DeclareOpaqueType':
+    case 'OpaqueType': {
+      if (node.lowerBound != null) {
+        // $FlowExpectedError[cannot-write]
+        delete node.lowerBound;
+      }
+      if (node.upperBound != null) {
+        // $FlowExpectedError[cannot-write]
+        delete node.upperBound;
+      }
+      return node;
+    }
     default: {
       return node;
     }

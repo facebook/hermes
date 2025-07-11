@@ -1330,6 +1330,8 @@ function deserializeOpaqueType() {
     id: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     impltype: this.deserializeNode(),
+    lowerBound: this.deserializeNode(),
+    upperBound: this.deserializeNode(),
     supertype: this.deserializeNode(),
   };
 }
@@ -1359,6 +1361,8 @@ function deserializeDeclareOpaqueType() {
     id: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     impltype: this.deserializeNode(),
+    lowerBound: this.deserializeNode(),
+    upperBound: this.deserializeNode(),
     supertype: this.deserializeNode(),
   };
 }
