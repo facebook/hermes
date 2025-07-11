@@ -228,9 +228,13 @@ class OrderedHashMapBase {
   /// The last entry inserted. We need it to add new elements afterwards.
   GCPointer<BucketType> lastIterationEntry_{nullptr};
 
-  /// Maximum capacity needs to be less than 1/4th the max 32-bit integer in
-  /// order to use an integer-based load factor check of 0.75.
-  static constexpr uint32_t MAX_CAPACITY = UINT32_MAX / 4;
+  /// The multiplier that the hash table grows or shrinks by each rehash.
+  static constexpr uint32_t kGrowOrShrinkFactor{2};
+
+  /// Maximum capacity of the hash table. This is checked in rehash() and we
+  /// won't grow the capacity past this number.
+  static constexpr uint32_t MAX_CAPACITY =
+      StorageType::maxCapacityNoOverflow() / kGrowOrShrinkFactor;
 
   /// Capacity of the hash table.
   uint32_t capacity_{INITIAL_CAPACITY};
@@ -261,7 +265,7 @@ class OrderedHashMapBase {
   lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key) const;
 
   /// Adjust the capacity of the hashtable and rehash.
-  /// The new capacity will be calculated by nextCapacity().
+  /// The new capacity will be calculated by checkedNextCapacity().
   /// Note that this fun will always run rehash even if the new capacity is same
   /// as before. In such case, all the deleted bucket will be removed and become
   /// empty bucket.
@@ -270,34 +274,57 @@ class OrderedHashMapBase {
   static ExecutionStatus
   rehash(Handle<Derived> self, Runtime &runtime, bool beforeAdd = false);
 
-  /// Determine if we should shrink the hash table basedon the current key count
-  /// and capacity.
+  /// Determine if we should shrink the hash table based on the current key
+  /// count and capacity.
   static bool shouldShrink(uint32_t capacity, uint32_t keyCount) {
-    return 8 * keyCount <= capacity &&
+    // Divide the capacity to get the number we want for comparison. Division
+    // ensures there won't be overflow.
+    return keyCount <= capacity / 8 &&
         capacity > OrderedHashMapBase::INITIAL_CAPACITY;
   }
-
-  static const uint32_t kRehashFactor = 2;
 
   /// Determine if we should rehash the hash table based on the current key
   /// count, delete count and capacity.
   static bool
   shouldRehash(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount) {
-    return kRehashFactor * (keyCount + deleteCount) >= capacity;
+    return (keyCount + deleteCount) >= rehashThreshold(capacity);
+  }
+
+  /// Determine the number of elements (alive and deleted) before a rehash
+  /// should happen.
+  static uint32_t rehashThreshold(uint32_t capacity) {
+    // `>> 1` means that we're using a load factor of 0.5
+    return capacity >> 1;
   }
 
   /// Calculate the next capacity based on the current capacity and key count.
-  static uint32_t nextCapacity(uint32_t capacity, uint32_t keyCount) {
+  /// If there are enough unused capacity, then the next capacity will shrink.
+  /// Capacity will grow otherwise. In the case that capacity cannot grow
+  /// anymore, due to the increase would exceed MAX_CAPACITY, then RangeError
+  /// will be raised.
+  static CallResult<uint32_t>
+  checkedNextCapacity(Runtime &runtime, uint32_t capacity, uint32_t keyCount) {
     if (!capacity)
       return OrderedHashMapBase::INITIAL_CAPACITY;
 
     if (shouldShrink(capacity, keyCount)) {
       assert(
-          (capacity / kRehashFactor) >= OrderedHashMapBase::INITIAL_CAPACITY);
-      return capacity / kRehashFactor;
+          (capacity / kGrowOrShrinkFactor) >=
+          OrderedHashMapBase::INITIAL_CAPACITY);
+      return capacity / kGrowOrShrinkFactor;
     }
-
-    return capacity * kRehashFactor;
+    static_assert(
+        MAX_CAPACITY <= UINT32_MAX / kGrowOrShrinkFactor,
+        "Avoid overflow on multiplying capacity by kGrowOrShrinkFactor");
+    uint32_t newCapacity = capacity * kGrowOrShrinkFactor;
+    if (LLVM_UNLIKELY(newCapacity > MAX_CAPACITY)) {
+      if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+        return runtime.raiseRangeError("Cannot insert new data. Map is full.");
+      } else {
+        return runtime.raiseRangeError("Cannot insert new data. Set is full.");
+      }
+    }
+    return capacity * kGrowOrShrinkFactor;
   }
 
   /// Check if the bucket is deleted or not.

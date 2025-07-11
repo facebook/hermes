@@ -141,21 +141,17 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     Handle<Derived> self,
     Runtime &runtime,
     bool beforeAdd) {
-  // NOTE: we have ensured that self->capacity_ * 4 never overflows uint32_t by
-  // setting MAX_CAPACITY to the appropriate value. self->size_ is always <=
-  // self->capacity_, so this applies to self->size_ as well.
-  static_assert(
-      MAX_CAPACITY <= UINT32_MAX / 4,
-      "Avoid overflow checks on multiplying capacity by 4");
-
-  const uint32_t newCapacity =
-      nextCapacity(self->capacity_, self->size_ + (beforeAdd ? 1 : 0));
+  const CallResult<uint32_t> newCapacity = checkedNextCapacity(
+      runtime, self->capacity_, self->size_ + (beforeAdd ? 1 : 0));
+  if (LLVM_UNLIKELY(newCapacity == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
 
   // Set new capacity first to update the hash function.
-  self->capacity_ = newCapacity;
+  self->capacity_ = *newCapacity;
 
   // Create a new hash table.
-  auto arrRes = StorageType::create(runtime, newCapacity, newCapacity);
+  auto arrRes = StorageType::create(runtime, *newCapacity, *newCapacity);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
