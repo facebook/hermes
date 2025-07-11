@@ -409,7 +409,10 @@ CallResult<HermesValue> setPrototypeClear(void *, Runtime &runtime) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.clear");
   }
-  JSSet::clear(selfHandle, runtime);
+  if (LLVM_UNLIKELY(
+          JSSet::clear(selfHandle, runtime) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   return HermesValue::encodeUndefinedValue();
 }
 

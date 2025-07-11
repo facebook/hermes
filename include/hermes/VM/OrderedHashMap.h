@@ -177,7 +177,7 @@ class OrderedHashMapBase {
   static bool erase(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
   /// Clear the map.
-  static void clear(Handle<Derived> self, Runtime &runtime);
+  static ExecutionStatus clear(Handle<Derived> self, Runtime &runtime);
 
   /// \return the size of the map.
   uint32_t size() const {

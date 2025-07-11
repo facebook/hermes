@@ -410,13 +410,13 @@ BucketType *OrderedHashMapBase<BucketType, Derived>::iteratorNext(
 }
 
 template <typename BucketType, typename Derived>
-void OrderedHashMapBase<BucketType, Derived>::clear(
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
     Handle<Derived> self,
     Runtime &runtime) {
   self->assertInitialized();
   if (!self->firstIterationEntry_) {
     // Empty set.
-    return;
+    return ExecutionStatus::RETURNED;
   }
 
   // Clear the hash table.
@@ -445,6 +445,7 @@ void OrderedHashMapBase<BucketType, Derived>::clear(
       runtime.getHeap());
   self->deletedCount_ = 0;
   self->size_ = 0;
+  return ExecutionStatus::RETURNED;
 }
 
 template class OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>;

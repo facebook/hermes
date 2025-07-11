@@ -281,7 +281,10 @@ CallResult<HermesValue> mapPrototypeClear(void *, Runtime &runtime) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.clear");
   }
-  JSMap::clear(selfHandle, runtime);
+  if (LLVM_UNLIKELY(
+          JSMap::clear(selfHandle, runtime) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
   return HermesValue::encodeUndefinedValue();
 }
 
