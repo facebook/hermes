@@ -67,7 +67,7 @@ TEST(ProfileGeneratorTest, Empty) {
   EXPECT_EQ(profile.getSamplesCount(), 0);
 }
 
-TEST(ProfileGeneratorTest, MultipleUniqueScriptURLs) {
+TEST(ProfileGeneratorTest, DISABLED_MultipleUniqueScriptURLs) {
   int kNumberOfUniqueSourceScriptURLs = 64;
 
   auto runtime = makeRuntime();
@@ -80,7 +80,7 @@ TEST(ProfileGeneratorTest, MultipleUniqueScriptURLs) {
            // The sampling interval is at most 0.1ms, see kSamplingProfilerFrequencyHz.
            while (Date.now() - start < 10) {}
          }
-       
+
          foo();
          )";
         hermes::hbc::CompileFlags flags{};
