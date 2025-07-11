@@ -971,11 +971,13 @@ ESTREE_NODE_3_ARGS(
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, right, false)
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_6_ARGS(
     OpaqueType, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, impltype, false,
+    NodePtr, lowerBound, true,
+    NodePtr, upperBound, true,
     NodePtr, supertype, true)
 
 ESTREE_NODE_4_ARGS(
@@ -990,11 +992,13 @@ ESTREE_NODE_3_ARGS(
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, right, false)
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_6_ARGS(
     DeclareOpaqueType, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, impltype, true,
+    NodePtr, lowerBound, true,
+    NodePtr, upperBound, true,
     NodePtr, supertype, true)
 ESTREE_NODE_4_ARGS(
     DeclareInterface, Flow,

@@ -1523,13 +1523,29 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
     typeParams = *optTypeParams;
   }
 
-  ESTree::Node *supertype = nullptr;
-  if ((kind == TypeAliasKind::Opaque || kind == TypeAliasKind::DeclareOpaque) &&
-      checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
-    auto optSuper = parseTypeAnnotationFlow();
-    if (!optSuper)
-      return None;
-    supertype = *optSuper;
+  ESTree::Node *lowerBound = nullptr;
+  ESTree::Node *upperBound = nullptr;
+  ESTree::Node *legacySupertype = nullptr;
+  if ((kind == TypeAliasKind::Opaque || kind == TypeAliasKind::DeclareOpaque)) {
+    if (checkAndEat(TokenKind::rw_super, JSLexer::GrammarContext::Type)) {
+      auto optLowerBound = parseUnionTypeAnnotationFlow();
+      if (!optLowerBound)
+        return None;
+      lowerBound = *optLowerBound;
+    }
+    if (checkAndEat(TokenKind::rw_extends, JSLexer::GrammarContext::Type)) {
+      auto optUpperBound = parseTypeAnnotationFlow();
+      if (!optUpperBound)
+        return None;
+      upperBound = *optUpperBound;
+    }
+    if (!lowerBound && !upperBound &&
+        checkAndEat(TokenKind::colon, JSLexer::GrammarContext::Type)) {
+      auto optSuper = parseTypeAnnotationFlow();
+      if (!optSuper)
+        return None;
+      legacySupertype = *optSuper;
+    }
   }
 
   ESTree::Node *right = nullptr;
@@ -1555,8 +1571,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
     return setLocation(
         start,
         getPrevTokenEndLoc(),
-        new (context_)
-            ESTree::DeclareOpaqueTypeNode(id, typeParams, right, supertype));
+        new (context_) ESTree::DeclareOpaqueTypeNode(
+            id, typeParams, right, lowerBound, upperBound, legacySupertype));
   }
   if (kind == TypeAliasKind::Declare) {
     return setLocation(
@@ -1568,8 +1584,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(
     return setLocation(
         start,
         getPrevTokenEndLoc(),
-        new (context_)
-            ESTree::OpaqueTypeNode(id, typeParams, right, supertype));
+        new (context_) ESTree::OpaqueTypeNode(
+            id, typeParams, right, lowerBound, upperBound, legacySupertype));
   }
   return setLocation(
       start,

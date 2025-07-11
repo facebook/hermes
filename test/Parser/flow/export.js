@@ -43,6 +43,8 @@ export opaque type B = number;
 // CHECK-NEXT:           "impltype": {
 // CHECK-NEXT:             "type": "NumberTypeAnnotation"
 // CHECK-NEXT:           },
+// CHECK-NEXT:           "lowerBound": null,
+// CHECK-NEXT:           "upperBound": null,
 // CHECK-NEXT:           "supertype": null
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],

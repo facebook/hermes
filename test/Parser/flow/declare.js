@@ -33,6 +33,8 @@ declare opaque type A;
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "impltype": null,
+// CHECK-NEXT:       "lowerBound": null,
+// CHECK-NEXT:       "upperBound": null,
 // CHECK-NEXT:       "supertype": null
 // CHECK-NEXT:     },
 
