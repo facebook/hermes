@@ -901,7 +901,6 @@ void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
   ClassContext classCtx(*this, node);
   // Declare a new scope where we will put private names.
   ScopeRAII scope{*this, node};
-  collectDeclaredPrivateIdentifiers(node);
   if (ESTree::IdentifierNode *ident = getClassID(node)) {
     // If there is a name, declare it.
     if (validateDeclarationName(Decl::Kind::ClassExprName, ident)) {
@@ -914,10 +913,17 @@ void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
       semCtx_.setExpressionDecl(ident, decl);
       bindingTable_.try_emplace(ident->_name, Binding{decl, ident});
     }
-    visitESTreeChildren(*this, node);
+  }
+  // Visit the super class expression before declaring private names, but after
+  // the class name was declared.
+  visitESTreeNode(*this, getSuperClass(node), node);
+  collectDeclaredPrivateIdentifiers(node);
+  // Visit the body node.
+  if (auto *CD = llvh::dyn_cast<ClassDeclarationNode>(node)) {
+    visitESTreeNode(*this, CD->_body, node);
   } else {
-    // Otherwise, no extra scope needed, just move on.
-    visitESTreeChildren(*this, node);
+    auto *CE = llvh::cast<ClassExpressionNode>(node);
+    visitESTreeNode(*this, CE->_body, node);
   }
   if (LLVM_UNLIKELY(recursionDepth_ == 0))
     return;

@@ -225,7 +225,7 @@ bool isAsync(FunctionLikeNode *node) {
   }
 }
 
-Node *getSuperClass(ClassLikeNode *node) {
+Node *&getSuperClass(ClassLikeNode *node) {
   switch (node->getKind()) {
     case NodeKind::ClassExpression:
       return cast<ClassExpressionNode>(node)->_superClass;

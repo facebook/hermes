@@ -1255,7 +1255,7 @@ bool isGenerator(FunctionLikeNode *node);
 bool isAsync(FunctionLikeNode *node);
 
 /// \return the super class node of \p node.
-Node *getSuperClass(ClassLikeNode *node);
+Node *&getSuperClass(ClassLikeNode *node);
 
 /// \return the IdentifierNode of \p node. Can be null.
 IdentifierNode *getClassID(ClassLikeNode *node);

@@ -23,12 +23,12 @@ class A {
 // CHECK-NEXT:    Scope %s.1
 // CHECK-NEXT:        Decl %d.1 'A' Class
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.2 '#f1' PrivateField
-// CHECK-NEXT:            Decl %d.3 '#m1' PrivateMethod
-// CHECK-NEXT:            Decl %d.4 '#x' PrivateGetterSetter
-// CHECK-NEXT:            Decl %d.5 '#onlyGetter' PrivateGetter
-// CHECK-NEXT:            Decl %d.6 '#onlySetter' PrivateSetter
-// CHECK-NEXT:            Decl %d.7 'A' ClassExprName
+// CHECK-NEXT:            Decl %d.2 'A' ClassExprName
+// CHECK-NEXT:            Decl %d.3 '#f1' PrivateField
+// CHECK-NEXT:            Decl %d.4 '#m1' PrivateMethod
+// CHECK-NEXT:            Decl %d.5 '#x' PrivateGetterSetter
+// CHECK-NEXT:            Decl %d.6 '#onlyGetter' PrivateGetter
+// CHECK-NEXT:            Decl %d.7 '#onlySetter' PrivateSetter
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.3
 // CHECK-NEXT:    Func strict
@@ -53,34 +53,34 @@ class A {
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ClassDeclaration Scope %s.2
-// CHECK-NEXT:        Id 'A' [D:%d.1 E:%d.7 'A']
+// CHECK-NEXT:        Id 'A' [D:%d.1 E:%d.2 'A']
 // CHECK-NEXT:        ClassBody
 // CHECK-NEXT:            ClassPrivateProperty
-// CHECK-NEXT:                Id 'f1' [D:E:%d.2 '#f1']
+// CHECK-NEXT:                Id 'f1' [D:E:%d.3 '#f1']
 // CHECK-NEXT:            MethodDefinition
 // CHECK-NEXT:                PrivateName
-// CHECK-NEXT:                    Id 'm1' [D:E:%d.3 '#m1']
+// CHECK-NEXT:                    Id 'm1' [D:E:%d.4 '#m1']
 // CHECK-NEXT:                FunctionExpression
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:            MethodDefinition
 // CHECK-NEXT:                PrivateName
-// CHECK-NEXT:                    Id 'x' [D:E:%d.4 '#x']
+// CHECK-NEXT:                    Id 'x' [D:E:%d.5 '#x']
 // CHECK-NEXT:                FunctionExpression
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:            MethodDefinition
 // CHECK-NEXT:                PrivateName
-// CHECK-NEXT:                    Id 'x' [D:E:%d.4 '#x']
+// CHECK-NEXT:                    Id 'x' [D:E:%d.5 '#x']
 // CHECK-NEXT:                FunctionExpression
 // CHECK-NEXT:                    Id 'v' [D:E:%d.10 'v']
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:            MethodDefinition
 // CHECK-NEXT:                PrivateName
-// CHECK-NEXT:                    Id 'onlyGetter' [D:E:%d.5 '#onlyGetter']
+// CHECK-NEXT:                    Id 'onlyGetter' [D:E:%d.6 '#onlyGetter']
 // CHECK-NEXT:                FunctionExpression
 // CHECK-NEXT:                    BlockStatement
 // CHECK-NEXT:            MethodDefinition
 // CHECK-NEXT:                PrivateName
-// CHECK-NEXT:                    Id 'onlySetter' [D:E:%d.6 '#onlySetter']
+// CHECK-NEXT:                    Id 'onlySetter' [D:E:%d.7 '#onlySetter']
 // CHECK-NEXT:                FunctionExpression
 // CHECK-NEXT:                    Id 'v' [D:E:%d.13 'v']
 // CHECK-NEXT:                    BlockStatement
