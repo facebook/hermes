@@ -5,7 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -emit-binary -target=HBC -out=%t %S/string-table-base.js && %hermes -target=HBC -dump-bytecode -pretty-disassemble=false -O -base-bytecode %t %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -emit-binary -out=%t.base.hbc %S/string-table-base.js && %hermesc -dump-bytecode -O -base-bytecode %t.base.hbc %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -emit-binary -out=%t.base.hbc %S/string-table-base.js && %hermesc -emit-binary -out=%t.update.hbc -O -base-bytecode %t.base.hbc %s && %hermesc -dump-bytecode %t.update.hbc | %FileCheck --match-full-lines %s
 
 // Compile with delta optimizing mode so the string table should contain all
 // strings from string-table-base.js, and with all strings combined and
@@ -20,6 +21,10 @@ var obj = { 'key11': 'val1', 'key2': '再见' };
 var Unicode = '\u7231\u9a6c\u4ed5';
 var Unicode2 = '\u8138\u4e66';
 var ascii = 'hello how are you';
+// Use string literal as identifier.
+var val1 = 1;
+
+//CHECK:String count: 28
 
 //CHECK-LABEL:Global String Table:
 //CHECK-NEXT:  s0[ASCII, {{[0-9]+}}..{{[0-9]+}}]: global
@@ -49,5 +54,6 @@ var ascii = 'hello how are you';
 //CHECK-NEXT:  i24[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: ascii
 //CHECK-NEXT:  i25[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: c
 //CHECK-NEXT:  i26[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: key11
+//CHECK-NEXT:  i27[ASCII, {{[0-9]+}}..{{[0-9]+}}] #{{[0-9A-Z]+}}: val1
 //CHECK-NOT: string-table-update.js
 //CHECK-LABEL: Function<global>({{.*}}):

@@ -646,6 +646,34 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
   }
 }
 
+TEST(StringStorageTest, DeltaOptimizingModeIdentifierTest) {
+  std::vector<llvh::StringRef> baseStrings = {"foo", "bar", "baz"};
+
+  auto baseTable = tableForStrings(baseStrings);
+  auto baseBuffer = baseTable.getStringStorageView();
+  auto baseEntries = baseTable.getStringTableView();
+
+  llvh::BitVector isIdentifier(baseEntries.size(), false);
+  hbc::ConsecutiveStringStorage storage{
+      std::move(baseEntries), std::move(baseBuffer)};
+  hbc::StringLiteralTable table{std::move(storage), std::move(isIdentifier)};
+
+  ASSERT_EQ(3, table.count());
+  EXPECT_EQ(0, table.getStringID("bar"));
+  EXPECT_EQ(1, table.getStringID("baz"));
+  EXPECT_EQ(2, table.getStringID("foo"));
+
+  table.addString("bar", /* isIdentifier */ true);
+  table.addString("quux", /* isIdentifier */ false);
+  table.addString("foo", /* isIdentifier */ false);
+
+  table.populateStorage(hbc::StringLiteralTable::OptimizeMode::ReorderAndPack);
+  EXPECT_EQ(5, table.count());
+  EXPECT_EQ(1, table.getStringID("baz"));
+  EXPECT_EQ(2, table.getStringID("foo"));
+  EXPECT_EQ(4, table.getIdentifierID("bar"));
+}
+
 TEST(StringAccumulatorTest, Ordering) {
   // When outputing a string storage instance, the accumulator sorts its index
   // entries.  First strings get grouped into "frequency classes".  The first

@@ -72,12 +72,12 @@ class StringLiteralTable {
 
   /// \return the number of strings in the mapping.
   inline size_t count() const {
-    return strings_.size();
+    return getStringTableView().size();
   }
 
   /// \return true if and only if no strings have been recorded.
   inline bool empty() const {
-    return strings_.size() == 0;
+    return getStringTableView().empty();
   }
 
   /// \return string id of an existing \p str in string table.

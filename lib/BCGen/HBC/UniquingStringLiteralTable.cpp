@@ -167,8 +167,13 @@ void StringLiteralTable::populateStringsTableFromStorage() {
     stringsKeys_.emplace_back(storage_.getUTF8StringAtIndex(i, utf8Storage));
     auto [it, inserted] =
         strings_.try_emplace(stringsKeys_.back(), stringsKeys_.size() - 1);
-    (void)inserted;
-    assert(inserted && "Duplicate string in storage.");
+    if (!inserted) {
+      // Overwrite the existing entry with the new index.
+      // A duplicate entry in stringsKeys_ will only happen if the same string
+      // is used first as a non-identifier and then as an identifier.
+      assert(isIdentifier_[stringsKeys_.size() - 1] && "must be an identifier");
+      it->second = stringsKeys_.size() - 1;
+    }
   }
 }
 
