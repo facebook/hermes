@@ -279,7 +279,7 @@ ExecutionStatus JSArrayBuffer::getExternalDataBlock(
     Handle<JSArrayBuffer> self,
     void **context
 ) {
-  assert(attached() && "Buffer must be attached");
+  assert(self->attached() && "Buffer must be attached");
 
   NamedPropertyDescriptor desc;
   bool exists = JSObject::getOwnNamedDescriptor(
