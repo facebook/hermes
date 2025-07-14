@@ -500,11 +500,11 @@ class JSI_EXPORT Runtime : public ICast {
   virtual ArrayBuffer createArrayBuffer(
       std::shared_ptr<MutableBuffer> buffer) = 0;
   virtual std::shared_ptr<MutableBuffer> getMutableBuffer(
+      const ArrayBuffer &buffer) = 0;
   virtual size_t size(const Array&) = 0;
   virtual size_t size(const ArrayBuffer&) = 0;
   virtual uint8_t* data(const ArrayBuffer&) = 0;
   virtual Value getValueAtIndex(const Array&, size_t i) = 0;
-      const ArrayBuffer &buffer) = 0;
   virtual void
   setValueAtIndexImpl(const Array&, size_t i, const Value& value) = 0;
 
