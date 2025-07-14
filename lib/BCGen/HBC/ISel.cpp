@@ -493,7 +493,6 @@ void HBCISel::generateUnaryOperatorInst(
     }
     default:
       llvm_unreachable("Can't handle this operation");
-      break;
   }
 }
 void HBCISel::generateLoadFrameInst(LoadFrameInst *Inst, BasicBlock *next) {
@@ -581,7 +580,6 @@ void HBCISel::generateBinaryOperatorInst(
       break;
     case OpKind::ExponentiationKind: // ** (**=)
       llvm_unreachable("ExponentiationKind emits a HermesInternal call");
-      break;
     case OpKind::ModuloKind: // %   (%=)
       BCFGen_->emitMod(res, left, right);
       break;
@@ -1112,7 +1110,6 @@ void HBCISel::generateCompareBranchInst(
 
     default:
       llvm_unreachable("invalid compare+branch operator");
-      break;
   }
 
   registerLongJump(loc, trueBlock);

@@ -1060,7 +1060,6 @@ typedArrayPrototypeFill(void *, Runtime &runtime, NativeArgs args) {
     }
     default:
       llvm_unreachable("No element that is that wide");
-      break;
   }
   return self.getHermesValue();
 }

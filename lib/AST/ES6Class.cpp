@@ -747,7 +747,6 @@ class ES6ClassesTransformations {
           break;
         default:
           hermes_fatal("Invalid ES6 class member");
-          break;
       }
 
       auto *call =
