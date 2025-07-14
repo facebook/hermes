@@ -501,7 +501,6 @@ class TypeInferenceImpl {
         return Type::createBoolean();
       default:
         hermes_fatal("Invalid unary operator");
-        break;
     }
   }
   Type inferDirectEvalInst(DirectEvalInst *inst) {

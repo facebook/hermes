@@ -859,7 +859,6 @@ void HBCISel::generateUnaryOperatorInst(
     }
     default:
       llvm_unreachable("Can't handle this operation");
-      break;
   }
 }
 void HBCISel::generateLoadFrameInst(
@@ -955,7 +954,6 @@ void HBCISel::generateBinaryOperatorInst(
       break;
     case ValueKind::BinaryExponentiationInstKind: // ** (**=)
       llvm_unreachable("ExponentiationKind emits a HermesInternal call");
-      break;
     case ValueKind::BinaryModuloInstKind: // %   (%=)
       BCFGen_->emitMod(res, left, right);
       break;
@@ -1661,7 +1659,6 @@ void HBCISel::generateHBCCompareBranchInst(
 
     default:
       llvm_unreachable("invalid compare+branch operator");
-      break;
   }
 
   registerLongJump(loc, trueBlock);
@@ -2303,7 +2300,6 @@ void HBCISel::generateFCompareInst(FCompareInst *Inst, BasicBlock *) {
       break;
     default:
       hermes_fatal("invalid kind for FCompareInst");
-      break;
   }
 }
 void HBCISel::generateHBCFCompareBranchInst(
@@ -2384,7 +2380,6 @@ void HBCISel::generateFBinaryMathInst(FBinaryMathInst *Inst, BasicBlock *) {
       break;
     default:
       hermes_fatal("invalid kind for FBinaryMathInst");
-      break;
   }
 }
 void HBCISel::generateFUnaryMathInst(FUnaryMathInst *Inst, BasicBlock *) {
@@ -2396,7 +2391,6 @@ void HBCISel::generateFUnaryMathInst(FUnaryMathInst *Inst, BasicBlock *) {
       break;
     default:
       hermes_fatal("invalid kind for FUnaryMathInst");
-      break;
   }
 }
 void HBCISel::generateTypedLoadParentInst(
