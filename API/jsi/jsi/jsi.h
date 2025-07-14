@@ -1239,7 +1239,7 @@ class JSI_EXPORT ArrayBuffer : public Object {
   /// \return the underlying MutableBuffer if this ArrayBuffer
   /// was created with one.
   /// This returns nullptr if it does not carry a MutableBuffer.
-  std::shared_ptr<MutableBuffer> getMutableBuffer() const {
+  std::shared_ptr<MutableBuffer> getMutableBuffer(Runtime& runtime) const {
     return runtime.getMutableBuffer(*this);
   }
 
