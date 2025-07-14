@@ -274,7 +274,7 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus JSArrayBuffer::setExternalDataBlock(
+ExecutionStatus JSArrayBuffer::getExternalDataBlock(
     Runtime &runtime,
     Handle<JSArrayBuffer> self,
     void **context
