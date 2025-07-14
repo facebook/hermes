@@ -64,7 +64,6 @@ void FlowTypesDumper::printTypeDescription(
     case TypeKind::Any:
     case TypeKind::Mixed:
       llvm_unreachable("singletons already handled");
-      break;
 
     case TypeKind::Union: {
       os << '(';
