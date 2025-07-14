@@ -294,7 +294,7 @@ ExecutionStatus JSArrayBuffer::getExternalDataBlock(
   // Raw pointers below.
   NoAllocScope scope(runtime);
   NativeState *ns = vmcast<NativeState>(
-      JSObject::getNamedSlotValueUnsafe(*h, runtime, desc)
+      JSObject::getNamedSlotValueUnsafe(*self, runtime, desc)
           .getObject(runtime));
   *context = ns->context();
   return ExecutionStatus::RETURNED;
