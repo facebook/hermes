@@ -296,7 +296,7 @@ ExecutionStatus JSArrayBuffer::getExternalDataBlock(
   NativeState *ns = vmcast<NativeState>(
       JSObject::getNamedSlotValueUnsafe(*h, runtime, desc)
           .getObject(runtime));
-  context = ns->context();
+  *context = ns->context();
   return ExecutionStatus::RETURNED;
 }
 
