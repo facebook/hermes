@@ -274,5 +274,31 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus JSArrayBuffer::setExternalDataBlock(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self,
+    void **context
+) {
+  NamedPropertyDescriptor desc;
+  bool exists = JSObject::getOwnNamedDescriptor(
+      self,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyArrayBufferExternalFinalizer),
+      desc);
+  (void)exists;
+  if (!exists) {
+    // JSArrayBuffer does not hold an external data block
+    return ExecutionStatus::ExecutionFailed;
+  }
+  assert(exists && "JSArrayBuffer");
+  // Raw pointers below.
+  NoAllocScope scope(runtime_);
+  NativeState *ns = vmcast<NativeState>(
+      JSObject::getNamedSlotValueUnsafe(*h, runtime_, desc)
+          .getObject(runtime_));
+  context = ns->context();
+  return ExecutionStatus::RETURNED;
+}
+
 } // namespace vm
 } // namespace hermes

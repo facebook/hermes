@@ -944,6 +944,8 @@ class HermesABIRuntimeWrapper : public Runtime {
     return intoJSIArrayBuffer(vtable_->create_arraybuffer_from_external_data(
         abiRt_, new MutableBufferWrapper(std::move(buffer))));
   }
+  std::shared_ptr<MutableBuffer> getMutableBuffer(
+    const ArrayBuffer& buffer) override;
   size_t size(const Array &arr) override {
     return vtable_->get_array_length(abiRt_, toABIArray(arr));
   }

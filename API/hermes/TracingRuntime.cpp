@@ -879,6 +879,11 @@ jsi::ArrayBuffer TracingRuntime::createArrayBuffer(
   throw std::logic_error("Cannot create external ArrayBuffers in trace mode.");
 }
 
+std::shared_ptr<jsi::MutableBuffer> TracingRuntime::getMutableBuffer(
+  const jsi::ArrayBuffer& buffer) {
+  throw std::logic_error("Cannot get external ArrayBuffers in trace mode.");
+}
+
 size_t TracingRuntime::size(const jsi::Array &arr) {
   // Array size inquiries read from the length property, which is
   // non-configurable and thus cannot have side effects.
