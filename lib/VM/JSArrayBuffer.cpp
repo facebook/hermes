@@ -292,10 +292,10 @@ ExecutionStatus JSArrayBuffer::getExternalDataBlock(
     return ExecutionStatus::EXCEPTION;
   }
   // Raw pointers below.
-  NoAllocScope scope(runtime_);
+  NoAllocScope scope(runtime);
   NativeState *ns = vmcast<NativeState>(
-      JSObject::getNamedSlotValueUnsafe(*h, runtime_, desc)
-          .getObject(runtime_));
+      JSObject::getNamedSlotValueUnsafe(*h, runtime, desc)
+          .getObject(runtime));
   context = ns->context();
   return ExecutionStatus::RETURNED;
 }
