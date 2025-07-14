@@ -409,7 +409,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:i260[ASCII, 882..885] #8540E4CF: p257
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "manyGetByIds"
 // CHECK-NEXT:    DeclareGlobalVar  "manyPutByIds"
 // CHECK-NEXT:    GetGlobalObject   r2
@@ -421,7 +421,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<manyGetByIds>(3 params, 4 registers, 1 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011
 // CHECK-NEXT:    LoadParam         r1, 1
 // CHECK-NEXT:    GetByIdShort      r3, r1, 0, "p0"
 // CHECK-NEXT:    GetByIdShort      r2, r1, 1, "p1"
@@ -946,7 +946,7 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<manyPutByIds>(4 params, 4 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x07a2, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x07a2
 // CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:    LoadParam         r1, 3
 // CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "p0"

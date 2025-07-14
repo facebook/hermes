@@ -419,7 +419,7 @@
 // CHECK-NEXT:i263[ASCII, 1161..1169] #807C5F3D: prototype
 
 // CHECK:Function<global>(1 params, 14 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r2, 258
 // CHECK-NEXT:    CreatePrivateName r1, "#f0"
 // CHECK-NEXT:    StoreToEnvironment r2, 0, r1
@@ -953,7 +953,7 @@
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Constructor<ManyPrivateProperties>(1 params, 14 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0019
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    GetNewTarget      r2
 // CHECK-NEXT:    GetById           r2, r2, 0, "prototype"
@@ -1484,7 +1484,7 @@
 // CHECK-NEXT:    Unreachable
 
 // CHECK:NCFunction<sum>(1 params, 4 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0021, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0021
 // CHECK-NEXT:    LoadParam         r2, 0
 // CHECK-NEXT:    GetParentEnvironment r0, 0
 // CHECK-NEXT:    LoadFromEnvironment r1, r0, 0

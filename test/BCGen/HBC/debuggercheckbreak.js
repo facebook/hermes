@@ -47,7 +47,7 @@ function test1() {
 // CHECK-NEXT:i4[ASCII, 21..25] #13935A76: test1
 
 // CHECK:Function<global>(1 params, 4 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r2, 0
 // CHECK-NEXT:    DeclareGlobalVar  "test1"
 // CHECK-NEXT:    CreateClosure     r1, r2, Function<test1>
@@ -59,7 +59,7 @@ function test1() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<test1>(1 params, 14 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x001e, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x001e
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r2, r1, 1
 // CHECK-NEXT:    LoadConstUndefined r1

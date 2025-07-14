@@ -69,7 +69,7 @@ function require(modIdx) {
 // CHECK-NEXT:i7[ASCII, 37..37] #0001E7F9: x
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "require"
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -78,7 +78,7 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<require>(2 params, 18 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b
 // CHECK-NEXT:    LoadParam         r2, 1
 // CHECK-NEXT:    LoadConstZero     r0
 // CHECK-NEXT:    JStrictEqual      L1, r0, r2
@@ -112,7 +112,7 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r2
 
 // CHECK:Function<modFact0>(5 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0029, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0029
 // CHECK-NEXT:    LoadParam         r1, 4
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    CreateClosure     r2, r0, Function<bar>
@@ -120,7 +120,7 @@ function require(modIdx) {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<modFact1>(5 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0031, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0031
 // CHECK-NEXT:    LoadParam         r1, 4
 // CHECK-NEXT:    LoadConstUndefined r5
 // CHECK-NEXT:    LoadParam         r2, 2

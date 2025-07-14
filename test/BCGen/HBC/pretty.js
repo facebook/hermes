@@ -40,7 +40,7 @@ function foo (a) {
 // CHECK-NEXT:i3[ASCII, 9..13] #A689F65B: print
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -49,7 +49,7 @@ function foo (a) {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(2 params, 16 registers, 3 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    Dec               r4, r4
 // CHECK-NEXT:    LoadConstZero     r0

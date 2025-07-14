@@ -54,7 +54,7 @@ function foo() {
 // CHECK-NEXT:i6[ASCII, 25..29] #A689F65B: print
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -63,7 +63,7 @@ function foo() {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<foo>(1 params, 12 registers, 1 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b
 // CHECK-NEXT:    CreateFunctionEnvironment r1, 3
 // CHECK-NEXT:    LoadConstInt      r0, 1234
 // CHECK-NEXT:    StoreNPToEnvironment r1, 0, r0
@@ -80,7 +80,7 @@ function foo() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<bar>(1 params, 16 registers, 2 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0019
 // CHECK-NEXT:    GetParentEnvironment r3, 0
 // CHECK-NEXT:    LoadFromEnvironment r1, r3, 0
 // CHECK-NEXT:    LoadConstUInt8    r0, 1

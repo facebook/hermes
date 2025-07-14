@@ -68,7 +68,7 @@ function *args() {
 // CHECK-NEXT:  Function ID 4 -> s0
 
 // CHECK:Function<global>(1 params, 4 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "loop"
 // CHECK-NEXT:    DeclareGlobalVar  "args"
@@ -119,7 +119,7 @@ function *args() {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<loop>(2 params, 23 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0
@@ -266,7 +266,7 @@ function *args() {
 // CHECK-NEXT:4: start = L8, end = L10, target = L10
 
 // CHECK:Function<args>(1 params, 21 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x003c, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x003c
 // CHECK-NEXT:    LoadParam         r3, 2
 // CHECK-NEXT:    LoadParam         r4, 1
 // CHECK-NEXT:    GetParentEnvironment r2, 0

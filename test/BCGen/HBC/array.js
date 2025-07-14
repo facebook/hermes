@@ -48,7 +48,7 @@ var z = [{}];
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:[String 0]
 // CHECK-NEXT:Function<global>(1 params, 6 registers, 1 numbers, 2 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "x"
 // CHECK-NEXT:    DeclareGlobalVar  "y"
 // CHECK-NEXT:    DeclareGlobalVar  "z"

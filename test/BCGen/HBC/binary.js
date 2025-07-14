@@ -59,7 +59,7 @@ function foo() { return; }
 // CHECK-NEXT:i2[ASCII, 12..14] #9290584E: foo
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "binary"
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    GetGlobalObject   r2
@@ -71,7 +71,7 @@ function foo() { return; }
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<binary>(1 params, 13 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    GetByIdShort      r3, r2, 0, "foo"
 // CHECK-NEXT:    LoadConstUndefined r1

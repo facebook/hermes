@@ -124,7 +124,7 @@
 // HBC-NEXT:s11[ASCII, 25..36]: stringSwitch
 
 // HBC:Function<global>(1 params, 13 registers, 1 numbers, 1 non-pointers):
-// HBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// HBC-NEXT:Offset in debug table: source 0x0000
 // HBC-NEXT:    LoadConstString   r3, "l1"
 // HBC-NEXT:    LoadConstUndefined r1
 // HBC-NEXT:    CreateClosure     r2, r1, Function<stringSwitch>

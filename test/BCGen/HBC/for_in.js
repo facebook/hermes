@@ -43,7 +43,7 @@ test_one(1,2,3)
 // CHECK-NEXT:i1[ASCII, 6..13] #33D4E32D: test_one
 
 // CHECK:Function<global>(1 params, 17 registers, 3 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] GetGlobalObject 4<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 3<Reg8>
@@ -57,7 +57,7 @@ test_one(1,2,3)
 // CHECK-NEXT:[@ 41] Ret 4<Reg8>
 
 // CHECK:Function<test_one>(3 params, 8 registers, 2 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011
 // CHECK-NEXT:[@ 0] LoadParam 6<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] Mov 4<Reg8>, 6<Reg8>
 // CHECK-NEXT:[@ 6] GetPNameList 5<Reg8>, 4<Reg8>, 0<Reg8>, 1<Reg8>

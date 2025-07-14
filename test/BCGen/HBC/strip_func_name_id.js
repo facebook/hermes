@@ -33,7 +33,7 @@ Math['function-name-stripped'] = 123;
 // CHECK-NEXT:i1[ASCII, 4..25] #D7615A1F: function-name-stripped
 
 // CHECK:Function<function-name-stripped>(1 params, 2 registers, 1 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    GetGlobalObject   r1
 // CHECK-NEXT:    TryGetById        r1, r1, 0, "Math"
 // CHECK-NEXT:    LoadConstUInt8    r0, 123

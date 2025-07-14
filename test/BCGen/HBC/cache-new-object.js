@@ -44,7 +44,7 @@ function simple(x, y) {
 // CHECK-NEXT:Object Shape Table:
 // CHECK-NEXT:0[0, 2]
 // CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "simple"
 // CHECK-NEXT:    GetGlobalObject   r2
 // CHECK-NEXT:    LoadConstUndefined r0
@@ -53,7 +53,7 @@ function simple(x, y) {
 // CHECK-NEXT:    Ret               r0
 
 // CHECK:Function<simple>(3 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b
 // CHECK-NEXT:    LoadThisNS        r2
 // CHECK-NEXT:    GetNewTarget      r1
 // CHECK-NEXT:    CacheNewObject    r2, r1, 0, 0

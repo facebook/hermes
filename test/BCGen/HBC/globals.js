@@ -38,7 +38,7 @@ y = x;
 // STRICT-NEXT:i3[ASCII, 10..10] #0001E3E8: y
 
 // STRICT:Function<global>(1 params, 14 registers, 1 numbers, 1 non-pointers):
-// STRICT-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// STRICT-NEXT:Offset in debug table: source 0x0000
 // STRICT-NEXT:    DeclareGlobalVar  "x"
 // STRICT-NEXT:    GetGlobalObject   r3
 // STRICT-NEXT:    LoadConstUInt8    r0, 5
@@ -92,7 +92,7 @@ y = x;
 // NONSTRICT-NEXT:i3[ASCII, 10..10] #0001E3E8: y
 
 // NONSTRICT:Function<global>(1 params, 14 registers, 1 numbers, 1 non-pointers):
-// NONSTRICT-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// NONSTRICT-NEXT:Offset in debug table: source 0x0000
 // NONSTRICT-NEXT:    DeclareGlobalVar  "x"
 // NONSTRICT-NEXT:    GetGlobalObject   r3
 // NONSTRICT-NEXT:    LoadConstUInt8    r0, 5

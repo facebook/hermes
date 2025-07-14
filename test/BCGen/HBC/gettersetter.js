@@ -45,7 +45,7 @@ var obj = {
 // CHECK-NEXT:i8[ASCII, 26..28] #DC53DBCF: obj
 
 // CHECK:Function<global>(1 params, 5 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "obj"
 // CHECK-NEXT:    NewObject         r2
 // CHECK-NEXT:    LoadConstString   r4, "b"

@@ -35,7 +35,7 @@ foo(0,0,1);
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
 // CHECK:Function<global>(1 params, 16 registers, 2 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    GetGlobalObject   r3
 // CHECK-NEXT:    LoadConstUndefined r2

@@ -97,7 +97,7 @@ function stringSwitch(x) {
 // HBC-NEXT:i20[ASCII, 35..39] #A689F65B: print
 
 // HBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// HBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// HBC-NEXT:Offset in debug table: source 0x0000
 // HBC-NEXT:    DeclareGlobalVar  "stringSwitch"
 // HBC-NEXT:    GetGlobalObject   r2
 // HBC-NEXT:    LoadConstUndefined r0
@@ -106,7 +106,7 @@ function stringSwitch(x) {
 // HBC-NEXT:    Ret               r0
 
 // HBC:Function<stringSwitch>(2 params, 15 registers, 1 numbers, 1 non-pointers):
-// HBC-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
+// HBC-NEXT:Offset in debug table: source 0x000b
 // HBC-NEXT:    LoadParam         r4, 1
 // HBC-NEXT:    GetGlobalObject   r3
 // HBC-NEXT:    LoadConstString   r2, "hi"
@@ -240,7 +240,7 @@ function stringSwitch(x) {
 // HBCRAW-NEXT:i20[ASCII, 35..39] #A689F65B: print
 
 // HBCRAW:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// HBCRAW-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// HBCRAW-NEXT:Offset in debug table: source 0x0000
 // HBCRAW-NEXT:[@ 0] DeclareGlobalVar 19<UInt32>
 // HBCRAW-NEXT:[@ 5] GetGlobalObject 2<Reg8>
 // HBCRAW-NEXT:[@ 7] LoadConstUndefined 0<Reg8>
@@ -249,7 +249,7 @@ function stringSwitch(x) {
 // HBCRAW-NEXT:[@ 20] Ret 0<Reg8>
 
 // HBCRAW:Function<stringSwitch>(2 params, 15 registers, 1 numbers, 1 non-pointers):
-// HBCRAW-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
+// HBCRAW-NEXT:Offset in debug table: source 0x000b
 // HBCRAW-NEXT:[@ 0] LoadParam 4<Reg8>, 1<UInt8>
 // HBCRAW-NEXT:[@ 3] GetGlobalObject 3<Reg8>
 // HBCRAW-NEXT:[@ 5] LoadConstString 2<Reg8>, 18<UInt16>

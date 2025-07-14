@@ -57,7 +57,7 @@ function foo() {
 // CHKBC-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 
 // CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    GetGlobalObject   r2
@@ -67,7 +67,7 @@ function foo() {
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<foo>(1 params, 1 registers, 0 numbers, 0 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x000e, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x000e
 // CHKBC-NEXT:    GetGlobalObject   r0
 // CHKBC-NEXT:    GetByIdShort      r0, r0, 0, "x"
 // CHKBC-NEXT:    Ret               r0

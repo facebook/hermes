@@ -52,7 +52,7 @@ print(bench(4e6, 100))
 // CHECK-NEXT:i2[ASCII, 11..15] #A689F65B: print
 
 // CHECK:Function<global>(1 params, 15 registers, 2 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "bench"
 // CHECK-NEXT:    GetGlobalObject   r3
 // CHECK-NEXT:    LoadConstUndefined r2
@@ -67,7 +67,7 @@ print(bench(4e6, 100))
 // CHECK-NEXT:    Ret               r3
 
 // CHECK:Function<bench>(3 params, 15 registers, 14 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0018, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0018
 // CHECK-NEXT:    LoadParam         r14, 1
 // CHECK-NEXT:    ToNumber          r8, r14
 // CHECK-NEXT:    LoadParam         r14, 2

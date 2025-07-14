@@ -47,7 +47,7 @@ try {
 // CHECK-NEXT:i6[ASCII, 32..36] #A689F65B: print
 
 // CHECK:Function<global>(1 params, 15 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    ProfilePoint      9
 // CHECK-NEXT:    DeclareGlobalVar  "condition"
 // CHECK-NEXT:    LoadConstUndefined r3

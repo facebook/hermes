@@ -1356,13 +1356,6 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
       } else {
         OS << llvh::format_hex(debugSourceOffset, 6);
       }
-      OS << ", lexical ";
-      uint32_t debugLexicalOffset = funcDebugOffsets->lexicalData;
-      if (debugLexicalOffset == DebugOffsets::NO_OFFSET) {
-        OS << "none";
-      } else {
-        OS << llvh::format_hex(debugLexicalOffset, 6);
-      }
       OS << '\n';
     }
     disassembleFunction(funcId, OS);

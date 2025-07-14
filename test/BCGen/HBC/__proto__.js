@@ -59,7 +59,7 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:0[0, 3]
 // CHECK-NEXT:1[7, 2]
 // CHECK-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "staticProto"
 // CHECK-NEXT:    DeclareGlobalVar  "dynamicProto"
 // CHECK-NEXT:    GetGlobalObject   r2
@@ -76,7 +76,7 @@ function dynamicProto(func, getProto) {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<dynamicProto>(3 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011
 // CHECK-NEXT:    NewObjectWithBuffer r1, 1, 13
 // CHECK-NEXT:    LoadConstUndefined r0
 // CHECK-NEXT:    LoadParam         r2, 1

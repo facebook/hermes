@@ -37,7 +37,7 @@ function foo(a) {
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    CreateTopLevelEnvironment r1, 0
 // CHECK-NEXT:    DeclareGlobalVar  "foo"
 // CHECK-NEXT:    CreateClosure     r1, r1, Function<foo>
@@ -48,7 +48,7 @@ function foo(a) {
 // CHECK-NEXT:    Ret               r1
 
 // CHECK:Function<foo>(2 params, 3 registers, 0 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x000b, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x000b
 // CHECK-NEXT:    GetParentEnvironment r1, 0
 // CHECK-NEXT:    CreateEnvironment r1, r1, 1
 // CHECK-NEXT:    LoadParam         r2, 1

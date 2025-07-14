@@ -39,7 +39,7 @@ var z = 0.0;
 // CHECK-NEXT:i4[ASCII, 9..9] #0001EFDB: z
 
 // CHECK:Function<global>(1 params, 3 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "w"
 // CHECK-NEXT:    DeclareGlobalVar  "x"
 // CHECK-NEXT:    DeclareGlobalVar  "y"

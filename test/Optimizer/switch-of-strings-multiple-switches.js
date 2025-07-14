@@ -299,7 +299,7 @@ function stringSwitchSeveralSwitches(b, s, i) {
 // HBC-NEXT:i21[ASCII, 73..99] #88138FB1: stringSwitchSeveralSwitches
 
 // HBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// HBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// HBC-NEXT:Offset in debug table: source 0x0000
 // HBC-NEXT:    DeclareGlobalVar  "stringSwitchSever"...
 // HBC-NEXT:    GetGlobalObject   r2
 // HBC-NEXT:    LoadConstUndefined r0

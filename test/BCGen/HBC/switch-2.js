@@ -102,7 +102,7 @@ function f(x) {
 // CHECK-NEXT:i2[ASCII, 6..6] #00019E07: f
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] DeclareGlobalVar 2<UInt32>
 // CHECK-NEXT:[@ 10] GetGlobalObject 2<Reg8>
@@ -118,7 +118,7 @@ function f(x) {
 // CHECK-NEXT:[@ 2] Ret 0<Reg8>
 
 // CHECK:Function<f>(2 params, 12 registers, 1 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011
 // CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] UIntSwitchImm 2<Reg8>, 292<UInt32>, 161<Addr32>, 0<UInt32>, 16<UInt32>
 // CHECK-NEXT:[@ 21] LoadConstInt 0<Reg8>, 3352<Imm32>

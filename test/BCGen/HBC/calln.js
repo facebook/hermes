@@ -133,7 +133,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:i5[ASCII, 22..25] #D0BDAD11: foo5
 
 // BCGEN:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "foo1"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo2"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo3"
@@ -154,14 +154,14 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo1>(2 params, 10 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x0023, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0023
 // BCGEN-NEXT:    LoadConstUndefined r0
 // BCGEN-NEXT:    LoadParam         r1, 1
 // BCGEN-NEXT:    Call1             r1, r1, r0
 // BCGEN-NEXT:    Ret               r0
 
 // BCGEN:Function<foo2>(2 params, 12 registers, 1 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x002b, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x002b
 // BCGEN-NEXT:    LoadConstUInt8    r0, 1
 // BCGEN-NEXT:    LoadConstUndefined r1
 // BCGEN-NEXT:    LoadParam         r2, 1
@@ -169,7 +169,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r1
 
 // BCGEN:Function<foo3>(2 params, 14 registers, 2 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x0033, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0033
 // BCGEN-NEXT:    LoadConstUInt8    r0, 2
 // BCGEN-NEXT:    LoadConstUInt8    r1, 1
 // BCGEN-NEXT:    LoadConstUndefined r2
@@ -178,7 +178,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r2
 
 // BCGEN:Function<foo4>(2 params, 16 registers, 3 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x003b, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x003b
 // BCGEN-NEXT:    LoadConstUInt8    r0, 3
 // BCGEN-NEXT:    LoadConstUInt8    r1, 2
 // BCGEN-NEXT:    LoadConstUInt8    r2, 1
@@ -188,7 +188,7 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:    Ret               r3
 
 // BCGEN:Function<foo5>(2 params, 18 registers, 4 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x0043, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0043
 // BCGEN-NEXT:    LoadConstUInt8    r6, 4
 // BCGEN-NEXT:    LoadConstUInt8    r7, 3
 // BCGEN-NEXT:    LoadConstUInt8    r8, 2

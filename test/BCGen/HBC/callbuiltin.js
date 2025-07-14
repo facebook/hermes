@@ -137,7 +137,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:0[0, 4]
 // CHKBC-NEXT:1[12, 1]
 // CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"
 // CHKBC-NEXT:    DeclareGlobalVar  "checkNonStaticBui"...
@@ -157,13 +157,13 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Ret               r1
 
 // CHKBC:Function<foo>(2 params, 10 registers, 0 numbers, 0 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0024, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x0024
 // CHKBC-NEXT:    LoadParam         r1, 1
 // CHKBC-NEXT:    CallBuiltin       r0, "Object.keys", 2
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<shadows>(1 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x002c, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x002c
 // CHKBC-NEXT:    NewObjectWithBuffer r3, 1, 17
 // CHKBC-NEXT:    GetGlobalObject   r1
 // CHKBC-NEXT:    TryGetById        r1, r1, 0, "print"
@@ -175,7 +175,7 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Function<checkNonStaticBuiltin>(1 params, 13 registers, 0 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x003a, lexical 0x0000
+// CHKBC-NEXT:Offset in debug table: source 0x003a
 // CHKBC-NEXT:    GetGlobalObject   r1
 // CHKBC-NEXT:    TryGetById        r3, r1, 0, "HermesInternal"
 // CHKBC-NEXT:    GetByIdShort      r2, r3, 1, "concat"

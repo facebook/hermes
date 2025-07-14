@@ -35,7 +35,7 @@ function foo() {
 // CHECK-NEXT:i1[ASCII, 6..8] #9290584E: foo
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>
 // CHECK-NEXT:[@ 7] LoadConstUndefined 0<Reg8>

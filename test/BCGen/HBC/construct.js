@@ -41,7 +41,7 @@ function bar() {
 // CHECK-NEXT:i3[ASCII, 12..12] #0001E7F9: x
 
 // CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 2<UInt32>
 // CHECK-NEXT:[@ 5] DeclareGlobalVar 1<UInt32>
 // CHECK-NEXT:[@ 10] GetGlobalObject 2<Reg8>
@@ -53,7 +53,7 @@ function bar() {
 // CHECK-NEXT:[@ 36] Ret 0<Reg8>
 
 // CHECK:Function<foo>(2 params, 3 registers, 0 numbers, 1 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0011, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0011
 // CHECK-NEXT:[@ 0] LoadParam 2<Reg8>, 1<UInt8>
 // CHECK-NEXT:[@ 3] LoadThisNS 1<Reg8>
 // CHECK-NEXT:[@ 5] PutByIdLoose 1<Reg8>, 2<Reg8>, 0<UInt8>, 3<UInt16>
@@ -61,7 +61,7 @@ function bar() {
 // CHECK-NEXT:[@ 13] Ret 0<Reg8>
 
 // CHECK:Function<bar>(1 params, 12 registers, 1 numbers, 0 non-pointers):
-// CHECK-NEXT:Offset in debug table: source 0x0019, lexical 0x0000
+// CHECK-NEXT:Offset in debug table: source 0x0019
 // CHECK-NEXT:[@ 0] GetGlobalObject 1<Reg8>
 // CHECK-NEXT:[@ 2] GetByIdShort 1<Reg8>, 1<Reg8>, 0<UInt8>, 2<UInt8>
 // CHECK-NEXT:[@ 7] CreateThisForNew 2<Reg8>, 1<Reg8>, 1<UInt8>

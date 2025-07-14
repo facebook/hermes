@@ -338,7 +338,7 @@ function obj7() {
 // BCGEN-NEXT:2[53, 13]
 // BCGEN-NEXT:3[83, 6]
 // BCGEN-NEXT:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
-// BCGEN-NEXT:Offset in debug table: source 0x0000, lexical 0x0000
+// BCGEN-NEXT:Offset in debug table: source 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "obj1"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj2"
 // BCGEN-NEXT:    DeclareGlobalVar  "obj3"
