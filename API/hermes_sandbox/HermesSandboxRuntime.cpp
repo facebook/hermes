@@ -2051,7 +2051,7 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       std::shared_ptr<MutableBuffer> buffer) override {
     THROW_UNIMPLEMENTED();
   }
-  std::shared_ptr<jsi::MutableBuffer> getMutableBuffer(
+  std::shared_ptr<MutableBuffer> getMutableBuffer(
     const ArrayBuffer& buffer) override {
     THROW_UNIMPLEMENTED();
   }

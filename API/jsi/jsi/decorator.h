@@ -361,7 +361,7 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
       std::shared_ptr<MutableBuffer> buffer) override {
     return plain_.createArrayBuffer(std::move(buffer));
   };
-  std::shared_ptr<jsi::MutableBuffer> getMutableBuffer(
+  std::shared_ptr<MutableBuffer> getMutableBuffer(
     const ArrayBuffer& buffer) override {
     return plain_.getMutableBuffer(buffer);
   }
@@ -898,7 +898,7 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
       std::shared_ptr<MutableBuffer> buffer) override {
     return RD::createArrayBuffer(std::move(buffer));
   };
-  std::shared_ptr<jsi::MutableBuffer> getMutableBuffer(
+  std::shared_ptr<MutableBuffer> getMutableBuffer(
     const ArrayBuffer& buffer) override {
     return RD::getMutableBuffer(buffer);
   }
