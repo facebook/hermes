@@ -770,7 +770,15 @@ void ESTreeIRGen::emitDestructuringArray(
       }
       emitTryWithSharedHandler(
           &handler,
-          [this, &lref, value, target, declInit](BasicBlock * /*catchBlock*/) {
+          [this, &lref, value, target, declInit](BasicBlock *catchBlock) {
+            SurroundingTry thisTry{
+                curFunction(),
+                target,
+                catchBlock,
+                {},
+                [](ESTree::Node *,
+                   ControlFlowChange cfc,
+                   BasicBlock *continueTarget) {}};
             // Store the previous value, if we have one.
             if (lref && !lref->isEmpty())
               lref->emitStore(Builder.createLoadStackInst(value));
