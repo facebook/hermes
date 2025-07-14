@@ -2423,7 +2423,7 @@ std::shared_ptr<jsi::MutableBuffer> HermesRuntimeImpl::getMutableBuffer(
       runtime_, buf, &context);
   if (context == nullptr)
     return nullptr;
-  auto mutableBuffer = dynamic_cast<std::shared_ptr<jsi::MutableBuffer> *>(context);
+  auto mutableBuffer = reinterpret_cast<std::shared_ptr<jsi::MutableBuffer> *>(context);
   if (LLVM_UNLIKELY(mutableBuffer == nullptr))
     throw jsi::JSINativeException("ArrayBuffer's external data block is not a jsi::MutableBuffer!");
   return *mutableBuffer;
