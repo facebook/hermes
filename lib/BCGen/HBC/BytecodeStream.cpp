@@ -211,7 +211,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   debugInfoOffset_ = loc_;
 
   if (options_.stripDebugInfoSection) {
-    const DebugInfoHeader empty = {0, 0, 0, 0, 0};
+    const DebugInfoHeader empty = {0, 0, 0, 0};
     writeBinary(empty);
     return;
   }
@@ -227,8 +227,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
       (uint32_t)filenameTable.size(),
       (uint32_t)filenameStorage.size(),
       (uint32_t)files.size(),
-      lexOffset,
-      (uint32_t)data.size()};
+      lexOffset};
   writeBinary(header);
   writeBinaryArray(filenameTable);
   writeBinaryArray(filenameStorage);

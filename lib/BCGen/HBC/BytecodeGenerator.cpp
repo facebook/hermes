@@ -148,7 +148,7 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
     uint32_t sourceLocOffset = debugInfoGenerator.appendSourceLocations(
         funcGen.getSourceLocation(), functionID, funcGen.getDebugLocations());
     // TODO: Delete lexical offset, there's nothing there.
-    bcFunc->setDebugOffsets({sourceLocOffset, 0});
+    bcFunc->setDebugOffsets({sourceLocOffset});
   }
 
   // For lazy functions, set the function here to be used by the

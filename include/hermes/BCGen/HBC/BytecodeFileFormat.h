@@ -418,8 +418,6 @@ struct DebugInfoHeader {
 
   // Count of the file table.
   uint32_t fileRegionCount;
-  // Byte offset in the debug data for the lexical data.
-  uint32_t lexicalDataOffset;
   // Size in bytes of the debug data.
   uint32_t debugDataSize;
 };

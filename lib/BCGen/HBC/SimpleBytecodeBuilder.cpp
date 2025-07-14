@@ -175,7 +175,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
       funcHeader.setOffset(functions_[i].offset);
       funcHeader.flags.setStrictMode(true);
       funcHeader.flags.setHasDebugInfo(true);
-      DebugOffsets offsets{0, 0};
+      DebugOffsets offsets{0};
       bytecode.resize(llvh::alignTo(bytecode.size(), 4));
       appendStructToBytecode(bytecode, funcHeader);
       bytecode.resize(llvh::alignTo(bytecode.size(), 4));
@@ -198,8 +198,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
         (uint32_t)filenameTable.size(),
         (uint32_t)filenameStorage.size(),
         (uint32_t)files.size(),
-        lexOffset,
-        (uint32_t)data.size()};
+        lexOffset};
     appendStructToBytecode(bytecode, header);
     appendArrayToBytecode(bytecode, filenameTable);
     appendArrayToBytecode(bytecode, filenameStorage);
@@ -209,7 +208,7 @@ std::unique_ptr<Buffer> SimpleBytecodeBuilder::generateBytecodeBuffer() {
     appendArrayToBytecode(bytecode, data.getData());
   } else {
     // Write an empty debug info header.
-    DebugInfoHeader debugInfoHeader{0, 0, 0, 0, 0};
+    DebugInfoHeader debugInfoHeader{0, 0, 0, 0};
     appendStructToBytecode(bytecode, debugInfoHeader);
   }
   assert(

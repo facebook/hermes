@@ -201,29 +201,6 @@ class UsageCounter : public BytecodeVisitor {
           offsets->sourceLocations,
           offset - offsets->sourceLocations);
     }
-
-    if (offsets->lexicalData &&
-        offsets->lexicalData != DebugOffsets::NO_OFFSET) {
-      auto data = bcProvider_->getDebugInfo()->viewData().getData();
-      unsigned start = offsets->lexicalData;
-      unsigned offset = start;
-      int64_t trash;
-
-      // Read parent id
-      offset += readSignedLEB128(data, offset, &trash);
-
-      // Read variable count
-      int64_t count;
-      offset += readSignedLEB128(data, offset, &count);
-      // Read variables
-      for (int64_t i = 0; i < count; i++) {
-        int64_t stringLength;
-        offset += readSignedLEB128(data, offset, &stringLength);
-        offset += stringLength;
-      }
-      appendRecord(
-          "debuginfo:lexicaldata", offsets->lexicalData, offset - start);
-    }
   }
 
   void afterStart() override {

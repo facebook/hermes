@@ -889,9 +889,6 @@ void ProfileAnalyzer::dumpFunctionInfo(uint32_t funcId, JSONEmitter &json) {
     if (dbg->sourceLocations != DebugOffsets::NO_OFFSET) {
       json.emitKeyValue("DebugSourceLocation: ", dbg->sourceLocations);
     }
-    if (dbg->lexicalData != DebugOffsets::NO_OFFSET) {
-      json.emitKeyValue("DebugLexicalData: ", dbg->lexicalData);
-    }
   }
 
   llvh::Optional<SourceTextLocation> sourceLocOpt =

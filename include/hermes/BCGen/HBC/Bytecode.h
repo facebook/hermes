@@ -148,8 +148,7 @@ class BytecodeFunction {
   void setDebugOffsets(DebugOffsets offsets) {
     debugOffsets_ = offsets;
     header_.flags.setHasDebugInfo(
-        debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET ||
-        debugOffsets_.lexicalData != DebugOffsets::NO_OFFSET);
+        debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET);
   }
 
   void setFunctionIR(Function *functionIR) {

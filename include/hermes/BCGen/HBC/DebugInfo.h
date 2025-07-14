@@ -159,16 +159,12 @@ struct DebugOffsets {
   /// (DebugSourceLocation).
   uint32_t sourceLocations = NO_OFFSET;
 
-  /// Offset into the lexical data section of the debugging data.
-  uint32_t lexicalData = NO_OFFSET;
-
   /// Sentinel value indicating no offset.
   static constexpr uint32_t NO_OFFSET = UINT32_MAX;
 
   /// Constructors.
   DebugOffsets() = default;
-  DebugOffsets(uint32_t src, uint32_t lex)
-      : sourceLocations(src), lexicalData(lex) {}
+  DebugOffsets(uint32_t src) : sourceLocations(src) {}
 };
 
 /// A result of a search for a bytecode offset for where a line/column fall.
@@ -224,7 +220,6 @@ class DebugInfo {
   explicit DebugInfo(
       UniquingFilenameTable &&filenameTable,
       DebugFileRegionList &&files,
-      uint32_t lexicalDataOffset,
       StreamVector<uint8_t> &&data)
       : filenameTable_(std::move(filenameTable)),
         files_(std::move(files)),
@@ -234,7 +229,6 @@ class DebugInfo {
       std::vector<StringTableEntry> &&filenameStrings,
       std::vector<unsigned char> &&filenameStorage,
       DebugFileRegionList &&files,
-      uint32_t lexicalDataOffset,
       StreamVector<uint8_t> &&data)
       : filenameTable_(ConsecutiveStringStorage{
             std::move(filenameStrings),

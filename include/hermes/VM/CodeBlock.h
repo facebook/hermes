@@ -215,8 +215,6 @@ class CodeBlock final : private llvh::TrailingObjects<
   /// with the current function if an entry is found, or llvh::None if not.
   OptValue<uint32_t> getFunctionSourceID() const;
 
-  OptValue<uint32_t> getDebugLexicalDataOffset() const;
-
   const inst::Inst *getOffsetPtr(uint32_t offset) const {
     assert(begin() + offset < end() && "offset out of bounds");
     return reinterpret_cast<const inst::Inst *>(begin() + offset);
