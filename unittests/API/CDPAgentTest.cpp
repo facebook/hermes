@@ -2851,6 +2851,48 @@ TEST_F(CDPAgentTest, DebuggerBreakpointsSurviveDomainReload) {
   ensureOkResponse(waitForMessage(), msgId++);
 }
 
+TEST_F(CDPAgentTest, DebuggerBreakpointsValidatedAcrossMultipleScripts) {
+  int msgId = 1;
+  std::string script = R"(
+    const a = 100;
+    const b = a + 1;
+  )";
+  std::string firstScriptURL = "file://foo-script.js";
+  std::string secondScriptURL = "file://bar-script.js";
+
+  // Wait for a script to be run in the VM prior to Debugger.enable
+  scheduleScript(script, firstScriptURL);
+  scheduleScript(script, secondScriptURL);
+  waitForScheduledScripts();
+
+  // Verify that upon enable, we get notification of existing scripts
+  sendParameterlessRequest("Debugger.enable", msgId);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendRequest(
+      "Debugger.setBreakpointByUrl",
+      msgId,
+      [scriptURL = firstScriptURL](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("url", scriptURL);
+        json.emitKeyValue("lineNumber", 1);
+        json.emitKeyValue("columnNumber", 0);
+      });
+  ensureSetBreakpointByUrlResponse(
+      waitForMessage("setBreakpointByUrl"), msgId++, {{1}});
+
+  sendAndCheckResponse("Debugger.disable", msgId++);
+
+  sendParameterlessRequest("Debugger.enable", msgId);
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  // The breakpoint will be resolved first, because it was applied to the first
+  // script.
+  ensureNotification(waitForMessage(), "Debugger.breakpointResolved");
+  ensureNotification(waitForMessage(), "Debugger.scriptParsed");
+  ensureOkResponse(waitForMessage(), msgId++);
+}
+
 TEST_F(CDPAgentTest, DebuggerBreakpointsPauseVMAfterDomainReload) {
   int msgId = 1;
 

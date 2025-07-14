@@ -185,15 +185,19 @@ void DebuggerDomainAgent::enable() {
   }
   enabled_ = true;
 
+#ifndef NDEBUG
+  for (const auto &[_, cdpBreakpoint] : cdpBreakpoints_) {
+    assert(
+        cdpBreakpoint.hermesBreakpoints.empty() &&
+        "Unexpected linked internal breakpoint");
+  }
+#endif
+
   // The debugger just got enabled; inform the client about all scripts.
   for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
     sendScriptParsedNotificationToClient(srcLoc);
 
     for (auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
-      assert(
-          cdpBreakpoint.hermesBreakpoints.empty() &&
-          "Unexpected linked internal breakpoint");
-
       if (srcLoc.fileName == cdpBreakpoint.description.url) {
         applyBreakpointAndSendNotification(
             cdpBreakpointID, cdpBreakpoint, srcLoc);
