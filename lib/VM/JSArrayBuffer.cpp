@@ -279,18 +279,18 @@ ExecutionStatus JSArrayBuffer::getExternalDataBlock(
     Handle<JSArrayBuffer> self,
     void **context
 ) {
+  assert(attached() && "Buffer must be attached");
+
   NamedPropertyDescriptor desc;
   bool exists = JSObject::getOwnNamedDescriptor(
       self,
       runtime,
       Predefined::getSymbolID(Predefined::InternalPropertyArrayBufferExternalFinalizer),
       desc);
-  (void)exists;
   if (!exists) {
     // JSArrayBuffer does not hold an external data block
-    return ExecutionStatus::ExecutionFailed;
+    return ExecutionStatus::EXCEPTION;
   }
-  assert(exists && "JSArrayBuffer");
   // Raw pointers below.
   NoAllocScope scope(runtime_);
   NativeState *ns = vmcast<NativeState>(
