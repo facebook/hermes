@@ -880,7 +880,7 @@ jsi::ArrayBuffer TracingRuntime::createArrayBuffer(
 }
 
 std::shared_ptr<jsi::MutableBuffer> TracingRuntime::getMutableBuffer(
-  const jsi::ArrayBuffer& buffer) {
+    const jsi::ArrayBuffer &buffer) {
   throw std::logic_error("Cannot get external ArrayBuffers in trace mode.");
 }
 

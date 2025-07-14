@@ -362,7 +362,7 @@ class RuntimeDecorator : public Base, private jsi::Instrumentation {
     return plain_.createArrayBuffer(std::move(buffer));
   };
   std::shared_ptr<MutableBuffer> getMutableBuffer(
-    const ArrayBuffer& buffer) override {
+      const ArrayBuffer &buffer) override {
     return plain_.getMutableBuffer(buffer);
   }
   size_t size(const Array& a) override {
@@ -899,7 +899,7 @@ class WithRuntimeDecorator : public RuntimeDecorator<Plain, Base> {
     return RD::createArrayBuffer(std::move(buffer));
   };
   std::shared_ptr<MutableBuffer> getMutableBuffer(
-    const ArrayBuffer& buffer) override {
+      const ArrayBuffer &buffer) override {
     return RD::getMutableBuffer(buffer);
   }
   size_t size(const Array& a) override {

@@ -211,9 +211,12 @@ TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
   return buf;
 })
 )#");
-    jsi::Value result = roundtrip.asObject(*rt).asFunction(*rt).call(*rt, arrayBuffer);
-    jsi::ArrayBuffer arrayBufferAgain = result.asObject(*rt).getArrayBuffer(*rt);
-    std::shared_ptr<jsi::MutableBuffer> mutableBuffer = arrayBufferAgain.getMutableBuffer(*rt);
+    Value result =
+        roundtrip.asObject(*rt).asFunction(*rt).call(*rt, arrayBuffer);
+    ArrayBuffer arrayBufferAgain =
+        result.asObject(*rt).getArrayBuffer(*rt);
+    std::shared_ptr<MutableBuffer> mutableBuffer =
+        arrayBufferAgain.getMutableBuffer(*rt);
     EXPECT_TRUE(mutableBuffer == buf);
   }
 }

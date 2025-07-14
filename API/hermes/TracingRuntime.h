@@ -122,7 +122,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   jsi::ArrayBuffer createArrayBuffer(
       std::shared_ptr<jsi::MutableBuffer> buffer) override;
   std::shared_ptr<jsi::MutableBuffer> getMutableBuffer(
-      const jsi::ArrayBuffer& buffer) override;
+      const jsi::ArrayBuffer &buffer) override;
 
   size_t size(const jsi::Array &arr) override;
   size_t size(const jsi::ArrayBuffer &buf) override;

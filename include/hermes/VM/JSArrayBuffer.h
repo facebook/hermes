@@ -79,12 +79,13 @@ class JSArrayBuffer final : public JSObject {
       void *context,
       FinalizeNativeStatePtr finalizePtr);
 
-  /// Gets the external data block that this JSArrayBuffer holds if there is any.
-  /// If this JSArrayBuffer does not hold external data, this returns an error.
+  /// Gets the external data block that this JSArrayBuffer holds if there is
+  /// any. If this JSArrayBuffer does not hold external data, this returns an
+  /// error.
   static ExecutionStatus getExternalDataBlock(
-    Runtime &runtime,
-    Handle<JSArrayBuffer> self,
-    void **context);
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self,
+      void **context);
 
   /// Retrieves a pointer to the held buffer.
   /// \return A pointer to the buffer owned by this object. This can be null

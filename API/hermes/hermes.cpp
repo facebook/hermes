@@ -726,7 +726,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::ArrayBuffer createArrayBuffer(
       std::shared_ptr<jsi::MutableBuffer> buffer) override;
   std::shared_ptr<jsi::MutableBuffer> getMutableBuffer(
-      const jsi::ArrayBuffer& buffer) override;
+      const jsi::ArrayBuffer &buffer) override;
   size_t size(const jsi::Array &) override;
   size_t size(const jsi::ArrayBuffer &) override;
   uint8_t *data(const jsi::ArrayBuffer &) override;
@@ -2413,19 +2413,21 @@ uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
 }
 
 std::shared_ptr<jsi::MutableBuffer> HermesRuntimeImpl::getMutableBuffer(
-    const jsi::ArrayBuffer& arr) {
+    const jsi::ArrayBuffer &arr) {
   auto buf = arrayBufferHandle(arr);
   if (LLVM_UNLIKELY(!buf->attached()))
     throw jsi::JSINativeException("ArrayBuffer is detached.");
 
-  void* context = nullptr;
-  auto res = vm::JSArrayBuffer::getExternalDataBlock(
-      runtime_, buf, &context);
-  if (context == nullptr)
+  void *context = nullptr;
+  auto res = vm::JSArrayBuffer::getExternalDataBlock(runtime_, buf, &context);
+  if (context == nullptr) {
+    // ArrayBuffer does not hold a MutableBuffer.
     return nullptr;
-  auto mutableBuffer = reinterpret_cast<std::shared_ptr<jsi::MutableBuffer> *>(context);
-  if (LLVM_UNLIKELY(mutableBuffer == nullptr))
-    throw jsi::JSINativeException("ArrayBuffer's external data block is not a jsi::MutableBuffer!");
+  }
+  checkStatus(res);
+
+  auto mutableBuffer =
+      reinterpret_cast<std::shared_ptr<jsi::MutableBuffer> *>(context);
   return *mutableBuffer;
 }
 

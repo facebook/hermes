@@ -277,15 +277,15 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
 ExecutionStatus JSArrayBuffer::getExternalDataBlock(
     Runtime &runtime,
     Handle<JSArrayBuffer> self,
-    void **context
-) {
+    void **context) {
   assert(self->attached() && "Buffer must be attached");
 
   NamedPropertyDescriptor desc;
   bool exists = JSObject::getOwnNamedDescriptor(
       self,
       runtime,
-      Predefined::getSymbolID(Predefined::InternalPropertyArrayBufferExternalFinalizer),
+      Predefined::getSymbolID(
+          Predefined::InternalPropertyArrayBufferExternalFinalizer),
       desc);
   if (!exists) {
     // JSArrayBuffer does not hold an external data block
