@@ -34,3 +34,20 @@ jobs:
         with:
           flavor: ${{ matrix.flavor }}
           slice: ${{ matrix.slice }}
+  build_hermes_macos:
+    runs-on: macos-14
+    needs: [build_apple_slices_hermes]
+    continue-on-error: true
+    env:
+      HERMES_TARBALL_ARTIFACTS_DIR: /tmp/hermes/hermes-runtime-darwin
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [Debug, Release]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Hermes MacOS
+        uses: ./.github/actions/build-hermes-macos
+        with:
+          flavor: ${{ matrix.flavor }}

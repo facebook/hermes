@@ -1,0 +1,170 @@
+name: build-hermes-macos
+description: This action builds hermesc for Apple platforms
+inputs:
+  flavor:
+    required: true
+    description: The flavor we want to build. It can be Debug or Release
+runs:
+  using: "composite"
+  steps:
+    - name: Setup xcode
+      uses: ./.github/actions/setup-xcode
+    - name: Setup node.js
+      uses: ./.github/actions/setup-node
+    - name: Yarn Install Dependencies
+      uses: ./.github/actions/yarn-install
+    - name: Slice cache macosx
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-macosx-${{ inputs.flavor }}
+    - name: Slice cache iphoneos
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-iphoneos-${{ inputs.flavor }}
+    - name: Slice cache iphonesimulator
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-iphonesimulator-${{ inputs.flavor }}
+    - name: Slice cache appletvos
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-appletvos-${{ inputs.flavor }}
+    - name: Slice cache appletvsimulator
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-appletvsimulator-${{ inputs.flavor }}
+    - name: Slice cache catalyst
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-catalyst-${{ inputs.flavor }}
+    - name: Slice cache xros
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-xros-${{ inputs.flavor }}
+    - name: Slice cache xrsimulator
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: slice-xrsimulator-${{ inputs.flavor }}
+    - name: Unzip slices
+      shell: bash
+      run: |
+        ls -l .
+        tar -xzv -f build_catalyst_${{ inputs.flavor }}.tar.gz
+        tar -xzv -f build_iphoneos_${{ inputs.flavor }}.tar.gz
+        tar -xzv -f build_iphonesimulator_${{ inputs.flavor }}.tar.gz
+        tar -xzv -f build_appletvos_${{ inputs.flavor }}.tar.gz
+        tar -xzv -f build_appletvsimulator_${{ inputs.flavor }}.tar.gz
+        tar -xzv -f build_macosx_${{ inputs.flavor }}.tar.gz
+        tar -xzv -f build_xros_${{ inputs.flavor }}.tar.gz
+        tar -xzv -f build_xrsimulator_${{ inputs.flavor }}.tar.gz
+    - name: Move back build folders
+      shell: bash
+      run: |
+        ls -l build_*
+        mv build_macosx_${{ inputs.flavor }} build_macosx
+        mv build_iphoneos_${{ inputs.flavor }} build_iphoneos
+        mv build_iphonesimulator_${{ inputs.flavor }} build_iphonesimulator
+        mv build_appletvos_${{ inputs.flavor }} build_appletvos
+        mv build_appletvsimulator_${{ inputs.flavor }} build_appletvsimulator
+        mv build_catalyst_${{ inputs.flavor }} build_catalyst
+        mv build_xros_${{ inputs.flavor }} build_xros
+        mv build_xrsimulator_${{ inputs.flavor }} build_xrsimulator
+    - name: Prepare destroot folder
+      shell: bash
+      run: |
+        chmod +x ./utils/build-apple-framework-rn.sh
+        . ./utils/build-apple-framework-rn.sh
+        prepare_dest_root_for_ci
+    - name: Create fat framework for iOS
+      shell: bash
+      run: |
+        echo "[HERMES] Creating the universal framework"
+        chmod +x ./utils/build-ios-framework-rn.sh
+        ./utils/build-ios-framework-rn.sh build_framework
+
+        chmod +x ./destroot/bin/hermesc
+    - name: Package the Hermes Apple frameworks
+      shell: bash
+      run: |
+        BUILD_TYPE="${{ inputs.flavor }}"
+        echo "Packaging Hermes Apple frameworks for $BUILD_TYPE build type"
+
+        TARBALL_OUTPUT_DIR=$(mktemp -d /tmp/hermes-tarball-output-XXXXXXXX)
+
+        echo "Packaging Hermes Apple frameworks for $BUILD_TYPE build type"
+
+        TARBALL_OUTPUT_PATH=$(node ./utils/scripts/hermes/create-tarball.js \
+          --inputDir . \
+          --buildType "$BUILD_TYPE" \
+          --outputDir $TARBALL_OUTPUT_DIR)
+
+        echo "Hermes tarball saved to $TARBALL_OUTPUT_PATH"
+
+        mkdir -p $HERMES_TARBALL_ARTIFACTS_DIR
+        cp $TARBALL_OUTPUT_PATH $HERMES_TARBALL_ARTIFACTS_DIR/.
+
+        mkdir -p /tmp/hermes/osx-bin/${{ inputs.flavor }}
+        cp ./build_macosx/bin/* /tmp/hermes/osx-bin/${{ inputs.flavor }}
+        ls -lR /tmp/hermes/osx-bin/
+    - name: Create dSYM archive
+      shell: bash
+      run: |
+        FLAVOR=${{ inputs.flavor }}
+        WORKING_DIR="/tmp/hermes_tmp/dSYM/$FLAVOR"
+
+        mkdir -p "$WORKING_DIR/macosx"
+        mkdir -p "$WORKING_DIR/catalyst"
+        mkdir -p "$WORKING_DIR/iphoneos"
+        mkdir -p "$WORKING_DIR/iphonesimulator"
+        mkdir -p "$WORKING_DIR/appletvos"
+        mkdir -p "$WORKING_DIR/appletvsimulator"
+        mkdir -p "$WORKING_DIR/xros"
+        mkdir -p "$WORKING_DIR/xrsimulator"
+
+        DSYM_FILE_PATH=API/hermes/hermes.framework.dSYM
+        cp -r build_macosx/$DSYM_FILE_PATH "$WORKING_DIR/macosx/"
+        cp -r build_catalyst/$DSYM_FILE_PATH "$WORKING_DIR/catalyst/"
+        cp -r build_iphoneos/$DSYM_FILE_PATH "$WORKING_DIR/iphoneos/"
+        cp -r build_iphonesimulator/$DSYM_FILE_PATH "$WORKING_DIR/iphonesimulator/"
+        cp -r build_appletvos/$DSYM_FILE_PATH "$WORKING_DIR/appletvos/"
+        cp -r build_appletvsimulator/$DSYM_FILE_PATH "$WORKING_DIR/appletvsimulator/"
+        cp -r build_xros/$DSYM_FILE_PATH "$WORKING_DIR/xros/"
+        cp -r build_xrsimulator/$DSYM_FILE_PATH "$WORKING_DIR/xrsimulator/"
+
+        DEST_DIR="/tmp/hermes/dSYM/$FLAVOR"
+        tar -C "$WORKING_DIR" -czvf "hermes.framework.dSYM" .
+
+        mkdir -p "$DEST_DIR"
+        mv "hermes.framework.dSYM" "$DEST_DIR"
+    - name: Upload hermes dSYM artifacts
+      uses: actions/upload-artifact@v4.3.4
+      with:
+        name: hermes-dSYM-${{ inputs.flavor }}
+        path: /tmp/hermes/dSYM/${{ inputs.flavor }}
+    - name: Upload hermes Runtime artifacts
+      uses: actions/upload-artifact@v4.3.4
+      with:
+        name: hermes-darwin-bin-${{ inputs.flavor }}
+        path: /tmp/hermes/hermes-runtime-darwin/hermes-ios-${{ inputs.flavor }}.tar.gz
+    - name: Upload hermes osx artifacts
+      uses: actions/upload-artifact@v4.3.4
+      with:
+        name: hermes-osx-bin-${{ inputs.flavor }}
+        path: /tmp/hermes/osx-bin/${{ inputs.flavor }}
+    - name: Upload Hermes Artifacts
+      uses: actions/cache/save@v4
+      if: ${{ github.ref == 'refs/heads/main' || contains(github.ref, '-stable') }} # To avoid that the cache explode.
+      with:
+        key: v4-hermes-artifacts-${{ inputs.flavor }}-${{ inputs.hermes-version }}-${{ inputs.react-native-version }}-${{ hashFiles('./packages/react-native/sdks/hermes-engine/utils/build-apple-framework.sh') }}
+        path: |
+          /tmp/hermes/osx-bin/${{ inputs.flavor }}
+          /tmp/hermes/dSYM/${{ inputs.flavor }}
+          /tmp/hermes/hermes-runtime-darwin/hermes-ios-${{ inputs.flavor }}.tar.gz
