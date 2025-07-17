@@ -889,7 +889,10 @@ static inline void putById_RJS(
           runtime,
           symID,
           Handle<>(value),
-          !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist());
+          !tryProp ? defaultPropOpFlags : defaultPropOpFlags.plusMustExist(),
+          /* runtimeModule */ nullptr,
+          unit,
+          cacheEntry);
     }
     if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION))
       _sh_throw_current(getSHRuntime(runtime));
