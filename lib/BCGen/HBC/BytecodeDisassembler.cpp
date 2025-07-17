@@ -107,31 +107,52 @@ std::pair<int, SLG::TagType> checkBufferTag(const unsigned char *buff) {
 
 namespace {
 
+/// \return the size of the data indicated by the given tag.
+size_t dataSizeForTag(SLG::TagType tag) {
+  switch (tag) {
+    case SLG::ShortStringTag:
+      return 2;
+    case SLG::LongStringTag:
+      return 4;
+    case SLG::NumberTag:
+      return 8;
+    case SLG::IntegerTag:
+      return 4;
+    case SLG::NullTag:
+    case SLG::UndefinedTag:
+    case SLG::TrueTag:
+    case SLG::FalseTag:
+    default:
+      return 0;
+  }
+}
+
 std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
   std::string rBracket{"]"};
+  size_t numBytes = dataSizeForTag(tag);
   switch (tag) {
     case SLG::ShortStringTag: {
       uint16_t val = llvh::support::endian::read<uint16_t, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 2;
+      *ind += numBytes;
       return std::string("[String ") + std::to_string(val) + rBracket;
     }
     case SLG::LongStringTag: {
       uint32_t val = llvh::support::endian::read<uint32_t, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 4;
+      *ind += numBytes;
       return std::string("[String ") + std::to_string(val) + rBracket;
     }
     case SLG::NumberTag: {
       double val = llvh::support::endian::read<double, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 8;
+      *ind += numBytes;
       return std::string("[double ") + std::to_string(val) + rBracket;
     }
     case SLG::IntegerTag: {
       uint32_t val = llvh::support::endian::read<uint32_t, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 4;
+      *ind += numBytes;
       return std::string("[int ") + std::to_string(val) + rBracket;
     }
     case SLG::NullTag:
@@ -266,7 +287,11 @@ void BytecodeDisassembler::disassembleLiteralValueBuffer(raw_ostream &OS) {
     std::pair<int, SLG::TagType> tag =
         checkBufferTag(literalValueBuffer.data() + ind);
     ind += (tag.first > 0x0f ? 2 : 1);
-    for (int i = 0; i < tag.first; i++) {
+    // Before reading from the buffer make sure there's enough data left,
+    // to avoid an overflowing read.
+    for (int i = 0; i < tag.first &&
+         (size_t)ind + dataSizeForTag(tag.second) <= literalValueBuffer.size();
+         i++) {
       OS << SLPToString(tag.second, literalValueBuffer.data(), &ind) << "\n";
     }
   }
@@ -286,7 +311,11 @@ void BytecodeDisassembler::disassembleObjectKeyBuffer(raw_ostream &OS) {
     std::pair<int, SLG::TagType> keyTag =
         checkBufferTag(objKeyBuffer.data() + keyInd);
     keyInd += (keyTag.first > 0x0f ? 2 : 1);
-    for (int i = 0; i < keyTag.first; i++) {
+    // Before reading from the buffer make sure there's enough data left,
+    // to avoid an overflowing read.
+    for (int i = 0; i < keyTag.first &&
+         (size_t)keyInd + dataSizeForTag(keyTag.second) <= objKeyBuffer.size();
+         i++) {
       OS << SLPToString(keyTag.second, objKeyBuffer.data(), &keyInd) << "\n";
     }
   }
