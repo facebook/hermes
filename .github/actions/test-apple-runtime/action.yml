@@ -1,0 +1,67 @@
+name: test-apple-runtime
+description: This action runs integration tests for the Hermes Apple runtime.
+runs:
+  using: "composite"
+  steps:
+    - name: Setup xcode
+      uses: ./.github/actions/setup-xcode
+    - name: Install dependencies
+      shell: bash
+      run: brew install cmake ninja && xcodebuild -downloadPlatform visionOS && xcodebuild -downloadPlatform tvOS
+    - name: Use built artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: .
+        name: hermes-darwin-bin-Debug.tar.gz
+    - name: Unzip artifacts
+      shell: bash
+      run: |
+        ls -l .
+        tar -xzv -f hermes-darwin-bin-Debug.tar.gz
+    - name: Move back destroot folder
+      shell: bash
+      run: |
+        ls -l hermes-ios*
+        mv hermes-ios-Debug/destroot destroot
+    - name: Build the test application
+      shell: bash
+      run: pod install
+      working-directory: test/ApplePlatformsIntegrationTestApp
+    - name: Test MacOS application
+      shell: bash
+      run: |-
+        xcodebuild test \
+          -workspace ApplePlatformsIntegrationTests.xcworkspace \
+          -configuration Debug \
+          -destination 'platform=macOS' \
+          -scheme ApplePlatformsIntegrationMacTests
+      working-directory: test/ApplePlatformsIntegrationTestApp
+    - name: Test iPhone application
+      shell: bash
+      run: |-
+        # macos-14 installs simulators for iPhone 15/16
+        # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md
+        xcodebuild test \
+          -workspace ApplePlatformsIntegrationTests.xcworkspace \
+          -configuration Debug \
+          -destination 'platform=iOS Simulator,name=iPhone 16' \
+          -scheme ApplePlatformsIntegrationMobileTests
+      working-directory: test/ApplePlatformsIntegrationTestApp
+    - name: Test Apple Vision application
+      shell: bash
+      run: |-
+        xcodebuild test \
+          -workspace ApplePlatformsIntegrationTests.xcworkspace \
+          -configuration Debug \
+          -destination 'platform=visionOS Simulator,name=Apple Vision Pro' \
+          -scheme ApplePlatformsIntegrationVisionOSTests
+      working-directory: test/ApplePlatformsIntegrationTestApp
+    - name: Test Apple TV application
+      shell: bash
+      run: |-
+        xcodebuild test \
+          -workspace ApplePlatformsIntegrationTests.xcworkspace \
+          -configuration Debug \
+          -destination 'platform=tvOS Simulator,name=Apple TV' \
+          -scheme ApplePlatformsIntegrationTVOSTests
+      working-directory: test/ApplePlatformsIntegrationTestApp
