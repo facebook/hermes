@@ -14,3 +14,23 @@ jobs:
         uses: actions/checkout@v4
       - name: Build HermesC Apple
         uses: ./.github/actions/build-hermesc-apple
+  build_apple_slices_hermes:
+    runs-on: macos-14
+    needs: build_hermesc_apple
+    env:
+      IOS_DEPLOYMENT_TARGET: "15.1"
+      XROS_DEPLOYMENT_TARGET: "1.0"
+      MAC_DEPLOYMENT_TARGET: "10.15"
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [Debug, Release]
+        slice: [macosx, iphoneos, iphonesimulator, appletvos, appletvsimulator, catalyst, xros, xrsimulator]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Slice
+        uses: ./.github/actions/build-apple-slices-hermes
+        with:
+          flavor: ${{ matrix.flavor }}
+          slice: ${{ matrix.slice }}
