@@ -1,0 +1,10 @@
+name: build-android
+description: This action builds android
+runs:
+  using: composite
+  steps:
+    - name: Build android
+      shell: bash
+      run: |
+        cd android
+        ./gradlew build
