@@ -74,3 +74,19 @@ jobs:
         uses: actions/checkout@v4
       - name: Build HermesC Windows
         uses: ./.github/actions/build-hermesc-windows
+  build_android:
+    runs-on: ubuntu-22.04
+    container:
+      image: reactnativecommunity/react-native-android:latest
+      env:
+        TERM: "dumb"
+        GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+        ORG_GRADLE_PROJECT_SIGNING_PWD: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_PWD }}
+        ORG_GRADLE_PROJECT_SIGNING_KEY: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_KEY }}
+        ORG_GRADLE_PROJECT_SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_USERNAME }}
+        ORG_GRADLE_PROJECT_SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Android
+        uses: ./.github/actions/build-android

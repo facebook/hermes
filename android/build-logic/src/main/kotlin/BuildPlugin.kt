@@ -5,8 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <jni.h>
+import org.gradle.api.Plugin
+import org.gradle.api.Project
 
-extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
-  return JNI_VERSION_1_6;
+class BuildPlugin : Plugin<Project> {
+  override fun apply(project: Project) {}
 }

@@ -5,9 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "JSRuntime.h"
+pluginManagement {
+  includeBuild("build-logic")
 
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
-  return facebook::jni::initialize(
-      vm, [] { facebook::jsi::jni::JSRuntime::registerNatives(); });
+  repositories {
+    mavenCentral()
+    google()
+    gradlePluginPortal()
+  }
 }
+
+rootProject.name = "Hermes"
