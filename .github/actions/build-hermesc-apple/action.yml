@@ -1,0 +1,17 @@
+name: build-hermesc-apple
+description: This action builds hermesc for Apple platforms
+runs:
+  using: composite
+  steps:
+    - name: Setup xcode
+      uses: ./.github/actions/setup-xcode
+    - name: Build HermesC Apple
+      shell: bash
+      run: |
+        . ./utils/build-apple-framework-rn.sh
+        build_host_hermesc_if_needed
+    - name: Upload HermesC Artifact
+      uses: actions/upload-artifact@v4.3.4
+      with:
+        name: hermesc-apple
+        path: ./build_host_hermesc
