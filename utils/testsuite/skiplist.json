@@ -3460,7 +3460,6 @@
     "regexp-v-flag",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
-    "string-trimming",
     "ShadowRealm",
     "tail-call-optimization",
     "Temporal",
