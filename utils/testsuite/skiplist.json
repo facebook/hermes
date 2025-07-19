@@ -3461,7 +3461,6 @@
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
     "string-trimming",
-    "super",
     "ShadowRealm",
     "tail-call-optimization",
     "Temporal",
