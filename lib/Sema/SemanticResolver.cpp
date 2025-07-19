@@ -841,6 +841,12 @@ void SemanticResolver::visit(ESTree::MetaPropertyNode *node) {
       // inside a local eval call.
       sm_.error(node->getSourceRange(), "'new.target' not in a function");
     }
+    if (semCtx_.nearestNonArrow(functionContext()->semInfo) ==
+        semCtx_.getGlobalFunction()) {
+      sm_.error(
+          node->getSourceRange(),
+          "'new.target' not allowed in arrow function in global scope");
+    }
     return;
   }
 

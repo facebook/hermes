@@ -249,7 +249,24 @@
         "test262/test/language/statements/class/elements/private-static-field-visible-to-direct-eval.js",
         "test262/test/language/statements/class/elements/private-setter-visible-to-direct-eval-on-initializer.js",
         "test262/test/language/statements/class/elements/private-field-visible-to-direct-eval-on-initializer.js",
-        "test262/test/language/statements/class/elements/private-static-method-visible-to-direct-eval.js"
+        "test262/test/language/statements/class/elements/private-static-method-visible-to-direct-eval.js",
+        "test262/test/language/expressions/class/elements/arrow-body-indirect-eval-err-contains-newtarget.js",
+        "test262/test/language/expressions/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js",
+        "test262/test/language/expressions/class/elements/direct-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/arrow-body-indirect-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/arrow-body-private-indirect-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/direct-eval-err-contains-newtarget.js",
+        "test262/test/language/expressions/class/elements/nested-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/expressions/class/elements/nested-private-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/nested-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/nested-private-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/expressions/class/elements/private-direct-eval-err-contains-newtarget.js",
+        "test262/test/language/statements/class/elements/private-direct-eval-err-contains-newtarget.js",
+        "test/language/expressions/class/elements/arrow-body-direct-eval-err-contains-newtarget.js",
+        "test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js",
+        "test/language/statements/class/elements/arrow-body-direct-eval-err-contains-newtarget.js",
+        "test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js"
+
       ],
       "comment": "Classes failures- unicode escaping in identifiers, computed function names, SpeciesConstructor & direct eval."
     },
@@ -3456,7 +3473,6 @@
     "FinalizationRegistry",
     "import-assertions",
     "json-superset",
-    "new.target",
     "regexp-v-flag",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
