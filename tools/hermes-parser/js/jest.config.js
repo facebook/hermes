@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow
+ * @noflow
  * @format
  */
 
@@ -32,7 +32,7 @@ module.exports = {
   //
   // We have to manually teach jest about the generated files that get placed in the `dist` folders.
   // Otherwise jest will look in the `src` folder and will only find the unusable `.flow` file.
-  moduleNameMapper: ({
+  moduleNameMapper: {
     // the modules themselves
     ...Object.fromEntries(
       packageJson.workspaces.map(moduleName => [
@@ -48,5 +48,5 @@ module.exports = {
       'dist',
       'HermesParserWASM.js',
     ),
-  } /*: {[string]: string} */),
+  },
 };
