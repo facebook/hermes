@@ -3472,7 +3472,6 @@
     "FinalizationGroup",
     "FinalizationRegistry",
     "import-assertions",
-    "json-superset",
     "regexp-v-flag",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
