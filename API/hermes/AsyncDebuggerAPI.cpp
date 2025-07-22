@@ -200,11 +200,9 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
       case debugger::PauseReason::EvalComplete:
         ::hermes::hermes_fatal(
             "Should have been handled differently in the else-if above");
-        break;
       case debugger::PauseReason::AsyncTriggerImplicit:
         ::hermes::hermes_fatal(
             "Should have executed interrupts and returned already");
-        break;
     }
     runEventCallbacks(event);
   }

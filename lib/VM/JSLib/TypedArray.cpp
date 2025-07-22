@@ -1124,7 +1124,6 @@ CallResult<HermesValue> typedArrayPrototypeFill(void *, Runtime &runtime) {
     }
     default:
       llvm_unreachable("No element that is that wide");
-      break;
   }
   return self.getHermesValue();
 }
