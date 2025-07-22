@@ -54,3 +54,33 @@ The libraries will be built in `./armeabi-v7a/`.
 ## Emscripten
 
 For Emscripten, you can find an example from the `test-emscripten` job from `hermes/.circleci/config.yml`. Also see more details at [Building with Emscripten](./Emscripten.md)
+
+## Compiling and Running ARM32 Static Hermes from ARM64
+
+On the ARM64 Linux machine on which you're compiling:
+```
+# Add architecture
+dpkg --add-architecture armhf
+# Update
+sudo apt update
+# For compiling
+sudo apt install gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf binutils-arm-linux-gnueabihf libc6:armhf libstdc++6:armhf
+```
+
+If you're executing on an ARM64 machine, set it up as well:
+```
+# Add architecture
+dpkg --add-architecture armhf
+# Update
+sudo apt update
+# For running
+sudo apt install libc6:armhf libstdc++6:armhf
+```
+
+There's a CMake toolchain file in the source directory that will then set up Clang to compile for ARM32. To use it:
+
+```
+CC=clang-16 CXX=clang++-16 cmake ${SRC_DIR?} -GNinja -DCMAKE_TOOLCHAIN_FILE=${SRC_DIR?}/armhf/arm-linux-gnueabihf.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+```
+
+Then you can run `ninja` and build 32-bit binaries and libraries. They'll work on the machine on which you're executing.
