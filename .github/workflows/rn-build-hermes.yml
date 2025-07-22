@@ -9,3 +9,6 @@ on:
 jobs:
   build_hermesc_apple:
     uses: ./.github/workflows/build-hermesc-apple.yml
+  build_apple_slices_hermes:
+    uses: ./.github/workflows/build-apple-slices-hermes.yml
+    needs: [build_hermesc_apple]
