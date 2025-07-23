@@ -182,7 +182,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         ),
         extends: Transform.ClassDeclarationSuperClass(
           node.superClass,
-          node.superTypeParameters,
+          node.superTypeArguments,
         ),
         mixins: [],
         body: Transform.ClassDeclarationBody(node.body),
@@ -257,7 +257,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         type: 'ClassImplements',
         id: Transform.Identifier(node.expression),
         typeParameters: Transform.TSTypeParameterInstantiationOpt(
-          node.typeParameters,
+          node.typeArguments,
         ),
       });
     }
@@ -1183,7 +1183,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           'interface extends',
         ),
         typeParameters: Transform.TSTypeParameterInstantiationOpt(
-          node.typeParameters,
+          node.typeArguments,
         ),
       });
     }
@@ -1975,7 +1975,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         type: 'GenericTypeAnnotation',
         id: Transform.EntityNameToTypeIdentifier(node.typeName),
         typeParameters: Transform.TSTypeParameterInstantiationOpt(
-          node.typeParameters,
+          node.typeArguments,
         ),
       });
     }

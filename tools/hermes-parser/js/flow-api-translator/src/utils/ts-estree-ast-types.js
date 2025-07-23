@@ -199,7 +199,7 @@ interface ClassBase extends BaseNode {
    * The generic type parameters passed to the superClass.
    * This is `undefined` if there are no generic type parameters passed.
    */
-  +superTypeParameters?: TSTypeParameterInstantiation;
+  +superTypeArguments?: TSTypeParameterInstantiation;
   /**
    * The generic type parameters declared for the class.
    * This is `undefined` if there are no generic type parameters declared.
@@ -1572,7 +1572,7 @@ export interface TSFunctionType extends TSFunctionSignatureBase {
 }
 interface TSHeritageBase extends BaseNode {
   +expression: Expression;
-  +typeParameters?: TSTypeParameterInstantiation;
+  +typeArguments?: TSTypeParameterInstantiation;
 }
 export interface TSImportEqualsDeclaration extends BaseNode {
   +type: 'TSImportEqualsDeclaration';
@@ -1928,7 +1928,7 @@ export interface TSTypeQuery extends BaseNode {
 export interface TSTypeReference extends BaseNode {
   +type: 'TSTypeReference';
   +typeName: EntityName;
-  +typeParameters?: TSTypeParameterInstantiation;
+  +typeArguments?: TSTypeParameterInstantiation;
 }
 export type TSUnaryExpression =
   | AwaitExpression

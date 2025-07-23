@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@babel/code-frame": "^7.16.0",
-    "@typescript-eslint/parser": "7.2.0",
-    "@typescript-eslint/visitor-keys": "7.2.0",
+    "@typescript-eslint/parser": "8.38.0",
+    "@typescript-eslint/visitor-keys": "8.38.0",
     "flow-enums-runtime": "^0.0.6",
     "hermes-eslint": "0.29.1",
     "hermes-estree": "0.29.1",
