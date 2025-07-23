@@ -88,7 +88,7 @@ component MyComponent(
 
 component MyComponent() /* Trailing comment */ {}
     `;
-    const output = prettier.format(code, getOptions());
+    const output = await prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
       "component MyComponent() {}
 

@@ -71,7 +71,7 @@ declare component MyComponent(
   // Trailing comment
 ) renders SomeComponent;
     `;
-    const output = prettier.format(code, getOptions());
+    const output = await prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
       "declare component MyComponent();
 

@@ -26,7 +26,7 @@ function format(code: string) {
 describe('Match expression', () => {
   test('empty', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {};
       `),
     ).toMatchInlineSnapshot(`
@@ -38,7 +38,7 @@ describe('Match expression', () => {
 
   test('body', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
         0 => f(),
         1 => (f(), 1),
@@ -59,7 +59,7 @@ describe('Match expression', () => {
 
   test('guards', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          1 if (b) => true,
          'foo' if (f()) => true,
@@ -80,7 +80,7 @@ describe('Match expression', () => {
 
   test('long guards', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          LoooongEnumBlorpType.Foo | LoooongEnumBlorpType.Bar if (loooong.bortLongBaz > 0) => 1,
          LoooongEnumBlorpType.LooongFoo | LoooongEnumBlorpType.LooongBar | LoooongEnumBlorpType.LooongBaz if (loooooooooooooooooong.bortLongBaz > looooooooooooong) => 1,
@@ -100,7 +100,7 @@ describe('Match expression', () => {
   });
   test('sequence expressions: always with parens', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x, y) {
          1 => (x, y),
          2 if ((x, y)) => 0,
@@ -117,7 +117,7 @@ describe('Match expression', () => {
 
   test('JSX body', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          1 => <div />,
          loooooooooooooooooooooooooooooooooooooooooong => <MyComponent><span>Some children inside</span></MyComponent>,
@@ -137,7 +137,7 @@ describe('Match expression', () => {
 
   test('patterns: core', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          "s" => 1,
          true => 1,
@@ -180,7 +180,7 @@ describe('Match expression', () => {
 
   test('patterns: member', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          foo.bar => true,
          foo[1] => true,
@@ -203,7 +203,7 @@ describe('Match expression', () => {
 
   test('patterns: object', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          {foo: 1, bar: 2} => 1,
          {'foo': 1} => 1,
@@ -234,7 +234,7 @@ describe('Match expression', () => {
 
   test('patterns: array', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          [10] => 1,
          [const y, 1] => y,
@@ -261,7 +261,7 @@ describe('Match expression', () => {
 
   test('patterns: or & as', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          "s" | true | null => 1,
          {foo: 1 | 2} => 2,
@@ -317,7 +317,7 @@ describe('Match expression', () => {
 
   test('long lines', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          2 if (f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)) => true,
          fooooooooooooooooooooooooooooo => fooooooooooooooooooooooooooooooooooooooooooooooooooooooo,
@@ -420,7 +420,7 @@ describe('Match expression', () => {
 
   test('comments', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          // bork
          [
@@ -448,7 +448,7 @@ describe('Match expression', () => {
 
   test('comments in multiline or patterns', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          // aaa
          | looooooooooooooooooooong
@@ -475,7 +475,7 @@ describe('Match expression', () => {
 describe('Match statement', () => {
   test('no cases', async () => {
     expect(
-      format(`
+      await format(`
        match (x) {};
       `),
     ).toMatchInlineSnapshot(`
@@ -487,7 +487,7 @@ describe('Match statement', () => {
 
   test('empty body', async () => {
     expect(
-      format(`
+      await format(`
        match (x) {
          1 => {}
        };
@@ -502,7 +502,7 @@ describe('Match statement', () => {
 
   test('guards', async () => {
     expect(
-      format(`
+      await format(`
        match (a) {
          1 if (b) => {
            const x = 1;
@@ -533,7 +533,7 @@ describe('Match statement', () => {
 
   test('long lines', async () => {
     expect(
-      format(`
+      await format(`
        match (x) {
          fooooooooooooooooooooooooooooo => {
            fooooooooooooooooooooooooooooooooooooooooooooooooooooooo();
@@ -552,7 +552,7 @@ describe('Match statement', () => {
 
   test('big example', async () => {
     expect(
-      format(`
+      await format(`
        match (node) {
          {
            type: 'GenericTypeAnnotation',

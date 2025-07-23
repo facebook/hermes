@@ -26,7 +26,7 @@ function format(code: string) {
 describe(`'const' type parameters`, () => {
   test('type', async () => {
     expect(
-      format(`
+      await format(`
         type T<const X> = X;
       `),
     ).toMatchInlineSnapshot(`
@@ -37,7 +37,7 @@ describe(`'const' type parameters`, () => {
 
   test('function: basic', async () => {
     expect(
-      format(`
+      await format(`
         function f<const T>(): void {}
       `),
     ).toMatchInlineSnapshot(`
@@ -48,7 +48,7 @@ describe(`'const' type parameters`, () => {
 
   test('function: with variance', async () => {
     expect(
-      format(`
+      await format(`
         function f<const +T>(): void {}
       `),
     ).toMatchInlineSnapshot(`
@@ -59,7 +59,7 @@ describe(`'const' type parameters`, () => {
 
   test('arrow: basic', async () => {
     expect(
-      format(`
+      await format(`
         <const T>(x: T) => {}
       `),
     ).toMatchInlineSnapshot(`
@@ -70,7 +70,7 @@ describe(`'const' type parameters`, () => {
 
   test('arrow: with variance', async () => {
     expect(
-      format(`
+      await format(`
         <const +T>(x: T) => {}
       `),
     ).toMatchInlineSnapshot(`
@@ -81,7 +81,7 @@ describe(`'const' type parameters`, () => {
 
   test('class: basic', async () => {
     expect(
-      format(`
+      await format(`
         class C<const T>{}
       `),
     ).toMatchInlineSnapshot(`
@@ -92,7 +92,7 @@ describe(`'const' type parameters`, () => {
 
   test('class: with variance', async () => {
     expect(
-      format(`
+      await format(`
         class C<const T>{}
       `),
     ).toMatchInlineSnapshot(`

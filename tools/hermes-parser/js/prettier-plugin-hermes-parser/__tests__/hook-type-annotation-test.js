@@ -109,7 +109,7 @@ type T = hook (
   // Trailing comment
 ) => SomeComponent;
     `;
-    const output = prettier.format(code, getOptions());
+    const output = await prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
       "type T = hook () => void;
 

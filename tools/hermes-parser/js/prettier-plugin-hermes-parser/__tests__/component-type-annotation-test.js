@@ -76,7 +76,7 @@ type T = component(bar: string) | component(baz: $ReadOnly<{k: string}>) | compo
 
 function A(realllllllllllllllllllyLong: string, reallllllllllllllllllllllllllllllllllllllyLong: string): component(realllllllllllllllllllyLong: string, reallllllllllllllllllllllllllllllllllllllyLong: string) {}
     `;
-    const output = prettier.format(code, getOptions());
+    const output = await prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
       "type T = component();
 
