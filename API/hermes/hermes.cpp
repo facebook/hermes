@@ -1673,9 +1673,13 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
 #endif
   }
   if (!bcErr.first) {
-    LOG_EXCEPTION_CAUSE("Compiling JS failed: %s", bcErr.second.c_str());
+    LOG_EXCEPTION_CAUSE(
+        "Compiling JS failed: %s, sourceURL: %s",
+        bcErr.second.c_str(),
+        sourceURL.c_str());
     throw jsi::JSINativeException(
-        "Compiling JS failed: " + std::move(bcErr.second));
+        "Compiling JS failed: " + std::move(bcErr.second) +
+        ", sourceURL: " + sourceURL);
   }
   return std::make_shared<const HermesPreparedJavaScript>(
       std::move(bcErr.first), runtimeFlags, std::move(sourceURL));
