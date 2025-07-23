@@ -1065,8 +1065,8 @@ const getTransforms = (
           superClass == null
             ? null
             : superClass.id.type === 'QualifiedTypeIdentifier'
-            ? transform.QualifiedTypeIdentifier(superClass.id)
-            : transform.Identifier((superClass.id: $FlowFixMe), false),
+              ? transform.QualifiedTypeIdentifier(superClass.id)
+              : transform.Identifier((superClass.id: $FlowFixMe), false),
         superTypeParameters: transform.TypeParameterInstantiation(
           superClass?.typeParameters,
         ),
@@ -3202,7 +3202,7 @@ const getTransforms = (
               loc: DUMMY_LOC,
               assertions: node.assertions.map(transform.ImportAttribute),
               importKind:
-                importKind === 'typeof' ? 'type' : importKind ?? 'value',
+                importKind === 'typeof' ? 'type' : (importKind ?? 'value'),
               source: transform.StringLiteral(node.source),
               specifiers,
             },

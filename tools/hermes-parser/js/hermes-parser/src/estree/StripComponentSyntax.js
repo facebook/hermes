@@ -311,8 +311,8 @@ function mapComponentParameterType(
     param.local.type === 'AssignmentPattern'
       ? true
       : param.local.type === 'Identifier'
-      ? param.local.optional
-      : false;
+        ? param.local.optional
+        : false;
 
   return {
     type: 'ObjectTypeProperty',

@@ -588,7 +588,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
               importKind:
                 specifier.importKind === 'value'
                   ? null
-                  : specifier.importKind ?? null,
+                  : (specifier.importKind ?? null),
             });
         }
       });
@@ -1263,11 +1263,11 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           node.optional === '+'
             ? 'PlusOptional'
             : node.optional === '-'
-            ? 'MinusOptional'
-            : // eslint-disable-next-line no-extra-boolean-cast
-            Boolean(node.optional)
-            ? 'Optional'
-            : null,
+              ? 'MinusOptional'
+              : // eslint-disable-next-line no-extra-boolean-cast
+                Boolean(node.optional)
+                ? 'Optional'
+                : null,
       });
       return constructFlowNode<FlowESTree.ObjectTypeAnnotation>({
         type: 'ObjectTypeAnnotation',
@@ -1293,13 +1293,13 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
               body: [],
             })
           : node.body.type === 'TSModuleDeclaration'
-          ? (() => {
-              throw translationError(node, 'nested module declarations');
-            })()
-          : constructFlowNode<FlowESTree.BlockStatement>({
-              type: 'BlockStatement',
-              body: node.body.body.flatMap(s => Transform.Statement(s)),
-            });
+            ? (() => {
+                throw translationError(node, 'nested module declarations');
+              })()
+            : constructFlowNode<FlowESTree.BlockStatement>({
+                type: 'BlockStatement',
+                body: node.body.body.flatMap(s => Transform.Statement(s)),
+              });
       if (node.id.type === 'Literal') {
         return constructFlowNode<FlowESTree.DeclareModule>({
           type: 'DeclareModule',
@@ -1707,16 +1707,16 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
               key.type === 'Identifier'
                 ? Transform.Identifier(key, false)
                 : key.type === 'PrivateIdentifier'
-                ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
-                    type: 'PrivateIdentifier',
-                    name: key.name,
-                  }): $FlowFixMe)
-                : constructFlowNode<FlowESTree.StringLiteral>({
-                    type: 'Literal',
-                    literalType: 'string',
-                    value: String(key.value),
-                    raw: JSON.stringify(String(key.value)),
-                  }),
+                  ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
+                      type: 'PrivateIdentifier',
+                      name: key.name,
+                    }): $FlowFixMe)
+                  : constructFlowNode<FlowESTree.StringLiteral>({
+                      type: 'Literal',
+                      literalType: 'string',
+                      value: String(key.value),
+                      raw: JSON.stringify(String(key.value)),
+                    }),
             value: Transform.TSTypeAnnotationOpt(
               prop.typeAnnotation?.typeAnnotation,
             ),
@@ -1762,16 +1762,16 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         originalKey.type === 'Identifier'
           ? Transform.Identifier(originalKey, false)
           : originalKey.type === 'PrivateIdentifier'
-          ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
-              type: 'PrivateIdentifier',
-              name: originalKey.name,
-            }): $FlowFixMe)
-          : constructFlowNode<FlowESTree.StringLiteral>({
-              type: 'Literal',
-              literalType: 'string',
-              value: String(originalKey.value),
-              raw: JSON.stringify(String(originalKey.value)),
-            });
+            ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
+                type: 'PrivateIdentifier',
+                name: originalKey.name,
+              }): $FlowFixMe)
+            : constructFlowNode<FlowESTree.StringLiteral>({
+                type: 'Literal',
+                literalType: 'string',
+                value: String(originalKey.value),
+                raw: JSON.stringify(String(originalKey.value)),
+              });
       const value = Transform.TSFunctionType(
         {
           type: 'TSFunctionType',
