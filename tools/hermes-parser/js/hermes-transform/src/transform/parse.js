@@ -22,7 +22,7 @@ export type ParseResult = {
   code: string,
 };
 
-export async function parse(code: string): Promise<ParseResult> {
+export function parse(code: string): ParseResult {
   const {ast, scopeManager} = parseForESLint(code, {
     sourceType: 'module',
     enableExperimentalComponentSyntax: true,
