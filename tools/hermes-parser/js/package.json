@@ -16,7 +16,6 @@
     "eslint-plugin-fb-flow": "^0.0.5",
     "eslint-plugin-flowtype": "^8.0.3",
     "eslint-plugin-jest": "^25.2.4",
-    "eslint-plugin-prettier": "^4.2.1",
     "flow-bin": "^0.276.0",
     "glob": "^8.0.3",
     "jest": "^29.2.2",
