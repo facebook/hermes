@@ -58,12 +58,6 @@
     },
     {
       "paths": [
-        "mjsunit/regress/regress-crbug-451770.js"
-      ],
-      "comment": "Temporarily turn off in classes stack."
-    },
-    {
-      "paths": [
         "test262/test/built-ins/AsyncArrowFunction/is-a-constructor.js",
         "test262/test/built-ins/AsyncFunction/is-a-constructor.js",
         "test262/test/built-ins/GeneratorFunction/is-a-constructor.js",
@@ -175,23 +169,7 @@
       "paths": [
         "test262/test/language/identifiers/part-unicode-5.2.0-class.js",
         "test262/test/language/identifiers/part-unicode-5.2.0-class-escaped.js",
-        "test262/test/language/statements/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-recursive.js",
-        "test262/test/language/statements/class/elements/syntax/early-errors/grammar-static-private-meth-constructor.js",
-        "test262/test/language/statements/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-function-expression.js",
-        "test262/test/language/statements/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage.js",
-        "test262/test/language/statements/class/elements/syntax/early-errors/grammar-static-private-async-meth-constructor.js",
-        "test262/test/language/statements/class/elements/syntax/early-errors/grammar-static-private-gen-meth-constructor.js",
-        "test262/test/language/statements/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-chained-usage.js",
-        "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-recursive.js",
-        "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-static-private-meth-constructor.js",
-        "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-function-expression.js",
-        "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage.js",
-        "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-static-private-async-meth-constructor.js",
-        "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-static-private-gen-meth-constructor.js",
-        "test262/test/language/expressions/class/elements/syntax/early-errors/grammar-private-environment-on-class-heritage-chained-usage.js",
-        "test262/test/language/expressions/class/elements/syntax/valid/grammar-field-accessor.js",
         "test262/test/language/statements/class/elements/fields-computed-name-static-propname-constructor.js",
-        "test262/test/language/statements/class/elements/syntax/valid/grammar-field-accessor.js",
         "test262/test/language/statements/class/static-method-non-configurable-err.js",
         "test262/test/language/statements/class/static-method-gen-non-configurable-err.js",
         "test262/test/language/statements/class/async-meth-escaped-async.js",
