@@ -3486,7 +3486,6 @@
     "regexp-duplicate-named-groups",
     "arraybuffer-transfer",
     "Array.fromAsync",
-    "String.prototype.toWellFormed",
     "array-grouping",
     "symbols-as-weakmap-keys",
     "json-parse-with-source"

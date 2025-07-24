@@ -134,6 +134,7 @@ STR(split, "split")
 STR(trimStart, "trimStart")
 STR(trimEnd, "trimEnd")
 STR(isWellFormed, "isWellFormed")
+STR(toWellFormed, "toWellFormed")
 
 STR(Function, "Function")
 STR(callee, "callee")

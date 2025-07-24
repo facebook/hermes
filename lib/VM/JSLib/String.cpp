@@ -343,6 +343,13 @@ HermesValue createStringConstructor(Runtime &runtime) {
       ctx,
       stringPrototypeIsWellFormed,
       0);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::toWellFormed),
+      ctx,
+      stringPrototypeToWellFormed,
+      0);
 
   return lv.cons.getHermesValue();
 }
@@ -3008,6 +3015,82 @@ CallResult<HermesValue> stringPrototypeIsWellFormed(void *, Runtime &runtime) {
 
   // 3. Return IsStringWellFormedUnicode(S).
   return HermesValue::encodeBoolValue(isStringWellFormedUnicode(strRes->get()));
+}
+
+// ES15 22.1.3.31 String.prototype.toWellFormed
+CallResult<HermesValue> stringPrototypeToWellFormed(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  struct : public Locals {
+    PinnedValue<StringPrimitive> S;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 1. Let O be ? RequireObjectCoercible(this value).
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, args.getThisHandle()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. Let S be ? ToString(O).
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.S = std::move(*strRes);
+
+  if (lv.S->isASCII()) {
+    // It's impossible for an ASCII string to contain any surrogates, so early
+    // return.
+    return HermesValue::encodeStringValue(*lv.S);
+  }
+
+  ArrayRef<char16_t> strRef = lv.S->getStringRef<char16_t>();
+  // 3. Let strLen be the length of S.
+  size_t strLen = strRef.size();
+  // 4. Let k be 0.
+  size_t k = 0;
+  // 5. Let result be the empty String.
+  llvh::SmallVector<char16_t, 32> result;
+  result.reserve(strLen);
+  // Keep track of if we've actually inserted a replacement character.
+  bool insertedReplacementCharacter = false;
+  // 6. Repeat, while k < strLen,
+  for (; k < strLen; ++k) {
+    // Deviate from the literal word of the spec slightly since we don't deal
+    // with code points directly, but rather code units.
+    char16_t ch = strRef[k];
+    if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {
+      if (isHighSurrogate(ch)) {
+        if (k + 1 < strLen) {
+          char16_t next = strRef[k + 1];
+          if (isLowSurrogate(next)) {
+            // Valid surrogate pair, keep both characters
+            result.push_back(ch);
+            result.push_back(next);
+            ++k; // Skip the low surrogate
+            continue;
+          }
+        }
+        // Lone surrogate: high surrogate without low counterpart
+        insertedReplacementCharacter = true;
+        result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      } else {
+        // Lone surrogate: low surrogate without high counterpart
+        insertedReplacementCharacter = true;
+        result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      }
+    } else {
+      // Regular character, keep as is
+      result.push_back(ch);
+    }
+  }
+
+  // If no replacement character was inserted, the original string can be used
+  // as-is.
+  return insertedReplacementCharacter
+      ? StringPrimitive::createEfficient(runtime, result)
+      : HermesValue::encodeStringValue(*lv.S);
 }
 
 } // namespace vm
