@@ -23,7 +23,7 @@
     "mkdirp": "^1.0.4",
     "patch-package": "^6.5.0",
     "prettier": "2.8.8",
-    "prettier-v3-for-testing": "npm:prettier@3.2.5"
+    "prettier-v3-for-testing": "npm:prettier@3.6.2"
   },
   "resolutions": {
     "jest-snapshot": "^29.2.2"
@@ -33,7 +33,7 @@
     "build-prettier": "./scripts/build-prettier.sh",
     "lint": "eslint .",
     "flow": "flow",
-    "format": "prettier --config ./.prettierrc.json --write \"**/*.js\"",
+    "format": "./node_modules/prettier-v3-for-testing/bin/prettier.cjs --config ./.prettierrc.json --write \"**/*.js\"",
     "postinstall": "patch-package",
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
