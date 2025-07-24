@@ -5150,7 +5150,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           new (context_) ESTree::TSModifiersNode(accessibility, readonly);
     }
 #endif
-    if (isStatic && propName == prototypeIdent_) {
+    if (isStatic && !computed && propName == prototypeIdent_) {
       error(
           prop->getSourceRange(),
           "Static class properties cannot be named 'prototype'");
@@ -5275,7 +5275,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
   }
 #endif
 
-  if (isStatic && !isPrivate && propName == prototypeIdent_) {
+  if (isStatic && !isPrivate && !computed && propName == prototypeIdent_) {
     // ClassElement : static MethodDefinition
     // It is a Syntax Error if PropName of MethodDefinition is "prototype".
     error(
