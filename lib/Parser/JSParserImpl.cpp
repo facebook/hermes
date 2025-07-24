@@ -4839,7 +4839,8 @@ bool JSParserImpl::parseClassBodyImpl(
             constructor = method;
           }
         }
-      } else if (auto *prop = dyn_cast<ESTree::ClassPropertyNode>(*optElem)) {
+      } else if (auto *prop = dyn_cast<ESTree::ClassPropertyNode>(*optElem);
+                 prop && !prop->_computed) {
         if (auto *propId = dyn_cast<ESTree::IdentifierNode>(prop->_key)) {
           if (propId->_name == constructorIdent_) {
             error(prop->getSourceRange(), "invalid class property name");
