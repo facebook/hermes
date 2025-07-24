@@ -1,0 +1,11 @@
+name: RN Build Hermes
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_hermesc_apple:
+    uses: ./.github/workflows/build-hermesc-apple.yml
