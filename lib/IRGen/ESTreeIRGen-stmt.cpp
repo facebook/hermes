@@ -691,9 +691,6 @@ void ESTreeIRGen::genScopedForLoop(ESTree::ForStatementNode *loop) {
   // Declare the new variables in the new scope and copy the declared variables
   // into the new ones. Change the decls to resolve to the "new" variables, so
   // all further accesses will refer to them.
-  assert(
-      loop->getScope() && !loop->getScope()->decls.empty() &&
-      "for-loop scope can't be empty if there is a scoped init");
 
   // if first...
   Builder.createCondBranchInst(
