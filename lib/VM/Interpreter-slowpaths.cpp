@@ -314,7 +314,8 @@ ExecutionStatus Interpreter::caseDefineOwnGetterSetterByVal(
              runtime,
              Handle<>(&O2REG(DefineOwnGetterSetterByVal)),
              dpFlags,
-             accessor)
+             accessor,
+             PropOpFlags().plusThrowOnError())
       .getStatus();
 }
 

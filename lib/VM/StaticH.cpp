@@ -1502,7 +1502,8 @@ extern "C" void _sh_ljs_define_own_getter_setter_by_val(
                runtime,
                Handle<>(toPHV(key)),
                dpFlags,
-               accessor)
+               accessor,
+               PropOpFlags().plusThrowOnError())
         .getStatus();
   }();
 
