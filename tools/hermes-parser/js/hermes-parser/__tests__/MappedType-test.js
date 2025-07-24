@@ -41,7 +41,10 @@ describe('MappedType', () => {
 
     test('ESTree', async () => {
       expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
-      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await printForSnapshotESTree(code)).toBe(
+        // Missing parens around the union type. Prettier v3 bug.
+        'type Mapped = {[key in keyof O | Z]: O[key]};',
+      );
     });
 
     test('Babel', async () => {

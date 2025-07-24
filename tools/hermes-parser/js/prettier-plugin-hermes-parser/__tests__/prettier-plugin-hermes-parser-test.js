@@ -11,9 +11,9 @@
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../.prettierrc.json';
 
-import * as prettierV2 from 'prettier';
 // $FlowExpectedError[untyped-import]
-import * as prettierV3 from 'prettier-v3-for-testing/index.cjs';
+import * as prettierV2 from 'prettier-v2-for-testing';
+import * as prettierV3 from 'prettier';
 
 function getOptions() {
   return {
