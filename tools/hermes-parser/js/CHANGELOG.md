@@ -1,3 +1,18 @@
+## 0.30.0
+
+### `hermes-parser`
+
+- Parse opaque type with both lower and upper bounds with `super` and `extends` syntax
+- Fix location of object literal method to not contain key.
+
+### `hermes-transform`
+
+- Make `parse` function synchronous
+
+### `flow-api-translator`
+
+- Fix Prettier v3 support
+
 ## 0.29.1
 
 ### `hermes-parser`
