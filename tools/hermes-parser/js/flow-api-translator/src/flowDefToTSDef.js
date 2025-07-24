@@ -424,6 +424,11 @@ const getTransforms = (
         const: false,
         declare: true,
         id: enumName,
+        body: {
+          type: 'TSEnumBody',
+          members,
+          loc: DUMMY_LOC,
+        },
         members,
       },
       // flow also exports `.cast`, `.isValid`, `.members` and `.getName` for enums
@@ -445,6 +450,7 @@ const getTransforms = (
         loc: DUMMY_LOC,
         declare: true,
         id: enumName,
+        kind: 'namespace',
         body: {
           type: 'TSModuleBlock',
           loc: DUMMY_LOC,
@@ -2289,14 +2295,18 @@ const getTransforms = (
             );
           }
 
-          return {
-            type: 'TSImportType',
+          // New AST format for `typeof import('module')`
+          return ({
+            type: 'TSTypeQuery',
             loc: DUMMY_LOC,
-            isTypeOf: true,
-            argument: moduleName,
-            qualifier: null,
-            typeParameters: null,
-          };
+            exprName: {
+              type: 'TSImportType',
+              loc: DUMMY_LOC,
+              argument: moduleName,
+              qualifier: null,
+              typeParameters: null,
+            },
+          }: $FlowFixMe);
         }
 
         case '$FlowFixMe': {
@@ -2328,6 +2338,17 @@ const getTransforms = (
               },
               in: false,
               out: false,
+            },
+            key: {
+              type: 'Identifier',
+              loc: DUMMY_LOC,
+              name: 'K',
+            },
+            constraint: {
+              type: 'TSTypeOperator',
+              loc: DUMMY_LOC,
+              operator: 'keyof',
+              typeAnnotation: assertHasExactlyNTypeParameters(1)[0],
             },
             nameType: null,
             typeAnnotation: {
@@ -3382,6 +3403,12 @@ const getTransforms = (
             in: false,
             out: false,
           },
+          key: {
+            type: 'Identifier',
+            loc: DUMMY_LOC,
+            name: prop.keyTparam.name,
+          },
+          constraint: transformTypeAnnotationType(prop.sourceType),
           readonly: prop.variance?.kind === 'plus',
           optional: prop.optional === 'Optional',
           typeAnnotation: transformTypeAnnotationType(prop.propType),
