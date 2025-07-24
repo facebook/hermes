@@ -102,6 +102,9 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     Runtime &runtime,
     Handle<> valueHandle);
 
+/// ES15 7.2.7 IsStringWellFormedUnicode
+bool isStringWellFormedUnicode(StringPrimitive *string);
+
 /// ES9 7.2.7
 inline bool isPropertyKey(Handle<> valueHandle) {
   return valueHandle->isString() || valueHandle->isSymbol();

@@ -1136,3 +1136,21 @@ try { "abcde".search(pattern); } catch (e) { print(e.name); }
 
 try { new String(new Symbol()); } catch (e) { print(e.name); }
 // CHECK-NEXT: TypeError
+
+// Lone leading surrogate
+print("ab\uD800".isWellFormed())
+// CHECK-NEXT: false
+print("ab\uD800c".isWellFormed())
+// CHECK-NEXT: false
+
+// Lone trailing surrogate
+print("\uDFFFab".isWellFormed())
+// CHECK-NEXT: false
+print("c\uDFFFab".isWellFormed())
+// CHECK-NEXT: false
+
+// Well-formed
+print("abc".isWellFormed())
+// CHECK-NEXT: true
+print("ab\uD83D\uDE04c".isWellFormed())
+// CHECK-NEXT: true

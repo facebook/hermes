@@ -133,6 +133,7 @@ STR(search, "search")
 STR(split, "split")
 STR(trimStart, "trimStart")
 STR(trimEnd, "trimEnd")
+STR(isWellFormed, "isWellFormed")
 
 STR(Function, "Function")
 STR(callee, "callee")

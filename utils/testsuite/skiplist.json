@@ -3487,7 +3487,6 @@
     "arraybuffer-transfer",
     "Array.fromAsync",
     "String.prototype.toWellFormed",
-    "String.prototype.isWellFormed",
     "array-grouping",
     "symbols-as-weakmap-keys",
     "json-parse-with-source"

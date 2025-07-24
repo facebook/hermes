@@ -336,6 +336,13 @@ HermesValue createStringConstructor(Runtime &runtime) {
       (void *)true,
       stringPrototypeIncludesOrStartsWith,
       1);
+  defineMethod(
+      runtime,
+      stringPrototype,
+      Predefined::getSymbolID(Predefined::isWellFormed),
+      ctx,
+      stringPrototypeIsWellFormed,
+      0);
 
   return lv.cons.getHermesValue();
 }
@@ -2981,6 +2988,26 @@ CallResult<HermesValue> stringPrototypeLastIndexOf(void *, Runtime &runtime) {
   auto position = args.getArgHandle(1);
   return stringDirectedIndexOf(
       runtime, args.getThisHandle(), searchString, position, true);
+}
+
+// ES15 22.1.3.10 String.prototype.isWellFormed
+CallResult<HermesValue> stringPrototypeIsWellFormed(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  // 1. Let O be ? RequireObjectCoercible(this value).
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, args.getThisHandle()) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. Let S be ? ToString(O).
+  auto strRes = toString_RJS(runtime, args.getThisHandle());
+  if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 3. Return IsStringWellFormedUnicode(S).
+  return HermesValue::encodeBoolValue(isStringWellFormedUnicode(strRes->get()));
 }
 
 } // namespace vm

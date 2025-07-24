@@ -379,6 +379,43 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
   return createPseudoHandle(result);
 }
 
+bool isStringWellFormedUnicode(StringPrimitive *string) {
+  if (string->isASCII()) {
+    // It's impossible for an ASCII string to contain any surrogates, so it must
+    // be well formed.
+    return true;
+  }
+
+  ArrayRef<char16_t> strRef = string->getStringRef<char16_t>();
+  // Check for lone surrogates by iterating through the string
+  for (size_t i = 0, len = strRef.size(); i < len; ++i) {
+    char16_t ch = strRef[i];
+    // Check if this character is a surrogate
+    if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {
+      // If it's a high surrogate, check if there's a valid low surrogate
+      // following
+      if (isHighSurrogate(ch)) {
+        if (i + 1 < len) {
+          char16_t next = strRef[i + 1];
+          if (isLowSurrogate(next)) {
+            // Valid surrogate pair, skip the low surrogate
+            ++i;
+            continue;
+          }
+        }
+        // Lone surrogate: high surrogate without low counterpart
+        return false;
+      } else {
+        // Lone surrogate: low surrogate without high counterpart
+        return false;
+      }
+    }
+  }
+
+  // No lone surrogates found
+  return true;
+}
+
 /// ES5.1 9.3.1
 static inline double stringToNumber(
     Runtime &runtime,
