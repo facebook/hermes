@@ -15,3 +15,5 @@ jobs:
   build_hermes_macos:
     uses: ./.github/workflows/build-hermes-macos.yml
     needs: build_apple_slices_hermes
+  build_hermesc_linux:
+    uses: ./.github/workflows/build-hermesc-linux.yml
