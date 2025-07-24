@@ -1080,6 +1080,7 @@ function convertSuperClass(
   context: TranslationContext,
 ): TranslatedResultOrNull<InterfaceExtends> {
   if (superClass == null) {
+    // $FlowFixMe[incompatible-return]
     return EMPTY_TRANSLATION_RESULT;
   }
 
@@ -1174,6 +1175,7 @@ function convertClassMember(
     case 'PropertyDefinition': {
       // PrivateIdentifier's are not exposed so can be stripped.
       if (member.key.type === 'PrivateIdentifier') {
+        // $FlowFixMe[incompatible-return]
         return EMPTY_TRANSLATION_RESULT;
       }
       if (
@@ -1241,6 +1243,7 @@ function convertClassMember(
     case 'MethodDefinition': {
       // PrivateIdentifier's are not exposed so can be stripped.
       if (member.key.type === 'PrivateIdentifier') {
+        // $FlowFixMe[incompatible-return]
         return EMPTY_TRANSLATION_RESULT;
       }
       if (
@@ -1726,6 +1729,7 @@ function convertTypeAnnotationTypeOrNull(
   context: TranslationContext,
 ): TranslatedResultOrNull<TypeAnnotationType> {
   if (annot == null) {
+    // $FlowFixMe[incompatible-return]
     return EMPTY_TRANSLATION_RESULT;
   }
 
@@ -1736,6 +1740,7 @@ function convertTypeParameterDeclarationOrNull(
   context: TranslationContext,
 ): TranslatedResultOrNull<TypeParameterDeclaration> {
   if (decl == null) {
+    // $FlowFixMe[incompatible-return]
     return EMPTY_TRANSLATION_RESULT;
   }
   return [asDetachedNode(decl), analyzeTypeDependencies(decl, context)];
@@ -1745,6 +1750,7 @@ function convertTypeParameterInstantiationOrNull(
   context: TranslationContext,
 ): TranslatedResultOrNull<TypeParameterInstantiation> {
   if (inst == null) {
+    // $FlowFixMe[incompatible-return]
     return EMPTY_TRANSLATION_RESULT;
   }
   return [asDetachedNode(inst), analyzeTypeDependencies(inst, context)];

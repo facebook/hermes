@@ -59,6 +59,7 @@ function test({
         new MutationContext(''),
         mutation,
       );
+      // $FlowFixMe[incompatible-call]
       expect(ast).toMatchObject(getAssertionObject(nodesToInsert));
     },
     skipTypes,
