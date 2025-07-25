@@ -807,6 +807,10 @@ NormalFunction *ESTreeIRGen::genLegacyImplicitConstructor(
   const auto &LC = curFunction()->legacyClassContext;
   assert(LC->constructor && "class context not properly set");
 
+  if (Value *compiled =
+          findCompiledEntity(classNode, ExtraKey::ImplicitClassConstructor))
+    return llvh::cast<NormalFunction>(compiled);
+
   // Retrieve the FunctionInfo for the implicit constructor, which must exist.
   sema::FunctionInfo *funcInfo =
       ESTree::getDecoration<ESTree::ClassLikeDecoration>(classNode)
@@ -898,6 +902,10 @@ NormalFunction *ESTreeIRGen::genStaticElementsInitFunction(
   if (staticElementsFuncInfo == nullptr) {
     return nullptr;
   }
+
+  if (Value *compiled = findCompiledEntity(
+          legacyClassNode, ExtraKey::ImplicitStaticElementsInitializer))
+    return llvh::cast<NormalFunction>(compiled);
 
   auto *staticElementsFunc = Builder.createFunction(
       (llvh::Twine("<static_elements_initializer:") + consName.str() + ">")
@@ -1060,6 +1068,10 @@ NormalFunction *ESTreeIRGen::genLegacyInstanceElementsInit(
   if (initFuncInfo == nullptr) {
     return nullptr;
   }
+
+  if (Value *compiled = findCompiledEntity(
+          legacyClassNode, ExtraKey::ImplicitFieldInitializer))
+    return llvh::cast<NormalFunction>(compiled);
 
   auto *initFunc = Builder.createFunction(
       (llvh::Twine("<instance_members_initializer:") + consName.str() + ">")
