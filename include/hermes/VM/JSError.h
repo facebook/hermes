@@ -209,23 +209,6 @@ class JSError final : public JSObject {
       const NativeStackTraceInfo *frame,
       SmallU16String<32> &stack);
 
-  /// Construct the stacktrace string, append to \p stack.
-  /// If the construction of the stack throws an uncatchable error, this
-  /// function returns prematurely.
-  ///
-  /// \param selfHandle supplies the call stack for the trace.
-  /// \param targetHandle supplies the error name and message for the trace.
-  ///
-  /// In the `(new Error).stack` case, selfHandle and targetHandle will both
-  /// refer to the same object.
-  /// In the `target = {}; Error.captureErrorStack(target); target.stack` case,
-  /// selfHandle will be the value of `target`'s [[CapturedError]] slot.
-  static ExecutionStatus constructNativeStackTraceString_RJS(
-      Runtime &runtime,
-      Handle<JSError> selfHandle,
-      Handle<JSObject> targetHandle,
-      SmallU16String<32> &stack);
-
   /// Construct the callSites array for Error.prepareStackTrace.
   static CallResult<HermesValue> constructCallSitesArray(
       Runtime &runtime,
