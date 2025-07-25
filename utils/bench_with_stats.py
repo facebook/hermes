@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import argparse
+import csv
 import math  # Needed for infinity when sorting N/A values
 import os
 import re
@@ -12,6 +13,7 @@ import shlex
 import statistics
 import subprocess
 import sys
+from collections import defaultdict
 
 
 def find_first_score(output_text):
@@ -22,7 +24,7 @@ def find_first_score(output_text):
         if match:
             try:
                 return float(match.group(1))
-            except (ValueError, IndexError):
+            except ValueError:
                 continue
     return None
 
@@ -153,6 +155,8 @@ def manual_ttest_confidence_interval(data1, data2, confidence=0.95):
     var2 = statistics.variance(data2) if len(data2) > 1 else 0
 
     # Pooled variance and standard error
+    if df == 0:
+        return (None, None)
     pooled_var = ((n1 - 1) * var1 + (n2 - 1) * var2) / df
     se = math.sqrt(pooled_var * (1 / n1 + 1 / n2))
 
@@ -195,6 +199,251 @@ def calculate_geometric_mean(percentages):
 
     # Convert back to percentage change
     return (geo_mean_factor - 1) * 100
+
+
+def calculate_geometric_mean_ratios(ratios):
+    """Calculate geometric mean of ratios.
+
+    Args:
+        ratios: List of ratios (e.g., [1.18, 0.89, 1.05])
+
+    Returns:
+        Geometric mean of ratios, or None if calculation not possible
+    """
+    if not ratios or any(r <= 0 for r in ratios):
+        return None
+    product = 1.0
+    for r in ratios:
+        product *= r
+    return product ** (1.0 / len(ratios))
+
+
+def print_per_benchmark_table(benchmark_result, display_format, confidence):
+    """Prints detailed table for a single benchmark with all engines."""
+    engines = benchmark_result["engines"]
+    if not engines:
+        return
+
+    # Determine column widths
+    max_engine_len = (
+        max(
+            len(f"engine{e['index']+1} {'(base)' if e['index'] == 0 else ''}")
+            for e in engines
+        )
+        + 2
+    )
+    score_width = 11
+    vs_base_width = 11
+    conf_width = 17
+    stdev_width = 11
+    runs_width = 11
+
+    # Header
+    print(f"--- Results for {benchmark_result['name']} (baseline: engine1) ---")
+    header = f"+-{'-' * max_engine_len}-+-{'-' * score_width}-+-{'-' * vs_base_width}-+-{'-' * conf_width}-+-{'-' * stdev_width}-+-{'-' * runs_width}-+"
+    print(header)
+    print(
+        f"| {'Engine'.ljust(max_engine_len)} | {'Avg Score'.rjust(score_width)} | {'vs Base'.rjust(vs_base_width)} | "
+        f"{(str(round(confidence * 100)) + '% CI').rjust(conf_width)} | {'Stdev'.rjust(stdev_width)} | {'Valid Runs'.rjust(runs_width)} |"
+    )
+    print(header)
+
+    # Data rows
+    for engine in engines:
+        # Engine name
+        engine_name = f"engine{engine['index']+1}"
+        if engine["index"] == 0:
+            engine_name += " (base)"
+        engine_name = engine_name.ljust(max_engine_len)
+
+        # Average score
+        avg_score_str = f"{engine['avg_score']:.1f}".rjust(score_width)
+
+        # vs Base
+        if engine["index"] == 0:
+            vs_base_str = "-".rjust(vs_base_width)
+        else:
+            if display_format == "percentage" and engine["vs_baseline_pct"] is not None:
+                vs_base_str = f"{engine['vs_baseline_pct']:+.1f}%".rjust(vs_base_width)
+            elif engine["vs_baseline_ratio"] is not None:
+                vs_base_str = f"{engine['vs_baseline_ratio']:.2f}x".rjust(vs_base_width)
+            else:
+                vs_base_str = "N/A".rjust(vs_base_width)
+
+        # Confidence interval
+        conf_int = engine.get("confidence_interval", (None, None))
+        if conf_int[0] is not None:
+            conf_str = f"{conf_int[0]:.1f} - {conf_int[1]:.1f}".rjust(conf_width)
+        else:
+            conf_str = "N/A".rjust(conf_width)
+
+        # Stdev
+        if engine.get("stdev") is not None:
+            stdev_str = f"+/- {engine['stdev']:.1f}".rjust(stdev_width)
+        else:
+            stdev_str = "N/A".rjust(stdev_width)
+
+        # Valid runs
+        runs_str = f"({engine['valid_runs']} runs)".rjust(runs_width)
+
+        print(
+            f"| {engine_name} | {avg_score_str} | {vs_base_str} | {conf_str} | {stdev_str} | {runs_str} |"
+        )
+
+    print(header)
+    print()
+
+
+def print_compact_summary_table(
+    title, all_results, display_format, num_engines, sort_by_last=False
+):
+    """Prints compact summary table with all benchmarks and engines."""
+    if not all_results:
+        print(f"\n--- {title} ---")
+        print("No data to display.")
+        return
+
+    # Prepare data
+    summary_data = []
+    for result in all_results:
+        row = {"name": result["name"], "comparisons": []}
+        for engine_idx in range(1, num_engines):
+            # Find this engine in results
+            engine_data = None
+            for e in result["engines"]:
+                if e["index"] == engine_idx:
+                    engine_data = e
+                    break
+
+            if engine_data:
+                if display_format == "percentage":
+                    value = engine_data.get("vs_baseline_pct")
+                else:
+                    value = engine_data.get("vs_baseline_ratio")
+            else:
+                value = None
+
+            row["comparisons"].append(value)
+
+        summary_data.append(row)
+
+    # Sort if requested
+    if sort_by_last and summary_data and summary_data[0]["comparisons"]:
+        summary_data = sorted(
+            summary_data,
+            key=lambda x: x["comparisons"][-1]
+            if x["comparisons"][-1] is not None
+            else -math.inf,
+            reverse=True,
+        )
+
+    # Determine column widths
+    max_name_len = max(len(row["name"]) for row in summary_data) if summary_data else 10
+    # Also consider "Geometric Mean" and "Benchmark" in the width calculation
+    max_name_len = max(max_name_len, len("Geometric Mean"), len("Benchmark"))
+    comp_width = 11
+
+    # Header
+    print(f"\n--- {title} ---")
+    header = f"+-{'-' * max_name_len}-"
+    for _ in range(1, num_engines):
+        header += f"+-{'-' * comp_width}-"
+    header += "+"
+    print(header)
+
+    # Column headers
+    header_row = f"| {'Benchmark'.ljust(max_name_len)} "
+    for i in range(1, num_engines):
+        header_row += f"| {f'engine{i+1}/1'.rjust(comp_width)} "
+    header_row += "|"
+    print(header_row)
+    print(header)
+
+    # Data rows
+    for row in summary_data:
+        data_row = f"| {row['name'].ljust(max_name_len)} "
+        for comp_value in row["comparisons"]:
+            if comp_value is not None:
+                if display_format == "percentage":
+                    value_str = f"{comp_value:+.1f}%"
+                else:
+                    value_str = f"{comp_value:.2f}x"
+            else:
+                value_str = "N/A"
+            data_row += f"| {value_str.rjust(comp_width)} "
+        data_row += "|"
+        print(data_row)
+
+    # Footer with geometric means
+    print(header)
+
+    # Calculate geometric means for each engine comparison
+    geo_means = []
+    for engine_idx in range(len(summary_data[0]["comparisons"]) if summary_data else 0):
+        values = [
+            row["comparisons"][engine_idx]
+            for row in summary_data
+            if row["comparisons"][engine_idx] is not None
+        ]
+        if values:
+            if display_format == "percentage":
+                geo_mean = calculate_geometric_mean(values)
+            else:
+                geo_mean = calculate_geometric_mean_ratios(values)
+            geo_means.append(geo_mean)
+        else:
+            geo_means.append(None)
+
+    if any(gm is not None for gm in geo_means):
+        geo_row = f"| {'Geometric Mean'.ljust(max_name_len)} "
+        for gm in geo_means:
+            if gm is not None:
+                if display_format == "percentage":
+                    value_str = f"{gm:+.1f}%"
+                else:
+                    value_str = f"{gm:.2f}x"
+            else:
+                value_str = "N/A"
+            geo_row += f"| {value_str.rjust(comp_width)} "
+        geo_row += "|"
+        print(geo_row)
+        print(header)
+
+
+def export_to_csv(filename, all_results, engine_commands):
+    """Export benchmark results to CSV file for easy graphing."""
+    with open(filename, "w", newline="") as csvfile:
+        # Prepare header
+        fieldnames = ["Benchmark"]
+        for i, _ in enumerate(engine_commands):
+            engine_name = f"Engine{i+1}"
+            fieldnames.append(engine_name)
+
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+
+        # Write data rows
+        for result in all_results:
+            row = {"Benchmark": result["name"]}
+
+            # Initialize all engine columns to ensure consistent CSV
+            for i in range(len(engine_commands)):
+                row[f"Engine{i+1}"] = ""
+
+            for engine in result["engines"]:
+                engine_idx = engine["index"]
+                engine_name = f"Engine{engine_idx+1}"
+
+                # Engine 1 is always 1.0, others show their ratio
+                if engine_idx == 0:
+                    row[engine_name] = 1.0
+                else:
+                    ratio = engine.get("vs_baseline_ratio")
+                    row[engine_name] = ratio if ratio is not None else ""
+
+            writer.writerow(row)
+
+    print(f"\nResults exported to: {filename}")
 
 
 def print_summary_table(title, confidence, summary_data):
@@ -268,7 +517,7 @@ if __name__ == "__main__":
         "--binary",
         action="append",
         required=True,
-        help='Command to run (including arguments). Must be specified exactly twice. Example: -b "./hermes -w -Xjit"',
+        help='Command to run (including arguments). Must be specified at least twice. Example: -b "./hermes -w -Xjit"',
         metavar="COMMAND",
     )
     parser.add_argument(
@@ -286,6 +535,26 @@ if __name__ == "__main__":
         help="Confidence limit (default: 0.95)",
     )
     parser.add_argument(
+        "--percentage",
+        action="store_true",
+        help="Force percentage change display (default for 2 engines)",
+    )
+    parser.add_argument(
+        "--ratio",
+        action="store_true",
+        help="Force ratio display (default for 3+ engines)",
+    )
+    parser.add_argument(
+        "--compact",
+        action="store_true",
+        help="Hide detailed per-benchmark tables, show only summary tables",
+    )
+    parser.add_argument(
+        "--csv",
+        metavar="FILE",
+        help="Export results to CSV file for graphing (in addition to normal output)",
+    )
+    parser.add_argument(
         "benchmarks",
         metavar="BENCHMARK.JS",
         nargs="+",  # Require at least one benchmark file
@@ -293,10 +562,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Validate exactly two binaries
-    if len(args.binary) != 2:
+    # Validate at least two binaries
+    if len(args.binary) < 2:
         print(
-            f"Error: Exactly two -b/--binary arguments required, got {len(args.binary)}.",
+            f"Error: At least two -b/--binary arguments required, got {len(args.binary)}.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -306,127 +575,253 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Parse the command strings into lists
-    old_command = shlex.split(args.binary[0])
-    new_command = shlex.split(args.binary[1])
+    engine_commands = [shlex.split(cmd) for cmd in args.binary]
+    num_engines = len(engine_commands)
 
-    print(f"OLD command: {' '.join(old_command)}")
-    print(f"NEW command: {' '.join(new_command)}")
+    # Determine display format
+    if args.percentage and args.ratio:
+        # Last one wins
+        display_format = "ratio" if args.ratio else "percentage"
+    elif args.percentage:
+        display_format = "percentage"
+    elif args.ratio:
+        display_format = "ratio"
+    else:
+        # Default behavior
+        display_format = "percentage" if num_engines == 2 else "ratio"
+
+    # Print engine commands
+    if num_engines == 2:
+        # Backward compatibility for 2 engines
+        print(f"OLD command: {' '.join(engine_commands[0])}")
+        print(f"NEW command: {' '.join(engine_commands[1])}")
+    else:
+        for i, cmd in enumerate(engine_commands):
+            print(f"Engine {i+1} command: {' '.join(cmd)}")
     print()
 
     # Store summary results here
     summary_results = []
 
+    # Store all results for multi-engine summary
+    all_benchmark_results = []
+
     for filename in args.benchmarks:
         print(f"--- Running benchmark: {filename} ({args.runs} runs) ---")
-        old_scores = []
-        new_scores = []
-        individual_pct_changes = []
 
-        # --- Run OLD and NEW multiple times ---
-        for i in range(args.runs):
-            # --- OLD RUN ---
-            print(f"OLD {filename} (Run {i+1}/{args.runs})")  # Announce before running
-            old_result = run_command(old_command, filename)
-            print(old_result.stdout, end="")  # Print the output immediately
-            old_score = find_first_score(old_result.stdout)
+        # Initialize data structures for multiple engines
+        engine_scores = defaultdict(list)  # {engine_index: [scores]}
 
-            # --- NEW RUN ---
-            print(f"NEW {filename} (Run {i+1}/{args.runs})")  # Announce before running
-            new_result = run_command(new_command, filename)
-            print(new_result.stdout, end="")  # Print the output immediately
-            new_score = find_first_score(new_result.stdout)
+        # Run benchmarks for all engines
+        for run_idx in range(args.runs):
+            for engine_idx, engine_cmd in enumerate(engine_commands):
+                # Determine display name for backward compatibility
+                if num_engines == 2:
+                    engine_name = "OLD" if engine_idx == 0 else "NEW"
+                else:
+                    engine_name = f"Engine {engine_idx + 1}"
 
-            # --- Store results from this run pair ---
-            if old_score is not None and new_score is not None:
-                old_scores.append(old_score)
-                new_scores.append(new_score)
-                if old_score != 0:
-                    pct_change = ((new_score - old_score) / old_score) * 100
-                    individual_pct_changes.append(pct_change)
-                # else: Handle old score = 0 case if needed for individual changes
+                print(f"{engine_name} {filename} (Run {run_idx+1}/{args.runs})")
+                result = run_command(engine_cmd, filename)
+                print(result.stdout, end="")
+                score = find_first_score(result.stdout)
+
+                if score is not None:
+                    engine_scores[engine_idx].append(score)
+                else:
+                    print(
+                        f"Warning: Score not found for {engine_name} {filename} run {run_idx+1}/{args.runs}."
+                    )
+
+            print("-" * 20)  # Separator between runs
+
+        # Process results for this benchmark
+        benchmark_result = {"name": filename, "engines": []}
+
+        # Calculate statistics for each engine
+        baseline_avg = None
+        for engine_idx in range(num_engines):
+            scores = engine_scores[engine_idx]
+            if not scores:
+                continue
+
+            avg_score = statistics.mean(scores)
+            valid_runs = len(scores)
+
+            # Set baseline from first engine
+            if engine_idx == 0:
+                baseline_avg = avg_score
+
+            engine_data = {
+                "index": engine_idx,
+                "command": " ".join(engine_commands[engine_idx]),
+                "scores": scores,
+                "avg_score": avg_score,
+                "valid_runs": valid_runs,
+            }
+
+            # Calculate standard deviation if we have enough runs
+            if valid_runs >= 2:
+                try:
+                    engine_data["stdev"] = statistics.stdev(scores)
+                except (statistics.StatisticsError, ValueError):
+                    engine_data["stdev"] = None
             else:
-                # Optionally warn if scores weren't found for this specific run
-                print(
-                    f"Warning: Score pair not found for {filename} run {i+1}/{args.runs}."
+                engine_data["stdev"] = None
+
+            # Calculate confidence interval
+            if engine_idx > 0 and valid_runs >= 2 and len(engine_scores[0]) >= 2:
+                (low, high) = manual_ttest_confidence_interval(
+                    scores, engine_scores[0], args.confidence
+                )
+                if low is not None and high is not None and baseline_avg != 0:
+                    engine_data["confidence_interval"] = (
+                        baseline_avg + low,
+                        baseline_avg + high,
+                    )
+                else:
+                    engine_data["confidence_interval"] = (None, None)
+            else:
+                engine_data["confidence_interval"] = (None, None)
+
+            # Calculate comparison to baseline
+            if baseline_avg and baseline_avg != 0:
+                engine_data["vs_baseline_ratio"] = avg_score / baseline_avg
+                engine_data["vs_baseline_pct"] = (
+                    (avg_score - baseline_avg) / baseline_avg
+                ) * 100
+            else:
+                engine_data["vs_baseline_ratio"] = None
+                engine_data["vs_baseline_pct"] = None
+
+            benchmark_result["engines"].append(engine_data)
+
+        all_benchmark_results.append(benchmark_result)
+
+        # For backward compatibility with 2 engines, maintain old summary format
+        if num_engines == 2 and len(benchmark_result["engines"]) >= 2:
+            engine0 = benchmark_result["engines"][0]
+            engine1 = benchmark_result["engines"][1]
+
+            if engine0["avg_score"] and engine0["avg_score"] != 0:
+                avg_percentage_change = engine1["vs_baseline_pct"]
+
+                # Calculate stdev of percentage changes
+                individual_pct_changes = []
+                for i in range(min(len(engine0["scores"]), len(engine1["scores"]))):
+                    if engine0["scores"][i] != 0:
+                        pct = (
+                            (engine1["scores"][i] - engine0["scores"][i])
+                            / engine0["scores"][i]
+                        ) * 100
+                        individual_pct_changes.append(pct)
+
+                if len(individual_pct_changes) >= 2:
+                    try:
+                        stdev_percentage_change = statistics.stdev(
+                            individual_pct_changes
+                        )
+                    except (statistics.StatisticsError, ValueError):
+                        stdev_percentage_change = None
+                else:
+                    stdev_percentage_change = None
+
+                # Get confidence interval
+                conf_int = engine1.get("confidence_interval", (None, None))
+                if conf_int[0] is not None and engine0["avg_score"] != 0:
+                    pct_low = (
+                        (conf_int[0] - engine0["avg_score"])
+                        / engine0["avg_score"]
+                        * 100
+                    )
+                    pct_high = (
+                        (conf_int[1] - engine0["avg_score"])
+                        / engine0["avg_score"]
+                        * 100
+                    )
+                else:
+                    pct_low, pct_high = None, None
+
+                change_output_line = format_change_line(
+                    avg_percentage_change,
+                    stdev_percentage_change,
+                    len(individual_pct_changes),
+                )
+                print(f"Summary for {filename}: {change_output_line}")
+
+                # Store for legacy summary table
+                summary_results.append(
+                    {
+                        "name": filename,
+                        "avg_pct": avg_percentage_change,
+                        "stdev_pct": stdev_percentage_change,
+                        "ttest": (pct_low, pct_high),
+                        "runs": len(individual_pct_changes),
+                    }
+                )
+            else:
+                print(f"Summary for {filename}: Change: N/A (baseline score is 0)")
+                summary_results.append(
+                    {
+                        "name": filename,
+                        "avg_pct": None,
+                        "stdev_pct": None,
+                        "ttest": (None, None),
+                        "runs": 0,
+                    }
                 )
 
-            print("-" * 20)  # Separator between individual runs
+        # Print detailed per-benchmark table for multi-engine case
+        if num_engines > 2 and not args.compact:
+            print_per_benchmark_table(benchmark_result, display_format, args.confidence)
 
-        # --- Calculate Averages and Standard Deviation for this benchmark ---
-        num_valid_pairs = len(individual_pct_changes)
-        avg_percentage_change = None
-        stdev_percentage_change = None
-        confidence_interval = None
-
-        if num_valid_pairs > 0:
-            # Ensure lists aren't empty before calling mean/stdev
-            if old_scores and new_scores:
-                avg_old = statistics.mean(old_scores)
-                avg_new = statistics.mean(new_scores)
-                if avg_old != 0:
-                    avg_percentage_change = ((avg_new - avg_old) / avg_old) * 100
-                    if num_valid_pairs >= 2:
-                        try:
-                            stdev_percentage_change = statistics.stdev(
-                                individual_pct_changes
-                            )
-                        except statistics.StatisticsError:
-                            # Handle potential errors if list is unexpectedly small
-                            stdev_percentage_change = None
-                    if num_valid_pairs >= 2:
-                        (low, high) = manual_ttest_confidence_interval(
-                            new_scores, old_scores, args.confidence
-                        )
-                        if low is not None and high is not None:
-                            (pct_low, pct_high) = (
-                                low / avg_old * 100,
-                                high / avg_old * 100,
-                            )
-                        else:
-                            (pct_low, pct_high) = (None, None)
-                    else:
-                        (pct_low, pct_high) = (None, None)
-
-        # else: No valid runs, values remain None
-
-        # --- Print the immediate summary line for this benchmark ---
-        change_output_line = format_change_line(
-            avg_percentage_change, stdev_percentage_change, num_valid_pairs
-        )
-        print(
-            f"Summary for {filename}: {change_output_line}"
-        )  # Make it clear this is the summary line
-        print()  # Empty line before next benchmark or final tables
-
-        # --- Store results for final tables ---
-        summary_results.append(
-            {
-                "name": filename,
-                "avg_pct": avg_percentage_change,
-                "stdev_pct": stdev_percentage_change,
-                "ttest": (pct_low, pct_high),
-                "runs": num_valid_pairs,
-            }
-        )
+        print()  # Empty line before next benchmark
 
     # --- Print Final Summary Tables ---
     print("=" * 60)
     print("Overall Benchmark Summary")
     print("=" * 60)
 
-    # 1. Table in Original Order
-    print_summary_table("Results (Original Order)", args.confidence, summary_results)
+    if num_engines == 2:
+        # Use legacy format for 2 engines
+        # 1. Table in Original Order
+        print_summary_table(
+            "Results (Original Order)", args.confidence, summary_results
+        )
 
-    # 2. Table Sorted by Average Change (Descending)
-    sorted_summary = sorted(
-        summary_results,
-        key=lambda item: item.get("avg_pct")
-        if item.get("avg_pct") is not None
-        else -math.inf,
-        reverse=True,
-    )
-    print_summary_table(
-        "Results (Sorted by Avg Change Descending)", args.confidence, sorted_summary
-    )
+        # 2. Table Sorted by Average Change (Descending)
+        sorted_summary = sorted(
+            summary_results,
+            key=lambda item: item.get("avg_pct")
+            if item.get("avg_pct") is not None
+            else -math.inf,
+            reverse=True,
+        )
+        print_summary_table(
+            "Results (Sorted by Avg Change Descending)", args.confidence, sorted_summary
+        )
+    else:
+        # Use new compact format for 3+ engines
+        # 1. Summary in original order
+        print_compact_summary_table(
+            "Summary Results (Original Order)",
+            all_benchmark_results,
+            display_format,
+            num_engines,
+            sort_by_last=False,
+        )
+
+        # 2. Summary sorted by last engine
+        print_compact_summary_table(
+            f"Summary Results (Sorted by engine{num_engines}/engine1)",
+            all_benchmark_results,
+            display_format,
+            num_engines,
+            sort_by_last=True,
+        )
+
+    # Export to CSV if requested
+    if args.csv:
+        export_to_csv(args.csv, all_benchmark_results, engine_commands)
 
     print("\nBenchmark Comparison Complete.")
