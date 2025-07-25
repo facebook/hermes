@@ -18,3 +18,7 @@ set(CMAKE_ASM_COMPILER_TARGET arm-linux-gnueabihf)
 # Ensure the correct architecture is used and enable Thumb-2
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mthumb -march=armv7-a")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mthumb -march=armv7-a")
+# Use LLD for better LTO support
+set(CMAKE_EXE_LINKER_FLAGS "-fuse-ld=lld-16")
+set(CMAKE_SHARED_LINKER_FLAGS "-fuse-ld=lld-16")
+set(CMAKE_MODULE_LINKER_FLAGS "-fuse-ld=lld-16")

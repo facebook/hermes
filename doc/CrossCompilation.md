@@ -57,6 +57,8 @@ For Emscripten, you can find an example from the `test-emscripten` job from `her
 
 ## Compiling and Running ARM32 Static Hermes from ARM64
 
+On the ARM64 Linux machine you need clang-16 and lld-16.
+
 On the ARM64 Linux machine on which you're compiling:
 ```
 # Add architecture
