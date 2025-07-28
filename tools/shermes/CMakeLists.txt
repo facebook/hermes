@@ -5,6 +5,7 @@
 
 # Define targets for the C++ console bindings. We define both a static and a
 # dynamic library, so they can be linked the same way as hermesvm.
+set(HERMES_ENABLE_EH ON)
 add_library(shermes_console SHARED ConsoleBindings.cpp)
 target_link_libraries(shermes_console PRIVATE hermesvm)
 
@@ -12,6 +13,7 @@ add_library(shermes_console_a STATIC ConsoleBindings.cpp)
 # Add hermesvm as a dependency so headers are available, even though we aren't
 # actually linking anything here.
 target_link_libraries(shermes_console_a PRIVATE hermesvm_a)
+set(HERMES_ENABLE_EH OFF)
 
 set(SHERMES_CC "cc" CACHE STRING "C compiler to invoke")
 set(SHERMES_CC_SYSCFLAGS "" CACHE STRING "C compiler system flags")

@@ -9,6 +9,21 @@
 #include "hermes/hermes.h"
 #include "jsi/jsi.h"
 
+#include <chrono>
+#include <cstdio>
+#include <thread>
+
+/// Object that contains console state that needs to be preserved between
+/// init_console_bindings and run_event_loop.
+struct SHConsoleContext {
+  /// The JS object that contains the console helpers from the
+  /// ConsoleBindings.js.inc file.
+  facebook::jsi::Object helpers;
+
+  SHConsoleContext(facebook::jsi::Object &&helpers)
+      : helpers(std::move(helpers)) {}
+};
+
 /// Init harness symbols used in the test262 testsuite:
 /// - $test262, with properties:
 ///   - global
@@ -68,8 +83,101 @@ static void initTest262Bindings(facebook::hermes::HermesRuntime &hrt) {
   definePropertyFn.call(hrt, global, "console", descriptor);
 }
 
-extern "C" SHERMES_EXPORT void init_console_bindings(SHRuntime *shr) {
+/// The JS library that implements the event loop.
+static const char *s_jslib =
+#include "ConsoleBindings.js.inc"
+    ;
+
+/// \return a SHConsoleContext initialized with the console bindings.
+///   Must be freed by free_console_context.
+extern "C" SHERMES_EXPORT SHConsoleContext *init_console_bindings(
+    SHRuntime *shr) {
   using namespace facebook;
   auto &hrt = *_sh_get_hermes_runtime(shr);
   initTest262Bindings(hrt);
+
+  auto consoleContext = std::make_unique<SHConsoleContext>(
+      hrt.evaluateJavaScript(
+             std::make_unique<jsi::StringBuffer>(s_jslib),
+             "ConsoleBindings.js.inc")
+          .asObject(hrt));
+  jsi::Object &helpers = consoleContext->helpers;
+
+  jsi::Function runMacroTask = helpers.getPropertyAsFunction(hrt, "run");
+
+  // There are no pending tasks, but we want to initialize the event loop
+  // current time.
+  {
+    double curTimeMs =
+        (double)std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count();
+    runMacroTask.call(hrt, curTimeMs);
+  }
+
+  return consoleContext.release();
+}
+
+/// Free the \p consoleContext.
+extern "C" SHERMES_EXPORT void free_console_context(
+    SHConsoleContext *consoleContext) {
+  delete consoleContext;
+}
+
+/// Run the event loop, using \p consoleContext to manage the event queue.
+/// Prints uncaught errors to stderr.
+/// \return true on success, false on error.
+extern "C" SHERMES_EXPORT bool run_event_loop(
+    SHRuntime *shr,
+    SHConsoleContext *consoleContext) {
+  using namespace facebook;
+  auto &hrt = *_sh_get_hermes_runtime(shr);
+
+  try {
+    // Register event loop functions and obtain the runMicroTask() helper
+    // function.
+    jsi::Object &helpers = consoleContext->helpers;
+    jsi::Function peekMacroTask = helpers.getPropertyAsFunction(hrt, "peek");
+    jsi::Function runMacroTask = helpers.getPropertyAsFunction(hrt, "run");
+
+    double nextTimeMs;
+
+    hrt.drainMicrotasks();
+
+    // This is the event loop. Loop while there are pending tasks.
+    while ((nextTimeMs = peekMacroTask.call(hrt).getNumber()) >= 0) {
+      auto now = std::chrono::steady_clock::now();
+      double curTimeMs =
+          (double)std::chrono::duration_cast<std::chrono::milliseconds>(
+              now.time_since_epoch())
+              .count();
+
+      // If we have to, sleep until the next task is ready.
+      if (nextTimeMs > curTimeMs) {
+        std::this_thread::sleep_until(
+            now +
+            std::chrono::milliseconds((int_least64_t)(nextTimeMs - curTimeMs)));
+
+        // Update the current time because we slept.
+        curTimeMs =
+            (double)std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count();
+      }
+
+      // Run the next task.
+      runMacroTask.call(hrt, curTimeMs);
+      hrt.drainMicrotasks();
+    }
+  } catch (jsi::JSError &e) {
+    // Handle JS exceptions here.
+    fprintf(stderr, "JS Exception: %s\n", e.what());
+    return false;
+  } catch (jsi::JSIException &e) {
+    // Handle JSI exceptions here.
+    fprintf(stderr, "JS Exception: %s\n", e.what());
+    return false;
+  }
+
+  return true;
 }

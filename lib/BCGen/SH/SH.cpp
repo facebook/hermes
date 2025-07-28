@@ -3050,12 +3050,23 @@ SHPrivateNameCacheEntry *get_private_name_cache(SHUnit *unit) {
 )";
     if (options.emitMain) {
       OS << R"(
-void init_console_bindings(SHRuntime *shr);
+typedef struct SHConsoleContext SHConsoleContext;
+
+SHConsoleContext *init_console_bindings(SHRuntime *shr);
+
+void free_console_context(SHConsoleContext *consoleContext);
+
+bool run_event_loop(
+    SHRuntime *shr,
+    SHConsoleContext *consoleContext);
 
 int main(int argc, char **argv) {
   SHRuntime *shr = _sh_init(argc, argv);
-  init_console_bindings(shr);
-  bool success = _sh_initialize_units(shr, 1, CREATE_THIS_UNIT);
+  SHConsoleContext *consoleContext = init_console_bindings(shr);
+  bool success =
+    _sh_initialize_units(shr, 1, CREATE_THIS_UNIT) &&
+    run_event_loop(shr, consoleContext);
+  free_console_context(consoleContext);
   _sh_done(shr);
   return success ? 0 : 1;
 }
