@@ -93,6 +93,9 @@ static SHRuntime *_sh_init(int argc, char **argv, llvh::raw_ostream &errs) {
     llvh::cl::ResetCommandLineParser();
     hermes::cli::RuntimeFlags runtimeFlags{};
 
+    // Enable microtask queue by default when used from the CLI.
+    runtimeFlags.MicrotaskQueue.setInitialValue(true);
+
     // Make sure the parser is reset on exit, so it doesn't keep references to
     // stack locations.
     const auto resetParser =
