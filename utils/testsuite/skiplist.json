@@ -130,12 +130,6 @@
     },
     {
       "paths": [
-        "test262/test/language/statements/try/scope-catch-block-lex-open.js"
-      ],
-      "comment": "Catch bindings need a separate scope"
-    },
-    {
-      "paths": [
         "test262/test/language/statements/debugger/statement.js",
         "mjsunit/es6/math-log1p.js"
       ],
@@ -238,7 +232,6 @@
         "test/language/expressions/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js",
         "test/language/statements/class/elements/arrow-body-direct-eval-err-contains-newtarget.js",
         "test/language/statements/class/elements/arrow-body-private-direct-eval-err-contains-newtarget.js"
-
       ],
       "comment": "Classes failures- unicode escaping in identifiers, computed function names, SpeciesConstructor & direct eval."
     },
@@ -1220,15 +1213,8 @@
     "test262/test/annexB/language/comments/single-line-html-close-first-line-2.js",
     "test262/test/annexB/language/global-code/script-decl-lex-collision.js",
     "test262/test/built-ins/Array/prototype/with/no-get-replaced-index.js",
-    "test262/test/built-ins/Array/prototype/with/length-increased-while-iterating.js",
     "test262/test/built-ins/Array/prototype/with/length-decreased-while-iterating.js",
-    "test262/test/built-ins/Array/prototype/with/holes-not-preserved.js",
-    "test262/test/built-ins/Array/prototype/toSpliced/elements-read-in-order.js",
-    "test262/test/built-ins/Array/prototype/toSpliced/length-increased-while-iterating.js",
-    "test262/test/built-ins/Array/prototype/toSpliced/length-decreased-while-iterating.js",
     "test262/test/built-ins/Array/prototype/toSpliced/length-clamped-to-2pow53minus1.js",
-    "test262/test/built-ins/Array/prototype/toSpliced/holes-not-preserved.js",
-    "test262/test/built-ins/Array/prototype/toSpliced/mutate-while-iterating.js",
     "test262/test/built-ins/Array/prototype/toSorted/comparefn-stop-after-error.js",
     "test262/test/built-ins/Array/prototype/toSorted/immutable.js",
     "test262/test/built-ins/Array/prototype/toSorted/length-increased-while-iterating.js",
@@ -1246,10 +1232,6 @@
     "test262/test/built-ins/Array/prototype/toSorted/metadata/name.js",
     "test262/test/built-ins/Array/prototype/toSorted/metadata/property-descriptor.js",
     "test262/test/built-ins/Array/prototype/toSorted/not-a-constructor.js",
-    "test262/test/built-ins/Array/prototype/toReversed/length-increased-while-iterating.js",
-    "test262/test/built-ins/Array/prototype/toReversed/get-descending-order.js",
-    "test262/test/built-ins/Array/prototype/toReversed/length-decreased-while-iterating.js",
-    "test262/test/built-ins/Array/prototype/toReversed/holes-not-preserved.js",
     "test262/test/built-ins/TypedArray/prototype/with/index-negative.js",
     "test262/test/built-ins/TypedArray/prototype/with/length-property-ignored.js",
     "test262/test/built-ins/TypedArray/prototype/with/immutable.js",
