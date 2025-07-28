@@ -677,7 +677,6 @@ add_subdirectory(lib)
 add_subdirectory(public)
 add_subdirectory(external)
 add_subdirectory(API)
-add_subdirectory(android/intltest/java/com/facebook/hermes/test)
 add_subdirectory(unsupported)
 
 if(HERMES_ENABLE_TOOLS)
