@@ -4504,17 +4504,17 @@ static inline CallResult<uint32_t> arrayCopyHelper(
     Runtime &runtime,
     GCScope &gcScope,
     Handle<JSObject> from,
-    uint32_t fromStartIndex,
+    uint64_t fromStartIndex,
     Handle<JSArray> to,
-    uint32_t toStartIndex,
-    uint32_t count) {
+    uint64_t toStartIndex,
+    uint64_t count) {
   struct : Locals {
     PinnedValue<> fromValue;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
   auto marker = gcScope.createMarker();
-  uint32_t i = 0;
+  uint64_t i = 0;
 
   while (i < count) {
     gcScope.flushToMarker(marker);

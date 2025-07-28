@@ -1214,7 +1214,6 @@
     "test262/test/annexB/language/global-code/script-decl-lex-collision.js",
     "test262/test/built-ins/Array/prototype/with/no-get-replaced-index.js",
     "test262/test/built-ins/Array/prototype/with/length-decreased-while-iterating.js",
-    "test262/test/built-ins/Array/prototype/toSpliced/length-clamped-to-2pow53minus1.js",
     "test262/test/built-ins/Array/prototype/toSorted/comparefn-stop-after-error.js",
     "test262/test/built-ins/Array/prototype/toSorted/immutable.js",
     "test262/test/built-ins/Array/prototype/toSorted/length-increased-while-iterating.js",
