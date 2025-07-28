@@ -5,6 +5,11 @@
 
 cmake_minimum_required(VERSION 3.21.0)
 
+# Set LTO policy
+if(POLICY CMP0069)
+    cmake_policy(SET CMP0069 NEW)
+endif()
+
 # Set the VERSION variables based on the project command
 if (POLICY CMP0048)
   cmake_policy(SET CMP0048 NEW)
