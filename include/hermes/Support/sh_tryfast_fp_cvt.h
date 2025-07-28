@@ -685,21 +685,21 @@ static inline uint64_t _sh_tryfast_f64_to_u64_cvt(double x) {
 
 static inline int _sh_tryfast_f64_to_i32_cvt(double x) {
   int result;
-  asm("vcvt.s32.f64 s0, %P1\n\t" // Convert double to int32 with truncation
-      "vmov %0, s0" // Move the lower part of d0 (s0) to the result
-      : "=r"(result) // Output: result in a general-purpose register
+  float temp __attribute__((unused));
+  asm("vcvt.s32.f64 %1, %P2\n\t" // Convert double to int32 with truncation
+      "vmov %0, %1" // Move the lower part of d0 (s0) to the result
+      : "=r"(result), "=t"(temp)
       : "w"(x) // Input: the double value
-      : "d0" // Clobbers: NEON register d0
   );
   return result;
 }
 static inline unsigned _sh_tryfast_f64_to_u32_cvt(double x) {
   unsigned result;
-  asm("vcvt.u32.f64 s0, %P1\n\t" // Convert double to uint32 with truncation
-      "vmov %0, s0" // Move the lower part of d0 (s0) to the result
-      : "=r"(result) // Output: result in a general-purpose register
+  float temp __attribute__((unused));
+  asm("vcvt.u32.f64 %1, %P2\n\t" // Convert double to uint32 with truncation
+      "vmov %0, %1" // Move the lower part of d0 (s0) to the result
+      : "=r"(result), "=t"(temp)
       : "w"(x) // Input: the double value
-      : "d0" // Clobbers: NEON register d0
   );
   return result;
 }
