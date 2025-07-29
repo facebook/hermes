@@ -41,6 +41,7 @@
 #include "hermes/Support/OutputStream.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/Warning.h"
+#include "hermes/Utils/CompilerRuntimeFlags.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
 #include "hermes/VM/JIT/Config.h"
@@ -333,13 +334,6 @@ opt<std::string> ProfilingOutFile(
     "profiling-out",
     desc("File to write profiling info to"));
 
-opt<bool> ES6BlockScoping(
-    "Xes6-block-scoping",
-    init(false),
-    desc("Enable support for ES6 block scoping"),
-    Hidden,
-    cat(CompilerCategory));
-
 opt<bool> MetroRequireOpt(
     "Xmetro-require",
     init(true),
@@ -347,32 +341,7 @@ opt<bool> MetroRequireOpt(
     Hidden,
     cat(CompilerCategory));
 
-opt<bool>
-    EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
-
-// This is normally a compiler option, but it also applies to strings given
-// to eval or the Function constructor.
-opt<bool> VerifyIR(
-    "verify-ir",
-#ifdef HERMES_SLOW_DEBUG
-    init(true),
-#else
-    init(false),
-    Hidden,
-#endif
-    desc("Verify the IR after creating it"),
-    cat(CompilerCategory));
-
-opt<bool> EmitAsyncBreakCheck(
-    "emit-async-break-check",
-    desc("Emit instruction to check async break request"),
-    init(false),
-    cat(CompilerCategory));
-
-opt<bool> OptimizedEval(
-    "optimized-eval",
-    desc("Turn on compiler optimizations in eval."),
-    init(false));
+hermes::CompilerRuntimeFlags compilerRuntimeFlags;
 
 opt<bool> PrintCompilerTiming(
     "ftime-report",
@@ -1115,7 +1084,7 @@ std::shared_ptr<Context> createContext(
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
-  codeGenOpts.verifyIRBetweenPasses = cl::VerifyIR;
+  codeGenOpts.verifyIRBetweenPasses = cl::compilerRuntimeFlags.VerifyIR;
   codeGenOpts.colors = cl::Colors;
   codeGenOpts.dumpFunctions.insert(
       cl::DumpFunctions.begin(), cl::DumpFunctions.end());
@@ -1155,8 +1124,8 @@ std::shared_ptr<Context> createContext(
 
   // Default is non-strict mode, unless it is typed..
   context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
-  context->setEnableEval(cl::EnableEval);
-  context->setEnableES6BlockScoping(cl::ES6BlockScoping);
+  context->setEnableEval(cl::compilerRuntimeFlags.EnableEval);
+  context->setEnableES6BlockScoping(cl::compilerRuntimeFlags.ES6BlockScoping);
   context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
@@ -1236,7 +1205,7 @@ std::shared_ptr<Context> createContext(
     // -g1 or -g0. If -g0, we'll strip debug info later.
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
-  context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
+  context->setEmitAsyncBreakCheck(cl::compilerRuntimeFlags.EmitAsyncBreakCheck);
   return context;
 }
 
@@ -2036,7 +2005,7 @@ CompileResult processSourceFiles(
   }
 
   // Verify the IR before we run optimizations on it.
-  if (cl::VerifyIR) {
+  if (cl::compilerRuntimeFlags.VerifyIR) {
     if (!verifyModule(*M, &llvh::errs())) {
       llvh::errs() << "IRGen produced invalid IR\n";
       return VerificationFailed;
@@ -2094,7 +2063,7 @@ CompileResult processSourceFiles(
   // options parsing and js parsing. Set the bytecode header flag here.
   genOptions.staticBuiltinsEnabled = context->getStaticBuiltinOptimization();
   genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
-  genOptions.verifyIR = cl::VerifyIR;
+  genOptions.verifyIR = cl::compilerRuntimeFlags.VerifyIR;
   genOptions.emitAsserts = cl::EnableAsserts;
 
   // If the user requests to output a source map, then do not also emit debug

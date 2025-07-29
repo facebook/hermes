@@ -23,6 +23,7 @@
 #include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Utils/CompilerRuntimeFlags.h"
 
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/CommandLine.h"
@@ -328,12 +329,7 @@ cl::opt<bool> ParseTS(
 const bool ParseTS = false;
 #endif
 
-cl::opt<bool> ES6BlockScoping{
-    "Xes6-block-scoping",
-    llvh::cl::Hidden,
-    llvh::cl::desc("Enable support for ES6 block scoping"),
-    llvh::cl::init(false),
-    llvh::cl::cat(CompilerCategory)};
+hermes::CompilerRuntimeFlags compilerRuntimeFlags;
 
 cl::opt<bool> MetroRequireOpt(
     "Xmetro-require",
@@ -448,24 +444,6 @@ cl::opt<bool> EnableTDZ(
 cl::opt<bool> StrictMode(
     "strict",
     cl::desc("Enable strict mode."),
-    cl::cat(CompilerCategory));
-
-cl::opt<bool> EnableEval(
-    "enable-eval",
-    cl::init(true),
-    cl::desc("Enable support for eval()"));
-
-// This is normally a compiler option, but it also applies to strings given
-// to eval or the Function constructor.
-cl::opt<bool> VerifyIR(
-    "verify-ir",
-#ifdef HERMES_SLOW_DEBUG
-    cl::init(true),
-#else
-    cl::init(false),
-    cl::Hidden,
-#endif
-    cl::desc("Verify the IR after each pass."),
     cl::cat(CompilerCategory));
 
 cl::opt<bool> DumpRegisterInterval(
@@ -609,7 +587,7 @@ std::shared_ptr<Context> createContext() {
   codeGenOpts.dumpSourceLocation =
       cli::DumpSourceLocation != LocationDumpMode::None;
   codeGenOpts.dumpIRBetweenPasses = cli::DumpBetweenPasses;
-  codeGenOpts.verifyIRBetweenPasses = cli::VerifyIR;
+  codeGenOpts.verifyIRBetweenPasses = cli::compilerRuntimeFlags.VerifyIR;
   codeGenOpts.colors = cli::Colors;
   codeGenOpts.dumpFunctions.insert(
       cli::DumpFunctions.begin(), cli::DumpFunctions.end());
@@ -655,8 +633,8 @@ std::shared_ptr<Context> createContext() {
     return nullptr;
   }
   context->setStrictMode(cli::Typed || cli::StrictMode);
-  context->setEnableEval(cli::EnableEval);
-  context->setEnableES6BlockScoping(cli::ES6BlockScoping);
+  context->setEnableEval(cli::compilerRuntimeFlags.EnableEval);
+  context->setEnableES6BlockScoping(cli::compilerRuntimeFlags.ES6BlockScoping);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
@@ -953,7 +931,7 @@ bool compileFromCommandLineOptions() {
   }
 
   // Verify the IR before we run optimizations on it.
-  if (cli::VerifyIR) {
+  if (cli::compilerRuntimeFlags.VerifyIR) {
     if (!verifyModule(M, &llvh::errs())) {
       llvh::errs() << "IRGen produced invalid IR\n";
       return false;
@@ -1010,7 +988,7 @@ bool compileFromCommandLineOptions() {
   genOptions.staticBuiltinsEnabled = context->getStaticBuiltinOptimization();
   // genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
 
-  genOptions.verifyIR = cli::VerifyIR;
+  genOptions.verifyIR = cli::compilerRuntimeFlags.VerifyIR;
 
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.

@@ -116,10 +116,11 @@ static int executeHBCBytecodeFromCL(
           .withEnableJIT(
               flags.DumpJITCode ||
               flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off)
-          .withEnableEval(cl::EnableEval)
-          .withVerifyEvalIR(cl::VerifyIR)
-          .withOptimizedEval(cl::OptimizedEval)
-          .withAsyncBreakCheckInEval(cl::EmitAsyncBreakCheck)
+          .withEnableEval(cl::compilerRuntimeFlags.EnableEval)
+          .withVerifyEvalIR(cl::compilerRuntimeFlags.VerifyIR)
+          .withOptimizedEval(cl::compilerRuntimeFlags.OptimizedEval)
+          .withAsyncBreakCheckInEval(
+              cl::compilerRuntimeFlags.EmitAsyncBreakCheck)
           .withVMExperimentFlags(flags.VMExperimentFlags)
           .withES6Proxy(flags.ES6Proxy)
           .withIntl(flags.Intl)
@@ -253,7 +254,7 @@ int main(int argc, char **argv) {
   // so that user can turn on this feature with single ExecutionTimeLimit
   // option.
   if (flags.ExecutionTimeLimit > 0) {
-    cl::EmitAsyncBreakCheck = true;
+    cl::compilerRuntimeFlags.EmitAsyncBreakCheck = true;
   }
 
   // Make sure any allocated alt signal stack is not considered a leak

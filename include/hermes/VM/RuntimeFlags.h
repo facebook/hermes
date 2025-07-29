@@ -15,6 +15,7 @@
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/MemorySizeParser.h"
 #include "hermes/Support/RandomSeedParser.h"
+#include "hermes/Utils/CompilerRuntimeFlags.h"
 
 #include <string>
 
@@ -302,34 +303,7 @@ struct VMOnlyRuntimeFlags {
 ///
 /// This struct can be used as a header-only dependency and instantiated by
 /// any client needing to parse these command line options.
-struct RuntimeFlags : public VMOnlyRuntimeFlags {
-  llvh::cl::opt<bool> EnableEval{
-      "enable-eval",
-      llvh::cl::init(true),
-      llvh::cl::desc("Enable support for eval()")};
-
-  // This is normally a compiler option, but it also applies to strings given
-  // to eval or the Function constructor.
-  llvh::cl::opt<bool> VerifyIR{
-      "verify-ir",
-#ifdef HERMES_SLOW_DEBUG
-      llvh::cl::init(true),
-#else
-      llvh::cl::init(false),
-      llvh::cl::Hidden,
-#endif
-      llvh::cl::desc("Verify the IR after creating it")};
-
-  llvh::cl::opt<bool> EmitAsyncBreakCheck{
-      "emit-async-break-check",
-      llvh::cl::desc("Emit instruction to check async break request"),
-      llvh::cl::init(false)};
-
-  llvh::cl::opt<bool> OptimizedEval{
-      "optimized-eval",
-      llvh::cl::desc("Turn on compiler optimizations in eval."),
-      llvh::cl::init(false)};
-};
+struct RuntimeFlags : public VMOnlyRuntimeFlags, CompilerRuntimeFlags {};
 
 #ifndef HERMES_IS_MOBILE_BUILD
 /// Build runtime config from the parsed command line flags.
