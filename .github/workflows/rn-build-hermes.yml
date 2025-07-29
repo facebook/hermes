@@ -17,3 +17,5 @@ jobs:
     needs: build_apple_slices_hermes
   build_hermesc_linux:
     uses: ./.github/workflows/build-hermesc-linux.yml
+  build_hermesc_windows:
+    uses: ./.github/workflows/build-hermesc-windows.yml
