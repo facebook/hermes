@@ -5,8 +5,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-rootProject.name = 'Hermes'
+pluginManagement {
+  includeBuild("build-logic")
 
-include ':hermes'
-include ':cppruntime'
-include ':intltest'
+  repositories {
+    mavenCentral()
+    google()
+    gradlePluginPortal()
+  }
+}
+
+rootProject.name = "hermes-engine"
