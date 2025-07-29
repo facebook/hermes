@@ -15,7 +15,7 @@ HERMES_PARSER_JS="$XPLAT/static_h/tools/hermes-parser/js"
 HERMES_PARSER_DIST="$HERMES_PARSER_JS/hermes-parser/dist"
 PRETTIER_DIR="$HERMES_PARSER_JS/prettier-hermes-v2-backport"
 PLUGIN_DIR="$HERMES_PARSER_JS/prettier-plugin-hermes-parser"
-PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.1.0.cjs"
+PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.9.2.cjs"
 
 if [ ! -d "$HERMES_PARSER_DIST" ]; then
     echo "$HERMES_PARSER_DIST does not exist, running initial build"
@@ -62,8 +62,8 @@ node $PRETTIER_YARN build --no-minify
 
 # Copy assets to prettier plugin dir
 echo "Copy assets"
-cp -r "./dist/plugins" "$PLUGIN_DIR/src/third-party/internal-prettier-v3/"
-cp "./dist/ast-to-doc.js" "$PLUGIN_DIR/src/third-party/internal-prettier-v3/ast-to-doc.js"
+cp -r "./dist/prettier/plugins" "$PLUGIN_DIR/src/third-party/internal-prettier-v3/"
+cp "./dist/prettier/ast-to-doc.js" "$PLUGIN_DIR/src/third-party/internal-prettier-v3/ast-to-doc.js"
 
 echo "Success!"
 echo "Be sure to commit your changes and create a PR to the upstream repo after committing"
