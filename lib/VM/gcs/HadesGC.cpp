@@ -826,14 +826,6 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE HadesGC::MarkAcceptor final
  private:
   template <typename T>
   T concurrentReadImpl(const T &valRef) {
-    using Storage =
-        typename std::conditional<sizeof(T) == 4, uint32_t, uint64_t>::type;
-    static_assert(sizeof(T) == sizeof(Storage), "Sizes must match");
-    union {
-      Storage storage;
-      T val;
-    } ret{};
-
     // There is a benign data race here, as the GC can read a pointer while
     // it's being modified by the mutator; however, the following rules we
     // obey prevent it from being a problem:
@@ -855,16 +847,19 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE HadesGC::MarkAcceptor final
     //    the modification.
     TsanIgnoreReadsBegin();
 
-    // The cast to a volatile variable forces a read from valRef, since
-    // reads from volatile variables are considered observable behaviour. This
-    // prevents the compiler from optimizing away the returned value,
+    // Read valRef and copy into result.
+    T result = valRef;
+
+    // This fence prevents the compiler from optimizing away the returned value,
     // guaranteeing that we will not observe changes to the underlying value
-    // past this point. Not using volatile here could lead to a TOCTOU bug,
+    // past this point. Not having a fence here could lead to a TOCTOU bug,
     // because the underlying value may change after a pointer check (in the
     // case of HermesValue) or a null check (for pointers).
-    ret.storage = *reinterpret_cast<Storage const volatile *>(&valRef);
+    // We have to make sure that the read we did above is not reordered later.
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+
     TsanIgnoreReadsEnd();
-    return ret.val;
+    return result;
   }
 
   template <typename T>
