@@ -549,6 +549,11 @@ jobs:
       HERMES_WS_DIR: /home/runner/work/hermes
       ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
     steps:
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: 17
+        distribution: "zulu"
     - name: Checkout Hermes
       uses: actions/checkout@v4.1.0
     - name: Checkout Test262
