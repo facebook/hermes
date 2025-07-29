@@ -22,15 +22,10 @@
   }
 })(function () {
   "use strict";
-  var __create = Object.create;
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __commonJS = (cb, mod) => function __require() {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
-  };
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
@@ -43,99 +38,7 @@
     }
     return to;
   };
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-    // If the importer is in node compatibility mode or this is not an ESM
-    // file that has been converted to a CommonJS file using a Babel-
-    // compatible transform (i.e. "__esModule" has not been set), then set
-    // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-    mod
-  ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-  // node_modules/jest-docblock/build/index.js
-  var require_build = __commonJS({
-    "node_modules/jest-docblock/build/index.js"(exports) {
-      "use strict";
-      Object.defineProperty(exports, "__esModule", {
-        value: true
-      });
-      exports.extract = extract2;
-      exports.parse = parse2;
-      exports.parseWithComments = parseWithComments2;
-      exports.print = print2;
-      exports.strip = strip2;
-      var commentEndRe = /\*\/$/;
-      var commentStartRe = /^\/\*\*?/;
-      var docblockRe = /^\s*(\/\*\*?(.|\r?\n)*?\*\/)/;
-      var lineCommentRe = /(^|\s+)\/\/([^\r\n]*)/g;
-      var ltrimNewlineRe = /^(\r?\n)+/;
-      var multilineRe = /(?:^|\r?\n) *(@[^\r\n]*?) *\r?\n *(?![^@\r\n]*\/\/[^]*)([^@\r\n\s][^@\r\n]+?) *\r?\n/g;
-      var propertyRe = /(?:^|\r?\n) *@(\S+) *([^\r\n]*)/g;
-      var stringStartRe = /(\r?\n|^) *\* ?/g;
-      var STRING_ARRAY = [];
-      function extract2(contents) {
-        const match = contents.match(docblockRe);
-        return match ? match[0].trimLeft() : "";
-      }
-      function strip2(contents) {
-        const match = contents.match(docblockRe);
-        return match && match[0] ? contents.substring(match[0].length) : contents;
-      }
-      function parse2(docblock) {
-        return parseWithComments2(docblock).pragmas;
-      }
-      function parseWithComments2(docblock) {
-        const line = "\n";
-        docblock = docblock.replace(commentStartRe, "").replace(commentEndRe, "").replace(stringStartRe, "$1");
-        let prev = "";
-        while (prev !== docblock) {
-          prev = docblock;
-          docblock = docblock.replace(multilineRe, `${line}$1 $2${line}`);
-        }
-        docblock = docblock.replace(ltrimNewlineRe, "").trimRight();
-        const result = /* @__PURE__ */ Object.create(null);
-        const comments = docblock.replace(propertyRe, "").replace(ltrimNewlineRe, "").trimRight();
-        let match;
-        while (match = propertyRe.exec(docblock)) {
-          const nextPragma = match[2].replace(lineCommentRe, "");
-          if (typeof result[match[1]] === "string" || Array.isArray(result[match[1]])) {
-            result[match[1]] = STRING_ARRAY.concat(result[match[1]], nextPragma);
-          } else {
-            result[match[1]] = nextPragma;
-          }
-        }
-        return {
-          comments,
-          pragmas: result
-        };
-      }
-      function print2({ comments = "", pragmas = {} }) {
-        const line = "\n";
-        const head = "/**";
-        const start = " *";
-        const tail = " */";
-        const keys = Object.keys(pragmas);
-        const printedObject = keys.flatMap((key) => printKeyValues(key, pragmas[key])).map((keyValue) => `${start} ${keyValue}${line}`).join("");
-        if (!comments) {
-          if (keys.length === 0) {
-            return "";
-          }
-          if (keys.length === 1 && !Array.isArray(pragmas[keys[0]])) {
-            const value = pragmas[keys[0]];
-            return `${head} ${printKeyValues(keys[0], value)[0]}${tail}`;
-          }
-        }
-        const printedComments = comments.split(line).map((textLine) => `${start} ${textLine}`).join(line) + line;
-        return head + line + (comments ? printedComments : "") + (comments && keys.length ? start + line : "") + printedObject + tail;
-      }
-      function printKeyValues(key, valueOrArray) {
-        return STRING_ARRAY.concat(valueOrArray).map(
-          (value) => `@${key} ${value}`.trim()
-        );
-      }
-    }
-  });
 
   // src/plugins/flow.js
   var flow_exports2 = {};
@@ -153,6 +56,9 @@
   function locStart(node) {
     var _a, _b, _c;
     const start = ((_a = node.range) == null ? void 0 : _a[0]) ?? node.start;
+    if (false) {
+      throw new TypeError("Can't not locate node.");
+    }
     const firstDecorator = (_c = ((_b = node.declaration) == null ? void 0 : _b.decorators) ?? node.decorators) == null ? void 0 : _c[0];
     if (firstDecorator) {
       return Math.min(locStart(firstDecorator), start);
@@ -161,11 +67,102 @@
   }
   function locEnd(node) {
     var _a;
-    return ((_a = node.range) == null ? void 0 : _a[1]) ?? node.end;
+    const end = ((_a = node.range) == null ? void 0 : _a[1]) ?? node.end;
+    if (false) {
+      throw new TypeError("Can't not locate node.");
+    }
+    return end;
   }
 
-  // src/language-js/pragma.js
-  var import_jest_docblock = __toESM(require_build(), 1);
+  // scripts/build/shims/string-replace-all.js
+  var stringReplaceAll = (isOptionalObject, original, pattern, replacement) => {
+    if (isOptionalObject && (original === void 0 || original === null)) {
+      return;
+    }
+    if (original.replaceAll) {
+      return original.replaceAll(pattern, replacement);
+    }
+    if (pattern.global) {
+      return original.replace(pattern, replacement);
+    }
+    return original.split(pattern).join(replacement);
+  };
+  var string_replace_all_default = stringReplaceAll;
+
+  // node_modules/jest-docblock/build/index.js
+  var commentEndRe = /\*\/$/;
+  var commentStartRe = /^\/\*\*?/;
+  var docblockRe = /^\s*(\/\*\*?(.|\r?\n)*?\*\/)/;
+  var lineCommentRe = /(^|\s+)\/\/([^\n\r]*)/g;
+  var ltrimNewlineRe = /^(\r?\n)+/;
+  var multilineRe = /(?:^|\r?\n) *(@[^\n\r]*?) *\r?\n *(?![^\n\r@]*\/\/[^]*)([^\s@][^\n\r@]+?) *\r?\n/g;
+  var propertyRe = /(?:^|\r?\n) *@(\S+) *([^\n\r]*)/g;
+  var stringStartRe = /(\r?\n|^) *\* ?/g;
+  var STRING_ARRAY = [];
+  function extract(contents) {
+    const match = contents.match(docblockRe);
+    return match ? match[0].trimStart() : "";
+  }
+  function parseWithComments(docblock) {
+    const line = "\n";
+    docblock = string_replace_all_default(
+      /* isOptionalObject */
+      false,
+      docblock.replace(commentStartRe, "").replace(commentEndRe, ""),
+      stringStartRe,
+      "$1"
+    );
+    let prev = "";
+    while (prev !== docblock) {
+      prev = docblock;
+      docblock = string_replace_all_default(
+        /* isOptionalObject */
+        false,
+        docblock,
+        multilineRe,
+        `${line}$1 $2${line}`
+      );
+    }
+    docblock = docblock.replace(ltrimNewlineRe, "").trimEnd();
+    const result = /* @__PURE__ */ Object.create(null);
+    const comments = string_replace_all_default(
+      /* isOptionalObject */
+      false,
+      docblock,
+      propertyRe,
+      ""
+    ).replace(ltrimNewlineRe, "").trimEnd();
+    let match;
+    while (match = propertyRe.exec(docblock)) {
+      const nextPragma = string_replace_all_default(
+        /* isOptionalObject */
+        false,
+        match[2],
+        lineCommentRe,
+        ""
+      );
+      if (typeof result[match[1]] === "string" || Array.isArray(result[match[1]])) {
+        const resultElement = result[match[1]];
+        result[match[1]] = [...STRING_ARRAY, ...Array.isArray(resultElement) ? resultElement : [resultElement], nextPragma];
+      } else {
+        result[match[1]] = nextPragma;
+      }
+    }
+    return {
+      comments,
+      pragmas: result
+    };
+  }
+
+  // src/utils/pragma/pragma.evaluate.js
+  var FORMAT_IGNORE_PRAGMAS = [
+    "noformat",
+    "noprettier"
+  ];
+  var FORMAT_PRAGMAS = [
+    "format",
+    "prettier"
+  ];
 
   // src/language-js/utils/get-shebang.js
   function getShebang(text) {
@@ -186,23 +183,17 @@
     if (shebang) {
       text = text.slice(shebang.length + 1);
     }
-    const docBlock = (0, import_jest_docblock.extract)(text);
-    const {
-      pragmas,
-      comments
-    } = (0, import_jest_docblock.parseWithComments)(docBlock);
-    return {
-      shebang,
-      text,
-      pragmas,
-      comments
-    };
+    const docBlock = extract(text);
+    const { pragmas, comments } = parseWithComments(docBlock);
+    return { shebang, text, pragmas, comments };
   }
   function hasPragma(text) {
-    const {
-      pragmas
-    } = parseDocBlock(text);
-    return Object.prototype.hasOwnProperty.call(pragmas, "prettier") || Object.prototype.hasOwnProperty.call(pragmas, "format");
+    const { pragmas } = parseDocBlock(text);
+    return FORMAT_PRAGMAS.some((pragma) => Object.prototype.hasOwnProperty.call(pragmas, pragma));
+  }
+  function hasIgnorePragma(text) {
+    const { pragmas } = parseDocBlock(text);
+    return FORMAT_IGNORE_PRAGMAS.some((pragma) => Object.prototype.hasOwnProperty.call(pragmas, pragma));
   }
 
   // src/language-js/parse/utils/create-parser.js
@@ -211,6 +202,7 @@
     return {
       astFormat: "estree",
       hasPragma,
+      hasIgnorePragma,
       locStart,
       locEnd,
       ...options
@@ -220,6 +212,7 @@
 
   // src/language-js/parse/flow.js
   function parse(text) {
+    void text;
   }
   var flow = create_parser_default(parse);
   return __toCommonJS(flow_exports2);

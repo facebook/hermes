@@ -14,7 +14,7 @@
     "prettier-plugin-hermes-parser": "0.30.0"
   },
   "peerDependencies": {
-    "prettier": "^3.0.0 || ^2.7.1"
+    "prettier": "^3.0.0"
   },
   "files": [
     "dist",

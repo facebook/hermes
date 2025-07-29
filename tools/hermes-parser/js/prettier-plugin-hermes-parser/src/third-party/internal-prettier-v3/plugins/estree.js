@@ -22,14 +22,12 @@
   }
 })(function () {
   "use strict";
-  var __create = Object.create;
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __commonJS = (cb, mod) => function __require() {
-    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  var __typeError = (msg) => {
+    throw TypeError(msg);
   };
   var __export = (target, all) => {
     for (var name in all)
@@ -43,117 +41,11 @@
     }
     return to;
   };
-  var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-    // If the importer is in node compatibility mode or this is not an ESM
-    // file that has been converted to a CommonJS file using a Babel-
-    // compatible transform (i.e. "__esModule" has not been set), then set
-    // "default" to the CommonJS "module.exports" for node compatibility.
-    isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-    mod
-  ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-  var __accessCheck = (obj, member, msg) => {
-    if (!member.has(obj))
-      throw TypeError("Cannot " + msg);
-  };
-  var __privateGet = (obj, member, getter) => {
-    __accessCheck(obj, member, "read from private field");
-    return getter ? getter.call(obj) : member.get(obj);
-  };
-  var __privateAdd = (obj, member, value) => {
-    if (member.has(obj))
-      throw TypeError("Cannot add the same private member more than once");
-    member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-  };
-  var __privateSet = (obj, member, value, setter) => {
-    __accessCheck(obj, member, "write to private field");
-    setter ? setter.call(obj, value) : member.set(obj, value);
-    return value;
-  };
-
-  // node_modules/jest-docblock/build/index.js
-  var require_build = __commonJS({
-    "node_modules/jest-docblock/build/index.js"(exports) {
-      "use strict";
-      Object.defineProperty(exports, "__esModule", {
-        value: true
-      });
-      exports.extract = extract2;
-      exports.parse = parse;
-      exports.parseWithComments = parseWithComments2;
-      exports.print = print3;
-      exports.strip = strip2;
-      var commentEndRe = /\*\/$/;
-      var commentStartRe = /^\/\*\*?/;
-      var docblockRe = /^\s*(\/\*\*?(.|\r?\n)*?\*\/)/;
-      var lineCommentRe = /(^|\s+)\/\/([^\r\n]*)/g;
-      var ltrimNewlineRe = /^(\r?\n)+/;
-      var multilineRe = /(?:^|\r?\n) *(@[^\r\n]*?) *\r?\n *(?![^@\r\n]*\/\/[^]*)([^@\r\n\s][^@\r\n]+?) *\r?\n/g;
-      var propertyRe = /(?:^|\r?\n) *@(\S+) *([^\r\n]*)/g;
-      var stringStartRe = /(\r?\n|^) *\* ?/g;
-      var STRING_ARRAY = [];
-      function extract2(contents) {
-        const match = contents.match(docblockRe);
-        return match ? match[0].trimLeft() : "";
-      }
-      function strip2(contents) {
-        const match = contents.match(docblockRe);
-        return match && match[0] ? contents.substring(match[0].length) : contents;
-      }
-      function parse(docblock) {
-        return parseWithComments2(docblock).pragmas;
-      }
-      function parseWithComments2(docblock) {
-        const line2 = "\n";
-        docblock = docblock.replace(commentStartRe, "").replace(commentEndRe, "").replace(stringStartRe, "$1");
-        let prev = "";
-        while (prev !== docblock) {
-          prev = docblock;
-          docblock = docblock.replace(multilineRe, `${line2}$1 $2${line2}`);
-        }
-        docblock = docblock.replace(ltrimNewlineRe, "").trimRight();
-        const result = /* @__PURE__ */ Object.create(null);
-        const comments = docblock.replace(propertyRe, "").replace(ltrimNewlineRe, "").trimRight();
-        let match;
-        while (match = propertyRe.exec(docblock)) {
-          const nextPragma = match[2].replace(lineCommentRe, "");
-          if (typeof result[match[1]] === "string" || Array.isArray(result[match[1]])) {
-            result[match[1]] = STRING_ARRAY.concat(result[match[1]], nextPragma);
-          } else {
-            result[match[1]] = nextPragma;
-          }
-        }
-        return {
-          comments,
-          pragmas: result
-        };
-      }
-      function print3({ comments = "", pragmas = {} }) {
-        const line2 = "\n";
-        const head = "/**";
-        const start = " *";
-        const tail = " */";
-        const keys = Object.keys(pragmas);
-        const printedObject = keys.flatMap((key) => printKeyValues(key, pragmas[key])).map((keyValue) => `${start} ${keyValue}${line2}`).join("");
-        if (!comments) {
-          if (keys.length === 0) {
-            return "";
-          }
-          if (keys.length === 1 && !Array.isArray(pragmas[keys[0]])) {
-            const value = pragmas[keys[0]];
-            return `${head} ${printKeyValues(keys[0], value)[0]}${tail}`;
-          }
-        }
-        const printedComments = comments.split(line2).map((textLine) => `${start} ${textLine}`).join(line2) + line2;
-        return head + line2 + (comments ? printedComments : "") + (comments && keys.length ? start + line2 : "") + printedObject + tail;
-      }
-      function printKeyValues(key, valueOrArray) {
-        return STRING_ARRAY.concat(valueOrArray).map(
-          (value) => `@${key} ${value}`.trim()
-        );
-      }
-    }
-  });
+  var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+  var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read from private field"), getter ? getter.call(obj) : member.get(obj));
+  var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+  var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 
   // src/plugins/estree.js
   var estree_exports = {};
@@ -166,18 +58,8 @@
   // src/language-js/languages.evaluate.js
   var languages_evaluate_default = [
     {
-      "linguistLanguageId": 183,
       "name": "JavaScript",
       "type": "programming",
-      "tmScope": "source.js",
-      "aceMode": "javascript",
-      "codemirrorMode": "javascript",
-      "codemirrorMimeType": "text/javascript",
-      "color": "#f1e05a",
-      "aliases": [
-        "js",
-        "node"
-      ],
       "extensions": [
         ".js",
         "._js",
@@ -185,7 +67,6 @@
         ".cjs",
         ".es",
         ".es6",
-        ".frag",
         ".gs",
         ".jake",
         ".javascript",
@@ -203,11 +84,18 @@
         ".ssjs",
         ".xsjs",
         ".xsjslib",
+        ".start.frag",
+        ".end.frag",
         ".wxs"
       ],
-      "filenames": [
-        "Jakefile"
+      "tmScope": "source.js",
+      "aceMode": "javascript",
+      "aliases": [
+        "js",
+        "node"
       ],
+      "codemirrorMode": "javascript",
+      "codemirrorMimeType": "text/javascript",
       "interpreters": [
         "chakra",
         "d8",
@@ -220,6 +108,11 @@
         "v8",
         "v8-shell",
         "zx"
+      ],
+      "filenames": [
+        "Jakefile",
+        "start.frag",
+        "end.frag"
       ],
       "parsers": [
         "babel",
@@ -234,22 +127,20 @@
       "vscodeLanguageIds": [
         "javascript",
         "mongo"
-      ]
+      ],
+      "linguistLanguageId": 183
     },
     {
-      "linguistLanguageId": 183,
       "name": "Flow",
       "type": "programming",
-      "tmScope": "source.js",
-      "aceMode": "javascript",
-      "codemirrorMode": "javascript",
-      "codemirrorMimeType": "text/javascript",
-      "color": "#f1e05a",
-      "aliases": [],
       "extensions": [
         ".js.flow"
       ],
-      "filenames": [],
+      "tmScope": "source.js",
+      "aceMode": "javascript",
+      "aliases": [],
+      "codemirrorMode": "javascript",
+      "codemirrorMimeType": "text/javascript",
       "interpreters": [
         "chakra",
         "d8",
@@ -262,29 +153,29 @@
         "v8",
         "v8-shell"
       ],
+      "filenames": [],
       "parsers": [
         "flow",
         "babel-flow"
       ],
       "vscodeLanguageIds": [
         "javascript"
-      ]
+      ],
+      "linguistLanguageId": 183
     },
     {
-      "linguistLanguageId": 183,
       "name": "JSX",
       "type": "programming",
-      "tmScope": "source.js.jsx",
-      "aceMode": "javascript",
-      "codemirrorMode": "jsx",
-      "codemirrorMimeType": "text/jsx",
-      "color": void 0,
-      "aliases": void 0,
       "extensions": [
         ".jsx"
       ],
-      "filenames": void 0,
+      "tmScope": "source.js.jsx",
+      "aceMode": "javascript",
+      "aliases": void 0,
+      "codemirrorMode": "jsx",
+      "codemirrorMimeType": "text/jsx",
       "interpreters": void 0,
+      "filenames": void 0,
       "parsers": [
         "babel",
         "babel-flow",
@@ -297,20 +188,12 @@
       "vscodeLanguageIds": [
         "javascriptreact"
       ],
-      "group": "JavaScript"
+      "group": "JavaScript",
+      "linguistLanguageId": 183
     },
     {
-      "linguistLanguageId": 378,
       "name": "TypeScript",
       "type": "programming",
-      "color": "#3178c6",
-      "aliases": [
-        "ts"
-      ],
-      "interpreters": [
-        "deno",
-        "ts-node"
-      ],
       "extensions": [
         ".ts",
         ".cts",
@@ -318,22 +201,29 @@
       ],
       "tmScope": "source.ts",
       "aceMode": "typescript",
+      "aliases": [
+        "ts"
+      ],
       "codemirrorMode": "javascript",
       "codemirrorMimeType": "application/typescript",
+      "interpreters": [
+        "bun",
+        "deno",
+        "ts-node",
+        "tsx"
+      ],
       "parsers": [
         "typescript",
         "babel-ts"
       ],
       "vscodeLanguageIds": [
         "typescript"
-      ]
+      ],
+      "linguistLanguageId": 378
     },
     {
-      "linguistLanguageId": 94901924,
       "name": "TSX",
       "type": "programming",
-      "color": "#3178c6",
-      "group": "TypeScript",
       "extensions": [
         ".tsx"
       ],
@@ -341,13 +231,15 @@
       "aceMode": "javascript",
       "codemirrorMode": "jsx",
       "codemirrorMimeType": "text/jsx",
+      "group": "TypeScript",
       "parsers": [
         "typescript",
         "babel-ts"
       ],
       "vscodeLanguageIds": [
         "typescriptreact"
-      ]
+      ],
+      "linguistLanguageId": 94901924
     }
   ];
 
@@ -440,7 +332,7 @@
 
   // node_modules/emoji-regex/index.mjs
   var emoji_regex_default = () => {
-    return /[#*0-9]\uFE0F?\u20E3|[\xA9\xAE\u203C\u2049\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23ED-\u23EF\u23F1\u23F2\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB\u25FC\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u265F\u2660\u2663\u2665\u2666\u2668\u267B\u267E\u267F\u2692\u2694-\u2697\u2699\u269B\u269C\u26A0\u26A7\u26AA\u26B0\u26B1\u26BD\u26BE\u26C4\u26C8\u26CF\u26D1\u26E9\u26F0-\u26F5\u26F7\u26F8\u26FA\u2702\u2708\u2709\u270F\u2712\u2714\u2716\u271D\u2721\u2733\u2734\u2744\u2747\u2757\u2763\u27A1\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B55\u3030\u303D\u3297\u3299]\uFE0F?|[\u261D\u270C\u270D](?:\uFE0F|\uD83C[\uDFFB-\uDFFF])?|[\u270A\u270B](?:\uD83C[\uDFFB-\uDFFF])?|[\u23E9-\u23EC\u23F0\u23F3\u25FD\u2693\u26A1\u26AB\u26C5\u26CE\u26D4\u26EA\u26FD\u2705\u2728\u274C\u274E\u2753-\u2755\u2795-\u2797\u27B0\u27BF\u2B50]|\u26D3\uFE0F?(?:\u200D\uD83D\uDCA5)?|\u26F9(?:\uFE0F|\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|\u2764\uFE0F?(?:\u200D(?:\uD83D\uDD25|\uD83E\uDE79))?|\uD83C(?:[\uDC04\uDD70\uDD71\uDD7E\uDD7F\uDE02\uDE37\uDF21\uDF24-\uDF2C\uDF36\uDF7D\uDF96\uDF97\uDF99-\uDF9B\uDF9E\uDF9F\uDFCD\uDFCE\uDFD4-\uDFDF\uDFF5\uDFF7]\uFE0F?|[\uDF85\uDFC2\uDFC7](?:\uD83C[\uDFFB-\uDFFF])?|[\uDFC4\uDFCA](?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDFCB\uDFCC](?:\uFE0F|\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDCCF\uDD8E\uDD91-\uDD9A\uDE01\uDE1A\uDE2F\uDE32-\uDE36\uDE38-\uDE3A\uDE50\uDE51\uDF00-\uDF20\uDF2D-\uDF35\uDF37-\uDF43\uDF45-\uDF4A\uDF4C-\uDF7C\uDF7E-\uDF84\uDF86-\uDF93\uDFA0-\uDFC1\uDFC5\uDFC6\uDFC8\uDFC9\uDFCF-\uDFD3\uDFE0-\uDFF0\uDFF8-\uDFFF]|\uDDE6\uD83C[\uDDE8-\uDDEC\uDDEE\uDDF1\uDDF2\uDDF4\uDDF6-\uDDFA\uDDFC\uDDFD\uDDFF]|\uDDE7\uD83C[\uDDE6\uDDE7\uDDE9-\uDDEF\uDDF1-\uDDF4\uDDF6-\uDDF9\uDDFB\uDDFC\uDDFE\uDDFF]|\uDDE8\uD83C[\uDDE6\uDDE8\uDDE9\uDDEB-\uDDEE\uDDF0-\uDDF5\uDDF7\uDDFA-\uDDFF]|\uDDE9\uD83C[\uDDEA\uDDEC\uDDEF\uDDF0\uDDF2\uDDF4\uDDFF]|\uDDEA\uD83C[\uDDE6\uDDE8\uDDEA\uDDEC\uDDED\uDDF7-\uDDFA]|\uDDEB\uD83C[\uDDEE-\uDDF0\uDDF2\uDDF4\uDDF7]|\uDDEC\uD83C[\uDDE6\uDDE7\uDDE9-\uDDEE\uDDF1-\uDDF3\uDDF5-\uDDFA\uDDFC\uDDFE]|\uDDED\uD83C[\uDDF0\uDDF2\uDDF3\uDDF7\uDDF9\uDDFA]|\uDDEE\uD83C[\uDDE8-\uDDEA\uDDF1-\uDDF4\uDDF6-\uDDF9]|\uDDEF\uD83C[\uDDEA\uDDF2\uDDF4\uDDF5]|\uDDF0\uD83C[\uDDEA\uDDEC-\uDDEE\uDDF2\uDDF3\uDDF5\uDDF7\uDDFC\uDDFE\uDDFF]|\uDDF1\uD83C[\uDDE6-\uDDE8\uDDEE\uDDF0\uDDF7-\uDDFB\uDDFE]|\uDDF2\uD83C[\uDDE6\uDDE8-\uDDED\uDDF0-\uDDFF]|\uDDF3\uD83C[\uDDE6\uDDE8\uDDEA-\uDDEC\uDDEE\uDDF1\uDDF4\uDDF5\uDDF7\uDDFA\uDDFF]|\uDDF4\uD83C\uDDF2|\uDDF5\uD83C[\uDDE6\uDDEA-\uDDED\uDDF0-\uDDF3\uDDF7-\uDDF9\uDDFC\uDDFE]|\uDDF6\uD83C\uDDE6|\uDDF7\uD83C[\uDDEA\uDDF4\uDDF8\uDDFA\uDDFC]|\uDDF8\uD83C[\uDDE6-\uDDEA\uDDEC-\uDDF4\uDDF7-\uDDF9\uDDFB\uDDFD-\uDDFF]|\uDDF9\uD83C[\uDDE6\uDDE8\uDDE9\uDDEB-\uDDED\uDDEF-\uDDF4\uDDF7\uDDF9\uDDFB\uDDFC\uDDFF]|\uDDFA\uD83C[\uDDE6\uDDEC\uDDF2\uDDF3\uDDF8\uDDFE\uDDFF]|\uDDFB\uD83C[\uDDE6\uDDE8\uDDEA\uDDEC\uDDEE\uDDF3\uDDFA]|\uDDFC\uD83C[\uDDEB\uDDF8]|\uDDFD\uD83C\uDDF0|\uDDFE\uD83C[\uDDEA\uDDF9]|\uDDFF\uD83C[\uDDE6\uDDF2\uDDFC]|\uDF44(?:\u200D\uD83D\uDFEB)?|\uDF4B(?:\u200D\uD83D\uDFE9)?|\uDFC3(?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D(?:[\u2640\u2642]\uFE0F?(?:\u200D\u27A1\uFE0F?)?|\u27A1\uFE0F?))?|\uDFF3\uFE0F?(?:\u200D(?:\u26A7\uFE0F?|\uD83C\uDF08))?|\uDFF4(?:\u200D\u2620\uFE0F?|\uDB40\uDC67\uDB40\uDC62\uDB40(?:\uDC65\uDB40\uDC6E\uDB40\uDC67|\uDC73\uDB40\uDC63\uDB40\uDC74|\uDC77\uDB40\uDC6C\uDB40\uDC73)\uDB40\uDC7F)?)|\uD83D(?:[\uDC3F\uDCFD\uDD49\uDD4A\uDD6F\uDD70\uDD73\uDD76-\uDD79\uDD87\uDD8A-\uDD8D\uDDA5\uDDA8\uDDB1\uDDB2\uDDBC\uDDC2-\uDDC4\uDDD1-\uDDD3\uDDDC-\uDDDE\uDDE1\uDDE3\uDDE8\uDDEF\uDDF3\uDDFA\uDECB\uDECD-\uDECF\uDEE0-\uDEE5\uDEE9\uDEF0\uDEF3]\uFE0F?|[\uDC42\uDC43\uDC46-\uDC50\uDC66\uDC67\uDC6B-\uDC6D\uDC72\uDC74-\uDC76\uDC78\uDC7C\uDC83\uDC85\uDC8F\uDC91\uDCAA\uDD7A\uDD95\uDD96\uDE4C\uDE4F\uDEC0\uDECC](?:\uD83C[\uDFFB-\uDFFF])?|[\uDC6E\uDC70\uDC71\uDC73\uDC77\uDC81\uDC82\uDC86\uDC87\uDE45-\uDE47\uDE4B\uDE4D\uDE4E\uDEA3\uDEB4\uDEB5](?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDD74\uDD90](?:\uFE0F|\uD83C[\uDFFB-\uDFFF])?|[\uDC00-\uDC07\uDC09-\uDC14\uDC16-\uDC25\uDC27-\uDC3A\uDC3C-\uDC3E\uDC40\uDC44\uDC45\uDC51-\uDC65\uDC6A\uDC79-\uDC7B\uDC7D-\uDC80\uDC84\uDC88-\uDC8E\uDC90\uDC92-\uDCA9\uDCAB-\uDCFC\uDCFF-\uDD3D\uDD4B-\uDD4E\uDD50-\uDD67\uDDA4\uDDFB-\uDE2D\uDE2F-\uDE34\uDE37-\uDE41\uDE43\uDE44\uDE48-\uDE4A\uDE80-\uDEA2\uDEA4-\uDEB3\uDEB7-\uDEBF\uDEC1-\uDEC5\uDED0-\uDED2\uDED5-\uDED7\uDEDC-\uDEDF\uDEEB\uDEEC\uDEF4-\uDEFC\uDFE0-\uDFEB\uDFF0]|\uDC08(?:\u200D\u2B1B)?|\uDC15(?:\u200D\uD83E\uDDBA)?|\uDC26(?:\u200D(?:\u2B1B|\uD83D\uDD25))?|\uDC3B(?:\u200D\u2744\uFE0F?)?|\uDC41\uFE0F?(?:\u200D\uD83D\uDDE8\uFE0F?)?|\uDC68(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D(?:[\uDC68\uDC69]\u200D\uD83D(?:\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?)|[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?)|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]))|\uD83C(?:\uDFFB(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFC-\uDFFF])))?|\uDFFC(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB\uDFFD-\uDFFF])))?|\uDFFD(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF])))?|\uDFFE(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB-\uDFFD\uDFFF])))?|\uDFFF(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB-\uDFFE])))?))?|\uDC69(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?[\uDC68\uDC69]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D(?:[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?|\uDC69\u200D\uD83D(?:\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?))|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]))|\uD83C(?:\uDFFB(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFC-\uDFFF])))?|\uDFFC(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB\uDFFD-\uDFFF])))?|\uDFFD(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF])))?|\uDFFE(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB-\uDFFD\uDFFF])))?|\uDFFF(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB-\uDFFE])))?))?|\uDC6F(?:\u200D[\u2640\u2642]\uFE0F?)?|\uDD75(?:\uFE0F|\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|\uDE2E(?:\u200D\uD83D\uDCA8)?|\uDE35(?:\u200D\uD83D\uDCAB)?|\uDE36(?:\u200D\uD83C\uDF2B\uFE0F?)?|\uDE42(?:\u200D[\u2194\u2195]\uFE0F?)?|\uDEB6(?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D(?:[\u2640\u2642]\uFE0F?(?:\u200D\u27A1\uFE0F?)?|\u27A1\uFE0F?))?)|\uD83E(?:[\uDD0C\uDD0F\uDD18-\uDD1F\uDD30-\uDD34\uDD36\uDD77\uDDB5\uDDB6\uDDBB\uDDD2\uDDD3\uDDD5\uDEC3-\uDEC5\uDEF0\uDEF2-\uDEF8](?:\uD83C[\uDFFB-\uDFFF])?|[\uDD26\uDD35\uDD37-\uDD39\uDD3D\uDD3E\uDDB8\uDDB9\uDDCD\uDDCF\uDDD4\uDDD6-\uDDDD](?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDDDE\uDDDF](?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDD0D\uDD0E\uDD10-\uDD17\uDD20-\uDD25\uDD27-\uDD2F\uDD3A\uDD3F-\uDD45\uDD47-\uDD76\uDD78-\uDDB4\uDDB7\uDDBA\uDDBC-\uDDCC\uDDD0\uDDE0-\uDDFF\uDE70-\uDE7C\uDE80-\uDE88\uDE90-\uDEBD\uDEBF-\uDEC2\uDECE-\uDEDB\uDEE0-\uDEE8]|\uDD3C(?:\u200D[\u2640\u2642]\uFE0F?|\uD83C[\uDFFB-\uDFFF])?|\uDDCE(?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D(?:[\u2640\u2642]\uFE0F?(?:\u200D\u27A1\uFE0F?)?|\u27A1\uFE0F?))?|\uDDD1(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1|\uDDD1\u200D\uD83E\uDDD2(?:\u200D\uD83E\uDDD2)?|\uDDD2(?:\u200D\uD83E\uDDD2)?))|\uD83C(?:\uDFFB(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFC-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFC(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB\uDFFD-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFD(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFE(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB-\uDFFD\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFF(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB-\uDFFE]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?))?|\uDEF1(?:\uD83C(?:\uDFFB(?:\u200D\uD83E\uDEF2\uD83C[\uDFFC-\uDFFF])?|\uDFFC(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB\uDFFD-\uDFFF])?|\uDFFD(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF])?|\uDFFE(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB-\uDFFD\uDFFF])?|\uDFFF(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB-\uDFFE])?))?)/g;
+    return /[#*0-9]\uFE0F?\u20E3|[\xA9\xAE\u203C\u2049\u2122\u2139\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23ED-\u23EF\u23F1\u23F2\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB\u25FC\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u265F\u2660\u2663\u2665\u2666\u2668\u267B\u267E\u267F\u2692\u2694-\u2697\u2699\u269B\u269C\u26A0\u26A7\u26AA\u26B0\u26B1\u26BD\u26BE\u26C4\u26C8\u26CF\u26D1\u26E9\u26F0-\u26F5\u26F7\u26F8\u26FA\u2702\u2708\u2709\u270F\u2712\u2714\u2716\u271D\u2721\u2733\u2734\u2744\u2747\u2757\u2763\u27A1\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B55\u3030\u303D\u3297\u3299]\uFE0F?|[\u261D\u270C\u270D](?:\uD83C[\uDFFB-\uDFFF]|\uFE0F)?|[\u270A\u270B](?:\uD83C[\uDFFB-\uDFFF])?|[\u23E9-\u23EC\u23F0\u23F3\u25FD\u2693\u26A1\u26AB\u26C5\u26CE\u26D4\u26EA\u26FD\u2705\u2728\u274C\u274E\u2753-\u2755\u2795-\u2797\u27B0\u27BF\u2B50]|\u26D3\uFE0F?(?:\u200D\uD83D\uDCA5)?|\u26F9(?:\uD83C[\uDFFB-\uDFFF]|\uFE0F)?(?:\u200D[\u2640\u2642]\uFE0F?)?|\u2764\uFE0F?(?:\u200D(?:\uD83D\uDD25|\uD83E\uDE79))?|\uD83C(?:[\uDC04\uDD70\uDD71\uDD7E\uDD7F\uDE02\uDE37\uDF21\uDF24-\uDF2C\uDF36\uDF7D\uDF96\uDF97\uDF99-\uDF9B\uDF9E\uDF9F\uDFCD\uDFCE\uDFD4-\uDFDF\uDFF5\uDFF7]\uFE0F?|[\uDF85\uDFC2\uDFC7](?:\uD83C[\uDFFB-\uDFFF])?|[\uDFC4\uDFCA](?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDFCB\uDFCC](?:\uD83C[\uDFFB-\uDFFF]|\uFE0F)?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDCCF\uDD8E\uDD91-\uDD9A\uDE01\uDE1A\uDE2F\uDE32-\uDE36\uDE38-\uDE3A\uDE50\uDE51\uDF00-\uDF20\uDF2D-\uDF35\uDF37-\uDF43\uDF45-\uDF4A\uDF4C-\uDF7C\uDF7E-\uDF84\uDF86-\uDF93\uDFA0-\uDFC1\uDFC5\uDFC6\uDFC8\uDFC9\uDFCF-\uDFD3\uDFE0-\uDFF0\uDFF8-\uDFFF]|\uDDE6\uD83C[\uDDE8-\uDDEC\uDDEE\uDDF1\uDDF2\uDDF4\uDDF6-\uDDFA\uDDFC\uDDFD\uDDFF]|\uDDE7\uD83C[\uDDE6\uDDE7\uDDE9-\uDDEF\uDDF1-\uDDF4\uDDF6-\uDDF9\uDDFB\uDDFC\uDDFE\uDDFF]|\uDDE8\uD83C[\uDDE6\uDDE8\uDDE9\uDDEB-\uDDEE\uDDF0-\uDDF7\uDDFA-\uDDFF]|\uDDE9\uD83C[\uDDEA\uDDEC\uDDEF\uDDF0\uDDF2\uDDF4\uDDFF]|\uDDEA\uD83C[\uDDE6\uDDE8\uDDEA\uDDEC\uDDED\uDDF7-\uDDFA]|\uDDEB\uD83C[\uDDEE-\uDDF0\uDDF2\uDDF4\uDDF7]|\uDDEC\uD83C[\uDDE6\uDDE7\uDDE9-\uDDEE\uDDF1-\uDDF3\uDDF5-\uDDFA\uDDFC\uDDFE]|\uDDED\uD83C[\uDDF0\uDDF2\uDDF3\uDDF7\uDDF9\uDDFA]|\uDDEE\uD83C[\uDDE8-\uDDEA\uDDF1-\uDDF4\uDDF6-\uDDF9]|\uDDEF\uD83C[\uDDEA\uDDF2\uDDF4\uDDF5]|\uDDF0\uD83C[\uDDEA\uDDEC-\uDDEE\uDDF2\uDDF3\uDDF5\uDDF7\uDDFC\uDDFE\uDDFF]|\uDDF1\uD83C[\uDDE6-\uDDE8\uDDEE\uDDF0\uDDF7-\uDDFB\uDDFE]|\uDDF2\uD83C[\uDDE6\uDDE8-\uDDED\uDDF0-\uDDFF]|\uDDF3\uD83C[\uDDE6\uDDE8\uDDEA-\uDDEC\uDDEE\uDDF1\uDDF4\uDDF5\uDDF7\uDDFA\uDDFF]|\uDDF4\uD83C\uDDF2|\uDDF5\uD83C[\uDDE6\uDDEA-\uDDED\uDDF0-\uDDF3\uDDF7-\uDDF9\uDDFC\uDDFE]|\uDDF6\uD83C\uDDE6|\uDDF7\uD83C[\uDDEA\uDDF4\uDDF8\uDDFA\uDDFC]|\uDDF8\uD83C[\uDDE6-\uDDEA\uDDEC-\uDDF4\uDDF7-\uDDF9\uDDFB\uDDFD-\uDDFF]|\uDDF9\uD83C[\uDDE6\uDDE8\uDDE9\uDDEB-\uDDED\uDDEF-\uDDF4\uDDF7\uDDF9\uDDFB\uDDFC\uDDFF]|\uDDFA\uD83C[\uDDE6\uDDEC\uDDF2\uDDF3\uDDF8\uDDFE\uDDFF]|\uDDFB\uD83C[\uDDE6\uDDE8\uDDEA\uDDEC\uDDEE\uDDF3\uDDFA]|\uDDFC\uD83C[\uDDEB\uDDF8]|\uDDFD\uD83C\uDDF0|\uDDFE\uD83C[\uDDEA\uDDF9]|\uDDFF\uD83C[\uDDE6\uDDF2\uDDFC]|\uDF44(?:\u200D\uD83D\uDFEB)?|\uDF4B(?:\u200D\uD83D\uDFE9)?|\uDFC3(?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D(?:[\u2640\u2642]\uFE0F?(?:\u200D\u27A1\uFE0F?)?|\u27A1\uFE0F?))?|\uDFF3\uFE0F?(?:\u200D(?:\u26A7\uFE0F?|\uD83C\uDF08))?|\uDFF4(?:\u200D\u2620\uFE0F?|\uDB40\uDC67\uDB40\uDC62\uDB40(?:\uDC65\uDB40\uDC6E\uDB40\uDC67|\uDC73\uDB40\uDC63\uDB40\uDC74|\uDC77\uDB40\uDC6C\uDB40\uDC73)\uDB40\uDC7F)?)|\uD83D(?:[\uDC3F\uDCFD\uDD49\uDD4A\uDD6F\uDD70\uDD73\uDD76-\uDD79\uDD87\uDD8A-\uDD8D\uDDA5\uDDA8\uDDB1\uDDB2\uDDBC\uDDC2-\uDDC4\uDDD1-\uDDD3\uDDDC-\uDDDE\uDDE1\uDDE3\uDDE8\uDDEF\uDDF3\uDDFA\uDECB\uDECD-\uDECF\uDEE0-\uDEE5\uDEE9\uDEF0\uDEF3]\uFE0F?|[\uDC42\uDC43\uDC46-\uDC50\uDC66\uDC67\uDC6B-\uDC6D\uDC72\uDC74-\uDC76\uDC78\uDC7C\uDC83\uDC85\uDC8F\uDC91\uDCAA\uDD7A\uDD95\uDD96\uDE4C\uDE4F\uDEC0\uDECC](?:\uD83C[\uDFFB-\uDFFF])?|[\uDC6E\uDC70\uDC71\uDC73\uDC77\uDC81\uDC82\uDC86\uDC87\uDE45-\uDE47\uDE4B\uDE4D\uDE4E\uDEA3\uDEB4\uDEB5](?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDD74\uDD90](?:\uD83C[\uDFFB-\uDFFF]|\uFE0F)?|[\uDC00-\uDC07\uDC09-\uDC14\uDC16-\uDC25\uDC27-\uDC3A\uDC3C-\uDC3E\uDC40\uDC44\uDC45\uDC51-\uDC65\uDC6A\uDC79-\uDC7B\uDC7D-\uDC80\uDC84\uDC88-\uDC8E\uDC90\uDC92-\uDCA9\uDCAB-\uDCFC\uDCFF-\uDD3D\uDD4B-\uDD4E\uDD50-\uDD67\uDDA4\uDDFB-\uDE2D\uDE2F-\uDE34\uDE37-\uDE41\uDE43\uDE44\uDE48-\uDE4A\uDE80-\uDEA2\uDEA4-\uDEB3\uDEB7-\uDEBF\uDEC1-\uDEC5\uDED0-\uDED2\uDED5-\uDED7\uDEDC-\uDEDF\uDEEB\uDEEC\uDEF4-\uDEFC\uDFE0-\uDFEB\uDFF0]|\uDC08(?:\u200D\u2B1B)?|\uDC15(?:\u200D\uD83E\uDDBA)?|\uDC26(?:\u200D(?:\u2B1B|\uD83D\uDD25))?|\uDC3B(?:\u200D\u2744\uFE0F?)?|\uDC41\uFE0F?(?:\u200D\uD83D\uDDE8\uFE0F?)?|\uDC68(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D(?:[\uDC68\uDC69]\u200D\uD83D(?:\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?)|[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?)|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]))|\uD83C(?:\uDFFB(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFC-\uDFFF])))?|\uDFFC(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB\uDFFD-\uDFFF])))?|\uDFFD(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF])))?|\uDFFE(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB-\uDFFD\uDFFF])))?|\uDFFF(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?\uDC68\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D\uDC68\uD83C[\uDFFB-\uDFFE])))?))?|\uDC69(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:\uDC8B\u200D\uD83D)?[\uDC68\uDC69]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D(?:[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?|\uDC69\u200D\uD83D(?:\uDC66(?:\u200D\uD83D\uDC66)?|\uDC67(?:\u200D\uD83D[\uDC66\uDC67])?))|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]))|\uD83C(?:\uDFFB(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFC-\uDFFF])))?|\uDFFC(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB\uDFFD-\uDFFF])))?|\uDFFD(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF])))?|\uDFFE(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB-\uDFFD\uDFFF])))?|\uDFFF(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D\uD83D(?:[\uDC68\uDC69]|\uDC8B\u200D\uD83D[\uDC68\uDC69])\uD83C[\uDFFB-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83D[\uDC68\uDC69]\uD83C[\uDFFB-\uDFFE])))?))?|\uDC6F(?:\u200D[\u2640\u2642]\uFE0F?)?|\uDD75(?:\uD83C[\uDFFB-\uDFFF]|\uFE0F)?(?:\u200D[\u2640\u2642]\uFE0F?)?|\uDE2E(?:\u200D\uD83D\uDCA8)?|\uDE35(?:\u200D\uD83D\uDCAB)?|\uDE36(?:\u200D\uD83C\uDF2B\uFE0F?)?|\uDE42(?:\u200D[\u2194\u2195]\uFE0F?)?|\uDEB6(?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D(?:[\u2640\u2642]\uFE0F?(?:\u200D\u27A1\uFE0F?)?|\u27A1\uFE0F?))?)|\uD83E(?:[\uDD0C\uDD0F\uDD18-\uDD1F\uDD30-\uDD34\uDD36\uDD77\uDDB5\uDDB6\uDDBB\uDDD2\uDDD3\uDDD5\uDEC3-\uDEC5\uDEF0\uDEF2-\uDEF8](?:\uD83C[\uDFFB-\uDFFF])?|[\uDD26\uDD35\uDD37-\uDD39\uDD3D\uDD3E\uDDB8\uDDB9\uDDCD\uDDCF\uDDD4\uDDD6-\uDDDD](?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDDDE\uDDDF](?:\u200D[\u2640\u2642]\uFE0F?)?|[\uDD0D\uDD0E\uDD10-\uDD17\uDD20-\uDD25\uDD27-\uDD2F\uDD3A\uDD3F-\uDD45\uDD47-\uDD76\uDD78-\uDDB4\uDDB7\uDDBA\uDDBC-\uDDCC\uDDD0\uDDE0-\uDDFF\uDE70-\uDE7C\uDE80-\uDE89\uDE8F-\uDEC2\uDEC6\uDECE-\uDEDC\uDEDF-\uDEE9]|\uDD3C(?:\u200D[\u2640\u2642]\uFE0F?|\uD83C[\uDFFB-\uDFFF])?|\uDDCE(?:\uD83C[\uDFFB-\uDFFF])?(?:\u200D(?:[\u2640\u2642]\uFE0F?(?:\u200D\u27A1\uFE0F?)?|\u27A1\uFE0F?))?|\uDDD1(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1|\uDDD1\u200D\uD83E\uDDD2(?:\u200D\uD83E\uDDD2)?|\uDDD2(?:\u200D\uD83E\uDDD2)?))|\uD83C(?:\uDFFB(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFC-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFC(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB\uDFFD-\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFD(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFE(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB-\uDFFD\uDFFF]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?|\uDFFF(?:\u200D(?:[\u2695\u2696\u2708]\uFE0F?|\u2764\uFE0F?\u200D(?:\uD83D\uDC8B\u200D)?\uD83E\uDDD1\uD83C[\uDFFB-\uDFFE]|\uD83C[\uDF3E\uDF73\uDF7C\uDF84\uDF93\uDFA4\uDFA8\uDFEB\uDFED]|\uD83D[\uDCBB\uDCBC\uDD27\uDD2C\uDE80\uDE92]|\uD83E(?:[\uDDAF\uDDBC\uDDBD](?:\u200D\u27A1\uFE0F?)?|[\uDDB0-\uDDB3]|\uDD1D\u200D\uD83E\uDDD1\uD83C[\uDFFB-\uDFFF])))?))?|\uDEF1(?:\uD83C(?:\uDFFB(?:\u200D\uD83E\uDEF2\uD83C[\uDFFC-\uDFFF])?|\uDFFC(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB\uDFFD-\uDFFF])?|\uDFFD(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB\uDFFC\uDFFE\uDFFF])?|\uDFFE(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB-\uDFFD\uDFFF])?|\uDFFF(?:\u200D\uD83E\uDEF2\uD83C[\uDFFB-\uDFFE])?))?)/g;
   };
 
   // node_modules/get-east-asian-width/lookup.js
@@ -448,14 +340,14 @@
     return x === 12288 || x >= 65281 && x <= 65376 || x >= 65504 && x <= 65510;
   }
   function isWide(x) {
-    return x >= 4352 && x <= 4447 || x === 8986 || x === 8987 || x === 9001 || x === 9002 || x >= 9193 && x <= 9196 || x === 9200 || x === 9203 || x === 9725 || x === 9726 || x === 9748 || x === 9749 || x >= 9800 && x <= 9811 || x === 9855 || x === 9875 || x === 9889 || x === 9898 || x === 9899 || x === 9917 || x === 9918 || x === 9924 || x === 9925 || x === 9934 || x === 9940 || x === 9962 || x === 9970 || x === 9971 || x === 9973 || x === 9978 || x === 9981 || x === 9989 || x === 9994 || x === 9995 || x === 10024 || x === 10060 || x === 10062 || x >= 10067 && x <= 10069 || x === 10071 || x >= 10133 && x <= 10135 || x === 10160 || x === 10175 || x === 11035 || x === 11036 || x === 11088 || x === 11093 || x >= 11904 && x <= 11929 || x >= 11931 && x <= 12019 || x >= 12032 && x <= 12245 || x >= 12272 && x <= 12287 || x >= 12289 && x <= 12350 || x >= 12353 && x <= 12438 || x >= 12441 && x <= 12543 || x >= 12549 && x <= 12591 || x >= 12593 && x <= 12686 || x >= 12688 && x <= 12771 || x >= 12783 && x <= 12830 || x >= 12832 && x <= 12871 || x >= 12880 && x <= 19903 || x >= 19968 && x <= 42124 || x >= 42128 && x <= 42182 || x >= 43360 && x <= 43388 || x >= 44032 && x <= 55203 || x >= 63744 && x <= 64255 || x >= 65040 && x <= 65049 || x >= 65072 && x <= 65106 || x >= 65108 && x <= 65126 || x >= 65128 && x <= 65131 || x >= 94176 && x <= 94180 || x === 94192 || x === 94193 || x >= 94208 && x <= 100343 || x >= 100352 && x <= 101589 || x >= 101632 && x <= 101640 || x >= 110576 && x <= 110579 || x >= 110581 && x <= 110587 || x === 110589 || x === 110590 || x >= 110592 && x <= 110882 || x === 110898 || x >= 110928 && x <= 110930 || x === 110933 || x >= 110948 && x <= 110951 || x >= 110960 && x <= 111355 || x === 126980 || x === 127183 || x === 127374 || x >= 127377 && x <= 127386 || x >= 127488 && x <= 127490 || x >= 127504 && x <= 127547 || x >= 127552 && x <= 127560 || x === 127568 || x === 127569 || x >= 127584 && x <= 127589 || x >= 127744 && x <= 127776 || x >= 127789 && x <= 127797 || x >= 127799 && x <= 127868 || x >= 127870 && x <= 127891 || x >= 127904 && x <= 127946 || x >= 127951 && x <= 127955 || x >= 127968 && x <= 127984 || x === 127988 || x >= 127992 && x <= 128062 || x === 128064 || x >= 128066 && x <= 128252 || x >= 128255 && x <= 128317 || x >= 128331 && x <= 128334 || x >= 128336 && x <= 128359 || x === 128378 || x === 128405 || x === 128406 || x === 128420 || x >= 128507 && x <= 128591 || x >= 128640 && x <= 128709 || x === 128716 || x >= 128720 && x <= 128722 || x >= 128725 && x <= 128727 || x >= 128732 && x <= 128735 || x === 128747 || x === 128748 || x >= 128756 && x <= 128764 || x >= 128992 && x <= 129003 || x === 129008 || x >= 129292 && x <= 129338 || x >= 129340 && x <= 129349 || x >= 129351 && x <= 129535 || x >= 129648 && x <= 129660 || x >= 129664 && x <= 129672 || x >= 129680 && x <= 129725 || x >= 129727 && x <= 129733 || x >= 129742 && x <= 129755 || x >= 129760 && x <= 129768 || x >= 129776 && x <= 129784 || x >= 131072 && x <= 196605 || x >= 196608 && x <= 262141;
+    return x >= 4352 && x <= 4447 || x === 8986 || x === 8987 || x === 9001 || x === 9002 || x >= 9193 && x <= 9196 || x === 9200 || x === 9203 || x === 9725 || x === 9726 || x === 9748 || x === 9749 || x >= 9776 && x <= 9783 || x >= 9800 && x <= 9811 || x === 9855 || x >= 9866 && x <= 9871 || x === 9875 || x === 9889 || x === 9898 || x === 9899 || x === 9917 || x === 9918 || x === 9924 || x === 9925 || x === 9934 || x === 9940 || x === 9962 || x === 9970 || x === 9971 || x === 9973 || x === 9978 || x === 9981 || x === 9989 || x === 9994 || x === 9995 || x === 10024 || x === 10060 || x === 10062 || x >= 10067 && x <= 10069 || x === 10071 || x >= 10133 && x <= 10135 || x === 10160 || x === 10175 || x === 11035 || x === 11036 || x === 11088 || x === 11093 || x >= 11904 && x <= 11929 || x >= 11931 && x <= 12019 || x >= 12032 && x <= 12245 || x >= 12272 && x <= 12287 || x >= 12289 && x <= 12350 || x >= 12353 && x <= 12438 || x >= 12441 && x <= 12543 || x >= 12549 && x <= 12591 || x >= 12593 && x <= 12686 || x >= 12688 && x <= 12773 || x >= 12783 && x <= 12830 || x >= 12832 && x <= 12871 || x >= 12880 && x <= 42124 || x >= 42128 && x <= 42182 || x >= 43360 && x <= 43388 || x >= 44032 && x <= 55203 || x >= 63744 && x <= 64255 || x >= 65040 && x <= 65049 || x >= 65072 && x <= 65106 || x >= 65108 && x <= 65126 || x >= 65128 && x <= 65131 || x >= 94176 && x <= 94180 || x === 94192 || x === 94193 || x >= 94208 && x <= 100343 || x >= 100352 && x <= 101589 || x >= 101631 && x <= 101640 || x >= 110576 && x <= 110579 || x >= 110581 && x <= 110587 || x === 110589 || x === 110590 || x >= 110592 && x <= 110882 || x === 110898 || x >= 110928 && x <= 110930 || x === 110933 || x >= 110948 && x <= 110951 || x >= 110960 && x <= 111355 || x >= 119552 && x <= 119638 || x >= 119648 && x <= 119670 || x === 126980 || x === 127183 || x === 127374 || x >= 127377 && x <= 127386 || x >= 127488 && x <= 127490 || x >= 127504 && x <= 127547 || x >= 127552 && x <= 127560 || x === 127568 || x === 127569 || x >= 127584 && x <= 127589 || x >= 127744 && x <= 127776 || x >= 127789 && x <= 127797 || x >= 127799 && x <= 127868 || x >= 127870 && x <= 127891 || x >= 127904 && x <= 127946 || x >= 127951 && x <= 127955 || x >= 127968 && x <= 127984 || x === 127988 || x >= 127992 && x <= 128062 || x === 128064 || x >= 128066 && x <= 128252 || x >= 128255 && x <= 128317 || x >= 128331 && x <= 128334 || x >= 128336 && x <= 128359 || x === 128378 || x === 128405 || x === 128406 || x === 128420 || x >= 128507 && x <= 128591 || x >= 128640 && x <= 128709 || x === 128716 || x >= 128720 && x <= 128722 || x >= 128725 && x <= 128727 || x >= 128732 && x <= 128735 || x === 128747 || x === 128748 || x >= 128756 && x <= 128764 || x >= 128992 && x <= 129003 || x === 129008 || x >= 129292 && x <= 129338 || x >= 129340 && x <= 129349 || x >= 129351 && x <= 129535 || x >= 129648 && x <= 129660 || x >= 129664 && x <= 129673 || x >= 129679 && x <= 129734 || x >= 129742 && x <= 129756 || x >= 129759 && x <= 129769 || x >= 129776 && x <= 129784 || x >= 131072 && x <= 196605 || x >= 196608 && x <= 262141;
   }
 
   // node_modules/get-east-asian-width/index.js
   var _isNarrowWidth = (codePoint) => !(isFullWidth(codePoint) || isWide(codePoint));
 
   // src/utils/get-string-width.js
-  var notAsciiRegex = /[^\x20-\x7F]/;
+  var notAsciiRegex = /[^\x20-\x7F]/u;
   function getStringWidth(text) {
     if (!text) {
       return 0;
@@ -505,10 +397,10 @@
       return false;
     };
   }
-  var skipWhitespace = skip(/\s/);
+  var skipWhitespace = skip(/\s/u);
   var skipSpaces = skip(" 	");
   var skipToLineEnd = skip(",; 	");
-  var skipEverythingButNewLine = skip(/[^\n\r]/);
+  var skipEverythingButNewLine = skip(/[^\n\r]/u);
 
   // src/utils/skip-newline.js
   function skipNewline(text, startIndex, options2) {
@@ -598,15 +490,20 @@
   }
   var is_non_empty_array_default = isNonEmptyArray;
 
+  // scripts/build/shims/assert.js
+  var assert = new Proxy(() => {
+  }, { get: () => assert });
+  var assert_default = assert;
+
   // src/utils/get-preferred-quote.js
   var SINGLE_QUOTE = "'";
   var DOUBLE_QUOTE = '"';
-  function getPreferredQuote(rawContent, preferredQuoteOrPreferSingleQuote) {
+  function getPreferredQuote(text, preferredQuoteOrPreferSingleQuote) {
     const preferred = preferredQuoteOrPreferSingleQuote === true || preferredQuoteOrPreferSingleQuote === SINGLE_QUOTE ? SINGLE_QUOTE : DOUBLE_QUOTE;
     const alternate = preferred === SINGLE_QUOTE ? DOUBLE_QUOTE : SINGLE_QUOTE;
     let preferredQuoteCount = 0;
     let alternateQuoteCount = 0;
-    for (const character of rawContent) {
+    for (const character of text) {
       if (character === preferred) {
         preferredQuoteCount++;
       } else if (character === alternate) {
@@ -618,13 +515,13 @@
   var get_preferred_quote_default = getPreferredQuote;
 
   // src/utils/make-string.js
-  function makeString(rawText2, enclosingQuote, unescapeUnnecessaryEscapes) {
+  function makeString(rawText, enclosingQuote, unescapeUnnecessaryEscapes) {
     const otherQuote = enclosingQuote === '"' ? "'" : '"';
-    const regex = /\\(.)|(["'])/gs;
+    const regex = /\\(.)|(["'])/gsu;
     const raw = string_replace_all_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
-      rawText2,
+      rawText,
       regex,
       (match, escaped, quote) => {
         if (escaped === otherQuote) {
@@ -636,7 +533,7 @@
         if (quote) {
           return quote;
         }
-        return unescapeUnnecessaryEscapes && /^[^\n\r"'0-7\\bfnrt-vx\u2028\u2029]$/.test(escaped) ? escaped : "\\" + escaped;
+        return unescapeUnnecessaryEscapes && /^[^\n\r"'0-7\\bfnrt-vx\u2028\u2029]$/u.test(escaped) ? escaped : "\\" + escaped;
       }
     );
     return enclosingQuote + raw + enclosingQuote;
@@ -645,6 +542,7 @@
 
   // src/utils/print-string.js
   function printString(raw, options2) {
+    assert_default.ok(/^(?<quote>["']).*\k<quote>$/su.test(raw));
     const rawContent = raw.slice(1, -1);
     const enclosingQuote = options2.parser === "json" || options2.parser === "jsonc" || // This was added before we have the `jsonc` parser
     // If `{quoteProps: "preserve"}` and `{singleQuote: false}` (default value),
@@ -653,18 +551,29 @@
     // See https://github.com/prettier/prettier/pull/10323
     // See https://github.com/prettier/prettier/pull/15831#discussion_r1431010636
     options2.parser === "json5" && options2.quoteProps === "preserve" && !options2.singleQuote ? '"' : options2.__isInHtmlAttribute ? "'" : get_preferred_quote_default(rawContent, options2.singleQuote);
+    const originalQuote = raw.charAt(0);
+    if (originalQuote === enclosingQuote) {
+      return raw;
+    }
     return make_string_default(
       rawContent,
       enclosingQuote,
-      !(options2.parser === "css" || options2.parser === "less" || options2.parser === "scss" || options2.__embeddedInHtml)
+      // Until Prettier 3.3.3, this option was set to true for most parsers, with some exceptions like CSS.
+      // Since Prettier 3.3.4, it is set to false for all parsers.
+      // For more details, please see https://github.com/prettier/prettier/issues/16542#issuecomment-2282249280.
+      false
     );
   }
   var print_string_default = printString;
 
   // src/language-js/loc.js
+  var isIndex = (value) => Number.isInteger(value) && value >= 0;
   function locStart(node) {
     var _a, _b, _c;
     const start = ((_a = node.range) == null ? void 0 : _a[0]) ?? node.start;
+    if (false) {
+      throw new TypeError("Can't not locate node.");
+    }
     const firstDecorator = (_c = ((_b = node.declaration) == null ? void 0 : _b.decorators) ?? node.decorators) == null ? void 0 : _c[0];
     if (firstDecorator) {
       return Math.min(locStart(firstDecorator), start);
@@ -673,15 +582,19 @@
   }
   function locEnd(node) {
     var _a;
-    return ((_a = node.range) == null ? void 0 : _a[1]) ?? node.end;
+    const end = ((_a = node.range) == null ? void 0 : _a[1]) ?? node.end;
+    if (false) {
+      throw new TypeError("Can't not locate node.");
+    }
+    return end;
   }
   function hasSameLocStart(nodeA, nodeB) {
     const nodeAStart = locStart(nodeA);
-    return Number.isInteger(nodeAStart) && nodeAStart === locStart(nodeB);
+    return isIndex(nodeAStart) && nodeAStart === locStart(nodeB);
   }
   function hasSameLocEnd(nodeA, nodeB) {
     const nodeAEnd = locEnd(nodeA);
-    return Number.isInteger(nodeAEnd) && nodeAEnd === locEnd(nodeB);
+    return isIndex(nodeAEnd) && nodeAEnd === locEnd(nodeB);
   }
   function hasSameLoc(nodeA, nodeB) {
     return hasSameLocStart(nodeA, nodeB) && hasSameLocEnd(nodeA, nodeB);
@@ -755,9 +668,9 @@
     ],
     "CallExpression": [
       "callee",
-      "arguments",
       "typeParameters",
-      "typeArguments"
+      "typeArguments",
+      "arguments"
     ],
     "CatchClause": [
       "param",
@@ -773,8 +686,8 @@
     ],
     "DebuggerStatement": [],
     "DoWhileStatement": [
-      "test",
-      "body"
+      "body",
+      "test"
     ],
     "EmptyStatement": [],
     "ExpressionStatement": [
@@ -796,18 +709,18 @@
     ],
     "FunctionDeclaration": [
       "id",
-      "params",
-      "body",
-      "returnType",
       "typeParameters",
-      "predicate"
+      "params",
+      "predicate",
+      "returnType",
+      "body"
     ],
     "FunctionExpression": [
       "id",
+      "typeParameters",
       "params",
-      "body",
       "returnType",
-      "typeParameters"
+      "body"
     ],
     "Identifier": [
       "typeAnnotation",
@@ -837,9 +750,9 @@
     ],
     "NewExpression": [
       "callee",
-      "arguments",
       "typeParameters",
-      "typeArguments"
+      "typeArguments",
+      "arguments"
     ],
     "Program": [
       "directives",
@@ -849,17 +762,17 @@
       "properties"
     ],
     "ObjectMethod": [
-      "key",
-      "params",
-      "body",
       "decorators",
+      "key",
+      "typeParameters",
+      "params",
       "returnType",
-      "typeParameters"
+      "body"
     ],
     "ObjectProperty": [
+      "decorators",
       "key",
-      "value",
-      "decorators"
+      "value"
     ],
     "RestElement": [
       "argument",
@@ -925,35 +838,35 @@
       "decorators"
     ],
     "ArrowFunctionExpression": [
-      "params",
-      "body",
-      "returnType",
       "typeParameters",
-      "predicate"
+      "params",
+      "predicate",
+      "returnType",
+      "body"
     ],
     "ClassBody": [
       "body"
     ],
     "ClassExpression": [
-      "id",
-      "body",
-      "superClass",
-      "mixins",
-      "typeParameters",
-      "superTypeParameters",
-      "implements",
       "decorators",
+      "id",
+      "typeParameters",
+      "superClass",
+      "superTypeParameters",
+      "mixins",
+      "implements",
+      "body",
       "superTypeArguments"
     ],
     "ClassDeclaration": [
-      "id",
-      "body",
-      "superClass",
-      "mixins",
-      "typeParameters",
-      "superTypeParameters",
-      "implements",
       "decorators",
+      "id",
+      "typeParameters",
+      "superClass",
+      "superTypeParameters",
+      "mixins",
+      "implements",
+      "body",
       "superTypeArguments"
     ],
     "ExportAllDeclaration": [
@@ -991,30 +904,29 @@
       "local"
     ],
     "ImportSpecifier": [
-      "local",
-      "imported"
+      "imported",
+      "local"
     ],
     "ImportExpression": [
       "source",
-      "options",
-      "attributes"
+      "options"
     ],
     "MetaProperty": [
       "meta",
       "property"
     ],
     "ClassMethod": [
-      "key",
-      "params",
-      "body",
       "decorators",
+      "key",
+      "typeParameters",
+      "params",
       "returnType",
-      "typeParameters"
+      "body"
     ],
     "ObjectPattern": [
+      "decorators",
       "properties",
-      "typeAnnotation",
-      "decorators"
+      "typeAnnotation"
     ],
     "SpreadElement": [
       "argument"
@@ -1022,8 +934,8 @@
     "Super": [],
     "TaggedTemplateExpression": [
       "tag",
-      "quasi",
       "typeParameters",
+      "quasi",
       "typeArguments"
     ],
     "TemplateElement": [],
@@ -1037,7 +949,6 @@
     "AwaitExpression": [
       "argument"
     ],
-    "Import": [],
     "BigIntLiteral": [],
     "ExportNamespaceSpecifier": [
       "exported"
@@ -1048,43 +959,47 @@
     ],
     "OptionalCallExpression": [
       "callee",
-      "arguments",
       "typeParameters",
-      "typeArguments"
+      "typeArguments",
+      "arguments"
     ],
     "ClassProperty": [
-      "key",
-      "value",
-      "typeAnnotation",
       "decorators",
-      "variance"
+      "variance",
+      "key",
+      "typeAnnotation",
+      "value"
     ],
     "ClassAccessorProperty": [
+      "decorators",
       "key",
-      "value",
       "typeAnnotation",
-      "decorators"
+      "value"
     ],
     "ClassPrivateProperty": [
-      "key",
-      "value",
       "decorators",
+      "variance",
+      "key",
       "typeAnnotation",
-      "variance"
+      "value"
     ],
     "ClassPrivateMethod": [
-      "key",
-      "params",
-      "body",
       "decorators",
+      "key",
+      "typeParameters",
+      "params",
       "returnType",
-      "typeParameters"
+      "body"
     ],
     "PrivateName": [
       "id"
     ],
     "StaticBlock": [
       "body"
+    ],
+    "ImportAttribute": [
+      "key",
+      "value"
     ],
     "AnyTypeAnnotation": [],
     "ArrayTypeAnnotation": [
@@ -1130,7 +1045,9 @@
     "DeclareOpaqueType": [
       "id",
       "typeParameters",
-      "supertype"
+      "supertype",
+      "lowerBound",
+      "upperBound"
     ],
     "DeclareVariable": [
       "id"
@@ -1138,10 +1055,12 @@
     "DeclareExportDeclaration": [
       "declaration",
       "specifiers",
-      "source"
+      "source",
+      "attributes"
     ],
     "DeclareExportAllDeclaration": [
-      "source"
+      "source",
+      "attributes"
     ],
     "DeclaredPredicate": [
       "value"
@@ -1149,10 +1068,10 @@
     "ExistsTypeAnnotation": [],
     "FunctionTypeAnnotation": [
       "typeParameters",
+      "this",
       "params",
       "rest",
-      "returnType",
-      "this"
+      "returnType"
     ],
     "FunctionTypeParam": [
       "name",
@@ -1195,19 +1114,16 @@
     ],
     "ObjectTypeInternalSlot": [
       "id",
-      "value",
-      "optional",
-      "static",
-      "method"
+      "value"
     ],
     "ObjectTypeCallProperty": [
       "value"
     ],
     "ObjectTypeIndexer": [
+      "variance",
       "id",
       "key",
-      "value",
-      "variance"
+      "value"
     ],
     "ObjectTypeProperty": [
       "key",
@@ -1221,11 +1137,13 @@
       "id",
       "typeParameters",
       "supertype",
-      "impltype"
+      "impltype",
+      "lowerBound",
+      "upperBound"
     ],
     "QualifiedTypeIdentifier": [
-      "id",
-      "qualification"
+      "qualification",
+      "id"
     ],
     "StringLiteralTypeAnnotation": [],
     "StringTypeAnnotation": [],
@@ -1336,9 +1254,9 @@
     ],
     "JSXOpeningElement": [
       "name",
-      "attributes",
+      "typeParameters",
       "typeArguments",
-      "typeParameters"
+      "attributes"
     ],
     "JSXSpreadAttribute": [
       "argument"
@@ -1359,10 +1277,6 @@
       "object",
       "callee"
     ],
-    "ImportAttribute": [
-      "key",
-      "value"
-    ],
     "Decorator": [
       "expression"
     ],
@@ -1372,13 +1286,6 @@
     "ExportDefaultSpecifier": [
       "exported"
     ],
-    "RecordExpression": [
-      "properties"
-    ],
-    "TupleExpression": [
-      "elements"
-    ],
-    "DecimalLiteral": [],
     "ModuleExpression": [
       "body"
     ],
@@ -1529,9 +1436,14 @@
       "indexType"
     ],
     "TSMappedType": [
-      "typeParameter",
+      "nameType",
       "typeAnnotation",
-      "nameType"
+      "key",
+      "constraint"
+    ],
+    "TSTemplateLiteralType": [
+      "quasis",
+      "types"
     ],
     "TSLiteralType": [
       "literal"
@@ -1571,9 +1483,12 @@
       "typeAnnotation",
       "expression"
     ],
+    "TSEnumBody": [
+      "members"
+    ],
     "TSEnumDeclaration": [
       "id",
-      "members"
+      "body"
     ],
     "TSEnumMember": [
       "id",
@@ -1588,6 +1503,7 @@
     ],
     "TSImportType": [
       "argument",
+      "options",
       "qualifier",
       "typeParameters",
       "typeArguments"
@@ -1694,10 +1610,6 @@
     "TSPublicKeyword": [],
     "TSReadonlyKeyword": [],
     "TSStaticKeyword": [],
-    "TSTemplateLiteralType": [
-      "quasis",
-      "types"
-    ],
     "AsConstExpression": [
       "expression"
     ],
@@ -1862,26 +1774,27 @@
       "typeAnnotation",
       "asserts"
     ],
-    "NGRoot": [
-      "node"
+    "NGChainedExpression": [
+      "expressions"
     ],
+    "NGEmptyExpression": [],
     "NGPipeExpression": [
       "left",
       "right",
       "arguments"
     ],
-    "NGChainedExpression": [
-      "expressions"
-    ],
-    "NGEmptyExpression": [],
     "NGMicrosyntax": [
       "body"
     ],
-    "NGMicrosyntaxKey": [],
+    "NGMicrosyntaxAs": [
+      "key",
+      "alias"
+    ],
     "NGMicrosyntaxExpression": [
       "expression",
       "alias"
     ],
+    "NGMicrosyntaxKey": [],
     "NGMicrosyntaxKeyedExpression": [
       "key",
       "expression"
@@ -1890,9 +1803,8 @@
       "key",
       "value"
     ],
-    "NGMicrosyntaxAs": [
-      "key",
-      "alias"
+    "NGRoot": [
+      "node"
     ],
     "JsExpressionRoot": [
       "node"
@@ -1909,12 +1821,12 @@
       "typeAnnotation"
     ],
     "NeverTypeAnnotation": [],
-    "UndefinedTypeAnnotation": [],
-    "UnknownTypeAnnotation": [],
     "SatisfiesExpression": [
       "expression",
       "typeAnnotation"
-    ]
+    ],
+    "UndefinedTypeAnnotation": [],
+    "UnknownTypeAnnotation": []
   };
 
   // src/language-js/traverse/get-visitor-keys.js
@@ -1927,6 +1839,13 @@
     return (node) => types.has(node == null ? void 0 : node.type);
   }
   var create_type_check_function_default = createTypeCheckFunction;
+
+  // src/language-js/utils/get-raw.js
+  function getRaw(node) {
+    var _a;
+    return ((_a = node.extra) == null ? void 0 : _a.raw) ?? node.raw;
+  }
+  var get_raw_default = getRaw;
 
   // src/language-js/utils/is-block-comment.js
   var isBlockComment = create_type_check_function_default([
@@ -1955,6 +1874,22 @@
     "MixedTypeAnnotation"
   ]);
   var is_flow_keyword_type_default = isFlowKeywordType;
+
+  // src/language-js/utils/is-line-comment.js
+  var isLineComment = create_type_check_function_default([
+    "Line",
+    "CommentLine",
+    // `meriyah` has `SingleLine`, `HashbangComment`, `HTMLOpen`, and `HTMLClose`
+    "SingleLine",
+    "HashbangComment",
+    "HTMLOpen",
+    "HTMLClose",
+    // `espree`, and `oxc`(with `{astType: 'ts'}`)
+    "Hashbang",
+    // `babel` and `flow` hashbang
+    "InterpreterDirective"
+  ]);
+  var is_line_comment_default = isLineComment;
 
   // src/language-js/utils/is-node-matches.js
   function isNodeMatchesNameOrPath(node, nameOrPath) {
@@ -1985,10 +1920,7 @@
 
   // src/language-js/utils/index.js
   function hasNode(node, predicate) {
-    return predicate(node) || hasDescendant(node, {
-      getVisitorKeys: get_visitor_keys_default,
-      predicate
-    });
+    return predicate(node) || hasDescendant(node, { getVisitorKeys: get_visitor_keys_default, predicate });
   }
   function hasNakedLeftSide(node) {
     return node.type === "AssignmentExpression" || node.type === "BinaryExpression" || node.type === "LogicalExpression" || node.type === "NGPipeExpression" || node.type === "ConditionalExpression" || isCallExpression(node) || isMemberExpression(node) || node.type === "SequenceExpression" || node.type === "TaggedTemplateExpression" || node.type === "BindExpression" || node.type === "UpdateExpression" && !node.prefix || isBinaryCastExpression(node) || node.type === "TSNonNullExpression" || node.type === "ChainExpression";
@@ -2026,30 +1958,31 @@
     }
     throw new Error("Unexpected node has no left side.");
   }
-  var isLineComment = create_type_check_function_default([
-    "Line",
-    "CommentLine",
-    // `meriyah` has `SingleLine`, `HashbangComment`, `HTMLOpen`, and `HTMLClose`
-    "SingleLine",
-    "HashbangComment",
-    "HTMLOpen",
-    "HTMLClose",
-    // `espree`
-    "Hashbang",
-    // Babel hashbang
-    "InterpreterDirective"
+  var isExportDeclaration = create_type_check_function_default([
+    "ExportDefaultDeclaration",
+    "DeclareExportDeclaration",
+    "ExportNamedDeclaration",
+    "ExportAllDeclaration",
+    "DeclareExportAllDeclaration"
   ]);
-  var isExportDeclaration = create_type_check_function_default(["ExportDefaultDeclaration", "DeclareExportDeclaration", "ExportNamedDeclaration", "ExportAllDeclaration", "DeclareExportAllDeclaration"]);
-  var isArrayOrTupleExpression = create_type_check_function_default(["ArrayExpression", "TupleExpression"]);
-  var isObjectOrRecordExpression = create_type_check_function_default(["ObjectExpression", "RecordExpression"]);
+  var isArrayExpression = create_type_check_function_default(["ArrayExpression"]);
+  var isObjectExpression = create_type_check_function_default(["ObjectExpression"]);
+  function isNullishCoalescing(node) {
+    return node.type === "LogicalExpression" && node.operator === "??";
+  }
   function isNumericLiteral(node) {
     return node.type === "NumericLiteral" || node.type === "Literal" && typeof node.value === "number";
+  }
+  function isBooleanLiteral(node) {
+    return node.type === "BooleanLiteral" || node.type === "Literal" && typeof node.value === "boolean";
   }
   function isSignedNumericLiteral(node) {
     return node.type === "UnaryExpression" && (node.operator === "+" || node.operator === "-") && isNumericLiteral(node.argument);
   }
   function isStringLiteral(node) {
-    return Boolean(node && (node.type === "StringLiteral" || node.type === "Literal" && typeof node.value === "string"));
+    return Boolean(
+      node && (node.type === "StringLiteral" || node.type === "Literal" && typeof node.value === "string")
+    );
   }
   function isRegExpLiteral(node) {
     return node.type === "RegExpLiteral" || node.type === "Literal" && Boolean(node.regex);
@@ -2059,16 +1992,28 @@
     "BooleanLiteral",
     "BigIntLiteral",
     // Babel, flow use `BigIntLiteral` too
-    "DecimalLiteral",
     "DirectiveLiteral",
     "NullLiteral",
     "NumericLiteral",
     "RegExpLiteral",
     "StringLiteral"
   ]);
-  var isSingleWordType = create_type_check_function_default(["Identifier", "ThisExpression", "Super", "PrivateName", "PrivateIdentifier", "Import"]);
-  var isObjectType = create_type_check_function_default(["ObjectTypeAnnotation", "TSTypeLiteral", "TSMappedType"]);
-  var isFunctionOrArrowExpression = create_type_check_function_default(["FunctionExpression", "ArrowFunctionExpression"]);
+  var isSingleWordType = create_type_check_function_default([
+    "Identifier",
+    "ThisExpression",
+    "Super",
+    "PrivateName",
+    "PrivateIdentifier"
+  ]);
+  var isObjectType = create_type_check_function_default([
+    "ObjectTypeAnnotation",
+    "TSTypeLiteral",
+    "TSMappedType"
+  ]);
+  var isFunctionOrArrowExpression = create_type_check_function_default([
+    "FunctionExpression",
+    "ArrowFunctionExpression"
+  ]);
   function isFunctionOrArrowExpressionWithBody(node) {
     return node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression" && node.body.type === "BlockStatement";
   }
@@ -2087,7 +2032,11 @@
   function isTypeAnnotationAFunction(node) {
     return (node.type === "TypeAnnotation" || node.type === "TSTypeAnnotation") && node.typeAnnotation.type === "FunctionTypeAnnotation" && !node.static && !hasSameLocStart(node, node.typeAnnotation);
   }
-  var isBinaryish = create_type_check_function_default(["BinaryExpression", "LogicalExpression", "NGPipeExpression"]);
+  var isBinaryish = create_type_check_function_default([
+    "BinaryExpression",
+    "LogicalExpression",
+    "NGPipeExpression"
+  ]);
   function isMemberish(node) {
     return isMemberExpression(node) || node.type === "BindExpression" && Boolean(node.object);
   }
@@ -2103,31 +2052,58 @@
     "TSTemplateLiteralType"
   ]);
   function isSimpleType(node) {
-    return is_ts_keyword_type_default(node) || is_flow_keyword_type_default(node) || isSimpleTypeAnnotation(node) || (node.type === "GenericTypeAnnotation" || node.type === "TSTypeReference") && !node.typeParameters;
+    return is_ts_keyword_type_default(node) || is_flow_keyword_type_default(node) || isSimpleTypeAnnotation(node) || (node.type === "GenericTypeAnnotation" || node.type === "TSTypeReference") && // @ts-expect-error -- `GenericTypeAnnotation`
+    !node.typeParameters && // @ts-expect-error -- `TSTypeReference`
+    !node.typeArguments;
   }
   function isUnitTestSetupIdentifier(node) {
     return node.type === "Identifier" && (node.name === "beforeEach" || node.name === "beforeAll" || node.name === "afterEach" || node.name === "afterAll");
   }
-  var testCallCalleePatterns = ["it", "it.only", "it.skip", "describe", "describe.only", "describe.skip", "test", "test.only", "test.skip", "test.step", "test.describe", "test.describe.only", "test.describe.parallel", "test.describe.parallel.only", "test.describe.serial", "test.describe.serial.only", "skip", "xit", "xdescribe", "xtest", "fit", "fdescribe", "ftest"];
+  var testCallCalleePatterns = [
+    "it",
+    "it.only",
+    "it.skip",
+    "describe",
+    "describe.only",
+    "describe.skip",
+    "test",
+    "test.only",
+    "test.skip",
+    "test.step",
+    "test.describe",
+    "test.describe.only",
+    "test.describe.parallel",
+    "test.describe.parallel.only",
+    "test.describe.serial",
+    "test.describe.serial.only",
+    "skip",
+    "xit",
+    "xdescribe",
+    "xtest",
+    "fit",
+    "fdescribe",
+    "ftest"
+  ];
   function isTestCallCallee(node) {
     return is_node_matches_default(node, testCallCalleePatterns);
   }
   function isTestCall(node, parent) {
-    if (node.type !== "CallExpression") {
+    if ((node == null ? void 0 : node.type) !== "CallExpression" || node.optional) {
       return false;
     }
-    if (node.arguments.length === 1) {
-      if (isAngularTestWrapper(node) && parent && isTestCall(parent)) {
-        return isFunctionOrArrowExpression(node.arguments[0]);
+    const args = getCallArguments(node);
+    if (args.length === 1) {
+      if (isAngularTestWrapper(node) && isTestCall(parent)) {
+        return isFunctionOrArrowExpression(args[0]);
       }
       if (isUnitTestSetupIdentifier(node.callee)) {
-        return isAngularTestWrapper(node.arguments[0]);
+        return isAngularTestWrapper(args[0]);
       }
-    } else if ((node.arguments.length === 2 || node.arguments.length === 3) && (node.arguments[0].type === "TemplateLiteral" || isStringLiteral(node.arguments[0])) && isTestCallCallee(node.callee)) {
-      if (node.arguments[2] && !isNumericLiteral(node.arguments[2])) {
+    } else if ((args.length === 2 || args.length === 3) && (args[0].type === "TemplateLiteral" || isStringLiteral(args[0])) && isTestCallCallee(node.callee)) {
+      if (args[2] && !isNumericLiteral(args[2])) {
         return false;
       }
-      return (node.arguments.length === 2 ? isFunctionOrArrowExpression(node.arguments[1]) : isFunctionOrArrowExpressionWithBody(node.arguments[1]) && getFunctionParameters(node.arguments[1]).length <= 1) || isAngularTestWrapper(node.arguments[1]);
+      return (args.length === 2 ? isFunctionOrArrowExpression(args[1]) : isFunctionOrArrowExpressionWithBody(args[1]) && getFunctionParameters(args[1]).length <= 1) || isAngularTestWrapper(args[1]);
     }
     return false;
   }
@@ -2137,56 +2113,12 @@
     }
     return fn(node);
   };
-  var isCallExpression = skipChainExpression(create_type_check_function_default(["CallExpression", "OptionalCallExpression"]));
-  var isMemberExpression = skipChainExpression(create_type_check_function_default(["MemberExpression", "OptionalMemberExpression"]));
-  function isSimpleTemplateLiteral(node) {
-    let expressionsKey = "expressions";
-    if (node.type === "TSTemplateLiteralType") {
-      expressionsKey = "types";
-    }
-    const expressions = node[expressionsKey];
-    if (expressions.length === 0) {
-      return false;
-    }
-    return expressions.every((expr) => {
-      if (isSimpleAtomicExpression(expr) || isSimpleMemberExpression(expr)) {
-        return true;
-      }
-    });
-  }
-  function isSimpleMemberExpression(node, {
-    maxDepth = Number.POSITIVE_INFINITY
-  } = {}) {
-    if (hasComment(node)) {
-      return false;
-    }
-    if (node.type === "ChainExpression") {
-      return isSimpleMemberExpression(node.expression, {
-        maxDepth
-      });
-    }
-    if (!isMemberExpression(node)) {
-      return false;
-    }
-    let head = node;
-    let depth = 0;
-    while (isMemberExpression(head) && depth++ <= maxDepth) {
-      if (!isSimpleAtomicExpression(head.property)) {
-        return false;
-      }
-      head = head.object;
-      if (hasComment(head)) {
-        return false;
-      }
-    }
-    return isSimpleAtomicExpression(head);
-  }
-  function isSimpleAtomicExpression(node) {
-    if (hasComment(node)) {
-      return false;
-    }
-    return isLiteral(node) || isSingleWordType(node);
-  }
+  var isCallExpression = skipChainExpression(
+    create_type_check_function_default(["CallExpression", "OptionalCallExpression"])
+  );
+  var isMemberExpression = skipChainExpression(
+    create_type_check_function_default(["MemberExpression", "OptionalMemberExpression"])
+  );
   function isSimpleExpressionByNodeCount(node, maxInnerNodeCount = 5) {
     const count = getExpressionInnerNodeCount(node, maxInnerNodeCount);
     return count <= maxInnerNodeCount;
@@ -2207,9 +2139,7 @@
   }
   var LONE_SHORT_ARGUMENT_THRESHOLD_RATE = 0.25;
   function isLoneShortArgument(node, options2) {
-    const {
-      printWidth
-    } = options2;
+    const { printWidth } = options2;
     if (hasComment(node)) {
       return false;
     }
@@ -2222,15 +2152,13 @@
       return regexpPattern.length <= threshold;
     }
     if (isStringLiteral(node)) {
-      return print_string_default(rawText(node), options2).length <= threshold;
+      return print_string_default(get_raw_default(node), options2).length <= threshold;
     }
     if (node.type === "TemplateLiteral") {
       return node.expressions.length === 0 && node.quasis[0].value.raw.length <= threshold && !node.quasis[0].value.raw.includes("\n");
     }
     if (node.type === "UnaryExpression") {
-      return isLoneShortArgument(node.argument, {
-        printWidth
-      });
+      return isLoneShortArgument(node.argument, { printWidth });
     }
     if (node.type === "CallExpression" && node.arguments.length === 0 && node.callee.type === "Identifier") {
       return node.callee.name.length <= threshold - 2;
@@ -2241,22 +2169,24 @@
     if (isJsxElement(node)) {
       return hasNodeIgnoreComment(node);
     }
-    return hasComment(node, CommentCheckFlags.Leading, (comment) => has_newline_default(text, locEnd(comment)));
+    return hasComment(
+      node,
+      CommentCheckFlags.Leading,
+      (comment) => has_newline_default(text, locEnd(comment))
+    );
   }
   function templateLiteralHasNewLines(template) {
     return template.quasis.some((quasi) => quasi.value.raw.includes("\n"));
   }
   function isTemplateOnItsOwnLine(node, text) {
-    return (node.type === "TemplateLiteral" && templateLiteralHasNewLines(node) || node.type === "TaggedTemplateExpression" && templateLiteralHasNewLines(node.quasi)) && !has_newline_default(text, locStart(node), {
-      backwards: true
-    });
+    return (node.type === "TemplateLiteral" && templateLiteralHasNewLines(node) || node.type === "TaggedTemplateExpression" && templateLiteralHasNewLines(node.quasi)) && !has_newline_default(text, locStart(node), { backwards: true });
   }
   function needsHardlineAfterDanglingComment(node) {
     if (!hasComment(node)) {
       return false;
     }
     const lastDanglingComment = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       getComments(node, CommentCheckFlags.Dangling),
       -1
@@ -2285,11 +2215,7 @@
     return false;
   }
   function isLongCurriedCallExpression(path) {
-    const {
-      node,
-      parent,
-      key
-    } = path;
+    const { node, parent, key } = path;
     return key === "callee" && isCallExpression(node) && isCallExpression(parent) && parent.arguments.length > 0 && node.arguments.length > parent.arguments.length;
   }
   var simpleCallArgumentUnaryOperators = /* @__PURE__ */ new Set(["!", "-", "+", "~"]);
@@ -2310,10 +2236,12 @@
     if (node.type === "TemplateLiteral") {
       return node.quasis.every((element) => !element.value.raw.includes("\n")) && node.expressions.every(isChildSimple);
     }
-    if (isObjectOrRecordExpression(node)) {
-      return node.properties.every((p) => !p.computed && (p.shorthand || p.value && isChildSimple(p.value)));
+    if (isObjectExpression(node)) {
+      return node.properties.every(
+        (p) => !p.computed && (p.shorthand || p.value && isChildSimple(p.value))
+      );
     }
-    if (isArrayOrTupleExpression(node)) {
+    if (isArrayExpression(node)) {
       return node.elements.every((x) => x === null || isChildSimple(x));
     }
     if (isCallLikeExpression(node)) {
@@ -2330,10 +2258,6 @@
       return isSimpleCallArgument(node.argument, depth);
     }
     return false;
-  }
-  function rawText(node) {
-    var _a;
-    return ((_a = node.extra) == null ? void 0 : _a.raw) ?? node.raw;
   }
   function identity(x) {
     return x;
@@ -2419,7 +2343,25 @@
     }
     return true;
   }
-  var PRECEDENCE = new Map([["|>"], ["??"], ["||"], ["&&"], ["|"], ["^"], ["&"], ["==", "===", "!=", "!=="], ["<", ">", "<=", ">=", "in", "instanceof"], [">>", "<<", ">>>"], ["+", "-"], ["*", "/", "%"], ["**"]].flatMap((operators, index) => operators.map((operator) => [operator, index])));
+  var PRECEDENCE = new Map(
+    [
+      ["|>"],
+      ["??"],
+      ["||"],
+      ["&&"],
+      ["|"],
+      ["^"],
+      ["&"],
+      ["==", "===", "!=", "!=="],
+      ["<", ">", "<=", ">=", "in", "instanceof"],
+      [">>", "<<", ">>>"],
+      ["+", "-"],
+      ["*", "/", "%"],
+      ["**"]
+    ].flatMap(
+      (operators, index) => operators.map((operator) => [operator, index])
+    )
+  );
   function getPrecedence(operator) {
     return PRECEDENCE.get(operator);
   }
@@ -2433,7 +2375,7 @@
     }
     const parameters = getFunctionParameters(node);
     return ((_a = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       parameters,
       -1
@@ -2460,9 +2402,7 @@
     return parameters;
   }
   function iterateFunctionParametersPath(path, iteratee) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     let index = 0;
     const callback = (childPath) => iteratee(childPath, index++);
     if (node.this) {
@@ -2486,11 +2426,8 @@
       return getCallArguments(node.expression);
     }
     let args = node.arguments;
-    if (node.type === "ImportExpression") {
-      args = [node.source];
-      if (node.attributes) {
-        args.push(node.attributes);
-      }
+    if (node.type === "ImportExpression" || node.type === "TSImportType") {
+      args = [node.type === "ImportExpression" ? node.source : node.argument];
       if (node.options) {
         args.push(node.options);
       }
@@ -2499,17 +2436,18 @@
     return args;
   }
   function iterateCallArgumentsPath(path, iteratee) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     if (node.type === "ChainExpression") {
-      return path.call(() => iterateCallArgumentsPath(path, iteratee), "expression");
+      return path.call(
+        () => iterateCallArgumentsPath(path, iteratee),
+        "expression"
+      );
     }
-    if (node.type === "ImportExpression") {
-      path.call((sourcePath) => iteratee(sourcePath, 0), "source");
-      if (node.attributes) {
-        path.call((sourcePath) => iteratee(sourcePath, 1), "attributes");
-      }
+    if (node.type === "ImportExpression" || node.type === "TSImportType") {
+      path.call(
+        (sourcePath) => iteratee(sourcePath, 0),
+        node.type === "ImportExpression" ? "source" : "argument"
+      );
       if (node.options) {
         path.call((sourcePath) => iteratee(sourcePath, 1), "options");
       }
@@ -2523,12 +2461,12 @@
       node = node.expression;
       selectors.push("expression");
     }
-    if (node.type === "ImportExpression") {
-      if (index === 0 || index === (node.attributes || node.options ? -2 : -1)) {
-        return [...selectors, "source"];
-      }
-      if (node.attributes && (index === 1 || index === -1)) {
-        return [...selectors, "attributes"];
+    if (node.type === "ImportExpression" || node.type === "TSImportType") {
+      if (index === 0 || index === (node.options ? -2 : -1)) {
+        return [
+          ...selectors,
+          node.type === "ImportExpression" ? "source" : "argument"
+        ];
       }
       if (node.options && (index === 1 || index === -1)) {
         return [...selectors, "options"];
@@ -2573,7 +2511,7 @@
       flags = 0;
     }
     if (flags || fn) {
-      return (comment, index, comments) => !(flags & CommentCheckFlags.Leading && !comment.leading || flags & CommentCheckFlags.Trailing && !comment.trailing || flags & CommentCheckFlags.Dangling && (comment.leading || comment.trailing) || flags & CommentCheckFlags.Block && !is_block_comment_default(comment) || flags & CommentCheckFlags.Line && !isLineComment(comment) || flags & CommentCheckFlags.First && index !== 0 || flags & CommentCheckFlags.Last && index !== comments.length - 1 || flags & CommentCheckFlags.PrettierIgnore && !isPrettierIgnoreComment(comment) || fn && !fn(comment));
+      return (comment, index, comments) => !(flags & CommentCheckFlags.Leading && !comment.leading || flags & CommentCheckFlags.Trailing && !comment.trailing || flags & CommentCheckFlags.Dangling && (comment.leading || comment.trailing) || flags & CommentCheckFlags.Block && !is_block_comment_default(comment) || flags & CommentCheckFlags.Line && !is_line_comment_default(comment) || flags & CommentCheckFlags.First && index !== 0 || flags & CommentCheckFlags.Last && index !== comments.length - 1 || flags & CommentCheckFlags.PrettierIgnore && !isPrettierIgnoreComment(comment) || fn && !fn(comment));
     }
   };
   function hasComment(node, flags, fn) {
@@ -2590,9 +2528,7 @@
     const test = getCommentTestFunction(flags, fn);
     return test ? node.comments.filter(test) : node.comments;
   }
-  var isNextLineEmpty2 = (node, {
-    originalText
-  }) => is_next_line_empty_default(originalText, locEnd(node));
+  var isNextLineEmpty2 = (node, { originalText }) => is_next_line_empty_default(originalText, locEnd(node));
   function isCallLikeExpression(node) {
     return isCallExpression(node) || node.type === "NewExpression" || node.type === "ImportExpression";
   }
@@ -2608,18 +2544,42 @@
     "AsConstExpression",
     "SatisfiesExpression"
   ]);
-  var isUnionType = create_type_check_function_default(["UnionTypeAnnotation", "TSUnionType"]);
-  var isIntersectionType = create_type_check_function_default(["IntersectionTypeAnnotation", "TSIntersectionType"]);
+  var isUnionType = create_type_check_function_default([
+    "TSUnionType",
+    "UnionTypeAnnotation"
+  ]);
+  var isIntersectionType = create_type_check_function_default([
+    "TSIntersectionType",
+    "IntersectionTypeAnnotation"
+  ]);
+  var isConditionalType = create_type_check_function_default([
+    "TSConditionalType",
+    "ConditionalTypeAnnotation"
+  ]);
 
   // src/language-js/clean.js
-  var ignoredProperties = /* @__PURE__ */ new Set(["range", "raw", "comments", "leadingComments", "trailingComments", "innerComments", "extra", "start", "end", "loc", "flags", "errors", "tokens"]);
+  var ignoredProperties = /* @__PURE__ */ new Set([
+    "range",
+    "raw",
+    "comments",
+    "leadingComments",
+    "trailingComments",
+    "innerComments",
+    "extra",
+    "start",
+    "end",
+    "loc",
+    "flags",
+    "errors",
+    "tokens"
+  ]);
   var removeTemplateElementsValue = (node) => {
     for (const templateElement of node.quasis) {
       delete templateElement.value;
     }
   };
-  function clean(original, cloned, parent) {
-    var _a, _b;
+  function clean(original, cloned) {
+    var _a;
     if (original.type === "Program") {
       delete cloned.sourceType;
     }
@@ -2628,12 +2588,6 @@
     }
     if ((original.type === "BigIntLiteral" || original.type === "Literal") && original.bigint) {
       cloned.bigint = original.bigint.toLowerCase();
-    }
-    if (original.type === "DecimalLiteral") {
-      cloned.value = Number(original.value);
-    }
-    if (original.type === "Literal" && cloned.decimal) {
-      cloned.decimal = Number(original.decimal);
     }
     if (original.type === "EmptyStatement") {
       return null;
@@ -2644,14 +2598,18 @@
     if (original.type === "JSXExpressionContainer" && (original.expression.type === "Literal" || original.expression.type === "StringLiteral") && original.expression.value === " ") {
       return null;
     }
-    if ((original.type === "Property" || original.type === "ObjectProperty" || original.type === "MethodDefinition" || original.type === "ClassProperty" || original.type === "ClassMethod" || original.type === "PropertyDefinition" || original.type === "TSDeclareMethod" || original.type === "TSPropertySignature" || original.type === "ObjectTypeProperty" || original.type === "ImportAttribute") && typeof original.key === "object" && original.key && (original.key.type === "Literal" || original.key.type === "NumericLiteral" || original.key.type === "StringLiteral" || original.key.type === "Identifier")) {
-      delete cloned.key;
+    if ((original.type === "Property" || original.type === "ObjectProperty" || original.type === "MethodDefinition" || original.type === "ClassProperty" || original.type === "ClassMethod" || original.type === "PropertyDefinition" || original.type === "TSDeclareMethod" || original.type === "TSPropertySignature" || original.type === "ObjectTypeProperty" || original.type === "ImportAttribute") && original.key && !original.computed) {
+      const { key } = original;
+      if (isStringLiteral(key) || isNumericLiteral(key)) {
+        cloned.key = String(key.value);
+      } else if (key.type === "Identifier") {
+        cloned.key = key.name;
+      }
     }
-    if (original.type === "JSXElement" && original.openingElement.name.name === "style" && original.openingElement.attributes.some((attr) => attr.type === "JSXAttribute" && attr.name.name === "jsx")) {
-      for (const {
-        type,
-        expression: expression2
-      } of cloned.children) {
+    if (original.type === "JSXElement" && original.openingElement.name.name === "style" && original.openingElement.attributes.some(
+      (attr) => attr.type === "JSXAttribute" && attr.name.name === "jsx"
+    )) {
+      for (const { type, expression: expression2 } of cloned.children) {
         if (type === "JSXExpressionContainer" && expression2.type === "TemplateLiteral") {
           removeTemplateElementsValue(expression2);
         }
@@ -2660,22 +2618,25 @@
     if (original.type === "JSXAttribute" && original.name.name === "css" && original.value.type === "JSXExpressionContainer" && original.value.expression.type === "TemplateLiteral") {
       removeTemplateElementsValue(cloned.value.expression);
     }
-    if (original.type === "JSXAttribute" && ((_a = original.value) == null ? void 0 : _a.type) === "Literal" && /["']|&quot;|&apos;/.test(original.value.value)) {
+    if (original.type === "JSXAttribute" && ((_a = original.value) == null ? void 0 : _a.type) === "Literal" && /["']|&quot;|&apos;/u.test(original.value.value)) {
       cloned.value.value = string_replace_all_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         original.value.value,
-        /["']|&quot;|&apos;/g,
+        /["']|&quot;|&apos;/gu,
         '"'
       );
     }
     const expression = original.expression || original.callee;
     if (original.type === "Decorator" && expression.type === "CallExpression" && expression.callee.name === "Component" && expression.arguments.length === 1) {
       const astProps = original.expression.arguments[0].properties;
-      for (const [index, prop] of cloned.expression.arguments[0].properties.entries()) {
+      for (const [
+        index,
+        prop
+      ] of cloned.expression.arguments[0].properties.entries()) {
         switch (astProps[index].key.name) {
           case "styles":
-            if (isArrayOrTupleExpression(prop.value)) {
+            if (isArrayExpression(prop.value)) {
               removeTemplateElementsValue(prop.value.elements[0]);
             }
             break;
@@ -2691,12 +2652,7 @@
       removeTemplateElementsValue(cloned.quasi);
     }
     if (original.type === "TemplateLiteral") {
-      const hasLanguageComment2 = (_b = original.leadingComments) == null ? void 0 : _b.some((comment) => is_block_comment_default(comment) && ["GraphQL", "HTML"].some((languageName) => comment.value === ` ${languageName} `));
-      if (hasLanguageComment2 || parent.type === "CallExpression" && parent.callee.name === "graphql" || // TODO: check parser
-      // `flow` and `typescript` don't have `leadingComments`
-      !original.leadingComments) {
-        removeTemplateElementsValue(cloned);
-      }
+      removeTemplateElementsValue(cloned);
     }
     if (original.type === "ChainExpression" && original.expression.type === "TSNonNullExpression") {
       cloned.type = "TSNonNullExpression";
@@ -2848,135 +2804,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   var traverse_doc_default = traverseDoc;
 
-  // src/document/utils/assert-doc.js
-  var noop = () => {
-  };
-  var assertDoc = true ? noop : function(doc) {
-    traverse_doc_default(doc, (doc2) => {
-      if (checked.has(doc2)) {
-        return false;
-      }
-      if (typeof doc2 !== "string") {
-        checked.add(doc2);
-      }
-    });
-  };
-  var assertDocArray = true ? noop : function(docs, optional = false) {
-    if (optional && !docs) {
-      return;
-    }
-    if (!Array.isArray(docs)) {
-      throw new TypeError("Unexpected doc array.");
-    }
-    for (const doc of docs) {
-      assertDoc(doc);
-    }
-  };
-
-  // src/document/builders.js
-  function indent(contents) {
-    assertDoc(contents);
-    return { type: DOC_TYPE_INDENT, contents };
-  }
-  function align(widthOrString, contents) {
-    assertDoc(contents);
-    return { type: DOC_TYPE_ALIGN, contents, n: widthOrString };
-  }
-  function group(contents, opts = {}) {
-    assertDoc(contents);
-    assertDocArray(
-      opts.expandedStates,
-      /* optional */
-      true
-    );
-    return {
-      type: DOC_TYPE_GROUP,
-      id: opts.id,
-      contents,
-      break: Boolean(opts.shouldBreak),
-      expandedStates: opts.expandedStates
-    };
-  }
-  function dedentToRoot(contents) {
-    return align(Number.NEGATIVE_INFINITY, contents);
-  }
-  function dedent(contents) {
-    return align(-1, contents);
-  }
-  function conditionalGroup(states, opts) {
-    return group(states[0], { ...opts, expandedStates: states });
-  }
-  function fill(parts) {
-    assertDocArray(parts);
-    return { type: DOC_TYPE_FILL, parts };
-  }
-  function ifBreak(breakContents, flatContents = "", opts = {}) {
-    assertDoc(breakContents);
-    if (flatContents !== "") {
-      assertDoc(flatContents);
-    }
-    return {
-      type: DOC_TYPE_IF_BREAK,
-      breakContents,
-      flatContents,
-      groupId: opts.groupId
-    };
-  }
-  function indentIfBreak(contents, opts) {
-    assertDoc(contents);
-    return {
-      type: DOC_TYPE_INDENT_IF_BREAK,
-      contents,
-      groupId: opts.groupId,
-      negate: opts.negate
-    };
-  }
-  function lineSuffix(contents) {
-    assertDoc(contents);
-    return { type: DOC_TYPE_LINE_SUFFIX, contents };
-  }
-  var lineSuffixBoundary = { type: DOC_TYPE_LINE_SUFFIX_BOUNDARY };
-  var breakParent = { type: DOC_TYPE_BREAK_PARENT };
-  var hardlineWithoutBreakParent = { type: DOC_TYPE_LINE, hard: true };
-  var literallineWithoutBreakParent = {
-    type: DOC_TYPE_LINE,
-    hard: true,
-    literal: true
-  };
-  var line = { type: DOC_TYPE_LINE };
-  var softline = { type: DOC_TYPE_LINE, soft: true };
-  var hardline = [hardlineWithoutBreakParent, breakParent];
-  var literalline = [literallineWithoutBreakParent, breakParent];
-  var cursor = { type: DOC_TYPE_CURSOR };
-  function join(separator, docs) {
-    assertDoc(separator);
-    assertDocArray(docs);
-    const parts = [];
-    for (let i = 0; i < docs.length; i++) {
-      if (i !== 0) {
-        parts.push(separator);
-      }
-      parts.push(docs[i]);
-    }
-    return parts;
-  }
-  function addAlignmentToDoc(doc, size, tabWidth) {
-    assertDoc(doc);
-    let aligned = doc;
-    if (size > 0) {
-      for (let i = 0; i < Math.floor(size / tabWidth); ++i) {
-        aligned = indent(aligned);
-      }
-      aligned = align(size % tabWidth, aligned);
-      aligned = align(Number.NEGATIVE_INFINITY, aligned);
-    }
-    return aligned;
-  }
-  function label(label2, contents) {
-    assertDoc(contents);
-    return label2 ? { type: DOC_TYPE_LABEL, label: label2, contents } : contents;
-  }
-
   // src/document/utils.js
   function mapDoc(doc, cb) {
     if (typeof doc === "string") {
@@ -2997,10 +2824,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         case DOC_TYPE_ARRAY:
           return cb(doc2.map(rec));
         case DOC_TYPE_FILL:
-          return cb({
-            ...doc2,
-            parts: doc2.parts.map(rec)
-          });
+          return cb({ ...doc2, parts: doc2.parts.map(rec) });
         case DOC_TYPE_IF_BREAK:
           return cb({
             ...doc2,
@@ -3008,31 +2832,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             flatContents: rec(doc2.flatContents)
           });
         case DOC_TYPE_GROUP: {
-          let {
-            expandedStates,
-            contents
-          } = doc2;
+          let { expandedStates, contents } = doc2;
           if (expandedStates) {
             expandedStates = expandedStates.map(rec);
             contents = expandedStates[0];
           } else {
             contents = rec(contents);
           }
-          return cb({
-            ...doc2,
-            contents,
-            expandedStates
-          });
+          return cb({ ...doc2, contents, expandedStates });
         }
         case DOC_TYPE_ALIGN:
         case DOC_TYPE_INDENT:
         case DOC_TYPE_INDENT_IF_BREAK:
         case DOC_TYPE_LABEL:
         case DOC_TYPE_LINE_SUFFIX:
-          return cb({
-            ...doc2,
-            contents: rec(doc2.contents)
-          });
+          return cb({ ...doc2, contents: rec(doc2.contents) });
         case DOC_TYPE_STRING:
         case DOC_TYPE_CURSOR:
         case DOC_TYPE_TRIM:
@@ -3078,7 +2892,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function breakParentGroup(groupStack) {
     if (groupStack.length > 0) {
       const parentGroup = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         groupStack,
         -1
@@ -3168,7 +2982,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           }
           const [currentPart, ...restParts] = Array.isArray(part) ? part : [part];
           if (typeof currentPart === "string" && typeof at_default(
-            /* isOptionalObject*/
+            /* isOptionalObject */
             false,
             parts,
             -1
@@ -3204,7 +3018,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return mapDoc(doc, (currentDoc) => cleanDocFn(currentDoc));
   }
   function replaceEndOfLine(doc, replacement = literalline) {
-    return mapDoc(doc, (currentDoc) => typeof currentDoc === "string" ? join(replacement, currentDoc.split("\n")) : currentDoc);
+    return mapDoc(
+      doc,
+      (currentDoc) => typeof currentDoc === "string" ? join(replacement, currentDoc.split("\n")) : currentDoc
+    );
   }
   function canBreakFn(doc) {
     if (doc.type === DOC_TYPE_LINE) {
@@ -3215,29 +3032,208 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return findInDoc(doc, canBreakFn, false);
   }
   function inheritLabel(doc, fn) {
-    return doc.type === DOC_TYPE_LABEL ? {
-      ...doc,
-      contents: fn(doc.contents)
-    } : fn(doc);
+    return doc.type === DOC_TYPE_LABEL ? { ...doc, contents: fn(doc.contents) } : fn(doc);
+  }
+  function isEmptyDoc(doc) {
+    let isEmpty = true;
+    traverse_doc_default(doc, (doc2) => {
+      switch (get_doc_type_default(doc2)) {
+        case DOC_TYPE_STRING:
+          if (doc2 === "") {
+            break;
+          }
+        // fallthrough
+        case DOC_TYPE_TRIM:
+        case DOC_TYPE_LINE_SUFFIX_BOUNDARY:
+        case DOC_TYPE_LINE:
+        case DOC_TYPE_BREAK_PARENT:
+          isEmpty = false;
+          return false;
+      }
+    });
+    return isEmpty;
+  }
+
+  // src/document/utils/assert-doc.js
+  var noop = () => {
+  };
+  var assertDoc = true ? noop : function(doc) {
+    traverse_doc_default(doc, (doc2) => {
+      if (checked.has(doc2)) {
+        return false;
+      }
+      if (typeof doc2 !== "string") {
+        checked.add(doc2);
+      }
+    });
+  };
+  var assertDocArray = true ? noop : function(docs, optional = false) {
+    if (optional && !docs) {
+      return;
+    }
+    if (!Array.isArray(docs)) {
+      throw new TypeError("Unexpected doc array.");
+    }
+    for (const doc of docs) {
+      assertDoc(doc);
+    }
+  };
+  var assertDocFillParts = true ? noop : (
+    /**
+     * @param {Doc[]} parts
+     */
+    function(parts) {
+      assertDocArray(parts);
+      if (parts.length > 1 && isEmptyDoc(at_default(
+        /* isOptionalObject */
+        false,
+        parts,
+        -1
+      ))) {
+        parts = parts.slice(0, -1);
+      }
+      for (const [i, doc] of parts.entries()) {
+        if (i % 2 === 1 && !isValidSeparator(doc)) {
+          const type = get_doc_type_default(doc);
+          throw new Error(
+            `Unexpected non-line-break doc at ${i}. Doc type is ${type}.`
+          );
+        }
+      }
+    }
+  );
+
+  // src/document/builders.js
+  function indent(contents) {
+    assertDoc(contents);
+    return { type: DOC_TYPE_INDENT, contents };
+  }
+  function align(widthOrString, contents) {
+    assertDoc(contents);
+    return { type: DOC_TYPE_ALIGN, contents, n: widthOrString };
+  }
+  function group(contents, opts = {}) {
+    assertDoc(contents);
+    assertDocArray(
+      opts.expandedStates,
+      /* optional */
+      true
+    );
+    return {
+      type: DOC_TYPE_GROUP,
+      id: opts.id,
+      contents,
+      break: Boolean(opts.shouldBreak),
+      expandedStates: opts.expandedStates
+    };
+  }
+  function dedentToRoot(contents) {
+    return align(Number.NEGATIVE_INFINITY, contents);
+  }
+  function dedent(contents) {
+    return align(-1, contents);
+  }
+  function conditionalGroup(states, opts) {
+    return group(states[0], { ...opts, expandedStates: states });
+  }
+  function fill(parts) {
+    assertDocFillParts(parts);
+    return { type: DOC_TYPE_FILL, parts };
+  }
+  function ifBreak(breakContents, flatContents = "", opts = {}) {
+    assertDoc(breakContents);
+    if (flatContents !== "") {
+      assertDoc(flatContents);
+    }
+    return {
+      type: DOC_TYPE_IF_BREAK,
+      breakContents,
+      flatContents,
+      groupId: opts.groupId
+    };
+  }
+  function indentIfBreak(contents, opts) {
+    assertDoc(contents);
+    return {
+      type: DOC_TYPE_INDENT_IF_BREAK,
+      contents,
+      groupId: opts.groupId,
+      negate: opts.negate
+    };
+  }
+  function lineSuffix(contents) {
+    assertDoc(contents);
+    return { type: DOC_TYPE_LINE_SUFFIX, contents };
+  }
+  var lineSuffixBoundary = { type: DOC_TYPE_LINE_SUFFIX_BOUNDARY };
+  var breakParent = { type: DOC_TYPE_BREAK_PARENT };
+  var hardlineWithoutBreakParent = { type: DOC_TYPE_LINE, hard: true };
+  var literallineWithoutBreakParent = {
+    type: DOC_TYPE_LINE,
+    hard: true,
+    literal: true
+  };
+  var line = { type: DOC_TYPE_LINE };
+  var softline = { type: DOC_TYPE_LINE, soft: true };
+  var hardline = [hardlineWithoutBreakParent, breakParent];
+  var literalline = [literallineWithoutBreakParent, breakParent];
+  var cursor = { type: DOC_TYPE_CURSOR };
+  function join(separator, docs) {
+    assertDoc(separator);
+    assertDocArray(docs);
+    const parts = [];
+    for (let i = 0; i < docs.length; i++) {
+      if (i !== 0) {
+        parts.push(separator);
+      }
+      parts.push(docs[i]);
+    }
+    return parts;
+  }
+  function addAlignmentToDoc(doc, size, tabWidth) {
+    assertDoc(doc);
+    let aligned = doc;
+    if (size > 0) {
+      for (let i = 0; i < Math.floor(size / tabWidth); ++i) {
+        aligned = indent(aligned);
+      }
+      aligned = align(size % tabWidth, aligned);
+      aligned = align(Number.NEGATIVE_INFINITY, aligned);
+    }
+    return aligned;
+  }
+  function label(label2, contents) {
+    assertDoc(contents);
+    return label2 ? { type: DOC_TYPE_LABEL, label: label2, contents } : contents;
   }
 
   // src/language-js/utils/is-indentable-block-comment.js
-  function isIndentableBlockComment(comment) {
+  function isIndentableBlockCommentInternal(comment) {
+    if (!is_block_comment_default(comment)) {
+      return false;
+    }
     const lines = `*${comment.value}*`.split("\n");
     return lines.length > 1 && lines.every((line2) => line2.trimStart()[0] === "*");
+  }
+  var cache = /* @__PURE__ */ new WeakMap();
+  function isIndentableBlockComment(comment) {
+    if (!cache.has(comment)) {
+      cache.set(comment, isIndentableBlockCommentInternal(comment));
+    }
+    return cache.get(comment);
   }
   var is_indentable_block_comment_default = isIndentableBlockComment;
 
   // src/language-js/print/comment.js
   function printComment(commentPath, options2) {
     const comment = commentPath.node;
-    if (isLineComment(comment)) {
+    if (is_line_comment_default(comment)) {
       return options2.originalText.slice(locStart(comment), locEnd(comment)).trimEnd();
     }
+    if (is_indentable_block_comment_default(comment)) {
+      return printIndentableBlockComment(comment);
+    }
     if (is_block_comment_default(comment)) {
-      if (is_indentable_block_comment_default(comment)) {
-        return printIndentableBlockComment(comment);
-      }
       return ["/*", replaceEndOfLine(comment.value), "*/"];
     }
     throw new Error("Not a comment: " + JSON.stringify(comment));
@@ -3334,28 +3330,89 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var has_newline_in_range_default = hasNewlineInRange;
 
   // src/language-js/utils/is-type-cast-comment.js
+  var cache2 = /* @__PURE__ */ new WeakMap();
   function isTypeCastComment(comment) {
-    return is_block_comment_default(comment) && comment.value[0] === "*" && // TypeScript expects the type to be enclosed in curly brackets, however
-    // Closure Compiler accepts types in parens and even without any delimiters at all.
-    // That's why we just search for "@type" and "@satisfies".
-    /@(?:type|satisfies)\b/.test(comment.value);
+    if (!cache2.has(comment)) {
+      cache2.set(
+        comment,
+        is_block_comment_default(comment) && comment.value[0] === "*" && // TypeScript expects the type to be enclosed in curly brackets, however
+        // Closure Compiler accepts types in parens and even without any delimiters at all.
+        // That's why we just search for "@type" and "@satisfies".
+        /@(?:type|satisfies)\b/u.test(comment.value)
+      );
+    }
+    return cache2.get(comment);
   }
   var is_type_cast_comment_default = isTypeCastComment;
 
   // src/language-js/comments/handle-comments.js
+  var isSingleLineComment = (comment, text) => is_line_comment_default(comment) || !has_newline_in_range_default(text, locStart(comment), locEnd(comment));
   function handleOwnLineComment(context) {
-    return [handleIgnoreComments, handleConditionalExpressionComments, handleLastFunctionArgComments, handleLastComponentArgComments, handleMemberExpressionComments, handleIfStatementComments, handleWhileComments, handleTryStatementComments, handleClassComments, handleForComments, handleUnionTypeComments, handleMatchOrPatternComments, handleOnlyComments, handleModuleSpecifiersComments, handleAssignmentPatternComments, handleMethodNameComments, handleLabeledStatementComments, handleBreakAndContinueStatementComments, handleNestedConditionalExpressionComments, handleCommentsInDestructuringPattern].some((fn) => fn(context));
+    return [
+      handleIgnoreComments,
+      handleConditionalExpressionComments,
+      handleLastFunctionArgComments,
+      handleLastComponentArgComments,
+      handleMemberExpressionComments,
+      handleIfStatementComments,
+      handleWhileComments,
+      handleTryStatementComments,
+      handleClassComments,
+      handleForComments,
+      handleUnionTypeComments,
+      handleMatchOrPatternComments,
+      handleOnlyComments,
+      handleModuleSpecifiersComments,
+      handleAssignmentPatternComments,
+      handleMethodNameComments,
+      handleLabeledStatementComments,
+      handleBreakAndContinueStatementComments,
+      handleNestedConditionalExpressionComments,
+      handleCommentsInDestructuringPattern,
+      handleTSMappedTypeComments
+    ].some((fn) => fn(context));
   }
   function handleEndOfLineComment(context) {
-    return [handleClosureTypeCastComments, handleLastFunctionArgComments, handleConditionalExpressionComments, handleModuleSpecifiersComments, handleIfStatementComments, handleWhileComments, handleTryStatementComments, handleClassComments, handleLabeledStatementComments, handleCallExpressionComments, handlePropertyComments, handleOnlyComments, handleVariableDeclaratorComments, handleBreakAndContinueStatementComments, handleSwitchDefaultCaseComments, handleLastUnionElementInExpression].some((fn) => fn(context));
+    return [
+      handleClosureTypeCastComments,
+      handleLastFunctionArgComments,
+      handleConditionalExpressionComments,
+      handleModuleSpecifiersComments,
+      handleIfStatementComments,
+      handleWhileComments,
+      handleTryStatementComments,
+      handleClassComments,
+      handleLabeledStatementComments,
+      handleCallExpressionComments,
+      handlePropertyComments,
+      handleOnlyComments,
+      handleVariableDeclaratorComments,
+      handleBreakAndContinueStatementComments,
+      handleSwitchDefaultCaseComments,
+      handleLastUnionElementInExpression,
+      handleLastBinaryOperatorOperand,
+      handleTSMappedTypeComments
+    ].some((fn) => fn(context));
   }
   function handleRemainingComment(context) {
-    return [handleIgnoreComments, handleIfStatementComments, handleWhileComments, handleObjectPropertyAssignment, handleCommentInEmptyParens, handleMethodNameComments, handleOnlyComments, handleCommentAfterArrowParams, handleFunctionNameComments, handleTSMappedTypeComments, handleBreakAndContinueStatementComments, handleTSFunctionTrailingComments].some((fn) => fn(context));
+    return [
+      handleIgnoreComments,
+      handleIfStatementComments,
+      handleWhileComments,
+      handleObjectPropertyAssignment,
+      handleCommentInEmptyParens,
+      handleMethodNameComments,
+      handleOnlyComments,
+      handleCommentAfterArrowParams,
+      handleFunctionNameComments,
+      handleBreakAndContinueStatementComments,
+      handleTSFunctionTrailingComments
+    ].some((fn) => fn(context));
   }
   function addBlockStatementFirstComment(node, comment) {
-    const firstNonEmptyNode = (node.body || node.properties).find(({
-      type
-    }) => type !== "EmptyStatement");
+    const firstNonEmptyNode = (node.body || node.properties).find(
+      ({ type }) => type !== "EmptyStatement"
+    );
     if (firstNonEmptyNode) {
       addLeadingComment(firstNonEmptyNode, comment);
     } else {
@@ -3369,10 +3426,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       addLeadingComment(node, comment);
     }
   }
-  function handleClosureTypeCastComments({
-    comment,
-    followingNode
-  }) {
+  function handleClosureTypeCastComments({ comment, followingNode }) {
     if (followingNode && is_type_cast_comment_default(comment)) {
       addLeadingComment(followingNode, comment);
       return true;
@@ -3389,24 +3443,32 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if ((enclosingNode == null ? void 0 : enclosingNode.type) !== "IfStatement" || !followingNode) {
       return false;
     }
-    const nextCharacter = get_next_non_space_non_comment_character_default(text, locEnd(comment));
+    const nextCharacter = get_next_non_space_non_comment_character_default(
+      text,
+      locEnd(comment)
+    );
     if (nextCharacter === ")") {
       addTrailingComment(precedingNode, comment);
       return true;
     }
     if (precedingNode === enclosingNode.consequent && followingNode === enclosingNode.alternate) {
-      if (precedingNode.type === "BlockStatement") {
-        addTrailingComment(precedingNode, comment);
-      } else {
-        const isSingleLineComment = isLineComment(comment) || comment.loc.start.line === comment.loc.end.line;
-        const isSameLineComment = comment.loc.start.line === precedingNode.loc.start.line;
-        if (isSingleLineComment && isSameLineComment) {
+      const maybeElseTokenIndex = get_next_non_space_non_comment_character_index_default(
+        text,
+        locEnd(enclosingNode.consequent)
+      );
+      if (locStart(comment) < maybeElseTokenIndex || enclosingNode.alternate.type === "BlockStatement") {
+        if (precedingNode.type === "BlockStatement") {
           addTrailingComment(precedingNode, comment);
-        } else {
-          addDanglingComment(enclosingNode, comment);
+          return true;
         }
+        if (isSingleLineComment(comment, text) && // Comment and `precedingNode` are on same line
+        !has_newline_in_range_default(text, locStart(precedingNode), locStart(comment))) {
+          addTrailingComment(precedingNode, comment);
+          return true;
+        }
+        addDanglingComment(enclosingNode, comment);
+        return true;
       }
-      return true;
     }
     if (followingNode.type === "BlockStatement") {
       addBlockStatementFirstComment(followingNode, comment);
@@ -3432,7 +3494,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if ((enclosingNode == null ? void 0 : enclosingNode.type) !== "WhileStatement" || !followingNode) {
       return false;
     }
-    const nextCharacter = get_next_non_space_non_comment_character_default(text, locEnd(comment));
+    const nextCharacter = get_next_non_space_non_comment_character_default(
+      text,
+      locEnd(comment)
+    );
     if (nextCharacter === ")") {
       addTrailingComment(precedingNode, comment);
       return true;
@@ -3494,11 +3559,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (!options2.experimentalTernaries) {
       return false;
     }
-    const enclosingIsCond = (enclosingNode == null ? void 0 : enclosingNode.type) === "ConditionalExpression" || (enclosingNode == null ? void 0 : enclosingNode.type) === "ConditionalTypeAnnotation" || (enclosingNode == null ? void 0 : enclosingNode.type) === "TSConditionalType";
+    const enclosingIsCond = (enclosingNode == null ? void 0 : enclosingNode.type) === "ConditionalExpression" || isConditionalType(enclosingNode);
     if (!enclosingIsCond) {
       return false;
     }
-    const followingIsCond = (followingNode == null ? void 0 : followingNode.type) === "ConditionalExpression" || (followingNode == null ? void 0 : followingNode.type) === "ConditionalTypeAnnotation" || (followingNode == null ? void 0 : followingNode.type) === "TSConditionalType";
+    const followingIsCond = (followingNode == null ? void 0 : followingNode.type) === "ConditionalExpression" || isConditionalType(followingNode);
     if (followingIsCond) {
       addDanglingComment(enclosingNode, comment);
       return true;
@@ -3514,8 +3579,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     options: options2
   }) {
     const isSameLineAsPrecedingNode = precedingNode && !has_newline_in_range_default(text, locEnd(precedingNode), locStart(comment));
-    if ((!precedingNode || !isSameLineAsPrecedingNode) && ((enclosingNode == null ? void 0 : enclosingNode.type) === "ConditionalExpression" || (enclosingNode == null ? void 0 : enclosingNode.type) === "ConditionalTypeAnnotation" || (enclosingNode == null ? void 0 : enclosingNode.type) === "TSConditionalType") && followingNode) {
-      if (options2.experimentalTernaries && enclosingNode.alternate === followingNode && !(is_block_comment_default(comment) && !has_newline_in_range_default(options2.originalText, locStart(comment), locEnd(comment)))) {
+    if ((!precedingNode || !isSameLineAsPrecedingNode) && ((enclosingNode == null ? void 0 : enclosingNode.type) === "ConditionalExpression" || isConditionalType(enclosingNode)) && followingNode) {
+      if (options2.experimentalTernaries && enclosingNode.alternate === followingNode && !(is_block_comment_default(comment) && !has_newline_in_range_default(
+        options2.originalText,
+        locStart(comment),
+        locEnd(comment)
+      ))) {
         addDanglingComment(enclosingNode, comment);
         return true;
       }
@@ -3535,7 +3604,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  var classLikeNodeTypes = /* @__PURE__ */ new Set(["ClassDeclaration", "ClassExpression", "DeclareClass", "DeclareInterface", "InterfaceDeclaration", "TSInterfaceDeclaration"]);
+  var classLikeNodeTypes = /* @__PURE__ */ new Set([
+    "ClassDeclaration",
+    "ClassExpression",
+    "DeclareClass",
+    "DeclareInterface",
+    "InterfaceDeclaration",
+    "TSInterfaceDeclaration"
+  ]);
   function handleClassComments({
     comment,
     precedingNode,
@@ -3545,7 +3621,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (classLikeNodeTypes.has(enclosingNode == null ? void 0 : enclosingNode.type)) {
       if (is_non_empty_array_default(enclosingNode.decorators) && !((followingNode == null ? void 0 : followingNode.type) === "Decorator")) {
         addTrailingComment(at_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           enclosingNode.decorators,
           -1
@@ -3575,7 +3651,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  var propertyLikeNodeTypes = /* @__PURE__ */ new Set(["ClassMethod", "ClassProperty", "PropertyDefinition", "TSAbstractPropertyDefinition", "TSAbstractMethodDefinition", "TSDeclareMethod", "MethodDefinition", "ClassAccessorProperty", "AccessorProperty", "TSAbstractAccessorProperty"]);
+  var propertyLikeNodeTypes = /* @__PURE__ */ new Set([
+    "ClassMethod",
+    "ClassProperty",
+    "PropertyDefinition",
+    "TSAbstractPropertyDefinition",
+    "TSAbstractMethodDefinition",
+    "TSDeclareMethod",
+    "MethodDefinition",
+    "ClassAccessorProperty",
+    "AccessorProperty",
+    "TSAbstractAccessorProperty",
+    "TSParameterProperty"
+  ]);
   function handleMethodNameComments({
     comment,
     precedingNode,
@@ -3589,13 +3677,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       addTrailingComment(precedingNode, comment);
       return true;
     }
-    if ((precedingNode == null ? void 0 : precedingNode.type) === "Decorator" && propertyLikeNodeTypes.has(enclosingNode == null ? void 0 : enclosingNode.type)) {
+    if ((precedingNode == null ? void 0 : precedingNode.type) === "Decorator" && propertyLikeNodeTypes.has(enclosingNode == null ? void 0 : enclosingNode.type) && (is_line_comment_default(comment) || comment.placement === "ownLine")) {
       addTrailingComment(precedingNode, comment);
       return true;
     }
     return false;
   }
-  var functionLikeNodeTypes = /* @__PURE__ */ new Set(["FunctionDeclaration", "FunctionExpression", "ClassMethod", "MethodDefinition", "ObjectMethod"]);
+  var functionLikeNodeTypes = /* @__PURE__ */ new Set([
+    "FunctionDeclaration",
+    "FunctionExpression",
+    "ClassMethod",
+    "MethodDefinition",
+    "ObjectMethod"
+  ]);
   function handleFunctionNameComments({
     comment,
     precedingNode,
@@ -3611,11 +3705,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  function handleCommentAfterArrowParams({
-    comment,
-    enclosingNode,
-    text
-  }) {
+  function handleCommentAfterArrowParams({ comment, enclosingNode, text }) {
     if ((enclosingNode == null ? void 0 : enclosingNode.type) !== "ArrowFunctionExpression") {
       return false;
     }
@@ -3626,11 +3716,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  function handleCommentInEmptyParens({
-    comment,
-    enclosingNode,
-    text
-  }) {
+  function handleCommentInEmptyParens({ comment, enclosingNode, text }) {
     if (get_next_non_space_non_comment_character_default(text, locEnd(comment)) !== ")") {
       return false;
     }
@@ -3677,7 +3763,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return true;
     }
     if (!is_block_comment_default(comment) && ((enclosingNode == null ? void 0 : enclosingNode.type) === "FunctionDeclaration" || (enclosingNode == null ? void 0 : enclosingNode.type) === "FunctionExpression" || (enclosingNode == null ? void 0 : enclosingNode.type) === "ObjectMethod") && (followingNode == null ? void 0 : followingNode.type) === "BlockStatement" && enclosingNode.body === followingNode) {
-      const characterAfterCommentIndex = get_next_non_space_non_comment_character_index_default(text, locEnd(comment));
+      const characterAfterCommentIndex = get_next_non_space_non_comment_character_index_default(
+        text,
+        locEnd(comment)
+      );
       if (characterAfterCommentIndex === locStart(followingNode)) {
         addBlockStatementFirstComment(followingNode, comment);
         return true;
@@ -3685,20 +3774,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  function handleLabeledStatementComments({
-    comment,
-    enclosingNode
-  }) {
+  function handleLabeledStatementComments({ comment, enclosingNode }) {
     if ((enclosingNode == null ? void 0 : enclosingNode.type) === "LabeledStatement") {
       addLeadingComment(enclosingNode, comment);
       return true;
     }
     return false;
   }
-  function handleBreakAndContinueStatementComments({
-    comment,
-    enclosingNode
-  }) {
+  function handleBreakAndContinueStatementComments({ comment, enclosingNode }) {
     if (((enclosingNode == null ? void 0 : enclosingNode.type) === "ContinueStatement" || (enclosingNode == null ? void 0 : enclosingNode.type) === "BreakStatement") && !enclosingNode.label) {
       addTrailingComment(enclosingNode, comment);
       return true;
@@ -3762,22 +3845,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  function handlePropertyComments({
-    comment,
-    enclosingNode
-  }) {
+  function handlePropertyComments({ comment, enclosingNode }) {
     if (isObjectProperty(enclosingNode)) {
       addLeadingComment(enclosingNode, comment);
       return true;
     }
     return false;
   }
-  function handleOnlyComments({
-    comment,
-    enclosingNode,
-    ast,
-    isLastComment
-  }) {
+  function handleOnlyComments({ comment, enclosingNode, ast, isLastComment }) {
     var _a;
     if (((_a = ast == null ? void 0 : ast.body) == null ? void 0 : _a.length) === 0) {
       if (isLastComment) {
@@ -3797,10 +3872,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  function handleForComments({
-    comment,
-    enclosingNode
-  }) {
+  function handleForComments({ comment, enclosingNode }) {
     if ((enclosingNode == null ? void 0 : enclosingNode.type) === "ForInStatement" || (enclosingNode == null ? void 0 : enclosingNode.type) === "ForOfStatement") {
       addLeadingComment(enclosingNode, comment);
       return true;
@@ -3825,18 +3897,27 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  function handleAssignmentPatternComments({
-    comment,
-    enclosingNode
-  }) {
+  function handleAssignmentPatternComments({ comment, enclosingNode }) {
     if ((enclosingNode == null ? void 0 : enclosingNode.type) === "AssignmentPattern") {
       addLeadingComment(enclosingNode, comment);
       return true;
     }
     return false;
   }
-  var assignmentLikeNodeTypes = /* @__PURE__ */ new Set(["VariableDeclarator", "AssignmentExpression", "TypeAlias", "TSTypeAliasDeclaration"]);
-  var complexExprNodeTypes = /* @__PURE__ */ new Set(["ObjectExpression", "RecordExpression", "ArrayExpression", "TupleExpression", "TemplateLiteral", "TaggedTemplateExpression", "ObjectTypeAnnotation", "TSTypeLiteral"]);
+  var assignmentLikeNodeTypes = /* @__PURE__ */ new Set([
+    "VariableDeclarator",
+    "AssignmentExpression",
+    "TypeAlias",
+    "TSTypeAliasDeclaration"
+  ]);
+  var complexExprNodeTypes = /* @__PURE__ */ new Set([
+    "ObjectExpression",
+    "ArrayExpression",
+    "TemplateLiteral",
+    "TaggedTemplateExpression",
+    "ObjectTypeAnnotation",
+    "TSTypeLiteral"
+  ]);
   function handleVariableDeclaratorComments({
     comment,
     enclosingNode,
@@ -3860,35 +3941,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return false;
   }
-  function handleIgnoreComments({
-    comment,
-    enclosingNode,
-    followingNode
-  }) {
-    if (isPrettierIgnoreComment(comment) && (enclosingNode == null ? void 0 : enclosingNode.type) === "TSMappedType" && (followingNode == null ? void 0 : followingNode.type) === "TSTypeParameter" && followingNode.constraint) {
+  function handleIgnoreComments({ comment, enclosingNode, followingNode }) {
+    if (isPrettierIgnoreComment(comment) && (enclosingNode == null ? void 0 : enclosingNode.type) === "TSMappedType" && followingNode === enclosingNode.key) {
       enclosingNode.prettierIgnore = true;
       comment.unignore = true;
       return true;
     }
   }
-  function handleTSMappedTypeComments({
-    comment,
-    precedingNode,
-    enclosingNode,
-    followingNode
-  }) {
+  function handleTSMappedTypeComments({ comment, precedingNode, enclosingNode }) {
     if ((enclosingNode == null ? void 0 : enclosingNode.type) !== "TSMappedType") {
-      return false;
+      return;
     }
-    if ((followingNode == null ? void 0 : followingNode.type) === "TSTypeParameter" && followingNode.name) {
-      addLeadingComment(followingNode.name, comment);
+    if (!precedingNode) {
+      addDanglingComment(enclosingNode, comment);
       return true;
     }
-    if ((precedingNode == null ? void 0 : precedingNode.type) === "TSTypeParameter" && precedingNode.constraint) {
-      addTrailingComment(precedingNode.constraint, comment);
-      return true;
-    }
-    return false;
   }
   function handleSwitchDefaultCaseComments({
     comment,
@@ -3898,7 +3965,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (!enclosingNode || enclosingNode.type !== "SwitchCase" || enclosingNode.test || !followingNode || followingNode !== enclosingNode.consequent[0]) {
       return false;
     }
-    if (followingNode.type === "BlockStatement" && isLineComment(comment)) {
+    if (followingNode.type === "BlockStatement" && is_line_comment_default(comment)) {
       addBlockStatementFirstComment(followingNode, comment);
     } else {
       addDanglingComment(enclosingNode, comment);
@@ -3913,7 +3980,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }) {
     if (isUnionType(precedingNode) && ((enclosingNode.type === "TSArrayType" || enclosingNode.type === "ArrayTypeAnnotation") && !followingNode || isIntersectionType(enclosingNode))) {
       addTrailingComment(at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         precedingNode.types,
         -1
@@ -3937,14 +4004,48 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return true;
     }
   }
-  var isRealFunctionLikeNode = create_type_check_function_default(["ArrowFunctionExpression", "FunctionExpression", "FunctionDeclaration", "ObjectMethod", "ClassMethod", "TSDeclareFunction", "TSCallSignatureDeclaration", "TSConstructSignatureDeclaration", "TSMethodSignature", "TSConstructorType", "TSFunctionType", "TSDeclareMethod"]);
+  function handleLastBinaryOperatorOperand({
+    comment,
+    precedingNode,
+    enclosingNode,
+    followingNode,
+    text
+  }) {
+    if (!followingNode && (enclosingNode == null ? void 0 : enclosingNode.type) === "UnaryExpression" && ((precedingNode == null ? void 0 : precedingNode.type) === "LogicalExpression" || (precedingNode == null ? void 0 : precedingNode.type) === "BinaryExpression")) {
+      if (
+        // Multiline expression
+        has_newline_in_range_default(
+          text,
+          locStart(enclosingNode.argument),
+          locStart(precedingNode.right)
+        ) && isSingleLineComment(comment, text) && // Comment and `precedingNode.right` are on same line
+        !has_newline_in_range_default(text, locStart(precedingNode.right), locStart(comment))
+      ) {
+        addTrailingComment(precedingNode.right, comment);
+        return true;
+      }
+    }
+    return false;
+  }
+  var isRealFunctionLikeNode = create_type_check_function_default([
+    "ArrowFunctionExpression",
+    "FunctionExpression",
+    "FunctionDeclaration",
+    "ObjectMethod",
+    "ClassMethod",
+    "TSDeclareFunction",
+    "TSCallSignatureDeclaration",
+    "TSConstructSignatureDeclaration",
+    "TSMethodSignature",
+    "TSConstructorType",
+    "TSFunctionType",
+    "TSDeclareMethod"
+  ]);
 
   // src/language-js/comments/printer-methods.js
   var nodeTypesCanNotAttachComment = /* @__PURE__ */ new Set([
     "EmptyStatement",
     "TemplateElement",
-    // In ESTree `import` is a token, `import("foo")`
-    "Import",
     // There is no similar node in Babel AST
     // ```ts
     // class Foo {
@@ -3961,26 +4062,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function getCommentChildNodes(node, options2) {
     var _a;
-    if ((options2.parser === "typescript" || options2.parser === "flow" || options2.parser === "acorn" || options2.parser === "espree" || options2.parser === "meriyah" || options2.parser === "__babel_estree") && node.type === "MethodDefinition" && ((_a = node.value) == null ? void 0 : _a.type) === "FunctionExpression" && getFunctionParameters(node.value).length === 0 && !node.value.returnType && !is_non_empty_array_default(node.value.typeParameters) && node.value.body) {
+    if ((options2.parser === "typescript" || options2.parser === "flow" || options2.parser === "hermes" || options2.parser === "acorn" || options2.parser === "oxc" || options2.parser === "oxc-ts" || options2.parser === "espree" || options2.parser === "meriyah" || options2.parser === "__babel_estree") && node.type === "MethodDefinition" && ((_a = node.value) == null ? void 0 : _a.type) === "FunctionExpression" && getFunctionParameters(node.value).length === 0 && !node.value.returnType && !is_non_empty_array_default(node.value.typeParameters) && node.value.body) {
       return [...node.decorators || [], node.key, node.value.body];
     }
   }
   function willPrintOwnComments(path) {
-    const {
-      node,
-      parent
-    } = path;
+    const { node, parent } = path;
     return (isJsxElement(node) || parent && (parent.type === "JSXSpreadAttribute" || parent.type === "JSXSpreadChild" || isUnionType(parent) || parent.type === "MatchOrPattern" || (parent.type === "ClassDeclaration" || parent.type === "ClassExpression") && parent.superClass === node)) && (!hasNodeIgnoreComment(node) || isUnionType(parent));
   }
-  function isGap(text, {
-    parser
-  }) {
-    if (parser === "flow" || parser === "babel-flow") {
+  function isGap(text, { parser }) {
+    if (parser === "flow" || parser === "hermes" || parser === "babel-flow") {
       text = string_replace_all_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         text,
-        /[\s(]/g,
+        /[\s(]/gu,
         ""
       );
       return text === "" || text === "/*" || text === "/*::";
@@ -4003,41 +4099,28 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var MODE_BREAK = Symbol("MODE_BREAK");
   var MODE_FLAT = Symbol("MODE_FLAT");
   var CURSOR_PLACEHOLDER = Symbol("cursor");
+  var DOC_FILL_PRINTED_LENGTH = Symbol("DOC_FILL_PRINTED_LENGTH");
   function rootIndent() {
-    return {
-      value: "",
-      length: 0,
-      queue: []
-    };
+    return { value: "", length: 0, queue: [] };
   }
   function makeIndent(ind, options2) {
-    return generateInd(ind, {
-      type: "indent"
-    }, options2);
+    return generateInd(ind, { type: "indent" }, options2);
   }
   function makeAlign(indent2, widthOrDoc, options2) {
     if (widthOrDoc === Number.NEGATIVE_INFINITY) {
       return indent2.root || rootIndent();
     }
     if (widthOrDoc < 0) {
-      return generateInd(indent2, {
-        type: "dedent"
-      }, options2);
+      return generateInd(indent2, { type: "dedent" }, options2);
     }
     if (!widthOrDoc) {
       return indent2;
     }
     if (widthOrDoc.type === "root") {
-      return {
-        ...indent2,
-        root: indent2
-      };
+      return { ...indent2, root: indent2 };
     }
     const alignType = typeof widthOrDoc === "string" ? "stringAlign" : "numberAlign";
-    return generateInd(indent2, {
-      type: alignType,
-      n: widthOrDoc
-    }, options2);
+    return generateInd(indent2, { type: alignType, n: widthOrDoc }, options2);
   }
   function generateInd(ind, newPart, options2) {
     const queue = newPart.type === "dedent" ? ind.queue.slice(0, -1) : [...ind.queue, newPart];
@@ -4069,12 +4152,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
     }
     flushSpaces();
-    return {
-      ...ind,
-      value,
-      length,
-      queue
-    };
+    return { ...ind, value, length, queue };
     function addTabs(count) {
       value += "	".repeat(count);
       length += options2.tabWidth * count;
@@ -4111,26 +4189,25 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     let trimCount = 0;
     let cursorCount = 0;
     let outIndex = out.length;
-    outer:
-      while (outIndex--) {
-        const last = out[outIndex];
-        if (last === CURSOR_PLACEHOLDER) {
-          cursorCount++;
-          continue;
-        }
-        if (false) {
-          throw new Error(`Unexpected value in trim: '${typeof last}'`);
-        }
-        for (let charIndex = last.length - 1; charIndex >= 0; charIndex--) {
-          const char = last[charIndex];
-          if (char === " " || char === "	") {
-            trimCount++;
-          } else {
-            out[outIndex] = last.slice(0, charIndex + 1);
-            break outer;
-          }
+    outer: while (outIndex--) {
+      const last = out[outIndex];
+      if (last === CURSOR_PLACEHOLDER) {
+        cursorCount++;
+        continue;
+      }
+      if (false) {
+        throw new Error(`Unexpected value in trim: '${typeof last}'`);
+      }
+      for (let charIndex = last.length - 1; charIndex >= 0; charIndex--) {
+        const char = last[charIndex];
+        if (char === " " || char === "	") {
+          trimCount++;
+        } else {
+          out[outIndex] = last.slice(0, charIndex + 1);
+          break outer;
         }
       }
+    }
     if (trimCount > 0 || cursorCount > 0) {
       out.length = outIndex + 1;
       while (cursorCount-- > 0) {
@@ -4154,10 +4231,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         cmds.push(restCommands[--restIdx]);
         continue;
       }
-      const {
-        mode,
-        doc
-      } = cmds.pop();
+      const { mode, doc } = cmds.pop();
       const docType = get_doc_type_default(doc);
       switch (docType) {
         case DOC_TYPE_STRING:
@@ -4167,11 +4241,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         case DOC_TYPE_ARRAY:
         case DOC_TYPE_FILL: {
           const parts = docType === DOC_TYPE_ARRAY ? doc : doc.parts;
-          for (let i = parts.length - 1; i >= 0; i--) {
-            cmds.push({
-              mode,
-              doc: parts[i]
-            });
+          const end = doc[DOC_FILL_PRINTED_LENGTH] ?? 0;
+          for (let i = parts.length - 1; i >= end; i--) {
+            cmds.push({ mode, doc: parts[i] });
           }
           break;
         }
@@ -4179,10 +4251,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         case DOC_TYPE_ALIGN:
         case DOC_TYPE_INDENT_IF_BREAK:
         case DOC_TYPE_LABEL:
-          cmds.push({
-            mode,
-            doc: doc.contents
-          });
+          cmds.push({ mode, doc: doc.contents });
           break;
         case DOC_TYPE_TRIM:
           width += trim(out);
@@ -4193,25 +4262,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           }
           const groupMode = doc.break ? MODE_BREAK : mode;
           const contents = doc.expandedStates && groupMode === MODE_BREAK ? at_default(
-            /* isOptionalObject*/
+            /* isOptionalObject */
             false,
             doc.expandedStates,
             -1
           ) : doc.contents;
-          cmds.push({
-            mode: groupMode,
-            doc: contents
-          });
+          cmds.push({ mode: groupMode, doc: contents });
           break;
         }
         case DOC_TYPE_IF_BREAK: {
           const groupMode = doc.groupId ? groupModeMap[doc.groupId] || MODE_FLAT : mode;
           const contents = groupMode === MODE_BREAK ? doc.breakContents : doc.flatContents;
           if (contents) {
-            cmds.push({
-              mode,
-              doc: contents
-            });
+            cmds.push({ mode, doc: contents });
           }
           break;
         }
@@ -4241,26 +4304,18 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const width = options2.printWidth;
     const newLine = convertEndOfLineToChars(options2.endOfLine);
     let pos = 0;
-    const cmds = [{
-      ind: rootIndent(),
-      mode: MODE_BREAK,
-      doc
-    }];
+    const cmds = [{ ind: rootIndent(), mode: MODE_BREAK, doc }];
     const out = [];
     let shouldRemeasure = false;
     const lineSuffix2 = [];
     let printedCursorCount = 0;
     propagateBreaks(doc);
     while (cmds.length > 0) {
-      const {
-        ind,
-        mode,
-        doc: doc2
-      } = cmds.pop();
+      const { ind, mode, doc: doc2 } = cmds.pop();
       switch (get_doc_type_default(doc2)) {
         case DOC_TYPE_STRING: {
           const formatted = newLine !== "\n" ? string_replace_all_default(
-            /* isOptionalObject*/
+            /* isOptionalObject */
             false,
             doc2,
             "\n",
@@ -4274,11 +4329,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         }
         case DOC_TYPE_ARRAY:
           for (let i = doc2.length - 1; i >= 0; i--) {
-            cmds.push({
-              ind,
-              mode,
-              doc: doc2[i]
-            });
+            cmds.push({ ind, mode, doc: doc2[i] });
           }
           break;
         case DOC_TYPE_CURSOR:
@@ -4289,11 +4340,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           printedCursorCount++;
           break;
         case DOC_TYPE_INDENT:
-          cmds.push({
-            ind: makeIndent(ind, options2),
-            mode,
-            doc: doc2.contents
-          });
+          cmds.push({ ind: makeIndent(ind, options2), mode, doc: doc2.contents });
           break;
         case DOC_TYPE_ALIGN:
           cmds.push({
@@ -4316,13 +4363,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
                 });
                 break;
               }
+            // fallthrough
             case MODE_BREAK: {
               shouldRemeasure = false;
-              const next = {
-                ind,
-                mode: MODE_FLAT,
-                doc: doc2.contents
-              };
+              const next = { ind, mode: MODE_FLAT, doc: doc2.contents };
               const rem = width - pos;
               const hasLineSuffix = lineSuffix2.length > 0;
               if (!doc2.break && fits(next, cmds, rem, hasLineSuffix, groupModeMap)) {
@@ -4330,34 +4374,22 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
               } else {
                 if (doc2.expandedStates) {
                   const mostExpanded = at_default(
-                    /* isOptionalObject*/
+                    /* isOptionalObject */
                     false,
                     doc2.expandedStates,
                     -1
                   );
                   if (doc2.break) {
-                    cmds.push({
-                      ind,
-                      mode: MODE_BREAK,
-                      doc: mostExpanded
-                    });
+                    cmds.push({ ind, mode: MODE_BREAK, doc: mostExpanded });
                     break;
                   } else {
                     for (let i = 1; i < doc2.expandedStates.length + 1; i++) {
                       if (i >= doc2.expandedStates.length) {
-                        cmds.push({
-                          ind,
-                          mode: MODE_BREAK,
-                          doc: mostExpanded
-                        });
+                        cmds.push({ ind, mode: MODE_BREAK, doc: mostExpanded });
                         break;
                       } else {
                         const state = doc2.expandedStates[i];
-                        const cmd = {
-                          ind,
-                          mode: MODE_FLAT,
-                          doc: state
-                        };
+                        const cmd = { ind, mode: MODE_FLAT, doc: state };
                         if (fits(cmd, cmds, rem, hasLineSuffix, groupModeMap)) {
                           cmds.push(cmd);
                           break;
@@ -4366,11 +4398,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
                     }
                   }
                 } else {
-                  cmds.push({
-                    ind,
-                    mode: MODE_BREAK,
-                    doc: doc2.contents
-                  });
+                  cmds.push({ ind, mode: MODE_BREAK, doc: doc2.contents });
                 }
               }
               break;
@@ -4378,34 +4406,54 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           }
           if (doc2.id) {
             groupModeMap[doc2.id] = at_default(
-              /* isOptionalObject*/
+              /* isOptionalObject */
               false,
               cmds,
               -1
             ).mode;
           }
           break;
+        // Fills each line with as much code as possible before moving to a new
+        // line with the same indentation.
+        //
+        // Expects doc.parts to be an array of alternating content and
+        // whitespace. The whitespace contains the linebreaks.
+        //
+        // For example:
+        //   ["I", line, "love", line, "monkeys"]
+        // or
+        //   [{ type: group, ... }, softline, { type: group, ... }]
+        //
+        // It uses this parts structure to handle three main layout cases:
+        // * The first two content items fit on the same line without
+        //   breaking
+        //   -> output the first content item and the whitespace "flat".
+        // * Only the first content item fits on the line without breaking
+        //   -> output the first content item "flat" and the whitespace with
+        //   "break".
+        // * Neither content item fits on the line without breaking
+        //   -> output the first content item and the whitespace with "break".
         case DOC_TYPE_FILL: {
           const rem = width - pos;
-          const {
-            parts
-          } = doc2;
-          if (parts.length === 0) {
+          const offset = doc2[DOC_FILL_PRINTED_LENGTH] ?? 0;
+          const { parts } = doc2;
+          const length = parts.length - offset;
+          if (length === 0) {
             break;
           }
-          const [content, whitespace] = parts;
-          const contentFlatCmd = {
-            ind,
-            mode: MODE_FLAT,
-            doc: content
-          };
-          const contentBreakCmd = {
-            ind,
-            mode: MODE_BREAK,
-            doc: content
-          };
-          const contentFits = fits(contentFlatCmd, [], rem, lineSuffix2.length > 0, groupModeMap, true);
-          if (parts.length === 1) {
+          const content = parts[offset + 0];
+          const whitespace = parts[offset + 1];
+          const contentFlatCmd = { ind, mode: MODE_FLAT, doc: content };
+          const contentBreakCmd = { ind, mode: MODE_BREAK, doc: content };
+          const contentFits = fits(
+            contentFlatCmd,
+            [],
+            rem,
+            lineSuffix2.length > 0,
+            groupModeMap,
+            true
+          );
+          if (length === 1) {
             if (contentFits) {
               cmds.push(contentFlatCmd);
             } else {
@@ -4413,17 +4461,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             }
             break;
           }
-          const whitespaceFlatCmd = {
-            ind,
-            mode: MODE_FLAT,
-            doc: whitespace
-          };
-          const whitespaceBreakCmd = {
-            ind,
-            mode: MODE_BREAK,
-            doc: whitespace
-          };
-          if (parts.length === 2) {
+          const whitespaceFlatCmd = { ind, mode: MODE_FLAT, doc: whitespace };
+          const whitespaceBreakCmd = { ind, mode: MODE_BREAK, doc: whitespace };
+          if (length === 2) {
             if (contentFits) {
               cmds.push(whitespaceFlatCmd, contentFlatCmd);
             } else {
@@ -4431,19 +4471,25 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             }
             break;
           }
-          parts.splice(0, 2);
+          const secondContent = parts[offset + 2];
           const remainingCmd = {
             ind,
             mode,
-            doc: fill(parts)
+            doc: { ...doc2, [DOC_FILL_PRINTED_LENGTH]: offset + 2 }
           };
-          const secondContent = parts[0];
           const firstAndSecondContentFlatCmd = {
             ind,
             mode: MODE_FLAT,
             doc: [content, whitespace, secondContent]
           };
-          const firstAndSecondContentFits = fits(firstAndSecondContentFlatCmd, [], rem, lineSuffix2.length > 0, groupModeMap, true);
+          const firstAndSecondContentFits = fits(
+            firstAndSecondContentFlatCmd,
+            [],
+            rem,
+            lineSuffix2.length > 0,
+            groupModeMap,
+            true
+          );
           if (firstAndSecondContentFits) {
             cmds.push(remainingCmd, whitespaceFlatCmd, contentFlatCmd);
           } else if (contentFits) {
@@ -4459,39 +4505,23 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           if (groupMode === MODE_BREAK) {
             const breakContents = doc2.type === DOC_TYPE_IF_BREAK ? doc2.breakContents : doc2.negate ? doc2.contents : indent(doc2.contents);
             if (breakContents) {
-              cmds.push({
-                ind,
-                mode,
-                doc: breakContents
-              });
+              cmds.push({ ind, mode, doc: breakContents });
             }
           }
           if (groupMode === MODE_FLAT) {
             const flatContents = doc2.type === DOC_TYPE_IF_BREAK ? doc2.flatContents : doc2.negate ? indent(doc2.contents) : doc2.contents;
             if (flatContents) {
-              cmds.push({
-                ind,
-                mode,
-                doc: flatContents
-              });
+              cmds.push({ ind, mode, doc: flatContents });
             }
           }
           break;
         }
         case DOC_TYPE_LINE_SUFFIX:
-          lineSuffix2.push({
-            ind,
-            mode,
-            doc: doc2.contents
-          });
+          lineSuffix2.push({ ind, mode, doc: doc2.contents });
           break;
         case DOC_TYPE_LINE_SUFFIX_BOUNDARY:
           if (lineSuffix2.length > 0) {
-            cmds.push({
-              ind,
-              mode,
-              doc: hardlineWithoutBreakParent
-            });
+            cmds.push({ ind, mode, doc: hardlineWithoutBreakParent });
           }
           break;
         case DOC_TYPE_LINE:
@@ -4506,13 +4536,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
               } else {
                 shouldRemeasure = true;
               }
+            // fallthrough
             case MODE_BREAK:
               if (lineSuffix2.length > 0) {
-                cmds.push({
-                  ind,
-                  mode,
-                  doc: doc2
-                }, ...lineSuffix2.reverse());
+                cmds.push({ ind, mode, doc: doc2 }, ...lineSuffix2.reverse());
                 lineSuffix2.length = 0;
                 break;
               }
@@ -4533,11 +4560,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           }
           break;
         case DOC_TYPE_LABEL:
-          cmds.push({
-            ind,
-            mode,
-            doc: doc2.contents
-          });
+          cmds.push({ ind, mode, doc: doc2.contents });
           break;
         case DOC_TYPE_BREAK_PARENT:
           break;
@@ -4551,7 +4574,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     const cursorPlaceholderIndex = out.indexOf(CURSOR_PLACEHOLDER);
     if (cursorPlaceholderIndex !== -1) {
-      const otherCursorPlaceholderIndex = out.indexOf(CURSOR_PLACEHOLDER, cursorPlaceholderIndex + 1);
+      const otherCursorPlaceholderIndex = out.indexOf(
+        CURSOR_PLACEHOLDER,
+        cursorPlaceholderIndex + 1
+      );
+      if (otherCursorPlaceholderIndex === -1) {
+        return {
+          formatted: out.filter((char) => char !== CURSOR_PLACEHOLDER).join("")
+        };
+      }
       const beforeCursor = out.slice(0, cursorPlaceholderIndex).join("");
       const aroundCursor = out.slice(cursorPlaceholderIndex + 1, otherCursorPlaceholderIndex).join("");
       const afterCursor = out.slice(otherCursorPlaceholderIndex + 1).join("");
@@ -4561,9 +4592,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         cursorNodeText: aroundCursor
       };
     }
-    return {
-      formatted: out.join("")
-    };
+    return { formatted: out.join("") };
   }
 
   // src/utils/get-alignment-size.js
@@ -4588,17 +4617,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return get_alignment_size_default(
       // All the leading whitespaces
-      value.slice(lastNewlineIndex + 1).match(/^[\t ]*/)[0],
+      value.slice(lastNewlineIndex + 1).match(/^[\t ]*/u)[0],
       tabWidth
     );
   }
   var get_indent_size_default = getIndentSize;
 
   // src/language-js/print/template-literal.js
-  function printTemplateLiteral(path, print3, options2) {
-    const {
-      node
-    } = path;
+  function printTemplateLiteral(path, options2, print3) {
+    const { node } = path;
     const isTemplateLiteral = node.type === "TemplateLiteral";
     if (isTemplateLiteral && isJestEachTemplateLiteral(path)) {
       const printed = printJestEachTemplateLiteral(path, options2, print3);
@@ -4611,48 +4638,38 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       expressionsKey = "types";
     }
     const parts = [];
-    let expressionDocs = path.map(print3, expressionsKey);
-    const isSimple = isSimpleTemplateLiteral(node);
-    if (isSimple) {
-      expressionDocs = expressionDocs.map((doc) => printDocToString(doc, {
-        ...options2,
-        printWidth: Number.POSITIVE_INFINITY
-      }).formatted);
-    }
+    const expressionDocs = path.map(print3, expressionsKey);
     parts.push(lineSuffixBoundary, "`");
     let previousQuasiIndentSize = 0;
-    path.each(({
-      index,
-      node: quasi
-    }) => {
+    path.each(({ index, node: quasi }) => {
       parts.push(print3());
       if (quasi.tail) {
         return;
       }
-      const {
-        tabWidth
-      } = options2;
+      const { tabWidth } = options2;
       const text = quasi.value.raw;
       const indentSize = text.includes("\n") ? get_indent_size_default(text, tabWidth) : previousQuasiIndentSize;
       previousQuasiIndentSize = indentSize;
       let expressionDoc = expressionDocs[index];
-      if (!isSimple) {
-        const expression = node[expressionsKey][index];
-        let interpolationHasNewline = has_newline_in_range_default(options2.originalText, locEnd(quasi), locStart(node.quasis[index + 1]));
-        if (!interpolationHasNewline) {
-          const renderedExpression = printDocToString(expressionDoc, {
-            ...options2,
-            printWidth: Number.POSITIVE_INFINITY
-          }).formatted;
-          if (renderedExpression.includes("\n")) {
-            interpolationHasNewline = true;
-          } else {
-            expressionDoc = renderedExpression;
-          }
+      const expression = node[expressionsKey][index];
+      let interpolationHasNewline = has_newline_in_range_default(
+        options2.originalText,
+        locEnd(quasi),
+        locStart(node.quasis[index + 1])
+      );
+      if (!interpolationHasNewline) {
+        const renderedExpression = printDocToString(expressionDoc, {
+          ...options2,
+          printWidth: Number.POSITIVE_INFINITY
+        }).formatted;
+        if (renderedExpression.includes("\n")) {
+          interpolationHasNewline = true;
+        } else {
+          expressionDoc = renderedExpression;
         }
-        if (interpolationHasNewline && (hasComment(expression) || isMemberExpression(expression) || expression.type === "ConditionalExpression" || expression.type === "SequenceExpression" || isBinaryCastExpression(expression) || isBinaryish(expression))) {
-          expressionDoc = [indent([softline, expressionDoc]), softline];
-        }
+      }
+      if (interpolationHasNewline && (hasComment(expression) || expression.type === "Identifier" || isMemberExpression(expression) || expression.type === "ConditionalExpression" || expression.type === "SequenceExpression" || isBinaryCastExpression(expression) || isBinaryish(expression))) {
+        expressionDoc = [indent([softline, expressionDoc]), softline];
       }
       const aligned = indentSize === 0 && text.endsWith("\n") ? align(Number.NEGATIVE_INFINITY, expressionDoc) : addAlignmentToDoc(expressionDoc, indentSize, tabWidth);
       parts.push(group(["${", aligned, lineSuffixBoundary, "}"]));
@@ -4660,35 +4677,52 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     parts.push("`");
     return parts;
   }
-  function printTaggedTemplateLiteral(print3) {
+  function printTaggedTemplateLiteral(path, options2, print3) {
     const quasiDoc = print3("quasi");
-    return label(quasiDoc.label && {
-      tagged: true,
-      ...quasiDoc.label
-    }, [print3("tag"), print3("typeParameters"), lineSuffixBoundary, quasiDoc]);
+    const { node } = path;
+    let space = "";
+    const quasiLeadingComment = getComments(
+      node.quasi,
+      CommentCheckFlags.Leading
+    )[0];
+    if (quasiLeadingComment) {
+      if (has_newline_in_range_default(
+        options2.originalText,
+        locEnd(node.typeArguments ?? node.typeParameters ?? node.tag),
+        locStart(quasiLeadingComment)
+      )) {
+        space = softline;
+      } else {
+        space = " ";
+      }
+    }
+    return label(quasiDoc.label && { tagged: true, ...quasiDoc.label }, [
+      print3("tag"),
+      print3(node.typeArguments ? "typeArguments" : "typeParameters"),
+      space,
+      lineSuffixBoundary,
+      quasiDoc
+    ]);
   }
   function printJestEachTemplateLiteral(path, options2, print3) {
-    const {
-      node
-    } = path;
-    const headerNames = node.quasis[0].value.raw.trim().split(/\s*\|\s*/);
+    const { node } = path;
+    const headerNames = node.quasis[0].value.raw.trim().split(/\s*\|\s*/u);
     if (headerNames.length > 1 || headerNames.some((headerName) => headerName.length > 0)) {
       options2.__inJestEach = true;
       const expressions = path.map(print3, "expressions");
       options2.__inJestEach = false;
       const parts = [];
-      const stringifiedExpressions = expressions.map((doc) => "${" + printDocToString(doc, {
-        ...options2,
-        printWidth: Number.POSITIVE_INFINITY,
-        endOfLine: "lf"
-      }).formatted + "}");
-      const tableBody = [{
-        hasLineBreak: false,
-        cells: []
-      }];
+      const stringifiedExpressions = expressions.map(
+        (doc) => "${" + printDocToString(doc, {
+          ...options2,
+          printWidth: Number.POSITIVE_INFINITY,
+          endOfLine: "lf"
+        }).formatted + "}"
+      );
+      const tableBody = [{ hasLineBreak: false, cells: [] }];
       for (let i = 1; i < node.quasis.length; i++) {
         const row = at_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           tableBody,
           -1
@@ -4699,34 +4733,51 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           row.hasLineBreak = true;
         }
         if (node.quasis[i].value.raw.includes("\n")) {
-          tableBody.push({
-            hasLineBreak: false,
-            cells: []
-          });
+          tableBody.push({ hasLineBreak: false, cells: [] });
         }
       }
-      const maxColumnCount = Math.max(headerNames.length, ...tableBody.map((row) => row.cells.length));
-      const maxColumnWidths = Array.from({
-        length: maxColumnCount
-      }).fill(0);
-      const table = [{
-        cells: headerNames
-      }, ...tableBody.filter((row) => row.cells.length > 0)];
-      for (const {
-        cells
-      } of table.filter((row) => !row.hasLineBreak)) {
+      const maxColumnCount = Math.max(
+        headerNames.length,
+        ...tableBody.map((row) => row.cells.length)
+      );
+      const maxColumnWidths = Array.from({ length: maxColumnCount }).fill(0);
+      const table = [
+        { cells: headerNames },
+        ...tableBody.filter((row) => row.cells.length > 0)
+      ];
+      for (const { cells } of table.filter((row) => !row.hasLineBreak)) {
         for (const [index, cell] of cells.entries()) {
-          maxColumnWidths[index] = Math.max(maxColumnWidths[index], get_string_width_default(cell));
+          maxColumnWidths[index] = Math.max(
+            maxColumnWidths[index],
+            get_string_width_default(cell)
+          );
         }
       }
-      parts.push(lineSuffixBoundary, "`", indent([hardline, join(hardline, table.map((row) => join(" | ", row.cells.map((cell, index) => row.hasLineBreak ? cell : cell + " ".repeat(maxColumnWidths[index] - get_string_width_default(cell))))))]), hardline, "`");
+      parts.push(
+        lineSuffixBoundary,
+        "`",
+        indent([
+          hardline,
+          join(
+            hardline,
+            table.map(
+              (row) => join(
+                " | ",
+                row.cells.map(
+                  (cell, index) => row.hasLineBreak ? cell : cell + " ".repeat(maxColumnWidths[index] - get_string_width_default(cell))
+                )
+              )
+            )
+          )
+        ]),
+        hardline,
+        "`"
+      );
       return parts;
     }
   }
   function printTemplateExpression(path, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     let printed = print3();
     if (hasComment(node)) {
       printed = group([indent([softline, printed]), softline]);
@@ -4734,16 +4785,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return ["${", printed, lineSuffixBoundary, "}"];
   }
   function printTemplateExpressions(path, print3) {
-    return path.map((path2) => printTemplateExpression(path2, print3), "expressions");
+    return path.map(
+      (path2) => printTemplateExpression(path2, print3),
+      "expressions"
+    );
   }
   function escapeTemplateCharacters(doc, raw) {
     return mapDoc(doc, (currentDoc) => {
       if (typeof currentDoc === "string") {
         return raw ? string_replace_all_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           currentDoc,
-          /(\\*)`/g,
+          /(\\*)`/gu,
           "$1$1\\`"
         ) : uncookTemplateElementValue(currentDoc);
       }
@@ -4752,18 +4806,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function uncookTemplateElementValue(cookedValue) {
     return string_replace_all_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       cookedValue,
-      /([\\`]|\${)/g,
-      "\\$1"
+      /([\\`]|\$\{)/gu,
+      String.raw`\$1`
     );
   }
-  function isJestEachTemplateLiteral({
-    node,
-    parent
-  }) {
-    const jestEachTriggerRegex = /^[fx]?(?:describe|it|test)$/;
+  function isJestEachTemplateLiteral({ node, parent }) {
+    const jestEachTriggerRegex = /^[fx]?(?:describe|it|test)$/u;
     return parent.type === "TaggedTemplateExpression" && parent.quasi === node && parent.tag.type === "MemberExpression" && parent.tag.property.type === "Identifier" && parent.tag.property.name === "each" && (parent.tag.object.type === "Identifier" && jestEachTriggerRegex.test(parent.tag.object.name) || parent.tag.object.type === "MemberExpression" && parent.tag.object.property.type === "Identifier" && (parent.tag.object.property.name === "only" || parent.tag.object.property.name === "skip") && parent.tag.object.object.type === "Identifier" && jestEachTriggerRegex.test(parent.tag.object.object.name));
   }
 
@@ -4778,7 +4829,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const isObjectPropertyNamedStyles = (node, key) => isObjectProperty(node) && !node.computed && node.key.type === "Identifier" && node.key.name === "styles" && key === "value";
     return path.match(
       isTemplateLiteral,
-      (node, name) => isArrayOrTupleExpression(node) && name === "elements",
+      (node, name) => isArrayExpression(node) && name === "elements",
       isObjectPropertyNamedStyles,
       ...angularComponentObjectExpressionPredicates
     ) || path.match(
@@ -4802,14 +4853,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     );
   }
   function hasLanguageComment({ node, parent }, languageName) {
-    return hasLeadingBlockCommentWithName(node, languageName) || isAsConstExpression(parent) && hasLeadingBlockCommentWithName(parent, languageName);
+    return hasLeadingBlockCommentWithName(node, languageName) || isAsConstExpression(parent) && hasLeadingBlockCommentWithName(parent, languageName) || parent.type === "ExpressionStatement" && hasLeadingBlockCommentWithName(parent, languageName);
   }
   function isAsConstExpression(node) {
     return node.type === "AsConstExpression" || node.type === "TSAsExpression" && node.typeAnnotation.type === "TSTypeReference" && node.typeAnnotation.typeName.type === "Identifier" && node.typeAnnotation.typeName.name === "const";
   }
 
   // src/language-js/embed/css.js
-  function printEmbedCss(textToDoc, print3, path) {
+  async function printEmbedCss(textToDoc, print3, path) {
     const { node } = path;
     const rawQuasis = node.quasis.map((q) => q.value.raw);
     let placeholderID = 0;
@@ -4817,7 +4868,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       (prevVal, currVal, idx) => idx === 0 ? currVal : prevVal + "@prettier-placeholder-" + placeholderID++ + "-id" + currVal,
       ""
     );
-    const quasisDoc = textToDoc(text, { parser: "scss" });
+    const quasisDoc = await textToDoc(text, { parser: "scss" });
     const expressionDocs = printTemplateExpressions(path, print3);
     const newDoc = replacePlaceholders(quasisDoc, expressionDocs);
     if (!newDoc) {
@@ -4834,7 +4885,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       if (typeof doc !== "string" || !doc.includes("@prettier-placeholder")) {
         return doc;
       }
-      return doc.split(/@prettier-placeholder-(\d+)-id/).map((component, idx) => {
+      return doc.split(/@prettier-placeholder-(\d+)-id/u).map((component, idx) => {
         if (idx % 2 === 0) {
           return replaceEndOfLine(component);
         }
@@ -4853,7 +4904,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return node.type === "Identifier" && node.name === "styled";
   }
   function isStyledExtend(node) {
-    return /^[A-Z]/.test(node.object.name) && node.property.name === "extend";
+    return /^[A-Z]/u.test(node.object.name) && node.property.name === "extend";
   }
   function isStyledComponents({ parent }) {
     if (!parent || parent.type !== "TaggedTemplateExpression") {
@@ -4892,7 +4943,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var css_default = printCss;
 
   // src/language-js/embed/graphql.js
-  function printEmbedGraphQL(textToDoc, print3, path) {
+  async function printEmbedGraphQL(textToDoc, print3, path) {
     const { node } = path;
     const numQuasis = node.quasis.length;
     const expressionDocs = printTemplateExpressions(path, print3);
@@ -4908,16 +4959,16 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       const startsWithBlankLine = numLines > 2 && lines[0].trim() === "" && lines[1].trim() === "";
       const endsWithBlankLine = numLines > 2 && lines[numLines - 1].trim() === "" && lines[numLines - 2].trim() === "";
       const commentsAndWhitespaceOnly = lines.every(
-        (line2) => /^\s*(?:#[^\n\r]*)?$/.test(line2)
+        (line2) => /^\s*(?:#[^\n\r]*)?$/u.test(line2)
       );
-      if (!isLast && /#[^\n\r]*$/.test(lines[numLines - 1])) {
+      if (!isLast && /#[^\n\r]*$/u.test(lines[numLines - 1])) {
         return null;
       }
       let doc = null;
       if (commentsAndWhitespaceOnly) {
         doc = printGraphqlComments(lines);
       } else {
-        doc = textToDoc(text, { parser: "graphql" });
+        doc = await textToDoc(text, { parser: "graphql" });
       }
       if (doc) {
         doc = escapeTemplateCharacters(doc, false);
@@ -4966,18 +5017,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/language-js/embed/html.js
   var htmlTemplateLiteralCounter = 0;
-  function printEmbedHtmlLike(parser, textToDoc, print3, path, options2) {
-    const {
-      node
-    } = path;
+  async function printEmbedHtmlLike(parser, textToDoc, print3, path, options2) {
+    const { node } = path;
     const counter = htmlTemplateLiteralCounter;
     htmlTemplateLiteralCounter = htmlTemplateLiteralCounter + 1 >>> 0;
     const composePlaceholder = (index) => `PRETTIER_HTML_PLACEHOLDER_${index}_${counter}_IN_JS`;
-    const text = node.quasis.map((quasi, index, quasis) => index === quasis.length - 1 ? quasi.value.cooked : quasi.value.cooked + composePlaceholder(index)).join("");
+    const text = node.quasis.map(
+      (quasi, index, quasis) => index === quasis.length - 1 ? quasi.value.cooked : quasi.value.cooked + composePlaceholder(index)
+    ).join("");
     const expressionDocs = printTemplateExpressions(path, print3);
-    const placeholderRegex = new RegExp(composePlaceholder("(\\d+)"), "g");
+    const placeholderRegex = new RegExp(
+      composePlaceholder(String.raw`(\d+)`),
+      "gu"
+    );
     let topLevelCount = 0;
-    const doc = textToDoc(text, {
+    const doc = await textToDoc(text, {
       parser,
       __onHtmlRoot(root) {
         topLevelCount = root.children.length;
@@ -4996,11 +5050,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             component = uncookTemplateElementValue(component);
             if (options2.__embeddedInHtml) {
               component = string_replace_all_default(
-                /* isOptionalObject*/
+                /* isOptionalObject */
                 false,
                 component,
-                /<\/(?=script\b)/gi,
-                "<\\/"
+                /<\/(?=script\b)/giu,
+                String.raw`<\/`
               );
             }
             parts.push(component);
@@ -5012,18 +5066,28 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
       return parts;
     });
-    const leadingWhitespace = /^\s/.test(text) ? " " : "";
-    const trailingWhitespace = /\s$/.test(text) ? " " : "";
+    const leadingWhitespace = /^\s/u.test(text) ? " " : "";
+    const trailingWhitespace = /\s$/u.test(text) ? " " : "";
     const linebreak = options2.htmlWhitespaceSensitivity === "ignore" ? hardline : leadingWhitespace && trailingWhitespace ? line : null;
     if (linebreak) {
       return group(["`", indent([linebreak, group(contentDoc)]), linebreak, "`"]);
     }
-    return label({
-      hug: false
-    }, group(["`", leadingWhitespace, topLevelCount > 1 ? indent(group(contentDoc)) : group(contentDoc), trailingWhitespace, "`"]));
+    return label(
+      { hug: false },
+      group([
+        "`",
+        leadingWhitespace,
+        topLevelCount > 1 ? indent(group(contentDoc)) : group(contentDoc),
+        trailingWhitespace,
+        "`"
+      ])
+    );
   }
   function isHtml(path) {
-    return hasLanguageComment(path, "HTML") || path.match((node) => node.type === "TemplateLiteral", (node, name) => node.type === "TaggedTemplateExpression" && node.tag.type === "Identifier" && node.tag.name === "html" && name === "quasi");
+    return hasLanguageComment(path, "HTML") || path.match(
+      (node) => node.type === "TemplateLiteral",
+      (node, name) => node.type === "TaggedTemplateExpression" && node.tag.type === "Identifier" && node.tag.name === "html" && name === "quasi"
+    );
   }
   var printEmbedHtml = printEmbedHtmlLike.bind(void 0, "html");
   var printEmbedAngular = printEmbedHtmlLike.bind(void 0, "angular");
@@ -5038,36 +5102,39 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var html_default = printHtml;
 
   // src/language-js/embed/markdown.js
-  function printEmbedMarkdown(textToDoc, print3, path) {
-    const {
-      node
-    } = path;
+  async function printEmbedMarkdown(textToDoc, print3, path) {
+    const { node } = path;
     let text = string_replace_all_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       node.quasis[0].value.raw,
-      /((?:\\\\)*)\\`/g,
+      /((?:\\\\)*)\\`/gu,
       (_, backslashes) => "\\".repeat(backslashes.length / 2) + "`"
     );
     const indentation = getIndentation(text);
     const hasIndent = indentation !== "";
     if (hasIndent) {
       text = string_replace_all_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         text,
-        new RegExp(`^${indentation}`, "gm"),
+        new RegExp(`^${indentation}`, "gmu"),
         ""
       );
     }
-    const doc = escapeTemplateCharacters(textToDoc(text, {
-      parser: "markdown",
-      __inJsTemplate: true
-    }), true);
-    return ["`", hasIndent ? indent([softline, doc]) : [literalline, dedentToRoot(doc)], softline, "`"];
+    const doc = escapeTemplateCharacters(
+      await textToDoc(text, { parser: "markdown", __inJsTemplate: true }),
+      true
+    );
+    return [
+      "`",
+      hasIndent ? indent([softline, doc]) : [literalline, dedentToRoot(doc)],
+      softline,
+      "`"
+    ];
   }
   function getIndentation(str) {
-    const firstMatchedIndent = str.match(/^([^\S\n]*)\S/m);
+    const firstMatchedIndent = str.match(/^([^\S\n]*)\S/mu);
     return firstMatchedIndent === null ? "" : firstMatchedIndent[1];
   }
   function printMarkdown(path) {
@@ -5075,10 +5142,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return printEmbedMarkdown;
     }
   }
-  function isMarkdown({
-    node,
-    parent
-  }) {
+  function isMarkdown({ node, parent }) {
     return (parent == null ? void 0 : parent.type) === "TaggedTemplateExpression" && node.quasis.length === 1 && parent.tag.type === "Identifier" && (parent.tag.name === "md" || parent.tag.name === "markdown");
   }
   var markdown_default = printMarkdown;
@@ -5105,8 +5169,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       if (node.quasis.length === 1 && node.quasis[0].value.raw.trim() === "") {
         return "``";
       }
-      return (...args) => {
-        const doc = embedder(...args);
+      return async (...args) => {
+        const doc = await embedder(...args);
         return doc && label({ embed: true, ...doc.label }, doc);
       };
     }
@@ -5116,8 +5180,103 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   var embed_default = embed;
 
-  // src/language-js/pragma.js
-  var import_jest_docblock = __toESM(require_build(), 1);
+  // node_modules/jest-docblock/build/index.js
+  var commentEndRe = /\*\/$/;
+  var commentStartRe = /^\/\*\*?/;
+  var docblockRe = /^\s*(\/\*\*?(.|\r?\n)*?\*\/)/;
+  var lineCommentRe = /(^|\s+)\/\/([^\n\r]*)/g;
+  var ltrimNewlineRe = /^(\r?\n)+/;
+  var multilineRe = /(?:^|\r?\n) *(@[^\n\r]*?) *\r?\n *(?![^\n\r@]*\/\/[^]*)([^\s@][^\n\r@]+?) *\r?\n/g;
+  var propertyRe = /(?:^|\r?\n) *@(\S+) *([^\n\r]*)/g;
+  var stringStartRe = /(\r?\n|^) *\* ?/g;
+  var STRING_ARRAY = [];
+  function extract(contents) {
+    const match = contents.match(docblockRe);
+    return match ? match[0].trimStart() : "";
+  }
+  function strip(contents) {
+    const matchResult = contents.match(docblockRe);
+    const match = matchResult == null ? void 0 : matchResult[0];
+    return match == null ? contents : contents.slice(match.length);
+  }
+  function parseWithComments(docblock) {
+    const line2 = "\n";
+    docblock = string_replace_all_default(
+      /* isOptionalObject */
+      false,
+      docblock.replace(commentStartRe, "").replace(commentEndRe, ""),
+      stringStartRe,
+      "$1"
+    );
+    let prev = "";
+    while (prev !== docblock) {
+      prev = docblock;
+      docblock = string_replace_all_default(
+        /* isOptionalObject */
+        false,
+        docblock,
+        multilineRe,
+        `${line2}$1 $2${line2}`
+      );
+    }
+    docblock = docblock.replace(ltrimNewlineRe, "").trimEnd();
+    const result = /* @__PURE__ */ Object.create(null);
+    const comments = string_replace_all_default(
+      /* isOptionalObject */
+      false,
+      docblock,
+      propertyRe,
+      ""
+    ).replace(ltrimNewlineRe, "").trimEnd();
+    let match;
+    while (match = propertyRe.exec(docblock)) {
+      const nextPragma = string_replace_all_default(
+        /* isOptionalObject */
+        false,
+        match[2],
+        lineCommentRe,
+        ""
+      );
+      if (typeof result[match[1]] === "string" || Array.isArray(result[match[1]])) {
+        const resultElement = result[match[1]];
+        result[match[1]] = [...STRING_ARRAY, ...Array.isArray(resultElement) ? resultElement : [resultElement], nextPragma];
+      } else {
+        result[match[1]] = nextPragma;
+      }
+    }
+    return {
+      comments,
+      pragmas: result
+    };
+  }
+  function print({
+    comments = "",
+    pragmas = {}
+  }) {
+    const line2 = "\n";
+    const head = "/**";
+    const start = " *";
+    const tail = " */";
+    const keys = Object.keys(pragmas);
+    const printedObject = keys.flatMap((key) => printKeyValues(key, pragmas[key])).map((keyValue) => `${start} ${keyValue}${line2}`).join("");
+    if (!comments) {
+      if (keys.length === 0) {
+        return "";
+      }
+      if (keys.length === 1 && !Array.isArray(pragmas[keys[0]])) {
+        const value = pragmas[keys[0]];
+        return `${head} ${printKeyValues(keys[0], value)[0]}${tail}`;
+      }
+    }
+    const printedComments = comments.split(line2).map((textLine) => `${start} ${textLine}`).join(line2) + line2;
+    return head + line2 + (comments ? printedComments : "") + (comments && keys.length > 0 ? start + line2 : "") + printedObject + tail;
+  }
+  function printKeyValues(key, valueOrArray) {
+    return [...STRING_ARRAY, ...Array.isArray(valueOrArray) ? valueOrArray : [valueOrArray]].map((value) => `@${key} ${value}`.trim());
+  }
+
+  // src/utils/pragma/pragma.evaluate.js
+  var FORMAT_PRAGMA_TO_INSERT = "format";
 
   // src/language-js/utils/get-shebang.js
   function getShebang(text) {
@@ -5138,29 +5297,16 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (shebang) {
       text = text.slice(shebang.length + 1);
     }
-    const docBlock = (0, import_jest_docblock.extract)(text);
-    const {
-      pragmas,
-      comments
-    } = (0, import_jest_docblock.parseWithComments)(docBlock);
-    return {
-      shebang,
-      text,
-      pragmas,
-      comments
-    };
+    const docBlock = extract(text);
+    const { pragmas, comments } = parseWithComments(docBlock);
+    return { shebang, text, pragmas, comments };
   }
   function insertPragma(originalText) {
-    const {
-      shebang,
-      text,
-      pragmas,
-      comments
-    } = parseDocBlock(originalText);
-    const strippedText = (0, import_jest_docblock.strip)(text);
-    let docBlock = (0, import_jest_docblock.print)({
+    const { shebang, text, pragmas, comments } = parseDocBlock(originalText);
+    const strippedText = strip(text);
+    let docBlock = print({
       pragmas: {
-        format: "",
+        [FORMAT_PRAGMA_TO_INSERT]: "",
         ...pragmas
       },
       comments: comments.trimStart()
@@ -5207,7 +5353,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return false;
     }
     if (node.type === "Identifier") {
-      if (((_a = node.extra) == null ? void 0 : _a.parenthesized) && /^PRETTIER_HTML_PLACEHOLDER_\d+_\d+_IN_JS$/.test(node.name)) {
+      if (((_a = node.extra) == null ? void 0 : _a.parenthesized) && /^PRETTIER_HTML_PLACEHOLDER_\d+_\d+_IN_JS$/u.test(node.name)) {
         return true;
       }
       if (key === "left" && (node.name === "async" && !parent.await || node.name === "let") && parent.type === "ForOfStatement") {
@@ -5299,38 +5445,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           node.type === "SequenceExpression"
         );
       case "Decorator":
-        if (key === "expression") {
-          if (isMemberExpression(node) && node.computed) {
-            return true;
-          }
-          let hasCallExpression = false;
-          let hasMemberExpression = false;
-          let current = node;
-          while (current) {
-            switch (current.type) {
-              case "MemberExpression":
-                hasMemberExpression = true;
-                current = current.object;
-                break;
-              case "CallExpression":
-                if (
-                  /** @(x().y) */
-                  hasMemberExpression || /** @(x().y()) */
-                  hasCallExpression
-                ) {
-                  return options2.parser !== "typescript";
-                }
-                hasCallExpression = true;
-                current = current.callee;
-                break;
-              case "Identifier":
-                return false;
-              case "TaggedTemplateExpression":
-                return options2.parser !== "typescript";
-              default:
-                return true;
-            }
-          }
+        if (key === "expression" && !canDecoratorExpressionUnparenthesized(node)) {
           return true;
         }
         break;
@@ -5343,8 +5458,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           return true;
         }
         break;
+      // A user typing `!foo instanceof Bar` probably intended
+      // `!(foo instanceof Bar)`, so format to `(!foo) instance Bar` to what is
+      // really happening
       case "BinaryExpression":
         if (key === "left" && (parent.operator === "in" || parent.operator === "instanceof") && node.type === "UnaryExpression") {
+          return true;
+        }
+        break;
+      case "VariableDeclarator":
+        if (key === "init" && path.match(
+          void 0,
+          void 0,
+          (node2, key2) => key2 === "declarations" && node2.type === "VariableDeclaration",
+          (node2, key2) => key2 === "left" && node2.type === "ForInStatement"
+        )) {
           return true;
         }
         break;
@@ -5354,6 +5482,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         if (parent.type === "UnaryExpression") {
           return node.prefix && (node.operator === "++" && parent.operator === "+" || node.operator === "--" && parent.operator === "-");
         }
+      // else fallthrough
       case "UnaryExpression":
         switch (parent.type) {
           case "UnaryExpression":
@@ -5389,6 +5518,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             return true;
           }
         }
+      // fallthrough
       case "TSTypeAssertion":
       case "TSAsExpression":
       case "TSSatisfiesExpression":
@@ -5404,7 +5534,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           case "SatisfiesExpression":
             return !isBinaryCastExpression(node);
           case "ConditionalExpression":
-            return isBinaryCastExpression(node);
+            return isBinaryCastExpression(node) || isNullishCoalescing(node);
           case "CallExpression":
           case "NewExpression":
           case "OptionalCallExpression":
@@ -5432,6 +5562,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             if (node.type === "LogicalExpression") {
               return parent.operator !== node.operator;
             }
+          // else fallthrough
           case "BinaryExpression": {
             const { operator, type } = node;
             if (!operator && type !== "TSTypeAssertion") {
@@ -5461,22 +5592,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             return false;
         }
       case "SequenceExpression":
-        switch (parent.type) {
-          case "ReturnStatement":
-            return false;
-          case "ForStatement":
-            return false;
-          case "ExpressionStatement":
-            return key !== "expression";
-          case "ArrowFunctionExpression":
-            return key !== "body";
-          default:
-            return true;
+        if (parent.type === "ForStatement") {
+          return false;
         }
+        return true;
       case "YieldExpression":
-        if (parent.type === "AwaitExpression") {
+        if (parent.type === "AwaitExpression" || parent.type === "TSTypeAssertion") {
           return true;
         }
+      // else fallthrough
       case "AwaitExpression":
         switch (parent.type) {
           case "TaggedTemplateExpression":
@@ -5516,12 +5640,17 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         )) {
           return true;
         }
+      // fallthrough
       case "TSConditionalType":
       case "TSConstructorType":
+      case "ConditionalTypeAnnotation":
+        if (key === "extendsType" && isConditionalType(node) && parent.type === node.type) {
+          return true;
+        }
+        if (key === "checkType" && isConditionalType(parent)) {
+          return true;
+        }
         if (key === "extendsType" && parent.type === "TSConditionalType") {
-          if (node.type === "TSConditionalType") {
-            return true;
-          }
           let { typeAnnotation } = node.returnType || node.typeAnnotation;
           if (typeAnnotation.type === "TSTypePredicate" && typeAnnotation.typeAnnotation) {
             typeAnnotation = typeAnnotation.typeAnnotation.typeAnnotation;
@@ -5530,14 +5659,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             return true;
           }
         }
-        if (key === "checkType" && parent.type === "TSConditionalType") {
-          return true;
-        }
+      // fallthrough
       case "TSUnionType":
       case "TSIntersectionType":
-        if ((parent.type === "TSUnionType" || parent.type === "TSIntersectionType") && parent.types.length > 1 && (!node.types || node.types.length > 1)) {
+        if ((isUnionType(parent) || isIntersectionType(parent)) && parent.types.length > 1 && (!node.types || node.types.length > 1)) {
           return true;
         }
+      // fallthrough
       case "TSInferType":
         if (node.type === "TSInferType") {
           if (parent.type === "TSRestType") {
@@ -5547,12 +5675,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             return true;
           }
         }
+      // fallthrough
       case "TSTypeOperator":
         return parent.type === "TSArrayType" || parent.type === "TSOptionalType" || parent.type === "TSRestType" || key === "objectType" && parent.type === "TSIndexedAccessType" || parent.type === "TSTypeOperator" || parent.type === "TSTypeAnnotation" && path.grandparent.type.startsWith("TSJSDoc");
       case "TSTypeQuery":
         return key === "objectType" && parent.type === "TSIndexedAccessType" || key === "elementType" && parent.type === "TSArrayType";
+      // Same as `TSTypeOperator`, but for Flow syntax
       case "TypeOperator":
         return parent.type === "ArrayTypeAnnotation" || parent.type === "NullableTypeAnnotation" || key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType") || parent.type === "TypeOperator";
+      // Same as `TSTypeQuery`, but for Flow syntax
       case "TypeofTypeAnnotation":
         return key === "objectType" && (parent.type === "IndexedAccessType" || parent.type === "OptionalIndexedAccessType") || key === "elementType" && parent.type === "ArrayTypeAnnotation";
       case "ArrayTypeAnnotation":
@@ -5595,36 +5726,23 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           }
         );
       }
-      case "ConditionalTypeAnnotation":
-        if (key === "extendsType" && parent.type === "ConditionalTypeAnnotation" && node.type === "ConditionalTypeAnnotation") {
-          return true;
-        }
-        if (key === "checkType" && parent.type === "ConditionalTypeAnnotation") {
-          return true;
-        }
+      // fallthrough
       case "OptionalIndexedAccessType":
         return key === "objectType" && parent.type === "IndexedAccessType";
       case "StringLiteral":
       case "NumericLiteral":
       case "Literal":
-        if (typeof node.value === "string" && parent.type === "ExpressionStatement" && !parent.directive) {
+        if (typeof node.value === "string" && parent.type === "ExpressionStatement" && typeof parent.directive !== "string") {
           const grandParent = path.grandparent;
           return grandParent.type === "Program" || grandParent.type === "BlockStatement";
         }
-        return key === "object" && parent.type === "MemberExpression" && typeof node.value === "number";
-      case "AssignmentExpression": {
-        const grandParent = path.grandparent;
-        if (key === "body" && parent.type === "ArrowFunctionExpression") {
-          return true;
-        }
-        if (key === "key" && (parent.type === "ClassProperty" || parent.type === "PropertyDefinition") && parent.computed) {
-          return false;
-        }
+        return key === "object" && isMemberExpression(parent) && isNumericLiteral(node);
+      case "AssignmentExpression":
         if ((key === "init" || key === "update") && parent.type === "ForStatement") {
           return false;
         }
-        if (parent.type === "ExpressionStatement") {
-          return node.left.type === "ObjectPattern";
+        if (key === "expression" && node.left.type !== "ObjectPattern" && parent.type === "ExpressionStatement") {
+          return false;
         }
         if (key === "key" && parent.type === "TSPropertySignature") {
           return false;
@@ -5632,17 +5750,27 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         if (parent.type === "AssignmentExpression") {
           return false;
         }
-        if (parent.type === "SequenceExpression" && grandParent.type === "ForStatement" && (grandParent.init === parent || grandParent.update === parent)) {
+        if (key === "expressions" && parent.type === "SequenceExpression" && path.match(
+          void 0,
+          void 0,
+          (node2, name) => (name === "init" || name === "update") && node2.type === "ForStatement"
+        )) {
           return false;
         }
-        if (key === "value" && parent.type === "Property" && grandParent.type === "ObjectPattern" && grandParent.properties.includes(parent)) {
+        if (key === "value" && parent.type === "Property" && path.match(
+          void 0,
+          void 0,
+          (node2, name) => name === "properties" && node2.type === "ObjectPattern"
+        )) {
           return false;
         }
         if (parent.type === "NGChainedExpression") {
           return false;
         }
+        if (key === "node" && parent.type === "JsExpressionRoot") {
+          return false;
+        }
         return true;
-      }
       case "ConditionalExpression":
         switch (parent.type) {
           case "TaggedTemplateExpression":
@@ -5686,6 +5814,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             return key === "callee";
           case "TaggedTemplateExpression":
             return true;
+          // This is basically a kind of IIFE.
           default:
             return false;
         }
@@ -5733,6 +5862,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         if (shouldAddParenthesesToChainElement(path)) {
           return true;
         }
+      // fallthrough
       case "TaggedTemplateExpression":
       case "TSNonNullExpression":
         if (key === "callee" && (parent.type === "BindExpression" || parent.type === "NewExpression")) {
@@ -5747,6 +5877,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
               case "BindExpression":
                 object = object.object;
                 break;
+              // tagged templates are basically member expressions from a grammar perspective
+              // see https://tc39.github.io/ecma262/#prod-MemberExpression
               case "TaggedTemplateExpression":
                 object = object.tag;
                 break;
@@ -5763,13 +5895,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return key === "callee" && (parent.type === "BindExpression" || parent.type === "NewExpression") || key === "object" && isMemberExpression(parent);
       case "NGPipeExpression":
         if (parent.type === "NGRoot" || parent.type === "NGMicrosyntaxExpression" || parent.type === "ObjectProperty" && // Preserve parens for compatibility with AngularJS expressions
-        !((_i = node.extra) == null ? void 0 : _i.parenthesized) || isArrayOrTupleExpression(parent) || key === "arguments" && isCallExpression(parent) || key === "right" && parent.type === "NGPipeExpression" || key === "property" && parent.type === "MemberExpression" || parent.type === "AssignmentExpression") {
+        !((_i = node.extra) == null ? void 0 : _i.parenthesized) || isArrayExpression(parent) || key === "arguments" && isCallExpression(parent) || key === "right" && parent.type === "NGPipeExpression" || key === "property" && parent.type === "MemberExpression" || parent.type === "AssignmentExpression") {
           return false;
         }
         return true;
       case "JSXFragment":
       case "JSXElement":
-        return key === "callee" || key === "left" && parent.type === "BinaryExpression" && parent.operator === "<" || !isArrayOrTupleExpression(parent) && parent.type !== "ArrowFunctionExpression" && parent.type !== "AssignmentExpression" && parent.type !== "AssignmentPattern" && parent.type !== "BinaryExpression" && parent.type !== "NewExpression" && parent.type !== "ConditionalExpression" && parent.type !== "ExpressionStatement" && parent.type !== "JsExpressionRoot" && parent.type !== "JSXAttribute" && parent.type !== "JSXElement" && parent.type !== "JSXExpressionContainer" && parent.type !== "JSXFragment" && parent.type !== "LogicalExpression" && !isCallExpression(parent) && !isObjectProperty(parent) && parent.type !== "ReturnStatement" && parent.type !== "ThrowStatement" && parent.type !== "TypeCastExpression" && parent.type !== "VariableDeclarator" && parent.type !== "YieldExpression" && parent.type !== "MatchExpressionCase";
+        return key === "callee" || key === "left" && parent.type === "BinaryExpression" && parent.operator === "<" || !isArrayExpression(parent) && parent.type !== "ArrowFunctionExpression" && parent.type !== "AssignmentExpression" && parent.type !== "AssignmentPattern" && parent.type !== "BinaryExpression" && parent.type !== "NewExpression" && parent.type !== "ConditionalExpression" && parent.type !== "ExpressionStatement" && parent.type !== "JsExpressionRoot" && parent.type !== "JSXAttribute" && parent.type !== "JSXElement" && parent.type !== "JSXExpressionContainer" && parent.type !== "JSXFragment" && parent.type !== "LogicalExpression" && !isCallExpression(parent) && !isObjectProperty(parent) && parent.type !== "ReturnStatement" && parent.type !== "ThrowStatement" && parent.type !== "TypeCastExpression" && parent.type !== "VariableDeclarator" && parent.type !== "YieldExpression" && parent.type !== "MatchExpressionCase";
       case "TSInstantiationExpression":
         return key === "object" && isMemberExpression(parent);
       case "MatchOrPattern":
@@ -5851,7 +5983,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     );
   }
   function endsWithRightBracket(node) {
-    return isObjectOrRecordExpression(node);
+    return isObjectExpression(node);
   }
   function isFollowedByRightBracket(path) {
     const { parent, key } = path;
@@ -5902,34 +6034,88 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     );
   }
   function shouldAddParenthesesToChainElement(path) {
-    const { node, parent, grandparent, key } = path;
-    if ((node.type === "OptionalMemberExpression" || node.type === "OptionalCallExpression") && (key === "object" && parent.type === "MemberExpression" || key === "callee" && (parent.type === "CallExpression" || parent.type === "NewExpression") || parent.type === "TSNonNullExpression" && grandparent.type === "MemberExpression" && grandparent.object === parent)) {
+    if (
+      // ESTree
+      path.match(
+        void 0,
+        (node, name) => name === "expression" && node.type === "ChainExpression",
+        (node, name) => name === "tag" && node.type === "TaggedTemplateExpression"
+      ) || // Babel
+      path.match(
+        (node) => node.type === "OptionalCallExpression" || node.type === "OptionalMemberExpression",
+        (node, name) => name === "tag" && node.type === "TaggedTemplateExpression"
+      ) || // Babel-ts
+      // (a?.b)!``;
+      // (a?.b!)``;
+      path.match(
+        (node) => node.type === "OptionalCallExpression" || node.type === "OptionalMemberExpression",
+        (node, name) => name === "expression" && node.type === "TSNonNullExpression",
+        (node, name) => name === "tag" && node.type === "TaggedTemplateExpression"
+      ) || // case (a?.b)!``; in Typescript
+      path.match(
+        void 0,
+        (node, name) => name === "expression" && node.type === "ChainExpression",
+        (node, name) => name === "expression" && node.type === "TSNonNullExpression",
+        (node, name) => name === "tag" && node.type === "TaggedTemplateExpression"
+      ) || // case (a?.b!)``; in Typescript
+      path.match(
+        void 0,
+        (node, name) => name === "expression" && node.type === "TSNonNullExpression",
+        (node, name) => name === "expression" && node.type === "ChainExpression",
+        (node, name) => name === "tag" && node.type === "TaggedTemplateExpression"
+      )
+    ) {
       return true;
     }
     if (path.match(
-      () => node.type === "CallExpression" || node.type === "MemberExpression",
-      (node2, name) => name === "expression" && node2.type === "ChainExpression"
+      (node) => node.type === "OptionalMemberExpression" || node.type === "OptionalCallExpression",
+      (node, name) => name === "object" && node.type === "MemberExpression" || name === "callee" && (node.type === "CallExpression" || node.type === "NewExpression")
+    ) || path.match(
+      (node) => node.type === "OptionalMemberExpression" || node.type === "OptionalCallExpression",
+      (node, name) => name === "expression" && node.type === "TSNonNullExpression",
+      (node, name) => name === "object" && node.type === "MemberExpression" || name === "callee" && node.type === "CallExpression"
+    )) {
+      return true;
+    }
+    if (path.match(
+      (node) => node.type === "CallExpression" || node.type === "MemberExpression",
+      (node, name) => name === "expression" && node.type === "ChainExpression"
     ) && (path.match(
       void 0,
       void 0,
-      (node2, name) => name === "callee" && (node2.type === "CallExpression" && !node2.optional || node2.type === "NewExpression") || name === "object" && node2.type === "MemberExpression" && !node2.optional
+      (node, name) => name === "callee" && (node.type === "CallExpression" && !node.optional || node.type === "NewExpression") || name === "object" && node.type === "MemberExpression" && !node.optional
     ) || path.match(
       void 0,
       void 0,
-      (node2, name) => name === "expression" && node2.type === "TSNonNullExpression",
-      (node2, name) => name === "object" && node2.type === "MemberExpression"
+      (node, name) => name === "expression" && node.type === "TSNonNullExpression",
+      (node, name) => name === "object" && node.type === "MemberExpression" || name === "callee" && node.type === "CallExpression"
     ))) {
       return true;
     }
     if (path.match(
-      () => node.type === "CallExpression" || node.type === "MemberExpression",
-      (node2, name) => name === "expression" && node2.type === "TSNonNullExpression",
-      (node2, name) => name === "expression" && node2.type === "ChainExpression",
-      (node2, name) => name === "object" && node2.type === "MemberExpression"
+      (node) => node.type === "CallExpression" || node.type === "MemberExpression",
+      (node, name) => name === "expression" && node.type === "TSNonNullExpression",
+      (node, name) => name === "expression" && node.type === "ChainExpression",
+      (node, name) => name === "object" && node.type === "MemberExpression" || name === "callee" && node.type === "CallExpression"
     )) {
       return true;
     }
     return false;
+  }
+  function isDecoratorMemberExpression(node) {
+    if (node.type === "Identifier") {
+      return true;
+    }
+    if (isMemberExpression(node)) {
+      return !node.computed && !node.optional && node.property.type === "Identifier" && isDecoratorMemberExpression(node.object);
+    }
+    return false;
+  }
+  function canDecoratorExpressionUnparenthesized(node) {
+    if (node.type === "ChainExpression") {
+      node = node.expression;
+    }
+    return isDecoratorMemberExpression(node) || isCallExpression(node) && !node.optional && isDecoratorMemberExpression(node.callee);
   }
   var needs_parens_default = needsParens;
 
@@ -6091,10 +6277,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var _whitespaceCharacters;
   var WhitespaceUtils = class {
     constructor(whitespaceCharacters) {
-      __privateAdd(this, _whitespaceCharacters, void 0);
+      __privateAdd(this, _whitespaceCharacters);
       __privateSet(this, _whitespaceCharacters, new Set(whitespaceCharacters));
       if (false) {
-        throw new TypeError(`Invalid characters: ${JSON.stringify(whitespaceCharacters)}`);
+        throw new TypeError(
+          `Invalid characters: ${JSON.stringify(whitespaceCharacters)}`
+        );
       }
     }
     getLeadingWhitespaceCount(text) {
@@ -6126,7 +6314,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     hasTrailingWhitespace(text) {
       return __privateGet(this, _whitespaceCharacters).has(at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         text,
         -1
@@ -6144,21 +6332,35 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return this.trimEnd(this.trimStart(text));
     }
     split(text, captureWhitespace = false) {
-      const pattern = `[${escapeStringRegexp([...__privateGet(this, _whitespaceCharacters)].join(""))}]+`;
-      const regexp = new RegExp(captureWhitespace ? `(${pattern})` : pattern);
+      const pattern = `[${escapeStringRegexp(
+        [...__privateGet(this, _whitespaceCharacters)].join("")
+      )}]+`;
+      const regexp = new RegExp(
+        captureWhitespace ? `(${pattern})` : pattern,
+        "u"
+      );
       return text.split(regexp);
     }
     hasWhitespaceCharacter(text) {
       const whitespaceCharacters = __privateGet(this, _whitespaceCharacters);
-      return Array.prototype.some.call(text, (character) => whitespaceCharacters.has(character));
+      return Array.prototype.some.call(
+        text,
+        (character) => whitespaceCharacters.has(character)
+      );
     }
     hasNonWhitespaceCharacter(text) {
       const whitespaceCharacters = __privateGet(this, _whitespaceCharacters);
-      return Array.prototype.some.call(text, (character) => !whitespaceCharacters.has(character));
+      return Array.prototype.some.call(
+        text,
+        (character) => !whitespaceCharacters.has(character)
+      );
     }
     isWhitespaceOnly(text) {
       const whitespaceCharacters = __privateGet(this, _whitespaceCharacters);
-      return Array.prototype.every.call(text, (character) => whitespaceCharacters.has(character));
+      return Array.prototype.every.call(
+        text,
+        (character) => whitespaceCharacters.has(character)
+      );
     }
   };
   _whitespaceCharacters = new WeakMap();
@@ -6168,10 +6370,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var jsxWhitespaceUtils = new whitespace_utils_default(" \n\r	");
   var isEmptyStringOrAnyLine = (doc) => doc === "" || doc === line || doc === hardline || doc === softline;
   function printJsxElementInternal(path, options2, print3) {
-    var _a, _b, _c;
-    const {
-      node
-    } = path;
+    var _a, _b, _c, _d, _e;
+    const { node } = path;
     if (node.type === "JSXElement" && isEmptyJsxElement(node)) {
       return [print3("openingElement"), print3("closingElement")];
     }
@@ -6196,10 +6396,18 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     let forcedBreak = willBreak(openingLines) || containsTag || containsMultipleAttributes || containsMultipleExpressions;
     const isMdxBlock = path.parent.rootMarker === "mdx";
     const rawJsxWhitespace = options2.singleQuote ? "{' '}" : '{" "}';
-    const jsxWhitespace = isMdxBlock ? " " : ifBreak([rawJsxWhitespace, softline], " ");
+    const jsxWhitespace = isMdxBlock ? line : ifBreak([rawJsxWhitespace, softline], " ");
     const isFacebookTranslationTag = ((_b = (_a = node.openingElement) == null ? void 0 : _a.name) == null ? void 0 : _b.name) === "fbt";
-    const children = printJsxChildren(path, options2, print3, jsxWhitespace, isFacebookTranslationTag);
-    const containsText = node.children.some((child) => isMeaningfulJsxText(child));
+    const children = printJsxChildren(
+      path,
+      options2,
+      print3,
+      jsxWhitespace,
+      isFacebookTranslationTag
+    );
+    const containsText = node.children.some(
+      (child) => isMeaningfulJsxText(child)
+    );
     for (let i = children.length - 2; i >= 0; i--) {
       const isPairOfEmptyStrings = children[i] === "" && children[i + 1] === "";
       const isPairOfHardlines = children[i] === hardline && children[i + 1] === "" && children[i + 2] === hardline;
@@ -6214,7 +6422,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
     }
     while (children.length > 0 && isEmptyStringOrAnyLine(at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       children,
       -1
@@ -6225,52 +6433,75 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       children.shift();
       children.shift();
     }
-    const multilineChildren = [];
+    const multilineChildren = [""];
     for (const [i, child] of children.entries()) {
       if (child === jsxWhitespace) {
-        if (i === 1 && children[i - 1] === "") {
+        if (i === 1 && isEmptyDoc(children[i - 1])) {
           if (children.length === 2) {
-            multilineChildren.push(rawJsxWhitespace);
+            multilineChildren.push([multilineChildren.pop(), rawJsxWhitespace]);
             continue;
           }
-          multilineChildren.push([rawJsxWhitespace, hardline]);
+          multilineChildren.push([rawJsxWhitespace, hardline], "");
           continue;
         } else if (i === children.length - 1) {
-          multilineChildren.push(rawJsxWhitespace);
+          multilineChildren.push([multilineChildren.pop(), rawJsxWhitespace]);
           continue;
         } else if (children[i - 1] === "" && children[i - 2] === hardline) {
-          multilineChildren.push(rawJsxWhitespace);
+          multilineChildren.push([multilineChildren.pop(), rawJsxWhitespace]);
           continue;
         }
       }
-      multilineChildren.push(child);
+      if (i % 2 === 0) {
+        multilineChildren.push([multilineChildren.pop(), child]);
+      } else {
+        multilineChildren.push(child, "");
+      }
       if (willBreak(child)) {
         forcedBreak = true;
       }
     }
-    let content = containsText ? fill(multilineChildren) : group(multilineChildren, {
-      shouldBreak: true
-    });
+    let content = containsText ? fill(multilineChildren) : group(multilineChildren, { shouldBreak: true });
     if (((_c = options2.cursorNode) == null ? void 0 : _c.type) === "JSXText" && node.children.includes(options2.cursorNode)) {
       content = [cursor, content, cursor];
+    } else if (((_d = options2.nodeBeforeCursor) == null ? void 0 : _d.type) === "JSXText" && node.children.includes(options2.nodeBeforeCursor)) {
+      content = [cursor, content];
+    } else if (((_e = options2.nodeAfterCursor) == null ? void 0 : _e.type) === "JSXText" && node.children.includes(options2.nodeAfterCursor)) {
+      content = [content, cursor];
     }
     if (isMdxBlock) {
       return content;
     }
-    const multiLineElem = group([openingLines, indent([hardline, content]), hardline, closingLines]);
+    const multiLineElem = group([
+      openingLines,
+      indent([hardline, content]),
+      hardline,
+      closingLines
+    ]);
     if (forcedBreak) {
       return multiLineElem;
     }
-    return conditionalGroup([group([openingLines, ...children, closingLines]), multiLineElem]);
+    return conditionalGroup([
+      group([openingLines, ...children, closingLines]),
+      multiLineElem
+    ]);
   }
   function printJsxChildren(path, options2, print3, jsxWhitespace, isFacebookTranslationTag) {
-    const parts = [];
-    path.each(({
-      node,
-      next
-    }) => {
+    let prevPart = "";
+    const parts = [prevPart];
+    function push(doc) {
+      prevPart = doc;
+      parts.push([parts.pop(), doc]);
+    }
+    function pushLine(doc) {
+      if (doc === "") {
+        return;
+      }
+      prevPart = doc;
+      parts.push(doc, "");
+    }
+    path.each(({ node, next }) => {
       if (node.type === "JSXText") {
-        const text = rawText(node);
+        const text = get_raw_default(node);
         if (isMeaningfulJsxText(node)) {
           const words = jsxWhitespaceUtils.split(
             text,
@@ -6278,18 +6509,24 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             true
           );
           if (words[0] === "") {
-            parts.push("");
             words.shift();
-            if (/\n/.test(words[0])) {
-              parts.push(separatorWithWhitespace(isFacebookTranslationTag, words[1], node, next));
+            if (/\n/u.test(words[0])) {
+              pushLine(
+                separatorWithWhitespace(
+                  isFacebookTranslationTag,
+                  words[1],
+                  node,
+                  next
+                )
+              );
             } else {
-              parts.push(jsxWhitespace);
+              pushLine(jsxWhitespace);
             }
             words.shift();
           }
           let endWhitespace;
           if (at_default(
-            /* isOptionalObject*/
+            /* isOptionalObject */
             false,
             words,
             -1
@@ -6302,47 +6539,58 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           }
           for (const [i, word] of words.entries()) {
             if (i % 2 === 1) {
-              parts.push(line);
+              pushLine(line);
             } else {
-              parts.push(word);
+              push(word);
             }
           }
           if (endWhitespace !== void 0) {
-            if (/\n/.test(endWhitespace)) {
-              parts.push(separatorWithWhitespace(isFacebookTranslationTag, at_default(
-                /* isOptionalObject*/
-                false,
-                parts,
-                -1
-              ), node, next));
+            if (/\n/u.test(endWhitespace)) {
+              pushLine(
+                separatorWithWhitespace(
+                  isFacebookTranslationTag,
+                  prevPart,
+                  node,
+                  next
+                )
+              );
             } else {
-              parts.push(jsxWhitespace);
+              pushLine(jsxWhitespace);
             }
           } else {
-            parts.push(separatorNoWhitespace(isFacebookTranslationTag, at_default(
-              /* isOptionalObject*/
-              false,
-              parts,
-              -1
-            ), node, next));
+            pushLine(
+              separatorNoWhitespace(
+                isFacebookTranslationTag,
+                prevPart,
+                node,
+                next
+              )
+            );
           }
-        } else if (/\n/.test(text)) {
-          if (text.match(/\n/g).length > 1) {
-            parts.push("", hardline);
+        } else if (/\n/u.test(text)) {
+          if (text.match(/\n/gu).length > 1) {
+            pushLine(hardline);
           }
         } else {
-          parts.push("", jsxWhitespace);
+          pushLine(jsxWhitespace);
         }
       } else {
         const printedChild = print3();
-        parts.push(printedChild);
+        push(printedChild);
         const directlyFollowedByMeaningfulText = next && isMeaningfulJsxText(next);
         if (directlyFollowedByMeaningfulText) {
-          const trimmed = jsxWhitespaceUtils.trim(rawText(next));
+          const trimmed = jsxWhitespaceUtils.trim(get_raw_default(next));
           const [firstWord] = jsxWhitespaceUtils.split(trimmed);
-          parts.push(separatorNoWhitespace(isFacebookTranslationTag, firstWord, node, next));
+          pushLine(
+            separatorNoWhitespace(
+              isFacebookTranslationTag,
+              firstWord,
+              node,
+              next
+            )
+          );
         } else {
-          parts.push(hardline);
+          pushLine(hardline);
         }
       }
     }, "children");
@@ -6366,35 +6614,69 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return hardline;
   }
-  var NO_WRAP_PARENTS = /* @__PURE__ */ new Set(["ArrayExpression", "TupleExpression", "JSXAttribute", "JSXElement", "JSXExpressionContainer", "JSXFragment", "ExpressionStatement", "CallExpression", "OptionalCallExpression", "ConditionalExpression", "JsExpressionRoot", "MatchExpressionCase"]);
+  var NO_WRAP_PARENTS = /* @__PURE__ */ new Set([
+    "ArrayExpression",
+    "JSXAttribute",
+    "JSXElement",
+    "JSXExpressionContainer",
+    "JSXFragment",
+    "ExpressionStatement",
+    "CallExpression",
+    "OptionalCallExpression",
+    "ConditionalExpression",
+    "JsExpressionRoot",
+    "MatchExpressionCase"
+  ]);
   function maybeWrapJsxElementInParens(path, elem, options2) {
-    const {
-      parent
-    } = path;
+    const { parent } = path;
     if (NO_WRAP_PARENTS.has(parent.type)) {
       return elem;
     }
-    const shouldBreak = path.match(void 0, (node) => node.type === "ArrowFunctionExpression", isCallExpression, (node) => node.type === "JSXExpressionContainer");
+    const shouldBreak = shouldBreakJsxElement(path);
     const needsParens2 = needs_parens_default(path, options2);
-    return group([needsParens2 ? "" : ifBreak("("), indent([softline, elem]), softline, needsParens2 ? "" : ifBreak(")")], {
-      shouldBreak
-    });
+    return group(
+      [
+        needsParens2 ? "" : ifBreak("("),
+        indent([softline, elem]),
+        softline,
+        needsParens2 ? "" : ifBreak(")")
+      ],
+      { shouldBreak }
+    );
+  }
+  function shouldBreakJsxElement(path) {
+    return path.match(
+      void 0,
+      (node) => node.type === "ArrowFunctionExpression",
+      isCallExpression
+    ) && // Babel
+    (path.match(
+      void 0,
+      void 0,
+      void 0,
+      (node) => node.type === "JSXExpressionContainer"
+    ) || // Estree
+    path.match(
+      void 0,
+      void 0,
+      void 0,
+      (node) => node.type === "ChainExpression",
+      (node) => node.type === "JSXExpressionContainer"
+    ));
   }
   function printJsxAttribute(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const parts = [];
     parts.push(print3("name"));
     if (node.value) {
       let res;
       if (isStringLiteral(node.value)) {
-        const raw = rawText(node.value);
+        const raw = get_raw_default(node.value);
         let final = string_replace_all_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           string_replace_all_default(
-            /* isOptionalObject*/
+            /* isOptionalObject */
             false,
             raw.slice(1, -1),
             "&apos;",
@@ -6405,19 +6687,22 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         );
         const quote = get_preferred_quote_default(final, options2.jsxSingleQuote);
         final = quote === '"' ? string_replace_all_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           final,
           '"',
           "&quot;"
         ) : string_replace_all_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           final,
           "'",
           "&apos;"
         );
-        res = path.call(() => printComments(path, replaceEndOfLine(quote + final + quote), options2), "value");
+        res = path.call(
+          () => printComments(path, replaceEndOfLine(quote + final + quote), options2),
+          "value"
+        );
       } else {
         res = print3("value");
       }
@@ -6426,23 +6711,30 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return parts;
   }
   function printJsxExpressionContainer(path, options2, print3) {
-    const {
-      node
-    } = path;
-    const shouldInline = (node2, parent) => node2.type === "JSXEmptyExpression" || !hasComment(node2) && (isArrayOrTupleExpression(node2) || isObjectOrRecordExpression(node2) || node2.type === "ArrowFunctionExpression" || node2.type === "AwaitExpression" && (shouldInline(node2.argument, node2) || node2.argument.type === "JSXElement") || isCallExpression(node2) || node2.type === "ChainExpression" && isCallExpression(node2.expression) || node2.type === "FunctionExpression" || node2.type === "TemplateLiteral" || node2.type === "TaggedTemplateExpression" || node2.type === "DoExpression" || isJsxElement(parent) && (node2.type === "ConditionalExpression" || isBinaryish(node2)));
+    const { node } = path;
+    const shouldInline = (node2, parent) => node2.type === "JSXEmptyExpression" || !hasComment(node2) && (isArrayExpression(node2) || isObjectExpression(node2) || node2.type === "ArrowFunctionExpression" || node2.type === "AwaitExpression" && (shouldInline(node2.argument, node2) || node2.argument.type === "JSXElement") || isCallExpression(node2) || node2.type === "ChainExpression" && isCallExpression(node2.expression) || node2.type === "FunctionExpression" || node2.type === "TemplateLiteral" || node2.type === "TaggedTemplateExpression" || node2.type === "DoExpression" || isJsxElement(parent) && (node2.type === "ConditionalExpression" || isBinaryish(node2)));
     if (shouldInline(node.expression, path.parent)) {
       return group(["{", print3("expression"), lineSuffixBoundary, "}"]);
     }
-    return group(["{", indent([softline, print3("expression")]), softline, lineSuffixBoundary, "}"]);
+    return group([
+      "{",
+      indent([softline, print3("expression")]),
+      softline,
+      lineSuffixBoundary,
+      "}"
+    ]);
   }
   function printJsxOpeningElement(path, options2, print3) {
     var _a, _b;
-    const {
-      node
-    } = path;
+    const { node } = path;
     const nameHasComments = hasComment(node.name) || hasComment(node.typeParameters) || hasComment(node.typeArguments);
     if (node.selfClosing && node.attributes.length === 0 && !nameHasComments) {
-      return ["<", print3("name"), node.typeArguments ? print3("typeArguments") : print3("typeParameters"), " />"];
+      return [
+        "<",
+        print3("name"),
+        node.typeArguments ? print3("typeArguments") : print3("typeParameters"),
+        " />"
+      ];
     }
     if (((_a = node.attributes) == null ? void 0 : _a.length) === 1 && isStringLiteral(node.attributes[0].value) && !node.attributes[0].value.value.includes("\n") && // We should break for the following cases:
     // <div
@@ -6454,19 +6746,39 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     //   // comment
     // >
     !nameHasComments && !hasComment(node.attributes[0])) {
-      return group(["<", print3("name"), node.typeArguments ? print3("typeArguments") : print3("typeParameters"), " ", ...path.map(print3, "attributes"), node.selfClosing ? " />" : ">"]);
+      return group([
+        "<",
+        print3("name"),
+        node.typeArguments ? print3("typeArguments") : print3("typeParameters"),
+        " ",
+        ...path.map(print3, "attributes"),
+        node.selfClosing ? " />" : ">"
+      ]);
     }
-    const shouldBreak = (_b = node.attributes) == null ? void 0 : _b.some((attr) => isStringLiteral(attr.value) && attr.value.value.includes("\n"));
+    const shouldBreak = (_b = node.attributes) == null ? void 0 : _b.some(
+      (attr) => isStringLiteral(attr.value) && attr.value.value.includes("\n")
+    );
     const attributeLine = options2.singleAttributePerLine && node.attributes.length > 1 ? hardline : line;
-    return group(["<", print3("name"), node.typeArguments ? print3("typeArguments") : print3("typeParameters"), indent(path.map(() => [attributeLine, print3()], "attributes")), ...printEndOfOpeningTag(node, options2, nameHasComments)], {
-      shouldBreak
-    });
+    return group(
+      [
+        "<",
+        print3("name"),
+        node.typeArguments ? print3("typeArguments") : print3("typeParameters"),
+        indent(path.map(() => [attributeLine, print3()], "attributes")),
+        ...printEndOfOpeningTag(node, options2, nameHasComments)
+      ],
+      { shouldBreak }
+    );
   }
   function printEndOfOpeningTag(node, options2, nameHasComments) {
     if (node.selfClosing) {
       return [line, "/>"];
     }
-    const bracketSameLine = shouldPrintBracketSameLine(node, options2, nameHasComments);
+    const bracketSameLine = shouldPrintBracketSameLine(
+      node,
+      options2,
+      nameHasComments
+    );
     if (bracketSameLine) {
       return [">"];
     }
@@ -6474,7 +6786,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function shouldPrintBracketSameLine(node, options2, nameHasComments) {
     const lastAttrHasTrailingComments = node.attributes.length > 0 && hasComment(at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       node.attributes,
       -1
@@ -6495,9 +6807,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     );
   }
   function printJsxClosingElement(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const parts = [];
     parts.push("</");
     const printed = print3("name");
@@ -6512,45 +6822,58 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return parts;
   }
   function printJsxOpeningClosingFragment(path, options2) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const nodeHasComment = hasComment(node);
     const hasOwnLineComment = hasComment(node, CommentCheckFlags.Line);
     const isOpeningFragment = node.type === "JSXOpeningFragment";
-    return [isOpeningFragment ? "<" : "</", indent([hasOwnLineComment ? hardline : nodeHasComment && !isOpeningFragment ? " " : "", printDanglingComments(path, options2)]), hasOwnLineComment ? hardline : "", ">"];
+    return [
+      isOpeningFragment ? "<" : "</",
+      indent([
+        hasOwnLineComment ? hardline : nodeHasComment && !isOpeningFragment ? " " : "",
+        printDanglingComments(path, options2)
+      ]),
+      hasOwnLineComment ? hardline : "",
+      ">"
+    ];
   }
   function printJsxElement(path, options2, print3) {
-    const elem = printComments(path, printJsxElementInternal(path, options2, print3), options2);
+    const elem = printComments(
+      path,
+      printJsxElementInternal(path, options2, print3),
+      options2
+    );
     return maybeWrapJsxElementInParens(path, elem, options2);
   }
   function printJsxEmptyExpression(path, options2) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const requiresHardline = hasComment(node, CommentCheckFlags.Line);
-    return [printDanglingComments(path, options2, {
-      indent: requiresHardline
-    }), requiresHardline ? hardline : ""];
+    return [
+      printDanglingComments(path, options2, { indent: requiresHardline }),
+      requiresHardline ? hardline : ""
+    ];
   }
   function printJsxSpreadAttributeOrChild(path, options2, print3) {
-    const {
-      node
-    } = path;
-    return ["{", path.call(({
-      node: node2
-    }) => {
-      const printed = ["...", print3()];
-      if (!hasComment(node2) || !willPrintOwnComments(path)) {
-        return printed;
-      }
-      return [indent([softline, printComments(path, printed, options2)]), softline];
-    }, node.type === "JSXSpreadAttribute" ? "argument" : "expression"), "}"];
+    const { node } = path;
+    return [
+      "{",
+      path.call(
+        ({ node: node2 }) => {
+          const printed = ["...", print3()];
+          if (!hasComment(node2) || !willPrintOwnComments(path)) {
+            return printed;
+          }
+          return [
+            indent([softline, printComments(path, printed, options2)]),
+            softline
+          ];
+        },
+        node.type === "JSXSpreadAttribute" ? "argument" : "expression"
+      ),
+      "}"
+    ];
   }
   function printJsx(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     if (!node.type.startsWith("JSX")) {
       return;
     }
@@ -6605,23 +6928,17 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return child.type === "JSXText" && !isMeaningfulJsxText(child);
   }
   function isMeaningfulJsxText(node) {
-    return node.type === "JSXText" && (jsxWhitespaceUtils.hasNonWhitespaceCharacter(rawText(node)) || !/\n/.test(rawText(node)));
+    return node.type === "JSXText" && (jsxWhitespaceUtils.hasNonWhitespaceCharacter(get_raw_default(node)) || !/\n/u.test(get_raw_default(node)));
   }
   function isJsxWhitespaceExpression(node) {
     return node.type === "JSXExpressionContainer" && isStringLiteral(node.expression) && node.expression.value === " " && !hasComment(node.expression);
   }
   function hasJsxIgnoreComment(path) {
-    const {
-      node,
-      parent
-    } = path;
+    const { node, parent } = path;
     if (!isJsxElement(node) || !isJsxElement(parent)) {
       return false;
     }
-    const {
-      index,
-      siblings
-    } = path;
+    const { index, siblings } = path;
     let prevSibling;
     for (let i = index; i > 0; i--) {
       const candidate = siblings[i - 1];
@@ -6644,18 +6961,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var uid = 0;
   function printBinaryishExpression(path, options2, print3) {
     var _a;
-    const {
-      node,
-      parent,
-      grandparent,
-      key
-    } = path;
+    const { node, parent, grandparent, key } = path;
     const isInsideParenthesis = key !== "body" && (parent.type === "IfStatement" || parent.type === "WhileStatement" || parent.type === "SwitchStatement" || parent.type === "DoWhileStatement");
     const isHackPipeline = node.operator === "|>" && ((_a = path.root.extra) == null ? void 0 : _a.__isUsingHackPipeline);
     const parts = printBinaryishExpressions(
       path,
-      print3,
       options2,
+      print3,
       /* isNested */
       false,
       isInsideParenthesis
@@ -6679,80 +6991,133 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return "";
     }
     const hasJsx = isJsxElement(node.right);
-    const firstGroupIndex = parts.findIndex((part) => typeof part !== "string" && !Array.isArray(part) && part.type === DOC_TYPE_GROUP);
-    const headParts = parts.slice(0, firstGroupIndex === -1 ? 1 : firstGroupIndex + 1);
+    const firstGroupIndex = parts.findIndex(
+      (part) => typeof part !== "string" && !Array.isArray(part) && part.type === DOC_TYPE_GROUP
+    );
+    const headParts = parts.slice(
+      0,
+      firstGroupIndex === -1 ? 1 : firstGroupIndex + 1
+    );
     const rest = parts.slice(headParts.length, hasJsx ? -1 : void 0);
     const groupId = Symbol("logicalChain-" + ++uid);
-    const chain = group([
-      // Don't include the initial expression in the indentation
-      // level. The first item is guaranteed to be the first
-      // left-most expression.
-      ...headParts,
-      indent(rest)
-    ], {
-      id: groupId
-    });
+    const chain = group(
+      [
+        // Don't include the initial expression in the indentation
+        // level. The first item is guaranteed to be the first
+        // left-most expression.
+        ...headParts,
+        indent(rest)
+      ],
+      { id: groupId }
+    );
     if (!hasJsx) {
       return chain;
     }
     const jsxPart = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       parts,
       -1
     );
-    return group([chain, indentIfBreak(jsxPart, {
-      groupId
-    })]);
+    return group([chain, indentIfBreak(jsxPart, { groupId })]);
   }
-  function printBinaryishExpressions(path, print3, options2, isNested, isInsideParenthesis) {
+  function printBinaryishExpressions(path, options2, print3, isNested, isInsideParenthesis) {
     var _a;
-    const {
-      node
-    } = path;
+    const { node } = path;
     if (!isBinaryish(node)) {
       return [group(print3())];
     }
     let parts = [];
     if (shouldFlatten(node.operator, node.left.operator)) {
-      parts = path.call((left) => printBinaryishExpressions(
-        left,
-        print3,
-        options2,
-        /* isNested */
-        true,
-        isInsideParenthesis
-      ), "left");
+      parts = path.call(
+        (left) => printBinaryishExpressions(
+          left,
+          options2,
+          print3,
+          /* isNested */
+          true,
+          isInsideParenthesis
+        ),
+        "left"
+      );
     } else {
       parts.push(group(print3("left")));
     }
     const shouldInline = shouldInlineLogicalExpression(node);
     const lineBeforeOperator = (node.operator === "|>" || node.type === "NGPipeExpression" || isVueFilterSequenceExpression(path, options2)) && !hasLeadingOwnLineComment(options2.originalText, node.right);
+    const hasTypeCastComment = hasComment(
+      node.right,
+      CommentCheckFlags.Leading,
+      is_type_cast_comment_default
+    );
+    const commentBeforeOperator = !hasTypeCastComment && hasLeadingOwnLineComment(options2.originalText, node.right);
     const operator = node.type === "NGPipeExpression" ? "|" : node.operator;
-    const rightSuffix = node.type === "NGPipeExpression" && node.arguments.length > 0 ? group(indent([softline, ": ", join([line, ": "], path.map(() => align(2, group(print3())), "arguments"))])) : "";
+    const rightSuffix = node.type === "NGPipeExpression" && node.arguments.length > 0 ? group(
+      indent([
+        softline,
+        ": ",
+        join(
+          [line, ": "],
+          path.map(() => align(2, group(print3())), "arguments")
+        )
+      ])
+    ) : "";
     let right;
     if (shouldInline) {
-      right = [operator, " ", print3("right"), rightSuffix];
+      right = [
+        operator,
+        hasLeadingOwnLineComment(options2.originalText, node.right) ? indent([line, print3("right"), rightSuffix]) : [" ", print3("right"), rightSuffix]
+      ];
     } else {
       const isHackPipeline = operator === "|>" && ((_a = path.root.extra) == null ? void 0 : _a.__isUsingHackPipeline);
-      const rightContent = isHackPipeline ? path.call((left) => printBinaryishExpressions(
-        left,
-        print3,
-        options2,
-        /* isNested */
-        true,
-        isInsideParenthesis
-      ), "right") : print3("right");
-      right = [lineBeforeOperator ? line : "", operator, lineBeforeOperator ? " " : line, rightContent, rightSuffix];
+      const rightContent = isHackPipeline ? path.call(
+        (left) => printBinaryishExpressions(
+          left,
+          options2,
+          print3,
+          /* isNested */
+          true,
+          isInsideParenthesis
+        ),
+        "right"
+      ) : print3("right");
+      if (options2.experimentalOperatorPosition === "start") {
+        let comment = "";
+        if (commentBeforeOperator) {
+          switch (get_doc_type_default(rightContent)) {
+            case DOC_TYPE_ARRAY:
+              comment = rightContent.splice(0, 1)[0];
+              break;
+            case DOC_TYPE_LABEL:
+              comment = rightContent.contents.splice(0, 1)[0];
+              break;
+          }
+        }
+        right = [line, comment, operator, " ", rightContent, rightSuffix];
+      } else {
+        right = [
+          lineBeforeOperator ? line : "",
+          operator,
+          lineBeforeOperator ? " " : line,
+          rightContent,
+          rightSuffix
+        ];
+      }
     }
-    const {
-      parent
-    } = path;
-    const shouldBreak = hasComment(node.left, CommentCheckFlags.Trailing | CommentCheckFlags.Line);
+    const { parent } = path;
+    const shouldBreak = hasComment(
+      node.left,
+      CommentCheckFlags.Trailing | CommentCheckFlags.Line
+    );
     const shouldGroup = shouldBreak || !(isInsideParenthesis && node.type === "LogicalExpression") && parent.type !== node.type && node.left.type !== node.type && node.right.type !== node.type;
-    parts.push(lineBeforeOperator ? "" : " ", shouldGroup ? group(right, {
-      shouldBreak
-    }) : right);
+    if (shouldGroup) {
+      right = group(right, { shouldBreak });
+    }
+    if (options2.experimentalOperatorPosition === "start") {
+      parts.push(shouldInline || commentBeforeOperator ? " " : "", right);
+    } else {
+      parts.push(lineBeforeOperator ? "" : " ", right);
+    }
     if (isNested && hasComment(node)) {
       const printed = cleanDoc(printComments(path, parts, options2));
       if (printed.type === DOC_TYPE_FILL) {
@@ -6766,10 +7131,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (node.type !== "LogicalExpression") {
       return false;
     }
-    if (isObjectOrRecordExpression(node.right) && node.right.properties.length > 0) {
+    if (isObjectExpression(node.right) && node.right.properties.length > 0) {
       return true;
     }
-    if (isArrayOrTupleExpression(node.right) && node.right.elements.length > 0) {
+    if (isArrayExpression(node.right) && node.right.elements.length > 0) {
       return true;
     }
     if (isJsxElement(node.right)) {
@@ -6779,7 +7144,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   var isBitwiseOrExpression = (node) => node.type === "BinaryExpression" && node.operator === "|";
   function isVueFilterSequenceExpression(path, options2) {
-    return (options2.parser === "__vue_expression" || options2.parser === "__vue_ts_expression") && isBitwiseOrExpression(path.node) && !path.hasAncestor((node) => !isBitwiseOrExpression(node) && node.type !== "JsExpressionRoot");
+    return (options2.parser === "__vue_expression" || options2.parser === "__vue_ts_expression") && isBitwiseOrExpression(path.node) && !path.hasAncestor(
+      (node) => !isBitwiseOrExpression(node) && node.type !== "JsExpressionRoot"
+    );
   }
 
   // src/language-js/print/angular.js
@@ -6817,7 +7184,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           "body"
         );
       case "NGMicrosyntaxKey":
-        return /^[$_a-z][\w$]*(?:-[$_a-z][\w$])*$/i.test(node.name) ? node.name : JSON.stringify(node.name);
+        return /^[$_a-z][\w$]*(?:-[$_a-z][\w$])*$/iu.test(node.name) ? node.name : JSON.stringify(node.name);
       case "NGMicrosyntaxExpression":
         return [
           print3("expression"),
@@ -6825,7 +7192,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ];
       case "NGMicrosyntaxKeyedExpression": {
         const { index, parent } = path;
-        const shouldNotPrintColon = isNgForOf(path) || (index === 1 && (node.key.name === "then" || node.key.name === "else" || node.key.name === "as") || (index === 2 || index === 3) && (node.key.name === "else" && parent.body[index - 1].type === "NGMicrosyntaxKeyedExpression" && parent.body[index - 1].key.name === "then" || node.key.name === "track")) && parent.body[0].type === "NGMicrosyntaxExpression";
+        const shouldNotPrintColon = isNgForOf(path) || isNgForOfTrack(path) || (index === 1 && (node.key.name === "then" || node.key.name === "else" || node.key.name === "as") || index === 2 && (node.key.name === "else" && parent.body[index - 1].type === "NGMicrosyntaxKeyedExpression" && parent.body[index - 1].key.name === "then" || node.key.name === "track")) && parent.body[0].type === "NGMicrosyntaxExpression";
         return [
           print3("key"),
           shouldNotPrintColon ? " " : ": ",
@@ -6846,6 +7213,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function isNgForOf({ node, index }) {
     return node.type === "NGMicrosyntaxKeyedExpression" && node.key.name === "of" && index === 1;
+  }
+  function isNgForOfTrack(path) {
+    const { node } = path;
+    return path.parent.body[1].key.name === "of" && node.type === "NGMicrosyntaxKeyedExpression" && node.key.name === "track" && node.key.type === "NGMicrosyntaxKey";
   }
   var hasSideEffect = create_type_check_function_default([
     "CallExpression",
@@ -6911,9 +7282,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/language-js/print/call-arguments.js
   function printCallArguments(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const args = getCallArguments(node);
     if (args.length === 0) {
       return ["(", printDanglingComments(path, options2), ")"];
@@ -6932,9 +7301,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     let anyArgEmptyLine = false;
     const printedArguments = [];
-    iterateCallArgumentsPath(path, ({
-      node: arg
-    }, index) => {
+    iterateCallArgumentsPath(path, ({ node: arg }, index) => {
       let argDoc = print3();
       if (index === lastArgIndex) {
       } else if (isNextLineEmpty2(arg, options2)) {
@@ -6945,12 +7312,20 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
       printedArguments.push(argDoc);
     });
-    const isDynamicImport = node.type === "ImportExpression" || node.callee.type === "Import";
-    const maybeTrailingComma = !isDynamicImport && shouldPrintComma(options2, "all") ? "," : "";
+    const maybeTrailingComma = (
+      // Angular does not allow trailing comma
+      !options2.parser.startsWith("__ng_") && // Dynamic imports cannot have trailing commas
+      node.type !== "ImportExpression" && node.type !== "TSImportType" && shouldPrintComma(options2, "all") ? "," : ""
+    );
+    if (node.type === "TSImportType" && args.length === 1 && (args[0].type === "TSLiteralType" && isStringLiteral(args[0].literal) || // TODO: Remove this when update Babel to v8
+    isStringLiteral(args[0])) && !hasComment(args[0])) {
+      return group(["(", ...printedArguments, ifBreak(maybeTrailingComma), ")"]);
+    }
     function allArgsBrokenOut() {
-      return group(["(", indent([line, ...printedArguments]), maybeTrailingComma, line, ")"], {
-        shouldBreak: true
-      });
+      return group(
+        ["(", indent([line, ...printedArguments]), maybeTrailingComma, line, ")"],
+        { shouldBreak: true }
+      );
     }
     if (anyArgEmptyLine || path.parent.type !== "Decorator" && isFunctionCompositionArgs(args)) {
       return allArgsBrokenOut();
@@ -6972,13 +7347,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         throw caught;
       }
       if (willBreak(firstArg)) {
-        return [breakParent, conditionalGroup([["(", group(firstArg, {
-          shouldBreak: true
-        }), ", ", ...tailArgs, ")"], allArgsBrokenOut()])];
+        return [
+          breakParent,
+          conditionalGroup([
+            ["(", group(firstArg, { shouldBreak: true }), ", ", ...tailArgs, ")"],
+            allArgsBrokenOut()
+          ])
+        ];
       }
-      return conditionalGroup([["(", firstArg, ", ", ...tailArgs, ")"], ["(", group(firstArg, {
-        shouldBreak: true
-      }), ", ", ...tailArgs, ")"], allArgsBrokenOut()]);
+      return conditionalGroup([
+        ["(", firstArg, ", ", ...tailArgs, ")"],
+        ["(", group(firstArg, { shouldBreak: true }), ", ", ...tailArgs, ")"],
+        allArgsBrokenOut()
+      ]);
     }
     if (shouldExpandLastArg(args, printedArguments, options2)) {
       const headArgs = printedArguments.slice(0, -1);
@@ -6997,15 +7378,27 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         throw caught;
       }
       if (willBreak(lastArg)) {
-        return [breakParent, conditionalGroup([["(", ...headArgs, group(lastArg, {
-          shouldBreak: true
-        }), ")"], allArgsBrokenOut()])];
+        return [
+          breakParent,
+          conditionalGroup([
+            ["(", ...headArgs, group(lastArg, { shouldBreak: true }), ")"],
+            allArgsBrokenOut()
+          ])
+        ];
       }
-      return conditionalGroup([["(", ...headArgs, lastArg, ")"], ["(", ...headArgs, group(lastArg, {
-        shouldBreak: true
-      }), ")"], allArgsBrokenOut()]);
+      return conditionalGroup([
+        ["(", ...headArgs, lastArg, ")"],
+        ["(", ...headArgs, group(lastArg, { shouldBreak: true }), ")"],
+        allArgsBrokenOut()
+      ]);
     }
-    const contents = ["(", indent([softline, ...printedArguments]), ifBreak(maybeTrailingComma), softline, ")"];
+    const contents = [
+      "(",
+      indent([softline, ...printedArguments]),
+      ifBreak(maybeTrailingComma),
+      softline,
+      ")"
+    ];
     if (isLongCurriedCallExpression(path)) {
       return contents;
     }
@@ -7014,7 +7407,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     });
   }
   function couldExpandArg(arg, arrowChainRecursion = false) {
-    return isObjectOrRecordExpression(arg) && (arg.properties.length > 0 || hasComment(arg)) || isArrayOrTupleExpression(arg) && (arg.elements.length > 0 || hasComment(arg)) || arg.type === "TSTypeAssertion" && couldExpandArg(arg.expression) || isBinaryCastExpression(arg) && couldExpandArg(arg.expression) || arg.type === "FunctionExpression" || arg.type === "ArrowFunctionExpression" && // we want to avoid breaking inside composite return types but not simple keywords
+    return isObjectExpression(arg) && (arg.properties.length > 0 || hasComment(arg)) || isArrayExpression(arg) && (arg.elements.length > 0 || hasComment(arg)) || arg.type === "TSTypeAssertion" && couldExpandArg(arg.expression) || isBinaryCastExpression(arg) && couldExpandArg(arg.expression) || arg.type === "FunctionExpression" || arg.type === "ArrowFunctionExpression" && // we want to avoid breaking inside composite return types but not simple keywords
     // https://github.com/prettier/prettier/issues/4070
     // export class Thing implements OtherThing {
     //   do: (type: Type) => Provider<Prop> = memoize(
@@ -7026,19 +7419,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     //   res.send("Hello World!");
     // });
     (!arg.returnType || !arg.returnType.typeAnnotation || arg.returnType.typeAnnotation.type !== "TSTypeReference" || // https://github.com/prettier/prettier/issues/7542
-    isNonEmptyBlockStatement(arg.body)) && (arg.body.type === "BlockStatement" || arg.body.type === "ArrowFunctionExpression" && couldExpandArg(arg.body, true) || isObjectOrRecordExpression(arg.body) || isArrayOrTupleExpression(arg.body) || !arrowChainRecursion && (isCallExpression(arg.body) || arg.body.type === "ConditionalExpression") || isJsxElement(arg.body)) || arg.type === "DoExpression" || arg.type === "ModuleExpression";
+    isNonEmptyBlockStatement(arg.body)) && (arg.body.type === "BlockStatement" || arg.body.type === "ArrowFunctionExpression" && couldExpandArg(arg.body, true) || isObjectExpression(arg.body) || isArrayExpression(arg.body) || !arrowChainRecursion && (isCallExpression(arg.body) || arg.body.type === "ConditionalExpression") || isJsxElement(arg.body)) || arg.type === "DoExpression" || arg.type === "ModuleExpression";
   }
   function shouldExpandLastArg(args, argDocs, options2) {
     var _a, _b;
     const lastArg = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       args,
       -1
     );
     if (args.length === 1) {
       const lastArgDoc = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         argDocs,
         -1
@@ -7048,7 +7441,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
     }
     const penultimateArg = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       args,
       -2
@@ -7056,7 +7449,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return !hasComment(lastArg, CommentCheckFlags.Leading) && !hasComment(lastArg, CommentCheckFlags.Trailing) && couldExpandArg(lastArg) && // If the last two arguments are of the same type,
     // disable last element expansion.
     (!penultimateArg || penultimateArg.type !== lastArg.type) && // useMemo(() => func(), [foo, bar, baz])
-    (args.length !== 2 || penultimateArg.type !== "ArrowFunctionExpression" || !isArrayOrTupleExpression(lastArg)) && !(args.length > 1 && isConciselyPrintedArray(lastArg, options2));
+    (args.length !== 2 || penultimateArg.type !== "ArrowFunctionExpression" || !isArrayExpression(lastArg)) && !(args.length > 1 && isConciselyPrintedArray(lastArg, options2));
   }
   function shouldExpandFirstArg(args) {
     if (args.length !== 2) {
@@ -7069,14 +7462,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return !hasComment(firstArg) && (firstArg.type === "FunctionExpression" || firstArg.type === "ArrowFunctionExpression" && firstArg.body.type === "BlockStatement") && secondArg.type !== "FunctionExpression" && secondArg.type !== "ArrowFunctionExpression" && secondArg.type !== "ConditionalExpression" && isHopefullyShortCallArgument(secondArg) && !couldExpandArg(secondArg);
   }
   function isHopefullyShortCallArgument(node) {
-    var _a;
     if (node.type === "ParenthesizedExpression") {
       return isHopefullyShortCallArgument(node.expression);
     }
     if (isBinaryCastExpression(node) || node.type === "TypeCastExpression") {
-      let {
-        typeAnnotation
-      } = node;
+      let { typeAnnotation } = node;
       if (typeAnnotation.type === "TypeAnnotation") {
         typeAnnotation = typeAnnotation.typeAnnotation;
       }
@@ -7086,8 +7476,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           typeAnnotation = typeAnnotation.elementType;
         }
       }
-      if ((typeAnnotation.type === "GenericTypeAnnotation" || typeAnnotation.type === "TSTypeReference") && ((_a = typeAnnotation.typeParameters) == null ? void 0 : _a.params.length) === 1) {
-        typeAnnotation = typeAnnotation.typeParameters.params[0];
+      if (typeAnnotation.type === "GenericTypeAnnotation" || typeAnnotation.type === "TSTypeReference") {
+        const typeArguments = typeAnnotation.typeArguments ?? typeAnnotation.typeParameters;
+        if ((typeArguments == null ? void 0 : typeArguments.params.length) === 1) {
+          typeAnnotation = typeArguments.params[0];
+        }
       }
       return isSimpleType(typeAnnotation) && isSimpleCallArgument(node.expression, 1);
     }
@@ -7125,7 +7518,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return node.type === "BlockStatement" && (node.body.some((node2) => node2.type !== "EmptyStatement") || hasComment(node, CommentCheckFlags.Dangling));
   }
   function isTypeModuleObjectExpression(node) {
-    return node.type === "ObjectExpression" && node.properties.length === 1 && isObjectProperty(node.properties[0]) && node.properties[0].key.type === "Identifier" && node.properties[0].key.name === "type" && isStringLiteral(node.properties[0].value) && node.properties[0].value.value === "module";
+    if (!(node.type === "ObjectExpression" && node.properties.length === 1)) {
+      return false;
+    }
+    const [property] = node.properties;
+    if (!isObjectProperty(property)) {
+      return false;
+    }
+    return !property.computed && (property.key.type === "Identifier" && property.key.name === "type" || isStringLiteral(property.key) && property.key.value === "type") && isStringLiteral(property.value) && property.value.value === "module";
   }
   var call_arguments_default = printCallArguments;
 
@@ -7169,52 +7569,66 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   // src/language-js/print/member-chain.js
   function printMemberChain(path, options2, print3) {
     if (path.node.type === "ChainExpression") {
-      return path.call(() => printMemberChain(path, options2, print3), "expression");
+      return path.call(
+        () => printMemberChain(path, options2, print3),
+        "expression"
+      );
     }
-    const {
-      parent
-    } = path;
-    const isExpressionStatement = !parent || parent.type === "ExpressionStatement";
+    const isExpressionStatement = (path.parent.type === "ChainExpression" ? path.grandparent : path.parent).type === "ExpressionStatement";
     const printedNodes = [];
     function shouldInsertEmptyLineAfter(node2) {
-      const {
-        originalText
-      } = options2;
-      const nextCharIndex = get_next_non_space_non_comment_character_index_default(originalText, locEnd(node2));
+      const { originalText } = options2;
+      const nextCharIndex = get_next_non_space_non_comment_character_index_default(
+        originalText,
+        locEnd(node2)
+      );
       const nextChar = originalText.charAt(nextCharIndex);
       if (nextChar === ")") {
         return nextCharIndex !== false && is_next_line_empty_default(originalText, nextCharIndex + 1);
       }
       return isNextLineEmpty2(node2, options2);
     }
-    function rec(path2) {
-      const {
-        node: node2
-      } = path2;
+    function rec() {
+      const { node: node2 } = path;
       if (node2.type === "ChainExpression") {
-        return path2.call(() => rec(path2), "expression");
+        return path.call(rec, "expression");
       }
       if (isCallExpression(node2) && (isMemberish(node2.callee) || isCallExpression(node2.callee))) {
         const hasTrailingEmptyLine = shouldInsertEmptyLineAfter(node2);
         printedNodes.unshift({
           node: node2,
           hasTrailingEmptyLine,
-          printed: [printComments(path2, [printOptionalToken(path2), printFunctionTypeParameters(path2, options2, print3), call_arguments_default(path2, options2, print3)], options2), hasTrailingEmptyLine ? hardline : ""]
+          printed: [
+            printComments(
+              path,
+              [
+                printOptionalToken(path),
+                printFunctionTypeParameters(path, options2, print3),
+                call_arguments_default(path, options2, print3)
+              ],
+              options2
+            ),
+            hasTrailingEmptyLine ? hardline : ""
+          ]
         });
-        path2.call((callee) => rec(callee), "callee");
+        path.call(rec, "callee");
       } else if (isMemberish(node2)) {
         printedNodes.unshift({
           node: node2,
-          needsParens: needs_parens_default(path2, options2),
-          printed: printComments(path2, isMemberExpression(node2) ? printMemberLookup(path2, options2, print3) : printBindExpressionCallee(path2, options2, print3), options2)
+          needsParens: needs_parens_default(path, options2),
+          printed: printComments(
+            path,
+            isMemberExpression(node2) ? printMemberLookup(path, options2, print3) : printBindExpressionCallee(path, options2, print3),
+            options2
+          )
         });
-        path2.call((object) => rec(object), "object");
+        path.call(rec, "object");
       } else if (node2.type === "TSNonNullExpression") {
         printedNodes.unshift({
           node: node2,
-          printed: printComments(path2, "!", options2)
+          printed: printComments(path, "!", options2)
         });
-        path2.call((expression) => rec(expression), "expression");
+        path.call(rec, "expression");
       } else {
         printedNodes.unshift({
           node: node2,
@@ -7222,15 +7636,17 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         });
       }
     }
-    const {
-      node
-    } = path;
+    const { node } = path;
     printedNodes.unshift({
       node,
-      printed: [printOptionalToken(path), printFunctionTypeParameters(path, options2, print3), call_arguments_default(path, options2, print3)]
+      printed: [
+        printOptionalToken(path),
+        printFunctionTypeParameters(path, options2, print3),
+        call_arguments_default(path, options2, print3)
+      ]
     });
     if (node.callee) {
-      path.call((callee) => rec(callee), "callee");
+      path.call(rec, "callee");
     }
     const groups = [];
     let currentGroup = [printedNodes[0]];
@@ -7278,7 +7694,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       groups.push(currentGroup);
     }
     function isFactory(name) {
-      return /^[A-Z]|^[$_]+$/.test(name);
+      return /^[A-Z]|^[$_]+$/u.test(name);
     }
     function isShort(name) {
       return name.length <= options2.tabWidth;
@@ -7291,7 +7707,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return firstNode.type === "ThisExpression" || firstNode.type === "Identifier" && (isFactory(firstNode.name) || isExpressionStatement && isShort(firstNode.name) || hasComputed);
       }
       const lastNode = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         groups2[0],
         -1
@@ -7302,7 +7718,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     function printGroup(printedGroup) {
       const printed = printedGroup.map((tuple) => tuple.printed);
       if (printedGroup.length > 0 && at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         printedGroup,
         -1
@@ -7323,7 +7739,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const flatGroups = groups.flat();
     const nodeHasComment = flatGroups.slice(1, -1).some((node2) => hasComment(node2.node, CommentCheckFlags.Leading)) || flatGroups.slice(0, -1).some((node2) => hasComment(node2.node, CommentCheckFlags.Trailing)) || groups[cutoff] && hasComment(groups[cutoff][0].node, CommentCheckFlags.Leading);
     if (groups.length <= cutoff && !nodeHasComment && !groups.some((g) => at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       g,
       -1
@@ -7334,22 +7750,25 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return group(oneLine);
     }
     const lastNodeBeforeIndent = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       groups[shouldMerge ? 1 : 0],
       -1
     ).node;
     const shouldHaveEmptyLineBeforeIndent = !isCallExpression(lastNodeBeforeIndent) && shouldInsertEmptyLineAfter(lastNodeBeforeIndent);
-    const expanded = [printGroup(groups[0]), shouldMerge ? groups.slice(1, 2).map(printGroup) : "", shouldHaveEmptyLineBeforeIndent ? hardline : "", printIndentedGroup(groups.slice(shouldMerge ? 2 : 1))];
-    const callExpressions = printedNodes.map(({
-      node: node2
-    }) => node2).filter(isCallExpression);
+    const expanded = [
+      printGroup(groups[0]),
+      shouldMerge ? groups.slice(1, 2).map(printGroup) : "",
+      shouldHaveEmptyLineBeforeIndent ? hardline : "",
+      printIndentedGroup(groups.slice(shouldMerge ? 2 : 1))
+    ];
+    const callExpressions = printedNodes.map(({ node: node2 }) => node2).filter(isCallExpression);
     function lastGroupWillBreakAndOtherCallsHaveFunctionArguments() {
       const lastGroupNode = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         at_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           groups,
           -1
@@ -7357,7 +7776,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         -1
       ).node;
       const lastGroupDoc = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         printedGroups,
         -1
@@ -7365,7 +7784,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return isCallExpression(lastGroupNode) && willBreak(lastGroupDoc) && callExpressions.slice(0, -1).some((node2) => node2.arguments.some(isFunctionOrArrowExpression));
     }
     let result;
-    if (nodeHasComment || callExpressions.length > 2 && callExpressions.some((expr) => !expr.arguments.every((arg) => isSimpleCallArgument(arg))) || printedGroups.slice(0, -1).some(willBreak) || lastGroupWillBreakAndOtherCallsHaveFunctionArguments()) {
+    if (nodeHasComment || callExpressions.length > 2 && callExpressions.some(
+      (expr) => !expr.arguments.every((arg) => isSimpleCallArgument(arg))
+    ) || printedGroups.slice(0, -1).some(willBreak) || lastGroupWillBreakAndOtherCallsHaveFunctionArguments()) {
       result = group(expanded);
     } else {
       result = [
@@ -7376,28 +7797,26 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         conditionalGroup([oneLine, expanded])
       ];
     }
-    return label({
-      memberChain: true
-    }, result);
+    return label({ memberChain: true }, result);
   }
   var member_chain_default = printMemberChain;
 
   // src/language-js/print/call-expression.js
   function printCallExpression(path, options2, print3) {
     var _a;
-    const { node, parent } = path;
+    const { node } = path;
     const isNew = node.type === "NewExpression";
     const isDynamicImport = node.type === "ImportExpression";
     const optional = printOptionalToken(path);
     const args = getCallArguments(node);
     const isTemplateLiteralSingleArg = args.length === 1 && isTemplateOnItsOwnLine(args[0], options2.originalText);
     if (isTemplateLiteralSingleArg || // Dangling comments are not handled, all these special cases should have arguments #9668
-    args.length > 0 && !isNew && !isDynamicImport && // We want to keep CommonJS- and AMD-style require calls, and AMD-style
+    // We want to keep CommonJS- and AMD-style require calls, and AMD-style
     // define calls, as a unit.
     // e.g. `define(["some/lib"], (lib) => {`
-    (isCommonsJsOrAmdCall(node, parent) || // Keep test declarations on a single line
+    isCommonsJsOrAmdModuleDefinition(path) || // Keep test declarations on a single line
     // e.g. `it('long name', () => {`
-    isTestCall(node, parent))) {
+    isTestCall(node, path.parent)) {
       const printed = [];
       iterateCallArgumentsPath(path, () => {
         printed.push(print3());
@@ -7405,7 +7824,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       if (!(isTemplateLiteralSingleArg && ((_a = printed[0].label) == null ? void 0 : _a.embed))) {
         return [
           isNew ? "new " : "",
-          print3("callee"),
+          printCallee(path, print3),
           optional,
           printFunctionTypeParameters(path, options2, print3),
           "(",
@@ -7423,7 +7842,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     const contents = [
       isNew ? "new " : "",
-      isDynamicImport ? printDynamicImportCallee(node) : print3("callee"),
+      printCallee(path, print3),
       optional,
       printFunctionTypeParameters(path, options2, print3),
       call_arguments_default(path, options2, print3)
@@ -7433,23 +7852,27 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return contents;
   }
-  function printDynamicImportCallee(node) {
-    if (!node.phase) {
-      return "import";
+  function printCallee(path, print3) {
+    const { node } = path;
+    if (node.type === "ImportExpression") {
+      return `import${node.phase ? `.${node.phase}` : ""}`;
     }
-    return `import.${node.phase}`;
+    return print3("callee");
   }
-  function isCommonsJsOrAmdCall(node, parentNode) {
+  function isCommonsJsOrAmdModuleDefinition(path) {
+    const { node } = path;
+    if (node.type !== "CallExpression" || node.optional) {
+      return false;
+    }
     if (node.callee.type !== "Identifier") {
       return false;
     }
+    const args = getCallArguments(node);
     if (node.callee.name === "require") {
-      const args = getCallArguments(node);
       return args.length === 1 && isStringLiteral(args[0]) || args.length > 1;
     }
-    if (node.callee.name === "define") {
-      const args = getCallArguments(node);
-      return parentNode.type === "ExpressionStatement" && (args.length === 1 || args.length === 2 && args[0].type === "ArrayExpression" || args.length === 3 && isStringLiteral(args[0]) && args[1].type === "ArrayExpression");
+    if (node.callee.name === "define" && path.parent.type === "ExpressionStatement") {
+      return args.length === 1 || args.length === 2 && args[0].type === "ArrayExpression" || args.length === 3 && isStringLiteral(args[0]) && args[1].type === "ArrayExpression";
     }
     return false;
   }
@@ -7459,10 +7882,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const layout = chooseLayout(path, options2, print3, leftDoc, rightPropertyName);
     const rightDoc = rightPropertyName ? print3(rightPropertyName, { assignmentLayout: layout }) : "";
     switch (layout) {
+      // First break after operator, then the sides are broken independently on their own lines
       case "break-after-operator":
         return group([group(leftDoc), operator, group(indent([line, rightDoc]))]);
+      // First break right-hand side, then left-hand side
       case "never-break-after-operator":
         return group([group(leftDoc), operator, " ", rightDoc]);
+      // First break right-hand side, then after operator
       case "fluid": {
         const groupId = Symbol("assignment");
         return group([
@@ -7475,6 +7901,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
       case "break-lhs":
         return group([leftDoc, operator, " ", group(rightDoc)]);
+      // Parts of assignment chains aren't wrapped in groups.
+      // Once one of them breaks, the chain breaks too.
       case "chain":
         return [group(leftDoc), operator, line, rightDoc];
       case "chain-tail":
@@ -7518,7 +7946,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (isHeadOfLongChain || hasLeadingOwnLineComment(options2.originalText, rightNode)) {
       return "break-after-operator";
     }
-    if (rightNode.type === "CallExpression" && rightNode.callee.name === "require" || // do not put values on a separate line from the key in json
+    if (node.type === "ImportAttribute" || rightNode.type === "CallExpression" && rightNode.callee.name === "require" || // do not put values on a separate line from the key in json
     options2.parser === "json5" || options2.parser === "jsonc" || options2.parser === "json") {
       return "never-break-after-operator";
     }
@@ -7536,7 +7964,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (isComplexTypeAliasParams(node)) {
       return "break-lhs";
     }
-    if (!canBreakLeftDoc && (hasShortKey || rightNode.type === "TemplateLiteral" || rightNode.type === "TaggedTemplateExpression" || rightNode.type === "BooleanLiteral" || isNumericLiteral(rightNode) || rightNode.type === "ClassExpression")) {
+    if (!canBreakLeftDoc && (hasShortKey || rightNode.type === "TemplateLiteral" || rightNode.type === "TaggedTemplateExpression" || isBooleanLiteral(rightNode) || isNumericLiteral(rightNode) || rightNode.type === "ClassExpression")) {
       return "never-break-after-operator";
     }
     return "fluid";
@@ -7572,7 +8000,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     let node = rightNode;
     const propertiesForPath = [];
-    for (; ; ) {
+    while (true) {
       if (node.type === "UnaryExpression" || node.type === "AwaitExpression" || node.type === "YieldExpression" && node.argument !== null) {
         node = node.argument;
         propertiesForPath.push("argument");
@@ -7655,7 +8083,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function getTypeParametersFromTypeReference(node) {
     var _a;
     if (isTypeReference(node)) {
-      return (_a = node.typeParameters) == null ? void 0 : _a.params;
+      return (_a = node.typeArguments ?? node.typeParameters) == null ? void 0 : _a.params;
     }
   }
   function isPoorlyBreakableMemberOrCallChain(path, options2, print3, deep = false) {
@@ -7722,8 +8150,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         case "FunctionTypeAnnotation":
         case "GenericTypeAnnotation":
         case "TSFunctionType":
-        case "TSTypeReference":
           return Boolean(subNode.typeParameters);
+        case "TSTypeReference":
+          return Boolean(
+            // TODO: Use `typeArguments` only when babel align with TS.
+            subNode.typeArguments ?? subNode.typeParameters
+          );
         default:
           return false;
       }
@@ -7732,7 +8164,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
 
   // src/language-js/print/function-parameters.js
-  function printFunctionParameters(path, print3, options2, expandArg, printTypeParams) {
+  function printFunctionParameters(path, options2, print3, expandArg, printTypeParams) {
     const functionNode = path.node;
     const parameters = getFunctionParameters(functionNode);
     const typeParams = printTypeParams ? printFunctionTypeParameters(path, options2, print3) : "";
@@ -7814,7 +8246,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return false;
     }
     const [parameter] = parameters;
-    return !hasComment(parameter) && (parameter.type === "ObjectPattern" || parameter.type === "ArrayPattern" || parameter.type === "Identifier" && parameter.typeAnnotation && (parameter.typeAnnotation.type === "TypeAnnotation" || parameter.typeAnnotation.type === "TSTypeAnnotation") && isObjectType(parameter.typeAnnotation.typeAnnotation) || parameter.type === "FunctionTypeParam" && isObjectType(parameter.typeAnnotation) && parameter !== node.rest || parameter.type === "AssignmentPattern" && (parameter.left.type === "ObjectPattern" || parameter.left.type === "ArrayPattern") && (parameter.right.type === "Identifier" || isObjectOrRecordExpression(parameter.right) && parameter.right.properties.length === 0 || isArrayOrTupleExpression(parameter.right) && parameter.right.elements.length === 0));
+    return !hasComment(parameter) && (parameter.type === "ObjectPattern" || parameter.type === "ArrayPattern" || parameter.type === "Identifier" && parameter.typeAnnotation && (parameter.typeAnnotation.type === "TypeAnnotation" || parameter.typeAnnotation.type === "TSTypeAnnotation") && isObjectType(parameter.typeAnnotation.typeAnnotation) || parameter.type === "FunctionTypeParam" && isObjectType(parameter.typeAnnotation) && parameter !== node.rest || parameter.type === "AssignmentPattern" && (parameter.left.type === "ObjectPattern" || parameter.left.type === "ArrayPattern") && (parameter.right.type === "Identifier" || isObjectExpression(parameter.right) && parameter.right.properties.length === 0 || isArrayExpression(parameter.right) && parameter.right.elements.length === 0));
   }
   function getReturnTypeNode(functionNode) {
     let returnTypeNode;
@@ -7943,7 +8375,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         if (previousIsObjectType && currentIsObjectType) {
           return [" & ", wasIndented ? indent(doc) : doc];
         }
-        if (!previousIsObjectType && !currentIsObjectType) {
+        if (
+          // If no object is involved, go to the next line if it breaks
+          !previousIsObjectType && !currentIsObjectType || hasLeadingOwnLineComment(options2.originalText, node)
+        ) {
+          if (options2.experimentalOperatorPosition === "start") {
+            return indent([line, "& ", doc]);
+          }
           return indent([" &", line, doc]);
         }
         if (index > 1) {
@@ -7956,7 +8394,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function printUnionType(path, options2, print3) {
     const { node } = path;
     const { parent } = path;
-    const shouldIndent = parent.type !== "TypeParameterInstantiation" && (parent.type !== "TSConditionalType" || !options2.experimentalTernaries) && (parent.type !== "ConditionalTypeAnnotation" || !options2.experimentalTernaries) && parent.type !== "TSTypeParameterInstantiation" && parent.type !== "GenericTypeAnnotation" && parent.type !== "TSTypeReference" && parent.type !== "TSTypeAssertion" && parent.type !== "TupleTypeAnnotation" && parent.type !== "TSTupleType" && !(parent.type === "FunctionTypeParam" && !parent.name && path.grandparent.this !== parent) && !((parent.type === "TypeAlias" || parent.type === "VariableDeclarator" || parent.type === "TSTypeAliasDeclaration") && hasLeadingOwnLineComment(options2.originalText, node));
+    const shouldIndent = parent.type !== "TypeParameterInstantiation" && (!isConditionalType(parent) || !options2.experimentalTernaries) && parent.type !== "TSTypeParameterInstantiation" && parent.type !== "GenericTypeAnnotation" && parent.type !== "TSTypeReference" && parent.type !== "TSTypeAssertion" && parent.type !== "TupleTypeAnnotation" && parent.type !== "TSTupleType" && !(parent.type === "FunctionTypeParam" && !parent.name && path.grandparent.this !== parent) && !((parent.type === "TypeAlias" || parent.type === "VariableDeclarator" || parent.type === "TSTypeAliasDeclaration") && hasLeadingOwnLineComment(options2.originalText, node));
     const shouldHug = shouldHugType(node);
     const printed = path.map((typePath) => {
       let printedType = print3();
@@ -8007,8 +8445,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     let parametersDoc = printFunctionParameters(
       path,
-      print3,
       options2,
+      print3,
       /* expandArg */
       false,
       /* printTypeParams */
@@ -8134,6 +8572,17 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         (node, key) => key === "typeAnnotation" && node.type === "Identifier",
         (node, key) => key === "id" && node.type === "DeclareHook"
       ) || /*
+      Flow
+      ```js
+      declare hook foo(): void;
+                      ^^^^^^^^ `TypeAnnotation`
+      ```
+      */
+      path.match(
+        (node) => node.type === "TypeAnnotation",
+        (node, key) => key === "typeAnnotation" && node.type === "Identifier",
+        (node, key) => key === "id" && node.type === "DeclareHook"
+      ) || /*
           Flow
       
           ```js
@@ -8170,7 +8619,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function printTypeQuery({ node }, print3) {
     const argumentPropertyName = node.type === "TSTypeQuery" ? "exprName" : "argument";
-    const typeArgsPropertyName = node.type === "TSTypeQuery" ? "typeParameters" : "typeArguments";
+    const typeArgsPropertyName = (
+      // TODO: Use `typeArguments` only when babel align with TS.
+      node.type === "TypeofTypeAnnotation" || node.typeArguments ? "typeArguments" : "typeParameters"
+    );
     return ["typeof ", print3(argumentPropertyName), print3(typeArgsPropertyName)];
   }
   function printTypePredicate(path, print3) {
@@ -8205,8 +8657,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var flowDeclareNodeTypes = /* @__PURE__ */ new Set([
     "DeclareClass",
     "DeclareComponent",
-    "DeclareHook",
     "DeclareFunction",
+    "DeclareHook",
     "DeclareVariable",
     "DeclareExportDeclaration",
     "DeclareExportAllDeclaration",
@@ -8262,23 +8714,23 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/language-js/print/array.js
   function printEmptyArrayElements(path, options2, openBracket, closeBracket) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const inexact = node.inexact ? "..." : "";
     if (!hasComment(node, CommentCheckFlags.Dangling)) {
       return [openBracket, inexact, closeBracket];
     }
-    return group([openBracket, inexact, printDanglingComments(path, options2, {
-      indent: true
-    }), softline, closeBracket]);
+    return group([
+      openBracket,
+      inexact,
+      printDanglingComments(path, options2, { indent: true }),
+      softline,
+      closeBracket
+    ]);
   }
   function printArray(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const parts = [];
-    const openBracket = node.type === "TupleExpression" ? "#[" : "[";
+    const openBracket = "[";
     const closeBracket = "]";
     const elementsProperty = (
       // TODO: Remove `types` when babel changes AST of `TupleTypeAnnotation`
@@ -8286,10 +8738,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     );
     const elements = node[elementsProperty];
     if (elements.length === 0) {
-      parts.push(printEmptyArrayElements(path, options2, openBracket, closeBracket));
+      parts.push(
+        printEmptyArrayElements(path, options2, openBracket, closeBracket)
+      );
     } else {
       const lastElem = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         elements,
         -1
@@ -8299,62 +8753,87 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       const groupId = Symbol("array");
       const shouldBreak = !options2.__inJestEach && elements.length > 1 && elements.every((element, i, elements2) => {
         const elementType = element == null ? void 0 : element.type;
-        if (!isArrayOrTupleExpression(element) && !isObjectOrRecordExpression(element)) {
+        if (!isArrayExpression(element) && !isObjectExpression(element)) {
           return false;
         }
         const nextElement = elements2[i + 1];
         if (nextElement && elementType !== nextElement.type) {
           return false;
         }
-        const itemsKey = isArrayOrTupleExpression(element) ? "elements" : "properties";
+        const itemsKey = isArrayExpression(element) ? "elements" : "properties";
         return element[itemsKey] && element[itemsKey].length > 1;
       });
       const shouldUseConciseFormatting = isConciselyPrintedArray(node, options2);
-      const trailingComma = !canHaveTrailingComma ? "" : needsForcedTrailingComma ? "," : !shouldPrintComma(options2) ? "" : shouldUseConciseFormatting ? ifBreak(",", "", {
-        groupId
-      }) : ifBreak(",");
-      parts.push(group([openBracket, indent([softline, shouldUseConciseFormatting ? printArrayElementsConcisely(path, options2, print3, trailingComma) : [printArrayElements(path, options2, elementsProperty, node.inexact, print3), trailingComma], printDanglingComments(path, options2)]), softline, closeBracket], {
-        shouldBreak,
-        id: groupId
-      }));
+      const trailingComma = !canHaveTrailingComma ? "" : needsForcedTrailingComma ? "," : !shouldPrintComma(options2) ? "" : shouldUseConciseFormatting ? ifBreak(",", "", { groupId }) : ifBreak(",");
+      parts.push(
+        group(
+          [
+            openBracket,
+            indent([
+              softline,
+              shouldUseConciseFormatting ? printArrayElementsConcisely(path, options2, print3, trailingComma) : [
+                printArrayElements(
+                  path,
+                  options2,
+                  print3,
+                  elementsProperty,
+                  node.inexact
+                ),
+                trailingComma
+              ],
+              printDanglingComments(path, options2)
+            ]),
+            softline,
+            closeBracket
+          ],
+          { shouldBreak, id: groupId }
+        )
+      );
     }
-    parts.push(printOptionalToken(path), printTypeAnnotationProperty(path, print3));
+    parts.push(
+      printOptionalToken(path),
+      printTypeAnnotationProperty(path, print3)
+    );
     return parts;
   }
   function isConciselyPrintedArray(node, options2) {
-    return isArrayOrTupleExpression(node) && node.elements.length > 1 && node.elements.every((element) => element && (isNumericLiteral(element) || isSignedNumericLiteral(element) && !hasComment(element.argument)) && !hasComment(element, CommentCheckFlags.Trailing | CommentCheckFlags.Line, (comment) => !has_newline_default(options2.originalText, locStart(comment), {
-      backwards: true
-    })));
+    return isArrayExpression(node) && node.elements.length > 1 && node.elements.every(
+      (element) => element && (isNumericLiteral(element) || isSignedNumericLiteral(element) && !hasComment(element.argument)) && !hasComment(
+        element,
+        CommentCheckFlags.Trailing | CommentCheckFlags.Line,
+        (comment) => !has_newline_default(options2.originalText, locStart(comment), {
+          backwards: true
+        })
+      )
+    );
   }
-  function isLineAfterElementEmpty({
-    node
-  }, {
-    originalText: text
-  }) {
+  function isLineAfterElementEmpty({ node }, { originalText: text }) {
     let currentIdx = locEnd(node);
     if (currentIdx === locStart(node)) {
       return false;
     }
-    const {
-      length
-    } = text;
+    const { length } = text;
     while (currentIdx < length) {
       if (text[currentIdx] === ",") {
         break;
       }
-      currentIdx = skip_inline_comment_default(text, skip_trailing_comment_default(text, currentIdx + 1));
+      currentIdx = skip_inline_comment_default(
+        text,
+        skip_trailing_comment_default(text, currentIdx + 1)
+      );
     }
     return is_next_line_empty_default(text, currentIdx);
   }
-  function printArrayElements(path, options2, elementsProperty, inexact, print3) {
+  function printArrayElements(path, options2, print3, elementsProperty, inexact) {
     const parts = [];
-    path.each(({
-      node,
-      isLast
-    }) => {
+    path.each(({ node, isLast }) => {
       parts.push(node ? group(print3()) : "");
       if (!isLast || inexact) {
-        parts.push([",", line, node && isLineAfterElementEmpty(path, options2) ? softline : ""]);
+        parts.push([
+          ",",
+          line,
+          node && isLineAfterElementEmpty(path, options2) ? softline : ""
+        ]);
       }
     }, elementsProperty);
     if (inexact) {
@@ -8364,62 +8843,56 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function printArrayElementsConcisely(path, options2, print3, trailingComma) {
     const parts = [];
-    path.each(({
-      isLast,
-      next
-    }) => {
+    path.each(({ isLast, next }) => {
       parts.push([print3(), isLast ? trailingComma : ","]);
       if (!isLast) {
-        parts.push(isLineAfterElementEmpty(path, options2) ? [hardline, hardline] : hasComment(next, CommentCheckFlags.Leading | CommentCheckFlags.Line) ? hardline : line);
+        parts.push(
+          isLineAfterElementEmpty(path, options2) ? [hardline, hardline] : hasComment(next, CommentCheckFlags.Leading | CommentCheckFlags.Line) ? hardline : line
+        );
       }
     }, "elements");
     return fill(parts);
   }
 
-  // scripts/build/shims/assert.js
-  var assert = new Proxy(() => {
-  }, { get: () => assert });
-  var assert_default = assert;
-
-  // node_modules/@prettier/is-es5-identifier-name/dist/index.js
-  var regexp_default = /^[\$A-Z_a-z\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E\u066F\u0671-\u06D3\u06D5\u06E5\u06E6\u06EE\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u08A0-\u08B4\u08B6-\u08BD\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0980\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC\u09DD\u09DF-\u09E1\u09F0\u09F1\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0\u0AE1\u0AF9\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3D\u0B5C\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D\u0C58-\u0C5A\u0C60\u0C61\u0C80\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0\u0CE1\u0CF1\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D54-\u0D56\u0D5F-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32\u0E33\u0E40-\u0E46\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB0\u0EB2\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u1884\u1887-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191E\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1C80-\u1C88\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2E2F\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FD5\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A\uA62B\uA640-\uA66E\uA67F-\uA69D\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA8FD\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uA9E0-\uA9E4\uA9E6-\uA9EF\uA9FA-\uA9FE\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA7E-\uAAAF\uAAB1\uAAB5\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC][\$0-9A-Z_a-z\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u0669\u066E-\u06D3\u06D5-\u06DC\u06DF-\u06E8\u06EA-\u06FC\u06FF\u0710-\u074A\u074D-\u07B1\u07C0-\u07F5\u07FA\u0800-\u082D\u0840-\u085B\u08A0-\u08B4\u08B6-\u08BD\u08D4-\u08E1\u08E3-\u0963\u0966-\u096F\u0971-\u0983\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC-\u09C4\u09C7\u09C8\u09CB-\u09CE\u09D7\u09DC\u09DD\u09DF-\u09E3\u09E6-\u09F1\u0A01-\u0A03\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABC-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE3\u0AE6-\u0AEF\u0AF9\u0B01-\u0B03\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3C-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B5C\u0B5D\u0B5F-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C00-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C58-\u0C5A\u0C60-\u0C63\u0C66-\u0C6F\u0C80-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CDE\u0CE0-\u0CE3\u0CE6-\u0CEF\u0CF1\u0CF2\u0D01-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D-\u0D44\u0D46-\u0D48\u0D4A-\u0D4E\u0D54-\u0D57\u0D5F-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DE6-\u0DEF\u0DF2\u0DF3\u0E01-\u0E3A\u0E40-\u0E4E\u0E50-\u0E59\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB9\u0EBB-\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u1049\u1050-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1714\u1720-\u1734\u1740-\u1753\u1760-\u176C\u176E-\u1770\u1772\u1773\u1780-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18AA\u18B0-\u18F5\u1900-\u191E\u1920-\u192B\u1930-\u193B\u1946-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u19D0-\u19D9\u1A00-\u1A1B\u1A20-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1AB0-\u1ABD\u1B00-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1BF3\u1C00-\u1C37\u1C40-\u1C49\u1C4D-\u1C7D\u1C80-\u1C88\u1CD0-\u1CD2\u1CD4-\u1CF6\u1CF8\u1CF9\u1D00-\u1DF5\u1DFB-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u200C\u200D\u203F\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u2E2F\u3005-\u3007\u3021-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099\u309A\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FD5\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA62B\uA640-\uA66F\uA674-\uA67D\uA67F-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA827\uA840-\uA873\uA880-\uA8C5\uA8D0-\uA8D9\uA8E0-\uA8F7\uA8FB\uA8FD\uA900-\uA92D\uA930-\uA953\uA960-\uA97C\uA980-\uA9C0\uA9CF-\uA9D9\uA9E0-\uA9FE\uAA00-\uAA36\uAA40-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A-\uAAC2\uAADB-\uAADD\uAAE0-\uAAEF\uAAF2-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABEA\uABEC\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE2F\uFE33\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]*$/;
-  var isEs5IdentifierName = (id) => regexp_default.test(id);
-  var src_default = isEs5IdentifierName;
+  // node_modules/is-es5-identifier-name/index.js
+  var identifierRegexp = /^[\$A-Z_a-z\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0370-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u05D0-\u05EA\u05F0-\u05F2\u0620-\u064A\u066E\u066F\u0671-\u06D3\u06D5\u06E5\u06E6\u06EE\u06EF\u06FA-\u06FC\u06FF\u0710\u0712-\u072F\u074D-\u07A5\u07B1\u07CA-\u07EA\u07F4\u07F5\u07FA\u0800-\u0815\u081A\u0824\u0828\u0840-\u0858\u08A0-\u08B4\u08B6-\u08BD\u0904-\u0939\u093D\u0950\u0958-\u0961\u0971-\u0980\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BD\u09CE\u09DC\u09DD\u09DF-\u09E1\u09F0\u09F1\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A59-\u0A5C\u0A5E\u0A72-\u0A74\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABD\u0AD0\u0AE0\u0AE1\u0AF9\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3D\u0B5C\u0B5D\u0B5F-\u0B61\u0B71\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BD0\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D\u0C58-\u0C5A\u0C60\u0C61\u0C80\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBD\u0CDE\u0CE0\u0CE1\u0CF1\u0CF2\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D\u0D4E\u0D54-\u0D56\u0D5F-\u0D61\u0D7A-\u0D7F\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0E01-\u0E30\u0E32\u0E33\u0E40-\u0E46\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB0\u0EB2\u0EB3\u0EBD\u0EC0-\u0EC4\u0EC6\u0EDC-\u0EDF\u0F00\u0F40-\u0F47\u0F49-\u0F6C\u0F88-\u0F8C\u1000-\u102A\u103F\u1050-\u1055\u105A-\u105D\u1061\u1065\u1066\u106E-\u1070\u1075-\u1081\u108E\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1711\u1720-\u1731\u1740-\u1751\u1760-\u176C\u176E-\u1770\u1780-\u17B3\u17D7\u17DC\u1820-\u1877\u1880-\u1884\u1887-\u18A8\u18AA\u18B0-\u18F5\u1900-\u191E\u1950-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u1A00-\u1A16\u1A20-\u1A54\u1AA7\u1B05-\u1B33\u1B45-\u1B4B\u1B83-\u1BA0\u1BAE\u1BAF\u1BBA-\u1BE5\u1C00-\u1C23\u1C4D-\u1C4F\u1C5A-\u1C7D\u1C80-\u1C88\u1CE9-\u1CEC\u1CEE-\u1CF1\u1CF5\u1CF6\u1D00-\u1DBF\u1E00-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u2071\u207F\u2090-\u209C\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CEE\u2CF2\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D80-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2E2F\u3005-\u3007\u3021-\u3029\u3031-\u3035\u3038-\u303C\u3041-\u3096\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FD5\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA61F\uA62A\uA62B\uA640-\uA66E\uA67F-\uA69D\uA6A0-\uA6EF\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA801\uA803-\uA805\uA807-\uA80A\uA80C-\uA822\uA840-\uA873\uA882-\uA8B3\uA8F2-\uA8F7\uA8FB\uA8FD\uA90A-\uA925\uA930-\uA946\uA960-\uA97C\uA984-\uA9B2\uA9CF\uA9E0-\uA9E4\uA9E6-\uA9EF\uA9FA-\uA9FE\uAA00-\uAA28\uAA40-\uAA42\uAA44-\uAA4B\uAA60-\uAA76\uAA7A\uAA7E-\uAAAF\uAAB1\uAAB5\uAAB6\uAAB9-\uAABD\uAAC0\uAAC2\uAADB-\uAADD\uAAE0-\uAAEA\uAAF2-\uAAF4\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABE2\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D\uFB1F-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE70-\uFE74\uFE76-\uFEFC\uFF21-\uFF3A\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC][\$0-9A-Z_a-z\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C6-\u02D1\u02E0-\u02E4\u02EC\u02EE\u0300-\u0374\u0376\u0377\u037A-\u037D\u037F\u0386\u0388-\u038A\u038C\u038E-\u03A1\u03A3-\u03F5\u03F7-\u0481\u0483-\u0487\u048A-\u052F\u0531-\u0556\u0559\u0561-\u0587\u0591-\u05BD\u05BF\u05C1\u05C2\u05C4\u05C5\u05C7\u05D0-\u05EA\u05F0-\u05F2\u0610-\u061A\u0620-\u0669\u066E-\u06D3\u06D5-\u06DC\u06DF-\u06E8\u06EA-\u06FC\u06FF\u0710-\u074A\u074D-\u07B1\u07C0-\u07F5\u07FA\u0800-\u082D\u0840-\u085B\u08A0-\u08B4\u08B6-\u08BD\u08D4-\u08E1\u08E3-\u0963\u0966-\u096F\u0971-\u0983\u0985-\u098C\u098F\u0990\u0993-\u09A8\u09AA-\u09B0\u09B2\u09B6-\u09B9\u09BC-\u09C4\u09C7\u09C8\u09CB-\u09CE\u09D7\u09DC\u09DD\u09DF-\u09E3\u09E6-\u09F1\u0A01-\u0A03\u0A05-\u0A0A\u0A0F\u0A10\u0A13-\u0A28\u0A2A-\u0A30\u0A32\u0A33\u0A35\u0A36\u0A38\u0A39\u0A3C\u0A3E-\u0A42\u0A47\u0A48\u0A4B-\u0A4D\u0A51\u0A59-\u0A5C\u0A5E\u0A66-\u0A75\u0A81-\u0A83\u0A85-\u0A8D\u0A8F-\u0A91\u0A93-\u0AA8\u0AAA-\u0AB0\u0AB2\u0AB3\u0AB5-\u0AB9\u0ABC-\u0AC5\u0AC7-\u0AC9\u0ACB-\u0ACD\u0AD0\u0AE0-\u0AE3\u0AE6-\u0AEF\u0AF9\u0B01-\u0B03\u0B05-\u0B0C\u0B0F\u0B10\u0B13-\u0B28\u0B2A-\u0B30\u0B32\u0B33\u0B35-\u0B39\u0B3C-\u0B44\u0B47\u0B48\u0B4B-\u0B4D\u0B56\u0B57\u0B5C\u0B5D\u0B5F-\u0B63\u0B66-\u0B6F\u0B71\u0B82\u0B83\u0B85-\u0B8A\u0B8E-\u0B90\u0B92-\u0B95\u0B99\u0B9A\u0B9C\u0B9E\u0B9F\u0BA3\u0BA4\u0BA8-\u0BAA\u0BAE-\u0BB9\u0BBE-\u0BC2\u0BC6-\u0BC8\u0BCA-\u0BCD\u0BD0\u0BD7\u0BE6-\u0BEF\u0C00-\u0C03\u0C05-\u0C0C\u0C0E-\u0C10\u0C12-\u0C28\u0C2A-\u0C39\u0C3D-\u0C44\u0C46-\u0C48\u0C4A-\u0C4D\u0C55\u0C56\u0C58-\u0C5A\u0C60-\u0C63\u0C66-\u0C6F\u0C80-\u0C83\u0C85-\u0C8C\u0C8E-\u0C90\u0C92-\u0CA8\u0CAA-\u0CB3\u0CB5-\u0CB9\u0CBC-\u0CC4\u0CC6-\u0CC8\u0CCA-\u0CCD\u0CD5\u0CD6\u0CDE\u0CE0-\u0CE3\u0CE6-\u0CEF\u0CF1\u0CF2\u0D01-\u0D03\u0D05-\u0D0C\u0D0E-\u0D10\u0D12-\u0D3A\u0D3D-\u0D44\u0D46-\u0D48\u0D4A-\u0D4E\u0D54-\u0D57\u0D5F-\u0D63\u0D66-\u0D6F\u0D7A-\u0D7F\u0D82\u0D83\u0D85-\u0D96\u0D9A-\u0DB1\u0DB3-\u0DBB\u0DBD\u0DC0-\u0DC6\u0DCA\u0DCF-\u0DD4\u0DD6\u0DD8-\u0DDF\u0DE6-\u0DEF\u0DF2\u0DF3\u0E01-\u0E3A\u0E40-\u0E4E\u0E50-\u0E59\u0E81\u0E82\u0E84\u0E87\u0E88\u0E8A\u0E8D\u0E94-\u0E97\u0E99-\u0E9F\u0EA1-\u0EA3\u0EA5\u0EA7\u0EAA\u0EAB\u0EAD-\u0EB9\u0EBB-\u0EBD\u0EC0-\u0EC4\u0EC6\u0EC8-\u0ECD\u0ED0-\u0ED9\u0EDC-\u0EDF\u0F00\u0F18\u0F19\u0F20-\u0F29\u0F35\u0F37\u0F39\u0F3E-\u0F47\u0F49-\u0F6C\u0F71-\u0F84\u0F86-\u0F97\u0F99-\u0FBC\u0FC6\u1000-\u1049\u1050-\u109D\u10A0-\u10C5\u10C7\u10CD\u10D0-\u10FA\u10FC-\u1248\u124A-\u124D\u1250-\u1256\u1258\u125A-\u125D\u1260-\u1288\u128A-\u128D\u1290-\u12B0\u12B2-\u12B5\u12B8-\u12BE\u12C0\u12C2-\u12C5\u12C8-\u12D6\u12D8-\u1310\u1312-\u1315\u1318-\u135A\u135D-\u135F\u1380-\u138F\u13A0-\u13F5\u13F8-\u13FD\u1401-\u166C\u166F-\u167F\u1681-\u169A\u16A0-\u16EA\u16EE-\u16F8\u1700-\u170C\u170E-\u1714\u1720-\u1734\u1740-\u1753\u1760-\u176C\u176E-\u1770\u1772\u1773\u1780-\u17D3\u17D7\u17DC\u17DD\u17E0-\u17E9\u180B-\u180D\u1810-\u1819\u1820-\u1877\u1880-\u18AA\u18B0-\u18F5\u1900-\u191E\u1920-\u192B\u1930-\u193B\u1946-\u196D\u1970-\u1974\u1980-\u19AB\u19B0-\u19C9\u19D0-\u19D9\u1A00-\u1A1B\u1A20-\u1A5E\u1A60-\u1A7C\u1A7F-\u1A89\u1A90-\u1A99\u1AA7\u1AB0-\u1ABD\u1B00-\u1B4B\u1B50-\u1B59\u1B6B-\u1B73\u1B80-\u1BF3\u1C00-\u1C37\u1C40-\u1C49\u1C4D-\u1C7D\u1C80-\u1C88\u1CD0-\u1CD2\u1CD4-\u1CF6\u1CF8\u1CF9\u1D00-\u1DF5\u1DFB-\u1F15\u1F18-\u1F1D\u1F20-\u1F45\u1F48-\u1F4D\u1F50-\u1F57\u1F59\u1F5B\u1F5D\u1F5F-\u1F7D\u1F80-\u1FB4\u1FB6-\u1FBC\u1FBE\u1FC2-\u1FC4\u1FC6-\u1FCC\u1FD0-\u1FD3\u1FD6-\u1FDB\u1FE0-\u1FEC\u1FF2-\u1FF4\u1FF6-\u1FFC\u200C\u200D\u203F\u2040\u2054\u2071\u207F\u2090-\u209C\u20D0-\u20DC\u20E1\u20E5-\u20F0\u2102\u2107\u210A-\u2113\u2115\u2119-\u211D\u2124\u2126\u2128\u212A-\u212D\u212F-\u2139\u213C-\u213F\u2145-\u2149\u214E\u2160-\u2188\u2C00-\u2C2E\u2C30-\u2C5E\u2C60-\u2CE4\u2CEB-\u2CF3\u2D00-\u2D25\u2D27\u2D2D\u2D30-\u2D67\u2D6F\u2D7F-\u2D96\u2DA0-\u2DA6\u2DA8-\u2DAE\u2DB0-\u2DB6\u2DB8-\u2DBE\u2DC0-\u2DC6\u2DC8-\u2DCE\u2DD0-\u2DD6\u2DD8-\u2DDE\u2DE0-\u2DFF\u2E2F\u3005-\u3007\u3021-\u302F\u3031-\u3035\u3038-\u303C\u3041-\u3096\u3099\u309A\u309D-\u309F\u30A1-\u30FA\u30FC-\u30FF\u3105-\u312D\u3131-\u318E\u31A0-\u31BA\u31F0-\u31FF\u3400-\u4DB5\u4E00-\u9FD5\uA000-\uA48C\uA4D0-\uA4FD\uA500-\uA60C\uA610-\uA62B\uA640-\uA66F\uA674-\uA67D\uA67F-\uA6F1\uA717-\uA71F\uA722-\uA788\uA78B-\uA7AE\uA7B0-\uA7B7\uA7F7-\uA827\uA840-\uA873\uA880-\uA8C5\uA8D0-\uA8D9\uA8E0-\uA8F7\uA8FB\uA8FD\uA900-\uA92D\uA930-\uA953\uA960-\uA97C\uA980-\uA9C0\uA9CF-\uA9D9\uA9E0-\uA9FE\uAA00-\uAA36\uAA40-\uAA4D\uAA50-\uAA59\uAA60-\uAA76\uAA7A-\uAAC2\uAADB-\uAADD\uAAE0-\uAAEF\uAAF2-\uAAF6\uAB01-\uAB06\uAB09-\uAB0E\uAB11-\uAB16\uAB20-\uAB26\uAB28-\uAB2E\uAB30-\uAB5A\uAB5C-\uAB65\uAB70-\uABEA\uABEC\uABED\uABF0-\uABF9\uAC00-\uD7A3\uD7B0-\uD7C6\uD7CB-\uD7FB\uF900-\uFA6D\uFA70-\uFAD9\uFB00-\uFB06\uFB13-\uFB17\uFB1D-\uFB28\uFB2A-\uFB36\uFB38-\uFB3C\uFB3E\uFB40\uFB41\uFB43\uFB44\uFB46-\uFBB1\uFBD3-\uFD3D\uFD50-\uFD8F\uFD92-\uFDC7\uFDF0-\uFDFB\uFE00-\uFE0F\uFE20-\uFE2F\uFE33\uFE34\uFE4D-\uFE4F\uFE70-\uFE74\uFE76-\uFEFC\uFF10-\uFF19\uFF21-\uFF3A\uFF3F\uFF41-\uFF5A\uFF66-\uFFBE\uFFC2-\uFFC7\uFFCA-\uFFCF\uFFD2-\uFFD7\uFFDA-\uFFDC]*$/;
+  var isEs5IdentifierName = (id) => identifierRegexp.test(id);
+  var is_es5_identifier_name_default = isEs5IdentifierName;
 
   // src/utils/print-number.js
   function printNumber(rawNumber) {
     if (rawNumber.length === 1) {
       return rawNumber;
     }
-    return rawNumber.toLowerCase().replace(/^([+-]?[\d.]+e)(?:\+|(-))?0*(?=\d)/, "$1$2").replace(/^([+-]?[\d.]+)e[+-]?0+$/, "$1").replace(/^([+-])?\./, "$10.").replace(/(\.\d+?)0+(?=e|$)/, "$1").replace(/\.(?=e|$)/, "");
+    return rawNumber.toLowerCase().replace(/^([+-]?[\d.]+e)(?:\+|(-))?0*(?=\d)/u, "$1$2").replace(/^([+-]?[\d.]+)e[+-]?0+$/u, "$1").replace(/^([+-])?\./u, "$10.").replace(/(\.\d+?)0+(?=e|$)/u, "$1").replace(/\.(?=e|$)/u, "");
   }
   var print_number_default = printNumber;
 
   // src/language-js/print/property.js
   var needsQuoteProps = /* @__PURE__ */ new WeakMap();
   function isSimpleNumber(numberString) {
-    return /^(?:\d+|\d+\.\d+)$/.test(numberString);
+    return /^(?:\d+|\d+\.\d+)$/u.test(numberString);
   }
   function isStringKeySafeToUnquote(node, options2) {
-    if (options2.parser === "json" || options2.parser === "jsonc" || !isStringLiteral(node.key) || print_string_default(rawText(node.key), options2).slice(1, -1) !== node.key.value) {
+    if (options2.parser === "json" || options2.parser === "jsonc" || !isStringLiteral(node.key) || print_string_default(get_raw_default(node.key), options2).slice(1, -1) !== node.key.value) {
       return false;
     }
-    if (src_default(node.key.value) && // With `--strictPropertyInitialization`, TS treats properties with quoted names differently than unquoted ones.
+    if (is_es5_identifier_name_default(node.key.value) && // With `--strictPropertyInitialization`, TS treats properties with quoted names differently than unquoted ones.
     // See https://github.com/microsoft/TypeScript/pull/20075
-    !(options2.parser === "babel-ts" && node.type === "ClassProperty" || options2.parser === "typescript" && node.type === "PropertyDefinition")) {
+    !(options2.parser === "babel-ts" && node.type === "ClassProperty" || (options2.parser === "typescript" || options2.parser === "oxc-ts") && node.type === "PropertyDefinition")) {
       return true;
     }
-    if (isSimpleNumber(node.key.value) && String(Number(node.key.value)) === node.key.value && node.type !== "ImportAttribute" && (options2.parser === "babel" || options2.parser === "acorn" || options2.parser === "espree" || options2.parser === "meriyah" || options2.parser === "__babel_estree")) {
+    if (isSimpleNumber(node.key.value) && String(Number(node.key.value)) === node.key.value && node.type !== "ImportAttribute" && (options2.parser === "babel" || options2.parser === "acorn" || options2.parser === "oxc" || options2.parser === "espree" || options2.parser === "meriyah" || options2.parser === "__babel_estree")) {
       return true;
     }
     return false;
   }
   function shouldQuotePropertyKey(path, options2) {
     const { key } = path.node;
-    return (key.type === "Identifier" || isNumericLiteral(key) && isSimpleNumber(print_number_default(rawText(key))) && // Avoid converting 999999999999999999999 to 1e+21, 0.99999999999999999 to 1 and 1.0 to 1.
-    String(key.value) === print_number_default(rawText(key)) && // Quoting number keys is safe in JS and Flow, but not in TypeScript (as
+    return (key.type === "Identifier" || isNumericLiteral(key) && isSimpleNumber(print_number_default(get_raw_default(key))) && // Avoid converting 999999999999999999999 to 1e+21, 0.99999999999999999 to 1 and 1.0 to 1.
+    String(key.value) === print_number_default(get_raw_default(key)) && // Quoting number keys is safe in JS and Flow, but not in TypeScript (as
     // mentioned in `isStringKeySafeToUnquote`).
-    !(options2.parser === "typescript" || options2.parser === "babel-ts")) && (options2.parser === "json" || options2.parser === "jsonc" || options2.quoteProps === "consistent" && needsQuoteProps.get(path.parent));
+    !(options2.parser === "typescript" || options2.parser === "babel-ts" || options2.parser === "oxc-ts")) && (options2.parser === "json" || options2.parser === "jsonc" || options2.quoteProps === "consistent" && needsQuoteProps.get(path.parent));
   }
   function printPropertyKey(path, options2, print3) {
     const { node } = path;
@@ -8447,7 +8920,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return path.call(
         (keyPath) => printComments(
           keyPath,
-          /^\d/.test(key.value) ? print_number_default(key.value) : key.value,
+          /^\d/u.test(key.value) ? print_number_default(key.value) : key.value,
           options2
         ),
         "key"
@@ -8472,7 +8945,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/language-js/print/function.js
   var isMethodValue = ({ node, key, parent }) => key === "value" && node.type === "FunctionExpression" && (parent.type === "ObjectMethod" || parent.type === "ClassMethod" || parent.type === "ClassPrivateMethod" || parent.type === "MethodDefinition" || parent.type === "TSAbstractMethodDefinition" || parent.type === "TSDeclareMethod" || parent.type === "Property" && isMethod(parent));
-  function printFunction(path, print3, options2, args) {
+  function printFunction(path, options2, print3, args) {
     if (isMethodValue(path)) {
       return printMethodValue(path, options2, print3);
     }
@@ -8494,8 +8967,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     ];
     const parametersDoc = printFunctionParameters(
       path,
-      print3,
       options2,
+      print3,
       expandArg
     );
     const returnTypeDoc = printReturnType(path, print3);
@@ -8535,14 +9008,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     parts.push(
       printPropertyKey(path, options2, print3),
-      node.optional || node.key.optional ? "?" : "",
+      node.optional ? "?" : "",
       node === value ? printMethodValue(path, options2, print3) : print3("value")
     );
     return parts;
   }
   function printMethodValue(path, options2, print3) {
     const { node } = path;
-    const parametersDoc = printFunctionParameters(path, print3, options2);
+    const parametersDoc = printFunctionParameters(path, options2, print3);
     const returnTypeDoc = printReturnType(path, print3);
     const shouldBreakParameters = shouldBreakFunctionParameters(node);
     const shouldGroupParameters = shouldGroupFunctionParameters(
@@ -8594,7 +9067,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       let argumentDoc = print3("argument");
       if (returnArgumentHasLeadingComment(options2, node.argument)) {
         argumentDoc = ["(", indent([hardline, argumentDoc]), hardline, ")"];
-      } else if (isBinaryish(node.argument) || node.argument.type === "SequenceExpression" || options2.experimentalTernaries && node.argument.type === "ConditionalExpression" && (node.argument.consequent.type === "ConditionalExpression" || node.argument.alternate.type === "ConditionalExpression")) {
+      } else if (isBinaryish(node.argument) || options2.experimentalTernaries && node.argument.type === "ConditionalExpression" && (node.argument.consequent.type === "ConditionalExpression" || node.argument.alternate.type === "ConditionalExpression")) {
         argumentDoc = group([
           ifBreak("("),
           indent([softline, argumentDoc]),
@@ -8705,11 +9178,16 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       signatureDocs,
       shouldBreak: shouldBreakChain
     });
-    let shouldBreakSignatures;
+    let shouldBreakSignatures = false;
     let shouldIndentSignatures = false;
+    let shouldPrintSoftlineInIndent = false;
     if (shouldPrintAsChain && (isCallee || // isAssignmentRhs
     args.assignmentLayout)) {
       shouldIndentSignatures = true;
+      shouldPrintSoftlineInIndent = !hasComment(
+        path.node,
+        CommentCheckFlags.Leading & CommentCheckFlags.Line
+      );
       shouldBreakSignatures = args.assignmentLayout === "chain-tail-arrow-chain" || isCallee && !shouldPutBodyOnSameLine;
     }
     bodyDoc = printArrowFunctionBody(path, options2, args, {
@@ -8720,7 +9198,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     });
     return group([
       group(
-        shouldIndentSignatures ? indent([softline, signaturesDoc]) : signaturesDoc,
+        shouldIndentSignatures ? indent([shouldPrintSoftlineInIndent ? softline : "", signaturesDoc]) : signaturesDoc,
         { shouldBreak: shouldBreakSignatures, id: chainGroupId }
       ),
       " =>",
@@ -8749,8 +9227,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         group([
           printFunctionParameters(
             path,
-            print3,
             options2,
+            print3,
             expandArg,
             /* printTypeParams */
             true
@@ -8775,7 +9253,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function mayBreakAfterShortPrefix(functionBody, bodyDoc, options2) {
     var _a, _b;
-    return isArrayOrTupleExpression(functionBody) || isObjectOrRecordExpression(functionBody) || functionBody.type === "ArrowFunctionExpression" || functionBody.type === "DoExpression" || functionBody.type === "BlockStatement" || isJsxElement(functionBody) || ((_a = bodyDoc.label) == null ? void 0 : _a.hug) !== false && (((_b = bodyDoc.label) == null ? void 0 : _b.embed) || isTemplateOnItsOwnLine(functionBody, options2.originalText));
+    return isArrayExpression(functionBody) || isObjectExpression(functionBody) || functionBody.type === "ArrowFunctionExpression" || functionBody.type === "DoExpression" || functionBody.type === "BlockStatement" || isJsxElement(functionBody) || ((_a = bodyDoc.label) == null ? void 0 : _a.hug) !== false && (((_b = bodyDoc.label) == null ? void 0 : _b.embed) || isTemplateOnItsOwnLine(functionBody, options2.originalText));
   }
   function printArrowFunctionSignatures(path, args, { signatureDocs, shouldBreak }) {
     if (signatureDocs.length === 1) {
@@ -8815,9 +9293,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         bodyComments
       ];
     }
-    if (shouldAlwaysAddParens(functionBody)) {
-      bodyDoc = group(["(", indent([softline, bodyDoc]), softline, ")"]);
-    }
     return shouldPutBodyOnSameLine ? [" ", bodyDoc, bodyComments] : [indent([line, bodyDoc, bodyComments]), trailingComma, trailingSpace];
   }
 
@@ -8840,19 +9315,15 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/language-js/print/statement.js
   function printStatementSequence(path, options2, print3, property) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const parts = [];
     const lastStatement = array_find_last_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       node[property],
       (statement) => statement.type !== "EmptyStatement"
     );
-    path.each(({
-      node: node2
-    }) => {
+    path.each(({ node: node2 }) => {
       if (node2.type === "EmptyStatement") {
         return;
       }
@@ -8870,10 +9341,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   // src/language-js/print/block.js
   function printBlock(path, options2, print3) {
     const bodyDoc = printBlockBody(path, options2, print3);
-    const {
-      node,
-      parent
-    } = path;
+    const { node, parent } = path;
     if (node.type === "Program" && (parent == null ? void 0 : parent.type) !== "ModuleExpression") {
       return bodyDoc ? [bodyDoc, hardline] : "";
     }
@@ -8886,7 +9354,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       parts.push(indent([hardline, bodyDoc]), hardline);
     } else {
       const parentParent = path.grandparent;
-      if (!(parent.type === "ArrowFunctionExpression" || parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || parent.type === "ComponentDeclaration" || parent.type === "HookDeclaration" || parent.type === "ObjectMethod" || parent.type === "ClassMethod" || parent.type === "ClassPrivateMethod" || parent.type === "ForStatement" || parent.type === "WhileStatement" || parent.type === "DoWhileStatement" || parent.type === "DoExpression" || parent.type === "ModuleExpression" || parent.type === "CatchClause" && !parentParent.finalizer || parent.type === "TSModuleDeclaration" || parent.type === "TSDeclareFunction" || parent.type === "MatchStatementCase" || node.type === "StaticBlock")) {
+      if (!(parent.type === "ArrowFunctionExpression" || parent.type === "FunctionExpression" || parent.type === "FunctionDeclaration" || parent.type === "ComponentDeclaration" || parent.type === "HookDeclaration" || parent.type === "ObjectMethod" || parent.type === "ClassMethod" || parent.type === "ClassPrivateMethod" || parent.type === "ForStatement" || parent.type === "WhileStatement" || parent.type === "DoWhileStatement" || parent.type === "DoExpression" || parent.type === "ModuleExpression" || parent.type === "CatchClause" && !parentParent.finalizer || parent.type === "TSModuleDeclaration" || parent.type === "MatchStatementCase" || node.type === "StaticBlock")) {
         parts.push(hardline);
       }
     }
@@ -8894,9 +9362,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return parts;
   }
   function printBlockBody(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const hasDirectives = is_non_empty_array_default(node.directives);
     const hasBody = node.body.some((node2) => node2.type !== "EmptyStatement");
     const hasDanglingComments = hasComment(node, CommentCheckFlags.Dangling);
@@ -8909,7 +9375,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       if (hasBody || hasDanglingComments) {
         parts.push(hardline);
         if (isNextLineEmpty2(at_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           node.directives,
           -1
@@ -8939,71 +9405,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   var create_group_id_mapper_default = createGroupIdMapper;
 
-  // src/language-js/print/mapped-type.js
-  function printFlowMappedTypeOptionalModifier(optional) {
-    switch (optional) {
-      case null:
-        return "";
-      case "PlusOptional":
-        return "+?";
-      case "MinusOptional":
-        return "-?";
-      case "Optional":
-        return "?";
-    }
-  }
-  function printFlowMappedTypeProperty(path, options2, print3) {
-    const { node } = path;
-    return group([
-      node.variance ? print3("variance") : "",
-      "[",
-      indent([print3("keyTparam"), " in ", print3("sourceType")]),
-      "]",
-      printFlowMappedTypeOptionalModifier(node.optional),
-      ": ",
-      print3("propType")
-    ]);
-  }
-  function printTypeScriptMappedTypeModifier(tokenNode, keyword) {
-    if (tokenNode === "+" || tokenNode === "-") {
-      return tokenNode + keyword;
-    }
-    return keyword;
-  }
-  function printTypescriptMappedType(path, options2, print3) {
-    const { node } = path;
-    const shouldBreak = has_newline_in_range_default(
-      options2.originalText,
-      locStart(node),
-      // Ideally, this should be the next token after `{`, but there is no node starts with it.
-      locStart(node.typeParameter)
-    );
-    return group(
-      [
-        "{",
-        indent([
-          options2.bracketSpacing ? line : softline,
-          group([
-            print3("typeParameter"),
-            node.optional ? printTypeScriptMappedTypeModifier(node.optional, "?") : "",
-            node.typeAnnotation ? ": " : "",
-            print3("typeAnnotation")
-          ]),
-          options2.semi ? ifBreak(";") : ""
-        ]),
-        printDanglingComments(path, options2),
-        options2.bracketSpacing ? line : softline,
-        "}"
-      ],
-      { shouldBreak }
-    );
-  }
-
   // src/language-js/print/type-parameters.js
   var getTypeParametersGroupId = create_group_id_mapper_default("typeParameters");
   function shouldForceTrailingComma(path, options2, paramsKey) {
     const { node } = path;
-    return getFunctionParameters(node).length === 1 && node.type.startsWith("TS") && !node[paramsKey][0].constraint && path.parent.type === "ArrowFunctionExpression" && !(options2.filepath && /\.ts$/.test(options2.filepath));
+    return getFunctionParameters(node).length === 1 && node.type.startsWith("TS") && !node[paramsKey][0].constraint && path.parent.type === "ArrowFunctionExpression" && !(options2.filepath && /\.ts$/u.test(options2.filepath));
   }
   function printTypeParameters(path, options2, print3, paramsKey) {
     const { node } = path;
@@ -9013,8 +9419,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (!Array.isArray(node[paramsKey])) {
       return print3(paramsKey);
     }
-    const grandparent = path.getNode(2);
-    const isParameterInTestCall = grandparent && isTestCall(grandparent);
+    const isParameterInTestCall = isTestCall(path.grandparent);
     const isArrowFunctionVariable = path.match(
       (node2) => !(node2[paramsKey].length === 1 && isObjectType(node2[paramsKey][0])),
       void 0,
@@ -9058,29 +9463,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return [printed, hardline];
   }
   function printTypeParameter(path, options2, print3) {
-    const { node, parent } = path;
+    const { node } = path;
     const parts = [node.const ? "const " : ""];
     const name = node.type === "TSTypeParameter" ? print3("name") : node.name;
-    if (parent.type === "TSMappedType") {
-      if (parent.readonly) {
-        parts.push(
-          printTypeScriptMappedTypeModifier(parent.readonly, "readonly"),
-          " "
-        );
-      }
-      parts.push("[", name);
-      if (node.constraint) {
-        parts.push(" in ", print3("constraint"));
-      }
-      if (parent.nameType) {
-        parts.push(
-          " as ",
-          path.callParent(() => print3("nameType"))
-        );
-      }
-      parts.push("]");
-      return parts;
-    }
     if (node.variance) {
       parts.push(print3("variance"));
     }
@@ -9136,7 +9521,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (node.superClass) {
       const printed = [
         printSuperClass(path, options2, print3),
-        print3("superTypeParameters")
+        print3(
+          // TODO: Use `superTypeArguments` only when babel align with TS.
+          node.superTypeArguments ? "superTypeArguments" : "superTypeParameters"
+        )
       ];
       const printedWithComments = path.call(
         (superClass) => ["extends ", printComments(superClass, printed, options2)],
@@ -9154,6 +9542,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       printHeritageClauses(path, options2, print3, "mixins"),
       printHeritageClauses(path, options2, print3, "implements")
     );
+    let heritageGroupId;
     if (groupMode) {
       let printedPartsGroup;
       if (shouldIndentOnlyHeritageClauses(node)) {
@@ -9161,11 +9550,18 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       } else {
         printedPartsGroup = indent([...partsGroup, extendsParts]);
       }
-      parts.push(group(printedPartsGroup, { id: getHeritageGroupId(node) }));
+      heritageGroupId = getHeritageGroupId(node);
+      parts.push(group(printedPartsGroup, { id: heritageGroupId }));
     } else {
       parts.push(...partsGroup, ...extendsParts);
     }
-    parts.push(" ", print3("body"));
+    const classBody = node.body;
+    if (groupMode && is_non_empty_array_default(classBody.body)) {
+      parts.push(ifBreak(hardline, " ", { groupId: heritageGroupId }));
+    } else {
+      parts.push(" ");
+    }
+    parts.push(print3("body"));
     return parts;
   }
   var getHeritageGroupId = create_group_id_mapper_default("heritageGroup");
@@ -9236,7 +9632,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (is_non_empty_array_default(node.decorators)) {
       parts.push(printClassMemberDecorators(path, options2, print3));
     }
-    parts.push(printTypeScriptAccessibilityToken(node), printDeclareToken(path));
+    parts.push(printDeclareToken(path), printTypeScriptAccessibilityToken(node));
     if (node.static) {
       parts.push("static ");
     }
@@ -9291,7 +9687,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       parts.push(printDanglingComments(path, options2));
     }
     return [
-      is_non_empty_array_default(node.body) ? printHardlineAfterHeritage(path.parent) : "",
       "{",
       parts.length > 0 ? [indent([hardline, parts]), hardline] : "",
       "}"
@@ -9306,7 +9701,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (!nextNode) {
       return false;
     }
-    if (nextNode.static || nextNode.accessibility) {
+    if (nextNode.static || nextNode.accessibility || // TypeScript
+    nextNode.readonly) {
       return false;
     }
     if (!nextNode.computed) {
@@ -9341,6 +9737,33 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return true;
     }
     return false;
+  }
+
+  // src/language-js/utils/vue-event-binding.js
+  var isVueEventBindingTsNode = create_type_check_function_default([
+    "TSAsExpression",
+    // `foo as number`
+    "TSTypeAssertion",
+    // `(<number>foo)`
+    "TSNonNullExpression",
+    // `foo!`
+    "TSInstantiationExpression",
+    // `foo<string>`
+    "TSSatisfiesExpression"
+    // `foo satisfies T`
+  ]);
+  function unwrapVueEventBindingTsNode(node) {
+    if (isVueEventBindingTsNode(node)) {
+      return unwrapVueEventBindingTsNode(node.expression);
+    }
+    return node;
+  }
+  var isVueEventBindingFunctionExpression = create_type_check_function_default([
+    "FunctionExpression",
+    "ArrowFunctionExpression"
+  ]);
+  function isVueEventBindingMemberExpression(node) {
+    return node.type === "MemberExpression" || node.type === "OptionalMemberExpression" || node.type === "Identifier" && node.name !== "undefined";
   }
 
   // src/language-js/print/semicolon.js
@@ -9407,22 +9830,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function isSingleJsxExpressionStatementInMarkdown({ node, parent }, options2) {
     return (options2.parentParser === "markdown" || options2.parentParser === "mdx") && node.type === "ExpressionStatement" && isJsxElement(node.expression) && parent.type === "Program" && parent.body.length === 1;
   }
-  function isVueEventBindingExpression(node) {
-    switch (node.type) {
-      case "MemberExpression":
-        switch (node.property.type) {
-          case "Identifier":
-          case "NumericLiteral":
-          case "StringLiteral":
-            return isVueEventBindingExpression(node.object);
-        }
-        return false;
-      case "Identifier":
-        return true;
-      default:
-        return false;
-    }
-  }
   function isSingleVueEventBindingExpressionStatement({ node, parent }, options2) {
     return (options2.parser === "__vue_event_binding" || options2.parser === "__vue_ts_event_binding") && node.type === "ExpressionStatement" && parent.type === "Program" && parent.body.length === 1;
   }
@@ -9431,7 +9838,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function printExpressionStatement(path, options2, print3) {
     const parts = [print3("expression")];
     if (isSingleVueEventBindingExpressionStatement(path, options2)) {
-      if (isVueEventBindingExpression(path.node.expression)) {
+      const expression = unwrapVueEventBindingTsNode(path.node.expression);
+      if (isVueEventBindingFunctionExpression(expression) || isVueEventBindingMemberExpression(expression)) {
         parts.push(";");
       }
     } else if (isSingleJsxExpressionStatementInMarkdown(path, options2)) {
@@ -9480,8 +9888,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return "null";
       case "BooleanLiteral":
         return String(node.value);
-      case "DecimalLiteral":
-        return print_number_default(node.value) + "m";
       case "DirectiveLiteral":
         return printDirective(node.extra.raw, options2);
       case "Literal": {
@@ -9490,9 +9896,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         }
         if (node.bigint) {
           return printBigInt(node.raw);
-        }
-        if (node.decimal) {
-          return print_number_default(node.decimal) + "m";
         }
         const { value } = node;
         if (typeof value === "number") {
@@ -9510,7 +9913,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return;
     }
     const { parent } = path;
-    return parent.type === "ExpressionStatement" && parent.directive;
+    return parent.type === "ExpressionStatement" && typeof parent.directive === "string";
   }
   function printBigInt(raw) {
     return raw.toLowerCase();
@@ -9519,10 +9922,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     flags = [...flags].sort().join("");
     return `/${pattern}/${flags}`;
   }
-  function printDirective(rawText2, options2) {
-    const rawContent = rawText2.slice(1, -1);
+  function printDirective(rawText, options2) {
+    const rawContent = rawText.slice(1, -1);
     if (rawContent.includes('"') || rawContent.includes("'")) {
-      return rawText2;
+      return rawText;
     }
     const enclosingQuote = options2.singleQuote ? "'" : '"';
     return enclosingQuote + rawContent + enclosingQuote;
@@ -9544,7 +9947,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       text = text.slice(0, commentStart - start) + " ".repeat(commentLength) + text.slice(commentEnd - start);
     }
     if (false) {
-      assert_default(text.length === end - start);
+      assert_default.ok(text.length === end - start);
     }
     return text;
   }
@@ -9555,7 +9958,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const { node } = path;
     return [
       "import",
-      node.module ? " module" : "",
       node.phase ? ` ${node.phase}` : "",
       printImportKind(node),
       printModuleSpecifiers(path, options2, print3),
@@ -9603,10 +10005,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var shouldOmitSemicolon = create_type_check_function_default([
     "ComponentDeclaration",
     "ClassDeclaration",
+    "ComponentDeclaration",
     "FunctionDeclaration",
     "TSInterfaceDeclaration",
     "DeclareComponent",
     "DeclareClass",
+    "DeclareComponent",
     "DeclareFunction",
     "DeclareHook",
     "HookDeclaration",
@@ -9785,7 +10189,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return false;
     }
     if (isStringLiteral(local)) {
-      return local.value === importedOrExported.value && rawText(local) === rawText(importedOrExported);
+      return local.value === importedOrExported.value && get_raw_default(local) === get_raw_default(importedOrExported);
     }
     switch (local.type) {
       case "Identifier":
@@ -9799,33 +10203,39 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function printObject(path, options2, print3) {
     var _a;
     const semi = options2.semi ? ";" : "";
-    const {
-      node
-    } = path;
+    const { node } = path;
     const isTypeAnnotation = node.type === "ObjectTypeAnnotation";
-    const isEnumBody = node.type === "TSEnumDeclaration" || node.type === "EnumBooleanBody" || node.type === "EnumNumberBody" || node.type === "EnumBigIntBody" || node.type === "EnumStringBody" || node.type === "EnumSymbolBody";
-    const fields = [node.type === "TSTypeLiteral" || isEnumBody ? "members" : node.type === "TSInterfaceBody" ? "body" : "properties"];
+    const isEnumBody = node.type === "TSEnumBody" || node.type === "EnumBooleanBody" || node.type === "EnumNumberBody" || node.type === "EnumBigIntBody" || node.type === "EnumStringBody" || node.type === "EnumSymbolBody";
+    const fields = [
+      node.type === "TSTypeLiteral" || isEnumBody ? "members" : node.type === "TSInterfaceBody" ? "body" : "properties"
+    ];
     if (isTypeAnnotation) {
       fields.push("indexers", "callProperties", "internalSlots");
     }
-    const propsAndLoc = fields.flatMap((field) => path.map(({
-      node: node2
-    }) => ({
-      node: node2,
-      printed: print3(),
-      loc: locStart(node2)
-    }), field));
+    const propsAndLoc = fields.flatMap(
+      (field) => path.map(
+        ({ node: node2 }) => ({
+          node: node2,
+          printed: print3(),
+          loc: locStart(node2)
+        }),
+        field
+      )
+    );
     if (fields.length > 1) {
       propsAndLoc.sort((a, b) => a.loc - b.loc);
     }
-    const {
-      parent,
-      key
-    } = path;
+    const { parent, key } = path;
     const isFlowInterfaceLikeBody = isTypeAnnotation && key === "body" && (parent.type === "InterfaceDeclaration" || parent.type === "DeclareInterface" || parent.type === "DeclareClass");
-    const shouldBreak = node.type === "TSInterfaceBody" || isEnumBody || isFlowInterfaceLikeBody || node.type === "ObjectPattern" && parent.type !== "FunctionDeclaration" && parent.type !== "FunctionExpression" && parent.type !== "ArrowFunctionExpression" && parent.type !== "ObjectMethod" && parent.type !== "ClassMethod" && parent.type !== "ClassPrivateMethod" && parent.type !== "AssignmentPattern" && parent.type !== "CatchClause" && node.properties.some((property) => property.value && (property.value.type === "ObjectPattern" || property.value.type === "ArrayPattern")) || node.type !== "ObjectPattern" && propsAndLoc.length > 0 && has_newline_in_range_default(options2.originalText, locStart(node), propsAndLoc[0].loc);
+    const shouldBreak = node.type === "TSInterfaceBody" || isEnumBody || isFlowInterfaceLikeBody || node.type === "ObjectPattern" && parent.type !== "FunctionDeclaration" && parent.type !== "FunctionExpression" && parent.type !== "ArrowFunctionExpression" && parent.type !== "ObjectMethod" && parent.type !== "ClassMethod" && parent.type !== "ClassPrivateMethod" && parent.type !== "AssignmentPattern" && parent.type !== "CatchClause" && node.properties.some(
+      (property) => property.value && (property.value.type === "ObjectPattern" || property.value.type === "ArrayPattern")
+    ) || node.type !== "ObjectPattern" && options2.objectWrap === "preserve" && propsAndLoc.length > 0 && has_newline_in_range_default(
+      options2.originalText,
+      locStart(node),
+      propsAndLoc[0].loc
+    );
     const separator = isFlowInterfaceLikeBody ? ";" : node.type === "TSInterfaceBody" || node.type === "TSTypeLiteral" ? ifBreak(semi, ";") : ",";
-    const leftBrace = node.type === "RecordExpression" ? "#{" : node.exact ? "{|" : "{";
+    const leftBrace = node.exact ? "{|" : "{";
     const rightBrace = node.exact ? "|}" : "}";
     let separatorParts = [];
     const props = propsAndLoc.map((prop) => {
@@ -9844,43 +10254,80 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       if (hasComment(node, CommentCheckFlags.Dangling)) {
         const hasLineComments = hasComment(node, CommentCheckFlags.Line);
         const printedDanglingComments = printDanglingComments(path, options2);
-        printed = [printedDanglingComments, hasLineComments || has_newline_default(options2.originalText, locEnd(at_default(
-          /* isOptionalObject*/
-          false,
-          getComments(node),
-          -1
-        ))) ? hardline : line, "..."];
+        printed = [
+          printedDanglingComments,
+          hasLineComments || has_newline_default(options2.originalText, locEnd(at_default(
+            /* isOptionalObject */
+            false,
+            getComments(node),
+            -1
+          ))) ? hardline : line,
+          "..."
+        ];
       } else {
         printed = ["..."];
       }
       props.push([...separatorParts, ...printed]);
     }
     const lastElem = (_a = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       propsAndLoc,
       -1
     )) == null ? void 0 : _a.node;
-    const canHaveTrailingSeparator = !(node.inexact || node.hasUnknownMembers || lastElem && (lastElem.type === "RestElement" || (lastElem.type === "TSPropertySignature" || lastElem.type === "TSCallSignatureDeclaration" || lastElem.type === "TSMethodSignature" || lastElem.type === "TSConstructSignatureDeclaration") && hasComment(lastElem, CommentCheckFlags.PrettierIgnore)));
+    const canHaveTrailingSeparator = !(node.inexact || node.hasUnknownMembers || lastElem && (lastElem.type === "RestElement" || (lastElem.type === "TSPropertySignature" || lastElem.type === "TSCallSignatureDeclaration" || lastElem.type === "TSMethodSignature" || lastElem.type === "TSConstructSignatureDeclaration" || lastElem.type === "TSIndexSignature") && hasComment(lastElem, CommentCheckFlags.PrettierIgnore)) || // https://github.com/microsoft/TypeScript/issues/61916
+    path.match(
+      void 0,
+      (node2, key2) => node2.type === "TSImportType" && key2 === "options"
+    ));
     let content;
     if (props.length === 0) {
       if (!hasComment(node, CommentCheckFlags.Dangling)) {
         return [leftBrace, rightBrace, printTypeAnnotationProperty(path, print3)];
       }
-      content = group([leftBrace, printDanglingComments(path, options2, {
-        indent: true
-      }), softline, rightBrace, printOptionalToken(path), printTypeAnnotationProperty(path, print3)]);
+      content = group([
+        leftBrace,
+        printDanglingComments(path, options2, { indent: true }),
+        softline,
+        rightBrace,
+        printOptionalToken(path),
+        printTypeAnnotationProperty(path, print3)
+      ]);
     } else {
-      content = [isFlowInterfaceLikeBody && is_non_empty_array_default(node.properties) ? printHardlineAfterHeritage(parent) : "", leftBrace, indent([options2.bracketSpacing ? line : softline, ...props]), ifBreak(canHaveTrailingSeparator && (separator !== "," || shouldPrintComma(options2)) ? separator : ""), options2.bracketSpacing ? line : softline, rightBrace, printOptionalToken(path), printTypeAnnotationProperty(path, print3)];
+      content = [
+        isFlowInterfaceLikeBody && is_non_empty_array_default(node.properties) ? printHardlineAfterHeritage(parent) : "",
+        leftBrace,
+        indent([options2.bracketSpacing ? line : softline, ...props]),
+        ifBreak(
+          canHaveTrailingSeparator && (separator !== "," || shouldPrintComma(options2)) ? separator : ""
+        ),
+        options2.bracketSpacing ? line : softline,
+        rightBrace,
+        printOptionalToken(path),
+        printTypeAnnotationProperty(path, print3)
+      ];
     }
-    if (path.match((node2) => node2.type === "ObjectPattern" && !is_non_empty_array_default(node2.decorators), shouldHugTheOnlyParameter) || isObjectType(node) && (path.match(void 0, (node2, name) => name === "typeAnnotation", (node2, name) => name === "typeAnnotation", shouldHugTheOnlyParameter) || path.match(void 0, (node2, name) => node2.type === "FunctionTypeParam" && name === "typeAnnotation", shouldHugTheOnlyParameter)) || // Assignment printing logic (printAssignment) is responsible
+    if (path.match(
+      (node2) => node2.type === "ObjectPattern" && !is_non_empty_array_default(node2.decorators),
+      shouldHugTheOnlyParameter
+    ) || isObjectType(node) && (path.match(
+      void 0,
+      (node2, name) => name === "typeAnnotation",
+      (node2, name) => name === "typeAnnotation",
+      shouldHugTheOnlyParameter
+    ) || path.match(
+      void 0,
+      (node2, name) => node2.type === "FunctionTypeParam" && name === "typeAnnotation",
+      shouldHugTheOnlyParameter
+    )) || // Assignment printing logic (printAssignment) is responsible
     // for adding a group if needed
-    !shouldBreak && path.match((node2) => node2.type === "ObjectPattern", (node2) => node2.type === "AssignmentExpression" || node2.type === "VariableDeclarator")) {
+    !shouldBreak && path.match(
+      (node2) => node2.type === "ObjectPattern",
+      (node2) => node2.type === "AssignmentExpression" || node2.type === "VariableDeclarator"
+    )) {
       return content;
     }
-    return group(content, {
-      shouldBreak
-    });
+    return group(content, { shouldBreak });
   }
   function shouldHugTheOnlyParameter(node, name) {
     return (name === "params" || name === "parameters" || name === "this" || name === "rest") && shouldHugTheOnlyFunctionParameter(node);
@@ -10094,7 +10541,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     const { node } = path;
     const isConditionalExpression = node.type === "ConditionalExpression";
-    const isTSConditional = node.type === "TSConditionalType" || node.type === "ConditionalTypeAnnotation";
+    const isTSConditional = isConditionalType(node);
     const consequentNodePropertyName = isConditionalExpression ? "consequent" : "trueType";
     const alternateNodePropertyName = isConditionalExpression ? "alternate" : "falseType";
     const testNodePropertyNames = isConditionalExpression ? ["test"] : ["checkType", "extendsType"];
@@ -10184,7 +10631,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       " ",
       "extends",
       " ",
-      node.extendsType.type === "TSConditionalType" || node.extendsType.type === "ConditionalTypeAnnotation" || node.extendsType.type === "TSMappedType" ? print3("extendsType") : group(wrapInParens(print3("extendsType")))
+      isConditionalType(node.extendsType) || node.extendsType.type === "TSMappedType" ? print3("extendsType") : group(wrapInParens(print3("extendsType")))
     ];
     const printedTestWithQuestionMark = group([printedTest, " ?"], {
       id: testId
@@ -10259,17 +10706,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "JsExpressionRoot":
         return print3("node");
       case "JsonRoot":
-        return [print3("node"), hardline];
+        return [printDanglingComments(path, options2), print3("node"), hardline];
       case "File":
         return printHtmlBinding(path, options2, print3) ?? print3("program");
+      // Babel extension.
       case "EmptyStatement":
         return "";
       case "ExpressionStatement":
         return printExpressionStatement(path, options2, print3);
       case "ChainExpression":
         return print3("expression");
+      // Babel non-standard node. Used for Closure-style type casts. See postprocess.js.
       case "ParenthesizedExpression": {
-        const shouldHug = !hasComment(node.expression) && (isObjectOrRecordExpression(node.expression) || isArrayOrTupleExpression(node.expression));
+        const shouldHug = !hasComment(node.expression) && (isObjectExpression(node.expression) || isArrayExpression(node.expression));
         if (shouldHug) {
           return ["(", print3("expression"), ")"];
         }
@@ -10320,7 +10769,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return printRestSpread(path, print3);
       case "FunctionDeclaration":
       case "FunctionExpression":
-        return printFunction(path, print3, options2, args);
+        return printFunction(path, options2, print3, args);
       case "ArrowFunctionExpression":
         return printArrowFunction(path, options2, print3, args);
       case "YieldExpression":
@@ -10366,8 +10815,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return printModuleSpecifier(path, options2, print3);
       case "ImportAttribute":
         return printProperty(path, options2, print3);
-      case "Import":
-        return "import";
       case "Program":
       case "BlockStatement":
       case "StaticBlock":
@@ -10385,37 +10832,41 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return printCallExpression(path, options2, print3);
       case "ObjectExpression":
       case "ObjectPattern":
-      case "RecordExpression":
         return printObject(path, options2, print3);
       case "Property":
         if (isMethod(node)) {
           return printMethod(path, options2, print3);
         }
         return printProperty(path, options2, print3);
+      // Babel
       case "ObjectProperty":
         return printProperty(path, options2, print3);
+      // Babel
       case "ObjectMethod":
         return printMethod(path, options2, print3);
       case "Decorator":
         return ["@", print3("expression")];
       case "ArrayExpression":
       case "ArrayPattern":
-      case "TupleExpression":
         return printArray(path, options2, print3);
       case "SequenceExpression": {
         const { parent } = path;
         if (parent.type === "ExpressionStatement" || parent.type === "ForStatement") {
-          const parts2 = [];
+          const parts3 = [];
           path.each(({ isFirst }) => {
             if (isFirst) {
-              parts2.push(print3());
+              parts3.push(print3());
             } else {
-              parts2.push(",", indent([line, print3()]));
+              parts3.push(",", indent([line, print3()]));
             }
           }, "expressions");
-          return group(parts2);
+          return group(parts3);
         }
-        return group(join([",", line], path.map(print3, "expressions")));
+        const parts2 = join([",", line], path.map(print3, "expressions"));
+        if ((parent.type === "ReturnStatement" || parent.type === "ThrowStatement") && path.key === "argument" || parent.type === "ArrowFunctionExpression" && path.key === "body") {
+          return group(ifBreak([indent([softline, parts2]), softline], parts2));
+        }
+        return group(parts2);
       }
       case "ThisExpression":
         return "this";
@@ -10423,9 +10874,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return "super";
       case "Directive":
         return [print3("value"), semi];
+      // Babel 6
       case "UnaryExpression":
         parts.push(node.operator);
-        if (/[a-z]$/.test(node.operator)) {
+        if (/[a-z]$/u.test(node.operator)) {
           parts.push(" ");
         }
         if (hasComment(node.argument)) {
@@ -10625,6 +11077,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           ];
         }
         return ["catch ", print3("body")];
+      // Note: ignoring n.lexical because it has no printing consequences.
       case "SwitchStatement":
         return [
           group([
@@ -10670,6 +11123,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         }
         return parts;
       }
+      // JSX extensions below.
       case "DebuggerStatement":
         return ["debugger", semi];
       case "ClassDeclaration":
@@ -10688,13 +11142,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TemplateElement":
         return replaceEndOfLine(node.value.raw);
       case "TemplateLiteral":
-        return printTemplateLiteral(path, print3, options2);
+        return printTemplateLiteral(path, options2, print3);
       case "TaggedTemplateExpression":
-        return printTaggedTemplateLiteral(print3);
+        return printTaggedTemplateLiteral(path, options2, print3);
       case "PrivateIdentifier":
         return ["#", node.name];
       case "PrivateName":
         return ["#", print3("id")];
+      // For hack-style pipeline
       case "TopicReference":
         return "%";
       case "ArgumentPlaceholder":
@@ -10702,6 +11157,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "ModuleExpression":
         return ["module ", print3("body")];
       case "InterpreterDirective":
+      // Printed as comment
       default:
         throw new unexpected_node_error_default(node, "ESTree");
     }
@@ -10732,15 +11188,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/language-js/print/component.js
   function printComponent(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const parts = [printDeclareToken(path), "component"];
     if (node.id) {
       parts.push(" ", print3("id"));
     }
     parts.push(print3("typeParameters"));
-    const parametersDoc = printComponentParameters(path, print3, options2);
+    const parametersDoc = printComponentParameters(path, options2, print3);
     if (node.rendersType) {
       parts.push(group([parametersDoc, " ", print3("rendersType")]));
     } else {
@@ -10754,18 +11208,23 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return parts;
   }
-  function printComponentParameters(path, print3, options2) {
-    const {
-      node: componentNode
-    } = path;
+  function printComponentParameters(path, options2, print3) {
+    const { node: componentNode } = path;
     let parameters = componentNode.params;
     if (componentNode.rest) {
       parameters = [...parameters, componentNode.rest];
     }
     if (parameters.length === 0) {
-      return ["(", printDanglingComments(path, options2, {
-        filter: (comment) => get_next_non_space_non_comment_character_default(options2.originalText, locEnd(comment)) === ")"
-      }), ")"];
+      return [
+        "(",
+        printDanglingComments(path, options2, {
+          filter: (comment) => get_next_non_space_non_comment_character_default(
+            options2.originalText,
+            locEnd(comment)
+          ) === ")"
+        }),
+        ")"
+      ];
     }
     const printed = [];
     iterateComponentParametersPath(path, (parameterPath, index) => {
@@ -10784,21 +11243,27 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         printed.push(line);
       }
     });
-    return ["(", indent([softline, ...printed]), ifBreak(shouldPrintComma(options2, "all") && !hasRestParameter2(componentNode, parameters) ? "," : ""), softline, ")"];
+    return [
+      "(",
+      indent([softline, ...printed]),
+      ifBreak(
+        shouldPrintComma(options2, "all") && !hasRestParameter2(componentNode, parameters) ? "," : ""
+      ),
+      softline,
+      ")"
+    ];
   }
   function hasRestParameter2(componentNode, parameters) {
     var _a;
     return componentNode.rest || ((_a = at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       parameters,
       -1
     )) == null ? void 0 : _a.type) === "RestElement";
   }
   function iterateComponentParametersPath(path, iteratee) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     let index = 0;
     const callback = (childPath) => iteratee(childPath, index++);
     path.each(callback, "params");
@@ -10807,18 +11272,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
   }
   function printComponentParameter(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     if (node.shorthand) {
       return print3("local");
     }
     return [print3("name"), " as ", print3("local")];
   }
   function printComponentTypeParameter(path, options2, print3) {
-    const {
-      node
-    } = path;
+    const { node } = path;
     const printed = [];
     if (node.name) {
       printed.push(print3("name"), node.optional ? "?: " : ": ");
@@ -10828,7 +11289,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
 
   // src/language-js/print/enum.js
-  function printEnumMembers(path, print3, options2) {
+  function printEnumBody(path, options2, print3) {
     return printObject(path, options2, print3);
   }
   function printEnumMember(path, print3) {
@@ -10849,31 +11310,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return [idDoc, " = ", initializerDoc];
   }
-  function printEnumBody(path, print3, options2) {
-    const { node } = path;
-    let type;
-    if (node.type === "EnumSymbolBody" || node.explicitType) {
-      switch (node.type) {
-        case "EnumBooleanBody":
-          type = "boolean";
-          break;
-        case "EnumNumberBody":
-          type = "number";
-          break;
-        case "EnumBigIntBody":
-          type = "bigint";
-          break;
-        case "EnumStringBody":
-          type = "string";
-          break;
-        case "EnumSymbolBody":
-          type = "symbol";
-          break;
-      }
-    }
-    return [type ? `of ${type} ` : "", printEnumMembers(path, print3, options2)];
-  }
-  function printEnumDeclaration(path, print3, options2) {
+  function printEnumDeclaration(path, print3) {
     const { node } = path;
     return [
       printDeclareToken(path),
@@ -10881,7 +11318,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "enum ",
       print3("id"),
       " ",
-      node.type === "TSEnumDeclaration" ? printEnumMembers(path, print3, options2) : print3("body")
+      print3("body")
     ];
   }
 
@@ -10894,8 +11331,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     const parametersDoc = printFunctionParameters(
       path,
-      print3,
       options2,
+      print3,
       false,
       true
     );
@@ -10936,8 +11373,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     parts.push(isDeclareHookTypeAnnotation(path) ? "" : "hook ");
     let parametersDoc = printFunctionParameters(
       path,
-      print3,
       options2,
+      print3,
       /* expandArg */
       false,
       /* printTypeParams */
@@ -10990,6 +11427,82 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     parts.push(" ", print3("body"));
     return group(parts);
+  }
+
+  // src/language-js/print/mapped-type.js
+  function printFlowMappedTypeOptionalModifier(optional) {
+    switch (optional) {
+      case null:
+        return "";
+      case "PlusOptional":
+        return "+?";
+      case "MinusOptional":
+        return "-?";
+      case "Optional":
+        return "?";
+    }
+  }
+  function printFlowMappedTypeProperty(path, options2, print3) {
+    const { node } = path;
+    return group([
+      node.variance ? print3("variance") : "",
+      "[",
+      indent([print3("keyTparam"), " in ", print3("sourceType")]),
+      "]",
+      printFlowMappedTypeOptionalModifier(node.optional),
+      ": ",
+      print3("propType")
+    ]);
+  }
+  function printTypeScriptMappedTypeModifier(tokenNode, keyword) {
+    if (tokenNode === "+" || tokenNode === "-") {
+      return tokenNode + keyword;
+    }
+    return keyword;
+  }
+  function printTypeScriptMappedType(path, options2, print3) {
+    const { node } = path;
+    let shouldBreak = false;
+    if (options2.objectWrap === "preserve") {
+      const start = locStart(node);
+      const textAfter = get_text_without_comments_default(
+        options2,
+        start + 1,
+        locStart(node.key)
+      );
+      const nextTokenIndex = start + 1 + textAfter.search(/\S/u);
+      if (has_newline_in_range_default(options2.originalText, start, nextTokenIndex)) {
+        shouldBreak = true;
+      }
+    }
+    return group(
+      [
+        "{",
+        indent([
+          options2.bracketSpacing ? line : softline,
+          hasComment(node, CommentCheckFlags.Dangling) ? group([printDanglingComments(path, options2), hardline]) : "",
+          group([
+            node.readonly ? [
+              printTypeScriptMappedTypeModifier(node.readonly, "readonly"),
+              " "
+            ] : "",
+            "[",
+            print3("key"),
+            " in ",
+            print3("constraint"),
+            node.nameType ? [" as ", print3("nameType")] : "",
+            "]",
+            node.optional ? printTypeScriptMappedTypeModifier(node.optional, "?") : "",
+            node.typeAnnotation ? ": " : "",
+            print3("typeAnnotation")
+          ]),
+          options2.semi ? ifBreak(";") : ""
+        ]),
+        options2.bracketSpacing ? line : softline,
+        "}"
+      ],
+      { shouldBreak }
+    );
   }
 
   // src/language-js/print/match.js
@@ -11229,6 +11742,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "IndexedAccessType":
       case "OptionalIndexedAccessType":
         return printIndexedAccessType(path, options2, print3);
+      // Type Annotations for Facebook Flow, typically stripped out or
+      // transformed away before printing.
       case "TypeAnnotation":
         return printTypeAnnotation(path, options2, print3);
       case "TypeParameter":
@@ -11241,13 +11756,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return printArrayType(print3);
       case "DeclareEnum":
       case "EnumDeclaration":
-        return printEnumDeclaration(path, print3, options2);
+        return printEnumDeclaration(path, print3);
       case "EnumBooleanBody":
       case "EnumNumberBody":
       case "EnumBigIntBody":
       case "EnumStringBody":
       case "EnumSymbolBody":
-        return printEnumBody(path, print3, options2);
+        return [
+          node.type === "EnumSymbolBody" || node.explicitType ? `of ${node.type.slice(
+            // `Enum`
+            4,
+            // `Body`
+            -4
+          ).toLowerCase()} ` : "",
+          printEnumBody(path, options2, print3)
+        ];
       case "EnumBooleanMember":
       case "EnumNumberMember":
       case "EnumBigIntMember":
@@ -11325,6 +11848,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           node.method ? "" : ": ",
           print3("value")
         ];
+      // Same as `RestElement`
       case "ObjectTypeSpreadProperty":
         return printRestSpread(path, print3);
       case "QualifiedTypeofIdentifier":
@@ -11335,11 +11859,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "BooleanLiteralTypeAnnotation":
         return String(node.value);
       case "StringLiteralTypeAnnotation":
-        return replaceEndOfLine(print_string_default(rawText(node), options2));
+        return replaceEndOfLine(print_string_default(get_raw_default(node), options2));
       case "NumberLiteralTypeAnnotation":
-        return print_number_default(node.raw ?? node.extra.raw);
+        return print_number_default(get_raw_default(node));
       case "BigIntLiteralTypeAnnotation":
-        return printBigInt(node.raw ?? node.extra.raw);
+        return printBigInt(get_raw_default(node));
       case "TypeCastExpression":
         return [
           "(",
@@ -11354,6 +11878,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TypeParameterDeclaration":
       case "TypeParameterInstantiation":
         return printTypeParameters(path, options2, print3, "params");
+      // Deprecated https://github.com/facebook/flow/commit/b98ae5528d9a073ddc62fc8ce418bbb1f2f80a82
       case "InferredPredicate":
       case "DeclaredPredicate":
         return [
@@ -11405,7 +11930,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSThisType":
         return "this";
       case "TSTypeAssertion": {
-        const shouldBreakAfterCast = !(isArrayOrTupleExpression(node.expression) || isObjectOrRecordExpression(node.expression));
+        const shouldBreakAfterCast = !(isArrayExpression(node.expression) || isObjectExpression(node.expression));
         const castGroup = group([
           "<",
           indent([softline, print3("typeAnnotation")]),
@@ -11428,7 +11953,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return group([castGroup, print3("expression")]);
       }
       case "TSDeclareFunction":
-        return printFunction(path, print3, options2);
+        return printFunction(path, options2, print3);
       case "TSExportAssignment":
         return ["export = ", print3("expression"), semi];
       case "TSModuleBlock":
@@ -11449,10 +11974,17 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSInterfaceHeritage":
       case "TSClassImplements":
       case "TSExpressionWithTypeArguments":
+      // Babel AST
       case "TSInstantiationExpression":
-        return [print3("expression"), print3("typeParameters")];
+        return [
+          print3("expression"),
+          print3(
+            // TODO: Use `typeArguments` only when babel align with TS.
+            node.typeArguments ? "typeArguments" : "typeParameters"
+          )
+        ];
       case "TSTemplateLiteralType":
-        return printTemplateLiteral(path, print3, options2);
+        return printTemplateLiteral(path, options2, print3);
       case "TSNamedTupleMember":
         return printNamedTupleMember(path, options2, print3);
       case "TSRestType":
@@ -11516,10 +12048,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         return [print3("expression"), "!"];
       case "TSImportType":
         return [
-          !node.isTypeOf ? "" : "typeof ",
-          "import(",
-          print3("argument"),
-          ")",
+          "import",
+          call_arguments_default(path, options2, print3),
           !node.qualifier ? "" : [".", print3("qualifier")],
           printTypeParameters(
             path,
@@ -11535,7 +12065,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSTypeOperator":
         return [node.operator, " ", print3("typeAnnotation")];
       case "TSMappedType":
-        return printTypescriptMappedType(path, options2, print3);
+        return printTypeScriptMappedType(path, options2, print3);
       case "TSMethodSignature": {
         const kind = node.kind && node.kind !== "method" ? `${node.kind} ` : "";
         parts.push(
@@ -11548,8 +12078,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         );
         const parametersDoc = printFunctionParameters(
           path,
-          print3,
           options2,
+          print3,
           /* expandArg */
           false,
           /* printTypeParams */
@@ -11571,7 +12101,9 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSNamespaceExportDeclaration":
         return ["export as namespace ", print3("id"), options2.semi ? ";" : ""];
       case "TSEnumDeclaration":
-        return printEnumDeclaration(path, print3, options2);
+        return printEnumDeclaration(path, print3);
+      case "TSEnumBody":
+        return printEnumBody(path, options2, print3);
       case "TSEnumMember":
         return printEnumMember(path, print3);
       case "TSImportEqualsDeclaration":
@@ -11598,13 +12130,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           parts.push(".");
         } else {
           parts.push(printDeclareToken(path));
-          const isGlobal = node.kind === "global" || // TODO: Use `node.kind` when babel update AST
-          // https://github.com/typescript-eslint/typescript-eslint/pull/6443
-          node.global;
-          if (!isGlobal) {
-            const kind = node.kind ?? // TODO: Use `node.kind` when babel update AST
-            (isStringLiteral(node.id) || get_text_without_comments_default(options2, locStart(node), locStart(node.id)).trim().endsWith("module") ? "module" : "namespace");
-            parts.push(kind, " ");
+          if (node.kind !== "global") {
+            parts.push(node.kind, " ");
           }
         }
         parts.push(print3("id"));
@@ -11635,12 +12162,19 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       case "TSTypeReference":
         return [
           print3("typeName"),
-          printTypeParameters(path, options2, print3, "typeParameters")
+          printTypeParameters(
+            path,
+            options2,
+            print3,
+            // TODO: Use `typeArguments` only when babel align with TS.
+            node.typeArguments ? "typeArguments" : "typeParameters"
+          )
         ];
       case "TSTypeAnnotation":
         return printTypeAnnotation(path, options2, print3);
       case "TSEmptyBodyFunctionExpression":
         return printMethodValue(path, options2, print3);
+      // These are not valid TypeScript. Printing them just for the sake of error recovery.
       case "TSJSDocAllType":
         return "*";
       case "TSJSDocUnknownType":
@@ -11660,6 +12194,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           "!"
         );
       case "TSParenthesizedType":
+      // Removed in `../parse/postprocess.js`
       default:
         throw new unexpected_node_error_default(node, "TypeScript");
     }
@@ -11739,22 +12274,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   // src/language-json/languages.evaluate.js
   var languages_evaluate_default2 = [
     {
-      "linguistLanguageId": 174,
       "name": "JSON.stringify",
       "type": "data",
-      "color": "#292929",
-      "tmScope": "source.json",
-      "aceMode": "json",
-      "codemirrorMode": "javascript",
-      "codemirrorMimeType": "application/json",
-      "aliases": [
-        "geojson",
-        "jsonl",
-        "topojson"
-      ],
       "extensions": [
         ".importmap"
       ],
+      "tmScope": "source.json",
+      "aceMode": "json",
+      "aliases": [
+        "geojson",
+        "jsonl",
+        "sarif",
+        "topojson"
+      ],
+      "codemirrorMode": "javascript",
+      "codemirrorMimeType": "application/json",
       "filenames": [
         "package.json",
         "package-lock.json",
@@ -11765,22 +12299,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       ],
       "vscodeLanguageIds": [
         "json"
-      ]
+      ],
+      "linguistLanguageId": 174
     },
     {
-      "linguistLanguageId": 174,
       "name": "JSON",
       "type": "data",
-      "color": "#292929",
-      "tmScope": "source.json",
-      "aceMode": "json",
-      "codemirrorMode": "javascript",
-      "codemirrorMimeType": "application/json",
-      "aliases": [
-        "geojson",
-        "jsonl",
-        "topojson"
-      ],
       "extensions": [
         ".json",
         ".4DForm",
@@ -11791,7 +12315,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ".har",
         ".ice",
         ".JSON-tmLanguage",
+        ".json.example",
         ".mcmeta",
+        ".sarif",
+        ".tact",
         ".tfstate",
         ".tfstate.backup",
         ".topojson",
@@ -11800,6 +12327,16 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ".yy",
         ".yyp"
       ],
+      "tmScope": "source.json",
+      "aceMode": "json",
+      "aliases": [
+        "geojson",
+        "jsonl",
+        "sarif",
+        "topojson"
+      ],
+      "codemirrorMode": "javascript",
+      "codemirrorMimeType": "application/json",
       "filenames": [
         ".all-contributorsrc",
         ".arcconfig",
@@ -11811,10 +12348,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ".tern-config",
         ".tern-project",
         ".watchmanconfig",
-        "Pipfile.lock",
-        "composer.lock",
-        "flake.lock",
-        "mcmod.info",
         ".babelrc",
         ".jscsrc",
         ".jshintrc",
@@ -11826,26 +12359,18 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       ],
       "vscodeLanguageIds": [
         "json"
-      ]
+      ],
+      "linguistLanguageId": 174
     },
     {
-      "linguistLanguageId": 423,
       "name": "JSON with Comments",
       "type": "data",
-      "color": "#292929",
-      "group": "JSON",
-      "tmScope": "source.js",
-      "aceMode": "javascript",
-      "codemirrorMode": "javascript",
-      "codemirrorMimeType": "text/javascript",
-      "aliases": [
-        "jsonc"
-      ],
       "extensions": [
         ".jsonc",
         ".code-snippets",
         ".code-workspace",
         ".sublime-build",
+        ".sublime-color-scheme",
         ".sublime-commands",
         ".sublime-completions",
         ".sublime-keymap",
@@ -11859,19 +12384,26 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ".sublime_metrics",
         ".sublime_session"
       ],
+      "tmScope": "source.json.comments",
+      "aceMode": "javascript",
+      "aliases": [
+        "jsonc"
+      ],
+      "codemirrorMode": "javascript",
+      "codemirrorMimeType": "text/javascript",
+      "group": "JSON",
       "filenames": [],
       "parsers": [
         "jsonc"
       ],
       "vscodeLanguageIds": [
         "jsonc"
-      ]
+      ],
+      "linguistLanguageId": 423
     },
     {
-      "linguistLanguageId": 175,
       "name": "JSON5",
       "type": "data",
-      "color": "#267CB9",
       "extensions": [
         ".json5"
       ],
@@ -11884,7 +12416,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       ],
       "vscodeLanguageIds": [
         "json5"
-      ]
+      ],
+      "linguistLanguageId": 175
     }
   ];
 
@@ -12023,6 +12556,22 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "description": "Print spaces between brackets.",
       "oppositeDescription": "Do not print spaces between brackets."
     },
+    "objectWrap": {
+      "category": "Common",
+      "type": "choice",
+      "default": "preserve",
+      "description": "How to wrap object literals.",
+      "choices": [
+        {
+          "value": "preserve",
+          "description": "Keep as multi-line, if there is a newline between the opening brace and first property."
+        },
+        {
+          "value": "collapse",
+          "description": "Fit to a single line when possible."
+        }
+      ]
+    },
     "singleQuote": {
       "category": "Common",
       "type": "boolean",
@@ -12083,6 +12632,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       ]
     },
     bracketSameLine: common_options_evaluate_default.bracketSameLine,
+    objectWrap: common_options_evaluate_default.objectWrap,
     bracketSpacing: common_options_evaluate_default.bracketSpacing,
     jsxBracketSameLine: {
       category: CATEGORY_JAVASCRIPT,
@@ -12096,6 +12646,22 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       default: true,
       description: "Print semicolons.",
       oppositeDescription: "Do not print semicolons, except at the beginning of lines which may need them."
+    },
+    experimentalOperatorPosition: {
+      category: CATEGORY_JAVASCRIPT,
+      type: "choice",
+      default: "end",
+      description: "Where to print operators when binary expressions wrap lines.",
+      choices: [
+        {
+          value: "start",
+          description: "Print operators at the start of new lines."
+        },
+        {
+          value: "end",
+          description: "Print operators at the end of previous lines."
+        }
+      ]
     },
     experimentalTernaries: {
       category: CATEGORY_JAVASCRIPT,

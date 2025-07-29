@@ -27,8 +27,8 @@
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getProtoOf = Object.getPrototypeOf;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __esm = (fn, res) => function __init() {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  var __typeError = (msg) => {
+    throw TypeError(msg);
   };
   var __commonJS = (cb, mod) => function __require() {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
@@ -54,97 +54,20 @@
     mod
   ));
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-  var __accessCheck = (obj, member, msg) => {
-    if (!member.has(obj))
-      throw TypeError("Cannot " + msg);
-  };
-  var __privateAdd = (obj, member, value) => {
-    if (member.has(obj))
-      throw TypeError("Cannot add the same private member more than once");
-    member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
-  };
-  var __privateMethod = (obj, member, method) => {
-    __accessCheck(obj, member, "access private method");
-    return method;
-  };
-
-  // scripts/build/shims/chalk.cjs
-  var require_chalk = __commonJS({
-    "scripts/build/shims/chalk.cjs"(exports, module) {
-      "use strict";
-      var chalk4 = new Proxy(String, { get: () => chalk4 });
-      module.exports = chalk4;
-    }
-  });
-
-  // scripts/build/shims/babel-highlight.js
-  var babel_highlight_exports = {};
-  __export(babel_highlight_exports, {
-    default: () => babel_highlight_default,
-    shouldHighlight: () => shouldHighlight
-  });
-  var shouldHighlight, babel_highlight_default;
-  var init_babel_highlight = __esm({
-    "scripts/build/shims/babel-highlight.js"() {
-      shouldHighlight = () => false;
-      babel_highlight_default = String;
-    }
-  });
+  var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
+  var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
+  var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 
   // node_modules/@babel/code-frame/lib/index.js
   var require_lib = __commonJS({
     "node_modules/@babel/code-frame/lib/index.js"(exports) {
       "use strict";
-      Object.defineProperty(exports, "__esModule", {
-        value: true
-      });
-      exports.codeFrameColumns = codeFrameColumns2;
-      exports.default = _default;
-      var _highlight = (init_babel_highlight(), __toCommonJS(babel_highlight_exports));
-      var _chalk = _interopRequireWildcard(require_chalk(), true);
-      function _getRequireWildcardCache(e) {
-        if ("function" != typeof WeakMap)
-          return null;
-        var r = /* @__PURE__ */ new WeakMap(), t = /* @__PURE__ */ new WeakMap();
-        return (_getRequireWildcardCache = function(e2) {
-          return e2 ? t : r;
-        })(e);
+      Object.defineProperty(exports, "__esModule", { value: true });
+      function getDefs() {
+        return new Proxy({}, { get: () => (text) => text });
       }
-      function _interopRequireWildcard(e, r) {
-        if (!r && e && e.__esModule)
-          return e;
-        if (null === e || "object" != typeof e && "function" != typeof e)
-          return { default: e };
-        var t = _getRequireWildcardCache(r);
-        if (t && t.has(e))
-          return t.get(e);
-        var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor;
-        for (var u in e)
-          if ("default" !== u && Object.prototype.hasOwnProperty.call(e, u)) {
-            var i = a ? Object.getOwnPropertyDescriptor(e, u) : null;
-            i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u];
-          }
-        return n.default = e, t && t.set(e, n), n;
-      }
-      var chalkWithForcedColor = void 0;
-      function getChalk(forceColor) {
-        if (forceColor) {
-          var _chalkWithForcedColor;
-          (_chalkWithForcedColor = chalkWithForcedColor) != null ? _chalkWithForcedColor : chalkWithForcedColor = new _chalk.default.constructor({
-            enabled: true,
-            level: 1
-          });
-          return chalkWithForcedColor;
-        }
-        return _chalk.default;
-      }
-      var deprecationWarningShown = false;
-      function getDefs(chalk4) {
-        return {
-          gutter: chalk4.grey,
-          marker: chalk4.red.bold,
-          message: chalk4.red.bold
-        };
+      function highlight(text) {
+        return text;
       }
       var NEWLINE = /\r\n|[\n\r\u2028\u2029]/;
       function getMarkerLines(loc, source, opts) {
@@ -204,12 +127,8 @@
         };
       }
       function codeFrameColumns2(rawLines, loc, opts = {}) {
-        const highlighted = (opts.highlightCode || opts.forceColor) && (0, _highlight.shouldHighlight)(opts);
-        const chalk4 = getChalk(opts.forceColor);
-        const defs = getDefs(chalk4);
-        const maybeHighlight = (chalkFn, string) => {
-          return highlighted ? chalkFn(string) : string;
-        };
+        const shouldHighlight = false;
+        const defs = getDefs(shouldHighlight);
         const lines = rawLines.split(NEWLINE);
         const {
           start,
@@ -218,9 +137,9 @@
         } = getMarkerLines(loc, lines, opts);
         const hasColumns = loc.start && typeof loc.start.column === "number";
         const numberMaxWidth = String(end).length;
-        const highlightedLines = highlighted ? (0, _highlight.default)(rawLines, opts) : rawLines;
-        let frame = highlightedLines.split(NEWLINE, end).slice(start, end).map((line2, index) => {
-          const number = start + 1 + index;
+        const highlightedLines = shouldHighlight ? highlight(rawLines) : rawLines;
+        let frame = highlightedLines.split(NEWLINE, end).slice(start, end).map((line2, index2) => {
+          const number = start + 1 + index2;
           const paddedNumber = ` ${number}`.slice(-numberMaxWidth);
           const gutter = ` ${paddedNumber} |`;
           const hasMarker = markerLines[number];
@@ -230,47 +149,27 @@
             if (Array.isArray(hasMarker)) {
               const markerSpacing = line2.slice(0, Math.max(hasMarker[0] - 1, 0)).replace(/[^\t]/g, " ");
               const numberOfMarkers = hasMarker[1] || 1;
-              markerLine = ["\n ", maybeHighlight(defs.gutter, gutter.replace(/\d/g, " ")), " ", markerSpacing, maybeHighlight(defs.marker, "^").repeat(numberOfMarkers)].join("");
+              markerLine = ["\n ", defs.gutter(gutter.replace(/\d/g, " ")), " ", markerSpacing, defs.marker("^").repeat(numberOfMarkers)].join("");
               if (lastMarkerLine && opts.message) {
-                markerLine += " " + maybeHighlight(defs.message, opts.message);
+                markerLine += " " + defs.message(opts.message);
               }
             }
-            return [maybeHighlight(defs.marker, ">"), maybeHighlight(defs.gutter, gutter), line2.length > 0 ? ` ${line2}` : "", markerLine].join("");
+            return [defs.marker(">"), defs.gutter(gutter), line2.length > 0 ? ` ${line2}` : "", markerLine].join("");
           } else {
-            return ` ${maybeHighlight(defs.gutter, gutter)}${line2.length > 0 ? ` ${line2}` : ""}`;
+            return ` ${defs.gutter(gutter)}${line2.length > 0 ? ` ${line2}` : ""}`;
           }
         }).join("\n");
         if (opts.message && !hasColumns) {
           frame = `${" ".repeat(numberMaxWidth + 1)}${opts.message}
 ${frame}`;
         }
-        if (highlighted) {
-          return chalk4.reset(frame);
+        if (shouldHighlight) {
+          return defs.reset(frame);
         } else {
           return frame;
         }
       }
-      function _default(rawLines, lineNumber, colNumber, opts = {}) {
-        if (!deprecationWarningShown) {
-          deprecationWarningShown = true;
-          const message = "Passing lineNumber and colNumber is deprecated to @babel/code-frame. Please use `codeFrameColumns`.";
-          if (void 0) {
-            (void 0)(message, "DeprecationWarning");
-          } else {
-            const deprecationError = new Error(message);
-            deprecationError.name = "DeprecationWarning";
-            console.warn(new Error(message));
-          }
-        }
-        colNumber = Math.max(colNumber, 0);
-        const location = {
-          start: {
-            column: colNumber,
-            line: lineNumber
-          }
-        };
-        return codeFrameColumns2(rawLines, location, opts);
-      }
+      exports.codeFrameColumns = codeFrameColumns2;
     }
   });
 
@@ -294,21 +193,17 @@ ${frame}`;
   var at_default = at;
 
   // src/common/ast-path.js
-  var _getNodeStackIndex, getNodeStackIndex_fn, _getAncestors, getAncestors_fn;
+  var _AstPath_instances, getNodeStackIndex_fn, getAncestors_fn;
   var AstPath = class {
     constructor(value) {
-      __privateAdd(this, _getNodeStackIndex);
-      __privateAdd(this, _getAncestors);
+      __privateAdd(this, _AstPath_instances);
       this.stack = [value];
     }
     /** @type {string | null} */
     get key() {
-      const {
-        stack,
-        siblings
-      } = this;
+      const { stack, siblings } = this;
       return at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         stack,
         siblings === null ? -2 : -4
@@ -317,7 +212,7 @@ ${frame}`;
     /** @type {number | null} */
     get index() {
       return this.siblings === null ? null : at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         this.stack,
         -2
@@ -326,7 +221,7 @@ ${frame}`;
     /** @type {object} */
     get node() {
       return at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         this.stack,
         -1
@@ -346,11 +241,9 @@ ${frame}`;
     }
     /** @type {object[] | null} */
     get siblings() {
-      const {
-        stack
-      } = this;
+      const { stack } = this;
       const maybeArray = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         stack,
         -3
@@ -359,16 +252,12 @@ ${frame}`;
     }
     /** @type {object | null} */
     get next() {
-      const {
-        siblings
-      } = this;
+      const { siblings } = this;
       return siblings === null ? null : siblings[this.index + 1];
     }
     /** @type {object | null} */
     get previous() {
-      const {
-        siblings
-      } = this;
+      const { siblings } = this;
       return siblings === null ? null : siblings[this.index - 1];
     }
     /** @type {boolean} */
@@ -377,10 +266,7 @@ ${frame}`;
     }
     /** @type {boolean} */
     get isLast() {
-      const {
-        siblings,
-        index
-      } = this;
+      const { siblings, index } = this;
       return siblings !== null && index === siblings.length - 1;
     }
     /** @type {boolean} */
@@ -393,20 +279,16 @@ ${frame}`;
     }
     /** @type {object[]} */
     get ancestors() {
-      return [...__privateMethod(this, _getAncestors, getAncestors_fn).call(this)];
+      return [...__privateMethod(this, _AstPath_instances, getAncestors_fn).call(this)];
     }
     // The name of the current property is always the penultimate element of
     // this.stack, and always a string/number/symbol.
     getName() {
-      const {
-        stack
-      } = this;
-      const {
-        length
-      } = stack;
+      const { stack } = this;
+      const { length } = stack;
       if (length > 1) {
         return at_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           stack,
           -2
@@ -418,14 +300,14 @@ ${frame}`;
     // this.stack.
     getValue() {
       return at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         this.stack,
         -1
       );
     }
     getNode(count = 0) {
-      const stackIndex = __privateMethod(this, _getNodeStackIndex, getNodeStackIndex_fn).call(this, count);
+      const stackIndex = __privateMethod(this, _AstPath_instances, getNodeStackIndex_fn).call(this, count);
       return stackIndex === -1 ? null : this.stack[stackIndex];
     }
     getParentNode(count = 0) {
@@ -437,14 +319,10 @@ ${frame}`;
     // be restored to its original state after the callback is finished, so it
     // is probably a mistake to retain a reference to the path.
     call(callback, ...names) {
-      const {
-        stack
-      } = this;
-      const {
-        length
-      } = stack;
+      const { stack } = this;
+      const { length } = stack;
       let value = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         stack,
         -1
@@ -459,8 +337,14 @@ ${frame}`;
         stack.length = length;
       }
     }
+    /**
+     * @template {(path: AstPath) => any} T
+     * @param {T} callback
+     * @param {number} [count=0]
+     * @returns {ReturnType<T>}
+     */
     callParent(callback, count = 0) {
-      const stackIndex = __privateMethod(this, _getNodeStackIndex, getNodeStackIndex_fn).call(this, count + 1);
+      const stackIndex = __privateMethod(this, _AstPath_instances, getNodeStackIndex_fn).call(this, count + 1);
       const parentValues = this.stack.splice(stackIndex + 1);
       try {
         return callback(this);
@@ -473,14 +357,10 @@ ${frame}`;
     // callback will be called with a reference to this path object for each
     // element of the array.
     each(callback, ...names) {
-      const {
-        stack
-      } = this;
-      const {
-        length
-      } = stack;
+      const { stack } = this;
+      const { length } = stack;
       let value = at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         stack,
         -1
@@ -504,9 +384,12 @@ ${frame}`;
     // the end of the iteration.
     map(callback, ...names) {
       const result = [];
-      this.each((path, index, value) => {
-        result[index] = callback(path, index, value);
-      }, ...names);
+      this.each(
+        (path, index, value) => {
+          result[index] = callback(path, index, value);
+        },
+        ...names
+      );
       return result;
     }
     /**
@@ -545,7 +428,7 @@ ${frame}`;
      * @internal Unstable API. Don't use in plugins for now.
      */
     findAncestor(predicate) {
-      for (const node of __privateMethod(this, _getAncestors, getAncestors_fn).call(this)) {
+      for (const node of __privateMethod(this, _AstPath_instances, getAncestors_fn).call(this)) {
         if (predicate(node)) {
           return node;
         }
@@ -560,7 +443,7 @@ ${frame}`;
      * @internal Unstable API. Don't use in plugins for now.
      */
     hasAncestor(predicate) {
-      for (const node of __privateMethod(this, _getAncestors, getAncestors_fn).call(this)) {
+      for (const node of __privateMethod(this, _AstPath_instances, getAncestors_fn).call(this)) {
         if (predicate(node)) {
           return true;
         }
@@ -568,11 +451,9 @@ ${frame}`;
       return false;
     }
   };
-  _getNodeStackIndex = new WeakSet();
+  _AstPath_instances = new WeakSet();
   getNodeStackIndex_fn = function(count) {
-    const {
-      stack
-    } = this;
+    const { stack } = this;
     for (let i = stack.length - 1; i >= 0; i -= 2) {
       if (!Array.isArray(stack[i]) && --count < 0) {
         return i;
@@ -580,11 +461,8 @@ ${frame}`;
     }
     return -1;
   };
-  _getAncestors = new WeakSet();
   getAncestors_fn = function* () {
-    const {
-      stack
-    } = this;
+    const { stack } = this;
     for (let index = stack.length - 3; index >= 0; index -= 2) {
       const value = stack[index];
       if (!Array.isArray(value)) {
@@ -625,6 +503,15 @@ ${frame}`;
     DOC_TYPE_LABEL,
     DOC_TYPE_BREAK_PARENT
   ]);
+
+  // node_modules/trim-newlines/index.js
+  function trimNewlinesEnd(string) {
+    let end = string.length;
+    while (end > 0 && (string[end - 1] === "\r" || string[end - 1] === "\n")) {
+      end--;
+    }
+    return end < string.length ? string.slice(0, end) : string;
+  }
 
   // src/document/utils/get-doc-type.js
   function getDocType(doc) {
@@ -674,31 +561,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   };
   var invalid_doc_error_default = InvalidDocError;
 
-  // src/document/utils/assert-doc.js
-  var noop = () => {
-  };
-  var assertDoc = true ? noop : function(doc) {
-    traverse_doc_default(doc, (doc2) => {
-      if (checked.has(doc2)) {
-        return false;
-      }
-      if (typeof doc2 !== "string") {
-        checked.add(doc2);
-      }
-    });
-  };
-
-  // src/document/builders.js
-  function lineSuffix(contents) {
-    assertDoc(contents);
-    return { type: DOC_TYPE_LINE_SUFFIX, contents };
-  }
-  var breakParent = { type: DOC_TYPE_BREAK_PARENT };
-  var hardlineWithoutBreakParent = { type: DOC_TYPE_LINE, hard: true };
-  var line = { type: DOC_TYPE_LINE };
-  var hardline = [hardlineWithoutBreakParent, breakParent];
-  var cursor = { type: DOC_TYPE_CURSOR };
-
   // src/document/utils.js
   function mapDoc(doc, cb) {
     if (typeof doc === "string") {
@@ -719,10 +581,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         case DOC_TYPE_ARRAY:
           return cb(doc2.map(rec));
         case DOC_TYPE_FILL:
-          return cb({
-            ...doc2,
-            parts: doc2.parts.map(rec)
-          });
+          return cb({ ...doc2, parts: doc2.parts.map(rec) });
         case DOC_TYPE_IF_BREAK:
           return cb({
             ...doc2,
@@ -730,31 +589,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
             flatContents: rec(doc2.flatContents)
           });
         case DOC_TYPE_GROUP: {
-          let {
-            expandedStates,
-            contents
-          } = doc2;
+          let { expandedStates, contents } = doc2;
           if (expandedStates) {
             expandedStates = expandedStates.map(rec);
             contents = expandedStates[0];
           } else {
             contents = rec(contents);
           }
-          return cb({
-            ...doc2,
-            contents,
-            expandedStates
-          });
+          return cb({ ...doc2, contents, expandedStates });
         }
         case DOC_TYPE_ALIGN:
         case DOC_TYPE_INDENT:
         case DOC_TYPE_INDENT_IF_BREAK:
         case DOC_TYPE_LABEL:
         case DOC_TYPE_LINE_SUFFIX:
-          return cb({
-            ...doc2,
-            contents: rec(doc2.contents)
-          });
+          return cb({ ...doc2, contents: rec(doc2.contents) });
         case DOC_TYPE_STRING:
         case DOC_TYPE_CURSOR:
         case DOC_TYPE_TRIM:
@@ -770,12 +619,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function stripTrailingHardlineFromParts(parts) {
     parts = [...parts];
     while (parts.length >= 2 && at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       parts,
       -2
     ).type === DOC_TYPE_LINE && at_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       parts,
       -1
@@ -784,7 +633,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     if (parts.length > 0) {
       const lastPart = stripTrailingHardlineFromDoc(at_default(
-        /* isOptionalObject*/
+        /* isOptionalObject */
         false,
         parts,
         -1
@@ -795,17 +644,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   }
   function stripTrailingHardlineFromDoc(doc) {
     switch (get_doc_type_default(doc)) {
-      case DOC_TYPE_ALIGN:
       case DOC_TYPE_INDENT:
       case DOC_TYPE_INDENT_IF_BREAK:
       case DOC_TYPE_GROUP:
       case DOC_TYPE_LINE_SUFFIX:
       case DOC_TYPE_LABEL: {
         const contents = stripTrailingHardlineFromDoc(doc.contents);
-        return {
-          ...doc,
-          contents
-        };
+        return { ...doc, contents };
       }
       case DOC_TYPE_IF_BREAK:
         return {
@@ -814,14 +659,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           flatContents: stripTrailingHardlineFromDoc(doc.flatContents)
         };
       case DOC_TYPE_FILL:
-        return {
-          ...doc,
-          parts: stripTrailingHardlineFromParts(doc.parts)
-        };
+        return { ...doc, parts: stripTrailingHardlineFromParts(doc.parts) };
       case DOC_TYPE_ARRAY:
         return stripTrailingHardlineFromParts(doc);
       case DOC_TYPE_STRING:
-        return doc.replace(/[\n\r]*$/, "");
+        return trimNewlinesEnd(doc);
+      case DOC_TYPE_ALIGN:
       case DOC_TYPE_CURSOR:
       case DOC_TYPE_TRIM:
       case DOC_TYPE_LINE_SUFFIX_BOUNDARY:
@@ -872,7 +715,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           }
           const [currentPart, ...restParts] = Array.isArray(part) ? part : [part];
           if (typeof currentPart === "string" && typeof at_default(
-            /* isOptionalObject*/
+            /* isOptionalObject */
             false,
             parts,
             -1
@@ -908,11 +751,33 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return mapDoc(doc, (currentDoc) => cleanDocFn(currentDoc));
   }
   function inheritLabel(doc, fn) {
-    return doc.type === DOC_TYPE_LABEL ? {
-      ...doc,
-      contents: fn(doc.contents)
-    } : fn(doc);
+    return doc.type === DOC_TYPE_LABEL ? { ...doc, contents: fn(doc.contents) } : fn(doc);
   }
+
+  // src/document/utils/assert-doc.js
+  var noop = () => {
+  };
+  var assertDoc = true ? noop : function(doc) {
+    traverse_doc_default(doc, (doc2) => {
+      if (checked.has(doc2)) {
+        return false;
+      }
+      if (typeof doc2 !== "string") {
+        checked.add(doc2);
+      }
+    });
+  };
+
+  // src/document/builders.js
+  function lineSuffix(contents) {
+    assertDoc(contents);
+    return { type: DOC_TYPE_LINE_SUFFIX, contents };
+  }
+  var breakParent = { type: DOC_TYPE_BREAK_PARENT };
+  var hardlineWithoutBreakParent = { type: DOC_TYPE_LINE, hard: true };
+  var line = { type: DOC_TYPE_LINE };
+  var hardline = [hardlineWithoutBreakParent, breakParent];
+  var cursor = { type: DOC_TYPE_CURSOR };
 
   // scripts/build/shims/assert.js
   var assert = new Proxy(() => {
@@ -969,10 +834,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       return false;
     };
   }
-  var skipWhitespace = skip(/\s/);
+  var skipWhitespace = skip(/\s/u);
   var skipSpaces = skip(" 	");
   var skipToLineEnd = skip(",; 	");
-  var skipEverythingButNewLine = skip(/[^\n\r]/);
+  var skipEverythingButNewLine = skip(/[^\n\r]/u);
 
   // src/utils/skip-newline.js
   function skipNewline(text, startIndex, options) {
@@ -1154,8 +1019,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     const tiesToBreak = [];
     const {
-      locStart,
-      locEnd,
       printer: {
         experimentalFeatures: {
           // TODO: Make this as default behavior
@@ -1189,16 +1052,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         ast: ast2,
         isLastComment
       } = context;
-      if (options2.parser === "json" || options2.parser === "json5" || options2.parser === "jsonc" || options2.parser === "__js_expression" || options2.parser === "__ts_expression" || options2.parser === "__vue_expression" || options2.parser === "__vue_ts_expression") {
-        if (locStart(comment) - locStart(ast2) <= 0) {
-          addLeadingComment(ast2, comment);
-          continue;
-        }
-        if (locEnd(comment) - locEnd(ast2) >= 0) {
-          addTrailingComment(ast2, comment);
-          continue;
-        }
-      }
       let args;
       if (avoidAstMutation) {
         args = [context];
@@ -1264,7 +1117,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       }
     }
   }
-  var isAllEmptyAndNoLineBreak = (text) => !/[\S\n\u2028\u2029]/.test(text);
+  var isAllEmptyAndNoLineBreak = (text) => !/[\S\n\u2028\u2029]/u.test(text);
   function isOwnLineComment(text, options, decoratedComments, commentIndex) {
     const { comment, precedingNode } = decoratedComments[commentIndex];
     const { locStart, locEnd } = options;
@@ -1296,7 +1149,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return has_newline_default(text, end);
   }
   function breakTies(tiesToBreak, options) {
-    var _a, _b;
+    var _a2, _b2;
     const tieCount = tiesToBreak.length;
     if (tieCount === 0) {
       return;
@@ -1313,7 +1166,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       assert_default.strictEqual(currentCommentPrecedingNode, precedingNode);
       assert_default.strictEqual(currentCommentFollowingNode, followingNode);
       const gap = options.originalText.slice(options.locEnd(comment), gapEndPos);
-      if (((_b = (_a = options.printer).isGap) == null ? void 0 : _b.call(_a, gap, options)) ?? /^[\s(]*$/.test(gap)) {
+      if (((_b2 = (_a2 = options.printer).isGap) == null ? void 0 : _b2.call(_a2, gap, options)) ?? /^[\s(]*$/u.test(gap)) {
         gapEndPos = options.locStart(comment);
       } else {
         break;
@@ -1361,11 +1214,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return options.printer.printComment(path, options);
   }
   function printLeadingComment(path, options) {
-    var _a;
+    var _a2;
     const comment = path.node;
     const parts = [printComment(path, options)];
     const { printer, originalText, locStart, locEnd } = options;
-    const isBlock = (_a = printer.isBlockComment) == null ? void 0 : _a.call(printer, comment);
+    const isBlock = (_a2 = printer.isBlockComment) == null ? void 0 : _a2.call(printer, comment);
     if (isBlock) {
       const lineBreak = has_newline_default(originalText, locEnd(comment)) ? has_newline_default(originalText, locStart(comment), {
         backwards: true
@@ -1384,11 +1237,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return parts;
   }
   function printTrailingComment(path, options, previousComment) {
-    var _a;
+    var _a2;
     const comment = path.node;
     const printed = printComment(path, options);
     const { printer, originalText, locStart } = options;
-    const isBlock = (_a = printer.isBlockComment) == null ? void 0 : _a.call(printer, comment);
+    const isBlock = (_a2 = printer.isBlockComment) == null ? void 0 : _a2.call(printer, comment);
     if ((previousComment == null ? void 0 : previousComment.hasLineSuffix) && !(previousComment == null ? void 0 : previousComment.isBlock) || has_newline_default(originalText, locStart(comment), { backwards: true })) {
       const isLineBeforeEmpty = is_previous_line_empty_default(
         originalText,
@@ -1504,6 +1357,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/main/core-options.evaluate.js
   var core_options_evaluate_default = {
+    "checkIgnorePragma": {
+      "category": "Special",
+      "type": "boolean",
+      "default": false,
+      "description": "Check whether the file's first docblock comment contains '@noprettier' or '@noformat' to determine if it should be formatted.",
+      "cliCategory": "Other"
+    },
     "cursorOffset": {
       "category": "Special",
       "type": "int",
@@ -1657,6 +1517,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         {
           "value": "lwc",
           "description": "Lightning Web Components"
+        },
+        {
+          "value": "mjml",
+          "description": "MJML"
         }
       ]
     },
@@ -1713,7 +1577,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       "category": "Special",
       "type": "boolean",
       "default": false,
-      "description": "Require either '@prettier' or '@format' to be present in the file's first docblock comment\nin order for it to be formatted.",
+      "description": "Require either '@prettier' or '@format' to be present in the file's first docblock comment in order for it to be formatted.",
       "cliCategory": "Other"
     },
     "tabWidth": {
@@ -1752,15 +1616,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   };
 
   // src/main/support.js
-  function getSupportInfo({
-    plugins = [],
-    showDeprecated = false
-  } = {}) {
+  function getSupportInfo({ plugins = [], showDeprecated = false } = {}) {
     const languages = plugins.flatMap((plugin) => plugin.languages ?? []);
     const options = [];
-    for (const option of normalizeOptionSettings(Object.assign({}, ...plugins.map(({
-      options: options2
-    }) => options2), core_options_evaluate_default))) {
+    for (const option of normalizeOptionSettings(
+      Object.assign({}, ...plugins.map(({ options: options2 }) => options2), core_options_evaluate_default)
+    )) {
       if (!showDeprecated && option.deprecated) {
         continue;
       }
@@ -1769,19 +1630,21 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
           option.choices = option.choices.filter((choice) => !choice.deprecated);
         }
         if (option.name === "parser") {
-          option.choices = [...option.choices, ...collectParsersFromLanguages(option.choices, languages, plugins)];
+          option.choices = [
+            ...option.choices,
+            ...collectParsersFromLanguages(option.choices, languages, plugins)
+          ];
         }
       }
-      option.pluginDefaults = Object.fromEntries(plugins.filter((plugin) => {
-        var _a;
-        return ((_a = plugin.defaultOptions) == null ? void 0 : _a[option.name]) !== void 0;
-      }).map((plugin) => [plugin.name, plugin.defaultOptions[option.name]]));
+      option.pluginDefaults = Object.fromEntries(
+        plugins.filter((plugin) => {
+          var _a2;
+          return ((_a2 = plugin.defaultOptions) == null ? void 0 : _a2[option.name]) !== void 0;
+        }).map((plugin) => [plugin.name, plugin.defaultOptions[option.name]])
+      );
       options.push(option);
     }
-    return {
-      languages,
-      options
-    };
+    return { languages, options };
   }
   function* collectParsersFromLanguages(parserChoices, languages, plugins) {
     const existingParsers = new Set(parserChoices.map((choice) => choice.value));
@@ -1790,15 +1653,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         for (const parserName of language.parsers) {
           if (!existingParsers.has(parserName)) {
             existingParsers.add(parserName);
-            const plugin = plugins.find((plugin2) => plugin2.parsers && Object.prototype.hasOwnProperty.call(plugin2.parsers, parserName));
+            const plugin = plugins.find(
+              (plugin2) => plugin2.parsers && Object.prototype.hasOwnProperty.call(plugin2.parsers, parserName)
+            );
             let description = language.name;
             if (plugin == null ? void 0 : plugin.name) {
               description += ` (plugin: ${plugin.name})`;
             }
-            yield {
-              value: parserName,
-              description
-            };
+            yield { value: parserName, description };
           }
         }
       }
@@ -1807,13 +1669,10 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   function normalizeOptionSettings(settings) {
     const options = [];
     for (const [name, originalOption] of Object.entries(settings)) {
-      const option = {
-        name,
-        ...originalOption
-      };
+      const option = { name, ...originalOption };
       if (Array.isArray(option.default)) {
         option.default = at_default(
-          /* isOptionalObject*/
+          /* isOptionalObject */
           false,
           option.default,
           -1
@@ -1824,11 +1683,52 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     return options;
   }
 
+  // scripts/build/shims/array-to-reversed.js
+  var arrayToReversed = (isOptionalObject, array2) => {
+    if (isOptionalObject && (array2 === void 0 || array2 === null)) {
+      return;
+    }
+    if (array2.toReversed || !Array.isArray(array2)) {
+      return array2.toReversed();
+    }
+    return [...array2].reverse();
+  };
+  var array_to_reversed_default = arrayToReversed;
+
   // src/utils/get-interpreter.js
   var get_interpreter_default = void 0;
 
+  // node_modules/deno-path-from-file-url/index.js
+  var _a, _b, _c, _d, _e;
+  var isWindows = ((_a = globalThis.Deno) == null ? void 0 : _a.build.os) === "windows" || ((_c = (_b = globalThis.navigator) == null ? void 0 : _b.platform) == null ? void 0 : _c.startsWith("Win")) || ((_e = (_d = globalThis.process) == null ? void 0 : _d.platform) == null ? void 0 : _e.startsWith("win")) || false;
+  function assertArg(url) {
+    url = url instanceof URL ? url : new URL(url);
+    if (url.protocol !== "file:") {
+      throw new TypeError(`URL must be a file URL: received "${url.protocol}"`);
+    }
+    return url;
+  }
+  function fromFileUrl(url) {
+    url = assertArg(url);
+    return decodeURIComponent(url.pathname.replace(/%(?![0-9A-Fa-f]{2})/g, "%25"));
+  }
+  function fromFileUrl2(url) {
+    url = assertArg(url);
+    let path = decodeURIComponent(url.pathname.replace(/\//g, "\\").replace(/%(?![0-9A-Fa-f]{2})/g, "%25")).replace(/^\\*([A-Za-z]:)(\\|$)/, "$1\\");
+    if (url.hostname !== "") {
+      path = `\\\\${url.hostname}${path}`;
+    }
+    return path;
+  }
+  function fromFileUrl3(url) {
+    return isWindows ? fromFileUrl2(url) : fromFileUrl(url);
+  }
+
+  // src/utils/universal-to-path.js
+  var universal_to_path_default = true ? fromFileUrl3 : fileURLToPath;
+
   // src/utils/infer-parser.js
-  var getFileBasename = (file) => String(file).split(/[/\\]/).pop();
+  var getFileBasename = (file) => String(file).split(/[/\\]/u).pop();
   function getLanguageByFileName(languages, file) {
     if (!file) {
       return;
@@ -1850,22 +1750,48 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     if (true) {
       return;
     }
+    const languagesWithInterpreters = languages.filter(
+      ({ interpreters }) => is_non_empty_array_default(interpreters)
+    );
+    if (languagesWithInterpreters.length === 0) {
+      return;
+    }
     const interpreter = get_interpreter_default(file);
     if (!interpreter) {
       return;
     }
-    return languages.find(
-      ({ interpreters }) => interpreters == null ? void 0 : interpreters.includes(interpreter)
+    return languagesWithInterpreters.find(
+      ({ interpreters }) => interpreters.includes(interpreter)
     );
   }
+  function getLanguageByIsSupported(languages, file) {
+    if (!file) {
+      return;
+    }
+    if (String(file).startsWith("file:")) {
+      try {
+        file = universal_to_path_default(file);
+      } catch {
+        return;
+      }
+    }
+    if (typeof file !== "string") {
+      return;
+    }
+    return languages.find(({ isSupported }) => isSupported == null ? void 0 : isSupported({ filepath: file }));
+  }
   function inferParser(options, fileInfo) {
-    const languages = options.plugins.flatMap(
+    const languages = array_to_reversed_default(
+      /* isOptionalObject */
+      false,
+      options.plugins
+    ).flatMap(
       (plugin) => (
         // @ts-expect-error -- Safe
         plugin.languages ?? []
       )
     );
-    const language = getLanguageByLanguageName(languages, fileInfo.language) ?? getLanguageByFileName(languages, fileInfo.physicalFile) ?? getLanguageByFileName(languages, fileInfo.file) ?? getLanguageByInterpreter(languages, fileInfo.physicalFile);
+    const language = getLanguageByLanguageName(languages, fileInfo.language) ?? getLanguageByFileName(languages, fileInfo.physicalFile) ?? getLanguageByFileName(languages, fileInfo.file) ?? getLanguageByIsSupported(languages, fileInfo.physicalFile) ?? getLanguageByIsSupported(languages, fileInfo.file) ?? getLanguageByInterpreter(languages, fileInfo.physicalFile);
     return language == null ? void 0 : language.parsers[0];
   }
   var infer_parser_default = inferParser;
@@ -1886,20 +1812,20 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     pair: ({ key, value }) => apiDescriptor.value({ [key]: value })
   };
 
+  // scripts/build/shims/colors.js
+  var colors = new Proxy(String, { get: () => colors });
+  var colors_default = colors;
+
   // node_modules/vnopts/lib/handlers/deprecated/common.js
-  var import_chalk = __toESM(require_chalk(), 1);
   var commonDeprecatedHandler = (keyOrPair, redirectTo, { descriptor }) => {
     const messages = [
-      `${import_chalk.default.yellow(typeof keyOrPair === "string" ? descriptor.key(keyOrPair) : descriptor.pair(keyOrPair))} is deprecated`
+      `${colors_default.yellow(typeof keyOrPair === "string" ? descriptor.key(keyOrPair) : descriptor.pair(keyOrPair))} is deprecated`
     ];
     if (redirectTo) {
-      messages.push(`we now treat it as ${import_chalk.default.blue(typeof redirectTo === "string" ? descriptor.key(redirectTo) : descriptor.pair(redirectTo))}`);
+      messages.push(`we now treat it as ${colors_default.blue(typeof redirectTo === "string" ? descriptor.key(redirectTo) : descriptor.pair(redirectTo))}`);
     }
     return messages.join("; ") + ".";
   };
-
-  // node_modules/vnopts/lib/handlers/invalid/common.js
-  var import_chalk2 = __toESM(require_chalk(), 1);
 
   // node_modules/vnopts/lib/constants.js
   var VALUE_NOT_EXIST = Symbol.for("vnopts.VALUE_NOT_EXIST");
@@ -1920,18 +1846,18 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   };
   function getDescription(key, value, expected, descriptor) {
     return [
-      `Invalid ${import_chalk2.default.red(descriptor.key(key))} value.`,
-      `Expected ${import_chalk2.default.blue(expected)},`,
-      `but received ${value === VALUE_NOT_EXIST ? import_chalk2.default.gray("nothing") : import_chalk2.default.red(descriptor.value(value))}.`
+      `Invalid ${colors_default.red(descriptor.key(key))} value.`,
+      `Expected ${colors_default.blue(expected)},`,
+      `but received ${value === VALUE_NOT_EXIST ? colors_default.gray("nothing") : colors_default.red(descriptor.value(value))}.`
     ].join(" ");
   }
   function getListDescription({ text, list }, printWidth) {
     const descriptions = [];
     if (text) {
-      descriptions.push(`- ${import_chalk2.default.blue(text)}`);
+      descriptions.push(`- ${colors_default.blue(text)}`);
     }
     if (list) {
-      descriptions.push([`- ${import_chalk2.default.blue(list.title)}:`].concat(list.values.map((valueDescription) => getListDescription(valueDescription, printWidth - INDENTATION.length).replace(/^|\n/g, `$&${INDENTATION}`))).join("\n"));
+      descriptions.push([`- ${colors_default.blue(list.title)}:`].concat(list.values.map((valueDescription) => getListDescription(valueDescription, printWidth - INDENTATION.length).replace(/^|\n/g, `$&${INDENTATION}`))).join("\n"));
     }
     return chooseDescription(descriptions, printWidth);
   }
@@ -1943,9 +1869,6 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const [firstWidth, secondWidth] = descriptions.map((description) => description.split("\n", 1)[0].length);
     return firstWidth > printWidth && firstWidth > secondWidth ? secondDescription : firstDescription;
   }
-
-  // node_modules/vnopts/lib/handlers/unknown/leven.js
-  var import_chalk3 = __toESM(require_chalk(), 1);
 
   // node_modules/leven/index.js
   var array = [];
@@ -2000,11 +1923,11 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   // node_modules/vnopts/lib/handlers/unknown/leven.js
   var levenUnknownHandler = (key, value, { descriptor, logger, schemas }) => {
     const messages = [
-      `Ignored unknown option ${import_chalk3.default.yellow(descriptor.pair({ key, value }))}.`
+      `Ignored unknown option ${colors_default.yellow(descriptor.pair({ key, value }))}.`
     ];
     const suggestion = Object.keys(schemas).sort().find((knownKey) => leven(key, knownKey) < 3);
     if (suggestion) {
-      messages.push(`Did you mean ${import_chalk3.default.blue(descriptor.key(suggestion))}?`);
+      messages.push(`Did you mean ${colors_default.blue(descriptor.key(suggestion))}?`);
     }
     logger.warn(messages.join(" "));
   };
@@ -2240,6 +2163,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const orders = [
       "undefined",
       "object",
+      // null
       "boolean",
       "number",
       "string"
@@ -2583,23 +2507,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       descriptor = apiDescriptor;
     }
     const unknown = !passThrough ? (key, value, options2) => {
-      const {
-        _,
-        ...schemas2
-      } = options2.schemas;
+      const { _, ...schemas2 } = options2.schemas;
       return levenUnknownHandler(key, value, {
         ...options2,
         schemas: schemas2
       });
-    } : Array.isArray(passThrough) ? (key, value) => !passThrough.includes(key) ? void 0 : {
-      [key]: value
-    } : (key, value) => ({
-      [key]: value
-    });
-    const schemas = optionInfosToSchemas(optionInfos, {
-      isCLI,
-      FlagSchema
-    });
+    } : Array.isArray(passThrough) ? (key, value) => !passThrough.includes(key) ? void 0 : { [key]: value } : (key, value) => ({ [key]: value });
+    const schemas = optionInfosToSchemas(optionInfos, { isCLI, FlagSchema });
     const normalizer = new Normalizer(schemas, {
       logger,
       unknown,
@@ -2615,43 +2529,34 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     return normalized;
   }
-  function optionInfosToSchemas(optionInfos, {
-    isCLI,
-    FlagSchema
-  }) {
+  function optionInfosToSchemas(optionInfos, { isCLI, FlagSchema }) {
     const schemas = [];
     if (isCLI) {
-      schemas.push(AnySchema.create({
-        name: "_"
-      }));
+      schemas.push(AnySchema.create({ name: "_" }));
     }
     for (const optionInfo of optionInfos) {
-      schemas.push(optionInfoToSchema(optionInfo, {
-        isCLI,
-        optionInfos,
-        FlagSchema
-      }));
+      schemas.push(
+        optionInfoToSchema(optionInfo, {
+          isCLI,
+          optionInfos,
+          FlagSchema
+        })
+      );
       if (optionInfo.alias && isCLI) {
-        schemas.push(AliasSchema.create({
-          // @ts-expect-error
-          name: optionInfo.alias,
-          sourceName: optionInfo.name
-        }));
+        schemas.push(
+          AliasSchema.create({
+            // @ts-expect-error
+            name: optionInfo.alias,
+            sourceName: optionInfo.name
+          })
+        );
       }
     }
     return schemas;
   }
-  function optionInfoToSchema(optionInfo, {
-    isCLI,
-    optionInfos,
-    FlagSchema
-  }) {
-    const {
-      name
-    } = optionInfo;
-    const parameters = {
-      name
-    };
+  function optionInfoToSchema(optionInfo, { isCLI, optionInfos, FlagSchema }) {
+    const { name } = optionInfo;
+    const parameters = { name };
     let SchemaConstructor;
     const handlers = {};
     switch (optionInfo.type) {
@@ -2666,22 +2571,27 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
         break;
       case "choice":
         SchemaConstructor = ChoiceSchema;
-        parameters.choices = optionInfo.choices.map((choiceInfo) => (choiceInfo == null ? void 0 : choiceInfo.redirect) ? {
-          ...choiceInfo,
-          redirect: {
-            to: {
-              key: optionInfo.name,
-              value: choiceInfo.redirect
+        parameters.choices = optionInfo.choices.map(
+          (choiceInfo) => (choiceInfo == null ? void 0 : choiceInfo.redirect) ? {
+            ...choiceInfo,
+            redirect: {
+              to: { key: optionInfo.name, value: choiceInfo.redirect }
             }
-          }
-        } : choiceInfo);
+          } : choiceInfo
+        );
         break;
       case "boolean":
         SchemaConstructor = BooleanSchema;
         break;
       case "flag":
         SchemaConstructor = FlagSchema;
-        parameters.flags = optionInfos.flatMap((optionInfo2) => [optionInfo2.alias, optionInfo2.description && optionInfo2.name, optionInfo2.oppositeDescription && `no-${optionInfo2.name}`].filter(Boolean));
+        parameters.flags = optionInfos.flatMap(
+          (optionInfo2) => [
+            optionInfo2.alias,
+            optionInfo2.description && optionInfo2.name,
+            optionInfo2.oppositeDescription && `no-${optionInfo2.name}`
+          ].filter(Boolean)
+        );
         break;
       case "path":
         SchemaConstructor = StringSchema;
@@ -2707,24 +2617,22 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     if (isCLI && !optionInfo.array) {
       const originalPreprocess = parameters.preprocess || ((x) => x);
-      parameters.preprocess = (value, schema, utils) => schema.preprocess(originalPreprocess(Array.isArray(value) ? at_default(
-        /* isOptionalObject*/
-        false,
-        value,
-        -1
-      ) : value), utils);
+      parameters.preprocess = (value, schema, utils) => schema.preprocess(
+        originalPreprocess(Array.isArray(value) ? at_default(
+          /* isOptionalObject */
+          false,
+          value,
+          -1
+        ) : value),
+        utils
+      );
     }
     return optionInfo.array ? ArraySchema.create({
-      ...isCLI ? {
-        preprocess: (v) => Array.isArray(v) ? v : [v]
-      } : {},
+      ...isCLI ? { preprocess: (v) => Array.isArray(v) ? v : [v] } : {},
       ...handlers,
       // @ts-expect-error
       valueSchema: SchemaConstructor.create(parameters)
-    }) : SchemaConstructor.create({
-      ...parameters,
-      ...handlers
-    });
+    }) : SchemaConstructor.create({ ...parameters, ...handlers });
   }
   var normalize_options_default = normalizeOptions;
 
@@ -2751,7 +2659,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       throw new Error("parserName is required.");
     }
     const plugin = array_find_last_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       plugins,
       (plugin2) => plugin2.parsers && Object.prototype.hasOwnProperty.call(plugin2.parsers, parserName)
@@ -2770,7 +2678,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       throw new Error("astFormat is required.");
     }
     const plugin = array_find_last_default(
-      /* isOptionalObject*/
+      /* isOptionalObject */
       false,
       plugins,
       (plugin2) => plugin2.printers && Object.prototype.hasOwnProperty.call(plugin2.printers, astFormat)
@@ -2784,10 +2692,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     throw new ConfigError(message);
   }
-  function resolveParser({
-    plugins,
-    parser
-  }) {
+  function resolveParser({ plugins, parser }) {
     const plugin = getParserPluginByParserName(plugins, parser);
     return initParser(plugin, parser);
   }
@@ -2808,8 +2713,8 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     locStart: null,
     locEnd: null
   };
-  function normalizeFormatOptions(options, opts = {}) {
-    var _a;
+  async function normalizeFormatOptions(options, opts = {}) {
+    var _a2;
     const rawOptions = { ...options };
     if (!rawOptions.parser) {
       if (!rawOptions.filepath) {
@@ -2841,12 +2746,12 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       rawOptions.plugins,
       rawOptions.parser
     );
-    const parser = initParser(parserPlugin, rawOptions.parser);
+    const parser = await initParser(parserPlugin, rawOptions.parser);
     rawOptions.astFormat = parser.astFormat;
     rawOptions.locEnd = parser.locEnd;
     rawOptions.locStart = parser.locStart;
-    const printerPlugin = ((_a = parserPlugin.printers) == null ? void 0 : _a[parser.astFormat]) ? parserPlugin : getPrinterPluginByAstFormat(rawOptions.plugins, parser.astFormat);
-    const printer = initPrinter(printerPlugin, parser.astFormat);
+    const printerPlugin = ((_a2 = parserPlugin.printers) == null ? void 0 : _a2[parser.astFormat]) ? parserPlugin : getPrinterPluginByAstFormat(rawOptions.plugins, parser.astFormat);
+    const printer = await initPrinter(printerPlugin, parser.astFormat);
     rawOptions.printer = printer;
     const pluginDefaults = printerPlugin.defaultOptions ? Object.fromEntries(
       Object.entries(printerPlugin.defaultOptions).filter(
@@ -2871,13 +2776,13 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
 
   // src/main/parse.js
   var import_code_frame = __toESM(require_lib(), 1);
-  function parse(originalText, options) {
-    const parser = resolveParser(options);
+  async function parse(originalText, options) {
+    const parser = await resolveParser(options);
     const text = parser.preprocess ? parser.preprocess(originalText, options) : originalText;
     options.originalText = text;
     let ast;
     try {
-      ast = parser.parse(
+      ast = await parser.parse(
         text,
         options,
         // TODO: remove the third argument in v4
@@ -2902,7 +2807,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var parse_default = parse;
 
   // src/main/multiparser.js
-  function printEmbeddedLanguages(path, genericPrint, options, printAstToDoc2, embeds) {
+  async function printEmbeddedLanguages(path, genericPrint, options, printAstToDoc2, embeds) {
     const {
       embeddedLanguageFormatting,
       printer: {
@@ -2916,7 +2821,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
     if (embed.length > 2) {
       throw new Error(
-        "printer.embed has too many parameters. The API changed in Prettier v3. Please update your plugin. See https://prettier.io/docs/en/plugins.html#optional-embed"
+        "printer.embed has too many parameters. The API changed in Prettier v3. Please update your plugin. See https://prettier.io/docs/plugins#optional-embed"
       );
     }
     const getVisitorKeys = create_get_visitor_keys_function_default(
@@ -2928,7 +2833,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     for (const { print, node, pathStack } of embedCallResults) {
       try {
         path.stack = pathStack;
-        const doc = print(textToDocForEmbed, genericPrint, path, options);
+        const doc = await print(textToDocForEmbed, genericPrint, path, options);
         if (doc) {
           embeds.set(node, doc);
         }
@@ -2974,18 +2879,22 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       embeds.set(node, result);
     }
   }
-  function textToDoc(text, partialNextOptions, parentOptions, printAstToDoc2) {
-    const options = normalize_format_options_default(
+  async function textToDoc(text, partialNextOptions, parentOptions, printAstToDoc2) {
+    const options = await normalize_format_options_default(
       {
         ...parentOptions,
         ...partialNextOptions,
         parentParser: parentOptions.parser,
-        originalText: text
+        originalText: text,
+        // Improve this if we calculate the relative index
+        cursorOffset: void 0,
+        rangeStart: void 0,
+        rangeEnd: void 0
       },
       { passThrough: true }
     );
-    const { ast } = parse_default(text, options);
-    const doc = printAstToDoc2(ast, options);
+    const { ast } = await parse_default(text, options);
+    const doc = await printAstToDoc2(ast, options);
     return stripTrailingHardline(doc);
   }
 
@@ -3011,14 +2920,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   var print_ignored_default = printIgnored;
 
   // src/main/ast-to-doc.js
-  function printAstToDoc(ast, options) {
-    ({ ast } = prepareToPrint(ast, options));
+  async function printAstToDoc(ast, options) {
+    ({ ast } = await prepareToPrint(ast, options));
     const cache = /* @__PURE__ */ new Map();
     const path = new ast_path_default(ast);
     const ensurePrintingNode = create_print_pre_check_function_default(options);
     const embeds = /* @__PURE__ */ new Map();
-    printEmbeddedLanguages(path, mainPrint, options, printAstToDoc, embeds);
-    const doc = callPluginPrintFunction(
+    await printEmbeddedLanguages(path, mainPrint, options, printAstToDoc, embeds);
+    const doc = await callPluginPrintFunction(
       path,
       options,
       mainPrint,
@@ -3026,6 +2935,14 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
       embeds
     );
     ensureAllCommentsPrinted(options);
+    if (options.cursorOffset >= 0) {
+      if (options.nodeAfterCursor && !options.nodeBeforeCursor) {
+        return [cursor, doc];
+      }
+      if (options.nodeBeforeCursor && !options.nodeAfterCursor) {
+        return [doc, cursor];
+      }
+    }
     return doc;
     function mainPrint(selector, args) {
       if (selector === void 0 || selector === path) {
@@ -3054,35 +2971,42 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     }
   }
   function callPluginPrintFunction(path, options, printPath, args, embeds) {
-    var _a;
+    var _a2;
     const { node } = path;
     const { printer } = options;
     let doc;
-    if ((_a = printer.hasPrettierIgnore) == null ? void 0 : _a.call(printer, path)) {
+    if ((_a2 = printer.hasPrettierIgnore) == null ? void 0 : _a2.call(printer, path)) {
       doc = print_ignored_default(path, options);
     } else if (embeds.has(node)) {
       doc = embeds.get(node);
     } else {
       doc = printer.print(path, options, printPath, args);
     }
-    if (node === options.cursorNode) {
-      doc = inheritLabel(doc, (doc2) => [cursor, doc2, cursor]);
+    switch (node) {
+      case options.cursorNode:
+        doc = inheritLabel(doc, (doc2) => [cursor, doc2, cursor]);
+        break;
+      case options.nodeBeforeCursor:
+        doc = inheritLabel(doc, (doc2) => [doc2, cursor]);
+        break;
+      case options.nodeAfterCursor:
+        doc = inheritLabel(doc, (doc2) => [cursor, doc2]);
+        break;
     }
     if (printer.printComment && (!printer.willPrintOwnComments || !printer.willPrintOwnComments(path, options))) {
       doc = printComments(path, doc, options);
     }
     return doc;
   }
-  function prepareToPrint(ast, options) {
+  async function prepareToPrint(ast, options) {
     const comments = ast.comments ?? [];
     options[Symbol.for("comments")] = comments;
-    options[Symbol.for("tokens")] = ast.tokens ?? [];
     options[Symbol.for("printedComments")] = /* @__PURE__ */ new Set();
     attachComments(ast, options);
     const {
       printer: { preprocess }
     } = options;
-    ast = preprocess ? preprocess(ast, options) : ast;
+    ast = preprocess ? await preprocess(ast, options) : ast;
     return { ast, comments };
   }
   return __toCommonJS(ast_to_doc_exports);

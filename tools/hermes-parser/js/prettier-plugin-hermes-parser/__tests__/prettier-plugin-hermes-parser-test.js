@@ -11,8 +11,6 @@
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../.prettierrc.json';
 
-// $FlowExpectedError[untyped-import]
-import * as prettierV2 from 'prettier-v2-for-testing';
 import * as prettierV3 from 'prettier';
 
 function getOptions() {
@@ -24,7 +22,7 @@ function getOptions() {
   };
 }
 
-async function runTestWithPrettier(prettier: typeof prettierV2) {
+async function runTestWithPrettier(prettier: typeof prettierV3) {
   const code = `
   // Function with graphql embed
   function foo() {
@@ -132,10 +130,6 @@ async function runTestWithPrettier(prettier: typeof prettierV2) {
 }
 
 describe('prettier-plugin-hermes-parser', () => {
-  it('uses plugin for v2', async () => {
-    await runTestWithPrettier(prettierV2);
-  });
-
   it('uses plugin for v3', async () => {
     await runTestWithPrettier(prettierV3);
   });

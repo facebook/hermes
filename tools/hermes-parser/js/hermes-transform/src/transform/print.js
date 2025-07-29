@@ -18,9 +18,6 @@ import * as prettier from 'prettier';
 import {mutateESTreeASTCommentsForPrettier} from './comments/comments';
 import type {VisitorKeysType} from 'hermes-parser';
 
-let cache = 1;
-const cacheBase = Math.random();
-
 export async function print(
   ast: MaybeDetachedNode<Program>,
   originalCode: string,
@@ -50,88 +47,27 @@ export async function print(
   // Fix up the AST to match what prettier expects.
   mutateESTreeASTForPrettier(program, visitorKeys);
 
-  switch (getPrettierMajorVersion()) {
-    case '3': {
-      // Lazy require this module as it only exists in prettier v3.
-      const prettierFlowPlugin = require('prettier/plugins/flow');
-      return prettier.format(
-        codeForPrinting,
-        // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
+  // Lazy require this module as it only exists in prettier v3.
+  const prettierFlowPlugin = require('prettier/plugins/flow');
+  return prettier.format(
+    codeForPrinting,
+    // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
+    {
+      ...prettierOptions,
+      parser: 'flow',
+      requirePragma: false,
+      plugins: [
         {
-          ...prettierOptions,
-          parser: 'flow',
-          requirePragma: false,
-          plugins: [
-            {
-              parsers: {
-                flow: {
-                  ...prettierFlowPlugin.parsers.flow,
-                  parse() {
-                    return program;
-                  },
-                },
+          parsers: {
+            flow: {
+              ...prettierFlowPlugin.parsers.flow,
+              parse() {
+                return program;
               },
             },
-          ],
+          },
         },
-      );
-    }
-    case '2': {
-      const hermesPlugin = require('prettier-plugin-hermes-parser');
-      const hermesParser = hermesPlugin.parsers?.hermes;
-      if (hermesParser == null) {
-        throw new Error('Hermes parser plugin not found');
-      }
-
-      return prettier.format(
-        codeForPrinting,
-        // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
-        {
-          ...prettierOptions,
-          parser: 'hermes',
-          requirePragma: false,
-          plugins: [
-            // $FlowExpectedError[incompatible-call] Cache value is not expected but needed in this case.
-            {
-              parsers: {
-                hermes: {
-                  ...hermesParser,
-
-                  // Prettier caches the plugin, by making this key always unique we ensure the new `parse`
-                  // function with the correct AST is always called.
-                  cache: `${cacheBase}-${cache++}`,
-
-                  // Provide the passed AST to prettier
-                  parse() {
-                    return program;
-                  },
-                },
-              },
-              printers: hermesPlugin.printers,
-            },
-          ],
-        },
-      );
-    }
-    case 'UNSUPPORTED':
-    default: {
-      throw new Error(
-        `Unknown or unsupported prettier version of "${prettier.version}". Only major versions 3 or 2 of prettier are supported.`,
-      );
-    }
-  }
-}
-
-function getPrettierMajorVersion(): '3' | '2' | 'UNSUPPORTED' {
-  const {version} = prettier;
-
-  if (version.startsWith('3.')) {
-    return '3';
-  }
-
-  if (version.startsWith('2.')) {
-    return '2';
-  }
-
-  return 'UNSUPPORTED';
+      ],
+    },
+  );
 }

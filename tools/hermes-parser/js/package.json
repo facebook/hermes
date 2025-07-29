@@ -22,8 +22,7 @@
     "jest-specific-snapshot": "^5.0.0",
     "mkdirp": "^1.0.4",
     "patch-package": "^6.5.0",
-    "prettier": "3.6.2",
-    "prettier-v2-for-testing": "npm:prettier@2.8.8"
+    "prettier": "3.6.2"
   },
   "resolutions": {
     "jest-snapshot": "^29.2.2"
