@@ -117,6 +117,8 @@ static int executeHBCBytecodeFromCL(
               flags.DumpJITCode ||
               flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off)
           .withEnableEval(cl::compilerRuntimeFlags.EnableEval)
+          .withEnableAsyncGenerators(
+              cl::compilerRuntimeFlags.EnableAsyncGenerators)
           .withVerifyEvalIR(cl::compilerRuntimeFlags.VerifyIR)
           .withOptimizedEval(cl::compilerRuntimeFlags.OptimizedEval)
           .withAsyncBreakCheckInEval(
@@ -219,6 +221,7 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
                         .build())
       .withVMExperimentFlags(flags.VMExperimentFlags)
       .withES6Proxy(flags.ES6Proxy)
+      .withEnableAsyncGenerators(cl::compilerRuntimeFlags.EnableAsyncGenerators)
       .withIntl(flags.Intl)
       .withMicrotaskQueue(flags.MicrotaskQueue)
       .withEnableHermesInternal(flags.EnableHermesInternal)

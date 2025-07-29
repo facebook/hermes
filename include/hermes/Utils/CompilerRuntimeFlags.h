@@ -48,6 +48,12 @@ struct CompilerRuntimeFlags {
       llvh::cl::init(false),
       llvh::cl::desc("Enable support for ES6 block scoping"),
       llvh::cl::Hidden};
+
+  llvh::cl::opt<bool> EnableAsyncGenerators{
+      "Xasync-generators",
+      llvh::cl::init(false),
+      llvh::cl::desc("Enable support for async generators"),
+      llvh::cl::Hidden};
 };
 
 } // namespace hermes

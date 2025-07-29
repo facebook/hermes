@@ -635,6 +635,8 @@ std::shared_ptr<Context> createContext() {
   context->setStrictMode(cli::Typed || cli::StrictMode);
   context->setEnableEval(cli::compilerRuntimeFlags.EnableEval);
   context->setEnableES6BlockScoping(cli::compilerRuntimeFlags.ES6BlockScoping);
+  context->setEnableAsyncGenerators(
+      cli::compilerRuntimeFlags.EnableAsyncGenerators);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());

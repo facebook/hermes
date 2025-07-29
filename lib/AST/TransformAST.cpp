@@ -6,10 +6,14 @@
  */
 
 #include "hermes/AST/TransformAST.h"
+#include "hermes/AST/AsyncGenerator.h"
 
 namespace hermes {
 
 ESTree::Node *transformASTForCompilation(Context &context, ESTree::Node *root) {
+  if (context.getEnableAsyncGenerators()) {
+    root = transformAsyncGenerators(context, root);
+  }
   return root;
 }
 

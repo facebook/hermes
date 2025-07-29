@@ -18,6 +18,7 @@ const char libhermes[] =
 "var Error;"
 "var Function;"
 "var HermesInternal;"
+"var HermesAsyncIteratorsInternal;"
 "var JSON;"
 "var Map;"
 "var Math;"

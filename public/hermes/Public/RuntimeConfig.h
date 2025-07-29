@@ -69,6 +69,9 @@ class PinnedHermesValue;
   /* Support for ES6 block scoping. */                                 \
   F(constexpr, bool, ES6BlockScoping, false)                           \
                                                                        \
+  /* Support for async generators in eval. */                          \
+  F(constexpr, bool, EnableAsyncGenerators, false)                     \
+                                                                       \
   /* Support for ECMA-402 Intl APIs. */                                \
   F(constexpr, bool, Intl, true)                                       \
                                                                        \
