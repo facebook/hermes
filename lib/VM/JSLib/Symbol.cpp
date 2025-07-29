@@ -76,6 +76,13 @@ void createSymbolConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::iterator),
       lv.symbolHandle,
       dpf);
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolAsyncIterator);
+  defineProperty(
+      runtime,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::asyncIterator),
+      lv.symbolHandle,
+      dpf);
   lv.symbolHandle =
       Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable);
   defineProperty(

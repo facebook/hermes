@@ -417,6 +417,7 @@ STR(keyFor, "keyFor")
 STR(hasInstance, "hasInstance")
 STR(isConcatSpreadable, "isConcatSpreadable")
 STR(iterator, "iterator")
+STR(asyncIterator, "asyncIterator")
 STR(toPrimitive, "toPrimitive")
 STR(toStringTag, "toStringTag")
 
@@ -473,6 +474,7 @@ STR(fileName, "fileName")
 STR(setPromiseRejectionTrackingHook, "setPromiseRejectionTrackingHook")
 STR(enablePromiseRejectionTracker, "enablePromiseRejectionTracker")
 STR(spawnAsync, "spawnAsync") /* NOLINT */
+STR(makeAsyncIterator, "makeAsyncIterator") /* NOLINT */
 
 STR(SHBuiltin, "$SHBuiltin")
 
@@ -488,6 +490,7 @@ STR(squareObjectNull, "[object Null]")
 STR(squareObjectGlobal, "[object global]")
 STR(squareSymbolHasInstance, "[Symbol.hasInstance]")
 STR(squareSymbolIterator, "[Symbol.iterator]")
+STR(squareSymbolAsyncIterator, "[Symbol.asyncIterator]")
 STR(squareSymbolToPrimitive, "[Symbol.toPrimitive]")
 STR(squareSymbolToStringTag, "[Symbol.toStringTag]")
 STR(squareSymbolMatch, "[Symbol.match]")

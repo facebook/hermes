@@ -54,7 +54,7 @@ void ESTreeIRGen::genStatement(ESTree::Node *stmt) {
   }
 
   if (auto *FOS = llvh::dyn_cast<ESTree::ForOfStatementNode>(stmt)) {
-    return genForOfStatement(FOS);
+    return FOS->_await ? genAsyncForOfStatement(FOS) : genForOfStatement(FOS);
   }
 
   if (auto *Ret = llvh::dyn_cast<ESTree::ReturnStatementNode>(stmt)) {
@@ -970,6 +970,104 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
 
   // Restore the outer scope for subsequent code.
   restoreScope(outerScope);
+
+  Builder.setInsertionBlock(exitBlock);
+}
+
+void ESTreeIRGen::genAsyncForOfStatement(
+    ESTree::ForOfStatementNode *forOfStmt) {
+  auto *outerScope = curFunction()->curScope();
+
+  // If block scoping is enabled, check if anything in the loop might capture,
+  // so we know whether to create inner scopes for the loop.
+  bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
+      !treeDoesNotCapture(forOfStmt);
+
+  // Create an inner scope for the loop init if needed and set it as the top
+  // scope. All loop variables will be declared in this scope.
+  if (createInnerScopes) {
+    auto *initScope = Builder.createCreateScopeInst(
+        curFunction()->getOrCreateInnerVariableScope(forOfStmt), outerScope);
+    curFunction()->setCurScope(initScope);
+  }
+
+  emitScopeDeclarations(forOfStmt->getScope());
+
+  auto *function = Builder.getInsertionBlock()->getParent();
+  auto *getNextBlock = Builder.createBasicBlock(function);
+  auto *bodyBlock = Builder.createBasicBlock(function);
+  auto *exitBlock = Builder.createBasicBlock(function);
+
+  // Initialize the goto labels.
+  curFunction()->initLabel(forOfStmt, exitBlock, getNextBlock);
+
+  auto *exprValue = genExpression(forOfStmt->_right);
+  const IteratorRecordSlow iteratorRecord = emitGetAsyncIteratorSlow(exprValue);
+
+  Builder.createBranchInst(getNextBlock);
+
+  // Attempt to retrieve the next value. If iteration is complete, finish the
+  // loop. This stays outside the SurroundingTry below because exceptions in
+  // `.next()` should not call `.return()` on the iterator.
+  Builder.setInsertionBlock(getNextBlock);
+  auto *nextResult = genYieldOrAwaitExpr(emitIteratorNextSlow(iteratorRecord));
+  auto *done = emitIteratorCompleteSlow(nextResult);
+  Builder.createCondBranchInst(done, exitBlock, bodyBlock);
+
+  Builder.setInsertionBlock(bodyBlock);
+
+  // Create a scope for the body if needed.
+  if (createInnerScopes) {
+    auto *innerScope = Builder.createCreateScopeInst(
+        curFunction()->curScope()->getVariableScope(), outerScope);
+    curFunction()->setCurScope(innerScope);
+  }
+
+  auto *nextValue = emitIteratorValueSlow(nextResult);
+
+  emitTryCatchScaffolding(
+      getNextBlock,
+      // emitBody.
+      [this, forOfStmt, nextValue, &iteratorRecord, getNextBlock](
+          BasicBlock *catchBlock) {
+        // Generate IR for the body of Try
+        SurroundingTry thisTry{
+            curFunction(),
+            forOfStmt,
+            catchBlock,
+            {},
+            [this, &iteratorRecord, getNextBlock, forOfStmt](
+                ESTree::Node *,
+                ControlFlowChange cfc,
+                BasicBlock *continueTarget) {
+              // Only emit the iteratorClose if this is a
+              // 'break' or if the target of the control flow
+              // change is outside the current loop. If
+              // continuing the existing loop, do not close
+              // the iterator.
+              if (cfc == ControlFlowChange::Break ||
+                  continueTarget != getNextBlock)
+                emitAsyncIteratorCloseSlow(forOfStmt, iteratorRecord, false);
+            }};
+
+        // Note: obtaining the value is not protected, but storing it is.
+        createLRef(forOfStmt->_left, false).emitStore(nextValue);
+
+        genStatement(forOfStmt->_body);
+        Builder.setLocation(SourceErrorManager::convertEndToLocation(
+            forOfStmt->_body->getSourceRange()));
+      },
+      // emitNormalCleanup.
+      []() {},
+      // emitHandler.
+      [this, &iteratorRecord, forOfStmt](BasicBlock *) {
+        auto *catchReg = Builder.createCatchInst();
+        emitAsyncIteratorCloseSlow(forOfStmt, iteratorRecord, true);
+        Builder.createThrowInst(catchReg);
+      });
+
+  // Restore the outer scope for subsequent code.
+  curFunction()->setCurScope(outerScope);
 
   Builder.setInsertionBlock(exitBlock);
 }

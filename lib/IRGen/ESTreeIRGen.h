@@ -704,6 +704,7 @@ class ESTreeIRGen {
   void genForOfFastArrayStatement(
       ESTree::ForOfStatementNode *forOfStmt,
       flow::ArrayType *type);
+  void genAsyncForOfStatement(ESTree::ForOfStatementNode *forOfStmt);
   void genWhileLoop(ESTree::WhileStatementNode *loop);
   void genDoWhileLoop(ESTree::DoWhileStatementNode *loop);
 
@@ -1460,6 +1461,9 @@ class ESTreeIRGen {
   /// \return the internal value @@iterator
   Value *emitIteratorSymbol();
 
+  /// \return the internal value @@asyncIterator
+  Value *emitAsyncIteratorSymbol();
+
   /// IteratorRecord as defined in ES2018 7.4.1 GetIterator
   struct IteratorRecordSlow {
     Value *iterator;
@@ -1477,6 +1481,15 @@ class ESTreeIRGen {
   ///
   /// \return (iterator, nextMethod)
   IteratorRecordSlow emitGetIteratorSlow(Value *obj);
+
+  /// Call obj[@@asyncIterator], which should return an async iterator,
+  /// and return the iterator itself and its \c next() method.
+  ///
+  /// NOTE: This API is slow and should only be used if it is necessary to
+  /// provide a value to the `next()` method on the iterator.
+  ///
+  /// \return (iterator, nextMethod)
+  IteratorRecordSlow emitGetAsyncIteratorSlow(Value *obj);
 
   /// ES2018 7.4.2 IteratorNext
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratornext
@@ -1499,13 +1512,35 @@ class ESTreeIRGen {
   /// \return \c iterResult.value
   Value *emitIteratorValueSlow(Value *iterResult);
 
+  /// A helper called only from \c emitIteratorCloseSlow or
+  /// emitAsyncIteratorCloseSlow. It performs the actual work.
+  void _emitIteratorCloseImpl(
+      ESTree::Node *astNode,
+      IteratorRecordSlow iteratorRecord,
+      bool ignoreInnerException,
+      bool isAsyncIterator);
+
   /// ES2018 7.4.6 IteratorClose
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-iteratorclose
   ///
+  /// \param astNode the caller AST node
   /// \param ignoreInnerException if set, exceptions thrown by the \c
   ///     iterator.return() method will be ignored and its result will not be
   ///     checked whether it is an object.
   void emitIteratorCloseSlow(
+      ESTree::Node *astNode,
+      IteratorRecordSlow iteratorRecord,
+      bool ignoreInnerException);
+
+  /// ES2018 7.4.7 AsyncIteratorClose
+  /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-asynciteratorclose
+  ///
+  /// \param astNode the caller AST node
+  /// \param ignoreInnerException if set, exceptions thrown by the \c
+  ///     async iterator.return() method will be ignored and its result will not
+  ///     be checked whether it is an object.
+  void emitAsyncIteratorCloseSlow(
+      ESTree::Node *astNode,
       IteratorRecordSlow iteratorRecord,
       bool ignoreInnerException);
 
