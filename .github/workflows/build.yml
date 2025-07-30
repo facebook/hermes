@@ -193,13 +193,12 @@ jobs:
       working-directory: test/ApplePlatformsIntegrationTestApp
     - name: Test iPhone application
       run: |-
-        # macos-14 installs simulators for iPhone 15/16, so use the oldest model
-        # here:
+        # macos-14 installs simulators for iPhone 15/16
         # https://github.com/actions/runner-images/blob/main/images/macos/macos-14-arm64-Readme.md
         xcodebuild test \
           -workspace ApplePlatformsIntegrationTests.xcworkspace \
           -configuration Debug \
-          -destination 'platform=iOS Simulator,name=iPhone 15' \
+          -destination 'platform=iOS Simulator,name=iPhone 16' \
           -scheme ApplePlatformsIntegrationMobileTests
       working-directory: test/ApplePlatformsIntegrationTestApp
     - name: Test Apple Vision application
@@ -549,6 +548,11 @@ jobs:
       HERMES_WS_DIR: /home/runner/work/hermes
       ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
     steps:
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'zulu'
     - name: Checkout Hermes
       uses: actions/checkout@v4.1.0
     - name: Checkout Test262

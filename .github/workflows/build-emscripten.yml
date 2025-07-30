@@ -1,0 +1,48 @@
+name: build-emscripten
+
+on:
+  workflow_call
+
+jobs:
+  build-emscripten:
+    runs-on: ubuntu-22.04
+    container:
+      image: emscripten/emsdk:3.1.17
+    steps:
+    - name: Install dependencies
+      run: |-
+        apt update
+        apt install -y libicu-dev libreadline-dev
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Build Hermes Compiler
+      run: |-
+        cmake -S hermes -B build_host_hermesc
+        cmake --build ./build_host_hermesc --target hermesc -j 4
+    - name: Build Hermes with Emscripten for Website Playground
+      run: |-
+        echo LINKER_FLAGS: $LINKER_FLAGS
+        cmake -S hermes -B playground \
+            -DCMAKE_BUILD_TYPE=Release  \
+            -DCMAKE_EXE_LINKER_FLAGS="$LINKER_FLAGS" \
+            -DCMAKE_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake" \
+            -DIMPORT_HERMESC="$PWD/build_host_hermesc/ImportHermesc.cmake"
+        cmake --build ./playground --target hermes -j 4
+        cmake --build ./playground --target hermesc -j 4
+        cmake --build ./playground --target emhermesc -j 4
+        EMHERMESC="$PWD/playground/bin/emhermesc.js" node ./hermes/tools/emhermesc/test.js
+      env:
+        LINKER_FLAGS: "-s WASM=1 -s ALLOW_MEMORY_GROWTH=0 -s TOTAL_MEMORY=33554432 -s MODULARIZE=1 -s EXPORT_NAME=createHermes -s INVOKE_RUN=0 -s EXIT_RUNTIME=1 -s NODERAWFS=0 -s EXTRA_EXPORTED_RUNTIME_METHODS=[callMain,FS] -s EXPORTED_FUNCTIONS=[_malloc,_free]"
+    - name: Create Playground tarball
+      run: |-
+        mkdir output staging
+        cp ./playground/bin/hermes.js ./playground/bin/hermes.wasm staging
+        tar -C staging -czvf output/${TAR_NAME} .
+        shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
+      env:
+        TAR_NAME: hermes-cli-emscripten.tar.gz
+    - uses: actions/upload-artifact@v4.3.1
+      with:
+        name: emscripten-hermes
+        path: output
