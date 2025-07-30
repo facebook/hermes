@@ -6,6 +6,8 @@ on:
 jobs:
   build-android:
     runs-on: 8-core-ubuntu
+    env:
+      HERMES_WS_DIR: /home/runner/work/hermes/hermes
     container:
       image: reactnativecommunity/react-native-android:latest
       env:
@@ -18,6 +20,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Build Hermes Compiler
+        run: |-
+          cmake -S . -B build
+          # Build the Hermes compiler so that the cross compiler build can
+          # access it to build the VM
+          cmake --build ./build --target hermesc -j 4
       - name: Build android
         shell: bash
         run: |

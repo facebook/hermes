@@ -20,3 +20,12 @@ kotlin {
     allWarningsAsErrors = providers.gradleProperty("warningsAsErrors").orNull.toBoolean()
   }
 }
+
+gradlePlugin {
+  plugins {
+    register("testUtils") {
+      id = "com.facebook.hermes.plugins.internal.testUtils"
+      implementationClass = "TestUtilsPlugin"
+    }
+  }
+}
