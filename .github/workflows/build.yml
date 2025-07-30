@@ -572,7 +572,18 @@ jobs:
       with:
         api-level: 29
         emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-        script: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+        script: |
+          adb logcat -c
+          touch ./emulator.log
+          chmod 777 ./emulator.log
+          adb logcat >> ./emulator.log &
+          cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+    - name: Upload emulator log
+      if: always()
+      uses: actions/upload-artifact@v4.3.4
+      with:
+        name: emulator.log
+        path: emulator.log
   test-macos-test262:
     runs-on: macos-14
     steps:
