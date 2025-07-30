@@ -16,3 +16,9 @@ pluginManagement {
 }
 
 rootProject.name = "Hermes"
+
+include(":hermes")
+
+include(":cppruntime")
+
+include(":intltest")
