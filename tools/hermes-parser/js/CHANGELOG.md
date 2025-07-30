@@ -1,3 +1,14 @@
+## 0.31.0
+
+### `hermes-transform`
+
+- Remove support for Prettier v2
+
+### `prettier-plugin-hermes-parser`
+
+- Remove support for Prettier v2
+- Synced with recent Prettier main branch
+
 ## 0.30.0
 
 ### `hermes-parser`

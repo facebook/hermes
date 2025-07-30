@@ -1,6 +1,6 @@
 {
   "name": "prettier-plugin-hermes-parser",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "description": "Hermes parser plugin for Prettier.",
   "main": "dist/index.js",
   "license": "MIT",
@@ -9,9 +9,9 @@
     "url": "git@github.com:facebook/hermes.git"
   },
   "dependencies": {
-    "hermes-estree": "0.30.0",
-    "hermes-parser": "0.30.0",
-    "prettier-plugin-hermes-parser": "0.30.0"
+    "hermes-estree": "0.31.0",
+    "hermes-parser": "0.31.0",
+    "prettier-plugin-hermes-parser": "0.31.0"
   },
   "peerDependencies": {
     "prettier": "^3.0.0"
