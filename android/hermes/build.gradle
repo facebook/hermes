@@ -7,42 +7,50 @@
 
 plugins {
   id("com.android.library")
-  id("com.facebook.hermes.plugins.internal.testUtils")
 }
 
-buildDir = "${testUtils.hermesWs}/build_android/hermes"
+def hermesWs = System.getenv("HERMES_WS_DIR")
+def outputDir = "${hermesWs}/build_android/outputs"
+def hermesC = "$hermesWs/build/ImportHermesc.cmake"
+def abis = project.hasProperty("abis") 
+  ? (project.getProperty("abis") instanceof String 
+      ? project.getProperty("abis").split(",") 
+      : project.getProperty("abis")) 
+  : ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+
+buildDir = "${hermesWs}/build_android/hermes"
 buildDir.mkdirs()
 
 android {
-  compileSdkVersion = testUtils.compileSdk
+  compileSdkVersion = 36
 
   defaultConfig {
-    minSdkVersion testUtils.minSdk
+    minSdkVersion 21
     namespace "com.facebook.hermes"
 
     externalNativeBuild {
       cmake {
         arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
         arguments "-DHERMES_IS_ANDROID=True"
-        arguments "-DHERMES_FACEBOOK_BUILD=${testUtils.facebookBuild}"
+        arguments "-DHERMES_FACEBOOK_BUILD=0"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DIMPORT_HERMESC=${testUtils.hermesC}"
+        arguments "-DIMPORT_HERMESC=${hermesC}"
         arguments "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True"
         arguments "-DHERMES_BUILD_SHARED_JSI=True"
         targets "libhermes"
       }
     }
     ndk {
-      abiFilters (*testUtils.abis)
+      abiFilters (*abis)
     }
   }
 
   externalNativeBuild {
     cmake {
-      version testUtils.cmakeVersion
+      version "3.22.1"
       path "../../CMakeLists.txt"
-      buildStagingDirectory = "${testUtils.hermesWs}/staging/hermes"
+      buildStagingDirectory = "${hermesWs}/staging/hermes"
       buildStagingDirectory.mkdirs()
     }
   }
@@ -123,33 +131,33 @@ android {
     def aarDir = "$buildDir/outputs/aar"
     tasks.named("assembleIntlDebug").configure {
       doLast {
-        file("$aarDir/hermes-intl-debug.aar").renameTo("${testUtils.outputDir}/hermes-debug.aar")
-        file("$aarDir/hermes-intl.aar").renameTo("${testUtils.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-intl-debug.aar").renameTo("${outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-intl.aar").renameTo("${outputDir}/hermes-debug.aar")
       }
     }
     tasks.named("assembleIntlRelease").configure {
       doLast {
-        file("$aarDir/hermes-intl-release.aar").renameTo("${testUtils.outputDir}/hermes-release.aar")
-        file("$aarDir/hermes-intl.aar").renameTo("${testUtils.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-intl-release.aar").renameTo("${outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-intl.aar").renameTo("${outputDir}/hermes-release.aar")
       }
     }
     tasks.named("assembleNointlDebug").configure {
       doLast {
-        file("$aarDir/hermes-nointl-debug.aar").renameTo("${testUtils.outputDir}/hermes-debug.aar")
-        file("$aarDir/hermes-nointl.aar").renameTo("${testUtils.outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-nointl-debug.aar").renameTo("${outputDir}/hermes-debug.aar")
+        file("$aarDir/hermes-nointl.aar").renameTo("${outputDir}/hermes-debug.aar")
       }
     }
     tasks.named("assembleNointlRelease").configure {
       doLast {
-        file("$aarDir/hermes-nointl-release.aar").renameTo("${testUtils.outputDir}/hermes-release.aar")
-        file("$aarDir/hermes-nointl.aar").renameTo("${testUtils.outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-nointl-release.aar").renameTo("${outputDir}/hermes-release.aar")
+        file("$aarDir/hermes-nointl.aar").renameTo("${outputDir}/hermes-release.aar")
       }
     }
     tasks.named("mergeIntlDebugNativeLibs").configure {
       doLast { task ->
         copy {
           from(task)
-          into("${testUtils.outputDir}/unstripped-debug")
+          into("${outputDir}/unstripped-debug")
         }
       }
     }
@@ -157,7 +165,7 @@ android {
       doLast { task ->
         copy {
           from(task)
-          into("${testUtils.outputDir}/unstripped-release")
+          into("${outputDir}/unstripped-release")
         }
       }
     }
@@ -165,7 +173,7 @@ android {
       doLast { task ->
         copy {
           from(task)
-          into("${testUtils.outputDir}/unstripped-debug")
+          into("${outputDir}/unstripped-debug")
         }
       }
     }
@@ -173,7 +181,7 @@ android {
       doLast { task ->
         copy {
           from(task)
-          into("${testUtils.outputDir}/unstripped-release")
+          into("${outputDir}/unstripped-release")
         }
       }
     }

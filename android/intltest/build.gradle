@@ -11,21 +11,27 @@
 plugins {
   id("com.android.library")
   id("de.undercouch.download")
-  id("com.facebook.hermes.plugins.internal.testUtils")
 }
+
+def hermesWs = System.getenv("HERMES_WS_DIR")
+def outputDir = "${hermesWs}/build_android/outputs"
+def hermesC = "$hermesWs/build/ImportHermesc.cmake"
+def abis = project.hasProperty("abis") 
+  ? (project.getProperty("abis") instanceof String 
+      ? project.getProperty("abis").split(",") 
+      : project.getProperty("abis")) 
+  : ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
 
 import de.undercouch.gradle.tasks.download.Download
 
-buildDir = "${testUtils.hermesWs}/build_android/intltest"
+buildDir = "${hermesWs}/build_android/intltest"
 buildDir.mkdirs()
 
 def testDestination = "java/com/facebook/hermes/test/assets"
 
 task prepareTests() {
   doLast {
-    def test262Dir = file(testUtils.fbsource).exists() ?
-                 "${testUtils.fbsource}/xplat/third-party/javascript-test-suites/test262/" :
-                 "${testUtils.hermesWs}/test262"
+    def test262Dir = "${hermesWs}/test262"
     assert file(test262Dir).exists() : "Test262 directory not found"
     copy{
       from(test262Dir) {
@@ -58,37 +64,37 @@ task prepareTests() {
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
   namespace "com.facebook.hermes.intltest"
-  compileSdkVersion = testUtils.compileSdk
+  compileSdkVersion = 36
 
   defaultConfig {
-    minSdkVersion = testUtils.minSdk
+    minSdkVersion = 21
     ndk {
-      abiFilters (*testUtils.abis)
+      abiFilters (*abis)
     }
     testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
-        arguments "-DHERMES_FACEBOOK_BUILD=${testUtils.facebookBuild}"
+        arguments "-DHERMES_FACEBOOK_BUILD=0"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DIMPORT_HERMESC=${testUtils.hermesC}"
+        arguments "-DIMPORT_HERMESC=${hermesC}"
         arguments "-DHERMES_SLOW_DEBUG=False"
         arguments "-DHERMES_ENABLE_INTL=True"
         targets "jsijni", "jsijniepi", "libhermes"
       }
     }
     ndk {
-      abiFilters (*testUtils.abis)
+      abiFilters (*abis)
     }
   }
 
   externalNativeBuild {
     cmake {
-      version testUtils.cmakeVersion
+      version "3.22.1"
       path "../../CMakeLists.txt"
-      buildStagingDirectory = "${testUtils.hermesWs}/staging/intl"
+      buildStagingDirectory = "${hermesWs}/staging/intl"
       buildStagingDirectory.mkdirs()
     }
   }

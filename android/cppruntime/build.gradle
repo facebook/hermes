@@ -7,18 +7,26 @@
 
 plugins {
   id("com.android.library")
-  id("com.facebook.hermes.plugins.internal.testUtils")
 }
 
-buildDir = "${testUtils.hermesWs}/build_android/cppruntime"
+def hermesWs = System.getenv("HERMES_WS_DIR")
+def outputDir = "${hermesWs}/build_android/outputs"
+def hermesC = "$hermesWs/build/ImportHermesc.cmake"
+def abis = project.hasProperty("abis") 
+  ? (project.getProperty("abis") instanceof String 
+      ? project.getProperty("abis").split(",") 
+      : project.getProperty("abis")) 
+  : ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+
+buildDir = "${hermesWs}/build_android/cppruntime"
 buildDir.mkdirs()
 
 android {
   namespace = "com.facebook.hermes.cppruntime"
-  compileSdkVersion = testUtils.compileSdk
+  compileSdkVersion = 36
 
   defaultConfig {
-    minSdkVersion = testUtils.minSdk
+    minSdkVersion = 21
     externalNativeBuild {
       cmake {
         arguments "-DANDROID_STL=c++_shared"
@@ -27,15 +35,15 @@ android {
     }
 
     ndk {
-      abiFilters (*testUtils.abis)
+      abiFilters (*abis)
     }
   }
 
   externalNativeBuild {
     cmake {
-      version testUtils.cmakeVersion
+      version "3.22.1"
       path "src/main/cpp/CMakeLists.txt"
-      buildStagingDirectory = "${testUtils.hermesWs}/staging/cppruntime"
+      buildStagingDirectory = "${hermesWs}/staging/cppruntime"
       buildStagingDirectory.mkdirs()
     }
   }
@@ -52,14 +60,14 @@ android {
     def aarDir = "$buildDir/outputs/aar"
     tasks.named("assembleDebug").configure {
       doLast {
-        file("$aarDir/cppruntime-debug.aar").renameTo("${testUtils.outputDir}/hermes-cppruntime-debug.aar")
-        file("$aarDir/cppruntime.aar").renameTo("${testUtils.outputDir}/hermes-cppruntime-debug.aar")
+        file("$aarDir/cppruntime-debug.aar").renameTo("${outputDir}/hermes-cppruntime-debug.aar")
+        file("$aarDir/cppruntime.aar").renameTo("${outputDir}/hermes-cppruntime-debug.aar")
       }
     }
     tasks.named("assembleRelease").configure {
       doLast {
-        file("$aarDir/cppruntime-release.aar").renameTo("${testUtils.outputDir}/hermes-cppruntime-release.aar")
-        file("$aarDir/cppruntime.aar").renameTo("${testUtils.outputDir}/hermes-cppruntime-release.aar")
+        file("$aarDir/cppruntime-release.aar").renameTo("${outputDir}/hermes-cppruntime-release.aar")
+        file("$aarDir/cppruntime.aar").renameTo("${outputDir}/hermes-cppruntime-release.aar")
       }
     }
   }
