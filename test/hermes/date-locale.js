@@ -14,7 +14,7 @@ RUN: TZ=EST+5 LC_ALL=tr_TR _HERMES_TEST_LOCALE=tr_TR %shermes -exec %s \
 RUN:            | %FileCheck --match-full-lines -check-prefix TR %s
 TODO(T53144040) Fix LIT tests on Windows
 XFAIL: windows
-UNSUPPORTED: ubsan || intl
+UNSUPPORTED: ubsan || intl || unicode_lite
 */
 "use strict";
 

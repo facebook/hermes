@@ -6,6 +6,7 @@
  */
 
 // RUN: LANG=en_US.UTF-8 %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// UNSUPPORTED: unicode_lite
 "use strict";
 
 print('String');

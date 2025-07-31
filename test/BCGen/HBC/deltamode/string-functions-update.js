@@ -6,6 +6,7 @@
  */
 
 // RUN: LANG=en_US.UTF-8 %hermes -O -emit-binary -target=HBC -out=%T/base.hbc %S/Inputs/string-functions-base.js.in && LANG=en_US.UTF-8 %hermes -emit-binary -target=HBC -O -base-bytecode %T/base.hbc -out %T/update.hbc %s && LANG=en_US.UTF-8 %hermes -b %T/update.hbc | %FileCheck --match-full-lines %s
+// UNSUPPORTED: unicode_lite
 
 // This test is used for verifying the correct behavior of the bytecode compiled with the delta optimizing mode.
 // First generate the base bytecode, then generate the new bytecode, finally run the new bytecode.

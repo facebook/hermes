@@ -13,6 +13,8 @@ namespace {
 
 using namespace hermes::platform_unicode;
 
+// convertToCase is not implemented in PlatformUnicodeLite.
+#if HERMES_PLATFORM_UNICODE != HERMES_PLATFORM_UNICODE_LITE
 TEST(PlatformUnicode, CaseTest) {
   llvh::SmallVector<char16_t, 16> str = {u'a', u'B', u'c', u'\u00df'};
   convertToCase(str, CaseConversion::ToUpper, false /* useCurrentLocale */);
@@ -42,5 +44,6 @@ TEST(PlatformUnicode, Normalize) {
   EXPECT_EQ(u'\u0323', str[1]);
   EXPECT_EQ(u'\u0307', str[2]);
 }
+#endif
 
 } // namespace

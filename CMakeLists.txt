@@ -809,6 +809,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     coverage=${coverage_directory}
     shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
     check_native_stack=${HERMES_CHECK_NATIVE_STACK}
+    unicode_lite=${HERMES_UNICODE_LITE}
     )
 
   set(HERMES_LIT_TEST_PARAMS
