@@ -24,3 +24,21 @@ async function* mixedValuesGenerator() {
     print(sum);
 })();
 //CHECK: 6
+
+class C {
+  async *method1() {
+    yield 10;
+    yield Promise.resolve(20);
+    yield new Promise((resolve) => resolve(30));
+  }
+}
+
+// Test async generator with for await...of loop
+(async function testAsyncGenMethod() {
+    let sum = 0;
+    for await (const value of new C().method1()) {
+        sum += value;
+    }
+    print(sum);
+})();
+//CHECK-NEXT: 60

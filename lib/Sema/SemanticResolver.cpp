@@ -1652,7 +1652,11 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
     ESTree::IdentifierNode *id,
     ESTree::Node *&body,
     ESTree::NodeList &params) {
-  if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node)) {
+  // async generators may be lazy, in which case they aren't transformed.
+  // They'll be transformed when called, so check the flag to see if they're
+  // enabled to determine whether to error early.
+  if (compile_ && ESTree::isAsync(node) && ESTree::isGenerator(node) &&
+      !astContext_.getEnableAsyncGenerators()) {
     sm_.error(node->getSourceRange(), "async generators are unsupported");
   }
 

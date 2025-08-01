@@ -85,12 +85,6 @@ void ESTreeIRGen::restoreScope(CreateScopeInst *scope) {
 
 void ESTreeIRGen::genFunctionDeclaration(
     ESTree::FunctionDeclarationNode *func) {
-  if (func->_async && func->_generator) {
-    Builder.getModule()->getContext().getSourceErrorManager().error(
-        func->getSourceRange(), Twine("async generators are unsupported"));
-    return;
-  }
-
   // Find the name of the function.
   auto *id = llvh::cast<ESTree::IdentifierNode>(func->_id);
   Identifier functionName = Identifier::getFromPointer(id->_name);
@@ -132,12 +126,6 @@ Value *ESTreeIRGen::genFunctionExpression(
     Function::DefinitionKind functionKind,
     Variable *homeObject,
     ESTree::Node *parentNode) {
-  if (FE->_async && FE->_generator) {
-    Builder.getModule()->getContext().getSourceErrorManager().error(
-        FE->getSourceRange(), Twine("async generators are unsupported"));
-    return Builder.getLiteralUndefined();
-  }
-
   // This is the possibly empty scope containing the function expression name.
   Function::ScopedLexicalScopeChange lexScopeChange(
       curFunction()->function, FE->getScope());

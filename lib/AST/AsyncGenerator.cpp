@@ -45,6 +45,11 @@ class AsyncGenerator : public TransformationsBase {
   AsyncGenerator(Context &context) : TransformationsBase(context) {}
 
   void visit(ESTree::FunctionDeclarationNode *funcDecl, ESTree::Node **ppNode) {
+    // Lazy functions are not transformed.
+    if (llvh::cast<ESTree::BlockStatementNode>(funcDecl->_body)
+            ->isLazyFunctionBody)
+      return;
+
     if (funcDecl->_async && funcDecl->_generator) {
       recurseFunctionBody(funcDecl->_body, true);
       auto *refFunc = transformAsyncGeneratorFunction(
@@ -66,6 +71,11 @@ class AsyncGenerator : public TransformationsBase {
   }
 
   void visit(ESTree::FunctionExpressionNode *funcExpr, ESTree::Node **ppNode) {
+    // Lazy functions are not transformed.
+    if (llvh::cast<ESTree::BlockStatementNode>(funcExpr->_body)
+            ->isLazyFunctionBody)
+      return;
+
     if (funcExpr->_async && funcExpr->_generator) {
       recurseFunctionBody(funcExpr->_body, true);
       auto *refFunc = transformAsyncGeneratorFunction(
