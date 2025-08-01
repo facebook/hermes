@@ -23,10 +23,10 @@ buildDir.mkdirs()
 
 android {
   namespace = "com.facebook.hermes.cppruntime"
-  compileSdkVersion = 36
+  compileSdkVersion = 31
 
   defaultConfig {
-    minSdkVersion = 21
+    minSdkVersion = 16
     externalNativeBuild {
       cmake {
         arguments "-DANDROID_STL=c++_shared"

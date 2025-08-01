@@ -64,10 +64,10 @@ task prepareTests() {
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
   namespace "com.facebook.hermes.intltest"
-  compileSdkVersion = 36
+  compileSdkVersion = 31
 
   defaultConfig {
-    minSdkVersion = 21
+    minSdkVersion = 16
     ndk {
       abiFilters (*abis)
     }

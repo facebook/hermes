@@ -22,10 +22,10 @@ buildDir = "${hermesWs}/build_android/hermes"
 buildDir.mkdirs()
 
 android {
-  compileSdkVersion = 36
+  compileSdkVersion = 31
 
   defaultConfig {
-    minSdkVersion 21
+    minSdkVersion 16
     namespace "com.facebook.hermes"
 
     externalNativeBuild {
