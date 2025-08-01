@@ -145,8 +145,3 @@ android {
     }
   }
 }
-
-repositories {
-  google()
-  mavenCentral()
-}
