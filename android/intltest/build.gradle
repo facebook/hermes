@@ -9,22 +9,29 @@
 //   ./gradlew intl:connectedAndroidTest
 
 plugins {
-  id('com.android.library')
+  id("com.android.library")
   id("de.undercouch.download")
 }
 
+def hermesWs = System.getenv("HERMES_WS_DIR")
+def outputDir = "${hermesWs}/build_android/outputs"
+def hermesC = "$hermesWs/build/ImportHermesc.cmake"
+def abis = project.hasProperty("abis") 
+  ? (project.getProperty("abis") instanceof String 
+      ? project.getProperty("abis").split(",") 
+      : project.getProperty("abis")) 
+  : ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+
 import de.undercouch.gradle.tasks.download.Download
 
-buildDir = "${rootProject.ext.hermes_ws}/build_android/intltest"
+buildDir = "${hermesWs}/build_android/intltest"
 buildDir.mkdirs()
 
 def testDestination = "java/com/facebook/hermes/test/assets"
 
 task prepareTests() {
   doLast {
-    def test262Dir = file(rootProject.ext.fbsource).exists() ?
-                 "${rootProject.ext.fbsource}/xplat/third-party/javascript-test-suites/test262/" :
-                 "${rootProject.ext.hermes_ws}/test262"
+    def test262Dir = "${hermesWs}/test262"
     assert file(test262Dir).exists() : "Test262 directory not found"
     copy{
       from(test262Dir) {
@@ -56,29 +63,30 @@ task prepareTests() {
 
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
-  compileSdkVersion 31
+  namespace "com.facebook.hermes.intltest"
+  compileSdkVersion = 31
 
   defaultConfig {
-    minSdkVersion 16
+    minSdkVersion = 21
     ndk {
-      abiFilters (*rootProject.ext.abis)
+      abiFilters (*abis)
     }
     testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
     externalNativeBuild {
       cmake {
         arguments "-DHERMES_IS_ANDROID=True"
-        arguments "-DHERMES_FACEBOOK_BUILD=${rootProject.ext.facebookBuild}"
+        arguments "-DHERMES_FACEBOOK_BUILD=0"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DIMPORT_HERMESC=${rootProject.ext.hermesC}"
+        arguments "-DIMPORT_HERMESC=${hermesC}"
         arguments "-DHERMES_SLOW_DEBUG=False"
         arguments "-DHERMES_ENABLE_INTL=True"
         targets "jsijni", "jsijniepi", "libhermes"
       }
     }
     ndk {
-      abiFilters (*rootProject.ext.abis)
+      abiFilters (*abis)
     }
   }
 
@@ -86,7 +94,7 @@ android {
     cmake {
       version "3.22.1"
       path "../../CMakeLists.txt"
-      buildStagingDirectory = "${rootProject.ext.hermes_ws}/staging/intl"
+      buildStagingDirectory = "${hermesWs}/staging/intl"
       buildStagingDirectory.mkdirs()
     }
   }
