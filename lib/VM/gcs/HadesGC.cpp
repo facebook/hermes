@@ -959,7 +959,7 @@ class HadesGC::MarkAcceptor final : public RootAndSlotAcceptor {
         typename std::conditional<sizeof(T) == 4, uint32_t, uint64_t>::type;
     static_assert(sizeof(T) == sizeof(Storage), "Sizes must match");
     union {
-      Storage storage;
+      Storage storage{};
       T val;
     } ret{};
 
