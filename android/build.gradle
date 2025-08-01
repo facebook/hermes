@@ -38,7 +38,7 @@ buildscript {
     fbsource = System.getenv("FBSOURCE_DIR") ?:
     System.getenv("HOME") + "/fbsource"
 
-    minSdkVersion = 16
+    minSdkVersion = 21
     compileSdkVersion = 31
     abis = project.hasProperty('abis') ?
          project.getProperty("abis").split(",") :
