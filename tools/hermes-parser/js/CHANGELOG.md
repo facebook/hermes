@@ -1,3 +1,9 @@
+## 0.31.1
+
+### `prettier-plugin-hermes-parser`
+
+Rebuild based on `@prettier/plugin-hermes`. There should be no formatting differences, but it will be less buggy.
+
 ## 0.31.0
 
 ### `hermes-transform`
