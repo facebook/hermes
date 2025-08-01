@@ -1,6 +1,6 @@
 # prettier-plugin-hermes-parser
 
-Hermes parser plugin for [Prettier](https://prettier.io/). This plugin enables Prettier to use `hermes-parser` as it's parser. Since Hermes parser uses C++ compiled to WASM it is significantly faster than alternatives such as `flow` or `babel-flow` by as much as 10x.
+Hermes parser plugin for [Prettier](https://prettier.io/). Unless you want to be on the bleeding edge, you should use the official [`@prettier/plugin-hermes`](https://www.npmjs.com/package/@prettier/plugin-hermes) instead.
 
 ## Usage
 

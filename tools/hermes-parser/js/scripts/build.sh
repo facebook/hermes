@@ -14,7 +14,6 @@ PACKAGES=(
   hermes-eslint
   hermes-transform
   flow-api-translator
-  prettier-plugin-hermes-parser
   babel-plugin-syntax-hermes-parser
 )
 
