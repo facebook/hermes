@@ -5,15 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-pluginManagement {
-  repositories {
-    google()
-    mavenCentral()
-  }
-}
+rootProject.name = 'Hermes'
 
-rootProject.name = "Hermes"
-
-include(":hermes")
-include(":cppruntime")
-include(":intltest")
+include ':hermes'
+include ':cppruntime'
+include ':intltest'
