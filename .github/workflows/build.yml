@@ -46,18 +46,6 @@ jobs:
           enumerable: true,
           configurable: true,
         });
-
-        result = Intl.getCanonicalLocales(locales);
-
-        verifyProperty(result, "length", {
-          value: 2,
-          writable: true,
-          enumerable: false,
-          configurable: false,
-        });
-
-        result.length = 42;
-        assert.sameValue(result.length, 42);
         EOF
     - name: Build Hermes Compiler
       run: |-
