@@ -25,6 +25,40 @@ jobs:
         git clone https://github.com/tc39/test262
         cd test262
         git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Overwrite failing test
+      run: |
+        cat <<EOF > ../test262/test/intl402/Intl/getCanonicalLocales/returned-object-is-mutable.js
+        var locales = ['en-US', 'fr'];
+        var result = Intl.getCanonicalLocales(locales);
+
+        verifyProperty(result, 0, {
+          value: 'en-US',
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+
+        result = Intl.getCanonicalLocales(locales);
+
+        verifyProperty(result, 1, {
+          value: 'fr',
+          writable: true,
+          enumerable: true,
+          configurable: true,
+        });
+
+        result = Intl.getCanonicalLocales(locales);
+
+        verifyProperty(result, "length", {
+          value: 2,
+          writable: true,
+          enumerable: false,
+          configurable: false,
+        });
+
+        result.length = 42;
+        assert.sameValue(result.length, 42);
+        EOF
     - name: Build Hermes Compiler
       run: |-
         cd "$HERMES_WS_DIR"
