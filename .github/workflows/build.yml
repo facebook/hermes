@@ -15,7 +15,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         java-version: '17'
-        distribution: 'zulu'
+        distribution: 'oracle'
     - name: Checkout Hermes
       uses: actions/checkout@v4.1.0
     - name: Checkout Test262
