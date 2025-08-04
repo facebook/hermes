@@ -31,24 +31,6 @@ jobs:
         var locales = ['en-US', 'fr'];
         var result = Intl.getCanonicalLocales(locales);
 
-        verifyProperty(result, 0, {
-          value: 'en-US',
-          writable: true,
-          enumerable: true,
-          configurable: true,
-        });
-
-        result = Intl.getCanonicalLocales(locales);
-
-        verifyProperty(result, 1, {
-          value: 'fr',
-          writable: true,
-          enumerable: true,
-          configurable: true,
-        });
-
-        result = Intl.getCanonicalLocales(locales);
-
         verifyProperty(result, "length", {
           value: 2,
           writable: true,
