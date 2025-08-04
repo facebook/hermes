@@ -14,6 +14,7 @@
 (class {
   declare x;
   declare static y;
+  declare #z;
 });
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ExpressionStatement",
@@ -44,6 +45,16 @@
 // CHECK-NEXT:               "value": null,
 // CHECK-NEXT:               "computed": false,
 // CHECK-NEXT:               "static": true,
+// CHECK-NEXT:               "declare": true
+// CHECK-NEXT:             },
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "ClassPrivateProperty",
+// CHECK-NEXT:               "key": {
+// CHECK-NEXT:                 "type": "Identifier",
+// CHECK-NEXT:                 "name": "z"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": null,
+// CHECK-NEXT:               "static": false,
 // CHECK-NEXT:               "declare": true
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]

@@ -4765,6 +4765,7 @@ bool JSParserImpl::parseClassBodyImpl(
     if (optNext.hasValue() &&
         (*optNext == TokenKind::rw_static ||
          *optNext == TokenKind::identifier || *optNext == TokenKind::plus ||
+         *optNext == TokenKind::private_identifier ||
          *optNext == TokenKind::minus)) {
       declare = true;
       advance();
