@@ -32,9 +32,12 @@ jobs:
         cmake --build ./build -j 4 --target hermesc
     - name: Build Hermes Intl Test
       run: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=arm64-v8a :intltest:assembleDebugAndroidTest
+    - name: Copy artifacts
+      run: |-
+        cp -r ../build_android build_android
     - name: Upload build_android
       if: always()
       uses: actions/upload-artifact@v4.3.4
       with:
         name: build_android
-        path: ../build_android
+        path: build_android
