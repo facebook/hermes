@@ -7,6 +7,7 @@ on:
 jobs:
   test-e2e-intl:
     runs-on: macos-15
+    timeout-minutes: 25
     env:
       HERMES_WS_DIR: /Users/runner/work/hermes
       ANDROID_NDK: /Users/runner/Library/Android/sdk/ndk/27.1.12297006
