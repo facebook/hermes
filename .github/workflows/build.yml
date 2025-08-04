@@ -44,7 +44,7 @@ jobs:
           const fs = require('fs');
           const path = '../test262/harness/propertyHelper.js';
           const file = fs.readFileSync(path, { encoding: 'utf-8' });
-          fs.writeFileSync(path, file.replace('throw new Test262Error(\"Expected TypeError, got \" + e);', ''));
+          fs.writeFileSync(path, file.replaceAll('throw new Test262Error(\"Expected TypeError, got \" + e);', ''));
         "
     - name: Build Hermes Compiler
       run: |-
