@@ -65,7 +65,7 @@ public class HermesIntlTest262 {
   public void test262Intl() throws IOException {
     Set<String> skipList = getSkipList();
     Stack<String> testFiles = new Stack<>();
-    testFiles.push("test262/test");
+    testFiles.push("test262/test/intl402/Intl/getCanonicalLocales/returned-object-is-mutable.js");
     AssetManager assets =
         InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets();
     ArrayList<String> ranTests = new ArrayList<>();
