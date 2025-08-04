@@ -19,22 +19,26 @@ jobs:
         distribution: 'oracle'
     - name: Checkout Hermes
       uses: actions/checkout@v4.1.0
-    - name: Checkout Test262
-      run: |-
-        cd "$HERMES_WS_DIR"
-        git clone https://github.com/tc39/test262
-        cd test262
-        git checkout 62626e083bd506124aac6c799464d76c2c42851b
-    - name: Build Hermes Compiler
-      run: |-
-        cd "$HERMES_WS_DIR"
-        cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
-        cmake --build ./build -j 4 --target hermesc
-    - name: Build Hermes Intl Test
-      run: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=arm64-v8a :intltest:assembleDebugAndroidTest
-    - name: Upload build_android
-      if: always()
-      uses: actions/upload-artifact@v4.3.4
-      with:
-        name: build_android
-        path: build_android
+    - name: Print path
+      run: pwd
+    - name: List files
+      run: ls -la
+    # - name: Checkout Test262
+    #   run: |-
+    #     cd "$HERMES_WS_DIR"
+    #     git clone https://github.com/tc39/test262
+    #     cd test262
+    #     git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    # - name: Build Hermes Compiler
+    #   run: |-
+    #     cd "$HERMES_WS_DIR"
+    #     cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
+    #     cmake --build ./build -j 4 --target hermesc
+    # - name: Build Hermes Intl Test
+    #   run: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=arm64-v8a :intltest:assembleDebugAndroidTest
+    # - name: Upload build_android
+    #   if: always()
+    #   uses: actions/upload-artifact@v4.3.4
+    #   with:
+    #     name: build_android
+    #     path: build_android
