@@ -92,6 +92,7 @@ public class HermesIntlTest262 {
           ranTests.add(path);
         } catch (com.facebook.jni.CppException ex) {
           failedTests.put(path, ex.getMessage());
+          ex.printStackTrace();
         }
       }
     }
