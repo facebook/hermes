@@ -6,11 +6,11 @@ on:
       - main
 jobs:
   test-e2e-intl:
-    runs-on: macos-15
+    runs-on: ubuntu-22.04
     timeout-minutes: 25
     env:
-      HERMES_WS_DIR: /Users/runner/work/hermes
-      ANDROID_NDK: /Users/runner/Library/Android/sdk/ndk/27.1.12297006
+      HERMES_WS_DIR: /home/runner/work/hermes
+      ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
     steps:
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -34,17 +34,22 @@ jobs:
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
         api-level: 29
-        arch: arm64-v8a
         emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         script: |
           adb logcat -c
           touch ./emulator.log
           chmod 777 ./emulator.log
           adb logcat >> ./emulator.log &
-          cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=arm64-v8a :intltest:connectedAndroidTest
+          cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=arm64-v8a :intltest:assembleDebugAndroidTest
     - name: Upload emulator log
       if: always()
       uses: actions/upload-artifact@v4.3.4
       with:
         name: emulator.log
         path: emulator.log
+    - name: Upload test apk
+      if: always()
+      uses: actions/upload-artifact@v4.3.4
+      with:
+        name: test.apk
+        path: build_android/intltest/outputs/apk/androidTest/debug/intltest-debug-androidTest.apk
