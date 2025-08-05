@@ -31,7 +31,7 @@ jobs:
         var locales = ['en-US', 'fr'];
         var result = Intl.getCanonicalLocales(locales);
 
-        throw new Test262Error("Test " + Math.pow(2, 32) - 1);
+        throw new Test262Error("MathPow " + (Math.pow(2, 32) - 1));
 
         verifyProperty(result, "length", {
           value: 2,
