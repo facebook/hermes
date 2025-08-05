@@ -41,10 +41,20 @@ jobs:
     - name: Remove first throw
       run: |
         node -e "
+          function replaceLast(str, search, replacement) {
+            const lastIndex = str.lastIndexOf(search);
+            if (lastIndex === -1) return str;
+
+            return (
+              str.substring(0, lastIndex) +
+              replacement +
+              str.substring(lastIndex + search.length)
+            );
+          }
           const fs = require('fs');
           const path = '../test262/harness/propertyHelper.js';
           const file = fs.readFileSync(path, { encoding: 'utf-8' });
-          fs.writeFileSync(path, file.replaceAll('throw new Test262Error(\"Expected TypeError, got \" + e);', ''));
+          fs.writeFileSync(path, replaceLast(file, 'throw new Test262Error(\"Expected TypeError, got \" + e);', ''));
         "
     - name: Build Hermes Compiler
       run: |-
