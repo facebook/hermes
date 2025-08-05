@@ -31,7 +31,7 @@ jobs:
         var locales = ['en-US', 'fr'];
         var result = Intl.getCanonicalLocales(locales);
 
-        result["length"] = 4294967295;
+        result["length"] = 3;
         EOF
     - name: Remove first throw
       run: |
