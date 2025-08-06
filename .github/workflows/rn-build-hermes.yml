@@ -22,3 +22,10 @@ jobs:
   build_android:
     uses: ./.github/workflows/build-android.yml
     secrets: inherit
+  build_emscripten:
+    uses: ./.github/workflows/build-emscripten.yml
+  test-apple-runtime:
+    needs: build_hermes_macos
+    uses: ./.github/workflows/test-apple-runtime.yml
+  run-tests:
+    uses: ./.github/workflows/run-tests.yml
