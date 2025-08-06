@@ -65,7 +65,6 @@ task prepareTests() {
 android {
   namespace "com.facebook.hermes.intltest"
   compileSdkVersion = 31
-  ndkVersion = "23.1.7779620"
 
   defaultConfig {
     minSdkVersion = 21

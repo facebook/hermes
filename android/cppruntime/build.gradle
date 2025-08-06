@@ -24,7 +24,6 @@ buildDir.mkdirs()
 android {
   namespace = "com.facebook.hermes.cppruntime"
   compileSdkVersion = 31
-  ndkVersion = "23.1.7779620"
 
   defaultConfig {
     minSdkVersion = 21
