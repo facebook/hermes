@@ -14,11 +14,11 @@ buildDir = "${hermesUtils.hermesWs}/build_android/hermes"
 buildDir.mkdirs()
 
 android {
-  compileSdkVersion = hermesUtils.compileSdk
+  compileSdk = hermesUtils.compileSdk
   ndkVersion = hermesUtils.ndkVersion
 
   defaultConfig {
-    minSdkVersion hermesUtils.minSdk
+    minSdk = hermesUtils.minSdk
     namespace "com.facebook.hermes"
 
     externalNativeBuild {

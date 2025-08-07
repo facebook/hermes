@@ -15,11 +15,11 @@ buildDir.mkdirs()
 
 android {
   namespace = "com.facebook.hermes.cppruntime"
-  compileSdkVersion = hermesUtils.compileSdk
+  compileSdk = hermesUtils.compileSdk
   ndkVersion = hermesUtils.ndkVersion
 
   defaultConfig {
-    minSdkVersion = hermesUtils.minSdk
+    minSdk = hermesUtils.minSdk
     externalNativeBuild {
       cmake {
         arguments "-DANDROID_STL=c++_shared"

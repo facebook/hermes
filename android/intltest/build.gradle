@@ -58,11 +58,11 @@ task prepareTests() {
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
   namespace "com.facebook.hermes.intltest"
-  compileSdkVersion = hermesUtils.compileSdk
+  compileSdk = hermesUtils.compileSdk
   ndkVersion = hermesUtils.ndkVersion
 
   defaultConfig {
-    minSdkVersion = hermesUtils.minSdk
+    minSdk = hermesUtils.minSdk
     ndk {
       abiFilters (*hermesUtils.abis)
     }
