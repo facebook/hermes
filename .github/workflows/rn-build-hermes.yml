@@ -19,3 +19,6 @@ jobs:
     uses: ./.github/workflows/build-hermesc-linux.yml
   build_hermesc_windows:
     uses: ./.github/workflows/build-hermesc-windows.yml
+  build_android:
+    uses: ./.github/workflows/build-android.yml
+    secrets: inherit
