@@ -27,7 +27,7 @@ target_link_libraries(hermesc
 # then used to build the VM for the target system.
 if(NOT CMAKE_CROSSCOMPILING)
   # Namespace added to avoid clashing the host binary with the target binary.
-  export(TARGETS hermesc FILE ${CMAKE_BINARY_DIR}/ImportHermesc.cmake NAMESPACE native-)
+  export(TARGETS hermesc FILE ${CMAKE_BINARY_DIR}/ImportHostCompilers.cmake NAMESPACE native-)
 endif()
 
 install(TARGETS hermesc
