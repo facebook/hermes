@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           cd android
-          TASKS="publishAllToMavenTempLocal build"
+          TASKS="publishAllToMavenTempLocal :build"
           ./gradlew $TASKS
       - name: Upload Maven Artifacts
         uses: actions/upload-artifact@v4.3.4
