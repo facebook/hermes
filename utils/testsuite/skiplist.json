@@ -266,7 +266,11 @@
         "test262/test/built-ins/AsyncGeneratorPrototype/throw/this-val-not-async-generator.js",
         "test262/test/built-ins/AsyncGeneratorPrototype/throw/this-val-not-object.js",
         "test262/test/built-ins/AsyncGeneratorPrototype/throw/throw-state-completed.js",
-        "test262/test/language/statements/class/subclass/superclass-async-generator-function.js"
+        "test262/test/language/statements/class/subclass/superclass-async-generator-function.js",
+        "test262/test/built-ins/AsyncIteratorPrototype/Symbol.asyncIterator/length.js",
+        "test262/test/built-ins/AsyncIteratorPrototype/Symbol.asyncIterator/return-val.js",
+        "test262/test/built-ins/AsyncIteratorPrototype/Symbol.asyncIterator/name.js",
+        "test262/test/built-ins/AsyncIteratorPrototype/Symbol.asyncIterator/prop-desc.js"
       ],
       "comment": "async generators aren't fully compliant because it's an AST transform"
     },
@@ -3539,7 +3543,6 @@
   ],
   "unsupported_features": [
     "Promise.prototype.finally",
-    "Symbol.asyncIterator",
     "Symbol.species",
     "Symbol.unscopables",
     "caller",
