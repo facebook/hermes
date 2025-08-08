@@ -32,6 +32,9 @@ cp -r ./llvm/utils/lit/* /path/to/hermes/external/llvh/utils/lit
 Some copied files were omitted because we don't use them
 (like lit self-tests and examples).
 
+Update: pull in the `run_under` argument in googletest.py, from LLVM release
+v20.1.8, commit hash `87f0227cb60147a26a1eeb4fb06e3b505e9c7261`.
+
 ## Other imports from v9.0.1
 
 Support/JSON and Support/ToolOutputFile.
