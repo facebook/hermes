@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
     try {
       runtime->evaluateJavaScript(
           std::make_unique<MemoryBuffer>(script_src, script_size), "");
-    } catch (const JSIException &e) {
+    } catch (const JSIException &) {
       exceptionThrew = true;
     }
     free(script_src);
