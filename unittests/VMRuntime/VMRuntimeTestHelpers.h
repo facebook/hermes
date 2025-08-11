@@ -40,7 +40,7 @@ static constexpr uint32_t kExtremeHeapLarge = 1 << 28;
 
 static const GCConfig::Builder kTestGCConfigBaseBuilder =
     GCConfig::Builder().withSanitizeConfig(
-        vm::GCSanitizeConfig::Builder().withSanitizeRate(0.0).build());
+        vm::GCSanitizeConfig::Builder().withSanitizeRate(0.01).build());
 
 static const GCConfig kTestGCConfigSmall =
     GCConfig::Builder(kTestGCConfigBaseBuilder)

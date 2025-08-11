@@ -51,6 +51,11 @@ static void exceedMaxHeap(
     rt.makeHandle(AwkwardCell::create(rt));
 }
 
+// When handlesan is ON, we won't check the heap footprint when creating new
+// heap segment. And if mmap storage provider is used, there's no limit on the
+// number of segments as well. For simplicity, just disable these tests under
+// handlesan.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST(GCOOMDeathTest, Fragmentation) {
   EXPECT_OOM(exceedMaxHeap());
 }
@@ -76,6 +81,7 @@ TEST(GCOOMDeathTest, WeakMapMarking) {
   };
   EXPECT_OOM(fn());
 }
+#endif
 
 } // namespace
 

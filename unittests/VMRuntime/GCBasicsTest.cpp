@@ -36,7 +36,8 @@ struct GCBasicsTest : public ::testing::Test {
 };
 
 // Hades doesn't report its stats the same way as other GCs.
-#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES)
+#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES) && \
+    !defined(HERMESVM_SANITIZE_HANDLES)
 TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
@@ -277,13 +278,18 @@ TEST_F(GCBasicsTest, TestFixedRuntimeCell) {
 
 /// Test that the extra bytes in the heap are reported correctly.
 TEST_F(GCBasicsTest, ExtraBytes) {
+  struct : Locals {
+    PinnedValue<DummyObject> o1;
+    PinnedValue<DummyObject> o2;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
   auto &gc = rt.getHeap();
 
   {
     GCBase::HeapInfo info;
-    auto *obj = DummyObject::create(rt.getHeap(), rt);
-    obj->acquireExtMem(gc, 256);
-    obj->extraBytes = 1;
+    lv.o1 = DummyObject::create(rt.getHeap(), rt);
+    lv.o1->acquireExtMem(gc, 256);
+    lv.o1->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.externalBytes, 256);
     // Since there is one dummy in the heap, the malloc size is at least the
@@ -294,14 +300,16 @@ TEST_F(GCBasicsTest, ExtraBytes) {
 
   {
     GCBase::HeapInfo info;
-    auto *obj = DummyObject::create(rt.getHeap(), rt);
-    obj->acquireExtMem(gc, 1024);
-    obj->extraBytes = 1;
+    lv.o2 = DummyObject::create(rt.getHeap(), rt);
+    lv.o2->acquireExtMem(gc, 1024);
+    lv.o2->extraBytes = 1;
     gc.getHeapInfoWithMallocSize(info);
     EXPECT_EQ(info.externalBytes, 256 + 1024);
     EXPECT_GE(info.mallocSizeEstimate, sizeof(WeakRefSlot) * 2 + 2);
   }
 
+  lv.o1 = nullptr;
+  lv.o2 = nullptr;
   rt.collect();
 
   {
@@ -397,6 +405,9 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
 }
 #endif // #ifdef HERMESVM_GC_MALLOC
 
+// handlesan allows allocation beyond the max heap size limit, so we need to
+// disable it here.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   // An object with this size requires large allocation support to successfully
   // allocate within HadesGC. This should fit into a JumboHeapSegment with size
@@ -527,5 +538,6 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   // The large object should be correctly freed now.
   ASSERT_EQ(heapInfo.allocatedBytes, 0);
 }
+#endif
 
 } // namespace

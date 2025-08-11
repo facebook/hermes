@@ -27,6 +27,9 @@ namespace {
 
 using IdentifierTableLargeHeapTest = LargeHeapRuntimeTestFixture;
 
+// When handlesan is ON, there could be symbols freed when creating new symbols
+// in the test, so we can't reliably assert about the create symbol index.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
   IdentifierTable &table = runtime.getIdentifierTable();
 
@@ -87,6 +90,7 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
       0u,
       (uint64_t)runtime.getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
 }
+#endif
 
 using IdentifierTableTest = RuntimeTestFixture;
 

@@ -33,7 +33,8 @@ TEST_F(ArrayStorageTest, ResizeTest) {
   // Size is 900, capacity is 900.
   StorageType::resize(arrHandle, runtime, 900);
   // arr[10] = 1
-  lv.arr->set(10, HVType::encodeNumberValue(1, runtime), runtime.getHeap());
+  auto num = HVType::encodeNumberValue(1, runtime);
+  lv.arr->set(10, num, runtime.getHeap());
   // Insert 90 elements at the left, new size will be 990, capacity will be
   // 1800.
   // Copy elements from [0, 900) in old array to [90, 990) in new array.

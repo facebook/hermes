@@ -705,7 +705,7 @@ TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
               Edge{HeapSnapshot::EdgeType::Weak, "weak", secondDummy.id}}));
 }
 
-#ifdef HERMESVM_GC_HADES
+#if defined(HERMESVM_GC_HADES) && !defined(HERMESVM_SANITIZE_HANDLES)
 // This test relies on the implementation details of Hades GC.
 TEST(HeapSnapshotTest, SnapshotFromCallbackContextRunInMiddleYG) {
   // The GC Heap can have at most two segments.
@@ -988,49 +988,55 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
 TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime));
-  SymbolID fooSym, barSym;
+  struct : Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<SymbolID> fooSym;
+    PinnedValue<SymbolID> barSym;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.obj = JSObject::create(runtime);
   {
     vm::GCScope gcScope(runtime);
-    fooSym = vm::stringToSymbolID(
-                 runtime, vm::StringPrimitive::createNoThrow(runtime, "foo"))
-                 ->getHermesValue()
-                 .getSymbol();
-    barSym = vm::stringToSymbolID(
-                 runtime, vm::StringPrimitive::createNoThrow(runtime, "bar"))
-                 ->getHermesValue()
-                 .getSymbol();
+    lv.fooSym = vm::stringToSymbolID(
+                    runtime, vm::StringPrimitive::createNoThrow(runtime, "foo"))
+                    ->getHermesValue()
+                    .getSymbol();
+    lv.barSym = vm::stringToSymbolID(
+                    runtime, vm::StringPrimitive::createNoThrow(runtime, "bar"))
+                    ->getHermesValue()
+                    .getSymbol();
   }
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   // Add two properties to the hidden class chain.
   ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
+      lv.obj,
       runtime,
-      fooSym,
+      *lv.fooSym,
       dpf,
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
   ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
+      lv.obj,
       runtime,
-      barSym,
+      *lv.barSym,
       dpf,
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
   // Trigger update transitions for both properties.
   dpf.writable = false;
   ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
+      lv.obj,
       runtime,
-      fooSym,
+      *lv.fooSym,
       dpf,
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
   ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
+      lv.obj,
       runtime,
-      barSym,
+      *lv.barSym,
       dpf,
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
   // Forcibly clear the final hidden class's property map.
-  auto *clazz = obj->getClass(runtime);
+  auto *clazz = lv.obj->getClass(runtime);
   clazz->clearPropertyMap(runtime.getHeap());
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory, true);
@@ -1039,7 +1045,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
   const JSONArray &edges = *llvh::cast<JSONArray>(root->at("edges"));
   const JSONArray &strings = *llvh::cast<JSONArray>(root->at("strings"));
 
-  const auto objID = runtime.getHeap().getObjectID(obj.get());
+  const auto objID = runtime.getHeap().getObjectID(lv.obj.get());
   auto nodesAndEdges = FIND_NODE_AND_EDGES_FOR_ID(objID, nodes, edges, strings);
 
   const auto FIRST_NAMED_PROPERTY_EDGE = firstNamedPropertyEdge<JSObject>();
@@ -1050,7 +1056,7 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
           HeapSnapshot::NodeType::Object,
           "JSObject(foo, bar)",
           objID,
-          obj->getAllocatedSize(),
+          lv.obj->getAllocatedSize(),
           FIRST_NAMED_PROPERTY_EDGE + 2));
   EXPECT_EQ(nodesAndEdges.second.size(), FIRST_NAMED_PROPERTY_EDGE + 2);
 

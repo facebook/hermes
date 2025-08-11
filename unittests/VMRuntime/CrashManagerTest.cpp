@@ -149,7 +149,9 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
 }
 #endif // HERMESVM_SANITIZE_HANDLES
 
-#ifdef HERMESVM_GC_HADES
+// When handlesan is ON, more collections are triggered and we might observe
+// different custom data in CrashManager, so disable it here.
+#if defined(HERMESVM_GC_HADES) && !defined(HERMESVM_SANITIZE_HANDLES)
 TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   // Turn on the "direct to OG" allocation feature.
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
@@ -188,6 +190,7 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   EXPECT_EQ(customData.count("XYZ:HeapSegment:3"), 1);
 }
 
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
   // Turn on the "direct to OG" allocation feature.
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
@@ -233,6 +236,7 @@ TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
   // All custom data should be removed.
   EXPECT_EQ(0, customData.size());
 }
+#endif
 #endif
 
 TEST(CrashManagerTest, GCNameIncluded) {

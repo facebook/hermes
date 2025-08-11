@@ -31,6 +31,8 @@ TEST(SymbolIDTest, UniquedTest) {
 
 using SymbolIDRuntimeTest = RuntimeTestFixture;
 
+// This test runs too slow when handlesan is ON.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
   // Hades adds a write barrier for symbols. Make sure it correctly captures
   // mutations.
@@ -88,6 +90,8 @@ TEST_F(SymbolIDRuntimeTest, WriteBarrier) {
     otherArray = tmp;
   }
 }
+#endif
+
 TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
   // Declare two weak symbols which the GC knows about.
   WeakRootSymbolID weakSymA;
@@ -165,6 +169,8 @@ TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
   ASSERT_FALSE(weakSymLazy.isInvalid());
 }
 
+// This test runs too slow when handlesan is ON.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(SymbolIDRuntimeTest, SymbolAllocDuringGC) {
   WeakRootSymbolID weakSym;
   runtime.addCustomWeakRootsFunction(
@@ -210,5 +216,6 @@ TEST_F(SymbolIDRuntimeTest, SymbolAllocDuringGC) {
     }
   }
 }
+#endif
 
 } // namespace

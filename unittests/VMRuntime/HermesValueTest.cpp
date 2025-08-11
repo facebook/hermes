@@ -22,21 +22,21 @@ using namespace hermes::vm;
 
 namespace {
 
-int32_t getRandomInt32(int32_t lower, int32_t upper) {
+[[maybe_unused]] int32_t getRandomInt32(int32_t lower, int32_t upper) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_int_distribution<int64_t> uniform_dist(lower, upper);
   return uniform_dist(e1);
 }
 
-uint64_t getRandomUInt64(uint64_t lower, uint64_t upper) {
+[[maybe_unused]] uint64_t getRandomUInt64(uint64_t lower, uint64_t upper) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_int_distribution<uint64_t> uniform_dist(lower, upper);
   return uniform_dist(e1);
 }
 
-double getRandomDouble(double lower, double upper) {
+[[maybe_unused]] double getRandomDouble(double lower, double upper) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_real_distribution<double> uniform_dist(lower, upper);
@@ -52,6 +52,7 @@ TEST(HermesValueTest, ConstexprTagsTest) {
 
 using HermesValueRuntimeTest = RuntimeTestFixture;
 
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
   // Encode the null value.
   {
@@ -289,6 +290,7 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_EQ(value, V.getSymbol());
   }
 }
+#endif
 
 TEST(HermesValueTest, NanTest) {
   double v1 = HermesValue::encodeNaNValue().getDouble();

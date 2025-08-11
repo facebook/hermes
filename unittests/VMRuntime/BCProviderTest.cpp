@@ -16,6 +16,8 @@ namespace {
 
 using BytecodeProviderTest = LargeHeapRuntimeTestFixture;
 
+// This test takes too long to run with handlesan + asan.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(BytecodeProviderTest, IdentifierHashesPreserved) {
   // Test that running a bytecode file twice doesn't modify identifier hashes.
   uint32_t identifierCount = 4096;
@@ -56,5 +58,6 @@ TEST_F(BytecodeProviderTest, IdentifierHashesPreserved) {
     EXPECT_EQ(i * identifierCount, cr->getNumberAs<uint32_t>());
   }
 }
+#endif
 
 } // namespace
