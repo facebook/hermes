@@ -32,7 +32,7 @@ cmake --build ./build --target hermesc
 
 ### 2nd Stage: Building the target Hermes
 
-The key is that we need to pass a CMake flag `-DIMPORT_HERMESC:PATH=$HERMES_WS_DIR/build_host_hermesc/ImportHermesc.cmake` during the cross compilation build of
+The key is that we need to pass a CMake flag `-DIMPORT_HOST_COMPILERS:PATH=$HERMES_WS_DIR/build_host_hermesc/ImportHostCompilers.cmake` during the cross compilation build of
 Hermes so it can access the host `hermesc` from the first stage to build the VM.
 
 This process is currently happened in different places for different platforms:

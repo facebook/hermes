@@ -10,7 +10,7 @@ set(CXX_STANDARD_REQUIRED ON)
 add_hermes_tool(hermes-jsi
   jsi.cpp
   ${ALL_HEADER_FILES}
-  LINK_LIBS libhermes timerStats
+  LINK_LIBS hermesvm timerStats
   )
 
 # TODO: We have to disable RTTI here because we use LLVM libraries compiled

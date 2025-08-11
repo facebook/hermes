@@ -105,7 +105,7 @@ function createHermesPrebuiltArtifactsTarball(
 function validateHermesFrameworksExist(destrootDir /*: string */) {
   if (
     !fs.existsSync(
-      path.join(destrootDir, 'Library/Frameworks/macosx/hermes.framework'),
+      path.join(destrootDir, 'Library/Frameworks/macosx/hermesvm.framework'),
     )
   ) {
     throw new Error(
@@ -114,7 +114,7 @@ function validateHermesFrameworksExist(destrootDir /*: string */) {
   }
   if (
     !fs.existsSync(
-      path.join(destrootDir, 'Library/Frameworks/universal/hermes.xcframework'),
+      path.join(destrootDir, 'Library/Frameworks/universal/hermesvm.xcframework'),
     )
   ) {
     throw new Error(
