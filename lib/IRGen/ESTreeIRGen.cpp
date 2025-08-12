@@ -84,7 +84,7 @@ void LReference::emitStore(Value *value) {
       return;
     case Kind::Destructuring:
       return irgen_->emitDestructuringAssignment(
-          declInit_, destructuringTarget_, value);
+          declInit_, llvh::cast<ESTree::PatternNode>(ast_), value);
   }
 
   llvm_unreachable("invalid LReference kind");

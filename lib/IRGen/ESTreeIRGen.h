@@ -386,6 +386,7 @@ class LReference {
     Destructuring,
   };
 
+  /// This constructor is used for any non-destructuring LReference.
   LReference(
       Kind kind,
       ESTreeIRGen *irgen,
@@ -395,18 +396,21 @@ class LReference {
       Value *property,
       SMLoc loadLoc,
       Value *thisVal = nullptr)
-      : kind_(kind), irgen_(irgen), declInit_(declInit) {
-    ast_ = ast;
-    base_ = base;
-    property_ = property;
-    thisValue_ = thisVal;
-    loadLoc_ = loadLoc;
-  }
+      : kind_(kind),
+        irgen_(irgen),
+        declInit_(declInit),
+        ast_(ast),
+        base_(base),
+        property_(property),
+        thisValue_(thisVal),
+        loadLoc_(loadLoc) {}
 
+  /// This constructor is used a destructuring LReference.
   LReference(ESTreeIRGen *irgen, bool declInit, ESTree::PatternNode *target)
-      : kind_(Kind::Destructuring), irgen_(irgen), declInit_(declInit) {
-    destructuringTarget_ = target;
-  }
+      : kind_(Kind::Destructuring),
+        irgen_(irgen),
+        declInit_(declInit),
+        ast_(target) {}
 
   bool isEmpty() const {
     return kind_ == Kind::Empty;
@@ -434,25 +438,21 @@ class LReference {
   /// when storing.
   bool declInit_;
 
-  union {
-    struct {
-      /// The base AST node.
-      ESTree::Node *ast_;
+  /// The base AST node.
+  ESTree::Node *ast_;
 
-      /// The base of the object, or the variable we load from.
-      Value *base_;
-      /// The name/value of the field this reference accesses, or null if this
-      /// is a variable access.
-      Value *property_;
+  /// The base of the object, or the variable we load from. Not populated for
+  /// Destructuring assignments.
+  Value *base_;
 
-      /// Corresponds to [[ThisValue]] in ES15 6.2.5 Reference Record. Only
-      /// populated for super references.
-      Value *thisValue_;
-    };
+  /// The name/value of the field this reference accesses, or null if this
+  /// is a variable access. Not populated for Destructuring assignments.
+  Value *property_;
 
-    /// Destructuring assignment target.
-    ESTree::PatternNode *destructuringTarget_;
-  };
+  /// Corresponds to [[ThisValue]] in ES15 6.2.5 Reference Record. Only
+  /// populated for super references. Not populated for Destructuring
+  /// assignments.
+  Value *thisValue_;
 
   /// Debug position for loads. Must be outside of the union because it has a
   /// constructor.
