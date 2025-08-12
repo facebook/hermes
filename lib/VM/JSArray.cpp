@@ -649,7 +649,8 @@ CallResult<bool> JSArray::setLength(
 
   if (d > 2147483648) {
     char* string;
-    if(0 > asprintf(&string, "Invalid array length: %u %f\n", ulen, d)) {
+    bool eq = ulen == d;
+    if(0 > asprintf(&string, "Invalid array length: %u %f %d\n", ulen, d, eq)) {
       return runtime.raiseRangeError("Invalid array length");
     } else {
       return runtime.raiseRangeError(string);
