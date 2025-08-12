@@ -772,22 +772,28 @@ void ESTreeIRGen::emitDestructuringArray(
 
   /// If the previous LReference is valid and non-empty, store "value" into
   /// it and reset the LReference.
-  auto storePreviousValue = [&lref, &handler, this, value]() {
+  auto storePreviousValue = [&lref, &handler, this, value, iteratorRecord]() {
     if (lref && !lref->isEmpty()) {
       if (lref->canStoreWithoutSideEffects()) {
         lref->emitStore(Builder.createLoadStackInst(value));
       } else {
         // If we can't store without side effects, wrap the store in try/catch.
         emitTryWithSharedHandler(
-            &handler, [this, &lref, value](BasicBlock *catchBlock) {
+            &handler,
+            [this, &lref, value, iteratorRecord](BasicBlock *catchBlock) {
               SurroundingTry thisTry{
                   curFunction(),
                   lref->getNode(),
                   catchBlock,
                   {},
-                  [](ESTree::Node *,
-                     ControlFlowChange cfc,
-                     BasicBlock *continueTarget) {}};
+                  [this, iteratorRecord](
+                      ESTree::Node *,
+                      ControlFlowChange cfc,
+                      BasicBlock *continueTarget) {
+                    if (cfc == ControlFlowChange::Break) {
+                      emitIteratorClose(iteratorRecord, false);
+                    }
+                  }};
               lref->emitStore(Builder.createLoadStackInst(value));
             });
       }
@@ -829,15 +835,21 @@ void ESTreeIRGen::emitDestructuringArray(
       }
       emitTryWithSharedHandler(
           &handler,
-          [this, &lref, value, target, declInit](BasicBlock *catchBlock) {
+          [this, &lref, value, target, declInit, iteratorRecord](
+              BasicBlock *catchBlock) {
             SurroundingTry thisTry{
                 curFunction(),
                 target,
                 catchBlock,
                 {},
-                [](ESTree::Node *,
-                   ControlFlowChange cfc,
-                   BasicBlock *continueTarget) {}};
+                [this, iteratorRecord](
+                    ESTree::Node *,
+                    ControlFlowChange cfc,
+                    BasicBlock *continueTarget) {
+                  if (cfc == ControlFlowChange::Break) {
+                    emitIteratorClose(iteratorRecord, false);
+                  }
+                }};
             // Store the previous value, if we have one.
             if (lref && !lref->isEmpty())
               lref->emitStore(Builder.createLoadStackInst(value));
@@ -1018,15 +1030,21 @@ void ESTreeIRGen::emitRestElement(
     lref = createLRef(rest->_argument, declInit);
   } else {
     emitTryWithSharedHandler(
-        handler, [this, &lref, rest, declInit](BasicBlock *catchBlock) {
+        handler,
+        [this, &lref, rest, declInit, iteratorRecord](BasicBlock *catchBlock) {
           SurroundingTry thisTry{
               curFunction(),
               rest,
               catchBlock,
               {},
-              [](ESTree::Node *,
-                 ControlFlowChange cfc,
-                 BasicBlock *continueTarget) {}};
+              [this, iteratorRecord](
+                  ESTree::Node *,
+                  ControlFlowChange cfc,
+                  BasicBlock *continueTarget) {
+                if (cfc == ControlFlowChange::Break) {
+                  emitIteratorClose(iteratorRecord, false);
+                }
+              }};
           lref = createLRef(rest->_argument, declInit);
         });
   }
