@@ -779,7 +779,15 @@ void ESTreeIRGen::emitDestructuringArray(
       } else {
         // If we can't store without side effects, wrap the store in try/catch.
         emitTryWithSharedHandler(
-            &handler, [this, &lref, value](BasicBlock * /*catchBlock*/) {
+            &handler, [this, &lref, value](BasicBlock *catchBlock) {
+              SurroundingTry thisTry{
+                  curFunction(),
+                  lref->getNode(),
+                  catchBlock,
+                  {},
+                  [](ESTree::Node *,
+                     ControlFlowChange cfc,
+                     BasicBlock *continueTarget) {}};
               lref->emitStore(Builder.createLoadStackInst(value));
             });
       }
@@ -1010,7 +1018,15 @@ void ESTreeIRGen::emitRestElement(
     lref = createLRef(rest->_argument, declInit);
   } else {
     emitTryWithSharedHandler(
-        handler, [this, &lref, rest, declInit](BasicBlock * /*catchBlock*/) {
+        handler, [this, &lref, rest, declInit](BasicBlock *catchBlock) {
+          SurroundingTry thisTry{
+              curFunction(),
+              rest,
+              catchBlock,
+              {},
+              [](ESTree::Node *,
+                 ControlFlowChange cfc,
+                 BasicBlock *continueTarget) {}};
           lref = createLRef(rest->_argument, declInit);
         });
   }

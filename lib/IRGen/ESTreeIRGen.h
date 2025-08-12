@@ -419,6 +419,11 @@ class LReference {
   Value *emitLoad();
   void emitStore(Value *value);
 
+  /// \return the AST node associated with this LReference.
+  ESTree::Node *getNode() const {
+    return ast_;
+  }
+
   /// \return true if it is known that \c emitStore() will not have any side
   ///   effects, including exceptions. This is not a sophisticated analysis,
   ///   it only checks for a local variable.
