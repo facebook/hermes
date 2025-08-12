@@ -41,7 +41,7 @@ android {
 
   externalNativeBuild {
     cmake {
-      version "3.22.1"
+      version hermesUtils.cmakeVersion
       path "src/main/cpp/CMakeLists.txt"
       buildStagingDirectory = "${hermesWs}/staging/cppruntime"
       buildStagingDirectory.mkdirs()
