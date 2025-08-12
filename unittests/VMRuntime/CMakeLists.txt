@@ -53,6 +53,7 @@ set(RTSources
   OperationsTest.cpp
   PredefinedStringsTest.cpp
   PropertyCacheTest.cpp
+  ProfileGeneratorTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
   SamplingHeapProfilerTest.cpp
