@@ -23,11 +23,30 @@ iterable[Symbol.iterator] = function() {
   return iterator;
 };
 
-function *myGen(o) {
-  [(yield).p] = o;
-}
-let genObj = myGen(iterable);
-genObj.next();
-genObj.return();
-
+// Check that the iterator is closed during evaluation of LReference.
+(function () {
+  function *myGen(o) {
+    [(yield).p] = o;
+  }
+  let genObj = myGen(iterable);
+  genObj.next();
+  genObj.return();
 // CHECK: iterator closed
+})();
+
+// Check that the iterator is closed when evaluating default value for array binding
+// results in an error being thrown.
+(function () {
+  function foo() {
+    print("throwing");
+    throw new Error();
+  }
+  try {
+    let [a = foo()] = iterable;
+// CHECK: throwing
+// CHECK: iterator closed
+  } catch (e) {
+    print(e.constructor.name);
+// CHECK: Error
+  }
+})();

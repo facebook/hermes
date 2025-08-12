@@ -74,7 +74,7 @@ var {a: [b = 1, e] = g} = x;
 // CHECK-NEXT:        TryStartInst %BB6, %BB8
 // CHECK-NEXT:%BB5:
 // CHECK-NEXT:  %45 = LoadStackInst (:any) %40: any
-// CHECK-NEXT:        CondBranchInst %45: any, %BB29, %BB28
+// CHECK-NEXT:        CondBranchInst %45: any, %BB33, %BB32
 // CHECK-NEXT:%BB6:
 // CHECK-NEXT:  %47 = CatchInst (:any)
 // CHECK-NEXT:        StoreStackInst %47: any, %43: any
@@ -101,61 +101,71 @@ var {a: [b = 1, e] = g} = x;
 // CHECK-NEXT:  %63 = BinaryStrictlyNotEqualInst (:any) %62: any, undefined: undefined
 // CHECK-NEXT:        CondBranchInst %63: any, %BB14, %BB13
 // CHECK-NEXT:%BB13:
-// CHECK-NEXT:        StoreStackInst 1: number, %42: any
-// CHECK-NEXT:        BranchInst %BB14
-// CHECK-NEXT:%BB14:
 // CHECK-NEXT:        TryStartInst %BB15, %BB17
+// CHECK-NEXT:%BB14:
+// CHECK-NEXT:        TryStartInst %BB19, %BB21
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %68 = CatchInst (:any)
-// CHECK-NEXT:        StoreStackInst %68: any, %43: any
+// CHECK-NEXT:  %67 = CatchInst (:any)
+// CHECK-NEXT:        StoreStackInst %67: any, %43: any
 // CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:        StoreStackInst undefined: undefined, %42: any
-// CHECK-NEXT:  %72 = LoadStackInst (:any) %40: any
-// CHECK-NEXT:        CondBranchInst %72: any, %BB21, %BB19
+// CHECK-NEXT:        BranchInst %BB14
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %74 = LoadStackInst (:any) %42: any
-// CHECK-NEXT:        StorePropertyLooseInst %74: any, globalObject: object, "b": string
+// CHECK-NEXT:        StoreStackInst 1: number, %42: any
 // CHECK-NEXT:        TryEndInst %BB15, %BB18
 // CHECK-NEXT:%BB18:
 // CHECK-NEXT:        BranchInst %BB16
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %78 = LoadStackInst (:any) %36: any
-// CHECK-NEXT:  %79 = IteratorNextInst (:any) %35: any, %78: any
-// CHECK-NEXT:  %80 = LoadStackInst (:any) %35: any
-// CHECK-NEXT:  %81 = BinaryStrictlyEqualInst (:any) %80: any, undefined: undefined
-// CHECK-NEXT:        StoreStackInst %81: any, %40: any
-// CHECK-NEXT:        CondBranchInst %81: any, %BB21, %BB20
-// CHECK-NEXT:%BB20:
-// CHECK-NEXT:        StoreStackInst %79: any, %42: any
-// CHECK-NEXT:        BranchInst %BB21
-// CHECK-NEXT:%BB21:
-// CHECK-NEXT:        TryStartInst %BB22, %BB24
-// CHECK-NEXT:%BB22:
-// CHECK-NEXT:  %87 = CatchInst (:any)
-// CHECK-NEXT:        StoreStackInst %87: any, %43: any
+// CHECK-NEXT:  %74 = CatchInst (:any)
+// CHECK-NEXT:        StoreStackInst %74: any, %43: any
 // CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:%BB20:
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %42: any
+// CHECK-NEXT:  %78 = LoadStackInst (:any) %40: any
+// CHECK-NEXT:        CondBranchInst %78: any, %BB25, %BB23
+// CHECK-NEXT:%BB21:
+// CHECK-NEXT:  %80 = LoadStackInst (:any) %42: any
+// CHECK-NEXT:        StorePropertyLooseInst %80: any, globalObject: object, "b": string
+// CHECK-NEXT:        TryEndInst %BB19, %BB22
+// CHECK-NEXT:%BB22:
+// CHECK-NEXT:        BranchInst %BB20
 // CHECK-NEXT:%BB23:
-// CHECK-NEXT:  %90 = LoadStackInst (:any) %40: any
-// CHECK-NEXT:        CondBranchInst %90: any, %BB27, %BB26
+// CHECK-NEXT:  %84 = LoadStackInst (:any) %36: any
+// CHECK-NEXT:  %85 = IteratorNextInst (:any) %35: any, %84: any
+// CHECK-NEXT:  %86 = LoadStackInst (:any) %35: any
+// CHECK-NEXT:  %87 = BinaryStrictlyEqualInst (:any) %86: any, undefined: undefined
+// CHECK-NEXT:        StoreStackInst %87: any, %40: any
+// CHECK-NEXT:        CondBranchInst %87: any, %BB25, %BB24
 // CHECK-NEXT:%BB24:
-// CHECK-NEXT:  %92 = LoadStackInst (:any) %42: any
-// CHECK-NEXT:        StorePropertyLooseInst %92: any, globalObject: object, "e": string
-// CHECK-NEXT:        TryEndInst %BB22, %BB25
+// CHECK-NEXT:        StoreStackInst %85: any, %42: any
+// CHECK-NEXT:        BranchInst %BB25
 // CHECK-NEXT:%BB25:
-// CHECK-NEXT:        BranchInst %BB23
+// CHECK-NEXT:        TryStartInst %BB26, %BB28
 // CHECK-NEXT:%BB26:
-// CHECK-NEXT:  %96 = LoadStackInst (:any) %35: any
-// CHECK-NEXT:  %97 = IteratorCloseInst (:any) %96: any, false: boolean
-// CHECK-NEXT:        BranchInst %BB27
+// CHECK-NEXT:  %93 = CatchInst (:any)
+// CHECK-NEXT:        StoreStackInst %93: any, %43: any
+// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB27:
-// CHECK-NEXT:  %99 = LoadStackInst (:any) %5: any
-// CHECK-NEXT:         ReturnInst %99: any
+// CHECK-NEXT:  %96 = LoadStackInst (:any) %40: any
+// CHECK-NEXT:        CondBranchInst %96: any, %BB31, %BB30
 // CHECK-NEXT:%BB28:
-// CHECK-NEXT:  %101 = LoadStackInst (:any) %35: any
-// CHECK-NEXT:  %102 = IteratorCloseInst (:any) %101: any, true: boolean
-// CHECK-NEXT:         BranchInst %BB29
+// CHECK-NEXT:  %98 = LoadStackInst (:any) %42: any
+// CHECK-NEXT:        StorePropertyLooseInst %98: any, globalObject: object, "e": string
+// CHECK-NEXT:         TryEndInst %BB26, %BB29
 // CHECK-NEXT:%BB29:
-// CHECK-NEXT:  %104 = LoadStackInst (:any) %43: any
-// CHECK-NEXT:         ThrowInst %104: any
+// CHECK-NEXT:         BranchInst %BB27
+// CHECK-NEXT:%BB30:
+// CHECK-NEXT:  %102 = LoadStackInst (:any) %35: any
+// CHECK-NEXT:  %103 = IteratorCloseInst (:any) %102: any, false: boolean
+// CHECK-NEXT:         BranchInst %BB31
+// CHECK-NEXT:%BB31:
+// CHECK-NEXT:  %105 = LoadStackInst (:any) %5: any
+// CHECK-NEXT:         ReturnInst %105: any
+// CHECK-NEXT:%BB32:
+// CHECK-NEXT:  %107 = LoadStackInst (:any) %35: any
+// CHECK-NEXT:  %108 = IteratorCloseInst (:any) %107: any, true: boolean
+// CHECK-NEXT:         BranchInst %BB33
+// CHECK-NEXT:%BB33:
+// CHECK-NEXT:  %110 = LoadStackInst (:any) %43: any
+// CHECK-NEXT:         ThrowInst %110: any
 // CHECK-NEXT:function_end

@@ -929,7 +929,25 @@ void ESTreeIRGen::emitDestructuringArray(
 
       // getDefaultBlock:
       Builder.setInsertionBlock(getDefaultBlock);
-      Builder.createStoreStackInst(genExpression(init, nameHint), value);
+      emitTryWithSharedHandler(
+          &handler,
+          [this, init, nameHint, value, iteratorRecord](
+              BasicBlock *catchBlock) {
+            SurroundingTry thisTry{
+                curFunction(),
+                init,
+                catchBlock,
+                {},
+                [this, iteratorRecord](
+                    ESTree::Node *,
+                    ControlFlowChange cfc,
+                    BasicBlock *continueTarget) {
+                  if (cfc == ControlFlowChange::Break) {
+                    emitIteratorClose(iteratorRecord, false);
+                  }
+                }};
+            Builder.createStoreStackInst(genExpression(init, nameHint), value);
+          });
       Builder.createBranchInst(storeBlock);
 
       // storeBlock:
