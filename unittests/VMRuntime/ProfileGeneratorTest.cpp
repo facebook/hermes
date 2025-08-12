@@ -62,7 +62,7 @@ size_t countUniqueSourceScriptURLs(
 
 TEST(ProfileGeneratorTest, Empty) {
   auto runtime = makeRuntime();
-  auto profile = executeWhileSampling(runtime, []() {});
+  auto profile = runtime->samplingProfiler->dumpAsProfile();
 
   EXPECT_EQ(profile.getSamplesCount(), 0);
 }
