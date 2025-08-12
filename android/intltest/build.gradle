@@ -57,7 +57,7 @@ task prepareTests() {
 
 // TODO: Figure out how to deduplicate this file and intl/build.gradle
 android {
-  namespace "com.facebook.hermes.intltest"
+  namespace = "com.facebook.hermes.intltest"
   compileSdk = hermesUtils.compileSdk
   ndkVersion = hermesUtils.ndkVersion
 

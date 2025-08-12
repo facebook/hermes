@@ -11,6 +11,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 plugins {
   id("maven-publish")
   id("signing")
+  alias(libs.plugins.nexus.publish)
   alias(libs.plugins.android.library)
   alias(libs.plugins.download)
   id("publish")
@@ -23,6 +24,19 @@ version = project.findProperty("VERSION_NAME")?.toString()!!
 val cmakeVersion = System.getenv("CMAKE_VERSION") ?: libs.versions.cmake.get()
 val cmakePath = "${getSDKPath()}/cmake/$cmakeVersion"
 val cmakeBinaryPath = "${cmakePath}/bin/cmake"
+val sonatypeUsername = findProperty("SONATYPE_USERNAME")?.toString()
+val sonatypePassword = findProperty("SONATYPE_PASSWORD")?.toString()
+
+nexusPublishing {
+  repositories {
+    sonatype {
+      username.set(sonatypeUsername)
+      password.set(sonatypePassword)
+      nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+      snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+    }
+  }
+}
 
 fun getSDKPath(): String {
   val androidSdkRoot = System.getenv("ANDROID_SDK_ROOT")

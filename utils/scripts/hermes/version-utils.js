@@ -1,0 +1,93 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow strict-local
+ * @format
+ */
+
+/*::
+export type BuildType = 'dry-run' | 'release' | 'commitly';
+export type Version = {
+    version: string,
+    major: string,
+    minor: string,
+    patch: string,
+    prerelease: ?string,
+}
+*/
+
+const {REPO_ROOT} = require('./consts');
+const {ANDROID_DIR} = require('./consts');
+const {getCurrentCommit} = require('./scm-utils');
+const {promises: fs} = require('fs');
+const path = require('path');
+
+const CMAKE_FILE_PATH = `${REPO_ROOT}/CMakeLists.txt`;
+const GRADLE_FILE_PATH = path.join(ANDROID_DIR, 'gradle.properties');
+const VERSION_REGEX =
+  /project\(Hermes\s+VERSION\s+(\d+\.\d+\.\d+)\s+LANGUAGES\s+C\s+CXX\)/;
+
+function validateBuildType(
+  buildType /*: string */,
+  // $FlowFixMe[incompatible-type-guard]
+) /*: buildType is BuildType */ {
+  const validBuildTypes = new Set(['release', 'dry-run', 'commitly']);
+
+  // $FlowFixMe[incompatible-return]
+  // $FlowFixMe[incompatible-type-guard]
+  return validBuildTypes.has(buildType);
+}
+
+// commitly version: 0.x.y-commitly-<YY:mm:DDThh:MM>-<commit-sha>
+async function getVersion(buildType /*: BuildType */) /*: Promise<string> */ {
+  const currentCommit = getCurrentCommit();
+  const shortCommit = currentCommit.slice(0, 9);
+
+  if (buildType === 'dry-run') {
+    return `0.0.0-${shortCommit}`;
+  }
+
+  const mainVersion = await getMainVersion();
+  if (buildType === 'commitly') {
+    const dateIdentifier = new Date().toISOString().replace(/[-]/g, '');
+    return `${mainVersion}-commitly-${dateIdentifier}-${shortCommit}`;
+  }
+
+  // release
+  return mainVersion;
+}
+
+async function getMainVersion() /*: Promise<string> */ {
+  const cmakeContent = await fs.readFile(CMAKE_FILE_PATH, 'utf8');
+  const versionMatch = extractMatchIfValid(cmakeContent);
+  const [, version] = versionMatch;
+  return version;
+}
+
+function extractMatchIfValid(cmakeContent /*: string */) {
+  const match = cmakeContent.match(VERSION_REGEX);
+  if (!match) {
+    throw new Error('Could not find version in CMakeLists.txt');
+  }
+  return match;
+}
+
+async function updateGradlePropertiesFile(
+  version /*: string */,
+) /*: Promise<void> */ {
+  const contents = await fs.readFile(GRADLE_FILE_PATH, 'utf-8');
+
+  return fs.writeFile(
+    GRADLE_FILE_PATH,
+    contents.replace(/^VERSION_NAME=.*/, `VERSION_NAME=${version}`),
+  );
+}
+
+module.exports = {
+  validateBuildType,
+  getVersion,
+  updateGradlePropertiesFile,
+};
