@@ -1090,8 +1090,17 @@ void ESTreeIRGen::emitRestElement(
   if (lref->canStoreWithoutSideEffects()) {
     lref->emitStore(A);
   } else {
-    emitTryWithSharedHandler(
-        handler, [&lref, A](BasicBlock *) { lref->emitStore(A); });
+    emitTryWithSharedHandler(handler, [&lref, A, this](BasicBlock *catchBlock) {
+      SurroundingTry thisTry{
+          curFunction(),
+          lref->getNode(),
+          catchBlock,
+          {},
+          [](ESTree::Node *,
+             ControlFlowChange cfc,
+             BasicBlock *continueTarget) {}};
+      lref->emitStore(A);
+    });
   }
 }
 
