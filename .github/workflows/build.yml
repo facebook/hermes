@@ -25,51 +25,19 @@ jobs:
         git clone https://github.com/tc39/test262
         cd test262
         git checkout 62626e083bd506124aac6c799464d76c2c42851b
-    - name: Overwrite failing test
-      run: |
-        cat <<EOF > ../test262/test/intl402/Intl/getCanonicalLocales/returned-object-is-mutable.js
-        var locales = ['en-US', 'fr'];
-        var result = Intl.getCanonicalLocales(locales);
-
-        result["length"] = Math.pow(2, 31) + 15;
-        EOF
-    - name: Remove first throw
-      run: |
-        node -e "
-          function replaceLast(str, search, replacement) {
-            const lastIndex = str.lastIndexOf(search);
-            if (lastIndex === -1) return str;
-
-            return (
-              str.substring(0, lastIndex) +
-              replacement +
-              str.substring(lastIndex + search.length)
-            );
-          }
-          const fs = require('fs');
-          const path = '../test262/harness/propertyHelper.js';
-          const file = fs.readFileSync(path, { encoding: 'utf-8' });
-          fs.writeFileSync(path, replaceLast(file, 'throw new Test262Error(\"Expected TypeError, got \" + e);', ''));
-        "
     - name: Build Hermes Compiler
       run: |-
         cd "$HERMES_WS_DIR"
         cmake -S hermes -B ./build -DCMAKE_BUILD_TYPE=Release
         cmake --build ./build -j 4 --target hermesc
-    - name: Run android tests
-      uses: ReactiveCircus/android-emulator-runner@v2.30.1
-      with:
-        api-level: 29
-        emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-        script: |
-          adb logcat -c
-          touch ./emulator.log
-          chmod 777 ./emulator.log
-          adb logcat >> ./emulator.log &
-          cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
-    - name: Upload emulator log
+    - name: Build Hermes Intl Test
+      run: cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:assembleDebugAndroidTest
+    - name: Copy artifacts
+      run: |-
+        cp -r ../build_android build_android
+    - name: Upload build_android
       if: always()
       uses: actions/upload-artifact@v4.3.4
       with:
-        name: emulator.log
-        path: emulator.log
+        name: build_android
+        path: build_android
