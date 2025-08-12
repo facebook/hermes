@@ -11,7 +11,6 @@
 plugins {
   id("com.android.library")
   id("de.undercouch.download")
-  id("com.facebook.hermes.plugins.internal.hermesUtils")
 }
 
 def hermesWs = System.getenv("HERMES_WS_DIR")
@@ -93,7 +92,7 @@ android {
 
   externalNativeBuild {
     cmake {
-      version hermesUtils.cmakeVersion
+      version "3.22.1"
       path "../../CMakeLists.txt"
       buildStagingDirectory = "${hermesWs}/staging/intl"
       buildStagingDirectory.mkdirs()
