@@ -1,12 +1,44 @@
 name: RN Build Hermes
 
 on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: 'Release type (release, commitly, dry-run)'
+        required: false
+        default: 'dry-run'
   pull_request:
   push:
     branches:
       - main
+    tags:
+      - "v0.*.*" # This should match v0.X.Y
 
 jobs:
+  set_release_type:
+    runs-on: ubuntu-latest
+    if: github.repository == 'facebook/hermes'
+    outputs:
+      RELEASE_TYPE: ${{ steps.set_release_type.outputs.RELEASE_TYPE }}
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      REF: ${{ github.ref }}
+    steps:
+      - id: set_release_type
+        run: |
+          if [[ $EVENT_NAME == "push" && $REF == refs/tags/v* ]]; then
+            echo "Setting release type to release"
+            echo "RELEASE_TYPE=release" >> $GITHUB_OUTPUT
+          elif [[ $EVENT_NAME == "push" && $REF == refs/heads/main ]]; then
+            echo "Setting release type to commitly"
+            echo "RELEASE_TYPE=commitly" >> $GITHUB_OUTPUT
+          elif [[ $EVENT_NAME == "workflow_dispatch" ]]; then
+            echo "Setting release type to ${{ github.event.inputs.release-type }}"
+            echo "RELEASE_TYPE=${{ github.event.inputs.release-type }}" >> $GITHUB_OUTPUT
+          else
+            echo "Setting release type to dry-run"
+            echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
+          fi
   build_hermesc_apple:
     uses: ./.github/workflows/build-hermesc-apple.yml
   build_apple_slices_hermes:
@@ -21,7 +53,10 @@ jobs:
     uses: ./.github/workflows/build-hermesc-windows.yml
   build_android:
     uses: ./.github/workflows/build-android.yml
+    needs: set_release_type
     secrets: inherit
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
   build_emscripten:
     uses: ./.github/workflows/build-emscripten.yml
   test-apple-runtime:
@@ -29,3 +64,15 @@ jobs:
     uses: ./.github/workflows/test-apple-runtime.yml
   run-tests:
     uses: ./.github/workflows/run-tests.yml
+  publish:
+    uses: ./.github/workflows/publish.yml
+    needs:
+      [
+        set_release_type,
+        build_hermes_macos,
+        build_hermesc_linux,
+        build_hermesc_windows,
+        build_android,
+      ]
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}

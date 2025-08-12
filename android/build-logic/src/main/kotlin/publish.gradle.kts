@@ -10,6 +10,7 @@ plugins {
   id("signing")
 }
 
+val isSnapshot: Boolean = findProperty("isSnapshot")?.toString()?.toBoolean() ?: false
 val signingKey: String? = findProperty("SIGNING_KEY")?.toString()
 val signingPwd: String? = findProperty("SIGNING_PWD")?.toString()
 
@@ -20,9 +21,16 @@ publishing {
     create<MavenPublication>("release") {
       afterEvaluate {
         from(components["default"])
-        version = project.version.toString()
-        groupId = project.group.toString()
+
+        version =
+            if (isSnapshot) {
+              "${project.version}-SNAPSHOT"
+            } else {
+              project.version.toString()
+            }
+
         artifactId = "hermes-android"
+        groupId = project.group.toString()
       }
 
       pom {
