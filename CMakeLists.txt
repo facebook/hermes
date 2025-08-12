@@ -277,7 +277,7 @@ set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
 set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
-set(IMPORT_HERMESC "" CACHE FILEPATH
+set(IMPORT_HOST_COMPILERS "" CACHE FILEPATH
   "Import the hermesc compiler from another build using the given CMake file.")
 
 # On Windows, produce static libraries by default so that tests and tools work
