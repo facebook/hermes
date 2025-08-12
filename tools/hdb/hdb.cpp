@@ -413,7 +413,7 @@ struct HDBDebugger : public debugger::EventObserver {
               loc.line = std::stoul(toks[0]);
               loc.column = std::stoul(toks[1]);
               loc.fileId = debugger::kInvalidLocation;
-            } catch (const std::invalid_argument &e) {
+            } catch (const std::invalid_argument &) {
               // If this fails, then give up on parsing the command.
               loc.fileName = toks[0];
               loc.line = std::stoul(toks[1]);

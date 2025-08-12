@@ -446,7 +446,7 @@ DiagKind toDiagKind(llvh::SourceMgr::DiagKind k) {
   switch (k) {
     default:
       assert(false && "Invalid DiagKind");
-      [[fallthrough]];
+      abort();
     case llvh::SourceMgr::DK_Error:
       return DiagKind::Error;
     case llvh::SourceMgr::DK_Warning:

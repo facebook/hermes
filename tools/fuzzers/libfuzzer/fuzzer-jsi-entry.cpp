@@ -72,7 +72,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   try {
     runtime->evaluateJavaScript(std::make_unique<StringBuffer>(s), "");
-  } catch (const JSIException &e) {
+  } catch (const JSIException &) {
     // Swallow JS-based exceptions.
     // The fuzzer will generate a lot of invalid JS, and if this causes an
     // exception to be thrown evaluating it, that's alright.

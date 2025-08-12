@@ -34,3 +34,5 @@ android/intltest/java/com/facebook/hermes/test/assets/**
 
 # clangd cache
 .cache/
+
+staging/
