@@ -620,7 +620,7 @@ CallResult<bool> JSArray::setLength(
   double d;
   if (LLVM_LIKELY(newLength->isNumber())) {
     d = newLength->getNumber();
-    ulen = truncateToUInt32(d);
+    ulen = (uint32_t)d;
   } else {
     // According to the spec, toNumber() has to be called twice.
     // https://tc39.es/ecma262/multipage/ordinary-and-exotic-objects-behaviours.html#sec-arraysetlength
@@ -632,7 +632,7 @@ CallResult<bool> JSArray::setLength(
     if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     d = res->getNumber();
-    ulen = truncateToUInt32(d);
+    ulen = (uint32_t)d;
     // If it is a string, no need to convert again, since it is pretty
     // expensive. Other types are not so important, since their conversions are
     // either fast (bool) or slow (object).
@@ -647,8 +647,19 @@ CallResult<bool> JSArray::setLength(
     }
   }
 
-  if (ulen != d)
+  if (d > 2147483648) {
+    char* string;
+    int truncated = (int)d;
+    if(0 > asprintf(&string, "Invalid array length: %u %f %d\n", ulen, d, truncated)) {
+      return runtime.raiseRangeError("Invalid array length");
+    } else {
+      return runtime.raiseRangeError(string);
+    }
+  }
+
+  if (ulen != d) {
     return runtime.raiseRangeError("Invalid array length");
+  }
 
   return setLength(selfHandle, runtime, ulen, opFlags);
 }
