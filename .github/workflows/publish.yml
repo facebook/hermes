@@ -77,6 +77,33 @@ jobs:
       - name: Copy Hermes binaries
         shell: bash
         run: |
+          mkdir -p ./npm/hermes-compiler/hermesc/osx-bin ./npm/hermes-compiler/hermesc/win64-bin ./npm/hermes-compiler/hermesc/linux64-bin
+
+          # When build_hermes_macos runs as a matrix, it outputs
+          if [[ -d $HERMES_WS_DIR/osx-bin/Release ]]; then
+            cp -r $HERMES_WS_DIR/osx-bin/Release/hermesc ./npm/hermes-compiler/hermesc/osx-bin/hermesc
+          elif [[ -d $HERMES_WS_DIR/osx-bin/Debug ]]; then
+            cp -r $HERMES_WS_DIR/osx-bin/Debug/hermesc ./npm/hermes-compiler/hermesc/osx-bin/hermesc
+          else
+            ls $HERMES_WS_DIR/osx-bin || echo "hermesc macOS artifacts directory missing."
+            echo "Could not locate macOS hermesc binary."; exit 1;
+          fi
+
+          # Sometimes, GHA creates artifacts with lowercase Debug/Release. Make sure that if it happen, we uppercase them.
+          if [[ -f "$HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-debug.tar.gz" ]]; then
+            mv "$HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-debug.tar.gz" "$HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Debug.tar.gz"
+          fi
+
+          if [[ -f "$HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-release.tar.gz" ]]; then
+            mv "$HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-release.tar.gz" "$HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Release.tar.gz"
+          fi
+
+          cp -r $HERMES_WS_DIR/win64-bin/* ./npm/hermes-compiler/hermesc/win64-bin/.
+          cp -r $HERMES_WS_DIR/linux64-bin/* ./npm/hermes-compiler/hermesc/linux64-bin/.
+
+          # Make sure the hermesc files are actually executable.
+          chmod -R +x npm/hermes-compiler/hermesc/*
+
           mkdir -p ./android/ios-artifacts/artifacts/
           cp $HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Debug.tar.gz ./android/ios-artifacts/artifacts/hermes-ios-debug.tar.gz
           cp $HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Release.tar.gz ./android/ios-artifacts/artifacts/hermes-ios-release.tar.gz
@@ -93,3 +120,16 @@ jobs:
         shell: bash
         run: |
           node ./utils/scripts/hermes/publish-artifacts.js -t ${{ inputs.release-type }}
+      - name: Publish to npm
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }}
+          ls -lR ./npm/hermes-compiler
+      - name: Copy hermes package
+        shell: bash
+        run: cp ./npm/hermes-compiler/hermes-compiler-0.12.0.tgz $HERMES_WS_DIR/hermes-compiler-0.12.0.tgz
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-engine-npm
+          path: /tmp/hermes/hermes-compiler-0.12.0.tgz
