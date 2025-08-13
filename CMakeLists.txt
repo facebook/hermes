@@ -295,6 +295,13 @@ set(HERMES_ALLOW_BOOST_CONTEXT 1 CACHE STRING
 set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
   "Enable gathering, printing of Statistics.")
 
+set(QEMU_RUN_PREFIX "" CACHE STRING
+  "Command prefix for invoking cross-compiled binaries with QEMU.")
+
+if (NOT QEMU_RUN_PREFIX STREQUAL "")
+  add_definitions(-DQEMU_MODE)
+endif()
+
 # Used to force enable slow statistics even in release builds.
 set(HERMES_FORCE_SLOW_STATS OFF CACHE BOOL
   "Force enable HERMES_SLOW_STATISTIC even when HERMES_SLOW_DEBUG is off.")
@@ -810,6 +817,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
     check_native_stack=${HERMES_CHECK_NATIVE_STACK}
     unicode_lite=${HERMES_UNICODE_LITE}
+    qemu_run_prefix=${QEMU_RUN_PREFIX}
     )
 
   set(HERMES_LIT_TEST_PARAMS

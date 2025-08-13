@@ -5,7 +5,7 @@
 
 # RUN: sh %s %S %t %hermes
 # RUN: sh %s %S %t %hermesc
-# REQUIRES: interpreter
+# REQUIRES: interpreter && !qemu_mode
 
 # shellcheck disable=SC2148
 

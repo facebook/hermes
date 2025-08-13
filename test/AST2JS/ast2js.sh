@@ -6,6 +6,7 @@
 
 # RUN: sh %s %hermesc %S/input1.js.txt %t-input1 %S/input1-p.js.txt
 # RUN: sh %s %hermesc %S/richards.js.txt %t-richards
+# UNSUPPORTED: qemu_mode
 
 set -e
 

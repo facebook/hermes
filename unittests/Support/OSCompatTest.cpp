@@ -54,11 +54,14 @@ TEST(OSCompatTest, CurrentRSS) {
 
 static constexpr size_t StorageSize = 4 * 1024 * 1024;
 
+// This operation causes segmentation fault on qemu user mode.
+#ifndef QEMU_MODE
 TEST(OSCompatTest, VmCommitNull) {
   // Committing a nullptr should not succeed on any platform
   auto result = oscompat::vm_commit(nullptr, StorageSize);
   EXPECT_FALSE(result);
 }
+#endif
 
 TEST(OSCompatTest, VmDoubleCommit) {
   // Double committing the same memory should succeed on every platform

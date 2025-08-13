@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %T %hbc-deltaprep %hermes
+# UNSUPPORTED: qemu_mode
 # shellcheck shell=bash
 
 # Exit on any failure.

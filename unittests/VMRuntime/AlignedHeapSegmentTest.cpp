@@ -175,8 +175,10 @@ TEST_F(AlignedHeapSegmentTest, AdviseUnused) {
   auto marked = oscompat::vm_footprint(start, end);
   ASSERT_TRUE(marked);
 
+#ifndef QEMU_MODE
   EXPECT_EQ(*initial + TOTAL_PAGES, *touched);
   EXPECT_EQ(*touched - FREED_PAGES, *marked);
+#endif
 
   provider_->deleteStorage(storage, FixedSizeHeapSegment::storageSize());
 #endif

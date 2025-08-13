@@ -4,7 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %shermes | %FileCheck --match-full-lines %s
-# REQUIRES: !fbcode_coverage
+# REQUIRES: !fbcode_coverage && !qemu_mode
 # shellcheck shell=bash
 
 # Test compiler messages with a source map.
