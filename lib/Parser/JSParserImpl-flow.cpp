@@ -4200,7 +4200,8 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeParamFlow() {
           name, isConst, bound, variance, initializer, usesExtendsBound));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow() {
+Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow(
+    JSLexer::GrammarContext trailingGrammarContext) {
   assert(check(TokenKind::less));
   SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
@@ -4219,7 +4220,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTypeArgsFlow() {
   SMLoc end = tok_->getEndLoc();
   if (!eat(
           TokenKind::greater,
-          JSLexer::GrammarContext::Type,
+          trailingGrammarContext,
           "at end of type parameters",
           "start of type parameters",
           start))

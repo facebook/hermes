@@ -37,6 +37,50 @@
 // CHECK-NEXT:         "closingElement": null
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
+// CHECK-NEXT:     },
+
+<Component<string> a-b={1} />
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "JSXElement",
+// CHECK-NEXT:         "openingElement": {
+// CHECK-NEXT:           "type": "JSXOpeningElement",
+// CHECK-NEXT:           "name": {
+// CHECK-NEXT:             "type": "JSXIdentifier",
+// CHECK-NEXT:             "name": "Component"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "attributes": [
+// CHECK-NEXT:             {
+// CHECK-NEXT:               "type": "JSXAttribute",
+// CHECK-NEXT:               "name": {
+// CHECK-NEXT:                 "type": "JSXIdentifier",
+// CHECK-NEXT:                 "name": "a-b"
+// CHECK-NEXT:               },
+// CHECK-NEXT:               "value": {
+// CHECK-NEXT:                 "type": "JSXExpressionContainer",
+// CHECK-NEXT:                 "expression": {
+// CHECK-NEXT:                   "type": "NumericLiteral",
+// CHECK-NEXT:                   "value": 1,
+// CHECK-NEXT:                   "raw": "1"
+// CHECK-NEXT:                 }
+// CHECK-NEXT:               }
+// CHECK-NEXT:             }
+// CHECK-NEXT:           ],
+// CHECK-NEXT:           "selfClosing": true,
+// CHECK-NEXT:           "typeArguments": {
+// CHECK-NEXT:             "type": "TypeParameterInstantiation",
+// CHECK-NEXT:             "params": [
+// CHECK-NEXT:               {
+// CHECK-NEXT:                 "type": "StringTypeAnnotation"
+// CHECK-NEXT:               }
+// CHECK-NEXT:             ]
+// CHECK-NEXT:           }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "children": [],
+// CHECK-NEXT:         "closingElement": null
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

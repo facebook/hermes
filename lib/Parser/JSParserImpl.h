@@ -1415,7 +1415,14 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parseTypeParamsFlow();
   Optional<ESTree::Node *> parseTypeParamFlow();
-  Optional<ESTree::Node *> parseTypeArgsFlow();
+
+  /// \param trailingGrammarContext the grammar context to use to advance past
+  /// the final '>' in type arguments. Used to disambiguate between
+  /// JSX-initiated type arguments and Flow-based type arguments, because JSX
+  /// must allow for JSX identifiers immediately after the closing '>'.
+  Optional<ESTree::Node *> parseTypeArgsFlow(
+      JSLexer::GrammarContext trailingGrammarContext =
+          JSLexer::GrammarContext::Type);
 
   /// \param[out] params the parameters, populated by reference.
   /// \param[out] thisConstraint the type annotation for 'this'.
