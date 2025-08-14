@@ -13,7 +13,9 @@ if(LIBTINFO_FOUND)
   list(APPEND LIBREADLINE ${LIBTINFO_FOUND})
 endif()
 set(CMAKE_REQUIRED_LIBRARIES ${LIBREADLINE})
-check_function_exists(readline HAVE_LIBREADLINE)
+if(LIBREADLINE_FOUND)
+  check_function_exists(readline HAVE_LIBREADLINE)
+endif()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
