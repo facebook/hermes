@@ -4,12 +4,6 @@
 - Parse `declare` of private class properties, e.g. `class C { declare #foo }`.
 - Fix parsing of JSX identifiers containing `-` when parsing JSX with type arguments, e.g. `<A<T> foo-bar=1 />`.
 
-## 0.31.1
-
-### `prettier-plugin-hermes-parser`
-
-Rebuild based on `@prettier/plugin-hermes`. There should be no formatting differences, but it will be less buggy.
-
 ## 0.31.0
 
 ### `hermes-transform`
