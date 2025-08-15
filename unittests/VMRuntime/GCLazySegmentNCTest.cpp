@@ -28,6 +28,7 @@ struct GCLazySegmentNCTest : public ::testing::Test {};
 using GCLazySegmentNCDeathTest = GCLazySegmentNCTest;
 
 using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
+constexpr size_t kSegmentCellStorageSize = FixedSizeHeapSegment::storageSize();
 
 constexpr size_t kHeapSizeHint = FixedSizeHeapSegment::maxSize() * 10;
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
@@ -41,7 +42,7 @@ TEST_F(GCLazySegmentNCTest, MaterializeAll) {
   DummyRuntime &rt = *runtime;
   GCScope scope{rt};
 
-  auto N = kHeapSizeHint / SegmentCell::size();
+  auto N = kHeapSizeHint / kSegmentCellStorageSize;
   for (size_t i = 0; i < N; ++i) {
     rt.makeHandle(SegmentCell::create(rt));
   }

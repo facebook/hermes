@@ -365,8 +365,10 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
 }
 
 #ifndef HERMESVM_GC_MALLOC
-using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
+  using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
+  constexpr size_t kSegmentCellStorageSize =
+      FixedSizeHeapSegment::storageSize();
   constexpr size_t kHeapSizeHint = FixedSizeHeapSegment::maxSize() * 10;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
@@ -389,7 +391,7 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
   oldHeapInfo = newHeapInfo;
   // Fill the old gen to force a collection.
-  auto N = kHeapSizeHint / SegmentCell::size() - 1;
+  auto N = kHeapSizeHint / kSegmentCellStorageSize - 1;
   {
     GCScopeMarkerRAII marker{rt};
     for (size_t i = 0; i < N - 1; ++i) {

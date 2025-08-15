@@ -193,11 +193,12 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
 #ifndef HERMESVM_SANITIZE_HANDLES
 TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
   // Turn on the "direct to OG" allocation feature.
-  GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
-                          .withName("XYZ")
-                          .withInitHeapSize(1 << 22)
-                          .withMaxHeapSize(1 << 25)
-                          .build();
+  GCConfig gcConfig =
+      GCConfig::Builder(kTestGCConfigBuilder)
+          .withName("XYZ")
+          .withInitHeapSize(1 << HERMESVM_LOG_HEAP_SEGMENT_SIZE)
+          .withMaxHeapSize(1 << (HERMESVM_LOG_HEAP_SEGMENT_SIZE + 3))
+          .build();
   auto testCrashMgr = std::make_shared<TestCrashManager>();
   auto runtime = DummyRuntime::create(
       gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);

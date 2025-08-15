@@ -57,11 +57,10 @@ TEST_F(RuntimeJSONUtilsTest, LongUTF16StringVal) {
   CallResult<HermesValue> parsedStr =
       runtimeJSONParseRef(runtime, std::move(stream));
   auto strPrim = Handle<StringPrimitive>::vmcast(runtime, *parsedStr);
-  auto strRef = strPrim.getHermesValue().getString()->getStringRef<char>();
   auto expectedStrRef = srcRef.slice(1, src.size() - 2);
-  ASSERT_EQ(expectedStrRef.size(), strRef.size());
+  ASSERT_EQ(expectedStrRef.size(), strPrim->getStringLength());
   for (size_t i = 0; i < expectedStrRef.size(); i++) {
-    ASSERT_TRUE(strRef[i] == expectedStrRef[i]);
+    ASSERT_TRUE(strPrim->at(i) == expectedStrRef[i]);
   }
 }
 
@@ -77,11 +76,10 @@ TEST_F(RuntimeJSONUtilsTest, LongUTF8StringVal) {
   CallResult<HermesValue> parsedStr =
       runtimeJSONParseRef(runtime, std::move(stream));
   auto strPrim = Handle<StringPrimitive>::vmcast(runtime, *parsedStr);
-  auto strRef = strPrim.getHermesValue().getString()->getStringRef<char>();
   auto expectedStrRef = srcRef.slice(1, src.size() - 2);
-  ASSERT_EQ(expectedStrRef.size(), strRef.size());
+  ASSERT_EQ(expectedStrRef.size(), strPrim->getStringLength());
   for (size_t i = 0; i < expectedStrRef.size(); i++) {
-    ASSERT_TRUE(strRef[i] == expectedStrRef[i]);
+    ASSERT_TRUE(strPrim->at(i) == expectedStrRef[i]);
   }
 }
 
@@ -103,11 +101,10 @@ TEST_F(RuntimeJSONUtilsTest, LongUTF8StringPropertyVal) {
   auto obj = Handle<JSObject>::vmcast(runtime, *parsedObj);
   auto prop1Val = obj->getNamed_RJS(obj, runtime, symbolFor("prop1"))
                       ->getHermesValue()
-                      .getString()
-                      ->getStringRef<char>();
-  ASSERT_EQ(expectedStrRef.size(), prop1Val.size());
+                      .getString();
+  ASSERT_EQ(expectedStrRef.size(), prop1Val->getStringLength());
   for (size_t i = 0; i < expectedStrRef.size(); i++) {
-    ASSERT_TRUE(prop1Val[i] == expectedStrRef[i]);
+    ASSERT_TRUE(prop1Val->at(i) == expectedStrRef[i]);
   }
 }
 
@@ -134,10 +131,9 @@ TEST_F(RuntimeJSONUtilsTest, LongUTF8StringValWithEscapes) {
   CallResult<HermesValue> parsedStr =
       runtimeJSONParseRef(runtime, std::move(stream));
   auto strPrim = Handle<StringPrimitive>::vmcast(runtime, *parsedStr);
-  auto strRef = strPrim.getHermesValue().getString()->getStringRef<char>();
-  ASSERT_EQ(expectedStrRef.size(), strRef.size());
+  ASSERT_EQ(expectedStrRef.size(), strPrim->getStringLength());
   for (size_t i = 0; i < expectedStrRef.size(); i++) {
-    ASSERT_TRUE(strRef[i] == expectedStrRef[i]);
+    ASSERT_TRUE(strPrim->at(i) == expectedStrRef[i]);
   }
 }
 
@@ -173,10 +169,9 @@ TEST_F(RuntimeJSONUtilsTest, LongUTF8StringValWithConversions) {
   CallResult<HermesValue> parsedStr =
       runtimeJSONParseRef(runtime, std::move(stream));
   auto strPrim = Handle<StringPrimitive>::vmcast(runtime, *parsedStr);
-  auto strRef = strPrim.getHermesValue().getString()->getStringRef<char16_t>();
-  ASSERT_EQ(expectedStrRef.size(), strRef.size());
+  ASSERT_EQ(expectedStrRef.size(), strPrim->getStringLength());
   for (size_t i = 0; i < expectedStrRef.size(); i++) {
-    ASSERT_TRUE(strRef[i] == expectedStrRef[i]);
+    ASSERT_TRUE(strPrim->at(i) == expectedStrRef[i]);
   }
 }
 
