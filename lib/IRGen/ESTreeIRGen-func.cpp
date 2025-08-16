@@ -880,7 +880,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
                   : Type::createAnyType(),
               false);
           var->setObeysTDZ(tdz);
-          var->setIsConst(decl->kind == sema::Decl::Kind::Const);
+          var->setConstness(sema::Decl::getKindConstness(decl->kind));
           setDeclData(decl, var);
         } else {
           var = llvh::cast<Variable>(getDeclData(decl));
@@ -921,7 +921,7 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
               // FunctionExprName isn't supposed to show up in the list when
               // debugging.
               /* hidden */ decl->kind == sema::Decl::Kind::FunctionExprName);
-          var->setIsConst(sema::Decl::isKindNotReassignable(decl->kind));
+          var->setConstness(sema::Decl::getKindConstness(decl->kind));
           if (isClsExpr) {
             var->setObeysTDZ(tdz);
           }

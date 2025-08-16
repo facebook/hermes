@@ -497,7 +497,7 @@ void ESTreeIRGen::genForLoop(ESTree::ForStatementNode *loop) {
           /* hidden */ false);
 
       // Mirror the TDZ and const-ness of the inner var.
-      outerVar->setIsConst(innerVar->getIsConst());
+      outerVar->setConstness(innerVar->getConstness());
       outerVar->setObeysTDZ(innerVar->getObeysTDZ());
       // Make sure the outer var is initialized.
       Builder.createStoreFrameInst(

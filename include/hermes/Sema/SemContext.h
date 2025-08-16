@@ -111,6 +111,17 @@ class Decl {
     PrivateStatic,
   };
 
+  /// This type describes what kind of constness the decl is.
+  enum class Constness {
+    /// The decl is never treated as const.
+    Never,
+    /// The decl is treated as const only when the assignment occurs in strict
+    /// mode code.
+    StrictModeOnly,
+    /// The decl is always treated as const.
+    Always
+  };
+
   /// \return true if this declaration kind obeys the TDZ.
   static bool isKindTDZ(Kind kind) {
     return kind <= Kind::Class;
@@ -134,10 +145,38 @@ class Decl {
     return kind >= Kind::GlobalProperty;
   }
 
-  /// \return true if this declaration kind cannot be reassigned.
-  static bool isKindNotReassignable(Kind kind) {
-    return kind == Kind::Const || kind == Kind::ClassExprName ||
-        kind == Kind::Import;
+  /// \return the const level of the given \p kind.
+  static Constness getKindConstness(Kind kind) {
+    // ES 2025 defines 9.1.1.1.3 CreateImmutableBinding ( N, S ) where N is the
+    // name of a binding and S is a 'strict' parameter. A strict binding means
+    // that attempting to rebind that name will always result in a TypeError
+    // being thrown, whereas a non-strict immutable binding means that a
+    // TypeError is only thrown when executing in strict mode. From this
+    // defintion, we can split `Decl::Kind`s into three categories: mutable
+    // bindings (never 'const'), immutable bindings made with S=true(always
+    // 'const'), immutable bindings made with S=false ('const' only in strict
+    // mode.)
+    switch (kind) {
+      // ES 2025 14.2.3
+      // 3.a.i. If IsConstantDeclaration of d is true, then
+      //   1. Perform ! lexEnv.CreateImmutableBinding(dn, true).
+      case Kind::Const:
+      // ES 2025 15.7.14
+      // 1.a. Perform ! classEnv.CreateImmutableBinding(classBinding, true).
+      case Kind::ClassExprName:
+      // ES2025 16.2.1.7.3.1
+      // 7.b.ii. Perform ! env.CreateImmutableBinding(in.[[LocalName]], true).
+      case Kind::Import:
+        return Constness::Always;
+
+      // ES2025 15.2.5
+      // 5. Perform ! funcEnv.CreateImmutableBinding(name, false).
+      case Kind::FunctionExprName:
+        return Constness::StrictModeOnly;
+
+      default:
+        return Constness::Never;
+    }
   }
 
   /// \return true if this declaration kind is a private name.

@@ -1352,8 +1352,8 @@ class Variable : public Value {
   /// If true, this variable obeys the TDZ rules.
   bool obeysTDZ_ = false;
 
-  /// If true, this variable is const.
-  bool isConst_ = false;
+  /// The constness of this variable.
+  sema::Decl::Constness constness_ = sema::Decl::Constness::Never;
 
   /// If true, this variable is hidden from e.g. the debugger.
   /// Used for synthetic variables that don't correspond to user-defined
@@ -1396,11 +1396,11 @@ class Variable : public Value {
     obeysTDZ_ = value;
   }
 
-  bool getIsConst() const {
-    return isConst_;
+  sema::Decl::Constness getConstness() const {
+    return constness_;
   }
-  void setIsConst(bool value) {
-    isConst_ = value;
+  void setConstness(sema::Decl::Constness constness) {
+    constness_ = constness;
   }
 
   bool getHidden() const {

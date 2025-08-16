@@ -1405,7 +1405,10 @@ ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
               Builder.createLoadFrameInst(RSI, var), Type::createEmpty());
         }
       }
-      if (var->getIsConst()) {
+      auto constness = var->getConstness();
+      if (constness == sema::Decl::Constness::Always ||
+          (Builder.getFunction()->isStrictMode() &&
+           constness == sema::Decl::Constness::StrictModeOnly)) {
         // If this is a const variable being reassigned, throw a TypeError.
         Builder.createThrowTypeErrorInst(Builder.getLiteralString(
             "assignment to constant variable '" + var->getName().str() + "'"));

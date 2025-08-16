@@ -2642,9 +2642,13 @@ bool SemanticResolver::isLValue(ESTree::Node *node) {
 
     // Unless we are running under compliance tests, report an error on
     // reassignment to const.
-    if (Decl::isKindNotReassignable(decl->kind))
-      if (!astContext_.getCodeGenerationSettings().test262)
+    if (!astContext_.getCodeGenerationSettings().test262) {
+      auto constness = Decl::getKindConstness(decl->kind);
+      if (constness == Decl::Constness::Always ||
+          (curFunctionInfo()->strict &&
+           constness == Decl::Constness::StrictModeOnly))
         return false;
+    }
 
     // In strict mode, assigning to the identifier "eval" or "arguments"
     // is invalid, regardless of what they are bound to in surrounding scopes.
