@@ -9,7 +9,7 @@ set(NO_EH_RTTI_SOURCES
 set(APITestsSources
   APITest.cpp
   APITestFactory.cpp
-  # ${HERMES_JSI_DIR}/jsi/test/testlib.cpp # Should we remove jsi dir?
+  ${HERMES_JSI_DIR}/jsi/test/testlib.cpp
   AsyncDebuggerAPITest.cpp
   CDPAgentTest.cpp
   ConsoleMessageTest.cpp
