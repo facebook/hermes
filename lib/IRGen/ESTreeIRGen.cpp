@@ -762,6 +762,8 @@ void ESTreeIRGen::emitDestructuringArray(
       genAnonymousLabelName("exc"), Type::createAnyType());
   // All exception handlers branch to this block.
   handler.exceptionBlock = Builder.createBasicBlock(Builder.getFunction());
+  bool fastDestructure =
+      Mod->getContext().getCodeGenerationSettings().enableFastDestructure;
 
   bool first = true;
   bool emittedRest = false;
@@ -772,34 +774,36 @@ void ESTreeIRGen::emitDestructuringArray(
 
   /// If the previous LReference is valid and non-empty, store "value" into
   /// it and reset the LReference.
-  auto storePreviousValue = [&lref, &handler, this, value, iteratorRecord]() {
-    if (lref && !lref->isEmpty()) {
-      if (lref->canStoreWithoutSideEffects()) {
-        lref->emitStore(Builder.createLoadStackInst(value));
-      } else {
-        // If we can't store without side effects, wrap the store in try/catch.
-        emitTryWithSharedHandler(
-            &handler,
-            [this, &lref, value, iteratorRecord](BasicBlock *catchBlock) {
-              SurroundingTry thisTry{
-                  curFunction(),
-                  lref->getNode(),
-                  catchBlock,
-                  {},
-                  [this, iteratorRecord](
-                      ESTree::Node *,
-                      ControlFlowChange cfc,
-                      BasicBlock *continueTarget) {
-                    if (cfc == ControlFlowChange::Break) {
-                      emitIteratorClose(iteratorRecord, false);
-                    }
-                  }};
-              lref->emitStore(Builder.createLoadStackInst(value));
-            });
-      }
-      lref.reset();
-    }
-  };
+  auto storePreviousValue =
+      [&lref, &handler, this, value, iteratorRecord, fastDestructure]() {
+        if (lref && !lref->isEmpty()) {
+          if (fastDestructure || lref->canStoreWithoutSideEffects()) {
+            lref->emitStore(Builder.createLoadStackInst(value));
+          } else {
+            // If we can't store without side effects, wrap the store in
+            // try/catch.
+            emitTryWithSharedHandler(
+                &handler,
+                [this, &lref, value, iteratorRecord](BasicBlock *catchBlock) {
+                  SurroundingTry thisTry{
+                      curFunction(),
+                      lref->getNode(),
+                      catchBlock,
+                      {},
+                      [this, iteratorRecord](
+                          ESTree::Node *,
+                          ControlFlowChange cfc,
+                          BasicBlock *continueTarget) {
+                        if (cfc == ControlFlowChange::Break) {
+                          emitIteratorClose(iteratorRecord, false);
+                        }
+                      }};
+                  lref->emitStore(Builder.createLoadStackInst(value));
+                });
+          }
+          lref.reset();
+        }
+      };
 
   for (auto &elem : targetPat->_elements) {
     ESTree::Node *target = &elem;
@@ -833,28 +837,34 @@ void ESTreeIRGen::emitDestructuringArray(
         lref->emitStore(Builder.createLoadStackInst(value));
         lref.reset();
       }
-      emitTryWithSharedHandler(
-          &handler,
-          [this, &lref, value, target, declInit, iteratorRecord](
-              BasicBlock *catchBlock) {
-            SurroundingTry thisTry{
-                curFunction(),
-                target,
-                catchBlock,
-                {},
-                [this, iteratorRecord](
-                    ESTree::Node *,
-                    ControlFlowChange cfc,
-                    BasicBlock *continueTarget) {
-                  if (cfc == ControlFlowChange::Break) {
-                    emitIteratorClose(iteratorRecord, false);
-                  }
-                }};
-            // Store the previous value, if we have one.
-            if (lref && !lref->isEmpty())
-              lref->emitStore(Builder.createLoadStackInst(value));
-            lref = createLRef(target, declInit);
-          });
+      if (fastDestructure) {
+        if (lref && !lref->isEmpty())
+          lref->emitStore(Builder.createLoadStackInst(value));
+        lref = createLRef(target, declInit);
+      } else {
+        emitTryWithSharedHandler(
+            &handler,
+            [this, &lref, value, target, declInit, iteratorRecord](
+                BasicBlock *catchBlock) {
+              SurroundingTry thisTry{
+                  curFunction(),
+                  target,
+                  catchBlock,
+                  {},
+                  [this, iteratorRecord](
+                      ESTree::Node *,
+                      ControlFlowChange cfc,
+                      BasicBlock *continueTarget) {
+                    if (cfc == ControlFlowChange::Break) {
+                      emitIteratorClose(iteratorRecord, false);
+                    }
+                  }};
+              // Store the previous value, if we have one.
+              if (lref && !lref->isEmpty())
+                lref->emitStore(Builder.createLoadStackInst(value));
+              lref = createLRef(target, declInit);
+            });
+      }
     }
 
     // Pseudocode of the algorithm for a step:
@@ -929,25 +939,30 @@ void ESTreeIRGen::emitDestructuringArray(
 
       // getDefaultBlock:
       Builder.setInsertionBlock(getDefaultBlock);
-      emitTryWithSharedHandler(
-          &handler,
-          [this, init, nameHint, value, iteratorRecord](
-              BasicBlock *catchBlock) {
-            SurroundingTry thisTry{
-                curFunction(),
-                init,
-                catchBlock,
-                {},
-                [this, iteratorRecord](
-                    ESTree::Node *,
-                    ControlFlowChange cfc,
-                    BasicBlock *continueTarget) {
-                  if (cfc == ControlFlowChange::Break) {
-                    emitIteratorClose(iteratorRecord, false);
-                  }
-                }};
-            Builder.createStoreStackInst(genExpression(init, nameHint), value);
-          });
+      if (fastDestructure) {
+        Builder.createStoreStackInst(genExpression(init, nameHint), value);
+      } else {
+        emitTryWithSharedHandler(
+            &handler,
+            [this, init, nameHint, value, iteratorRecord](
+                BasicBlock *catchBlock) {
+              SurroundingTry thisTry{
+                  curFunction(),
+                  init,
+                  catchBlock,
+                  {},
+                  [this, iteratorRecord](
+                      ESTree::Node *,
+                      ControlFlowChange cfc,
+                      BasicBlock *continueTarget) {
+                    if (cfc == ControlFlowChange::Break) {
+                      emitIteratorClose(iteratorRecord, false);
+                    }
+                  }};
+              Builder.createStoreStackInst(
+                  genExpression(init, nameHint), value);
+            });
+      }
       Builder.createBranchInst(storeBlock);
 
       // storeBlock:

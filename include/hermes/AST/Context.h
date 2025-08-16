@@ -32,6 +32,8 @@ struct CodeGenerationSettings {
   bool test262{false};
   /// Whether we should emit TDZ checks.
   bool enableTDZ{false};
+  /// Whether we should emit fast (non-compliant) array destructuring.
+  bool enableFastDestructure{false};
   /// Dump register liveness intervals.
   bool dumpRegisterInterval{false};
   /// Print source location information in IR dumps.

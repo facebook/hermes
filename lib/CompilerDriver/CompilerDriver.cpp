@@ -612,11 +612,27 @@ static opt<bool> Test262(
     desc("Increase compliance with test262 by moving more checks to runtime"),
     cat(CompilerCategory));
 
+static opt<bool> EnableFastNoncompliant(
+    "Xenable-fast-noncompliant",
+    init(false),
+    Hidden,
+    desc(
+        "UNSUPPORTED: Enable all options that result in faster, but noncompliant, behavior."),
+    cat(CompilerCategory));
+
 static opt<bool> EnableTDZ(
     "Xenable-tdz",
     init(false),
     Hidden,
     desc("UNSUPPORTED: Enable TDZ checks for let/const"),
+    cat(CompilerCategory));
+
+static opt<bool> EnableFastDestructure(
+    "Xenable-fast-destructure",
+    init(false),
+    Hidden,
+    desc(
+        "UNSUPPORTED: Enable a faster, but non-compliant, array destructuring."),
     cat(CompilerCategory));
 
 #define WARNING_CATEGORY(name, specifier, description) \
@@ -953,6 +969,12 @@ bool validateFlags() {
     err("Error! Cannot use both -strict and -non-strict");
   }
 
+  if (cl::EnableFastNoncompliant) {
+    if (cl::EnableTDZ) {
+      err("Error! Cannot enable both TDZ and fast noncompliance");
+    }
+  }
+
   if (cl::Xg3 && cl::OptimizationLevel == cl::OptLevel::OMax) {
     err("Error! Full debug info is not compatible with full optimization");
   }
@@ -1078,7 +1100,9 @@ std::shared_ptr<Context> createContext(
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
   codeGenOpts.test262 = cl::Test262;
-  codeGenOpts.enableTDZ = cl::EnableTDZ;
+  codeGenOpts.enableTDZ = !cl::EnableFastNoncompliant && cl::EnableTDZ;
+  codeGenOpts.enableFastDestructure =
+      cl::EnableFastNoncompliant || cl::EnableFastDestructure;
   codeGenOpts.dumpRegisterInterval = cl::DumpRegisterInterval;
   codeGenOpts.dumpUseList = cl::DumpUseList;
   codeGenOpts.dumpSourceLocation =
