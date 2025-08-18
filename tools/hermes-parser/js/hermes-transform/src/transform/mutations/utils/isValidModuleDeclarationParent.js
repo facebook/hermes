@@ -57,7 +57,7 @@ export function isValidModuleDeclarationParent(
   for (const node of nodesToInsertOrReplace) {
     if (
       !isModuleDeclaration(
-        // $FlowExpectedError[incompatible-cast]
+        // $FlowExpectedError[incompatible-type]
         (node: ESNode),
       )
     ) {

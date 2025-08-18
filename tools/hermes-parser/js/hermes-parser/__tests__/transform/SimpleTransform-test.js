@@ -75,7 +75,7 @@ describe('SimpleTransform', () => {
               retraversedReplacedNode = true;
               return node;
             }
-            // $FlowFixMe[incompatible-call]
+            // $FlowFixMe[incompatible-type]
             return {
               type: 'ExpressionStatement',
               expression: {
@@ -98,7 +98,7 @@ describe('SimpleTransform', () => {
         result: `function b(): string {}`,
         transform(node) {
           if (node.type === 'VoidTypeAnnotation') {
-            // $FlowFixMe[incompatible-call]
+            // $FlowFixMe[incompatible-type]
             return {
               type: 'StringTypeAnnotation',
             };

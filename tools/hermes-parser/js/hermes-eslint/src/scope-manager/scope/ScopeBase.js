@@ -125,7 +125,7 @@ function registerScope(scopeManager: ScopeManager, scope: Scope): void {
 }
 
 function asScope(scope: ScopeBase<$FlowFixMe, $FlowFixMe, $FlowFixMe>): Scope {
-  // $FlowExpectedError[incompatible-return] - it's impossible to tell flow this is safe
+  // $FlowExpectedError[incompatible-type] - it's impossible to tell flow this is safe
   return scope;
 }
 

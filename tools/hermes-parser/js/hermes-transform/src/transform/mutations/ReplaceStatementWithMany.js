@@ -88,7 +88,7 @@ export function performReplaceStatementWithManyMutation(
   }
 
   const statementsToReplaceWith =
-    // $FlowExpectedError[incompatible-cast] -- this is enforced by isValidModuleDeclarationParent above
+    // $FlowExpectedError[incompatible-type] -- this is enforced by isValidModuleDeclarationParent above
     (mutation.nodesToReplaceWith: $ReadOnlyArray<DetachedNode<Statement>>);
 
   // we need to wrap the nodes in a BlockStatement as before there was only 1 node

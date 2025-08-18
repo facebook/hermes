@@ -83,10 +83,9 @@ export async function parseAndGetAstAndNode<T: ESNode = ESNode>(
   const {ast, scopeManager} = await parse(code);
 
   let target: T | null = null;
-  // $FlowFixMe[incompatible-call]
   traverse(code, ast, scopeManager, () => ({
     // $FlowExpectedError[invalid-computed-prop] - this is guaranteed safe
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     [type](node: T | null) {
       target = node;
     },

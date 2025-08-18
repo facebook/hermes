@@ -23,7 +23,7 @@ export function analyzeFunctionReturn(func: AFunction): TypeAnnotation {
   }
 
   // We trust Flow has validated this function to only return void
-  // $FlowFixMe[incompatible-return]
+  // $FlowFixMe[incompatible-type]
   return t.TypeAnnotation({typeAnnotation: t.VoidTypeAnnotation()});
 }
 

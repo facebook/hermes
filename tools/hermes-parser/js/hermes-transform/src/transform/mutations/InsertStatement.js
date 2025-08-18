@@ -95,7 +95,7 @@ export function performInsertStatementMutation(
   }
 
   const statementsToInsert =
-    // $FlowExpectedError[incompatible-cast] -- this is enforced by isValidModuleDeclarationParent above
+    // $FlowExpectedError[incompatible-type] -- this is enforced by isValidModuleDeclarationParent above
     (mutation.nodesToInsert: $ReadOnlyArray<DetachedNode<Statement>>);
 
   const {parent, key} = insertionParent;

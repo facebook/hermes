@@ -124,7 +124,7 @@ function getTopLevelStatement(
   let currentNode: ?ESNode = node;
   while (currentNode != null) {
     if (currentNode.parent?.type === 'Program') {
-      // $FlowFixMe[incompatible-return]
+      // $FlowFixMe[incompatible-type]
       return currentNode;
     }
     currentNode = currentNode.parent;
@@ -535,7 +535,7 @@ function convertObjectExpression(
             inheritComments(
               prop,
               t.ObjectTypeMethodSignature({
-                // $FlowFixMe[incompatible-call]
+                // $FlowFixMe[incompatible-type]
                 key: asDetachedNode<
                   Identifier | NumericLiteral | StringLiteral | Expression,
                 >(prop.key),
@@ -564,7 +564,7 @@ function convertObjectExpression(
             inheritComments(
               prop,
               t.ObjectTypeAccessorSignature({
-                // $FlowFixMe[incompatible-call]
+                // $FlowFixMe[incompatible-type]
                 key: asDetachedNode<
                   Identifier | NumericLiteral | StringLiteral | Expression,
                 >(prop.key),
@@ -585,7 +585,7 @@ function convertObjectExpression(
           inheritComments(
             prop,
             t.ObjectTypePropertySignature({
-              // $FlowFixMe[incompatible-call]
+              // $FlowFixMe[incompatible-type]
               key: asDetachedNode<
                 Identifier | NumericLiteral | StringLiteral | Expression,
               >(prop.key),
@@ -994,7 +994,7 @@ function convertClassDeclaration(
   }
   return [
     t.DeclareClass({
-      // $FlowFixMe[incompatible-call]
+      // $FlowFixMe[incompatible-type]
       id: asDetachedNode<Identifier | null>(class_.id),
       typeParameters: resultTypeParams,
       implements: class_.implements.map(impl => asDetachedNode(impl)),
@@ -1080,7 +1080,7 @@ function convertSuperClass(
   context: TranslationContext,
 ): TranslatedResultOrNull<InterfaceExtends> {
   if (superClass == null) {
-    // $FlowFixMe[incompatible-return]
+    // $FlowFixMe[incompatible-type]
     return EMPTY_TRANSLATION_RESULT;
   }
 
@@ -1175,7 +1175,7 @@ function convertClassMember(
     case 'PropertyDefinition': {
       // PrivateIdentifier's are not exposed so can be stripped.
       if (member.key.type === 'PrivateIdentifier') {
-        // $FlowFixMe[incompatible-return]
+        // $FlowFixMe[incompatible-type]
         return EMPTY_TRANSLATION_RESULT;
       }
       if (
@@ -1203,7 +1203,7 @@ function convertClassMember(
           inheritComments(
             member,
             t.ObjectTypePropertySignature({
-              // $FlowFixMe[incompatible-call]
+              // $FlowFixMe[incompatible-type]
               key: asDetachedNode<
                 ClassPropertyNameComputed | ClassPropertyNameNonComputed,
               >(member.key),
@@ -1227,7 +1227,7 @@ function convertClassMember(
         inheritComments(
           member,
           t.ObjectTypePropertySignature({
-            // $FlowFixMe[incompatible-call]
+            // $FlowFixMe[incompatible-type]
             key: asDetachedNode<
               ClassPropertyNameComputed | ClassPropertyNameNonComputed,
             >(member.key),
@@ -1243,7 +1243,7 @@ function convertClassMember(
     case 'MethodDefinition': {
       // PrivateIdentifier's are not exposed so can be stripped.
       if (member.key.type === 'PrivateIdentifier') {
-        // $FlowFixMe[incompatible-return]
+        // $FlowFixMe[incompatible-type]
         return EMPTY_TRANSLATION_RESULT;
       }
       if (
@@ -1281,7 +1281,7 @@ function convertClassMember(
           inheritComments(
             member,
             t.ObjectTypeAccessorSignature({
-              // $FlowFixMe[incompatible-call]
+              // $FlowFixMe[incompatible-type]
               key: asDetachedNode<
                 ClassPropertyNameComputed | ClassPropertyNameNonComputed,
               >(newKey),
@@ -1298,7 +1298,7 @@ function convertClassMember(
         inheritComments(
           member,
           t.ObjectTypeMethodSignature({
-            // $FlowFixMe[incompatible-call]
+            // $FlowFixMe[incompatible-type]
             key: asDetachedNode<
               ClassPropertyNameComputed | ClassPropertyNameNonComputed,
             >(newKey),
@@ -1603,7 +1603,7 @@ function convertFunctionParameters(
             );
           }
           const [resultParam, deps] = convertBindingNameToFunctionTypeParam(
-            // $FlowFixMe[incompatible-call] I dont think these other cases are possible
+            // $FlowFixMe[incompatible-type] I dont think these other cases are possible
             param.argument,
             context,
             index,
@@ -1729,7 +1729,7 @@ function convertTypeAnnotationTypeOrNull(
   context: TranslationContext,
 ): TranslatedResultOrNull<TypeAnnotationType> {
   if (annot == null) {
-    // $FlowFixMe[incompatible-return]
+    // $FlowFixMe[incompatible-type]
     return EMPTY_TRANSLATION_RESULT;
   }
 
@@ -1740,7 +1740,7 @@ function convertTypeParameterDeclarationOrNull(
   context: TranslationContext,
 ): TranslatedResultOrNull<TypeParameterDeclaration> {
   if (decl == null) {
-    // $FlowFixMe[incompatible-return]
+    // $FlowFixMe[incompatible-type]
     return EMPTY_TRANSLATION_RESULT;
   }
   return [asDetachedNode(decl), analyzeTypeDependencies(decl, context)];
@@ -1750,7 +1750,7 @@ function convertTypeParameterInstantiationOrNull(
   context: TranslationContext,
 ): TranslatedResultOrNull<TypeParameterInstantiation> {
   if (inst == null) {
-    // $FlowFixMe[incompatible-return]
+    // $FlowFixMe[incompatible-type]
     return EMPTY_TRANSLATION_RESULT;
   }
   return [asDetachedNode(inst), analyzeTypeDependencies(inst, context)];

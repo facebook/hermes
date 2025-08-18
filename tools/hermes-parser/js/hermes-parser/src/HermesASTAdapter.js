@@ -65,7 +65,7 @@ export default class HermesASTAdapter {
       );
     }
 
-    // $FlowExpectedError[incompatible-return] We know this is a program at this point.
+    // $FlowExpectedError[incompatible-type] We know this is a program at this point.
     return resultNode;
   }
 

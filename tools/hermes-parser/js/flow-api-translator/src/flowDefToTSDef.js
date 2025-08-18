@@ -46,11 +46,11 @@ function constructFlowNode<T: FlowESTree.BaseNode>(
 }
 
 const cloneJSDocCommentsToNewNode =
-  // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
+  // $FlowExpectedError[incompatible-type] - trust me this re-type is 100% safe
   (cloneJSDocCommentsToNewNodeOriginal: (mixed, mixed) => void);
 
 const makeCommentOwnLine =
-  // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
+  // $FlowExpectedError[incompatible-type] - trust me this re-type is 100% safe
   (makeCommentOwnLineOriginal: (string, mixed) => string);
 
 const VALID_REACT_IMPORTS = new Set<string>(['React', 'react']);
@@ -102,8 +102,6 @@ export function flowDefToTSDef(
         node.type
       ](
         // $FlowExpectedError[incompatible-type]
-        // $FlowExpectedError[prop-missing]
-        // $FlowFixMe[incompatible-call]
         node,
       );
       tsBody.push(...(Array.isArray(result) ? result : [result]));
@@ -180,7 +178,7 @@ const getTransforms = (
     // $FlowExpectedError[prop-missing]
     // $FlowExpectedError[cannot-write]
     node.comments ??= [];
-    // $FlowExpectedError[incompatible-cast]
+    // $FlowExpectedError[incompatible-type]
     (node.comments: Array<TSESTree.Comment>).push(comment);
   }
   function unsupportedAnnotation(

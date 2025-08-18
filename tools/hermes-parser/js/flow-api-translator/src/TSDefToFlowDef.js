@@ -46,7 +46,7 @@ function constructFlowNode<T: FlowESTree.BaseNode>(
 }
 
 const makeCommentOwnLine =
-  // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
+  // $FlowExpectedError[incompatible-type] - trust me this re-type is 100% safe
   (makeCommentOwnLineOriginal: (string, mixed) => string);
 
 export function TSDefToFlowDef(
@@ -112,7 +112,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     // $FlowExpectedError[prop-missing]
     // $FlowExpectedError[cannot-write]
     node.comments ??= [];
-    // $FlowExpectedError[incompatible-cast]
+    // $FlowExpectedError[incompatible-type]
     (node.comments: Array<TSESTree.Comment>).push(comment);
   }
   function unsupportedAnnotation(
@@ -202,12 +202,12 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
             break;
           case 'TSAbstractPropertyDefinition':
           case 'PropertyDefinition':
-            // $FlowFixMe[incompatible-call] ambiguous node
+            // $FlowFixMe[incompatible-type] ambiguous node
             Transform._translateIntoObjectProp(classItem, properties, indexers);
             break;
           case 'MethodDefinition':
           case 'TSAbstractMethodDefinition':
-            // $FlowFixMe[incompatible-call] ambiguous node
+            // $FlowFixMe[incompatible-type] ambiguous node
             Transform._translateIntoObjectMethod(classItem, properties);
             break;
         }
@@ -1062,7 +1062,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           objectType: base,
           indexType: constructFlowNode<FlowESTree.StringLiteralTypeAnnotation>({
             type: 'StringLiteralTypeAnnotation',
-            // $FlowFixMe[incompatible-call]
+            // $FlowFixMe[incompatible-type]
             value: name,
             // $FlowFixMe[incompatible-type]
             raw: `'${name}'`,

@@ -33,7 +33,6 @@ function cleanAstForHermes(ast: $FlowFixMe, style: 'babel' | 'estree'): mixed {
   }
 
   return JSON.parse(
-    // $FlowExpectedError[incompatible-call]
     JSON.stringify(ast, (_, value) => {
       if (typeof value === 'bigint') {
         return value.toString();
@@ -59,7 +58,6 @@ function cleanAstForEspree(ast: $FlowFixMe): mixed {
     leave() {},
   });
   return JSON.parse(
-    // $FlowExpectedError[incompatible-call]
     JSON.stringify(ast, (_, value) => {
       if (typeof value === 'bigint') {
         return value.toString();
@@ -85,7 +83,6 @@ function cleanBabelAst(ast: $FlowFixMe): mixed {
   });
 
   return JSON.parse(
-    // $FlowExpectedError[incompatible-call]
     JSON.stringify(ast, (_, value) => {
       if (typeof value === 'bigint') {
         return value.toString();
@@ -144,7 +141,7 @@ export function parseEspree(source: string): mixed {
 }
 
 export function parseHermes(source: string, style: 'babel' | 'estree'): mixed {
-  // $FlowExpectedError[incompatible-call] - the overloads confuse flow
+  // $FlowExpectedError[incompatible-type] - the overloads confuse flow
   const ast = parseHermesOriginal(source, {
     babel: style === 'babel',
     sourceType: 'module',

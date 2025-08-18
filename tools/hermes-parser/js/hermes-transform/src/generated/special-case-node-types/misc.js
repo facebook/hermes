@@ -65,11 +65,11 @@ export function ArrowFunctionExpression(props: {
     expression: props.body.type !== 'BlockStatement',
     params: props.params.map(n => asDetachedNode(n)),
     body: asDetachedNode(props.body),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     returnType: asDetachedNode(props.returnType),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     predicate: asDetachedNode(props.predicate),
     async: props.async,
   });
@@ -100,13 +100,13 @@ export function ClassDeclaration(props: {
 }): DetachedNode<ClassDeclarationType> {
   const node = detachedProps<ClassDeclarationType>(props.parent, {
     type: 'ClassDeclaration',
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     superClass: asDetachedNode(props.superClass),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     superTypeParameters: asDetachedNode(props.superTypeParameters),
     decorators: (props.decorators ?? []).map(n => asDetachedNode(n)),
     implements: (props.implements ?? []).map(n => asDetachedNode(n)),
@@ -151,7 +151,7 @@ export function Identifier(props: {
     type: 'Identifier',
     name: props.name,
     optional: props.optional ?? false,
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     typeAnnotation: asDetachedNode(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
@@ -179,7 +179,7 @@ export function Program(props: {
     comments: props.comments ?? [],
     interpreter:
       props.interpreter != null
-        ? // $FlowFixMe[incompatible-call]
+        ? // $FlowFixMe[incompatible-type]
           asDetachedNode<InterpreterDirectiveType>({
             type: 'InterpreterDirective',
             value: props.interpreter,
@@ -211,7 +211,7 @@ export function DeclareFunction(props: {
         typeAnnotation: asDetachedNode(props.functionType),
       }),
     }),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     predicate: asDetachedNode(props.predicate),
   });
   setParentPointersInDirectChildren(node);

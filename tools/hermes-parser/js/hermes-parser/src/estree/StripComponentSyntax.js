@@ -836,7 +836,7 @@ export function transformProgram(
         case 'SwitchCase': {
           const consequent = mapStatementList(node.consequent, options);
           return nodeWith(node, {
-            /* $FlowExpectedError[incompatible-call] We know `mapStatementList` will
+            /* $FlowExpectedError[incompatible-type] We know `mapStatementList` will
                not return `ModuleDeclaration` nodes if it is not passed any */
             consequent,
           });

@@ -205,7 +205,7 @@ export function addComment(
 }
 
 export function cloneComment<T: Comment>(comment: T): T {
-  // $FlowExpectedError[incompatible-return]
+  // $FlowExpectedError[incompatible-type]
   return {
     type: comment.type,
     value: comment.value,
@@ -215,7 +215,7 @@ export function cloneComment<T: Comment>(comment: T): T {
 }
 
 export function cloneCommentWithMarkers<T: Comment>(comment: T): T {
-  // $FlowExpectedError[incompatible-return]
+  // $FlowExpectedError[incompatible-type]
   return {
     type: comment.type,
     value: comment.value,

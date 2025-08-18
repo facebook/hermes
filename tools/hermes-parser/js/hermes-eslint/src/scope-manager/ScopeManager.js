@@ -157,7 +157,6 @@ class ScopeManager {
       throw new Error('currentScope was unexpectedly null.');
     }
 
-    // $FlowExpectedError[incompatible-return]
     return this.currentScope;
   }
   _nestScope<T: Scope>(scope: T): T {
