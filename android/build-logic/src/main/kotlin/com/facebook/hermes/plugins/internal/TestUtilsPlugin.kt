@@ -39,7 +39,9 @@ class HermesUtils(private val project: Project) {
     get() {
       val candidateHermesCPaths =
           listOf(
-              "$hermesWs/build/ImportHermesc.cmake", "$hermesWs/build_release/ImportHermesc.cmake")
+              "$hermesWs/build/ImportHermesc.cmake",
+              "$hermesWs/build_release/ImportHermesc.cmake",
+          )
 
       return candidateHermesCPaths.lastOrNull { File(it).exists() }
           ?: throw InvalidUserDataException("Hermes host build not found")
