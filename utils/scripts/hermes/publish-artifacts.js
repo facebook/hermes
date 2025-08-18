@@ -79,7 +79,7 @@ function publishAndroidArtifactsToMaven(
     }
   } else {
     echo(
-      'Nothing to do as this is not a stable release - Nightlies Android artifacts are published by build_android',
+      'Nothing to do as this is not a stable release - Commitlies Android artifacts are published by build_android',
     );
   }
 

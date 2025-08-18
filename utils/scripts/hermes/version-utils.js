@@ -52,7 +52,12 @@ async function getVersion(buildType /*: BuildType */) /*: Promise<string> */ {
 
   const mainVersion = await getMainVersion();
   if (buildType === 'commitly') {
-    const dateIdentifier = new Date().toISOString().replace(/[-]/g, '');
+    const date = new Date();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const dateIdentifier =
+      date.toISOString().slice(0, -14).replace(/[-]/g, '') +
+      `${hours}${minutes}`;
     return `${mainVersion}-commitly-${dateIdentifier}-${shortCommit}`;
   }
 
