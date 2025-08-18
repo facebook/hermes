@@ -81,3 +81,6 @@ bool sys::commandLineFitsWithinSystemLimits(StringRef Program,
 #ifdef _WIN32
 #include "Windows/Program.inc"
 #endif
+#ifdef __wasi__
+#include "Wasi/Program.inc"
+#endif
