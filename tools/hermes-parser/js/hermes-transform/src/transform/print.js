@@ -47,25 +47,39 @@ export async function print(
   // Fix up the AST to match what prettier expects.
   mutateESTreeASTForPrettier(program, visitorKeys);
 
-  // Lazy require this module as it only exists in prettier v3.
-  const prettierFlowPlugin = require('prettier/plugins/flow');
+  let pluginParserName = 'flow';
+  let pluginParser;
+  let pluginPrinter;
+  try {
+    // Use prettier-plugin-hermes-parser if we can. It has latest Flow syntax support.
+    // $FlowExpectedError[untyped-import]
+    const prettierHermesPlugin = await import('prettier-plugin-hermes-parser');
+    pluginParser = prettierHermesPlugin.parsers.hermes;
+    pluginPrinter = prettierHermesPlugin.printers;
+    pluginParserName = 'hermes';
+  } catch {
+    const prettierFlowPlugin = require('prettier/plugins/flow');
+    pluginParser = prettierFlowPlugin.parsers.flow;
+  }
+
   return prettier.format(
     codeForPrinting,
     // $FlowExpectedError[incompatible-exact] - we don't want to create a dependency on the prettier types
     {
       ...prettierOptions,
-      parser: 'flow',
+      parser: pluginParserName,
       requirePragma: false,
       plugins: [
         {
           parsers: {
-            flow: {
-              ...prettierFlowPlugin.parsers.flow,
+            [pluginParserName]: {
+              ...pluginParser,
               parse() {
                 return program;
               },
             },
           },
+          printers: pluginPrinter,
         },
       ],
     },
