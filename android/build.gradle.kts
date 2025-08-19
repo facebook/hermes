@@ -319,3 +319,9 @@ tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs.add("-Xlint:deprecation,unchecked")
   options.compilerArgs.add("-Werror")
 }
+
+// We need to override the artifact ID as this project is called `hermes-engine` but
+// the maven coordinates are on `hermes-android`.
+publishing {
+  publications { getByName("release", MavenPublication::class) { artifactId = "hermes-android" } }
+}
