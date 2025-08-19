@@ -16,10 +16,10 @@ import type {BuildType} from './version-utils';
 
 const {
   getVersion,
-  validateBuildType,
   updateGradlePropertiesFile,
+  validateBuildType,
 } = require('./version-utils');
-const {echo, exec, exit} = require('shelljs');
+const {echo, exec, exit, popd, pushd} = require('shelljs');
 const yargs = require('yargs');
 
 async function main() {
@@ -51,8 +51,10 @@ async function publishArtifacts(buildType /*: BuildType */) {
   const version = getVersion(buildType);
 
   updateGradlePropertiesFile(version);
+  pushd('android');
   await publishAndroidArtifactsToMaven(version, buildType);
   await publishExternalArtifactsToMaven(version, buildType);
+  popd();
 }
 
 function publishAndroidArtifactsToMaven(
@@ -68,9 +70,8 @@ function publishAndroidArtifactsToMaven(
   ) {
     // -------- For stable releases, we also need to close and release the staging repository.
     if (
-      exec(
-        './android/gradlew publishAndroidToSonatype closeSonatypeStagingRepository',
-      ).code
+      exec('./gradlew publishAndroidToSonatype closeSonatypeStagingRepository')
+        .code
     ) {
       echo(
         'Failed to close and release the staging repository on Sonatype (Maven Central) for Android artifacts',
@@ -101,7 +102,7 @@ function publishExternalArtifactsToMaven(
     // This can't be done earlier in build_android because this artifact are partially built by the iOS jobs.
     if (
       exec(
-        './android/gradlew :ios-artifacts:publishToSonatype closeSonatypeStagingRepository',
+        './gradlew :ios-artifacts:publishToSonatype closeSonatypeStagingRepository',
       ).code
     ) {
       echo(
@@ -114,7 +115,7 @@ function publishExternalArtifactsToMaven(
     // -------- For nightly releases, we only need to publish the snapshot to Sonatype snapshot repo.
     if (
       exec(
-        './android/gradlew :ios-artifacts:publishToSonatype -PisSnapshot=' +
+        './gradlew :ios-artifacts:publishToSonatype -PisSnapshot=' +
           isSnapshot.toString(),
       ).code
     ) {

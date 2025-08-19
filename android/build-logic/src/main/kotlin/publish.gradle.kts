@@ -20,7 +20,9 @@ publishing {
   publications {
     create<MavenPublication>("release") {
       afterEvaluate {
-        from(components["default"])
+        if (project.plugins.hasPlugin("com.android.library")) {
+          from(components["default"])
+        }
 
         version =
             if (isSnapshot) {
@@ -29,7 +31,6 @@ publishing {
               project.version.toString()
             }
 
-        artifactId = "hermes-android"
         groupId = project.group.toString()
       }
 
