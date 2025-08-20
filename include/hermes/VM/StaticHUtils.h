@@ -22,13 +22,6 @@ inline SHRuntime *getSHRuntime(Runtime &runtime) {
   return static_cast<SHRuntime *>(&runtime);
 }
 
-inline PinnedHermesValue *toPHV(SHLegacyValue *shv) {
-  return static_cast<PinnedHermesValue *>(shv);
-}
-inline const PinnedHermesValue *toPHV(const SHLegacyValue *shv) {
-  return static_cast<const PinnedHermesValue *>(shv);
-}
-
 /// Free the \p unit, and all associated data.
 void sh_unit_done(Runtime &runtime, SHUnit *unit);
 

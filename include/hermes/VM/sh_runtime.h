@@ -8,6 +8,7 @@
 #ifndef HERMES_SH_RUNTIME_H
 #define HERMES_SH_RUNTIME_H
 
+#include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_segment_info.h"
 
 #include "libhermesvm-config.h"
@@ -76,6 +77,9 @@ typedef struct SHRuntime {
 
   /// The current top of the exception handler stack.
   SHJmpBuf *shCurJmpBuf;
+
+#define SHRUNTIME_HV_FIELD(name) SHLegacyValue name;
+#include "hermes/VM/SHRuntimeHermesValueFields.def"
 } SHRuntime;
 
 #ifdef HERMESVM_COMPRESSED_POINTERS

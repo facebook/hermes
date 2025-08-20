@@ -298,7 +298,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
         runtimeModuleFlags,
         sourceURL,
         environment,
-        global_);
+        Handle<>(toPHV(&global_)));
   }
 
   ExecutionStatus loadSegment(

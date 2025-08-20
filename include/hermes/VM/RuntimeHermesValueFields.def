@@ -105,7 +105,6 @@ RUNTIME_HV_FIELD(functionPrototypeSymbolHasInstance, NativeFunction)
 // revisit this in stage 2
 RUNTIME_HV_FIELD(specialCodeBlockDomain_, Domain)
 
-RUNTIME_HV_FIELD(global_, JSObject)
 RUNTIME_HV_FIELD(thrownValue_, HermesValue)
 RUNTIME_HV_FIELD(keptObjects_, JSMapImpl<CellKind::JSSetKind>)
 #ifdef HERMES_ENABLE_DEBUGGER

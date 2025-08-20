@@ -1127,7 +1127,7 @@ tailCall:
           O1REG(CoerceThisNS) = O2REG(CoerceThisNS);
         } else if (
             O2REG(CoerceThisNS).isNull() || O2REG(CoerceThisNS).isUndefined()) {
-          O1REG(CoerceThisNS) = runtime.global_.getHermesValue();
+          O1REG(CoerceThisNS) = runtime.getGlobal().getHermesValue();
         } else {
           lv.tmp = O2REG(CoerceThisNS);
           nextIP = NEXTINST(CoerceThisNS);
@@ -1142,7 +1142,7 @@ tailCall:
         } else if (
             FRAME.getThisArgRef().isNull() ||
             FRAME.getThisArgRef().isUndefined()) {
-          O1REG(LoadThisNS) = runtime.global_.getHermesValue();
+          O1REG(LoadThisNS) = runtime.getGlobal().getHermesValue();
         } else {
           lv.tmp = FRAME.getThisArgRef();
           nextIP = NEXTINST(LoadThisNS);
@@ -1841,7 +1841,7 @@ tailCall:
       }
 
       CASE(GetGlobalObject) {
-        O1REG(GetGlobalObject) = runtime.global_.getHermesValue();
+        O1REG(GetGlobalObject) = runtime.getGlobal().getHermesValue();
         ip = NEXTINST(GetGlobalObject);
         DISPATCH;
       }

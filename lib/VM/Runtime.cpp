@@ -435,7 +435,8 @@ Runtime::Runtime(
     }
   }
 
-  global_ = JSObject::create(*this, makeNullHandle<JSObject>());
+  global_ =
+      JSObject::create(*this, makeNullHandle<JSObject>()).getHermesValue();
 
   JSLibFlags jsLibFlags{};
   jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();
@@ -450,7 +451,7 @@ Runtime::Runtime(
   // Set the prototype of the global object to the standard object prototype,
   // which has now been defined.
   ignoreAllocationFailure(JSObject::setParent(
-      *global_, *this, *objectPrototype, PropOpFlags().plusThrowOnError()));
+      *getGlobal(), *this, *objectPrototype, PropOpFlags().plusThrowOnError()));
 
   symbolRegistry_.init(*this);
 
@@ -587,6 +588,8 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
     acceptor.beginRootSection(RootAcceptor::Section::RuntimeFields);
     for (auto &clazz : rootClazzes_)
       acceptor.accept(clazz, "rootClass");
+#define SHRUNTIME_HV_FIELD(name) acceptor.acceptNullable(*toPHV(&name));
+#include "hermes/VM/SHRuntimeHermesValueFields.def"
 #define RUNTIME_HV_FIELD(name, type) acceptor.acceptNullablePV(name);
 #include "hermes/VM/RuntimeHermesValueFields.def"
 #define RUNTIME_PHV_FIELD(name) acceptor.acceptNullable(name);
@@ -1308,7 +1311,7 @@ void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
 }
 
 Handle<JSObject> Runtime::getGlobal() {
-  return Handle<JSObject>::vmcast(&global_);
+  return Handle<JSObject>::vmcast(toPHV(&global_));
 }
 
 std::vector<llvh::ArrayRef<uint8_t>> Runtime::getEpilogues() {

@@ -728,6 +728,13 @@ inline llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue lhv) {
   return dumpHermesValue(OS, lhv);
 }
 
+inline PinnedHermesValue *toPHV(SHLegacyValue *shv) {
+  return static_cast<PinnedHermesValue *>(shv);
+}
+inline const PinnedHermesValue *toPHV(const SHLegacyValue *shv) {
+  return static_cast<const PinnedHermesValue *>(shv);
+}
+
 } // end namespace vm
 } // end namespace hermes
 

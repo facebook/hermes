@@ -136,7 +136,7 @@ extern "C" SHLegacyValue _sh_ljs_coerce_this_ns(
   if (LLVM_LIKELY(_sh_ljs_is_object(value))) {
     return value;
   } else if (_sh_ljs_is_null(value) || _sh_ljs_is_undefined(value)) {
-    return getRuntime(shr).global_.getHermesValue();
+    return getRuntime(shr).getGlobal().getHermesValue();
   } else {
     CallResult<HermesValue> res{HermesValue::encodeUndefinedValue()};
     {
@@ -741,7 +741,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
 }
 
 extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {
-  return getRuntime(shr).global_.getHermesValue();
+  return getRuntime(shr).global_;
 }
 
 extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
