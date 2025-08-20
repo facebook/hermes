@@ -12,6 +12,7 @@
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_mirror.h"
 #include "hermes/VM/sh_runtime.h"
+#include "hermes/VM/sh_stack_frame.h"
 #include "hermes/VMLayouts/sh_stack_frame_layout.h"
 
 #include <math.h>
@@ -291,8 +292,18 @@ SHERMES_EXPORT void
 _sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP);
 
 /// Index 0 loads "this", 1 the first param, etc.
-SHERMES_EXPORT SHLegacyValue
-_sh_ljs_param(SHLegacyValue *frame, uint32_t index);
+static inline SHLegacyValue _sh_ljs_param(
+    SHLegacyValue *frame,
+    uint32_t index) {
+  uint32_t argCount = _sh_stackframe_get_argcount(frame);
+  if (SH_LIKELY(index <= argCount)) {
+    // Subtract 1 (just like the interpreter) because -1 is used for "this" in
+    // _sh_stackframe_get_arg_ptr.
+    return *_sh_stackframe_get_arg_ptr(frame, (int32_t)index - 1);
+  } else {
+    return _sh_ljs_undefined();
+  }
+}
 
 /// Coerce a value assumed to contain 'this' to an object using non-strict
 /// mode rules. Primitives are boxed, \c null or \c undefed produce the global

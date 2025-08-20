@@ -119,17 +119,6 @@ _sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame) {
   (void)runtime.restoreStackAndPreviousFrame(StackFramePtr(toPHV(frame)));
 }
 
-extern "C" SHLegacyValue _sh_ljs_param(SHLegacyValue *frame, uint32_t index) {
-  assert(index <= INT32_MAX && "param index should be 31 bits");
-  auto framePtr = StackFramePtr(toPHV(frame));
-  if (LLVM_LIKELY(index <= framePtr.getArgCount())) {
-    // getArgRef() expects `this` to be -1.
-    return framePtr.getArgRef((int32_t)index - 1);
-  } else {
-    return _sh_ljs_undefined();
-  }
-}
-
 extern "C" SHLegacyValue _sh_ljs_coerce_this_ns(
     SHRuntime *shr,
     SHLegacyValue value) {
