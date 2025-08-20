@@ -12,6 +12,7 @@
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_mirror.h"
 #include "hermes/VM/sh_runtime.h"
+#include "hermes/VMLayouts/sh_stack_frame_layout.h"
 
 #include <math.h>
 #include <setjmp.h>

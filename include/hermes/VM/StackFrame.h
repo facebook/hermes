@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_STACKFRAME_H
 #define HERMES_VM_STACKFRAME_H
 
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/NativeArgs.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include <iterator>
 #include <type_traits>

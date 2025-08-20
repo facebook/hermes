@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_NATIVEARGS_H
 #define HERMES_VM_NATIVEARGS_H
 
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
 #include "hermes/VM/HandleRootOwner.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 
 namespace hermes {
 namespace vm {

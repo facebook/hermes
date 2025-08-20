@@ -13,7 +13,6 @@
 #include "JitHandlers.h"
 
 #include "../RuntimeOffsets.h"
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Support/ErrorHandling.h"
@@ -23,6 +22,7 @@
 #include "hermes/VM/Interpreter.h"
 #include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/StaticHUtils.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 #include "llvh/ADT/Statistic.h"
 
 #define DEBUG_TYPE "jit"

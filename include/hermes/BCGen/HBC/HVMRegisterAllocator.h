@@ -8,9 +8,9 @@
 #ifndef HERMES_BCGEN_HBC_HVMREGISTERALLOCATOR_H
 #define HERMES_BCGEN_HBC_HVMREGISTERALLOCATOR_H
 
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/RegAlloc.h"
 #include "hermes/IR/IR.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 
 namespace hermes {
 

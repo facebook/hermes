@@ -13,7 +13,6 @@
 #include "hermes/AST/NativeContext.h"
 #include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/BCGen/HBC/Passes.h"
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/LowerScopes.h"
 #include "hermes/BCGen/LowerStoreInstrs.h"
@@ -30,6 +29,7 @@
 #include "hermes/Support/DenseMapInfoSpecializations.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/UTF8.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 #include "llvh/ADT/MapVector.h"
 
 #include "llvh/ADT/BitVector.h"

@@ -11,7 +11,6 @@
 
 #include "hermes/ADT/DenseUInt64.h"
 #include "hermes/ADT/SimpleLRU.h"
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/JIT/JIT.h"
@@ -19,6 +18,7 @@
 #include "hermes/VM/JIT/arm64/JIT.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/static_h.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include "llvh/ADT/DenseMap.h"
 

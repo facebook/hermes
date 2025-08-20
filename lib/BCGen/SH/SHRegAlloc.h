@@ -8,8 +8,8 @@
 #ifndef HERMES_BCGEN_SHREGALLOC_H
 #define HERMES_BCGEN_SHREGALLOC_H
 
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/BitVector.h"
