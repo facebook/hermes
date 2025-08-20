@@ -478,6 +478,7 @@ class InstrGen {
   InstrGen(
       llvh::raw_ostream &os,
       sh::SHRegisterAllocator &ra,
+      const BytecodeGenerationOptions &options,
       const llvh::DenseMap<BasicBlock *, unsigned> &bbMap,
       Function &F,
       ModuleGen &moduleGen,
@@ -487,6 +488,7 @@ class InstrGen {
       const llvh::MapVector<TryStartInst *, uint32_t> &tryIDs)
       : os_(os),
         ra_(ra),
+        options_(options),
         bbMap_(bbMap),
         F_(F),
         nativeContext_(F.getContext().getNativeContext()),
@@ -495,6 +497,7 @@ class InstrGen {
         nextReadCacheIdx_(nextReadCacheIdx),
         nextPrivateNameCacheIdx_(nextPrivateNameCacheIdx),
         tryIDs_(tryIDs) {
+    (void)options_;
     if (!tryIDs_.empty())
       enclosingTrys_ = *findEnclosingTrysPerBlock(&F_);
   }
@@ -521,6 +524,9 @@ class InstrGen {
 
   /// The register allocator that was created for the current function
   sh::SHRegisterAllocator &ra_;
+
+  /// Options for generation.
+  const BytecodeGenerationOptions &options_;
 
   /// A map from basic blocks to unique numbers for identification
   const llvh::DenseMap<BasicBlock *, unsigned> &bbMap_;
@@ -2640,6 +2646,7 @@ void generateFunction(
   InstrGen instrGen(
       OS,
       RA,
+      options,
       bbMap,
       F,
       moduleGen,

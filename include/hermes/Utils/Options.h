@@ -55,6 +55,10 @@ struct BytecodeGenerationOptions {
   /// generated unit.
   bool emitMain = true;
 
+  /// Whether the SH backend should emit small C code. If false, will inline
+  /// more fast paths.
+  bool smallC = false;
+
   /// Whether to strip the debug info in the bytecode binary.
   bool stripDebugInfoSection = false;
 

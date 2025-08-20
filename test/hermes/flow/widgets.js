@@ -10,6 +10,7 @@
 
 // RUN: %hermes -typed %s | %FileCheckOrRegen --match-full-lines %s
 // RUN: %shermes -typed -exec %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %shermes -Xsmall-c -typed -exec %s | %FileCheckOrRegen --match-full-lines %s
 
 'use strict';
 

@@ -120,6 +120,11 @@ cl::opt<OptLevel> OptimizationLevel(
         clEnumValN(OptLevel::OMax, "O", "Expensive optimizations")),
     cl::cat(CompilerCategory));
 
+static cl::opt<bool> SmallC(
+    "Xsmall-c",
+    cl::init(false),
+    cl::desc("Optimize output native code for size instead of performance"));
+
 cl::opt<DebugLevel> DebugInfoLevel(
     cl::desc("Choose debug info level:"),
     cl::init(DebugLevel::g0),
@@ -1003,6 +1008,8 @@ bool compileFromCommandLineOptions() {
   genOptions.emitMain = cli::ExportedUnit.empty();
   if (!cli::ExportedUnit.empty())
     genOptions.unitName = cli::ExportedUnit;
+
+  genOptions.smallC = cli::SmallC;
 
   genOptions.emitSourceLocations =
       cli::DumpSourceLocation != LocationDumpMode::None;
