@@ -34,4 +34,28 @@ typedef uint16_t char16_t;
 #define SHERMES_NO_SANITIZE(KIND)
 #endif
 
+#ifdef __GNUC__
+#define SH_LIKELY(EXPR) __builtin_expect((bool)(EXPR), true)
+#define SH_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
+#else
+#define SH_LIKELY(EXPR) (EXPR)
+#define SH_UNLIKELY(EXPR) (EXPR)
+#endif
+
+/// SH_ATTRIBUTE_NOINLINE - On compilers where we have a directive to do so,
+/// mark a method "not for inlining".
+#ifdef __GNUC__
+#define SH_ATTRIBUTE_NOINLINE __attribute__((noinline))
+#else
+#define SH_ATTRIBUTE_NOINLINE
+#endif
+
+/// SH_ATTRIBUTE_ALWAYS_INLINE - On compilers where we have a directive to do
+/// so, mark a method "always inline" because it is performance sensitive.
+#ifdef __GNUC__
+#define SH_ATTRIBUTE_ALWAYS_INLINE __attribute__((always_inline))
+#else
+#define SH_ATTRIBUTE_ALWAYS_INLINE
+#endif
+
 #endif // HERMES_SH_CONFIG_H
