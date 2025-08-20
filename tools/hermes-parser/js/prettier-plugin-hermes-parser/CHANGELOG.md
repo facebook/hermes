@@ -1,3 +1,6 @@
+## 0.32.0
+- Support opaque type with both lower and upper bounds with `super` and `extends` syntax.
+
 ## 0.31.1
 - Rebuild based on `@prettier/plugin-hermes`. There should be no formatting differences, but it will be less buggy.
 

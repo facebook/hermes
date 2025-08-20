@@ -1,6 +1,6 @@
 {
   "name": "prettier-plugin-hermes-parser",
-  "version": "0.31.1",
+  "version": "0.32.0",
   "description": "Hermes parser plugin for Prettier.",
   "license": "MIT",
   "repository": {
