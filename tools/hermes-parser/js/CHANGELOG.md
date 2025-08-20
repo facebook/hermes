@@ -1,3 +1,9 @@
+## 0.32.0
+
+### `hermes-transform`
+
+- Use `prettier-plugin-hermes-parser` to print transformed code if it's installed.
+
 ## 0.31.2
 
 ### `hermes-parser`
