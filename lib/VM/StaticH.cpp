@@ -740,10 +740,6 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
       .getHermesValue();
 }
 
-extern "C" SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {
-  return getRuntime(shr).global_;
-}
-
 extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
   Runtime &runtime = getRuntime(shr);
   {

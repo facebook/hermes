@@ -534,7 +534,10 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_create_class(
     SHLegacyValue *homeObjectOut,
     SHLegacyValue *superClass);
 
-SHERMES_EXPORT SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr);
+static inline SHLegacyValue _sh_ljs_get_global_object(SHRuntime *shr) {
+  return shr->global_;
+}
+
 SHERMES_EXPORT void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name);
 
 SHERMES_EXPORT void _sh_ljs_put_by_id_loose_rjs(
