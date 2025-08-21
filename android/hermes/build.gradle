@@ -28,10 +28,10 @@ android {
         arguments "-DHERMES_FACEBOOK_BUILD=${hermesUtils.facebookBuild}"
         arguments "-DANDROID_STL=c++_shared"
         arguments "-DANDROID_PIE=True"
-        arguments "-DIMPORT_HERMESC=${hermesUtils.hermesC}"
+        arguments "-DIMPORT_HOST_COMPILERS=${hermesUtils.hermesC}"
         arguments "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True"
         arguments "-DHERMES_BUILD_SHARED_JSI=True"
-        targets "libhermes"
+        targets "hermesvm"
       }
     }
     ndk {

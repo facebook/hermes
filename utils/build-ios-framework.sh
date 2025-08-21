@@ -6,7 +6,7 @@
 
 . ./utils/build-apple-framework.sh
 
-if [ ! -d destroot/Library/Frameworks/universal/hermes.xcframework ]; then
+if [ ! -d destroot/Library/Frameworks/universal/hermesvm.xcframework ]; then
     ios_deployment_target=$(get_ios_deployment_target)
     visionos_deployment_target=$(get_visionos_deployment_target)
     tvos_deployment_target=$(get_tvos_deployment_target)

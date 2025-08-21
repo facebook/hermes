@@ -91,32 +91,29 @@ if(HERMES_THREAD_SAFETY_ANALYSIS)
 endif()
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
-  LINK_LIBS libhermes hermesPlatform)
+  LINK_LIBS hermesvm hermesPlatform)
 
 add_hermes_library(timerStats TimerStats.cpp LINK_LIBS jsi hermesSupport)
 
 add_hermes_library(traceInterpreter TraceInterpreter.cpp
-  LINK_LIBS libhermes hermesInstrumentation synthTrace synthTraceParser)
+  LINK_LIBS hermesvm hermesInstrumentation synthTrace synthTraceParser)
 
-add_library(libhermes ${api_sources})
-target_link_libraries(libhermes PUBLIC jsi PRIVATE hermesVMRuntime ${INSPECTOR_DEPS})
-target_link_options(libhermes PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
+add_library(hermesvm ${api_sources})
+target_link_libraries(hermesvm PUBLIC jsi PRIVATE hermesVMRuntime ${INSPECTOR_DEPS})
+target_link_options(hermesvm PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 
 # Export the required header directory
-target_include_directories(libhermes PUBLIC .. ../../public ${HERMES_COMMON_DIR}/public ${HERMES_JSI_DIR})
+target_include_directories(hermesvm PUBLIC .. ../../public ${HERMES_COMMON_DIR}/public ${HERMES_JSI_DIR})
 
-# Avoid becoming liblibhermes (and there's already a target called 'hermes')
-set_target_properties(libhermes PROPERTIES OUTPUT_NAME hermes)
-
-# Create a lean version of libhermes in the same way.
-add_library(libhermes_lean ${api_sources})
-target_link_libraries(libhermes_lean PUBLIC jsi PRIVATE hermesVMRuntimeLean ${INSPECTOR_DEPS})
-target_link_options(libhermes_lean PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
-target_include_directories(libhermes_lean PUBLIC .. ../../public ${HERMES_COMMON_DIR}/public ${HERMES_JSI_DIR})
-set_target_properties(libhermes_lean PROPERTIES OUTPUT_NAME hermes_lean)
+# Create a lean version of hermesvm in the same way.
+add_library(hermesvmlean ${api_sources})
+target_link_libraries(hermesvmlean PUBLIC jsi PRIVATE hermesVMRuntimeLean ${INSPECTOR_DEPS})
+target_link_options(hermesvmlean PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
+target_include_directories(hermesvmlean PUBLIC .. ../../public ${HERMES_COMMON_DIR}/public ${HERMES_JSI_DIR})
+set_target_properties(hermesvmlean PROPERTIES OUTPUT_NAME hermes_lean)
 
 if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
-  set_target_properties(libhermes PROPERTIES
+  set_target_properties(hermesvm PROPERTIES
     FRAMEWORK TRUE
     VERSION ${PROJECT_VERSION}
     SOVERSION ${PROJECT_VERSION}
@@ -133,38 +130,42 @@ if(APPLE AND HERMES_BUILD_APPLE_FRAMEWORK)
     MACOSX_PACKAGE_LOCATION Headers/Public
   )
   if(HERMES_ENABLE_BITCODE)
-    target_compile_options(libhermes PUBLIC "-fembed-bitcode")
-    target_link_options(libhermes PUBLIC "-fembed-bitcode")
+    target_compile_options(hermesvm PUBLIC "-fembed-bitcode")
+    target_link_options(hermesvm PUBLIC "-fembed-bitcode")
   endif()
   # Define the deployment target in the frameworks metadata
   if(HERMES_APPLE_TARGET_PLATFORM MATCHES "iphone")
-    add_custom_command(TARGET libhermes POST_BUILD
-      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:libhermes>/Info.plist
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
     )
   elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "appletv")
-    add_custom_command(TARGET libhermes POST_BUILD
-      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:libhermes>/Info.plist
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
     )
   elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
-    add_custom_command(TARGET libhermes POST_BUILD
-      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:libhermes>/Resources/Info.plist
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Resources/Info.plist
     )
   elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "macos")
-    add_custom_command(TARGET libhermes POST_BUILD
-      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:libhermes>/Resources/Info.plist
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Resources/Info.plist
     )
   elseif(HERMES_APPLE_TARGET_PLATFORM MATCHES "xr")
     if(CMAKE_VERSION VERSION_LESS 3.28.4)
       message("VisionOS Simulator requires CMake version >= 3.28.4")
     endif()
 
-    add_custom_command(TARGET libhermes POST_BUILD
-      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:libhermes>/Info.plist
+    add_custom_command(TARGET hermesvm POST_BUILD
+      COMMAND /usr/libexec/PlistBuddy -c "Add :MinimumOSVersion string ${CMAKE_OSX_DEPLOYMENT_TARGET}" $<TARGET_FILE_DIR:hermesvm>/Info.plist
     )
   endif()
 endif()
 
-install(TARGETS libhermes
+set_target_properties(hermesvm PROPERTIES
+  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+)
+
+install(TARGETS hermesvm
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib

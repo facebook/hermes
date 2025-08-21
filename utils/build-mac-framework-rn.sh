@@ -13,7 +13,7 @@ CURR_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=xplat/hermes/utils/build-apple-framework-rn.sh
 source "${CURR_SCRIPT_DIR}/build-apple-framework-rn.sh"
 
-if [ ! -d destroot/Library/Frameworks/macosx/hermes.framework ]; then
+if [ ! -d destroot/Library/Frameworks/macosx/hermesvm.framework ]; then
     mac_deployment_target=$(get_mac_deployment_target)
 
     build_apple_framework "macosx" "x86_64;arm64" "$mac_deployment_target"

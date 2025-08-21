@@ -11,7 +11,7 @@ add_hermes_tool(hdb
 
 # TODO: Even though this does not use llvh at all, a quirk of our build is that
 #       pthread is found and provided by llvh.
-target_link_libraries(hdb libhermes LLVHSupport)
+target_link_libraries(hdb hermesvm LLVHSupport)
 
 install(TARGETS hdb
   RUNTIME DESTINATION bin

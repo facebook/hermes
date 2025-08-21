@@ -24,7 +24,7 @@ if(HERMES_IS_ANDROID)
   add_hermes_library(jsijni SHARED
       ${jni_source_files}
       LINK_LIBS
-      libhermes
+      hermesvm
       compileJS
       fbjni::fbjni
       jsi
@@ -34,7 +34,7 @@ if(HERMES_IS_ANDROID)
   add_hermes_library(jsijniepi SHARED
       ${epi_source_files}
       LINK_LIBS
-      libhermes
+      hermesvm
       compileJS
       fbjni::fbjni
       jsi
