@@ -191,7 +191,7 @@ jobs:
         # Generate and build the debug artefact.
         cmake -S hermes -B build_wasm_dbg \
           -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
-          -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
+          -DIMPORT_HOST_COMPILERS=build_host/ImportHostCompilers.cmake \
           -DCMAKE_BUILD_TYPE=Debug -DHERMES_UNICODE_LITE=ON \
           -DCMAKE_CXX_FLAGS=-O2  -DCMAKE_C_FLAGS=-O2 \
           -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB" \
@@ -202,7 +202,7 @@ jobs:
         # Generate and build the release artefact.
         cmake -S hermes -B build_wasm_opt \
           -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake \
-          -DIMPORT_HERMESC=build_host/ImportHermesc.cmake \
+          -DIMPORT_HOST_COMPILERS=build_host/ImportHostCompilers.cmake \
           -DCMAKE_BUILD_TYPE=Release -DHERMES_UNICODE_LITE=ON \
           -DCMAKE_EXE_LINKER_FLAGS="-sALLOW_MEMORY_GROWTH=1 -sSTACK_SIZE=256KB -g2" \
           -DHERMES_ENABLE_DEBUGGER=OFF

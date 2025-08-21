@@ -27,10 +27,10 @@ Pod::Spec.new do |spec|
                     "GCC_PREPROCESSOR_DEFINITIONS[config=Release]" => "$(inherited) HERMES_ENABLE_DEBUGGER=0"
                   }
 
-  spec.ios.vendored_frameworks = "destroot/Library/Frameworks/universal/hermes.xcframework"
-  spec.visionos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermes.xcframework"
-  spec.tvos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermes.xcframework"
-  spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermes.framework"
+  spec.ios.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
+  spec.visionos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
+  spec.tvos.vendored_frameworks = "destroot/Library/Frameworks/universal/hermesvm.xcframework"
+  spec.osx.vendored_frameworks = "destroot/Library/Frameworks/macosx/hermesvm.framework"
 
   spec.subspec 'Hermes' do |ss|
     ss.source_files = ''

@@ -5,9 +5,9 @@
 
 add_definitions(-DHERMES_CMAKE_BUILD)
 
-if(IMPORT_HERMESC)
-  file(TO_CMAKE_PATH "${IMPORT_HERMESC}" IMPORT_HERMESC_CMAKE)
-  include(${IMPORT_HERMESC_CMAKE})
+if(IMPORT_HOST_COMPILERS)
+  file(TO_CMAKE_PATH "${IMPORT_HOST_COMPILERS}" IMPORT_HOST_COMPILERS_CMAKE)
+  include(${IMPORT_HOST_COMPILERS_CMAKE})
   set(hermesc_EXE native-hermesc)
 else()
   set(hermesc_EXE hermesc)
