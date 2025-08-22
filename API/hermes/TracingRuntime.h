@@ -108,6 +108,11 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       const jsi::PropNameID &name,
       const jsi::Value &value) override;
 
+  void deleteProperty(const jsi::Object &obj, const jsi::PropNameID &name)
+      override;
+  void deleteProperty(const jsi::Object &obj, const jsi::String &name) override;
+  void deleteProperty(const jsi::Object &, const jsi::Value &name) override;
+
   void setPrototypeOf(const jsi::Object &object, const jsi::Value &prototype)
       override;
   jsi::Value getPrototypeOf(const jsi::Object &object) override;

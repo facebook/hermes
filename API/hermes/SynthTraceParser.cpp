@@ -487,6 +487,13 @@ SynthTrace getTrace(
 #endif
         );
         break;
+      case RecordType::DeleteProperty: {
+        trace.emplace_back<SynthTrace::DeletePropertyRecord>(
+            timeFromStart,
+            objID->getValue(),
+            SynthTrace::decode(propID->str()));
+        break;
+      }
       case RecordType::GetPropertyNames: {
         trace.emplace_back<SynthTrace::GetPropertyNamesRecord>(
             timeFromStart, objID->getValue());

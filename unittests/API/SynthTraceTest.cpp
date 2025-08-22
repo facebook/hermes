@@ -559,6 +559,49 @@ TEST_F(SynthTraceTest, HasProperty) {
   EXPECT_EQ_RECORD(hprExpect1, *records[4]);
 }
 
+TEST_F(SynthTraceTest, DeleteProperty) {
+  std::string foo{"foo"};
+  SynthTrace::ObjectID objID;
+  SynthTrace::ObjectID fooID;
+  auto obj = jsi::Object(*rt);
+  objID = rt->useObjectID(obj);
+  auto fooStr = jsi::String::createFromAscii(*rt, foo);
+  fooID = rt->useObjectID(fooStr);
+  auto val = jsi::Value(*rt, 1);
+  obj.setProperty(*rt, fooStr, 1);
+  obj.deleteProperty(*rt, fooStr);
+  const auto &records = rt->trace().records();
+  EXPECT_EQ(4, records.size());
+  EXPECT_EQ(SynthTrace::RecordType::CreateObject, records[0]->getType());
+  EXPECT_EQ(SynthTrace::RecordType::CreateString, records[1]->getType());
+  EXPECT_EQ(SynthTrace::RecordType::SetProperty, records[2]->getType());
+  auto deleteStrRecord = SynthTrace::DeletePropertyRecord(
+      records[3]->time_, objID, SynthTrace::encodeString(fooID));
+  EXPECT_EQ_RECORD(deleteStrRecord, *records[3]);
+
+  objID = rt->useObjectID(obj);
+  auto fooProp = jsi::PropNameID::forAscii(*rt, foo);
+  fooID = rt->useObjectID(fooProp);
+  obj.setProperty(*rt, fooProp, 1);
+  obj.deleteProperty(*rt, fooProp);
+  EXPECT_EQ(7, records.size());
+  EXPECT_EQ(SynthTrace::RecordType::CreatePropNameID, records[4]->getType());
+  EXPECT_EQ(SynthTrace::RecordType::SetProperty, records[5]->getType());
+  auto deletePropRecord = SynthTrace::DeletePropertyRecord(
+      records[6]->time_, objID, SynthTrace::encodePropNameID(fooID));
+  EXPECT_EQ_RECORD(deletePropRecord, *records[6]);
+
+  objID = rt->useObjectID(obj);
+  auto propVal = jsi::Value(*rt, 1);
+  obj.setProperty(*rt, "1", 123);
+  obj.deleteProperty(*rt, propVal);
+  EXPECT_EQ(SynthTrace::RecordType::CreateString, records[7]->getType());
+  EXPECT_EQ(SynthTrace::RecordType::SetProperty, records[8]->getType());
+  auto expectedDeleteRecord = SynthTrace::DeletePropertyRecord(
+      records[9]->time_, objID, SynthTrace::encodeNumber(1));
+  EXPECT_EQ_RECORD(expectedDeleteRecord, *records[9]);
+}
+
 TEST_F(SynthTraceTest, GetPropertyNames) {
   SynthTrace::ObjectID objID;
   SynthTrace::ObjectID propNamesID;
@@ -1493,6 +1536,31 @@ TEST_F(SynthTraceReplayTest, CreateObjectReplay) {
 
     auto child2 = rt.global().getProperty(rt, "child2").asObject(rt);
     EXPECT_TRUE(child2.getPrototype(rt).isNull());
+  }
+}
+
+TEST_F(SynthTraceReplayTest, DeletePropertyReplay) {
+  {
+    auto &rt = *traceRt;
+    auto obj = jsi::Object(rt);
+    rt.global().setProperty(rt, "foo", obj);
+
+    obj.setProperty(rt, "bar", 123);
+    obj.setProperty(rt, "baz", 456);
+    obj.setProperty(rt, "100", 789);
+
+    obj.deleteProperty(rt, jsi::String::createFromAscii(rt, "bar"));
+    obj.deleteProperty(rt, jsi::PropNameID::forAscii(rt, "baz"));
+    obj.deleteProperty(rt, jsi::Value(rt, 100));
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto obj = rt.global().getPropertyAsObject(rt, "foo");
+
+    EXPECT_FALSE(obj.hasProperty(rt, "bar"));
+    EXPECT_FALSE(obj.hasProperty(rt, "baz"));
+    EXPECT_FALSE(obj.hasProperty(rt, "100"));
   }
 }
 

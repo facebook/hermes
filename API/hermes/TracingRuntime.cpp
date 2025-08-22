@@ -826,6 +826,34 @@ void TracingRuntime::setPropertyValue(
   RD::setPropertyValue(obj, name, value);
 }
 
+void TracingRuntime::deleteProperty(
+    const jsi::Object &obj,
+    const jsi::PropNameID &name) {
+  trace_.emplace_back<SynthTrace::DeletePropertyRecord>(
+      getTimeSinceStart(),
+      useObjectID(obj),
+      SynthTrace::encodePropNameID(useObjectID(name)));
+  RD::deleteProperty(obj, name);
+}
+
+void TracingRuntime::deleteProperty(
+    const jsi::Object &obj,
+    const jsi::String &name) {
+  trace_.emplace_back<SynthTrace::DeletePropertyRecord>(
+      getTimeSinceStart(),
+      useObjectID(obj),
+      SynthTrace::encodeString(useObjectID(name)));
+  RD::deleteProperty(obj, name);
+}
+
+void TracingRuntime::deleteProperty(
+    const jsi::Object &obj,
+    const jsi::Value &name) {
+  trace_.emplace_back<SynthTrace::DeletePropertyRecord>(
+      getTimeSinceStart(), useObjectID(obj), useTraceValue(name));
+  RD::deleteProperty(obj, name);
+}
+
 void TracingRuntime::setPrototypeOf(
     const jsi::Object &object,
     const jsi::Value &prototype) {
