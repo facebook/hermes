@@ -51,12 +51,12 @@ jobs:
     uses: ./.github/workflows/build-hermesc-linux.yml
   build_hermesc_windows:
     uses: ./.github/workflows/build-hermesc-windows.yml
-  build_android:
-    uses: ./.github/workflows/build-android.yml
-    needs: set_release_type
-    secrets: inherit
-    with:
-      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+  # build_android:
+  #   uses: ./.github/workflows/build-android.yml
+  #   needs: set_release_type
+  #   secrets: inherit
+  #   with:
+  #     release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
   build_emscripten:
     uses: ./.github/workflows/build-emscripten.yml
   test-apple-runtime:
@@ -72,7 +72,7 @@ jobs:
         build_hermes_macos,
         build_hermesc_linux,
         build_hermesc_windows,
-        build_android,
+        # build_android,
       ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
