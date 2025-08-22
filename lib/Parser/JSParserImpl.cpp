@@ -1446,7 +1446,7 @@ Optional<ESTree::PropertyNode *> JSParserImpl::parseBindingProperty(
     // Must validate BindingIdentifier, because there are certain identifiers
     // which are valid as PropertyName but not as BindingIdentifier.
     auto *ident = dyn_cast<ESTree::IdentifierNode>(key);
-    if (!ident ||
+    if (!ident || computed ||
         !validateBindingIdentifier(
             Param{},
             ident->getSourceRange(),
@@ -3002,7 +3002,8 @@ Optional<ESTree::Node *> JSParserImpl::parsePropertyAssignment(bool eagerly) {
   ESTree::Node *value;
   bool shorthand = false;
 
-  if (isa<ESTree::IdentifierNode>(key) && check(TokenKind::equal)) {
+  if (isa<ESTree::IdentifierNode>(key) && check(TokenKind::equal) &&
+      !computed) {
     // Check for CoverInitializedName: IdentifierReference Initializer
     auto startLoc = advance().Start;
     auto optInit = parseAssignmentExpression();
