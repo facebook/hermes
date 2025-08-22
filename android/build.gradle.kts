@@ -64,9 +64,12 @@ fun getSDKManagerPath(): String {
   }
 }
 
-val buildDir = project.layout.buildDirectory.get().asFile
 val hermesDir = project.projectDir.parentFile
-val hermesBuildDir = File("$buildDir/hermes")
+val hermesBuildDir = File("$hermesDir/build")
+
+project.layout.buildDirectory.set(hermesBuildDir)
+
+val buildDir = project.layout.buildDirectory.get().asFile
 val hermesCOutputBinary = File("$buildDir/hermes/bin/hermesc")
 
 // This filetree represents the file of the Hermes build that we want as input/output
