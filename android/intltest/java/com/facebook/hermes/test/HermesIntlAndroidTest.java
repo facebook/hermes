@@ -80,6 +80,20 @@ public class HermesIntlAndroidTest {
     }
   }
 
+  // @Test
+  // public void testTruncation() throws IOException {
+  //   try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+  //     rt.evaluateJavaScript(
+  //         new StringBuilder()
+  //             .append("var result = ['en-US', 'fr'];\n")
+  //             .append("result[\"length\"] = 4294967295;\n")
+  //             .append("var newLength = String(result.length);\n")
+  //             .toString());
+  //     String result = rt.getGlobalStringProperty("newLength");
+  //     assertThat(result).isEqualTo("4294967295");
+  //   }
+  // }
+
   @Test
   public void testDateTimeFormatCaseInsensitivity() {
     try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
