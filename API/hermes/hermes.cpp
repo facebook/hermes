@@ -732,6 +732,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Object &,
       const jsi::String &name,
       const jsi::Value &value) override;
+  void deleteProperty(const jsi::Object &, const jsi::PropNameID &name)
+      override;
+  void deleteProperty(const jsi::Object &, const jsi::String &name) override;
+  void deleteProperty(const jsi::Object &, const jsi::Value &name) override;
   bool isArray(const jsi::Object &) const override;
   bool isArrayBuffer(const jsi::Object &) const override;
   bool isFunction(const jsi::Object &) const override;
@@ -2377,6 +2381,49 @@ void HermesRuntimeImpl::setPropertyValue(
                    vmHandleFromValue(value, &valueStorage),
                    vm::PropOpFlags().plusThrowOnError())
                   .getStatus());
+}
+
+void HermesRuntimeImpl::deleteProperty(
+    const jsi::Object &obj,
+    const jsi::PropNameID &name) {
+  vm::GCScope gcScope(runtime_);
+  auto res = vm::JSObject::deleteNamed(
+      handle(obj),
+      runtime_,
+      phv(name).getSymbol(),
+      vm::PropOpFlags().plusThrowOnError());
+  checkStatus(res.getStatus());
+}
+
+void HermesRuntimeImpl::deleteProperty(
+    const jsi::Object &obj,
+    const jsi::String &name) {
+  vm::GCScope gcScope(runtime_);
+  auto res = vm::JSObject::deleteComputed(
+      handle(obj),
+      runtime_,
+      stringHandle(name),
+      vm::PropOpFlags().plusThrowOnError());
+  checkStatus(res.getStatus());
+  if (!*res) {
+    throw jsi::JSError(*this, "Failed to delete property");
+  }
+}
+
+void HermesRuntimeImpl::deleteProperty(
+    const jsi::Object &obj,
+    const jsi::Value &name) {
+  vm::GCScope gcScope(runtime_);
+  vm::PinnedHermesValue numStorage;
+  auto res = vm::JSObject::deleteComputed(
+      handle(obj),
+      runtime_,
+      vmHandleFromValue(name, &numStorage),
+      vm::PropOpFlags().plusThrowOnError());
+  checkStatus(res.getStatus());
+  if (!*res) {
+    throw jsi::JSError(*this, "Failed to delete property");
+  }
 }
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {
