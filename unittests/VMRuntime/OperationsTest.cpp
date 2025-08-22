@@ -13,6 +13,7 @@
 
 #include "TestHelpers.h"
 
+#include <cmath>
 #include <limits>
 
 #include "gtest/gtest.h"
@@ -29,6 +30,12 @@ CallResult<HermesValue> res{ExecutionStatus ::EXCEPTION};
   }
 
 using OperationsTest = RuntimeTestFixture;
+
+TEST_F(OperationsTest, DoubleIntConversionTest) {
+  double d = std::pow(2.0, 32.0) - 1;
+  uint32_t len = (uint32_t)d;
+  EXPECT_EQ(len, 4294967295);
+}
 
 TEST_F(OperationsTest, IsSameValueTest) {
   PinnedHermesValue v1;
