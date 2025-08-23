@@ -17,7 +17,7 @@ import type {BabelFile} from './babel/TransformESTreeToBabel';
 import * as HermesParser from './HermesParser';
 import HermesToESTreeAdapter from './HermesToESTreeAdapter';
 import FlowVisitorKeys from './generated/ESTreeVisitorKeys';
-import * as StripComponentSyntax from './estree/StripComponentSyntax';
+import * as TransformComponentSyntax from './estree/TransformComponentSyntax';
 import * as TransformMatchSyntax from './estree/TransformMatchSyntax';
 import * as StripFlowTypesForBabel from './estree/StripFlowTypesForBabel';
 import * as TransformESTreeToBabel from './babel/TransformESTreeToBabel';
@@ -93,7 +93,7 @@ export function parse(
 
   const loweredESTreeAST = [
     TransformMatchSyntax.transformProgram,
-    StripComponentSyntax.transformProgram,
+    TransformComponentSyntax.transformProgram,
     StripFlowTypesForBabel.transformProgram,
   ].reduce((ast, transform) => transform(ast, options), estreeAST);
 
@@ -112,7 +112,7 @@ export {default as mutateESTreeASTForPrettier} from './utils/mutateESTreeASTForP
 
 const Transforms = {
   transformMatchSyntax: TransformMatchSyntax.transformProgram,
-  stripComponentSyntax: StripComponentSyntax.transformProgram,
+  transformComponentSyntax: TransformComponentSyntax.transformProgram,
   stripFlowTypesForBabel: StripFlowTypesForBabel.transformProgram,
   stripFlowTypes: StripFlowTypes.transformProgram,
 };

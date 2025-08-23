@@ -243,7 +243,7 @@ function mapComponentParameters(
   if (propsProperties.length === 0) {
     if (refParam == null) {
       throw new Error(
-        'StripComponentSyntax: Invalid state, ref should always be set at this point if props are empty',
+        'TransformComponentSyntax: Invalid state, ref should always be set at this point if props are empty',
       );
     }
     const emptyParamsLoc = {

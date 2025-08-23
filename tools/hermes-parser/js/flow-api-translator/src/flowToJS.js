@@ -37,7 +37,7 @@ export function flowToJS(
   _scopeManager: ScopeManager,
 ): Program {
   return [
-    Transforms.stripComponentSyntax,
+    Transforms.transformComponentSyntax,
     Transforms.stripFlowTypes,
     stripAtFlow,
   ].reduce((ast, transform) => transform(ast, {}), sourceAST);
