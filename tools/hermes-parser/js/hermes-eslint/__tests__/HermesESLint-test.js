@@ -103,7 +103,7 @@ test('Visitor key order for control flow nodes', () => {
 });
 
 test('Parse error messages formatted for ESLint', () => {
-  expect(() => parseForESLint('const = 1')).toThrowError(
+  expect(() => parseForESLint('const = 1')).toThrow(
     expect.objectContaining({
       lineNumber: 1,
       column: 6,

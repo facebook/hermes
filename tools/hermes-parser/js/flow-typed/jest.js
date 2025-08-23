@@ -243,55 +243,45 @@ interface JestExpectType {
    * Use .toHaveBeenCalled to ensure that a mock function got called.
    */
   toHaveBeenCalled(): void;
-  toBeCalled(): void;
   /**
    * Use .toHaveBeenCalledTimes to ensure that a mock function got called exact
    * number of times.
    */
   toHaveBeenCalledTimes(number: number): void;
-  toBeCalledTimes(number: number): void;
   /**
    *
    */
   toHaveBeenNthCalledWith(nthCall: number, ...args: Array<any>): void;
-  nthCalledWith(nthCall: number, ...args: Array<any>): void;
   /**
    *
    */
   toHaveReturned(): void;
-  toReturn(): void;
   /**
    *
    */
   toHaveReturnedTimes(number: number): void;
-  toReturnTimes(number: number): void;
   /**
    *
    */
   toHaveReturnedWith(value: any): void;
-  toReturnWith(value: any): void;
   /**
    *
    */
   toHaveLastReturnedWith(value: any): void;
-  lastReturnedWith(value: any): void;
   /**
    *
    */
   toHaveNthReturnedWith(nthCall: number, value: any): void;
-  nthReturnedWith(nthCall: number, value: any): void;
   /**
    * Use .toHaveBeenCalledWith to ensure that a mock function was called with
    * specific arguments.
    */
   toHaveBeenCalledWith(...args: Array<any>): void;
-  toBeCalledWith(...args: Array<any>): void;
   /**
    * Use .toHaveBeenLastCalledWith to ensure that a mock function was last called
    * with specific arguments.
    */
   toHaveBeenLastCalledWith(...args: Array<any>): void;
-  lastCalledWith(...args: Array<any>): void;
   /**
    * Check that an object has a .length property and it is set to a certain
    * numeric value.
@@ -329,11 +319,8 @@ interface JestExpectType {
    * If you want to test that a specific error gets thrown, you can provide an
    * argument to toThrow. The argument can be a string for the error message,
    * a class for the error, or a regex that should match the error.
-   *
-   * Alias: .toThrowError
    */
   toThrow(message?: string | Error | Class<Error> | RegExp): void;
-  toThrowError(message?: string | Error | Class<Error> | RegExp): void;
   /**
    * Use .toThrowErrorMatchingSnapshot to test that a function throws a error
    * matching the most recent snapshot when it is called.

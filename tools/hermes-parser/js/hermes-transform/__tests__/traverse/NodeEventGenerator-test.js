@@ -54,7 +54,7 @@ describe('NodeEventGenerator', () => {
       const emitter = new SafeEmitter();
 
       emitter.on('Foo >', () => {});
-      expect(() => new NodeEventGenerator(emitter)).toThrowError(
+      expect(() => new NodeEventGenerator(emitter)).toThrow(
         /Syntax error in selector "Foo >" at position 5: Expected " ", "!", .*/u,
       );
     });

@@ -49,7 +49,7 @@ const = 1
   });
 
   test('Has error location', () => {
-    expect(() => parse('const = 1')).toThrowError(
+    expect(() => parse('const = 1')).toThrow(
       expect.objectContaining({
         loc: {
           line: 1,

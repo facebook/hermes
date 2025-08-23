@@ -196,12 +196,12 @@ function expectAlignment(
       break;
 
     case 'hermes-exception':
-      expect(hermesAst).toThrowError(expectation.expectedExceptionMessage);
+      expect(hermesAst).toThrow(expectation.expectedExceptionMessage);
       break;
 
     case 'espree-exception':
     case 'babel-exception':
-      expect(otherAst).toThrowError(expectation.expectedExceptionMessage);
+      expect(otherAst).toThrow(expectation.expectedExceptionMessage);
       break;
   }
 }
