@@ -8,20 +8,19 @@
 #pragma once
 
 #include "hermes/VM/HermesValue.h"
+#include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/static_h.h"
 
 typedef struct SHRuntime SHRuntime;
 typedef struct SHRuntimeModule SHRuntimeModule;
 typedef struct SHCodeBlock SHCodeBlock;
-class StringSwitchDenseMap;
 
 namespace hermes::vm {
 
 class Runtime;
 class CodeBlock;
 class JSObject;
-class RuntimeModule;
 class PinnedHermesValue;
 
 /// Create a JSFunction closure. The properties of the function (name, etc.)
