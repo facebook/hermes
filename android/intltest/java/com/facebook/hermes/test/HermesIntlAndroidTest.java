@@ -25,6 +25,22 @@ import org.junit.runner.RunWith;
 public class HermesIntlAndroidTest {
 
   @Test
+  public void testTruncation() throws IOException {
+    try (JSRuntime rt = JSRuntime.makeHermesRuntime()) {
+      rt.evaluateJavaScript(
+          new StringBuilder()
+              .append("var locales = ['en-US', 'fr'];\n")
+              .append("var result = Intl.getCanonicalLocales(locales);\n")
+              .append("result[\"length\"] = Math.pow(2, 32) - 1;\n")
+              .append("var newLength = String(result.length);\n")
+              .toString());
+
+      String result = rt.getGlobalStringProperty("newLength");
+      assertThat(result).isEqualTo("4294967295");
+    }
+  }
+
+  @Test
   public void testIntlFromAsset() throws IOException {
     AssetManager assets =
         InstrumentationRegistry.getInstrumentation().getTargetContext().getAssets();
