@@ -17,6 +17,4 @@ pluginManagement {
 
 rootProject.name = "hermes-engine"
 
-include(":cppruntime")
-
-include(":intltest")
+include(":ios-artifacts", ":cppruntime", ":intltest")
