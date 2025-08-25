@@ -9,3 +9,6 @@ The Hermes parser exposes a single `parse(code, [options])` function, where `cod
 - **sourceFilename**: `string`, defaults to `null`. The filename corresponding to the code that is to be parsed. If non-null, the filename will be added to all source locations in the output AST.
 - **sourceType**: `"module"`, `"script"`, or `"unambiguous"` (default). If `"unambiguous"`, source type will be automatically detected and set to `"module"` if any ES6 imports or exports are present in the code, otherwise source type will be set to `"script"`.
 - **tokens**: `boolean`, defaults to `false`. If `true`, add all tokens to a `tokens` property on the root node.
+- **transformOptions**: `object`. Options to be supplied to relevant transforms.
+  - `TransformEnumSyntax`
+    - `getRuntime` (optional): `() => Expression` - The expression which should be a reference to the Flow Enums runtime. By default, is `require('flow-enums-runtime')`.

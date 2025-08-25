@@ -11,7 +11,8 @@
 import type {AlignmentCase} from '../__test_utils__/alignment-utils';
 
 import {expectEspreeAlignment} from '../__test_utils__/alignment-utils';
-import {parseForSnapshot} from '../__test_utils__/parse';
+import {parseForSnapshot, printForSnapshotBabel} from '../__test_utils__/parse';
+import {ident} from '../src/utils/Builders';
 
 describe('Enum', () => {
   const testCase: AlignmentCase = {
@@ -85,5 +86,83 @@ describe('Enum', () => {
       }
     `);
     expectEspreeAlignment(testCase);
+  });
+
+  describe('Transform', () => {
+    test('boolean', async () => {
+      const code = `enum E {A = true, B = false}`;
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+       "const E = require("flow-enums-runtime")({
+         A: true,
+         B: false
+       });"
+      `);
+    });
+    test('number', async () => {
+      const code = `enum E {A = 1, B = 2}`;
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+       "const E = require("flow-enums-runtime")({
+         A: 1,
+         B: 2
+       });"
+      `);
+    });
+    test('string-initialized', async () => {
+      const code = `enum E {A = 'a', B = 'b'}`;
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+       "const E = require("flow-enums-runtime")({
+         A: 'a',
+         B: 'b'
+       });"
+      `);
+    });
+    test('string-defaulted', async () => {
+      const code = `enum E {A, B}`;
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"const E = require("flow-enums-runtime").Mirrored(["A", "B"]);"`,
+      );
+    });
+    test('symbol', async () => {
+      const code = `enum E of symbol {A, B}`;
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+       "const E = require("flow-enums-runtime")({
+         A: Symbol("A"),
+         B: Symbol("B")
+       });"
+      `);
+    });
+    test('export', async () => {
+      const code = `export enum E {A = 1, B = 2}`;
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+       "export const E = require("flow-enums-runtime")({
+         A: 1,
+         B: 2
+       });"
+      `);
+    });
+    test('export-default-program', async () => {
+      const code = `export default enum E {A = 1, B = 2}`;
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(`
+       "const E = require("flow-enums-runtime")({
+         A: 1,
+         B: 2
+       });
+
+       export default E;"
+      `);
+    });
+    test('`getRuntime` option', async () => {
+      const code = `enum E {A = 1, B = 2}`;
+      const getRuntime = () => ident('Enum');
+      const options = {
+        transformOptions: {TransformEnumSyntax: {getRuntime}},
+      };
+      expect(await printForSnapshotBabel(code, options)).toMatchInlineSnapshot(`
+       "const E = Enum({
+         A: 1,
+         B: 2
+       });"
+      `);
+    });
   });
 });

@@ -104,11 +104,15 @@ export function parseForSnapshotESTree(code: string): mixed {
 }
 export function printForSnapshotBabel(
   code: string,
-  options?: {reactRuntimeTarget?: ParserOptions['reactRuntimeTarget']},
+  options?: {
+    reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
+    transformOptions?: ParserOptions['transformOptions'],
+  },
 ): Promise<string> {
   return printForSnapshot(code, {
     babel: true,
     reactRuntimeTarget: options?.reactRuntimeTarget,
+    transformOptions: options?.transformOptions,
   });
 }
 export function parseForSnapshotBabel(code: string): mixed {
@@ -122,11 +126,13 @@ export async function printForSnapshot(
     enableExperimentalComponentSyntax,
     enableExperimentalFlowMatchSyntax,
     reactRuntimeTarget,
+    transformOptions,
   }: $ReadOnly<{
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
     enableExperimentalFlowMatchSyntax?: boolean,
     reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
+    transformOptions?: ParserOptions['transformOptions'],
   }> = {},
 ): Promise<string> {
   const parseOpts = {
@@ -135,6 +141,7 @@ export async function printForSnapshot(
     enableExperimentalFlowMatchSyntax:
       enableExperimentalFlowMatchSyntax ?? true,
     reactRuntimeTarget,
+    transformOptions,
   };
   if (babel === true) {
     const ast = parse(source, {

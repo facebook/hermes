@@ -8,6 +8,8 @@
  * @format
  */
 
+import type {Expression} from 'hermes-estree';
+
 export type ParserOptions = {
   allowReturnOutsideFunction?: boolean,
   babel?: boolean,
@@ -18,6 +20,11 @@ export type ParserOptions = {
   sourceFilename?: string,
   sourceType?: 'module' | 'script' | 'unambiguous',
   tokens?: boolean,
+  transformOptions?: {
+    TransformEnumSyntax?: {
+      getRuntime: () => Expression,
+    },
+  },
 };
 
 export const ParserOptionsKeys: $ReadOnlySet<$Keys<ParserOptions>> = new Set([
@@ -30,4 +37,5 @@ export const ParserOptionsKeys: $ReadOnlySet<$Keys<ParserOptions>> = new Set([
   'sourceFilename',
   'sourceType',
   'tokens',
+  'transformOptions',
 ]);
