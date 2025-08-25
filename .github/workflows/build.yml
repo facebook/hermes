@@ -7,7 +7,7 @@ on:
 jobs:
   test-e2e-intl:
     runs-on: ubuntu-22.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       HERMES_WS_DIR: /home/runner/work/hermes
       ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
@@ -59,14 +59,15 @@ jobs:
     - name: Run android tests
       uses: ReactiveCircus/android-emulator-runner@v2.30.1
       with:
-        api-level: 29
+        api-level: 35
+        arch: x86_64
         emulator-options: -timezone Europe/Paris -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
         script: |
           adb logcat -c
           touch ./emulator.log
           chmod 777 ./emulator.log
           adb logcat >> ./emulator.log &
-          cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86 :intltest:connectedAndroidTest
+          cd android && ./gradlew :intltest:prepareTests && ./gradlew -Pabis=x86_64 :intltest:connectedAndroidTest
     - name: Upload emulator log
       if: always()
       uses: actions/upload-artifact@v4.3.4
