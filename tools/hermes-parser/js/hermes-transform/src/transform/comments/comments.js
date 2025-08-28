@@ -147,14 +147,17 @@ export function setCommentsOnNode(
   node: ESNode | DetachedNode<ESNode>,
   comments: $ReadOnlyArray<Comment>,
 ): void {
-  // $FlowExpectedError - this property is secretly added by prettier.
+  // $FlowExpectedError[prop-missing] - this property is secretly added by prettier.
+  // $FlowExpectedError[incompatible-use] - this property is secretly added by prettier.
+  // $FlowExpectedError[cannot-write] - this property is secretly added by prettier.
   node.comments = comments;
 }
 
 export function getCommentsForNode(
   node: ESNode | DetachedNode<ESNode>,
 ): $ReadOnlyArray<Comment> {
-  // $FlowExpectedError - this property is secretly added by prettier.
+  // $FlowExpectedError[prop-missing] - this property is secretly added by prettier.
+  // $FlowExpectedError[incompatible-use] - this property is secretly added by prettier.
   return node.comments ?? [];
 }
 
@@ -165,11 +168,11 @@ export function isAttachedComment(comment: Comment): boolean {
 }
 
 export function isLeadingComment(comment: Comment): boolean {
-  // $FlowExpectedError - this property is secretly added by prettier.
+  // $FlowExpectedError[prop-missing] - this property is secretly added by prettier.
   return comment.leading === true;
 }
 export function isTrailingComment(comment: Comment): boolean {
-  // $FlowExpectedError - this property is secretly added by prettier.
+  // $FlowExpectedError[prop-missing] - this property is secretly added by prettier.
   return comment.trailing === true;
 }
 

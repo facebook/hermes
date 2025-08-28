@@ -125,7 +125,7 @@ export default class HermesASTAdapter {
   }
 
   mapEmpty(_node: HermesNode): HermesNode {
-    // $FlowExpectedError
+    // $FlowExpectedError[incompatible-type]
     return null;
   }
 
