@@ -1362,6 +1362,44 @@ TEST_P(HermesRuntimeTest, CreateObjectWithPrototype) {
   EXPECT_THROW(Object::create(*rt, Value(1)), JSError);
 }
 
+TEST_P(HermesRuntimeTest, DeleteProperty) {
+  eval("var obj = {1:2, foo: 'bar', 3:4, salt: 'pepper'}");
+  auto obj = rt->global().getPropertyAsObject(*rt, "obj");
+
+  auto prop = PropNameID::forAscii(*rt, "1");
+  obj.deleteProperty(*rt, prop);
+  auto hasRes = obj.hasProperty(*rt, prop);
+  EXPECT_FALSE(hasRes);
+
+  auto str = String::createFromAscii(*rt, "foo");
+  obj.deleteProperty(*rt, str);
+  hasRes = obj.hasProperty(*rt, str);
+  EXPECT_FALSE(hasRes);
+
+  auto valProp = Value(3);
+  obj.deleteProperty(*rt, valProp);
+  auto getRes = obj.getProperty(*rt, "3");
+  EXPECT_TRUE(getRes.isUndefined());
+
+  hasRes = obj.hasProperty(*rt, "salt");
+  EXPECT_TRUE(hasRes);
+  obj.deleteProperty(*rt, "salt");
+  hasRes = obj.hasProperty(*rt, "salt");
+  EXPECT_FALSE(hasRes);
+
+  obj = eval(
+            "const obj = {};"
+            "Object.defineProperty(obj, 'prop', {"
+            "value: 10,"
+            "configurable: false,"
+            "}); obj;")
+            .getObject(*rt);
+  prop = PropNameID::forAscii(*rt, "prop");
+  EXPECT_THROW(obj.deleteProperty(*rt, prop), JSError);
+  hasRes = obj.hasProperty(*rt, "prop");
+  EXPECT_TRUE(hasRes);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
