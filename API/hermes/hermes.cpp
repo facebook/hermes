@@ -619,6 +619,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   ICast *castInterface(const jsi::UUID &interfaceUUID) override;
 
   // Concrete declarations of jsi::Runtime pure virtual methods
+  using HermesRuntime::getProperty;
+  using HermesRuntime::hasProperty;
+  using HermesRuntime::setPropertyValue;
+
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       std::string sourceURL) override;
