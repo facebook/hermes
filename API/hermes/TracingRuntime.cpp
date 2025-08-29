@@ -756,6 +756,24 @@ jsi::Value TracingRuntime::getProperty(
   return value;
 }
 
+jsi::Value TracingRuntime::getProperty(
+    const jsi::Object &obj,
+    const jsi::Value &name) {
+  trace_.emplace_back<SynthTrace::GetPropertyRecord>(
+      getTimeSinceStart(),
+      useObjectID(obj),
+      useTraceValue(name)
+#ifdef HERMESVM_API_TRACE_DEBUG
+          ,
+      SynthTrace::getDescriptiveString(*this, name)
+#endif
+  );
+  auto value = RD::getProperty(obj, name);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(value));
+  return value;
+}
+
 jsi::Value TracingRuntime::getPrototypeOf(const jsi::Object &object) {
   trace_.emplace_back<SynthTrace::GetPrototypeRecord>(
       getTimeSinceStart(), useObjectID(object));
@@ -796,6 +814,21 @@ bool TracingRuntime::hasProperty(
   return RD::hasProperty(obj, name);
 }
 
+bool TracingRuntime::hasProperty(
+    const jsi::Object &obj,
+    const jsi::Value &name) {
+  trace_.emplace_back<SynthTrace::HasPropertyRecord>(
+      getTimeSinceStart(),
+      useObjectID(obj),
+      useTraceValue(name)
+#ifdef HERMESVM_API_TRACE_DEBUG
+          ,
+      SynthTrace::getDescriptiveString(*this, name)
+#endif
+  );
+  return RD::hasProperty(obj, name);
+}
+
 void TracingRuntime::setPropertyValue(
     const jsi::Object &obj,
     const jsi::String &name,
@@ -821,6 +854,21 @@ void TracingRuntime::setPropertyValue(
       SynthTrace::encodePropNameID(useObjectID(name)),
 #ifdef HERMESVM_API_TRACE_DEBUG
       name.utf8(*this),
+#endif
+      useTraceValue(value));
+  RD::setPropertyValue(obj, name, value);
+}
+
+void TracingRuntime::setPropertyValue(
+    const jsi::Object &obj,
+    const jsi::Value &name,
+    const jsi::Value &value) {
+  trace_.emplace_back<SynthTrace::SetPropertyRecord>(
+      getTimeSinceStart(),
+      useObjectID(obj),
+      useTraceValue(name),
+#ifdef HERMESVM_API_TRACE_DEBUG
+      SynthTrace::getDescriptiveString(*this, name),
 #endif
       useTraceValue(value));
   RD::setPropertyValue(obj, name, value);

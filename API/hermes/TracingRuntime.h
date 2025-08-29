@@ -94,10 +94,13 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       override;
   jsi::Value getProperty(const jsi::Object &obj, const jsi::PropNameID &name)
       override;
+  jsi::Value getProperty(const jsi::Object &obj, const jsi::Value &name)
+      override;
 
   bool hasProperty(const jsi::Object &obj, const jsi::String &name) override;
   bool hasProperty(const jsi::Object &obj, const jsi::PropNameID &name)
       override;
+  bool hasProperty(const jsi::Object &obj, const jsi::Value &name) override;
 
   void setPropertyValue(
       const jsi::Object &obj,
@@ -106,6 +109,10 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   void setPropertyValue(
       const jsi::Object &obj,
       const jsi::PropNameID &name,
+      const jsi::Value &value) override;
+  void setPropertyValue(
+      const jsi::Object &obj,
+      const jsi::Value &name,
       const jsi::Value &value) override;
 
   void deleteProperty(const jsi::Object &obj, const jsi::PropNameID &name)

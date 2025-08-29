@@ -14,6 +14,8 @@
 #include "hermes/Support/SHA1.h"
 #include "hermes/VM/GCExecTrace.h"
 
+#include "jsi/jsi.h"
+
 #include <chrono>
 #include <cstdlib>
 #include <memory>
@@ -324,6 +326,14 @@ class SynthTrace {
 
   /// Decodes a string into a trace value.
   static TraceValue decode(const std::string &);
+
+#ifdef HERMESVM_API_TRACE_DEBUG
+  /// Given a Value, return a descriptive string. This should only be used to
+  /// provide more debugging info when creating records.
+  static std::string getDescriptiveString(
+      jsi::Runtime &runtime,
+      const jsi::Value &value);
+#endif
 
   /// The version of the Synth Benchmark
   constexpr static uint32_t synthVersion() {
@@ -820,7 +830,7 @@ class SynthTrace {
   struct GetPropertyRecord : public Record {
     /// The ObjectID of the object that was accessed for its property.
     const ObjectID objID_;
-    /// String or PropNameID passed to getProperty.
+    /// String or PropNameID or Value passed to getProperty.
     const TraceValue propID_;
 #ifdef HERMESVM_API_TRACE_DEBUG
     std::string propNameDbg_;
@@ -864,7 +874,7 @@ class SynthTrace {
   struct SetPropertyRecord : public Record {
     /// The ObjectID of the object that was accessed for its property.
     const ObjectID objID_;
-    /// String or PropNameID passed to setProperty.
+    /// String or PropNameID or Value passed to setProperty.
     const TraceValue propID_;
 #ifdef HERMESVM_API_TRACE_DEBUG
     std::string propNameDbg_;

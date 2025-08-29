@@ -935,13 +935,20 @@ void TraceInterpreter::executeRecords() {
             assert(propString.utf8(rt_) == gpr.propNameDbg_);
 #endif
             value = obj.getProperty(rt_, propString);
-          } else {
-            assert(gpr.propID_.isPropNameID());
+          } else if (gpr.propID_.isPropNameID()) {
             auto propNameID = getPropNameIDForUse(gpr.propID_.getUID());
 #ifdef HERMESVM_API_TRACE_DEBUG
             assert(propNameID.utf8(rt_) == gpr.propNameDbg_);
 #endif
             value = obj.getProperty(rt_, propNameID);
+          } else {
+            auto propNameVal = traceValueToJSIValue(gpr.propID_);
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(
+                SynthTrace::getDescriptiveString(rt_, propNameVal) ==
+                gpr.propNameDbg_);
+#endif
+            value = obj.getProperty(rt_, propNameVal);
           }
           retval = std::move(value);
           break;
@@ -958,13 +965,20 @@ void TraceInterpreter::executeRecords() {
             assert(propString.utf8(rt_) == spr.propNameDbg_);
 #endif
             obj.setProperty(rt_, propString, traceValueToJSIValue(spr.value_));
-          } else {
-            assert(spr.propID_.isPropNameID());
+          } else if (spr.propID_.isPropNameID()) {
             auto propNameID = getPropNameIDForUse(spr.propID_.getUID());
 #ifdef HERMESVM_API_TRACE_DEBUG
             assert(propNameID.utf8(rt_) == spr.propNameDbg_);
 #endif
             obj.setProperty(rt_, propNameID, traceValueToJSIValue(spr.value_));
+          } else {
+            auto propNameVal = traceValueToJSIValue(spr.propID_);
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(
+                SynthTrace::getDescriptiveString(rt_, propNameVal) ==
+                gpr.propNameDbg_);
+#endif
+            obj.setProperty(rt_, propNameVal, traceValueToJSIValue(spr.value_));
           }
           break;
         }
@@ -994,13 +1008,20 @@ void TraceInterpreter::executeRecords() {
             assert(propString.utf8(rt_) == hpr.propNameDbg_);
 #endif
             obj.hasProperty(rt_, propString);
-          } else {
-            assert(hpr.propID_.isPropNameID());
+          } else if (hpr.propID_.isPropNameID()) {
             auto propNameID = getPropNameIDForUse(hpr.propID_.getUID());
 #ifdef HERMESVM_API_TRACE_DEBUG
             assert(propNameID.utf8(rt_) == hpr.propNameDbg_);
 #endif
             obj.hasProperty(rt_, propNameID);
+          } else {
+            auto propNameVal = traceValueToJSIValue(hpr.propID_);
+#ifdef HERMESVM_API_TRACE_DEBUG
+            assert(
+                SynthTrace::getDescriptiveString(rt_, propNameVal) ==
+                gpr.propNameDbg_);
+#endif
+            obj.hasProperty(rt_, propNameVal);
           }
           break;
         }
