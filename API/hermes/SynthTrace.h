@@ -217,6 +217,7 @@ class SynthTrace {
   RECORD(GetStringData)                  \
   RECORD(GetPrototype)                   \
   RECORD(SetPrototype)                   \
+  RECORD(DeleteProperty)                 \
   RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
@@ -982,6 +983,29 @@ class SynthTrace {
       pushIfTrackedValue(value_, uses);
       return uses;
     }
+  };
+
+  struct DeletePropertyRecord final : public Record {
+    static constexpr RecordType type{RecordType::DeleteProperty};
+    /// The object ID of the object that was accessed for its property
+    const ObjectID objID_;
+    /// The name of the property being deleted
+    const TraceValue propID_;
+
+    DeletePropertyRecord(TimeSinceStart time, ObjectID objID, TraceValue propID)
+        : Record(time), objID_(objID), propID_(propID) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses{objID_};
+      pushIfTrackedValue(propID_, uses);
+      return uses;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
   /// A GetPrototypeRecord is an event where native code gets the prototype of a

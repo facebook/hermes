@@ -614,6 +614,13 @@ void SynthTrace::GetStringDataRecord::toJSONInternal(JSONEmitter &json) const {
       "strData", llvh::ArrayRef(strData_.data(), strData_.size()));
 }
 
+void SynthTrace::DeletePropertyRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("objID", objID_);
+  json.emitKeyValue("propID", encode(propID_));
+}
+
 void SynthTrace::GlobalRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);

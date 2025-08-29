@@ -1000,6 +1000,22 @@ void TraceInterpreter::executeRecords() {
           }
           break;
         }
+        case RecordType::DeleteProperty: {
+          const auto &record =
+              static_cast<const SynthTrace::DeletePropertyRecord &>(*rec);
+          auto obj = getJSIValueForUse(record.objID_).getObject(rt_);
+          if (record.propID_.isString()) {
+            const jsi::String propString =
+                getJSIValueForUse(record.propID_.getUID()).asString(rt_);
+            obj.deleteProperty(rt_, propString);
+          } else if (record.propID_.isPropNameID()) {
+            auto propNameID = getPropNameIDForUse(record.propID_.getUID());
+            obj.deleteProperty(rt_, propNameID);
+          } else {
+            obj.deleteProperty(rt_, traceValueToJSIValue(record.propID_));
+          }
+          break;
+        }
         case RecordType::GetPropertyNames: {
           const auto &gpnr =
               static_cast<const SynthTrace::GetPropertyNamesRecord &>(*rec);

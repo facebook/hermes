@@ -453,4 +453,21 @@ TEST_F(SynthTraceSerializationTest, CreateObjectWithPrototypeRecord) {
       to_string(SynthTrace::CreateObjectWithPrototypeRecord(
           dummyTime, 2, SynthTrace::encodeObject(1))));
 }
+
+TEST_F(SynthTraceSerializationTest, DeletePropertyRecord) {
+  EXPECT_EQ(
+      R"({"type":"DeletePropertyRecord","time":0,"objID":1,"propID":"string:123"})",
+      to_string(SynthTrace::DeletePropertyRecord(
+          dummyTime, 1, SynthTrace::encodeString(123))));
+
+  EXPECT_EQ(
+      R"({"type":"DeletePropertyRecord","time":0,"objID":1,"propID":"propNameID:123"})",
+      to_string(SynthTrace::DeletePropertyRecord(
+          dummyTime, 1, SynthTrace::encodePropNameID(123))));
+
+  EXPECT_EQ(
+      R"({"type":"DeletePropertyRecord","time":0,"objID":1,"propID":"number:0x00000000000000"})",
+      to_string(SynthTrace::DeletePropertyRecord(
+          dummyTime, 1, SynthTrace::encodeNumber(0))));
+}
 } // namespace
