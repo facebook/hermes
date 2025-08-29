@@ -104,10 +104,10 @@ export function parseForSnapshotESTree(code: string): mixed {
 }
 export function printForSnapshotBabel(
   code: string,
-  options?: {
+  options?: $ReadOnly<{
     reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
     transformOptions?: ParserOptions['transformOptions'],
-  },
+  }>,
 ): Promise<string> {
   return printForSnapshot(code, {
     babel: true,

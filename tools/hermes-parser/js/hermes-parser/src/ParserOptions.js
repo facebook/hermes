@@ -21,8 +21,8 @@ export type ParserOptions = {
   sourceType?: 'module' | 'script' | 'unambiguous',
   tokens?: boolean,
   transformOptions?: {
-    TransformEnumSyntax?: {
-      getRuntime: () => Expression,
+    +TransformEnumSyntax?: {
+      +getRuntime: () => Expression,
     },
   },
 };
