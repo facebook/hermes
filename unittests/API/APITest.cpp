@@ -1555,6 +1555,47 @@ TEST_P(HermesRuntimeTest, DeleteProperty) {
   EXPECT_TRUE(hasRes);
 }
 
+TEST_P(HermesRuntimeTest, ObjectTest) {
+  eval("var obj = {1:2, 3:4}");
+  auto obj = rt->global().getPropertyAsObject(*rt, "obj");
+
+  auto propVal = Value(1);
+  // Check for and get existing properties
+  auto hasRes = obj.hasProperty(*rt, propVal);
+  EXPECT_TRUE(hasRes);
+  auto getRes = obj.getProperty(*rt, propVal);
+  EXPECT_EQ(getRes.getNumber(), 2);
+  // Overwrite existing property
+  obj.setProperty(*rt, propVal, 3);
+  getRes = obj.getProperty(*rt, propVal);
+  EXPECT_EQ(getRes.getNumber(), 3);
+
+  // Tests for non-existing properties
+  propVal = Value(5);
+  hasRes = obj.hasProperty(*rt, propVal);
+  EXPECT_FALSE(hasRes);
+  getRes = obj.getProperty(*rt, propVal);
+  EXPECT_TRUE(getRes.isUndefined());
+
+  // Add new property
+  obj.setProperty(*rt, propVal, "bar");
+  hasRes = obj.hasProperty(*rt, propVal);
+  EXPECT_TRUE(hasRes);
+  getRes = obj.getProperty(*rt, propVal);
+  EXPECT_EQ(getRes.getString(*rt).utf8(*rt), "bar");
+
+  auto badObjKey = eval(
+      "var badObj = {"
+      "    toString: function() {"
+      "        throw new Error('something went wrong');"
+      "    }"
+      "};"
+      "badObj;");
+  EXPECT_THROW(obj.setProperty(*rt, badObjKey, 123), JSError);
+  EXPECT_THROW(obj.hasProperty(*rt, badObjKey), JSError);
+  EXPECT_THROW(obj.getProperty(*rt, badObjKey), JSError);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
