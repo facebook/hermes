@@ -15,19 +15,17 @@ export type Version = {
     major: string,
     minor: string,
     patch: string,
-    prerelease: ?string,
 }
 */
 
-const {REPO_ROOT} = require('./consts');
-const {ANDROID_DIR} = require('./consts');
+const {ANDROID_DIR, REPO_ROOT} = require('./consts');
 const {getCurrentCommit} = require('./scm-utils');
 const {promises: fs} = require('fs');
 const path = require('path');
 
 const CMAKE_FILE_PATH = `${REPO_ROOT}/CMakeLists.txt`;
 const GRADLE_FILE_PATH = path.join(ANDROID_DIR, 'gradle.properties');
-const VERSION_REGEX =
+const CMAKE_VERSION_REGEX =
   /project\(Hermes\s+VERSION\s+(\d+\.\d+\.\d+)\s+LANGUAGES\s+C\s+CXX\)/;
 
 function validateBuildType(
@@ -61,7 +59,7 @@ async function getMainVersion() /*: Promise<string> */ {
 }
 
 function extractMatchIfValid(cmakeContent /*: string */) {
-  const match = cmakeContent.match(VERSION_REGEX);
+  const match = cmakeContent.match(CMAKE_VERSION_REGEX);
   if (!match) {
     throw new Error('Could not find version in CMakeLists.txt');
   }
@@ -79,8 +77,28 @@ async function updateGradlePropertiesFile(
   );
 }
 
+async function updatePackageJsonVersion(
+  version /*: string */,
+) /*: Promise<void> */ {
+  const hermesCompilerPackageJsonPath = path.join(
+    REPO_ROOT,
+    'npm',
+    'hermes-compiler-v2',
+    'package.json',
+  );
+  const packageJson = JSON.parse(
+    await fs.readFile(hermesCompilerPackageJsonPath, 'utf-8'),
+  );
+  packageJson.version = version;
+  await fs.writeFile(
+    'package.json',
+    JSON.stringify(packageJson, null, 2) + '\n',
+  );
+}
+
 module.exports = {
   validateBuildType,
   getVersion,
   updateGradlePropertiesFile,
+  updatePackageJsonVersion,
 };
