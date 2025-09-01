@@ -327,6 +327,12 @@ tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs.add("-Werror")
 }
 
+tasks.register("publishAndroidOnlyToMavenTempLocal") {
+  dependsOn(":publishAllPublicationsToMavenTempLocalRepository", ":build")
+}
+
+tasks.register("publishAndroidOnlyToSonatype") { dependsOn(":publishToSonatype") }
+
 // We need to override the artifact ID as this project is called `hermes-engine` but
 // the maven coordinates are on `hermes-android`.
 publishing {
