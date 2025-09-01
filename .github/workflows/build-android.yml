@@ -45,9 +45,9 @@ jobs:
 
           if [[ "${{ inputs.release-type }}" == "commitly" ]]; then
             export ORG_GRADLE_PROJECT_isSnapshot="true"
-            TASKS=":publishAllToMavenTempLocal :publishToSonatype :build"
+            TASKS="publishAndroidOnlyToMavenTempLocal publishAndroidOnlyToSonatype"
           else
-            TASKS=":publishAllToMavenTempLocal :build"
+            TASKS="publishAndroidOnlyToMavenTempLocal"
           fi
 
           ./gradlew $TASKS -PenableWarningsAsErrors=true
