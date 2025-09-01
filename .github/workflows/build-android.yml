@@ -25,12 +25,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build Hermes Compiler
-        run: |-
-          cmake -S . -B build
-          # Build the Hermes compiler so that the cross compiler build can
-          # access it to build the VM
-          cmake --build ./build --target hermesc -j 4
       - name: Setup node.js
         uses: ./.github/actions/setup-node
       - name: Install node dependencies

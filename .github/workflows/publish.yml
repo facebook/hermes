@@ -80,8 +80,8 @@ jobs:
           mkdir -p ./android/ios-artifacts/artifacts/
           cp $HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Debug.tar.gz ./android/ios-artifacts/artifacts/hermes-ios-debug.tar.gz
           cp $HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Release.tar.gz ./android/ios-artifacts/artifacts/hermes-ios-release.tar.gz
-          cp $HERMES_WS_DIR/dSYM/Debug/hermes.framework.dSYM  ./android/ios-artifacts/artifacts/hermes-framework-dSYM-debug.tar.gz
-          cp $HERMES_WS_DIR/dSYM/Release/hermes.framework.dSYM  ./android/ios-artifacts/artifacts/hermes-framework-dSYM-release.tar.gz
+          cp $HERMES_WS_DIR/dSYM/Debug/hermesvm.framework.dSYM  ./android/ios-artifacts/artifacts/hermes-framework-dSYM-debug.tar.gz
+          cp $HERMES_WS_DIR/dSYM/Release/hermesvm.framework.dSYM  ./android/ios-artifacts/artifacts/hermes-framework-dSYM-release.tar.gz
       - name: Print Artifacts Directory
         shell: bash
         run: ls -lR ./android/ios-artifacts/artifacts/
