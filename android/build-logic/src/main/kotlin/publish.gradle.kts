@@ -10,6 +10,7 @@ plugins {
   id("signing")
 }
 
+val isSnapshot: Boolean = findProperty("isSnapshot")?.toString()?.toBoolean() ?: false
 val signingKey: String? = findProperty("SIGNING_KEY")?.toString()
 val signingPwd: String? = findProperty("SIGNING_PWD")?.toString()
 
@@ -19,16 +20,24 @@ publishing {
   publications {
     create<MavenPublication>("release") {
       afterEvaluate {
-        from(components["default"])
-        version = project.version.toString()
+        if (project.plugins.hasPlugin("com.android.library")) {
+          from(components["default"])
+        }
+
+        version =
+            if (isSnapshot) {
+              "${project.version}-SNAPSHOT"
+            } else {
+              project.version.toString()
+            }
+
         groupId = project.group.toString()
-        artifactId = "hermes-android"
       }
 
       pom {
         name.set("hermes")
         description.set("A JavaScript engine optimized for fast start-up of React Native apps")
-        url.set("https://github.com/facebook/hermes")
+        url.set("https://github.com/facebook/hermes/tree/static_h")
 
         developers {
           developer {

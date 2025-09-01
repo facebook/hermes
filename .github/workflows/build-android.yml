@@ -1,6 +1,12 @@
 name: build-android
 
-on: workflow_call
+on:
+  workflow_call:
+    inputs:
+      release-type:
+        required: true
+        description: The type of release we are building. It could be release or dry-run
+        type: string
 
 jobs:
   build-android:
@@ -19,18 +25,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build Hermes Compiler
-        run: |-
-          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-          # Build the Hermes compiler so that the cross compiler build can
-          # access it to build the VM
-          cmake --build ./build --target hermesc -j 4
+      - name: Setup node.js
+        uses: ./.github/actions/setup-node
+      - name: Install node dependencies
+        uses: ./.github/actions/yarn-install
+      - name: Set React Native Version
+        shell: bash
+        run: node ./utils/scripts/hermes/set-artifacts-version.js --build-type ${{ inputs.release-type }}
       - name: Build android
         shell: bash
         run: |
           cd android
-          TASKS="publishAllToMavenTempLocal build"
-          ./gradlew $TASKS
+          ./gradlew publishAndroidOnlyToMavenTempLocal :build -PenableWarningsAsErrors=true
       - name: Upload Maven Artifacts
         uses: actions/upload-artifact@v4.3.4
         with:

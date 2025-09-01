@@ -12,7 +12,7 @@ repositories {
   gradlePluginPortal()
 }
 
-group = "com.facebook.hermes"
+group = "com.facebook.hermes-v2"
 
 kotlin {
   @Suppress("MagicNumber") jvmToolchain(17)

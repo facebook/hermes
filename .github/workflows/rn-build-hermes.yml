@@ -1,12 +1,36 @@
 name: RN Build Static Hermes
 
 on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: 'Release type (release, dry-run)'
+        required: false
+        default: 'dry-run'
   pull_request:
   push:
     branches:
       - 250829098.0.0-stable
 
 jobs:
+  set_release_type:
+    runs-on: ubuntu-latest
+    if: github.repository == 'facebook/hermes'
+    outputs:
+      RELEASE_TYPE: ${{ steps.set_release_type.outputs.RELEASE_TYPE }}
+    env:
+      EVENT_NAME: ${{ github.event_name }}
+      REF: ${{ github.ref }}
+    steps:
+      - id: set_release_type
+        run: |
+          if [[ $EVENT_NAME == "workflow_dispatch" ]]; then
+            echo "Setting release type to ${{ github.event.inputs.release-type }}"
+            echo "RELEASE_TYPE=${{ github.event.inputs.release-type }}" >> $GITHUB_OUTPUT
+          else
+            echo "Setting release type to dry-run"
+            echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
+          fi
   build_hermesc_apple:
     uses: ./.github/workflows/build-hermesc-apple.yml
   build_apple_slices_hermes:
@@ -21,4 +45,17 @@ jobs:
     uses: ./.github/workflows/build-hermesc-windows.yml
   build_android:
     uses: ./.github/workflows/build-android.yml
+    needs: set_release_type
     secrets: inherit
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+  publish:
+    uses: ./.github/workflows/publish.yml
+    needs:
+      [
+        set_release_type,
+        build_hermes_macos,
+        build_hermesc_linux,
+      ]
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
