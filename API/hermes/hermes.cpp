@@ -2631,7 +2631,7 @@ void HermesRuntimeImpl::throwJSErrorWithMessage(Args &&...args) {
 void *HermesRuntimeImpl::createNodeApiEnv(int32_t apiVersion) {
 #ifndef HERMESVM_LEAN
   auto res = ::hermes::node_api::createModuleNodeApiEnvironment(
-      *this->getVMRuntimeUnsafe(), apiVersion);
+      *static_cast<vm::Runtime*>(this->getVMRuntimeUnsafe()), apiVersion);
   if (res.getStatus() == ::hermes::vm::ExecutionStatus::EXCEPTION) {
     throw std::runtime_error("Failed to create Node API environment");
   }
