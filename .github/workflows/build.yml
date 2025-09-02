@@ -15,7 +15,7 @@ jobs:
       with:
         path: hermes
     - name: Install dependencies
-      run: brew install cmake ninja
+      run: brew update && (brew list ninja cmake || brew install ninja cmake)
     - name: Build macOS CLI
       run: |-
         cmake -S hermes -B build -G Ninja ${RELEASE_FLAGS} -DHERMES_ENABLE_DEBUGGER=False
@@ -61,7 +61,7 @@ jobs:
         path: hermes
     - name: Setup dependencies
       run: |-
-        brew install cmake ninja
+        brew update && (brew list ninja cmake || brew install ninja cmake)
         # Check out test262 at a pinned revision to reduce flakiness
         git clone https://github.com/tc39/test262
         cd test262
