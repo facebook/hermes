@@ -66,6 +66,7 @@ jobs:
     uses: ./.github/workflows/run-tests.yml
   publish:
     uses: ./.github/workflows/publish.yml
+    secrets: inherit
     needs:
       [
         set_release_type,
