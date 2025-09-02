@@ -30,9 +30,11 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup xcode
         uses: ./.github/actions/setup-xcode
+      - name: Install CMake
+        uses: ./.github/actions/install-cmake
       - name: Install dependencies
         shell: bash
-        run: brew install cmake ninja
+        run: brew install ninja
       - name: Download visionOS SDK
         shell: bash
         if: ${{ matrix.scheme == 'ApplePlatformsIntegrationVisionOSTests' }}

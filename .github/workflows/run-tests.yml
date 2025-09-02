@@ -13,8 +13,8 @@ jobs:
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
-    - name: Install dependencies
-      run: brew install cmake
+    - name: Install CMake
+      uses: ./hermes/.github/actions/install-cmake
     - name: Run MacOS regression tests in debug mode
       run: |-
         cmake -S hermes -B build -GXcode
@@ -131,9 +131,11 @@ jobs:
     - uses: actions/checkout@v4.1.0
       with:
         path: hermes
+    - name: Install CMake
+      uses: ./hermes/.github/actions/install-cmake
     - name: Setup dependencies
       run: |-
-        brew install cmake ninja
+        brew install ninja
         # Check out test262 at a pinned revision to reduce flakiness
         git clone https://github.com/tc39/test262
         cd test262
