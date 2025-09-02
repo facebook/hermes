@@ -3501,7 +3501,6 @@
     "FinalizationGroup",
     "FinalizationRegistry",
     "import-assertions",
-    "regexp-v-flag",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",
     "ShadowRealm",
