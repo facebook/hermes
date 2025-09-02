@@ -84,7 +84,6 @@ static int executeHBCBytecodeFromCL(
 
   auto gcConfigBuilder =
       vm::GCConfig::Builder()
-          .withMinHeapSize(flags.MinHeapSize.bytes)
           .withInitHeapSize(flags.InitHeapSize.bytes)
           .withMaxHeapSize(flags.MaxHeapSize.bytes)
           .withOccupancyTarget(flags.OccupancyTarget)

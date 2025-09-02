@@ -137,9 +137,6 @@ uint64_t jsonStringToUint64(const ::hermes::parser::JSONValue *val) {
     ::hermes::hermes_fatal("gcConfig should be an object");
   }
   auto *gcConfig = llvh::cast<JSONObject>(val);
-  if (auto *sz = gcConfig->get("minHeapSize")) {
-    gcconf.withMinHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
-  }
   if (auto *sz = gcConfig->get("initHeapSize")) {
     gcconf.withInitHeapSize(getNumberAs<::hermes::vm::gcheapsize_t>(sz));
   }

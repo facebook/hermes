@@ -123,7 +123,6 @@ SynthTrace::SynthTrace(
     {
       json_->emitKey("gcConfig");
       json_->openDict();
-      json_->emitKeyValue("minHeapSize", conf.getGCConfig().getMinHeapSize());
       json_->emitKeyValue("initHeapSize", conf.getGCConfig().getInitHeapSize());
       json_->emitKeyValue("maxHeapSize", conf.getGCConfig().getMaxHeapSize());
       json_->emitKeyValue(

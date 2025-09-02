@@ -69,12 +69,6 @@ struct VMOnlyRuntimeFlags {
 #endif
   };
 
-  llvh::cl::opt<MemorySize, false, MemorySizeParser> MinHeapSize{
-      "gc-min-heap",
-      llvh::cl::desc("Minimum heap size.  Format: <unsigned>{{K,M,G}{iB}"),
-      llvh::cl::cat(GCCategory),
-      llvh::cl::init(MemorySize{vm::GCConfig::getDefaultMinHeapSize()})};
-
   llvh::cl::opt<MemorySize, false, MemorySizeParser> InitHeapSize{
       "gc-init-heap",
       llvh::cl::desc("Initial heap size.  Format: <unsigned>{{K,M,G}{iB}"),

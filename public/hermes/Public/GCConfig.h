@@ -144,9 +144,6 @@ enum class GCEventKind {
 /// Parameters for GC Initialisation.  Check documentation in README.md
 /// constexpr indicates that the default value is constexpr.
 #define GC_FIELDS(F)                                                     \
-  /* Minimum heap size hint. */                                          \
-  F(constexpr, gcheapsize_t, MinHeapSize, 0)                             \
-                                                                         \
   /* Initial heap size hint. */                                          \
   F(constexpr, gcheapsize_t, InitHeapSize, 32 << 20)                     \
                                                                          \
@@ -206,19 +203,6 @@ enum class GCEventKind {
   /* GC_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
-  if (builder.hasMinHeapSize()) {
-    if (builder.hasInitHeapSize()) {
-      // If both are specified, normalize the initial size up to the minimum,
-      // if necessary.
-      InitHeapSize_ = std::max(MinHeapSize_, InitHeapSize_);
-    } else {
-      // If the minimum is set explicitly, but the initial heap size is not,
-      // use the minimum as the initial size.
-      InitHeapSize_ = MinHeapSize_;
-    }
-  }
-  assert(InitHeapSize_ >= MinHeapSize_);
-
   // Make sure the max is at least the Init.
   MaxHeapSize_ = std::max(InitHeapSize_, MaxHeapSize_);
 })

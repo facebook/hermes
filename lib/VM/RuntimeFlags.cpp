@@ -15,7 +15,6 @@ namespace hermes::cli {
 vm::RuntimeConfig buildRuntimeConfig(const RuntimeFlags &flags) {
   return vm::RuntimeConfig::Builder()
       .withGCConfig(vm::GCConfig::Builder()
-                        .withMinHeapSize(flags.MinHeapSize.bytes)
                         .withInitHeapSize(flags.InitHeapSize.bytes)
                         .withMaxHeapSize(flags.MaxHeapSize.bytes)
                         .withOccupancyTarget(flags.OccupancyTarget)

@@ -275,9 +275,6 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
 
   auto gcConfig = rtConfig.getPropertyAsObject(*rt, "gcConfig");
   EXPECT_EQ(
-      conf.getGCConfig().getMinHeapSize(),
-      gcConfig.getProperty(*rt, "minHeapSize").asNumber());
-  EXPECT_EQ(
       conf.getGCConfig().getInitHeapSize(),
       gcConfig.getProperty(*rt, "initHeapSize").asNumber());
   EXPECT_EQ(

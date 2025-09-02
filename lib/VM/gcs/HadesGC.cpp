@@ -1238,9 +1238,7 @@ HadesGC::HadesGC(
     hermes_fatal("Failed to initialize the young gen", newYoungGen.getError());
   setYoungGen(std::move(newYoungGen.get()));
   const size_t initHeapSize = std::max<uint64_t>(
-      {gcConfig.getMinHeapSize(),
-       gcConfig.getInitHeapSize(),
-       FixedSizeHeapSegment::maxSize()});
+      gcConfig.getInitHeapSize(), FixedSizeHeapSegment::maxSize());
   oldGen_.setTargetSizeBytes(initHeapSize - FixedSizeHeapSegment::maxSize());
 }
 

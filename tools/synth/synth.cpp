@@ -282,8 +282,6 @@ int main(int argc, char **argv) {
       shouldPrintGCStats = (cl::flags.GCPrintStats || cl::flags.GCBeforeStats);
     }
 
-    llvh::Optional<::hermes::vm::gcheapsize_t> minHeapSize =
-        execOption(cl::flags.MinHeapSize);
     llvh::Optional<::hermes::vm::gcheapsize_t> initHeapSize =
         execOption(cl::flags.InitHeapSize);
     llvh::Optional<::hermes::vm::gcheapsize_t> maxHeapSize =
@@ -320,11 +318,8 @@ int main(int argc, char **argv) {
             });
       }
     }
-    if (minHeapSize) {
-      options.gcConfigBuilder.withMinHeapSize(*minHeapSize);
-    }
     if (initHeapSize) {
-      options.gcConfigBuilder.withMinHeapSize(*initHeapSize);
+      options.gcConfigBuilder.withInitHeapSize(*initHeapSize);
     }
     if (maxHeapSize) {
       options.gcConfigBuilder.withMaxHeapSize(*maxHeapSize);
