@@ -55,12 +55,6 @@ static llvh::cl::opt<unsigned> Repeat(
     llvh::cl::Hidden);
 
 struct Flags : public cli::RuntimeFlags {
-  llvh::cl::opt<bool> GCPrintStats{
-      "gc-print-stats",
-      llvh::cl::desc("Output summary garbage collection statistics at exit"),
-      llvh::cl::cat(GCCategory),
-      llvh::cl::init(false)};
-
   llvh::cl::opt<bool> GCPrintCollectionStats{
       "gc-print-collection-stats",
       llvh::cl::desc("Output statistics for each garbage collection at exit"),

@@ -82,6 +82,12 @@ struct VMOnlyRuntimeFlags {
       llvh::cl::cat(GCCategory),
       llvh::cl::init(vm::GCConfig::getDefaultOccupancyTarget())};
 
+  llvh::cl::opt<bool> GCPrintStats{
+      "gc-print-stats",
+      llvh::cl::desc("Output summary garbage collection statistics at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
+
   llvh::cl::opt<ExecuteOptions::SampleProfilingMode> SampleProfiling{
       "sample-profiling",
       llvh::cl::init(ExecuteOptions::SampleProfilingMode::None),

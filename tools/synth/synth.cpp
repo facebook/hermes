@@ -134,12 +134,6 @@ struct Flags : public cli::RuntimeFlags {
       cat(GCCategory),
       init(false)};
 
-  opt<bool> GCPrintStats{
-      "gc-print-stats",
-      desc("Output summary garbage collection statistics at exit"),
-      cat(GCCategory),
-      init(true)};
-
   opt<bool> GCPrintCollectionStats{
       "gc-print-collection-stats",
       desc("Output statistics for each garbage collection at exit"),

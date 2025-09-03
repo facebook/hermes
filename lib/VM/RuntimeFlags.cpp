@@ -23,6 +23,7 @@ vm::RuntimeConfig buildRuntimeConfig(const RuntimeFlags &flags) {
                                 .withSanitizeRate(flags.GCSanitizeRate)
                                 .withRandomSeed(flags.GCSanitizeRandomSeed)
                                 .build())
+                        .withShouldRecordStats(flags.GCPrintStats)
                         .withShouldReleaseUnused(vm::kReleaseUnusedOld)
                         .withAllocInYoung(flags.GCAllocYoung)
                         .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI)
