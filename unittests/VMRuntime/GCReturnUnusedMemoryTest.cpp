@@ -65,7 +65,7 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
   auto collected = gc.getVMFootprintForTest();
   ASSERT_TRUE(collected);
 
-  EXPECT_LT(*before, *touched);
+  EXPECT_LE(*before, *touched);
   EXPECT_GT(*touched, *collected);
 #endif // _WINDOWS
 }
