@@ -39,41 +39,41 @@ jobs:
             echo "Setting release type to dry-run"
             echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
           fi
-  build_hermesc_apple:
-    uses: ./.github/workflows/build-hermesc-apple.yml
-  build_apple_slices_hermes:
-    uses: ./.github/workflows/build-apple-slices-hermes.yml
-    needs: build_hermesc_apple
-  build_hermes_macos:
-    uses: ./.github/workflows/build-hermes-macos.yml
-    needs: build_apple_slices_hermes
-  build_hermesc_linux:
-    uses: ./.github/workflows/build-hermesc-linux.yml
-  build_hermesc_windows:
-    uses: ./.github/workflows/build-hermesc-windows.yml
-  build_android:
-    uses: ./.github/workflows/build-android.yml
-    needs: set_release_type
-    secrets: inherit
-    with:
-      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
-  build_emscripten:
-    uses: ./.github/workflows/build-emscripten.yml
-  test-apple-runtime:
-    needs: build_hermes_macos
-    uses: ./.github/workflows/test-apple-runtime.yml
-  run-tests:
-    uses: ./.github/workflows/run-tests.yml
+  # build_hermesc_apple:
+  #   uses: ./.github/workflows/build-hermesc-apple.yml
+  # build_apple_slices_hermes:
+  #   uses: ./.github/workflows/build-apple-slices-hermes.yml
+  #   needs: build_hermesc_apple
+  # build_hermes_macos:
+  #   uses: ./.github/workflows/build-hermes-macos.yml
+  #   needs: build_apple_slices_hermes
+  # build_hermesc_linux:
+  #   uses: ./.github/workflows/build-hermesc-linux.yml
+  # build_hermesc_windows:
+  #   uses: ./.github/workflows/build-hermesc-windows.yml
+  # build_android:
+  #   uses: ./.github/workflows/build-android.yml
+  #   needs: set_release_type
+  #   secrets: inherit
+  #   with:
+  #     release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+  # build_emscripten:
+  #   uses: ./.github/workflows/build-emscripten.yml
+  # test-apple-runtime:
+  #   needs: build_hermes_macos
+  #   uses: ./.github/workflows/test-apple-runtime.yml
+  # run-tests:
+  #   uses: ./.github/workflows/run-tests.yml
   publish:
     uses: ./.github/workflows/publish.yml
     secrets: inherit
-    needs:
-      [
-        set_release_type,
-        build_hermes_macos,
-        build_hermesc_linux,
-        build_hermesc_windows,
-        build_android,
-      ]
+    # needs:
+    #   [
+    #     set_release_type,
+    #     build_hermes_macos,
+    #     build_hermesc_linux,
+    #     build_hermesc_windows,
+    #     build_android,
+    #   ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}

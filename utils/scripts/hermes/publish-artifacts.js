@@ -48,12 +48,12 @@ async function publishArtifacts(buildType /*: BuildType */) {
     return;
   }
 
-  const version = getVersion(buildType);
+  const version = await getVersion(buildType);
+  await updateGradlePropertiesFile(version);
 
-  updateGradlePropertiesFile(version);
   pushd('android');
   await publishAndroidArtifactsToMaven(version, buildType);
-  await publishExternalArtifactsToMaven(version, buildType);
+  await publishIOSArtifactsToMaven(version, buildType);
   popd();
 }
 
@@ -87,7 +87,7 @@ function publishAndroidArtifactsToMaven(
   echo('Finished publishing Android artifacts to Maven Central');
 }
 
-function publishExternalArtifactsToMaven(
+function publishIOSArtifactsToMaven(
   releaseVersion /*: string */,
   buildType /*: BuildType */,
 ) {
