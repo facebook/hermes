@@ -984,6 +984,11 @@ class GCBase {
   /// Print any and all collected statistics to the give output stream, \p os.
   void printAllCollectedStats(llvh::raw_ostream &os);
 
+  /// Whether to output GC statistics at the end of execution.
+  bool shouldRecordGCStats() const {
+    return recordGcStats_;
+  }
+
   /// Total number of collections of any kind.
   unsigned getNumGCs() const {
     return cumStats_.numCollections;

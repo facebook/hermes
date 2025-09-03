@@ -612,6 +612,10 @@ bool executeHBCBytecodeImpl(
     printStats(*runtime, llvh::errs(), options.gcAnalyticsEvents);
   }
 
+  if (options.runtimeConfig.getTrackIO()) {
+    runtime->getIOTrackingInfoJSON(llvh::errs());
+  }
+
   if (options.jitEmitCounters) {
     llvh::errs() << "JIT counters:\n";
     runtime->getJITContext().dumpCounters(llvh::errs());

@@ -820,9 +820,6 @@ void Runtime::printHeapStats(llvh::raw_ostream &os) {
 #ifndef NDEBUG
   printArrayCensus(os);
 #endif
-  if (trackIO_) {
-    getIOTrackingInfoJSON(os);
-  }
 }
 
 void Runtime::getIOTrackingInfoJSON(llvh::raw_ostream &os) {
@@ -875,6 +872,8 @@ void Runtime::validateSavedIPBeforeCall() const {
 }
 
 void Runtime::printArrayCensus(llvh::raw_ostream &os) {
+  if (!getHeap().shouldRecordGCStats())
+    return;
   // Do array capacity histogram.
   // Map from array size to number of arrays that are that size.
   // Arrays includes ArrayStorage.
