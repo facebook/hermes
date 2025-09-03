@@ -88,7 +88,7 @@ struct StackTrace {
 
  private:
   explicit StackTrace(std::vector<CallFrameInfo> frames)
-      : frames_(std::move(frames)){};
+      : frames_(std::move(frames)) {}
   friend ProgramState;
   friend ::hermes::vm::Debugger;
   std::vector<CallFrameInfo> frames_;
