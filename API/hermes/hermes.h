@@ -156,17 +156,6 @@ class HERMES_EXPORT ISetFatalHandler : public jsi::ICast {
   ~ISetFatalHandler() = default;
 };
 
-class IHermesExtra : public IHermes {
- public:
-#ifdef HERMESVM_PROFILER_OPCODE
-  /// Write the opcode stats to the given stream.
-  virtual void dumpOpcodeStats(std::ostream &os) const = 0;
-#endif
-
- protected:
-  ~IHermesExtra() = default;
-};
-
 /// Interface for methods that are exposed for test purposes.
 class HERMES_EXPORT IHermesTestHelpers : public jsi::ICast {
  public:
@@ -184,7 +173,7 @@ class HERMES_EXPORT IHermesTestHelpers : public jsi::ICast {
 };
 
 class HermesRuntime : public jsi::Runtime,
-                      public IHermesExtra,
+                      public IHermes,
                       public IHermesSHUnit {
  public:
   /// Similar to jsi::Runtime, HermesRuntime is treated as an object, rather
