@@ -26,13 +26,9 @@ module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier
 component_syntax=true
 enums=true
 experimental.pattern_matching=true
-experimental.only_support_flow_fixme_and_expected_error=true
-experimental.require_suppression_with_error_code=true
-experimental.invariant_subtyping_error_message_improvement=true
-experimental.natural_inference.local_object_literals.followup_fix=true
 
 [version]
-^0.280.0
+^0.281.0
 
 [lints]
 untyped-type-import=error
