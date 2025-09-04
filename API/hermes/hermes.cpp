@@ -1202,7 +1202,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
       const std::string &sourceURL) override;
-  jsi::Value evaluateSHUnit(SHUnit *(*shUnitCreator)()) override;
+  SHUnitCreator getSHUnitCreator() const override;
+  jsi::Value evaluateSHUnit(SHUnitCreator shUnitCreator) override;
   SHRuntime *getSHRuntime() noexcept override;
   void *getVMRuntimeUnsafe() const override;
   size_t rootsListLengthForTests() const override;
@@ -1408,9 +1409,10 @@ jsi::ICast *HermesRuntimeImpl::getHermesRootAPI() {
 jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
   if (interfaceUUID == IHermesTestHelpers::uuid) {
     return static_cast<IHermesTestHelpers *>(this);
-  }
-  if (interfaceUUID == IHermes::uuid) {
+  } else if (interfaceUUID == IHermes::uuid) {
     return static_cast<IHermes *>(this);
+  } else if (interfaceUUID == IHermesSHUnit::uuid) {
+    return static_cast<IHermesSHUnit *>(this);
   }
   return nullptr;
 }
@@ -1609,6 +1611,18 @@ jsi::Value HermesRuntimeImpl::evaluateJavaScriptWithSourceMap(
     const std::string &sourceURL) {
   return evaluatePreparedJavaScript(
       prepareJavaScriptWithSourceMap(buffer, sourceMapBuf, sourceURL));
+}
+
+#ifdef HERMES_SH_UNIT_FN
+extern "C" SHUnit *HERMES_SH_UNIT_FN(void);
+#endif
+
+SHUnitCreator HermesRuntimeImpl::getSHUnitCreator() const {
+#ifdef HERMES_SH_UNIT_FN
+  return HERMES_SH_UNIT_FN;
+#else
+  return nullptr;
+#endif
 }
 
 jsi::Value HermesRuntimeImpl::evaluateSHUnit(SHUnitCreator shUnitCreator) {

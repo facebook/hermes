@@ -208,7 +208,9 @@ class HERMES_EXPORT IHermesTestHelpers : public jsi::ICast {
   ~IHermesTestHelpers() = default;
 };
 
-class HermesRuntime : public jsi::Runtime, public IHermesExtra {
+class HermesRuntime : public jsi::Runtime,
+                      public IHermesExtra,
+                      public IHermesSHUnit {
  public:
   /// Similar to jsi::Runtime, HermesRuntime is treated as an object, rather
   /// than a pure interface. This is to prevent breaking usages of
