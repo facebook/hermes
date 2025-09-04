@@ -158,34 +158,9 @@ class HERMES_EXPORT ISetFatalHandler : public jsi::ICast {
 
 class IHermesExtra : public IHermes {
  public:
-  /// Dump sampled stack trace for a given runtime to a data structure that can
-  /// be used by third parties.
-  virtual sampling_profiler::Profile dumpSampledTraceToProfile() = 0;
-
-#ifdef HERMESVM_PROFILER_BB
-  /// Write the trace to the given stream.
-  virtual void dumpBasicBlockProfileTrace(std::ostream &os) const = 0;
-#endif
-
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Write the opcode stats to the given stream.
   virtual void dumpOpcodeStats(std::ostream &os) const = 0;
-#endif
-
-#ifdef HERMES_ENABLE_DEBUGGER
-
-  struct DebugFlags {
-    // Looking for the .lazy flag? It's no longer necessary.
-    // Source is evaluated lazily by default. See
-    // RuntimeConfig::CompilationMode.
-  };
-
-  /// Evaluate the given code in an unoptimized form,
-  /// used for debugging.
-  virtual void debugJavaScript(
-      const std::string &src,
-      const std::string &sourceURL,
-      const DebugFlags &debugFlags) = 0;
 #endif
 
  protected:

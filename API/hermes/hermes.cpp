@@ -1139,19 +1139,14 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value getObjectForID(uint64_t id) override;
   const ::hermes::vm::GCExecTrace &getGCExecTrace() const override;
   std::string getIOTrackingInfoJSON() override;
-#ifdef HERMESVM_PROFILER_BB
-  void dumpBasicBlockProfileTrace(std::ostream &os) const override;
-#endif
 #ifdef HERMESVM_PROFILER_OPCODE
   void dumpOpcodeStats(std::ostream &os) const override;
 #endif
   debugger::Debugger &getDebugger() override;
-#ifdef HERMES_ENABLE_DEBUGGER
   void debugJavaScript(
       const std::string &src,
       const std::string &sourceURL,
       const DebugFlags &debugFlags) override;
-#endif
   void registerForProfiling() override;
   void unregisterForProfiling() override;
   void asyncTriggerTimeout() override;
@@ -1476,14 +1471,6 @@ std::string HermesRuntimeImpl::getIOTrackingInfoJSON() {
   return buf;
 }
 
-#ifdef HERMESVM_PROFILER_BB
-void HermesRuntimeImpl::dumpBasicBlockProfileTrace(std::ostream &stream) const {
-  llvh::raw_os_ostream os(stream);
-  static_cast<const HermesRuntimeImpl *>(this)
-      ->runtime_.dumpBasicBlockProfileTrace(os);
-}
-#endif
-
 #ifdef HERMESVM_PROFILER_OPCODE
 void HermesRuntimeImpl::dumpOpcodeStats(std::ostream &stream) const {
   llvh::raw_os_ostream os(stream);
@@ -1495,20 +1482,18 @@ debugger::Debugger &HermesRuntimeImpl::getDebugger() {
   return *(debugger_);
 }
 
-#ifdef HERMES_ENABLE_DEBUGGER
-
 void HermesRuntimeImpl::debugJavaScript(
     const std::string &src,
     const std::string &sourceURL,
     const DebugFlags &debugFlags) {
+#ifdef HERMES_ENABLE_DEBUGGER
   vm::Runtime &runtime = runtime_;
   vm::GCScope gcScope(runtime);
   vm::ExecutionStatus res =
       runtime.run(src, sourceURL, compileFlags_).getStatus();
   checkStatus(res);
-}
-
 #endif
+}
 
 void HermesRuntimeImpl::registerForProfiling() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE

@@ -639,12 +639,6 @@ std::string TraceInterpreter::executeRecordsWithMarkerOptions() {
   }
   executeRecords();
 
-#ifdef HERMESVM_PROFILER_BB
-  if (auto *hermesRuntime = dynamic_cast<HermesRuntime *>(&rt_)) {
-    hermesRuntime->dumpBasicBlockProfileTrace(std::cerr);
-  }
-#endif
-
   checkMarker(std::string("end"));
   if (!markerFound_) {
     // An action was requested at a marker but that marker wasn't found.
