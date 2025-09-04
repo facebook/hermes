@@ -619,10 +619,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
   ICast *castInterface(const jsi::UUID &interfaceUUID) override;
 
   // Concrete declarations of jsi::Runtime pure virtual methods
-  using HermesRuntime::getProperty;
-  using HermesRuntime::hasProperty;
-  using HermesRuntime::setPropertyValue;
-
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       std::string sourceURL) override;
@@ -702,8 +698,10 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value getProperty(const jsi::Object &, const jsi::PropNameID &name)
       override;
   jsi::Value getProperty(const jsi::Object &, const jsi::String &name) override;
+  jsi::Value getProperty(const jsi::Object &, const jsi::Value &name) override;
   bool hasProperty(const jsi::Object &, const jsi::PropNameID &name) override;
   bool hasProperty(const jsi::Object &, const jsi::String &name) override;
+  bool hasProperty(const jsi::Object &, const jsi::Value &name) override;
   void setPropertyValue(
       const jsi::Object &,
       const jsi::PropNameID &name,
@@ -712,10 +710,15 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Object &,
       const jsi::String &name,
       const jsi::Value &value) override;
+  void setPropertyValue(
+      const jsi::Object &,
+      const jsi::Value &name,
+      const jsi::Value &value) override;
   void deleteProperty(const jsi::Object &, const jsi::PropNameID &name)
       override;
   void deleteProperty(const jsi::Object &, const jsi::String &name) override;
   void deleteProperty(const jsi::Object &, const jsi::Value &name) override;
+
   bool isArray(const jsi::Object &) const override;
   bool isArrayBuffer(const jsi::Object &) const override;
   bool isFunction(const jsi::Object &) const override;
@@ -2264,6 +2267,17 @@ jsi::Value HermesRuntimeImpl::getProperty(
   return valueFromHermesValue(res->get());
 }
 
+jsi::Value HermesRuntimeImpl::getProperty(
+    const jsi::Object &obj,
+    const jsi::Value &name) {
+  vm::GCScope gcScope(runtime_);
+  auto nameHandle = vmHandleFromValue(name);
+  auto objHandle = handle(obj);
+  auto res = objHandle->getComputed_RJS(objHandle, runtime_, nameHandle);
+  checkStatus(res.getStatus());
+  return valueFromHermesValue(res->get());
+}
+
 bool HermesRuntimeImpl::hasProperty(
     const jsi::Object &obj,
     const jsi::String &name) {
@@ -2283,6 +2297,17 @@ bool HermesRuntimeImpl::hasProperty(
   auto result = h->hasNamedOrIndexed(h, runtime_, nameID);
   checkStatus(result.getStatus());
   return result.getValue();
+}
+
+bool HermesRuntimeImpl::hasProperty(
+    const jsi::Object &obj,
+    const jsi::Value &name) {
+  vm::GCScope gcScope(runtime_);
+  auto nameHandle = vmHandleFromValue(name);
+  auto objHandle = handle(obj);
+  auto res = objHandle->hasComputed(objHandle, runtime_, nameHandle);
+  checkStatus(res.getStatus());
+  return res.getValue();
 }
 
 void HermesRuntimeImpl::setPropertyValue(
@@ -2314,6 +2339,19 @@ void HermesRuntimeImpl::setPropertyValue(
                    vmHandleFromValue(value),
                    vm::PropOpFlags().plusThrowOnError())
                   .getStatus());
+}
+
+void HermesRuntimeImpl::setPropertyValue(
+    const jsi::Object &obj,
+    const jsi::Value &name,
+    const jsi::Value &value) {
+  vm::GCScope gcScope(runtime_);
+  auto nameHandle = vmHandleFromValue(name);
+  auto valhandle = vmHandleFromValue(value);
+  auto objHandle = handle(obj);
+  auto res =
+      vm::JSObject::putComputed_RJS(objHandle, runtime_, nameHandle, valhandle);
+  checkStatus(res.getStatus());
 }
 
 void HermesRuntimeImpl::deleteProperty(
