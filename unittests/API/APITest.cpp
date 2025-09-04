@@ -1429,6 +1429,14 @@ TEST_P(HermesRuntimeTest, ObjectTest) {
   getRes = obj.getProperty(*rt, propVal);
   EXPECT_EQ(getRes.getString(*rt).utf8(*rt), "bar");
 
+  obj = eval(
+            "Object.defineProperty(obj, '456', {"
+            "  value: 10,"
+            "  writable: false,});")
+            .getObject(*rt);
+  auto unwritableProp = Value(456);
+  EXPECT_THROW(obj.setProperty(*rt, unwritableProp, 1), JSError);
+
   auto badObjKey = eval(
       "var badObj = {"
       "    toString: function() {"
