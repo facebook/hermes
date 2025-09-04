@@ -2424,8 +2424,12 @@ void HermesRuntimeImpl::setPropertyValue(
   auto nameHandle = vmHandleFromValue(name, &nameNumStorage);
   auto valhandle = vmHandleFromValue(value, &valNumStorage);
   auto objHandle = handle(obj);
-  auto res =
-      vm::JSObject::putComputed_RJS(objHandle, runtime_, nameHandle, valhandle);
+  auto res = vm::JSObject::putComputed_RJS(
+      objHandle,
+      runtime_,
+      nameHandle,
+      valhandle,
+      vm::PropOpFlags().plusThrowOnError());
   checkStatus(res.getStatus());
 }
 
@@ -2451,9 +2455,6 @@ void HermesRuntimeImpl::deleteProperty(
       stringHandle(name),
       vm::PropOpFlags().plusThrowOnError());
   checkStatus(res.getStatus());
-  if (!*res) {
-    throw jsi::JSError(*this, "Failed to delete property");
-  }
 }
 
 void HermesRuntimeImpl::deleteProperty(
@@ -2467,9 +2468,6 @@ void HermesRuntimeImpl::deleteProperty(
       vmHandleFromValue(name, &numStorage),
       vm::PropOpFlags().plusThrowOnError());
   checkStatus(res.getStatus());
-  if (!*res) {
-    throw jsi::JSError(*this, "Failed to delete property");
-  }
 }
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {
