@@ -25,6 +25,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup git safe folders
+        shell: bash
+        run: git config --global --add safe.directory '*'
       - name: Setup node.js
         uses: ./.github/actions/setup-node
       - name: Install node dependencies
