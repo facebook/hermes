@@ -303,6 +303,32 @@ SynthTrace::TraceValue SynthTrace::decode(const std::string &str) {
   }
 }
 
+#ifdef HERMESVM_API_TRACE_DEBUG
+std::string SynthTrace::getDescriptiveString(
+    jsi::Runtime &runtime,
+    const jsi::Value &value) {
+  if (value.isUndefined()) {
+    return "undefined:";
+  } else if (value.isNull()) {
+    return "null:";
+  } else if (value.isBool()) {
+    return value.getBool() ? "true" : "false";
+  } else if (value.isNumber()) {
+    return std::to_string(value.getNumber());
+  } else if (value.isBigInt()) {
+    return value.getBigInt(runtime).toString(runtime).utf8(runtime);
+  } else if (value.isString()) {
+    return value.getString(runtime).utf8(runtime);
+  } else if (value.isObject()) {
+    return "object:";
+  } else if (value.isSymbol()) {
+    return value.getSymbol(runtime).toString(runtime);
+  } else {
+    llvm_unreachable("No other values allowed in the trace");
+  }
+}
+#endif
+
 void SynthTrace::Record::toJSON(JSONEmitter &json) const {
   json.openDict();
   toJSONInternal(json);
