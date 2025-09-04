@@ -493,6 +493,17 @@ class HermesRuntimeImpl final : public HermesRuntime,
 #endif
   }
 
+  void dumpOpcodeStats(std::ostream &stream) const override {
+#ifdef HERMESVM_PROFILER_OPCODE
+    llvh::raw_os_ostream os(stream);
+    static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
+#else
+    throw std::logic_error(
+        "Cannot write the basic block profile trace out if Hermes wasn't built with "
+        "hermes.profiler=OPCODE");
+#endif
+  }
+
   void dumpProfilerSymbolsToFile(const std::string &fileName) const override {
     throw std::logic_error(
         "Cannot dump profiler symbols out if Hermes wasn't built with "
@@ -1139,9 +1150,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value getObjectForID(uint64_t id) override;
   const ::hermes::vm::GCExecTrace &getGCExecTrace() const override;
   std::string getIOTrackingInfoJSON() override;
-#ifdef HERMESVM_PROFILER_OPCODE
-  void dumpOpcodeStats(std::ostream &os) const override;
-#endif
   debugger::Debugger &getDebugger() override;
   void debugJavaScript(
       const std::string &src,
@@ -1470,13 +1478,6 @@ std::string HermesRuntimeImpl::getIOTrackingInfoJSON() {
   strstrm.flush();
   return buf;
 }
-
-#ifdef HERMESVM_PROFILER_OPCODE
-void HermesRuntimeImpl::dumpOpcodeStats(std::ostream &stream) const {
-  llvh::raw_os_ostream os(stream);
-  static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
-}
-#endif
 
 debugger::Debugger &HermesRuntimeImpl::getDebugger() {
   return *(debugger_);
