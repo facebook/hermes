@@ -1,2 +1,4 @@
 .gradle
 .externalNativeBuild
+.cxx
+staging

@@ -95,4 +95,4 @@ set(HERMES_ENABLE_EH OFF)
 add_hermes_library(synthTraceParser SynthTraceParser.cpp LINK_OBJLIBS hermesSupport hermesParser synthTrace)
 
 # compileJS uses neither exceptions nor RTTI
-add_hermes_library(compileJS CompileJS.cpp LINK_OBJLIBS hermesPublic)
+add_hermes_library(compileJS CompileJS.cpp LINK_OBJLIBS hermesPublic hermesHBCBackend)
