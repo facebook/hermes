@@ -74,22 +74,22 @@ jobs:
       - name: Show /tmp/hermes directory
         shell: bash
         run: ls -lR /tmp/hermes
-      - name: Copy Hermes binaries
-        shell: bash
-        run: |
-          mkdir -p ./android/ios-artifacts/artifacts/
-          cp $HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Debug.tar.gz ./android/ios-artifacts/artifacts/hermes-ios-debug.tar.gz
-          cp $HERMES_WS_DIR/hermes-runtime-darwin/hermes-ios-Release.tar.gz ./android/ios-artifacts/artifacts/hermes-ios-release.tar.gz
-          cp $HERMES_WS_DIR/dSYM/Debug/hermesvm.framework.dSYM  ./android/ios-artifacts/artifacts/hermes-framework-dSYM-debug.tar.gz
-          cp $HERMES_WS_DIR/dSYM/Release/hermesvm.framework.dSYM  ./android/ios-artifacts/artifacts/hermes-framework-dSYM-release.tar.gz
-      - name: Print Artifacts Directory
-        shell: bash
-        run: ls -lR ./android/ios-artifacts/artifacts/
       - name: Setup node.js
         uses: ./.github/actions/setup-node
       - name: Install dependencies
         uses: ./.github/actions/yarn-install
+      - name: Copy Hermes binaries
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/prepare-artifacts.js
+      - name: Print Artifacts Directory
+        shell: bash
+        run: ls -lR ./android/ios-artifacts/artifacts/
       - name: Publish artifacts
         shell: bash
         run: |
           node ./utils/scripts/hermes/publish-artifacts.js -t ${{ inputs.release-type }}
+      - name: Publish to npm
+        shell: bash
+        run: |
+          node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }}
