@@ -309,12 +309,7 @@ android {
     }
   }
 
-  prefab {
-    create("hermesvm") {
-      headers = prefabHeadersDir.absolutePath
-      libraryName = "hermesvm"
-    }
-  }
+  prefab { create("hermesvm") { headers = prefabHeadersDir.absolutePath } }
 }
 
 afterEvaluate {
