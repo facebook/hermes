@@ -507,6 +507,8 @@ class JSI_EXPORT Runtime : public ICast {
   virtual Array createArray(size_t length) = 0;
   virtual ArrayBuffer createArrayBuffer(
       std::shared_ptr<MutableBuffer> buffer) = 0;
+  virtual std::shared_ptr<MutableBuffer> getMutableBuffer(
+      const ArrayBuffer &buffer) = 0;
   virtual size_t size(const Array&) = 0;
   virtual size_t size(const ArrayBuffer&) = 0;
   virtual uint8_t* data(const ArrayBuffer&) = 0;
@@ -1264,7 +1266,7 @@ class JSI_EXPORT ArrayBuffer : public Object {
   ArrayBuffer(ArrayBuffer&&) = default;
   ArrayBuffer& operator=(ArrayBuffer&&) = default;
 
-  ArrayBuffer(Runtime& runtime, std::shared_ptr<MutableBuffer> buffer)
+  ArrayBuffer(Runtime &runtime, std::shared_ptr<MutableBuffer> buffer)
       : ArrayBuffer(runtime.createArrayBuffer(std::move(buffer))) {}
 
   /// \return the size of the ArrayBuffer storage. This is not affected by
@@ -1280,6 +1282,13 @@ class JSI_EXPORT ArrayBuffer : public Object {
 
   uint8_t* data(Runtime& runtime) const {
     return runtime.data(*this);
+  }
+
+  /// \return the underlying MutableBuffer if this ArrayBuffer
+  /// was created with one.
+  /// This returns nullptr if it does not carry a MutableBuffer.
+  std::shared_ptr<MutableBuffer> getMutableBuffer(Runtime& runtime) const {
+    return runtime.getMutableBuffer(*this);
   }
 
  private:
