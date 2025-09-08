@@ -251,6 +251,51 @@ class TransitionMap {
 
 class HiddenClass final : public GCCell {
   friend void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend struct RuntimeOffsets;
+
+  /// Optional property map of all properties defined by this hidden class.
+  /// This includes \c symbolID_, \c parent_->symbolID_, \c
+  /// parent_->parent_->symbolID_ and so on (in reverse order).
+  /// It is constructed lazily when needed, or is "stolen" from the parent class
+  /// when a transition is performed from the parent class to this one.
+  ///
+  /// NOTE: May be cleared by the GC for any HiddenClass not in a Handle.
+  GCPointer<DictPropertyMap> propertyMap_{};
+
+  /// The parent hidden class which contains a transition from itself to this
+  /// one keyed on \c symbolID_+propertyFlags_. It can be null if there is no
+  /// parent.
+  GCPointer<HiddenClass> parent_;
+
+  /// Cache that contains for-in property names for objects of this class.
+  /// Never used in dictionary mode.
+  GCPointer<ArrayStorageSmall> forInCache_{};
+
+  /// The symbol that was added when transitioning to this hidden class.
+  const GCSymbolID symbolID_;
+  /// The flags of the added symbol.
+  const PropertyFlags propertyFlags_;
+
+  /// Total number of properties encoded in the entire chain from this class
+  /// to the root. Note that some transitions do not introduce a new property,
+  /// so this is not the same as the length of the transition chain.
+  /// Before we enter "dictionary mode", this determines the offset of a new
+  /// property.
+  unsigned numProperties_;
+
+#if HERMESVM_JIT
+  /// A unique identifier for this hidden class, lazily assigned by the JIT,
+  /// when it needs to keep track of the hidden class cheaply.
+  /// 0 means not assigned yet.
+  uint16_t lazyJITId_ = 0;
+#endif
+
+  /// Flags associated with this hidden class.
+  ClassFlags flags_{};
+
+  /// This hash table encodes the transitions from this class to child classes
+  /// keyed on the property being added (or updated) and its flags.
+  detail::TransitionMap transitionMap_;
 
  public:
   using Transition = detail::Transition;
@@ -259,6 +304,21 @@ class HiddenClass final : public GCCell {
   static constexpr unsigned kDictionaryThreshold = 64;
 
   static const VTable vt;
+
+  HiddenClass(
+      Runtime &runtime,
+      ClassFlags flags,
+      Handle<HiddenClass> parent,
+      SymbolID symbolID,
+      PropertyFlags propertyFlags,
+      unsigned numProperties)
+      : parent_(runtime, *parent, runtime.getHeap()),
+        symbolID_(symbolID),
+        propertyFlags_(propertyFlags),
+        numProperties_(numProperties),
+        flags_(flags) {
+    assert(propertyFlags.isValid() && "propertyFlags must be valid");
+  }
 
   static constexpr CellKind getCellKind() {
     return CellKind::HiddenClassKind;
@@ -483,21 +543,6 @@ class HiddenClass final : public GCCell {
   /// \return true if all properties are non-writable and non-configurable
   static bool areAllReadOnly(Handle<HiddenClass> selfHandle, Runtime &runtime);
 
-  HiddenClass(
-      Runtime &runtime,
-      ClassFlags flags,
-      Handle<HiddenClass> parent,
-      SymbolID symbolID,
-      PropertyFlags propertyFlags,
-      unsigned numProperties)
-      : symbolID_(symbolID),
-        propertyFlags_(propertyFlags),
-        flags_(flags),
-        numProperties_(numProperties),
-        parent_(runtime, *parent, runtime.getHeap()) {
-    assert(propertyFlags.isValid() && "propertyFlags must be valid");
-  }
-
  private:
   /// Allocate a new hidden class instance with the supplied parameters.
   static CallResult<HermesValue> create(
@@ -566,52 +611,6 @@ class HiddenClass final : public GCCell {
 #endif
 
  private:
-  friend struct RuntimeOffsets;
-
-  /// The symbol that was added when transitioning to this hidden class.
-  const GCSymbolID symbolID_;
-  /// The flags of the added symbol.
-  const PropertyFlags propertyFlags_;
-
-  /// Flags associated with this hidden class.
-  ClassFlags flags_{};
-
-#if HERMESVM_JIT
-  /// A unique identifier for this hidden class, lazily assigned by the JIT,
-  /// when it needs to keep track of the hidden class cheaply.
-  /// 0 means not assigned yet.
-  uint16_t lazyJITId_ = 0;
-#endif
-
-  /// Total number of properties encoded in the entire chain from this class
-  /// to the root. Note that some transitions do not introduce a new property,
-  /// so this is not the same as the length of the transition chain.
-  /// Before we enter "dictionary mode", this determines the offset of a new
-  /// property.
-  unsigned numProperties_;
-
-  /// Optional property map of all properties defined by this hidden class.
-  /// This includes \c symbolID_, \c parent_->symbolID_, \c
-  /// parent_->parent_->symbolID_ and so on (in reverse order).
-  /// It is constructed lazily when needed, or is "stolen" from the parent class
-  /// when a transition is performed from the parent class to this one.
-  ///
-  /// NOTE: May be cleared by the GC for any HiddenClass not in a Handle.
-  GCPointer<DictPropertyMap> propertyMap_{};
-
-  /// This hash table encodes the transitions from this class to child classes
-  /// keyed on the property being added (or updated) and its flags.
-  detail::TransitionMap transitionMap_;
-
-  /// The parent hidden class which contains a transition from itself to this
-  /// one keyed on \c symbolID_+propertyFlags_. It can be null if there is no
-  /// parent.
-  GCPointer<HiddenClass> parent_;
-
-  /// Cache that contains for-in property names for objects of this class.
-  /// Never used in dictionary mode.
-  GCPointer<ArrayStorageSmall> forInCache_{};
-
   /// Computes the updated class flags for a class with flags \p flags for when
   /// a property is added or updated with property flags \p pf and based on
   /// whether a new index like property has been added.
