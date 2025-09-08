@@ -250,12 +250,7 @@ CallResult<HermesValue> weakMapPrototypeSet(void *, Runtime &runtime) {
     return runtime.raiseTypeError("WeakMap key must be an Object");
   }
 
-  if (LLVM_UNLIKELY(
-          JSWeakMap::setValue(M, runtime, key, args.getArgHandle(1)) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
+  JSWeakMap::setValue(M, runtime, key, args.getArgHandle(1));
   return M.getHermesValue();
 }
 

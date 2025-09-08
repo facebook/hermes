@@ -941,7 +941,7 @@ TEST_F(HeapSnapshotRuntimeTest, WeakMapTest) {
   Handle<JSObject> key = runtime.makeHandle(JSObject::create(runtime));
   Handle<JSObject> value = runtime.makeHandle(JSObject::create(runtime));
   // Add a key so the DenseMap will exist.
-  ASSERT_FALSE(isException(JSWeakMap::setValue(map, runtime, key, value)));
+  JSWeakMap::setValue(map, runtime, key, value);
 
   JSONObject *root = TAKE_SNAPSHOT(runtime.getHeap(), jsonFactory, true);
   ASSERT_TRUE(root != nullptr);

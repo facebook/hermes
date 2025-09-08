@@ -211,7 +211,7 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Set a key/value, overwriting the previous value at that key,
   /// or add a new key/value if the key doesn't exist.
-  static ExecutionStatus setValue(
+  static void setValue(
       Handle<JSWeakMapImplBase> self,
       Runtime &runtime,
       Handle<JSObject> key,

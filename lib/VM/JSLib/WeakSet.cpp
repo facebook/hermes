@@ -173,13 +173,7 @@ CallResult<HermesValue> weakSetPrototypeAdd(void *, Runtime &runtime) {
     return runtime.raiseTypeError("WeakSet key must be an Object");
   }
 
-  if (LLVM_UNLIKELY(
-          JSWeakSet::setValue(
-              M, runtime, key, HandleRootOwner::getUndefinedValue()) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
+  JSWeakSet::setValue(M, runtime, key, HandleRootOwner::getUndefinedValue());
   return M.getHermesValue();
 }
 

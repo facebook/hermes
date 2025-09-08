@@ -24,7 +24,7 @@ void JSWeakMapImplBase::WeakMapImplBaseBuildMeta(
 
 /// Set a key/value, overwriting the previous value at that key,
 /// or add a new key/value if the key doesn't exist.
-ExecutionStatus JSWeakMapImplBase::setValue(
+void JSWeakMapImplBase::setValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
     Handle<JSObject> key,
@@ -37,7 +37,7 @@ ExecutionStatus JSWeakMapImplBase::setValue(
   if (it != self->set_.end()) {
     // Key already exists, update existing value.
     it->setMappedValue(*value);
-    return ExecutionStatus::RETURNED;
+    return;
   }
 
   // If we have exceeded the target size, check and clear unused entries before
@@ -49,8 +49,6 @@ ExecutionStatus JSWeakMapImplBase::setValue(
   auto result = self->set_.insert(mapKey);
   (void)result;
   assert(result.second && "unable to add a new value to map");
-
-  return ExecutionStatus::RETURNED;
 }
 
 /// Delete a key/value in the map.
