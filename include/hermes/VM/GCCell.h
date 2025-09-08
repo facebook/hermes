@@ -184,33 +184,6 @@ class GCCell {
     kindAndSize_ = kindAndSize;
   }
 
-  /// We distinguish between two styles of forwarding pointer:
-  /// "marked" and "unmarked".  When marked forwarding pointers are
-  /// used, we can make efficient queries on a GCCell to determine
-  /// whether a forwarding pointer has been installed.  (For example,
-  /// we might use a low order "mark" bit in the vtp_ field to
-  /// indicate that that holds a forwarding pointer.)  With unmarked
-  /// forwarding pointers, some external data (e.g., external
-  /// mark bits in mark/sweep/compact) must indicate whether the
-  /// GCCell currently holds a forwarding pointer; there is no
-  /// efficient query for this.
-
-  /// The next two functions define unmarked forwarding pointers.
-
-  /// Sets this cell to contain a forwarding pointer to another cell.
-  /// NOTE: this should only be used by the GC.
-  void setForwardingPointer(CompressedPointer cell) {
-    forwardingPointer_ = cell;
-  }
-
-  /// \return a forwarding pointer to another object, if one exists. If one
-  /// has not yet been set by \c setForwardingPointer(), this function is
-  /// guaranteed to not return a pointer into the GC heap.
-  /// NOTE: this should only be used by the GC.
-  CompressedPointer getForwardingPointer() const {
-    return forwardingPointer_;
-  }
-
   /// These three functions implement marked forwarding pointers.
 
   /// Sets this cell to contain a forwarding pointer to another cell. Note that
