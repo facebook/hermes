@@ -223,7 +223,6 @@ export default class HermesParserDeserializer {
    * objects that are filled after the AST has been deserialized.
    */
   addEmptyLoc(): HermesSourceLocation {
-    // $FlowExpectedError
     const loc: HermesSourceLocation = {};
     this.locMap[this.next()] = loc;
     return loc;
