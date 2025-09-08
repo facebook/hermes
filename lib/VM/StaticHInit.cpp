@@ -8,6 +8,7 @@
 #include "hermes/VM/RuntimeFlags.h"
 #include "hermes/VM/StaticHUtils.h"
 #include "hermes/hermes.h"
+#include "jsi/instrumentation.h"
 
 #include "llvh/ADT/ScopeExit.h"
 
@@ -31,6 +32,11 @@ struct GlobalState {
 GlobalState &getGlobalState() {
   static GlobalState state{};
   return state;
+}
+
+void printRecordedGCStats(HermesRuntime *hrt) {
+  std::string stats = hrt->instrumentation().getRecordedGCStats();
+  llvh::errs() << stats;
 }
 } // namespace
 
@@ -68,11 +74,12 @@ extern "C" void _sh_done(SHRuntime *shr) {
     auto &gs = getGlobalState();
     std::lock_guard<std::mutex> lock(gs.mutex);
     // Find the runtime.
-    auto it = gs.runtimes.find(&getRuntime(shr));
+    auto it = gs.runtimes.find(shr);
     if (it == gs.runtimes.end()) {
       llvh::errs() << "SHRuntime not found\n";
       abort();
     }
+    printRecordedGCStats(it->second.get());
     // Store the runtime in the shared pointer, so it will be destroyed outside
     // the lock.
     runtimePtr.swap(it->second);
