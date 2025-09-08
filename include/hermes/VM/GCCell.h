@@ -288,10 +288,6 @@ static_assert(GCCell::maxNormalSize() >= FixedSizeHeapSegment::maxSize());
 /// \see ArrayStorage for how to inherit from this class correctly.
 class VariableSizeRuntimeCell : public GCCell {
  public:
-  uint32_t getSize() const {
-    return getAllocatedSize();
-  }
-
   /// Sets the size of the current cell to be \p sz.
   /// NOTE: This should only be used by the GC, and only to shrink objects.
   /// \pre sz is already heap-aligned.
@@ -303,7 +299,9 @@ class VariableSizeRuntimeCell : public GCCell {
         sz >= sizeof(VariableSizeRuntimeCell) &&
         "Should not allocate a VariableSizeRuntimeCell of size less than "
         "the size of a cell");
-    assert(sz <= maxNormalSize() && "sz cannot be larger than maxNormalSize()");
+    assert(
+        sz <= maxNormalSize() && "Setting size of large object is not allowed");
+    assert(sz < getAllocatedSize() && "Can only shrink objects");
     setKindAndSize(KindAndSize{getKind(), sz});
   }
 };
