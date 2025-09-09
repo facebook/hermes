@@ -42,13 +42,16 @@ static void exceedMaxHeap(
   auto runtime =
       DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint, baseConfig));
   DummyRuntime &rt = *runtime;
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<AwkwardCell> handles[20]; // kSegments + 2 + some extra
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Exceed the maximum size of the heap. Note we need 2 extra segments instead
   // of just one because Hades can sometimes hide the memory for a segment
   // during compaction.
   for (size_t i = 0; i < kSegments + 2; ++i)
-    rt.makeHandle(AwkwardCell::create(rt));
+    lv.handles[i] = AwkwardCell::create(rt);
 }
 
 // When handlesan is ON, we won't check the heap footprint when creating new

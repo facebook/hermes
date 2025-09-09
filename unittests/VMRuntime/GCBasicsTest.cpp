@@ -42,7 +42,10 @@ TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<DummyObject> obj2;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Verify the initial state.
   gc.getHeapInfo(info);
@@ -89,7 +92,7 @@ TEST_F(GCBasicsTest, SmokeTest) {
 
   // Allocate two objects, the second with a GC handle.
   DummyObject::create(rt.getHeap(), rt);
-  rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
+  lv.obj2 = DummyObject::create(rt.getHeap(), rt);
   gc.getHeapInfo(info);
   gc.getDebugHeapInfo(debugInfo);
   ASSERT_EQ(2u, debugInfo.numAllocatedObjects);
@@ -115,7 +118,10 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
   GCBase::DebugHeapInfo debugInfo;
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<ArrayStorage> a2;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Initialize three arrays, one with a GC handle.
   gcheapsize_t totalAlloc = 0;
@@ -124,7 +130,7 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   totalAlloc += heapAlignSize(ArrayStorage::allocationSize(0));
   auto *a1 = ArrayStorage::createForTest(gc, 3);
   totalAlloc += heapAlignSize(ArrayStorage::allocationSize(3));
-  auto a2 = rt.makeHandle(ArrayStorage::createForTest(gc, 3));
+  lv.a2 = ArrayStorage::createForTest(gc, 3);
   totalAlloc += heapAlignSize(ArrayStorage::allocationSize(3));
   // Verify the initial state.
   gc.getHeapInfo(info);
@@ -137,10 +143,10 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   EXPECT_EQ(totalAlloc, info.allocatedBytes);
 
   // Initialize a reachable graph.
-  a2->set(0, HermesValue::encodeObjectValue(a1), gc);
-  a2->set(2, HermesValue::encodeObjectValue(*a2), gc);
+  lv.a2->set(0, HermesValue::encodeObjectValue(a1), gc);
+  lv.a2->set(2, HermesValue::encodeObjectValue(*lv.a2), gc);
   a1->set(0, HermesValue::encodeObjectValue(a1), gc);
-  a1->set(1, HermesValue::encodeObjectValue(*a2), gc);
+  a1->set(1, HermesValue::encodeObjectValue(*lv.a2), gc);
 
   rt.collect();
   totalAlloc -= heapAlignSize(ArrayStorage::allocationSize(0));
@@ -154,14 +160,14 @@ TEST_F(GCBasicsTest, MovedObjectTest) {
   EXPECT_EQ(totalAlloc, info.allocatedBytes);
 
   // Extract what we know was a pointer to a1.
-  a1 = vmcast<ArrayStorage>(a2->at(0));
+  a1 = vmcast<ArrayStorage>(lv.a2->at(0));
 
   // Ensure the contents of the objects changed.
-  EXPECT_EQ(a1, a2->at(0).getPointer());
-  EXPECT_EQ(HermesValue::encodeEmptyValue(), a2->at(1));
-  EXPECT_EQ(*a2, a2->at(2).getPointer());
+  EXPECT_EQ(a1, lv.a2->at(0).getPointer());
+  EXPECT_EQ(HermesValue::encodeEmptyValue(), lv.a2->at(1));
+  EXPECT_EQ(*lv.a2, lv.a2->at(2).getPointer());
   EXPECT_EQ(a1, a1->at(0).getPointer());
-  EXPECT_EQ(*a2, a1->at(1).getPointer());
+  EXPECT_EQ(*lv.a2, a1->at(1).getPointer());
   EXPECT_EQ(HermesValue::encodeEmptyValue(), a1->at(2));
 }
 
@@ -196,25 +202,28 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
 TEST_F(GCBasicsTest, WeakRefTest) {
   auto &gc = rt.getHeap();
   GCBase::DebugHeapInfo debugInfo;
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<ArrayStorage> a2;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(0u, debugInfo.numAllocatedObjects);
 
-  auto a2 = rt.makeHandle(ArrayStorage::createForTest(gc, 10));
+  lv.a2 = ArrayStorage::createForTest(gc, 10);
   auto *a1 = ArrayStorage::createForTest(gc, 10);
 
   gc.getDebugHeapInfo(debugInfo);
   EXPECT_EQ(2u, debugInfo.numAllocatedObjects);
 
   WeakRef<ArrayStorage> wr1{rt, gc, a1};
-  WeakRef<ArrayStorage> wr2{rt, gc, a2};
+  WeakRef<ArrayStorage> wr2{rt, gc, lv.a2};
 
   ASSERT_TRUE(wr1.isValid());
   ASSERT_TRUE(wr2.isValid());
 
   ASSERT_EQ(a1, wr1.getNoBarrierUnsafe(rt));
-  ASSERT_EQ(*a2, wr2.getNoBarrierUnsafe(rt));
+  ASSERT_EQ(*lv.a2, wr2.getNoBarrierUnsafe(rt));
 
   // a1 is supposed to be freed during the following collection, so clear
   // the pointer to avoid mistakes.
@@ -229,7 +238,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   // Though the slot is empty, it's still reachable, so must not be freed yet.
   ASSERT_FALSE(wr1.isSlotFree());
   ASSERT_TRUE(wr2.isValid());
-  ASSERT_EQ(*a2, wr2.getNoBarrierUnsafe(rt));
+  ASSERT_EQ(*lv.a2, wr2.getNoBarrierUnsafe(rt));
 
   // Make the slot unreachable and test that it is freed.
   wr1.releaseSlot();
@@ -249,17 +258,19 @@ TEST_F(GCBasicsTest, WeakRefTest) {
 #endif // !NDEBUG && !HERMESVM_GC_HADES
 
 TEST_F(GCBasicsTest, WeakRootTest) {
-  GCScope scope{rt};
   GC &gc = rt.getHeap();
 
   WeakRoot<GCCell> wr;
   rt.weakRoots.push_back(&wr);
   {
-    GCScopeMarkerRAII marker{rt};
-    auto obj = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
-    wr.set(rt, *obj);
+    struct : Locals {
+      PinnedValue<DummyObject> obj;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
+    lv.obj = DummyObject::create(rt.getHeap(), rt);
+    wr.set(rt, *lv.obj);
     rt.collect();
-    ASSERT_EQ(wr.get(rt, gc), *obj);
+    ASSERT_EQ(wr.get(rt, gc), *lv.obj);
   }
   rt.collect();
   ASSERT_TRUE(wr.get(rt, gc) == nullptr);
@@ -330,17 +341,19 @@ TEST_F(GCBasicsTest, TestIDIsUnique) {
 }
 
 TEST_F(GCBasicsTest, TestIDPersistsAcrossCollections) {
-  GCScope scope{rt};
-  auto handle = rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
-  const auto idBefore = rt.getHeap().getObjectID(*handle);
+  struct : Locals {
+    PinnedValue<DummyObject> handle;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+  lv.handle = DummyObject::create(rt.getHeap(), rt);
+  const auto idBefore = rt.getHeap().getObjectID(*lv.handle);
   rt.collect();
-  const auto idAfter = rt.getHeap().getObjectID(*handle);
+  const auto idAfter = rt.getHeap().getObjectID(*lv.handle);
   EXPECT_EQ(idBefore, idAfter);
 }
 
 /// Test that objects that die during (YG) GC are untracked.
 TEST_F(GCBasicsTest, TestIDDeathInYoung) {
-  GCScope scope{rt};
   rt.getHeap().getObjectID(DummyObject::create(rt.getHeap(), rt));
   rt.collect();
   // ~DummyRuntime will verify all pointers in ID map.
@@ -370,20 +383,25 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   constexpr size_t kSegmentCellStorageSize =
       FixedSizeHeapSegment::storageSize();
   constexpr size_t kHeapSizeHint = FixedSizeHeapSegment::maxSize() * 10;
+  constexpr size_t N = kHeapSizeHint / kSegmentCellStorageSize - 1;
 
   const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
-  auto handle = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
-  const auto originalID = rt.getHeap().getObjectID(*handle);
+  struct : Locals {
+    PinnedValue<SegmentCell> handle;
+    PinnedValue<SegmentCell> handle2;
+    PinnedValue<SegmentCell> handles[N - 1]; // For large allocation loop
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+  lv.handle = SegmentCell::create(rt);
+  const auto originalID = rt.getHeap().getObjectID(*lv.handle);
   GC::HeapInfo oldHeapInfo;
   rt.getHeap().getHeapInfo(oldHeapInfo);
   // A second allocation should put the first object into the old gen.
-  auto handle2 = rt.makeHandle<SegmentCell>(SegmentCell::create(rt));
-  (void)handle2;
-  auto idAfter = rt.getHeap().getObjectID(*handle);
+  lv.handle2 = SegmentCell::create(rt);
+  auto idAfter = rt.getHeap().getObjectID(*lv.handle);
   GC::HeapInfo newHeapInfo;
   rt.getHeap().getHeapInfo(newHeapInfo);
   EXPECT_EQ(originalID, idAfter);
@@ -391,15 +409,11 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
   oldHeapInfo = newHeapInfo;
   // Fill the old gen to force a collection.
-  auto N = kHeapSizeHint / kSegmentCellStorageSize - 1;
-  {
-    GCScopeMarkerRAII marker{rt};
-    for (size_t i = 0; i < N - 1; ++i) {
-      rt.makeHandle(SegmentCell::create(rt));
-    }
+  for (size_t i = 0; i < N - 1; ++i) {
+    lv.handles[i] = SegmentCell::create(rt);
   }
   SegmentCell::create(rt);
-  idAfter = rt.getHeap().getObjectID(*handle);
+  idAfter = rt.getHeap().getObjectID(*lv.handle);
   rt.getHeap().getHeapInfo(newHeapInfo);
   EXPECT_EQ(originalID, idAfter);
   // There should have been one old gen collection.

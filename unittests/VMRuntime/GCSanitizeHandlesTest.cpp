@@ -61,11 +61,13 @@ struct TestHarness {
 TEST(GCSanitizeHandlesTest, MovesRoots) {
   TestHarness TH;
   DummyRuntime &runtime = *TH.runtime;
-  GCScope gcScope(runtime);
+  struct : Locals {
+    PinnedValue<DummyObject> dummy;
+  } lv;
+  DummyLocalsRAII lraii{runtime, &lv};
 
-  auto dummy =
-      runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
-  TH.testHandleMoves(dummy);
+  lv.dummy = DummyObject::create(runtime.getHeap(), runtime);
+  TH.testHandleMoves(lv.dummy);
 }
 
 /// Objects reachable from the root should also be moved from its position
@@ -73,16 +75,18 @@ TEST(GCSanitizeHandlesTest, MovesRoots) {
 TEST(GCSanitizeHandlesTest, MovesNonRoots) {
   TestHarness TH;
   DummyRuntime &runtime = *TH.runtime;
-  GCScope gcScope(runtime);
+  struct : Locals {
+    PinnedValue<DummyObject> dummy;
+  } lv;
+  DummyLocalsRAII lraii{runtime, &lv};
 
-  auto dummy =
-      runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
+  lv.dummy = DummyObject::create(runtime.getHeap(), runtime);
   auto *dummy2 = DummyObject::create(runtime.getHeap(), runtime);
-  dummy->setPointer(runtime.getHeap(), dummy2);
+  lv.dummy->setPointer(runtime.getHeap(), dummy2);
 
-  auto *before = dummy->other.get(runtime);
+  auto *before = lv.dummy->other.get(runtime);
   TH.triggerFreshHeap();
-  auto *after = dummy->other.get(runtime);
+  auto *after = lv.dummy->other.get(runtime);
   ASSERT_NE(before, after);
 }
 
@@ -93,12 +97,14 @@ TEST(GCSanitizeHandlesTest, MovesNonRoots) {
 TEST(GCSanitizeHandlesTest, MovesAfterCollect) {
   TestHarness TH;
   DummyRuntime &runtime = *TH.runtime;
-  GCScope gcScope(runtime);
+  struct : Locals {
+    PinnedValue<DummyObject> dummy;
+  } lv;
+  DummyLocalsRAII lraii{runtime, &lv};
 
-  Handle<DummyObject> dummy =
-      runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
+  lv.dummy = DummyObject::create(runtime.getHeap(), runtime);
   runtime.collect();
-  TH.testHandleMoves(dummy);
+  TH.testHandleMoves(lv.dummy);
 }
 
 /// Pointers to native values can also exist on the heap, and these should not
@@ -106,16 +112,19 @@ TEST(GCSanitizeHandlesTest, MovesAfterCollect) {
 TEST(GCSanitizeHandlesTest, DoesNotMoveNativeValues) {
   TestHarness TH;
   DummyRuntime &runtime = *TH.runtime;
-  GCScope gcScope(runtime);
+  struct : Locals {
+    PinnedValue<> hNative;
+  } lv;
+  DummyLocalsRAII lraii{runtime, &lv};
 
   const char buf[] = "the quick brown fox jumped over the lazy dog.";
-  auto hNative = runtime.makeHandle(HermesValue::encodeNativePointer(
-      const_cast<void *>(reinterpret_cast<const void *>(buf))));
+  lv.hNative = HermesValue::encodeNativePointer(
+      const_cast<void *>(reinterpret_cast<const void *>(buf)));
 
   auto prevNativeLoc = reinterpret_cast<const void *>(buf);
   TH.triggerFreshHeap();
   auto currNativeLoc =
-      hNative.getHermesValue().getNativePointer<const void *>();
+      lv.hNative.getHermesValue().getNativePointer<const void *>();
 
   EXPECT_EQ(prevNativeLoc, currNativeLoc);
 }

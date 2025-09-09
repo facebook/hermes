@@ -38,9 +38,12 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<DummyObject> obj;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
   DummyObject::create(rt.getHeap(), rt);
-  rt.makeHandle(createWithFinalizeCount(rt, rt.getHeap(), &finalized));
+  lv.obj = createWithFinalizeCount(rt, rt.getHeap(), &finalized);
   rt.collect();
 
   ASSERT_EQ(0, finalized);
@@ -51,9 +54,12 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<DummyObject> obj;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
   createWithFinalizeCount(rt, rt.getHeap(), &finalized);
-  rt.makeHandle(createWithFinalizeCount(rt, rt.getHeap(), &finalized));
+  lv.obj = createWithFinalizeCount(rt, rt.getHeap(), &finalized);
   rt.collect();
 
   ASSERT_EQ(1, finalized);
@@ -65,12 +71,16 @@ TEST(GCFinalizerTest, MultipleCollect) {
   DummyRuntime &rt = *runtime;
 
   {
-    GCScope scope{rt};
+    struct : Locals {
+      PinnedValue<DummyObject> obj1;
+      PinnedValue<DummyObject> obj2;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
     createWithFinalizeCount(rt, rt.getHeap(), &finalized);
     DummyObject::create(rt.getHeap(), rt);
     createWithFinalizeCount(rt, rt.getHeap(), &finalized);
-    rt.makeHandle(createWithFinalizeCount(rt, rt.getHeap(), &finalized));
-    rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
+    lv.obj1 = createWithFinalizeCount(rt, rt.getHeap(), &finalized);
+    lv.obj2 = DummyObject::create(rt.getHeap(), rt);
     rt.collect();
 
     ASSERT_EQ(2, finalized);
@@ -86,9 +96,13 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
   {
     auto rt = DummyRuntime::create(kTestGCConfigSmall);
 
-    GCScope scope{*rt};
-    rt->makeHandle(createWithFinalizeCount(*rt, rt->getHeap(), &finalized));
-    rt->makeHandle(createWithFinalizeCount(*rt, rt->getHeap(), &finalized));
+    struct : Locals {
+      PinnedValue<DummyObject> obj1;
+      PinnedValue<DummyObject> obj2;
+    } lv;
+    DummyLocalsRAII lraii{*rt, &lv};
+    lv.obj1 = createWithFinalizeCount(*rt, rt->getHeap(), &finalized);
+    lv.obj2 = createWithFinalizeCount(*rt, rt->getHeap(), &finalized);
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.

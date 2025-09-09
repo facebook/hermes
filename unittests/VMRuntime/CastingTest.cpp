@@ -18,7 +18,11 @@ namespace {
 TEST(CastingTest, SmokeTest) {
   auto rt = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &runtime = *rt;
-  GCScope gcScope(runtime);
+  struct : Locals {
+    PinnedValue<ArrayStorage> h1;
+    PinnedValue<ArrayStorageSmall> h2;
+  } lv;
+  DummyLocalsRAII lraii{runtime, &lv};
 
   const int TAG1 = 1234;
   const SymbolID TAG2 = SymbolID::unsafeCreate(4567);
@@ -29,15 +33,13 @@ TEST(CastingTest, SmokeTest) {
   // SmallHermesValue does not support DummyRuntime.
   const auto SHVTAG2 = SmallHermesValue::encodeSymbolValue(TAG2);
 
-  auto h1 =
-      runtime.makeHandle(ArrayStorage::createForTest(runtime.getHeap(), 1));
-  h1->set(0, HVTAG1, runtime.getHeap());
-  auto h2 = runtime.makeHandle(
-      ArrayStorageSmall::createForTest(runtime.getHeap(), 1));
-  h2->set(0, SHVTAG2, runtime.getHeap());
+  lv.h1 = ArrayStorage::createForTest(runtime.getHeap(), 1);
+  lv.h1->set(0, HVTAG1, runtime.getHeap());
+  lv.h2 = ArrayStorageSmall::createForTest(runtime.getHeap(), 1);
+  lv.h2->set(0, SHVTAG2, runtime.getHeap());
 
-  GCCell *p1 = h1.get();
-  GCCell *p2 = h2.get();
+  GCCell *p1 = lv.h1.get();
+  GCCell *p2 = lv.h2.get();
 
   auto v1 = HermesValue::encodeObjectValue(p1);
   auto v2 = HermesValue::encodeObjectValue(p2);

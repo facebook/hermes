@@ -36,18 +36,23 @@ TEST(GCReturnUnusedMemoryTest, CollectReturnsFreeMemory) {
 
   llvh::ErrorOr<size_t> before = 0;
   {
-    GCScope scope{rt};
+    struct : Locals {
+      PinnedValue<SemiCell> cell1;
+      PinnedValue<SemiCell> cell2;
+      PinnedValue<SemiCell> cell3;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
     // Allocate cells directly in the old generation.
-    auto cell1 = rt.makeHandle(SemiCell::createLongLived(rt));
-    auto cell2 = rt.makeHandle(SemiCell::createLongLived(rt));
-    rt.makeHandle(SemiCell::createLongLived(rt));
+    lv.cell1 = SemiCell::createLongLived(rt);
+    lv.cell2 = SemiCell::createLongLived(rt);
+    lv.cell3 = SemiCell::createLongLived(rt);
 
     before = gc.getVMFootprintForTest();
     ASSERT_TRUE(before);
 
     // Make the pages dirty
-    (void)cell1->touch();
-    (void)cell2->touch();
+    (void)lv.cell1->touch();
+    (void)lv.cell2->touch();
   }
 
   auto touched = gc.getVMFootprintForTest();

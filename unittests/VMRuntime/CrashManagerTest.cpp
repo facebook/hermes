@@ -95,18 +95,19 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
       gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<SegmentCell> handles[25];
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Allocate 25 segments.  By the time we're done, this should fill
   // the YG (which will have grown to a full segment size), and 24 OG
   // segments.
   for (size_t i = 0; i < 8; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[i] = SegmentCell::create(rt);
   }
-  auto marker = scope.createMarker();
-  (void)marker;
   for (size_t i = 0; i < 17; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[8 + i] = SegmentCell::create(rt);
   }
 
 #ifdef HERMESVM_GC_HADES
@@ -166,11 +167,14 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
       gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<SegmentCell> handles[3];
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Fill up YG at least once, to make sure promotion keeps the right name.
   for (size_t i = 0; i < 3; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[i] = SegmentCell::create(rt);
   }
 
   const auto &customData = testCrashMgr->customData();
@@ -205,15 +209,20 @@ TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
   DummyRuntime &rt = *runtime;
   const auto &customData = testCrashMgr->customData();
   {
-    GCScope scope{rt};
+    struct : Locals {
+      PinnedValue<SegmentCell> h1;
+      PinnedValue<SegmentCell> h2;
+      PinnedValue<SegmentCell> h3;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
 
-    rt.makeHandle(SegmentCell::createLongLived(rt));
-    rt.makeHandle(SegmentCell::createLongLived(rt));
-    auto h3 = rt.makeMutableHandle(SegmentCell::createLongLived(rt));
+    lv.h1 = SegmentCell::createLongLived(rt);
+    lv.h2 = SegmentCell::createLongLived(rt);
+    lv.h3 = SegmentCell::createLongLived(rt);
     // YG segment (two entries) + 3 OG segments created above + GCKind entry.
     EXPECT_EQ(6, customData.size());
 
-    h3.set(nullptr);
+    lv.h3 = nullptr;
     // The segment for h3 will be compacted.
     rt.collect();
     // Make sure we don't remove the wrong entry.
@@ -223,12 +232,17 @@ TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
   }
 
   {
-    GCScope scope{rt};
-    rt.makeHandle(SegmentCell::create(rt));
-    rt.makeHandle(SegmentCell::createLongLived(rt));
+    struct : Locals {
+      PinnedValue<SegmentCell> h1;
+      PinnedValue<SegmentCell> h2;
+      PinnedValue<SegmentCell> h3;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
+    lv.h1 = SegmentCell::create(rt);
+    lv.h2 = SegmentCell::createLongLived(rt);
     // Trigger a YG collection, which starts an OG collection and prepares
     // compaction.
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.h3 = SegmentCell::create(rt);
     EXPECT_EQ(customData.count("XYZ:HeapSegment:COMPACT"), 1);
   }
 

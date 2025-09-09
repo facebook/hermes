@@ -87,9 +87,12 @@ TEST(InstrumentationAPITest, RunCallbackAfterAllocatingMemoryOverLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCScope scope{runtime};
-  auto h = runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
-  h->acquireExtMem(runtime.getHeap(), 200);
+  struct : Locals {
+    PinnedValue<DummyObject> h;
+  } lv;
+  DummyLocalsRAII lraii{runtime, &lv};
+  lv.h = DummyObject::create(runtime.getHeap(), runtime);
+  lv.h->acquireExtMem(runtime.getHeap(), 200);
   runtime.collect();
   EXPECT_TRUE(triggeredTripwire);
 }
@@ -109,8 +112,11 @@ TEST(InstrumentationAPITest, DontRunCallbackAfterAllocatingMemoryUnderLimit) {
   DummyRuntime &runtime = *rt;
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
-  GCScope scope{runtime};
-  runtime.makeHandle(DummyObject::create(runtime.getHeap(), runtime));
+  struct : Locals {
+    PinnedValue<DummyObject> dummy;
+  } lv;
+  DummyLocalsRAII lraii{runtime, &lv};
+  lv.dummy = DummyObject::create(runtime.getHeap(), runtime);
   runtime.collect();
   EXPECT_FALSE(triggeredTripwire);
 }
