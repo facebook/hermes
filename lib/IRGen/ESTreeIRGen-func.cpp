@@ -635,25 +635,14 @@ Function *ESTreeIRGen::genAsyncFunction(
       llvh::isa<ESTree::ArrowFunctionExpressionNode>(functionNode);
   auto *body = ESTree::getBlockStatement(functionNode);
   if (body->isLazyFunctionBody) {
-    if (isAsyncArrow) {
-      setupLazyFunction(
-          asyncFn,
-          functionNode,
-          parentNode,
-          body,
-          parentScope,
-          ExtraKey::AsyncOuter,
-          capturedState);
-    } else {
-      setupLazyFunction(
-          asyncFn,
-          functionNode,
-          parentNode,
-          body,
-          parentScope,
-          ExtraKey::AsyncOuter,
-          capturedState);
-    }
+    setupLazyFunction(
+        asyncFn,
+        functionNode,
+        parentNode,
+        body,
+        parentScope,
+        ExtraKey::AsyncOuter,
+        capturedState);
     return asyncFn;
   }
 
