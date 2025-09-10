@@ -43,6 +43,9 @@ function foo() {
 // CHKBC-NEXT:  String Kind Entry count: 2
 // CHKBC-NEXT:  RegExp count: 0
 // CHKBC-NEXT:  StringSwitchImm count: 0
+// CHKBC-NEXT:  Key buffer size (bytes): 0
+// CHKBC-NEXT:  Value buffer size (bytes): 0
+// CHKBC-NEXT:  Shape table count: 0
 // CHKBC-NEXT:  Segment ID: 0
 // CHKBC-NEXT:  CommonJS module count: 0
 // CHKBC-NEXT:  CommonJS module count (static): 0

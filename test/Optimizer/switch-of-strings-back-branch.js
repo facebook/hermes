@@ -65,6 +65,9 @@ function stringSwitch(x) {
 // HBC-NEXT:  String Kind Entry count: 2
 // HBC-NEXT:  RegExp count: 0
 // HBC-NEXT:  StringSwitchImm count: 1
+// HBC-NEXT:  Key buffer size (bytes): 0
+// HBC-NEXT:  Value buffer size (bytes): 0
+// HBC-NEXT:  Shape table count: 0
 // HBC-NEXT:  Segment ID: 0
 // HBC-NEXT:  CommonJS module count: 0
 // HBC-NEXT:  CommonJS module count (static): 0
@@ -208,6 +211,9 @@ function stringSwitch(x) {
 // HBCRAW-NEXT:  String Kind Entry count: 2
 // HBCRAW-NEXT:  RegExp count: 0
 // HBCRAW-NEXT:  StringSwitchImm count: 1
+// HBCRAW-NEXT:  Key buffer size (bytes): 0
+// HBCRAW-NEXT:  Value buffer size (bytes): 0
+// HBCRAW-NEXT:  Shape table count: 0
 // HBCRAW-NEXT:  Segment ID: 0
 // HBCRAW-NEXT:  CommonJS module count: 0
 // HBCRAW-NEXT:  CommonJS module count (static): 0

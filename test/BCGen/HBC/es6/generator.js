@@ -30,6 +30,9 @@ function *args() {
 // CHECK-NEXT:  String Kind Entry count: 2
 // CHECK-NEXT:  RegExp count: 0
 // CHECK-NEXT:  StringSwitchImm count: 0
+// CHECK-NEXT:  Key buffer size (bytes): 5
+// CHECK-NEXT:  Value buffer size (bytes): 10
+// CHECK-NEXT:  Shape table count: 1
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -58,12 +61,15 @@ function *args() {
 // CHECK-NEXT:false
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:true
-// CHECK-NEXT:Object Key Buffer:
+
+// CHECK:Object Key Buffer:
 // CHECK-NEXT:[String 7]
 // CHECK-NEXT:[String 5]
-// CHECK-NEXT:Object Shape Table:
+
+// CHECK:Object Shape Table:
 // CHECK-NEXT:0[0, 2]
-// CHECK-NEXT:Function Source Table:
+
+// CHECK:Function Source Table:
 // CHECK-NEXT:  Function ID 3 -> s0
 // CHECK-NEXT:  Function ID 4 -> s0
 

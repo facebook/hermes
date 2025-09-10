@@ -35,6 +35,9 @@ function foo(p) {
 // CHECK-NEXT:  String Kind Entry count: 2
 // CHECK-NEXT:  RegExp count: 0
 // CHECK-NEXT:  StringSwitchImm count: 0
+// CHECK-NEXT:  Key buffer size (bytes): 12
+// CHECK-NEXT:  Value buffer size (bytes): 18
+// CHECK-NEXT:  Shape table count: 2
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -59,16 +62,19 @@ function foo(p) {
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:null
 // CHECK-NEXT:[int 5]
-// CHECK-NEXT:Object Key Buffer:
+
+// CHECK:Object Key Buffer:
 // CHECK-NEXT:[String 3]
 // CHECK-NEXT:[String 4]
 // CHECK-NEXT:[String 5]
 // CHECK-NEXT:[String 6]
 // CHECK-NEXT:[String 7]
-// CHECK-NEXT:Object Shape Table:
+
+// CHECK:Object Shape Table:
 // CHECK-NEXT:0[0, 2]
 // CHECK-NEXT:1[5, 3]
-// CHECK-NEXT:Function<global>(1 params, 11 registers, 0 numbers, 1 non-pointers):
+
+// CHECK:Function<global>(1 params, 11 registers, 0 numbers, 1 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:[@ 0] DeclareGlobalVar 5<UInt32>
 // CHECK-NEXT:[@ 5] GetGlobalObject 2<Reg8>

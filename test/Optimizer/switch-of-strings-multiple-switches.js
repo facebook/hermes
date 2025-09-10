@@ -266,6 +266,9 @@ function stringSwitchSeveralSwitches(b, s, i) {
 // HBC-NEXT:  String Kind Entry count: 2
 // HBC-NEXT:  RegExp count: 0
 // HBC-NEXT:  StringSwitchImm count: 2
+// HBC-NEXT:  Key buffer size (bytes): 0
+// HBC-NEXT:  Value buffer size (bytes): 0
+// HBC-NEXT:  Shape table count: 0
 // HBC-NEXT:  Segment ID: 0
 // HBC-NEXT:  CommonJS module count: 0
 // HBC-NEXT:  CommonJS module count (static): 0

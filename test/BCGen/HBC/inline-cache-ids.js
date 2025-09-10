@@ -137,6 +137,9 @@ function manyPutByIds(o, o2, val) {
 // CHECK-NEXT:  String Kind Entry count: 3
 // CHECK-NEXT:  RegExp count: 0
 // CHECK-NEXT:  StringSwitchImm count: 0
+// CHECK-NEXT:  Key buffer size (bytes): 0
+// CHECK-NEXT:  Value buffer size (bytes): 0
+// CHECK-NEXT:  Shape table count: 0
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0

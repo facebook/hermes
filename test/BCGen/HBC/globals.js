@@ -23,6 +23,9 @@ y = x;
 // STRICT-NEXT:  String Kind Entry count: 2
 // STRICT-NEXT:  RegExp count: 0
 // STRICT-NEXT:  StringSwitchImm count: 0
+// STRICT-NEXT:  Key buffer size (bytes): 0
+// STRICT-NEXT:  Value buffer size (bytes): 0
+// STRICT-NEXT:  Shape table count: 0
 // STRICT-NEXT:  Segment ID: 0
 // STRICT-NEXT:  CommonJS module count: 0
 // STRICT-NEXT:  CommonJS module count (static): 0
@@ -77,6 +80,9 @@ y = x;
 // NONSTRICT-NEXT:  String Kind Entry count: 2
 // NONSTRICT-NEXT:  RegExp count: 0
 // NONSTRICT-NEXT:  StringSwitchImm count: 0
+// NONSTRICT-NEXT:  Key buffer size (bytes): 0
+// NONSTRICT-NEXT:  Value buffer size (bytes): 0
+// NONSTRICT-NEXT:  Shape table count: 0
 // NONSTRICT-NEXT:  Segment ID: 0
 // NONSTRICT-NEXT:  CommonJS module count: 0
 // NONSTRICT-NEXT:  CommonJS module count (static): 0

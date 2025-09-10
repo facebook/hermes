@@ -195,6 +195,12 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  RegExp count: " << bcProvider_->getRegExpTable().size() << "\n";
   OS << "  StringSwitchImm count: "
      << bcProvider_->getNumStringSwitchImmInstrs() << "\n";
+  OS << "  Key buffer size (bytes): "
+     << bcProvider_->getObjectKeyBuffer().size() << "\n";
+  OS << "  Value buffer size (bytes): "
+     << bcProvider_->getLiteralValueBuffer().size() << "\n";
+  OS << "  Shape table count: " << bcProvider_->getObjectShapeTable().size()
+     << "\n";
   OS << "  Segment ID: " << bcProvider_->getSegmentID() << "\n";
   OS << "  CommonJS module count: " << bcProvider_->getCJSModuleTable().size()
      << "\n";
@@ -295,6 +301,7 @@ void BytecodeDisassembler::disassembleLiteralValueBuffer(raw_ostream &OS) {
       OS << SLPToString(tag.second, literalValueBuffer.data(), &ind) << "\n";
     }
   }
+  OS << "\n";
 }
 
 /// NOTE: The output might not show the value of every literal used
@@ -319,6 +326,7 @@ void BytecodeDisassembler::disassembleObjectKeyBuffer(raw_ostream &OS) {
       OS << SLPToString(keyTag.second, objKeyBuffer.data(), &keyInd) << "\n";
     }
   }
+  OS << "\n";
 }
 
 void BytecodeDisassembler::disassembleObjectShapeTable(raw_ostream &OS) {
@@ -332,6 +340,7 @@ void BytecodeDisassembler::disassembleObjectShapeTable(raw_ostream &OS) {
     OS << shapeTableIdx << "[" << shapeInfo.keyBufferOffset << ", "
        << shapeInfo.numProps << "]\n";
   }
+  OS << "\n";
 }
 
 /// Converts the given bigint magnitude \p bytes to a string in base 10.

@@ -22,6 +22,9 @@ var z = [{}];
 // CHECK-NEXT:  String Kind Entry count: 2
 // CHECK-NEXT:  RegExp count: 0
 // CHECK-NEXT:  StringSwitchImm count: 0
+// CHECK-NEXT:  Key buffer size (bytes): 0
+// CHECK-NEXT:  Value buffer size (bytes): 18
+// CHECK-NEXT:  Shape table count: 0
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
@@ -47,7 +50,8 @@ var z = [{}];
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:[String 1]
 // CHECK-NEXT:[String 0]
-// CHECK-NEXT:Function<global>(1 params, 6 registers, 1 numbers, 2 non-pointers):
+
+// CHECK:Function<global>(1 params, 6 registers, 1 numbers, 2 non-pointers):
 // CHECK-NEXT:Offset in debug table: source 0x0000
 // CHECK-NEXT:    DeclareGlobalVar  "x"
 // CHECK-NEXT:    DeclareGlobalVar  "y"

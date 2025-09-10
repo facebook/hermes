@@ -98,6 +98,9 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:  String Kind Entry count: 2
 // CHKBC-NEXT:  RegExp count: 0
 // CHKBC-NEXT:  StringSwitchImm count: 0
+// CHKBC-NEXT:  Key buffer size (bytes): 15
+// CHKBC-NEXT:  Value buffer size (bytes): 18
+// CHKBC-NEXT:  Shape table count: 2
 // CHKBC-NEXT:  Segment ID: 0
 // CHKBC-NEXT:  CommonJS module count: 0
 // CHKBC-NEXT:  CommonJS module count (static): 0
@@ -127,16 +130,19 @@ print(foo({a: 10, b: 20, lastKey:30, 5:6}))
 // CHKBC-NEXT:[int 30]
 // CHKBC-NEXT:[int 6]
 // CHKBC-NEXT:null
-// CHKBC-NEXT:Object Key Buffer:
+
+// CHKBC:Object Key Buffer:
 // CHKBC-NEXT:[String 4]
 // CHKBC-NEXT:[String 6]
 // CHKBC-NEXT:[String 3]
 // CHKBC-NEXT:[int 5]
 // CHKBC-NEXT:[String 10]
-// CHKBC-NEXT:Object Shape Table:
+
+// CHKBC:Object Shape Table:
 // CHKBC-NEXT:0[0, 4]
 // CHKBC-NEXT:1[12, 1]
-// CHKBC-NEXT:Function<global>(1 params, 13 registers, 0 numbers, 1 non-pointers):
+
+// CHKBC:Function<global>(1 params, 13 registers, 0 numbers, 1 non-pointers):
 // CHKBC-NEXT:Offset in debug table: source 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
 // CHKBC-NEXT:    DeclareGlobalVar  "shadows"

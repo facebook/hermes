@@ -20,6 +20,9 @@ Math['function-name-stripped'] = 123;
 // CHECK-NEXT:  String Kind Entry count: 1
 // CHECK-NEXT:  RegExp count: 0
 // CHECK-NEXT:  StringSwitchImm count: 0
+// CHECK-NEXT:  Key buffer size (bytes): 0
+// CHECK-NEXT:  Value buffer size (bytes): 0
+// CHECK-NEXT:  Shape table count: 0
 // CHECK-NEXT:  Segment ID: 0
 // CHECK-NEXT:  CommonJS module count: 0
 // CHECK-NEXT:  CommonJS module count (static): 0
