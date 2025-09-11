@@ -304,7 +304,8 @@ bool Verifier::visitFunction(const Function &F) {
           }
 
           // Make sure that the incoming value dominates the incoming block.
-          AssertWithMsg(
+          AssertIWithMsg(
+              (*Phi),
               D.dominates(inst->getParent(), block),
               "Incoming PHI value " << bbLabel(*inst->getParent())
                                     << " must dominate incoming "
