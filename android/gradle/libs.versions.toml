@@ -14,6 +14,7 @@ download = "5.4.0"
 fbjni = "0.7.0"
 kotlin = "2.1.20"
 ktfmt = "0.22.0"
+nexus-publish = "2.0.0"
 yoga-proguard-annotations = "1.19.0"
 
 [libraries]
@@ -25,4 +26,5 @@ yoga-proguard-annotations = { module = "com.facebook.yoga:proguard-annotations",
 android-library = { id = "com.android.library", version.ref = "agp" }
 download = { id = "de.undercouch.download", version.ref = "download" }
 ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
+nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

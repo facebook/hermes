@@ -43,8 +43,13 @@ class HermesUtils(private val project: Project) {
               "$hermesWs/build_release/ImportHostCompilers.cmake",
           )
 
-      return candidateHermesCPaths.lastOrNull { File(it).exists() }
-          ?: throw InvalidUserDataException("Hermes host build not found")
+      val hermesCPath = candidateHermesCPaths.lastOrNull { File(it).exists() }
+      if (hermesCPath == null) {
+        project.logger.warn("Could not find hermesC path. Using default path.")
+        return "$hermesWs/build/ImportHostCompilers.cmake"
+      }
+
+      return hermesCPath
     }
 
   // For Facebook internal use:
