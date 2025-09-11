@@ -1218,6 +1218,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
     BasicBlock *shortCircuitBB,
     MemberExpressionOperation op) {
   PhiInst::ValueListType values;
+  PhiInst::ValueListType baseValues;
   PhiInst::BasicBlockListType blocks;
 
   // true when this is the genOptionalMemberExpression call containing
@@ -1237,6 +1238,10 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
     shortCircuitBB = Builder.createBasicBlock(Builder.getFunction());
     Builder.setInsertionBlock(shortCircuitBB);
     values.push_back(Builder.getLiteralUndefined());
+    // When short circuiting, just use 'undefined' as this, because the short
+    // circuit will result in an attempt to call 'undefined' that will throw
+    // anyway.
+    baseValues.push_back(Builder.getLiteralUndefined());
     blocks.push_back(shortCircuitBB);
     Builder.createBranchInst(continueBB);
     Builder.setInsertionBlock(insertionBB);
@@ -1292,11 +1297,14 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genOptionalMemberExpression(
 
   if (isFirstOptional) {
     values.push_back(result);
+    baseValues.push_back(baseValue);
     blocks.push_back(Builder.getInsertionBlock());
     Builder.createBranchInst(continueBB);
 
     Builder.setInsertionBlock(continueBB);
-    return {Builder.createPhiInst(values, blocks), nullptr, baseValue};
+    PhiInst *valuePhi = Builder.createPhiInst(values, blocks);
+    PhiInst *basePhi = Builder.createPhiInst(baseValues, blocks);
+    return {valuePhi, nullptr, basePhi};
   }
 
   // If this isn't the first optional, no Phi needed, just return the result.
