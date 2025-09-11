@@ -11,6 +11,7 @@ import org.apache.tools.ant.taskdefs.condition.Os
 plugins {
   id("maven-publish")
   id("signing")
+  alias(libs.plugins.nexus.publish)
   alias(libs.plugins.android.library)
   alias(libs.plugins.download)
   id("publish")
@@ -23,6 +24,19 @@ version = project.findProperty("VERSION_NAME")?.toString()!!
 val cmakeVersion = System.getenv("CMAKE_VERSION") ?: libs.versions.cmake.get()
 val cmakePath = "${getSDKPath()}/cmake/$cmakeVersion"
 val cmakeBinaryPath = "${cmakePath}/bin/cmake"
+val sonatypeUsername = findProperty("SONATYPE_USERNAME")?.toString()
+val sonatypePassword = findProperty("SONATYPE_PASSWORD")?.toString()
+
+nexusPublishing {
+  repositories {
+    sonatype {
+      username.set(sonatypeUsername)
+      password.set(sonatypePassword)
+      nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+      snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+    }
+  }
+}
 
 fun getSDKPath(): String {
   val androidSdkRoot = System.getenv("ANDROID_SDK_ROOT")
@@ -50,9 +64,12 @@ fun getSDKManagerPath(): String {
   }
 }
 
-val buildDir = project.layout.buildDirectory.get().asFile
 val hermesDir = project.projectDir.parentFile
-val hermesBuildDir = File("$buildDir/hermes")
+val hermesBuildDir = File("$hermesDir/build")
+
+project.layout.buildDirectory.set(hermesBuildDir)
+
+val buildDir = project.layout.buildDirectory.get().asFile
 val hermesCOutputBinary = File("$buildDir/hermes/bin/hermesc")
 
 // This filetree represents the file of the Hermes build that we want as input/output
@@ -293,4 +310,16 @@ afterEvaluate {
 tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs.add("-Xlint:deprecation,unchecked")
   options.compilerArgs.add("-Werror")
+}
+
+tasks.register("publishAndroidOnlyToMavenTempLocal") {
+  dependsOn(":publishAllPublicationsToMavenTempLocalRepository", ":build")
+}
+
+tasks.register("publishAndroidOnlyToSonatype") { dependsOn(":publishToSonatype") }
+
+// We need to override the artifact ID as this project is called `hermes-engine` but
+// the maven coordinates are on `hermes-android`.
+publishing {
+  publications { getByName("release", MavenPublication::class) { artifactId = "hermes-android" } }
 }
