@@ -8,6 +8,8 @@
 #include "hermes/AST/ESTreeJSONDumper.h"
 
 #include "hermes/Support/JSONEmitter.h"
+#include "hermes/Support/StackOverflowGuard.h"
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/StringMap.h"
 #include "llvh/ADT/StringSet.h"
 #include "llvh/Support/MemoryBuffer.h"
@@ -34,6 +36,8 @@ class ESTreeJSONDumper {
   /// If non-null, only print the source locations for kinds in this set.
   const NodeKindSet *includeSourceLocs_;
 
+  StackOverflowGuard stackOverflowGuard_;
+
  public:
   explicit ESTreeJSONDumper(
       JSONEmitter &json,
@@ -47,7 +51,14 @@ class ESTreeJSONDumper {
         mode_(mode),
         locMode_(locMode),
         rawProp_(rawProp),
-        includeSourceLocs_(includeSourceLocs) {
+        includeSourceLocs_(includeSourceLocs),
+#ifdef HERMES_CHECK_NATIVE_STACK
+        stackOverflowGuard_(StackOverflowGuard::nativeStackGuard(
+            512 * 1024)) // Gap tested to work with sanitizer builds
+#else
+        stackOverflowGuard_(StackOverflowGuard::depthCounterGuard(128))
+#endif
+  {
     if (locMode != LocationDumpMode::None) {
       assert(sm && "SourceErrorManager required for dumping");
     }
@@ -188,6 +199,18 @@ class ESTreeJSONDumper {
   void dumpNode(NodePtr node) {
     if (!node) {
       json_.emitNullValue();
+      return;
+    }
+#ifndef HERMES_CHECK_NATIVE_STACK
+    ++stackOverflowGuard_.callDepth;
+    auto decrementDepth =
+        llvh::make_scope_exit([this] { --stackOverflowGuard_.callDepth; });
+#endif
+    if (stackOverflowGuard_.isOverflowing()) {
+      json_.emitNullValue();
+      sm_->error(
+          node->getEndLoc(),
+          "Too many nested expressions/statements/declarations");
       return;
     }
 
