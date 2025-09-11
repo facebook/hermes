@@ -975,13 +975,19 @@ void LowerToStateMachine::moveCrossingValuesToOuter() {
 }
 
 /// \return true if an entry BasicBlock in \p PI is not a predecessor of
-/// the BasicBlock \p PI resides in.
+/// the BasicBlock \p PI resides in, or a Value operand no longer dominates
+/// \p PI.
 static bool shouldMovePhiInst(
     PhiInst *PI,
-    const llvh::DenseSet<BasicBlock *> &predBBs) {
+    const llvh::DenseSet<BasicBlock *> &predBBs,
+    const DominanceInfo &D) {
   for (size_t i = 0, e = PI->getNumEntries(); i < e; ++i) {
-    auto [_, valBB] = PI->getEntry(i);
+    auto [val, valBB] = PI->getEntry(i);
     if (!predBBs.count(valBB)) {
+      return true;
+    }
+    if (auto *valInst = llvh::dyn_cast<Instruction>(val);
+        valInst && !D.properlyDominates(valInst, PI)) {
       return true;
     }
   }
@@ -995,7 +1001,7 @@ void LowerToStateMachine::moveInnerPhisToOuter(DominanceInfo &D) {
     predBBs.insert(pred_begin(&BB), pred_end(&BB));
     for (Instruction &I : BB) {
       if (auto *PI = llvh::dyn_cast<PhiInst>(&I)) {
-        if (!shouldMovePhiInst(PI, predBBs))
+        if (!shouldMovePhiInst(PI, predBBs, D))
           continue;
         auto outerVar = builder_.createVariable(
             getParentOuterScope_->getVariableScope(),
@@ -1011,7 +1017,7 @@ void LowerToStateMachine::moveInnerPhisToOuter(DominanceInfo &D) {
           moveBuilderTo(&predBB->back(), builder_);
           builder_.createStoreFrameInst(getParentOuterScope_, val, outerVar);
         }
-        moveBuilderTo(PI, builder_);
+        movePastFirstInBlock(builder_, PI->getParent());
         auto loadReplacement =
             builder_.createLoadFrameInst(getParentOuterScope_, outerVar);
         PI->replaceAllUsesWith(loadReplacement);
