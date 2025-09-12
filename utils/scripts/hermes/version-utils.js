@@ -15,20 +15,15 @@ export type Version = {
     major: string,
     minor: string,
     patch: string,
-    prerelease: ?string,
 }
 */
 
-const {REPO_ROOT} = require('./consts');
-const {ANDROID_DIR} = require('./consts');
+const {ANDROID_DIR, REPO_ROOT} = require('./consts');
 const {getCurrentCommit} = require('./scm-utils');
 const {promises: fs} = require('fs');
 const path = require('path');
 
-const CMAKE_FILE_PATH = `${REPO_ROOT}/CMakeLists.txt`;
 const GRADLE_FILE_PATH = path.join(ANDROID_DIR, 'gradle.properties');
-const VERSION_REGEX =
-  /project\(Hermes\s+VERSION\s+(\d+\.\d+\.\d+)\s+LANGUAGES\s+C\s+CXX\)/;
 
 function validateBuildType(
   buildType /*: string */,
@@ -54,18 +49,17 @@ async function getVersion(buildType /*: BuildType */) /*: Promise<string> */ {
 }
 
 async function getMainVersion() /*: Promise<string> */ {
-  const cmakeContent = await fs.readFile(CMAKE_FILE_PATH, 'utf8');
-  const versionMatch = extractMatchIfValid(cmakeContent);
-  const [, version] = versionMatch;
-  return version;
-}
+  const hermesCompilerPackageJsonPath = path.join(
+    REPO_ROOT,
+    'npm',
+    'hermes-compiler',
+    'package.json',
+  );
+  const packageJson = JSON.parse(
+    await fs.readFile(hermesCompilerPackageJsonPath, 'utf-8'),
+  );
 
-function extractMatchIfValid(cmakeContent /*: string */) {
-  const match = cmakeContent.match(VERSION_REGEX);
-  if (!match) {
-    throw new Error('Could not find version in CMakeLists.txt');
-  }
-  return match;
+  return packageJson.version;
 }
 
 async function updateGradlePropertiesFile(
