@@ -7,6 +7,10 @@ on:
         required: true
         description: The type of release we are building. It could be release or dry-run
         type: string
+      gha-npm-token:
+        required: false
+        description: The GHA npm token, required only to publish to npm
+        default: ''
 
 jobs:
   publish:
@@ -84,7 +88,17 @@ jobs:
         shell: bash
         run: |
           node ./utils/scripts/hermes/publish-artifacts.js -t ${{ inputs.release-type }}
+      - name: Set npm credentials
+        if: ${{ inputs.release-type == 'release' ||
+          inputs.release-type == 'commitly' }}
+        shell: bash
+        run: echo "//registry.npmjs.org/:_authToken=${{ inputs.gha-npm-token }}" > ~/.npmrc
       - name: Publish to npm
         shell: bash
         run: |
           node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }}
+      - name: Upload npm logs
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: npm-logs
+          path: ~/.npm/_logs
