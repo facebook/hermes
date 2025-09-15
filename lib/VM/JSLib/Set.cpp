@@ -5,13 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//===----------------------------------------------------------------------===//
-/// \file
-/// ES6.0 23.2 Initialize the Set constructor.
-//===----------------------------------------------------------------------===//
-
 #include "JSLibInternal.h"
-
 #include "hermes/VM/StringPrimitive.h"
 
 namespace hermes {
@@ -20,7 +14,8 @@ namespace vm {
 Handle<JSObject> createSetConstructor(Runtime &runtime) {
   auto setPrototype = Handle<JSObject>::vmcast(&runtime.setPrototype);
 
-  // Set.prototype.xxx methods.
+  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
+
   defineMethod(
       runtime,
       setPrototype,
@@ -87,26 +82,84 @@ Handle<JSObject> createSetConstructor(Runtime &runtime) {
       setPrototypeValues,
       0);
 
-  DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
+  // ES2025 Set methods
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::intersection),
+      nullptr,
+      setPrototypeIntersection,
+      1);
 
-  // Use the same valuesMethod for both keys() and values().
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::unionStr),
+      nullptr,
+      setPrototypeUnion,
+      1);
+
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::difference),
+      nullptr,
+      setPrototypeDifference,
+      1);
+
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::symmetricDifference),
+      nullptr,
+      setPrototypeSymmetricDifference,
+      1);
+
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::isSubsetOf),
+      nullptr,
+      setPrototypeIsSubsetOf,
+      1);
+
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::isSupersetOf),
+      nullptr,
+      setPrototypeIsSupersetOf,
+      1);
+
+  defineMethod(
+      runtime,
+      setPrototype,
+      Predefined::getSymbolID(Predefined::isDisjointFrom),
+      nullptr,
+      setPrototypeIsDisjointFrom,
+      1);
+
+  // Set [Symbol.iterator] and keys to be the same as values.
   Handle<NativeFunction> propValue = Handle<NativeFunction>::vmcast(
-      runtime.makeHandle(runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
+      runtime.makeHandle(runtime.ignoreAllocationFailure(
+          JSObject::getNamed_RJS(
+              setPrototype,
+              runtime,
+              Predefined::getSymbolID(Predefined::values)))));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
           setPrototype,
           runtime,
-          Predefined::getSymbolID(Predefined::values)))));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      setPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::keys),
-      dpf,
-      propValue));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      setPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      propValue));
+          Predefined::getSymbolID(Predefined::keys),
+          dpf,
+          propValue));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          setPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          propValue));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -161,46 +214,41 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
   }
 
   auto iterRes = getIterator(runtime, args.getArgHandle(0));
-  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+  if (iterRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto iteratorRecord = *iterRes;
+  auto iterRecord = *iterRes;
 
-  // Iterate the array and add every element.
-  MutableHandle<JSObject> tmpHandle{runtime};
-  auto marker = gcScope.createMarker();
-
-  // Check the length of the array after every iteration,
-  // to allow for the fact that the length could be modified during iteration.
-  for (;;) {
-    gcScope.flushToMarker(marker);
-    CallResult<Handle<JSObject>> nextRes =
-        iteratorStep(runtime, iteratorRecord);
-    if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
+  while (true) {
+    auto nextRes = iteratorNext(runtime, iterRecord);
+    if (nextRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    if (!*nextRes) {
-      // Done with iteration.
+    auto next = runtime.makeHandle<JSObject>(std::move(*nextRes));
+
+    auto doneRes = JSObject::getNamed_RJS(
+        next, runtime, Predefined::getSymbolID(Predefined::done));
+    if (doneRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (toBoolean(doneRes->get())) {
       return selfHandle.getHermesValue();
     }
-    tmpHandle = vmcast<JSObject>(nextRes->getHermesValue());
-    auto nextValueRes = JSObject::getNamed_RJS(
-        tmpHandle, runtime, Predefined::getSymbolID(Predefined::value));
-    if (LLVM_UNLIKELY(nextValueRes == ExecutionStatus::EXCEPTION)) {
+
+    auto valueRes = JSObject::getNamed_RJS(
+        next, runtime, Predefined::getSymbolID(Predefined::value));
+    if (valueRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-
-    if (LLVM_UNLIKELY(
-            Callable::executeCall1(
-                adder, runtime, selfHandle, nextValueRes->get()) ==
-            ExecutionStatus::EXCEPTION)) {
-      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    if (Callable::executeCall1(
+            adder, runtime, selfHandle, valueRes->get(), true) ==
+        ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
     }
   }
 
   return selfHandle.getHermesValue();
 }
-
 // ES12 23.2.3.1 Set.prototype.add ( value )
 CallResult<HermesValue>
 setPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
@@ -219,6 +267,7 @@ setPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
   return selfHandle.getHermesValue();
 }
 
+// ES12 23.2.3.2 Set.prototype.clear ( )
 CallResult<HermesValue>
 setPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -230,6 +279,7 @@ setPrototypeClear(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
+// ES12 23.2.3.4 Set.prototype.delete ( value )
 CallResult<HermesValue>
 setPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -237,10 +287,11 @@ setPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.delete");
   }
-  return HermesValue::encodeBoolValue(
-      JSSet::deleteKey(selfHandle, runtime, args.getArgHandle(0)));
+  bool deleted = JSSet::deleteKey(selfHandle, runtime, args.getArgHandle(0));
+  return HermesValue::encodeBoolValue(deleted);
 }
 
+// ES12 23.2.3.5 Set.prototype.entries ( )
 CallResult<HermesValue>
 setPrototypeEntries(void *, Runtime &runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -248,12 +299,14 @@ setPrototypeEntries(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.entries");
   }
-  auto iterator = runtime.makeHandle(JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
+  auto iterator = runtime.makeHandle(
+      JSSetIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
   return iterator.getHermesValue();
 }
 
+// ES12 23.2.3.6 Set.prototype.forEach ( callbackfn [ , thisArg ] )
 CallResult<HermesValue>
 setPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>();
@@ -261,37 +314,43 @@ setPrototypeForEach(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.forEach");
   }
-  auto callbackfn = args.dyncastArg<Callable>(0);
-  if (LLVM_UNLIKELY(!callbackfn)) {
+
+  auto callbackfn = Handle<Callable>::dyn_vmcast(args.getArgHandle(0));
+  if (!callbackfn) {
     return runtime.raiseTypeError(
-        "callbackfn must be Callable inSet.prototype.forEach");
+        "callbackfn must be a function in Set.prototype.forEach");
   }
+
   auto thisArg = args.getArgHandle(1);
-  if (LLVM_UNLIKELY(
-          JSSet::forEach(selfHandle, runtime, callbackfn, thisArg) ==
-          ExecutionStatus::EXCEPTION))
+
+  if (JSSet::forEach(selfHandle, runtime, callbackfn, thisArg) ==
+      ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
+  }
+
   return HermesValue::encodeUndefinedValue();
 }
 
+// ES12 23.2.3.7 Set.prototype.has ( value )
 CallResult<HermesValue>
 setPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
   auto selfHandle = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError("Non-Set object called on Set.prototype.has");
   }
-  return HermesValue::encodeBoolValue(
-      JSSet::hasKey(selfHandle, runtime, args.getArgHandle(0)));
+  bool has = JSSet::hasKey(selfHandle, runtime, args.getArgHandle(0));
+  return HermesValue::encodeBoolValue(has);
 }
 
 CallResult<HermesValue>
 setPrototypeSizeGetter(void *, Runtime &runtime, NativeArgs args) {
-  auto self = dyn_vmcast<JSSet>(args.getThisArg());
+  auto self = args.dyncastThis<JSSet>();
   if (LLVM_UNLIKELY(!self)) {
     return runtime.raiseTypeError(
-        "Non-Set object called on Set.prototype.size");
+        "Non-Set object called on Set.prototype.size getter");
   }
-  return HermesValue::encodeUntrustedNumberValue(JSSet::getSize(self, runtime));
+  return HermesValue::encodeUntrustedNumberValue(
+      JSSet::getSize(self.get(), runtime));
 }
 
 CallResult<HermesValue>
@@ -301,15 +360,550 @@ setPrototypeValues(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.values");
   }
-  auto iterator = runtime.makeHandle(JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
+  auto iterator = runtime.makeHandle(
+      JSSetIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
   return iterator.getHermesValue();
 }
 
+// Helper functions for Set-like object support
+namespace {
+
+/// Get the size of a Set-like object
+CallResult<uint32_t> getSetLikeSize(Runtime &runtime, Handle<> obj) {
+  // If it's a real Set, use optimized path
+  if (auto setHandle = Handle<JSSet>::dyn_vmcast(obj)) {
+    return JSSet::getSize(setHandle.get(), runtime);
+  }
+
+  // Convert to object
+  auto objRes = toObject(runtime, obj);
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto objHandle = runtime.makeHandle<JSObject>(objRes.getValue());
+
+  // Get size property
+  auto sizeRes = JSObject::getNamed_RJS(
+      objHandle, runtime, Predefined::getSymbolID(Predefined::size));
+  if (LLVM_UNLIKELY(sizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Convert to number
+  auto numRes = toNumber_RJS(runtime, runtime.makeHandle(std::move(*sizeRes)));
+  if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  double size = numRes->getNumber();
+  if (size < 0)
+    size = 0;
+  if (size > UINT32_MAX)
+    size = UINT32_MAX;
+
+  return static_cast<uint32_t>(size);
+}
+
+/// Check if a Set-like object has a value
+CallResult<bool> setLikeHas(Runtime &runtime, Handle<> obj, Handle<> value) {
+  // If it's a real Set, use optimized path
+  if (auto setHandle = Handle<JSSet>::dyn_vmcast(obj)) {
+    return JSSet::hasKey(setHandle, runtime, value);
+  }
+
+  // Convert to object
+  auto objRes = toObject(runtime, obj);
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto objHandle = runtime.makeHandle<JSObject>(objRes.getValue());
+
+  // Get has method
+  auto hasRes = JSObject::getNamed_RJS(
+      objHandle, runtime, Predefined::getSymbolID(Predefined::has));
+  if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Check if callable
+  auto hasMethod =
+      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*hasRes)));
+  if (!hasMethod) {
+    return runtime.raiseTypeError("Set-like object 'has' is not callable");
+  }
+
+  // Call has method
+  auto callRes =
+      Callable::executeCall1(hasMethod, runtime, objHandle, value.get());
+  if (LLVM_UNLIKELY(callRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return toBoolean(callRes->get());
+}
+
+/// Iterate a Set-like object using keys() method
+template <typename Callback>
+CallResult<HermesValue>
+iterateSetLike(Runtime &runtime, Handle<> obj, Callback callback) {
+  // If it's a real Set, use optimized path
+  if (auto setHandle = Handle<JSSet>::dyn_vmcast(obj)) {
+    MutableHandle<HashMapEntry> entry{runtime};
+    GCScopeMarkerRAII marker{runtime};
+    for (entry = setHandle->iteratorNext(runtime, nullptr); entry;
+         entry = setHandle->iteratorNext(runtime, entry.get())) {
+      marker.flush();
+      Handle<> value = runtime.makeHandle(entry->key);
+      auto res = callback(value);
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+    }
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  // Convert to object
+  auto objRes = toObject(runtime, obj);
+  if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto objHandle = runtime.makeHandle<JSObject>(objRes.getValue());
+
+  // Get keys method
+  auto keysRes = JSObject::getNamed_RJS(
+      objHandle, runtime, Predefined::getSymbolID(Predefined::keys));
+  if (LLVM_UNLIKELY(keysRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Check if callable
+  auto keysMethod =
+      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*keysRes)));
+  if (!keysMethod) {
+    return runtime.raiseTypeError("Set-like object 'keys' is not callable");
+  }
+
+  // Call keys() to get iterator
+  auto iterRes = Callable::executeCall0(keysMethod, runtime, objHandle);
+  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Use iterator protocol
+  auto getIterRes =
+      getIterator(runtime, runtime.makeHandle(std::move(*iterRes)));
+  if (LLVM_UNLIKELY(getIterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto iterRecord = *getIterRes;
+
+  GCScopeMarkerRAII marker{runtime};
+
+  // Iterate
+  while (true) {
+    marker.flush();
+
+    auto nextRes = iteratorNext(runtime, iterRecord);
+    if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto next = runtime.makeHandle<JSObject>(std::move(*nextRes));
+
+    // Check done
+    auto doneRes = JSObject::getNamed_RJS(
+        next, runtime, Predefined::getSymbolID(Predefined::done));
+    if (LLVM_UNLIKELY(doneRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (toBoolean(doneRes->get())) {
+      break;
+    }
+
+    // Get value
+    auto valueRes = JSObject::getNamed_RJS(
+        next, runtime, Predefined::getSymbolID(Predefined::value));
+    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    auto value = runtime.makeHandle(std::move(*valueRes));
+    auto res = callback(value);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+
+  return HermesValue::encodeUndefinedValue();
+}
+
+} // namespace
+
+// ES2025 Set.prototype.intersection ( other )
+CallResult<HermesValue>
+setPrototypeIntersection(void *, Runtime &runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Set.prototype.intersection called on non-Set object");
+  }
+
+  if (args.getArgCount() == 0) {
+    return runtime.raiseTypeError(
+        "Set.prototype.intersection requires 1 argument");
+  }
+
+  auto other = args.getArgHandle(0);
+
+  // Create result Set
+  auto resultHandle = runtime.makeHandle<JSSet>(
+      JSSet::create(runtime, Handle<JSObject>::vmcast(&runtime.setPrototype)));
+  JSSet::initializeStorage(resultHandle, runtime);
+
+  // Get sizes for optimization
+  uint32_t selfSize = JSSet::getSize(selfHandle.get(), runtime);
+  auto otherSizeRes = getSetLikeSize(runtime, other);
+  if (LLVM_UNLIKELY(otherSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint32_t otherSize = *otherSizeRes;
+
+  // Iterate the smaller set for efficiency
+  if (selfSize <= otherSize) {
+    // Iterate self, check membership in other
+    MutableHandle<HashMapEntry> entry{runtime};
+    GCScopeMarkerRAII marker{runtime};
+    for (entry = selfHandle->iteratorNext(runtime, nullptr); entry;
+         entry = selfHandle->iteratorNext(runtime, entry.get())) {
+      marker.flush();
+      Handle<> value = runtime.makeHandle(entry->key);
+
+      auto hasRes = setLikeHas(runtime, other, value);
+      if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      if (*hasRes) {
+        JSSet::addValue(resultHandle, runtime, value, value);
+      }
+    }
+  } else {
+    // Iterate other, check membership in self
+    auto iterRes =
+        iterateSetLike(runtime, other, [&](Handle<> value) -> ExecutionStatus {
+          if (JSSet::hasKey(selfHandle, runtime, value)) {
+            JSSet::addValue(resultHandle, runtime, value, value);
+          }
+          return ExecutionStatus::RETURNED;
+        });
+    if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+  }
+
+  return resultHandle.getHermesValue();
+}
+
+// ES2025 Set.prototype.union ( other )
+CallResult<HermesValue>
+setPrototypeUnion(void *, Runtime &runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Set.prototype.union called on non-Set object");
+  }
+
+  if (args.getArgCount() == 0) {
+    return runtime.raiseTypeError("Set.prototype.union requires 1 argument");
+  }
+
+  auto other = args.getArgHandle(0);
+
+  // Create result Set
+  auto resultHandle = runtime.makeHandle<JSSet>(
+      JSSet::create(runtime, Handle<JSObject>::vmcast(&runtime.setPrototype)));
+  JSSet::initializeStorage(resultHandle, runtime);
+
+  // Add all elements from self
+  MutableHandle<HashMapEntry> entry{runtime};
+  GCScopeMarkerRAII marker{runtime};
+  for (entry = selfHandle->iteratorNext(runtime, nullptr); entry;
+       entry = selfHandle->iteratorNext(runtime, entry.get())) {
+    marker.flush();
+    Handle<> value = runtime.makeHandle(entry->key);
+    JSSet::addValue(resultHandle, runtime, value, value);
+  }
+
+  // Add all elements from other
+  auto iterRes =
+      iterateSetLike(runtime, other, [&](Handle<> value) -> ExecutionStatus {
+        JSSet::addValue(resultHandle, runtime, value, value);
+        return ExecutionStatus::RETURNED;
+      });
+  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return resultHandle.getHermesValue();
+}
+
+// ES2025 Set.prototype.difference ( other )
+CallResult<HermesValue>
+setPrototypeDifference(void *, Runtime &runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Set.prototype.difference called on non-Set object");
+  }
+
+  if (args.getArgCount() == 0) {
+    return runtime.raiseTypeError(
+        "Set.prototype.difference requires 1 argument");
+  }
+
+  auto other = args.getArgHandle(0);
+
+  // Create result Set
+  auto resultHandle = runtime.makeHandle<JSSet>(
+      JSSet::create(runtime, Handle<JSObject>::vmcast(&runtime.setPrototype)));
+  JSSet::initializeStorage(resultHandle, runtime);
+
+  // Add elements from self that are not in other
+  MutableHandle<HashMapEntry> entry{runtime};
+  GCScopeMarkerRAII marker{runtime};
+  for (entry = selfHandle->iteratorNext(runtime, nullptr); entry;
+       entry = selfHandle->iteratorNext(runtime, entry.get())) {
+    marker.flush();
+    Handle<> value = runtime.makeHandle(entry->key);
+
+    auto hasRes = setLikeHas(runtime, other, value);
+    if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (!*hasRes) {
+      JSSet::addValue(resultHandle, runtime, value, value);
+    }
+  }
+
+  return resultHandle.getHermesValue();
+}
+
+// ES2025 Set.prototype.symmetricDifference ( other )
+CallResult<HermesValue>
+setPrototypeSymmetricDifference(void *, Runtime &runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Set.prototype.symmetricDifference called on non-Set object");
+  }
+
+  if (args.getArgCount() == 0) {
+    return runtime.raiseTypeError(
+        "Set.prototype.symmetricDifference requires 1 argument");
+  }
+
+  auto other = args.getArgHandle(0);
+
+  // Create result Set
+  auto resultHandle = runtime.makeHandle<JSSet>(
+      JSSet::create(runtime, Handle<JSObject>::vmcast(&runtime.setPrototype)));
+  JSSet::initializeStorage(resultHandle, runtime);
+
+  // Add elements from self that are not in other
+  MutableHandle<HashMapEntry> entry{runtime};
+  GCScopeMarkerRAII marker{runtime};
+  for (entry = selfHandle->iteratorNext(runtime, nullptr); entry;
+       entry = selfHandle->iteratorNext(runtime, entry.get())) {
+    marker.flush();
+    Handle<> value = runtime.makeHandle(entry->key);
+
+    auto hasRes = setLikeHas(runtime, other, value);
+    if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (!*hasRes) {
+      JSSet::addValue(resultHandle, runtime, value, value);
+    }
+  }
+
+  // Add elements from other that are not in self
+  auto iterRes =
+      iterateSetLike(runtime, other, [&](Handle<> value) -> ExecutionStatus {
+        if (!JSSet::hasKey(selfHandle, runtime, value)) {
+          JSSet::addValue(resultHandle, runtime, value, value);
+        }
+        return ExecutionStatus::RETURNED;
+      });
+  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return resultHandle.getHermesValue();
+}
+
+// ES2025 Set.prototype.isSubsetOf ( other )
+CallResult<HermesValue>
+setPrototypeIsSubsetOf(void *, Runtime &runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Set.prototype.isSubsetOf called on non-Set object");
+  }
+
+  if (args.getArgCount() == 0) {
+    return runtime.raiseTypeError(
+        "Set.prototype.isSubsetOf requires 1 argument");
+  }
+
+  auto other = args.getArgHandle(0);
+
+  // Check sizes first - if self is larger, it cannot be a subset
+  uint32_t selfSize = JSSet::getSize(selfHandle.get(), runtime);
+  auto otherSizeRes = getSetLikeSize(runtime, other);
+  if (LLVM_UNLIKELY(otherSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint32_t otherSize = *otherSizeRes;
+
+  if (selfSize > otherSize) {
+    return HermesValue::encodeBoolValue(false);
+  }
+
+  // Check if every element of self is in other
+  MutableHandle<HashMapEntry> entry{runtime};
+  GCScopeMarkerRAII marker{runtime};
+  for (entry = selfHandle->iteratorNext(runtime, nullptr); entry;
+       entry = selfHandle->iteratorNext(runtime, entry.get())) {
+    marker.flush();
+    Handle<> value = runtime.makeHandle(entry->key);
+
+    auto hasRes = setLikeHas(runtime, other, value);
+    if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (!*hasRes) {
+      return HermesValue::encodeBoolValue(false);
+    }
+  }
+
+  return HermesValue::encodeBoolValue(true);
+}
+
+// ES2025 Set.prototype.isSupersetOf ( other )
+CallResult<HermesValue>
+setPrototypeIsSupersetOf(void *, Runtime &runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Set.prototype.isSupersetOf called on non-Set object");
+  }
+
+  if (args.getArgCount() == 0) {
+    return runtime.raiseTypeError(
+        "Set.prototype.isSupersetOf requires 1 argument");
+  }
+
+  auto other = args.getArgHandle(0);
+
+  // Check sizes first - if other is larger, self cannot be a superset
+  uint32_t selfSize = JSSet::getSize(selfHandle.get(), runtime);
+  auto otherSizeRes = getSetLikeSize(runtime, other);
+  if (LLVM_UNLIKELY(otherSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint32_t otherSize = *otherSizeRes;
+
+  if (otherSize > selfSize) {
+    return HermesValue::encodeBoolValue(false);
+  }
+
+  // Check if every element of other is in self
+  bool allInSelf = true;
+  auto iterRes =
+      iterateSetLike(runtime, other, [&](Handle<> value) -> ExecutionStatus {
+        if (!JSSet::hasKey(selfHandle, runtime, value)) {
+          allInSelf = false;
+        }
+        return ExecutionStatus::RETURNED;
+      });
+  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return HermesValue::encodeBoolValue(allInSelf);
+}
+
+// ES2025 Set.prototype.isDisjointFrom ( other )
+CallResult<HermesValue>
+setPrototypeIsDisjointFrom(void *, Runtime &runtime, NativeArgs args) {
+  auto selfHandle = args.dyncastThis<JSSet>();
+  if (LLVM_UNLIKELY(!selfHandle)) {
+    return runtime.raiseTypeError(
+        "Set.prototype.isDisjointFrom called on non-Set object");
+  }
+
+  if (args.getArgCount() == 0) {
+    return runtime.raiseTypeError(
+        "Set.prototype.isDisjointFrom requires 1 argument");
+  }
+
+  auto other = args.getArgHandle(0);
+
+  // Get sizes for optimization - iterate the smaller set
+  uint32_t selfSize = JSSet::getSize(selfHandle.get(), runtime);
+  auto otherSizeRes = getSetLikeSize(runtime, other);
+  if (LLVM_UNLIKELY(otherSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  uint32_t otherSize = *otherSizeRes;
+
+  if (selfSize <= otherSize) {
+    // Check if any element of self is in other
+    MutableHandle<HashMapEntry> entry{runtime};
+    GCScopeMarkerRAII marker{runtime};
+    for (entry = selfHandle->iteratorNext(runtime, nullptr); entry;
+         entry = selfHandle->iteratorNext(runtime, entry.get())) {
+      marker.flush();
+      Handle<> value = runtime.makeHandle(entry->key);
+
+      auto hasRes = setLikeHas(runtime, other, value);
+      if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      if (*hasRes) {
+        return HermesValue::encodeBoolValue(false);
+      }
+    }
+  } else {
+    // Check if any element of other is in self
+    bool hasCommon = false;
+    auto iterRes =
+        iterateSetLike(runtime, other, [&](Handle<> value) -> ExecutionStatus {
+          if (JSSet::hasKey(selfHandle, runtime, value)) {
+            hasCommon = true;
+          }
+          return ExecutionStatus::RETURNED;
+        });
+    if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (hasCommon) {
+      return HermesValue::encodeBoolValue(false);
+    }
+  }
+
+  return HermesValue::encodeBoolValue(true);
+}
 Handle<JSObject> createSetIteratorPrototype(Runtime &runtime) {
-  auto parentHandle = runtime.makeHandle(JSObject::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
+  auto parentHandle = runtime.makeHandle(
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
   defineMethod(
       runtime,
       parentHandle,
@@ -318,7 +912,7 @@ Handle<JSObject> createSetIteratorPrototype(Runtime &runtime) {
       setIteratorPrototypeNext,
       0);
 
-  auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
   dpf.enumerable = 0;
   defineProperty(
