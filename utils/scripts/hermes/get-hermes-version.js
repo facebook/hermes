@@ -9,17 +9,10 @@
  */
 
 /*::
-import type {BuildType, Version} from './version-utils';
+import type {BuildType} from './version-utils';
 */
 
-const {ANDROID_DIR} = require('./consts');
-const {
-  getVersion,
-  validateBuildType,
-  updateGradlePropertiesFile,
-} = require('./version-utils');
-const {promises: fs} = require('fs');
-const path = require('path');
+const {getVersion, validateBuildType} = require('./version-utils');
 const {parseArgs} = require('util');
 
 const config = {
@@ -28,30 +21,25 @@ const config = {
       type: 'string',
       short: 'b',
     },
-    hermesVersion: {
-      type: 'string',
-      short: 'v',
-    },
     help: {type: 'boolean'},
   },
 };
 
 async function main() {
   const {
-    values: {'build-type': buildType, hermesVersion, help},
+    values: {'build-type': buildType, help},
     /* $FlowFixMe[incompatible-call] Natural Inference rollout. See
      * https://fburl.com/workplace/6291gfvu */
   } = parseArgs(config);
 
   if (help) {
     console.log(`
-  Usage: node ./utils/scripts/hermes/set-artifacts-version.js [OPTIONS]
+  Usage: node ./utils/scripts/hermes/get-hermes-version.js [OPTIONS]
 
-  Updates version in gradle.proparties file.
+  Generates and outputs version string for the given build type.
 
   Options:
     --build-type       One of ['dry-run', 'commitly', 'release'].
-    --version          Use a specific version instead of generating one.
     `);
     return;
   }
@@ -60,12 +48,8 @@ async function main() {
     throw new Error(`Unsupported build type: ${buildType}`);
   }
 
-  let version = hermesVersion;
-  if (!version) {
-    version = await getVersion(buildType);
-  }
-
-  await updateGradlePropertiesFile(version);
+  const version = await getVersion(buildType);
+  console.log(version);
 }
 
 if (require.main === module) {

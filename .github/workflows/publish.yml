@@ -7,6 +7,10 @@ on:
         required: true
         description: The type of release we are building. It could be commitly, release or dry-run
         type: string
+      hermes-version:
+        required: true
+        description: The Hermes version to use for this build
+        type: string
 
 jobs:
   publish:
@@ -88,8 +92,8 @@ jobs:
       - name: Publish artifacts
         shell: bash
         run: |
-          node ./utils/scripts/hermes/publish-artifacts.js -t ${{ inputs.release-type }}
+          node ./utils/scripts/hermes/publish-artifacts.js -t ${{ inputs.release-type }} -v ${{ inputs.hermes-version }}
       - name: Publish to npm
         shell: bash
         run: |
-          node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }}
+          node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }} -v ${{ inputs.hermes-version }}

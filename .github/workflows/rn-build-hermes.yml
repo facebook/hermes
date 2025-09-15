@@ -20,10 +20,17 @@ jobs:
     if: github.repository == 'facebook/hermes'
     outputs:
       RELEASE_TYPE: ${{ steps.set_release_type.outputs.RELEASE_TYPE }}
+      HERMES_VERSION: ${{ steps.generate_version.outputs.HERMES_VERSION }}
     env:
       EVENT_NAME: ${{ github.event_name }}
       REF: ${{ github.ref }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup node.js
+        uses: ./.github/actions/setup-node
+      - name: Install node dependencies
+        uses: ./.github/actions/yarn-install
       - id: set_release_type
         run: |
           if [[ $EVENT_NAME == "push" && $REF == refs/tags/v* ]]; then
@@ -39,6 +46,11 @@ jobs:
             echo "Setting release type to dry-run"
             echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
           fi
+      - id: generate_version
+        run: |
+          VERSION=$(node ./utils/scripts/hermes/get-hermes-version.js --build-type ${{ steps.set_release_type.outputs.RELEASE_TYPE }})
+          echo "Generated version: $VERSION"
+          echo "HERMES_VERSION=$VERSION" >> $GITHUB_OUTPUT
   build_hermesc_apple:
     uses: ./.github/workflows/build-hermesc-apple.yml
   build_apple_slices_hermes:
@@ -57,6 +69,7 @@ jobs:
     secrets: inherit
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
   build_emscripten:
     uses: ./.github/workflows/build-emscripten.yml
   test-apple-runtime:
@@ -76,3 +89,4 @@ jobs:
       ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}

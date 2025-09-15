@@ -51,19 +51,30 @@ async function main() {
       choices: ['dry-run', 'commitly', 'release'],
       default: 'dry-run',
     })
+    .option('v', {
+      alias: 'hermesVersion',
+      describe: 'Use a specific version instead of generating one.',
+      type: 'string',
+    })
     .strict().argv;
 
   // $FlowFixMe[prop-missing]
   const buildType = argv.builtType;
+  // $FlowFixMe[prop-missing]
+  const hermesVersion = argv.hermesVersion;
 
   if (!validateBuildType(buildType)) {
     throw new Error(`Unsupported build type: ${buildType}`);
   }
 
+  if (hermesVersion && buildType !== 'release') {
+    await updatePackageJsonVersion(hermesVersion);
+  }
+
   const result = await publishNpm(buildType);
 
   if (result && result.code) {
-    const version = await getVersion(buildType);
+    const version = hermesVersion ? hermesVersion : await getVersion(buildType);
     throw new Error(`Failed to publish hermes-compiler@${version}`);
   }
 }
