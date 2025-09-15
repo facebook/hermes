@@ -1,0 +1,30 @@
+[versions]
+# Android versions
+minSdk = "24"
+targetSdk = "36"
+compileSdk = "36"
+buildTools = "36.0.0"
+ndkVersion = "27.1.12297006"
+# CMake version
+cmake = "3.31.6"
+# Dependencies versions
+agp = "8.11.0"
+androidx-annotation = "1.6.0"
+download = "5.4.0"
+fbjni = "0.7.0"
+kotlin = "2.1.20"
+ktfmt = "0.22.0"
+nexus-publish = "2.0.0"
+yoga-proguard-annotations = "1.19.0"
+
+[libraries]
+androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "androidx-annotation" }
+fbjni = { module = "com.facebook.fbjni:fbjni", version.ref = "fbjni" }
+yoga-proguard-annotations = { module = "com.facebook.yoga:proguard-annotations", version.ref = "yoga-proguard-annotations" }
+
+[plugins]
+android-library = { id = "com.android.library", version.ref = "agp" }
+download = { id = "de.undercouch.download", version.ref = "download" }
+ktfmt = { id = "com.ncorti.ktfmt.gradle", version.ref = "ktfmt" }
+nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
