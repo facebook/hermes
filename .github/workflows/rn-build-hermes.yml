@@ -60,3 +60,4 @@ jobs:
       ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      gha-npm-token: ${{ secrets.GHA_NPM_TOKEN }}
