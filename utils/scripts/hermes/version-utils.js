@@ -42,6 +42,7 @@ async function getVersion(buildType /*: BuildType */) /*: Promise<string> */ {
   const shortCommit = currentCommit.slice(0, 9);
 
   const mainVersion = await getMainVersion();
+
   if (['commitly', 'dry-run'].includes(buildType)) {
     const date = new Date();
     const hours = date.getHours().toString().padStart(2, '0');
@@ -80,8 +81,28 @@ async function updateGradlePropertiesFile(
   );
 }
 
+async function updatePackageJsonVersion(
+  version /*: string */,
+) /*: Promise<void> */ {
+  const hermesCompilerPackageJsonPath = path.join(
+    REPO_ROOT,
+    'npm',
+    'hermes-compiler',
+    'package.json',
+  );
+  const packageJson = JSON.parse(
+    await fs.readFile(hermesCompilerPackageJsonPath, 'utf-8'),
+  );
+  packageJson.version = version;
+  await fs.writeFile(
+    hermesCompilerPackageJsonPath,
+    JSON.stringify(packageJson, null, 2) + '\n',
+  );
+}
+
 module.exports = {
   validateBuildType,
   getVersion,
   updateGradlePropertiesFile,
+  updatePackageJsonVersion,
 };

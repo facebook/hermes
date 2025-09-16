@@ -30,25 +30,38 @@ async function main() {
       choices: ['dry-run', 'commitly', 'release'],
       default: 'dry-run',
     })
+    .option('v', {
+      alias: 'hermesVersion',
+      describe: 'Use a specific version instead of generating one.',
+      type: 'string',
+    })
     .strict().argv;
 
   // $FlowFixMe[prop-missing]
   const buildType = argv.builtType;
+  // $FlowFixMe[prop-missing]
+  const hermesVersion = argv.hermesVersion;
 
   if (!validateBuildType(buildType)) {
     throw new Error(`Unsupported build type: ${buildType}`);
   }
 
-  await publishArtifacts(buildType);
+  await publishArtifacts(buildType, hermesVersion);
 }
 
-async function publishArtifacts(buildType /*: BuildType */) {
+async function publishArtifacts(
+  buildType /*: BuildType */,
+  hermesVersion /*: string */,
+) {
   if (buildType === 'dry-run') {
     console.log('Skipping publishing artifacts because --dry-run is set.');
     return;
   }
 
-  const version = await getVersion(buildType);
+  let version = hermesVersion;
+  if (!version) {
+    version = await getVersion(buildType);
+  }
   await updateGradlePropertiesFile(version);
 
   pushd('android');
