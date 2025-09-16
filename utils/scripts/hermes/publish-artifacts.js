@@ -83,8 +83,9 @@ function publishAndroidArtifactsToMaven(
   ) {
     // -------- For stable releases, we also need to close and release the staging repository.
     if (
-      exec('./gradlew publishAndroidToSonatype closeSonatypeStagingRepository')
-        .code
+      exec(
+        './gradlew publishAndroidOnlyToSonatype closeSonatypeStagingRepository',
+      ).code
     ) {
       echo(
         'Failed to close and release the staging repository on Sonatype (Maven Central) for Android artifacts',
