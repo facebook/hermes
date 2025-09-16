@@ -91,12 +91,10 @@ async function publishNpm(
     }
   }
 
-  const otp = process.env.NPM_CONFIG_OTP;
-  const otpFlag = otp != null ? ` --otp ${otp}` : '';
   const packagePath = path.join(REPO_ROOT, 'npm', 'hermes-compiler');
   const options /*: ExecOptsSync */ = {cwd: packagePath};
 
-  return exec(`npm publish${tagFlag}${otpFlag}${dryRunFlag}`, options);
+  return exec(`npm publish${tagFlag}${dryRunFlag}`, options);
 }
 
 if (require.main === module) {
