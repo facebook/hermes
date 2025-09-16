@@ -7,10 +7,6 @@ on:
         required: true
         description: The type of release we are building. It could be release or dry-run
         type: string
-      gha-npm-token:
-        required: false
-        description: The GHA npm token, required only to publish to npm
-        default: ''
 
 jobs:
   publish:
@@ -26,6 +22,7 @@ jobs:
       ORG_GRADLE_PROJECT_SIGNING_KEY: ${{ secrets.ORG_GRADLE_PROJECT_SIGNING_KEY }}
       ORG_GRADLE_PROJECT_SONATYPE_USERNAME: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_USERNAME }}
       ORG_GRADLE_PROJECT_SONATYPE_PASSWORD: ${{ secrets.ORG_GRADLE_PROJECT_SONATYPE_PASSWORD }}
+      GHA_NPM_TOKEN: ${{ secrets.GHA_NPM_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,7 +89,7 @@ jobs:
         if: ${{ inputs.release-type == 'release' ||
           inputs.release-type == 'commitly' }}
         shell: bash
-        run: echo "//registry.npmjs.org/:_authToken=${{ inputs.gha-npm-token }}" > ~/.npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${{ env.GHA_NPM_TOKEN }}" > ~/.npmrc
       - name: Publish to npm
         shell: bash
         run: |
