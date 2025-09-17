@@ -65,7 +65,7 @@ function publishAndroidArtifactsToMaven(
     // -------- For stable releases, we also need to close and release the staging repository.
     if (
       exec(
-        './gradlew publishAndroidOnlyToSonatype closeSonatypeStagingRepository',
+        './gradlew publishAndroidOnlyToSonatype closeAndReleaseSonatypeStagingRepository',
       ).code
     ) {
       echo(
@@ -89,7 +89,7 @@ function publishExternalArtifactsToMaven(
     // This can't be done earlier in build_android because this artifact are partially built by the iOS jobs.
     if (
       exec(
-        './gradlew :ios-artifacts:publishToSonatype closeSonatypeStagingRepository',
+        './gradlew :ios-artifacts:publishToSonatype closeAndReleaseSonatypeStagingRepository',
       ).code
     ) {
       echo(
