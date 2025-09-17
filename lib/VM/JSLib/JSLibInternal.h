@@ -166,13 +166,6 @@ void defineProperty(
     Handle<> value,
     DefinePropertyFlags dpf);
 
-/// Call the IteratorClose operation following an exception being thrown.
-/// \pre runtime.thrownValue_ must be populated with a thrown value.
-/// \return ExecutionStatus::EXCEPTION
-ExecutionStatus iteratorCloseAndRethrow(
-    Runtime &runtime,
-    Handle<JSObject> iterator);
-
 /// Create and initialize the global Object constructor. Populate the methods
 /// of Object and Object.prototype.
 /// \return the global Object constructor.

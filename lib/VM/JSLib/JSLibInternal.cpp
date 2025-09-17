@@ -256,27 +256,6 @@ void defineProperty(
   return defineProperty(runtime, objectHandle, name, value, dpf);
 }
 
-ExecutionStatus iteratorCloseAndRethrow(
-    Runtime &runtime,
-    Handle<JSObject> iterator) {
-  struct : public Locals {
-    PinnedValue<> completion;
-  } lv;
-  LocalsRAII lraii(runtime, &lv);
-  lv.completion = runtime.getThrownValue();
-  if (isUncatchableError(lv.completion.getHermesValue())) {
-    // If an uncatchable exception was raised, do not swallow it, but instead
-    // propagate it.
-    return ExecutionStatus::EXCEPTION;
-  }
-  runtime.clearThrownValue();
-  auto status = iteratorClose(runtime, iterator, lv.completion);
-  (void)status;
-  assert(
-      status == ExecutionStatus::EXCEPTION && "exception swallowed mistakenly");
-  return ExecutionStatus::EXCEPTION;
-}
-
 static std::vector<uint8_t> getReturnThisRegexBytecode() {
   const char16_t *returnThisRE = uR"X(^\s*return[ \t]+this\s*;?\s*$)X";
   return regex::Regex<regex::UTF16RegexTraits>(returnThisRE).compile();

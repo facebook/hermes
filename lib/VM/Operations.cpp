@@ -1691,6 +1691,27 @@ ExecutionStatus iteratorClose(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus iteratorCloseAndRethrow(
+    Runtime &runtime,
+    Handle<JSObject> iterator) {
+  struct : public Locals {
+    PinnedValue<> completion;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.completion = runtime.getThrownValue();
+  if (isUncatchableError(lv.completion.getHermesValue())) {
+    // If an uncatchable exception was raised, do not swallow it, but instead
+    // propagate it.
+    return ExecutionStatus::EXCEPTION;
+  }
+  runtime.clearThrownValue();
+  auto status = iteratorClose(runtime, iterator, lv.completion);
+  (void)status;
+  assert(
+      status == ExecutionStatus::EXCEPTION && "exception swallowed mistakenly");
+  return ExecutionStatus::EXCEPTION;
+}
+
 CallResult<Handle<JSArray>> iterableToArray(
     Runtime &runtime,
     Handle<HermesValue> items) {

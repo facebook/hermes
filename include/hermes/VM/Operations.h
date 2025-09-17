@@ -429,6 +429,13 @@ CallResult<bool> iteratorStepValue(
 ExecutionStatus
 iteratorClose(Runtime &runtime, Handle<JSObject> iterator, Handle<> completion);
 
+/// Call the IteratorClose operation following an exception being thrown.
+/// \pre runtime.thrownValue_ must be populated with a thrown value.
+/// \return ExecutionStatus::EXCEPTION
+ExecutionStatus iteratorCloseAndRethrow(
+    Runtime &runtime,
+    Handle<JSObject> iterator);
+
 /// This function combines ES2023 7.4.12 IterableToList and 7.3.18
 /// CreateArrayFromList into one API.
 CallResult<Handle<JSArray>> iterableToArray(
