@@ -216,6 +216,7 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
             return 'properties';
 
           // $FlowFixMe[incompatible-type]
+          // $FlowFixMe[invalid-compare]
           case 'OptionalCallExpression':
           case 'CallExpression':
           case 'NewExpression':
@@ -247,6 +248,7 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
             return 'properties';
 
           // $FlowFixMe[incompatible-type]
+          // $FlowFixMe[invalid-compare]
           case 'OptionalCallExpression':
           case 'CallExpression':
           case 'NewExpression':
@@ -275,6 +277,7 @@ function getRemovalParent(node: RemoveNodeMutation['node']): $ReadOnly<{
     // $FlowExpectedError[prop-missing]
     const arr = node.parent[key];
     const idx = arr.indexOf(node);
+    // $FlowFixMe[invalid-compare]
     if (idx === -1) {
       throw new InvalidRemovalError(
         `Could not find target in array of \`${node.parent.type}.${key}\`.`,

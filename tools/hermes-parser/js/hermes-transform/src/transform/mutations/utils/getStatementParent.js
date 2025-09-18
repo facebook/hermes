@@ -45,6 +45,7 @@ export function getStatementParent(
       const value = parentWithType[key];
 
       if (
+        // $FlowFixMe[invalid-compare]
         value === target ||
         (Array.isArray(value) && value.includes(target))
       ) {
@@ -136,6 +137,7 @@ export function getStatementParent(
     // array insertions are already validated by the getAssertedIndex function
     result.targetIndex == null &&
     // $FlowExpectedError[prop-missing]
+    // $FlowFixMe[invalid-compare]
     result.parent[result.key] !== target
   ) {
     throw new InvalidStatementError(

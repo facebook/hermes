@@ -135,6 +135,7 @@ export function isExpression(node /*: ESNode */) /*: implies node is Expression 
     node.type === 'ArrayExpression' ||
     node.type === 'ObjectExpression' ||
     // $FlowFixMe[incompatible-type]
+    // $FlowFixMe[invalid-compare]
     node.type === 'ObjectExpression' ||
     node.type === 'FunctionExpression' ||
     node.type === 'ArrowFunctionExpression' ||

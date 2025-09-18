@@ -40,6 +40,7 @@ export function performModifyNodeInPlaceMutation(
     const prevPropValue = target[key];
 
     // If the value did not change, skip.
+    // $FlowFixMe[invalid-compare]
     if (prevPropValue === newPropValue) {
       continue;
     }

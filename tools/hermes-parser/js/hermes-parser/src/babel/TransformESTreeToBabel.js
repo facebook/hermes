@@ -753,6 +753,7 @@ function mapTypeofTypeAnnotation(
   // $FlowExpectedError[cannot-write]
   delete node.typeArguments;
   // $FlowFixMe[incompatible-type]
+  // $FlowFixMe[invalid-compare]
   if (node.argument.type !== 'GenericTypeAnnotation') {
     return nodeWith(node, {
       // $FlowExpectedError[incompatible-type] Special override for Babel
@@ -920,6 +921,7 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
     case 'Program': {
       // Check if we have already processed this node.
       // $FlowFixMe[incompatible-type]
+      // $FlowFixMe[invalid-compare]
       if (node.parent?.type === 'File') {
         return node;
       }
@@ -1263,6 +1265,7 @@ export function transformProgram(
   });
 
   // $FlowFixMe[incompatible-type]
+  // $FlowFixMe[invalid-compare]
   if (resultNode?.type === 'File') {
     return resultNode;
   }

@@ -90,6 +90,7 @@ function getParentKey(target: ESNode): $ReadOnly<
   for (const key of getVisitorKeys(parent)) {
     const child = (parent: $FlowFixMe)[key];
     if (isNode(child)) {
+      // $FlowFixMe[invalid-compare]
       if (child === target) {
         return {type: 'single', parent, key};
       }

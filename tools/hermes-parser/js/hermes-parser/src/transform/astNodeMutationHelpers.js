@@ -48,6 +48,7 @@ function getParentKey(
         parent[key],
       )
     ) {
+      // $FlowFixMe[invalid-compare]
       if (parent[key] === target) {
         return {type: 'single', node: parent, key};
       }

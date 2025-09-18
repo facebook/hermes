@@ -246,17 +246,24 @@ type VariableScope =
     this.type = type;
 
     this.__dynamic =
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Global || this.type === ScopeType.With;
 
     this.block = block;
 
     this.variableScope =
       this.type === ScopeType.ClassFieldInitializer ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.ClassStaticBlock ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Function ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Global ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Module ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.DeclareModule ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.DeclareNamespace
         ? // $FlowFixMe[incompatible-type] not possible to teach flow this is safe
           this
