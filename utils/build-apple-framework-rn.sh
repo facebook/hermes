@@ -13,6 +13,7 @@ IMPORT_HOST_COMPILERS_PATH=${HERMES_OVERRIDE_HERMESC_PATH:-$PWD/build_host_herme
 BUILD_TYPE=${BUILD_TYPE:-Debug}
 
 HERMES_PATH="$CURR_SCRIPT_DIR/.."
+HERMES_COMPILER_PACKAGE_PATH="$HERMES_PATH/npm/hermes-compiler"
 
 NUM_CORES=$(sysctl -n hw.ncpu)
 
@@ -41,6 +42,24 @@ function get_visionos_deployment_target {
 
 function get_mac_deployment_target {
   use_env_var "${MAC_DEPLOYMENT_TARGET}" "MAC_DEPLOYMENT_TARGET"
+}
+
+function get_release_version {
+  local package_json_path="$HERMES_COMPILER_PACKAGE_PATH/package.json"
+  if [[ -f "$package_json_path" ]]; then
+    local version
+    version=$(node -e "console.log(JSON.parse(require('fs').readFileSync('$package_json_path', 'utf8')).version)" 2>/dev/null)
+    if [[ -n "$version" ]]; then
+      echo "$version"
+      return
+    else
+      echo >&2 "Error: Failed to read version from $package_json_path"
+      exit 1
+    fi
+  else
+    echo >&2 "Error: Package file not found at $package_json_path"
+    exit 1
+  fi
 }
 
 # Build host hermes compiler for internal bytecode
@@ -92,6 +111,7 @@ function configure_apple_framework {
       -DCMAKE_CXX_FLAGS:STRING="-gdwarf" \
       -DCMAKE_C_FLAGS:STRING="-gdwarf" \
       -DIMPORT_HOST_COMPILERS:PATH="$IMPORT_HOST_COMPILERS_PATH" \
+      -DHERMES_RELEASE_VERSION="$(get_release_version)" \
       -DJSI_DIR="$JSI_PATH" \
       -DCMAKE_BUILD_TYPE="$cmake_build_type"
     popd > /dev/null || exit 1

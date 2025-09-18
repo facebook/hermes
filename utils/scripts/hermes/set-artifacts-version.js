@@ -17,6 +17,7 @@ const {
   getVersion,
   validateBuildType,
   updateGradlePropertiesFile,
+  updatePackageJsonVersion,
 } = require('./version-utils');
 const {promises: fs} = require('fs');
 const path = require('path');
@@ -66,6 +67,7 @@ async function main() {
   }
 
   await updateGradlePropertiesFile(version);
+  await updatePackageJsonVersion(version);
 }
 
 if (require.main === module) {
