@@ -1141,7 +1141,11 @@ void SemanticResolver::visit(ESTree::CallExpressionNode *node) {
           if (propIdent->_name == kw_.identModuleFactory) {
             // This visits its children explicitly (with a module context
             // set), so we return after it.
-            visitModuleFactory(node);
+            // The require optimization should only be validated when we are
+            // actually attempting to parse this code for compilation. Before
+            // that point, the SH builtin call may still be incomplete.
+            if (compile_)
+              visitModuleFactory(node);
             return;
           } else if (propIdent->_name == kw_.identExport) {
             // In this case, we must visit the children first, to ensure that
