@@ -27,6 +27,7 @@ insta = { version = "1.30.0", features = ["glob"] }
 miette = { version = "5.9.0" }
 prettyplease = "0.2.10"
 quote = "1.0.29"
+proc-macro2 = "1.0.79"
 serde = { version = "1.0.167", features = ["serde_derive"] }
 serde_json = "1.0.100"
 stacker = "0.1.15"

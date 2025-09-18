@@ -8,7 +8,7 @@
 use std::collections::HashSet;
 
 use indexmap::IndexMap;
-use quote::__private::TokenStream;
+use proc_macro2::TokenStream;
 use quote::format_ident;
 use quote::quote;
 use serde::Deserialize;
@@ -357,7 +357,7 @@ impl Node {
             let serialized_field_name = field.rename.as_ref().unwrap_or(field_name_str);
             let serializer = if field.flatten {
                 quote! {
-                    Serialize::serialize(&self.#field_name, serde::__private::ser::FlatMapSerializer(&mut state))?;
+                    Serialize::serialize(&self.#field_name, crate::ser::FlatMapSerializer(&mut state))?;
                 }
             } else {
                 quote! {
@@ -733,7 +733,7 @@ impl Enum {
                     tag_matches.push(quote! {
                         #enum_tag::#inner_variant => {
                             let node: Box<#inner_variant> = <Box<#inner_variant> as Deserialize>::deserialize(
-                                serde::__private::de::ContentDeserializer::<D::Error>::new(tagged.1),
+                                crate::de::ContentDeserializer::<D::Error>::new(tagged.1),
                             )?;
                             Ok(#name::#outer_variant(#outer_variant::#inner_variant(node)))
                         }
@@ -752,7 +752,7 @@ impl Enum {
                 tag_matches.push(quote! {
                     #enum_tag::#variant_name => {
                         let node: Box<#variant_name> = <Box<#variant_name> as Deserialize>::deserialize(
-                            serde::__private::de::ContentDeserializer::<D::Error>::new(tagged.1),
+                            crate::de::ContentDeserializer::<D::Error>::new(tagged.1),
                         )?;
                         Ok(#name::#variant_name(node))
                     }
@@ -787,7 +787,7 @@ impl Enum {
                 where D: serde::Deserializer<'de> {
                     let tagged = serde::Deserializer::deserialize_any(
                         deserializer,
-                        serde::__private::de::TaggedContentVisitor::<#enum_tag>::new("type", #name_str)
+                        crate::de::TaggedContentVisitor::<#enum_tag>::new("type", #name_str)
                     )?;
                     match tagged.0 {
                         #(#tag_matches),*
