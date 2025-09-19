@@ -151,8 +151,19 @@ class Builder {
   /// corresponding index in \c values_.
   std::vector<std::pair<const Instruction *, size_t>> arraysInst_{};
 
+  // This contains all the unique shapes of all the object literals in the
+  // module.
+  std::vector<ShapeTableEntry> objShapeTable_{};
+
+  /// This maps a <keyBufferOffset, numProps> pair to an element index in \p
+  /// objShapeTable_.
+  llvh::DenseMap<std::pair<uint32_t, uint32_t>, uint32_t> keyOffsetToShapeIdx_;
+
   /// Each element is the keys portion of a serialized object literal.
   UniquedStringVector objKeys_{};
+
+  /// The underlying raw byte storage of the keys buffer.
+  hbc::ConsecutiveStringStorage keyStorage_{};
 
   /// Each element records the instruction whose literal was serialized at the
   /// corresponding indices in \c objKeys_/values_. Note that the indicies may
@@ -259,12 +270,42 @@ void Builder::reseedFromBaseBytecode() {
   }
   valueStorage_ =
       hbc::ConsecutiveStringStorage{std::move(valueStrTable), valueBuf.vec()};
+
+  // Now recreate the key storage. This is easier since the shape table is
+  // a convenient place where the uniqued info can be found for all keys in the
+  // key storage.
+  objShapeTable_ = shapeTable.vec();
+  llvh::ArrayRef<unsigned char> keyBuf = bcProvider_->getObjectKeyBuffer();
+  std::vector<StringTableEntry> keyStrTable;
+  keyStrTable.reserve(objShapeTable_.size());
+  for (size_t i = 0, e = objShapeTable_.size(); i < e; ++i) {
+    auto numProps = objShapeTable_[i].numProps;
+    auto keyBufferOffset = objShapeTable_[i].keyBufferOffset;
+    auto sizeInBytes = SerializedLiteralParser::parse(
+        keyBuf.slice(keyBufferOffset), numProps, emptyVisitor);
+    keyStrTable.push_back({keyBufferOffset, (uint32_t)sizeInBytes, false});
+    objKeys_.push_back(llvh::StringRef{
+        reinterpret_cast<const char *>(keyBuf.data() + keyBufferOffset),
+        sizeInBytes});
+    keyOffsetToShapeIdx_.insert({{keyBufferOffset, numProps}, (uint32_t)i});
+  }
+  keyStorage_ =
+      hbc::ConsecutiveStringStorage{std::move(keyStrTable), keyBuf.vec()};
 }
 
 void Builder::makeBufferStorages() {
+  assert(
+      bcProvider_ ||
+      (valueStorage_.count() == 0 && keyStorage_.count() == 0) &&
+          "with no base bytecode, storages should be empty");
   valueStorage_.appendStorage(hbc::ConsecutiveStringStorage{
       values_.beginSet() + valueStorage_.count(),
       values_.endSet(),
+      std::true_type{},
+      optimize_});
+  keyStorage_.appendStorage(hbc::ConsecutiveStringStorage{
+      objKeys_.beginSet() + keyStorage_.count(),
+      objKeys_.endSet(),
       std::true_type{},
       optimize_});
 }
@@ -275,8 +316,6 @@ LiteralBufferBuilder::Result Builder::generate() {
   }
   traverse();
   makeBufferStorages();
-  hbc::ConsecutiveStringStorage keyStorage{
-      objKeys_.beginSet(), objKeys_.endSet(), std::true_type{}, optimize_};
 
   // Populate the offset map.
   LiteralOffsetMapTy literalOffsetMap{};
@@ -296,15 +335,8 @@ LiteralBufferBuilder::Result Builder::generate() {
     literalOffsetMap[Inst] = {UINT32_MAX, valView[arrayIndexInSet].getOffset()};
   }
 
-  // This contains all the unique shapes of all the object literals in the
-  // module.
-  std::vector<ShapeTableEntry> objShapeTable{};
-  // This maps a <keyBufferOffset, numProps> pair to an element index in the
-  // object shape table.
-  llvh::DenseMap<std::pair<uint32_t, uint32_t>, uint32_t> coordToIdx;
-
   // Visit all object literals.
-  auto keyView = const_cast<const hbc::ConsecutiveStringStorage &>(keyStorage)
+  auto keyView = const_cast<const hbc::ConsecutiveStringStorage &>(keyStorage_)
                      .getStringTableView();
   for (size_t i = 0, e = objInst_.size(); i != e; ++i) {
     const auto [Inst, indices] = objInst_[i];
@@ -316,12 +348,12 @@ LiteralBufferBuilder::Result Builder::generate() {
     uint32_t keyIndexInSet = objKeys_.indexInSet(keyIdx);
     uint32_t valIndexInSet = values_.indexInSet(valIdx);
     uint32_t keyBufferOffset = keyView[keyIndexInSet].getOffset();
-    const auto [iter, success] =
-        coordToIdx.insert({{keyBufferOffset, len}, coordToIdx.size()});
+    const auto [iter, success] = keyOffsetToShapeIdx_.insert(
+        {{keyBufferOffset, len}, keyOffsetToShapeIdx_.size()});
     auto shapeID = iter->second;
     if (success) {
       // This is a new entry, add it to the shape table.
-      objShapeTable.push_back({keyBufferOffset, len});
+      objShapeTable_.push_back({keyBufferOffset, len});
     }
     literalOffsetMap[Inst] =
         LiteralOffset{shapeID, valView[valIndexInSet].getOffset()};
@@ -335,20 +367,20 @@ LiteralBufferBuilder::Result Builder::generate() {
         "instruction literal can't be serialized twice");
     uint32_t keyIndexInSet = objKeys_.indexInSet(idx);
     uint32_t keyBufferOffset = keyView[keyIndexInSet].getOffset();
-    const auto [iter, success] =
-        coordToIdx.insert({{keyBufferOffset, len}, coordToIdx.size()});
+    const auto [iter, success] = keyOffsetToShapeIdx_.insert(
+        {{keyBufferOffset, len}, keyOffsetToShapeIdx_.size()});
     uint32_t shapeID = iter->second;
     if (success) {
       // This is a new entry, add it to the shape table.
-      objShapeTable.push_back({keyBufferOffset, len});
+      objShapeTable_.push_back({keyBufferOffset, len});
     }
     literalOffsetMap[Inst] = LiteralOffset{shapeID, UINT32_MAX};
   }
 
   return {
       std::move(valueStorage_).acquireStringTableAndStorage().second,
-      std::move(keyStorage).acquireStringTableAndStorage().second,
-      std::move(objShapeTable),
+      std::move(keyStorage_).acquireStringTableAndStorage().second,
+      std::move(objShapeTable_),
       std::move(literalOffsetMap)};
 }
 
