@@ -78,6 +78,10 @@ static llvh::Optional<Handle<JSError>> getErrorFromStackTarget(
       return Handle<JSError>::vmcast(targetHandle);
     }
 
+    if (LLVM_UNLIKELY(targetHandle->isProxyObject())) {
+      return llvh::None;
+    }
+
     mutHnd.set(targetHandle->getParent(runtime));
   }
   return llvh::None;
