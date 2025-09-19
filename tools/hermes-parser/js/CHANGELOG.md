@@ -1,3 +1,9 @@
+## 0.32.1
+
+### `hermes-parser`
+
+- Fix parsing of `require` calls.
+
 ## 0.32.0
 
 ### `hermes-transform`
