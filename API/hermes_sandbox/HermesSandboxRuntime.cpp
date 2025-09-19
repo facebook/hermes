@@ -2051,6 +2051,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
       std::shared_ptr<MutableBuffer> buffer) override {
     THROW_UNIMPLEMENTED();
   }
+  std::shared_ptr<MutableBuffer> getMutableBuffer(
+      const ArrayBuffer &buffer) override {
+    THROW_UNIMPLEMENTED();
+  }
   size_t size(const Array &arr) override {
     return vt_.get_array_length(this, srt_, toSandboxArray(arr).pointer);
   }

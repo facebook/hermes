@@ -199,6 +199,26 @@ TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
     rt->instrumentation().collectGarbage("");
     EXPECT_TRUE(weakBuf.expired());
   }
+
+  {
+    auto buf = std::make_shared<FixedBuffer>();
+    for (uint32_t i = 0; i < buf->arr.size(); i++)
+      buf->arr[i] = i;
+    auto arrayBuffer = ArrayBuffer(*rt, buf);
+    auto roundtrip = eval(
+        R"#(
+(function (buf) {
+  return buf;
+})
+)#");
+    Value result =
+        roundtrip.asObject(*rt).asFunction(*rt).call(*rt, arrayBuffer);
+    ArrayBuffer arrayBufferAgain =
+        result.asObject(*rt).getArrayBuffer(*rt);
+    std::shared_ptr<MutableBuffer> mutableBuffer =
+        arrayBufferAgain.getMutableBuffer(*rt);
+    EXPECT_TRUE(mutableBuffer == buf);
+  }
 }
 
 TEST_F(HermesRuntimeTestMethodsTest, DetachedArrayBuffer) {
