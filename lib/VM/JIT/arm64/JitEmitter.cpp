@@ -3121,9 +3121,8 @@ void Emitter::newObjectWithBuffer(
   // Load the HiddenClass from the cache.
 #ifdef HERMESVM_GC_HADES
   // First check the read barrier.
-  a.ldrb(
-      xTmp.w(),
-      a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesOGMarkingBarriers));
+  emit_load_from_base_offset<1, true>(
+      a, xTmp, xRuntime, xTmp2, RuntimeOffsets::runtimeHadesOGMarkingBarriers);
   a.cbnz(xTmp.w(), slowPathLab);
 #endif
   // Load the HC from the cache.

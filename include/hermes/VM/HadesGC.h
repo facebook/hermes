@@ -1079,6 +1079,29 @@ class HadesGC final : public GCBase {
   static constexpr double kYGInitialSizeFactor = 0.5;
   double ygSizeFactor_{kYGInitialSizeFactor};
 
+  /// Flag used to signal to the background thread that it should stop and yield
+  /// the gcMutex_ to the mutator as soon as possible.
+  AtomicIfConcurrentGC<bool> ogPaused_{false};
+
+  enum class Phase : uint8_t {
+    None,
+    Mark,
+    CompleteMarking,
+    Sweep,
+  };
+
+  /// Represents the current phase the concurrent GC is in. The main difference
+  /// between phases is their effect on read and write barriers. Should only be
+  /// accessed if gcMutex_ is acquired.
+  Phase concurrentPhase_{Phase::None};
+
+  /// Represents whether the background thread is currently marking. Should only
+  /// be accessed by the mutator thread or during a STW pause.
+  /// ogMarkingBarriers_ is true from the start of marking the OG heap until the
+  /// start of the STW pause but is kept separate from concurrentPhase_ in
+  /// order to reduce synchronisation requirements for write barriers.
+  bool ogMarkingBarriers_{false};
+
   /// oldGen_ is a free list space, so it needs a different segment
   /// representation.
   /// Protected by gcMutex_.
@@ -1103,10 +1126,6 @@ class HadesGC final : public GCBase {
   llvh::Optional<std::pair<CellKind, uint32_t>> currentCellKindAndSize_;
 #endif
 
-  /// Flag used to signal to the background thread that it should stop and yield
-  /// the gcMutex_ to the mutator as soon as possible.
-  AtomicIfConcurrentGC<bool> ogPaused_{false};
-
   /// Condition variable used to block either the mutator or background thread
   /// until the other has completed.
   ///   1. The background thread should wait on this when ogPaused_ is set to
@@ -1114,25 +1133,6 @@ class HadesGC final : public GCBase {
   ///   2. The mutator should wait on this if it is waiting for the background
   ///   thread to finish its current task.
   std::condition_variable_any ogPauseCondVar_;
-
-  enum class Phase : uint8_t {
-    None,
-    Mark,
-    CompleteMarking,
-    Sweep,
-  };
-
-  /// Represents the current phase the concurrent GC is in. The main difference
-  /// between phases is their effect on read and write barriers. Should only be
-  /// accessed if gcMutex_ is acquired.
-  Phase concurrentPhase_{Phase::None};
-
-  /// Represents whether the background thread is currently marking. Should only
-  /// be accessed by the mutator thread or during a STW pause.
-  /// ogMarkingBarriers_ is true from the start of marking the OG heap until the
-  /// start of the STW pause but is kept separate from concurrentPhase_ in
-  /// order to reduce synchronisation requirements for write barriers.
-  bool ogMarkingBarriers_{false};
 
   /// State that needs to be maintained while we are marking the old gen.
   struct MarkState {
