@@ -8,6 +8,7 @@
 #ifndef HERMES_BCGEN_LITERALBUFFERBUILDER_H
 #define HERMES_BCGEN_LITERALBUFFERBUILDER_H
 
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/ShapeTableEntry.h"
 #include "llvh/ADT/DenseMap.h"
@@ -47,7 +48,8 @@ Result generate(
     const std::function<bool(Function *)> &shouldVisitFunction,
     const SerializedLiteralGenerator::StringLookupFn &getIdentifier,
     const SerializedLiteralGenerator::StringLookupFn &getString,
-    bool optimize);
+    bool optimize,
+    hbc::BCProviderBase *bcProvider = nullptr);
 } // namespace LiteralBufferBuilder
 } // namespace hermes
 

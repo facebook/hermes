@@ -23,8 +23,9 @@ namespace hermes::SerializedLiteralParser {
 ///   void visitNumber(double);
 ///   void visitNull();
 ///   void visitBool(bool);
+/// \return the number of bytes read.
 template <typename Visitor>
-static void
+static size_t
 parse(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
   size_t bufIdx = 0;
 
@@ -91,6 +92,7 @@ parse(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
         break;
     }
   }
+  return bufIdx;
 }
 
 } // namespace hermes::SerializedLiteralParser

@@ -7,9 +7,12 @@
 
 #include "hermes/BCGen/LiteralBufferBuilder.h"
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
+#include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Inst/Inst.h"
+#include "hermes/Inst/InstDecode.h"
 
 namespace hermes {
 namespace LiteralBufferBuilder {
@@ -76,25 +79,34 @@ class Builder {
   /// \param getIdentifier used to lookup identifiers.
   /// \param getString used to lookup string values.
   /// \param optimize whether to deduplicate the serialized literals.
+  /// \param bcProvider optional base bytecode provider.
   Builder(
       Module *m,
       const std::function<bool(Function *)> &shouldVisitFunction,
       const SerializedLiteralGenerator::StringLookupFn &getIdentifier,
       const SerializedLiteralGenerator::StringLookupFn &getString,
-      bool optimize)
+      bool optimize,
+      hbc::BCProviderBase *bcProvider)
       : M_(m),
         shouldVisitFunction_(shouldVisitFunction),
         optimize_(optimize),
-        literalGenerator_(getIdentifier, getString) {}
+        literalGenerator_(getIdentifier, getString),
+        bcProvider_(bcProvider) {}
 
   /// Do everything: collect the literals, optionally deduplicate them.
   Result generate();
 
  private:
+  /// Reseed the tables to be initialized with the base bytecode given.
+  void reseedFromBaseBytecode();
+
   /// Traverse the module, skipping functions that should not be visited,
   /// and collect all serialized array and object literals and the corresponding
   /// instruction.
   void traverse();
+
+  /// Make the underlying raw storage for the buffers.
+  void makeBufferStorages();
 
   /// Serialization handlers for different instructions.
   void serializeLiteralFor(AllocArrayInst *AAI);
@@ -122,6 +134,8 @@ class Builder {
   /// The stateless generator object.
   SerializedLiteralGenerator literalGenerator_;
 
+  hbc::BCProviderBase *bcProvider_;
+
   /// Temporary buffer to serialize literals into. We keep it around instead
   /// of allocating a new one every time.
   std::vector<unsigned char> tempBuffer_{};
@@ -129,6 +143,9 @@ class Builder {
   /// Each element is the values portion of a serialized object literal or
   /// array.
   UniquedStringVector values_{};
+
+  /// The underlying raw byte storage of the values buffer.
+  hbc::ConsecutiveStringStorage valueStorage_{};
 
   /// Each element records the instruction whose literal was serialized at the
   /// corresponding index in \c values_.
@@ -151,12 +168,113 @@ class Builder {
   std::vector<std::pair<CacheNewObjectInst *, size_t>> cacheNewObjectInst_{};
 };
 
-LiteralBufferBuilder::Result Builder::generate() {
-  traverse();
+void Builder::reseedFromBaseBytecode() {
+  assert(bcProvider_ && "expected nonnull bytecode provider");
+  llvh::ArrayRef<ShapeTableEntry> shapeTable =
+      bcProvider_->getObjectShapeTable();
+  llvh::ArrayRef<unsigned char> valueBuf = bcProvider_->getLiteralValueBuffer();
+  // Pair of <offset, sizeInBytes>.
+  llvh::DenseSet<std::pair<uint32_t, uint32_t>> seenValueBufferEntries;
+  std::vector<StringTableEntry> valueStrTable;
+  struct {
+    void visitStringID(uint32_t id) {}
+    void visitNumber(double d) {}
+    void visitNull() {}
+    void visitUndefined() {}
+    void visitBool(bool b) {}
+  } emptyVisitor;
 
-  // Construct the serialized storage, optionally optimizing it.
-  hbc::ConsecutiveStringStorage valStorage{
-      values_.beginSet(), values_.endSet(), std::true_type{}, optimize_};
+  /// Process the usage of a <offset, numElements> usage from a bytecode
+  /// instruction. If this pair has not been seen before, we add an entry to \c
+  /// valueStrTable which describes the layout of the base bytecode value
+  /// buffer.
+  auto processValueUserOp =
+      [this, &valueBuf, &emptyVisitor, &valueStrTable, &seenValueBufferEntries](
+          uint32_t valBufOffset, uint16_t numElements) {
+        auto sizeInBytes = SerializedLiteralParser::parse(
+            valueBuf.slice(valBufOffset), numElements, emptyVisitor);
+        auto [_, inserted] =
+            seenValueBufferEntries.insert({valBufOffset, sizeInBytes});
+        if (inserted) {
+          valueStrTable.push_back({valBufOffset, (uint32_t)sizeInBytes, false});
+          values_.push_back(llvh::StringRef{
+              reinterpret_cast<const char *>(valueBuf.data() + valBufOffset),
+              sizeInBytes});
+        }
+      };
+
+  // There is no convenient header describing the structure of the raw bytes for
+  // the value buffer. Therefore, we reconstruct the individual elements in the
+  // buffer by looking at the bytecode instructions that index into the value
+  // buffer.
+  for (unsigned funcId = 0; funcId < bcProvider_->getFunctionCount();
+       ++funcId) {
+    hbc::RuntimeFunctionHeader functionHeader =
+        bcProvider_->getFunctionHeader(funcId);
+    const uint8_t *bytecodeStart = bcProvider_->getBytecode(funcId);
+    const uint8_t *bytecodeEnd =
+        bytecodeStart + functionHeader.getBytecodeSizeInBytes();
+    const uint8_t *cursor = bytecodeStart;
+    while (cursor < bytecodeEnd) {
+      auto *ip = reinterpret_cast<const inst::Inst *>(cursor);
+      switch (ip->opCode) {
+        case inst::OpCode::NewArrayWithBuffer:
+          processValueUserOp(
+              ip->iNewArrayWithBuffer.op4, ip->iNewArrayWithBuffer.op3);
+          break;
+        case inst::OpCode::NewArrayWithBufferLong:
+          processValueUserOp(
+              ip->iNewArrayWithBufferLong.op4, ip->iNewArrayWithBufferLong.op3);
+          break;
+        case inst::OpCode::NewObjectWithBuffer: {
+          auto numElements = shapeTable[ip->iNewObjectWithBuffer.op2].numProps;
+          processValueUserOp(ip->iNewObjectWithBuffer.op3, numElements);
+          break;
+        }
+        case inst::OpCode::NewObjectWithBufferLong: {
+          auto numElements =
+              shapeTable[ip->iNewObjectWithBufferLong.op2].numProps;
+          processValueUserOp(ip->iNewObjectWithBufferLong.op3, numElements);
+          break;
+        }
+        case inst::OpCode::NewObjectWithBufferAndParent: {
+          auto numElements =
+              shapeTable[ip->iNewObjectWithBufferAndParent.op3].numProps;
+          processValueUserOp(
+              ip->iNewObjectWithBufferAndParent.op4, numElements);
+          break;
+        }
+        default:
+#ifndef NDEBUG
+#define DEFINE_VALUE_BUFFER_USER(name)    \
+  assert(                                 \
+      ip->opCode != inst::OpCode::name && \
+      "Value buffer user " #name " not handled");
+#include "hermes/BCGen/HBC/BytecodeList.def"
+#endif
+          break;
+      }
+      cursor += inst::getInstSize(ip->opCode);
+    }
+  }
+  valueStorage_ =
+      hbc::ConsecutiveStringStorage{std::move(valueStrTable), valueBuf.vec()};
+}
+
+void Builder::makeBufferStorages() {
+  valueStorage_.appendStorage(hbc::ConsecutiveStringStorage{
+      values_.beginSet() + valueStorage_.count(),
+      values_.endSet(),
+      std::true_type{},
+      optimize_});
+}
+
+LiteralBufferBuilder::Result Builder::generate() {
+  if (bcProvider_) {
+    reseedFromBaseBytecode();
+  }
+  traverse();
+  makeBufferStorages();
   hbc::ConsecutiveStringStorage keyStorage{
       objKeys_.beginSet(), objKeys_.endSet(), std::true_type{}, optimize_};
 
@@ -166,8 +284,9 @@ LiteralBufferBuilder::Result Builder::generate() {
   // Visit all object/array literal values.
   // Cast these to const to make sure we're calling the correct overload and no
   // longer modifying the underlying storage.
-  auto valView = const_cast<const hbc::ConsecutiveStringStorage &>(valStorage)
-                     .getStringTableView();
+  auto valView =
+      const_cast<const hbc::ConsecutiveStringStorage &>(valueStorage_)
+          .getStringTableView();
   for (size_t i = 0, e = arraysInst_.size(); i != e; ++i) {
     const auto [Inst, idx] = arraysInst_[i];
     assert(
@@ -227,7 +346,7 @@ LiteralBufferBuilder::Result Builder::generate() {
   }
 
   return {
-      std::move(valStorage).acquireStringTableAndStorage().second,
+      std::move(valueStorage_).acquireStringTableAndStorage().second,
       std::move(keyStorage).acquireStringTableAndStorage().second,
       std::move(objShapeTable),
       std::move(literalOffsetMap)};
@@ -316,8 +435,15 @@ Result generate(
     const std::function<bool(Function *)> &shouldVisitFunction,
     const SerializedLiteralGenerator::StringLookupFn &getIdentifier,
     const SerializedLiteralGenerator::StringLookupFn &getString,
-    bool optimize) {
-  return Builder(m, shouldVisitFunction, getIdentifier, getString, optimize)
+    bool optimize,
+    hbc::BCProviderBase *bcProvider) {
+  return Builder(
+             m,
+             shouldVisitFunction,
+             getIdentifier,
+             getString,
+             optimize,
+             bcProvider)
       .generate();
 }
 

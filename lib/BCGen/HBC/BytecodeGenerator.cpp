@@ -614,7 +614,8 @@ bool BytecodeModuleGenerator::generate(
       shouldGenerate,
       [this](llvh::StringRef str) { return getIdentifierID(str); },
       [this](llvh::StringRef str) { return getStringID(str); },
-      options_.optimizationEnabled));
+      options_.optimizationEnabled,
+      baseBCProvider_.get()));
 
   if (!generateAddedFunctions())
     return false;

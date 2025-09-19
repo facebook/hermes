@@ -39,6 +39,11 @@
 #ifndef DEFINE_RET_TARGET
 #define DEFINE_RET_TARGET(...)
 #endif
+// Whenever a new value buffer user is added, be sure to add a new
+// handler in the delta mode code for literal buffers.
+#ifndef DEFINE_VALUE_BUFFER_USER
+#define DEFINE_VALUE_BUFFER_USER(...)
+#endif
 #ifndef ASSERT_EQUAL_LAYOUT1
 #define ASSERT_EQUAL_LAYOUT1(a, b)
 #endif
@@ -85,6 +90,8 @@ DEFINE_OPCODE_0(Unreachable)
 /// Arg3 is the offset in the object val buffer table.
 DEFINE_OPCODE_3(NewObjectWithBuffer, Reg8, UInt16, UInt16)
 DEFINE_OPCODE_3(NewObjectWithBufferLong, Reg8, UInt32, UInt32)
+DEFINE_VALUE_BUFFER_USER(NewObjectWithBuffer)
+DEFINE_VALUE_BUFFER_USER(NewObjectWithBufferLong)
 
 /// Create an object from a static map of values, setting its parent.
 /// Arg1 is the destination.
@@ -92,6 +99,7 @@ DEFINE_OPCODE_3(NewObjectWithBufferLong, Reg8, UInt32, UInt32)
 /// Arg3 is the index in the object shape table.
 /// Arg4 is the offset in the object val buffer table.
 DEFINE_OPCODE_4(NewObjectWithBufferAndParent, Reg8, Reg8, UInt32, UInt32)
+DEFINE_VALUE_BUFFER_USER(NewObjectWithBufferAndParent)
 
 /// Create a new, empty Object using the built-in constructor (regardless of
 /// whether it was overridden).
@@ -113,6 +121,8 @@ DEFINE_OPCODE_2(NewObjectWithParent, Reg8, Reg8)
 /// Arg4 is the offset in the array buffer table.
 DEFINE_OPCODE_4(NewArrayWithBuffer, Reg8, UInt16, UInt16, UInt16)
 DEFINE_OPCODE_4(NewArrayWithBufferLong, Reg8, UInt16, UInt16, UInt32)
+DEFINE_VALUE_BUFFER_USER(NewArrayWithBuffer)
+DEFINE_VALUE_BUFFER_USER(NewArrayWithBufferLong)
 
 /// Create a new array of a given size.
 /// Arg1 = new Array(Arg2)
@@ -1022,6 +1032,7 @@ ASSERT_EQUAL_LAYOUT2(CallWithNewTarget, CallWithNewTargetLong)
 #undef DEFINE_OPCODE
 #undef DEFINE_JUMP_LONG_VARIANT
 #undef DEFINE_RET_TARGET
+#undef DEFINE_VALUE_BUFFER_USER
 #undef ASSERT_EQUAL_LAYOUT1
 #undef ASSERT_EQUAL_LAYOUT2
 #undef ASSERT_EQUAL_LAYOUT3
