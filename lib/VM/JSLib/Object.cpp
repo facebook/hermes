@@ -162,6 +162,13 @@ HermesValue createObjectConstructor(Runtime &runtime) {
   defineMethod(
       runtime,
       lv.cons,
+      Predefined::getSymbolID(Predefined::groupBy),
+      ctx,
+      objectGroupBy,
+      2);
+  defineMethod(
+      runtime,
+      lv.cons,
       Predefined::getSymbolID(Predefined::hasOwn),
       ctx,
       objectHasOwn,
@@ -1247,6 +1254,37 @@ CallResult<HermesValue> objectSetPrototypeOf(void *, Runtime &runtime) {
 
   // 8. Return O.
   return *O;
+}
+
+/// ES15.0 20.1.2.13 Object.groupBy ( items, callback )
+/// https://tc39.es/ecma262/#sec-object.groupby
+CallResult<HermesValue> objectGroupBy(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 2. Let obj be OrdinaryObjectCreate(null).
+  lv.obj = JSObject::create(runtime, Runtime::makeNullHandle<JSObject>());
+
+  // 1. Let groups be ? GroupBy(items, callbackfn, PROPERTY).
+  if (LLVM_UNLIKELY(
+          groupByProperty(
+              runtime, lv.obj, args.getArgHandle(0), args.getArgHandle(1)) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // NOTE: The below are handled by `groupByProperty` which directly acts on
+  // the above JSObject.
+  // 3. For each Record { [[Key]], [[Elements]] } g of groups, do
+  // a. Let elements be CreateArrayFromList(g.[[Elements]]).
+  // b. Perform ! CreateDataPropertyOrThrow(obj, g.[[Key]], elements).
+
+  // 4. Return obj.
+  return lv.obj.getHermesValue();
 }
 
 //===----------------------------------------------------------------------===//

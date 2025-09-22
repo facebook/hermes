@@ -174,6 +174,82 @@ try {
 }
 //CHECK: to_prim
 
+print('groupBy');
+// CHECK-LABEL: groupBy
+print(JSON.stringify(Object.groupBy([1, 2, 3, 4, 5], (item) => item > 2)));
+// CHECK-NEXT: {"false":[1,2],"true":[3,4,5]}
+print(JSON.stringify(Object.groupBy([1, 2, 3, 4, 5], (item) => item % 2 ? "odd" : "even")));
+// CHECK-NEXT: {"odd":[1,3,5],"even":[2,4]}
+print(JSON.stringify(Object.groupBy([1, 'a', 2, 'b', 3, 'c'], (item) => typeof item)));
+// CHECK-NEXT: {"number":[1,2,3],"string":["a","b","c"]}
+const inventory = [
+  { name: "bananas", quantity: 0 },
+  { name: "goat", quantity: 0 },
+  { name: "cherries", quantity: 3 },
+  { name: "fish", quantity: 4 },
+];
+print(JSON.stringify(Object.groupBy(inventory, (item) => item.quantity > 0 ? "inStock" : 'outOfStock')));
+// CHECK-NEXT: {"outOfStock":[{"name":"bananas","quantity":0},{"name":"goat","quantity":0}],"inStock":[{"name":"cherries","quantity":3},{"name":"fish","quantity":4}]}
+try {
+  Object.groupBy({}, (item) => typeof item);
+} catch (e) {
+  print(e.name);
+}
+// CHECK-NEXT: TypeError 
+const iterableWhichThrows = {
+  [Symbol.iterator]() {
+    throw "Error from iterable";
+  },
+};
+try {
+  Object.groupBy(iterableWhichThrows, (item) => typeof item);
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Error from iterable
+const iteratorWhichThrows = {
+  [Symbol.iterator]() {
+    return this;
+  },
+  next() {
+    throw "Error from iterator";
+  },
+};
+try {
+  Object.groupBy(iteratorWhichThrows, (item) => typeof item);
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Error from iterator
+const iteratorWhichCloses = {
+  [Symbol.iterator]() {
+    return this;
+  },
+  next() {
+    return {};
+  },
+  return() {
+    print("Closing iterator");
+  },
+};
+try {
+  Object.groupBy(iteratorWhichCloses, () => {
+    throw "Error from callback 1";
+  });
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Closing iterator
+// CHECK-NEXT: Error from callback 1
+try {
+  Object.groupBy([1, 2, 3], () => {
+    throw "Error from callback 2";
+  });
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Error from callback 2
+
 print('hasOwn');
 // CHECK-LABEL: hasOwn
 var obj = new Object();
