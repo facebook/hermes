@@ -3514,7 +3514,6 @@
     "regexp-duplicate-named-groups",
     "arraybuffer-transfer",
     "Array.fromAsync",
-    "array-grouping",
     "symbols-as-weakmap-keys",
     "json-parse-with-source"
   ],
