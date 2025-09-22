@@ -620,6 +620,33 @@ inline HermesValue canonicalizeKeyedCollectionKey(HermesValue key) {
   }
   return key;
 }
+
+/// ES15.0 7.3.35 GroupBy ( items, callback, keyCoercion )
+/// https://tc39.es/ecma262/#sec-groupby
+/// Groups a list of items into an Object based on the results of a callback
+/// which operates on each item.
+/// \param target the Object to which to add keyed groups.
+/// \param items array of ECMAValues to be grouped.
+/// \param callback callback which returns the key per given item.
+ExecutionStatus groupByProperty(
+    Runtime &runtime,
+    Handle<JSObject> target,
+    Handle<> items,
+    Handle<> callback);
+
+/// ES15.0 7.3.35 GroupBy ( items, callback, keyCoercion )
+/// https://tc39.es/ecma262/#sec-groupby
+/// Groups a list of items into a Map based on the results of a callback which
+/// operates on each item.
+/// \param target the Map to which to add keyed groups.
+/// \param items array of ECMAValues to be grouped.
+/// \param callback callback which returns the key per given item.
+ExecutionStatus groupByCollection(
+    Runtime &runtime,
+    Handle<JSMapImpl<CellKind::JSMapKind>> target,
+    Handle<> items,
+    Handle<> callback);
+
 } // namespace vm
 } // namespace hermes
 

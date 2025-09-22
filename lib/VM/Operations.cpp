@@ -17,6 +17,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PrimitiveBox.h"
@@ -2610,6 +2611,236 @@ ExecutionStatus getSetRecord(
 
   return ExecutionStatus::RETURNED;
 }
+
+namespace {
+
+enum class KeyCoercion { Property, Collection };
+
+/// ES15.0 7.3.35 GroupBy ( items, callback, keyCoercion )
+/// https://tc39.es/ecma262/#sec-groupby
+/// Groups a list of items into an Object based on the results of a callback
+/// which operates on each item.
+/// \param[out] target the JSObject to which to add keyed groups if keyCoercion
+/// is `Property` or a JSMap to which to add keyed groups if keyCoercion is
+/// `Collection`. The keyed groups must always be of type JSArray.
+/// \param items JSArray of ECMAValues to be grouped.
+/// \param callback callback which returns the key per given item.
+/// \return a JSObject if keyCoercion is `Property` or a JSMap if keyCoercion
+/// is `Collection`.
+template <KeyCoercion keyCoercion, class T>
+ExecutionStatus
+groupBy(Runtime &runtime, Handle<T> target, Handle<> items, Handle<> callback) {
+  struct : public Locals {
+    PinnedValue<> key;
+    PinnedValue<JSArray> value;
+    PinnedValue<> tmpValueMaybeArray;
+    PinnedValue<> next;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 1. Perform ? RequireObjectCoercible(items).
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, items) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. If IsCallable(callback) is false, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*callback))) {
+    return runtime.raiseTypeError("callback must be Callable in groupby");
+  }
+
+  // 3. Let groups be a new empty List.
+  // 4. Let iteratorRecord be ? GetIterator(items, sync).
+  CallResult<CheckedIteratorRecord> iteratorRecordResult =
+      getCheckedIterator(runtime, items);
+
+  if (LLVM_UNLIKELY(iteratorRecordResult == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  const CheckedIteratorRecord &iteratorRecord = *iteratorRecordResult;
+
+  GCScope gcScope(runtime);
+  auto marker = gcScope.createMarker();
+
+  // 5. Let k be 0.
+  uint64_t k = 0;
+
+  // 6. Repeat,
+  while (true) {
+    // a. If k ≥ 2**53 - 1, then
+    if (LLVM_UNLIKELY(k >= ((uint64_t)1 << 53) - 1)) {
+      // i. Let error be ThrowCompletion(a newly created TypeError object).
+      (void)runtime.raiseTypeError("groupBy result out of space");
+
+      // ii. Return ? IteratorClose(iteratorRecord, error).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+
+    // b. Let next be ? IteratorStepValue(iteratorRecord).
+    auto stepValRes = iteratorStepValue(runtime, iteratorRecord, &lv.next);
+
+    if (LLVM_UNLIKELY(stepValRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // c. If next is done, then
+    if (!*stepValRes) {
+      // i. Return groups.
+      break;
+    }
+
+    // d. Let value be next.
+    // e. Let key be Completion(Call(callback, undefined, « value, 𝔽(k) »)).
+    auto keyRes = Callable::executeCall2(
+        Handle<Callable>::vmcast(callback),
+        runtime,
+        Runtime::getUndefinedValue(),
+        lv.next.getHermesValue(),
+        HermesValue::encodeTrustedNumberValue(k));
+
+    // f. IfAbruptCloseIterator(key, iteratorRecord).
+    if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+
+    lv.key = std::move(*keyRes);
+
+    // g. If keyCoercion is PROPERTY, then
+    if constexpr (keyCoercion == KeyCoercion::Property) {
+      // i. Set key to Completion(ToPropertyKey(key)).
+      auto keyRes = toPropertyKey(runtime, lv.key);
+
+      // ii. IfAbruptCloseIterator(key, iteratorRecord).
+      if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
+        return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+      }
+
+      lv.key = std::move(*keyRes);
+    }
+    // h. Else,
+    else {
+      // i. Assert: keyCoercion is COLLECTION.
+      static_assert(
+          keyCoercion == KeyCoercion::Collection,
+          "keyCoercion must be of type `Collection`");
+
+      // ii. Set key to CanonicalizeKeyedCollectionKey(key).
+      auto key = canonicalizeKeyedCollectionKey(*lv.key);
+
+      lv.key = std::move(key);
+    }
+
+    // i. Perform AddValueToKeyedGroup(groups, key, value).
+    // We deviate from the spec here for performance reasons by acting on the
+    // resulting Map or Object directly, rather than creating an intermediate
+    // hashmap.
+    //
+    // Get the keyed group from the target if it exists, otherwise return
+    // undefined.
+    if constexpr (keyCoercion == KeyCoercion::Property) {
+      auto propValueRes = JSObject::getComputed_RJS(
+          Handle<JSObject>::vmcast(target), runtime, lv.key);
+
+      if (LLVM_UNLIKELY(propValueRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      lv.tmpValueMaybeArray = std::move(*propValueRes);
+    } else {
+      static_assert(
+          keyCoercion == KeyCoercion::Collection,
+          "keyCoercion must be of type `Collection`");
+
+      lv.tmpValueMaybeArray = Handle<JSMap>::vmcast(target)
+                                  ->get(runtime, *lv.key)
+                                  .unboxToHV(runtime);
+    }
+
+    if (lv.tmpValueMaybeArray->isUndefined()) {
+      // If a keyed group does not exist, add key to the result object and
+      // initialize with an empty array.
+      auto emptyArrRes = JSArray::create(runtime, 0, 0);
+
+      if (LLVM_UNLIKELY(emptyArrRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      lv.value = std::move(*emptyArrRes);
+
+      // Add empty array to keyed group property key.
+      if constexpr (keyCoercion == KeyCoercion::Property) {
+        auto newArrayRes = JSObject::putComputed_RJS(
+            Handle<JSObject>::vmcast(target),
+            runtime,
+            lv.key,
+            lv.value,
+            PropOpFlags().plusThrowOnError());
+
+        if (LLVM_UNLIKELY(newArrayRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      } else {
+        static_assert(
+            keyCoercion == KeyCoercion::Collection,
+            "keyCoercion must be of type `Collection`");
+
+        auto newArrayRes = JSMap::insert(
+            Handle<JSMap>::vmcast(target), runtime, lv.key, lv.value);
+
+        if (LLVM_UNLIKELY(newArrayRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      }
+    } else {
+      lv.value = Handle<JSArray>::vmcast(&lv.tmpValueMaybeArray);
+    }
+
+    size_t keyedGroupLength = JSArray::getLength(*lv.value, runtime);
+
+    // Append keyed group array with new item that matches the key.
+    auto appendItemRes =
+        JSArray::setElementAt(lv.value, runtime, keyedGroupLength, lv.next);
+
+    if (LLVM_UNLIKELY(appendItemRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    keyedGroupLength++;
+
+    // Increase the length of keyed group array.
+    if (LLVM_UNLIKELY(
+            JSArray::setLengthProperty(lv.value, runtime, keyedGroupLength) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    gcScope.flushToMarker(marker);
+
+    // j. Set k to k + 1.
+    k++;
+  }
+
+  return ExecutionStatus::RETURNED;
+}
+
+} // namespace
+
+ExecutionStatus groupByProperty(
+    Runtime &runtime,
+    Handle<JSObject> target,
+    Handle<> items,
+    Handle<> callback) {
+  return groupBy<KeyCoercion::Property>(runtime, target, items, callback);
+};
+
+ExecutionStatus groupByCollection(
+    Runtime &runtime,
+    Handle<JSMapImpl<CellKind::JSMapKind>> target,
+    Handle<> items,
+    Handle<> callback) {
+  return groupBy<KeyCoercion::Collection>(runtime, target, items, callback);
+};
 
 } // namespace vm
 } // namespace hermes
