@@ -134,6 +134,14 @@ HermesValue createMapConstructor(Runtime &runtime) {
       0,
       lv.cons);
 
+  defineMethod(
+      runtime,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::groupBy),
+      nullptr,
+      mapGroupBy,
+      2);
+
   return lv.cons.getHermesValue();
 }
 
@@ -469,5 +477,45 @@ CallResult<HermesValue> mapIteratorPrototypeNext(void *, Runtime &runtime) {
   }
   return *cr;
 }
+
+/// ES15.0 24.1.2.1 Map.groupBy ( items, callback )
+/// https://tc39.es/ecma262/#sec-map.groupby
+CallResult<HermesValue> mapGroupBy(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
+  struct : public Locals {
+    PinnedValue<JSMap> map;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 2. Let map be ! Construct(%Map%).
+  lv.map = JSMap::create(runtime, runtime.mapPrototype);
+
+  if (LLVM_UNLIKELY(
+          JSMap::initializeStorage(lv.map, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 1. Let groups be ? GroupBy(items, callbackfn, COLLECTION).
+  if (LLVM_UNLIKELY(
+          groupByCollection(
+              runtime, lv.map, args.getArgHandle(0), args.getArgHandle(1)) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // NOTE: The below are handled by `groupByCollection` which directly acts on
+  // the above JSMap.
+  // 2. Let map be ! Construct(%Map%).
+  // 3. For each Record { [[Key]], [[Elements]] } g of groups, do
+  // a. Let elements be CreateArrayFromList(g.[[Elements]]).
+  // b. Let entry be the Record { [[Key]]: g.[[Key]], [[Value]]: elements }.
+  // c. Append entry to map.[[MapData]].
+
+  // 4. Return map.
+  return lv.map.getHermesValue();
+}
+
 } // namespace vm
 } // namespace hermes

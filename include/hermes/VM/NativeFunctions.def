@@ -175,7 +175,6 @@ NATIVE_FUNCTION(hermesInternalDrainJobs)
 NATIVE_FUNCTION(hermesInternalFuzzilli)
 #endif
 
-
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
 NATIVE_FUNCTION(shouldPauseOnThrow)
@@ -191,6 +190,7 @@ NATIVE_FUNCTION(errorIsError)
 NATIVE_FUNCTION(jsonParse)
 NATIVE_FUNCTION(jsonStringify)
 NATIVE_FUNCTION(mapConstructor)
+NATIVE_FUNCTION(mapGroupBy)
 NATIVE_FUNCTION(mapIteratorPrototypeNext)
 NATIVE_FUNCTION(mapPrototypeClear)
 NATIVE_FUNCTION(mapPrototypeDelete)
