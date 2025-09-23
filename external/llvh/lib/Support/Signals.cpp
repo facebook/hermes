@@ -246,3 +246,6 @@ static bool printSymbolizedStackTrace(StringRef Argv0, void **StackTrace,
 #ifdef _WIN32
 #include "Windows/Signals.inc"
 #endif
+#ifdef __wasi__
+#include "Wasi/Signals.inc"
+#endif
