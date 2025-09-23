@@ -112,17 +112,17 @@ void manualStackScan() {
   }
 }
 
-TEST(StackBoundsTest, manualStackScan_mainThread) {
+TEST(StackBoundsTest, manualStackScanMainThread) {
   manualStackScan();
 }
-TEST(StackBoundsTest, unboundRecursion_mainThread) {
+TEST(StackBoundsTest, unboundRecursionMainThread) {
   unboundedRecursion();
 }
-TEST(StackBoundsTest, manualStackScan_thread) {
+TEST(StackBoundsTest, manualStackScanThread) {
   std::thread t(manualStackScan);
   t.join();
 }
-TEST(StackBoundsTest, unboundRecursion_thread) {
+TEST(StackBoundsTest, unboundRecursionThread) {
   std::thread t(unboundedRecursion);
   t.join();
 }
@@ -154,13 +154,13 @@ void runInThreadWith64KGuard(void *(threadFunc)(void *)) {
   pthread_join(thread, nullptr);
 }
 
-TEST(StackBoundsTest, manualStackScan_thread64KGuard) {
+TEST(StackBoundsTest, manualStackScanThread64KGuard) {
   runInThreadWith64KGuard([](void *) -> void * {
     manualStackScan();
     return nullptr;
   });
 }
-TEST(StackBoundsTest, unboundRecursion_thread64KGuard) {
+TEST(StackBoundsTest, unboundRecursionThread64KGuard) {
   runInThreadWith64KGuard([](void *) -> void * {
     unboundedRecursion();
     return nullptr;
