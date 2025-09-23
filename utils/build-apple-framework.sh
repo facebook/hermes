@@ -47,15 +47,15 @@ function get_mac_deployment_target {
 
 # Build host hermes compiler for internal bytecode
 function build_host_hermesc {
-  cmake -S . -B build_host_hermesc
-  cmake --build ./build_host_hermesc --target hermesc
+  cmake -S . -B build_host_hermesc -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
+  cmake --build ./build_host_hermesc --target hermesc shermes
 }
 
 # Utility function to configure an Apple framework
 function configure_apple_framework {
   local build_cli_tools
 
-  if [[ $1 == macosx ]]; then
+  if [[ $1 == iphonesimulator || $1 == macosx ]]; then
     build_cli_tools="true"
   else
     build_cli_tools="false"
@@ -70,11 +70,15 @@ function configure_apple_framework {
     -DHERMES_ENABLE_LIBFUZZER:BOOLEAN=false \
     -DHERMES_ENABLE_FUZZILLI:BOOLEAN=false \
     -DHERMES_ENABLE_TEST_SUITE:BOOLEAN=false \
+    -DHERMES_ENABLE_BITCODE:BOOLEAN=false \
     -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true \
     -DCMAKE_CXX_FLAGS="-gdwarf" \
     -DCMAKE_C_FLAGS="-gdwarf" \
     -DHERMES_ENABLE_TOOLS:BOOLEAN="$build_cli_tools" \
-    -DIMPORT_HERMESC:PATH="$PWD/build_host_hermesc/ImportHermesc.cmake" \
+    -DLLVM_ENABLE_TERMINFO=OFF \
+    -DLIBREADLINE_FOUND=OFF \
+    -DLIBTINFO_FOUND=OFF \
+    -DIMPORT_HOST_COMPILERS:PATH="$PWD/build_host_hermesc/ImportHostCompilers.cmake" \
     -DCMAKE_INSTALL_PREFIX:PATH=../destroot \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
 }
@@ -84,16 +88,20 @@ function build_apple_framework {
   echo "Building framework for $1 with architectures: $2"
 
   build_host_hermesc
-  [ ! -f "$PWD/build_host_hermesc/ImportHermesc.cmake" ] &&
+  [ ! -f "$PWD/build_host_hermesc/ImportHostCompilers.cmake" ] &&
   echo "Host hermesc is required to build apple frameworks!"
 
   configure_apple_framework "$1" "$2" "$3"
 
   if [[ "$BUILD_SYSTEM" == "Ninja" ]]; then
-    (cd "./build_$1" && ninja install/strip)
+    ninja -C "./build_$1" install/strip
   else
-    (cd "./build_$1" && make install/strip)
+    make -C "./build_$1" install/strip
   fi
+
+  # Copy the built binary to destroot so universal framework can be created later.
+  mkdir -p "destroot/Library/Frameworks/$1"
+  cp -R "./build_$1"/lib/hermesvm.framework* "destroot/Library/Frameworks/$1"
 }
 
 # Accepts an array of frameworks and will place all of
@@ -108,11 +116,11 @@ function create_universal_framework {
   echo "Creating universal framework for platforms: ${platforms[*]}"
 
   for i in "${!platforms[@]}"; do
-    args+="-framework ${platforms[$i]}/hermes.framework "
+    args+="-framework ${platforms[$i]}/hermesvm.framework "
   done
 
   mkdir universal
-  xcodebuild -create-xcframework $args -output "universal/hermes.xcframework"
+  xcodebuild -create-xcframework $args -output "universal/hermesvm.xcframework"
 
   for platform in $@; do
     rm -r "$platform"
