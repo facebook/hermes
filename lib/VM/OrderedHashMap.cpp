@@ -70,6 +70,7 @@ void OrderedHashMapBase<BucketType, Derived>::buildMetadata(
     Metadata::Builder &mb) {
   const auto *self = static_cast<const Derived *>(cell);
   mb.addField("hashTable", &self->hashTable_);
+  mb.addField("dataTable", &self->dataTable_);
   mb.addField("firstIterationEntry", &self->firstIterationEntry_);
   mb.addField("lastIterationEntry", &self->lastIterationEntry_);
 }

@@ -43,6 +43,10 @@ class HashMapEntryBase final : public GCCell, public Data {
  public:
   static const VTable vt;
 
+  /// Number of elements used in data table per each entry of hash table.
+  static constexpr uint8_t kElementsPerEntry =
+      std::is_same_v<Data, HashMapEntryKey> ? 1 : 2;
+
   /// Previous entry in insertion order.
   GCPointer<HashMapEntryBase> prevIterationEntry{nullptr};
 
@@ -103,32 +107,24 @@ using HashMapEntry = HashMapEntryBase<HashMapEntryKeyValue>;
 using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
 
 /// OrderedHashMapBase is a hash map implementation that maintains insertion
-/// order. Since there are multiple use cases that need a hash map, this class
-/// is not directly gc-managed with the intention for actual gc-managed classes
-/// to inherit from this class. E.g. OrderedHashMap used internally by
-/// SymbolRegistry, or JSMap/JSSet for implementation of the JavaScript Map &
-/// Set. Having the gc-managed classes inherit from this class, we save one
-/// level of indirection of having to makeHandle before accessing the actual
-/// hash map functionality.
+/// order.
 ///
 /// The map contains two conceptual parts:
-/// 1) a standard hash table with open addressing, to store and lookup
-///    HermesValue
-/// 2) a linked list to maintain the insertion order
+/// 1) An ArrayStorageSmall representing a standard hash table with open
+/// addressing, to store numbers that could be used to index into the data table
+/// discussed in #2.
+/// 2) A data table, which is an ArrayStorageSmall that stores the entry's key
+/// and value in-place. This eliminates the need to create a new GCCell for each
+/// entry of the hash table.
 ///
-/// When an element is added, it's always appended to the end of the linked
-/// list. When an element is deleted, we put a tombstone value in the hash table
-/// and mark the element as deleted, and remove it from the linked list, unless
-/// it's the last element.
+/// The data table is used in insertion order. When a new entry is added to the
+/// hash table, the entry is appended to the data table. The key and value of
+/// the entry are stored in-place at those slots. And then the hash table stores
+/// a number that allows us to index into the data table to look at the values
+/// later.
 ///
-/// Iterators are pointers to the entries, which are always linked according to
-/// insertion order.
-///
-/// When the number of alive elements and deleted elements exceeds threasholds,
-/// we will rehash the table. We always make sure that any entry at any moment
-/// can successfully find the next entry according to insertion order, and rely
-/// on GC to manage the "deleted" entries", free them when no more iterators are
-/// before that entry.
+/// When the number of alive elements and deleted elements exceeds thresholds,
+/// we will rehash the table.
 ///
 /// We chose linear probing for open addressing. It's simple and possibly faster
 /// than quadratic probing because of memory locality. With a simple test case
@@ -198,14 +194,26 @@ class OrderedHashMapBase {
   static ExecutionStatus initializeStorage(
       Handle<Derived> self,
       Runtime &runtime) {
-    auto arrRes =
+    auto hashTableRes =
         StorageType::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
-    if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    if (LLVM_UNLIKELY(hashTableRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
-    auto *arr = vmcast<StorageType>(*arrRes);
-    self->hashTable_.set(runtime, arr, runtime.getHeap());
+    auto *hashTable = vmcast<StorageType>(*hashTableRes);
+    self->hashTable_.setNonNull(runtime, hashTable, runtime.getHeap());
+
+    // Create data table with corresponding capacity, but start off with 0 size.
+    // Entries will be appended as the hash table receives elements.
+    auto dataTableRes = StorageType::create(
+        runtime, dataTableAllocationSize(INITIAL_CAPACITY), 0 /* size */);
+    if (LLVM_UNLIKELY(dataTableRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    auto *dataTable = vmcast<StorageType>(*dataTableRes);
+    self->dataTable_.setNonNull(runtime, dataTable, runtime.getHeap());
+
     return ExecutionStatus::RETURNED;
   }
 
@@ -215,12 +223,20 @@ class OrderedHashMapBase {
 
   void assertInitialized() const {
     assert(hashTable_ && "Element storage uninitialized.");
+    assert(dataTable_ && "Data Table uninitialized.");
   }
 
  private:
   /// The hashtable, with size always equal to capacity_. The number of
   /// reachable entries from hashTable_ should be equal to size_.
   GCPointer<StorageType> hashTable_{nullptr};
+
+  /// The data table is where the actual data for each hash table entry is
+  /// stored. It's an array where each entry can use up multiple elements. For
+  /// example, for a Map, the key and the value would take up 2 elements in the
+  /// array. We do this so that we could avoid doing new allocation for each
+  /// entry of the hash table. Less allocations mean less GC time.
+  GCPointer<StorageType> dataTable_{nullptr};
 
   /// The first entry ever inserted. We need this entry to begin an iteration.
   GCPointer<BucketType> firstIterationEntry_{nullptr};
@@ -232,9 +248,11 @@ class OrderedHashMapBase {
   static constexpr uint32_t kGrowOrShrinkFactor{2};
 
   /// Maximum capacity of the hash table. This is checked in rehash() and we
-  /// won't grow the capacity past this number.
+  /// won't grow the capacity past this number. This is calculated so that the
+  /// data table size won't overflow uint32_t.
   static constexpr uint32_t MAX_CAPACITY =
-      StorageType::maxCapacityNoOverflow() / kGrowOrShrinkFactor;
+      StorageType::maxCapacityNoOverflow() / kGrowOrShrinkFactor /
+      BucketType::kElementsPerEntry;
 
   /// Capacity of the hash table.
   uint32_t capacity_{INITIAL_CAPACITY};
@@ -245,6 +263,18 @@ class OrderedHashMapBase {
   /// Number of deleted entries in the storage. The count will be reset during
   /// rehash and clear.
   uint32_t deletedCount_{0};
+
+  /// \param hashTableCapacity hash table's capacity in number of elements
+  /// \return the actual number of elements to allocate for data table based on
+  /// the desired hash table capacity
+  static constexpr uint32_t dataTableAllocationSize(
+      uint32_t hashTableCapacity) {
+    // Once the hash table reaches the rehash threshold, we're going to allocate
+    // a new data table. Therefore, there is no need to allocate space for the
+    // entire hash table capacity. By allocating less than the whole hash table
+    // capacity, we save on memory usage and get better perf.
+    return rehashThreshold(hashTableCapacity) * BucketType::kElementsPerEntry;
+  }
 
   /// Hash a HermesValue to an index to our hash table.
   static uint32_t
@@ -285,14 +315,14 @@ class OrderedHashMapBase {
 
   /// Determine if we should rehash the hash table based on the current key
   /// count, delete count and capacity.
-  static bool
+  static constexpr bool
   shouldRehash(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount) {
     return (keyCount + deleteCount) >= rehashThreshold(capacity);
   }
 
   /// Determine the number of elements (alive and deleted) before a rehash
   /// should happen.
-  static uint32_t rehashThreshold(uint32_t capacity) {
+  static constexpr uint32_t rehashThreshold(uint32_t capacity) {
     // `>> 1` means that we're using a load factor of 0.5
     return capacity >> 1;
   }
