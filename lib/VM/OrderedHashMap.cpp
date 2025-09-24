@@ -256,6 +256,7 @@ OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
 
   // We can deref the handles because we are in NoAllocScope.
   StorageType *hashTable = hashTable_.getNonNull(runtime);
+  StorageType *dataTable = dataTable_.getNonNull(runtime);
   const uint32_t mask = capacity_ - 1;
 
   // Each bucket must be either empty, deleted (Null) or BucketType.
@@ -266,10 +267,10 @@ OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     }
 
     if (!isDeleted(shv)) {
-      assert(shv.isObject());
-      auto *entry = vmcast<BucketType>(shv.getObject(runtime));
-      if (isSameValueZero(entry->key.unboxToHV(runtime), key)) {
-        return {entry->dataTableKeyIndex, bucket};
+      uint32_t dataTableKeyIndex = shv.getNumber(runtime);
+      auto keySHV = dataTable->at(dataTableKeyIndex);
+      if (isSameValueZero(keySHV.unboxToHV(runtime), key)) {
+        return {dataTableKeyIndex, bucket};
       }
     }
 
@@ -318,54 +319,55 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   lv.newDataTable.template castAndSetHermesValue<StorageType>(*dataTableRes);
 
   // Now re-add all entries to the hash table.
-  NoAllocScope noAlloc{runtime};
-  MutableHandle<> keyHandle{runtime};
+  uint32_t totalEntries = self->size_ + self->deletedCount_;
+  uint32_t newDataTableKeyIndex = 0;
+  uint32_t oldDataTableKeyIndex = 0;
 
   NoHandleScope noHandle{runtime};
 
-  // We can deref the handles because we are in NoAllocScope.
-  StorageType *newHashTable = lv.newHashTable.get();
-  StorageType *newDataTable = lv.newDataTable.get();
-  OrderedHashMapBase<BucketType, Derived> *rawSelf = *self;
-  const uint32_t mask = rawSelf->capacity_ - 1;
-  auto entry = rawSelf->firstIterationEntry_.get(runtime);
-  uint32_t newDataTableKeyIndex = 0;
-  while (entry) {
-    if (!entry->isDeleted()) {
-      keyHandle = entry->key.unboxToHV(runtime);
-      uint32_t bucket = hashToBucket(rawSelf->capacity_, runtime, *keyHandle);
+  const uint32_t mask = self->capacity_ - 1;
+  for (uint32_t i = 0; i < totalEntries; ++i) {
+    auto keySHV =
+        self->dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex);
+    if (!keySHV.isEmpty()) {
+      uint32_t bucket =
+          hashToBucket(self->capacity_, runtime, keySHV.unboxToHV(runtime));
       [[maybe_unused]] const uint32_t firstBucket = bucket;
-      while (!newHashTable->at(bucket).isEmpty()) {
+      while (!lv.newHashTable->at(bucket).isEmpty()) {
         // Find another bucket if it is not empty.
         bucket = (bucket + 1) & mask;
         assert(firstBucket != bucket && "Hash table is full!");
       }
       // Set the new entry to the bucket.
-      newDataTable->set(newDataTableKeyIndex, entry->key, runtime.getHeap());
+      lv.newDataTable->set(newDataTableKeyIndex, keySHV, runtime.getHeap());
       if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
-        newDataTable->set(
-            newDataTableKeyIndex + 1, entry->value, runtime.getHeap());
+        auto valueSHV =
+            self->dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex + 1);
+        lv.newDataTable->set(
+            newDataTableKeyIndex + 1, valueSHV, runtime.getHeap());
       }
-      entry->dataTableKeyIndex = newDataTableKeyIndex;
-      newHashTable->set(
-          bucket,
-          SmallHermesValue::encodeObjectValue(entry, runtime),
-          runtime.getHeap());
+      auto numberSHV =
+          SmallHermesValue::encodeNumberValue(newDataTableKeyIndex, runtime);
+      lv.newHashTable->set(bucket, numberSHV, runtime.getHeap());
       newDataTableKeyIndex += BucketType::kElementsPerEntry;
     }
-    entry = entry->nextIterationEntry.get(runtime);
+    oldDataTableKeyIndex += BucketType::kElementsPerEntry;
   }
+
+  NoAllocScope noAlloc{runtime};
+
+  OrderedHashMapBase<BucketType, Derived> *rawSelf = *self;
 
   // Adjust any active iterators to handle the fact that we removed deleted
   // entries in the new data table.
   rawSelf->updateIteratorIndicesForRehash(runtime);
 
   rawSelf->deletedCount_ = 0;
-  rawSelf->hashTable_.setNonNull(runtime, newHashTable, runtime.getHeap());
+  rawSelf->hashTable_.setNonNull(runtime, *lv.newHashTable, runtime.getHeap());
   assert(
       rawSelf->hashTable_.getNonNull(runtime)->size() == rawSelf->capacity_ &&
       "Inconsistent capacity");
-  rawSelf->dataTable_.setNonNull(runtime, newDataTable, runtime.getHeap());
+  rawSelf->dataTable_.setNonNull(runtime, *lv.newDataTable, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
 
@@ -472,20 +474,17 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
   // Find the bucket for this key. If the entry already exists, update the value
   // and return.
   {
-    // Note that SmallHermesValue::encodeHermesValue() may allocate, so we need
-    // to call it before getting raw pointer for entry.
-    auto shv =
-        SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
     OptValue<uint32_t> dataTableKeyIndex;
-    std::tie(dataTableKeyIndex, bucket) =
+    uint32_t newBucket;
+    std::tie(dataTableKeyIndex, newBucket) =
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    bucket = newBucket;
     if (dataTableKeyIndex.hasValue()) {
       // Element for the key already exists, update value and return.
-      auto entrySHV = self->hashTable_.getNonNull(runtime)->at(bucket);
-      BucketType *entry = vmcast<BucketType>(entrySHV.getObject(runtime));
-      entry->value.set(shv, runtime.getHeap());
+      auto valueSHV =
+          SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
       self->dataTable_.getNonNull(runtime)->set(
-          entry->dataTableKeyIndex + 1, shv, runtime.getHeap());
+          *dataTableKeyIndex + 1, valueSHV, runtime.getHeap());
       return ExecutionStatus::RETURNED;
     }
   }
@@ -545,71 +544,26 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
         "After rehash, we must be able to find an empty bucket");
   }
 
-  // Create a new entry, set the key and value.
-  // Allocate the new entry in the same generation as the hash table to avoid
-  // pointers from old gen to young gen.
-  auto crtRes = runtime.getHeap().inYoungGen(self->hashTable_.get(runtime))
-      ? BucketType::create(
-            runtime, self->dataTable_.getNonNull(runtime)->size())
-      : BucketType::createLongLived(
-            runtime, self->dataTable_.getNonNull(runtime)->size());
-  if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+  // Store the data table index in \p hashTable_ so we can go from hash table to
+  // the actual data
+  auto entryIndexSHV = SmallHermesValue::encodeNumberValue(
+      self->dataTable_.getNonNull(runtime)->size(), runtime);
+  self->hashTable_.getNonNull(runtime)->set(
+      bucket, entryIndexSHV, runtime.getHeap());
 
-  // Note that SmallHermesValue::encodeHermesValue() may allocate, so we need to
-  // call it and set to newMapEntry one at a time.
   lv.dataTable = self->dataTable_.getNonNull(runtime);
-  auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
-  auto k = SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
-  newMapEntry->key.set(k, runtime.getHeap());
   assert(
       lv.dataTable->size() < lv.dataTable->capacity() &&
       "Data table should always have enough capacity");
+  auto k = SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
   lv.dataTable->pushWithinCapacity(runtime, k);
   if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
     auto v =
         SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
-    newMapEntry->value.set(v, runtime.getHeap());
     lv.dataTable->pushWithinCapacity(runtime, v);
   }
 
-  // After here, no allocation
-  NoAllocScope noAlloc{runtime};
-  NoHandleScope noHandle{runtime};
-
-  // We can deref in NoAllocScope.
-  OrderedHashMapBase<BucketType, Derived> *rawSelf = *self;
-  GC &heap = runtime.getHeap();
-
-  // Set the newly inserted entry as the front of this bucket chain.
-  rawSelf->hashTable_.getNonNull(runtime)->set(
-      bucket,
-      SmallHermesValue::encodeObjectValue(*newMapEntry, runtime),
-      runtime.getHeap());
-
-  if (!rawSelf->firstIterationEntry_) {
-    // If we are inserting the first ever element, update
-    // first iteration entry pointer.
-    rawSelf->firstIterationEntry_.set(runtime, newMapEntry.get(), heap);
-    rawSelf->lastIterationEntry_.set(runtime, newMapEntry.get(), heap);
-  } else {
-    // Connect the new entry with the last entry.
-    rawSelf->lastIterationEntry_.getNonNull(runtime)->nextIterationEntry.set(
-        runtime, newMapEntry.get(), heap);
-    newMapEntry->prevIterationEntry.set(
-        runtime, rawSelf->lastIterationEntry_, heap);
-
-    BucketType *previousLastEntry = rawSelf->lastIterationEntry_.get(runtime);
-    rawSelf->lastIterationEntry_.set(runtime, newMapEntry.get(), heap);
-
-    if (previousLastEntry && previousLastEntry->isDeleted()) {
-      // If the last entry was a deleted entry, we no longer need to keep it.
-      rawSelf->removeLinkedListNode(runtime, previousLastEntry, heap);
-    }
-  }
-
-  rawSelf->size_++;
+  self->size_++;
   return ExecutionStatus::RETURNED;
 }
 
@@ -629,21 +583,9 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
   }
 
   // Mark the bucket as deleted. We remove this in rehash.
-  auto entrySHV = self->hashTable_.getNonNull(runtime)->at(bucket);
-  BucketType *entry = vmcast<BucketType>(entrySHV.getObject(runtime));
   deleteBucket(self, runtime, bucket, *dataTableKeyIndex);
-  entry->markDeleted(runtime);
   self->deletedCount_++;
   self->size_--;
-
-  // Now delete the entry from the iteration linked list.
-  // If we are deleting the last entry, don't remove it from the list yet.
-  // This will ensure that if any iterator out there is currently pointing to
-  // this entry, it will be able to follow on if we add new entries in the
-  // future.
-  if (entry != self->lastIterationEntry_.get(runtime)) {
-    self->removeLinkedListNode(runtime, entry, runtime.getHeap());
-  }
 
   if (shouldShrink(self->capacity_, self->size_))
     self->rehash(self, runtime);
@@ -725,18 +667,13 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
     Handle<Derived> self,
     Runtime &runtime) {
   self->assertInitialized();
-  if (!self->firstIterationEntry_) {
+  if (self->size_ == 0 && self->deletedCount_ == 0) {
     // Empty set.
     return ExecutionStatus::RETURNED;
   }
 
   // Clear the hash table.
   for (unsigned i = 0; i < self->capacity_; ++i) {
-    auto shv = self->hashTable_.getNonNull(runtime)->at(i);
-    // Delete every element reachable from the hash table.
-    if (shv.isObject()) {
-      vmcast<BucketType>(shv.getObject(runtime))->markDeleted(runtime);
-    }
     // Clear every element in the hash table.
     self->hashTable_.getNonNull(runtime)->setNonPtr(
         i, SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
@@ -753,14 +690,6 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
   self->iteratorIndices_->forEach(
       [](IteratorIndex &index) { index.setIsFirstIteration(true); });
 
-  // After clearing, we will still keep the last deleted entry
-  // in case there is an iterator out there
-  // pointing to the middle of the iteration chain. We need it to be
-  // able to merge back eventually.
-  self->firstIterationEntry_.set(
-      runtime, self->lastIterationEntry_, runtime.getHeap());
-  self->firstIterationEntry_.getNonNull(runtime)->prevIterationEntry.setNull(
-      runtime.getHeap());
   self->deletedCount_ = 0;
   self->size_ = 0;
   return ExecutionStatus::RETURNED;
