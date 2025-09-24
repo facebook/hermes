@@ -199,11 +199,14 @@ class OrderedHashMapBase {
   HermesValue iteratorValue(Runtime &runtime, const IteratorContext &iterCtx)
       const;
 
-  explicit OrderedHashMapBase();
+  explicit OrderedHashMapBase() {}
 
   /// This function should be invoked by child class' finalizer to do any final
   /// tasks on the GC before destructor gets called.
-  void cleanUp(GCCell *self, GC &gc) {}
+  void cleanUp(GCCell *self, GC &gc) {
+    uint32_t capacityInBytes = hashTable_.size() * sizeof(uint32_t);
+    gc.debitExternalMemory(self, capacityInBytes);
+  }
 
   /// Allocate the internal element storage.
   static ExecutionStatus initializeStorage(
@@ -214,17 +217,17 @@ class OrderedHashMapBase {
   /// Initial capacity of the hash table. Note that if this changes,
   /// test/hermes/set-iterator.js also needs to be updated because the tests
   /// depends on knowing when rehashes happen.
-  static constexpr uint32_t INITIAL_CAPACITY = 16;
+  static constexpr uint32_t kInitialCapacity = 16;
 
   void assertInitialized() const {
-    assert(hashTable_ && "Element storage uninitialized.");
+    assert(hashTable_.size() > 0 && "Element storage uninitialized.");
     assert(dataTable_ && "Data Table uninitialized.");
   }
 
  private:
   /// The hashtable, with size always equal to capacity_. The number of
   /// reachable entries from hashTable_ should be equal to size_.
-  GCPointer<StorageType> hashTable_{nullptr};
+  std::vector<uint32_t> hashTable_{};
 
   /// The data table is where the actual data for each hash table entry is
   /// stored. It's an array where each entry can use up multiple elements. For
@@ -260,12 +263,17 @@ class OrderedHashMapBase {
   /// Maximum capacity of the hash table. This is checked in rehash() and we
   /// won't grow the capacity past this number. This is calculated so that the
   /// data table size won't overflow uint32_t.
-  static constexpr uint32_t MAX_CAPACITY =
+  static constexpr uint32_t kMaxCapacity =
       StorageType::maxCapacityNoOverflow() / kGrowOrShrinkFactor /
       BucketType::kElementsPerEntry;
 
+  /// For representing when the hash table element is unused.
+  static constexpr uint32_t kHashTableElementUnused = kMaxCapacity + 1;
+  /// For epresenting when the hash table element is deleted.
+  static constexpr uint32_t kHashTableElementDeleted = kMaxCapacity + 2;
+
   /// Capacity of the hash table.
-  uint32_t capacity_{INITIAL_CAPACITY};
+  uint32_t capacity_{kInitialCapacity};
 
   /// Number of alive entries in the storage.
   uint32_t size_{0};
@@ -328,7 +336,7 @@ class OrderedHashMapBase {
     // Divide the capacity to get the number we want for comparison. Division
     // ensures there won't be overflow.
     return keyCount <= capacity / 8 &&
-        capacity > OrderedHashMapBase::INITIAL_CAPACITY;
+        capacity > OrderedHashMapBase::kInitialCapacity;
   }
 
   /// Determine if we should rehash the hash table based on the current key
@@ -350,24 +358,24 @@ class OrderedHashMapBase {
   /// Calculate the next capacity based on the current capacity and key count.
   /// If there are enough unused capacity, then the next capacity will shrink.
   /// Capacity will grow otherwise. In the case that capacity cannot grow
-  /// anymore, due to the increase would exceed MAX_CAPACITY, then RangeError
+  /// anymore, due to the increase would exceed kMaxCapacity, then RangeError
   /// will be raised.
   static CallResult<uint32_t>
   checkedNextCapacity(Runtime &runtime, uint32_t capacity, uint32_t keyCount) {
     if (!capacity)
-      return OrderedHashMapBase::INITIAL_CAPACITY;
+      return OrderedHashMapBase::kInitialCapacity;
 
     if (shouldShrink(capacity, keyCount)) {
       assert(
           (capacity / kGrowOrShrinkFactor) >=
-          OrderedHashMapBase::INITIAL_CAPACITY);
+          OrderedHashMapBase::kInitialCapacity);
       return capacity / kGrowOrShrinkFactor;
     }
     static_assert(
-        MAX_CAPACITY <= UINT32_MAX / kGrowOrShrinkFactor,
+        kMaxCapacity <= UINT32_MAX / kGrowOrShrinkFactor,
         "Avoid overflow on multiplying capacity by kGrowOrShrinkFactor");
     uint32_t newCapacity = capacity * kGrowOrShrinkFactor;
-    if (LLVM_UNLIKELY(newCapacity > MAX_CAPACITY)) {
+    if (LLVM_UNLIKELY(newCapacity > kMaxCapacity)) {
       if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
         return runtime.raiseRangeError("Cannot insert new data. Map is full.");
       } else {
@@ -401,9 +409,8 @@ class OrderedHashMapBase {
           runtime.getHeap());
     }
 
-    // Use NullValue to indicate that the bucket is deleted.
-    self->hashTable_.getNonNull(runtime)->set(
-        bucket, SmallHermesValue::encodeNullValue(), runtime.getHeap());
+    assert(bucket < self->capacity_ && "Hash table index >= capacity.");
+    self->hashTable_[bucket] = kHashTableElementDeleted;
   }
 
   /// Helper function for inserting key or key/value pair into the container.

@@ -124,14 +124,10 @@ class OrderedHashMapBase<BucketType, Derived>::IteratorIndex {
 };
 
 template <typename BucketType, typename Derived>
-OrderedHashMapBase<BucketType, Derived>::OrderedHashMapBase() {}
-
-template <typename BucketType, typename Derived>
 void OrderedHashMapBase<BucketType, Derived>::buildMetadata(
     const GCCell *cell,
     Metadata::Builder &mb) {
   const auto *self = static_cast<const Derived *>(cell);
-  mb.addField("hashTable", &self->hashTable_);
   mb.addField("dataTable", &self->dataTable_);
 }
 
@@ -140,19 +136,14 @@ template <typename BucketType, typename Derived>
 ExecutionStatus OrderedHashMapBase<BucketType, Derived>::initializeStorage(
     Handle<Derived> self,
     Runtime &runtime) {
-  auto hashTableRes =
-      StorageType::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
-  if (LLVM_UNLIKELY(hashTableRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  auto *hashTable = vmcast<StorageType>(*hashTableRes);
-  self->hashTable_.setNonNull(runtime, hashTable, runtime.getHeap());
+  self->hashTable_.resize(kInitialCapacity, kHashTableElementUnused);
+  runtime.getHeap().creditExternalMemory(
+      *self, kInitialCapacity * sizeof(uint32_t));
 
   // Create data table with corresponding capacity, but start off with 0 size.
   // Entries will be appended as the hash table receives elements.
   auto dataTableRes = StorageType::create(
-      runtime, dataTableAllocationSize(INITIAL_CAPACITY), 0 /* size */);
+      runtime, dataTableAllocationSize(kInitialCapacity), 0 /* size */);
   if (LLVM_UNLIKELY(dataTableRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -173,28 +164,22 @@ OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     Runtime &runtime,
     uint32_t bucket,
     HermesValue key) const {
-  assert(
-      hashTable_.getNonNull(runtime)->size() == capacity_ &&
-      "Inconsistent capacity");
+  assert(hashTable_.size() == capacity_ && "Inconsistent capacity");
   [[maybe_unused]] const uint32_t firstBucket = bucket;
 
   NoAllocScope noAlloc{runtime};
   NoHandleScope noHandle{runtime};
 
   // We can deref the handles because we are in NoAllocScope.
-  StorageType *hashTable = hashTable_.getNonNull(runtime);
   StorageType *dataTable = dataTable_.getNonNull(runtime);
   const uint32_t mask = capacity_ - 1;
 
-  // Each bucket must be either empty, deleted (Null) or BucketType.
-  while (true) {
-    auto shv = hashTable->at(bucket);
-    if (shv.isEmpty()) {
-      break;
-    }
-
-    if (!isDeleted(shv)) {
-      uint32_t dataTableKeyIndex = shv.getNumber(runtime);
+  // Each bucket must be either kHashTableElementUnused,
+  // kHashTableElementDeleted, or an index to the data table.
+  uint32_t dataTableKeyIndex;
+  assert(bucket < capacity_ && "Hash table index >= capacity.");
+  while ((dataTableKeyIndex = hashTable_[bucket]) != kHashTableElementUnused) {
+    if (dataTableKeyIndex != kHashTableElementDeleted) {
       auto keySHV = dataTable->at(dataTableKeyIndex);
       if (isSameValueZero(keySHV.unboxToHV(runtime), key)) {
         return {dataTableKeyIndex, bucket};
@@ -214,7 +199,6 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     Runtime &runtime,
     bool beforeAdd) {
   struct : public Locals {
-    PinnedValue<StorageType> newHashTable;
     PinnedValue<StorageType> newDataTable;
   } lv;
   LocalsRAII lraii(runtime, &lv);
@@ -229,11 +213,10 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   self->capacity_ = *newCapacity;
 
   // Create a new hash table.
-  auto hashTableRes = StorageType::create(runtime, *newCapacity, *newCapacity);
-  if (LLVM_UNLIKELY(hashTableRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.newHashTable.template castAndSetHermesValue<StorageType>(*hashTableRes);
+  std::vector<uint32_t> newHashTable;
+  newHashTable.resize(*newCapacity, kHashTableElementUnused);
+  runtime.getHeap().creditExternalMemory(
+      *self, *newCapacity * sizeof(uint32_t));
 
   // Create a new data table.
   auto dataTableRes = StorageType::create(
@@ -260,10 +243,12 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
       uint32_t bucket =
           hashToBucket(self->capacity_, runtime, keySHV.unboxToHV(runtime));
       [[maybe_unused]] const uint32_t firstBucket = bucket;
-      while (!lv.newHashTable->at(bucket).isEmpty()) {
-        // Find another bucket if it is not empty.
+      assert(bucket < *newCapacity && "Hash table index >= new capacity.");
+      while (newHashTable[bucket] != kHashTableElementUnused) {
+        // Find another bucket if it is already used.
         bucket = (bucket + 1) & mask;
         assert(firstBucket != bucket && "Hash table is full!");
+        assert(bucket < *newCapacity && "Hash table index >= new capacity.");
       }
       // Set the new entry to the bucket.
       lv.newDataTable->set(newDataTableKeyIndex, keySHV, runtime.getHeap());
@@ -273,9 +258,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
         lv.newDataTable->set(
             newDataTableKeyIndex + 1, valueSHV, runtime.getHeap());
       }
-      auto numberSHV =
-          SmallHermesValue::encodeNumberValue(newDataTableKeyIndex, runtime);
-      lv.newHashTable->set(bucket, numberSHV, runtime.getHeap());
+      assert(bucket < *newCapacity && "Hash table index >= new capacity.");
+      newHashTable[bucket] = newDataTableKeyIndex;
+
       newDataTableKeyIndex += BucketType::kElementsPerEntry;
     }
     oldDataTableKeyIndex += BucketType::kElementsPerEntry;
@@ -290,10 +275,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
   rawSelf->updateIteratorIndicesForRehash(runtime);
 
   rawSelf->deletedCount_ = 0;
-  rawSelf->hashTable_.setNonNull(runtime, *lv.newHashTable, runtime.getHeap());
-  assert(
-      rawSelf->hashTable_.getNonNull(runtime)->size() == rawSelf->capacity_ &&
-      "Inconsistent capacity");
+  uint32_t oldSizeInBytes = rawSelf->hashTable_.size() * sizeof(uint32_t);
+  rawSelf->hashTable_ = std::move(newHashTable);
+  runtime.getHeap().debitExternalMemory(*self, oldSizeInBytes);
   rawSelf->dataTable_.setNonNull(runtime, *lv.newDataTable, runtime.getHeap());
   return ExecutionStatus::RETURNED;
 }
@@ -473,10 +457,8 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
 
   // Store the data table index in \p hashTable_ so we can go from hash table to
   // the actual data
-  auto entryIndexSHV = SmallHermesValue::encodeNumberValue(
-      self->dataTable_.getNonNull(runtime)->size(), runtime);
-  self->hashTable_.getNonNull(runtime)->set(
-      bucket, entryIndexSHV, runtime.getHeap());
+  assert(bucket < self->capacity_ && "Hash table index >= capacity.");
+  self->hashTable_[bucket] = self->dataTable_.getNonNull(runtime)->size();
 
   lv.dataTable = self->dataTable_.getNonNull(runtime);
   assert(
@@ -600,15 +582,10 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
   }
 
   // Clear the hash table.
-  for (unsigned i = 0; i < self->capacity_; ++i) {
-    // Clear every element in the hash table.
-    self->hashTable_.getNonNull(runtime)->setNonPtr(
-        i, SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
-  }
+  self->hashTable_ = std::vector<uint32_t>();
   // Resize the hash table to the initial size.
-  StorageType::resizeWithinCapacity(
-      self->hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
-  self->capacity_ = INITIAL_CAPACITY;
+  self->hashTable_.resize(kInitialCapacity, kHashTableElementUnused);
+  self->capacity_ = kInitialCapacity;
 
   // Resize the data table back to 0.
   self->dataTable_.getNonNull(runtime)->clear(runtime);
