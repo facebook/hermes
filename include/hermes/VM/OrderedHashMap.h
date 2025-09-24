@@ -129,7 +129,8 @@ using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
 /// hash table, the entry is appended to the data table. The key and value of
 /// the entry are stored in-place at those slots. And then the hash table stores
 /// a number that allows us to index into the data table to look at the values
-/// later.
+/// later. When deleting an entry, the key and value elements in the data table
+/// are set to empty values to signify that they've been deleted.
 ///
 /// When the number of alive elements and deleted elements exceeds thresholds,
 /// we will perform a rehash. When rehashing, a new data table is allocated and
@@ -378,7 +379,24 @@ class OrderedHashMapBase {
   /// Mark the bucket as deleted.
   static void
   deleteBucket(Handle<Derived> self, Runtime &runtime, uint32_t bucket) {
-    /// Use NullValue to indicate that the bucket is deleted.
+    auto shv = self->hashTable_.getNonNull(runtime)->at(bucket);
+    auto *entry = vmcast<BucketType>(shv.getObject(runtime));
+    uint32_t dataTableKeyIndex = entry->dataTableKeyIndex;
+
+    // Use EmptyValue to indicate the corresponding elements in the data table
+    // are deleted.
+    self->dataTable_.getNonNull(runtime)->setNonPtr(
+        dataTableKeyIndex,
+        SmallHermesValue::encodeEmptyValue(),
+        runtime.getHeap());
+    if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+      self->dataTable_.getNonNull(runtime)->setNonPtr(
+          dataTableKeyIndex + 1,
+          SmallHermesValue::encodeEmptyValue(),
+          runtime.getHeap());
+    }
+
+    // Use NullValue to indicate that the bucket is deleted.
     self->hashTable_.getNonNull(runtime)->set(
         bucket, SmallHermesValue::encodeNullValue(), runtime.getHeap());
   }
