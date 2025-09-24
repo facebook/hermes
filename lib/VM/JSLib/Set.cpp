@@ -202,9 +202,8 @@ setFromSetFastPath(Runtime &runtime, Handle<JSSet> target, Handle<JSSet> src) {
   return JSSet::forEachNative(
       src,
       runtime,
-      [&target, &lv](
-          Runtime &runtime, Handle<HashSetEntry> entry) -> ExecutionStatus {
-        lv.keyHandle = entry->key.unboxToHV(runtime);
+      [&target, &lv](Runtime &runtime, HermesValue keyHV) -> ExecutionStatus {
+        lv.keyHandle = keyHV;
         if (LLVM_UNLIKELY(
                 JSSet::insert(target, runtime, lv.keyHandle) ==
                 ExecutionStatus::EXCEPTION)) {
@@ -598,8 +597,8 @@ CallResult<HermesValue> setPrototypeDifference(void *, Runtime &runtime) {
       auto forEachRes = JSSet::forEachNative(
           selfHandle,
           runtime,
-          [&lv, &otherSet](Runtime &runtime, Handle<HashSetEntry> entry) {
-            lv.tmp = entry->key.unboxToHV(runtime);
+          [&lv, &otherSet](Runtime &runtime, HermesValue keyHV) {
+            lv.tmp = keyHV;
             if (!otherSet->has(runtime, *lv.tmp)) {
               if (LLVM_UNLIKELY(
                       JSSet::insert(lv.resultSet, runtime, lv.tmp) ==
@@ -634,8 +633,8 @@ CallResult<HermesValue> setPrototypeDifference(void *, Runtime &runtime) {
     auto forEachRes = JSSet::forEachNative(
         lv.resultSet,
         runtime,
-        [&lv, &other](Runtime &runtime, Handle<HashSetEntry> entry) {
-          lv.tmp = entry->key.unboxToHV(runtime);
+        [&lv, &other](Runtime &runtime, HermesValue keyHV) {
+          lv.tmp = keyHV;
           // ii.1. let inOther be ?ToBoolean(?Call(otherRec.[[Has]],
           // otherRec.[[SetObject]], e))
           auto hasRes = Callable::executeCall1(
@@ -751,8 +750,8 @@ CallResult<HermesValue> setPrototypeIntersection(void *, Runtime &runtime) {
       auto forEachRes = JSSet::forEachNative(
           setToIterate,
           runtime,
-          [&lv, &setToCheck](Runtime &runtime, Handle<HashSetEntry> entry) {
-            lv.tmp = entry->key.unboxToHV(runtime);
+          [&lv, &setToCheck](Runtime &runtime, HermesValue keyHV) {
+            lv.tmp = keyHV;
             if (setToCheck->has(runtime, *lv.tmp)) {
               if (LLVM_UNLIKELY(
                       JSSet::insert(lv.resultSet, runtime, lv.tmp) ==
@@ -780,8 +779,8 @@ CallResult<HermesValue> setPrototypeIntersection(void *, Runtime &runtime) {
     auto forEachRes = JSSet::forEachNative(
         selfHandle,
         runtime,
-        [&lv, &other](Runtime &runtime, Handle<HashSetEntry> entry) {
-          lv.tmp = entry->key.unboxToHV(runtime);
+        [&lv, &other](Runtime &runtime, HermesValue keyHV) {
+          lv.tmp = keyHV;
           // 1. let inOther be ?ToBoolean(?Call(otherRec.[[Has]],
           // otherRec.[[SetObject]], e))
           auto hasRes = Callable::executeCall1(
@@ -1176,8 +1175,8 @@ CallResult<HermesValue> setPrototypeSymmetricDifference(
     auto forEachRes = JSSet::forEachNative(
         otherSet,
         runtime,
-        [&lv, &selfHandle](Runtime &runtime, Handle<HashSetEntry> entry) {
-          lv.tmp = entry->key.unboxToHV(runtime);
+        [&lv, &selfHandle](Runtime &runtime, HermesValue keyHV) {
+          lv.tmp = keyHV;
           if (selfHandle->has(runtime, *lv.tmp)) {
             JSSet::erase(lv.resultSet, runtime, lv.tmp);
           } else {
@@ -1306,8 +1305,8 @@ CallResult<HermesValue> setPrototypeUnion(void *, Runtime &runtime) {
       return ExecutionStatus::EXCEPTION;
     }
     auto forEachRes = JSSet::forEachNative(
-        otherSet, runtime, [&lv](Runtime &runtime, Handle<HashSetEntry> entry) {
-          lv.tmp = entry->key.unboxToHV(runtime);
+        otherSet, runtime, [&lv](Runtime &runtime, HermesValue keyHV) {
+          lv.tmp = keyHV;
           if (LLVM_UNLIKELY(
                   JSSet::insert(lv.resultSet, runtime, lv.tmp) ==
                   ExecutionStatus::EXCEPTION)) {

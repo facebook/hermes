@@ -78,7 +78,9 @@ class JSMapImpl final : public JSObject,
   }
 
   /// Call the native \p callbackfn for each entry, with \p thisArg as this.
-  /// \param callback: (Runtime &, Handle<HashMapEntryType>) -> ExecutionStatus.
+  /// \param callback Number of parameters depends on if this is a Map or Set.
+  /// For Map, (Runtime&, HermesValue, HermesValue) -> ExecutionStatus. For Set,
+  /// (Runtime&, HermesValue) -> ExecutionStatus.
   template <typename CB>
   static ExecutionStatus
   forEachNative(Handle<JSMapImpl> self, Runtime &runtime, CB callback) {
@@ -88,9 +90,21 @@ class JSMapImpl final : public JSObject,
     for (entry = self->iteratorNext(runtime); entry;
          entry = self->iteratorNext(runtime, entry.get())) {
       marker.flush();
-      if (LLVM_UNLIKELY(
-              callback(runtime, entry) == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
+      if constexpr (std::is_same_v<HashMapEntryType, HashMapEntry>) {
+        if (LLVM_UNLIKELY(
+                callback(
+                    runtime,
+                    entry->key.unboxToHV(runtime),
+                    entry->value.unboxToHV(runtime)) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      } else {
+        if (LLVM_UNLIKELY(
+                callback(runtime, entry->key.unboxToHV(runtime)) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
       }
     }
 

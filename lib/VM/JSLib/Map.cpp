@@ -163,10 +163,10 @@ mapFromMapFastPath(Runtime &runtime, Handle<JSMap> target, Handle<JSMap> src) {
   return JSMap::forEachNative(
       src,
       runtime,
-      [&target, &lv](
-          Runtime &runtime, Handle<HashMapEntry> entry) -> ExecutionStatus {
-        lv.keyHandle = entry->key.unboxToHV(runtime);
-        lv.valueHandle = entry->value.unboxToHV(runtime);
+      [&target, &lv](Runtime &runtime, HermesValue keyHV, HermesValue valueHV)
+          -> ExecutionStatus {
+        lv.keyHandle = keyHV;
+        lv.valueHandle = valueHV;
         if (LLVM_UNLIKELY(
                 JSMap::insert(target, runtime, lv.keyHandle, lv.valueHandle) ==
                 ExecutionStatus::EXCEPTION)) {
