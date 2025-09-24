@@ -436,6 +436,9 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
       self->hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
   self->capacity_ = INITIAL_CAPACITY;
 
+  // Resize the data table back to 0.
+  self->dataTable_.getNonNull(runtime)->clear(runtime);
+
   // After clearing, we will still keep the last deleted entry
   // in case there is an iterator out there
   // pointing to the middle of the iteration chain. We need it to be
