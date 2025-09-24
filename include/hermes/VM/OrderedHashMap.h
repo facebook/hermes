@@ -228,7 +228,9 @@ class OrderedHashMapBase {
   }
 
  protected:
-  /// Initial capacity of the hash table.
+  /// Initial capacity of the hash table. Note that if this changes,
+  /// test/hermes/set-iterator.js also needs to be updated because the tests
+  /// depends on knowing when rehashes happen.
   static constexpr uint32_t INITIAL_CAPACITY = 16;
 
   void assertInitialized() const {
@@ -255,6 +257,8 @@ class OrderedHashMapBase {
   GCPointer<BucketType> lastIterationEntry_{nullptr};
 
   /// The multiplier that the hash table grows or shrinks by each rehash.
+  /// Note that if this changes, test/hermes/set-iterator.js also needs to be
+  /// updated because the tests depends on knowing when rehashes happen.
   static constexpr uint32_t kGrowOrShrinkFactor{2};
 
   /// Maximum capacity of the hash table. This is checked in rehash() and we
@@ -337,7 +341,9 @@ class OrderedHashMapBase {
   /// Determine the number of elements (alive and deleted) before a rehash
   /// should happen.
   static constexpr uint32_t rehashThreshold(uint32_t capacity) {
-    // `>> 1` means that we're using a load factor of 0.5
+    // `>> 1` means that we're using a load factor of 0.5 Note that if this
+    // changes, test/hermes/set-iterator.js also needs to be updated because the
+    // tests depends on knowing when rehashes happen.
     return capacity >> 1;
   }
 
