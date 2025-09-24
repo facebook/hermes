@@ -54,22 +54,17 @@ class JSMapImpl final : public JSObject,
       Handle<Callable> callbackfn,
       Handle<> thisArg) {
     self->assertInitialized();
-    MutableHandle<HashMapEntryType> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
-    for (entry = self->iteratorNext(runtime); entry;
-         entry = self->iteratorNext(runtime, entry.get())) {
+    auto iterCtx = self->newIterator(runtime);
+    while (self->advanceIterator(runtime, iterCtx)) {
       marker.flush();
-      SmallHermesValue key = entry->key;
-      assert(!key.isEmpty() && "Invalid key encountered");
-      SmallHermesValue value = entry->getValue();
-      assert(!value.isEmpty() && "Invalid value encountered");
       if (LLVM_UNLIKELY(
               Callable::executeCall3(
                   callbackfn,
                   runtime,
                   thisArg,
-                  value.unboxToHV(runtime),
-                  key.unboxToHV(runtime),
+                  self->iteratorValue(runtime, iterCtx),
+                  self->iteratorKey(runtime, iterCtx),
                   self.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -85,23 +80,22 @@ class JSMapImpl final : public JSObject,
   static ExecutionStatus
   forEachNative(Handle<JSMapImpl> self, Runtime &runtime, CB callback) {
     self->assertInitialized();
-    MutableHandle<HashMapEntryType> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
-    for (entry = self->iteratorNext(runtime); entry;
-         entry = self->iteratorNext(runtime, entry.get())) {
+    auto iterCtx = self->newIterator(runtime);
+    while (self->advanceIterator(runtime, iterCtx)) {
       marker.flush();
       if constexpr (std::is_same_v<HashMapEntryType, HashMapEntry>) {
         if (LLVM_UNLIKELY(
                 callback(
                     runtime,
-                    entry->key.unboxToHV(runtime),
-                    entry->value.unboxToHV(runtime)) ==
+                    self->iteratorKey(runtime, iterCtx),
+                    self->iteratorValue(runtime, iterCtx)) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
       } else {
         if (LLVM_UNLIKELY(
-                callback(runtime, entry->key.unboxToHV(runtime)) ==
+                callback(runtime, self->iteratorKey(runtime, iterCtx)) ==
                 ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
@@ -116,6 +110,10 @@ class JSMapImpl final : public JSObject,
       Handle<JSObject> parent,
       Handle<HiddenClass> clazz)
       : JSObject(runtime, *parent, *clazz) {}
+
+ private:
+  /// Finalizer function to be called when GC is cleaning up this object.
+  static void _finalizeImpl(GCCell *cell, GC &gc);
 };
 
 /// JSMapTypeTraits binds iterator type and its corresponding container type.

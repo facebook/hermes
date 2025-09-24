@@ -870,7 +870,6 @@ CallResult<HermesValue> setPrototypeIsDisjointFrom(void *, Runtime &runtime) {
     PinnedValue<Callable> otherHasMethod;
     PinnedValue<Callable> otherKeysMethod;
     PinnedValue<> tmp;
-    PinnedValue<HashSetEntry> entry;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
@@ -903,12 +902,12 @@ CallResult<HermesValue> setPrototypeIsDisjointFrom(void *, Runtime &runtime) {
           runtime.setPrototypeValues.getHermesValue().getRaw();
     }
     if (LLVM_LIKELY(fastPath)) {
-      const JSSet *setToIterate =
-          thisSize <= otherSize ? *selfHandle : otherSet;
-      const JSSet *setToCheck = thisSize <= otherSize ? otherSet : *selfHandle;
-      for (auto entry = setToIterate->iteratorNext(runtime); entry;
-           entry = setToIterate->iteratorNext(runtime, entry)) {
-        if (setToCheck->has(runtime, entry->key.unboxToHV(runtime))) {
+      JSSet *setToIterate = thisSize <= otherSize ? *selfHandle : otherSet;
+      JSSet *setToCheck = thisSize <= otherSize ? otherSet : *selfHandle;
+      JSSet::IteratorContext iterCtx = setToIterate->newIterator(runtime);
+      while (setToIterate->advanceIterator(runtime, iterCtx)) {
+        if (setToCheck->has(
+                runtime, setToIterate->iteratorKey(runtime, iterCtx))) {
           return HermesValue::encodeBoolValue(false);
         }
       }
@@ -923,13 +922,16 @@ CallResult<HermesValue> setPrototypeIsDisjointFrom(void *, Runtime &runtime) {
     //   i. Let e be O.[[SetData]][index]
     //   ii. Set index to index + 1
     //   iii. If e is not EMPTY, then
-    for (lv.entry = selfHandle->iteratorNext(runtime); lv.entry.get();
-         lv.entry = selfHandle->iteratorNext(runtime, lv.entry.get())) {
+    JSSet::IteratorContext iterCtx = selfHandle->newIterator(runtime);
+    while (selfHandle->advanceIterator(runtime, iterCtx)) {
       GCScopeMarkerRAII marker{runtime};
       // 1. Let inOther be ToBoolean(?Call(otherRec.[[Has]],
       //    otherRec.[[SetObject]], e))
       auto hasRes = Callable::executeCall1(
-          lv.otherHasMethod, runtime, other, lv.entry->key.unboxToHV(runtime));
+          lv.otherHasMethod,
+          runtime,
+          other,
+          selfHandle->iteratorKey(runtime, iterCtx));
       if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -992,7 +994,6 @@ CallResult<HermesValue> setPrototypeIsSubsetOf(void *, Runtime &runtime) {
   struct : Locals {
     PinnedValue<Callable> otherHasMethod;
     PinnedValue<Callable> otherKeysMethod;
-    PinnedValue<HashSetEntry> entry;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
@@ -1017,13 +1018,16 @@ CallResult<HermesValue> setPrototypeIsSubsetOf(void *, Runtime &runtime) {
   //   a. Let e be O.[[SetData]][index]
   //   b. Set index to index + 1
   //   c. If e is not EMPTY, then
-  for (lv.entry = selfHandle->iteratorNext(runtime); lv.entry.get();
-       lv.entry = selfHandle->iteratorNext(runtime, lv.entry.get())) {
+  JSSet::IteratorContext iterCtx = selfHandle->newIterator(runtime);
+  while (selfHandle->advanceIterator(runtime, iterCtx)) {
     GCScopeMarkerRAII marker{runtime};
     // i. Let inOther be ToBoolean(?Call(otherRec.[[Has]],
     //    otherRec.[[SetObject]], e))
     auto hasRes = Callable::executeCall1(
-        lv.otherHasMethod, runtime, other, lv.entry->key.unboxToHV(runtime));
+        lv.otherHasMethod,
+        runtime,
+        other,
+        selfHandle->iteratorKey(runtime, iterCtx));
     if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1077,9 +1081,9 @@ CallResult<HermesValue> setPrototypeIsSupersetOf(void *, Runtime &runtime) {
       runtime.setPrototypeValues.getHermesValue().getRaw();
   if (LLVM_LIKELY(otherSet && originalKeys)) {
     NoAllocScope noAlloc{runtime};
-    for (auto entry = otherSet->iteratorNext(runtime); entry;
-         entry = otherSet->iteratorNext(runtime, entry)) {
-      if (!selfHandle->has(runtime, entry->key.unboxToHV(runtime))) {
+    JSSet::IteratorContext iterCtx = otherSet->newIterator(runtime);
+    while (otherSet->advanceIterator(runtime, iterCtx)) {
+      if (!selfHandle->has(runtime, otherSet->iteratorKey(runtime, iterCtx))) {
         return HermesValue::encodeBoolValue(false);
       }
     }

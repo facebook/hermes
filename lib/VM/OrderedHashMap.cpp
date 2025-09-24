@@ -68,6 +68,111 @@ template class HashMapEntryBase<HashMapEntryKey>;
 // class OrderedHashMapBase
 
 template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::IteratorContext::reset() {
+  if (index_ != nullptr) {
+    index_->free();
+  }
+  index_ = nullptr;
+  storage_ = nullptr;
+}
+
+/// A ManagedChunkedList element that stores the iterator index that should be
+/// accessed next.
+template <typename BucketType, typename Derived>
+class OrderedHashMapBase<BucketType, Derived>::IteratorIndex {
+ public:
+  /// \return the iterator index value
+  uint32_t getValue() const {
+    assert(!isFree() && "Value not present");
+    return value_;
+  }
+
+  /// Sets the iterator index value
+  void setValue(uint32_t value) {
+    assert(!isFree() && "Value not present");
+    value_ = value;
+  }
+
+  /// \return whether an initial iteration has been done using this
+  /// IteratorIndex
+  bool getIsFirstIteration() const {
+    assert(!isFree() && "Value not present");
+    return isFirstIteration_;
+  }
+
+  /// Sets the state indicating whether an initial iteration has been done
+  /// using this IteratorIndex. This is needed because we want to skip
+  /// advancing the index value one time after a clear or if it's newly
+  /// created.
+  void setIsFirstIteration(bool isFirstIteration) {
+    assert(!isFree() && "Value not present");
+    isFirstIteration_ = isFirstIteration;
+    if (isFirstIteration)
+      value_ = 0;
+  }
+
+  /// Set the element to free, this can be called from either the mutator
+  /// (when destroying an iterator) or the background thread (in finalizer).
+  void free() {
+    /// There are three operations related to this atomic variable:
+    /// 1. Freeing the element on background thread.
+    /// 2. Checking if the element is free on the mutator.
+    /// 3. Freeing and reusing the element on the mutator.
+    /// Since the only operation that background thread can do with the
+    /// element is freeing it, we don't need a barrier to order the store.
+    free_.store(true, std::memory_order_relaxed);
+  }
+
+  // Methods required by ManagedChunkedList.
+
+  IteratorIndex() = default;
+
+  /// \return true if the element has been freed. As noted in free(), since
+  /// background thread can only free a element, we don't need a stricter
+  /// order.
+  bool isFree() const {
+    return free_.load(std::memory_order_relaxed);
+  }
+
+  /// Get the next free element. Must not be called when this instance is
+  /// occupied with a value.
+  IteratorIndex *getNextFree() {
+    assert(isFree() && "Can only get nextFree on a free element");
+    return nextFree_;
+  }
+
+  /// Set the next free element. Must not be called when this instance is
+  /// occupied with a value.
+  void setNextFree(IteratorIndex *nextFree) {
+    assert(isFree() && "Can only set nextFree on a free element");
+    nextFree_ = nextFree;
+  }
+
+  /// Emplace new value to this element.
+  void emplace() {
+    assert(isFree() && "Emplacing already occupied element");
+    free_.store(false, std::memory_order_relaxed);
+    setIsFirstIteration(true);
+  }
+
+ private:
+  union {
+    /// Stores the index to the data table.
+    uint32_t value_;
+    IteratorIndex *nextFree_;
+  };
+  /// Indicates whether an iteration has been performed using this
+  /// IteratorIndex. This is used for newly created IteratorIndex and any
+  /// active IteratorIndex when a clear operation is performed on the hash
+  /// table. Used by the advanceIterator function to know whether to update
+  /// the index value.
+  bool isFirstIteration_;
+  /// Atomic state represents whether the element is free. It can be written
+  /// by background thread (in finalizer) and read/written by mutator.
+  std::atomic<bool> free_{true};
+};
+
+template <typename BucketType, typename Derived>
 OrderedHashMapBase<BucketType, Derived>::OrderedHashMapBase() {}
 
 template <typename BucketType, typename Derived>
@@ -79,6 +184,38 @@ void OrderedHashMapBase<BucketType, Derived>::buildMetadata(
   mb.addField("dataTable", &self->dataTable_);
   mb.addField("firstIterationEntry", &self->firstIterationEntry_);
   mb.addField("lastIterationEntry", &self->lastIterationEntry_);
+}
+
+/// Allocate the internal element storage.
+template <typename BucketType, typename Derived>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::initializeStorage(
+    Handle<Derived> self,
+    Runtime &runtime) {
+  auto hashTableRes =
+      StorageType::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
+  if (LLVM_UNLIKELY(hashTableRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto *hashTable = vmcast<StorageType>(*hashTableRes);
+  self->hashTable_.setNonNull(runtime, hashTable, runtime.getHeap());
+
+  // Create data table with corresponding capacity, but start off with 0 size.
+  // Entries will be appended as the hash table receives elements.
+  auto dataTableRes = StorageType::create(
+      runtime, dataTableAllocationSize(INITIAL_CAPACITY), 0 /* size */);
+  if (LLVM_UNLIKELY(dataTableRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto *dataTable = vmcast<StorageType>(*dataTableRes);
+  self->dataTable_.setNonNull(runtime, dataTable, runtime.getHeap());
+
+  // Create iterator metadata storage
+  self->iteratorIndices_ = std::make_shared<ManagedChunkedList<IteratorIndex>>(
+      0.5 /* occupancyRatio */, 0.5 /* sizingWeight */);
+
+  return ExecutionStatus::RETURNED;
 }
 
 template <typename BucketType, typename Derived>
@@ -436,6 +573,75 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
     self->rehash(self, runtime);
 
   return true;
+}
+
+template <typename BucketType, typename Derived>
+typename OrderedHashMapBase<BucketType, Derived>::IteratorContext
+OrderedHashMapBase<BucketType, Derived>::newIterator(Runtime &runtime) {
+  return IteratorContext(iteratorIndices_->add(), iteratorIndices_);
+}
+
+template <typename BucketType, typename Derived>
+bool OrderedHashMapBase<BucketType, Derived>::advanceIterator(
+    Runtime &runtime,
+    IteratorContext &iterCtx) {
+  uint32_t i = 0;
+
+  assert(iterCtx.initialized() && "Invalid IteratorContext");
+  IteratorIndex *index = iterCtx.index_;
+
+  // Check if the iterator was newly created or was reset due to clearing the
+  // OrderedHashMap. In both cases, we won't advance the index this time around
+  // since the index is already at 0.
+  if (!index->getIsFirstIteration()) {
+    // Advance to the next entry.
+    i = index->getValue() + 1;
+  } else {
+    index->setIsFirstIteration(false);
+  }
+
+  // The iterator index might be pointing to a deleted element, so need to
+  // iterate and find the next one that isn't deleted.
+  for (; i < size_ + deletedCount_; ++i) {
+    if (!dataTable_.getNonNull(runtime)
+             ->at(i * BucketType::kElementsPerEntry)
+             .isEmpty()) {
+      // Found valid element
+      index->setValue(i);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+template <typename BucketType, typename Derived>
+HermesValue OrderedHashMapBase<BucketType, Derived>::iteratorKey(
+    Runtime &runtime,
+    const IteratorContext &iterCtx) const {
+  assert(iterCtx.initialized() && "Invalid IteratorContext");
+  auto shv = dataTable_.getNonNull(runtime)->at(
+      iterCtx.index_->getValue() * BucketType::kElementsPerEntry);
+  assert(!shv.isEmpty() && "Invalid key encountered");
+  return shv.unboxToHV(runtime);
+}
+
+template <typename BucketType, typename Derived>
+HermesValue OrderedHashMapBase<BucketType, Derived>::iteratorValue(
+    Runtime &runtime,
+    const IteratorContext &iterCtx) const {
+  assert(iterCtx.initialized() && "Invalid IteratorContext");
+  if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+    auto shv = dataTable_.getNonNull(runtime)->at(
+        iterCtx.index_->getValue() * BucketType::kElementsPerEntry + 1);
+    assert(!shv.isEmpty() && "Invalid value encountered");
+    return shv.unboxToHV(runtime);
+  } else {
+    auto shv = dataTable_.getNonNull(runtime)->at(
+        iterCtx.index_->getValue() * BucketType::kElementsPerEntry);
+    assert(!shv.isEmpty() && "Invalid key encountered");
+    return shv.unboxToHV(runtime);
+  }
 }
 
 template <typename BucketType, typename Derived>

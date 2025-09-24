@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_ORDERED_HASHMAP_H
 #define HERMES_VM_ORDERED_HASHMAP_H
 
+#include "hermes/ADT/ManagedChunkedList.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Runtime.h"
@@ -136,6 +137,9 @@ using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
 /// we will perform a rehash. When rehashing, a new data table is allocated and
 /// only the elements that aren't deleted are copied to the new data table.
 ///
+/// Iterators can simply keep an index to the data table because all the values
+/// are appended in insertion order.
+///
 /// We chose linear probing for open addressing. It's simple and possibly faster
 /// than quadratic probing because of memory locality. With a simple test case
 /// to insert integers as keys, we didn't see any performance gain with
@@ -146,9 +150,75 @@ using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
 /// pairs. Derived in the class template should be the child gc-managed class.
 template <typename BucketType, typename Derived>
 class OrderedHashMapBase {
+ private:
+  class IteratorIndex;
+
  public:
   using Entry = BucketType;
   using StorageType = ArrayStorageSmall;
+
+  /// This is a helper RAII class to hand out to consumers of
+  /// OrderedHashMapBase. It is used as context parameter to the iterator
+  /// related functions. Internally it contains the IteratorIndex holding where
+  /// the iterator should read next. It'll also handle marking IteratorIndex as
+  /// free during destruction.
+  class IteratorContext {
+   public:
+    /// Constructs an uninitialized instance
+    explicit IteratorContext() {}
+    /// Constructs an initialized instance with IteratorIndex
+    explicit IteratorContext(
+        IteratorIndex &index,
+        const std::shared_ptr<ManagedChunkedList<IteratorIndex>> &storage)
+        : index_(&index), storage_(storage) {
+      assert(storage != nullptr && "Must hold shared ownership of the storage");
+    }
+
+    /// Destructor handles marking the IteratorIndex as free for
+    /// ManagedChunkedList.
+    ~IteratorContext() {
+      reset();
+    }
+
+    /// \return true if there is an IteratorIndex stored in this context
+    bool initialized() const {
+      return index_ != nullptr;
+    }
+
+    /// Mark the internal IteratorIndex as free and clear reference to it.
+    void reset();
+
+    /// Move constructor & assignment operator are allowed.
+    IteratorContext(IteratorContext &&other)
+        : index_(other.index_), storage_(std::move(other.storage_)) {
+      other.index_ = nullptr;
+    }
+
+    IteratorContext &operator=(IteratorContext &&other) {
+      reset();
+      index_ = other.index_;
+      storage_ = std::move(other.storage_);
+      other.index_ = nullptr;
+      return *this;
+    }
+
+    /// Disallow copy constructor & assignment operator.
+    IteratorContext(const IteratorContext &) = delete;
+    IteratorContext &operator=(const IteratorContext &) = delete;
+
+   private:
+    friend class OrderedHashMapBase;
+
+    /// Optionally holds a pointer of IteratorIndex. This is used to know
+    /// which element in the data table an iterator should access next.
+    IteratorIndex *index_ = nullptr;
+
+    // Holds shared ownership of the ManagedChunkedList to ensure the pointer
+    // held by \p index_ remains valid. This is because there is no guarantee to
+    // the ordering of finalizers being run. Also see comment on
+    // OrderedHashMapBase's \p iteratorIndices_.
+    std::shared_ptr<ManagedChunkedList<IteratorIndex>> storage_ = nullptr;
+  };
 
   static void buildMetadata(const GCCell *cell, Metadata::Builder &mb);
 
@@ -191,6 +261,32 @@ class OrderedHashMapBase {
     return size_;
   }
 
+  /// Creates a new iterator.
+  /// \return IteratorContext that caller should be using in subsequent calls to
+  /// other iterator functions
+  IteratorContext newIterator(Runtime &runtime);
+
+  /// Advances the iterator and updates the context.
+  /// \param iterCtx IteratorContext to be modified. On success, the internal
+  /// IteratorIndex is updated.
+  /// \return true if the iterator successfully advances to the next hash table
+  /// element, false if the iterator reaches the end of all hash table elements.
+  bool advanceIterator(Runtime &runtime, IteratorContext &iterCtx);
+
+  /// Reads the key. This must be used immediately after \c advanceIterator
+  /// before any other operations are done on the hash table.
+  /// \param iterCtx IteratorContext must be initialized
+  /// \return Key of the hash table entry where the iterator is currently at
+  HermesValue iteratorKey(Runtime &runtime, const IteratorContext &iterCtx)
+      const;
+
+  /// Reads the value. This must be used immediately after \c advanceIterator
+  /// before any other operations are done on the hash table.
+  /// \param iterCtx IteratorContext must be initialized
+  /// \return Value of the hash table entry where the iterator is currently at
+  HermesValue iteratorValue(Runtime &runtime, const IteratorContext &iterCtx)
+      const;
+
   /// \return the next element in insertion order.
   /// If \p entry is nullptr, we are starting the iteration from the first
   /// entry that is not deleted.
@@ -200,32 +296,14 @@ class OrderedHashMapBase {
 
   explicit OrderedHashMapBase();
 
+  /// This function should be invoked by child class' finalizer to do any final
+  /// tasks on the GC before destructor gets called.
+  void cleanUp(GCCell *self, GC &gc) {}
+
   /// Allocate the internal element storage.
   static ExecutionStatus initializeStorage(
       Handle<Derived> self,
-      Runtime &runtime) {
-    auto hashTableRes =
-        StorageType::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
-    if (LLVM_UNLIKELY(hashTableRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    auto *hashTable = vmcast<StorageType>(*hashTableRes);
-    self->hashTable_.setNonNull(runtime, hashTable, runtime.getHeap());
-
-    // Create data table with corresponding capacity, but start off with 0 size.
-    // Entries will be appended as the hash table receives elements.
-    auto dataTableRes = StorageType::create(
-        runtime, dataTableAllocationSize(INITIAL_CAPACITY), 0 /* size */);
-    if (LLVM_UNLIKELY(dataTableRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    auto *dataTable = vmcast<StorageType>(*dataTableRes);
-    self->dataTable_.setNonNull(runtime, dataTable, runtime.getHeap());
-
-    return ExecutionStatus::RETURNED;
-  }
+      Runtime &runtime);
 
  protected:
   /// Initial capacity of the hash table. Note that if this changes,
@@ -249,6 +327,25 @@ class OrderedHashMapBase {
   /// array. We do this so that we could avoid doing new allocation for each
   /// entry of the hash table. Less allocations mean less GC time.
   GCPointer<StorageType> dataTable_{nullptr};
+
+  /// Stores the index to the data table where an iterator is supposed to read
+  /// the value next. Upon each rehash and clear, all of the indices will be
+  /// updated. The ManagedChunkedList takes care of allocating space when
+  /// needed, making use of the free elements, and provides a way to loop
+  /// through existing elements.
+  ///
+  /// The ManagedChunkedList is held in a shared_ptr for two reasons:
+  /// 1) This class hands out IteratorContext to JSMapImpl and
+  /// JSMapIteratorImpl. This class doesn't keep a list of objects that hold
+  /// IteratorContext, so there is no way for it to null out IteratorIndex
+  /// pointers.
+  /// 2) There is no ordering guarantee on the finalizers of JSMapImpl and
+  /// JSMapIteratorImpl. It is possible for the JSMapImpl finalizer to run first
+  /// before the JSMapIteratorImpl finalizer.
+  ///
+  /// Since in the JSMapIteratorImpl finalizer, it needs to mark IteratorIndex
+  /// as free, the ManagedChunkedList needs to stay alive for that finalizer.
+  std::shared_ptr<ManagedChunkedList<IteratorIndex>> iteratorIndices_{nullptr};
 
   /// The first entry ever inserted. We need this entry to begin an iteration.
   GCPointer<BucketType> firstIterationEntry_{nullptr};

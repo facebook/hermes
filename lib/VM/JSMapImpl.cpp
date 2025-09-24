@@ -17,24 +17,28 @@ namespace vm {
 // class JSMapImpl
 
 void JSMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.setVTable(&JSMap::vt);
   JSMap::buildMetadata(cell, mb);
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<JSMapImpl<CellKind::JSMapKind>>());
   JSObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSMap::vt);
 }
 
 void JSSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.setVTable(&JSSet::vt);
   JSSet::buildMetadata(cell, mb);
   mb.addJSObjectOverlapSlots(
       JSObject::numOverlapSlots<JSMapImpl<CellKind::JSSetKind>>());
   JSObjectBuildMeta(cell, mb);
+  mb.setVTable(&JSSet::vt);
 }
 
 template <CellKind C>
 const ObjectVTable JSMapImpl<C>::vt{
-    VTable(C, cellSize<JSMapImpl<C>>()),
+    VTable(
+        C,
+        cellSize<JSMapImpl<C>>(),
+        false /* allowLargeAlloc */,
+        JSMapImpl<C>::_finalizeImpl),
     JSMapImpl::_getOwnIndexedRangeImpl,
     JSMapImpl::_haveOwnIndexedImpl,
     JSMapImpl::_getOwnIndexedPropertyFlagsImpl,
@@ -45,10 +49,17 @@ const ObjectVTable JSMapImpl<C>::vt{
 };
 
 template <CellKind C>
+void JSMapImpl<C>::_finalizeImpl(GCCell *cell, GC &gc) {
+  auto *self = vmcast<JSMapImpl<C>>(cell);
+  self->cleanUp(cell, gc);
+  self->~JSMapImpl<C>();
+}
+
+template <CellKind C>
 PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime.makeAFixed<JSMapImpl>(
+  auto *cell = runtime.makeAFixed<JSMapImpl, HasFinalizer::Yes>(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
