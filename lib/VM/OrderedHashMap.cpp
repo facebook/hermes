@@ -714,25 +714,6 @@ HermesValue OrderedHashMapBase<BucketType, Derived>::iteratorValue(
 }
 
 template <typename BucketType, typename Derived>
-BucketType *OrderedHashMapBase<BucketType, Derived>::iteratorNext(
-    Runtime &runtime,
-    BucketType *entry) const {
-  if (entry == nullptr) {
-    // Starting a new iteration from the first entry.
-    entry = firstIterationEntry_.get(runtime);
-  } else {
-    // Advance to the next entry.
-    entry = entry->nextIterationEntry.get(runtime);
-  }
-
-  // Make sure the entry we returned (if not nullptr) must not be deleted.
-  while (entry && entry->isDeleted()) {
-    entry = entry->nextIterationEntry.get(runtime);
-  }
-  return entry;
-}
-
-template <typename BucketType, typename Derived>
 ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
     Handle<Derived> self,
     Runtime &runtime) {

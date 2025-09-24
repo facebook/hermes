@@ -292,13 +292,6 @@ class OrderedHashMapBase {
   HermesValue iteratorValue(Runtime &runtime, const IteratorContext &iterCtx)
       const;
 
-  /// \return the next element in insertion order.
-  /// If \p entry is nullptr, we are starting the iteration from the first
-  /// entry that is not deleted.
-  /// Otherwise, we look for the next element after \p entry that is not
-  /// deleted.
-  BucketType *iteratorNext(Runtime &runtime, BucketType *entry = nullptr) const;
-
   explicit OrderedHashMapBase();
 
   /// This function should be invoked by child class' finalizer to do any final

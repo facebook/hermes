@@ -81,7 +81,6 @@ void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapIteratorImpl<C> *>(cell);
   mb.addField("data", &self->data_);
-  mb.addField("itr", &self->itr_);
 }
 
 void JSMapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {

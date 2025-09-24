@@ -256,9 +256,6 @@ class JSMapIteratorImpl final : public JSObject {
   /// initialized or the iteration has ended.
   GCPointer<JSMapImpl<JSMapTypeTraits<C>::ContainerKind>> data_{nullptr};
 
-  /// Iteration pointer to the element storage in the Map.
-  GCPointer<HashMapEntryType> itr_{nullptr};
-
   /// Holds context for the iterator.
   typename JSMapImpl<JSMapTypeTraits<C>::ContainerKind>::IteratorContext
       iterCtx_{};
