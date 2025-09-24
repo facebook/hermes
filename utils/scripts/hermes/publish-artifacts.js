@@ -17,6 +17,7 @@ import type {BuildType} from './version-utils';
 const {
   getVersion,
   updateGradlePropertiesFile,
+  updatePackageJsonVersion,
   validateBuildType,
 } = require('./version-utils');
 const {echo, exec, exit, popd, pushd} = require('shelljs');
@@ -63,6 +64,7 @@ async function publishArtifacts(
     version = await getVersion(buildType);
   }
   await updateGradlePropertiesFile(version);
+  await updatePackageJsonVersion(version);
 
   pushd('android');
   await publishAndroidArtifactsToMaven(version, buildType);
