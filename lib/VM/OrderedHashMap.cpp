@@ -356,6 +356,10 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
     entry = entry->nextIterationEntry.get(runtime);
   }
 
+  // Adjust any active iterators to handle the fact that we removed deleted
+  // entries in the new data table.
+  rawSelf->updateIteratorIndicesForRehash(runtime);
+
   rawSelf->deletedCount_ = 0;
   rawSelf->hashTable_.setNonNull(runtime, newHashTable, runtime.getHeap());
   assert(
@@ -363,6 +367,71 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
       "Inconsistent capacity");
   rawSelf->dataTable_.setNonNull(runtime, newDataTable, runtime.getHeap());
   return ExecutionStatus::RETURNED;
+}
+
+template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::updateIteratorIndicesForRehash(
+    Runtime &runtime) {
+  // For each of the deleted entry, we store the entry index to help iterators
+  // adjust their entry index in the next step.
+  // Suppose you have the following data table (kElementsPerEntry = 1), and 'x'
+  // marks the deleted entries.
+  // entry index: 0 1 2 3 4 5 6 7 8
+  //            : 0 x 2 x 4 x 6 x 8
+  // We'll record the deleted indices as: [1 3 5 7]
+  std::vector<uint32_t> deletedEntryIndices;
+  deletedEntryIndices.reserve(deletedCount_);
+  uint32_t oldDataTableKeyIndex = 0;
+  for (uint32_t i = 0; i < size_ + deletedCount_; i++) {
+    auto shv = dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex);
+    if (shv.isEmpty()) {
+      // Entry is deleted
+      deletedEntryIndices.push_back(i);
+    }
+    oldDataTableKeyIndex += BucketType::kElementsPerEntry;
+  }
+  assert(
+      deletedEntryIndices.size() == deletedCount_ &&
+      "Should encounter same number of deleted elements as the deletedCount_");
+
+  // Update all iterators to adjust their indices for the rehash. We take the
+  // IteratorIndex's value and reduce it by the number of deleted elements that
+  // occur before that index.
+  //
+  // For example, if we have the following data table (kElementsPerEntry = 1):
+  // entry index: 0 1 2 3 4 5 6 7 8
+  // values     : 0 x 2 x 4 x 6 x 8
+  // And the iterator has already navigated and printed the #4 entry, then the
+  // IteratorIndex value will be 5. Since there are 2 deleted entries already
+  // traversed (entry 1 and entry 3), the IteratorIndex value should become 3
+  // after the rehash (representing that we already navigated. #0, #2, and #4
+  // entries).
+  //
+  // In the new data table, the values are as follows:
+  // entry index: 0 1 2 3 4
+  // values     : 0 2 4 6 8
+  // Therefore, IteratorIndex value = 3 will allow the iterator to print the
+  // next value, which should be 6.
+  iteratorIndices_->forEach([&deletedEntryIndices](IteratorIndex &index) {
+    // Perform the std::lower_bound algorithm to do a binary search to find
+    // the first deleted entry index >= IteratorIndex value. Using the same
+    // example as above, the \p deletedEntryIndices would be [1 3 5 7].
+    // So for IteratorIndex value = 5, then \p firstEqualOrGreaterIter will
+    // be calculated to be the iterator pointing at index 2 of \p
+    // deletedEntryIndices. We then know the number of deleted entry indices
+    // that appeared before (entry 1 and entry 3).
+    //
+    // If, however, IteratorIndex value = 8 and there aren't any deleted
+    // entry index that is >= 8, then \p firstEqualOrGreaterIter will be
+    // deletedEntryIndices.end().
+    const uint32_t iteratorIndex = index.getValue();
+    auto firstEqualOrGreaterIter = std::lower_bound(
+        deletedEntryIndices.begin(), deletedEntryIndices.end(), iteratorIndex);
+
+    uint32_t numDeletedBeforeIndex =
+        std::distance(deletedEntryIndices.begin(), firstEqualOrGreaterIter);
+    index.setValue(iteratorIndex - numDeletedBeforeIndex);
+  });
 }
 
 template <typename BucketType, typename Derived>
@@ -691,6 +760,10 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
 
   // Resize the data table back to 0.
   self->dataTable_.getNonNull(runtime)->clear(runtime);
+
+  // Update all iterators back to index 0.
+  self->iteratorIndices_->forEach(
+      [](IteratorIndex &index) { index.setIsFirstIteration(true); });
 
   // After clearing, we will still keep the last deleted entry
   // in case there is an iterator out there

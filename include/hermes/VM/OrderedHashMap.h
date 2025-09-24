@@ -138,7 +138,12 @@ using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
 /// only the elements that aren't deleted are copied to the new data table.
 ///
 /// Iterators can simply keep an index to the data table because all the values
-/// are appended in insertion order.
+/// are appended in insertion order. When performing clear and rehash
+/// operations, we will eagerly update all active iterators, which we keep track
+/// of in iteratorIndices_. This differs from other engines, but our assumption
+/// is that in practice most code won't be keeping around many active iterators.
+/// The iterator indices need to be updated because clear and rehash will remove
+/// deleted elements, so indices to the data table need to be updated.
 ///
 /// We chose linear probing for open addressing. It's simple and possibly faster
 /// than quadratic probing because of memory locality. With a simple test case
@@ -418,6 +423,12 @@ class OrderedHashMapBase {
   /// increase.
   static ExecutionStatus
   rehash(Handle<Derived> self, Runtime &runtime, bool beforeAdd = false);
+
+  /// This function updates all active iterator indices to adjust the value
+  /// after a rehash. A rehash will remove any deleted entries of the
+  /// OrderedHashMap, so indices need to be adjusted to account for those
+  /// removed entries.
+  void updateIteratorIndicesForRehash(Runtime &runtime);
 
   /// Determine if we should shrink the hash table based on the current key
   /// count and capacity.
