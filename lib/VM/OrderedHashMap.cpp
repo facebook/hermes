@@ -262,7 +262,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
   self->assertInitialized();
   uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
 
-  // Find the bucket for this key. It the entry already exists, update the value
+  // Find the bucket for this key. If the entry already exists, update the value
   // and return.
   {
     // Note that SmallHermesValue::encodeHermesValue() may allocate, so we need
@@ -275,6 +275,8 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
     if (entry) {
       // Element for the key already exists, update value and return.
       entry->value.set(shv, runtime.getHeap());
+      self->dataTable_.getNonNull(runtime)->set(
+          entry->dataTableKeyIndex + 1, shv, runtime.getHeap());
       return ExecutionStatus::RETURNED;
     }
   }
@@ -291,7 +293,7 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
   self->assertInitialized();
   uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
 
-  // Find the bucket for this key. It the entry already exists, then return.
+  // Find the bucket for this key. If the entry already exists, then return.
   {
     BucketType *entry = nullptr;
     std::tie(entry, bucket) =
@@ -312,6 +314,11 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
     uint32_t bucket,
     Handle<> key,
     Handle<> value) {
+  struct : public Locals {
+    PinnedValue<StorageType> dataTable;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Run rehash if necessary before inserting.
   if (shouldRehash(self->capacity_, self->size_, self->deletedCount_)) {
     if (LLVM_UNLIKELY(
@@ -341,13 +348,19 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
 
   // Note that SmallHermesValue::encodeHermesValue() may allocate, so we need to
   // call it and set to newMapEntry one at a time.
+  lv.dataTable = self->dataTable_.getNonNull(runtime);
   auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
   auto k = SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
   newMapEntry->key.set(k, runtime.getHeap());
+  assert(
+      lv.dataTable->size() < lv.dataTable->capacity() &&
+      "Data table should always have enough capacity");
+  lv.dataTable->pushWithinCapacity(runtime, k);
   if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
     auto v =
         SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
     newMapEntry->value.set(v, runtime.getHeap());
+    lv.dataTable->pushWithinCapacity(runtime, v);
   }
 
   // After here, no allocation

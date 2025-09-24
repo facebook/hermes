@@ -384,7 +384,9 @@ class OrderedHashMapBase {
   }
 
   /// Helper function for inserting key or key/value pair into the container.
-  /// Called by the public insert() functions.
+  /// This is used by the public insert() functions and only for adding keys
+  /// that don't already exist. This will update the hash table as well as
+  /// appending key (and value if applicable) to the data table.
   static ExecutionStatus doInsert(
       Handle<Derived> self,
       Runtime &runtime,
