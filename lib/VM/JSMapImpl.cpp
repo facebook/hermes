@@ -96,7 +96,11 @@ void JSSetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 template <CellKind C>
 const ObjectVTable JSMapIteratorImpl<C>::vt = {
-    VTable(C, cellSize<JSMapIteratorImpl<C>>()),
+    VTable(
+        C,
+        cellSize<JSMapIteratorImpl<C>>(),
+        false /* allowLargeAlloc */,
+        JSMapIteratorImpl<C>::_finalizeImpl),
     JSMapIteratorImpl::_getOwnIndexedRangeImpl,
     JSMapIteratorImpl::_haveOwnIndexedImpl,
     JSMapIteratorImpl::_getOwnIndexedPropertyFlagsImpl,
@@ -107,10 +111,16 @@ const ObjectVTable JSMapIteratorImpl<C>::vt = {
 };
 
 template <CellKind C>
+void JSMapIteratorImpl<C>::_finalizeImpl(GCCell *cell, GC &gc) {
+  auto *self = vmcast<JSMapIteratorImpl<C>>(cell);
+  self->~JSMapIteratorImpl();
+}
+
+template <CellKind C>
 PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
     Runtime &runtime,
     Handle<JSObject> prototype) {
-  auto *cell = runtime.makeAFixed<JSMapIteratorImpl<C>>(
+  auto *cell = runtime.makeAFixed<JSMapIteratorImpl<C>, HasFinalizer::Yes>(
       runtime,
       prototype,
       runtime.getHiddenClassForPrototype(
