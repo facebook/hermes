@@ -241,7 +241,7 @@ void OrderedHashMapBase<BucketType, Derived>::removeLinkedListNode(
 }
 
 template <typename BucketType, typename Derived>
-std::pair<BucketType *, uint32_t>
+std::pair<OptValue<uint32_t>, uint32_t>
 OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     Runtime &runtime,
     uint32_t bucket,
@@ -269,7 +269,7 @@ OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
       assert(shv.isObject());
       auto *entry = vmcast<BucketType>(shv.getObject(runtime));
       if (isSameValueZero(entry->key.unboxToHV(runtime), key)) {
-        return {entry, bucket};
+        return {entry->dataTableKeyIndex, bucket};
       }
     }
 
@@ -277,7 +277,7 @@ OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     assert(bucket != firstBucket && "Hash table has wrapped around");
   }
 
-  return {nullptr, bucket};
+  return {llvh::None, bucket};
 }
 
 template <typename BucketType, typename Derived>
@@ -441,7 +441,7 @@ bool OrderedHashMapBase<BucketType, Derived>::has(
   NoAllocScope noAlloc{runtime};
   assertInitialized();
   auto bucket = hashToBucket(capacity_, runtime, key);
-  return lookupInBucket(runtime, bucket, key).first;
+  return lookupInBucket(runtime, bucket, key).first.hasValue();
 }
 
 template <typename BucketType, typename Derived>
@@ -451,11 +451,12 @@ SmallHermesValue OrderedHashMapBase<BucketType, Derived>::get(
   NoAllocScope noAlloc{runtime};
   assertInitialized();
   auto bucket = hashToBucket(capacity_, runtime, key);
-  auto *entry = lookupInBucket(runtime, bucket, key).first;
-  if (!entry) {
+  OptValue<uint32_t> dataTableKeyIndex =
+      lookupInBucket(runtime, bucket, key).first;
+  if (!dataTableKeyIndex.hasValue()) {
     return SmallHermesValue::encodeUndefinedValue();
   }
-  return entry->getValue();
+  return dataTable_.getNonNull(runtime)->at(*dataTableKeyIndex + 1);
 }
 
 template <typename BucketType, typename Derived>
@@ -475,11 +476,13 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
     // to call it before getting raw pointer for entry.
     auto shv =
         SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
-    BucketType *entry = nullptr;
-    std::tie(entry, bucket) =
+    OptValue<uint32_t> dataTableKeyIndex;
+    std::tie(dataTableKeyIndex, bucket) =
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
-    if (entry) {
+    if (dataTableKeyIndex.hasValue()) {
       // Element for the key already exists, update value and return.
+      auto entrySHV = self->hashTable_.getNonNull(runtime)->at(bucket);
+      BucketType *entry = vmcast<BucketType>(entrySHV.getObject(runtime));
       entry->value.set(shv, runtime.getHeap());
       self->dataTable_.getNonNull(runtime)->set(
           entry->dataTableKeyIndex + 1, shv, runtime.getHeap());
@@ -501,10 +504,10 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
 
   // Find the bucket for this key. If the entry already exists, then return.
   {
-    BucketType *entry = nullptr;
-    std::tie(entry, bucket) =
+    OptValue<uint32_t> dataTableKeyIndex;
+    std::tie(dataTableKeyIndex, bucket) =
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
-    if (entry) {
+    if (dataTableKeyIndex.hasValue()) {
       return ExecutionStatus::RETURNED;
     }
   }
@@ -534,10 +537,12 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
 
     // Find a new empty bucket after rehash.
     bucket = hashToBucket(self->capacity_, runtime, *key);
-    BucketType *entry = nullptr;
-    std::tie(entry, bucket) =
+    OptValue<uint32_t> dataTableKeyIndex;
+    std::tie(dataTableKeyIndex, bucket) =
         self->lookupInBucket(runtime, bucket, key.getHermesValue());
-    assert(!entry && "After rehash, we must be able to find an empty bucket");
+    assert(
+        !dataTableKeyIndex.hasValue() &&
+        "After rehash, we must be able to find an empty bucket");
   }
 
   // Create a new entry, set the key and value.
@@ -615,15 +620,17 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
     Handle<> key) {
   self->assertInitialized();
   uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
-  BucketType *entry = nullptr;
-  std::tie(entry, bucket) =
+  OptValue<uint32_t> dataTableKeyIndex;
+  std::tie(dataTableKeyIndex, bucket) =
       self->lookupInBucket(runtime, bucket, key.getHermesValue());
-  if (!entry) {
+  if (!dataTableKeyIndex.hasValue()) {
     // Element does not exist.
     return false;
   }
 
   // Mark the bucket as deleted. We remove this in rehash.
+  auto entrySHV = self->hashTable_.getNonNull(runtime)->at(bucket);
+  BucketType *entry = vmcast<BucketType>(entrySHV.getObject(runtime));
   deleteBucket(self, runtime, bucket);
   entry->markDeleted(runtime);
   self->deletedCount_++;

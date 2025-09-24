@@ -397,10 +397,11 @@ class OrderedHashMapBase {
   void removeLinkedListNode(Runtime &runtime, BucketType *entry, GC &gc);
 
   /// Lookup an entry with key as \p key in a given \p bucket (hash).
-  /// \return The pair of the entry found and the index for it. The entry can be
-  /// nullptr if the key doesn't exist. In that case, the index is the index of
-  /// the available bucket for the give key.
-  std::pair<BucketType *, uint32_t>
+  /// \return If found, returns the pair of the corresponding data table index
+  /// and the bucket index for it. If not found, then data table key index won't
+  /// be available, and the bucket index would be the bucket available for the
+  /// \p key.
+  std::pair<OptValue<uint32_t>, uint32_t>
   lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key) const;
 
   /// Perform a rehash operation by removing all deleted entries and re-insert
