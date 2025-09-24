@@ -18,102 +18,13 @@
 namespace hermes {
 namespace vm {
 
-/// Data structure for the entry of OrderedHashSet.
-struct HashMapEntryKey {
-  /// The key.
-  GCSmallHermesValue key;
+struct HashSetEntry {
+  static constexpr uint8_t kElementsPerEntry = 1;
 };
 
-/// Data structure for the entry of OrderedHashMap.
-struct HashMapEntryKeyValue {
-  /// The key.
-  GCSmallHermesValue key;
-  /// The value.
-  GCSmallHermesValue value;
+struct HashMapEntry {
+  static constexpr uint8_t kElementsPerEntry = 2;
 };
-
-/// HashMapEntry is a gc-managed entry in the OrderedHashMap.
-/// We use HashMapEntry to form two separate linked lists,
-/// one that tracks the insertion order for iteration purpose, one
-/// tracks the list of entries in a hash table bucket for hash operations.
-template <typename Data>
-class HashMapEntryBase final : public GCCell, public Data {
-  friend void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-  friend void HashSetEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb);
-
- public:
-  static const VTable vt;
-
-  /// Number of elements used in data table per each entry of hash table.
-  static constexpr uint8_t kElementsPerEntry =
-      std::is_same_v<Data, HashMapEntryKey> ? 1 : 2;
-
-  /// This is temporarily here to help break up the diff stack until we get rid
-  /// of HashMapEntryBase. The entire HashMapEntryBase will be removed later, so
-  /// there won't be this code left around.
-  uint32_t dataTableKeyIndex;
-
-  /// Previous entry in insertion order.
-  GCPointer<HashMapEntryBase> prevIterationEntry{nullptr};
-
-  /// Next entry in insertion order.
-  GCPointer<HashMapEntryBase> nextIterationEntry{nullptr};
-
-  static constexpr CellKind getCellKind() {
-    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
-      return CellKind::HashMapEntryKind;
-    } else {
-      static_assert(std::is_same_v<Data, HashMapEntryKey>);
-      return CellKind::HashSetEntryKind;
-    }
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == getCellKind();
-  }
-
-  static CallResult<PseudoHandle<HashMapEntryBase>> create(
-      Runtime &runtime,
-      uint32_t dataTableKeyIndex);
-
-  static CallResult<PseudoHandle<HashMapEntryBase>> createLongLived(
-      Runtime &runtime,
-      uint32_t dataTableKeyIndex);
-
-  /// \return the value. If the Data is HashMapEntryKey, the key will be
-  /// returned.
-  GCSmallHermesValue getValue() const {
-    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
-      return Data::value;
-    } else {
-      return Data::key;
-    }
-  }
-
-  /// Indicates whether this entry has been deleted.
-  bool isDeleted() const {
-    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
-      assert(
-          Data::key.isEmpty() == Data::value.isEmpty() &&
-          "Inconsistent deleted status");
-    }
-    return Data::key.isEmpty();
-  }
-
-  /// Mark this entry as deleted.
-  void markDeleted(Runtime &runtime) {
-    Data::key.setNonPtr(
-        SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
-    if constexpr (std::is_same_v<Data, HashMapEntryKeyValue>) {
-      Data::value.setNonPtr(
-          SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
-    }
-  }
-}; // HashMapEntryBase
-
-/// The bucket type for OrderedHashMap.
-using HashMapEntry = HashMapEntryBase<HashMapEntryKeyValue>;
-/// The bucket type for OrderedHashSet.
-using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
 
 /// OrderedHashMapBase is a hash map implementation that maintains insertion
 /// order.
@@ -240,17 +151,13 @@ class OrderedHashMapBase {
 
   /// Insert a key/value pair, if not already existing. Function enabled only if
   /// this is a Map.
-  template <
-      typename = std::enable_if<
-          std::is_same_v<BucketType, HashMapEntryBase<HashMapEntryKeyValue>>>>
+  template <typename = std::enable_if<std::is_same_v<BucketType, HashMapEntry>>>
   static ExecutionStatus
   insert(Handle<Derived> self, Runtime &runtime, Handle<> key, Handle<> value);
 
   /// Insert a key, if not already existing. Function enabled only if this is a
   /// Set.
-  template <
-      typename = std::enable_if<
-          std::is_same_v<BucketType, HashMapEntryBase<HashMapEntryKey>>>>
+  template <typename = std::enable_if<std::is_same_v<BucketType, HashSetEntry>>>
   static ExecutionStatus
   insert(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
@@ -345,12 +252,6 @@ class OrderedHashMapBase {
   /// as free, the ManagedChunkedList needs to stay alive for that finalizer.
   std::shared_ptr<ManagedChunkedList<IteratorIndex>> iteratorIndices_{nullptr};
 
-  /// The first entry ever inserted. We need this entry to begin an iteration.
-  GCPointer<BucketType> firstIterationEntry_{nullptr};
-
-  /// The last entry inserted. We need it to add new elements afterwards.
-  GCPointer<BucketType> lastIterationEntry_{nullptr};
-
   /// The multiplier that the hash table grows or shrinks by each rehash.
   /// Note that if this changes, test/hermes/set-iterator.js also needs to be
   /// updated because the tests depends on knowing when rehashes happen.
@@ -392,9 +293,6 @@ class OrderedHashMapBase {
     assert((capacity & (capacity - 1)) == 0 && "capacity_ must be power of 2");
     return hash & (capacity - 1);
   }
-
-  /// Remove a node from the linked list.
-  void removeLinkedListNode(Runtime &runtime, BucketType *entry, GC &gc);
 
   /// Lookup an entry with key as \p key in a given \p bucket (hash).
   /// \return If found, returns the pair of the corresponding data table index

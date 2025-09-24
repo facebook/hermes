@@ -16,55 +16,6 @@
 namespace hermes {
 namespace vm {
 //===----------------------------------------------------------------------===//
-// class HashMapEntryBase
-
-template <typename Data>
-const VTable HashMapEntryBase<Data>::vt{
-    CellKind::HashMapEntryKind,
-    cellSize<HashMapEntryBase<Data>>()};
-
-void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const HashMapEntry *>(cell);
-  mb.setVTable(&HashMapEntry::vt);
-  mb.addField("key", &self->key);
-  mb.addField("value", &self->value);
-  mb.addField("prevIterationEntry", &self->prevIterationEntry);
-  mb.addField("nextIterationEntry", &self->nextIterationEntry);
-}
-
-void HashSetEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const HashSetEntry *>(cell);
-  mb.setVTable(&HashSetEntry::vt);
-  mb.addField("key", &self->key);
-  mb.addField("prevIterationEntry", &self->prevIterationEntry);
-  mb.addField("nextIterationEntry", &self->nextIterationEntry);
-}
-
-template <typename Data>
-CallResult<PseudoHandle<HashMapEntryBase<Data>>> HashMapEntryBase<Data>::create(
-    Runtime &runtime,
-    uint32_t dataTableKeyIndex) {
-  PseudoHandle entry =
-      createPseudoHandle(runtime.makeAFixed<HashMapEntryBase<Data>>());
-  entry->dataTableKeyIndex = dataTableKeyIndex;
-  return entry;
-}
-
-template <typename Data>
-CallResult<PseudoHandle<HashMapEntryBase<Data>>> HashMapEntryBase<
-    Data>::createLongLived(Runtime &runtime, uint32_t dataTableKeyIndex) {
-  PseudoHandle entry = createPseudoHandle(runtime.makeAFixed<
-                                          HashMapEntryBase<Data>,
-                                          HasFinalizer::No,
-                                          LongLived::Yes>());
-  entry->dataTableKeyIndex = dataTableKeyIndex;
-  return entry;
-}
-
-template class HashMapEntryBase<HashMapEntryKeyValue>;
-template class HashMapEntryBase<HashMapEntryKey>;
-
-//===----------------------------------------------------------------------===//
 // class OrderedHashMapBase
 
 template <typename BucketType, typename Derived>
@@ -182,8 +133,6 @@ void OrderedHashMapBase<BucketType, Derived>::buildMetadata(
   const auto *self = static_cast<const Derived *>(cell);
   mb.addField("hashTable", &self->hashTable_);
   mb.addField("dataTable", &self->dataTable_);
-  mb.addField("firstIterationEntry", &self->firstIterationEntry_);
-  mb.addField("lastIterationEntry", &self->lastIterationEntry_);
 }
 
 /// Allocate the internal element storage.
@@ -216,28 +165,6 @@ ExecutionStatus OrderedHashMapBase<BucketType, Derived>::initializeStorage(
       0.5 /* occupancyRatio */, 0.5 /* sizingWeight */);
 
   return ExecutionStatus::RETURNED;
-}
-
-template <typename BucketType, typename Derived>
-void OrderedHashMapBase<BucketType, Derived>::removeLinkedListNode(
-    Runtime &runtime,
-    BucketType *entry,
-    GC &gc) {
-  assert(
-      entry != lastIterationEntry_.get(runtime) &&
-      "Cannot remove the last entry");
-  if (entry->prevIterationEntry) {
-    entry->prevIterationEntry.getNonNull(runtime)->nextIterationEntry.set(
-        runtime, entry->nextIterationEntry, gc);
-  }
-  if (entry->nextIterationEntry) {
-    entry->nextIterationEntry.getNonNull(runtime)->prevIterationEntry.set(
-        runtime, entry->prevIterationEntry, gc);
-  }
-  if (entry == firstIterationEntry_.get(runtime)) {
-    firstIterationEntry_.set(runtime, entry->nextIterationEntry, gc);
-  }
-  entry->prevIterationEntry.setNull(runtime.getHeap());
 }
 
 template <typename BucketType, typename Derived>

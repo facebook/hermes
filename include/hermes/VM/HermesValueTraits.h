@@ -89,11 +89,6 @@ class JSTypedArray;
 template <typename T, CellKind C>
 struct IsGCObject<JSTypedArray<T, C>> : public std::true_type {};
 
-template <typename T>
-class HashMapEntryBase;
-template <typename Data>
-struct IsGCObject<HashMapEntryBase<Data>> : public std::true_type {};
-
 template <CellKind C>
 class JSMapImpl;
 template <CellKind C>
