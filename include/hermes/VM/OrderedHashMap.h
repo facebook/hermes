@@ -47,6 +47,11 @@ class HashMapEntryBase final : public GCCell, public Data {
   static constexpr uint8_t kElementsPerEntry =
       std::is_same_v<Data, HashMapEntryKey> ? 1 : 2;
 
+  /// This is temporarily here to help break up the diff stack until we get rid
+  /// of HashMapEntryBase. The entire HashMapEntryBase will be removed later, so
+  /// there won't be this code left around.
+  uint32_t dataTableKeyIndex;
+
   /// Previous entry in insertion order.
   GCPointer<HashMapEntryBase> prevIterationEntry{nullptr};
 
@@ -65,10 +70,13 @@ class HashMapEntryBase final : public GCCell, public Data {
     return cell->getKind() == getCellKind();
   }
 
-  static CallResult<PseudoHandle<HashMapEntryBase>> create(Runtime &runtime);
+  static CallResult<PseudoHandle<HashMapEntryBase>> create(
+      Runtime &runtime,
+      uint32_t dataTableKeyIndex);
 
   static CallResult<PseudoHandle<HashMapEntryBase>> createLongLived(
-      Runtime &runtime);
+      Runtime &runtime,
+      uint32_t dataTableKeyIndex);
 
   /// \return the value. If the Data is HashMapEntryKey, the key will be
   /// returned.
@@ -124,7 +132,8 @@ using HashSetEntry = HashMapEntryBase<HashMapEntryKey>;
 /// later.
 ///
 /// When the number of alive elements and deleted elements exceeds thresholds,
-/// we will rehash the table.
+/// we will perform a rehash. When rehashing, a new data table is allocated and
+/// only the elements that aren't deleted are copied to the new data table.
 ///
 /// We chose linear probing for open addressing. It's simple and possibly faster
 /// than quadratic probing because of memory locality. With a simple test case
@@ -294,13 +303,17 @@ class OrderedHashMapBase {
   std::pair<BucketType *, uint32_t>
   lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key) const;
 
-  /// Adjust the capacity of the hashtable and rehash.
-  /// The new capacity will be calculated by checkedNextCapacity().
-  /// Note that this fun will always run rehash even if the new capacity is same
-  /// as before. In such case, all the deleted bucket will be removed and become
-  /// empty bucket.
+  /// Perform a rehash operation by removing all deleted entries and re-insert
+  /// them into new allocated hash table and data table. The old hash table and
+  /// data table are discarded. The new capacity will be calculated by
+  /// checkedNextCapacity(). Note that this function will always run rehash even
+  /// if the new capacity is same as before. In such case, all the deleted
+  /// bucket will be removed and become empty bucket.
   /// \param beforeAdd if true, we use current size + 1 to calculate the new
-  /// capacity. Otherwise, we use current size to calculate the new capacity.
+  /// capacity. This is used when calling from doInsert() because we're about to
+  /// add one more entry. Otherwise, we use current size to calculate the new
+  /// capacity. This is used when calling from erase(), so the size shouldn't
+  /// increase.
   static ExecutionStatus
   rehash(Handle<Derived> self, Runtime &runtime, bool beforeAdd = false);
 
