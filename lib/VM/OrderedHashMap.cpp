@@ -631,7 +631,7 @@ bool OrderedHashMapBase<BucketType, Derived>::erase(
   // Mark the bucket as deleted. We remove this in rehash.
   auto entrySHV = self->hashTable_.getNonNull(runtime)->at(bucket);
   BucketType *entry = vmcast<BucketType>(entrySHV.getObject(runtime));
-  deleteBucket(self, runtime, bucket);
+  deleteBucket(self, runtime, bucket, *dataTableKeyIndex);
   entry->markDeleted(runtime);
   self->deletedCount_++;
   self->size_--;

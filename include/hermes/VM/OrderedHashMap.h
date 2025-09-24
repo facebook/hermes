@@ -485,12 +485,11 @@ class OrderedHashMapBase {
   }
 
   /// Mark the bucket as deleted.
-  static void
-  deleteBucket(Handle<Derived> self, Runtime &runtime, uint32_t bucket) {
-    auto shv = self->hashTable_.getNonNull(runtime)->at(bucket);
-    auto *entry = vmcast<BucketType>(shv.getObject(runtime));
-    uint32_t dataTableKeyIndex = entry->dataTableKeyIndex;
-
+  static void deleteBucket(
+      Handle<Derived> self,
+      Runtime &runtime,
+      uint32_t bucket,
+      uint32_t dataTableKeyIndex) {
     // Use EmptyValue to indicate the corresponding elements in the data table
     // are deleted.
     self->dataTable_.getNonNull(runtime)->setNonPtr(
