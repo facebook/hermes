@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import com.facebook.hermes.helpers.internal.SerializeHermesCompilerPackageJson
 import com.facebook.hermes.tasks.internal.CustomExecTask
 import org.apache.tools.ant.taskdefs.condition.Os
 
@@ -20,6 +21,8 @@ plugins {
 group = "com.facebook.hermes"
 
 version = project.findProperty("VERSION_NAME")?.toString()!!
+
+val hermesReleaseVersion = SerializeHermesCompilerPackageJson(project).hermesReleaseVersion
 
 val cmakeVersion = System.getenv("CMAKE_VERSION") ?: libs.versions.cmake.get()
 val cmakePath = "${getSDKPath()}/cmake/$cmakeVersion"
@@ -222,7 +225,7 @@ android {
             "-DIMPORT_HOST_COMPILERS=${File(hermesBuildDir, "ImportHostCompilers.cmake").toString()}",
             "-DJSI_DIR=${jsiDir}",
             "-DHERMES_BUILD_SHARED_JSI=True",
-            // "-DHERMES_RELEASE_VERSION=for RN ${version}",
+            "-DHERMES_RELEASE_VERSION=${hermesReleaseVersion}",
             "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True",
             // We intentionally build Hermes with Intl support only. This is to simplify
             // the build setup and to avoid overcomplicating the build-type matrix.
