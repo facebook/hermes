@@ -519,17 +519,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
 #endif
   }
 
-  void dumpOpcodeStats(std::ostream &stream) const override {
-#ifdef HERMESVM_PROFILER_OPCODE
-    llvh::raw_os_ostream os(stream);
-    static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
-#else
-    throw std::logic_error(
-        "Cannot write the basic block profile trace out if Hermes wasn't built with "
-        "hermes.profiler=OPCODE");
-#endif
-  }
-
   void dumpProfilerSymbolsToFile(const std::string &fileName) const override {
     throw std::logic_error(
         "Cannot dump profiler symbols out if Hermes wasn't built with "
@@ -1191,11 +1180,19 @@ class HermesRuntimeImpl final : public HermesRuntime,
   jsi::Value getObjectForID(uint64_t id) override;
   const ::hermes::vm::GCExecTrace &getGCExecTrace() const override;
   std::string getIOTrackingInfoJSON() override;
+#ifdef HERMESVM_PROFILER_BB
+  void dumpBasicBlockProfileTrace(std::ostream &os) const override;
+#endif
+#ifdef HERMESVM_PROFILER_OPCODE
+  void dumpOpcodeStats(std::ostream &os) const override;
+#endif
   debugger::Debugger &getDebugger() override;
+#ifdef HERMES_ENABLE_DEBUGGER
   void debugJavaScript(
       const std::string &src,
       const std::string &sourceURL,
       const DebugFlags &debugFlags) override;
+#endif
   void registerForProfiling() override;
   void unregisterForProfiling() override;
   void asyncTriggerTimeout() override;
@@ -1205,8 +1202,7 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
       const std::string &sourceURL) override;
-  SHUnitCreator getSHUnitCreator() const override;
-  jsi::Value evaluateSHUnit(SHUnitCreator shUnitCreator) override;
+  jsi::Value evaluateSHUnit(SHUnit *(*shUnitCreator)()) override;
   SHRuntime *getSHRuntime() noexcept override;
   void *getVMRuntimeUnsafe() const override;
   size_t rootsListLengthForTests() const override;
@@ -1412,10 +1408,9 @@ jsi::ICast *HermesRuntimeImpl::getHermesRootAPI() {
 jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
   if (interfaceUUID == IHermesTestHelpers::uuid) {
     return static_cast<IHermesTestHelpers *>(this);
-  } else if (interfaceUUID == IHermes::uuid) {
+  }
+  if (interfaceUUID == IHermes::uuid) {
     return static_cast<IHermes *>(this);
-  } else if (interfaceUUID == IHermesSHUnit::uuid) {
-    return static_cast<IHermesSHUnit *>(this);
   }
   return nullptr;
 }
@@ -1529,22 +1524,39 @@ std::string HermesRuntimeImpl::getIOTrackingInfoJSON() {
   return buf;
 }
 
+#ifdef HERMESVM_PROFILER_BB
+void HermesRuntimeImpl::dumpBasicBlockProfileTrace(std::ostream &stream) const {
+  llvh::raw_os_ostream os(stream);
+  static_cast<const HermesRuntimeImpl *>(this)
+      ->runtime_.dumpBasicBlockProfileTrace(os);
+}
+#endif
+
+#ifdef HERMESVM_PROFILER_OPCODE
+void HermesRuntimeImpl::dumpOpcodeStats(std::ostream &stream) const {
+  llvh::raw_os_ostream os(stream);
+  static_cast<const HermesRuntimeImpl *>(this)->runtime_.dumpOpcodeStats(os);
+}
+#endif
+
 debugger::Debugger &HermesRuntimeImpl::getDebugger() {
   return *(debugger_);
 }
+
+#ifdef HERMES_ENABLE_DEBUGGER
 
 void HermesRuntimeImpl::debugJavaScript(
     const std::string &src,
     const std::string &sourceURL,
     const DebugFlags &debugFlags) {
-#ifdef HERMES_ENABLE_DEBUGGER
   vm::Runtime &runtime = runtime_;
   vm::GCScope gcScope(runtime);
   vm::ExecutionStatus res =
       runtime.run(src, sourceURL, compileFlags_).getStatus();
   checkStatus(res);
-#endif
 }
+
+#endif
 
 void HermesRuntimeImpl::registerForProfiling() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
@@ -1597,18 +1609,6 @@ jsi::Value HermesRuntimeImpl::evaluateJavaScriptWithSourceMap(
     const std::string &sourceURL) {
   return evaluatePreparedJavaScript(
       prepareJavaScriptWithSourceMap(buffer, sourceMapBuf, sourceURL));
-}
-
-#ifdef HERMES_SH_UNIT_FN
-extern "C" SHUnit *HERMES_SH_UNIT_FN(void);
-#endif
-
-SHUnitCreator HermesRuntimeImpl::getSHUnitCreator() const {
-#ifdef HERMES_SH_UNIT_FN
-  return HERMES_SH_UNIT_FN;
-#else
-  return nullptr;
-#endif
 }
 
 jsi::Value HermesRuntimeImpl::evaluateSHUnit(SHUnitCreator shUnitCreator) {
@@ -2424,12 +2424,8 @@ void HermesRuntimeImpl::setPropertyValue(
   auto nameHandle = vmHandleFromValue(name, &nameNumStorage);
   auto valhandle = vmHandleFromValue(value, &valNumStorage);
   auto objHandle = handle(obj);
-  auto res = vm::JSObject::putComputed_RJS(
-      objHandle,
-      runtime_,
-      nameHandle,
-      valhandle,
-      vm::PropOpFlags().plusThrowOnError());
+  auto res =
+      vm::JSObject::putComputed_RJS(objHandle, runtime_, nameHandle, valhandle);
   checkStatus(res.getStatus());
 }
 
@@ -2455,6 +2451,9 @@ void HermesRuntimeImpl::deleteProperty(
       stringHandle(name),
       vm::PropOpFlags().plusThrowOnError());
   checkStatus(res.getStatus());
+  if (!*res) {
+    throw jsi::JSError(*this, "Failed to delete property");
+  }
 }
 
 void HermesRuntimeImpl::deleteProperty(
@@ -2468,6 +2467,9 @@ void HermesRuntimeImpl::deleteProperty(
       vmHandleFromValue(name, &numStorage),
       vm::PropOpFlags().plusThrowOnError());
   checkStatus(res.getStatus());
+  if (!*res) {
+    throw jsi::JSError(*this, "Failed to delete property");
+  }
 }
 
 bool HermesRuntimeImpl::isArray(const jsi::Object &obj) const {

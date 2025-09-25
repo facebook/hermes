@@ -1410,7 +1410,11 @@ std::string TraceInterpreter::printStats() {
 #ifdef HERMESVM_PROFILER_OPCODE
   stats += "\n";
   std::ostringstream os;
-  rt_.instrumentation().dumpOpcodeStats(os);
+  if (auto *hermesRuntime = castInterface<IHermes>(&rt_)) {
+    hermesRuntime->dumpOpcodeStats(os);
+  } else {
+    throw std::runtime_error("Unable to cast runtime into HermesRuntime");
+  }
   stats += os.str();
   stats += "\n";
 #endif
