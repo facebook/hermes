@@ -183,7 +183,6 @@ static CallResult<HermesValue> constructErrorObject(
   struct : public Locals {
     PinnedValue<JSObject> selfParent;
     PinnedValue<JSError> self;
-    PinnedValue<JSObject> propObj;
     PinnedValue<> cause;
   } lv;
   LocalsRAII lraii(runtime, &lv);
@@ -227,18 +226,24 @@ static CallResult<HermesValue> constructErrorObject(
   // If Type(options) is Object and ? HasProperty(options, "cause") is true
   if (auto options = Handle<JSObject>::dyn_vmcast(opts)) {
     GCScopeMarkerRAII marker{runtime};
-    NamedPropertyDescriptor desc;
-    auto propObjPtr = JSObject::getNamedDescriptorPredefined(
-        options, runtime, Predefined::cause, desc);
-    if (propObjPtr) {
-      lv.propObj = propObjPtr;
+
+    auto causeName = Predefined::getSymbolID(Predefined::cause);
+
+    // Use the below to ensure we trigger the `[[HasProperty]]` proxy trap.
+    auto hasRes = JSObject::hasNamed(options, runtime, causeName);
+    if (LLVM_UNLIKELY(hasRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    if (LLVM_UNLIKELY(*hasRes)) {
       // a. Let cause be ? Get(options, "cause").
-      auto causeRes = JSObject::getNamedPropertyValue_RJS(
-          lv.self, runtime, lv.propObj, desc);
+      auto causeRes = JSObject::getNamed_RJS(
+          options, runtime, causeName, PropOpFlags().plusThrowOnError());
       if (LLVM_UNLIKELY(causeRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       lv.cause = std::move(*causeRes);
+
       // b. Perform ! CreateNonEnumerableDataPropertyOrThrow(O, "cause", cause).
       if (LLVM_UNLIKELY(
               JSObject::defineOwnProperty(
