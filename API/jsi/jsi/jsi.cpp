@@ -334,10 +334,6 @@ Instrumentation& Runtime::instrumentation() {
       std::abort();
     }
 
-    void dumpOpcodeStats(std::ostream&) const override {
-      std::abort();
-    }
-
     void dumpProfilerSymbolsToFile(const std::string&) const override {
       std::abort();
     }
