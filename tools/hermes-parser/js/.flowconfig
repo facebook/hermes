@@ -38,7 +38,7 @@ experimental.natural_inference.array_object_literals.implicit_instantiation_fix=
 experimental.natural_inference.jsx_literal=true
 
 [version]
-^0.285.0
+^0.286.0
 
 [lints]
 untyped-type-import=error
