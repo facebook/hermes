@@ -1714,16 +1714,34 @@ std::pair<T1 *, T2 *> HadesGC::make2YoungGenUnsafeImpl(
       : res.ptr;
   void *t2Void = ((uint8_t *)t1Void + size1);
 
-  T1 *t1Res = llvh::apply_tuple(
-      [t1Void, size1](auto &&...args) -> T1 * {
-        return constructCell<T1>(t1Void, size1, args...);
-      },
-      t1Args);
-  T2 *t2Res = llvh::apply_tuple(
-      [t2Void, size2](auto &&...args) -> T2 * {
-        return constructCell<T2>(t2Void, size2, args...);
-      },
-      t2Args);
+  T1 *t1Res;
+  T2 *t2Res;
+  {
+#ifdef HERMES_SLOW_DEBUG
+    assert(!currentCellKindAndSize_ && "makeA() calls can not be interleaved");
+    llvh::SaveAndRestore<llvh::Optional<std::pair<CellKind, uint32_t>>>
+        saveCurrentCellKindAndSize(
+            currentCellKindAndSize_, std::make_pair(T1::getCellKind(), size1));
+#endif
+    t1Res = llvh::apply_tuple(
+        [t1Void, size1](auto &&...args) -> T1 * {
+          return constructCell<T1>(t1Void, size1, args...);
+        },
+        t1Args);
+  }
+  {
+#ifdef HERMES_SLOW_DEBUG
+    assert(!currentCellKindAndSize_ && "makeA() calls can not be interleaved");
+    llvh::SaveAndRestore<llvh::Optional<std::pair<CellKind, uint32_t>>>
+        saveCurrentCellKindAndSize(
+            currentCellKindAndSize_, std::make_pair(T2::getCellKind(), size2));
+#endif
+    t2Res = llvh::apply_tuple(
+        [t2Void, size2](auto &&...args) -> T2 * {
+          return constructCell<T2>(t2Void, size2, args...);
+        },
+        t2Args);
+  }
 
   return {t1Res, t2Res};
 }
