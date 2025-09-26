@@ -2,6 +2,13 @@
   "manual_skip_list": [
     {
       "paths": [
+        "test262/test/built-ins/WeakRef/returns-new-object-from-constructor-with-symbol-target.js",
+        "test262/test/built-ins/WeakRef/prototype/deref/return-symbol-target.js"
+      ],
+      "comment": "Symbol key is not supported in WeakRef yet"
+    },
+    {
+      "paths": [
         "test262/test/annexB/language/eval-code/direct",
         "test262/test/language/eval-code/direct",
         "test262/test/built-ins/Function/prototype/toString/",
@@ -3513,7 +3520,6 @@
     "regexp-duplicate-named-groups",
     "arraybuffer-transfer",
     "Array.fromAsync",
-    "symbols-as-weakmap-keys",
     "json-parse-with-source"
   ],
   "permanent_unsupported_features": [

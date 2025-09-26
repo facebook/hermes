@@ -57,7 +57,7 @@ m.add(b);
 print(m.has(a), m.has(b));
 // CHECK-NEXT: true true
 try { m.add(1, 2) } catch(e) { print('caught', e.name, e.message) }
-// CHECK-NEXT: caught TypeError WeakSet key must be an Object
+// CHECK-NEXT: caught TypeError WeakSet key must be an Object or non-registered Symbol
 try { WeakSet.prototype.add.call([], a, 3) } catch(e) { print('caught', e.name, e.message) }
 // CHECK-NEXT: caught TypeError WeakSet.prototype.add can only be called on a WeakSet
 

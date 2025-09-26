@@ -168,9 +168,10 @@ CallResult<HermesValue> weakSetPrototypeAdd(void *, Runtime &runtime) {
         "WeakSet.prototype.add can only be called on a WeakSet");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
-    return runtime.raiseTypeError("WeakSet key must be an Object");
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
+    return runtime.raiseTypeError(
+        "WeakSet key must be an Object or non-registered Symbol");
   }
 
   JSWeakSet::setValue(M, runtime, key, HandleRootOwner::getUndefinedValue());
@@ -185,8 +186,8 @@ CallResult<HermesValue> weakSetPrototypeDelete(void *, Runtime &runtime) {
         "WeakSet.prototype.delete can only be called on a WeakSet");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
     return HermesValue::encodeBoolValue(false);
   }
 
@@ -201,8 +202,8 @@ CallResult<HermesValue> weakSetPrototypeHas(void *, Runtime &runtime) {
         "WeakSet.prototype.has can only be called on a WeakSet");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
     return HermesValue::encodeBoolValue(false);
   }
 

@@ -215,30 +215,28 @@ class JSWeakMapImplBase : public JSObject {
 
   /// Set a key/value, overwriting the previous value at that key,
   /// or add a new key/value if the key doesn't exist.
+  /// \pre \p key must be an Object or non-registered Symbol.
   static void setValue(
       Handle<JSWeakMapImplBase> self,
       Runtime &runtime,
-      Handle<JSObject> key,
+      Handle<> key,
       Handle<> value);
 
   /// Delete a key/value in the map.
   /// \return true if the key/value existed and was removed.
-  static bool deleteValue(
-      Handle<JSWeakMapImplBase> self,
-      Runtime &runtime,
-      Handle<JSObject> key);
+  /// \pre \p key must be an Object or non-registered Symbol.
+  static bool
+  deleteValue(Handle<JSWeakMapImplBase> self, Runtime &runtime, Handle<> key);
 
   /// \return true if the \p key exists in the map.
-  static bool hasValue(
-      Handle<JSWeakMapImplBase> self,
-      Runtime &runtime,
-      Handle<JSObject> key);
+  /// \pre \p key must be an Object or non-registered Symbol.
+  static bool
+  hasValue(Handle<JSWeakMapImplBase> self, Runtime &runtime, Handle<> key);
 
   /// \return the value at \p key, if it exists. Else, return undefined.
-  static HermesValue getValue(
-      Handle<JSWeakMapImplBase> self,
-      Runtime &runtime,
-      Handle<JSObject> key);
+  /// \pre \p key must be an Object or non-registered Symbol.
+  static HermesValue
+  getValue(Handle<JSWeakMapImplBase> self, Runtime &runtime, Handle<> key);
 
   /// \return the size of the internal set, after freeing any freeable slots
   /// and erasing their owning keys. Used for testing purposes.

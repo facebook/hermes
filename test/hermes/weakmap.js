@@ -62,7 +62,7 @@ m.set(b, 88);
 print(m.get(a), m.get(b));
 // CHECK-NEXT: 12 88
 try { m.set(1, 2) } catch(e) { print('caught', e.name, e.message) }
-// CHECK-NEXT: caught TypeError WeakMap key must be an Object
+// CHECK-NEXT: caught TypeError WeakMap key must be an Object or non-registered Symbol
 try { WeakMap.prototype.set.call([], a, 3) } catch(e) { print('caught', e.name, e.message) }
 // CHECK-NEXT: caught TypeError WeakMap.prototype.set can only be called on a WeakMap
 
@@ -135,6 +135,26 @@ map.set(key, value);
 gc();
 print(typeof map.get(key))
 // CHECK-NEXT: string
+
+print('WeakMap Symbol key');
+// CHECK-LABEL: WeakMap Symbol key
+var m = new WeakMap();
+var s = Symbol("test");
+m.set(s, 11);
+gc();
+print(m.get(s));
+// CHECK-NEXT: 11
+print(m.get(Symbol("test")));
+// CHECK-NEXT: undefined
+var s2 = Symbol.for("test");
+print(m.has(s2));
+// CHECK-NEXT: false
+try { m.set(s2, 11) } catch (e) { print('caught', e.name, e.message); }
+// CHECK-NEXT: caught TypeError WeakMap key must be an Object or non-registered Symbol
+print(m.delete(s));
+// CHECK-NEXT: true
+print(m.has(s));
+// CHECK-NEXT: false
 
 
 // Ensure some reuse occurred.

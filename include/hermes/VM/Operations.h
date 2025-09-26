@@ -220,6 +220,14 @@ inline CallResult<Handle<SymbolID>> stringToSymbolID(
       runtime, std::move(strPrim));
 }
 
+/// ES16.0 9.13
+/// \return true if \p hv is suitable for use as a weak reference, i.e., an
+/// Object or a non-registered Symbol.
+inline bool canBeHeldWeakly(Runtime &rt, HermesValue hv) {
+  return hv.isObject() ||
+      (hv.isSymbol() && !rt.getSymbolRegistry().hasSymbol(hv.getSymbol()));
+}
+
 /// Convert a value to a uniqued property name.
 CallResult<Handle<SymbolID>> valueToSymbolID(
     Runtime &runtime,

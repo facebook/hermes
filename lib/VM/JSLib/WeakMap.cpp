@@ -197,8 +197,8 @@ CallResult<HermesValue> weakMapPrototypeDelete(void *, Runtime &runtime) {
         "WeakMap.prototype.delete can only be called on a WeakMap");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
     return HermesValue::encodeBoolValue(false);
   }
 
@@ -213,8 +213,8 @@ CallResult<HermesValue> weakMapPrototypeGet(void *, Runtime &runtime) {
         "WeakMap.prototype.get can only be called on a WeakMap");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
     return HermesValue::encodeUndefinedValue();
   }
 
@@ -229,8 +229,8 @@ CallResult<HermesValue> weakMapPrototypeHas(void *, Runtime &runtime) {
         "WeakMap.prototype.has can only be called on a WeakMap");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
     return HermesValue::encodeBoolValue(false);
   }
 
@@ -245,9 +245,10 @@ CallResult<HermesValue> weakMapPrototypeSet(void *, Runtime &runtime) {
         "WeakMap.prototype.set can only be called on a WeakMap");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
-    return runtime.raiseTypeError("WeakMap key must be an Object");
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
+    return runtime.raiseTypeError(
+        "WeakMap key must be an Object or non-registered Symbol");
   }
 
   JSWeakMap::setValue(M, runtime, key, args.getArgHandle(1));

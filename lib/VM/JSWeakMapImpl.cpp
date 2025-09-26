@@ -27,13 +27,15 @@ void JSWeakMapImplBase::WeakMapImplBaseBuildMeta(
 void JSWeakMapImplBase::setValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key,
+    Handle<> key,
     Handle<> value) {
-  auto keyObjOrSym =
-      SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   // No allocations should occur while a WeakRefKey is live.
   NoAllocScope noAlloc{runtime};
-  uint32_t hash = runtime.gcStableHashHermesValue(key.getHermesValue());
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
   WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT::iterator it = self->set_.find_as(lookupKey);
 
@@ -59,11 +61,13 @@ void JSWeakMapImplBase::setValue(
 bool JSWeakMapImplBase::deleteValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key) {
-  auto keyObjOrSym =
-      SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
+    Handle<> key) {
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   NoAllocScope noAlloc{runtime};
-  uint32_t hash = runtime.gcStableHashHermesValue(key.getHermesValue());
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
   WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT ::iterator it = self->set_.find_as(lookupKey);
   if (it == self->set_.end()) {
@@ -78,11 +82,13 @@ bool JSWeakMapImplBase::deleteValue(
 bool JSWeakMapImplBase::hasValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key) {
-  auto keyObjOrSym =
-      SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
+    Handle<> key) {
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   NoAllocScope noAlloc{runtime};
-  uint32_t hash = runtime.gcStableHashHermesValue(key.getHermesValue());
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
   WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT::iterator it = self->set_.find_as(lookupKey);
   return it != self->set_.end();
@@ -91,11 +97,13 @@ bool JSWeakMapImplBase::hasValue(
 HermesValue JSWeakMapImplBase::getValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key) {
-  auto keyObjOrSym =
-      SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
+    Handle<> key) {
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   NoAllocScope noAlloc{runtime};
-  uint32_t hash = runtime.gcStableHashHermesValue(key.getHermesValue());
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
   WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT::iterator it = self->set_.find_as(lookupKey);
   if (it == self->set_.end()) {
