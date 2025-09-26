@@ -276,6 +276,25 @@ TEST_F(GCBasicsTest, WeakRootTest) {
   ASSERT_TRUE(wr.get(rt, gc) == nullptr);
 }
 
+TEST_F(GCBasicsTest, WeakSmallHermesValueTest) {
+  struct : Locals {
+    PinnedValue<DummyObject> o;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+
+  WeakSmallHermesValue wshv;
+  rt.weakSHVs.push_back(&wshv);
+
+  lv.o = DummyObject::create(rt.getHeap(), rt);
+  wshv.setObject(rt, *lv.o);
+  rt.collect();
+  ASSERT_EQ(wshv.getPointer(rt, rt.getHeap()), *lv.o);
+
+  lv.o = nullptr;
+  rt.collect();
+  ASSERT_TRUE(wshv.isInvalid());
+}
+
 TEST_F(GCBasicsTest, VariableSizeRuntimeCellOffsetTest) {
   auto *cell = ArrayStorage::createForTest(rt.getHeap(), 1);
   EXPECT_EQ(

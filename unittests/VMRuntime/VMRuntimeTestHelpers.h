@@ -281,6 +281,7 @@ class DummyRuntime final : public RuntimeBase, public HandleRootOwner {
 
  public:
   std::vector<WeakRoot<GCCell> *> weakRoots{};
+  std::vector<WeakSmallHermesValue *> weakSHVs;
   /// Head of the locals list used for VM operations.
   Locals *vmLocals{};
 

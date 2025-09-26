@@ -169,6 +169,37 @@ TEST_F(SymbolIDRuntimeTest, WeakSymbol) {
   ASSERT_FALSE(weakSymLazy.isInvalid());
 }
 
+TEST_F(SymbolIDRuntimeTest, WeakSmallHermesValue) {
+  WeakSmallHermesValue wshv;
+  runtime.addCustomWeakRootsFunction(
+      [&](GC *gc, WeakRootAcceptor &acceptor) { acceptor.acceptWeak(wshv); });
+
+  struct : Locals {
+    PinnedValue<StringPrimitive> str;
+    PinnedValue<SymbolID> sym;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  std::string asciiStr = "weakSHV";
+  auto strRes = StringPrimitive::create(
+      runtime, ASCIIRef{asciiStr.c_str(), asciiStr.length()});
+  ASSERT_FALSE(isException(strRes));
+  lv.str.castAndSetHermesValue<StringPrimitive>(*strRes);
+
+  auto symRes =
+      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, lv.str);
+  ASSERT_FALSE(isException(symRes));
+  lv.sym = *symRes;
+  wshv.setSymbol(*lv.sym);
+  runtime.collect("test");
+  ASSERT_EQ(wshv.getSymbolNoBarrierUnsafe(), *lv.sym);
+
+  // Clear the strong reference.
+  lv.sym = SymbolID{};
+  runtime.collect("test");
+  ASSERT_TRUE(wshv.isInvalid());
+}
+
 // This test runs too slow when handlesan is ON.
 #ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(SymbolIDRuntimeTest, SymbolAllocDuringGC) {

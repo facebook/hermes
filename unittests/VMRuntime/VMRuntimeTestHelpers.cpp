@@ -98,6 +98,9 @@ void DummyRuntime::markWeakRoots(WeakRootAcceptor &acceptor, bool) {
   for (WeakRoot<GCCell> *ptr : weakRoots) {
     acceptor.acceptWeak(*ptr);
   }
+  for (WeakSmallHermesValue *wshv : weakSHVs) {
+    acceptor.acceptWeak(*wshv);
+  }
 }
 
 // Dummy runtime doesn't need to mark anything during complete marking.
