@@ -157,6 +157,32 @@ struct MallocGC::MarkingAcceptor final : public RootAcceptor,
     wr = CompressedPointer::encode(ptr, pointerBase_);
   }
 
+  void acceptWeak(WeakSmallHermesValue &wshv) override {
+    if (wshv.isPointer()) {
+      GCCell *ptr = wshv.getPointerNoBarrierUnsafe(pointerBase_);
+      CellHeader *header = CellHeader::from(ptr);
+
+      // Reset weak root if target GCCell is dead.
+      if (header->isMarked()) {
+#ifdef HERMESVM_SANITIZE_HANDLES
+        wshv.setObject(pointerBase_, header->getForwardingPointer()->data());
+#endif
+      } else {
+        wshv.invalidate();
+      }
+    } else if (wshv.isSymbol()) {
+      SymbolID id = wshv.getSymbolNoBarrierUnsafe();
+      if (id.isInvalid())
+        return;
+      assert(
+          id.unsafeGetIndex() < markedSymbols_.size() &&
+          "Tried to mark a weak symbol not in range");
+      if (!markedSymbols_[id.unsafeGetIndex()]) {
+        wshv.invalidate();
+      }
+    }
+  }
+
   void acceptWeakSym(WeakRootSymbolID &ws) override {
     if (ws.isInvalid()) {
       return;

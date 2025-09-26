@@ -18,6 +18,7 @@
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValue-inline.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
+#include "hermes/VM/WeakRoot-inline.h"
 
 #include <array>
 #include <functional>
@@ -581,6 +582,25 @@ class HadesGC::EvacAcceptor final : public RootAcceptor,
     }
   }
 
+  void acceptWeak(WeakSmallHermesValue &wshv) override {
+    if (wshv.isPointer()) {
+      GCCell *const ptr = wshv.getPointerNoBarrierUnsafe(pointerBase_);
+      if (!shouldForward(ptr))
+        return;
+
+      if (ptr->hasMarkedForwardingPointer()) {
+        CompressedPointer forwardedCell = ptr->getMarkedForwardingPointer();
+        assert(
+            forwardedCell.getNonNull(pointerBase_)->isValid() &&
+            "Cell was forwarded incorrectly");
+        wshv.setObject(forwardedCell);
+      } else {
+        // The target GCCell is dead, invalidate it.
+        wshv.invalidate();
+      }
+    }
+  }
+
   // Nothing to do for symbols, since they are not collected during a YG
   // collection.
   void acceptWeakSym(WeakRootSymbolID &ws) override {}
@@ -941,6 +961,29 @@ class HadesGC::MarkWeakRootsAcceptor final : public WeakRootAcceptor {
     // after this collection has started and should be treated as live.
     if (idx < markedSymbols_.size() && !markedSymbols_[idx]) {
       ws = SymbolID::empty();
+    }
+  }
+
+  void acceptWeak(WeakSmallHermesValue &wshv) override {
+    if (wshv.isPointer()) {
+      GCCell *const cell = wshv.getPointerNoBarrierUnsafe(gc_.getPointerBase());
+      HERMES_SLOW_ASSERT(gc_.dbgContains(cell) && "ptr not in heap");
+      if (AlignedHeapSegment::getCellMarkBit(cell)) {
+        // If the cell is marked, do nothing.
+        return;
+      }
+      // The target GCCell is dead, invalidate it.
+      wshv.invalidate();
+    } else if (wshv.isSymbol()) {
+      SymbolID sym = wshv.getSymbolNoBarrierUnsafe();
+      if (sym.isInvalid())
+        return;
+      const uint32_t idx = sym.unsafeGetIndex();
+      // Symbols pointing outside the markedSymbols range have been allocated
+      // after this collection has started and should be treated as live.
+      if (idx < markedSymbols_.size() && !markedSymbols_[idx]) {
+        wshv.invalidate();
+      }
     }
   }
 

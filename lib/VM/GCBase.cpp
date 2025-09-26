@@ -344,6 +344,10 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
     // Same goes for weak symbols.
   }
 
+  void acceptWeak(WeakSmallHermesValue &wshv) override {
+    // Same goes for weak pointers/symbols.
+  }
+
   void beginRootSection(Section section) override {
     // Make an element edge from the super root to each root section.
     snap_.addIndexedEdge(
@@ -380,6 +384,16 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor, public WeakRootAcceptor {
   void acceptWeak(WeakRootBase &wr) override {
     auto *ptr = wr.getNoBarrierUnsafe(gc_.getPointerBase());
     pointerAccept(ptr, nullptr, true);
+  }
+
+  void acceptWeak(WeakSmallHermesValue &wshv) override {
+    if (wshv.isPointer()) {
+      GCCell *ptr = wshv.getPointerNoBarrierUnsafe(gc_.getPointerBase());
+      pointerAccept(ptr, nullptr, true);
+    }
+    if (wshv.isSymbol()) {
+      acceptSym(wshv.getSymbolNoBarrierUnsafe(), nullptr, true);
+    }
   }
 
   void acceptWeakSym(WeakRootSymbolID &ws) override {

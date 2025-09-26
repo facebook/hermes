@@ -10,6 +10,7 @@
 
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCDecl.h"
+#include "hermes/VM/SmallHermesValue.h"
 #include "hermes/VM/SymbolID.h"
 
 namespace hermes {
@@ -116,6 +117,83 @@ class WeakRootSymbolID final : protected SymbolID {
   inline SymbolID get(GC &gc);
   inline SymbolID getNoBarrierUnsafe() {
     return (SymbolID)(*this);
+  }
+};
+
+/// A WeakSmallHermesValue can weakly hold Pointer (i.e., String, Object,
+/// BoxedDouble, BigInt) and Symbol values, or any other primitive values that a
+/// SmallHermesValue can hold (e.g., Bool, small integer, etc.).
+/// Each value can have four states:
+/// 1. Empty, which represents the invalidated state and is the default initial
+/// value. When the pointed to object or symbol is dead, the state will
+/// transition back to Empty again.
+/// 2. Pointer, which must not be null.
+/// 3. Symbol (user should check if it's a registered symbol).
+/// 4. Any other values except the above three types (e.g., Bool).
+/// During young gen collection, if the value is pointer, we update the pointer
+/// value if the pointed object has been evacuated, or invalidate it if it's
+/// dead. During old gen collection, we invalidate it if the pointed object is
+/// dead or the symbol is invalid.
+class WeakSmallHermesValue final : protected SmallHermesValue {
+ public:
+  WeakSmallHermesValue() : SmallHermesValue(encodeEmptyValue()) {}
+
+  explicit WeakSmallHermesValue(SmallHermesValue val) : SmallHermesValue(val) {
+    assert(
+        (!val.isPointer() || val.getPointer()) &&
+        "val cannot be invalid pointer");
+  }
+
+  using SmallHermesValue::isObject;
+  using SmallHermesValue::isPointer;
+  using SmallHermesValue::isSymbol;
+  using SmallHermesValue::operator=;
+  using SmallHermesValue::getRaw;
+
+  inline SymbolID getSymbol(GC &gc) const;
+  SymbolID getSymbolNoBarrierUnsafe() const {
+    return SmallHermesValue::getSymbol();
+  }
+
+  inline GCCell *getPointer(PointerBase &base, GC &gc) const;
+  GCCell *getPointerNoBarrierUnsafe(PointerBase &base) const {
+    return SmallHermesValue::getPointer(base);
+  }
+  CompressedPointer getPointerNoBarrierUnsafe() const {
+    return SmallHermesValue::getPointer();
+  }
+  inline GCCell *getObject(PointerBase &base, GC &gc) const;
+  GCCell *getObjectNoBarrierUnsafe(PointerBase &base) const {
+    return SmallHermesValue::getObject(base);
+  }
+  CompressedPointer getObjectNoBarrierUnsafe() const {
+    return SmallHermesValue::getObject();
+  }
+  inline void setObject(CompressedPointer newVal);
+  inline void setObject(PointerBase &base, GCCell *ptr);
+  void setSymbol(SymbolID sym) {
+    assert(sym.isValid() && "Must be valid symbol");
+    setNoBarrier(encodeSymbolValue(sym));
+  }
+  void set(SmallHermesValue newVal) {
+    assert(
+        (!newVal.isPointer() || newVal.getPointer()) &&
+        "newVal cannot be invalid pointer");
+    setNoBarrier(newVal);
+  }
+
+  /// Set the value to dead.
+  void invalidate() {
+    setNoBarrier(encodeEmptyValue());
+  }
+
+  /// \return True if this weak value is invalid.
+  bool isInvalid() const {
+    return isEmpty();
+  }
+
+  explicit operator bool() const {
+    return !isInvalid();
   }
 };
 

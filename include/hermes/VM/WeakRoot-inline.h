@@ -9,6 +9,7 @@
 #define HERMES_VM_WEAKROOT_INLINE_H
 
 #include "hermes/VM/GC.h"
+#include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/WeakRoot.h"
 
 namespace hermes {
@@ -40,6 +41,33 @@ SymbolID WeakRootSymbolID::get(GC &gc) {
   SymbolID id = (SymbolID)(*this);
   gc.weakRefReadBarrier(id);
   return id;
+}
+
+void WeakSmallHermesValue::setObject(CompressedPointer newVal) {
+  assert(newVal && "Object pointer must not be null");
+  setNoBarrier(encodeObjectValue(newVal));
+}
+
+void WeakSmallHermesValue::setObject(PointerBase &base, GCCell *ptr) {
+  assert(ptr && "Object pointer must not be null");
+  setNoBarrier(encodeObjectValue(ptr, base));
+}
+
+SymbolID WeakSmallHermesValue::getSymbol(GC &gc) const {
+  SymbolID id = SmallHermesValue::getSymbol();
+  gc.weakRefReadBarrier(id);
+  return id;
+}
+
+GCCell *WeakSmallHermesValue::getPointer(PointerBase &base, GC &gc) const {
+  GCCell *ptr = SmallHermesValue::getPointer(base);
+  gc.weakRefReadBarrier(ptr);
+  return ptr;
+}
+
+GCCell *WeakSmallHermesValue::getObject(PointerBase &base, GC &gc) const {
+  assert(isObject());
+  return getPointer(base, gc);
 }
 
 } // namespace vm

@@ -29,6 +29,7 @@ struct CheckHeapWellFormedAcceptor final : public RootAcceptor,
   void accept(const RootSymbolID &sym) override;
   void acceptWeak(WeakRootBase &ptr) override;
   void acceptWeakSym(WeakRootSymbolID &ws) override;
+  void acceptWeak(WeakSmallHermesValue &wshv) override;
 
   /// Heap acceptors.
   void accept(GCPointerBase &ptr);

@@ -36,6 +36,13 @@ void CheckHeapWellFormedAcceptor::acceptWeak(WeakRootBase &ptr) {
   GCCell *p = ptr.getNoBarrierUnsafe(gc.getPointerBase());
   accept(p);
 }
+void CheckHeapWellFormedAcceptor::acceptWeak(WeakSmallHermesValue &wshv) {
+  if (!wshv.isPointer())
+    return;
+  GCCell *ptr = wshv.getPointerNoBarrierUnsafe(gc.getPointerBase());
+  accept(ptr);
+}
+
 void CheckHeapWellFormedAcceptor::accept(GCPointerBase &ptr) {
   accept(ptr.get(gc.getPointerBase()));
 }

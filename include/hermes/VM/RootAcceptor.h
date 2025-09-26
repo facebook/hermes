@@ -21,6 +21,7 @@ class HeapSnapshot;
 class WeakRootBase;
 class WeakRootSymbolID;
 class GCCell;
+class WeakSmallHermesValue;
 
 struct RootSectionAcceptor {
   virtual ~RootSectionAcceptor() = default;
@@ -97,6 +98,8 @@ struct WeakRootAcceptor : RootSectionAcceptor {
   virtual void acceptWeak(WeakRootBase &ptr) = 0;
 
   virtual void acceptWeakSym(WeakRootSymbolID &sym) = 0;
+
+  virtual void acceptWeak(WeakSmallHermesValue &wshv) = 0;
 };
 
 template <typename Acceptor>
