@@ -1819,11 +1819,13 @@ void HadesGC::markWeakMapEntrySlots() {
       // If the owner structure isn't reachable, no need to mark the values.
       if (!AlignedHeapSegment::getCellMarkBit(ownerMapCell))
         return;
-      GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
-      // The WeakRef object must be marked for the mapped value to
-      // be marked (unless there are other strong refs to the value).
-      if (!AlignedHeapSegment::getCellMarkBit(cell))
-        return;
+      if (slot.key.isPointer()) {
+        GCCell *cell = slot.key.getPointerNoBarrierUnsafe(getPointerBase());
+        // The WeakRef object must be marked for the mapped value to
+        // be marked (unless there are other strong refs to the value).
+        if (!AlignedHeapSegment::getCellMarkBit(cell))
+          return;
+      }
       acceptor.accept(slot.mappedValue);
     });
     newlyMarkedValue = !markState_->localWorklist.empty();
@@ -1837,10 +1839,17 @@ void HadesGC::markWeakMapEntrySlots() {
       slot.mappedValue = HermesValue::encodeEmptyValue();
       return;
     }
-    GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
     GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
-    if (!AlignedHeapSegment::getCellMarkBit(cell) ||
-        !AlignedHeapSegment::getCellMarkBit(ownerMapCell)) {
+    // We don't need to handle the case of Symbol key here since if the key is
+    // valid, its symbol must be alive.
+    if (slot.key.isPointer()) {
+      GCCell *cell = slot.key.getPointerNoBarrierUnsafe(getPointerBase());
+      if (!AlignedHeapSegment::getCellMarkBit(cell)) {
+        slot.mappedValue = HermesValue::encodeEmptyValue();
+        return;
+      }
+    }
+    if (!AlignedHeapSegment::getCellMarkBit(ownerMapCell)) {
       slot.mappedValue = HermesValue::encodeEmptyValue();
     }
   });

@@ -1075,7 +1075,7 @@ class GCBase {
   /// \param value The mapped value by the key \p key.
   /// \param owner Pointer to the owning WeakMap/WeakSet.
   WeakMapEntrySlot *allocWeakMapEntrySlot(
-      JSObject *key,
+      SmallHermesValue key,
       HermesValue value,
       JSWeakMapImplBase *owner);
 

@@ -464,11 +464,13 @@ void MallocGC::markWeakMapEntrySlots(MarkingAcceptor &acceptor) {
       // If the owner structure isn't reachable, no need to mark the values.
       if (!CellHeader::from(ownerMapCell)->isMarked())
         return;
-      GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
-      // The WeakRef object must be marked for the mapped value to
-      // be marked (unless there are other strong refs to the value).
-      if (!CellHeader::from(cell)->isMarked())
-        return;
+      if (slot.key.isPointer()) {
+        GCCell *cell = slot.key.getPointerNoBarrierUnsafe(getPointerBase());
+        // The WeakRef object must be marked for the mapped value to
+        // be marked (unless there are other strong refs to the value).
+        if (!CellHeader::from(cell)->isMarked())
+          return;
+      }
       acceptor.accept(slot.mappedValue);
     });
     newlyMarkedValue = !acceptor.worklist_.empty();
@@ -481,10 +483,17 @@ void MallocGC::markWeakMapEntrySlots(MarkingAcceptor &acceptor) {
       slot.mappedValue = HermesValue::encodeEmptyValue();
       return;
     }
-    GCCell *cell = slot.key.getNoBarrierUnsafe(getPointerBase());
     GCCell *ownerMapCell = slot.owner.getNoBarrierUnsafe(getPointerBase());
-    if (!CellHeader::from(ownerMapCell)->isMarked() ||
-        !CellHeader::from(cell)->isMarked()) {
+    // We don't need to handle the case of Symbol key here since if the key is
+    // valid, its symbol must be alive.
+    if (slot.key.isPointer()) {
+      GCCell *cell = slot.key.getPointerNoBarrierUnsafe(getPointerBase());
+      if (!CellHeader::from(cell)->isMarked()) {
+        slot.mappedValue = HermesValue::encodeEmptyValue();
+        return;
+      }
+    }
+    if (!CellHeader::from(ownerMapCell)->isMarked()) {
       slot.mappedValue = HermesValue::encodeEmptyValue();
     }
   });

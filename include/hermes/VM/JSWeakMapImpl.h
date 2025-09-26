@@ -40,18 +40,23 @@ class WeakRefKey {
  public:
   WeakRefKey(
       Runtime &runtime,
-      Handle<JSObject> key,
+      SmallHermesValue keyObjOrSym,
+      uint32_t keyHash,
       HermesValue value,
       JSWeakMapImplBase *ownerMapPtr)
-      : slot_(
-            runtime.getHeap().allocWeakMapEntrySlot(*key, value, ownerMapPtr)),
-        hash_(runtime.gcStableHashJSObject(*key)) {}
+      : slot_(runtime.getHeap()
+                  .allocWeakMapEntrySlot(keyObjOrSym, value, ownerMapPtr)),
+        hash_(keyHash) {}
 
-  /// \return a pointer to the key object with read barrier. This should not be
-  /// called when the weak ref key object is collected.
-  JSObject *getKeyNonNull(PointerBase &base, GC &gc) const {
-    assert(isKeyValid() && "tried to access collected weak ref object");
-    return static_cast<JSObject *>(slot_->key.getNonNull(base, gc));
+  /// \return The heap snapshot NodeID for this key. Note that heap snapshot
+  /// are created on mutator thread with no background thread running, key
+  /// objects/symbols are accessed here with no barriers.
+  HeapSnapshot::NodeID getKeyObjectID(GC &gc) const {
+    if (slot_->key.isObject()) {
+      return gc.getObjectID(slot_->key.getPointerNoBarrierUnsafe());
+    }
+    assert(slot_->key.isSymbol());
+    return gc.getObjectID(slot_->key.getSymbolNoBarrierUnsafe());
   }
 
   /// \return The mapped value by the the key object.
@@ -102,19 +107,19 @@ class WeakRefKey {
       return false;
 
     // If either key has been garbage collected, it is impossible for them to
-    // compare equal. Otherwise, check for reference equality between the keys.
+    // compare equal. Otherwise, compare their raw bits directly since they can
+    // only be Objects or Symbols.
     return slot_->key && other.slot_->key &&
-        slot_->key.getNoBarrierUnsafe() ==
-        other.slot_->key.getNoBarrierUnsafe();
+        slot_->key.getRaw() == other.slot_->key.getRaw();
   }
 
   /// \return true if the underlying slot points to the same key object as
   /// \p keyObject. This is only used by WeakRefLookupKey, so \p keyObject
   /// should never be null.
-  bool isKeyEqual(CompressedPointer keyObject) const {
+  bool isKeyEqual(SmallHermesValue keyObjOrSym) const {
     if (reinterpret_cast<uintptr_t>(slot_) <= kTombstoneKey)
       return false;
-    return slot_->key.getNoBarrierUnsafe() == keyObject;
+    return slot_->key.getRaw() == keyObjOrSym.getRaw();
   }
 
   /// Free the WeakMapEntrySlot held by this reference.
@@ -131,15 +136,11 @@ class WeakRefKey {
 /// need to allocate a new WeakMapEntrySlot for query operations. With this,
 /// the only case that we will allocate a new slot is when inserting new values.
 struct WeakRefLookupKey {
-  /// Pointer of the key object.
-  CompressedPointer refCellPtr;
+  /// Pointer of the key object or the key symbol.
+  SmallHermesValue keyObjOrSym;
 
   /// GC-stable hash value of the JSObject pointed to by ref, while it's alive.
   uint32_t hash;
-
-  WeakRefLookupKey(Runtime &runtime, Handle<JSObject> keyObj)
-      : refCellPtr(CompressedPointer::encode(*keyObj, runtime)),
-        hash(runtime.gcStableHashJSObject(*keyObj)) {}
 };
 
 /// Enable using WeakRefKey in DenseMap.
@@ -173,8 +174,11 @@ struct WeakRefInfo {
   /// collected, and the equality check in isKeyEqual() always fails since no
   /// object will ever compare equal to an object that has been freed.
   static inline bool isEqual(const WeakRefLookupKey &a, const WeakRefKey &b) {
-    assert(a.refCellPtr && "LookupKey should not use a null object pointer");
-    return b.isKeyEqual(a.refCellPtr);
+    assert(
+        ((a.keyObjOrSym.isObject() && a.keyObjOrSym.getObject()) ||
+         (a.keyObjOrSym.isSymbol() && a.keyObjOrSym.getSymbol().isValid())) &&
+        "LookupKey should not use a null object pointer or invalid symbol");
+    return b.isKeyEqual(a.keyObjOrSym);
   }
 };
 

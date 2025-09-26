@@ -144,7 +144,7 @@ class WeakMapEntrySlot {
   WeakRoot<GCCell> owner;
   /// The WeakRoot to the key (or next free slot).
   union {
-    WeakRoot<GCCell> key;
+    WeakSmallHermesValue key;
     WeakMapEntrySlot *nextFree;
   };
   /// The value mapped by the WeakRef key.
@@ -180,11 +180,11 @@ class WeakMapEntrySlot {
 
   /// Emplace new value to this slot.
   void emplace(
-      CompressedPointer keyPtr,
+      SmallHermesValue keyPtr,
       HermesValue value,
       CompressedPointer ownerPtr) {
     freed_.store(false, std::memory_order_relaxed);
-    key = keyPtr;
+    key.set(keyPtr);
     mappedValue = value;
     owner = ownerPtr;
   }

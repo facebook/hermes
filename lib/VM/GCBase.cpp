@@ -989,13 +989,11 @@ WeakRefSlot *GCBase::allocWeakSlot(CompressedPointer ptr) {
 }
 
 WeakMapEntrySlot *GCBase::allocWeakMapEntrySlot(
-    JSObject *key,
+    SmallHermesValue key,
     HermesValue value,
     JSWeakMapImplBase *owner) {
   return &weakMapEntrySlots_.add(
-      CompressedPointer::encode(key, getPointerBase()),
-      value,
-      CompressedPointer::encode(owner, getPointerBase()));
+      key, value, CompressedPointer::encode(owner, getPointerBase()));
 }
 
 HeapSnapshot::NodeID GCBase::getObjectID(const GCCell *cell) {
