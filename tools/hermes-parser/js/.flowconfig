@@ -28,7 +28,7 @@ enums=true
 experimental.pattern_matching=true
 
 [version]
-^0.286.0
+^0.287.0
 
 [lints]
 untyped-type-import=error
