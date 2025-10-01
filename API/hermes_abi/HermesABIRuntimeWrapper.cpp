@@ -899,7 +899,8 @@ class HermesABIRuntimeWrapper : public Runtime {
   }
 
   bool isArray(const Object &obj) const override {
-    return vtable_->object_is_array(abiRt_, toABIObject(obj));
+    return const_cast<HermesABIRuntimeWrapper *>(this)->unwrap(
+        vtable_->object_is_array(abiRt_, toABIObject(obj)));
   }
   bool isArrayBuffer(const Object &obj) const override {
     return vtable_->object_is_arraybuffer(abiRt_, toABIObject(obj));
@@ -945,7 +946,7 @@ class HermesABIRuntimeWrapper : public Runtime {
         abiRt_, new MutableBufferWrapper(std::move(buffer))));
   }
   size_t size(const Array &arr) override {
-    return vtable_->get_array_length(abiRt_, toABIArray(arr));
+    return unwrap(vtable_->get_array_length(abiRt_, toABIArray(arr)));
   }
   size_t size(const ArrayBuffer &ab) override {
     return unwrap(vtable_->get_arraybuffer_size(abiRt_, toABIArrayBuffer(ab)));

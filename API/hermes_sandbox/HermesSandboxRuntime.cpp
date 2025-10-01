@@ -268,7 +268,7 @@ struct SandboxNativeState {
   F(get_object_property_names, u32, (w2c_hermes *, u32, u32))                 \
   F(set_object_external_memory_pressure, u32, (w2c_hermes *, u32, u32, u32))  \
   F(create_array, u32, (w2c_hermes *, u32, u32))                              \
-  F(get_array_length, u32, (w2c_hermes *, u32, u32))                          \
+  F(get_array_length, void, (w2c_hermes *, u32, u32, u32))                    \
   F(create_arraybuffer_from_external_data, u32, (w2c_hermes *, u32, u32))     \
   F(get_arraybuffer_data, void, (w2c_hermes *, u32, u32, u32))                \
   F(get_arraybuffer_size, void, (w2c_hermes *, u32, u32, u32))                \
@@ -2011,7 +2011,9 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
   }
 
   bool isArray(const Object &obj) const override {
-    return vt_.object_is_array(getMutMod(), srt_, toSandboxObject(obj).pointer);
+    SandboxBoolOrError resBoolOrError{
+        vt_.object_is_array(getMutMod(), srt_, toSandboxObject(obj).pointer)};
+    return const_cast<HermesSandboxRuntimeImpl *>(this)->unwrap(resBoolOrError);
   }
   bool isArrayBuffer(const Object &obj) const override {
     return vt_.object_is_arraybuffer(
@@ -2052,7 +2054,10 @@ class HermesSandboxRuntimeImpl : public facebook::hermes::HermesSandboxRuntime,
     THROW_UNIMPLEMENTED();
   }
   size_t size(const Array &arr) override {
-    return vt_.get_array_length(this, srt_, toSandboxArray(arr).pointer);
+    StackAlloc<SandboxSizeTOrError> resSizeTorError(this);
+    vt_.get_array_length(
+        this, resSizeTorError, srt_, toSandboxArray(arr).pointer);
+    return unwrap(*resSizeTorError);
   }
   size_t size(const ArrayBuffer &ab) override {
     StackAlloc<SandboxSizeTOrError> resSizeTOrError(this);

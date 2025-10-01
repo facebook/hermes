@@ -159,9 +159,6 @@ vm::Handle<vm::SymbolID> toHandle(HermesABISymbol sym) {
 vm::Handle<vm::SymbolID> toHandle(HermesABIPropNameID sym) {
   return toHandle<vm::SymbolID>(sym.pointer);
 }
-vm::Handle<vm::JSArray> toHandle(HermesABIArray arr) {
-  return toHandle<vm::JSArray>(arr.pointer);
-}
 vm::Handle<vm::BigIntPrimitive> toHandle(HermesABIBigInt bi) {
   return toHandle<vm::BigIntPrimitive>(bi.pointer);
 }
@@ -778,10 +775,29 @@ HermesABIArrayOrError create_array(HermesABIRuntime *abiRt, size_t length) {
   return hart->createArrayOrError(result->getHermesValue());
 }
 
-size_t get_array_length(HermesABIRuntime *abiRt, HermesABIArray arr) {
+HermesABISizeTOrError get_array_length(
+    HermesABIRuntime *abiRt,
+    HermesABIArray arr) {
   auto *hart = impl(abiRt);
   auto &runtime = *hart->rt;
-  return vm::JSArray::getLength(*toHandle(arr), runtime);
+  auto objHandle = toHandle<vm::JSObject>(arr.pointer);
+  if (auto *jsArr = vm::dyn_vmcast<vm::JSArray>(*objHandle)) {
+    return abi::createSizeTOrError(vm::JSArray::getLength(jsArr, runtime));
+  }
+
+  vm::GCScope gcScope(runtime);
+  auto getRes = vm::JSObject::getNamed_RJS(
+      objHandle, runtime, vm::Predefined::getSymbolID(vm::Predefined::length));
+  if (getRes == vm::ExecutionStatus::EXCEPTION) {
+    return abi::createSizeTOrError(HermesABIErrorCodeJSError);
+  }
+
+  auto lenHandle = runtime.makeHandle(std::move(*getRes));
+  auto lenRes = vm::toLength(runtime, lenHandle);
+  if (lenRes == vm::ExecutionStatus::EXCEPTION) {
+    return abi::createSizeTOrError(HermesABIErrorCodeJSError);
+  }
+  return abi::createSizeTOrError(lenRes->getNumber());
 }
 
 HermesABIArrayBufferOrError create_arraybuffer_from_external_data(
@@ -1229,9 +1245,23 @@ HermesABIVoidOrError set_native_state(
   return abi::createVoidOrError();
 }
 
-bool object_is_array(HermesABIRuntime *, HermesABIObject object) {
-  return vm::vmisa<vm::JSArray>(*toHandle(object));
+HermesABIBoolOrError object_is_array(
+    HermesABIRuntime *abiRt,
+    HermesABIObject object) {
+  auto objHandle = toHandle(object);
+  if (LLVM_LIKELY(vm::vmisa<vm::JSArray>(*objHandle))) {
+    return abi::createBoolOrError(true);
+  }
+  auto *hart = impl(abiRt);
+  auto &runtime = *hart->rt;
+  vm::GCScope gcScope(runtime);
+  auto result = vm::isArray(runtime, *objHandle);
+  if (result == vm::ExecutionStatus::EXCEPTION) {
+    return abi::createBoolOrError(HermesABIErrorCodeJSError);
+  }
+  return abi::createBoolOrError(*result);
 }
+
 bool object_is_arraybuffer(HermesABIRuntime *, HermesABIObject object) {
   return vm::vmisa<vm::JSArrayBuffer>(*toHandle(object));
 }
