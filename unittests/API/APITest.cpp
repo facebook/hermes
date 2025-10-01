@@ -852,6 +852,24 @@ TEST_P(HermesRuntimeTest, PropNameIDFromSymbol) {
   EXPECT_EQ(x.getProperty(*rt, globalProp).getString(*rt).utf8(*rt), "global");
 }
 
+TEST_P(HermesRuntimeTest, ArrayTest) {
+  auto array = eval("[1, 2, 3]").getObject(*rt);
+  EXPECT_TRUE(array.isArray(*rt));
+  auto jsiArray = array.getArray(*rt);
+  EXPECT_EQ(jsiArray.size(*rt), 3);
+  EXPECT_EQ(jsiArray.getValueAtIndex(*rt, 0).asNumber(), 1);
+  jsiArray.setValueAtIndex(*rt, 1, 0);
+  EXPECT_EQ(jsiArray.getValueAtIndex(*rt, 1).asNumber(), 0);
+
+  array = eval("new Proxy([4, 5, 6], {})").getObject(*rt);
+  EXPECT_TRUE(array.isArray(*rt));
+  jsiArray = array.getArray(*rt);
+  EXPECT_EQ(jsiArray.size(*rt), 3);
+  EXPECT_EQ(jsiArray.getValueAtIndex(*rt, 0).asNumber(), 4);
+  jsiArray.setValueAtIndex(*rt, 1, 0);
+  EXPECT_EQ(jsiArray.getValueAtIndex(*rt, 1).asNumber(), 0);
+}
+
 TEST_P(HermesRuntimeTest, HasComputedTest) {
   // The only use of JSObject::hasComputed() is in HermesRuntimeImpl,
   // so we test its Proxy support here, instead of from JS.
