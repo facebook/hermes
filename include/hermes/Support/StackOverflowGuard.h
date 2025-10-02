@@ -115,6 +115,23 @@ class StackOverflowGuard {
   inline bool isOverflowing() {
     return callDepth > maxCallDepth;
   }
+
+  class CallFrameRAII;
+};
+
+/// A simple RAII class to help users increment/decrement frame depth if
+/// necessary.
+class [[nodiscard]] StackOverflowGuard::CallFrameRAII {
+  StackOverflowGuard &guard_;
+
+ public:
+  explicit CallFrameRAII(StackOverflowGuard &guard) : guard_(guard) {
+    ++guard_.callDepth;
+  }
+
+  ~CallFrameRAII() {
+    --guard_.callDepth;
+  }
 };
 
 #endif

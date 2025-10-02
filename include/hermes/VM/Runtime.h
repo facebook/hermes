@@ -1733,19 +1733,20 @@ class ScopedNativeDepthTracker {
   Runtime &runtime_;
   /// Whether the stack overflowed when the tracker was constructed.
   bool overflowed_;
+#ifndef HERMES_CHECK_NATIVE_STACK
+  StackOverflowGuard::CallFrameRAII frame_;
+#endif
 
  public:
-  explicit ScopedNativeDepthTracker(Runtime &runtime) : runtime_(runtime) {
+  explicit ScopedNativeDepthTracker(Runtime &runtime)
+      : runtime_(runtime)
+#ifndef HERMES_CHECK_NATIVE_STACK
+        ,
+        frame_(StackOverflowGuard::CallFrameRAII{runtime_.overflowGuard_})
+#endif
+  {
     (void)runtime_;
-#ifndef HERMES_CHECK_NATIVE_STACK
-    ++runtime.overflowGuard_.callDepth;
-#endif
     overflowed_ = runtime.isStackOverflowing();
-  }
-  ~ScopedNativeDepthTracker() {
-#ifndef HERMES_CHECK_NATIVE_STACK
-    --runtime_.overflowGuard_.callDepth;
-#endif
   }
 
   /// \return whether we overflowed the native call frame depth.

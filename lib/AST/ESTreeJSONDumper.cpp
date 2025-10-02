@@ -202,9 +202,7 @@ class ESTreeJSONDumper {
       return;
     }
 #ifndef HERMES_CHECK_NATIVE_STACK
-    ++stackOverflowGuard_.callDepth;
-    auto decrementDepth =
-        llvh::make_scope_exit([this] { --stackOverflowGuard_.callDepth; });
+    StackOverflowGuard::CallFrameRAII callFrame{stackOverflowGuard_};
 #endif
     if (stackOverflowGuard_.isOverflowing()) {
       json_.emitNullValue();
