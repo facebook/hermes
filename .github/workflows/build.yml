@@ -141,12 +141,16 @@ jobs:
           export CC=clang-16
           export CXX=clang++-16
           cmake -S hermes -GNinja -B build -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
+            -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux \
+            -DHERMESVM_FORCE_CONCURRENT_GC=ON
           cmake --build build --target check-hermes all
 
           cmake -S hermes -GNinja -B build_intl -DHERMES_ENABLE_INTL=ON \
             -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux
+            -DCMAKE_SYSTEM_PROCESSOR=arm -DCMAKE_SYSTEM_NAME=Linux \
+            -DHERMESVM_FORCE_CONCURRENT_GC=ON -DHERMESVM_SANITIZE_HANDLES=ON \
+            -DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=ON \
+            -DHERMES_ENABLE_ADDRESS_SANITIZER=ON
           cmake --build ./build_intl
           # Not running Hermes test with -DHERMES_ENABLE_INTL=ON  until more of
           # Intl is built out: toLocaleLowerCase and toLocaleUpperCase are the two
