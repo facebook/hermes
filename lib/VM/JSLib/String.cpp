@@ -843,6 +843,8 @@ CallResult<HermesValue> stringPrototypeConcat(void *, Runtime &runtime) {
   }
   lv.strings = vmcast<ArrayStorageSmall>(*arrRes);
 
+  // Track if all strings are ASCII.
+  bool allASCII = lv.S->isASCII();
   // Run toString on the arguments to figure out the final size.
   auto marker = gcScope.createMarker();
   for (uint32_t i = 0; i < argCount; ++i) {
@@ -859,6 +861,7 @@ CallResult<HermesValue> stringPrototypeConcat(void *, Runtime &runtime) {
         runtime.getHeap());
     uint32_t strLength = strRes->get()->getStringLength();
 
+    allASCII &= (*strRes)->isASCII();
     size.add(strLength);
     if (LLVM_UNLIKELY(size.isOverflowed())) {
       return runtime.raiseRangeError("resulting string length exceeds limit");
@@ -868,7 +871,7 @@ CallResult<HermesValue> stringPrototypeConcat(void *, Runtime &runtime) {
   }
 
   // Allocate the complete result.
-  auto builder = StringBuilder::createStringBuilder(runtime, size);
+  auto builder = StringBuilder::createStringBuilder(runtime, size, allASCII);
   if (builder == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
