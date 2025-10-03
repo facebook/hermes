@@ -44,18 +44,6 @@ Pod::Spec.new do |spec|
     ss.header_dir = 'hermes/cdp'
   end
 
-  spec.subspec 'inspector' do |ss|
-    ss.source_files = ''
-    ss.public_header_files = 'destroot/include/hermes/inspector/*.h'
-    ss.header_dir = 'hermes/inspector'
-  end
-
-  spec.subspec 'inspector_chrome' do |ss|
-    ss.source_files = ''
-    ss.public_header_files = 'destroot/include/hermes/inspector/chrome/*.h'
-    ss.header_dir = 'hermes/inspector/chrome'
-  end
-
   spec.subspec 'jsi' do |ss|
     ss.source_files = ''
     ss.public_header_files = 'destroot/include/jsi/*.h'
