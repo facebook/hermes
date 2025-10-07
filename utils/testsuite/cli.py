@@ -72,6 +72,16 @@ def create_parser():
         help="Path to hermes built binary directory, default to the package root",
     )
     parser.add_argument(
+        "--bytecode-compat-check",
+        dest="bytecode_compat_check",
+        default=False,
+        action="store_true",
+        help="""When this flag is provided, specified binary directory expects
+        an additional b_hermes binary. The hermes binary will be used to compile
+        the test file to bytecode, while b_hermes is used to run the bytecode.
+        This has no effect in shermes mode and lazy mode.""",
+    )
+    parser.add_argument(
         "-j",
         "--jobs",
         dest="n_jobs",
@@ -168,7 +178,9 @@ def validate_args(args: argparse.Namespace):
             print("Argument error: Only one path is expected with --dump-source.")
             sys.exit(1)
 
-    utils.check_hermes_exe(args.binary_directory, args.shermes)
+    utils.check_hermes_exe(
+        args.binary_directory, args.shermes, args.bytecode_compat_check
+    )
 
 
 def print_stats(stats: dict) -> None:
@@ -274,6 +286,7 @@ async def run(
     n_jobs: int,
     test_skiplist: bool,
     test_intl: bool,
+    bytecode_compat_check: bool,
     lazy: bool,
     shermes: bool,
     opt: bool,
@@ -370,6 +383,7 @@ async def run(
             binary_directory,
             skipped_paths_features,
             test_skiplist,
+            bytecode_compat_check,
             lazy,
             shermes,
             opt,
@@ -488,6 +502,7 @@ async def main() -> int:
         args.n_jobs,
         args.test_skiplist,
         args.test_intl,
+        args.bytecode_compat_check,
         args.lazy,
         args.shermes,
         args.opt,

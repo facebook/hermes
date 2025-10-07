@@ -139,7 +139,9 @@ def list_all_matched_entries(pattern: str) -> List[PathT]:
     return [f for f in files if f.startswith(pattern)]
 
 
-def check_hermes_exe(binary_dir: PathT, shermes: bool) -> None:
+def check_hermes_exe(
+    binary_dir: PathT, shermes: bool, bytecode_compat_check: bool
+) -> None:
     """Check that needed Hermes executables exist, terminate the execution if not."""
 
     # TODO(zhaogang): Check the executable names on Windows if we run testsuites on it.
@@ -150,6 +152,12 @@ def check_hermes_exe(binary_dir: PathT, shermes: bool) -> None:
     if not os.path.isfile(exe):
         print(f"Error: {exe} not found.")
         sys.exit(1)
+
+    if bytecode_compat_check:
+        exe = os.path.join(binary_dir, "b_hermes")
+        if not os.path.isfile(exe):
+            print(f"Error: {exe} not found.")
+            sys.exit(1)
 
 
 HERMES_FEATURES_MATCHER = re.compile(

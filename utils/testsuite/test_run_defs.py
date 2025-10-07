@@ -39,6 +39,8 @@ class TestRunArgs(object):
     """Helper for skipping certain tests."""
     test_skiplist: bool
     """Whether to run tests in skiplist."""
+    bytecode_compat_check: bool
+    """Whether to run bytecode compatibility check."""
     lazy: bool
     """Whether to force lazy evaluation."""
     shermes: bool
@@ -226,6 +228,7 @@ class Test262Suite(Suite):
             args.binary_directory,
             test_case.expected_failure,
             disable_handle_san,
+            args.bytecode_compat_check,
             args.lazy,
             args.shermes,
             args.opt,
@@ -287,6 +290,7 @@ class MjsunitSuite(Suite):
             args.binary_directory,
             test_case.expected_failure,
             disable_handle_san,
+            args.bytecode_compat_check,
             args.lazy,
             args.shermes,
             args.opt,
