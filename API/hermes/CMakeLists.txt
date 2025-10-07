@@ -14,6 +14,10 @@ if(HERMES_ENABLE_DEBUGGER)
     cdp/MessageConverters.cpp
     cdp/MessageInterfaces.cpp
     cdp/MessageTypes.cpp
+    inspector/chrome/JSONValueInterfaces.cpp
+    inspector/chrome/MessageConverters.cpp
+    inspector/chrome/MessageInterfaces.cpp
+    inspector/chrome/MessageTypes.cpp
   )
 
   if (NOT HERMES_ENABLE_EH_RTTI)
@@ -42,6 +46,11 @@ if(HERMES_ENABLE_DEBUGGER)
   )
 
   set(INSPECTOR_API_SOURCES
+    inspector/chrome/CallbackOStream.cpp
+    inspector/chrome/CDPHandler.cpp
+    inspector/chrome/RemoteObjectConverters.cpp
+    inspector/chrome/RemoteObjectsTable.cpp
+    inspector/RuntimeAdapter.cpp
     ${CDP_API_SOURCES}
     ${INSPECTOR_NO_EH_RTTI_SOURCES}
   )
