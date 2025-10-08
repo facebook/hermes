@@ -154,6 +154,32 @@
         "test/annexB/built-ins/RegExp/legacy-accessors/rightContext/this-subclass-constructor.js"
       ],
       "comment": "Noncompliant GetLegacyRegExpStaticProperty (T209498741)"
+    },
+    {
+      "paths": [
+        "test262/test/built-ins/Iterator/",
+        "test262/test/built-ins/Iterator/from/",
+        "test262/test/built-ins/Iterator/prototype/",
+        "test262/test/built-ins/Iterator/prototype/constructor/",
+        "test262/test/built-ins/Iterator/prototype/drop/",
+        "test262/test/built-ins/Iterator/prototype/every/",
+        "test262/test/built-ins/Iterator/prototype/filter/",
+        "test262/test/built-ins/Iterator/prototype/find/",
+        "test262/test/built-ins/Iterator/prototype/flatMap/",
+        "test262/test/built-ins/Iterator/prototype/forEach/",
+        "test262/test/built-ins/Iterator/prototype/map/",
+        "test262/test/built-ins/Iterator/prototype/reduce/",
+        "test262/test/built-ins/Iterator/prototype/some/",
+        "test262/test/built-ins/Iterator/prototype/Symbol.iterator/",
+        "test262/test/built-ins/Iterator/prototype/Symbol.toStringTag/",
+        "test262/test/built-ins/Iterator/prototype/take/",
+        "test262/test/built-ins/Iterator/prototype/toArray/",
+        "test262/test/built-ins/Object/prototype/toString/symbol-tag-array-builtin.js",
+        "test262/test/built-ins/Object/prototype/toString/symbol-tag-map-builtin.js",
+        "test262/test/built-ins/Object/prototype/toString/symbol-tag-string-builtin.js",
+        "test262/test/built-ins/Object/prototype/toString/symbol-tag-set-builtin.js"
+      ],
+      "comment": "Iterator helpers tests will be removed from skiplist as they are added in T221534846"
     }
   ],
   "skip_list": [
@@ -3506,7 +3532,6 @@
     "tail-call-optimization",
     "Temporal",
     "u180e",
-    "iterator-helpers",
     "regexp-v-flag",
     "Intl.NumberFormat-v3",
     "Intl.DurationFormat",
