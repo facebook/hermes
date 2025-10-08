@@ -153,3 +153,45 @@ print(Math.sumPrecise.length);
 
 print(Math.sumPrecise.name);
 // CHECK-NEXT: sumPrecise
+
+// Additional edge cases from TC39 proposal test suite
+
+// Test basic ability to handle intermediate overflows
+print(Math.sumPrecise([1e308, 1e308, 0.1, 0.1, 1e30, 0.1, -1e30, -1e308, -1e308]));
+// CHECK-NEXT: 0.30000000000000004
+
+print(Math.sumPrecise([1e30, 0.1, -1e30]));
+// CHECK-NEXT: 0.1
+
+// Test specific edge cases from fuzzer
+print(Math.sumPrecise([8.98846567431158e+307, 8.988465674311579e+307, -1.7976931348623157e+308]));
+// CHECK-NEXT: 0
+
+// Test handling of multiple overflows
+print(Math.sumPrecise([1e308, 1e308]));
+// CHECK-NEXT: Infinity
+
+// Test single element arrays
+print(Math.sumPrecise([1e308]));
+// CHECK-NEXT: 1e+308
+
+print(Math.sumPrecise([.1]));
+// CHECK-NEXT: 0.1
+
+// Test two element arrays with cancellation
+print(Math.sumPrecise([.1, .1]));
+// CHECK-NEXT: 0.2
+
+print(Math.sumPrecise([.1, -.1]));
+// CHECK-NEXT: 0
+
+// Test with specific infinity combinations
+print(Math.sumPrecise([1, Infinity, -1e308]));
+// CHECK-NEXT: Infinity
+
+print(Math.sumPrecise([1, Infinity, -1e308, -Infinity]));
+// CHECK-NEXT: NaN
+
+// Test edge case with large number combinations
+print(Math.sumPrecise([-2.534858246857893e+115, 8.988465674311579e+307, 8.98846567431158e+307]));
+// CHECK-NEXT: 1.7976931348623157e+308
