@@ -176,19 +176,20 @@ TEST_F(GCBasicsTest, WeakRefSlotTest) {
   auto obj = (void *)0x12345670;
   CompressedPointer ptr =
       CompressedPointer::encode(static_cast<GCCell *>(obj), rt);
+  auto shv = SmallHermesValue::encodeObjectValue(ptr);
 
   WeakRefSlot s;
-  s.emplace(ptr);
+  s.emplace(shv);
   EXPECT_TRUE(s.hasValue());
-  EXPECT_EQ(ptr, s.getNoBarrierUnsafe());
-  EXPECT_EQ(obj, s.getNoBarrierUnsafe(rt));
+  EXPECT_EQ(ptr, s.getObjectNoBarrierUnsafe());
+  EXPECT_EQ(obj, s.getObjectNoBarrierUnsafe(rt));
 
   // Update pointer of unmarked slot.
   auto obj2 = (void *)0x76543210;
   s.setPointer(CompressedPointer::encode(static_cast<GCCell *>(obj2), rt));
   EXPECT_FALSE(s.isFree());
   EXPECT_TRUE(s.hasValue());
-  EXPECT_EQ(obj2, s.getNoBarrierUnsafe(rt));
+  EXPECT_EQ(obj2, s.getObjectNoBarrierUnsafe(rt));
 
   s.clearPointer();
   EXPECT_FALSE(s.isFree());

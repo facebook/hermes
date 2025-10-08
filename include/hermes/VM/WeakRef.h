@@ -59,14 +59,15 @@ class WeakRef : public WeakRefBase {
       : WeakRef(runtime, runtime.getHeap(), *handle) {}
 
   explicit WeakRef(PointerBase &base, GC &gc, T *ptr)
-      : WeakRefBase(gc.allocWeakSlot(CompressedPointer::encode(ptr, base))) {}
+      : WeakRefBase(
+            gc.allocWeakSlot(SmallHermesValue::encodeObjectValue(ptr, base))) {}
 
   explicit WeakRef(PointerBase &base, GC &gc, Handle<T> handle)
       : WeakRef(base, gc, *handle) {}
 
   /// Construct a WeakRef with slot pointer directly. This is only used in
-  /// TransitionMap and JSWeakRef where we need to initialize a WeakRef with
-  /// nullptr before creating an actual one.
+  /// TransitionMap where we need to initialize a WeakRef with  nullptr before
+  /// creating an actual one.
   explicit WeakRef(WeakRefSlot *slot) : WeakRefBase(slot) {}
 
   /// Convert between compatible types.
@@ -90,7 +91,7 @@ class WeakRef : public WeakRefBase {
     if (!isValid()) {
       return nullptr;
     }
-    GCCell *value = slot_->get(runtime, runtime.getHeap());
+    GCCell *value = slot_->getObject(runtime, runtime.getHeap());
     return static_cast<T *>(value);
   }
 
@@ -103,7 +104,7 @@ class WeakRef : public WeakRefBase {
     if (!isValid()) {
       return nullptr;
     }
-    return static_cast<T *>(slot_->getNoBarrierUnsafe(base));
+    return static_cast<T *>(slot_->getObjectNoBarrierUnsafe(base));
   }
 
   /// \return true if the underlying slot is null.

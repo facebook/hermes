@@ -24,25 +24,40 @@ class WeakRefSlot {
  public:
   // Mutator methods.
 
-  /// Return true if this slot stores a non-null pointer to something.
+  /// Return true if this slot stores a valid Object pointer or Symbol.
   bool hasValue() const {
     assert(!isFree() && "Should never query a free WeakRef");
-    return value_.root != CompressedPointer(nullptr);
+    return !!value_.root;
   }
+
+  bool isObject() const {
+    return value_.root.isObject();
+  }
+  bool isSymbol() const {
+    return value_.root.isSymbol();
+  }
+
+  /// Return the underlying value, which is either an Object or Symbol, without
+  /// a read barrier.
+  inline HermesValue getValueNoBarrierUnsafe(PointerBase &base) const;
 
   /// Return the object as a GCCell *, with a read barrier
-  inline GCCell *get(PointerBase &base, GC &gc) const;
+  inline GCCell *getObject(PointerBase &base, GC &gc) const;
 
-  /// Same as get, but without a read barrier
-  GCCell *getNoBarrierUnsafe(PointerBase &base) const {
+  /// Same as getObject, but without a read barrier
+  GCCell *getObjectNoBarrierUnsafe(PointerBase &base) const {
     // Cannot check state() here because it can race with marking code.
     assert(hasValue() && "tried to access collected referent");
-    return value_.root.getNonNullNoBarrierUnsafe(base);
+    return value_.root.getObjectNoBarrierUnsafe(base);
+  }
+  CompressedPointer getObjectNoBarrierUnsafe() const {
+    assert(hasValue() && "tried to access collected referent");
+    return value_.root.getObjectNoBarrierUnsafe();
   }
 
-  CompressedPointer getNoBarrierUnsafe() const {
-    assert(hasValue() && "tried to access collected referent");
-    return value_.root.getNoBarrierUnsafe();
+  /// Return the symbol, without a read barrier.
+  SymbolID getSymbolNoBarrierUnsafe() const {
+    return value_.root.getSymbolNoBarrierUnsafe();
   }
 
   void markWeakRoots(WeakRootAcceptor &acceptor) {
@@ -53,14 +68,11 @@ class WeakRefSlot {
   // GC methods to update slot when referent moves/dies.
 
   /// Update the stored pointer (because the object moved).
-  void setPointer(CompressedPointer ptr) {
-    // Cannot check state() here because it can race with marking code.
-    value_.root = ptr;
-  }
+  inline void setPointer(CompressedPointer ptr);
 
   /// Clear the pointer (because the object died).
   void clearPointer() {
-    value_.root = CompressedPointer(nullptr);
+    value_.root.invalidate();
   }
 
   /// GC methods to recycle slots.
@@ -98,9 +110,9 @@ class WeakRefSlot {
   }
 
   /// Emplace new value to this slot.
-  void emplace(CompressedPointer ptr) {
+  void emplace(SmallHermesValue target) {
     assert(isFree() && "Slot must be free.");
-    value_.root = ptr;
+    value_.root.set(target);
     free_.store(false, std::memory_order_relaxed);
   }
 
@@ -111,7 +123,7 @@ class WeakRefSlot {
   /// another freed slot and added to a freelist for reuse (currently this is
   /// delegated to ManagedChunkedList).
   union WeakRootOrIndex {
-    WeakRoot<GCCell> root;
+    WeakSmallHermesValue root;
     WeakRefSlot *nextFree;
     WeakRootOrIndex() {}
   } value_;

@@ -14,10 +14,23 @@
 namespace hermes {
 namespace vm {
 
-GCCell *WeakRefSlot::get(PointerBase &base, GC &gc) const {
+void WeakRefSlot::setPointer(CompressedPointer ptr) {
+  // Cannot check state() here because it can race with marking code.
+  value_.root.setObject(ptr);
+}
+
+GCCell *WeakRefSlot::getObject(PointerBase &base, GC &gc) const {
   // Cannot check state() here because it can race with marking code.
   assert(hasValue() && "tried to access collected referent");
-  return value_.root.getNonNull(base, gc);
+  return value_.root.getObject(base, gc);
+}
+
+HermesValue WeakRefSlot::getValueNoBarrierUnsafe(PointerBase &base) const {
+  // We don't use unboxToHV here because we know the exact possible types.
+  if (value_.root.isObject())
+    return HermesValue::encodeObjectValue(
+        value_.root.getObjectNoBarrierUnsafe(base));
+  return HermesValue::encodeSymbolValue(value_.root.getSymbolNoBarrierUnsafe());
 }
 
 } // namespace vm

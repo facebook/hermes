@@ -1068,7 +1068,9 @@ class GCBase {
     return true;
   }
 
-  WeakRefSlot *allocWeakSlot(CompressedPointer ptr);
+  /// Allocate a slot to use in WeakRef.
+  /// \pre \p target must hold an Object or non-registered Symbol.
+  WeakRefSlot *allocWeakSlot(SmallHermesValue target);
 
   /// Allocate a slot to use in WeakMap/WeakSet when inserting a new entry.
   /// \param key Pointer to the key object.

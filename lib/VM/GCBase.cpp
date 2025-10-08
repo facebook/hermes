@@ -984,8 +984,8 @@ bool GCBase::shouldSanitizeHandles() {
 }
 #endif
 
-WeakRefSlot *GCBase::allocWeakSlot(CompressedPointer ptr) {
-  return &weakSlots_.add(ptr);
+WeakRefSlot *GCBase::allocWeakSlot(SmallHermesValue target) {
+  return &weakSlots_.add(target);
 }
 
 WeakMapEntrySlot *GCBase::allocWeakMapEntrySlot(
