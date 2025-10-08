@@ -333,11 +333,10 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
     // 1. We must do this before marking weak symbols, because the mark bits
     //    will be updated by this call to reflect symbols that were not actually
     //    freed.
-    // 2. We must do this after we mark the WeakMap entries, because they may
-    //    retain additional symbols. However, if we add support for WeakMaps
-    //    with symbol keys, we will have to revisit this, because freeSymbols
-    //    also updates the mark bits to reflect non-freeable symbols, which is
-    //    necessary to know if a symbol key in a WeakMap is reachable.
+    // 2. We call this after marking WeakMaps. This is safe even if WeakMaps
+    //    have symbol keys, because the symbol keys for WeakMap are always
+    //    non-lazy, so its mark bits won't be updated in below call (which
+    //    calls IdentifierTable::freeUnmarkedSymbols()).
     gcCallbacks_.freeSymbols(acceptor.markedSymbols_);
 
     // Update weak roots references.
