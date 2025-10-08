@@ -44,6 +44,11 @@ class WeakRefBase {
   void releaseSlot() {
     slot_->free();
   }
+
+  /// \return true if the underlying slot is null.
+  bool isEmpty() const {
+    return !slot_;
+  }
 };
 
 /// This class encapsulates a weak reference - a reference that does not cause
@@ -107,14 +112,35 @@ class WeakRef : public WeakRefBase {
     return static_cast<T *>(slot_->getObjectNoBarrierUnsafe(base));
   }
 
-  /// \return true if the underlying slot is null.
-  bool isEmpty() const {
-    return !slot_;
-  }
-
   /// Whether the underlying slot is freed.
   bool isSlotFree() const {
     return slot_->isFree();
+  }
+};
+
+/// A WeakRef type whose target can be Object or Symbol. This is only used by
+/// JSWeakRef.
+class WeakRefObjOrSym : public WeakRefBase {
+ public:
+  /// Construct from \p handle, which must be either Object or Symbol.
+  explicit WeakRefObjOrSym(Runtime &runtime, SmallHermesValue target)
+      : WeakRefBase(runtime.getHeap().allocWeakSlot(target)) {
+    assert(
+        (target.isObject() || target.isSymbol()) &&
+        "Target must be Object or Symbol");
+  }
+  explicit WeakRefObjOrSym(WeakRefSlot *slot) : WeakRefBase(slot) {}
+
+  HermesValue getNoBarrierUnsafe(PointerBase &base) const {
+    return slot_->getValueNoBarrierUnsafe(base);
+  }
+
+  /// \return the HeapSnapshot node id for the underlying Object or Symbol.
+  HeapSnapshot::NodeID getNodeID(GC &gc) const {
+    assert(isValid() && "Heap snapshot should not visit invalid weak ref");
+    if (slot_->isObject())
+      return gc.getObjectID(slot_->getObjectNoBarrierUnsafe());
+    return gc.getObjectID(slot_->getSymbolNoBarrierUnsafe());
   }
 };
 

@@ -73,10 +73,12 @@ CallResult<HermesValue> weakRefConstructor(void *, Runtime &runtime) {
         "WeakRef() called in function context instead of constructor");
   }
 
-  auto target = args.dyncastArg<JSObject>(0);
-  // 2. If Type(target) is not Object, throw a TypeError exception.
-  if (LLVM_UNLIKELY(!target)) {
-    return runtime.raiseTypeError("target argument is not an object");
+  auto target = args.getArgHandle(0);
+  // 2. If Type(target) is not Object/non-registered Symbol, throw a TypeError
+  // exception.
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *target))) {
+    return runtime.raiseTypeError(
+        "target argument is not an object or non-registered symbol");
   }
 
   // Create the `this` for JSWeakRef.
@@ -107,7 +109,8 @@ CallResult<HermesValue> weakRefConstructor(void *, Runtime &runtime) {
   runtime.addToKeptObjects(target);
 
   // 5. Set weakRef.[[WeakRefTarget]] to target.
-  lv.self->setTarget(runtime, target);
+  auto targetSHV = SmallHermesValue::encodeHermesValue(*target, runtime);
+  lv.self->setTarget(runtime, targetSHV);
 
   // 6. Return weakRef.
   return lv.self.getHermesValue();
@@ -127,11 +130,11 @@ CallResult<HermesValue> weakRefPrototypeDeref(void *, Runtime &runtime) {
     return val;
 
   struct : public Locals {
-    PinnedValue<JSObject> targetHandle;
+    PinnedValue<> targetHandle;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
-  lv.targetHandle.castAndSetHermesValue<JSObject>(val);
+  lv.targetHandle = val;
   // If the target is not empty, then
   // 2a. Perform AddToKeptObjects
   runtime.addToKeptObjects(lv.targetHandle);

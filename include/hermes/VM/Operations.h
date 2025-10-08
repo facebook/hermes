@@ -227,6 +227,10 @@ inline bool canBeHeldWeakly(Runtime &rt, HermesValue hv) {
   return hv.isObject() ||
       (hv.isSymbol() && !rt.getSymbolRegistry().hasSymbol(hv.getSymbol()));
 }
+inline bool canBeHeldWeakly(Runtime &rt, SmallHermesValue hv) {
+  return hv.isObject() ||
+      (hv.isSymbol() && !rt.getSymbolRegistry().hasSymbol(hv.getSymbol()));
+}
 
 /// Convert a value to a uniqued property name.
 CallResult<Handle<SymbolID>> valueToSymbolID(

@@ -56,16 +56,13 @@ void JSWeakRef::_snapshotAddEdgesImpl(
   if (!self->ref_.isValid())
     return;
   snap.addNamedEdge(
-      HeapSnapshot::EdgeType::Weak,
-      "weak",
-      gc.getObjectID(self->ref_.getNoBarrierUnsafe(gc.getPointerBase())));
+      HeapSnapshot::EdgeType::Weak, "weak", self->ref_.getNodeID(gc));
 }
 #endif
 
 void JSWeakRef::_finalizeImpl(GCCell *cell, GC &) {
   auto *self = vmcast<JSWeakRef>(cell);
-  if (!self->ref_.isEmpty())
-    self->ref_.releaseSlot();
+  self->ref_.releaseSlot();
 }
 
 PseudoHandle<JSWeakRef> JSWeakRef::create(
@@ -79,13 +76,16 @@ PseudoHandle<JSWeakRef> JSWeakRef::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
-void JSWeakRef::setTarget(Runtime &runtime, Handle<JSObject> target) {
+void JSWeakRef::setTarget(Runtime &runtime, SmallHermesValue target) {
   assert(ref_.isEmpty() && "Should not call setTarget multiple times");
-  ref_ = WeakRef<JSObject>(runtime, target);
+  assert(
+      canBeHeldWeakly(runtime, target) &&
+      "target should be Object or non-registered Symbol");
+  ref_ = WeakRefObjOrSym(runtime, target);
 }
 
 HermesValue JSWeakRef::deref(Runtime &runtime) const {
-  return ref_.isValid() ? HermesValue::encodeObjectValue(ref_.get(runtime))
+  return ref_.isValid() ? ref_.getNoBarrierUnsafe(runtime)
                         : HermesValue::encodeUndefinedValue();
 }
 

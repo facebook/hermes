@@ -1952,7 +1952,10 @@ ExecutionStatus Runtime::drainJobs() {
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus Runtime::addToKeptObjects(Handle<JSObject> obj) {
+ExecutionStatus Runtime::addToKeptObjects(Handle<> obj) {
+  assert(
+      canBeHeldWeakly(*this, *obj) &&
+      "obj must hold an Object or non-registered Symbol");
   // Lazily create the map for keptObjects_
   if (*keptObjects_ == nullptr) {
     keptObjects_ = JSSet::create(*this, mapPrototype);

@@ -452,15 +452,16 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// exception" (https://html.spec.whatwg.org/C#microtask-queuing).
   ExecutionStatus drainJobs();
 
-  // ES2021 9.12 "When the abstract operation AddToKeptObjects is called with a
-  // target object reference, it adds the target to a list that will point
-  // strongly at the target until ClearKeptObjects is called."
-  ExecutionStatus addToKeptObjects(Handle<JSObject> obj);
+  /// ES2025 9.11 "When the abstract operation AddToKeptObjects is called with a
+  /// target object or symbol, it adds the target to a list that will point
+  /// strongly at the target until ClearKeptObjects is called."
+  /// \pre \p obj must hold an Object or non-registered Symbol.
+  ExecutionStatus addToKeptObjects(Handle<> obj);
 
-  // ES2021 9.11 "ECMAScript implementations are
-  // expected to call ClearKeptObjects when a synchronous sequence of ECMAScript
-  // executions completes." This method clears all kept WeakRefs and allows
-  // their targets to be eligible for garbage collection again.
+  /// ES2025 9.10 "ECMAScript implementations are
+  /// expected to call ClearKeptObjects when a synchronous sequence of
+  /// ECMAScript executions completes." This method clears all kept WeakRefs and
+  /// allows their targets to be eligible for garbage collection again.
   void clearKeptObjects();
 
   IdentifierTable &getIdentifierTable() {
