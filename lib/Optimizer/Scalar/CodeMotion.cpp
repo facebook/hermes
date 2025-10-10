@@ -59,6 +59,8 @@ static Instruction *findIdenticalInWindow(
 /// Check whether \p inst can be hoisted out of its basic block.
 /// \returns true if \p inst is safe to hoist.
 static inline bool canHoistFromCondBranch(Instruction *inst) {
+  if (inst->getSideEffect().getUnhoistable())
+    return false;
   // Terminators and instructions that need to be first should not be hoisted.
   return !(
       llvh::isa<TerminatorInst>(inst) ||
@@ -123,6 +125,8 @@ static bool canHoistFromLoop(
     Instruction *inst,
     Instruction *branchInst,
     const DominanceInfo &dominance) {
+  if (inst->getSideEffect().getUnhoistable())
+    return false;
   // Check whether the instruction is pure, and whether it has restrictions on
   // where it can be placed within a block.
   if (llvh::isa<TerminatorInst>(inst) || !inst->getSideEffect().isPure() ||

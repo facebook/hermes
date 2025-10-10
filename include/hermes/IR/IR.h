@@ -508,6 +508,9 @@ class SideEffect {
   /// example, two identical instructions that have \p Idempotent set may be
   /// merged if they are only separated by instructions that have no side
   /// effects.
+  /// \c Unhoistable implies that an instruction must not be hoisted out of its
+  /// basic block (e.g. by CodeMotion) because it relies on preconditions which
+  /// aren't fully expressed only by its operands.
 
 #define SIDE_EFFECT_FIELDS \
   FIELD(ReadStack)         \
@@ -519,7 +522,8 @@ class SideEffect {
   FIELD(Throw)             \
   FIELD(ExecuteJS)         \
   FIELD(FirstInBlock)      \
-  FIELD(Idempotent)
+  FIELD(Idempotent)        \
+  FIELD(Unhoistable)
 
 #define FIELD(field)        \
   bool get##field() const { \
