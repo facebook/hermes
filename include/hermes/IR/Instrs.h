@@ -6039,7 +6039,14 @@ class UnionNarrowTrustedInst : public SingleOperandInst {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect{}.setIdempotent();
+    // This instruction is unhoistable. It is preceded by instructions that
+    // ensure its own execution invariants, so it would be invalid to lift it
+    // before them. For example, in TDZ there will first be a throwing check
+    // emitted, followed by this instruction. So this instruction would only
+    // valid in the non-throwing case of the preceding instructions, so it
+    // cannot get lifted to an earlier point before those assumptions are
+    // checked.
+    return SideEffect{}.setIdempotent().setUnhoistable();
   }
 
   static bool classof(const Value *V) {
