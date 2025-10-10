@@ -14,6 +14,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/FastArray.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
@@ -1866,7 +1867,8 @@ bool isConstructor(Runtime &runtime, Callable *callable) {
 
   // We check for NativeFunction since those are defined to not be
   // constructible, with the exception of NativeConstructor.
-  if (!vmisa<NativeFunction>(callable) || vmisa<NativeConstructor>(callable)) {
+  if (!vmisa<NativeFunction>(callable) || vmisa<NativeConstructor>(callable) ||
+      vmisa<FinalizableNativeFunction>(callable)) {
     return true;
   }
 
