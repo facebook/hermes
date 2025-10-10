@@ -4878,7 +4878,12 @@ class GetConstructedObjectInst : public Instruction {
   }
 
   SideEffect getSideEffectImpl() const {
-    return SideEffect{}.setIdempotent();
+    // This instruction cannot be hoisted above the instructions that precede
+    // it, the instructions that specifically validate that the construct call
+    // happened legally. Otherwise this instruction could end up returning some
+    // value that doesn't make sense, since the construct call was going to
+    // throw before this instruction should be executed.
+    return SideEffect{}.setIdempotent().setUnhoistable();
   }
 
   static bool classof(const Value *V) {
