@@ -1230,7 +1230,7 @@ extern "C" SHLegacyValue _sh_ljs_create_this(
       }
       cellKind = calleeFunc->getKind();
       // Repeat the checks, now against the target.
-      if (cellKind >= CellKind::CallableExpectsThisKind_first) {
+      if (cellKind >= CellKind::CallableExpectsThisKind_first || cellKind == CellKind::FinalizableNativeFunctionKind) {
         // Do nothing, correctNewTarget is already set up correctly.
       } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
         return HermesValue::encodeUndefinedValue();
