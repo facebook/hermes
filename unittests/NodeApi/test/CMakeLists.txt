@@ -1,10 +1,10 @@
 if(WIN32)
   # "npx" interrupts current shell script execution without the "call"
   set(npx cmd /c npx)
-  set(yarn cmd /c yarn)
+  set(npm cmd /c npm)
 else()
   set(npx "npx")
-  set(yarn "yarn")
+  set(npm "npm")
 endif()
 
 # copy JS Tools package files
@@ -12,26 +12,26 @@ add_custom_command(
   OUTPUT
     ${CMAKE_CURRENT_BINARY_DIR}/babel.config.js
     ${CMAKE_CURRENT_BINARY_DIR}/package.json
-    ${CMAKE_CURRENT_BINARY_DIR}/yarn.lock
+    ${CMAKE_CURRENT_BINARY_DIR}/package-lock.json
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
     ${CMAKE_CURRENT_SOURCE_DIR}/babel.config.js
     ${CMAKE_CURRENT_SOURCE_DIR}/package.json
-    ${CMAKE_CURRENT_SOURCE_DIR}/yarn.lock
+    ${CMAKE_CURRENT_SOURCE_DIR}/package-lock.json
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 add_custom_target(copyNodeApiJSToolsFiles)
 
-# run "yarn install"
+# run "npm install"
 add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/node_modules.sha1
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/node_modules.sha256
   DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/package.json
-    ${CMAKE_CURRENT_BINARY_DIR}/yarn.lock
-  COMMAND ${yarn} install --frozen-lockfile
+    ${CMAKE_CURRENT_BINARY_DIR}/package-lock.json
+  COMMAND ${npm} install
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 )
 add_custom_target(installNodeApiTestJsTools
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/node_modules.sha1
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/node_modules.sha256
 )
 add_dependencies(installNodeApiTestJsTools copyNodeApiJSToolsFiles)
 

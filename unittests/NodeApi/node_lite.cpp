@@ -6,12 +6,14 @@
 #include <algorithm>
 #include <array>
 #include <cstdarg>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <limits>
 #include <regex>
 #include <sstream>
+#include <utility>
 #include "child_process.h"
 
 namespace fs = std::filesystem;

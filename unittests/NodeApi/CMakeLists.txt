@@ -85,12 +85,12 @@ set(HERMES_ENABLE_EH_RTTI ON)
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)
 
-if(APPLE)
-  set(CHILD_PROCESS_SRC child_process_mac.cpp)
-  set(NODE_LITE_PLATFORM_SRC node_lite_mac.cpp)
-else()
-  set(CHILD_PROCESS_SRC child_process.cpp)
+if(WIN32)
+  set(CHILD_PROCESS_SRC child_process_windows.cpp)
   set(NODE_LITE_PLATFORM_SRC node_lite_windows.cpp)
+else()
+  set(CHILD_PROCESS_SRC child_process_posix.cpp)
+  set(NODE_LITE_PLATFORM_SRC node_lite_posix.cpp)
 endif()
 
 add_executable(node_lite
@@ -105,6 +105,9 @@ add_executable(node_lite
   string_utils.h
 )
 target_link_libraries(node_lite PRIVATE libshared)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(node_lite PRIVATE dl)
+endif()
 target_include_directories(node_lite
   PRIVATE
     ../../API/hermes_node_api/node_api

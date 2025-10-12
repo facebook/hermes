@@ -31,6 +31,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#pragma intrinsic(_AddressOfReturnAddress)
+#endif
 
 namespace hermes {
 
@@ -57,6 +61,7 @@ class StackOverflowGuard {
   ///   current thread. Updates the stack bounds if the thread which Runtime
   ///   is executing on changes.
   inline bool isOverflowing() {
+    const void *framePointer = currentFramePointer();
     // Check for overflow by subtracting the sp from the high pointer.
     // If the sp is outside the valid stack range, the difference will
     // be greater than the known stack size.
@@ -65,9 +70,9 @@ class StackOverflowGuard {
     // We know that nativeStackSize_ <= nativeStackHigh_
     // (because otherwise the stack wouldn't fit in the memory),
     // so the overflowed difference will be greater than nativeStackSize_.
-    if (LLVM_LIKELY(!(
-            (uintptr_t)nativeStackHigh - (uintptr_t)__builtin_frame_address(0) >
-            nativeStackSize))) {
+    if (LLVM_LIKELY(
+            !((uintptr_t)nativeStackHigh - (uintptr_t)framePointer >
+              nativeStackSize))) {
       // Fast path: quickly check the stored stack bounds.
       // NOTE: It is possible to have a false negative here (highly unlikely).
       // If the program creates many threads and destroys them, a new
@@ -87,6 +92,15 @@ class StackOverflowGuard {
   }
 
  private:
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  static inline const void *currentFramePointer() {
+#if defined(_MSC_VER)
+    return _AddressOfReturnAddress();
+#else
+    return __builtin_frame_address(0);
+#endif
+  }
+
   /// Slow path for \c isOverflowing.
   /// Sets \c stackLow_ \c stackHigh_.
   /// \return true if the native stack is overflowing the bounds of the

@@ -3,7 +3,6 @@
 
 #include <dlfcn.h>
 #include "node_lite.h"
-#include "string_utils.h"
 
 namespace node_api_tests {
 
