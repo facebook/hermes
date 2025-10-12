@@ -220,6 +220,9 @@ struct hash<napi_type_tag> {
 
 namespace hermes::node_api {
 
+template <typename T>
+inline constexpr bool kAlwaysFalse = false;
+
 // The default version of Node-API to use when user did not request a specific
 // version. The version 8 was the last version that was active before Node-API
 // is added a mechanism to specify a Node-API version per module.
@@ -637,6 +640,7 @@ class NodeApiLinkedListBase {
 // heap. The GC roots are the vm::PinnedHermesValue instances.
 template <class T>
 class NodeApiLinkedList final : public NodeApiLinkedListBase {
+  // TODO: Restore or delete the static_assert
   // static_assert(
   //     std::is_base_of_v<Item, T>,
   //     "T must inherit from NodeApiLinkedListBase::Item.");
@@ -3866,7 +3870,7 @@ NodeApiEnvironment::getTypedArrayName() noexcept {
   } else
 #include "hermes/VM/TypedArrays.def"
   {
-    static_assert(false, "Unexpected typed array");
+    static_assert(kAlwaysFalse<cellKind>, "Unexpected typed array");
   }
 }
 
