@@ -220,7 +220,7 @@ struct hash<napi_type_tag> {
 
 namespace hermes::node_api {
 
-template <typename T>
+template <vm::CellKind>
 inline constexpr bool kAlwaysFalse = false;
 
 // The default version of Node-API to use when user did not request a specific
