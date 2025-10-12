@@ -129,7 +129,7 @@ jobs:
         run: |-
             apt update
             apt install -y git openssh-client cmake clang-16 build-essential \
-                libreadline-dev libicu-dev zip python3 ninja-build
+                libreadline-dev libicu-dev zip python3 ninja-build nodejs npm
             # Check out test262 at a pinned revision to reduce flakiness
             cd ..
             git clone https://github.com/tc39/test262
