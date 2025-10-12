@@ -74,6 +74,11 @@ function(add_node_api_module MODULE_TARGET)
     SUFFIX .node
     PREFIX ""
   )
+
+  # Remember the target so we can wire it up as a dependency of the test
+  # executable later. This ensures the native addon is built even when the
+  # default "all" target is not.
+  set_property(GLOBAL APPEND PROPERTY NODE_API_TEST_MODULE_TARGETS ${MODULE_TARGET})
 endfunction()
 
 add_subdirectory(test)
@@ -145,3 +150,9 @@ target_link_libraries(NodeApiTests libshared)
 
 # transform test JS files to be Hermes-compatible
 add_dependencies(NodeApiTests transformJSFiles node_lite)
+
+get_property(_node_api_module_targets GLOBAL PROPERTY NODE_API_TEST_MODULE_TARGETS)
+if(_node_api_module_targets)
+  list(REMOVE_DUPLICATES _node_api_module_targets)
+  add_dependencies(NodeApiTests ${_node_api_module_targets})
+endif()
