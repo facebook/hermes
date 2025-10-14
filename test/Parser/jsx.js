@@ -656,7 +656,6 @@
 // CHECK-NEXT:                 "type": "JSXExpressionContainer",
 // CHECK-NEXT:                 "expression": {
 // CHECK-NEXT:                   "type": "ArrowFunctionExpression",
-// CHECK-NEXT:                   "id": null,
 // CHECK-NEXT:                   "params": [],
 // CHECK-NEXT:                   "body": {
 // CHECK-NEXT:                     "type": "BlockStatement",

@@ -20,7 +20,6 @@ let foo = (a, [b = 1, c] = [], {c:d = 1, e:{f}}, ...[g,h = 1]) => {}
 //CHECK-NEXT:             "type": "VariableDeclarator",
 //CHECK-NEXT:             "init": {
 //CHECK-NEXT:               "type": "ArrowFunctionExpression",
-//CHECK-NEXT:               "id": null,
 //CHECK-NEXT:               "params": [
 //CHECK-NEXT:                 {
 //CHECK-NEXT:                   "type": "Identifier",
@@ -163,7 +162,6 @@ let bar = ([,,]) => {}
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "ArrayPattern",

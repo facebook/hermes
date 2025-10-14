@@ -89,7 +89,7 @@ Node *getIdentifier(FunctionLikeNode *node) {
     case NodeKind::FunctionExpression:
       return cast<FunctionExpressionNode>(node)->_id;
     case NodeKind::ArrowFunctionExpression:
-      return cast<ArrowFunctionExpressionNode>(node)->_id;
+      return nullptr;
     case NodeKind::FunctionDeclaration:
       return cast<FunctionDeclarationNode>(node)->_id;
   }

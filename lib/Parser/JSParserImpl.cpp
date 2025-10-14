@@ -5536,7 +5536,6 @@ Optional<ESTree::Node *> JSParserImpl::parseArrowFunctionExpression(
       startLoc,
       getPrevTokenEndLoc(),
       new (context_) ESTree::ArrowFunctionExpressionNode(
-          nullptr,
           std::move(paramList),
           body,
           typeParams,

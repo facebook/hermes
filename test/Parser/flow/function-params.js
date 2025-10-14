@@ -16,7 +16,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -39,7 +38,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -63,7 +61,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -93,7 +90,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "AssignmentPattern",
@@ -125,7 +121,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "AssignmentPattern",
@@ -163,7 +158,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",

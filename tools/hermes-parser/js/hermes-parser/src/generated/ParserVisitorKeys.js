@@ -36,7 +36,6 @@ export const HERMES_AST_VISITOR_KEYS = {
     elementType: 'Node',
   },
   ArrowFunctionExpression: {
-    id: 'Node',
     params: 'NodeList',
     body: 'Node',
     typeParameters: 'Node',

@@ -20,7 +20,6 @@ var t1 = a => 1;
 //CHECK-NEXT:            "type": "VariableDeclarator",
 //CHECK-NEXT:            "init": {
 //CHECK-NEXT:              "type": "ArrowFunctionExpression",
-//CHECK-NEXT:              "id": null,
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
@@ -52,7 +51,6 @@ var t2 = (a) => 1;
 //CHECK-NEXT:            "type": "VariableDeclarator",
 //CHECK-NEXT:            "init": {
 //CHECK-NEXT:              "type": "ArrowFunctionExpression",
-//CHECK-NEXT:              "id": null,
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
@@ -84,7 +82,6 @@ var t3 = a => { return 20; }
 //CHECK-NEXT:            "type": "VariableDeclarator",
 //CHECK-NEXT:            "init": {
 //CHECK-NEXT:              "type": "ArrowFunctionExpression",
-//CHECK-NEXT:              "id": null,
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
@@ -124,7 +121,6 @@ var t4 = (a,b,c) => a;
 //CHECK-NEXT:            "type": "VariableDeclarator",
 //CHECK-NEXT:            "init": {
 //CHECK-NEXT:              "type": "ArrowFunctionExpression",
-//CHECK-NEXT:              "id": null,
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",
@@ -163,7 +159,6 @@ var t5 = () => 3;
 //CHECK-NEXT:            "type": "VariableDeclarator",
 //CHECK-NEXT:            "init": {
 //CHECK-NEXT:              "type": "ArrowFunctionExpression",
-//CHECK-NEXT:              "id": null,
 //CHECK-NEXT:              "params": [],
 //CHECK-NEXT:              "body": {
 //CHECK-NEXT:                "type": "NumericLiteral",
@@ -190,7 +185,6 @@ var t6 = (a,) => 3;
 //CHECK-NEXT:            "type": "VariableDeclarator",
 //CHECK-NEXT:            "init": {
 //CHECK-NEXT:              "type": "ArrowFunctionExpression",
-//CHECK-NEXT:              "id": null,
 //CHECK-NEXT:              "params": [
 //CHECK-NEXT:                {
 //CHECK-NEXT:                  "type": "Identifier",

@@ -215,7 +215,6 @@ function foo(): implies x is number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -255,7 +254,6 @@ function foo(): implies x is number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -298,7 +296,6 @@ async (x): implies => x !== null;
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -338,7 +335,6 @@ async (x): implies x is number => x !== null;
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",

@@ -339,7 +339,6 @@ class Clazz {
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "NumericLiteral",
@@ -357,7 +356,6 @@ class Clazz {
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -380,7 +378,6 @@ class Clazz {
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -410,7 +407,6 @@ class Clazz {
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",

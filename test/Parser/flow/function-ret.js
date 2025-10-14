@@ -213,7 +213,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "NumericLiteral",
@@ -237,7 +236,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",
@@ -276,7 +274,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "ObjectPattern",
@@ -326,7 +323,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -361,7 +357,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -397,7 +392,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -442,7 +436,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",
@@ -496,7 +489,6 @@ function foo(a?): number {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",

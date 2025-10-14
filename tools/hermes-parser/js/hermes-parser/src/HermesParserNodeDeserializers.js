@@ -56,7 +56,6 @@ function deserializeArrowFunctionExpression() {
   return {
     type: 'ArrowFunctionExpression',
     loc: this.addEmptyLoc(),
-    id: this.deserializeNode(),
     params: this.deserializeNodeList(),
     body: this.deserializeNode(),
     typeParameters: this.deserializeNode(),

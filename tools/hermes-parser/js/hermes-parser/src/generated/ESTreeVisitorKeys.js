@@ -27,7 +27,6 @@ module.exports = {
   ArrayPattern: ['elements', 'typeAnnotation'],
   ArrayTypeAnnotation: ['elementType'],
   ArrowFunctionExpression: [
-    'id',
     'params',
     'body',
     'typeParameters',

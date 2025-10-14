@@ -16,7 +16,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "NumericLiteral",
@@ -46,7 +45,6 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",
@@ -123,11 +121,9 @@
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [],
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "ArrowFunctionExpression",
-// CHECK-NEXT:           "id": null,
 // CHECK-NEXT:           "params": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
@@ -136,7 +132,6 @@
 // CHECK-NEXT:           ],
 // CHECK-NEXT:           "body": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "Identifier",

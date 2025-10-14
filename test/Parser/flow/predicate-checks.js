@@ -184,7 +184,6 @@ function foo(): number %checks {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -216,7 +215,6 @@ function foo(): number %checks {}
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -254,7 +252,6 @@ async (x): %checks => x !== null;
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",
@@ -286,7 +283,6 @@ async (x): number %checks => x !== null;
 // CHECK-NEXT:       "type": "ExpressionStatement",
 // CHECK-NEXT:       "expression": {
 // CHECK-NEXT:         "type": "ArrowFunctionExpression",
-// CHECK-NEXT:         "id": null,
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "Identifier",

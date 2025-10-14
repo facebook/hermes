@@ -21,7 +21,6 @@ var x = (foo: number): number => 3;
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "Identifier",
@@ -65,7 +64,6 @@ var x = (foo: number = 3): number => 3;
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "AssignmentPattern",
@@ -117,7 +115,6 @@ var x = (foo: number = 3) => 3;
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "AssignmentPattern",
