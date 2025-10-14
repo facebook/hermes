@@ -1043,6 +1043,22 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
       return node;
     }
 
+    case 'UnknownTypeAnnotation': {
+      // $FlowExpectedError[cannot-write]
+      node.type = 'MixedTypeAnnotation';
+      return node;
+    }
+    case 'NeverTypeAnnotation': {
+      // $FlowExpectedError[cannot-write]
+      node.type = 'EmptyTypeAnnotation';
+      return node;
+    }
+    case 'UndefinedTypeAnnotation': {
+      // $FlowExpectedError[cannot-write]
+      node.type = 'VoidTypeAnnotation';
+      return node;
+    }
+
     case 'JSXText': {
       // $FlowExpectedError[prop-missing]
       node.extra = {

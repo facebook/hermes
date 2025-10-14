@@ -314,7 +314,6 @@ describe('Keyword Types', () => {
   };
 
   test('Emitted `.value` type is correct', () => {
-    // Also assert that the literal's `.value` is the correct instance type
     expect(parse(testCase.code)).toMatchObject({
       type: 'Program',
       body: [
@@ -1223,5 +1222,110 @@ describe('TypeCastExpression', () => {
       }
     `);
     expectBabelAlignment(testCase);
+  });
+});
+
+describe('unknown/never/undefined', () => {
+  const testCase: AlignmentCase = {
+    code: `
+      type T0 = unknown;
+      type T1 = never;
+      type T2 = undefined;
+    `,
+    espree: {expectToFail: false},
+    babel: {expectToFail: false},
+  };
+
+  test('ESTree', () => {
+    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+     {
+       "body": [
+         {
+           "id": {
+             "name": "T0",
+             "optional": false,
+             "type": "Identifier",
+             "typeAnnotation": null,
+           },
+           "right": {
+             "type": "UnknownTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T1",
+             "optional": false,
+             "type": "Identifier",
+             "typeAnnotation": null,
+           },
+           "right": {
+             "type": "NeverTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T2",
+             "optional": false,
+             "type": "Identifier",
+             "typeAnnotation": null,
+           },
+           "right": {
+             "type": "UndefinedTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+       ],
+       "type": "Program",
+     }
+    `);
+  });
+
+  test('Babel', () => {
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+     {
+       "body": [
+         {
+           "id": {
+             "name": "T0",
+             "type": "Identifier",
+           },
+           "right": {
+             "type": "MixedTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T1",
+             "type": "Identifier",
+           },
+           "right": {
+             "type": "EmptyTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T2",
+             "type": "Identifier",
+           },
+           "right": {
+             "type": "VoidTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+       ],
+       "type": "Program",
+     }
+    `);
   });
 });

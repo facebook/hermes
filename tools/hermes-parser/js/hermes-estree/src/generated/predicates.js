@@ -162,6 +162,7 @@ import type {
   MetaProperty,
   MethodDefinition,
   MixedTypeAnnotation,
+  NeverTypeAnnotation,
   NewExpression,
   NullableTypeAnnotation,
   NullLiteralTypeAnnotation,
@@ -215,7 +216,9 @@ import type {
   TypeParameterInstantiation,
   TypePredicate,
   UnaryExpression,
+  UndefinedTypeAnnotation,
   UnionTypeAnnotation,
+  UnknownTypeAnnotation,
   UpdateExpression,
   VariableDeclaration,
   VariableDeclarator,
@@ -882,6 +885,11 @@ export function isMixedTypeAnnotation(node /*: ESNode | Token */) /*: implies no
 }
     
 
+export function isNeverTypeAnnotation(node /*: ESNode | Token */) /*: implies node is NeverTypeAnnotation */ {
+  return node.type === 'NeverTypeAnnotation';
+}
+    
+
 export function isNewExpression(node /*: ESNode | Token */) /*: implies node is NewExpression */ {
   return node.type === 'NewExpression';
 }
@@ -1147,8 +1155,18 @@ export function isUnaryExpression(node /*: ESNode | Token */) /*: implies node i
 }
     
 
+export function isUndefinedTypeAnnotation(node /*: ESNode | Token */) /*: implies node is UndefinedTypeAnnotation */ {
+  return node.type === 'UndefinedTypeAnnotation';
+}
+    
+
 export function isUnionTypeAnnotation(node /*: ESNode | Token */) /*: implies node is UnionTypeAnnotation */ {
   return node.type === 'UnionTypeAnnotation';
+}
+    
+
+export function isUnknownTypeAnnotation(node /*: ESNode | Token */) /*: implies node is UnknownTypeAnnotation */ {
+  return node.type === 'UnknownTypeAnnotation';
 }
     
 

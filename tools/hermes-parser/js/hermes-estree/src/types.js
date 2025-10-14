@@ -1156,6 +1156,9 @@ export type TypeAnnotationType =
   | ThisTypeAnnotation
   | MixedTypeAnnotation
   | VoidTypeAnnotation
+  | UnknownTypeAnnotation
+  | NeverTypeAnnotation
+  | UndefinedTypeAnnotation
   | StringLiteralTypeAnnotation
   | NumberLiteralTypeAnnotation
   | BigIntLiteralTypeAnnotation
@@ -1249,6 +1252,15 @@ export interface MixedTypeAnnotation extends BaseNode {
 }
 export interface VoidTypeAnnotation extends BaseNode {
   +type: 'VoidTypeAnnotation';
+}
+export interface UnknownTypeAnnotation extends BaseNode {
+  +type: 'UnknownTypeAnnotation';
+}
+export interface NeverTypeAnnotation extends BaseNode {
+  +type: 'NeverTypeAnnotation';
+}
+export interface UndefinedTypeAnnotation extends BaseNode {
+  +type: 'UndefinedTypeAnnotation';
 }
 export interface StringLiteralTypeAnnotation extends BaseNode {
   +type: 'StringLiteralTypeAnnotation';

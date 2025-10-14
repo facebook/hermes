@@ -1112,6 +1112,15 @@ function deserializeBigIntTypeAnnotation() {
 function deserializeVoidTypeAnnotation() {
   return {type: 'VoidTypeAnnotation', loc: this.addEmptyLoc()};
 }
+function deserializeNeverTypeAnnotation() {
+  return {type: 'NeverTypeAnnotation', loc: this.addEmptyLoc()};
+}
+function deserializeUnknownTypeAnnotation() {
+  return {type: 'UnknownTypeAnnotation', loc: this.addEmptyLoc()};
+}
+function deserializeUndefinedTypeAnnotation() {
+  return {type: 'UndefinedTypeAnnotation', loc: this.addEmptyLoc()};
+}
 function deserializeFunctionTypeAnnotation() {
   return {
     type: 'FunctionTypeAnnotation',
@@ -2278,6 +2287,9 @@ module.exports = [
   deserializeMixedTypeAnnotation,
   deserializeBigIntTypeAnnotation,
   deserializeVoidTypeAnnotation,
+  deserializeNeverTypeAnnotation,
+  deserializeUnknownTypeAnnotation,
+  deserializeUndefinedTypeAnnotation,
   deserializeFunctionTypeAnnotation,
   deserializeHookTypeAnnotation,
   deserializeFunctionTypeParam,

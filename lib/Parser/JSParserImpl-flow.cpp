@@ -2813,6 +2813,24 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryTypeAnnotationFlow() {
             advance(JSLexer::GrammarContext::Type).End,
             new (context_) ESTree::EmptyTypeAnnotationNode());
       }
+      if (tok_->getResWordOrIdentifier() == unknownIdent_) {
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::UnknownTypeAnnotationNode());
+      }
+      if (tok_->getResWordOrIdentifier() == neverIdent_) {
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::NeverTypeAnnotationNode());
+      }
+      if (tok_->getResWordOrIdentifier() == undefinedIdent_) {
+        return setLocation(
+            start,
+            advance(JSLexer::GrammarContext::Type).End,
+            new (context_) ESTree::UndefinedTypeAnnotationNode());
+      }
       if (tok_->getResWordOrIdentifier() == booleanIdent_ ||
           tok_->getResWordOrIdentifier() == boolIdent_) {
         return setLocation(

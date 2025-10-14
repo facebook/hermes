@@ -341,9 +341,6 @@ class JSParserImpl {
 
 #if HERMES_PARSE_TS
   UniqueString *readonlyIdent_;
-  UniqueString *neverIdent_;
-  UniqueString *undefinedIdent_;
-  UniqueString *unknownIdent_;
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
@@ -351,6 +348,9 @@ class JSParserImpl {
   UniqueString *isIdent_;
   UniqueString *inferIdent_;
   UniqueString *constIdent_;
+  UniqueString *neverIdent_;
+  UniqueString *undefinedIdent_;
+  UniqueString *unknownIdent_;
 #endif
 
   /// String representation of all tokens.

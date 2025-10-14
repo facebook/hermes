@@ -858,6 +858,10 @@ ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Flow)
 ESTREE_NODE_0_ARGS(MixedTypeAnnotation, Flow)
 ESTREE_NODE_0_ARGS(BigIntTypeAnnotation, Flow)
 ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(NeverTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(UnknownTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(UndefinedTypeAnnotation, Flow)
+
 ESTREE_NODE_5_ARGS(
     FunctionTypeAnnotation, Flow,
     NodeList, params, false,

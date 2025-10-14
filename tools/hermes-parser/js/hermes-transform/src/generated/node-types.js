@@ -144,6 +144,7 @@ import type {
   MetaProperty as MetaPropertyType,
   MethodDefinition as MethodDefinitionType,
   MixedTypeAnnotation as MixedTypeAnnotationType,
+  NeverTypeAnnotation as NeverTypeAnnotationType,
   NewExpression as NewExpressionType,
   NullableTypeAnnotation as NullableTypeAnnotationType,
   NullLiteralTypeAnnotation as NullLiteralTypeAnnotationType,
@@ -194,7 +195,9 @@ import type {
   TypeParameterInstantiation as TypeParameterInstantiationType,
   TypePredicate as TypePredicateType,
   UnaryExpression as UnaryExpressionType,
+  UndefinedTypeAnnotation as UndefinedTypeAnnotationType,
   UnionTypeAnnotation as UnionTypeAnnotationType,
+  UnknownTypeAnnotation as UnknownTypeAnnotationType,
   UpdateExpression as UpdateExpressionType,
   VariableDeclaration as VariableDeclarationType,
   VariableDeclarator as VariableDeclaratorType,
@@ -923,6 +926,8 @@ export type MethodDefinitionProps = {
 
 export type MixedTypeAnnotationProps = {};
 
+export type NeverTypeAnnotationProps = {};
+
 export type NewExpressionProps = {
   +callee: MaybeDetachedNode<NewExpressionType['callee']>,
   +typeArguments?: ?MaybeDetachedNode<NewExpressionType['typeArguments']>,
@@ -1222,11 +1227,15 @@ export type UnaryExpressionProps = {
   +prefix: UnaryExpressionType['prefix'],
 };
 
+export type UndefinedTypeAnnotationProps = {};
+
 export type UnionTypeAnnotationProps = {
   +types: $ReadOnlyArray<
     MaybeDetachedNode<UnionTypeAnnotationType['types'][number]>,
   >,
 };
+
+export type UnknownTypeAnnotationProps = {};
 
 export type UpdateExpressionProps = {
   +operator: UpdateExpressionType['operator'],
@@ -3016,6 +3025,16 @@ export function MixedTypeAnnotation(
   });
 }
 
+export function NeverTypeAnnotation(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<NeverTypeAnnotationType> {
+  return detachedProps<NeverTypeAnnotationType>((props.parent: $FlowFixMe), {
+    type: 'NeverTypeAnnotation',
+  });
+}
+
 export function NewExpression(props: {
   ...NewExpressionProps,
   +parent?: ESNode,
@@ -3745,6 +3764,19 @@ export function UnaryExpression(props: {
   return node;
 }
 
+export function UndefinedTypeAnnotation(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<UndefinedTypeAnnotationType> {
+  return detachedProps<UndefinedTypeAnnotationType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'UndefinedTypeAnnotation',
+    },
+  );
+}
+
 export function UnionTypeAnnotation(props: {
   ...UnionTypeAnnotationProps,
   +parent?: ESNode,
@@ -3758,6 +3790,16 @@ export function UnionTypeAnnotation(props: {
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
+}
+
+export function UnknownTypeAnnotation(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<UnknownTypeAnnotationType> {
+  return detachedProps<UnknownTypeAnnotationType>((props.parent: $FlowFixMe), {
+    type: 'UnknownTypeAnnotation',
+  });
 }
 
 export function UpdateExpression(props: {
