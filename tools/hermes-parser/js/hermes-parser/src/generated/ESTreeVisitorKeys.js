@@ -278,7 +278,7 @@ module.exports = {
   ThisTypeAnnotation: [],
   ThrowStatement: ['argument'],
   TryStatement: ['block', 'handler', 'finalizer'],
-  TupleTypeAnnotation: ['types'],
+  TupleTypeAnnotation: ['elementTypes'],
   TupleTypeLabeledElement: ['label', 'elementType', 'variance'],
   TupleTypeSpreadElement: ['label', 'typeAnnotation'],
   TypeAlias: ['id', 'typeParameters', 'right'],

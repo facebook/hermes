@@ -662,7 +662,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     finalizer: 'Node',
   },
   TupleTypeAnnotation: {
-    types: 'NodeList',
+    elementTypes: 'NodeList',
   },
   TupleTypeLabeledElement: {
     label: 'Node',

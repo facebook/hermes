@@ -1440,7 +1440,9 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     ): FlowESTree.TupleTypeAnnotation {
       return constructFlowNode<FlowESTree.TupleTypeAnnotation>({
         type: 'TupleTypeAnnotation',
-        types: node.elementTypes.map(node => Transform.TSTypeAnnotation(node)),
+        elementTypes: node.elementTypes.map(node =>
+          Transform.TSTypeAnnotation(node),
+        ),
         inexact: false,
       });
     }

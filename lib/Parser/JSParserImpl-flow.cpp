@@ -3122,7 +3122,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
   assert(check(TokenKind::l_square));
   SMLoc start = advance(JSLexer::GrammarContext::Type).Start;
 
-  ESTree::NodeList types{};
+  ESTree::NodeList elementTypes{};
   bool inexact = false;
 
   while (!check(TokenKind::r_square)) {
@@ -3143,7 +3143,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
       auto optType = parseTupleElementFlow(startLoc, startsWithDotDotDot);
       if (!optType)
         return None;
-      types.push_back(**optType);
+      elementTypes.push_back(**optType);
 
       if (!checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type))
         break;
@@ -3161,7 +3161,7 @@ Optional<ESTree::Node *> JSParserImpl::parseTupleTypeAnnotationFlow() {
       start,
       advance(JSLexer::GrammarContext::Type).End,
       new (context_)
-          ESTree::TupleTypeAnnotationNode(std::move(types), inexact));
+          ESTree::TupleTypeAnnotationNode(std::move(elementTypes), inexact));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTupleElementFlow(

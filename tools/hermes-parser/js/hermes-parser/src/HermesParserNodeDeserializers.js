@@ -1221,7 +1221,7 @@ function deserializeTupleTypeAnnotation() {
   return {
     type: 'TupleTypeAnnotation',
     loc: this.addEmptyLoc(),
-    types: this.deserializeNodeList(),
+    elementTypes: this.deserializeNodeList(),
     inexact: this.deserializeBoolean(),
   };
 }

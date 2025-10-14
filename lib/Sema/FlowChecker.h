@@ -852,7 +852,7 @@ Type *FlowChecker::processTupleTypeAnnotation(
     ESTree::TupleTypeAnnotationNode *node,
     AnnotationCB cb) {
   llvh::SmallVector<Type *, 4> types{};
-  for (auto &n : node->_types) {
+  for (auto &n : node->_elementTypes) {
     if (llvh::isa<ESTree::TupleTypeSpreadElementNode>(&n)) {
       sm_.error(n.getSourceRange(), "ft: tuple spread unsupported");
       continue;

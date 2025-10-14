@@ -85,6 +85,7 @@ const FlowESTreeAndBabelVisitorKeys: VisitorKeys = {
   RegExpLiteral: [],
   RestElement: [...FlowVisitorKeys.RestElement, 'typeAnnotation'],
   StringLiteral: [],
+  TupleTypeAnnotation: ['types'],
   CommentBlock: [],
   CommentLine: [],
 };
@@ -1040,6 +1041,10 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
     case 'TupleTypeAnnotation': {
       // $FlowExpectedError[cannot-write]
       delete node.inexact;
+      // $FlowExpectedError[prop-missing]
+      node.types = node.elementTypes;
+      // $FlowExpectedError[cannot-write]
+      delete node.elementTypes;
       return node;
     }
 

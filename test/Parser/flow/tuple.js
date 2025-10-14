@@ -21,7 +21,7 @@ type A = [];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [],
+// CHECK-NEXT:         "elementTypes": [],
 // CHECK-NEXT:         "inexact": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
@@ -36,7 +36,7 @@ type A = [B, C];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [
+// CHECK-NEXT:         "elementTypes": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "GenericTypeAnnotation",
 // CHECK-NEXT:             "id": {
@@ -68,7 +68,7 @@ type A = [...B];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [
+// CHECK-NEXT:         "elementTypes": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "TupleTypeSpreadElement",
 // CHECK-NEXT:             "label": null,
@@ -96,7 +96,7 @@ type A = [...B: C];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [
+// CHECK-NEXT:         "elementTypes": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "TupleTypeSpreadElement",
 // CHECK-NEXT:             "label": {
@@ -127,7 +127,7 @@ type A = [+B: C];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [
+// CHECK-NEXT:         "elementTypes": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "TupleTypeLabeledElement",
 // CHECK-NEXT:             "label": {
@@ -163,7 +163,7 @@ type A = [+B?: C];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [
+// CHECK-NEXT:         "elementTypes": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "TupleTypeLabeledElement",
 // CHECK-NEXT:             "label": {
@@ -199,7 +199,7 @@ type A = [B?: C];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [
+// CHECK-NEXT:         "elementTypes": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "TupleTypeLabeledElement",
 // CHECK-NEXT:             "label": {
@@ -232,7 +232,7 @@ type A = [...];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [],
+// CHECK-NEXT:         "elementTypes": [],
 // CHECK-NEXT:         "inexact": true
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
@@ -247,7 +247,7 @@ type A = [B, ...];
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "right": {
 // CHECK-NEXT:         "type": "TupleTypeAnnotation",
-// CHECK-NEXT:         "types": [
+// CHECK-NEXT:         "elementTypes": [
 // CHECK-NEXT:           {
 // CHECK-NEXT:             "type": "GenericTypeAnnotation",
 // CHECK-NEXT:             "id": {

@@ -916,7 +916,7 @@ ESTREE_NODE_2_ARGS(
     NodePtr, id, false)
 ESTREE_NODE_2_ARGS(
     TupleTypeAnnotation, Flow,
-    NodeList, types, false,
+    NodeList, elementTypes, false,
     NodeBoolean, inexact, false)
 ESTREE_NODE_2_ARGS(
     TupleTypeSpreadElement, Flow,

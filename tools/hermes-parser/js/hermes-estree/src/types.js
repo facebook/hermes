@@ -1320,7 +1320,7 @@ export interface KeyofTypeAnnotation extends BaseNode {
 }
 export interface TupleTypeAnnotation extends BaseNode {
   +type: 'TupleTypeAnnotation';
-  +types: $ReadOnlyArray<TypeAnnotationType>;
+  +elementTypes: $ReadOnlyArray<TypeAnnotationType>;
   +inexact: boolean;
 }
 export interface TupleTypeSpreadElement extends BaseNode {

@@ -3905,14 +3905,14 @@ const getTransforms = (
       node: FlowESTree.TupleTypeAnnotation,
     ): TSESTree.TSTupleType | TSESTree.TSTypeOperator {
       const allReadOnly =
-        node.types.length > 0 &&
-        node.types.every(
+        node.elementTypes.length > 0 &&
+        node.elementTypes.every(
           element =>
             element.type === 'TupleTypeLabeledElement' &&
             element.variance != null &&
             element.variance.kind === 'plus',
         );
-      const elems = node.types.map((element): TSESTree.TypeNode => {
+      const elems = node.elementTypes.map((element): TSESTree.TypeNode => {
         switch (element.type) {
           case 'TupleTypeLabeledElement':
             if (!allReadOnly && element.variance != null) {

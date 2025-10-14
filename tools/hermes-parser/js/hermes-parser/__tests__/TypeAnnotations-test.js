@@ -720,13 +720,13 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
-                "inexact": false,
-                "type": "TupleTypeAnnotation",
-                "types": [
+                "elementTypes": [
                   {
                     "type": "StringTypeAnnotation",
                   },
                 ],
+                "inexact": false,
+                "type": "TupleTypeAnnotation",
               },
               "type": "TypeAlias",
               "typeParameters": null,
@@ -794,9 +794,7 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
-                "inexact": false,
-                "type": "TupleTypeAnnotation",
-                "types": [
+                "elementTypes": [
                   {
                     "label": null,
                     "type": "TupleTypeSpreadElement",
@@ -812,6 +810,8 @@ describe('TupleTypeAnnotation', () => {
                     },
                   },
                 ],
+                "inexact": false,
+                "type": "TupleTypeAnnotation",
               },
               "type": "TypeAlias",
               "typeParameters": null,
@@ -879,9 +879,7 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
-                "inexact": false,
-                "type": "TupleTypeAnnotation",
-                "types": [
+                "elementTypes": [
                   {
                     "elementType": {
                       "type": "NumberTypeAnnotation",
@@ -900,6 +898,8 @@ describe('TupleTypeAnnotation', () => {
                     },
                   },
                 ],
+                "inexact": false,
+                "type": "TupleTypeAnnotation",
               },
               "type": "TypeAlias",
               "typeParameters": null,
@@ -967,9 +967,9 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
+                "elementTypes": [],
                 "inexact": true,
                 "type": "TupleTypeAnnotation",
-                "types": [],
               },
               "type": "TypeAlias",
               "typeParameters": null,

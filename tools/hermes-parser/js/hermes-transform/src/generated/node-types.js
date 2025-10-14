@@ -1147,8 +1147,8 @@ export type TryStatementProps = {
 };
 
 export type TupleTypeAnnotationProps = {
-  +types: $ReadOnlyArray<
-    MaybeDetachedNode<TupleTypeAnnotationType['types'][number]>,
+  +elementTypes: $ReadOnlyArray<
+    MaybeDetachedNode<TupleTypeAnnotationType['elementTypes'][number]>,
   >,
   +inexact: TupleTypeAnnotationType['inexact'],
 };
@@ -3576,7 +3576,7 @@ export function TupleTypeAnnotation(props: {
     (props.parent: $FlowFixMe),
     {
       type: 'TupleTypeAnnotation',
-      types: props.types.map(n => asDetachedNodeForCodeGen(n)),
+      elementTypes: props.elementTypes.map(n => asDetachedNodeForCodeGen(n)),
       inexact: props.inexact,
     },
   );
