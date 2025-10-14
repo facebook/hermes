@@ -36,7 +36,7 @@ jobs:
         uses: ./.github/actions/setup-node
       - name: Install node dependencies
         uses: ./.github/actions/yarn-install
-      - name: Set React Native Version
+      - name: Set artifacts version
         shell: bash
         run: node ./utils/scripts/hermes/set-artifacts-version.js --build-type ${{ inputs.release-type }} --hermesVersion "${{ inputs.hermes-version }}"
       - name: Build android
