@@ -83,18 +83,19 @@ async function publishNpm(
   buildType /*: BuildType */,
 ) /*: Promise<ShellString | null> */ {
   let tagFlag = '';
-  let dryRunFlag = '';
-  if (['commitly', 'dry-run'].includes(buildType)) {
+
+  if (buildType === 'dry-run') {
+    tagFlag = ` --tag nightly --dry-run`;
+  } else if (buildType === 'commitly') {
     tagFlag = ` --tag nightly`;
-    if (buildType === 'dry-run') {
-      dryRunFlag = ` --dry-run`;
-    }
+  } else if (buildType === 'release') {
+    tagFlag = ` --tag latest-v0`;
   }
 
   const packagePath = path.join(REPO_ROOT, 'npm', 'hermes-compiler');
   const options /*: ExecOptsSync */ = {cwd: packagePath};
 
-  return exec(`npm publish${tagFlag}${dryRunFlag}`, options);
+  return exec(`npm publish${tagFlag}`, options);
 }
 
 if (require.main === module) {
