@@ -66,16 +66,18 @@ async function main() {
 async function publishNpm(
   buildType /*: BuildType */,
 ) /*: Promise<ShellString | null> */ {
-  let dryRunFlag = '';
+  let tagFlag = '';
 
   if (buildType === 'dry-run') {
-    dryRunFlag = ` --dry-run`;
+    tagFlag = ` --dry-run`;
+  } else if (buildType === 'release') {
+    tagFlag = ` --tag latest-v1`;
   }
 
   const packagePath = path.join(REPO_ROOT, 'npm', 'hermes-compiler');
   const options /*: ExecOptsSync */ = {cwd: packagePath};
 
-  return exec(`npm publish${dryRunFlag}`, options);
+  return exec(`npm publish${tagFlag}`, options);
 }
 
 if (require.main === module) {
