@@ -69,13 +69,13 @@ class Suite(ABC):
             return path[: path.rfind(s) + len(s)]
 
         if "test262/" in path:
-            return Test262Suite(get_suite_directory("test262"))
+            return Test262Suite(get_suite_directory("test262/"))
         elif "mjsunit/" in path:
-            return MjsunitSuite(get_suite_directory("mjsunit"))
+            return MjsunitSuite(get_suite_directory("mjsunit/"))
         elif "CVEs/" in path:
-            return CvesSuite(get_suite_directory("CVEs"))
+            return CvesSuite(get_suite_directory("CVEs/"))
         elif "esprima/" in path:
-            return EsprimaAstCheckSuite(get_suite_directory("esprima"))
+            return EsprimaAstCheckSuite(get_suite_directory("esprima/"))
         elif "flow/" in path:
             # Use "flow/" to avoid matching flowtest/
             return FlowAstCheckSuite(get_suite_directory("flow/"))
