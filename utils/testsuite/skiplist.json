@@ -137,7 +137,10 @@
       "paths": [
         "test262/test/language/expressions/arrow-function/throw-new.js",
         "test262/test/language/expressions/object/method-definition/generator-invoke-ctor.js",
-        "test262/test/language/expressions/object/method-definition/name-invoke-ctor.js"
+        "test262/test/language/expressions/object/method-definition/name-invoke-ctor.js",
+        "mjsunit/es6/arrow-functions.js",
+        "mjsunit/regress/regress-inline-arrow-as-construct.js",
+        "mjsunit/es6/generators-objects.js"
       ],
       "comment": "T213438202, native backend does not throw as expected on invalid constructor."
     },
@@ -1436,6 +1439,7 @@
     "mjsunit/es6/regress/regress-4097.js",
     "mjsunit/es6/regress/regress-4482.js",
     "mjsunit/es6/regress/regress-468661.js",
+    "es6/regress/regress-474783.js",
     "mjsunit/es6/regress/regress-cr372788.js",
     "mjsunit/es6/throw-type-error-function-restrictions.js",
     "mjsunit/es6/typedarray.js",
