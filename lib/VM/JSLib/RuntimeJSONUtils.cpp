@@ -9,14 +9,12 @@
 
 #include "Object.h"
 
-#include "hermes/Support/Compiler.h"
 #include "hermes/Support/JSON.h"
 #include "hermes/Support/UTF16Stream.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
-#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/PrimitiveBox.h"
 
 #include "JSONLexer.h"
