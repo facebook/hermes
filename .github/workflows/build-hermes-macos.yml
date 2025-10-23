@@ -54,15 +54,15 @@ jobs:
       - name: Prepare destroot folder
         shell: bash
         run: |
-          chmod +x ./utils/build-apple-framework-rn.sh
-          source ./utils/build-apple-framework-rn.sh
+          chmod +x ./utils/build-apple-framework.sh
+          source ./utils/build-apple-framework.sh
           prepare_dest_root_for_ci
       - name: Create fat framework for iOS
         shell: bash
         run: |
           echo "[HERMES] Creating the universal framework"
-          chmod +x ./utils/build-ios-framework-rn.sh
-          ./utils/build-ios-framework-rn.sh build_framework
+          chmod +x ./utils/build-ios-framework.sh
+          ./utils/build-ios-framework.sh build_framework
 
           chmod +x ./destroot/bin/hermesc
       - name: Package the Hermes Apple frameworks

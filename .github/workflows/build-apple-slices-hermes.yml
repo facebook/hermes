@@ -48,13 +48,13 @@ jobs:
           if [[ "$SLICE" == "macosx" ]]; then
             echo "[HERMES] Building Hermes for MacOS"
 
-            chmod +x ./utils/build-mac-framework-rn.sh
-            BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-mac-framework-rn.sh
+            chmod +x ./utils/build-mac-framework.sh
+            BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-mac-framework.sh
           else
             echo "[HERMES] Building Hermes for iOS: $SLICE"
 
-            chmod +x ./utils/build-ios-framework-rn.sh
-            BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-ios-framework-rn.sh "$SLICE"
+            chmod +x ./utils/build-ios-framework.sh
+            BUILD_TYPE="${{ matrix.flavor }}" ./utils/build-ios-framework.sh "$SLICE"
           fi
 
           echo "Moving from build_$SLICE to $FINAL_PATH"
