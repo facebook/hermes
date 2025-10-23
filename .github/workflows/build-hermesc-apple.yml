@@ -13,7 +13,7 @@ jobs:
       - name: Build HermesC Apple
         shell: bash
         run: |
-          source ./utils/build-apple-framework-rn.sh
+          source ./utils/build-apple-framework.sh
           build_host_hermesc_if_needed
       - name: Upload HermesC Artifact
         uses: actions/upload-artifact@v4.3.4
