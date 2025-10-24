@@ -22,6 +22,12 @@ jobs:
       EVENT_NAME: ${{ github.event_name }}
       REF: ${{ github.ref }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup node.js
+        uses: ./.github/actions/setup-node
+      - name: Install node dependencies
+        uses: ./.github/actions/yarn-install
       - id: set_release_type
         run: |
           if [[ $EVENT_NAME == "workflow_dispatch" ]]; then
@@ -31,6 +37,11 @@ jobs:
             echo "Setting release type to dry-run"
             echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
           fi
+      - id: generate_version
+        run: |
+          VERSION=$(node ./utils/scripts/hermes/get-hermes-version.js --build-type ${{ steps.set_release_type.outputs.RELEASE_TYPE }})
+          echo "Generated version: $VERSION"
+          echo "HERMES_VERSION=$VERSION" >> $GITHUB_OUTPUT
   build_hermesc_apple:
     uses: ./.github/workflows/build-hermesc-apple.yml
   build_apple_slices_hermes:
@@ -60,3 +71,9 @@ jobs:
       ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+  create-tag:
+    uses: ./.github/workflows/create-tag.yml
+    needs: publish
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
