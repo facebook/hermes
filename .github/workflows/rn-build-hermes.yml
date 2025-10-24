@@ -90,3 +90,9 @@ jobs:
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
       hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
+  create-tag:
+    uses: ./.github/workflows/create-tag.yml
+    needs: publish
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
