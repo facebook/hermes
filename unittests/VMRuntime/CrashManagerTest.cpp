@@ -19,12 +19,14 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/LargeDummyObject.h"
 #include "hermes/VM/LimitedStorageProvider.h"
 
 #include <deque>
 
 using namespace hermes;
 using namespace hermes::vm;
+using namespace testhelpers;
 
 using ::testing::MatchesRegex;
 
@@ -194,7 +196,6 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   EXPECT_EQ(customData.count("XYZ:HeapSegment:3"), 1);
 }
 
-#ifndef HERMESVM_SANITIZE_HANDLES
 TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
   // Turn on the "direct to OG" allocation feature.
   GCConfig gcConfig =
@@ -251,7 +252,46 @@ TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
   // All custom data should be removed.
   EXPECT_EQ(0, customData.size());
 }
-#endif
+
+TEST(CrashManagerTest, JumboSegmentExtentTest) {
+  GCConfig gcConfig =
+      GCConfig::Builder(kTestGCConfigBuilder)
+          .withName("XYZ")
+          .withInitHeapSize(1 << HERMESVM_LOG_HEAP_SEGMENT_SIZE)
+          .withMaxHeapSize(1 << (HERMESVM_LOG_HEAP_SEGMENT_SIZE + 3))
+          .build();
+
+  auto testCrashMgr = std::make_shared<TestCrashManager>();
+  auto runtime = DummyRuntime::create(
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
+  DummyRuntime &rt = *runtime;
+  auto &customData = testCrashMgr->customData();
+
+  struct : Locals {
+    PinnedValue<SegmentCell> h1;
+    PinnedValue<SegmentCell> h2;
+    PinnedValue<LargeDummyObject> h3;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+
+  lv.h1 = SegmentCell::create(rt);
+  lv.h2 = SegmentCell::createLongLived(rt);
+  // This jumbo heap segment should occupy the space of 3 * kSegmentUnitSize.
+  lv.h3 = LargeDummyObject::create(
+      FixedSizeHeapSegment::storageSize() * 2, rt.getHeap());
+
+  // YG + one normal OG segment + one jumbo segment + GC kind entry.
+  EXPECT_EQ(customData.size(), 5);
+  EXPECT_EQ(1, customData.count("XYZ:HeapSegment:YG"));
+  EXPECT_EQ(1, customData.count("XYZ:HeapSegment:1"));
+  EXPECT_EQ(1, customData.count("XYZ:HeapSegment:2"));
+  auto jumboSegmentData = customData.find("XYZ:HeapSegment:3");
+  ASSERT_TRUE(jumboSegmentData != customData.end());
+
+  char *low = nullptr, *high = nullptr;
+  std::sscanf(jumboSegmentData->second.c_str(), "%p:%p", &low, &high);
+  EXPECT_EQ(high - low, 3 * AlignedHeapSegment::kSegmentUnitSize);
+}
 #endif
 
 TEST(CrashManagerTest, GCNameIncluded) {

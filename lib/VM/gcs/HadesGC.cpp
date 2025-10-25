@@ -3211,7 +3211,7 @@ llvh::ErrorOr<T> HadesGC::createSegmentImpl(
   }
   gcCallbacks_.registerHeapSegment(segIdx, seg.lowLim());
   addSegmentExtentToCrashManager(
-      seg, FixedSizeHeapSegment::storageSize(), std::to_string(segIdx));
+      seg, seg.storageSize(), std::to_string(segIdx));
 #ifndef NDEBUG
   // Add this segment's address mapping.
   for (char *alignedAddr = seg.lowLim(), *end = seg.hiLim(); alignedAddr != end;
