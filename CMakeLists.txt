@@ -546,6 +546,11 @@ else()
 endif()
 add_definitions(-DHERMES_USE_BOOST_CONTEXT=${HERMES_USE_BOOST_CONTEXT})
 
+if (MSVC AND HERMES_USE_BOOST_CONTEXT)
+  set(BOOST_CONTEXT_IMPLEMENTATION "winfib" CACHE STRING
+      "Boost.Context implementation (fcontext, ucontext, winfib)" FORCE)
+endif()
+
 if(HERMES_FORCE_SLOW_STATS)
   add_definitions(-DHERMES_FORCE_SLOW_STATS)
 endif()

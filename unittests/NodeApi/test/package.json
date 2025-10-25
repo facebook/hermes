@@ -1,0 +1,13 @@
+{
+  "name": "hermes-node-api-test-packages",
+  "private": true,
+  "scripts": {
+    "postinstall": "set -e; tar -cf - node_modules | sha256sum | awk '{print $1}' > node_modules.sha256"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.0",
+    "@babel/core": "^7.28.0",
+    "@babel/runtime": "^7.28.2",
+    "@react-native/babel-preset": "^0.80.2"
+  }
+}
