@@ -5,7 +5,7 @@ on:
 
 jobs:
   build_apple_slices_hermes:
-    runs-on: macos-14
+    runs-on: macos-15
     env:
       IOS_DEPLOYMENT_TARGET: "15.1"
       XROS_DEPLOYMENT_TARGET: "1.0"
