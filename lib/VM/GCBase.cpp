@@ -998,14 +998,16 @@ WeakMapEntrySlot *GCBase::allocWeakMapEntrySlot(
 
 HeapSnapshot::NodeID GCBase::getObjectID(const GCCell *cell) {
   assert(cell && "Called getObjectID on a null pointer");
-  return getObjectID(CompressedPointer::encodeNonNull(
-      const_cast<GCCell *>(cell), pointerBase_));
+  return getObjectID(
+      CompressedPointer::encodeNonNull(
+          const_cast<GCCell *>(cell), pointerBase_));
 }
 
 HeapSnapshot::NodeID GCBase::getObjectIDMustExist(const GCCell *cell) {
   assert(cell && "Called getObjectID on a null pointer");
-  return idTracker_.getObjectIDMustExist(CompressedPointer::encodeNonNull(
-      const_cast<GCCell *>(cell), pointerBase_));
+  return idTracker_.getObjectIDMustExist(
+      CompressedPointer::encodeNonNull(
+          const_cast<GCCell *>(cell), pointerBase_));
 }
 
 HeapSnapshot::NodeID GCBase::getObjectID(CompressedPointer cell) {
@@ -1024,8 +1026,9 @@ HeapSnapshot::NodeID GCBase::getNativeID(const void *mem) {
 
 bool GCBase::hasObjectID(const GCCell *cell) {
   assert(cell && "Called hasObjectID on a null pointer");
-  return idTracker_.hasObjectID(CompressedPointer::encodeNonNull(
-      const_cast<GCCell *>(cell), pointerBase_));
+  return idTracker_.hasObjectID(
+      CompressedPointer::encodeNonNull(
+          const_cast<GCCell *>(cell), pointerBase_));
 }
 
 void GCBase::newAlloc(const GCCell *ptr, uint32_t sz) {
@@ -1060,8 +1063,9 @@ void GCBase::untrackObject(const GCCell *cell, uint32_t sz) {
   getAllocationLocationTracker().freeAlloc(cell, sz);
   getSamplingAllocationTracker().freeAlloc(cell, sz);
 #endif
-  idTracker_.untrackObject(CompressedPointer::encodeNonNull(
-      const_cast<GCCell *>(cell), pointerBase_));
+  idTracker_.untrackObject(
+      CompressedPointer::encodeNonNull(
+          const_cast<GCCell *>(cell), pointerBase_));
 }
 
 #ifndef NDEBUG
@@ -1351,14 +1355,15 @@ void GCBase::AllocationLocationTracker::enable(
   // The first fragment has all objects that were live before the profiler was
   // enabled.
   // The ID and timestamp will be filled out via flushCallback.
-  fragments_.emplace_back(Fragment{
-      IDTracker::kInvalidNode,
-      std::chrono::microseconds(),
-      numObjects,
-      numBytes,
-      // Say the fragment is touched here so it is written out
-      // automatically by flushCallback.
-      true});
+  fragments_.emplace_back(
+      Fragment{
+          IDTracker::kInvalidNode,
+          std::chrono::microseconds(),
+          numObjects,
+          numBytes,
+          // Say the fragment is touched here so it is written out
+          // automatically by flushCallback.
+          true});
   // Immediately flush the first fragment.
   flushCallback();
 }
@@ -1469,8 +1474,9 @@ void GCBase::AllocationLocationTracker::flushCallback() {
     lastFrag.lastSeenObjectID_ = lastID;
     lastFrag.timestamp_ = duration;
     // Place an empty fragment at the end, for any new allocs.
-    fragments_.emplace_back(Fragment{
-        IDTracker::kInvalidNode, std::chrono::microseconds(), 0, 0, false});
+    fragments_.emplace_back(
+        Fragment{
+            IDTracker::kInvalidNode, std::chrono::microseconds(), 0, 0, false});
   }
   if (fragmentCallback_) {
     std::vector<HeapStatsUpdate> updatedFragments;

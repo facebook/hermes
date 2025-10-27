@@ -524,30 +524,33 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
   {
     // Create a PropertyDescriptor object with enumerable and configurable set.
     auto attributes = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    attributes,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::enumerable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    attributes,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::configurable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            attributes,
+            runtime,
+            Predefined::getSymbolID(Predefined::enumerable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            attributes,
+            runtime,
+            Predefined::getSymbolID(Predefined::configurable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
 
     // Add value to the PropertyDescriptor.
     auto value = HermesValue::encodeTrustedNumberValue(123);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    attributes,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::value),
-                    runtime.makeHandle(value),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            attributes,
+            runtime,
+            Predefined::getSymbolID(Predefined::value),
+            runtime.makeHandle(value),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
 
     // Call Object.defineProperty() with prop.
     auto propHandle =
@@ -588,26 +591,29 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
         Predefined::getSymbolID(Predefined::toString));
     ASSERT_RETURNED(propRes.getStatus());
     auto toStringFn = runtime.makeHandle<Callable>(std::move(*propRes));
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    accessorAttributes,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::set),
-                    toStringFn,
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            accessorAttributes,
+            runtime,
+            Predefined::getSymbolID(Predefined::set),
+            toStringFn,
+            PropOpFlags().plusThrowOnError())
+            .getValue());
 
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    accessorAttributes,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::get),
-                    toStringFn,
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            accessorAttributes,
+            runtime,
+            Predefined::getSymbolID(Predefined::get),
+            toStringFn,
+            PropOpFlags().plusThrowOnError())
+            .getValue());
 
     // Call Object.defineProperty() with prop.
-    auto prop = runtime.makeHandle(HermesValue::encodeStringValue(
-        StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"newkey1"))
-            .get()));
+    auto prop = runtime.makeHandle(
+        HermesValue::encodeStringValue(
+            StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"newkey1"))
+                .get()));
     ASSERT_RETURNED(
         definePropertyFn
             ->executeCall3(
@@ -675,61 +681,68 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
   // Create the first property descriptor object.
   {
     auto property1 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property1,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::enumerable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property1,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::configurable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property1,
+            runtime,
+            Predefined::getSymbolID(Predefined::enumerable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property1,
+            runtime,
+            Predefined::getSymbolID(Predefined::configurable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
     auto value1 = HermesValue::encodeTrustedNumberValue(123);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property1,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::value),
-                    runtime.makeHandle(value1),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    properties,
-                    runtime,
-                    *id1,
-                    property1,
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property1,
+            runtime,
+            Predefined::getSymbolID(Predefined::value),
+            runtime.makeHandle(value1),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            properties,
+            runtime,
+            *id1,
+            property1,
+            PropOpFlags().plusThrowOnError())
+            .getValue());
   }
   // Create the second property descriptor object.
   {
     auto property2 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property2,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::writable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property2,
+            runtime,
+            Predefined::getSymbolID(Predefined::writable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
     auto value2 = HermesValue::encodeNullValue();
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property2,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::value),
-                    runtime.makeHandle(value2),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    properties,
-                    runtime,
-                    *id2,
-                    property2,
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property2,
+            runtime,
+            Predefined::getSymbolID(Predefined::value),
+            runtime.makeHandle(value2),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            properties,
+            runtime,
+            *id2,
+            property2,
+            PropOpFlags().plusThrowOnError())
+            .getValue());
   }
   // Get global object.
   GET_GLOBAL(Object);
@@ -804,61 +817,68 @@ TEST_F(JSLibTest, ObjectCreateTest) {
   // Create the first property descriptor object.
   {
     auto property1 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property1,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::enumerable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property1,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::configurable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property1,
+            runtime,
+            Predefined::getSymbolID(Predefined::enumerable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property1,
+            runtime,
+            Predefined::getSymbolID(Predefined::configurable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
     auto value1 = HermesValue::encodeTrustedNumberValue(123);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property1,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::value),
-                    runtime.makeHandle(value1),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    properties,
-                    runtime,
-                    *id1,
-                    property1,
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property1,
+            runtime,
+            Predefined::getSymbolID(Predefined::value),
+            runtime.makeHandle(value1),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            properties,
+            runtime,
+            *id1,
+            property1,
+            PropOpFlags().plusThrowOnError())
+            .getValue());
   }
   // Create the second property descriptor object.
   {
     auto property2 = createObject(runtime);
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property2,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::writable),
-                    runtime.makeHandle(HermesValue::encodeBoolValue(true)),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property2,
+            runtime,
+            Predefined::getSymbolID(Predefined::writable),
+            runtime.makeHandle(HermesValue::encodeBoolValue(true)),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
     auto value2 = HermesValue::encodeNullValue();
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    property2,
-                    runtime,
-                    Predefined::getSymbolID(Predefined::value),
-                    runtime.makeHandle(value2),
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
-    ASSERT_TRUE(JSObject::putNamed_RJS(
-                    properties,
-                    runtime,
-                    *id2,
-                    property2,
-                    PropOpFlags().plusThrowOnError())
-                    .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            property2,
+            runtime,
+            Predefined::getSymbolID(Predefined::value),
+            runtime.makeHandle(value2),
+            PropOpFlags().plusThrowOnError())
+            .getValue());
+    ASSERT_TRUE(
+        JSObject::putNamed_RJS(
+            properties,
+            runtime,
+            *id2,
+            property2,
+            PropOpFlags().plusThrowOnError())
+            .getValue());
   }
   // Get global object.
   GET_GLOBAL(Object);

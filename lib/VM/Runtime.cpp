@@ -301,15 +301,19 @@ Runtime::Runtime(
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK
-      overflowGuard_(StackOverflowGuard::nativeStackGuard(std::max(
-          runtimeConfig.getNativeStackGap(),
-          kMinSupportedNativeStackGap))),
+      overflowGuard_(
+          StackOverflowGuard::nativeStackGuard(
+              std::max(
+                  runtimeConfig.getNativeStackGap(),
+                  kMinSupportedNativeStackGap))),
 #else
-      overflowGuard_(StackOverflowGuard::depthCounterGuard(
-          Runtime::MAX_NATIVE_CALL_FRAME_DEPTH)),
+      overflowGuard_(
+          StackOverflowGuard::depthCounterGuard(
+              Runtime::MAX_NATIVE_CALL_FRAME_DEPTH)),
 #endif
-      builtins_(static_cast<Callable **>(
-          checkedCalloc(BuiltinMethod::_count, sizeof(Callable *)))),
+      builtins_(
+          static_cast<Callable **>(
+              checkedCalloc(BuiltinMethod::_count, sizeof(Callable *)))),
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
       codeCoverageProfiler_(std::make_unique<CodeCoverageProfiler>(*this)),
@@ -450,8 +454,12 @@ Runtime::Runtime(
 
   // Set the prototype of the global object to the standard object prototype,
   // which has now been defined.
-  ignoreAllocationFailure(JSObject::setParent(
-      *getGlobal(), *this, *objectPrototype, PropOpFlags().plusThrowOnError()));
+  ignoreAllocationFailure(
+      JSObject::setParent(
+          *getGlobal(),
+          *this,
+          *objectPrototype,
+          PropOpFlags().plusThrowOnError()));
 
   symbolRegistry_.init(*this);
 
@@ -879,10 +887,11 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Arrays includes ArrayStorage.
   std::map<std::pair<size_t, size_t>, std::pair<size_t, size_t>>
       arraySizeToCountAndWastedSlots;
-  auto printTable = [&os](const std::map<
-                          std::pair<size_t, size_t>,
-                          std::pair<size_t, size_t>>
-                              &arraySizeToCountAndWastedSlots) {
+  auto printTable = [&os](
+                        const std::map<
+                            std::pair<size_t, size_t>,
+                            std::pair<size_t, size_t>>
+                            &arraySizeToCountAndWastedSlots) {
     os << llvh::format(
         "%8s %8s %8s %10s %15s %15s %15s %20s %25s\n",
         (const char *)"Capacity",
@@ -1716,8 +1725,9 @@ ExecutionStatus Runtime::forEachPublicNativeBuiltin(
     LLVM_DEBUG(llvh::dbgs() << publicNativeBuiltins[methodIndex].name << "\n");
     // Find the object first, if it changed.
     bool frozen = (publicNativeBuiltins[methodIndex].object & FROZEN_FLAG) != 0;
-    auto objectName = (Predefined::Str)(
-        publicNativeBuiltins[methodIndex].object & ~FROZEN_FLAG);
+    auto objectName =
+        (Predefined::Str)(publicNativeBuiltins[methodIndex].object &
+                          ~FROZEN_FLAG);
     if (objectName != lastObjectName) {
       auto objectID = Predefined::getSymbolID(objectName);
       // Avoid running any JS here to avoid modifying the builtins while

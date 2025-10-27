@@ -1164,8 +1164,9 @@ uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
 }
 
 void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
-  Builder.setLocation(SourceErrorManager::convertEndToLocation(
-      Builder.getFunction()->getSourceRange()));
+  Builder.setLocation(
+      SourceErrorManager::convertEndToLocation(
+          Builder.getFunction()->getSourceRange()));
   if (returnValue) {
     if (curFunction()->hasLegacyClassContext()) {
       if (curFunction()->getSemInfo()->constructorKind ==

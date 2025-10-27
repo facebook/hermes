@@ -23,9 +23,10 @@ TEST(RuntimeTest, configRegisterCountOverflow) {
       "RuntimeConfig maxNumRegisters too big");
   EXPECT_DEATH_IF_SUPPORTED(
       {
-        Runtime::create(RuntimeConfig::Builder()
-                            .withMaxNumRegisters(UINT32_MAX - 1)
-                            .build());
+        Runtime::create(
+            RuntimeConfig::Builder()
+                .withMaxNumRegisters(UINT32_MAX - 1)
+                .build());
       },
       "RuntimeConfig maxNumRegisters too big");
 }

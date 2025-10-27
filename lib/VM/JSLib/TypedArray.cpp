@@ -2135,12 +2135,13 @@ HermesValue createTypedArrayBaseConstructor(Runtime &runtime) {
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
   // Use the same valuesMethod for Symbol.iterator.
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      proto,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      lv.values));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          proto,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          lv.values));
 
   defineMethod(
       runtime,
@@ -2151,16 +2152,18 @@ HermesValue createTypedArrayBaseConstructor(Runtime &runtime) {
       0);
 
   {
-    lv.propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-        Handle<JSArray>::vmcast(&runtime.arrayPrototype),
-        runtime,
-        Predefined::getSymbolID(Predefined::toString)));
-    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-        proto,
-        runtime,
-        Predefined::getSymbolID(Predefined::toString),
-        dpf,
-        Handle<NativeFunction>::vmcast(&lv.propValue)));
+    lv.propValue = runtime.ignoreAllocationFailure(
+        JSObject::getNamed_RJS(
+            Handle<JSArray>::vmcast(&runtime.arrayPrototype),
+            runtime,
+            Predefined::getSymbolID(Predefined::toString)));
+    runtime.ignoreAllocationFailure(
+        JSObject::defineOwnProperty(
+            proto,
+            runtime,
+            Predefined::getSymbolID(Predefined::toString),
+            dpf,
+            Handle<NativeFunction>::vmcast(&lv.propValue)));
   }
 
   defineMethod(

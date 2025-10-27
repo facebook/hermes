@@ -45,7 +45,7 @@ static llvh::DenseMap<llvh::StringRef, uint32_t> initializeHTMLEntities() {
   llvh::DenseMap<llvh::StringRef, uint32_t> entities{};
 
 #define HTML_ENTITY(NAME, VALUE) \
-  entities.insert({ llvh::StringLiteral(#NAME), VALUE });
+  entities.insert({llvh::StringLiteral(#NAME), VALUE});
 #include "hermes/Parser/HTMLEntities.def"
 
   return entities;

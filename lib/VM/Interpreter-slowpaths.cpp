@@ -1542,8 +1542,9 @@ ExecutionStatus doGetByIdSlowPath_RJS(
 static inline PseudoHandle<>
 tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id) {
   if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
-    return createPseudoHandle(HermesValue::encodeTrustedNumberValue(
-        base->getString()->getStringLength()));
+    return createPseudoHandle(
+        HermesValue::encodeTrustedNumberValue(
+            base->getString()->getStringLength()));
   }
   return createPseudoHandle(HermesValue::encodeEmptyValue());
 }

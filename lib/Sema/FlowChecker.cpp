@@ -1978,13 +1978,15 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
   // The new Decl for the specialization of the function declaration.
   sema::Decl *newDecl = nullptr;
   if (llvh::isa<ESTree::FunctionDeclarationNode>(specialization)) {
-    newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
-        llvh::cast<ESTree::FunctionDeclarationNode>(specialization)->_id));
+    newDecl = getDecl(
+        llvh::cast<ESTree::IdentifierNode>(
+            llvh::cast<ESTree::FunctionDeclarationNode>(specialization)->_id));
   } else if (
 
       llvh::isa<ESTree::ClassDeclarationNode>(specialization)) {
-    newDecl = getDecl(llvh::cast<ESTree::IdentifierNode>(
-        llvh::cast<ESTree::ClassDeclarationNode>(specialization)->_id));
+    newDecl = getDecl(
+        llvh::cast<ESTree::IdentifierNode>(
+            llvh::cast<ESTree::ClassDeclarationNode>(specialization)->_id));
   }
 
   newDecl->generic = false;

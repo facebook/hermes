@@ -57,8 +57,9 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   bytecodeGenOpts.format = OutputFormatKind::EmitBundle;
   bytecodeGenOpts.staticBuiltinsEnabled = flags.staticBuiltins;
   bytecodeGenOpts.stripDebugInfoSection = sourceMapGen != nullptr;
-  auto sourceHash = llvh::SHA1::hash(llvh::ArrayRef<uint8_t>{
-      reinterpret_cast<const uint8_t *>(source), strlen(source)});
+  auto sourceHash = llvh::SHA1::hash(
+      llvh::ArrayRef<uint8_t>{
+          reinterpret_cast<const uint8_t *>(source), strlen(source)});
   llvh::SmallVector<char, 0> bytecodeVector;
   llvh::raw_svector_ostream OS(bytecodeVector);
   std::unique_ptr<BytecodeModule> BM = generateBytecodeModule(

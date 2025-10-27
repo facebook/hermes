@@ -69,8 +69,9 @@ void HeapProfilerDomainAgent::takeHeapSnapshot(
       req.reportProgress && *req.reportProgress,
       req.captureNumericValue && *req.captureNumericValue);
 #else
-  sendResponseToClient(m::makeErrorResponse(
-      req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
@@ -118,8 +119,9 @@ void HeapProfilerDomainAgent::getObjectByHeapObjectId(
   uint64_t objID = atoi(req.objectId.c_str());
   jsi::Value val = runtime_.getObjectForID(objID);
   if (val.isNull()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::ServerError, "Unknown object"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::ServerError, "Unknown object"));
     return;
   }
 
@@ -127,8 +129,11 @@ void HeapProfilerDomainAgent::getObjectByHeapObjectId(
   m::runtime::RemoteObject remoteObj = m::runtime::makeRemoteObject(
       runtime_, val, *objTable_, group, ObjectSerializationOptions{});
   if (remoteObj.type.empty()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::ServerError, "Remote object is not available"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::ServerError,
+            "Remote object is not available"));
     return;
   }
 
@@ -137,8 +142,9 @@ void HeapProfilerDomainAgent::getObjectByHeapObjectId(
   resp.result = std::move(remoteObj);
   sendResponseToClient(resp);
 #else
-  sendResponseToClient(m::makeErrorResponse(
-      req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
@@ -160,12 +166,14 @@ void HeapProfilerDomainAgent::getHeapObjectId(
     resp.heapSnapshotObjectId = stream.str();
     sendResponseToClient(resp);
   } else {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::ServerError, "Object is not available"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::ServerError, "Object is not available"));
   }
 #else
-  sendResponseToClient(m::makeErrorResponse(
-      req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
@@ -179,8 +187,11 @@ void HeapProfilerDomainAgent::startTrackingHeapObjects(
     const m::heapProfiler::StartTrackingHeapObjectsRequest &req) {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   if (trackingHeapObjectStackTraces_) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "Already tracking heap objects"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Already tracking heap objects"));
     return;
   }
 
@@ -229,8 +240,9 @@ void HeapProfilerDomainAgent::startTrackingHeapObjects(
         sendNotificationToClient(heapStatsNote);
       });
 #else
-  sendResponseToClient(m::makeErrorResponse(
-      req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
@@ -238,8 +250,9 @@ void HeapProfilerDomainAgent::stopTrackingHeapObjects(
     const m::heapProfiler::StopTrackingHeapObjectsRequest &req) {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   if (!trackingHeapObjectStackTraces_) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "Not tracking heap objects"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::InvalidRequest, "Not tracking heap objects"));
     return;
   }
 
@@ -250,8 +263,9 @@ void HeapProfilerDomainAgent::stopTrackingHeapObjects(
       req.reportProgress && *req.reportProgress,
       req.captureNumericValue && *req.captureNumericValue);
 #else
-  sendResponseToClient(m::makeErrorResponse(
-      req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
@@ -267,8 +281,9 @@ void HeapProfilerDomainAgent::startSampling(
   samplingHeap_ = true;
   sendResponseToClient(m::makeOkResponse(req.id));
 #else
-  sendResponseToClient(m::makeErrorResponse(
-      req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 
@@ -276,8 +291,9 @@ void HeapProfilerDomainAgent::stopSampling(
     const m::heapProfiler::StopSamplingRequest &req) {
 #ifdef HERMES_MEMORY_INSTRUMENTATION
   if (!samplingHeap_) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "Heap sampling not active"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::InvalidRequest, "Heap sampling not active"));
     return;
   }
 
@@ -288,16 +304,18 @@ void HeapProfilerDomainAgent::stopSampling(
   m::heapProfiler::StopSamplingResponse resp;
   auto profile = m::heapProfiler::makeSamplingHeapProfile(stream.str());
   if (profile == nullptr) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InternalError, "Failed to create profile"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::InternalError, "Failed to create profile"));
     return;
   }
   resp.id = req.id;
   resp.profile = std::move(*profile);
   sendResponseToClient(resp);
 #else
-  sendResponseToClient(m::makeErrorResponse(
-      req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          req.id, m::ErrorCode::InvalidRequest, kNoInstrumentation));
 #endif // HERMES_MEMORY_INSTRUMENTATION
 }
 

@@ -46,8 +46,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 
         genStatement(tryStmt->_block);
 
-        Builder.setLocation(SourceErrorManager::convertEndToLocation(
-            tryStmt->_block->getSourceRange()));
+        Builder.setLocation(
+            SourceErrorManager::convertEndToLocation(
+                tryStmt->_block->getSourceRange()));
       },
       // emitNormalCleanup.
       [this, tryStmt]() {
@@ -56,8 +57,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
           // in the body.
           FunctionContext::AllowRecompileRAII allowRecompile(*curFunction());
           genStatement(tryStmt->_finalizer);
-          Builder.setLocation(SourceErrorManager::convertEndToLocation(
-              tryStmt->_finalizer->getSourceRange()));
+          Builder.setLocation(
+              SourceErrorManager::convertEndToLocation(
+                  tryStmt->_finalizer->getSourceRange()));
         }
       },
       // emitHandler.
@@ -77,8 +79,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 
           genStatement(catchClauseNode->_body);
 
-          Builder.setLocation(SourceErrorManager::convertEndToLocation(
-              tryStmt->_handler->getSourceRange()));
+          Builder.setLocation(
+              SourceErrorManager::convertEndToLocation(
+                  tryStmt->_handler->getSourceRange()));
           Builder.createBranchInst(nextBlock);
         } else {
           // Indicate for debugging that we are compiling a "finally" handler a
@@ -91,8 +94,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 
           genStatement(tryStmt->_finalizer);
 
-          Builder.setLocation(SourceErrorManager::convertEndToLocation(
-              tryStmt->_finalizer->getSourceRange()));
+          Builder.setLocation(
+              SourceErrorManager::convertEndToLocation(
+                  tryStmt->_finalizer->getSourceRange()));
           Builder.createThrowInst(catchReg);
         }
       });

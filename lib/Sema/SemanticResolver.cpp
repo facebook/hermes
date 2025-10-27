@@ -2881,15 +2881,16 @@ FunctionContext::FunctionContext(
           strict,
           customDirectives)),
       node(node),
-      decls(DeclCollector::run(
-          node,
-          resolver.keywords(),
-          resolver.recursionDepth_,
-          [&resolver](ESTree::Node *n) {
-            // Inform the resolver that we have gone too deep.
-            resolver.recursionDepth_ = 0;
-            resolver.recursionDepthExceeded(n);
-          })) {
+      decls(
+          DeclCollector::run(
+              node,
+              resolver.keywords(),
+              resolver.recursionDepth_,
+              [&resolver](ESTree::Node *n) {
+                // Inform the resolver that we have gone too deep.
+                resolver.recursionDepth_ = 0;
+                resolver.recursionDepthExceeded(n);
+              })) {
   resolver.curFunctionContext_ = this;
   node->setSemInfo(this->semInfo);
 }
@@ -2912,15 +2913,16 @@ FunctionContext::FunctionContext(
       prevContext_(resolver.curFunctionContext_),
       semInfo(newFunctionInfo),
       node(nullptr),
-      decls(DeclCollector::run(
-          node,
-          resolver.keywords(),
-          resolver.recursionDepth_,
-          [&resolver](ESTree::Node *n) {
-            // Inform the resolver that we have gone too deep.
-            resolver.recursionDepth_ = 0;
-            resolver.recursionDepthExceeded(n);
-          })) {
+      decls(
+          DeclCollector::run(
+              node,
+              resolver.keywords(),
+              resolver.recursionDepth_,
+              [&resolver](ESTree::Node *n) {
+                // Inform the resolver that we have gone too deep.
+                resolver.recursionDepth_ = 0;
+                resolver.recursionDepthExceeded(n);
+              })) {
   resolver.curFunctionContext_ = this;
 }
 
@@ -2933,15 +2935,16 @@ FunctionContext::FunctionContext(
       prevContext_(nullptr),
       semInfo(semInfoLazy),
       node(node),
-      decls(DeclCollector::run(
-          node,
-          resolver.keywords(),
-          resolver.recursionDepth_,
-          [&resolver](ESTree::Node *n) {
-            // Inform the resolver that we have gone too deep.
-            resolver.recursionDepth_ = 0;
-            resolver.recursionDepthExceeded(n);
-          })) {
+      decls(
+          DeclCollector::run(
+              node,
+              resolver.keywords(),
+              resolver.recursionDepth_,
+              [&resolver](ESTree::Node *n) {
+                // Inform the resolver that we have gone too deep.
+                resolver.recursionDepth_ = 0;
+                resolver.recursionDepthExceeded(n);
+              })) {
   // Use the same semInfo as the lazy one.
   node->setSemInfo(semInfoLazy);
   resolver.curFunctionContext_ = this;

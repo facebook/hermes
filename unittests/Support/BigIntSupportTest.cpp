@@ -392,40 +392,42 @@ TEST(BigIntTest, dropExtraSignBitsTest) {
       llvh::ArrayRef<uint8_t>({0xff}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::ArrayRef<uint8_t>(
-          {0x00,
-           0x01,
-           0x02,
-           0x03,
-           0x03,
-           0x00,
-           0x00,
-           0x00,
-           0x02,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00})),
+      dropExtraSignBits(
+          llvh::ArrayRef<uint8_t>(
+              {0x00,
+               0x01,
+               0x02,
+               0x03,
+               0x03,
+               0x00,
+               0x00,
+               0x00,
+               0x02,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00})),
       llvh::ArrayRef<uint8_t>(
           {0x00, 0x01, 0x02, 0x03, 0x03, 0x00, 0x00, 0x00, 0x02}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::ArrayRef<uint8_t>(
-          {0x80,
-           0x81,
-           0x82,
-           0x83,
-           0x89,
-           0x00,
-           0x00,
-           0x00,
-           0x8a,
-           0xff,
-           0xff,
-           0xff,
-           0xff,
-           0xff})),
+      dropExtraSignBits(
+          llvh::ArrayRef<uint8_t>(
+              {0x80,
+               0x81,
+               0x82,
+               0x83,
+               0x89,
+               0x00,
+               0x00,
+               0x00,
+               0x8a,
+               0xff,
+               0xff,
+               0xff,
+               0xff,
+               0xff})),
       llvh::ArrayRef<uint8_t>(
           {0x80, 0x81, 0x82, 0x83, 0x89, 0x00, 0x00, 0x00, 0x8a}));
 
@@ -435,20 +437,21 @@ TEST(BigIntTest, dropExtraSignBitsTest) {
       llvh::ArrayRef<uint8_t>({0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}));
 
   EXPECT_EQ(
-      dropExtraSignBits(llvh::ArrayRef<uint8_t>(
-          {0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x00,
-           0x80})),
+      dropExtraSignBits(
+          llvh::ArrayRef<uint8_t>(
+              {0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x00,
+               0x80})),
       llvh::ArrayRef<uint8_t>(
           {0x00,
            0x00,

@@ -53,8 +53,9 @@ class ESTreeJSONDumper {
         rawProp_(rawProp),
         includeSourceLocs_(includeSourceLocs),
 #ifdef HERMES_CHECK_NATIVE_STACK
-        stackOverflowGuard_(StackOverflowGuard::nativeStackGuard(
-            512 * 1024)) // Gap tested to work with sanitizer builds
+        stackOverflowGuard_(
+            StackOverflowGuard::nativeStackGuard(
+                512 * 1024)) // Gap tested to work with sanitizer builds
 #else
         stackOverflowGuard_(StackOverflowGuard::depthCounterGuard(128))
 #endif

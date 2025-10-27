@@ -568,8 +568,9 @@ Literal *hermes::evalBinaryOperator(
       break;
     case ValueKind::BinaryExponentiationInstKind: // ** (**=)
       if (leftLiteralNum && rightLiteralNum) {
-        return builder.getLiteralNumber(hermes::expOp(
-            leftLiteralNum->getValue(), rightLiteralNum->getValue()));
+        return builder.getLiteralNumber(
+            hermes::expOp(
+                leftLiteralNum->getValue(), rightLiteralNum->getValue()));
       }
       break;
     case ValueKind::BinaryOrInstKind: // |   (|=)

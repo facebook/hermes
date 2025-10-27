@@ -53,9 +53,10 @@ class RuntimeInstance {
   explicit RuntimeInstance(std::string scriptSource, std::string scriptUrl)
       : executor_(std::make_unique<SerialExecutor>()),
         runtime_(
-            fbhermes::makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
-                                            .withEnableSampleProfiling(true)
-                                            .build())) {
+            fbhermes::makeHermesRuntime(
+                ::hermes::vm::RuntimeConfig::Builder()
+                    .withEnableSampleProfiling(true)
+                    .build())) {
     cdpDebugAPI_ = cdp::CDPDebugAPI::create(*runtime_);
 
     // Install console.log handler

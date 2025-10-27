@@ -553,10 +553,11 @@ class GCBase {
     using HeapStatsUpdate = std::tuple<uint64_t, uint64_t, uint64_t>;
 
     /// Enable location tracking.
-    void enable(std::function<void(
-                    uint64_t,
-                    std::chrono::microseconds,
-                    std::vector<HeapStatsUpdate>)> callback);
+    void enable(
+        std::function<void(
+            uint64_t,
+            std::chrono::microseconds,
+            std::vector<HeapStatsUpdate>)> callback);
 
     /// Disable location tracking - turns \c newAlloc() into a no-op. Existing
     /// allocations continue to be tracked.

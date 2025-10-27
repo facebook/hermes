@@ -48,8 +48,7 @@ class GCExecTrace {
 #ifndef HERMESVM_API_TRACE_DEBUG
   inline
 #endif
-      void
-      emit(::hermes::JSONEmitter &json) const;
+      void emit(::hermes::JSONEmitter &json) const;
 
  private:
 #ifdef HERMESVM_API_TRACE_DEBUG

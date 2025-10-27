@@ -199,20 +199,24 @@ void Builder::reseedFromBaseBytecode() {
   /// instruction. If this pair has not been seen before, we add an entry to \c
   /// valueStrTable which describes the layout of the base bytecode value
   /// buffer.
-  auto processValueUserOp =
-      [this, &valueBuf, &emptyVisitor, &valueStrTable, &seenValueBufferEntries](
-          uint32_t valBufOffset, uint16_t numElements) {
-        auto sizeInBytes = SerializedLiteralParser::parse(
-            valueBuf.slice(valBufOffset), numElements, emptyVisitor);
-        auto [_, inserted] =
-            seenValueBufferEntries.insert({valBufOffset, sizeInBytes});
-        if (inserted) {
-          valueStrTable.push_back({valBufOffset, (uint32_t)sizeInBytes, false});
-          values_.push_back(llvh::StringRef{
+  auto processValueUserOp = [this,
+                             &valueBuf,
+                             &emptyVisitor,
+                             &valueStrTable,
+                             &seenValueBufferEntries](
+                                uint32_t valBufOffset, uint16_t numElements) {
+    auto sizeInBytes = SerializedLiteralParser::parse(
+        valueBuf.slice(valBufOffset), numElements, emptyVisitor);
+    auto [_, inserted] =
+        seenValueBufferEntries.insert({valBufOffset, sizeInBytes});
+    if (inserted) {
+      valueStrTable.push_back({valBufOffset, (uint32_t)sizeInBytes, false});
+      values_.push_back(
+          llvh::StringRef{
               reinterpret_cast<const char *>(valueBuf.data() + valBufOffset),
               sizeInBytes});
-        }
-      };
+    }
+  };
 
   // There is no convenient header describing the structure of the raw bytes for
   // the value buffer. Therefore, we reconstruct the individual elements in the
@@ -284,9 +288,10 @@ void Builder::reseedFromBaseBytecode() {
     auto sizeInBytes = SerializedLiteralParser::parse(
         keyBuf.slice(keyBufferOffset), numProps, emptyVisitor);
     keyStrTable.push_back({keyBufferOffset, (uint32_t)sizeInBytes, false});
-    objKeys_.push_back(llvh::StringRef{
-        reinterpret_cast<const char *>(keyBuf.data() + keyBufferOffset),
-        sizeInBytes});
+    objKeys_.push_back(
+        llvh::StringRef{
+            reinterpret_cast<const char *>(keyBuf.data() + keyBufferOffset),
+            sizeInBytes});
     keyOffsetToShapeIdx_.insert({{keyBufferOffset, numProps}, (uint32_t)i});
   }
   keyStorage_ =
@@ -298,16 +303,18 @@ void Builder::makeBufferStorages() {
       bcProvider_ ||
       (valueStorage_.count() == 0 && keyStorage_.count() == 0) &&
           "with no base bytecode, storages should be empty");
-  valueStorage_.appendStorage(hbc::ConsecutiveStringStorage{
-      values_.beginSet() + valueStorage_.count(),
-      values_.endSet(),
-      std::true_type{},
-      optimize_});
-  keyStorage_.appendStorage(hbc::ConsecutiveStringStorage{
-      objKeys_.beginSet() + keyStorage_.count(),
-      objKeys_.endSet(),
-      std::true_type{},
-      optimize_});
+  valueStorage_.appendStorage(
+      hbc::ConsecutiveStringStorage{
+          values_.beginSet() + valueStorage_.count(),
+          values_.endSet(),
+          std::true_type{},
+          optimize_});
+  keyStorage_.appendStorage(
+      hbc::ConsecutiveStringStorage{
+          objKeys_.beginSet() + keyStorage_.count(),
+          objKeys_.endSet(),
+          std::true_type{},
+          optimize_});
 }
 
 LiteralBufferBuilder::Result Builder::generate() {

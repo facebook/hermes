@@ -2261,8 +2261,9 @@ ExecutionStatus toPropertyDescriptor(
       return runtime.raiseTypeError(
           "Invalid property descriptor. Can't set both accessor and writable.");
     }
-    valueOrAccessor.set(PropertyAccessor::create(runtime, getterPtr, setterPtr)
-                            .getHermesValue());
+    valueOrAccessor.set(
+        PropertyAccessor::create(runtime, getterPtr, setterPtr)
+            .getHermesValue());
   }
 
   return ExecutionStatus::RETURNED;

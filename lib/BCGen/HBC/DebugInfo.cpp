@@ -360,8 +360,9 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
   const uint32_t startOffset = sourcesData.size();
 
   if (files.empty() || files.back().filenameId != start.filenameId) {
-    files.push_back(DebugFileRegion{
-        startOffset, start.filenameId, start.sourceMappingUrlId});
+    files.push_back(
+        DebugFileRegion{
+            startOffset, start.filenameId, start.sourceMappingUrlId});
   }
 
   appendSignedLEB128(sourcesData, functionIndex);
@@ -376,10 +377,11 @@ uint32_t DebugInfoGenerator::appendSourceLocations(
 
   for (auto &next : offsets) {
     if (next.filenameId != previous->filenameId) {
-      files.push_back(DebugFileRegion{
-          (unsigned)sourcesData.size(),
-          next.filenameId,
-          start.sourceMappingUrlId});
+      files.push_back(
+          DebugFileRegion{
+              (unsigned)sourcesData.size(),
+              next.filenameId,
+              start.sourceMappingUrlId});
     }
 
     int32_t adelta = delta(next.address, previousAddress);

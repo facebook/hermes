@@ -176,8 +176,9 @@ class Domain final : public GCCell {
   /// \return the module object for the given cjsModuleOffset.
   PseudoHandle<JSObject> getModule(Runtime &runtime, uint32_t cjsModuleOffset)
       const {
-    return createPseudoHandle(dyn_vmcast<JSObject>(
-        cjsModules_.getNonNull(runtime)->at(cjsModuleOffset + ModuleOffset)));
+    return createPseudoHandle(
+        dyn_vmcast<JSObject>(cjsModules_.getNonNull(runtime)->at(
+            cjsModuleOffset + ModuleOffset)));
   }
 
   /// \return the function index for the given cjsModuleOffset.

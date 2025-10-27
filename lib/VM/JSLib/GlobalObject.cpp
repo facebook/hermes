@@ -319,38 +319,42 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
             name,
             paramCount,
             Runtime::makeNullHandle<JSObject>());
-        runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-            runtime.getGlobal(), runtime, name, normalDPF, func));
+        runtime.ignoreAllocationFailure(
+            JSObject::defineOwnProperty(
+                runtime.getGlobal(), runtime, name, normalDPF, func));
         return func;
       };
 
   // 15.1.1.1 NaN.
   lv.value = HermesValue::encodeNaNValue();
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::NaN),
-      constantDPF,
-      lv.value));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::NaN),
+          constantDPF,
+          lv.value));
 
   // 15.1.1.2 Infinity.
   lv.value = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::Infinity),
-      constantDPF,
-      lv.value));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::Infinity),
+          constantDPF,
+          lv.value));
 
   // 15.1.1.2 undefined.
   lv.value = HermesValue::encodeUndefinedValue();
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::undefined),
-      constantDPF,
-      lv.value));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::undefined),
+          constantDPF,
+          lv.value));
 
   // "Forward declaration" of Object.prototype. Its properties will be populated
   // later.
@@ -387,12 +391,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       0,
       Runtime::makeNullHandle<JSObject>());
   runtime.functionPrototypeRawPtr = *runtime.functionPrototype;
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.functionPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      configurableOnlyPDF,
-      Runtime::getZeroValue()));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.functionPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::length),
+          configurableOnlyPDF,
+          Runtime::getZeroValue()));
 
   // [[ThrowTypeError]].
   auto throwTypeErrorFunction = NativeFunction::create(
@@ -404,12 +409,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       Predefined::getSymbolID(Predefined::emptyString),
       0,
       Runtime::makeNullHandle<JSObject>());
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      throwTypeErrorFunction,
-      runtime,
-      Predefined::getSymbolID(Predefined::length),
-      clearConfigurableDPF,
-      Runtime::getUndefinedValue()));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          throwTypeErrorFunction,
+          runtime,
+          Predefined::getSymbolID(Predefined::length),
+          clearConfigurableDPF,
+          Runtime::getUndefinedValue()));
   runtime.throwTypeErrorAccessor = PropertyAccessor::create(
       runtime, throwTypeErrorFunction, throwTypeErrorFunction);
 
@@ -423,10 +429,11 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of String.prototype. Its properties will be
   // populated later.
-  runtime.stringPrototype = runtime.ignoreAllocationFailure(JSString::create(
-      runtime,
-      runtime.getPredefinedStringHandle(Predefined::emptyString),
-      runtime.objectPrototype));
+  runtime.stringPrototype = runtime.ignoreAllocationFailure(
+      JSString::create(
+          runtime,
+          runtime.getPredefinedStringHandle(Predefined::emptyString),
+          runtime.objectPrototype));
 
   // "Forward declaration" of BigInt.prototype. Its properties will be
   // populated later.
@@ -455,8 +462,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // "Forward declaration" of Array.prototype. Its properties will be
   // populated later.
-  runtime.arrayPrototype =
-      runtime.ignoreAllocationFailure(JSArray::createNoAllocPropStorage(
+  runtime.arrayPrototype = runtime.ignoreAllocationFailure(
+      JSArray::createNoAllocPropStorage(
           runtime,
           runtime.objectPrototype,
           JSArray::createClass(runtime, runtime.objectPrototype),
@@ -679,53 +686,58 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // Define the global Math object
   lv.tempHandle.castAndSetHermesValue<JSObject>(createMathObject(runtime));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::Math),
-      normalDPF,
-      lv.tempHandle));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::Math),
+          normalDPF,
+          lv.tempHandle));
 
   // Define the global JSON object
   createJSONObject(runtime, lv.tempHandle);
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::JSON),
-      normalDPF,
-      lv.tempHandle));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::JSON),
+          normalDPF,
+          lv.tempHandle));
 
   if (LLVM_UNLIKELY(runtime.hasES6Proxy())) {
     // Define the global Reflect object
     createReflectObject(runtime, lv.tempHandle);
-    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-        runtime.getGlobal(),
-        runtime,
-        Predefined::getSymbolID(Predefined::Reflect),
-        normalDPF,
-        lv.tempHandle));
+    runtime.ignoreAllocationFailure(
+        JSObject::defineOwnProperty(
+            runtime.getGlobal(),
+            runtime,
+            Predefined::getSymbolID(Predefined::Reflect),
+            normalDPF,
+            lv.tempHandle));
   }
 
   // Define the global %HermesInternal object.
   lv.tempHandle.castAndSetHermesValue<JSObject>(
       createHermesInternalObject(runtime, jsLibFlags));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::HermesInternal),
-      constantDPF,
-      lv.tempHandle));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::HermesInternal),
+          constantDPF,
+          lv.tempHandle));
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
   // Define the global %DebuggerInternal object.
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      runtime.getIdentifierTable().registerLazyIdentifier(
-          runtime, createASCIIRef("DebuggerInternal")),
-      constantDPF,
-      createDebuggerInternalObject(runtime)));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          runtime.getIdentifierTable().registerLazyIdentifier(
+              runtime, createASCIIRef("DebuggerInternal")),
+          constantDPF,
+          createDebuggerInternalObject(runtime)));
 
 #endif // HERMES_ENABLE_DEBUGGER
 
@@ -774,19 +786,21 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       1);
 
   // Define the 'globalThis' property.
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::globalThis),
-      normalDPF,
-      runtime.getGlobal()));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::globalThis),
+          normalDPF,
+          runtime.getGlobal()));
 
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      Predefined::getSymbolID(Predefined::SHBuiltin),
-      constantDPF,
-      Runtime::getUndefinedValue()));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          Predefined::getSymbolID(Predefined::SHBuiltin),
+          constantDPF,
+          Runtime::getUndefinedValue()));
 
   // Define the 'require' function.
   runtime.requireFunction = NativeFunction::create(
@@ -809,12 +823,13 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // TODO T65916424: Consider how we can move this somewhere more modular.
   if (runtime.hasIntl()) {
     lv.value = intl::createIntlObject(runtime);
-    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-        runtime.getGlobal(),
-        runtime,
-        Predefined::getSymbolID(Predefined::Intl),
-        normalDPF,
-        lv.value));
+    runtime.ignoreAllocationFailure(
+        JSObject::defineOwnProperty(
+            runtime.getGlobal(),
+            runtime,
+            Predefined::getSymbolID(Predefined::Intl),
+            normalDPF,
+            lv.value));
   }
 #endif
 }

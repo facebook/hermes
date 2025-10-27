@@ -151,18 +151,20 @@ HermesValue createSetConstructor(Runtime &runtime) {
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   // Use the same valuesMethod for both keys() and values().
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      setPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::keys),
-      dpf,
-      runtime.setPrototypeValues));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      setPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      runtime.setPrototypeValues));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          setPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::keys),
+          dpf,
+          runtime.setPrototypeValues));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          setPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          runtime.setPrototypeValues));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;

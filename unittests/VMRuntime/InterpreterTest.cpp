@@ -354,12 +354,13 @@ L1:
   BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
   auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
 
-  Handle<JSFunction> factFn = runtime.makeHandle(JSFunction::create(
-      runtime,
-      runtimeModule->getDomain(runtime),
-      runtime.makeNullHandle<JSObject>(),
-      runtime.makeNullHandle<Environment>(),
-      codeBlock));
+  Handle<JSFunction> factFn = runtime.makeHandle(
+      JSFunction::create(
+          runtime,
+          runtimeModule->getDomain(runtime),
+          runtime.makeNullHandle<JSObject>(),
+          runtime.makeNullHandle<Environment>(),
+          codeBlock));
 
   // Define the 'fact' function.
   (void)JSObject::putNamed_RJS(

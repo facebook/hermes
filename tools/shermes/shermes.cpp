@@ -283,8 +283,9 @@ static cl::opt<bool> PrintCompilerTiming(
 
 static cl::opt<std::string> ExportedUnit(
     "exported-unit",
-    cl::desc("Produce an SHUnit with the given name to be used by other code. "
-             "When this is specified, no main function will be produced."),
+    cl::desc(
+        "Produce an SHUnit with the given name to be used by other code. "
+        "When this is specified, no main function will be produced."),
     cl::cat(CompilerCategory));
 
 cl::opt<bool> DumpBetweenPasses(

@@ -640,8 +640,9 @@ CallResult<PseudoHandle<JSArray>> JSArray::createAndAllocPropStorage(
   // Allocate property storage with size corresponding to number of properties
   // in the hidden class.
   lv.arr = std::move(*res);
-  runtime.ignoreAllocationFailure(JSObject::allocatePropStorage(
-      lv.arr, runtime, classHandle->getNumProperties()));
+  runtime.ignoreAllocationFailure(
+      JSObject::allocatePropStorage(
+          lv.arr, runtime, classHandle->getNumProperties()));
 
   return PseudoHandle<JSArray>::create(*lv.arr);
 }

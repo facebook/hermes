@@ -77,12 +77,16 @@ TEST_F(DomainStateTest, TestModifications) {
   // Verify removal works
   auto lvl2Value = state.getCopy({"level1", "level2Key"});
   EXPECT_TRUE(dynamic_cast<TestStateValue *>(lvl2Value.get()) != nullptr);
-  { state.transaction().remove({"level1", "level2Key"}); }
+  {
+    state.transaction().remove({"level1", "level2Key"});
+  }
   lvl2Value = state.getCopy({"level1", "level2Key"});
   EXPECT_FALSE(dynamic_cast<TestStateValue *>(lvl2Value.get()) != nullptr);
 
   // Verify dictionary works too
-  { state.transaction().remove({"level1", "level2"}); }
+  {
+    state.transaction().remove({"level1", "level2"});
+  }
   leafValue = state.getCopy({"level1", "level2", "key"});
   EXPECT_FALSE(dynamic_cast<TestStateValue *>(leafValue.get()) != nullptr);
 }
@@ -109,7 +113,9 @@ TEST_F(DomainStateTest, TestCopy) {
   // doesn't affect what's copied
   *sharedInt = 321;
   // Delete something to validate it doesn't affect what's copied
-  { state.transaction().remove({"level1", "level2"}); }
+  {
+    state.transaction().remove({"level1", "level2"});
+  }
 
   auto leafValue = copy->getCopy({"level1", "level2", "key"});
   TestStateValue *testValue = dynamic_cast<TestStateValue *>(leafValue.get());

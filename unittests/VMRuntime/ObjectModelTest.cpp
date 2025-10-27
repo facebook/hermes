@@ -731,8 +731,9 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
 
   // Create non-symbol versions of these symbols and then test with
   // getComputed().
-  auto nonIndexIDString = runtime.makeHandle(HermesValue::encodeStringValue(
-      runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
+  auto nonIndexIDString = runtime.makeHandle(
+      HermesValue::encodeStringValue(
+          runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
   auto indexId1Num =
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(2));
   auto indexId2Num =
@@ -755,8 +756,9 @@ TEST_F(ObjectModelTest, HasProperty) {
 
   auto nonIndexID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
-  auto nonIndexIDString = runtime.makeHandle(HermesValue::encodeStringValue(
-      runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
+  auto nonIndexIDString = runtime.makeHandle(
+      HermesValue::encodeStringValue(
+          runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
   auto indexID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"5"));
   auto indexIDNum =

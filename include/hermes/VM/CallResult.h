@@ -273,8 +273,9 @@ class CallResult<Handle<T>, detail::CallResultSpecialize::Handle> {
   /* implicit */ CallResult(Handle<T> value) : valueOrStatus_(value) {}
 
   /* implicit */ CallResult(ExecutionStatus status)
-      : valueOrStatus_(Handle<T>::unsafeCreate(
-            reinterpret_cast<const PinnedHermesValue *>(-1))) {
+      : valueOrStatus_(
+            Handle<T>::unsafeCreate(
+                reinterpret_cast<const PinnedHermesValue *>(-1))) {
     assert(status != ExecutionStatus::RETURNED);
   }
 

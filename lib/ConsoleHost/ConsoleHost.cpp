@@ -218,12 +218,13 @@ static void initTest262Harness(vm::Runtime &runtime) {
 
   // Define $262.global
   auto global = runtime.getGlobal();
-  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
-      test262Obj,
-      runtime,
-      vm::Predefined::getSymbolID(vm::Predefined::global),
-      nonEnumerableDPF,
-      global));
+  runtime.ignoreAllocationFailure(
+      vm::JSObject::defineOwnProperty(
+          test262Obj,
+          runtime,
+          vm::Predefined::getSymbolID(vm::Predefined::global),
+          nonEnumerableDPF,
+          global));
 
   /// Try to get defined property on given JSObject \p selfHandle. If it does
   /// not exist, return None.
@@ -258,8 +259,9 @@ static void initTest262Harness(vm::Runtime &runtime) {
     if (!prop)
       return;
 
-    runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
-        tgtSelfHandle, runtime, tgtName, nonEnumerableDPF, *prop));
+    runtime.ignoreAllocationFailure(
+        vm::JSObject::defineOwnProperty(
+            tgtSelfHandle, runtime, tgtName, nonEnumerableDPF, *prop));
   };
 
   // Define $262.evalScript
@@ -283,12 +285,13 @@ static void initTest262Harness(vm::Runtime &runtime) {
   }
 
   // Define global object $262
-  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
-      global,
-      runtime,
-      vm::Predefined::getSymbolID(vm::Predefined::test262),
-      nonEnumerableDPF,
-      test262Obj));
+  runtime.ignoreAllocationFailure(
+      vm::JSObject::defineOwnProperty(
+          global,
+          runtime,
+          vm::Predefined::getSymbolID(vm::Predefined::test262),
+          nonEnumerableDPF,
+          test262Obj));
 
   // Define global function alert()
   tryCopyProperty(
@@ -387,25 +390,29 @@ void installConsoleBindings(
       1);
 
   lv.console = vm::JSObject::create(runtime);
-  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
-      runtime.getGlobal(),
-      runtime,
-      runtime
-          .ignoreAllocationFailure(runtime.getIdentifierTable().getSymbolHandle(
-              runtime, llvh::createASCIIRef("console")))
-          .get(),
-      normalDPF,
-      lv.console));
-  lv.print = runtime.ignoreAllocationFailure(vm::JSObject::getNamed_RJS(
-      runtime.getGlobal(),
-      runtime,
-      vm::Predefined::getSymbolID(vm::Predefined::print)));
-  runtime.ignoreAllocationFailure(vm::JSObject::defineOwnProperty(
-      lv.console,
-      runtime,
-      vm::Predefined::getSymbolID(vm::Predefined::log),
-      normalDPF,
-      lv.print));
+  runtime.ignoreAllocationFailure(
+      vm::JSObject::defineOwnProperty(
+          runtime.getGlobal(),
+          runtime,
+          runtime
+              .ignoreAllocationFailure(
+                  runtime.getIdentifierTable().getSymbolHandle(
+                      runtime, llvh::createASCIIRef("console")))
+              .get(),
+          normalDPF,
+          lv.console));
+  lv.print = runtime.ignoreAllocationFailure(
+      vm::JSObject::getNamed_RJS(
+          runtime.getGlobal(),
+          runtime,
+          vm::Predefined::getSymbolID(vm::Predefined::print)));
+  runtime.ignoreAllocationFailure(
+      vm::JSObject::defineOwnProperty(
+          lv.console,
+          runtime,
+          vm::Predefined::getSymbolID(vm::Predefined::log),
+          normalDPF,
+          lv.print));
 
   initTest262Harness(runtime);
 }

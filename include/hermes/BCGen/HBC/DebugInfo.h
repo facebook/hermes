@@ -230,9 +230,10 @@ class DebugInfo {
       std::vector<unsigned char> &&filenameStorage,
       DebugFileRegionList &&files,
       StreamVector<uint8_t> &&data)
-      : filenameTable_(ConsecutiveStringStorage{
-            std::move(filenameStrings),
-            std::move(filenameStorage)}),
+      : filenameTable_(
+            ConsecutiveStringStorage{
+                std::move(filenameStrings),
+                std::move(filenameStorage)}),
         files_(std::move(files)),
         data_(std::move(data)) {}
 

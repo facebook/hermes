@@ -36,9 +36,10 @@ struct TestHarness {
     runtime = DummyRuntime::create(TestGCConfigFixedSize(
         1u << 20,
         GCConfig::Builder(kTestGCConfigBuilder)
-            .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(1.0)
-                                    .build())));
+            .withSanitizeConfig(
+                vm::GCSanitizeConfig::Builder()
+                    .withSanitizeRate(1.0)
+                    .build())));
   }
 
   void triggerFreshHeap() {

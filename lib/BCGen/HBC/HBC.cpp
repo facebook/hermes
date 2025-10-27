@@ -139,11 +139,11 @@ static void compileLazyFunctionWorker(void *argPtr) {
   assert(lazyDataInst && "function must be lazy");
   const LazyCompilationData &lazyData = lazyDataInst->getData();
 
-  LLVM_DEBUG(llvh::dbgs() << "Compiling lazy "
-                          << F->getDescriptiveDefinitionKindStr() << ": "
-                          << F->getOriginalOrInferredName() << " @ ";
-             manager.dumpCoords(llvh::dbgs(), F->getSourceRange().Start);
-             llvh::dbgs() << "\n");
+  LLVM_DEBUG(
+      llvh::dbgs() << "Compiling lazy " << F->getDescriptiveDefinitionKindStr()
+                   << ": " << F->getOriginalOrInferredName() << " @ ";
+      manager.dumpCoords(llvh::dbgs(), F->getSourceRange().Start);
+      llvh::dbgs() << "\n");
 
   // Free the AST once we're done compiling this function.
   AllocationScope alloc(context.getAllocator());

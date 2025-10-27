@@ -141,8 +141,9 @@ struct VMOnlyRuntimeFlags {
 
   llvh::cl::opt<bool> StopAfterInit{
       "stop-after-module-init",
-      llvh::cl::desc("Exit once module loading is finished. Useful "
-                     "to measure module initialization time"),
+      llvh::cl::desc(
+          "Exit once module loading is finished. Useful "
+          "to measure module initialization time"),
       llvh::cl::cat(RuntimeCategory)};
 
   llvh::cl::opt<bool> TrackBytecodeIO{

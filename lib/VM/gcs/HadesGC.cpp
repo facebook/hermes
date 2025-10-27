@@ -1267,10 +1267,10 @@ HadesGC::HadesGC(
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       overwriteDeadYGObjects_{gcConfig.getOverwriteDeadYGObjects()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
-      ygAverageSurvivalBytes_{
-          /*weight*/ 0.5,
-          /*init*/ kYGInitialSizeFactor * FixedSizeHeapSegment::maxSize() *
-              kYGInitialSurvivalRatio} {
+      ygAverageSurvivalBytes_{/*weight*/ 0.5,
+                              /*init*/ kYGInitialSizeFactor *
+                                  FixedSizeHeapSegment::maxSize() *
+                                  kYGInitialSurvivalRatio} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", getKindAsStr().c_str());
@@ -1955,8 +1955,9 @@ void HadesGC::finalizeAll() {
   finalizeYoungGenObjects();
   // Remove contextual custom data entries for YG.
   removeSegmentExtentFromCrashManager(kYGNameForCrashMgr);
-  removeSegmentExtentFromCrashManager(std::to_string(
-      AlignedHeapSegment::getSegmentIndexFromStart(youngGen_.lowLim())));
+  removeSegmentExtentFromCrashManager(
+      std::to_string(
+          AlignedHeapSegment::getSegmentIndexFromStart(youngGen_.lowLim())));
 
   // If we are in the middle of a YG collection, some objects may have already
   // been promoted to the OG. Assume that any remaining external memory in the

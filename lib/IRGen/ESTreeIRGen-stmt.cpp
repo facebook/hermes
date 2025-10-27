@@ -956,8 +956,9 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
         createLRef(forOfStmt->_left, false).emitStore(nextValue);
 
         genStatement(forOfStmt->_body);
-        Builder.setLocation(SourceErrorManager::convertEndToLocation(
-            forOfStmt->_body->getSourceRange()));
+        Builder.setLocation(
+            SourceErrorManager::convertEndToLocation(
+                forOfStmt->_body->getSourceRange()));
       },
       // emitNormalCleanup.
       []() {},
@@ -1054,8 +1055,9 @@ void ESTreeIRGen::genAsyncForOfStatement(
         createLRef(forOfStmt->_left, false).emitStore(nextValue);
 
         genStatement(forOfStmt->_body);
-        Builder.setLocation(SourceErrorManager::convertEndToLocation(
-            forOfStmt->_body->getSourceRange()));
+        Builder.setLocation(
+            SourceErrorManager::convertEndToLocation(
+                forOfStmt->_body->getSourceRange()));
       },
       // emitNormalCleanup.
       []() {},

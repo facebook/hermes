@@ -144,8 +144,9 @@ class SHStringTable {
         entry = {
             u16Offset | (1 << 31),
             (uint32_t)strStorage.size(),
-            hashString(llvh::ArrayRef<char16_t>{
-                strStorage.data(), strStorage.size()})};
+            hashString(
+                llvh::ArrayRef<char16_t>{
+                    strStorage.data(), strStorage.size()})};
         u16Offset += strStorage.size() + 1;
       }
       stringEntries.push_back(entry);

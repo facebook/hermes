@@ -157,8 +157,9 @@ extern "C" CompileResult *hermesCompileToBytecode(
 
   hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
-      llvh::SHA1::hash(llvh::makeArrayRef(
-          reinterpret_cast<const uint8_t *>(source), sourceSize - 1)),
+      llvh::SHA1::hash(
+          llvh::makeArrayRef(
+              reinterpret_cast<const uint8_t *>(source), sourceSize - 1)),
       bcstream,
       opts);
 

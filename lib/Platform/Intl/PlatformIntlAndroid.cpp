@@ -130,14 +130,16 @@ Options optionsFromJava(jni::alias_ref<JOptionsMap> result) {
             kv.second->getClass())) {
       ret.emplace(
           stringFromJava(kv.first),
-          Option(static_cast<bool>(
-              jni::static_ref_cast<jni::JBoolean>(kv.second)->booleanValue())));
+          Option(
+              static_cast<bool>(jni::static_ref_cast<jni::JBoolean>(kv.second)
+                                    ->booleanValue())));
     } else if (jni::JInteger::javaClassStatic()->isAssignableFrom(
                    kv.second->getClass())) {
       ret.emplace(
           stringFromJava(kv.first),
-          Option(static_cast<double>(
-              jni::static_ref_cast<jni::JInteger>(kv.second)->intValue())));
+          Option(
+              static_cast<double>(
+                  jni::static_ref_cast<jni::JInteger>(kv.second)->intValue())));
     } else if (jni::JDouble::javaClassStatic()->isAssignableFrom(
                    kv.second->getClass())) {
       ret.emplace(
@@ -498,8 +500,9 @@ vm::ExecutionStatus DateTimeFormatAndroid::initialize(
     const std::vector<std::u16string> &locales,
     const Options &options) noexcept {
   try {
-    jDateTimeFormat_ = jni::make_global(JDateTimeFormat::create(
-        localesToJava(locales), optionsToJava(options)));
+    jDateTimeFormat_ = jni::make_global(
+        JDateTimeFormat::create(
+            localesToJava(locales), optionsToJava(options)));
   } catch (const std::exception &ex) {
     return runtime.raiseRangeError(ex.what());
   }

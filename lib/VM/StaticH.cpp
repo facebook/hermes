@@ -229,8 +229,9 @@ static void reifyArguments(
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   {
     GCScopeMarkerRAII marker{runtime};
-    res = toCallResultHermesValue(Interpreter::reifyArgumentsSlowPath(
-        runtime, framePtr.getCalleeClosureHandleUnsafe(), strictMode));
+    res = toCallResultHermesValue(
+        Interpreter::reifyArgumentsSlowPath(
+            runtime, framePtr.getCalleeClosureHandleUnsafe(), strictMode));
   }
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
@@ -659,8 +660,9 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
         func,
         funcInfo,
         unit);
-    auto generatorFunction = runtime.makeHandle(vmcast<NativeJSFunction>(
-        runtime.getCurrentFrame().getCalleeClosureUnsafe()));
+    auto generatorFunction = runtime.makeHandle(
+        vmcast<NativeJSFunction>(
+            runtime.getCurrentFrame().getCalleeClosureUnsafe()));
     assert(
         generatorFunction->getFunctionInfo()->kind == FuncKind::Generator &&
         "should be called from a generator function");
@@ -1152,10 +1154,10 @@ static inline HermesValue getByIdWithReceiver_RJS(
     if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION))
       _sh_throw_current(getSHRuntime(runtime));
 #ifdef HERMES_SLOW_DEBUG
-      // if (cacheEntry && savedClass &&
-      //     cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
-      //   ++NumGetByIdCacheEvicts;
-      // }
+    // if (cacheEntry && savedClass &&
+    //     cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
+    //   ++NumGetByIdCacheEvicts;
+    // }
 #endif
     return resPH->get();
   } else {

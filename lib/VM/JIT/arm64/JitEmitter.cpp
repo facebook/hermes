@@ -2304,7 +2304,7 @@ void Emitter::directEval(FR frRes, FR frText, bool strictCaller) {
   a.mov(a64::w2, strictCaller);
   EMIT_RUNTIME_CALL(
       *this,
-      HermesValue(*)(Runtime &, PinnedHermesValue *, bool),
+      HermesValue (*)(Runtime &, PinnedHermesValue *, bool),
       _jit_direct_eval);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -2552,7 +2552,7 @@ void Emitter::loadConstBigInt(
   a.mov(a64::w2, bigIntID);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHRuntimeModule *, uint32_t),
+      SHLegacyValue (*)(SHRuntime *, SHRuntimeModule *, uint32_t),
       _sh_ljs_get_bytecode_bigint);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -2659,7 +2659,7 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
          em.loadFrameAddr(a64::x1, sl.frInput1);
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_to_numeric_rjs);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -2767,7 +2767,7 @@ void Emitter::addEmptyString(FR frRes, FR frInput) {
          em.loadFrameAddr(a64::x1, sl.frInput1);
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_add_empty_string_rjs);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -2950,7 +2950,7 @@ void Emitter::newObject(FR frRes) {
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          EMIT_RUNTIME_CALL(
-             em, SHLegacyValue(*)(SHRuntime *), _sh_ljs_new_object);
+             em, SHLegacyValue (*)(SHRuntime *), _sh_ljs_new_object);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
        }});
@@ -3038,7 +3038,7 @@ void Emitter::newObjectWithParent(FR frRes, FR frParent) {
 
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_new_object_with_parent);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -3381,7 +3381,7 @@ void Emitter::newObjectWithBufferSlow(
   a.mov(a64::w3, valBufferOffset);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHCodeBlock *, uint32_t, uint32_t),
+      SHLegacyValue (*)(SHRuntime *, SHCodeBlock *, uint32_t, uint32_t),
       _interpreter_create_object_from_buffer);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -3412,7 +3412,7 @@ void Emitter::newObjectWithBufferAndParent(
   a.mov(a64::w4, valBufferOffset);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *, SHCodeBlock *, SHLegacyValue *, uint32_t, uint32_t),
       _interpreter_create_object_from_buffer_with_parent);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -3427,7 +3427,7 @@ void Emitter::newArray(FR frRes, uint32_t size) {
   a.mov(a64::x0, xRuntime);
   a.mov(a64::w1, size);
   EMIT_RUNTIME_CALL(
-      *this, SHLegacyValue(*)(SHRuntime *, uint32_t), _sh_ljs_new_array);
+      *this, SHLegacyValue (*)(SHRuntime *, uint32_t), _sh_ljs_new_array);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
@@ -3454,7 +3454,7 @@ void Emitter::newArrayWithBuffer(
   a.mov(a64::w4, bufferIndex);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *, SHCodeBlock *, uint32_t, uint32_t, uint32_t),
       _interpreter_create_array_from_buffer);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -3469,7 +3469,7 @@ void Emitter::newFastArray(FR frRes, uint32_t size) {
   a.mov(a64::x0, xRuntime);
   a.mov(a64::w1, size);
   EMIT_RUNTIME_CALL(
-      *this, SHLegacyValue(*)(SHRuntime *, uint32_t), _sh_new_fastarray);
+      *this, SHLegacyValue (*)(SHRuntime *, uint32_t), _sh_new_fastarray);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
   frUpdatedWithHW(frRes, hwRes);
@@ -3524,7 +3524,7 @@ void Emitter::fastArrayLoad(FR frRes, FR frArr, FR frIdx) {
   movHWFromFR(HWReg::vecD(0), frIdx);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, double idx),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, double idx),
       _sh_fastarray_load);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -3684,7 +3684,7 @@ void Emitter::createTopLevelEnvironment(FR frRes, uint32_t size) {
 
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *, uint32_t),
+      SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *, uint32_t),
       _sh_ljs_create_environment);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -3763,7 +3763,7 @@ void Emitter::createFunctionEnvironment(FR frRes, uint32_t size) {
 
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+             SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, uint32_t),
              _sh_ljs_create_function_environment);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -3844,7 +3844,7 @@ void Emitter::createEnvironment(FR frRes, FR frParent, uint32_t size) {
 
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *, uint32_t),
+             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *, uint32_t),
              _sh_ljs_create_environment);
 
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
@@ -4011,7 +4011,7 @@ void Emitter::createClosure(
   loadBits64InGp(a64::w3, functionID, nullptr);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *, const SHLegacyValue *, SHRuntimeModule *, uint32_t),
       _sh_ljs_create_bytecode_closure);
 
@@ -4096,7 +4096,7 @@ void Emitter::createGenerator(
   a.mov(a64::w4, functionID);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *,
           SHLegacyValue *,
           const SHLegacyValue *,
@@ -4163,7 +4163,7 @@ void Emitter::getArgumentsLength(FR frRes, FR frLazyReg) {
          em.loadFrameAddr(a64::x2, sl.frInput1);
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+             SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
              _sh_ljs_get_arguments_length);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -4199,7 +4199,7 @@ void Emitter::createThis(
   }
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *,
           SHLegacyValue *,
           SHLegacyValue *,
@@ -4282,7 +4282,7 @@ void Emitter::loadThisNS(FR frRes) {
                  StackFrameLayout::ThisArg * (int)sizeof(SHLegacyValue)));
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
+             SHLegacyValue (*)(SHRuntime *, SHLegacyValue),
              _sh_ljs_coerce_this_ns);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -4336,7 +4336,7 @@ void Emitter::coerceThisNS(FR frRes, FR frThis) {
          em._loadFrame(HWReg(a64::x1), sl.frInput1);
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, SHLegacyValue),
+             SHLegacyValue (*)(SHRuntime *, SHLegacyValue),
              _sh_ljs_coerce_this_ns);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -4371,7 +4371,7 @@ void Emitter::iteratorBegin(FR frRes, FR frSource) {
   loadFrameAddr(a64::x1, frSource);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *),
       _sh_ljs_iterator_begin_rjs);
 
   syncFrameOutParam(frSource);
@@ -4399,7 +4399,7 @@ void Emitter::iteratorNext(FR frRes, FR frIteratorOrIdx, FR frSourceOrNext) {
   loadFrameAddr(a64::x2, frSourceOrNext);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, const SHLegacyValue *),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, const SHLegacyValue *),
       _sh_ljs_iterator_next_rjs);
 
   syncFrameOutParam(frIteratorOrIdx);
@@ -4534,7 +4534,7 @@ void Emitter::createRegExp(
   a.mov(a64::w4, regexpID);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *, SHCodeBlock *, uint32_t, uint32_t, uint32_t),
       _interpreter_create_regexp);
 
@@ -4672,12 +4672,12 @@ void Emitter::delByVal(FR frRes, FR frTarget, FR frKey, bool strict) {
   if (strict) {
     EMIT_RUNTIME_CALL(
         *this,
-        SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+        SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
         _sh_ljs_del_by_val_strict);
   } else {
     EMIT_RUNTIME_CALL(
         *this,
-        SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+        SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
         _sh_ljs_del_by_val_loose);
   }
 
@@ -4740,7 +4740,7 @@ void Emitter::getOwnPrivateBySym(
 
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *,
           const SHLegacyValue *,
           const SHLegacyValue *,
@@ -5187,8 +5187,8 @@ void Emitter::getByIdWithReceiver(
   }
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
-          SHRuntime * shr,
+      SHLegacyValue (*)(
+          SHRuntime *shr,
           const SHLegacyValue *source,
           const SHLegacyValue *receiver,
           SHSymbolID symID,
@@ -5227,11 +5227,11 @@ void Emitter::getByValWithReceiver(
 
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
-          SHRuntime * shr,
-          SHLegacyValue * source,
-          SHLegacyValue * key,
-          SHLegacyValue * receiver),
+      SHLegacyValue (*)(
+          SHRuntime *shr,
+          SHLegacyValue *source,
+          SHLegacyValue *key,
+          SHLegacyValue *receiver),
       _sh_ljs_get_by_val_with_receiver_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -5718,7 +5718,7 @@ void Emitter::getByVal(FR frRes, FR frSource, FR frKey) {
   loadFrameAddr(a64::x2, frKey);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
       _sh_ljs_get_by_val_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -5738,7 +5738,7 @@ void Emitter::getByIndex(FR frRes, FR frSource, uint32_t key) {
   a.mov(a64::w2, key);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, uint32_t),
       _sh_ljs_get_by_index_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -6046,7 +6046,7 @@ void Emitter::instanceOf(FR frRes, FR frLeft, FR frRight) {
   loadFrameAddr(a64::x2, frRight);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
       _sh_ljs_instance_of_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -6068,7 +6068,7 @@ void Emitter::isIn(FR frRes, FR frLeft, FR frRight) {
   loadFrameAddr(a64::x2, frRight);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
       _sh_ljs_is_in_rjs);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -6108,7 +6108,7 @@ void Emitter::privateIsIn(
 
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *,
           SHLegacyValue *,
           SHLegacyValue *,
@@ -6490,7 +6490,7 @@ void Emitter::callBuiltin(FR frRes, uint32_t builtinIndex, uint32_t argc) {
   a.mov(a64::w3, builtinIndex);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, uint32_t, uint32_t),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, uint32_t, uint32_t),
       _jit_call_builtin);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -6600,7 +6600,7 @@ void Emitter::callRequire(FR frRes, FR frRequireFunc, uint32_t modIndex) {
 
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *, SHArrayStorage **, SHLegacyValue *, uint32_t),
       _sh_ljs_callRequire);
 
@@ -6776,7 +6776,7 @@ void Emitter::bitNot(FR frRes, FR frInput) {
          em.loadFrameAddr(a64::x1, sl.frInput1);
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+             SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
              _sh_ljs_bit_not_rjs);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));
          em.a.b(sl.contLab);
@@ -6793,7 +6793,7 @@ void Emitter::typeOf(FR frRes, FR frInput) {
   loadFrameAddr(a64::x1, frInput);
   // TODO: Use a function that preserves temporary registers.
   EMIT_RUNTIME_CALL(
-      *this, SHLegacyValue(*)(SHRuntime *, SHLegacyValue *), _sh_ljs_typeof);
+      *this, SHLegacyValue (*)(SHRuntime *, SHLegacyValue *), _sh_ljs_typeof);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -6818,7 +6818,7 @@ void Emitter::getPNameList(FR frRes, FR frObj, FR frIdx, FR frSize) {
   loadFrameAddr(a64::x3, frSize);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *, SHLegacyValue *, SHLegacyValue *, SHLegacyValue *),
       _sh_ljs_get_pname_list_rjs);
 
@@ -6860,7 +6860,7 @@ void Emitter::getNextPName(
   loadFrameAddr(a64::x4, frSize);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(
+      SHLegacyValue (*)(
           SHRuntime *,
           SHLegacyValue *,
           SHLegacyValue *,
@@ -6886,7 +6886,7 @@ void Emitter::toPropertyKey(FR frRes, FR frVal) {
   loadFrameAddr(a64::x1, frVal);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, const SHLegacyValue *),
+      SHLegacyValue (*)(SHRuntime *, const SHLegacyValue *),
       _sh_ljs_to_property_key);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -6903,7 +6903,7 @@ void Emitter::createPrivateName(FR frRes, SHSymbolID symID) {
   a.mov(a64::w1, symID);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHSymbolID),
+      SHLegacyValue (*)(SHRuntime *, SHSymbolID),
       _sh_ljs_create_private_name);
 
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
@@ -6925,7 +6925,7 @@ void Emitter::addS(FR frRes, FR frLeft, FR frRight) {
   loadFrameAddr(a64::x2, frRight);
   EMIT_RUNTIME_CALL(
       *this,
-      SHLegacyValue(*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
+      SHLegacyValue (*)(SHRuntime *, SHLegacyValue *, SHLegacyValue *),
       _sh_ljs_string_add);
   HWReg hwRes = getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
   movHWFromHW<false>(hwRes, HWReg::gpX(0));
@@ -7015,7 +7015,7 @@ void Emitter::mod(bool forceNumber, FR frRes, FR frLeft, FR frRight) {
          em.loadFrameAddr(a64::x2, sl.frInput2);
          EMIT_RUNTIME_CALL(
              em,
-             SHLegacyValue(*)(
+             SHLegacyValue (*)(
                  SHRuntime *, const SHLegacyValue *, const SHLegacyValue *),
              _sh_ljs_mod_rjs);
          em.movHWFromHW<false>(sl.hwRes, HWReg::gpX(0));

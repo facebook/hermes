@@ -934,8 +934,9 @@ class HermesRuntimeImpl final : public HermesRuntime,
             vm::TwineChar16{"Exception in HostObject::getPropertyNames: "} +
             rt_.utf16FromErrorWhat(ex, buf));
       } catch (...) {
-        return rt_.runtime_.raiseError(vm::TwineChar16{
-            "Exception in HostObject::getPropertyNames: <unknown>"});
+        return rt_.runtime_.raiseError(
+            vm::TwineChar16{
+                "Exception in HostObject::getPropertyNames: <unknown>"});
       }
     };
   };
@@ -1259,8 +1260,9 @@ std::unique_ptr<HermesRuntime> HermesRootAPI::makeHermesRuntime(
   // Only HermesRuntime can create a debugger instance.  This requires
   // the setter and not using make_unique, so the call to new is here
   // in this function, which is a friend of debugger::Debugger.
-  ret->setDebugger(std::unique_ptr<debugger::Debugger>(
-      new debugger::Debugger(ret.get(), ret->runtime_)));
+  ret->setDebugger(
+      std::unique_ptr<debugger::Debugger>(
+          new debugger::Debugger(ret.get(), ret->runtime_)));
 #else
   ret->setDebugger(std::make_unique<debugger::Debugger>());
 #endif
@@ -2537,8 +2539,9 @@ jsi::Array HermesRuntimeImpl::getPropertyNames(const jsi::Object &obj) {
 }
 
 jsi::WeakObject HermesRuntimeImpl::createWeakObject(const jsi::Object &obj) {
-  return addWeak(vm::WeakRoot<vm::JSObject>(
-      static_cast<vm::JSObject *>(phv(obj).getObject()), runtime_));
+  return addWeak(
+      vm::WeakRoot<vm::JSObject>(
+          static_cast<vm::JSObject *>(phv(obj).getObject()), runtime_));
 }
 
 jsi::Value HermesRuntimeImpl::lockWeakObject(const jsi::WeakObject &wo) {
@@ -3038,8 +3041,9 @@ std::unique_ptr<jsi::ThreadSafeRuntime> makeThreadSafeHermesRuntime(
   // Only HermesRuntime can create a debugger instance.  This requires
   // the setter and not using make_unique, so the call to new is here
   // in this function, which is a friend of debugger::Debugger.
-  hermesRt.setDebugger(std::unique_ptr<debugger::Debugger>(
-      new debugger::Debugger(&hermesRt, hermesRt.runtime_)));
+  hermesRt.setDebugger(
+      std::unique_ptr<debugger::Debugger>(
+          new debugger::Debugger(&hermesRt, hermesRt.runtime_)));
 #else
   hermesRt.setDebugger(std::make_unique<debugger::Debugger>());
 #endif

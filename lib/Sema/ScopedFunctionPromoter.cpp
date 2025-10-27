@@ -182,8 +182,8 @@ void ScopedFunctionPromoter::processDeclarations(Node *scope) {
     if (!node)
       continue;
 
-      // DeclCollector collects type aliases, but ScopedFunctionPromoter should
-      // skip them.
+    // DeclCollector collects type aliases, but ScopedFunctionPromoter should
+    // skip them.
 #if HERMES_PARSE_FLOW
     if (llvh::isa<ESTree::TypeAliasNode>(node))
       continue;

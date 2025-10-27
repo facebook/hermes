@@ -379,9 +379,10 @@ class TS2FlowConverter
   }
 
   UniqueString *getRawString(llvh::SMRange range) {
-    return context_.getStringTable().getString(llvh::StringRef{
-        range.Start.getPointer(),
-        (size_t)(range.End.getPointer() - range.Start.getPointer())});
+    return context_.getStringTable().getString(
+        llvh::StringRef{
+            range.Start.getPointer(),
+            (size_t)(range.End.getPointer() - range.Start.getPointer())});
   }
 
   Context &context_;

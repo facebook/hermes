@@ -92,8 +92,9 @@ bool compileJS(
       "BCProviderFromSrc must have a bytecode module");
   hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
-      llvh::SHA1::hash(llvh::makeArrayRef(
-          reinterpret_cast<const uint8_t *>(str.data()), str.size())),
+      llvh::SHA1::hash(
+          llvh::makeArrayRef(
+              reinterpret_cast<const uint8_t *>(str.data()), str.size())),
       bcstream,
       opts);
 

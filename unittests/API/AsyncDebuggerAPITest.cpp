@@ -331,19 +331,20 @@ TEST_F(AsyncDebuggerAPITest, RemoveLastDebuggerEventCallbackTest) {
              AsyncDebuggerAPI &asyncDebugger,
              DebuggerEventType event) {});
 
-  EXPECT_TRUE(waitFor<bool>(
-      [this](auto promise) {
-        eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
-            [promise](
-                HermesRuntime &runtime,
-                AsyncDebuggerAPI &asyncDebugger,
-                DebuggerEventType event) {
-              EXPECT_EQ(event, DebuggerEventType::ExplicitPause);
-              promise->set_value(true);
-            });
-        runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
-      },
-      "wait on explicit pause"));
+  EXPECT_TRUE(
+      waitFor<bool>(
+          [this](auto promise) {
+            eventCallbackID_ = asyncDebuggerAPI_->addDebuggerEventCallback_TS(
+                [promise](
+                    HermesRuntime &runtime,
+                    AsyncDebuggerAPI &asyncDebugger,
+                    DebuggerEventType event) {
+                  EXPECT_EQ(event, DebuggerEventType::ExplicitPause);
+                  promise->set_value(true);
+                });
+            runtime_->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+          },
+          "wait on explicit pause"));
 
   // Trigger an interrupt to make sure that we're inside
   // processInterruptWhilePaused()
@@ -370,17 +371,18 @@ TEST_F(AsyncDebuggerAPITest, RemoveLastDebuggerEventCallbackTest) {
         });
   }));
 
-  EXPECT_TRUE(waitFor<bool>(
-      [this](auto promise) {
-        // Schedule something on the runtime thread to confirm that we broke out
-        // of processInterruptWhilePaused() after removing the last
-        // DebuggerEventCallback
-        runtimeThread_->add([promise]() { promise->set_value(true); });
-        // Removing the last DebuggerEventCallback will signal and cause another
-        // iteration of processInterruptWhilePaused()
-        asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
-      },
-      "wait on runtime thread freed up"));
+  EXPECT_TRUE(
+      waitFor<bool>(
+          [this](auto promise) {
+            // Schedule something on the runtime thread to confirm that we broke
+            // out of processInterruptWhilePaused() after removing the last
+            // DebuggerEventCallback
+            runtimeThread_->add([promise]() { promise->set_value(true); });
+            // Removing the last DebuggerEventCallback will signal and cause
+            // another iteration of processInterruptWhilePaused()
+            asyncDebuggerAPI_->removeDebuggerEventCallback_TS(eventCallbackID_);
+          },
+          "wait on runtime thread freed up"));
 }
 
 TEST_F(AsyncDebuggerAPITest, NoDebuggerEventCallbackTest) {

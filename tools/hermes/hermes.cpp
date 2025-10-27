@@ -76,18 +76,18 @@ static int executeHBCBytecodeFromCL(
 
   ExecuteOptions options;
 
-  auto gcConfigBuilder =
-      vm::GCConfig::Builder()
-          .withInitHeapSize(flags.InitHeapSize.bytes)
-          .withMaxHeapSize(flags.MaxHeapSize.bytes)
-          .withOccupancyTarget(flags.OccupancyTarget)
-          .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                  .withSanitizeRate(flags.GCSanitizeRate)
-                                  .withRandomSeed(flags.GCSanitizeRandomSeed)
-                                  .build())
-          .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-          .withAllocInYoung(flags.GCAllocYoung)
-          .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI);
+  auto gcConfigBuilder = vm::GCConfig::Builder()
+                             .withInitHeapSize(flags.InitHeapSize.bytes)
+                             .withMaxHeapSize(flags.MaxHeapSize.bytes)
+                             .withOccupancyTarget(flags.OccupancyTarget)
+                             .withSanitizeConfig(
+                                 vm::GCSanitizeConfig::Builder()
+                                     .withSanitizeRate(flags.GCSanitizeRate)
+                                     .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                     .build())
+                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+                             .withAllocInYoung(flags.GCAllocYoung)
+                             .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI);
 
   std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
   if (flags.GCPrintStats || flags.GCBeforeStats ||
@@ -203,15 +203,16 @@ static int executeHBCBytecodeFromCL(
 
 static vm::RuntimeConfig getReplRuntimeConfig() {
   return vm::RuntimeConfig::Builder()
-      .withGCConfig(vm::GCConfig::Builder()
-                        .withInitHeapSize(flags.InitHeapSize.bytes)
-                        .withMaxHeapSize(flags.MaxHeapSize.bytes)
-                        .withSanitizeConfig(
-                            vm::GCSanitizeConfig::Builder()
-                                .withSanitizeRate(flags.GCSanitizeRate)
-                                .withRandomSeed(flags.GCSanitizeRandomSeed)
-                                .build())
-                        .build())
+      .withGCConfig(
+          vm::GCConfig::Builder()
+              .withInitHeapSize(flags.InitHeapSize.bytes)
+              .withMaxHeapSize(flags.MaxHeapSize.bytes)
+              .withSanitizeConfig(
+                  vm::GCSanitizeConfig::Builder()
+                      .withSanitizeRate(flags.GCSanitizeRate)
+                      .withRandomSeed(flags.GCSanitizeRandomSeed)
+                      .build())
+              .build())
       .withVMExperimentFlags(flags.VMExperimentFlags)
       .withES6Proxy(flags.ES6Proxy)
       .withEnableAsyncGenerators(cl::compilerRuntimeFlags.EnableAsyncGenerators)

@@ -528,8 +528,8 @@ CallResult<HermesValue> hermesBuiltinArraySpread(void *, Runtime &runtime) {
     // Copying from an array, first check and make sure that
     // `arr[Symbol.iterator]` hasn't been changed by the user.
     NamedPropertyDescriptor desc;
-    PseudoHandle<JSObject> propObj =
-        createPseudoHandle(JSObject::getNamedDescriptorPredefined(
+    PseudoHandle<JSObject> propObj = createPseudoHandle(
+        JSObject::getNamedDescriptorPredefined(
             arr, runtime, Predefined::SymbolIterator, desc));
     if (LLVM_LIKELY(propObj) && LLVM_LIKELY(!desc.flags.proxyObject)) {
       SmallHermesValue slotValue =

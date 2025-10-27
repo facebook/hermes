@@ -109,12 +109,13 @@ HermesValue createMapConstructor(Runtime &runtime) {
       0);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      mapPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      runtime.mapPrototypeEntries));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          mapPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          runtime.mapPrototypeEntries));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;

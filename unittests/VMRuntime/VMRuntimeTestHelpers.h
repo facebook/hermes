@@ -137,10 +137,11 @@ class RuntimeTestFixture : public RuntimeTestFixtureBase {
  public:
   RuntimeTestFixture() : RuntimeTestFixtureBase(kTestRTConfig) {}
   RuntimeTestFixture(experiments::VMExperimentFlags flags)
-      : RuntimeTestFixtureBase(RuntimeConfig::Builder()
-                                   .withGCConfig(kTestGCConfig)
-                                   .withVMExperimentFlags(flags)
-                                   .build()) {}
+      : RuntimeTestFixtureBase(
+            RuntimeConfig::Builder()
+                .withGCConfig(kTestGCConfig)
+                .withVMExperimentFlags(flags)
+                .build()) {}
 };
 
 class SmallHeapRuntimeTestFixture : public RuntimeTestFixtureBase {

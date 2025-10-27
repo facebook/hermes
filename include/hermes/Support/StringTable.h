@@ -39,7 +39,7 @@ class UniqueString {
   UniqueString &operator=(const UniqueString &) = delete;
 
  public:
-  explicit UniqueString(llvh::StringRef str) : str_(str){};
+  explicit UniqueString(llvh::StringRef str) : str_(str) {};
 
   const llvh::StringRef &str() const {
     return str_;
@@ -112,7 +112,7 @@ class StringTable {
   StringTable &operator=(const StringTable &_) = delete;
 
  public:
-  explicit StringTable(Allocator &allocator) : allocator_(allocator){};
+  explicit StringTable(Allocator &allocator) : allocator_(allocator) {};
 
   /// Return a unique zero-terminated copy of the supplied string \p name.
   UniqueString *getString(const llvh::Twine &name) {

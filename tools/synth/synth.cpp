@@ -80,9 +80,10 @@ static opt<MarkerAction> Action(
 
 static opt<bool> UseTraceConfig(
     "use-trace-config",
-    desc("Controls what RuntimeConfig as the default that the various config "
-         "modify.  True says to use the recorded config of the trace, false "
-         "means start from the default config."),
+    desc(
+        "Controls what RuntimeConfig as the default that the various config "
+        "modify.  True says to use the recorded config of the trace, false "
+        "means start from the default config."),
     init(true));
 
 static opt<bool> UseVerification(
@@ -103,8 +104,9 @@ static opt<bool>
 
 static opt<unsigned> BytecodeWarmupPercent(
     "bytecode-warmup-percent",
-    desc("Eagerly read some bytecode into page cache. May yield faster startup "
-         "for large bytecode files."),
+    desc(
+        "Eagerly read some bytecode into page cache. May yield faster startup "
+        "for large bytecode files."),
     init(0));
 
 static opt<int> Reps(
@@ -116,10 +118,11 @@ static opt<int> Reps(
 
 static opt<bool> DisableSourceHashCheck(
     "disable-source-hash-check",
-    desc("Remove the requirement that the input bytecode was compiled from the "
-         "same source used to record the trace. There must only be one input "
-         "bytecode file in this case. If its observable behavior deviates "
-         "from the trace, the results are undefined."),
+    desc(
+        "Remove the requirement that the input bytecode was compiled from the "
+        "same source used to record the trace. There must only be one input "
+        "bytecode file in this case. If its observable behavior deviates "
+        "from the trace, the results are undefined."),
     init(false));
 
 /// @}

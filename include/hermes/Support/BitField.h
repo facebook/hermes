@@ -73,8 +73,8 @@ class BitField {
   /// Number of bits in the storage type
   static constexpr unsigned STORAGE_BITS = sizeof(StorageType) * 8;
   /// Precompute the mask for the field aligned to bit 0.
-  static constexpr StorageType MASK = std::numeric_limits<StorageType>::max() >>
-      (STORAGE_BITS - Width);
+  static constexpr StorageType MASK =
+      std::numeric_limits<StorageType>::max() >> (STORAGE_BITS - Width);
   /// Check if the field is a bitfield or just a field (it happens).
   static constexpr bool IS_BITFIELD = Width < STORAGE_BITS;
 

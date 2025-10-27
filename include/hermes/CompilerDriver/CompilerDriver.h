@@ -58,7 +58,7 @@ struct BytecodeBufferInfo {
       : bufferIsMmapped(isMmapped),
         bufferStart(start),
         bufferSize(size),
-        filename(std::move(filename)){};
+        filename(std::move(filename)) {};
 };
 
 /// A type wrapping up the possible outputs of compileFiles.

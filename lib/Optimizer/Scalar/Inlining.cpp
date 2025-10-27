@@ -622,15 +622,16 @@ bool Inlining::runOnModule(Module *M) {
         continue;
       }
 
-      LLVM_DEBUG(llvh::dbgs() << "Inlining function '"
-                              << FC->getInternalNameStr() << "' ";
-                 FC->getContext().getSourceErrorManager().dumpCoords(
-                     llvh::dbgs(), FC->getSourceRange().Start);
-                 llvh::dbgs() << " into function '"
-                              << intoFunction->getInternalNameStr() << "' ";
-                 FC->getContext().getSourceErrorManager().dumpCoords(
-                     llvh::dbgs(), intoFunction->getSourceRange().Start);
-                 llvh::dbgs() << "\n";);
+      LLVM_DEBUG(
+          llvh::dbgs() << "Inlining function '" << FC->getInternalNameStr()
+                       << "' ";
+          FC->getContext().getSourceErrorManager().dumpCoords(
+              llvh::dbgs(), FC->getSourceRange().Start);
+          llvh::dbgs() << " into function '"
+                       << intoFunction->getInternalNameStr() << "' ";
+          FC->getContext().getSourceErrorManager().dumpCoords(
+              llvh::dbgs(), intoFunction->getSourceRange().Start);
+          llvh::dbgs() << "\n";);
 
       intoFunctions.insert(intoFunction);
 

@@ -53,7 +53,7 @@ class JSONValue {
   JSONValue &operator=(const JSONValue &) = delete;
 
  public:
-  explicit constexpr JSONValue(JSONKind kind) : kind_(kind){};
+  explicit constexpr JSONValue(JSONKind kind) : kind_(kind) {};
 
   JSONKind getKind() const {
     return kind_;
@@ -74,7 +74,7 @@ class JSONScalar : public JSONValue {
 };
 
 class JSONNull : public JSONScalar {
-  constexpr JSONNull() : JSONScalar(JSONKind::Null){};
+  constexpr JSONNull() : JSONScalar(JSONKind::Null) {};
 
   static JSONNull instance_;
 
@@ -92,7 +92,7 @@ class JSONBoolean : public JSONScalar {
   bool const value_;
 
   explicit constexpr JSONBoolean(bool value)
-      : JSONScalar(JSONKind::Boolean), value_(value){};
+      : JSONScalar(JSONKind::Boolean), value_(value) {};
 
   static JSONBoolean true_;
   static JSONBoolean false_;

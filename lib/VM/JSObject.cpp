@@ -1565,8 +1565,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       // the key to be passed in as a primitive string value rather than a
       // symbol, if it actually did come from a string.
       Handle<> nameValHandle = name.isUniqued()
-          ? runtime.makeHandle(HermesValue::encodeStringValue(
-                runtime.getStringPrimFromSymbolID(name)))
+          ? runtime.makeHandle(
+                HermesValue::encodeStringValue(
+                    runtime.getStringPrimFromSymbolID(name)))
           : runtime.makeHandle(name);
       CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
           receiverHandle, runtime, nameValHandle, IgnoreProxy::No, desc);
@@ -2143,8 +2144,9 @@ CallResult<bool> JSObject::defineOwnPropertyInternal(
       return JSProxy::defineOwnProperty(
           selfHandle,
           runtime,
-          name.isUniqued() ? runtime.makeHandle(HermesValue::encodeStringValue(
-                                 runtime.getStringPrimFromSymbolID(name)))
+          name.isUniqued() ? runtime.makeHandle(
+                                 HermesValue::encodeStringValue(
+                                     runtime.getStringPrimFromSymbolID(name)))
                            : runtime.makeHandle(name),
           dpFlags,
           valueOrAccessor,

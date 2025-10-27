@@ -21,13 +21,15 @@ namespace jni {
 jni::local_ref<JSRuntime::jhybridobject> JSRuntime::makeHermesRuntime(
     jni::alias_ref<jclass>,
     bool shouldRecordGCStats) {
-  return newObjectCxxArgs(hermes::makeHermesRuntime(
-      ::hermes::vm::RuntimeConfig::Builder()
-          .withIntl(true)
-          .withGCConfig(::hermes::vm::GCConfig::Builder()
-                            .withShouldRecordStats(shouldRecordGCStats)
-                            .build())
-          .build()));
+  return newObjectCxxArgs(
+      hermes::makeHermesRuntime(
+          ::hermes::vm::RuntimeConfig::Builder()
+              .withIntl(true)
+              .withGCConfig(
+                  ::hermes::vm::GCConfig::Builder()
+                      .withShouldRecordStats(shouldRecordGCStats)
+                      .build())
+              .build()));
 }
 
 jni::local_ref<JSRuntime::jhybridobject>
@@ -36,14 +38,16 @@ JSRuntime::makeHermesRuntimeWithHeapSpec(
     jlong initHeapSize,
     jlong maxHeapSize,
     bool shouldRecordGCStats) {
-  return newObjectCxxArgs(hermes::makeHermesRuntime(
-      ::hermes::vm::RuntimeConfig::Builder()
-          .withGCConfig(::hermes::vm::GCConfig::Builder()
-                            .withInitHeapSize(initHeapSize)
-                            .withMaxHeapSize(maxHeapSize)
-                            .withShouldRecordStats(shouldRecordGCStats)
-                            .build())
-          .build()));
+  return newObjectCxxArgs(
+      hermes::makeHermesRuntime(
+          ::hermes::vm::RuntimeConfig::Builder()
+              .withGCConfig(
+                  ::hermes::vm::GCConfig::Builder()
+                      .withInitHeapSize(initHeapSize)
+                      .withMaxHeapSize(maxHeapSize)
+                      .withShouldRecordStats(shouldRecordGCStats)
+                      .build())
+              .build()));
 }
 
 jni::local_ref<jbyteArray> JSRuntime::compileJavaScript(

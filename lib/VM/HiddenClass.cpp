@@ -208,14 +208,15 @@ Handle<HiddenClass> HiddenClass::copyToNewDictionary(
   }
 
   /// Allocate a new class without a parent.
-  auto newClassHandle = runtime.makeHandle<HiddenClass>(
-      runtime.ignoreAllocationFailure(HiddenClass::create(
-          runtime,
-          newFlags,
-          Runtime::makeNullHandle<HiddenClass>(),
-          SymbolID{},
-          PropertyFlags{},
-          selfHandle->numProperties_)));
+  auto newClassHandle =
+      runtime.makeHandle<HiddenClass>(runtime.ignoreAllocationFailure(
+          HiddenClass::create(
+              runtime,
+              newFlags,
+              Runtime::makeNullHandle<HiddenClass>(),
+              SymbolID{},
+              PropertyFlags{},
+              selfHandle->numProperties_)));
 
   // Optionally allocate the property map and move it to the new class.
   if (LLVM_UNLIKELY(!selfHandle->propertyMap_))
@@ -443,14 +444,15 @@ CallResult<std::pair<Handle<HiddenClass>, SlotIndex>> HiddenClass::addProperty(
   auto newFlags = computeFlags(selfHandle->flags_, propertyFlags, isIndexLike);
 
   // Allocate the child.
-  auto childHandle = runtime.makeHandle<HiddenClass>(
-      runtime.ignoreAllocationFailure(HiddenClass::create(
-          runtime,
-          newFlags,
-          selfHandle,
-          name,
-          propertyFlags,
-          selfHandle->numProperties_ + 1)));
+  auto childHandle =
+      runtime.makeHandle<HiddenClass>(runtime.ignoreAllocationFailure(
+          HiddenClass::create(
+              runtime,
+              newFlags,
+              selfHandle,
+              name,
+              propertyFlags,
+              selfHandle->numProperties_ + 1)));
 
   // Add it to the transition table.
   auto inserted = selfHandle->transitionMap_.insertNew(
@@ -571,14 +573,15 @@ Handle<HiddenClass> HiddenClass::updateProperty(
   descPair->second.flags = newFlags;
 
   // Allocate the child.
-  auto childHandle = runtime.makeHandle<HiddenClass>(
-      runtime.ignoreAllocationFailure(HiddenClass::create(
-          runtime,
-          computeFlags(selfHandle->flags_, newFlags, false),
-          selfHandle,
-          name,
-          transitionFlags,
-          selfHandle->numProperties_)));
+  auto childHandle =
+      runtime.makeHandle<HiddenClass>(runtime.ignoreAllocationFailure(
+          HiddenClass::create(
+              runtime,
+              computeFlags(selfHandle->flags_, newFlags, false),
+              selfHandle,
+              name,
+              transitionFlags,
+              selfHandle->numProperties_)));
 
   // Add it to the transition table.
   auto inserted = selfHandle->transitionMap_.insertNew(

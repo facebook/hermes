@@ -23,8 +23,7 @@ template <typename IndexType>
 #ifdef NDEBUG
 LLVM_ATTRIBUTE_ALWAYS_INLINE
 #endif
-    inline OptValue<HermesValue>
-    tryFastGetComputedMayAlloc(
+    inline OptValue<HermesValue> tryFastGetComputedMayAlloc(
         Runtime &runtime,
         JSObject *obj,
         IndexType index) {
@@ -78,8 +77,7 @@ template <typename IndexType>
 #ifdef NDEBUG
 LLVM_ATTRIBUTE_ALWAYS_INLINE
 #endif
-    inline OptValue<HermesValue>
-    tryFastGetComputedNoAlloc(
+    inline OptValue<HermesValue> tryFastGetComputedNoAlloc(
         Runtime &runtime,
         JSObject *obj,
         IndexType index) {

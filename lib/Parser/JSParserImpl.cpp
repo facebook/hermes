@@ -7100,9 +7100,10 @@ ESTree::ExpressionStatementNode *JSParserImpl::parseDirective() {
     rawDirective = tok_->getStringLiteral();
   } else {
     auto rng = tok_->getSourceRange();
-    rawDirective = lexer_.getIdentifier(llvh::StringRef(
-        rng.Start.getPointer() + 1,
-        rng.End.getPointer() - rng.Start.getPointer() - 2));
+    rawDirective = lexer_.getIdentifier(
+        llvh::StringRef(
+            rng.Start.getPointer() + 1,
+            rng.End.getPointer() - rng.Start.getPointer() - 2));
   }
 
   // Actually process the directive. Note that we want to do that before we

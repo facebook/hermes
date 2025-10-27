@@ -153,12 +153,13 @@ HermesValue createArrayConstructor(Runtime &runtime) {
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      arrayPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      runtime.arrayPrototypeValues));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          arrayPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          runtime.arrayPrototypeValues));
 
   defineSystemConstructor(
       runtime,

@@ -144,10 +144,11 @@ void testErrorConverges(
     absError.push_back(llabs(ai.area() - expected));
   }
 
-  EXPECT_TRUE(std::is_sorted(
-      absError.begin(), absError.end(), [](int64_t l, int64_t r) {
-        return l > r;
-      }));
+  EXPECT_TRUE(
+      std::is_sorted(
+          absError.begin(), absError.end(), [](int64_t l, int64_t r) {
+            return l > r;
+          }));
 }
 
 } // namespace

@@ -21,9 +21,10 @@ using namespace facebook::hermes;
 class HeapSnapshotAPITest : public ::testing::TestWithParam<bool> {
  public:
   HeapSnapshotAPITest()
-      : rt(makeHermesRuntime(::hermes::vm::RuntimeConfig::Builder()
-                                 .withES6Proxy(true)
-                                 .build())) {
+      : rt(makeHermesRuntime(
+            ::hermes::vm::RuntimeConfig::Builder()
+                .withES6Proxy(true)
+                .build())) {
     if (trackingFromBeginning()) {
       rt->instrumentation().startTrackingHeapObjectStackTraces(nullptr);
     }

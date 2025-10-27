@@ -110,16 +110,16 @@ int main(int argc, char **argv) {
 
   ExecuteOptions options;
 
-  auto gcConfigBuilder =
-      vm::GCConfig::Builder()
-          .withInitHeapSize(flags.InitHeapSize.bytes)
-          .withMaxHeapSize(flags.MaxHeapSize.bytes)
-          .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                  .withSanitizeRate(flags.GCSanitizeRate)
-                                  .withRandomSeed(flags.GCSanitizeRandomSeed)
-                                  .build())
-          .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-          .withName("hvm");
+  auto gcConfigBuilder = vm::GCConfig::Builder()
+                             .withInitHeapSize(flags.InitHeapSize.bytes)
+                             .withMaxHeapSize(flags.MaxHeapSize.bytes)
+                             .withSanitizeConfig(
+                                 vm::GCSanitizeConfig::Builder()
+                                     .withSanitizeRate(flags.GCSanitizeRate)
+                                     .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                     .build())
+                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+                             .withName("hvm");
 
   std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
   if (flags.GCPrintStats || flags.GCPrintCollectionStats) {

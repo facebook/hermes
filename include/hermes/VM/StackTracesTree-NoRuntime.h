@@ -99,7 +99,7 @@ struct StackTracesTreeNode {
         sourceLoc(sourceLoc),
         name(name),
         codeBlock_(codeBlock),
-        ip_(ip){};
+        ip_(ip) {};
 
   // Public data fields for the node.
   const size_t id;

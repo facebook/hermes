@@ -350,8 +350,9 @@ opt<bool> PrintCompilerTiming(
 
 static list<std::string> IncludeGlobals(
     "include-globals",
-    desc("Include the definitions of global properties (can be "
-         "specified more than once)"),
+    desc(
+        "Include the definitions of global properties (can be "
+        "specified more than once)"),
     value_desc("filename"));
 
 enum BytecodeFormatKind { HBC, SH };

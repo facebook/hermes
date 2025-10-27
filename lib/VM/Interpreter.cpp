@@ -1454,8 +1454,9 @@ tailCall:
         // getRealOpCode) if there are breakpoints installed in the function
         // we're returning into.
         if (LLVM_UNLIKELY(curCodeBlock->getNumInstalledBreakpoints() > 0)) {
-          ip = IPADD(inst::getInstSize(
-              runtime.debugger_.getRealOpCode(curCodeBlock, CUROFFSET)));
+          ip = IPADD(
+              inst::getInstSize(
+                  runtime.debugger_.getRealOpCode(curCodeBlock, CUROFFSET)));
         } else {
           // No breakpoints in the function being returned to, just use
           // nextInstCall().
@@ -2081,8 +2082,9 @@ tailCall:
           HiddenClass *resultClazz =
               addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
           ++NumPutByIdTransitionHits;
-          CAPTURE_IP(JSObject::addNewOwnPropertyInSlot(
-              obj, runtime, resultClazz, addCacheEntry.getSlot(), shv));
+          CAPTURE_IP(
+              JSObject::addNewOwnPropertyInSlot(
+                  obj, runtime, resultClazz, addCacheEntry.getSlot(), shv));
           ip = nextIP;
           DISPATCH;
         }
@@ -2253,13 +2255,14 @@ tailCall:
       }
     DefineOwnByIndex: {
       lv.tmp = HermesValue::encodeTrustedNumberValue(idVal);
-      CAPTURE_IP(JSObject::defineOwnComputedPrimitive(
-          Handle<JSObject>::vmcast(&O1REG(DefineOwnByIndex)),
-          runtime,
-          lv.tmp,
-          DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          Handle<>(&O2REG(DefineOwnByIndex)),
-          PropOpFlags().plusThrowOnError()));
+      CAPTURE_IP(
+          JSObject::defineOwnComputedPrimitive(
+              Handle<JSObject>::vmcast(&O1REG(DefineOwnByIndex)),
+              runtime,
+              lv.tmp,
+              DefinePropertyFlags::getDefaultNewPropertyFlags(),
+              Handle<>(&O2REG(DefineOwnByIndex)),
+              PropOpFlags().plusThrowOnError()));
       gcScope.flushToSmallCount(KEEP_HANDLES);
       lv.tmp.clear();
       ip = nextIP;

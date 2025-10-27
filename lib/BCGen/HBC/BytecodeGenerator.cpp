@@ -609,13 +609,14 @@ bool BytecodeModuleGenerator::generate(
   // Possibilities include passing the list of Functions to
   // LiteralBufferBuilder or letting LiteralBufferBuilder operate in an
   // incremental manner on single Functions.
-  initializeSerializedLiterals(LiteralBufferBuilder::generate(
-      M_,
-      shouldGenerate,
-      [this](llvh::StringRef str) { return getIdentifierID(str); },
-      [this](llvh::StringRef str) { return getStringID(str); },
-      options_.optimizationEnabled,
-      baseBCProvider_.get()));
+  initializeSerializedLiterals(
+      LiteralBufferBuilder::generate(
+          M_,
+          shouldGenerate,
+          [this](llvh::StringRef str) { return getIdentifierID(str); },
+          [this](llvh::StringRef str) { return getStringID(str); },
+          options_.optimizationEnabled,
+          baseBCProvider_.get()));
 
   if (!generateAddedFunctions())
     return false;
@@ -673,12 +674,13 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
   // TODO: Avoid creating a new vector and copying the data here.
   // We should just be able to give references to LiteralBufferBuilder and have
   // it append directly.
-  initializeSerializedLiteralsLazy(LiteralBufferBuilder::generate(
-      M_,
-      shouldGenerate,
-      [this](llvh::StringRef str) { return getIdentifierID(str); },
-      [this](llvh::StringRef str) { return getStringID(str); },
-      options_.optimizationEnabled));
+  initializeSerializedLiteralsLazy(
+      LiteralBufferBuilder::generate(
+          M_,
+          shouldGenerate,
+          [this](llvh::StringRef str) { return getIdentifierID(str); },
+          [this](llvh::StringRef str) { return getStringID(str); },
+          options_.optimizationEnabled));
 
   if (!generateAddedFunctions())
     return false;
@@ -738,12 +740,13 @@ bool BytecodeModuleGenerator::generateForEval(Function *entryPoint) && {
   // Possibilities include passing the list of Functions to
   // LiteralBufferBuilder or letting LiteralBufferBuilder operate in an
   // incremental manner on single Functions.
-  initializeSerializedLiterals(LiteralBufferBuilder::generate(
-      M_,
-      shouldGenerate,
-      [this](llvh::StringRef str) { return getIdentifierID(str); },
-      [this](llvh::StringRef str) { return getStringID(str); },
-      options_.optimizationEnabled));
+  initializeSerializedLiterals(
+      LiteralBufferBuilder::generate(
+          M_,
+          shouldGenerate,
+          [this](llvh::StringRef str) { return getIdentifierID(str); },
+          [this](llvh::StringRef str) { return getStringID(str); },
+          options_.optimizationEnabled));
 
   if (!generateAddedFunctions())
     return false;

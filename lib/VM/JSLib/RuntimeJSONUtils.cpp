@@ -912,8 +912,9 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
 
   // Str.8.
   if (lv_.operationStrValue->isString()) {
-    operationQuote(StringPrimitive::createStringView(
-        runtime_, Handle<StringPrimitive>::vmcast(&lv_.operationStrValue)));
+    operationQuote(
+        StringPrimitive::createStringView(
+            runtime_, Handle<StringPrimitive>::vmcast(&lv_.operationStrValue)));
     return true;
   }
 
@@ -1115,8 +1116,9 @@ ExecutionStatus JSONStringifyer::operationJO() {
     }
     // tmpHandle now contains property as string.
     // JO.8.b.i
-    operationQuote(StringPrimitive::createStringView(
-        runtime_, Handle<StringPrimitive>::vmcast(&lv_.tmpHandle)));
+    operationQuote(
+        StringPrimitive::createStringView(
+            runtime_, Handle<StringPrimitive>::vmcast(&lv_.tmpHandle)));
     // JO.8.b.ii
     output_.push_back(u':');
     // JO.8.b.iii
@@ -1224,8 +1226,9 @@ CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {
   (void)status;
 
   // Step 11 in ES5.1 15.12.3.
-  status = operationStr(HermesValue::encodeStringValue(
-      runtime_.getPredefinedString(Predefined::emptyString)));
+  status = operationStr(
+      HermesValue::encodeStringValue(
+          runtime_.getPredefinedString(Predefined::emptyString)));
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

@@ -15,8 +15,9 @@ llvh::MD5::MD5Result doMD5Checksum(
   llvh::MD5 md5;
   llvh::MD5::MD5Result checksum;
   md5.update(bytecode);
-  md5.update(llvh::ArrayRef<uint8_t>(
-      reinterpret_cast<uint8_t *>(&funcId), sizeof(uint32_t)));
+  md5.update(
+      llvh::ArrayRef<uint8_t>(
+          reinterpret_cast<uint8_t *>(&funcId), sizeof(uint32_t)));
   md5.final(checksum);
   return checksum;
 }

@@ -52,7 +52,7 @@ static void verifyAllBuiltinsFrozen(Runtime &runtime) {
   auto global = runtime.getGlobal();
   Predefined::getSymbolID(Predefined::isArray);
 #define NORMAL_OBJECT(object) \
-  { EXPECT_PROPERTY_NORMAL(global, Predefined::object) }
+  {EXPECT_PROPERTY_NORMAL(global, Predefined::object)}
 #define BUILTIN_OBJECT(object) \
   {EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, Predefined::object)}
 

@@ -19,11 +19,12 @@ uint32_t UniquingFilenameTable::addFilename(llvh::StringRef filename) {
 void UniquingFilenameTable::appendFilenamesToStorage() {
   const size_t existingStrings = storage_.count();
 
-  storage_.appendStorage(ConsecutiveStringStorage{
-      filenames_.begin() + existingStrings,
-      filenames_.end(),
-      std::false_type{},
-      false});
+  storage_.appendStorage(
+      ConsecutiveStringStorage{
+          filenames_.begin() + existingStrings,
+          filenames_.end(),
+          std::false_type{},
+          false});
 
   assert(storage_.count() == filenames_.size() && "must map all strings");
 }

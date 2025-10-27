@@ -864,9 +864,10 @@ TEST_F(SynthTraceTest, HostObjectProxy) {
                 jsi::PropNameID::forAscii(rt, cs.getHappened.c_str())),
             setHappenedPropName(
                 jsi::PropNameID::forAscii(rt, cs.setHappened.c_str())),
-            getPropertyNamesHappenedPropName(jsi::PropNameID::forAscii(
-                rt,
-                cs.getPropertyNamesHappened.c_str())),
+            getPropertyNamesHappenedPropName(
+                jsi::PropNameID::forAscii(
+                    rt,
+                    cs.getPropertyNamesHappened.c_str())),
             global(global),
             trt(rt) {}
       jsi::Value get(jsi::Runtime &rt, const jsi::PropNameID &name) override {
@@ -1142,8 +1143,9 @@ TEST_F(SynthTraceTest, HostObjectPropertyNamesAreDefs) {
           this.yRes = o.y;
         }) ();
     )###";
-    codeHash = llvh::SHA1::hash(llvh::makeArrayRef(
-        reinterpret_cast<const uint8_t *>(code.data()), code.size()));
+    codeHash = llvh::SHA1::hash(
+        llvh::makeArrayRef(
+            reinterpret_cast<const uint8_t *>(code.data()), code.size()));
 
     rt->evaluateJavaScript(
         std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(code)), "");
@@ -1401,11 +1403,12 @@ struct SynthTraceRuntimeTest : public ::testing::Test {
   std::unique_ptr<TracingHermesRuntime> traceRt;
 
   SynthTraceRuntimeTest()
-      : config(::hermes::vm::RuntimeConfig::Builder()
-                   .withSynthTraceMode(
-                       ::hermes::vm::SynthTraceMode::TracingAndReplaying)
-                   .withMicrotaskQueue(true)
-                   .build()) {
+      : config(
+            ::hermes::vm::RuntimeConfig::Builder()
+                .withSynthTraceMode(
+                    ::hermes::vm::SynthTraceMode::TracingAndReplaying)
+                .withMicrotaskQueue(true)
+                .build()) {
     auto *hermesRoot = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
     traceRt = makeTracingHermesRuntime(
         hermesRoot->makeHermesRuntime(config),
@@ -1551,7 +1554,8 @@ function foo(a, b, c){
     rt.global().getPropertyAsFunction(rt, "foo").call(rt, obj, obj, obj);
   }
   replay();
-  {}
+  {
+  }
 }
 
 TEST_F(SynthTraceReplayTest, CreateObjectReplay) {

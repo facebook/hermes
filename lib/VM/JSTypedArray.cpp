@@ -188,8 +188,9 @@ ExecutionStatus JSTypedArrayBase::createBuffer(
     uint64_t length) {
   assert(selfObj);
 
-  auto tmpbuf = runtime.makeHandle(JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
+  auto tmpbuf = runtime.makeHandle(
+      JSArrayBuffer::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
 
   // Ensure that the buffer size in bytes will not overflow
   // JSArrayBuffer::size_type (maybe not same as JSTypedArrayBase::size_type).
@@ -336,8 +337,9 @@ template <typename T, CellKind C>
 CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocate(
     Runtime &runtime,
     size_type length) {
-  Handle<JSTypedArrayBase> ta = runtime.makeHandle(JSTypedArray<T, C>::create(
-      runtime, JSTypedArray<T, C>::getPrototype(runtime)));
+  Handle<JSTypedArrayBase> ta = runtime.makeHandle(
+      JSTypedArray<T, C>::create(
+          runtime, JSTypedArray<T, C>::getPrototype(runtime)));
   if (JSTypedArrayBase::createBuffer(runtime, ta, length) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
