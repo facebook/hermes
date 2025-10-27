@@ -11,8 +11,6 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v0.*.*" # This should match v0.X.Y
 
 jobs:
   set_release_type:
@@ -87,6 +85,12 @@ jobs:
         build_hermesc_linux,
         build_hermesc_windows,
       ]
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
+  create-tag:
+    uses: ./.github/workflows/create-tag.yml
+    needs: publish
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
       hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
