@@ -212,6 +212,10 @@ def normalize_esprima_ast(ast: JSON) -> JSON:
         ):
             if "declare" not in ast:
                 ast["declare"] = False
+
+        # Hermes doesn't have the 'id' field in ArrowFunctionExpression.
+        if ast["type"] == "ArrowFunctionExpression":
+            del ast["id"]
     # If it is a template literal, the 'value' field contains
     # the 'cooked' and 'raw' strings, which should be moved.
     if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:
