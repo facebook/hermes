@@ -59,8 +59,10 @@ CallResult<Handle<JSString>> JSString::create(
               runtime,
               Predefined::getSymbolID(Predefined::length),
               pf,
-              runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
-                  value->getStringLength()))) == ExecutionStatus::EXCEPTION)) {
+              runtime.makeHandle(
+                  HermesValue::encodeUntrustedNumberValue(
+                      value->getStringLength()))) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 

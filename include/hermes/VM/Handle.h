@@ -314,9 +314,9 @@ class Handle : public HandleBase {
 
   /// Allocate a new handle in the current GCScope
   explicit Handle(HandleRootOwner &runtime, value_type value)
-      : HandleBase(runtime, HermesValueTraits<T>::encode(value)){};
+      : HandleBase(runtime, HermesValueTraits<T>::encode(value)) {};
   explicit Handle(GCScope *inScope, value_type value)
-      : HandleBase(inScope, HermesValueTraits<T>::encode(value)){};
+      : HandleBase(inScope, HermesValueTraits<T>::encode(value)) {};
 
   /// Create a Handle aliasing a non-movable HermesValue without
   /// allocating a handle.

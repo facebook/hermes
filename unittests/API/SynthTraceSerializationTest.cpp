@@ -84,46 +84,52 @@ TEST_F(SynthTraceSerializationTest, EncodeString) {
 TEST_F(SynthTraceSerializationTest, CallNoArgs) {
   EXPECT_EQ(
       R"({"type":"CallFromNativeRecord","time":0,"functionID":1,"thisArg":"undefined:","args":[]})",
-      to_string(SynthTrace::CallFromNativeRecord(
-          dummyTime, 1, SynthTrace::encodeUndefined(), {})));
+      to_string(
+          SynthTrace::CallFromNativeRecord(
+              dummyTime, 1, SynthTrace::encodeUndefined(), {})));
 }
 
 TEST_F(SynthTraceSerializationTest, Call) {
   EXPECT_EQ(
       R"({"type":"CallFromNativeRecord","time":0,"functionID":1,"thisArg":"object:1","args":["undefined:","bool:true"]})",
-      to_string(SynthTrace::CallFromNativeRecord(
-          dummyTime,
-          1,
-          SynthTrace::encodeObject(1),
-          {SynthTrace::encodeUndefined(), SynthTrace::encodeBool(true)})));
+      to_string(
+          SynthTrace::CallFromNativeRecord(
+              dummyTime,
+              1,
+              SynthTrace::encodeObject(1),
+              {SynthTrace::encodeUndefined(), SynthTrace::encodeBool(true)})));
 }
 
 TEST_F(SynthTraceSerializationTest, Construct) {
   EXPECT_EQ(
       R"({"type":"ConstructFromNativeRecord","time":0,"functionID":1,"thisArg":"undefined:","args":["null:"]})",
-      to_string(SynthTrace::ConstructFromNativeRecord(
-          dummyTime,
-          1,
-          SynthTrace::encodeUndefined(),
-          {SynthTrace::encodeNull()})));
+      to_string(
+          SynthTrace::ConstructFromNativeRecord(
+              dummyTime,
+              1,
+              SynthTrace::encodeUndefined(),
+              {SynthTrace::encodeNull()})));
 }
 
 TEST_F(SynthTraceSerializationTest, Return) {
   EXPECT_EQ(
       R"({"type":"ReturnFromNativeRecord","time":0,"retval":"bool:true"})",
-      to_string(SynthTrace::ReturnFromNativeRecord(
-          dummyTime, SynthTrace::encodeBool(true))));
+      to_string(
+          SynthTrace::ReturnFromNativeRecord(
+              dummyTime, SynthTrace::encodeBool(true))));
   EXPECT_EQ(
       R"({"type":"ReturnToNativeRecord","time":0,"retval":"bool:false"})",
-      to_string(SynthTrace::ReturnToNativeRecord(
-          dummyTime, SynthTrace::encodeBool(false))));
+      to_string(
+          SynthTrace::ReturnToNativeRecord(
+              dummyTime, SynthTrace::encodeBool(false))));
 }
 
 TEST_F(SynthTraceSerializationTest, ReturnEncodeUTF8String) {
   EXPECT_EQ(
       R"({"type":"ReturnFromNativeRecord","time":0,"retval":"string:1111"})",
-      to_string(SynthTrace::ReturnFromNativeRecord{
-          dummyTime, SynthTrace::encodeString(1111)}));
+      to_string(
+          SynthTrace::ReturnFromNativeRecord{
+              dummyTime, SynthTrace::encodeString(1111)}));
 }
 
 TEST_F(SynthTraceSerializationTest, GetProperty) {
@@ -200,8 +206,9 @@ TEST_F(SynthTraceSerializationTest, CreateArray) {
 TEST_F(SynthTraceSerializationTest, ArrayWrite) {
   EXPECT_EQ(
       R"({"type":"ArrayWriteRecord","time":0,"objID":1,"index":0,"value":"string:1111"})",
-      to_string(SynthTrace::ArrayWriteRecord(
-          dummyTime, 1, 0, SynthTrace::encodeString(1111))));
+      to_string(
+          SynthTrace::ArrayWriteRecord(
+              dummyTime, 1, 0, SynthTrace::encodeString(1111))));
 }
 
 TEST_F(SynthTraceSerializationTest, MarkerRecord) {
@@ -216,15 +223,17 @@ TEST_F(SynthTraceSerializationTest, GetPropertyNative) {
       to_string(SynthTrace::GetPropertyNativeRecord(dummyTime, 1, 100, "foo")));
   EXPECT_EQ(
       R"({"type":"GetPropertyNativeReturnRecord","time":0,"retval":"null:"})",
-      to_string(SynthTrace::GetPropertyNativeReturnRecord(
-          dummyTime, SynthTrace::encodeNull())));
+      to_string(
+          SynthTrace::GetPropertyNativeReturnRecord(
+              dummyTime, SynthTrace::encodeNull())));
 }
 
 TEST_F(SynthTraceSerializationTest, SetPropertyNative) {
   EXPECT_EQ(
       R"({"type":"SetPropertyNativeRecord","time":0,"hostObjectID":1,"propNameID":100,"propName":"foo","value":"string:1111"})",
-      to_string(SynthTrace::SetPropertyNativeRecord(
-          dummyTime, 1, 100, "foo", SynthTrace::encodeString(1111))));
+      to_string(
+          SynthTrace::SetPropertyNativeRecord(
+              dummyTime, 1, 100, "foo", SynthTrace::encodeString(1111))));
 }
 
 TEST_F(SynthTraceSerializationTest, SetPropertyNativeReturn) {
@@ -240,8 +249,9 @@ TEST_F(SynthTraceSerializationTest, TimeIsPrinted) {
   // JSON emitters escape forward slashes.
   EXPECT_EQ(
       R"({"type":"BeginExecJSRecord","time":100,"sourceURL":"file:\/\/\/file.js","sourceHash":"6440b537af26795e5f452bcd320faccb02055a4f","sourceIsBytecode":false})",
-      to_string(SynthTrace::BeginExecJSRecord(
-          std::chrono::milliseconds(100), "file:///file.js", hash, false)));
+      to_string(
+          SynthTrace::BeginExecJSRecord(
+              std::chrono::milliseconds(100), "file:///file.js", hash, false)));
 }
 
 TEST_F(SynthTraceSerializationTest, EndExecHasRetval) {
@@ -388,12 +398,14 @@ TEST_F(SynthTraceSerializationTest, FullTrace) {
 TEST_F(SynthTraceSerializationTest, Utf8Record) {
   EXPECT_EQ(
       R"({"type":"Utf8Record","time":0,"objID":"string:123","retval":"hi\u00f0\u009f\u0091\u008b"})",
-      to_string(SynthTrace::Utf8Record(
-          dummyTime, SynthTrace::encodeString(123), "hi👋")));
+      to_string(
+          SynthTrace::Utf8Record(
+              dummyTime, SynthTrace::encodeString(123), "hi👋")));
   EXPECT_EQ(
       R"({"type":"Utf8Record","time":0,"objID":"string:111","retval":"\u00f0"})",
-      to_string(SynthTrace::Utf8Record(
-          dummyTime, SynthTrace::encodeString(111), "\xf0")));
+      to_string(
+          SynthTrace::Utf8Record(
+              dummyTime, SynthTrace::encodeString(111), "\xf0")));
 }
 
 TEST_F(SynthTraceSerializationTest, Utf16Record) {
@@ -401,14 +413,16 @@ TEST_F(SynthTraceSerializationTest, Utf16Record) {
       R"({"type":"Utf16Record","time":0,"objID":"string:123","retval":"hi\ud83d\udc4b"})";
   EXPECT_EQ(
       serialized,
-      to_string(SynthTrace::Utf16Record(
-          dummyTime, SynthTrace::encodeString(123), u"hi\xd83d\xdc4b")));
+      to_string(
+          SynthTrace::Utf16Record(
+              dummyTime, SynthTrace::encodeString(123), u"hi\xd83d\xdc4b")));
   serialized =
       R"({"type":"Utf16Record","time":0,"objID":"string:111","retval":"\ud83d"})";
   EXPECT_EQ(
       serialized,
-      to_string(SynthTrace::Utf16Record(
-          dummyTime, SynthTrace::encodeString(111), u"\xd83d")));
+      to_string(
+          SynthTrace::Utf16Record(
+              dummyTime, SynthTrace::encodeString(111), u"\xd83d")));
 }
 
 TEST_F(SynthTraceSerializationTest, GetStringDataRecord) {
@@ -416,25 +430,31 @@ TEST_F(SynthTraceSerializationTest, GetStringDataRecord) {
       R"({"type":"GetStringDataRecord","time":0,"objID":"string:123","strData":"\nhello\ud83d\udc4b\\"})";
   EXPECT_EQ(
       serialized,
-      to_string(SynthTrace::GetStringDataRecord(
-          dummyTime, SynthTrace::encodeString(123), u"\nhello\xd83d\xdc4b\\")));
+      to_string(
+          SynthTrace::GetStringDataRecord(
+              dummyTime,
+              SynthTrace::encodeString(123),
+              u"\nhello\xd83d\xdc4b\\")));
   serialized =
       R"({"type":"GetStringDataRecord","time":0,"objID":"propNameID:111","strData":"\ud83d"})";
   EXPECT_EQ(
       serialized,
-      to_string(SynthTrace::GetStringDataRecord(
-          dummyTime, SynthTrace::encodePropNameID(111), u"\xd83d")));
+      to_string(
+          SynthTrace::GetStringDataRecord(
+              dummyTime, SynthTrace::encodePropNameID(111), u"\xd83d")));
 }
 
 TEST_F(SynthTraceSerializationTest, SetPrototypeTest) {
   EXPECT_EQ(
       R"({"type":"SetPrototypeRecord","time":0,"objID":1,"value":"null:"})",
-      to_string(SynthTrace::SetPrototypeRecord(
-          dummyTime, 1, SynthTrace::encodeNull())));
+      to_string(
+          SynthTrace::SetPrototypeRecord(
+              dummyTime, 1, SynthTrace::encodeNull())));
   EXPECT_EQ(
       R"({"type":"SetPrototypeRecord","time":0,"objID":2,"value":"object:1"})",
-      to_string(SynthTrace::SetPrototypeRecord(
-          dummyTime, 2, SynthTrace::encodeObject(1))));
+      to_string(
+          SynthTrace::SetPrototypeRecord(
+              dummyTime, 2, SynthTrace::encodeObject(1))));
 }
 
 TEST_F(SynthTraceSerializationTest, GetPrototypeTest) {
@@ -446,28 +466,33 @@ TEST_F(SynthTraceSerializationTest, GetPrototypeTest) {
 TEST_F(SynthTraceSerializationTest, CreateObjectWithPrototypeRecord) {
   EXPECT_EQ(
       R"({"type":"CreateObjectWithPrototypeRecord","time":0,"objID":1,"prototype":"null:"})",
-      to_string(SynthTrace::CreateObjectWithPrototypeRecord(
-          dummyTime, 1, SynthTrace::encodeNull())));
+      to_string(
+          SynthTrace::CreateObjectWithPrototypeRecord(
+              dummyTime, 1, SynthTrace::encodeNull())));
   EXPECT_EQ(
       R"({"type":"CreateObjectWithPrototypeRecord","time":0,"objID":2,"prototype":"object:1"})",
-      to_string(SynthTrace::CreateObjectWithPrototypeRecord(
-          dummyTime, 2, SynthTrace::encodeObject(1))));
+      to_string(
+          SynthTrace::CreateObjectWithPrototypeRecord(
+              dummyTime, 2, SynthTrace::encodeObject(1))));
 }
 
 TEST_F(SynthTraceSerializationTest, DeletePropertyRecord) {
   EXPECT_EQ(
       R"({"type":"DeletePropertyRecord","time":0,"objID":1,"propID":"string:123"})",
-      to_string(SynthTrace::DeletePropertyRecord(
-          dummyTime, 1, SynthTrace::encodeString(123))));
+      to_string(
+          SynthTrace::DeletePropertyRecord(
+              dummyTime, 1, SynthTrace::encodeString(123))));
 
   EXPECT_EQ(
       R"({"type":"DeletePropertyRecord","time":0,"objID":1,"propID":"propNameID:123"})",
-      to_string(SynthTrace::DeletePropertyRecord(
-          dummyTime, 1, SynthTrace::encodePropNameID(123))));
+      to_string(
+          SynthTrace::DeletePropertyRecord(
+              dummyTime, 1, SynthTrace::encodePropNameID(123))));
 
   EXPECT_EQ(
       R"({"type":"DeletePropertyRecord","time":0,"objID":1,"propID":"number:0x00000000000000"})",
-      to_string(SynthTrace::DeletePropertyRecord(
-          dummyTime, 1, SynthTrace::encodeNumber(0))));
+      to_string(
+          SynthTrace::DeletePropertyRecord(
+              dummyTime, 1, SynthTrace::encodeNumber(0))));
 }
 } // namespace

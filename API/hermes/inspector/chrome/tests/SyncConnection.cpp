@@ -33,9 +33,10 @@ void ExecutorRuntimeAdapter::tickleJs() {
 SyncConnection::SyncConnection(
     AsyncHermesRuntime &runtime,
     bool waitForDebugger)
-    : cdpHandler_(CDPHandler::create(
-          std::make_unique<ExecutorRuntimeAdapter>(runtime),
-          waitForDebugger)) {
+    : cdpHandler_(
+          CDPHandler::create(
+              std::make_unique<ExecutorRuntimeAdapter>(runtime),
+              waitForDebugger)) {
   registerCallbacks();
 }
 

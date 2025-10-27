@@ -48,10 +48,11 @@ void ProfilerDomainAgent::stop(const m::profiler::StopRequest &req) {
     resp.profile = std::move(*profile);
     sendResponseToClient(resp);
   } catch (const std::exception &) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InternalError,
-        "Hermes profile output could not be parsed."));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InternalError,
+            "Hermes profile output could not be parsed."));
   }
 }
 

@@ -1488,9 +1488,10 @@ void FunctionContext::finalizeHoisting() {
       // declaration per identifier is needed regardless of how many
       // functions with that id are hoisted.
       FunctionDeclarationNode *first = nodes[0];
-      varDecls->emplace_back(FunctionInfo::VarDecl::withoutInitializer(
-          FunctionInfo::VarDecl::Kind::Var,
-          cast<ESTree::IdentifierNode>(first->_id)));
+      varDecls->emplace_back(
+          FunctionInfo::VarDecl::withoutInitializer(
+              FunctionInfo::VarDecl::Kind::Var,
+              cast<ESTree::IdentifierNode>(first->_id)));
 
       // Now mark all functions as hoisted, which prevents creation of the
       // binding identifier below.
@@ -1530,9 +1531,10 @@ void FunctionContext::finalizeHoisting() {
          it < end;
          ++it) {
       if (!(*it)->getSemInfo()->hoisted) {
-        decls->emplace_back(FunctionInfo::VarDecl::withoutInitializer(
-            FunctionInfo::VarDecl::Kind::Var,
-            cast<ESTree::IdentifierNode>((*it)->_id)));
+        decls->emplace_back(
+            FunctionInfo::VarDecl::withoutInitializer(
+                FunctionInfo::VarDecl::Kind::Var,
+                cast<ESTree::IdentifierNode>((*it)->_id)));
       }
     }
   }

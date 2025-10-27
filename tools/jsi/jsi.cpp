@@ -54,7 +54,7 @@ class FileBuffer : public jsi::Buffer {
   }
 
   FileBuffer(std::unique_ptr<llvh::MemoryBuffer> buffer)
-      : buffer_(std::move(buffer)){};
+      : buffer_(std::move(buffer)) {};
   size_t size() const override {
     return buffer_->getBufferSize();
   }

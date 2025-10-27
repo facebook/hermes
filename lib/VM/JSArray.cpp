@@ -586,8 +586,9 @@ CallResult<Handle<JSArray>> JSArray::createAndAllocPropStorage(
   // Allocate property storage with size corresponding to number of properties
   // in the hidden class.
   Handle<JSArray> arr = std::move(*res);
-  runtime.ignoreAllocationFailure(JSObject::allocatePropStorage(
-      arr, runtime, classHandle->getNumProperties()));
+  runtime.ignoreAllocationFailure(
+      JSObject::allocatePropStorage(
+          arr, runtime, classHandle->getNumProperties()));
 
   return arr;
 }

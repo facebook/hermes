@@ -1040,7 +1040,7 @@ class Variable : public Value {
 
  public:
   explicit Variable(ScopeDesc *scope, DeclKind declKind, Identifier txt)
-      : Variable(ValueKind::VariableKind, scope, declKind, txt){};
+      : Variable(ValueKind::VariableKind, scope, declKind, txt) {};
 
   ~Variable();
 

@@ -49,8 +49,9 @@ static opt<bool> GCAllocYoung(
 
 static opt<bool> GCRevertToYGAtTTI(
     "gc-revert-to-yg-at-tti",
-    desc("Determines whether to revert to young generation, if necessary, at "
-         "TTI notification"),
+    desc(
+        "Determines whether to revert to young generation, if necessary, at "
+        "TTI notification"),
     cat(GCCategory),
     init(false));
 
@@ -81,21 +82,22 @@ static int executeHBCBytecodeFromCL(
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(vm::GCConfig::Builder()
-                            .withMinHeapSize(cl::MinHeapSize.bytes)
-                            .withInitHeapSize(cl::InitHeapSize.bytes)
-                            .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                            .withOccupancyTarget(cl::OccupancyTarget)
-                            .withSanitizeConfig(
-                                vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(cl::GCSanitizeRate)
-                                    .withRandomSeed(cl::GCSanitizeRandomSeed)
-                                    .build())
-                            .withShouldRecordStats(recStats)
-                            .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                            .withAllocInYoung(cl::GCAllocYoung)
-                            .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
-                            .build())
+          .withGCConfig(
+              vm::GCConfig::Builder()
+                  .withMinHeapSize(cl::MinHeapSize.bytes)
+                  .withInitHeapSize(cl::InitHeapSize.bytes)
+                  .withMaxHeapSize(cl::MaxHeapSize.bytes)
+                  .withOccupancyTarget(cl::OccupancyTarget)
+                  .withSanitizeConfig(
+                      vm::GCSanitizeConfig::Builder()
+                          .withSanitizeRate(cl::GCSanitizeRate)
+                          .withRandomSeed(cl::GCSanitizeRandomSeed)
+                          .build())
+                  .withShouldRecordStats(recStats)
+                  .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+                  .withAllocInYoung(cl::GCAllocYoung)
+                  .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
+                  .build())
           .withEnableBlockScoping(cl::EnableBlockScoping)
           .withEnableEval(cl::EnableEval)
           .withVerifyEvalIR(cl::VerifyIR)
@@ -151,10 +153,11 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
           vm::GCConfig::Builder()
               .withInitHeapSize(cl::InitHeapSize.bytes)
               .withMaxHeapSize(cl::MaxHeapSize.bytes)
-              .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                      .withSanitizeRate(cl::GCSanitizeRate)
-                                      .withRandomSeed(cl::GCSanitizeRandomSeed)
-                                      .build())
+              .withSanitizeConfig(
+                  vm::GCSanitizeConfig::Builder()
+                      .withSanitizeRate(cl::GCSanitizeRate)
+                      .withRandomSeed(cl::GCSanitizeRandomSeed)
+                      .build())
               .withShouldRecordStats(cl::GCPrintStats)
               .build())
       .withEnableBlockScoping(cl::EnableBlockScoping)

@@ -347,12 +347,13 @@ L1:
   BFG->bytecodeGenerationComplete();
   auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
 
-  Handle<JSFunction> factFn = runtime.makeHandle(JSFunction::create(
-      runtime,
-      runtimeModule->getDomain(runtime),
-      runtime.makeNullHandle<JSObject>(),
-      runtime.makeNullHandle<Environment>(),
-      codeBlock));
+  Handle<JSFunction> factFn = runtime.makeHandle(
+      JSFunction::create(
+          runtime,
+          runtimeModule->getDomain(runtime),
+          runtime.makeNullHandle<JSObject>(),
+          runtime.makeNullHandle<Environment>(),
+          codeBlock));
 
   // Define the 'fact' function.
   (void)JSObject::putNamed_RJS(

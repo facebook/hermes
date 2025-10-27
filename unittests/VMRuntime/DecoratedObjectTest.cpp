@@ -32,10 +32,11 @@ TEST_F(DecoratedObjectTest, DecoratedObjectFinalizerRunsOnce) {
   auto counter = std::make_shared<int>(0);
   {
     GCScope scope{runtime, "DecoratedObjectTest"};
-    (void)runtime.makeHandle(DecoratedObject::create(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.objectPrototype),
-        std::make_unique<TestDecoration>(counter)));
+    (void)runtime.makeHandle(
+        DecoratedObject::create(
+            runtime,
+            Handle<JSObject>::vmcast(&runtime.objectPrototype),
+            std::make_unique<TestDecoration>(counter)));
     runtime.collect("test");
     // should not have been finalized yet
     EXPECT_EQ(0, *counter);
@@ -53,10 +54,11 @@ TEST_F(DecoratedObjectTest, ChangeDecoration) {
   auto counter = std::make_shared<int>(0);
   {
     GCScope scope{runtime, "DecoratedObjectTest"};
-    auto handle = runtime.makeHandle(DecoratedObject::create(
-        runtime,
-        Handle<JSObject>::vmcast(&runtime.objectPrototype),
-        std::make_unique<TestDecoration>(counter)));
+    auto handle = runtime.makeHandle(
+        DecoratedObject::create(
+            runtime,
+            Handle<JSObject>::vmcast(&runtime.objectPrototype),
+            std::make_unique<TestDecoration>(counter)));
     EXPECT_EQ(0, *counter);
     handle->setDecoration(std::make_unique<TestDecoration>(counter));
     // Old decoration was deallocated.
@@ -71,8 +73,11 @@ TEST_F(DecoratedObjectTest, NullDecoration) {
   // Null decorations do not crash.
   {
     GCScope scope{runtime, "DecoratedObjectTest"};
-    auto handle = runtime.makeHandle(DecoratedObject::create(
-        runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype), nullptr));
+    auto handle = runtime.makeHandle(
+        DecoratedObject::create(
+            runtime,
+            Handle<JSObject>::vmcast(&runtime.objectPrototype),
+            nullptr));
     EXPECT_EQ(nullptr, handle->getDecoration());
   }
   runtime.collect("test");
@@ -81,11 +86,12 @@ TEST_F(DecoratedObjectTest, NullDecoration) {
 TEST_F(DecoratedObjectTest, AdditionalSlots) {
   auto counter = std::make_shared<int>(0);
   GCScope scope{runtime, "DecoratedObjectTest"};
-  auto handle = runtime.makeHandle(DecoratedObject::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.objectPrototype),
-      std::make_unique<TestDecoration>(counter),
-      numAdditionalSlotsForTest<DecoratedObject>()));
+  auto handle = runtime.makeHandle(
+      DecoratedObject::create(
+          runtime,
+          Handle<JSObject>::vmcast(&runtime.objectPrototype),
+          std::make_unique<TestDecoration>(counter),
+          numAdditionalSlotsForTest<DecoratedObject>()));
   testAdditionalSlots(runtime, handle);
 }
 

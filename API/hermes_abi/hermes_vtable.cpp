@@ -311,8 +311,9 @@ class HermesABIRuntimeImpl : public HermesABIRuntime {
       case HermesABIValueKindBoolean:
         return vm::Runtime::getBoolValue(abi::getBoolValue(val));
       case HermesABIValueKindNumber:
-        return rt->makeHandle(vm::HermesValue::encodeUntrustedNumberValue(
-            abi::getNumberValue(val)));
+        return rt->makeHandle(
+            vm::HermesValue::encodeUntrustedNumberValue(
+                abi::getNumberValue(val)));
       case HermesABIValueKindString:
       case HermesABIValueKindObject:
       case HermesABIValueKindSymbol:
@@ -807,9 +808,10 @@ HermesABIArrayBufferOrError create_arraybuffer_from_external_data(
   auto &runtime = *hart->rt;
 
   vm::GCScope gcScope(runtime);
-  auto arrayBuffer = runtime.makeHandle(vm::JSArrayBuffer::create(
-      runtime,
-      vm::Handle<vm::JSObject>::vmcast(&runtime.arrayBufferPrototype)));
+  auto arrayBuffer = runtime.makeHandle(
+      vm::JSArrayBuffer::create(
+          runtime,
+          vm::Handle<vm::JSObject>::vmcast(&runtime.arrayBufferPrototype)));
 
   // Set up the ArrayBuffer such that the data refers to the provided buffer,
   // and the finalizer will invoke the release method.

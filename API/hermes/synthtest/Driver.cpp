@@ -130,10 +130,14 @@ TEST(SynthBenchmark, RunMultipleSourceFiles) {
   std::string source2 = R"("goodbye";)";
   std::string trace;
   {
-    auto hash1 = llvh::SHA1::hash(llvh::makeArrayRef(
-        reinterpret_cast<const uint8_t *>(source1.c_str()), source1.length()));
-    auto hash2 = llvh::SHA1::hash(llvh::makeArrayRef(
-        reinterpret_cast<const uint8_t *>(source2.c_str()), source2.length()));
+    auto hash1 = llvh::SHA1::hash(
+        llvh::makeArrayRef(
+            reinterpret_cast<const uint8_t *>(source1.c_str()),
+            source1.length()));
+    auto hash2 = llvh::SHA1::hash(
+        llvh::makeArrayRef(
+            reinterpret_cast<const uint8_t *>(source2.c_str()),
+            source2.length()));
     std::string hash1AsStr = ::hermes::hashAsString(hash1);
     std::string hash2AsStr = ::hermes::hashAsString(hash2);
     int numChars =

@@ -75,8 +75,9 @@ class StringBuilder {
       // the string. This can cause performance issues if misused.
       // The allocation can fail in theory, but in practice, since we are
       // dropping one string and replace it with another, this should be safe.
-      auto strRes = runtime_->ignoreAllocationFailure(StringPrimitive::create(
-          *runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
+      auto strRes = runtime_->ignoreAllocationFailure(
+          StringPrimitive::create(
+              *runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
       auto currentPartialString =
           ASCIIRef(strPrim_->castToASCIIPointer(), index_);
       strPrim_ = strRes.getString();
@@ -137,8 +138,9 @@ class StringBuilder {
       appendUTF16Ref({other->castToUTF16Pointer(), length});
     } else {
       // strPrim_ is ASCII, while other is UTF16. We have to recreate string.
-      auto strRes = runtime_->ignoreAllocationFailure(StringPrimitive::create(
-          *runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
+      auto strRes = runtime_->ignoreAllocationFailure(
+          StringPrimitive::create(
+              *runtime_, strPrim_->getStringLength(), /*asciiNotUTF16*/ false));
       auto currentPartialString =
           ASCIIRef(strPrim_->castToASCIIPointer(), index_);
       // Set strPrim_ to the newly created string.

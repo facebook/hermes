@@ -227,12 +227,13 @@ CallResult<HermesValue> reflectSet(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("target is not an object");
   }
 
-  return toHV(JSObject::putComputedWithReceiver_RJS(
-      target,
-      runtime,
-      args.getArgHandle(1),
-      args.getArgHandle(2),
-      (args.getArgCount() >= 4) ? args.getArgHandle(3) : target));
+  return toHV(
+      JSObject::putComputedWithReceiver_RJS(
+          target,
+          runtime,
+          args.getArgHandle(1),
+          args.getArgHandle(2),
+          (args.getArgCount() >= 4) ? args.getArgHandle(3) : target));
 }
 
 CallResult<HermesValue>
@@ -247,8 +248,11 @@ reflectSetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError("target is not an object and not null");
   }
 
-  return toHV(JSObject::setParent(
-      *target, runtime, proto.isObject() ? vmcast<JSObject>(proto) : nullptr));
+  return toHV(
+      JSObject::setParent(
+          *target,
+          runtime,
+          proto.isObject() ? vmcast<JSObject>(proto) : nullptr));
 }
 
 Handle<JSObject> createReflectObject(Runtime &runtime) {

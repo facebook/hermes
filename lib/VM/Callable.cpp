@@ -553,8 +553,9 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
   pf.configurable = 1;
 
   // Length is the number of formal arguments.
-  auto length = runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
-      argCount >= *targetLength ? 0.0 : *targetLength - argCount));
+  auto length = runtime.makeHandle(
+      HermesValue::encodeUntrustedNumberValue(
+          argCount >= *targetLength ? 0.0 : *targetLength - argCount));
   if (LLVM_UNLIKELY(
           JSObject::defineNewOwnProperty(
               selfHandle,

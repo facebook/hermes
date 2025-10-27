@@ -28,12 +28,14 @@ TEST_F(StringPrimTest, CreateTest) {
   auto str2 = StringPrimitive::createNoThrow(runtime, "foo");
 
   EXPECT_EQ(5u, str1->getStringLength());
-  EXPECT_TRUE(StringPrimitive::createStringView(runtime, str1)
-                  .equals(createUTF16Ref(u"hello")));
+  EXPECT_TRUE(
+      StringPrimitive::createStringView(runtime, str1)
+          .equals(createUTF16Ref(u"hello")));
 
   EXPECT_EQ(3u, str2->getStringLength());
-  EXPECT_TRUE(StringPrimitive::createStringView(runtime, str2)
-                  .equals(createUTF16Ref(u"foo")));
+  EXPECT_TRUE(
+      StringPrimitive::createStringView(runtime, str2)
+          .equals(createUTF16Ref(u"foo")));
 }
 
 TEST_F(StringPrimTest, EqualityTest) {
@@ -60,10 +62,12 @@ TEST_F(StringPrimTest, CreateEfficientTest) {
       "Test strings should be shorter than EXTERNAL_STRING_MIN_SIZE");
   std::string narrowShort = "foo";
   std::u16string wideShort(u"foo");
-  auto s1 = handlefy(StringPrimitive::createEfficient(
-      runtime, createASCIIRef(narrowShort.c_str())));
-  auto s2 = handlefy(StringPrimitive::createEfficient(
-      runtime, createUTF16Ref(wideShort.c_str())));
+  auto s1 = handlefy(
+      StringPrimitive::createEfficient(
+          runtime, createASCIIRef(narrowShort.c_str())));
+  auto s2 = handlefy(
+      StringPrimitive::createEfficient(
+          runtime, createUTF16Ref(wideShort.c_str())));
   auto s3 = handlefy(
       StringPrimitive::createEfficient(runtime, std::move(narrowShort)));
   auto s4 =
@@ -77,10 +81,12 @@ TEST_F(StringPrimTest, CreateEfficientTest) {
   size_t longLength = StringPrimitive::EXTERNAL_STRING_MIN_SIZE;
   std::string narrowLong(longLength, '!');
   std::u16string wideLong(longLength, u'!');
-  auto e1 = handlefy(StringPrimitive::createEfficient(
-      runtime, createASCIIRef(narrowLong.c_str())));
-  auto e2 = handlefy(StringPrimitive::createEfficient(
-      runtime, createUTF16Ref(wideLong.c_str())));
+  auto e1 = handlefy(
+      StringPrimitive::createEfficient(
+          runtime, createASCIIRef(narrowLong.c_str())));
+  auto e2 = handlefy(
+      StringPrimitive::createEfficient(
+          runtime, createUTF16Ref(wideLong.c_str())));
   auto e3 = handlefy(
       StringPrimitive::createEfficient(runtime, std::move(narrowLong)));
   auto e4 =
@@ -127,9 +133,10 @@ TEST_F(StringPrimTest, ConcatTest) {
     auto b = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"def"));
     auto strRes = StringPrimitive::concat(runtime, a, b);
     ASSERT_NE(ExecutionStatus::EXCEPTION, strRes.getStatus());
-    EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime, runtime.makeHandle<StringPrimitive>(*strRes))
-                    .equals(createUTF16Ref(u"abcdef")));
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(
+            runtime, runtime.makeHandle<StringPrimitive>(*strRes))
+            .equals(createUTF16Ref(u"abcdef")));
   }
 
   {
@@ -137,9 +144,10 @@ TEST_F(StringPrimTest, ConcatTest) {
     auto b = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"abc"));
     auto strRes = StringPrimitive::concat(runtime, a, b);
     ASSERT_NE(ExecutionStatus::EXCEPTION, strRes.getStatus());
-    EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime, runtime.makeHandle<StringPrimitive>(*strRes))
-                    .equals(createUTF16Ref(u"abc")));
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(
+            runtime, runtime.makeHandle<StringPrimitive>(*strRes))
+            .equals(createUTF16Ref(u"abc")));
   }
 }
 

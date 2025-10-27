@@ -68,8 +68,9 @@ CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
     return runtime.raiseTypeError("Cannot clone from a detached buffer");
   }
 
-  auto arr = runtime.makeHandle(JSArrayBuffer::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
+  auto arr = runtime.makeHandle(
+      JSArrayBuffer::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
 
   // Don't need to zero out the data since we'll be copying into it immediately.
   if (createDataBlock(runtime, arr, srcSize, false) ==

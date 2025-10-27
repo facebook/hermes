@@ -633,14 +633,15 @@ TEST_F(OperationsTest, ToBooleanTest) {
 }
 
 // Use macros for these tests because they're verbose.
-#define ToStringTest(result, value)                                            \
-  {                                                                            \
-    Handle<> scopedValue = runtime.makeHandle(value);                          \
-    auto strRes = toString_RJS(runtime, scopedValue);                          \
-    EXPECT_EQ(ExecutionStatus::RETURNED, strRes.getStatus());                  \
-    EXPECT_TRUE(StringPrimitive::createStringView(                             \
-                    runtime, runtime.makeHandle(std::move(strRes.getValue()))) \
-                    .equals(createUTF16Ref(result)));                          \
+#define ToStringTest(result, value)                                    \
+  {                                                                    \
+    Handle<> scopedValue = runtime.makeHandle(value);                  \
+    auto strRes = toString_RJS(runtime, scopedValue);                  \
+    EXPECT_EQ(ExecutionStatus::RETURNED, strRes.getStatus());          \
+    EXPECT_TRUE(                                                       \
+        StringPrimitive::createStringView(                             \
+            runtime, runtime.makeHandle(std::move(strRes.getValue()))) \
+            .equals(createUTF16Ref(result)));                          \
   }
 
 #define DoubleToStringTest(result, value) \
@@ -907,9 +908,10 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     auto strRes = toString_RJS(runtime, runtime.makeHandle(res.getValue()));
     EXPECT_EQ(ExecutionStatus::RETURNED, strRes.getStatus());
-    EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime, runtime.makeHandle(std::move(*strRes)))
-                    .equals(createUTF16Ref(u"18446744073709552000")));
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(
+            runtime, runtime.makeHandle(std::move(*strRes)))
+            .equals(createUTF16Ref(u"18446744073709552000")));
   }
 
   // Invalid strings
@@ -1161,8 +1163,9 @@ TEST_F(OperationsTest, ToObjectTest) {
     auto obj = vmcast<JSString>(static_cast<GCCell *>(res->getObject()));
     auto objStrHandle =
         runtime.makeHandle(JSString::getPrimitiveString(obj, runtime));
-    EXPECT_TRUE(StringPrimitive::createStringView(runtime, objStrHandle)
-                    .equals(strRef));
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(runtime, objStrHandle)
+            .equals(strRef));
   }
 
   {
@@ -1288,10 +1291,11 @@ TEST_F(OperationsTest, AdditionTest) {
     res = addOp_RJS(runtime, aHandle, bHandle);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res.getValue().isString());
-    EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime,
-                    runtime.makeHandle(vmcast<StringPrimitive>(res.getValue())))
-                    .equals(createUTF16Ref(u"abcdef")));
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(
+            runtime,
+            runtime.makeHandle(vmcast<StringPrimitive>(res.getValue())))
+            .equals(createUTF16Ref(u"abcdef")));
   }
 
   {
@@ -1303,10 +1307,11 @@ TEST_F(OperationsTest, AdditionTest) {
     res = addOp_RJS(runtime, aHandle, bHandle);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res.getValue().isString());
-    EXPECT_TRUE(StringPrimitive::createStringView(
-                    runtime,
-                    runtime.makeHandle(vmcast<StringPrimitive>(res.getValue())))
-                    .equals(createUTF16Ref(u"number: 1.4")));
+    EXPECT_TRUE(
+        StringPrimitive::createStringView(
+            runtime,
+            runtime.makeHandle(vmcast<StringPrimitive>(res.getValue())))
+            .equals(createUTF16Ref(u"number: 1.4")));
   }
 
   {

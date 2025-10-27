@@ -200,8 +200,8 @@ TEST_F(BigIntPrimitiveTest, FromDouble) {
           digit(0, 0, 0, 0, 0, 0, 0, 0) + digit(0, 0, 0, 0, 0, 0, 0, 0) +
           digit(0, 0, 0, 0, 0, 0, 0, 0));
 
-  auto HNegMaxDouble =
-      runtime.ignoreAllocationFailure(BigIntPrimitive::fromDouble(
+  auto HNegMaxDouble = runtime.ignoreAllocationFailure(
+      BigIntPrimitive::fromDouble(
           runtime, -std::numeric_limits<double>::max()));
   EXPECT_EQ(
       fullRawData(HNegMaxDouble),

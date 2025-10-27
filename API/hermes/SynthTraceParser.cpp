@@ -153,8 +153,9 @@ uint64_t jsonStringToUint64(const ::hermes::parser::JSONValue *val) {
     gcconf.withEffectiveOOMThreshold(getNumberAs<unsigned>(threshold));
   }
   if (auto *shouldRelease = gcConfig->get("shouldReleaseUnused")) {
-    gcconf.withShouldReleaseUnused(SynthTrace::releaseUnusedFromName(
-        llvh::cast<JSONString>(shouldRelease)->c_str()));
+    gcconf.withShouldReleaseUnused(
+        SynthTrace::releaseUnusedFromName(
+            llvh::cast<JSONString>(shouldRelease)->c_str()));
   }
   if (auto *name = gcConfig->get("name")) {
     gcconf.withName(llvh::cast<JSONString>(name)->str());

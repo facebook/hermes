@@ -197,17 +197,19 @@ struct StackTracesTreeParameterizedTest
               .getSymbol();
     }
 
-    ASSERT_FALSE(isException(JSObject::putNamed_RJS(
-        runtime.getGlobal(),
-        runtime,
-        enableAllocationLocationTrackerSym,
-        runtime.makeHandle<NativeFunction>(
-            *NativeFunction::createWithoutPrototype(
-                runtime,
-                nullptr,
-                trackerOnByDefault() ? noop : enableAllocationLocationTracker,
-                enableAllocationLocationTrackerSym,
-                0)))));
+    ASSERT_FALSE(isException(
+        JSObject::putNamed_RJS(
+            runtime.getGlobal(),
+            runtime,
+            enableAllocationLocationTrackerSym,
+            runtime.makeHandle<NativeFunction>(
+                *NativeFunction::createWithoutPrototype(
+                    runtime,
+                    nullptr,
+                    trackerOnByDefault() ? noop
+                                         : enableAllocationLocationTracker,
+                    enableAllocationLocationTrackerSym,
+                    0)))));
   }
 
   // No need for a tear-down, because the runtime destructor will clear all

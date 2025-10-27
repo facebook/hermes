@@ -829,7 +829,7 @@ class HERMES_EMPTY_BASES Runtime : public PointerBase,
   uint64_t opcodeCount = 0;
 
   /// Dump function profiling stats to stdout.
-  enum class ProfileType{TIME, OPCODES, ALL};
+  enum class ProfileType { TIME, OPCODES, ALL };
   void dumpJSFunctionStats(ProfileType type = ProfileType::ALL);
 #endif
 

@@ -144,8 +144,9 @@ CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto generatorFunction = runtime.makeHandle(vmcast<JSGeneratorFunction>(
-      runtime.getCurrentFrame().getCalleeClosureUnsafe()));
+  auto generatorFunction = runtime.makeHandle(
+      vmcast<JSGeneratorFunction>(
+          runtime.getCurrentFrame().getCalleeClosureUnsafe()));
 
   auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
@@ -286,8 +287,9 @@ inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
     Handle<> base,
     SymbolID id) {
   if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
-    return createPseudoHandle(HermesValue::encodeUntrustedNumberValue(
-        base->getString()->getStringLength()));
+    return createPseudoHandle(
+        HermesValue::encodeUntrustedNumberValue(
+            base->getString()->getStringLength()));
   }
   return createPseudoHandle(HermesValue::encodeEmptyValue());
 }
@@ -1246,9 +1248,10 @@ tailCall:
   CASE(name) {                                                           \
     if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
       /* Fast-path. */                                                   \
-      O1REG(name) = HermesValue::encodeTrustedNumberValue(do##name(      \
-          hermes::truncateToInt32(O2REG(name).getNumber()),              \
-          hermes::truncateToInt32(O3REG(name).getNumber())));            \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(               \
+          do##name(                                                      \
+              hermes::truncateToInt32(O2REG(name).getNumber()),          \
+              hermes::truncateToInt32(O3REG(name).getNumber())));        \
       ip = NEXTINST(name);                                               \
       DISPATCH;                                                          \
     }                                                                    \
@@ -1810,8 +1813,9 @@ tailCall:
         // getRealOpCode) if there are breakpoints installed in the function
         // we're returning into.
         if (LLVM_UNLIKELY(curCodeBlock->getNumInstalledBreakpoints() > 0)) {
-          ip = IPADD(inst::getInstSize(
-              runtime.debugger_.getRealOpCode(curCodeBlock, CUROFFSET)));
+          ip = IPADD(
+              inst::getInstSize(
+                  runtime.debugger_.getRealOpCode(curCodeBlock, CUROFFSET)));
         } else {
           // No breakpoints in the function being returned to, just use
           // nextInstCall().
@@ -2580,12 +2584,13 @@ tailCall:
       }
     putOwnByIndex: {
       tmpHandle = HermesValue::encodeUntrustedNumberValue(idVal);
-      CAPTURE_IP(JSObject::defineOwnComputedPrimitive(
-          Handle<JSObject>::vmcast(&O1REG(PutOwnByIndex)),
-          runtime,
-          tmpHandle,
-          DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          Handle<>(&O2REG(PutOwnByIndex))));
+      CAPTURE_IP(
+          JSObject::defineOwnComputedPrimitive(
+              Handle<JSObject>::vmcast(&O1REG(PutOwnByIndex)),
+              runtime,
+              tmpHandle,
+              DefinePropertyFlags::getDefaultNewPropertyFlags(),
+              Handle<>(&O2REG(PutOwnByIndex))));
       gcScope.flushToSmallCount(KEEP_HANDLES);
       tmpHandle.clear();
       ip = nextIP;
@@ -3631,8 +3636,9 @@ tailCall:
             runtime.makeHandle(vmcast<JSError>(runtime.thrownValue_)));
         runtime.clearThrownValue();
 
-        CAPTURE_IP(JSError::recordStackTrace(
-            errorHandle, runtime, false, curCodeBlock, ip));
+        CAPTURE_IP(
+            JSError::recordStackTrace(
+                errorHandle, runtime, false, curCodeBlock, ip));
 
         // Restore the thrown value.
         runtime.setThrownValue(errorHandle.getHermesValue());

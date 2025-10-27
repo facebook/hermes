@@ -1285,10 +1285,10 @@ HadesGC::HadesGC(
       revertToYGAtTTI_{gcConfig.getRevertToYGAtTTI()},
       overwriteDeadYGObjects_{gcConfig.getOverwriteDeadYGObjects()},
       occupancyTarget_(gcConfig.getOccupancyTarget()),
-      ygAverageSurvivalBytes_{
-          /*weight*/ 0.5,
-          /*init*/ kYGInitialSizeFactor * HeapSegment::maxSize() *
-              kYGInitialSurvivalRatio} {
+      ygAverageSurvivalBytes_{/*weight*/ 0.5,
+                              /*init*/ kYGInitialSizeFactor *
+                                  HeapSegment::maxSize() *
+                                  kYGInitialSurvivalRatio} {
   (void)vmExperimentFlags;
   std::lock_guard<Mutex> lk(gcMutex_);
   crashMgr_->setCustomData("HermesGC", getKindAsStr().c_str());
@@ -3120,8 +3120,9 @@ void HadesGC::verifyCardTable() {
           gc.compactee_.evacContains(valuePtr);
       if (!gc.inYoungGen(locPtr) &&
           (gc.inYoungGen(valuePtr) || crossRegionCompacteePtr)) {
-        assert(HeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
-            locPtr));
+        assert(
+            HeapSegment::cardTableCovering(locPtr)->isCardForAddressDirty(
+                locPtr));
       }
     }
 

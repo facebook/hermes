@@ -45,15 +45,17 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 
         genStatement(tryStmt->_block, IsLoopBody::No);
 
-        Builder.setLocation(SourceErrorManager::convertEndToLocation(
-            tryStmt->_block->getSourceRange()));
+        Builder.setLocation(
+            SourceErrorManager::convertEndToLocation(
+                tryStmt->_block->getSourceRange()));
       },
       // emitNormalCleanup.
       [this, tryStmt]() {
         if (tryStmt->_finalizer) {
           genStatement(tryStmt->_finalizer, IsLoopBody::No);
-          Builder.setLocation(SourceErrorManager::convertEndToLocation(
-              tryStmt->_finalizer->getSourceRange()));
+          Builder.setLocation(
+              SourceErrorManager::convertEndToLocation(
+                  tryStmt->_finalizer->getSourceRange()));
         }
       },
       // emitHandler.
@@ -85,8 +87,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 
           genCatchHandler(catchClauseNode->_body);
 
-          Builder.setLocation(SourceErrorManager::convertEndToLocation(
-              tryStmt->_handler->getSourceRange()));
+          Builder.setLocation(
+              SourceErrorManager::convertEndToLocation(
+                  tryStmt->_handler->getSourceRange()));
           Builder.createBranchInst(nextBlock);
         } else {
           // A finally block catches the exception and rethrows is.
@@ -95,8 +98,9 @@ void ESTreeIRGen::genTryStatement(ESTree::TryStatementNode *tryStmt) {
 
           genStatement(tryStmt->_finalizer, IsLoopBody::No);
 
-          Builder.setLocation(SourceErrorManager::convertEndToLocation(
-              tryStmt->_finalizer->getSourceRange()));
+          Builder.setLocation(
+              SourceErrorManager::convertEndToLocation(
+                  tryStmt->_finalizer->getSourceRange()));
           Builder.createThrowInst(catchReg);
         }
       });

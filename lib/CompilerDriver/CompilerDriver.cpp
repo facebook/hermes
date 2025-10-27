@@ -333,8 +333,9 @@ opt<bool> OptimizedEval(
 
 static list<std::string> IncludeGlobals(
     "include-globals",
-    desc("Include the definitions of global properties (can be "
-         "specified more than once)"),
+    desc(
+        "Include the definitions of global properties (can be "
+        "specified more than once)"),
     value_desc("filename"));
 
 enum BytecodeFormatKind {
@@ -472,8 +473,9 @@ static opt<bool> GenerateNamesForAnonymousFunctions(
     "Xgen-names-anon-functions",
     init(false),
     ReallyHidden,
-    desc("Instructs the compiler to create a synthetic label for anonymous "
-         "functions"),
+    desc(
+        "Instructs the compiler to create a synthetic label for anonymous "
+        "functions"),
     cat(CompilerCategory));
 
 #ifndef NDEBUG

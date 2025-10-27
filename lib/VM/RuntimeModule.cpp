@@ -176,8 +176,9 @@ RuntimeModule *RuntimeModule::createLazyModule(
   // We don't know which function index this block will eventually represent,
   // so just add it as 0 to ensure ownership. We'll move it later in
   // `initializeLazy`.
-  RM->functionMap_.emplace_back(CodeBlock::createCodeBlock(
-      RM, RM->bcProvider_->getFunctionHeader(functionID), {}, functionID));
+  RM->functionMap_.emplace_back(
+      CodeBlock::createCodeBlock(
+          RM, RM->bcProvider_->getFunctionHeader(functionID), {}, functionID));
 
   // The module doesn't have a string table until we've compiled the block,
   // so just add the string name as 0 in the mean time for f.name to work via

@@ -128,11 +128,11 @@
     return TypeAsSingleToken{__VA_ARGS__};             \
   }
 
-#define _HERMES_CTORCONFIG_SETTER(CX, TYPE, NAME, ...) \
-  inline auto with##NAME(TYPE NAME)->decltype(*this) { \
-    config_.NAME##_ = std::move(NAME);                 \
-    NAME##Explicit_ = true;                            \
-    return *this;                                      \
+#define _HERMES_CTORCONFIG_SETTER(CX, TYPE, NAME, ...)   \
+  inline auto with##NAME(TYPE NAME) -> decltype(*this) { \
+    config_.NAME##_ = std::move(NAME);                   \
+    NAME##Explicit_ = true;                              \
+    return *this;                                        \
   }
 
 #define _HERMES_CTORCONFIG_BUILDER_GETTER(CX, TYPE, NAME, ...) \

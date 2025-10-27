@@ -831,8 +831,9 @@ CallResult<bool> JSProxy::hasNamed(
   }
   return hasWithTrap(
       runtime,
-      runtime.makeHandle(HermesValue::encodeStringValue(
-          runtime.getStringPrimFromSymbolID(name))),
+      runtime.makeHandle(
+          HermesValue::encodeStringValue(
+              runtime.getStringPrimFromSymbolID(name))),
       *trapRes,
       handler,
       target);
@@ -960,8 +961,9 @@ CallResult<PseudoHandle<>> JSProxy::getNamed(
   }
   return getWithTrap(
       runtime,
-      name.isUniqued() ? runtime.makeHandle(HermesValue::encodeStringValue(
-                             runtime.getStringPrimFromSymbolID(name)))
+      name.isUniqued() ? runtime.makeHandle(
+                             HermesValue::encodeStringValue(
+                                 runtime.getStringPrimFromSymbolID(name)))
                        : runtime.makeHandle(name),
       *trapRes,
       handler,
@@ -1101,8 +1103,9 @@ CallResult<bool> JSProxy::setNamed(
   }
   return setWithTrap(
       runtime,
-      name.isUniqued() ? runtime.makeHandle(HermesValue::encodeStringValue(
-                             runtime.getStringPrimFromSymbolID(name)))
+      name.isUniqued() ? runtime.makeHandle(
+                             HermesValue::encodeStringValue(
+                                 runtime.getStringPrimFromSymbolID(name)))
                        : runtime.makeHandle(name),
       valueHandle,
       *trapRes,
@@ -1223,8 +1226,9 @@ CallResult<bool> JSProxy::deleteNamed(
   }
   return deleteWithTrap(
       runtime,
-      runtime.makeHandle(HermesValue::encodeStringValue(
-          runtime.getStringPrimFromSymbolID(name))),
+      runtime.makeHandle(
+          HermesValue::encodeStringValue(
+              runtime.getStringPrimFromSymbolID(name))),
       *trapRes,
       handler,
       target);

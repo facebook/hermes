@@ -250,8 +250,9 @@ class CallFunctionOnBuilder {
   }
 
  private:
-  void addParams(const std::optional<std::vector<m::runtime::CallArgument>>
-                     &maybeArguments) {
+  void addParams(
+      const std::optional<std::vector<m::runtime::CallArgument>>
+          &maybeArguments) {
     if (maybeArguments) {
       for (const auto &ca : *maybeArguments) {
         addParam(ca);
@@ -473,10 +474,11 @@ void RuntimeDomainAgent::globalLexicalScopeNames(
   }
 
   if (!asyncDebuggerAPI_.isPaused()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "Cannot get global scope names unless execution is paused"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Cannot get global scope names unless execution is paused"));
     return;
   }
 
@@ -488,8 +490,9 @@ void RuntimeDomainAgent::globalLexicalScopeNames(
   const debugger::LexicalInfo &lexicalInfo = state.getLexicalInfo(0);
   debugger::ScopeDepth scopeCount = lexicalInfo.getScopesCount();
   if (scopeCount == 0) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "No scope descriptor"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::InvalidRequest, "No scope descriptor"));
     return;
   }
   const debugger::ScopeDepth globalScopeIndex = scopeCount - 1;
@@ -560,10 +563,11 @@ void RuntimeDomainAgent::getProperties(
   try {
     if (scopePtr != nullptr) {
       if (!asyncDebuggerAPI_.isPaused()) {
-        sendResponseToClient(m::makeErrorResponse(
-            req.id,
-            m::ErrorCode::InvalidRequest,
-            "Cannot get scope properties unless execution is paused"));
+        sendResponseToClient(
+            m::makeErrorResponse(
+                req.id,
+                m::ErrorCode::InvalidRequest,
+                "Cannot get scope properties unless execution is paused"));
         return;
       }
       const debugger::ProgramState &state =
@@ -571,10 +575,11 @@ void RuntimeDomainAgent::getProperties(
       auto result =
           makePropsFromScope(*scopePtr, objGroup, state, serializationOptions);
       if (!result) {
-        sendResponseToClient(m::makeErrorResponse(
-            req.id,
-            m::ErrorCode::InvalidRequest,
-            "Could not inspect specified scope"));
+        sendResponseToClient(
+            m::makeErrorResponse(
+                req.id,
+                m::ErrorCode::InvalidRequest,
+                "Could not inspect specified scope"));
         return;
       }
       resp.result = std::move(*result);
@@ -594,10 +599,11 @@ void RuntimeDomainAgent::getProperties(
         }
       }
     } else {
-      sendResponseToClient(m::makeErrorResponse(
-          req.id,
-          m::ErrorCode::ServerError,
-          "Could not find an object with the given ID"));
+      sendResponseToClient(
+          m::makeErrorResponse(
+              req.id,
+              m::ErrorCode::ServerError,
+              "Could not find an object with the given ID"));
       return;
     }
   } catch (const jsi::JSError &error) {
@@ -651,10 +657,11 @@ void RuntimeDomainAgent::callFunctionOn(
   CallFunctionOnRunner runner;
 
   if (req.objectId.has_value() == req.executionContextId.has_value()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "The request must specify either object id or execution context id."));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "The request must specify either object id or execution context id."));
     return;
   }
 
@@ -671,8 +678,9 @@ void RuntimeDomainAgent::callFunctionOn(
     std::tie(expression, runner) =
         CallFunctionOnBuilder(req).expressionAndRunner();
   } catch (const std::exception &e) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, std::string(e.what())));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::InvalidRequest, std::string(e.what())));
     return;
   }
 
@@ -682,10 +690,11 @@ void RuntimeDomainAgent::callFunctionOn(
         std::unique_ptr<jsi::StringBuffer>(new jsi::StringBuffer(expression)),
         kEvaluatedCodeUrl);
   } catch (const jsi::JSIException &) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InternalError,
-        "Failed to prepare function call"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InternalError,
+            "Failed to prepare function call"));
     return;
   }
 
@@ -710,8 +719,11 @@ void RuntimeDomainAgent::callFunctionOn(
 
 bool RuntimeDomainAgent::checkRuntimeEnabled(const m::Request &req) {
   if (!enabled_) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "Runtime domain not enabled"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Runtime domain not enabled"));
     return false;
   }
   return true;
@@ -724,10 +736,12 @@ bool RuntimeDomainAgent::validateExecutionContextId(
     return true;
   }
 
-  sendResponseToClient(m::makeErrorResponse(
-      commandId,
-      m::ErrorCode::InvalidRequest,
-      "Unknown execution context id: " + std::to_string(executionContextId)));
+  sendResponseToClient(
+      m::makeErrorResponse(
+          commandId,
+          m::ErrorCode::InvalidRequest,
+          "Unknown execution context id: " +
+              std::to_string(executionContextId)));
   return false;
 }
 
@@ -996,8 +1010,13 @@ void RuntimeDomainAgent::consoleAPICalled(
   ObjectSerializationOptions serializationOptions;
   serializationOptions.generatePreview = !isBuffered;
   for (auto &arg : message.args) {
-    note.args.push_back(m::runtime::makeRemoteObject(
-        runtime_, arg, *objTable_, "ConsoleObjectGroup", serializationOptions));
+    note.args.push_back(
+        m::runtime::makeRemoteObject(
+            runtime_,
+            arg,
+            *objTable_,
+            "ConsoleObjectGroup",
+            serializationOptions));
   }
 
   sendNotificationToClient(note);
@@ -1010,10 +1029,11 @@ void RuntimeDomainAgent::releaseObject(
   if (objTable_->releaseObject(req.objectId)) {
     sendResponseToClient(m::makeOkResponse(req.id));
   } else {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::ServerError,
-        "Could not find an object with the given ID"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::ServerError,
+            "Could not find an object with the given ID"));
   }
 }
 

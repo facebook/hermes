@@ -32,14 +32,15 @@ Handle<NativeConstructor> defineSystemConstructor(
     unsigned paramCount,
     NativeConstructor::CreatorFunction *creator,
     CellKind targetKind) {
-  auto constructor = runtime.makeHandle(NativeConstructor::create(
-      runtime,
-      constructorProtoObjectHandle,
-      nullptr,
-      nativeFunctionPtr,
-      paramCount,
-      creator,
-      targetKind));
+  auto constructor = runtime.makeHandle(
+      NativeConstructor::create(
+          runtime,
+          constructorProtoObjectHandle,
+          nullptr,
+          nativeFunctionPtr,
+          paramCount,
+          creator,
+          targetKind));
 
   auto st = Callable::defineNameLengthAndPrototype(
       constructor,

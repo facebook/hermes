@@ -36,9 +36,10 @@ struct TestHarness {
     runtime = DummyRuntime::create(TestGCConfigFixedSize(
         1u << 20,
         GCConfig::Builder(kTestGCConfigBuilder)
-            .withSanitizeConfig(vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(1.0)
-                                    .build())));
+            .withSanitizeConfig(
+                vm::GCSanitizeConfig::Builder()
+                    .withSanitizeRate(1.0)
+                    .build())));
   }
 
   void triggerFreshHeap() {
@@ -109,8 +110,9 @@ TEST(GCSanitizeHandlesTest, DoesNotMoveNativeValues) {
   GCScope gcScope(runtime);
 
   const char buf[] = "the quick brown fox jumped over the lazy dog.";
-  auto hNative = runtime.makeHandle(HermesValue::encodeNativePointer(
-      const_cast<void *>(reinterpret_cast<const void *>(buf))));
+  auto hNative = runtime.makeHandle(
+      HermesValue::encodeNativePointer(
+          const_cast<void *>(reinterpret_cast<const void *>(buf))));
 
   auto prevNativeLoc = reinterpret_cast<const void *>(buf);
   TH.triggerFreshHeap();

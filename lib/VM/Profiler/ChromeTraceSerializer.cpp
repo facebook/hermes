@@ -37,8 +37,9 @@ std::shared_ptr<ChromeStackFrameNode> ChromeStackFrameNode::findOrAddNewChild(
   for (const auto &node : children_)
     if (node->getFrameInfo() == target)
       return node;
-  children_.emplace_back(std::make_unique<ChromeStackFrameNode>(
-      frameIdGen.getNextFrameNodeId(), target));
+  children_.emplace_back(
+      std::make_unique<ChromeStackFrameNode>(
+          frameIdGen.getNextFrameNodeId(), target));
   return children_.back();
 }
 
@@ -321,9 +322,10 @@ void ChromeTraceSerializer::serialize(llvh::raw_ostream &OS) const {
 
 /*static*/ std::string ChromeTraceSerializer::getSerializedTimeStamp(
     SamplingProfiler::TimeStampType timeStamp) {
-  return std::to_string(std::chrono::duration_cast<std::chrono::microseconds>(
-                            timeStamp.time_since_epoch())
-                            .count());
+  return std::to_string(
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          timeStamp.time_since_epoch())
+          .count());
 }
 
 namespace {

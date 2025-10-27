@@ -427,10 +427,11 @@ static JSONObject *takeSnapshot(
 
 TEST(HeapSnapshotTest, IDReversibleTest) {
   // Make sure an ID <-> Object mapping is preserved across collections.
-  auto runtime = DummyRuntime::create(GCConfig::Builder()
-                                          .withInitHeapSize(1024)
-                                          .withMaxHeapSize(1024 * 100)
-                                          .build());
+  auto runtime = DummyRuntime::create(
+      GCConfig::Builder()
+          .withInitHeapSize(1024)
+          .withMaxHeapSize(1024 * 100)
+          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   GCScope gcScope(rt);
@@ -450,10 +451,11 @@ TEST(HeapSnapshotTest, IDReversibleTest) {
 TEST(HeapSnapshotTest, HeaderTest) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  auto runtime = DummyRuntime::create(GCConfig::Builder()
-                                          .withInitHeapSize(1024)
-                                          .withMaxHeapSize(1024 * 100)
-                                          .build());
+  auto runtime = DummyRuntime::create(
+      GCConfig::Builder()
+          .withInitHeapSize(1024)
+          .withMaxHeapSize(1024 * 100)
+          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
 
@@ -586,10 +588,11 @@ TEST(HeapSnapshotTest, HeaderTest) {
 TEST(HeapSnapshotTest, TestNodesAndEdgesForDummyObjects) {
   JSONFactory::Allocator alloc;
   JSONFactory jsonFactory{alloc};
-  auto runtime = DummyRuntime::create(GCConfig::Builder()
-                                          .withInitHeapSize(1024)
-                                          .withMaxHeapSize(1024 * 100)
-                                          .build());
+  auto runtime = DummyRuntime::create(
+      GCConfig::Builder()
+          .withInitHeapSize(1024)
+          .withMaxHeapSize(1024 * 100)
+          .build());
   DummyRuntime &rt = *runtime;
   auto &gc = rt.getHeap();
   GCScope gcScope(rt);
@@ -698,14 +701,15 @@ TEST(HeapSnapshotTest, SnapshotFromCallbackContext) {
   std::ostringstream stream;
   auto runtime = DummyRuntime::create(
       kTestGCConfigSmall.rebuild()
-          .withTripwireConfig(GCTripwireConfig::Builder()
-                                  .withLimit(32)
-                                  .withCallback([&triggeredTripwire, &stream](
-                                                    GCTripwireContext &ctx) {
-                                    triggeredTripwire = true;
-                                    ctx.createSnapshot(stream, true);
-                                  })
-                                  .build())
+          .withTripwireConfig(
+              GCTripwireConfig::Builder()
+                  .withLimit(32)
+                  .withCallback(
+                      [&triggeredTripwire, &stream](GCTripwireContext &ctx) {
+                        triggeredTripwire = true;
+                        ctx.createSnapshot(stream, true);
+                      })
+                  .build())
           .build());
   DummyRuntime &rt = *runtime;
   GCScope scope{rt};
@@ -937,32 +941,36 @@ TEST_F(HeapSnapshotRuntimeTest, PropertyUpdatesTest) {
   }
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   // Add two properties to the hidden class chain.
-  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
-      runtime,
-      fooSym,
-      dpf,
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
-  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
-      runtime,
-      barSym,
-      dpf,
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
+  ASSERT_FALSE(isException(
+      JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          fooSym,
+          dpf,
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
+  ASSERT_FALSE(isException(
+      JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          barSym,
+          dpf,
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
   // Trigger update transitions for both properties.
   dpf.writable = false;
-  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
-      runtime,
-      fooSym,
-      dpf,
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
-  ASSERT_FALSE(isException(JSObject::defineOwnProperty(
-      obj,
-      runtime,
-      barSym,
-      dpf,
-      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
+  ASSERT_FALSE(isException(
+      JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          fooSym,
+          dpf,
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(100)))));
+  ASSERT_FALSE(isException(
+      JSObject::defineOwnProperty(
+          obj,
+          runtime,
+          barSym,
+          dpf,
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(200)))));
   // Forcibly clear the final hidden class's property map.
   auto *clazz = obj->getClass(runtime);
   clazz->clearPropertyMap(runtime.getHeap());

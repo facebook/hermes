@@ -1167,11 +1167,12 @@ TEST_F(CDPAgentTest, DebuggerBytecodeScript) {
   // Compile code without debug info so that the SourceLocation would be
   // invalid.
   std::string bytecode;
-  EXPECT_TRUE(::hermes::compileJS(
-      R"(
+  EXPECT_TRUE(
+      ::hermes::compileJS(
+          R"(
     true
   )",
-      bytecode));
+          bytecode));
 
   runtimeThread_->add([this, bytecode]() {
     runtime_->evaluateJavaScript(

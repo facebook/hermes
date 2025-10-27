@@ -105,15 +105,16 @@ Handle<JSObject> createMapConstructor(Runtime &runtime) {
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
-  PseudoHandle<> propValue =
-      runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
+  PseudoHandle<> propValue = runtime.ignoreAllocationFailure(
+      JSObject::getNamed_RJS(
           mapPrototype, runtime, Predefined::getSymbolID(Predefined::entries)));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      mapPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      runtime.makeHandle<NativeFunction>(propValue.get())));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          mapPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          runtime.makeHandle<NativeFunction>(propValue.get())));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -209,8 +210,9 @@ mapPrototypeEntries(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.entries");
   }
-  auto iterator = runtime.makeHandle(JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
+  auto iterator = runtime.makeHandle(
+      JSMapIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
   return iterator.getHermesValue();
 }
@@ -261,8 +263,9 @@ mapPrototypeKeys(void *, Runtime &runtime, NativeArgs args) {
         "Non-Map object called on Map.prototype.keys");
   }
 
-  auto iterator = runtime.makeHandle(JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
+  auto iterator = runtime.makeHandle(
+      JSMapIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Key);
   return iterator.getHermesValue();
 }
@@ -301,15 +304,17 @@ mapPrototypeValues(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Map object called on Map.prototype.values");
   }
-  auto iterator = runtime.makeHandle(JSMapIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
+  auto iterator = runtime.makeHandle(
+      JSMapIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.mapIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
   return iterator.getHermesValue();
 }
 
 Handle<JSObject> createMapIteratorPrototype(Runtime &runtime) {
-  auto parentHandle = runtime.makeHandle(JSObject::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
+  auto parentHandle = runtime.makeHandle(
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
   defineMethod(
       runtime,
       parentHandle,

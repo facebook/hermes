@@ -1305,10 +1305,11 @@ SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
     next->variables.reserve(it->variables.size());
     for (auto var : it->variables) {
       constexpr bool immutableBinding = false;
-      next->variables.push_back(SerializedScope::Declaration{
-          Builder.createIdentifier(var),
-          Variable::DeclKind::Var,
-          immutableBinding});
+      next->variables.push_back(
+          SerializedScope::Declaration{
+              Builder.createIdentifier(var),
+              Variable::DeclKind::Var,
+              immutableBinding});
     }
     next->parentScope = current;
     current = next;
@@ -1336,8 +1337,11 @@ SerializedScopePtr ESTreeIRGen::serializeScope(
     }
   }
   for (auto *var : S->getVariables()) {
-    scope->variables.push_back(SerializedScope::Declaration{
-        var->getName(), var->getDeclKind(), var->getStrictImmutableBinding()});
+    scope->variables.push_back(
+        SerializedScope::Declaration{
+            var->getName(),
+            var->getDeclKind(),
+            var->getStrictImmutableBinding()});
   }
   scope->parentScope = serializeScope(S->getParent(), false);
   return scope;

@@ -89,8 +89,9 @@ bool compileJS(
   hbc::BytecodeSerializer BS{bcstream, opts};
   BS.serialize(
       *res.first->getBytecodeModule(),
-      llvh::SHA1::hash(llvh::makeArrayRef(
-          reinterpret_cast<const uint8_t *>(str.data()), str.size())));
+      llvh::SHA1::hash(
+          llvh::makeArrayRef(
+              reinterpret_cast<const uint8_t *>(str.data()), str.size())));
 
   // Flush to string.
   bcstream.flush();

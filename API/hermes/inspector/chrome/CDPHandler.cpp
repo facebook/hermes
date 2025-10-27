@@ -682,8 +682,11 @@ void CDPHandlerImpl::handle(std::string str) {
   // able to turn the debugger back on once it's disabled.
   if (isDebuggerDisabled() && isDebuggerRequest(*req) &&
       (req->method != kDebuggerEnableMethod)) {
-    sendResponseToClient(m::makeErrorResponse(
-        req->id, m::ErrorCode::ServerError, "Debugger agent is not enabled"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req->id,
+            m::ErrorCode::ServerError,
+            "Debugger agent is not enabled"));
   } else {
     req->accept(*this);
   }
@@ -711,13 +714,14 @@ void CDPHandlerImpl::sendConsoleAPICalledEventToClient(
 
   size_t argsSize = info.args.size(runtime_);
   for (size_t index = 0; index < argsSize; ++index) {
-    apiCalledNote.args.push_back(m::runtime::makeRemoteObject(
-        runtime_,
-        info.args.getValueAtIndex(runtime_, index),
-        objTable_,
-        "ConsoleObjectGroup",
-        false,
-        false));
+    apiCalledNote.args.push_back(
+        m::runtime::makeRemoteObject(
+            runtime_,
+            info.args.getValueAtIndex(runtime_, index),
+            objTable_,
+            "ConsoleObjectGroup",
+            false,
+            false));
   }
 
   sendNotificationToClient(apiCalledNote);
@@ -957,8 +961,9 @@ void CDPHandlerImpl::handle(
       resp.result = std::move(*remoteObjPtr);
       sendResponseToClient(resp);
     } else {
-      sendResponseToClient(m::makeErrorResponse(
-          req.id, m::ErrorCode::ServerError, "Object is not available"));
+      sendResponseToClient(
+          m::makeErrorResponse(
+              req.id, m::ErrorCode::ServerError, "Object is not available"));
     }
   });
 }
@@ -984,8 +989,9 @@ void CDPHandlerImpl::handle(
       resp.heapSnapshotObjectId = stream.str();
       sendResponseToClient(resp);
     } else {
-      sendResponseToClient(m::makeErrorResponse(
-          req.id, m::ErrorCode::ServerError, "Object is not available"));
+      sendResponseToClient(
+          m::makeErrorResponse(
+              req.id, m::ErrorCode::ServerError, "Object is not available"));
     }
   });
 }
@@ -1020,10 +1026,11 @@ void CDPHandlerImpl::handle(const m::profiler::StopRequest &req) {
       resp.profile = std::move(*profile);
       sendResponseToClient(resp);
     } catch (const std::exception &) {
-      sendResponseToClient(m::makeErrorResponse(
-          req.id,
-          m::ErrorCode::InternalError,
-          "Hermes profile output could not be parsed."));
+      sendResponseToClient(
+          m::makeErrorResponse(
+              req.id,
+              m::ErrorCode::InternalError,
+              "Hermes profile output could not be parsed."));
     }
   });
 }
@@ -1220,8 +1227,9 @@ class CallFunctionOnBuilder {
   }
 
  private:
-  void addParams(const std::optional<std::vector<m::runtime::CallArgument>>
-                     &maybeArguments) {
+  void addParams(
+      const std::optional<std::vector<m::runtime::CallArgument>>
+          &maybeArguments) {
     if (maybeArguments) {
       for (const auto &ca : *maybeArguments) {
         addParam(ca);
@@ -1392,10 +1400,11 @@ void CDPHandlerImpl::handle(const m::runtime::EnableRequest &req) {
           << " discarded at the beginning.";
       jsi::Array argsArray(rt, 1);
       argsArray.setValueAtIndex(rt, 0, oss.str());
-      sendConsoleAPICalledEventToClient(ConsoleMessageInfo{
-          consoleMessageCache_.front().timestamp - 0.1,
-          "warning",
-          std::move(argsArray)});
+      sendConsoleAPICalledEventToClient(
+          ConsoleMessageInfo{
+              consoleMessageCache_.front().timestamp - 0.1,
+              "warning",
+              std::move(argsArray)});
     }
 
     for (auto &msg : consoleMessageCache_) {
@@ -1910,12 +1919,13 @@ CDPHandler::CDPHandler(
     const CDPHandlerSessionConfig &sessionConfig,
     std::optional<CDPHandlerExecutionContextDescription>
         executionContextDescription)
-    : impl_(std::make_shared<CDPHandlerImpl>(
-          std::move(adapter),
-          waitForDebugger,
-          std::move(state),
-          sessionConfig,
-          std::move(executionContextDescription))),
+    : impl_(
+          std::make_shared<CDPHandlerImpl>(
+              std::move(adapter),
+              waitForDebugger,
+              std::move(state),
+              sessionConfig,
+              std::move(executionContextDescription))),
       title_(title) {
   if (processConsoleAPI) {
     impl_->installLogHandler();
@@ -2009,10 +2019,11 @@ void CDPHandlerImpl::processPendingFuncs() {
       pendingFuncs_.pop();
       func(getDebugger().getProgramState());
     } else {
-      sendResponseToClient(m::makeErrorResponse(
-          -1, // TODO: real id
-          m::ErrorCode::InvalidRequest,
-          "Already in desired attachment state"));
+      sendResponseToClient(
+          m::makeErrorResponse(
+              -1, // TODO: real id
+              m::ErrorCode::InvalidRequest,
+              "Already in desired attachment state"));
     }
   }
 }
@@ -2445,30 +2456,33 @@ void CDPHandlerImpl::installConsoleFunction(
                 jsi::Array argsArray(runtime, count);
                 for (size_t index = 0; index < count; ++index)
                   argsArray.setValueAtIndex(runtime, index, args[index]);
-                strongThis->handleConsoleAPI(ConsoleMessageInfo{
-                    strongThis->currentTimestampMs(),
-                    chromeType,
-                    std::move(argsArray)});
+                strongThis->handleConsoleAPI(
+                    ConsoleMessageInfo{
+                        strongThis->currentTimestampMs(),
+                        chromeType,
+                        std::move(argsArray)});
                 return jsi::Value::undefined();
               }
               // console.assert needs to check the first parameter before
               // logging.
               if (count == 0) {
                 // No parameters, throw a blank assertion failed message.
-                strongThis->handleConsoleAPI(ConsoleMessageInfo{
-                    strongThis->currentTimestampMs(),
-                    chromeType,
-                    jsi::Array(runtime, 0)});
+                strongThis->handleConsoleAPI(
+                    ConsoleMessageInfo{
+                        strongThis->currentTimestampMs(),
+                        chromeType,
+                        jsi::Array(runtime, 0)});
               } else if (!toBoolean(runtime, args[0])) {
                 // Shift the message array down by one to not include the
                 // condition.
                 jsi::Array argsArray(runtime, count - 1);
                 for (size_t index = 1; index < count; ++index)
                   argsArray.setValueAtIndex(runtime, index, args[index]);
-                strongThis->handleConsoleAPI(ConsoleMessageInfo{
-                    strongThis->currentTimestampMs(),
-                    chromeType,
-                    std::move(argsArray)});
+                strongThis->handleConsoleAPI(
+                    ConsoleMessageInfo{
+                        strongThis->currentTimestampMs(),
+                        chromeType,
+                        std::move(argsArray)});
               }
             }
 

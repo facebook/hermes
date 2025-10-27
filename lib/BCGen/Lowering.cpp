@@ -405,8 +405,9 @@ bool LowerAllocObject::lowerAllocObjectBuffer(
       // buffer or change the instruction.
       // Otherwise, use null as placeholder, and
       // later a PutById instruction will overwrite it with correct value.
-      prop_map.push_back(std::pair<Literal *, Literal *>(
-          propLiteral, builder.getLiteralNull()));
+      prop_map.push_back(
+          std::pair<Literal *, Literal *>(
+              propLiteral, builder.getLiteralNull()));
 
       // Since we will be defining this property twice, once in the buffer
       // once setting the correct value later, we can no longer use

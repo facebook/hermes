@@ -860,8 +860,9 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
 
   // Str.8.
   if (operationStrValue_->isString()) {
-    operationQuote(StringPrimitive::createStringView(
-        runtime_, Handle<StringPrimitive>::vmcast(operationStrValue_)));
+    operationQuote(
+        StringPrimitive::createStringView(
+            runtime_, Handle<StringPrimitive>::vmcast(operationStrValue_)));
     return true;
   }
 
@@ -938,8 +939,9 @@ ExecutionStatus JSONStringifyer::operationJA() {
   depthCount_++;
   output_.push_back(u'[');
   CallResult<uint64_t> lenRes = getArrayLikeLength_RJS(
-      runtime_.makeHandle(vmcast<JSObject>(
-          stackValue_->at(stackValue_->size() - 1).getObject(runtime_))),
+      runtime_.makeHandle(
+          vmcast<JSObject>(
+              stackValue_->at(stackValue_->size() - 1).getObject(runtime_))),
       runtime_);
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1057,8 +1059,9 @@ ExecutionStatus JSONStringifyer::operationJO() {
     }
     // tmpHandle now contains property as string.
     // JO.8.b.i
-    operationQuote(StringPrimitive::createStringView(
-        runtime_, Handle<StringPrimitive>::vmcast(tmpHandle_)));
+    operationQuote(
+        StringPrimitive::createStringView(
+            runtime_, Handle<StringPrimitive>::vmcast(tmpHandle_)));
     // JO.8.b.ii
     output_.push_back(u':');
     // JO.8.b.iii
@@ -1166,8 +1169,9 @@ CallResult<HermesValue> JSONStringifyer::stringify(Handle<> value) {
   (void)status;
 
   // Step 11 in ES5.1 15.12.3.
-  status = operationStr(HermesValue::encodeStringValue(
-      runtime_.getPredefinedString(Predefined::emptyString)));
+  status = operationStr(
+      HermesValue::encodeStringValue(
+          runtime_.getPredefinedString(Predefined::emptyString)));
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }

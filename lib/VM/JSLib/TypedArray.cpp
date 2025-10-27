@@ -404,8 +404,9 @@ class TypedArraySortModel : public SortModel {
 
     CallResult<PseudoHandle<HermesValue>> callRes{ExecutionStatus::EXCEPTION};
     {
-      Handle<> aValHandle = runtime_.makeHandle(JSObject::getOwnIndexed(
-          createPseudoHandle(self_.get()), runtime_, a));
+      Handle<> aValHandle = runtime_.makeHandle(
+          JSObject::getOwnIndexed(
+              createPseudoHandle(self_.get()), runtime_, a));
       // To avoid the need to create a handle for bVal a NoAllocScope is created
       // below, to ensure no memory allocation will happen.
       HermesValue bVal =
@@ -1320,8 +1321,9 @@ typedArrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
   auto self = args.vmcastThis<JSTypedArrayBase>();
   auto len = self->getLength();
   auto separator = args.getArg(0).isUndefined()
-      ? runtime.makeHandle(HermesValue::encodeStringValue(
-            runtime.getPredefinedString(Predefined::comma)))
+      ? runtime.makeHandle(
+            HermesValue::encodeStringValue(
+                runtime.getPredefinedString(Predefined::comma)))
       : args.getArgHandle(0);
   auto res = toString_RJS(runtime, separator);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
@@ -1751,14 +1753,15 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
   // Create NativeConstructor manually to avoid global object assignment.
   // Use NativeConstructor because %TypedArray% is supposed to be
   // a constructor function object, but must not be called directly with "new".
-  auto cons = runtime.makeHandle(NativeConstructor::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      nullptr,
-      typedArrayBaseConstructor,
-      0,
-      NativeConstructor::creatorFunction<JSObject>,
-      CellKind::JSObjectKind));
+  auto cons = runtime.makeHandle(
+      NativeConstructor::create(
+          runtime,
+          Handle<JSObject>::vmcast(&runtime.functionPrototype),
+          nullptr,
+          typedArrayBaseConstructor,
+          0,
+          NativeConstructor::creatorFunction<JSObject>,
+          CellKind::JSObjectKind));
 
   // Define %TypedArray%.prototype to be proto.
   auto st = Callable::defineNameLengthAndPrototype(
@@ -2011,28 +2014,32 @@ Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime) {
 
   // Use the same valuesMethod for Symbol.iterator.
   {
-    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-        proto, runtime, Predefined::getSymbolID(Predefined::values)));
-    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-        proto,
-        runtime,
-        Predefined::getSymbolID(Predefined::SymbolIterator),
-        dpf,
-        runtime.makeHandle<NativeFunction>(propValue.getHermesValue())));
+    auto propValue = runtime.ignoreAllocationFailure(
+        JSObject::getNamed_RJS(
+            proto, runtime, Predefined::getSymbolID(Predefined::values)));
+    runtime.ignoreAllocationFailure(
+        JSObject::defineOwnProperty(
+            proto,
+            runtime,
+            Predefined::getSymbolID(Predefined::SymbolIterator),
+            dpf,
+            runtime.makeHandle<NativeFunction>(propValue.getHermesValue())));
   }
 
   {
-    auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-        Handle<JSArray>::vmcast(&runtime.arrayPrototype),
-        runtime,
-        Predefined::getSymbolID(Predefined::toString)));
-    runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-        proto,
-        runtime,
-        Predefined::getSymbolID(Predefined::toString),
-        dpf,
-        Handle<NativeFunction>::vmcast(
-            runtime.makeHandle(std::move(propValue)))));
+    auto propValue = runtime.ignoreAllocationFailure(
+        JSObject::getNamed_RJS(
+            Handle<JSArray>::vmcast(&runtime.arrayPrototype),
+            runtime,
+            Predefined::getSymbolID(Predefined::toString)));
+    runtime.ignoreAllocationFailure(
+        JSObject::defineOwnProperty(
+            proto,
+            runtime,
+            Predefined::getSymbolID(Predefined::toString),
+            dpf,
+            Handle<NativeFunction>::vmcast(
+                runtime.makeHandle(std::move(propValue)))));
   }
 
   defineMethod(

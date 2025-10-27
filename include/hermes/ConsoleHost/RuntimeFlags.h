@@ -45,11 +45,12 @@ static OptionCategory RuntimeCategory(
 
 static opt<double> GCSanitizeRate(
     "gc-sanitize-handles",
-    desc("A probability between 0 and 1 inclusive which indicates the chance "
-         "that we do handle sanitization at a given allocation. "
-         "Sanitization moves the heap to a new location. With ASAN "
-         "enabled, this causes accesses via stale pointers into the heap to "
-         "be sanitized."),
+    desc(
+        "A probability between 0 and 1 inclusive which indicates the chance "
+        "that we do handle sanitization at a given allocation. "
+        "Sanitization moves the heap to a new location. With ASAN "
+        "enabled, this causes accesses via stale pointers into the heap to "
+        "be sanitized."),
     cat(GCCategory),
 #ifdef HERMESVM_SANITIZE_HANDLES
     init(0.01)
@@ -61,8 +62,9 @@ static opt<double> GCSanitizeRate(
 
 static opt<int64_t, false, RandomSeedParser> GCSanitizeRandomSeed(
     "gc-sanitize-handles-random-seed",
-    desc("A number used as a seed to the random engine for handle sanitization."
-         "A negative value means to choose the seed at random"),
+    desc(
+        "A number used as a seed to the random engine for handle sanitization."
+        "A negative value means to choose the seed at random"),
     cat(GCCategory),
     init(-1)
 #ifndef HERMESVM_SANITIZE_HANDLES
@@ -127,8 +129,9 @@ static opt<bool> MicrotaskQueue(
 
 static llvh::cl::opt<bool> StopAfterInit(
     "stop-after-module-init",
-    llvh::cl::desc("Exit once module loading is finished. Useful "
-                   "to measure module initialization time"),
+    llvh::cl::desc(
+        "Exit once module loading is finished. Useful "
+        "to measure module initialization time"),
     cat(RuntimeCategory));
 
 static opt<bool> TrackBytecodeIO(

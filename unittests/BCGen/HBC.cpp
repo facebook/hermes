@@ -169,8 +169,9 @@ TEST(HBCBytecodeGen, StripDebugInfo) {
   Function *globalFunction = Builder.createTopLevelFunction(
       M.getInitialScope()->createInnerScope(), {});
   auto BFG1 = BytecodeFunctionGenerator::create(BMG, 3);
-  BFG1->addDebugSourceLocation(DebugSourceLocation{
-      0, 1, 20, 300, 0, scopeDescId, DebugSourceLocation::NO_REG});
+  BFG1->addDebugSourceLocation(
+      DebugSourceLocation{
+          0, 1, 20, 300, 0, scopeDescId, DebugSourceLocation::NO_REG});
   BFG1->emitMov(1, 2);
   BMG.setEntryPointIndex(BMG.addFunction(globalFunction));
   BMG.setFunctionGenerator(globalFunction, std::move(BFG1));

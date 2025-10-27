@@ -124,18 +124,19 @@ int main(int argc, char **argv) {
   ExecuteOptions options;
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(vm::GCConfig::Builder()
-                            .withInitHeapSize(cl::InitHeapSize.bytes)
-                            .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                            .withSanitizeConfig(
-                                vm::GCSanitizeConfig::Builder()
-                                    .withSanitizeRate(cl::GCSanitizeRate)
-                                    .withRandomSeed(cl::GCSanitizeRandomSeed)
-                                    .build())
-                            .withShouldRecordStats(GCPrintStats)
-                            .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                            .withName("hvm")
-                            .build())
+          .withGCConfig(
+              vm::GCConfig::Builder()
+                  .withInitHeapSize(cl::InitHeapSize.bytes)
+                  .withMaxHeapSize(cl::MaxHeapSize.bytes)
+                  .withSanitizeConfig(
+                      vm::GCSanitizeConfig::Builder()
+                          .withSanitizeRate(cl::GCSanitizeRate)
+                          .withRandomSeed(cl::GCSanitizeRandomSeed)
+                          .build())
+                  .withShouldRecordStats(GCPrintStats)
+                  .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+                  .withName("hvm")
+                  .build())
           .withEnableBlockScoping(EnableBlockScoping)
           .withES6Promise(cl::ES6Promise)
           .withES6Proxy(cl::ES6Proxy)

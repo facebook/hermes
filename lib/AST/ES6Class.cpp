@@ -709,8 +709,9 @@ class ES6ClassesTransformations {
         // methods.
         auto *identifierNode =
             llvh::cast<ESTree::IdentifierNode>(classMember.key);
-        parameters.append(createTransformedNode<ESTree::StringLiteralNode>(
-            identifierNode, identifierNode->_name));
+        parameters.append(
+            createTransformedNode<ESTree::StringLiteralNode>(
+                identifierNode, identifierNode->_name));
 
         auto *functionExpr =
             llvh::cast<ESTree::FunctionExpressionNode>(srcNode->_value);

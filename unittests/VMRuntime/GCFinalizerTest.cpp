@@ -110,10 +110,12 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructRealRuntime) {
   {
     GCScope gcScope(*rt);
 
-    auto r1 = rt->makeHandle(HermesValue::encodeObjectValue(
-        createWithFinalizeCount(*rt, rt->getHeap(), &finalized)));
-    auto r2 = rt->makeHandle(HermesValue::encodeObjectValue(
-        createWithFinalizeCount(*rt, rt->getHeap(), &finalized)));
+    auto r1 = rt->makeHandle(
+        HermesValue::encodeObjectValue(
+            createWithFinalizeCount(*rt, rt->getHeap(), &finalized)));
+    auto r2 = rt->makeHandle(
+        HermesValue::encodeObjectValue(
+            createWithFinalizeCount(*rt, rt->getHeap(), &finalized)));
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.

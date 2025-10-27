@@ -29,8 +29,9 @@ static bool hashIsValid(llvh::ArrayRef<uint8_t> aref) {
   // Use fileLength rather than aref.end() since there may be an epilogue.
   const auto *footer = reinterpret_cast<const hbc::BytecodeFileFooter *>(
       aref.data() + header->fileLength - sizeof(BytecodeFileFooter));
-  SHA1 actual = llvh::SHA1::hash(llvh::ArrayRef<uint8_t>(
-      aref.begin(), reinterpret_cast<const uint8_t *>(footer)));
+  SHA1 actual = llvh::SHA1::hash(
+      llvh::ArrayRef<uint8_t>(
+          aref.begin(), reinterpret_cast<const uint8_t *>(footer)));
   return std::equal(actual.begin(), actual.end(), footer->fileHash);
 }
 
@@ -43,8 +44,9 @@ static void updateHash(llvh::MutableArrayRef<uint8_t> aref) {
   // Use fileLength rather than aref.end() since there may be an epilogue.
   auto *footer = reinterpret_cast<hbc::BytecodeFileFooter *>(
       aref.data() + header->fileLength - sizeof(BytecodeFileFooter));
-  SHA1 actual = llvh::SHA1::hash(llvh::ArrayRef<uint8_t>(
-      aref.begin(), reinterpret_cast<const uint8_t *>(footer)));
+  SHA1 actual = llvh::SHA1::hash(
+      llvh::ArrayRef<uint8_t>(
+          aref.begin(), reinterpret_cast<const uint8_t *>(footer)));
   std::copy(actual.begin(), actual.end(), footer->fileHash);
 }
 
@@ -718,8 +720,9 @@ void BCProviderFromBuffer::prefetch(llvh::ArrayRef<uint8_t> aref) {
   auto functionHeaders = fields.functionHeaders.data();
   const SmallFuncHeader &globalSmall = functionHeaders[globalFunctionIndex];
   RuntimeFunctionHeader global = globalSmall.flags.overflowed
-      ? RuntimeFunctionHeader(reinterpret_cast<const hbc::FunctionHeader *>(
-            aref.data() + globalSmall.getLargeHeaderOffset()))
+      ? RuntimeFunctionHeader(
+            reinterpret_cast<const hbc::FunctionHeader *>(
+                aref.data() + globalSmall.getLargeHeaderOffset()))
       : RuntimeFunctionHeader(&globalSmall);
   prefetchRegion(aref.data() + global.offset(), global.bytecodeSizeInBytes());
 }

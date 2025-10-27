@@ -64,7 +64,8 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   BytecodeSerializer BS{OS, opts};
   BS.serialize(
       *BM,
-      llvh::SHA1::hash(llvh::ArrayRef<uint8_t>{
-          reinterpret_cast<const uint8_t *>(source), strlen(source)}));
+      llvh::SHA1::hash(
+          llvh::ArrayRef<uint8_t>{
+              reinterpret_cast<const uint8_t *>(source), strlen(source)}));
   return std::vector<uint8_t>{bytecodeVector.begin(), bytecodeVector.end()};
 }

@@ -497,8 +497,9 @@ CallResult<HermesValue> intlServiceConstructor(
   }
 
   // Otherwise allocate a new one.
-  auto newHandle = runtime.makeHandle(DecoratedObject::create(
-      runtime, servicePrototype, std::move(native), additionalSlots));
+  auto newHandle = runtime.makeHandle(
+      DecoratedObject::create(
+          runtime, servicePrototype, std::move(native), additionalSlots));
   setType(newHandle);
   return newHandle.getHermesValue();
 }
@@ -566,12 +567,13 @@ enum class CollatorSlotIndexes { boundCompare, COUNT };
 PseudoHandle<NativeFunction> getBoundCompare(
     DecoratedObject *collator,
     Runtime &runtime) {
-  return createPseudoHandle(dyn_vmcast<NativeFunction>(
-      DecoratedObject::getAdditionalSlotValue(
-          collator,
-          runtime,
-          static_cast<unsigned int>(CollatorSlotIndexes::boundCompare))
-          .unboxToHV(runtime)));
+  return createPseudoHandle(
+      dyn_vmcast<NativeFunction>(
+          DecoratedObject::getAdditionalSlotValue(
+              collator,
+              runtime,
+              static_cast<unsigned int>(CollatorSlotIndexes::boundCompare))
+              .unboxToHV(runtime)));
 }
 
 void setBoundCompare(
@@ -591,12 +593,13 @@ enum class CollatorCompareSlotIndexes { collator, COUNT };
 PseudoHandle<DecoratedObject> getCollator(
     PseudoHandle<NativeFunction> compare,
     Runtime &runtime) {
-  return createPseudoHandle(vmcast<DecoratedObject>(
-      NativeFunction::getAdditionalSlotValue(
-          compare.get(),
-          runtime,
-          static_cast<unsigned int>(CollatorCompareSlotIndexes::collator))
-          .getObject(runtime)));
+  return createPseudoHandle(
+      vmcast<DecoratedObject>(
+          NativeFunction::getAdditionalSlotValue(
+              compare.get(),
+              runtime,
+              static_cast<unsigned int>(CollatorCompareSlotIndexes::collator))
+              .getObject(runtime)));
 }
 
 void setCollator(
@@ -804,12 +807,13 @@ enum class DTFSlotIndexes { boundFormat, COUNT };
 PseudoHandle<NativeFunction> getDTFBoundFormat(
     PseudoHandle<DecoratedObject> dtf,
     Runtime &runtime) {
-  return createPseudoHandle(dyn_vmcast<NativeFunction>(
-      DecoratedObject::getAdditionalSlotValue(
-          dtf.get(),
-          runtime,
-          static_cast<unsigned int>(DTFSlotIndexes::boundFormat))
-          .unboxToHV(runtime)));
+  return createPseudoHandle(
+      dyn_vmcast<NativeFunction>(
+          DecoratedObject::getAdditionalSlotValue(
+              dtf.get(),
+              runtime,
+              static_cast<unsigned int>(DTFSlotIndexes::boundFormat))
+              .unboxToHV(runtime)));
 }
 
 void setDTFBoundFormat(
@@ -829,12 +833,13 @@ enum class DTFFormatSlotIndexes { dateTimeFormat, COUNT };
 PseudoHandle<DecoratedObject> getDateTimeFormat(
     PseudoHandle<NativeFunction> format,
     Runtime &runtime) {
-  return createPseudoHandle(vmcast<DecoratedObject>(
-      NativeFunction::getAdditionalSlotValue(
-          format.get(),
-          runtime,
-          static_cast<unsigned int>(DTFFormatSlotIndexes::dateTimeFormat))
-          .getObject(runtime)));
+  return createPseudoHandle(
+      vmcast<DecoratedObject>(
+          NativeFunction::getAdditionalSlotValue(
+              format.get(),
+              runtime,
+              static_cast<unsigned int>(DTFFormatSlotIndexes::dateTimeFormat))
+              .getObject(runtime)));
 }
 
 void setDateTimeFormat(
@@ -1118,12 +1123,13 @@ enum class NFSlotIndexes { boundFormat, COUNT };
 PseudoHandle<NativeFunction> getNFBoundFormat(
     PseudoHandle<DecoratedObject> nf,
     Runtime &runtime) {
-  return createPseudoHandle(dyn_vmcast<NativeFunction>(
-      DecoratedObject::getAdditionalSlotValue(
-          nf.get(),
-          runtime,
-          static_cast<unsigned int>(NFSlotIndexes::boundFormat))
-          .unboxToHV(runtime)));
+  return createPseudoHandle(
+      dyn_vmcast<NativeFunction>(
+          DecoratedObject::getAdditionalSlotValue(
+              nf.get(),
+              runtime,
+              static_cast<unsigned int>(NFSlotIndexes::boundFormat))
+              .unboxToHV(runtime)));
 }
 
 void setNFBoundFormat(
@@ -1143,12 +1149,13 @@ enum class NFFormatSlotIndexes { numberFormat, COUNT };
 PseudoHandle<DecoratedObject> getNumberFormat(
     PseudoHandle<NativeFunction> format,
     Runtime &runtime) {
-  return createPseudoHandle(vmcast<DecoratedObject>(
-      NativeFunction::getAdditionalSlotValue(
-          format.get(),
-          runtime,
-          static_cast<unsigned int>(NFFormatSlotIndexes::numberFormat))
-          .getObject(runtime)));
+  return createPseudoHandle(
+      vmcast<DecoratedObject>(
+          NativeFunction::getAdditionalSlotValue(
+              format.get(),
+              runtime,
+              static_cast<unsigned int>(NFFormatSlotIndexes::numberFormat))
+              .getObject(runtime)));
 }
 
 void setNumberFormat(

@@ -101,12 +101,13 @@ CallResult<HermesValue> runRequireCall(
                              ->getCodeBlockMayAllocate(domain->getFunctionIndex(
                                  runtime, cjsModuleOffset));
 
-  Handle<JSFunction> func = runtime.makeHandle(JSFunction::create(
-      runtime,
-      domain,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      Runtime::makeNullHandle<Environment>(),
-      codeBlock));
+  Handle<JSFunction> func = runtime.makeHandle(
+      JSFunction::create(
+          runtime,
+          domain,
+          Handle<JSObject>::vmcast(&runtime.functionPrototype),
+          Runtime::makeNullHandle<Environment>(),
+          codeBlock));
 
   if (LLVM_UNLIKELY(
           JSFunction::executeCall3(

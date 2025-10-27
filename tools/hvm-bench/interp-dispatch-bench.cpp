@@ -196,13 +196,14 @@ int main(int argc, char **argv) {
   llvh::outs() << "Running " << (uint64_t)LoopCount << " loops of factorial("
                << FactValue << ")\n";
 
-  auto runtime =
-      Runtime::create(RuntimeConfig::Builder()
-                          .withGCConfig(GCConfig::Builder()
-                                            .withInitHeapSize(1 << 16)
-                                            .withMaxHeapSize(1 << 19)
-                                            .build())
-                          .build());
+  auto runtime = Runtime::create(
+      RuntimeConfig::Builder()
+          .withGCConfig(
+              GCConfig::Builder()
+                  .withInitHeapSize(1 << 16)
+                  .withMaxHeapSize(1 << 19)
+                  .build())
+          .build());
 
   GCScope scope(*runtime);
   auto res = benchmark(*runtime, LoopCount, FactValue);

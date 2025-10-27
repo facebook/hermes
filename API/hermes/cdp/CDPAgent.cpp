@@ -216,14 +216,15 @@ CDPAgentImpl::CDPAgentImpl(
       runtimeTaskRunner_(
           cdpDebugAPI.asyncDebuggerAPI(),
           std::move(enqueueRuntimeTaskCallback)),
-      domainAgents_(std::make_shared<DomainAgents>(
-          executionContextID,
-          cdpDebugAPI,
-          messageCallback_,
-          (state && state->debuggerAgentState)
-              ? std::move(state->debuggerAgentState)
-              : std::make_unique<DomainState>(),
-          std::move(destroyedDomainAgentsImpl))) {}
+      domainAgents_(
+          std::make_shared<DomainAgents>(
+              executionContextID,
+              cdpDebugAPI,
+              messageCallback_,
+              (state && state->debuggerAgentState)
+                  ? std::move(state->debuggerAgentState)
+                  : std::make_unique<DomainState>(),
+              std::move(destroyedDomainAgentsImpl))) {}
 
 CDPAgentImpl::~CDPAgentImpl() {
   // Call DomainAgents::dispose on the runtime thread, only keeping a copy of
@@ -371,11 +372,12 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     std::shared_ptr<message::Request> command) {
   size_t domainLength = command->method.find('.');
   if (domainLength == std::string::npos) {
-    messageCallback_(message::makeErrorResponse(
-                         command->id,
-                         message::ErrorCode::ParseError,
-                         "Malformed domain '" + command->method + "'")
-                         .toJsonStr());
+    messageCallback_(
+        message::makeErrorResponse(
+            command->id,
+            message::ErrorCode::ParseError,
+            "Malformed domain '" + command->method + "'")
+            .toJsonStr());
     return;
   }
   std::string_view method = command->method;
@@ -507,11 +509,12 @@ void CDPAgentImpl::DomainAgentsImpl::handleCommand(
     handled = false;
   }
   if (!handled) {
-    messageCallback_(message::makeErrorResponse(
-                         command->id,
-                         message::ErrorCode::MethodNotFound,
-                         "Unsupported method '" + command->method + "'")
-                         .toJsonStr());
+    messageCallback_(
+        message::makeErrorResponse(
+            command->id,
+            message::ErrorCode::MethodNotFound,
+            "Unsupported method '" + command->method + "'")
+            .toJsonStr());
   }
 }
 
@@ -538,15 +541,16 @@ CDPAgentImpl::DomainAgents::DomainAgents(
     // control block. Since we don't control when the integrator queue discards
     // their queued tasks, allocating this way allows us to be in control of
     // when DomainAgentsImpl gets cleaned up.
-    : impl_(std::shared_ptr<DomainAgentsImpl>(new DomainAgentsImpl(
-          executionContextID,
-          cdpDebugAPI.runtime(),
-          cdpDebugAPI.asyncDebuggerAPI(),
-          cdpDebugAPI.consoleMessageStorage_,
-          cdpDebugAPI.consoleMessageDispatcher_,
-          std::move(messageCallback),
-          std::move(debuggerAgentState),
-          std::move(destroyedDomainAgentsImpl)))) {}
+    : impl_(
+          std::shared_ptr<DomainAgentsImpl>(new DomainAgentsImpl(
+              executionContextID,
+              cdpDebugAPI.runtime(),
+              cdpDebugAPI.asyncDebuggerAPI(),
+              cdpDebugAPI.consoleMessageStorage_,
+              cdpDebugAPI.consoleMessageDispatcher_,
+              std::move(messageCallback),
+              std::move(debuggerAgentState),
+              std::move(destroyedDomainAgentsImpl)))) {}
 
 void CDPAgentImpl::DomainAgents::initialize() {
   impl_->initialize();
@@ -590,13 +594,14 @@ CDPAgent::CDPAgent(
     OutboundMessageFunc messageCallback,
     State state,
     std::shared_ptr<std::atomic_bool> destroyedDomainAgents)
-    : impl_(std::make_unique<CDPAgentImpl>(
-          executionContextID,
-          cdpDebugAPI,
-          enqueueRuntimeTaskCallback,
-          SynchronizedOutboundCallback(messageCallback),
-          state,
-          destroyedDomainAgents)) {
+    : impl_(
+          std::make_unique<CDPAgentImpl>(
+              executionContextID,
+              cdpDebugAPI,
+              enqueueRuntimeTaskCallback,
+              SynchronizedOutboundCallback(messageCallback),
+              state,
+              destroyedDomainAgents)) {
   impl_->initializeDomainAgents();
 }
 

@@ -17,14 +17,15 @@ namespace vm {
 Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
 
-  auto cons = runtime.makeHandle(NativeConstructor::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.functionConstructor),
-      nullptr,
-      generatorFunctionConstructor,
-      1,
-      NativeConstructor::creatorFunction<JSGeneratorFunction>,
-      CellKind::JSGeneratorFunctionKind));
+  auto cons = runtime.makeHandle(
+      NativeConstructor::create(
+          runtime,
+          Handle<JSObject>::vmcast(&runtime.functionConstructor),
+          nullptr,
+          generatorFunctionConstructor,
+          1,
+          NativeConstructor::creatorFunction<JSGeneratorFunction>,
+          CellKind::JSGeneratorFunctionKind));
 
   auto st = Callable::defineNameLengthAndPrototype(
       cons,

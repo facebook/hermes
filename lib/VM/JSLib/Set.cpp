@@ -91,22 +91,25 @@ Handle<JSObject> createSetConstructor(Runtime &runtime) {
 
   // Use the same valuesMethod for both keys() and values().
   Handle<NativeFunction> propValue = Handle<NativeFunction>::vmcast(
-      runtime.makeHandle(runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
+      runtime.makeHandle(runtime.ignoreAllocationFailure(
+          JSObject::getNamed_RJS(
+              setPrototype,
+              runtime,
+              Predefined::getSymbolID(Predefined::values)))));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
           setPrototype,
           runtime,
-          Predefined::getSymbolID(Predefined::values)))));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      setPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::keys),
-      dpf,
-      propValue));
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      setPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      propValue));
+          Predefined::getSymbolID(Predefined::keys),
+          dpf,
+          propValue));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          setPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          propValue));
 
   dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -248,8 +251,9 @@ setPrototypeEntries(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.entries");
   }
-  auto iterator = runtime.makeHandle(JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
+  auto iterator = runtime.makeHandle(
+      JSSetIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Entry);
   return iterator.getHermesValue();
 }
@@ -301,15 +305,17 @@ setPrototypeValues(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Non-Set object called on Set.prototype.values");
   }
-  auto iterator = runtime.makeHandle(JSSetIterator::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
+  auto iterator = runtime.makeHandle(
+      JSSetIterator::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.setIteratorPrototype)));
   iterator->initializeIterator(runtime, selfHandle, IterationKind::Value);
   return iterator.getHermesValue();
 }
 
 Handle<JSObject> createSetIteratorPrototype(Runtime &runtime) {
-  auto parentHandle = runtime.makeHandle(JSObject::create(
-      runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
+  auto parentHandle = runtime.makeHandle(
+      JSObject::create(
+          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype)));
   defineMethod(
       runtime,
       parentHandle,

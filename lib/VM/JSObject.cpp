@@ -1472,8 +1472,9 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
       // the key to be passed in as a primitive string value rather than a
       // symbol, if it actually did come from a string.
       Handle<> nameValHandle = name.isUniqued()
-          ? runtime.makeHandle(HermesValue::encodeStringValue(
-                runtime.getStringPrimFromSymbolID(name)))
+          ? runtime.makeHandle(
+                HermesValue::encodeStringValue(
+                    runtime.getStringPrimFromSymbolID(name)))
           : runtime.makeHandle(name);
       CallResult<bool> descDefinedRes = getOwnComputedPrimitiveDescriptor(
           receiverHandle,
@@ -2058,8 +2059,9 @@ CallResult<bool> JSObject::defineOwnPropertyInternal(
       return JSProxy::defineOwnProperty(
           selfHandle,
           runtime,
-          name.isUniqued() ? runtime.makeHandle(HermesValue::encodeStringValue(
-                                 runtime.getStringPrimFromSymbolID(name)))
+          name.isUniqued() ? runtime.makeHandle(
+                                 HermesValue::encodeStringValue(
+                                     runtime.getStringPrimFromSymbolID(name)))
                            : runtime.makeHandle(name),
           dpFlags,
           valueOrAccessor,
@@ -3056,8 +3058,8 @@ CallResult<uint32_t> appendAllPropertyNames(
       // string types. This is because 3 should be treated as a duplicate of
       // '3'. Therefore, we attempt to convert this string to a number, and
       // insert the resulting value in the duplicate set.
-      OptValue<uint32_t> strToIdx =
-          toArrayIndex(StringPrimitive::createStringView(
+      OptValue<uint32_t> strToIdx = toArrayIndex(
+          StringPrimitive::createStringView(
               runtime, Handle<StringPrimitive>::vmcast(prop)));
       if (strToIdx) {
         dedupIdxNames.insert(*strToIdx);
@@ -3117,8 +3119,8 @@ CallResult<uint32_t> appendAllPropertyNames(
         // index names, then attempt to convert this string prop to an index and
         // check that number value for duplicates.
         if (LLVM_UNLIKELY(!dupFound && dedupIdxNames.size())) {
-          OptValue<uint32_t> propNum =
-              toArrayIndex(StringPrimitive::createStringView(
+          OptValue<uint32_t> propNum = toArrayIndex(
+              StringPrimitive::createStringView(
                   runtime, Handle<StringPrimitive>::vmcast(prop)));
           if (LLVM_UNLIKELY(propNum))
             dupFound = dedupIdxNames.count(*propNum);

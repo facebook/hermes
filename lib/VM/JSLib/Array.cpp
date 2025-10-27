@@ -150,18 +150,22 @@ Handle<JSObject> createArrayConstructor(Runtime &runtime) {
       arrayPrototypeWith,
       2);
 
-  auto propValue = runtime.ignoreAllocationFailure(JSObject::getNamed_RJS(
-      arrayPrototype, runtime, Predefined::getSymbolID(Predefined::values)));
+  auto propValue = runtime.ignoreAllocationFailure(
+      JSObject::getNamed_RJS(
+          arrayPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::values)));
   runtime.arrayPrototypeValues = std::move(propValue);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
-  runtime.ignoreAllocationFailure(JSObject::defineOwnProperty(
-      arrayPrototype,
-      runtime,
-      Predefined::getSymbolID(Predefined::SymbolIterator),
-      dpf,
-      Handle<>(&runtime.arrayPrototypeValues)));
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          arrayPrototype,
+          runtime,
+          Predefined::getSymbolID(Predefined::SymbolIterator),
+          dpf,
+          Handle<>(&runtime.arrayPrototypeValues)));
 
   auto cons = defineSystemConstructor<JSArray>(
       runtime,
@@ -877,8 +881,9 @@ arrayPrototypeJoin(void *, Runtime &runtime, NativeArgs args) {
 
   // Use comma for separator if the first argument is undefined.
   auto separator = args.getArg(0).isUndefined()
-      ? runtime.makeHandle(HermesValue::encodeStringValue(
-            runtime.getPredefinedString(Predefined::comma)))
+      ? runtime.makeHandle(
+            HermesValue::encodeStringValue(
+                runtime.getPredefinedString(Predefined::comma)))
       : args.getArgHandle(0);
   auto strRes = toString_RJS(runtime, separator);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
@@ -2216,8 +2221,9 @@ arrayPrototypeSplice(void *, Runtime &runtime, NativeArgs args) {
               O,
               runtime,
               Predefined::getSymbolID(Predefined::length),
-              runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(
-                  len - actualDeleteCount + itemCount)),
+              runtime.makeHandle(
+                  HermesValue::encodeUntrustedNumberValue(
+                      len - actualDeleteCount + itemCount)),
               PropOpFlags().plusThrowOnError()) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

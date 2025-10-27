@@ -355,8 +355,9 @@ void DebuggerDomainAgent::setBlackboxPatterns(
   // If it's not valid, we respond with an error allowing the client to handle
   // that situation.
   if (!blackboxPatternRegex.valid()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidParams, "Invalid regex pattern"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::InvalidParams, "Invalid regex pattern"));
     return;
   }
 
@@ -377,16 +378,18 @@ void DebuggerDomainAgent::setBlackboxedRanges(
 
   auto blackboxedRanges = std::vector<std::pair<int, int>>();
   for (auto &position : req.positions) {
-    blackboxedRanges.push_back(std::pair<int, int>(
-        /* cdp line and column numbers are 0 based */
-        position.lineNumber + 1,
-        position.columnNumber + 1));
+    blackboxedRanges.push_back(
+        std::pair<int, int>(
+            /* cdp line and column numbers are 0 based */
+            position.lineNumber + 1,
+            position.columnNumber + 1));
   }
 
-  assert(std::is_sorted(
-      blackboxedRanges.begin(),
-      blackboxedRanges.end(),
-      blackboxRangeComparator));
+  assert(
+      std::is_sorted(
+          blackboxedRanges.begin(),
+          blackboxedRanges.end(),
+          blackboxRangeComparator));
 
   blackboxedRanges_[scriptID] = std::move(blackboxedRanges);
 
@@ -498,10 +501,11 @@ void DebuggerDomainAgent::setPauseOnExceptions(
   } else if (req.state == "uncaught") {
     mode = debugger::PauseOnThrowMode::Uncaught;
   } else {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "Unknown pause-on-exception state: " + req.state));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Unknown pause-on-exception state: " + req.state));
     return;
   }
 
@@ -569,8 +573,9 @@ void DebuggerDomainAgent::setBreakpoint(
       createHermesBreakpoint(
           static_cast<debugger::ScriptID>(scriptID), description);
   if (!hermesBreakpoint) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::ServerError, "Breakpoint creation failed"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::ServerError, "Breakpoint creation failed"));
     return;
   }
 
@@ -600,10 +605,11 @@ void DebuggerDomainAgent::setBreakpointByUrl(
   // TODO: getLocationByBreakpointRequest(req);
   // TODO: failure to parse
   if (!req.url.has_value()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "URL required; regex unsupported"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "URL required; regex unsupported"));
     return;
   }
 
@@ -644,10 +650,11 @@ void DebuggerDomainAgent::removeBreakpoint(
   auto cdpID = std::stoull(req.breakpointId);
   auto cdpBreakpoint = cdpBreakpoints_.find(cdpID);
   if (cdpBreakpoint == cdpBreakpoints_.end()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id,
-        m::ErrorCode::InvalidRequest,
-        "Unknown breakpoint ID: " + req.breakpointId));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Unknown breakpoint ID: " + req.breakpointId));
     return;
   }
 
@@ -902,8 +909,11 @@ std::optional<HermesBreakpointLocation> DebuggerDomainAgent::applyBreakpoint(
 
 bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {
   if (!enabled_) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "Debugger domain not enabled"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id,
+            m::ErrorCode::InvalidRequest,
+            "Debugger domain not enabled"));
     return false;
   }
   return true;
@@ -911,8 +921,9 @@ bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {
 
 bool DebuggerDomainAgent::checkDebuggerPaused(const m::Request &req) {
   if (!paused_ && !asyncDebugger_.isWaitingForCommand()) {
-    sendResponseToClient(m::makeErrorResponse(
-        req.id, m::ErrorCode::InvalidRequest, "Debugger is not paused"));
+    sendResponseToClient(
+        m::makeErrorResponse(
+            req.id, m::ErrorCode::InvalidRequest, "Debugger is not paused"));
     return false;
   }
   return true;

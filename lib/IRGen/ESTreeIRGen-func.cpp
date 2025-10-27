@@ -929,8 +929,9 @@ uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
 
 void ESTreeIRGen::emitFunctionEpilogue(Value *returnValue) {
   if (returnValue) {
-    Builder.setLocation(SourceErrorManager::convertEndToLocation(
-        Builder.getFunction()->getSourceRange()));
+    Builder.setLocation(
+        SourceErrorManager::convertEndToLocation(
+            Builder.getFunction()->getSourceRange()));
     Builder.createReturnInst(returnValue);
   }
 

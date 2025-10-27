@@ -266,12 +266,15 @@ Runtime::Runtime(
       stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK
-      overflowGuard_(StackOverflowGuard::nativeStackGuard(std::max(
-          runtimeConfig.getNativeStackGap(),
-          kMinSupportedNativeStackGap))),
+      overflowGuard_(
+          StackOverflowGuard::nativeStackGuard(
+              std::max(
+                  runtimeConfig.getNativeStackGap(),
+                  kMinSupportedNativeStackGap))),
 #else
-      overflowGuard_(StackOverflowGuard::depthCounterGuard(
-          Runtime::MAX_NATIVE_CALL_FRAME_DEPTH)),
+      overflowGuard_(
+          StackOverflowGuard::depthCounterGuard(
+              Runtime::MAX_NATIVE_CALL_FRAME_DEPTH)),
 #endif
       crashCallbackKey_(
           crashMgr_->registerCallback([this](int fd) { crashCallback(fd); })),
@@ -385,11 +388,12 @@ Runtime::Runtime(
 
   // Set the prototype of the global object to the standard object prototype,
   // which has now been defined.
-  ignoreAllocationFailure(JSObject::setParent(
-      vmcast<JSObject>(global_),
-      *this,
-      vmcast<JSObject>(objectPrototype),
-      PropOpFlags().plusThrowOnError()));
+  ignoreAllocationFailure(
+      JSObject::setParent(
+          vmcast<JSObject>(global_),
+          *this,
+          vmcast<JSObject>(objectPrototype),
+          PropOpFlags().plusThrowOnError()));
 
   symbolRegistry_.init(*this);
 
@@ -778,10 +782,11 @@ void Runtime::printArrayCensus(llvh::raw_ostream &os) {
   // Arrays includes ArrayStorage and SegmentedArray.
   std::map<std::pair<size_t, size_t>, std::pair<size_t, size_t>>
       arraySizeToCountAndWastedSlots;
-  auto printTable = [&os](const std::map<
-                          std::pair<size_t, size_t>,
-                          std::pair<size_t, size_t>>
-                              &arraySizeToCountAndWastedSlots) {
+  auto printTable = [&os](
+                        const std::map<
+                            std::pair<size_t, size_t>,
+                            std::pair<size_t, size_t>>
+                            &arraySizeToCountAndWastedSlots) {
     os << llvh::format(
         "%8s %8s %8s %10s %15s %15s %15s %20s %25s\n",
         (const char *)"Capacity",
@@ -973,8 +978,9 @@ CallResult<HermesValue> Runtime::run(
     const hbc::CompileFlags &compileFlags) {
 #ifdef HERMESVM_LEAN
   auto buffer = code.get();
-  return raiseEvalUnsupported(llvh::StringRef(
-      reinterpret_cast<const char *>(buffer->data()), buffer->size()));
+  return raiseEvalUnsupported(
+      llvh::StringRef(
+          reinterpret_cast<const char *>(buffer->data()), buffer->size()));
 #else
   std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
   {
@@ -1732,11 +1738,8 @@ static const struct JSBuiltin {
 } jsBuiltins[] = {
 #define BUILTIN_METHOD(object, method)
 #define PRIVATE_BUILTIN(name)
-#define JS_BUILTIN(name)                                \
-  {                                                     \
-    (uint16_t) Predefined::name,                        \
-        (uint16_t)BuiltinMethod::HermesBuiltin##_##name \
-  }
+#define JS_BUILTIN(name) \
+  {(uint16_t)Predefined::name, (uint16_t)BuiltinMethod::HermesBuiltin##_##name}
 #include "hermes/FrontEndDefs/Builtins.def"
 };
 

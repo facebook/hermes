@@ -556,8 +556,9 @@ void ESTreeIRGen::genForOfStatement(ESTree::ForOfStatementNode *forOfStmt) {
         createLRef(forOfStmt->_left, false).emitStore(nextValue);
 
         genStatement(forOfStmt->_body, IsLoopBody::Yes);
-        Builder.setLocation(SourceErrorManager::convertEndToLocation(
-            forOfStmt->_body->getSourceRange()));
+        Builder.setLocation(
+            SourceErrorManager::convertEndToLocation(
+                forOfStmt->_body->getSourceRange()));
       },
       // emitNormalCleanup.
       []() {},

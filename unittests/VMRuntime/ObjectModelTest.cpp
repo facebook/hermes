@@ -559,14 +559,15 @@ TEST_F(ObjectModelTest, NativeConstructorTest) {
     return NativeConstructor::creatorFunction<JSDate>(runtime, proto, context);
   };
 
-  auto dateCons = runtime.makeHandle(NativeConstructor::create(
-      runtime,
-      Runtime::makeNullHandle<JSObject>(),
-      &sContext,
-      nullptr,
-      0,
-      creator,
-      CellKind::JSFunctionKind));
+  auto dateCons = runtime.makeHandle(
+      NativeConstructor::create(
+          runtime,
+          Runtime::makeNullHandle<JSObject>(),
+          &sContext,
+          nullptr,
+          0,
+          creator,
+          CellKind::JSFunctionKind));
   auto crtRes = dateCons->newObject(
       dateCons, runtime, Runtime::makeNullHandle<JSObject>());
   ASSERT_EQ(ExecutionStatus::RETURNED, crtRes.getStatus());
@@ -758,8 +759,9 @@ TEST_F(ObjectModelTest, NamedOrIndexed) {
 
   // Create non-symbol versions of these symbols and then test with
   // getComputed().
-  auto nonIndexIDString = runtime.makeHandle(HermesValue::encodeStringValue(
-      runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
+  auto nonIndexIDString = runtime.makeHandle(
+      HermesValue::encodeStringValue(
+          runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
   auto indexId1Num =
       runtime.makeHandle(HermesValue::encodeTrustedNumberValue(2));
   auto indexId2Num =
@@ -782,8 +784,9 @@ TEST_F(ObjectModelTest, HasProperty) {
 
   auto nonIndexID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"prop1"));
-  auto nonIndexIDString = runtime.makeHandle(HermesValue::encodeStringValue(
-      runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
+  auto nonIndexIDString = runtime.makeHandle(
+      HermesValue::encodeStringValue(
+          runtime.getIdentifierTable().getStringPrim(runtime, *nonIndexID)));
   auto indexID = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"5"));
   auto indexIDNum =
@@ -912,10 +915,11 @@ struct ObjectModelLargeHeapTest : public RuntimeTestFixtureBase {
   ObjectModelLargeHeapTest()
       : RuntimeTestFixtureBase(
             RuntimeConfig::Builder()
-                .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder)
-                                  .withInitHeapSize(1 << 20)
-                                  .withMaxHeapSize(1 << 26)
-                                  .build())
+                .withGCConfig(
+                    GCConfig::Builder(kTestGCConfigBuilder)
+                        .withInitHeapSize(1 << 20)
+                        .withMaxHeapSize(1 << 26)
+                        .build())
                 .build()) {}
 };
 

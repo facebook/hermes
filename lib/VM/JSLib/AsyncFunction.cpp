@@ -26,14 +26,15 @@ Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime) {
 
   /// 26.7.2 Properties of the AsyncFunction Constructor
   /// has a [[Prototype]] internal slot whose value is %Function%.
-  auto cons = runtime.makeHandle(NativeConstructor::create(
-      runtime,
-      Handle<JSObject>::vmcast(&runtime.functionConstructor),
-      nullptr,
-      asyncFunctionConstructor,
-      1,
-      NativeConstructor::creatorFunction<JSAsyncFunction>,
-      CellKind::JSAsyncFunctionKind));
+  auto cons = runtime.makeHandle(
+      NativeConstructor::create(
+          runtime,
+          Handle<JSObject>::vmcast(&runtime.functionConstructor),
+          nullptr,
+          asyncFunctionConstructor,
+          1,
+          NativeConstructor::creatorFunction<JSAsyncFunction>,
+          CellKind::JSAsyncFunctionKind));
 
   /// has a "name" property whose value is "AsyncFunction".
   /// 26.7.2.1 AsyncFunction.length

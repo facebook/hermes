@@ -63,8 +63,9 @@ class BytecodeSerializer {
   void writeBinaryArray(const ArrayRef<T> array) {
     size_t size = sizeof(T) * array.size();
     if (!isLayout_) {
-      outputHasher_.update(llvh::ArrayRef<uint8_t>(
-          reinterpret_cast<const uint8_t *>(array.data()), size));
+      outputHasher_.update(
+          llvh::ArrayRef<uint8_t>(
+              reinterpret_cast<const uint8_t *>(array.data()), size));
       os_.write(reinterpret_cast<const char *>(array.data()), size);
     }
     loc_ += size;

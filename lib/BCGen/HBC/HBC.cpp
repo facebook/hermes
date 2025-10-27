@@ -528,8 +528,9 @@ std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
       traverseCJSModuleNames(M, shouldGenerate, addString);
     }
 
-    BMGen.initializeStringTable(UniquingStringLiteralAccumulator::toTable(
-        std::move(strings), options.optimizationEnabled));
+    BMGen.initializeStringTable(
+        UniquingStringLiteralAccumulator::toTable(
+            std::move(strings), options.optimizationEnabled));
   }
 
   // Generate the serialized literal buffers.

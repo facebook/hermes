@@ -623,11 +623,12 @@ TEST_F(ConnectionTests, testBytecodeScript) {
   // Compile code without debug info so that the SourceLocation would be
   // invalid.
   std::string bytecode;
-  EXPECT_TRUE(::hermes::compileJS(
-      R"(
+  EXPECT_TRUE(
+      ::hermes::compileJS(
+          R"(
     true
   )",
-      bytecode));
+          bytecode));
 
   asyncRuntime.evaluateBytecodeAsync(bytecode);
 

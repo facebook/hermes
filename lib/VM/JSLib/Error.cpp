@@ -183,8 +183,8 @@ static CallResult<HermesValue> constructErrorObject(
   if (auto options = Handle<JSObject>::dyn_vmcast(opts)) {
     GCScopeMarkerRAII marker{runtime};
     NamedPropertyDescriptor desc;
-    Handle<JSObject> propObj =
-        runtime.makeHandle(JSObject::getNamedDescriptorPredefined(
+    Handle<JSObject> propObj = runtime.makeHandle(
+        JSObject::getNamedDescriptorPredefined(
             options, runtime, Predefined::cause, desc));
     if (propObj) {
       // a. Let cause be ? Get(options, "cause").
