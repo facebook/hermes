@@ -1,7 +1,16 @@
 name: build-apple-slices-hermes
 
 on:
-  workflow_call
+  workflow_call:
+    inputs:
+      release-type:
+        required: true
+        description: The type of release we are building. It could be commitly, release or dry-run
+        type: string
+      hermes-version:
+        required: true
+        description: The Hermes version to use for this build
+        type: string
 
 jobs:
   build_apple_slices_hermes:
@@ -18,6 +27,16 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+    - name: Setup git safe folders
+      shell: bash
+      run: git config --global --add safe.directory '*'
+    - name: Setup node.js
+      uses: ./.github/actions/setup-node
+    - name: Install node dependencies
+      uses: ./.github/actions/yarn-install
+    - name: Set artifacts version
+      shell: bash
+      run: node ./utils/scripts/hermes/set-artifacts-version.js --build-type ${{ inputs.release-type }} --hermesVersion "${{ inputs.hermes-version }}"
     - name: Setup xcode
       uses: ./.github/actions/setup-xcode
     - name: Restore HermesC Artifact

@@ -53,7 +53,14 @@ jobs:
     uses: ./.github/workflows/build-hermesc-apple.yml
   build_apple_slices_hermes:
     uses: ./.github/workflows/build-apple-slices-hermes.yml
-    needs: build_hermesc_apple
+    needs:
+      [
+        set_release_type,
+        build_hermesc_apple,
+      ]
+    with:
+      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
+      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
   build_hermes_macos:
     uses: ./.github/workflows/build-hermes-macos.yml
     needs: build_apple_slices_hermes
