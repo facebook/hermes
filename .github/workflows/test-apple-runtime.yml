@@ -5,12 +5,13 @@ on:
 
 jobs:
   test-apple-runtime:
-    runs-on: macos-14
+    runs-on: macos-15
     env:
       TERM: dumb
       HERMES_WS_DIR: "/tmp/hermes"
       HOMEBREW_NO_AUTO_UPDATE: 1
     strategy:
+      fail-fast: false
       matrix:
         include:
           - destination: platform=macOS
@@ -19,7 +20,7 @@ jobs:
           - destination: platform=iOS Simulator,name=iPhone 16
             scheme: ApplePlatformsIntegrationMobileTests
             name: Test iPhone application
-          - destination: platform=visionOS Simulator,name=Apple Vision Pro
+          - destination: platform=visionOS Simulator,OS=26.0,name=Apple Vision Pro
             scheme: ApplePlatformsIntegrationVisionOSTests
             name: Test Apple Vision application
           - destination: platform=tvOS Simulator,name=Apple TV

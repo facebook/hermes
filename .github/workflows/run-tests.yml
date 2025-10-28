@@ -5,7 +5,7 @@ on:
 
 jobs:
   test-macos:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
@@ -123,7 +123,7 @@ jobs:
         name: emulator.log
         path: emulator.log
   test-macos-test262:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
     - uses: maxim-lobanov/setup-xcode@v1
       with:

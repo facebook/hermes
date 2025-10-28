@@ -94,6 +94,20 @@ function configure_apple_framework {
     xcode_15_flags="LINKER:-ld_classic"
   fi
 
+  # For catalyst, we need to set some additional C and Cxx flags
+  shared_clang_flags=""
+  if [[ $1 == "catalyst" ]]; then
+    # return the right target flags for catalyst depending on the architecture
+    if [[ $2 == "x86_64" ]]; then
+      shared_clang_flags="-target x86_64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
+    elif [[ $2 == "arm64" ]]; then
+      shared_clang_flags="-target arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
+    else
+      echo "Error: unknown architecture passed $1"
+      exit 1
+    fi
+  fi
+
   pushd "$HERMES_PATH" > /dev/null || exit 1
     cmake -S . -B "build_$1" \
       -DHERMES_EXTRA_LINKER_FLAGS="$xcode_15_flags" \
@@ -108,8 +122,8 @@ function configure_apple_framework {
       -DHERMES_ENABLE_BITCODE:BOOLEAN=false \
       -DHERMES_BUILD_APPLE_FRAMEWORK:BOOLEAN=true \
       -DHERMES_BUILD_SHARED_JSI:BOOLEAN=false \
-      -DCMAKE_CXX_FLAGS:STRING="-gdwarf" \
-      -DCMAKE_C_FLAGS:STRING="-gdwarf" \
+      -DCMAKE_CXX_FLAGS:STRING="-gdwarf $shared_clang_flags" \
+      -DCMAKE_C_FLAGS:STRING="-gdwarf $shared_clang_flags" \
       -DIMPORT_HOST_COMPILERS:PATH="$IMPORT_HOST_COMPILERS_PATH" \
       -DHERMES_RELEASE_VERSION="$(get_release_version)" \
       -DJSI_DIR="$JSI_PATH" \
