@@ -16,8 +16,6 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/TwineChar16.h"
 
-#include "llvh/ADT/Optional.h"
-
 namespace hermes {
 namespace vm {
 
