@@ -50,7 +50,7 @@ OMITTED_KEYS = {
     # TODO: remember to update or remove them once we update the parser.
     "FunctionDeclaration": {"expression", "predicate"},
     "FunctionExpression": {"expression", "predicate"},
-    "ArrowFunctionExpression": {"generator"},
+    "ArrowFunctionExpression": {"id", "generator"},
     "ForInStatement": {"each"},
     "Identifier": {"optional"},
     "MethodDefinition": {"decorators"},
