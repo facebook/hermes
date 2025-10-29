@@ -4,7 +4,7 @@ on: workflow_call
 
 jobs:
   build-hermes-macos:
-    runs-on: macos-14
+    runs-on: macos-15
     continue-on-error: true
     env:
       HERMES_TARBALL_ARTIFACTS_DIR: /tmp/hermes/hermes-runtime-darwin
