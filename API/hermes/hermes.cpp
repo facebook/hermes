@@ -12,6 +12,7 @@
 #include "hermes/ADT/ManagedChunkedList.h"
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/DebuggerAPI.h"
 #include "hermes/Platform/Logging.h"
@@ -1712,41 +1713,29 @@ size_t HermesRuntimeImpl::rootsListLengthForTests() const {
 
 namespace {
 
-/// An implementation of PreparedJavaScript that wraps a BytecodeProvider.
+/// An implementation of PreparedJavaScript that can work across multiple
+/// runtime instances. It stores either compiled bytecode (for eager
+/// compilation) or source code (for lazy compilation).
 class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
-  std::shared_ptr<hbc::BCProvider> bcProvider_;
-  vm::RuntimeModuleFlags runtimeFlags_;
-  std::string sourceURL_;
-  /// The Runtime that's used to create this PreparedJavaScript.
-  /// The PreparedJavaScript must not be run on any other runtime.
-  vm::Runtime &runtime_;
-
  public:
+  /// For bytecode path (eager compilation): bytecodeBuffer is non-null
+  std::shared_ptr<const jsi::Buffer> bytecodeBuffer;
+
+  /// For source path (lazy compilation): sourceBuffer is non-null
+  std::shared_ptr<const jsi::Buffer> sourceBuffer;
+  std::shared_ptr<const jsi::Buffer> sourceMapBuffer; // may be null
+
+  std::string sourceURL;
+
   explicit HermesPreparedJavaScript(
-      std::unique_ptr<hbc::BCProvider> bcProvider,
-      vm::RuntimeModuleFlags runtimeFlags,
-      std::string sourceURL,
-      vm::Runtime &runtime)
-      : bcProvider_(std::move(bcProvider)),
-        runtimeFlags_(runtimeFlags),
-        sourceURL_(std::move(sourceURL)),
-        runtime_(runtime) {}
-
-  std::shared_ptr<hbc::BCProvider> bytecodeProvider() const {
-    return bcProvider_;
-  }
-
-  vm::RuntimeModuleFlags runtimeFlags() const {
-    return runtimeFlags_;
-  }
-
-  const std::string &sourceURL() const {
-    return sourceURL_;
-  }
-
-  vm::Runtime &runtime() const {
-    return runtime_;
-  }
+      std::shared_ptr<const jsi::Buffer> bytecodeBuffer,
+      std::shared_ptr<const jsi::Buffer> sourceBuffer,
+      std::shared_ptr<const jsi::Buffer> sourceMapBuffer,
+      std::string sourceURL)
+      : bytecodeBuffer(std::move(bytecodeBuffer)),
+        sourceBuffer(std::move(sourceBuffer)),
+        sourceMapBuffer(std::move(sourceMapBuffer)),
+        sourceURL(std::move(sourceURL)) {}
 };
 
 } // namespace
@@ -1756,49 +1745,87 @@ HermesRuntimeImpl::prepareJavaScriptWithSourceMap(
     const std::shared_ptr<const jsi::Buffer> &jsiBuffer,
     const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
     std::string sourceURL) {
-  std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
-  vm::RuntimeModuleFlags runtimeFlags{};
-
   auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
   bool isBytecode = api->isHermesBytecode(jsiBuffer->data(), jsiBuffer->size());
-#ifdef HERMESVM_PLATFORM_LOGGING
-  hermesLog(
-      "HermesVM", "Prepare JS on %s.", isBytecode ? "bytecode" : "source");
-#endif
 
-  // Construct the BC provider either from buffer or source.
+  // If input is already bytecode, store it directly
   if (isBytecode) {
     if (sourceMapBuf) {
       throw std::logic_error("Source map cannot be specified with bytecode");
     }
-    bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-        std::make_unique<BufferAdapter>(jsiBuffer));
-    runtimeFlags.persistent = true;
-  } else {
+#ifdef HERMESVM_PLATFORM_LOGGING
+    hermesLog("HermesVM", "Prepare JS on bytecode.");
+#endif
+    return std::make_shared<const HermesPreparedJavaScript>(
+        jsiBuffer, // bytecodeBuffer
+        nullptr, // sourceBuffer
+        nullptr, // sourceMapBuffer
+        std::move(sourceURL));
+  }
+
+  // Check if we should eagerly compile or defer (lazy compilation)
+  bool shouldEagerlyCompile = !compileFlags_.lazy ||
+      jsiBuffer->size() < compileFlags_.preemptiveFileCompilationThreshold;
+
+  if (shouldEagerlyCompile) {
+    // Eager compilation: compile to bytecode now
+#ifdef HERMESVM_PLATFORM_LOGGING
+    hermesLog("HermesVM", "Prepare JS with eager compilation.");
+#endif
+
     llvh::StringRef sourceMap;
     std::unique_ptr<BufferAdapter> buf0;
     if (sourceMapBuf) {
       buf0 = ensureZeroTerminated(sourceMapBuf);
-      // The source map StringRef must include the null terminator.
       sourceMap = llvh::StringRef((const char *)buf0->data(), buf0->size() + 1);
     }
-    bcErr = hbc::createBCProviderFromSrc(
-        ensureZeroTerminated(jsiBuffer), sourceURL, sourceMap, compileFlags_);
-    if (bcErr.first) {
-      runtimeFlags.persistent = bcErr.first->allowPersistent();
+
+    // Ensure compilation is eager.
+    auto cflags = compileFlags_;
+    cflags.lazy = false;
+    auto bcErr = hbc::createBCProviderFromSrc(
+        ensureZeroTerminated(jsiBuffer), sourceURL, sourceMap, cflags);
+
+    if (!bcErr.first) {
+      LOG_EXCEPTION_CAUSE(
+          "Compiling JS failed: %s, sourceURL: %s",
+          bcErr.second.c_str(),
+          sourceURL.c_str());
+      throw jsi::JSINativeException(
+          "Compiling JS failed: " + std::move(bcErr.second) +
+          ", sourceURL: " + sourceURL);
     }
+
+    // Extract bytecode from BCProvider and store it
+    std::string bytecodeStr;
+    llvh::raw_string_ostream bcstream(bytecodeStr);
+
+    ::hermes::BytecodeGenerationOptions opts(::hermes::EmitBundle);
+
+    hbc::serializeBytecodeModule(
+        *bcErr.first->getBytecodeModule(), {}, bcstream, opts);
+
+    bcstream.flush();
+
+    std::shared_ptr<const jsi::Buffer> bytecodeBuffer =
+        std::make_shared<jsi::StringBuffer>(std::move(bytecodeStr));
+
+    return std::make_shared<const HermesPreparedJavaScript>(
+        bytecodeBuffer, // bytecodeBuffer
+        nullptr, // sourceBuffer
+        nullptr, // sourceMapBuffer
+        std::move(sourceURL));
   }
-  if (!bcErr.first) {
-    LOG_EXCEPTION_CAUSE(
-        "Compiling JS failed: %s, sourceURL: %s",
-        bcErr.second.c_str(),
-        sourceURL.c_str());
-    throw jsi::JSINativeException(
-        "Compiling JS failed: " + std::move(bcErr.second) +
-        ", sourceURL: " + sourceURL);
-  }
+
+  // Lazy compilation: store source for compilation at evaluation time
+#ifdef HERMESVM_PLATFORM_LOGGING
+  hermesLog("HermesVM", "Prepare JS with lazy compilation (store source).");
+#endif
   return std::make_shared<const HermesPreparedJavaScript>(
-      std::move(bcErr.first), runtimeFlags, std::move(sourceURL), runtime_);
+      nullptr, // bytecodeBuffer
+      jsiBuffer, // sourceBuffer
+      sourceMapBuf, // sourceMapBuffer
+      std::move(sourceURL));
 }
 
 std::shared_ptr<const jsi::PreparedJavaScript>
@@ -1815,21 +1842,36 @@ jsi::Value HermesRuntimeImpl::evaluatePreparedJavaScript(
       "js must be an instance of HermesPreparedJavaScript");
   const auto *hermesPrep =
       static_cast<const HermesPreparedJavaScript *>(js.get());
-  if (&hermesPrep->runtime() != &runtime_) {
-    // PreparedJavaScript must not be used across runtimes because it could lead
-    // to a race if lazy compilation attempts to modify BCProvider from both
-    // runtimes simultaneously.
-    ::hermes::hermes_fatal(
-        "JS must be prepared by the same runtime as it is evaluated on");
+
+  // Check which path: bytecode or source
+  if (hermesPrep->bytecodeBuffer) {
+    // Bytecode path: create BCProvider and execute
+    auto bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+        std::make_unique<BufferAdapter>(hermesPrep->bytecodeBuffer));
+
+    if (!bcErr.first) {
+      throw jsi::JSINativeException(
+          "Failed to create BCProvider from bytecode: " + bcErr.second);
+    }
+
+    vm::GCScope gcScope(runtime_);
+    vm::RuntimeModuleFlags runtimeFlags{};
+    runtimeFlags.persistent = true;
+    auto res = runtime_.runBytecode(
+        std::move(bcErr.first),
+        runtimeFlags,
+        hermesPrep->sourceURL,
+        vm::Runtime::makeNullHandle<vm::Environment>());
+    checkStatus(res.getStatus());
+    return valueFromHermesValue(*res);
+  } else {
+    // Source path: delegate to evaluateJavaScript
+    // Each runtime compiles independently, avoiding shared mutable state
+    return evaluateJavaScriptWithSourceMap(
+        hermesPrep->sourceBuffer,
+        hermesPrep->sourceMapBuffer,
+        hermesPrep->sourceURL);
   }
-  vm::GCScope gcScope(runtime_);
-  auto res = runtime_.runBytecode(
-      hermesPrep->bytecodeProvider(),
-      hermesPrep->runtimeFlags(),
-      hermesPrep->sourceURL(),
-      vm::Runtime::makeNullHandle<vm::Environment>());
-  checkStatus(res.getStatus());
-  return valueFromHermesValue(*res);
 }
 
 jsi::Value HermesRuntimeImpl::evaluateJavaScript(

@@ -104,6 +104,14 @@ VariableInfoAtDepth getVariableInfoAtDepth(
   hermes_fatal("Lean VM does not support debugging");
 }
 
+void serializeBytecodeModule(
+    BytecodeModule &BM,
+    const SHA1 &sourceHash,
+    llvh::raw_ostream &os,
+    BytecodeGenerationOptions options) {
+  hermes_fatal("Lean VM does not support bytecode serialization");
+}
+
 } // namespace hbc
 } // namespace hermes
 
