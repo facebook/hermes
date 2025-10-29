@@ -4,8 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       release-type:
-        description: 'Release type (release, dry-run)'
         required: false
+        description: 'Release type (release, dry-run)'
+        type: choice
+        options:
+          - release
+          - dry-run
         default: 'dry-run'
   pull_request:
   push:
