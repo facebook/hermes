@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       release-type:
-        description: 'Release type (release, commitly, dry-run)'
         required: false
-        default: 'dry-run'
+        description: The type of release we are building. It could be commitly, release or dry-run
+        type: choice
+        options:
+          - release
+          - commitly
+          - dry-run
+        default: dry-run
   pull_request:
   push:
     branches:
