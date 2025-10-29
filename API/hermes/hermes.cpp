@@ -1593,12 +1593,82 @@ void HermesRuntimeImpl::unwatchTimeLimit() {
   }
 }
 
+namespace {
+
+/// If the buffer contains an embedded terminating zero, shrink it, so it is
+/// one past the size, as per the LLVM MemoryBuffer convention. Otherwise, copy
+/// it into a new zero-terminated buffer.
+std::unique_ptr<BufferAdapter> ensureZeroTerminated(
+    const std::shared_ptr<const jsi::Buffer> &buf) {
+  size_t size = buf->size();
+  const uint8_t *data = buf->data();
+
+  // Check for zero termination
+  if (size != 0 && data[size - 1] == 0) {
+    return std::make_unique<BufferAdapter>(buf, data, size - 1);
+  } else {
+    // Copy into a zero-terminated instance.
+    return std::make_unique<BufferAdapter>(std::make_shared<jsi::StringBuffer>(
+        std::string((const char *)data, size)));
+  }
+}
+
+} // namespace
+
 jsi::Value HermesRuntimeImpl::evaluateJavaScriptWithSourceMap(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::shared_ptr<const jsi::Buffer> &sourceMapBuf,
     const std::string &sourceURL) {
-  return evaluatePreparedJavaScript(
-      prepareJavaScriptWithSourceMap(buffer, sourceMapBuf, sourceURL));
+  std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bcErr{};
+  vm::RuntimeModuleFlags runtimeFlags{};
+
+  auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+  bool isBytecode = api->isHermesBytecode(buffer->data(), buffer->size());
+#ifdef HERMESVM_PLATFORM_LOGGING
+  hermesLog(
+      "HermesVM", "Prepare JS on %s.", isBytecode ? "bytecode" : "source");
+#endif
+
+  // Construct the BC provider either from buffer or source.
+  if (isBytecode) {
+    if (sourceMapBuf) {
+      throw std::logic_error("Source map cannot be specified with bytecode");
+    }
+    bcErr = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+        std::make_unique<BufferAdapter>(buffer));
+    runtimeFlags.persistent = true;
+  } else {
+    llvh::StringRef sourceMap;
+    std::unique_ptr<BufferAdapter> buf0;
+    if (sourceMapBuf) {
+      buf0 = ensureZeroTerminated(sourceMapBuf);
+      // The source map StringRef must include the null terminator.
+      sourceMap = llvh::StringRef((const char *)buf0->data(), buf0->size() + 1);
+    }
+    bcErr = hbc::createBCProviderFromSrc(
+        ensureZeroTerminated(buffer), sourceURL, sourceMap, compileFlags_);
+    if (bcErr.first) {
+      runtimeFlags.persistent = bcErr.first->allowPersistent();
+    }
+  }
+  if (!bcErr.first) {
+    LOG_EXCEPTION_CAUSE(
+        "Compiling JS failed: %s, sourceURL: %s",
+        bcErr.second.c_str(),
+        sourceURL.c_str());
+    throw jsi::JSINativeException(
+        "Compiling JS failed: " + std::move(bcErr.second) +
+        ", sourceURL: " + sourceURL);
+  }
+
+  vm::GCScope gcScope(runtime_);
+  auto res = runtime_.runBytecode(
+      std::move(bcErr.first),
+      runtimeFlags,
+      sourceURL,
+      vm::Runtime::makeNullHandle<vm::Environment>());
+  checkStatus(res.getStatus());
+  return valueFromHermesValue(*res);
 }
 
 #ifdef HERMES_SH_UNIT_FN
@@ -1678,24 +1748,6 @@ class HermesPreparedJavaScript final : public jsi::PreparedJavaScript {
     return runtime_;
   }
 };
-
-/// If the buffer contains an embedded terminating zero, shrink it, so it is
-/// one past the size, as per the LLVM MemoryBuffer convention. Otherwise, copy
-/// it into a new zero-terminated buffer.
-std::unique_ptr<BufferAdapter> ensureZeroTerminated(
-    const std::shared_ptr<const jsi::Buffer> &buf) {
-  size_t size = buf->size();
-  const uint8_t *data = buf->data();
-
-  // Check for zero termination
-  if (size != 0 && data[size - 1] == 0) {
-    return std::make_unique<BufferAdapter>(buf, data, size - 1);
-  } else {
-    // Copy into a zero-terminated instance.
-    return std::make_unique<BufferAdapter>(std::make_shared<jsi::StringBuffer>(
-        std::string((const char *)data, size)));
-  }
-}
 
 } // namespace
 
