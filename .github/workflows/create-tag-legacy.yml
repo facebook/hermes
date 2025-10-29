@@ -1,0 +1,36 @@
+name: Publish Tag Legacy
+on:
+  workflow_dispatch:
+    inputs:
+      rnVersion:
+        description: "The React Native version that will use this tag"
+        required: true
+      targetSha:
+        description: "The SHA you want to tag. If not specified it will tag the HEAD of the selected branch"
+        required: false
+
+jobs:
+  publish:
+    runs-on: [ubuntu-latest]
+
+    steps:
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Get the target SHA
+        id: targetSha
+        run: echo "targetSha=$(if [ -z "$TARGET_SHA" ]; then echo $GITHUB_SHA; else echo $TARGET_SHA; fi)" >> $GITHUB_OUTPUT
+        env:
+          TARGET_SHA: ${{ github.event.inputs.targetSha }}
+
+      - name: Create tag
+        uses: actions/github-script@v5
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/hermes-${{ steps.date.outputs.date }}-RNv${{ github.event.inputs.rnVersion }}-${{ steps.targetSha.outputs.targetSha }}',
+              sha: '${{ steps.targetSha.outputs.targetSha }}'
+            })
