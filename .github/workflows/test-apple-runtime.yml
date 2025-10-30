@@ -36,14 +36,40 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: brew install ninja
+      # =============================== #
+      # Download visionOS SDK if Needed #
+      # =============================== #
       - name: Download visionOS SDK
+        id: download-visionos-sdk
         shell: bash
         if: ${{ matrix.scheme == 'ApplePlatformsIntegrationVisionOSTests' }}
+        continue-on-error: true
         run: xcodebuild -downloadPlatform visionOS
+
+      # The download is flaky. Sometimes it fails to connect. So we wait 5 sec and retry once.
+      - name: Try again to download visionOS SDK
+        if: ${{ matrix.scheme == 'ApplePlatformsIntegrationVisionOSTests' && steps.download-visionos-sdk.outcome == 'failure' }}
+        shell: bash
+        run: |
+          sleep 5
+          xcodebuild -downloadPlatform visionOS
+      # =========================== #
+      # Download tvOS SDK if Needed #
+      # =========================== #
       - name: Download tvOS SDK
+        id: download-tvos-sdk
         shell: bash
         if: ${{ matrix.scheme == 'ApplePlatformsIntegrationTVOSTests' }}
+        continue-on-error: true
         run: xcodebuild -downloadPlatform tvOS
+      # The download is flaky. Sometimes it fails to connect. So we wait 5 sec and retry once.
+      - name: Try again to download visionOS SDK
+        if: ${{ matrix.scheme == 'ApplePlatformsIntegrationTVOSTests' && steps.download-tvos-sdk.outcome == 'failure' }}
+        shell: bash
+        run: |
+          sleep 5
+          xcodebuild -downloadPlatform tvOS
+
       - name: Use built artifacts
         uses: actions/download-artifact@v4
         with:
