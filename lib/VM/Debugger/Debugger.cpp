@@ -26,7 +26,6 @@
 #ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
 #pragma GCC diagnostic ignored "-Wshorten-64-to-32"
 #endif
-#ifdef HERMES_ENABLE_DEBUGGER
 
 namespace hermes {
 namespace vm {
@@ -1667,7 +1666,5 @@ auto Debugger::resolveScriptId(
 
 } // namespace vm
 } // namespace hermes
-
-#endif
 
 #endif // HERMES_ENABLE_DEBUGGER
