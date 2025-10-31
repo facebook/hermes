@@ -124,6 +124,8 @@ double HermesValue32::getNumber(PointerBase &pb) const {
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2:
       return encodeObjectValue(static_cast<GCCell *>(hv.getObject()), runtime);
+    case HermesValue::ETag::Native1:
+    case HermesValue::ETag::Native2:
     default:
       assert(
           hv.isNumber() && "Native values are forbidden in SmallHermesValue");
