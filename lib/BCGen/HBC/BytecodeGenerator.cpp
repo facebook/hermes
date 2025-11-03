@@ -8,6 +8,7 @@
 #include "BytecodeGenerator.h"
 
 #include "LoweringPipelines.h"
+#include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
@@ -17,12 +18,10 @@
 #include "hermes/BCGen/Lowering.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/Analysis.h"
-#include "hermes/Optimizer/PassManager/PassManager.h"
 
-#include "llvh/ADT/SmallString.h"
-#include "llvh/Support/Format.h"
+#include <variant>
 
-#include <unordered_map>
+#define DEBUG_TYPE "hbc-bytecode-generator"
 
 namespace hermes {
 namespace hbc {
@@ -453,22 +452,184 @@ void BytecodeModuleGenerator::collectStrings() {
   }
 }
 
-/// Iterate over all the instructions in \p F and make sure the environment ID
-/// is valid.
-static void fixupEnvironmentIDs(Function *F) {
-  DominanceInfo D(F);
-  IRBuilder builder(F);
-  // Check for dominance and update IDs to 0 if not matching.
-  for (auto &BB : *F) {
-    for (auto &I : BB) {
-      if (auto *implicitEnvOperand =
-              llvh::dyn_cast_or_null<Instruction>(I.getImplicitEnvOperand())) {
-        if (!D.properlyDominates(implicitEnvOperand, &I)) {
+namespace {
+
+class FixupEnvIDVisitor;
+
+/// A "stack node" used by the dominator tree DFS visitor to keep track where
+/// it is in the tree. This specialization pushes and pops a
+/// ScopedHashTableScope, to pop all dominating environments when we go back
+/// up the tree.
+class FixupEnvIDStackNode : public DomTreeDFS::StackNode {
+  ScopedHashTableScope<Value *, std::monostate> scope_;
+
+ public:
+  explicit inline FixupEnvIDStackNode(
+      FixupEnvIDVisitor *ctx,
+      const DominanceInfoNode *n);
+};
+
+/// A utility class to clear the environment ID from instructions that are not
+/// dominated by the instruction creating the environment. This happens in
+/// generators, albeit rarely, making the instruction non-inspectable. In those
+/// rare cases we need to ensure we never produce invalid debugging information.
+/// The "correct" solution would be for this never to happen in the first place,
+/// but we haven't figured out how yet.
+///
+/// In practice this also clears up the environment ID of the instructions
+/// creating each environment, because they are tagged with their own
+/// environment when they arrive at this stage.
+///
+/// Implemented as a DFS dominator tree visitor, keeping the currently
+/// dominating environments in a ScopedHashTable.
+class FixupEnvIDVisitor
+    : public DomTreeDFS::Visitor<FixupEnvIDVisitor, FixupEnvIDStackNode> {
+  /// The function we are fixing up.
+  Function *F_;
+
+  using EnvSet = llvh::SmallPtrSet<Value *, 2>;
+  /// Map recording all environments created in a basic block. This is
+  /// pre-populated before we run.
+  llvh::DenseMap<BasicBlock *, EnvSet> bbToEnvs_{};
+
+  /// Environments dominating the current instruction at any point. As we walk
+  /// the dominator tree in DFS, environments are pushed as we encounter
+  /// instructions that created them (pre-recorded in \c envBBs) and popped
+  /// when we go back up the tree.
+  ScopedHashTable<Value *, std::monostate> envs_{};
+
+#ifndef NDEBUG
+  /// Number of instructions with scope checked.
+  int count_ = 0;
+  /// Number of instructions with scope cleared.
+  int cleared_ = 0;
+#endif
+
+  friend class FixupEnvIDStackNode;
+  friend class DomTreeDFS::Visitor<FixupEnvIDVisitor, FixupEnvIDStackNode>;
+
+ public:
+  explicit FixupEnvIDVisitor(Function *F, DominanceInfo &DI)
+      : DomTreeDFS::Visitor<FixupEnvIDVisitor, FixupEnvIDStackNode>(DI),
+        F_(F) {}
+  // clang-format off
+#ifndef NDEBUG
+  void incCount() { ++count_; }
+  int getCount() const { return count_; }
+  void incCleared() { ++cleared_; }
+  int getCleared() const { return cleared_; }
+#else
+  void incCount() {}
+  int getCount() const { return 0; }
+  void incCleared() {}
+  int getCleared() const { return 0; }
+#endif
+  // clang-format on
+
+  /// Perform the fixup.
+  void run() {
+    // Collect all basic block environments.
+    for (Value *env : F_->environments())
+      if (auto *I = dyn_cast<Instruction>(env))
+        bbToEnvs_[I->getParent()].insert(I);
+
+    DFS();
+  }
+
+ private:
+  /// Called by the visitor when we visit each dominator tree node in DFS order.
+  /// All environments dominating this basic block are "active" in \c bbToEnvs_.
+  bool processNode(FixupEnvIDStackNode *SN) {
+    BasicBlock *BB = SN->node()->getBlock();
+
+    // An environment already known to dominate instructions in this BB.
+    // This is a fast 1-entry cache while scanning the BB.
+    Instruction *knownDominateEnv = nullptr;
+
+    // Run two versions of the loop, depending on whether environments are
+    // created by this BB.
+    if (auto it = bbToEnvs_.find(BB); it != bbToEnvs_.end()) {
+      // Some environments created in this BB. We need to record when exactly,
+      // as that environment will dominate the remaining instructions in the
+      // block.
+      EnvSet *const envSet = &it->second;
+
+      for (auto &I : *BB) {
+        auto *implicitEnvOperand =
+            llvh::dyn_cast_or_null<Instruction>(I.getImplicitEnvOperand());
+        if (!implicitEnvOperand)
+          continue;
+        incCount();
+        if (implicitEnvOperand == knownDominateEnv)
+          continue;
+
+        // Does the environment dominate this inst? If not, clear it.
+        if (envs_.find(implicitEnvOperand)) {
+          // Cache the last known dominator.
+          knownDominateEnv = implicitEnvOperand;
+        } else {
+          incCleared();
+          I.clearEnvironmentID();
+        }
+
+        // If this instruction creates an environment, record it as dominating
+        // the rest of the instructions in this BB (and lower dominated BBs).
+        if (envSet->count(&I))
+          envs_.try_emplace(&I, {});
+      }
+    } else {
+      // No environments created in this BB.
+      for (auto &I : *BB) {
+        auto *implicitEnvOperand =
+            llvh::dyn_cast_or_null<Instruction>(I.getImplicitEnvOperand());
+        if (!implicitEnvOperand)
+          continue;
+        incCount();
+        if (implicitEnvOperand == knownDominateEnv)
+          continue;
+
+        // Does the environment dominate this inst? If not, clear it.
+        if (envs_.find(implicitEnvOperand)) {
+          // Cache the last known dominator.
+          knownDominateEnv = implicitEnvOperand;
+        } else {
+          incCleared();
           I.clearEnvironmentID();
         }
       }
     }
+
+    return true;
   }
+};
+
+FixupEnvIDStackNode::FixupEnvIDStackNode(
+    FixupEnvIDVisitor *ctx,
+    const DominanceInfoNode *n)
+    : DomTreeDFS::StackNode(n), scope_(ctx->envs_) {}
+
+} // anonymous namespace
+
+/// Iterate over all the instructions in \p F and make sure the environment ID
+/// is valid.
+static void fixupEnvironmentIDs(Function *F) {
+#if 0
+  auto start = std::chrono::steady_clock::now();
+#endif
+
+  DominanceInfo D(F);
+  FixupEnvIDVisitor v(F, D);
+  v.run();
+
+  LLVM_DEBUG(
+      llvh::dbgs() << v.getCount() << " checks, " << v.getCleared()
+                   << " cleared\n");
+#if 0
+  auto end = std::chrono::steady_clock::now();
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  llvh::outs() << "fixupEnvironmentIDs took " << duration.count() << " ms\n";
+#endif
 }
 
 bool BytecodeModuleGenerator::generateAddedFunctions() {
