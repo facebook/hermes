@@ -1642,7 +1642,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Builder.createIdentifier("get " + keyStr.str()),
             /* superClassNode */ nullptr,
             Function::DefinitionKind::ES5Function,
-            /* homeObject */ nullptr,
+            /* homeObject */ capturedObj,
             /* parentNode */ propValue->getterProp);
       }
 
@@ -1653,7 +1653,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Builder.createIdentifier("set " + keyStr.str()),
             /* superClassNode */ nullptr,
             Function::DefinitionKind::ES5Function,
-            /* homeObject */ nullptr,
+            /* homeObject */ capturedObj,
             /* parentNode */ propValue->setterProp);
       }
 
