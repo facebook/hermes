@@ -12,7 +12,7 @@ on:
           - dry-run
       hermes-version:
         required: true
-        description: The Hermes version to use for this tag
+        description: The Hermes version to use for this tag. It will be used to create the tag name of the form hermes-v${ hermes-version }
         type: string
   workflow_call:
     inputs:
@@ -22,7 +22,7 @@ on:
         type: string
       hermes-version:
         required: true
-        description: The Hermes version to use for this tag
+        description: The Hermes version to use for this tag. It will be used to create the tag name of the form hermes-v${ hermes-version }
         type: string
 
 jobs:
