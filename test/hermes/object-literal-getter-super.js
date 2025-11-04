@@ -20,3 +20,19 @@ var object = {
 Object.setPrototypeOf(object, proto);
 print(object.a);
 // CHECK: a proto m
+
+// Test that accessors without computed names can also refer to super.
+(function () {
+  let v1 = {
+    get a() {
+      let x = super.m;
+      print(x);
+    }
+  }
+  let parent = { m: 12 };
+  v1.a;
+// CHECK-NEXT: undefined
+  Object.setPrototypeOf(v1, parent);
+  v1.a;
+// CHECK-NEXT: 12
+})();
