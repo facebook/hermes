@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
+import traceback
 from typing import no_type_check, Tuple
 
 from .typing_defs import JSON
@@ -147,9 +148,6 @@ def normalize_hermes_ast(ast: JSON) -> JSON:
         if not ast["optional"]:
             del ast["optional"]
         ast["type"] = "PropertyDefinition"
-    if ast["type"] == "TupleTypeAnnotation":
-        ast["elementTypes"] = ast["types"]
-        del ast["types"]
     if ast["type"] == "TypeParameter":
         if not ast["usesExtendsBound"]:
             del ast["usesExtendsBound"]
@@ -212,10 +210,6 @@ def normalize_esprima_ast(ast: JSON) -> JSON:
         ):
             if "declare" not in ast:
                 ast["declare"] = False
-
-        # Hermes doesn't have the 'id' field in ArrowFunctionExpression.
-        if ast["type"] == "ArrowFunctionExpression":
-            del ast["id"]
     # If it is a template literal, the 'value' field contains
     # the 'cooked' and 'raw' strings, which should be moved.
     if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:
@@ -302,8 +296,18 @@ def diff(output: str, test_name: str, expected_ast: JSON) -> TestCaseResult:
     # Most ASTs in esprima/flow tests are very small, performance is not a
     # concern. Even it is, most expensive operations happen in normalization
     # (e.g., del), and those have to be done when comparing ASTs.
-    hermes_ast = trim_ast(normalize_hermes_ast(hermes_ast))
-    expected_ast = trim_ast(normalize_esprima_ast(expected_ast))
+    try:
+        hermes_ast = trim_ast(normalize_hermes_ast(hermes_ast))
+        expected_ast = trim_ast(normalize_esprima_ast(expected_ast))
+    except Exception:
+        # In case that hermes parser gets updated and adds/removes some keys,
+        # we might see Exception such as KeyError. Treat it as a failure and
+        # report the error message and stack.
+        msg = "FAIL: fail to trim AST"
+        details = f"Error: {traceback.format_exc()}\n"
+        details += f"Hermes AST: \n{json.dumps(hermes_ast, indent=2)}\n"
+        details += f"ESPRIMA AST: \n{json.dumps(expected_ast, indent=2)}"
+        return TestCaseResult(test_name, TestResultCode.TEST_FAILED, msg, details)
     (test_passed, details) = compare_ast(hermes_ast, expected_ast)
     if not test_passed:
         msg = "FAIL: AST not expected"
