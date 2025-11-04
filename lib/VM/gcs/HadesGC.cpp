@@ -1298,9 +1298,7 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   std::lock_guard<Mutex> lk{gcMutex_};
   GCBase::getHeapInfo(info);
   info.allocatedBytes = allocatedBytes();
-  // Heap size includes fragmentation, which means every segment is fully used.
-  info.heapSize =
-      (oldGen_.numSegments() + 1) * FixedSizeHeapSegment::storageSize();
+  info.heapSize = segmentFootprint();
   // If YG isn't empty, its bytes haven't been accounted for yet, add them here.
   info.totalAllocatedBytes = totalAllocatedBytes_ + youngGen().used();
   info.va = info.heapSize;

@@ -495,6 +495,18 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
     }
     rt.getHeap().getHeapInfo(heapInfo);
     ASSERT_EQ(heapInfo.totalAllocatedBytes, expectedTotalAllocBytes);
+#ifndef HERMESVM_GC_MALLOC
+    // YG + 1 normal OG segment (created when evacuation) + 1 jumbo heap segment
+    // (with size equals to 2 * kSegmentUnitSize).
+    ASSERT_EQ(heapInfo.heapSize, 4 * FixedSizeHeapSegment::kSegmentUnitSize);
+    // The heapSize should always be larger than allocatedBytes.
+    // Note that we don't assert for exact allocatedBytes here since the YG
+    // collection behavior depends on the updates of ygSizeFactor_, which could
+    // be different in different builds and platforms (we are allocating a half
+    // segment size object here, which may reset the segment effective end if
+    // ygSizeFactor_ is smaller than 0.5).
+    ASSERT_GE(heapInfo.heapSize, heapInfo.allocatedBytes);
+#endif
   }
   // Clear all objects in heap.
   rt.collect();
