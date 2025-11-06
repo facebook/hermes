@@ -119,6 +119,7 @@ _sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame) {
   (void)runtime.restoreStackAndPreviousFrame(StackFramePtr(toPHV(frame)));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_coerce_this_ns(
     SHRuntime *shr,
     SHLegacyValue value) {
@@ -173,6 +174,7 @@ static SHLegacyValue getArgumentsPropByVal_RJS(
   return res->getHermesValue();
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_arguments_prop_by_val_loose(
     SHRuntime *shr,
     SHLegacyValue *frame,
@@ -180,6 +182,7 @@ extern "C" SHLegacyValue _sh_ljs_get_arguments_prop_by_val_loose(
     SHLegacyValue *lazyReg) {
   return getArgumentsPropByVal_RJS(shr, frame, idx, lazyReg, false);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_arguments_prop_by_val_strict(
     SHRuntime *shr,
     SHLegacyValue *frame,
@@ -187,6 +190,7 @@ extern "C" SHLegacyValue _sh_ljs_get_arguments_prop_by_val_strict(
     SHLegacyValue *lazyReg) {
   return getArgumentsPropByVal_RJS(shr, frame, idx, lazyReg, true);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_arguments_length(
     SHRuntime *shr,
     SHLegacyValue *frame,
@@ -238,12 +242,14 @@ static void reifyArguments(
   *lazyReg = *res;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_reify_arguments_loose(
     SHRuntime *shr,
     SHLegacyValue *frame,
     SHLegacyValue *lazyReg) {
   reifyArguments(shr, frame, lazyReg, false);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_reify_arguments_strict(
     SHRuntime *shr,
     SHLegacyValue *frame,
@@ -251,6 +257,7 @@ extern "C" void _sh_ljs_reify_arguments_strict(
   reifyArguments(shr, frame, lazyReg, true);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_by_val_with_receiver_rjs(
     SHRuntime *shr,
     SHLegacyValue *source,
@@ -299,6 +306,7 @@ extern "C" SHLegacyValue _sh_ljs_get_by_val_with_receiver_rjs(
   return res->getHermesValue();
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   Handle<> sourceHandle{toPHV(source)};
@@ -328,6 +336,7 @@ _sh_ljs_get_by_index_rjs(SHRuntime *shr, SHLegacyValue *source, uint32_t key) {
   return res->getHermesValue();
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_own_private_by_sym(
     SHRuntime *shr,
     const SHLegacyValue *source,
@@ -365,6 +374,7 @@ extern "C" SHLegacyValue _sh_ljs_get_own_private_by_sym(
   return *res;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_catch(
     SHRuntime *shr,
     SHLocals *locals,
@@ -376,6 +386,7 @@ extern "C" SHLegacyValue _sh_catch(
   return _sh_get_clear_thrown_value(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_catch_no_pop(
     SHRuntime *shr,
     SHLocals *locals,
@@ -388,6 +399,7 @@ extern "C" void _sh_catch_no_pop(
   runtime.setCurrentFrame(StackFramePtr(toPHV(frame)));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_get_clear_thrown_value(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
   SHLegacyValue res = runtime.getThrownValue();
@@ -395,6 +407,7 @@ extern "C" SHLegacyValue _sh_get_clear_thrown_value(SHRuntime *shr) {
   return res;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_throw_current(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
   assert(runtime.shCurJmpBuf && "No SH exception handler installed");
@@ -408,17 +421,20 @@ extern "C" void _sh_throw_current(SHRuntime *shr) {
   llvm_unreachable("longjmp cannot return");
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_throw(SHRuntime *shr, SHLegacyValue value) {
   Runtime &runtime = getRuntime(shr);
   runtime.setThrownValue(HermesValue::fromRaw(value.raw));
   _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message) {
   (void)getRuntime(shr).raiseTypeError(Handle<>(toPHV(message)));
   _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_throw_type_error_ascii(
     SHRuntime *shr,
     const char *message) {
@@ -426,6 +442,7 @@ extern "C" void _sh_throw_type_error_ascii(
   _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_throw_reference_error_ascii(
     SHRuntime *shr,
     const char *message) {
@@ -434,6 +451,7 @@ extern "C" void _sh_throw_reference_error_ascii(
   _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_throw_empty(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
   (void)runtime.raiseReferenceError("accessing an uninitialized variable");
@@ -488,6 +506,7 @@ static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
   return res->getHermesValue();
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   Runtime &runtime = getRuntime(shr);
@@ -500,6 +519,7 @@ _sh_ljs_call(SHRuntime *shr, SHLegacyValue *frame, uint32_t argCount) {
   return doCall(runtime, &newFrame.getCalleeClosureOrCBRef());
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_callRequire(
     SHRuntime *shr,
     SHArrayStorage **exportCache,
@@ -556,6 +576,7 @@ extern "C" SHLegacyValue _sh_ljs_callRequire(
   return *slowRes;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_call_builtin(
     SHRuntime *shr,
     SHLegacyValue *frame,
@@ -590,6 +611,7 @@ extern "C" SHLegacyValue _sh_ljs_get_builtin_closure(
       getRuntime(shr).getBuiltinCallable(builtinMethodID));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_create_environment(
     SHRuntime *shr,
     const SHLegacyValue *parentEnv,
@@ -607,6 +629,7 @@ extern "C" SHLegacyValue _sh_ljs_create_environment(
   // #endif
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_ljs_get_env(SHRuntime *shr, SHLegacyValue startEnv, uint32_t level) {
   Runtime &runtime = getRuntime(shr);
@@ -619,6 +642,7 @@ _sh_ljs_get_env(SHRuntime *shr, SHLegacyValue startEnv, uint32_t level) {
   return HermesValue::encodeObjectValue(curEnv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_store_to_env(
     SHRuntime *shr,
     SHLegacyValue env,
@@ -639,6 +663,7 @@ extern "C" void _sh_ljs_store_np_to_env(
       .setNonPtr(HermesValue::fromRaw(val.raw), getRuntime(shr).getHeap());
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_create_generator_object(
     SHRuntime *shr,
     const SHLegacyValue *env,
@@ -688,6 +713,7 @@ extern "C" SHLegacyValue _sh_ljs_create_generator_object(
   return *genObjRes;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_create_class(
     SHRuntime *shr,
     const SHLegacyValue *env,
@@ -713,6 +739,7 @@ extern "C" SHLegacyValue _sh_ljs_create_class(
   return HermesValue::encodeObjectValue(std::get<0>(*classRes));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_create_closure(
     SHRuntime *shr,
     const SHLegacyValue *env,
@@ -731,6 +758,7 @@ extern "C" SHLegacyValue _sh_ljs_create_closure(
       .getHermesValue();
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_declare_global_var(SHRuntime *shr, SHSymbolID name) {
   Runtime &runtime = getRuntime(shr);
   {
@@ -897,6 +925,7 @@ static inline void putById_RJS(
   }
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_put_by_id_loose_rjs(
     SHRuntime *shr,
     SHUnit *unit,
@@ -913,6 +942,7 @@ extern "C" void _sh_ljs_put_by_id_loose_rjs(
       reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_put_by_id_strict_rjs(
     SHRuntime *shr,
     SHUnit *unit,
@@ -929,6 +959,7 @@ extern "C" void _sh_ljs_put_by_id_strict_rjs(
       reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
     SHRuntime *shr,
     SHUnit *unit,
@@ -945,6 +976,7 @@ extern "C" void _sh_ljs_try_put_by_id_loose_rjs(
       reinterpret_cast<WritePropertyCacheEntry *>(propCacheEntry));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_try_put_by_id_strict_rjs(
     SHRuntime *shr,
     SHUnit *unit,
@@ -1009,6 +1041,7 @@ static inline void putByVal_RJS(
   putByValWithReceiver_RJS(shr, target, key, value, target, strictMode);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_put_by_val_loose_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1016,6 +1049,7 @@ extern "C" void _sh_ljs_put_by_val_loose_rjs(
     SHLegacyValue *value) {
   putByVal_RJS(shr, target, key, value, false);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_put_by_val_strict_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1023,6 +1057,7 @@ extern "C" void _sh_ljs_put_by_val_strict_rjs(
     SHLegacyValue *value) {
   putByVal_RJS(shr, target, key, value, true);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_put_by_val_with_receiver_rjs(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1187,6 +1222,7 @@ static inline HermesValue getById_RJS(
       runtime, source, symID, source, cacheEntry);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_create_this(
     SHRuntime *shr,
     SHLegacyValue *callee,
@@ -1288,6 +1324,7 @@ throwCurrent:
   _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
@@ -1299,6 +1336,7 @@ extern "C" SHLegacyValue _sh_ljs_try_get_by_id_rjs(
       SymbolID::unsafeCreate(symID),
       reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
@@ -1311,6 +1349,7 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_rjs(
       reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
@@ -1325,6 +1364,7 @@ extern "C" SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
       reinterpret_cast<ReadPropertyCacheEntry *>(propCacheEntry));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_define_own_by_id(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1383,6 +1423,7 @@ extern "C" void _sh_ljs_define_own_by_id(
     _sh_throw_current(getSHRuntime(runtime));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_define_own_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1403,6 +1444,7 @@ extern "C" void _sh_ljs_define_own_by_val(
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_define_own_ne_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1424,6 +1466,7 @@ extern "C" void _sh_ljs_define_own_ne_by_val(
     _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_define_own_by_index(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1448,6 +1491,7 @@ extern "C" void _sh_ljs_define_own_by_index(
 }
 
 /// Put a non-enumerable property.
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_define_own_getter_setter_by_val(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1498,6 +1542,7 @@ extern "C" void _sh_ljs_define_own_getter_setter_by_val(
     _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_add_own_private_by_sym(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1516,6 +1561,7 @@ extern "C" void _sh_ljs_add_own_private_by_sym(
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
     _sh_throw_current(shr);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_put_own_private_by_sym(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1610,12 +1656,14 @@ static HermesValue delByVal(
   }
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_del_by_val_strict(
     SHRuntime *shr,
     SHLegacyValue *target,
     SHLegacyValue *key) {
   return delByVal(getRuntime(shr), toPHV(target), toPHV(key), true);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_del_by_val_loose(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -1623,12 +1671,14 @@ extern "C" SHLegacyValue _sh_ljs_del_by_val_loose(
   return delByVal(getRuntime(shr), toPHV(target), toPHV(key), false);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_string(SHRuntime *shr, SHSymbolID symID) {
   NoHandleScope noHandles{getRuntime(shr)};
   return HermesValue::encodeStringValue(
       getRuntime(shr).getStringPrimFromSymbolID(SymbolID::unsafeCreate(symID)));
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_create_private_name(
     SHRuntime *shr,
     SHSymbolID descStrID) {
@@ -1655,6 +1705,7 @@ extern "C" SHLegacyValue _sh_ljs_create_private_name(
   return *cr;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags) {
   Runtime &runtime = getRuntime(shr);
@@ -1678,6 +1729,7 @@ _sh_ljs_create_regexp(SHRuntime *shr, SHSymbolID pattern, SHSymbolID flags) {
   return *cr;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_ljs_create_bigint(SHRuntime *shr, const uint8_t *value, uint32_t size) {
   Runtime &runtime = getRuntime(shr);
@@ -1693,6 +1745,7 @@ _sh_ljs_create_bigint(SHRuntime *shr, const uint8_t *value, uint32_t size) {
   return *res;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_object(SHRuntime *shr) {
   PseudoHandle<JSObject> result;
   {
@@ -1701,6 +1754,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object(SHRuntime *shr) {
   }
   return result.getHermesValue();
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
     SHRuntime *shr,
     const SHLegacyValue *parent) {
@@ -1817,6 +1871,7 @@ static SHLegacyValue createObjectFromBuffer(
   return lv.obj.getHermesValue();
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
@@ -1827,6 +1882,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
       runtime, unit, runtime.objectPrototype, shapeTableIndex, valBufferOffset);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer_and_parent(
     SHRuntime *shr,
     SHUnit *unit,
@@ -1845,6 +1901,7 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer_and_parent(
       runtime, unit, parentHandle, shapeTableIndex, valBufferOffset);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t size) {
   Runtime &runtime = getRuntime(shr);
 
@@ -1858,6 +1915,7 @@ extern "C" SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t size) {
   return *arrayRes;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
     SHRuntime *shr,
     SHUnit *unit,
@@ -1930,6 +1988,7 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
   return arr;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_cache_new_object(
     SHRuntime *shr,
     SHUnit *unit,
@@ -1938,6 +1997,7 @@ extern "C" void _sh_ljs_cache_new_object(
     uint32_t shapeTableIndex,
     void **cacheEntry) {}
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_define_own_in_dense_array(
     SHRuntime *shr,
     SHLegacyValue *array,
@@ -1951,6 +2011,7 @@ extern "C" void _sh_ljs_define_own_in_dense_array(
       vmcast<JSArray>(*toPHV(array)), runtime, idx, shv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   Runtime &runtime = getRuntime(shr);
 
@@ -1964,6 +2025,7 @@ extern "C" SHLegacyValue _sh_new_fastarray(SHRuntime *shr, uint32_t sizeHint) {
   return *arrayRes;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
   Runtime &runtime = getRuntime(shr);
@@ -1982,6 +2044,7 @@ _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj) {
     _sh_throw_current(shr);
   return _sh_ljs_bool(*cr);
 }
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_private_is_in_rjs(
     SHRuntime *shr,
     SHLegacyValue *privateName,
@@ -2041,6 +2104,7 @@ extern "C" SHLegacyValue _sh_ljs_private_is_in_rjs(
   return _sh_ljs_bool(*cr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
     SHRuntime *shr,
     SHLegacyValue *base,
@@ -2088,6 +2152,7 @@ extern "C" SHLegacyValue _sh_ljs_get_pname_list_rjs(
   return *cr;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
     SHRuntime *shr,
     SHLegacyValue *props,
@@ -2198,6 +2263,7 @@ extern "C" SHLegacyValue _sh_ljs_get_next_pname_rjs(
   return *result;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue _sh_ljs_direct_eval(
     SHRuntime *shr,
     SHLegacyValue *evalText,
@@ -2223,10 +2289,12 @@ extern "C" SHLegacyValue _sh_ljs_direct_eval(
   return *result;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" int32_t _sh_to_int32_double_slow_path(double d) {
   return truncateToInt32SlowPath(d);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_prload_direct(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
   Runtime &runtime = getRuntime(shr);
@@ -2236,6 +2304,7 @@ _sh_prload_direct(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
       .unboxToHV(runtime);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_prload_indirect(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
   Runtime &runtime = getRuntime(shr);
@@ -2245,6 +2314,7 @@ _sh_prload_indirect(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
       .unboxToHV(runtime);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_prstore_direct(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -2257,6 +2327,7 @@ extern "C" void _sh_prstore_direct(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_prstore_direct_bool(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -2269,6 +2340,7 @@ extern "C" void _sh_prstore_direct_bool(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_prstore_direct_number(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -2282,6 +2354,7 @@ extern "C" void _sh_prstore_direct_number(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_prstore_direct_object(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -2295,6 +2368,7 @@ extern "C" void _sh_prstore_direct_object(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_prstore_direct_string(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -2308,6 +2382,7 @@ extern "C" void _sh_prstore_direct_string(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_prstore_indirect(
     SHRuntime *shr,
     SHLegacyValue *target,
@@ -2320,15 +2395,18 @@ extern "C" void _sh_prstore_indirect(
       vmcast<JSObject>(*toPHV(target)), runtime, propIndex, shv);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_unreachable() {
   hermes_fatal("Unreachable code reached");
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_throw_array_oob(SHRuntime *shr) {
   (void)getRuntime(shr).raiseRangeError("array load index out of range");
   _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
   Runtime &runtime = getRuntime(shr);
@@ -2343,6 +2421,7 @@ _sh_fastarray_load(SHRuntime *shr, SHLegacyValue *array, double index) {
   return storage->at(intIndex).unboxToHV(runtime);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_fastarray_store(
     SHRuntime *shr,
     const SHLegacyValue *storedValue,
@@ -2361,6 +2440,7 @@ extern "C" void _sh_fastarray_store(
   return storage->set(intIndex, shv, runtime.getHeap());
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_fastarray_push(
     SHRuntime *shr,
     SHLegacyValue *pushedValue,
@@ -2373,6 +2453,7 @@ extern "C" void _sh_fastarray_push(
     _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_fastarray_append(
     SHRuntime *shr,
     SHLegacyValue *other,
@@ -2386,6 +2467,7 @@ extern "C" void _sh_fastarray_append(
     _sh_throw_current(shr);
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...) {
   Runtime &runtime = getRuntime(shr);
@@ -2491,10 +2573,12 @@ _sh_string_concat(SHRuntime *shr, uint32_t argCount, ...) {
   return *result;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" int _sh_errno(void) {
   return errno;
 }
 
+LLVM_ATTRIBUTE_NOINLINE
 extern "C" SHLegacyValue
 _sh_asciiz_to_string(SHRuntime *shr, const char *str, ptrdiff_t len) {
   Runtime &runtime = getRuntime(shr);
