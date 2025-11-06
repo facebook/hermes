@@ -867,7 +867,9 @@ class InstrGen {
         }
         break;
       case (ValueKind::UnaryTildeInstKind):
-        os_ << "_sh_ljs_bit_not_rjs(shr, &";
+        os_ << (options_.smallC ? "_sh_ljs_bit_not_rjs"
+                                : "_sh_ljs_bit_not_rjs_inline")
+            << "(shr, &";
         generateRegister(*inst.getSingleOperand());
         os_ << ");\n";
         break;
@@ -1060,22 +1062,29 @@ class InstrGen {
               options_.smallC ? "_sh_ljs_mod_rjs" : "_sh_ljs_mod_rjs_inline";
         break;
       case ValueKind::BinaryOrInstKind: // |   (|=)
-        funcUntypedOp = "_sh_ljs_bit_or_rjs";
+        funcUntypedOp = options_.smallC ? "_sh_ljs_bit_or_rjs"
+                                        : "_sh_ljs_bit_or_rjs_inline";
         break;
       case ValueKind::BinaryAndInstKind: // &   (&=)
-        funcUntypedOp = "_sh_ljs_bit_and_rjs";
+        funcUntypedOp = options_.smallC ? "_sh_ljs_bit_and_rjs"
+                                        : "_sh_ljs_bit_and_rjs_inline";
         break;
       case ValueKind::BinaryXorInstKind: // ^   (^=)
-        funcUntypedOp = "_sh_ljs_bit_xor_rjs";
+        funcUntypedOp = options_.smallC ? "_sh_ljs_bit_xor_rjs"
+                                        : "_sh_ljs_bit_xor_rjs_inline";
         break;
       case ValueKind::BinaryRightShiftInstKind: // >>  (>>=)
-        funcUntypedOp = "_sh_ljs_right_shift_rjs";
+        funcUntypedOp = options_.smallC ? "_sh_ljs_right_shift_rjs"
+                                        : "_sh_ljs_right_shift_rjs_inline";
         break;
       case ValueKind::BinaryUnsignedRightShiftInstKind: // >>> (>>>=)
-        funcUntypedOp = "_sh_ljs_unsigned_right_shift_rjs";
+        funcUntypedOp = options_.smallC
+            ? "_sh_ljs_unsigned_right_shift_rjs"
+            : "_sh_ljs_unsigned_right_shift_rjs_inline";
         break;
       case ValueKind::BinaryLeftShiftInstKind: // <<  (<<=)
-        funcUntypedOp = "_sh_ljs_left_shift_rjs";
+        funcUntypedOp = options_.smallC ? "_sh_ljs_left_shift_rjs"
+                                        : "_sh_ljs_left_shift_rjs_inline";
         break;
       case ValueKind::BinaryNotEqualInstKind: // !=
         funcUntypedOp = "!_sh_ljs_equal_rjs";

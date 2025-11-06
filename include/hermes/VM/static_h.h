@@ -1055,28 +1055,115 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_bit_or_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+
+static inline SHLegacyValue _sh_ljs_bit_or_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  int32_t aInt, bInt;
+  if (SH_LIKELY(
+          _sh_ljs_tryfast_truncate_to_int32(*a, &aInt) &&
+          _sh_ljs_tryfast_truncate_to_int32(*b, &bInt))) {
+    return _sh_ljs_double((double)(aInt | bInt));
+  }
+  return _sh_ljs_bit_or_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT SHLegacyValue _sh_ljs_bit_and_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+static inline SHLegacyValue _sh_ljs_bit_and_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  int32_t aInt, bInt;
+  if (SH_LIKELY(
+          _sh_ljs_tryfast_truncate_to_int32(*a, &aInt) &&
+          _sh_ljs_tryfast_truncate_to_int32(*b, &bInt))) {
+    return _sh_ljs_double((double)(aInt & bInt));
+  }
+  return _sh_ljs_bit_and_rjs(shr, a, b);
+}
 SHERMES_EXPORT SHLegacyValue _sh_ljs_bit_xor_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+static inline SHLegacyValue _sh_ljs_bit_xor_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  int32_t aInt, bInt;
+  if (SH_LIKELY(
+          _sh_ljs_tryfast_truncate_to_int32(*a, &aInt) &&
+          _sh_ljs_tryfast_truncate_to_int32(*b, &bInt))) {
+    return _sh_ljs_double((double)(aInt ^ bInt));
+  }
+  return _sh_ljs_bit_xor_rjs(shr, a, b);
+}
 SHERMES_EXPORT SHLegacyValue _sh_ljs_right_shift_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+static inline SHLegacyValue _sh_ljs_right_shift_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  int32_t aInt, bInt;
+  if (SH_LIKELY(
+          _sh_ljs_tryfast_truncate_to_int32(*a, &aInt) &&
+          _sh_ljs_tryfast_truncate_to_int32(*b, &bInt))) {
+    uint32_t bUInt = bInt & 0x1f;
+    return _sh_ljs_double((double)(aInt >> bUInt));
+  }
+  return _sh_ljs_right_shift_rjs(shr, a, b);
+}
 SHERMES_EXPORT SHLegacyValue _sh_ljs_unsigned_right_shift_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+static inline SHLegacyValue _sh_ljs_unsigned_right_shift_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  uint32_t aUint;
+  int32_t bInt;
+  if (SH_LIKELY(
+          _sh_ljs_tryfast_truncate_to_uint32(*a, &aUint) &&
+          _sh_ljs_tryfast_truncate_to_int32(*b, &bInt))) {
+    uint32_t bUInt = bInt & 0x1f;
+    return _sh_ljs_double((double)(aUint >> bUInt));
+  }
+  return _sh_ljs_unsigned_right_shift_rjs(shr, a, b);
+}
 SHERMES_EXPORT SHLegacyValue _sh_ljs_left_shift_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+static inline SHLegacyValue _sh_ljs_left_shift_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  int32_t aInt, bInt;
+  if (SH_LIKELY(
+          _sh_ljs_tryfast_truncate_to_int32(*a, &aInt) &&
+          _sh_ljs_tryfast_truncate_to_int32(*b, &bInt))) {
+    uint32_t bUInt = bInt & 0x1f;
+    return _sh_ljs_double((double)(aInt << bUInt));
+  }
+  return _sh_ljs_left_shift_rjs(shr, a, b);
+}
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_bit_not_rjs(SHRuntime *shr, const SHLegacyValue *a);
+static inline SHLegacyValue _sh_ljs_bit_not_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a) {
+  int32_t aInt;
+  if (SH_LIKELY(_sh_ljs_tryfast_truncate_to_int32(*a, &aInt))) {
+    return _sh_ljs_double((double)(~aInt));
+  }
+  return _sh_ljs_bit_not_rjs(shr, a);
+}
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_minus_rjs(SHRuntime *shr, const SHLegacyValue *n);
 
