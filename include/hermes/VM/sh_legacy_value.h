@@ -260,6 +260,13 @@ static inline SHLegacyValue _sh_ljs_empty() {
   return _sh_ljs_encode_raw_etag(0, HVETag_Empty);
 }
 
+/// Create a SHLegacyValue that has the raw representation 0. This value
+/// must never become visible to user code, and is guaranteed to be ignored by
+/// the GC.
+static inline SHLegacyValue _sh_ljs_raw_zero_value_unsafe() {
+  return (SHLegacyValue){0};
+}
+
 static inline bool _sh_ljs_is_undefined(SHLegacyValue v) {
   return _sh_ljs_get_etag(v) == HVETag_Undefined;
 }

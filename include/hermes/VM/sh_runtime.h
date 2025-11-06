@@ -239,6 +239,90 @@ static inline void *_sh_cp_decode_non_null(
 
 #endif
 
+/// Number of stack words after the top of frame that we always ensure are
+/// available. This is necessary so we can perform native calls with small
+/// number of arguments without checking.
+#define SH_STACK_RESERVE 32
+
+static inline uint32_t _sh_available_stack_size(const SHRuntime *shr) {
+  return (uint32_t)(shr->registerStackEnd - shr->stackPointer);
+}
+
+/// Check whether there is space to allocate <tt>count + SH_STACK_RESERVE</tt>
+/// stack registers.
+/// \param shr pointer to SHRuntime
+/// \param count number of registers to check for
+/// \return true if there is enough space
+static inline bool _sh_check_available_stack(
+    const SHRuntime *shr,
+    uint32_t count) {
+  // Note: use 64-bit arithmetic to avoid overflow. We could also do it with
+  // a couple of comparisons, but that is likely to be slower.
+  return _sh_available_stack_size(shr) >= (uint64_t)count + SH_STACK_RESERVE;
+}
+
+/// Allocate stack space for \p count registers, but keep it uninitialized.
+/// The caller should initialize it ASAP.
+/// \param shr pointer to SHRuntime
+/// \param count number of registers to allocate
+/// \return the new stack pointer
+static inline SHLegacyValue *_sh_alloc_uninitialized_stack(
+    SHRuntime *shr,
+    uint32_t count) {
+  assert(_sh_available_stack_size(shr) >= count && "register stack overflow");
+  return (shr->stackPointer += count);
+}
+
+/// Initialize stack space with zeroes using fast vectorized pattern.
+/// \param base the starting address of the space to initialize
+/// \param count the number of SHLegacyValues to initialize
+static inline void _sh_init_stack_with_zeroes(
+    SHLegacyValue *base,
+    uint32_t count) {
+  SHLegacyValue *lim = base + count;
+  // Fill the first count % 4 elements so we can fill 4 at a time in the loop.
+  if (count & 1)
+    *(base++) = _sh_ljs_raw_zero_value_unsafe();
+
+  if (count & 2) {
+    *(base++) = _sh_ljs_raw_zero_value_unsafe();
+    *(base++) = _sh_ljs_raw_zero_value_unsafe();
+  }
+
+  // Store the remaining elements 4 at a time, allowing the compiler to use
+  // vectorized stores for up to 4 elements at a time. Note that the empty asm
+  // statement at the end of the loop prevents the compiler from storing more
+  // elements together.
+  while (base < lim) {
+    *(base++) = _sh_ljs_raw_zero_value_unsafe();
+    *(base++) = _sh_ljs_raw_zero_value_unsafe();
+    *(base++) = _sh_ljs_raw_zero_value_unsafe();
+    *(base++) = _sh_ljs_raw_zero_value_unsafe();
+
+#ifdef __GNUC__
+    // This empty asm statement tells the compiler that we want each write to
+    // be observable, so it cannot turn the loop into a memset call.
+    asm volatile("" : : : "memory");
+#endif
+  }
+  assert(base == lim && "Fill failed");
+}
+
+/// Check whether <tt>count + STACK_RESERVE</tt> stack registers are available
+/// and allocate \p count registers.
+/// \param count number of registers to allocate.
+/// \return \c true if allocation was successful.
+static inline bool _sh_check_and_alloc_stack(SHRuntime *shr, uint32_t count) {
+  if (!_sh_check_available_stack(shr, count))
+    return false;
+
+  SHLegacyValue *fillPtr = shr->stackPointer;
+  _sh_alloc_uninitialized_stack(shr, count);
+  // Initialize the new registers.
+  _sh_init_stack_with_zeroes(fillPtr, count);
+  return true;
+}
+
 #ifdef __cplusplus
 }
 #endif

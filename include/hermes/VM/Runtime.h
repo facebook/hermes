@@ -110,7 +110,7 @@ class JSArray;
 /// Number of stack words after the top of frame that we always ensure are
 /// available. This is necessary so we can perform native calls with small
 /// number of arguments without checking.
-static const unsigned STACK_RESERVE = 32;
+static const unsigned STACK_RESERVE = SH_STACK_RESERVE;
 
 /// Type used to assign object unique integer identifiers.
 using ObjectID = uint32_t;
@@ -2232,25 +2232,19 @@ inline uint32_t Runtime::getStackLevel() const {
 }
 
 inline uint32_t Runtime::availableStackSize() const {
-  return (uint32_t)(toPHV(registerStackEnd) - toPHV(stackPointer));
+  return _sh_available_stack_size(this);
 }
 
 inline bool Runtime::checkAvailableStack(uint32_t count) {
-  // Note: use 64-bit arithmetic to avoid overflow. We could also do it with
-  // a couple of comparisons, but that is likely to be slower.
-  return availableStackSize() >= (uint64_t)count + STACK_RESERVE;
+  return _sh_check_available_stack(this, count);
 }
 
 inline PinnedHermesValue *Runtime::allocUninitializedStack(uint32_t count) {
-  assert(availableStackSize() >= count && "register stack overflow");
-  return toPHV(stackPointer += count);
+  return toPHV(_sh_alloc_uninitialized_stack(this, count));
 }
 
 inline bool Runtime::checkAndAllocStack(uint32_t count) {
-  if (LLVM_UNLIKELY(!checkAvailableStack(count)))
-    return false;
-  allocStack(count);
-  return true;
+  return _sh_check_and_alloc_stack(this, count);
 }
 
 inline void Runtime::allocStack(uint32_t count) {
