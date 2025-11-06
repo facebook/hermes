@@ -12,6 +12,7 @@
 #include "hermes/VM/sh_legacy_value.h"
 #include "hermes/VM/sh_mirror.h"
 #include "hermes/VM/sh_runtime.h"
+#include "hermes/VM/sh_small_hermes_value.h"
 #include "hermes/VM/sh_stack_frame.h"
 #include "hermes/VMLayouts/sh_stack_frame_layout.h"
 
@@ -598,6 +599,49 @@ SHERMES_EXPORT void _sh_ljs_put_by_val_with_receiver_rjs(
     SHLegacyValue *receiver,
     bool isStrict);
 
+/// Load a property from direct storage.
+SHERMES_EXPORT SHLegacyValue
+_sh_prload_direct(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex);
+
+/// Load a property from indirect storage. Note that propIndex is relative to
+/// the indirect storage.
+SHERMES_EXPORT SHLegacyValue
+_sh_prload_indirect(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex);
+
+static inline SHLegacyValue
+_sh_prload(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+#ifndef HERMESVM_BOXED_DOUBLES
+    return ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(source))
+        ->directProps[propIndex];
+#else
+    return _sh_prload_direct(shr, source, propIndex);
+#endif
+  } else {
+    return _sh_prload_indirect(
+        shr, source, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS);
+  }
+}
+
+static inline SHLegacyValue
+_sh_prload_inline(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
+  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
+    SHGCSmallHermesValue shv =
+        ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(source))
+            ->directProps[propIndex];
+    return _sh_shv_unbox_inline(shr, shv);
+  } else {
+    // Inline indirect property access
+    SHCompressedPointer propStoragePtr = {
+        .raw = ((SHJSObject *)_sh_ljs_get_pointer(source))->propStorage};
+    SHArrayStorageSmall *propStorage =
+        (SHArrayStorageSmall *)_sh_cp_decode_non_null(shr, propStoragePtr);
+    SHGCSmallHermesValue shv =
+        propStorage->storage[propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS];
+    return _sh_shv_unbox_inline(shr, shv);
+  }
+}
+
 SHERMES_EXPORT SHLegacyValue _sh_ljs_try_get_by_id_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
@@ -608,6 +652,39 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_id_rjs(
     const SHLegacyValue *source,
     SHSymbolID symID,
     SHReadPropertyCacheEntry *propCacheEntry);
+
+/// Inline fast path for property access by ID with cache checking.
+/// If cache hits, directly loads the property. Otherwise falls back to the
+/// out-of-line implementation.
+/// \pre propCacheEntry is not null.
+static inline SHLegacyValue _sh_ljs_get_by_id_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *source,
+    SHSymbolID symID,
+    SHReadPropertyCacheEntry *propCacheEntry) {
+  assert(propCacheEntry && "propCacheEntry must not be null");
+  if (SH_LIKELY(_sh_ljs_is_object(*source))) {
+    // Fast path: check cache hit
+    SHJSObject *sourceCell = (SHJSObject *)_sh_ljs_get_pointer(*source);
+
+    // Check if the object is a JSObject
+    SHCompressedPointer clazzPtr = {.raw = sourceCell->clazz};
+
+    // Compare cached class with object's current class
+    if (SH_LIKELY(propCacheEntry->clazz == clazzPtr.raw)) {
+      // Cache hit! Extract slot with proper masking (like
+      // ReadPropertyCacheEntry::getSlot())
+      uint16_t slot = propCacheEntry->_slot16 & 0xffff;
+
+      // Load property directly using the cached slot
+      return _sh_prload_inline(shr, *source, slot);
+    }
+  }
+
+  // Cache miss - fall back to out-of-line implementation
+  return _sh_ljs_get_by_id_rjs(shr, source, symID, propCacheEntry);
+}
+
 SHERMES_EXPORT SHLegacyValue _sh_ljs_get_by_id_with_receiver_rjs(
     SHRuntime *shr,
     const SHLegacyValue *source,
@@ -1147,15 +1224,6 @@ static inline int32_t _sh_to_int32_double(double d) {
   return _sh_to_int32_double_slow_path(d);
 }
 
-/// Load a property from direct storage.
-SHERMES_EXPORT SHLegacyValue
-_sh_prload_direct(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex);
-
-/// Load a property from indirect storage. Note that propIndex is relative to
-/// the indirect storage.
-SHERMES_EXPORT SHLegacyValue
-_sh_prload_indirect(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex);
-
 /// Store a property into direct storage.
 SHERMES_EXPORT void _sh_prstore_direct(
     SHRuntime *shr,
@@ -1196,21 +1264,6 @@ SHERMES_EXPORT void _sh_prstore_indirect(
     SHLegacyValue *value);
 
 SHERMES_EXPORT void _sh_unreachable() __attribute__((noreturn));
-
-static inline SHLegacyValue
-_sh_prload(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
-  if (propIndex < HERMESVM_DIRECT_PROPERTY_SLOTS) {
-#ifndef HERMESVM_BOXED_DOUBLES
-    return ((SHJSObjectAndDirectProps *)_sh_ljs_get_pointer(source))
-        ->directProps[propIndex];
-#else
-    return _sh_prload_direct(shr, source, propIndex);
-#endif
-  } else {
-    return _sh_prload_indirect(
-        shr, source, propIndex - HERMESVM_DIRECT_PROPERTY_SLOTS);
-  }
-}
 
 /// Store a property into direct or indirect storage depending on its index.
 static inline void _sh_prstore(

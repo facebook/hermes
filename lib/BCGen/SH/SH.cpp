@@ -1400,7 +1400,9 @@ class InstrGen {
     generateValue(inst);
     os_ << " = ";
     if (auto *LS = llvh::dyn_cast<LiteralString>(inst.getProperty())) {
-      os_ << "_sh_ljs_get_by_id_rjs(shr,&";
+      os_ << (options_.smallC ? "_sh_ljs_get_by_id_rjs"
+                              : "_sh_ljs_get_by_id_rjs_inline")
+          << "(shr,&";
       generateRegister(*inst.getObject());
       os_ << ",";
       genStringConstReadIC(LS) << ");\n";
