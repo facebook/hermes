@@ -158,6 +158,20 @@ class InstSimplifyImpl {
     return asInt32;
   }
 
+  Value *reduceAsUint32(AsUint32Inst *asUint32) {
+    auto *op = asUint32->getSingleOperand();
+
+    // If operand is a literal, try to evaluate ToNumber(operand) then ToUint32.
+    if (auto *lit = llvh::dyn_cast<Literal>(op)) {
+      if (auto *result = evalToUint32(builder_, lit)) {
+        return result;
+      }
+    }
+
+    // Nothing can be done to simplify, return it as-is.
+    return asUint32;
+  }
+
   /// Attempt to simplify \p unary and return a typed instruction if possible.
   /// \return the new instruction, nullptr if it can't be simplified.
   Instruction *simplifyTypedUnaryExpression(UnaryOperatorInst *unary) {
@@ -517,6 +531,14 @@ class InstSimplifyImpl {
         }
         break;
       }
+      case ValueKind::BinaryUnsignedRightShiftInstKind: { // >>>
+        // Convert (x >>> 0) to AsUint32.
+        if (llvh::isa<LiteralNumber>(rhs) &&
+            llvh::cast<LiteralNumber>(rhs)->getValue() == 0) {
+          return reduceAsUint32(builder_.createAsUint32Inst(lhs));
+        }
+        break;
+      }
 
       default:
         break;
@@ -730,6 +752,10 @@ class InstSimplifyImpl {
   Value *simplifyAsInt32(AsInt32Inst *asInt32) {
     Value *reduced = reduceAsInt32(asInt32);
     return (reduced == asInt32) ? nullptr : reduced;
+  }
+  Value *simplifyAsUint32(AsUint32Inst *asUint32) {
+    Value *reduced = reduceAsUint32(asUint32);
+    return (reduced == asUint32) ? nullptr : reduced;
   }
 
   Value *simplifyAddEmptyString(AddEmptyStringInst *AES) {
@@ -1047,6 +1073,8 @@ class InstSimplifyImpl {
         return simplifyAsNumeric(cast<AsNumericInst>(I));
       case ValueKind::AsInt32InstKind:
         return simplifyAsInt32(cast<AsInt32Inst>(I));
+      case ValueKind::AsUint32InstKind:
+        return simplifyAsUint32(cast<AsUint32Inst>(I));
       case ValueKind::AddEmptyStringInstKind:
         return simplifyAddEmptyString(cast<AddEmptyStringInst>(I));
       case ValueKind::PhiInstKind:

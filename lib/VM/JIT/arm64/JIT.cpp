@@ -474,7 +474,11 @@ inline void JITContext::Compiler::emitToNumeric(
 }
 
 inline void JITContext::Compiler::emitToInt32(const inst::ToInt32Inst *inst) {
-  em_.toInt32(FR(inst->op1), FR(inst->op2));
+  em_.toInt32(FR(inst->op1), FR(inst->op2), /* isSigned */ true);
+}
+
+inline void JITContext::Compiler::emitToUint32(const inst::ToUint32Inst *inst) {
+  em_.toInt32(FR(inst->op1), FR(inst->op2), /* isSigned */ false);
 }
 
 inline void JITContext::Compiler::emitAddEmptyString(

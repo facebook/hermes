@@ -2666,8 +2666,12 @@ void Emitter::toNumeric(FR frRes, FR frInput) {
        }});
 }
 
-void Emitter::toInt32(FR frRes, FR frInput) {
-  comment("// ToInt32 r%u, r%u", frRes.index(), frInput.index());
+void Emitter::toInt32(FR frRes, FR frInput, bool isSigned) {
+  comment(
+      "// %s r%u, r%u",
+      isSigned ? "ToInt32" : "ToUint32",
+      frRes.index(),
+      frInput.index());
 
   HWReg hwTempGpX = allocTempGpX();
   HWReg hwTempVecD = allocTempVecD();
@@ -2692,31 +2696,39 @@ void Emitter::toInt32(FR frRes, FR frInput) {
   HWReg hwRes = getOrAllocFRInVecD(frRes, false);
   frUpdatedWithHW(frRes, hwRes, FRType::Number);
 
-  // Truncate to an int32 in the fast path.
-  a.scvtf(hwRes.a64VecD(), hwTempGpX.a64GpX().w());
+  if (isSigned) {
+    // Convert int32 back to double.
+    a.scvtf(hwRes.a64VecD(), hwTempGpX.a64GpX().w());
+  } else {
+    // Convert uint32 back to double.
+    a.ucvtf(hwRes.a64VecD(), hwTempGpX.a64GpX().w());
+  }
 
   a.bind(contLab);
 
   slowPaths_.push_back(
       {.slowPathLab = slowPathLab,
        .contLab = contLab,
+       .name = isSigned ? "ToInt32" : "ToUint32",
        .frRes = frRes,
        .frInput1 = frInput,
        .hwRes = hwRes,
+       .slowCall = isSigned ? (void *)_sh_ljs_to_int32_rjs
+                            : (void *)_sh_ljs_to_uint32_rjs,
+       .slowCallName =
+           isSigned ? "_sh_ljs_to_int32_rjs" : "_sh_ljs_to_uint32_rjs",
        .emittingIP = emittingIP,
        .emit = [](Emitter &em, SlowPath &sl) {
          em.comment(
-             "// to_int32 r%u, r%u, r%u",
+             "// Slow path: %s, r%u, r%u, r%u",
+             sl.name,
              sl.frRes.index(),
              sl.frInput1.index(),
              sl.frInput2.index());
          em.a.bind(sl.slowPathLab);
          em.a.mov(a64::x0, xRuntime);
          em.loadFrameAddr(a64::x1, sl.frInput1);
-         EMIT_RUNTIME_CALL(
-             em,
-             double (*)(SHRuntime *, const SHLegacyValue *),
-             _sh_ljs_to_int32_rjs);
+         em.callThunkWithSavedIP((void *)sl.slowCall, sl.slowCallName);
          em.movHWFromHW<false>(sl.hwRes, HWReg::vecD(0));
          em.a.b(sl.contLab);
        }});

@@ -467,6 +467,9 @@ class TypeInferenceImpl {
   Type inferAsInt32Inst(AsInt32Inst *inst) {
     return *inst->getInherentType();
   }
+  Type inferAsUint32Inst(AsUint32Inst *inst) {
+    return *inst->getInherentType();
+  }
   Type inferLoadStackInst(LoadStackInst *inst) {
     return inst->getSingleOperand()->getType();
   }

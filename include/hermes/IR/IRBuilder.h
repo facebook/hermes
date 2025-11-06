@@ -297,6 +297,8 @@ class IRBuilder {
 
   AsInt32Inst *createAsInt32Inst(Value *val);
 
+  AsUint32Inst *createAsUint32Inst(Value *val);
+
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
   CreatePrivateNameInst *createCreatePrivateNameInst(LiteralString *descStr);

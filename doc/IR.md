@@ -278,6 +278,15 @@ Arguments | The value to cast.
 Semantics | The instruction follows the JavaScript rules for converting types into 32-bit signed integers.
 Effects | May read or write to memory.
 
+### AsUint32Inst
+
+AsUint32Inst | _
+--- | --- |
+Description | Casts a JavaScript value into an unsigned 32-bit integer value.
+Example |  %1 = AsUint32Inst %input
+Arguments | The value to cast.
+Semantics | The instruction follows the JavaScript rules for converting types into 32-bit unsigned integers (equivalent to `>>> 0`).
+Effects | May read or write to memory.
 
 ### AddEmptyStringInst
 

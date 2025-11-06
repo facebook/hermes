@@ -45,6 +45,10 @@ LiteralNumber *evalToNumber(IRBuilder &builder, Literal *operand);
 /// Returns a number if the operand can be converted to one, nullptr otherwise.
 LiteralNumber *evalToInt32(IRBuilder &builder, Literal *operand);
 
+/// Converts a literal to a 32-bit unsigned integer literal.
+/// Returns a number if the operand can be converted to one, nullptr otherwise.
+LiteralNumber *evalToUint32(IRBuilder &builder, Literal *operand);
+
 /// Converts a value to a boolean literal.
 /// Returns a boolean if the operand can be converted to one, nullptr otherwise.
 LiteralBool *evalToBoolean(IRBuilder &builder, Value *operand);

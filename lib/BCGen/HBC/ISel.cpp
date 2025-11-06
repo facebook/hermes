@@ -750,6 +750,12 @@ void HBCISel::generateAsInt32Inst(AsInt32Inst *Inst, BasicBlock *next) {
   BCFGen_->emitToInt32(dst, src);
 }
 
+void HBCISel::generateAsUint32Inst(AsUint32Inst *Inst, BasicBlock *next) {
+  auto dst = encodeValue(Inst);
+  auto src = encodeValue(Inst->getSingleOperand());
+  BCFGen_->emitToUint32(dst, src);
+}
+
 void HBCISel::emitMovIfNeeded(param_t dest, param_t src) {
   if (dest == src)
     return;

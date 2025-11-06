@@ -2361,6 +2361,23 @@ tailCall:
         DISPATCH;
       }
 
+      CASE(ToUint32) {
+        uint32_t argInt;
+        if (LLVM_LIKELY(
+                _sh_ljs_tryfast_truncate_to_uint32(O2REG(ToUint32), &argInt))) {
+          /* Fast-path. */
+          O1REG(ToUint32) = HermesValue::encodeTrustedNumberValue(argInt);
+        } else {
+          CAPTURE_IP(res = toUInt32_RJS(runtime, Handle<>(&O2REG(ToUint32))));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+            goto exception;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          O1REG(ToUint32) = res.getValue();
+        }
+        ip = NEXTINST(ToUint32);
+        DISPATCH;
+      }
+
       CASE(AddEmptyString) {
         if (LLVM_LIKELY(O2REG(AddEmptyString).isString())) {
           O1REG(AddEmptyString) = O2REG(AddEmptyString);

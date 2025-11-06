@@ -349,6 +349,12 @@ AsInt32Inst *IRBuilder::createAsInt32Inst(Value *val) {
   return AII;
 }
 
+AsUint32Inst *IRBuilder::createAsUint32Inst(Value *val) {
+  auto *AUI = new AsUint32Inst(val);
+  insert(AUI);
+  return AUI;
+}
+
 AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   auto *I = new AddEmptyStringInst(val);
   insert(I);

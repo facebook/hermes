@@ -486,7 +486,7 @@ class Emitter {
   loadConstBigInt(FR frRes, RuntimeModule *runtimeModule, uint32_t bigIntID);
   void toNumber(FR frRes, FR frInput);
   void toNumeric(FR frRes, FR frInput);
-  void toInt32(FR frRes, FR frInput);
+  void toInt32(FR frRes, FR frInput, bool isSigned);
   void addEmptyString(FR frRes, FR frInput);
 
   void addS(FR frRes, FR frLeft, FR frRight);

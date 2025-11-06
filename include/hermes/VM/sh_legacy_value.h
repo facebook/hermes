@@ -353,6 +353,34 @@ static inline bool _sh_ljs_tryfast_truncate_to_int32(
   }
 }
 
+/// If the value is a number that can be efficiently truncated to a 32 bit
+/// unsigned number, return true and store the result in \p res.
+/// Otherwise, return false and leave \p res in an unspecified state.
+static inline bool _sh_ljs_tryfast_truncate_to_uint32(
+    SHLegacyValue v,
+    uint32_t *res) {
+// If we are compiling with ARM v8.3 or above, there is a special instruction
+// to do the conversion.
+#ifdef __ARM_FEATURE_JCVT
+  if (!_sh_ljs_is_non_nan_number(v))
+    return false;
+  *res = (uint32_t)__builtin_arm_jcvt(v.f64);
+  return true;
+#endif
+
+  // Since we use NaN-boxing for non-number values, we know that any
+  // non-number values will fail the attempted conversion to uint32. So we can
+  // simply attempt the conversion without checking for numbers.
+  if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
+    uint64_t fast = _sh_tryfast_f64_to_u64_cvt(v.f64);
+    *res = (uint32_t)fast;
+    return (double)fast == v.f64;
+  } else {
+    *res = _sh_tryfast_f64_to_u32_cvt(v.f64);
+    return (double)*res == v.f64;
+  }
+}
+
 /// Test whether the given HermesValues are both non-NaN number values.
 /// Since we use NaN-boxing, this just checks if either parameter is NaN, which
 /// can have some performance advantages over _sh_ljs_is_double():

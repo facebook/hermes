@@ -748,6 +748,10 @@ bool Verifier::visitAsInt32Inst(const AsInt32Inst &Inst) {
   return true;
 }
 
+bool Verifier::visitAsUint32Inst(const AsUint32Inst &Inst) {
+  return true;
+}
+
 bool Verifier::visitAddEmptyStringInst(const AddEmptyStringInst &Inst) {
   AssertIWithMsg(
       Inst,

@@ -775,7 +775,27 @@ class InstrGen {
       generateRegister(*inst.getSingleOperand());
       os_ << ")));\n";
     } else {
-      os_ << "_sh_ljs_double(_sh_ljs_to_int32_rjs(shr, ";
+      os_
+          << (options_.smallC
+                  ? "_sh_ljs_double(_sh_ljs_to_int32_rjs(shr, "
+                  : "_sh_ljs_double(_sh_ljs_to_int32_rjs_inline(shr, ");
+      generateRegisterPtr(*inst.getSingleOperand());
+      os_ << "));\n";
+    }
+  }
+  void generateAsUint32Inst(AsUint32Inst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    if (inst.getSingleOperand()->getType().isNumberType()) {
+      os_ << "_sh_ljs_double((double)_sh_to_uint32_double(_sh_ljs_get_double(";
+      generateRegister(*inst.getSingleOperand());
+      os_ << ")));\n";
+    } else {
+      os_
+          << (options_.smallC
+                  ? "_sh_ljs_double(_sh_ljs_to_uint32_rjs(shr, "
+                  : "_sh_ljs_double(_sh_ljs_to_uint32_rjs_inline(shr, ");
       generateRegisterPtr(*inst.getSingleOperand());
       os_ << "));\n";
     }

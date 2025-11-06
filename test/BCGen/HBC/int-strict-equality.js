@@ -91,7 +91,7 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHKIR-NEXT:  %1 = LoadParamInst (:any) %y: any
 // CHKIR-NEXT:  %2 = AsInt32Inst (:number) %0: any
-// CHKIR-NEXT:  %3 = BinaryUnsignedRightShiftInst (:number) %1: any, 0: number
+// CHKIR-NEXT:  %3 = AsUint32Inst (:number) %1: any
 // CHKIR-NEXT:  %4 = FEqualInst (:boolean) %2: number, %3: number
 // CHKIR-NEXT:       CondBranchInst %4: boolean, %BB1, %BB2
 // CHKIR-NEXT:%BB1:
@@ -104,8 +104,8 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:%BB0:
 // CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
 // CHKIR-NEXT:  %1 = LoadParamInst (:any) %y: any
-// CHKIR-NEXT:  %2 = BinaryUnsignedRightShiftInst (:number) %0: any, 0: number
-// CHKIR-NEXT:  %3 = BinaryUnsignedRightShiftInst (:number) %1: any, 0: number
+// CHKIR-NEXT:  %2 = AsUint32Inst (:number) %0: any
+// CHKIR-NEXT:  %3 = AsUint32Inst (:number) %1: any
 // CHKIR-NEXT:  %4 = FEqualInst (:boolean) %2: number, %3: number
 // CHKIR-NEXT:       CondBranchInst %4: boolean, %BB1, %BB2
 // CHKIR-NEXT:%BB1:
@@ -126,7 +126,7 @@ function test_could_be_int(func) {
 // CHKIR-NEXT:       BranchInst %BB2
 // CHKIR-NEXT:%BB2:
 // CHKIR-NEXT:  %7 = PhiInst (:undefined|number) %5: number, %BB1, undefined: undefined, %BB0
-// CHKIR-NEXT:  %8 = BinaryUnsignedRightShiftInst (:number) %2: number, 0: number
+// CHKIR-NEXT:  %8 = AsUint32Inst (:number) %2: number
 // CHKIR-NEXT:  %9 = BinaryStrictlyEqualInst (:boolean) %7: undefined|number, %8: number
 // CHKIR-NEXT:        CondBranchInst %9: boolean, %BB3, %BB4
 // CHKIR-NEXT:%BB3:
@@ -192,12 +192,10 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    Ret               r1
 
 // CHKBC:Function<test_int_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x001d
 // CHKBC-NEXT:    LoadParam         r3, 1
 // CHKBC-NEXT:    ToInt32           r1, r3
-// CHKBC-NEXT:    LoadConstZero     r0
 // CHKBC-NEXT:    LoadParam         r3, 2
-// CHKBC-NEXT:    URshift           r0, r3, r0
+// CHKBC-NEXT:    ToUint32          r0, r3
 // CHKBC-NEXT:    JStrictEqual      L1, r1, r0
 // CHKBC-NEXT:    LoadConstUndefined r2
 // CHKBC-NEXT:    Ret               r2
@@ -205,12 +203,10 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    Ret               r1
 
 // CHKBC:Function<test_uint_uint>(3 params, 4 registers, 2 numbers, 1 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0025
-// CHKBC-NEXT:    LoadConstZero     r0
 // CHKBC-NEXT:    LoadParam         r3, 1
-// CHKBC-NEXT:    URshift           r1, r3, r0
+// CHKBC-NEXT:    ToUint32          r1, r3
 // CHKBC-NEXT:    LoadParam         r3, 2
-// CHKBC-NEXT:    URshift           r0, r3, r0
+// CHKBC-NEXT:    ToUint32          r0, r3
 // CHKBC-NEXT:    JStrictEqual      L1, r1, r0
 // CHKBC-NEXT:    LoadConstUndefined r2
 // CHKBC-NEXT:    Ret               r2
@@ -218,7 +214,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    Ret               r1
 
 // CHKBC:Function<test_could_be_int>(2 params, 14 registers, 2 numbers, 2 non-pointers):
-// CHKBC-NEXT:Offset in debug table: source 0x0030
+// CHKBC-NEXT:Offset in debug table: source 0x001d
 // CHKBC-NEXT:    LoadParam         r4, 1
 // CHKBC-NEXT:    LoadConstUndefined r3
 // CHKBC-NEXT:    Call1             r5, r4, r3
@@ -229,8 +225,7 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    JmpFalse          L1, r4
 // CHKBC-NEXT:    ToInt32           r2, r0
 // CHKBC-NEXT:L1:
-// CHKBC-NEXT:    LoadConstZero     r1
-// CHKBC-NEXT:    URshift           r1, r0, r1
+// CHKBC-NEXT:    ToUint32          r1, r0
 // CHKBC-NEXT:    JStrictEqual      L2, r2, r1
 // CHKBC-NEXT:    Ret               r3
 // CHKBC-NEXT:L2:
@@ -252,13 +247,8 @@ function test_could_be_int(func) {
 // CHKBC-NEXT:    bc 40: line 12 col 1
 // CHKBC-NEXT:    bc 51: line 12 col 1
 // CHKBC-NEXT:    bc 62: line 12 col 1
-// CHKBC-NEXT:  0x001d  function idx 2, starts at line 23 col 1
-// CHKBC-NEXT:    bc 11: line 25 col 7
-// CHKBC-NEXT:  0x0025  function idx 3, starts at line 34 col 1
-// CHKBC-NEXT:    bc 5: line 35 col 7
-// CHKBC-NEXT:    bc 12: line 36 col 7
-// CHKBC-NEXT:  0x0030  function idx 4, starts at line 45 col 1
+// CHKBC-NEXT:  0x001d  function idx 4, starts at line 45 col 1
 // CHKBC-NEXT:    bc 5: line 46 col 15
 // CHKBC-NEXT:    bc 12: line 46 col 11
 // CHKBC-NEXT:    bc 16: line 47 col 15
-// CHKBC-NEXT:  0x0040  end of debug source table
+// CHKBC-NEXT:  0x002d  end of debug source table

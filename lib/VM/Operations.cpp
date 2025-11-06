@@ -2914,6 +2914,25 @@ extern "C" double _sh_ljs_to_int32_rjs(SHRuntime *shr, const SHLegacyValue *n) {
   return cr->getDouble();
 }
 
+extern "C" double _sh_ljs_to_uint32_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  uint32_t argInt;
+  if (LLVM_LIKELY(_sh_ljs_tryfast_truncate_to_uint32(*n, &argInt))) {
+    return (double)argInt;
+  }
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toUInt32_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return cr->getDouble();
+}
+
 #define SH_COMPARISON_OP(name, call, oper)                              \
   extern "C" bool name(                                                 \
       SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) { \

@@ -389,6 +389,41 @@ class AsInt32Inst : public SingleOperandInst {
   }
 };
 
+class AsUint32Inst : public SingleOperandInst {
+  AsUint32Inst(const AsUint32Inst &) = delete;
+  void operator=(const AsUint32Inst &) = delete;
+
+ public:
+  explicit AsUint32Inst(Value *value)
+      : SingleOperandInst(ValueKind::AsUint32InstKind, value) {
+    setType(*getInherentTypeImpl());
+  }
+  explicit AsUint32Inst(
+      const AsUint32Inst *src,
+      llvh::ArrayRef<Value *> operands)
+      : SingleOperandInst(src, operands) {}
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createUint32();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return SideEffect::createExecute();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AsUint32InstKind;
+  }
+};
+
 class CondBranchInst : public TerminatorInst {
   CondBranchInst(const CondBranchInst &) = delete;
   void operator=(const CondBranchInst &) = delete;

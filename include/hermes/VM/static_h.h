@@ -801,6 +801,27 @@ _sh_ljs_to_numeric_rjs(SHRuntime *shr, const SHLegacyValue *n);
 SHERMES_EXPORT double _sh_ljs_to_int32_rjs(
     SHRuntime *shr,
     const SHLegacyValue *n);
+static inline double _sh_ljs_to_int32_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  int32_t res;
+  if (SH_LIKELY(_sh_ljs_tryfast_truncate_to_int32(*n, &res))) {
+    return res;
+  }
+  return _sh_ljs_to_int32_rjs(shr, n);
+}
+SHERMES_EXPORT double _sh_ljs_to_uint32_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n);
+static inline double _sh_ljs_to_uint32_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  uint32_t res;
+  if (SH_LIKELY(_sh_ljs_tryfast_truncate_to_uint32(*n, &res))) {
+    return res;
+  }
+  return _sh_ljs_to_uint32_rjs(shr, n);
+}
 
 SHERMES_EXPORT bool _sh_ljs_less_rjs(
     SHRuntime *shr,
@@ -1213,15 +1234,54 @@ static inline int32_t _sh_to_int32_double(double d) {
 
   if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
     int64_t fast;
-    if (__builtin_expect(sh_tryfast_f64_to_i64(d, fast), 1))
+    if (SH_LIKELY(sh_tryfast_f64_to_i64(d, fast)))
       return (int32_t)fast;
   } else {
     int32_t fast;
-    if (__builtin_expect(sh_tryfast_f64_to_i32(d, fast), 1))
+    if (SH_LIKELY(sh_tryfast_f64_to_i32(d, fast)))
       return fast;
   }
 
   return _sh_to_int32_double_slow_path(d);
+}
+
+/// C version of the hermes::truncateToUInt32 function.
+/// Inlines the fast path for SH to use, calls out to the slow path.
+static inline uint32_t _sh_to_uint32_double(double d) {
+  // NOTE: this implementation should be consistent with truncateToUint32()
+  // in Support/Conversions.h
+  // If we are compiling with ARM v8.3 or above, there is a special instruction
+  // to do the conversion.
+#ifdef __ARM_FEATURE_JCVT
+  return __builtin_arm_jcvt(d);
+#endif
+
+  // NOTE: this implementation should be consistent with truncateToInt32()
+  // in Support/Conversions.h
+
+  // Use __builtin_constant_p() for better perf and to avoid UB caused by
+  // constant propagation.
+#if defined(__GNUC__)
+  if (__builtin_constant_p(d)) {
+    // Be aggressive on constant path, use the maximum precision bits
+    // of double type for range check.
+    if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53))
+      return (int32_t)(int64_t)d;
+    return (uint32_t)_sh_to_int32_double_slow_path(d);
+  }
+#endif
+
+  if (HERMES_TRYFAST_F64_TO_64_IS_FAST) {
+    uint64_t fast;
+    if (SH_LIKELY(sh_tryfast_f64_to_u64(d, fast)))
+      return (uint32_t)fast;
+  } else {
+    uint32_t fast;
+    if (SH_LIKELY(sh_tryfast_f64_to_u32(d, fast)))
+      return fast;
+  }
+
+  return (uint32_t)_sh_to_int32_double_slow_path(d);
 }
 
 /// Store a property into direct storage.

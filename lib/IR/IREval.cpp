@@ -666,6 +666,16 @@ LiteralNumber *hermes::evalToInt32(IRBuilder &builder, Literal *operand) {
   return builder.getLiteralNumber(truncateToInt32(val));
 }
 
+LiteralNumber *hermes::evalToUint32(IRBuilder &builder, Literal *operand) {
+  // Eval to a number first, then truncate to a 32-bit unsigned int.
+  LiteralNumber *lit = evalToNumber(builder, operand);
+  if (!lit) {
+    return nullptr;
+  }
+  double val = lit->getValue();
+  return builder.getLiteralNumber(truncateToUInt32(val));
+}
+
 LiteralBool *hermes::evalToBoolean(IRBuilder &builder, Value *operand) {
   if (auto *L = llvh::dyn_cast<Literal>(operand)) {
     return evalToBoolean(builder, L);
