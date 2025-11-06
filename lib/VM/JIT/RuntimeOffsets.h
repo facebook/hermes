@@ -11,6 +11,7 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
+#include "hermes/VM/sh_runtime.h"
 
 namespace hermes {
 namespace vm {
@@ -22,7 +23,7 @@ struct RuntimeOffsets {
   static constexpr uint32_t stackPointer = offsetof(Runtime, stackPointer);
   static constexpr uint32_t registerStackEnd =
       offsetof(SHRuntime, registerStackEnd);
-  static constexpr uint32_t currentFrame = offsetof(Runtime, currentFrame_);
+  static constexpr uint32_t currentFrame = offsetof(SHRuntime, currentFrame);
   static constexpr uint32_t currentIP = offsetof(Runtime, currentIP_);
   static constexpr uint32_t globalObject = offsetof(Runtime, global_);
   static constexpr uint32_t thrownValue = offsetof(Runtime, thrownValue_);

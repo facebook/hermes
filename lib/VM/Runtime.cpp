@@ -252,6 +252,7 @@ RuntimeBase::RuntimeBase() {
 
   shCurJmpBuf = nullptr;
   stackPointer = nullptr;
+  currentFrame = nullptr;
   shLocals = nullptr;
 }
 
@@ -861,17 +862,18 @@ void Runtime::removeRuntimeModule(RuntimeModule *rm) {
 void Runtime::assertTopCodeBlockContainsIP(const inst::Inst *ip) const {
   // Check that if the topmost function is currently a JSFunction, then the IP
   // is in that function.
-  if (currentFrame_ != StackFramePtr(toPHV(registerStackStart)))
-    if (auto *codeBlock = currentFrame_.getCalleeCodeBlock())
+  if (getCurrentFrame() != StackFramePtr(toPHV(registerStackStart)))
+    if (auto *codeBlock =
+            StackFramePtr(toPHV(currentFrame)).getCalleeCodeBlock())
       assert(codeBlock->contains(ip) && "IP not in CodeBlock");
 }
 
 void Runtime::validateSavedIPBeforeCall() const {
   // If this is the first frame, there is nothing to save.
-  if (currentFrame_ == StackFramePtr(toPHV(registerStackStart)))
+  if (getCurrentFrame() == StackFramePtr(toPHV(registerStackStart)))
     return;
 
-  auto *codeBlock = currentFrame_.getCalleeCodeBlock();
+  auto *codeBlock = getCurrentFrame().getCalleeCodeBlock();
   // If the current function is not bytecode, the IP does not need to be saved.
   if (!codeBlock)
     return;

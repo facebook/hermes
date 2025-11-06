@@ -534,8 +534,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   inline void popStack(uint32_t count);
 
   /// \return the current frame pointer.
-  StackFramePtr getCurrentFrame() {
-    return currentFrame_;
+  StackFramePtr getCurrentFrame() const {
+    return StackFramePtr(toPHV(currentFrame));
   }
 
   /// Set the current frame pointer to the specified value.
@@ -549,7 +549,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// Restore the stack pointer to the base of the current frame and then
   /// set the frame pointer to the previous frame.
   /// \param currentFrame the currentFrame. It must match the value of
-  ///   this->currentFrame_, but is more efficient to pass it in assuming it
+  ///   getCurrentFrame(), but is more efficient to pass it in assuming it
   ///   already is in a register. It also provides some additional error
   ///   checking in debug builds, ensuring that the stack hasn't changed
   ///   unexpectedly.
@@ -1303,9 +1303,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   llvh::MutableArrayRef<PinnedHermesValue> registerStackAllocation_;
   /// Manages data to be used in the case of a crash.
   std::shared_ptr<CrashManager> crashMgr_;
-  /// Points to the first register in the current frame. The current frame
-  /// continues up to \c stackPointer (exclusive).
-  StackFramePtr currentFrame_{nullptr};
 
   /// Used to guard against stack overflow. Either uses real stack checking or
   /// call depth counter checking.
@@ -1877,7 +1874,7 @@ class ScopedNativeCallFrame {
     auto *stack = runtime.allocUninitializedStack(registersNeeded);
     frame_ = StackFramePtr::initFrame(
         stack,
-        runtime.currentFrame_,
+        runtime.getCurrentFrame(),
         runtime.getCurrentIP(),
         nullptr,
         nullptr,
@@ -2301,39 +2298,41 @@ inline void Runtime::popStack(uint32_t count) {
 }
 
 inline void Runtime::setCurrentFrame(StackFramePtr frame) {
-  currentFrame_ = frame;
+  currentFrame = frame.ptr();
 }
 
 /// Set the current frame pointer to the current top of the stack and return
 /// it.
 /// \return the new value of the current frame pointer.
 inline StackFramePtr Runtime::setCurrentFrameToTopOfStack() {
-  return currentFrame_ = StackFramePtr(toPHV(stackPointer));
+  currentFrame = stackPointer;
+  return StackFramePtr(toPHV(stackPointer));
 }
 
 inline StackFramePtr Runtime::restoreStackAndPreviousFrame(
-    StackFramePtr currentFrame) {
+    StackFramePtr currentFrameArg) {
   assert(
-      currentFrame_ == currentFrame &&
+      getCurrentFrame() == currentFrameArg &&
       "currentFrame parameter must match currentFrame_");
-  stackPointer = currentFrame.ptr();
-  return currentFrame_ = currentFrame.getPreviousFrame();
+  stackPointer = currentFrameArg.ptr();
+  currentFrame = currentFrameArg.getPreviousFramePointer();
+  return getCurrentFrame();
 }
 
 inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
-  return restoreStackAndPreviousFrame(currentFrame_);
+  return restoreStackAndPreviousFrame(getCurrentFrame());
 }
 
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
   return {
-      StackFrameIterator{currentFrame_},
+      StackFrameIterator{getCurrentFrame()},
       StackFrameIterator{toPHV(registerStackStart)}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
   return {
-      ConstStackFrameIterator{currentFrame_},
+      ConstStackFrameIterator{getCurrentFrame()},
       ConstStackFrameIterator{toPHV(registerStackStart)}};
 };
 

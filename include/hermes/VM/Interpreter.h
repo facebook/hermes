@@ -226,7 +226,7 @@ class Interpreter {
     ExecutionStatus status = runtime.debugger_.runDebugger(reason, state);
     codeBlock = state.codeBlock;
     ip = state.codeBlock->getOffsetPtr(state.offset);
-    frameRegs = &runtime.currentFrame_.getFirstLocalRef();
+    frameRegs = &StackFramePtr(toPHV(runtime.currentFrame)).getFirstLocalRef();
     return status;
   }
 #endif
