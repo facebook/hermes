@@ -122,4 +122,10 @@ typedef struct SHArrayStorage {
   SHLegacyValue storage[0];
 } SHArrayStorage;
 
+/// Struct mirroring the layout of BoxedDouble.
+typedef struct SHBoxedDouble {
+  SHGCCell base;
+  double value_;
+} SHBoxedDouble;
+
 #endif

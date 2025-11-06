@@ -14,6 +14,7 @@
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/SymbolID.h"
+#include "hermes/VM/sh_small_hermes_value.h"
 
 #include "llvh/Support/MathExtras.h"
 
@@ -232,19 +233,21 @@ class HermesValue32 {
   /// and fixing any code that relies on the layout of HermesValue32.
   /// Updated: Mar 11, 2025
   static constexpr size_t kVersion = 1;
-  static constexpr size_t kNumRawTypeBits = sizeof(RawType) * 8;
-  static constexpr size_t kNumTagBits = LogHeapAlign;
+  static constexpr size_t kNumRawTypeBits = SH_SHV_RAW_TYPE_BITS;
+  static constexpr size_t kNumTagBits = SH_SHV_TAG_BITS;
   static constexpr size_t kNumValueBits = kNumRawTypeBits - kNumTagBits;
+
+  static_assert(kNumTagBits == LogHeapAlign, "Tag bits must match alignment");
 
   /// A 3 bit tag describing the stored value. Tags that represent multiple
   /// types are distinguished using an additional bit found in the "ETag".
   enum class Tag : uint8_t {
-    CompressedHV64,
-    String,
-    BigInt,
-    Object,
-    BoxedDouble,
-    Symbol,
+    CompressedHV64 = HV32Tag_CompressedHV64,
+    String = HV32Tag_String,
+    BigInt = HV32Tag_BigInt,
+    Object = HV32Tag_Object,
+    BoxedDouble = HV32Tag_BoxedDouble,
+    Symbol = HV32Tag_Symbol,
     _Last,
 
     FirstPointer = String,
@@ -268,7 +271,7 @@ class HermesValue32 {
   }
 
   RawType getValue() const {
-    return raw_ >> kNumTagBits;
+    return _sh_shv_get_value(raw_);
   }
 
   double getCompressedDouble() const {
@@ -277,8 +280,7 @@ class HermesValue32 {
   }
 
   Tag getTag() const {
-    return static_cast<Tag>(
-        raw_ & llvh::maskTrailingOnes<RawType>(kNumTagBits));
+    return static_cast<Tag>(_sh_shv_get_tag(raw_));
   }
 
   /// Assert that the pointer can be encoded.
@@ -324,8 +326,7 @@ class HermesValue32 {
   uint64_t compressedHV64ToBits() const {
     static_assert((uint64_t)Tag::CompressedHV64 == 0, "Must have zero tag");
     assert(getTag() == Tag::CompressedHV64 && "Must be a compressed HV64");
-    // The tag is guaranteed to be 0, so we can just shift to decompress.
-    return (uint64_t)raw_ << (64 - kNumRawTypeBits);
+    return _sh_shv_decompress_hv64(raw_);
   }
 
   static constexpr HermesValue32 bitsToCompressedHV64(uint64_t bits) {
@@ -451,8 +452,7 @@ class HermesValue32 {
 
   CompressedPointer getPointer() const {
     assert(isPointer());
-    RawType rawPtr = raw_ & llvh::maskLeadingOnes<RawType>(kNumValueBits);
-    return CompressedPointer::fromRaw(rawPtr);
+    return CompressedPointer::fromRaw(_sh_shv_get_pointer(raw_).raw);
   }
 
   SymbolID getSymbol() const {

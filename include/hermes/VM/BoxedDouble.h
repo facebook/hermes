@@ -41,6 +41,10 @@ class BoxedDouble final : public GCCell {
   double get() const {
     return value_;
   }
+
+ private:
+  /// Dummy function for static asserts that may need private fields.
+  static void staticAsserts();
 };
 
 } // namespace vm
