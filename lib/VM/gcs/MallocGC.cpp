@@ -28,6 +28,14 @@ namespace vm {
 
 static const char *kGCName = "malloc";
 
+const VTable MallocGC::FreelistCell::vt{
+    CellKind::FreelistKind,
+    cellSize<MallocGC::FreelistCell>()};
+
+void FreelistBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.setVTable(&MallocGC::FreelistCell::vt);
+}
+
 struct MallocGC::MarkingAcceptor final : public RootAcceptor,
                                          public WeakRootAcceptor {
   MallocGC &gc;

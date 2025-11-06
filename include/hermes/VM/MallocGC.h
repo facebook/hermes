@@ -257,6 +257,21 @@ class MallocGC final : public GCBase {
   virtual void creditExternalMemory(GCCell *alloc, uint32_t size) override;
   virtual void debitExternalMemory(GCCell *alloc, uint32_t size) override;
 
+  class FreelistCell final : public GCCell {
+    friend void FreelistBuildMeta(const GCCell *, Metadata::Builder &);
+
+   private:
+    static const VTable vt;
+
+   public:
+    static constexpr CellKind getCellKind() {
+      return CellKind::FreelistKind;
+    }
+    static bool classof(const GCCell *cell) {
+      return cell->getKind() == CellKind::FreelistKind;
+    }
+  };
+
   void writeBarrier(const GCHermesValue *, HermesValue) {}
   void writeBarrier(const GCSmallHermesValue *, SmallHermesValue) {}
   void writeBarrierForLargeObj(
