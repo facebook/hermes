@@ -55,43 +55,11 @@ CallResult<HermesValue> toCallResultHermesValue(
 }
 } // namespace
 
-extern "C" SHLegacyValue *
-_sh_push_locals(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
-  // TODO: [SH]: check for native stack overflow.
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" void _sh_throw_register_stack_overflow(SHRuntime *shr) {
   Runtime &runtime = getRuntime(shr);
-
-  PinnedHermesValue *savedSP = runtime.getStackPointer();
-
-  // Allocate the registers for the new frame, but only if stack != 0.
-  if (stackSize && LLVM_UNLIKELY(!runtime.checkAndAllocStack(stackSize))) {
-    (void)runtime.raiseStackOverflow(
-        Runtime::StackOverflowKind::JSRegisterStack);
-    _sh_throw_current(shr);
-  }
-
-  locals->prev = runtime.shLocals;
-  runtime.shLocals = locals;
-  return savedSP;
-}
-
-extern "C" SHLegacyValue *
-_sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
-  // TODO: [SH]: check for native stack overflow.
-  Runtime &runtime = getRuntime(shr);
-
-  PinnedHermesValue *frame = runtime.getStackPointer();
-
-  // Allocate the registers for the new frame.
-  if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(stackSize))) {
-    (void)runtime.raiseStackOverflow(
-        Runtime::StackOverflowKind::JSRegisterStack);
-    _sh_throw_current(shr);
-  }
-
-  runtime.setCurrentFrame(StackFramePtr(frame));
-  locals->prev = runtime.shLocals;
-  runtime.shLocals = locals;
-  return frame;
+  (void)runtime.raiseStackOverflow(Runtime::StackOverflowKind::JSRegisterStack);
+  _sh_throw_current(shr);
 }
 
 extern "C" void _sh_check_native_stack_overflow(SHRuntime *shr) {

@@ -371,11 +371,6 @@ void _sh_throw_invalid_call(SHRuntime *shr) {
   (void)runtime.raiseTypeError("Class constructor invoked without new");
   _sh_throw_current(shr);
 }
-void _sh_throw_register_stack_overflow(SHRuntime *shr) {
-  Runtime &runtime = getRuntime(shr);
-  (void)runtime.raiseStackOverflow(Runtime::StackOverflowKind::JSRegisterStack);
-  _sh_throw_current(shr);
-}
 
 void *_jit_find_catch_target(
     SHRuntime *shr,

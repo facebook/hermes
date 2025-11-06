@@ -140,9 +140,6 @@ void *_jit_find_catch_target(
 [[noreturn]] void _sh_throw_invalid_construct(SHRuntime *shr);
 [[noreturn]] void _sh_throw_invalid_call(SHRuntime *shr);
 
-/// Throw a register stack overflow exception.
-[[noreturn]] void _sh_throw_register_stack_overflow(SHRuntime *shr);
-
 /// Raise an exception that the target of a call is not callable. The outgoing
 /// registers must already have been set up.
 [[noreturn]] void _jit_throw_non_object_call(SHRuntime *shr);

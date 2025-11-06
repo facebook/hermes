@@ -277,10 +277,25 @@ SHERMES_EXPORT void _sh_cache_template_object(
     uint32_t templateObjID,
     SHLegacyValue templateObj);
 
+/// Throw a register stack overflow exception.
+SHERMES_EXPORT void _sh_throw_register_stack_overflow(SHRuntime *shr);
+
 /// Add the locals to the gc list, allocate register stack, return a pointer to
 /// the frame.
-SHERMES_EXPORT SHLegacyValue *
-_sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize);
+static inline SHLegacyValue *
+_sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
+  SHLegacyValue *frame = shr->stackPointer;
+
+  if (SH_UNLIKELY(!_sh_check_and_alloc_stack(shr, stackSize))) {
+    _sh_throw_register_stack_overflow(shr);
+    SH_BUILTIN_UNREACHABLE;
+  }
+
+  shr->currentFrame = frame;
+  locals->prev = shr->shLocals;
+  shr->shLocals = locals;
+  return frame;
+}
 
 /// Pop the locals from the root stack and restore the stack and frame pointers.
 /// \param shr the SHRuntime
@@ -296,8 +311,19 @@ _sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame) {
 
 /// Add a locals struct to the root stack, allocate the requested number of
 /// registers and return the previous register stack pointer.
-SHERMES_EXPORT SHLegacyValue *
-_sh_push_locals(SHRuntime *shr, SHLocals *locals, uint32_t stackSize);
+static inline SHLegacyValue *
+_sh_push_locals(SHRuntime *shr, SHLocals *locals, uint32_t stackSize) {
+  SHLegacyValue *savedSP = shr->stackPointer;
+
+  if (stackSize && SH_UNLIKELY(!_sh_check_and_alloc_stack(shr, stackSize))) {
+    _sh_throw_register_stack_overflow(shr);
+  }
+
+  locals->prev = shr->shLocals;
+  shr->shLocals = locals;
+  return savedSP;
+}
+
 /// Pop the locals (which must be current), restore the register stack.
 static inline void
 _sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP) {

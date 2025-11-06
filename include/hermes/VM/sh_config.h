@@ -58,4 +58,15 @@ typedef uint16_t char16_t;
 #define SH_ATTRIBUTE_ALWAYS_INLINE
 #endif
 
+/// SH_BUILTIN_UNREACHABLE - On compilers which support it, expands
+/// to an expression which states that it is undefined behavior for the
+/// compiler to reach this point.  Otherwise is not defined.
+#ifdef __GNUC__
+#define SH_BUILTIN_UNREACHABLE __builtin_unreachable()
+#elif defined(_MSC_VER)
+#define SH_BUILTIN_UNREACHABLE __assume(false)
+#else
+#define SH_BUILTIN_UNREACHABLE ((void)0)
+#endif
+
 #endif // HERMES_SH_CONFIG_H
