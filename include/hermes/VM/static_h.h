@@ -289,8 +289,15 @@ _sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame);
 SHERMES_EXPORT SHLegacyValue *
 _sh_push_locals(SHRuntime *shr, SHLocals *locals, uint32_t stackSize);
 /// Pop the locals (which must be current), restore the register stack.
-SHERMES_EXPORT void
-_sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP);
+static inline void
+_sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP) {
+  assert(shr->shLocals == locals && "Only the current locals can be popped");
+  shr->shLocals = locals->prev;
+  assert(
+      savedSP <= shr->stackPointer &&
+      "attempting to pop the stack to a higher level");
+  shr->stackPointer = savedSP;
+}
 
 /// Index 0 loads "this", 1 the first param, etc.
 static inline SHLegacyValue _sh_ljs_param(

@@ -104,14 +104,6 @@ extern "C" void _sh_check_native_stack_overflow(SHRuntime *shr) {
 }
 
 extern "C" void
-_sh_pop_locals(SHRuntime *shr, SHLocals *locals, SHLegacyValue *savedSP) {
-  Runtime &runtime = getRuntime(shr);
-  assert(runtime.shLocals == locals && "Only the current locals can be popped");
-  runtime.shLocals = locals->prev;
-  runtime.popToSavedStackPointer(toPHV(savedSP));
-}
-
-extern "C" void
 _sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame) {
   Runtime &runtime = getRuntime(shr);
   assert(runtime.shLocals == locals && "Only the current locals can be popped");
