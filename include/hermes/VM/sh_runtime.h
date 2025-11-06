@@ -22,6 +22,7 @@ extern "C" {
 #endif
 
 typedef struct SHUnit SHUnit;
+typedef struct SHLocals SHLocals;
 
 /// This struct represents an element in the exception handler stack. This
 /// represents a try, and contains the information necessary to jump to its
@@ -77,6 +78,23 @@ typedef struct SHRuntime {
 
   /// The current top of the exception handler stack.
   SHJmpBuf *shCurJmpBuf;
+
+  /// Past-the-end pointer for the current frame. This points to the first
+  /// uninitialized element at the end of the stack.
+  SHLegacyValue *stackPointer;
+
+  /// Start of the register stack.
+  SHLegacyValue *registerStackStart;
+
+  /// End of the register stack.
+  SHLegacyValue *registerStackEnd;
+
+  /// Points to the first register in the current frame. The current frame
+  /// continues up to stackPointer (exclusive).
+  SHLegacyValue *currentFrame;
+
+  /// [SH] head of locals list.
+  SHLocals *shLocals;
 
 #define SHRUNTIME_HV_FIELD(name) SHLegacyValue name;
 #include "hermes/VM/SHRuntimeHermesValueFields.def"

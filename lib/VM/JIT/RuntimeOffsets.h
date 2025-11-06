@@ -19,9 +19,9 @@ namespace vm {
 #pragma GCC diagnostic ignored "-Winvalid-offsetof"
 
 struct RuntimeOffsets {
-  static constexpr uint32_t stackPointer = offsetof(Runtime, stackPointer_);
+  static constexpr uint32_t stackPointer = offsetof(Runtime, stackPointer);
   static constexpr uint32_t registerStackEnd =
-      offsetof(Runtime, registerStackEnd_);
+      offsetof(SHRuntime, registerStackEnd);
   static constexpr uint32_t currentFrame = offsetof(Runtime, currentFrame_);
   static constexpr uint32_t currentIP = offsetof(Runtime, currentIP_);
   static constexpr uint32_t globalObject = offsetof(Runtime, global_);

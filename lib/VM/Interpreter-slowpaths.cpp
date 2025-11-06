@@ -987,7 +987,7 @@ ExecutionStatus Interpreter::implCallBuiltin(
   NativeFunction *nf = vmcast<NativeFunction>(callable);
 
   auto newFrame = StackFramePtr::initFrame(
-      runtime.stackPointer_,
+      runtime.getStackPointer(),
       FRAME,
       ip,
       curCodeBlock,

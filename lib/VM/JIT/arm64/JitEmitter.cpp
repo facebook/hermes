@@ -1499,7 +1499,7 @@ void Emitter::frameSetup(
   asmjit::Label registerOverflowLab = newSlowPathLabel();
 
   // Compute the remaining available stack space:
-  // runtime.registerStackEnd_ - runtime.stackPointer_
+  // runtime.registerStackEnd - runtime.stackPointer
   a.ldr(a64::x0, a64::Mem(xRuntime, RuntimeOffsets::registerStackEnd));
   a.sub(a64::x0, a64::x0, xFrame);
   // Check if we need more registers than remain.

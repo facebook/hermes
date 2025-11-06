@@ -1183,7 +1183,7 @@ tailCall:
       CASE(Call1) {
         callArgCount = 1;
         nextIP = NEXTINST(Call1);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call1);
         callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         goto doCall;
@@ -1192,7 +1192,7 @@ tailCall:
       CASE(Call2) {
         callArgCount = 2;
         nextIP = NEXTINST(Call2);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call2);
         fr.getArgRefUnsafe(0) = O4REG(Call2);
         callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
@@ -1202,7 +1202,7 @@ tailCall:
       CASE(Call3) {
         callArgCount = 3;
         nextIP = NEXTINST(Call3);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call3);
         fr.getArgRefUnsafe(0) = O4REG(Call3);
         fr.getArgRefUnsafe(1) = O5REG(Call3);
@@ -1213,7 +1213,7 @@ tailCall:
       CASE(Call4) {
         callArgCount = 4;
         nextIP = NEXTINST(Call4);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call4);
         fr.getArgRefUnsafe(0) = O4REG(Call4);
         fr.getArgRefUnsafe(1) = O5REG(Call4);
@@ -1249,7 +1249,7 @@ tailCall:
       // Subtract 1 from callArgCount as 'this' is considered an argument in the
       // instruction, but not in the frame.
       auto newFrame = StackFramePtr::initFrame(
-          runtime.stackPointer_,
+          runtime.getStackPointer(),
           FRAME,
           ip,
           curCodeBlock,

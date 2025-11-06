@@ -500,7 +500,7 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// \return the current stack pointer.
   PinnedHermesValue *getStackPointer() {
-    return stackPointer_;
+    return toPHV(stackPointer);
   }
 
   /// Pop the register stack down to a previously saved stack pointer.
@@ -851,9 +851,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
 
   /// Head of the locals list used for VM operations.
   Locals *vmLocals{};
-
-  /// [SH] head of locals list.
-  SHLocals *shLocals{};
 
   /// Raw pointers to prototypes.
   JSObject *objectPrototypeRawPtr{};
@@ -1304,11 +1301,6 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   /// If the register stack is allocated by the runtime, then this stores its
   /// location and size.
   llvh::MutableArrayRef<PinnedHermesValue> registerStackAllocation_;
-  PinnedHermesValue *registerStackStart_;
-  PinnedHermesValue *registerStackEnd_;
-  /// Past-the-end pointer for the current frame. This points to the first
-  /// uninitialized element at the end of the stack.
-  PinnedHermesValue *stackPointer_;
   /// Manages data to be used in the case of a crash.
   std::shared_ptr<CrashManager> crashMgr_;
   /// Points to the first register in the current frame. The current frame
@@ -2231,19 +2223,19 @@ inline Runtime::FormatSymbolID Runtime::formatSymbolID(SymbolID id) {
   return FormatSymbolID(*this, id);
 }
 
-inline void Runtime::popToSavedStackPointer(PinnedHermesValue *stackPointer) {
+inline void Runtime::popToSavedStackPointer(PinnedHermesValue *toRestore) {
   assert(
-      stackPointer <= stackPointer_ &&
+      toRestore <= stackPointer &&
       "attempting to pop the stack to a higher level");
-  stackPointer_ = stackPointer;
+  stackPointer = toRestore;
 }
 
 inline uint32_t Runtime::getStackLevel() const {
-  return (uint32_t)(stackPointer_ - registerStackStart_);
+  return (uint32_t)(toPHV(stackPointer) - toPHV(registerStackStart));
 }
 
 inline uint32_t Runtime::availableStackSize() const {
-  return (uint32_t)(registerStackEnd_ - stackPointer_);
+  return (uint32_t)(toPHV(registerStackEnd) - toPHV(stackPointer));
 }
 
 inline bool Runtime::checkAvailableStack(uint32_t count) {
@@ -2254,7 +2246,7 @@ inline bool Runtime::checkAvailableStack(uint32_t count) {
 
 inline PinnedHermesValue *Runtime::allocUninitializedStack(uint32_t count) {
   assert(availableStackSize() >= count && "register stack overflow");
-  return stackPointer_ += count;
+  return toPHV(stackPointer += count);
 }
 
 inline bool Runtime::checkAndAllocStack(uint32_t count) {
@@ -2265,10 +2257,10 @@ inline bool Runtime::checkAndAllocStack(uint32_t count) {
 }
 
 inline void Runtime::allocStack(uint32_t count) {
-  auto *fillPtr = stackPointer_;
+  auto *fillPtr = stackPointer;
   allocUninitializedStack(count);
   // Initialize the new registers.
-  initStackWithZeroes(fillPtr, count);
+  initStackWithZeroes(toPHV(fillPtr), count);
 }
 
 inline void Runtime::initStackWithZeroes(
@@ -2305,7 +2297,7 @@ inline void Runtime::initStackWithZeroes(
 
 inline void Runtime::popStack(uint32_t count) {
   assert(getStackLevel() >= count && "register stack underflow");
-  stackPointer_ += count;
+  stackPointer += count;
 }
 
 inline void Runtime::setCurrentFrame(StackFramePtr frame) {
@@ -2316,7 +2308,7 @@ inline void Runtime::setCurrentFrame(StackFramePtr frame) {
 /// it.
 /// \return the new value of the current frame pointer.
 inline StackFramePtr Runtime::setCurrentFrameToTopOfStack() {
-  return currentFrame_ = StackFramePtr(stackPointer_);
+  return currentFrame_ = StackFramePtr(toPHV(stackPointer));
 }
 
 inline StackFramePtr Runtime::restoreStackAndPreviousFrame(
@@ -2324,7 +2316,7 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame(
   assert(
       currentFrame_ == currentFrame &&
       "currentFrame parameter must match currentFrame_");
-  stackPointer_ = currentFrame.ptr();
+  stackPointer = currentFrame.ptr();
   return currentFrame_ = currentFrame.getPreviousFrame();
 }
 
@@ -2335,14 +2327,14 @@ inline StackFramePtr Runtime::restoreStackAndPreviousFrame() {
 inline llvh::iterator_range<StackFrameIterator> Runtime::getStackFrames() {
   return {
       StackFrameIterator{currentFrame_},
-      StackFrameIterator{registerStackStart_}};
+      StackFrameIterator{toPHV(registerStackStart)}};
 };
 
 inline llvh::iterator_range<ConstStackFrameIterator> Runtime::getStackFrames()
     const {
   return {
       ConstStackFrameIterator{currentFrame_},
-      ConstStackFrameIterator{registerStackStart_}};
+      ConstStackFrameIterator{toPHV(registerStackStart)}};
 };
 
 inline StackOverflowGuard Runtime::getOverflowGuardForRegex() {

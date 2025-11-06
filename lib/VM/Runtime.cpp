@@ -251,6 +251,8 @@ RuntimeBase::RuntimeBase() {
   std::fill(std::begin(units), std::end(units), nullptr);
 
   shCurJmpBuf = nullptr;
+  stackPointer = nullptr;
+  shLocals = nullptr;
 }
 
 void RuntimeBase::registerHeapSegment(unsigned idx, void *lowLim) {
@@ -298,7 +300,6 @@ Runtime::Runtime(
       trackIO_(runtimeConfig.getTrackIO()),
       vmExperimentFlags_(runtimeConfig.getVMExperimentFlags()),
       jsLibStorage_(createJSLibStorage()),
-      stackPointer_(),
       crashMgr_(runtimeConfig.getCrashMgr()),
 #ifdef HERMES_CHECK_NATIVE_STACK
       overflowGuard_(
@@ -326,8 +327,9 @@ Runtime::Runtime(
   if (LLVM_UNLIKELY(maxNumRegisters > kMaxSupportedNumRegisters)) {
     hermes_fatal("RuntimeConfig maxNumRegisters too big");
   }
-  registerStackStart_ = runtimeConfig.getRegisterStack();
-  if (!registerStackStart_) {
+  registerStackStart =
+      static_cast<SHLegacyValue *>(runtimeConfig.getRegisterStack());
+  if (!registerStackStart) {
     // registerStackAllocation_ should not be allocated with new, because then
     // default constructors would run for the whole stack space.
     // Round up to page size as required by vm_allocate.
@@ -337,19 +339,20 @@ Runtime::Runtime(
     if (!result) {
       hermes_fatal("Failed to allocate register stack", result.getError());
     }
-    registerStackStart_ = static_cast<PinnedHermesValue *>(result.get());
-    registerStackAllocation_ = {registerStackStart_, numBytesForRegisters};
-    crashMgr_->registerMemory(registerStackStart_, numBytesForRegisters);
+    registerStackStart = static_cast<SHLegacyValue *>(result.get());
+    registerStackAllocation_ = {
+        toPHV(registerStackStart), numBytesForRegisters};
+    crashMgr_->registerMemory(toPHV(registerStackStart), numBytesForRegisters);
   }
 
-  registerStackEnd_ = registerStackStart_ + maxNumRegisters;
+  registerStackEnd = registerStackStart + maxNumRegisters;
   if (shouldRandomizeMemoryLayout_) {
     const unsigned bytesOff = std::random_device()() % oscompat::page_size();
-    registerStackStart_ += bytesOff / sizeof(PinnedHermesValue);
+    registerStackStart += bytesOff / sizeof(SHLegacyValue);
     assert(
-        registerStackEnd_ >= registerStackStart_ && "register stack too small");
+        registerStackEnd >= registerStackStart && "register stack too small");
   }
-  stackPointer_ = registerStackStart_;
+  stackPointer = registerStackStart;
 
   static_assert(
       sizeof(SHUnit::script_id) == sizeof(facebook::hermes::debugger::ScriptID),
@@ -566,7 +569,8 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Registers);
     acceptor.beginRootSection(RootAcceptor::Section::Registers);
-    for (auto *p = registerStackStart_, *e = stackPointer_; p != e; ++p)
+    for (auto *p = toPHV(registerStackStart), *e = getStackPointer(); p != e;
+         ++p)
       acceptor.accept(*p);
     acceptor.endRootSection();
   }
@@ -857,14 +861,14 @@ void Runtime::removeRuntimeModule(RuntimeModule *rm) {
 void Runtime::assertTopCodeBlockContainsIP(const inst::Inst *ip) const {
   // Check that if the topmost function is currently a JSFunction, then the IP
   // is in that function.
-  if (currentFrame_ != StackFramePtr(registerStackStart_))
+  if (currentFrame_ != StackFramePtr(toPHV(registerStackStart)))
     if (auto *codeBlock = currentFrame_.getCalleeCodeBlock())
       assert(codeBlock->contains(ip) && "IP not in CodeBlock");
 }
 
 void Runtime::validateSavedIPBeforeCall() const {
   // If this is the first frame, there is nothing to save.
-  if (currentFrame_ == StackFramePtr(registerStackStart_))
+  if (currentFrame_ == StackFramePtr(toPHV(registerStackStart)))
     return;
 
   auto *codeBlock = currentFrame_.getCalleeCodeBlock();
@@ -872,7 +876,7 @@ void Runtime::validateSavedIPBeforeCall() const {
   if (!codeBlock)
     return;
 
-  auto *ip = StackFramePtr(stackPointer_).getSavedIP();
+  auto *ip = StackFramePtr(toPHV(stackPointer)).getSavedIP();
   // Validate that the IP is correct.
   assert(ip && "Saved IP is null");
   assert(codeBlock->contains(ip) && "Saved IP not in CodeBlock");
@@ -1355,7 +1359,7 @@ llvh::Optional<Runtime::StackFrameInfo> Runtime::stackFrameInfoByIndex(
 /// call.
 uint32_t Runtime::calcFrameOffset(ConstStackFrameIterator it) const {
   assert(it != getStackFrames().end() && "invalid frame");
-  return it->ptr() - registerStackStart_;
+  return it->ptr() - toPHV(registerStackStart);
 }
 
 /// \return the offset between the location of the current frame and the
@@ -2085,9 +2089,9 @@ void Runtime::crashCallback(int fd) {
   json.emitKeyValue("address", writeHex(this));
   json.emitKeyValue(
       "registerStackAllocation", writeHex(registerStackAllocation_.data()));
-  json.emitKeyValue("registerStackStart", writeHex(registerStackStart_));
-  json.emitKeyValue("registerStackPointer", writeHex(stackPointer_));
-  json.emitKeyValue("registerStackEnd", writeHex(registerStackEnd_));
+  json.emitKeyValue("registerStackStart", writeHex(registerStackStart));
+  json.emitKeyValue("registerStackPointer", writeHex(stackPointer));
+  json.emitKeyValue("registerStackEnd", writeHex(registerStackEnd));
   json.emitKey("callstack");
   crashWriteCallStack(json);
   json.closeDict();
@@ -2102,7 +2106,8 @@ void Runtime::crashWriteCallStack(JSONEmitter &json) {
   for (auto frame : getStackFrames()) {
     json.openDict();
     json.emitKeyValue(
-        "StackFrameRegOffs", (uint32_t)(frame.ptr() - registerStackStart_));
+        "StackFrameRegOffs",
+        (uint32_t)(frame.ptr() - toPHV(registerStackStart)));
     auto codeBlock = frame.getSavedCodeBlock();
     if (codeBlock) {
       json.emitKeyValue("FunctionID", codeBlock->getFunctionID());
