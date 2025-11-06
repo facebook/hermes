@@ -729,18 +729,73 @@ SHERMES_EXPORT bool _sh_ljs_less_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+
+static inline bool _sh_ljs_less_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and compare.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_get_double(*a) < _sh_ljs_get_double(*b);
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_less_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT bool _sh_ljs_greater_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+
+static inline bool _sh_ljs_greater_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and compare.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_get_double(*a) > _sh_ljs_get_double(*b);
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_greater_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT bool _sh_ljs_less_equal_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+
+static inline bool _sh_ljs_less_equal_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and compare.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_get_double(*a) <= _sh_ljs_get_double(*b);
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_less_equal_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT bool _sh_ljs_greater_equal_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
     const SHLegacyValue *b);
+
+static inline bool _sh_ljs_greater_equal_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and compare.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_get_double(*a) >= _sh_ljs_get_double(*b);
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_greater_equal_rjs(shr, a, b);
+}
 SHERMES_EXPORT bool _sh_ljs_equal_rjs(
     SHRuntime *shr,
     const SHLegacyValue *a,
@@ -749,14 +804,113 @@ SHERMES_EXPORT bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b);
 
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_add_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+
+static inline SHLegacyValue _sh_ljs_add_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and add.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_double(_sh_ljs_get_double(*a) + _sh_ljs_get_double(*b));
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_add_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_sub_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+
+static inline SHLegacyValue _sh_ljs_sub_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and subtract.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_double(_sh_ljs_get_double(*a) - _sh_ljs_get_double(*b));
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_sub_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_mul_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+
+static inline SHLegacyValue _sh_ljs_mul_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and multiply.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_double(_sh_ljs_get_double(*a) * _sh_ljs_get_double(*b));
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_mul_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_div_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+
+static inline SHLegacyValue _sh_ljs_div_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and divide.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_double(_sh_ljs_get_double(*a) / _sh_ljs_get_double(*b));
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_div_rjs(shr, a, b);
+}
+
+/// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail. Note
+/// that we only do this for unsigned integers, because signed mod can produce
+/// -0, which requires special handling.
+/// \return the double representing the result of the JS mod operation on the
+///   two integers.
+static inline double _sh_mod_uint32(uint32_t a, uint32_t b) {
+  if (b == 0) {
+    // Avoid the divide-by-zero and return NaN directly.
+    return nan("");
+  }
+  return (double)(a % b);
+}
+
+__attribute__((const)) static inline double _sh_mod_double(double a, double b) {
+  uint32_t aUint, bUint;
+  bool aIsUint = sh_tryfast_f64_to_u32(a, aUint);
+  bool bIsUint = sh_tryfast_f64_to_u32(b, bUint);
+
+  // If both numbers are unsigned integers, use the fast path.
+  // `-0` must be handled specially, so just check `a != 0` for simplicity.
+  if (a != 0 && aIsUint && bIsUint) {
+    return _sh_mod_uint32(aUint, bUint);
+  }
+
+  // Actually have to do the double operation.
+  return fmod(a, b);
+}
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_mod_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+
+static inline SHLegacyValue _sh_ljs_mod_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and perform modulo.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_double(
+        _sh_mod_double(_sh_ljs_get_double(*a), _sh_ljs_get_double(*b)));
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_mod_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_is_in_rjs(SHRuntime *shr, SHLegacyValue *name, SHLegacyValue *obj);
 SHERMES_EXPORT SHLegacyValue _sh_ljs_private_is_in_rjs(
@@ -771,8 +925,33 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_instance_of_rjs(
 
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_inc_rjs(SHRuntime *shr, const SHLegacyValue *n);
+
+static inline SHLegacyValue _sh_ljs_inc_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  // Fast path: check if value is a number and increment.
+  if (SH_LIKELY(_sh_ljs_is_non_nan_number(*n))) {
+    return _sh_ljs_double(_sh_ljs_get_double(*n) + 1.0);
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_inc_rjs(shr, n);
+}
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_dec_rjs(SHRuntime *shr, const SHLegacyValue *n);
+
+static inline SHLegacyValue _sh_ljs_dec_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  // Fast path: check if value is a number and decrement.
+  if (SH_LIKELY(_sh_ljs_is_non_nan_number(*n))) {
+    return _sh_ljs_double(_sh_ljs_get_double(*n) - 1.0);
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_dec_rjs(shr, n);
+}
 
 SHERMES_EXPORT SHLegacyValue _sh_ljs_bit_or_rjs(
     SHRuntime *shr,
@@ -923,34 +1102,6 @@ SHERMES_EXPORT void _sh_ljs_iterator_close_rjs(
 
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_direct_eval(SHRuntime *shr, SHLegacyValue *evalText, bool strictCaller);
-
-/// Run a % b if b != 0, otherwise use `fmod` so the operation can't fail. Note
-/// that we only do this for unsigned integers, because signed mod can produce
-/// -0, which requires special handling.
-/// \return the double representing the result of the JS mod operation on the
-///   two integers.
-static inline double _sh_mod_uint32(uint32_t a, uint32_t b) {
-  if (b == 0) {
-    // Avoid the divide-by-zero and return NaN directly.
-    return nan("");
-  }
-  return (double)(a % b);
-}
-
-__attribute__((const)) static inline double _sh_mod_double(double a, double b) {
-  uint32_t aUint, bUint;
-  bool aIsUint = sh_tryfast_f64_to_u32(a, aUint);
-  bool bIsUint = sh_tryfast_f64_to_u32(b, bUint);
-
-  // If both numbers are unsigned integers, use the fast path.
-  // `-0` must be handled specially, so just check `a != 0` for simplicity.
-  if (a != 0 && aIsUint && bIsUint) {
-    return _sh_mod_uint32(aUint, bUint);
-  }
-
-  // Actually have to do the double operation.
-  return fmod(a, b);
-}
 
 /// Call the \c hermes::truncateToInt32SlowPath function.
 /// Annotated ((const)) to let the compiler know that the function will not

@@ -826,7 +826,9 @@ class InstrGen {
           generateRegister(*inst.getSingleOperand());
           os_ << ") + 1);\n";
         } else {
-          os_ << "_sh_ljs_inc_rjs(shr, &";
+          os_ << (options_.smallC ? "_sh_ljs_inc_rjs"
+                                  : "_sh_ljs_inc_rjs_inline")
+              << "(shr, &";
           generateRegister(*inst.getSingleOperand());
           os_ << ");\n";
         }
@@ -837,7 +839,9 @@ class InstrGen {
           generateRegister(*inst.getSingleOperand());
           os_ << ") - 1);\n";
         } else {
-          os_ << "_sh_ljs_dec_rjs(shr, &";
+          os_ << (options_.smallC ? "_sh_ljs_dec_rjs"
+                                  : "_sh_ljs_dec_rjs_inline")
+              << "(shr, &";
           generateRegister(*inst.getSingleOperand());
           os_ << ");\n";
         }
@@ -999,28 +1003,32 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = "+";
         } else {
-          funcUntypedOp = "_sh_ljs_add_rjs";
+          funcUntypedOp =
+              options_.smallC ? "_sh_ljs_add_rjs" : "_sh_ljs_add_rjs_inline";
         }
         break;
       case ValueKind::BinarySubtractInstKind: // -   (-=)
         if (bothDouble) {
           infixDoubleOp = "-";
         } else {
-          funcUntypedOp = "_sh_ljs_sub_rjs";
+          funcUntypedOp =
+              options_.smallC ? "_sh_ljs_sub_rjs" : "_sh_ljs_sub_rjs_inline";
         }
         break;
       case ValueKind::BinaryMultiplyInstKind: // *   (*=)
         if (bothDouble) {
           infixDoubleOp = "*";
         } else {
-          funcUntypedOp = "_sh_ljs_mul_rjs";
+          funcUntypedOp =
+              options_.smallC ? "_sh_ljs_mul_rjs" : "_sh_ljs_mul_rjs_inline";
         }
         break;
       case ValueKind::BinaryDivideInstKind: // /   (/=)
         if (bothDouble)
           infixDoubleOp = "/";
         else
-          funcUntypedOp = "_sh_ljs_div_rjs";
+          funcUntypedOp =
+              options_.smallC ? "_sh_ljs_div_rjs" : "_sh_ljs_div_rjs_inline";
         break;
       case ValueKind::BinaryModuloInstKind: // %   (%=)
         if (bothInt32)
@@ -1028,7 +1036,8 @@ class InstrGen {
         else if (bothDouble)
           funcDoubleOp = "_sh_mod_double";
         else
-          funcUntypedOp = "_sh_ljs_mod_rjs";
+          funcUntypedOp =
+              options_.smallC ? "_sh_ljs_mod_rjs" : "_sh_ljs_mod_rjs_inline";
         break;
       case ValueKind::BinaryOrInstKind: // |   (|=)
         funcUntypedOp = "_sh_ljs_bit_or_rjs";
@@ -1103,7 +1112,8 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = "<";
         } else {
-          funcUntypedOp = "_sh_ljs_less_rjs";
+          funcUntypedOp =
+              options_.smallC ? "_sh_ljs_less_rjs" : "_sh_ljs_less_rjs_inline";
         }
         boolConv = true;
         break;
@@ -1111,7 +1121,8 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = "<=";
         } else {
-          funcUntypedOp = "_sh_ljs_less_equal_rjs";
+          funcUntypedOp = options_.smallC ? "_sh_ljs_less_equal_rjs"
+                                          : "_sh_ljs_less_equal_rjs_inline";
         }
         boolConv = true;
         break;
@@ -1119,7 +1130,8 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = ">";
         } else {
-          funcUntypedOp = "_sh_ljs_greater_rjs";
+          funcUntypedOp = options_.smallC ? "_sh_ljs_greater_rjs"
+                                          : "_sh_ljs_greater_rjs_inline";
         }
         boolConv = true;
         break;
@@ -1127,7 +1139,8 @@ class InstrGen {
         if (bothDouble) {
           infixDoubleOp = ">=";
         } else {
-          funcUntypedOp = "_sh_ljs_greater_equal_rjs";
+          funcUntypedOp = options_.smallC ? "_sh_ljs_greater_equal_rjs"
+                                          : "_sh_ljs_greater_equal_rjs_inline";
         }
         boolConv = true;
         break;
