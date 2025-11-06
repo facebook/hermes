@@ -2919,7 +2919,7 @@ extern "C" double _sh_ljs_to_int32_rjs(SHRuntime *shr, const SHLegacyValue *n) {
       SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) { \
     auto *pa = toPHV(a);                                                \
     auto *pb = toPHV(b);                                                \
-    if (LLVM_LIKELY(pa->isNumber() && pb->isNumber()))                  \
+    if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))          \
       return pa->getNumber() oper pb->getNumber();                      \
     Runtime &runtime = getRuntime(shr);                                 \
     CallResult<bool> cr{false};                                         \
@@ -2944,7 +2944,7 @@ extern "C" SHLegacyValue _sh_ljs_add_rjs(
     const SHLegacyValue *b) {
   auto *pa = toPHV(a);
   auto *pb = toPHV(b);
-  if (LLVM_LIKELY(pa->isNumber() && pb->isNumber()))
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))
     return HermesValue::encodeTrustedNumberValue(
         pa->getNumber() + pb->getNumber());
   Runtime &runtime = getRuntime(shr);
@@ -3046,7 +3046,7 @@ SHLegacyValue
 binOpImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
   Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
   // Fast path, both arguments are numbers.
-  if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber()))
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))
     return HermesValue::encodeTrustedNumberValue(
         Oper(lhs->getNumber(), rhs->getNumber()));
 
@@ -3114,7 +3114,7 @@ SHLegacyValue
 bitOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
   Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
   // Fast path, both arguments are numbers.
-  if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber()))
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))
     return HermesValue::encodeTrustedNumberValue(Oper(
         hermes::truncateToInt32(lhs->getNumber()),
         hermes::truncateToInt32(rhs->getNumber())));
@@ -3152,7 +3152,7 @@ SHLegacyValue
 shiftOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
   Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
   // Fast path, both arguments are numbers.
-  if (LLVM_LIKELY(lhs->isNumber() && rhs->isNumber())) {
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
     auto lnum = hermes::truncateToInt32(lhs->getNumber());
     uint32_t rnum = hermes::truncateToInt32(rhs->getNumber()) & 0x1f;
     return HermesValue::encodeTrustedNumberValue(Oper(lnum, rnum));
