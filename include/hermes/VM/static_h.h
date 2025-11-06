@@ -281,8 +281,18 @@ SHERMES_EXPORT void _sh_cache_template_object(
 /// the frame.
 SHERMES_EXPORT SHLegacyValue *
 _sh_enter(SHRuntime *shr, SHLocals *locals, uint32_t stackSize);
-SHERMES_EXPORT void
-_sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame);
+
+/// Pop the locals from the root stack and restore the stack and frame pointers.
+/// \param shr the SHRuntime
+/// \param locals the locals to pop from the root stack
+/// \param frame the value that should be restored to the stack pointer
+static inline void
+_sh_leave(SHRuntime *shr, SHLocals *locals, SHLegacyValue *frame) {
+  assert(shr->shLocals == locals && "Only the current locals can be popped");
+  shr->shLocals = locals->prev;
+  shr->stackPointer = frame;
+  shr->currentFrame = _sh_stackframe_get_previous_frame_pointer(frame);
+}
 
 /// Add a locals struct to the root stack, allocate the requested number of
 /// registers and return the previous register stack pointer.
