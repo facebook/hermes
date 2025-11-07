@@ -359,7 +359,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
     BRIDGE_INFO(double, info, heapSize);
     BRIDGE_INFO(double, info, va);
     BRIDGE_INFO(double, info, externalBytes);
-    BRIDGE_INFO(int, info, numMarkStackOverflows);
     if (includeExpensive) {
       BRIDGE_INFO(double, info, mallocSizeEstimate);
     }

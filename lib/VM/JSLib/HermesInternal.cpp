@@ -157,7 +157,6 @@ CallResult<HermesValue> hermesInternalGetInstrumentedStats(
   ADD_PROP("js_mallocSizeEstimate", info.mallocSizeEstimate);
   ADD_PROP("js_vaSize", info.va);
   ADD_PROP("js_externalBytes", info.externalBytes);
-  ADD_PROP("js_markStackOverflows", info.numMarkStackOverflows);
 #undef ADD_PROP
 
   return lv.resultHandle.getHermesValue();

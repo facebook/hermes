@@ -469,6 +469,19 @@ TEST(HermesWatchTimeLimitTest, WatchTimeLimit) {
   }
 }
 
+#ifdef HERMESVM_GC_HADES
+TEST_P(HermesRuntimeTest, GetHeapInfo) {
+  auto &instrumentation = rt->instrumentation();
+  // Make sure we do run some collections.
+  instrumentation.collectGarbage("test");
+  auto heapInfo = instrumentation.getHeapInfo(false);
+  // Let's not assert the exact number of collections, which could be changed
+  // in concrete Hades implementation.
+  EXPECT_NE(heapInfo["hermes_full_numCollections"], 0);
+  EXPECT_NE(heapInfo["hermes_yg_numCollections"], 0);
+}
+#endif
+
 TEST_P(HermesRuntimeTest, TriggerAsyncTimeout) {
   auto runTest = [](auto *rt) {
     // Some code that loops forever to exercise the async interrupt.

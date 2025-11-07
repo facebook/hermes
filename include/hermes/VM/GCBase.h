@@ -474,9 +474,6 @@ class GCBase {
     /// infrequently, and can therefore be stored in a counter in the GC, making
     /// them cheaper to query. This is a subset of mallocSizeEstimate.
     uint64_t externalBytes{0};
-    /// Cumulative number of mark stack overflows in full collections
-    /// (zero if non-generational GC).
-    unsigned numMarkStackOverflows{0};
     /// Stats for full collections (zeroes if non-generational GC).
     CumulativeHeapStats fullStats;
     /// Stats for collections in the young generation (zeroes if
