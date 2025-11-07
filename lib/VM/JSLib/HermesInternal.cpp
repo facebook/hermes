@@ -112,51 +112,96 @@ CallResult<HermesValue> hermesInternalGetInstrumentedStats(
   GCScope gcScope(runtime);
   struct : public Locals {
     PinnedValue<JSObject> resultHandle;
+    PinnedValue<JSObject> specificStatsHandle;
     PinnedValue<> valHandle;
   } lv;
   LocalsRAII lraii(runtime, &lv);
   lv.resultHandle = JSObject::create(runtime);
 
   /// Adds \p key with \p val to the resultHandle object.
-  auto addToResultHandle = [&](llvh::StringRef key, double v) {
-    GCScopeMarkerRAII marker{gcScope};
-    HermesValue val = HermesValue::encodeUntrustedNumberValue(v);
-    lv.valHandle = val;
-    auto keySym = symbolForCStr(runtime, key.data());
-    if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
+  auto addToResultHandle =
+      [&gcScope, &runtime](
+          Handle<JSObject> obj, llvh::StringRef key, Handle<> val) {
+        GCScopeMarkerRAII marker{gcScope};
+        auto keySym = symbolForCStr(runtime, key.data());
+        if (LLVM_UNLIKELY(keySym == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
 
-    return JSObject::defineNewOwnProperty(
-        lv.resultHandle,
-        runtime,
-        **keySym,
-        PropertyFlags::defaultNewNamedPropertyFlags(),
-        lv.valHandle);
-  };
+        return JSObject::defineNewOwnProperty(
+            obj,
+            runtime,
+            **keySym,
+            PropertyFlags::defaultNewNamedPropertyFlags(),
+            val);
+      };
 
   /// Adds a property to resultHandle. \p key provides its name, and \p val,
   /// its value.
-#define ADD_PROP(name, value)                                              \
-  if (LLVM_UNLIKELY(                                                       \
-          addToResultHandle(name, value) == ExecutionStatus::EXCEPTION)) { \
-    return ExecutionStatus::EXCEPTION;                                     \
+#define ADD_PROP(obj, name, value)                               \
+  lv.valHandle = HermesValue::encodeUntrustedNumberValue(value); \
+  if (LLVM_UNLIKELY(                                             \
+          addToResultHandle(obj, name, lv.valHandle) ==          \
+          ExecutionStatus::EXCEPTION)) {                         \
+    return ExecutionStatus::EXCEPTION;                           \
   }
 
   auto &heap = runtime.getHeap();
   GCBase::HeapInfo info;
   heap.getHeapInfo(info);
 
-  ADD_PROP("js_VMExperiments", runtime.getVMExperimentFlags());
-  ADD_PROP("js_numGCs", heap.getNumGCs());
-  ADD_PROP("js_gcCPUTime", heap.getGCCPUTime());
-  ADD_PROP("js_gcTime", heap.getGCTime());
-  ADD_PROP("js_totalAllocatedBytes", info.totalAllocatedBytes);
-  ADD_PROP("js_allocatedBytes", info.allocatedBytes);
-  ADD_PROP("js_heapSize", info.heapSize);
-  ADD_PROP("js_mallocSizeEstimate", info.mallocSizeEstimate);
-  ADD_PROP("js_vaSize", info.va);
-  ADD_PROP("js_externalBytes", info.externalBytes);
+  ADD_PROP(lv.resultHandle, "js_VMExperiments", runtime.getVMExperimentFlags());
+  ADD_PROP(lv.resultHandle, "js_numGCs", heap.getNumGCs());
+  ADD_PROP(lv.resultHandle, "js_gcCPUTime", heap.getGCCPUTime());
+  ADD_PROP(
+      lv.resultHandle,
+      "js_avgGCCPUTime",
+      info.generalStats.gcCPUTime.average());
+  ADD_PROP(
+      lv.resultHandle, "js_maxGCCPUTime", info.generalStats.gcCPUTime.max());
+  ADD_PROP(lv.resultHandle, "js_gcTime", heap.getGCTime());
+  ADD_PROP(
+      lv.resultHandle, "js_avgGCTime", info.generalStats.gcWallTime.average());
+  ADD_PROP(lv.resultHandle, "js_maxGCTime", info.generalStats.gcWallTime.max());
+  ADD_PROP(lv.resultHandle, "js_totalAllocatedBytes", info.totalAllocatedBytes);
+  ADD_PROP(lv.resultHandle, "js_allocatedBytes", info.allocatedBytes);
+  ADD_PROP(lv.resultHandle, "js_heapSize", info.heapSize);
+  ADD_PROP(lv.resultHandle, "js_mallocSizeEstimate", info.mallocSizeEstimate);
+  ADD_PROP(lv.resultHandle, "js_vaSize", info.va);
+  ADD_PROP(lv.resultHandle, "js_externalBytes", info.externalBytes);
+  ADD_PROP(
+      lv.resultHandle,
+      "js_peakAllocatedBytes",
+      info.generalStats.usedBefore.max());
+  ADD_PROP(
+      lv.resultHandle, "js_peakLiveAfterGC", info.generalStats.usedAfter.max());
+
+#ifdef HERMESVM_GC_HADES
+  lv.specificStatsHandle = JSObject::create(runtime);
+  auto res = addToResultHandle(
+      lv.resultHandle, "js_gcSpecific", lv.specificStatsHandle);
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  ADD_PROP(
+      lv.specificStatsHandle,
+      "js_numYGCollections",
+      info.youngGenStats.numCollections);
+  ADD_PROP(
+      lv.specificStatsHandle,
+      "js_numOGCollections",
+      info.fullStats.numCollections);
+  ADD_PROP(lv.specificStatsHandle, "js_numCompactions", info.numCompactions);
+  ADD_PROP(
+      lv.specificStatsHandle,
+      "js_numLargeAllocation",
+      info.numLargeAllocations);
+  ADD_PROP(
+      lv.specificStatsHandle,
+      "js_numLargeObjectBytes",
+      info.allocatedLargeObjectBytes);
+#endif
 #undef ADD_PROP
 
   return lv.resultHandle.getHermesValue();
