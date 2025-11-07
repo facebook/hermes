@@ -1299,10 +1299,13 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   GCBase::getHeapInfo(info);
   info.allocatedBytes = allocatedBytes();
   info.heapSize = segmentFootprint();
+  info.numCompactions = numCompactions_;
   // If YG isn't empty, its bytes haven't been accounted for yet, add them here.
   info.totalAllocatedBytes = totalAllocatedBytes_ + youngGen().used();
   info.va = info.heapSize;
   info.externalBytes = oldGen_.externalBytes() + getYoungGenExternalBytes();
+  info.numLargeAllocations = oldGen_.numLargeAllocations();
+  info.allocatedLargeObjectBytes = oldGen_.allocatedLargeObjectBytes();
   info.youngGenStats = ygCumulativeStats_;
   info.fullStats = ogCumulativeStats_;
 }
@@ -1417,6 +1420,8 @@ void HadesGC::disableSamplingHeapProfiler(llvh::raw_ostream &os) {
 #endif // HERMES_MEMORY_INSTRUMENTATION
 
 void HadesGC::printStats(JSONEmitter &json) {
+  // Ensure we can safely access any internal stats.
+  std::lock_guard<Mutex> lk{gcMutex_};
   GCBase::printStats(json);
   json.emitKey("specific");
   json.openDict();
@@ -3087,14 +3092,21 @@ uint64_t HadesGC::heapFootprint() const {
 }
 
 uint64_t HadesGC::OldGen::allocatedBytes() const {
+  assert(gc_.gcMutex_ && "gcMutex must be held when accessing allocatedBytes_");
   return allocatedBytes_;
 }
 
 uint64_t HadesGC::OldGen::allocatedLargeObjectBytes() const {
+  assert(
+      gc_.gcMutex_ &&
+      "gcMutex must be held when accessing allocatedLargeObjectBytes_");
   return allocatedLargeObjectBytes_;
 }
 
 unsigned HadesGC::OldGen::numLargeAllocations() const {
+  assert(
+      gc_.gcMutex_ &&
+      "gcMutex must be held when accessing numLargeAllocations_");
   return numLargeAllocations_;
 }
 
