@@ -334,7 +334,7 @@ class HiddenClass final : public GCCell {
 
   /// Create a "root" hidden class - one that doesn't define any properties, but
   /// is a starting point for a hierarchy.
-  static CallResult<HermesValue> createRoot(Runtime &runtime);
+  static HiddenClass *createRoot(Runtime &runtime);
 
   /// \return true if this hidden class is guaranteed to be a leaf.
   /// It can return false negatives, so it should only be used for stats
@@ -545,7 +545,7 @@ class HiddenClass final : public GCCell {
 
  private:
   /// Allocate a new hidden class instance with the supplied parameters.
-  static CallResult<HermesValue> create(
+  static HiddenClass *create(
       Runtime &runtime,
       ClassFlags flags,
       Handle<HiddenClass> parent,

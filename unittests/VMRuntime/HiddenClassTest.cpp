@@ -51,8 +51,8 @@ TEST_F(HiddenClassTest, SmokeTest) {
   MutableHandle<HiddenClass> y{runtime};
   MutableHandle<HiddenClass> z{runtime};
 
-  auto rootHnd = runtime.makeHandle<HiddenClass>(
-      runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)));
+  auto rootHnd =
+      runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(runtime));
 
   ASSERT_EQ(0u, rootHnd->getNumProperties());
   ASSERT_FALSE(rootHnd->isDictionary());
@@ -264,8 +264,8 @@ TEST_F(HiddenClassTest, AccessorsTest) {
   MutableHandle<HiddenClass> x{runtime};
   MutableHandle<HiddenClass> y{runtime};
 
-  auto rootCls = runtime.makeHandle<HiddenClass>(
-      runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)));
+  auto rootCls =
+      runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(runtime));
 
   ASSERT_FALSE(rootCls->getMayHaveAccessor());
 
@@ -347,10 +347,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       runtime, createUTF16Ref(u"d"));
 
   // Add y.a, y.b, y.c
-  MutableHandle<HiddenClass> y{
-      runtime,
-      vmcast<HiddenClass>(
-          runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
+  MutableHandle<HiddenClass> y{runtime, HiddenClass::createRoot(runtime)};
   {
     // y.a
     auto addRes = HiddenClass::addProperty(
@@ -475,10 +472,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 }
 
 TEST_F(HiddenClassTest, ForEachProperty) {
-  MutableHandle<HiddenClass> clazz{
-      runtime,
-      vmcast<HiddenClass>(
-          runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
+  MutableHandle<HiddenClass> clazz{runtime, HiddenClass::createRoot(runtime)};
 
   auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));

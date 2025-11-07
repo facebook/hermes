@@ -397,10 +397,7 @@ Runtime::Runtime(
 
   // Initialize the root hidden class and its variants.
   {
-    MutableHandle<HiddenClass> clazz(
-        *this,
-        vmcast<HiddenClass>(
-            ignoreAllocationFailure(HiddenClass::createRoot(*this))));
+    MutableHandle<HiddenClass> clazz(*this, HiddenClass::createRoot(*this));
     rootClazzes_[0] = clazz.getHermesValue();
     for (unsigned i = 1; i <= InternalProperty::NumAnonymousInternalProperties;
          ++i) {
@@ -415,8 +412,7 @@ Runtime::Runtime(
     // Create a separate hierarchy of hidden classes for lazy objects, Proxy and
     // HostObject, for lazy objects so that they never
     // compare equal to ordinary objects.
-    clazz = vmcast<HiddenClass>(
-        ignoreAllocationFailure(HiddenClass::createRoot(*this)));
+    clazz = HiddenClass::createRoot(*this);
 
     // For lazy objects, they should just use this empty HiddenClass until they
     // are actually populated.
