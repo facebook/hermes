@@ -1323,6 +1323,9 @@ void HadesGC::getHeapInfo(HeapInfo &info) {
   info.totalAllocatedBytes = totalAllocatedBytes_ + youngGen().used();
   info.va = info.heapSize;
   info.externalBytes = oldGen_.externalBytes() + getYoungGenExternalBytes();
+  info.youngGenStats = ygCumulativeStats_;
+  info.fullStats = ogCumulativeStats_;
+  info.numCompactions = numCompactions_;
 }
 
 void HadesGC::getHeapInfoWithMallocSize(HeapInfo &info) {

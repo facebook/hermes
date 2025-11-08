@@ -365,6 +365,8 @@ class GCBase {
   struct HeapInfo {
     /// Number of garbage collections (of any kind) since creation.
     unsigned numCollections{0};
+    /// Number of compaction since creation (zero if non-generational GC).
+    unsigned numCompactions{0};
     /// Total (cumulative) bytes allocated within the JS heap since creation.
     uint64_t totalAllocatedBytes{0};
     /// Number of currently allocated bytes within the JS heap. Some may be
@@ -386,6 +388,8 @@ class GCBase {
     /// Cumulative number of mark stack overflows in full collections
     /// (zero if non-generational GC).
     unsigned numMarkStackOverflows{0};
+    /// Stats for general collection (including both YG and OG).
+    CumulativeHeapStats generalStats;
     /// Stats for full collections (zeroes if non-generational GC).
     CumulativeHeapStats fullStats;
     /// Stats for collections in the young generation (zeroes if

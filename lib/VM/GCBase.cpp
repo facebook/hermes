@@ -745,6 +745,7 @@ void GCBase::printAllCollectedStats(llvh::raw_ostream &os) {
 
 void GCBase::getHeapInfo(HeapInfo &info) {
   info.numCollections = cumStats_.numCollections;
+  info.generalStats = cumStats_;
 }
 
 void GCBase::getHeapInfoWithMallocSize(HeapInfo &info) {
