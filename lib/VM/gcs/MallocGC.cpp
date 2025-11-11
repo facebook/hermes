@@ -445,7 +445,7 @@ void MallocGC::collect(std::string cause, bool /*canEffectiveOOM*/) {
       std::chrono::duration<double>(wallTime).count(),
       std::chrono::duration<double>(cpuTime).count()};
 
-  recordGCStats(event, /* onMutator */ true);
+  recordGCStats(event, /* onMutator */ true, /* fromNewCollection */ true);
   checkTripwire(allocatedBytes_ + externalBytes_);
 }
 

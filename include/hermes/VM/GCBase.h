@@ -1364,14 +1364,24 @@ class GCBase {
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the overall cumulative stats struct.
-  void recordGCStats(const InternalAnalyticsEvent &event, bool onMutator);
+  /// \param fromNewCollection If true, it means this is called from a new
+  /// collection cycle, otherwise, it's called while waiting for an existing
+  /// collection to finish.
+  void recordGCStats(
+      const InternalAnalyticsEvent &event,
+      bool onMutator,
+      bool fromNewCollection);
 
   /// Record statistics from a single GC, which are specified in the given
   /// \p event, in the given cumulative stats struct.
+  /// \param fromNewCollection If true, it means this is called from a new
+  /// collection cycle, otherwise, it's called while waiting for an existing
+  /// collection to finish.
   void recordGCStats(
       const InternalAnalyticsEvent &event,
       CumulativeHeapStats *stats,
-      bool onMutator);
+      bool onMutator,
+      bool fromNewCollection);
 
   /// Print detailed stats of the breakdown of the roots and heap in terms of
   /// the number of pointers, symbols, HermesValues, etc.

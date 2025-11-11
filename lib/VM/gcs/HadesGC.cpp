@@ -1489,7 +1489,10 @@ void HadesGC::waitForCollectionToFinish(std::string cause) {
   if (waitingStats) {
     waitingStats->endCPUTimeSection();
     waitingStats->setEndTime();
-    recordGCStats(std::move(*waitingStats).getEvent(), true);
+    recordGCStats(
+        std::move(*waitingStats).getEvent(),
+        /* onMutator */ true,
+        /* fromNewCollection */ false);
   }
 }
 
@@ -2793,8 +2796,12 @@ void HadesGC::youngGenCollection(
   ygCollectionStats_->setEndTime();
   ygCollectionStats_->endCPUTimeSection();
   auto statsEvent = std::move(*ygCollectionStats_).getEvent();
-  recordGCStats(statsEvent, true);
-  recordGCStats(statsEvent, &ygCumulativeStats_, true);
+  recordGCStats(statsEvent, /* onMutator */ true, /* fromNewCollection */ true);
+  recordGCStats(
+      statsEvent,
+      &ygCumulativeStats_,
+      /* onMutator */ true,
+      /* fromNewCollection */ true);
   ygCollectionStats_.reset();
 }
 
@@ -2860,8 +2867,12 @@ void HadesGC::checkTripwireAndSubmitStats() {
   // bound of what is live.
   checkTripwire(usedBytes);
   auto event = std::move(*ogCollectionStats_).getEvent();
-  recordGCStats(event, false);
-  recordGCStats(event, &ogCumulativeStats_, false);
+  recordGCStats(event, /* onMutator */ false, /* fromNewCollection */ true);
+  recordGCStats(
+      event,
+      &ogCumulativeStats_,
+      /* onMutator */ false,
+      /* fromNewCollection */ true);
   ogCollectionStats_.reset();
 }
 
