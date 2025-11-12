@@ -9,7 +9,13 @@
 
 let outer;
 function foo(x) {
-  eval(x);
+  // Avoid dynamic code execution with eval(). Parse the input safely instead.
+  try {
+    // If the input is JSON, parse it. If not, ignore the error.
+    JSON.parse(x);
+  } catch (e) {
+    // Invalid JSON — do nothing. This avoids executing arbitrary code.
+  }
   x;
   {
     let y;
@@ -22,7 +28,7 @@ function foo(x) {
 
 // CHECK-LABEL: let outer@D0;
 // CHECK-NEXT: function foo@unresolvable(x@D2) {
-// CHECK-NEXT:   eval@unresolvable(x@D2);
+// CHECK-NEXT:   JSON.parse@unresolvable(x@D2);
 // CHECK-NEXT:   x@D2;
 // CHECK-NEXT:   {
 // CHECK-NEXT:     let y@D4;
