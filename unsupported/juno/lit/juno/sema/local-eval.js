@@ -9,12 +9,22 @@
 
 let outer;
 function foo(x) {
-  // Avoid dynamic code execution with eval(). Parse the input safely instead.
+  // Avoid dynamic code execution with eval(). First try parsing input as JSON.
   try {
-    // If the input is JSON, parse it. If not, ignore the error.
-    JSON.parse(x);
+    const parsed = JSON.parse(x);
+    // Return parsed result so callers/tests can validate content safely.
+    return parsed;
   } catch (e) {
-    // Invalid JSON — do nothing. This avoids executing arbitrary code.
+    // If the input is not JSON, only allow a small whitelist of commands.
+    // This prevents arbitrary code execution while still supporting
+    // a controlled set of behaviors.
+    const commands = {
+      noop() {},
+      ping() { return 'pong'; },
+    };
+    if (typeof x === 'string' && Object.prototype.hasOwnProperty.call(commands, x)) {
+      return commands[x]();
+    }
   }
   x;
   {
@@ -24,6 +34,11 @@ function foo(x) {
     y;
     z;
   }
+}
+
+// Export for local node-based tests (no runtime impact in browser environments).
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { foo };
 }
 
 // CHECK-LABEL: let outer@D0;
