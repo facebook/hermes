@@ -105,7 +105,7 @@ export function transformProgram(
         case 'ClassExpression': {
           return nodeWith(node, {
             typeParameters: null,
-            superTypeParameters: null,
+            superTypeArguments: null,
             implements: [],
             decorators: [],
           });

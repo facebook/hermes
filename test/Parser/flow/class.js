@@ -34,7 +34,7 @@ class C<T> extends S<T> implements I1<T>, I2 {}
 // CHECK-NEXT:         "type": "Identifier",
 // CHECK-NEXT:         "name": "S"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "superTypeParameters": {
+// CHECK-NEXT:       "superTypeArguments": {
 // CHECK-NEXT:         "type": "TypeParameterInstantiation",
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {

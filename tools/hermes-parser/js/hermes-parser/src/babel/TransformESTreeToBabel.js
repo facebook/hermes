@@ -59,6 +59,11 @@ const FlowESTreeAndBabelVisitorKeys: VisitorKeys = {
   BigIntLiteral: [],
   BlockStatement: ['directives', ...FlowVisitorKeys.BlockStatement],
   BooleanLiteral: [],
+  ClassExpression: ['superTypeParameters', ...FlowVisitorKeys.ClassExpression],
+  ClassDeclaration: [
+    'superTypeParameters',
+    ...FlowVisitorKeys.ClassDeclaration,
+  ],
   ClassMethod: ['key', 'params', 'body', 'returnType', 'typeParameters'],
   ClassPrivateMethod: ['key', 'params', 'body', 'returnType', 'typeParameters'],
   ClassProperty: ['key', 'value', 'typeAnnotation', 'variance'],
@@ -1188,9 +1193,15 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
         // $FlowExpectedError[cannot-write]
         delete node.implements;
       }
-      if (node.superTypeParameters == null) {
+      if (node.superTypeArguments == null) {
         // $FlowExpectedError[cannot-write]
-        delete node.superTypeParameters;
+        delete node.superTypeArguments;
+      } else {
+        // $FlowExpectedError[cannot-write]
+        // $FlowExpectedError[prop-missing]
+        node.superTypeParameters = node.superTypeArguments;
+        // $FlowExpectedError[cannot-write]
+        delete node.superTypeArguments;
       }
       if (node.typeParameters == null) {
         // $FlowExpectedError[cannot-write]

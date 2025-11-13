@@ -980,7 +980,7 @@ function convertClassDeclaration(
   );
   const [resultSuperClass, superClassDeps] = convertSuperClass(
     class_.superClass,
-    class_.superTypeParameters,
+    class_.superTypeArguments,
     context,
   );
   const [resultClassBody, bodyDeps] = convertClassBody(class_.body, context);
@@ -1059,11 +1059,11 @@ function convertExpressionToTypeofIdentifier(
 function convertSuperClassHelper(
   detachedId: DetachedNode<Identifier | QualifiedTypeIdentifier>,
   nodeForDependencies: ESNode,
-  superTypeParameters: ?TypeParameterInstantiation,
+  superTypeArguments: ?TypeParameterInstantiation,
   context: TranslationContext,
 ): TranslatedResultOrNull<InterfaceExtends> {
   const [resultTypeParams, typeParamsDeps] =
-    convertTypeParameterInstantiationOrNull(superTypeParameters, context);
+    convertTypeParameterInstantiationOrNull(superTypeArguments, context);
   const superDeps = analyzeTypeDependencies(nodeForDependencies, context);
   return [
     t.InterfaceExtends({
@@ -1076,7 +1076,7 @@ function convertSuperClassHelper(
 
 function convertSuperClass(
   superClass: ?Expression,
-  superTypeParameters: ?TypeParameterInstantiation,
+  superTypeArguments: ?TypeParameterInstantiation,
   context: TranslationContext,
 ): TranslatedResultOrNull<InterfaceExtends> {
   if (superClass == null) {
@@ -1089,7 +1089,7 @@ function convertSuperClass(
       return convertSuperClassHelper(
         asDetachedNode(superClass),
         superClass,
-        superTypeParameters,
+        superTypeArguments,
         context,
       );
     }
@@ -1097,7 +1097,7 @@ function convertSuperClass(
       return convertSuperClassHelper(
         convertExpressionToIdentifier(superClass, context),
         superClass,
-        superTypeParameters,
+        superTypeArguments,
         context,
       );
     }
@@ -1112,7 +1112,7 @@ function convertSuperClass(
         return convertSuperClassHelper(
           asDetachedNode(typeAnnotation.id),
           typeAnnotation,
-          superTypeParameters,
+          superTypeArguments,
           context,
         );
       }

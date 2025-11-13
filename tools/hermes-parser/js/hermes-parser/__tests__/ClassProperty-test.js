@@ -37,91 +37,91 @@ describe('PropertyDefinition', () => {
 
   test('ESTree', () => {
     expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-      {
-        "body": [
-          {
-            "body": {
-              "body": [
-                {
-                  "computed": false,
-                  "declare": false,
-                  "key": {
-                    "name": "foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "optional": false,
-                  "static": false,
-                  "tsModifiers": null,
-                  "type": "PropertyDefinition",
-                  "typeAnnotation": null,
-                  "value": null,
-                  "variance": null,
-                },
-                {
-                  "computed": false,
-                  "declare": false,
-                  "key": {
-                    "name": "bar",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "optional": false,
-                  "static": false,
-                  "tsModifiers": null,
-                  "type": "PropertyDefinition",
-                  "typeAnnotation": null,
-                  "value": {
-                    "literalType": "numeric",
-                    "raw": "1",
-                    "type": "Literal",
-                    "value": 1,
-                  },
-                  "variance": null,
-                },
-                {
-                  "computed": false,
-                  "declare": false,
-                  "key": {
-                    "name": "staticProp",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "optional": false,
-                  "static": true,
-                  "tsModifiers": null,
-                  "type": "PropertyDefinition",
-                  "typeAnnotation": null,
-                  "value": {
-                    "literalType": "numeric",
-                    "raw": "1",
-                    "type": "Literal",
-                    "value": 1,
-                  },
-                  "variance": null,
-                },
-              ],
-              "type": "ClassBody",
-            },
-            "decorators": [],
-            "id": {
-              "name": "C",
-              "optional": false,
-              "type": "Identifier",
-              "typeAnnotation": null,
-            },
-            "implements": [],
-            "superClass": null,
-            "superTypeParameters": null,
-            "type": "ClassDeclaration",
-            "typeParameters": null,
-          },
-        ],
-        "type": "Program",
-      }
+     {
+       "body": [
+         {
+           "body": {
+             "body": [
+               {
+                 "computed": false,
+                 "declare": false,
+                 "key": {
+                   "name": "foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "optional": false,
+                 "static": false,
+                 "tsModifiers": null,
+                 "type": "PropertyDefinition",
+                 "typeAnnotation": null,
+                 "value": null,
+                 "variance": null,
+               },
+               {
+                 "computed": false,
+                 "declare": false,
+                 "key": {
+                   "name": "bar",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "optional": false,
+                 "static": false,
+                 "tsModifiers": null,
+                 "type": "PropertyDefinition",
+                 "typeAnnotation": null,
+                 "value": {
+                   "literalType": "numeric",
+                   "raw": "1",
+                   "type": "Literal",
+                   "value": 1,
+                 },
+                 "variance": null,
+               },
+               {
+                 "computed": false,
+                 "declare": false,
+                 "key": {
+                   "name": "staticProp",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "optional": false,
+                 "static": true,
+                 "tsModifiers": null,
+                 "type": "PropertyDefinition",
+                 "typeAnnotation": null,
+                 "value": {
+                   "literalType": "numeric",
+                   "raw": "1",
+                   "type": "Literal",
+                   "value": 1,
+                 },
+                 "variance": null,
+               },
+             ],
+             "type": "ClassBody",
+           },
+           "decorators": [],
+           "id": {
+             "name": "C",
+             "optional": false,
+             "type": "Identifier",
+             "typeAnnotation": null,
+           },
+           "implements": [],
+           "superClass": null,
+           "superTypeArguments": null,
+           "type": "ClassDeclaration",
+           "typeParameters": null,
+         },
+       ],
+       "type": "Program",
+     }
     `);
     expectEspreeAlignment(testCase);
   });
@@ -150,64 +150,64 @@ describe('PropertyDefinition', () => {
 
       test('ESTree', () => {
         expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-          {
-            "body": [
-              {
-                "body": {
-                  "body": [
-                    {
-                      "computed": false,
-                      "declare": false,
-                      "key": {
-                        "name": "baz",
-                        "optional": false,
-                        "type": "Identifier",
-                        "typeAnnotation": null,
-                      },
-                      "optional": false,
-                      "static": false,
-                      "tsModifiers": null,
-                      "type": "PropertyDefinition",
-                      "typeAnnotation": {
-                        "type": "TypeAnnotation",
-                        "typeAnnotation": {
-                          "id": {
-                            "name": "F",
-                            "optional": false,
-                            "type": "Identifier",
-                            "typeAnnotation": null,
-                          },
-                          "type": "GenericTypeAnnotation",
-                          "typeParameters": null,
-                        },
-                      },
-                      "value": {
-                        "literalType": "numeric",
-                        "raw": "1",
-                        "type": "Literal",
-                        "value": 1,
-                      },
-                      "variance": null,
-                    },
-                  ],
-                  "type": "ClassBody",
-                },
-                "decorators": [],
-                "id": {
-                  "name": "C",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "implements": [],
-                "superClass": null,
-                "superTypeParameters": null,
-                "type": "ClassDeclaration",
-                "typeParameters": null,
-              },
-            ],
-            "type": "Program",
-          }
+         {
+           "body": [
+             {
+               "body": {
+                 "body": [
+                   {
+                     "computed": false,
+                     "declare": false,
+                     "key": {
+                       "name": "baz",
+                       "optional": false,
+                       "type": "Identifier",
+                       "typeAnnotation": null,
+                     },
+                     "optional": false,
+                     "static": false,
+                     "tsModifiers": null,
+                     "type": "PropertyDefinition",
+                     "typeAnnotation": {
+                       "type": "TypeAnnotation",
+                       "typeAnnotation": {
+                         "id": {
+                           "name": "F",
+                           "optional": false,
+                           "type": "Identifier",
+                           "typeAnnotation": null,
+                         },
+                         "type": "GenericTypeAnnotation",
+                         "typeParameters": null,
+                       },
+                     },
+                     "value": {
+                       "literalType": "numeric",
+                       "raw": "1",
+                       "type": "Literal",
+                       "value": 1,
+                     },
+                     "variance": null,
+                   },
+                 ],
+                 "type": "ClassBody",
+               },
+               "decorators": [],
+               "id": {
+                 "name": "C",
+                 "optional": false,
+                 "type": "Identifier",
+                 "typeAnnotation": null,
+               },
+               "implements": [],
+               "superClass": null,
+               "superTypeArguments": null,
+               "type": "ClassDeclaration",
+               "typeParameters": null,
+             },
+           ],
+           "type": "Program",
+         }
         `);
         expectEspreeAlignment(testCase);
       });
@@ -238,54 +238,54 @@ describe('PropertyDefinition', () => {
 
       test('ESTree', () => {
         expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-          {
-            "body": [
-              {
-                "body": {
-                  "body": [
-                    {
-                      "computed": false,
-                      "declare": true,
-                      "key": {
-                        "name": "bam",
-                        "optional": false,
-                        "type": "Identifier",
-                        "typeAnnotation": null,
-                      },
-                      "optional": false,
-                      "static": false,
-                      "tsModifiers": null,
-                      "type": "PropertyDefinition",
-                      "typeAnnotation": {
-                        "type": "TypeAnnotation",
-                        "typeAnnotation": {
-                          "raw": "1",
-                          "type": "NumberLiteralTypeAnnotation",
-                          "value": 1,
-                        },
-                      },
-                      "value": null,
-                      "variance": null,
-                    },
-                  ],
-                  "type": "ClassBody",
-                },
-                "decorators": [],
-                "id": {
-                  "name": "C",
-                  "optional": false,
-                  "type": "Identifier",
-                  "typeAnnotation": null,
-                },
-                "implements": [],
-                "superClass": null,
-                "superTypeParameters": null,
-                "type": "ClassDeclaration",
-                "typeParameters": null,
-              },
-            ],
-            "type": "Program",
-          }
+         {
+           "body": [
+             {
+               "body": {
+                 "body": [
+                   {
+                     "computed": false,
+                     "declare": true,
+                     "key": {
+                       "name": "bam",
+                       "optional": false,
+                       "type": "Identifier",
+                       "typeAnnotation": null,
+                     },
+                     "optional": false,
+                     "static": false,
+                     "tsModifiers": null,
+                     "type": "PropertyDefinition",
+                     "typeAnnotation": {
+                       "type": "TypeAnnotation",
+                       "typeAnnotation": {
+                         "raw": "1",
+                         "type": "NumberLiteralTypeAnnotation",
+                         "value": 1,
+                       },
+                     },
+                     "value": null,
+                     "variance": null,
+                   },
+                 ],
+                 "type": "ClassBody",
+               },
+               "decorators": [],
+               "id": {
+                 "name": "C",
+                 "optional": false,
+                 "type": "Identifier",
+                 "typeAnnotation": null,
+               },
+               "implements": [],
+               "superClass": null,
+               "superTypeArguments": null,
+               "type": "ClassDeclaration",
+               "typeParameters": null,
+             },
+           ],
+           "type": "Program",
+         }
         `);
         expectEspreeAlignment(testCase);
       });

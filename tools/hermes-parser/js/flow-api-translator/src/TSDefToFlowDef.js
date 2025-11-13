@@ -225,7 +225,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
 
     static ClassDeclarationSuperClass(
       superClass: ?TSESTree.LeftHandSideExpression,
-      superTypeParameters: ?TSESTree.TSTypeParameterInstantiation,
+      superTypeArguments: ?TSESTree.TSTypeParameterInstantiation,
     ): [FlowESTree.InterfaceExtends] | [] {
       if (superClass == null) {
         return [];
@@ -239,7 +239,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           type: 'InterfaceExtends',
           id,
           typeParameters:
-            Transform.TSTypeParameterInstantiationOpt(superTypeParameters),
+            Transform.TSTypeParameterInstantiationOpt(superTypeArguments),
         }),
       ];
     }

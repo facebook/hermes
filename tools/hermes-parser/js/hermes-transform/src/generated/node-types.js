@@ -307,8 +307,8 @@ export type ClassExpressionProps = {
   +id?: ?MaybeDetachedNode<ClassExpressionType['id']>,
   +typeParameters?: ?MaybeDetachedNode<ClassExpressionType['typeParameters']>,
   +superClass?: ?MaybeDetachedNode<ClassExpressionType['superClass']>,
-  +superTypeParameters?: ?MaybeDetachedNode<
-    ClassExpressionType['superTypeParameters'],
+  +superTypeArguments?: ?MaybeDetachedNode<
+    ClassExpressionType['superTypeArguments'],
   >,
   +implements: $ReadOnlyArray<
     MaybeDetachedNode<ClassExpressionType['implements'][number]>,
@@ -1537,7 +1537,7 @@ export function ClassExpression(props: {
     id: asDetachedNodeForCodeGen(props.id),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
     superClass: asDetachedNodeForCodeGen(props.superClass),
-    superTypeParameters: asDetachedNodeForCodeGen(props.superTypeParameters),
+    superTypeArguments: asDetachedNodeForCodeGen(props.superTypeArguments),
     implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
     decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
     body: asDetachedNodeForCodeGen(props.body),

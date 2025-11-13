@@ -32,55 +32,55 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "private",
-                      "type": "PrivateIdentifier",
-                    },
-                    "kind": "method",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "Foo",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "private",
+                     "type": "PrivateIdentifier",
+                   },
+                   "kind": "method",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "Foo",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -106,108 +106,108 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "private",
-                      "type": "PrivateIdentifier",
-                    },
-                    "kind": "method",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "constructor",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "kind": "constructor",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [
-                          {
-                            "directive": null,
-                            "expression": {
-                              "arguments": [],
-                              "callee": {
-                                "computed": false,
-                                "object": {
-                                  "name": "foo",
-                                  "optional": false,
-                                  "type": "Identifier",
-                                  "typeAnnotation": null,
-                                },
-                                "optional": false,
-                                "property": {
-                                  "name": "private",
-                                  "type": "PrivateIdentifier",
-                                },
-                                "type": "MemberExpression",
-                              },
-                              "optional": false,
-                              "type": "CallExpression",
-                              "typeArguments": null,
-                            },
-                            "type": "ExpressionStatement",
-                          },
-                        ],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "Foo",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "private",
+                     "type": "PrivateIdentifier",
+                   },
+                   "kind": "method",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "constructor",
+                     "optional": false,
+                     "type": "Identifier",
+                     "typeAnnotation": null,
+                   },
+                   "kind": "constructor",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [
+                         {
+                           "directive": null,
+                           "expression": {
+                             "arguments": [],
+                             "callee": {
+                               "computed": false,
+                               "object": {
+                                 "name": "foo",
+                                 "optional": false,
+                                 "type": "Identifier",
+                                 "typeAnnotation": null,
+                               },
+                               "optional": false,
+                               "property": {
+                                 "name": "private",
+                                 "type": "PrivateIdentifier",
+                               },
+                               "type": "MemberExpression",
+                             },
+                             "optional": false,
+                             "type": "CallExpression",
+                             "typeArguments": null,
+                           },
+                           "type": "ExpressionStatement",
+                         },
+                       ],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "Foo",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });

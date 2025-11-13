@@ -914,7 +914,7 @@ interface BaseClass extends BaseNode {
   +body: ClassBody;
 
   +typeParameters: null | TypeParameterDeclaration;
-  +superTypeParameters: null | TypeParameterInstantiation;
+  +superTypeArguments: null | TypeParameterInstantiation;
   +implements: $ReadOnlyArray<ClassImplements>;
   +decorators: $ReadOnlyArray<Decorator>;
 }

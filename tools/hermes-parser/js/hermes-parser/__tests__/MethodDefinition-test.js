@@ -33,57 +33,57 @@ describe('MethodDefinition', () => {
     test('ESTree', () => {
       // ESTree AST contains MethodDefinition containing a FunctionExpression value
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "foo",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "kind": "method",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "C",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "foo",
+                     "optional": false,
+                     "type": "Identifier",
+                     "typeAnnotation": null,
+                   },
+                   "kind": "method",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "C",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -148,57 +148,57 @@ describe('MethodDefinition', () => {
     test('ESTree', () => {
       // ESTree AST contains MethodDefinition containing a FunctionExpression value
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "constructor",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "kind": "constructor",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "C",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "constructor",
+                     "optional": false,
+                     "type": "Identifier",
+                     "typeAnnotation": null,
+                   },
+                   "kind": "constructor",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "C",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -264,101 +264,101 @@ describe('MethodDefinition', () => {
     test('ESTree', () => {
       // ESTree AST contains MethodDefinition containing a FunctionExpression value
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "foo",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "kind": "get",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [
-                          {
-                            "argument": {
-                              "literalType": "numeric",
-                              "raw": "1",
-                              "type": "Literal",
-                              "value": 1,
-                            },
-                            "type": "ReturnStatement",
-                          },
-                        ],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "foo",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "kind": "set",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [
-                        {
-                          "name": "v",
-                          "optional": false,
-                          "type": "Identifier",
-                          "typeAnnotation": null,
-                        },
-                      ],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "C",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "foo",
+                     "optional": false,
+                     "type": "Identifier",
+                     "typeAnnotation": null,
+                   },
+                   "kind": "get",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [
+                         {
+                           "argument": {
+                             "literalType": "numeric",
+                             "raw": "1",
+                             "type": "Literal",
+                             "value": 1,
+                           },
+                           "type": "ReturnStatement",
+                         },
+                       ],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "foo",
+                     "optional": false,
+                     "type": "Identifier",
+                     "typeAnnotation": null,
+                   },
+                   "kind": "set",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [
+                       {
+                         "name": "v",
+                         "optional": false,
+                         "type": "Identifier",
+                         "typeAnnotation": null,
+                       },
+                     ],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "C",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });

@@ -507,12 +507,12 @@ ESTREE_NODE_7_ARGS(
     NodePtr, id, true,
     NodePtr, typeParameters, true,
     NodePtr, superClass, true,
-    NodePtr, superTypeParameters, true,
+    NodePtr, superTypeArguments, true,
     NodeList, implements, false,
     NodeList, decorators, false,
     NodePtr, body, false)
 ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, typeParameters)
-ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, superTypeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, superTypeArguments)
 ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, implements)
 ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, decorators)
 
@@ -521,12 +521,12 @@ ESTREE_NODE_7_ARGS(
     NodePtr, id, true,
     NodePtr, typeParameters, true,
     NodePtr, superClass, true,
-    NodePtr, superTypeParameters, true,
+    NodePtr, superTypeArguments, true,
     NodeList, implements, false,
     NodeList, decorators, false,
     NodePtr, body, false)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, typeParameters)
-ESTREE_IGNORE_IF_EMPTY(ClassExpression, superTypeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassExpression, superTypeArguments)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, implements)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, decorators)
 ESTREE_LAST(ClassLike)

@@ -32,45 +32,45 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "declare": false,
-                    "key": {
-                      "name": "private",
-                      "type": "PrivateIdentifier",
-                    },
-                    "optional": false,
-                    "static": false,
-                    "tsModifiers": null,
-                    "type": "PropertyDefinition",
-                    "typeAnnotation": null,
-                    "value": null,
-                    "variance": null,
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "Foo",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "declare": false,
+                   "key": {
+                     "name": "private",
+                     "type": "PrivateIdentifier",
+                   },
+                   "optional": false,
+                   "static": false,
+                   "tsModifiers": null,
+                   "type": "PropertyDefinition",
+                   "typeAnnotation": null,
+                   "value": null,
+                   "variance": null,
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "Foo",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -96,92 +96,92 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "declare": false,
-                    "key": {
-                      "name": "private",
-                      "type": "PrivateIdentifier",
-                    },
-                    "optional": false,
-                    "static": false,
-                    "tsModifiers": null,
-                    "type": "PropertyDefinition",
-                    "typeAnnotation": null,
-                    "value": null,
-                    "variance": null,
-                  },
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "constructor",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "kind": "constructor",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [
-                          {
-                            "directive": null,
-                            "expression": {
-                              "computed": false,
-                              "object": {
-                                "name": "foo",
-                                "optional": false,
-                                "type": "Identifier",
-                                "typeAnnotation": null,
-                              },
-                              "optional": false,
-                              "property": {
-                                "name": "private",
-                                "type": "PrivateIdentifier",
-                              },
-                              "type": "MemberExpression",
-                            },
-                            "type": "ExpressionStatement",
-                          },
-                        ],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "Foo",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "declare": false,
+                   "key": {
+                     "name": "private",
+                     "type": "PrivateIdentifier",
+                   },
+                   "optional": false,
+                   "static": false,
+                   "tsModifiers": null,
+                   "type": "PropertyDefinition",
+                   "typeAnnotation": null,
+                   "value": null,
+                   "variance": null,
+                 },
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "constructor",
+                     "optional": false,
+                     "type": "Identifier",
+                     "typeAnnotation": null,
+                   },
+                   "kind": "constructor",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [
+                         {
+                           "directive": null,
+                           "expression": {
+                             "computed": false,
+                             "object": {
+                               "name": "foo",
+                               "optional": false,
+                               "type": "Identifier",
+                               "typeAnnotation": null,
+                             },
+                             "optional": false,
+                             "property": {
+                               "name": "private",
+                               "type": "PrivateIdentifier",
+                             },
+                             "type": "MemberExpression",
+                           },
+                           "type": "ExpressionStatement",
+                         },
+                       ],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "Foo",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -211,91 +211,91 @@ describe('Private properties', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "body": {
-                "body": [
-                  {
-                    "computed": false,
-                    "declare": false,
-                    "key": {
-                      "name": "private",
-                      "type": "PrivateIdentifier",
-                    },
-                    "optional": false,
-                    "static": false,
-                    "tsModifiers": null,
-                    "type": "PropertyDefinition",
-                    "typeAnnotation": null,
-                    "value": null,
-                    "variance": null,
-                  },
-                  {
-                    "computed": false,
-                    "key": {
-                      "name": "constructor",
-                      "optional": false,
-                      "type": "Identifier",
-                      "typeAnnotation": null,
-                    },
-                    "kind": "constructor",
-                    "static": false,
-                    "type": "MethodDefinition",
-                    "value": {
-                      "async": false,
-                      "body": {
-                        "body": [
-                          {
-                            "directive": null,
-                            "expression": {
-                              "left": {
-                                "name": "private",
-                                "type": "PrivateIdentifier",
-                              },
-                              "operator": "in",
-                              "right": {
-                                "name": "foo",
-                                "optional": false,
-                                "type": "Identifier",
-                                "typeAnnotation": null,
-                              },
-                              "type": "BinaryExpression",
-                            },
-                            "type": "ExpressionStatement",
-                          },
-                        ],
-                        "type": "BlockStatement",
-                      },
-                      "expression": false,
-                      "generator": false,
-                      "id": null,
-                      "params": [],
-                      "predicate": null,
-                      "returnType": null,
-                      "type": "FunctionExpression",
-                      "typeParameters": null,
-                    },
-                  },
-                ],
-                "type": "ClassBody",
-              },
-              "decorators": [],
-              "id": {
-                "name": "Foo",
-                "optional": false,
-                "type": "Identifier",
-                "typeAnnotation": null,
-              },
-              "implements": [],
-              "superClass": null,
-              "superTypeParameters": null,
-              "type": "ClassDeclaration",
-              "typeParameters": null,
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "body": {
+               "body": [
+                 {
+                   "computed": false,
+                   "declare": false,
+                   "key": {
+                     "name": "private",
+                     "type": "PrivateIdentifier",
+                   },
+                   "optional": false,
+                   "static": false,
+                   "tsModifiers": null,
+                   "type": "PropertyDefinition",
+                   "typeAnnotation": null,
+                   "value": null,
+                   "variance": null,
+                 },
+                 {
+                   "computed": false,
+                   "key": {
+                     "name": "constructor",
+                     "optional": false,
+                     "type": "Identifier",
+                     "typeAnnotation": null,
+                   },
+                   "kind": "constructor",
+                   "static": false,
+                   "type": "MethodDefinition",
+                   "value": {
+                     "async": false,
+                     "body": {
+                       "body": [
+                         {
+                           "directive": null,
+                           "expression": {
+                             "left": {
+                               "name": "private",
+                               "type": "PrivateIdentifier",
+                             },
+                             "operator": "in",
+                             "right": {
+                               "name": "foo",
+                               "optional": false,
+                               "type": "Identifier",
+                               "typeAnnotation": null,
+                             },
+                             "type": "BinaryExpression",
+                           },
+                           "type": "ExpressionStatement",
+                         },
+                       ],
+                       "type": "BlockStatement",
+                     },
+                     "expression": false,
+                     "generator": false,
+                     "id": null,
+                     "params": [],
+                     "predicate": null,
+                     "returnType": null,
+                     "type": "FunctionExpression",
+                     "typeParameters": null,
+                   },
+                 },
+               ],
+               "type": "ClassBody",
+             },
+             "decorators": [],
+             "id": {
+               "name": "Foo",
+               "optional": false,
+               "type": "Identifier",
+               "typeAnnotation": null,
+             },
+             "implements": [],
+             "superClass": null,
+             "superTypeArguments": null,
+             "type": "ClassDeclaration",
+             "typeParameters": null,
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });

@@ -36,7 +36,7 @@ class C<T> extends D<U> {}
 // CHECK-NEXT:         "type": "Identifier",
 // CHECK-NEXT:         "name": "D"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "superTypeParameters": {
+// CHECK-NEXT:       "superTypeArguments": {
 // CHECK-NEXT:         "type": "TSTypeParameterInstantiation",
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
@@ -82,7 +82,7 @@ class C<T> extends D<U> {}
 // CHECK-NEXT:           "type": "Identifier",
 // CHECK-NEXT:           "name": "D"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "superTypeParameters": {
+// CHECK-NEXT:         "superTypeArguments": {
 // CHECK-NEXT:           "type": "TSTypeParameterInstantiation",
 // CHECK-NEXT:           "params": [
 // CHECK-NEXT:             {

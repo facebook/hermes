@@ -210,6 +210,10 @@ def normalize_esprima_ast(ast: JSON) -> JSON:
         ):
             if "declare" not in ast:
                 ast["declare"] = False
+        if ast["type"] == "ClassDeclaration" or ast["type"] == "ClassExpression":
+            if "superTypeParameters" in ast:
+                ast["superTypeArguments"] = ast["superTypeParameters"]
+                del ast["superTypeParameters"]
     # If it is a template literal, the 'value' field contains
     # the 'cooked' and 'raw' strings, which should be moved.
     if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:

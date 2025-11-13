@@ -81,8 +81,8 @@ export type ClassDeclarationProps = {
   +id?: ?MaybeDetachedNode<ClassDeclarationType['id']>,
   +typeParameters?: ?MaybeDetachedNode<ClassDeclarationType['typeParameters']>,
   +superClass?: ?MaybeDetachedNode<ClassDeclarationType['superClass']>,
-  +superTypeParameters?: ?MaybeDetachedNode<
-    ClassDeclarationType['superTypeParameters'],
+  +superTypeArguments?: ?MaybeDetachedNode<
+    ClassDeclarationType['superTypeArguments'],
   >,
   // make this optional as it's rarer that people would want to include them
   +implements?: $ReadOnlyArray<
@@ -107,7 +107,7 @@ export function ClassDeclaration(props: {
     // $FlowFixMe[incompatible-type]
     superClass: asDetachedNode(props.superClass),
     // $FlowFixMe[incompatible-type]
-    superTypeParameters: asDetachedNode(props.superTypeParameters),
+    superTypeArguments: asDetachedNode(props.superTypeArguments),
     decorators: (props.decorators ?? []).map(n => asDetachedNode(n)),
     implements: (props.implements ?? []).map(n => asDetachedNode(n)),
     body: asDetachedNode(props.body),

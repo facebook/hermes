@@ -290,12 +290,12 @@ class FlowChecker::ParseClassType {
   ParseClassType(
       FlowChecker &outer,
       ESTree::Node *superClass,
-      ESTree::Node *superTypeParameters,
+      ESTree::Node *superTypeArguments,
       ESTree::Node *body,
       Type *classType)
       : outer_(outer),
         superClassType(
-            resolveSuperClass(outer, superClass, superTypeParameters)) {
+            resolveSuperClass(outer, superClass, superTypeArguments)) {
     LLVM_DEBUG(
         llvh::dbgs()
         << "ParseClassType for: "
@@ -351,7 +351,7 @@ class FlowChecker::ParseClassType {
   Type *resolveSuperClass(
       FlowChecker &outer_,
       ESTree::Node *superClass,
-      ESTree::Node *superTypeParameters) {
+      ESTree::Node *superTypeArguments) {
     if (!superClass)
       return nullptr;
     auto *superClassIdent = llvh::dyn_cast<ESTree::IdentifierNode>(superClass);
@@ -372,20 +372,20 @@ class FlowChecker::ParseClassType {
       // to extend it.
       llvh::SaveAndRestore<std::vector<DeferredGenericClass> *>
           savedDeferredGenerics{outer_.deferredParseGenerics_, nullptr};
-      auto *superTypeParams =
+      auto *superTypeArgs =
           llvh::cast_or_null<ESTree::TypeParameterInstantiationNode>(
-              superTypeParameters);
-      if (!superTypeParams) {
+              superTypeArguments);
+      if (!superTypeArgs) {
         outer_.sm_.error(
             superClassIdent->getSourceRange(),
             "ft: missing type arguments for superclass");
         return nullptr;
       }
       outer_.resolveGenericClassSpecialization(
-          superClassIdent, superTypeParams, superDecl);
-    } else if (superTypeParameters) {
+          superClassIdent, superTypeArgs, superDecl);
+    } else if (superTypeArguments) {
       outer_.sm_.error(
-          superTypeParameters->getStartLoc(),
+          superTypeArguments->getStartLoc(),
           "ft: type arguments are not allowed for non-generic classes");
       return nullptr;
     }
@@ -583,10 +583,10 @@ class FlowChecker::ParseClassType {
 
 void FlowChecker::parseClassType(
     ESTree::Node *superClass,
-    ESTree::Node *superTypeParameters,
+    ESTree::Node *superTypeArguments,
     ESTree::Node *body,
     Type *classType) {
-  ParseClassType(*this, superClass, superTypeParameters, body, classType);
+  ParseClassType(*this, superClass, superTypeArguments, body, classType);
 }
 
 void FlowChecker::visitClassNode(
@@ -609,7 +609,7 @@ void FlowChecker::visit(ESTree::ClassExpressionNode *node) {
 
   unsigned errorsBefore = sm_.getErrorCount();
   parseClassType(
-      node->_superClass, node->_superTypeParameters, node->_body, classType);
+      node->_superClass, node->_superTypeArguments, node->_body, classType);
   if (sm_.getErrorCount() != errorsBefore) {
     // Failed to parse class.
     return;
@@ -2118,7 +2118,7 @@ void FlowChecker::typecheckGenericClassSpecialization(
   } else {
     parseClassType(
         specialization->_superClass,
-        specialization->_superTypeParameters,
+        specialization->_superTypeArguments,
         specialization->_body,
         classType);
     typecheckQueue_.emplace_back(

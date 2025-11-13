@@ -696,7 +696,7 @@ class FlowChecker::DeclareScopeTypes {
       outer.visitExpression(classNode->_superClass, classNode, nullptr);
       outer.parseClassType(
           classNode->_superClass,
-          classNode->_superTypeParameters,
+          classNode->_superTypeArguments,
           classNode->_body,
           type);
     }
@@ -942,7 +942,7 @@ class FlowChecker::DeclareScopeTypes {
       // and must have been parsed before the current one.
       outer.parseClassType(
           specialization->_superClass,
-          specialization->_superTypeParameters,
+          specialization->_superTypeArguments,
           specialization->_body,
           deferred.classType);
 
