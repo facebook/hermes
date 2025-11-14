@@ -689,7 +689,6 @@ std::shared_ptr<Context> createContext() {
   } else if (cli::DebugInfoLevel == DebugLevel::g2) {
     context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
   } else if (cli::DebugInfoLevel == DebugLevel::g1) {
-    // -g1 or -g0. If -g0, we'll strip debug info later.
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   } else {
     context->setDebugInfoSetting(DebugInfoSetting::NONE);
@@ -1015,10 +1014,8 @@ bool compileFromCommandLineOptions() {
   genOptions.emitSourceLocations =
       cli::DumpSourceLocation != LocationDumpMode::None;
 
-  // Emit line directives if we have full debug info enabled or it was
-  // explicitly requested.
-  genOptions.emitLineDirectives =
-      cli::DebugInfoLevel >= DebugLevel::g3 || cli::ForceLineDirectives;
+  // Emit line directives if explicitly requested.
+  genOptions.emitLineDirectives = cli::ForceLineDirectives;
 
   ShermesCompileParams params(genOptions);
   // Populate all fields of ShermesCompileParams.
