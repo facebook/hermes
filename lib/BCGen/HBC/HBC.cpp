@@ -438,10 +438,33 @@ SMLoc findSMLocFromCoords(
   return manager.findSMLocFromCoords(coords);
 }
 
+SMRange findSMRangeForLine(hbc::BCProvider *baseProvider, uint32_t line) {
+  if (!llvh::isa<BCProviderFromSrc>(baseProvider))
+    return SMRange{};
+
+  auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  assert(bcModule && "no bytecode module while debugging");
+  hbc::BytecodeFunction &globalFunc =
+      bcModule->getFunction(provider->getGlobalFunctionIndex());
+  Function *F = globalFunc.getFunctionIR();
+  assert(F && "no IR for global function while debugging");
+
+  SourceErrorManager &manager =
+      provider->getModule()->getContext().getSourceErrorManager();
+
+  // Convert the coords to SMLoc to check for membership, because that's simpler
+  // than converting the exclusive end SMLoc of the function to coords,
+  // plus it only requires one conversion.
+  return manager.findSMRangeForLine(
+      manager.findBufferIdForLoc(F->getSourceRange().Start), line);
+}
+
 bool coordsInLazyFunction(
     hbc::BCProvider *baseProvider,
     uint32_t funcID,
-    SMLoc loc) {
+    SMLoc loc,
+    OptValue<SMLoc> end) {
   auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
   hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
   hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
@@ -452,8 +475,20 @@ bool coordsInLazyFunction(
   if (!loc.isValid())
     return false;
 
-  return F->getSourceRange().Start.getPointer() <= loc.getPointer() &&
+  bool startsIn = F->getSourceRange().Start.getPointer() <= loc.getPointer() &&
       loc.getPointer() < F->getSourceRange().End.getPointer();
+  // If the loc is in the function, we're done.
+  if (startsIn)
+    return true;
+
+  // If the end is specified, check if the range is larger than the function.
+  if (end.hasValue()) {
+    return loc.getPointer() <= F->getSourceRange().Start.getPointer() &&
+        F->getSourceRange().End.getPointer() <= end.getValue().getPointer();
+  }
+
+  // Otherwise, failed.
+  return false;
 }
 
 std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(

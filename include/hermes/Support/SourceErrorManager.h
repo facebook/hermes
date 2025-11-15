@@ -450,7 +450,19 @@ class SourceErrorManager {
   const llvh::MemoryBuffer *findBufferForLoc(SMLoc loc) const;
 
   /// Find the SMLoc corresponding to the supplied source coordinates.
-  SMLoc findSMLocFromCoords(SourceCoords coords);
+  SMLoc findSMLocFromCoords(SourceCoords coords) {
+    auto [result, lineEnd] =
+        findForCoordsImpl(coords.bufId, coords.line, coords.col);
+    return result;
+  }
+
+  /// Find the SMRange corresponding to the line.
+  /// \param bufId 1-based buffer ID.
+  /// \param line 1-based line number.
+  SMRange findSMRangeForLine(unsigned bufId, unsigned line) {
+    auto [result, lineEnd] = findForCoordsImpl(bufId, line, llvh::None);
+    return SMRange(result, lineEnd);
+  }
 
   /// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the
   /// error output options
@@ -650,6 +662,15 @@ class SourceErrorManager {
   unsigned indexToVirtualBufferId(unsigned index) const {
     return index | kVirtualBufIdTag;
   }
+
+  /// \param bufId 1-based buffer ID.
+  /// \param line 1-based line number.
+  /// \param col 1-based line number.
+  /// \return if the column is specified, return the location of the line/column
+  /// and the end of the line. If the column is not specified, return the
+  /// location of the start of the line and the end of the line.
+  std::pair<SMLoc, SMLoc>
+  findForCoordsImpl(unsigned bufId, unsigned line, OptValue<unsigned> col);
 };
 
 /// RAII to enable message buffering and restore the previous state of

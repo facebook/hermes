@@ -189,17 +189,28 @@ SMLoc findSMLocFromCoords(
     uint32_t line,
     uint32_t col);
 
+/// Convert line and column to a SMLoc.
+/// \param provider the BCProvider to lookup in.
+/// \param line 1-based line.
+/// \return the SMRange corresponding to the line, which may be invalid if
+///   none was able to be found.
+SMRange findSMRangeForLine(hbc::BCProvider *provider, uint32_t line);
+
 /// \pre the BytecodeFunction at funcID is lazy.
 /// \param provider the BCProviderFromSrc owning the BytecodeModule.
 ///   Passed in as BCProvider to avoid BCProviderFromSrc dependencies in
 ///   CodeBlock (for simplicity).
 /// \param funcID the ID of the lazy function.
 /// \param loc the SMLoc to lookup.
-/// \return whether the loc is contained in the lazy function.
+/// \param end if provided, the end of the range to check for overlaps.
+///   If not provided, only loc will be checked for overlap.
+/// \return whether the loc (or range) overlaps the source range of the lazy
+///   function.
 bool coordsInLazyFunction(
     hbc::BCProvider *provider,
     uint32_t funcID,
-    SMLoc loc);
+    SMLoc loc,
+    OptValue<SMLoc> end);
 
 /// Generate the bytecode for eval function by running the full compiler
 /// pipeline without optimizations.

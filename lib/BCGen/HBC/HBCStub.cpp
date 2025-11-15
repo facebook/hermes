@@ -72,10 +72,15 @@ SMLoc findSMLocFromCoords(
   return SMLoc{};
 }
 
+SMRange findSMRangeForLine(hbc::BCProvider *baseProvider, uint32_t line) {
+  return {};
+}
+
 bool coordsInLazyFunction(
     hbc::BCProvider *baseProvider,
     uint32_t funcID,
-    SMLoc loc) {
+    SMLoc loc,
+    OptValue<SMLoc> end) {
   return false;
 }
 

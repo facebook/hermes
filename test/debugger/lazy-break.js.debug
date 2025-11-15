@@ -1,4 +1,7 @@
 break 12 3
+break 16
+info breakpoints
+continue
 info breakpoints
 continue
 info breakpoints

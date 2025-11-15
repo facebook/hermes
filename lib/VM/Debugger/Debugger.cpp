@@ -1411,9 +1411,20 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       toVisit.push_back(runtimeModule.getCodeBlockMayAllocate(i));
     }
 
-    SMLoc loc = hbc::findSMLocFromCoords(
-        runtimeModule.getBytecode(), request.line, request.column);
-    if (!loc.isValid()) {
+    // Up to 2 locations to check for lazy compilation.
+    SMLoc locStart;
+    OptValue<SMLoc> locEnd;
+    if (request.column == kInvalidLocation) {
+      SMRange range =
+          hbc::findSMRangeForLine(runtimeModule.getBytecode(), request.line);
+      locStart = range.Start;
+      locEnd = range.End;
+    } else {
+      locStart = hbc::findSMLocFromCoords(
+          runtimeModule.getBytecode(), request.line, request.column);
+      locEnd = llvh::None;
+    }
+    if (!locStart.isValid()) {
       // Unable to resolve a location in this runtimeModule.
       continue;
     }
@@ -1438,7 +1449,7 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
 
       visited.insert(codeBlock);
 
-      if (codeBlock->coordsInLazyFunction(loc)) {
+      if (codeBlock->coordsInLazyFunction(locStart, locEnd)) {
         // The code block probably contains the breakpoint we want to set.
         // First, we compile it.
         if (LLVM_UNLIKELY(

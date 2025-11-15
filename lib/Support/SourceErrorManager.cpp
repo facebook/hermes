@@ -353,12 +353,15 @@ const llvh::MemoryBuffer *SourceErrorManager::findBufferForLoc(
   return sm_.getMemoryBuffer(bufID);
 }
 
-SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
-  if (!coords.isValid())
+std::pair<SMLoc, SMLoc> SourceErrorManager::findForCoordsImpl(
+    unsigned bufId,
+    unsigned line,
+    OptValue<unsigned> col) {
+  if (bufId == 0)
     return {};
 
   // TODO: optimize this with caching, etc.
-  auto *buffer = getSourceBuffer(coords.bufId);
+  auto *buffer = getSourceBuffer(bufId);
   if (!buffer)
     return {};
 
@@ -370,7 +373,7 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   const char *lineEnd;
   while ((lineEnd = (const char *)std::memchr(cur, '\n', end - cur)) !=
              nullptr &&
-         lineNumber != coords.line) {
+         lineNumber != line) {
     ++lineNumber;
     cur = lineEnd + 1;
   }
@@ -381,7 +384,7 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
 
   // The last line we found is [cur..lineEnd) and its number is lineNumber.
   // Is it the right one?
-  if (lineNumber != coords.line)
+  if (lineNumber != line)
     return {};
 
   // Trim a CR at start and end to account for all crazy line endings.
@@ -390,11 +393,15 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   if (cur != lineEnd && *(lineEnd - 1) == '\r')
     --lineEnd;
 
+  if (!col.hasValue()) {
+    return {SMLoc::getFromPointer(cur), SMLoc::getFromPointer(lineEnd)};
+  }
+
   // Special case for empty line.
   if (cur == lineEnd) {
     // Column 1 or 0 in an empty line should work.
-    if (coords.col <= 1)
-      return SMLoc::getFromPointer(cur);
+    if (col.getValue() <= 1)
+      return {SMLoc::getFromPointer(cur), SMLoc::getFromPointer(lineEnd)};
     return {};
   }
 
@@ -410,9 +417,12 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   // ASCII is easy - just add the offset.
   if (LLVM_LIKELY(!utf8)) {
     // Is the column in range?
-    if (coords.col > (size_t)(lineEnd - cur))
+    if (col.getValue() > (size_t)(lineEnd - cur))
       return {};
-    return SMLoc::getFromPointer(cur + coords.col - 1);
+    return {
+        SMLoc::getFromPointer(cur + col.getValue() - 1),
+        SMLoc::getFromPointer(lineEnd)};
+    ;
   }
 
   // Scan for the column while accounting for multi-byte characters.
@@ -421,8 +431,8 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
     // Skip continuation bytes.
     if (isUTF8ContinuationByte(*cur))
       continue;
-    if (++column == coords.col)
-      return SMLoc::getFromPointer(cur);
+    if (++column == col.getValue())
+      return {SMLoc::getFromPointer(cur), SMLoc::getFromPointer(lineEnd)};
   }
 
   return {};

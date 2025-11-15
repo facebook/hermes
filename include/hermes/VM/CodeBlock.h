@@ -240,7 +240,7 @@ class CodeBlock final : private llvh::TrailingObjects<
 
   /// \pre isLazy() is true.
   /// \return whether the coordinates are in the lazy function.
-  bool coordsInLazyFunction(SMLoc loc) const;
+  bool coordsInLazyFunction(SMLoc loc, OptValue<SMLoc> end) const;
 
   /// \return a vector representing the number of Variables for each depth
   ///   of the VariableScope chain, starting from \p

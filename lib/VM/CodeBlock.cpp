@@ -246,11 +246,11 @@ ExecutionStatus CodeBlock::compileLazyFunction(Runtime &runtime) {
   return ExecutionStatus::RETURNED;
 }
 
-bool CodeBlock::coordsInLazyFunction(SMLoc loc) const {
+bool CodeBlock::coordsInLazyFunction(SMLoc loc, OptValue<SMLoc> end) const {
   assert(isLazy() && "function is not lazy");
 
   return hbc::coordsInLazyFunction(
-      runtimeModule_->getBytecode(), functionID_, loc);
+      runtimeModule_->getBytecode(), functionID_, loc, end);
 }
 
 std::vector<uint32_t> CodeBlock::getVariableCounts(
