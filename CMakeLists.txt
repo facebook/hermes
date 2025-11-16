@@ -296,6 +296,8 @@ set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
 set(QEMU_RUN_PREFIX "" CACHE STRING
   "Command prefix for invoking cross-compiled binaries with QEMU.")
 
+set(JSI_UNSTABLE ON CACHE BOOL "Enable the JSI unstable APIs.")
+
 if (NOT QEMU_RUN_PREFIX STREQUAL "")
   add_definitions(-DQEMU_MODE)
 endif()
@@ -680,6 +682,9 @@ endif()
 
 set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++17")
 
+if (JSI_UNSTABLE)
+    add_definitions(-DJSI_UNSTABLE)
+endif()
 # JSI_DIR has always priority over other folders.
 # It's used by React Native when building Hermes from source so
 # the copy of JSI inside `react-native/ReactCommon/jsi` can be used.
