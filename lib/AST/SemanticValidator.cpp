@@ -339,7 +339,7 @@ void SemanticValidator::visit(LabeledStatementNode *labelStmt) {
         "previous definition");
   }
   // Auto-erase the label on exit, if we inserted it.
-  const auto &deleter = llvh::make_scope_exit([=]() {
+  const auto &deleter = llvh::make_scope_exit([=, this]() {
     if (insertRes.second)
       curFunction()->labelMap.erase(id->_name);
   });
