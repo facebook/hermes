@@ -1087,15 +1087,14 @@ inline void JSLexer::appendUnicodeToStorage(
 
 inline uint32_t JSLexer::decodeUTF8() {
   const char *saveStart = curCharPtr_;
-  return hermes::decodeUTF8<false>(curCharPtr_, [=, this](const Twine &msg) {
+  return hermes::decodeUTF8<false>(curCharPtr_, [=](const Twine &msg) {
     error(SMLoc::getFromPointer(saveStart), msg);
   });
 }
 
 inline uint32_t JSLexer::_decodeUTF8SlowPath(const char *&at) {
-  return hermes::_decodeUTF8SlowPath<false>(at, [=, this](const Twine &msg) {
-    error(SMLoc::getFromPointer(at), msg);
-  });
+  return hermes::_decodeUTF8SlowPath<false>(
+      at, [=](const Twine &msg) { error(SMLoc::getFromPointer(at), msg); });
 }
 
 inline std::pair<uint32_t, const char *> JSLexer::_peekUTF8(
