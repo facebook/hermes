@@ -12,6 +12,7 @@
 #include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 
+#include <jsi/hermes.h>
 #include <jsi/instrumentation.h>
 #include <jsi/jsi.h>
 #include <llvh/Support/MemoryBuffer.h>
@@ -123,6 +124,8 @@ class TraceInterpreter final {
   llvh::raw_ostream *traceStream_;
   // Map from source hash to source file to run.
   std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles_;
+  // Map from source hash to shermes unit creator function.
+  std::map<::hermes::SHA1, SHUnitCreator> shermesUnitCreatorFns_;
   const SynthTrace &trace_;
 
   /// The last use of each object.
@@ -169,6 +172,22 @@ class TraceInterpreter final {
       const std::function<std::shared_ptr<jsi::Runtime>(
           const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime);
 
+#ifndef _WIN32
+  /// Execute the trace given by \p traceFile, that was the trace of executing
+  /// the bundle from which \p shermesUnitLibFiles are generated.
+  /// \param shermesUnitCreatorFns A map from source hash to the shermes unit
+  /// creator function (i.e., sh_export_<unit_name>), which is defined in the
+  /// shermes generated C file. For each BeginExecJSRecord, the shermes unit
+  /// with matching source hash will be evaluated.
+  /// \return The stats collected by the runtime about times and memory usage.
+  static std::string execNativeWithRuntime(
+      const std::string &traceFile,
+      const std::map<::hermes::SHA1, SHUnitCreator> &shermesUnitCreatorFns,
+      const ExecuteOptions &options,
+      const std::function<std::shared_ptr<jsi::Runtime>(
+          const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime);
+#endif
+
   /// \param traceStream If non-null, write a trace of the execution into this
   /// stream.
   /// \return Tuple of GC stats and the runtime instance used for replaying.
@@ -186,6 +205,12 @@ class TraceInterpreter final {
       const ExecuteOptions &options,
       const SynthTrace &trace,
       std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles);
+
+  TraceInterpreter(
+      jsi::Runtime &rt,
+      const ExecuteOptions &options,
+      const SynthTrace &trace,
+      std::map<::hermes::SHA1, SHUnitCreator> shermesUnitCreatorFns);
 
   static std::string exec(
       jsi::Runtime &rt,
@@ -226,6 +251,13 @@ class TraceInterpreter final {
   /// Execute the records. JS might call this recursively when HostFunction or
   /// HostObject's functions are called.
   void executeRecords();
+
+  /// Execute the record. When \p bundles_ is not empty, the bundle file
+  /// (source or bytecode) with the matching source hash will be evaluated.
+  /// Otherwise, the shermes unit from \p shermesUnitCreatorFns_ with matching
+  /// source hash will be evaluated.
+  jsi::Value executeBeginExecJSRecord(
+      const SynthTrace::BeginExecJSRecord &bejsr);
 
   /// Requires that \p valID is the proper id for \p val, and that a
   /// defining occurrence of \p valID occurs at the current \p defIndex. Decides
