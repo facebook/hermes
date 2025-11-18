@@ -19,6 +19,7 @@
 
 #include "llvh/ADT/DenseMap.h"
 
+#include <atomic>
 #include <chrono>
 #include <mutex>
 #include <unordered_set>
@@ -183,7 +184,7 @@ class SamplingProfiler {
   // protected by runtimeDataLock_.
   /// The counter of how many suspend calls are pending -- i.e., need to be
   /// resume()d.
-  volatile uint32_t suspendCount_{0};
+  std::atomic<uint32_t> suspendCount_{0};
   /// The actual sampled stack depth in preSuspendStackStorage_.
   volatile uint32_t preSuspendStackDepth_{0};
   /// JS stack captured at time of GC.

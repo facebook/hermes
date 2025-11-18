@@ -329,12 +329,11 @@ void DebuggerDomainAgent::setBlackboxPatterns(
     sendResponseToClient(m::makeOkResponse(req.id));
     return;
   }
-
-  std::string combinedPattern = u8"(";
-  for (auto &pattern : req.patterns) {
-    combinedPattern.append(pattern + u8"|");
+  std::string combinedPattern = "(";
+  for (const auto &pattern : req.patterns) {
+    combinedPattern.append(pattern + "|");
   }
-  combinedPattern.back() = u8')';
+  combinedPattern.back() = ')';
 
   // We expect req.patterns to be encoded as UTF-8 in accordance with RFC-8259
   // See comment in CDPAgent::handleCommand
