@@ -1182,7 +1182,7 @@ void Runtime::printException(llvh::raw_ostream &os, Handle<> valueHandle) {
       if (LLVM_LIKELY(!wasFormattingStackTrace)) {
         setFormattingStackTrace(true);
       }
-      const auto &guard = llvh::make_scope_exit([=]() {
+      const auto &guard = llvh::make_scope_exit([=, this]() {
         if (formattingStackTrace() != wasFormattingStackTrace) {
           setFormattingStackTrace(wasFormattingStackTrace);
         }
