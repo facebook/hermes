@@ -12,6 +12,16 @@
 
 namespace hermes {
 
+#define HERMES_KEYWORD(name, string) \
+  ident##name(astContext.getIdentifier(string).getUnderlyingPointer()),
+
+Keywords::Keywords(Context &astContext)
+    :
+#include "hermes/AST/Keywords.def"
+      dummy_(0) {
+  (void)dummy_;
+}
+
 Context::Context(
     SourceErrorManager &sm,
     CodeGenerationSettings &&codeGenOpts,
@@ -20,6 +30,7 @@ Context::Context(
     std::unique_ptr<ResolutionTable> resolutionTable,
     std::vector<uint32_t> segments)
     : sm_(sm),
+      kw_(*this),
       resolutionTable_(std::move(resolutionTable)),
       segments_(std::move(segments)),
       codeGenerationSettings_(std::move(codeGenOpts)),
@@ -35,6 +46,7 @@ Context::Context(
     std::vector<uint32_t> segments)
     : ownSm_(new SourceErrorManager()),
       sm_(*ownSm_),
+      kw_(*this),
       resolutionTable_(std::move(resolutionTable)),
       segments_(std::move(segments)),
       codeGenerationSettings_(std::move(codeGenOpts)),

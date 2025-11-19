@@ -17,9 +17,9 @@ namespace {
 
 class LowerAST : public ESTree::RecursionDepthTracker<LowerAST> {
   Context &astContext_;
-  SemContext &semContext_;
+  [[maybe_unused]] SemContext &semContext_;
   flow::FlowContext &flowContext_;
-  Keywords &kw_;
+  const Keywords &kw_;
 
  public:
   LowerAST(
@@ -29,7 +29,7 @@ class LowerAST : public ESTree::RecursionDepthTracker<LowerAST> {
       : astContext_(astContext),
         semContext_(semContext),
         flowContext_(flowContext),
-        kw_(semContext_.kw) {}
+        kw_(astContext_.keywords()) {}
 
   bool run(ESTree::Node *node) {
     ESTree::visitESTreeNodeNoReplace(*this, node);

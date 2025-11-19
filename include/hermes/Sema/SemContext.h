@@ -10,11 +10,13 @@
 
 #include "hermes/ADT/PersistentScopedMap.h"
 #include "hermes/AST/ESTree.h"
-#include "hermes/Sema/Keywords.h"
 
 #include <deque>
 
 namespace hermes {
+
+class Keywords;
+
 namespace sema {
 
 class Decl;
@@ -441,7 +443,7 @@ class SemContext {
  public:
   /// Convenient storage of "keyword" identifiers used by various part of the
   /// infrastructure.
-  Keywords kw;
+  const Keywords &kw;
 
   /// Construct a SemContext with an optional parent.
   /// If a parent is provided, the binding table will be shared with the parent.

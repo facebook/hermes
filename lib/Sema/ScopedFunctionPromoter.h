@@ -10,13 +10,7 @@
 
 #include "hermes/AST/ESTree.h"
 
-namespace hermes {
-
-namespace sem {
-class Keywords;
-}
-
-namespace sema {
+namespace hermes::sema {
 
 class SemanticResolver;
 
@@ -38,7 +32,6 @@ std::vector<ESTree::FunctionDeclarationNode *> getPromotedScopedFuncDecls(
     SemanticResolver &resolver,
     ESTree::FunctionLikeNode *funcNode);
 
-} // namespace sema
-} // namespace hermes
+} // namespace hermes::sema
 
 #endif

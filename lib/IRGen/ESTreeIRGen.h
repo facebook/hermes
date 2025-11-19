@@ -12,7 +12,6 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Sema/FlowContext.h"
-#include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
 
 #include "llvh/ADT/StringRef.h"
@@ -524,7 +523,7 @@ class ESTreeIRGen {
   /// Semantic resolution tables.
   sema::SemContext &semCtx_;
   /// Keywords to avoid string content comparisons.
-  sema::Keywords &kw_;
+  const Keywords &kw_;
   /// Flow types context.
   flow::FlowContext &flowContext_;
   /// The root of the ESTree.

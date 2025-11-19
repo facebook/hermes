@@ -7,6 +7,8 @@
 
 #include "hermes/Sema/SemContext.h"
 
+#include "hermes/AST/Context.h"
+
 namespace hermes {
 namespace sema {
 
@@ -56,7 +58,7 @@ SemContext::SemContext(
     Context &astContext,
     const std::shared_ptr<SemContext> &parent,
     LexicalScope *lexScope)
-    : kw(astContext),
+    : kw(astContext.keywords()),
       parent_(parent),
       parentLexScope_(lexScope),
       root_(parent_ ? parent_->root_ : this) {

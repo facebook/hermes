@@ -7,7 +7,7 @@
 
 #include "ASTEval.h"
 
-#include "hermes/Sema/Keywords.h"
+#include "hermes/AST/Context.h"
 #include "hermes/Support/Conversions.h"
 
 namespace hermes::sema {

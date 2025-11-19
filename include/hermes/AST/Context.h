@@ -25,6 +25,7 @@ class Namer;
 
 class BackendContext;
 class NativeContext;
+class Context;
 struct NativeSettings;
 
 struct CodeGenerationSettings {
@@ -160,6 +161,18 @@ struct CustomDirectives {
   bool noInline{false};
 };
 
+class Keywords {
+ public:
+#define HERMES_KEYWORD(name, string) UniqueString *const ident##name;
+#include "hermes/AST/Keywords.def"
+
+  explicit Keywords(Context &astContext);
+
+ private:
+  /// An unused field to handle the last "," in constructor init.
+  int const dummy_;
+};
+
 /// Holds shared dependencies and state.
 class Context {
  public:
@@ -199,6 +212,10 @@ class Context {
 
   /// A reference to the manager which we are using.
   SourceErrorManager &sm_;
+
+  /// Convenient storage of "keyword" identifiers used by various part of the
+  /// infrastructure.
+  Keywords kw_;
 
   /// Whether we are running in script mode. Default to strict.
   bool strictMode_{false};
@@ -306,6 +323,10 @@ class Context {
 
   StringTable &getStringTable() {
     return stringTable_;
+  }
+
+  const Keywords &keywords() const {
+    return kw_;
   }
 
   void addCompiledRegExp(

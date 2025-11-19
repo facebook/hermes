@@ -10,8 +10,11 @@
 
 #include "hermes/AST/ESTree.h"
 
-namespace hermes::sema {
+namespace hermes {
 class Keywords;
+}
+
+namespace hermes::sema {
 
 /// Evaluate a binary expression if possible and fold it into a single literal
 /// node.

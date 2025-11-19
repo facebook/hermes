@@ -9,6 +9,7 @@
 
 #include "ASTEval.h"
 #include "ScopedFunctionPromoter.h"
+#include "hermes/AST/Context.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Support/sh_tryfast_fp_cvt.h"
@@ -46,7 +47,7 @@ SemanticResolver::SemanticResolver(
       sm_(astContext.getSourceErrorManager()),
       bufferMessages_{&sm_},
       semCtx_(semCtx),
-      kw_{astContext},
+      kw_{astContext.keywords()},
       ambientDecls_(ambientDecls),
       saveDecls_(saveDecls),
       bindingTable_(semCtx.getBindingTable()),

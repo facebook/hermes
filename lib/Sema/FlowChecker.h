@@ -14,7 +14,6 @@
 #include "hermes/AST/Context.h"
 #include "hermes/AST/RecursiveVisitor.h"
 #include "hermes/Sema/FlowContext.h"
-#include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
 #include "hermes/Support/StackExecutor.h"
 
@@ -74,7 +73,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   sema::DeclCollectorMapTy &declCollectorMap_;
 
   /// Keywords we will be checking for.
-  sema::Keywords &kw_;
+  const Keywords &kw_;
 
   /// Use an 8MB stack, which is the default size on mac and linux.
   static constexpr size_t kExecutorStackSize = 1 << 23;

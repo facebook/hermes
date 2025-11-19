@@ -9,7 +9,6 @@
 #define HERMES_SEMA_DECLCOLLECTOR_H
 
 #include "hermes/AST/RecursiveVisitor.h"
-#include "hermes/Sema/Keywords.h"
 #include "hermes/Sema/SemContext.h"
 
 namespace hermes {
@@ -41,7 +40,7 @@ class DeclCollector
   /// \return a DeclCollector which has collected all declarations in \p root.
   static std::unique_ptr<DeclCollector> run(
       ESTree::FunctionLikeNode *root,
-      const sema::Keywords &kw,
+      const Keywords &kw,
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {
     return runCommon(root, kw, recursionDepth, recursionDepthExceeded);
@@ -49,7 +48,7 @@ class DeclCollector
   /// Overload for static block nodes.
   static std::unique_ptr<DeclCollector> run(
       ESTree::StaticBlockNode *root,
-      const sema::Keywords &kw,
+      const Keywords &kw,
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded) {
     return runCommon(root, kw, recursionDepth, recursionDepthExceeded);
@@ -129,7 +128,7 @@ class DeclCollector
  private:
   explicit DeclCollector(
       ESTree::Node *root,
-      const sema::Keywords &kw,
+      const Keywords &kw,
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded)
       : Base(recursionDepth, recursionDepthExceeded), root_(root), kw_(kw) {}
@@ -137,7 +136,7 @@ class DeclCollector
   /// Generic run method shared for the different supported AST nodes.
   static std::unique_ptr<DeclCollector> runCommon(
       ESTree::Node *root,
-      const sema::Keywords &kw,
+      const Keywords &kw,
       unsigned recursionDepth,
       const std::function<void(ESTree::Node *)> &recursionDepthExceeded);
 
@@ -166,7 +165,7 @@ class DeclCollector
   /// Root node for the collection.
   ESTree::Node *root_;
 
-  const sema::Keywords &kw_;
+  const Keywords &kw_;
 
   /// Associate a ScopeDecls structure with the node that creates the scope.
   llvh::DenseMap<ESTree::Node *, ScopeDecls> scopes_{};
