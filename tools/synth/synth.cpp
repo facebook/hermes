@@ -21,6 +21,10 @@
 #include <iostream>
 #include <tuple>
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
 using namespace hermes;
 using namespace hermes::vm;
 
@@ -44,8 +48,20 @@ using llvh::cl::Required;
 static opt<std::string>
     TraceFile(desc("input trace file"), Positional, Required);
 
-static list<std::string>
-    BytecodeFiles(desc("input bytecode files"), Positional, OneOrMore);
+static list<std::string> CodeFiles(
+    desc(
+        "input bytecode files or shermes unit names and hashes"
+        "(when -shermes flag is set, on non-Windows platforms)."
+        "For bytecode files, it's passed as 'file1 file2 file3 ..'. For shermes"
+        "input, it's passed as 'hash1 unit_fn1 hash2 unit_fn2...'."),
+    Positional,
+    OneOrMore);
+
+// shermes doesn't support Windows.
+#ifndef _WIN32
+static opt<bool>
+    Shermes("shermes", desc("Use the shermes native backend"), init(false));
+#endif
 
 static opt<std::string> Marker(
     "marker",
@@ -218,6 +234,16 @@ static const char *fileExtensionForAction(MarkerAction action) {
   }
 }
 
+/// Convert the hash hex string to hermes::SHA1.
+static hermes::SHA1 stringToSHA1(const std::string &hexStr) {
+  hermes::SHA1 sha;
+  assert(hexStr.size() == sha.size() * 2 && "Invalid hash string length");
+  for (size_t j = 0; j < sha.size(); j++) {
+    sha[j] = std::stoi(hexStr.substr(2 * j, 2), nullptr, 16);
+  }
+  return sha;
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   llvh::sys::PrintStackTraceOnErrorSignal("Hermes synth");
@@ -235,6 +261,13 @@ int main(int argc, char **argv) {
                    << "Profiling info will be written separately after "
                    << "each rep, which probably isn't what you want.\n";
     }
+
+#ifndef _WIN32
+    if (cl::Shermes && !cl::Trace.empty()) {
+      llvh::errs() << "Shermes does not support tracing\n";
+      return EXIT_FAILURE;
+    }
+#endif
 
 #if !HERMESVM_JIT
     if (cl::flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off) {
@@ -344,12 +377,18 @@ int main(int argc, char **argv) {
       options.gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
     }
 
-    std::vector<std::string> bytecodeFiles{
-        cl::BytecodeFiles.begin(), cl::BytecodeFiles.end()};
-    if (cl::DisableSourceHashCheck && bytecodeFiles.size() != 1) {
-      throw std::invalid_argument(
-          "Must have single bytecode file to disable source hash check");
+    std::vector<std::string> bytecodeFiles;
+#ifndef _WIN32
+    if (!cl::Shermes)
+#endif
+    {
+      bytecodeFiles = {cl::CodeFiles.begin(), cl::CodeFiles.end()};
+      if (cl::DisableSourceHashCheck && bytecodeFiles.size() != 1) {
+        throw std::invalid_argument(
+            "Must have single bytecode file to disable source hash check");
+      }
     }
+
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.gcConfigBuilder.withShouldRecordStats(false);
@@ -385,9 +424,45 @@ int main(int argc, char **argv) {
 
       llvh::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
-      llvh::outs() << TraceInterpreter::execAndGetStats(
-                          cl::TraceFile, bytecodeFiles, options)
-                   << "\n";
+#ifndef _WIN32
+      if (cl::Shermes) {
+        assert(cl::CodeFiles.size() % 2 == 0 && "Invalid shermes input");
+        // Lookup the SHUnitCreator function for each source hash.
+        std::map<::hermes::SHA1, SHUnitCreator> shermesUnitCreatorFns;
+        for (size_t i = 0; i < cl::CodeFiles.size(); i += 2) {
+          auto sha1 = stringToSHA1(cl::CodeFiles[i]);
+          auto &unitFnName = cl::CodeFiles[i + 1];
+          void *handle = dlopen(nullptr, RTLD_LAZY);
+          if (!handle)
+            throw std::runtime_error(dlerror());
+          auto *unitCreatorFn =
+              (SHUnitCreator)dlsym(handle, unitFnName.c_str());
+          if (!unitCreatorFn)
+            throw std::runtime_error(dlerror());
+          shermesUnitCreatorFns.emplace(sha1, unitCreatorFn);
+        }
+
+        auto createRuntime = [](const ::hermes::vm::RuntimeConfig &config) {
+          auto hermesRoot =
+              facebook::jsi::castInterface<facebook::hermes::IHermesRootAPI>(
+                  facebook::hermes::makeHermesRootAPI());
+          return hermesRoot->makeHermesRuntime(config);
+        };
+
+        llvh::outs() << TraceInterpreter::execNativeWithRuntime(
+                            cl::TraceFile,
+                            shermesUnitCreatorFns,
+                            options,
+                            createRuntime)
+                     << "\n";
+
+      } else
+#endif
+      {
+        llvh::outs() << TraceInterpreter::execAndGetStats(
+                            cl::TraceFile, bytecodeFiles, options)
+                     << "\n";
+      }
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
@@ -401,8 +476,8 @@ int main(int argc, char **argv) {
     return 0;
   } catch (const std::invalid_argument &e) {
     std::cerr << "Invalid argument: " << e.what() << std::endl;
-  } catch (const std::system_error &e) {
-    std::cerr << "System error: " << e.what() << std::endl;
+  } catch (const std::runtime_error &e) {
+    std::cerr << "Runtime error: " << e.what() << std::endl;
   }
   return 1;
 }
