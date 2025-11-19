@@ -66,4 +66,14 @@ HERMES_KEYWORD(ModuleFactory, "moduleFactory")
 HERMES_KEYWORD(Export, "export")
 HERMES_KEYWORD(Import, "import")
 
+HERMES_KEYWORD(Object, "object")
+HERMES_KEYWORD(String, "string")
+HERMES_KEYWORD(Number, "number")
+HERMES_KEYWORD(Boolean, "boolean")
+HERMES_KEYWORD(Symbol, "symbol")
+HERMES_KEYWORD(Bigint, "bigint")
+HERMES_KEYWORD(Function, "function")
+
+HERMES_KEYWORD(EmptyString, "")
+
 #undef HERMES_KEYWORD

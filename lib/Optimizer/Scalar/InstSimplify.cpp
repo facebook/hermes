@@ -200,23 +200,30 @@ class InstSimplifyImpl {
   Value *simplifyTypeOf(TypeOfInst *typeOf) {
     auto *op = typeOf->getArgument();
     Type t = op->getType();
+    const Keywords &kw = builder_.getModule()->getContext().keywords();
     if (t.isNullType() || llvh::isa<GlobalObject>(op)) {
-      return builder_.getLiteralString("object");
+      return builder_.getLiteralString(
+          Identifier::getFromPointer(kw.identObject));
     }
     if (t.isNumberType()) {
-      return builder_.getLiteralString("number");
+      return builder_.getLiteralString(
+          Identifier::getFromPointer(kw.identNumber));
     }
     if (t.isUndefinedType()) {
-      return builder_.getLiteralString("undefined");
+      return builder_.getLiteralString(
+          Identifier::getFromPointer(kw.identUndefined));
     }
     if (t.isBooleanType()) {
-      return builder_.getLiteralString("boolean");
+      return builder_.getLiteralString(
+          Identifier::getFromPointer(kw.identBoolean));
     }
     if (t.isStringType()) {
-      return builder_.getLiteralString("string");
+      return builder_.getLiteralString(
+          Identifier::getFromPointer(kw.identString));
     }
     if (t.isSymbolType()) {
-      return builder_.getLiteralString("symbol");
+      return builder_.getLiteralString(
+          Identifier::getFromPointer(kw.identSymbol));
     }
     // Type is either multiple things or object. We cannot distinguish object
     // from closure yet, so give up.
@@ -326,31 +333,34 @@ class InstSimplifyImpl {
   }
 
   /// Simplify an equality/inequality comparison between a typeof and a string.
-  /// \param str the string to compare the typeof result with.
+  /// \param strLit the string to compare the typeof result with.
   /// \param typeofInst the typeof instruction to run.
   /// \param invert whether to check for inequality instead of equality.
   /// \return a TypeOfIsInst that replaces the strict equality/inequality.
-  Value *
-  simplifyTypeOfCheck(LiteralString *str, TypeOfInst *typeofInst, bool invert) {
+  Value *simplifyTypeOfCheck(
+      LiteralString *strLit,
+      TypeOfInst *typeofInst,
+      bool invert) {
     TypeOfIsTypes types;
-    llvh::StringRef strRef = str->getValue().str();
-    if (strRef == "undefined") {
+    UniqueString *str = strLit->getValue().getUnderlyingPointer();
+    const Keywords &kw = builder_.getModule()->getContext().keywords();
+    if (str == kw.identUndefined) {
       types = TypeOfIsTypes{}.withUndefined(true);
-    } else if (strRef == "object") {
+    } else if (str == kw.identObject) {
       // TypeOfIs supports null and object separately.
       // typeof null is "object", so we have to put both.
       types = TypeOfIsTypes{}.withNull(true).withObject(true);
-    } else if (strRef == "string") {
+    } else if (str == kw.identString) {
       types = TypeOfIsTypes{}.withString(true);
-    } else if (strRef == "symbol") {
+    } else if (str == kw.identSymbol) {
       types = TypeOfIsTypes{}.withSymbol(true);
-    } else if (strRef == "boolean") {
+    } else if (str == kw.identBoolean) {
       types = TypeOfIsTypes{}.withBoolean(true);
-    } else if (strRef == "number") {
+    } else if (str == kw.identNumber) {
       types = TypeOfIsTypes{}.withNumber(true);
-    } else if (strRef == "bigint") {
+    } else if (str == kw.identBigint) {
       types = TypeOfIsTypes{}.withBigint(true);
-    } else if (strRef == "function") {
+    } else if (str == kw.identFunction) {
       types = TypeOfIsTypes{}.withFunction(true);
     } else {
       // All other strings are not going to be returned by typeof.
@@ -367,6 +377,7 @@ class InstSimplifyImpl {
   }
 
   Value *simplifyBinOp(BinaryOperatorInst *binary) {
+    const Keywords &kw = builder_.getModule()->getContext().keywords();
     Value *lhs = binary->getLeftHandSide();
     Value *rhs = binary->getRightHandSide();
     auto kind = binary->getKind();
@@ -506,11 +517,13 @@ class InstSimplifyImpl {
       case ValueKind::BinaryAddInstKind:
         // Convert ("" + x) or (x + "") as AsString(x).
         if (llvh::isa<LiteralString>(lhs) &&
-            cast<LiteralString>(lhs)->getValue().str() == "") {
+            cast<LiteralString>(lhs)->getValue().getUnderlyingPointer() ==
+                kw.identEmptyString) {
           return builder_.createAddEmptyStringInst(rhs);
         } else if (
             llvh::isa<LiteralString>(rhs) &&
-            cast<LiteralString>(rhs)->getValue().str() == "") {
+            cast<LiteralString>(rhs)->getValue().getUnderlyingPointer() ==
+                kw.identEmptyString) {
           return builder_.createAddEmptyStringInst(lhs);
         }
         break;
@@ -1041,8 +1054,11 @@ class InstSimplifyImpl {
     // replace it even in cases where the callee cannot be called as a
     // constructor.
     builder_.setInsertionPoint(CTI);
+    const Keywords &kw = builder_.getModule()->getContext().keywords();
     auto *proto = builder_.createLoadPropertyInst(
-        CTI->getClosure(), builder_.getLiteralString("prototype"));
+        CTI->getClosure(),
+        builder_.getLiteralString(
+            Identifier::getFromPointer(kw.identPrototype)));
     return builder_.createAllocObjectLiteralInst({}, proto);
   }
 
