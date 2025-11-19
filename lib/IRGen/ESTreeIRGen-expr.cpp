@@ -1438,7 +1438,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
     auto *prop = cast<ESTree::PropertyNode>(&P);
     shouldCaptureObjForHomeObject |= prop->_method ||
-        prop->_kind->str() == "set" || prop->_kind->str() == "get";
+        prop->_kind == kw_.identSet || prop->_kind == kw_.identGet;
     if (prop->_computed) {
       // Can't store any useful information if the name is computed.
       // Just generate the code in the next loop.
@@ -1449,7 +1449,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
 
     // protoProperty should only be recorded if the property is not a method
     // nor a shorthand value.
-    if (prop->_kind->str() == "init" && propName == "__proto__" &&
+    if (prop->_kind == kw_.identInit && propName == "__proto__" &&
         !prop->_method && !prop->_shorthand) {
       if (!protoProperty) {
         protoProperty = prop;
@@ -1464,14 +1464,14 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     }
 
     PropertyValue *propValue = &propMap[propName];
-    if (prop->_kind->str() == "get") {
+    if (prop->_kind == kw_.identGet) {
       propValue->setGetter(
           cast<ESTree::FunctionExpressionNode>(prop->_value), prop);
-    } else if (prop->_kind->str() == "set") {
+    } else if (prop->_kind == kw_.identSet) {
       propValue->setSetter(
           cast<ESTree::FunctionExpressionNode>(prop->_value), prop);
     } else {
-      assert(prop->_kind->str() == "init" && "invalid PropertyNode kind");
+      assert(prop->_kind == kw_.identInit && "invalid PropertyNode kind");
       // We record the propValue if this is a regular property
       propValue->setValue(prop->_value);
     }
@@ -1550,7 +1550,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
             Function::DefinitionKind::ES6Method,
             capturedObj,
             prop);
-      } else if (prop->_kind->str() == "set" || prop->_kind->str() == "get") {
+      } else if (prop->_kind == kw_.identSet || prop->_kind == kw_.identGet) {
         value = genFunctionExpression(
             llvh::cast<ESTree::FunctionExpressionNode>(prop->_value),
             Identifier{},
@@ -1561,14 +1561,14 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       } else {
         value = genExpression(prop->_value, Identifier{});
       }
-      if (prop->_kind->str() == "get") {
+      if (prop->_kind == kw_.identGet) {
         Builder.createDefineOwnGetterSetterInst(
             value,
             Builder.getLiteralUndefined(),
             Obj,
             key,
             IRBuilder::PropEnumerable::Yes);
-      } else if (prop->_kind->str() == "set") {
+      } else if (prop->_kind == kw_.identSet) {
         Builder.createDefineOwnGetterSetterInst(
             Builder.getLiteralUndefined(),
             value,
@@ -1622,7 +1622,7 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       }
     };
 
-    if (prop->_kind->str() == "get" || prop->_kind->str() == "set") {
+    if (prop->_kind == kw_.identGet || prop->_kind == kw_.identSet) {
       // If  we already generated it, skip.
       if (propValue->state == PropertyValue::IRGenerated)
         continue;
@@ -1712,7 +1712,7 @@ Value *ESTreeIRGen::genTypedObjectExpr(
   for (auto &node : Expr->_properties) {
     auto *prop = llvh::cast<ESTree::PropertyNode>(&node);
     assert(
-        !prop->_computed && !prop->_method && prop->_kind->str() == "init" &&
+        !prop->_computed && !prop->_method && prop->_kind == kw_.identInit &&
         "Unexpected property kind in typechecked object");
 
     stringStorage.clear();
@@ -2101,7 +2101,7 @@ Value *ESTreeIRGen::genResumeGenerator(
 
 Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
   // Handle long chains of +/- non-recursively.
-  if (bin->_operator->str() == "+" || bin->_operator->str() == "-") {
+  if (bin->_operator == kw_.identPlus || bin->_operator == kw_.identMinus) {
     auto list = linearizeLeft(bin, {"+", "-"});
 
     Value *LHS = genExpression(list[0]->_left);
@@ -2122,7 +2122,7 @@ Value *ESTreeIRGen::genBinaryExpression(ESTree::BinaryExpressionNode *bin) {
   if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(bin->_left)) {
     // If we are seeing the form `#privateName in val`, generate a different
     // kind of `in` operator.
-    assert(bin->_operator->str() == "in");
+    assert(bin->_operator == kw_.identIn);
     kind = ValueKind::BinaryPrivateInInstKind;
     LHS = genPrivateNameValue(llvh::cast<ESTree::IdentifierNode>(PN->_id));
   } else {
@@ -2241,9 +2241,9 @@ Value *ESTreeIRGen::genUpdateExpr(ESTree::UpdateExpressionNode *updateExpr) {
   bool isPrefix = updateExpr->_prefix;
 
   ValueKind opKind;
-  if (updateExpr->_operator->str() == "++") {
+  if (updateExpr->_operator == kw_.identPlusPlus) {
     opKind = ValueKind::UnaryIncInstKind;
-  } else if (updateExpr->_operator->str() == "--") {
+  } else if (updateExpr->_operator == kw_.identMinusMinus) {
     opKind = ValueKind::UnaryDecInstKind;
   } else {
     llvm_unreachable("Invalid update operator");
