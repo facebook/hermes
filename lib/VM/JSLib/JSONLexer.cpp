@@ -9,7 +9,7 @@
 
 #include "hermes/VM/StringPrimitive.h"
 
-#include "dtoa/dtoa.h"
+#include "hermes/Support/FastStrToDouble.h"
 
 namespace hermes {
 namespace vm {
@@ -138,12 +138,11 @@ ExecutionStatus JSONLexer<Kind>::scanNumber() {
 
   str8.push_back('\0');
 
-  char *endPtr;
-  double value = ::hermes_g_strtod(str8.data(), &endPtr);
-  if (endPtr != str8.data() + len) {
-    return errorWithChar(u"Unexpected character in number: ", *endPtr);
+  OptValue<double> result = fastStrToDouble(str8);
+  if (LLVM_UNLIKELY(!result)) {
+    return error("Invalid number input");
   }
-  token_.setNumber(value);
+  token_.setNumber(*result);
   return ExecutionStatus::RETURNED;
 }
 
