@@ -158,7 +158,6 @@
     {
       "paths": [
         "test262/test/built-ins/Iterator/from/",
-        "test262/test/built-ins/Iterator/prototype/constructor/",
         "test262/test/built-ins/Iterator/prototype/drop/",
         "test262/test/built-ins/Iterator/prototype/every/",
         "test262/test/built-ins/Iterator/prototype/filter/",
@@ -168,14 +167,8 @@
         "test262/test/built-ins/Iterator/prototype/map/",
         "test262/test/built-ins/Iterator/prototype/reduce/",
         "test262/test/built-ins/Iterator/prototype/some/",
-        "test262/test/built-ins/Iterator/prototype/Symbol.iterator/",
-        "test262/test/built-ins/Iterator/prototype/Symbol.toStringTag/",
         "test262/test/built-ins/Iterator/prototype/take/",
         "test262/test/built-ins/Iterator/prototype/toArray/",
-        "test262/test/built-ins/Object/prototype/toString/symbol-tag-array-builtin.js",
-        "test262/test/built-ins/Object/prototype/toString/symbol-tag-map-builtin.js",
-        "test262/test/built-ins/Object/prototype/toString/symbol-tag-string-builtin.js",
-        "test262/test/built-ins/Object/prototype/toString/symbol-tag-set-builtin.js",
         "mjsunit/harmony/iterator-from.js",
         "mjsunit/harmony/regress/regress-crbug-1444842.js"
       ],
