@@ -158,7 +158,6 @@
     {
       "paths": [
         "test262/test/built-ins/Iterator/from/",
-        "test262/test/built-ins/Iterator/prototype/find/",
         "test262/test/built-ins/Iterator/prototype/flatMap/",
         "test262/test/built-ins/Iterator/prototype/forEach/",
         "test262/test/built-ins/Iterator/prototype/map/",
