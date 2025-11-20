@@ -118,27 +118,37 @@ CallResult<char16_t> JSONLexer<Kind>::consumeUnicode() {
 
 template <EncodingKind Kind>
 ExecutionStatus JSONLexer<Kind>::scanNumber() {
-  llvh::SmallVector<char, 32> str8;
+  // Mark the beginning of the number contents.
+  const CharT *beginNumContents;
+  if constexpr (Traits::UsesRawPtr) {
+    beginNumContents = iter_.cur;
+  } else {
+    iter_.cur.beginCapture();
+  }
   while (hasChar()) {
     auto ch = *iter_.cur;
     if (!(ch == u'-' || ch == u'+' || ch == u'.' || (ch | 32) == u'e' ||
           (ch >= u'0' && ch <= u'9'))) {
       break;
     }
-    str8.push_back(ch);
     ++iter_.cur;
   }
 
-  size_t len = str8.size();
+  // Obtain a view over the number contents.
+  llvh::ArrayRef<CharT> numRef;
+  if constexpr (Traits::UsesRawPtr) {
+    numRef = llvh::ArrayRef<CharT>{beginNumContents, iter_.cur};
+  } else {
+    numRef = iter_.cur.endCapture();
+  }
+  size_t len = numRef.size();
   assert(len > 0 && "scanNumber must be called on a number-looking char");
-  if (str8[0] == '0' && len > 1 && str8[1] >= '0' && str8[1] <= '9') {
+  if (numRef[0] == '0' && len > 1 && numRef[1] >= '0' && numRef[1] <= '9') {
     // The integer part cannot start with 0, unless it's 0.
-    return errorWithChar(u"Unexpected character in number: ", str8[1]);
+    return errorWithChar(u"Unexpected character in number: ", numRef[1]);
   }
 
-  str8.push_back('\0');
-
-  OptValue<double> result = fastStrToDouble(str8);
+  OptValue<double> result = fastStrToDouble(numRef);
   if (LLVM_UNLIKELY(!result)) {
     return error("Invalid number input");
   }
