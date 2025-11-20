@@ -82,22 +82,9 @@ class RuntimeJSONParser {
   CallResult<HermesValue> parse();
 
  private:
-  /// Parse a JSON value, starting from the current token.
-  /// When this function is finished, the current token will be set
-  /// to the next token after the current parsed value.
-  CallResult<HermesValue> parseValue();
-
   /// Parse the top-level JSON value. When this function is finished, the lexer
   /// should be at the end of the file.
-  CallResult<HermesValue> iterativeParseValue();
-
-  /// Parse a JSON array, starting from the "[" token.
-  /// When this function is finished, the current token must be "]".
-  CallResult<HermesValue> parseArray();
-
-  /// Parse a JSON object, starting from the "{" token.
-  /// When this function is finished, the current token must be "}".
-  CallResult<HermesValue> parseObject();
+  CallResult<HermesValue> parseValue();
 
   /// Use reviver to filter the result.
   CallResult<HermesValue> revive(Handle<> value);
@@ -272,7 +259,7 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::parse() {
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto parRes = iterativeParseValue();
+  auto parRes = parseValue();
   if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -327,7 +314,7 @@ static inline bool matchesHiddenClass(
 }
 
 template <EncodingKind Kind>
-CallResult<HermesValue> RuntimeJSONParser<Kind>::iterativeParseValue() {
+CallResult<HermesValue> RuntimeJSONParser<Kind>::parseValue() {
   struct : public Locals {
     /// List of property SymbolIDs for all unclosed objects being parsed.
     PinnedValue<ArrayStorage> properties;
@@ -702,204 +689,6 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::iterativeParseValue() {
     return ExecutionStatus::EXCEPTION;
   }
   return ExecutionStatus::RETURNED;
-}
-
-template <EncodingKind Kind>
-CallResult<HermesValue> RuntimeJSONParser<Kind>::parseValue() {
-  struct : public Locals {
-    PinnedValue<> returnValue;
-  } lv;
-  LocalsRAII lraii(runtime_, &lv);
-
-  llvh::SaveAndRestore<decltype(remainingDepth_)> oldDepth{
-      remainingDepth_, remainingDepth_ - 1};
-  if (remainingDepth_ <= 0) {
-    return runtime_.raiseStackOverflow(Runtime::StackOverflowKind::JSONParser);
-  }
-
-  switch (lexer_.getCurToken()->getKind()) {
-    case JSONTokenKind::String:
-      lv.returnValue = lexer_.getCurToken()->getStrAsPrim().getHermesValue();
-      break;
-    case JSONTokenKind::Number:
-      lv.returnValue = HermesValue::encodeTrustedNumberValue(
-          lexer_.getCurToken()->getNumber());
-      break;
-    case JSONTokenKind::LBrace: {
-      auto parRes = parseObject();
-      if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      lv.returnValue = *parRes;
-      break;
-    }
-    case JSONTokenKind::LSquare: {
-      auto parRes = parseArray();
-      if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      lv.returnValue = *parRes;
-      break;
-    }
-    case JSONTokenKind::True:
-      lv.returnValue = HermesValue::encodeBoolValue(true);
-      break;
-    case JSONTokenKind::False:
-      lv.returnValue = HermesValue::encodeBoolValue(false);
-      break;
-    case JSONTokenKind::Null:
-      lv.returnValue = HermesValue::encodeNullValue();
-      break;
-
-    default:
-      return lexer_.errorUnexpectedChar();
-  }
-
-  if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return lv.returnValue.getHermesValue();
-}
-
-template <EncodingKind Kind>
-CallResult<HermesValue> RuntimeJSONParser<Kind>::parseArray() {
-  struct : public Locals {
-    PinnedValue<JSArray> array;
-    PinnedValue<> indexValue;
-    PinnedValue<> elementValue;
-  } lv;
-  LocalsRAII lraii(runtime_, &lv);
-
-  assert(
-      lexer_.getCurToken()->getKind() == JSONTokenKind::LSquare &&
-      "Wrong entrance to parseArray");
-  auto arrRes = JSArray::create(runtime_, 4, 0);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  lv.array.template castAndSetHermesValue<JSArray>(arrRes->getHermesValue());
-
-  if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (lexer_.getCurToken()->getKind() != JSONTokenKind::RSquare) {
-    GCScope gcScope{runtime_};
-    auto marker = gcScope.createMarker();
-
-    for (uint32_t index = 0;; ++index) {
-      gcScope.flushToMarker(marker);
-
-      auto parRes = parseValue();
-      if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-
-      lv.indexValue = HermesValue::encodeTrustedNumberValue(index);
-      lv.elementValue = *parRes;
-      (void)JSObject::defineOwnComputedPrimitive(
-          lv.array,
-          runtime_,
-          lv.indexValue,
-          DefinePropertyFlags::getDefaultNewPropertyFlags(),
-          lv.elementValue);
-
-      if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
-        if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        continue;
-      } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RSquare) {
-        break;
-      } else {
-        return lexer_.errorUnexpectedChar();
-      }
-    }
-    assert(
-        lexer_.getCurToken()->getKind() == JSONTokenKind::RSquare &&
-        "Unexpected break for array parse");
-  }
-
-  return lv.array.getHermesValue();
-}
-
-template <EncodingKind Kind>
-CallResult<HermesValue> RuntimeJSONParser<Kind>::parseObject() {
-  struct : public Locals {
-    PinnedValue<JSObject> object;
-    PinnedValue<SymbolID> key;
-    PinnedValue<> propertyValue;
-  } lv;
-  LocalsRAII lraii(runtime_, &lv);
-
-  assert(
-      lexer_.getCurToken()->getKind() == JSONTokenKind::LBrace &&
-      "Wrong entrance to parseObject");
-  lv.object.template castAndSetHermesValue<JSObject>(
-      JSObject::create(runtime_).getHermesValue());
-
-  // If the lexer encounters a string in this context, it should treat it as a
-  // key string, which means it will store the string as a symbol.
-  if (LLVM_UNLIKELY(
-          lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
-    return lv.object.getHermesValue();
-  }
-
-  GCScope gcScope{runtime_};
-  auto marker = gcScope.createMarker();
-  for (;;) {
-    gcScope.flushToMarker(marker);
-
-    if (LLVM_UNLIKELY(
-            lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
-      return lexer_.error("Expect a string key in JSON object");
-    }
-    lv.key = lexer_.getCurToken()->getStrAsSymbol().get();
-
-    if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    if (lexer_.getCurToken()->getKind() != JSONTokenKind::Colon) {
-      return lexer_.error("Expect ':' after the key in JSON object");
-    }
-
-    if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    auto parRes = parseValue();
-    if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    lv.propertyValue = *parRes;
-    (void)JSObject::defineOwnComputedPrimitive(
-        lv.object,
-        runtime_,
-        lv.key,
-        DefinePropertyFlags::getDefaultNewPropertyFlags(),
-        lv.propertyValue);
-
-    if (lexer_.getCurToken()->getKind() == JSONTokenKind::Comma) {
-      if (LLVM_UNLIKELY(
-              lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
-        return ExecutionStatus::EXCEPTION;
-      }
-      continue;
-    } else if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
-      break;
-    } else {
-      return lexer_.errorUnexpectedChar();
-    }
-  }
-  assert(
-      lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace &&
-      "Unexpected stop for object parse");
-  return lv.object.getHermesValue();
 }
 
 template <EncodingKind Kind>
