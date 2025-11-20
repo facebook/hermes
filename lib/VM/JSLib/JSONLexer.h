@@ -19,20 +19,24 @@ namespace vm {
 
 class Runtime;
 
-enum class JSONTokenKind {
-  Number,
+enum class JSONTokenKind : uint8_t {
   String,
+  Number,
   True,
   False,
   Null,
+  Comma,
+  Colon,
   LBrace,
   RBrace,
   LSquare,
   RSquare,
-  Comma,
-  Colon,
+  // Whitespace and error are never returned from a call to advancing the lexer,
+  // they're only used internally by the lexer.
+  Error,
+  Whitespace,
   Eof,
-  None
+  None,
 };
 
 /// Encapsulates the information contained in the current token.
@@ -243,7 +247,7 @@ class JSONLexer {
   LLVM_NODISCARD ExecutionStatus scanString();
 
   /// Parse a reserved keyword.
-  LLVM_NODISCARD ExecutionStatus scanWord(const char *word, JSONTokenKind kind);
+  LLVM_NODISCARD ExecutionStatus scanWord(const char *word);
 
   /// Parse a unicode code point and \return the char16 value.
   /// On error, \return llvh::None.
