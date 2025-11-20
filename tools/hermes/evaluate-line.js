@@ -251,13 +251,14 @@ C_STRING((function() {
         elements.push(prettyPrintProp(value, prop, visited));
       }
     }
-    if (value.constructor && value.constructor.name && value.constructor.name !== "Object") {
-      return value.constructor.name + ' { ' + elements.join(', ') + ' }';
-    } else if (value[Symbol.toStringTag]) {
+    if (value[Symbol.toStringTag]) {
       // For any built-in objects whose printing is not specialized, we prefix its
       // 19.4.2.15 Symbol.toStringTag value to help with disambiguation. This covers cases
       // including Generator, {String, RegExp, Map, Set, Array}Iterator, Math, JSON, etc.
       return value[Symbol.toStringTag] + ' { ' + elements.join(', ') + ' }';
+    }
+    else if (value.constructor && value.constructor.name && value.constructor.name !== "Object") {
+      return value.constructor.name + ' { ' + elements.join(', ') + ' }';
     } else {
       return '{ ' + elements.join(', ') + ' }';
     }

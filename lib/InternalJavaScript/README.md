@@ -7,3 +7,13 @@ The Promise Internal Bytecode is generated on the fly by running:
 ```sh
 $ utils/gen-promise-internal-bc.sh
 ```
+
+## Iterator helpers
+
+The Iterator Helper polyfill is adapted from https://github.com/es-shims/iterator-helpers/ at commit da02ab656dce1c4f73355290a3bd9e4c25ccc3b. The required dependencies are taken and flattened in `05-IteratorHelperDependencies.js` and the actual Iterator implementation are followed after the file. The dependencies may be simplified from the original source.
+
+Note the original polyfill's dependencies included many polyfills for features that are supported by Hermes. In those cases, they are may be removed and use Hermes implementation directly.
+Examples (non-exhausive):
+* `Error`s are supported so its polyfill implementation is removed.
+* Checks for `Symbol`s support are removed since Hermes support `Symbol`s.
+* Hermes implements `Function.prototype.bind`, so the polyfill for this is removed.
