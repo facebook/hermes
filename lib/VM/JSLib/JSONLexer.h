@@ -235,7 +235,8 @@ class JSONLexer {
 
   /// Advance the lexer by a single token. The parameter forKey determines how
   /// strings are stored in the lexer.
-  LLVM_NODISCARD ExecutionStatus advanceHelper(bool forKey);
+  template <typename ForKey>
+  LLVM_NODISCARD ExecutionStatus advanceHelper();
 
   /// Parse a JSONNumber.
   LLVM_NODISCARD ExecutionStatus scanNumber();
@@ -248,6 +249,31 @@ class JSONLexer {
 
   /// Parse a reserved keyword.
   LLVM_NODISCARD ExecutionStatus scanWord(const char *word);
+
+  /// Parse `true`
+  LLVM_NODISCARD ExecutionStatus scanTrue() {
+    return scanWord("true");
+  }
+
+  /// Parse `false`
+  LLVM_NODISCARD ExecutionStatus scanFalse() {
+    return scanWord("false");
+  }
+
+  /// Parse `null`
+  LLVM_NODISCARD ExecutionStatus scanNull() {
+    return scanWord("null");
+  }
+
+  /// Move the iterator forward one character.
+  LLVM_NODISCARD ExecutionStatus bumpIterator() {
+    ++iter_.cur;
+    return ExecutionStatus::RETURNED;
+  }
+
+  LLVM_NODISCARD ExecutionStatus handleError() {
+    return errorWithChar(u"Unexpected character: ", *iter_.cur);
+  }
 
   /// Parse a unicode code point and \return the char16 value.
   /// On error, \return llvh::None.

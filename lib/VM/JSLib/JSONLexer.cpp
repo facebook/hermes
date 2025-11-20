@@ -86,13 +86,9 @@ static const constexpr JSONTokenKind TOKEN_TABLE[256] = {
 #undef TABLE_ELEMENT
 };
 
-static const char *TrueString = "true";
-static const char *FalseString = "false";
-static const char *NullString = "null";
-
 template <EncodingKind Kind>
 ExecutionStatus JSONLexer<Kind>::advance() {
-  auto res = advanceHelper(false);
+  auto res = advanceHelper<StrAsValue>();
   assert(
       res == ExecutionStatus::EXCEPTION ||
       (token_.getKind() != JSONTokenKind::Whitespace &&
@@ -103,7 +99,7 @@ ExecutionStatus JSONLexer<Kind>::advance() {
 
 template <EncodingKind Kind>
 ExecutionStatus JSONLexer<Kind>::advanceStrAsSymbol() {
-  auto res = advanceHelper(true);
+  auto res = advanceHelper<StrAsSymbol>();
   assert(
       res == ExecutionStatus::EXCEPTION ||
       (token_.getKind() != JSONTokenKind::Whitespace &&
@@ -113,7 +109,8 @@ ExecutionStatus JSONLexer<Kind>::advanceStrAsSymbol() {
 }
 
 template <EncodingKind Kind>
-ExecutionStatus JSONLexer<Kind>::advanceHelper(bool forKey) {
+template <typename ForKey>
+ExecutionStatus JSONLexer<Kind>::advanceHelper() {
   // Skip whitespaces.
   JSONTokenKind curKind;
   CharT curVal;
@@ -139,38 +136,39 @@ ExecutionStatus JSONLexer<Kind>::advanceHelper(bool forKey) {
   token_.setPunctuator(curKind);
   token_.setFirstChar(curVal);
 
-  switch (curKind) {
-    case JSONTokenKind::String:
-      if (forKey) {
-        return scanString<StrAsSymbol>();
-      } else {
-        return scanString<StrAsValue>();
-      }
-    case JSONTokenKind::Number:
-      return scanNumber();
-    case JSONTokenKind::True:
-      return scanWord(TrueString);
-    case JSONTokenKind::False:
-      return scanWord(FalseString);
-    case JSONTokenKind::Null:
-      return scanWord(NullString);
-    case JSONTokenKind::Comma:
-    case JSONTokenKind::Colon:
-    case JSONTokenKind::LBrace:
-    case JSONTokenKind::RBrace:
-    case JSONTokenKind::LSquare:
-    case JSONTokenKind::RSquare:
-      ++iter_.cur;
-      return ExecutionStatus::RETURNED;
-    case JSONTokenKind::Error:
-      return errorWithChar(u"Unexpected character: ", curVal);
-    case JSONTokenKind::Whitespace:
-    case JSONTokenKind::Eof:
-    case JSONTokenKind::None:
-      llvm_unreachable("Invalid token kind");
-  }
+  assert(
+      (curKind != JSONTokenKind::Whitespace) &&
+      (curKind != JSONTokenKind::Eof) && (curKind != JSONTokenKind::None) &&
+      "invalid token");
 
-  return ExecutionStatus::RETURNED;
+  using HandlerFn = ExecutionStatus (JSONLexer<Kind>::*)();
+  static constexpr HandlerFn dispatchTable[] = {
+      // JSONTokenKind::String
+      &JSONLexer<Kind>::scanString<ForKey>,
+      // JSONTokenKind::Number
+      &JSONLexer<Kind>::scanNumber,
+      // JSONTokenKind::True
+      &JSONLexer<Kind>::scanTrue,
+      // JSONTokenKind::False
+      &JSONLexer<Kind>::scanFalse,
+      // JSONTokenKind::Null
+      &JSONLexer<Kind>::scanNull,
+      // JSONTokenKind::Comma
+      &JSONLexer<Kind>::bumpIterator,
+      // JSONTokenKind::Colon
+      &JSONLexer<Kind>::bumpIterator,
+      // JSONTokenKind::LBrace
+      &JSONLexer<Kind>::bumpIterator,
+      // JSONTokenKind::RBrace
+      &JSONLexer<Kind>::bumpIterator,
+      // JSONTokenKind::LSquare
+      &JSONLexer<Kind>::bumpIterator,
+      // JSONTokenKind::RSquare
+      &JSONLexer<Kind>::bumpIterator,
+      // JSONTokenKind::Error
+      &JSONLexer<Kind>::handleError,
+  };
+  return (this->*dispatchTable[static_cast<uint8_t>(curKind)])();
 }
 
 template <EncodingKind Kind>
