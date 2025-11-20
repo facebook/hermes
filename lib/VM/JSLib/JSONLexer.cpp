@@ -8,7 +8,6 @@
 #include "JSONLexer.h"
 
 #include "hermes/VM/StringPrimitive.h"
-#include "llvh/ADT/ScopeExit.h"
 
 #include "dtoa/dtoa.h"
 
@@ -24,39 +23,42 @@ static bool isJSONWhiteSpace(char16_t ch) {
   return (ch == u'\t' || ch == u'\r' || ch == u'\n' || ch == u' ');
 }
 
-ExecutionStatus JSONLexer::advance() {
+template <EncodingKind Kind>
+ExecutionStatus JSONLexer<Kind>::advance() {
   return advanceHelper(false);
 }
 
-ExecutionStatus JSONLexer::advanceStrAsSymbol() {
+template <EncodingKind Kind>
+ExecutionStatus JSONLexer<Kind>::advanceStrAsSymbol() {
   return advanceHelper(true);
 }
 
-ExecutionStatus JSONLexer::advanceHelper(bool forKey) {
+template <EncodingKind Kind>
+ExecutionStatus JSONLexer<Kind>::advanceHelper(bool forKey) {
   // Skip whitespaces.
-  while (curCharPtr_.hasChar() && isJSONWhiteSpace(*curCharPtr_)) {
-    ++curCharPtr_;
+  while (hasChar() && isJSONWhiteSpace(*iter_.cur)) {
+    ++iter_.cur;
   }
 
   // End of buffer.
-  if (!curCharPtr_.hasChar()) {
+  if (!hasChar()) {
     token_.setEof();
     return ExecutionStatus::RETURNED;
   }
 
-  token_.setFirstChar(*curCharPtr_);
+  token_.setFirstChar(*iter_.cur);
 
 #define PUNC(ch, tok)          \
   case ch:                     \
     token_.setPunctuator(tok); \
-    ++curCharPtr_;             \
+    ++iter_.cur;               \
     return ExecutionStatus::RETURNED
 
 #define WORD(ch, word, tok) \
   case ch:                  \
     return scanWord(word, tok)
 
-  switch (*curCharPtr_) {
+  switch (*iter_.cur) {
     PUNC(u'{', JSONTokenKind::LBrace);
     PUNC(u'}', JSONTokenKind::RBrace);
     PUNC(u'[', JSONTokenKind::LSquare);
@@ -88,41 +90,43 @@ ExecutionStatus JSONLexer::advanceHelper(bool forKey) {
       }
 
     default:
-      return errorWithChar(u"Unexpected character: ", *curCharPtr_);
+      return errorWithChar(u"Unexpected character: ", *iter_.cur);
   }
 }
 
-CallResult<char16_t> JSONLexer::consumeUnicode() {
+template <EncodingKind Kind>
+CallResult<char16_t> JSONLexer<Kind>::consumeUnicode() {
   uint16_t val = 0;
   for (unsigned i = 0; i < 4; ++i) {
-    if (!curCharPtr_.hasChar()) {
+    if (!hasChar()) {
       return error("Unexpected end of input");
     }
-    int ch = *curCharPtr_ | 32;
+    int ch = *iter_.cur | 32;
     if (ch >= '0' && ch <= '9') {
       ch -= '0';
     } else if (ch >= 'a' && ch <= 'f') {
       ch -= 'a' - 10;
     } else {
-      return errorWithChar(u"Invalid unicode point character: ", *curCharPtr_);
+      return errorWithChar(u"Invalid unicode point character: ", *iter_.cur);
     }
     val = (val << 4) + ch;
-    ++curCharPtr_;
+    ++iter_.cur;
   }
 
   return static_cast<char16_t>(val);
 }
 
-ExecutionStatus JSONLexer::scanNumber() {
+template <EncodingKind Kind>
+ExecutionStatus JSONLexer<Kind>::scanNumber() {
   llvh::SmallVector<char, 32> str8;
-  while (curCharPtr_.hasChar()) {
-    auto ch = *curCharPtr_;
+  while (hasChar()) {
+    auto ch = *iter_.cur;
     if (!(ch == u'-' || ch == u'+' || ch == u'.' || (ch | 32) == u'e' ||
           (ch >= u'0' && ch <= u'9'))) {
       break;
     }
     str8.push_back(ch);
-    ++curCharPtr_;
+    ++iter_.cur;
   }
 
   size_t len = str8.size();
@@ -143,67 +147,85 @@ ExecutionStatus JSONLexer::scanNumber() {
   return ExecutionStatus::RETURNED;
 }
 
+template <EncodingKind Kind>
 template <typename ForKey>
-ExecutionStatus JSONLexer::scanString() {
-  assert(*curCharPtr_ == '"');
-  ++curCharPtr_;
+ExecutionStatus JSONLexer<Kind>::scanString() {
+  assert(*iter_.cur == '"');
+  ++iter_.cur;
   bool hasEscape = false;
-  // Ideally we don't have to use tmpStorage. In the case of a plain string with
+  // Ideally we don't have to use escapedStr. In the case of a plain string with
   // no escapes, we construct an ArrayRef at the end of scanning that points to
   // the beginning and end of the string.
-  SmallU16String<32> tmpStorage;
-  curCharPtr_.beginCapture();
-  // Make sure we don't somehow leave a dangling open capture.
-  auto ensureCaptureClosed =
-      llvh::make_scope_exit([this] { curCharPtr_.cancelCapture(); });
-  bool allAscii = true;
+  llvh::SmallVector<char16_t, 32> escapedStr;
+  const CharT *beginNonEscaped;
+  if constexpr (Traits::UsesRawPtr) {
+    beginNonEscaped = iter_.cur;
+  } else {
+    iter_.cur.beginCapture();
+  }
   hermes::JenkinsHash hash = hermes::JenkinsHashInit;
 
-  while (curCharPtr_.hasChar()) {
-    if (*curCharPtr_ == '"') {
-      // End of string.
-      llvh::ArrayRef<char16_t> strRef =
-          hasEscape ? tmpStorage.arrayRef() : curCharPtr_.endCapture();
-      ++curCharPtr_;
+  while (hasChar()) {
+    if (*iter_.cur == '"') {
+      // Reached the end of string.
+      llvh::ArrayRef<CharT> strRef;
+      if (LLVM_LIKELY(!hasEscape)) {
+        if constexpr (Traits::UsesRawPtr) {
+          strRef = llvh::ArrayRef<CharT>{beginNonEscaped, iter_.cur};
+        } else {
+          strRef = iter_.cur.endCapture();
+        }
+      }
+      ++iter_.cur;
       if constexpr (ForKey::value) {
-        auto symRes = runtime_.getIdentifierTable().getSymbolHandle(
-            runtime_, strRef, hash);
+        auto symRes = LLVM_UNLIKELY(hasEscape)
+            ? runtime_.getIdentifierTable().getSymbolHandle(
+                  runtime_, llvh::ArrayRef<char16_t>{escapedStr}, hash)
+            : runtime_.getIdentifierTable().getSymbolHandle(
+                  runtime_, strRef, hash);
         if (symRes == ExecutionStatus::EXCEPTION)
           return ExecutionStatus::EXCEPTION;
         token_.setSymbol(symRes->get());
         return ExecutionStatus::RETURNED;
       }
-      auto strRes =
-          StringPrimitive::createWithKnownEncoding(runtime_, strRef, allAscii);
+      auto strRes = LLVM_UNLIKELY(hasEscape)
+          ? StringPrimitive::create(
+                runtime_, llvh::ArrayRef<char16_t>{escapedStr})
+          : StringPrimitive::create(runtime_, strRef);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       token_.setString(vmcast<StringPrimitive>(*strRes));
       return ExecutionStatus::RETURNED;
-    } else if (*curCharPtr_ <= '\u001F') {
+    } else if (*iter_.cur <= '\u001F') {
       return error(u"U+0000 thru U+001F is not allowed in string");
     }
     char16_t scannedChar = -1;
-    if (*curCharPtr_ == u'\\') {
+    if (*iter_.cur == u'\\') {
       if (!hasEscape) {
         // This is the first escape character encountered, so append everything
-        // we've seen so far to tmpStorage.
-        tmpStorage.append(curCharPtr_.endCapture());
+        // we've seen so far to escapedStr.
+        if constexpr (Traits::UsesRawPtr) {
+          escapedStr.append(beginNonEscaped, iter_.cur);
+        } else {
+          llvh::ArrayRef<char16_t> nonEscapedRef = iter_.cur.endCapture();
+          escapedStr.append(nonEscapedRef.begin(), nonEscapedRef.end());
+        }
       }
       hasEscape = true;
-      ++curCharPtr_;
-      if (!curCharPtr_.hasChar()) {
+      ++iter_.cur;
+      if (!hasChar()) {
         return error("Unexpected end of input");
       }
-      switch (*curCharPtr_) {
+      switch (*iter_.cur) {
 #define CONSUME_VAL(v)     \
-  tmpStorage.push_back(v); \
-  ++curCharPtr_;
+  escapedStr.push_back(v); \
+  ++iter_.cur;
 
         case u'"':
         case u'/':
         case u'\\':
-          CONSUME_VAL(*curCharPtr_)
+          CONSUME_VAL(*iter_.cur)
           break;
         case 'b':
           CONSUME_VAL(8)
@@ -221,40 +243,41 @@ ExecutionStatus JSONLexer::scanString() {
           CONSUME_VAL(9)
           break;
         case 'u': {
-          ++curCharPtr_;
+          ++iter_.cur;
           CallResult<char16_t> cr = consumeUnicode();
           if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
             return ExecutionStatus::EXCEPTION;
           }
-          tmpStorage.push_back(*cr);
+          escapedStr.push_back(*cr);
           break;
         }
 
         default:
-          return errorWithChar(u"Invalid escape sequence: ", *curCharPtr_);
+          return errorWithChar(u"Invalid escape sequence: ", *iter_.cur);
       }
-      scannedChar = tmpStorage.back();
+      scannedChar = escapedStr.back();
     } else {
-      scannedChar = *curCharPtr_;
+      scannedChar = *iter_.cur;
       if (hasEscape)
-        tmpStorage.push_back(scannedChar);
-      ++curCharPtr_;
+        escapedStr.push_back(scannedChar);
+      ++iter_.cur;
     }
     if constexpr (ForKey::value) {
       hash = hermes::updateJenkinsHash(hash, scannedChar);
-    } else {
-      allAscii &= isASCII(scannedChar);
     }
   }
   return error("Unexpected end of input");
 }
 
-ExecutionStatus JSONLexer::scanWord(const char *word, JSONTokenKind kind) {
-  while (*word && curCharPtr_.hasChar()) {
-    if (*curCharPtr_ != *word) {
-      return errorWithChar(u"Unexpected character: ", *curCharPtr_);
+template <EncodingKind Kind>
+ExecutionStatus JSONLexer<Kind>::scanWord(
+    const char *word,
+    JSONTokenKind kind) {
+  while (*word && hasChar()) {
+    if (*iter_.cur != *word) {
+      return errorWithChar(u"Unexpected character: ", *iter_.cur);
     }
-    ++curCharPtr_;
+    ++iter_.cur;
     ++word;
   }
   if (*word) {
@@ -263,6 +286,10 @@ ExecutionStatus JSONLexer::scanWord(const char *word, JSONTokenKind kind) {
   token_.setPunctuator(kind);
   return ExecutionStatus::RETURNED;
 }
+
+template class JSONLexer<EncodingKind::ASCII>;
+template class JSONLexer<EncodingKind::UTF8>;
+template class JSONLexer<EncodingKind::UTF16>;
 
 } // namespace vm
 } // namespace hermes

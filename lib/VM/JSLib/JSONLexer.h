@@ -11,9 +11,7 @@
 #include "hermes/Support/UTF16Stream.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringPrimitive.h"
-#include "hermes/VM/StringView.h"
 #include "hermes/VM/TwineChar16.h"
 
 namespace hermes {
@@ -110,19 +108,75 @@ class JSONToken {
   }
 };
 
+/// These are all the different input encodings that JSONLexer supports.
+enum class EncodingKind { ASCII, UTF16, UTF8 };
+
+/// EncodingTraits contains the information that the lexer needs in order to
+/// iterate through the encoded input.
+template <EncodingKind>
+struct EncodingTraits;
+
+/// ASCII specialization
+template <>
+struct EncodingTraits<EncodingKind::ASCII> {
+  using CharT = char;
+  static constexpr bool UsesRawPtr = true;
+  struct Iterator {
+    const CharT *cur;
+    const CharT *end;
+  };
+};
+
+/// UTF16 specialization
+template <>
+struct EncodingTraits<EncodingKind::UTF16> {
+  using CharT = char16_t;
+  static constexpr bool UsesRawPtr = true;
+  struct Iterator {
+    const CharT *cur;
+    const CharT *end;
+  };
+};
+
+/// UTF8 specialization
+template <>
+struct EncodingTraits<EncodingKind::UTF8> {
+  /// Even though the underlying storage is char8_t, the API that
+  /// UTF16Stream exposes is char16_t.
+  using CharT = char16_t;
+  static constexpr bool UsesRawPtr = false;
+  struct Iterator {
+    /// UTF16Stream is capable of converting UTF8 input data to a stream of
+    /// UTF16 values.
+    UTF16Stream cur;
+  };
+};
+
+template <EncodingKind Kind>
 class JSONLexer {
  private:
-  UTF16Stream curCharPtr_;
-
-  Runtime &runtime_;
-
-  JSONToken token_;
+  using Traits = EncodingTraits<Kind>;
+  using CharT = typename Traits::CharT;
   using StrAsSymbol = std::true_type;
   using StrAsValue = std::false_type;
 
+  /// It's important to keep the iterator fields at the very beginning of the
+  /// layout. There was a consistent, measureable perf regression when the
+  /// cursor pointer was not located at offset 0.
+  typename EncodingTraits<Kind>::Iterator iter_;
+  Runtime &runtime_;
+  JSONToken token_;
+
  public:
-  JSONLexer(Runtime &runtime, UTF16Stream &&stream)
-      : curCharPtr_(std::move(stream)), runtime_(runtime), token_(runtime) {}
+  /// Constructor for when we can work directly with raw pointers.
+  template <typename U = Traits, typename = std::enable_if_t<U::UsesRawPtr>>
+  JSONLexer(Runtime &runtime, llvh::ArrayRef<CharT> str)
+      : iter_{str.begin(), str.end()}, runtime_(runtime), token_(runtime) {}
+
+  /// Constructor for when we *cannot* work directly with raw pointers.
+  template <typename U = Traits, typename = std::enable_if_t<!U::UsesRawPtr>>
+  JSONLexer(Runtime &runtime, UTF16Stream &&jsonString)
+      : iter_{std::move(jsonString)}, runtime_(runtime), token_(runtime) {}
 
   /// \return the current token.
   const JSONToken *getCurToken() const {
@@ -166,6 +220,15 @@ class JSONLexer {
   }
 
  private:
+  /// \return true if there is more input left for the lexer to consume.
+  inline bool hasChar() {
+    if constexpr (Traits::UsesRawPtr) {
+      return iter_.cur < iter_.end;
+    } else {
+      return iter_.cur.hasChar();
+    }
+  }
+
   /// Advance the lexer by a single token. The parameter forKey determines how
   /// strings are stored in the lexer.
   LLVM_NODISCARD ExecutionStatus advanceHelper(bool forKey);
