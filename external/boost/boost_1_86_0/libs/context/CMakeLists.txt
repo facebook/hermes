@@ -193,6 +193,10 @@ if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "fcontext")
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set_property(SOURCE ${ASM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS "-x" "assembler-with-cpp")
   endif()
+elseif(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "winfib")
+  set(IMPL_SOURCES
+    src/fiber.cpp
+  )
 else()
   set(IMPL_SOURCES
     src/continuation.cpp
@@ -215,6 +219,8 @@ add_hermes_library(boost_context
   ${STACK_TRAITS_SOURCES}
 )
 
+set(_boost_context_targets boost_context boost_context_obj)
+
 #add_library(Boost::context ALIAS boost_context)
 
 #target_include_directories(boost_context PUBLIC include)
@@ -233,23 +239,33 @@ add_hermes_library(boost_context
 # ATTENTION. Some assemblers are picky to get --defsym,KEY=VALUE pairs where '=' is non-optional!
 # Be sure all defines have the '=' character. Overkill solution: always put '=' throughout this module.
 
-target_compile_definitions(boost_context
-  PUBLIC BOOST_CONTEXT_NO_LIB=
-  PRIVATE BOOST_CONTEXT_SOURCE=
-)
+foreach(_target ${_boost_context_targets})
+  target_compile_definitions(${_target}
+    PUBLIC BOOST_CONTEXT_NO_LIB=
+    PRIVATE BOOST_CONTEXT_SOURCE=
+  )
+endforeach()
 
 if(BUILD_SHARED_LIBS)
-  target_compile_definitions(boost_context PUBLIC BOOST_CONTEXT_DYN_LINK= BOOST_CONTEXT_EXPORT=EXPORT)
+  foreach(_target ${_boost_context_targets})
+    target_compile_definitions(${_target} PUBLIC BOOST_CONTEXT_DYN_LINK= BOOST_CONTEXT_EXPORT=EXPORT)
+  endforeach()
 else()
-  target_compile_definitions(boost_context PUBLIC BOOST_CONTEXT_STATIC_LINK= BOOST_CONTEXT_EXPORT=)
+  foreach(_target ${_boost_context_targets})
+    target_compile_definitions(${_target} PUBLIC BOOST_CONTEXT_STATIC_LINK= BOOST_CONTEXT_EXPORT=)
+  endforeach()
 endif()
 
 if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "ucontext")
-  target_compile_definitions(boost_context PUBLIC BOOST_USE_UCONTEXT=)
+  foreach(_target ${_boost_context_targets})
+    target_compile_definitions(${_target} PUBLIC BOOST_USE_UCONTEXT=)
+  endforeach()
 endif()
 
 if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "winfib")
-  target_compile_definitions(boost_context PUBLIC BOOST_USE_WINFIB=)
+  foreach(_target ${_boost_context_targets})
+    target_compile_definitions(${_target} PUBLIC BOOST_USE_WINFIB=)
+  endforeach()
 endif()
 
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
