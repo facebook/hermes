@@ -45,7 +45,7 @@ class TestCase:
     """
     expected_failure: OptExpectedFailure = None
     """
-    The "negative" field in the test262 frontmatter. This means the test is 
+    The "negative" field in the test262 frontmatter. This means the test is
     expected to throw an error of given type. The two fields are (if not None):
     - phase, potential values are:
         - parse, meaning that the test must throw before execution
@@ -112,6 +112,7 @@ function internal_arraysEqual(a, b) {
 }
 function builtin_nop(x) { return x; }
 function builtin_false() { return false; }
+function builtin_true() { return true; }
 
 var nopSentinel = {};
 
@@ -155,6 +156,75 @@ function v8pragma_StringCharCodeAt(s, i) {
 var debug = function(s) {
   alert('-->', s);
 };
+
+function v8pragma_StringMaxLength() {
+  return 256 * 1024 * 1024;
+}
+
+function v8pragma_TypeOf(val) {
+  return typeof val;
+}
+
+function v8pragma_ConstructConsString(a, b) {
+  return a;
+}
+
+// For 64-bit devices, v8 may do extra tests regarding optimization, but we can skip
+function v8pragma_Is64Bit() {
+  return false;
+}
+
+function v8pragma_ConstructSlicedString(str, i) {
+  return str.slice(i);
+}
+
+function v8pragma_ConstructInternalizedString(a, b) {
+  return a + b;
+}
+
+function v8pragma_ToLength(val) {
+  return val.length;
+}
+
+function executeCode(code) {
+  if (typeof code === 'function') return code();
+  if (typeof code === 'string') return eval(code);
+  failWithMessage(
+      'Given code is neither function nor string, but ' + (typeof code) +
+      ': <' + prettyPrinted(code) + '>');
+}
+
+function v8_assertException(e, type_opt, cause_opt) {
+    if (type_opt !== undefined) {
+      assertEquals('function', typeof type_opt);
+      assertInstanceof(e, type_opt);
+    }
+}
+
+// Error messages may differ between V8 and Hermes, so ignore the assert on the message.
+function v8_assertThrows(code, type_opt, cause_opt) {
+    if (arguments.length > 1 && type_opt === undefined) {
+      failWithMessage('invalid use of assertThrows, unknown type_opt given');
+    }
+    if (type_opt !== undefined && typeof type_opt !== 'function') {
+      failWithMessage(
+          'invalid use of assertThrows, maybe you want assertThrowsEquals');
+    }
+    try {
+      executeCode(code);
+    } catch (e) {
+      assertException(e, type_opt, undefined);
+      return;
+    }
+    let msg = 'Did not throw exception';
+    if (type_opt !== undefined && type_opt.name !== undefined)
+      msg += ', expected ' + type_opt.name;
+    failWithMessage(msg);
+  };
+
+// Note that this is not added in the pragma map to avoid overriding other variants
+// of assertThrows, e.g. assertThrowsEquals
+assertThrows = v8_assertThrows;
 
 // The idea here is that some pragmas are meaningless for our JS interpreter,
 // but we don't want to throw out the whole test case. In those cases, just
@@ -204,6 +274,44 @@ function v8pragma_NopSentinel() {
         "%_StringCharCodeAt": "v8pragma_StringCharCodeAt",
         "%AbortJS": "throw new Error",
         "%EnqueueMicrotask": "queueMicrotask",
+        "%PerformMicrotaskCheckpoint": "HermesInternal.drainJobs",
+        "%PrepareFunctionForOptimization": "builtin_nop",
+        "%OptimizeMaglevOnNextCall": "builtin_nop",
+        "%IsDictPropertyConstTrackingEnabled": "v8pragma_NopSentinel",
+        "%HasSmiElements": "v8pragma_NopSentinel",
+        "%GetOptimizationStatus": "v8pragma_NopSentinel",
+        "%StringMaxLength": "v8pragma_StringMaxLength",
+        "%EnsureFeedbackVectorForFunction": "builtin_nop",
+        "%HeapObjectVerify": "builtin_nop",
+        "%ClearFunctionFeedback": "builtin_nop",
+        "%TurbofanStaticAssert": "builtin_nop",
+        "%DisableOptimizationFinalization": "builtin_nop",
+        "%FinalizeOptimization": "builtin_nop",
+        "%SimulateNewspaceFull": "builtin_nop",
+        "%BaselineOsr": "builtin_nop",
+        "%ForceFlush": "builtin_nop",
+        "%CompleteInobjectSlackTracking": "builtin_nop",
+        "%DisassembleFunction": "builtin_nop",
+        "%InternalizeString": "builtin_nop",
+        "%SetForceSlowPath": "builtin_nop",
+        "%RegexpIsUnmodified": "builtin_nop",
+        "%NewRegExpWithBacktrackLimit": "builtin_nop",
+        "%PretenureAllocationSite": "builtin_nop",
+        "%WaitForBackgroundOptimization": "builtin_nop",
+        "%Typeof": "v8pragma_TypeOf",
+        "%CompileBaseline": "builtin_nop",
+        "%ConstructConsString": "v8pragma_ConstructConsString",
+        "%Is64Bit": "builtin_false",
+        "%ToLength": "v8pragma_ToLength",
+        "%IsUndefinedDoubleEnabled": "builtin_false",
+        "%Call": "v8pragma_Call",
+        "%ConstructThinString": "v8pragma_ConstructConsString",
+        "%ConstructSlicedString": "v8pragma_ConstructSlicedString",
+        "%SystemBreak": "builtin_nop",
+        "%CollectGarbage": "builtin_nop",
+        "assertException": "v8_assertException",
+        "assertOptimized": "builtin_nop",
+        "assertUnoptimized": "builtin_nop",
     }
 
     for pragma, replacement in v8_pragmas.items():
