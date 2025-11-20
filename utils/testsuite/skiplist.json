@@ -157,14 +157,6 @@
     },
     {
       "paths": [
-        "mjsunit/harmony/iterator-from.js",
-        "mjsunit/harmony/regress/regress-crbug-1444842.js",
-        "test262/test/built-ins/Iterator/from/"
-      ],
-      "comment": "Iterator helpers tests will be removed from skiplist as they are added in T221534846"
-    },
-    {
-      "paths": [
         "mjsunit/compiler/float16-array-next.js",
         "mjsunit/compiler/float16-array.js",
         "mjsunit/compiler/regress-392660676.js",
