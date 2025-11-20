@@ -158,7 +158,6 @@
     {
       "paths": [
         "test262/test/built-ins/Iterator/from/",
-        "test262/test/built-ins/Iterator/prototype/drop/",
         "test262/test/built-ins/Iterator/prototype/every/",
         "test262/test/built-ins/Iterator/prototype/filter/",
         "test262/test/built-ins/Iterator/prototype/find/",
