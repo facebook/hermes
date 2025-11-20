@@ -151,12 +151,8 @@ template <EncodingKind Kind>
 template <typename ForKey>
 ExecutionStatus JSONLexer<Kind>::scanString() {
   assert(*iter_.cur == '"');
+  // Advance over opening quote.
   ++iter_.cur;
-  bool hasEscape = false;
-  // Ideally we don't have to use escapedStr. In the case of a plain string with
-  // no escapes, we construct an ArrayRef at the end of scanning that points to
-  // the beginning and end of the string.
-  llvh::SmallVector<char16_t, 32> escapedStr;
   const CharT *beginNonEscaped;
   if constexpr (Traits::UsesRawPtr) {
     beginNonEscaped = iter_.cur;
@@ -165,105 +161,157 @@ ExecutionStatus JSONLexer<Kind>::scanString() {
   }
   hermes::JenkinsHash hash = hermes::JenkinsHashInit;
 
-  while (hasChar()) {
-    if (*iter_.cur == '"') {
+  // This loop can only handle simple strings that have no escapes. If an escape
+  // is encountered, iteration stops and the string is finished processing
+  // below.
+  while (true) {
+    if (LLVM_UNLIKELY(!hasChar())) {
+      return error("Unexpected end of input");
+    }
+    CharT curVal = *iter_.cur;
+    if (curVal == '"') {
       // Reached the end of string.
       llvh::ArrayRef<CharT> strRef;
-      if (LLVM_LIKELY(!hasEscape)) {
-        if constexpr (Traits::UsesRawPtr) {
-          strRef = llvh::ArrayRef<CharT>{beginNonEscaped, iter_.cur};
-        } else {
-          strRef = iter_.cur.endCapture();
-        }
+      if constexpr (Traits::UsesRawPtr) {
+        strRef = llvh::ArrayRef<CharT>{beginNonEscaped, iter_.cur};
+      } else {
+        strRef = iter_.cur.endCapture();
       }
       ++iter_.cur;
       if constexpr (ForKey::value) {
-        auto symRes = LLVM_UNLIKELY(hasEscape)
-            ? runtime_.getIdentifierTable().getSymbolHandle(
-                  runtime_, llvh::ArrayRef<char16_t>{escapedStr}, hash)
-            : runtime_.getIdentifierTable().getSymbolHandle(
-                  runtime_, strRef, hash);
+        auto symRes = runtime_.getIdentifierTable().getSymbolHandle(
+            runtime_, strRef, hash);
         if (symRes == ExecutionStatus::EXCEPTION)
           return ExecutionStatus::EXCEPTION;
         token_.setSymbol(symRes->get());
         return ExecutionStatus::RETURNED;
       }
-      auto strRes = LLVM_UNLIKELY(hasEscape)
-          ? StringPrimitive::create(
-                runtime_, llvh::ArrayRef<char16_t>{escapedStr})
-          : StringPrimitive::create(runtime_, strRef);
+      auto strRes = StringPrimitive::create(runtime_, strRef);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
       token_.setString(vmcast<StringPrimitive>(*strRes));
       return ExecutionStatus::RETURNED;
-    } else if (*iter_.cur <= '\u001F') {
+    } else if (LLVM_UNLIKELY(curVal <= '\u001F')) {
       return error(u"U+0000 thru U+001F is not allowed in string");
     }
-    char16_t scannedChar = -1;
-    if (*iter_.cur == u'\\') {
-      if (!hasEscape) {
-        // This is the first escape character encountered, so append everything
-        // we've seen so far to escapedStr.
-        if constexpr (Traits::UsesRawPtr) {
-          escapedStr.append(beginNonEscaped, iter_.cur);
-        } else {
-          llvh::ArrayRef<char16_t> nonEscapedRef = iter_.cur.endCapture();
-          escapedStr.append(nonEscapedRef.begin(), nonEscapedRef.end());
-        }
+    if (LLVM_LIKELY(curVal != '\\')) {
+      if constexpr (ForKey::value) {
+        hash = hermes::updateJenkinsHash(hash, curVal);
       }
-      hasEscape = true;
       ++iter_.cur;
-      if (!hasChar()) {
-        return error("Unexpected end of input");
-      }
-      switch (*iter_.cur) {
-#define CONSUME_VAL(v)     \
-  escapedStr.push_back(v); \
-  ++iter_.cur;
-
-        case u'"':
-        case u'/':
-        case u'\\':
-          CONSUME_VAL(*iter_.cur)
-          break;
-        case 'b':
-          CONSUME_VAL(8)
-          break;
-        case 'f':
-          CONSUME_VAL(12)
-          break;
-        case 'n':
-          CONSUME_VAL(10)
-          break;
-        case 'r':
-          CONSUME_VAL(13)
-          break;
-        case 't':
-          CONSUME_VAL(9)
-          break;
-        case 'u': {
-          ++iter_.cur;
-          CallResult<char16_t> cr = consumeUnicode();
-          if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
-            return ExecutionStatus::EXCEPTION;
-          }
-          escapedStr.push_back(*cr);
-          break;
-        }
-
-        default:
-          return errorWithChar(u"Invalid escape sequence: ", *iter_.cur);
-      }
-      scannedChar = escapedStr.back();
-    } else {
-      scannedChar = *iter_.cur;
-      if (hasEscape)
-        escapedStr.push_back(scannedChar);
-      ++iter_.cur;
+      continue;
     }
+    // escape found, break out.
+    break;
+  }
+
+  // We reach this point after an escape has occured. This means that the
+  // contents of the string we are parsing don't actually exist byte for byte in
+  // the input string. Instead, we must build the contents of the string from
+  // scratch. The contents of the string are placed into escapedStr.
+  llvh::SmallVector<char16_t, 32> escapedStr;
+  // Append all the 'simple' string contents that were observed up to this
+  // point.
+  if constexpr (Traits::UsesRawPtr) {
+    escapedStr.append(beginNonEscaped, iter_.cur);
+  } else {
+    llvh::ArrayRef<char16_t> nonEscapedRef = iter_.cur.endCapture();
+    escapedStr.append(nonEscapedRef.begin(), nonEscapedRef.end());
+  }
+  while (true) {
+    if (LLVM_UNLIKELY(!hasChar())) {
+      return error("Unexpected end of input");
+    }
+    CharT curVal = *iter_.cur;
+    if (curVal == '"') {
+      // Reached the end of string.
+      ++iter_.cur;
+      if constexpr (ForKey::value) {
+        auto symRes = runtime_.getIdentifierTable().getSymbolHandle(
+            runtime_, llvh::ArrayRef<char16_t>{escapedStr}, hash);
+        if (symRes == ExecutionStatus::EXCEPTION)
+          return ExecutionStatus::EXCEPTION;
+        token_.setSymbol(symRes->get());
+        return ExecutionStatus::RETURNED;
+      }
+      auto strRes = StringPrimitive::create(
+          runtime_, llvh::ArrayRef<char16_t>{escapedStr});
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      token_.setString(vmcast<StringPrimitive>(*strRes));
+      return ExecutionStatus::RETURNED;
+    } else if (LLVM_UNLIKELY(curVal <= '\u001F')) {
+      return error(u"U+0000 thru U+001F is not allowed in string");
+    }
+    if (LLVM_LIKELY(curVal != '\\')) {
+      escapedStr.push_back(curVal);
+      if constexpr (ForKey::value) {
+        hash = hermes::updateJenkinsHash(hash, curVal);
+      }
+      ++iter_.cur;
+      continue;
+    }
+    // Advance over starting backslash.
+    ++iter_.cur;
+    if (!hasChar()) {
+      return error("Unexpected end of input");
+    }
+    switch (*iter_.cur) {
+      case '"':
+        escapedStr.push_back('"');
+        ++iter_.cur;
+        break;
+      case '/':
+        escapedStr.push_back('/');
+        ++iter_.cur;
+        break;
+      case '\\':
+        escapedStr.push_back('\\');
+        ++iter_.cur;
+        break;
+      case 'b':
+        // Backspace (Unicode U+0008)
+        escapedStr.push_back(0x08);
+        ++iter_.cur;
+        break;
+      case 'f':
+        // Form feed (Unicode U+000C)
+        escapedStr.push_back(0x0C);
+        ++iter_.cur;
+        break;
+      case 'n':
+        // Line feed (Unicode U+000A)
+        escapedStr.push_back(0x0A);
+        ++iter_.cur;
+        break;
+      case 'r':
+        // Carriage return (Unicode U+000D)
+        escapedStr.push_back(0x0D);
+        ++iter_.cur;
+        break;
+      case 't':
+        // Horiztonal tab (Unicode U+0009)
+        escapedStr.push_back(0x09);
+        ++iter_.cur;
+        break;
+      case 'u': {
+        ++iter_.cur;
+        CallResult<char16_t> cr = consumeUnicode();
+        if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        escapedStr.push_back(*cr);
+        break;
+      }
+
+      default:
+        return errorWithChar(u"Invalid escape sequence: ", *iter_.cur);
+    }
+    char16_t escapedCharVal = escapedStr.back();
     if constexpr (ForKey::value) {
-      hash = hermes::updateJenkinsHash(hash, scannedChar);
+      hash = hermes::updateJenkinsHash(hash, escapedCharVal);
     }
   }
   return error("Unexpected end of input");
