@@ -158,7 +158,6 @@
     {
       "paths": [
         "test262/test/built-ins/Iterator/from/",
-        "test262/test/built-ins/Iterator/prototype/some/",
         "test262/test/built-ins/Iterator/prototype/take/",
         "test262/test/built-ins/Iterator/prototype/toArray/",
         "mjsunit/harmony/iterator-from.js",
