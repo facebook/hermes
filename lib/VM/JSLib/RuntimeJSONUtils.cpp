@@ -290,6 +290,42 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::parse() {
   return parRes;
 }
 
+/// Check if the hidden class found in \p existingEntry matches the SymbolIDs
+/// found in \p properties, starting from \p beginIdx.
+/// \param existingCacheEntry is the entry in the hidden class cache to compare.
+///   It might not be a HiddenClass if this cache entry hasn't been written to
+///   yet.
+/// \param properties ArrayStorage which must contain only SymbolIDs.
+/// \param beginIdx starting place in \p properties to begin comparison.
+/// \param sz the amount of SymbolIDs in \p properties to check.
+/// \param cacheEntry[out] will be set if \p existingEntry was a HiddenClass,
+///   regardless of if there was a match or not.
+/// \return true if \p existingCacheEntry is a HiddenClass whose properties all
+/// match exactly to the relevant contents of \p properties.
+static inline bool matchesHiddenClass(
+    Runtime &runtime,
+    HermesValue existingCacheEntry,
+    Handle<ArrayStorage> properties,
+    size_t beginIdx,
+    size_t sz,
+    PinnedValue<HiddenClass> &cacheEntry) {
+  if (!vmisa<HiddenClass>(existingCacheEntry)) {
+    return false;
+  }
+  cacheEntry.template castAndSetHermesValue<HiddenClass>(existingCacheEntry);
+  if (sz != cacheEntry->getNumProperties()) {
+    return false;
+  }
+  return HiddenClass::forEachPropertyWhile(
+      cacheEntry,
+      runtime,
+      [properties, &beginIdx](
+          Runtime &, SymbolID expected, NamedPropertyDescriptor desc) {
+        SymbolID actual = properties->at(beginIdx++).getSymbol();
+        return actual == expected;
+      });
+}
+
 template <EncodingKind Kind>
 CallResult<HermesValue> RuntimeJSONParser<Kind>::iterativeParseValue() {
   struct : public Locals {
@@ -304,6 +340,13 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::iterativeParseValue() {
     PinnedValue<SymbolID> key;
     /// Used to hold recently created objects/arrays.
     PinnedValue<JSObject> newObject;
+    /// Cache of hidden classes, keyed by depth. The cache is grown every time
+    /// an object at a new depth is parsed. The depth is defined as the sum of
+    /// all open objects and arrays. Because of this, it's possible for the
+    /// cache to contain invalid entries of the value empty.
+    PinnedValue<ArrayStorage> hcCache;
+    /// Current cache entry being tested.
+    PinnedValue<HiddenClass> cacheEntry;
   } lv;
   LocalsRAII lraii(runtime_, &lv);
 
@@ -318,6 +361,13 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::iterativeParseValue() {
     return ExecutionStatus::EXCEPTION;
   }
   lv.values = vmcast<ArrayStorageSmall>(*valuesRes);
+
+  auto cacheRes = ArrayStorage::create(runtime_, 4, 0);
+  if (LLVM_UNLIKELY(cacheRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // The hidden class cache.
+  lv.hcCache = vmcast<ArrayStorage>(*cacheRes);
 
   // These different contexts here refer to the unfinished elements that are
   // being parsed. Each context is pushed onto a stack when beginning to parse
@@ -527,22 +577,59 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::iterativeParseValue() {
         size_t beginValIdx = objCtx->valuesIdx;
         size_t numElements = lv.values->size() - beginValIdx;
         size_t beginPropIdx = lv.properties->size() - numElements;
-        lv.newObject = JSObject::create(runtime_, numElements);
-        for (size_t i = 0; i < numElements; i++) {
-          gcScope.flushToMarker(marker);
-          size_t propIdx = beginPropIdx + i;
-          size_t valIdx = beginValIdx + i;
-          lv.key = lv.properties->at(propIdx).getSymbol();
-          lv.curVal = lv.values->at(valIdx).unboxToHV(runtime_);
-          if (LLVM_UNLIKELY(
-                  JSObject::defineOwnComputedPrimitive(
-                      lv.newObject,
-                      runtime_,
-                      lv.key,
-                      DefinePropertyFlags::getDefaultNewPropertyFlags(),
-                      lv.curVal) == ExecutionStatus::EXCEPTION))
-            return ExecutionStatus::EXCEPTION;
+        auto depth = contexts.size();
+        if (lv.hcCache->size() > depth &&
+            matchesHiddenClass(
+                runtime_,
+                lv.hcCache->at(depth),
+                lv.properties,
+                beginPropIdx,
+                numElements,
+                lv.cacheEntry)) {
+          // Fast path, we know the end HiddenClass and it's been written to
+          // lv.cacheEntry.
+          lv.newObject = JSObject::create(
+              runtime_,
+              Handle<JSObject>::vmcast(&runtime_.objectPrototype),
+              lv.cacheEntry);
+          for (size_t i = 0; i < numElements; i++) {
+            size_t valIdx = beginValIdx + i;
+            auto shv = lv.values->at(valIdx);
+            JSObject::setNamedSlotValueUnsafe(*lv.newObject, runtime_, i, shv);
+          }
+        } else {
+          // Slowpath
+          lv.newObject = JSObject::create(runtime_, numElements);
+          for (size_t i = 0; i < numElements; i++) {
+            gcScope.flushToMarker(marker);
+            size_t propIdx = beginPropIdx + i;
+            size_t valIdx = beginValIdx + i;
+            lv.key = lv.properties->at(propIdx).getSymbol();
+            lv.curVal = lv.values->at(valIdx).unboxToHV(runtime_);
+            if (LLVM_UNLIKELY(
+                    JSObject::defineOwnComputedPrimitive(
+                        lv.newObject,
+                        runtime_,
+                        lv.key,
+                        DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                        lv.curVal) == ExecutionStatus::EXCEPTION))
+              return ExecutionStatus::EXCEPTION;
+          }
+          // Populate cache entry
+          if (lv.hcCache->size() < depth + 1) {
+            if (LLVM_UNLIKELY(
+                    ArrayStorage::resize(lv.hcCache, runtime_, depth + 1) ==
+                    ExecutionStatus::EXCEPTION)) {
+              return ExecutionStatus::EXCEPTION;
+            }
+          }
+          lv.hcCache->set(
+              depth,
+              HermesValue::encodeObjectValue(
+                  lv.newObject->getClass(runtime_), runtime_),
+              runtime_.getHeap());
         }
+
         ArrayStorageSmall::resizeWithinCapacity(
             *lv.values, runtime_.getHeap(), beginValIdx);
         ArrayStorage::resizeWithinCapacity(
