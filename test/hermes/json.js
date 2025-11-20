@@ -399,7 +399,7 @@ var obj = { toJSON: function() { return "foo"; } };
 print(JSON.stringify([obj]));
 // CHECK-NEXT: ["foo"]
 
-// Ensure there's no crash on overflows.
+// Verify that deeply nested structures can be parsed.
 var a = '';
 var b = '';
 for (var i = 0; i < 1000; ++i) {
@@ -408,8 +408,9 @@ for (var i = 0; i < 1000; ++i) {
   b += ']]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]';
 }
 var c = a + b;
-try { JSON.parse(c); } catch (e) { print('caught', e.name); }
-// CHECK-NEXT: caught RangeError
+JSON.parse(c);
+print("parse completed");
+// CHECK-NEXT: parse completed
 
 try {
   JSON.parse(

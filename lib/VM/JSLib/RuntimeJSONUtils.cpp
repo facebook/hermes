@@ -22,6 +22,8 @@
 #include "llvh/ADT/SmallString.h"
 #include "llvh/Support/SaveAndRestore.h"
 
+#include <variant>
+
 namespace hermes {
 namespace vm {
 
@@ -84,6 +86,10 @@ class RuntimeJSONParser {
   /// When this function is finished, the current token will be set
   /// to the next token after the current parsed value.
   CallResult<HermesValue> parseValue();
+
+  /// Parse the top-level JSON value. When this function is finished, the lexer
+  /// should be at the end of the file.
+  CallResult<HermesValue> iterativeParseValue();
 
   /// Parse a JSON array, starting from the "[" token.
   /// When this function is finished, the current token must be "]".
@@ -266,7 +272,7 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::parse() {
   if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto parRes = parseValue();
+  auto parRes = iterativeParseValue();
   if (LLVM_UNLIKELY(parRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -282,6 +288,333 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::parse() {
       return ExecutionStatus::EXCEPTION;
   }
   return parRes;
+}
+
+template <EncodingKind Kind>
+CallResult<HermesValue> RuntimeJSONParser<Kind>::iterativeParseValue() {
+  struct : public Locals {
+    /// List of property SymbolIDs for all unclosed objects being parsed.
+    PinnedValue<ArrayStorage> properties;
+    /// List of property values for all unclosed objects/arrays being parsed.
+    PinnedValue<ArrayStorageSmall> values;
+    /// The most recently finished parsed value.
+    PinnedValue<> curVal;
+    /// Used to be able to give a handle to defineOwnComputedPrimitive when
+    /// making objects.
+    PinnedValue<SymbolID> key;
+    /// Used to hold recently created objects/arrays.
+    PinnedValue<JSObject> newObject;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
+  auto propsRes = ArrayStorage::create(runtime_, 4, 0);
+  if (LLVM_UNLIKELY(propsRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.properties = vmcast<ArrayStorage>(*propsRes);
+
+  auto valuesRes = ArrayStorageSmall::create(runtime_, 4, 0);
+  if (LLVM_UNLIKELY(valuesRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.values = vmcast<ArrayStorageSmall>(*valuesRes);
+
+  // These different contexts here refer to the unfinished elements that are
+  // being parsed. Each context is pushed onto a stack when beginning to parse
+  // an element of that type.
+
+  /// The RootCtx indicates the beginning of the parse. If a value is finished
+  /// parsing and the current context is the RootCtx, then that means this
+  /// parsed value *is* the top-level result.
+  struct RootCtx {};
+  /// When an array is first encountered, record the starting index into the
+  /// pending values ArrayStorage. This is so that when the array is finished
+  /// parsing, we know how large it is and what elements in the values
+  /// ArrayStorage pertain to this parsed array.
+  struct ArrayCtx {
+    size_t valuesIdx;
+  };
+  /// When an object is first encountered, record the starting index into the
+  /// pending values ArrayStorage. This is so that when the object is finished
+  /// parsing, we know how large it is and what elements in the values
+  /// ArrayStorage and properties ArrayStorage pertain to this parsed object.
+  struct ObjectCtx {
+    size_t valuesIdx;
+  };
+  using CtxTy = std::variant<RootCtx, ArrayCtx, ObjectCtx>;
+  // This holds the list of all started but not yet finished arrays/objects.
+  std::vector<CtxTy> contexts;
+  // The current context is initialized to root, which signals the top-level
+  // JSON value.
+  CtxTy curContext = RootCtx{};
+  auto popContext = [&contexts]() -> CtxTy {
+    auto res = contexts.back();
+    contexts.pop_back();
+    return res;
+  };
+  auto pushContext = [&contexts](CtxTy ctx) { contexts.push_back(ctx); };
+
+  GCScope gcScope{runtime_};
+  auto marker = gcScope.createMarker();
+  // This outer loop iterates after a value has been added to an object/array,
+  // and we are starting to parsing the next element of it. Take the following
+  // JSON value: [1, 2, 3]. We produce the value of 1 from the first inner loop,
+  // we consume that 1 in the second inner loop (along with the comma) then we
+  // come back around on the outer loop to get to the first inner loop again to
+  // produce the 2.
+  while (true) {
+    gcScope.flushToMarker(marker);
+    // 'break' will jump to the bottom of the loop which will consume the
+    // produced values; 'continue' will restart the loop.
+    while (true) {
+      // Keep iterating until we reach a simple 'terminal value'. A terminal
+      // value is a string/number/true/false/null/empty object/empty array.
+      // Note the string of an object property does not count towards this
+      // definition of terminal value.
+      switch (lexer_.getCurToken()->getKind()) {
+        case JSONTokenKind::String:
+          lv.curVal = lexer_.getCurToken()->getStrAsPrim().getHermesValue();
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          break;
+        case JSONTokenKind::Number:
+          lv.curVal = HermesValue::encodeTrustedNumberValue(
+              lexer_.getCurToken()->getNumber());
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          break;
+        case JSONTokenKind::True:
+          lv.curVal = HermesValue::encodeBoolValue(true);
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          break;
+        case JSONTokenKind::False:
+          lv.curVal = HermesValue::encodeBoolValue(false);
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          break;
+        case JSONTokenKind::Null:
+          lv.curVal = HermesValue::encodeNullValue();
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          break;
+        case JSONTokenKind::LBrace: {
+          if (LLVM_UNLIKELY(
+                  lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          if (lexer_.getCurToken()->getKind() == JSONTokenKind::RBrace) {
+            // we have an empty object.
+            lv.curVal = JSObject::create(runtime_).getHermesValue();
+            if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+              return ExecutionStatus::EXCEPTION;
+            }
+            break;
+          }
+          if (lexer_.getCurToken()->getKind() != JSONTokenKind::String) {
+            return lexer_.error("Expect a string key in JSON object");
+          }
+          pushContext(curContext);
+          curContext = ObjectCtx{lv.values->size()};
+          if (LLVM_UNLIKELY(
+                  ArrayStorage::push_back(
+                      lv.properties,
+                      runtime_,
+                      lexer_.getCurToken()->getStrAsSymbol()) ==
+                  ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          };
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          if (LLVM_UNLIKELY(
+                  lexer_.getCurToken()->getKind() != JSONTokenKind::Colon)) {
+            return lexer_.error("Expect ':' after the key in JSON object");
+          }
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          continue;
+        }
+        case JSONTokenKind::LSquare: {
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          if (lexer_.getCurToken()->getKind() == JSONTokenKind::RSquare) {
+            // parsed an empty array
+            auto arrRes = JSArray::create(runtime_, 0, 0);
+            if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+              return ExecutionStatus::EXCEPTION;
+            }
+            lv.curVal = arrRes->getHermesValue();
+            if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+              return ExecutionStatus::EXCEPTION;
+            }
+            break;
+          }
+          pushContext(curContext);
+          curContext = ArrayCtx{lv.values->size()};
+          continue;
+        }
+        case JSONTokenKind::Eof:
+          return lexer_.error("Unexpected end of input");
+        default:
+          // Closing arrays or objects is not handled this loop (unless they are
+          // empty). ] and } should always be parsed and handled in the bottom
+          // loop responsible for building objects and arrays.
+          return lexer_.errorUnexpectedChar();
+      }
+      break;
+    }
+
+    // We will keep iterating in this loop as long as we can close pending
+    // arrays or objects. If we see that there are more elements or properties
+    // left to parse, we break out of this loop, and continue in the top loop.
+    while (true) {
+      if (std::holds_alternative<RootCtx>(curContext)) {
+        return lv.curVal.getHermesValue();
+      } else if (auto *objCtx = std::get_if<ObjectCtx>(&curContext)) {
+        if (LLVM_UNLIKELY(
+                ArrayStorageSmall::push_back(lv.values, runtime_, lv.curVal) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        if (LLVM_LIKELY(
+                lexer_.getCurToken()->getKind() == JSONTokenKind::Comma)) {
+          // A comma means there is another property for this object. Let's
+          // parse the property and leave the parser ready to continue
+          // parsing the property value.
+          if (LLVM_UNLIKELY(
+                  lexer_.advanceStrAsSymbol() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          if (LLVM_UNLIKELY(
+                  lexer_.getCurToken()->getKind() != JSONTokenKind::String)) {
+            return lexer_.error("Expect a string key in JSON object");
+          }
+          if (LLVM_UNLIKELY(
+                  ArrayStorage::push_back(
+                      lv.properties,
+                      runtime_,
+                      lexer_.getCurToken()->getStrAsSymbol()) ==
+                  ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          if (LLVM_UNLIKELY(
+                  lexer_.getCurToken()->getKind() != JSONTokenKind::Colon)) {
+            return lexer_.error("Expect ':' after the key in JSON object");
+          }
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          break;
+        }
+        // If there isn't a comma for another property, then we must be at the
+        // end of the object.
+        if (LLVM_UNLIKELY(
+                lexer_.getCurToken()->getKind() != JSONTokenKind::RBrace)) {
+          return lexer_.errorUnexpectedChar();
+        }
+
+        size_t beginValIdx = objCtx->valuesIdx;
+        size_t numElements = lv.values->size() - beginValIdx;
+        size_t beginPropIdx = lv.properties->size() - numElements;
+        lv.newObject = JSObject::create(runtime_, numElements);
+        for (size_t i = 0; i < numElements; i++) {
+          gcScope.flushToMarker(marker);
+          size_t propIdx = beginPropIdx + i;
+          size_t valIdx = beginValIdx + i;
+          lv.key = lv.properties->at(propIdx).getSymbol();
+          lv.curVal = lv.values->at(valIdx).unboxToHV(runtime_);
+          if (LLVM_UNLIKELY(
+                  JSObject::defineOwnComputedPrimitive(
+                      lv.newObject,
+                      runtime_,
+                      lv.key,
+                      DefinePropertyFlags::getDefaultNewPropertyFlags(),
+                      lv.curVal) == ExecutionStatus::EXCEPTION))
+            return ExecutionStatus::EXCEPTION;
+        }
+        ArrayStorageSmall::resizeWithinCapacity(
+            *lv.values, runtime_.getHeap(), beginValIdx);
+        ArrayStorage::resizeWithinCapacity(
+            *lv.properties, runtime_.getHeap(), beginPropIdx);
+
+        lv.curVal = lv.newObject.getHermesValue();
+        curContext = popContext();
+        if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        continue;
+      } else if (auto *arrCtx = std::get_if<ArrayCtx>(&curContext)) {
+        if (LLVM_UNLIKELY(
+                ArrayStorageSmall::push_back(lv.values, runtime_, lv.curVal) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        if (LLVM_LIKELY(
+                lexer_.getCurToken()->getKind() == JSONTokenKind::Comma)) {
+          if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+            return ExecutionStatus::EXCEPTION;
+          }
+          break;
+        }
+        if (LLVM_UNLIKELY(
+                lexer_.getCurToken()->getKind() != JSONTokenKind::RSquare)) {
+          return lexer_.errorUnexpectedChar();
+        }
+        size_t beginIdx = arrCtx->valuesIdx;
+        size_t numElements = lv.values->size() - beginIdx;
+
+        auto arrRes = JSArray::create(runtime_, numElements, numElements);
+        if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lv.newObject = vmcast<JSObject>(arrRes->getHermesValue());
+        if (LLVM_UNLIKELY(
+                JSArray::setStorageEndIndex(
+                    Handle<JSArray>::vmcast(&lv.newObject),
+                    runtime_,
+                    numElements) == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        };
+        // Transfer the elements from the temporary storage in lv.values, to the
+        // indexed storage of the JSArray just created.
+        ArrayStorageSmall *srcStorage = *lv.values;
+        ArrayStorageSmall *destStorage =
+            vmcast<JSArray>(*lv.newObject)->getIndexedStorageUnsafe(runtime_);
+        GCSmallHermesValueInLargeObj::uninitialized_copy(
+            srcStorage->data() + beginIdx,
+            srcStorage->data() + beginIdx + numElements,
+            destStorage->data(),
+            destStorage,
+            runtime_.getHeap());
+        ArrayStorageSmall::resizeWithinCapacity(
+            *lv.values, runtime_.getHeap(), beginIdx);
+        lv.curVal = lv.newObject.getHermesValue();
+        curContext = popContext();
+        if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        continue;
+      }
+      assert(false && "control flow should be handled inside of cases above");
+    }
+  }
+
+  // Advance one more time to reach what should be the end of the file.
+  if (LLVM_UNLIKELY(lexer_.advance() == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return ExecutionStatus::RETURNED;
 }
 
 template <EncodingKind Kind>
