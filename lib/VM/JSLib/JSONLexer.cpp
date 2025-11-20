@@ -125,10 +125,27 @@ ExecutionStatus JSONLexer<Kind>::scanNumber() {
   } else {
     iter_.cur.beginCapture();
   }
+
+  // Check for initial negative sign.
+  double multiplier = 1;
+  if (*iter_.cur == '-') {
+    multiplier = -1;
+    ++iter_.cur;
+  }
+
+  bool isTrivialInteger = true;
+  uint64_t integer = 0;
+  constexpr uint64_t kFirstIntThatCanOverflow = (UINT64_MAX - 9) / 10;
   while (hasChar()) {
     auto ch = *iter_.cur;
-    if (!(ch == u'-' || ch == u'+' || ch == u'.' || (ch | 32) == u'e' ||
-          (ch >= u'0' && ch <= u'9'))) {
+    if (ch >= '0' && ch <= '9') {
+      if (integer > kFirstIntThatCanOverflow) {
+        isTrivialInteger = false;
+      }
+      integer = integer * 10 + (ch - '0');
+    } else if (ch == '-' || ch == '+' || ch == '.' || (ch | 32) == 'e') {
+      isTrivialInteger = false;
+    } else {
       break;
     }
     ++iter_.cur;
@@ -141,11 +158,20 @@ ExecutionStatus JSONLexer<Kind>::scanNumber() {
   } else {
     numRef = iter_.cur.endCapture();
   }
+
+  // Check for illegal leading 0.
   size_t len = numRef.size();
   assert(len > 0 && "scanNumber must be called on a number-looking char");
-  if (numRef[0] == '0' && len > 1 && numRef[1] >= '0' && numRef[1] <= '9') {
+  if (LLVM_UNLIKELY(
+          numRef[0] == '0' && len > 1 && numRef[1] >= '0' &&
+          numRef[1] <= '9')) {
     // The integer part cannot start with 0, unless it's 0.
     return errorWithChar(u"Unexpected character in number: ", numRef[1]);
+  }
+
+  if (isTrivialInteger) {
+    token_.setNumber((double)integer * multiplier);
+    return ExecutionStatus::RETURNED;
   }
 
   OptValue<double> result = fastStrToDouble(numRef);
