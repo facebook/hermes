@@ -227,7 +227,6 @@ android {
             "-DHERMES_BUILD_SHARED_JSI=True",
             "-DHERMES_RELEASE_VERSION=${hermesReleaseVersion}",
             "-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True",
-            "-DHERMESVM_HEAP_HV_MODE=HEAP_HV_PREFER32",
             // We intentionally build Hermes with Intl support only. This is to simplify
             // the build setup and to avoid overcomplicating the build-type matrix.
             "-DHERMES_ENABLE_INTL=True",
