@@ -30,7 +30,7 @@
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
-#include "hermes/VM/JSLib/RuntimeJSONUtils.h"
+#include "hermes/VM/JSLib/RuntimeJSONParse.h"
 #include "hermes/VM/NativeState.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"

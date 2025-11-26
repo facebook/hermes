@@ -5,11 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "VMRuntimeTestHelpers.h"
+
+#include "hermes/Support/UTF16Stream.h"
+#include "hermes/VM/JSLib/RuntimeJSONParse.h"
+
 #include <cstdint>
 #include <string>
-#include "hermes/VM/JSLib/RuntimeJSONUtils.h"
-
-#include "VMRuntimeTestHelpers.h"
 
 using namespace hermes::vm;
 

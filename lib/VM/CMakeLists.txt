@@ -105,7 +105,8 @@ set(source_files
   JSLib/Map.cpp
   JSLib/Math.cpp
   JSLib/JSON.cpp
-  JSLib/RuntimeJSONUtils.cpp
+  JSLib/RuntimeJSONParse.cpp
+  JSLib/RuntimeJSONStringify.cpp
   JSLib/JSONLexer.cpp
   JSLib/Object.cpp
   JSLib/Proxy.cpp

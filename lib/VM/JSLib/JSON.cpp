@@ -10,7 +10,8 @@
 /// ES5.1 15.12 Populate the JSON object.
 //===----------------------------------------------------------------------===//
 #include "JSLibInternal.h"
-#include "hermes/VM/JSLib/RuntimeJSONUtils.h"
+#include "hermes/VM/JSLib/RuntimeJSONParse.h"
+#include "hermes/VM/JSLib/RuntimeJSONStringify.h"
 #include "hermes/VM/SingleObject.h"
 #include "hermes/VM/StringPrimitive.h"
 
