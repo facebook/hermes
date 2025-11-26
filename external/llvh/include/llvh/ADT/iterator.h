@@ -268,7 +268,12 @@ public:
     return *static_cast<DerivedT *>(this);
   }
 
-  bool operator==(const DerivedT &RHS) const { return I == RHS.I; }
+  friend bool operator==(const DerivedT &LHS, const DerivedT &RHS) {
+    return LHS.I == RHS.I;
+  }
+  friend bool operator!=(const DerivedT &LHS, const DerivedT &RHS) {
+    return LHS.I != RHS.I;
+  }
   bool operator<(const DerivedT &RHS) const {
     static_assert(
         BaseT::IsRandomAccess,
