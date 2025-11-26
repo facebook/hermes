@@ -242,7 +242,8 @@ void SamplingProfiler::suspend(
   bool enabled = sampling_profiler::Sampler::get()->enabled();
 
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  if (++suspendCount_ > 1) {
+  suspendCount_ = suspendCount_ + 1;
+  if (suspendCount_ > 1) {
     // If there are multiple nested suspend calls use a default "multiple" frame
     // kind for the suspend entry in the call stack.
     reason = SuspendFrameInfo::Kind::Multiple;
@@ -260,7 +261,8 @@ void SamplingProfiler::suspend(
 void SamplingProfiler::resume() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   assert(suspendCount_ > 0 && "resume() without suspend()");
-  if (--suspendCount_ == 0) {
+  suspendCount_ = suspendCount_ - 1;
+  if (suspendCount_ == 0) {
     preSuspendStackDepth_ = 0;
   }
 }
