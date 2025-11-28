@@ -1741,10 +1741,6 @@ multiply(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
 
 namespace {
 namespace div_rem {
-static uint32_t getResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  return std::max(lhs.numDigits, rhs.numDigits) + 1;
-}
-
 static OperationStatus compute(
     MutableBigIntRef quoc,
     MutableBigIntRef rem,
@@ -1882,7 +1878,19 @@ static OperationStatus compute(
 } // namespace
 
 uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  return lhs.numDigits < rhs.numDigits ? 0 : div_rem::getResultSize(lhs, rhs);
+  if (lhs.numDigits < rhs.numDigits) {
+    // Special case: (res = 0, rem = lhs), regardless of rhs sign
+    return 0;
+  }
+
+  if (compare(rhs, -1) == 0 && isNegative(lhs)) {
+    // In this (and only this) case, we can end up with more digits than we started with
+    // Examples: -(2n**63n)/-1n, -(2n**127n)/-1n
+    // We avoid this in general case as it makes division much slower
+    return lhs.numDigits + 1;
+  }
+
+  return lhs.numDigits;
 }
 
 OperationStatus
@@ -1893,7 +1901,12 @@ divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
 }
 
 uint32_t remainderResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  return lhs.numDigits < rhs.numDigits ? lhs.numDigits : div_rem::getResultSize(lhs, rhs);
+  if (lhs.numDigits < rhs.numDigits) {
+    // Special case: (res = 0, rem = lhs), regardless of rhs sign
+    return lhs.numDigits;
+  }
+
+  return divideResultSize(lhs, rhs); // We currently expect them to be equivalent in div_rem::compute()
 }
 
 OperationStatus remainder(
