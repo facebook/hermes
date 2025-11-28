@@ -1754,6 +1754,25 @@ static OperationStatus compute(
       ((quoc.digits != nullptr) != (rem.digits != nullptr)) &&
       "untested -- calling with both or neither quoc and rem");
 
+  // Signal division by zero.
+  if (compare(rhs, 0) == 0) {
+    return OperationStatus::DIVISION_BY_ZERO;
+  }
+
+  if (lhs.numDigits < rhs.numDigits) {
+    // In this case, divideResultSize returns 0 and mismatches remainderResultSize
+
+    if (quoc.digits != nullptr) {
+      quoc.numDigits = 0;
+    }
+
+    if (rem.digits != nullptr) {
+      return initWithDigits(rem, lhs);
+    }
+
+    return OperationStatus::RETURNED;
+  }
+
   const uint32_t resultSize = divideResultSize(lhs, rhs);
   // set quoc's and rem's numDigits if their digits buffer is nullptr, which
   // allows querying either for determining the result size.
@@ -1771,11 +1790,6 @@ static OperationStatus compute(
   // make sure to drop any extraneous digits.
   quoc.numDigits = resultSize;
   rem.numDigits = resultSize;
-
-  // Signal division by zero.
-  if (compare(rhs, 0) == 0) {
-    return OperationStatus::DIVISION_BY_ZERO;
-  }
 
   // tcDivide operates on unsigned number, so just like multiply, the operands
   // must be negated (and the result as well, if appropriate) if they are
@@ -1868,7 +1882,7 @@ static OperationStatus compute(
 } // namespace
 
 uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  return div_rem::getResultSize(lhs, rhs);
+  return lhs.numDigits < rhs.numDigits ? 0 : div_rem::getResultSize(lhs, rhs);
 }
 
 OperationStatus
@@ -1879,7 +1893,7 @@ divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
 }
 
 uint32_t remainderResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  return div_rem::getResultSize(lhs, rhs);
+  return lhs.numDigits < rhs.numDigits ? lhs.numDigits : div_rem::getResultSize(lhs, rhs);
 }
 
 OperationStatus remainder(
