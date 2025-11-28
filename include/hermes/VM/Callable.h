@@ -24,7 +24,24 @@ namespace hermes {
 namespace vm {
 
 /// Environment storing all escaping variables for a function.
-class Environment final
+/// We need the `HERMES_EMPTY_BASES` attribute here because without it, MSVC
+/// or Clang on Windows will add 4 padding bytes before parentEnvironment_ under
+/// HV32 release mode (TrailingObjects<Environment, GCHermesValue> has
+/// an alignas(8) specifier), which causes different layout than SHEnvironment.
+/// Memory layout without HERMES_EMPTY_BASES, with HV32 release mode:
+/// 0:  base class VariableSizeRuntimeCell
+/// 4:  padding
+/// 8:  parentEnvironment_
+/// 12: size_
+/// 16: trailing objects of GCHermesValue
+/// Memory layout with HERMES_EMPTY_BASES, with HV32 release mode:
+/// 0: base class VariableSizeRuntimeCell
+/// 4: parentEnvironment_
+/// 8: size_
+/// 12: padding
+/// 16: trailing objects of GChermesValue
+/// Once we upgrade to c++20, we should use [[no_unique_address]] here.
+class HERMES_EMPTY_BASES Environment final
     : public VariableSizeRuntimeCell,
       private llvh::TrailingObjects<Environment, GCHermesValue> {
   friend TrailingObjects;
