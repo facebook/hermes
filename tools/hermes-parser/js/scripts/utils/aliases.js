@@ -267,6 +267,8 @@ export default ({
   EnumDefaultedMember: ['EnumMember'],
   IndexedAccessType: ['Flow', 'FlowType'],
   OptionalIndexedAccessType: ['Flow', 'FlowType'],
+  MatchExpression: ['Expression'],
+  MatchStatement: ['Statement'],
   JSXAttribute: ['JSX', 'Immutable'],
   JSXClosingElement: ['JSX', 'Immutable'],
   JSXElement: ['JSX', 'Immutable', 'Expression'],
