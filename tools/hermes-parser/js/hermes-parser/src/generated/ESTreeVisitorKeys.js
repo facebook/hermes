@@ -205,6 +205,8 @@ module.exports = {
   MatchExpression: ['argument', 'cases'],
   MatchExpressionCase: ['pattern', 'body', 'guard'],
   MatchIdentifierPattern: ['id'],
+  MatchInstanceObjectPattern: ['properties', 'rest'],
+  MatchInstancePattern: ['constructor', 'properties'],
   MatchLiteralPattern: ['literal'],
   MatchMemberPattern: ['base', 'property'],
   MatchObjectPattern: ['properties', 'rest'],

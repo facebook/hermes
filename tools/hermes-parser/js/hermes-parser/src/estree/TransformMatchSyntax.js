@@ -194,6 +194,7 @@ function needsPropExistsCond(pattern: MatchPattern): boolean {
     case 'MatchLiteralPattern':
     case 'MatchUnaryPattern':
     case 'MatchObjectPattern':
+    case 'MatchInstancePattern':
     case 'MatchArrayPattern':
       return false;
     case 'MatchAsPattern': {
@@ -358,6 +359,9 @@ function analyzePattern(
         });
       }
       return {conditions, bindings};
+    }
+    case 'MatchInstancePattern': {
+      throw new Error('TODO:records');
     }
     case 'MatchOrPattern': {
       const {patterns} = pattern;

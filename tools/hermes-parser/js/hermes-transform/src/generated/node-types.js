@@ -131,6 +131,8 @@ import type {
   MatchExpression as MatchExpressionType,
   MatchExpressionCase as MatchExpressionCaseType,
   MatchIdentifierPattern as MatchIdentifierPatternType,
+  MatchInstanceObjectPattern as MatchInstanceObjectPatternType,
+  MatchInstancePattern as MatchInstancePatternType,
   MatchLiteralPattern as MatchLiteralPatternType,
   MatchMemberPattern as MatchMemberPatternType,
   MatchObjectPattern as MatchObjectPatternType,
@@ -857,6 +859,18 @@ export type MatchExpressionCaseProps = {
 
 export type MatchIdentifierPatternProps = {
   +id: MaybeDetachedNode<MatchIdentifierPatternType['id']>,
+};
+
+export type MatchInstanceObjectPatternProps = {
+  +properties: $ReadOnlyArray<
+    MaybeDetachedNode<MatchInstanceObjectPatternType['properties'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<MatchInstanceObjectPatternType['rest']>,
+};
+
+export type MatchInstancePatternProps = {
+  +constructor: MaybeDetachedNode<MatchInstancePatternType['constructor']>,
+  +properties: MaybeDetachedNode<MatchInstancePatternType['properties']>,
 };
 
 export type MatchLiteralPatternProps = {
@@ -2836,6 +2850,38 @@ export function MatchIdentifierPattern(props: {
     {
       type: 'MatchIdentifierPattern',
       id: asDetachedNodeForCodeGen(props.id),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchInstanceObjectPattern(props: {
+  ...MatchInstanceObjectPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchInstanceObjectPatternType> {
+  const node = detachedProps<MatchInstanceObjectPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchInstanceObjectPattern',
+      properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
+      rest: asDetachedNodeForCodeGen(props.rest),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchInstancePattern(props: {
+  ...MatchInstancePatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchInstancePatternType> {
+  const node = detachedProps<MatchInstancePatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchInstancePattern',
+      constructor: asDetachedNodeForCodeGen(props.constructor),
+      properties: asDetachedNodeForCodeGen(props.properties),
     },
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));

@@ -1225,6 +1225,19 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchSubpatternFlow() {
               new (context_) ESTree::MatchMemberPatternNode(pat, property));
         }
       }
+
+      // Check for instance pattern with object fields
+      if (check(TokenKind::l_brace)) {
+        auto optProps = parseMatchInstanceObjectPatternFlow();
+        if (!optProps)
+          return None;
+        return setLocation(
+            start_loc,
+            getPrevTokenEndLoc(),
+            new (context_)
+                ESTree::MatchInstancePatternNode(pat, optProps.getValue()));
+      }
+
       return pat;
     }
 
@@ -1349,17 +1362,15 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchRestPatternFlow() {
       new (context_) ESTree::MatchRestPatternNode(arg));
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
-  assert(check(TokenKind::l_brace));
-  auto startLoc = advance().Start;
-  ESTree::NodeList properties{};
-  ESTree::Node *rest = nullptr;
-
+bool JSParserImpl::parseMatchObjectPatternPropertiesFlow(
+    SMLoc startLoc,
+    ESTree::NodeList &properties,
+    ESTree::Node *&rest) {
   while (!check(TokenKind::r_brace)) {
     if (check(TokenKind::dotdotdot)) {
       auto optRest = parseMatchRestPatternFlow();
       if (!optRest) {
-        return None;
+        return false;
       }
       rest = optRest.getValue();
       break;
@@ -1371,7 +1382,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
       // Shorthand syntax: e.g. `const x` is shorthand for `x: const x`
       auto optBindingPattern = parseMatchBindingPatternFlow();
       if (!optBindingPattern)
-        return None;
+        return false;
       auto bindingPattern = optBindingPattern.getValue();
       prop = setLocation(
           propStartLoc,
@@ -1428,7 +1439,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
               "in match object pattern property key",
               "start of match object pattern property key",
               propStartLoc);
-          return None;
+          return false;
         }
       }
       if (!eat(
@@ -1437,7 +1448,7 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
               "in match object pattern property",
               "start of match object pattern property",
               propStartLoc))
-        return None;
+        return false;
       auto optPattern = parseMatchPatternFlow();
       prop = setLocation(
           propStartLoc,
@@ -1455,6 +1466,18 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
           "at end of object match pattern",
           "location of '{'",
           startLoc))
+    return false;
+
+  return true;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
+  assert(check(TokenKind::l_brace));
+  auto startLoc = advance().Start;
+  ESTree::NodeList properties{};
+  ESTree::Node *rest = nullptr;
+
+  if (!parseMatchObjectPatternPropertiesFlow(startLoc, properties, rest))
     return None;
 
   return setLocation(
@@ -1462,6 +1485,22 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchObjectPatternFlow() {
       getPrevTokenEndLoc(),
       new (context_)
           ESTree::MatchObjectPatternNode(std::move(properties), rest));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseMatchInstanceObjectPatternFlow() {
+  assert(check(TokenKind::l_brace));
+  auto startLoc = advance().Start;
+  ESTree::NodeList properties{};
+  ESTree::Node *rest = nullptr;
+
+  if (!parseMatchObjectPatternPropertiesFlow(startLoc, properties, rest))
+    return None;
+
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::MatchInstanceObjectPatternNode(std::move(properties), rest));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMatchArrayPatternFlow() {

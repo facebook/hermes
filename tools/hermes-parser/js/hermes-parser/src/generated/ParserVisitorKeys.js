@@ -477,6 +477,14 @@ export const HERMES_AST_VISITOR_KEYS = {
   MatchIdentifierPattern: {
     id: 'Node',
   },
+  MatchInstanceObjectPattern: {
+    properties: 'NodeList',
+    rest: 'Node',
+  },
+  MatchInstancePattern: {
+    constructor: 'Node',
+    properties: 'Node',
+  },
   MatchLiteralPattern: {
     literal: 'Node',
   },

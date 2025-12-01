@@ -906,6 +906,14 @@ function deserializeMatchMemberPattern() {
     property: this.deserializeNode(),
   };
 }
+function deserializeMatchInstancePattern() {
+  return {
+    type: 'MatchInstancePattern',
+    loc: this.addEmptyLoc(),
+    constructor: this.deserializeNode(),
+    properties: this.deserializeNode(),
+  };
+}
 function deserializeMatchPatternLast() {
   throw new Error('MatchPattern' + ' should not appear in program buffer');
 }
@@ -916,6 +924,14 @@ function deserializeMatchObjectPatternProperty() {
     key: this.deserializeNode(),
     pattern: this.deserializeNode(),
     shorthand: this.deserializeBoolean(),
+  };
+}
+function deserializeMatchInstanceObjectPattern() {
+  return {
+    type: 'MatchInstanceObjectPattern',
+    loc: this.addEmptyLoc(),
+    properties: this.deserializeNodeList(),
+    rest: this.deserializeNode(),
   };
 }
 function deserializeMatchRestPattern() {
@@ -2248,8 +2264,10 @@ module.exports = [
   deserializeMatchOrPattern,
   deserializeMatchAsPattern,
   deserializeMatchMemberPattern,
+  deserializeMatchInstancePattern,
   deserializeMatchPatternLast,
   deserializeMatchObjectPatternProperty,
+  deserializeMatchInstanceObjectPattern,
   deserializeMatchRestPattern,
   deserializeJSXFirst,
   deserializeJSXIdentifier,

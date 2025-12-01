@@ -207,6 +207,7 @@ export type ESNode =
   | MatchPattern
   | MatchRestPattern
   | MatchObjectPatternProperty
+  | MatchInstanceObjectPattern
   | MatchExpressionCase
   | MatchStatementCase
   // JSX
@@ -2066,6 +2067,7 @@ export type MatchPattern =
   | MatchMemberPattern
   | MatchBindingPattern
   | MatchObjectPattern
+  | MatchInstancePattern
   | MatchArrayPattern;
 
 export interface MatchOrPattern extends BaseNode {
@@ -2113,6 +2115,16 @@ export interface MatchObjectPatternProperty extends BaseNode {
   +key: Identifier | StringLiteral | NumericLiteral | BigIntLiteral;
   +pattern: MatchPattern;
   +shorthand: boolean;
+}
+export interface MatchInstancePattern extends BaseNode {
+  +type: 'MatchInstancePattern';
+  +constructor: MatchIdentifierPattern | MatchMemberPattern;
+  +properties: MatchInstanceObjectPattern;
+}
+export interface MatchInstanceObjectPattern extends BaseNode {
+  +type: 'MatchInstanceObjectPattern';
+  +properties: $ReadOnlyArray<MatchObjectPatternProperty>;
+  +rest: MatchRestPattern | null;
 }
 export interface MatchArrayPattern extends BaseNode {
   +type: 'MatchArrayPattern';

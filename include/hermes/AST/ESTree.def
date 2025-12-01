@@ -729,6 +729,11 @@ ESTREE_NODE_2_ARGS(
   NodePtr, base, false, // MatchIdentifierPattern | MatchMemberPattern
   NodePtr, property, false // Identifier | Literal
 )
+ESTREE_NODE_2_ARGS(
+  MatchInstancePattern, MatchPattern,
+  NodePtr, constructor, false, // MatchIdentifierPattern | MatchMemberPattern
+  NodePtr, properties, false // MatchInstanceObjectPattern
+)
 
 ESTREE_LAST(MatchPattern)
 
@@ -738,6 +743,11 @@ ESTREE_NODE_3_ARGS(
   NodePtr, key, false, // Identifier | Literal
   NodePtr, pattern, false, // MatchPattern
   NodeBoolean, shorthand, false // boolean
+)
+ESTREE_NODE_2_ARGS(
+  MatchInstanceObjectPattern, Base,
+  NodeList, properties, false, // [ MatchObjectPatternProperty ]
+  NodePtr, rest, true // MatchRestPattern | null
 )
 ESTREE_NODE_1_ARGS(
   MatchRestPattern, Base,

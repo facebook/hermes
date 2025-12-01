@@ -148,6 +148,8 @@ import type {
   MatchExpression,
   MatchExpressionCase,
   MatchIdentifierPattern,
+  MatchInstanceObjectPattern,
+  MatchInstancePattern,
   MatchLiteralPattern,
   MatchMemberPattern,
   MatchObjectPattern,
@@ -812,6 +814,16 @@ export function isMatchExpressionCase(node /*: ESNode | Token */) /*: implies no
 
 export function isMatchIdentifierPattern(node /*: ESNode | Token */) /*: implies node is MatchIdentifierPattern */ {
   return node.type === 'MatchIdentifierPattern';
+}
+    
+
+export function isMatchInstanceObjectPattern(node /*: ESNode | Token */) /*: implies node is MatchInstanceObjectPattern */ {
+  return node.type === 'MatchInstanceObjectPattern';
+}
+    
+
+export function isMatchInstancePattern(node /*: ESNode | Token */) /*: implies node is MatchInstancePattern */ {
+  return node.type === 'MatchInstancePattern';
 }
     
 

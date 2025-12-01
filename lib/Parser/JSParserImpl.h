@@ -1302,6 +1302,16 @@ class JSParserImpl {
   Optional<ESTree::MatchBindingPatternNode *> parseMatchBindingPatternFlow();
   Optional<ESTree::Node *> parseMatchRestPatternFlow();
   Optional<ESTree::Node *> parseMatchObjectPatternFlow();
+  Optional<ESTree::Node *> parseMatchInstanceObjectPatternFlow();
+  /// Helper to parse the common structure of properties and rest for both
+  /// parseMatchObjectPatternFlow and parseMatchInstanceObjectPatternFlow.
+  /// \param[out] properties populated with the parsed properties.
+  /// \param[out] rest populated with the optional rest pattern.
+  /// \return true on success, false on error.
+  bool parseMatchObjectPatternPropertiesFlow(
+      SMLoc start,
+      ESTree::NodeList &properties,
+      ESTree::Node *&rest);
   Optional<ESTree::Node *> parseMatchArrayPatternFlow();
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
