@@ -255,6 +255,10 @@ class Context {
   /// also using Flow syntax.
   bool parseFlowMatch_{false};
 
+  /// If true, allow parsing Flow record declarations and expressions
+  /// when also using Flow syntax.
+  bool parseFlowRecords_{false};
+
   /// Whether to parse Flow type syntax.
   ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
@@ -450,6 +454,13 @@ class Context {
   }
   bool getParseFlowMatch() const {
     return parseFlowMatch_;
+  }
+
+  void setParseFlowRecords(bool parseFlowRecords) {
+    parseFlowRecords_ = parseFlowRecords;
+  }
+  bool getParseFlowRecords() const {
+    return parseFlowRecords_;
   }
 
   void setParseTS(bool parseTS) {

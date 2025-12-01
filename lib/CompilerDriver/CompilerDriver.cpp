@@ -515,6 +515,13 @@ static opt<bool> ParseFlowMatch(
     init(false),
     Hidden,
     cat(CompilerCategory));
+
+static opt<bool> ParseFlowRecords(
+    "Xparse-flow-records",
+    desc("Parse Flow record declarations and expressions"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
 #endif
 
 #if HERMES_PARSE_TS
@@ -1216,6 +1223,7 @@ std::shared_ptr<Context> createContext(
   }
   context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
   context->setParseFlowMatch(cl::ParseFlowMatch);
+  context->setParseFlowRecords(cl::ParseFlowRecords);
 #endif
 
 #if HERMES_PARSE_TS
