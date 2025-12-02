@@ -1634,6 +1634,10 @@ class HermesSerializationTest : public HermesRuntimeTest {
  public:
   HermesSerializationTest() : HermesRuntimeTest() {
     serializationInterface = castInterface<ISerialization>(rt.get());
+
+    auto *api = castInterface<IHermesRootAPI>(makeHermesRootAPI());
+    rt2 = api->makeHermesRuntime(hermes::vm::RuntimeConfig());
+    serializationInterface2 = castInterface<ISerialization>(rt2.get());
   }
 
   // Evaluate the given code and serialize its results
@@ -1647,7 +1651,9 @@ class HermesSerializationTest : public HermesRuntimeTest {
     return serializationInterface->deserialize(serialized).getObject(*rt);
   }
 
+  std::unique_ptr<Runtime> rt2;
   ISerialization *serializationInterface;
+  ISerialization *serializationInterface2;
 };
 
 TEST_P(HermesSerializationTest, SerializePrimitives) {
@@ -2536,6 +2542,224 @@ TEST_P(HermesSerializationTest, SerializeUnsupported) {
       "var proxy = new Proxy(target, handler); proxy;");
 
   EXPECT_THROW(serializationInterface->serialize(proxy), JSError);
+}
+
+TEST_P(HermesSerializationTest, SerializeTypedArrayInternalWithTransfer) {
+  eval(
+      "var bar = new Int8Array([-3, -1, 0, 2, 4]);"
+      "var obj = {salt: 'pepper', foo: bar}");
+  auto obj = rt->global().getProperty(*rt, "obj");
+  auto bar = obj.getObject(*rt).getPropertyAsObject(*rt, "foo");
+  auto buffer = bar.getPropertyAsObject(*rt, "buffer").getArrayBuffer(*rt);
+  EXPECT_EQ(buffer.size(*rt), 5);
+
+  Array transfers = Array::createWithElements(*rt, Value(*rt, buffer));
+  auto serialized =
+      serializationInterface->serializeWithTransfer(obj, transfers);
+
+  // Test the original buffer has now been detached
+  EXPECT_THROW(buffer.size(*rt), JSIException);
+
+  auto deserialized =
+      serializationInterface2->deserializeWithTransfer(serialized);
+  // Check that the SerializedValue is consumed by deserialization process
+  EXPECT_EQ(serialized, nullptr);
+
+  EXPECT_EQ(deserialized.length(*rt2), 2);
+  auto deserializeObj = deserialized.getValueAtIndex(*rt2, 0).asObject(*rt2);
+  auto transferredObj = deserialized.getValueAtIndex(*rt2, 1).asObject(*rt2);
+
+  auto pepperStr = deserializeObj.getProperty(*rt2, "salt").getString(*rt2);
+  EXPECT_EQ(pepperStr.utf8(*rt2), "pepper");
+
+  auto deserializedArr = deserializeObj.getPropertyAsObject(*rt2, "foo");
+  auto deserializedBuffer =
+      deserializedArr.getPropertyAsObject(*rt2, "buffer").getArrayBuffer(*rt);
+  EXPECT_EQ(deserializedBuffer.size(*rt2), 5);
+
+  auto atFn = deserializedArr.getPropertyAsFunction(*rt2, "at");
+  auto bytesPerElem = deserializedArr.getProperty(*rt2, "BYTES_PER_ELEMENT");
+  EXPECT_EQ(bytesPerElem.getNumber(), 1);
+  auto res = atFn.callWithThis(*rt2, deserializedArr, 0).getNumber();
+  EXPECT_EQ(res, -3);
+  res = atFn.callWithThis(*rt2, deserializedArr, 1).getNumber();
+  EXPECT_EQ(res, -1);
+  res = atFn.callWithThis(*rt2, deserializedArr, 2).getNumber();
+  EXPECT_EQ(res, 0);
+  res = atFn.callWithThis(*rt2, deserializedArr, 3).getNumber();
+  EXPECT_EQ(res, 2);
+  res = atFn.callWithThis(*rt2, deserializedArr, 4).getNumber();
+  EXPECT_EQ(res, 4);
+
+  // Check that the transferred object is the same as obj.foo's buffer
+  EXPECT_TRUE(Object::strictEquals(*rt2, transferredObj, deserializedBuffer));
+
+  // Transfer an empty buffer
+  obj = eval("new Int16Array();");
+  buffer =
+      obj.getObject(*rt).getPropertyAsObject(*rt, "buffer").getArrayBuffer(*rt);
+  transfers = Array::createWithElements(*rt, Value(*rt, buffer));
+  serialized = serializationInterface->serializeWithTransfer(obj, transfers);
+  deserialized = serializationInterface2->deserializeWithTransfer(serialized);
+  EXPECT_EQ(serialized, nullptr);
+
+  EXPECT_EQ(deserialized.length(*rt2), 2);
+
+  deserializeObj = deserialized.getValueAtIndex(*rt2, 0).asObject(*rt2);
+  transferredObj = deserialized.getValueAtIndex(*rt2, 1).asObject(*rt2);
+  deserializedBuffer =
+      deserializeObj.getPropertyAsObject(*rt2, "buffer").getArrayBuffer(*rt2);
+
+  EXPECT_EQ(deserializedBuffer.size(*rt2), 0);
+  bytesPerElem = deserializeObj.getProperty(*rt2, "BYTES_PER_ELEMENT");
+  EXPECT_EQ(bytesPerElem.getNumber(), 2);
+  EXPECT_TRUE(Object::strictEquals(*rt2, transferredObj, deserializedBuffer));
+}
+
+TEST_P(HermesSerializationTest, SerializeTypedArrayExternalWithTransfer) {
+  struct FixedBuffer : MutableBuffer {
+    size_t size() const override {
+      return sizeof(arr);
+    }
+    uint8_t *data() override {
+      return reinterpret_cast<uint8_t *>(arr.data());
+    }
+
+    std::array<uint16_t, 4> arr;
+  };
+
+  auto buf = std::make_shared<FixedBuffer>();
+  for (uint32_t i = 0; i < buf->arr.size(); i++) {
+    buf->arr[i] = i * i;
+  }
+  auto arrayBuffer = ArrayBuffer(*rt, buf);
+  auto makeFn = eval(
+      "(function makeArray(buf) {"
+      "var view = new Uint16Array(buf);"
+      "return view;"
+      "})");
+  auto arr = makeFn.asObject(*rt).asFunction(*rt).call(*rt, arrayBuffer);
+  auto buffer =
+      arr.getObject(*rt).getPropertyAsObject(*rt, "buffer").getArrayBuffer(*rt);
+
+  Array transfers = Array::createWithElements(*rt, Value(*rt, buffer));
+  auto serialized =
+      serializationInterface->serializeWithTransfer(arr, transfers);
+
+  // Test the original buffer has now been detached
+  EXPECT_THROW(buffer.size(*rt), JSIException);
+
+  auto deserialized =
+      serializationInterface2->deserializeWithTransfer(serialized);
+  // Check that the SerializedValue is consumed by deserialization process
+  EXPECT_EQ(serialized, nullptr);
+
+  EXPECT_EQ(deserialized.length(*rt2), 2);
+  auto deserializedArr = deserialized.getValueAtIndex(*rt2, 0).asObject(*rt2);
+  auto transferredObj = deserialized.getValueAtIndex(*rt2, 1).asObject(*rt2);
+
+  auto atFn = deserializedArr.getPropertyAsFunction(*rt2, "at");
+  auto bytesPerElem = deserializedArr.getProperty(*rt2, "BYTES_PER_ELEMENT");
+  EXPECT_EQ(bytesPerElem.getNumber(), 2);
+  auto res = atFn.callWithThis(*rt2, deserializedArr, 0).getNumber();
+  EXPECT_EQ(res, 0);
+  res = atFn.callWithThis(*rt2, deserializedArr, 1).getNumber();
+  EXPECT_EQ(res, 1);
+  res = atFn.callWithThis(*rt2, deserializedArr, 2).getNumber();
+  EXPECT_EQ(res, 4);
+  res = atFn.callWithThis(*rt2, deserializedArr, 3).getNumber();
+  EXPECT_EQ(res, 9);
+
+  auto deserializedBuffer =
+      deserializedArr.getPropertyAsObject(*rt2, "buffer").getArrayBuffer(*rt);
+  EXPECT_EQ(deserializedBuffer.size(*rt2), 8);
+
+  // Check that the transferred object is the deserialized typed array's
+  // buffer.
+  EXPECT_TRUE(Object::strictEquals(*rt2, transferredObj, deserializedBuffer));
+}
+
+TEST_P(HermesSerializationTest, SerializeWithTransferRunJavascript) {
+  // This is constructed so that when `obj` is serialized and the `foo` getter
+  // is invoked, it removes an element from `transferArr`. However, we should
+  // still transfer both `ab1` and `ab2`
+  eval(
+      "var ab1 = new ArrayBuffer(8);"
+      "var ab2 = new ArrayBuffer(16);"
+      "var transferArr = [ab1, ab2];"
+      "var obj = {"
+      "    get foo() {"
+      "        transferArr.pop();"
+      "        return 'bar';"
+      "    }"
+      "};");
+  auto obj = rt->global().getProperty(*rt, "obj");
+  auto transferArr =
+      rt->global().getProperty(*rt, "transferArr").getObject(*rt).getArray(*rt);
+
+  auto ab1 =
+      transferArr.getValueAtIndex(*rt, 0).getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_EQ(ab1.length(*rt), 8);
+  auto ab2 =
+      transferArr.getValueAtIndex(*rt, 1).getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_EQ(ab2.length(*rt), 16);
+
+  auto serialized =
+      serializationInterface->serializeWithTransfer(obj, transferArr);
+  auto deserialized =
+      serializationInterface2->deserializeWithTransfer(serialized);
+  EXPECT_EQ(serialized, nullptr);
+  // It should contain the deserialized `obj`, `ab1`, and `ab2` in that order
+  EXPECT_EQ(deserialized.length(*rt2), 3);
+
+  // Check that everything was properly deserialized into the 2nd runtime
+  auto deserializedObj = deserialized.getValueAtIndex(*rt2, 0).getObject(*rt2);
+  auto foo = deserializedObj.getProperty(*rt2, "foo");
+  EXPECT_EQ(foo.getString(*rt2).utf8(*rt2), "bar");
+
+  auto deserializedAb1 =
+      deserialized.getValueAtIndex(*rt2, 1).getObject(*rt2).getArrayBuffer(
+          *rt2);
+  EXPECT_EQ(deserializedAb1.length(*rt2), 8);
+
+  auto deserializedAb2 =
+      deserialized.getValueAtIndex(*rt2, 2).getObject(*rt2).getArrayBuffer(
+          *rt2);
+  EXPECT_EQ(deserializedAb2.length(*rt2), 16);
+
+  // Check that the original transfer array has been modified
+  EXPECT_EQ(transferArr.length(*rt), 1);
+  // Check the original ArrayBuffers have been detached
+  EXPECT_THROW(ab1.size(*rt), JSINativeException);
+  EXPECT_THROW(ab1.size(*rt2), JSINativeException);
+}
+
+TEST_P(HermesSerializationTest, SerializeWithTransferDetachedArrayBuffer) {
+  // This is constructed so that when `obj` is serialized and the `foo` getter
+  // is invoked, it detaches the ArrayBuffer `ab1`, so serialization should
+  // fail.
+  eval(
+      "var ab1 = new ArrayBuffer(8);"
+      "var ab2 = new ArrayBuffer(16);"
+      "var transferArr = [ab1, ab2];"
+      "var obj = {"
+      "    get foo() {"
+      "        HermesInternal.detachArrayBuffer(ab1);"
+      "        return 'bar';"
+      "    }"
+      "};");
+  auto obj = rt->global().getProperty(*rt, "obj");
+  auto transferArr =
+      rt->global().getProperty(*rt, "transferArr").getObject(*rt).getArray(*rt);
+
+  auto ab1 =
+      transferArr.getValueAtIndex(*rt, 0).getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_EQ(ab1.length(*rt), 8);
+  auto ab2 =
+      transferArr.getValueAtIndex(*rt, 1).getObject(*rt).getArrayBuffer(*rt);
+  EXPECT_EQ(ab2.length(*rt), 16);
+  EXPECT_THROW(
+      serializationInterface->serializeWithTransfer(obj, transferArr), JSError);
 }
 
 INSTANTIATE_TEST_CASE_P(

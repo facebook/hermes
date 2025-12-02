@@ -39,6 +39,15 @@ class SerializedValue {
   /// with the format (string serialization ID, isAscii, length, data)
   std::vector<uint8_t> strings;
 
+  /// For JS ArrayBuffers with internal data blocks, store the pointer to the
+  /// underlying data block that needs to be transferred.
+  std::vector<uint8_t *> internalBuffers;
+
+  /// For JS ArrayBuffers with external data blocks, store a pair contain the
+  /// data block pointer, and the context responsible for cleaning up the data
+  /// block.
+  std::vector<std::pair<uint8_t *, std::shared_ptr<void>>> externalBuffers;
+
   /// Describes the type of JS value for some serialized content. The special
   /// Reference type is used to point at a JS value serialized at some other
   /// location.
@@ -91,7 +100,7 @@ class SerializedValue {
   /// over data buffers
   SerializedValue(const SerializedValue &) = delete;
   void operator=(const SerializedValue &) = delete;
-  ~SerializedValue() = default;
+  ~SerializedValue();
 };
 
 /// Serializes a HermesValue \p value. Follows StructuredSerializeInternal
@@ -105,6 +114,28 @@ CallResult<SerializedValue> serialize_RJS(Runtime &runtime, Handle<> value);
 CallResult<HermesValue> deserialize(
     Runtime &runtime,
     const SerializedValue &serialized);
+
+/// Serializes a HermesValue \p value. Given the length property of \p
+/// transferList, it will transfer everything at index [0, length - 1] out of
+/// the current runtime.
+///  Follows StructuredSerializeWithTransfer.
+/// https://html.spec.whatwg.org/multipage/structured-data.html#structuredserializewithtransfer
+CallResult<SerializedValue> serializeWithTransfer_RJS(
+    Runtime &runtime,
+    Handle<> value,
+    Handle<JSArray> transferList);
+
+/// Deserializes the SerializedValue \p serialized following the structure clone
+/// algorithm. The SerializedValue \p serialized must be created by
+/// serializeWithTransfer_RJS. This performs any transfer as necessary, and
+/// consumes the serialized object so it cannot be deserialized again.
+/// Returns a JS Array where the first element is the deserialized value,
+/// followed by all transferred values.
+/// Follows StructuredDeserializeWithTransfer.
+/// https://html.spec.whatwg.org/multipage/structured-data.html#structuredserializewithtransfer
+CallResult<PseudoHandle<JSArray>> deserializeWithTransfer(
+    Runtime &runtime,
+    SerializedValue &serialized);
 
 } // namespace vm
 } // namespace hermes

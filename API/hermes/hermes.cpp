@@ -1507,14 +1507,42 @@ jsi::Value HermesRuntimeImpl::deserialize(
 std::unique_ptr<jsi::Serialized> HermesRuntimeImpl::serializeWithTransfer(
     jsi::Value &value,
     const jsi::Array &transferList) {
-  throw jsi::JSINativeException(
-      "Transfer functionalities not yet implemented.");
+  if (LLVM_UNLIKELY(!vm::vmisa<vm::JSArray>(phv(transferList)))) {
+    throw jsi::JSINativeException("Transfer array must not be a Proxy.");
+  }
+  vm::GCScope gcScope(runtime_);
+  vm::PinnedHermesValue numberStorage;
+
+  auto arrHandle = vm::Handle<vm::JSArray>::vmcast(&phv(transferList));
+  auto serializedRes = vm::serializeWithTransfer_RJS(
+      runtime_, vmHandleFromValue(value, &numberStorage), arrHandle);
+  checkStatus(serializedRes.getStatus());
+
+  return std::make_unique<HermesSerialized>(*serializedRes);
 }
 
 jsi::Array HermesRuntimeImpl::deserializeWithTransfer(
     std::unique_ptr<jsi::Serialized> &serialized) {
-  throw jsi::JSINativeException(
-      "Transfer functionalities not yet implemented.");
+  if (LLVM_UNLIKELY(!serialized)) {
+    throw jsi::JSINativeException("serialized cannot be null");
+  }
+
+  void *privateSerialized =
+      serialized->getPrivate(HermesSerialized::getHermesSerializedSecret());
+  if (LLVM_UNLIKELY(!privateSerialized)) {
+    throw jsi::JSINativeException(
+        "Cannot deserialize non-Hermes serialized objects");
+  }
+
+  vm::GCScope gcScope(runtime_);
+  auto *serializedValue =
+      reinterpret_cast<vm::SerializedValue *>(privateSerialized);
+  auto deserializedRes =
+      vm::deserializeWithTransfer(runtime_, *serializedValue);
+  serialized.reset();
+  checkStatus(deserializedRes.getStatus());
+
+  return add<jsi::Array>(deserializedRes->getHermesValue());
 }
 #endif
 

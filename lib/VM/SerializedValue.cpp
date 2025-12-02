@@ -1150,6 +1150,76 @@ CallResult<PseudoHandle<JSArrayBuffer>> deserializeArrayBuffer(
   return createPseudoHandle(*lv.self);
 }
 
+/// Serialize the JS ArrayBuffer \p arrayBuffer for transfer at the end of \p
+/// serialized with the format (size, index in internal buffer list) for
+/// internal buffers. For external buffer, use the format (size, data pointer,
+/// index in external buffer context list).
+/// Implements 5.4.2.2 and 5.4.2.3 of StructuredSerializeWithTransfer
+void serializeArrayBufferForTransfer(
+    Runtime &runtime,
+    SerializedValue &serialized,
+    Handle<JSArrayBuffer> selfArrayBuffer) {
+  // 5.4.2.3. Set dataHolder.[[ArrayBufferByteLength]] to
+  // transferable.[[ArrayBufferByteLength]].
+  uint32_t size = selfArrayBuffer->size();
+  appendValueToBuffer<uint32_t>(serialized.content, size);
+
+  // 5.4.2.2. Set dataHolder.[[ArrayBufferData]] to
+  // transferable.[[ArrayBufferData]].
+  uint8_t *bufferData = selfArrayBuffer->getDataBlock(runtime);
+
+  if (selfArrayBuffer->external()) {
+    uint32_t idx = serialized.externalBuffers.size();
+    appendValueToBuffer<uint32_t>(serialized.content, idx);
+    std::shared_ptr<void> ctx =
+        JSArrayBuffer::getExternalDataContext(runtime, selfArrayBuffer);
+    serialized.externalBuffers.emplace_back(std::pair{bufferData, ctx});
+  } else {
+    uint32_t idx = serialized.internalBuffers.size();
+    appendValueToBuffer<uint32_t>(serialized.content, idx);
+    serialized.internalBuffers.push_back(bufferData);
+  }
+}
+
+/// Deserializes the data pointed by \p content into a JS ArrayBuffer. Update
+/// the pointer to point past the ArrayBuffer record. Implements step 3.2 of
+/// StructuredDeserializeWithTransfer
+PseudoHandle<JSArrayBuffer> deserializeArrayBufferForTransfer(
+    Runtime &runtime,
+    SerializedValue &serialized,
+    const uint8_t *&content,
+    bool isInternalBuffer) {
+  uint32_t size = deserializeUInt32(content);
+
+  // Internal buffer case
+  if (isInternalBuffer) {
+    uint32_t idx = deserializeUInt32(content);
+    uint8_t *data = serialized.internalBuffers[idx];
+    PseudoHandle<JSArrayBuffer> jsArrayBuffer =
+        JSArrayBuffer::createWithInternalDataBlock(
+            runtime, runtime.arrayBufferPrototype, data, size);
+    /// Set the corresponding entry to null, so the serialized object no longer
+    /// holds ownership over the data.
+    serialized.internalBuffers[idx] = nullptr;
+    return jsArrayBuffer;
+  }
+
+  // External buffer case
+  struct : Locals {
+    PinnedValue<JSArrayBuffer> self;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  auto jsArrayBuffer =
+      JSArrayBuffer::create(runtime, runtime.arrayBufferPrototype);
+  lv.self = std::move(jsArrayBuffer);
+
+  uint32_t idx = deserializeUInt32(content);
+  auto [data, context] = serialized.externalBuffers[idx];
+  JSArrayBuffer::setExternalDataBlock(runtime, lv.self, data, size, context);
+  return createPseudoHandle(*lv.self);
+}
+
 /// Serialize the JS DataView \p selfView at the end of \p serialized with the
 /// format (array buffer, byte length, byte offset).
 /// Implements 14.1-14.5 of StructuredSerializeInternal
@@ -1878,6 +1948,171 @@ CallResult<HermesValue> deserializeImpl(
   return *lv.self;
 }
 
+/// For each element in \p transferList, check its type is transferable. Then,
+/// add a corresponding entry in \p serialized so it can be referenced during
+/// serialization of other JS Values.
+/// Returns an ArrayStorage containing everything in \p transferList. This
+/// copied list is not in the spec. However, it is necessary to protect against
+/// the transfer list changing during serialization, which can run arbitrary JS.
+/// Implements Step 2 of StructuredSerializeWithTransfer
+CallResult<PseudoHandle<ArrayStorage>> prepareTransferListForSerialization(
+    Runtime &runtime,
+    SerializedValue &serialized,
+    Handle<JSArray> transferList,
+    SerializationValueDenseMap &memoryMap) {
+  auto transferListLen = JSArray::getLength(*transferList, runtime);
+  auto arrStorageRes =
+      ArrayStorage::create(runtime, transferListLen, transferListLen);
+  if (LLVM_UNLIKELY(arrStorageRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  NoAllocScope noAlloc(runtime);
+  ArrayStorage *copy = vmcast<ArrayStorage>(*arrStorageRes);
+
+  // 2. For each transferable of transferList:
+  for (JSArray::size_type i = 0, e = transferListLen; i < e; i++) {
+    auto transferableHv = transferList->at(runtime, i).unboxToHV(runtime);
+    auto *transferableArrayBuffer = dyn_vmcast<JSArrayBuffer>(transferableHv);
+    // 1.If transferable has neither an [[ArrayBufferData]] internal slot nor a
+    //   [[Detached]] internal slot, then throw a "DataCloneError" DOMException.
+    // 2. SharedArrayBuffer case: Unsupported
+    if (!transferableArrayBuffer) {
+      return runtime.raiseError(
+          "Transfer list contains non-transferable value");
+    }
+    // 3. If memory[transferable] exists, then throw a "DataCloneError"
+    //    DOMException.
+    auto hash = runtime.gcStableHashJSObject(transferableArrayBuffer);
+    HermesValueInfo hvInfo{transferableHv, hash};
+    if (auto it = memoryMap.find_as(hvInfo); it != memoryMap.end()) {
+      return runtime.raiseError("Transfer list contains same value twice");
+    }
+    // 4. Set memory[transferable] to { [[Type]]: an uninitialized value }.
+    // We add an entry to the offsets buffer and add it to the map so reference
+    // records can be created during serialization if this value is referenced.
+    // Actual serialization of items in the transfer list comes later.
+    auto *valuePtr = &runtime.serializationValues_.add(transferableHv, hash);
+    uint32_t id = serialized.offsets.size();
+    memoryMap[valuePtr] = id;
+    // Write a dummy location until the actual serialization of the item comes.
+    serialized.offsets.push_back(0);
+
+    // Add the transferable value to the internal copy of the transferList. We
+    // already allocated the size of the ArrayStorage beforehand, so we can set
+    // it directly.
+    copy->set(i, transferableHv, runtime.getHeap());
+  }
+  return createPseudoHandle(copy);
+}
+
+/// For each ArrayBuffer in \p transferList, detach and serialize the
+/// ArrayBuffer at the end of \p serialized.content and update the corresponding
+/// offset in the \p serialized.offsets.
+/// Implements Step 4, 5 of StructuredSerializeWithTransfer
+ExecutionStatus serializeTransferList(
+    Runtime &runtime,
+    SerializedValue &serialized,
+    Handle<ArrayStorage> transferList,
+    SerializationValueDenseMap &memoryMap) {
+  // 4. Let transferDataHolders be a new empty List.
+  // 5. For each transferable of transferList:
+  struct : Locals {
+    PinnedValue<JSArrayBuffer> arrayBuffer;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  for (size_t i = 0, e = transferList->size(); i < e; ++i) {
+    auto transferableHV = transferList->at(i);
+    // 1. If transferable has an [[ArrayBufferData]] internal slot and
+    // IsDetachedBuffer(transferable) is true, then throw a "DataCloneError"
+    // DOMException.
+    // 2. Platform object case: Unsupported
+    lv.arrayBuffer = vmcast<JSArrayBuffer>(transferableHV);
+    if (!lv.arrayBuffer->attached()) {
+      return runtime.raiseError("Detached ArrayBuffers are not serializable");
+    }
+    // 3. Let dataHolder be memory[transferable].
+    auto hash = runtime.gcStableHashJSObject(*lv.arrayBuffer);
+    HermesValueInfo hvInfo{transferableHV, hash};
+    auto it = memoryMap.find_as(hvInfo);
+
+    // In Step 2.4 of StructuredSerializeWithTransfer, which is performed before
+    // this function is called, we added it to the memoryMap, so it must be
+    // present.
+    assert(
+        it != memoryMap.end() && "Transferred object not found in memory map");
+    uint32_t id = it->second;
+    uint32_t beginOffset = serialized.content.size();
+
+    // Now we know where the transferred object will be serialized, write the
+    // offset to the offset buffer
+    serialized.offsets[id] = beginOffset;
+
+    // 4. If transferable has an [[ArrayBufferData]] internal slot, then:
+    //  1. Resizeable ArrayBuffer case: Unsupported
+    //  2. Otherwise:
+    //    1. Set dataHolder.[[Type]] to "ArrayBuffer".
+    auto type = lv.arrayBuffer->external()
+        ? SerializedValue::Type::ArrayBufferExternal
+        : SerializedValue::Type::ArrayBufferInternal;
+    serialized.content.push_back(getUInt8FromSerializedType(type));
+    appendValueToBuffer<uint32_t>(serialized.content, id);
+    //    2-3: Handled in the helper.
+    serializeArrayBufferForTransfer(runtime, serialized, lv.arrayBuffer);
+    //  3. Perform ? DetachArrayBuffer(transferable).
+    // Detach the ArrayBuffer but do not free the data so we can transfer
+    // ownership
+    JSArrayBuffer::ejectBufferUnsafe(runtime, lv.arrayBuffer);
+    // 5. Platform object case: Unsupported
+    // 6. Append dataHolder to transferDataHolders
+    // Step 6 is essentially done when we serialize the necessary data in
+    // serializeArrayBufferForTransfer
+  }
+  return ExecutionStatus::RETURNED;
+}
+
+/// Deserialize and transfer all JSArrayBuffers in the transferList of \p
+/// serialized. Returns a list of IDs of the objects that are successfully
+/// transferred.
+/// Implements Step 2, 3 of StructuredDeserializeWithTransfer
+std::vector<uint32_t> deserializeTransferList(
+    Runtime &runtime,
+    SerializedValue &serialized,
+    DeserializationValueDenseMap &memoryMap) {
+  // 2. Let transferredValues be a new empty List.
+  std::vector<uint32_t> transferredIds;
+  // 3. For each transferDataHolder of
+  // serializeWithTransferResult.[[TransferDataHolders]]:
+  // Transferred values are assigned serialization id first, so they must start
+  // at 0.
+  uint32_t numTransfers =
+      serialized.internalBuffers.size() + serialized.externalBuffers.size();
+  for (uint32_t i = 0; i < numTransfers; ++i) {
+    auto contentOffset = serialized.offsets[i];
+    const uint8_t *curr = serialized.content.data() + contentOffset;
+    // 1. Let value be an uninitialized value.
+    auto type = deserializeSerializedType(curr);
+    // 2: Handled in the helper.
+    bool isInternalBuffer = type == SerializedValue::Type::ArrayBufferInternal;
+    [[maybe_unused]] uint32_t deserializedId = deserializeUInt32(curr);
+    assert(
+        deserializedId == i &&
+        "ID in serialized record does not match the record being deserialized.");
+    auto res = deserializeArrayBufferForTransfer(
+        runtime, serialized, curr, isInternalBuffer);
+
+    // 3-4. Resizeable ArrayBuffer and Platform objects: Unsupported
+    // 5. Set memory[transferDataHolder] to value.
+    auto *valuePtr = &runtime.serializationValues_.add(
+        res.getHermesValue(), runtime.gcStableHashJSObject(res.get()));
+    memoryMap[i] = valuePtr;
+
+    // 6. Append value to transferredValues.
+    transferredIds.push_back(i);
+  }
+  return transferredIds;
+}
+
 void freeDataAfterSerialization(SerializationValueDenseMap &memoryMap) {
   for (auto [value, _] : memoryMap) {
     value->markAsFree();
@@ -1887,6 +2122,15 @@ void freeDataAfterDeserialization(DeserializationValueDenseMap &memoryMap) {
   for (auto [_, value] : memoryMap) {
     value->markAsFree();
   }
+}
+
+void cleanUpAfterDeserializeWithTransfer(
+    SerializedValue &serialized,
+    DeserializationValueDenseMap &memoryMap) {
+  // Free any held data so GC can clean it up
+  freeDataAfterDeserialization(memoryMap);
+  // Clear the content buffer so the SerializedValue is invalidated.
+  serialized.content.clear();
 }
 
 } // namespace
@@ -1907,7 +2151,7 @@ CallResult<SerializedValue> serialize_RJS(Runtime &runtime, Handle<> value) {
 CallResult<HermesValue> deserialize(
     Runtime &runtime,
     const SerializedValue &serialized) {
-  if (serialized.content.size() == 0) {
+  if (serialized.content.empty()) {
     return runtime.raiseError("Cannot deserialize empty serialization data");
   }
   DeserializationValueDenseMap memoryMap;
@@ -1919,6 +2163,140 @@ CallResult<HermesValue> deserialize(
     return ExecutionStatus::EXCEPTION;
   }
   return *deserializedRes;
+}
+
+CallResult<SerializedValue> serializeWithTransfer_RJS(
+    Runtime &runtime,
+    Handle<> value,
+    Handle<JSArray> transferList) {
+  // This will hold the copy of the `transferList`. This is because the
+  // serialization process can run arbitrary JS, potentially modifying the
+  // original JSArray `transferList`. However, StructuredSerializeWithTransfer
+  // assumes that the list of transfer values remains the same throughout the
+  // whole process.
+  struct : Locals {
+    PinnedValue<ArrayStorage> transfersCopy;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  SerializedValue serialized;
+  // 1. Let memory be an empty map.
+  SerializationValueDenseMap memoryMap;
+  auto cleanUp = llvh::make_scope_exit(
+      [&memoryMap]() { freeDataAfterSerialization(memoryMap); });
+
+  // 2. Handled in the helper.
+  auto prepTransferListRes = prepareTransferListForSerialization(
+      runtime, serialized, transferList, memoryMap);
+  if (LLVM_UNLIKELY(prepTransferListRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.transfersCopy = std::move(*prepTransferListRes);
+
+  // 3. Let serialized be ? StructuredSerializeInternal(value, false, memory).
+  auto serializedRes = serializeImpl(runtime, value, serialized, memoryMap);
+  if (LLVM_UNLIKELY(serializedRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 4-5: Handled in the helper.
+  auto serializeTransferListRes =
+      serializeTransferList(runtime, serialized, lv.transfersCopy, memoryMap);
+  if (LLVM_UNLIKELY(serializeTransferListRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 6. Return { [[Serialized]]: serialized, [[TransferDataHolders]]:
+  // transferDataHolders }.
+  return serialized;
+}
+
+CallResult<PseudoHandle<JSArray>> deserializeWithTransfer(
+    Runtime &runtime,
+    SerializedValue &serialized) {
+  if (serialized.content.empty()) {
+    return runtime.raiseError("Cannot deserialize empty serialization data");
+  }
+  // 1. Let memory be an empty map.
+  DeserializationValueDenseMap memoryMap;
+  auto cleanUp = llvh::make_scope_exit([&memoryMap, &serialized]() {
+    cleanUpAfterDeserializeWithTransfer(serialized, memoryMap);
+  });
+  // 2-3: Handled in the helper.
+  std::vector<uint32_t> transferredIds =
+      deserializeTransferList(runtime, serialized, memoryMap);
+
+  // 4. Let deserialized be ?
+  // StructuredDeserialize(serializeWithTransferResult.[[Serialized]],
+  // targetRealm, memory).
+  // Deserialize the main serialized value, which is located at the front of
+  // serialized.content
+  const uint8_t *start = serialized.content.data();
+  auto valRes = deserializeImpl(runtime, serialized, start, memoryMap);
+  if (LLVM_UNLIKELY(valRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 5. Return { [[Deserialized]]: deserialized, [[TransferredValues]]:
+  // transferredValues }.
+  struct : Locals {
+    PinnedValue<JSArray> result;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  auto transferLen = transferredIds.size();
+  auto arrayLen = transferLen + 1;
+  auto ret = JSArray::create(runtime, arrayLen, arrayLen);
+  if (LLVM_UNLIKELY(ret == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  lv.result = std::move(*ret);
+  JSArray::setStorageEndIndex(lv.result, runtime, arrayLen);
+
+  // Set the deserialized value as the first element.
+  // This call happens outside of NoAllocScope because
+  // SmallHermesValue::encodeHermesValue may allocate if valRes is not a pointer
+  // type.
+  JSArray::unsafeSetExistingElementAt(
+      *lv.result,
+      runtime,
+      0,
+      SmallHermesValue::encodeHermesValue(*valRes, runtime));
+
+  // At this point, all objects are deserialized and the result Array is
+  // allocated. No other allocation needs to happen.
+  NoAllocScope noAlloc(runtime);
+
+  // Add all transferred values to the result.
+  for (size_t i = 0; i < transferLen; i++) {
+    auto *valuePtr = memoryMap.lookup(transferredIds[i]);
+    // All transferred values are deserialized, so it must have been added to
+    // the memory map.
+    assert(
+        valuePtr != nullptr &&
+        "Transferred value not found in deserialized memory map");
+
+    auto *arrayBuffer = vmcast<JSArrayBuffer>(valuePtr->value());
+    auto shv = SmallHermesValue::encodeObjectValue(arrayBuffer, runtime);
+
+    JSArray::unsafeSetExistingElementAt(*lv.result, runtime, i + 1, shv);
+  }
+
+  return createPseudoHandle(*lv.result);
+}
+
+SerializedValue::~SerializedValue() {
+  // At the end of this SerializedValue's lifetime, if it still holds any
+  // ownership over ArrayBuffer internal data blocks, then we need to free the
+  // storage. This can happen if the user never deserialized this object. Note:
+  // No extra work is needed for external data blocks because they are managed
+  // by shared pointers and released when the object is destroyed.
+  for (auto *internalBuf : internalBuffers) {
+    if (internalBuf) {
+      free(internalBuf);
+    }
+  }
 }
 
 } // namespace vm
