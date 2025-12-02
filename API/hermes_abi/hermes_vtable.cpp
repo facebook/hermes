@@ -823,12 +823,14 @@ HermesABIArrayBufferOrError create_arraybuffer_from_external_data(
   // and the finalizer will invoke the release method.
   auto size = buf->size;
   auto *data = buf->data;
-  auto finalize = [](vm::GC &, vm::NativeState *ns) {
-    auto *self = static_cast<HermesABIMutableBuffer *>(ns->context());
-    self->vtable->release(self);
-  };
   vm::JSArrayBuffer::setExternalDataBlock(
-      runtime, lv.arrayBuffer, data, size, buf, finalize);
+      runtime,
+      lv.arrayBuffer,
+      data,
+      size,
+      std::shared_ptr<void>(buf, [](HermesABIMutableBuffer *buffer) {
+        buffer->vtable->release(buffer);
+      }));
   return hart->createArrayBufferOrError(lv.arrayBuffer.getHermesValue());
 }
 

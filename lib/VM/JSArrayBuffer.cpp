@@ -255,8 +255,7 @@ void JSArrayBuffer::setExternalDataBlock(
     Handle<JSArrayBuffer> self,
     uint8_t *data,
     size_type size,
-    void *context,
-    FinalizeNativeStatePtr finalizePtr) {
+    const std::shared_ptr<void> &context) {
   struct : public Locals {
     PinnedValue<NativeState> ns;
   } lv;
@@ -264,7 +263,11 @@ void JSArrayBuffer::setExternalDataBlock(
 
   detach(runtime, self);
 
-  lv.ns = NativeState::create(runtime, context, finalizePtr);
+  auto contextPtr = new std::shared_ptr<void>(context);
+  auto finalizer = [](GC &gc, NativeState *ns) {
+    delete static_cast<std::shared_ptr<void> *>(ns->context());
+  };
+  lv.ns = NativeState::create(runtime, contextPtr, finalizer);
   setExternalFinalizer(runtime, self, lv.ns);
   self->attached_ = true;
   self->size_ = size;

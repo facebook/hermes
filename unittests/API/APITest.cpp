@@ -181,6 +181,7 @@ TEST_F(HermesRuntimeTestMethodsTest, ExternalArrayBufferTest) {
     auto buf = std::make_shared<FixedBuffer>();
     std::weak_ptr<FixedBuffer> weakBuf(buf);
     auto arrayBuffer = ArrayBuffer(*rt, std::move(buf));
+    EXPECT_EQ(weakBuf.use_count(), 1);
     auto detach = eval(
         R"#(
 (function (buf) {

@@ -68,15 +68,16 @@ class JSArrayBuffer final : public JSObject {
       bool zero = true);
 
   /// Sets the data block used by this JSArrayBuffer to be \p data, with size
-  /// \p size. Ensures that \p finalizePtr is invoked with argument \p context
-  /// at some point after this JSArrayBuffer has been garbage collected.
+  /// \p size. The deleter of the shared pointer \p context should clean up the
+  /// external data when it is deallocated. The JS ArrayBuffer will share the
+  /// ownership of the external data via a shared pointer. When GC finalizes
+  /// this JSArrayBuffer, it will release its shared ownership.
   static void setExternalDataBlock(
       Runtime &runtime,
       Handle<JSArrayBuffer> self,
       uint8_t *data,
       size_type size,
-      void *context,
-      FinalizeNativeStatePtr finalizePtr);
+      const std::shared_ptr<void> &context);
 
   /// Retrieves a pointer to the held buffer.
   /// \return A pointer to the buffer owned by this object. This can be null

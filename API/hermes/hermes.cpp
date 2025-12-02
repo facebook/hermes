@@ -2666,12 +2666,7 @@ jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
       vm::Handle<vm::JSObject>::vmcast(&runtime_.arrayBufferPrototype));
   auto size = buffer->size();
   auto *data = buffer->data();
-  auto *ctx = new std::shared_ptr<jsi::MutableBuffer>(std::move(buffer));
-  auto finalize = [](vm::GC &, vm::NativeState *ns) {
-    delete static_cast<std::shared_ptr<jsi::MutableBuffer> *>(ns->context());
-  };
-  vm::JSArrayBuffer::setExternalDataBlock(
-      runtime_, lv.buf, data, size, ctx, finalize);
+  vm::JSArrayBuffer::setExternalDataBlock(runtime_, lv.buf, data, size, buffer);
   return add<jsi::ArrayBuffer>(lv.buf.getHermesValue());
 }
 
