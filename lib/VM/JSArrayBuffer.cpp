@@ -60,6 +60,20 @@ PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
   return JSObjectInit::initToPseudoHandle(runtime, cell);
 }
 
+PseudoHandle<JSArrayBuffer> JSArrayBuffer::createWithInternalDataBlock(
+    Runtime &runtime,
+    Handle<JSObject> parentHandle,
+    uint8_t *data,
+    size_type size) {
+  auto self = JSArrayBuffer::create(runtime, parentHandle);
+  self->attached_ = true;
+  self->data_ = data;
+  self->size_ = size;
+  self->external_ = false;
+  runtime.getHeap().creditExternalMemory(self.get(), size);
+  return self;
+}
+
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
     Runtime &runtime,
     Handle<JSArrayBuffer> src,
@@ -290,6 +304,41 @@ void JSArrayBuffer::setExternalDataBlock(
   self->size_ = size;
   self->external_ = true;
   self->data_ = data;
+}
+
+PseudoHandle<NativeState> JSArrayBuffer::getExternalFinalizerNativeState(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self) {
+  assert(
+      self->attached() && self->external() &&
+      "There must be an external buffer attached.");
+
+  // External buffer finalizer must be held by the NativeState at the specified
+  // internal property. Thus, we can retrieve the property without performing
+  // checks to see if it succeeds.
+  NamedPropertyDescriptor desc;
+  JSObject::getOwnNamedDescriptor(
+      self,
+      runtime,
+      Predefined::getSymbolID(
+          Predefined::InternalPropertyArrayBufferExternalFinalizer),
+      desc);
+  auto *ns = vmcast<NativeState>(
+      JSObject::getNamedSlotValueUnsafe(*self, runtime, desc)
+          .getObject(runtime));
+  return createPseudoHandle(ns);
+}
+
+std::shared_ptr<void> JSArrayBuffer::getExternalDataContext(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self) {
+  assert(
+      self->attached() && self->external() &&
+      "There must be an external buffer attached.");
+  NoAllocScope noAlloc(runtime);
+  NativeState *ns = getExternalFinalizerNativeState(runtime, self).get();
+  auto *contextPtr = static_cast<const std::shared_ptr<void> *>(ns->context());
+  return std::shared_ptr<void>(*contextPtr);
 }
 
 } // namespace vm

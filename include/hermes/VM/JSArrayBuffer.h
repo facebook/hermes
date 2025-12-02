@@ -38,6 +38,14 @@ class JSArrayBuffer final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> prototype);
 
+  /// Create an ArrayBuffer and sets the data block to be used by this
+  /// JSArrayBuffer to be \p data with \p size.
+  static PseudoHandle<JSArrayBuffer> createWithInternalDataBlock(
+      Runtime &runtime,
+      Handle<JSObject> prototype,
+      uint8_t *data,
+      size_type size);
+
   /// ES7 24.1.1.4
   /// NOTE: since SharedArrayBuffer does not exist, this does not use the
   /// SpeciesConstructor, it always allocates a normal ArrayBuffer.
@@ -79,6 +87,15 @@ class JSArrayBuffer final : public JSObject {
       size_type size,
       const std::shared_ptr<void> &context);
 
+  /// \return A shared pointer whose deleter cleans up the external data block,
+  /// specified when the external data was first set. In practice, users should
+  /// always set a valid pointer to clean up the data, so the context ptr should
+  /// not be null.
+  /// \pre attached() and external() must be true
+  static std::shared_ptr<void> getExternalDataContext(
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self);
+
   /// Retrieves a pointer to the held buffer.
   /// \return A pointer to the buffer owned by this object. This can be null
   ///   if the ArrayBuffer is empty.
@@ -99,6 +116,11 @@ class JSArrayBuffer final : public JSObject {
   /// the attached-ness and the validity of any index before using it.
   bool attached() const {
     return attached_;
+  }
+
+  /// Whether this JSArrayBuffer is attached to some external data block.
+  bool external() const {
+    return external_;
   }
 
   /// Detaches this buffer from its data block, effectively freeing the storage
@@ -126,8 +148,15 @@ class JSArrayBuffer final : public JSObject {
 #endif
 
  private:
-  /// Set the internal property that retains the NativeState owning the external
-  /// buffer to \p value.
+  /// Get the internal property that retains the NativeState owning the external
+  /// buffer
+  /// \pre attached() and external() must be true
+  static PseudoHandle<NativeState> getExternalFinalizerNativeState(
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self);
+
+  /// Set the internal property that retains the NativeState owning the
+  /// external buffer to \p value.
   static void setExternalFinalizer(
       Runtime &runtime,
       Handle<JSArrayBuffer> self,
