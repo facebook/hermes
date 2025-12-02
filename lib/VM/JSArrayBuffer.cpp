@@ -190,10 +190,7 @@ ExecutionStatus JSArrayBuffer::detach(
   if (!self->external_)
     self->freeInternalBuffer(runtime.getHeap());
   else {
-    auto res = setExternalFinalizer(
-        runtime, self, HandleRootOwner::getUndefinedValue());
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
+    setExternalFinalizer(runtime, self, HandleRootOwner::getUndefinedValue());
   }
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
@@ -235,22 +232,26 @@ ExecutionStatus JSArrayBuffer::createDataBlock(
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus JSArrayBuffer::setExternalFinalizer(
+void JSArrayBuffer::setExternalFinalizer(
     Runtime &runtime,
     Handle<JSArrayBuffer> self,
     Handle<> value) {
-  auto res = JSObject::defineOwnProperty(
+  // We are setting an internal property with InternalForce() flag. The write
+  // should always go through, and we can skip the result check.
+  [[maybe_unused]] auto res = JSObject::defineOwnProperty(
       self,
       runtime,
       Predefined::getSymbolID(
           Predefined::InternalPropertyArrayBufferExternalFinalizer),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      value);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  if (LLVM_UNLIKELY(!*res))
-    return runtime.raiseTypeError("Cannot modify external buffer.");
-  return ExecutionStatus::RETURNED;
+      value,
+      PropOpFlags().plusInternalForce());
+  assert(
+      res == ExecutionStatus::RETURNED &&
+      "Writes to the external block internal property should never throw");
+  assert(
+      *res &&
+      "Writes to the external block internal property should never fail");
 }
 
 ExecutionStatus JSArrayBuffer::setExternalDataBlock(
@@ -268,12 +269,8 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
   if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
-  // Set the external finalizer first, so that if it throws, the buffer is not
-  // left in an attached state.
   lv.ns = NativeState::create(runtime, context, finalizePtr);
-  auto res = setExternalFinalizer(runtime, self, lv.ns);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
+  setExternalFinalizer(runtime, self, lv.ns);
   self->attached_ = true;
   self->size_ = size;
   self->external_ = true;

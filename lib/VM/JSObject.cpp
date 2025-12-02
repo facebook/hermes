@@ -3175,6 +3175,13 @@ JSObject::checkPropertyUpdate(
   if (dpFlags.isEmpty())
     return std::make_pair(PropertyUpdateStatus::done, currentFlags);
 
+  // The InternalForce() flag indicate the property update should go through, no
+  // matter what. This is used by internal properties, which are often
+  // implementation details and not real JS properties.
+  if (opFlags.getInternalForce()) {
+    return std::make_pair(PropertyUpdateStatus::needSet, currentFlags);
+  }
+
   assert(
       (!dpFlags.isAccessor() || (!dpFlags.setWritable && !dpFlags.writable)) &&
       "can't set both accessor and writable");

@@ -120,7 +120,7 @@ class JSArrayBuffer final : public JSObject {
  private:
   /// Set the internal property that retains the NativeState owning the external
   /// buffer to \p value.
-  static ExecutionStatus setExternalFinalizer(
+  static void setExternalFinalizer(
       Runtime &runtime,
       Handle<JSArrayBuffer> self,
       Handle<> value);

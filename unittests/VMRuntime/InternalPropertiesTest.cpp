@@ -69,4 +69,151 @@ TEST_F(InternalPropertiesTest, NamedInternalPropertyTest) {
   ASSERT_EQ(JSArray::getLength(**propSymbols, runtime), 0);
 }
 
+TEST_F(InternalPropertiesTest, AddInternalPropertySealedObject) {
+  struct : Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.obj =
+      JSObject::create(runtime, HandleRootOwner::makeNullHandle<JSObject>());
+  FORCE_DICTIONARY_MODE(lv.obj);
+
+  auto symbolId = Predefined::getSymbolID(
+      Predefined::InternalPropertyNamedPropForUnitTestOnly);
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+
+  // Seal an object
+  auto sealRes = JSObject::seal(lv.obj, runtime);
+  ASSERT_RETURNED(sealRes);
+
+  // Add property without `InternalForce` flag should fail
+  auto defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getOneValue(),
+      PropOpFlags());
+  EXPECT_FALSE(*defineOwnRes);
+
+  // With `InternalForce`
+  defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getOneValue(),
+      PropOpFlags().plusInternalForce());
+  EXPECT_TRUE(*defineOwnRes);
+  EXPECT_CALLRESULT_VALUE(
+      HVConstants::kOne, JSObject::getNamed_RJS(lv.obj, runtime, symbolId));
+
+  // Internal property should be updatable when sealed
+  defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getNegOneValue(),
+      PropOpFlags());
+  EXPECT_TRUE(*defineOwnRes);
+  EXPECT_CALLRESULT_VALUE(
+      HVConstants::kNegOne, JSObject::getNamed_RJS(lv.obj, runtime, symbolId));
+}
+
+TEST_F(InternalPropertiesTest, AddInternalPropertyFrozenObject) {
+  struct : Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.obj =
+      JSObject::create(runtime, HandleRootOwner::makeNullHandle<JSObject>());
+  FORCE_DICTIONARY_MODE(lv.obj);
+
+  auto symbolId = Predefined::getSymbolID(
+      Predefined::InternalPropertyNamedPropForUnitTestOnly);
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+
+  // Freeze an object
+  auto freezeRes = JSObject::freeze(lv.obj, runtime);
+  ASSERT_RETURNED(freezeRes);
+
+  // Add property without `InternalForce` flag should fail
+  auto defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getOneValue(),
+      PropOpFlags());
+  EXPECT_FALSE(*defineOwnRes);
+
+  // With `InternalForce`
+  defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getOneValue(),
+      PropOpFlags().plusInternalForce());
+  EXPECT_TRUE(*defineOwnRes);
+  EXPECT_CALLRESULT_VALUE(
+      HVConstants::kOne, JSObject::getNamed_RJS(lv.obj, runtime, symbolId));
+}
+
+TEST_F(InternalPropertiesTest, UpdateInternalPropertyFrozenObject) {
+  struct : Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.obj =
+      JSObject::create(runtime, HandleRootOwner::makeNullHandle<JSObject>());
+  FORCE_DICTIONARY_MODE(lv.obj);
+
+  auto symbolId = Predefined::getSymbolID(
+      Predefined::InternalPropertyNamedPropForUnitTestOnly);
+  DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
+
+  auto defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getOneValue(),
+      PropOpFlags());
+  EXPECT_TRUE(*defineOwnRes);
+  EXPECT_CALLRESULT_VALUE(
+      HVConstants::kOne, JSObject::getNamed_RJS(lv.obj, runtime, symbolId));
+
+  // Freeze an object
+  auto freezeRes = JSObject::freeze(lv.obj, runtime);
+  ASSERT_RETURNED(freezeRes);
+
+  // Updating without `InternalForce` should fail, property not updated
+  defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getNegOneValue(),
+      PropOpFlags());
+  EXPECT_FALSE(*defineOwnRes);
+  EXPECT_CALLRESULT_VALUE(
+      HVConstants::kOne, JSObject::getNamed_RJS(lv.obj, runtime, symbolId));
+
+  defineOwnRes = JSObject::defineOwnProperty(
+      lv.obj,
+      runtime,
+      symbolId,
+      dpf,
+      HandleRootOwner::getNegOneValue(),
+      PropOpFlags().plusInternalForce());
+  EXPECT_TRUE(*defineOwnRes);
+  EXPECT_CALLRESULT_VALUE(
+      HVConstants::kNegOne, JSObject::getNamed_RJS(lv.obj, runtime, symbolId));
+}
+
 } // anonymous namespace
