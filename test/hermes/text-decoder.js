@@ -1,0 +1,247 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// RUN: LC_ALL=en_US.UTF-8 %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+"use strict";
+
+print('TextDecoder');
+// CHECK-LABEL: TextDecoder
+
+var decoder = new TextDecoder();
+print(Object.prototype.toString.call(decoder));
+// CHECK-NEXT: [object TextDecoder]
+
+// Test default properties
+print(decoder.encoding);
+// CHECK-NEXT: utf-8
+print(decoder.fatal);
+// CHECK-NEXT: false
+print(decoder.ignoreBOM);
+// CHECK-NEXT: false
+
+// Test property descriptors
+const descEncoding = Object.getOwnPropertyDescriptor(TextDecoder.prototype, 'encoding');
+print(descEncoding.enumerable);
+// CHECK-NEXT: true
+print(descEncoding.configurable);
+// CHECK-NEXT: true
+
+const descFatal = Object.getOwnPropertyDescriptor(TextDecoder.prototype, 'fatal');
+print(descFatal.enumerable);
+// CHECK-NEXT: true
+print(descFatal.configurable);
+// CHECK-NEXT: true
+
+const descIgnoreBOM = Object.getOwnPropertyDescriptor(TextDecoder.prototype, 'ignoreBOM');
+print(descIgnoreBOM.enumerable);
+// CHECK-NEXT: true
+print(descIgnoreBOM.configurable);
+// CHECK-NEXT: true
+
+// Test constructor options
+var decoderWithOptions = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
+print(decoderWithOptions.encoding);
+// CHECK-NEXT: utf-8
+print(decoderWithOptions.fatal);
+// CHECK-NEXT: true
+print(decoderWithOptions.ignoreBOM);
+// CHECK-NEXT: true
+
+// Test encoding labels
+var utf8Decoder = new TextDecoder('utf8');
+print(utf8Decoder.encoding);
+// CHECK-NEXT: utf-8
+
+var utf16leDecoder = new TextDecoder('utf-16le');
+print(utf16leDecoder.encoding);
+// CHECK-NEXT: utf-16le
+
+var utf16beDecoder = new TextDecoder('utf-16be');
+print(utf16beDecoder.encoding);
+// CHECK-NEXT: utf-16be
+
+var latin1Decoder = new TextDecoder('iso-8859-1');
+print(latin1Decoder.encoding);
+// CHECK-NEXT: iso-8859-1
+
+var latin1Decoder2 = new TextDecoder('latin1');
+print(latin1Decoder2.encoding);
+// CHECK-NEXT: iso-8859-1
+
+// Test unknown encoding
+try {
+  new TextDecoder('unknown-encoding');
+} catch (e) {
+  print(e.name);
+  // CHECK-NEXT: RangeError
+}
+
+// Test decoding empty input
+print(decoder.decode() === '');
+// CHECK-NEXT: true
+
+print(decoder.decode(undefined) === '');
+// CHECK-NEXT: true
+
+print(decoder.decode(new Uint8Array(0)) === '');
+// CHECK-NEXT: true
+
+// Test basic UTF-8 decoding
+var utf8Bytes = new Uint8Array([116, 101, 115, 116]); // "test"
+print(decoder.decode(utf8Bytes));
+// CHECK-NEXT: test
+
+// Test UTF-8 with multi-byte characters
+// "↑↓" = U+2191 U+2193 = E2 86 91 E2 86 93
+var arrowBytes = new Uint8Array([0xE2, 0x86, 0x91, 0xE2, 0x86, 0x93]);
+print(decoder.decode(arrowBytes));
+// CHECK-NEXT: ↑↓
+
+// Test UTF-8 with 4-byte character (emoji)
+// "😃" = U+1F603 = F0 9F 98 83
+var emojiBytes = new Uint8Array([0xF0, 0x9F, 0x98, 0x83]);
+print(decoder.decode(emojiBytes));
+// CHECK-NEXT: 😃
+
+// Test UTF-8 BOM handling (default: skip BOM)
+var utf8WithBOM = new Uint8Array([0xEF, 0xBB, 0xBF, 116, 101, 115, 116]);
+print(decoder.decode(utf8WithBOM));
+// CHECK-NEXT: test
+
+// Test UTF-8 BOM with ignoreBOM=true (include BOM in output)
+var decoderIgnoreBOM = new TextDecoder('utf-8', { ignoreBOM: true });
+var result = decoderIgnoreBOM.decode(utf8WithBOM);
+print(result.length);
+// CHECK-NEXT: 5
+
+// Test invalid UTF-8 handling (non-fatal, replacement character)
+var invalidUtf8 = new Uint8Array([0x80, 0x81, 116, 101, 115, 116]);
+var decoded = decoder.decode(invalidUtf8);
+print(decoded.length);
+// CHECK-NEXT: 6
+print(decoded.charCodeAt(0));
+// CHECK-NEXT: 65533
+print(decoded.charCodeAt(1));
+// CHECK-NEXT: 65533
+
+// Test fatal mode for invalid UTF-8
+var fatalDecoder = new TextDecoder('utf-8', { fatal: true });
+try {
+  fatalDecoder.decode(new Uint8Array([0x80]));
+} catch (e) {
+  print(e.name);
+  // CHECK-NEXT: TypeError
+}
+
+// Test UTF-16LE decoding
+// "test" in UTF-16LE = 74 00 65 00 73 00 74 00
+var utf16leBytes = new Uint8Array([0x74, 0x00, 0x65, 0x00, 0x73, 0x00, 0x74, 0x00]);
+print(utf16leDecoder.decode(utf16leBytes));
+// CHECK-NEXT: test
+
+// Test UTF-16LE with BOM (FF FE)
+var utf16leWithBOM = new Uint8Array([0xFF, 0xFE, 0x74, 0x00, 0x65, 0x00, 0x73, 0x00, 0x74, 0x00]);
+print(utf16leDecoder.decode(utf16leWithBOM));
+// CHECK-NEXT: test
+
+// Test UTF-16BE decoding
+// "test" in UTF-16BE = 00 74 00 65 00 73 00 74
+var utf16beBytes = new Uint8Array([0x00, 0x74, 0x00, 0x65, 0x00, 0x73, 0x00, 0x74]);
+print(utf16beDecoder.decode(utf16beBytes));
+// CHECK-NEXT: test
+
+// Test UTF-16BE with BOM (FE FF)
+var utf16beWithBOM = new Uint8Array([0xFE, 0xFF, 0x00, 0x74, 0x00, 0x65, 0x00, 0x73, 0x00, 0x74]);
+print(utf16beDecoder.decode(utf16beWithBOM));
+// CHECK-NEXT: test
+
+// Test Latin-1 decoding
+// "café" in Latin-1 = 63 61 66 E9
+var latin1Bytes = new Uint8Array([0x63, 0x61, 0x66, 0xE9]);
+print(latin1Decoder.decode(latin1Bytes));
+// CHECK-NEXT: café
+
+// Test Latin-1 with high bytes
+var latin1High = new Uint8Array([0xA9, 0xAE, 0xB0]); // ©®°
+print(latin1Decoder.decode(latin1High));
+// CHECK-NEXT: ©®°
+
+// Test decoding with ArrayBuffer
+var buffer = new ArrayBuffer(4);
+var view = new Uint8Array(buffer);
+view[0] = 116; view[1] = 101; view[2] = 115; view[3] = 116;
+print(decoder.decode(buffer));
+// CHECK-NEXT: test
+
+// Test decoding with DataView
+var dataView = new DataView(buffer);
+print(decoder.decode(dataView));
+// CHECK-NEXT: test
+
+// Test decoding with DataView slice
+var largeBuffer = new ArrayBuffer(10);
+var largeView = new Uint8Array(largeBuffer);
+largeView[2] = 116; largeView[3] = 101; largeView[4] = 115; largeView[5] = 116;
+var sliceDataView = new DataView(largeBuffer, 2, 4);
+print(decoder.decode(sliceDataView));
+// CHECK-NEXT: test
+
+// Test error handling for non-TextDecoder object
+try {
+  const b = {};
+  TextDecoder.prototype.decode.call(b, new Uint8Array(0));
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextDecoder.prototype.decode() called on non-TextDecoder object
+}
+
+try {
+  TextDecoder.prototype.decode.call(undefined, new Uint8Array(0));
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextDecoder.prototype.decode() called on non-TextDecoder object
+}
+
+// Test error handling for encoding getter
+try {
+  TextDecoder.prototype.encoding;
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextDecoder.prototype.encoding called on non-TextDecoder object
+}
+
+// Test error handling for fatal getter
+try {
+  TextDecoder.prototype.fatal;
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextDecoder.prototype.fatal called on non-TextDecoder object
+}
+
+// Test error handling for ignoreBOM getter
+try {
+  TextDecoder.prototype.ignoreBOM;
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextDecoder.prototype.ignoreBOM called on non-TextDecoder object
+}
+
+// Test that TextDecoder must be called as a constructor
+try {
+  TextDecoder();
+} catch (e) {
+  print(e.message);
+  // CHECK-NEXT: TextDecoder must be called as a constructor
+}
+
+// Test roundtrip with TextEncoder
+var encoder = new TextEncoder();
+var originalText = "Hello, 世界! 🌍";
+var encoded = encoder.encode(originalText);
+var decoded = decoder.decode(encoded);
+print(decoded === originalText);
+// CHECK-NEXT: true

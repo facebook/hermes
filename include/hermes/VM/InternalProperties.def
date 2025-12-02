@@ -34,6 +34,9 @@ NAMED_PROP(ExternalMemoryPressure)
 
 /// A reserved symbol ID to use for the HC transition to the frozen state.
 NAMED_PROP(FreezeTransition)
+NAMED_PROP(TextDecoderEncoding)
+NAMED_PROP(TextDecoderFatal)
+NAMED_PROP(TextDecoderIgnoreBOM)
 
 #undef PROP
 #undef NAMED_PROP

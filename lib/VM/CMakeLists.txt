@@ -132,6 +132,7 @@ set(source_files
   JSLib/eval.cpp
   JSLib/escape.cpp
   JSLib/require.cpp
+  JSLib/TextDecoder.cpp
 )
 
 if (${HERMESVM_GCKIND} STREQUAL "MALLOC")

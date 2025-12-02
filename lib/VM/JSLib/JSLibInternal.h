@@ -365,6 +365,9 @@ HermesValue createGeneratorFunctionConstructor(Runtime &runtime);
 /// Create the AsyncFunction constructor and populate methods.
 HermesValue createAsyncFunctionConstructor(Runtime &runtime);
 
+/// Create the TextDecoder constructor and populate methods.
+Handle<JSObject> createTextDecoderConstructor(Runtime &runtime);
+
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime &runtime);
 
