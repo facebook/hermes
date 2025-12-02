@@ -1224,6 +1224,30 @@ ESTREE_NODE_3_ARGS(
     NodePtr, local, false,
     NodeBoolean, shorthand, false)
 
+ESTREE_NODE_4_ARGS(
+    RecordDeclaration, Flow,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodeList, implements, false,
+    NodePtr, body, false)
+ESTREE_NODE_2_ARGS(
+    RecordDeclarationImplements, Flow,
+    NodePtr, id, false,
+    NodePtr, typeArguments, true)
+ESTREE_NODE_1_ARGS(
+    RecordDeclarationBody, Flow,
+    NodeList, elements, false)
+ESTREE_NODE_3_ARGS(
+    RecordDeclarationProperty, Flow,
+    NodePtr, key, false,
+    NodePtr, typeAnnotation, false,
+    NodePtr, defaultValue, true)
+ESTREE_NODE_3_ARGS(
+    RecordDeclarationStaticProperty, Flow,
+    NodePtr, key, false,
+    NodePtr, typeAnnotation, false,
+    NodePtr, value, false)
+
 ESTREE_LAST(Flow)
 
 #endif

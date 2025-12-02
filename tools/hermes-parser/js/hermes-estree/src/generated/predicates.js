@@ -187,6 +187,11 @@ import type {
   PropertyDefinition,
   QualifiedTypeIdentifier,
   QualifiedTypeofIdentifier,
+  RecordDeclaration,
+  RecordDeclarationBody,
+  RecordDeclarationImplements,
+  RecordDeclarationProperty,
+  RecordDeclarationStaticProperty,
   RestElement,
   ReturnStatement,
   SequenceExpression,
@@ -1009,6 +1014,31 @@ export function isQualifiedTypeIdentifier(node /*: ESNode | Token */) /*: implie
 
 export function isQualifiedTypeofIdentifier(node /*: ESNode | Token */) /*: implies node is QualifiedTypeofIdentifier */ {
   return node.type === 'QualifiedTypeofIdentifier';
+}
+    
+
+export function isRecordDeclaration(node /*: ESNode | Token */) /*: implies node is RecordDeclaration */ {
+  return node.type === 'RecordDeclaration';
+}
+    
+
+export function isRecordDeclarationBody(node /*: ESNode | Token */) /*: implies node is RecordDeclarationBody */ {
+  return node.type === 'RecordDeclarationBody';
+}
+    
+
+export function isRecordDeclarationImplements(node /*: ESNode | Token */) /*: implies node is RecordDeclarationImplements */ {
+  return node.type === 'RecordDeclarationImplements';
+}
+    
+
+export function isRecordDeclarationProperty(node /*: ESNode | Token */) /*: implies node is RecordDeclarationProperty */ {
+  return node.type === 'RecordDeclarationProperty';
+}
+    
+
+export function isRecordDeclarationStaticProperty(node /*: ESNode | Token */) /*: implies node is RecordDeclarationStaticProperty */ {
+  return node.type === 'RecordDeclarationStaticProperty';
 }
     
 

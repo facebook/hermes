@@ -1935,6 +1935,7 @@ const getTransforms = (
         switch (node.declaration.type) {
           case 'ClassDeclaration':
           case 'ComponentDeclaration':
+          case 'RecordDeclaration':
           case 'HookDeclaration':
           case 'FunctionDeclaration':
           case 'VariableDeclaration':

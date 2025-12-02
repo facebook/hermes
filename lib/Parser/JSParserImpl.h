@@ -337,6 +337,8 @@ class JSParserImpl {
 
   UniqueString *matchIdent_;
   UniqueString *underscoreIdent_;
+
+  UniqueString *recordIdent_;
 #endif
 
 #if HERMES_PARSE_TS
@@ -583,6 +585,9 @@ class JSParserImpl {
       }
       if (context_.getParseFlowComponentSyntax() &&
           checkHookDeclarationFlow()) {
+        return true;
+      }
+      if (checkRecordDeclarationFlow()) {
         return true;
       }
       if (check(opaqueIdent_)) {
@@ -1313,6 +1318,13 @@ class JSParserImpl {
       ESTree::NodeList &properties,
       ESTree::Node *&rest);
   Optional<ESTree::Node *> parseMatchArrayPatternFlow();
+
+  /// Checks if we are at the start of a Flow record declaration:
+  /// `record` [no LineTerminator here] <Identifier>
+  bool checkRecordDeclarationFlow();
+  Optional<ESTree::Node *> parseRecordDeclarationFlow(SMLoc start);
+  Optional<ESTree::RecordDeclarationImplementsNode *>
+  parseRecordDeclarationImplementsFlow();
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);

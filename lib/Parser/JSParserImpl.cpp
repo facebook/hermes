@@ -130,6 +130,9 @@ void JSParserImpl::initializeIdentifiers() {
   // Flow match expressions and statements
   matchIdent_ = lexer_.getIdentifier("match");
   underscoreIdent_ = lexer_.getIdentifier("_");
+
+  // Flow Record syntax
+  recordIdent_ = lexer_.getIdentifier("record");
 #endif
 
 #if HERMES_PARSE_TS
@@ -6891,6 +6894,17 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           startLoc,
           *optEnum,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optEnum));
+    } else if (
+        context_.getParseFlow() && context_.getParseFlowRecords() &&
+        checkRecordDeclarationFlow()) {
+      auto optRecord = parseRecordDeclarationFlow(tok_->getStartLoc());
+      if (!optRecord) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optRecord,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optRecord));
 #endif
     } else {
       // export default AssignmentExpression ;

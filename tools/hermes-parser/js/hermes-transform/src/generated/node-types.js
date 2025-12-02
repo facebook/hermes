@@ -167,6 +167,11 @@ import type {
   PropertyDefinition as PropertyDefinitionType,
   QualifiedTypeIdentifier as QualifiedTypeIdentifierType,
   QualifiedTypeofIdentifier as QualifiedTypeofIdentifierType,
+  RecordDeclaration as RecordDeclarationType,
+  RecordDeclarationBody as RecordDeclarationBodyType,
+  RecordDeclarationImplements as RecordDeclarationImplementsType,
+  RecordDeclarationProperty as RecordDeclarationPropertyType,
+  RecordDeclarationStaticProperty as RecordDeclarationStaticPropertyType,
   RestElement as RestElementType,
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
@@ -1083,6 +1088,46 @@ export type QualifiedTypeofIdentifierProps = {
     QualifiedTypeofIdentifierType['qualification'],
   >,
   +id: MaybeDetachedNode<QualifiedTypeofIdentifierType['id']>,
+};
+
+export type RecordDeclarationProps = {
+  +id: MaybeDetachedNode<RecordDeclarationType['id']>,
+  +typeParameters?: ?MaybeDetachedNode<RecordDeclarationType['typeParameters']>,
+  +implements: $ReadOnlyArray<
+    MaybeDetachedNode<RecordDeclarationType['implements'][number]>,
+  >,
+  +body: MaybeDetachedNode<RecordDeclarationType['body']>,
+};
+
+export type RecordDeclarationBodyProps = {
+  +elements: $ReadOnlyArray<
+    MaybeDetachedNode<RecordDeclarationBodyType['elements'][number]>,
+  >,
+};
+
+export type RecordDeclarationImplementsProps = {
+  +id: MaybeDetachedNode<RecordDeclarationImplementsType['id']>,
+  +typeArguments?: ?MaybeDetachedNode<
+    RecordDeclarationImplementsType['typeArguments'],
+  >,
+};
+
+export type RecordDeclarationPropertyProps = {
+  +key: MaybeDetachedNode<RecordDeclarationPropertyType['key']>,
+  +typeAnnotation: MaybeDetachedNode<
+    RecordDeclarationPropertyType['typeAnnotation'],
+  >,
+  +defaultValue?: ?MaybeDetachedNode<
+    RecordDeclarationPropertyType['defaultValue'],
+  >,
+};
+
+export type RecordDeclarationStaticPropertyProps = {
+  +key: MaybeDetachedNode<RecordDeclarationStaticPropertyType['key']>,
+  +typeAnnotation: MaybeDetachedNode<
+    RecordDeclarationStaticPropertyType['typeAnnotation'],
+  >,
+  +value: MaybeDetachedNode<RecordDeclarationStaticPropertyType['value']>,
 };
 
 export type RestElementProps = {
@@ -3398,6 +3443,89 @@ export function QualifiedTypeofIdentifier(props: {
       type: 'QualifiedTypeofIdentifier',
       qualification: asDetachedNodeForCodeGen(props.qualification),
       id: asDetachedNodeForCodeGen(props.id),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclaration(props: {
+  ...RecordDeclarationProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationType> {
+  const node = detachedProps<RecordDeclarationType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclaration',
+      id: asDetachedNodeForCodeGen(props.id),
+      typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+      implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
+      body: asDetachedNodeForCodeGen(props.body),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationBody(props: {
+  ...RecordDeclarationBodyProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationBodyType> {
+  const node = detachedProps<RecordDeclarationBodyType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationBody',
+      elements: props.elements.map(n => asDetachedNodeForCodeGen(n)),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationImplements(props: {
+  ...RecordDeclarationImplementsProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationImplementsType> {
+  const node = detachedProps<RecordDeclarationImplementsType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationImplements',
+      id: asDetachedNodeForCodeGen(props.id),
+      typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationProperty(props: {
+  ...RecordDeclarationPropertyProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationPropertyType> {
+  const node = detachedProps<RecordDeclarationPropertyType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationProperty',
+      key: asDetachedNodeForCodeGen(props.key),
+      typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+      defaultValue: asDetachedNodeForCodeGen(props.defaultValue),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationStaticProperty(props: {
+  ...RecordDeclarationStaticPropertyProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationStaticPropertyType> {
+  const node = detachedProps<RecordDeclarationStaticPropertyType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationStaticProperty',
+      key: asDetachedNodeForCodeGen(props.key),
+      typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+      value: asDetachedNodeForCodeGen(props.value),
     },
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));

@@ -269,6 +269,7 @@ export default ({
   OptionalIndexedAccessType: ['Flow', 'FlowType'],
   MatchExpression: ['Expression'],
   MatchStatement: ['Statement'],
+  RecordDeclaration: ['Statement', 'Declaration'],
   JSXAttribute: ['JSX', 'Immutable'],
   JSXClosingElement: ['JSX', 'Immutable'],
   JSXElement: ['JSX', 'Immutable', 'Expression'],

@@ -192,6 +192,7 @@ export function isStatement(node /*: ESNode */) /*: implies node is Statement */
     node.type === 'LabeledStatement' ||
     node.type === 'MatchStatement' ||
     node.type === 'OpaqueType' ||
+    node.type === 'RecordDeclaration' ||
     node.type === 'ReturnStatement' ||
     node.type === 'SwitchStatement' ||
     node.type === 'ThrowStatement' ||

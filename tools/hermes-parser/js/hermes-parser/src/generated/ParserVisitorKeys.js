@@ -620,6 +620,29 @@ export const HERMES_AST_VISITOR_KEYS = {
     qualification: 'Node',
     id: 'Node',
   },
+  RecordDeclaration: {
+    id: 'Node',
+    typeParameters: 'Node',
+    implements: 'NodeList',
+    body: 'Node',
+  },
+  RecordDeclarationBody: {
+    elements: 'NodeList',
+  },
+  RecordDeclarationImplements: {
+    id: 'Node',
+    typeArguments: 'Node',
+  },
+  RecordDeclarationProperty: {
+    key: 'Node',
+    typeAnnotation: 'Node',
+    defaultValue: 'Node',
+  },
+  RecordDeclarationStaticProperty: {
+    key: 'Node',
+    typeAnnotation: 'Node',
+    value: 'Node',
+  },
   RegExpLiteral: {},
   RestElement: {
     argument: 'Node',

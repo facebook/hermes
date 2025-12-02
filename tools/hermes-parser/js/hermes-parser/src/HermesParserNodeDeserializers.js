@@ -1758,6 +1758,49 @@ function deserializeComponentParameter() {
     shorthand: this.deserializeBoolean(),
   };
 }
+function deserializeRecordDeclaration() {
+  return {
+    type: 'RecordDeclaration',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    typeParameters: this.deserializeNode(),
+    implements: this.deserializeNodeList(),
+    body: this.deserializeNode(),
+  };
+}
+function deserializeRecordDeclarationImplements() {
+  return {
+    type: 'RecordDeclarationImplements',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    typeArguments: this.deserializeNode(),
+  };
+}
+function deserializeRecordDeclarationBody() {
+  return {
+    type: 'RecordDeclarationBody',
+    loc: this.addEmptyLoc(),
+    elements: this.deserializeNodeList(),
+  };
+}
+function deserializeRecordDeclarationProperty() {
+  return {
+    type: 'RecordDeclarationProperty',
+    loc: this.addEmptyLoc(),
+    key: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+    defaultValue: this.deserializeNode(),
+  };
+}
+function deserializeRecordDeclarationStaticProperty() {
+  return {
+    type: 'RecordDeclarationStaticProperty',
+    loc: this.addEmptyLoc(),
+    key: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+    value: this.deserializeNode(),
+  };
+}
 function deserializeFlowLast() {
   throw new Error('Flow' + ' should not appear in program buffer');
 }
@@ -2381,6 +2424,11 @@ module.exports = [
   deserializeEnumBigIntMember,
   deserializeEnumBooleanMember,
   deserializeComponentParameter,
+  deserializeRecordDeclaration,
+  deserializeRecordDeclarationImplements,
+  deserializeRecordDeclarationBody,
+  deserializeRecordDeclarationProperty,
+  deserializeRecordDeclarationStaticProperty,
   deserializeFlowLast,
   deserializeTSFirst,
   deserializeTSTypeAnnotation,

@@ -31,6 +31,10 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
     return parseHookDeclarationFlow(start);
   }
 
+  if (context_.getParseFlowRecords() && checkRecordDeclarationFlow()) {
+    return parseRecordDeclarationFlow(start);
+  }
+
   if (check(TokenKind::rw_enum)) {
     auto optEnum = parseEnumDeclarationFlow(start, /* declare */ false);
     if (!optEnum)
@@ -1538,6 +1542,313 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchArrayPatternFlow() {
       startLoc,
       getPrevTokenEndLoc(),
       new (context_) ESTree::MatchArrayPatternNode(std::move(elements), rest));
+}
+
+bool JSParserImpl::checkRecordDeclarationFlow() {
+  if (!check(recordIdent_))
+    return false;
+
+  // Don't pass an `expectedToken` so we don't advance on a match. This allows
+  // `parseRecordDeclarationFlow` to reparse the token and store useful
+  // information. Additionally to be used within `checkDeclaration` this
+  // function must be idempotent.
+  OptValue<TokenKind> optNext = lexer_.lookahead1(None);
+  return optNext.hasValue() && *optNext == TokenKind::identifier;
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
+  assert(check(recordIdent_));
+  advance();
+
+  auto optId = parseBindingIdentifier(Param{});
+
+  if (!optId) {
+    errorExpected(
+        TokenKind::identifier, "after 'record'", "location of 'record'", start);
+    return None;
+  }
+
+  ESTree::Node *typeParams = nullptr;
+
+  if (check(TokenKind::less)) {
+    auto optTypeParams = parseTypeParamsFlow();
+    if (!optTypeParams)
+      return None;
+    typeParams = *optTypeParams;
+  }
+
+  // Parse optional 'implements' clause
+  ESTree::NodeList implementsList;
+  if (check(implementsIdent_)) {
+    advance(JSLexer::GrammarContext::Type);
+    do {
+      if (!need(
+              TokenKind::identifier,
+              "in record 'implements'",
+              "start of declaration",
+              start))
+        return None;
+      auto optImplements = parseRecordDeclarationImplementsFlow();
+      if (!optImplements)
+        return None;
+      implementsList.push_back(**optImplements);
+    } while (checkAndEat(TokenKind::comma, JSLexer::GrammarContext::Type));
+  }
+
+  if (!need(
+          TokenKind::l_brace,
+          "in record declaration",
+          "start of record declaration",
+          start)) {
+    return None;
+  }
+
+  // Parse record body
+  SMLoc bodyStart = advance().Start;
+  ESTree::NodeList bodyElements;
+
+  while (!check(TokenKind::r_brace)) {
+    if (check(TokenKind::eof)) {
+      errorExpected(
+          TokenKind::r_brace,
+          "in record body",
+          "start of record body",
+          bodyStart);
+      return None;
+    }
+
+    const auto isModifierKeyword = [this]() -> bool {
+      auto optNext = lexer_.lookahead1(llvh::None);
+      if (!optNext)
+        return false;
+
+      switch (*optNext) {
+        case TokenKind::colon: // token: T
+        case TokenKind::less: // token<T>() {}
+        case TokenKind::l_paren: // token() {}
+        case TokenKind::r_brace: // end of record
+        case TokenKind::eof: // end of file
+          return false;
+        default:
+          return true;
+      }
+    };
+
+    // Parse modifiers: static, async, generator (*)
+    bool isStatic = false;
+    if ((check(staticIdent_)) && isModifierKeyword()) {
+      advance();
+      isStatic = true;
+    }
+    bool isAsync = false;
+    if (check(asyncIdent_) && isModifierKeyword()) {
+      advance();
+      isAsync = true;
+    }
+    bool isGenerator = checkAndEat(TokenKind::star);
+
+    // Parse property/method key
+    if (!check(TokenKind::identifier)) {
+      errorExpected(
+          TokenKind::identifier,
+          "in record body",
+          "start of record body",
+          bodyStart);
+      return None;
+    }
+
+    SMLoc keyStart = tok_->getStartLoc();
+    auto *key = setLocation(
+        tok_,
+        tok_,
+        new (context_)
+            ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+    advance();
+
+    if (key->_name == constructorIdent_ ||
+        (isStatic && key->_name == prototypeIdent_)) {
+      error(key->getSourceRange(), "invalid record property name");
+      return None;
+    }
+
+    if (checkAndEat(TokenKind::colon)) {
+      // Property
+      if (isAsync || isGenerator) {
+        error(
+            key->getSourceRange(),
+            "invalid async/generator modifier for record property, expected a method definition");
+        return None;
+      }
+      auto optType = parseTypeAnnotationFlow();
+      if (!optType)
+        return None;
+
+      ESTree::Node *value = nullptr;
+      if (checkAndEat(TokenKind::equal)) {
+        auto optValue = parseAssignmentExpression();
+        if (!optValue)
+          return None;
+        value = *optValue;
+      }
+
+      ESTree::Node *prop;
+      if (isStatic) {
+        if (!value) {
+          error(
+              key->getEndLoc(),
+              "static record properties must have an initializer");
+          return None;
+        }
+        prop = setLocation(
+            keyStart,
+            value,
+            new (context_) ESTree::RecordDeclarationStaticPropertyNode(
+                key, *optType, value));
+      } else {
+        prop = setLocation(
+            keyStart,
+            value ? value : *optType,
+            new (context_)
+                ESTree::RecordDeclarationPropertyNode(key, *optType, value));
+      }
+      bodyElements.push_back(*prop);
+
+      if (!check(TokenKind::r_brace, TokenKind::eof)) {
+        if (!eat(
+                TokenKind::comma,
+                JSLexer::GrammarContext::AllowRegExp,
+                "after property",
+                "start of property",
+                keyStart)) {
+          return None;
+        }
+      }
+    } else if (check(TokenKind::l_paren) || check(TokenKind::less)) {
+      // Method
+      ESTree::Node *methodTypeParams = nullptr;
+      if (check(TokenKind::less)) {
+        auto optTypeParams = parseTypeParamsFlow();
+        if (!optTypeParams)
+          return None;
+        methodTypeParams = *optTypeParams;
+      }
+
+      if (!check(TokenKind::l_paren)) {
+        errorExpected(
+            TokenKind::l_paren,
+            "in method parameters",
+            "start of method",
+            keyStart);
+        return None;
+      }
+
+      ESTree::NodeList paramList;
+      if (!parseFormalParameters(Param{}, paramList))
+        return None;
+
+      ESTree::Node *returnType = nullptr;
+      if (check(TokenKind::colon)) {
+        SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+        auto optRet = parseReturnTypeAnnotationFlow(annotStart);
+        if (!optRet)
+          return None;
+        returnType = *optRet;
+      }
+
+      if (!check(TokenKind::l_brace)) {
+        errorExpected(
+            TokenKind::l_brace, "in method body", "start of method", keyStart);
+        return None;
+      }
+
+      llvh::SaveAndRestore<bool> oldParamYield(paramYield_, isGenerator);
+      llvh::SaveAndRestore<bool> oldParamAwait(paramAwait_, isAsync);
+
+      SaveFunctionState saveFunctionState{this};
+      auto parsedBody = parseFunctionBody(
+          Param{},
+          false,
+          oldParamYield.get(),
+          oldParamAwait.get(),
+          JSLexer::AllowRegExp,
+          true);
+      if (!parsedBody)
+        return None;
+      auto *methodBody = parsedBody.getValue();
+
+      auto *funcExpr = setLocation(
+          keyStart,
+          methodBody,
+          new (context_) ESTree::FunctionExpressionNode(
+              nullptr,
+              std::move(paramList),
+              methodBody,
+              methodTypeParams,
+              returnType,
+              nullptr,
+              isGenerator,
+              isAsync));
+
+      auto *method = setLocation(
+          keyStart,
+          methodBody,
+          new (context_) ESTree::MethodDefinitionNode(
+              key, funcExpr, methodIdent_, false, isStatic));
+      bodyElements.push_back(*method);
+    } else {
+      error(
+          key->getEndLoc(),
+          "expected ':' for property, '(' for method, or '<' for method with type parameters");
+      return None;
+    }
+  }
+
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::GrammarContext::AllowRegExp,
+          "in record body",
+          "start of record body",
+          bodyStart)) {
+    return None;
+  }
+
+  auto *body = setLocation(
+      bodyStart,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::RecordDeclarationBodyNode(std::move(bodyElements)));
+
+  return setLocation(
+      start,
+      body,
+      new (context_) ESTree::RecordDeclarationNode(
+          *optId, typeParams, std::move(implementsList), body));
+}
+
+Optional<ESTree::RecordDeclarationImplementsNode *>
+JSParserImpl::parseRecordDeclarationImplementsFlow() {
+  assert(check(TokenKind::identifier));
+  SMLoc start = tok_->getStartLoc();
+
+  ESTree::Node *id = setLocation(
+      tok_,
+      tok_,
+      new (context_)
+          ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
+  advance(JSLexer::GrammarContext::Type);
+
+  ESTree::Node *typeArgs = nullptr;
+  if (check(TokenKind::less)) {
+    auto optTypeArgs = parseTypeArgsFlow();
+    if (!optTypeArgs)
+      return None;
+    typeArgs = *optTypeArgs;
+  }
+
+  return setLocation(
+      start,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::RecordDeclarationImplementsNode(id, typeArgs));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(

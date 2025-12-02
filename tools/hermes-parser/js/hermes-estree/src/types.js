@@ -210,6 +210,12 @@ export type ESNode =
   | MatchInstanceObjectPattern
   | MatchExpressionCase
   | MatchStatementCase
+  // Records
+  | RecordDeclaration
+  | RecordDeclarationImplements
+  | RecordDeclarationBody
+  | RecordDeclarationProperty
+  | RecordDeclarationStaticProperty
   // JSX
   | JSXNode;
 
@@ -277,7 +283,8 @@ export type Statement =
   | VariableDeclaration
   | WhileStatement
   | WithStatement
-  | MatchStatement;
+  | MatchStatement
+  | RecordDeclaration;
 
 // nodes that can be the direct parent of a statement
 export type StatementParentSingle =
@@ -1091,7 +1098,8 @@ export type NamedDeclaration =
   | TypeAlias
   | OpaqueType
   | InterfaceDeclaration
-  | EnumDeclaration;
+  | EnumDeclaration
+  | RecordDeclaration;
 
 interface ExportNamedDeclarationBase extends BaseNode {
   +type: 'ExportNamedDeclaration';
@@ -2134,6 +2142,46 @@ export interface MatchArrayPattern extends BaseNode {
 export interface MatchRestPattern extends BaseNode {
   +type: 'MatchRestPattern';
   +argument: MatchBindingPattern | null;
+}
+
+/***********
+ * Records *
+ ***********/
+export interface RecordDeclaration extends BaseNode {
+  +type: 'RecordDeclaration';
+  +id: Identifier;
+  +typeParameters: TypeParameterDeclaration | null;
+  +implements: $ReadOnlyArray<RecordDeclarationImplements>;
+  +body: RecordDeclarationBody;
+}
+
+export interface RecordDeclarationImplements extends BaseNode {
+  +type: 'RecordDeclarationImplements';
+  +id: Identifier;
+  +typeArguments: TypeParameterInstantiation | null;
+}
+
+export interface RecordDeclarationBody extends BaseNode {
+  +type: 'RecordDeclarationBody';
+  +elements: $ReadOnlyArray<
+    | RecordDeclarationProperty
+    | RecordDeclarationStaticProperty
+    | MethodDefinition,
+  >;
+}
+
+export interface RecordDeclarationProperty extends BaseNode {
+  +type: 'RecordDeclarationProperty';
+  +key: Identifier;
+  +typeAnnotation: TypeAnnotation;
+  +defaultValue: Expression | null;
+}
+
+export interface RecordDeclarationStaticProperty extends BaseNode {
+  +type: 'RecordDeclarationStaticProperty';
+  +key: Identifier;
+  +typeAnnotation: TypeAnnotation;
+  +value: Expression;
 }
 
 /******************************************************
