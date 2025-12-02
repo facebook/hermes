@@ -101,13 +101,21 @@ class JSArrayBuffer final : public JSObject {
     return attached_;
   }
 
-  /// Free the data block owned by this JSArrayBuffer.
-  void freeInternalBuffer(GC &gc);
-
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
   static void detach(Runtime &runtime, Handle<JSArrayBuffer> self);
+
+  /// Marks the JS ArrayBuffer as detached and "ejects" the held data block,
+  /// releasing JS ArrayBuffer's ownership of the data. If the data block is an
+  /// internal buffer, it is untracked from GC, but not freed. Otherwise, the
+  /// external buffer is untracked by NativeState holding the buffer. The
+  /// external buffer may be cleaned up if the NativeState was the only thing
+  /// holding on to the buffer. WARNING: This is very dangerous and users must
+  /// obtain the ownership of the data block through getDataBlock or
+  /// getExternalDataContext before ejectng the buffer. \pre attached() must be
+  /// true
+  static void ejectBufferUnsafe(Runtime &runtime, Handle<JSArrayBuffer> self);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC &gc);
@@ -124,6 +132,12 @@ class JSArrayBuffer final : public JSObject {
       Runtime &runtime,
       Handle<JSArrayBuffer> self,
       Handle<> value);
+
+  /// Free the data block owned by this JSArrayBuffer.
+  void freeInternalBuffer(GC &gc);
+
+  /// Untrack the internal buffer from GC snapshots
+  void untrackInternalBuffer(GC &gc);
 
   /// data_, size_, and external_ are only valid when attached_ is true.
   uint8_t *data_;

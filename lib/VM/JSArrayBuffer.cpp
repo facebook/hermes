@@ -177,9 +177,13 @@ void JSArrayBuffer::freeInternalBuffer(GC &gc) {
   assert(!external_ && "External buffer cannot be freed");
 
   // Need to untrack the native memory that may have been tracked by snapshots.
-  gc.debitExternalMemory(this, size_);
-  gc.getIDTracker().untrackNative(data);
+  untrackInternalBuffer(gc);
   free(data);
+}
+
+void JSArrayBuffer::untrackInternalBuffer(GC &gc) {
+  gc.debitExternalMemory(this, size_);
+  gc.getIDTracker().untrackNative(data_);
 }
 
 void JSArrayBuffer::detach(Runtime &runtime, Handle<JSArrayBuffer> self) {
@@ -192,6 +196,19 @@ void JSArrayBuffer::detach(Runtime &runtime, Handle<JSArrayBuffer> self) {
   }
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
+  self->attached_ = false;
+}
+
+void JSArrayBuffer::ejectBufferUnsafe(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self) {
+  assert(self->attached() && "Buffer must be attached");
+  // Untrack the memory if the attached data block is internal.
+  if (!self->external_) {
+    self->untrackInternalBuffer(runtime.getHeap());
+  } else {
+    setExternalFinalizer(runtime, self, HandleRootOwner::getUndefinedValue());
+  }
   self->attached_ = false;
 }
 
