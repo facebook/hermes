@@ -827,10 +827,8 @@ HermesABIArrayBufferOrError create_arraybuffer_from_external_data(
     auto *self = static_cast<HermesABIMutableBuffer *>(ns->context());
     self->vtable->release(self);
   };
-  auto res = vm::JSArrayBuffer::setExternalDataBlock(
+  vm::JSArrayBuffer::setExternalDataBlock(
       runtime, lv.arrayBuffer, data, size, buf, finalize);
-  if (res == vm::ExecutionStatus::EXCEPTION)
-    return abi::createArrayBufferOrError(HermesABIErrorCodeJSError);
   return hart->createArrayBufferOrError(lv.arrayBuffer.getHermesValue());
 }
 

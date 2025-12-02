@@ -2670,9 +2670,8 @@ jsi::ArrayBuffer HermesRuntimeImpl::createArrayBuffer(
   auto finalize = [](vm::GC &, vm::NativeState *ns) {
     delete static_cast<std::shared_ptr<jsi::MutableBuffer> *>(ns->context());
   };
-  auto res = vm::JSArrayBuffer::setExternalDataBlock(
+  vm::JSArrayBuffer::setExternalDataBlock(
       runtime_, lv.buf, data, size, ctx, finalize);
-  checkStatus(res);
   return add<jsi::ArrayBuffer>(lv.buf.getHermesValue());
 }
 

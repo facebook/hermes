@@ -182,11 +182,9 @@ void JSArrayBuffer::freeInternalBuffer(GC &gc) {
   free(data);
 }
 
-ExecutionStatus JSArrayBuffer::detach(
-    Runtime &runtime,
-    Handle<JSArrayBuffer> self) {
+void JSArrayBuffer::detach(Runtime &runtime, Handle<JSArrayBuffer> self) {
   if (!self->attached())
-    return ExecutionStatus::RETURNED;
+    return;
   if (!self->external_)
     self->freeInternalBuffer(runtime.getHeap());
   else {
@@ -195,7 +193,6 @@ ExecutionStatus JSArrayBuffer::detach(
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
   self->attached_ = false;
-  return ExecutionStatus::RETURNED;
 }
 
 ExecutionStatus JSArrayBuffer::createDataBlock(
@@ -203,8 +200,7 @@ ExecutionStatus JSArrayBuffer::createDataBlock(
     Handle<JSArrayBuffer> self,
     size_type size,
     bool zero) {
-  if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
+  detach(runtime, self);
   uint8_t *data = nullptr;
   if (size > 0) {
     // If an external allocation of this size would exceed the GC heap size,
@@ -254,7 +250,7 @@ void JSArrayBuffer::setExternalFinalizer(
       "Writes to the external block internal property should never fail");
 }
 
-ExecutionStatus JSArrayBuffer::setExternalDataBlock(
+void JSArrayBuffer::setExternalDataBlock(
     Runtime &runtime,
     Handle<JSArrayBuffer> self,
     uint8_t *data,
@@ -266,8 +262,7 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
-  if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
+  detach(runtime, self);
 
   lv.ns = NativeState::create(runtime, context, finalizePtr);
   setExternalFinalizer(runtime, self, lv.ns);
@@ -275,7 +270,6 @@ ExecutionStatus JSArrayBuffer::setExternalDataBlock(
   self->size_ = size;
   self->external_ = true;
   self->data_ = data;
-  return ExecutionStatus::RETURNED;
 }
 
 } // namespace vm

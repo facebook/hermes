@@ -70,8 +70,7 @@ class JSArrayBuffer final : public JSObject {
   /// Sets the data block used by this JSArrayBuffer to be \p data, with size
   /// \p size. Ensures that \p finalizePtr is invoked with argument \p context
   /// at some point after this JSArrayBuffer has been garbage collected.
-  /// \return ExecutionStatus::RETURNED iff the data block was successfully set.
-  static ExecutionStatus setExternalDataBlock(
+  static void setExternalDataBlock(
       Runtime &runtime,
       Handle<JSArrayBuffer> self,
       uint8_t *data,
@@ -107,7 +106,7 @@ class JSArrayBuffer final : public JSObject {
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
-  static ExecutionStatus detach(Runtime &runtime, Handle<JSArrayBuffer> self);
+  static void detach(Runtime &runtime, Handle<JSArrayBuffer> self);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC &gc);
