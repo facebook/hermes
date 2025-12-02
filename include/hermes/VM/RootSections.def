@@ -27,6 +27,7 @@ ROOT_SECTION(WeakRefSlots)
 ROOT_SECTION(SymbolRegistry)
 ROOT_SECTION(SamplingProfiler)
 ROOT_SECTION(CodeCoverageProfiler)
+ROOT_SECTION(Serialization)
 ROOT_SECTION(Custom)
 
 #undef ROOT_SECTION

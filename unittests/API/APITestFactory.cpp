@@ -20,9 +20,15 @@ std::vector<RuntimeFactory> runtimeGenerators() {
         return makeHermesRuntime(
             ::hermes::vm::RuntimeConfig::Builder()
                 .withMicrotaskQueue(true)
+                .withEnableHermesInternalTestMethods(true)
                 .build());
       },
-      [] { return makeThreadSafeHermesRuntime(); }};
+      [] {
+        return makeThreadSafeHermesRuntime(
+            ::hermes::vm::RuntimeConfig::Builder()
+                .withEnableHermesInternalTestMethods(true)
+                .build());
+      }};
 }
 
 } // namespace jsi

@@ -98,6 +98,7 @@ struct StackTracesTree;
 struct Locals;
 template <CellKind C>
 class JSMapImpl;
+struct SerializationManagedValue;
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 class SamplingProfiler;
@@ -874,6 +875,10 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   const bool asyncBreakCheckInEval : 1;
 
   const SynthTraceMode traceMode;
+
+  /// A ManagedChunkedList that stores values currently being used for
+  /// serialization/deserialization
+  ManagedChunkedList<SerializationManagedValue> serializationValues_;
 
 #ifdef HERMESVM_PROFILER_OPCODE
   /// Track the frequency of each opcode in the interpreter.

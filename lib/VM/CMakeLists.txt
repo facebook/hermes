@@ -62,6 +62,7 @@ set(source_files
   Profiler/SamplingProfilerPosix.cpp
   Profiler/SamplingProfilerWindows.cpp
   Profiler/SamplingProfilerSampler.cpp
+  SerializedValue.cpp
   SingleObject.cpp
   StackFrame.cpp
   StackTracesTree.cpp

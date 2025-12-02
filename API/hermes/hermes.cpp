@@ -36,6 +36,7 @@
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/SerializedValue.h"
 #include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
@@ -178,6 +179,33 @@ struct UUIDInfo : llvh::DenseMapInfo<jsi::UUID> {
     return jsi::UUID::Hash()(Val);
   }
 };
+
+#ifdef JSI_UNSTABLE
+/// HermesSerialized represents a jsi::Serialized object produced by the Hermes
+/// runtime. HermesSerialized is hidden from users, who should remain unaware of
+/// the serialized type. However, it provides the implementation of the
+/// `getPrivate` function that allows Hermes runtimes to obtain the
+/// vm::SerializedValue object that actually holds the serialized data.
+class HermesSerialized final : public jsi::Serialized {
+ public:
+  vm::SerializedValue serialized_;
+
+  HermesSerialized(vm::SerializedValue &serializedValue)
+      : serialized_(std::move(serializedValue)) {}
+
+  static const void *getHermesSerializedSecret() {
+    static const uint8_t hidden = 0;
+    return &hidden;
+  }
+
+  void *getPrivate(const void *secretAddr) override {
+    if (secretAddr == getHermesSerializedSecret()) {
+      return &serialized_;
+    }
+    return nullptr;
+  }
+};
+#endif
 } // namespace
 
 class HermesRootAPI final : public IHermesRootAPI, public ISetFatalHandler {
@@ -213,7 +241,12 @@ namespace {
 class HermesRuntimeImpl final : public HermesRuntime,
                                 private IHermesTestHelpers,
                                 private InstallHermesFatalErrorHandler,
-                                private jsi::Instrumentation {
+                                private jsi::Instrumentation
+#ifdef JSI_UNSTABLE
+    ,
+                                public jsi::ISerialization
+#endif
+{
  public:
   HermesRuntimeImpl(const vm::RuntimeConfig &runtimeConfig)
       : hermesValues_(runtimeConfig.getGCConfig().getOccupancyTarget()),
@@ -652,6 +685,18 @@ class HermesRuntimeImpl final : public HermesRuntime,
       std::string sourceURL);
 
   ICast *castInterface(const jsi::UUID &interfaceUUID) override;
+
+#ifdef JSI_UNSTABLE
+  std::shared_ptr<jsi::Serialized> serialize(jsi::Value &value) override;
+  jsi::Value deserialize(
+      const std::shared_ptr<jsi::Serialized> &serialized) override;
+
+  std::unique_ptr<jsi::Serialized> serializeWithTransfer(
+      jsi::Value &value,
+      const jsi::Array &transferList) override;
+  jsi::Array deserializeWithTransfer(
+      std::unique_ptr<jsi::Serialized> &serialized) override;
+#endif
 
   // Concrete declarations of jsi::Runtime pure virtual methods
   std::shared_ptr<const jsi::PreparedJavaScript> prepareJavaScript(
@@ -1419,8 +1464,59 @@ jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
   } else if (interfaceUUID == IHermesSHUnit::uuid) {
     return static_cast<IHermesSHUnit *>(this);
   }
+#ifdef JSI_UNSTABLE
+  else if (interfaceUUID == ISerialization::uuid) {
+    return static_cast<ISerialization *>(this);
+  }
+#endif
   return nullptr;
 }
+
+#ifdef JSI_UNSTABLE
+std::shared_ptr<jsi::Serialized> HermesRuntimeImpl::serialize(
+    jsi::Value &value) {
+  vm::GCScope gcScope(runtime_);
+  vm::PinnedHermesValue numberStorage;
+  auto serializedRes =
+      vm::serialize_RJS(runtime_, vmHandleFromValue(value, &numberStorage));
+  checkStatus(serializedRes.getStatus());
+  return std::make_shared<HermesSerialized>(*serializedRes);
+}
+
+jsi::Value HermesRuntimeImpl::deserialize(
+    const std::shared_ptr<jsi::Serialized> &serialized) {
+  if (LLVM_UNLIKELY(!serialized)) {
+    throw jsi::JSINativeException("serialized cannot be null");
+  }
+
+  void *privateSerialized =
+      serialized->getPrivate(HermesSerialized::getHermesSerializedSecret());
+  if (LLVM_UNLIKELY(!privateSerialized)) {
+    throw jsi::JSINativeException(
+        "Cannot deserialize non-Hermes serialized objects");
+  }
+
+  vm::GCScope gcScope(runtime_);
+  auto serializedValue =
+      reinterpret_cast<vm::SerializedValue *>(privateSerialized);
+  auto deserializedRes = vm::deserialize(runtime_, *serializedValue);
+  checkStatus(deserializedRes.getStatus());
+  return valueFromHermesValue(*deserializedRes);
+}
+
+std::unique_ptr<jsi::Serialized> HermesRuntimeImpl::serializeWithTransfer(
+    jsi::Value &value,
+    const jsi::Array &transferList) {
+  throw jsi::JSINativeException(
+      "Transfer functionalities not yet implemented.");
+}
+
+jsi::Array HermesRuntimeImpl::deserializeWithTransfer(
+    std::unique_ptr<jsi::Serialized> &serialized) {
+  throw jsi::JSINativeException(
+      "Transfer functionalities not yet implemented.");
+}
+#endif
 
 sampling_profiler::Profile HermesRuntimeImpl::dumpSampledTraceToProfile() {
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE

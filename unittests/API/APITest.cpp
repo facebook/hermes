@@ -1629,9 +1629,923 @@ TEST_P(HermesRuntimeTest, ObjectTest) {
   EXPECT_THROW(obj.getProperty(*rt, badObjKey), JSError);
 }
 
+#ifdef JSI_UNSTABLE
+class HermesSerializationTest : public HermesRuntimeTest {
+ public:
+  HermesSerializationTest() : HermesRuntimeTest() {
+    serializationInterface = castInterface<ISerialization>(rt.get());
+  }
+
+  // Evaluate the given code and serialize its results
+  std::shared_ptr<Serialized> evalAndSerialize(const char *code) {
+    Value evalRes = eval(code);
+    return serializationInterface->serialize(evalRes);
+  }
+
+  // Deserialize the given Serialized object as a jsi::Object
+  Object deserializeAsObject(const std::shared_ptr<Serialized> &serialized) {
+    return serializationInterface->deserialize(serialized).getObject(*rt);
+  }
+
+  ISerialization *serializationInterface;
+};
+
+TEST_P(HermesSerializationTest, SerializePrimitives) {
+  auto serialized = evalAndSerialize("undefined");
+  auto deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_TRUE(deserialized.isUndefined());
+
+  serialized = evalAndSerialize("null");
+  deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_TRUE(deserialized.isNull());
+
+  serialized = evalAndSerialize("true");
+  deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_TRUE(deserialized.getBool());
+
+  serialized = evalAndSerialize("false");
+  deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_FALSE(deserialized.getBool());
+
+  serialized = evalAndSerialize("100.99");
+  deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_EQ(deserialized.getNumber(), 100.99);
+
+  serialized = evalAndSerialize("18446744073709551615n");
+  deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_EQ(
+      deserialized.getBigInt(*rt).toString(*rt).utf8(*rt),
+      "18446744073709551615");
+
+  serialized = evalAndSerialize("'this is an ascii string!'");
+  deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_EQ(deserialized.getString(*rt).utf8(*rt), "this is an ascii string!");
+
+  serialized = evalAndSerialize("'this is a utf16 string!\\ud83d\\udc4d'");
+  deserialized = serializationInterface->deserialize(serialized);
+  EXPECT_EQ(
+      deserialized.getString(*rt).utf16(*rt),
+      u"this is a utf16 string!\xd83d\xdc4d");
+
+  auto sym = eval("Symbol('foo')");
+  EXPECT_THROW(serializationInterface->serialize(sym), JSError);
+}
+
+TEST_P(HermesSerializationTest, SerializeSimpleObjectTypes) {
+  auto serialized = evalAndSerialize("new Boolean(true)");
+  auto deserializedObj = deserializeAsObject(serialized);
+  auto result = deserializedObj.getPropertyAsFunction(*rt, "valueOf")
+                    .callWithThis(*rt, deserializedObj);
+  EXPECT_TRUE(result.getBool());
+
+  serialized = evalAndSerialize("new Boolean(false)");
+  deserializedObj = deserializeAsObject(serialized);
+  result = deserializedObj.getPropertyAsFunction(*rt, "valueOf")
+               .callWithThis(*rt, deserializedObj);
+  EXPECT_FALSE(result.getBool());
+
+  serialized = evalAndSerialize("new Number(123.456)");
+  deserializedObj = deserializeAsObject(serialized);
+  result = deserializedObj.getPropertyAsFunction(*rt, "valueOf")
+               .callWithThis(*rt, deserializedObj);
+  EXPECT_EQ(result.getNumber(), 123.456);
+
+  serialized = evalAndSerialize("new Number('foobar')");
+  deserializedObj = deserializeAsObject(serialized);
+  result = deserializedObj.getPropertyAsFunction(*rt, "valueOf")
+               .callWithThis(*rt, deserializedObj);
+  EXPECT_TRUE(std::isnan(result.getNumber()));
+
+  serialized = evalAndSerialize("Object(18446744073709551615n)");
+  deserializedObj = deserializeAsObject(serialized);
+  result = deserializedObj.getPropertyAsFunction(*rt, "toString")
+               .callWithThis(*rt, deserializedObj);
+  EXPECT_EQ(result.getString(*rt).utf8(*rt), "18446744073709551615");
+
+  serialized = evalAndSerialize("new String('this is an ascii string!')");
+  deserializedObj = deserializeAsObject(serialized);
+  result = deserializedObj.getPropertyAsFunction(*rt, "valueOf")
+               .callWithThis(*rt, deserializedObj);
+  EXPECT_EQ(result.getString(*rt).utf8(*rt), "this is an ascii string!");
+
+  serialized =
+      evalAndSerialize("new String('this is a utf16 string!\\ud83d\\udc4d')");
+  deserializedObj = deserializeAsObject(serialized);
+  result = deserializedObj.getPropertyAsFunction(*rt, "valueOf")
+               .callWithThis(*rt, deserializedObj);
+  EXPECT_EQ(
+      result.getString(*rt).utf16(*rt), u"this is a utf16 string!\xd83d\xdc4d");
+
+  serialized = evalAndSerialize("new Date(2025, 5, 4)");
+  deserializedObj = deserializeAsObject(serialized);
+  result = deserializedObj.getPropertyAsFunction(*rt, "toDateString")
+               .callWithThis(*rt, deserializedObj);
+  EXPECT_EQ(result.getString(*rt).utf8(*rt), "Wed Jun 04 2025");
+}
+
+TEST_P(HermesSerializationTest, SerializeRegExp) {
+  // This will search for the word 'salty'. the 'i' flag indicate an
+  // case-insensitive search
+  auto exp = "/salty/i";
+  auto serialized = evalAndSerialize(exp);
+  auto deserializedObj = deserializeAsObject(serialized);
+
+  auto testFunc = deserializedObj.getPropertyAsFunction(*rt, "test");
+  auto result =
+      testFunc.callWithThis(*rt, deserializedObj, "My cat's name is Salty.");
+
+  EXPECT_TRUE(result.getBool());
+
+  // Using named capture groups
+  exp = "/(?<word>Foobar)/i";
+  serialized = evalAndSerialize(exp);
+  deserializedObj = deserializeAsObject(serialized);
+  auto execFunc = deserializedObj.getPropertyAsFunction(*rt, "exec");
+  auto testStr = "When I write tests, my go-to word is foobar";
+  result = execFunc.callWithThis(*rt, deserializedObj, testStr);
+  auto resultGroup = result.getObject(*rt).getPropertyAsObject(*rt, "groups");
+  auto word = resultGroup.getProperty(*rt, "word");
+  EXPECT_EQ(word.getString(*rt).utf8(*rt), "foobar");
+}
+
+TEST_P(HermesSerializationTest, SerializeObject) {
+  // A simple object with 2 properties
+  auto code = R"(
+var obj = {1:2, foo: 'bar'};
+obj;
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+  auto resultValue = deserializedObj.getProperty(*rt, "1");
+  EXPECT_EQ(resultValue.getNumber(), 2);
+  resultValue = deserializedObj.getProperty(*rt, "foo");
+  EXPECT_EQ(resultValue.getString(*rt).utf8(*rt), "bar");
+
+  // An object that uses the same string
+  code = R"(
+var obj = {foo:'bar', foo2: 'bar'};
+obj;
+ )";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+  resultValue = deserializedObj.getProperty(*rt, "foo");
+  EXPECT_EQ(resultValue.getString(*rt).utf8(*rt), "bar");
+  resultValue = deserializedObj.getProperty(*rt, "foo2");
+  EXPECT_EQ(resultValue.getString(*rt).utf8(*rt), "bar");
+
+  // An object that uses symbol for property key. Symbol should not be
+  // serialized.
+  auto sym = eval("var fooSym = Symbol('foo'); fooSym;").asSymbol(*rt);
+  code = R"(
+var obj = {1:2};
+obj[fooSym] = 'baz';
+obj;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+  // Check the symbol is on the original object
+  auto originalObj = rt->global().getPropertyAsObject(*rt, "obj");
+  EXPECT_TRUE(originalObj.hasProperty(*rt, PropNameID::forSymbol(*rt, sym)));
+  // Check the symbol is not on the cloned object
+  resultValue = deserializedObj.getProperty(*rt, "1");
+  EXPECT_EQ(resultValue.getNumber(), 2);
+  EXPECT_FALSE(
+      deserializedObj.hasProperty(*rt, PropNameID::forSymbol(*rt, sym)));
+
+  // An object that contains another object as a property
+  code = R"(
+  var innerObj = {1: 2};
+  var outerObj = {inner: innerObj, 3: 4};
+  outerObj;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+  resultValue = deserializedObj.getProperty(*rt, "3");
+  EXPECT_EQ(resultValue.getNumber(), 4);
+  auto innerObj = deserializedObj.getPropertyAsObject(*rt, "inner");
+  resultValue = innerObj.getProperty(*rt, "1");
+  EXPECT_EQ(resultValue.getNumber(), 2);
+
+  // Referencing an object multiple times
+  code = R"(
+var innerObj = {1: 2};
+var outerObj = {
+    firstRef: innerObj,
+    3: 4,
+    nestedObj: {
+        5: 6,
+        secondRef: innerObj
+    }
+};
+outerObj;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+  resultValue = deserializedObj.getProperty(*rt, "3");
+  EXPECT_EQ(resultValue.getNumber(), 4);
+  innerObj = deserializedObj.getPropertyAsObject(*rt, "firstRef");
+  resultValue = innerObj.getProperty(*rt, "1");
+  EXPECT_EQ(resultValue.getNumber(), 2);
+  auto nestedObj = deserializedObj.getPropertyAsObject(*rt, "nestedObj");
+  resultValue = nestedObj.getProperty(*rt, "5");
+  EXPECT_EQ(resultValue.getNumber(), 6);
+  auto secondRef = nestedObj.getPropertyAsObject(*rt, "secondRef");
+  EXPECT_TRUE(Object::strictEquals(*rt, innerObj, secondRef));
+
+  // An object that points to itself in one of the properties
+  code = R"(
+var bar = 'bar';
+var obj = {
+    1: 2,
+    foo: bar,
+    foo2: bar
+};
+obj.myself = obj;
+obj;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+  resultValue = deserializedObj.getProperty(*rt, "1");
+  EXPECT_EQ(resultValue.getNumber(), 2);
+  innerObj = deserializedObj.getPropertyAsObject(*rt, "myself");
+  resultValue = innerObj.getProperty(*rt, "1");
+  EXPECT_EQ(resultValue.getNumber(), 2);
+  // Changing the "inner" myself object should also be reflected at the high
+  // level object
+  innerObj.setProperty(*rt, "foo", "bar");
+  resultValue = deserializedObj.getProperty(*rt, "foo");
+  EXPECT_EQ(resultValue.getString(*rt).utf8(*rt), "bar");
+}
+
+TEST_P(HermesSerializationTest, SeriaalizeObjectNonEnumerableProperties) {
+  auto code = R"(
+var obj = {
+  foo: "bar",
+  apple: "banana"
+};
+Object.defineProperty(obj, "salt", {
+  value: "pepper",
+  enumerable: false
+});
+obj;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+  auto hasPropertyRes = deserializedObj.hasProperty(*rt, "foo");
+  EXPECT_TRUE(hasPropertyRes);
+  hasPropertyRes = deserializedObj.hasProperty(*rt, "apple");
+  EXPECT_TRUE(hasPropertyRes);
+
+  // 'salt' is a non-enumerable property key on the original object, so it
+  // should not be cloned in the new copy
+  hasPropertyRes = deserializedObj.hasProperty(*rt, "salt");
+  EXPECT_FALSE(hasPropertyRes);
+}
+
+TEST_P(HermesSerializationTest, SerializeObjectRunJavaScript) {
+  // When serializing `obj`, the `foo` getter will be invoked, deleting the
+  // property `salt` from the object and adding the property `hello`. However,
+  // the cloned object should only contain `foo`.
+  auto code = R"(
+var obj = {
+    get foo() {
+        delete this.salt;
+        this.hello = 'world';
+        return 'bar';
+    },
+    salt: 'pepper'
+};
+obj;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+
+  // First, check that the property 'salt' was deleted and 'hello' was added
+  // to the object in the original runtime.
+  auto originalObj = rt->global().getPropertyAsObject(*rt, "obj");
+  auto foo = originalObj.getProperty(*rt, "foo");
+  EXPECT_EQ(foo.getString(*rt).utf8(*rt), "bar");
+  auto hasSalt = originalObj.hasProperty(*rt, "salt");
+  EXPECT_FALSE(hasSalt);
+  auto hello = originalObj.getProperty(*rt, "hello");
+  EXPECT_EQ(hello.getString(*rt).utf8(*rt), "world");
+
+  /// Check that the deserialized object only has the 'foo' property. 'salt'
+  /// was deleted by the foo getter, so it was never serialized, and the
+  /// algorithm shouldn't serialize any new properties added by getter.
+  foo = deserializedObj.getProperty(*rt, "foo");
+  EXPECT_EQ(foo.getString(*rt).utf8(*rt), "bar");
+  hasSalt = deserializedObj.hasProperty(*rt, "salt");
+  EXPECT_FALSE(hasSalt);
+  auto hasHello = deserializedObj.hasProperty(*rt, "hello");
+  EXPECT_FALSE(hasHello);
+}
+
+TEST_P(HermesSerializationTest, SerializeArrayBuffer) {
+  auto code = R"(
+var buffer = new ArrayBuffer(32);
+buffer;
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+
+  auto byteLen = deserializedObj.getProperty(*rt, "byteLength");
+  EXPECT_EQ(byteLen.getNumber(), 32);
+
+  code = R"(
+var buffer = new ArrayBuffer(0);
+buffer;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+
+  byteLen = deserializedObj.getProperty(*rt, "byteLength");
+  EXPECT_EQ(byteLen.getNumber(), 0);
+
+  // Detached ArrayBuffers are not serializable
+  code = R"(
+var buffer = new ArrayBuffer(8);
+HermesInternal.detachArrayBuffer(buffer);
+buffer;
+)";
+  auto detachedBuffer = eval(code);
+  EXPECT_THROW(serializationInterface->serialize(detachedBuffer), JSError);
+}
+
+TEST_P(HermesSerializationTest, SerializeDataView) {
+  auto code = R"(
+var buffer = new ArrayBuffer(32);
+var view = new DataView(buffer, 16, 4);
+view.setInt16(0, -123);
+view.setInt16(2, 456);
+view;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+
+  auto byteLen = deserializedObj.getProperty(*rt, "byteLength").getNumber();
+  EXPECT_EQ(byteLen, 4);
+  auto byteOffset = deserializedObj.getProperty(*rt, "byteOffset").getNumber();
+  EXPECT_EQ(byteOffset, 16);
+  auto getInt16Fn = deserializedObj.getPropertyAsFunction(*rt, "getInt16");
+  auto getRes = getInt16Fn.callWithThis(*rt, deserializedObj, 0).getNumber();
+  EXPECT_EQ(getRes, -123);
+  getRes = getInt16Fn.callWithThis(*rt, deserializedObj, 2).getNumber();
+  EXPECT_EQ(getRes, 456);
+
+  // Verify that the underlying buffer was copied over completely
+  auto buffer = deserializedObj.getPropertyAsObject(*rt, "buffer");
+  byteLen = buffer.getProperty(*rt, "byteLength").getNumber();
+  EXPECT_EQ(byteLen, 32);
+
+  // The underlying ArrayBuffer is detached
+  code = R"(
+var buffer = new ArrayBuffer(32);
+var view = new DataView(buffer, 16, 4);
+HermesInternal.detachArrayBuffer(buffer);
+view;
+)";
+  auto viewWithDetachedBuffer = eval(code);
+  EXPECT_THROW(
+      serializationInterface->serialize(viewWithDetachedBuffer), JSError);
+}
+
+TEST_P(HermesSerializationTest, VerifyTypeSerializedTypeArray) {
+  // This test simply checks that we correctly serialize the type of the Array.
+  // It does not verify the content of the array.
+#define TYPED_ARRAY(name, type)                                  \
+  {                                                              \
+    auto code = "new " #name "Array();";                         \
+    auto serialized = evalAndSerialize(code);                    \
+    auto deserializedArr = deserializeAsObject(serialized);      \
+    auto constructor =                                           \
+        deserializedArr.getPropertyAsObject(*rt, "constructor"); \
+    auto name = constructor.getProperty(*rt, "name");            \
+    EXPECT_EQ(name.getString(*rt).utf8(*rt), #name "Array");     \
+  }
+#include "hermes/VM/TypedArrays.def"
+} // namespace
+
+TEST_P(HermesSerializationTest, SerializeTypedArray) {
+  auto code = R"(
+var buffer = new ArrayBuffer(32);
+var float64arr = new Float64Array(buffer);
+float64arr[0] = 12.34;
+float64arr[1] = 34.56;
+float64arr[2] = 56.78;
+float64arr[3] = 78.90;
+
+float64arr;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+
+  // Verify that the underlying buffer was copied over completely
+  auto buffer = deserializedObj.getPropertyAsObject(*rt, "buffer");
+  auto byteLen = buffer.getProperty(*rt, "byteLength").getNumber();
+  EXPECT_EQ(byteLen, 32);
+
+  auto bytesPerElem = deserializedObj.getProperty(*rt, "BYTES_PER_ELEMENT");
+  EXPECT_EQ(bytesPerElem.getNumber(), 8);
+  byteLen = deserializedObj.getProperty(*rt, "byteLength").getNumber();
+  EXPECT_EQ(byteLen, 32);
+  auto byteOffset = deserializedObj.getProperty(*rt, "byteOffset").getNumber();
+  EXPECT_EQ(byteOffset, 0);
+  auto len = deserializedObj.getProperty(*rt, "length").getNumber();
+  EXPECT_EQ(len, 4);
+
+  auto atFn = deserializedObj.getPropertyAsFunction(*rt, "at");
+  auto res = atFn.callWithThis(*rt, deserializedObj, 0).getNumber();
+  EXPECT_EQ(res, 12.34);
+  res = atFn.callWithThis(*rt, deserializedObj, 1).getNumber();
+  EXPECT_EQ(res, 34.56);
+  res = atFn.callWithThis(*rt, deserializedObj, 2).getNumber();
+  EXPECT_EQ(res, 56.78);
+  res = atFn.callWithThis(*rt, deserializedObj, 3).getNumber();
+  EXPECT_EQ(res, 78.90);
+
+  code = R"(
+var uint32arr = new Int32Array(buffer, 4, 5);
+uint32arr[0] = 100;
+uint32arr[1] = 200;
+uint32arr[2] = 300;
+uint32arr[3] = 400;
+uint32arr[4] = 500;
+
+uint32arr;
+)";
+
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+
+  bytesPerElem = deserializedObj.getProperty(*rt, "BYTES_PER_ELEMENT");
+  EXPECT_EQ(bytesPerElem.getNumber(), 4);
+  byteLen = deserializedObj.getProperty(*rt, "byteLength").getNumber();
+  EXPECT_EQ(byteLen, 20);
+  byteOffset = deserializedObj.getProperty(*rt, "byteOffset").getNumber();
+  EXPECT_EQ(byteOffset, 4);
+  len = deserializedObj.getProperty(*rt, "length").getNumber();
+  EXPECT_EQ(len, 5);
+
+  atFn = deserializedObj.getPropertyAsFunction(*rt, "at");
+  bytesPerElem = deserializedObj.getProperty(*rt, "BYTES_PER_ELEMENT");
+  EXPECT_EQ(bytesPerElem.getNumber(), 4);
+  res = atFn.callWithThis(*rt, deserializedObj, 0).getNumber();
+  EXPECT_EQ(res, 100);
+  res = atFn.callWithThis(*rt, deserializedObj, 1).getNumber();
+  EXPECT_EQ(res, 200);
+  res = atFn.callWithThis(*rt, deserializedObj, 2).getNumber();
+  EXPECT_EQ(res, 300);
+  res = atFn.callWithThis(*rt, deserializedObj, 3).getNumber();
+  EXPECT_EQ(res, 400);
+  res = atFn.callWithThis(*rt, deserializedObj, 4).getNumber();
+  EXPECT_EQ(res, 500);
+
+  // The array is empty
+  code = R"(
+var arr = new Int32Array(0);
+arr;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+  bytesPerElem = deserializedObj.getProperty(*rt, "BYTES_PER_ELEMENT");
+  EXPECT_EQ(bytesPerElem.getNumber(), 4);
+  byteLen = deserializedObj.getProperty(*rt, "byteLength").getNumber();
+  EXPECT_EQ(byteLen, 0);
+  byteOffset = deserializedObj.getProperty(*rt, "byteOffset").getNumber();
+  EXPECT_EQ(byteOffset, 0);
+  len = deserializedObj.getProperty(*rt, "length").getNumber();
+  EXPECT_EQ(len, 0);
+
+  // The underlying ArrayBuffer is detached
+  code = R"(
+var buffer = new ArrayBuffer(8);
+var arr = new Int8Array(buffer);
+HermesInternal.detachArrayBuffer(buffer);
+arr;
+)";
+  auto arrWithDetachedBuffer = eval(code);
+  EXPECT_THROW(
+      serializationInterface->serialize(arrWithDetachedBuffer), JSError);
+}
+
+TEST_P(HermesSerializationTest, SerializeMap) {
+  auto code = R"(
+var m = new Map();
+m.set('salt', 'pepper');
+m.set('obj', {1: 2});
+m;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+  auto getFunc = deserializedObj.getPropertyAsFunction(*rt, "get");
+  auto size = deserializedObj.getProperty(*rt, "size").getNumber();
+  EXPECT_EQ(size, 2);
+
+  auto result = getFunc.callWithThis(
+      *rt, deserializedObj, String::createFromUtf8(*rt, "salt"));
+  EXPECT_EQ(result.getString(*rt).utf8(*rt), "pepper");
+
+  result = getFunc.callWithThis(
+      *rt, deserializedObj, String::createFromUtf8(*rt, "obj"));
+  EXPECT_EQ(result.getObject(*rt).getProperty(*rt, "1").getNumber(), 2);
+
+  // An empty map
+  serialized = evalAndSerialize("new Map();");
+  deserializedObj = deserializeAsObject(serialized);
+  size = deserializedObj.getProperty(*rt, "size").getNumber();
+  EXPECT_EQ(size, 0);
+}
+
+TEST_P(HermesSerializationTest, SerializeMapRunJavaScript) {
+  // When serializing the map, `obj` will also be serialized, the foo getter
+  // will be invoked, removing the key `2` from the original map. However,
+  // serialized map should still contain the key-value (2, 3)
+  auto code = R"(
+var map = new Map();
+var obj = {
+    get foo() {
+        map.delete(2);
+        return 'bar';
+    }
+};
+map.set(1, obj);
+map.set(2, 3);
+map;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto mapCloned = deserializeAsObject(serialized);
+
+  // Check the original map is modified by the `foo` getter in `obj`
+  auto mapOriginal = rt->global().getPropertyAsObject(*rt, "map");
+  auto hasFn = mapOriginal.getPropertyAsFunction(*rt, "has");
+  auto result = hasFn.callWithThis(*rt, mapOriginal, 1);
+  EXPECT_TRUE(result.getBool());
+  result = hasFn.callWithThis(*rt, mapOriginal, 2);
+  EXPECT_FALSE(result.getBool());
+
+  // Check the cloned map has cloned both (1, obj) and (2, 3)
+  auto getFn = mapCloned.getPropertyAsFunction(*rt, "get");
+  result = getFn.callWithThis(*rt, mapCloned, 1);
+  auto objCloned = result.getObject(*rt);
+  auto foo = objCloned.getProperty(*rt, "foo");
+  EXPECT_EQ(foo.getString(*rt).utf8(*rt), "bar");
+
+  result = getFn.callWithThis(*rt, mapCloned, 2);
+  EXPECT_EQ(result.getNumber(), 3);
+}
+
+TEST_P(HermesSerializationTest, SerializeSet) {
+  auto code = R"(
+var s = new Set(['salt', 10]);
+s;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto deserializedObj = deserializeAsObject(serialized);
+  auto size = deserializedObj.getProperty(*rt, "size").getNumber();
+  EXPECT_EQ(size, 2);
+
+  auto hasFunc = deserializedObj.getPropertyAsFunction(*rt, "has");
+  auto result = hasFunc.callWithThis(
+      *rt, deserializedObj, String::createFromUtf8(*rt, "salt"));
+  EXPECT_TRUE(result.getBool());
+
+  result = hasFunc.callWithThis(*rt, deserializedObj, Value(10));
+  EXPECT_TRUE(result.getBool());
+
+  result = hasFunc.callWithThis(
+      *rt, deserializedObj, String::createFromUtf8(*rt, "pepper"));
+  EXPECT_FALSE(result.getBool());
+
+  // An empty set
+  serialized = evalAndSerialize("new Set();");
+  deserializedObj = deserializeAsObject(serialized);
+  size = deserializedObj.getProperty(*rt, "size").getNumber();
+  EXPECT_EQ(size, 0);
+}
+
+TEST_P(HermesSerializationTest, SerializeSetRunJavaScript) {
+  // When serializing the set, `obj` will be serialized first and the foo
+  // getter will be invoked. The getter will remove the `2` from the original
+  // set. However, serialized set should contain both `obj` and `2`.
+  auto code = R"(
+var set = new Set();
+var obj = {
+    get foo() {
+        set.delete('foobar');
+        return 'bar';
+    }
+};
+set.add(obj);
+set.add('foobar');
+var arr = [set, obj];
+arr;
+)";
+
+  auto serialized = evalAndSerialize(code);
+  auto arrCloned = deserializeAsObject(serialized).getArray(*rt);
+
+  // Check the original set is modified by the `foo` getter in `obj`
+  auto setOriginal = rt->global().getPropertyAsObject(*rt, "set");
+  auto obj = rt->global().getPropertyAsObject(*rt, "obj");
+  auto hasFn = setOriginal.getPropertyAsFunction(*rt, "has");
+  auto result = hasFn.callWithThis(*rt, setOriginal, "foobar");
+  EXPECT_FALSE(result.getBool());
+  result = hasFn.callWithThis(*rt, setOriginal, obj);
+  EXPECT_TRUE(result.getBool());
+
+  // Check the cloned set has both obj and "foobar"
+  auto setCloned = arrCloned.getValueAtIndex(*rt, 0).getObject(*rt);
+  auto objCloned = arrCloned.getValueAtIndex(*rt, 1).getObject(*rt);
+  result = hasFn.callWithThis(*rt, setCloned, "foobar");
+  EXPECT_TRUE(result.getBool());
+  result = hasFn.callWithThis(*rt, setCloned, objCloned);
+  EXPECT_TRUE(result.getBool());
+
+  auto foo = objCloned.getProperty(*rt, "foo");
+  EXPECT_EQ(foo.getString(*rt).utf8(*rt), "bar");
+}
+
+TEST_P(HermesSerializationTest, SerializeError) {
+  auto serialized = evalAndSerialize("new Error('some generic error');");
+  auto deserializedObj = deserializeAsObject(serialized);
+
+  auto errorName = deserializedObj.getProperty(*rt, "name").getString(*rt);
+  EXPECT_EQ(errorName.utf8(*rt), "Error");
+
+  auto msg = deserializedObj.getProperty(*rt, "message").getString(*rt);
+  EXPECT_EQ(msg.utf8(*rt), "some generic error");
+
+  serialized = evalAndSerialize("new TypeError('some type error');");
+  deserializedObj = deserializeAsObject(serialized);
+
+  errorName = deserializedObj.getProperty(*rt, "name").getString(*rt);
+  EXPECT_EQ(errorName.utf8(*rt), "TypeError");
+
+  msg = deserializedObj.getProperty(*rt, "message").getString(*rt);
+  EXPECT_EQ(msg.utf8(*rt), "some type error");
+
+  serialized = evalAndSerialize("new ReferenceError(undefined);");
+  deserializedObj = deserializeAsObject(serialized);
+
+  errorName = deserializedObj.getProperty(*rt, "name").getString(*rt);
+  EXPECT_EQ(errorName.utf8(*rt), "ReferenceError");
+
+  auto hasOwnFn = deserializedObj.getPropertyAsFunction(*rt, "hasOwnProperty");
+  auto hasOwnRes = hasOwnFn.callWithThis(*rt, deserializedObj, "message");
+  EXPECT_FALSE(hasOwnRes.getBool());
+
+  auto code = R"(
+var err = new SyntaxError();
+err.message = {
+    toString: function() {
+        return 'some syntax error';
+    }
+};
+err;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedObj = deserializeAsObject(serialized);
+
+  errorName = deserializedObj.getProperty(*rt, "name").getString(*rt);
+  EXPECT_EQ(errorName.utf8(*rt), "SyntaxError");
+  msg = deserializedObj.getProperty(*rt, "message").getString(*rt);
+  EXPECT_EQ(msg.utf8(*rt), "some syntax error");
+}
+
+TEST_P(HermesSerializationTest, SerializeArray) {
+  // Simple array
+  auto code = R"(
+var arr = ['a', 'b', 'c'];
+arr;
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  auto arrLen = deserializedArr.length(*rt);
+  EXPECT_EQ(arrLen, 3);
+  auto result = deserializedArr.getValueAtIndex(*rt, 1);
+  EXPECT_EQ(result.getString(*rt).utf8(*rt), "b");
+
+  // Array with objects
+  code = R"(
+var foo = {salt: 'pepper'};
+var bar = [100, 99, 'apple', foo];
+bar;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  arrLen = deserializedArr.length(*rt);
+  EXPECT_EQ(arrLen, 4);
+  result = deserializedArr.getValueAtIndex(*rt, 1);
+  EXPECT_EQ(result.getNumber(), 99);
+
+  result = deserializedArr.getValueAtIndex(*rt, 2);
+  EXPECT_EQ(result.getString(*rt).utf8(*rt), "apple");
+
+  auto fooObj = deserializedArr.getValueAtIndex(*rt, 3).getObject(*rt);
+  result = fooObj.getProperty(*rt, "salt");
+  EXPECT_EQ(result.getString(*rt).utf8(*rt), "pepper");
+
+  // Sparse Array
+  code = R"(
+var arr = [1,,3,,5];
+arr;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  arrLen = deserializedArr.length(*rt);
+  EXPECT_EQ(arrLen, 5);
+  result = deserializedArr.getValueAtIndex(*rt, 0);
+  EXPECT_EQ(result.getNumber(), 1);
+  result = deserializedArr.getValueAtIndex(*rt, 1);
+  EXPECT_TRUE(result.isUndefined());
+  result = deserializedArr.getValueAtIndex(*rt, 2);
+  EXPECT_EQ(result.getNumber(), 3);
+  result = deserializedArr.getValueAtIndex(*rt, 3);
+  EXPECT_TRUE(result.isUndefined());
+  result = deserializedArr.getValueAtIndex(*rt, 4);
+  EXPECT_EQ(result.getNumber(), 5);
+
+  // Serializing the array will invoke the getter, which deletes the last
+  // element from the array.
+  code = R"(
+var obj = {};
+var arr = [1, obj, 3];
+Object.defineProperty(obj, "foo", {
+  enumerable: true,
+  get: function() {
+    arr.length = 2;
+    return "bar"
+  }
+});
+arr;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  arrLen = deserializedArr.length(*rt);
+  // Even though the original array was resized to 2, note that the serialize
+  // algorithm store the length directly, and expects the length to be set when
+  // deserializing.
+  EXPECT_EQ(arrLen, 3);
+  result = deserializedArr.getValueAtIndex(*rt, 0);
+  EXPECT_EQ(result.getNumber(), 1);
+  result = deserializedArr.getValueAtIndex(*rt, 1);
+  auto resultObj = result.getObject(*rt);
+  EXPECT_EQ(resultObj.getProperty(*rt, "foo").getString(*rt).utf8(*rt), "bar");
+  result = deserializedArr.getValueAtIndex(*rt, 2);
+  EXPECT_TRUE(result.isUndefined());
+  // Verify the getter modified the original arr
+  auto originalArr = rt->global().getPropertyAsObject(*rt, "arr").getArray(*rt);
+  arrLen = originalArr.length(*rt);
+  EXPECT_EQ(arrLen, 2);
+}
+
+TEST_P(HermesSerializationTest, SerializeArrayNamedProperty) {
+  // Array with named property key "1"
+  auto code = R"(
+var arr = [100, 200];
+Object.defineProperty(arr, 1, {
+  value: 300,
+  configurable: false,
+  enumerable: true,
+  writeable: true,
+});
+arr;
+)";
+  auto serialized = evalAndSerialize(code);
+  auto deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  auto result = deserializedArr.getValueAtIndex(*rt, 1);
+  auto arrLen = deserializedArr.length(*rt);
+  EXPECT_EQ(arrLen, 2);
+  // We should be getting the named property "1" which has the value 300, and
+  // not the value originally in the JSArray indexed storage
+  EXPECT_EQ(result.getNumber(), 300);
+
+  code = R"(
+var arr = [100, 200];
+arr.foo = "bar";
+arr;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  arrLen = deserializedArr.length(*rt);
+  EXPECT_EQ(arrLen, 2);
+  result = deserializedArr.getValueAtIndex(*rt, 1);
+  EXPECT_EQ(result.getNumber(), 200);
+
+  // An array with a getter
+  code = R"(
+var arr = [1, 2, 3];
+Object.defineProperty(arr, 1, {
+  enumerable: true,
+  configurable: true,
+  get: function() {
+    arr[2] = 200;
+    arr[3] = 300;
+    return 100
+  }
+});
+arr;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  arrLen = deserializedArr.length(*rt);
+  EXPECT_EQ(arrLen, 3);
+  result = deserializedArr.getValueAtIndex(*rt, 0);
+  EXPECT_EQ(result.getNumber(), 1);
+  // Getter returns 100, even if the array storage originally had stored 2
+  result = deserializedArr.getValueAtIndex(*rt, 1);
+  EXPECT_EQ(result.getNumber(), 100);
+  // Getter effected element at index 2
+  result = deserializedArr.getValueAtIndex(*rt, 2);
+  EXPECT_EQ(result.getNumber(), 200);
+  // Getter added the element at index 3 to the original array.
+  auto originalArr = rt->global().getPropertyAsObject(*rt, "arr").getArray(*rt);
+  result = originalArr.getValueAtIndex(*rt, 3);
+  EXPECT_EQ(result.getNumber(), 300);
+  // However, the cloning algorithm obtains a list of all property keys to
+  // serialize up-front, and does not account for properties added as a result
+  // of the getter's side effects.
+  result = deserializedArr.hasProperty(*rt, 3);
+  EXPECT_FALSE(result.getBool());
+
+  // The array is eligible for fast path at first, but once the object element
+  // is serialized, it makes the array ineligible for fast path
+  code = R"(
+var obj = {};
+Object.defineProperty(obj, "foo", {
+  enumerable: true,
+  get: function() {
+    Object.defineProperty(arr, 2, {
+      enumerable: true,
+      configurable: false,
+      value: 200,
+    });
+    return "bar";
+  }
+});
+var arr = [1, obj, 2];
+arr;
+)";
+  serialized = evalAndSerialize(code);
+  deserializedArr = deserializeAsObject(serialized).getArray(*rt);
+  result = deserializedArr.getValueAtIndex(*rt, 0);
+  EXPECT_EQ(result.getNumber(), 1);
+  result = deserializedArr.getValueAtIndex(*rt, 1);
+  auto resultObj = result.getObject(*rt);
+  EXPECT_EQ(resultObj.getProperty(*rt, "foo").getString(*rt).utf8(*rt), "bar");
+  result = deserializedArr.getValueAtIndex(*rt, 2);
+  EXPECT_EQ(result.getNumber(), 200);
+  arrLen = deserializedArr.length(*rt);
+  EXPECT_EQ(arrLen, 3);
+}
+
+TEST_P(HermesSerializationTest, SerializeUnsupported) {
+  // Go through known unsupported values for serialization and make sure we
+  // throw
+  // Functions
+  auto func = eval("(function testFunc() {})");
+  EXPECT_THROW(serializationInterface->serialize(func), JSError);
+
+  // Host Objects
+  class TestHostObject : public HostObject {
+    std::vector<PropNameID> getPropertyNames(Runtime &rt) override {
+      return PropNameID::names(rt, "test");
+    }
+
+    Value get(Runtime &runtime, const PropNameID &name) override {
+      return Value();
+    }
+  };
+  Object hostObj =
+      Object::createFromHostObject(*rt, std::make_shared<TestHostObject>());
+
+  auto hostObjVal = Value(*rt, hostObj);
+  EXPECT_THROW(serializationInterface->serialize(hostObjVal), JSError);
+
+  auto proxy = eval(
+      "var target = {};"
+      "var handler = {};"
+      "var proxy = new Proxy(target, handler); proxy;");
+
+  EXPECT_THROW(serializationInterface->serialize(proxy), JSError);
+}
+
+INSTANTIATE_TEST_CASE_P(
+    Runtimes,
+    HermesSerializationTest,
+    ::testing::ValuesIn(runtimeGenerators()));
+#endif
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesRuntimeTest,
     ::testing::ValuesIn(runtimeGenerators()));
-
 } // namespace

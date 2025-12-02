@@ -9,6 +9,7 @@
 #define DEBUG_TYPE "vm"
 #include "hermes/VM/Runtime.h"
 
+#include "SerializationManagedValue.h"
 #include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
@@ -282,6 +283,9 @@ Runtime::Runtime(
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
       traceMode(runtimeConfig.getSynthTraceMode()),
+      serializationValues_(
+          runtimeConfig.getGCConfig().getOccupancyTarget(),
+          0.5),
       gcCallbacksWrapper_(*this),
       heap_(
           gcCallbacksWrapper_,
@@ -707,6 +711,16 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
     if (codeCoverageProfiler_) {
       codeCoverageProfiler_->markRoots(acceptor);
     }
+    acceptor.endRootSection();
+  }
+
+  {
+    MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Serialization);
+    acceptor.beginRootSection(RootAcceptor::Section::Serialization);
+    serializationValues_.forEach(
+        [&acceptor](SerializationManagedValue &element) {
+          acceptor.accept(element.value());
+        });
     acceptor.endRootSection();
   }
 
