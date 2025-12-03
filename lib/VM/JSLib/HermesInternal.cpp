@@ -273,6 +273,14 @@ CallResult<HermesValue> hermesInternalGetRuntimeProperties(
     return ExecutionStatus::EXCEPTION;
   }
 
+  lv.tmpHandle =
+      HermesValue::encodeBoolValue(runtime.getJITContext().isEnabled());
+  if (LLVM_UNLIKELY(
+          addProperty(lv.tmpHandle, "JIT Enabled") ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   lv.tmpHandle = HermesValue::encodeBoolValue(runtime.builtinsAreFrozen());
   if (LLVM_UNLIKELY(
           addProperty(lv.tmpHandle, "Builtins Frozen") ==
