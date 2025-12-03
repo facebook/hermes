@@ -12,7 +12,7 @@
 #include <hermes/Support/SHA1.h>
 #include <hermes/SynthTrace.h>
 
-#include <jsi/hermes.h>
+#include <jsi/hermes-interfaces.h>
 #include <jsi/instrumentation.h>
 #include <jsi/jsi.h>
 #include <llvh/Support/MemoryBuffer.h>
