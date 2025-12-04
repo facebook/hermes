@@ -122,6 +122,10 @@ HermesValue createFunctionConstructor(Runtime &runtime) {
 }
 
 CallResult<HermesValue> functionConstructor(void *, Runtime &runtime) {
+  if (!runtime.enableEval) {
+    return runtime.raiseEvalUnsupported("Function constructor");
+  }
+  
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Normal);
 }

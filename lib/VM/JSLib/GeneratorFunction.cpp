@@ -74,6 +74,10 @@ HermesValue createGeneratorFunctionConstructor(Runtime &runtime) {
 }
 
 CallResult<HermesValue> generatorFunctionConstructor(void *, Runtime &runtime) {
+  if (!runtime.enableEval) {
+    return runtime.raiseEvalUnsupported("GeneratorFunction constructor");
+  }
+  
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Generator);
 }

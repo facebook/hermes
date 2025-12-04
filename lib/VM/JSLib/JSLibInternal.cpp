@@ -301,6 +301,10 @@ CallResult<HermesValue> createDynamicFunction(
     Runtime &runtime,
     NativeArgs args,
     DynamicFunctionKind kind) {
+  if (!runtime.enableEval) {
+    return runtime.raiseEvalUnsupported("Function constructor");
+  }
+  
   GCScope gcScope(runtime);
 
   // Number of arguments supplied to Function().

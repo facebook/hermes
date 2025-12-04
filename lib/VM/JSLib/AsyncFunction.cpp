@@ -16,6 +16,10 @@ namespace vm {
 
 /// 26.7.1.1 AsyncFunction ( p1, p2, … , pn, body )
 CallResult<HermesValue> asyncFunctionConstructor(void *, Runtime &runtime) {
+  if (!runtime.enableEval) {
+    return runtime.raiseEvalUnsupported("AsyncFunction constructor");
+  }
+  
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   /// 3. Return CreateDynamicFunction(C, NewTarget, async, args).
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Async);
