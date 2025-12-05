@@ -29,31 +29,21 @@ enum class TextDecoderEncoding : uint8_t {
 /// Returns llvh::None if the encoding is not supported.
 static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
     StringView label) {
-  // Normalize the label by trimming whitespace and converting to lowercase
-  // for comparison. Per the WHATWG Encoding spec, labels are ASCII
-  // case-insensitive.
+  // Normalize the label by trimming whitespace and converting to lowercase according to WHATWG Encoding spec.
 
   auto begin = label.begin();
   auto end = label.end();
-
-  // Trim leading whitespace
-  while (begin != end && (*begin == ' ' || *begin == '\t' || *begin == '\n' ||
-                          *begin == '\r' || *begin == '\f')) {
+  while (begin != end && (*begin == ' ' || *begin == '\t' || *begin == '\n' || *begin == '\r' || *begin == '\f')) {
     ++begin;
   }
-
-  // Trim trailing whitespace
   while (begin != end) {
     auto last = end - 1;
-    if (*last == ' ' || *last == '\t' || *last == '\n' || *last == '\r' ||
-        *last == '\f') {
+    if (*last == ' ' || *last == '\t' || *last == '\n' || *last == '\r' || *last == '\f') {
       end = last;
     } else {
       break;
     }
   }
-
-  // Compare case-insensitively
   auto compareIgnoreCase = [](StringView sv, const char *str) -> bool {
     size_t len = strlen(str);
     if (sv.length() != len) {
@@ -62,7 +52,6 @@ static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
     auto it = sv.begin();
     for (size_t i = 0; i < len; ++i, ++it) {
       char16_t c = *it;
-      // Convert to lowercase for ASCII letters
       if (c >= 'A' && c <= 'Z') {
         c = c - 'A' + 'a';
       }
@@ -74,26 +63,21 @@ static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
   };
 
   StringView trimmed = label.slice(begin, end);
-
-  // UTF-8 encodings (per WHATWG Encoding spec)
   if (compareIgnoreCase(trimmed, "utf-8") ||
       compareIgnoreCase(trimmed, "utf8") ||
       compareIgnoreCase(trimmed, "unicode-1-1-utf-8")) {
     return TextDecoderEncoding::UTF8;
   }
 
-  // UTF-16LE encodings
   if (compareIgnoreCase(trimmed, "utf-16le") ||
       compareIgnoreCase(trimmed, "utf-16")) {
     return TextDecoderEncoding::UTF16LE;
   }
 
-  // UTF-16BE encodings
   if (compareIgnoreCase(trimmed, "utf-16be")) {
     return TextDecoderEncoding::UTF16BE;
   }
 
-  // Latin-1 / ISO-8859-1 encodings (per WHATWG Encoding spec)
   if (compareIgnoreCase(trimmed, "iso-8859-1") ||
       compareIgnoreCase(trimmed, "iso8859-1") ||
       compareIgnoreCase(trimmed, "iso88591") ||
@@ -127,7 +111,6 @@ static Predefined::Str getEncodingName(TextDecoderEncoding encoding) {
   llvm_unreachable("Invalid encoding");
 }
 
-/// Check if this object is a valid TextDecoder instance.
 static bool isTextDecoderObject(
     Handle<JSObject> obj,
     Runtime &runtime,
@@ -144,8 +127,7 @@ static bool isTextDecoderObject(
     return false;
   }
 
-  // Get encoding
-  if (outEncoding) {
+  if (outEncoding) {  // Get encoding
     HermesValue encodingVal =
         JSObject::getNamedSlotValueUnsafe(obj.get(), runtime, desc)
             .unboxToHV(runtime);
@@ -157,8 +139,7 @@ static bool isTextDecoderObject(
             encodingVal.getNumber()));
   }
 
-  // Get fatal flag
-  if (outFatal) {
+  if (outFatal) {  // Get fatal flag
     exists = JSObject::getOwnNamedDescriptor(
         obj,
         runtime,
@@ -173,8 +154,7 @@ static bool isTextDecoderObject(
     *outFatal = fatalVal.getBool();
   }
 
-  // Get ignoreBOM flag
-  if (outIgnoreBOM) {
+  if (outIgnoreBOM) {  // Get ignoreBOM flag
     exists = JSObject::getOwnNamedDescriptor(
         obj,
         runtime,
@@ -432,14 +412,12 @@ textDecoderPrototypeIgnoreBOM(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(ignoreBOM);
 }
 
-/// Decode UTF-8 bytes to a string.
 static CallResult<HermesValue> decodeUTF8(
     Runtime &runtime,
     const uint8_t *bytes,
     size_t length,
     bool fatal,
     bool ignoreBOM) {
-  // Handle empty input
   if (length == 0) {
     return HermesValue::encodeStringValue(
         runtime.getPredefinedString(Predefined::emptyString));
@@ -448,8 +426,7 @@ static CallResult<HermesValue> decodeUTF8(
   const uint8_t *start = bytes;
   const uint8_t *end = bytes + length;
 
-  // Skip BOM if present and ignoreBOM is false
-  // UTF-8 BOM is EF BB BF
+  // Skip BOM if present and ignoreBOM is false; UTF-8 BOM is EF BB BF
   if (!ignoreBOM && length >= 3 && start[0] == 0xEF && start[1] == 0xBB &&
       start[2] == 0xBF) {
     start += 3;
@@ -645,7 +622,6 @@ static CallResult<HermesValue> decodeUTF8(
   return builder.getStringPrimitive().getHermesValue();
 }
 
-/// Decode UTF-16LE bytes to a string.
 static CallResult<HermesValue> decodeUTF16LE(
     Runtime &runtime,
     const uint8_t *bytes,
@@ -669,8 +645,7 @@ static CallResult<HermesValue> decodeUTF16LE(
   const uint8_t *start = bytes;
   const uint8_t *end = bytes + length;
 
-  // Skip BOM if present and ignoreBOM is false
-  // UTF-16LE BOM is FF FE
+  // Skip BOM if present and ignoreBOM is false; UTF-16LE BOM is FF FE
   if (!ignoreBOM && length >= 2 && start[0] == 0xFF && start[1] == 0xFE) {
     start += 2;
   }
@@ -697,7 +672,6 @@ static CallResult<HermesValue> decodeUTF16LE(
   return builder.getStringPrimitive().getHermesValue();
 }
 
-/// Decode UTF-16BE bytes to a string.
 static CallResult<HermesValue> decodeUTF16BE(
     Runtime &runtime,
     const uint8_t *bytes,
@@ -749,7 +723,6 @@ static CallResult<HermesValue> decodeUTF16BE(
   return builder.getStringPrimitive().getHermesValue();
 }
 
-/// Decode Latin-1 (ISO-8859-1) bytes to a string.
 static CallResult<HermesValue> decodeLatin1(
     Runtime &runtime,
     const uint8_t *bytes,
