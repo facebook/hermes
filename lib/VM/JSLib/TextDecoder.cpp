@@ -386,36 +386,46 @@ textDecoderPrototypeIgnoreBOM(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(ignoreBOM);
 }
 
-/// Decode UTF-8 bytes to a string.
+/// Decode UTF-8 bytes to a string using LLVM's converter, with replacement
+/// characters for invalid sequences in non-fatal mode (per WHATWG spec).
 static CallResult<HermesValue> decodeUTF8(
     Runtime &runtime,
     const uint8_t *bytes,
     size_t length,
-    bool fatal,
-    bool ignoreBOM) {
-  // Skip BOM if present and ignoreBOM is false. UTF-8 BOM is EF BB BF.
-  if (!ignoreBOM && length >= 3 &&
-      bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
+    bool fatal,  // When false, invalid bytes are replaced with U+FFFD; else throws a TypeError.
+    bool ignoreBOM  // When false, the BOM is preserved and included in the output.
+  ) {
+  if (!ignoreBOM && length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
     bytes += 3;
     length -= 3;
   }
 
-  if (length == 0) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
-  }
+  std::u16string result;
+  result.reserve(length);
 
-  // In fatal mode, we need to validate the UTF-8 first since createEfficient
-  // with IgnoreInputErrors=false raises RangeError, but we need TypeError.
-  if (fatal) {
-    const uint8_t *tmp = bytes;
-    if (!llvh::isLegalUTF8String(&tmp, bytes + length)) {
-      return runtime.raiseTypeError("Invalid UTF-8 sequence");
+  const llvh::UTF8 *src = bytes;
+  const llvh::UTF8 *srcEnd = bytes + length;
+
+  while (src < srcEnd) {
+    llvh::UTF16 buf[256];
+    llvh::UTF16 *dst = buf;
+    llvh::ConversionResult res = llvh::ConvertUTF8toUTF16(
+        &src, srcEnd, &dst, buf + 256, llvh::lenientConversion);
+
+    result.append(reinterpret_cast<char16_t *>(buf), reinterpret_cast<char16_t *>(dst));
+
+    if (res == llvh::conversionOK) {
+      break;
+    } else if (res == llvh::sourceIllegal || res == llvh::sourceExhausted) {
+      if (fatal) {
+        return runtime.raiseTypeError("Invalid UTF-8 sequence");
+      }
+      result.push_back(0xFFFD);
+      ++src;
     }
   }
 
-  return StringPrimitive::createEfficient(
-      runtime, llvh::makeArrayRef(bytes, length), /*IgnoreInputErrors=*/true);
+  return StringPrimitive::createEfficient(runtime, std::move(result));
 }
 
 static CallResult<HermesValue> decodeUTF16LE(
