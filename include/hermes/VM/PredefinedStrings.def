@@ -520,7 +520,7 @@ STR(ignoreBOM, "ignoreBOM")
 STR(stream, "stream")
 STR(utf16le, "utf-16le")
 STR(utf16be, "utf-16be")
-STR(latin1, "iso-8859-1")
+STR(windows1252, "windows-1252")
 
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these out of the

@@ -24,7 +24,7 @@ enum class TextDecoderEncoding : uint8_t {
   UTF8 = 0,
   UTF16LE = 1,
   UTF16BE = 2,
-  Latin1 = 3,
+  Windows1252 = 3,
 };
 
 /// Parse the encoding label and return the corresponding encoding type.
@@ -66,7 +66,7 @@ static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
       trimmed.equals_lower("us-ascii") || trimmed.equals_lower("iso-ir-100") ||
       trimmed.equals_lower("csisolatin1") ||
       trimmed.equals_lower("windows-1252") || trimmed.equals_lower("cp1252")) {
-    return TextDecoderEncoding::Latin1;
+    return TextDecoderEncoding::Windows1252;
   }
 
   return llvh::None;
@@ -81,8 +81,8 @@ static Predefined::Str getEncodingName(TextDecoderEncoding encoding) {
       return Predefined::utf16le;
     case TextDecoderEncoding::UTF16BE:
       return Predefined::utf16be;
-    case TextDecoderEncoding::Latin1:
-      return Predefined::latin1;
+    case TextDecoderEncoding::Windows1252:
+      return Predefined::windows1252;
   }
   llvm_unreachable("Invalid encoding");
 }
@@ -503,12 +503,21 @@ static CallResult<HermesValue> decodeUTF16(
   return StringPrimitive::createEfficient(runtime, std::move(result));
 }
 
-/// Latin-1 is a single-byte encoding where every byte is valid and there's no BOM.
-static CallResult<HermesValue> decodeLatin1(
+/// Windows-1252 lookup table for special characters.
+static constexpr char16_t kWindows1252Table[32] = {
+    0x20AC, 0x0081, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,  // 80-87
+    0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x008D, 0x017D, 0x008F,  // 88-8F
+    0x0090, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,  // 90-97
+    0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x009D, 0x017E, 0x0178,  // 98-9F
+};
+
+/// Windows-1252 is a single-byte encoding. Bytes 0x00-0x7F and 0xA0-0xFF map
+/// directly to Unicode, but 0x80-0x9F use a special lookup table.
+static CallResult<HermesValue> decodeWindows1252(
     Runtime &runtime,
     const uint8_t *bytes,
     size_t length) {
-  if (isAllASCII(bytes, bytes + length)) {  // Fast path for pure ascii strings.
+  if (isAllASCII(bytes, bytes + length)) {  // Fast path for pure ASCII strings.
     return StringPrimitive::create(
         runtime, ASCIIRef(reinterpret_cast<const char *>(bytes), length));
   }
@@ -521,7 +530,12 @@ static CallResult<HermesValue> decodeLatin1(
   auto builder = std::move(*builderRes);
 
   for (size_t i = 0; i < length; ++i) {
-    builder.appendCharacter(static_cast<char16_t>(bytes[i]));
+    uint8_t byte = bytes[i];
+    if (byte >= 0x80 && byte <= 0x9F) {
+      builder.appendCharacter(kWindows1252Table[byte - 0x80]);
+    } else {
+      builder.appendCharacter(static_cast<char16_t>(byte));
+    }
   }
 
   return builder.getStringPrimitive().getHermesValue();
@@ -591,8 +605,8 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
       return decodeUTF16(runtime, bytes, length, fatal, ignoreBOM, false);
     case TextDecoderEncoding::UTF16BE:
       return decodeUTF16(runtime, bytes, length, fatal, ignoreBOM, true);
-    case TextDecoderEncoding::Latin1:
-      return decodeLatin1(runtime, bytes, length);
+    case TextDecoderEncoding::Windows1252:
+      return decodeWindows1252(runtime, bytes, length);
   }
 
   llvm_unreachable("Invalid encoding");

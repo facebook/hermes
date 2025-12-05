@@ -64,13 +64,22 @@ var utf16beDecoder = new TextDecoder('utf-16be');
 print(utf16beDecoder.encoding);
 // CHECK-NEXT: utf-16be
 
-var latin1Decoder = new TextDecoder('iso-8859-1');
-print(latin1Decoder.encoding);
-// CHECK-NEXT: iso-8859-1
+var windows1252Decoder = new TextDecoder('windows-1252');
+print(windows1252Decoder.encoding);
+// CHECK-NEXT: windows-1252
 
-var latin1Decoder2 = new TextDecoder('latin1');
-print(latin1Decoder2.encoding);
-// CHECK-NEXT: iso-8859-1
+// All these aliases should map to windows-1252
+var latin1Decoder = new TextDecoder('latin1');
+print(latin1Decoder.encoding);
+// CHECK-NEXT: windows-1252
+
+var asciiDecoder = new TextDecoder('ascii');
+print(asciiDecoder.encoding);
+// CHECK-NEXT: windows-1252
+
+var iso88591Decoder = new TextDecoder('iso-8859-1');
+print(iso88591Decoder.encoding);
+// CHECK-NEXT: windows-1252
 
 // Test unknown encoding
 try {
@@ -159,16 +168,39 @@ var utf16beWithBOM = new Uint8Array([0xFE, 0xFF, 0x00, 0x74, 0x00, 0x65, 0x00, 0
 print(utf16beDecoder.decode(utf16beWithBOM));
 // CHECK-NEXT: test
 
-// Test Latin-1 decoding
-// "café" in Latin-1 = 63 61 66 E9
-var latin1Bytes = new Uint8Array([0x63, 0x61, 0x66, 0xE9]);
-print(latin1Decoder.decode(latin1Bytes));
+// Test Windows-1252 decoding
+// "café" = 63 61 66 E9
+var cafeBytes = new Uint8Array([0x63, 0x61, 0x66, 0xE9]);
+print(windows1252Decoder.decode(cafeBytes));
 // CHECK-NEXT: café
 
-// Test Latin-1 with high bytes
-var latin1High = new Uint8Array([0xA9, 0xAE, 0xB0]); // ©®°
-print(latin1Decoder.decode(latin1High));
+// Test Windows-1252 with high bytes (0xA0-0xFF map directly like Latin-1)
+var highBytes = new Uint8Array([0xA9, 0xAE, 0xB0]); // ©®°
+print(windows1252Decoder.decode(highBytes));
 // CHECK-NEXT: ©®°
+
+// Test Windows-1252 special characters in 0x80-0x9F range
+// 0x80 = € (U+20AC), 0x89 = ‰ (U+2030), 0x99 = ™ (U+2122)
+var specialBytes = new Uint8Array([0x80, 0x89, 0x99]);
+var specialDecoded = windows1252Decoder.decode(specialBytes);
+print(specialDecoded.charCodeAt(0) === 0x20AC);  // €
+// CHECK-NEXT: true
+print(specialDecoded.charCodeAt(1) === 0x2030);  // ‰
+// CHECK-NEXT: true
+print(specialDecoded.charCodeAt(2) === 0x2122);  // ™
+// CHECK-NEXT: true
+
+// Test full Windows-1252 decode per WHATWG spec example
+// [0x63, 0x61, 0x66, 0xE9, 0x20, 0xFF, 0x80, 0x89] = "café ÿ€‰"
+var fullTest = new Uint8Array([0x63, 0x61, 0x66, 0xE9, 0x20, 0xFF, 0x80, 0x89]);
+print(windows1252Decoder.decode(fullTest));
+// CHECK-NEXT: café ÿ€‰
+
+// Verify all aliases decode Windows-1252 correctly
+print(latin1Decoder.decode(fullTest));
+// CHECK-NEXT: café ÿ€‰
+print(asciiDecoder.decode(fullTest));
+// CHECK-NEXT: café ÿ€‰
 
 // Test decoding with ArrayBuffer
 var buffer = new ArrayBuffer(4);
