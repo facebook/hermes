@@ -29,67 +29,41 @@ enum class TextDecoderEncoding : uint8_t {
 /// Returns llvh::None if the encoding is not supported.
 static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
     StringView label) {
-  // Normalize the label by trimming whitespace and converting to lowercase according to WHATWG Encoding spec.
+  if (!label.isASCII()) {  // Encoding labels must be ascii.
+    return llvh::None;
+  }
 
-  auto begin = label.begin();
-  auto end = label.end();
-  while (begin != end && (*begin == ' ' || *begin == '\t' || *begin == '\n' || *begin == '\r' || *begin == '\f')) {
-    ++begin;
-  }
-  while (begin != end) {
-    auto last = end - 1;
-    if (*last == ' ' || *last == '\t' || *last == '\n' || *last == '\r' || *last == '\f') {
-      end = last;
-    } else {
-      break;
-    }
-  }
-  auto compareIgnoreCase = [](StringView sv, const char *str) -> bool {
-    size_t len = strlen(str);
-    if (sv.length() != len) {
-      return false;
-    }
-    auto it = sv.begin();
-    for (size_t i = 0; i < len; ++i, ++it) {
-      char16_t c = *it;
-      if (c >= 'A' && c <= 'Z') {
-        c = c - 'A' + 'a';
-      }
-      if (c != str[i]) {
-        return false;
-      }
-    }
-    return true;
+  auto isASCIIWhitespace = [](char c) {
+    return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
   };
+  const char *begin = label.castToCharPtr();
+  const char *end = begin + label.length();
+  while (begin != end && isASCIIWhitespace(*begin))
+    ++begin;
+  while (end != begin && isASCIIWhitespace(*(end - 1)))
+    --end;
 
-  StringView trimmed = label.slice(begin, end);
-  if (compareIgnoreCase(trimmed, "utf-8") ||
-      compareIgnoreCase(trimmed, "utf8") ||
-      compareIgnoreCase(trimmed, "unicode-1-1-utf-8")) {
+  llvh::StringRef trimmed(begin, end - begin);
+  if (trimmed.equals_lower("utf-8") || trimmed.equals_lower("utf8") ||
+      trimmed.equals_lower("unicode-1-1-utf-8")) {
     return TextDecoderEncoding::UTF8;
   }
 
-  if (compareIgnoreCase(trimmed, "utf-16le") ||
-      compareIgnoreCase(trimmed, "utf-16")) {
+  if (trimmed.equals_lower("utf-16le") || trimmed.equals_lower("utf-16")) {
     return TextDecoderEncoding::UTF16LE;
   }
 
-  if (compareIgnoreCase(trimmed, "utf-16be")) {
+  if (trimmed.equals_lower("utf-16be")) {
     return TextDecoderEncoding::UTF16BE;
   }
 
-  if (compareIgnoreCase(trimmed, "iso-8859-1") ||
-      compareIgnoreCase(trimmed, "iso8859-1") ||
-      compareIgnoreCase(trimmed, "iso88591") ||
-      compareIgnoreCase(trimmed, "latin1") ||
-      compareIgnoreCase(trimmed, "latin-1") ||
-      compareIgnoreCase(trimmed, "l1") ||
-      compareIgnoreCase(trimmed, "ascii") ||
-      compareIgnoreCase(trimmed, "us-ascii") ||
-      compareIgnoreCase(trimmed, "iso-ir-100") ||
-      compareIgnoreCase(trimmed, "csisolatin1") ||
-      compareIgnoreCase(trimmed, "windows-1252") ||
-      compareIgnoreCase(trimmed, "cp1252")) {
+  if (trimmed.equals_lower("iso-8859-1") ||
+      trimmed.equals_lower("iso8859-1") || trimmed.equals_lower("iso88591") ||
+      trimmed.equals_lower("latin1") || trimmed.equals_lower("latin-1") ||
+      trimmed.equals_lower("l1") || trimmed.equals_lower("ascii") ||
+      trimmed.equals_lower("us-ascii") || trimmed.equals_lower("iso-ir-100") ||
+      trimmed.equals_lower("csisolatin1") ||
+      trimmed.equals_lower("windows-1252") || trimmed.equals_lower("cp1252")) {
     return TextDecoderEncoding::Latin1;
   }
 
