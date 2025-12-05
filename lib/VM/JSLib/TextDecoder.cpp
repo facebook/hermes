@@ -412,214 +412,36 @@ textDecoderPrototypeIgnoreBOM(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(ignoreBOM);
 }
 
+/// Decode UTF-8 bytes to a string.
 static CallResult<HermesValue> decodeUTF8(
     Runtime &runtime,
     const uint8_t *bytes,
     size_t length,
     bool fatal,
     bool ignoreBOM) {
+  // Skip BOM if present and ignoreBOM is false. UTF-8 BOM is EF BB BF.
+  if (!ignoreBOM && length >= 3 &&
+      bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
+    bytes += 3;
+    length -= 3;
+  }
+
   if (length == 0) {
     return HermesValue::encodeStringValue(
         runtime.getPredefinedString(Predefined::emptyString));
   }
 
-  const uint8_t *start = bytes;
-  const uint8_t *end = bytes + length;
-
-  // Skip BOM if present and ignoreBOM is false; UTF-8 BOM is EF BB BF
-  if (!ignoreBOM && length >= 3 && start[0] == 0xEF && start[1] == 0xBB &&
-      start[2] == 0xBF) {
-    start += 3;
-  }
-
-  if (start == end) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
-  }
-
-  // First pass: determine if result is ASCII-only and calculate output size
-  bool isASCII = true;
-  size_t utf16Length = 0;
-  const uint8_t *p = start;
-
-  while (p < end) {
-    uint8_t b = *p;
-    if (b < 0x80) {
-      // ASCII byte
-      utf16Length++;
-      p++;
-    } else if ((b & 0xE0) == 0xC0) {
-      // 2-byte sequence
-      if (p + 1 >= end || (p[1] & 0xC0) != 0x80) {
-        if (fatal) {
-          return runtime.raiseTypeError("Invalid UTF-8 sequence");
-        }
-        // Replacement character
-        utf16Length++;
-        p++;
-        isASCII = false;
-        continue;
-      }
-      uint32_t cp = ((b & 0x1F) << 6) | (p[1] & 0x3F);
-      // Check for overlong encoding
-      if (cp < 0x80) {
-        if (fatal) {
-          return runtime.raiseTypeError("Invalid UTF-8 sequence (overlong)");
-        }
-        utf16Length++;
-        p += 2;
-        isASCII = false;
-        continue;
-      }
-      utf16Length++;
-      p += 2;
-      isASCII = false;
-    } else if ((b & 0xF0) == 0xE0) {
-      // 3-byte sequence
-      if (p + 2 >= end || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80) {
-        if (fatal) {
-          return runtime.raiseTypeError("Invalid UTF-8 sequence");
-        }
-        utf16Length++;
-        p++;
-        isASCII = false;
-        continue;
-      }
-      uint32_t cp =
-          ((b & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
-      // Check for overlong encoding and surrogate range
-      if (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF)) {
-        if (fatal) {
-          return runtime.raiseTypeError("Invalid UTF-8 sequence");
-        }
-        utf16Length++;
-        p += 3;
-        isASCII = false;
-        continue;
-      }
-      utf16Length++;
-      p += 3;
-      isASCII = false;
-    } else if ((b & 0xF8) == 0xF0) {
-      // 4-byte sequence
-      if (p + 3 >= end || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 ||
-          (p[3] & 0xC0) != 0x80) {
-        if (fatal) {
-          return runtime.raiseTypeError("Invalid UTF-8 sequence");
-        }
-        utf16Length++;
-        p++;
-        isASCII = false;
-        continue;
-      }
-      uint32_t cp = ((b & 0x07) << 18) | ((p[1] & 0x3F) << 12) |
-          ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
-      // Check for overlong encoding and valid range
-      if (cp < 0x10000 || cp > 0x10FFFF) {
-        if (fatal) {
-          return runtime.raiseTypeError("Invalid UTF-8 sequence");
-        }
-        utf16Length++;
-        p += 4;
-        isASCII = false;
-        continue;
-      }
-      // Surrogate pair
-      utf16Length += 2;
-      p += 4;
-      isASCII = false;
-    } else {
-      // Invalid leading byte
-      if (fatal) {
-        return runtime.raiseTypeError("Invalid UTF-8 sequence");
-      }
-      utf16Length++;
-      p++;
-      isASCII = false;
+  // In fatal mode, we need to validate the UTF-8 first since createEfficient
+  // with IgnoreInputErrors=false raises RangeError, but we need TypeError.
+  if (fatal) {
+    const uint8_t *tmp = bytes;
+    if (!llvh::isLegalUTF8String(&tmp, bytes + length)) {
+      return runtime.raiseTypeError("Invalid UTF-8 sequence");
     }
   }
 
-  // Create the result string
-  if (isASCII) {
-    // All ASCII, can create directly
-    auto strRes = StringPrimitive::create(
-        runtime,
-        ASCIIRef(reinterpret_cast<const char *>(start), end - start));
-    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return strRes;
-  }
-
-  // Need to decode to UTF-16
-  auto builderRes =
-      StringBuilder::createStringBuilder(runtime, SafeUInt32(utf16Length));
-  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto builder = std::move(*builderRes);
-
-  p = start;
-  while (p < end) {
-    uint8_t b = *p;
-    if (b < 0x80) {
-      builder.appendCharacter(b);
-      p++;
-    } else if ((b & 0xE0) == 0xC0) {
-      if (p + 1 >= end || (p[1] & 0xC0) != 0x80) {
-        builder.appendCharacter(0xFFFD); // Replacement character
-        p++;
-        continue;
-      }
-      uint32_t cp = ((b & 0x1F) << 6) | (p[1] & 0x3F);
-      if (cp < 0x80) {
-        builder.appendCharacter(0xFFFD);
-        p += 2;
-        continue;
-      }
-      builder.appendCharacter(static_cast<char16_t>(cp));
-      p += 2;
-    } else if ((b & 0xF0) == 0xE0) {
-      if (p + 2 >= end || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80) {
-        builder.appendCharacter(0xFFFD);
-        p++;
-        continue;
-      }
-      uint32_t cp =
-          ((b & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
-      if (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF)) {
-        builder.appendCharacter(0xFFFD);
-        p += 3;
-        continue;
-      }
-      builder.appendCharacter(static_cast<char16_t>(cp));
-      p += 3;
-    } else if ((b & 0xF8) == 0xF0) {
-      if (p + 3 >= end || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 ||
-          (p[3] & 0xC0) != 0x80) {
-        builder.appendCharacter(0xFFFD);
-        p++;
-        continue;
-      }
-      uint32_t cp = ((b & 0x07) << 18) | ((p[1] & 0x3F) << 12) |
-          ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
-      if (cp < 0x10000 || cp > 0x10FFFF) {
-        builder.appendCharacter(0xFFFD);
-        p += 4;
-        continue;
-      }
-      // Encode as surrogate pair
-      cp -= 0x10000;
-      builder.appendCharacter(static_cast<char16_t>(0xD800 + (cp >> 10)));
-      builder.appendCharacter(static_cast<char16_t>(0xDC00 + (cp & 0x3FF)));
-      p += 4;
-    } else {
-      builder.appendCharacter(0xFFFD);
-      p++;
-    }
-  }
-
-  return builder.getStringPrimitive().getHermesValue();
+  return StringPrimitive::createEfficient(
+      runtime, llvh::makeArrayRef(bytes, length), /*IgnoreInputErrors=*/true);
 }
 
 static CallResult<HermesValue> decodeUTF16LE(
