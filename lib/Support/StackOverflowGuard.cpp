@@ -17,7 +17,7 @@ bool StackOverflowGuard::isStackOverflowingSlowPath() {
   nativeStackHigh = (const char *)highPtr;
   nativeStackSize = size;
   return LLVM_UNLIKELY(
-      (uintptr_t)nativeStackHigh - (uintptr_t)__builtin_frame_address(0) >
+      (uintptr_t)nativeStackHigh - (uintptr_t)currentFramePointer() >
       nativeStackSize);
 }
 
