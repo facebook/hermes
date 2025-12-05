@@ -577,6 +577,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // "Forward declaration" of TextEncoder.prototype.
   runtime.textEncoderPrototype = JSObject::create(runtime).getHermesValue();
 
+  // "Forward declaration" of TextDecoder.prototype.
+  runtime.textDecoderPrototype = JSObject::create(runtime).getHermesValue();
+
   // Object constructor.
   runtime.objectConstructor = createObjectConstructor(runtime).getHermesValue();
 
@@ -682,6 +685,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
 
   // TextEncoder constructor.
   createTextEncoderConstructor(runtime);
+
+  // TextDecoder constructor.
+  createTextDecoderConstructor(runtime);
 
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);

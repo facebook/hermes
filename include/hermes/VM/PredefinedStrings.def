@@ -492,6 +492,15 @@ STR(written, "written")
 STR(encoding, "encoding")
 STR(utf8, "utf-8")
 
+STR(TextDecoder, "TextDecoder")
+STR(decode, "decode")
+STR(fatal, "fatal")
+STR(ignoreBOM, "ignoreBOM")
+STR(stream, "stream")
+STR(utf16le, "utf-16le")
+STR(utf16be, "utf-16be")
+STR(windows1252, "windows-1252")
+
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these out of the
 // predefined strings table.

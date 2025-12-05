@@ -417,6 +417,9 @@ Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime);
 /// Create the TextEncoder constructor and populate methods.
 Handle<JSObject> createTextEncoderConstructor(Runtime &runtime);
 
+/// Create the TextDecoder constructor and populate methods.
+Handle<JSObject> createTextDecoderConstructor(Runtime &runtime);
+
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime &runtime);
 
