@@ -172,6 +172,8 @@ import type {
   RecordDeclarationImplements as RecordDeclarationImplementsType,
   RecordDeclarationProperty as RecordDeclarationPropertyType,
   RecordDeclarationStaticProperty as RecordDeclarationStaticPropertyType,
+  RecordExpression as RecordExpressionType,
+  RecordExpressionProperties as RecordExpressionPropertiesType,
   RestElement as RestElementType,
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
@@ -1128,6 +1130,18 @@ export type RecordDeclarationStaticPropertyProps = {
     RecordDeclarationStaticPropertyType['typeAnnotation'],
   >,
   +value: MaybeDetachedNode<RecordDeclarationStaticPropertyType['value']>,
+};
+
+export type RecordExpressionProps = {
+  +constructor: MaybeDetachedNode<RecordExpressionType['constructor']>,
+  +typeArguments?: ?MaybeDetachedNode<RecordExpressionType['typeArguments']>,
+  +properties: MaybeDetachedNode<RecordExpressionType['properties']>,
+};
+
+export type RecordExpressionPropertiesProps = {
+  +properties: $ReadOnlyArray<
+    MaybeDetachedNode<RecordExpressionPropertiesType['properties'][number]>,
+  >,
 };
 
 export type RestElementProps = {
@@ -3526,6 +3540,35 @@ export function RecordDeclarationStaticProperty(props: {
       key: asDetachedNodeForCodeGen(props.key),
       typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
       value: asDetachedNodeForCodeGen(props.value),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordExpression(props: {
+  ...RecordExpressionProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordExpressionType> {
+  const node = detachedProps<RecordExpressionType>((props.parent: $FlowFixMe), {
+    type: 'RecordExpression',
+    constructor: asDetachedNodeForCodeGen(props.constructor),
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    properties: asDetachedNodeForCodeGen(props.properties),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordExpressionProperties(props: {
+  ...RecordExpressionPropertiesProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordExpressionPropertiesType> {
+  const node = detachedProps<RecordExpressionPropertiesType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordExpressionProperties',
+      properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
     },
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));

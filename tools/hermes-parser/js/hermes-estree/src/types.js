@@ -216,6 +216,8 @@ export type ESNode =
   | RecordDeclarationBody
   | RecordDeclarationProperty
   | RecordDeclarationStaticProperty
+  | RecordExpression
+  | RecordExpressionProperties
   // JSX
   | JSXNode;
 
@@ -494,6 +496,7 @@ export type Expression =
   | AsExpression
   | AsConstExpression
   | MatchExpression
+  | RecordExpression
   | JSXFragment
   | JSXElement;
 
@@ -523,7 +526,7 @@ export type ObjectProperty =
   | ObjectPropertyWithShorthandStaticName
   | ObjectPropertyWithComputedName;
 interface ObjectPropertyBase extends BaseNode {
-  +parent: ObjectExpression | ObjectPattern;
+  +parent: ObjectExpression | ObjectPattern | RecordExpressionProperties;
 }
 export interface ObjectPropertyWithNonShorthandStaticName
   extends ObjectPropertyBase {
@@ -2182,6 +2185,18 @@ export interface RecordDeclarationStaticProperty extends BaseNode {
   +key: Identifier;
   +typeAnnotation: TypeAnnotation;
   +value: Expression;
+}
+
+export interface RecordExpression extends BaseNode {
+  +type: 'RecordExpression';
+  +constructor: Expression;
+  +typeArguments: TypeParameterInstantiation | null;
+  +properties: RecordExpressionProperties;
+}
+
+export interface RecordExpressionProperties extends BaseNode {
+  +type: 'RecordExpressionProperties';
+  +properties: $ReadOnlyArray<ObjectProperty | SpreadElement>;
 }
 
 /******************************************************

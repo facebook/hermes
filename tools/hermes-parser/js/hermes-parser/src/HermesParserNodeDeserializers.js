@@ -1801,6 +1801,22 @@ function deserializeRecordDeclarationStaticProperty() {
     value: this.deserializeNode(),
   };
 }
+function deserializeRecordExpression() {
+  return {
+    type: 'RecordExpression',
+    loc: this.addEmptyLoc(),
+    constructor: this.deserializeNode(),
+    typeArguments: this.deserializeNode(),
+    properties: this.deserializeNode(),
+  };
+}
+function deserializeRecordExpressionProperties() {
+  return {
+    type: 'RecordExpressionProperties',
+    loc: this.addEmptyLoc(),
+    properties: this.deserializeNodeList(),
+  };
+}
 function deserializeFlowLast() {
   throw new Error('Flow' + ' should not appear in program buffer');
 }
@@ -2429,6 +2445,8 @@ module.exports = [
   deserializeRecordDeclarationBody,
   deserializeRecordDeclarationProperty,
   deserializeRecordDeclarationStaticProperty,
+  deserializeRecordExpression,
+  deserializeRecordExpressionProperties,
   deserializeFlowLast,
   deserializeTSFirst,
   deserializeTSTypeAnnotation,

@@ -192,6 +192,8 @@ import type {
   RecordDeclarationImplements,
   RecordDeclarationProperty,
   RecordDeclarationStaticProperty,
+  RecordExpression,
+  RecordExpressionProperties,
   RestElement,
   ReturnStatement,
   SequenceExpression,
@@ -1039,6 +1041,16 @@ export function isRecordDeclarationProperty(node /*: ESNode | Token */) /*: impl
 
 export function isRecordDeclarationStaticProperty(node /*: ESNode | Token */) /*: implies node is RecordDeclarationStaticProperty */ {
   return node.type === 'RecordDeclarationStaticProperty';
+}
+    
+
+export function isRecordExpression(node /*: ESNode | Token */) /*: implies node is RecordExpression */ {
+  return node.type === 'RecordExpression';
+}
+    
+
+export function isRecordExpressionProperties(node /*: ESNode | Token */) /*: implies node is RecordExpressionProperties */ {
+  return node.type === 'RecordExpressionProperties';
 }
     
 

@@ -944,7 +944,8 @@ Optional<ESTree::Node *> JSParserImpl::parseMatchCallOrMatchExpressionFlow() {
   if (!optExpr) {
     return None;
   }
-  return parseLeftHandSideExpressionTail(startLoc, optExpr.getValue());
+  return parseLeftHandSideExpressionTail(
+      startLoc, optExpr.getValue(), IsClassHeritageArgument::No);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMatchExpressionFlow(
@@ -1849,6 +1850,45 @@ JSParserImpl::parseRecordDeclarationImplementsFlow() {
       start,
       getPrevTokenEndLoc(),
       new (context_) ESTree::RecordDeclarationImplementsNode(id, typeArgs));
+}
+
+bool JSParserImpl::checkRecordExpressionFlow(ESTree::NodePtr expr) {
+  return check(TokenKind::l_brace) && !lexer_.isNewLineBeforeCurrentToken() &&
+      (llvh::isa<ESTree::IdentifierNode>(expr) ||
+       llvh::isa<ESTree::MemberExpressionNode>(expr));
+}
+
+Optional<ESTree::Node *> JSParserImpl::parseRecordExpressionFlow(
+    SMLoc startLoc,
+    ESTree::NodePtr constructor,
+    ESTree::NodePtr typeArgs) {
+  assert(check(TokenKind::l_brace));
+  SMLoc propertiesStartLoc = advance().Start;
+
+  ESTree::NodeList elemList;
+  if (!parseObjectProperties(elemList))
+    return None;
+
+  SMLoc endLoc = tok_->getEndLoc();
+  if (!eat(
+          TokenKind::r_brace,
+          JSLexer::AllowDiv,
+          "at end of record expression '{...'",
+          "location of '{'",
+          propertiesStartLoc))
+    return None;
+
+  ESTree::RecordExpressionPropertiesNode *properties = setLocation(
+      propertiesStartLoc,
+      endLoc,
+      new (context_)
+          ESTree::RecordExpressionPropertiesNode(std::move(elemList)));
+
+  return setLocation(
+      startLoc,
+      endLoc,
+      new (context_)
+          ESTree::RecordExpressionNode(constructor, typeArgs, properties));
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseTypeAliasFlow(

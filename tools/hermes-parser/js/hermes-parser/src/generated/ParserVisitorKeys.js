@@ -643,6 +643,14 @@ export const HERMES_AST_VISITOR_KEYS = {
     typeAnnotation: 'Node',
     value: 'Node',
   },
+  RecordExpression: {
+    constructor: 'Node',
+    typeArguments: 'Node',
+    properties: 'Node',
+  },
+  RecordExpressionProperties: {
+    properties: 'NodeList',
+  },
   RegExpLiteral: {},
   RestElement: {
     argument: 'Node',

@@ -161,7 +161,8 @@ export function isExpression(node /*: ESNode */) /*: implies node is Expression 
     node.type === 'AsConstExpression' ||
     node.type === 'JSXFragment' ||
     node.type === 'JSXElement' ||
-    node.type === 'MatchExpression'
+    node.type === 'MatchExpression' ||
+    node.type === 'RecordExpression'
   );
 }
 

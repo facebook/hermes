@@ -1820,7 +1820,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
       if (await) {
         //   for await ( LeftHandSideExpression
         //               ^
-        optExpr1 = parseLeftHandSideExpression();
+        optExpr1 = parseLeftHandSideExpression(IsClassHeritageArgument::No);
       } else {
         // ForStatement:
         //   for ( Expression_opt
@@ -2631,25 +2631,20 @@ Optional<ESTree::ArrayExpressionNode *> JSParserImpl::parseArrayLiteral() {
           ESTree::ArrayExpressionNode(std::move(elemList), trailingComma));
 }
 
-Optional<ESTree::ObjectExpressionNode *> JSParserImpl::parseObjectLiteral() {
-  assert(check(TokenKind::l_brace));
-  SMLoc startLoc = advance().Start;
-
-  ESTree::NodeList elemList;
-
+bool JSParserImpl::parseObjectProperties(ESTree::NodeList &elemList) {
   if (!check(TokenKind::r_brace)) {
     for (;;) {
       if (check(TokenKind::dotdotdot)) {
         // Spread.
         auto optSpread = parseSpreadElement();
         if (!optSpread)
-          return None;
+          return false;
 
         elemList.push_back(**optSpread);
       } else {
         auto prop = parsePropertyAssignment(false);
         if (!prop)
-          return None;
+          return false;
 
         elemList.push_back(*prop.getValue());
       }
@@ -2660,6 +2655,16 @@ Optional<ESTree::ObjectExpressionNode *> JSParserImpl::parseObjectLiteral() {
         break;
     }
   }
+  return true;
+}
+
+Optional<ESTree::ObjectExpressionNode *> JSParserImpl::parseObjectLiteral() {
+  assert(check(TokenKind::l_brace));
+  SMLoc startLoc = advance().Start;
+
+  ESTree::NodeList elemList;
+  if (!parseObjectProperties(elemList))
+    return None;
 
   SMLoc endLoc = tok_->getEndLoc();
   if (!eat(
@@ -3863,19 +3868,22 @@ Optional<ESTree::Node *> JSParserImpl::parseNewExpressionOrOptionalExpression(
   return expr;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression() {
+Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpression(
+    IsClassHeritageArgument isClassHeritageArgument) {
   SMLoc startLoc = tok_->getStartLoc();
 
   auto optExpr = parseNewExpressionOrOptionalExpression(IsConstructorCall::No);
   if (!optExpr)
     return None;
 
-  return parseLeftHandSideExpressionTail(startLoc, optExpr.getValue());
+  return parseLeftHandSideExpressionTail(
+      startLoc, optExpr.getValue(), isClassHeritageArgument);
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpressionTail(
     SMLoc startLoc,
-    ESTree::Node *expr) {
+    ESTree::Node *expr,
+    IsClassHeritageArgument isClassHeritageArgument) {
   bool optional = checkAndEat(TokenKind::questiondot);
   bool seenOptionalChain = optional ||
       (expr->getParens() == 0 &&
@@ -3895,8 +3903,12 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpressionTail(
     SourceErrorManager::SaveAndSuppressMessages suppress{
         &sm_, Subsystem::Parser};
     auto optTypeArgs = parseTypeArguments();
-    if (optTypeArgs && check(TokenKind::l_paren)) {
-      // Call expression with type arguments.
+    if (optTypeArgs &&
+        (check(TokenKind::l_paren) ||
+         (context_.getParseFlow() && context_.getParseFlowRecords() &&
+          isClassHeritageArgument != IsClassHeritageArgument::Yes &&
+          checkRecordExpressionFlow(expr)))) {
+      // Call expression or Flow record expression with type arguments.
       typeArgs = *optTypeArgs;
     } else {
       // Failed to parse a call expression with type arguments,
@@ -3917,13 +3929,25 @@ Optional<ESTree::Node *> JSParserImpl::parseLeftHandSideExpressionTail(
       return None;
     expr = optCallExpr.getValue();
   }
+#if HERMES_PARSE_FLOW
+  // Is this a RecordExpression?
+  else if (
+      context_.getParseFlow() && context_.getParseFlowRecords() &&
+      isClassHeritageArgument != IsClassHeritageArgument::Yes &&
+      checkRecordExpressionFlow(expr)) {
+    auto optRecord = parseRecordExpressionFlow(startLoc, expr, typeArgs);
+    if (!optRecord)
+      return None;
+    expr = optRecord.getValue();
+  }
+#endif
 
   return expr;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parsePostfixExpression() {
   SMLoc startLoc = tok_->getStartLoc();
-  auto optLHandExpr = parseLeftHandSideExpression();
+  auto optLHandExpr = parseLeftHandSideExpression(IsClassHeritageArgument::No);
   if (!optLHandExpr)
     return None;
 
@@ -4639,7 +4663,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassTail(
   if (checkAndEat(TokenKind::rw_extends)) {
     // ClassHeritage[opt] { ClassBody[opt] }
     // ^
-    auto optSuperClass = parseLeftHandSideExpression();
+    auto optSuperClass =
+        parseLeftHandSideExpression(IsClassHeritageArgument::Yes);
     if (!optSuperClass)
       return None;
     superClass = *optSuperClass;

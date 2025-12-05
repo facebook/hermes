@@ -864,6 +864,10 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parsePrimaryExpression();
   Optional<ESTree::ArrayExpressionNode *> parseArrayLiteral();
+  /// Inner loop of parsing the object property elements.
+  /// \param elemList is the output list of object property element nodes.
+  /// \return false if there was an error.
+  bool parseObjectProperties(ESTree::NodeList &elemList);
   Optional<ESTree::ObjectExpressionNode *> parseObjectLiteral();
   Optional<ESTree::Node *> parseSpreadElement();
   Optional<ESTree::Node *> parsePropertyAssignment(bool eagerly);
@@ -949,12 +953,21 @@ class JSParserImpl {
   ///     the code `new a?.b()` is not valid.
   Optional<ESTree::Node *> parseNewExpressionOrOptionalExpression(
       IsConstructorCall isConstructorCall);
-  Optional<ESTree::Node *> parseLeftHandSideExpression();
+  /// Indicates whether we are parsing the argument to a class `extends`.
+  enum class IsClassHeritageArgument { No, Yes };
+  /// Parse a LHS expression.
+  /// \param isClassHeritageArgument is Yes if we are parsing a class `extends`
+  /// argument.
+  Optional<ESTree::Node *> parseLeftHandSideExpression(
+      IsClassHeritageArgument isClassHeritageArgument);
   /// Parse the remainder of a LHS expression after parsing a "new or optional
   /// expression". Includes parsing the type args and call args.
+  /// \param isClassHeritageArgument is Yes if we are parsing a class `extends`
+  /// argument.
   Optional<ESTree::Node *> parseLeftHandSideExpressionTail(
       SMLoc startLoc,
-      ESTree::Node *expr);
+      ESTree::Node *expr,
+      IsClassHeritageArgument isClassHeritageArgument);
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();
 
@@ -1325,6 +1338,18 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseRecordDeclarationFlow(SMLoc start);
   Optional<ESTree::RecordDeclarationImplementsNode *>
   parseRecordDeclarationImplementsFlow();
+
+  /// Checks if we are at the start of a Flow record declaration.
+  /// \param expr the potential constructor of the record
+  bool checkRecordExpressionFlow(ESTree::NodePtr expr);
+  /// Parse a RecordExpression: MyRecord<TypeArgs>? { properties }
+  /// \param startLoc the start location of the expression
+  /// \param constructor the record constructor identifier (e.g., MyRecord)
+  /// \param typeArgs optional type arguments parsed before the '{'
+  Optional<ESTree::Node *> parseRecordExpressionFlow(
+      SMLoc startLoc,
+      ESTree::NodePtr constructor,
+      ESTree::NodePtr typeArgs);
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);
