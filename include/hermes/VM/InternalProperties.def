@@ -37,6 +37,8 @@ NAMED_PROP(FreezeTransition)
 NAMED_PROP(TextDecoderEncoding)
 NAMED_PROP(TextDecoderFatal)
 NAMED_PROP(TextDecoderIgnoreBOM)
+NAMED_PROP(TextDecoderPending)
+NAMED_PROP(TextDecoderBOMSeen)
 
 #undef PROP
 #undef NAMED_PROP

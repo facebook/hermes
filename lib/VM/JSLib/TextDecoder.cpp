@@ -11,6 +11,7 @@
 #include "hermes/Support/UTF8.h"
 #include "llvh/Support/ConvertUTF.h"
 
+#include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSTypedArray.h"
@@ -327,6 +328,36 @@ textDecoderConstructor(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  // Initialize streaming state: pending bytes (empty array) and BOM seen flag
+  auto pendingArrRes = JSArray::create(runtime, 0, 0);
+  if (LLVM_UNLIKELY(pendingArrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto pendingHandle = runtime.makeHandle((*pendingArrRes).getHermesValue());
+  if (LLVM_UNLIKELY(
+          JSObject::defineNewOwnProperty(
+              selfHandle,
+              runtime,
+              Predefined::getSymbolID(
+                  Predefined::InternalPropertyTextDecoderPending),
+              PropertyFlags::defaultNewNamedPropertyFlags(),
+              pendingHandle) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  auto bomSeenHandle =
+      runtime.makeHandle(HermesValue::encodeBoolValue(false));
+  if (LLVM_UNLIKELY(
+          JSObject::defineNewOwnProperty(
+              selfHandle,
+              runtime,
+              Predefined::getSymbolID(
+                  Predefined::InternalPropertyTextDecoderBOMSeen),
+              PropertyFlags::defaultNewNamedPropertyFlags(),
+              bomSeenHandle) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
   return selfHandle.getHermesValue();
 }
 
@@ -388,25 +419,72 @@ textDecoderPrototypeIgnoreBOM(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(ignoreBOM);
 }
 
-/// Decode UTF-8 bytes to a string using LLVM's converter, with replacement
-/// characters for invalid sequences in non-fatal mode (per WHATWG spec).
+
+/// Get the expected length of a UTF-8 sequence from its first byte.
+static size_t utf8SequenceLength(uint8_t byte) {
+  if ((byte & 0x80) == 0) return 1;       // ASCII
+  if ((byte & 0xE0) == 0xC0) return 2;    // 110xxxxx
+  if ((byte & 0xF0) == 0xE0) return 3;    // 1110xxxx
+  if ((byte & 0xF8) == 0xF0) return 4;    // 11110xxx
+  return 0;  // Continuation byte or invalid
+}
+
+/// Decode UTF-8 bytes to a string, with streaming support.
 static CallResult<HermesValue> decodeUTF8(
     Runtime &runtime,
     const uint8_t *bytes,
     size_t length,
-    bool fatal,  // When false, invalid bytes are replaced with U+FFFD; else throws a TypeError.
-    bool ignoreBOM  // When false, the BOM is preserved and included in the output.
-  ) {
-  if (!ignoreBOM && length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
+    bool fatal,
+    bool ignoreBOM,
+    bool stream,
+    bool bomSeen,
+    uint8_t outPendingBytes[4],
+    size_t *outPendingCount,
+    bool *outBOMSeen) {
+  *outPendingCount = 0;
+  *outBOMSeen = bomSeen;
+
+  // Handle BOM (only strip once at the start of stream)
+  if (!ignoreBOM && !bomSeen && length >= 3 &&
+      bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF) {
     bytes += 3;
     length -= 3;
+    *outBOMSeen = true;
+  } else if (length > 0) {
+    *outBOMSeen = true;
+  }
+
+  if (length == 0) {
+    return HermesValue::encodeStringValue(
+        runtime.getPredefinedString(Predefined::emptyString));
+  }
+
+  // If streaming, check for incomplete sequence at end
+  size_t processLength = length;
+  size_t pendingStart = length;
+
+  if (stream) {
+    size_t i = length;
+    while (i > 0) {
+      --i;
+      uint8_t byte = bytes[i];
+      if ((byte & 0xC0) != 0x80) {  // Found lead byte
+        size_t seqLen = utf8SequenceLength(byte);
+        size_t remaining = length - i;
+        if (seqLen > 0 && remaining < seqLen) {
+          pendingStart = i;
+          processLength = i;
+        }
+        break;
+      }
+    }
   }
 
   std::u16string result;
-  result.reserve(length);
+  result.reserve(processLength);
 
   const llvh::UTF8 *src = bytes;
-  const llvh::UTF8 *srcEnd = bytes + length;
+  const llvh::UTF8 *srcEnd = bytes + processLength;
 
   while (src < srcEnd) {
     llvh::UTF16 buf[256];
@@ -418,13 +496,36 @@ static CallResult<HermesValue> decodeUTF8(
 
     if (res == llvh::conversionOK) {
       break;
-    } else if (res == llvh::sourceIllegal || res == llvh::sourceExhausted) {
+    } else if (res == llvh::sourceIllegal) {
       if (fatal) {
         return runtime.raiseTypeError("Invalid UTF-8 sequence");
       }
       result.push_back(UNICODE_REPLACEMENT_CHARACTER);
-      ++src;  // ConvertUTF8toUTF16 advances up to the last successfully converted character; we skip one to move on.
+      ++src;
+    } else if (res == llvh::sourceExhausted) {
+      if (stream) {
+        break;
+      }
+      if (fatal) {
+        return runtime.raiseTypeError("Invalid UTF-8 sequence");
+      }
+      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      ++src;
     }
+  }
+
+  // Store pending bytes if streaming; else emit replacement char.
+  if (stream && pendingStart < length) {
+    *outPendingCount = length - pendingStart;
+    for (size_t i = 0; i < *outPendingCount; ++i) {
+      outPendingBytes[i] = bytes[pendingStart + i];
+    }
+  }
+  if (!stream && processLength < length) {
+    if (fatal) {
+      return runtime.raiseTypeError("Invalid UTF-8 sequence");
+    }
+    result.push_back(UNICODE_REPLACEMENT_CHARACTER);
   }
 
   return StringPrimitive::createEfficient(runtime, std::move(result));
@@ -436,25 +537,37 @@ static CallResult<HermesValue> decodeUTF16(
     size_t length,
     bool fatal,
     bool ignoreBOM,
-    bool bigEndian) {
+    bool bigEndian,
+    bool stream,
+    bool bomSeen,
+    uint8_t outPendingBytes[4],
+    size_t *outPendingCount,
+    bool *outBOMSeen) {
+  *outPendingCount = 0;
+  *outBOMSeen = bomSeen;
+
   bool hasTrailingByte = length % 2 != 0;
-  if (hasTrailingByte) {
+  size_t evenLength = hasTrailingByte ? length - 1 : length;
+
+  if (hasTrailingByte && !stream) {
     if (fatal) {
       return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
     }
-    length -= 1;
   }
 
   const uint8_t *start = bytes;
-  const uint8_t *end = bytes + length;
+  const uint8_t *end = bytes + evenLength;
 
-  // Skip BOM if present and ignoreBOM is false.
-  // UTF-16LE BOM is FF FE, UTF-16BE BOM is FE FF.
-  if (!ignoreBOM && length >= 2) {
+  // Handle BOM (only strip once at the start of stream)
+  if (!ignoreBOM && !bomSeen && evenLength >= 2) {
     if ((bigEndian && start[0] == 0xFE && start[1] == 0xFF) ||
         (!bigEndian && start[0] == 0xFF && start[1] == 0xFE)) {
       start += 2;
+      *outBOMSeen = true;
     }
+  }
+  if (evenLength > 0) {
+    *outBOMSeen = true;
   }
 
   auto readU16 = [bigEndian](const uint8_t *p) -> char16_t {
@@ -468,36 +581,52 @@ static CallResult<HermesValue> decodeUTF16(
   std::u16string result;
   result.reserve((end - start) / 2 + 1);
 
-  for (const uint8_t *p = start; p < end; p += 2) {
+  const uint8_t *p = start;
+  while (p < end) {
     char16_t cu = readU16(p);
 
     if (isHighSurrogate(cu)) {
-      if (p + 2 < end) {
+      if (p + 4 <= end) {
         char16_t next = readU16(p + 2);
-        if (isLowSurrogate(next)) {  // Valid surrogate pair
+        if (isLowSurrogate(next)) {
           result.push_back(cu);
           result.push_back(next);
-          p += 2;
+          p += 4;
           continue;
         }
+      } else if (stream && p + 2 == end) {
+        // High surrogate at end - save as pending
+        outPendingBytes[0] = p[0];
+        outPendingBytes[1] = p[1];
+        *outPendingCount = 2;
+        break;
       }
-      // Lone high surrogate
       if (fatal) {
         return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
       }
       result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      p += 2;
     } else if (isLowSurrogate(cu)) {
       if (fatal) {
         return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
       }
       result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      p += 2;
     } else {
       result.push_back(cu);
+      p += 2;
     }
   }
 
+  // Handle trailing odd byte
   if (hasTrailingByte) {
-    result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+    if (stream) {
+      // Append the odd byte to any existing pending bytes
+      outPendingBytes[*outPendingCount] = bytes[length - 1];
+      ++(*outPendingCount);
+    } else {
+      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+    }
   }
 
   return StringPrimitive::createEfficient(runtime, std::move(result));
@@ -541,6 +670,84 @@ static CallResult<HermesValue> decodeWindows1252(
   return builder.getStringPrimitive().getHermesValue();
 }
 
+// Returns the count and fills the buffer (up to 4 bytes).
+static size_t getPendingBytes(
+    Handle<JSObject> obj,
+    Runtime &runtime,
+    uint8_t *buf) {
+  NamedPropertyDescriptor desc;
+  JSObject::getOwnNamedDescriptor(
+      obj,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyTextDecoderPending),
+      desc);
+  HermesValue val =
+      JSObject::getNamedSlotValueUnsafe(obj.get(), runtime, desc)
+          .unboxToHV(runtime);
+  if (!val.isObject()) {
+    return 0;
+  }
+  auto *arr = dyn_vmcast<JSArray>(val);
+  if (!arr) {
+    return 0;
+  }
+  size_t count = JSArray::getLength(arr, runtime);
+  for (size_t i = 0; i < count && i < 4; ++i) {
+    HermesValue elem = arr->at(runtime, i).unboxToHV(runtime);
+    buf[i] = static_cast<uint8_t>(elem.getNumber());
+  }
+  return count;
+}
+
+/// Creates a new JSArray with the given bytes.
+static ExecutionStatus setPendingBytes(
+    Handle<JSObject> obj,
+    Runtime &runtime,
+    const uint8_t *bytes,
+    size_t count) {
+  auto arrRes = JSArray::create(runtime, count, count);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto arr = *arrRes;
+  MutableHandle<> val{runtime};
+  for (size_t i = 0; i < count; ++i) {
+    val = HermesValue::encodeTrustedNumberValue(bytes[i]);
+    JSArray::setElementAt(arr, runtime, i, val);
+  }
+
+  NamedPropertyDescriptor desc;
+  JSObject::getOwnNamedDescriptor(
+      obj,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyTextDecoderPending),
+      desc);
+  JSObject::setNamedSlotValueUnsafe(
+      obj.get(), runtime, desc,
+      SmallHermesValue::encodeObjectValue(arr.get(), runtime));
+  return ExecutionStatus::RETURNED;
+}
+
+static bool getBOMSeen(Handle<JSObject> obj, Runtime &runtime) {
+  NamedPropertyDescriptor desc;
+  JSObject::getOwnNamedDescriptor(
+      obj, runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyTextDecoderBOMSeen),
+      desc);
+  return JSObject::getNamedSlotValueUnsafe(obj.get(), runtime, desc)
+      .unboxToHV(runtime).getBool();
+}
+
+static void setBOMSeen(Handle<JSObject> obj, Runtime &runtime, bool val) {
+  NamedPropertyDescriptor desc;
+  JSObject::getOwnNamedDescriptor(
+      obj, runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyTextDecoderBOMSeen),
+      desc);
+  JSObject::setNamedSlotValueUnsafe(
+      obj.get(), runtime, desc, SmallHermesValue::encodeBoolValue(val));
+}
+
 CallResult<HermesValue>
 textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
   GCScope gcScope{runtime};
@@ -559,57 +766,132 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
         "TextDecoder.prototype.decode() called on non-TextDecoder object");
   }
 
-  // Handle the case where no input is provided
-  if (args.getArgCount() == 0 || args.getArg(0).isUndefined()) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
+  // Parse stream option
+  bool stream = false;
+  if (args.getArgCount() > 1 && !args.getArg(1).isUndefined()) {
+    auto optionsHandle = args.getArgHandle(1);
+    if (optionsHandle->isObject()) {
+      auto optionsObj = Handle<JSObject>::vmcast(optionsHandle);
+      auto streamRes = JSObject::getNamed_RJS(
+          optionsObj, runtime, Predefined::getSymbolID(Predefined::stream));
+      if (LLVM_UNLIKELY(streamRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      if (!(*streamRes)->isUndefined()) {
+        stream = toBoolean(streamRes->get());
+      }
+    }
   }
 
-  // Get the input buffer
-  auto inputHandle = args.getArgHandle(0);
+  // Get pending bytes and bomSeen from a previous execution.
+  uint8_t pendingBuf[4];
+  size_t pendingCount = getPendingBytes(selfHandle, runtime, pendingBuf);
+  bool bomSeen = getBOMSeen(selfHandle, runtime);
   const uint8_t *bytes = nullptr;
   size_t length = 0;
 
-  if (auto *typedArray = dyn_vmcast<JSTypedArrayBase>(*inputHandle)) {
-    if (LLVM_UNLIKELY(!typedArray->attached(runtime))) {
+  if (args.getArgCount() > 0 && !args.getArg(0).isUndefined()) {
+    auto inputHandle = args.getArgHandle(0);
+
+    if (auto *typedArray = dyn_vmcast<JSTypedArrayBase>(*inputHandle)) {
+      if (LLVM_UNLIKELY(!typedArray->attached(runtime))) {
+        return runtime.raiseTypeError(
+            "TextDecoder.prototype.decode() called with detached buffer");
+      }
+      bytes = typedArray->begin(runtime);
+      length = typedArray->getByteLength();
+    } else if (auto *dataView = dyn_vmcast<JSDataView>(*inputHandle)) {
+      if (LLVM_UNLIKELY(!dataView->attached(runtime))) {
+        return runtime.raiseTypeError(
+            "TextDecoder.prototype.decode() called with detached buffer");
+      }
+      auto buffer = dataView->getBuffer(runtime);
+      bytes = buffer->getDataBlock(runtime) + dataView->byteOffset();
+      length = dataView->byteLength();
+    } else if (auto *arrayBuffer = dyn_vmcast<JSArrayBuffer>(*inputHandle)) {
+      if (LLVM_UNLIKELY(!arrayBuffer->attached())) {
+        return runtime.raiseTypeError(
+            "TextDecoder.prototype.decode() called with detached buffer");
+      }
+      bytes = arrayBuffer->getDataBlock(runtime);
+      length = arrayBuffer->size();
+    } else {
       return runtime.raiseTypeError(
-          "TextDecoder.prototype.decode() called with detached buffer");
+          "TextDecoder.prototype.decode() requires an ArrayBuffer or ArrayBufferView");
     }
-    bytes = typedArray->begin(runtime);
-    length = typedArray->getByteLength();
-  } else if (auto *dataView = dyn_vmcast<JSDataView>(*inputHandle)) {
-    if (LLVM_UNLIKELY(!dataView->attached(runtime))) {
-      return runtime.raiseTypeError(
-          "TextDecoder.prototype.decode() called with detached buffer");
+  }  // else: user called decode() without params.
+
+  // Combine pending bytes with new input
+  const uint8_t *inputBytes;
+  size_t inputLength;
+  std::vector<uint8_t> combined;
+
+  if (pendingCount > 0) {
+    // Need to combine pending bytes with new input
+    combined.reserve(pendingCount + length);
+    combined.insert(combined.end(), pendingBuf, pendingBuf + pendingCount);
+    if (bytes && length > 0) {
+      combined.insert(combined.end(), bytes, bytes + length);
     }
-    auto buffer = dataView->getBuffer(runtime);
-    bytes = buffer->getDataBlock(runtime) + dataView->byteOffset();
-    length = dataView->byteLength();
-  } else if (auto *arrayBuffer = dyn_vmcast<JSArrayBuffer>(*inputHandle)) {
-    if (LLVM_UNLIKELY(!arrayBuffer->attached())) {
-      return runtime.raiseTypeError(
-          "TextDecoder.prototype.decode() called with detached buffer");
-    }
-    bytes = arrayBuffer->getDataBlock(runtime);
-    length = arrayBuffer->size();
+    inputBytes = combined.data();
+    inputLength = combined.size();
   } else {
-    return runtime.raiseTypeError(
-        "TextDecoder.prototype.decode() requires an ArrayBuffer or ArrayBufferView");
+    // No pending bytes, use input directly without copying
+    inputBytes = bytes;
+    inputLength = length;
   }
 
-  // Decode based on encoding
+  uint8_t newPendingBytes[4];
+  size_t newPendingCount = 0;
+  bool newBOMSeen = bomSeen;
+  CallResult<HermesValue> result = ExecutionStatus::EXCEPTION;
+
   switch (encoding) {
     case TextDecoderEncoding::UTF8:
-      return decodeUTF8(runtime, bytes, length, fatal, ignoreBOM);
+      result = decodeUTF8(
+          runtime, inputBytes, inputLength, fatal, ignoreBOM, stream, bomSeen,
+          newPendingBytes, &newPendingCount, &newBOMSeen);
+      break;
     case TextDecoderEncoding::UTF16LE:
-      return decodeUTF16(runtime, bytes, length, fatal, ignoreBOM, false);
+      result = decodeUTF16(
+          runtime, inputBytes, inputLength, fatal, ignoreBOM, false, stream,
+          bomSeen, newPendingBytes, &newPendingCount, &newBOMSeen);
+      break;
     case TextDecoderEncoding::UTF16BE:
-      return decodeUTF16(runtime, bytes, length, fatal, ignoreBOM, true);
+      result = decodeUTF16(
+          runtime, inputBytes, inputLength, fatal, ignoreBOM, true, stream,
+          bomSeen, newPendingBytes, &newPendingCount, &newBOMSeen);
+      break;
     case TextDecoderEncoding::Windows1252:
-      return decodeWindows1252(runtime, bytes, length);
+      result = decodeWindows1252(runtime, inputBytes, inputLength);
+      newPendingCount = 0;
+      newBOMSeen = true;
+      break;
   }
 
-  llvm_unreachable("Invalid encoding");
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Update or clear streaming state
+  if (stream) {
+    if (LLVM_UNLIKELY(
+            setPendingBytes(
+                selfHandle, runtime, newPendingBytes, newPendingCount) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    setBOMSeen(selfHandle, runtime, newBOMSeen);
+  } else {
+    if (LLVM_UNLIKELY(
+            setPendingBytes(selfHandle, runtime, nullptr, 0) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    setBOMSeen(selfHandle, runtime, false);
+  }
+
+  return result;
 }
 
 } // namespace vm

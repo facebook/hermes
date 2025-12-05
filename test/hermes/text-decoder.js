@@ -344,3 +344,85 @@ print(longDecoded === longText);
 // CHECK-NEXT: true
 print(longDecoded.length);
 // CHECK-NEXT: 602
+
+// ==================== Streaming Tests ====================
+
+// Test UTF-8 streaming with incomplete multi-byte sequence
+// "日" = U+65E5 = E6 97 A5 (3 bytes)
+var streamDecoder = new TextDecoder('utf-8');
+var chunk1 = new Uint8Array([0xE6, 0x97]);  // Incomplete 3-byte seq
+var chunk2 = new Uint8Array([0xA5]);        // Complete it
+
+var streamResult1 = streamDecoder.decode(chunk1, {stream: true});
+print(streamResult1.length);  // Should be 0 (bytes pending)
+// CHECK-NEXT: 0
+
+var streamResult2 = streamDecoder.decode(chunk2);  // End stream
+print(streamResult2);  // Should be "日"
+// CHECK-NEXT: 日
+
+// Test UTF-8 streaming with 4-byte emoji split
+// "😀" = U+1F600 = F0 9F 98 80 (4 bytes)
+var emojiStreamDecoder = new TextDecoder('utf-8');
+var emojiChunk1 = new Uint8Array([0xF0, 0x9F, 0x98]);  // First 3 bytes
+var emojiChunk2 = new Uint8Array([0x80]);              // Last byte
+
+var emojiResult1 = emojiStreamDecoder.decode(emojiChunk1, {stream: true});
+print(emojiResult1.length);  // Should be 0
+// CHECK-NEXT: 0
+
+var emojiResult2 = emojiStreamDecoder.decode(emojiChunk2);
+print(emojiResult2);  // Should be "😀"
+// CHECK-NEXT: 😀
+
+// Test UTF-16LE streaming with odd byte
+var utf16StreamDecoder = new TextDecoder('utf-16le');
+var utf16Chunk1 = new Uint8Array([0x41]);  // Half of 'A' (0x0041)
+var utf16Chunk2 = new Uint8Array([0x00]);  // Complete 'A'
+
+var utf16Result1 = utf16StreamDecoder.decode(utf16Chunk1, {stream: true});
+print(utf16Result1.length);  // Should be 0
+// CHECK-NEXT: 0
+
+var utf16Result2 = utf16StreamDecoder.decode(utf16Chunk2);
+print(utf16Result2);  // Should be 'A'
+// CHECK-NEXT: A
+
+// Test UTF-16LE streaming with surrogate pair split
+var utf16SurrogateDecoder = new TextDecoder('utf-16le');
+// "😀" = D83D DE00 in UTF-16
+var surrogateChunk1 = new Uint8Array([0x3D, 0xD8]);  // High surrogate D83D
+var surrogateChunk2 = new Uint8Array([0x00, 0xDE]);  // Low surrogate DE00
+
+var surrogateResult1 = utf16SurrogateDecoder.decode(surrogateChunk1, {stream: true});
+print(surrogateResult1.length);  // Should be 0 (high surrogate pending)
+// CHECK-NEXT: 0
+
+var surrogateResult2 = utf16SurrogateDecoder.decode(surrogateChunk2);
+print(surrogateResult2);  // Should be "😀"
+// CHECK-NEXT: 😀
+
+// Test that stream:false at end flushes pending bytes with replacement
+var flushDecoder = new TextDecoder('utf-8');
+var incompleteSeq = new Uint8Array([0xE6, 0x97]);  // Incomplete 3-byte
+var flushResult = flushDecoder.decode(incompleteSeq, {stream: true});
+print(flushResult.length);  // Empty during stream
+// CHECK-NEXT: 0
+
+var finalResult = flushDecoder.decode(new Uint8Array(0));  // End stream with no data
+print(finalResult.charCodeAt(0) === 0xFFFD);  // Should emit replacement char
+// CHECK-NEXT: true
+
+// Test BOM handling with streaming - BOM should only be stripped once
+var bomStreamDecoder = new TextDecoder('utf-8');
+var bomChunk1 = new Uint8Array([0xEF, 0xBB, 0xBF, 0x41]);  // BOM + 'A'
+var bomChunk2 = new Uint8Array([0xEF, 0xBB, 0xBF, 0x42]);  // BOM sequence (U+FEFF) + 'B'
+
+var bomResult1 = bomStreamDecoder.decode(bomChunk1, {stream: true});
+print(bomResult1);  // Should be 'A' (BOM stripped from first chunk)
+// CHECK-NEXT: A
+
+var bomResult2 = bomStreamDecoder.decode(bomChunk2);
+// Second BOM sequence decodes to U+FEFF (not stripped because BOM already seen)
+print(bomResult2.length);  // Should be 2 (U+FEFF + 'B')
+// CHECK-NEXT: 2
