@@ -7,6 +7,7 @@
 
 #include "JSLibInternal.h"
 
+#include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Support/UTF8.h"
 #include "llvh/Support/ConvertUTF.h"
 
@@ -421,7 +422,7 @@ static CallResult<HermesValue> decodeUTF8(
       if (fatal) {
         return runtime.raiseTypeError("Invalid UTF-8 sequence");
       }
-      result.push_back(0xFFFD);
+      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
       ++src;  // ConvertUTF8toUTF16 advances up to the last successfully converted character; we skip one to move on.
     }
   }
@@ -429,12 +430,13 @@ static CallResult<HermesValue> decodeUTF8(
   return StringPrimitive::createEfficient(runtime, std::move(result));
 }
 
-static CallResult<HermesValue> decodeUTF16LE(
+static CallResult<HermesValue> decodeUTF16(
     Runtime &runtime,
     const uint8_t *bytes,
     size_t length,
     bool fatal,
-    bool ignoreBOM) {
+    bool ignoreBOM,
+    bool bigEndian) {
   bool hasTrailingByte = length % 2 != 0;
   if (hasTrailingByte) {
     if (fatal) {
@@ -446,21 +448,33 @@ static CallResult<HermesValue> decodeUTF16LE(
   const uint8_t *start = bytes;
   const uint8_t *end = bytes + length;
 
-  // Skip BOM if present and ignoreBOM is false. UTF-16LE BOM is FF FE.
-  if (!ignoreBOM && length >= 2 && start[0] == 0xFF && start[1] == 0xFE) {
-    start += 2;
+  // Skip BOM if present and ignoreBOM is false.
+  // UTF-16LE BOM is FF FE, UTF-16BE BOM is FE FF.
+  if (!ignoreBOM && length >= 2) {
+    if ((bigEndian && start[0] == 0xFE && start[1] == 0xFF) ||
+        (!bigEndian && start[0] == 0xFF && start[1] == 0xFE)) {
+      start += 2;
+    }
   }
+
+  auto readU16 = [bigEndian](const uint8_t *p) -> char16_t {
+    if (bigEndian) {
+      return (static_cast<char16_t>(p[0]) << 8) | static_cast<char16_t>(p[1]);
+    } else {
+      return static_cast<char16_t>(p[0]) | (static_cast<char16_t>(p[1]) << 8);
+    }
+  };
 
   std::u16string result;
   result.reserve((end - start) / 2 + 1);
 
   for (const uint8_t *p = start; p < end; p += 2) {
-    char16_t cu = static_cast<char16_t>(p[0]) | (static_cast<char16_t>(p[1]) << 8);
+    char16_t cu = readU16(p);
 
-    if (cu >= 0xD800 && cu <= 0xDBFF) {  // High surrogate
+    if (isHighSurrogate(cu)) {
       if (p + 2 < end) {
-        char16_t next = static_cast<char16_t>(p[2]) | (static_cast<char16_t>(p[3]) << 8);
-        if (next >= 0xDC00 && next <= 0xDFFF) {  // Valid surrogate pair
+        char16_t next = readU16(p + 2);
+        if (isLowSurrogate(next)) {  // Valid surrogate pair
           result.push_back(cu);
           result.push_back(next);
           p += 2;
@@ -471,79 +485,19 @@ static CallResult<HermesValue> decodeUTF16LE(
       if (fatal) {
         return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
       }
-      result.push_back(0xFFFD);
-    } else if (cu >= 0xDC00 && cu <= 0xDFFF) {  // Lone low surrogate
+      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+    } else if (isLowSurrogate(cu)) {
       if (fatal) {
         return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
       }
-      result.push_back(0xFFFD);
+      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
     } else {
       result.push_back(cu);
     }
   }
 
   if (hasTrailingByte) {
-    result.push_back(0xFFFD);
-  }
-
-  return StringPrimitive::createEfficient(runtime, std::move(result));
-}
-
-static CallResult<HermesValue> decodeUTF16BE(
-    Runtime &runtime,
-    const uint8_t *bytes,
-    size_t length,
-    bool fatal,
-    bool ignoreBOM) {
-  bool hasTrailingByte = length % 2 != 0;
-  if (hasTrailingByte) {
-    if (fatal) {
-      return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
-    }
-    length -= 1;
-  }
-
-  const uint8_t *start = bytes;
-  const uint8_t *end = bytes + length;
-
-  // Skip BOM if present and ignoreBOM is false. UTF-16BE BOM is FE FF.
-  if (!ignoreBOM && length >= 2 && start[0] == 0xFE && start[1] == 0xFF) {
-    start += 2;
-  }
-
-  std::u16string result;
-  result.reserve((end - start) / 2 + 1);
-
-  for (const uint8_t *p = start; p < end; p += 2) {
-    char16_t cu = (static_cast<char16_t>(p[0]) << 8) | static_cast<char16_t>(p[1]);
-
-    if (cu >= 0xD800 && cu <= 0xDBFF) {  // High surrogate
-      if (p + 2 < end) {
-        char16_t next = (static_cast<char16_t>(p[2]) << 8) | static_cast<char16_t>(p[3]);
-        if (next >= 0xDC00 && next <= 0xDFFF) {  // Valid surrogate pair
-          result.push_back(cu);
-          result.push_back(next);
-          p += 2;
-          continue;
-        }
-      }
-      // Lone high surrogate
-      if (fatal) {
-        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
-      }
-      result.push_back(0xFFFD);
-    } else if (cu >= 0xDC00 && cu <= 0xDFFF) {  // Lone low surrogate
-      if (fatal) {
-        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
-      }
-      result.push_back(0xFFFD);
-    } else {
-      result.push_back(cu);
-    }
-  }
-
-  if (hasTrailingByte) {
-    result.push_back(0xFFFD);
+    result.push_back(UNICODE_REPLACEMENT_CHARACTER);
   }
 
   return StringPrimitive::createEfficient(runtime, std::move(result));
@@ -634,9 +588,9 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
     case TextDecoderEncoding::UTF8:
       return decodeUTF8(runtime, bytes, length, fatal, ignoreBOM);
     case TextDecoderEncoding::UTF16LE:
-      return decodeUTF16LE(runtime, bytes, length, fatal, ignoreBOM);
+      return decodeUTF16(runtime, bytes, length, fatal, ignoreBOM, false);
     case TextDecoderEncoding::UTF16BE:
-      return decodeUTF16BE(runtime, bytes, length, fatal, ignoreBOM);
+      return decodeUTF16(runtime, bytes, length, fatal, ignoreBOM, true);
     case TextDecoderEncoding::Latin1:
       return decodeLatin1(runtime, bytes, length);
   }
