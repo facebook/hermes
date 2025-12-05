@@ -245,3 +245,70 @@ var encoded = encoder.encode(originalText);
 var decoded = decoder.decode(encoded);
 print(decoded === originalText);
 // CHECK-NEXT: true
+
+// Test long string with 3-byte char + emojis (to test chunk boundaries)
+// "中" = U+4E2D = 3 UTF-8 bytes, 1 UTF-16 code unit
+// "😀" = U+1F600 = 4 UTF-8 bytes, 2 UTF-16 code units (surrogate pair)
+// 255 "中" fills buffer to 255, then emoji needs 2 slots - tests boundary
+var boundaryTest = "中".repeat(255) + "😀".repeat(150);
+var boundaryEncoded = encoder.encode(boundaryTest);
+print(boundaryEncoded.length);  // 255*3 + 150*4 = 765 + 600 = 1365
+// CHECK-NEXT: 1365
+var boundaryDecoded = decoder.decode(boundaryEncoded);
+print(boundaryDecoded === boundaryTest);
+// CHECK-NEXT: true
+print(boundaryDecoded.length);  // 255 + 150*2 = 555
+// CHECK-NEXT: 555
+
+// Test long emoji string with UTF-16LE
+var utf16leEmojis = new Uint8Array(300 * 4);  // 300 emojis * 2 code units * 2 bytes
+for (var i = 0; i < 300; i++) {
+  // 😀 = U+1F600 = surrogate pair D83D DE00
+  utf16leEmojis[i * 4 + 0] = 0x3D;  // D83D low byte
+  utf16leEmojis[i * 4 + 1] = 0xD8;  // D83D high byte
+  utf16leEmojis[i * 4 + 2] = 0x00;  // DE00 low byte
+  utf16leEmojis[i * 4 + 3] = 0xDE;  // DE00 high byte
+}
+var utf16leEmojiDecoded = utf16leDecoder.decode(utf16leEmojis);
+print(utf16leEmojiDecoded === "😀".repeat(300));
+// CHECK-NEXT: true
+
+// Test long emoji string with UTF-16BE
+var utf16beEmojis = new Uint8Array(300 * 4);
+for (var i = 0; i < 300; i++) {
+  // 😀 = U+1F600 = surrogate pair D83D DE00
+  utf16beEmojis[i * 4 + 0] = 0xD8;  // D83D high byte
+  utf16beEmojis[i * 4 + 1] = 0x3D;  // D83D low byte
+  utf16beEmojis[i * 4 + 2] = 0xDE;  // DE00 high byte
+  utf16beEmojis[i * 4 + 3] = 0x00;  // DE00 low byte
+}
+var utf16beEmojiDecoded = utf16beDecoder.decode(utf16beEmojis);
+print(utf16beEmojiDecoded === "😀".repeat(300));
+// CHECK-NEXT: true
+
+// Test unpaired surrogate in UTF-16LE (non-fatal should produce U+FFFD)
+// Lone high surrogate D800 followed by 'A'
+var loneHighLE = new Uint8Array([0x00, 0xD8, 0x41, 0x00]);
+var loneHighResultLE = utf16leDecoder.decode(loneHighLE);
+print(loneHighResultLE.charCodeAt(0) === 0xFFFD);  // Should be replacement char
+// CHECK-NEXT: true
+print(loneHighResultLE.charAt(1));  // Should be 'A'
+// CHECK-NEXT: A
+
+// Test unpaired surrogate in UTF-16BE (non-fatal should produce U+FFFD)
+// Lone high surrogate D800 followed by 'A'
+var loneHighBE = new Uint8Array([0xD8, 0x00, 0x00, 0x41]);
+var loneHighResultBE = utf16beDecoder.decode(loneHighBE);
+print(loneHighResultBE.charCodeAt(0) === 0xFFFD);  // Should be replacement char
+// CHECK-NEXT: true
+print(loneHighResultBE.charAt(1));  // Should be 'A'
+// CHECK-NEXT: A
+
+// Test long UTF-8 sequence (>256 chars to test chunking)
+var longText = "a".repeat(300) + "😀" + "b".repeat(300);
+var longEncoded = encoder.encode(longText);
+var longDecoded = decoder.decode(longEncoded);
+print(longDecoded === longText);
+// CHECK-NEXT: true
+print(longDecoded.length);
+// CHECK-NEXT: 602

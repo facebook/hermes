@@ -7,6 +7,7 @@
 
 #include "JSLibInternal.h"
 
+#include "hermes/Support/UTF8.h"
 #include "llvh/Support/ConvertUTF.h"
 
 #include "hermes/VM/JSArrayBuffer.h"
@@ -421,7 +422,7 @@ static CallResult<HermesValue> decodeUTF8(
         return runtime.raiseTypeError("Invalid UTF-8 sequence");
       }
       result.push_back(0xFFFD);
-      ++src;
+      ++src;  // ConvertUTF8toUTF16 advances up to the last successfully converted character; we skip one to move on.
     }
   }
 
@@ -434,48 +435,58 @@ static CallResult<HermesValue> decodeUTF16LE(
     size_t length,
     bool fatal,
     bool ignoreBOM) {
-  // UTF-16 requires even number of bytes
-  if (length % 2 != 0) {
+  bool hasTrailingByte = length % 2 != 0;
+  if (hasTrailingByte) {
     if (fatal) {
       return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
     }
-    // Truncate to even
-    length = length - 1;
-  }
-
-  if (length == 0) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
+    length -= 1;
   }
 
   const uint8_t *start = bytes;
   const uint8_t *end = bytes + length;
 
-  // Skip BOM if present and ignoreBOM is false; UTF-16LE BOM is FF FE
+  // Skip BOM if present and ignoreBOM is false. UTF-16LE BOM is FF FE.
   if (!ignoreBOM && length >= 2 && start[0] == 0xFF && start[1] == 0xFE) {
     start += 2;
   }
 
-  size_t numCodeUnits = (end - start) / 2;
-  if (numCodeUnits == 0) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
-  }
-
-  auto builderRes =
-      StringBuilder::createStringBuilder(runtime, SafeUInt32(numCodeUnits));
-  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto builder = std::move(*builderRes);
+  std::u16string result;
+  result.reserve((end - start) / 2 + 1);
 
   for (const uint8_t *p = start; p < end; p += 2) {
-    char16_t codeUnit = static_cast<char16_t>(p[0]) |
-        (static_cast<char16_t>(p[1]) << 8);
-    builder.appendCharacter(codeUnit);
+    char16_t cu = static_cast<char16_t>(p[0]) | (static_cast<char16_t>(p[1]) << 8);
+
+    if (cu >= 0xD800 && cu <= 0xDBFF) {  // High surrogate
+      if (p + 2 < end) {
+        char16_t next = static_cast<char16_t>(p[2]) | (static_cast<char16_t>(p[3]) << 8);
+        if (next >= 0xDC00 && next <= 0xDFFF) {  // Valid surrogate pair
+          result.push_back(cu);
+          result.push_back(next);
+          p += 2;
+          continue;
+        }
+      }
+      // Lone high surrogate
+      if (fatal) {
+        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+      }
+      result.push_back(0xFFFD);
+    } else if (cu >= 0xDC00 && cu <= 0xDFFF) {  // Lone low surrogate
+      if (fatal) {
+        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+      }
+      result.push_back(0xFFFD);
+    } else {
+      result.push_back(cu);
+    }
   }
 
-  return builder.getStringPrimitive().getHermesValue();
+  if (hasTrailingByte) {
+    result.push_back(0xFFFD);
+  }
+
+  return StringPrimitive::createEfficient(runtime, std::move(result));
 }
 
 static CallResult<HermesValue> decodeUTF16BE(
@@ -484,86 +495,70 @@ static CallResult<HermesValue> decodeUTF16BE(
     size_t length,
     bool fatal,
     bool ignoreBOM) {
-  // UTF-16 requires even number of bytes
-  if (length % 2 != 0) {
+  bool hasTrailingByte = length % 2 != 0;
+  if (hasTrailingByte) {
     if (fatal) {
       return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
     }
-    // Truncate to even
-    length = length - 1;
-  }
-
-  if (length == 0) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
+    length -= 1;
   }
 
   const uint8_t *start = bytes;
   const uint8_t *end = bytes + length;
 
-  // Skip BOM if present and ignoreBOM is false
-  // UTF-16BE BOM is FE FF
+  // Skip BOM if present and ignoreBOM is false. UTF-16BE BOM is FE FF.
   if (!ignoreBOM && length >= 2 && start[0] == 0xFE && start[1] == 0xFF) {
     start += 2;
   }
 
-  size_t numCodeUnits = (end - start) / 2;
-  if (numCodeUnits == 0) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
-  }
-
-  auto builderRes =
-      StringBuilder::createStringBuilder(runtime, SafeUInt32(numCodeUnits));
-  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto builder = std::move(*builderRes);
+  std::u16string result;
+  result.reserve((end - start) / 2 + 1);
 
   for (const uint8_t *p = start; p < end; p += 2) {
-    char16_t codeUnit = (static_cast<char16_t>(p[0]) << 8) |
-        static_cast<char16_t>(p[1]);
-    builder.appendCharacter(codeUnit);
+    char16_t cu = (static_cast<char16_t>(p[0]) << 8) | static_cast<char16_t>(p[1]);
+
+    if (cu >= 0xD800 && cu <= 0xDBFF) {  // High surrogate
+      if (p + 2 < end) {
+        char16_t next = (static_cast<char16_t>(p[2]) << 8) | static_cast<char16_t>(p[3]);
+        if (next >= 0xDC00 && next <= 0xDFFF) {  // Valid surrogate pair
+          result.push_back(cu);
+          result.push_back(next);
+          p += 2;
+          continue;
+        }
+      }
+      // Lone high surrogate
+      if (fatal) {
+        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+      }
+      result.push_back(0xFFFD);
+    } else if (cu >= 0xDC00 && cu <= 0xDFFF) {  // Lone low surrogate
+      if (fatal) {
+        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+      }
+      result.push_back(0xFFFD);
+    } else {
+      result.push_back(cu);
+    }
   }
 
-  return builder.getStringPrimitive().getHermesValue();
+  if (hasTrailingByte) {
+    result.push_back(0xFFFD);
+  }
+
+  return StringPrimitive::createEfficient(runtime, std::move(result));
 }
 
+/// Latin-1 is a single-byte encoding where every byte is valid and there's no BOM.
 static CallResult<HermesValue> decodeLatin1(
     Runtime &runtime,
     const uint8_t *bytes,
-    size_t length,
-    bool /* fatal */,
-    bool /* ignoreBOM */) {
-  // Latin-1 is a subset of Unicode where each byte maps directly to
-  // a code point. No BOM handling needed for Latin-1.
-
-  if (length == 0) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
+    size_t length) {
+  if (isAllASCII(bytes, bytes + length)) {  // Fast path for pure ascii strings.
+    return StringPrimitive::create(
+        runtime, ASCIIRef(reinterpret_cast<const char *>(bytes), length));
   }
 
-  // Check if all bytes are ASCII
-  bool isASCII = true;
-  for (size_t i = 0; i < length; ++i) {
-    if (bytes[i] >= 0x80) {
-      isASCII = false;
-      break;
-    }
-  }
-
-  if (isASCII) {
-    // All ASCII, can create directly
-    auto strRes = StringPrimitive::create(
-        runtime,
-        ASCIIRef(reinterpret_cast<const char *>(bytes), length));
-    if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return strRes;
-  }
-
-  // Need to create UTF-16 string (Latin-1 bytes above 0x7F need char16_t)
   auto builderRes =
       StringBuilder::createStringBuilder(runtime, SafeUInt32(length));
   if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
@@ -643,7 +638,7 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
     case TextDecoderEncoding::UTF16BE:
       return decodeUTF16BE(runtime, bytes, length, fatal, ignoreBOM);
     case TextDecoderEncoding::Latin1:
-      return decodeLatin1(runtime, bytes, length, fatal, ignoreBOM);
+      return decodeLatin1(runtime, bytes, length);
   }
 
   llvm_unreachable("Invalid encoding");
