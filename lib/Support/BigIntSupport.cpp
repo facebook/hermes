@@ -1755,7 +1755,7 @@ static OperationStatus compute(
     return OperationStatus::DIVISION_BY_ZERO;
   }
 
-  if (lhs.numDigits < rhs.numDigits) {
+  if (lhs.numDigits + 1 < rhs.numDigits) {
     // In this case, divideResultSize returns 0 and mismatches remainderResultSize
 
     if (quoc.digits != nullptr) {
@@ -1878,8 +1878,9 @@ static OperationStatus compute(
 } // namespace
 
 uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  if (lhs.numDigits < rhs.numDigits) {
+  if (lhs.numDigits + 1 < rhs.numDigits) {
     // Special case: (res = 0, rem = lhs), regardless of rhs sign
+    // Can't use lhs.numDigits < rhs.numDigits here because -(2n**63n)/(2n**63n) is not 0
     return 0;
   }
 
@@ -1901,8 +1902,9 @@ divide(MutableBigIntRef dst, ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
 }
 
 uint32_t remainderResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  if (lhs.numDigits < rhs.numDigits) {
+  if (lhs.numDigits + 1 < rhs.numDigits) {
     // Special case: (res = 0, rem = lhs), regardless of rhs sign
+    // Can't use lhs.numDigits < rhs.numDigits here because -(2n**63n)/(2n**63n) is not 0
     return lhs.numDigits;
   }
 
