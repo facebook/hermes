@@ -1864,7 +1864,7 @@ static OperationStatus compute(
 } // namespace
 
 uint32_t divideResultSize(ImmutableBigIntRef lhs, ImmutableBigIntRef rhs) {
-  if (compare(rhs, -1) == 0 && isNegative(lhs)) {
+  if (isNegative(lhs) && compare(rhs, -1) == 0) {
     // In this (and only this) case, we can end up with more digits than we started with
     // Examples: -(2n**63n)/-1n, -(2n**127n)/-1n
     // We avoid this in general case as it makes division much slower
