@@ -260,3 +260,28 @@ const e = match (x) {}
     ],
   });
 });
+
+test('Allow Flow record syntax', () => {
+  expect(() =>
+    parse('record R {}', {enableExperimentalFlowRecordSyntax: false}),
+  ).toThrow(new SyntaxError(`Failed to parse source`));
+
+  expect(parse('record R {}')).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'RecordDeclaration',
+        id: {
+          type: 'Identifier',
+          name: 'R',
+        },
+        implements: [],
+        typeParameters: null,
+        body: {
+          type: 'RecordDeclarationBody',
+          elements: [],
+        },
+      },
+    ],
+  });
+});

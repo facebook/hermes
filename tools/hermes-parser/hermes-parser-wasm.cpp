@@ -36,6 +36,7 @@ extern "C" ParseResult *hermesParse(
     bool detectFlow,
     bool enableExperimentalComponentSyntax,
     bool enableExperimentalFlowMatchSyntax,
+    bool enableExperimentalRecordSyntax,
     bool tokens,
     bool allowReturnOutsideFunction) {
   std::unique_ptr<ParseResult> result = std::make_unique<ParseResult>();
@@ -65,6 +66,7 @@ extern "C" ParseResult *hermesParse(
   context->setParseFlow(parseFlowSetting);
   context->setParseFlowComponentSyntax(enableExperimentalComponentSyntax);
   context->setParseFlowMatch(enableExperimentalFlowMatchSyntax);
+  context->setParseFlowRecords(enableExperimentalRecordSyntax);
   context->setParseJSX(true);
   context->setUseCJSModules(true);
   context->setAllowReturnOutsideFunction(allowReturnOutsideFunction);

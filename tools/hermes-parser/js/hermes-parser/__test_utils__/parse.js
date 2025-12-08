@@ -67,11 +67,13 @@ export function parseForSnapshot(
     preserveRange,
     enableExperimentalComponentSyntax,
     enableExperimentalFlowMatchSyntax,
+    enableExperimentalFlowRecordSyntax,
   }: $ReadOnly<{
     preserveRange?: boolean,
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
     enableExperimentalFlowMatchSyntax?: boolean,
+    enableExperimentalFlowRecordSyntax?: boolean,
   }> = {},
 ): mixed {
   const parseOpts = {
@@ -79,6 +81,8 @@ export function parseForSnapshot(
       enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
       enableExperimentalFlowMatchSyntax ?? true,
+    enableExperimentalFlowRecordSyntax:
+      enableExperimentalFlowRecordSyntax ?? true,
   };
   if (babel === true) {
     return cleanASTForSnapshot(
@@ -125,12 +129,14 @@ export async function printForSnapshot(
     babel,
     enableExperimentalComponentSyntax,
     enableExperimentalFlowMatchSyntax,
+    enableExperimentalFlowRecordSyntax,
     reactRuntimeTarget,
     transformOptions,
   }: $ReadOnly<{
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
     enableExperimentalFlowMatchSyntax?: boolean,
+    enableExperimentalFlowRecordSyntax?: boolean,
     reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
     transformOptions?: ParserOptions['transformOptions'],
   }> = {},
@@ -140,6 +146,8 @@ export async function printForSnapshot(
       enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
       enableExperimentalFlowMatchSyntax ?? true,
+    enableExperimentalFlowRecordSyntax:
+      enableExperimentalFlowRecordSyntax ?? true,
     reactRuntimeTarget,
     transformOptions,
   };
