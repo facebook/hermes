@@ -1054,19 +1054,58 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
     }
 
     case 'UnknownTypeAnnotation': {
-      // $FlowExpectedError[cannot-write]
-      node.type = 'MixedTypeAnnotation';
-      return node;
+      return {
+        type: 'GenericTypeAnnotation',
+        id: {
+          type: 'Identifier',
+          name: 'unknown',
+          optional: false,
+          typeAnnotation: null,
+          loc: node.loc,
+          range: node.range,
+          parent: EMPTY_PARENT,
+        },
+        typeParameters: null,
+        loc: node.loc,
+        range: node.range,
+        parent: EMPTY_PARENT,
+      };
     }
     case 'NeverTypeAnnotation': {
-      // $FlowExpectedError[cannot-write]
-      node.type = 'EmptyTypeAnnotation';
-      return node;
+      return {
+        type: 'GenericTypeAnnotation',
+        id: {
+          type: 'Identifier',
+          name: 'never',
+          optional: false,
+          typeAnnotation: null,
+          loc: node.loc,
+          range: node.range,
+          parent: EMPTY_PARENT,
+        },
+        typeParameters: null,
+        loc: node.loc,
+        range: node.range,
+        parent: EMPTY_PARENT,
+      };
     }
     case 'UndefinedTypeAnnotation': {
-      // $FlowExpectedError[cannot-write]
-      node.type = 'VoidTypeAnnotation';
-      return node;
+      return {
+        type: 'GenericTypeAnnotation',
+        id: {
+          type: 'Identifier',
+          name: 'undefined',
+          optional: false,
+          typeAnnotation: null,
+          loc: node.loc,
+          range: node.range,
+          parent: EMPTY_PARENT,
+        },
+        typeParameters: null,
+        loc: node.loc,
+        range: node.range,
+        parent: EMPTY_PARENT,
+      };
     }
 
     case 'JSXText': {

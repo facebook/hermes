@@ -1296,7 +1296,12 @@ describe('unknown/never/undefined', () => {
              "type": "Identifier",
            },
            "right": {
-             "type": "MixedTypeAnnotation",
+             "id": {
+               "name": "unknown",
+               "type": "Identifier",
+             },
+             "type": "GenericTypeAnnotation",
+             "typeParameters": null,
            },
            "type": "TypeAlias",
            "typeParameters": null,
@@ -1307,7 +1312,12 @@ describe('unknown/never/undefined', () => {
              "type": "Identifier",
            },
            "right": {
-             "type": "EmptyTypeAnnotation",
+             "id": {
+               "name": "never",
+               "type": "Identifier",
+             },
+             "type": "GenericTypeAnnotation",
+             "typeParameters": null,
            },
            "type": "TypeAlias",
            "typeParameters": null,
@@ -1318,7 +1328,12 @@ describe('unknown/never/undefined', () => {
              "type": "Identifier",
            },
            "right": {
-             "type": "VoidTypeAnnotation",
+             "id": {
+               "name": "undefined",
+               "type": "Identifier",
+             },
+             "type": "GenericTypeAnnotation",
+             "typeParameters": null,
            },
            "type": "TypeAlias",
            "typeParameters": null,
