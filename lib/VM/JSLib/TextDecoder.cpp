@@ -166,15 +166,23 @@ static unsigned maximalSubpartLength(const uint8_t *bytes, size_t available) {
 // Returns llvh::None if the encoding is not supported.
 static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
     StringView label) {
-  if (!label.isASCII()) {  // Encoding labels must be ascii.
-    return llvh::None;
+  // Copy to a char buffer, checking that all characters are ASCII.
+  // Encoding labels must be ASCII per the WHATWG spec.
+  llvh::SmallVector<char, 32> buf;
+  buf.reserve(label.length());
+  for (size_t i = 0; i < label.length(); ++i) {
+    char16_t c = label[i];
+    if (c > 127) {
+      return llvh::None;  // Non-ASCII character in label.
+    }
+    buf.push_back(static_cast<char>(c));
   }
 
   auto isASCIIWhitespace = [](char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
   };
-  const char *begin = label.castToCharPtr();
-  const char *end = begin + label.length();
+  const char *begin = buf.data();
+  const char *end = begin + buf.size();
   while (begin != end && isASCIIWhitespace(*begin)) {
     ++begin;
   }
