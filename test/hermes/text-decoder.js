@@ -491,3 +491,9 @@ print(new TextDecoder().decode(Uint8Array.of(0xf4, 0x90), {stream:true}).length)
 var greekDecoder = new TextDecoder('iso-8859-7');
 print(greekDecoder.decode(new Uint8Array([0xD3, 0xC1, 0xC2, 0xC2, 0xCF, 0xD0, 0xCF, 0xD5, 0xCB, 0xCF, 0xD3])));
 // CHECK-NEXT: ΣΑΒΒΟΠΟΥΛΟΣ
+
+// BOM split across streaming calls should still be stripped
+var bomStreamDecoder = new TextDecoder();
+bomStreamDecoder.decode(new Uint8Array([0xEF, 0xBB]), { stream: true });
+print(bomStreamDecoder.decode(new Uint8Array([0xBF, 0x40])).length);
+// CHECK-NEXT: 1

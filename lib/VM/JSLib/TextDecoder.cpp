@@ -807,8 +807,6 @@ static DecodeError decodeUTF8(
     bytes += 3;
     length -= 3;
     *outBOMSeen = true;
-  } else if (length > 0) {
-    *outBOMSeen = true;
   }
 
   // Check for incomplete sequence at end. Only process bytes that form complete sequences.
@@ -825,6 +823,11 @@ static DecodeError decodeUTF8(
   }
 
   decoded->reserve(processLength);
+
+  // Mark BOM as seen once we actually process bytes (not just buffer them).
+  if (!*outBOMSeen && processLength > 0) {
+    *outBOMSeen = true;
+  }
 
   const llvh::UTF8 *src = bytes;
   const llvh::UTF8 *srcEnd = bytes + processLength;
