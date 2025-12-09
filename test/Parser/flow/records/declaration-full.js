@@ -91,6 +91,20 @@ record R<T> implements I<T> {
 // CHECK-NEXT:               "type": "BooleanLiteral",
 // CHECK-NEXT:               "value": false
 // CHECK-NEXT:             }
+// CHECK-NEXT:           },
+
+class: string,
+
+// CHECK-NEXT:           {
+// CHECK-NEXT:             "type": "RecordDeclarationProperty",
+// CHECK-NEXT:             "key": {
+// CHECK-NEXT:               "type": "Identifier",
+// CHECK-NEXT:               "name": "class"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "typeAnnotation": {
+// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "defaultValue": null
 // CHECK-NEXT:           }
 
 }

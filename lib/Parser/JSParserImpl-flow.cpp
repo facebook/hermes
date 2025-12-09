@@ -1635,6 +1635,8 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
       }
     };
 
+    SMLoc propStartLoc = tok_->getStartLoc();
+
     // Parse modifiers: static, async, generator (*)
     bool isStatic = false;
     if ((check(staticIdent_)) && isModifierKeyword()) {
@@ -1648,28 +1650,25 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
     }
     bool isGenerator = checkAndEat(TokenKind::star);
 
-    // Parse property/method key
-    if (!check(TokenKind::identifier)) {
-      errorExpected(
-          TokenKind::identifier,
-          "in record body",
-          "start of record body",
-          bodyStart);
+    if (check(TokenKind::l_square)) {
+      error(tok_->getStartLoc(), "records do not support computed properties");
       return None;
     }
-
-    SMLoc keyStart = tok_->getStartLoc();
-    auto *key = setLocation(
-        tok_,
-        tok_,
-        new (context_)
-            ESTree::IdentifierNode(tok_->getIdentifier(), nullptr, false));
-    advance();
-
-    if (key->_name == constructorIdent_ ||
-        (isStatic && key->_name == prototypeIdent_)) {
-      error(key->getSourceRange(), "invalid record property name");
+    if (check(TokenKind::private_identifier)) {
+      error(tok_->getStartLoc(), "records do not support private elements");
       return None;
+    }
+    auto optKey = parsePropertyName();
+    if (!optKey)
+      return None;
+    auto key = optKey.getValue();
+
+    if (auto *keyIdent = llvh::dyn_cast<ESTree::IdentifierNode>(key)) {
+      if (keyIdent->_name == constructorIdent_ ||
+          (isStatic && keyIdent->_name == prototypeIdent_)) {
+        error(key->getSourceRange(), "invalid record property name");
+        return None;
+      }
     }
 
     if (checkAndEat(TokenKind::colon)) {
@@ -1701,13 +1700,13 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
           return None;
         }
         prop = setLocation(
-            keyStart,
+            propStartLoc,
             value,
             new (context_) ESTree::RecordDeclarationStaticPropertyNode(
                 key, *optType, value));
       } else {
         prop = setLocation(
-            keyStart,
+            propStartLoc,
             value ? value : *optType,
             new (context_)
                 ESTree::RecordDeclarationPropertyNode(key, *optType, value));
@@ -1720,7 +1719,7 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
                 JSLexer::GrammarContext::AllowRegExp,
                 "after property",
                 "start of property",
-                keyStart)) {
+                propStartLoc)) {
           return None;
         }
       }
@@ -1739,7 +1738,7 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
             TokenKind::l_paren,
             "in method parameters",
             "start of method",
-            keyStart);
+            propStartLoc);
         return None;
       }
 
@@ -1758,7 +1757,10 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
 
       if (!check(TokenKind::l_brace)) {
         errorExpected(
-            TokenKind::l_brace, "in method body", "start of method", keyStart);
+            TokenKind::l_brace,
+            "in method body",
+            "start of method",
+            propStartLoc);
         return None;
       }
 
@@ -1778,7 +1780,7 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
       auto *methodBody = parsedBody.getValue();
 
       auto *funcExpr = setLocation(
-          keyStart,
+          propStartLoc,
           methodBody,
           new (context_) ESTree::FunctionExpressionNode(
               nullptr,
@@ -1791,7 +1793,7 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
               isAsync));
 
       auto *method = setLocation(
-          keyStart,
+          propStartLoc,
           methodBody,
           new (context_) ESTree::MethodDefinitionNode(
               key, funcExpr, methodIdent_, false, isStatic));

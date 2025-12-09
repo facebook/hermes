@@ -7,7 +7,7 @@
 
 // RUN: (! %hermesc -parse-flow -Xparse-flow-records -dump-ast -pretty-json %s 2>&1 ) | %FileCheck --match-full-lines %s
 
-// CHECK: {{.*}}declaration-computed-properties-unsupported.js:15:3: error: 'identifier' expected in record body
+// CHECK: {{.*}}declaration-computed-properties-unsupported.js:15:3: error: records do not support computed properties
 // CHECK-NEXT:   [X]: number,
 // CHECK-NEXT:   ^
 

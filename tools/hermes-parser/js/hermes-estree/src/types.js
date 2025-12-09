@@ -2173,16 +2173,22 @@ export interface RecordDeclarationBody extends BaseNode {
   >;
 }
 
+export type RecordPropertyKey =
+  | Identifier
+  | StringLiteral
+  | NumericLiteral
+  | BigIntLiteral;
+
 export interface RecordDeclarationProperty extends BaseNode {
   +type: 'RecordDeclarationProperty';
-  +key: Identifier;
+  +key: RecordPropertyKey;
   +typeAnnotation: TypeAnnotation;
   +defaultValue: Expression | null;
 }
 
 export interface RecordDeclarationStaticProperty extends BaseNode {
   +type: 'RecordDeclarationStaticProperty';
-  +key: Identifier;
+  +key: RecordPropertyKey;
   +typeAnnotation: TypeAnnotation;
   +value: Expression;
 }
