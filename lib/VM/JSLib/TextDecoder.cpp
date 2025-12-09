@@ -13,6 +13,7 @@
 
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
+#include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/StringBuilder.h"
@@ -873,6 +874,30 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
           "TextDecoder.prototype.decode() requires an ArrayBuffer or ArrayBufferView");
     }
   }  // else: user called decode() without params.
+
+  bool isByteEncoding = encoding == TextDecoderEncoding::UTF8 ||
+      encoding == TextDecoderEncoding::Windows1252;
+  if (pendingCount == 0 && isByteEncoding) {
+    const uint8_t *asciiBytes = bytes;
+    size_t asciiLength = length;
+    // Skip UTF-8 BOM if present, not ignored, and not already seen.
+    if (encoding == TextDecoderEncoding::UTF8 &&
+        !ignoreBOM && !bomSeen && asciiLength >= 3 &&
+        asciiBytes[0] == 0xEF && asciiBytes[1] == 0xBB && asciiBytes[2] == 0xBF) {
+      asciiBytes += 3;
+      asciiLength -= 3;
+    }
+    if (isAllASCII(asciiBytes, asciiBytes + asciiLength)) {
+      // Update streaming state if needed (UTF-8 only).
+      if (encoding == TextDecoderEncoding::UTF8 &&
+          stream && asciiLength > 0 && !bomSeen) {
+        setBOMSeen(selfHandle, runtime, true);
+      }
+      return StringPrimitive::createEfficient(
+          runtime,
+          ASCIIRef(reinterpret_cast<const char *>(asciiBytes), asciiLength));
+    }
+  }
 
   // Combine pending bytes with new input
   const uint8_t *inputBytes;
