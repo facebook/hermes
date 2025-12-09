@@ -2129,7 +2129,7 @@ export interface MatchObjectPatternProperty extends BaseNode {
 }
 export interface MatchInstancePattern extends BaseNode {
   +type: 'MatchInstancePattern';
-  +constructor: MatchIdentifierPattern | MatchMemberPattern;
+  +targetConstructor: MatchIdentifierPattern | MatchMemberPattern;
   +properties: MatchInstanceObjectPattern;
 }
 export interface MatchInstanceObjectPattern extends BaseNode {

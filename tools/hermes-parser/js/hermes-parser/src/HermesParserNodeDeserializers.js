@@ -910,7 +910,7 @@ function deserializeMatchInstancePattern() {
   return {
     type: 'MatchInstancePattern',
     loc: this.addEmptyLoc(),
-    constructor: this.deserializeNode(),
+    targetConstructor: this.deserializeNode(),
     properties: this.deserializeNode(),
   };
 }

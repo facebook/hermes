@@ -731,7 +731,7 @@ ESTREE_NODE_2_ARGS(
 )
 ESTREE_NODE_2_ARGS(
   MatchInstancePattern, MatchPattern,
-  NodePtr, constructor, false, // MatchIdentifierPattern | MatchMemberPattern
+  NodePtr, targetConstructor, false, // MatchIdentifierPattern | MatchMemberPattern
   NodePtr, properties, false // MatchInstanceObjectPattern
 )
 

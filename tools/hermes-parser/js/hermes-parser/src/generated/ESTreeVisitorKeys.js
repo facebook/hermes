@@ -206,7 +206,7 @@ module.exports = {
   MatchExpressionCase: ['pattern', 'body', 'guard'],
   MatchIdentifierPattern: ['id'],
   MatchInstanceObjectPattern: ['properties', 'rest'],
-  MatchInstancePattern: ['constructor', 'properties'],
+  MatchInstancePattern: ['targetConstructor', 'properties'],
   MatchLiteralPattern: ['literal'],
   MatchMemberPattern: ['base', 'property'],
   MatchObjectPattern: ['properties', 'rest'],

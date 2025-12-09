@@ -876,7 +876,9 @@ export type MatchInstanceObjectPatternProps = {
 };
 
 export type MatchInstancePatternProps = {
-  +constructor: MaybeDetachedNode<MatchInstancePatternType['constructor']>,
+  +targetConstructor: MaybeDetachedNode<
+    MatchInstancePatternType['targetConstructor'],
+  >,
   +properties: MaybeDetachedNode<MatchInstancePatternType['properties']>,
 };
 
@@ -2939,7 +2941,7 @@ export function MatchInstancePattern(props: {
     (props.parent: $FlowFixMe),
     {
       type: 'MatchInstancePattern',
-      constructor: asDetachedNodeForCodeGen(props.constructor),
+      targetConstructor: asDetachedNodeForCodeGen(props.targetConstructor),
       properties: asDetachedNodeForCodeGen(props.properties),
     },
   );

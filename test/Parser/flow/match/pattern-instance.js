@@ -33,7 +33,7 @@ const e = match (x) {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
 // CHECK-NEXT:                "pattern": {
 // CHECK-NEXT:                  "type": "MatchInstancePattern",
-// CHECK-NEXT:                  "constructor": {
+// CHECK-NEXT:                  "targetConstructor": {
 // CHECK-NEXT:                    "type": "MatchIdentifierPattern",
 // CHECK-NEXT:                    "id": {
 // CHECK-NEXT:                      "type": "Identifier",
@@ -93,7 +93,7 @@ const e = match (x) {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
 // CHECK-NEXT:                "pattern": {
 // CHECK-NEXT:                  "type": "MatchInstancePattern",
-// CHECK-NEXT:                  "constructor": {
+// CHECK-NEXT:                  "targetConstructor": {
 // CHECK-NEXT:                    "type": "MatchIdentifierPattern",
 // CHECK-NEXT:                    "id": {
 // CHECK-NEXT:                      "type": "Identifier",
@@ -139,7 +139,7 @@ const e = match (x) {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
 // CHECK-NEXT:                "pattern": {
 // CHECK-NEXT:                  "type": "MatchInstancePattern",
-// CHECK-NEXT:                  "constructor": {
+// CHECK-NEXT:                  "targetConstructor": {
 // CHECK-NEXT:                    "type": "MatchIdentifierPattern",
 // CHECK-NEXT:                    "id": {
 // CHECK-NEXT:                      "type": "Identifier",
@@ -192,7 +192,7 @@ const e = match (x) {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
 // CHECK-NEXT:                "pattern": {
 // CHECK-NEXT:                  "type": "MatchInstancePattern",
-// CHECK-NEXT:                  "constructor": {
+// CHECK-NEXT:                  "targetConstructor": {
 // CHECK-NEXT:                    "type": "MatchMemberPattern",
 // CHECK-NEXT:                    "base": {
 // CHECK-NEXT:                      "type": "MatchIdentifierPattern",
@@ -226,7 +226,7 @@ const e = match (x) {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
 // CHECK-NEXT:                "pattern": {
 // CHECK-NEXT:                  "type": "MatchInstancePattern",
-// CHECK-NEXT:                  "constructor": {
+// CHECK-NEXT:                  "targetConstructor": {
 // CHECK-NEXT:                    "type": "MatchMemberPattern",
 // CHECK-NEXT:                    "base": {
 // CHECK-NEXT:                      "type": "MatchIdentifierPattern",
@@ -263,7 +263,7 @@ const e = match (x) {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
 // CHECK-NEXT:                "pattern": {
 // CHECK-NEXT:                  "type": "MatchInstancePattern",
-// CHECK-NEXT:                  "constructor": {
+// CHECK-NEXT:                  "targetConstructor": {
 // CHECK-NEXT:                    "type": "MatchMemberPattern",
 // CHECK-NEXT:                    "base": {
 // CHECK-NEXT:                      "type": "MatchIdentifierPattern",
