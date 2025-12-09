@@ -486,3 +486,8 @@ print(new TextDecoder().decode(Uint8Array.of(0xf0, 0x80), {stream:true}).length)
 // F4 90+ would be > U+10FFFF - should emit replacement chars
 print(new TextDecoder().decode(Uint8Array.of(0xf4, 0x90), {stream:true}).length);
 // CHECK-NEXT: 2
+
+// ISO-8859-7 (Greek): ΣΑΒΒΟΠΟΥΛΟΣ
+var greekDecoder = new TextDecoder('iso-8859-7');
+print(greekDecoder.decode(new Uint8Array([0xD3, 0xC1, 0xC2, 0xC2, 0xCF, 0xD0, 0xCF, 0xD5, 0xCB, 0xCF, 0xD3])));
+// CHECK-NEXT: ΣΑΒΒΟΠΟΥΛΟΣ
