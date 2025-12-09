@@ -426,3 +426,11 @@ var bomResult2 = bomStreamDecoder.decode(bomChunk2);
 // Second BOM sequence decodes to U+FEFF (not stripped because BOM already seen)
 print(bomResult2.length);  // Should be 2 (U+FEFF + 'B')
 // CHECK-NEXT: 2
+
+// Test large inputs
+print(new TextDecoder().decode(new Uint8Array(1e6)).length);
+// CHECK-NEXT: 1000000
+print(new TextDecoder().decode(new Uint8Array(2e6)).length);
+// CHECK-NEXT: 2000000
+print(new TextDecoder('utf-16le').decode(new Uint16Array(1e6)).length);
+// CHECK-NEXT: 1000000

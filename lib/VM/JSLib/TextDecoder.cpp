@@ -28,6 +28,13 @@ enum class TextDecoderEncoding : uint8_t {
   Windows1252 = 3,
 };
 
+enum class DecodeError {
+  None = 0,
+  InvalidSequence,  // Invalid byte sequence (fatal mode)
+  InvalidSurrogate, // Invalid surrogate (fatal mode)
+  OddByteCount,     // Odd byte count in UTF-16 (fatal mode)
+};
+
 /// Parse the encoding label and return the corresponding encoding type.
 /// Returns llvh::None if the encoding is not supported.
 static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
@@ -429,15 +436,14 @@ static size_t utf8SequenceLength(uint8_t byte) {
   return 0;  // Continuation byte or invalid
 }
 
-/// Decode UTF-8 bytes to a string, with streaming support.
-static CallResult<HermesValue> decodeUTF8(
-    Runtime &runtime,
+static DecodeError decodeUTF8(
     const uint8_t *bytes,
     size_t length,
     bool fatal,
     bool ignoreBOM,
     bool stream,
     bool bomSeen,
+    std::u16string *decoded,
     uint8_t outPendingBytes[4],
     size_t *outPendingCount,
     bool *outBOMSeen) {
@@ -452,11 +458,6 @@ static CallResult<HermesValue> decodeUTF8(
     *outBOMSeen = true;
   } else if (length > 0) {
     *outBOMSeen = true;
-  }
-
-  if (length == 0) {
-    return HermesValue::encodeStringValue(
-        runtime.getPredefinedString(Predefined::emptyString));
   }
 
   // If streaming, check for incomplete sequence at end
@@ -480,8 +481,7 @@ static CallResult<HermesValue> decodeUTF8(
     }
   }
 
-  std::u16string result;
-  result.reserve(processLength);
+  decoded->reserve(processLength);
 
   const llvh::UTF8 *src = bytes;
   const llvh::UTF8 *srcEnd = bytes + processLength;
@@ -492,24 +492,25 @@ static CallResult<HermesValue> decodeUTF8(
     llvh::ConversionResult res = llvh::ConvertUTF8toUTF16(
         &src, srcEnd, &dst, buf + 256, llvh::lenientConversion);
 
-    result.append(reinterpret_cast<char16_t *>(buf), reinterpret_cast<char16_t *>(dst));
+    decoded->append(
+        reinterpret_cast<char16_t *>(buf), reinterpret_cast<char16_t *>(dst));
 
     if (res == llvh::conversionOK) {
       break;
     } else if (res == llvh::sourceIllegal) {
       if (fatal) {
-        return runtime.raiseTypeError("Invalid UTF-8 sequence");
+        return DecodeError::InvalidSequence;
       }
-      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
       ++src;
     } else if (res == llvh::sourceExhausted) {
       if (stream) {
         break;
       }
       if (fatal) {
-        return runtime.raiseTypeError("Invalid UTF-8 sequence");
+        return DecodeError::InvalidSequence;
       }
-      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
       ++src;
     }
   }
@@ -523,16 +524,15 @@ static CallResult<HermesValue> decodeUTF8(
   }
   if (!stream && processLength < length) {
     if (fatal) {
-      return runtime.raiseTypeError("Invalid UTF-8 sequence");
+      return DecodeError::InvalidSequence;
     }
-    result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+    decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
   }
 
-  return StringPrimitive::createEfficient(runtime, std::move(result));
+  return DecodeError::None;
 }
 
-static CallResult<HermesValue> decodeUTF16(
-    Runtime &runtime,
+static DecodeError decodeUTF16(
     const uint8_t *bytes,
     size_t length,
     bool fatal,
@@ -540,6 +540,7 @@ static CallResult<HermesValue> decodeUTF16(
     bool bigEndian,
     bool stream,
     bool bomSeen,
+    std::u16string *decoded,
     uint8_t outPendingBytes[4],
     size_t *outPendingCount,
     bool *outBOMSeen) {
@@ -549,10 +550,8 @@ static CallResult<HermesValue> decodeUTF16(
   bool hasTrailingByte = length % 2 != 0;
   size_t evenLength = hasTrailingByte ? length - 1 : length;
 
-  if (hasTrailingByte && !stream) {
-    if (fatal) {
-      return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
-    }
+  if (hasTrailingByte && !stream && fatal) {
+    return DecodeError::OddByteCount;
   }
 
   const uint8_t *start = bytes;
@@ -578,8 +577,7 @@ static CallResult<HermesValue> decodeUTF16(
     }
   };
 
-  std::u16string result;
-  result.reserve((end - start) / 2 + 1);
+  decoded->reserve((end - start) / 2 + 1);
 
   const uint8_t *p = start;
   while (p < end) {
@@ -589,8 +587,8 @@ static CallResult<HermesValue> decodeUTF16(
       if (p + 4 <= end) {
         char16_t next = readU16(p + 2);
         if (isLowSurrogate(next)) {
-          result.push_back(cu);
-          result.push_back(next);
+          decoded->push_back(cu);
+          decoded->push_back(next);
           p += 4;
           continue;
         }
@@ -602,18 +600,18 @@ static CallResult<HermesValue> decodeUTF16(
         break;
       }
       if (fatal) {
-        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+        return DecodeError::InvalidSurrogate;
       }
-      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
       p += 2;
     } else if (isLowSurrogate(cu)) {
       if (fatal) {
-        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+        return DecodeError::InvalidSurrogate;
       }
-      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
       p += 2;
     } else {
-      result.push_back(cu);
+      decoded->push_back(cu);
       p += 2;
     }
   }
@@ -625,11 +623,11 @@ static CallResult<HermesValue> decodeUTF16(
       outPendingBytes[*outPendingCount] = bytes[length - 1];
       ++(*outPendingCount);
     } else {
-      result.push_back(UNICODE_REPLACEMENT_CHARACTER);
+      decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
     }
   }
 
-  return StringPrimitive::createEfficient(runtime, std::move(result));
+  return DecodeError::None;
 }
 
 /// Windows-1252 lookup table for special characters.
@@ -642,32 +640,19 @@ static constexpr char16_t kWindows1252Table[32] = {
 
 /// Windows-1252 is a single-byte encoding. Bytes 0x00-0x7F and 0xA0-0xFF map
 /// directly to Unicode, but 0x80-0x9F use a special lookup table.
-static CallResult<HermesValue> decodeWindows1252(
-    Runtime &runtime,
+static void decodeWindows1252(
     const uint8_t *bytes,
-    size_t length) {
-  if (isAllASCII(bytes, bytes + length)) {  // Fast path for pure ASCII strings.
-    return StringPrimitive::create(
-        runtime, ASCIIRef(reinterpret_cast<const char *>(bytes), length));
-  }
-
-  auto builderRes =
-      StringBuilder::createStringBuilder(runtime, SafeUInt32(length));
-  if (LLVM_UNLIKELY(builderRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto builder = std::move(*builderRes);
-
+    size_t length,
+    std::u16string *decoded) {
+  decoded->reserve(length);
   for (size_t i = 0; i < length; ++i) {
     uint8_t byte = bytes[i];
     if (byte >= 0x80 && byte <= 0x9F) {
-      builder.appendCharacter(kWindows1252Table[byte - 0x80]);
+      decoded->push_back(kWindows1252Table[byte - 0x80]);
     } else {
-      builder.appendCharacter(static_cast<char16_t>(byte));
+      decoded->push_back(static_cast<char16_t>(byte));
     }
   }
-
-  return builder.getStringPrimitive().getHermesValue();
 }
 
 // Returns the count and fills the buffer (up to 4 bytes).
@@ -844,33 +829,43 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
   uint8_t newPendingBytes[4];
   size_t newPendingCount = 0;
   bool newBOMSeen = bomSeen;
-  CallResult<HermesValue> result = ExecutionStatus::EXCEPTION;
+  std::u16string decoded;
+  DecodeError err = DecodeError::None;
 
   switch (encoding) {
     case TextDecoderEncoding::UTF8:
-      result = decodeUTF8(
-          runtime, inputBytes, inputLength, fatal, ignoreBOM, stream, bomSeen,
+      err = decodeUTF8(
+          inputBytes, inputLength, fatal, ignoreBOM, stream, bomSeen, &decoded,
           newPendingBytes, &newPendingCount, &newBOMSeen);
       break;
     case TextDecoderEncoding::UTF16LE:
-      result = decodeUTF16(
-          runtime, inputBytes, inputLength, fatal, ignoreBOM, false, stream,
-          bomSeen, newPendingBytes, &newPendingCount, &newBOMSeen);
+      err = decodeUTF16(
+          inputBytes, inputLength, fatal, ignoreBOM, false, stream, bomSeen,
+          &decoded, newPendingBytes, &newPendingCount, &newBOMSeen);
       break;
     case TextDecoderEncoding::UTF16BE:
-      result = decodeUTF16(
-          runtime, inputBytes, inputLength, fatal, ignoreBOM, true, stream,
-          bomSeen, newPendingBytes, &newPendingCount, &newBOMSeen);
+      err = decodeUTF16(
+          inputBytes, inputLength, fatal, ignoreBOM, true, stream, bomSeen,
+          &decoded, newPendingBytes, &newPendingCount, &newBOMSeen);
       break;
     case TextDecoderEncoding::Windows1252:
-      result = decodeWindows1252(runtime, inputBytes, inputLength);
+      decodeWindows1252(inputBytes, inputLength, &decoded);
       newPendingCount = 0;
       newBOMSeen = true;
       break;
   }
 
-  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(err != DecodeError::None)) {
+    switch (err) {
+      case DecodeError::InvalidSequence:
+        return runtime.raiseTypeError("Invalid UTF-8 sequence");
+      case DecodeError::InvalidSurrogate:
+        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+      case DecodeError::OddByteCount:
+        return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
+      default:
+        return runtime.raiseTypeError("Decoding error");
+    }
   }
 
   // Update or clear streaming state
@@ -891,7 +886,7 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
     setBOMSeen(selfHandle, runtime, false);
   }
 
-  return result;
+  return StringPrimitive::createEfficient(runtime, std::move(decoded));
 }
 
 } // namespace vm
