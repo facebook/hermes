@@ -497,3 +497,15 @@ var bomStreamDecoder = new TextDecoder();
 bomStreamDecoder.decode(new Uint8Array([0xEF, 0xBB]), { stream: true });
 print(bomStreamDecoder.decode(new Uint8Array([0xBF, 0x40])).length);
 // CHECK-NEXT: 1
+
+// Test that decoder state is reset after error when stream=false
+// This tests that a failed decode() with stream=false clears pending bytes
+// so subsequent calls start fresh.
+var stateResetDecoder = new TextDecoder('utf-16le', { fatal: true });
+stateResetDecoder.decode(Uint8Array.of(0), { stream: true });  // Leaves 1 pending byte
+try {
+  stateResetDecoder.decode();  // Non-stream: errors with odd byte count, should reset state
+} catch (e) {}
+// This should NOT throw - state should be reset despite previous error
+print(stateResetDecoder.decode().length);
+// CHECK-NEXT: 0

@@ -1524,19 +1524,6 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
     newBOMSeen = true;
   }
 
-  if (LLVM_UNLIKELY(err != DecodeError::None)) {
-    switch (err) {
-      case DecodeError::InvalidSequence:
-        return runtime.raiseTypeError("Invalid UTF-8 sequence");
-      case DecodeError::InvalidSurrogate:
-        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
-      case DecodeError::OddByteCount:
-        return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
-      default:
-        return runtime.raiseTypeError("Decoding error");
-    }
-  }
-
   // Update or clear streaming state
   if (stream) {
     if (LLVM_UNLIKELY(
@@ -1553,6 +1540,19 @@ textDecoderPrototypeDecode(void *, Runtime &runtime, NativeArgs args) {
       return ExecutionStatus::EXCEPTION;
     }
     setBOMSeen(selfHandle, runtime, false);
+  }
+
+  if (LLVM_UNLIKELY(err != DecodeError::None)) {
+    switch (err) {
+      case DecodeError::InvalidSequence:
+        return runtime.raiseTypeError("Invalid UTF-8 sequence");
+      case DecodeError::InvalidSurrogate:
+        return runtime.raiseTypeError("Invalid UTF-16: lone surrogate");
+      case DecodeError::OddByteCount:
+        return runtime.raiseTypeError("Invalid UTF-16 data (odd byte count)");
+      default:
+        return runtime.raiseTypeError("Decoding error");
+    }
   }
 
   return StringPrimitive::createEfficient(runtime, std::move(decoded));
