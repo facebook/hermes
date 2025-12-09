@@ -20,7 +20,7 @@
 namespace hermes {
 namespace vm {
 
-/// Encoding types supported by TextDecoder.
+// Encoding types supported by TextDecoder.
 enum class TextDecoderEncoding : uint8_t {
   UTF8 = 0,
   UTF16LE = 1,
@@ -35,8 +35,98 @@ enum class DecodeError {
   OddByteCount,     // Odd byte count in UTF-16 (fatal mode)
 };
 
-/// Parse the encoding label and return the corresponding encoding type.
-/// Returns llvh::None if the encoding is not supported.
+// Returns the expected UTF-8 sequence length for a valid lead byte.
+// Returns 0 for invalid lead bytes (continuation bytes, 0xC0-0xC1, 0xF5-0xFF).
+// This is stricter than llvh::getNumBytesForUTF8 which returns non-zero for
+// some invalid lead bytes.
+static unsigned validUTF8SequenceLength(uint8_t byte) {
+  if (byte < 0x80) {
+    return 1;  // ASCII
+  }
+  if (byte < 0xC2) {
+    return 0;  // Continuation byte or overlong (0xC0, 0xC1)
+  }
+  if (byte < 0xE0) {
+    return 2;  // 2-byte sequence (0xC2-0xDF)
+  }
+  if (byte < 0xF0) {
+    return 3;  // 3-byte sequence (0xE0-0xEF)
+  }
+  if (byte < 0xF5) {
+    return 4;  // 4-byte sequence (0xF0-0xF4)
+  }
+  return 0;    // Invalid (0xF5-0xFF would encode > U+10FFFF)
+}
+
+// Check if a partial UTF-8 sequence could possibly be completed to form
+// a valid codepoint. Returns true if the sequence could be valid with more bytes.
+static bool isValidPartialUTF8(const uint8_t *bytes, size_t len) {
+  if (len == 0) {
+    return false;
+  }
+
+  uint8_t b0 = bytes[0];
+  unsigned expectedLen = validUTF8SequenceLength(b0);
+  if (expectedLen == 0 || len >= expectedLen) {
+    return false;  // Invalid lead or already complete
+  }
+
+  // Check second byte constraints for 3 and 4 byte sequences
+  if (len >= 2) {
+    uint8_t b1 = bytes[1];
+    // Must be continuation byte
+    if ((b1 & 0xC0) != 0x80) {
+      return false;
+    }
+    if (b0 == 0xE0 && b1 < 0xA0) {
+      return false;  // Overlong 3-byte
+    }
+    if (b0 == 0xED && b1 > 0x9F) {
+      return false;  // Would produce surrogate (D800-DFFF)
+    }
+    if (b0 == 0xF0 && b1 < 0x90) {
+      return false;  // Overlong 4-byte
+    }
+    if (b0 == 0xF4 && b1 > 0x8F) {
+      return false;  // Would be > U+10FFFF
+    }
+  }
+
+  // Check third byte for 4-byte sequences
+  if (len >= 3) {
+    uint8_t b2 = bytes[2];
+    if ((b2 & 0xC0) != 0x80) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+// Unicode 6.3.0, D93b:
+//   Maximal subpart of an ill-formed subsequence: The longest code unit
+//   subsequence starting at an unconvertible offset that is either:
+//   a. the initial subsequence of a well-formed code unit sequence, or
+//   b. a subsequence of length one.
+static unsigned maximalSubpartLength(const uint8_t *bytes, size_t available) {
+  if (available == 0) {
+    return 0;
+  }
+
+  // Find the longest prefix that isValidPartialUTF8 returns true for.
+  unsigned maxLen = 1;
+  for (unsigned len = 2; len <= available && len <= 4; ++len) {
+    if (isValidPartialUTF8(bytes, len)) {
+      maxLen = len;
+    } else {
+      break;
+    }
+  }
+  return maxLen;
+}
+
+// Parse the encoding label and return the corresponding encoding type.
+// Returns llvh::None if the encoding is not supported.
 static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
     StringView label) {
   if (!label.isASCII()) {  // Encoding labels must be ascii.
@@ -48,10 +138,12 @@ static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
   };
   const char *begin = label.castToCharPtr();
   const char *end = begin + label.length();
-  while (begin != end && isASCIIWhitespace(*begin))
+  while (begin != end && isASCIIWhitespace(*begin)) {
     ++begin;
-  while (end != begin && isASCIIWhitespace(*(end - 1)))
+  }
+  while (end != begin && isASCIIWhitespace(*(end - 1))) {
     --end;
+  }
 
   llvh::StringRef trimmed(begin, end - begin);
   if (trimmed.equals_lower("utf-8") || trimmed.equals_lower("utf8") ||
@@ -80,7 +172,7 @@ static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
   return llvh::None;
 }
 
-/// Get the canonical encoding name for the given encoding type.
+// Get the canonical encoding name for the given encoding type.
 static Predefined::Str getEncodingName(TextDecoderEncoding encoding) {
   switch (encoding) {
     case TextDecoderEncoding::UTF8:
@@ -427,14 +519,6 @@ textDecoderPrototypeIgnoreBOM(void *, Runtime &runtime, NativeArgs args) {
 }
 
 
-/// Get the expected length of a UTF-8 sequence from its first byte.
-static size_t utf8SequenceLength(uint8_t byte) {
-  if ((byte & 0x80) == 0) return 1;       // ASCII
-  if ((byte & 0xE0) == 0xC0) return 2;    // 110xxxxx
-  if ((byte & 0xF0) == 0xE0) return 3;    // 1110xxxx
-  if ((byte & 0xF8) == 0xF0) return 4;    // 11110xxx
-  return 0;  // Continuation byte or invalid
-}
 
 static DecodeError decodeUTF8(
     const uint8_t *bytes,
@@ -460,22 +544,14 @@ static DecodeError decodeUTF8(
     *outBOMSeen = true;
   }
 
-  // If streaming, check for incomplete sequence at end
+  // Check for incomplete sequence at end. Only process bytes that form complete sequences.
   size_t processLength = length;
-  size_t pendingStart = length;
-
-  if (stream) {
-    size_t i = length;
-    while (i > 0) {
-      --i;
-      uint8_t byte = bytes[i];
-      if ((byte & 0xC0) != 0x80) {  // Found lead byte
-        size_t seqLen = utf8SequenceLength(byte);
-        size_t remaining = length - i;
-        if (seqLen > 0 && remaining < seqLen) {
-          pendingStart = i;
-          processLength = i;
-        }
+  if (length > 0) {
+    // Find potential incomplete sequence at end (up to 3 bytes for 4-byte seq)
+    for (size_t tailLen = std::min(length, size_t(3)); tailLen > 0; --tailLen) {
+      size_t tailIndex = length - tailLen;
+      if (isValidPartialUTF8(bytes + tailIndex, tailLen)) {
+        processLength = tailIndex;
         break;
       }
     }
@@ -497,29 +573,21 @@ static DecodeError decodeUTF8(
 
     if (res == llvh::conversionOK) {
       break;
-    } else if (res == llvh::sourceIllegal) {
+    } else if (res == llvh::sourceIllegal || res == llvh::sourceExhausted) {
       if (fatal) {
         return DecodeError::InvalidSequence;
       }
+      // Consume the maximal subpart of the ill-formed sequence.
       decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
-      ++src;
-    } else if (res == llvh::sourceExhausted) {
-      if (stream) {
-        break;
-      }
-      if (fatal) {
-        return DecodeError::InvalidSequence;
-      }
-      decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
-      ++src;
+      src += maximalSubpartLength(src, srcEnd - src);
     }
   }
 
   // Store pending bytes if streaming; else emit replacement char.
-  if (stream && pendingStart < length) {
-    *outPendingCount = length - pendingStart;
+  if (stream && processLength < length) {
+    *outPendingCount = length - processLength;
     for (size_t i = 0; i < *outPendingCount; ++i) {
-      outPendingBytes[i] = bytes[pendingStart + i];
+      outPendingBytes[i] = bytes[processLength + i];
     }
   }
   if (!stream && processLength < length) {
@@ -630,7 +698,7 @@ static DecodeError decodeUTF16(
   return DecodeError::None;
 }
 
-/// Windows-1252 lookup table for special characters.
+// Windows-1252 lookup table for special characters.
 static constexpr char16_t kWindows1252Table[32] = {
     0x20AC, 0x0081, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,  // 80-87
     0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x008D, 0x017D, 0x008F,  // 88-8F
@@ -638,8 +706,8 @@ static constexpr char16_t kWindows1252Table[32] = {
     0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x009D, 0x017E, 0x0178,  // 98-9F
 };
 
-/// Windows-1252 is a single-byte encoding. Bytes 0x00-0x7F and 0xA0-0xFF map
-/// directly to Unicode, but 0x80-0x9F use a special lookup table.
+// Windows-1252 is a single-byte encoding. Bytes 0x00-0x7F and 0xA0-0xFF map
+// directly to Unicode, but 0x80-0x9F use a special lookup table.
 static void decodeWindows1252(
     const uint8_t *bytes,
     size_t length,
@@ -684,7 +752,7 @@ static size_t getPendingBytes(
   return count;
 }
 
-/// Creates a new JSArray with the given bytes.
+// Creates a new JSArray with the given bytes.
 static ExecutionStatus setPendingBytes(
     Handle<JSObject> obj,
     Runtime &runtime,

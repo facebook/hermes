@@ -146,6 +146,29 @@ try {
   // CHECK-NEXT: TypeError
 }
 
+// Valid incomplete sequences (1 replacement char for entire sequence)
+print(new TextDecoder().decode(Uint8Array.of(0xF0)) === '\uFFFD');
+// CHECK-NEXT: true
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x9F)) === '\uFFFD');
+// CHECK-NEXT: true
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x9F, 0x92)) === '\uFFFD');
+// CHECK-NEXT: true
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x90, 0x80)).length);
+// CHECK-NEXT: 1
+
+// Invalid sequences (replacement char per maximal subpart)
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x9F, 0x41)) === '\uFFFDA');
+// CHECK-NEXT: true
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x41, 0x42)) === '\uFFFDAB');
+// CHECK-NEXT: true
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x41, 0xF0)) === '\uFFFDA\uFFFD');
+// CHECK-NEXT: true
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x8F, 0x92)) === '\uFFFD\uFFFD\uFFFD');
+// CHECK-NEXT: true
+// 0xF0 requires second byte 0x90-0xBF, so 0x80 is invalid - 3 replacements
+print(new TextDecoder().decode(Uint8Array.of(0xF0, 0x80, 0x80)).length);
+// CHECK-NEXT: 3
+
 // Test UTF-16LE decoding
 // "test" in UTF-16LE = 74 00 65 00 73 00 74 00
 var utf16leBytes = new Uint8Array([0x74, 0x00, 0x65, 0x00, 0x73, 0x00, 0x74, 0x00]);
@@ -434,3 +457,32 @@ print(new TextDecoder().decode(new Uint8Array(2e6)).length);
 // CHECK-NEXT: 2000000
 print(new TextDecoder('utf-16le').decode(new Uint16Array(1e6)).length);
 // CHECK-NEXT: 1000000
+
+// Test invalid UTF-8 sequences in streaming mode (should not buffer invalid bytes)
+// Invalid lead bytes should emit replacement char immediately
+print(new TextDecoder().decode(Uint8Array.of(0xc0), {stream:true}).length);
+// CHECK-NEXT: 1
+print(new TextDecoder().decode(Uint8Array.of(0xc1), {stream:true}).length);
+// CHECK-NEXT: 1
+print(new TextDecoder().decode(Uint8Array.of(0xf5), {stream:true}).length);
+// CHECK-NEXT: 1
+print(new TextDecoder().decode(Uint8Array.of(0xff), {stream:true}).length);
+// CHECK-NEXT: 1
+
+// ED A0-BF would produce surrogates - should emit replacement chars, not buffer
+print(new TextDecoder().decode(Uint8Array.of(0xed, 0xa0), {stream:true}).length);
+// CHECK-NEXT: 2
+print(new TextDecoder().decode(Uint8Array.of(0xed, 0xbf), {stream:true}).length);
+// CHECK-NEXT: 2
+
+// But ED 80-9F is valid start, should buffer
+print(new TextDecoder().decode(Uint8Array.of(0xed, 0x9f), {stream:true}).length);
+// CHECK-NEXT: 0
+
+// F0 80-8F would be overlong - should emit replacement chars
+print(new TextDecoder().decode(Uint8Array.of(0xf0, 0x80), {stream:true}).length);
+// CHECK-NEXT: 2
+
+// F4 90+ would be > U+10FFFF - should emit replacement chars
+print(new TextDecoder().decode(Uint8Array.of(0xf4, 0x90), {stream:true}).length);
+// CHECK-NEXT: 2
