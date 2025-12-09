@@ -331,7 +331,7 @@ bool Verifier::visitFunction(const Function &F) {
   // If we are supporting full debugging, then we require that all functions
   // have a CreateScopeInst.
   if (F.getContext().getDebugInfoSetting() == DebugInfoSetting::ALL &&
-      !llvh::isa<GeneratorFunction>(F)) {
+      !llvh::isa<GeneratorFunction>(F) && !F.isLazy()) {
     AssertWithMsg(
         functionState->createScopeEncountered,
         "All non-generator functions need to have a CreateScopeInst");

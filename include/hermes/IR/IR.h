@@ -2267,6 +2267,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// \return the LazyCompilationDataInst at the start of the function,
   /// or nullptr if there isn't one.
+  const LazyCompilationDataInst *getLazyCompilationDataInst() const;
   LazyCompilationDataInst *getLazyCompilationDataInst();
 
   /// \return the EvalCompilationDataInst at the start of the function,
@@ -2274,7 +2275,7 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   EvalCompilationDataInst *getEvalCompilationDataInst();
 
   /// \return true if the function should be compiled lazily.
-  bool isLazy() {
+  bool isLazy() const {
     return getLazyCompilationDataInst() != nullptr;
   }
 

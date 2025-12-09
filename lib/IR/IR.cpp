@@ -319,6 +319,11 @@ LazyCompilationDataInst *Function::getLazyCompilationDataInst() {
       &BasicBlockList.front().front());
 }
 
+const LazyCompilationDataInst *Function::getLazyCompilationDataInst() const {
+  return llvh::dyn_cast<const LazyCompilationDataInst>(
+      &BasicBlockList.front().front());
+}
+
 EvalCompilationDataInst *Function::getEvalCompilationDataInst() {
   return llvh::dyn_cast<EvalCompilationDataInst>(
       &BasicBlockList.front().front());
