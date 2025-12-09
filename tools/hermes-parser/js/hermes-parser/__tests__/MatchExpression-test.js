@@ -12,6 +12,18 @@ import {printForSnapshot} from '../__test_utils__/parse';
 
 const transform = (src: string) => printForSnapshot(src, {babel: true});
 
+class C {
+  foo: number;
+  bar: string;
+  baz: string;
+
+  constructor({foo, bar, baz}: {foo: number, bar: string, baz: string}) {
+    this.foo = foo;
+    this.bar = bar;
+    this.baz = baz;
+  }
+}
+
 function runMatchExp(code: string, x: mixed): mixed {
   const f: $FlowFixMe = new Function(
     'x',
@@ -19,6 +31,7 @@ function runMatchExp(code: string, x: mixed): mixed {
     'bar',
     'no',
     'yes',
+    'C',
     `${code}; return e;`,
   );
   return f(
@@ -27,6 +40,7 @@ function runMatchExp(code: string, x: mixed): mixed {
     {a: 'bar'},
     () => false,
     () => true,
+    C,
   );
 }
 
@@ -796,6 +810,64 @@ describe('MatchExpression', () => {
       expect(runMatchExp(output, {foo: undefined})).toBe(true);
       expect(runMatchExp(output, {bar: undefined})).toBe(true);
       expect(runMatchExp(output, {baz: undefined})).toBe(true);
+    });
+
+    test('instance pattern', async () => {
+      const code = `
+        const e = match (x) {
+          C {foo: 1, bar: const a, const baz} => a + baz,
+          _ => 1,
+        };
+      `;
+      const output = await transform(code);
+      expect(output).toMatchInlineSnapshot(`
+       "const e = ($$gen$m0 => {
+         if ($$gen$m0 instanceof C && $$gen$m0.foo === 1 && "bar" in $$gen$m0 && "baz" in $$gen$m0) {
+           const a = $$gen$m0.bar;
+           const baz = $$gen$m0.baz;
+           return a + baz;
+         }
+
+         return 1;
+       })(x);"
+      `);
+
+      expect(runMatchExp(output, new C({foo: 1, bar: 'bar', baz: 'baz'}))).toBe(
+        'barbaz',
+      );
+      expect(runMatchExp(output, {foo: 1, bar: 'bar', baz: 'baz'})).toBe(1);
+      expect(runMatchExp(output, null)).toBe(1);
+    });
+
+    test('instance pattern rest', async () => {
+      const code = `
+        const e = match (x) {
+          C {foo: 1, bar: const a, ...const rest} => rest,
+          _ => 1,
+        };
+      `;
+      const output = await transform(code);
+      expect(output).toMatchInlineSnapshot(`
+       "const e = ($$gen$m0 => {
+         if ($$gen$m0 instanceof C && $$gen$m0.foo === 1 && "bar" in $$gen$m0) {
+           const a = $$gen$m0.bar;
+           const {
+             foo: $$gen$m1,
+             bar: $$gen$m2,
+             ...rest
+           } = $$gen$m0;
+           return rest;
+         }
+
+         return 1;
+       })(x);"
+      `);
+
+      expect(
+        runMatchExp(output, new C({foo: 1, bar: 'bar', baz: 'baz'})),
+      ).toStrictEqual({baz: 'baz'});
+      expect(runMatchExp(output, {foo: 1, bar: 'bar'})).toBe(1);
+      expect(runMatchExp(output, null)).toBe(1);
     });
 
     test('nested', async () => {

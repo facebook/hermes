@@ -24,8 +24,11 @@ import type {
   Identifier,
   Literal,
   MatchExpression,
+  MatchIdentifierPattern,
   MatchMemberPattern,
+  MatchObjectPatternProperty,
   MatchPattern,
+  MatchRestPattern,
   MatchStatement,
   MemberExpression,
   ObjectPattern,
@@ -86,6 +89,7 @@ type Condition =
   | {type: 'is-nan', key: Key}
   | {type: 'array', key: Key, length: number, lengthOp: 'eq' | 'gte'}
   | {type: 'object', key: Key}
+  | {type: 'instanceof', key: Key, constructor: Expression}
   | {type: 'prop-exists', key: Key, propName: string}
   | {type: 'or', orConditions: Array<Array<Condition>>};
 
@@ -209,6 +213,74 @@ function needsPropExistsCond(pattern: MatchPattern): boolean {
 }
 
 /**
+ * Analyzes properties of both object patterns and instance patterns.
+ */
+function analyzeProperties(
+  key: Key,
+  pattern: MatchPattern,
+  seenBindingNames: Set<string>,
+  properties: ReadonlyArray<MatchObjectPatternProperty>,
+  rest: MatchRestPattern | null,
+): {
+  conditions: Array<Condition>,
+  bindings: Array<Binding>,
+} {
+  const conditions: Array<Condition> = [];
+  const bindings: Array<Binding> = [];
+  const objKeys: Array<Identifier | Literal> = [];
+  const seenNames = new Set<string>();
+
+  properties.forEach(prop => {
+    const {key: objKey, pattern: propPattern} = prop;
+    objKeys.push(objKey);
+    const name = objKeyToString(objKey);
+    if (seenNames.has(name)) {
+      throw createSyntaxError(
+        propPattern,
+        `Duplicate property name '${name}' in match object pattern.`,
+      );
+    }
+    seenNames.add(name);
+    const propKey: Key = key.concat(objKey);
+    if (needsPropExistsCond(propPattern)) {
+      conditions.push({
+        type: 'prop-exists',
+        key,
+        propName: name,
+      });
+    }
+    const {conditions: childConditions, bindings: childBindings} =
+      analyzePattern(propPattern, propKey, seenBindingNames);
+    conditions.push(...childConditions);
+    bindings.push(...childBindings);
+  });
+  if (rest != null && rest.argument != null) {
+    const {id, kind} = rest.argument;
+    checkDuplicateBindingName(seenBindingNames, rest.argument, id.name);
+    checkBindingKind(pattern, kind);
+    bindings.push({
+      type: 'object-rest',
+      key,
+      exclude: objKeys,
+      kind,
+      id,
+    });
+  }
+  return {conditions, bindings};
+}
+
+function constructorExpression(
+  constructor: MatchIdentifierPattern | MatchMemberPattern,
+): Expression {
+  switch (constructor.type) {
+    case 'MatchIdentifierPattern':
+      return constructor.id;
+    case 'MatchMemberPattern':
+      return convertMemberPattern(constructor);
+  }
+}
+
+/**
  * Analyzes a match pattern, and produced both the conditions and bindings
  * produced by that pattern.
  */
@@ -318,50 +390,40 @@ function analyzePattern(
     }
     case 'MatchObjectPattern': {
       const {properties, rest} = pattern;
-      const conditions: Array<Condition> = [{type: 'object', key}];
-      const bindings: Array<Binding> = [];
-      const objKeys: Array<Identifier | Literal> = [];
-      const seenNames = new Set<string>();
-      properties.forEach(prop => {
-        const {key: objKey, pattern: propPattern} = prop;
-        objKeys.push(objKey);
-        const name = objKeyToString(objKey);
-        if (seenNames.has(name)) {
-          throw createSyntaxError(
-            propPattern,
-            `Duplicate property name '${name}' in match object pattern.`,
-          );
-        }
-        seenNames.add(name);
-        const propKey: Key = key.concat(objKey);
-        if (needsPropExistsCond(propPattern)) {
-          conditions.push({
-            type: 'prop-exists',
-            key,
-            propName: name,
-          });
-        }
-        const {conditions: childConditions, bindings: childBindings} =
-          analyzePattern(propPattern, propKey, seenBindingNames);
-        conditions.push(...childConditions);
-        bindings.push(...childBindings);
-      });
-      if (rest != null && rest.argument != null) {
-        const {id, kind} = rest.argument;
-        checkDuplicateBindingName(seenBindingNames, rest.argument, id.name);
-        checkBindingKind(pattern, kind);
-        bindings.push({
-          type: 'object-rest',
-          key,
-          exclude: objKeys,
-          kind,
-          id,
-        });
-      }
+      const {conditions: propertyConditions, bindings} = analyzeProperties(
+        key,
+        pattern,
+        seenBindingNames,
+        properties,
+        rest,
+      );
+      const conditions: Array<Condition> = [
+        {type: 'object', key},
+        ...propertyConditions,
+      ];
       return {conditions, bindings};
     }
     case 'MatchInstancePattern': {
-      throw new Error('TODO:records');
+      const {
+        targetConstructor,
+        properties: {properties, rest},
+      } = pattern;
+      const {conditions: propertyConditions, bindings} = analyzeProperties(
+        key,
+        pattern,
+        seenBindingNames,
+        properties,
+        rest,
+      );
+      const conditions: Array<Condition> = [
+        {
+          type: 'instanceof',
+          key,
+          constructor: constructorExpression(targetConstructor),
+        },
+        ...propertyConditions,
+      ];
+      return {conditions, bindings};
     }
     case 'MatchOrPattern': {
       const {patterns} = pattern;
@@ -501,6 +563,18 @@ function testsOfCondition(
       };
       return [
         disjunction([conjunction([typeofObject, notNull]), typeofFunction]),
+      ];
+    }
+    case 'instanceof': {
+      const {key, constructor} = condition;
+      return [
+        {
+          type: 'BinaryExpression',
+          left: expressionOfKey(root, key),
+          right: constructor,
+          operator: 'instanceof',
+          ...etc(),
+        },
       ];
     }
     case 'prop-exists': {
