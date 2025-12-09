@@ -191,16 +191,23 @@ static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
   }
 
   llvh::StringRef trimmed(begin, end - begin);
-  if (trimmed.equals_lower("utf-8") || trimmed.equals_lower("utf8") ||
-      trimmed.equals_lower("unicode-1-1-utf-8")) {
+  if (trimmed.equals_lower("unicode-1-1-utf-8") ||
+      trimmed.equals_lower("unicode11utf8") ||
+      trimmed.equals_lower("unicode20utf8") || trimmed.equals_lower("utf-8") ||
+      trimmed.equals_lower("utf8") || trimmed.equals_lower("x-unicode20utf8")) {
     return TextDecoderEncoding::UTF8;
   }
 
-  if (trimmed.equals_lower("utf-16le") || trimmed.equals_lower("utf-16")) {
+  if (trimmed.equals_lower("csunicode") ||
+      trimmed.equals_lower("iso-10646-ucs-2") ||
+      trimmed.equals_lower("ucs-2") || trimmed.equals_lower("unicode") ||
+      trimmed.equals_lower("unicodefeff") || trimmed.equals_lower("utf-16") ||
+      trimmed.equals_lower("utf-16le")) {
     return TextDecoderEncoding::UTF16LE;
   }
 
-  if (trimmed.equals_lower("utf-16be") || trimmed.equals_lower("unicodefffe")) {
+  if (trimmed.equals_lower("unicodefffe") ||
+      trimmed.equals_lower("utf-16be")) {
     return TextDecoderEncoding::UTF16BE;
   }
 
@@ -292,7 +299,8 @@ static llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
 
   if (trimmed.equals_lower("csisolatin9") || trimmed.equals_lower("iso-8859-15") ||
       trimmed.equals_lower("iso8859-15") || trimmed.equals_lower("iso885915") ||
-      trimmed.equals_lower("iso_8859-15") || trimmed.equals_lower("l9")) {
+      trimmed.equals_lower("iso_8859-15") || trimmed.equals_lower("l9") ||
+      trimmed.equals_lower("latin9")) {
     return TextDecoderEncoding::ISO_8859_15;
   }
 
