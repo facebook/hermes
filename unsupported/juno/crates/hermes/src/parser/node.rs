@@ -275,9 +275,9 @@ impl Comment {
             self.source_range.end.as_ptr()
         };
 
-        return StringRef {
+        StringRef {
             data: start,
             length: unsafe { end.offset_from(start) as usize },
-        };
+        }
     }
 }
