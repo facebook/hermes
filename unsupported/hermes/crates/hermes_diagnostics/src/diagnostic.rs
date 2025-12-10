@@ -262,6 +262,6 @@ impl From<Diagnostic> for Diagnostics {
 fn source_span_from_range(range: SourceRange) -> SourceSpan {
     SourceSpan::new(
         (range.start as usize).into(),
-        ((u32::from(range.end) - range.start) as usize).into(),
+        ((range.end - range.start) as usize).into(),
     )
 }
