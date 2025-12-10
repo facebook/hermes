@@ -21,6 +21,9 @@
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/TimeLimitMonitor.h"
 #include "hermes/VM/instrumentation/PerfEvents.h"
+#include "hermes/hermes.h"
+
+#include "jsi/jsi.h"
 
 namespace hermes {
 
@@ -453,7 +456,16 @@ bool executeHBCBytecodeImpl(
   }
 
   std::unique_ptr<vm::StatSamplingThread> statSampler;
-  auto runtime = vm::Runtime::create(options.runtimeConfig);
+
+  // Create HermesRuntime (JSI wrapper) - this installs JSI extensions like
+  // TextEncoder. We then extract the underlying vm::Runtime for low-level
+  // operations.
+  auto hermesRuntime =
+      facebook::hermes::makeHermesRuntime(options.runtimeConfig);
+  auto *runtime = static_cast<vm::Runtime *>(
+      facebook::jsi::castInterface<facebook::hermes::IHermes>(
+          hermesRuntime.get())
+          ->getVMRuntimeUnsafe());
 
   // TODO: surely this should use RuntimeConfig?
   runtime->getJITContext().setForceJIT(options.forceJIT);

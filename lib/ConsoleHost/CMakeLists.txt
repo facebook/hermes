@@ -8,5 +8,5 @@ set(source_files
 )
 
 add_hermes_library(hermesConsoleHost ${source_files}
-  LINK_OBJLIBS hermesPublic
+  LINK_OBJLIBS hermesPublic hermesapi
 )
