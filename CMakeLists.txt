@@ -234,6 +234,9 @@ set(HERMES_MEMORY_INSTRUMENTATION ${HERMES_ENABLE_DEBUGGER} CACHE BOOL
 set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
     "Build Facebook (rather than open-source) version of Hermes")
 
+set(HERMES_ENABLE_CONTRIB_EXTENSIONS ON CACHE BOOL
+    "Include community-contributed extensions (can be disabled for critical deployments)")
+
 set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
     "GC Out-of-memory raises an exception, rather than causing a crash")
 
@@ -820,6 +823,7 @@ if(HERMES_ENABLE_TEST_SUITE)
     shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
     check_native_stack=${HERMES_CHECK_NATIVE_STACK}
     unicode_lite=${HERMES_UNICODE_LITE}
+    contrib_extensions_enabled=${HERMES_ENABLE_CONTRIB_EXTENSIONS}
     qemu_run_prefix=${QEMU_RUN_PREFIX}
     )
 
