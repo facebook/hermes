@@ -22,11 +22,11 @@ test().then(() => {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:Break on 'debugger' statement in global: {{.*}}step-in-promise.js[2]:17:1
-// CHECK-NEXT:Set breakpoint 1 at {{.*}}step-in-promise.js[2]:13:5
+// CHECK:Break on 'debugger' statement in global: {{.*}}step-in-promise.js[3]:17:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}step-in-promise.js[3]:13:5
 // CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on breakpoint 1 in anonymous: {{.*}}step-in-promise.js[2]:13:5
+// CHECK-NEXT:Break on breakpoint 1 in anonymous: {{.*}}step-in-promise.js[3]:13:5
 // CHECK-NEXT:inside Promise
-// CHECK-NEXT:Stepped to test: {{.*}}step-in-promise.js[2]:12:21
-// CHECK-NEXT:Stepped to global: {{.*}}step-in-promise.js[2]:19:12
+// CHECK-NEXT:Stepped to test: {{.*}}step-in-promise.js[3]:12:21
+// CHECK-NEXT:Stepped to global: {{.*}}step-in-promise.js[3]:19:12
 // CHECK-NEXT:Continuing execution

@@ -52,12 +52,17 @@ set(HERMES_ENABLE_EH ON)
 set(HERMES_ENABLE_RTTI ON)
 
 add_subdirectory(cdp)
+add_subdirectory(extensions)
 
 set(api_sources
   hermes.cpp
   DebuggerAPI.cpp
   AsyncDebuggerAPI.cpp
   RuntimeTaskRunner.cpp
+  extensions/Extensions.cpp
+  extensions/ExtensionsBytecode.cpp
+  extensions/Intrinsics.cpp
+  extensions/Dummy.cpp
   ${CDP_API_SOURCES}
   )
 
@@ -80,6 +85,15 @@ add_hermes_library(hermesapi
   LINK_OBJLIBS hermesPublic LINK_LIBS jsi ${CDP_DEPS}
   )
 target_include_directories(hermesapi_obj PUBLIC ..)
+
+# ExtensionsBytecode.cpp needs to find the generated .inc file
+target_include_directories(hermesapi_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/extensions)
+
+# Ensure the bytecode is generated before compiling ExtensionsBytecode.cpp
+set_source_files_properties(extensions/ExtensionsBytecode.cpp
+  PROPERTIES
+  OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/extensions/ExtensionsBytecode.inc
+)
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_OBJLIBS hermesapi)

@@ -25,6 +25,6 @@ foo(obj);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:Break on 'debugger' statement in get number: {{.*}}step-out-breakpoint.js[2]:13:5
-// CHECK-NEXT:Set breakpoint 1 at {{.*}}step-out-breakpoint.js[2]:21:4
-// CHECK-NEXT:Stepped to foo: {{.*}}step-out-breakpoint.js[2]:21:4
+// CHECK:Break on 'debugger' statement in get number: {{.*}}step-out-breakpoint.js[3]:13:5
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}step-out-breakpoint.js[3]:21:4
+// CHECK-NEXT:Stepped to foo: {{.*}}step-out-breakpoint.js[3]:21:4

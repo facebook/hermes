@@ -23,7 +23,7 @@ print(main(foo));
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:Break on 'debugger' statement in foo: {{.*}}ret-breakpoint.js[2]:12:3
-// CHECK-NEXT:Set breakpoint 1 at {{.*}}ret-breakpoint.js[2]:19:11
+// CHECK:Break on 'debugger' statement in foo: {{.*}}ret-breakpoint.js[3]:12:3
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}ret-breakpoint.js[3]:19:11
 // CHECK-NEXT:Continuing execution
 // CHECK-NEXT:1

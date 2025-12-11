@@ -41,16 +41,16 @@ debuggerStmtAfter(1);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:34:1
-// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-ret-afterwards.js[2]:14:7
-// CHECK-NEXT:Set breakpoint 2 at {{.*}}debugger-opcode-on-ret-afterwards.js[2]:19:10
-// CHECK-NEXT:Set breakpoint 3 at {{.*}}debugger-opcode-on-ret-afterwards.js[2]:25:7
+// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-ret-afterwards.js[3]:34:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-ret-afterwards.js[3]:14:7
+// CHECK-NEXT:Set breakpoint 2 at {{.*}}debugger-opcode-on-ret-afterwards.js[3]:19:10
+// CHECK-NEXT:Set breakpoint 3 at {{.*}}debugger-opcode-on-ret-afterwards.js[3]:25:7
 // CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on breakpoint 1 in get x: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:14:7
+// CHECK-NEXT:Break on breakpoint 1 in get x: {{.*}}debugger-opcode-on-ret-afterwards.js[3]:14:7
 // CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on breakpoint 2 in userBreakpointAfter: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:19:10
+// CHECK-NEXT:Break on breakpoint 2 in userBreakpointAfter: {{.*}}debugger-opcode-on-ret-afterwards.js[3]:19:10
 // CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on breakpoint 3 in get x: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:25:7
+// CHECK-NEXT:Break on breakpoint 3 in get x: {{.*}}debugger-opcode-on-ret-afterwards.js[3]:25:7
 // CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on 'debugger' statement in debuggerStmtAfter: {{.*}}debugger-opcode-on-ret-afterwards.js[2]:30:3
+// CHECK-NEXT:Break on 'debugger' statement in debuggerStmtAfter: {{.*}}debugger-opcode-on-ret-afterwards.js[3]:30:3
 // CHECK-NEXT:Continuing execution
