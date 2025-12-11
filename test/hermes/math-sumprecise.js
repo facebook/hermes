@@ -348,4 +348,3 @@ print(nameDescriptor.configurable);
 // } catch(e) {
 //   print('Cannot construct:', e.name);
 // }
-// CHECK-NEXT: Cannot construct: TypeError
