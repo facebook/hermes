@@ -14,7 +14,4 @@ try {
 } catch (e) {
   print(e.name, e.message);
 }
-result = 10;
-
-print('done');
-// CHECK: done
+// CHECK: TypeError Cannot set prototype of immutable prototype object

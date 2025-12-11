@@ -356,12 +356,8 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           constantDPF,
           lv.value));
 
-  // "Forward declaration" of Object.prototype. Its properties will be populated
-  // later.
-
-  runtime.objectPrototype =
-      JSObject::create(runtime, Runtime::makeNullHandle<JSObject>());
-  runtime.objectPrototypeRawPtr = *runtime.objectPrototype;
+  // "Forward declaration" of Object.prototype is in the Runtime constructor,
+  // before the global object is allocated.
 
   // "Forward declaration" of Error.prototype. Its properties will be populated
   // later.

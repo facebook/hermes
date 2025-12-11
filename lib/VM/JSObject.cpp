@@ -240,7 +240,12 @@ CallResult<bool> JSObject::setParent(
   // which we've already checked above.
   // %Object.prototype% is the only object in the spec which is an immutable
   // prototype exotic object.
-  if (LLVM_UNLIKELY(self == runtime.objectPrototypeRawPtr)) {
+  // The global object's parent is host-defined,
+  // so we also make the global object be an immutable prototype object
+  // because modifying the parent of a global object can lead to bizarre
+  // states like Proxies in the parent chain of the global object.
+  if (LLVM_UNLIKELY(self == runtime.objectPrototypeRawPtr) ||
+      LLVM_UNLIKELY(self == runtime.getGlobal().get())) {
     return runtime.raiseTypeError(
         "Cannot set prototype of immutable prototype object");
   }

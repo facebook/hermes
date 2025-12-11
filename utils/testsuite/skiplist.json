@@ -707,6 +707,29 @@
         "Use special function properties such as '.caller'."
       ]
     },
+    {
+      "paths": [
+        "mjsunit/regress/regress-675.js",
+        "mjsunit/regress/regress-crbug-913212.js",
+        "mjsunit/regress/regress-761639.js",
+        "mjsunit/regress/regress-crbug-454091.js",
+        "mjsunit/regress/readonly3.js",
+        "mjsunit/regress/readonly5.js",
+        "mjsunit/global-deleted-property-ic.js",
+        "mjsunit/regress/regress-1176504.js",
+        "mjsunit/regress/regress-447561.js",
+        "mjsunit/es6/global-proto-proxy.js",
+        "mjsunit/regress/regress-crbug-666742.js",
+        "mjsunit/regress/regress-489151.js",
+        "mjsunit/es6/reflect.js",
+        "mjsunit/regress/regress-crbug-1004037.js",
+        "mjsunit/regress/regress-crbug-1104711.js",
+        "mjsunit/regress/regress-crbug-764219.js"
+      ],
+      "comment": [
+        "V8 allows changing the parent of the global object, Hermes/JSC don't"
+      ]
+    },
     "esprima/test_fixtures/expression/primary/keyword/invalid-escaped-if.js",
     "esprima/test_fixtures/ES6/identifier/estimated.js",
     "esprima/test_fixtures/ES6/identifier/weierstrass.js",

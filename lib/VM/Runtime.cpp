@@ -443,8 +443,11 @@ Runtime::Runtime(
     }
   }
 
-  global_ =
-      JSObject::create(*this, makeNullHandle<JSObject>()).getHermesValue();
+  objectPrototype =
+      JSObject::create(*this, Runtime::makeNullHandle<JSObject>());
+  objectPrototypeRawPtr = *objectPrototype;
+
+  global_ = JSObject::create(*this, objectPrototype).getHermesValue();
 
   JSLibFlags jsLibFlags{};
   jsLibFlags.enableHermesInternal = runtimeConfig.getEnableHermesInternal();
@@ -455,15 +458,6 @@ Runtime::Runtime(
   // Once the global object has been initialized, populate native builtins to
   // the builtins table.
   initNativeBuiltins();
-
-  // Set the prototype of the global object to the standard object prototype,
-  // which has now been defined.
-  ignoreAllocationFailure(
-      JSObject::setParent(
-          *getGlobal(),
-          *this,
-          *objectPrototype,
-          PropOpFlags().plusThrowOnError()));
 
   symbolRegistry_.init(*this);
 
