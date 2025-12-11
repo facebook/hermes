@@ -12,27 +12,28 @@
 
 const genPrefix = '$$gen$';
 
-export function createGenID(uniqueTransformPrefix: string): {
-  genID(): string,
-  addUsage(string): void,
-} {
-  let genN: number = 0;
-  const used = new Set<string>();
+export default class GenID {
+  genN: number = 0;
+  +used: Set<string> = new Set();
+  +prefix: string;
 
-  return {
-    genID(): string {
-      let name;
-      do {
-        name = `${genPrefix}${uniqueTransformPrefix}${genN}`;
-        genN++;
-      } while (used.has(name));
-      used.add(name);
-      return name;
-    },
-    addUsage(name: string): void {
-      if (name.startsWith(genPrefix)) {
-        used.add(name);
-      }
-    },
-  };
+  constructor(uniqueTransformPrefix: string) {
+    this.prefix = `${genPrefix}${uniqueTransformPrefix}`;
+  }
+
+  id(): string {
+    let name;
+    do {
+      name = `${this.prefix}${this.genN}`;
+      this.genN++;
+    } while (this.used.has(name));
+    this.used.add(name);
+    return name;
+  }
+
+  addUsage(name: string): void {
+    if (name.startsWith(this.prefix)) {
+      this.used.add(name);
+    }
+  }
 }

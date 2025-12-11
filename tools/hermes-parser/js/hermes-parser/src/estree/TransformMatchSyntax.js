@@ -60,18 +60,18 @@ import {
   typeofExpression,
   variableDeclaration,
 } from '../utils/Builders';
-import {createGenID} from '../utils/GenID';
+import GenID from '../utils/GenID';
 
 /**
  * Generated identifiers.
  * `GenID` is initialized in the transform.
  */
-let GenID: ?ReturnType<typeof createGenID> = null;
+let genID: GenID | null = null;
 function genIdent(): Identifier {
-  if (GenID == null) {
+  if (genID == null) {
     throw Error('GenID must be initialized at the start of the transform.');
   }
-  return ident(GenID.genID());
+  return ident(genID.id());
 }
 
 /**
@@ -959,7 +959,7 @@ export function transformProgram(
 ): Program {
   // Initialize so each file transformed starts freshly incrementing the
   // variable name counter, and has its own usage tracking.
-  GenID = createGenID('m');
+  genID = new GenID('m');
   return SimpleTransform.transformProgram(program, {
     transform(node: ESNode) {
       switch (node.type) {
@@ -973,12 +973,12 @@ export function transformProgram(
           // A rudimentary check to avoid some collisions with our generated
           // variable names. Ideally, we would have access a scope analyzer
           // inside the transform instead.
-          if (GenID == null) {
+          if (genID == null) {
             throw Error(
               'GenID must be initialized at the start of the transform.',
             );
           }
-          GenID.addUsage(node.name);
+          genID.addUsage(node.name);
           return node;
         }
         default: {
