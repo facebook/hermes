@@ -1431,7 +1431,11 @@ void SemanticResolver::visit(ESTree::SpreadElementNode *node, Node *parent) {
       !llvh::isa<ESTree::ArrayExpressionNode>(parent) &&
       !llvh::isa<ESTree::CallExpressionNode>(parent) &&
       !llvh::isa<ESTree::OptionalCallExpressionNode>(parent) &&
-      !llvh::isa<ESTree::NewExpressionNode>(parent))
+      !llvh::isa<ESTree::NewExpressionNode>(parent)
+#if HERMES_PARSE_FLOW
+      && !llvh::isa<ESTree::RecordExpressionPropertiesNode>(parent)
+#endif
+  )
     sm_.error(node->getSourceRange(), "spread operator is not supported");
   visitESTreeChildren(*this, node);
 }
