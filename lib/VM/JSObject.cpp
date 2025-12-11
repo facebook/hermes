@@ -1488,9 +1488,6 @@ CallResult<bool> JSObject::putNamedWithReceiver_RJS(
     }
 
     if (LLVM_UNLIKELY(desc.flags.proxyObject)) {
-      assert(
-          !opFlags.getMustExist() &&
-          "MustExist cannot be used with Proxy objects");
       CallResult<bool> setRes = JSProxy::setNamed(
           runtime.makeHandle(propObj), runtime, name, valueHandle, receiver);
       if (LLVM_UNLIKELY(setRes == ExecutionStatus::EXCEPTION)) {
@@ -1740,9 +1737,6 @@ CallResult<bool> JSObject::putComputedWithReceiver_RJS(
     }
 
     if (LLVM_UNLIKELY(desc.flags.proxyObject)) {
-      assert(
-          !opFlags.getMustExist() &&
-          "MustExist cannot be used with Proxy objects");
       CallResult<Handle<>> key = toPropertyKey(runtime, nameValPrimitiveHandle);
       if (key == ExecutionStatus::EXCEPTION)
         return ExecutionStatus::EXCEPTION;
