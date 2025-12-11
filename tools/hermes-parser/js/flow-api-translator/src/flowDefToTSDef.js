@@ -3724,7 +3724,13 @@ const getTransforms = (
       const key =
         node.key.type === 'Identifier'
           ? transform.Identifier(node.key)
-          : transform.StringLiteral(node.key);
+          : node.key.literalType === 'string'
+            ? transform.StringLiteral(node.key)
+            : null;
+
+      if (key == null) {
+        throw unexpectedTranslationError(node, 'Unsupported key type');
+      }
 
       if (node.method === true) {
         // flow has just one node for all object properties and relies upon the method flag

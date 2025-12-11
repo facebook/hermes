@@ -521,6 +521,12 @@ export interface ObjectExpression extends BaseNode {
 // and object desturcturing properties.
 export type Property = ObjectProperty | DestructuringObjectProperty;
 
+export type ObjectPropertyKey =
+  | Identifier
+  | StringLiteral
+  | NumericLiteral
+  | BigIntLiteral;
+
 export type ObjectProperty =
   | ObjectPropertyWithNonShorthandStaticName
   | ObjectPropertyWithShorthandStaticName
@@ -533,7 +539,7 @@ export interface ObjectPropertyWithNonShorthandStaticName
   +type: 'Property';
   +computed: false;
   // non-computed, non-shorthand names are constrained significantly
-  +key: Identifier | StringLiteral | NumericLiteral;
+  +key: ObjectPropertyKey;
   +value: Expression;
   +kind: 'init' | 'get' | 'set';
   +method: boolean;
@@ -579,7 +585,7 @@ export interface DestructuringObjectPropertyWithNonShorthandStaticName
   +type: 'Property';
   +computed: false;
   // non-computed, non-shorthand names are constrained significantly
-  +key: Identifier | StringLiteral | NumericLiteral;
+  +key: ObjectPropertyKey;
   // destructuring properties cannot have any value
   +value: DestructuringPattern;
   +shorthand: false;
@@ -936,8 +942,7 @@ export type PropertyName =
 export type ClassPropertyNameComputed = Expression;
 export type ClassPropertyNameNonComputed =
   | PrivateIdentifier
-  | Identifier
-  | StringLiteral;
+  | ObjectPropertyKey;
 
 export type ClassMember = PropertyDefinition | MethodDefinition | StaticBlock;
 export type ClassMemberWithNonComputedName =
@@ -1481,7 +1486,7 @@ export interface ObjectTypeAnnotation extends BaseNode {
 }
 interface ObjectTypePropertyBase extends BaseNode {
   +type: 'ObjectTypeProperty';
-  +key: Identifier | StringLiteral;
+  +key: ObjectPropertyKey;
   +value: TypeAnnotationType;
   +method: boolean;
   +optional: boolean;
@@ -2123,7 +2128,7 @@ export interface MatchObjectPattern extends BaseNode {
 }
 export interface MatchObjectPatternProperty extends BaseNode {
   +type: 'MatchObjectPatternProperty';
-  +key: Identifier | StringLiteral | NumericLiteral | BigIntLiteral;
+  +key: ObjectPropertyKey;
   +pattern: MatchPattern;
   +shorthand: boolean;
 }
@@ -2173,22 +2178,16 @@ export interface RecordDeclarationBody extends BaseNode {
   >;
 }
 
-export type RecordPropertyKey =
-  | Identifier
-  | StringLiteral
-  | NumericLiteral
-  | BigIntLiteral;
-
 export interface RecordDeclarationProperty extends BaseNode {
   +type: 'RecordDeclarationProperty';
-  +key: RecordPropertyKey;
+  +key: ObjectPropertyKey;
   +typeAnnotation: TypeAnnotation;
   +defaultValue: Expression | null;
 }
 
 export interface RecordDeclarationStaticProperty extends BaseNode {
   +type: 'RecordDeclarationStaticProperty';
-  +key: RecordPropertyKey;
+  +key: ObjectPropertyKey;
   +typeAnnotation: TypeAnnotation;
   +value: Expression;
 }
