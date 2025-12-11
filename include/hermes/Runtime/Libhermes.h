@@ -50,6 +50,7 @@ const char libhermes[] =
 "function URIError() {}"
 "function ArrayBuffer() {}"
 "function DataView() {}"
+"function TextEncoder() {}"
 #define TYPED_ARRAY(name, type) \
   "function " #name "Array() {}"
 #include "hermes/VM/TypedArrays.def"

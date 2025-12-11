@@ -94,55 +94,56 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:        Decl %d.33 'URIError' UndeclaredGlobalProperty
 // CHECK-NEXT:        Decl %d.34 'ArrayBuffer' UndeclaredGlobalProperty
 // CHECK-NEXT:        Decl %d.35 'DataView' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.36 'Uint8Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.37 'Int8Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.38 'Uint8ClampedArray' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.39 'Uint16Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.40 'Int16Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.41 'Uint32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.42 'Int32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.43 'Float32Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.44 'Float64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.45 'BigUint64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.46 'BigInt64Array' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.47 'print' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.48 'eval' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.49 'parseInt' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.50 'parseFloat' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.51 'isNaN' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.52 'isFinite' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.53 'escape' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.54 'unescape' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.55 'decodeURI' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.56 'decodeURIComponent' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.57 'encodeURI' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.58 'encodeURIComponent' UndeclaredGlobalProperty
-// CHECK-NEXT:        Decl %d.59 'gc' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.36 'TextEncoder' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.37 'Uint8Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.38 'Int8Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.39 'Uint8ClampedArray' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.40 'Uint16Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.41 'Int16Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.42 'Uint32Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.43 'Int32Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.44 'Float32Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.45 'Float64Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.46 'BigUint64Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.47 'BigInt64Array' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.48 'print' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.49 'eval' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.50 'parseInt' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.51 'parseFloat' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.52 'isNaN' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.53 'isFinite' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.54 'escape' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.55 'unescape' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.56 'decodeURI' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.57 'decodeURIComponent' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.58 'encodeURI' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.59 'encodeURIComponent' UndeclaredGlobalProperty
+// CHECK-NEXT:        Decl %d.60 'gc' UndeclaredGlobalProperty
 // CHECK-NEXT:    Func strict
 // CHECK-NEXT:        Scope %s.2
-// CHECK-NEXT:            Decl %d.60 'exports' Parameter : any
-// CHECK-NEXT:            Decl %d.61 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.61 'exports' Parameter : any
+// CHECK-NEXT:            Decl %d.62 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.62 'unionArr' Var : %array.10
-// CHECK-NEXT:                Decl %d.63 'annotatedArr' Var : %array.10
-// CHECK-NEXT:                Decl %d.64 'Base' Class : %class_constructor.4
-// CHECK-NEXT:                Decl %d.65 'Derived' Class : %class_constructor.8
-// CHECK-NEXT:                Decl %d.66 'baseArr' Var : %array.11
-// CHECK-NEXT:                Decl %d.67 'numArr' Var : %array.12
-// CHECK-NEXT:                Decl %d.68 'strArr' Var : %array.14
-// CHECK-NEXT:                Decl %d.69 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.63 'unionArr' Var : %array.10
+// CHECK-NEXT:                Decl %d.64 'annotatedArr' Var : %array.10
+// CHECK-NEXT:                Decl %d.65 'Base' Class : %class_constructor.4
+// CHECK-NEXT:                Decl %d.66 'Derived' Class : %class_constructor.8
+// CHECK-NEXT:                Decl %d.67 'baseArr' Var : %array.11
+// CHECK-NEXT:                Decl %d.68 'numArr' Var : %array.12
+// CHECK-NEXT:                Decl %d.69 'strArr' Var : %array.14
+// CHECK-NEXT:                Decl %d.70 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.4
 // CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.5
-// CHECK-NEXT:                    Decl %d.70 'arguments' Var Arguments
+// CHECK-NEXT:                    Decl %d.71 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
 // CHECK-NEXT:        CallExpression : any
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
-// CHECK-NEXT:                Id 'exports' [D:E:%d.60 'exports']
+// CHECK-NEXT:                Id 'exports' [D:E:%d.61 'exports']
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        CallExpression : any
@@ -154,23 +155,23 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                                                NumericLiteral : number
 // CHECK-NEXT:                                                StringLiteral : string
 // CHECK-NEXT:                                                Id 'undefined' [D:E:%d.26 'undefined'] : void
-// CHECK-NEXT:                                            Id 'unionArr' [D:E:%d.62 'unionArr']
+// CHECK-NEXT:                                            Id 'unionArr' [D:E:%d.63 'unionArr']
 // CHECK-NEXT:                                    VariableDeclaration
 // CHECK-NEXT:                                        VariableDeclarator
 // CHECK-NEXT:                                            ArrayExpression : %array.10
 // CHECK-NEXT:                                                NumericLiteral : number
 // CHECK-NEXT:                                                StringLiteral : string
-// CHECK-NEXT:                                            Id 'annotatedArr' [D:E:%d.63 'annotatedArr']
+// CHECK-NEXT:                                            Id 'annotatedArr' [D:E:%d.64 'annotatedArr']
 // CHECK-NEXT:                                    ExpressionStatement
 // CHECK-NEXT:                                        AssignmentExpression : %array.10
-// CHECK-NEXT:                                            Id 'annotatedArr' [D:E:%d.63 'annotatedArr'] : %array.10
-// CHECK-NEXT:                                            Id 'unionArr' [D:E:%d.62 'unionArr'] : %array.10
+// CHECK-NEXT:                                            Id 'annotatedArr' [D:E:%d.64 'annotatedArr'] : %array.10
+// CHECK-NEXT:                                            Id 'unionArr' [D:E:%d.63 'unionArr'] : %array.10
 // CHECK-NEXT:                                    ClassDeclaration
-// CHECK-NEXT:                                        Id 'Base' [D:E:%d.64 'Base']
+// CHECK-NEXT:                                        Id 'Base' [D:E:%d.65 'Base']
 // CHECK-NEXT:                                        ClassBody
 // CHECK-NEXT:                                    ClassDeclaration
-// CHECK-NEXT:                                        Id 'Derived' [D:E:%d.65 'Derived']
-// CHECK-NEXT:                                        Id 'Base' [D:E:%d.64 'Base'] : %class_constructor.4
+// CHECK-NEXT:                                        Id 'Derived' [D:E:%d.66 'Derived']
+// CHECK-NEXT:                                        Id 'Base' [D:E:%d.65 'Base'] : %class_constructor.4
 // CHECK-NEXT:                                        ClassBody
 // CHECK-NEXT:                                            MethodDefinition : %function.6
 // CHECK-NEXT:                                                Id 'constructor'
@@ -183,17 +184,17 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                                        VariableDeclarator
 // CHECK-NEXT:                                            ArrayExpression : %array.11
 // CHECK-NEXT:                                                NewExpression : %class.2
-// CHECK-NEXT:                                                    Id 'Base' [D:E:%d.64 'Base'] : %class_constructor.4
+// CHECK-NEXT:                                                    Id 'Base' [D:E:%d.65 'Base'] : %class_constructor.4
 // CHECK-NEXT:                                                NewExpression : %class.5
-// CHECK-NEXT:                                                    Id 'Derived' [D:E:%d.65 'Derived'] : %class_constructor.8
-// CHECK-NEXT:                                            Id 'baseArr' [D:E:%d.66 'baseArr']
+// CHECK-NEXT:                                                    Id 'Derived' [D:E:%d.66 'Derived'] : %class_constructor.8
+// CHECK-NEXT:                                            Id 'baseArr' [D:E:%d.67 'baseArr']
 // CHECK-NEXT:                                    VariableDeclaration
 // CHECK-NEXT:                                        VariableDeclarator
 // CHECK-NEXT:                                            ArrayExpression : %array.12
 // CHECK-NEXT:                                                NumericLiteral : number
 // CHECK-NEXT:                                                NumericLiteral : number
 // CHECK-NEXT:                                                NumericLiteral : number
-// CHECK-NEXT:                                            Id 'numArr' [D:E:%d.67 'numArr']
+// CHECK-NEXT:                                            Id 'numArr' [D:E:%d.68 'numArr']
 // CHECK-NEXT:                                    VariableDeclaration
 // CHECK-NEXT:                                        VariableDeclarator
 // CHECK-NEXT:                                            ArrayExpression : %array.14
@@ -201,6 +202,6 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                                                StringLiteral : string
 // CHECK-NEXT:                                                StringLiteral : string
 // CHECK-NEXT:                                                SpreadElement
-// CHECK-NEXT:                                                    Id 'numArr' [D:E:%d.67 'numArr'] : %array.12
-// CHECK-NEXT:                                            Id 'strArr' [D:E:%d.68 'strArr']
+// CHECK-NEXT:                                                    Id 'numArr' [D:E:%d.68 'numArr'] : %array.12
+// CHECK-NEXT:                                            Id 'strArr' [D:E:%d.69 'strArr']
 // CHECK-NEXT:            ObjectExpression : %object.15
