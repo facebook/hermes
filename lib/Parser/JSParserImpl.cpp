@@ -3460,9 +3460,7 @@ Optional<ESTree::Node *> JSParserImpl::parseOptionalExpressionExceptNew_tail(
   return expr;
 }
 
-Optional<const char *> JSParserImpl::parseArguments(
-    ESTree::NodeList &argList,
-    SMLoc &endLoc) {
+bool JSParserImpl::parseArguments(ESTree::NodeList &argList, SMLoc &endLoc) {
   assert(check(TokenKind::l_paren));
   SMLoc startLoc = advance().Start;
   if (!check(TokenKind::r_paren)) {
@@ -3472,7 +3470,7 @@ Optional<const char *> JSParserImpl::parseArguments(
 
       auto arg = parseAssignmentExpression();
       if (!arg)
-        return None;
+        return false;
 
       if (isSpread) {
         argList.push_back(*setLocation(
@@ -3487,8 +3485,22 @@ Optional<const char *> JSParserImpl::parseArguments(
         break;
 
       // Check for ",)".
-      if (check(TokenKind::r_paren))
-        break;
+      if (check(TokenKind::r_paren)) {
+        endLoc = tok_->getEndLoc();
+        advance();
+        // Must be after the arguments now.
+        // If we see `=>` and this was a spread element, that's an error
+        // because this can only be an async arrow function's parameters,
+        // and no commas are allowed after rest parameters.
+        // We have to error here instead of during reparse because the fact that
+        // there was a trailing comma isn't recorded anywhere.
+        if (LLVM_UNLIKELY(isSpread) && check(TokenKind::equalgreater)) {
+          error(
+              argList.back().getEndLoc(),
+              "Rest parameter must be last formal parameter");
+        }
+        return true;
+      }
     }
   }
   endLoc = tok_->getEndLoc();
@@ -3498,9 +3510,9 @@ Optional<const char *> JSParserImpl::parseArguments(
           "at end of function call",
           "location of '('",
           startLoc))
-    return None;
+    return false;
 
-  return "OK";
+  return true;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseMemberSelect(

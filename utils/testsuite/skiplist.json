@@ -24,7 +24,6 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/async-arrow-function/rest-params-trailing-comma-early-error.js",
         "test262/test/language/expressions/async-arrow-function/escaped-async.js"
       ],
       "comment": "Corner cases in async arrow functions (T193923741)"

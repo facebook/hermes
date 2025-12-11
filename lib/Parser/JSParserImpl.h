@@ -902,11 +902,8 @@ class JSParserImpl {
       SMLoc startLoc,
       ESTree::Node *expr);
 
-  /// Returns a dummy Optional<> just to indicate success or failure like all
-  /// other functions.
-  Optional<const char *> parseArguments(
-      ESTree::NodeList &argList,
-      SMLoc &endLoc);
+  /// \return false on error.
+  bool parseArguments(ESTree::NodeList &argList, SMLoc &endLoc);
 
   /// \param startLoc the start location of the expression
   /// \param objectLoc the location of the object part of the expression and is
