@@ -21,7 +21,7 @@ const x = R<> {a: 1};
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "RecordExpression",
-// CHECK-NEXT:             "constructor": {
+// CHECK-NEXT:             "recordConstructor": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "R"
 // CHECK-NEXT:             },
@@ -69,7 +69,7 @@ const y = R<T, S> {a: 1};
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "RecordExpression",
-// CHECK-NEXT:             "constructor": {
+// CHECK-NEXT:             "recordConstructor": {
 // CHECK-NEXT:               "type": "Identifier",
 // CHECK-NEXT:               "name": "R"
 // CHECK-NEXT:             },

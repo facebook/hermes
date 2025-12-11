@@ -1250,7 +1250,7 @@ ESTREE_NODE_3_ARGS(
 
 ESTREE_NODE_3_ARGS(
     RecordExpression, Flow,
-    NodePtr, constructor, false,
+    NodePtr, recordConstructor, false,
     NodePtr, typeArguments, true,
     NodePtr, properties, false)
 ESTREE_NODE_1_ARGS(

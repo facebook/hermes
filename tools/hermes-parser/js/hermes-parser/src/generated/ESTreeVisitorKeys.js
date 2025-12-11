@@ -266,7 +266,7 @@ module.exports = {
   RecordDeclarationImplements: ['id', 'typeArguments'],
   RecordDeclarationProperty: ['key', 'typeAnnotation', 'defaultValue'],
   RecordDeclarationStaticProperty: ['key', 'typeAnnotation', 'value'],
-  RecordExpression: ['constructor', 'typeArguments', 'properties'],
+  RecordExpression: ['recordConstructor', 'typeArguments', 'properties'],
   RecordExpressionProperties: ['properties'],
   RestElement: ['argument'],
   ReturnStatement: ['argument'],

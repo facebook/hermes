@@ -1135,7 +1135,9 @@ export type RecordDeclarationStaticPropertyProps = {
 };
 
 export type RecordExpressionProps = {
-  +constructor: MaybeDetachedNode<RecordExpressionType['constructor']>,
+  +recordConstructor: MaybeDetachedNode<
+    RecordExpressionType['recordConstructor'],
+  >,
   +typeArguments?: ?MaybeDetachedNode<RecordExpressionType['typeArguments']>,
   +properties: MaybeDetachedNode<RecordExpressionType['properties']>,
 };
@@ -3554,7 +3556,7 @@ export function RecordExpression(props: {
 }): DetachedNode<RecordExpressionType> {
   const node = detachedProps<RecordExpressionType>((props.parent: $FlowFixMe), {
     type: 'RecordExpression',
-    constructor: asDetachedNodeForCodeGen(props.constructor),
+    recordConstructor: asDetachedNodeForCodeGen(props.recordConstructor),
     typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
     properties: asDetachedNodeForCodeGen(props.properties),
   });

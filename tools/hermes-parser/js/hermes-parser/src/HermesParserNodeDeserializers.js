@@ -1805,7 +1805,7 @@ function deserializeRecordExpression() {
   return {
     type: 'RecordExpression',
     loc: this.addEmptyLoc(),
-    constructor: this.deserializeNode(),
+    recordConstructor: this.deserializeNode(),
     typeArguments: this.deserializeNode(),
     properties: this.deserializeNode(),
   };

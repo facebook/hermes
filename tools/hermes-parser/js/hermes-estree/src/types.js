@@ -2194,7 +2194,7 @@ export interface RecordDeclarationStaticProperty extends BaseNode {
 
 export interface RecordExpression extends BaseNode {
   +type: 'RecordExpression';
-  +constructor: Expression;
+  +recordConstructor: Expression;
   +typeArguments: TypeParameterInstantiation | null;
   +properties: RecordExpressionProperties;
 }

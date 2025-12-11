@@ -29,7 +29,7 @@ function test() {
 // CHECK-NEXT:             "type": "ReturnStatement",
 // CHECK-NEXT:             "argument": {
 // CHECK-NEXT:               "type": "RecordExpression",
-// CHECK-NEXT:               "constructor": {
+// CHECK-NEXT:               "recordConstructor": {
 // CHECK-NEXT:                 "type": "Identifier",
 // CHECK-NEXT:                 "name": "R"
 // CHECK-NEXT:               },
@@ -96,7 +96,7 @@ const x = foo(R {c: 3});
 // CHECK-NEXT:             "arguments": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "RecordExpression",
-// CHECK-NEXT:                 "constructor": {
+// CHECK-NEXT:                 "recordConstructor": {
 // CHECK-NEXT:                   "type": "Identifier",
 // CHECK-NEXT:                   "name": "R"
 // CHECK-NEXT:                 },
@@ -146,7 +146,7 @@ const y = [R {d: 4}, R {e: 5}];
 // CHECK-NEXT:             "elements": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "RecordExpression",
-// CHECK-NEXT:                 "constructor": {
+// CHECK-NEXT:                 "recordConstructor": {
 // CHECK-NEXT:                   "type": "Identifier",
 // CHECK-NEXT:                   "name": "R"
 // CHECK-NEXT:                 },
@@ -175,7 +175,7 @@ const y = [R {d: 4}, R {e: 5}];
 // CHECK-NEXT:               },
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "RecordExpression",
-// CHECK-NEXT:                 "constructor": {
+// CHECK-NEXT:                 "recordConstructor": {
 // CHECK-NEXT:                   "type": "Identifier",
 // CHECK-NEXT:                   "name": "R"
 // CHECK-NEXT:                 },
@@ -232,7 +232,7 @@ const z = {nested: R {f: 6}};
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "RecordExpression",
-// CHECK-NEXT:                   "constructor": {
+// CHECK-NEXT:                   "recordConstructor": {
 // CHECK-NEXT:                     "type": "Identifier",
 // CHECK-NEXT:                     "name": "R"
 // CHECK-NEXT:                   },
