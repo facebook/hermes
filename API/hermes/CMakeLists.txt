@@ -59,10 +59,7 @@ set(api_sources
   DebuggerAPI.cpp
   AsyncDebuggerAPI.cpp
   RuntimeTaskRunner.cpp
-  extensions/Extensions.cpp
-  extensions/ExtensionsBytecode.cpp
-  extensions/Intrinsics.cpp
-  extensions/Dummy.cpp
+  ${EXTENSIONS_CPP_SOURCES}
   ${CDP_API_SOURCES}
   )
 
@@ -86,11 +83,18 @@ add_hermes_library(hermesapi
   )
 target_include_directories(hermesapi_obj PUBLIC ..)
 
+# Pass contrib extensions flag to C++ code.
+if(HERMES_ENABLE_CONTRIB_EXTENSIONS)
+  target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CONTRIB_EXTENSIONS=1)
+else()
+  target_compile_definitions(hermesapi_obj PRIVATE HERMES_ENABLE_CONTRIB_EXTENSIONS=0)
+endif()
+
 # ExtensionsBytecode.cpp needs to find the generated .inc file
 target_include_directories(hermesapi_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/extensions)
 
 # Ensure the bytecode is generated before compiling ExtensionsBytecode.cpp
-set_source_files_properties(extensions/ExtensionsBytecode.cpp
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/extensions/ExtensionsBytecode.cpp
   PROPERTIES
   OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/extensions/ExtensionsBytecode.inc
 )

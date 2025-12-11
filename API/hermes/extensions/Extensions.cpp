@@ -10,6 +10,10 @@
 #include "Dummy.h"
 #include "Intrinsics.h"
 
+#if HERMES_ENABLE_CONTRIB_EXTENSIONS
+#include "contrib/ContribExtensions.h"
+#endif
+
 #include "jsi/jsi.h"
 
 namespace facebook {
@@ -21,6 +25,11 @@ void installExtensions(jsi::Runtime &rt, jsi::Object extensions) {
 
   // Delegate to each extension's install function.
   installDummy(rt, extensions);
+
+#if HERMES_ENABLE_CONTRIB_EXTENSIONS
+  // Install community-contributed extensions.
+  installContribExtensions(rt, extensions);
+#endif
 }
 
 } // namespace hermes

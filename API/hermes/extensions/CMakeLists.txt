@@ -22,9 +22,30 @@ else()
   set(concatenate "type")
 endif()
 
-# The concatenation order is specified by the numeric prefixes in the JS filenames.
-file(GLOB extensions_js_sources "${CMAKE_CURRENT_SOURCE_DIR}/*.js")
-list(SORT extensions_js_sources)
+# Header and footer are handled explicitly to ensure correct ordering.
+# Extension JS files are globbed and sorted between them.
+set(header_js "${CMAKE_CURRENT_SOURCE_DIR}/00-header.js")
+set(footer_js "${CMAKE_CURRENT_SOURCE_DIR}/99-footer.js")
+
+# Glob core extension JS files (excluding header 00-* and footer 99-*).
+file(GLOB core_extensions_js "${CMAKE_CURRENT_SOURCE_DIR}/[1-8]*.js")
+
+# Optionally include contrib extensions.
+# Contrib JS files are appended after core extensions due to absolute path sorting
+# (contrib/ sorts after numeric prefixes). Within each group, files are sorted
+# by their numeric prefix.
+if(HERMES_ENABLE_CONTRIB_EXTENSIONS)
+  add_subdirectory(contrib)
+  file(GLOB contrib_extensions_js "${CMAKE_CURRENT_SOURCE_DIR}/contrib/*.js")
+  list(APPEND core_extensions_js ${contrib_extensions_js})
+endif()
+
+# Sort extension files. Due to absolute path sorting, core extensions come first,
+# then contrib extensions. This ordering is intentional.
+list(SORT core_extensions_js)
+
+# Build final list: header + sorted extensions + footer
+set(extensions_js_sources ${header_js} ${core_extensions_js} ${footer_js})
 
 # Convert path from cmake style (`/`) to native style (`\` on Win and `/` elsewhere) for Win.
 set(extensions_js_sources_native_path "")
@@ -62,3 +83,18 @@ add_custom_command(
 )
 
 add_custom_target(ExtensionsBytecodeInclude ALL DEPENDS ExtensionsBytecode.inc)
+
+# Export C++ sources to parent for linking.
+set(EXTENSIONS_CPP_SOURCES
+  ${CMAKE_CURRENT_SOURCE_DIR}/Extensions.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/ExtensionsBytecode.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/Intrinsics.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/Dummy.cpp
+)
+
+# Append contrib sources if enabled (set by contrib/CMakeLists.txt).
+if(HERMES_ENABLE_CONTRIB_EXTENSIONS)
+  list(APPEND EXTENSIONS_CPP_SOURCES ${CONTRIB_EXTENSIONS_CPP_SOURCES})
+endif()
+
+set(EXTENSIONS_CPP_SOURCES ${EXTENSIONS_CPP_SOURCES} PARENT_SCOPE)
