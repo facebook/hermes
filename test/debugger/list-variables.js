@@ -23,7 +23,7 @@
         let l1B = 9;
         class C {}; // force new scope to be made.
         debugger;
-// CHECK:Break on 'debugger' statement in foo: {{.*}}list-variables.js[2]:25:9
+// CHECK:Break on 'debugger' statement in foo: {{.*}}list-variables.js{{[[0-9]+]}}:25:9
 // CHECK-NEXT:this = undefined
 // CHECK-NEXT: 0:        l1A = 8
 // CHECK-NEXT: 0:        l1B = 9
@@ -48,7 +48,7 @@
     {
       let b = 2;
       debugger;
-// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js[2]:50:7
+// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js{{[[0-9]+]}}:50:7
 // CHECK-NEXT:this = undefined
 // CHECK-NEXT: 0:          b = 2
 // CHECK-NEXT: 1:          a = 1
@@ -56,14 +56,14 @@
     {
       let c = 3;
       debugger;
-// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js[2]:58:7
+// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js{{[[0-9]+]}}:58:7
 // CHECK-NEXT:this = undefined
 // CHECK-NEXT: 0:          c = 3
 // CHECK-NEXT: 1:          a = 1
       {
         let d = 4;
         debugger;
-// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js[2]:65:9
+// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js{{[[0-9]+]}}:65:9
 // CHECK-NEXT:this = undefined
 // CHECK-NEXT: 0:          d = 4
 // CHECK-NEXT: 1:          c = 3
@@ -72,7 +72,7 @@
       {
         let e = 5;
         debugger;
-// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js[2]:74:9
+// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js{{[[0-9]+]}}:74:9
 // CHECK-NEXT:this = undefined
 // CHECK-NEXT: 0:          e = 5
 // CHECK-NEXT: 1:          c = 3
@@ -80,7 +80,7 @@
       }
     }
     debugger;
-// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js[2]:82:5
+// CHECK:Break on 'debugger' statement in baz: {{.*}}list-variables.js{{[[0-9]+]}}:82:5
 // CHECK-NEXT:this = undefined
 // CHECK-NEXT: 0:          a = 1
   }

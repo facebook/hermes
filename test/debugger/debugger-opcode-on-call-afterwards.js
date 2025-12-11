@@ -33,18 +33,18 @@ debuggerStmtAfter(1);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-call-afterwards.js[2]:26:1
-// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-call-afterwards.js[2]:16:5
-// CHECK-NEXT:Set breakpoint 2 at {{.*}}debugger-opcode-on-call-afterwards.js[2]:17:10
-// CHECK-NEXT:Set breakpoint 3 at {{.*}}debugger-opcode-on-call-afterwards.js[2]:21:5
+// CHECK:Break on 'debugger' statement in global: {{.*}}debugger-opcode-on-call-afterwards.js[3]:26:1
+// CHECK-NEXT:Set breakpoint 1 at {{.*}}debugger-opcode-on-call-afterwards.js[3]:16:5
+// CHECK-NEXT:Set breakpoint 2 at {{.*}}debugger-opcode-on-call-afterwards.js[3]:17:10
+// CHECK-NEXT:Set breakpoint 3 at {{.*}}debugger-opcode-on-call-afterwards.js[3]:21:5
 // CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on breakpoint 1 in userBreakpointAfter: {{.*}}debugger-opcode-on-call-afterwards.js[2]:16:5
-// CHECK-NEXT:Continuing execution
-// CHECK-NEXT:fn
-// CHECK-NEXT:Break on breakpoint 2 in userBreakpointAfter: {{.*}}debugger-opcode-on-call-afterwards.js[2]:17:10
-// CHECK-NEXT:Continuing execution
-// CHECK-NEXT:Break on breakpoint 3 in debuggerStmtAfter: {{.*}}debugger-opcode-on-call-afterwards.js[2]:21:5
+// CHECK-NEXT:Break on breakpoint 1 in userBreakpointAfter: {{.*}}debugger-opcode-on-call-afterwards.js[3]:16:5
 // CHECK-NEXT:Continuing execution
 // CHECK-NEXT:fn
-// CHECK-NEXT:Break on 'debugger' statement in debuggerStmtAfter: {{.*}}debugger-opcode-on-call-afterwards.js[2]:22:3
+// CHECK-NEXT:Break on breakpoint 2 in userBreakpointAfter: {{.*}}debugger-opcode-on-call-afterwards.js[3]:17:10
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:Break on breakpoint 3 in debuggerStmtAfter: {{.*}}debugger-opcode-on-call-afterwards.js[3]:21:5
+// CHECK-NEXT:Continuing execution
+// CHECK-NEXT:fn
+// CHECK-NEXT:Break on 'debugger' statement in debuggerStmtAfter: {{.*}}debugger-opcode-on-call-afterwards.js[3]:22:3
 // CHECK-NEXT:Continuing execution

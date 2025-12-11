@@ -270,7 +270,10 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level4");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  // Capture the fileId from the first JS frame - don't hardcode it since
+  // internal modules may be added/removed.
+  uint32_t firstEvalFileId = frame.location.fileId;
+  ASSERT_NE(firstEvalFileId, kInvalidLocation);
   ASSERT_EQ(frame.location.line, 3);
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "(native)");
@@ -284,7 +287,7 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level3");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 7);
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "(native)");
@@ -301,19 +304,19 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level2");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 11);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level1");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 16);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "eval");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 19);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
@@ -350,25 +353,29 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level3");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  // Capture the fileId for this eval - it should be different from
+  // firstEvalFileId since this is a new eval.
+  uint32_t secondEvalFileId = frame.location.fileId;
+  ASSERT_NE(secondEvalFileId, kInvalidLocation);
+  ASSERT_NE(secondEvalFileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 3);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level2");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.fileId, secondEvalFileId);
   ASSERT_EQ(frame.location.line, 7);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level1");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.fileId, secondEvalFileId);
   ASSERT_EQ(frame.location.line, 11);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "eval");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.fileId, secondEvalFileId);
   ASSERT_EQ(frame.location.line, 14);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);

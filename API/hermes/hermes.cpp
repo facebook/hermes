@@ -19,6 +19,7 @@
 #include "hermes/Public/JSOutOfMemoryError.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/SourceMap/SourceMapParser.h"
+#include "hermes/Support/Buffer.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 #include "hermes/Support/UTF16Stream.h"
 #include "hermes/Support/UTF8.h"
@@ -43,6 +44,9 @@
 #include "hermes/VM/SymbolID.h"
 #include "hermes/VM/TimeLimitMonitor.h"
 #include "hermes/VM/WeakRoot-inline.h"
+
+#include "extensions/Extensions.h"
+#include "extensions/ExtensionsBytecode.h"
 
 #include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/ErrorHandling.h"
@@ -1287,6 +1291,32 @@ jsi::ICast *HermesRootAPI::castInterface(const jsi::UUID &interfaceUUID) {
   return nullptr;
 }
 
+/// Load and install JSI-based extensions (TextEncoder, etc.).
+/// Uses internal VM APIs to set hidesEpilogue=true so the extensions bytecode
+/// epilogue is not visible to users via runtime.getEpilogues().
+static void loadAndInstallExtensions(HermesRuntimeImpl &runtime) {
+  llvh::ArrayRef<uint8_t> bytecode = getExtensionsBytecode();
+  auto bcResult = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+      std::make_unique<::hermes::Buffer>(bytecode.data(), bytecode.size()));
+  if (LLVM_UNLIKELY(!bcResult.first)) {
+    ::hermes::hermes_fatal(
+        ("Error loading extensions bytecode: " + bcResult.second).c_str());
+  }
+  vm::RuntimeModuleFlags flags;
+  flags.persistent = true;
+  flags.hidesEpilogue = true;
+  auto res = runtime.runtime_.runBytecode(
+      std::move(bcResult.first),
+      flags,
+      /*sourceURL*/ "Extensions.js",
+      vm::Runtime::makeNullHandle<vm::Environment>());
+  if (LLVM_UNLIKELY(res == vm::ExecutionStatus::EXCEPTION)) {
+    ::hermes::hermes_fatal("Extensions bytecode threw exception");
+  }
+  jsi::Object extensions = runtime.valueFromHermesValue(*res).asObject(runtime);
+  installExtensions(runtime, std::move(extensions));
+}
+
 std::unique_ptr<HermesRuntime> HermesRootAPI::makeHermesRuntime(
     const vm::RuntimeConfig &runtimeConfig) {
 #ifdef HERMESVM_PLATFORM_LOGGING
@@ -1311,6 +1341,8 @@ std::unique_ptr<HermesRuntime> HermesRootAPI::makeHermesRuntime(
 #else
   ret->setDebugger(std::make_unique<debugger::Debugger>());
 #endif
+
+  loadAndInstallExtensions(*ret);
 
   return ret;
 }

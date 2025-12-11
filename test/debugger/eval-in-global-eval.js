@@ -21,6 +21,6 @@ main();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:Break on 'debugger' statement in foo: [3]:5:5
+// CHECK:Break on 'debugger' statement in foo: [4]:5:5
 // CHECK-NEXT:1
 // CHECK-NEXT:Continuing execution
