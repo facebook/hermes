@@ -23,12 +23,15 @@ import type {
   Identifier,
   MemberExpression,
   MethodDefinition,
+  NewExpression,
+  ObjectExpression,
   ObjectPattern,
   ObjectPropertyKey,
   Program,
   RecordDeclaration,
   RecordDeclarationProperty,
   RecordDeclarationStaticProperty,
+  RecordExpression,
   ThisExpression,
 } from 'hermes-estree';
 
@@ -261,6 +264,21 @@ function mapRecordDeclaration(
   };
 }
 
+function mapRecordExpression(node: RecordExpression): NewExpression {
+  const obj: ObjectExpression = {
+    type: 'ObjectExpression',
+    properties: node.properties.properties,
+    ...etc(),
+  };
+  return {
+    type: 'NewExpression',
+    callee: node.recordConstructor,
+    arguments: [obj],
+    typeArguments: null,
+    ...etc(),
+  };
+}
+
 export function transformProgram(
   program: Program,
   _options: ParserOptions,
@@ -271,6 +289,9 @@ export function transformProgram(
       switch (node.type) {
         case 'RecordDeclaration': {
           return mapRecordDeclaration(genID, node);
+        }
+        case 'RecordExpression': {
+          return mapRecordExpression(node);
         }
         case 'Identifier': {
           // A rudimentary check to avoid some collisions with our generated
