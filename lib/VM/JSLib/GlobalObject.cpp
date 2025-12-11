@@ -560,9 +560,6 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   runtime.asyncFunctionPrototype =
       JSObject::create(runtime, runtime.functionPrototype);
 
-  // "Forward declaration" of TextEncoder.prototype.
-  runtime.textEncoderPrototype = JSObject::create(runtime);
-
   // Object constructor.
   runtime.objectConstructor.castAndSetHermesValue<NativeConstructor>(
       createObjectConstructor(runtime));
@@ -671,10 +668,6 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // AsyncFunction constructor (not directly exposed in the global object).
   runtime.asyncFunctionConstructor.castAndSetHermesValue<NativeConstructor>(
       createAsyncFunctionConstructor(runtime));
-
-  // TextEncoder constructor.
-  runtime.textEncoderConstructor.castAndSetHermesValue<NativeConstructor>(
-      createTextEncoderConstructor(runtime));
 
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);

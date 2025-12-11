@@ -9,6 +9,7 @@
 
 #include "Dummy.h"
 #include "Intrinsics.h"
+#include "TextEncoder.h"
 
 #if HERMES_ENABLE_CONTRIB_EXTENSIONS
 #include "contrib/ContribExtensions.h"
@@ -24,6 +25,7 @@ void installExtensions(jsi::Runtime &rt, jsi::Object extensions) {
   captureIntrinsics(rt);
 
   // Delegate to each extension's install function.
+  installTextEncoder(rt, extensions);
   installDummy(rt, extensions);
 
 #if HERMES_ENABLE_CONTRIB_EXTENSIONS

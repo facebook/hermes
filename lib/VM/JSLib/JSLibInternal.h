@@ -365,9 +365,6 @@ HermesValue createGeneratorFunctionConstructor(Runtime &runtime);
 /// Create the AsyncFunction constructor and populate methods.
 HermesValue createAsyncFunctionConstructor(Runtime &runtime);
 
-/// Create the TextEncoder constructor and populate methods.
-HermesValue createTextEncoderConstructor(Runtime &runtime);
-
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime &runtime);
 

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: LC_ALL=en_US.UTF-8 %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: LC_ALL=en_US.UTF-8 %hermes -O -target=HBC -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
 "use strict";
 
 print('TextEncoder');
@@ -134,3 +134,14 @@ print(stats.read, stats.written);
 // CHECK-NEXT: 2 4
 print(result[0], result[1], result[2], result[3]);
 // CHECK-NEXT: 240 159 152 131
+
+// Test encodeInto with detached ArrayBuffer throws TypeError
+var ab = new ArrayBuffer(10);
+var u8 = new Uint8Array(ab);
+HermesInternal.detachArrayBuffer(ab);
+try {
+  encoder.encodeInto('test', u8);
+} catch (e) {
+  print(e.name, e.message);
+  // CHECK-NEXT: TypeError TextEncoder.prototype.encodeInto called on a detached ArrayBuffer
+}
