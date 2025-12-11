@@ -24,12 +24,6 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/async-arrow-function/escaped-async.js"
-      ],
-      "comment": "Corner cases in async arrow functions (T193923741)"
-    },
-    {
-      "paths": [
         "test262/test/intl402/DateTimeFormat/prototype/formatToParts/fractionalSecondDigits.js",
         "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-long-en.js",
         "test262/test/intl402/DateTimeFormat/prototype/formatToParts/dayPeriod-narrow-en.js",

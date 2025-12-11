@@ -524,17 +524,22 @@ class JSParserImpl {
     return tok_->getKind() == TokenKind::identifier &&
         tok_->getIdentifier() == ident;
   }
+  /// \param range is the source range of the \p ident, must be valid.
+  /// \return true if the \p ident is unescaped.
+  static bool isUnescaped(UniqueString *ident, SMRange range) {
+    assert(range.isValid() && "range must be valid");
+    // Unescaped identifier is the same as the length of the identifier,
+    // because the escapes add extra characters.
+    size_t tokLen = range.End.getPointer() - range.Start.getPointer();
+    return tokLen == ident->str().size();
+  }
   /// \return true if the current token is the specified identifier
-  /// without any escapes. It checks this by comparing the length of the token
-  /// with the length of the \p ident.
+  /// without any escapes. It checks this by calling isUnescaped().
   bool checkUnescaped(UniqueString *ident) const {
     if (tok_->getKind() != TokenKind::identifier ||
         tok_->getIdentifier() != ident)
       return false;
-    SMRange tokRange = tok_->getSourceRange();
-    assert(tokRange.isValid() && "tokRange not initialized");
-    size_t tokLen = tokRange.End.getPointer() - tokRange.Start.getPointer();
-    return tokLen == ident->str().size();
+    return isUnescaped(ident, tok_->getSourceRange());
   }
   /// Check whether the current token is one of the specified ones. \returns
   /// true if it is.
@@ -560,7 +565,7 @@ class JSParserImpl {
   bool checkDeclaration() {
     if (checkN(
             TokenKind::rw_function, TokenKind::rw_const, TokenKind::rw_class) ||
-        (check(asyncIdent_) && checkAsyncFunction())) {
+        (checkUnescaped(asyncIdent_) && checkAsyncFunction())) {
       return true;
     }
 

@@ -302,7 +302,8 @@ bool JSParserImpl::checkAsyncFunction() {
   // async [no LineTerminator here] function
   // ^
   assert(
-      check(asyncIdent_) && "check for async function must occur at 'async'");
+      checkUnescaped(asyncIdent_) &&
+      "check for async function must occur at 'async'");
   // Avoid passing TokenKind::rw_function here, because parseFunctionHelper
   // relies on seeing `async` in order to construct its AST node.
   // This function must also be idempotent to allow for branching based on its
@@ -377,8 +378,8 @@ Optional<ESTree::FunctionLikeNode *> JSParserImpl::parseFunctionHelper(
     bool isDeclaration,
     bool forceEagerly) {
   // function or async function
-  assert(check(TokenKind::rw_function) || check(asyncIdent_));
-  bool isAsync = check(asyncIdent_);
+  assert(check(TokenKind::rw_function) || checkUnescaped(asyncIdent_));
+  bool isAsync = checkUnescaped(asyncIdent_);
 
   SMLoc startLoc = advance().Start;
 
@@ -809,7 +810,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
 
   assert(checkDeclaration() && "invalid start for declaration");
 
-  if (check(TokenKind::rw_function) || check(asyncIdent_)) {
+  if (check(TokenKind::rw_function) || checkUnescaped(asyncIdent_)) {
     auto fdecl = parseFunctionDeclaration(Param{});
     if (!fdecl)
       return None;
@@ -1539,7 +1540,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExpressionOrLabelledStatement(
   // but report an error because it will be ambiguous whether the parse was
   // correct.
   if (checkN(TokenKind::l_brace, TokenKind::rw_function, TokenKind::rw_class) ||
-      (check(asyncIdent_) && checkAsyncFunction())) {
+      (checkUnescaped(asyncIdent_) && checkAsyncFunction())) {
     // There's no need to stop reporting errors.
     error(
         tok_->getSourceRange(),
@@ -2369,7 +2370,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
               "Unexpected usage of 'yield' as an identifier reference");
         }
       }
-      if (check(asyncIdent_) && checkAsyncFunction()) {
+      if (checkUnescaped(asyncIdent_) && checkAsyncFunction()) {
         auto func = parseFunctionExpression();
         if (!func)
           return None;
@@ -4993,7 +4994,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
           new (context_) ESTree::IdentifierNode(setIdent_, nullptr, false));
       doParsePropertyName = false;
     }
-  } else if (check(asyncIdent_)) {
+  } else if (checkUnescaped(asyncIdent_)) {
     SMRange range = advance();
     if (!checkN(
             TokenKind::less,
@@ -5401,7 +5402,8 @@ bool JSParserImpl::reparseArrowParameters(
     // Set `isAsync = true` to indicate that this was async.
     auto *callee = dyn_cast<ESTree::IdentifierNode>(callNode->_callee);
     if (!isAsync && callNode->getParens() == 0 && callee &&
-        callee->_name == asyncIdent_ && !hasNewLine) {
+        callee->_name == asyncIdent_ &&
+        isUnescaped(callee->_name, callee->getSourceRange()) && !hasNewLine) {
       nodeList = std::move(callNode->_arguments);
       isAsync = true;
     } else {
@@ -5845,7 +5847,7 @@ Optional<ESTree::Node *> JSParserImpl::reparseObjectAssignmentPattern(
 Optional<ESTree::Node *> JSParserImpl::tryParseTypedAsyncArrowFunction(
     Param param) {
   assert(context_.getParseFlow());
-  assert(check(asyncIdent_));
+  assert(checkUnescaped(asyncIdent_));
   JSLexer::SavePoint savePoint{&lexer_};
   SMLoc start = advance().Start;
 
@@ -5960,7 +5962,7 @@ Optional<ESTree::Node *> JSParserImpl::parseAssignmentExpression(
 
     SMLoc startLoc = tok_->getStartLoc();
     bool forceAsync = false;
-    if (check(asyncIdent_)) {
+    if (checkUnescaped(asyncIdent_)) {
       OptValue<TokenKind> optNext = lexer_.lookahead1(TokenKind::identifier);
       if (optNext.hasValue() && *optNext == TokenKind::identifier) {
         forceAsync = true;
@@ -6877,7 +6879,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
     CHECK_RECURSION;
     // export default
     if (check(TokenKind::rw_function) ||
-        (check(asyncIdent_) && checkAsyncFunction())) {
+        (checkUnescaped(asyncIdent_) && checkAsyncFunction())) {
       // export default HoistableDeclaration
       // Currently, the only hoistable declarations are functions.
       auto optFunDecl = parseFunctionDeclaration(ParamDefault);
