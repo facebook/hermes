@@ -20,6 +20,7 @@ import FlowVisitorKeys from './generated/ESTreeVisitorKeys';
 import * as TransformComponentSyntax from './estree/TransformComponentSyntax';
 import * as TransformEnumSyntax from './estree/TransformEnumSyntax';
 import * as TransformMatchSyntax from './estree/TransformMatchSyntax';
+import * as TransformRecordSyntax from './estree/TransformRecordSyntax';
 import * as StripFlowTypesForBabel from './estree/StripFlowTypesForBabel';
 import * as TransformESTreeToBabel from './babel/TransformESTreeToBabel';
 import * as StripFlowTypes from './estree/StripFlowTypes';
@@ -100,6 +101,7 @@ export function parse(
     TransformEnumSyntax.transformProgram,
     TransformMatchSyntax.transformProgram,
     TransformComponentSyntax.transformProgram,
+    TransformRecordSyntax.transformProgram,
     StripFlowTypesForBabel.transformProgram,
   ].reduce((ast, transform) => transform(ast, options), estreeAST);
 
@@ -120,6 +122,7 @@ const Transforms = {
   transformEnumSyntax: TransformEnumSyntax.transformProgram,
   transformMatchSyntax: TransformMatchSyntax.transformProgram,
   transformComponentSyntax: TransformComponentSyntax.transformProgram,
+  transformRecordSyntax: TransformRecordSyntax.transformProgram,
   stripFlowTypesForBabel: StripFlowTypesForBabel.transformProgram,
   stripFlowTypes: StripFlowTypes.transformProgram,
 };
