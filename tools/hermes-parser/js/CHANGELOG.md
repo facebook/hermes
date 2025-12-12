@@ -1,3 +1,12 @@
+## 0.33.0
+
+### `hermes-parser`
+- Parse `unknown`, `never`, and `undefined` types as their own nodes (`UnknownTypeAnnotation`, `NeverTypeAnnotation`, `UndefinedTypeAnnotation`).
+- Renamed `TupleTypeAnnotation` property from `types` to `elementTypes` - matching Flow parser.
+- Renamed `ClassDeclaration`/`ClassExpression` property `superTypeParameters` to `superTypeArguments`.
+- Parse `match` instance patterns.
+- Parse record declarations and expressions.
+
 ## 0.32.1
 
 ### `hermes-parser`
