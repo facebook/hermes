@@ -287,7 +287,9 @@ def print_properties(unicode_data_lines):
     """Output UnicodeRanges for PropLists."""
     categories = [
         "UNICODE_OTHER_ID_START Other_ID_Start",
+        "UNICODE_OTHER_ID_CONTINUE Other_ID_Continue",
         "UNICODE_PATTERN_LETTER Pattern_Syntax Pattern_White_Space L& Ll Lt Lu Lm Lo",
+        "UNICODE_PATTERN_CONTINUE Pattern_Syntax Pattern_White_Space Mn Mc Nd Pc",
     ]
     for cat in categories:
         run_property_select(unicode_data_lines, cat.split(" "))

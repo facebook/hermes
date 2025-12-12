@@ -19,3 +19,6 @@ var z_‿⁀⁔︳︴﹍﹎﹏＿ = 1.0;
 
 // Put them all together.
 {Ⅵ૬͓͋﹍͕͔: "𐒡"};
+
+// ID_Continue
+var $\u19da = 1;

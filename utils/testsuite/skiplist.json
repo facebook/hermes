@@ -262,8 +262,6 @@
     },
     {
       "paths": [
-        "test262/test/language/identifiers/part-unicode-5.2.0-class.js",
-        "test262/test/language/identifiers/part-unicode-5.2.0-class-escaped.js",
         "test262/test/language/statements/class/async-meth-escaped-async.js",
         "test262/test/language/statements/class/syntax/escaped-static.js",
         "test262/test/language/expressions/class/elements/static-field-init-with-this.js",
