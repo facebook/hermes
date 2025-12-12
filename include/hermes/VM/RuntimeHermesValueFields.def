@@ -81,6 +81,7 @@ RUNTIME_HV_FIELD_PROTOTYPE(requireFunction)
 RUNTIME_HV_FIELD_PROTOTYPE(jsErrorStackAccessor)
 RUNTIME_HV_FIELD_PROTOTYPE(callSitePrototype)
 RUNTIME_HV_FIELD_PROTOTYPE(textEncoderPrototype)
+RUNTIME_HV_FIELD_PROTOTYPE(textDecoderPrototype)
 
 // TODO: for Serialization/Deserialization  after global object initialization
 // we record specialCodeBlockDomain_ and create runtimemodule later need to
