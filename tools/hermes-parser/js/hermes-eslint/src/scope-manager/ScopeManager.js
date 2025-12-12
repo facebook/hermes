@@ -27,6 +27,7 @@ import {
   GlobalScope,
   MatchCaseScope,
   ModuleScope,
+  RecordScope,
   SwitchScope,
   TypeScope,
   WithScope,
@@ -294,6 +295,12 @@ class ScopeManager {
   nestMatchCaseScope(node: MatchCaseScope['block']): MatchCaseScope {
     return this._nestScope(
       new MatchCaseScope(this, this._assertCurrentScope(), node),
+    );
+  }
+
+  nestRecordScope(node: RecordScope['block']): RecordScope {
+    return this._nestScope(
+      new RecordScope(this, this._assertCurrentScope(), node),
     );
   }
 }

@@ -31,6 +31,8 @@ function parse(code: string, options?: ParseForESLintOptions): Program {
       options?.enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
       options?.enableExperimentalFlowMatchSyntax ?? true,
+    enableExperimentalFlowRecordSyntax:
+      options?.enableExperimentalFlowRecordSyntax ?? true,
   };
 
   try {

@@ -23,6 +23,7 @@ const DefinitionType = keyMirror({
   ImplicitGlobalVariable: null,
   ImportBinding: null,
   Parameter: null,
+  RecordName: null,
   Type: null,
   TypeParameter: null,
   Variable: null,

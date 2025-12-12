@@ -73,6 +73,8 @@ import type {
   PrivateIdentifier,
   Program,
   Property,
+  RecordDeclaration,
+  RecordExpression,
   SwitchStatement,
   TaggedTemplateExpression,
   TypeAlias,
@@ -101,6 +103,7 @@ import {
   FunctionNameDefinition,
   HookNameDefinition,
   ParameterDefinition,
+  RecordNameDefinition,
   VariableDefinition,
 } from '../definition';
 
@@ -775,6 +778,59 @@ class Referencer extends Visitor {
     }
 
     this.visit(node.value);
+  }
+
+  RecordDeclaration(node: RecordDeclaration): void {
+    const {id} = node;
+    this.currentScope().defineIdentifier(
+      id,
+      new RecordNameDefinition(id, node),
+    );
+
+    this.scopeManager.nestRecordScope(node);
+
+    // define the record name again inside the new scope
+    // references to the record should not resolve directly to the parent record
+    this.currentScope().defineIdentifier(
+      id,
+      new RecordNameDefinition(id, node),
+    );
+
+    // visit the type param declarations
+    this.visitType(node.typeParameters);
+    // then the usages
+    node.implements?.forEach(imp => this.visitType(imp));
+
+    for (const element of node.body.elements) {
+      switch (element.type) {
+        case 'RecordDeclarationProperty': {
+          // Skip visiting key, it is not a reference
+          this.visitType(element.typeAnnotation);
+          if (element.defaultValue) {
+            this.visit(element.defaultValue);
+          }
+          break;
+        }
+        case 'RecordDeclarationStaticProperty': {
+          // Skip visiting key, it is not a reference
+          this.visitType(element.typeAnnotation);
+          this.visit(element.value);
+          break;
+        }
+        case 'MethodDefinition': {
+          this.visitFunction(element.value);
+          break;
+        }
+      }
+    }
+
+    this.close(node);
+  }
+
+  RecordExpression(node: RecordExpression): void {
+    this.visit(node.recordConstructor);
+    this.visitType(node.typeArguments);
+    this.visit(node.properties);
   }
 
   SwitchStatement(node: SwitchStatement): void {

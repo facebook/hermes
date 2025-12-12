@@ -25,6 +25,7 @@ import type {HookScope} from './HookScope';
 import type {GlobalScope} from './GlobalScope';
 import type {MatchCaseScope} from './MatchCaseScope';
 import type {ModuleScope} from './ModuleScope';
+import type {RecordScope} from './RecordScope';
 import type {SwitchScope} from './SwitchScope';
 import type {TypeScope} from './TypeScope';
 import type {WithScope} from './WithScope';
@@ -45,6 +46,7 @@ type Scope =
   | GlobalScope
   | MatchCaseScope
   | ModuleScope
+  | RecordScope
   | SwitchScope
   | TypeScope
   | WithScope;
