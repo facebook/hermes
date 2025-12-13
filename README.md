@@ -12,6 +12,8 @@ If you're only interested in using pre-built Hermes in a new or existing React N
 
 If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
 
+**[Hermes Blog](doc/blog/README.md)** - Technical articles and deep dives into Hermes internals.
+
 The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
 
 * [Building and Running Hermes](doc/BuildingAndRunning.md)
