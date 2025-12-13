@@ -50,6 +50,25 @@ result = encoder.encode('');
 print(result.length);
 // CHECK-NEXT: 0
 
+// Test default argument behavior (issue #1857)
+result = encoder.encode();
+print(result.length);
+// CHECK-NEXT: 0
+
+result = encoder.encode(undefined);
+print(result.length);
+// CHECK-NEXT: 0
+
+// Explicit null should stringify to "null" (4 bytes)
+result = encoder.encode(null);
+print(result.length);
+// CHECK-NEXT: 4
+
+// String "undefined" should encode (9 bytes)
+result = encoder.encode("undefined");
+print(result.length);
+// CHECK-NEXT: 9
+
 result = encoder.encode('\x0D');
 print(result.length, result[0]);
 // CHECK-NEXT: 1 13
@@ -99,6 +118,18 @@ print(result[0], result[1], result[2], result[3]);
 stats = encoder.encodeInto('', result);
 print(stats.read, stats.written);
 // CHECK-NEXT: 0 0
+
+// Unlike encode(), encodeInto() has required parameters per the spec.
+// Passing undefined for the source stringifies to "undefined" (9 bytes).
+result = new Uint8Array(20);
+stats = encoder.encodeInto(undefined, result);
+print(stats.read, stats.written);
+// CHECK-NEXT: 9 9
+print(result.slice(0, 9).join(' '));
+// CHECK-NEXT: 117 110 100 101 102 105 110 101 100
+
+// Restore 4-byte buffer for remaining tests
+result = new Uint8Array(4);
 
 // ASCII case that does NOT fit within the provided buffer
 stats = encoder.encodeInto('testing', result);
