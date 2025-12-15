@@ -7,10 +7,10 @@
 
 #include "TextDecoder.h"
 
-#include "BufferUtils.h"
-#include "Intrinsics.h"
+#include "JSIUtils.h"
 #include "TextDecoderUtils.h"
 
+#include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Support/UTF8.h"
 
 #include <cstdint>
@@ -20,6 +20,8 @@
 namespace facebook {
 namespace hermes {
 namespace {
+
+using ::hermes::UNICODE_REPLACEMENT_CHARACTER;
 
 /// NativeState subclass for TextDecoder instances.
 /// Stores encoding configuration and streaming state.
@@ -62,13 +64,19 @@ inline TextDecoderNativeState *getTextDecoderState(
   return static_cast<TextDecoderNativeState *>(obj.getNativeState(rt).get());
 }
 
-BufferInfo getInputBytes(jsi::Runtime &rt, const jsi::Value &val) {
+/// Get input bytes from a value that can be ArrayBuffer, TypedArray, or
+/// DataView. Returns {nullptr, 0} for undefined/null.
+/// Throws JSError if the value is not a valid buffer type.
+/// Throws JSINativeException (to be caught by caller) if buffer is detached.
+TypedArrayBufferInfo getInputBytes(jsi::Runtime &rt, const jsi::Value &val) {
   if (val.isUndefined() || val.isNull()) {
-    return BufferInfo::make(nullptr, 0);
+    return {nullptr, 0};
   }
 
   if (!val.isObject()) {
-    return BufferInfo::invalid();
+    throw jsi::JSError(
+        rt,
+        "TextDecoder.prototype.decode() requires an ArrayBuffer or ArrayBufferView");
   }
 
   jsi::Object obj = val.asObject(rt);
@@ -76,11 +84,16 @@ BufferInfo getInputBytes(jsi::Runtime &rt, const jsi::Value &val) {
   // Check if it's an ArrayBuffer directly
   if (obj.isArrayBuffer(rt)) {
     jsi::ArrayBuffer ab = obj.getArrayBuffer(rt);
-    return BufferInfo::make(ab.data(rt), ab.size(rt));
+    // data(rt) throws JSINativeException if detached
+    return {ab.data(rt), ab.size(rt)};
   }
 
   // Check for TypedArray or DataView using shared utility
-  return getTypedArrayBuffer(rt, val);
+  return getTypedArrayBuffer(
+      rt,
+      val,
+      "TextDecoder.prototype.decode() requires an ArrayBuffer or ArrayBufferView",
+      "TextDecoder.prototype.decode called on a detached ArrayBuffer");
 }
 
 /// Native helper called by the JS constructor to install NativeState.
@@ -151,33 +164,62 @@ jsi::Value textDecoderDecode(
   const uint8_t *bytes = nullptr;
   size_t length = 0;
   if (count > 0 && !args[0].isUndefined()) {
-    BufferInfo inputInfo;
+    TypedArrayBufferInfo inputInfo;
     try {
       inputInfo = getInputBytes(rt, args[0]);
     } catch (const jsi::JSINativeException &) {
       throwTypeError(
           rt, "TextDecoder.prototype.decode called on a detached ArrayBuffer");
     }
-    if (!inputInfo) {
-      throw jsi::JSError(
-          rt,
-          "TextDecoder.prototype.decode() requires an ArrayBuffer or ArrayBufferView");
-    }
     bytes = inputInfo.data;
-    length = inputInfo.length;
+    length = inputInfo.byteLength;
   }
 
-  // Fast path for ASCII-only input with no pending bytes
-  bool isByteEncoding =
-      state->encoding == TextDecoderEncoding::UTF8 ||
-      isSingleByteEncoding(state->encoding);
-  if (state->pendingCount == 0 && isByteEncoding && bytes != nullptr) {
+  // Fast path for single-byte encodings: single-pass decode with ASCII
+  // optimization. No pending bytes possible for single-byte encodings.
+  if (isSingleByteEncoding(state->encoding)) {
+    if (bytes == nullptr || length == 0) {
+      return jsi::String::createFromAscii(rt, "", 0);
+    }
+    size_t tableIndex =
+        static_cast<uint8_t>(state->encoding) - kFirstSingleByteEncoding;
+    const char16_t *table = kSingleByteEncodings[tableIndex];
+
+    // Single pass: decode and check if all ASCII simultaneously
+    std::u16string decoded;
+    decoded.reserve(length);
+    bool allAscii = true;
+
+    for (size_t i = 0; i < length; ++i) {
+      uint8_t b = bytes[i];
+      if (b < 0x80) {
+        decoded.push_back(static_cast<char16_t>(b));
+      } else {
+        allAscii = false;
+        char16_t cp = table[b - 0x80];
+        if (state->fatal && cp == UNICODE_REPLACEMENT_CHARACTER) {
+          throw jsi::JSError(rt, "Invalid byte sequence");
+        }
+        decoded.push_back(cp);
+      }
+    }
+
+    if (allAscii) {
+      return jsi::String::createFromAscii(
+          rt, reinterpret_cast<const char *>(bytes), length);
+    }
+    return jsi::String::createFromUtf16(rt, decoded.data(), decoded.size());
+  }
+
+  // Fast path for UTF-8 ASCII-only input with no pending bytes
+  if (state->encoding == TextDecoderEncoding::UTF8 && state->pendingCount == 0 &&
+      bytes != nullptr) {
     const uint8_t *asciiBytes = bytes;
     size_t asciiLength = length;
     // Skip UTF-8 BOM if present, not ignored, and not already seen.
-    if (state->encoding == TextDecoderEncoding::UTF8 && !state->ignoreBOM &&
-        !state->bomSeen && asciiLength >= 3 && asciiBytes[0] == 0xEF &&
-        asciiBytes[1] == 0xBB && asciiBytes[2] == 0xBF) {
+    if (!state->ignoreBOM && !state->bomSeen && asciiLength >= 3 &&
+        asciiBytes[0] == 0xEF && asciiBytes[1] == 0xBB &&
+        asciiBytes[2] == 0xBF) {
       asciiBytes += 3;
       asciiLength -= 3;
     }
@@ -191,8 +233,7 @@ jsi::Value textDecoderDecode(
     }
     if (allASCII) {
       // Update streaming state if needed
-      if (state->encoding == TextDecoderEncoding::UTF8 && stream &&
-          asciiLength > 0 && !state->bomSeen) {
+      if (stream && asciiLength > 0 && !state->bomSeen) {
         state->bomSeen = true;
       }
       return jsi::String::createFromAscii(
@@ -265,17 +306,6 @@ jsi::Value textDecoderDecode(
         newPendingBytes,
         &newPendingCount,
         &newBOMSeen);
-  } else if (isSingleByteEncoding(state->encoding)) {
-    size_t tableIndex =
-        static_cast<uint8_t>(state->encoding) - kFirstSingleByteEncoding;
-    err = decodeSingleByteEncoding(
-        inputBytes,
-        inputLength,
-        kSingleByteEncodings[tableIndex],
-        state->fatal,
-        &decoded);
-    newPendingCount = 0;
-    newBOMSeen = true;
   }
 
   // Update or clear streaming state

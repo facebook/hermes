@@ -104,13 +104,6 @@ DecodeError decodeUTF16(
     size_t *outPendingCount,
     bool *outBOMSeen);
 
-DecodeError decodeSingleByteEncoding(
-    const uint8_t *bytes,
-    size_t length,
-    const char16_t *table,
-    bool fatal,
-    std::u16string *decoded);
-
 } // namespace hermes
 } // namespace facebook
 

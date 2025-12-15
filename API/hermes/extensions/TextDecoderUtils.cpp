@@ -889,27 +889,5 @@ const char16_t *const kSingleByteEncodings[] = {
     kWindows1257,  kWindows1258,  kXMacCyrillic,
 };
 
-DecodeError decodeSingleByteEncoding(
-    const uint8_t *bytes,
-    size_t length,
-    const char16_t *table,
-    bool fatal,
-    std::u16string *decoded) {
-  decoded->reserve(length);
-  for (size_t i = 0; i < length; ++i) {
-    uint8_t byte = bytes[i];
-    if (byte < 0x80) {
-      decoded->push_back(static_cast<char16_t>(byte));
-    } else {
-      char16_t cp = table[byte - 0x80];
-      if (cp == UNICODE_REPLACEMENT_CHARACTER && fatal) {
-        return DecodeError::InvalidSequence;
-      }
-      decoded->push_back(cp);
-    }
-  }
-  return DecodeError::None;
-}
-
 } // namespace hermes
 } // namespace facebook
