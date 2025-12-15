@@ -9,10 +9,16 @@
 
 #include "hermes/Platform/Unicode/CharacterProperties.h"
 #include "hermes/Support/UTF8.h"
+#include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/ConvertUTF.h"
 
+namespace facebook {
 namespace hermes {
-namespace vm {
+
+// Import Unicode helpers from the hermes namespace.
+using ::hermes::isHighSurrogate;
+using ::hermes::isLowSurrogate;
+using ::hermes::UNICODE_REPLACEMENT_CHARACTER;
 
 // Returns the expected UTF-8 sequence length for a valid lead byte.
 // Returns 0 for invalid lead bytes (continuation bytes, 0xC0-0xC1, 0xF5-0xFF).
@@ -106,25 +112,13 @@ static unsigned maximalSubpartLength(const uint8_t *bytes, size_t available) {
 
 // Parse the encoding label and return the corresponding encoding type.
 // Returns llvh::None if the encoding is not supported.
-llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
-    StringView label) {
-  // Copy to a char buffer, checking that all characters are ASCII.
-  // Encoding labels must be ASCII per the WHATWG spec.
-  llvh::SmallVector<char, 32> buf;
-  buf.reserve(label.length());
-  for (size_t i = 0; i < label.length(); ++i) {
-    char16_t c = label[i];
-    if (c > 127) {
-      return llvh::None;  // Non-ASCII character in label.
-    }
-    buf.push_back(static_cast<char>(c));
-  }
-
+llvh::Optional<TextDecoderEncoding> parseEncodingLabel(llvh::StringRef label) {
+  // Trim ASCII whitespace from both ends.
   auto isASCIIWhitespace = [](char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f';
   };
-  const char *begin = buf.data();
-  const char *end = begin + buf.size();
+  const char *begin = label.data();
+  const char *end = begin + label.size();
   while (begin != end && isASCIIWhitespace(*begin)) {
     ++begin;
   }
@@ -336,72 +330,72 @@ llvh::Optional<TextDecoderEncoding> parseEncodingLabel(
 }
 
 // Get the canonical encoding name for the given encoding type.
-Predefined::Str getEncodingName(TextDecoderEncoding encoding) {
+const char *getEncodingName(TextDecoderEncoding encoding) {
   switch (encoding) {
     case TextDecoderEncoding::UTF8:
-      return Predefined::utf8;
+      return "utf-8";
     case TextDecoderEncoding::UTF16LE:
-      return Predefined::utf16le;
+      return "utf-16le";
     case TextDecoderEncoding::UTF16BE:
-      return Predefined::utf16be;
+      return "utf-16be";
     case TextDecoderEncoding::IBM866:
-      return Predefined::ibm866;
+      return "ibm866";
     case TextDecoderEncoding::ISO_8859_2:
-      return Predefined::iso88592;
+      return "iso-8859-2";
     case TextDecoderEncoding::ISO_8859_3:
-      return Predefined::iso88593;
+      return "iso-8859-3";
     case TextDecoderEncoding::ISO_8859_4:
-      return Predefined::iso88594;
+      return "iso-8859-4";
     case TextDecoderEncoding::ISO_8859_5:
-      return Predefined::iso88595;
+      return "iso-8859-5";
     case TextDecoderEncoding::ISO_8859_6:
-      return Predefined::iso88596;
+      return "iso-8859-6";
     case TextDecoderEncoding::ISO_8859_7:
-      return Predefined::iso88597;
+      return "iso-8859-7";
     case TextDecoderEncoding::ISO_8859_8:
-      return Predefined::iso88598;
+      return "iso-8859-8";
     case TextDecoderEncoding::ISO_8859_8_I:
-      return Predefined::iso88598i;
+      return "iso-8859-8-i";
     case TextDecoderEncoding::ISO_8859_10:
-      return Predefined::iso885910;
+      return "iso-8859-10";
     case TextDecoderEncoding::ISO_8859_13:
-      return Predefined::iso885913;
+      return "iso-8859-13";
     case TextDecoderEncoding::ISO_8859_14:
-      return Predefined::iso885914;
+      return "iso-8859-14";
     case TextDecoderEncoding::ISO_8859_15:
-      return Predefined::iso885915;
+      return "iso-8859-15";
     case TextDecoderEncoding::ISO_8859_16:
-      return Predefined::iso885916;
+      return "iso-8859-16";
     case TextDecoderEncoding::KOI8_R:
-      return Predefined::koi8r;
+      return "koi8-r";
     case TextDecoderEncoding::KOI8_U:
-      return Predefined::koi8u;
+      return "koi8-u";
     case TextDecoderEncoding::Macintosh:
-      return Predefined::macintosh;
+      return "macintosh";
     case TextDecoderEncoding::Windows874:
-      return Predefined::windows874;
+      return "windows-874";
     case TextDecoderEncoding::Windows1250:
-      return Predefined::windows1250;
+      return "windows-1250";
     case TextDecoderEncoding::Windows1251:
-      return Predefined::windows1251;
+      return "windows-1251";
     case TextDecoderEncoding::Windows1252:
-      return Predefined::windows1252;
+      return "windows-1252";
     case TextDecoderEncoding::Windows1253:
-      return Predefined::windows1253;
+      return "windows-1253";
     case TextDecoderEncoding::Windows1254:
-      return Predefined::windows1254;
+      return "windows-1254";
     case TextDecoderEncoding::Windows1255:
-      return Predefined::windows1255;
+      return "windows-1255";
     case TextDecoderEncoding::Windows1256:
-      return Predefined::windows1256;
+      return "windows-1256";
     case TextDecoderEncoding::Windows1257:
-      return Predefined::windows1257;
+      return "windows-1257";
     case TextDecoderEncoding::Windows1258:
-      return Predefined::windows1258;
+      return "windows-1258";
     case TextDecoderEncoding::XMacCyrillic:
-      return Predefined::xmaccyrillic;
+      return "x-mac-cyrillic";
   }
-  llvm_unreachable("Invalid encoding");
+  return "utf-8"; // Default fallback
 }
 
 DecodeError decodeUTF8(
@@ -917,5 +911,5 @@ DecodeError decodeSingleByteEncoding(
   return DecodeError::None;
 }
 
-} // namespace vm
 } // namespace hermes
+} // namespace facebook

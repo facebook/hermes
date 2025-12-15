@@ -5,21 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_VM_JSLIB_TEXTDECODERUTILS_H
-#define HERMES_VM_JSLIB_TEXTDECODERUTILS_H
-
-#include "hermes/VM/Predefined.h"
-#include "hermes/VM/StringView.h"
+#ifndef HERMES_EXTENSIONS_TEXTDECODERUTILS_H
+#define HERMES_EXTENSIONS_TEXTDECODERUTILS_H
 
 #include "llvh/ADT/Optional.h"
+#include "llvh/ADT/StringRef.h"
 
+#include <cstdint>
 #include <string>
 
+namespace facebook {
 namespace hermes {
-namespace vm {
 
-// Encoding types supported by TextDecoder. isSingleByteEncoding and kSingleByteEncodings
-// depend on the defaule enum values.
+// Encoding types supported by TextDecoder. isSingleByteEncoding and
+// kSingleByteEncodings depend on the default enum values.
 enum class TextDecoderEncoding : uint8_t {
   UTF8,
   UTF16LE,
@@ -56,16 +55,16 @@ enum class TextDecoderEncoding : uint8_t {
 
 enum class DecodeError {
   None = 0,
-  InvalidSequence,  // Invalid byte sequence (fatal mode)
+  InvalidSequence, // Invalid byte sequence (fatal mode)
   InvalidSurrogate, // Invalid surrogate (fatal mode)
-  OddByteCount,     // Odd byte count in UTF-16 (fatal mode)
+  OddByteCount, // Odd byte count in UTF-16 (fatal mode)
 };
 
 // First single-byte encoding value.
 static constexpr uint8_t kFirstSingleByteEncoding =
     static_cast<uint8_t>(TextDecoderEncoding::IBM866);
 
-static bool isSingleByteEncoding(TextDecoderEncoding enc) {
+inline bool isSingleByteEncoding(TextDecoderEncoding enc) {
   return static_cast<uint8_t>(enc) >= kFirstSingleByteEncoding;
 }
 
@@ -75,10 +74,10 @@ extern const char16_t *const kSingleByteEncodings[];
 
 // Parse the encoding label and return the corresponding encoding type.
 // Returns llvh::None if the encoding is not supported.
-llvh::Optional<TextDecoderEncoding> parseEncodingLabel(StringView label);
+llvh::Optional<TextDecoderEncoding> parseEncodingLabel(llvh::StringRef label);
 
 // Get the canonical encoding name for the given encoding type.
-Predefined::Str getEncodingName(TextDecoderEncoding encoding);
+const char *getEncodingName(TextDecoderEncoding encoding);
 
 DecodeError decodeUTF8(
     const uint8_t *bytes,
@@ -112,7 +111,7 @@ DecodeError decodeSingleByteEncoding(
     bool fatal,
     std::u16string *decoded);
 
-} // namespace vm
 } // namespace hermes
+} // namespace facebook
 
-#endif // HERMES_VM_JSLIB_TEXTDECODERUTILS_H
+#endif // HERMES_EXTENSIONS_TEXTDECODERUTILS_H
