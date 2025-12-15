@@ -24,6 +24,7 @@ constexpr jsi::UUID kIntrinsicsUUID{
 
 ExtensionIntrinsics::ExtensionIntrinsics(jsi::Runtime &rt)
     : typeError(rt.global().getPropertyAsFunction(rt, "TypeError")),
+      rangeError(rt.global().getPropertyAsFunction(rt, "RangeError")),
       uint8Array(rt.global().getPropertyAsFunction(rt, "Uint8Array")) {}
 
 void captureIntrinsics(jsi::Runtime &rt) {
@@ -45,6 +46,13 @@ const ExtensionIntrinsics &getIntrinsics(jsi::Runtime &rt) {
   const auto &intrinsics = getIntrinsics(rt);
   jsi::Value error =
       intrinsics.typeError.call(rt, jsi::String::createFromUtf8(rt, message));
+  throw jsi::JSError(rt, std::move(error));
+}
+
+[[noreturn]] void throwRangeError(jsi::Runtime &rt, const char *message) {
+  const auto &intrinsics = getIntrinsics(rt);
+  jsi::Value error =
+      intrinsics.rangeError.call(rt, jsi::String::createFromUtf8(rt, message));
   throw jsi::JSError(rt, std::move(error));
 }
 

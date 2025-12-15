@@ -111,7 +111,7 @@ jsi::Value textDecoderInit(
     std::string labelStr = args[1].toString(rt).utf8(rt);
     auto parsedEncoding = parseEncodingLabel(labelStr);
     if (!parsedEncoding) {
-      throw jsi::JSError(rt, "Unknown encoding: " + labelStr);
+      throwRangeError(rt, ("Unknown encoding: " + labelStr).c_str());
     }
     encoding = *parsedEncoding;
   }
@@ -198,7 +198,7 @@ jsi::Value textDecoderDecode(
         allAscii = false;
         char16_t cp = table[b - 0x80];
         if (state->fatal && cp == UNICODE_REPLACEMENT_CHARACTER) {
-          throw jsi::JSError(rt, "Invalid byte sequence");
+          throwTypeError(rt, "Invalid byte sequence");
         }
         decoded.push_back(cp);
       }
@@ -232,9 +232,14 @@ jsi::Value textDecoderDecode(
       }
     }
     if (allASCII) {
-      // Update streaming state if needed
-      if (stream && asciiLength > 0 && !state->bomSeen) {
-        state->bomSeen = true;
+      // Update or reset streaming state
+      if (stream) {
+        if (asciiLength > 0 && !state->bomSeen) {
+          state->bomSeen = true;
+        }
+      } else {
+        // Reset state for next decode call
+        state->bomSeen = false;
       }
       return jsi::String::createFromAscii(
           rt, reinterpret_cast<const char *>(asciiBytes), asciiLength);
@@ -323,13 +328,13 @@ jsi::Value textDecoderDecode(
   if (err != DecodeError::None) {
     switch (err) {
       case DecodeError::InvalidSequence:
-        throw jsi::JSError(rt, "Invalid byte sequence");
+        throwTypeError(rt, "Invalid byte sequence");
       case DecodeError::InvalidSurrogate:
-        throw jsi::JSError(rt, "Invalid UTF-16: lone surrogate");
+        throwTypeError(rt, "Invalid UTF-16: lone surrogate");
       case DecodeError::OddByteCount:
-        throw jsi::JSError(rt, "Invalid UTF-16 data (odd byte count)");
+        throwTypeError(rt, "Invalid UTF-16 data (odd byte count)");
       default:
-        throw jsi::JSError(rt, "Decoding error");
+        throwTypeError(rt, "Decoding error");
     }
   }
 

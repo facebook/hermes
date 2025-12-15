@@ -509,3 +509,45 @@ try {
 // This should NOT throw - state should be reset despite previous error
 print(stateResetDecoder.decode().length);
 // CHECK-NEXT: 0
+
+// Test non-literal strings as encoding labels
+// The encoding label should work the same whether it's a literal or computed string
+var computedLabel = 'UTF-8'.toLowerCase();
+var computedDecoder = new TextDecoder(computedLabel);
+print(computedDecoder.encoding);
+// CHECK-NEXT: utf-8
+
+var joinedLabel = ['utf', '8'].join('-');
+var joinedDecoder = new TextDecoder(joinedLabel);
+print(joinedDecoder.encoding);
+// CHECK-NEXT: utf-8
+
+// Test that BOM state is reset after a non-streaming decode completes
+// When stream=false (default), the decoder should reset its internal state including bomSeen
+// So the next decode call starts fresh and should strip the BOM again.
+var bomResetDecoder = new TextDecoder();
+// First decode with stream=true, no BOM
+bomResetDecoder.decode(Uint8Array.of(0x00, 0x00), { stream: true });
+// End the stream (stream=false), this should reset all state including bomSeen
+bomResetDecoder.decode(Uint8Array.of(0x00));
+// Now a new decode call with BOM should strip it (fresh state)
+var bomResetResult = bomResetDecoder.decode(Uint8Array.of(0xEF, 0xBB, 0xBF));
+print(bomResetResult.length);  // BOM should be stripped, result should be empty
+// CHECK-NEXT: 0
+
+// Variant: Start new stream, BOM split across calls should still be stripped
+var bomResetDecoder2 = new TextDecoder();
+bomResetDecoder2.decode(Uint8Array.of(0x41), { stream: true });  // 'A'
+bomResetDecoder2.decode();  // End stream, resets state
+// New stream starting with partial BOM
+bomResetDecoder2.decode(Uint8Array.of(0xEF, 0xBB), { stream: true });
+print(bomResetDecoder2.decode(Uint8Array.of(0xBF)).length);  // BOM stripped, empty
+// CHECK-NEXT: 0
+
+// Test UTF-16LE with lone high surrogate followed by odd trailing byte
+// Bytes [0x00, 0xD8] = code unit 0xD800 (high surrogate)
+// Byte [0xD8] = incomplete trailing byte
+// Result should be 1 replacement character (the incomplete surrogate pair merges with odd byte)
+var utf16OddDecoder = new TextDecoder('utf-16le');
+print(utf16OddDecoder.decode(Uint8Array.of(0x00, 0xD8, 0xD8)).length);
+// CHECK-NEXT: 1

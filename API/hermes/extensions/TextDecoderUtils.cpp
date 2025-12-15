@@ -541,12 +541,25 @@ DecodeError decodeUTF16(
           p += 4;
           continue;
         }
-      } else if (stream && p + 2 == end) {
-        // High surrogate at end - save as pending
-        outPendingBytes[0] = p[0];
-        outPendingBytes[1] = p[1];
-        *outPendingCount = 2;
-        break;
+      } else if (p + 2 == end) {
+        // High surrogate at end with no complete code unit following.
+        if (stream) {
+          // Streaming: save high surrogate as pending
+          outPendingBytes[0] = p[0];
+          outPendingBytes[1] = p[1];
+          *outPendingCount = 2;
+          break;
+        }
+        // Not streaming: high surrogate + any trailing odd byte = single error.
+        // The odd byte would have been part of the low surrogate that never came.
+        if (fatal) {
+          return DecodeError::InvalidSurrogate;
+        }
+        decoded->push_back(UNICODE_REPLACEMENT_CHARACTER);
+        // Skip the high surrogate and consume the trailing odd byte together
+        hasTrailingByte = false;
+        p += 2;
+        continue;
       }
       if (fatal) {
         return DecodeError::InvalidSurrogate;
