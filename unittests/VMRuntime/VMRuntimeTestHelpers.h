@@ -241,15 +241,15 @@ inline const GCConfig TestGCConfigFixedSize(
 /// Some tests expect out of memory.  This may either be fatal, or throw
 /// exception; parameterize tests over this choice.
 #ifdef HERMESVM_EXCEPTION_ON_OOM
-#define EXPECT_OOM(exp)                     \
-  {                                         \
-    bool exThrown = false;                  \
-    try {                                   \
-      exp;                                  \
-    } catch (const JSOutOfMemoryError &x) { \
-      exThrown = true;                      \
-    }                                       \
-    EXPECT_TRUE(exThrown);                  \
+#define EXPECT_OOM(exp)                    \
+  {                                        \
+    bool exThrown = false;                 \
+    try {                                  \
+      exp;                                 \
+    } catch (const JSOutOfMemoryError &) { \
+      exThrown = true;                     \
+    }                                      \
+    EXPECT_TRUE(exThrown);                 \
   }
 #else
 #define EXPECT_OOM(exp) EXPECT_DEATH_IF_SUPPORTED({ exp; }, "OOM")
