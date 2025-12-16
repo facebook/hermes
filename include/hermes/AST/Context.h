@@ -9,6 +9,7 @@
 #define HERMES_AST_CONTEXT_H
 
 #include "hermes/ADT/StringSetVector.h"
+#include "hermes/AST/Config.h"
 #include "hermes/Parser/PreParser.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/Allocator.h"

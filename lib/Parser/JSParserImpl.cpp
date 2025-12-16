@@ -24,6 +24,7 @@ JSParserImpl::JSParserImpl(
     Context &context,
     std::unique_ptr<llvh::MemoryBuffer> input)
     : context_(context),
+      kw_(context_.keywords()),
       sm_(context.getSourceErrorManager()),
       lexer_(
           std::move(input),
@@ -37,6 +38,7 @@ JSParserImpl::JSParserImpl(
 
 JSParserImpl::JSParserImpl(Context &context, uint32_t bufferId, ParserPass pass)
     : context_(context),
+      kw_(context_.keywords()),
       sm_(context.getSourceErrorManager()),
       lexer_(
           bufferId,
@@ -50,103 +52,103 @@ JSParserImpl::JSParserImpl(Context &context, uint32_t bufferId, ParserPass pass)
 }
 
 void JSParserImpl::initializeIdentifiers() {
-  getIdent_ = lexer_.getIdentifier("get");
-  setIdent_ = lexer_.getIdentifier("set");
-  initIdent_ = lexer_.getIdentifier("init");
-  useStrictIdent_ = lexer_.getIdentifier("use strict");
-  showSourceIdent_ = lexer_.getIdentifier("show source");
-  hideSourceIdent_ = lexer_.getIdentifier("hide source");
-  sensitiveIdent_ = lexer_.getIdentifier("sensitive");
-  useStaticBuiltinIdent_ = lexer_.getIdentifier("use static builtin");
-  letIdent_ = lexer_.getIdentifier("let");
-  ofIdent_ = lexer_.getIdentifier("of");
-  fromIdent_ = lexer_.getIdentifier("from");
-  asIdent_ = lexer_.getIdentifier("as");
-  implementsIdent_ = lexer_.getIdentifier("implements");
-  interfaceIdent_ = lexer_.getIdentifier("interface");
-  packageIdent_ = lexer_.getIdentifier("package");
-  privateIdent_ = lexer_.getIdentifier("private");
-  protectedIdent_ = lexer_.getIdentifier("protected");
-  prototypeIdent_ = lexer_.getIdentifier("prototype");
-  publicIdent_ = lexer_.getIdentifier("public");
-  staticIdent_ = lexer_.getIdentifier("static");
-  methodIdent_ = lexer_.getIdentifier("method");
-  constructorIdent_ = lexer_.getIdentifier("constructor");
-  yieldIdent_ = lexer_.getIdentifier("yield");
-  newIdent_ = lexer_.getIdentifier("new");
-  targetIdent_ = lexer_.getIdentifier("target");
-  importIdent_ = lexer_.getIdentifier("import");
-  metaIdent_ = lexer_.getIdentifier("meta");
-  valueIdent_ = lexer_.getIdentifier("value");
-  typeIdent_ = lexer_.getIdentifier("type");
-  asyncIdent_ = lexer_.getIdentifier("async");
-  argumentsIdent_ = lexer_.getIdentifier("arguments");
-  awaitIdent_ = lexer_.getIdentifier("await");
-  assertIdent_ = lexer_.getIdentifier("assert");
+  getIdent_ = kw_.identGet;
+  setIdent_ = kw_.identSet;
+  initIdent_ = kw_.identInit;
+  useStrictIdent_ = kw_.identUseStrict;
+  showSourceIdent_ = kw_.identShowSource;
+  hideSourceIdent_ = kw_.identHideSource;
+  sensitiveIdent_ = kw_.identSensitive;
+  useStaticBuiltinIdent_ = kw_.identUseStaticBuiltin;
+  letIdent_ = kw_.identLet;
+  ofIdent_ = kw_.identOf;
+  fromIdent_ = kw_.identFrom;
+  asIdent_ = kw_.identAs;
+  implementsIdent_ = kw_.identImplements;
+  interfaceIdent_ = kw_.identInterface;
+  packageIdent_ = kw_.identPackage;
+  privateIdent_ = kw_.identPrivate;
+  protectedIdent_ = kw_.identProtected;
+  prototypeIdent_ = kw_.identPrototype;
+  publicIdent_ = kw_.identPublic;
+  staticIdent_ = kw_.identStatic;
+  methodIdent_ = kw_.identMethod;
+  constructorIdent_ = kw_.identConstructor;
+  yieldIdent_ = kw_.identYield;
+  newIdent_ = kw_.identNew;
+  targetIdent_ = kw_.identTarget;
+  importIdent_ = kw_.identImport;
+  metaIdent_ = kw_.identMeta;
+  valueIdent_ = kw_.identValue;
+  typeIdent_ = kw_.identType;
+  asyncIdent_ = kw_.identAsync;
+  argumentsIdent_ = kw_.identArguments;
+  awaitIdent_ = kw_.identAwait;
+  assertIdent_ = kw_.identAssert;
 
 #if HERMES_PARSE_FLOW
 
-  typeofIdent_ = lexer_.getIdentifier("typeof");
-  keyofIdent_ = lexer_.getIdentifier("keyof");
-  declareIdent_ = lexer_.getIdentifier("declare");
-  protoIdent_ = lexer_.getIdentifier("proto");
-  opaqueIdent_ = lexer_.getIdentifier("opaque");
-  plusIdent_ = lexer_.getIdentifier("plus");
-  minusIdent_ = lexer_.getIdentifier("minus");
-  moduleIdent_ = lexer_.getIdentifier("module");
-  exportsIdent_ = lexer_.getIdentifier("exports");
-  esIdent_ = lexer_.getIdentifier("ES");
-  commonJSIdent_ = lexer_.getIdentifier("CommonJS");
-  mixinsIdent_ = lexer_.getIdentifier("mixins");
-  thisIdent_ = lexer_.getIdentifier("this");
+  typeofIdent_ = kw_.identTypeof;
+  keyofIdent_ = kw_.identKeyof;
+  declareIdent_ = kw_.identDeclare;
+  protoIdent_ = kw_.identProto;
+  opaqueIdent_ = kw_.identOpaque;
+  plusIdent_ = kw_.identFlowPlus;
+  minusIdent_ = kw_.identFlowMinus;
+  moduleIdent_ = kw_.identModule;
+  exportsIdent_ = kw_.identExports;
+  esIdent_ = kw_.identES;
+  commonJSIdent_ = kw_.identCommonJS;
+  mixinsIdent_ = kw_.identMixins;
+  thisIdent_ = kw_.identThis;
 
-  anyIdent_ = lexer_.getIdentifier("any");
-  mixedIdent_ = lexer_.getIdentifier("mixed");
-  emptyIdent_ = lexer_.getIdentifier("empty");
-  booleanIdent_ = lexer_.getIdentifier("boolean");
-  boolIdent_ = lexer_.getIdentifier("bool");
-  numberIdent_ = lexer_.getIdentifier("number");
-  stringIdent_ = lexer_.getIdentifier("string");
-  voidIdent_ = lexer_.getIdentifier("void");
-  nullIdent_ = lexer_.getIdentifier("null");
-  symbolIdent_ = lexer_.getIdentifier("symbol");
-  bigintIdent_ = lexer_.getIdentifier("bigint");
+  anyIdent_ = kw_.identAny;
+  mixedIdent_ = kw_.identMixed;
+  emptyIdent_ = kw_.identEmpty;
+  booleanIdent_ = kw_.identBoolean;
+  boolIdent_ = kw_.identBool;
+  numberIdent_ = kw_.identNumber;
+  stringIdent_ = kw_.identString;
+  voidIdent_ = kw_.identVoid;
+  nullIdent_ = kw_.identNull;
+  symbolIdent_ = kw_.identSymbol;
+  bigintIdent_ = kw_.identBigint;
 
-  mappedTypeOptionalIdent_ = lexer_.getIdentifier("Optional");
-  mappedTypePlusOptionalIdent_ = lexer_.getIdentifier("PlusOptional");
-  mappedTypeMinusOptionalIdent_ = lexer_.getIdentifier("MinusOptional");
+  mappedTypeOptionalIdent_ = kw_.identMappedTypeOptional;
+  mappedTypePlusOptionalIdent_ = kw_.identMappedTypePlusOptional;
+  mappedTypeMinusOptionalIdent_ = kw_.identMappedTypeMinusOptional;
 
-  checksIdent_ = lexer_.getIdentifier("%checks");
-  assertsIdent_ = lexer_.getIdentifier("asserts");
-  impliesIdent_ = lexer_.getIdentifier("implies");
+  checksIdent_ = kw_.identChecks;
+  assertsIdent_ = kw_.identFlowAsserts;
+  impliesIdent_ = kw_.identImplies;
 
   // Flow Component syntax
-  componentIdent_ = lexer_.getIdentifier("component");
-  rendersIdent_ = lexer_.getIdentifier("renders");
-  rendersMaybeOperator_ = lexer_.getIdentifier("renders?");
-  rendersStarOperator_ = lexer_.getIdentifier("renders*");
-  hookIdent_ = lexer_.getIdentifier("hook");
+  componentIdent_ = kw_.identComponent;
+  rendersIdent_ = kw_.identRenders;
+  rendersMaybeOperator_ = kw_.identRendersMaybe;
+  rendersStarOperator_ = kw_.identRendersStar;
+  hookIdent_ = kw_.identHook;
 
   // Flow match expressions and statements
-  matchIdent_ = lexer_.getIdentifier("match");
-  underscoreIdent_ = lexer_.getIdentifier("_");
+  matchIdent_ = kw_.identMatch;
+  underscoreIdent_ = kw_.identUnderscore;
 
   // Flow Record syntax
-  recordIdent_ = lexer_.getIdentifier("record");
+  recordIdent_ = kw_.identRecord;
 #endif
 
 #if HERMES_PARSE_TS
-  readonlyIdent_ = lexer_.getIdentifier("readonly");
-  neverIdent_ = lexer_.getIdentifier("never");
-  undefinedIdent_ = lexer_.getIdentifier("undefined");
-  unknownIdent_ = lexer_.getIdentifier("unknown");
+  readonlyIdent_ = kw_.identReadonly;
+  neverIdent_ = kw_.identNever;
+  undefinedIdent_ = kw_.identUndefined;
+  unknownIdent_ = kw_.identUnknown;
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
-  namespaceIdent_ = lexer_.getIdentifier("namespace");
-  isIdent_ = lexer_.getIdentifier("is");
-  inferIdent_ = lexer_.getIdentifier("infer");
-  constIdent_ = lexer_.getIdentifier("const");
+  namespaceIdent_ = kw_.identNamespace;
+  isIdent_ = kw_.identIs;
+  inferIdent_ = kw_.identInfer;
+  constIdent_ = kw_.identConst;
 #endif
 
   // Generate the string representation of all tokens.

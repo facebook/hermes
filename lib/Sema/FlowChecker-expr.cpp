@@ -570,7 +570,7 @@ class FlowChecker::ExprVisitor {
       }
 
       UniqueString *name = outer_.propertyKeyAsIdentifier(prop->_key);
-      if (!name || name == outer_.kw_.identProto) {
+      if (!name || name == outer_.kw_.identUnderscoreProto) {
         outer_.sm_.warning(
             prop->_key->getSourceRange(),
             "ft: unsupported key for typed object, assuming 'any'");

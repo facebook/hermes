@@ -167,6 +167,8 @@ class JSParserImpl {
 
   /// Current compilation context.
   Context &context_;
+  /// The Keywords created by the Context.
+  const Keywords &kw_;
   /// Source error and buffer manager.
   SourceErrorManager &sm_;
   /// Source code lexer.
