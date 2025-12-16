@@ -220,6 +220,8 @@ class SynthTrace {
   RECORD(GetPrototype)                   \
   RECORD(SetPrototype)                   \
   RECORD(DeleteProperty)                 \
+  RECORD(Serialize)                      \
+  RECORD(Deserialize)                    \
   RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
@@ -1491,6 +1493,55 @@ class SynthTrace {
       std::vector<ObjectID> vec;
       pushIfTrackedValue(objID_, vec);
       return vec;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct SerializeRecord final : public Record {
+    static constexpr RecordType type{RecordType::Serialize};
+    /// The jsi::Value being serialized
+    const TraceValue value_;
+
+    explicit SerializeRecord(TimeSinceStart time, TraceValue value)
+        : Record(time), value_(value) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses;
+      pushIfTrackedValue(value_, uses);
+      return uses;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct DeserializeRecord final : public Record {
+    static constexpr RecordType type{RecordType::Deserialize};
+    /// This mirrors the structure of vm::SerializedValue
+    std::vector<uint32_t> offsets_;
+    std::vector<uint8_t> content_;
+    std::vector<uint8_t> strings_;
+
+    explicit DeserializeRecord(
+        TimeSinceStart time,
+        const std::vector<uint32_t> &offsets,
+        const std::vector<uint8_t> &content,
+        const std::vector<uint8_t> &strings)
+        : Record(time),
+          offsets_(offsets),
+          content_(content),
+          strings_(strings) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {};
     }
 
     void toJSONInternal(::hermes::JSONEmitter &json) const override;

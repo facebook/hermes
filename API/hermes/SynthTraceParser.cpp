@@ -10,6 +10,7 @@
 #include "hermes/Parser/JSLexer.h"
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/ErrorHandling.h"
+#include "hermes/Support/HermesSafeMath.h"
 #include "hermes/Support/SourceErrorManager.h"
 
 #include <sstream>
@@ -212,6 +213,29 @@ Collection<std::string, std::allocator<std::string>> getListOfStrings(
         return std::string(llvh::cast<JSONString>(value)->c_str());
       });
   return strings;
+}
+
+/// Converts the JSON array \p array of numbers (doubles) into a vector of
+/// integers of type \p T. The type must be converted into int8, int16, or
+/// int32.
+template <
+    typename T,
+    typename = typename std::enable_if<std::is_integral<T>::value, void>::type>
+std::vector<T> getNumberArrayFromJSON(JSONArray *array) {
+  std::vector<T> values;
+  std::transform(
+      array->begin(),
+      array->end(),
+      std::back_inserter(values),
+      [](const JSONValue *value) -> T {
+        if (value->getKind() != JSONKind::Number) {
+          ::hermes::hermes_fatal(
+              "Serialization arrays should only contain numbers");
+        }
+        return ::hermes::ubcastFromDouble<T>(
+            llvh::cast<JSONNumber>(value)->getValue());
+      });
+  return values;
 }
 
 SynthTrace getTrace(
@@ -615,6 +639,21 @@ SynthTrace getTrace(
         trace.emplace_back<SynthTrace::GetPrototypeRecord>(
             timeFromStart, objID->getValue());
         break;
+      case RecordType::Serialize:
+        trace.emplace_back<SynthTrace::SerializeRecord>(
+            timeFromStart, SynthTrace::decode(propValue->c_str()));
+        break;
+      case RecordType::Deserialize: {
+        auto offsetsJSON = llvh::cast<JSONArray>(obj->get("offsets"));
+        auto contentJSON = llvh::cast<JSONArray>(obj->get("content"));
+        auto stringsJSON = llvh::cast<JSONArray>(obj->get("strings"));
+        auto offsets = getNumberArrayFromJSON<uint32_t>(offsetsJSON);
+        auto contents = getNumberArrayFromJSON<uint8_t>(contentJSON);
+        auto strings = getNumberArrayFromJSON<uint8_t>(stringsJSON);
+        trace.emplace_back<SynthTrace::DeserializeRecord>(
+            timeFromStart, offsets, contents, strings);
+        break;
+      }
       case RecordType::Global: {
         trace.emplace_back<SynthTrace::GlobalRecord>(
             timeFromStart, objID->getValue());

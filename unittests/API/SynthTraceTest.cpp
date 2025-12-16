@@ -2367,6 +2367,55 @@ TEST_F(SynthTraceReplayTest, HostFunctionAsGetPropertyNames) {
   }
 }
 
+#ifdef JSI_UNSTABLE
+TEST_F(SynthTraceReplayTest, SerializeReplay) {
+  {
+    auto &rt = *traceRt;
+    jsi::Object innerObj = jsi::Object(rt);
+    ;
+    innerObj.setProperty(rt, 1, 512);
+
+    jsi::Object outerObj = jsi::Object(rt);
+    outerObj.setProperty(rt, "foo", "bar");
+    outerObj.setProperty(rt, "refInner1", innerObj);
+    outerObj.setProperty(rt, "refInner2", innerObj);
+    jsi::Value outerObjVal = std::move(outerObj);
+
+    auto serializationInterface = jsi::castInterface<jsi::ISerialization>(&rt);
+    auto serialized = serializationInterface->serialize(outerObjVal);
+    auto deserialized =
+        serializationInterface->deserialize(serialized).asObject(rt);
+
+    // Do some basic check to make sure tracing runtime returns the right Object
+    // from deserialization
+    auto fooProp = deserialized.getProperty(rt, "foo");
+    EXPECT_EQ(fooProp.getString(rt).utf8(rt), "bar");
+
+    auto innerObjClone = deserialized.getPropertyAsObject(rt, "refInner1");
+    auto oneProp = innerObjClone.getProperty(rt, 1);
+    EXPECT_EQ(oneProp.getNumber(), 512);
+    auto innerObjClone2 = deserialized.getPropertyAsObject(rt, "refInner2");
+    EXPECT_TRUE(jsi::Object::strictEquals(rt, innerObjClone, innerObjClone2));
+
+    rt.global().setProperty(rt, "obj", deserialized);
+  }
+  replay();
+  {
+    auto &rt = *replayRt;
+    auto deserialized = rt.global().getPropertyAsObject(rt, "obj");
+
+    auto fooProp = deserialized.getProperty(rt, "foo");
+    EXPECT_EQ(fooProp.getString(rt).utf8(rt), "bar");
+
+    auto innerObjClone = deserialized.getPropertyAsObject(rt, "refInner1");
+    auto oneProp = innerObjClone.getProperty(rt, 1);
+    EXPECT_EQ(oneProp.getNumber(), 512);
+    auto innerObjClone2 = deserialized.getPropertyAsObject(rt, "refInner2");
+    EXPECT_TRUE(jsi::Object::strictEquals(rt, innerObjClone, innerObjClone2));
+  }
+}
+#endif
+
 using JobQueueReplayTest = SynthTraceReplayTest;
 
 TEST_F(JobQueueReplayTest, DrainSingleMicrotask) {

@@ -248,7 +248,8 @@ class HermesRuntimeImpl final : public HermesRuntime,
                                 private jsi::Instrumentation
 #ifdef JSI_UNSTABLE
     ,
-                                public jsi::ISerialization
+                                public jsi::ISerialization,
+                                private IHermesTracingHelpers
 #endif
 {
  public:
@@ -700,6 +701,11 @@ class HermesRuntimeImpl final : public HermesRuntime,
       const jsi::Array &transferList) override;
   jsi::Array deserializeWithTransfer(
       std::unique_ptr<jsi::Serialized> &serialized) override;
+
+  const vm::SerializedValue *getHermesSerializedValue(
+      const jsi::Serialized &serialized) const override;
+  const std::shared_ptr<jsi::Serialized> makeSerialized(
+      vm::SerializedValue &value) const override;
 #endif
 
   // Concrete declarations of jsi::Runtime pure virtual methods
@@ -1499,6 +1505,8 @@ jsi::ICast *HermesRuntimeImpl::castInterface(const jsi::UUID &interfaceUUID) {
 #ifdef JSI_UNSTABLE
   else if (interfaceUUID == ISerialization::uuid) {
     return static_cast<ISerialization *>(this);
+  } else if (interfaceUUID == IHermesTracingHelpers::uuid) {
+    return static_cast<IHermesTracingHelpers *>(this);
   }
 #endif
   return nullptr;
@@ -1575,6 +1583,23 @@ jsi::Array HermesRuntimeImpl::deserializeWithTransfer(
   checkStatus(deserializedRes.getStatus());
 
   return add<jsi::Array>(deserializedRes->getHermesValue());
+}
+
+const vm::SerializedValue *HermesRuntimeImpl::getHermesSerializedValue(
+    const jsi::Serialized &serialized) const {
+  const void *secret = HermesSerialized::getHermesSerializedSecret();
+  void *privateSerialized =
+      const_cast<jsi::Serialized *>(&serialized)->getPrivate(secret);
+
+  const vm::SerializedValue *serializedValue =
+      reinterpret_cast<vm::SerializedValue *>(privateSerialized);
+
+  return serializedValue;
+}
+
+const std::shared_ptr<jsi::Serialized> HermesRuntimeImpl::makeSerialized(
+    ::hermes::vm::SerializedValue &value) const {
+  return std::make_unique<HermesSerialized>(value);
 }
 #endif
 

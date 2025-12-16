@@ -11,6 +11,7 @@
 #include <hermes/Support/JSONEmitter.h>
 #include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
+#include <hermes/VM/SerializedValue.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
 #include <jsi/instrumentation.h>
 #include <llvh/Support/SHA1.h>
@@ -833,6 +834,11 @@ void TraceInterpreter::executeRecords() {
 #endif
 
   const auto endIndex = records.size();
+#ifdef JSI_UNSTABLE
+  ISerialization *serializationInterface = castInterface<ISerialization>(&rt_);
+  IHermesTracingHelpers *tracingHelpersInterface =
+      castInterface<IHermesTracingHelpers>(&rt_);
+#endif
   while (nextExecIndex_ < endIndex) {
     const auto currentExecIndex = nextExecIndex_++;
     eraseRefsBefore(currentExecIndex);
@@ -1306,6 +1312,42 @@ void TraceInterpreter::executeRecords() {
             prop.getPropNameIdData(rt_, cb);
             TRACE_EXPECT_EQ_UTF16(record.strData_, strData);
           }
+          break;
+        }
+        case RecordType::Serialize: {
+#ifdef JSI_UNSTABLE
+          const auto &record =
+              static_cast<const SynthTrace::SerializeRecord &>(*rec);
+          if (LLVM_UNLIKELY(!serializationInterface)) {
+            throw std::runtime_error(
+                "Encountered Serialize Record, but ISerialization not implemented");
+          }
+          auto value = traceValueToJSIValue(record.value_);
+          serializationInterface->serialize(value);
+#endif
+          break;
+        }
+        case RecordType::Deserialize: {
+#ifdef JSI_UNSTABLE
+          const auto &record =
+              static_cast<const SynthTrace::DeserializeRecord &>(*rec);
+          if (LLVM_UNLIKELY(!serializationInterface)) {
+            throw std::runtime_error(
+                "Encountered Deserialize Record, but ISerialization not implemented");
+          }
+          if (LLVM_UNLIKELY(!tracingHelpersInterface)) {
+            throw std::runtime_error(
+                "Encountered Deserialize Record, but IHermesTracingHelpers not implemented");
+          }
+          ::hermes::vm::SerializedValue serializedValue;
+          serializedValue.offsets = std::move(record.offsets_);
+          serializedValue.content = std::move(record.content_);
+          serializedValue.strings = std::move(record.strings_);
+
+          auto serialized =
+              tracingHelpersInterface->makeSerialized(serializedValue);
+          retval = serializationInterface->deserialize(serialized);
+#endif
           break;
         }
         case RecordType::Global: {

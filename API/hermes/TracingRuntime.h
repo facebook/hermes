@@ -18,7 +18,12 @@ namespace facebook {
 namespace hermes {
 namespace tracing {
 
-class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
+class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime>
+#ifdef JSI_UNSTABLE
+    ,
+                       public jsi::ISerialization
+#endif
+{
  public:
   using RD = RuntimeDecorator<jsi::Runtime>;
 
@@ -37,6 +42,7 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
   /// @name jsi::Runtime methods.
   /// @{
 
+  jsi::ICast *castInterface(const jsi::UUID &interfaceUUID) override;
   jsi::Value evaluateJavaScript(
       const std::shared_ptr<const jsi::Buffer> &buffer,
       const std::string &sourceURL) override;
@@ -166,6 +172,17 @@ class TracingRuntime : public jsi::RuntimeDecorator<jsi::Runtime> {
       override;
 
   /// @}
+
+#ifdef JSI_UNSTABLE
+  std::shared_ptr<jsi::Serialized> serialize(jsi::Value &value) override;
+  jsi::Value deserialize(
+      const std::shared_ptr<jsi::Serialized> &serialized) override;
+  std::unique_ptr<jsi::Serialized> serializeWithTransfer(
+      jsi::Value &value,
+      const jsi::Array &transferList) override;
+  jsi::Array deserializeWithTransfer(
+      std::unique_ptr<jsi::Serialized> &serialized) override;
+#endif
 
   void addMarker(const std::string &marker);
 

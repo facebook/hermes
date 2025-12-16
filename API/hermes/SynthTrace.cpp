@@ -637,6 +637,31 @@ void SynthTrace::DeletePropertyRecord::toJSONInternal(
   json.emitKeyValue("propID", encode(propID_));
 }
 
+void SynthTrace::SerializeRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("value", encode(value_));
+}
+
+void SynthTrace::DeserializeRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKey("offsets");
+  json.openArray();
+  json.emitValues(llvh::ArrayRef<uint32_t>(offsets_.data(), offsets_.size()));
+  json.closeArray();
+
+  json.emitKey("content");
+  json.openArray();
+  json.emitValues(llvh::ArrayRef<uint8_t>(content_.data(), content_.size()));
+  json.closeArray();
+
+  json.emitKey("strings");
+  json.openArray();
+  json.emitValues(llvh::ArrayRef<uint8_t>(strings_.data(), strings_.size()));
+  json.closeArray();
+}
+
 void SynthTrace::GlobalRecord::toJSONInternal(JSONEmitter &json) const {
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);

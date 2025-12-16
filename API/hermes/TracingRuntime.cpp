@@ -11,6 +11,7 @@
 #include <hermes/Platform/Logging.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/JSONEmitter.h>
+#include <hermes/VM/SerializedValue.h>
 
 #include <llvh/Support/raw_ostream.h>
 #include "llvh/Support/FileSystem.h"
@@ -1093,6 +1094,72 @@ void TracingRuntime::setExternalMemoryPressure(
       getTimeSinceStart(), useObjectID(obj), amount);
   RD::setExternalMemoryPressure(obj, amount);
 }
+
+jsi::ICast *TracingRuntime::castInterface(const jsi::UUID &interfaceUUID) {
+  auto *interface = RD::castInterface(interfaceUUID);
+  if (!interface) {
+    // Underlying runtime does not support this interface, so return null
+    return nullptr;
+  }
+// We need to make sure we return the implementation provided by
+// TracingRuntime, otherwise the records will not be created.
+#ifdef JSI_UNSTABLE
+  if (interfaceUUID == ISerialization::uuid) {
+    return static_cast<jsi::ISerialization *>(this);
+  }
+#endif
+  return nullptr;
+}
+
+#ifdef JSI_UNSTABLE
+std::shared_ptr<jsi::Serialized> TracingRuntime::serialize(jsi::Value &value) {
+  auto serializationInterface =
+      jsi::dynamicInterfaceCast<ISerialization>(runtime_);
+  assert(
+      serializationInterface &&
+      "Underlying runtime does not implement ISerialization interface");
+  trace_.emplace_back<SynthTrace::SerializeRecord>(
+      getTimeSinceStart(), useTraceValue(value));
+  return serializationInterface->serialize(value);
+}
+
+jsi::Value TracingRuntime::deserialize(
+    const std::shared_ptr<jsi::Serialized> &serialized) {
+  auto serializationInterface =
+      jsi::dynamicInterfaceCast<ISerialization>(runtime_);
+  assert(
+      serializationInterface &&
+      "Underlying runtime does not implement ISerialization interface");
+  auto retVal = serializationInterface->deserialize(serialized);
+
+  auto tracingHelperInterface =
+      jsi::dynamicInterfaceCast<IHermesTracingHelpers>(runtime_);
+  assert(
+      tracingHelperInterface &&
+      "Underlying runtime does not implement IHermesTracingHelpers interface");
+  const ::hermes::vm::SerializedValue *serializedValue =
+      tracingHelperInterface->getHermesSerializedValue(*serialized);
+  trace_.emplace_back<SynthTrace::DeserializeRecord>(
+      getTimeSinceStart(),
+      serializedValue->offsets,
+      serializedValue->content,
+      serializedValue->strings);
+  trace_.emplace_back<SynthTrace::ReturnToNativeRecord>(
+      getTimeSinceStart(), defTraceValue(retVal));
+  return retVal;
+}
+
+std::unique_ptr<jsi::Serialized> TracingRuntime::serializeWithTransfer(
+    jsi::Value &value,
+    const jsi::Array &transferList) {
+  throw std::logic_error("Cannot transfer JS Values in tracing mode.");
+}
+
+jsi::Array TracingRuntime::deserializeWithTransfer(
+    std::unique_ptr<jsi::Serialized> &serialized) {
+  throw std::logic_error("Cannot transfer JS Values in tracing mode.");
+}
+#endif
 
 void TracingRuntime::addMarker(const std::string &marker) {
   trace_.emplace_back<SynthTrace::MarkerRecord>(getTimeSinceStart(), marker);
