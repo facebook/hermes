@@ -14,7 +14,7 @@ jobs:
         flavor: [Debug, Release]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup xcode
         uses: ./.github/actions/setup-xcode
       - name: Setup node.js
@@ -22,7 +22,7 @@ jobs:
       - name: Yarn Install Dependencies
         uses: ./.github/actions/yarn-install
       - name: Download slice artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: slice-*-${{ matrix.flavor }}
           path: .
@@ -119,17 +119,17 @@ jobs:
           mkdir -p "$DEST_DIR"
           mv "hermesvm.framework.dSYM" "$DEST_DIR"
       - name: Upload hermes dSYM artifacts
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: hermes-dSYM-${{ matrix.flavor }}
           path: /tmp/hermes/dSYM/${{ matrix.flavor }}
       - name: Upload hermes Runtime artifacts
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: hermes-darwin-bin-${{ matrix.flavor }}
           path: /tmp/hermes/hermes-runtime-darwin/hermes-ios-${{ matrix.flavor }}.tar.gz
       - name: Upload hermes osx artifacts
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: hermes-osx-bin-${{ matrix.flavor }}
           path: /tmp/hermes/osx-bin/${{ matrix.flavor }}
