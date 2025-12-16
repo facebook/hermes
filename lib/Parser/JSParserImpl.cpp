@@ -294,7 +294,7 @@ bool JSParserImpl::checkEndAssignmentExpression(
              TokenKind::semi,
              TokenKind::colon,
              TokenKind::eof) ||
-      (ofEndsAssignment == OfEndsAssignment::Yes && check(ofIdent_)) ||
+      (ofEndsAssignment == OfEndsAssignment::Yes && checkUnescaped(ofIdent_)) ||
       lexer_.isNewLineBeforeCurrentToken();
 }
 
@@ -1842,7 +1842,7 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
     }
   }
 
-  if (checkN(TokenKind::rw_in, ofIdent_)) {
+  if (check(TokenKind::rw_in) || checkUnescaped(ofIdent_)) {
     // Productions valid here:
     //   for [await] ( var/let/const VariableDeclaration[In] in/of
     //   for [await] ( LeftHandSideExpression in/of

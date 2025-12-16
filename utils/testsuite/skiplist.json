@@ -81,7 +81,6 @@
   "skip_list": [
     {
       "paths": [
-        "test262/test/language/statements/for-await-of/escaped-of.js",
         "test262/test/language/expressions/async-generator/early-errors-expression-binding-identifier-arguments.js",
         "test262/test/language/expressions/async-generator/early-errors-expression-binding-identifier-eval.js",
         "test262/test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-simple-no-strict.js",
