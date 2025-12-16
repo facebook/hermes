@@ -542,31 +542,6 @@ class JSObject : public GCCell {
       JSObject *parent,
       PropOpFlags opFlags = PropOpFlags());
 
-  /// Return the value of an internal property slot. Use getDirectSlotValue if
-  /// \p index is known to be in a direct property slot at compile time.
-  static SmallHermesValue
-  getInternalProperty(JSObject *self, PointerBase &base, SlotIndex index) {
-    assert(
-        HiddenClass::debugIsPropertyDefined(
-            self->getClass(base), base, InternalProperty::getSymbolID(index)) &&
-        "internal slot must be reserved");
-    return getNamedSlotValueUnsafe(self, base, index);
-  }
-
-  static void setInternalProperty(
-      JSObject *self,
-      Runtime &runtime,
-      SlotIndex index,
-      SmallHermesValue value) {
-    assert(
-        HiddenClass::debugIsPropertyDefined(
-            self->getClass(runtime),
-            runtime,
-            InternalProperty::getSymbolID(index)) &&
-        "internal slot must be reserved");
-    return setNamedSlotValueUnsafe(self, runtime, index, value);
-  }
-
   /// This is the proxy-aware version of getParent.  It has to
   /// allocate handles, so it's neither as simple or efficient as
   /// getParent, but it's needed.  If selfHandle has no parent, this
@@ -617,17 +592,6 @@ class JSObject : public GCCell {
         runtime,
         OwnKeysFlags().plusIncludeSymbols().plusIncludeNonEnumerable());
   }
-
-  /// Load a value from the direct property storage space by \p index.
-  /// \pre index < DIRECT_PROPERTY_SLOTS.
-  template <SlotIndex index>
-  inline static SmallHermesValue getDirectSlotValue(const JSObject *self);
-
-  /// Store a value to the direct property storage space by \p index.
-  /// \pre index < DIRECT_PROPERTY_SLOTS.
-  template <SlotIndex index>
-  inline static void
-  setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc);
 
   /// Load a value from the "named value" storage space by \p index.
   inline static SmallHermesValue getNamedSlotValueUnsafe(
@@ -793,9 +757,9 @@ class JSObject : public GCCell {
       Handle<JSObject> propObj,
       ComputedPropertyDescriptor desc);
 
-  /// This adds some functionality to the other overload.  If propObj
-  /// normal object, this behaves just like the other overload.  This
-  /// is safe to use with proxies: if the desc has the proxyObject
+  /// This adds some functionality to getComputedPropertyValueInternal_RJS.
+  /// If propObj normal object, this behaves just like the other overload.
+  /// This is safe to use with proxies: if the desc has the proxyObject
   /// flag set, then \c nameValHandle is used to call the proxy has
   /// trap.  If the has trap returns false, then this returns an empty
   /// HermesValue, otherwise, the get trap is called (also using \c
@@ -1399,6 +1363,42 @@ class JSObject : public GCCell {
       PropStorage::size_type size);
 
   /// @}
+
+  /// Return the value of an internal property slot. Use getDirectSlotValue if
+  /// \p index is known to be in a direct property slot at compile time.
+  static SmallHermesValue
+  getInternalProperty(JSObject *self, PointerBase &base, SlotIndex index) {
+    assert(
+        HiddenClass::debugIsPropertyDefined(
+            self->getClass(base), base, InternalProperty::getSymbolID(index)) &&
+        "internal slot must be reserved");
+    return getNamedSlotValueUnsafe(self, base, index);
+  }
+
+  static void setInternalProperty(
+      JSObject *self,
+      Runtime &runtime,
+      SlotIndex index,
+      SmallHermesValue value) {
+    assert(
+        HiddenClass::debugIsPropertyDefined(
+            self->getClass(runtime),
+            runtime,
+            InternalProperty::getSymbolID(index)) &&
+        "internal slot must be reserved");
+    return setNamedSlotValueUnsafe(self, runtime, index, value);
+  }
+
+  /// Load a value from the direct property storage space by \p index.
+  /// \pre index < DIRECT_PROPERTY_SLOTS.
+  template <SlotIndex index>
+  inline static SmallHermesValue getDirectSlotValue(const JSObject *self);
+
+  /// Store a value to the direct property storage space by \p index.
+  /// \pre index < DIRECT_PROPERTY_SLOTS.
+  template <SlotIndex index>
+  inline static void
+  setDirectSlotValue(JSObject *self, SmallHermesValue value, GC &gc);
 
  private:
   // Internal API
