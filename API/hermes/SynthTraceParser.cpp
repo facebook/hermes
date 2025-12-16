@@ -252,36 +252,35 @@ SynthTrace getTrace(
     RecordType kind =
         strToRecordType(llvh::cast<JSONString>(obj->get("type"))->str());
     // Common properties, they may not exist on all objects so use a
-    // dynamic cast.
+    // cast_or_null.
+    // objID can be either a JSONNumber or JSONString, depending on the Record,
+    // so use a dyn_cast
     auto *objID = llvh::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
-    auto *hostObjID =
-        llvh::dyn_cast_or_null<JSONNumber>(obj->get("hostObjectID"));
-    auto *funcID = llvh::dyn_cast_or_null<JSONNumber>(obj->get("functionID"));
-    auto *propID = llvh::dyn_cast_or_null<JSONString>(obj->get("propID"));
-    auto *propNameID =
-        llvh::dyn_cast_or_null<JSONNumber>(obj->get("propNameID"));
-    auto *propName = llvh::dyn_cast_or_null<JSONString>(obj->get("propName"));
-    auto *propValue = llvh::dyn_cast_or_null<JSONString>(obj->get("value"));
-    auto *arrayIndex = llvh::dyn_cast_or_null<JSONNumber>(obj->get("index"));
-    auto *callArgs = llvh::dyn_cast_or_null<JSONArray>(obj->get("args"));
-    auto *thisArg = llvh::dyn_cast_or_null<JSONString>(obj->get("thisArg"));
-    auto *retval = llvh::dyn_cast_or_null<JSONString>(obj->get("retval"));
+    auto *hostObjID = llvh::cast_or_null<JSONNumber>(obj->get("hostObjectID"));
+    auto *funcID = llvh::cast_or_null<JSONNumber>(obj->get("functionID"));
+    auto *propID = llvh::cast_or_null<JSONString>(obj->get("propID"));
+    auto *propNameID = llvh::cast_or_null<JSONNumber>(obj->get("propNameID"));
+    auto *propName = llvh::cast_or_null<JSONString>(obj->get("propName"));
+    auto *propValue = llvh::cast_or_null<JSONString>(obj->get("value"));
+    auto *arrayIndex = llvh::cast_or_null<JSONNumber>(obj->get("index"));
+    auto *callArgs = llvh::cast_or_null<JSONArray>(obj->get("args"));
+    auto *thisArg = llvh::cast_or_null<JSONString>(obj->get("thisArg"));
+    auto *retval = llvh::cast_or_null<JSONString>(obj->get("retval"));
     switch (kind) {
       case RecordType::BeginExecJS: {
         std::string sourceURL;
         ::hermes::SHA1 hash{};
         bool sourceIsBytecode{false};
         if (JSONString *sourceURLJSON =
-                llvh::dyn_cast_or_null<JSONString>(obj->get("sourceURL"))) {
+                llvh::cast_or_null<JSONString>(obj->get("sourceURL"))) {
           sourceURL = sourceURLJSON->str();
         }
         if (JSONString *sourceHash =
-                llvh::dyn_cast_or_null<JSONString>(obj->get("sourceHash"))) {
+                llvh::cast_or_null<JSONString>(obj->get("sourceHash"))) {
           hash = parseHashStrAsNumber(sourceHash->str());
         }
         if (JSONBoolean *sourceIsBytecodeJson =
-                llvh::dyn_cast_or_null<JSONBoolean>(
-                    obj->get("sourceIsBytecode"))) {
+                llvh::cast_or_null<JSONBoolean>(obj->get("sourceIsBytecode"))) {
           sourceIsBytecode = sourceIsBytecodeJson->getValue();
         }
         trace.emplace_back<SynthTrace::BeginExecJSRecord>(
@@ -304,8 +303,7 @@ SynthTrace getTrace(
             timeFromStart, objID->getValue());
         break;
       case RecordType::CreateObjectWithPrototype: {
-        auto *prototype =
-            llvh::dyn_cast_or_null<JSONString>(obj->get("prototype"));
+        auto *prototype = llvh::cast<JSONString>(obj->get("prototype"));
         trace.emplace_back<SynthTrace::CreateObjectWithPrototypeRecord>(
             timeFromStart,
             objID->getValue(),
@@ -326,7 +324,7 @@ SynthTrace getTrace(
         break;
       }
       case RecordType::CreateBigInt: {
-        auto method = llvh::dyn_cast<JSONString>(obj->get("method"));
+        auto method = llvh::cast<JSONString>(obj->get("method"));
         SynthTrace::CreateBigIntRecord::Method creationMethod =
             SynthTrace::CreateBigIntRecord::Method::FromUint64;
         if (method->str() == "FromInt64") {
@@ -342,8 +340,8 @@ SynthTrace getTrace(
         break;
       }
       case RecordType::BigIntToString: {
-        auto *strID = llvh::dyn_cast<JSONNumber>(obj->get("strID"));
-        auto *bigintID = llvh::dyn_cast<JSONNumber>(obj->get("bigintID"));
+        auto *strID = llvh::cast<JSONNumber>(obj->get("strID"));
+        auto *bigintID = llvh::cast<JSONNumber>(obj->get("bigintID"));
         trace.emplace_back<SynthTrace::BigIntToStringRecord>(
             timeFromStart,
             strID->getValue(),
@@ -352,9 +350,8 @@ SynthTrace getTrace(
         break;
       }
       case RecordType::CreateString: {
-        auto encoding =
-            llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
-        auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
+        auto encoding = llvh::cast<JSONString>(obj->get("encoding"));
+        auto str = llvh::cast<JSONString>(obj->get("chars"));
         switch (getStringEncodingType(encoding->str())) {
           case SynthTrace::StringEncodingType::ASCII: {
             trace.emplace_back<SynthTrace::CreateStringRecord>(
@@ -386,10 +383,9 @@ SynthTrace getTrace(
         break;
       }
       case RecordType::CreatePropNameID: {
-        auto id = llvh::dyn_cast_or_null<JSONNumber>(obj->get("objID"));
-        auto encoding =
-            llvh::dyn_cast_or_null<JSONString>(obj->get("encoding"));
-        auto str = llvh::dyn_cast_or_null<JSONString>(obj->get("chars"));
+        auto id = llvh::cast<JSONNumber>(obj->get("objID"));
+        auto encoding = llvh::cast<JSONString>(obj->get("encoding"));
+        auto str = llvh::cast<JSONString>(obj->get("chars"));
         switch (getStringEncodingType(encoding->str())) {
           case SynthTrace::StringEncodingType::ASCII: {
             trace.emplace_back<SynthTrace::CreatePropNameIDRecord>(
@@ -433,13 +429,13 @@ SynthTrace getTrace(
         break;
       case RecordType::CreateHostFunction: {
         unsigned paramCount = 0;
-        if (JSONNumber *jsonParamCount = llvh::dyn_cast_or_null<JSONNumber>(
-                obj->get("parameterCount"))) {
+        if (JSONNumber *jsonParamCount =
+                llvh::cast_or_null<JSONNumber>(obj->get("parameterCount"))) {
           paramCount = jsonParamCount->getValue();
         }
         std::string functionName;
         if (JSONString *jsonFunctionName =
-                llvh::dyn_cast_or_null<JSONString>(obj->get("functionName"))) {
+                llvh::cast_or_null<JSONString>(obj->get("functionName"))) {
           functionName = jsonFunctionName->str();
         }
         trace.emplace_back<SynthTrace::CreateHostFunctionRecord>(
@@ -572,8 +568,7 @@ SynthTrace getTrace(
             timeFromStart, hostObjID->getValue());
         break;
       case RecordType::GetNativePropertyNamesReturn: {
-        auto *pnids =
-            llvh::dyn_cast_or_null<JSONArray>(obj->get("propNameIDs"));
+        auto *pnids = llvh::cast<JSONArray>(obj->get("propNameIDs"));
         trace.emplace_back<SynthTrace::GetNativePropertyNamesReturnRecord>(
             timeFromStart, getListOfTraceValues(pnids));
         break;
@@ -585,7 +580,7 @@ SynthTrace getTrace(
         break;
       }
       case RecordType::Utf8: {
-        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
+        auto *objId = llvh::cast<JSONString>(obj->get("objID"));
         trace.emplace_back<SynthTrace::Utf8Record>(
             timeFromStart,
             SynthTrace::decode(objId->str()),
@@ -593,7 +588,7 @@ SynthTrace getTrace(
         break;
       }
       case RecordType::Utf16: {
-        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
+        auto *objId = llvh::cast<JSONString>(obj->get("objID"));
         trace.emplace_back<SynthTrace::Utf16Record>(
             timeFromStart,
             SynthTrace::decode(objId->str()),
@@ -601,8 +596,8 @@ SynthTrace getTrace(
         break;
       }
       case RecordType::GetStringData: {
-        auto *objId = llvh::dyn_cast_or_null<JSONString>(obj->get("objID"));
-        auto *strData = llvh::dyn_cast_or_null<JSONString>(obj->get("strData"));
+        auto *objId = llvh::cast<JSONString>(obj->get("objID"));
+        auto *strData = llvh::cast<JSONString>(obj->get("strData"));
         trace.emplace_back<SynthTrace::GetStringDataRecord>(
             timeFromStart,
             SynthTrace::decode(objId->str()),
@@ -659,7 +654,7 @@ parseSynthTrace(std::unique_ptr<llvh::MemoryBuffer> trace) {
   // Else, for backwards compatibility, allow no version to be specified, which
   // will imply "latest version".
 
-  auto *gid = llvh::dyn_cast_or_null<JSONNumber>(root->get("globalObjID"));
+  auto *gid = llvh::cast_or_null<JSONNumber>(root->get("globalObjID"));
   std::optional<SynthTrace::ObjectID> globalObjID = gid
       ? getNumberAs<SynthTrace::ObjectID>(gid)
       : std::optional<SynthTrace::ObjectID>();
