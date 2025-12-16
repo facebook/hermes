@@ -901,7 +901,7 @@ CallResult<HermesValue> Interpreter::createThisImpl(
     }
     cellKind = calleeFunc->getKind();
     // Repeat the checks, now against the target.
-    if (cellKind >= CellKind::CallableExpectsThisKind_first) {
+    if (cellKind >= CellKind::CallableExpectsThisKind_first || cellKind == CellKind::FinalizableNativeFunctionKind) {
       // Do nothing, correctNewTarget is already set up correctly.
     } else if (cellKind >= CellKind::CallableMakesThisKind_first) {
       return HermesValue::encodeUndefinedValue();
