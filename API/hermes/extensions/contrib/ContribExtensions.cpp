@@ -8,14 +8,18 @@
 #include "ContribExtensions.h"
 
 #include "ContribDummy.h"
+
 // Add new contrib extension headers here.
+#include "TextDecoder.h"
 
 namespace facebook {
 namespace hermes {
 
 void installContribExtensions(jsi::Runtime &rt, jsi::Object &extensions) {
   installContribDummy(rt, extensions);
+
   // Add new contrib extension install calls here.
+  installTextDecoder(rt, extensions);
 }
 
 } // namespace hermes

@@ -9,5 +9,9 @@
 set(CONTRIB_EXTENSIONS_CPP_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/ContribExtensions.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ContribDummy.cpp
+
+  ${CMAKE_CURRENT_SOURCE_DIR}/TextDecoder.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/TextDecoderUtils.cpp
+
   PARENT_SCOPE
 )
