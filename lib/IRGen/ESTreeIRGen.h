@@ -1315,6 +1315,9 @@ class ESTreeIRGen {
       DoEmitDeclarations doEmitDeclarations,
       VariableScope *parentScope);
 
+  /// Initialize declarations in the function.
+  void emitFunctionDeclarations(ESTree::FunctionLikeNode *funcNode);
+
   /// Declare all variables in the scope, except parameters and private names
   /// (which are handled separately). Variables that obey TDZ are initialized to
   /// empty. Hoisted closures are recursively compiled and initialized. Imports

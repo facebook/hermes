@@ -382,3 +382,15 @@ class A {
 // CHECK-NEXT: foo called
 // CHECK-NEXT: error thrown
 })();
+
+// Test that super can be invoked from default parameter value.
+(function () {
+  class C0 { x = 12; }
+  class C1 extends C0 {
+    constructor(q=super()) {
+      print(this.x);
+    }
+  }
+  new C1();
+// CHECK-NEXT: 12
+})();

@@ -56,10 +56,10 @@ function foo() {
 
 // CHECK:base constructor MyClass(p1: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %p1: any
-// CHECK-NEXT:  %1 = GetNewTargetInst (:object) %new.target: object
-// CHECK-NEXT:  %2 = LoadPropertyInst (:any) %1: object, "prototype": string
-// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) %2: any
-// CHECK-NEXT:       StorePropertyStrictInst %0: any, %3: object, "p1": string
-// CHECK-NEXT:       ReturnInst %3: object
+// CHECK-NEXT:  %0 = GetNewTargetInst (:object) %new.target: object
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) %0: object, "prototype": string
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) %1: any
+// CHECK-NEXT:  %3 = LoadParamInst (:any) %p1: any
+// CHECK-NEXT:       StorePropertyStrictInst %3: any, %2: object, "p1": string
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end

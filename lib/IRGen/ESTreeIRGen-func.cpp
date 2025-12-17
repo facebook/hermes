@@ -459,38 +459,35 @@ NormalFunction *ESTreeIRGen::genBasicFunction(
           functionNode,
           Builder.createBasicBlock(newFunction),
           InitES5CaptureState::Yes,
-          DoEmitDeclarations::Yes,
+          DoEmitDeclarations::No,
           parentScope);
-    }
-
-    if (curFunction()->hasLegacyClassContext()) {
-      if (functionKind == Function::DefinitionKind::ES6BaseConstructor) {
-        // Initialize `this` for the function.
-        emitLegacyBaseClassThisInit();
-        // We only need to generate this here for base classes. It's not
-        // required for derived because they generate this call after calling
-        // super().
-        emitLegacyInstanceElementsInitCall();
-      } else if (
-          functionKind == Function::DefinitionKind::ES6DerivedConstructor) {
-        // Initialize the 'checked this' in derived class constructors.
-        newFunctionContext.capturedState.thisVal = Builder.createVariable(
-            curFunction()->curScope()->getVariableScope(),
-            Builder.createIdentifier("?CHECKED_this"),
-            Type::unionTy(Type::createObject(), Type::createEmpty()),
-            true);
-        Builder.createStoreFrameInst(
-            curFunction()->curScope(),
-            Builder.getLiteralEmpty(),
-            newFunctionContext.capturedState.thisVal);
+      if (curFunction()->hasLegacyClassContext()) {
+        if (functionKind == Function::DefinitionKind::ES6BaseConstructor) {
+          // Initialize `this` for the function.
+          emitLegacyBaseClassThisInit();
+          // We only need to generate this here for base classes. It's not
+          // required for derived because they generate this call after calling
+          // super().
+          emitLegacyInstanceElementsInitCall();
+        } else if (
+            functionKind == Function::DefinitionKind::ES6DerivedConstructor) {
+          // Initialize the 'checked this' in derived class constructors.
+          newFunctionContext.capturedState.thisVal = Builder.createVariable(
+              curFunction()->curScope()->getVariableScope(),
+              Builder.createIdentifier("?CHECKED_this"),
+              Type::unionTy(Type::createObject(), Type::createEmpty()),
+              true);
+          Builder.createStoreFrameInst(
+              curFunction()->curScope(),
+              Builder.getLiteralEmpty(),
+              newFunctionContext.capturedState.thisVal);
+        }
       }
-    } else {
-      if (functionKind == Function::DefinitionKind::ES6BaseConstructor) {
-        assert(
-            curFunction()->hasTypedClassContext() &&
-            "ES6Constructor has no valid class context");
-        // If we're compiling a typed base class constructor, emit the field
-        // inits at the start.
+      emitFunctionDeclarations(functionNode);
+      if (functionKind == Function::DefinitionKind::ES6BaseConstructor &&
+          curFunction()->hasTypedClassContext()) {
+        // We're compiling a typed base class constructor, emit the field inits
+        // at the start.
         emitTypedFieldInitCall(typedClassContext.type);
       }
     }
@@ -864,11 +861,14 @@ void ESTreeIRGen::emitFunctionPrologue(
 
   if (doEmitDeclarations == DoEmitDeclarations::No)
     return;
+  emitFunctionDeclarations(funcNode);
+}
 
+void ESTreeIRGen::emitFunctionDeclarations(ESTree::FunctionLikeNode *funcNode) {
+  auto *semInfo = curFunction()->getSemInfo();
   if (funcNode)
     emitParameters(funcNode);
   emitScopeDeclarations(semInfo->getFunctionBodyScope());
-
   // Generate the code for import declarations before generating the rest of the
   // body.
   for (auto importDecl : semInfo->imports) {
