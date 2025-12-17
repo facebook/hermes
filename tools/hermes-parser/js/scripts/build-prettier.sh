@@ -8,6 +8,7 @@ set -xe -o pipefail
 
 HG_ROOT=$(hg root)
 XPLAT="$HG_ROOT/xplat"
+NODE="$XPLAT/third-party/node/v24.8.0/node"
 XPLAT_YARN="$XPLAT/third-party/yarn/yarn"
 
 REPO_URI="https://github.com/pieterv/prettier.git"
@@ -15,7 +16,7 @@ HERMES_PARSER_JS="$XPLAT/static_h/tools/hermes-parser/js"
 HERMES_PARSER_DIST="$HERMES_PARSER_JS/hermes-parser/dist"
 PRETTIER_DIR="$HERMES_PARSER_JS/prettier-hermes-flow-fork"
 PLUGIN_DIR="$HERMES_PARSER_JS/prettier-plugin-hermes-parser"
-PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.9.2.cjs"
+PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.12.0.cjs"
 GENERATED="generated"
 
 if [ ! -d "$HERMES_PARSER_DIST" ]; then
@@ -56,11 +57,11 @@ httpsProxy: http://fwdproxy:8080" >> .yarnrc.yml
 
 # Install Deps
 echo "Running yarn install"
-node $PRETTIER_YARN install
+$NODE $PRETTIER_YARN install
 
 # Build prettier
 echo "Building assets"
-node $PRETTIER_YARN build --package=@prettier/plugin-hermes
+$NODE $PRETTIER_YARN build --package=@prettier/plugin-hermes
 
 # Copy assets to prettier plugin dir
 echo "Copy assets"
