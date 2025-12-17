@@ -436,15 +436,8 @@ static SHLegacyValue doCall(Runtime &runtime, PinnedHermesValue *callTarget) {
 
   {
     GCScopeMarkerRAII marker{runtime};
-    if (vmisa<NativeFunction>(*callTarget)) {
-      auto *native = vmcast<NativeFunction>(*callTarget);
-      res = NativeFunction::_nativeCall(native, runtime);
-    } else if (vmisa<BoundFunction>(*callTarget)) {
-      auto *bound = vmcast<BoundFunction>(*callTarget);
-      res = BoundFunction::_boundCall(bound, runtime);
-    } else if (vmisa<Callable>(*callTarget)) {
-      auto callable = Handle<Callable>::vmcast(callTarget);
-      res = callable->call(callable, runtime);
+    if (LLVM_LIKELY(vmisa<Callable>(*callTarget))) {
+      res = Callable::call(Handle<Callable>::vmcast(callTarget), runtime);
     } else {
       res = runtime.raiseTypeErrorForValue(
           Handle<>(callTarget), " is not a function");

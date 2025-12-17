@@ -1629,6 +1629,51 @@ TEST_P(HermesRuntimeTest, ObjectTest) {
   EXPECT_THROW(obj.getProperty(*rt, badObjKey), JSError);
 }
 
+TEST_P(HermesRuntimeTest, FinalizableHostFunctionConstructorTest) {
+  // Create a host function that returns an object when called with truthy arg,
+  // otherwise returns a non-object value
+  Function hostFunc = Function::createFromHostFunction(
+      *rt,
+      PropNameID::forAscii(*rt, "HostFunc"),
+      1,
+      [](Runtime &rt, const Value &, const Value *args, size_t count) -> Value {
+        if (count > 0 && args[0].getBool()) {
+          Object obj(rt);
+          obj.setProperty(rt, "value", 42);
+          return Value(rt, obj);
+        }
+        return Value(123);
+      });
+
+  auto result = hostFunc.call(*rt, Value(true));
+  EXPECT_TRUE(result.isObject());
+  EXPECT_EQ(result.getObject(*rt).getProperty(*rt, "value").getNumber(), 42);
+
+  // Calling as a constructor with object return should succeed (using JSI APIs)
+  result = hostFunc.callAsConstructor(*rt, Value(true));
+  EXPECT_TRUE(result.isObject());
+  EXPECT_EQ(result.getObject(*rt).getProperty(*rt, "value").getNumber(), 42);
+
+  // Calling as a constructor with non-object return should throw TypeError
+  EXPECT_THROW(hostFunc.callAsConstructor(*rt, Value(false)), JSError);
+
+  rt->global().setProperty(*rt, "HostFunc", hostFunc);
+
+  // Calling as a normal function via JS.
+  result = eval("HostFunc(true)");
+  EXPECT_TRUE(result.isObject());
+  EXPECT_EQ(result.getObject(*rt).getProperty(*rt, "value").getNumber(), 42);
+
+  // Calling as a constructor via JS with object return should succeed.
+  result = eval("new HostFunc(true)");
+  EXPECT_TRUE(result.isObject());
+  EXPECT_EQ(result.getObject(*rt).getProperty(*rt, "value").getNumber(), 42);
+
+  // Calling as a constructor via JS with non-object return should
+  // throw TypeError
+  EXPECT_THROW(eval("new HostFunc(false)"), JSError);
+}
+
 #ifdef JSI_UNSTABLE
 class HermesSerializationTest : public HermesRuntimeTest {
  public:

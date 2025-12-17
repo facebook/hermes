@@ -100,9 +100,9 @@ CELL_CLASS(FastArray, "FastArray")
 CELL_KIND(BoundFunction)
 // *NativeFunction begin*
 CELL_KIND(NativeFunction)
-CELL_KIND(FinalizableNativeFunction)
 // Makes own `this`.
 CELL_KIND(NativeConstructor)
+CELL_KIND(FinalizableNativeFunction)
 // *NativeFunction end*, including JSCallableProxy
 CELL_CLASS(JSCallableProxy, "CallableProxy")
 CELL_KIND(NativeJSClass)
@@ -125,7 +125,7 @@ CELL_RANGE(Callable, BoundFunction, NativeJSFunction)
 // invoked as a constructor.
 // These callables may or may not make their own `this`. Some may not be
 // allowed to be called as a constructor at all.
-CELL_RANGE(CallableUnknownMakesThis, BoundFunction, FinalizableNativeFunction)
+CELL_RANGE(CallableUnknownMakesThis, BoundFunction, NativeFunction)
 // These callables make their own `this` when called as a constructor.
 CELL_RANGE(CallableMakesThis, NativeConstructor, JSClass)
 // These callables expect a populated `this` when called as a constructor.

@@ -251,25 +251,23 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
 CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     Runtime &runtime,
     PinnedHermesValue *callTarget) {
-  if (vmisa<NativeJSFunction>(*callTarget)) {
-    auto *legacy = vmcast<NativeJSFunction>(*callTarget);
-    ++NumNativeFunctionCalls;
-    // Call the native function directly
-    return NativeJSFunction::_nativeCall(legacy, runtime);
-  } else if (vmisa<NativeFunction>(*callTarget)) {
-    auto *native = vmcast<NativeFunction>(*callTarget);
-    ++NumNativeFunctionCalls;
-    // Call the native function directly
-    return NativeFunction::_nativeCall(native, runtime);
-  } else if (vmisa<BoundFunction>(*callTarget)) {
-    auto *bound = vmcast<BoundFunction>(*callTarget);
-    ++NumBoundFunctionCalls;
-    // Call the bound function.
-    return BoundFunction::_boundCall(bound, runtime);
-  } else {
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*callTarget))) {
     return runtime.raiseTypeErrorForValue(
         Handle<>(callTarget), " is not a function");
   }
+#if HERMES_SLOW_STATISTIC_ENABLED
+  if (vmisa<NativeJSFunction>(*callTarget)) {
+    ++NumNativeFunctionCalls;
+  } else if (vmisa<NativeFunction>(*callTarget)) {
+    ++NumNativeFunctionCalls;
+  } else if (vmisa<BoundFunction>(*callTarget)) {
+    ++NumBoundFunctionCalls;
+  }
+#else
+  (void)NumNativeFunctionCalls;
+  (void)NumBoundFunctionCalls;
+#endif
+  return Callable::call(Handle<Callable>::vmcast(callTarget), runtime);
 }
 
 #ifndef NDEBUG

@@ -71,6 +71,11 @@ class FinalizableNativeFunction final : public NativeFunction {
     finalizePtr_(context_);
   }
 
+  /// Call the native function with arguments already on the stack.
+  static CallResult<PseudoHandle<>> _callImpl(
+      Handle<Callable> selfHandle,
+      Runtime &runtime);
+
   static void _finalizeImpl(GCCell *cell, GC &) {
     auto *self = vmcast<FinalizableNativeFunction>(cell);
     // Destruct the object.

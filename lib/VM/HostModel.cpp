@@ -32,6 +32,24 @@ const CallableVTable FinalizableNativeFunction::vt{
     },
     FinalizableNativeFunction::_callImpl};
 
+CallResult<PseudoHandle<>> FinalizableNativeFunction::_callImpl(
+    Handle<Callable> selfHandle,
+    Runtime &runtime) {
+  CallResult<PseudoHandle<>> res =
+      _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
+  if (LLVM_UNLIKELY(res != ExecutionStatus::EXCEPTION)) {
+    StackFramePtr newFrame{runtime.getStackPointer()};
+    bool isConstructCall = !newFrame.getNewTargetRef().isUndefined();
+    // FinalizableNativeFunction must return an object value when it's called as
+    // a constructor.
+    if (isConstructCall && !(*res)->isObject()) {
+      return runtime.raiseTypeError(
+          "FinalizableNativeFunction constructor must return an object");
+    }
+  }
+  return res;
+}
+
 void FinalizableNativeFunctionBuildMeta(
     const GCCell *cell,
     Metadata::Builder &mb) {
