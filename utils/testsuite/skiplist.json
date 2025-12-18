@@ -34,7 +34,8 @@
     {
       "paths": [
         "test262/test/language/statements/debugger/statement.js",
-        "mjsunit/es6/math-log1p.js"
+        "mjsunit/es6/math-log1p.js",
+        "mjsunit/es8/async-function-stacktrace.js"
       ],
       "comment": "These tests fail with shermes for now."
     },
@@ -559,6 +560,27 @@
     },
     {
       "paths": [
+        "mjsunit/es8/async-await-interleaved.js",
+        "mjsunit/compiler/promise-prototype-finally.js",
+        "mjsunit/es6/promise-internal-setter.js",
+        "mjsunit/regress/regress-crbug-976256.js",
+        "mjsunit/regress-chromium-1040238_generated.js",
+        "mjsunit/regress/regress-chromium-1040238.js"
+      ],
+      "comment": "Non-compliant Promise and async-await."
+    },
+    {
+      "paths": [
+        "mjsunit/weakrefs/weakref-deref-keeps-alive.js",
+        "mjsunit/weakrefs/minor-gc-reclaims-unreachable-weakref-target.js",
+        "mjsunit/weakrefs/minor-gc-weakref-deref-keeps-alive.js",
+        "mjsunit/weakrefs/symbol-as-weakref-target-gc.js",
+        "mjsunit/weakrefs/two-weakrefs.js"
+      ],
+      "comment": "Relies on V8 specific gc."
+    },
+    {
+      "paths": [
         "test262/test/language/expressions/assignment/destructuring/keyed-destructuring-property-reference-target-evaluation-order.js",
         "test262/test/language/expressions/assignment/destructuring/iterator-destructuring-property-reference-target-evaluation-order.js"
       ],
@@ -775,6 +797,8 @@
     "mjsunit/harmony/async-debug-caught-exception-cases1.js",
     "mjsunit/harmony/async-debug-caught-exception-cases2.js",
     "mjsunit/harmony/async-debug-caught-exception-cases3.js",
+    "mjsunit/harmony/array-from-async.js",
+    "mjsunit/regress/regress-v8-9534.js",
     "mjsunit/es6/reflect-set-prototype-of.js",
     "test262/test/built-ins/Object/prototype/setPrototypeOf-with-different-values.js",
     "mjsunit/es6/debug-blockscopes.js",
@@ -1845,6 +1869,8 @@
     "mjsunit/harmony/await-using-with-sync-async-null-undefined-tick-count.js",
     "mjsunit/harmony/regress/regress-440585463.js",
     "mjsunit/harmony/async-generators-basic.js",
+    "mjsunit/harmony/regress/regress-897436.js",
+    "mjsunit/regress/async-generator-is-awaiting.js",
     "mjsunit/harmony/regress/regress-437612640.js",
     "mjsunit/harmony/promise-all-settled.js",
     "mjsunit/harmony/import-from-instantiation-errored.js",
@@ -2242,6 +2268,8 @@
     "mjsunit/async-stack-traces-prepare-stacktrace-1.js",
     "mjsunit/async-stack-traces-promise-all-settled.js",
     "mjsunit/async-stack-traces-prepare-stacktrace-3.js",
+    "mjsunit/harmony/async-disposable-stack-dispose-tick-count.js",
+    "mjsunit/harmony/async-disposable-stack-with-null-undefined-tick-count.js",
     "mjsunit/const-tracking-let-invalidate-eval.js",
     "mjsunit/field-representation-tracking.js",
     "mjsunit/call-lhs-web-compat-early-errors.js",
@@ -2436,6 +2464,13 @@
     },
     {
       "paths": [
+        "mjsunit/compiler/regress-902608.js",
+        "mjsunit/regress/regress-crbug-1443133.js"
+      ],
+      "comment": "Tests V8 specific functionalities."
+    },
+    {
+      "paths": [
         "mjsunit/protector-cell/"
       ],
       "comment": "These test the protector pragmas, which are v8 specific."
@@ -2559,7 +2594,11 @@
         "mjsunit/huge-typedarrays.js",
         "mjsunit/typedarray-growablesharedarraybuffer.js",
         "mjsunit/typedarray-resizablearraybuffer-detach.js",
-        "mjsunit/typedarray-resizablearraybuffer.js"
+        "mjsunit/typedarray-resizablearraybuffer.js",
+        "mjsunit/regress/regress-13652.js",
+        "mjsunit/regress-432143539.js",
+        "mjsunit/regress/regress-crbug-1424699.js",
+        "mjsunit/compiler/regress-crbug-1474379.js"
       ],
       "comment": "Uses D8, which is V8's specific debugger."
     },
@@ -2756,7 +2795,9 @@
         "mjsunit/regress-414738826.js",
         "mjsunit/regress/regress-4578-deopt.js",
         "mjsunit/regress/regress-v8-13190.js",
-        "mjsunit/shared-function-tier-up-turbo.js"
+        "mjsunit/shared-function-tier-up-turbo.js",
+        "mjsunit/baseline/flush-baseline-code.js",
+        "mjsunit/baseline/flush-only-baseline-code.js"
       ],
       "comment": "V8 specific pragmas"
     },
@@ -2831,7 +2872,14 @@
         "mjsunit/regress/regress-v8-14662.js",
         "mjsunit/stack-trace-cpp-function-template-3.js",
         "mjsunit/baseline/cross-realm.js",
-        "mjsunit/regress/regress-crbug-1197053.js"
+        "mjsunit/regress/regress-crbug-1197053.js",
+        "mjsunit/weakrefs/cleanup-from-different-realm.js",
+        "mjsunit/weakrefs/cleanup-on-detached-realm.js",
+        "mjsunit/weakrefs/cleanup-proxy-from-different-realm.js",
+        "mjusint/weakrefs/minor-gc-cleanup-from-different-realm.js",
+        "mjsunit/weakrefs/minor-gc-cleanup-on-detached-realm.js",
+        "mjsunit/weakrefs/minor-gc-cleanup-proxy-from-different-realm.js",
+        "mjsunit/weakrefs/minor-gc-cleanup-from-different-realm.js"
       ],
       "comment": "Realms are not supported."
     },
@@ -2936,7 +2984,50 @@
         "mjsunit/weakrefs/basics.js",
         "mjsunit/weakrefs/minor-gc-weak-unregistertoken.js",
         "mjsunit/weakrefs/symbol-as-weakref-target.js",
-        "mjsunit/weakrefs/weak-unregistertoken.js"
+        "mjsunit/weakrefs/weak-unregistertoken.js",
+        "mjsunit/weakrefs/weak-cell-basics.js",
+        "mjsunit/weakrefs/cleanup-is-not-a-microtask.js",
+        "mjsunit/regress/regress-372298921.js",
+        "mjsunit/weakrefs/cleanup.js",
+        "mjsunit/weakrefs/finalizationregistry-and-weakref.js",
+        "mjsunit/weakrefs/finalizationregistry-independent-lifetime-multiple.js",
+        "mjsunit/weakrefs/finalizationregistry-independent-lifetime.js",
+        "mjsunit/weakrefs/finalizationregistry-keeps-holdings-alive.js",
+        "mjsunit/weakrefs/finalizationregistry-scheduled-for-cleanup-multiple-times.js",
+        "mjsunit/weakrefs/minor-gc-cleanup-is-not-a-microtask.js",
+        "mjsunit/weakrefs/minor-gc-cleanup.js",
+        "mjsunit/weakrefs/minor-gc-finalizationregistry-and-weakref.js",
+        "mjsunit/weakrefs/minor-gc-finalizationregistry-independent-lifetime-multiple.js",
+        "mjsunit/weakrefs/minor-gc-finalizationregistry-independent-lifetime.js",
+        "mjsunit/weakrefs/minor-gc-finalizationregistry-keeps-holdings-alive.js",
+        "mjsunit/weakrefs/minor-gc-finalizationregistry-scheduled-for-cleanup-multiple-times.js",
+        "mjsunit/weakrefs/minor-gc-multiple-dirty-finalization-groups.js",
+        "mjsunit/weakrefs/minor-gc-reclaims-unreachable-weak-cell-target.js",
+        "mjsunit/weakrefs/minor-gc-reentrant-gc-from-cleanup.js",
+        "mjsunit/weakrefs/minor-gc-stress-finalizationregistry-dirty-enqueue.js",
+        "mjsunit/weakrefs/minor-gc-undefined-holdings.js",
+        "mjsunit/weakrefs/minor-gc-unregister-after-cleanup.js",
+        "mjsunit/weakrefs/minor-gc-unregister-before-cleanup.js",
+        "mjsunit/weakrefs/minor-gc-unregister-called-twice.js",
+        "mjsunit/weakrefs/minor-gc-unregister-inside-cleanup.js",
+        "mjsunit/weakrefs/minor-gc-unregister-inside-cleanup2.js",
+        "mjsunit/weakrefs/minor-gc-unregister-inside-cleanup3.js",
+        "mjsunit/weakrefs/minor-gc-unregister-many.js",
+        "mjsunit/weakrefs/minor-gc-unregister-when-cleanup-already-scheduled.js",
+        "mjsunit/weakrefs/minor-gc-weak-cell-basics.js",
+        "mjsunit/weakrefs/multiple-dirty-finalization-groups.js",
+        "mjsunit/weakrefs/reentrant-gc-from-cleanup.js",
+        "mjsunit/weakrefs/stress-finalizationregistry-dirty-enqueue.js",
+        "mjsunit/weakrefs/symbol-in-finalizationregistry.js",
+        "mjsunit/weakrefs/undefined-holdings.js",
+        "mjsunit/weakrefs/unregister-after-cleanup.js",
+        "mjsunit/weakrefs/unregister-before-cleanup.js",
+        "mjsunit/weakrefs/unregister-called-twice.js",
+        "mjsunit/weakrefs/unregister-inside-cleanup.js",
+        "mjsunit/weakrefs/unregister-inside-cleanup2.js",
+        "mjsunit/weakrefs/unregister-inside-cleanup3.js",
+        "mjsunit/weakrefs/unregister-many.js",
+        "mjsunit/weakrefs/unregister-when-cleanup-already-scheduled.js"
       ],
       "comment": "Finalization Registry"
     },

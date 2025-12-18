@@ -234,6 +234,14 @@ function v8pragma_NopSentinel() {
   return nopSentinel;
 }
 
+// Throw error on any unhandled Promise rejections.
+HermesInternal.enablePromiseRejectionTracker({
+    allRejections: true,
+    onUnhandled: function(_, error) {
+        throw error;
+    }
+});
+
 """
 
     v8_pragmas = {
