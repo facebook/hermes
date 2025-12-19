@@ -12,5 +12,6 @@ exports[`flowDefToTSDef types/utilities/$Values 1`] = `
  */
 
 type T = Foo[keyof Foo];
+type T2 = Bar[keyof Bar];
 "
 `;

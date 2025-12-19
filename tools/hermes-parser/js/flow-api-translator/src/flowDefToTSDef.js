@@ -2464,8 +2464,9 @@ const getTransforms = (
           };
         }
 
-        case '$Values': {
-          // `$Values<T>` => `T[keyof T]`
+        case '$Values':
+        case 'Values': {
+          // `$Values<T>` / `Values<T>` => `T[keyof T]`
           const transformedType = assertHasExactlyNTypeParameters(1)[0];
           return {
             type: 'TSIndexedAccessType',
