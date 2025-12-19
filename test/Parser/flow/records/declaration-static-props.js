@@ -34,7 +34,10 @@ record R {
 // CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "StringTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "StringLiteral",
@@ -51,7 +54,10 @@ record R {
 // CHECK-NEXT:               "name": "bar"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "BooleanTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "BooleanTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "BooleanLiteral",

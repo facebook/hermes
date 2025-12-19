@@ -40,7 +40,10 @@
 // CHECK-NEXT:                   "name": "static"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "typeAnnotation": {
-// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   "type": "TypeAnnotation",
+// CHECK-NEXT:                   "typeAnnotation": {
+// CHECK-NEXT:                     "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "defaultValue": null
 // CHECK-NEXT:               },
@@ -51,7 +54,10 @@
 // CHECK-NEXT:                   "name": "async"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "typeAnnotation": {
-// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   "type": "TypeAnnotation",
+// CHECK-NEXT:                   "typeAnnotation": {
+// CHECK-NEXT:                     "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "defaultValue": null
 // CHECK-NEXT:               },
@@ -62,7 +68,10 @@
 // CHECK-NEXT:                   "name": "async"
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "typeAnnotation": {
-// CHECK-NEXT:                   "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   "type": "TypeAnnotation",
+// CHECK-NEXT:                   "typeAnnotation": {
+// CHECK-NEXT:                     "type": "NumberTypeAnnotation"
+// CHECK-NEXT:                   }
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "value": {
 // CHECK-NEXT:                   "type": "NumericLiteral",

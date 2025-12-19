@@ -34,7 +34,10 @@ record R {
 // CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "StringTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "defaultValue": null
 // CHECK-NEXT:           },

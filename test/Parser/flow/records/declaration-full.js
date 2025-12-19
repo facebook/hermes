@@ -66,12 +66,15 @@ record R<T> implements I<T> {
 // CHECK-NEXT:               "name": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "GenericTypeAnnotation",
-// CHECK-NEXT:               "id": {
-// CHECK-NEXT:                 "type": "Identifier",
-// CHECK-NEXT:                 "name": "T"
-// CHECK-NEXT:               },
-// CHECK-NEXT:               "typeParameters": null
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "GenericTypeAnnotation",
+// CHECK-NEXT:                 "id": {
+// CHECK-NEXT:                   "type": "Identifier",
+// CHECK-NEXT:                   "name": "T"
+// CHECK-NEXT:                 },
+// CHECK-NEXT:                 "typeParameters": null
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "defaultValue": null
 // CHECK-NEXT:           },
@@ -85,7 +88,10 @@ record R<T> implements I<T> {
 // CHECK-NEXT:               "name": "bar"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "BooleanTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "BooleanTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "defaultValue": {
 // CHECK-NEXT:               "type": "BooleanLiteral",
@@ -102,7 +108,10 @@ class: string,
 // CHECK-NEXT:               "name": "class"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "StringTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "defaultValue": null
 // CHECK-NEXT:           }

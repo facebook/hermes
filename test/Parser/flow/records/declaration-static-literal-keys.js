@@ -35,7 +35,10 @@ record R {
 // CHECK-NEXT:               "raw": "42"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "NumberTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "NumericLiteral",
@@ -53,7 +56,10 @@ record R {
 // CHECK-NEXT:               "value": "foo"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "StringTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "StringTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "StringLiteral",
@@ -70,7 +76,10 @@ record R {
 // CHECK-NEXT:               "bigint": "2"
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "typeAnnotation": {
-// CHECK-NEXT:               "type": "BigIntTypeAnnotation"
+// CHECK-NEXT:               "type": "TypeAnnotation",
+// CHECK-NEXT:               "typeAnnotation": {
+// CHECK-NEXT:                 "type": "BigIntTypeAnnotation"
+// CHECK-NEXT:               }
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "value": {
 // CHECK-NEXT:               "type": "BigIntLiteral",

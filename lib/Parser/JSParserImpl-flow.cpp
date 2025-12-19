@@ -1671,7 +1671,7 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
       }
     }
 
-    if (checkAndEat(TokenKind::colon)) {
+    if (check(TokenKind::colon)) {
       // Property
       if (isAsync || isGenerator) {
         error(
@@ -1679,7 +1679,9 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
             "invalid async/generator modifier for record property, expected a method definition");
         return None;
       }
-      auto optType = parseTypeAnnotationFlow();
+      // Eat the colon
+      SMLoc annotStart = advance(JSLexer::GrammarContext::Type).Start;
+      auto optType = parseTypeAnnotationFlow(annotStart);
       if (!optType)
         return None;
 
