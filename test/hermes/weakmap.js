@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %t.hbc | %FileCheck --match-full-lines %s
 
 print("WeakMap");
 // CHECK-LABEL: WeakMap
@@ -107,6 +107,9 @@ m.set(a, 10);
   m.set(b, 12);
   print(HermesInternal.getWeakSize(m));
 // CHECK-NEXT: 2
+// Keep b alive here so that it won't get collected when calling getWeakSize().
+  print(m.get(b));
+// CHECK-NEXT: 12
   for (var i = 0; i < 10000; ++i) {
     m.set({}, 12);
   }

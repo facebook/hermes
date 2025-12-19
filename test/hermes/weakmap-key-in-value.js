@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -gc-init-heap=4M -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -gc-init-heap=4M -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
-// RUN: %shermes -exec %s -Wx,-gc-init-heap=4M,-Xhermes-internal-test-methods | %FileCheck --match-full-lines %s
+// RUN: %hermes -gc-init-heap=4M -O -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -gc-init-heap=4M -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-init-heap=4M,-Xhermes-internal-test-methods -Wx,-gc-sanitize-handles=0.1 | %FileCheck --match-full-lines %s
 
 "use strict";
 
@@ -184,11 +184,11 @@ function foo7() {
     return wm1;
   }
   var wm = createWeakMap();
-  var arr = [0];
+  var arr;
   for (var i = 0; i < 57; i++) {
-    wm.set(arr, 0);
     arr = [0];
     arr[3262] = 0;
+    wm.set(arr, 0);
   }
   gc();
   // CHECK-NEXT: 1

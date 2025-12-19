@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
-// RUN: %hermesc -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %t.hbc | %FileCheck --match-full-lines %s
 
 print("WeakSet");
 // CHECK-LABEL: WeakSet
@@ -89,6 +89,9 @@ m.add(a);
   m.add(b);
   print(HermesInternal.getWeakSize(m));
 // CHECK-NEXT: 2
+// Keep b alive here so that it won't get collected when calling getWeakSize().
+  print(m.has(b));
+// CHECK-NEXT: true
 })();
 // b can be freed now.
 // Run the GC twice - first to invalidate the WeakRef,
