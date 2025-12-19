@@ -1,0 +1,3 @@
+{
+    "command": "bash gen_cpp_compile_commands.sh"
+}
