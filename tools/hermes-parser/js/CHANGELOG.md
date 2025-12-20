@@ -1,3 +1,8 @@
+## 0.33.1
+
+### `hermes-parser`
+- Fixed parser regression of a divide after a call with a trailing comma erroneously being intrepreted as a regex literal
+
 ## 0.33.0
 
 ### `hermes-parser`
