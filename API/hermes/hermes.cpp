@@ -1311,6 +1311,7 @@ static void loadAndInstallExtensions(HermesRuntimeImpl &runtime) {
   vm::RuntimeModuleFlags flags;
   flags.persistent = true;
   flags.hidesEpilogue = true;
+  flags.funcsAreBuiltins = true;
   auto res = runtime.runtime_.runBytecode(
       std::move(bcResult.first),
       flags,

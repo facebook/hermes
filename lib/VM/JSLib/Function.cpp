@@ -18,6 +18,7 @@
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime-inline.h"
+#include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
@@ -165,27 +166,35 @@ CallResult<HermesValue> functionPrototypeToString(void *, Runtime &runtime) {
   // Deal with JSFunctions that has a source String ID. That implies this
   // function need a non-default toString implementation.
   if (auto jsFunc = dyn_vmcast<JSFunction>(*func)) {
-    if (auto sourceID = jsFunc->getCodeBlock()->getFunctionSourceID()) {
+    RuntimeModule *runtimeModule = jsFunc->getCodeBlock()->getRuntimeModule();
+    bool nativeCode = false;
+
+    // If the module's functions are builtins, all show [native code].
+    if (runtimeModule->funcsAreBuiltins()) {
+      nativeCode = true;
+    } else if (auto sourceID = jsFunc->getCodeBlock()->getFunctionSourceID()) {
       StringPrimitive *source =
-          jsFunc->getCodeBlock()
-              ->getRuntimeModule()
-              ->getStringPrimFromStringIDMayAllocate(*sourceID);
+          runtimeModule->getStringPrimFromStringIDMayAllocate(*sourceID);
       // Empty source marks implementation-hidden function, fabricate a source
       // code string that imitate a NativeFunction.
       if (source->getStringLength() == 0) {
-        SmallU16String<64> strBuf{};
-        strBuf.append("function ");
-        if (LLVM_UNLIKELY(
-                appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        strBuf.append("() { [native code] }");
-        return StringPrimitive::create(runtime, strBuf);
+        nativeCode = true;
       } else {
         // Otherwise, it's the preserved source code.
         return HermesValue::encodeStringValue(source);
       }
-    };
+    }
+
+    if (nativeCode) {
+      SmallU16String<64> strBuf{};
+      strBuf.append("function ");
+      if (LLVM_UNLIKELY(
+              appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      strBuf.append("() { [native code] }");
+      return StringPrimitive::create(runtime, strBuf);
+    }
   }
 
   SmallU16String<64> strBuf{};

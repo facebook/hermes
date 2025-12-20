@@ -54,6 +54,11 @@ union RuntimeModuleFlags {
     /// Whether this runtime module's epilogue should be hidden in
     /// runtime.getEpilogues().
     bool hidesEpilogue : 1;
+
+    /// Whether functions in this module should be treated as builtins, meaning
+    /// Function.prototype.toString() returns "[native code]" instead of the
+    /// actual source. This is used for InternalJavaScript and extensions.
+    bool funcsAreBuiltins : 1;
   };
   uint8_t flags;
   RuntimeModuleFlags() : flags(0) {}
@@ -347,6 +352,12 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// Runtime.getEpilogues().
   bool hidesEpilogue() const {
     return flags_.hidesEpilogue;
+  }
+
+  /// \return whether functions in this module should be treated as builtins,
+  /// i.e., their toString() returns "[native code]".
+  bool funcsAreBuiltins() const {
+    return flags_.funcsAreBuiltins;
   }
 
   /// \return any trailing data after the real bytecode.
