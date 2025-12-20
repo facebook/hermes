@@ -9,6 +9,7 @@
 
 #include "Object.h"
 
+#include "hermes/Support/BuildTable256.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Callable.h"
@@ -550,6 +551,31 @@ bool handleSurrogate(Output &output, llvh::ArrayRef<CharT> view, size_t i) {
   return false;
 }
 
+static constexpr bool needsEscTableBuilder(uint8_t ch) {
+  switch (ch) {
+    case '\\':
+    case '"':
+    case '\b':
+    case '\f':
+    case '\n':
+    case '\r':
+    case '\t':
+      return true;
+    default:
+      if (ch < u' ')
+        return true;
+      return false;
+  }
+}
+
+/// This table maps an ASCII character to a boolean which is true if the given
+/// character needs to be escaped.
+static const constexpr bool NEEDS_ESC_TABLE[256] = {
+#define TABLE_ELEMENT(N) needsEscTableBuilder(N),
+    BUILD_TABLE_256(TABLE_ELEMENT)
+#undef TABLE_ELEMENT
+};
+
 /// Quotes a string given by \p view and puts the quoted version into \p output.
 /// \p view must be utf16 or ASCII encoded.
 /// \post output is a container that has a sequential list of utf16 characters
@@ -558,9 +584,39 @@ template <typename Output, typename CharT>
 void quoteStringForJSON(Output &output, llvh::ArrayRef<CharT> view) {
   // Quote.1.
   output.push_back(u'"');
+  const CharT *begin = view.data();
+  const CharT *cursor = begin;
+  const CharT *end = begin + view.size();
+  // Keep track of the range of unescaped characters, starting at beginUnescPtr.
+  const CharT *beginUnescPtr = begin;
   // Quote.2.
-  for (size_t i = 0, e = view.size(); i < e; ++i) {
-    CharT ch = view[i];
+  while (cursor < end) {
+    CharT ch = *cursor;
+    if constexpr (sizeof(CharT) > 1) {
+      if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {
+        output.append(beginUnescPtr, cursor);
+        size_t i = cursor - begin;
+        if (handleSurrogate(output, view, i)) {
+          ++cursor;
+          ++cursor;
+        } else {
+          ++cursor;
+        }
+        beginUnescPtr = cursor;
+        continue;
+      }
+      if (ch >= 0xFF) {
+        cursor++;
+        continue;
+      }
+    }
+    if (LLVM_LIKELY(!NEEDS_ESC_TABLE[(uint8_t)ch])) {
+      ++cursor;
+      continue;
+    }
+    output.append(beginUnescPtr, cursor);
+    cursor++;
+    beginUnescPtr = cursor;
 #define ESCAPE(ch, replace)    \
   case ch:                     \
     output.push_back(u'\\');   \
@@ -569,46 +625,30 @@ void quoteStringForJSON(Output &output, llvh::ArrayRef<CharT> view) {
 
     switch (ch) {
       // Quote.2.a.
-      ESCAPE(u'\\', u'\\');
-      ESCAPE(u'"', u'"');
+      ESCAPE('\\', '\\');
+      ESCAPE('"', '"');
       // Quote.2.b.
-      ESCAPE(u'\b', u'b');
-      ESCAPE(u'\f', u'f');
-      ESCAPE(u'\n', u'n');
-      ESCAPE(u'\r', u'r');
-      ESCAPE(u'\t', u't');
+      ESCAPE('\b', 'b');
+      ESCAPE('\f', 'f');
+      ESCAPE('\n', 'n');
+      ESCAPE('\r', 'r');
+      ESCAPE('\t', 't');
       default:
-        if (ch < u' ') {
-          // Quote.2.c.
-          output.append({u'\\', u'u', u'0', u'0'});
-          output.push_back(u'0' + (ch / 16));
-          if (ch % 16 < 10) {
-            output.push_back(u'0' + (ch % 16));
-          } else {
-            output.push_back(u'a' + (ch % 16 - 10));
-          }
+        assert(
+            ch < u' ' &&
+            "Char doesn't need escaping but the escape switch was reached");
+        // Quote.2.c.
+        output.append({'\\', 'u', '0', '0'});
+        output.push_back(u'0' + (ch / 16));
+        if (ch % 16 < 10) {
+          output.push_back(u'0' + (ch % 16));
         } else {
-          // This check should only generate code when CharT is more than 1
-          // byte.
-          if constexpr (
-              std::numeric_limits<CharT>::max() >= UNICODE_SURROGATE_FIRST) {
-            if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {
-              if (handleSurrogate(output, view, i)) {
-                // Found a valid surrogate pair, so skip over the next
-                // character.
-                i++;
-              }
-            } else {
-              // Quote.2.d.
-              output.push_back(ch);
-            }
-          } else {
-            // Quote.2.d.
-            output.push_back(ch);
-          }
+          output.push_back(u'a' + (ch % 16 - 10));
         }
     }
   }
+  // Finish appending unescaped characters.
+  output.append(beginUnescPtr, cursor);
   // Quote.3.
   output.push_back(u'"');
 }
