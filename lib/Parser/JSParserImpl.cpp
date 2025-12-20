@@ -3490,7 +3490,7 @@ bool JSParserImpl::parseArguments(ESTree::NodeList &argList, SMLoc &endLoc) {
       // Check for ",)".
       if (check(TokenKind::r_paren)) {
         endLoc = tok_->getEndLoc();
-        advance();
+        advance(JSLexer::AllowDiv);
         // Must be after the arguments now.
         // If we see `=>` and this was a spread element, that's an error
         // because this can only be an async arrow function's parameters,
