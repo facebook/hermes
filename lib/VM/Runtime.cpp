@@ -1239,6 +1239,23 @@ Handle<JSObject> Runtime::runInternalJavaScript() {
   RuntimeModuleFlags flags;
   flags.persistent = true;
   flags.hidesEpilogue = true;
+
+  // Why are we setting funcsAreBuiltins conditionally?
+  // Pay attention, because this will blow your mind. It turns out that JS
+  // libraries routinely check whether certain functions are "built-in" by
+  // running `foo.toString().includes("[native code]")` and change behavior in
+  // significant ways. Some versions of React Native use the following logic:
+  //
+  // hasPromiseQueuedToJSVM =
+  //    (HermesInternal?.hasPromise?.()
+  //      && global?.HermesInternal?.useEngineQueue?.())
+  //    ||
+  //    (Promise && Promise.toString().includes("[native code]");
+  //
+  // So, even if the microtask queue is disabled, RN will incorrectly assume it
+  // is enabled, because the Promise implementation is a built-in.
+  flags.funcsAreBuiltins = hasMicrotaskQueue();
+
   auto res = runBytecode(
       std::move(bcResult.first),
       flags,
