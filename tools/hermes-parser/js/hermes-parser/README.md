@@ -11,4 +11,5 @@ The Hermes parser exposes a single `parse(code, [options])` function, where `cod
 - **tokens**: `boolean`, defaults to `false`. If `true`, add all tokens to a `tokens` property on the root node.
 - **transformOptions**: `object`. Options to be supplied to relevant transforms.
   - `TransformEnumSyntax`
+    - `enable`: `boolean` - Whether to enable the transform. By default, `false`.
     - `getRuntime` (optional): `() => Expression` - The expression which should be a reference to the Flow Enums runtime. By default, is `require('flow-enums-runtime')`.

@@ -98,12 +98,14 @@ export function parse(
   }
 
   const loweredESTreeAST = [
-    TransformEnumSyntax.transformProgram,
+    options.transformOptions?.TransformEnumSyntax?.enable
+      ? TransformEnumSyntax.transformProgram
+      : null,
     TransformMatchSyntax.transformProgram,
     TransformComponentSyntax.transformProgram,
     TransformRecordSyntax.transformProgram,
     StripFlowTypesForBabel.transformProgram,
-  ].reduce((ast, transform) => transform(ast, options), estreeAST);
+  ].reduce((ast, transform) => transform?.(ast, options) ?? ast, estreeAST);
 
   return TransformESTreeToBabel.transformProgram(loweredESTreeAST, options);
 }
