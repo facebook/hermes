@@ -234,6 +234,7 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
         return node;
 
       case 'ArrowFunctionExpression':
+        node.id = null;
         node.expression = node.body.type !== 'BlockStatement';
         return node;
     }
