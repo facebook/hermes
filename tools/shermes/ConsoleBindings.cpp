@@ -44,6 +44,8 @@ static void initTest262Bindings(facebook::hermes::HermesRuntime &hrt) {
 
   facebook::jsi::Object descriptor{hrt};
   descriptor.setProperty(hrt, "enumerable", false);
+  descriptor.setProperty(hrt, "writable", true);
+  descriptor.setProperty(hrt, "configurable", true);
   auto valueProp = facebook::jsi::PropNameID::forAscii(hrt, "value");
 
   // Define $262.global.
