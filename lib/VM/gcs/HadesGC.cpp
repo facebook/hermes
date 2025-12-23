@@ -1172,7 +1172,7 @@ bool HadesGC::OldGen::sweepNext(bool backgroundThread) {
   }
 
   // Correct the allocated byte count.
-  incrementAllocatedBytes(-segmentSweptBytes);
+  decrementAllocatedBytes(segmentSweptBytes);
   sweepIterator_.sweptBytes += segmentSweptBytes;
   sweepIterator_.sweptExternalBytes += externalBytesBefore - externalBytes();
 
@@ -1756,7 +1756,7 @@ void HadesGC::finalizeCompactee() {
   // At this point, any cells that survived compaction are already accounted for
   // separately in the counter, so we just need to subtract the number of bytes
   // allocated in the compactee.
-  oldGen_.incrementAllocatedBytes(-preAllocated);
+  oldGen_.decrementAllocatedBytes(preAllocated);
 
 #ifndef NDEBUG
   unitSegmentAddrMap_.erase(compactee_.segment->lowLim());
@@ -1922,7 +1922,7 @@ void HadesGC::OldGen::freeUnusedJumboSegments() {
       gc_.untrackObject(cell, sz);
     }
     // Reflect the allocation bytes change.
-    incrementAllocatedBytes(-sz);
+    decrementAllocatedBytes(sz);
     allocatedLargeObjectBytes_ -= sz;
     sweepIterator_.sweptBytes += sz;
 
@@ -3121,9 +3121,14 @@ unsigned HadesGC::OldGen::numLargeAllocations() const {
   return numLargeAllocations_;
 }
 
-void HadesGC::OldGen::incrementAllocatedBytes(int32_t incr) {
+void HadesGC::OldGen::incrementAllocatedBytes(size_t incr) {
   allocatedBytes_ += incr;
   assert(allocatedBytes_ <= size() && "Invalid increment");
+}
+
+void HadesGC::OldGen::decrementAllocatedBytes(size_t decr) {
+  assert(allocatedBytes_ >= decr && "Invalid decrement");
+  allocatedBytes_ -= decr;
 }
 
 uint64_t HadesGC::OldGen::externalBytes() const {

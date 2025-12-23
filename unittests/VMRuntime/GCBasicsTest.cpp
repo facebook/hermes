@@ -588,4 +588,40 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
 }
 #endif
 
+/// Test that a super large allocation (larger than max of int32_t) still works
+/// correctly.
+TEST(LargeAllocationBigHeapTest, SuperLargeAlloc) {
+  constexpr gcheapsize_t kMaxHeapSize = (1ULL << 32) - 1;
+  const GCConfig kGCConfig = TestGCConfigFixedSize(kMaxHeapSize);
+  auto runtime = DummyRuntime::create(kGCConfig);
+  DummyRuntime &rt = *runtime;
+
+  struct : Locals {
+    PinnedValue<LargeDummyObject> l1;
+    PinnedValue<LargeDummyObject> l2;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+
+  GCBase::HeapInfo heapInfo;
+  rt.getHeap().getHeapInfo(heapInfo);
+  ASSERT_EQ(heapInfo.allocatedBytes, 0);
+
+  constexpr uint32_t size1 =
+      JumboHeapSegment::computeActualCellSize(1024 * 1024 * 32);
+  lv.l1 = LargeDummyObject::create(size1, rt.getHeap());
+  ASSERT_NE(lv.l1.get(), nullptr);
+
+  // This is larger than INT32_MAX. It will fail if we use wrong integer type
+  // when tracking allocated bytes (e.g., we used to use int32_t in
+  // incrementAllocatedBytes() of HadesGC).
+  constexpr uint32_t size2 = JumboHeapSegment::computeActualCellSize(1UL << 31);
+  lv.l2 = LargeDummyObject::create(size2, rt.getHeap());
+  ASSERT_NE(lv.l2.get(), nullptr);
+
+  // Assert that both large allocation succeeded and the final number of
+  // allocated bytes is correct.
+  rt.getHeap().getHeapInfo(heapInfo);
+  ASSERT_EQ(heapInfo.allocatedBytes, (uint64_t)size1 + size2);
+}
+
 } // namespace

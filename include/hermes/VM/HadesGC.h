@@ -751,7 +751,10 @@ class HadesGC final : public GCBase {
     unsigned numLargeAllocations() const;
 
     /// Increase the allocated bytes tracker by \p incr.
-    void incrementAllocatedBytes(int32_t incr);
+    void incrementAllocatedBytes(size_t incr);
+
+    /// Decrease the allocated bytes tracker by \p decr.
+    void decrementAllocatedBytes(size_t decr);
 
     /// \return the total number of bytes that are held in external memory, kept
     /// alive by objects in the OG.
