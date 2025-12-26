@@ -61,8 +61,9 @@ given, "intl_tests" if `--test-intl` is given).
 
 After it finishes, all passed tests included in the skiplist config file will be
 printed, and you can tell the runner to remove these tests from the config by
-following the prompt (we will only update "skip_list" section for now). Note
-that if some tests are covered by a folder path in the config, the test runner
-will first find all tests under that folder, exclude those passed, and insert
-the rest into the config file. If you don't want this behavior for a specific
-folder, please add it to the manual list with a comment explaining the reason.
+following the prompt (we will only update "skip_list" and "permanent_skip_list"
+section for now). Note that if some tests are covered by a folder path in the
+config, the test runner will first find all tests under that folder, exclude
+those passed, and insert the rest into the config file. If you don't want this
+behavior for a specific folder, please add it to the manual list with a comment
+explaining the reason.

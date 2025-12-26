@@ -220,11 +220,9 @@ class SkippedPathsOrFeatures(object):
         # Unfold directory paths directly included in the list.
         return self.unfold_top_level(tests, skipped_paths)
 
-    def remove_tests(self, tests: Dict[str, str]) -> None:
-        """Remove given tests from the skip list config."""
+    def remove_tests_from_cat(self, tests: Dict[str, str], cat: SkipCategory) -> None:
+        """Remove given tests under given category from the skip list config."""
 
-        # Only paths included in SKIP_LIST can be removed for now.
-        cat = SkipCategory.SKIP_LIST.value
         skipped_paths: List[SkippedPathItem] = self.paths_features.get(cat, [])
         skipped_paths = self.unfold(tests, skipped_paths)
         # Remove plain test paths that also exist in the given list.
@@ -243,6 +241,20 @@ class SkippedPathsOrFeatures(object):
                 result.append(path_item)
 
         self.paths_features[cat] = result
+
+    def remove_tests(self, tests: Dict[str, str]) -> None:
+        """
+        Remove given tests from the skip list config."""
+
+        # Only paths included in SKIP_LIST and PERMANENT_SKIP_LIST can be
+        # removed for now.
+        cats = [
+            SkipCategory.SKIP_LIST.value,
+            SkipCategory.PERMANENT_SKIP_LIST.value,
+        ]
+        for cat in cats:
+            self.remove_tests_from_cat(tests, cat)
+        self.persist()
 
     def persist(self) -> None:
         """
