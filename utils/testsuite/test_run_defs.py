@@ -192,7 +192,8 @@ class Test262Suite(Suite):
                 ],
                 full_test_name,
             ):
-                return skip_result
+                if not args.test_skiplist:
+                    return skip_result
 
         base_name = os.path.basename(args.test_file)
         base_name_no_ext = os.path.splitext(base_name)[0]

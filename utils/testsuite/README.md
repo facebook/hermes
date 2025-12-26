@@ -39,15 +39,30 @@ flow testsuite, we use additionally below flags:
 
 ## Skiplist
 
+`skiplist.json` is a config file that contains a list of tests that we want to
+skip by default. It has several sections:
+- "manual_skip_list": This is managed manually. We usually put tests that we plan
+to support soon here and remove them manually once it's supported.
+- "skip_list": We put all tests that currently fail due to spec incompliance or
+unsupported feature here.
+- "lazy_skip_list": Tests we want to skip when "--lazy" is passed.
+- "permanent_skip_list": Tests we do not plan to fix or support.
+- "handlesan_skip_list": Tests that should be run with "-gc-sanitize-handles=0".
+- "unsupported_features": Tests with unsupported features in test262. We may
+support them in the future.
+- "permanent_unsupported_features": Tests with unsupported features in 262. We
+don't have a plan to support them.
+- "intl_tests": Tests requires INTL to be enabled.
+- "platform_skip_list": Tests that need to be skipped depending on platforms.
+
 Run with flag `--test-skiplist` to force running tests that are included in the
-`skiplist.json` config (but we will scan only "skiplist" and "manual_skiplist"
-in the config, and "lazy_skip_list" if `--lazy` is given, "intl_tests" if
-`--test-intl` is given).
+`skiplist.json` config (all other sections, and "lazy_skip_list" if `--lazy` is
+given, "intl_tests" if `--test-intl` is given).
 
 After it finishes, all passed tests included in the skiplist config file will be
 printed, and you can tell the runner to remove these tests from the config by
-following the prompt ("manual_list" won't be touched). Note that if some tests
-are covered by a folder path in the config, the test runner will first find all
-tests under that folder, exclude those passed, and insert the rest into the
-config file. If you don't want this behavior for a specific folder, please add
-it to the manual list with a comment explaining the reason.
+following the prompt (we will only update "skip_list" section for now). Note
+that if some tests are covered by a folder path in the config, the test runner
+will first find all tests under that folder, exclude those passed, and insert
+the rest into the config file. If you don't want this behavior for a specific
+folder, please add it to the manual list with a comment explaining the reason.

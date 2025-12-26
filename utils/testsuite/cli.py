@@ -338,17 +338,10 @@ async def run(
         assert suite, f"Test suite root directory is not found for {test_file}"
         full_test_name = suite.get_full_test_name(test_file)
 
-        # We always skip tests that are in permanent skiplist.
-        if test_result := skipped_paths_features.try_skip(
-            test_file, [SkipCategory.PERMANENT_SKIP_LIST], full_test_name
-        ):
-            pd.update(test_result)
-            stats[test_result.code] += 1
-            continue
-
         # Check if this file should be skipped w.r.t. the test_skiplist flag.
         skip_categories = [
             SkipCategory.SKIP_LIST,
+            SkipCategory.PERMANENT_SKIP_LIST,
             SkipCategory.MANUAL_SKIP_LIST,
             SkipCategory.PLATFORM_SKIP_LIST,
         ]
