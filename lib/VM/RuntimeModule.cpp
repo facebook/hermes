@@ -7,7 +7,6 @@
 
 #include "hermes/VM/RuntimeModule.h"
 
-#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/CodeBlock.h"
