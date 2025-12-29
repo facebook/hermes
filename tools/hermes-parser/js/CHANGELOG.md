@@ -1,3 +1,9 @@
+## 0.33.2
+
+### `hermes-parser`
+- Always set `id` in `ArrowFunctionExpression` to `null`.
+- Do not enable Flow Enums transform by default, add option instead: `transformOptions: {TransformEnumSyntax: {enable: true}}`.
+
 ## 0.33.1
 
 ### `hermes-parser`
