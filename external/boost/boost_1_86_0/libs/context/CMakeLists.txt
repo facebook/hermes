@@ -238,6 +238,11 @@ target_compile_definitions(boost_context
   PRIVATE BOOST_CONTEXT_SOURCE=
 )
 
+target_compile_definitions(boost_context_obj
+  PUBLIC BOOST_CONTEXT_NO_LIB=
+  PRIVATE BOOST_CONTEXT_SOURCE=
+)
+
 if(BUILD_SHARED_LIBS)
   target_compile_definitions(boost_context PUBLIC BOOST_CONTEXT_DYN_LINK= BOOST_CONTEXT_EXPORT=EXPORT)
 else()
