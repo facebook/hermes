@@ -33,15 +33,6 @@ std::pair<std::unique_ptr<BCProvider>, std::string> createBCProviderFromSrc(
   return {nullptr, "Lean VM does not support bytecode generation"};
 }
 
-std::unique_ptr<BytecodeModule> generateBytecodeModule(
-    Module *M,
-    Function *entryPoint,
-    const BytecodeGenerationOptions &options,
-    hermes::OptValue<uint32_t> segment,
-    std::unique_ptr<BCProviderBase> baseBCProvider) {
-  return nullptr;
-}
-
 bool generateBytecodeFunctionLazy(
     BytecodeModule &bm,
     Module *M,
@@ -50,13 +41,6 @@ bool generateBytecodeFunctionLazy(
     FileAndSourceMapIdCache &debugIdCache,
     const BytecodeGenerationOptions &options) {
   return false;
-}
-
-std::unique_ptr<BytecodeModule> generateBytecodeModuleForEval(
-    Module *M,
-    Function *entryPoint,
-    const BytecodeGenerationOptions &options) {
-  return nullptr;
 }
 
 std::pair<bool, llvh::StringRef> compileLazyFunction(
