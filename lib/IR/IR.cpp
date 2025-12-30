@@ -186,6 +186,7 @@ static Type functionNewTargetType(Function::DefinitionKind defKind) {
     case Function::DefinitionKind::ES6Method:
       return Type::createUndefined();
   }
+  llvm_unreachable("all cases handled");
 }
 
 Function::Function(
