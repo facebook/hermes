@@ -15,6 +15,7 @@ add_hermes_library(hermesHBCBackend
   BytecodeFormConverter.cpp
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
+  DebugInfoNonLean.cpp
   Passes.cpp
   SimpleBytecodeBuilder.cpp
   StringKind.cpp
