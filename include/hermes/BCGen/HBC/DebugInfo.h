@@ -397,6 +397,106 @@ class DebugInfoGenerator {
   void generate() &&;
 };
 
+namespace detail {
+
+/// A type used to iteratively deserialize function debug info.
+struct FunctionDebugInfoDeserializer {
+  /// Construct a deserializer that begins deserializing at \p offset in \p
+  /// data. It will deserialize until the function's debug info is finished
+  /// (address delta = -1) at which point isDone() will return true. The offset
+  /// of the next section can be obtained via getOffset().
+  /// isDone() will not be true until after the first call to next().
+  FunctionDebugInfoDeserializer(llvh::ArrayRef<uint8_t> data, uint32_t offset)
+      : data_(data), offset_(offset) {
+    functionIndex_ = decode1Int();
+    current_.line = decode1Int();
+    current_.column = decode1Int();
+    current_.envIdx = decode1Int();
+  }
+
+  /// \return the next debug location, or None if we reach the end.
+  /// Sample usage: while (auto loc = fdid.next()) {...}
+  OptValue<DebugSourceLocation> next() {
+    assert(!done_ && "next() called after done");
+
+    auto addressDelta = decode1Int();
+    if (addressDelta == -1) {
+      done_ = true;
+      return llvh::None;
+    }
+    current_.address += addressDelta;
+
+    // ldelta encoding: bits 3..32 contain the line delta.
+    // Bit 0 indicates the presence of location information.
+    // Bit 1 indicates the presence of statement information.
+    // Bit 2 indicates the presence of envIdx information.
+
+    int64_t lineDelta = decode1Int();
+    if ((lineDelta & 1) == 0) {
+      // No location information here, but not done yet.
+      return llvh::None;
+    }
+
+    int64_t columnDelta = decode1Int();
+    int64_t statementDelta = 0;
+    if ((lineDelta & 2) != 0) {
+      statementDelta = decode1Int();
+    }
+
+    int64_t envIdxDelta = 0;
+    if ((lineDelta & 4) != 0) {
+      envIdxDelta = decode1Int();
+    }
+
+    lineDelta >>= 3;
+
+    current_.line += lineDelta;
+    current_.column += columnDelta;
+    current_.statement += statementDelta;
+    current_.envIdx += envIdxDelta;
+    return current_;
+  }
+
+  /// \return whether we're done reading the debug info for this function.
+  /// next() must not be called when isDone() is true.
+  bool isDone() const {
+    return done_;
+  }
+
+  /// \return the offset of this deserializer in the data.
+  uint32_t getOffset() const {
+    return offset_;
+  }
+
+  /// \return the index of the function being deserialized.
+  uint32_t getFunctionIndex() const {
+    return functionIndex_;
+  }
+
+  /// \return the current source location.
+  const DebugSourceLocation &getCurrent() const {
+    return current_;
+  }
+
+ private:
+  /// LEB-decode the next int.
+  int64_t decode1Int() {
+    int64_t result;
+    offset_ += readSignedLEB128(data_, offset_, &result);
+    return result;
+  }
+
+  llvh::ArrayRef<uint8_t> data_;
+  uint32_t offset_;
+
+  uint32_t functionIndex_;
+  DebugSourceLocation current_;
+
+  bool done_ = false;
+};
+
+} // namespace detail
+
 } // namespace hbc
 } // namespace hermes
 #endif // HERMES_BCGEN_HBC_DEBUGINFO_H
