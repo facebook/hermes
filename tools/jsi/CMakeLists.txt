@@ -12,3 +12,22 @@ add_hermes_tool(hermes-jsi
   ${ALL_HEADER_FILES}
   LINK_OBJLIBS hermesvm_a timerStats
   )
+
+# Additional targets to test linking against the other library variants.
+add_hermes_tool(hermes-jsi-lean
+  jsi.cpp
+  ${ALL_HEADER_FILES}
+  LINK_OBJLIBS hermesvmlean_a timerStats
+  )
+
+add_hermes_tool(hermes-jsi-shared
+  jsi.cpp
+  ${ALL_HEADER_FILES}
+  )
+target_link_libraries(hermes-jsi-shared PRIVATE hermesvm timerStats)
+
+add_hermes_tool(hermes-jsi-lean-shared
+  jsi.cpp
+  ${ALL_HEADER_FILES}
+  )
+target_link_libraries(hermes-jsi-lean-shared PRIVATE hermesvmlean timerStats)
