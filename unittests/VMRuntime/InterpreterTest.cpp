@@ -22,6 +22,8 @@
 using namespace hermes::vm;
 using namespace hermes::hbc;
 
+namespace vmdetail = hermes::vm::detail;
+
 /// Associate a label with an instruction. Use it like this:
 /// \begincode
 ///   LABEL(L(1), builder.emitMov(1, 2));
@@ -194,8 +196,9 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   builder.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
   auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
-  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "print"), printID);
-  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "result="), resultID);
+  ASSERT_EQ(vmdetail::mapStringMayAllocate(*runtimeModule, "print"), printID);
+  ASSERT_EQ(
+      vmdetail::mapStringMayAllocate(*runtimeModule, "result="), resultID);
 
   auto printFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
       runtime,
@@ -302,7 +305,7 @@ L2:
 TEST_F(InterpreterTest, RecursiveFactorialTest) {
   auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
-  auto factID = detail::mapStringMayAllocate(*runtimeModule, "fact");
+  auto factID = vmdetail::mapStringMayAllocate(*runtimeModule, "fact");
 
   /*
    get_arg    reg0, 1           ; load n
@@ -473,8 +476,8 @@ TEST_F(InterpreterTest, TestJmpBuiltinIs) {
   auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
 
   ASSERT_EQ(
-      detail::mapStringMayAllocate(*runtimeModule, "Function"), functionID);
-  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "call"), callID);
+      vmdetail::mapStringMayAllocate(*runtimeModule, "Function"), functionID);
+  ASSERT_EQ(vmdetail::mapStringMayAllocate(*runtimeModule, "call"), callID);
 
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
@@ -584,7 +587,7 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   builder.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
   auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
-  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "getSP"), getSPID);
+  ASSERT_EQ(vmdetail::mapStringMayAllocate(*runtimeModule, "getSP"), getSPID);
 
   auto getSPFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
       runtime,
