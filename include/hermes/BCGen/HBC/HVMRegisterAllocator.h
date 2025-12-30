@@ -103,6 +103,7 @@ class HVMRegisterAllocator : public RegisterAllocator {
       case RegClass::_last:
         hermes_fatal("register has no corresponding HVM index");
     }
+    llvm_unreachable("all cases handled");
   }
 
   /// \return the max loop depth.

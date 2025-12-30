@@ -41,6 +41,7 @@ constexpr ProhibitInvoke computeProhibitInvoke(
     case Function::ProhibitInvoke::ProhibitCall:
       return ProhibitInvoke::Call;
   }
+  llvm_unreachable("all cases handled");
 }
 
 /// \return the FuncKind value corresponding to the function's \p valKind.

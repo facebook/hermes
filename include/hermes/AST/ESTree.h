@@ -1192,6 +1192,7 @@ class GetDecorationHelper {
     return nullptr;
 #include "hermes/AST/ESTree.def"
     }
+    llvm_unreachable("invalid node kind");
   }
 
  private:

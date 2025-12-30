@@ -113,6 +113,7 @@ class FlowChecker::FindLoopingTypes {
       _HERMES_SEMA_FLOW_SINGLETONS _HERMES_SEMA_FLOW_COMPLEX_TYPES
 #undef _HERMES_SEMA_FLOW_DEFKIND
     }
+    llvm_unreachable("all cases handled");
   }
 
   bool isLooping(Type *, SingletonType *) {
