@@ -261,6 +261,11 @@ if (XCODE)
 endif ()
 
 if (MSVC)
+  # Remove CMake's default exception handling flags to avoid D9025 warnings
+  # when we set our own in hermes_update_compile_flags()
+  string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "/EHsc" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0)
     # For MSVC 2013, disable iterator null pointer checking in debug mode,
     # especially so std::equal(nullptr, nullptr, nullptr) will not assert.
