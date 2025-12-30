@@ -789,6 +789,10 @@ if(HERMES_ENABLE_TEST_SUITE)
     shermes-dep
     compileJS
     emhermesc
+    hermes-jsi
+    hermes-jsi-lean
+    hermes-jsi-shared
+    hermes-jsi-lean-shared
     )
 
   set(coverage_directory "")
