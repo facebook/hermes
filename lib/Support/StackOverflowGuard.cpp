@@ -16,9 +16,13 @@ bool StackOverflowGuard::isStackOverflowingSlowPath() {
   auto [highPtr, size] = oscompat::thread_stack_bounds(nativeStackGap);
   nativeStackHigh = (const char *)highPtr;
   nativeStackSize = size;
+#ifdef _MSC_VER
+  void *stackPointer = _AddressOfReturnAddress();
+#else
+  void *stackPointer = __builtin_frame_address(0);
+#endif
   return LLVM_UNLIKELY(
-      (uintptr_t)nativeStackHigh - (uintptr_t)__builtin_frame_address(0) >
-      nativeStackSize);
+      (uintptr_t)nativeStackHigh - (uintptr_t)stackPointer > nativeStackSize);
 }
 
 #endif

@@ -27,6 +27,10 @@
 #ifndef HERMES_SUPPORT_STACKOVERFLOWGUARD_H
 #define HERMES_SUPPORT_STACKOVERFLOWGUARD_H
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #include "llvh/Support/Compiler.h"
 
 #include <cstddef>
@@ -65,9 +69,14 @@ class StackOverflowGuard {
     // We know that nativeStackSize_ <= nativeStackHigh_
     // (because otherwise the stack wouldn't fit in the memory),
     // so the overflowed difference will be greater than nativeStackSize_.
-    if (LLVM_LIKELY(!(
-            (uintptr_t)nativeStackHigh - (uintptr_t)__builtin_frame_address(0) >
-            nativeStackSize))) {
+#ifdef _MSC_VER
+    void *stackPointer = _AddressOfReturnAddress();
+#else
+    void *stackPointer = __builtin_frame_address(0);
+#endif
+    if (LLVM_LIKELY(
+            !((uintptr_t)nativeStackHigh - (uintptr_t)stackPointer >
+              nativeStackSize))) {
       // Fast path: quickly check the stored stack bounds.
       // NOTE: It is possible to have a false negative here (highly unlikely).
       // If the program creates many threads and destroys them, a new
