@@ -349,6 +349,7 @@ if (MSVC)
       # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
       -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
+      -wd4576 # Suppress 'a parenthesized type followed by an initializer list is a non-standard explicit type conversion syntax'
 
       # Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
