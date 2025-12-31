@@ -226,7 +226,7 @@ static inline SHLegacyValue _sh_ljs_double(double v) {
   return (SHLegacyValue){u.i};
 }
 static inline SHLegacyValue _sh_ljs_untrusted_double(double v) {
-  if (__builtin_expect(v != v, false))
+  if (SH_UNLIKELY(v != v))
     return _sh_ljs_double(NAN);
   return _sh_ljs_double(v);
 }

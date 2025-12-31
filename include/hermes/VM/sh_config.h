@@ -58,6 +58,22 @@ typedef uint16_t char16_t;
 #define SH_ATTRIBUTE_ALWAYS_INLINE
 #endif
 
+#ifdef __GNUC__
+#define SH_ATTRIBUTE_NORETURN __attribute__((noreturn))
+#elif defined(_MSC_VER)
+#define SH_ATTRIBUTE_NORETURN __declspec(noreturn)
+#else
+#define SH_ATTRIBUTE_NORETURN
+#endif
+
+/// SH_READNONE - Indicates that a function has no side effects and doesn't
+/// read any state other than its parameters (a pure mathematical function).
+#ifdef __GNUC__
+#define SH_READNONE __attribute__((const))
+#else
+#define SH_READNONE
+#endif
+
 /// SH_BUILTIN_UNREACHABLE - On compilers which support it, expands
 /// to an expression which states that it is undefined behavior for the
 /// compiler to reach this point.  Otherwise is not defined.
