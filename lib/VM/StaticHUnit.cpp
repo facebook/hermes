@@ -252,7 +252,7 @@ void hermes::vm::sh_unit_mark_weak_roots(
     }
     for (auto &prop : llvh::makeMutableArrayRef(
              reinterpret_cast<PrivateNameCacheEntry *>(
-                 unit->num_private_name_cache_entries),
+                 unit->private_name_cache),
              unit->num_private_name_cache_entries)) {
       if (prop.clazz) {
         acceptor.acceptWeak(prop.clazz);
