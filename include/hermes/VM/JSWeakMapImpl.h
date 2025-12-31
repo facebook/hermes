@@ -25,8 +25,8 @@ namespace detail {
 /// Uses invalid locations as slots for empty and tombstone keys.
 class WeakRefKey {
   /// Used to construct Empty/Tombstone WeakRefKey.
-  static constexpr uint32_t kEmptyKey = 0;
-  static constexpr uint32_t kTombstoneKey = 1;
+  static constexpr uintptr_t kEmptyKey = 0;
+  static constexpr uintptr_t kTombstoneKey = 1;
 
   /// Slot to the key object (packaged with its mapped value and owning map).
   WeakMapEntrySlot *slot_;
