@@ -405,27 +405,29 @@ SHERMES_EXPORT void _sh_catch_no_pop(
     uint32_t stackSize);
 /// Clear the thrown value and return it.
 SHERMES_EXPORT SHLegacyValue _sh_get_clear_thrown_value(SHRuntime *shr);
-SHERMES_EXPORT void _sh_throw_current(SHRuntime *shr) __attribute__((noreturn));
-SHERMES_EXPORT void _sh_throw(SHRuntime *shr, SHLegacyValue value)
-    __attribute__((noreturn));
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_throw_current(SHRuntime *shr);
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_throw(
+    SHRuntime *shr,
+    SHLegacyValue value);
 
 /// Throw a TypeError with the given message.
 /// \param message will be converted to a string and used as the error message.
-SHERMES_EXPORT void _sh_throw_type_error(SHRuntime *shr, SHLegacyValue *message)
-    __attribute__((noreturn));
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_throw_type_error(
+    SHRuntime *shr,
+    SHLegacyValue *message);
 /// Throw a TypeError with the given ASCII message.
-SHERMES_EXPORT void _sh_throw_type_error_ascii(
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_throw_type_error_ascii(
     SHRuntime *shr,
-    const char *message) __attribute__((noreturn));
-SHERMES_EXPORT void _sh_throw_reference_error_ascii(
+    const char *message);
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_throw_reference_error_ascii(
     SHRuntime *shr,
-    const char *message) __attribute__((noreturn));
+    const char *message);
 
 /// Throw a ReferenceError for accessing uninitialized variable.
-SHERMES_EXPORT void _sh_throw_empty(SHRuntime *shr) __attribute__((noreturn));
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_throw_empty(SHRuntime *shr);
 
 /// Throws a ReferenceError for double-initialization of `this`.
-__attribute__((noreturn)) static inline void _sh_throw_this_already_initialized(
+static inline SH_ATTRIBUTE_NORETURN void _sh_throw_this_already_initialized(
     SHRuntime *shr) {
   _sh_throw_reference_error_ascii(shr, "Cannot call super constructor twice");
 }
@@ -755,6 +757,20 @@ SHERMES_EXPORT SHLegacyValue
 _sh_ljs_mul_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_div_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
+
+static inline SHLegacyValue _sh_ljs_div_rjs_inline(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  // Fast path: check if both values are numbers and divide.
+  if (SH_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    return _sh_ljs_double(_sh_ljs_get_double(*a) / _sh_ljs_get_double(*b));
+  }
+
+  // Otherwise: go to out-of-line slow path.
+  return _sh_ljs_div_rjs(shr, a, b);
+}
+
 SHERMES_EXPORT SHLegacyValue
 _sh_ljs_mod_rjs(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b);
 SHERMES_EXPORT SHLegacyValue
@@ -937,7 +953,7 @@ static inline double _sh_mod_uint32(uint32_t a, uint32_t b) {
   return (double)(a % b);
 }
 
-__attribute__((const)) static inline double _sh_mod_double(double a, double b) {
+SH_READNONE static inline double _sh_mod_double(double a, double b) {
   uint32_t aUint, bUint;
   bool aIsUint = sh_tryfast_f64_to_u32(a, aUint);
   bool bIsUint = sh_tryfast_f64_to_u32(b, bUint);
@@ -956,8 +972,7 @@ __attribute__((const)) static inline double _sh_mod_double(double a, double b) {
 /// Annotated ((const)) to let the compiler know that the function will not
 /// read/write global memory at all (it's just doing math), allowing for
 /// optimizations around the locals struct.
-SHERMES_EXPORT __attribute__((const)) int32_t
-_sh_to_int32_double_slow_path(double d);
+SHERMES_EXPORT SH_READNONE int32_t _sh_to_int32_double_slow_path(double d);
 
 /// C version of the hermes::truncateToInt32 function.
 /// Inlines the fast path for SH to use, calls out to the slow path.
@@ -1044,7 +1059,7 @@ SHERMES_EXPORT void _sh_prstore_indirect(
     uint32_t propIndex,
     SHLegacyValue *value);
 
-SHERMES_EXPORT void _sh_unreachable() __attribute__((noreturn));
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_unreachable();
 
 static inline SHLegacyValue
 _sh_prload(SHRuntime *shr, SHLegacyValue source, uint32_t propIndex) {
@@ -1150,8 +1165,7 @@ static inline void _sh_prstore_string(
 }
 
 /// Throw an array out-of-bounds error.
-SHERMES_EXPORT void _sh_throw_array_oob(SHRuntime *shr)
-    __attribute__((noreturn));
+SHERMES_EXPORT SH_ATTRIBUTE_NORETURN void _sh_throw_array_oob(SHRuntime *shr);
 
 /// Out-of-line implementation for loading the element at \p index from the
 /// FastArray \p array.
@@ -1216,7 +1230,7 @@ static inline SHLegacyValue _sh_typed_load_parent(
 /// If the double value is within representable integer range, convert it,
 /// otherwise throw.
 static inline uint64_t _sh_to_uint64_double_or_throw(SHRuntime *shr, double d) {
-  if (__builtin_expect(d >= 0 && d <= (double)(1LL << 53), true)) {
+  if (SH_LIKELY(d >= 0 && d <= (double)(1LL << 53))) {
     return (uint64_t)d;
   }
   _sh_throw_type_error_ascii(shr, "number not representable as uint64_t");
@@ -1225,9 +1239,8 @@ static inline uint64_t _sh_to_uint64_double_or_throw(SHRuntime *shr, double d) {
 /// If the double value is within representable integer range, convert it,
 /// otherwise throw.
 static inline int64_t _sh_to_int64_double_or_throw(SHRuntime *shr, double d) {
-  if (__builtin_expect(
-          d >= (double)(int64_t)(-1ULL << 53) && d <= (double)(1LL << 53),
-          true)) {
+  if (SH_LIKELY(
+          d >= (double)(int64_t)(-1ULL << 53) && d <= (double)(1LL << 53))) {
     return (int64_t)d;
   }
   _sh_throw_type_error_ascii(shr, "number not representable as int64_t");
@@ -1236,7 +1249,7 @@ static inline int64_t _sh_to_int64_double_or_throw(SHRuntime *shr, double d) {
 /// If the int64 value is within representable integer range, convert it,
 /// otherwise throw
 static inline double _sh_to_double_int64_or_throw(SHRuntime *shr, int64_t i) {
-  if (__builtin_expect(i >= (int64_t)(-1ULL << 53) && i <= (1LL << 53), true)) {
+  if (SH_LIKELY(i >= (int64_t)(-1ULL << 53) && i <= (1LL << 53))) {
     return (double)i;
   }
   _sh_throw_type_error_ascii(shr, "int64_t not representable as number");
@@ -1244,7 +1257,7 @@ static inline double _sh_to_double_int64_or_throw(SHRuntime *shr, int64_t i) {
 /// If the uint64 value is within representable integer range, convert it,
 /// otherwise throw
 static inline double _sh_to_double_uint64_or_throw(SHRuntime *shr, uint64_t i) {
-  if (__builtin_expect(i <= 1ULL << 53, true)) {
+  if (SH_LIKELY(i <= 1ULL << 53)) {
     // On x86_64 there is no instruction to convert uint64_t to double, making
     // it a bit slower. Fortunately, we know that `i` is in range for int64_t,
     // so we can just pretend it is signed.
@@ -1264,7 +1277,7 @@ static inline SHLegacyValue _sh_ljs_native_pointer_or_throw(
   // the mantissa and just look at the exponent.
   // It is faster to check if all 11 bits are 1s if we invert the number and
   // check for 0 instead.
-  if (__builtin_expect(((~(uint64_t)(uintptr_t)p >> 52) & 0x7ff) != 0, true)) {
+  if (SH_LIKELY(((~(uint64_t)(uintptr_t)p >> 52) & 0x7ff) != 0)) {
     return _sh_ljs_native_pointer(p);
   }
   _sh_throw_type_error_ascii(shr, "pointer not representable as number");
@@ -1328,20 +1341,28 @@ static inline unsigned char _sh_ptr_read_uchar(unsigned char *ptr, int offset) {
 /// Note that the offset is in sizeof(void *) units. It is required that the
 /// destination pointer is correctly aligned (which is implied by its type).
 static inline void _sh_ptr_write_ptr(void **dest, int offset, void *value) {
+#ifdef __GNUC__
   __builtin_memcpy(
       __builtin_assume_aligned(&dest[offset], sizeof(value)),
       &value,
       sizeof(value));
+#else
+  memcpy(&dest[offset], &value, sizeof(value));
+#endif
 }
 /// Read a pointer from the given \p src at the given \p offset.
 /// Note that the offset is in sizeof(void *) units. It is required that the
 /// source pointer is correctly aligned (which is implied by its type).
 static inline void *_sh_ptr_read_ptr(void **src, int offset) {
   void *value;
+#ifdef __GNUC__
   __builtin_memcpy(
       &value,
       __builtin_assume_aligned(&src[offset], sizeof(value)),
       sizeof(value));
+#else
+  memcpy(&value, &src[offset], sizeof(value));
+#endif
   return value;
 }
 
