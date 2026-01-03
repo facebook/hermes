@@ -9,7 +9,7 @@
   "dependencies": {
     "command-line-args": "^5.1.1",
     "request": "^2.88.0",
-    "tar": "^4.4.8",
+    "tar": "^6.1.15",
     "shelljs": "^0.8.3"
   }
 }
