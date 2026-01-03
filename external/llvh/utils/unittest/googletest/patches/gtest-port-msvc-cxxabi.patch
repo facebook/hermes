@@ -1,0 +1,14 @@
+diff --git a/include/gtest/internal/gtest-port.h b/include/gtest/internal/gtest-port.h
+--- a/include/gtest/internal/gtest-port.h
++++ b/include/gtest/internal/gtest-port.h
+@@ -948,7 +948,9 @@
+ #endif
+
+ // _LIBCPP_VERSION is defined by the libc++ library from the LLVM project.
+-#if defined(__has_include)
++// Exclude MSVC: it doesn't have cxxabi.h, and __has_include is buggy under
++// Wine (see https://bugs.winehq.org/show_bug.cgi?id=54130).
++#if !defined(_MSC_VER) && defined(__has_include)
+ # if __has_include(<cxxabi.h>)
+ #  define GTEST_HAS_CXXABI_H_ 1
+ # else

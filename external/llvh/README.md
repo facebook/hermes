@@ -13,6 +13,10 @@ Pulled in this fix: https://github.com/google/googletest/commit/3498a1ac52deb83f
 from googletest-1.10.0 into googletest-1.8.0.
 It only modifies `./utils/unittest/googletest/include/gtest/internal/gtest-port.h`.
 
+Fixed cxxabi.h detection for MSVC under Wine. MSVC doesn't have cxxabi.h, and
+`__has_include` is buggy under Wine (see https://bugs.winehq.org/show_bug.cgi?id=54130).
+Patch: `./utils/unittest/googletest/patches/gtest-port-msvc-cxxabi.patch`.
+
 
 ## LIT patches
 
