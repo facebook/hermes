@@ -44,11 +44,16 @@ file(GENERATE
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>)
 
+set(SHERMES_LINK_LIBS hermescompiler)
+if(NOT WIN32)
+  list(APPEND SHERMES_LINK_LIBS dl)
+endif()
+
 add_hermes_tool(shermes
   shermes.cpp
   ParseJSFile.cpp ParseJSFile.h
   compile.cpp compile.h
-  LINK_LIBS hermescompiler dl)
+  LINK_LIBS ${SHERMES_LINK_LIBS})
 
 # The compiler is used as part of the build of the VM.
 # During cross-compilation, the compiler needs to be built for the host system,
