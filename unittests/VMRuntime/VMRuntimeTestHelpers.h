@@ -411,13 +411,13 @@ class [[nodiscard]] DummyLocalsRAII {
       : runtime_(runtime), locals_(locals) {
     locals->prev = runtime_.vmLocals;
     locals->numLocals =
-        (sizeof(T) - offsetof(Locals, locals)) / sizeof(PinnedHermesValue);
+        (sizeof(T) - Locals::localsOffset()) / sizeof(PinnedHermesValue);
 #ifdef HERMES_SLOW_DEBUG
     // All pointer/symbol type PinnedValues in locals must be initialized/reset
     // to default. Otherwise, potential dangling pointers could be accessed by
     // the GC.
     for (size_t i = 0; i < locals_->numLocals; ++i) {
-      auto &phv = locals_->locals[i];
+      auto &phv = locals_->locals()[i];
       assert(
           (!phv.isPointer() || !phv.getPointer()) &&
           (!phv.isSymbol() || phv.getSymbol().isInvalid()));

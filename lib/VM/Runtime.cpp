@@ -573,9 +573,11 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
   {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Locals);
     acceptor.beginRootSection(RootAcceptor::Section::Locals);
-    for (Locals *locals = vmLocals; locals; locals = locals->prev)
+    for (Locals *locals = vmLocals; locals; locals = locals->prev) {
+      PinnedHermesValue *pinned = locals->locals();
       for (size_t i = 0, e = locals->numLocals; i < e; ++i)
-        acceptor.acceptNullable(locals->locals[i]);
+        acceptor.acceptNullable(pinned[i]);
+    }
     acceptor.endRootSection();
   }
 

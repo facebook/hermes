@@ -1678,8 +1678,10 @@ struct Locals {
   /// Pointer to the previous Locals struct.
   Locals *prev;
 
-  /// The trailing locals.
-  PinnedHermesValue locals[0];
+  /// Return a pointer to the locals array following this structure.
+  inline PinnedHermesValue *locals();
+  /// Return the offset of the locals array within Locals.
+  static inline constexpr size_t localsOffset();
 
 #ifndef NDEBUG
   /// In debug mode, assert to ensure the locals are properly registered.
@@ -1689,6 +1691,20 @@ struct Locals {
   }
 #endif
 };
+
+/// The layout local instances will have when instantiated.
+struct LocalsImpl : public Locals {
+  /// The trailing locals.
+  PinnedHermesValue _locals[1];
+};
+
+inline PinnedHermesValue *Locals::locals() {
+  return static_cast<LocalsImpl *>(this)->_locals;
+}
+
+inline constexpr size_t Locals::localsOffset() {
+  return offsetof(LocalsImpl, _locals);
+}
 
 /// RAII class to push/pop a Locals struct within a scope.
 class [[nodiscard]] LocalsRAII {
@@ -1701,13 +1717,13 @@ class [[nodiscard]] LocalsRAII {
       : runtime_(runtime), locals_(locals) {
     locals->prev = runtime_.vmLocals;
     locals->numLocals =
-        (sizeof(T) - offsetof(Locals, locals)) / sizeof(PinnedHermesValue);
+        (sizeof(T) - Locals::localsOffset()) / sizeof(PinnedHermesValue);
 #ifdef HERMES_SLOW_DEBUG
     // All pointer/symbol type PinnedValues in locals must be initialized/reset
     // to default. Otherwise, potential dangling pointers could be accessed by
     // the GC.
     for (size_t i = 0; i < locals_->numLocals; ++i) {
-      auto &phv = locals_->locals[i];
+      auto &phv = locals_->locals()[i];
       assert(
           (!phv.isPointer() || !phv.getPointer()) &&
           (!phv.isSymbol() || phv.getSymbol().isInvalid()));
