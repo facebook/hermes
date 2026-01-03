@@ -1,3 +1,8 @@
+## 0.33.0
+- Includes changes up to Prettier 3.7.4
+- Support Flow match instance patterns
+- Support Flow Records
+
 ## 0.32.0
 - Support opaque type with both lower and upper bounds with `super` and `extends` syntax.
 
