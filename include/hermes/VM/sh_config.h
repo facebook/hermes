@@ -28,7 +28,7 @@ typedef uint16_t char16_t;
 
 /// \macro SHERMES_NO_SANITIZE
 /// Disable a particular sanitizer for a function.
-#if __has_attribute(no_sanitize)
+#if defined(__has_attribute) && __has_attribute(no_sanitize)
 #define SHERMES_NO_SANITIZE(KIND) __attribute__((no_sanitize(KIND)))
 #else
 #define SHERMES_NO_SANITIZE(KIND)
