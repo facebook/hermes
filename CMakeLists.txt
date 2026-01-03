@@ -341,26 +341,29 @@ if (HERMES_STATIC_LINK)
 endif()
 
 # Check if the linker supports deleting unused sections and ICF.
-check_linker_flag(CXX "LINKER:--gc-sections" HAVE_GC_SECTIONS)
-# Only check for -dead_strip on Apple because some linkers may interpret it
-# as "-d -e ad_strip".
-if(APPLE)
-  check_linker_flag(CXX "LINKER:-dead_strip" HAVE_DEAD_STRIP)
-endif()
-check_linker_flag(CXX "LINKER:--icf=safe" HAVE_ICF)
+# These are GNU ld / lld flags, so skip them for MSVC.
+if(NOT MSVC)
+  check_linker_flag(CXX "LINKER:--gc-sections" HAVE_GC_SECTIONS)
+  # Only check for -dead_strip on Apple because some linkers may interpret it
+  # as "-d -e ad_strip".
+  if(APPLE)
+    check_linker_flag(CXX "LINKER:-dead_strip" HAVE_DEAD_STRIP)
+  endif()
+  check_linker_flag(CXX "LINKER:--icf=safe" HAVE_ICF)
 
-if(HAVE_GC_SECTIONS)
-  add_flag_if_supported("-ffunction-sections" FUNCTION_SECTIONS)
-  add_flag_if_supported("-fdata-sections" DATA_SECTIONS)
-  list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--gc-sections")
-elseif(HAVE_DEAD_STRIP)
-  # This is similar to the above, but for macOS.
-  list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:-dead_strip")
-endif()
+  if(HAVE_GC_SECTIONS)
+    add_flag_if_supported("-ffunction-sections" FUNCTION_SECTIONS)
+    add_flag_if_supported("-fdata-sections" DATA_SECTIONS)
+    list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--gc-sections")
+  elseif(HAVE_DEAD_STRIP)
+    # This is similar to the above, but for macOS.
+    list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:-dead_strip")
+  endif()
 
-if(HAVE_ICF)
-  add_flag_if_supported("-faddrsig" ADDRSIG)
-  list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--icf=safe")
+  if(HAVE_ICF)
+    add_flag_if_supported("-faddrsig" ADDRSIG)
+    list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:--icf=safe")
+  endif()
 endif()
 
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
