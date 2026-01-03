@@ -810,8 +810,10 @@ class BufferedStringPrimitive final : public StringPrimitive {
     return vmcast<ExternalStringPrimitive<T>>(concatBufferHV_);
   }
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
   static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
   static void _snapshotAddNodesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
 
   /// Reference to an ExternalStringPrimitive used as a concatenation buffer.
   /// Every concatenation appends to it and allocates a new
