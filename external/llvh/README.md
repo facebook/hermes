@@ -17,6 +17,10 @@ Fixed cxxabi.h detection for MSVC under Wine. MSVC doesn't have cxxabi.h, and
 `__has_include` is buggy under Wine (see https://bugs.winehq.org/show_bug.cgi?id=54130).
 Patch: `./utils/unittest/googletest/patches/gtest-port-msvc-cxxabi.patch`.
 
+Added `UniversalTersePrinter` specialization for `std::nullptr_t` to fix MSVC
+ambiguous `operator<<` error.
+Patch: `./utils/unittest/googletest/patches/gtest-printers-nullptr.patch`.
+
 
 ## LIT patches
 

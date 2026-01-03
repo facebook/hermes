@@ -840,6 +840,15 @@ class UniversalTersePrinter<wchar_t*> {
   }
 };
 
+// Specialization for std::nullptr_t to fix MSVC ambiguous operator<< error.
+template <>
+class UniversalTersePrinter<std::nullptr_t> {
+ public:
+  static void Print(std::nullptr_t, ::std::ostream* os) {
+    *os << "nullptr";
+  }
+};
+
 template <typename T>
 void UniversalTersePrint(const T& value, ::std::ostream* os) {
   UniversalTersePrinter<T>::Print(value, os);
