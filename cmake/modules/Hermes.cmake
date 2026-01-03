@@ -62,55 +62,43 @@ else (WIN32)
   endif (FUCHSIA OR UNIX)
 endif (WIN32)
 
-function(hermes_update_compile_flags name)
-  get_property(sources TARGET ${name} PROPERTY SOURCES)
-  if ("${sources}" MATCHES "\\.c(;|$)")
-    set(update_src_props ON)
-  endif ()
-
+# Set C++ exception handling and RTTI flags for a target.
+# Uses generator expressions to apply flags only to C++ source files,
+# so it works correctly even for targets with mixed C and C++ sources.
+function(hermes_update_cxx_flags name)
   set(flags "")
 
   if (HERMES_ENABLE_EH)
     if (GCC_COMPATIBLE)
-      set(flags "${flags} -fexceptions")
+      list(APPEND flags -fexceptions)
     elseif (MSVC)
-      set(flags "${flags} /EHsc")
+      list(APPEND flags /EHsc)
     endif ()
   else ()
     if (GCC_COMPATIBLE)
-      set(flags "${flags} -fno-exceptions")
+      list(APPEND flags -fno-exceptions)
     elseif (MSVC)
-      set(flags "${flags} /EHs-c-")
+      list(APPEND flags /EHs-c-)
     endif ()
   endif ()
 
   if (HERMES_ENABLE_RTTI)
     if (GCC_COMPATIBLE)
-      set(flags "${flags} -frtti")
+      list(APPEND flags -frtti)
     elseif (MSVC)
-      set(flags "${flags} /GR")
+      list(APPEND flags /GR)
     endif ()
   else ()
     if (GCC_COMPATIBLE)
-      set(flags "${flags} -fno-rtti")
+      list(APPEND flags -fno-rtti)
     elseif (MSVC)
-      set(flags "${flags} /GR-")
+      list(APPEND flags /GR-)
     endif ()
   endif ()
 
-  if (update_src_props)
-    foreach (fn ${sources})
-      get_filename_component(suf ${fn} EXT)
-      if ("${suf}" STREQUAL ".cpp")
-        set_property(SOURCE ${fn} APPEND_STRING PROPERTY
-          COMPILE_FLAGS "${flags}")
-      endif ()
-    endforeach ()
-  else ()
-    # Update target props, since all sources are C++.
-    set_property(TARGET ${name} APPEND_STRING PROPERTY
-      COMPILE_FLAGS "${flags}")
-  endif ()
+  # Use generator expression to apply flags only to C++ files.
+  target_compile_options(${name} PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:${flags}>")
 endfunction()
 
 # LINK_OBJLIBS links in object libraries created by Hermes
@@ -126,7 +114,7 @@ function(add_hermes_library name)
     endif()
     target_link_libraries(${name} ${ARG_LINK_OBJLIBS} ${ARG_LINK_LIBS})
     set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
-    hermes_update_compile_flags(${name})
+    hermes_update_cxx_flags(${name})
   else()
     # When asking to link an OBJECT library (the default), we create an OBJECT
     # library with a suffix _obj, which depends on all object libraries in
@@ -147,7 +135,7 @@ function(add_hermes_library name)
     endforeach(lib)
     target_link_libraries(${name}_obj ${ARG_LINK_LIBS})
     set_property(TARGET ${name}_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
-    hermes_update_compile_flags(${name}_obj)
+    hermes_update_cxx_flags(${name}_obj)
 
     add_library(${name} STATIC)
     target_link_libraries(${name} ${name}_obj ${ARG_LINK_OBJLIBS})
@@ -160,7 +148,7 @@ function(add_hermes_executable name)
   add_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
   target_link_libraries(${name} ${ARG_LINK_OBJLIBS} ${ARG_LINK_LIBS})
   target_link_options(${name} PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
-  hermes_update_compile_flags(${name})
+  hermes_update_cxx_flags(${name})
 endfunction(add_hermes_executable)
 
 function(add_hermes_tool name)
@@ -262,7 +250,7 @@ endif ()
 
 if (MSVC)
   # Remove CMake's default exception handling flags to avoid D9025 warnings
-  # when we set our own in hermes_update_compile_flags()
+  # when we set our own in hermes_update_cxx_flags()
   string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REPLACE "/EHsc" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
