@@ -184,8 +184,13 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
 endif()
 
 # Take dependencies on hermesPublic and hermesapi so their headers are exposed.
+# On Windows, link winmm for timeBeginPeriod/timeEndPeriod used by SamplingProfilerSampler.
+if(WIN32)
+  set(VM_PLATFORM_LIBS winmm)
+endif()
+
 add_hermes_library(hermesVMRuntime ${source_files}
         LINK_OBJLIBS hermesPublic hermesapi
-        LINK_LIBS ${JITLIBS})
+        LINK_LIBS ${JITLIBS} ${VM_PLATFORM_LIBS})
 
 add_subdirectory(Instrumentation)
