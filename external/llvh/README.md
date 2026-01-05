@@ -21,6 +21,11 @@ Added `UniversalTersePrinter` specialization for `std::nullptr_t` to fix MSVC
 ambiguous `operator<<` error.
 Patch: `./utils/unittest/googletest/patches/gtest-printers-nullptr.patch`.
 
+Added `UniversalTersePrinter` specialization for `char16_t*`. MSVC explicitly
+deletes `operator<<` for `char16_t*` in `<ostream>`. Uses proper C-style
+escaping consistent with gtest's `char*`/`wchar_t*` string printing.
+Patch: `./utils/unittest/googletest/patches/gtest-printers-char16.patch`.
+
 
 ## LIT patches
 

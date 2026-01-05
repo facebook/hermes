@@ -95,6 +95,7 @@
 #ifndef GTEST_INCLUDE_GTEST_GTEST_PRINTERS_H_
 #define GTEST_INCLUDE_GTEST_GTEST_PRINTERS_H_
 
+#include <iomanip>
 #include <ostream>  // NOLINT
 #include <sstream>
 #include <string>
@@ -837,6 +838,71 @@ class UniversalTersePrinter<wchar_t*> {
  public:
   static void Print(wchar_t* str, ::std::ostream* os) {
     UniversalTersePrinter<const wchar_t*>::Print(str, os);
+  }
+};
+
+// Specialization for char16_t* to fix MSVC deleted operator<< error.
+// MSVC explicitly deletes operator<< for char16_t* in <ostream>.
+// Uses escaping consistent with gtest's char/wchar_t string printing.
+template <>
+class UniversalTersePrinter<const char16_t*> {
+ public:
+  static void Print(const char16_t* str, ::std::ostream* os) {
+    if (str == NULL) {
+      *os << "NULL";
+    } else {
+      *os << "u\"";
+      bool is_previous_hex = false;
+      for (const char16_t* p = str; *p; ++p) {
+        char16_t c = *p;
+        // If previous char was \xNN and current is a hex digit, break string.
+        if (is_previous_hex &&
+            ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') ||
+             (c >= 'a' && c <= 'f'))) {
+          *os << "\" u\"";
+        }
+        is_previous_hex = false;
+        switch (c) {
+          case u'\0': *os << "\\0"; break;
+          case u'\\': *os << "\\\\"; break;
+          case u'"':  *os << "\\\""; break;
+          case u'\a': *os << "\\a"; break;
+          case u'\b': *os << "\\b"; break;
+          case u'\f': *os << "\\f"; break;
+          case u'\n': *os << "\\n"; break;
+          case u'\r': *os << "\\r"; break;
+          case u'\t': *os << "\\t"; break;
+          case u'\v': *os << "\\v"; break;
+          default:
+            if (c >= 0x20 && c <= 0x7E) {
+              *os << static_cast<char>(c);
+            } else if (c <= 0xFF) {
+              // Print as \xNN for values <= 0xFF
+              *os << "\\x"
+                  << std::hex << std::setfill('0') << std::setw(2)
+                  << static_cast<unsigned>(c)
+                  << std::dec;
+              is_previous_hex = true;
+            } else {
+              // Print as \uNNNN for values > 0xFF
+              *os << "\\u"
+                  << std::hex << std::setfill('0') << std::setw(4)
+                  << static_cast<unsigned>(c)
+                  << std::dec;
+            }
+            break;
+        }
+      }
+      *os << "\"";
+    }
+  }
+};
+
+template <>
+class UniversalTersePrinter<char16_t*> {
+ public:
+  static void Print(char16_t* str, ::std::ostream* os) {
+    UniversalTersePrinter<const char16_t*>::Print(str, os);
   }
 };
 
