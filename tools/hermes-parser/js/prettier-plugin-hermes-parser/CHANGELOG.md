@@ -1,4 +1,4 @@
-## 0.33.0
+## 0.33.1
 - Includes changes up to Prettier 3.7.4
 - Support Flow match instance patterns
 - Support Flow Records
