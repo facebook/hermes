@@ -1,0 +1,30 @@
+diff --git a/include/llvh/Support/raw_ostream.h b/include/llvh/Support/raw_ostream.h
+--- a/include/llvh/Support/raw_ostream.h
++++ b/include/llvh/Support/raw_ostream.h
+@@ -556,7 +556,7 @@ class buffer_ostream : public raw_svector_ostream {
+
+ public:
+   buffer_ostream(raw_ostream &OS) : raw_svector_ostream(Buffer), OS(OS) {}
+-  ~buffer_ostream() override { OS << str(); }
++  ~buffer_ostream() override;
+ };
+
+ } // end namespace llvh
+diff --git a/lib/Support/raw_ostream.cpp b/lib/Support/raw_ostream.cpp
+--- a/lib/Support/raw_ostream.cpp
++++ b/lib/Support/raw_ostream.cpp
+@@ -890,6 +890,14 @@ void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
+   memcpy(OS.data() + Offset, Ptr, Size);
+ }
+
++// The destructor is defined here to serve as a "key function" for the class,
++// ensuring that the vtable and typeinfo are emitted in this translation unit
++// (which is compiled with -fno-rtti) rather than in every TU that includes
++// the header. This prevents link errors when TUs compiled with -frtti
++// (such as unit tests) would otherwise emit typeinfo referencing the parent
++// class's typeinfo, which doesn't exist due to -fno-rtti.
++buffer_ostream::~buffer_ostream() { OS << str(); }
++
+ //===----------------------------------------------------------------------===//
+ //  raw_null_ostream
+ //===----------------------------------------------------------------------===//
