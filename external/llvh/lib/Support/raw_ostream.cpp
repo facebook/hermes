@@ -890,6 +890,14 @@ void raw_svector_ostream::pwrite_impl(const char *Ptr, size_t Size,
   memcpy(OS.data() + Offset, Ptr, Size);
 }
 
+// The destructor is defined here to serve as a "key function" for the class,
+// ensuring that the vtable and typeinfo are emitted in this translation unit
+// (which is compiled with -fno-rtti) rather than in every TU that includes
+// the header. This prevents link errors when TUs compiled with -frtti
+// (such as unit tests) would otherwise emit typeinfo referencing the parent
+// class's typeinfo, which doesn't exist due to -fno-rtti.
+buffer_ostream::~buffer_ostream() { OS << str(); }
+
 //===----------------------------------------------------------------------===//
 //  raw_null_ostream
 //===----------------------------------------------------------------------===//
