@@ -50,9 +50,13 @@ add_custom_command(
 )
 
 # Native compiled InternalJavaScript target
-add_hermes_library(hermesInternalUnit internal_unit.c)
-target_compile_options(hermesInternalUnit_obj PRIVATE -w)
-target_include_directories(hermesInternalUnit_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+# Always build it to prevent bitrot, except on MSVC where the generated C code
+# is not compatible with MSVC's C compiler.
+if(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OR NOT MSVC)
+  add_hermes_library(hermesInternalUnit internal_unit.c)
+  target_compile_options(hermesInternalUnit_obj PRIVATE -w)
+  target_include_directories(hermesInternalUnit_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 # Bytecode compiled InternalJavaScript target
 add_hermes_library(hermesInternalBytecode

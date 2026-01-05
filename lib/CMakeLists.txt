@@ -161,7 +161,6 @@ target_link_libraries(hermesvmlean_a PUBLIC
   hermesHBCBackendLean_obj
   hermesInst_obj
   hermesInstrumentation_obj
-  hermesInternalUnit_obj
   hermesInternalJavaScript_obj
   hermesPlatformUnicode_obj
   hermesPlatform_obj
