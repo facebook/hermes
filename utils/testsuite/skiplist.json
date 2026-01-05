@@ -653,6 +653,13 @@
         "V8 allows changing the parent of the global object, Hermes/JSC don't"
       ]
     },
+    {
+      "paths": [
+        "test262/test/language/comments/S7.4_A5.js",
+        "test262/test/language/comments/S7.4_A6.js"
+      ],
+      "comment": "T250551008: Failed on Github armv7 CI."
+    },
     "esprima/test_fixtures/expression/primary/keyword/invalid-escaped-if.js",
     "esprima/test_fixtures/ES6/identifier/estimated.js",
     "esprima/test_fixtures/ES6/identifier/weierstrass.js",
