@@ -223,6 +223,11 @@ endif()
 if(APPLE)
   target_link_libraries(hermesvm PRIVATE -force_load hermesvm_a)
   target_link_libraries(hermesvmlean PRIVATE -force_load hermesvmlean_a)
+elseif(MSVC)
+  target_link_libraries(hermesvm PRIVATE hermesvm_a)
+  target_link_options(hermesvm PRIVATE /WHOLEARCHIVE:hermesvm_a)
+  target_link_libraries(hermesvmlean PRIVATE hermesvmlean_a)
+  target_link_options(hermesvmlean PRIVATE /WHOLEARCHIVE:hermesvmlean_a)
 else()
   target_link_libraries(hermesvm PRIVATE
     -Wl,--whole-archive
