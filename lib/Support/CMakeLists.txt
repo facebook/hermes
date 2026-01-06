@@ -31,6 +31,7 @@ add_hermes_library(hermesSupport
         MD5.cpp
         OSCompatCommon.cpp
         OSCompatEmscripten.cpp
+        OSCompatWasi.cpp
         OSCompatPosix.cpp
         OSCompatWindows.cpp
         PageAccessTrackerPosix.cpp

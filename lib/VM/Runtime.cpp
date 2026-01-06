@@ -107,6 +107,7 @@ static const Predefined::Str fixedPropCacheNames[(size_t)PropCacheID::_COUNT] =
 
 } // namespace
 
+#ifdef HERMESVM_RUNTIME_ON_STACK
 // Minidumps include stack memory, not heap memory.  If we want to be
 // able to inspect the Runtime object in a minidump, we can do that by
 // arranging for it to be allocated on a stack.  No existing stack is
@@ -150,6 +151,7 @@ class Runtime::StackRuntime {
   Runtime *runtime_{nullptr};
   std::thread thread_;
 };
+#endif
 
 /* static */
 std::shared_ptr<Runtime> Runtime::create(const RuntimeConfig &runtimeConfig) {
