@@ -8,8 +8,3 @@ require('promise/setimmediate/finally');
 
 // expose Promise to global.
 globalThis.Promise = Promise;
-
-// register the JavaScript implemented `enable` function into
-// the Hermes' internal promise rejection tracker.
-var enableHook = require('promise/setimmediate/rejection-tracking').enable
-HermesInternal?.setPromiseRejectionTrackingHook?.(enableHook);
