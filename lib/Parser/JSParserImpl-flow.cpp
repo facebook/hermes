@@ -1857,9 +1857,22 @@ JSParserImpl::parseRecordDeclarationImplementsFlow() {
 }
 
 bool JSParserImpl::checkRecordExpressionFlow(ESTree::NodePtr expr) {
-  return check(TokenKind::l_brace) && !lexer_.isNewLineBeforeCurrentToken() &&
-      (llvh::isa<ESTree::IdentifierNode>(expr) ||
-       llvh::isa<ESTree::MemberExpressionNode>(expr));
+  if (!check(TokenKind::l_brace) || lexer_.isNewLineBeforeCurrentToken()) {
+    return false;
+  }
+  if (auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(expr)) {
+    // Record expression names cannot begin with lowercase 'a'-'z'.
+    llvh::StringRef name = ident->_name->str();
+    if (name.empty() || (name[0] >= 'a' && name[0] <= 'z')) {
+      return false;
+    }
+    return true;
+  }
+  if (llvh::isa<ESTree::MemberExpressionNode>(expr)) {
+    // Member expressions are always allowed.
+    return true;
+  }
+  return false;
 }
 
 Optional<ESTree::Node *> JSParserImpl::parseRecordExpressionFlow(
