@@ -80,8 +80,6 @@ describe('records', () => {
       expect(recordScope.type).toEqual('record');
       expect(recordScope.block.type).toEqual('RecordDeclaration');
       expect(recordScope.isStrict).toBe(true);
-      expect(recordScope.variables).toHaveLength(1);
-      expect(recordScope.variables[0].name).toEqual('Point');
     });
 
     test('record with type parameters', () => {
@@ -103,9 +101,8 @@ describe('records', () => {
       const recordScope = scopeManager.scopes[2];
       expect(recordScope.type).toEqual('record');
       expect(recordScope.block.type).toEqual('RecordDeclaration');
-      expect(recordScope.variables).toHaveLength(2);
-      expect(recordScope.variables[0].name).toEqual('Container');
-      expect(recordScope.variables[1].name).toEqual('T');
+      expect(recordScope.variables).toHaveLength(1);
+      expect(recordScope.variables[0].name).toEqual('T');
     });
 
     test('record with implements clause', () => {
@@ -204,12 +201,15 @@ describe('records', () => {
 
       expect(scopeManager.scopes).toHaveLength(3); // [global, module, Node]
 
+      const moduleScope = scopeManager.scopes[1];
+      expect(moduleScope.variables).toHaveLength(1);
+      expect(moduleScope.variables[0].name).toEqual('Node');
+
       const recordScope = scopeManager.scopes[2]; // Node
       expect(recordScope.type).toEqual(ScopeType.Record);
-      expect(recordScope.variables).toHaveLength(1);
-      expect(recordScope.variables[0].name).toEqual('Node');
       expect(recordScope.references).toHaveLength(1);
-      expect(recordScope.references[0].identifier.name).toEqual('Node');
+      expect(recordScope.references[0].identifier.name).toBe('Node');
+      expect(recordScope.references[0].resolved).toBe(moduleScope.variables[0]);
     });
 
     test('record definitions have correct isTypeDefinition and isVariableDefinition flags', () => {

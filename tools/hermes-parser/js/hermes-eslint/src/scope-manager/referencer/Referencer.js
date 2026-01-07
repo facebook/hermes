@@ -789,13 +789,6 @@ class Referencer extends Visitor {
 
     this.scopeManager.nestRecordScope(node);
 
-    // define the record name again inside the new scope
-    // references to the record should not resolve directly to the parent record
-    this.currentScope().defineIdentifier(
-      id,
-      new RecordNameDefinition(id, node),
-    );
-
     // visit the type param declarations
     this.visitType(node.typeParameters);
     // then the usages
