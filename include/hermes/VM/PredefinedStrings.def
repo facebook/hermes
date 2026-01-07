@@ -211,6 +211,7 @@ STR(with, "with")
 
 STR(ArrayBuffer, "ArrayBuffer")
 STR(byteLength, "byteLength")
+STR(detached, "detached")
 STR(isView, "isView")
 STR(buffer, "buffer")
 STR(byteOffset, "byteOffset")

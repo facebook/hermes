@@ -16,6 +16,7 @@ NATIVE_FUNCTION(arrayBufferConstructor)
 NATIVE_FUNCTION(arrayBufferIsView)
 
 NATIVE_FUNCTION(arrayBufferPrototypeByteLength)
+NATIVE_FUNCTION(arrayBufferPrototypeDetached)
 NATIVE_FUNCTION(arrayBufferPrototypeSlice)
 
 NATIVE_FUNCTION(arrayConstructor)

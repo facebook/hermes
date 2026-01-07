@@ -53,6 +53,15 @@ HermesValue createArrayBufferConstructor(Runtime &runtime) {
       nullptr,
       false,
       true);
+  defineAccessor(
+      runtime,
+      arrayBufferPrototype,
+      Predefined::getSymbolID(Predefined::detached),
+      nullptr,
+      arrayBufferPrototypeDetached,
+      nullptr,
+      false,
+      true);
   defineMethod(
       runtime,
       arrayBufferPrototype,
@@ -158,6 +167,16 @@ CallResult<HermesValue> arrayBufferPrototypeByteLength(
         "byteLength called on a non ArrayBuffer object");
   }
   return HermesValue::encodeTrustedNumberValue(self->size());
+}
+
+CallResult<HermesValue> arrayBufferPrototypeDetached(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  auto self = args.dyncastThis<JSArrayBuffer>();
+  if (!self) {
+    return runtime.raiseTypeError(
+        "detached called on a non ArrayBuffer object");
+  }
+  return HermesValue::encodeBoolValue(!self->attached());
 }
 
 CallResult<HermesValue> arrayBufferPrototypeSlice(void *, Runtime &runtime) {

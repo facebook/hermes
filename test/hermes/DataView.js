@@ -168,3 +168,12 @@ var ab = new ArrayBuffer(10);
 HermesInternal.detachArrayBuffer(ab);
 print(ab.byteLength);
 // CHECK-NEXT: 0
+
+print("Check ArrayBuffer.prototype.detached");
+// CHECK-LABEL: Check ArrayBuffer.prototype.detached
+var ab = new ArrayBuffer(10);
+print(ab.detached);
+// CHECK-NEXT: false
+HermesInternal.detachArrayBuffer(ab);
+print(ab.detached);
+// CHECK-NEXT: true
