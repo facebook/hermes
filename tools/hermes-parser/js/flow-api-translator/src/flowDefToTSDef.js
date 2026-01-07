@@ -755,6 +755,12 @@ const getTransforms = (
         return transform.TypeOperator(node);
       case 'ComponentTypeAnnotation':
         return transform.ComponentTypeAnnotation(node);
+      case 'NeverTypeAnnotation':
+        return transform.NeverTypeAnnotation(node);
+      case 'UndefinedTypeAnnotation':
+        return transform.UndefinedTypeAnnotation(node);
+      case 'UnknownTypeAnnotation':
+        return transform.UnknownTypeAnnotation(node);
       default:
         throw unexpectedTranslationError(node, `Unhandled type ${node.type}`);
     }
@@ -4102,6 +4108,30 @@ const getTransforms = (
     ): TSESTree.TSVoidKeyword {
       return {
         type: 'TSVoidKeyword',
+        loc: DUMMY_LOC,
+      };
+    },
+    NeverTypeAnnotation(
+      _node: FlowESTree.NeverTypeAnnotation,
+    ): TSESTree.TSNeverKeyword {
+      return {
+        type: 'TSNeverKeyword',
+        loc: DUMMY_LOC,
+      };
+    },
+    UndefinedTypeAnnotation(
+      _node: FlowESTree.UndefinedTypeAnnotation,
+    ): TSESTree.TSUndefinedKeyword {
+      return {
+        type: 'TSUndefinedKeyword',
+        loc: DUMMY_LOC,
+      };
+    },
+    UnknownTypeAnnotation(
+      _node: FlowESTree.UnknownTypeAnnotation,
+    ): TSESTree.TSUnknownKeyword {
+      return {
+        type: 'TSUnknownKeyword',
         loc: DUMMY_LOC,
       };
     },
