@@ -77,6 +77,23 @@
         "mjsunit/value-serializer.js"
       ],
       "comment": "Float16 Array, which is not supported by Hermes at the time this is updated, but may not be hard to support."
+    },
+    {
+      "paths": [
+        "test262/test/language/expressions/compound-assignment/S11.13.2_A4.6_T2.4.js",
+        "test262/test/built-ins/Function/S15.3.2.1_A3_T11.js",
+        "test262/test/built-ins/String/prototype/match/S15.5.4.10_A1_T7.js",
+        "test262/test/built-ins/String/prototype/match/S15.5.4.10_A1_T5.js",
+        "test262/test/built-ins/TypedArray/prototype/toLocaleString/calls-tostring-from-each-value.js",
+        "test262/test/language/statements/class/elements/async-gen-private-method/yield-spread-arr-single.js",
+        "test262/test/language/statements/class/elements/async-gen-private-method/yield-promise-reject-next.js",
+        "test262/test/built-ins/String/prototype/match/S15.5.4.10_A1_T8.js",
+        "test262/test/built-ins/TypedArray/prototype/toLocaleString/calls-tolocalestring-from-each-value.js",
+        "test262/test/built-ins/TypedArray/prototype/subarray/BigInt/tointeger-end.js",
+        "test262/test/built-ins/Function/S15.3.2.1_A3_T10.js",
+        "test262/test/built-ins/TypedArray/prototype/toLocaleString/calls-valueof-from-each-value.js"
+      ],
+      "comment": "These tests consume too much memory and time on Sandcastle."
     }
   ],
   "skip_list": [
