@@ -1,3 +1,14 @@
+## 0.33.3
+
+### `hermes-parser`
+- Do not parse record expression names starting with lowercase 'a'-'z'
+
+### `hermes-eslint`
+- Update support for record declarations
+
+### `flow-api-translator`
+- Support `never`, `undefined`, `unknown` type annotations
+
 ## 0.33.2
 
 ### `hermes-parser`
