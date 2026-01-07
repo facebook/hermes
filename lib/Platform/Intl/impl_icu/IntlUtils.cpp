@@ -6,6 +6,7 @@
  */
 
 #include "IntlUtils.h"
+#include <cstdint>
 
 namespace hermes {
 namespace platform_intl {

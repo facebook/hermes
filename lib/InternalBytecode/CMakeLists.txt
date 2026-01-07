@@ -10,7 +10,7 @@ if(IMPORT_HOST_COMPILERS)
   include(${IMPORT_HOST_COMPILERS_CMAKE})
   set(hermesc_EXE native-hermesc)
 else()
-  set(hermesc_EXE hermesc)
+  set(hermesc_EXE ${HERMES_TOOLS_OUTPUT_DIR}/hermesc)
 endif()
 
 add_hermes_library(hermesInternalBytecode
