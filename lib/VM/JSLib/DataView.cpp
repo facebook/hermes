@@ -37,6 +37,10 @@ CallResult<HermesValue> dataViewPrototypeByteLength(void *, Runtime &runtime) {
     return runtime.raiseTypeError(
         "DataView.prototype.byteLength called on a non DataView object");
   }
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError(
+        "DataView.prototype.byteLength called on a detached ArrayBuffer");
+  }
   return HermesValue::encodeTrustedNumberValue(self->byteLength());
 }
 
@@ -47,6 +51,10 @@ CallResult<HermesValue> dataViewPrototypeByteOffset(void *, Runtime &runtime) {
   if (!self) {
     return runtime.raiseTypeError(
         "DataView.prototype.byteOffset called on a non DataView object");
+  }
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError(
+        "DataView.prototype.byteOffset called on a detached ArrayBuffer");
   }
   return HermesValue::encodeTrustedNumberValue(self->byteOffset());
 }

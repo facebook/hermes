@@ -106,8 +106,8 @@ class JSArrayBuffer final : public JSObject {
   }
 
   /// Get the size of this buffer.
+  /// Returns 0 for detached buffers.
   size_type size() const {
-    assert(attached() && "Cannot get size from a detached ArrayBuffer");
     return size_;
   }
 
@@ -168,7 +168,8 @@ class JSArrayBuffer final : public JSObject {
   /// Untrack the internal buffer from GC snapshots
   void untrackInternalBuffer(GC &gc);
 
-  /// data_, size_, and external_ are only valid when attached_ is true.
+  /// data_ size_, and external_ are only valid when attached_ is true.
+  /// if detached_, data_ is nullptr, size_ is 0, and external_ is false.
   uint8_t *data_;
   size_type size_;
   bool external_;

@@ -210,6 +210,9 @@ void JSArrayBuffer::detach(Runtime &runtime, Handle<JSArrayBuffer> self) {
   }
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
+  self->data_ = nullptr;
+  self->size_ = 0;
+  self->external_ = false;
   self->attached_ = false;
 }
 
@@ -223,6 +226,9 @@ void JSArrayBuffer::ejectBufferUnsafe(
   } else {
     setExternalFinalizer(runtime, self, HandleRootOwner::getUndefinedValue());
   }
+  self->data_ = nullptr;
+  self->size_ = 0;
+  self->external_ = false;
   self->attached_ = false;
 }
 

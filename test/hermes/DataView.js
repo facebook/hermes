@@ -141,3 +141,30 @@ try {
     print(e.constructor === TypeError);
     // CHECK-NEXT: true
 }
+
+print("Check byteLength and byteOffset on detached ArrayBuffer");
+// CHECK-LABEL: Check byteLength and byteOffset on detached ArrayBuffer
+var buffer = new ArrayBuffer(16);
+var view = new DataView(buffer, 4, 8);
+HermesInternal.detachArrayBuffer(buffer);
+try {
+    view.byteLength;
+    print('Should not reach here');
+} catch (e) {
+    print('byteLength threw', e.constructor === TypeError);
+    // CHECK-NEXT: byteLength threw true
+}
+try {
+    view.byteOffset;
+    print('Should not reach here');
+} catch (e) {
+    print('byteOffset threw', e.constructor === TypeError);
+    // CHECK-NEXT: byteOffset threw true
+}
+
+print("Check ArrayBuffer byteLength on detached buffer");
+// CHECK-LABEL: Check ArrayBuffer byteLength on detached buffer
+var ab = new ArrayBuffer(10);
+HermesInternal.detachArrayBuffer(ab);
+print(ab.byteLength);
+// CHECK-NEXT: 0
