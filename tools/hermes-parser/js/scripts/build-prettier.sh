@@ -16,7 +16,7 @@ HERMES_PARSER_JS="$XPLAT/static_h/tools/hermes-parser/js"
 HERMES_PARSER_DIST="$HERMES_PARSER_JS/hermes-parser/dist"
 PRETTIER_DIR="$HERMES_PARSER_JS/prettier-hermes-flow-fork"
 PLUGIN_DIR="$HERMES_PARSER_JS/prettier-plugin-hermes-parser"
-PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.12.0.cjs"
+PRETTIER_YARN="$PRETTIER_DIR/.yarn/releases/yarn-4.9.2.cjs"
 GENERATED="generated"
 
 if [ ! -d "$HERMES_PARSER_DIST" ]; then

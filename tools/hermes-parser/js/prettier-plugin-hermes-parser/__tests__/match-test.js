@@ -232,6 +232,23 @@ describe('Match expression', () => {
     `);
   });
 
+  test('patterns: instance', async () => {
+    expect(
+      await format(`
+       const e = match (x) {
+         Foo {foo: 1, bar: 2} => 1,
+         Foo.Bar {'foo': 1} => 1,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+     "const e = match (x) {
+       Foo {foo: 1, bar: 2} => 1,
+       Foo.Bar {'foo': 1} => 1,
+     };
+     "
+    `);
+  });
+
   test('patterns: array', async () => {
     expect(
       await format(`

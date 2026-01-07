@@ -1,3 +1,6 @@
+## 0.33.2
+- Reverts base Prettier version back to 3.6.2, but keeps other changes
+
 ## 0.33.1
 - Includes changes up to Prettier 3.7.4
 - Support Flow match instance patterns
