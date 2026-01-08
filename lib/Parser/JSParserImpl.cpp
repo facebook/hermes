@@ -1876,6 +1876,60 @@ Optional<ESTree::Node *> JSParserImpl::parseForStatement(Param param) {
         endLoc,
         new (context_)
             ESTree::VariableDeclarationNode(declIdent, std::move(declList)));
+  } else if ((checkUnescaped(kw_.identUsing) &&
+              lexer_.isUsingFollowedByIdentifier(kw_))) {
+    // for ( using Identifier
+    //       ^
+    // NOTE: lookahead must not be 'using of', so we check that below.
+    SMLoc varStartLoc = advance().Start;
+
+    if (checkUnescaped(kw_.identOf)) {
+      // for (using of ....)
+      //            ^
+      // Not actually a 'using' declaration.
+      expr1 = setLocation(
+          varStartLoc,
+          getPrevTokenEndLoc(),
+          new (context_)
+              ESTree::IdentifierNode(kw_.identUsing, nullptr, false));
+    } else {
+      // for ( using [no LineTerminator here] ForBinding
+      //                                      ^
+      // ForBinding: BindingIdentifier
+      assert(
+          !lexer_.isNewLineBeforeCurrentToken() &&
+          "newline checked by isUsingFollowedByIdentifier");
+      auto optIdent = parseBindingIdentifier(param);
+      if (!optIdent)
+        return None;
+      ESTree::NodeList declList;
+      declList.push_back(**optIdent);
+
+      decl = setLocation(
+          varStartLoc,
+          getPrevTokenEndLoc(),
+          new (context_) ESTree::VariableDeclarationNode(
+              kw_.identUsing, std::move(declList)));
+    }
+  } else if (
+      checkUnescaped(kw_.identAwait) &&
+      lexer_.isAwaitUsingFollowedByIdentifier(kw_)) {
+    // await using Identifier
+    // ^
+    SMLoc varStartLoc = advance().Start;
+    advance();
+
+    auto optIdent = parseBindingIdentifier(param);
+    if (!optIdent)
+      return None;
+    ESTree::NodeList declList;
+    declList.push_back(**optIdent);
+
+    decl = setLocation(
+        varStartLoc,
+        getPrevTokenEndLoc(),
+        new (context_) ESTree::VariableDeclarationNode(
+            kw_.identAwaitUsing, std::move(declList)));
   } else {
     if (!check(TokenKind::semi)) {
       llvh::Optional<ESTree::Node *> optExpr1;
