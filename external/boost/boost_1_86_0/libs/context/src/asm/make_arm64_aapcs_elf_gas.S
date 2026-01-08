@@ -72,6 +72,10 @@ hoost_make_fcontext:
     adr  x1, finish
     str  x1, [x0, #0x98]
 
+    # clear FP slot to properly terminate frame pointer chain
+    # this allows stack unwinders (e.g. GWP-ASan) to safely walk the stack
+    str  xzr, [x0, #0x90]
+
     ret  x30 // return pointer to context-data (x0)
 
 finish:

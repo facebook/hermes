@@ -57,14 +57,19 @@ _hoost_make_fcontext:
     leaq  finish(%rip), %rcx
     /* save address of finish as return-address for context-function */
     /* will be entered after context-function returns */
-    movq  %rcx, 0x30(%rax)
+    /* NOTE: stored in R12 slot (not RBP) to avoid corrupting frame pointer chain */
+    movq  %rcx, 0x8(%rax)
+
+    /* clear RBP slot to properly terminate frame pointer chain */
+    /* this allows stack unwinders (e.g. GWP-ASan) to safely walk the stack */
+    movq  $0, 0x30(%rax)
 
     ret /* return pointer to context-data */
 
 trampoline:
     /* store return address on stack */
     /* fix stack alignment */
-    push %rbp
+    push %r12
     /* jump to context-function */
     jmp *%rbx
 
