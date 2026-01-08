@@ -836,6 +836,18 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *optLexDecl;
   }
 
+  if (checkUnescaped(kw_.identUsing) || (checkUnescaped(awaitIdent_))) {
+    // using Identifier
+    // ^
+    // await using Identifier
+    // ^
+    auto optUsingDecl = parseUsingDeclaration(param);
+    if (!optUsingDecl)
+      return None;
+
+    return *optUsingDecl;
+  }
+
 #if HERMES_PARSE_FLOW
   if (context_.getParseFlow()) {
     auto optDecl = parseFlowDeclaration();
@@ -1114,6 +1126,48 @@ JSParserImpl::parseLexicalDeclaration(Param param) {
   return res;
 }
 
+Optional<ESTree::VariableDeclarationNode *> JSParserImpl::parseUsingDeclaration(
+    Param param) {
+  assert(checkUnescaped(awaitIdent_) || checkUnescaped(kw_.identUsing));
+
+  // Determine if this is 'using' or 'await using'.
+  bool isAwaitUsing = checkUnescaped(awaitIdent_);
+  SMLoc startLoc = advance().Start;
+  UniqueString *kindIdent = kw_.identUsing;
+
+  if (isAwaitUsing) {
+    // await using Identifier
+    //       ^
+    assert(checkUnescaped(kw_.identUsing));
+    advance();
+    kindIdent = kw_.identAwaitUsing;
+  }
+
+  ESTree::NodeList declList;
+  if (!parseVariableDeclarationList(
+          param, declList, startLoc, VariableDeclAllowPattern::No))
+    return None;
+
+  if (!eatSemi())
+    return None;
+
+  // 'using' declarations require initializers.
+  for (const ESTree::Node &decl : declList) {
+    const auto *varDecl = llvh::cast<ESTree::VariableDeclaratorNode>(&decl);
+    if (!varDecl->_init) {
+      error(
+          varDecl->getSourceRange(),
+          "missing initializer in using declaration");
+    }
+  }
+
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_)
+          ESTree::VariableDeclarationNode(kindIdent, std::move(declList)));
+}
+
 Optional<ESTree::VariableDeclarationNode *>
 JSParserImpl::parseVariableStatement(Param param) {
   return parseLexicalDeclaration(ParamIn);
@@ -1134,18 +1188,19 @@ Optional<ESTree::PrivateNameNode *> JSParserImpl::parsePrivateName() {
       start, ident, new (context_) ESTree::PrivateNameNode(ident));
 }
 
-Optional<const char *> JSParserImpl::parseVariableDeclarationList(
+bool JSParserImpl::parseVariableDeclarationList(
     Param param,
     ESTree::NodeList &declList,
-    SMLoc declLoc) {
+    SMLoc declLoc,
+    VariableDeclAllowPattern allowPattern) {
   do {
-    auto optDecl = parseVariableDeclaration(param, declLoc);
+    auto optDecl = parseVariableDeclaration(param, declLoc, allowPattern);
     if (!optDecl)
-      return None;
+      return false;
     declList.push_back(*optDecl.getValue());
   } while (checkAndEat(TokenKind::comma));
 
-  return "OK";
+  return true;
 }
 
 void JSParserImpl::ensureDestructuringInitialized(
@@ -1163,11 +1218,15 @@ void JSParserImpl::ensureDestructuringInitialized(
 }
 
 Optional<ESTree::VariableDeclaratorNode *>
-JSParserImpl::parseVariableDeclaration(Param param, SMLoc declLoc) {
+JSParserImpl::parseVariableDeclaration(
+    Param param,
+    SMLoc declLoc,
+    VariableDeclAllowPattern allowPattern) {
   ESTree::Node *target;
   SMLoc startLoc = tok_->getStartLoc();
 
-  if (check(TokenKind::l_square, TokenKind::l_brace)) {
+  if (allowPattern == VariableDeclAllowPattern::Yes &&
+      check(TokenKind::l_square, TokenKind::l_brace)) {
     auto optPat = parseBindingPattern(param);
     if (!optPat)
       return None;

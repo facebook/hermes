@@ -9,6 +9,7 @@
 #define HERMES_PARSER_JSLEXER_H
 
 #include "hermes/AST/Config.h"
+#include "hermes/AST/Context.h"
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/SourceErrorManager.h"
@@ -586,6 +587,20 @@ class JSLexer {
   ///   based on the next token ('[', '{', or identifier).
   bool isLetFollowedByDeclStart();
 
+  /// Check whether the current 'using' starts a using declaration.
+  /// \pre the current token is 'using'.
+  /// Does not advance the current token.
+  /// \return true when 'using' is followed by an Identifier with no
+  ///   LineTerminator between them.
+  bool isUsingFollowedByIdentifier(const Keywords &kw);
+
+  /// Check whether the current 'await' starts an 'await using' declaration.
+  /// \pre the current token is 'await'.
+  /// Does not advance the current token.
+  /// \return true when 'await using Identifier' follows with no LineTerminator
+  ///   between tokens.
+  bool isAwaitUsingFollowedByIdentifier(const Keywords &kw);
+
   /// Force an EOF at the next token.
   void forceEOF() {
     curCharPtr_ = bufferEnd_;
@@ -642,6 +657,30 @@ class JSLexer {
   /// \return the kind of next token if available, otherwise return None.
   template <bool RequireNoNewLine = true>
   OptValue<TokenKind> lookahead1(OptValue<TokenKind> expectedToken);
+
+  /// Skip over an expected identifier and return the kind of the next token.
+  /// Does not report any error messages during lookahead.
+  /// This is used for two-token lookahead, e.g., to determine whether we're in
+  ///   await using Identifier
+  ///   ^
+  /// where we need to look past 'using' to see if an identifier follows.
+  ///
+  /// If we start in this state:
+  ///   curTok skipTok resultTok
+  ///   ^
+  ///
+  /// Then we'll skip over skipTok if it's an identifier that matches \p
+  /// expectedIdent and we'll return the type of resultTok.
+  ///
+  /// \pre curTok is an identifier or reserved word.
+  /// \param RequireNoNewLine if true, then return llvh::None when there is a
+  ///   newline before either token seen by lookahead.
+  /// \param expectedIdent the expected identifier for skipTok. If the
+  ///   first token doesn't match, returns None.
+  /// \return the kind of resultTok if available, otherwise return None.
+  ///   Always restores the lexer state (never keeps the lookahead tokens).
+  template <bool RequireNoNewLine = true>
+  OptValue<TokenKind> lookahead2(UniqueString *expectedIdent);
 
   UniqueString *getIdentifier(llvh::StringRef name) {
     return strTab_.getString(name);
@@ -792,6 +831,13 @@ class JSLexer {
   }
 
  private:
+  /// Skip over whitespace that doesn't need to modify any flags in the JSLexer.
+  /// Does not skip over newlines due to newLineBeforeCurrentToken_.
+  /// Does not skip over comments.
+  /// Used to avoid lookahead.
+  /// \return the character at curCharPtr_ at the end.
+  char optimisticSkipWhitespace();
+
   /// Initialize the storage with the characters between \p begin and \p end.
   inline void initStorageWith(const char *begin, const char *end);
 

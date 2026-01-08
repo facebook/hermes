@@ -584,6 +584,15 @@ class JSParserImpl {
       return lexer_.isLetFollowedByDeclStart();
     }
 
+    if (checkUnescaped(kw_.identUsing)) {
+      return lexer_.isUsingFollowedByIdentifier(kw_);
+    }
+
+    if (paramAwait_ && checkUnescaped(awaitIdent_) &&
+        lexer_.isAwaitUsingFollowedByIdentifier(kw_)) {
+      return true;
+    }
+
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow()) {
       if (context_.getParseFlowComponentSyntax() &&
@@ -803,6 +812,10 @@ class JSParserImpl {
   /// \param param [In, Yield]
   Optional<ESTree::VariableDeclarationNode *> parseLexicalDeclaration(
       Param param);
+  /// Parse a 'using' or 'await using' declaration.
+  /// \param param [In, Yield]
+  Optional<ESTree::VariableDeclarationNode *> parseUsingDeclaration(
+      Param param);
   /// Parse a VariableStatement or LexicalDeclaration.
   /// \param param [Yield]
   Optional<ESTree::VariableDeclarationNode *> parseVariableStatement(
@@ -811,22 +824,27 @@ class JSParserImpl {
   /// Parse a PrivateName starting with the '#'.
   Optional<ESTree::PrivateNameNode *> parsePrivateName();
 
-  /// Parse a list of variable declarations. \returns a dummy value but the
-  /// optionality still encodes the error condition.
+  /// Whether to allow binding patterns in the variable declaration.
+  enum class VariableDeclAllowPattern { No, Yes };
+
+  /// Parse a list of variable declarations.
+  /// \return true on success, false on error.
   /// \param param [In, Yield]
   /// \param declLoc is the location of the `rw_var` token and is used for error
   /// display.
-  Optional<const char *> parseVariableDeclarationList(
+  bool parseVariableDeclarationList(
       Param param,
       ESTree::NodeList &declList,
-      SMLoc declLoc);
+      SMLoc declLoc,
+      VariableDeclAllowPattern allowPattern = VariableDeclAllowPattern::Yes);
 
   /// \param param [In, Yield]
   /// \param declLoc is the location of the let/var/const token and is used for
   /// error display.
   Optional<ESTree::VariableDeclaratorNode *> parseVariableDeclaration(
       Param param,
-      SMLoc declLoc);
+      SMLoc declLoc,
+      VariableDeclAllowPattern allowPattern);
 
   /// Ensure that all destructuring declarations in the specified declaration
   /// node are initialized and report errors if they are not.

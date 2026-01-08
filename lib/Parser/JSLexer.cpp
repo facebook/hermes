@@ -113,32 +113,27 @@ void JSLexer::initializeReservedIdentifiers() {
 #include "hermes/Parser/TokenKinds.def"
 }
 
+char JSLexer::optimisticSkipWhitespace() {
+  while (char cur = *curCharPtr_) {
+    switch (cur) {
+      case ' ':
+      case '\t':
+      case '\v':
+      case '\f':
+        ++curCharPtr_;
+        continue;
+
+      default:
+        return cur;
+    }
+  }
+  return '\0';
+}
+
 bool JSLexer::isLetFollowedByDeclStart() {
   assert(
       token_.getKind() == TokenKind::identifier &&
       token_.getIdentifier()->str() == "let");
-
-  /// Skip over whitespace that doesn't need to modify any flags in the JSLexer.
-  /// Does not skip over newlines due to newLineBeforeCurrentToken_.
-  /// Does not skip over comments.
-  /// Used to avoid lookahead.
-  /// \return the character at curCharPtr_ at the end.
-  auto optimisticSkipWhitespace = [this]() -> char {
-    while (char cur = *curCharPtr_) {
-      switch (cur) {
-        case ' ':
-        case '\t':
-        case '\v':
-        case '\f':
-          ++curCharPtr_;
-          continue;
-
-        default:
-          return cur;
-      }
-    }
-    return '\0';
-  };
 
   const char curChar = optimisticSkipWhitespace();
 
@@ -177,6 +172,83 @@ bool JSLexer::isLetFollowedByDeclStart() {
       (*nextTokenKind == TokenKind::identifier ||
        *nextTokenKind == TokenKind::l_brace ||
        *nextTokenKind == TokenKind::l_square);
+}
+
+bool JSLexer::isUsingFollowedByIdentifier(const Keywords &kw) {
+  assert(
+      token_.getKind() == TokenKind::identifier &&
+      token_.getIdentifier() == kw.identUsing);
+  // Checking for:
+  // using [no LineTerminator here] Identifier
+  //      ^
+
+  const char *savedPtr = curCharPtr_;
+  char curChar = optimisticSkipWhitespace();
+  curCharPtr_ = savedPtr;
+
+  // Check for newline - if present, this is not a using declaration.
+  if (curChar == '\r' || curChar == '\n') {
+    return false;
+  }
+
+  // Fast path: next char starts an ASCII identifier.
+  if (isASCIIIdentifierStart(curChar)) {
+    return true;
+  }
+
+  // Slow path: use lookahead with RequireNoNewLine=true.
+  OptValue<TokenKind> nextTokenKind =
+      lookahead1</* RequireNoNewLine */ true>(llvh::None);
+  return nextTokenKind.hasValue() && *nextTokenKind == TokenKind::identifier;
+}
+
+bool JSLexer::isAwaitUsingFollowedByIdentifier(const Keywords &kw) {
+  assert(
+      token_.getKind() == TokenKind::identifier &&
+      token_.getIdentifier() == kw.identAwait);
+  // Checking for:
+  // await [no LineTerminator here] using [no LineTerminator here] Identifier
+  //      ^
+
+  const char *savedPtr = curCharPtr_;
+
+  // Skip whitespace after 'await' (no newlines allowed).
+  char curChar = optimisticSkipWhitespace();
+
+  // Check for newline.
+  if (curChar == '\r' || curChar == '\n') {
+    curCharPtr_ = savedPtr;
+    return false;
+  }
+
+  // Fast path: check if next chars are 'using' followed by whitespace
+  // and an ASCII identifier.
+  // Note that we can just check character by character because the buffer is
+  // null-terminated.
+  if (curChar == 'u' && curCharPtr_[1] == 's' && curCharPtr_[2] == 'i' &&
+      curCharPtr_[3] == 'n' && curCharPtr_[4] == 'g' &&
+      !isASCIIIdentifierContinue(curCharPtr_[5])) {
+    curCharPtr_ += 5;
+    curChar = optimisticSkipWhitespace();
+
+    curCharPtr_ = savedPtr;
+
+    // Check for newline between 'using' and identifier.
+    if (curChar == '\r' || curChar == '\n') {
+      return false;
+    }
+
+    if (isASCIIIdentifierStart(curChar)) {
+      return true;
+    }
+  }
+
+  // Slow path.
+  // There might be comments, newlines, UTF-8 identifiers, etc.
+  curCharPtr_ = savedPtr;
+  OptValue<TokenKind> optNext =
+      lookahead2</* RequireNoNewLine */ true>(kw.identUsing);
+  return optNext.hasValue() && *optNext == TokenKind::identifier;
 }
 
 const Token *JSLexer::advance(GrammarContext grammarContext) {
@@ -1027,6 +1099,65 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
 
 template OptValue<TokenKind> JSLexer::lookahead1<true>(OptValue<TokenKind>);
 template OptValue<TokenKind> JSLexer::lookahead1<false>(OptValue<TokenKind>);
+
+template <bool RequireNoNewLine>
+OptValue<TokenKind> JSLexer::lookahead2(UniqueString *expectedIdent) {
+  assert(
+      (token_.getKind() == TokenKind::identifier || token_.isResWord()) &&
+      "unsupported current token");
+  UniqueString *savedIdent = token_.getResWordOrIdentifier();
+  TokenKind savedKind = token_.getKind();
+  SMLoc start = token_.getStartLoc();
+  SMLoc end = token_.getEndLoc();
+  const char *cur = curCharPtr_;
+  SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
+
+  // Remove any comments that were stored during the lookahead.
+  auto savedCommentStorageSize = commentStorage_.size();
+  auto savedTokenStorageSize = storeTokens_ ? tokenStorage_.size() : 0;
+  auto restoreScope = llvh::make_scope_exit([&] {
+    if (storeComments_)
+      commentStorage_.erase(
+          commentStorage_.begin() + savedCommentStorageSize,
+          commentStorage_.end());
+    // Undo the storage for the tokens we advanced to.
+    if (LLVM_UNLIKELY(storeTokens_)) {
+      tokenStorage_.erase(
+          tokenStorage_.begin() + savedTokenStorageSize, tokenStorage_.end());
+    }
+    // Restore the original token.
+    token_.setStart(start.getPointer());
+    token_.setEnd(end.getPointer());
+    if (savedKind == TokenKind::identifier) {
+      token_.setIdentifier(savedIdent);
+    } else {
+      token_.setResWord(savedKind, savedIdent);
+    }
+    seek(SMLoc::getFromPointer(cur));
+  });
+
+  advance();
+  if (RequireNoNewLine && isNewLineBeforeCurrentToken()) {
+    return llvh::None;
+  }
+
+  // If the next token isn't the expected identifier, bail.
+  if (token_.getKind() != TokenKind::identifier ||
+      token_.getIdentifier() != expectedIdent) {
+    return llvh::None;
+  }
+
+  // Advance to the token we're looking ahead to.
+  advance();
+  if (RequireNoNewLine && isNewLineBeforeCurrentToken()) {
+    return llvh::None;
+  }
+
+  return token_.getKind();
+}
+
+template OptValue<TokenKind> JSLexer::lookahead2<true>(UniqueString *);
+template OptValue<TokenKind> JSLexer::lookahead2<false>(UniqueString *);
 
 uint32_t JSLexer::consumeUnicodeEscape() {
   assert(*curCharPtr_ == '\\');

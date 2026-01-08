@@ -322,6 +322,14 @@ void SemanticResolver::visit(
 }
 
 void SemanticResolver::visit(ESTree::VariableDeclarationNode *node) {
+  if (compile_ &&
+      (node->_kind == kw_.identUsing || node->_kind == kw_.identAwaitUsing)) {
+    // 'using' declarations are not supported in compiled code.
+    sm_.error(
+        node->getSourceRange(), "using declarations are not yet supported");
+    return;
+  }
+
   visitESTreeChildren(*this, node);
 
   // ES5Catch, var
