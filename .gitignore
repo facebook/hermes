@@ -38,3 +38,6 @@ cmake-build*/
 
 # clangd cache
 .cache/
+
+# Compilation database
+compile_commands.json
