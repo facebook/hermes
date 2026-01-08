@@ -26,11 +26,11 @@ jobs:
           ]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup xcode
         uses: ./.github/actions/setup-xcode
       - name: Restore HermesC Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermesc-apple
           path: ./build_host_hermesc
@@ -80,7 +80,7 @@ jobs:
         run: |
           tar -czv -f build_${{ matrix.slice }}_${{ matrix.flavor }}.tar.gz build_${{ matrix.slice }}_${{ matrix.flavor }}
       - name: Upload Artifact for Slice (${{ matrix.slice }}, ${{ matrix.flavor }})
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: slice-${{ matrix.slice }}-${{ matrix.flavor }}
           path: ./build_${{ matrix.slice }}_${{ matrix.flavor }}.tar.gz
