@@ -8,7 +8,7 @@ set -xe -o pipefail
 
 HG_ROOT=$(hg root)
 XPLAT="$HG_ROOT/xplat"
-NODE="$XPLAT/third-party/node/v24.8.0/node"
+NODE="$XPLAT/third-party/node/bin/node"
 XPLAT_YARN="$XPLAT/third-party/yarn/yarn"
 
 REPO_URI="https://github.com/pieterv/prettier.git"
