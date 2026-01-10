@@ -223,7 +223,7 @@ bool mergeNewStores(Function *F) {
 
   // For each basic block, collect an ordered list of stores into
   // AllocObjectInsts that should be considered for lowering into a buffer.
-  llvh::DenseMap<AllocObjectLiteralInst *, BlockUserMap> allocUsers;
+  llvh::MapVector<AllocObjectLiteralInst *, BlockUserMap> allocUsers;
   for (BasicBlock &BB : *F) {
     for (Instruction &I : BB) {
       // Skip Phis for now, we will revisit them later.
