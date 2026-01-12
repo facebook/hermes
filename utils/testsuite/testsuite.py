@@ -969,8 +969,7 @@ def get_arg_parser():
         dest="match",
         default=None,
         type=str,
-        help="Optional. Substring that the test filename must "
-        "contain in order to run.",
+        help="Optional. Substring that the test filename must contain in order to run.",
     )
     parser.add_argument(
         "-s",

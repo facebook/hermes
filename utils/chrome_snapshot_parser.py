@@ -105,9 +105,9 @@ def main():
             trace_node, parent_id = trace_node_stack.pop()
             if not parent_id:
                 # Root node should be the only one at the top level.
-                assert len(trace_node) == len(
-                    TRACE_NODE_FIELDS
-                ), "More than one node at the top of the tree"
+                assert len(trace_node) == len(TRACE_NODE_FIELDS), (
+                    "More than one node at the top of the tree"
+                )
             for child in chunk(trace_node, len(TRACE_NODE_FIELDS)):
                 # Convert function_info_index into the actual function_info.
                 child[1] = trace_functions[child[1]]
@@ -126,9 +126,9 @@ def main():
         for _ in range(edge_count):
             raw_edge_type, name_or_index, to_node = next(curr_edge)
             real_type = EDGE_TYPES[raw_edge_type]
-            assert (
-                to_node % len(NODE_FIELDS) == 0
-            ), "to_node in an edge isn't divisible by {}".format(len(NODE_FIELDS))
+            assert to_node % len(NODE_FIELDS) == 0, (
+                "to_node in an edge isn't divisible by {}".format(len(NODE_FIELDS))
+            )
             edges.append(
                 {
                     "type": real_type,
