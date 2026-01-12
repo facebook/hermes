@@ -611,12 +611,12 @@ class UnicodeProperties:
     def log_metrics(self):
         print(
             f"""
-string_offset_bits: {self._metrics['string_offset'].bit_length()}
-string_size_bits: {self._metrics['string_size'].bit_length()}
-range_pool_offset_bits: {self._metrics['range_pool_offset'].bit_length()}
-range_pool_size_bits: {self._metrics['range_pool_size'].bit_length()}
-range_array_pool_offset_bits: {self._metrics['range_array_pool_offset'].bit_length()}
-range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()}
+string_offset_bits: {self._metrics["string_offset"].bit_length()}
+string_size_bits: {self._metrics["string_size"].bit_length()}
+range_pool_offset_bits: {self._metrics["range_pool_offset"].bit_length()}
+range_pool_size_bits: {self._metrics["range_pool_size"].bit_length()}
+range_array_pool_offset_bits: {self._metrics["range_array_pool_offset"].bit_length()}
+range_array_pool_size_bits: {self._metrics["range_array_pool_size"].bit_length()}
               """,
             file=sys.stderr,
         )
@@ -796,9 +796,9 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             fields = split_fields(line)
             canonical_name = fields[1]
             if canonical_name in binary_property_aliases:
-                assert (
-                    len(binary_property_aliases[canonical_name]) == 0
-                ), "Duplicate canonical name"
+                assert len(binary_property_aliases[canonical_name]) == 0, (
+                    "Duplicate canonical name"
+                )
                 binary_property_aliases[canonical_name] = list(set(fields))
 
         is_known_name_or_alias = (
@@ -1043,9 +1043,9 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                     yield f"// {cat}: {name}"
                 if ranges is not None:
                     size = len(ranges) if range_size is None else range_size
-                    assert (
-                        offset + size < 0xFFFF
-                    ), "Range array offset+size exceeds uint16_t"
+                    assert offset + size < 0xFFFF, (
+                        "Range array offset+size exceeds uint16_t"
+                    )
                     self._metrics["range_pool_offset"] = max(
                         self._metrics["range_pool_offset"], offset
                     )
@@ -1090,9 +1090,9 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             for name, (offset, size) in pool.range_array_pool():
                 if self.INCLUDE_COMMENTS:
                     yield f'// "{name}"'
-                assert (
-                    offset + size < 0xFFFF
-                ), "Range array map offset+size exceeds uint16_t"
+                assert offset + size < 0xFFFF, (
+                    "Range array map offset+size exceeds uint16_t"
+                )
                 self._metrics["range_array_pool_offset"] = max(
                     self._metrics["range_array_pool_offset"], offset
                 )

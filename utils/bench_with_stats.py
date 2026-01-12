@@ -227,7 +227,7 @@ def print_per_benchmark_table(benchmark_result, display_format, confidence):
     # Determine column widths
     max_engine_len = (
         max(
-            len(f"engine{e['index']+1} {'(base)' if e['index'] == 0 else ''}")
+            len(f"engine{e['index'] + 1} {'(base)' if e['index'] == 0 else ''}")
             for e in engines
         )
         + 2
@@ -251,7 +251,7 @@ def print_per_benchmark_table(benchmark_result, display_format, confidence):
     # Data rows
     for engine in engines:
         # Engine name
-        engine_name = f"engine{engine['index']+1}"
+        engine_name = f"engine{engine['index'] + 1}"
         if engine["index"] == 0:
             engine_name += " (base)"
         engine_name = engine_name.ljust(max_engine_len)
@@ -354,7 +354,7 @@ def print_compact_summary_table(
     # Column headers
     header_row = f"| {'Benchmark'.ljust(max_name_len)} "
     for i in range(1, num_engines):
-        header_row += f"| {f'engine{i+1}/1'.rjust(comp_width)} "
+        header_row += f"| {f'engine{i + 1}/1'.rjust(comp_width)} "
     header_row += "|"
     print(header_row)
     print(header)
@@ -416,7 +416,7 @@ def export_to_csv(filename, all_results, engine_commands):
         # Prepare header
         fieldnames = ["Benchmark"]
         for i, _ in enumerate(engine_commands):
-            engine_name = f"Engine{i+1}"
+            engine_name = f"Engine{i + 1}"
             fieldnames.append(engine_name)
 
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -428,11 +428,11 @@ def export_to_csv(filename, all_results, engine_commands):
 
             # Initialize all engine columns to ensure consistent CSV
             for i in range(len(engine_commands)):
-                row[f"Engine{i+1}"] = ""
+                row[f"Engine{i + 1}"] = ""
 
             for engine in result["engines"]:
                 engine_idx = engine["index"]
-                engine_name = f"Engine{engine_idx+1}"
+                engine_name = f"Engine{engine_idx + 1}"
 
                 # Engine 1 is always 1.0, others show their ratio
                 if engine_idx == 0:
@@ -597,7 +597,7 @@ if __name__ == "__main__":
         print(f"NEW command: {' '.join(engine_commands[1])}")
     else:
         for i, cmd in enumerate(engine_commands):
-            print(f"Engine {i+1} command: {' '.join(cmd)}")
+            print(f"Engine {i + 1} command: {' '.join(cmd)}")
     print()
 
     # Store summary results here
@@ -621,7 +621,7 @@ if __name__ == "__main__":
                 else:
                     engine_name = f"Engine {engine_idx + 1}"
 
-                print(f"{engine_name} {filename} (Run {run_idx+1}/{args.runs})")
+                print(f"{engine_name} {filename} (Run {run_idx + 1}/{args.runs})")
                 result = run_command(engine_cmd, filename)
                 print(result.stdout, end="")
                 score = find_first_score(result.stdout)
@@ -630,7 +630,7 @@ if __name__ == "__main__":
                     engine_scores[engine_idx].append(score)
                 else:
                     print(
-                        f"Warning: Score not found for {engine_name} {filename} run {run_idx+1}/{args.runs}."
+                        f"Warning: Score not found for {engine_name} {filename} run {run_idx + 1}/{args.runs}."
                     )
 
             print("-" * 20)  # Separator between runs

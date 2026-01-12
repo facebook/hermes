@@ -9,7 +9,6 @@ from enum import auto, Flag
 from typing import List
 
 from .external.parse_test262 import parseTestRecord
-
 from .typing_defs import OptExpectedFailure, PathT
 
 
