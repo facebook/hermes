@@ -8,12 +8,12 @@
 // RUN: %hermesc -O0 -dump-ast %s | %FileCheck %s --check-prefix=CHKAST
 // RUN: %hermesc -O0 -dump-ir %s | %FileCheck %s --check-prefix=CHKIR
 
-// This test ensures that a very large numeric literal can be parsed as
-// Infinity.
+// This test ensures that very large/small numeric literals are handled correctly.
 // It is only testing the parser, so it should use dump-ast; however, Infinity
 // is not serializable in JSON, so this test needs to happen at the IR level.
 
 55e55555555555555555555555555555555555;
+1e-1000;
 
 //CHKAST:{
 //CHKAST-NEXT:  "type": "Program",
@@ -24,6 +24,15 @@
 //CHKAST-NEXT:        "type": "NumericLiteral",
 //CHKAST-NEXT:        "value": null,
 //CHKAST-NEXT:        "raw": "55e55555555555555555555555555555555555"
+//CHKAST-NEXT:      },
+//CHKAST-NEXT:      "directive": null
+//CHKAST-NEXT:    },
+//CHKAST-NEXT:    {
+//CHKAST-NEXT:      "type": "ExpressionStatement",
+//CHKAST-NEXT:      "expression": {
+//CHKAST-NEXT:        "type": "NumericLiteral",
+//CHKAST-NEXT:        "value": 0,
+//CHKAST-NEXT:        "raw": "1e-1000"
 //CHKAST-NEXT:      },
 //CHKAST-NEXT:      "directive": null
 //CHKAST-NEXT:    }
