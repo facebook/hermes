@@ -298,6 +298,12 @@ describe('flowToFlowDef', () => {
         `declare export function foo(bar: string, ...baz: Array<number>): void;`,
       );
     });
+    it('with destructured rest params', async () => {
+      await expectTranslate(
+        `export function foo(...{bar}: {bar: string}): void {}`,
+        `declare export function foo(...$$PARAM_0$$: {bar: string}): void;`,
+      );
+    });
     it('with default params', async () => {
       await expectTranslate(
         `export function foo(bar: string = 'hello'): void {}`,

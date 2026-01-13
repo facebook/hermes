@@ -1623,7 +1623,10 @@ function convertBindingNameToFunctionTypeParam(
   index: number,
   isAssignment: boolean,
 ): TranslatedResult<FunctionTypeParam> {
-  const name = pat.type === 'Identifier' ? pat.name : `$$PARAM_${index}$$`;
+  const name =
+    pat.type === 'Identifier' && pat.name != null
+      ? pat.name
+      : `$$PARAM_${index}$$`;
   const [resultParamTypeAnnotation, paramDeps] = convertTypeAnnotation(
     pat.typeAnnotation,
     pat,
@@ -1631,7 +1634,7 @@ function convertBindingNameToFunctionTypeParam(
   );
   return [
     t.FunctionTypeParam({
-      name: name != null ? t.Identifier({name}) : null,
+      name: t.Identifier({name}),
       typeAnnotation: resultParamTypeAnnotation,
       optional:
         isAssignment || (pat.type === 'Identifier' ? pat.optional : false),
