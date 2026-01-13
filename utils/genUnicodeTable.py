@@ -271,7 +271,7 @@ def run_property_select(unicode_data_lines, args):
     print_template(
         """
 // static constexpr uint32_t ${name}_SIZE = $interval_count;
-static constexpr UnicodeRange ${name}[] = {
+static constexpr std::array<UnicodeRange, ${interval_count}> ${name} = {
 ${intervals}
 };
     """,
