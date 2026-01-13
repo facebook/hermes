@@ -843,13 +843,15 @@ bool BytecodeModuleGenerator::generateLazyFunctions(
           [this](llvh::StringRef str) { return getStringID(str); },
           options_.optimizationEnabled));
 
-  if (!generateAddedFunctions())
-    return false;
+  bool result = generateAddedFunctions();
 
+  // Any of the previous steps may have modified existing tables,
+  // so make sure we update the provider and clean up even if errors occurred
+  // when generateAddedFunctions was called.
   bm_.getBCProviderFromSrc()->setBytecodeModuleRefs();
   M_->resetForMoreCompilation();
 
-  return true;
+  return result;
 }
 
 bool BytecodeModuleGenerator::generateForEval(Function *entryPoint) && {
