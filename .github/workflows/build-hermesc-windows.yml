@@ -14,7 +14,7 @@ jobs:
       CMAKE_DIR: 'C:\Program Files\CMake\bin'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up workspace
         shell: powershell
         run: |
@@ -64,7 +64,7 @@ jobs:
           # Include Windows runtime dependencies
           Copy-Item -Path "$Env:HERMES_WS_DIR\deps\*" -Destination "$Env:HERMES_WS_DIR\win64-bin"
       - name: Upload windows artifacts
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: hermes-win64-bin
           path: C:\tmp\hermes\win64-bin\
