@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git@github.com:facebook/hermes.git"
+    "url": "https://github.com/facebook/hermes.git"
   },
   "dependencies": {
     "@babel/code-frame": "^7.16.0",
