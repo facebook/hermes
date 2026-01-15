@@ -117,6 +117,11 @@ class SkippedPathsOrFeatures(object):
             None otherwise.
         """
 
+        # If it's full path of a test file, normalize the path to POSIX style
+        # since we use that style in skiplist.json.
+        if os.path.exists(test_or_feature):
+            test_or_feature = Path(test_or_feature).as_posix()
+
         for cat in cats:
             if self.should_skip_cat(test_or_feature, cat):
                 msg = f"SKIP: skipped by {cat.name} ({test_or_feature})"
