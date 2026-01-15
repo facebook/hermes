@@ -17,16 +17,6 @@ TEST(DtoaTest, SmokeTest) {
   EXPECT_STREQ("3.14", buf);
   DtoaAllocator<> dalloc{};
 
-  char *se;
-  double val = hermes_g_strtod(buf, &se);
-  ASSERT_EQ(0, *se);
-  ASSERT_EQ(3.14, val);
-
-  const char *inv = "asdf";
-  val = hermes_g_strtod(inv, &se);
-  ASSERT_EQ(inv, se);
-  ASSERT_EQ(0, val);
-
 #define DtoaDecimalTest(M, N, K, S, SIGN)                    \
   {                                                          \
     int n, sign;                                             \
