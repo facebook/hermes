@@ -9,6 +9,7 @@
 
 #include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/Support/Conversions.h"
+#include "hermes/Support/FastStrToDouble.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
@@ -501,8 +502,8 @@ static inline double stringToNumber(
     }
   }
 
-  // Finally, copy 16 bit chars into 8 bit chars and call dtoa.
-  llvh::SmallVector<char, 32> str8(len + 1);
+  // Finally, copy 16 bit chars into 8 bit chars and call fastStrToDouble.
+  llvh::SmallVector<char, 32> str8(len);
   uint32_t i = 0;
   for (auto c16 : str16) {
     // Check to ensure we only have valid number characters now.
@@ -514,11 +515,11 @@ static inline double stringToNumber(
     }
     ++i;
   }
-  str8[len] = '\0';
-  char *endPtr;
-  double result = ::hermes_g_strtod(str8.data(), &endPtr);
-  if (endPtr == str8.data() + len) {
-    return result;
+
+  Char8StrToDoubleParseResult parseRes =
+      fastStrToDouble(llvh::ArrayRef<char>{str8});
+  if (parseRes.ptr == str8.data() + len) {
+    return parseRes.value;
   }
 
   // If everything failed, return NaN.

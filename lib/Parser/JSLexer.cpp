@@ -11,6 +11,7 @@
 #include "dtoa/dtoa.h"
 #include "hermes/Support/Conversions.h"
 
+#include "hermes/Support/FastStrToDouble.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/StringSwitch.h"
 
@@ -1774,7 +1775,6 @@ end:
       }
     }
 
-    // We need a zero-terminated buffer for hermes_g_strtod().
     llvh::SmallString<32> buf;
     buf.reserve(curCharPtr_ - start + 1);
     if (LLVM_UNLIKELY(seenSeparator)) {
@@ -1806,12 +1806,13 @@ end:
     } else {
       buf.append(start, curCharPtr_);
     }
-    buf.push_back(0);
-    char *endPtr;
-    val = ::hermes_g_strtod(buf.data(), &endPtr);
-    if (endPtr != &buf.back()) {
+    Char8StrToDoubleParseResult parseRes =
+        fastStrToDouble(llvh::ArrayRef<char>{buf});
+    if (LLVM_UNLIKELY(parseRes.ptr != buf.data() + buf.size())) {
       errorRange(token_.getStartLoc(), "invalid numeric literal");
       val = std::numeric_limits<double>::quiet_NaN();
+    } else {
+      val = parseRes.value;
     }
   } else {
     if (legacyOctal &&

@@ -10,6 +10,7 @@
 /// Initialize the global object ES5.1 15.1
 //===----------------------------------------------------------------------===//
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "hermes/Support/FastStrToDouble.h"
 #include "hermes/VM/FastArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSDataView.h"
@@ -232,22 +233,13 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime) {
     // Empty string.
     return HermesValue::encodeNaNValue();
   }
-  // Use hermes_g_strtod to figure out the longest prefix that's still valid.
-  // hermes_g_strtod will try to convert the string to int for as long as it
-  // can, and set endPtr to the last location where the prefix so far is still
-  // a valid integer.
   len = i;
-  str8[len] = '\0';
-  char *endPtr;
-  ::hermes_g_strtod(str8.data(), &endPtr);
-  if (endPtr == str8.data()) {
-    // Empty string.
+  Char8StrToDoubleParseResult parseRes = fastStrToDouble(str8);
+  if (!parseRes) {
+    // Empty string or string containing no valid number prefix.
     return HermesValue::encodeNaNValue();
   }
-  // Now we know the prefix untill endPtr is a valid int.
-  *endPtr = '\0';
-  return HermesValue::encodeTrustedNumberValue(
-      ::hermes_g_strtod(str8.data(), &endPtr));
+  return HermesValue::encodeTrustedNumberValue(parseRes.value);
 }
 
 /// Customized global function. gc() forces a GC collect.
