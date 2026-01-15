@@ -499,3 +499,28 @@ print(JSON.parse("1.2e2"));
 // CHECK-NEXT: 120
 print(JSON.parse("2.3E3"));
 // CHECK-NEXT: 2300
+
+function tryPrintParse(str) {
+  try {
+    print(JSON.parse(str));
+  } catch (e) {
+    print(e.constructor.name);
+  }
+}
+
+tryPrintParse("55e555555555555555555555555555555555551e-1000");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("55e55555555555555555555555555555555555");
+// CHECK-NEXT: Infinity
+tryPrintParse("1e-1000");
+// CHECK-NEXT: 0
+tryPrintParse("abc");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("123error");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("123.56.78");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("+52");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("123.123.123.123");
+// CHECK-NEXT: SyntaxError

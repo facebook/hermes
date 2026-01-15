@@ -231,11 +231,11 @@ ExecutionStatus JSONLexer<Kind>::scanNumber() {
     return ExecutionStatus::RETURNED;
   }
 
-  OptValue<double> result = fastStrToDouble(numRef);
-  if (LLVM_UNLIKELY(!result)) {
+  StrToDoubleParseResult<CharT> parseRes = fastStrToDouble(numRef);
+  if (LLVM_UNLIKELY(parseRes.ptr != numRef.end())) {
     return error("Invalid number input");
   }
-  token_.setNumber(*result);
+  token_.setNumber(parseRes.value);
   return ExecutionStatus::RETURNED;
 }
 
