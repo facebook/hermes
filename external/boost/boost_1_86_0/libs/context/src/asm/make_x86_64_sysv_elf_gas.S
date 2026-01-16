@@ -89,7 +89,12 @@ hoost_make_fcontext:
     leaq  finish(%rip), %rcx
     /* save address of finish as return-address for context-function */
     /* will be entered after context-function returns */
-    movq  %rcx, 0x38(%rax)
+    /* NOTE: stored in R12 slot (not RBP) to avoid corrupting frame pointer chain */
+    movq  %rcx, 0x10(%rax)
+
+    /* clear RBP slot to properly terminate frame pointer chain */
+    /* this allows stack unwinders (e.g. GWP-ASan) to safely walk the stack */
+    movq  $0, 0x38(%rax)
 
 #if BOOST_CONTEXT_SHADOW_STACK
     /* Populate the shadow stack and normal stack */
@@ -165,13 +170,13 @@ trampoline:
     /* fix stack alignment */
     _CET_ENDBR
 #if BOOST_CONTEXT_SHADOW_STACK
-    /* save address of "jmp *%rbp" as return-address */
+    /* save address of "jmp *%r12" as return-address */
     /* on stack and shadow stack */
     call  2f
-    jmp  *%rbp
+    jmp  *%r12
 2:
 #else
-    push %rbp
+    push %r12
 #endif
     /* jump to context-function */
     jmp *%rbx
