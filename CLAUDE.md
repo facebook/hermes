@@ -134,6 +134,7 @@ The build produces two VM variants: "regular" (full VM with compiler) and "lean"
 
 - **lib/VM/**: Virtual machine core - runtime, interpreter, garbage collector, object model
 - **lib/VM/JSLib/**: JavaScript standard library implemented in C++ (Array, Object, String, etc.)
+- **lib/InternalJavaScript/**: JavaScript polyfills compiled into the VM (e.g., Math.sumPrecise, Promise)
 - **lib/Parser/**: JavaScript parser
 - **lib/AST/**: Abstract syntax tree definitions
 - **lib/IR/**: Intermediate representation for optimization

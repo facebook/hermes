@@ -80,5 +80,3 @@ Specific behaviors where Hermes differs from the ECMAScript specification or has
 *   **`Promise` Implementation:** Promises are implemented using an internally bundled polyfill compiled to bytecode. While generally conformant, microtask timing or specific edge cases might differ slightly from other engines or the exact specification. See the [polyfill source](https://github.com/facebook/hermes/blob/HEAD/utils/promise/index.js).
 
 *   **`Symbol.prototype.description` Conformance:** While `Symbol('desc').description` works as expected, `Symbol().description` currently returns `''` (empty string) instead of the spec-compliant `undefined`.
-
-*   **`Math.sumPrecise` Iterator Protocol:** The polyfill implementation does not call `iteratorClose` when iteration is terminated early as noted in the polyfill source. Additionally, error handling for invalid iterator states may not fully conform to the specification's `TypeError` throwing requirements in all edge cases.
