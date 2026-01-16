@@ -7,8 +7,8 @@
 #ifndef BOOST_CONTEXT_FIBER_H
 #define BOOST_CONTEXT_FIBER_H
 
-#include <hoost/predef/os.h>
-#if BOOST_OS_MACOS
+// Use standard platform detection instead of Boost.Predef
+#if defined(__APPLE__)
 #define _XOPEN_SOURCE 600
 #endif
 
@@ -16,7 +16,6 @@ extern "C" {
 #include <ucontext.h>
 }
 
-#include <hoost/predef.h>
 #include <hoost/context/detail/config.hpp>
 
 #include <algorithm>
@@ -33,7 +32,6 @@ extern "C" {
 
 #include <hoost/assert.hpp>
 #include <hoost/config.hpp>
-#include <hoost/predef.h>
 
 #include <hoost/context/detail/disable_overload.hpp>
 #if defined(BOOST_NO_CXX14_STD_EXCHANGE)
@@ -67,7 +65,7 @@ namespace detail {
 // entered if the execution context
 // is resumed for the first time
 template <typename Record>
-#if BOOST_OS_MACOS
+#if defined(__APPLE__)
 static void fiber_entry_func(std::uint32_t data_high,
                              std::uint32_t data_low) noexcept {
   auto data =
@@ -106,9 +104,13 @@ struct BOOST_CONTEXT_DECL fiber_activation_record {
     // (e.g. main context, thread-entry context)
     fiber_activation_record() {
         if ( BOOST_UNLIKELY( 0 != ::getcontext( & uctx) ) ) {
+#if defined(BOOST_NO_EXCEPTIONS)
+            std::abort();
+#else
             throw std::system_error(
                     std::error_code( errno, std::system_category() ),
                     "getcontext() failed");
+#endif
         }
 
 #if defined(BOOST_USE_TSAN)
@@ -283,6 +285,14 @@ public:
                                          & from->stack_size);
 #endif
         Ctx c{ from };
+#if defined(BOOST_NO_EXCEPTIONS)
+        // invoke context-function (no try-catch without exceptions)
+#if defined(BOOST_NO_CXX17_STD_INVOKE)
+        c = boost::context::detail::invoke( fn_, std::move( c) );
+#else
+        c = std::invoke( fn_, std::move( c) );
+#endif
+#else
         try {
             // invoke context-function
 #if defined(BOOST_NO_CXX17_STD_INVOKE)
@@ -293,6 +303,7 @@ public:
         } catch ( forced_unwind const& ex) {
             c = Ctx{ ex.from };
         }
+#endif
         // this context has finished its task
 		from = nullptr;
         ontop = nullptr;
@@ -320,13 +331,17 @@ static fiber_activation_record * create_fiber1( StackAlloc && salloc, Fn && fn) 
             reinterpret_cast< uintptr_t >( sctx.sp) - static_cast< uintptr_t >( sctx.size) );
     // create user-context
     if ( BOOST_UNLIKELY( 0 != ::getcontext( & record->uctx) ) ) {
+#if defined(BOOST_NO_EXCEPTIONS)
+        std::abort();
+#else
         record->~capture_t();
         salloc.deallocate( sctx);
         throw std::system_error(
                 std::error_code( errno, std::system_category() ),
                 "getcontext() failed");
+#endif
     }
-#if BOOST_OS_BSD_FREE
+#if defined(__FreeBSD__)
     // because FreeBSD defines stack_t::ss_sp as char *
     record->uctx.uc_stack.ss_sp = static_cast< char * >( stack_bottom);
 #else
@@ -336,7 +351,7 @@ static fiber_activation_record * create_fiber1( StackAlloc && salloc, Fn && fn) 
     record->uctx.uc_stack.ss_size = reinterpret_cast< uintptr_t >( storage) -
             reinterpret_cast< uintptr_t >( stack_bottom) - static_cast< uintptr_t >( 64);
     record->uctx.uc_link = nullptr;
-#if BOOST_OS_MACOS
+#if defined(__APPLE__)
     const auto integer = std::uint64_t(record);
     ::makecontext(&record->uctx, (void (*)()) & fiber_entry_func<capture_t>, 2,
                   std::uint32_t((integer >> 32) & 0xFFFFFFFF),
@@ -371,13 +386,17 @@ static fiber_activation_record * create_fiber2( preallocated palloc, StackAlloc 
             reinterpret_cast< uintptr_t >( palloc.sctx.sp) - static_cast< uintptr_t >( palloc.sctx.size) );
     // create user-context
     if ( BOOST_UNLIKELY( 0 != ::getcontext( & record->uctx) ) ) {
+#if defined(BOOST_NO_EXCEPTIONS)
+        std::abort();
+#else
         record->~capture_t();
         salloc.deallocate( palloc.sctx);
         throw std::system_error(
                 std::error_code( errno, std::system_category() ),
                 "getcontext() failed");
+#endif
     }
-#if BOOST_OS_BSD_FREE
+#if defined(__FreeBSD__)
     // because FreeBSD defines stack_t::ss_sp as char *
     record->uctx.uc_stack.ss_sp = static_cast< char * >( stack_bottom);
 #else
@@ -387,7 +406,7 @@ static fiber_activation_record * create_fiber2( preallocated palloc, StackAlloc 
     record->uctx.uc_stack.ss_size = reinterpret_cast< uintptr_t >( storage) -
             reinterpret_cast< uintptr_t >( stack_bottom) - static_cast< uintptr_t >( 64);
     record->uctx.uc_link = nullptr;
-#if BOOST_OS_MACOS
+#if defined(__APPLE__)
     const auto integer = std::uint64_t(record);
     ::makecontext(&record->uctx, (void (*)()) & fiber_entry_func<capture_t>, 2,
                   std::uint32_t((integer >> 32) & 0xFFFFFFFF),
@@ -488,7 +507,11 @@ public:
         detail::fiber_activation_record * ptr = std::exchange( ptr_, nullptr)->resume();
 #endif
         if ( BOOST_UNLIKELY( detail::fiber_activation_record::current()->force_unwind) ) {
+#if defined(BOOST_NO_EXCEPTIONS)
+            std::abort();
+#else
             throw detail::forced_unwind{ ptr};
+#endif
         } else if ( BOOST_UNLIKELY( nullptr != detail::fiber_activation_record::current()->ontop) ) {
             ptr = detail::fiber_activation_record::current()->ontop( ptr);
             detail::fiber_activation_record::current()->ontop = nullptr;
@@ -507,7 +530,11 @@ public:
             std::exchange( ptr_, nullptr)->resume_with< fiber >( std::forward< Fn >( fn) );
 #endif
         if ( BOOST_UNLIKELY( detail::fiber_activation_record::current()->force_unwind) ) {
+#if defined(BOOST_NO_EXCEPTIONS)
+            std::abort();
+#else
             throw detail::forced_unwind{ ptr};
+#endif
         } else if ( BOOST_UNLIKELY( nullptr != detail::fiber_activation_record::current()->ontop) ) {
             ptr = detail::fiber_activation_record::current()->ontop( ptr);
             detail::fiber_activation_record::current()->ontop = nullptr;

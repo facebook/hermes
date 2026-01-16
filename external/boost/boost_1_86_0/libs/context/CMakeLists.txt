@@ -198,8 +198,9 @@ if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "fcontext")
     set_property(SOURCE ${ASM_SOURCES} APPEND PROPERTY COMPILE_OPTIONS "-x" "assembler-with-cpp")
   endif()
 else()
+  # Hermes only uses the fiber API, not the continuation API.
+  # Skip continuation.cpp since continuation_ucontext.hpp is not included.
   set(IMPL_SOURCES
-    src/continuation.cpp
     src/fiber.cpp
   )
 endif()
@@ -255,10 +256,12 @@ endif()
 
 if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "ucontext")
   target_compile_definitions(boost_context PUBLIC BOOST_USE_UCONTEXT=)
+  target_compile_definitions(boost_context_obj PUBLIC BOOST_USE_UCONTEXT=)
 endif()
 
 if(BOOST_CONTEXT_IMPLEMENTATION STREQUAL "winfib")
   target_compile_definitions(boost_context PUBLIC BOOST_USE_WINFIB=)
+  target_compile_definitions(boost_context_obj PUBLIC BOOST_USE_WINFIB=)
 endif()
 
 if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
