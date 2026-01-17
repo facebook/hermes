@@ -4978,7 +4978,7 @@ class HERMES_ATTRIBUTE_INTERNAL_LINKAGE Emitter::GetByIdImpl {
 
     // Allocate the result register. Note that it can overlap the temps we
     // just freed.
-    hwRes = _.getOrAllocFRInAnyReg(frRes, false, HWReg::gpX(0));
+    hwRes = _.getOrAllocFRInGpX(frRes, false, HWReg::gpX(0));
 
     // Finally we begin code generation for the fast path.
 
