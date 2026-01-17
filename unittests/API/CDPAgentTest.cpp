@@ -1293,7 +1293,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatterns) {
   // Ø - two bytes (U+00D8 - 11000011 10011000)
   // ಚ - three bytes (U+0C9A - 11100000 10110010 10011010)
   // 😁 - four bytes (U+1F601 - 11110000 10011111 10011000 10000001)
-  std::string utf8FileName(u8"mainØಚ😁");
+  std::string utf8FileName(reinterpret_cast<const char *>(u8"mainØಚ😁"));
 
   // debugger; statement won't work unless Debugger domain is enabled
   scheduleScript(
@@ -1432,7 +1432,9 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
 
   sendAndCheckResponse("Debugger.enable", msgId++);
 
-  std::string utf8FileName(u8"/node_modules/somelibrary/lib/mainØಚ😁.js");
+  std::string utf8FileName(
+      reinterpret_cast<const char *>(
+          u8"/node_modules/somelibrary/lib/mainØಚ😁.js"));
   std::string script = R"(  // (line 0)
   var a = 1;
     debugger;       // (line 2) hit debugger statement if script is not blackboxed
@@ -1444,7 +1446,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // should ignore scripts in node_modules. This means the debugger statement on
   // line 5 will be skipped
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"(/node_modules/|/bower_components/)"});
+      msgId++, {R"(/node_modules/|/bower_components/)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1463,7 +1465,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // For an irrelevant extra pattern "aa" besides the default,
   // should ignore the script
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"(/node_modules/|/bower_components/)", u8R"(aa)"});
+      msgId++, {R"(/node_modules/|/bower_components/)", R"(aa)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1472,7 +1474,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // passing a regex "(/somelibrary/lib/|aa)" and an irrelevant pattern
   // should ignore the script
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"((/somelibrary/lib/|aa))", u8R"(bb)"});
+      msgId++, {R"((/somelibrary/lib/|aa))", R"(bb)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1480,7 +1482,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
 
   // passing a regex with an escaped slash "\/": "/somelibrary\/lib/"
   // should ignore the script
-  sendSetBlackboxPatternsAndCheckResponse(msgId++, {u8R"(/somelibrary\/lib/)"});
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {R"(/somelibrary\/lib/)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1489,8 +1491,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // passing a regex with a twice escaped slash "\\/": "/somelibrary\\/lib/"
   // results in the backslash escape, rendering the escaped path incorrect
   // and should NOT ignore the script
-  sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"(/somelibrary\\/lib/)"});
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {R"(/somelibrary\\/lib/)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
@@ -1502,7 +1503,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // should result in an error response from cdp
   // the ignored patterns would not change leaving the script NOT ignored
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"())"}, false /* expectOK */);
+      msgId++, {R"())"}, false /* expectOK */);
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
