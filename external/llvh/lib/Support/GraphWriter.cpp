@@ -48,14 +48,15 @@ std::string llvh::DOT::EscapeString(const std::string &Label) {
       Str[i] = ' ';
       break;
     case '\\':
-      if (i+1 != Str.length())
+      if (i+1 != Str.length()) {
         switch (Str[i+1]) {
           case 'l': continue; // don't disturb \l
           case '|': case '{': case '}':
             Str.erase(Str.begin()+i); continue;
           default: break;
         }
-        LLVM_FALLTHROUGH;
+      }
+      LLVM_FALLTHROUGH;
     case '{': case '}':
     case '<': case '>':
     case '|': case '"':
