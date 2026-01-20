@@ -56,7 +56,7 @@ public:
 #else
         void * vp = std::malloc( size_);
         if ( ! vp) {
-#ifdef HOOST_EXCEPTIONS_DISABLED
+#ifdef BOOST_NO_EXCEPTIONS
             abort();
 #else
             throw std::bad_alloc();

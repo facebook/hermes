@@ -65,7 +65,7 @@ namespace detail {
 
 inline
 transfer_t fiber_unwind( transfer_t t) {
-#ifdef HOOST_EXCEPTIONS_DISABLED
+#ifdef BOOST_NO_EXCEPTIONS
     abort();
 #else
     throw forced_unwind( t.fctx);
@@ -93,14 +93,14 @@ void fiber_entry( transfer_t t) noexcept {
     Rec * rec = static_cast< Rec * >( t.data);
     BOOST_ASSERT( nullptr != t.fctx);
     BOOST_ASSERT( nullptr != rec);
-#ifndef HOOST_EXCEPTIONS_DISABLED
+#ifndef BOOST_NO_EXCEPTIONS
     try {
 #endif
         // jump back to `create_context()`
         t = hoost_jump_fcontext( t.fctx, nullptr);
         // start executing
         t.fctx = rec->run( t.fctx);
-#ifndef HOOST_EXCEPTIONS_DISABLED
+#ifndef BOOST_NO_EXCEPTIONS
     } catch ( forced_unwind const& ex) {
         t = { ex.fctx, nullptr };
     }

@@ -62,7 +62,7 @@ public:
 #else
         void * vp = ::mmap( 0, size__, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #endif
-#ifdef HOOST_EXCEPTIONS_DISABLED
+#ifdef BOOST_NO_EXCEPTIONS
         if ( MAP_FAILED == vp) abort();
 #else
         if ( MAP_FAILED == vp) throw std::bad_alloc();
