@@ -424,7 +424,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       // ? ?? ?.
       case '?':
         token_.setStart(curCharPtr_);
-        if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
+        if (curCharPtr_[1] == '.' && !isASCIIDigit(curCharPtr_[2])) {
           // OptionalChainingPunctuator ::
           // ?. [lookahead does not contain DecimalDigit]
           // This is done to prevent `x?.3:y` from being recognized
@@ -828,7 +828,7 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
         if (ch == ';' && curCharPtr_ != numberStart) {
           curCharPtr_++;
           return codePoint;
-        } else if (isdigit(ch)) {
+        } else if (isASCIIDigit(ch)) {
           ch -= '0';
         } else {
           ch |= 32;
@@ -862,7 +862,7 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
         if (ch == ';' && curCharPtr_ != numberStart) {
           curCharPtr_++;
           return codePoint;
-        } else if (isdigit(ch)) {
+        } else if (isASCIIDigit(ch)) {
           // Check that this number is representable as a code point
           codePoint = codePoint * 10 + (ch - '0');
           if (codePoint > UNICODE_MAX_VALUE) {
@@ -895,7 +895,7 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
 
         curCharPtr_++;
         return it->second;
-      } else if (((ch | 32) >= 'a' && (ch | 32) <= 'z') || isdigit(ch)) {
+      } else if (((ch | 32) >= 'a' && (ch | 32) <= 'z') || isASCIIDigit(ch)) {
         ++curCharPtr_;
       } else {
         break;
@@ -1616,7 +1616,7 @@ void JSLexer::scanNumber(GrammarContext grammarContext) {
     }
   }
 
-  while (isdigit(*curCharPtr_) ||
+  while (isASCIIDigit(*curCharPtr_) ||
          (radix == 16 && (*curCharPtr_ | 32) >= 'a' &&
           (*curCharPtr_ | 32) <= 'f') ||
          (*curCharPtr_ == '_')) {
@@ -1645,7 +1645,7 @@ fraction:
   // We arrive here after we have consumed the decimal dot ".".
   //
   real = true;
-  while (isdigit(*curCharPtr_) || *curCharPtr_ == '_') {
+  while (isASCIIDigit(*curCharPtr_) || *curCharPtr_ == '_') {
     seenSeparator |= *curCharPtr_ == '_';
     ++curCharPtr_;
   }
@@ -1663,11 +1663,11 @@ exponent:
   real = true;
   if (*curCharPtr_ == '+' || *curCharPtr_ == '-')
     ++curCharPtr_;
-  if (isdigit(*curCharPtr_)) {
+  if (isASCIIDigit(*curCharPtr_)) {
     do {
       seenSeparator |= *curCharPtr_ == '_';
       ++curCharPtr_;
-    } while (isdigit(*curCharPtr_) || *curCharPtr_ == '_');
+    } while (isASCIIDigit(*curCharPtr_) || *curCharPtr_ == '_');
   } else {
     ok = false;
   }
@@ -1789,13 +1789,13 @@ end:
           // properly because of the radix==16 check.
           char prev = *(it - 1);
           char next = *(it + 1);
-          if (!isdigit(prev) &&
+          if (!isASCIIDigit(prev) &&
               !(radix == 16 && 'a' <= (prev | 32) && (prev | 32) <= 'f')) {
             errorRange(
                 token_.getStartLoc(),
                 "numeric separator must come after a digit");
           } else if (
-              !isdigit(next) &&
+              !isASCIIDigit(next) &&
               !(radix == 16 && 'a' <= (next | 32) && (next | 32) <= 'f')) {
             errorRange(
                 token_.getStartLoc(),

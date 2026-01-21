@@ -89,6 +89,13 @@ bool isUnicodeDigit(uint32_t cp);
 /// \return true if the codepoint is in the Connector Punctuation category.
 bool isUnicodeConnectorPunctuation(uint32_t cp);
 
+/// \return true if the character is an ASCII digit (0-9).
+/// This is a safe replacement for isdigit() that handles non-ASCII characters
+/// correctly on all platforms.
+inline bool isASCIIDigit(uint32_t ch) {
+  return ch >= '0' && ch <= '9';
+}
+
 /// \return true if the codepoint has the ID_Start property and is ASCII.
 inline bool isASCIIIdentifierStart(uint32_t ch) {
   return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
