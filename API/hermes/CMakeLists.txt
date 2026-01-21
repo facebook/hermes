@@ -93,11 +93,10 @@ endif()
 # ExtensionsBytecode.cpp needs to find the generated .inc file
 target_include_directories(hermesapi_obj PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/extensions)
 
-# Ensure the bytecode is generated before compiling ExtensionsBytecode.cpp
-set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/extensions/ExtensionsBytecode.cpp
-  PROPERTIES
-  OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/extensions/ExtensionsBytecode.inc
-)
+# Ensure hermesapi_obj waits for ExtensionsBytecodeInclude to complete.
+# This prevents race conditions with Visual Studio where the .inc file might be
+# accessed while still being generated.
+add_dependencies(hermesapi_obj ExtensionsBytecodeInclude)
 
 add_hermes_library(synthTrace hermes_tracing.cpp SynthTrace.cpp TracingRuntime.cpp
   LINK_OBJLIBS hermesapi)

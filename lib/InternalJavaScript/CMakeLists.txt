@@ -63,11 +63,6 @@ add_hermes_library(hermesInternalBytecode
     InternalBytecode.cpp
 )
 
-set_source_files_properties(InternalBytecode.cpp
-  PROPERTIES
-  OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/InternalBytecode.inc
-)
-
 # Allow InternalBytecode to find its .inc file
 target_include_directories(hermesInternalBytecode_obj
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}
@@ -83,8 +78,6 @@ add_custom_command(
   VERBATIM
 )
 
-add_custom_target(InternalBytecode ALL DEPENDS InternalBytecode.hbc)
-
 # X.inc is the hex dump of the compiled bytecode artifact that can be included
 # in the InternalBytecode.cpp as C/C++ hex literal to initialize a byte array.
 add_custom_command(
@@ -96,6 +89,11 @@ add_custom_command(
 )
 
 add_custom_target(InternalBytecodeInclude ALL DEPENDS InternalBytecode.inc)
+
+# Ensure hermesInternalBytecode_obj waits for InternalBytecodeInclude to complete.
+# This prevents race conditions with Visual Studio where the .inc file might be
+# accessed while still being generated.
+add_dependencies(hermesInternalBytecode_obj InternalBytecodeInclude)
 
 # Switch native version and bytecode version
 if(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
