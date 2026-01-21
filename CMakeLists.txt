@@ -59,6 +59,10 @@ if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
 endif()
 
+if (WIN32)
+add_definitions(-D_WINDOWS)
+endif()
+
 # This must be consistent with the release_version in:
 # - android/build.gradle
 # - npm/package.json

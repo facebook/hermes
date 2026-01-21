@@ -7,7 +7,7 @@
 # dynamic library, so they can be linked the same way as hermesvm.
 set(HERMES_ENABLE_EH ON)
 add_library(shermes_console SHARED ConsoleBindings.cpp)
-target_link_libraries(shermes_console PRIVATE hermesvm)
+target_link_libraries(shermes_console PRIVATE hermesvm jsi)
 
 add_library(shermes_console_a STATIC ConsoleBindings.cpp)
 # Add hermesvm as a dependency so headers are available, even though we aren't
