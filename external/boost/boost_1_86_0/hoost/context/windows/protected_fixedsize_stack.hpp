@@ -13,6 +13,7 @@ extern "C" {
 
 #include <cmath>
 #include <cstddef>
+#include <cstdlib>
 #include <new>
 
 #include <hoost/assert.hpp>
@@ -49,7 +50,11 @@ public:
         const std::size_t size__ = ( pages + 1) * traits_type::page_size();
 
         void * vp = ::VirtualAlloc( 0, size__, MEM_COMMIT, PAGE_READWRITE);
+#ifdef BOOST_NO_EXCEPTIONS
+        if ( ! vp) abort();
+#else
         if ( ! vp) throw std::bad_alloc();
+#endif
 
         DWORD old_options;
         const BOOL result = ::VirtualProtect(
