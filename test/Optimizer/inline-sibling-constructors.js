@@ -44,14 +44,12 @@ function outer() {
 // CHECK:function Point(x: any, y: any, z: any): undefined
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
-// CHECK-NEXT:  %1 = GetNewTargetInst (:undefined|object) %new.target: undefined|object
-// CHECK-NEXT:       CacheNewObjectInst %0: any, %1: undefined|object, "x": string, "y": string, "z": string
-// CHECK-NEXT:  %3 = LoadParamInst (:any) %x: any
-// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
-// CHECK-NEXT:  %5 = LoadParamInst (:any) %z: any
-// CHECK-NEXT:       StorePropertyStrictInst %3: any, %0: any, "x": string
-// CHECK-NEXT:       StorePropertyStrictInst %4: any, %0: any, "y": string
-// CHECK-NEXT:       StorePropertyStrictInst %5: any, %0: any, "z": string
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %3 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:       StorePropertyStrictInst %1: any, %0: any, "x": string
+// CHECK-NEXT:       StorePropertyStrictInst %2: any, %0: any, "y": string
+// CHECK-NEXT:       StorePropertyStrictInst %3: any, %0: any, "z": string
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
@@ -64,9 +62,8 @@ function outer() {
 // CHECK-NEXT:  %4 = LoadFrameInst (:object) %0: environment, [%VS0.Point]: object
 // CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: object, "prototype": string
 // CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) %5: any
-// CHECK-NEXT:       CacheNewObjectInst %6: object, %4: object, "x": string, "y": string, "z": string
 // CHECK-NEXT:       StorePropertyStrictInst %1: any, %6: object, "x": string
 // CHECK-NEXT:       StorePropertyStrictInst %2: any, %6: object, "y": string
-// CHECK-NEXT:        StorePropertyStrictInst %3: any, %6: object, "z": string
+// CHECK-NEXT:       StorePropertyStrictInst %3: any, %6: object, "z": string
 // CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end

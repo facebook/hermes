@@ -693,9 +693,6 @@ class TypeInferenceImpl {
   Type inferIteratorCloseInst(IteratorCloseInst *inst) {
     return Type::createAnyType();
   }
-  Type inferCacheNewObjectInst(CacheNewObjectInst *inst) {
-    return Type::createNoType();
-  }
   Type inferUnreachableInst(UnreachableInst *inst) {
     return Type::createNoType();
   }

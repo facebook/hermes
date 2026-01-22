@@ -1811,19 +1811,6 @@ class InstrGen {
     os_ << ", " << boolStr(inst.getIgnoreInnerException());
     os_ << ");\n";
   }
-  void generateCacheNewObjectInst(CacheNewObjectInst &inst) {
-    // TODO: Implement this properly when we have a proper cache.
-    // For now, emit the call with just the shape table index.
-    auto buffIdx = moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst)
-                       .shapeTableIdx;
-    os_.indent(2);
-    os_ << "_sh_ljs_cache_new_object(shr, shUnit, ";
-    generateRegisterPtr(*inst.getThis());
-    os_ << ", ";
-    generateRegisterPtr(*inst.getNewTarget());
-    os_ << ", ";
-    os_ << buffIdx << ", NULL);\n";
-  }
   void generateUnreachableInst(UnreachableInst &inst) {
     os_.indent(2);
     os_ << "_sh_unreachable();\n";

@@ -459,11 +459,6 @@ inline void JITContext::Compiler::emitMovLong(const inst::MovLongInst *inst) {
   em_.mov(FR(inst->op1), FR(inst->op2));
 }
 
-inline void JITContext::Compiler::emitCacheNewObject(
-    const inst::CacheNewObjectInst *inst) {
-  // TODO: Implement CacheNewObject.
-}
-
 inline void JITContext::Compiler::emitToNumber(const inst::ToNumberInst *inst) {
   em_.toNumber(FR(inst->op1), FR(inst->op2));
 }

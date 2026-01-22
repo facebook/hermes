@@ -265,9 +265,8 @@ static_assert(
   /* third word, with flags below */                    \
   F(uint8_t, b1, uint32_t, FrameSize, 8)                \
   F(uint8_t, b2, uint8_t, ReadCacheSize, 8)             \
-  F(uint8_t, b3, uint8_t, WriteCacheSize, 6)            \
-  N(WriteCacheSize, b3, uint8_t, NumCacheNewObject, 1)  \
-  N(NumCacheNewObject, b3, uint8_t, PrivateNameCacheSize, 1)
+  F(uint8_t, b3, uint8_t, WriteCacheSize, 7)            \
+  N(WriteCacheSize, b3, uint8_t, PrivateNameCacheSize, 1)
 
 /**
  * Metadata of a function.
@@ -298,7 +297,6 @@ struct FunctionHeader {
       uint32_t functionNameID,
       uint8_t readCacheSize,
       uint8_t writeCacheSize,
-      uint8_t numCacheNewObject,
       uint8_t privateCacheSize) {
     setOffset(0);
     setParamCount(paramCount);
@@ -310,7 +308,6 @@ struct FunctionHeader {
     setFrameSize(frameSize);
     setReadCacheSize(readCacheSize);
     setWriteCacheSize(writeCacheSize);
-    setNumCacheNewObject(numCacheNewObject);
     setPrivateNameCacheSize(privateCacheSize);
   }
 };

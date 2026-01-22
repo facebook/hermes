@@ -1934,15 +1934,6 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
 }
 
 LLVM_ATTRIBUTE_NOINLINE
-extern "C" void _sh_ljs_cache_new_object(
-    SHRuntime *shr,
-    SHUnit *unit,
-    SHLegacyValue *thisArg,
-    SHLegacyValue *newTarget,
-    uint32_t shapeTableIndex,
-    void **cacheEntry) {}
-
-LLVM_ATTRIBUTE_NOINLINE
 extern "C" void _sh_ljs_define_own_in_dense_array(
     SHRuntime *shr,
     SHLegacyValue *array,

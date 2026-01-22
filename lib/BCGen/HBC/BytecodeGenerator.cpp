@@ -130,7 +130,6 @@ BytecodeFunctionGenerator::generateBytecodeFunction(
       nameID,
       funcGen.readCacheSize_,
       funcGen.writeCacheSize_,
-      funcGen.numCacheNewObject_,
       funcGen.privateNameCacheSize_};
 
   header.flags.setProhibitInvoke(computeProhibitInvoke(F->getProhibitInvoke()));
@@ -312,10 +311,6 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
       // AllocObjectFromBuffer stores the keys and values as alternating
       // operands, with keys starting first.
       return (idx - LIRAllocObjectFromBufferInst::FirstKeyIdx) % 2 == 0;
-
-    case ValueKind::CacheNewObjectInstKind:
-      // The keys of CacheNewObject are identifiers.
-      return idx >= CacheNewObjectInst::FirstKeyIdx;
 
     default:
       return false;

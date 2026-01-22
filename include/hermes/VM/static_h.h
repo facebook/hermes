@@ -1261,19 +1261,6 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array_with_buffer(
     uint32_t numLiterals,
     uint32_t bufferIndex);
 
-/// \p thisArg is "this" parameter to the function.
-/// \p newTarget is the new.target value in the function.
-/// \p shapeTableIndex is the index into the shape table where the serialized
-///   keys for this operation are stored.
-/// \p cacheEntry is the cache entry for this operation.
-SHERMES_EXPORT void _sh_ljs_cache_new_object(
-    SHRuntime *shr,
-    SHUnit *unit,
-    SHLegacyValue *thisArg,
-    SHLegacyValue *newTarget,
-    uint32_t shapeTableIndex,
-    void **cacheEntry);
-
 /// Define an own property in a dense JavaScript array at a specific index.
 /// Requires that the array is dense and that the ArrayStorage
 /// underlying it has a size which is greater than the arrayIndex operand.

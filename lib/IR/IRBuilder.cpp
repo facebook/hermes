@@ -1229,15 +1229,6 @@ IteratorCloseInst *IRBuilder::createIteratorCloseInst(
   return I;
 }
 
-CacheNewObjectInst *IRBuilder::createCacheNewObjectInst(
-    Value *thisParameter,
-    Value *newTarget,
-    llvh::ArrayRef<LiteralString *> keys) {
-  auto *I = new CacheNewObjectInst(thisParameter, newTarget, keys);
-  insert(I);
-  return I;
-}
-
 UnreachableInst *IRBuilder::createUnreachableInst() {
   auto *I = new UnreachableInst();
   insert(I);

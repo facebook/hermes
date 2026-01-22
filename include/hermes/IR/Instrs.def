@@ -237,8 +237,6 @@ DEF_VALUE(HBCResolveParentEnvironmentInst, BaseScopeInst)
 DEF_VALUE(HBCCreateFunctionEnvironmentInst, BaseScopeInst)
 MARK_LAST(BaseScopeInst)
 
-DEF_VALUE(CacheNewObjectInst, Instruction)
-
 // These are target dependent instructions:
 
 DEF_VALUE(LIRGetThisNSInst, Instruction)

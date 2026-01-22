@@ -2840,12 +2840,6 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(CacheNewObject) {
-        // TODO: Implement this properly.
-        ip = NEXTINST(CacheNewObject);
-        DISPATCH;
-      }
-
       CASE(CreateThisForSuper) {
         CAPTURE_IP_ASSIGN(
             res,

@@ -967,16 +967,6 @@ Arguments | %iterator is the index or the iterator. %ignoreInnerException is a b
 Semantics | If %iterator is an iterator, calls `.return()` on it to close it. Otherwise, this is a no-op. If `.return()` throws, the exception is ignored when %ignoreInnerException is true.
 Effects | May read and write memory, may throw or execute.
 
-### CacheNewObject
-
-CacheNewObject | _
---- | --- |
-Description | Optimization which allows us to create an object with the proper layout for construction.
-Example |  CacheNewObject %this, %newTarget, %value0, %value1, ...
-Arguments | %this is the this parameter we want to populate with the optimized hidden class, and the %values are names of keys in the object, which will be stored in the key buffer.
-Semantics | Populates the "this" parameter with a cached hidden class which is to be used for storing properties to during construction if possible, otherwise just passes the original %this through. The values are the field names which are used to create the hidden class in memory. Checks new.target, doesn't do anything if it's undefined.
-Effects | May read or write from memory when caching.
-
 ### UnreachableInst
 
 UnreachableInst | _

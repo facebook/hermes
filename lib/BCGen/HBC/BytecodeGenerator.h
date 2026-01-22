@@ -317,9 +317,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
   /// as above applies when the size is 255.
   uint8_t privateNameCacheSize_{0};
 
-  /// Number of cache new object entries for this function.
-  uint8_t numCacheNewObject_{0};
-
   /// The jump table for this function (if any)
   /// this vector consists of jump table for each UIntSwitchImm instruction,
   /// laid out sequentially. Each entry is a relative jump.
@@ -559,13 +556,6 @@ class BytecodeFunctionGenerator : public BytecodeInstructionGenerator {
         !complete_ &&
         "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
     this->privateNameCacheSize_ = sz;
-  }
-
-  void setNumCacheNewObject(uint8_t sz) {
-    assert(
-        !complete_ &&
-        "Cannot modify BytecodeFunction after call to bytecodeGenerationComplete.");
-    this->numCacheNewObject_ = sz;
   }
 
   /// Set the jump table for this function, if any.

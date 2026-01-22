@@ -246,9 +246,6 @@ class HBCISel {
   uint8_t nextPropertyWriteCacheIndex_{0};
   uint8_t nextPrivateNameCacheIndex_{0};
 
-  /// The next index to use for CacheNewObject.
-  uint8_t numCacheNewObject_{0};
-
   /// This enum is used to provide extra, distinguishing information to the
   /// property reads that would otherwise share of cache index.
   enum class PropCacheKind : uint8_t { NormalIdentifier = 0, WithReceiver };
@@ -685,7 +682,6 @@ void HBCISel::addDebugLexicalInfo() {
 void HBCISel::populatePropertyCachingInfo() {
   BCFGen_->setReadCacheSize(nextPropertyReadCacheIndex_);
   BCFGen_->setWriteCacheSize(nextPropertyWriteCacheIndex_);
-  BCFGen_->setNumCacheNewObject(numCacheNewObject_);
   BCFGen_->setPrivateNameCacheSize(nextPrivateNameCacheIndex_);
   if (nextPropertyReadCacheIndex_ > 0) {
     NumFunctionsWithReadCache++;
@@ -2153,23 +2149,6 @@ void HBCISel::generateIteratorCloseInst(
   auto iter = encodeValue(Inst->getIterator());
   bool ignoreInnerException = Inst->getIgnoreInnerException();
   BCFGen_->emitIteratorClose(iter, ignoreInnerException);
-}
-
-void HBCISel::generateCacheNewObjectInst(
-    hermes::CacheNewObjectInst *Inst,
-    hermes::BasicBlock *next) {
-  auto thisReg = encodeValue(Inst->getThis());
-  auto newTargetReg = encodeValue(Inst->getNewTarget());
-
-  auto bufIndex =
-      BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
-  // We only have 8 bits for the total number of CacheNewObject entries, so the
-  // maximum entry index is UINT8_MAX - 1. If we exceed that, we can just skip
-  // this instruction, since it is purely an optimization.
-  if (numCacheNewObject_ < UINT8_MAX) {
-    BCFGen_->emitCacheNewObject(
-        thisReg, newTargetReg, bufIndex.shapeTableIdx, numCacheNewObject_++);
-  }
 }
 
 void HBCISel::generateCreateClassInst(CreateClassInst *Inst, BasicBlock *next) {
