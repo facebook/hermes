@@ -441,6 +441,7 @@ TraceInterpreter::getSourceHashToBundleMap(
   }
 
   rtConfigBuilder.withEnableJIT(options.enableJIT);
+  rtConfigBuilder.withForceJIT(options.forceJIT);
 
   // If (and only if) an out trace is requested, turn on tracing in the VM
   // as well.

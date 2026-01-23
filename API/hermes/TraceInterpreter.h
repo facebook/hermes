@@ -73,6 +73,9 @@ class TraceInterpreter final {
     /// If true, use the Hermes VM JIT during execution.
     bool enableJIT{false};
 
+    /// If true, force JIT compilation on all functions.
+    bool forceJIT{false};
+
     /// If true, remove the requirement that the input bytecode was compiled
     /// from the same source used to record the trace. There must only be one
     /// input bytecode file in this case. If its observable behavior deviates

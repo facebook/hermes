@@ -276,9 +276,8 @@ int main(int argc, char **argv) {
     }
 #endif
 
-    if (cl::flags.DumpJITCode ||
-        cl::flags.JIT == cli::VMOnlyRuntimeFlags::JITMode::Force) {
-      llvh::errs() << "synth does not support -Xjit=force or -Xdump-jitcode\n";
+    if (cl::flags.DumpJITCode) {
+      llvh::errs() << "synth does not support -Xdump-jitcode\n";
       return EXIT_FAILURE;
     }
 
@@ -297,6 +296,7 @@ int main(int argc, char **argv) {
     }
     options.forceGCBeforeStats = cl::flags.GCBeforeStats;
     options.enableJIT = cl::flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off;
+    options.forceJIT = cl::flags.JIT == cli::VMOnlyRuntimeFlags::JITMode::Force;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
 
     options.basicBlockProfiling = cl::flags.BasicBlockProfiling;
