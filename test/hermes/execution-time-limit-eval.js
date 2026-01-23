@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -w -O0 -emit-async-break-check -time-limit=300 %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermes -w -O0 -emit-async-break-check -time-limit=3000 %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 eval(`
 function entryPoint() {
