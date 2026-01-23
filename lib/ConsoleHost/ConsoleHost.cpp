@@ -467,10 +467,8 @@ bool executeHBCBytecodeImpl(
           hermesRuntime.get())
           ->getVMRuntimeUnsafe());
 
-  // TODO: surely this should use RuntimeConfig?
-  runtime->getJITContext().setForceJIT(options.forceJIT);
-  runtime->getJITContext().setMemoryLimit(options.jitMemoryLimit);
-  runtime->getJITContext().setDefaultExecThreshold(options.jitThreshold);
+  // Other JIT settings (forceJIT, jitThreshold, jitMemoryLimit) are now
+  // configured via RuntimeConfig in the Runtime constructor.
   runtime->getJITContext().setDumpJITCode(options.dumpJITCode);
   runtime->getJITContext().setCrashOnError(options.jitCrashOnError);
   runtime->getJITContext().setEmitAsserts(options.jitEmitAsserts);

@@ -467,6 +467,9 @@ Runtime::Runtime(
   // Execute our internal bytecode.
   auto jsBuiltinsObj = runInternalJavaScript();
   jitContext_.setEnabled(runtimeConfig.getEnableJIT());
+  jitContext_.setForceJIT(runtimeConfig.getForceJIT());
+  jitContext_.setDefaultExecThreshold(runtimeConfig.getJITThreshold());
+  jitContext_.setMemoryLimit(runtimeConfig.getJITMemoryLimit());
   codeCoverageProfiler_->restore();
 
   // Populate JS builtins returned from internal bytecode to the builtins table.

@@ -120,6 +120,15 @@ class PinnedHermesValue;
                                                                        \
   /* The flags passed from a VM experiment */                          \
   F(constexpr, uint32_t, VMExperimentFlags, 0)                         \
+                                                                       \
+  /* Force JIT compilation on all functions. */                        \
+  F(constexpr, bool, ForceJIT, false)                                  \
+                                                                       \
+  /* JIT compilation threshold (number of calls before JIT'ing). */    \
+  F(constexpr, uint32_t, JITThreshold, 1 << 5)                         \
+                                                                       \
+  /* JIT memory limit, after which no more code will be JIT'ed. */     \
+  F(constexpr, uint32_t, JITMemoryLimit, 32u << 20)                    \
   /* RUNTIME_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {})

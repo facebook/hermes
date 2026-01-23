@@ -139,15 +139,6 @@ struct ExecuteOptions {
   /// Execution time limit.
   uint32_t timeLimit{0};
 
-  /// Force JIT on all functions.
-  bool forceJIT{false};
-
-  /// JIT compilation threshold.
-  uint32_t jitThreshold{1 << 5};
-
-  /// JIT memory limit, after which no more code will be JIT'ed.
-  uint32_t jitMemoryLimit{32u << 20};
-
   /// Dump JIT'ed code.
   unsigned dumpJITCode{0};
 
