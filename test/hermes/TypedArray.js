@@ -254,6 +254,36 @@ cons.forEach(function(TypedArray) {
   assert.equal(view[0], 1);
 });
 
+// Check constructor from iterable (Set)
+cons.forEach(function(TypedArray) {
+  var set = new Set([1, 2, 3]);
+  var view = new TypedArray(set);
+  assert.equal(view.length, 3);
+  assert.equal(view[0], 1);
+  assert.equal(view[1], 2);
+  assert.equal(view[2], 3);
+});
+
+// Check constructor from iterable (Map.values())
+cons.forEach(function(TypedArray) {
+  var map = new Map([[0, 10], [1, 20], [2, 30]]);
+  var view = new TypedArray(map.values());
+  assert.equal(view.length, 3);
+  assert.equal(view[0], 10);
+  assert.equal(view[1], 20);
+  assert.equal(view[2], 30);
+});
+
+// Check constructor from iterable (generator)
+cons.forEach(function(TypedArray) {
+  function* gen() { yield 4; yield 5; yield 6; }
+  var view = new TypedArray(gen());
+  assert.equal(view.length, 3);
+  assert.equal(view[0], 4);
+  assert.equal(view[1], 5);
+  assert.equal(view[2], 6);
+});
+
 // Empty constructor
 cons.forEach(function(TypedArray) {
   assert.equal(new TypedArray().length, 0);
@@ -559,19 +589,49 @@ cons.forEach(function(c, i) {
     from([]);
   }, TypeError);
 
-  // Test a TypedArray whose length is greater than 2 ^ 32 - 1
-  // NOTE: This behavior differs from v8 and JSC, because we use uint32_t as our
-  // indexing type. They also disagree with each other.
+  // Test an array-like (non-iterable) object whose length is greater than
+  // 2 ^ 32 - 1. NOTE: This behavior differs from v8 and JSC, because we use
+  // uint32_t as our indexing type. They also disagree with each other.
+  // NOTE: TypedArrays have @@iterator, so they use iteration (not length).
+  // We use a plain object without @@iterator to test the length limit.
   assert.throws(function() {
-    var ta = new c();
-    Object.defineProperty(ta, "length", {
-      get: function() {
-        // This number is 2 ^ 32 + 1.
-        return 4294967297;
-      }
-    });
-    return c.from(ta);
+    var arrayLike = {
+      length: 4294967297, // 2 ^ 32 + 1
+      0: 1
+    };
+    return c.from(arrayLike);
   }, RangeError);
+
+  // Works on iterables (Set).
+  var set = new Set([1, 2, 3]);
+  ta = c.from(set);
+  assert.equal(ta.length, 3);
+  assert.equal(ta[0], 1);
+  assert.equal(ta[1], 2);
+  assert.equal(ta[2], 3);
+
+  // Works on iterables (Map.values()).
+  var map = new Map([[0, 10], [1, 20], [2, 30]]);
+  ta = c.from(map.values());
+  assert.equal(ta.length, 3);
+  assert.equal(ta[0], 10);
+  assert.equal(ta[1], 20);
+  assert.equal(ta[2], 30);
+
+  // Works on iterables (generator).
+  function* gen() { yield 4; yield 5; yield 6; }
+  ta = c.from(gen());
+  assert.equal(ta.length, 3);
+  assert.equal(ta[0], 4);
+  assert.equal(ta[1], 5);
+  assert.equal(ta[2], 6);
+
+  // Works on iterables with mapfn.
+  ta = c.from(new Set([1, 2, 3]), function(x) { return x * 2; });
+  assert.equal(ta.length, 3);
+  assert.equal(ta[0], 2);
+  assert.equal(ta[1], 4);
+  assert.equal(ta[2], 6);
 });
 
 /// @}
