@@ -26,10 +26,91 @@ namespace {
 /// @{
 
 /// ES7 22.2.2.1.1 IterableToArrayLike
+/// If items has an @@iterator method, iterate through it and collect
+/// values into an array. Otherwise, return ToObject(items).
 CallResult<HermesValue> iterableToArrayLike(Runtime &runtime, Handle<> items) {
-  // NOTE: this is a very basic function for now because iterators do not
-  // yet exist in Hermes. When they do, update this function.
-  return toObject(runtime, items);
+  struct : public Locals {
+    PinnedValue<> iteratorSymbol;
+    PinnedValue<> usingIterator;
+    PinnedValue<> nextValue;
+    PinnedValue<JSArray> A;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  GCScope gcScope{runtime};
+
+  // 1. Let usingIterator be ? GetMethod(items, @@iterator).
+  lv.iteratorSymbol = HermesValue::encodeSymbolValue(
+      Predefined::getSymbolID(Predefined::SymbolIterator));
+  auto methodRes = getMethod(runtime, items, lv.iteratorSymbol);
+  if (LLVM_UNLIKELY(methodRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.usingIterator = std::move(*methodRes);
+
+  // 2. If usingIterator is undefined, items is not iterable, so assume it is
+  // an array-like object and return ToObject(items).
+  if (lv.usingIterator->isUndefined()) {
+    return toObject(runtime, items);
+  }
+
+  // 3. Let iteratorRecord be ? GetIterator(items, sync, usingIterator).
+  auto iterRes = getCheckedIterator(
+      runtime, items, Handle<Callable>::vmcast(&lv.usingIterator));
+  if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto iteratorRecord = *iterRes;
+
+  // 4. Let values be a new empty List.
+  auto arrRes = JSArray::create(runtime, 0, 0);
+  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+    return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+  }
+  lv.A = std::move(*arrRes);
+
+  // 5. Repeat,
+  uint32_t k = 0;
+  while (true) {
+    GCScopeMarkerRAII marker{gcScope};
+
+    // Get next iterator result.
+    auto next = iteratorStep(runtime, iteratorRecord);
+    if (LLVM_UNLIKELY(next == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // If done, return the array.
+    if (!next.getValue()) {
+      if (LLVM_UNLIKELY(
+              JSArray::setLengthProperty(lv.A, runtime, k) ==
+              ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      return lv.A.getHermesValue();
+    }
+
+    // Get the value from the iterator result.
+    auto valueRes = JSObject::getNamed_RJS(
+        *next, runtime, Predefined::getSymbolID(Predefined::value));
+    if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    lv.nextValue = std::move(*valueRes);
+
+    // Check for overflow before appending.
+    if (LLVM_UNLIKELY(k == UINT32_MAX)) {
+      (void)runtime.raiseRangeError("iterable too long for TypedArray");
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+
+    // Append to array.
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(lv.A, runtime, k, lv.nextValue) ==
+            ExecutionStatus::EXCEPTION)) {
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+    ++k;
+  }
 }
 
 /// Given a numeric \p value and \p length, returns either length + value if
