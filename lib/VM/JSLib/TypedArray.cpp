@@ -291,7 +291,8 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
   }
   GCScope scope(runtime);
   // 8. Let k be 0.
-  uint64_t i = 0;
+  // Note: createBuffer validates that len fits in size_type.
+  JSTypedArrayBase::size_type i = 0;
   auto marker = scope.createMarker();
   // 9. Repeat, while k < len.
   for (; i < len; ++i) {
@@ -301,9 +302,8 @@ CallResult<HermesValue> typedArrayConstructorFromObject(
     if ((propRes = getIndexed_RJS(runtime, lv.arrayLike, i)) ==
         ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
-    PinnedValue<> iValue = HermesValue::encodeTrustedNumberValue(i);
     lv.kValue = std::move(*propRes);
-    if (JSTypedArray<T, C>::putComputed_RJS(self, runtime, iValue, lv.kValue) ==
+    if (JSObject::setOwnIndexed(self, runtime, i, lv.kValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -800,7 +800,8 @@ CallResult<HermesValue> typedArrayFrom(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
   // 9. Let k be 0.
-  uint64_t k = 0;
+  // Note: typedArrayCreate validates that len fits in size_type.
+  JSTypedArrayBase::size_type k = 0;
   // 10. Repeat, while k < len.
   for (; k < len; ++k) {
     GCScopeMarkerRAII marker{runtime};
@@ -829,9 +830,7 @@ CallResult<HermesValue> typedArrayFrom(void *, Runtime &runtime) {
     // the call to the mapfn, so either way it is the correct value.
     // d. Else, let mappedValue be kValue (already done by initializer).
     // e. Perform ? Set(targetObj, Pk, mappedValue, true).
-    PinnedValue<> kVal = HermesValue::encodeTrustedNumberValue(k);
-    if (JSObject::putComputed_RJS(
-            lv.targetObj, runtime, kVal, lv.mappedValue) ==
+    if (JSObject::setOwnIndexed(lv.targetObj, runtime, k, lv.mappedValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -845,7 +844,6 @@ CallResult<HermesValue> typedArrayFrom(void *, Runtime &runtime) {
 CallResult<HermesValue> typedArrayOf(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   struct : public Locals {
-    PinnedValue<> k;
     PinnedValue<> kValue;
     PinnedValue<JSTypedArrayBase> newObj;
   } lv;
@@ -870,18 +868,16 @@ CallResult<HermesValue> typedArrayOf(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
   // 6. Let k be 0.
-  lv.k = HermesValue::encodeTrustedNumberValue(0);
   GCScope scope(runtime);
   auto marker = scope.createMarker();
   // 7. Repeat, while k < len.
-  for (; lv.k->getNumberAs<uint64_t>() < len;
-       lv.k = HermesValue::encodeTrustedNumberValue(
-           lv.k->getNumberAs<uint64_t>() + 1)) {
+  // Note: typedArrayCreate validates that len fits in size_type.
+  for (JSTypedArrayBase::size_type k = 0; k < len; ++k) {
     // a. Let kValue be items[k].
-    lv.kValue = args.getArg(lv.k->getNumberAs<uint64_t>());
+    lv.kValue = args.getArg(k);
     // b. Let Pk be ! ToString(k).
     // c. Perform ? Set(newObj, Pk, kValue, true).
-    if (JSObject::putComputed_RJS(lv.newObj, runtime, lv.k, lv.kValue) ==
+    if (JSObject::setOwnIndexed(lv.newObj, runtime, k, lv.kValue) ==
         ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
