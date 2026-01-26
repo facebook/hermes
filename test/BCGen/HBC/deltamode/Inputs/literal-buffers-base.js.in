@@ -1,0 +1,59 @@
+/**
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+// This file acts as a base source code to test compiling other files with
+// delta optimizing mode. This is a copy of the original literal-buffer-base.js
+// but with all RUN and CHECK lines removed. Test literal-buffer-update.js will
+// use this file to avoid race condition between literal-buffer-base.js and
+// literal-buffer-update.js when FileCheckOrRegen is trying to modify the
+// base.js while RUN line in update.js is trying to compile base.js.
+
+function a1() {
+  return [1, 2, 3];
+}
+
+function a2() {
+  return [4, 5, 6];
+}
+
+function o1() {
+  return {
+    a: 1,
+    b: 2,
+    c: 3,
+  };
+}
+
+function o2() {
+  return {
+    a: 1,
+    b: 2,
+    c: 3,
+  };
+}
+
+function o3() {
+  return {
+    d: 1,
+    e: 2,
+    f: 3,
+  };
+}
+
+function o4() {
+  return {
+    a: 4,
+    b: 5,
+  };
+}
+
+function o5() {
+  return {
+    g: 6,
+    h: 7,
+  };
+}

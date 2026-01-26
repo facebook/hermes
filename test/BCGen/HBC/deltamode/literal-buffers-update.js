@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %S/literal-buffers-base.js -O -emit-binary -out %t-base.hbc && %hermes %s -base-bytecode=%t-base.hbc -O -dump-bytecode | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermes %S/Inputs/literal-buffers-base.js.in -O -emit-binary -out %t-base.hbc && %hermes %s -base-bytecode=%t-base.hbc -O -dump-bytecode | %FileCheckOrRegen --match-full-lines %s
 
 // This test is for delta mode: first we must compile the base bytecode,
 // then compile the source JS in this test given that base bytecode. We
