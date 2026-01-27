@@ -94,10 +94,13 @@ function configure_apple_framework {
     xcode_15_flags="LINKER:-ld_classic"
   fi
 
-  # For catalyst, we need to set some additional C and Cxx flags
+  # For catalyst, we need to set the target triple to use the macabi environment.
+  # The architecture in -target is overridden by CMake's -arch flags, so we can use
+  # any architecture here (arm64). CMake will add -arch x86_64 and -arch arm64 which
+  # correctly override just the architecture portion while preserving ios-macabi.
   shared_clang_flags=""
   if [[ $1 == "catalyst" ]]; then
-    shared_clang_flags="-target x86_64-arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
+    shared_clang_flags="-target arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
   fi
 
   pushd "$HERMES_PATH" > /dev/null || exit 1
