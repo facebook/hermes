@@ -42,5 +42,8 @@
     "hermes-transform",
     "babel-plugin-syntax-hermes-parser"
   ],
-  "dependencies": {}
+  "dependencies": {},
+  "resolutions": {
+    "lodash": "^4.17.23"
+  }
 }
