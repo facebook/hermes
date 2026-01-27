@@ -81,14 +81,6 @@ function build_framework {
   if [ ! -d destroot/Library/Frameworks/universal/hermesvm.xcframework ]; then
     deployment_target=$(get_deployment_target "$1")
 
-    # If $1 (platform) is catalyst call build catalyst
-    if [[ $1 == "catalyst" ]]; then
-      build_catalyst "$deployment_target"
-      return
-    fi
-
-    deployment_target=$(get_deployment_target "$1")
-
     architecture=$(get_architecture "$1")
 
     build_apple_framework "$1" "$architecture" "$deployment_target"
