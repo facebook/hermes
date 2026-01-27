@@ -97,15 +97,15 @@ function configure_apple_framework {
   # For catalyst, we need to set some additional C and Cxx flags
   shared_clang_flags=""
   if [[ $1 == "catalyst" ]]; then
-    # return the right target flags for catalyst depending on the architecture
-    if [[ $2 == "x86_64" ]]; then
-      shared_clang_flags="-target x86_64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
-    elif [[ $2 == "arm64" ]]; then
-      shared_clang_flags="-target arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
-    else
-      echo "Error: unknown architecture passed $1"
-      exit 1
-    fi
+  #   # return the right target flags for catalyst depending on the architecture
+  #   if [[ $2 == "x86_64" ]]; then
+  shared_clang_flags="-target x86_64-arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
+  #   elif [[ $2 == "arm64" ]]; then
+  #     shared_clang_flags="-target arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
+  #   else
+  #     echo "Error: unknown architecture passed $1"
+  #     exit 1
+  #   fi
   fi
 
   pushd "$HERMES_PATH" > /dev/null || exit 1

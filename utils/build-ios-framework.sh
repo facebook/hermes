@@ -82,10 +82,10 @@ function build_framework {
     deployment_target=$(get_deployment_target "$1")
 
     # If $1 (platform) is catalyst call build catalyst
-    if [[ $1 == "catalyst" ]]; then
-      build_catalyst "$deployment_target"
-      return
-    fi
+    # if [[ $1 == "catalyst" ]]; then
+    #   build_catalyst "$deployment_target"
+    #   return
+    # fi
 
     deployment_target=$(get_deployment_target "$1")
 
