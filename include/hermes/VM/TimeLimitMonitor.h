@@ -9,6 +9,7 @@
 #define HERMES_VM_TIMELIMITMONITOR_H
 
 #include "llvh/ADT/DenseMap.h"
+#include "hermes/Support/FakeThreads.h"
 
 #include <chrono>
 #include <condition_variable>

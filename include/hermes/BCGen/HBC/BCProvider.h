@@ -15,6 +15,7 @@
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/Buffer.h"
+#include "hermes/Support/FakeThreads.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PageAccessTracker.h"
 #include "hermes/Support/StringTableEntry.h"
