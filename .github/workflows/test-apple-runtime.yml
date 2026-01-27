@@ -20,10 +20,10 @@ jobs:
           - destination: platform=iOS Simulator,name=iPhone 16
             scheme: ApplePlatformsIntegrationMobileTests
             name: Test iPhone application
-          - destination: platform=visionOS Simulator,OS=26.0,name=Apple Vision Pro
+          - destination: platform=visionOS Simulator,OS=26.2,name=Apple Vision Pro
             scheme: ApplePlatformsIntegrationVisionOSTests
             name: Test Apple Vision application
-          - destination: platform=tvOS Simulator,name=Apple TV
+          - destination: platform=tvOS Simulator,arch=arm64,OS=26.2,name=Apple TV
             scheme: ApplePlatformsIntegrationTVOSTests
             name: Test Apple TV application
     steps:
@@ -36,40 +36,6 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: brew install ninja
-      # =============================== #
-      # Download visionOS SDK if Needed #
-      # =============================== #
-      - name: Download visionOS SDK
-        id: download-visionos-sdk
-        shell: bash
-        if: ${{ matrix.scheme == 'ApplePlatformsIntegrationVisionOSTests' }}
-        continue-on-error: true
-        run: xcodebuild -downloadPlatform visionOS
-
-      # The download is flaky. Sometimes it fails to connect. So we wait 5 sec and retry once.
-      - name: Try again to download visionOS SDK
-        if: ${{ matrix.scheme == 'ApplePlatformsIntegrationVisionOSTests' && steps.download-visionos-sdk.outcome == 'failure' }}
-        shell: bash
-        run: |
-          sleep 5
-          xcodebuild -downloadPlatform visionOS
-      # =========================== #
-      # Download tvOS SDK if Needed #
-      # =========================== #
-      - name: Download tvOS SDK
-        id: download-tvos-sdk
-        shell: bash
-        if: ${{ matrix.scheme == 'ApplePlatformsIntegrationTVOSTests' }}
-        continue-on-error: true
-        run: xcodebuild -downloadPlatform tvOS
-      # The download is flaky. Sometimes it fails to connect. So we wait 5 sec and retry once.
-      - name: Try again to download visionOS SDK
-        if: ${{ matrix.scheme == 'ApplePlatformsIntegrationTVOSTests' && steps.download-tvos-sdk.outcome == 'failure' }}
-        shell: bash
-        run: |
-          sleep 5
-          xcodebuild -downloadPlatform tvOS
-
       - name: Use built artifacts
         uses: actions/download-artifact@v4
         with:
