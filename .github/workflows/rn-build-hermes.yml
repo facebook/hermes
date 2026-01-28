@@ -38,7 +38,11 @@ jobs:
         uses: ./.github/actions/yarn-install
       - id: set_release_type
         run: |
-          if [[ $EVENT_NAME == "workflow_dispatch" ]]; then
+          # Guard: never allow release mode on static_h branch
+          if [[ $REF == "refs/heads/static_h" ]]; then
+            echo "Branch is static_h, forcing dry-run mode"
+            echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
+          elif [[ $EVENT_NAME == "workflow_dispatch" ]]; then
             echo "Setting release type to ${{ github.event.inputs.release-type }}"
             echo "RELEASE_TYPE=${{ github.event.inputs.release-type }}" >> $GITHUB_OUTPUT
           else
