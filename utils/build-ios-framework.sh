@@ -36,58 +36,11 @@ function get_deployment_target {
     fi
 }
 
-function build_catalyst {
-  # $1 is the deployment_target here
-
-  # get the architectures
-  architectures=$(get_architecture "catalyst")
-
-  # loop over the architectures and build them
-  echo "$architectures" | tr ';' '\n' | while read -r arch; do
-    build_apple_framework "catalyst" "$arch" "$1"
-
-    echo "Finding the hermesvm.framework"
-    find "." -name "hermesvm.framework" -print
-    echo "=============================="
-    ls -lr .
-    echo "=============================="
-
-    mkdir -p "./build_catalyst/lib/$arch/hermesvm.framework"
-    mv "./build_catalyst/lib/hermesvm.framework" "./build_catalyst/lib/$arch/"
-    mv "./build_catalyst/lib/hermesvm.framework.dSYM" "./build_catalyst/lib/$arch/"
-  done
-
-  echo "Create the framework for both Catalyst architectures"
-  cp -R "./build_catalyst/lib/arm64/hermesvm.framework" "./build_catalyst/lib/hermesvm.framework"
-  lipo -create \
-    "./build_catalyst/lib/x86_64/hermesvm.framework/hermesvm" \
-    "./build_catalyst/lib/arm64/hermesvm.framework/hermesvm" \
-    -output "./build_catalyst/lib/hermesvm.framework/hermesvm"
-
-  echo "Create the dSYMs for both Catalyst architectures"
-  cp -R "./build_catalyst/lib/arm64/hermesvm.framework.dSYM" "./build_catalyst/lib/hermesvm.framework.dSYM"
-  lipo -create \
-    "./build_catalyst/lib/x86_64/hermesvm.framework.dSYM/Contents/Resources/DWARF/hermesvm" \
-    "./build_catalyst/lib/arm64/hermesvm.framework.dSYM/Contents/Resources/DWARF/hermesvm" \
-    -output "./build_catalyst/lib/hermesvm.framework.dSYM/Contents/Resources/DWARF/hermesvm"
-
-  echo "Remove the individual architectures folders"
-  echo "$architectures" | tr ';' '\n' | while read -r arch; do
-    rm -rf "./build_catalyst/lib/$arch"
-  done
-}
-
 # build a single framework
 # $1 is the target to build
 function build_framework {
   if [ ! -d destroot/Library/Frameworks/universal/hermesvm.xcframework ]; then
     deployment_target=$(get_deployment_target "$1")
-
-    # If $1 (platform) is catalyst call build catalyst
-    if [[ $1 == "catalyst" ]]; then
-      build_catalyst "$deployment_target"
-      return
-    fi
 
     architecture=$(get_architecture "$1")
 
