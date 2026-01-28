@@ -12,9 +12,12 @@ on:
           - dry-run
         default: 'dry-run'
   pull_request:
+    branches:
+      - static_h
   push:
     branches:
       - 250829098.0.0-stable
+      - static_h
 
 jobs:
   set_release_type:
