@@ -117,7 +117,7 @@ TEST(IdentifierTableDeathTest, LazyExternalSymbolTooBig) {
     GCScope gcScope{runtime};
     auto &idTable = runtime.getIdentifierTable();
 
-    const auto extSize =
+    const size_t extSize =
         (1 << 24) +
         std::max<uint64_t>(
             kTestGCConfig.getMaxHeapSize(),
