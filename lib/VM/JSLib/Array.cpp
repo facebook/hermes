@@ -13,6 +13,7 @@
 
 #include "hermes/ADT/SafeInt.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
+#include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/SmallHermesValue.h"
@@ -410,22 +411,8 @@ static bool checkAndCacheProtoForFastPath(Runtime &runtime) {
   return true;
 }
 
-/// Check for the fast path for array methods that can be optimized when running
-/// on an extensible ordinary JSArray with the standard HiddenClass ('length'
-/// hasn't been modified) with no accessors or indexed properties in bounds in
-/// the prototype chain. The object must also have indexed storage that starts
-/// at 0 and ends at the length of the array.
-///
-/// \param arr the array to check for fast pathing.
-/// \param arrayClass Optional: the default HiddenClass of an array. If set,
-///   check that arr has this hidden class. This is a very fast (but
-///   restrictive) way to check whether ".length" has been changed to be
-///   read-only. If the caller doesn't care, or has already checked, this can be
-///   nullptr.
-/// \param len the length of \p arr.
-///
-/// \return whether we can use the fast path for Array methods on \p arr.
-static bool arrayFastPathCheck(
+/// Declared in JSLib.h so it can be used outside of JSLib
+bool arrayFastPathCheck(
     Runtime &runtime,
     JSArray *arr,
     HiddenClass *arrayClass,
