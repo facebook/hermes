@@ -20,7 +20,7 @@
 namespace hermes::cli {
 
 struct MemorySize {
-  unsigned bytes;
+  uint64_t bytes;
 };
 
 // Define a custom parser for memory size specifications.

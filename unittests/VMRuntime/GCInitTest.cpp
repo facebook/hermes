@@ -21,8 +21,8 @@ using namespace hermes::vm;
 
 namespace {
 
-static constexpr size_t kK = 1024;
-static constexpr size_t kM = kK * kK;
+static constexpr gcheapsize_t kK = 1024;
+static constexpr gcheapsize_t kM = kK * kK;
 
 // The arguments are <heap size, page size>
 struct GCInitTests
@@ -33,8 +33,8 @@ TEST_P(GCInitTests, InitSizeTest) {
   oscompat::set_test_page_size(std::get<1>(GetParam()));
 
   GCConfig config = GCConfig::Builder()
-                        .withInitHeapSize(std::get<0>(GetParam()))
-                        .withMaxHeapSize(32 * kM)
+                        .withInitHeapSize(32 * kM)
+                        .withMaxHeapSize(std::get<0>(GetParam()))
                         .build();
 
   auto runtime = DummyRuntime::create(config);
@@ -51,12 +51,18 @@ INSTANTIATE_TEST_CASE_P(
         std::make_tuple(1 * kM, 4 * kK),
         std::make_tuple(8 * kM, 4 * kK),
         std::make_tuple(32 * kM, 4 * kK),
+        std::make_tuple(2048UL * kM, 4 * kK),
+        // This will overflow gcheapsize_t on 32-bit platforms and result 0,
+        // but it's fine since it will be clamped to InitHeapSize.
+        std::make_tuple(8192UL * kM, 4 * kK),
         std::make_tuple(32 * kK, 16 * kK),
         std::make_tuple(128 * kK, 16 * kK),
         std::make_tuple(512 * kK, 16 * kK),
         std::make_tuple(1 * kM, 16 * kK),
         std::make_tuple(8 * kM, 16 * kK),
-        std::make_tuple(32 * kM, 16 * kK)));
+        std::make_tuple(32 * kM, 16 * kK),
+        std::make_tuple(2048UL * kM, 16 * kK),
+        std::make_tuple(8192UL * kM, 16 * kK)));
 
 } // namespace
 

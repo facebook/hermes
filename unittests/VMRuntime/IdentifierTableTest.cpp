@@ -117,9 +117,11 @@ TEST(IdentifierTableDeathTest, LazyExternalSymbolTooBig) {
     GCScope gcScope{runtime};
     auto &idTable = runtime.getIdentifierTable();
 
-    const auto extSize = (1 << 24) +
-        std::max(kTestGCConfig.getMaxHeapSize(),
-                 toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
+    const auto extSize =
+        (1 << 24) +
+        std::max<uint64_t>(
+            kTestGCConfig.getMaxHeapSize(),
+            toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
 
     // A string of this size is definitely too big to be allocated.
     ASSERT_FALSE(runtime.getHeap().canAllocExternalMemory(extSize));

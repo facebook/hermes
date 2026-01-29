@@ -77,6 +77,28 @@ class HadesGC final : public GCBase {
     return gc->getKind() == HeapKind::HadesGC;
   }
 
+  /// When HERMESVM_COMPRESSED_POINTERS is ON, clamp \p maxHeapSize to
+  /// [2 * kSegmentUnitSize, 4GB - kSegmentUnitSize], since we can't go beyond
+  /// 4GB with compressed pointers. Otherwise, clamp it to
+  /// [2 * kSegmentUnitSize, maxHeapSize].
+  gcheapsize_t clampMaxHeapSize(gcheapsize_t maxHeapSize) const {
+#ifdef HERMESVM_COMPRESSED_POINTERS
+    return std::max<uint64_t>(
+        std::min<uint64_t>(
+            // Subtract the size of a single FixedSizeHeapSegment as a safe
+            // buffer.
+            (1ULL << 32) - FixedSizeHeapSegment::storageSize(),
+            maxHeapSize),
+        // At least one YG segment and one OG segment.
+        2 * FixedSizeHeapSegment::storageSize());
+#else
+    return std::max<uint64_t>(
+        maxHeapSize,
+        // At least one YG segment and one OG segment.
+        2 * FixedSizeHeapSegment::storageSize());
+#endif
+  }
+
   /// The maximum size of a normal allocation. All GCCell types that do not
   /// support large allocation must be smaller than or equal to this.
   static constexpr uint32_t maxNormalAllocationSize() {

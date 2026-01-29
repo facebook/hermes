@@ -1255,10 +1255,7 @@ HadesGC::HadesGC(
           gcConfig,
           std::move(crashMgr),
           HeapKind::HadesGC),
-      maxHeapSize_{std::max<uint64_t>(
-          gcConfig.getMaxHeapSize(),
-          // At least one YG segment and one OG segment.
-          2 * FixedSizeHeapSegment::storageSize())},
+      maxHeapSize_{clampMaxHeapSize(gcConfig.getMaxHeapSize())},
       provider_(std::move(provider)),
       oldGen_{*this},
       backgroundExecutor_{
