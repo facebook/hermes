@@ -37,7 +37,7 @@ class HERMES_EXPORT CDPDebugAPI {
 
   /// Gets the AsyncDebuggerAPI associated with this instance.
   debugger::AsyncDebuggerAPI &asyncDebuggerAPI() {
-    return *asyncDebuggerAPI_;
+    return asyncDebuggerAPI_;
   }
 
   /// Adds a console message to the current CDPDebugAPI instance,
@@ -53,10 +53,13 @@ class HERMES_EXPORT CDPDebugAPI {
 
   CDPDebugAPI(HermesRuntime &runtime, size_t maxCachedMessages);
 
-  HermesRuntime &runtime_;
-  std::unique_ptr<debugger::AsyncDebuggerAPI> asyncDebuggerAPI_;
+  /// Member order matters for destruction: asyncDebuggerAPI_ must be destroyed
+  /// first, as its destructor flushes the queue of pending tasks, which may
+  /// reference other objects (like consoleMessageDispatcher_).
   ConsoleMessageStorage consoleMessageStorage_;
   ConsoleMessageDispatcher consoleMessageDispatcher_;
+  HermesRuntime &runtime_;
+  debugger::AsyncDebuggerAPI asyncDebuggerAPI_;
 };
 
 } // namespace cdp

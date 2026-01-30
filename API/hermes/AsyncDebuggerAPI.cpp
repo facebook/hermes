@@ -317,12 +317,6 @@ void AsyncDebuggerAPI::runEventCallbacks(DebuggerEventType event) {
   }
 }
 
-std::unique_ptr<AsyncDebuggerAPI> AsyncDebuggerAPI::create(
-    HermesRuntime &runtime) {
-  // Can't use make_unique here since the constructor is private.
-  return std::unique_ptr<AsyncDebuggerAPI>(new AsyncDebuggerAPI(runtime));
-}
-
 } // namespace debugger
 } // namespace hermes
 } // namespace facebook

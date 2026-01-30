@@ -80,7 +80,7 @@ void AsyncDebuggerAPITest::SetUp() {
           jsi::PropNameID::forAscii(*runtime_, "shouldStop"),
           0,
           std::bind(&AsyncDebuggerAPITest::shouldStop, this, _1, _2, _3, _4)));
-  asyncDebuggerAPI_ = AsyncDebuggerAPI::create(*runtime_);
+  asyncDebuggerAPI_ = std::make_unique<AsyncDebuggerAPI>(*runtime_);
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
   // Give the runtime thread the same stack size as the main thread. The runtime
@@ -564,10 +564,9 @@ TEST(AsyncDebuggerAPITest, StubImplementationTest) {
   auto builder = ::hermes::vm::RuntimeConfig::Builder();
   std::unique_ptr<facebook::hermes::HermesRuntime> runtime =
       facebook::hermes::makeHermesRuntime(builder.build());
-  std::unique_ptr<facebook::hermes::debugger::AsyncDebuggerAPI>
-      asyncDebuggerAPI =
-          facebook::hermes::debugger::AsyncDebuggerAPI::create(*runtime);
-  EXPECT_TRUE(asyncDebuggerAPI == nullptr);
+  // Just verify we can construct an instance successfully
+  facebook::hermes::debugger::AsyncDebuggerAPI asyncDebuggerAPI(*runtime);
+  EXPECT_FALSE(asyncDebuggerAPI.isPaused());
 }
 
 #endif // !HERMES_ENABLE_DEBUGGER
