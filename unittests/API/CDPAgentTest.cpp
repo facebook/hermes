@@ -2746,6 +2746,170 @@ TEST_F(CDPAgentTest, DebuggerApplyBreakpointsToNewLoadedScripts) {
   expectNothing();
 }
 
+TEST_F(CDPAgentTest, DebuggerConditionalBreakpoint_ConditionTrue) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var x = 10;
+    debugger;      // line 2
+    Math.random(); // line 3: conditional breakpoint here with "x > 5"
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement, set conditional breakpoint on line 3
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 5");
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 3, 4});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause on line 3 because x (10) > 5
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerConditionalBreakpoint_ConditionFalse) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var x = 3;
+    debugger;      // line 2
+    Math.random(); // line 3: conditional breakpoint here with "x > 5"
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement, set conditional breakpoint on line 3
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 5");
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 3, 4});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerConditionalBreakpoint_EmptyStringIsUnconditional) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1
+    Math.random(); // line 2: breakpoint with empty condition ""
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement, set breakpoint with empty condition on line 2
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+        json.emitKeyValue("condition", "");
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause on line 2 because empty string = unconditional
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerDuplicateBreakpoint_SameLocation) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1
+    Math.random(); // line 2: set breakpoint here twice
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // Set first breakpoint on line 2 - should succeed
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
+
+  // Set second breakpoint at the same location - should fail with error
+  // (V8 returns: "Breakpoint at specified location already exists.")
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+      });
+  expectErrorMessageContaining("Breakpoint", msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause exactly once on line 2 (first breakpoint still works)
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
 TEST_F(CDPAgentTest, DebuggerRemoveBreakpoint) {
   int msgId = 1;
 

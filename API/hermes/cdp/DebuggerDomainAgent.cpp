@@ -564,7 +564,7 @@ void DebuggerDomainAgent::setBreakpoint(
   CDPBreakpointDescription description;
   description.line = req.location.lineNumber;
   description.column = req.location.columnNumber;
-  description.condition = req.location.scriptId;
+  description.condition = req.condition;
 
   auto scriptID = std::stoull(req.location.scriptId);
 

@@ -135,11 +135,17 @@ class DebuggerDomainAgent : public DomainAgent {
   /// Handles Debugger.evaluateOnCallFrame
   void evaluateOnCallFrame(const m::debugger::EvaluateOnCallFrameRequest &req);
 
-  /// Debugger.setBreakpoint creates a CDP breakpoint that applies to exactly
-  /// one script (identified by script ID) that does not survive reloads.
+  /// @cdp Debugger.setBreakpoint creates a CDP breakpoint that applies to
+  /// exactly one script (identified by script ID) that does not survive
+  /// reloads. Responds with an error if a breakpoint already exists at the same
+  /// location. A `condition` equal to an empty string is treated the same as an
+  /// omitted condition (= unconditional breakpoint).
   void setBreakpoint(const m::debugger::SetBreakpointRequest &req);
-  // Debugger.setBreakpointByUrl creates a CDP breakpoint that may apply to
-  // multiple scripts (identified by URL), and survives reloads.
+  /// @cdp Debugger.setBreakpointByUrl creates a CDP breakpoint that may apply
+  /// to multiple scripts (identified by URL), and survives reloads. Responds
+  /// with an error if a breakpoint already exists at the same location. A
+  /// `condition` equal to an empty string is treated the same as an omitted
+  /// condition (= unconditional breakpoint).
   void setBreakpointByUrl(const m::debugger::SetBreakpointByUrlRequest &req);
   /// Handles Debugger.removeBreakpoint
   void removeBreakpoint(const m::debugger::RemoveBreakpointRequest &req);
