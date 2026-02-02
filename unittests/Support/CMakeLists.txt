@@ -22,6 +22,7 @@ set(SupportSources
   PlatformLoggingTest.cpp
   RegexTest.cpp
   SerialExecutorTest.cpp
+  SimpleLRUTest.cpp
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
   StackBoundsTest.cpp

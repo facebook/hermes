@@ -8,53 +8,106 @@
 #pragma once
 
 #include <cassert>
+#include <deque>
 #include <vector>
 
 namespace hermes {
 
-/// A simple LRU container.
+/// A container that tracks values in least-recently-used order. Values can be
+/// added, removed, and marked as used. The least recently used value can be
+/// retrieved efficiently.
+///
+/// Implementation: Values are stored in nodes that form a doubly-linked list
+/// ordered by recency. The most recently used node is at the front (after the
+/// sentinel head), and the least recently used is at the back (before the
+/// head). Nodes are allocated from a deque to ensure pointer stability.
+/// Removed nodes are cached in a free list for reuse.
 template <typename T>
 class SimpleLRU {
-  /// Debugging marker.
+  /// Magic number used in debug builds to validate node pointers.
   static constexpr uint32_t kMark = 0x764ABF12;
 
+  /// A node in the doubly-linked list, containing only the list pointers.
+  /// This is separated from the value to allow the sentinel head to be just
+  /// an Item without requiring a default-constructible T.
   struct Item {
 #ifndef NDEBUG
+    /// Debug marker to detect invalid pointer casts.
     uint32_t marker;
 #endif
-    Item *prev, *next;
+    /// Pointer to the previous item in the list (more recently used).
+    Item *prev;
+    /// Pointer to the next item in the list (less recently used).
+    Item *next;
   };
+
+  /// A complete node containing both list pointers and the stored value.
   struct Node {
+    /// The list item, must be first for pointer arithmetic in leastRecent().
     Item item;
+    /// The user-provided value.
     T value;
   };
 
-  std::vector<Node> nodes_{};
+  /// Storage for all allocated nodes. We use a deque so that insertions do
+  /// not invalidate pointers to existing nodes.
+  std::deque<Node> nodes_{};
+
+  /// Cache of removed nodes available for reuse, avoiding repeated allocation.
   std::vector<Node *> freed_{};
+
+  /// Number of pre-allocated nodes (from capacity constructor) not yet used.
+  /// These are at indices [nodes_.size() - preAllocAvail_, nodes_.size()).
+  size_t preAllocAvail_;
+
+  /// Sentinel head of the doubly-linked list. head_.next points to the most
+  /// recently used node, head_.prev points to the least recently used node.
+  /// When empty, both point to &head_ itself.
   Item head_;
 
  public:
-  explicit SimpleLRU() {
+  /// Construct an empty LRU container.
+  SimpleLRU() : preAllocAvail_(0) {
     head_.prev = head_.next = &head_;
   }
-  explicit SimpleLRU(size_t capacity) : SimpleLRU() {
-    nodes_.reserve(capacity);
+
+  /// Construct an empty LRU container with pre-allocated storage.
+  /// \p capacity The number of elements to pre-allocate. Requires T to be
+  ///   default-constructible.
+  explicit SimpleLRU(size_t capacity) : preAllocAvail_(capacity) {
+    head_.prev = head_.next = &head_;
+    nodes_.resize(capacity);
     freed_.reserve(capacity);
+#ifndef NDEBUG
+    for (auto &node : nodes_)
+      node.item.marker = kMark;
+#endif
   }
 
-  explicit SimpleLRU(const SimpleLRU &) = delete;
-  explicit SimpleLRU(SimpleLRU &&) = delete;
-  void operator=(const SimpleLRU &) = delete;
-  void operator=(SimpleLRU &&) = delete;
+  // Type is not copyable.
+  SimpleLRU(const SimpleLRU &) = delete;
+  SimpleLRU &operator=(const SimpleLRU &) = delete;
 
+  // Type is not movable (due to self-referential head_ pointers).
+  SimpleLRU(SimpleLRU &&) = delete;
+  SimpleLRU &operator=(SimpleLRU &&) = delete;
+
+  /// \return true if the container has no values.
   bool empty() const {
     return head_.next == &head_;
   }
 
-  /// Add a new value.
+  /// Add a new value to the container, marking it as most recently used.
+  /// \p value The value to add.
+  /// \return A pointer to the stored value. This pointer remains valid until
+  ///   the value is removed.
   T *add(const T &value) {
     Node *n;
-    if (!freed_.empty()) {
+    if (preAllocAvail_ > 0) {
+      // Use a pre-allocated node.
+      n = &nodes_[nodes_.size() - preAllocAvail_];
+      --preAllocAvail_;
+    } else if (!freed_.empty()) {
       n = freed_.back();
       freed_.pop_back();
     } else {
@@ -68,7 +121,8 @@ class SimpleLRU {
     return &n->value;
   }
 
-  /// Mark a value as most recently used.
+  /// Mark a value as most recently used, moving it to the front.
+  /// \p pValue Pointer to a value previously returned by add().
   void use(T *pValue) {
     Node *n = (Node *)((char *)pValue - offsetof(Node, value));
     assert(n->item.marker == kMark && "Invalid node pointer");
@@ -78,7 +132,9 @@ class SimpleLRU {
     }
   }
 
-  /// Remove a value from the LRU.
+  /// Remove a value from the container.
+  /// \p pValue Pointer to a value previously returned by add(). The pointer
+  ///   becomes invalid after this call.
   void remove(T *pValue) {
     Node *n = (Node *)((char *)pValue - offsetof(Node, value));
     assert(n->item.marker == kMark && "Invalid node pointer");
@@ -86,7 +142,8 @@ class SimpleLRU {
     freed_.push_back(n);
   }
 
-  /// Return the least recently used one.
+  /// \return A pointer to the least recently used value.
+  /// \pre !empty()
   T *leastRecent() {
     assert(!empty() && "LRU is empty");
     Node *n = (Node *)head_.prev;
@@ -95,6 +152,8 @@ class SimpleLRU {
   }
 
  private:
+  /// Insert \p elem into the list immediately after \p after.
+  /// \pre elem is not currently in any list.
   void listInsert(Item *after, Item *elem) {
     assert(!elem->prev && !elem->next && "Item already in list");
     elem->next = after->next;
@@ -102,8 +161,11 @@ class SimpleLRU {
     after->next = elem;
     elem->next->prev = elem;
   }
+
+  /// Remove \p elem from the list.
+  /// \pre elem is currently in a list.
   void listRemove(Item *elem) {
-    assert(elem->prev && elem->next && "Item already removed");
+    assert(elem->prev && elem->next && "Item not in list");
     elem->prev->next = elem->next;
     elem->next->prev = elem->prev;
 #ifndef NDEBUG
