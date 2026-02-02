@@ -1,3 +1,6 @@
+## 0.34.0
+- Support Flow's new `keyof` operator that replaces `$Keys`. See [this PR in prettier main](https://github.com/prettier/prettier/pull/18801/changes).
+
 ## 0.33.2
 - Reverts base Prettier version back to 3.6.2, but keeps other changes
 
