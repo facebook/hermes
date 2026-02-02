@@ -602,6 +602,13 @@ function deserializeProperty() {
     shorthand: this.deserializeBoolean(),
   };
 }
+function deserializeDecorator() {
+  return {
+    type: 'Decorator',
+    loc: this.addEmptyLoc(),
+    expression: this.deserializeNode(),
+  };
+}
 function deserializeClassLikeFirst() {
   throw new Error('ClassLike' + ' should not appear in program buffer');
 }
@@ -651,6 +658,7 @@ function deserializeClassProperty() {
     value: this.deserializeNode(),
     computed: this.deserializeBoolean(),
     static: this.deserializeBoolean(),
+    decorators: this.deserializeNodeList(),
     declare: this.deserializeBoolean(),
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
@@ -666,6 +674,7 @@ function deserializeClassPrivateProperty() {
     key: this.deserializeNode(),
     value: this.deserializeNode(),
     static: this.deserializeBoolean(),
+    decorators: this.deserializeNodeList(),
     declare: this.deserializeBoolean(),
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
@@ -683,8 +692,10 @@ function deserializeMethodDefinition() {
     kind: this.deserializeString(),
     computed: this.deserializeBoolean(),
     static: this.deserializeBoolean(),
+    decorators: this.deserializeNodeList(),
   };
 }
+
 function deserializeImportDeclaration() {
   return {
     type: 'ImportDeclaration',
@@ -2279,6 +2290,7 @@ module.exports = [
   deserializeTaggedTemplateExpression,
   deserializeTemplateElement,
   deserializeProperty,
+  deserializeDecorator,
   deserializeClassLikeFirst,
   deserializeClassDeclaration,
 
@@ -2291,6 +2303,7 @@ module.exports = [
   deserializeClassPrivateProperty,
 
   deserializeMethodDefinition,
+
   deserializeImportDeclaration,
   deserializeImportSpecifier,
   deserializeImportDefaultSpecifier,

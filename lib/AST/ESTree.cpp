@@ -262,5 +262,17 @@ ClassBodyNode *getClassBody(ClassLikeNode *node) {
   llvm_unreachable("invalid ClassLikeNode");
 }
 
+ESTree::NodeList &getDecorators(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return cast<ClassExpressionNode>(node)->_decorators;
+    case NodeKind::ClassDeclaration:
+      return cast<ClassDeclarationNode>(node)->_decorators;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
 } // namespace ESTree
 } // namespace hermes

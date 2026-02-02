@@ -1146,8 +1146,9 @@ TEST(JSLexerTest, AtSignTest) {
     ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
 
+    ASSERT_EQ(TokenKind::at, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
-    EXPECT_EQ(1, sm.getErrorCount());
+    EXPECT_EQ(0, sm.getErrorCount());
   }
   {
     JSLexer::Allocator alloc;
@@ -1161,8 +1162,9 @@ TEST(JSLexerTest, AtSignTest) {
     ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
 
+    ASSERT_EQ(TokenKind::at, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
-    EXPECT_EQ(1, sm.getErrorCount());
+    EXPECT_EQ(0, sm.getErrorCount());
   }
 }
 

@@ -566,7 +566,10 @@ class JSParserImpl {
   /// Check whether the current token begins a Declaration.
   bool checkDeclaration() {
     if (checkN(
-            TokenKind::rw_function, TokenKind::rw_const, TokenKind::rw_class) ||
+            TokenKind::rw_function,
+            TokenKind::rw_const,
+            TokenKind::rw_class,
+            TokenKind::at) ||
         (checkUnescaped(asyncIdent_) && checkAsyncFunction())) {
       return true;
     }
@@ -1015,6 +1018,9 @@ class JSParserImpl {
   Optional<ESTree::YieldExpressionNode *> parseYieldExpression(
       Param param = ParamIn);
 
+  bool parseDecoratorList(ESTree::NodeList &list);
+  Optional<ESTree::DecoratorNode *> parseDecorator();
+
   Optional<ESTree::ClassDeclarationNode *> parseClassDeclaration(Param param);
   Optional<ESTree::ClassExpressionNode *> parseClassExpression();
 
@@ -1025,11 +1031,13 @@ class JSParserImpl {
   /// \param if the name is provided, the type params if provided, nullptr
   /// otherwise.
   /// \param kind whether the class is a declaration or expression.
+  /// \param decorators the decorator list, empty if no decorators.
   Optional<ESTree::Node *> parseClassTail(
       SMLoc startLoc,
       ESTree::Node *name,
       ESTree::Node *typeParams,
-      ClassParseKind kind);
+      ClassParseKind kind,
+      ESTree::NodeList &&decorators);
 
   Optional<ESTree::ClassBodyNode *> parseClassBody(SMLoc startLoc);
 
@@ -1050,6 +1058,7 @@ class JSParserImpl {
       bool declare,
       bool readonly,
       ESTree::NodeLabel accessibility,
+      ESTree::NodeList &&decorators,
       bool eagerly = false);
 
   /// Reparse the specified node as arrow function parameter list and store the

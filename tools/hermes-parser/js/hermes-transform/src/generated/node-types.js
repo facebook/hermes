@@ -64,6 +64,7 @@ import type {
   DeclareOpaqueType as DeclareOpaqueTypeType,
   DeclareTypeAlias as DeclareTypeAliasType,
   DeclareVariable as DeclareVariableType,
+  Decorator as DecoratorType,
   DoWhileStatement as DoWhileStatementType,
   EmptyStatement as EmptyStatementType,
   EmptyTypeAnnotation as EmptyTypeAnnotationType,
@@ -470,6 +471,10 @@ export type DeclareTypeAliasProps = {
 export type DeclareVariableProps = {
   +id: MaybeDetachedNode<DeclareVariableType['id']>,
   +kind: DeclareVariableType['kind'],
+};
+
+export type DecoratorProps = {
+  +expression: MaybeDetachedNode<DecoratorType['expression']>,
 };
 
 export type DoWhileStatementProps = {
@@ -945,6 +950,9 @@ export type MethodDefinitionProps = {
   +kind: MethodDefinitionType['kind'],
   +computed: MethodDefinitionType['computed'],
   +static: MethodDefinitionType['static'],
+  +decorators: $ReadOnlyArray<
+    MaybeDetachedNode<MethodDefinitionType['decorators'][number]>,
+  >,
 };
 
 export type MixedTypeAnnotationProps = {};
@@ -1072,6 +1080,9 @@ export type PropertyDefinitionProps = {
   +value?: ?MaybeDetachedNode<PropertyDefinitionType['value']>,
   +computed: PropertyDefinitionType['computed'],
   +static: PropertyDefinitionType['static'],
+  +decorators: $ReadOnlyArray<
+    MaybeDetachedNode<PropertyDefinitionType['decorators'][number]>,
+  >,
   +declare: PropertyDefinitionType['declare'],
   +optional: PropertyDefinitionType['optional'],
   +variance?: ?MaybeDetachedNode<PropertyDefinitionType['variance']>,
@@ -1941,6 +1952,18 @@ export function DeclareVariable(props: {
     type: 'DeclareVariable',
     id: asDetachedNodeForCodeGen(props.id),
     kind: props.kind,
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function Decorator(props: {
+  ...DecoratorProps,
+  +parent?: ESNode,
+}): DetachedNode<DecoratorType> {
+  const node = detachedProps<DecoratorType>((props.parent: $FlowFixMe), {
+    type: 'Decorator',
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
@@ -3119,6 +3142,7 @@ export function MethodDefinition(props: {
     kind: props.kind,
     computed: props.computed,
     static: props.static,
+    decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
@@ -3425,6 +3449,7 @@ export function PropertyDefinition(props: {
       value: asDetachedNodeForCodeGen(props.value),
       computed: props.computed,
       static: props.static,
+      decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
       declare: props.declare,
       optional: props.optional,
       variance: asDetachedNodeForCodeGen(props.variance),

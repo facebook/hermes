@@ -40,6 +40,7 @@ describe('MethodDefinition', () => {
                "body": [
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "foo",
                      "optional": false,
@@ -155,6 +156,7 @@ describe('MethodDefinition', () => {
                "body": [
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "constructor",
                      "optional": false,
@@ -271,6 +273,7 @@ describe('MethodDefinition', () => {
                "body": [
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "foo",
                      "optional": false,
@@ -308,6 +311,7 @@ describe('MethodDefinition', () => {
                  },
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "foo",
                      "optional": false,

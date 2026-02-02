@@ -909,6 +909,10 @@ void SemanticResolver::visit(ESTree::ClassExpressionNode *node) {
 }
 
 void SemanticResolver::visitClassAsExpr(ESTree::ClassLikeNode *node) {
+  if (compile_ && !ESTree::getDecorators(node).empty()) {
+    sm_.error(node->getSourceRange(), "decorators are not supported");
+  }
+
   // Classes must be in strict mode.
   llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
   ClassContext classCtx(*this, node);
@@ -957,6 +961,10 @@ void SemanticResolver::visit(PrivateNameNode *node) {
 }
 
 void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
+  if (compile_ && !node->_decorators.empty()) {
+    sm_.error(node->getSourceRange(), "decorators are not supported");
+  }
+
   // Visit the init expression, since it needs to be resolved.
   if (node->_value) {
     // We visit the initializer expression in the context of a synthesized
@@ -996,6 +1004,10 @@ void SemanticResolver::visit(ClassPrivatePropertyNode *node) {
 }
 
 void SemanticResolver::visit(ESTree::ClassPropertyNode *node) {
+  if (compile_ && !node->_decorators.empty()) {
+    sm_.error(node->getSourceRange(), "decorators are not supported");
+  }
+
   // If computed property, the key expression needs to be resolved.
   if (node->_computed) {
     // Computed keys cannot reference super.
@@ -1080,6 +1092,10 @@ void SemanticResolver::visit(ESTree::SuperNode *node, ESTree::Node *parent) {
 void SemanticResolver::visit(
     ESTree::MethodDefinitionNode *node,
     ESTree::Node *parent) {
+  if (compile_ && !node->_decorators.empty()) {
+    sm_.error(node->getSourceRange(), "decorators are not supported");
+  }
+
   // If computed property, the key expression needs to be resolved.
   if (node->_computed)
     visitESTreeNode(*this, node->_key, node);

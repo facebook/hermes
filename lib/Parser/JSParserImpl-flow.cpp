@@ -1798,7 +1798,7 @@ Optional<ESTree::Node *> JSParserImpl::parseRecordDeclarationFlow(SMLoc start) {
           propStartLoc,
           methodBody,
           new (context_) ESTree::MethodDefinitionNode(
-              key, funcExpr, methodIdent_, false, isStatic));
+              key, funcExpr, methodIdent_, false, isStatic, {}));
       bodyElements.push_back(*method);
     } else {
       error(

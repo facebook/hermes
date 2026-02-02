@@ -971,6 +971,7 @@ export interface MethodDefinitionConstructor extends MethodDefinitionBase {
   +kind: 'constructor';
   +computed: false;
   +static: false;
+  +decorators: $ReadOnlyArray<Decorator>;
 }
 export interface MethodDefinitionWithComputedName extends MethodDefinitionBase {
   +type: 'MethodDefinition';
@@ -978,6 +979,7 @@ export interface MethodDefinitionWithComputedName extends MethodDefinitionBase {
   +kind: 'method' | 'get' | 'set';
   +computed: true;
   +static: boolean;
+  +decorators: $ReadOnlyArray<Decorator>;
 }
 export interface MethodDefinitionWithNonComputedName
   extends MethodDefinitionBase {
@@ -986,6 +988,7 @@ export interface MethodDefinitionWithNonComputedName
   +kind: 'method' | 'get' | 'set';
   +computed: false;
   +static: boolean;
+  +decorators: $ReadOnlyArray<Decorator>;
 }
 
 // `PropertyDefinition` is the new standard for all class properties
@@ -996,6 +999,7 @@ interface PropertyDefinitionBase extends BaseNode {
   +value: null | Expression;
   +typeAnnotation: null | TypeAnnotation;
   +static: boolean;
+  +decorators: $ReadOnlyArray<Decorator>;
   +variance: null | Variance;
   +declare: boolean;
   // hermes always emit this as false

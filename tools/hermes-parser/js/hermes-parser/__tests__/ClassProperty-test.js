@@ -45,6 +45,7 @@ describe('PropertyDefinition', () => {
                {
                  "computed": false,
                  "declare": false,
+                 "decorators": [],
                  "key": {
                    "name": "foo",
                    "optional": false,
@@ -62,6 +63,7 @@ describe('PropertyDefinition', () => {
                {
                  "computed": false,
                  "declare": false,
+                 "decorators": [],
                  "key": {
                    "name": "bar",
                    "optional": false,
@@ -84,6 +86,7 @@ describe('PropertyDefinition', () => {
                {
                  "computed": false,
                  "declare": false,
+                 "decorators": [],
                  "key": {
                    "name": "staticProp",
                    "optional": false,
@@ -158,6 +161,7 @@ describe('PropertyDefinition', () => {
                    {
                      "computed": false,
                      "declare": false,
+                     "decorators": [],
                      "key": {
                        "name": "baz",
                        "optional": false,
@@ -246,6 +250,7 @@ describe('PropertyDefinition', () => {
                    {
                      "computed": false,
                      "declare": true,
+                     "decorators": [],
                      "key": {
                        "name": "bam",
                        "optional": false,

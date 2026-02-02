@@ -820,7 +820,7 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
     return *fdecl;
   }
 
-  if (check(TokenKind::rw_class)) {
+  if (check(TokenKind::at, TokenKind::rw_class)) {
     auto optClass = parseClassDeclaration(Param{});
     if (!optClass)
       return None;
@@ -2657,6 +2657,7 @@ Optional<ESTree::Node *> JSParserImpl::parsePrimaryExpression() {
       return fExpr.getValue();
     }
 
+    case TokenKind::at:
     case TokenKind::rw_class: {
       auto optClass = parseClassExpression();
       if (!optClass)
@@ -4670,14 +4671,140 @@ Optional<ESTree::YieldExpressionNode *> JSParserImpl::parseYieldExpression(
       new (context_) ESTree::YieldExpressionNode(optArg.getValue(), delegate));
 }
 
+bool JSParserImpl::parseDecoratorList(ESTree::NodeList &list) {
+  assert(check(TokenKind::at));
+
+  while (check(TokenKind::at)) {
+    auto optDecorator = parseDecorator();
+    if (!optDecorator)
+      return false;
+    list.push_back(**optDecorator);
+  }
+
+  return true;
+}
+
+Optional<ESTree::DecoratorNode *> JSParserImpl::parseDecorator() {
+  assert(check(TokenKind::at));
+
+  SMLoc startLoc = advance().Start;
+  ESTree::Node *expr = nullptr;
+
+  if (check(TokenKind::l_paren)) {
+    // DecoratorParenthesizedExpression:
+    // ( Expression[+In, ?Yield, ?Await] )
+    // ^
+    SMLoc parenLoc = advance().Start;
+    auto optExpr = parseExpression(ParamIn);
+    if (!optExpr)
+      return None;
+    if (!eat(
+            TokenKind::r_paren,
+            JSLexer::AllowDiv,
+            "at end of decorator expression",
+            "location of '('",
+            parenLoc))
+      return None;
+    expr = *optExpr;
+  } else {
+    // Must be identifier (start of DecoratorMemberExpression).
+    if (!check(TokenKind::identifier) && !tok_->isResWord()) {
+      errorExpected(
+          TokenKind::identifier, "in decorator", "location of '@'", startLoc);
+      return None;
+    }
+
+    expr = setLocation(
+        tok_,
+        tok_,
+        new (context_) ESTree::IdentifierNode(
+            tok_->getResWordOrIdentifier(), nullptr, false));
+    advance(JSLexer::AllowDiv);
+
+    // Parse member chain:
+    // DecoratorMemberExpression . IdentifierName
+    //                           ^
+    while (checkAndEat(TokenKind::period)) {
+      ESTree::Node *property = nullptr;
+
+      if (check(TokenKind::private_identifier)) {
+        auto optPrivate = parsePrivateName();
+        if (!optPrivate)
+          return None;
+        property = *optPrivate;
+      } else if (check(TokenKind::identifier) || tok_->isResWord()) {
+        property = setLocation(
+            tok_,
+            tok_,
+            new (context_) ESTree::IdentifierNode(
+                tok_->getResWordOrIdentifier(), nullptr, false));
+        advance(JSLexer::AllowDiv);
+      } else {
+        errorExpected(
+            TokenKind::identifier,
+            "after '.' in decorator",
+            "location of '@'",
+            startLoc);
+        return None;
+      }
+
+      expr = setLocation(
+          startLoc,
+          property,
+          new (context_) ESTree::MemberExpressionNode(expr, property, false));
+    }
+
+    // DecoratorCallExpression:
+    // DecoratorMemberExpression Arguments
+    //                           ^
+    if (check(TokenKind::l_paren)) {
+      ESTree::NodeList argList;
+      SMLoc endLoc;
+      if (!parseArguments(argList, endLoc))
+        return None;
+      expr = setLocation(
+          startLoc,
+          endLoc,
+          new (context_)
+              ESTree::CallExpressionNode(expr, nullptr, std::move(argList)));
+    }
+  }
+
+  return setLocation(
+      startLoc,
+      getPrevTokenEndLoc(),
+      new (context_) ESTree::DecoratorNode(expr));
+}
+
 Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
     Param param) {
-  assert(check(TokenKind::rw_class) && "class must start with 'class'");
+  assert(
+      check(TokenKind::at, TokenKind::rw_class) &&
+      "class must start with '@' or 'class'");
   // NOTE: Class definition is always strict mode code.
   SaveFunctionState saveFunctionState{this};
   setStrictMode(true);
 
-  SMLoc startLoc = advance().Start;
+  SMLoc startLoc = tok_->getStartLoc();
+  ESTree::NodeList decorators{};
+
+  if (check(TokenKind::at)) {
+    if (!parseDecoratorList(decorators))
+      return None;
+
+    if (!eat(
+            TokenKind::rw_class,
+            JSLexer::GrammarContext::AllowRegExp,
+            "in class",
+            "start of class",
+            startLoc)) {
+      return None;
+    }
+  } else {
+    // No decorators, eat the 'class' token.
+    assert(check(TokenKind::rw_class));
+    advance();
+  }
 
   ESTree::Node *name = nullptr;
   ESTree::Node *typeParams = nullptr;
@@ -4720,20 +4847,45 @@ Optional<ESTree::ClassDeclarationNode *> JSParserImpl::parseClassDeclaration(
   }
 #endif
 
-  auto optClass =
-      parseClassTail(startLoc, name, typeParams, ClassParseKind::Declaration);
+  auto optClass = parseClassTail(
+      startLoc,
+      name,
+      typeParams,
+      ClassParseKind::Declaration,
+      std::move(decorators));
   if (!optClass)
     return None;
   return llvh::cast<ESTree::ClassDeclarationNode>(*optClass);
 }
 
 Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
-  assert(check(TokenKind::rw_class) && "class must start with 'class'");
+  assert(
+      check(TokenKind::at, TokenKind::rw_class) &&
+      "class must start with '@' or 'class'");
   // NOTE: A class definition is always strict mode code.
   SaveFunctionState saveFunctionState{this};
   setStrictMode(true);
 
-  SMLoc start = advance().Start;
+  SMLoc start = tok_->getStartLoc();
+  ESTree::NodeList decorators{};
+
+  if (check(TokenKind::at)) {
+    if (!parseDecoratorList(decorators))
+      return None;
+
+    if (!eat(
+            TokenKind::rw_class,
+            JSLexer::GrammarContext::AllowRegExp,
+            "in class",
+            "start of class",
+            start)) {
+      return None;
+    }
+  } else {
+    // No decorators, eat the 'class' token.
+    assert(check(TokenKind::rw_class));
+    advance();
+  }
 
   ESTree::Node *name = nullptr;
   ESTree::Node *typeParams = nullptr;
@@ -4773,8 +4925,12 @@ Optional<ESTree::ClassExpressionNode *> JSParserImpl::parseClassExpression() {
   }
 #endif
 
-  auto optClass =
-      parseClassTail(start, name, typeParams, ClassParseKind::Expression);
+  auto optClass = parseClassTail(
+      start,
+      name,
+      typeParams,
+      ClassParseKind::Expression,
+      std::move(decorators));
   if (!optClass)
     return None;
   return llvh::cast<ESTree::ClassExpressionNode>(*optClass);
@@ -4784,7 +4940,8 @@ Optional<ESTree::Node *> JSParserImpl::parseClassTail(
     SMLoc startLoc,
     ESTree::Node *name,
     ESTree::Node *typeParams,
-    ClassParseKind kind) {
+    ClassParseKind kind,
+    ESTree::NodeList &&decorators) {
   ESTree::Node *superClass = nullptr;
   ESTree::Node *superTypeParams = nullptr;
 
@@ -4860,7 +5017,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassTail(
             superClass,
             superTypeParams,
             std::move(implements),
-            {},
+            std::move(decorators),
             *optBody));
   }
   return setLocation(
@@ -4872,7 +5029,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassTail(
           superClass,
           superTypeParams,
           std::move(implements),
-          {},
+          std::move(decorators),
           *optBody));
 }
 
@@ -4910,6 +5067,12 @@ bool JSParserImpl::parseClassBodyImpl(
     bool eagerly) {
   bool isStatic = false;
   SMRange startRange = tok_->getSourceRange();
+
+  ESTree::NodeList decorators{};
+  if (check(TokenKind::at)) {
+    if (!parseDecoratorList(decorators))
+      return false;
+  }
 
   bool declare = false;
   bool readonly = false;
@@ -4980,7 +5143,13 @@ bool JSParserImpl::parseClassBodyImpl(
     default: {
       // ClassElement
       auto optElem = parseClassElement(
-          isStatic, startRange, declare, readonly, accessibility, eagerly);
+          isStatic,
+          startRange,
+          declare,
+          readonly,
+          accessibility,
+          std::move(decorators),
+          eagerly);
       if (!optElem)
         return false;
       if (auto *method = dyn_cast<ESTree::MethodDefinitionNode>(*optElem)) {
@@ -5023,6 +5192,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
     bool declare,
     bool readonly,
     ESTree::NodeLabel accessibility,
+    ESTree::NodeList &&decorators,
     bool eagerly) {
   SMLoc startLoc = tok_->getStartLoc();
 
@@ -5295,6 +5465,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
               prop,
               value,
               isStatic,
+              std::move(decorators),
               declare,
               optional,
               variance,
@@ -5321,6 +5492,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
             value,
             computed,
             isStatic,
+            std::move(decorators),
             declare,
             optional,
             variance,
@@ -5483,7 +5655,7 @@ Optional<ESTree::Node *> JSParserImpl::parseClassElement(
       startRange,
       optBody.getValue(),
       new (context_) ESTree::MethodDefinitionNode(
-          prop, funcExpr, kind, computed, isStatic));
+          prop, funcExpr, kind, computed, isStatic, std::move(decorators)));
 }
 
 bool JSParserImpl::reparseArrowParameters(
@@ -7005,7 +7177,7 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           startLoc,
           *optFunDecl,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optFunDecl));
-    } else if (check(TokenKind::rw_class)) {
+    } else if (check(TokenKind::rw_class, TokenKind::at)) {
       auto optClassDecl = parseClassDeclaration(ParamDefault);
       if (!optClassDecl) {
         return None;

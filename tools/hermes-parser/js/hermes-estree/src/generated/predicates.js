@@ -82,6 +82,7 @@ import type {
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
+  Decorator,
   DoWhileStatement,
   EmptyStatement,
   EmptyTypeAnnotation,
@@ -491,6 +492,11 @@ export function isDeclareTypeAlias(node /*: ESNode | Token */) /*: implies node 
 
 export function isDeclareVariable(node /*: ESNode | Token */) /*: implies node is DeclareVariable */ {
   return node.type === 'DeclareVariable';
+}
+    
+
+export function isDecorator(node /*: ESNode | Token */) /*: implies node is Decorator */ {
+  return node.type === 'Decorator';
 }
     
 

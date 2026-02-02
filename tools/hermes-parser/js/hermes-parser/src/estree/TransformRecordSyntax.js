@@ -170,6 +170,7 @@ function mapRecordDeclaration(
     kind: 'constructor',
     computed: false,
     static: false,
+    decorators: [],
     value: {
       type: 'FunctionExpression',
       id: null,
@@ -230,6 +231,7 @@ function mapRecordDeclaration(
       key: shallowCloneNode(prop.key),
       value: deepCloneNode(prop.value),
       static: true,
+      decorators: [],
       typeAnnotation: null,
       variance: null,
       computed: false,

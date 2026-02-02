@@ -39,6 +39,7 @@ describe('Private properties', () => {
                "body": [
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "private",
                      "type": "PrivateIdentifier",
@@ -113,6 +114,7 @@ describe('Private properties', () => {
                "body": [
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "private",
                      "type": "PrivateIdentifier",
@@ -138,6 +140,7 @@ describe('Private properties', () => {
                  },
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "constructor",
                      "optional": false,

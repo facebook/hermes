@@ -501,6 +501,10 @@ ESTREE_NODE_6_ARGS(
     NodeBoolean, method, false,
     NodeBoolean, shorthand, false)
 
+ESTREE_NODE_1_ARGS(
+    Decorator, Base,
+    NodePtr, expression, false)
+
 ESTREE_FIRST(ClassLike, Base)
 ESTREE_NODE_7_ARGS(
     ClassDeclaration, ClassLike,
@@ -535,44 +539,50 @@ ESTREE_NODE_1_ARGS(
     ClassBody, Base,
     NodeList, body, false)
 
-ESTREE_NODE_9_ARGS(
+ESTREE_NODE_10_ARGS(
     ClassProperty, Base,
     NodePtr, key, false,
     NodePtr, value, true,
     NodeBoolean, computed, false,
     NodeBoolean, static, false,
+    NodeList, decorators, false,
     NodeBoolean, declare, false,
     NodeBoolean, optional, false,
     NodePtr, variance, true,
     NodePtr, typeAnnotation, true,
     NodePtr, tsModifiers, true)
+ESTREE_IGNORE_IF_EMPTY(ClassProperty, decorators)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, variance)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, optional)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, typeAnnotation)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, tsModifiers)
 
-ESTREE_NODE_8_ARGS(
+ESTREE_NODE_9_ARGS(
     ClassPrivateProperty, Base,
     NodePtr, key, false,
     NodePtr, value, true,
     NodeBoolean, static, false,
+    NodeList, decorators, false,
     NodeBoolean, declare, false,
     NodeBoolean, optional, false,
     NodePtr, variance, true,
     NodePtr, typeAnnotation, true,
     NodePtr, tsModifiers, true)
+ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, decorators)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, variance)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, optional)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, typeAnnotation)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, tsModifiers)
 
-ESTREE_NODE_5_ARGS(
+ESTREE_NODE_6_ARGS(
     MethodDefinition, Base,
     NodePtr, key, false,
     NodePtr, value, false,
     NodeLabel, kind, false,
     NodeBoolean, computed, false,
-    NodeBoolean, static, false)
+    NodeBoolean, static, false,
+    NodeList, decorators, false)
+ESTREE_IGNORE_IF_EMPTY(MethodDefinition, decorators)
 
 // Imports ========================================
 

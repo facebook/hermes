@@ -40,6 +40,7 @@ describe('Private properties', () => {
                  {
                    "computed": false,
                    "declare": false,
+                   "decorators": [],
                    "key": {
                      "name": "private",
                      "type": "PrivateIdentifier",
@@ -104,6 +105,7 @@ describe('Private properties', () => {
                  {
                    "computed": false,
                    "declare": false,
+                   "decorators": [],
                    "key": {
                      "name": "private",
                      "type": "PrivateIdentifier",
@@ -118,6 +120,7 @@ describe('Private properties', () => {
                  },
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "constructor",
                      "optional": false,
@@ -219,6 +222,7 @@ describe('Private properties', () => {
                  {
                    "computed": false,
                    "declare": false,
+                   "decorators": [],
                    "key": {
                      "name": "private",
                      "type": "PrivateIdentifier",
@@ -233,6 +237,7 @@ describe('Private properties', () => {
                  },
                  {
                    "computed": false,
+                   "decorators": [],
                    "key": {
                      "name": "constructor",
                      "optional": false,

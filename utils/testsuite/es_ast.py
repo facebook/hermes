@@ -147,6 +147,8 @@ def normalize_hermes_ast(ast: JSON) -> JSON:
     if ast["type"] == "ClassProperty" or ast["type"] == "ClassPrivateProperty":
         if not ast["optional"]:
             del ast["optional"]
+        if len(ast["decorators"]) == 0:
+            del ast["decorators"]
         ast["type"] = "PropertyDefinition"
     if ast["type"] == "TypeParameter":
         if not ast["usesExtendsBound"]:
@@ -154,6 +156,10 @@ def normalize_hermes_ast(ast: JSON) -> JSON:
     if ast["type"] == "TupleTypeLabeledElement":
         if not ast["optional"]:
             del ast["optional"]
+    if ast["type"] == "ClassDeclaration" or ast["type"] == "ClassExpression":
+        if "decorators" in ast:
+            if len(ast["decorators"]) == 0:
+                del ast["decorators"]
     # convert the literal node types to ESTree standard form
     if ast["type"] in HERMES_LITERAL_NODE_TYPES:
         if ast["type"] == "NullLiteral":
@@ -214,6 +220,9 @@ def normalize_esprima_ast(ast: JSON) -> JSON:
             if "superTypeParameters" in ast:
                 ast["superTypeArguments"] = ast["superTypeParameters"]
                 del ast["superTypeParameters"]
+            if "decorators" in ast:
+                if len(ast["decorators"]) == 0:
+                    del ast["decorators"]
     # If it is a template literal, the 'value' field contains
     # the 'cooked' and 'raw' strings, which should be moved.
     if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:

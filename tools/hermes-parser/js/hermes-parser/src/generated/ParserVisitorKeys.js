@@ -219,6 +219,9 @@ export const HERMES_AST_VISITOR_KEYS = {
   DeclareVariable: {
     id: 'Node',
   },
+  Decorator: {
+    expression: 'Node',
+  },
   DoWhileStatement: {
     body: 'Node',
     test: 'Node',
@@ -530,6 +533,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   MethodDefinition: {
     key: 'Node',
     value: 'Node',
+    decorators: 'NodeList',
   },
   MixedTypeAnnotation: {},
   NeverTypeAnnotation: {},
@@ -609,6 +613,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   PropertyDefinition: {
     key: 'Node',
     value: 'Node',
+    decorators: 'NodeList',
     variance: 'Node',
     typeAnnotation: 'Node',
   },
