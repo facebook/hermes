@@ -188,6 +188,7 @@ struct RecursiveVisitorDispatch {
 #define ESTREE_NODE_7_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_8_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_9_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_10_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -276,6 +277,7 @@ struct RecursiveVisitorDispatch {
 #define ESTREE_NODE_7_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_8_ARGS(NAME, ...) VISIT(NAME)
 #define ESTREE_NODE_9_ARGS(NAME, ...) VISIT(NAME)
+#define ESTREE_NODE_10_ARGS(NAME, ...) VISIT(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -517,6 +519,53 @@ struct RecursiveVisitorDispatch {
     visit(v, node->_##ARG6NM, node, extra...);               \
     visit(v, node->_##ARG7NM, node, extra...);               \
     visit(v, node->_##ARG8NM, node, extra...);               \
+  }
+
+#define ESTREE_NODE_10_ARGS(                                 \
+    NAME,                                                    \
+    BASE,                                                    \
+    ARG0TY,                                                  \
+    ARG0NM,                                                  \
+    ARG0OPT,                                                 \
+    ARG1TY,                                                  \
+    ARG1NM,                                                  \
+    ARG1OPT,                                                 \
+    ARG2TY,                                                  \
+    ARG2NM,                                                  \
+    ARG2OPT,                                                 \
+    ARG3TY,                                                  \
+    ARG3NM,                                                  \
+    ARG3OPT,                                                 \
+    ARG4TY,                                                  \
+    ARG4NM,                                                  \
+    ARG4OPT,                                                 \
+    ARG5TY,                                                  \
+    ARG5NM,                                                  \
+    ARG5OPT,                                                 \
+    ARG6TY,                                                  \
+    ARG6NM,                                                  \
+    ARG6OPT,                                                 \
+    ARG7TY,                                                  \
+    ARG7NM,                                                  \
+    ARG7OPT,                                                 \
+    ARG8TY,                                                  \
+    ARG8NM,                                                  \
+    ARG8OPT,                                                 \
+    ARG9TY,                                                  \
+    ARG9NM,                                                  \
+    ARG9OPT)                                                 \
+  HERMES_ALWAYS_INLINE static inline void visitChildrenImpl( \
+      Visitor &v, NAME##Node *node, ExtraT... extra) {       \
+    visit(v, node->_##ARG0NM, node, extra...);               \
+    visit(v, node->_##ARG1NM, node, extra...);               \
+    visit(v, node->_##ARG2NM, node, extra...);               \
+    visit(v, node->_##ARG3NM, node, extra...);               \
+    visit(v, node->_##ARG4NM, node, extra...);               \
+    visit(v, node->_##ARG5NM, node, extra...);               \
+    visit(v, node->_##ARG6NM, node, extra...);               \
+    visit(v, node->_##ARG7NM, node, extra...);               \
+    visit(v, node->_##ARG8NM, node, extra...);               \
+    visit(v, node->_##ARG9NM, node, extra...);               \
   }
 
 #include "hermes/AST/ESTree.def"

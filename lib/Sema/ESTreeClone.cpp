@@ -357,6 +357,7 @@ class Cloner {
 #define ESTREE_NODE_7_ARGS(NAME, ...) CLONE(NAME)
 #define ESTREE_NODE_8_ARGS(NAME, ...) CLONE(NAME)
 #define ESTREE_NODE_9_ARGS(NAME, ...) CLONE(NAME)
+#define ESTREE_NODE_10_ARGS(NAME, ...) CLONE(NAME)
 
 #include "hermes/AST/ESTree.def"
 
@@ -712,6 +713,73 @@ class Cloner {
         std::move(arg6),                    \
         std::move(arg7),                    \
         std::move(arg8));                   \
+  }
+
+#define ESTREE_NODE_10_ARGS(                \
+    NAME,                                   \
+    BASE,                                   \
+    ARG0TY,                                 \
+    ARG0NM,                                 \
+    ARG0OPT,                                \
+    ARG1TY,                                 \
+    ARG1NM,                                 \
+    ARG1OPT,                                \
+    ARG2TY,                                 \
+    ARG2NM,                                 \
+    ARG2OPT,                                \
+    ARG3TY,                                 \
+    ARG3NM,                                 \
+    ARG3OPT,                                \
+    ARG4TY,                                 \
+    ARG4NM,                                 \
+    ARG4OPT,                                \
+    ARG5TY,                                 \
+    ARG5NM,                                 \
+    ARG5OPT,                                \
+    ARG6TY,                                 \
+    ARG6NM,                                 \
+    ARG6OPT,                                \
+    ARG7TY,                                 \
+    ARG7NM,                                 \
+    ARG7OPT,                                \
+    ARG8TY,                                 \
+    ARG8NM,                                 \
+    ARG8OPT,                                \
+    ARG9TY,                                 \
+    ARG9NM,                                 \
+    ARG9OPT)                                \
+  NAME##Node *cloneImpl(NAME##Node *node) { \
+    ARG0TY arg0;                            \
+    ARG1TY arg1;                            \
+    ARG2TY arg2;                            \
+    ARG3TY arg3;                            \
+    ARG4TY arg4;                            \
+    ARG5TY arg5;                            \
+    ARG6TY arg6;                            \
+    ARG7TY arg7;                            \
+    ARG8TY arg8;                            \
+    ARG9TY arg9;                            \
+    clone(node->_##ARG0NM, arg0);           \
+    clone(node->_##ARG1NM, arg1);           \
+    clone(node->_##ARG2NM, arg2);           \
+    clone(node->_##ARG3NM, arg3);           \
+    clone(node->_##ARG4NM, arg4);           \
+    clone(node->_##ARG5NM, arg5);           \
+    clone(node->_##ARG6NM, arg6);           \
+    clone(node->_##ARG7NM, arg7);           \
+    clone(node->_##ARG8NM, arg8);           \
+    clone(node->_##ARG9NM, arg9);           \
+    return new (astContext_) NAME##Node(    \
+        std::move(arg0),                    \
+        std::move(arg1),                    \
+        std::move(arg2),                    \
+        std::move(arg3),                    \
+        std::move(arg4),                    \
+        std::move(arg5),                    \
+        std::move(arg6),                    \
+        std::move(arg7),                    \
+        std::move(arg8),                    \
+        std::move(arg9));                   \
   }
 
 #include "hermes/AST/ESTree.def"
