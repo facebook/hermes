@@ -439,13 +439,6 @@ class HermesRuntimeImpl final : public HermesRuntime,
 
   // Overridden from jsi::Instrumentation
   void collectGarbage(std::string cause) override {
-    if ((vmExperimentFlags_ & vm::experiments::IgnoreMemoryWarnings) &&
-        cause == "TRIM_MEMORY_RUNNING_CRITICAL") {
-      // Do nothing if the GC is a memory warning.
-      // TODO(T79835917): Remove this after proving this is the cause of OOMs
-      // and finding a better resolution.
-      return;
-    }
     runtime_.collect(std::move(cause));
   }
 
