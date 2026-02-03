@@ -12,6 +12,7 @@
 let x: [number, bool] = [1, true]
 let y: number = x[0]
 let z: bool = x[1]
+let l: number = x.length
 
 // Auto-generated content below. Please do not modify manually.
 
@@ -29,7 +30,8 @@ let z: bool = x[1]
 // CHECK-NEXT:            Decl %d.2 'x' Let : %tuple.2
 // CHECK-NEXT:            Decl %d.3 'y' Let : number
 // CHECK-NEXT:            Decl %d.4 'z' Let : boolean
-// CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
+// CHECK-NEXT:            Decl %d.5 'l' Let : number
+// CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -57,4 +59,10 @@ let z: bool = x[1]
 // CHECK-NEXT:                                Id 'x' [D:E:%d.2 'x'] : %tuple.2
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                            Id 'z' [D:E:%d.4 'z']
+// CHECK-NEXT:                    VariableDeclaration
+// CHECK-NEXT:                        VariableDeclarator
+// CHECK-NEXT:                            MemberExpression : number
+// CHECK-NEXT:                                Id 'x' [D:E:%d.2 'x'] : %tuple.2
+// CHECK-NEXT:                                Id 'length'
+// CHECK-NEXT:                            Id 'l' [D:E:%d.5 'l']
 // CHECK-NEXT:            ObjectExpression : %object.3

@@ -302,6 +302,19 @@ class FlowChecker::ExprVisitor {
               node->_property->getSourceRange(),
               "ft: tuple property access requires an number literal index");
         }
+      } else {
+        // Named property access to tuple.
+        auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+        // TODO: We may want to allow calling into array functions with tuples
+        // (providing the union of all elements as the generic type of the
+        // array), but that's not supported yet.
+        if (id->_name == outer_.kw_.identLength) {
+          // Tuple .length is a number.
+          resType = outer_.flowContext_.getNumber();
+        } else {
+          outer_.sm_.error(
+              node->_property->getSourceRange(), "ft: unknown tuple property");
+        }
       }
     } else if (!llvh::isa<AnyType>(objType->info)) {
       if (node->_computed) {
