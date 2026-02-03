@@ -128,6 +128,8 @@ llvh::StringRef TypeInfo::getKindName() const {
       return "object";
     case TypeKind::Generic:
       return "generic";
+    case TypeKind::InferencePlaceholder:
+      return "inference placeholder";
   }
   llvm_unreachable("invalid TypeKind");
 }

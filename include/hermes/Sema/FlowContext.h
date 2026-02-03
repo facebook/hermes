@@ -23,16 +23,17 @@ class MethodDefinitionNode;
 
 namespace flow {
 
-#define _HERMES_SEMA_FLOW_SINGLETONS \
-  _HERMES_SEMA_FLOW_DEFKIND(Void)    \
-  _HERMES_SEMA_FLOW_DEFKIND(Null)    \
-  _HERMES_SEMA_FLOW_DEFKIND(Boolean) \
-  _HERMES_SEMA_FLOW_DEFKIND(String)  \
-  _HERMES_SEMA_FLOW_DEFKIND(CPtr)    \
-  _HERMES_SEMA_FLOW_DEFKIND(Generic) \
-  _HERMES_SEMA_FLOW_DEFKIND(Number)  \
-  _HERMES_SEMA_FLOW_DEFKIND(BigInt)  \
-  _HERMES_SEMA_FLOW_DEFKIND(Any)     \
+#define _HERMES_SEMA_FLOW_SINGLETONS              \
+  _HERMES_SEMA_FLOW_DEFKIND(Void)                 \
+  _HERMES_SEMA_FLOW_DEFKIND(Null)                 \
+  _HERMES_SEMA_FLOW_DEFKIND(Boolean)              \
+  _HERMES_SEMA_FLOW_DEFKIND(String)               \
+  _HERMES_SEMA_FLOW_DEFKIND(CPtr)                 \
+  _HERMES_SEMA_FLOW_DEFKIND(Generic)              \
+  _HERMES_SEMA_FLOW_DEFKIND(InferencePlaceholder) \
+  _HERMES_SEMA_FLOW_DEFKIND(Number)               \
+  _HERMES_SEMA_FLOW_DEFKIND(BigInt)               \
+  _HERMES_SEMA_FLOW_DEFKIND(Any)                  \
   _HERMES_SEMA_FLOW_DEFKIND(Mixed)
 
 #define _HERMES_SEMA_FLOW_COMPLEX_TYPES      \
@@ -231,6 +232,9 @@ using CPtrType = SingleType<TypeKind::CPtr, PrimaryType>;
 using GenericType = SingleType<TypeKind::Generic, PrimaryType>;
 using NumberType = SingleType<TypeKind::Number, PrimaryType>;
 using BigIntType = SingleType<TypeKind::BigInt, PrimaryType>;
+
+using InferencePlaceholderType =
+    SingleType<TypeKind::InferencePlaceholder, PrimaryType>;
 
 using AnyType = SingleType<TypeKind::Any, SingletonType>;
 using MixedType = SingleType<TypeKind::Mixed, SingletonType>;
