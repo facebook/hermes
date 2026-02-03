@@ -19,7 +19,4 @@ let a: A.B;
 // CHECK:{{.*}}qualified-type-error.js:14:10: error: ft: unsupported type annotation
 // CHECK-NEXT:type A = A.B;
 // CHECK-NEXT:         ^~~
-// CHECK-NEXT:{{.*}}qualified-type-error.js:15:8: error: ft: unsupported type annotation
-// CHECK-NEXT:let a: A.B;
-// CHECK-NEXT:       ^~~
-// CHECK-NEXT:Emitted 2 errors. exiting.
+// CHECK-NEXT:Emitted 1 errors. exiting.

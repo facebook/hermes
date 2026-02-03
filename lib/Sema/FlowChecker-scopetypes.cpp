@@ -253,9 +253,12 @@ class FlowChecker::DeclareScopeTypes {
     llvh::SaveAndRestore savedDeferredGenerics{
         outer.deferredParseGenerics_, &deferredParseGenerics};
 
-    createForwardDeclarations(decls);
-    resolveAllAliases();
-    completeForwardDeclarations();
+    if (!createForwardDeclarations(decls))
+      return;
+    if (!resolveAllAliases())
+      return;
+    if (!completeForwardDeclarations())
+      return;
     parseDeferredGenericClasses();
   }
 
@@ -270,7 +273,8 @@ class FlowChecker::DeclareScopeTypes {
     // Don't call createForwardDeclarations, because we're directly calling
     // resolveTypeAnnotation and we don't have a list of decls.
     Type *type = declareScopeTypes.resolveTypeAnnotation(gta, visited, 0);
-    declareScopeTypes.completeForwardDeclarations();
+    if (!declareScopeTypes.completeForwardDeclarations())
+      return outer.flowContext_.getAny();
     declareScopeTypes.parseDeferredGenericClasses();
     return type;
   }
@@ -311,7 +315,9 @@ class FlowChecker::DeclareScopeTypes {
   }
 
   /// Forward declare all classes and record all aliases for later processing.
-  void createForwardDeclarations(const sema::ScopeDecls &decls) {
+  /// \return false on error.
+  bool createForwardDeclarations(const sema::ScopeDecls &decls) {
+    bool result = true;
     for (ESTree::Node *declNode : decls) {
       if (llvh::isa<ESTree::VariableDeclarationNode>(declNode) ||
           llvh::isa<ESTree::ImportDeclarationNode>(declNode) ||
@@ -324,8 +330,10 @@ class FlowChecker::DeclareScopeTypes {
         // Class declaration.
         //
         auto *id = llvh::cast<ESTree::IdentifierNode>(classNode->_id);
-        if (isRedeclaration(id))
+        if (isRedeclaration(id)) {
+          result = false;
           continue;
+        }
 
         sema::Decl *decl = outer.getDecl(id);
         decl->generic = classNode->_typeParameters != nullptr;
@@ -389,12 +397,16 @@ class FlowChecker::DeclareScopeTypes {
             "ft: unsupported type declaration " + declNode->getNodeName());
       }
     }
+
+    return result;
   }
 
   /// Resolve all recorded aliases. At the end of this all local types should
   /// resolve to something: a primary type, a type in a surrounding scope, a
   /// local forward declared class, or a union of any of these.
-  void resolveAllAliases() {
+  /// \return false on error.
+  bool resolveAllAliases() {
+    unsigned errorsBefore = outer.sm_.getErrorCount();
     for (Type *localType : localTypeAliases) {
       // Skip already resolved types.
       if (localType->info)
@@ -440,6 +452,8 @@ class FlowChecker::DeclareScopeTypes {
         forwardGenericInstantiations.insert({localType, copy});
       }
     }
+
+    return outer.sm_.getErrorCount() == errorsBefore;
   }
 
   /// Resolve a type annotation in the current scope. This assumes that all
@@ -456,7 +470,7 @@ class FlowChecker::DeclareScopeTypes {
   ///     annotations. Used to check self-recursion.
   /// \param depth track depth to avoid stack overflow.
   ///
-  /// \return the resolved type.
+  /// \return the resolved type, "any" on error.
   Type *resolveTypeAnnotation(
       ESTree::Node *annotation,
       llvh::SmallDenseSet<ESTree::TypeAliasNode *> &visited,
@@ -653,7 +667,10 @@ class FlowChecker::DeclareScopeTypes {
   /// All types declared in the scope have been resolved at the first level.
   /// Resolve the remaining forward declared types and canonicalize forward
   /// unions as much as possible.
-  void completeForwardDeclarations() {
+  /// \return false on error.
+  bool completeForwardDeclarations() {
+    unsigned errorsBefore = outer.sm_.getErrorCount();
+
     // Instantiating generic type aliases may cause new forward declarations
     // to be created. To account for this, keep iterating until no more are
     // introduced.
@@ -701,6 +718,8 @@ class FlowChecker::DeclareScopeTypes {
           classNode->_body,
           type);
     }
+
+    return outer.sm_.getErrorCount() == errorsBefore;
   }
 
   /// Complete the forward declaration of the given \p type,

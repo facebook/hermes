@@ -1325,6 +1325,8 @@ bool FlowChecker::resolveScopeTypesAndAnnotate(
   unsigned errorsBefore = sm_.getErrorCount();
 
   declareScopeTypes(*decls, scope, scopeNode);
+  if (sm_.getErrorCount() != errorsBefore)
+    return false;
   AnnotateScopeDecls(*this, *decls, scopeNode);
 
   // If there were any errors during annotation, fail.
