@@ -890,12 +890,27 @@ void FlowChecker::visitFunctionLike(
   assert(node->getSemInfo()->strict && "Types can only be used in strict mode");
   ScopeRAII scope(*this);
 
+  size_t i = 0;
   for (auto &param : params) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&param)) {
       sema::Decl *decl = getDecl(id);
       assert(decl && "unresolved parameter");
-      declTypes_.try_emplace(
-          decl, parseOptionalTypeAnnotation(id->_typeAnnotation));
+      Type *paramType;
+      auto *typedFn = llvh::dyn_cast<TypedFunctionType>(
+          curFunctionContext_->functionType->info);
+      if (id->_name == kw_.identThis) {
+        // 'this' is stored separately, not in getParams().
+        paramType = typedFn ? typedFn->getThisParam() : flowContext_.getAny();
+        if (!paramType)
+          paramType = flowContext_.getAny();
+      } else if (typedFn && i < typedFn->getParams().size()) {
+        paramType = typedFn->getParams()[i].second;
+        ++i;
+      } else {
+        paramType = flowContext_.getAny();
+        ++i;
+      }
+      declTypes_.try_emplace(decl, paramType);
     }
   }
 

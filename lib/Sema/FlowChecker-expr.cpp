@@ -193,7 +193,85 @@ class FlowChecker::ExprVisitor {
       ESTree::ArrowFunctionExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    return outer_.visit(node);
+    if (auto *constraintFnType = llvh::dyn_cast_or_null<TypedFunctionType>(
+            constraint ? constraint->info : nullptr)) {
+      // If a constraint was provided, attempt to infer the return type of the
+      // function.
+      if (node->_typeParameters) {
+        outer_.sm_.error(
+            node->_typeParameters->getStartLoc(),
+            "ft: type parameters not supported on function expressions");
+        return;
+      }
+
+      // Populate the param types.
+      size_t i = 0;
+      llvh::SmallVector<TypedFunctionType::Param, 4> params{};
+      for (const auto &param : node->_params) {
+        // Default is 'any', but try to get a narrower type if possible.
+        TypedFunctionType::Param typedFnParam{
+            Identifier{}, outer_.flowContext_.getAny()};
+
+        if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&param)) {
+          typedFnParam.first = Identifier::getFromPointer(id->_name);
+          if (id->_typeAnnotation) {
+            // Use explicit type annotation that was provided.
+            typedFnParam.second =
+                outer_.parseOptionalTypeAnnotation(id->_typeAnnotation);
+            if (i < constraintFnType->getParams().size()) {
+              // Attempt to populate the constraint type with the explicit type.
+              // This allows us to pass an arrow function that looks like
+              //   (x: number) => x + 1
+              // to a placeholder function type like `A => B` and infer that `A`
+              // is number.
+              outer_.matchConstraintToType(
+                  constraintFnType->getParams()[i].second, typedFnParam.second);
+            }
+          } else if (i < constraintFnType->getParams().size()) {
+            // No type annotation, but there's a constraint type, so use that.
+            // Add the name of the parameter for better errors.
+            typedFnParam.second = constraintFnType->getParams()[i].second;
+          }
+        } else {
+          outer_.sm_.warning(
+              param.getSourceRange(),
+              "ft: arrow function destructuring not supported, assuming 'any'");
+        }
+
+        params.push_back(typedFnParam);
+      }
+
+      Type *returnType;
+      if (node->_returnType) {
+        // Use explicit return type annotation if possible.
+        returnType = outer_.parseOptionalTypeAnnotation(node->_returnType);
+        outer_.matchConstraintToType(
+            constraintFnType->getReturnType(), returnType);
+      } else {
+        // Otherwise, use the constraint type.
+        returnType = constraintFnType->getReturnType();
+      }
+
+      // The type of the arrow function that we've inferred.
+      // Note that the return type is potentially an InferencePlaceholder,
+      // which may be filled in when the ReturnStatement argument is visited by
+      // ExprVisitor (with the return type as a constraint).
+      Type *arrowInferenceType =
+          outer_.flowContext_.createType(outer_.flowContext_.createFunction(
+              returnType, nullptr, params, node->_async, false));
+      outer_.setNodeType(node, arrowInferenceType);
+
+      {
+        FunctionContext functionContext{
+            outer_,
+            node,
+            arrowInferenceType,
+            outer_.curFunctionContext_->thisParamType};
+        outer_.visitFunctionLike(node, node->_body, node->_params);
+      }
+    } else {
+      outer_.visit(node);
+    }
   }
   void visit(
       ESTree::ClassExpressionNode *node,
