@@ -153,3 +153,41 @@ jobs:
           # main ones.
           # cmake --build ./build_intl --target check-hermes
           python3 hermes/utils/test_runner.py --test-intl test262/test -b build_intl/bin
+
+  test-windows-test262:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025]
+        build_type: [Debug, Release]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v4.1.0
+      with:
+        path: hermes
+    - name: Setup dependencies
+      # Use the Git Bash (based on MSYS2/MinGW).
+      shell: bash
+      run: |
+        # Check out test262 at a pinned revision to reduce flakiness
+        git clone https://github.com/tc39/test262
+        cd test262
+        git checkout 62626e083bd506124aac6c799464d76c2c42851b
+    - name: Build and run tests
+      shell: bash
+      env:
+          # Disable path conversion
+          MSYS2_ARG_CONV_EXCL: "*"
+      run: |
+        # Configure with Visual Studio generator
+        # Use system version 10.0.15063 or newer for VS2022 compatibility and built-in ICU
+        cmake -S hermes -B build -G "Visual Studio 17 2022" \
+          -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_VERSION=10.0.15063 \
+          -DJSI_UNSTABLE=ON
+
+        # Build using CMake
+        cmake --build build --config ${{ matrix.build_type }} --target hermes -- \
+          -m /p:UseMultiToolTask=true /p:EnforceProcessCountAcrossBuilds=true
+
+        # Run test262 suite
+        python3 hermes/utils/test_runner.py test262/test -b build/bin/${{ matrix.build_type }} --timeout 600
