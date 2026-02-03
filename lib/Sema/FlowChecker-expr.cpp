@@ -452,13 +452,15 @@ class FlowChecker::ExprVisitor {
         auto id = llvh::cast<ESTree::IdentifierNode>(node->_property);
         auto optFieldIdx =
             exactObjType->findField(Identifier::getFromPointer(id->_name));
-        if (!optFieldIdx) {
+        if (optFieldIdx) {
+          const auto &field = exactObjType->getFields()[*optFieldIdx];
+          resType = field.type;
+        } else {
           outer_.sm_.error(
               node->_property->getSourceRange(),
               "ft: property " + id->_name->str() + " not defined in object");
+          resType = outer_.flowContext_.getAny();
         }
-        const auto &field = exactObjType->getFields()[*optFieldIdx];
-        resType = field.type;
       }
     } else if (auto *arrayType = llvh::dyn_cast<ArrayType>(objType->info)) {
       if (node->_computed) {
