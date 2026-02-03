@@ -126,49 +126,49 @@ function f15(): number {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}implicit-return-error.js:14:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK:{{.*}}implicit-return-error.js:14:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f1(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:18:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:18:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f2(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:23:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:23:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f3(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:28:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:28:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f4(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:33:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:33:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f5(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:37:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:37:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f6(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:41:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:41:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f7(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:49:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:49:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f8(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:55:14: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:55:16: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f9(): number {
-// CHECK-NEXT:             ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:65:15: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:               ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:65:17: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f10(): number {
-// CHECK-NEXT:              ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:75:15: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:                ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:75:17: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f11(): number {
-// CHECK-NEXT:              ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:85:15: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:                ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:85:17: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f12(): number {
-// CHECK-NEXT:              ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:94:15: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:                ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:94:17: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f13(): number {
-// CHECK-NEXT:              ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:107:15: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:                ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:107:17: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f14(): number {
-// CHECK-NEXT:              ^~~~~~~~
-// CHECK-NEXT:{{.*}}implicit-return-error.js:117:15: error: ft: implicitly-returned 'undefined' incompatible with return type
+// CHECK-NEXT:                ^~~~~~
+// CHECK-NEXT:{{.*}}implicit-return-error.js:117:17: error: ft: implicitly-returned 'undefined' incompatible with return type
 // CHECK-NEXT:function f15(): number {
-// CHECK-NEXT:              ^~~~~~~~
+// CHECK-NEXT:                ^~~~~~
 // CHECK-NEXT:Emitted 15 errors. exiting.
