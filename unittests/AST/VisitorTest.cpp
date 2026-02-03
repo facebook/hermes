@@ -354,4 +354,48 @@ TEST(VisitorTest, ExtraInfoTest) {
   }
 }
 
+TEST(VisitorTest, AfterVisitTest) {
+  Context context;
+
+  ESTree::NodeList seq{};
+  seq.push_back(*new (context) ESTree::NumericLiteralNode(1));
+
+  auto *seqExpr = new (context) ESTree::SequenceExpressionNode(std::move(seq));
+  auto *expr = new (context) ESTree::BinaryExpressionNode(
+      new (context) ESTree::NullLiteralNode(),
+      seqExpr,
+      context.getStringTable().getString("+"));
+
+  class Visitor {
+   public:
+    llvh::SmallVector<ESTree::Node *, 4> path{};
+
+    explicit Visitor() {}
+
+    bool incRecursionDepth(ESTree::Node *) {
+      return true;
+    }
+    void decRecursionDepth() {}
+
+    void afterVisit(ESTree::Node *node, ESTree::Node *parent, int extra) {
+      path.push_back(node);
+    }
+
+    void visit(ESTree::Node *node, ESTree::Node *parent, int extra) {
+      ESTree::visitESTreeChildren(*this, node, 3);
+    }
+  };
+
+  {
+    Visitor v{};
+    ESTree::visitESTreeNodeNoReplace(v, expr, nullptr, 1);
+    ASSERT_EQ(4, v.path.size());
+    // Pushed after recursive visits, so these are in postorder.
+    EXPECT_TRUE(llvh::isa<ESTree::NullLiteralNode>(v.path[0]));
+    EXPECT_TRUE(llvh::isa<ESTree::NumericLiteralNode>(v.path[1]));
+    EXPECT_TRUE(llvh::isa<ESTree::SequenceExpressionNode>(v.path[2]));
+    EXPECT_TRUE(llvh::isa<ESTree::BinaryExpressionNode>(v.path[3]));
+  }
+}
+
 } // end anonymous namespace

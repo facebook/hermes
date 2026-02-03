@@ -64,6 +64,33 @@ void visitCaller(V &v, Node **node, Node *parent, E... extra) {
     v.visit(static_cast<N *>(*node));
 }
 
+/// See has_callable_visit_helper.
+template <typename T, typename, typename... Args>
+struct has_callable_after_helper : std::false_type {};
+
+/// See has_callable_visit_helper.
+template <typename T, typename... Args>
+struct has_callable_after_helper<
+    T,
+    std::void_t<decltype(std::declval<T>().afterVisit(
+        std::declval<Args>()...))>,
+    Args...> : std::true_type {};
+
+/// See has_callable_visit.
+template <typename T, typename... Args>
+using has_callable_after = has_callable_after_helper<T, void, Args...>;
+
+/// Call the after() method, detecting the correct signature to use.
+template <typename V, typename... E>
+void afterCaller(V &v, Node *node, Node *parent, E... extra) {
+  if constexpr (has_callable_after<V, Node *, Node *, E...>::value)
+    v.afterVisit(node, parent, extra...);
+  else if constexpr (has_callable_after<V, Node *, Node *>::value)
+    v.afterVisit(node, parent);
+  else if constexpr (has_callable_after<V, Node *>::value)
+    v.afterVisit(node);
+}
+
 } // namespace detail
 
 using llvh::cast;
@@ -155,6 +182,12 @@ using llvh::cast;
 /// every child node. Similarly, visitESTreeNodeList can be called with
 /// ExtraT, which will be propagated to every element of the list.
 ///
+/// \section After visit
+///
+/// If the visitor has an optional \c afterVisit function defined, it will be
+/// called after any node is visited.
+/// See \c afterCaller for valid signatures for afterVisit.
+///
 /// \param Visitor the visitor class.
 template <class Visitor, typename... ExtraT>
 struct RecursiveVisitorDispatch {
@@ -194,6 +227,7 @@ struct RecursiveVisitorDispatch {
 
 #undef VISIT
     }
+    detail::afterCaller<Visitor, ExtraT...>(v, node, parent, extra...);
     v.decRecursionDepth();
   }
 
