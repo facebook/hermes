@@ -30,6 +30,124 @@
 namespace hermes {
 namespace flow {
 
+void FlowChecker::matchConstraintToType(
+    Type *startConstraint,
+    const Type *startType) {
+  // Use worklist to avoid recursion, with SetVector to avoid revisiting
+  // looping types.
+  llvh::SmallSetVector<std::pair<Type *, const Type *>, 32> worklist;
+  worklist.insert({startConstraint, startType});
+
+  for (size_t i = 0; i < worklist.size(); ++i) {
+    auto [constraint, type] = worklist[i];
+    if (!constraint || !type)
+      continue;
+
+    if (llvh::isa<InferencePlaceholderType>(constraint->info)) {
+      // Found a placeholder, replace it with the type that matches it.
+      constraint->info = type->info;
+      continue;
+    }
+
+    // It's possible at this point that the type used to be a placeholder, but
+    // has been replaced with a non-placeholder. If that happened, then we
+    // won't be able to infer a potentially conflicting type for the
+    // placeholder.
+    // For example, if we try to match (T is a placeholder):
+    //   constraint=[T,T]
+    //   type=[number,string]
+    // it'll set T to number, and we won't be able to infer string for T.
+    // Meaning that we'll always need to check the argument types
+    // at the CallExpression visitor.
+
+    if (constraint->info->getKind() != type->info->getKind()) {
+      // Mismatch, nothing more to do.
+      continue;
+    }
+
+    switch (type->info->getKind()) {
+      // Singleton types have nothing to visit.
+#define _HERMES_SEMA_FLOW_DEFKIND(name) \
+  case TypeKind::name:                  \
+    continue;
+      _HERMES_SEMA_FLOW_SINGLETONS
+
+      // Classes are nominally typed.
+      case TypeKind::Class:
+      case TypeKind::ClassConstructor:
+      // Functions that we don't infer the types of here.
+      case TypeKind::NativeFunction:
+      case TypeKind::UntypedFunction:
+        continue;
+
+      case TypeKind::Union:
+        // TODO: Determine how to match unions here, because any arm could
+        // match any other arm, recursively. There's also potential for
+        // looping union arms.
+        continue;
+
+      case TypeKind::Array: {
+        // Visit the array element.
+        auto *constraintArr = llvh::cast<ArrayType>(constraint->info);
+        auto *typeArr = llvh::cast<ArrayType>(type->info);
+        worklist.insert({constraintArr->getElement(), typeArr->getElement()});
+        continue;
+      }
+
+      case TypeKind::Tuple: {
+        // Visit the tuple elements.
+        auto *constraintTuple = llvh::cast<TupleType>(constraint->info);
+        auto *typeTuple = llvh::cast<TupleType>(type->info);
+        if (constraintTuple->getTypes().size() !=
+            typeTuple->getTypes().size()) {
+          continue;
+        }
+
+        for (size_t i = 0, e = constraintTuple->getTypes().size(); i < e; ++i) {
+          worklist.insert(
+              {constraintTuple->getTypes()[i], typeTuple->getTypes()[i]});
+        }
+        continue;
+      }
+
+      case TypeKind::TypedFunction: {
+        auto *constraintFn = llvh::cast<TypedFunctionType>(constraint->info);
+        auto *typeFn = llvh::cast<TypedFunctionType>(type->info);
+        if (constraintFn->getParams().size() != typeFn->getParams().size()) {
+          continue;
+        }
+
+        worklist.insert({constraintFn->getThisParam(), typeFn->getThisParam()});
+        for (size_t i = 0, e = constraintFn->getParams().size(); i < e; ++i) {
+          worklist.insert(
+              {constraintFn->getParams()[i].second,
+               typeFn->getParams()[i].second});
+        }
+        worklist.insert(
+            {constraintFn->getReturnType(), typeFn->getReturnType()});
+        continue;
+      }
+
+      case TypeKind::ExactObject: {
+        // Visit the object properties.
+        auto *constraintObj = llvh::cast<ExactObjectType>(constraint->info);
+        auto *typeObj = llvh::cast<ExactObjectType>(type->info);
+        if (constraintObj->getFields().size() != typeObj->getFields().size()) {
+          continue;
+        }
+
+        for (size_t i = 0, e = constraintObj->getFields().size(); i < e; ++i) {
+          worklist.insert(
+              {constraintObj->getFields()[i].type,
+               typeObj->getFields()[i].type});
+        }
+        continue;
+      }
+
+    } // switch
+  }
+}
+
 class FlowChecker::ExprVisitor {
   FlowChecker &outer_;
 
@@ -53,6 +171,16 @@ class FlowChecker::ExprVisitor {
     } else {
       visitESTreeChildren(*this, node, nullptr);
     }
+  }
+
+  void afterVisit(ESTree::Node *node, ESTree::Node *parent, Type *constraint) {
+    // Now that we've found the type of the node, attempt to populate any
+    // InferencePlaceholders based on the typechecked actual type of the
+    // expression.
+    // This must be done after every expression is visited, since the type
+    // of the constraint needs to have placeholders filled in whenever possible
+    // if we want to use the information to inform the type of the arguments.
+    outer_.matchConstraintToType(constraint, outer_.getNodeTypeOrAny(node));
   }
 
   void visit(
@@ -1244,19 +1372,33 @@ class FlowChecker::ExprVisitor {
       }
     }
 
+    // Whether we have to visit the arguments or not depends on whether we
+    // visited them during generic type argument inference.
+    bool shouldVisitArguments = true;
+
     if (auto *identCallee =
             llvh::dyn_cast<ESTree::IdentifierNode>(node->_callee)) {
       sema::Decl *decl = outer_.getDecl(identCallee);
       if (decl->generic) {
-        // TODO: Visit arguments here to infer the type arguments.
-        if (!node->_typeArguments) {
-          outer_.sm_.error(
-              node->_callee->getSourceRange(), "ft: type arguments required");
-          return;
+        if (node->_typeArguments) {
+          outer_.resolveCallToGenericFunctionSpecialization(
+              node, identCallee, decl);
+        } else {
+          // Attempt to infer the type arguments.
+          auto [visited, typeArgs] =
+              outer_.inferTypeArgumentsForGenericFunctionCall(
+                  node, identCallee, decl);
+          if (visited)
+            shouldVisitArguments = false;
+          if (typeArgs.empty()) {
+            outer_.sm_.error(
+                node->getStartLoc(),
+                "could not infer type arguments for generic function");
+            return;
+          }
+          outer_.resolveCallToGenericFunctionSpecializationWithParsedTypes(
+              node, identCallee, typeArgs, decl);
         }
-
-        outer_.resolveCallToGenericFunctionSpecialization(
-            node, identCallee, decl);
       }
     } else if (node->_typeArguments) {
       // Generics handled above.
@@ -1302,14 +1444,16 @@ class FlowChecker::ExprVisitor {
       params = nftype->getParams();
     }
 
-    size_t i = 0;
-    for (ESTree::Node &argNode : node->_arguments) {
-      // Constrain types of arguments before visiting when possible.
-      Type *argConstraint = i < params.size() ? params[i].second : nullptr;
-      // Don't bother with error reporting here, we'll report them later
-      // when we actually try to typecheck the arguments.
-      visitESTreeNodeNoReplace(*this, &argNode, node, argConstraint);
-      ++i;
+    if (shouldVisitArguments) {
+      size_t i = 0;
+      for (ESTree::Node &argNode : node->_arguments) {
+        // Constrain types of arguments before visiting when possible.
+        Type *argConstraint = i < params.size() ? params[i].second : nullptr;
+        // Don't bother with error reporting here, we'll report them later
+        // when we actually try to typecheck the arguments.
+        visitESTreeNodeNoReplace(*this, &argNode, node, argConstraint);
+        ++i;
+      }
     }
 
     if (auto *ftype = llvh::dyn_cast<TypedFunctionType>(calleeType->info)) {

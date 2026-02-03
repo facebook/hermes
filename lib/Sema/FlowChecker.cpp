@@ -2062,6 +2062,93 @@ void FlowChecker::resolveCallToGenericFunctionSpecialization(
   }
 }
 
+void FlowChecker::resolveCallToGenericFunctionSpecializationWithParsedTypes(
+    ESTree::CallExpressionNode *node,
+    ESTree::IdentifierNode *callee,
+    llvh::ArrayRef<Type *> typeArgTypes,
+    sema::Decl *oldDecl) {
+  assert(oldDecl && "expected valid oldDecl");
+
+  sema::Decl *newDecl = nullptr;
+  newDecl = specializeGenericWithParsedTypes(
+      oldDecl, node->getSourceRange(), typeArgTypes, oldDecl->scope);
+
+  if (newDecl) {
+    semContext_.setExpressionDecl(callee, newDecl);
+    setNodeType(callee, getDeclType(newDecl));
+  }
+}
+
+std::pair<bool, llvh::SmallVector<Type *, 2>>
+FlowChecker::inferTypeArgumentsForGenericFunctionCall(
+    ESTree::CallExpressionNode *node,
+    ESTree::IdentifierNode *callee,
+    sema::Decl *oldDecl) {
+  // Retrieve generic info.
+  GenericInfo<ESTree::Node> &generic = getGenericInfoMustExist(oldDecl);
+  auto *genericDecl =
+      llvh::dyn_cast<ESTree::FunctionDeclarationNode>(generic.originalNode);
+  if (!genericDecl)
+    return {false, {}};
+
+  auto *typeParams = llvh::cast<ESTree::TypeParameterDeclarationNode>(
+      genericDecl->_typeParameters);
+  size_t numTypeParams = typeParams->_params.size();
+  assert(numTypeParams > 0 && "expected at least one type parameter");
+
+  // Keep pointers to all the placeholder types.
+  llvh::SmallVector<Type *, 2> typeArgs{};
+  for (size_t i = 0; i < numTypeParams; ++i) {
+    typeArgs.push_back(
+        flowContext_.createType(flowContext_.getInferencePlaceholderInfo()));
+  }
+
+  // Bind the placeholder types into the type parameter names and parse the
+  // function type, to get the initial constraint passed to visitExpression.
+  llvh::SmallVector<Type *, 2> callArgConstraints{};
+  {
+    ScopeRAII paramScope{*this};
+    if (!validateAndBindTypeParameters(
+            typeParams, callee->getSourceRange(), typeArgs, oldDecl->scope)) {
+      assert(false && "type parameters must bind here, not user provided");
+    }
+
+    for (ESTree::Node &param : ESTree::getParams(genericDecl)) {
+      auto *ident = llvh::dyn_cast<ESTree::IdentifierNode>(&param);
+      if (!ident) {
+        // Cannot infer anything.
+        return {};
+      }
+      if (!ident->_typeAnnotation)
+        callArgConstraints.push_back(nullptr);
+      callArgConstraints.push_back(parseTypeAnnotation(
+          llvh::cast<ESTree::TypeAnnotationNode>(ident->_typeAnnotation)
+              ->_typeAnnotation));
+    }
+  }
+
+  // Visit all the arguments, even if there's a mismatch and we're not able to
+  // provide constraints for all arguments.
+  // This allows us to easily skip visiting all the arguments in the
+  // CallExpression visitor function in ExprVisitor.
+  size_t i = 0;
+  for (ESTree::Node &arg : node->_arguments) {
+    Type *constraint =
+        i < callArgConstraints.size() ? callArgConstraints[i] : nullptr;
+    visitExpression(&arg, node, constraint);
+    ++i;
+  }
+
+  for (auto *typeArg : typeArgs) {
+    if (llvh::isa<InferencePlaceholderType>(typeArg->info)) {
+      // Failed to infer.
+      return {true, {}};
+    }
+  }
+
+  return {true, std::move(typeArgs)};
+}
+
 void FlowChecker::typecheckGenericFunctionSpecialization(
     ESTree::FunctionDeclarationNode *specialization,
     llvh::ArrayRef<Type *> typeArgTypes,

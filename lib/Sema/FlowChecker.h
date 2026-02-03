@@ -606,6 +606,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       llvh::ArrayRef<Type *> typeArgTypes,
       sema::LexicalScope *scope);
 
+  /// Match a constraint type (containing placeholders) against a concrete type.
+  /// Fills in InferencePlaceholder types by mutating their info pointers.
+  /// \param startConstraint the constraint that may contain
+  /// InferencePlaceholders.
+  /// \param startType the type to start attempting to assign from.
+  void matchConstraintToType(Type *startConstraint, const Type *startType);
+
   /// If necessary, specialize and typecheck the specialization of a generic
   /// function.
   /// Parses the type arguments in \p typeArgsNode.
@@ -640,6 +647,36 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \param callee the name of the generic being called
   /// \param oldDecl the original Decl for the non-specialized generic function
   void resolveCallToGenericFunctionSpecialization(
+      ESTree::CallExpressionNode *node,
+      ESTree::IdentifierNode *callee,
+      sema::Decl *oldDecl);
+
+  /// If necessary, specialize and typecheck the specialization of a generic
+  /// function.
+  /// Set the type of the callee to the specialized version of the function.
+  /// \param node the call expression passing the type arguments
+  /// \param callee the name of the generic being called
+  /// \param typeArgTypes the actual Types to instantiate the arguments with.
+  /// \param oldDecl the original Decl for the non-specialized generic function
+  void resolveCallToGenericFunctionSpecializationWithParsedTypes(
+      ESTree::CallExpressionNode *node,
+      ESTree::IdentifierNode *callee,
+      llvh::ArrayRef<Type *> typeArgTypes,
+      sema::Decl *oldDecl);
+
+  /// Try to visit the arguments to the call expression and typecheck them.
+  /// Infer a possible set of type arguments to use for the call
+  /// using an eager type assignment mechanism based on the types of the
+  /// arguments.
+  /// NOTE: the inferred type arguments may not be compatible with
+  /// every argument, so they must be typechecked by the caller after creating a
+  /// generic specialization.
+  /// \return (didVisitArgs, typeArgs) where didVisitArgs is true when the
+  /// arguments were visited (so the caller doesn't have to visit and typecheck
+  /// the arguments). If inference was possible, typeArgs is non-empty and
+  /// contains the inferred type arguments, otherwise typeArgs is empty.
+  std::pair<bool, llvh::SmallVector<Type *, 2>>
+  inferTypeArgumentsForGenericFunctionCall(
       ESTree::CallExpressionNode *node,
       ESTree::IdentifierNode *callee,
       sema::Decl *oldDecl);
