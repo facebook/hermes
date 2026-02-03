@@ -25,7 +25,7 @@ function foo(t: {x: number}): void {
 // CHECK-NEXT:{{.*}}exact-object-error.js:13:7: error: ft: incompatible initialization type
 // CHECK-NEXT:  let c: {x: number, y: string} = t;
 // CHECK-NEXT:      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}exact-object-error.js:14:7: error: ft: incompatible initialization type
+// CHECK-NEXT:{{.*}}exact-object-error.js:14:28: error: ft: incompatible property type for 'x'
 // CHECK-NEXT:  let d: {x: number} = {x: "hi"};
-// CHECK-NEXT:      ^~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK-NEXT:                           ^~~~
 // CHECK-NEXT:Emitted 4 errors. exiting.

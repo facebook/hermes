@@ -545,8 +545,6 @@ class FlowChecker::ExprVisitor {
       ESTree::ObjectExpressionNode *node,
       ESTree::Node *parent,
       Type *constraint) {
-    visitESTreeChildren(*this, node, nullptr);
-
     // Failed to make an object type that matches the properties,
     // assume 'any' and continue.
     bool assumeAny = false;
@@ -555,6 +553,9 @@ class FlowChecker::ExprVisitor {
     llvh::SmallVector<ExactObjectType::Field, 4> fields;
     // Name of the key, mapping to index in the fields vector.
     llvh::SmallDenseMap<UniqueString *, size_t> names;
+
+    auto *constraintObjectType = llvh::dyn_cast_or_null<ExactObjectType>(
+        constraint ? constraint->info : nullptr);
 
     for (ESTree::Node &node : node->_properties) {
       auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&node);
@@ -569,6 +570,8 @@ class FlowChecker::ExprVisitor {
         break;
       }
 
+      visitESTreeNodeNoReplace(*this, prop->_key, prop, nullptr);
+
       UniqueString *name = outer_.propertyKeyAsIdentifier(prop->_key);
       if (!name || name == outer_.kw_.identUnderscoreProto) {
         outer_.sm_.warning(
@@ -578,7 +581,34 @@ class FlowChecker::ExprVisitor {
         break;
       }
 
+      Type *constraintValueType = nullptr;
+      if (constraintObjectType) {
+        if (auto optField = constraintObjectType->findField(
+                Identifier::getFromPointer(name))) {
+          constraintValueType =
+              constraintObjectType->getFields()[*optField].type;
+        }
+      }
+
+      // Use the value constraint to visit the value node.
+      visitESTreeNodeNoReplace(*this, prop->_value, prop, constraintValueType);
+
       Type *valueType = outer_.getNodeTypeOrAny(prop->_value);
+
+      if (constraintValueType) {
+        auto cf = canAFlowIntoB(valueType, constraintValueType);
+        if (!cf.canFlow) {
+          outer_.sm_.error(
+              prop->_value->getSourceRange(),
+              llvh::Twine("ft: incompatible property type for '") +
+                  name->str() + "'");
+        }
+        if (cf.needCheckedCast) {
+          prop->_value =
+              outer_.implicitCheckedCast(prop->_value, constraintValueType, cf);
+        }
+        valueType = constraintValueType;
+      }
 
       // Handle duplicate keys.
       auto [it, inserted] = names.try_emplace(name, fields.size());

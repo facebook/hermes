@@ -17,7 +17,7 @@ let tx: number = t.x;
 let t2x: number = t2.x;
 t.x = 5;
 
-let tdup: {x: string, y: bool} = {x: 3, x: 'hi', y: true};
+let tdup: {x: string, y: bool} = {x: '3', x: 'hi', y: true};
 
 type TRec = {
   x: TRec | null,
@@ -102,7 +102,7 @@ let trec: TRec;
 // CHECK-NEXT:                            ObjectExpression : %object.5
 // CHECK-NEXT:                                Property
 // CHECK-NEXT:                                    Id 'x'
-// CHECK-NEXT:                                    NumericLiteral : number
+// CHECK-NEXT:                                    StringLiteral : string
 // CHECK-NEXT:                                Property
 // CHECK-NEXT:                                    Id 'x'
 // CHECK-NEXT:                                    StringLiteral : string
