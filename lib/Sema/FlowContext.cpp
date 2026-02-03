@@ -225,7 +225,7 @@ bool TypeInfo::equals(const TypeInfo *other, CompareState &state) const {
 
   // Handle two unions when at least one of them is incomplete.
   if ((thisIncomplete || otherIncomplete) && llvh::isa<UnionType>(this) &&
-      llvh::isa<UnionType>(this)) {
+      llvh::isa<UnionType>(other)) {
     bool result = listsMatchSlow(
         llvh::cast<UnionType>(this)->getTypes(),
         llvh::cast<UnionType>(other)->getTypes(),
@@ -404,15 +404,11 @@ bool UnionType::_equalsImpl(const UnionType *other, CompareState &state) const {
   if (numNonLoopingTypes_ != other->numNonLoopingTypes_)
     return false;
 
-  if (lexicographicalComparison(
-          getNonLoopingTypes().begin(),
-          getNonLoopingTypes().end(),
-          other->getNonLoopingTypes().begin(),
-          other->getNonLoopingTypes().end(),
-          [&state](Type *a, Type *b) {
-            return a->info->compare(b->info, state);
-          }))
-    return false;
+  for (size_t i = 0, e = getNonLoopingTypes().size(); i < e; ++i) {
+    if (!getNonLoopingTypes()[i]->info->equals(
+            other->getNonLoopingTypes()[i]->info, state))
+      return false;
+  }
 
   return listsMatchSlow(getLoopingTypes(), other->getLoopingTypes(), state);
 }
@@ -536,17 +532,13 @@ bool TypedFunctionType::_equalsImpl(
     return false;
   if (cmpHelper(thisParam_, other->thisParam_))
     return false;
-  if (lexicographicalComparison(
-          params_.begin(),
-          params_.end(),
-          other->params_.begin(),
-          other->params_.end(),
-          [&state](const Param &pa, const Param &pb) {
-            return pa.second->info->compare(pb.second->info, state);
-          })) {
+  if (params_.size() != other->params_.size())
     return false;
+  for (size_t i = 0, e = params_.size(); i < e; ++i) {
+    if (!params_[i].second->info->equals(other->params_[i].second->info, state))
+      return false;
   }
-  if (cmpHelper(return_, other->return_))
+  if (!return_->info->equals(other->return_->info))
     return false;
   return true;
 }

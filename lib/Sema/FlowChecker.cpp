@@ -1628,7 +1628,7 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
     assert(
         arrayA->getElement()->info && arrayB->getElement()->info &&
         "uninitialized elements");
-    if (arrayA->getElement()->info->compare(arrayB->getElement()->info) == 0)
+    if (arrayA->getElement()->info->equals(arrayB->getElement()->info))
       return {.canFlow = true};
     return {};
   }
