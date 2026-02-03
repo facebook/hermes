@@ -166,9 +166,9 @@ class Container extends Widget {
 
   reduce(ctx: Context): RenderNode {
     const component: Component = new NumberComponent(13);
-    const children: RenderNode[] = arrayPrototypeMap<Widget, RenderNode>(
+    const children: RenderNode[] = arrayPrototypeMap(
       this.children,
-      (child: Widget): RenderNode => RenderNode_createForChild(ctx, child),
+      child => RenderNode_createForChild(ctx, child),
     );
     return RenderNode_create(ctx, [component], children);
   }
@@ -232,9 +232,9 @@ function reconcileChildren(
 ): RenderNode[] {
   const outChildren: RenderNode[] = [];
   const oldChildrenByKey: any = new Map();
-  arrayPrototypeForEach<RenderNode>(oldChildren, (child: RenderNode) => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
+  arrayPrototypeForEach(oldChildren, child => $SHBuiltin.call(mapPrototypeSet, oldChildrenByKey, child.key, child));
 
-  arrayPrototypeForEach<RenderNode>(newChildren, (child: RenderNode) => {
+  arrayPrototypeForEach(newChildren, child => {
     const newKey = child.key;
     const oldChild: RenderNode | void =
       $SHBuiltin.call(mapPrototypeGet, oldChildrenByKey, newKey);
@@ -252,7 +252,7 @@ function mapEntitiesToComponents(
   entities: VirtualEntity[],
 ): any {
   const map: any = new Map();
-  arrayPrototypeForEach<VirtualEntity>(entities, (entity: VirtualEntity) => {
+  arrayPrototypeForEach(entities, entity => {
     const key: number = entity.key;
     const value: Component[] = entity.value;
     if ($SHBuiltin.call(mapPrototypeGet, map, key) == undefined) {
@@ -277,29 +277,29 @@ function diffTrees(
   const createdComponents: ComponentPair[] = [];
   const deletedComponents: ComponentPair[] = [];
 
-  const oldEntityIds: number[] = arrayPrototypeMap<VirtualEntity, number>(
+  const oldEntityIds: number[] = arrayPrototypeMap(
     oldEntities,
-    (entity: VirtualEntity): number => entity.key,
+    entity => entity.key,
   );
-  const newEntityIds: number[] = arrayPrototypeMap<VirtualEntity, number>(
+  const newEntityIds: number[] = arrayPrototypeMap(
     newEntities,
-    (entity: VirtualEntity): number => entity.key
+    entity => entity.key
   );
 
-  const createdEntities: number[] = arrayPrototypeFilter<number>(newEntityIds,
-    (entityId: number) => !arrayPrototypeIncludes<number>(oldEntityIds, entityId),
+  const createdEntities: number[] = arrayPrototypeFilter(newEntityIds,
+    entityId => !arrayPrototypeIncludes(oldEntityIds, entityId),
   );
-  const deletedEntities: number[] = arrayPrototypeFilter<number>(oldEntityIds,
-    (entityId: number) => !arrayPrototypeIncludes<number>(newEntityIds, entityId),
+  const deletedEntities: number[] = arrayPrototypeFilter(oldEntityIds,
+    entityId => !arrayPrototypeIncludes(newEntityIds, entityId),
   );
 
   const oldComponents: any = mapEntitiesToComponents(oldEntities);
   const newComponents: any = mapEntitiesToComponents(newEntities);
 
-  arrayPrototypeForEach<number>(createdEntities, (entityId: number) => {
-    const components: ComponentPair[] = arrayPrototypeMap<Component, ComponentPair>(
+  arrayPrototypeForEach(createdEntities, entityId => {
+    const components: ComponentPair[] = arrayPrototypeMap(
       $SHBuiltin.call(mapPrototypeGet, newComponents, entityId) || ([]: Component[]),
-      (it: Component): ComponentPair => new ComponentPair(entityId, it),
+      (it: Component) => new ComponentPair(entityId, it),
     );
     createdComponents.push(...components);
   });
@@ -312,22 +312,22 @@ function diffTrees(
     const oldComponentsForKey: Component[] = $SHBuiltin.call(mapPrototypeGet, oldComponents, key) || ([]: Component[]);
     const newComponentsForKey: Component[] = value;
 
-    const deleted: Component[] = arrayPrototypeFilter<Component>(
+    const deleted: Component[] = arrayPrototypeFilter(
       oldComponentsForKey,
-      (it: Component) => !arrayPrototypeIncludes<Component>(newComponentsForKey, it),
+      it => !arrayPrototypeIncludes(newComponentsForKey, it),
     );
-    const created: Component[] = arrayPrototypeFilter<Component>(
+    const created: Component[] = arrayPrototypeFilter(
       newComponentsForKey,
-      (it: Component) => !arrayPrototypeIncludes<Component>(oldComponentsForKey, it),
+      it => !arrayPrototypeIncludes(oldComponentsForKey, it),
     );
 
-    arrayPrototypeForEach<Component>(
+    arrayPrototypeForEach(
       deleted,
-      (it: Component) => deletedComponents.push(new ComponentPair(key, it)),
+      it => deletedComponents.push(new ComponentPair(key, it)),
     );
-    arrayPrototypeForEach<Component>(
+    arrayPrototypeForEach(
       created,
-      (it: Component) => createdComponents.push(new ComponentPair(key, it)),
+      it => createdComponents.push(new ComponentPair(key, it)),
     );
   });
 
@@ -453,11 +453,11 @@ class RenderNode {
 
   reduce(): VirtualEntity[] {
     const childrenEntities: VirtualEntity[] = [];
-    arrayPrototypeForEach<RenderNode>(
+    arrayPrototypeForEach(
       this.children,
-      (child: RenderNode) => childrenEntities.push(...child.reduce()),
+      child => childrenEntities.push(...child.reduce()),
     );
-    return arrayPrototypeConcat<VirtualEntity>(
+    return arrayPrototypeConcat(
       [new VirtualEntity(this.id, this.components)],
       childrenEntities,
     );
@@ -512,7 +512,7 @@ class TestApp extends ComposedWidget {
     if (sizes.length != models.length) {
       throw new Error('sizes and models must have same length');
     }
-    return arrayPrototypeMapWithIndex<string, Widget>(
+    return arrayPrototypeMapWithIndex(
       models,
       (modelPath: string, index: number): Widget => {
         const buttonSize = sizes[index];
