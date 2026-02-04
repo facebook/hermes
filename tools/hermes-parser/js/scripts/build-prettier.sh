@@ -8,7 +8,9 @@ set -xe -o pipefail
 
 HG_ROOT=$(hg root)
 XPLAT="$HG_ROOT/xplat"
-NODE="$XPLAT/third-party/node/bin/node"
+# Call node binary directly to avoid --stack-trace-limit=48 from wrapper
+# (not allowed in Worker execArgv on Node 22+)
+NODE="$XPLAT/third-party/node/bin/node-linux-x64"
 XPLAT_YARN="$XPLAT/third-party/yarn/yarn"
 
 REPO_URI="https://github.com/pieterv/prettier.git"
@@ -28,7 +30,7 @@ fi
 
 if [ ! -d "$PRETTIER_DIR" ]; then
     echo "Cloning prettier fork locally"
-    git clone -b flow-fork "$REPO_URI" "$PRETTIER_DIR"
+    git -c http.https://github.com.proxy=http://fwdproxy:8080 clone -b flow-fork "$REPO_URI" "$PRETTIER_DIR"
 fi
 
 pushd "$PRETTIER_DIR"
@@ -44,7 +46,7 @@ fi
 rm -f .eslintrc.cjs
 
 echo "Checking prettier branch is up to date"
-git fetch upstream
+git -c http.https://github.com.proxy=http://fwdproxy:8080 fetch upstream
 # Check if local branch is behind upstream/flow-fork
 COMMITS_BEHIND=$(git rev-list --left-right --count upstream/flow-fork...HEAD | awk '{print $1}')
 if [ "$COMMITS_BEHIND" -gt 0 ]; then
