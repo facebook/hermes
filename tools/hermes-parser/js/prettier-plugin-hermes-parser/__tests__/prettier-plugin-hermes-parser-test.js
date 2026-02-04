@@ -156,4 +156,36 @@ describe('prettier-plugin-hermes-parser', () => {
 
     expect(secondPass).toBe(firstPass);
   });
+
+  it('does not add spurious empty lines in nested JSX', async () => {
+    const code = `
+      function Foo() {
+        return (
+          <View style={styles.root}>
+            <View style={styles.content}>
+              <Text>Hello</Text>
+              <Button onClick={handleClick} />
+            </View>
+            <Separator />
+          </View>
+        );
+      }
+    `;
+    const output = await prettierV3.format(code, getOptions());
+    // Should not have empty lines after opening tags or before closing tags
+    expect(output).toMatchInlineSnapshot(`
+      "function Foo() {
+        return (
+          <View style={styles.root}>
+            <View style={styles.content}>
+              <Text>Hello</Text>
+              <Button onClick={handleClick} />
+            </View>
+            <Separator />
+          </View>
+        );
+      }
+      "
+    `);
+  });
 });
