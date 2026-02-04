@@ -57,6 +57,9 @@ class HermesValue : public HermesValueBase {
     EmptyInvalid = HVTag_EmptyInvalid,
     UndefinedNull = HVTag_UndefinedNull,
     BoolSymbol = HVTag_BoolSymbol,
+#ifdef HERMESVM_BOXED_DOUBLES
+    RawHV32 = HVTag_RawHV32,
+#endif
 
     /// Pointer tags start here.
     FirstPointer = HVTag_FirstPointer,
@@ -79,6 +82,10 @@ class HermesValue : public HermesValueBase {
     Null = HVETag_Null,
     Bool = HVETag_Bool,
     Symbol = HVETag_Symbol,
+#ifdef HERMESVM_BOXED_DOUBLES
+    RawHV32_1 = HVETag_RawHV32_1,
+    RawHV32_2 = HVETag_RawHV32_2,
+#endif
     Str1 = HVETag_Str1,
     Str2 = HVETag_Str2,
     BigInt1 = HVETag_BigInt1,
@@ -324,6 +331,11 @@ class HermesValue : public HermesValueBase {
   inline bool isBool() const {
     return getETag() == ETag::Bool;
   }
+#ifdef HERMESVM_BOXED_DOUBLES
+  inline bool isRawHV32() const {
+    return getTag() == Tag::RawHV32;
+  }
+#endif
   inline bool isObject() const {
     return getTag() == Tag::Object;
   }

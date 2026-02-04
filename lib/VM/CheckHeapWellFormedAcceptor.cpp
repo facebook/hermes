@@ -26,6 +26,11 @@ void CheckHeapWellFormedAcceptor::accept(PinnedHermesValue &hv) {
   acceptHV(hv);
 }
 void CheckHeapWellFormedAcceptor::acceptNullable(PinnedHermesValue &hv) {
+#ifdef HERMESVM_BOXED_DOUBLES
+  assert(
+      (hv.getTag() != HermesValue::Tag::RawHV32) &&
+      "PHV with tag RawHV32 should be marked differently");
+#endif
   acceptHV(hv);
 }
 void CheckHeapWellFormedAcceptor::accept(const RootSymbolID &sym) {
@@ -47,6 +52,11 @@ void CheckHeapWellFormedAcceptor::accept(GCPointerBase &ptr) {
   accept(ptr.get(gc.getPointerBase()));
 }
 void CheckHeapWellFormedAcceptor::accept(GCHermesValueBase &hv) {
+#ifdef HERMESVM_BOXED_DOUBLES
+  assert(
+      (hv.getTag() != HermesValue::Tag::RawHV32) &&
+      "RawHV32 value is only allowed in roots");
+#endif
   acceptHV(hv);
 }
 void CheckHeapWellFormedAcceptor::accept(GCSmallHermesValueBase &hv) {

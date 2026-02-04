@@ -100,6 +100,24 @@
 /// Unlike native pointers, native uint32 may be NaN-boxed since they can fit in
 /// the low bits of a NaN, but since we always know where they are, it is more
 /// efficient to avoid tagging them.
+///
+/// Encode HermesValue32 directly into HermesValue
+/// ================
+/// HermesValue can also store the raw bits of HermesValue32, with tag RawHV32.
+/// This is useful when we want to hold a HV32 across allocations in a function.
+/// Currently we only use PinnedHermesValue for GC roots. By encoding the raw
+/// bits of a HV32 directly into HV, we could mark the HV32 when marking
+/// roots. This allows us to use PinnedValue<SmallHermesValue>.
+/// This tag is only necessary when HERMESVM_BOXED_DOUBLES is ON (otherwise,
+/// SmallHermesValue is essentially HermesValue). The encoding works as below:
+/// 1. When HERMESVM_COMPRESSED_POINTERS is ON: HV32 is always 32 bits, so
+/// simply put it into the low 32 bits of a HV with tag RawHV32.
+/// 2. When HERMESVM_COMPRESSED_POINTERS is OFF (for testing purpose):
+/// 2.1 if the HV32 has tag CompressedHV64, we could directly decompress it to a
+/// HV, guaranteed no allocation.
+/// 2.2. Otherwise, the data bits of the HV32 is guaranteed to use at most
+/// 48 bits. So we could construct a HV with tag RawHV32 and raw value of this
+/// HV32.
 
 #ifndef HERMES_SH_LEGACY_VALUE_H
 #define HERMES_SH_LEGACY_VALUE_H
@@ -144,7 +162,12 @@ enum HVTag {
   HVTag_EmptyInvalid = HVTag_First,
   HVTag_UndefinedNull,
   HVTag_BoolSymbol,
+#ifdef HERMESVM_BOXED_DOUBLES
+  /// The value encodes raw bits of HermesValue32.
+  HVTag_RawHV32,
+#else
   HVTag_Unused,
+#endif
   /// Pointer tags start here.
   HVTag_FirstPointer,
   HVTag_Str = HVTag_FirstPointer,
@@ -167,6 +190,10 @@ enum HVETag {
   HVETag_Null = HVTag_UndefinedNull * 2 + 1,
   HVETag_Bool = HVTag_BoolSymbol * 2,
   HVETag_Symbol = HVTag_BoolSymbol * 2 + 1,
+#ifdef HERMESVM_BOXED_DOUBLES
+  HVETag_RawHV32_1 = HVTag_RawHV32 * 2,
+  HVETag_RawHV32_2 = HVTag_RawHV32 * 2 + 1,
+#endif
   HVETag_Str1 = HVTag_Str * 2,
   HVETag_Str2 = HVTag_Str * 2 + 1,
   HVETag_BigInt1 = HVTag_BigInt * 2,
