@@ -133,4 +133,27 @@ describe('prettier-plugin-hermes-parser', () => {
   it('uses plugin for v3', async () => {
     await runTestWithPrettier(prettierV3);
   });
+
+  it('formats JSX variable declaration stably', async () => {
+    const code = `const notFoundView = (
+      <LumaView   style={styles.root}
+      >{collectionHeader} </LumaView>
+    );`;
+
+    // First format
+    const firstPass = await prettierV3.format(code, getOptions());
+
+    // Assert the output
+    expect(firstPass).toMatchInlineSnapshot(`
+      "const notFoundView = (
+        <LumaView style={styles.root}>{collectionHeader} </LumaView>
+      );
+      "
+    `);
+
+    // Second format - should be identical to first (stability check)
+    const secondPass = await prettierV3.format(firstPass, getOptions());
+
+    expect(secondPass).toBe(firstPass);
+  });
 });
