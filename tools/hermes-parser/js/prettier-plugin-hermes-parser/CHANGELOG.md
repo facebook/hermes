@@ -1,3 +1,6 @@
+## 0.34.1
+- Fixed a bug that a white space was accidentally removed by autoformatter causing prettier to add unnecessary new lines.
+
 ## 0.34.0
 - Support Flow's new `keyof` operator that replaces `$Keys`. See [this PR in prettier main](https://github.com/prettier/prettier/pull/18801/changes).
 
