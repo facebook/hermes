@@ -51,6 +51,7 @@ jobs:
       ANDROID_NDK: /usr/local/lib/android/sdk/ndk/27.1.12297006
       HERMES_WS_DIR: /home/runner/work/hermes
       REACT_NATIVE_OVERRIDE_HERMES_DIR: /home/runner/work/hermes/hermes
+      CMAKE_VERSION: 3.22.1
     steps:
     - name: Install Node
       uses: actions/setup-node@v4.0.2
