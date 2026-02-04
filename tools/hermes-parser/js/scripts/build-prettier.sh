@@ -21,7 +21,9 @@ GENERATED="generated"
 
 if [ ! -d "$HERMES_PARSER_DIST" ]; then
     echo "$HERMES_PARSER_DIST does not exist, running initial build"
+    pushd "$HERMES_PARSER_JS"
     $XPLAT_YARN build
+    popd
 fi
 
 if [ ! -d "$PRETTIER_DIR" ]; then
