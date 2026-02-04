@@ -108,6 +108,8 @@ class DebugScopingInfo {
 };
 
 /// The file name, line and column associated with a bytecode address.
+/// It could be invalid (e.g., has 0 line number), so users must check its
+/// validity before using it, unless explicitly stated by code returning it.
 struct DebugSourceLocation {
   // The bytecode offset of this debug info.
   uint32_t address{0};
@@ -129,6 +131,7 @@ struct DebugSourceLocation {
   // list DebugScopingInfo entries. 0 indicates no env info.
   uint32_t envIdx{0};
 
+  /// Construct an invalid DebugSourceLocation.
   DebugSourceLocation() {}
 
   DebugSourceLocation(
@@ -150,6 +153,12 @@ struct DebugSourceLocation {
 
   bool operator!=(const DebugSourceLocation &rhs) const {
     return !(*this == rhs);
+  }
+
+  /// \return true if this is a valid source location, i.e., non-zero line and
+  /// column number.
+  bool isValid() const {
+    return line != 0 && column != 0;
   }
 };
 
@@ -287,13 +296,16 @@ class DebugInfo {
   }
 
   /// Get the location of \p offsetInFunction, given the function's debug
-  /// offset.
+  /// offset. None if there is no source location or it's invalid.
   OptValue<DebugSourceLocation> getLocationForAddress(
       uint32_t debugOffset,
       uint32_t offsetInFunction) const;
 
   /// Get the location of the start of the function with \p debugOffset.
-  DebugSourceLocation getLocationForFunction(uint32_t debugOffset) const;
+  /// None if there is no source location or it's invalid. Otherwise, always
+  /// returns a valid DebugSourceLocation.
+  OptValue<DebugSourceLocation> getLocationForFunction(
+      uint32_t debugOffset) const;
 
   /// Given a \p targetLine and optional \p targetColumn,
   /// find a bytecode address at which that location is listed in debug info.
@@ -473,9 +485,17 @@ struct FunctionDebugInfoDeserializer {
     return functionIndex_;
   }
 
-  /// \return the current source location.
-  const DebugSourceLocation &getCurrent() const {
-    return current_;
+  /// \return the current source location. None if it's invalid.
+  OptValue<DebugSourceLocation> getCurrent() const {
+    if (current_.isValid())
+      return current_;
+    return llvh::None;
+  }
+
+  /// \return the current address. Note that the current offset may not have
+  /// location information, but it still has valid address.
+  uint32_t getCurrentAddress() const {
+    return current_.address;
   }
 
  private:

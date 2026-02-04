@@ -657,9 +657,16 @@ void HBCISel::addDebugSourceLocationInfo() {
   // If there's no debug info, don't set the function location.
   // This avoids polluting the string table with source file names.
   if (hasDebugInfo) {
-    getDebugSourceLocation(manager, F_->getSourceRange().Start, &info);
-    info.address = 0;
-    info.statement = 0;
+    if (getDebugSourceLocation(manager, F_->getSourceRange().Start, &info)) {
+      info.address = 0;
+      info.statement = 0;
+    } else {
+      // If there is debug info but the function doesn't have source location
+      // (e.g., it's synthetic function), reset info to default, which indicates
+      // invalid source location (i.e., with 0 line/column value). We will check
+      // for this when deserializing function debug info.
+      info = {};
+    }
     BCFGen_->setSourceLocation(info);
   }
 }

@@ -40,7 +40,7 @@ OptValue<DebugSourceLocation> DebugInfo::getLocationForAddress(
     // isDone() won't be true on the first iteration, because fdid was just
     // constructed.
     auto nextLocation = fdid.next();
-    if (fdid.isDone() || fdid.getCurrent().address > offsetInFunction)
+    if (fdid.isDone() || fdid.getCurrentAddress() > offsetInFunction)
       break;
     lastLocation = nextLocation;
     lastLocationOffset = nextLocationOffset;
@@ -57,7 +57,7 @@ OptValue<DebugSourceLocation> DebugInfo::getLocationForAddress(
   return llvh::None;
 }
 
-DebugSourceLocation DebugInfo::getLocationForFunction(
+OptValue<DebugSourceLocation> DebugInfo::getLocationForFunction(
     uint32_t debugOffset) const {
   assert(debugOffset < data_.size() && "Debug offset out of range");
   FunctionDebugInfoDeserializer fdid(data_.getData(), debugOffset);
@@ -162,10 +162,14 @@ void DebugInfo::disassembleFilesAndOffsets(llvh::raw_ostream &OS) const {
   llvh::ArrayRef<uint8_t> locsData = sourceLocationsData();
   while (offset < locsData.size()) {
     FunctionDebugInfoDeserializer fdid(locsData, offset);
+    uint32_t line = 0, column = 0;
+    if (auto loc = fdid.getCurrent()) {
+      line = loc->line;
+      column = loc->column;
+    }
     OS << "  " << llvh::format_hex(offset, 6);
     OS << "  function idx " << fdid.getFunctionIndex();
-    OS << ", starts at line " << fdid.getCurrent().line << " col "
-       << fdid.getCurrent().column << "\n";
+    OS << ", starts at line " << line << " col " << column << "\n";
     uint32_t count = 0;
     while (!fdid.isDone()) {
       if (auto loc = fdid.next()) {

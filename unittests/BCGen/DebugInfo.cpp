@@ -11,6 +11,7 @@
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
+#include "hermes/SourceMap/SourceMapGenerator.h"
 
 #include "gtest/gtest.h"
 
@@ -193,5 +194,54 @@ TEST(DebugInfo, TestGetAddress) {
   ASSERT_TRUE(result.hasValue());
   EXPECT_EQ(3u, result->functionIndex);
   EXPECT_EQ(2u, result->bytecodeOffset);
+}
+
+TEST(DebugInfo, TestPopulateSourceMapWithInvalidLocations) {
+  DebugInfo info;
+  auto dbg = makeGenerator(info);
+
+  // Function 0: valid start location.
+  dbg.appendSourceLocations(
+      Loc{0, 0, 10, 5, 0}, // Function starts at file1:10:5
+      0,
+      {
+          Loc{0, 1, 11, 1, 1}, // opcode 0 at file1:11:1
+          Loc{2, 1, 12, 1, 1}, // opcode 2 at file1:12:1
+      });
+
+  // Function 1: invalid start location.
+  dbg.appendSourceLocations(
+      Loc{0, 0, 0, 0, 0}, // Invalid: line=0, column=0
+      1,
+      {
+          Loc{0, 1, 20, 1, 1}, // opcode 0 at file1:20:1
+          Loc{2, 1, 21, 1, 1}, // opcode 2 at file1:21:1
+      });
+
+  // Function 2: valid start location.
+  dbg.appendSourceLocations(
+      Loc{0, 0, 30, 5, 0}, // Function starts at file1:30:5
+      2,
+      {
+          Loc{0, 1, 31, 1, 1}, // opcode 0 at file1:31:1
+      });
+
+  std::move(dbg).generate();
+
+  // Create a SourceMapGenerator and populate it.
+  SourceMapGenerator sourceMap;
+  sourceMap.addSource("file1.js");
+
+  // Function offsets: function 0 at offset 0, function 1 at offset 100,
+  // function 2 at offset 200.
+  std::vector<uint32_t> functionOffsets = {0, 100, 200};
+  info.populateSourceMap(&sourceMap, std::move(functionOffsets), 0);
+
+  // Verify the source map was populated without crashing.
+  // The function with invalid start location should be skipped.
+  auto lines = sourceMap.getMappingsLines();
+  ASSERT_EQ(1u, lines.size());
+  // 3 (function 1) + 2 (function 1) + 2 (function 2)
+  ASSERT_EQ(7u, lines[0].size());
 }
 } // end anonymous namespace

@@ -51,7 +51,9 @@ void DebugInfo::populateSourceMap(
   while (offset < locsData.size()) {
     FunctionDebugInfoDeserializer fdid(locsData, offset);
     uint32_t offsetInFile = functionOffsets[fdid.getFunctionIndex()];
-    segments.push_back(segmentFor(fdid.getCurrent(), offsetInFile, offset));
+    // The function start could have invalid source location, need to skip it.
+    if (auto loc = fdid.getCurrent())
+      segments.push_back(segmentFor(*loc, offsetInFile, offset));
     while (!fdid.isDone()) {
       if (auto loc = fdid.next()) {
         segments.push_back(segmentFor(*loc, offsetInFile, offset));
