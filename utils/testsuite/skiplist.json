@@ -3067,7 +3067,10 @@
     "test262/test/intl402/NumberFormat/prototype/resolvedOptions/resolved-numbering-system-unicode-extensions-and-options.js",
     "test262/test/intl402/String/prototype/toLocaleLowerCase/validates-all-locale-identifiers.js",
     "test262/test/intl402/String/prototype/toLocaleUpperCase/validates-all-locale-identifiers.js",
-    "test262/test/staging/sm/extensions/newer-type-functions-caller-arguments.js"
+    "test262/test/staging/sm/extensions/newer-type-functions-caller-arguments.js",
+    "test262/test/staging/sm/class/classConstructorNoCall.js",
+    "test262/test/staging/sm/class/methodInstallation.js",
+    "test262/test/staging/sm/object/method-non-constructor.js"
   ],
   "lazy_skip_list": [
     "test262/test/language/statements/try/scope-catch-param-lex-close.js"
