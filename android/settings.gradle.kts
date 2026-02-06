@@ -15,6 +15,13 @@ pluginManagement {
   }
 }
 
+dependencyResolutionManagement {
+  repositories {
+    google()
+    mavenCentral()
+  }
+}
+
 rootProject.name = "hermes-engine"
 
 include(":ios-artifacts", ":cppruntime", ":intltest")
