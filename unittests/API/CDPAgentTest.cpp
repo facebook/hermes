@@ -37,6 +37,50 @@ m::runtime::CallArgument makeObjectIdCallArgument(
 } // namespace hermes
 } // namespace facebook
 
+void CDPAgentTest::MessageQueue::push(std::string message) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  messages_.push(std::move(message));
+  hasMessage_.notify_one();
+}
+
+std::string CDPAgentTest::MessageQueue::waitForMessage(
+    std::string context,
+    std::optional<std::chrono::milliseconds> timeout) {
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  bool success;
+  if (timeout.has_value()) {
+    success = hasMessage_.wait_for(
+        lock, timeout.value(), [this]() -> bool { return !messages_.empty(); });
+  } else {
+    hasMessage_.wait(lock, [this]() -> bool { return !messages_.empty(); });
+    success = true;
+  }
+
+  if (!success) {
+    throw std::runtime_error("timed out waiting for " + context);
+  }
+
+  std::string message = std::move(messages_.front());
+  messages_.pop();
+  return message;
+}
+
+std::optional<std::string> CDPAgentTest::MessageQueue::tryGetMessage() {
+  // Take a message, if present, while holding the mutex protecting the message
+  // collection. This doesn't clear the "hasMessage_" notification, so it could
+  // leave "hasMessage_" signaled when there is no message waiting. This is
+  // okay, because waiting on "hasMessage_" elsewhere tolerates spurious
+  // wake-ups by also checking "messages_.empty()".
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (messages_.empty()) {
+    return std::nullopt;
+  }
+  std::string message = std::move(messages_.front());
+  messages_.pop();
+  return message;
+}
+
 using namespace facebook::hermes::cdp;
 using namespace facebook::hermes::debugger;
 using namespace facebook::hermes;
@@ -46,12 +90,6 @@ using namespace std::placeholders;
 
 void CDPAgentTest::handleRuntimeTask(RuntimeTask task) {
   runtimeThread_->add([this, task]() { task(*runtime_); });
-}
-
-void CDPAgentTest::handleResponse(const std::string &message) {
-  std::lock_guard<std::mutex> lock(messageMutex_);
-  messages_.push(message);
-  hasMessage_.notify_one();
 }
 
 void CDPAgentTest::scheduleScript(
@@ -74,7 +112,7 @@ void CDPAgentTest::SetUp() {
       kTestExecutionContextId_,
       *cdpDebugAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1),
+      [this](const std::string &message) { defaultQueue_.push(message); },
       {},
       destroyedDomainAgentsImpl_));
 }
@@ -176,7 +214,7 @@ void CDPAgentTest::preserveStateAndResetTestEnv(bool saveAgentInRuntimeThread) {
       kTestExecutionContextId_,
       *cdpDebugAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1),
+      [this](const std::string &message) { defaultQueue_.push(message); },
       std::move(state));
 }
 
@@ -186,48 +224,40 @@ void CDPAgentTest::waitForScheduledScripts() {
   });
 }
 
+CDPAgentTest::CDPAgentAndQueue CDPAgentTest::createCDPAgentAndQueue() {
+  auto queue = std::make_shared<MessageQueue>();
+  auto agent = CDPAgent::create(
+      kTestExecutionContextId_,
+      *cdpDebugAPI_,
+      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
+      [queue](const std::string &message) { queue->push(message); });
+  return {std::move(agent), std::move(queue)};
+}
+
 std::string CDPAgentTest::waitForMessage(
     std::string context,
-    std::optional<std::chrono::milliseconds> timeout) {
-  std::unique_lock<std::mutex> lock(messageMutex_);
-
-  bool success;
-  if (timeout.has_value()) {
-    success = hasMessage_.wait_for(
-        lock, timeout.value(), [this]() -> bool { return !messages_.empty(); });
-  } else {
-    hasMessage_.wait(lock, [this]() -> bool { return !messages_.empty(); });
-    success = true;
+    std::optional<std::chrono::milliseconds> timeout,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
   }
-
-  if (!success) {
-    throw std::runtime_error("timed out waiting for " + context);
-  }
-
-  std::string message = std::move(messages_.front());
-  messages_.pop();
-  return message;
+  return queue->waitForMessage(std::move(context), timeout);
 }
 
-std::optional<std::string> CDPAgentTest::tryGetMessage() {
-  // Take a message, if present, while holding the mutex protecting the message
-  // collection. This doesn't clear the "hasMessage_" notification, so it could
-  // leave "hasMessage_" signaled when there is no message waiting. This is
-  // okay, because waiting on "hasMessage_" elsewhere tolerates spurious
-  // wake-ups by also checking "messages_.empty()".
-  std::unique_lock<std::mutex> lock(messageMutex_);
-  if (messages_.empty()) {
-    return std::nullopt;
+std::optional<std::string> CDPAgentTest::tryGetMessage(MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
   }
-  std::string message = std::move(messages_.front());
-  messages_.pop();
-  return message;
+  return queue->tryGetMessage();
 }
 
-void CDPAgentTest::expectNothing() {
+void CDPAgentTest::expectNothing(MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
   std::string message;
   try {
-    message = waitForMessage("nothing", std::chrono::milliseconds(2500));
+    message = queue->waitForMessage("nothing", std::chrono::milliseconds(2500));
   } catch (...) {
     // if no values are received it times out with an exception
     // so we can say that we've succeeded at seeing nothing
@@ -238,8 +268,13 @@ void CDPAgentTest::expectNothing() {
       "received a notification but didn't expect one: " + message);
 }
 
-JSONObject *CDPAgentTest::expectNotification(const std::string &method) {
-  std::string message = waitForMessage();
+JSONObject *CDPAgentTest::expectNotification(
+    const std::string &method,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  std::string message = queue->waitForMessage("reply");
   JSONObject *notification = jsonScope_.parseObject(message);
   EXPECT_EQ(jsonScope_.getString(notification, {"method"}), method);
   return notification;
@@ -247,8 +282,12 @@ JSONObject *CDPAgentTest::expectNotification(const std::string &method) {
 
 JSONObject *CDPAgentTest::expectResponse(
     const std::optional<std::string> &method,
-    int id) {
-  std::string message = waitForMessage();
+    int id,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  std::string message = queue->waitForMessage("reply");
   JSONObject *response = jsonScope_.parseObject(message);
   if (method) {
     EXPECT_EQ(jsonScope_.getString(response, {"method"}), *method);
@@ -259,21 +298,30 @@ JSONObject *CDPAgentTest::expectResponse(
 
 void CDPAgentTest::expectErrorMessageContaining(
     const std::string &substring,
-    long long messageID) {
-  std::string errorMessage = ensureErrorResponse(waitForMessage(), messageID);
+    long long messageID,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  std::string errorMessage =
+      ensureErrorResponse(queue->waitForMessage("reply"), messageID);
   ASSERT_NE(errorMessage.find(substring), std::string::npos);
 }
 
 JSONObject *CDPAgentTest::expectHeapSnapshot(
     int messageID,
-    bool ignoreTrackingNotifications) {
+    bool ignoreTrackingNotifications,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
   // Expect chunk notifications until the snapshot object is complete. Fail if
   // the object is invalid (e.g. truncated data, excess data, malformed JSON).
   // There is no indication of how many segments there will be, so just receive
   // until the object is complete, then expect no more.
   std::stringstream snapshot;
   do {
-    JSONObject *note = jsonScope_.parseObject(waitForMessage());
+    JSONObject *note = jsonScope_.parseObject(queue->waitForMessage("reply"));
     std::string method = jsonScope_.getString(note, {"method"});
     if (ignoreTrackingNotifications &&
         (method == "HeapProfiler.lastSeenObjectId" ||
@@ -286,7 +334,7 @@ JSONObject *CDPAgentTest::expectHeapSnapshot(
   } while (!jsonScope_.tryParseObject(snapshot.str()).has_value());
 
   // Expect the snapshot response after all chunks have been received.
-  ensureOkResponse(waitForMessage(), messageID);
+  ensureOkResponse(queue->waitForMessage("reply"), messageID);
 
   return jsonScope_.parseObject(snapshot.str());
 }
@@ -303,7 +351,10 @@ void CDPAgentTest::sendRequest(
     const std::string &method,
     int id,
     const std::function<void(::hermes::JSONEmitter &)> &setParameters,
-    CDPAgent *altAgent) {
+    CDPAgent *agent) {
+  if (!agent) {
+    agent = cdpAgent_.get();
+  }
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
@@ -318,11 +369,7 @@ void CDPAgentTest::sendRequest(
   }
   json.closeDict();
   commandStream.flush();
-  if (altAgent != nullptr) {
-    altAgent->handleCommand(command);
-  } else {
-    cdpAgent_->handleCommand(command);
-  }
+  agent->handleCommand(command);
 }
 
 void CDPAgentTest::sendSetBlackboxedRangesAndCheckResponse(
@@ -350,7 +397,12 @@ void CDPAgentTest::sendSetBlackboxedRangesAndCheckResponse(
 void CDPAgentTest::sendSetBlackboxPatternsAndCheckResponse(
     int msgId,
     std::vector<std::string> patterns,
-    bool expectOK) {
+    bool expectOK,
+    CDPAgent *agent,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
   sendRequest(
       "Debugger.setBlackboxPatterns",
       msgId,
@@ -361,21 +413,32 @@ void CDPAgentTest::sendSetBlackboxPatternsAndCheckResponse(
           json.emitValue(pattern);
         }
         json.closeArray();
-      });
+      },
+      agent);
   if (expectOK) {
-    ensureOkResponse(waitForMessage("setBlackboxPatterns"), msgId);
+    ensureOkResponse(queue->waitForMessage("setBlackboxPatterns"), msgId);
   } else {
-    ensureErrorResponse(waitForMessage("setBlackboxPatterns"), msgId);
+    ensureErrorResponse(queue->waitForMessage("setBlackboxPatterns"), msgId);
   }
 }
 
-void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
-  sendRequest(method, id);
+void CDPAgentTest::sendParameterlessRequest(
+    const std::string &method,
+    int id,
+    CDPAgent *agent) {
+  sendRequest(method, id, {}, agent);
 }
 
-void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
-  sendParameterlessRequest(method, id);
-  ensureOkResponse(waitForMessage(), id);
+void CDPAgentTest::sendAndCheckResponse(
+    const std::string &method,
+    int id,
+    CDPAgent *agent,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  sendParameterlessRequest(method, id, agent);
+  ensureOkResponse(queue->waitForMessage("reply"), id);
 }
 
 jsi::Value CDPAgentTest::signalTest(
@@ -420,7 +483,10 @@ void CDPAgentTest::sendEvalRequest(
     int id,
     int callFrameId,
     const std::string &expression,
-    CDPAgent *altAgent) {
+    CDPAgent *agent) {
+  if (!agent) {
+    agent = cdpAgent_.get();
+  }
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
@@ -435,11 +501,7 @@ void CDPAgentTest::sendEvalRequest(
   json.closeDict();
   json.closeDict();
   commandStream.flush();
-  if (altAgent != nullptr) {
-    altAgent->handleCommand(command);
-  } else {
-    cdpAgent_->handleCommand(command);
-  }
+  agent->handleCommand(command);
 }
 
 m::runtime::GetPropertiesResponse CDPAgentTest::getAndEnsureProps(
@@ -3232,12 +3294,8 @@ TEST_F(CDPAgentTest, DebuggerActivateBreakpoints) {
 }
 
 TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
-  // Make a second CDPAgent
-  auto secondCDPAgent = CDPAgent::create(
-      kTestExecutionContextId_,
-      *cdpDebugAPI_,
-      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1));
+  // Make a second CDPAgent with its own message queue
+  auto [secondAgent, secondMessages] = createCDPAgentAndQueue();
 
   int msgId = 1;
 
@@ -3259,10 +3317,10 @@ TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
 
     // Send a command from the second CDPAgent even though we never enabled the
     // Debugger domain on the second one.
-    sendRequest(method, msgId, {}, secondCDPAgent.get());
+    sendRequest(method, msgId, {}, secondAgent.get());
 
     // Check that the command gets processed successfully
-    ensureOkResponse(waitForMessage(), msgId++);
+    ensureOkResponse(secondMessages->waitForMessage(), msgId++);
 
     // And the debugger resumed
     ensureNotification(waitForMessage(), "Debugger.resumed");
@@ -3280,9 +3338,9 @@ TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
 
   // Send a command from the second CDPAgent for evaluateOnCallFrame even though
   // we never enabled the Debugger domain on the second one.
-  sendEvalRequest(msgId, 0, R"("foo" + foo)", secondCDPAgent.get());
+  sendEvalRequest(msgId, 0, R"("foo" + foo)", secondAgent.get());
 
-  ensureEvalResponse(waitForMessage(), msgId++, "foobar");
+  ensureEvalResponse(secondMessages->waitForMessage(), msgId++, "foobar");
 }
 
 TEST_F(CDPAgentTest, RuntimeEnableDisable) {

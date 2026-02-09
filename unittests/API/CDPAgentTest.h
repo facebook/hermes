@@ -73,8 +73,42 @@ m::runtime::CallArgument makeObjectIdCallArgument(
 // CDPAgentTest class is at global scope for friend access from CDPAgent
 class CDPAgentTest : public ::testing::Test {
  public:
+  /// Thread-safe message queue for receiving CDP messages.
+  class MessageQueue {
+   public:
+    MessageQueue() = default;
+    ~MessageQueue() = default;
+
+    // Non-movable to ensure references captured in lambdas remain valid.
+    MessageQueue(MessageQueue &&) = delete;
+    MessageQueue &operator=(MessageQueue &&) = delete;
+
+    // Non-copyable.
+    MessageQueue(const MessageQueue &) = delete;
+    MessageQueue &operator=(const MessageQueue &) = delete;
+
+    void push(std::string message);
+
+    std::string waitForMessage(
+        std::string context = "reply",
+        std::optional<std::chrono::milliseconds> timeout = std::nullopt);
+
+    std::optional<std::string> tryGetMessage();
+
+   private:
+    std::mutex mutex_;
+    std::condition_variable hasMessage_;
+    std::queue<std::string> messages_;
+  };
+
+  using CDPAgentAndQueue = std::pair<
+      std::unique_ptr<facebook::hermes::cdp::CDPAgent>,
+      std::shared_ptr<MessageQueue>>;
+
+  /// Creates a secondary CDP session for multi-session tests.
+  CDPAgentAndQueue createCDPAgentAndQueue();
+
   void handleRuntimeTask(facebook::hermes::debugger::RuntimeTask task);
-  void handleResponse(const std::string &message);
 
  protected:
   static constexpr int32_t kTestExecutionContextId_ = 1;
@@ -97,24 +131,30 @@ class CDPAgentTest : public ::testing::Test {
   /// from the debugger. returns the message. throws on timeout.
   std::string waitForMessage(
       std::string context = "reply",
-      std::optional<std::chrono::milliseconds> timeout = std::nullopt);
+      std::optional<std::chrono::milliseconds> timeout = std::nullopt,
+      MessageQueue *queue = nullptr);
 
   /// check to see if a response or notification is immediately available.
   /// returns the message, or nullopt if no message is available.
-  std::optional<std::string> tryGetMessage();
+  std::optional<std::string> tryGetMessage(MessageQueue *queue = nullptr);
 
-  void expectNothing();
+  void expectNothing(MessageQueue *queue = nullptr);
   facebook::hermes::cdp::JSONObject *expectNotification(
-      const std::string &method);
+      const std::string &method,
+      MessageQueue *queue = nullptr);
   facebook::hermes::cdp::JSONObject *expectResponse(
       const std::optional<std::string> &method,
-      int id);
+      int id,
+      MessageQueue *queue = nullptr);
+
   /// Wait for a message, validate that it is an error with the specified
   /// \p messageID, and assert that the error description contains the
   /// specified \p substring.
   void expectErrorMessageContaining(
       const std::string &substring,
-      long long messageID);
+      long long messageID,
+      MessageQueue *queue = nullptr);
+
   /// Expect a sequence of messages conveying a heap snapshot:
   /// 1 or more notifications containing chunks of the snapshot JSON object
   /// followed by an OK response to the snapshot request.
@@ -124,13 +164,14 @@ class CDPAgentTest : public ::testing::Test {
   /// \return the completed heap snapshot JSON object
   facebook::hermes::cdp::JSONObject *expectHeapSnapshot(
       int messageID,
-      bool ignoreTrackingNotifications = false);
+      bool ignoreTrackingNotifications = false,
+      MessageQueue *queue = nullptr);
 
   void sendRequest(
       const std::string &method,
       int id,
       const std::function<void(::hermes::JSONEmitter &)> &setParameters = {},
-      facebook::hermes::cdp::CDPAgent *altAgent = nullptr);
+      facebook::hermes::cdp::CDPAgent *agent = nullptr);
   void sendSetBlackboxedRangesAndCheckResponse(
       int msgId,
       std::string scriptID,
@@ -138,14 +179,23 @@ class CDPAgentTest : public ::testing::Test {
   void sendSetBlackboxPatternsAndCheckResponse(
       int msgId,
       std::vector<std::string> patterns,
-      bool expectOK = true);
-  void sendParameterlessRequest(const std::string &method, int id);
-  void sendAndCheckResponse(const std::string &method, int id);
+      bool expectOK = true,
+      facebook::hermes::cdp::CDPAgent *agent = nullptr,
+      MessageQueue *queue = nullptr);
+  void sendParameterlessRequest(
+      const std::string &method,
+      int id,
+      facebook::hermes::cdp::CDPAgent *agent = nullptr);
+  void sendAndCheckResponse(
+      const std::string &method,
+      int id,
+      facebook::hermes::cdp::CDPAgent *agent = nullptr,
+      MessageQueue *queue = nullptr);
   void sendEvalRequest(
       int id,
       int callFrameId,
       const std::string &expression,
-      facebook::hermes::cdp::CDPAgent *altAgent = nullptr);
+      facebook::hermes::cdp::CDPAgent *agent = nullptr);
 
   facebook::jsi::Value shouldStop(
       facebook::jsi::Runtime &runtime,
@@ -188,6 +238,7 @@ class CDPAgentTest : public ::testing::Test {
   std::unique_ptr<facebook::hermes::cdp::CDPDebugAPI> cdpDebugAPI_;
   std::unique_ptr<::hermes::SerialExecutor> runtimeThread_;
   std::unique_ptr<facebook::hermes::cdp::CDPAgent> cdpAgent_;
+  MessageQueue defaultQueue_;
 
   std::atomic<bool> stopFlag_{};
 
@@ -203,10 +254,6 @@ class CDPAgentTest : public ::testing::Test {
   /// thread (via "takeStoredValue").
   std::mutex storedValueMutex_;
   facebook::jsi::Value storedValue_;
-
-  std::mutex messageMutex_;
-  std::condition_variable hasMessage_;
-  std::queue<std::string> messages_;
 
   std::vector<std::string> thrownExceptions_;
   facebook::hermes::JSONScope jsonScope_;
