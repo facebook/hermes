@@ -2751,7 +2751,10 @@ TEST_F(CDPAgentTest, DebuggerConditionalBreakpoint_EmptyStringIsUnconditional) {
   waitForScheduledScripts();
 }
 
-TEST_F(CDPAgentTest, DebuggerDuplicateBreakpoint_SameLocation) {
+/// Multiple breakpoints at the same location are allowed.
+/// When execution hits the location, if any breakpoint's condition evaluates
+/// to true, the debugger pauses.
+TEST_F(CDPAgentTest, DebuggerMultipleBreakpoints_SameLocation) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -2778,8 +2781,7 @@ TEST_F(CDPAgentTest, DebuggerDuplicateBreakpoint_SameLocation) {
       });
   ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
 
-  // Set second breakpoint at the same location - should fail with error
-  // (V8 returns: "Breakpoint at specified location already exists.")
+  // Set second breakpoint at the same location - should also succeed
   sendRequest(
       "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
         json.emitKey("location");
@@ -2788,13 +2790,280 @@ TEST_F(CDPAgentTest, DebuggerDuplicateBreakpoint_SameLocation) {
         json.emitKeyValue("lineNumber", 2);
         json.closeDict();
       });
-  expectErrorMessageContaining("Breakpoint", msgId++);
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
 
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
-  // Should pause exactly once on line 2 (first breakpoint still works)
+  // Should pause on line 2 (both breakpoints active at this location)
   ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+/// When removing one breakpoint from a location with multiple breakpoints,
+/// the other breakpoints remain active.
+TEST_F(CDPAgentTest, DebuggerRemovingOneBreakpointLeavesOthersActive) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    function target() {       // line 1
+      debugger;               // line 2
+      Math.random();          // line 3: set 2 breakpoints here
+    }
+    target();                 // line 5
+    target();                 // line 6
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"target", 2, 2}, {"global", 5, 1}});
+
+  // Set first breakpoint on line 3
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+      });
+  auto *resp1 = expectResponse(std::nullopt, msgId++);
+  auto bp1Id = jsonScope_.getString(resp1, {"result", "breakpointId"});
+
+  // Set second breakpoint at the same location
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+      });
+  auto *resp2 = expectResponse(std::nullopt, msgId++);
+  auto bp2Id = jsonScope_.getString(resp2, {"result", "breakpointId"});
+
+  // Remove the first breakpoint
+  sendRequest(
+      "Debugger.removeBreakpoint", msgId, [bp1Id](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("breakpointId", bp1Id);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // First call to target() - should pause on line 3 (second breakpoint active)
+  ensurePaused(waitForMessage(), "other", {{"target", 3, 2}, {"global", 5, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Second call to target() - should pause again (second breakpoint still
+  // there)
+  ensurePaused(waitForMessage(), "other", {{"target", 2, 2}, {"global", 6, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  ensurePaused(waitForMessage(), "other", {{"target", 3, 2}, {"global", 6, 1}});
+
+  // Remove the second breakpoint
+  sendRequest(
+      "Debugger.removeBreakpoint", msgId, [bp2Id](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("breakpointId", bp2Id);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+/// When all conditional breakpoints at a location evaluate to false,
+/// the debugger does not pause.
+TEST_F(CDPAgentTest, DebuggerAllConditionalBreakpointsEvaluateToFalse) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var x = 1;
+    debugger;          // line 2
+    Math.random();     // line 3: two conditional breakpoints, both false
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // Set first conditional breakpoint with condition that evaluates to false
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 10");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set second conditional breakpoint with condition that also evaluates to
+  // false
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 100");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Script should complete without pausing on line 3
+  waitForScheduledScripts();
+}
+
+/// Breakpoint conditions are evaluated in the order they were created.
+/// The first condition that evaluates to true triggers the pause; conditions
+/// after it are not evaluated (short-circuit).
+TEST_F(CDPAgentTest, DebuggerConditionsEvaluatedInCreationOrder) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var evalOrder = [];
+    debugger;          // line 2
+    Math.random();     // line 3: breakpoints set here
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // Set first breakpoint with condition that has side effect and returns true
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('A'), true)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set second breakpoint with condition that has side effect (should NOT run
+  // due to short-circuit after first true)
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('B'), false)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause because first breakpoint's condition is true
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  // Evaluate evalOrder to check order (should be 'A' only due to short-circuit)
+  sendEvalRequest(msgId, 0, "evalOrder.join(',')");
+  ensureEvalResponse(waitForMessage(), msgId++, "A");
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+/// Condition evaluation short-circuits on the first true condition.
+/// Subsequent conditions are not evaluated.
+TEST_F(CDPAgentTest, DebuggerConditionShortCircuitsOnFirstTrue) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var evalOrder = [];
+    debugger;          // line 2
+    Math.random();     // line 3: breakpoints set here
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // Set first breakpoint with condition that returns false
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('A'), false)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set second breakpoint with condition that returns true
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('B'), true)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set third breakpoint with condition that should NOT be evaluated (comes
+  // after true)
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('C'), true)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause because second breakpoint's condition is true
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  // Evaluate evalOrder - should be 'A,B' (C not evaluated due to short-circuit)
+  sendEvalRequest(msgId, 0, "evalOrder.join(',')");
+  ensureEvalResponse(waitForMessage(), msgId++, "A,B");
 
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");

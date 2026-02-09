@@ -25,9 +25,9 @@ function bar() {
 bar();
 // CHECK-NEXT: Break on 'debugger' statement in bar: {{.*}}:21:3
 // CHECK-NEXT: Set breakpoint 1 at {{.+}}:16:3
-// CHECK-NEXT: Invalid or duplicate breakpoint not set
-// CHECK-NEXT: Set breakpoint 2 at {{.+}}:17:3
-// CHECK-NEXT: Deleted breakpoint 2
+// CHECK-NEXT: Set breakpoint 2 at {{.+}}:16:3
+// CHECK-NEXT: Set breakpoint 3 at {{.+}}:17:3
+// CHECK-NEXT: Deleted breakpoint 3
 // CHECK-NEXT: Continuing execution
 // CHECK-NEXT: first
 // CHECK-NEXT: Break on breakpoint 1 in foo: {{.*}}:16:3

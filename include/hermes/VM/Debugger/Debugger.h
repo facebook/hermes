@@ -22,6 +22,7 @@
 #include "hermes/VM/static_h.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/MapVector.h"
+#include "llvh/ADT/SetVector.h"
 
 #include <atomic>
 #include <cstdint>
@@ -123,10 +124,10 @@ class Debugger {
     /// Opcode that was replaced.
     hbc::opcode_atom_t opCode;
 
-    /// If this location has a user breakpoint set,
-    /// then this is set to the ID of the user breakpoint.
-    /// Else, it's set to None.
-    OptValue<BreakpointID> user{llvh::None};
+    /// If this location has user breakpoint(s) set, their IDs are stored here
+    /// in creation order. When conditions are evaluated, they are checked in
+    /// this order, short-circuiting when any condition evaluates to true.
+    llvh::SmallSetVector<BreakpointID, 1> userBreakpointIDs{};
 
     /// Whether this location has an on-load breakpoint set.
     bool onLoad{false};
@@ -150,7 +151,8 @@ class Debugger {
 
     /// Total number of logical breakpoints set at this location.
     uint32_t count() const {
-      return callStackDepths.size() + (user ? 1 : 0) + (onLoad ? 1 : 0);
+      return callStackDepths.size() + userBreakpointIDs.size() +
+          (onLoad ? 1 : 0);
     }
   };
 
@@ -521,9 +523,9 @@ class Debugger {
   /// The breakpoint is set to be a one-shot.
   void setOnLoadBreakpoint(CodeBlock *codeBlock, uint32_t offset);
 
-  /// Unset user breakpoint \p breakpoint.
+  /// Unset user breakpoint with ID \p id at the location of \p breakpoint.
   /// Removes the location from breakpointLocations_ if no longer needed.
-  void unsetUserBreakpoint(const Breakpoint &breakpoint);
+  void unsetUserBreakpoint(const Breakpoint &breakpoint, BreakpointID id);
 
   /// Creates a step breakpoint at offset 0 of \p codeBlock,
   /// to be used while in the middle of a step and entering a
@@ -634,8 +636,8 @@ class Debugger {
   /// \return true if the breakpoint is successfully resolved.
   bool resolveBreakpointLocation(Breakpoint &breakpoint) const;
 
-  /// Unresolves the breakpoint.
-  void unresolveBreakpointLocation(Breakpoint &breakpoint);
+  /// Unresolves the breakpoint with ID \p id.
+  void unresolveBreakpointLocation(Breakpoint &breakpoint, BreakpointID id);
 
   /// \return a CallFrameInfo for a given code block \p codeBlock and IP offset
   /// into it \p ipOffset.

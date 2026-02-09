@@ -305,9 +305,9 @@ TEST_F(CDPAgentMultiDebuggerTest, BlackboxingActiveWhenBothAgentsAgree) {
   waitForScheduledScripts();
 }
 
-/// Cross-session breakpoint collision: When two sessions try to set breakpoints
-/// at the same location, the second one fails with an error.
-TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsIdenticalBreakpoint) {
+/// Cross-session breakpoints at the same location: Both sessions can set
+/// breakpoints at the same location and both succeed.
+TEST_F(CDPAgentMultiDebuggerTest, CrossSessionBreakpointsSameLocation) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -341,7 +341,7 @@ TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsIdenticalBreakpoint) {
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
   ensureOkResponse(secondMessages->waitForMessage(), msgId++);
 
-  // Agent 2 tries to set breakpoint at same location - should fail
+  // Agent 2 sets breakpoint at same location - should also succeed
   sendRequest(
       "Debugger.setBreakpoint",
       msgId,
@@ -353,9 +353,10 @@ TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsIdenticalBreakpoint) {
         json.closeDict();
       },
       secondAgent.get());
-  ensureErrorResponse(secondMessages->waitForMessage(), msgId++);
+  ensureSetBreakpointResponse(
+      secondMessages->waitForMessage(), msgId++, {2, 12});
 
-  // Agent 1's breakpoint should still work
+  // Both agents' breakpoints are active at this location
   scheduleScript("breakpointTarget();", "call_test.js");
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
@@ -374,7 +375,9 @@ TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsIdenticalBreakpoint) {
   ensureNotification(secondMessages->waitForMessage(), "Debugger.resumed");
 }
 
-TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsOverlappingBreakpoint) {
+/// Cross-session overlapping breakpoints: Two sessions can set breakpoints
+/// that resolve to the same bytecode location and both succeed.
+TEST_F(CDPAgentMultiDebuggerTest, CrossSessionOverlappingBreakpoints) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -391,7 +394,7 @@ TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsOverlappingBreakpoint) {
   std::string scriptId =
       jsonScope_.getString(scriptParsed, {"params", "scriptId"});
 
-  // Agent 1 sets breakpoint successfully at the exact line+column
+  // Agent 1 sets breakpoint at the exact line+column
   sendRequest(
       "Debugger.setBreakpoint", msgId++, [&](::hermes::JSONEmitter &json) {
         json.emitKey("location");
@@ -409,8 +412,8 @@ TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsOverlappingBreakpoint) {
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
   ensureOkResponse(secondMessages->waitForMessage(), msgId++);
 
-  // Agent 2 tries to set breakpoint at the same line (Hermes resolves the
-  // column)
+  // Agent 2 sets breakpoint at the same line (Hermes resolves to same column)
+  // Should also succeed now that multiple breakpoints are supported
   sendRequest(
       "Debugger.setBreakpoint",
       msgId,
@@ -422,9 +425,10 @@ TEST_F(CDPAgentMultiDebuggerTest, SecondSessionRejectsOverlappingBreakpoint) {
         json.closeDict();
       },
       secondAgent.get());
-  ensureErrorResponse(secondMessages->waitForMessage(), msgId++);
+  ensureSetBreakpointResponse(
+      secondMessages->waitForMessage(), msgId++, {2, 12});
 
-  // Agent 1's breakpoint should still work
+  // Both agents' breakpoints are active at this location
   scheduleScript("breakpointTarget();", "call_test.js");
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
@@ -653,13 +657,10 @@ TEST_F(CDPAgentMultiDebuggerTest, DisablingAgentFreesLocation) {
   ensureNotification(secondMessages->waitForMessage(), "Debugger.resumed");
 }
 
-/// Cross-session deferred breakpoint collision: Two sessions set identical
+/// Cross-session deferred breakpoints: Two sessions set identical
 /// setBreakpointByUrl requests before the script is loaded. When the script
-/// loads, the first agent's breakpoint resolves but the second fails
-/// due to Hermes's single-breakpoint-per-location limitation.
-/// Known deviation from V8: The first-enabled agent's breakpoint wins,
-/// regardless of the order in which breakpoints were set.
-TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionIdentical) {
+/// loads, both agents' breakpoints resolve successfully.
+TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointsBothResolve) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -689,7 +690,7 @@ TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionIdentical) {
   ensureSetBreakpointByUrlResponse(
       secondMessages->waitForMessage(), msgId++, {});
 
-  // Now load the script - first agent's breakpoint resolves, second fails
+  // Now load the script - both agents' breakpoints resolve
   scheduleScript(
       R"(
     function breakpointTarget() {  // line 1
@@ -703,11 +704,12 @@ TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionIdentical) {
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(waitForMessage(), "Debugger.breakpointResolved");
 
-  // Second agent: scriptParsed only (breakpoint fails to resolve due to
-  // collision)
+  // Second agent: scriptParsed + breakpointResolved (now succeeds!)
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(
+      secondMessages->waitForMessage(), "Debugger.breakpointResolved");
 
-  // First agent's breakpoint should work
+  // Both agents' breakpoints are active at this location
   scheduleScript("breakpointTarget();", "call_test.js");
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
@@ -726,15 +728,12 @@ TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionIdentical) {
   ensureNotification(secondMessages->waitForMessage(), "Debugger.resumed");
 }
 
-/// Cross-session deferred breakpoint collision: Two sessions set different
+/// Cross-session deferred breakpoints: Two sessions set different
 /// setBreakpointByUrl requests that resolve to the same bytecode location.
-/// When the script loads, the first agent's breakpoint resolves but the
-/// second fails.
-/// Known deviation from V8: The first-enabled agent's breakpoint wins,
-/// regardless of the order in which breakpoints were set.
+/// When the script loads, both agents' breakpoints resolve successfully.
 TEST_F(
     CDPAgentMultiDebuggerTest,
-    DeferredBreakpointCollisionDifferentRequests) {
+    DeferredBreakpointsBothResolveFromDifferentRequests) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -766,7 +765,7 @@ TEST_F(
   ensureSetBreakpointByUrlResponse(
       secondMessages->waitForMessage(), msgId++, {});
 
-  // Now load the script - first agent's breakpoint resolves, second fails
+  // Now load the script - both agents' breakpoints resolve
   scheduleScript(
       R"(
     function breakpointTarget() {  // line 1
@@ -780,11 +779,12 @@ TEST_F(
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(waitForMessage(), "Debugger.breakpointResolved");
 
-  // Second agent: scriptParsed only (breakpoint fails to resolve due to
-  // collision)
+  // Second agent: scriptParsed + breakpointResolved (now succeeds!)
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(
+      secondMessages->waitForMessage(), "Debugger.breakpointResolved");
 
-  // First agent's breakpoint should work
+  // Both agents' breakpoints are active at this location
   scheduleScript("breakpointTarget();", "call_test.js");
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
@@ -803,13 +803,10 @@ TEST_F(
   ensureNotification(secondMessages->waitForMessage(), "Debugger.resumed");
 }
 
-/// Cross-session deferred breakpoint collision: The second agent sets its
-/// breakpoint first, but the first agent's breakpoint still wins when the
-/// script loads. This demonstrates that agent order, not breakpoint
-/// setting order, determines which breakpoint resolves.
-/// Known deviation from V8: The first-enabled agent's breakpoint wins,
-/// regardless of the order in which breakpoints were set.
-TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionFirstAgentWins) {
+/// Cross-session deferred breakpoints: Even when the second agent sets its
+/// breakpoint first chronologically, both agents' breakpoints resolve when
+/// the script loads.
+TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointsBothResolveReverseOrder) {
   int msgId = 1;
 
   sendAndCheckResponse("Debugger.enable", msgId++);
@@ -818,7 +815,7 @@ TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionFirstAgentWins) {
   sendAndCheckResponse(
       "Debugger.enable", msgId++, secondAgent.get(), secondMessages.get());
 
-  // Set breakpoints: Second agent, THEN first.
+  // Set breakpoints: Second agent, THEN first (reversed order)
   sendRequest(
       "Debugger.setBreakpointByUrl",
       msgId,
@@ -839,8 +836,7 @@ TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionFirstAgentWins) {
       });
   ensureSetBreakpointByUrlResponse(waitForMessage(), msgId++, {});
 
-  // Now load the script - first agent's breakpoint wins, even though
-  // second agent set its breakpoint first chronologically
+  // Now load the script - both agents' breakpoints resolve
   scheduleScript(
       R"(
     function breakpointTarget() {  // line 1
@@ -850,15 +846,16 @@ TEST_F(CDPAgentMultiDebuggerTest, DeferredBreakpointCollisionFirstAgentWins) {
   )",
       "deferred_test.js");
 
-  // First agent: scriptParsed + breakpointResolved (wins!)
+  // First agent: scriptParsed + breakpointResolved
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(waitForMessage(), "Debugger.breakpointResolved");
 
-  // Second agent: scriptParsed only (breakpoint fails to resolve, even
-  // though it was set first)
+  // Second agent: scriptParsed + breakpointResolved (now succeeds!)
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");
+  ensureNotification(
+      secondMessages->waitForMessage(), "Debugger.breakpointResolved");
 
-  // First agent's breakpoint should work
+  // Both agents' breakpoints are active at this location
   scheduleScript("breakpointTarget();", "call_test.js");
   ensureNotification(waitForMessage(), "Debugger.scriptParsed");
   ensureNotification(secondMessages->waitForMessage(), "Debugger.scriptParsed");

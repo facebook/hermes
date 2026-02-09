@@ -131,23 +131,19 @@ class DebuggerDomainAgent : public DomainAgent {
 
   /// @cdp Debugger.setBreakpoint creates a CDP breakpoint that applies to
   /// exactly one script (identified by script ID) that does not survive
-  /// reloads. Responds with an error if a breakpoint already exists at the same
-  /// location. A `condition` equal to an empty string is treated the same as an
+  /// reloads. A `condition` equal to an empty string is treated the same as an
   /// omitted condition (= unconditional breakpoint).
-  /// In Hermes, if two or more clients set a breakpoint that resolves to the
-  /// same location, exactly one of the clients (no guarantee which one) will
-  /// see the breakpoint resolve successfully. The `condition` (if any)
-  /// specified by that client is the one that will apply to the breakpoint.
+  /// Hermes allows multiple breakpoints to be set at the same location,
+  /// even in the same CDP session. For comparison, V8 allows it from different
+  /// sessions but disallows it within a single session.
   void setBreakpoint(const m::debugger::SetBreakpointRequest &req);
   /// @cdp Debugger.setBreakpointByUrl creates a CDP breakpoint that may apply
-  /// to multiple scripts (identified by URL), and survives reloads. Responds
-  /// with an error if a breakpoint already exists at the same location. A
+  /// to multiple scripts (identified by URL), and survives reloads. A
   /// `condition` equal to an empty string is treated the same as an omitted
   /// condition (= unconditional breakpoint).
-  /// In Hermes, if two or more clients set a breakpoint that resolves to the
-  /// same location, exactly one of the clients (no guarantee which one) will
-  /// see the breakpoint resolve successfully. The `condition` (if any)
-  /// specified by that client is the one that will apply to the breakpoint.
+  /// Hermes allows multiple breakpoints to be set at the same location,
+  /// even in the same CDP session. For comparison, V8 allows it from different
+  /// sessions but disallows it within a single session.
   void setBreakpointByUrl(const m::debugger::SetBreakpointByUrlRequest &req);
   /// Handles Debugger.removeBreakpoint
   void removeBreakpoint(const m::debugger::RemoveBreakpointRequest &req);
