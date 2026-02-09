@@ -181,11 +181,6 @@ void DebuggerDomainCoordinator::disableAgent(
   assert(it != enabledAgents_.end());
   enabledAgents_.erase(it);
 
-  // This doesn't support multiple debug clients also setting breakpoints. If we
-  // need that functionality, then we might need to track breakpoints set by
-  // each client.
-  runtime_.getDebugger().deleteAllBreakpoints();
-
   if (enabledAgents_.empty()) {
     if (debuggerEventCallbackId_ != kInvalidDebuggerEventCallbackID) {
       asyncDebugger.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);

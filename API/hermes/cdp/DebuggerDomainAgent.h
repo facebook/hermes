@@ -134,12 +134,20 @@ class DebuggerDomainAgent : public DomainAgent {
   /// reloads. Responds with an error if a breakpoint already exists at the same
   /// location. A `condition` equal to an empty string is treated the same as an
   /// omitted condition (= unconditional breakpoint).
+  /// In Hermes, if two or more clients set a breakpoint that resolves to the
+  /// same location, exactly one of the clients (no guarantee which one) will
+  /// see the breakpoint resolve successfully. The `condition` (if any)
+  /// specified by that client is the one that will apply to the breakpoint.
   void setBreakpoint(const m::debugger::SetBreakpointRequest &req);
   /// @cdp Debugger.setBreakpointByUrl creates a CDP breakpoint that may apply
   /// to multiple scripts (identified by URL), and survives reloads. Responds
   /// with an error if a breakpoint already exists at the same location. A
   /// `condition` equal to an empty string is treated the same as an omitted
   /// condition (= unconditional breakpoint).
+  /// In Hermes, if two or more clients set a breakpoint that resolves to the
+  /// same location, exactly one of the clients (no guarantee which one) will
+  /// see the breakpoint resolve successfully. The `condition` (if any)
+  /// specified by that client is the one that will apply to the breakpoint.
   void setBreakpointByUrl(const m::debugger::SetBreakpointByUrlRequest &req);
   /// Handles Debugger.removeBreakpoint
   void removeBreakpoint(const m::debugger::RemoveBreakpointRequest &req);

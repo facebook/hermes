@@ -121,10 +121,13 @@ void DebuggerDomainAgent::disable() {
   }
   enabled_ = false;
 
-  // Unlink all persisted CDPBreakpoints from their HermesBreakpoints, in case
-  // domain will be re-enabled. This is required, because all internal Hermes
-  // breakpoints were deleted above.
+  // Delete all HermesBreakpoints from their CDPBreakpoints. They will be
+  // recreated if we re-enable the domain later.
   for (auto &[_, cdpBreakpoint] : cdpBreakpoints_) {
+    for (const HermesBreakpoint &hermesBreakpoint :
+         cdpBreakpoint.hermesBreakpoints) {
+      runtime_.getDebugger().deleteBreakpoint(hermesBreakpoint.breakpointID);
+    }
     cdpBreakpoint.hermesBreakpoints.clear();
   }
 }
