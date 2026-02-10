@@ -128,11 +128,11 @@ DomainState::Transaction::~Transaction() {
 void DomainState::Transaction::add(
     std::vector<std::string> paths,
     const StateValue &value) {
-  modifications_.push_back(std::make_pair(paths, value.copy()));
+  modifications_.emplace_back(paths, value.copy());
 }
 
 void DomainState::Transaction::remove(std::vector<std::string> paths) {
-  modifications_.push_back(std::make_pair(paths, nullptr));
+  modifications_.emplace_back(paths, nullptr);
 }
 
 } // namespace cdp
