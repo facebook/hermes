@@ -104,10 +104,6 @@ class DebuggerDomainCoordinator {
 
   HermesRuntime &runtime_;
 
-  /// ID for the registered DebuggerEventCallback
-  debugger::DebuggerEventCallbackID debuggerEventCallbackId_ =
-      debugger::kInvalidDebuggerEventCallbackID;
-
   /// The set of agents that are currently enabled.
   std::vector<DebuggerDomainAgent *> enabledAgents_;
 

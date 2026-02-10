@@ -817,7 +817,7 @@ TEST_F(CDPAgentTest, DebuggerDestroyWhileEnabled) {
 
   // Queue a job on the runtime queue. The runtime queue was busy paused on the
   // debugger statement on line 1, but the destruction of CDPAgent should
-  // removeDebuggerEventCallback_TS() and thus free up the runtime queue.
+  // clear the debugger event callback and thus free up the runtime queue.
   waitFor<bool>([this](auto promise) {
     runtimeThread_->add([this, promise]() {
       // Verify that breakpoints are cleaned up from HermesRuntime
@@ -868,12 +868,14 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   // Wait for the script to start.
   waitForTestSignal();
 
-  // Before Debugger.enable, register another debug client and trigger a pause
-  DebuggerEventCallbackID eventCallbackID;
+  // Before Debugger.enable, set a debugger event callback and trigger a pause.
+  // When CDPAgent's Debugger.enable is processed, it will call
+  // setDebuggerEventCallback_TS, clobbering our callback, but the runtime will
+  // still be in a paused state.
   AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
   waitFor<bool>(
-      [this, &asyncDebuggerAPI, &eventCallbackID](auto promise) {
-        eventCallbackID = asyncDebuggerAPI.addDebuggerEventCallback_TS(
+      [this, &asyncDebuggerAPI](auto promise) {
+        asyncDebuggerAPI.setDebuggerEventCallback_TS(
             [promise](
                 HermesRuntime &runtime,
                 AsyncDebuggerAPI &asyncDebugger,
@@ -888,14 +890,15 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
 
   // At this point, the runtime thread is paused due to Explicit AsyncBreak. Now
   // we'll test if we can perform Debugger.enable while the runtime is in that
-  // state.
+  // state. Note: Debugger.enable will call setDebuggerEventCallback_TS,
+  // clobbering our callback above, but the runtime remains paused.
 
   sendParameterlessRequest("Debugger.enable", msgId);
   ensureNotification(
       waitForMessage("Debugger.scriptParsed"), "Debugger.scriptParsed");
 
   // Verify that after Debugger.enable is processed, we'll automatically get a
-  // Debugger.paused notification
+  // Debugger.paused notification because the runtime was already paused.
   ensurePaused(
       waitForMessage("paused"),
       "other",
@@ -903,10 +906,8 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
 
   ensureOkResponse(waitForMessage(), msgId++);
 
-  // After removing this callback, AsyncDebuggerAPI will still have another
-  // callback registered by CDPAgent. Therefore, JS will not continue by itself.
-  asyncDebuggerAPI.removeDebuggerEventCallback_TS(eventCallbackID);
-  // Have to manually resume it:
+  // Test that we can manually resume using triggerInterrupt_TS, even though
+  // CDPAgent now owns the debugger event callback.
   waitFor<bool>([&asyncDebuggerAPI](auto promise) {
     asyncDebuggerAPI.triggerInterrupt_TS(
         [&asyncDebuggerAPI, promise](HermesRuntime &runtime) {
@@ -970,23 +971,9 @@ TEST_F(CDPAgentTest, DebuggerSkipExplicitPauseInBlackboxedRanges) {
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
-  // [6] register async debug client and trigger a pause
-  DebuggerEventCallbackID eventCallbackID;
-  AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
-  waitFor<bool>(
-      [this, &asyncDebuggerAPI, &eventCallbackID, &msgId](auto promise) {
-        eventCallbackID = asyncDebuggerAPI.addDebuggerEventCallback_TS(
-            [promise](
-                HermesRuntime & /*runtime*/,
-                AsyncDebuggerAPI & /*asyncDebugger*/,
-                DebuggerEventType event) {
-              if (event == DebuggerEventType::ExplicitPause) {
-                promise->set_value(true);
-              }
-            });
-        sendAndCheckResponse("Debugger.pause", msgId++);
-      },
-      "wait on explicit pause");
+  // [6] send Debugger.pause while running in the loop. The response confirms
+  // the explicit pause flag has been set.
+  sendAndCheckResponse("Debugger.pause", msgId++);
 
   // [7] allow stepping out of the blackboxed while loop which would
   // immediately trigger the requested pause on the next statement

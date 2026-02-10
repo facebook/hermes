@@ -20,9 +20,7 @@ namespace debugger {
 AsyncDebuggerAPI::AsyncDebuggerAPI(HermesRuntime &runtime)
     : runtime_(runtime),
       isWaitingForCommand_(false),
-      nextCommand_(debugger::Command::continueExecution()),
-      nextEventCallbackID_(kInvalidDebuggerEventCallbackID + 1),
-      eventCallbackIterator_(eventCallbacks_.end()) {
+      nextCommand_(debugger::Command::continueExecution()) {
   runtime_.getDebugger().setEventObserver(this);
 }
 
@@ -34,53 +32,26 @@ AsyncDebuggerAPI::~AsyncDebuggerAPI() {
   runInterrupts();
 }
 
-DebuggerEventCallbackID AsyncDebuggerAPI::addDebuggerEventCallback_TS(
+void AsyncDebuggerAPI::setDebuggerEventCallback_TS(
     DebuggerEventCallback callback) {
+  assert(
+      callback &&
+      "callback must be non-empty; use clearDebuggerEventCallback_TS to clear");
   std::lock_guard<std::mutex> lock(mutex_);
-  uint32_t id = nextEventCallbackID_++;
-  eventCallbacks_.push_back({id, callback});
+  eventCallback_ = std::move(callback);
 
   runtime_.getDebugger().setIsDebuggerAttached(true);
 
   // Runtime thread might be on hold by didPause. Need to signal to unblock
   // that.
   signal_.notify_one();
-  return id;
 }
 
-void AsyncDebuggerAPI::removeDebuggerEventCallback_TS(
-    DebuggerEventCallbackID id) {
+void AsyncDebuggerAPI::clearDebuggerEventCallback_TS() {
   std::lock_guard<std::mutex> lock(mutex_);
-  for (auto it = eventCallbacks_.begin(); it != eventCallbacks_.end(); it++) {
-    if (it->id == id) {
-      // eventCallbacks_ is a std::list. Its iterators remain valid even after
-      // erase() as long as the iterator isn't the element being erased. If
-      // we're trying to erase the same element as the one pointed to by
-      // eventCallbackIterator_, then increment the iterator so that the next
-      // time takeNextEventCallback() runs it'll have a valid iterator.
-      if (it == eventCallbackIterator_) {
-        eventCallbackIterator_++;
-      }
+  eventCallback_ = nullptr;
 
-      // Note that the callback at iterator `it` might be the currently
-      // executing DebuggerEventCallback. This is ok because runEventCallbacks()
-      // and takeNextEventCallback() will make a copy of the
-      // DebuggerEventCallback, so removing the copy from eventCallbacks_ is ok.
-      //
-      // Also, the typical expectation of a remove callback function is that
-      // once the function returns, nothing will invoke that callback again.
-      // This becomes weird if the remove function is being called from the
-      // callback itself. However, there isn't a lifetime ambiguity because the
-      // callback function is running and it shouldn't expect to be able to
-      // destroy whatever object containing the function.
-      eventCallbacks_.erase(it);
-      break;
-    }
-  }
-
-  if (eventCallbacks_.empty()) {
-    runtime_.getDebugger().setIsDebuggerAttached(false);
-  }
+  runtime_.getDebugger().setIsDebuggerAttached(false);
 
   // Runtime thread might be on hold by didPause. Need to signal to unblock
   // that.
@@ -91,7 +62,7 @@ bool AsyncDebuggerAPI::isWaitingForCommand() {
   return isWaitingForCommand_;
 }
 
-bool AsyncDebuggerAPI::isPaused() {
+bool AsyncDebuggerAPI::isPaused() const {
   return inDidPause_;
 }
 
@@ -172,7 +143,7 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
     isWaitingForCommand_ = true;
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (eventCallbacks_.empty()) {
+      if (!eventCallback_) {
         isWaitingForCommand_ = false;
         return debugger::Command::continueExecution();
       }
@@ -204,10 +175,10 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
         ::hermes::hermes_fatal(
             "Should have executed interrupts and returned already");
     }
-    runEventCallbacks(event);
+    runEventCallback(event);
   }
 
-  // After invoking DebuggerEventCallbacks, we'll continue to hold onto the
+  // After invoking DebuggerEventCallback, we'll continue to hold onto the
   // thread in order to simulate an async API where DebuggerEventCallback
   // doesn't need to immediately decide on what AsyncDebugCommand to return.
   // While we're holding onto the thread, we still need to service any interrupt
@@ -215,7 +186,7 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
   processInterruptWhilePaused();
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (eventCallbacks_.empty()) {
+    if (!eventCallback_) {
       isWaitingForCommand_ = false;
       return debugger::Command::continueExecution();
     }
@@ -234,23 +205,23 @@ debugger::Command AsyncDebuggerAPI::didPause(debugger::Debugger &debugger) {
     // Because of the check for `runtime.debugger_.isDebugging()` in
     // runDebuggerUpdatingState of Interpreter.h, performing the eval won't
     // trigger recursive didPauses.
-    runEventCallbacks(DebuggerEventType::Resumed);
+    runEventCallback(DebuggerEventType::Resumed);
   }
   return std::move(nextCommand_);
 }
 
 void AsyncDebuggerAPI::processInterruptWhilePaused() {
   std::unique_lock<std::mutex> lock(mutex_);
-  // We check whether `eventCallbacks_` has callbacks in all the while-loops
+  // We check whether `eventCallback_` is set in all the while-loops
   // below. This is because that callback could be cleared by users of
   // AsyncDebuggerAPI at any time. We don't impose requirement on callers of
   // AsyncDebuggerAPI when they must be constructed and destructed.
-  while (isWaitingForCommand_ && !eventCallbacks_.empty()) {
-    while (isWaitingForCommand_ && !eventCallbacks_.empty() &&
+  while (isWaitingForCommand_ && eventCallback_) {
+    while (isWaitingForCommand_ && eventCallback_ &&
            interruptCallbacks_.empty()) {
       signal_.wait(lock);
     }
-    if (!eventCallbacks_.empty()) {
+    if (eventCallback_) {
       lock.unlock();
       // Specifically don't run all interrupts if one of the interrupts sets
       // the next command. Once the next command has been set, we'll exit
@@ -288,32 +259,14 @@ void AsyncDebuggerAPI::runInterrupts(bool ignoreNextCommand) {
   }
 }
 
-std::optional<DebuggerEventCallback> AsyncDebuggerAPI::takeNextEventCallback() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  if (eventCallbackIterator_ == eventCallbacks_.end()) {
-    return std::nullopt;
-  }
-
-  DebuggerEventCallback func = eventCallbackIterator_->callback;
-
-  eventCallbackIterator_++;
-
-  return func;
-}
-
-void AsyncDebuggerAPI::runEventCallbacks(DebuggerEventType event) {
+void AsyncDebuggerAPI::runEventCallback(DebuggerEventType event) {
+  DebuggerEventCallback callback;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    eventCallbackIterator_ = eventCallbacks_.begin();
+    callback = eventCallback_;
   }
-
-  std::optional<DebuggerEventCallback> entry = takeNextEventCallback();
-  while (entry.has_value()) {
-    DebuggerEventCallback func = entry.value();
-    if (func) {
-      func(runtime_, *this, event);
-    }
-    entry = takeNextEventCallback();
+  if (callback) {
+    callback(runtime_, *this, event);
   }
 }
 

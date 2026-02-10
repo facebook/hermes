@@ -147,7 +147,7 @@ void DebuggerDomainCoordinator::enableAgent(
 
   if (needToRegisterCallback) {
     runtime_.getDebugger().setShouldPauseOnScriptLoad(true);
-    debuggerEventCallbackId_ = asyncDebugger.addDebuggerEventCallback_TS(
+    asyncDebugger.setDebuggerEventCallback_TS(
         [this](
             HermesRuntime &runtime,
             AsyncDebuggerAPI &asyncDebugger,
@@ -182,10 +182,7 @@ void DebuggerDomainCoordinator::disableAgent(
   enabledAgents_.erase(it);
 
   if (enabledAgents_.empty()) {
-    if (debuggerEventCallbackId_ != kInvalidDebuggerEventCallbackID) {
-      asyncDebugger.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
-      debuggerEventCallbackId_ = kInvalidDebuggerEventCallbackID;
-    }
+    asyncDebugger.clearDebuggerEventCallback_TS();
 
     // If a pending explicit pause was set, clear it. Even if we later
     // resubscribe to debugger events, by then we may have missed the pause
@@ -196,8 +193,9 @@ void DebuggerDomainCoordinator::disableAgent(
     // explicitPausePending_ above.
     lastUserStepRequest_ = std::nullopt;
 
-    // NOTE: This assumes that no other users of the current runtime are
-    // interested in debugger events for script loads.
+    // This coordinator is the only recipient of debugger events (via
+    // AsyncDebuggerAPI), so disable pausing on script load while there are no
+    // agents enabled.
     runtime_.getDebugger().setShouldPauseOnScriptLoad(false);
   }
 }

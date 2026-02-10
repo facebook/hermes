@@ -29,7 +29,7 @@ class RuntimeDomainAgent : public DomainAgent {
   RuntimeDomainAgent(
       int32_t executionContextID,
       HermesRuntime &runtime,
-      debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+      const debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
       SynchronizedOutboundCallback messageCallback,
       std::shared_ptr<RemoteObjectsTable> objTable,
       ConsoleMessageStorage &consoleMessageStorage,
@@ -115,7 +115,7 @@ class RuntimeDomainAgent : public DomainAgent {
       const ObjectSerializationOptions &serializationOptions);
 
   HermesRuntime &runtime_;
-  debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
+  const debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
   ConsoleMessageStorage &consoleMessageStorage_;
   ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
