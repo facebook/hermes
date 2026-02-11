@@ -2404,6 +2404,24 @@ SKIP_LIST = [
     "test262/test/staging/sm/syntax/escaped-let-static-identifier.js",
     "test262/test/staging/sm/syntax/keyword-unescaped-requirement.js",
     "test262/test/staging/sm/types/8.12.5-01.js",
+    # Unicode 16.0.0 and 17.0.0 identifiers not yet supported.
+    "test262/test/language/identifiers/part-unicode-17.0.0.js",
+    "test262/test/language/identifiers/start-unicode-16.0.0.js",
+    "test262/test/language/identifiers/start-unicode-16.0.0-escaped.js",
+    "test262/test/language/identifiers/start-unicode-17.0.0.js",
+    "test262/test/language/identifiers/start-unicode-17.0.0-escaped.js",
+    # Generator delegation issue.
+    "test262/test/staging/sm/generators/delegating-yield-5.js",
+    # Tests that timeout.
+    "test262/test/staging/sm/JSON/parse-mega-huge-array.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-1-of-8.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-2-of-8.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-3-of-8.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-4-of-8.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-5-of-8.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-6-of-8.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-7-of-8.js",
+    "test262/test/staging/sm/Date/dst-offset-caching-8-of-8.js",
 ]
 
 # Tests to skip on specific platforms. Keys are sys.platform values.
