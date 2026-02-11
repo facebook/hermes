@@ -18,6 +18,7 @@
 #include "llvh/Support/MathExtras.h"
 
 #include <cstdint>
+#include <cstring>
 
 namespace hermes {
 namespace vm {
@@ -363,11 +364,16 @@ class AlignedHeapSegment {
 
   /// Clears the card table.
   void clearAllCards() const {
-    cleanOrDirtyRange(
-        contents(),
-        Contents::kFirstUsedIndex,
-        getEndCardIndex(),
-        Contents::CardStatus::Clean);
+    // Use memset for efficiency. This is safe because we only clear cards
+    // after scanning them, which only happens during YG collection. When
+    // YG collection finishes, the background marking thread may continue but
+    // will not access card tables unless preparing for compaction (in which
+    // case this function won't be called).
+    char *cards = reinterpret_cast<char *>(contents()->prefixHeader_.cards_);
+    std::memset(
+        cards + Contents::kFirstUsedIndex,
+        (int)Contents::CardStatus::Clean,
+        getEndCardIndex() - Contents::kFirstUsedIndex);
   }
 
   /// \return The card boundary table.
