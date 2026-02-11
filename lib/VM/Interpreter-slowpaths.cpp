@@ -41,7 +41,7 @@ ExecutionStatus Interpreter::caseDirectEval(
 
   GCScopeMarkerRAII gcMarker{runtime};
 
-  // Check to see if global eval() has been overriden, in which case call it as
+  // Check to see if global eval() has been overridden, in which case call it as
   // as normal function.
   auto global = runtime.getGlobal();
   auto existingEval = global->getNamed_RJS(
