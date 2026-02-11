@@ -881,7 +881,7 @@ regExpPrototypeTest(void *context, Runtime &runtime, NativeArgs args) {
       !runtime.makeHandle(res.getValue())->isNull());
 }
 
-/// Return the ith capture group in the most recent succesful RegExp search.
+/// Return the ith capture group in the most recent successful RegExp search.
 /// If there was no ith capture group, return "".
 CallResult<HermesValue>
 regExpDollarNumberGetter(void *ctx, Runtime &runtime, NativeArgs args) {
