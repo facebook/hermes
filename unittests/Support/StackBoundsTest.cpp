@@ -82,14 +82,20 @@ LLVM_ATTRIBUTE_NOINLINE unsigned recursiveCall() {
   volatile char data[2000];
   dataPtr = data;
 
-  ++recCount;
+  // Write out the increment in full because compound assignment to volatile is
+  // deprecated in C++20.
+  recCount = recCount + 1;
   if (isOverflowing()) {
     printf("Stack overflow, count=%u\n", recCount);
     return recCount;
   }
 
-  // Prevent a tall call.
-  return recursiveCall() + (--recCount);
+  unsigned res = recursiveCall();
+
+  // Ensure something runs after the call in order to prevent a tall call.
+  // As with the increment above, write out the decrement in full.
+  recCount = recCount - 1;
+  return res + recCount;
 }
 
 void unboundedRecursion() {
