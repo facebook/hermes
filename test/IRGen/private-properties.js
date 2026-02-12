@@ -27,7 +27,13 @@ function simpleFields() {
 function simpleMethods() {
   class B {
     #m1() {}
-    static #m2() {}
+    #m2(o) {
+      o.#m1();
+    }
+    static #m3() {}
+    #m4(o) {
+      o.#m3();
+    }
   }
   return B;
 }
@@ -82,7 +88,7 @@ function simpleMethods() {
 // CHECK-NEXT:        ReturnInst %23: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS2 [B: any, B#1: any, #m1: object, ?instance_brand_B: privateName, #m2: object, ?static_brand_B: privateName, ?B.prototype: object, ?B: object, <instElemInitFunc:B>: object]
+// CHECK:scope %VS2 [B: any, B#1: any, #m1: object, ?instance_brand_B: privateName, #m2: object, #m3: object, ?static_brand_B: privateName, #m4: object, ?B.prototype: object, ?B: object, <instElemInitFunc:B>: object]
 
 // CHECK:function simpleMethods(): any
 // CHECK-NEXT:%BB0:
@@ -103,14 +109,18 @@ function simpleMethods() {
 // CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS2.#m1]: object
 // CHECK-NEXT:  %15 = CreateFunctionInst (:object) %1: environment, %VS2: any, %#m2(): functionCode
 // CHECK-NEXT:        StoreFrameInst %1: environment, %15: object, [%VS2.#m2]: object
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %1: environment, %VS2: any, %#m3(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %17: object, [%VS2.#m3]: object
+// CHECK-NEXT:  %19 = CreateFunctionInst (:object) %1: environment, %VS2: any, %#m4(): functionCode
+// CHECK-NEXT:        StoreFrameInst %1: environment, %19: object, [%VS2.#m4]: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.B#1]: any
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.?B]: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %12: object, [%VS2.?B.prototype]: object
-// CHECK-NEXT:  %20 = LoadFrameInst (:privateName) %1: environment, [%VS2.?static_brand_B]: privateName
-// CHECK-NEXT:        AddOwnPrivateFieldInst undefined: undefined, %11: object, %20: privateName
+// CHECK-NEXT:  %24 = LoadFrameInst (:privateName) %1: environment, [%VS2.?static_brand_B]: privateName
+// CHECK-NEXT:        AddOwnPrivateFieldInst undefined: undefined, %11: object, %24: privateName
 // CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.B]: any
-// CHECK-NEXT:  %23 = LoadFrameInst (:any) %1: environment, [%VS2.B]: any
-// CHECK-NEXT:        ReturnInst %23: any
+// CHECK-NEXT:  %27 = LoadFrameInst (:any) %1: environment, [%VS2.B]: any
+// CHECK-NEXT:        ReturnInst %27: any
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS3 []
@@ -230,11 +240,51 @@ function simpleMethods() {
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS11 []
+// CHECK:scope %VS11 [o: any]
 
-// CHECK:method #m2(): any
+// CHECK:method #m2(o: any): any
 // CHECK-NEXT:%BB0:
 // CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
 // CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS11: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS11.o]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS11.o]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:privateName) %0: environment, [%VS2.?instance_brand_B]: privateName
+// CHECK-NEXT:  %6 = BinaryPrivateInInst (:any) %5: privateName, %4: any
+// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %8 = LoadFrameInst (:object) %0: environment, [%VS2.#m1]: object
+// CHECK-NEXT:  %9 = CallInst (:any) %8: object, empty: any, false: boolean, empty: any, undefined: undefined, %4: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ThrowTypeErrorInst "Private element not found": string
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS12 []
+
+// CHECK:method #m3(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS12: any, %0: environment
 // CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS13 [o: any]
+
+// CHECK:method #m4(o: any): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS2: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS13: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %o: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS13.o]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS13.o]: any
+// CHECK-NEXT:  %5 = LoadFrameInst (:privateName) %0: environment, [%VS2.?static_brand_B]: privateName
+// CHECK-NEXT:  %6 = BinaryPrivateInInst (:any) %5: privateName, %4: any
+// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %8 = LoadFrameInst (:object) %0: environment, [%VS2.#m3]: object
+// CHECK-NEXT:  %9 = CallInst (:any) %8: object, empty: any, false: boolean, empty: any, undefined: undefined, %4: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ThrowTypeErrorInst "Private element not found": string
 // CHECK-NEXT:function_end
