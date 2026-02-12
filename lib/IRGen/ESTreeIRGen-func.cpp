@@ -1216,6 +1216,11 @@ Function *ESTreeIRGen::genFieldInitFunction() {
     return nullptr;
   }
 
+  // Check if already compiled (e.g., when recompiling a finally block).
+  if (Value *compiled =
+          findCompiledEntity(classNode, ExtraKey::ImplicitFieldInitializer))
+    return llvh::cast<Function>(compiled);
+
   auto initFunc = llvh::cast<Function>(Builder.createFunction(
       (llvh::Twine("<instance_members_initializer:") +
        typedClassContext.type->getClassName().str() + ">")

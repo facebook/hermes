@@ -125,13 +125,22 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
       emitTypedClassAllocation(classType->getHomeObjectTypeInfo(), vtable);
 
   // Store the home object in a variable so that we can reference it later,
-  // e.g. when we emit method calls.
-  Variable *homeObjectVar = Builder.createVariable(
-      curFunction()->curScope()->getVariableScope(),
-      Builder.createIdentifier(
-          llvh::Twine("?") + classType->getClassName().str() + ".prototype"),
-      flowTypeToIRType(classType->getHomeObjectType()),
-      /* hidden */ true);
+  // e.g. when we emit method calls. Check if we already have a cached entry
+  // (e.g., when recompiling a finally block) and reuse it.
+  Variable *homeObjectVar;
+  auto existingIt = classConstructors_.find(classType);
+  if (existingIt != classConstructors_.end()) {
+    // Reuse existing variable from previous compilation.
+    homeObjectVar = existingIt->second.homeObjectVar;
+  } else {
+    // First compilation: create new variable.
+    homeObjectVar = Builder.createVariable(
+        curFunction()->curScope()->getVariableScope(),
+        Builder.createIdentifier(
+            llvh::Twine("?") + classType->getClassName().str() + ".prototype"),
+        flowTypeToIRType(classType->getHomeObjectType()),
+        /* hidden */ true);
+  }
   Builder.createStoreFrameInst(
       curFunction()->curScope(), homeObject, homeObjectVar);
 
@@ -142,9 +151,14 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     auto [it, inserted] = classConstructors_.try_emplace(
         classType, createCallable->getFunctionCode(), homeObjectVar);
     (void)it;
+    (void)inserted;
+    // On recompilation, the entry already exists. Verify consistency.
     assert(
         it->second.constructorFunc == createCallable->getFunctionCode() &&
         "redefinition of constructor function");
+    assert(
+        it->second.homeObjectVar == homeObjectVar &&
+        "redefinition with different homeObjectVar");
   }
 
   // The 'prototype' property is initially set as non-configurable,
@@ -258,10 +272,15 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
           // If this field represents a final method, record the IR function so
           // we can use it to populate the target of calls.
           if (!field.overridden) {
-            auto [_, success] =
+            auto [it, success] =
                 finalMethods_.try_emplace(&field, CFI->getFunctionCode());
+            (void)it;
             (void)success;
-            assert(success && "Method already emitted");
+            // On recompilation (e.g., finally blocks), the entry may already
+            // exist. Verify it has the same Function.
+            assert(
+                (success || it->second == CFI->getFunctionCode()) &&
+                "Method already emitted with different function");
           }
         }
       } else {

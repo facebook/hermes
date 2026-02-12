@@ -29,7 +29,7 @@ try {} finally { class C {} }
 // CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [exports: any, C: any, ?C.prototype: object, ?C.prototype#1: object]
+// CHECK:scope %VS1 [exports: any, C: any, ?C.prototype: object]
 
 // CHECK:function ""(exports: any): any
 // CHECK-NEXT:%BB0:
@@ -44,7 +44,7 @@ try {} finally { class C {} }
 // CHECK-NEXT:  %7 = CreateFunctionInst (:object) %1: environment, %VS1: any, %C(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS1.C]: any
 // CHECK-NEXT:  %9 = AllocTypedObjectInst (:object) empty: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.?C.prototype#1]: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.?C.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, %7: object, "prototype": string
 // CHECK-NEXT:        ThrowInst %5: any
 // CHECK-NEXT:%BB2:
