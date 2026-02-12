@@ -20,7 +20,7 @@ jobs:
           - destination: platform=iOS Simulator,name=iPhone 16
             scheme: ApplePlatformsIntegrationMobileTests
             name: Test iPhone application
-          - destination: platform=visionOS Simulator,OS=26.0,name=Apple Vision Pro
+          - destination: platform=visionOS Simulator,OS=2.5,name=Apple Vision Pro
             scheme: ApplePlatformsIntegrationVisionOSTests
             name: Test Apple Vision application
           - destination: platform=tvOS Simulator,name=Apple TV
