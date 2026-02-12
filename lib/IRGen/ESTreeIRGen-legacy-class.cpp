@@ -62,43 +62,35 @@ namespace irgen {
 /// inspecting the kind of a `Decl`, it's possible to know which kind of element
 /// in the side table the customData field of the `Decl` points to.
 void ESTreeIRGen::emitPrivateNameDeclarations(
+    ESTree::ClassLikeNode *classNode,
     sema::LexicalScope *scope,
     Identifier className) {
-  Variable *staticBrand = nullptr;
-  Variable *instanceBrand = nullptr;
+  // Get the cached variables for this class. Brand Variables must be cached
+  // for recompilation (e.g., finally blocks) to ensure consistency.
+  auto &cachedVars = legacyClassVars_[classNode];
+
   /// Lazily create and return the correct private brand for the given static
-  /// level.
-  auto getPrivateBrand =
-      [this, &className, &staticBrand, &instanceBrand](bool isStatic) {
-        if (isStatic) {
-          if (!staticBrand) {
-            staticBrand = Builder.createVariable(
-                curFunction()->curScope()->getVariableScope(),
-                Twine("?static_brand_") + className.str(),
-                Type::createPrivateName(),
-                /* hidden */ true);
-            Builder.createStoreFrameInst(
-                curFunction()->curScope(),
-                Builder.createCreatePrivateNameInst(
-                    Builder.getLiteralString(className)),
-                staticBrand);
-          }
-          return staticBrand;
-        }
-        if (!instanceBrand) {
-          instanceBrand = Builder.createVariable(
-              curFunction()->curScope()->getVariableScope(),
-              Twine("?instance_brand_") + className.str(),
-              Type::createPrivateName(),
-              /* hidden */ true);
-          Builder.createStoreFrameInst(
-              curFunction()->curScope(),
-              Builder.createCreatePrivateNameInst(
-                  Builder.getLiteralString(className)),
-              instanceBrand);
-        }
-        return instanceBrand;
-      };
+  /// level. Brands are cached to ensure consistency across recompilations.
+  auto getPrivateBrand = [this, &className, &cachedVars](bool isStatic) {
+    if (isStatic) {
+      if (!cachedVars.staticBrand) {
+        cachedVars.staticBrand = Builder.createVariable(
+            curFunction()->curScope()->getVariableScope(),
+            Twine("?static_brand_") + className.str(),
+            Type::createPrivateName(),
+            /* hidden */ true);
+      }
+      return cachedVars.staticBrand;
+    }
+    if (!cachedVars.instanceBrand) {
+      cachedVars.instanceBrand = Builder.createVariable(
+          curFunction()->curScope()->getVariableScope(),
+          Twine("?instance_brand_") + className.str(),
+          Type::createPrivateName(),
+          /* hidden */ true);
+    }
+    return cachedVars.instanceBrand;
+  };
   for (sema::Decl *decl : scope->decls) {
     if (!sema::Decl::isKindPrivateName(decl->kind))
       continue;
@@ -206,6 +198,25 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
         assert(false && "unhandled private decl");
         continue;
     }
+  }
+
+  // Emit brand stores. These must be emitted on every compilation (including
+  // recompiles) because the store instruction must exist in all code paths.
+  // We check the cached brands rather than the flags because on recompile
+  // getPrivateBrand may not be called (decl->customData is already set).
+  if (cachedVars.staticBrand) {
+    Builder.createStoreFrameInst(
+        curFunction()->curScope(),
+        Builder.createCreatePrivateNameInst(
+            Builder.getLiteralString(className)),
+        cachedVars.staticBrand);
+  }
+  if (cachedVars.instanceBrand) {
+    Builder.createStoreFrameInst(
+        curFunction()->curScope(),
+        Builder.createCreatePrivateNameInst(
+            Builder.getLiteralString(className)),
+        cachedVars.instanceBrand);
   }
 }
 
@@ -359,21 +370,37 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
   Value *superCls = superClassNode ? genExpression(superClassNode)
                                    : Builder.getEmptySentinel();
 
-  emitPrivateNameDeclarations(classNode->getScope(), className);
+  emitPrivateNameDeclarations(classNode, classNode->getScope(), className);
   auto *curScope = curFunction()->curScope();
   auto *curVarScope = curScope->getVariableScope();
-  // Holds the .prototype of the class.
-  Variable *clsPrototypeVar = Builder.createVariable(
-      curScope->getVariableScope(),
-      Builder.createIdentifier("?" + className.str() + ".prototype"),
-      Type::createObject(),
-      true);
-  // Holds the class
-  Variable *classVar = Builder.createVariable(
-      curVarScope,
-      Builder.createIdentifier("?" + className.str()),
-      Type::createObject(),
-      true);
+
+  // Check if we already created internal variables for this class (e.g., when
+  // recompiling a finally block). If so, reuse them to ensure consistency.
+  // Note: emitPrivateNameDeclarations may have already created an entry for
+  // caching brand variables, so we check classVar specifically rather than
+  // whether the entry exists.
+  Variable *clsPrototypeVar;
+  Variable *classVar;
+  auto &cachedVars = legacyClassVars_[classNode];
+  if (cachedVars.classVar) {
+    clsPrototypeVar = cachedVars.prototypeVar;
+    classVar = cachedVars.classVar;
+  } else {
+    // Holds the .prototype of the class.
+    clsPrototypeVar = Builder.createVariable(
+        curScope->getVariableScope(),
+        Builder.createIdentifier("?" + className.str() + ".prototype"),
+        Type::createObject(),
+        true);
+    // Holds the class
+    classVar = Builder.createVariable(
+        curVarScope,
+        Builder.createIdentifier("?" + className.str()),
+        Type::createObject(),
+        true);
+    cachedVars.classVar = classVar;
+    cachedVars.prototypeVar = clsPrototypeVar;
+  }
 
   std::shared_ptr<LegacyClassContext> savedClsCtx =
       curFunction()->legacyClassContext;
@@ -391,11 +418,18 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
     CreateFunctionInst *createInstElemInitFunc =
         Builder.createCreateFunctionInst(
             curFunction()->curScope(), instElemInitFunc);
-    Variable *instElemInitFuncVar = Builder.createVariable(
-        curFunction()->curScope()->getVariableScope(),
-        (llvh::Twine("<instElemInitFunc:") + className.str() + ">"),
-        Type::createObject(),
-        /* hidden */ true);
+    // Reuse cached variable or create a new one.
+    Variable *instElemInitFuncVar;
+    if (cachedVars.instElemInitFuncVar) {
+      instElemInitFuncVar = cachedVars.instElemInitFuncVar;
+    } else {
+      instElemInitFuncVar = Builder.createVariable(
+          curFunction()->curScope()->getVariableScope(),
+          (llvh::Twine("<instElemInitFunc:") + className.str() + ">"),
+          Type::createObject(),
+          /* hidden */ true);
+      cachedVars.instElemInitFuncVar = instElemInitFuncVar;
+    }
     Builder.createStoreFrameInst(
         curFunction()->curScope(), createInstElemInitFunc, instElemInitFuncVar);
     curFunction()->legacyClassContext->instElemInitFuncVar =
@@ -555,12 +589,20 @@ CreateClassInst *ESTreeIRGen::genLegacyClassLike(
     } else if (
         auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&classElement)) {
       if (prop->_computed) {
-        Variable *fieldKeyVar = Builder.createVariable(
-            curVarScope,
-            Builder.createIdentifier(
-                className.str() + "_computed_key_" + Twine(computedKeyIdx++)),
-            Type::createAnyType(),
-            /* hidden */ true);
+        // Reuse cached variable or create a new one.
+        auto cachedKeyIt = cachedVars.computedFieldKeys.find(prop);
+        Variable *fieldKeyVar;
+        if (cachedKeyIt != cachedVars.computedFieldKeys.end()) {
+          fieldKeyVar = cachedKeyIt->second;
+        } else {
+          fieldKeyVar = Builder.createVariable(
+              curVarScope,
+              Builder.createIdentifier(
+                  className.str() + "_computed_key_" + Twine(computedKeyIdx++)),
+              Type::createAnyType(),
+              /* hidden */ true);
+          cachedVars.computedFieldKeys[prop] = fieldKeyVar;
+        }
         curFunction()->legacyClassContext->classComputedFieldKeys[prop] =
             fieldKeyVar;
         Builder.createStoreFrameInst(
