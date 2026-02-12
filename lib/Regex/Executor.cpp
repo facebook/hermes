@@ -653,19 +653,23 @@ bool bracketMatchesChar(
   // do not match, false if we do. Implement this by xor with the negate flag.
 
   // Check character classes.
-  // Note we don't have to canonicalize here, because canonicalization does not
-  // affect which character class a character is in (i.e. a character doesn't
-  // become a digit after uppercasing).
+  // When both ignoreCase and unicode are set (/iu), canonicalize the character
+  // before testing, because per ES spec 22.2.2.9.2 (WordCharacters), \w with
+  // /iu must match any character whose canonical form is a word character
+  // (e.g. U+212A KELVIN SIGN canonicalizes to 'k').
   if (insn->positiveCharClasses || insn->negativeCharClasses) {
+    auto testCh = ctx.syntaxFlags_.ignoreCase && ctx.syntaxFlags_.unicode
+        ? Traits::canonicalize(ch, true)
+        : ch;
     for (auto charClass :
          {CharacterClass::Digits,
           CharacterClass::Spaces,
           CharacterClass::Words}) {
       if ((insn->positiveCharClasses & charClass) &&
-          traits.characterHasType(ch, charClass))
+          traits.characterHasType(testCh, charClass))
         return true ^ insn->negate;
       if ((insn->negativeCharClasses & charClass) &&
-          !traits.characterHasType(ch, charClass))
+          !traits.characterHasType(testCh, charClass))
         return true ^ insn->negate;
     }
   }
