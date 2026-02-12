@@ -379,14 +379,21 @@ ExecutionStatus Debugger::runDebugger(
       // ignoring the debugger statement.
       if (breakpointOpt.hasValue()) {
         assert(
-            breakpointOpt->user.hasValue() &&
+            !breakpointOpt->userBreakpointIDs.empty() &&
             "must be stopped on a user breakpoint");
-        const auto &condition =
-            userBreakpoints_[*breakpointOpt->user].condition;
-        if (checkBreakpointCondition(condition)) {
-          pauseReason = PauseReason::Breakpoint;
-          breakpoint = *(breakpointOpt->user);
-        } else {
+        // Evaluate conditions in creation order, short-circuiting on first
+        // true.
+        bool shouldPause = false;
+        for (BreakpointID id : breakpointOpt->userBreakpointIDs) {
+          const auto &condition = userBreakpoints_[id].condition;
+          if (checkBreakpointCondition(condition)) {
+            pauseReason = PauseReason::Breakpoint;
+            breakpoint = id;
+            shouldPause = true;
+            break;
+          }
+        }
+        if (!shouldPause) {
           isDebugging_ = false;
           return ExecutionStatus::RETURNED;
         }
@@ -571,7 +578,7 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
 
   for (auto &bp : userBreakpoints_) {
     if (unloadingBlocks.count(bp.second.codeBlock)) {
-      unresolveBreakpointLocation(bp.second);
+      unresolveBreakpointLocation(bp.second, bp.first);
     }
   }
 
@@ -583,7 +590,8 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
     auto it = breakpointLocations_.find(ptr);
     if (it != breakpointLocations_.end()) {
       auto &location = it->second;
-      assert(!location.user.hasValue() && "Unexpected user breakpoint");
+      assert(
+          location.userBreakpointIDs.empty() && "Unexpected user breakpoint");
       uninstallBreakpoint(bp.codeBlock, bp.offset, location.opCode);
       breakpointLocations_.erase(it);
     }
@@ -720,19 +728,9 @@ auto Debugger::createBreakpoint(const SourceLocation &loc) -> BreakpointID {
   breakpoint.enabled = true;
   bool resolved = resolveBreakpointLocation(breakpoint);
 
-  BreakpointID breakpointId;
+  BreakpointID breakpointId = nextBreakpointId_++;
   if (resolved) {
-    auto breakpointLoc =
-        getBreakpointLocation(breakpoint.codeBlock, breakpoint.offset);
-    if (breakpointLoc.hasValue() && breakpointLoc->user) {
-      // Don't set duplicate user breakpoint.
-      return kInvalidBreakpoint;
-    }
-
-    breakpointId = nextBreakpointId_++;
     setUserBreakpoint(breakpoint.codeBlock, breakpoint.offset, breakpointId);
-  } else {
-    breakpointId = nextBreakpointId_++;
   }
 
   userBreakpoints_[breakpointId] = std::move(breakpoint);
@@ -760,7 +758,7 @@ void Debugger::deleteBreakpoint(BreakpointID id) {
 
   auto &breakpoint = it->second;
   if (breakpoint.enabled && breakpoint.isResolved()) {
-    unsetUserBreakpoint(breakpoint);
+    unsetUserBreakpoint(breakpoint, id);
   }
   userBreakpoints_.erase(it);
 }
@@ -769,7 +767,7 @@ void Debugger::deleteAllBreakpoints() {
   for (auto &it : userBreakpoints_) {
     auto &breakpoint = it.second;
     if (breakpoint.enabled && breakpoint.isResolved()) {
-      unsetUserBreakpoint(breakpoint);
+      unsetUserBreakpoint(breakpoint, it.first);
     }
   }
   userBreakpoints_.clear();
@@ -791,7 +789,7 @@ void Debugger::setBreakpointEnabled(BreakpointID id, bool enable) {
   } else if (!enable && breakpoint.enabled) {
     breakpoint.enabled = false;
     if (breakpoint.isResolved()) {
-      unsetUserBreakpoint(breakpoint);
+      unsetUserBreakpoint(breakpoint, id);
     }
   }
 }
@@ -836,7 +834,7 @@ void Debugger::setUserBreakpoint(
     uint32_t offset,
     BreakpointID id) {
   BreakpointLocation &location = installBreakpoint(codeBlock, offset);
-  location.user = id;
+  location.userBreakpointIDs.insert(id);
 }
 
 void Debugger::doSetNonUserBreakpoint(
@@ -891,7 +889,15 @@ void Debugger::setOnLoadBreakpoint(CodeBlock *codeBlock, uint32_t offset) {
   assert(location.count() && "invalid count following set breakpoint");
 }
 
-void Debugger::unsetUserBreakpoint(const Breakpoint &breakpoint) {
+void Debugger::unsetUserBreakpoint(
+    const Breakpoint &breakpoint,
+    BreakpointID id) {
+#ifndef NDEBUG
+  auto it = userBreakpoints_.find(id);
+  assert(
+      it != userBreakpoints_.end() && &it->second == &breakpoint &&
+      "ID must map to the provided breakpoint");
+#endif
   CodeBlock *codeBlock = breakpoint.codeBlock;
   uint32_t offset = breakpoint.offset;
 
@@ -908,8 +914,10 @@ void Debugger::unsetUserBreakpoint(const Breakpoint &breakpoint) {
 
   auto &location = locIt->second;
 
-  assert(location.user && "no user breakpoints to unset");
-  location.user = llvh::None;
+  assert(!location.userBreakpointIDs.empty() && "no user breakpoints to unset");
+  bool removed = location.userBreakpointIDs.remove(id);
+  assert(removed && "breakpoint ID not found in user set");
+  (void)removed;
   if (location.count() == 0) {
     // No more reason to keep this location around.
     // Unpatch it from the opcode stream and delete it from the map.
@@ -1580,10 +1588,17 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   return false;
 }
 
-void Debugger::unresolveBreakpointLocation(Breakpoint &breakpoint) {
+void Debugger::unresolveBreakpointLocation(
+    Breakpoint &breakpoint,
+    BreakpointID id) {
+  auto it = userBreakpoints_.find(id);
+  assert(
+      it != userBreakpoints_.end() && &it->second == &breakpoint &&
+      "ID must map to the provided breakpoint");
+  (void)it;
   assert(breakpoint.isResolved() && "Breakpoint already unresolved");
   if (breakpoint.enabled) {
-    unsetUserBreakpoint(breakpoint);
+    unsetUserBreakpoint(breakpoint, id);
   }
   breakpoint.resolvedLocation.reset();
   breakpoint.codeBlock = nullptr;

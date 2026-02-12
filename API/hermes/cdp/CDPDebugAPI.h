@@ -11,6 +11,7 @@
 #include <hermes/AsyncDebuggerAPI.h>
 
 #include "ConsoleMessage.h"
+#include "DebuggerDomainCoordinator.h"
 
 namespace facebook {
 namespace hermes {
@@ -37,7 +38,12 @@ class HERMES_EXPORT CDPDebugAPI {
 
   /// Gets the AsyncDebuggerAPI associated with this instance.
   debugger::AsyncDebuggerAPI &asyncDebuggerAPI() {
-    return *asyncDebuggerAPI_;
+    return asyncDebuggerAPI_;
+  }
+
+  /// Gets the DebuggerDomainCoordinator associated with this instance.
+  DebuggerDomainCoordinator &debuggerDomainCoordinator() {
+    return debuggerDomainCoordinator_;
   }
 
   /// Adds a console message to the current CDPDebugAPI instance,
@@ -53,10 +59,15 @@ class HERMES_EXPORT CDPDebugAPI {
 
   CDPDebugAPI(HermesRuntime &runtime, size_t maxCachedMessages);
 
-  HermesRuntime &runtime_;
-  std::unique_ptr<debugger::AsyncDebuggerAPI> asyncDebuggerAPI_;
+  /// Member order matters for destruction: asyncDebuggerAPI_ must be destroyed
+  /// first, as its destructor flushes the queue of pending tasks, which may
+  /// reference other objects (like consoleMessageDispatcher_ and
+  /// debuggerDomainCoordinator_).
   ConsoleMessageStorage consoleMessageStorage_;
   ConsoleMessageDispatcher consoleMessageDispatcher_;
+  HermesRuntime &runtime_;
+  DebuggerDomainCoordinator debuggerDomainCoordinator_;
+  debugger::AsyncDebuggerAPI asyncDebuggerAPI_;
 };
 
 } // namespace cdp

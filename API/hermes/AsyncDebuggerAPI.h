@@ -82,14 +82,11 @@ using EvalCompleteCallback = std::function<
 /// functions that are safe to call on any thread. All other functions must be
 /// called on the runtime thread.
 class HERMES_EXPORT AsyncDebuggerAPI : private debugger::EventObserver {
-  /// Hide the constructor so users can only construct via static create
-  /// methods.
-  AsyncDebuggerAPI(HermesRuntime &runtime);
-
  public:
-  /// Creates an AsyncDebuggerAPI for use with the provided HermesRuntime. This
-  /// should be called and created at the same time as creating HermesRuntime.
-  static std::unique_ptr<AsyncDebuggerAPI> create(HermesRuntime &runtime);
+  /// Constructs an AsyncDebuggerAPI for use with the provided HermesRuntime.
+  /// This should be called and created at the same time as creating
+  /// HermesRuntime.
+  explicit AsyncDebuggerAPI(HermesRuntime &runtime);
 
   /// Must be destroyed on the runtime thread or when you're sure nothing is
   /// interacting with the runtime. Must be destroyed before destroying
@@ -265,9 +262,7 @@ using EvalCompleteCallback = std::function<
 
 class HERMES_EXPORT AsyncDebuggerAPI {
  public:
-  static std::unique_ptr<AsyncDebuggerAPI> create(HermesRuntime &runtime) {
-    return nullptr;
-  }
+  explicit AsyncDebuggerAPI(HermesRuntime &) {}
 
   ~AsyncDebuggerAPI() {}
 

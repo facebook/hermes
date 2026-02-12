@@ -22,12 +22,11 @@ using namespace facebook::hermes::debugger;
 static const char *const kBreakpointsKey = "breakpoints";
 static const char *const kBreakpointsActiveKey = "breakpointsActive";
 
-enum class PausedNotificationReason { kException, kOther, kStep };
-
 DebuggerDomainAgent::DebuggerDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
-    AsyncDebuggerAPI &asyncDebugger,
+    debugger::AsyncDebuggerAPI &asyncDebugger,
+    DebuggerDomainCoordinator &debuggerDomainCoordinator,
     SynchronizedOutboundCallback messageCallback,
     std::shared_ptr<RemoteObjectsTable> objTable,
     DomainState &state)
@@ -37,22 +36,9 @@ DebuggerDomainAgent::DebuggerDomainAgent(
           std::move(objTable)),
       runtime_(runtime),
       asyncDebugger_(asyncDebugger),
-      debuggerEventCallbackId_(kInvalidDebuggerEventCallbackID),
+      debuggerDomainCoordinator_(debuggerDomainCoordinator),
       state_(state),
-      enabled_(false),
-      paused_(false) {
-  std::unique_ptr<StateValue> breakpointsActiveStateValue =
-      state_.getCopy({kBreakpointsActiveKey});
-  if (breakpointsActiveStateValue) {
-    BooleanStateValue *boolStateValue =
-        dynamic_cast<BooleanStateValue *>(breakpointsActiveStateValue.get());
-    breakpointsActive_ = boolStateValue->value;
-  } else {
-    // If the flag is not persisted in the state, then we default to true
-    // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=450-454;drc=27d34700b83f381c62e3a348de2e6dfdc08364b8
-    breakpointsActive_ = true;
-  }
-
+      enabled_(false) {
   std::unique_ptr<StateValue> value = state_.getCopy({kBreakpointsKey});
   if (value) {
     DictionaryStateValue *dict =
@@ -80,101 +66,15 @@ DebuggerDomainAgent::DebuggerDomainAgent(
 }
 
 DebuggerDomainAgent::~DebuggerDomainAgent() {
-  cleanUp();
+  disable();
 }
 
-void DebuggerDomainAgent::handleDebuggerEvent(
-    HermesRuntime &runtime,
-    AsyncDebuggerAPI &asyncDebugger,
-    DebuggerEventType event) {
-  assert(enabled_ && "Should only be receiving debugger events while enabled");
-
-  switch (event) {
-    case DebuggerEventType::ScriptLoaded:
-      processNewLoadedScript();
-      asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
-      break;
-    case DebuggerEventType::Exception:
-      if (isTopFrameLocationBlackboxed()) {
-        asyncDebugger_.resumeFromPaused(
-            explicitPausePending_ ? AsyncDebugCommand::StepInto
-                                  : AsyncDebugCommand::Continue);
-      } else {
-        setPaused(PausedNotificationReason::kException);
-      }
-      break;
-    case DebuggerEventType::Resumed:
-      if (paused_) {
-        setUnpaused();
-      }
-      break;
-    case DebuggerEventType::Breakpoint:
-      if (breakpointsActive_) {
-        setPaused(PausedNotificationReason::kOther);
-      } else {
-        asyncDebugger_.resumeFromPaused(
-            explicitPausePending_ ? AsyncDebugCommand::StepInto
-                                  : AsyncDebugCommand::Continue);
-      }
-      break;
-    case DebuggerEventType::DebuggerStatement:
-      if (isTopFrameLocationBlackboxed()) {
-        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
-      } else {
-        setPaused(PausedNotificationReason::kOther);
-      }
-      break;
-    case DebuggerEventType::StepFinish:
-      if (isTopFrameLocationBlackboxed()) {
-        // If we land on a blackboxed frame via a user command that is either
-        // "step over" or "step out" we step out of the blackboxed frame.
-        // In all the other cases (explicit pause / step into / unknown command)
-        // we execute a step into (that usually results in subsequent step
-        // intos) to stop on the next non-blackboxed line.
-        // If the blackboxed function calls any functions in a non-blackboxed
-        // range, it would eventually stop on first such a function.
-        // If the blackboxed function doesn't call any non-blackboxed functions,
-        // it would keep on stepping into until it exits the blackboxed function
-        // itself, effectively acting like a step out.
-        auto nextStep = lastUserStepRequest_.has_value() &&
-                (*lastUserStepRequest_ == LastUserStepRequest::StepOver ||
-                 *lastUserStepRequest_ == LastUserStepRequest::StepOut)
-            ? AsyncDebugCommand::StepOut
-            : AsyncDebugCommand::StepInto;
-
-        asyncDebugger_.resumeFromPaused(nextStep);
-      } else {
-        PausedNotificationReason pauseReason = explicitPausePending_
-            ? PausedNotificationReason::kOther
-            : PausedNotificationReason::kStep;
-        setPaused(pauseReason);
-      }
-      break;
-    case DebuggerEventType::ExplicitPause:
-      if (isTopFrameLocationBlackboxed()) {
-        // an explicit pause should eventually stop execution on the next
-        // non-blackboxed line, so we can just continue to step into here
-        // until we hit a non-blackboxed line
-        asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepInto);
-      } else {
-        setPaused(PausedNotificationReason::kOther);
-      }
-      break;
-    default:
-      assert(false && "unknown DebuggerEventType");
-      asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
-  }
-}
-
-void DebuggerDomainAgent::setPaused(
+void DebuggerDomainAgent::notifyPaused(
     PausedNotificationReason pausedNotificationReason) {
-  paused_ = true;
-  explicitPausePending_ = false;
   sendPausedNotificationToClient(pausedNotificationReason);
 }
 
-void DebuggerDomainAgent::setUnpaused() {
-  paused_ = false;
+void DebuggerDomainAgent::notifyUnpaused() {
   objTable_->releaseObjectGroup(BacktraceObjectGroup);
   sendNotificationToClient(m::debugger::ResumedNotification{});
 }
@@ -193,32 +93,20 @@ void DebuggerDomainAgent::enable() {
   }
 #endif
 
-  // The debugger just got enabled; inform the client about all scripts.
-  for (auto &srcLoc : runtime_.getDebugger().getLoadedScripts()) {
-    sendScriptParsedNotificationToClient(srcLoc);
-
-    for (auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
-      if (srcLoc.fileName == cdpBreakpoint.description.url) {
-        applyBreakpointAndSendNotification(
-            cdpBreakpointID, cdpBreakpoint, srcLoc);
-      }
-    }
+  debuggerDomainCoordinator_.enableAgent(asyncDebugger_, *this);
+  bool breakpointsActive;
+  std::unique_ptr<StateValue> breakpointsActiveStateValue =
+      state_.getCopy({kBreakpointsActiveKey});
+  if (breakpointsActiveStateValue) {
+    BooleanStateValue *boolStateValue =
+        dynamic_cast<BooleanStateValue *>(breakpointsActiveStateValue.get());
+    breakpointsActive = boolStateValue->value;
+  } else {
+    // If the flag is not persisted in the state, then we default to true
+    // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/v8-debugger-agent-impl.cc;l=450-454;drc=27d34700b83f381c62e3a348de2e6dfdc08364b8
+    breakpointsActive = true;
   }
-
-  runtime_.getDebugger().setShouldPauseOnScriptLoad(true);
-  debuggerEventCallbackId_ = asyncDebugger_.addDebuggerEventCallback_TS(
-      [this](
-          HermesRuntime &runtime,
-          AsyncDebuggerAPI &asyncDebugger,
-          DebuggerEventType event) {
-        handleDebuggerEvent(runtime, asyncDebugger, event);
-      });
-
-  // Check to see if debugger is currently paused. There could be multiple debug
-  // clients and the program could have already been paused.
-  if (asyncDebugger_.isWaitingForCommand()) {
-    setPaused(PausedNotificationReason::kOther);
-  }
+  debuggerDomainCoordinator_.setBreakpointsActive(breakpointsActive);
 }
 
 void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
@@ -227,35 +115,25 @@ void DebuggerDomainAgent::enable(const m::debugger::EnableRequest &req) {
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
-void DebuggerDomainAgent::cleanUp() {
-  // This doesn't support other debug clients also setting breakpoints. If we
-  // need that functionality, then we might need to track breakpoints set by
-  // this client and only remove those.
-  runtime_.getDebugger().deleteAllBreakpoints();
+void DebuggerDomainAgent::disable() {
+  if (enabled_) {
+    debuggerDomainCoordinator_.disableAgent(asyncDebugger_, *this);
+  }
+  enabled_ = false;
 
-  // Unlink all persisted CDPBreakpoints from their HermesBreakpoints, in case
-  // domain will be re-enabled. This is required, because all internal Hermes
-  // breakpoints were deleted above.
+  // Delete all HermesBreakpoints from their CDPBreakpoints. They will be
+  // recreated if we re-enable the domain later.
   for (auto &[_, cdpBreakpoint] : cdpBreakpoints_) {
+    for (const HermesBreakpoint &hermesBreakpoint :
+         cdpBreakpoint.hermesBreakpoints) {
+      runtime_.getDebugger().deleteBreakpoint(hermesBreakpoint.breakpointID);
+    }
     cdpBreakpoint.hermesBreakpoints.clear();
   }
-
-  if (debuggerEventCallbackId_ != kInvalidDebuggerEventCallbackID) {
-    asyncDebugger_.removeDebuggerEventCallback_TS(debuggerEventCallbackId_);
-    debuggerEventCallbackId_ = kInvalidDebuggerEventCallbackID;
-  }
-
-  // This doesn't work well if there are other debug clients that also toggle
-  // this flag. If we need that functionality, then DebuggerAPI needs to be
-  // changed.
-  runtime_.getDebugger().setShouldPauseOnScriptLoad(false);
 }
 
 void DebuggerDomainAgent::disable(const m::debugger::DisableRequest &req) {
-  if (enabled_) {
-    cleanUp();
-  }
-  enabled_ = false;
+  disable();
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -264,9 +142,7 @@ void DebuggerDomainAgent::pause(const m::debugger::PauseRequest &req) {
     return;
   }
 
-  explicitPausePending_ = true;
-
-  runtime_.getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+  debuggerDomainCoordinator_.pause();
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -275,7 +151,7 @@ void DebuggerDomainAgent::resume(const m::debugger::ResumeRequest &req) {
     return;
   }
 
-  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::Continue);
+  debuggerDomainCoordinator_.resume(asyncDebugger_);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -284,9 +160,8 @@ void DebuggerDomainAgent::stepInto(const m::debugger::StepIntoRequest &req) {
     return;
   }
 
-  lastUserStepRequest_ = LastUserStepRequest::StepInto;
-
-  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepInto);
+  debuggerDomainCoordinator_.stepFromPaused(
+      asyncDebugger_, UserStepRequest::StepInto);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -295,9 +170,8 @@ void DebuggerDomainAgent::stepOut(const m::debugger::StepOutRequest &req) {
     return;
   }
 
-  lastUserStepRequest_ = LastUserStepRequest::StepOut;
-
-  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOut);
+  debuggerDomainCoordinator_.stepFromPaused(
+      asyncDebugger_, UserStepRequest::StepOut);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -306,9 +180,8 @@ void DebuggerDomainAgent::stepOver(const m::debugger::StepOverRequest &req) {
     return;
   }
 
-  lastUserStepRequest_ = LastUserStepRequest::StepOver;
-
-  asyncDebugger_.resumeFromPaused(AsyncDebugCommand::StepOver);
+  debuggerDomainCoordinator_.stepFromPaused(
+      asyncDebugger_, UserStepRequest::StepOver);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -396,10 +269,12 @@ void DebuggerDomainAgent::setBlackboxedRanges(
 }
 
 bool DebuggerDomainAgent::isLocationBlackboxed(
-    ScriptID scriptID,
-    std::string scriptName,
-    int lineNumber,
-    int columnNumber) {
+    const SourceLocation &loc) const {
+  ScriptID scriptID = loc.fileId;
+  const std::string &scriptName = loc.fileName;
+  int lineNumber = loc.line;
+  int columnNumber = loc.column;
+
   if (blackboxAnonymousScripts_ && scriptName.empty()) {
     return true;
   }
@@ -449,40 +324,22 @@ bool DebuggerDomainAgent::isLocationBlackboxed(
   return std::distance(positions.begin(), locationPosition) % 2 == 1;
 }
 
-bool DebuggerDomainAgent::isTopFrameLocationBlackboxed() {
-  auto stackTrace = runtime_.getDebugger().getProgramState().getStackTrace();
-  if (stackTrace.callFrameCount() < 1) {
-    return false;
-  }
-  debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
-  if (breakpointsActive_) {
-    for (const auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
-      for (const HermesBreakpoint &hermesBreakpoint :
-           cdpBreakpoint.hermesBreakpoints) {
-        auto breakpointLoc =
-            runtime_.getDebugger()
-                .getBreakpointInfo(hermesBreakpoint.breakpointID)
-                .resolvedLocation;
-
-        auto locationHasManualBreakpoint =
-            (loc.fileId == breakpointLoc.fileId &&
-             loc.line == breakpointLoc.line &&
-             loc.column == breakpointLoc.column);
-        // Locations with manual breakpoints are not considered blackboxed.
-        // For example, if a user steps inside a blackboxed function, if any of
-        // the next lines in that function have a manual breakpoint, we should
-        // respect them and stop on them rather than stepping over them. The
-        // same logic applies to explicit pauses. While they trigger stepping
-        // into until out of blackboxed ranges, or until the program continues
-        // execution if one of these steps lands on a line with a manual
-        // breakpoint, we should stop on it.
-        if (locationHasManualBreakpoint) {
-          return false;
-        }
+bool DebuggerDomainAgent::locationHasManualBreakpoint(
+    const SourceLocation &loc) const {
+  for (const auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
+    for (const HermesBreakpoint &hermesBreakpoint :
+         cdpBreakpoint.hermesBreakpoints) {
+      auto breakpointLoc = runtime_.getDebugger()
+                               .getBreakpointInfo(hermesBreakpoint.breakpointID)
+                               .resolvedLocation;
+      if (loc.fileId == breakpointLoc.fileId &&
+          loc.line == breakpointLoc.line &&
+          loc.column == breakpointLoc.column) {
+        return true;
       }
     }
   }
-  return isLocationBlackboxed(loc.fileId, loc.fileName, loc.line, loc.column);
+  return false;
 }
 
 void DebuggerDomainAgent::setPauseOnExceptions(
@@ -563,7 +420,7 @@ void DebuggerDomainAgent::setBreakpoint(
   CDPBreakpointDescription description;
   description.line = req.location.lineNumber;
   description.column = req.location.columnNumber;
-  description.condition = req.location.scriptId;
+  description.condition = req.condition;
 
   auto scriptID = std::stoull(req.location.scriptId);
 
@@ -689,7 +546,7 @@ void DebuggerDomainAgent::setBreakpointsActive(
     transaction.add({kBreakpointsActiveKey}, breakpointsActiveStateValue);
   }
 
-  breakpointsActive_ = req.active;
+  debuggerDomainCoordinator_.setBreakpointsActive(req.active);
   sendResponseToClient(m::makeOkResponse(req.id));
 }
 
@@ -768,33 +625,6 @@ void DebuggerDomainAgent::sendScriptParsedNotificationToClient(
     note.sourceMapURL = sourceMappingUrl;
   }
   sendNotificationToClient(note);
-}
-
-void DebuggerDomainAgent::processNewLoadedScript() {
-  assert(
-      asyncDebugger_.isWaitingForCommand() &&
-      "Can only be called while paused");
-
-  auto stackTrace = runtime_.getDebugger().getProgramState().getStackTrace();
-
-  if (stackTrace.callFrameCount() > 0) {
-    debugger::SourceLocation loc = stackTrace.callFrameForIndex(0).location;
-
-    // Invalid fileId indicates debug info isn't included when compilation took
-    // place. E.g. compiling to bytecode without -g.
-    if (loc.fileId == debugger::kInvalidLocation) {
-      return;
-    }
-
-    sendScriptParsedNotificationToClient(loc);
-
-    // Apply existing breakpoints to the new script.
-    for (auto &[id, breakpoint] : cdpBreakpoints_) {
-      if (loc.fileName == breakpoint.description.url) {
-        applyBreakpointAndSendNotification(id, breakpoint, loc);
-      }
-    }
-  }
 }
 
 /// Create a CDP breakpoint with a \p description of where to break, and
@@ -919,13 +749,24 @@ bool DebuggerDomainAgent::checkDebuggerEnabled(const m::Request &req) {
 }
 
 bool DebuggerDomainAgent::checkDebuggerPaused(const m::Request &req) {
-  if (!paused_ && !asyncDebugger_.isWaitingForCommand()) {
+  if (!debuggerDomainCoordinator_.isPaused(asyncDebugger_)) {
     sendResponseToClient(
         m::makeErrorResponse(
             req.id, m::ErrorCode::InvalidRequest, "Debugger is not paused"));
     return false;
   }
   return true;
+}
+
+void DebuggerDomainAgent::processScript(
+    const debugger::SourceLocation &srcLoc) {
+  sendScriptParsedNotificationToClient(srcLoc);
+  for (auto &[cdpBreakpointID, cdpBreakpoint] : cdpBreakpoints_) {
+    if (srcLoc.fileName == cdpBreakpoint.description.url) {
+      applyBreakpointAndSendNotification(
+          cdpBreakpointID, cdpBreakpoint, srcLoc);
+    }
+  }
 }
 
 } // namespace cdp

@@ -440,7 +440,7 @@ struct HDBDebugger : public debugger::EventObserver {
         if (breakpointId == debugger::kInvalidBreakpoint) {
           // Failed to set the breakpoint.
           // TODO: Improve error reporting here.
-          std::cout << "Invalid or duplicate breakpoint not set\n";
+          std::cout << "Invalid breakpoint not set\n";
         } else {
           const auto info = debugger.getBreakpointInfo(breakpointId);
           const auto &loc =

@@ -9,6 +9,7 @@
 #include "CDPDebugAPI.h"
 #include "ConsoleMessage.h"
 #include "DebuggerDomainAgent.h"
+#include "DebuggerDomainCoordinator.h"
 #include "HeapProfilerDomainAgent.h"
 #include "ProfilerDomainAgent.h"
 #include "RuntimeDomainAgent.h"
@@ -100,6 +101,7 @@ class CDPAgentImpl {
         int32_t executionContextID,
         HermesRuntime &runtime,
         debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+        DebuggerDomainCoordinator &debuggerDomainCoordinator,
         ConsoleMessageStorage &consoleMessageStorage,
         ConsoleMessageDispatcher &consoleMessageDispatcher,
         SynchronizedOutboundCallback messageCallback,
@@ -132,6 +134,7 @@ class CDPAgentImpl {
     int32_t executionContextID_;
     HermesRuntime &runtime_;
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
+    DebuggerDomainCoordinator &debuggerDomainCoordinator_;
     ConsoleMessageStorage &consoleMessageStorage_;
     ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
@@ -310,6 +313,7 @@ CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
     int32_t executionContextID,
     HermesRuntime &runtime,
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+    DebuggerDomainCoordinator &debuggerDomainCoordinator,
     ConsoleMessageStorage &consoleMessageStorage,
     ConsoleMessageDispatcher &consoleMessageDispatcher,
     SynchronizedOutboundCallback messageCallback,
@@ -318,6 +322,7 @@ CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
     : executionContextID_(executionContextID),
       runtime_(runtime),
       asyncDebuggerAPI_(asyncDebuggerAPI),
+      debuggerDomainCoordinator_(debuggerDomainCoordinator),
       consoleMessageStorage_(consoleMessageStorage),
       consoleMessageDispatcher_(consoleMessageDispatcher),
       messageCallback_(std::move(messageCallback)),
@@ -334,6 +339,7 @@ void CDPAgentImpl::DomainAgentsImpl::initialize() {
       executionContextID_,
       runtime_,
       asyncDebuggerAPI_,
+      debuggerDomainCoordinator_,
       messageCallback_,
       objTable_,
       *debuggerAgentState_);
@@ -546,6 +552,7 @@ CDPAgentImpl::DomainAgents::DomainAgents(
               executionContextID,
               cdpDebugAPI.runtime(),
               cdpDebugAPI.asyncDebuggerAPI(),
+              cdpDebugAPI.debuggerDomainCoordinator(),
               cdpDebugAPI.consoleMessageStorage_,
               cdpDebugAPI.consoleMessageDispatcher_,
               std::move(messageCallback),

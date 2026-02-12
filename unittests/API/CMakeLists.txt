@@ -15,6 +15,7 @@ set(APITestsSources
   ${HERMES_JSI_DIR}/jsi/test/testlib.cpp
   AsyncDebuggerAPITest.cpp
   CDPAgentTest.cpp
+  CDPAgentMultiDebuggerTest.cpp
   ConsoleMessageTest.cpp
   DomainStateTest.cpp
   SynchronizedCallbackTest.cpp
