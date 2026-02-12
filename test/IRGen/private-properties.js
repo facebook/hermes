@@ -91,9 +91,9 @@ function simpleMethods() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.B]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.B#1]: any
 // CHECK-NEXT:  %4 = CreatePrivateNameInst (:privateName) "B": string
-// CHECK-NEXT:       StoreFrameInst %1: environment, %4: privateName, [%VS2.?instance_brand_B]: privateName
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: privateName, [%VS2.?static_brand_B]: privateName
 // CHECK-NEXT:  %6 = CreatePrivateNameInst (:privateName) "B": string
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: privateName, [%VS2.?static_brand_B]: privateName
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: privateName, [%VS2.?instance_brand_B]: privateName
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS2: any, %<instance_members_initializer:B>(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %8: object, [%VS2.<instElemInitFunc:B>]: object
 // CHECK-NEXT:  %10 = AllocStackInst (:object) $?anon_0_clsPrototype: any

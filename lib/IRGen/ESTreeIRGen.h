@@ -611,6 +611,33 @@ class ESTreeIRGen {
   /// guaranteed to be, if any.
   llvh::DenseMap<const flow::ClassType::Field *, Function *> finalMethods_{};
 
+  /// Internal variables created during legacy class compilation.
+  /// These need to be cached so they can be reused when the same class
+  /// is compiled multiple times (e.g., in a finally block).
+  struct LegacyClassVars {
+    /// Variable holding the class constructor object.
+    Variable *classVar{nullptr};
+    /// Variable holding the class prototype object.
+    Variable *prototypeVar{nullptr};
+    /// Variable holding the instance elements initializer closure.
+    /// May be nullptr if there are no instance elements.
+    Variable *instElemInitFuncVar{nullptr};
+    /// Variable holding the static private brand (for static private methods).
+    Variable *staticBrand{nullptr};
+    /// Variable holding the instance private brand (for instance private
+    /// methods).
+    Variable *instanceBrand{nullptr};
+    /// Map from computed property nodes to their key variables.
+    llvh::DenseMap<ESTree::ClassPropertyNode *, Variable *> computedFieldKeys{};
+
+    LegacyClassVars() = default;
+    LegacyClassVars(Variable *cls, Variable *proto)
+        : classVar(cls), prototypeVar(proto) {}
+  };
+
+  /// Map from a class AST node to its internal variables.
+  llvh::DenseMap<ESTree::ClassLikeNode *, LegacyClassVars> legacyClassVars_{};
+
   /// A queue of "entities" that have been forward declared and mapped in
   /// \c compiledEntities_, but need to be actually compiled. This makes the
   /// compiler non-recursive.
@@ -1329,8 +1356,10 @@ class ESTreeIRGen {
   /// Declare all private names in the class' scope. This will setup the
   /// customData for all private name decls to point to the required state
   /// needed for IRGen to handle usages involving that private name.
+  /// \param classNode The class AST node, used for caching internal variables.
   /// \param scope The lexical scope, can't be null.
   void emitPrivateNameDeclarations(
+      ESTree::ClassLikeNode *classNode,
       sema::LexicalScope *scope,
       Identifier className);
 

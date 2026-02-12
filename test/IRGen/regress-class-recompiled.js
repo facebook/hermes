@@ -34,7 +34,7 @@
 // CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
-// CHECK:scope %VS1 [e: any, C1: any, C1#1: any, ?C1.prototype: object, ?C1: object, <instElemInitFunc:C1>: object, ?C1.prototype#1: object, ?C1#1: object, <instElemInitFunc:C1>#1: object]
+// CHECK:scope %VS1 [e: any, C1: any, C1#1: any, ?C1.prototype: object, ?C1: object, <instElemInitFunc:C1>: object]
 
 // CHECK:function ""(): any
 // CHECK-NEXT:%BB0:
@@ -46,13 +46,13 @@
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.C1]: any
 // CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.C1#1]: any
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %<instance_members_initializer:C1>(): functionCode
-// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.<instElemInitFunc:C1>#1]: object
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.<instElemInitFunc:C1>]: object
 // CHECK-NEXT:  %8 = AllocStackInst (:object) $?anon_1_clsPrototype: any
 // CHECK-NEXT:  %9 = CreateClassInst (:object) %1: environment, %VS1: any, %C1(): functionCode, empty: any, %8: object
 // CHECK-NEXT:  %10 = LoadStackInst (:object) %8: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.C1#1]: any
-// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.?C1#1]: object
-// CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.?C1.prototype#1]: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.?C1]: object
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: object, [%VS1.?C1.prototype]: object
 // CHECK-NEXT:  %14 = CreateFunctionInst (:object) %1: environment, %VS1: any, %<static_elements_initializer:C1>(): functionCode
 // CHECK-NEXT:  %15 = CallInst (:any) %14: object, %<static_elements_initializer:C1>(): functionCode, true: boolean, %1: environment, undefined: undefined, %9: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.C1]: any
