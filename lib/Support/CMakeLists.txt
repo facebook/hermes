@@ -16,6 +16,7 @@ if (HERMES_USE_BOOST_CONTEXT)
   include_directories(${PROJECT_SOURCE_DIR}/external/boost/boost_1_86_0)
 endif()
 
+include_directories(${PROJECT_SOURCE_DIR}/external/dragonbox/)
 include_directories(${PROJECT_SOURCE_DIR}/external/fast_float/)
 
 add_hermes_library(hermesSupport
@@ -25,6 +26,7 @@ add_hermes_library(hermesSupport
         CheckedMalloc.cpp
         Conversions.cpp
         ErrorHandling.cpp
+        FastDoubleToDecimal.cpp
         FastStrToDouble.cpp
         JSONEmitter.cpp
         MD5.cpp
