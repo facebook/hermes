@@ -82,20 +82,27 @@ static char *uintToStr(T value, llvh::MutableArrayRef<char> buf) {
   return bufEnd + 1;
 }
 
-/// ES5.1 9.8.1
+/// ES2025 6.1.6.1.20 Number::toString ( x, radix ). This only implements
+/// base 10.
 size_t numberToString(double m, char *dest, size_t destSize) {
   assert(destSize >= NUMBER_TO_STRING_BUF_SIZE);
   (void)destSize;
+  // 1. If x is NaN, return "NaN".
   if (std::isnan(m)) {
     strcpy(dest, "NaN");
     return 3;
   }
-
+  // 2. If x is either +0 or -0, return "0".
   if (m == 0) {
     strcpy(dest, "0");
     return 1;
   }
 
+  // 3. If x < -0, return the string-concatenation of "-" and
+  // Number::toString(-x, radix). We don't actually implement this with
+  // recursion, we simply add the negative sign in-place.
+
+  // 4. If x is +Infinity, return "Infinity".
   if (m == std::numeric_limits<double>::infinity()) {
     strcpy(dest, "Infinity");
     return 8;
@@ -104,8 +111,23 @@ size_t numberToString(double m, char *dest, size_t destSize) {
     strcpy(dest, "-Infinity");
     return 9;
   }
-  DoubleDecimalComponents conv = fastDoubleToDecimal(m);
   char *destPtr = dest;
+
+  // 5. Let n, k, and s be integers such that:
+  // k >= 1,
+  // radix**(k - 1) <= s < radix**k,
+  // s * radix**(n - k) is x,
+  // and k is as small as possible.
+  // Note that k is the number of digits in the representation of s using radix
+  // radix, that s is not divisible by radix, and that the least significant
+  // digit of s is not necessarily uniquely determined by these criteria.
+
+  // Informally, another way of understanding these variables are:
+  // s is an integer containing the significant digits.
+  // k is how many digits s has.
+  // n says where the decimal (or radix) point goes.
+  // 123.45 as example: s = 12345 k = 5, n = 3.
+  DoubleDecimalComponents conv = fastDoubleToDecimal(m);
   if (conv.negative) {
     *destPtr++ = '-';
   }
@@ -116,56 +138,102 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   char *sDigitsEnd = sDigitsBuf + NUMBER_TO_STRING_BUF_SIZE - 1;
   int k = sDigitsEnd - sDigitsBegin + 1;
   int n = conv.exponent + k;
-  if (k <= n && n <= 21) {
-    // Step 6 of 9.8.1.
-    for (int i = 0; i < k; ++i) {
-      *destPtr++ = sDigitsBegin[i];
-    }
-    for (int i = 0; i < n - k; ++i) {
-      *destPtr++ = '0';
-    }
-  } else if (0 < n && n <= 21) {
-    // Step 7 of 9.8.1.
-    for (int i = 0; i < n; ++i) {
-      *destPtr++ = sDigitsBegin[i];
-    }
-    *destPtr++ = '.';
-    for (int i = n; i < k; ++i) {
-      *destPtr++ = sDigitsBegin[i];
-    }
-  } else if (-6 < n && n <= 0) {
-    // Step 8 of 9.8.1.
-    *destPtr++ = '0';
-    *destPtr++ = '.';
-    for (int i = 0; i < -n; ++i) {
-      *destPtr++ = '0';
-    }
-    for (int i = 0; i < k; ++i) {
-      *destPtr++ = sDigitsBegin[i];
-    }
-  } else if (k == 1) {
-    // Step 9 of 9.8.1.
-    char nBuf[NUMBER_TO_STRING_BUF_SIZE];
-    int nLen = ::snprintf(nBuf, sizeof(nBuf), "%d", ::abs(n - 1));
-    *destPtr++ = sDigitsBegin[0];
-    *destPtr++ = 'e';
-    *destPtr++ = n - 1 < 0 ? '-' : '+';
-    for (int i = 0; i < nLen; ++i) {
-      *destPtr++ = nBuf[i];
+
+  // 6. If radix != 10 or n is in the inclusive interval from -5 to 21, then
+  if (n >= -5 && n <= 21) {
+    // a. If n >= k, then
+    if (n >= k) {
+      // i. Return the string-concatenation of:
+      // - the code units of the k digits of the representation of s using radix
+      //   radix
+      for (int i = 0; i < k; ++i) {
+        *destPtr++ = sDigitsBegin[i];
+      }
+      // - n - k occurrences of the code unit 0x0030 (DIGIT ZERO)
+      for (int i = 0; i < n - k; ++i) {
+        *destPtr++ = '\x30';
+      }
+    } else if (n > 0) {
+      // b. Else if n > 0, then
+      // i. Return the string-concatenation of:
+      // - the code units of the most significant n digits of the representation
+      // of s using radix radix.
+      for (int i = 0; i < n; ++i) {
+        *destPtr++ = sDigitsBegin[i];
+      }
+      // the code unit 0x002E (FULL STOP)
+      *destPtr++ = '\x2e';
+      // the code units of the remaining k - n digits of the representation of s
+      // using radix radix
+      for (int i = n; i < k; ++i) {
+        *destPtr++ = sDigitsBegin[i];
+      }
+    } else {
+      // c. Else,
+      // i. Assert: n <= 0.
+      assert(n <= 0 && "n is not less than or equal to zero");
+      // Return the string-concatenation of:
+      // - the code unit 0x0030 (DIGIT ZERO)
+      *destPtr++ = '\x30';
+      // - the code unit 0x002E (FULL STOP)
+      *destPtr++ = '\x2e';
+      // - -n occurrences of the code unit 0x0030 (DIGIT ZERO)
+      for (int i = 0; i < -n; ++i) {
+        *destPtr++ = '\x30';
+      }
+      // - the code units of the k digits of the representation of s using radix
+      // radix
+      for (int i = 0; i < k; ++i) {
+        *destPtr++ = sDigitsBegin[i];
+      }
     }
   } else {
-    // Step 10 of 9.8.1.
+    // 7. NOTE: In this case, the input will be represented using scientific E
+    // notation, such as 1.2e+3.
+    // 8. Assert: radix is 10 (this is always true for this function.)
+    // 9. If n < 0, then
+    // a. Let exponentSign be the code unit 0x002D (HYPHEN-MINUS).
+    // 10. Else,
+    // a. Let exponentSign be the code unit 0x002B (PLUS SIGN).
+    char exponentSign = n < 0 ? '\x2d' : '\x2b';
+
     char nBuf[NUMBER_TO_STRING_BUF_SIZE];
-    int nLen = ::snprintf(nBuf, sizeof(nBuf), "%d", ::abs(n - 1));
-    *destPtr++ = sDigitsBegin[0];
-    *destPtr++ = '.';
-    for (int i = 1; i < k; ++i) {
-      *destPtr++ = sDigitsBegin[i];
-    }
-    *destPtr++ = 'e';
-    *destPtr++ = n - 1 < 0 ? '-' : '+';
-    for (int i = 0; i < nLen; ++i) {
-      *destPtr++ = nBuf[i];
+    int expVal = n - 1;
+    int nLen = ::snprintf(nBuf, sizeof(nBuf), "%d", ::abs(expVal));
+
+    // 11. If k = 1, then
+    if (k == 1) {
+      // a. Return the string-concatenation of:
+      // the code unit of the single digit of s
+      *destPtr++ = '0' + conv.significand;
+      // - the code unit 0x0065 (LATIN SMALL LETTER E)
+      *destPtr++ = '\x65';
+      // - exponentSign
+      *destPtr++ = exponentSign;
+      // - the code units of the decimal representation of abs(n - 1)
+      for (int i = 0; i < nLen; ++i) {
+        *destPtr++ = nBuf[i];
+      }
+    } else {
+      // 12. Return the string-concatenation of:
+      // - the code unit of the most significant digit of the decimal
+      // representation of s
+      *destPtr++ = sDigitsBegin[0];
+      // - the code unit 0x002E (FULL STOP)
+      *destPtr++ = '\x2e';
+      // - the code units of the remaining k - 1 digits of the decimal
+      // representation of s
+      for (int i = 1; i < k; ++i) {
+        *destPtr++ = sDigitsBegin[i];
+      }
+      // - the code unit 0x0065 (LATIN SMALL LETTER E)
+      *destPtr++ = '\x65';
+      // - exponentSign
+      *destPtr++ = exponentSign;
+      // - the code units of the decimal representation of abs(n - 1)
+      for (int i = 0; i < nLen; ++i) {
+        *destPtr++ = nBuf[i];
+      }
     }
   }
 
