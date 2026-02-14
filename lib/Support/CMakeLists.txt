@@ -19,7 +19,6 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR}/external/fast_float/)
 
 add_hermes_library(hermesSupport
-        Allocator.cpp
         Base64.cpp
         Base64vlq.cpp
         BigIntSupport.cpp
