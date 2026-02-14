@@ -109,3 +109,113 @@ print(JSON.stringify("\udfff\udc00"));
 // CHECK-NEXT: "\udfff\udc00"
 print(JSON.stringify("\ue000\udc00"));
 // CHECK-NEXT: "\udc00"
+
+// Testing number values.
+// NaN -> null (JSON spec)
+print(JSON.stringify(NaN));
+// CHECK-NEXT: null
+
+// +0 and -0 -> 0
+print(JSON.stringify(0));
+// CHECK-NEXT: 0
+print(JSON.stringify(-0));
+// CHECK-NEXT: 0
+
+// Infinity -> null
+print(JSON.stringify(Infinity));
+// CHECK-NEXT: null
+print(JSON.stringify(-Infinity));
+// CHECK-NEXT: null
+
+// Negative numbers
+print(JSON.stringify(-42));
+// CHECK-NEXT: -42
+print(JSON.stringify(-3.14159));
+// CHECK-NEXT: -3.14159
+print(JSON.stringify(-0.001));
+// CHECK-NEXT: -0.001
+
+// Large integers (n >= k, no decimal point)
+print(JSON.stringify(1));
+// CHECK-NEXT: 1
+print(JSON.stringify(42));
+// CHECK-NEXT: 42
+print(JSON.stringify(1000));
+// CHECK-NEXT: 1000
+print(JSON.stringify(12345));
+// CHECK-NEXT: 12345
+print(JSON.stringify(1000000));
+// CHECK-NEXT: 1000000
+
+// Regular decimals (0 < n < k, decimal in middle)
+print(JSON.stringify(0.5));
+// CHECK-NEXT: 0.5
+print(JSON.stringify(1.5));
+// CHECK-NEXT: 1.5
+print(JSON.stringify(3.14159));
+// CHECK-NEXT: 3.14159
+print(JSON.stringify(123.456));
+// CHECK-NEXT: 123.456
+
+// Small decimals (n <= 0, leading zeros after decimal)
+print(JSON.stringify(0.1));
+// CHECK-NEXT: 0.1
+print(JSON.stringify(0.01));
+// CHECK-NEXT: 0.01
+print(JSON.stringify(0.001));
+// CHECK-NEXT: 0.001
+print(JSON.stringify(0.0001));
+// CHECK-NEXT: 0.0001
+print(JSON.stringify(0.00001));
+// CHECK-NEXT: 0.00001
+print(JSON.stringify(0.000001));
+// CHECK-NEXT: 0.000001
+
+// Scientific notation, k=1 (single digit mantissa)
+print(JSON.stringify(1e21));
+// CHECK-NEXT: 1e+21
+print(JSON.stringify(1e22));
+// CHECK-NEXT: 1e+22
+print(JSON.stringify(2e25));
+// CHECK-NEXT: 2e+25
+print(JSON.stringify(1e-7));
+// CHECK-NEXT: 1e-7
+print(JSON.stringify(1e-10));
+// CHECK-NEXT: 1e-10
+print(JSON.stringify(3e-15));
+// CHECK-NEXT: 3e-15
+
+// Scientific notation, k>1 (multiple digit mantissa)
+print(JSON.stringify(1.23e21));
+// CHECK-NEXT: 1.23e+21
+print(JSON.stringify(9.87654e25));
+// CHECK-NEXT: 9.87654e+25
+print(JSON.stringify(1.5e30));
+// CHECK-NEXT: 1.5e+30
+print(JSON.stringify(1.23e-7));
+// CHECK-NEXT: 1.23e-7
+print(JSON.stringify(9.87e-10));
+// CHECK-NEXT: 9.87e-10
+print(JSON.stringify(3.14159e-15));
+// CHECK-NEXT: 3.14159e-15
+
+// Boundary cases for n in [-5, 21]
+// 1e-5 and 1e-6 are still inside [-5, 21] so no scientific notation
+print(JSON.stringify(1e-5));
+// CHECK-NEXT: 0.00001
+print(JSON.stringify(1e-6));
+// CHECK-NEXT: 0.000001
+// 1e20 is inside [-5, 21] so no scientific notation
+print(JSON.stringify(1e20));
+// CHECK-NEXT: 100000000000000000000
+// 1e21 is outside, so scientific notation
+print(JSON.stringify(1e21));
+// CHECK-NEXT: 1e+21
+
+// Edge cases with many significant digits
+print(JSON.stringify(1.234567890123456e10));
+// CHECK-NEXT: 12345678901.23456
+print(JSON.stringify(9.999999999999998e15));
+// CHECK-NEXT: 9999999999999998
+print(JSON.stringify(1.111111111111111e-10));
+// CHECK-NEXT: 1.111111111111111e-10
