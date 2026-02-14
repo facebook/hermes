@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_TRACINGRUNTIME_H
-#define HERMES_TRACINGRUNTIME_H
+#pragma once
 
 #include "SynthTrace.h"
 
@@ -328,5 +327,3 @@ std::unique_ptr<TracingHermesRuntime> makeTracingHermesRuntime(
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_TRACINGRUNTIME_H

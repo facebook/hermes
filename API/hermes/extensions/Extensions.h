@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_EXTENSIONS_EXTENSIONS_H
-#define HERMES_EXTENSIONS_EXTENSIONS_H
+#pragma once
 
 #include <jsi/jsi.h>
 
@@ -19,5 +18,3 @@ void installExtensions(jsi::Runtime &rt, jsi::Object extensions);
 
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_EXTENSIONS_EXTENSIONS_H

@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_HERMES_TRACING_H
-#define HERMES_HERMES_TRACING_H
+#pragma once
 
 #include <hermes/hermes.h>
 
@@ -51,5 +50,3 @@ std::shared_ptr<jsi::Runtime> makeTracingHermesRuntime(
 
 } // namespace hermes
 } // namespace facebook
-
-#endif

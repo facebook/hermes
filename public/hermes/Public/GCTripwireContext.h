@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
-#define HERMES_PUBLIC_GCTRIPWIRECONTEXT_H
+#pragma once
 
 #include <hermes/Public/HermesExport.h>
 
@@ -39,5 +38,3 @@ class HERMES_EXPORT GCTripwireContext {
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMES_PUBLIC_GCTRIPWIRECONTEXT_H

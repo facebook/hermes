@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_EXTENSIONS_TEXTDECODERUTILS_H
-#define HERMES_EXTENSIONS_TEXTDECODERUTILS_H
+#pragma once
 
 #include "llvh/ADT/Optional.h"
 #include "llvh/ADT/StringRef.h"
@@ -112,5 +111,3 @@ DecodeError decodeUTF16(
 
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_EXTENSIONS_TEXTDECODERUTILS_H

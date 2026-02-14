@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_HERMES_H
-#define HERMES_HERMES_H
+#pragma once
 
 #include <exception>
 #include <list>
@@ -241,5 +240,3 @@ makeThreadSafeHermesRuntime(
         ::hermes::vm::RuntimeConfig());
 } // namespace hermes
 } // namespace facebook
-
-#endif

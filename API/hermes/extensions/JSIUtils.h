@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_EXTENSIONS_JSIUTILS_H
-#define HERMES_EXTENSIONS_JSIUTILS_H
+#pragma once
 
 #include "Intrinsics.h"
 
@@ -88,5 +87,3 @@ TypedArrayBufferInfo getTypedArrayBuffer(
 
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_EXTENSIONS_JSIUTILS_H

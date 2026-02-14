@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_EXTENSIONS_EXTENSIONSBYTECODE_H
-#define HERMES_EXTENSIONS_EXTENSIONSBYTECODE_H
+#pragma once
 
 #include "llvh/ADT/ArrayRef.h"
 
@@ -22,5 +21,3 @@ llvh::ArrayRef<uint8_t> getExtensionsBytecode();
 
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_EXTENSIONS_EXTENSIONSBYTECODE_H

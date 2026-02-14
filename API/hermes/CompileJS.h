@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_COMPILEJS_H
-#define HERMES_COMPILEJS_H
+#pragma once
 
 #include <optional>
 #include <string>
@@ -92,5 +91,3 @@ bool compileJS(
     std::optional<std::string_view> sourceMapBuf = std::nullopt);
 
 } // namespace hermes
-
-#endif

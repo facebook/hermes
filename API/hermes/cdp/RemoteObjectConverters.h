@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_REMOTEOBJECTCONVERTERS_H
-#define HERMES_CDP_REMOTEOBJECTCONVERTERS_H
+#pragma once
 
 #include <hermes/DebuggerAPI.h>
 #include <hermes/cdp/MessageTypes.h>
@@ -76,5 +75,3 @@ ExceptionDetails makeExceptionDetails(
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_REMOTEOBJECTCONVERTERS_H

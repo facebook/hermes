@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_RUNTIMEDOMAINAGENT_H
-#define HERMES_CDP_RUNTIMEDOMAINAGENT_H
+#pragma once
 
 #include <optional>
 
@@ -137,5 +136,3 @@ class RuntimeDomainAgent : public DomainAgent {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_RUNTIMEDOMAINAGENT_H

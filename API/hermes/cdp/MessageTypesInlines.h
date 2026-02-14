@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_MESSAGETYPESINLINES_H
-#define HERMES_CDP_MESSAGETYPESINLINES_H
+#pragma once
 
 #include <memory>
 #include <optional>
@@ -312,5 +311,3 @@ void deleter(T *p) {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_MESSAGETYPESINLINES_H

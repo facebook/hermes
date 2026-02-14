@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_CALLBACKOSTREAM_H
-#define HERMES_CDP_CALLBACKOSTREAM_H
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -88,5 +87,3 @@ class CallbackOStream : public std::ostream {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_CALLBACKOSTREAM_H

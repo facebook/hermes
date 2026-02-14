@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_SYNTHTRACE_H
-#define HERMES_SYNTHTRACE_H
+#pragma once
 
 #include "hermes/ADT/StringSetVector.h"
 #include "hermes/Public/RuntimeConfig.h"
@@ -1574,5 +1573,3 @@ class SynthTrace {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_SYNTHTRACE_H

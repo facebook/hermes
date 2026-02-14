@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_EXTENSIONS_TEXTDECODER_H
-#define HERMES_EXTENSIONS_TEXTDECODER_H
+#pragma once
 
 #include <jsi/jsi.h>
 
@@ -29,5 +28,3 @@ void installTextDecoder(jsi::Runtime &runtime, jsi::Object &extensions);
 
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_EXTENSIONS_TEXTDECODER_H

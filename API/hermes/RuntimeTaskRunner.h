@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_RUNTIMETASKRUNNER_H
-#define HERMES_RUNTIMETASKRUNNER_H
+#pragma once
 
 #include "AsyncDebuggerAPI.h"
 
@@ -63,5 +62,3 @@ class RuntimeTaskRunner
 } // namespace debugger
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_RUNTIMETASKRUNNER_H

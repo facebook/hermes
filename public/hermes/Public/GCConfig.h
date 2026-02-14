@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_GCCONFIG_H
-#define HERMES_PUBLIC_GCCONFIG_H
+#pragma once
 
 #include "hermes/Public/CtorConfig.h"
 #include "hermes/Public/GCTripwireContext.h"
@@ -210,5 +209,3 @@ _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMES_PUBLIC_GCCONFIG_H

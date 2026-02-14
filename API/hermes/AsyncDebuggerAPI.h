@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_ASYNCDEBUGGERAPI_H
-#define HERMES_ASYNCDEBUGGERAPI_H
+#pragma once
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
@@ -275,5 +274,3 @@ class HERMES_EXPORT AsyncDebuggerAPI {
 } // namespace facebook
 
 #endif // !HERMES_ENABLE_DEBUGGER
-
-#endif // HERMES_ASYNCDEBUGGERAPI_H

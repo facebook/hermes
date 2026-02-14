@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_DOMAINSTATE_H
-#define HERMES_CDP_DOMAINSTATE_H
+#pragma once
 
 #include <memory>
 #include <mutex>
@@ -139,5 +138,3 @@ class DomainState {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_DOMAINSTATE_H

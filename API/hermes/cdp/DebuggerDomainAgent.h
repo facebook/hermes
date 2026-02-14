@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_DEBUGGERDOMAINAGENT_H
-#define HERMES_CDP_DEBUGGERDOMAINAGENT_H
+#pragma once
 
 #include <string>
 
@@ -280,5 +279,3 @@ class DebuggerDomainAgent : public DomainAgent {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_DEBUGGERDOMAINAGENT_H

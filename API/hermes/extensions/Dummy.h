@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_EXTENSIONS_DUMMY_H
-#define HERMES_EXTENSIONS_DUMMY_H
+#pragma once
 
 #include <jsi/jsi.h>
 
@@ -23,5 +22,3 @@ void installDummy(jsi::Runtime &runtime, jsi::Object &extensions);
 
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_EXTENSIONS_DUMMY_H

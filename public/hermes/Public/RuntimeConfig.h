@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_RUNTIMECONFIG_H
-#define HERMES_PUBLIC_RUNTIMECONFIG_H
+#pragma once
 
 #include "hermes/Public/CrashManager.h"
 #include "hermes/Public/CtorConfig.h"
@@ -137,5 +136,3 @@ _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {})
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMES_PUBLIC_RUNTIMECONFIG_H

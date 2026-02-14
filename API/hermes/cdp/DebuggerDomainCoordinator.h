@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_DEBUGGERDOMAINCOORDINATOR_H
-#define HERMES_CDP_DEBUGGERDOMAINCOORDINATOR_H
+#pragma once
 
 #include <vector>
 
@@ -136,5 +135,3 @@ class DebuggerDomainCoordinator {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_DEBUGGERDOMAINCOORDINATOR_H

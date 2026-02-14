@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_EXTENSIONS_INTRINSICS_H
-#define HERMES_EXTENSIONS_INTRINSICS_H
+#pragma once
 
 #include "jsi/jsi.h"
 
@@ -43,5 +42,3 @@ const ExtensionIntrinsics &getIntrinsics(jsi::Runtime &rt);
 
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_EXTENSIONS_INTRINSICS_H

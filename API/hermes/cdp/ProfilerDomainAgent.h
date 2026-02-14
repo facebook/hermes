@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_PROFILERDOMAINAGENT_H
-#define HERMES_CDP_PROFILERDOMAINAGENT_H
+#pragma once
 
 #include <hermes/cdp/MessageConverters.h>
 #include <hermes/hermes.h>
@@ -38,5 +37,3 @@ class ProfilerDomainAgent : public DomainAgent {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_PROFILERDOMAINAGENT_H
