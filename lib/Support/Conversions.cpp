@@ -6,8 +6,9 @@
  */
 
 #include "hermes/Support/Conversions.h"
+#include "hermes/Support/FastDoubleToDecimal.h"
 
-#include "dtoa/dtoa.h"
+#include "llvh/ADT/ArrayRef.h"
 
 #include <cmath>
 
@@ -55,12 +56,36 @@ int32_t truncateToInt32SlowPath(double d) {
   }
 }
 
+/// Convert an unsigned integer \p value to its decimal string representation,
+/// not null terminated. Least significant digit will be written to the last
+/// position in \p buf.
+/// \param value is the value to be converted.
+/// \param buf is a pre-allocated buffer to hold the string contents. Must be
+///   at least 20 characters to hold the maximum uint64_t value.
+/// \return pointer to the beginning of the string within \p buf.
+template <typename T>
+static char *uintToStr(T value, llvh::MutableArrayRef<char> buf) {
+  static_assert(std::is_integral<T>::value, "T must be integral");
+  static_assert(std::is_unsigned<T>::value, "T must be unsigned");
+  // uint64_t max number is 20 digits.
+  assert(buf.size() >= 20 && "buffer must hold at least 20 characters");
+  char *bufEnd = buf.end() - 1;
+  if (value == 0) {
+    *bufEnd = '0';
+    return bufEnd;
+  }
+  // Extract digits least-significant first.
+  for (; value > 0; value /= 10, --bufEnd) {
+    T digit = value % 10;
+    *bufEnd = (char)('0' + digit);
+  }
+  return bufEnd + 1;
+}
+
 /// ES5.1 9.8.1
 size_t numberToString(double m, char *dest, size_t destSize) {
   assert(destSize >= NUMBER_TO_STRING_BUF_SIZE);
   (void)destSize;
-  DtoaAllocator<> dalloc{};
-
   if (std::isnan(m)) {
     strcpy(dest, "NaN");
     return 3;
@@ -79,35 +104,22 @@ size_t numberToString(double m, char *dest, size_t destSize) {
     strcpy(dest, "-Infinity");
     return 9;
   }
-
-  // After special cases, run dtoa to convert.
-  // We do this manually because we need all of the output of dtoa.
-  // Note that n, k, s are defined per ES5.1 9.8.1
-
-  // Iterator for easier population.
+  DoubleDecimalComponents conv = fastDoubleToDecimal(m);
   char *destPtr = dest;
-
-  // Decimal point index.
-  int n;
-
-  // 1 if negative, 0 else.
-  int sign;
-
-  // Points to the end of the string s after it's populated.
-  char *sEnd;
-
-  char *s = ::g_dtoa(dalloc, m, 0, 0, &n, &sign, &sEnd);
-
-  if (sign)
+  if (conv.negative) {
     *destPtr++ = '-';
-
-  // Length of decimal representation of s.
-  int k = sEnd - s;
-
+  }
+  // Convert significand to a temporary digit buffer.
+  char sDigitsBuf[NUMBER_TO_STRING_BUF_SIZE];
+  char *sDigitsBegin =
+      uintToStr(conv.significand, llvh::MutableArrayRef<char>(sDigitsBuf));
+  char *sDigitsEnd = sDigitsBuf + NUMBER_TO_STRING_BUF_SIZE - 1;
+  int k = sDigitsEnd - sDigitsBegin + 1;
+  int n = conv.exponent + k;
   if (k <= n && n <= 21) {
     // Step 6 of 9.8.1.
     for (int i = 0; i < k; ++i) {
-      *destPtr++ = s[i];
+      *destPtr++ = sDigitsBegin[i];
     }
     for (int i = 0; i < n - k; ++i) {
       *destPtr++ = '0';
@@ -115,11 +127,11 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   } else if (0 < n && n <= 21) {
     // Step 7 of 9.8.1.
     for (int i = 0; i < n; ++i) {
-      *destPtr++ = s[i];
+      *destPtr++ = sDigitsBegin[i];
     }
     *destPtr++ = '.';
     for (int i = n; i < k; ++i) {
-      *destPtr++ = s[i];
+      *destPtr++ = sDigitsBegin[i];
     }
   } else if (-6 < n && n <= 0) {
     // Step 8 of 9.8.1.
@@ -129,14 +141,13 @@ size_t numberToString(double m, char *dest, size_t destSize) {
       *destPtr++ = '0';
     }
     for (int i = 0; i < k; ++i) {
-      *destPtr++ = s[i];
+      *destPtr++ = sDigitsBegin[i];
     }
   } else if (k == 1) {
     // Step 9 of 9.8.1.
     char nBuf[NUMBER_TO_STRING_BUF_SIZE];
     int nLen = ::snprintf(nBuf, sizeof(nBuf), "%d", ::abs(n - 1));
-
-    *destPtr++ = s[0];
+    *destPtr++ = sDigitsBegin[0];
     *destPtr++ = 'e';
     *destPtr++ = n - 1 < 0 ? '-' : '+';
     for (int i = 0; i < nLen; ++i) {
@@ -146,11 +157,10 @@ size_t numberToString(double m, char *dest, size_t destSize) {
     // Step 10 of 9.8.1.
     char nBuf[NUMBER_TO_STRING_BUF_SIZE];
     int nLen = ::snprintf(nBuf, sizeof(nBuf), "%d", ::abs(n - 1));
-
-    *destPtr++ = s[0];
+    *destPtr++ = sDigitsBegin[0];
     *destPtr++ = '.';
     for (int i = 1; i < k; ++i) {
-      *destPtr++ = s[i];
+      *destPtr++ = sDigitsBegin[i];
     }
     *destPtr++ = 'e';
     *destPtr++ = n - 1 < 0 ? '-' : '+';
@@ -162,9 +172,7 @@ size_t numberToString(double m, char *dest, size_t destSize) {
   // Null-terminate
   *destPtr++ = '\0';
   assert(static_cast<size_t>(destPtr - dest) < NUMBER_TO_STRING_BUF_SIZE);
-
-  g_freedtoa(dalloc, s);
-  return destPtr - dest - 1;
+  return static_cast<size_t>(destPtr - dest - 1);
 }
 } // namespace hermes
 
