@@ -197,22 +197,24 @@ size_t numberToString(double m, char *dest, size_t destSize) {
     // a. Let exponentSign be the code unit 0x002B (PLUS SIGN).
     char exponentSign = n < 0 ? '\x2d' : '\x2b';
 
-    char nBuf[NUMBER_TO_STRING_BUF_SIZE];
-    int expVal = n - 1;
-    int nLen = ::snprintf(nBuf, sizeof(nBuf), "%d", ::abs(expVal));
+    char nDigitsBuf[NUMBER_TO_STRING_BUF_SIZE];
+    char *nDigitsBegin = uintToStr(
+        (unsigned int)std::abs(n - 1), llvh::MutableArrayRef<char>(nDigitsBuf));
+    char *nDigitsEnd = nDigitsBuf + NUMBER_TO_STRING_BUF_SIZE - 1;
+    int nLen = nDigitsEnd - nDigitsBegin + 1;
 
     // 11. If k = 1, then
     if (k == 1) {
       // a. Return the string-concatenation of:
       // the code unit of the single digit of s
-      *destPtr++ = '0' + conv.significand;
+      *destPtr++ = sDigitsBegin[0];
       // - the code unit 0x0065 (LATIN SMALL LETTER E)
       *destPtr++ = '\x65';
       // - exponentSign
       *destPtr++ = exponentSign;
       // - the code units of the decimal representation of abs(n - 1)
       for (int i = 0; i < nLen; ++i) {
-        *destPtr++ = nBuf[i];
+        *destPtr++ = nDigitsBegin[i];
       }
     } else {
       // 12. Return the string-concatenation of:
@@ -232,7 +234,7 @@ size_t numberToString(double m, char *dest, size_t destSize) {
       *destPtr++ = exponentSign;
       // - the code units of the decimal representation of abs(n - 1)
       for (int i = 0; i < nLen; ++i) {
-        *destPtr++ = nBuf[i];
+        *destPtr++ = nDigitsBegin[i];
       }
     }
   }
