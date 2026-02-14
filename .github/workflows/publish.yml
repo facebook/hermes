@@ -25,7 +25,7 @@ jobs:
       GHA_NPM_TOKEN: ${{ secrets.GHA_NPM_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Setup git safe folders
         shell: bash
         run: git config --global --add safe.directory '*'
@@ -33,37 +33,37 @@ jobs:
         shell: bash
         run: mkdir -p /tmp/hermes/osx-bin
       - name: Download osx-bin release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermes-osx-bin-Release
           path: /tmp/hermes/osx-bin/Release
       - name: Download osx-bin debug artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermes-osx-bin-Debug
           path: /tmp/hermes/osx-bin/Debug
       - name: Download darwin-bin release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermes-darwin-bin-Release
           path: /tmp/hermes/hermes-runtime-darwin
       - name: Download darwin-bin debug artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermes-darwin-bin-Debug
           path: /tmp/hermes/hermes-runtime-darwin
       - name: Download hermes dSYM debug artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermes-dSYM-Debug
           path: /tmp/hermes/dSYM/Debug
       - name: Download hermes dSYM release vartifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermes-dSYM-Release
           path: /tmp/hermes/dSYM/Release
       - name: Download linux-bin artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: hermes-linux-bin
           path: /tmp/hermes/linux64-bin
@@ -95,7 +95,7 @@ jobs:
         run: |
           node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }}
       - name: Upload npm logs
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: npm-logs
           path: ~/.npm/_logs

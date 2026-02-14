@@ -11,7 +11,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v6
       with:
         path: hermes
     - name: Install dependencies
@@ -33,7 +33,7 @@ jobs:
         shasum -a 256 output/${TAR_NAME} > output/${TAR_NAME}.sha256
       env:
         TAR_NAME: hermes-cli-darwin.tar.gz
-    - uses: actions/upload-artifact@v4.3.1
+    - uses: actions/upload-artifact@v6
       with:
         name: macos-hermes
         path: output
@@ -56,7 +56,7 @@ jobs:
     - uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: 16.2
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v6
       with:
         path: hermes
     - name: Setup dependencies
@@ -90,7 +90,7 @@ jobs:
             test_runner_flags: "--vm-args='-Xjit=force'"
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v4.1.0
+    - uses: actions/checkout@v6
       with:
         path: hermes
     - name: Setup dependencies
@@ -124,7 +124,7 @@ jobs:
     steps:
       # checkout action has problem running on container, currently using v1 can bypass it,
       # see https://github.com/actions/checkout/issues/334.
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v6
       - name: Setup dependencies
         run: |-
             apt update
