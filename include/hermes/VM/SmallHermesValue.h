@@ -94,6 +94,13 @@ class SmallHermesValueAdaptor : protected HermesValue {
     return HermesValue::getNumberAs<T>();
   }
 
+  HermesValue encodeAsHermesValue() const {
+    return *this;
+  }
+  static SmallHermesValueAdaptor decodeFromHermesValue(HermesValue hv) {
+    return SmallHermesValueAdaptor{hv};
+  }
+
   HermesValue toHV(PointerBase &) const {
     return *this;
   }
@@ -402,6 +409,44 @@ class HermesValue32 {
   RawType getRaw() const {
     return raw_;
   }
+
+#ifndef HERMESVM_COMPRESSED_POINTERS
+  /// Encode this HV32 directly into a HermesValue. If the current tag is
+  /// CompressedHV64, the result HermesValue is the decompressed value and has
+  /// right tag in it. Otherwise, the result HermesValue has tag RawHV32 and the
+  /// data bits are exactly from this HV32.
+  HermesValue encodeAsHermesValue() const {
+    if (getTag() == Tag::CompressedHV64) {
+      return HermesValue::fromRaw(compressedHV64ToBits());
+    }
+    // On 64 bit platforms, the top 16 bits of rawValue must be zero, so we can
+    // directly set the tag RawHV32.
+    assert(
+        (raw_ & ~HermesValue::kDataMask) == 0 && "raw value exceeds 48 bits");
+    return HermesValue::fromTagAndValue(HermesValue::Tag::RawHV32, raw_);
+  }
+  /// Take the directly encoded HV32 out from \p hv.
+  static HermesValue32 decodeFromHermesValue(HermesValue hv) {
+    if (hv.isNumberOrCompressible()) {
+      return bitsToCompressedHV64(hv.getRaw());
+    }
+    assert((hv.getTag() == HermesValue::Tag::RawHV32) && "Must be RawHV32");
+    return fromRaw(hv.getRaw() & HermesValue::kDataMask);
+  }
+#else
+  /// Encode this HV32 directly into a HermesValue, the low 32 bits are the
+  /// raw value of this HV32.
+  HermesValue encodeAsHermesValue() const {
+    return HermesValue::fromTagAndValue(HermesValue::Tag::RawHV32, raw_);
+  }
+  /// Take the directly encoded HV32 out from \p hv, which must have tag
+  /// RawHV32.
+  static HermesValue32 decodeFromHermesValue(HermesValue hv) {
+    assert((hv.getTag() == HermesValue::Tag::RawHV32) && "Must be RawHV32");
+    static_assert(sizeof(RawType) == sizeof(uint32_t));
+    return fromRaw((uint32_t)hv.getRaw());
+  }
+#endif
 
   /// Convert this to a full HermesValue, but do not unbox a BoxedDouble.
   /// This is only intended for diagnostics or for code reuse in the GC.

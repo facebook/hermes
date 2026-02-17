@@ -239,4 +239,143 @@ TEST_F(SmallHermesValueRuntimeTest, ObjectTest) {
   EXPECT_EQ(HV.getObject(), obj.get());
 }
 
+#ifdef HERMESVM_BOXED_DOUBLES
+#ifdef HERMESVM_COMPRESSED_POINTERS
+TEST_F(SmallHermesValueRuntimeTest, EncodeDecodeAsHV64) {
+  // SHV of compressible non-Number, e.g., Undefined
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeUndefinedValue();
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of compressible Number
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(0.0, runtime);
+#ifndef HERMESVM_SANITIZE_HANDLES
+    ASSERT_TRUE(SHV.isInlinedDouble());
+#endif
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of non-compressible Number
+  {
+    double d = std::numeric_limits<double>::max();
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(d, runtime);
+    ASSERT_TRUE(SHV.isBoxedDouble());
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Object
+  {
+    auto obj = JSObject::create(runtime);
+    SmallHermesValue SHV =
+        SmallHermesValue::encodeObjectValue(obj.get(), runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Symbol
+  {
+    auto sym = SymbolID::unsafeCreate(42);
+    SmallHermesValue SHV = SmallHermesValue::encodeSymbolValue(sym);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of String
+  {
+    auto str = StringPrimitive::createNoThrow(
+        runtime, createUTF16Ref(u"I'm a string"));
+    SmallHermesValue SHV = SmallHermesValue::encodeStringValue(*str, runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+}
+#else
+TEST_F(SmallHermesValueRuntimeTest, EncodeDecodeAsHV64) {
+  // SHV of compressible non-Number, e.g., Undefined
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeUndefinedValue();
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isUndefined());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of compressible Number
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(0.0, runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+#ifndef HERMESVM_SANITIZE_HANDLES
+    ASSERT_TRUE(SHV.isInlinedDouble());
+    EXPECT_TRUE(HV.isNumber());
+#else
+    ASSERT_TRUE(SHV.isBoxedDouble());
+    ASSERT_TRUE(HV.isRawHV32());
+#endif
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of non-compressible Number
+  {
+    double d = std::numeric_limits<double>::max();
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(d, runtime);
+    ASSERT_TRUE(SHV.isBoxedDouble());
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Object
+  {
+    auto obj = JSObject::create(runtime);
+    SmallHermesValue SHV =
+        SmallHermesValue::encodeObjectValue(obj.get(), runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Symbol
+  {
+    auto sym = SymbolID::unsafeCreate(42);
+    SmallHermesValue SHV = SmallHermesValue::encodeSymbolValue(sym);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of String
+  {
+    auto str = StringPrimitive::createNoThrow(
+        runtime, createUTF16Ref(u"I'm a string"));
+    SmallHermesValue SHV = SmallHermesValue::encodeStringValue(*str, runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+}
+#endif
+#endif
+
 } // anonymous namespace.
