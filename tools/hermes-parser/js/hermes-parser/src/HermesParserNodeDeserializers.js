@@ -702,7 +702,7 @@ function deserializeImportDeclaration() {
     loc: this.addEmptyLoc(),
     specifiers: this.deserializeNodeList(),
     source: this.deserializeNode(),
-    assertions: this.deserializeNodeList(),
+    attributes: this.deserializeNodeList(),
     importKind: this.deserializeString(),
   };
 }

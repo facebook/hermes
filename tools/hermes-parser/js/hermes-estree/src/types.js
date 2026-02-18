@@ -1058,7 +1058,7 @@ export interface ImportDeclaration extends BaseNode {
     ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier,
   >;
   +source: StringLiteral;
-  +assertions: $ReadOnlyArray<ImportAttribute>;
+  +attributes: $ReadOnlyArray<ImportAttribute>;
 
   +importKind: 'value' | 'type' | 'typeof';
 }

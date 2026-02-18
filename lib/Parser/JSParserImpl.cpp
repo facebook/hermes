@@ -84,7 +84,6 @@ void JSParserImpl::initializeIdentifiers() {
   asyncIdent_ = kw_.identAsync;
   argumentsIdent_ = kw_.identArguments;
   awaitIdent_ = kw_.identAwait;
-  assertIdent_ = kw_.identAssert;
 
 #if HERMES_PARSE_FLOW
 
@@ -6613,13 +6612,13 @@ Optional<ESTree::StringLiteralNode *> JSParserImpl::parseFromClause() {
   return source;
 }
 
-bool JSParserImpl::parseAssertClause(ESTree::NodeList &attributes) {
-  assert(check(assertIdent_));
+bool JSParserImpl::parseWithClause(ESTree::NodeList &attributes) {
+  assert(check(TokenKind::rw_with));
   SMLoc start = advance().Start;
 
-  // assert { }
-  // assert { AssertEntries ,[opt] }
-  //        ^
+  // with { }
+  // with { WithEntries ,[opt] }
+  //      ^
 
   if (!eat(
           TokenKind::l_brace,
@@ -6717,8 +6716,8 @@ JSParserImpl::parseImportDeclaration() {
     advance();
 
     ESTree::NodeList attributes{};
-    if (check(assertIdent_) && !lexer_.isNewLineBeforeCurrentToken()) {
-      if (!parseAssertClause(attributes))
+    if (check(TokenKind::rw_with) && !lexer_.isNewLineBeforeCurrentToken()) {
+      if (!parseWithClause(attributes))
         return None;
     }
 
@@ -6745,8 +6744,8 @@ JSParserImpl::parseImportDeclaration() {
   }
 
   ESTree::NodeList attributes{};
-  if (check(assertIdent_) && !lexer_.isNewLineBeforeCurrentToken()) {
-    if (!parseAssertClause(attributes))
+  if (check(TokenKind::rw_with) && !lexer_.isNewLineBeforeCurrentToken()) {
+    if (!parseWithClause(attributes))
       return None;
   }
 

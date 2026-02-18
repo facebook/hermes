@@ -606,7 +606,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           node.importKind === 'type'
             ? 'typeof'
             : node.importKind,
-        assertions: [],
+        attributes: [],
         specifiers,
       });
     }

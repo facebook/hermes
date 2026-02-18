@@ -688,8 +688,8 @@ export type ImportDeclarationProps = {
     MaybeDetachedNode<ImportDeclarationType['specifiers'][number]>,
   >,
   +source: MaybeDetachedNode<ImportDeclarationType['source']>,
-  +assertions?: ?$ReadOnlyArray<
-    MaybeDetachedNode<ImportDeclarationType['assertions'][number]>,
+  +attributes?: ?$ReadOnlyArray<
+    MaybeDetachedNode<ImportDeclarationType['attributes'][number]>,
   >,
   +importKind: ImportDeclarationType['importKind'],
 };
@@ -2436,7 +2436,7 @@ export function ImportDeclaration(props: {
       type: 'ImportDeclaration',
       specifiers: props.specifiers.map(n => asDetachedNodeForCodeGen(n)),
       source: asDetachedNodeForCodeGen(props.source),
-      assertions: props.assertions?.map(n => asDetachedNodeForCodeGen(n)),
+      attributes: props.attributes?.map(n => asDetachedNodeForCodeGen(n)),
       importKind: props.importKind,
     },
   );

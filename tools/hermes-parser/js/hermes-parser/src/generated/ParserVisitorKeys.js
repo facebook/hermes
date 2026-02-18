@@ -361,7 +361,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   ImportDeclaration: {
     specifiers: 'NodeList',
     source: 'Node',
-    assertions: 'NodeList',
+    attributes: 'NodeList',
   },
   ImportDefaultSpecifier: {
     local: 'Node',

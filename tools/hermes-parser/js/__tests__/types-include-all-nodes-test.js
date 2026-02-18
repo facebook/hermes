@@ -144,7 +144,7 @@ const propertiesWithIncorrectOptionalFlagInHermes = new Map([
     new Set<string>([
       // hermes has this marked as optional, but it always returns an array
       // https://www.internalfb.com/code/fbsource/[03317c92fabb32841bec7d90d297595d7392f6ea]/xplat/hermes/lib/Parser/JSParserImpl.cpp?lines=5846%2C5859-5860
-      'assertions',
+      'attributes',
     ]),
   ],
   [

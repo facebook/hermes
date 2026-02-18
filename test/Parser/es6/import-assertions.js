@@ -11,7 +11,7 @@
 // CHECK-NEXT:   "type": "Program",
 // CHECK-NEXT:   "body": [
 
-import 'foo.js' assert {};
+import 'foo.js' with {};
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ImportDeclaration",
 // CHECK-NEXT:       "specifiers": [],
@@ -19,11 +19,11 @@ import 'foo.js' assert {};
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "assertions": [],
+// CHECK-NEXT:       "attributes": [],
 // CHECK-NEXT:       "importKind": "value"
 // CHECK-NEXT:     },
 
-import 'foo.js' assert {type: 'json'};
+import 'foo.js' with {type: 'json'};
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ImportDeclaration",
 // CHECK-NEXT:       "specifiers": [],
@@ -31,7 +31,7 @@ import 'foo.js' assert {type: 'json'};
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "assertions": [
+// CHECK-NEXT:       "attributes": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -47,7 +47,7 @@ import 'foo.js' assert {type: 'json'};
 // CHECK-NEXT:       "importKind": "value"
 // CHECK-NEXT:     },
 
-import 'foo.js' assert {'type': 'json'};
+import 'foo.js' with {'type': 'json'};
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ImportDeclaration",
 // CHECK-NEXT:       "specifiers": [],
@@ -55,7 +55,7 @@ import 'foo.js' assert {'type': 'json'};
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "assertions": [
+// CHECK-NEXT:       "attributes": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -71,15 +71,23 @@ import 'foo.js' assert {'type': 'json'};
 // CHECK-NEXT:       "importKind": "value"
 // CHECK-NEXT:     },
 
-import 'foo.js' assert {'type': 'json',};
+import x from 'foo.js' with {'type': 'json'};
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ImportDeclaration",
-// CHECK-NEXT:       "specifiers": [],
+// CHECK-NEXT:       "specifiers": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "ImportDefaultSpecifier",
+// CHECK-NEXT:           "local": {
+// CHECK-NEXT:             "type": "Identifier",
+// CHECK-NEXT:             "name": "x"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "source": {
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "assertions": [
+// CHECK-NEXT:       "attributes": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -95,7 +103,7 @@ import 'foo.js' assert {'type': 'json',};
 // CHECK-NEXT:       "importKind": "value"
 // CHECK-NEXT:     },
 
-import 'foo.js' assert {'type': 'json', 'foo': 'bar', };
+import 'foo.js' with {'type': 'json',};
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ImportDeclaration",
 // CHECK-NEXT:       "specifiers": [],
@@ -103,7 +111,31 @@ import 'foo.js' assert {'type': 'json', 'foo': 'bar', };
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "assertions": [
+// CHECK-NEXT:       "attributes": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:           "type": "ImportAttribute",
+// CHECK-NEXT:           "key": {
+// CHECK-NEXT:             "type": "StringLiteral",
+// CHECK-NEXT:             "value": "type"
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "value": {
+// CHECK-NEXT:             "type": "StringLiteral",
+// CHECK-NEXT:             "value": "json"
+// CHECK-NEXT:           }
+// CHECK-NEXT:         }
+// CHECK-NEXT:       ],
+// CHECK-NEXT:       "importKind": "value"
+// CHECK-NEXT:     },
+
+import 'foo.js' with {'type': 'json', 'foo': 'bar', };
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ImportDeclaration",
+// CHECK-NEXT:       "specifiers": [],
+// CHECK-NEXT:       "source": {
+// CHECK-NEXT:         "type": "StringLiteral",
+// CHECK-NEXT:         "value": "foo.js"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "attributes": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {
@@ -130,7 +162,7 @@ import 'foo.js' assert {'type': 'json', 'foo': 'bar', };
 // CHECK-NEXT:       "importKind": "value"
 // CHECK-NEXT:     },
 
-import 'foo.js' assert {'type': 'json', 'foo': 'bar', };
+import 'foo.js' with {'type': 'json', 'foo': 'bar', };
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "ImportDeclaration",
 // CHECK-NEXT:       "specifiers": [],
@@ -138,7 +170,7 @@ import 'foo.js' assert {'type': 'json', 'foo': 'bar', };
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo.js"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "assertions": [
+// CHECK-NEXT:       "attributes": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "type": "ImportAttribute",
 // CHECK-NEXT:           "key": {

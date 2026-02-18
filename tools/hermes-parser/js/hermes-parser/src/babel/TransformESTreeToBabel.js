@@ -1278,9 +1278,9 @@ function transformNode(node: ESNodeOrBabelNode): ESNodeOrBabelNode | null {
       return node;
     }
     case 'ImportDeclaration': {
-      if (node.assertions == null || node.assertions.length === 0) {
+      if (node.attributes == null || node.attributes.length === 0) {
         // $FlowExpectedError[cannot-write]
-        delete node.assertions;
+        delete node.attributes;
       }
       return node;
     }

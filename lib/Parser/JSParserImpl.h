@@ -293,7 +293,6 @@ class JSParserImpl {
   UniqueString *asyncIdent_;
   UniqueString *argumentsIdent_;
   UniqueString *awaitIdent_;
-  UniqueString *assertIdent_;
 
 #if HERMES_PARSE_FLOW
 
@@ -1144,7 +1143,7 @@ class JSParserImpl {
   /// Parse a FromClause and return the string literal representing the source.
   Optional<ESTree::StringLiteralNode *> parseFromClause();
 
-  bool parseAssertClause(ESTree::NodeList &attributes);
+  bool parseWithClause(ESTree::NodeList &attributes);
 
   Optional<ESTree::ImportDeclarationNode *> parseImportDeclaration();
 

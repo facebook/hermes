@@ -879,7 +879,7 @@ void SemanticResolver::visit(ESTree::ImportDeclarationNode *importDecl) {
         "'import' statement requires module mode");
   }
 
-  if (compile_ && !importDecl->_assertions.empty()) {
+  if (compile_ && !importDecl->_attributes.empty()) {
     sm_.error(
         importDecl->getSourceRange(), "import assertions are not supported");
   }

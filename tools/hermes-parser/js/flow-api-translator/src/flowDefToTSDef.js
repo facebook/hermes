@@ -1373,7 +1373,7 @@ const getTransforms = (
             return ({
               type: 'ExportNamedDeclaration',
               loc: DUMMY_LOC,
-              // flow does not currently support assertions
+              // flow does not currently support attributes
               assertions: [],
               declaration: null,
               // flow does not support declared type exports with specifiers
@@ -1470,7 +1470,7 @@ const getTransforms = (
                   {
                     type: 'ExportNamedDeclaration',
                     loc: DUMMY_LOC,
-                    // flow does not currently support assertions
+                    // flow does not currently support attributes
                     assertions: [],
                     declaration,
                     exportKind,
@@ -1506,7 +1506,7 @@ const getTransforms = (
                     loc: DUMMY_LOC,
                     specifiers: [],
                     exportKind: 'type',
-                    // flow does not currently support assertions
+                    // flow does not currently support attributes
                     assertions: [],
                   },
                 ];
@@ -1517,7 +1517,7 @@ const getTransforms = (
               {
                 type: 'ExportNamedDeclaration',
                 loc: DUMMY_LOC,
-                // flow does not currently support assertions
+                // flow does not currently support attributes
                 assertions: [],
                 declaration,
                 exportKind,
@@ -1532,7 +1532,7 @@ const getTransforms = (
           return ({
             type: 'ExportNamedDeclaration',
             loc: DUMMY_LOC,
-            // flow does not currently support assertions
+            // flow does not currently support attributes
             assertions: [],
             declaration: null,
             // flow does not support declared type exports with a source
@@ -1905,7 +1905,7 @@ const getTransforms = (
       return {
         type: 'ExportAllDeclaration',
         loc: DUMMY_LOC,
-        // flow does not currently support import/export assertions
+        // flow does not currently support import/export attributes
         assertions: [],
         exportKind: node.exportKind,
         source: transform.StringLiteral(node.source),
@@ -1923,7 +1923,7 @@ const getTransforms = (
         return {
           type: 'ExportNamedDeclaration',
           loc: DUMMY_LOC,
-          // flow does not currently support import/export assertions
+          // flow does not currently support import/export attributes
           assertions: [],
           declaration: null,
           exportKind: node.exportKind,
@@ -3227,7 +3227,7 @@ const getTransforms = (
             {
               type: 'ImportDeclaration',
               loc: DUMMY_LOC,
-              assertions: node.assertions.map(transform.ImportAttribute),
+              assertions: node.attributes.map(transform.ImportAttribute),
               importKind:
                 importKind === 'typeof' ? 'type' : (importKind ?? 'value'),
               source: transform.StringLiteral(node.source),

@@ -170,7 +170,7 @@ module.exports = {
   Identifier: ['typeAnnotation'],
   IfStatement: ['test', 'consequent', 'alternate'],
   ImportAttribute: ['key', 'value'],
-  ImportDeclaration: ['specifiers', 'source', 'assertions'],
+  ImportDeclaration: ['specifiers', 'source', 'attributes'],
   ImportDefaultSpecifier: ['local'],
   ImportExpression: ['source', 'options'],
   ImportNamespaceSpecifier: ['local'],

@@ -357,7 +357,7 @@ function stripUnusedDefs(
           specifiers: resultSpecfiers,
           importKind: stmt.importKind,
           source: stmt.source,
-          assertions: stmt.assertions,
+          attributes: stmt.attributes,
         });
       }
       return detachedStmt;
@@ -940,10 +940,10 @@ function convertImportDeclaration(
   stmt: ImportDeclaration,
   context: TranslationContext,
 ): TranslatedResult<ImportDeclaration> {
-  if (stmt.assertions.length > 0) {
+  if (stmt.attributes.length > 0) {
     throw translationError(
       stmt,
-      'ImportDeclaration: assertions not supported',
+      'ImportDeclaration: attributes not supported',
       context,
     );
   }
@@ -953,7 +953,7 @@ function convertImportDeclaration(
       specifiers: stmt.specifiers,
       importKind: stmt.importKind,
       source: stmt.source,
-      assertions: [],
+      attributes: [],
     }),
     [],
   ];
