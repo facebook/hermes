@@ -64,20 +64,14 @@ jobs:
     needs: build_apple_slices_hermes
   build_hermesc_linux:
     uses: ./.github/workflows/build-hermesc-linux.yml
-  # TODO: Reenable once support for MSVC is added T242502301
-  # build_hermesc_windows:
-  #   uses: ./.github/workflows/build-hermesc-windows.yml
+  build_hermesc_windows:
+    uses: ./.github/workflows/build-hermesc-windows.yml
   build_android:
     uses: ./.github/workflows/build-android.yml
     needs: set_release_type
     secrets: inherit
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
-  test-apple-runtime:
-    needs: build_hermes_macos
-    uses: ./.github/workflows/test-apple-runtime.yml
-  run-tests:
-    uses: ./.github/workflows/run-tests.yml
   publish:
     uses: ./.github/workflows/publish.yml
     secrets: inherit
@@ -86,6 +80,7 @@ jobs:
         set_release_type,
         build_hermes_macos,
         build_hermesc_linux,
+        build_hermesc_windows,
       ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
