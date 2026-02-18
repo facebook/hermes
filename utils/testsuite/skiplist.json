@@ -780,13 +780,6 @@
     },
     {
       "paths": [
-        "test262/test/language/comments/S7.4_A5.js",
-        "test262/test/language/comments/S7.4_A6.js"
-      ],
-      "comment": "T250551008: Failed on Github armv7 CI."
-    },
-    {
-      "paths": [
         "test262/test/language/identifiers/part-unicode-16.0.0-class-escaped.js",
         "test262/test/language/identifiers/part-unicode-16.0.0-class.js",
         "test262/test/language/identifiers/part-unicode-16.0.0-escaped.js",
