@@ -23,6 +23,7 @@ set(APITestsSources
   SynthTraceParserTest.cpp
   SynthTraceSerializationTest.cpp
   TimerStatsTest.cpp
+  CDPRemoteObjectConvertersTest.cpp
   ${NO_EH_RTTI_SOURCES}
   )
 set(APISegmentTestCompileSources

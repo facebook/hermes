@@ -2137,6 +2137,35 @@ TEST_F(CDPAgentTest, DebuggerReportsException) {
   waitForScheduledScripts();
 }
 
+TEST_F(CDPAgentTest, RuntimeEvaluateCustomErrorDescription) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // Evaluate an expression that throws a custom error class
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue(
+        "expression",
+        R"(
+          // Transpiled class CustomError extends Error {}
+          function CustomError(...args) {
+            const instance = Reflect.construct(Error, args);
+            Reflect.setPrototypeOf(instance, Reflect.getPrototypeOf(this));
+            return instance;
+          }
+          Object.setPrototypeOf(CustomError.prototype, Error.prototype);
+          throw new CustomError('custom message');
+        )");
+  });
+  auto resp = expectResponse(std::nullopt, msgId++);
+
+  // The exception's RemoteObject should have the custom class name in its
+  // description, not just "Error".
+  auto description = jsonScope_.getString(
+      resp, {"result", "exceptionDetails", "exception", "description"});
+  EXPECT_TRUE(description.find("CustomError: custom message") == 0);
+}
+
 TEST_F(CDPAgentTest, DebuggerEvalOnCallFrame) {
   int msgId = 1;
 

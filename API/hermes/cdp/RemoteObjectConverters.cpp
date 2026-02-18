@@ -30,11 +30,84 @@ static std::string abbreviateString(const std::string &str) {
   return str.substr(0, kMaxLength - 1) + kEllipsis;
 }
 
+static std::optional<std::string> getConstructorNameOfObject(
+    facebook::jsi::Runtime &runtime,
+    const jsi::Object &obj) {
+  auto constructorProp = obj.getProperty(runtime, "constructor");
+
+  if (!constructorProp.isObject() ||
+      !constructorProp.getObject(runtime).isFunction(runtime)) {
+    return std::nullopt;
+  }
+
+  auto constructorNameProp =
+      constructorProp.getObject(runtime).getFunction(runtime).getProperty(
+          runtime, "name");
+  if (!constructorNameProp.isString()) {
+    return std::nullopt;
+  }
+
+  auto name = constructorNameProp.asString(runtime).utf8(runtime);
+  if (name.empty()) {
+    return std::nullopt;
+  }
+  return name;
+}
+
 static bool isObjectInstanceOfError(
-    const jsi::Object &obj,
-    facebook::jsi::Runtime &runtime) {
+    facebook::jsi::Runtime &runtime,
+    const jsi::Object &obj) {
   return obj.instanceOf(
       runtime, runtime.global().getPropertyAsFunction(runtime, "Error"));
+}
+
+// Parity with V8. 01 Aug, 2025
+// https://source.chromium.org/chromium/chromium/src/+/main:v8/src/inspector/value-mirror.cc;l=252-311;drc=bdc48d1b1312cc40c00282efb1c9c5f41dcdca9a
+static std::string descriptionForError(
+    facebook::jsi::Runtime &runtime,
+    const jsi::Object &obj) {
+  std::string result = "Error";
+
+  auto nameProp = obj.getProperty(runtime, "name");
+  auto namePropStr =
+      nameProp.isString() ? nameProp.asString(runtime).utf8(runtime) : "";
+  if (namePropStr.length() > 0 && namePropStr != "Error") {
+    result = std::move(namePropStr);
+  } else {
+    auto constructorName = getConstructorNameOfObject(runtime, obj);
+    if (constructorName.has_value() && !constructorName->empty()) {
+      result = std::move(*constructorName);
+    }
+  }
+
+  auto stackProp = obj.getProperty(runtime, "stack");
+  auto stack =
+      stackProp.isString() ? stackProp.asString(runtime).utf8(runtime) : "";
+
+  auto messageProp = obj.getProperty(runtime, "message");
+  auto message =
+      messageProp.isString() ? messageProp.asString(runtime).utf8(runtime) : "";
+
+  // Strip the "ErrorName: message" prefix from V8-format stacks to avoid
+  // duplication, since we construct that prefix ourselves.
+  auto pos = stack.find("\n    at ");
+  std::string trimmedStack;
+  if (pos != std::string::npos) {
+    trimmedStack = stack.substr(pos);
+  } else if (stack.empty()) {
+    trimmedStack = "";
+  } else {
+    trimmedStack = "\n" + stack;
+  }
+
+  if (message.length() > 0) {
+    result += ": " + message;
+  }
+  if (trimmedStack.length() > 0) {
+    result += trimmedStack;
+  }
+
+  return result;
 }
 
 static m::runtime::PropertyPreview generatePropertyPreview(
@@ -75,7 +148,7 @@ static m::runtime::PropertyPreview generatePropertyPreview(
       preview.subtype = "array";
       preview.value = "Array(" +
           std::to_string(obj.getArray(runtime).length(runtime)) + ")";
-    } else if (isObjectInstanceOfError(obj, runtime)) {
+    } else if (isObjectInstanceOfError(runtime, obj)) {
       preview.type = "object";
       preview.subtype = "error";
       preview.value = abbreviateString(
@@ -151,7 +224,12 @@ static m::runtime::ObjectPreview generateObjectPreview(
     }
     preview.properties.push_back(std::move(desc));
   }
-  preview.description = "Object";
+  if (isObjectInstanceOfError(runtime, obj)) {
+    preview.description = descriptionForError(runtime, obj);
+    preview.subtype = "error";
+  } else {
+    preview.description = "Object";
+  }
   preview.overflow = propCount > kMaxPreviewProperties;
   return preview;
 }
@@ -231,16 +309,16 @@ std::vector<m::debugger::CallFrame> m::debugger::makeCallFrames(
     h::debugger::CallFrameInfo callFrameInfo = stackTrace.callFrameForIndex(i);
 
     // @cdp This is not explicitly documented for Debugger.CallFrame in the
-    // protocol spec, but Chrome DevTools filters out any frames that don't have
-    // a valid script in DebuggerModel.ts:
+    // protocol spec, but Chrome DevTools filters out any frames that don't
+    // have a valid script in DebuggerModel.ts:
     // https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/9a23d4c7c4c2d1a3d9e913af38d6965f474c4284/front_end/core/sdk/DebuggerModel.ts#L1200
     //
     // Furthermore, V8 filters out any frame that isn't user JavaScript in
     // StackFrameBuilder as it visits each frame:
     // https://source.chromium.org/chromium/chromium/src/+/main:v8/src/execution/isolate.cc;l=1439;drc=6a1467666bf8f85bb49fe3d37fce5eba67763061
     //
-    // The expectation is that there is no native frames for Debugger.CallFrame,
-    // so we filter them out here as well.
+    // The expectation is that there is no native frames for
+    // Debugger.CallFrame, so we filter them out here as well.
     if (callFrameInfo.location.fileId ==
         ::facebook::hermes::debugger::kInvalidLocation) {
       continue;
@@ -288,8 +366,8 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
   } else if (value.isString()) {
     result.type = "string";
 
-    // result.value is a blob of well-formed JSON. Therefore, we need to encode
-    // the string as JSON.
+    // result.value is a blob of well-formed JSON. Therefore, we need to
+    // encode the string as JSON.
     std::string encodedValue;
     llvh::raw_string_ostream stream{encodedValue};
     ::hermes::JSONEmitter json{stream};
@@ -313,10 +391,9 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
       result.value = "\"\"";
       /**
        * @cdp Runtime.RemoteObject's description property is a string, but in
-       * the case of functions, V8 populates it with the result of toString [1]
-       * and Chrome DevTools uses a series of regexes [2] to extract structured
-       * information about the function.
-       * [1]
+       * the case of functions, V8 populates it with the result of toString
+       * [1] and Chrome DevTools uses a series of regexes [2] to extract
+       * structured information about the function. [1]
        * https://source.chromium.org/chromium/chromium/src/+/main:v8/src/debug/debug-interface.cc;l=138-174;drc=42debe0b0e6bf90175dd0d121eb0e7dc11a6d29c
        * [2]
        * https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/9a23d4c7c4c2d1a3d9e913af38d6965f474c4284/front_end/ui/legacy/components/object_ui/ObjectPropertiesSection.ts#L311-L391
@@ -333,13 +410,12 @@ m::runtime::RemoteObject m::runtime::makeRemoteObject(
       if (options.generatePreview) {
         result.preview = generateArrayPreview(runtime, array);
       }
-    } else if (isObjectInstanceOfError(obj, runtime)) {
+    } else if (isObjectInstanceOfError(runtime, obj)) {
       result.type = "object";
       result.subtype = "error";
       // T198854404 we should report subclasses of Error here, e.g. TypeError
       result.className = "Error";
-      result.description =
-          obj.getProperty(runtime, "stack").toString(runtime).utf8(runtime);
+      result.description = descriptionForError(runtime, obj);
       if (options.generatePreview) {
         result.preview = generateObjectPreview(runtime, obj);
       }
