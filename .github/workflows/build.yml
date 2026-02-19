@@ -158,8 +158,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2025]
+        os: [windows-2025, windows-11-arm]
         build_type: [Debug, Release]
+        target_cpu: [x86_64, arm64]
+        cmake_flags: ["", "-DBOOST_CONTEXT_IMPLEMENTATION=winfib"]
+        exclude:
+          - os: windows-11-arm
+            target_cpu: x86_64
+          - os: windows-11-arm
+            cmake_flags: ""
+          - os: windows-2025
+            target_cpu: arm64
+          - os: windows-2025
+            cmake_flags: "-DBOOST_CONTEXT_IMPLEMENTATION=winfib"
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4.1.0
@@ -183,7 +194,8 @@ jobs:
         # Use system version 10.0.15063 or newer for VS2022 compatibility and built-in ICU
         cmake -S hermes -B build -G "Visual Studio 17 2022" \
           -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_VERSION=10.0.15063 \
-          -DJSI_UNSTABLE=ON
+          -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.target_cpu }} \
+          ${{ matrix.cmake_flags }} -DJSI_UNSTABLE=ON
 
         # Build using CMake
         cmake --build build --config ${{ matrix.build_type }} --target hermes -- \
