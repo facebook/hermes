@@ -73,6 +73,7 @@ jobs:
         set_release_type,
         build_hermes_macos,
         build_hermesc_linux,
+        build_hermesc_windows,
       ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
