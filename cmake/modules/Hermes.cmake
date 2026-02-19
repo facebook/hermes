@@ -162,6 +162,16 @@ function(add_hermes_tool name)
 
   set_property(TARGET ${name} PROPERTY RUNTIME_OUTPUT_DIRECTORY
     "${HERMES_TOOLS_OUTPUT_DIR}")
+
+  if (HERMES_ENABLE_ADDRESS_SANITIZER AND MSVC)
+    # Copy ASAN DLL to the executable's directory after building.
+    add_custom_command(TARGET ${name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<$<CONFIG:Debug>:${ASAN_DEBUG_DLL}>$<$<NOT:$<CONFIG:Debug>>:${ASAN_RELEASE_DLL}>"
+        "$<TARGET_FILE_DIR:${name}>"
+        COMMENT "Copying ASan DLL: ${ASAN_DLL} -> $<TARGET_FILE_DIR:${name}>"
+    )
+  endif()
 endfunction(add_hermes_tool)
 
 # find_package()is not able to find packages specified with <name>_DIR if

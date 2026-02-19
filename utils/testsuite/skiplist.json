@@ -4738,6 +4738,16 @@
         ],
         "comment": "Intl implementation issues on Apple."
       }
+    ],
+    "win32": [
+      {
+        "paths": [
+          "test262/test/built-ins/RegExp/",
+          "test262/test/built-ins/decodeURI/",
+          "test262/test/built-ins/decodeURIComponent/"
+        ],
+        "comment": "These tests are extremely slow on Windows with ASAN enabled. So disable them for now."
+      }
     ]
   }
 }

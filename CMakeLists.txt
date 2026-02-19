@@ -462,22 +462,49 @@ if(HERMESVM_CRASH_TRACE)
     add_definitions(-DHERMESVM_CRASH_TRACE=1)
 endif()
 if (HERMES_ENABLE_ADDRESS_SANITIZER)
-    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
-    # GCC does not automatically link libpthread when using ASAN
-    append("-lpthread" CMAKE_EXE_LINKER_FLAGS)
+    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    # MSVC handles ASAN runtime linking automatically when objects compiled with
+    # /fsanitize=address are linked. Don't pass the flag to the linker on MSVC.
+    if (MSVC)
+        # MSVC needs these debug information for ASAN to report errors correctly.
+        append("/Zi" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+        append("/DEBUG" CMAKE_EXE_LINKER_FLAGS)
+        # Disable asan sanitization on contaienrs, which causes redefinition error
+        # on VS2022 when building llvh.
+        add_compile_definitions(_DISABLE_VECTOR_ANNOTATION)
+
+        get_filename_component(MSVC_BIN_DIR ${CMAKE_CXX_COMPILER} DIRECTORY)
+        # Define the paths to the ASAN Release and Debug DLLs.
+        set(ASAN_RELEASE_DLL "${MSVC_BIN_DIR}/clang_rt.asan_dynamic-x86_64.dll")
+        set(ASAN_DEBUG_DLL   "${MSVC_BIN_DIR}/clang_rt.asan_dbg_dynamic-x86_64.dll")
+    else()
+        append("-fsanitize=address" CMAKE_EXE_LINKER_FLAGS)
+        # GCC does not automatically link libpthread when using ASAN
+        append("-lpthread" CMAKE_EXE_LINKER_FLAGS)
+    endif()
 endif()
 if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
-    add_definitions(-DHERMES_UBSAN)
-    # Do not enable the vptr sanitizer, as it requires RTTI.
-    append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
-    # Function signature sanitization produces false positives on Apple platforms.
-    # https://github.com/llvm/llvm-project/issues/109074
-    if (APPLE)
-        add_flag_if_supported("-fno-sanitize=function" APPLE_NO_SANITIZE_FUNCTION)
+    # MSVC does not support UBSan
+    if (MSVC)
+        message(WARNING "Undefined Behavior Sanitizer is not supported on MSVC, ignoring HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER")
+    else()
+        add_definitions(-DHERMES_UBSAN)
+        # Do not enable the vptr sanitizer, as it requires RTTI.
+        append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+        # Function signature sanitization produces false positives on Apple platforms.
+        # https://github.com/llvm/llvm-project/issues/109074
+        if (APPLE)
+            add_flag_if_supported("-fno-sanitize=function" APPLE_NO_SANITIZE_FUNCTION)
+        endif()
     endif()
 endif()
 if (HERMES_ENABLE_THREAD_SANITIZER)
-    append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    # MSVC does not support TSan.
+    if (MSVC)
+        message(WARNING "Thread Sanitizer is not supported on MSVC, ignoring HERMES_ENABLE_THREAD_SANITIZER")
+    else()
+        append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    endif()
 endif()
 if (HERMES_ENABLE_TRACE_PC_GUARD)
     append("-fsanitize-coverage=trace-pc-guard" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
