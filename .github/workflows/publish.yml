@@ -67,6 +67,11 @@ jobs:
         with:
           name: hermes-linux-bin
           path: /tmp/hermes/linux64-bin
+      - name: Download windows-bin artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-win64-bin
+          path: /tmp/hermes/win64-bin
       - name: Show /tmp/hermes directory
         shell: bash
         run: ls -lR /tmp/hermes
