@@ -22,9 +22,7 @@ function copyHermesBinaries() {
   // Create directories for npm/hermes-compiler/hermesc binaries
   mkdir('-p', './npm/hermes-compiler/hermesc/osx-bin');
   mkdir('-p', './npm/hermes-compiler/hermesc/linux64-bin');
-
-  // Once the windows artifacts are available, this can be uncommented.
-  // mkdir('-p', './npm/hermes-compiler/hermesc/win64-bin');
+  mkdir('-p', './npm/hermes-compiler/hermesc/win64-bin');
 
   const osxBinDir = path.join(HERMES_WS_DIR, 'osx-bin');
   const osxReleaseDir = path.join(osxBinDir, 'Release');
@@ -71,13 +69,12 @@ function copyHermesBinaries() {
     fs.renameSync(releaseTarLower, releaseTarUpper);
   }
 
-  // Once the windows artifacts are available, this can be uncommented.
-  // echo('Copying Windows binaries...');
-  // cp(
-  //   '-r',
-  //   path.join(HERMES_WS_DIR, 'win64-bin/*'),
-  //   './npm/hermes-compiler/hermesc/win64-bin/.',
-  // );
+  echo('Copying Windows binaries...');
+  cp(
+    '-r',
+    path.join(HERMES_WS_DIR, 'win64-bin/*'),
+    './npm/hermes-compiler/hermesc/win64-bin/.',
+  );
 
   echo('Copying Linux binaries...');
   cp(
