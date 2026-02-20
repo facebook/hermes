@@ -21,9 +21,9 @@ _BLANK_LINES = r"([ \t]*[\r\n]{1,2})*"
 _YAML_PATTERN = re.compile(r"/\*---(.*)---\*/" + _BLANK_LINES, re.DOTALL)
 
 # Matches all known variants for the license block.
-# https://github.com/tc39/test262/blob/705d78299cf786c84fa4df473eff98374de7135a/tools/lint/lib/checks/license.py
+# https://github.com/tc39/test262/blob/cf4c281a3857d88f7165bc022b059132d71ef0ce/tools/lint/lib/checks/license.py
 _LICENSE_PATTERN = re.compile(
-    r"// Copyright( \([C]\))? (\w+) .+\. {1,2}All rights reserved\.[\r\n]{1,2}"
+    r"// Copyright( \(C\))? ([1-9][0-9-]*) .+\. {1,2}All rights reserved\.[\r\n]{1,2}"
     + r"("
     + r"// This code is governed by the( BSD)? license found in the LICENSE file\."
     + r"|"
@@ -32,9 +32,16 @@ _LICENSE_PATTERN = re.compile(
     + r"// Use of this source code is governed by a BSD-style license that can be[\r\n]{1,2}"
     + r"// found in the LICENSE file\."
     + r"|"
-    + r"// See LICENSE or https://github\.com/tc39/test262/blob/(master|HEAD)/LICENSE"
-    + r")"
-    + _BLANK_LINES,
+    + r"// See LICENSE or https://github\.com/tc39/test262/blob/HEAD/LICENSE"
+    + r")",
+    re.IGNORECASE,
+)
+
+_PD_PATTERN = re.compile(
+    r"/\*[\r\n]{1,2}"
+    + r" \* Any copyright is dedicated to the Public Domain.[\r\n]{1,2}"
+    + r" \* http://creativecommons.org/licenses/publicdomain/[\r\n]{1,2}"
+    + r" \*/[\r\n]{1,2}",
     re.IGNORECASE,
 )
 
@@ -54,10 +61,17 @@ def yamlAttrParser(testRecord: dict, attrs: str, test_name: str) -> None:
 
 def findLicense(src: str) -> Optional[str]:
     match = _LICENSE_PATTERN.search(src)
-    if not match:
-        return None
+    if match:
+        return match.group(0)
 
-    return match.group(0)
+    # Some tests have both a license block and a public domain block, and the
+    # latter is placed after the former. So we detect it after the license
+    # pattern matching.
+    match = _PD_PATTERN.search(src)
+    if match:
+        return match.group(0)
+
+    return None
 
 
 def findAttrs(src: str) -> Tuple[Optional[str], Optional[str]]:
