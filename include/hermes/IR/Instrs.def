@@ -119,6 +119,7 @@ DEF_VALUE(DefineOwnGetterSetterInst, Instruction)
 DEF_VALUE(AddOwnPrivateFieldInst, Instruction)
 DEF_VALUE(LoadOwnPrivateFieldInst, Instruction)
 DEF_VALUE(StoreOwnPrivateFieldInst, Instruction)
+DEF_VALUE(PrivateBrandCheckInst, Instruction)
 
 MARK_FIRST(DeletePropertyInst, Instruction)
 DEF_VALUE(DeletePropertyLooseInst, DeletePropertyInst)

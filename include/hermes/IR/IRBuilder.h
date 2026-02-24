@@ -476,6 +476,9 @@ class IRBuilder {
       Value *storedValue,
       Value *object,
       Value *property);
+  PrivateBrandCheckInst *createPrivateBrandCheckInst(
+      Value *object,
+      Value *brand);
 
   DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,

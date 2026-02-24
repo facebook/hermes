@@ -582,6 +582,9 @@ class TypeInferenceImpl {
   Type inferAddOwnPrivateFieldInst(AddOwnPrivateFieldInst *inst) {
     return Type::createNoType();
   }
+  Type inferPrivateBrandCheckInst(PrivateBrandCheckInst *inst) {
+    return Type::createNoType();
+  }
 
   Type inferDefineOwnGetterSetterInst(DefineOwnGetterSetterInst *inst) {
     return Type::createNoType();

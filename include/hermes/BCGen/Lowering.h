@@ -21,6 +21,10 @@ namespace hermes {
 
 Pass *createOptEnvironmentInit();
 
+/// Lowers PrivateBrandCheckInst into a conditional branch that checks whether
+/// the brand is installed on the object and throws a TypeError if not.
+Pass *createLowerPrivateBrandCheck();
+
 /// Lowers switches to a sequence of IFs.
 class SwitchLowering : public FunctionPass {
  public:

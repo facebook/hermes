@@ -1097,6 +1097,14 @@ bool Verifier::visitAddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &Inst) {
   return true;
 }
 
+bool Verifier::visitPrivateBrandCheckInst(const PrivateBrandCheckInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getBrand()->getType().isPrivateNameType(),
+      "PrivateBrandCheckInst::Brand must be a private name");
+  return true;
+}
+
 bool Verifier::visitDefineOwnGetterSetterInst(
     const DefineOwnGetterSetterInst &Inst) {
   AssertIWithMsg(

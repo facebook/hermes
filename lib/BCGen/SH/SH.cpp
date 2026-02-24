@@ -1385,6 +1385,9 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
+  void generatePrivateBrandCheckInst(PrivateBrandCheckInst &inst) {
+    hermes_fatal("PrivateBrandCheckInst should have been lowered");
+  }
   void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
     os_.indent(2);
     os_ << "_sh_ljs_define_own_getter_setter_by_val(";
@@ -2555,6 +2558,9 @@ class InstrGen {
 bool lowerModuleIR(Module *M, bool optimize) {
   PassManager PM("SH Lower");
   PM.addLowerGeneratorFunction();
+  // LowerPrivateBrandCheck produces ThrowTypeErrorInst, which is lowered by
+  // PeepholeLowering. Therefore, LowerPrivateBrandCheck must run before.
+  PM.addPass(createLowerPrivateBrandCheck());
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.

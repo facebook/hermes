@@ -694,6 +694,13 @@ AddOwnPrivateFieldInst *IRBuilder::createAddOwnPrivateFieldInst(
   insert(inst);
   return inst;
 }
+PrivateBrandCheckInst *IRBuilder::createPrivateBrandCheckInst(
+    Value *object,
+    Value *brand) {
+  auto *inst = new PrivateBrandCheckInst(object, brand);
+  insert(inst);
+  return inst;
+}
 
 DefineOwnGetterSetterInst *IRBuilder::createDefineOwnGetterSetterInst(
     Value *storedGetter,

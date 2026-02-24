@@ -1979,6 +1979,53 @@ class StoreOwnPrivateFieldInst : public Instruction {
   }
 };
 
+class PrivateBrandCheckInst : public Instruction {
+  PrivateBrandCheckInst(const PrivateBrandCheckInst &) = delete;
+  void operator=(const PrivateBrandCheckInst &) = delete;
+
+ public:
+  enum { ObjectIdx, BrandIdx };
+  explicit PrivateBrandCheckInst(Value *object, Value *brand)
+      : Instruction(ValueKind::PrivateBrandCheckInstKind) {
+    assert(
+        brand->getType().isPrivateNameType() &&
+        "brand must be a private name type");
+    setType(Type::createNoType());
+    pushOperand(object);
+    pushOperand(brand);
+  }
+
+  explicit PrivateBrandCheckInst(
+      const PrivateBrandCheckInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getObject() const {
+    return getOperand(ObjectIdx);
+  }
+  Value *getBrand() const {
+    return getOperand(BrandIdx);
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    // The instruction may throw (TypeError if brand not found) and reads the
+    // heap (to check if brand is present).
+    return SideEffect{}.setThrow().setReadHeap();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::PrivateBrandCheckInstKind;
+  }
+};
+
 class AddOwnPrivateFieldInst : public Instruction {
   AddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &) = delete;
   void operator=(const AddOwnPrivateFieldInst &) = delete;

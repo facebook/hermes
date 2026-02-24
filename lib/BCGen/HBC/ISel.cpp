@@ -1192,6 +1192,12 @@ void HBCISel::generateAddOwnPrivateFieldInst(
   BCFGen_->emitAddOwnPrivateBySym(objReg, valueReg, symReg);
 }
 
+void HBCISel::generatePrivateBrandCheckInst(
+    PrivateBrandCheckInst *Inst,
+    BasicBlock *next) {
+  hermes_fatal("PrivateBrandCheckInst should have been lowered.");
+}
+
 void HBCISel::generateDefineOwnGetterSetterInst(
     DefineOwnGetterSetterInst *Inst,
     BasicBlock *next) {

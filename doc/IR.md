@@ -608,6 +608,16 @@ Arguments | *%value* is the value to be stored. *%object* must be an object. *%p
 Semantics | This instruction is used to initialize private fields on objects. As such it implements ES2024 7.3.27 PrivateFieldAdd- except this instruction will assume that the property being added does not already exist.
 Effects | May read and write memory.
 
+### PrivateBrandCheckInst
+
+PrivateBrandCheckInst | _
+--- | --- |
+Description | Check that an object has a private brand installed.
+Example |   `PrivateBrandCheckInst %object, %brand : privateName`
+Arguments | *%object* is the object to check. *%brand* must be a private name representing the brand to look for.
+Semantics | This instruction implements the brand check for private methods and accessors. It throws a TypeError if the brand is not present on the object.
+Effects | May read memory and throw.
+
 ### DefineOwnGetterSetterInst
 
 DefineOwnGetterSetterInst | _
