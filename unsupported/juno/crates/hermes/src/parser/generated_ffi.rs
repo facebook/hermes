@@ -329,6 +329,7 @@ unsafe extern "C" {
     pub fn hermes_get_ComponentDeclaration_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_ComponentDeclaration_typeParameters(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_ComponentDeclaration_rendersType(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_ComponentDeclaration_async(node: NodePtr) -> bool;
     // HookDeclaration
     pub fn hermes_get_HookDeclaration_id(node: NodePtr) -> NodePtr;
     pub fn hermes_get_HookDeclaration_params(node: NodePtr) -> NodeListRef;

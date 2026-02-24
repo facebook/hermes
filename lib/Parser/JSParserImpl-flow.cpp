@@ -22,6 +22,13 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
   assert(checkDeclaration());
   SMLoc start = tok_->getStartLoc();
 
+  if (context_.getParseFlowComponentSyntax() && check(asyncIdent_) &&
+      checkAsyncComponentFlow()) {
+    advance(); // consume 'async'
+    return parseComponentDeclarationFlow(
+        start, /* declare */ false, /* isAsync */ true);
+  }
+
   if (context_.getParseFlowComponentSyntax() &&
       checkComponentDeclarationFlow()) {
     return parseComponentDeclarationFlow(start, /* declare */ false);
@@ -101,6 +108,17 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(SMLoc start) {
     return parseDeclareHookFlow(start);
   }
 
+  if (context_.getParseFlowComponentSyntax() && check(asyncIdent_) &&
+      checkAsyncComponentFlow()) {
+    error(
+        tok_->getStartLoc(),
+        "`async` is not supported for declared components. "
+        "Use `declare component` instead.");
+    advance(); // consume 'async'
+    return parseComponentDeclarationFlow(
+        start, /* declare */ true, /* isAsync */ true);
+  }
+
   if (context_.getParseFlowComponentSyntax() &&
       checkComponentDeclarationFlow()) {
     return parseComponentDeclarationFlow(start, /* declare */ true);
@@ -167,9 +185,23 @@ bool JSParserImpl::checkComponentDeclarationFlow() {
   return optNext.hasValue() && *optNext == TokenKind::identifier;
 }
 
+bool JSParserImpl::checkAsyncComponentFlow() {
+  // async [no LineTerminator here] component
+  // ^
+  // Callers must already check check(asyncIdent_).
+  assert(check(asyncIdent_));
+  JSLexer::SavePoint savePoint{&lexer_};
+  advance();
+  bool result =
+      !lexer_.isNewLineBeforeCurrentToken() && checkComponentDeclarationFlow();
+  savePoint.restore();
+  return result;
+}
+
 Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
     SMLoc start,
-    bool declare) {
+    bool declare,
+    bool isAsync) {
   // component
   assert(check(componentIdent_));
   advance();
@@ -247,7 +279,7 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
   SaveStrictModeAndSeenDirectives saveStrictModeAndSeenDirectives{this};
 
   auto parsedBody = parseFunctionBody(
-      Param{}, false, false, false, JSLexer::AllowRegExp, true);
+      Param{}, false, false, isAsync, JSLexer::AllowRegExp, true);
   if (!parsedBody)
     return None;
   auto *body = parsedBody.getValue();
@@ -256,7 +288,12 @@ Optional<ESTree::Node *> JSParserImpl::parseComponentDeclarationFlow(
       start,
       body,
       new (context_) ESTree::ComponentDeclarationNode(
-          *optId, std::move(paramList), body, typeParams, rendersType));
+          *optId,
+          std::move(paramList),
+          body,
+          typeParams,
+          rendersType,
+          isAsync));
 }
 
 bool JSParserImpl::parseComponentParametersFlow(
@@ -2081,6 +2118,23 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(SMLoc start) {
           new (context_) ESTree::DeclareExportDeclarationNode(
               *optFunc, {}, nullptr, true));
     }
+    if (context_.getParseFlowComponentSyntax() && check(asyncIdent_) &&
+        checkAsyncComponentFlow()) {
+      error(
+          tok_->getStartLoc(),
+          "`async` is not supported for declared components. "
+          "Use `declare component` instead.");
+      advance(); // consume 'async'
+      auto optComponent = parseComponentDeclarationFlow(
+          start, /* declare */ true, /* isAsync */ true);
+      if (!optComponent)
+        return None;
+      return setLocation(
+          start,
+          *optComponent,
+          new (context_) ESTree::DeclareExportDeclarationNode(
+              *optComponent, {}, nullptr, true));
+    }
     if (context_.getParseFlowComponentSyntax() &&
         checkComponentDeclarationFlow()) {
       auto optComponent =
@@ -2146,6 +2200,24 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(SMLoc start) {
         *optClass,
         new (context_) ESTree::DeclareExportDeclarationNode(
             *optClass, {}, nullptr, false));
+  }
+
+  if (context_.getParseFlowComponentSyntax() && check(asyncIdent_) &&
+      checkAsyncComponentFlow()) {
+    error(
+        tok_->getStartLoc(),
+        "`async` is not supported for declared components. "
+        "Use `declare component` instead.");
+    advance(); // consume 'async'
+    auto optComponent = parseComponentDeclarationFlow(
+        start, /* declare */ true, /* isAsync */ true);
+    if (!optComponent)
+      return None;
+    return setLocation(
+        start,
+        *optComponent,
+        new (context_) ESTree::DeclareExportDeclarationNode(
+            *optComponent, {}, nullptr, false));
   }
 
   if (context_.getParseFlowComponentSyntax() &&

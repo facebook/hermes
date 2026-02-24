@@ -182,13 +182,14 @@ class EsprimaTestRunner:
                     ast["type"] = "RestElement"
                 if ast["type"] == "SpreadProperty":
                     ast["type"] = "SpreadElement"
-                if (
-                    ast["type"] == "ClassProperty"
-                    or ast["type"] == "ClassPrivateProperty"
-                    or ast["type"] == "PropertyDefinition"
+                if ast["type"] in (
+                    "ClassProperty",
+                    "ClassPrivateProperty",
+                    "PropertyDefinition",
                 ):
-                    if "declare" not in ast:
-                        ast["declare"] = False
+                    ast.setdefault("declare", False)
+                if ast["type"] == "ComponentDeclaration":
+                    ast.setdefault("async", False)
             # If it is a template literal, the 'value' field contains
             # the 'cooked' and 'raw' strings, which should be moved.
             if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:
