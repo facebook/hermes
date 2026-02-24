@@ -141,6 +141,18 @@ class JSONStringifyer {
   /// \return whether the result is not undefined.
   CallResult<bool> operationStr(HermesValue key);
 
+  /// Serialize the value in lv_.operationStrValue. This is a helper for
+  /// operationStr that performs the actual serialization after the value has
+  /// been retrieved from the holder. It can also be called directly when the
+  /// value is already available.
+  /// \p key is the property key for this value, used by the replacer function
+  /// and toJSON. The holder must be set in lv_.operationStrHolder by the
+  /// caller.
+  /// \return whether the result is not undefined.
+  CallResult<bool> operationStrValue(
+      GCScopeMarkerRAII &marker,
+      HermesValue key);
+
   /// Implement the abstract operation Quote(value).
   /// It wraps a String value in double quotes and escapes characters within it.
   void operationQuote(StringView value);
@@ -314,22 +326,28 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
 }
 
 CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
-  struct : public Locals {
-    PinnedValue<> hValueHV;
-    PinnedValue<Callable> toJSON;
-  } lv;
-  LocalsRAII lraii(runtime_, &lv);
-
   GCScopeMarkerRAII marker{runtime_};
-  lv_.tmpHandle = key;
-
   // Str.1: access holder[key].
+  lv_.tmpHandle = key;
   auto propRes = JSObject::getComputed_RJS(
       lv_.operationStrHolder, runtime_, lv_.tmpHandle);
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv_.operationStrValue = propRes->get();
+  return operationStrValue(marker, key);
+}
+
+CallResult<bool> JSONStringifyer::operationStrValue(
+    GCScopeMarkerRAII &marker,
+    HermesValue key) {
+  struct : public Locals {
+    PinnedValue<> hValueHV;
+    PinnedValue<Callable> toJSON;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
+  lv_.tmpHandle = key;
 
   // Str.2. If Type(value) is Object or BigInt, then
   lv.hValueHV = *lv_.operationStrValue;
@@ -347,12 +365,12 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     auto valueObj = Handle<JSObject>::vmcast(&lv.hValueHV);
     // Str.2.
     // Str.2.a: check if toJSON exists in value.
-    if (LLVM_UNLIKELY(
-            (propRes = JSObject::getNamedWithReceiver_RJS(
-                 valueObj,
-                 runtime_,
-                 Predefined::getSymbolID(Predefined::toJSON),
-                 lv_.operationStrValue)) == ExecutionStatus::EXCEPTION)) {
+    auto propRes = JSObject::getNamedWithReceiver_RJS(
+        valueObj,
+        runtime_,
+        Predefined::getSymbolID(Predefined::toJSON),
+        lv_.operationStrValue);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // Str.2.b: check if toJSON is a Callable.
