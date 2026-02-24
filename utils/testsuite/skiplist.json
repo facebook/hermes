@@ -3028,7 +3028,10 @@
     "test262/test/staging/sm/extensions/newer-type-functions-caller-arguments.js",
     "test262/test/staging/sm/class/classConstructorNoCall.js",
     "test262/test/staging/sm/class/methodInstallation.js",
-    "test262/test/staging/sm/object/method-non-constructor.js"
+    "test262/test/staging/sm/object/method-non-constructor.js",
+    "test262/test/staging/sm/Array/toLocaleString-01.js",
+    "test262/test/staging/sm/Function/redefine-arguments-length.js",
+    "test262/test/staging/sm/Math/expm1-monotonicity.js"
   ],
   "lazy_skip_list": [
     "test262/test/language/statements/try/scope-catch-param-lex-close.js"
