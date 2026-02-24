@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function empty () {
     switch (1) {}
@@ -20,39 +20,43 @@ function onlyDefault () {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [empty, onlyDefault]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %empty#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "empty" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %onlyDefault#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "onlyDefault" : string
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %6 = StoreStackInst undefined : undefined, %5
-// CHECK-NEXT:  %7 = LoadStackInst %5
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "empty": string
+// CHECK-NEXT:       DeclareGlobalVarInst "onlyDefault": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %empty(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "empty": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %onlyDefault(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "onlyDefault": string
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %7: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
-// CHECK:function empty#0#1()#2
-// CHECK-NEXT:S{empty#0#1()#2} = []
+// CHECK:scope %VS1 []
+
+// CHECK:function empty(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{empty#0#1()#2}
-// CHECK-NEXT:  %1 = BranchInst %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function onlyDefault#0#1()#3
-// CHECK-NEXT:S{onlyDefault#0#1()#3} = []
+// CHECK:scope %VS2 []
+
+// CHECK:function onlyDefault(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{onlyDefault#0#1()#3}
-// CHECK-NEXT:  %1 = BranchInst %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = BranchInst %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = BranchInst %BB2
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

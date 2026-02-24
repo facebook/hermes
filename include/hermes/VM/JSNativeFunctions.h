@@ -16,13 +16,11 @@
 namespace hermes {
 namespace vm {
 
-#define NATIVE_FUNCTION(func) \
-  CallResult<HermesValue> func(void *, Runtime &, NativeArgs);
+#define NATIVE_FUNCTION(func) CallResult<HermesValue> func(void *, Runtime &);
 #include "hermes/VM/NativeFunctions.def"
 
 /// Get a human-readable name of a native function.
 const char *getFunctionName(NativeFunctionPtr);
-const char *getFunctionName(NativeConstructor::CreatorFunction *);
 
 } // namespace vm
 } // namespace hermes

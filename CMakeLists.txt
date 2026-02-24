@@ -3,7 +3,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-cmake_minimum_required(VERSION 3.13.0)
+cmake_minimum_required(VERSION 3.21.0)
+
+# Set LTO policy
+if(POLICY CMP0069)
+    cmake_policy(SET CMP0069 NEW)
+endif()
 
 # Set the VERSION variables based on the project command
 if (POLICY CMP0048)
@@ -40,6 +45,12 @@ if (POLICY CMP0091)
   cmake_policy(SET CMP0091 NEW)
 endif()
 
+# Require a build type
+get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
+if ((NOT IS_MULTI_CONFIG) AND (NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL ""))
+    message(FATAL_ERROR "Please set CMAKE_BUILD_TYPE")
+endif()
+
 # Has to be set before `project` as per documentation
 # https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_SYSROOT.html
 set(CMAKE_OSX_SYSROOT ${HERMES_APPLE_TARGET_PLATFORM})
@@ -53,12 +64,16 @@ if(HERMES_APPLE_TARGET_PLATFORM MATCHES "catalyst")
   set(THREADS_PREFER_PTHREAD_FLAG ON)
 endif()
 
+if (WIN32)
+add_definitions(-D_WINDOWS)
+endif()
+
 # This must be consistent with the release_version in:
 # - android/build.gradle
 # - npm/package.json
 # - hermes-engine.podspec
 project(Hermes
-        VERSION 0.12.0
+        VERSION 1.0.0
         LANGUAGES C CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/")
@@ -95,7 +110,7 @@ set(HERMES_IS_MOBILE_BUILD ${HERMES_IS_ANDROID} CACHE BOOL
 
 set(HERMESVM_GCKIND HADES
   CACHE STRING
-  "HermesVM GC type: either MALLOC or HADES")
+  "HermesVM GC type: MALLOC, HADES")
 
 # Hermes VM opcode stats profiling
 set(HERMESVM_PROFILER_OPCODE OFF CACHE BOOL
@@ -125,8 +140,16 @@ endif()
 set(HERMESVM_INDIRECT_THREADING ${DEFAULT_INTERPRETER_THREADING} CACHE BOOL
   "Enable the indirect threaded interpreter")
 
-set(HERMESVM_ALLOW_COMPRESSED_POINTERS ON CACHE BOOL
-  "Enable compressed pointers. If this is on and the target is a 64-bit build, compressed pointers will be used.")
+# Determine how HermesValue-s are encoded in the heap.
+# - HEAP_HV_64: the default 64-bit encoding
+# - HEAP_HV_PREFER32: on 32-bit systems use 32-bit encoding and boxed doubles.
+#       On 64-bit systems, if the GC supports it, use 32-bit encoding with
+#       compressed pointers and boxed doubles. Otherwise fall back to HEAP_HV_64.
+# - HEAP_HV_BOXED: the encoding is either 32 or 64-bit depending on the system,
+#       but always box doubles. This is used for testing that all paths can deal
+#       with potential allocation of boxed doubles.
+set(HERMESVM_HEAP_HV_MODE HEAP_HV_64 CACHE STRING
+  "Heap HV mode: HEAP_HV_64, HEAP_HV_PREFER32, HEAP_HV_BOXED")
 
 if(APPLE)
     set(DEFAULT_CONTIGUOUS_HEAP OFF)
@@ -142,9 +165,9 @@ set(HERMESVM_ALLOW_HUGE_PAGES OFF CACHE BOOL
 
 # Note that smaller heap segments will lower the maximum number of properties
 # that can be stored in an object.
-set(HERMESVM_HEAP_SEGMENT_SIZE_KB 4096
+set(HERMESVM_LOG_HEAP_SEGMENT_SIZE 22
         CACHE STRING
-        "Size of segments in the GC managed heap in KB. Must be a power of 2.")
+        "Base 2 log of the size of segments in the GC managed heap in bytes.")
 
 set(HERMESVM_ALLOW_CONCURRENT_GC ON CACHE BOOL
         "Enable concurrency in the GC for 64-bit builds.")
@@ -190,10 +213,6 @@ set(HERMES_ENABLE_FUZZILLI OFF CACHE BOOL
 set(HERMES_ENABLE_TOOLS ON CACHE BOOL
   "Enable CLI tools")
 
-# Enable bitcode
-set(HERMES_ENABLE_BITCODE OFF CACHE BOOL
-  "Include bitcode with the framework")
-
 # Set linker flag for building the fuzzer
 set(HERMES_FUZZING_FLAG "-fsanitize=fuzzer" CACHE STRING
   "Linker argument to link fuzz targets against a given fuzzer.")
@@ -218,13 +237,7 @@ set(HERMES_USE_STATIC_ICU OFF CACHE BOOL
 set(HERMES_UNICODE_LITE OFF CACHE BOOL
   "Enable to use internal no-op unicode functionality instead of relying on underlying system libraries")
 
-if(WIN32)
-  set(DEFAULT_HERMES_CHECK_NATIVE_STACK OFF)
-else()
-  set(DEFAULT_HERMES_CHECK_NATIVE_STACK ON)
-endif()
-
-set(HERMES_CHECK_NATIVE_STACK ${DEFAULT_HERMES_CHECK_NATIVE_STACK} CACHE BOOL
+set(HERMES_CHECK_NATIVE_STACK ON CACHE BOOL
   "Check the native stack for stack overflow")
 
 set(HERMES_ENABLE_DEBUGGER ON CACHE BOOL
@@ -233,11 +246,11 @@ set(HERMES_ENABLE_DEBUGGER ON CACHE BOOL
 set(HERMES_MEMORY_INSTRUMENTATION ${HERMES_ENABLE_DEBUGGER} CACHE BOOL
   "Build with memory instrumentation support")
 
-set(HERMES_ENABLE_IR_INSTRUMENTATION OFF CACHE BOOL
-    "Build IR instrumentation support")
-
 set(HERMES_FACEBOOK_BUILD OFF CACHE BOOL
     "Build Facebook (rather than open-source) version of Hermes")
+
+set(HERMES_ENABLE_CONTRIB_EXTENSIONS ON CACHE BOOL
+    "Include community-contributed extensions (can be disabled for critical deployments)")
 
 set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
     "GC Out-of-memory raises an exception, rather than causing a crash")
@@ -245,20 +258,11 @@ set(HERMESVM_EXCEPTION_ON_OOM OFF CACHE BOOL
 set(HERMESVM_PLATFORM_LOGGING OFF CACHE BOOL
     "hermesLog(...) is enabled, using the platform's logging mechanism")
 
-set(HERMES_RUN_WASM OFF CACHE BOOL
-    "Emit Asm.js/Wasm unsafe compiler intrinsics")
-
-set(HERMES_USE_FLOWPARSER OFF CACHE BOOL
-  "Use libflowparser for parsing es6")
-
 set(HERMES_ENABLE_WERROR OFF CACHE BOOL
   "Whether the build should have -Werror enabled")
 
-set(HERMES_THREAD_SAFETY_ANALYSIS ON CACHE BOOL
+set(HERMES_THREAD_SAFETY_ANALYSIS OFF CACHE BOOL
   "Whether to compile with clang's -Wthread-safety")
-
-set(HERMES_ENABLE_WIN10_ICU_FALLBACK ON CACHE BOOL
-  "Whether to allow falling back on Win10 ICU")
 
 set(HERMES_GITHUB_RESOURCE_DIR "" CACHE STRING
   "A directory with additional files to bundle in the GitHub release")
@@ -270,11 +274,22 @@ set(ANDROID_LINUX_PERF_PATH ""
 set(HERMES_MSVC_MP ON CACHE STRING
   "Enable /MP in MSVC for parallel builds")
 
-set(EMSCRIPTEN_FASTCOMP OFF CACHE BOOL
-  "Emscripten is using the fastcomp backend instead of the LLVM one")
-
 set(HERMES_ENABLE_INTL OFF CACHE BOOL
   "Enable JS Intl support (WIP)")
+
+# On Windows, Intl is always enabled - the WinGlob fallback ensures it works
+# even without ICU. Override the cache variable to ON.
+if(WIN32)
+  set(HERMES_ENABLE_INTL ON)
+endif()
+
+set(HERMES_ENABLE_BUNDLED_ICU ON CACHE BOOL
+  "Build bundled hermes-icu.dll with ICU 78 for full Intl support on all Windows versions")
+
+set(HERMES_EXTERNAL_ICU_DIR "" CACHE PATH
+  "Path to external unicode.org ICU bin directory (for testing)")
+set(HERMES_EXTERNAL_ICU_VERSION "" CACHE STRING
+  "External ICU major version, e.g. 78 (for testing)")
 
 set(HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES ON CACHE BOOL
   "Enable RegExp Unicode Property Escapes support")
@@ -282,27 +297,55 @@ set(HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES ON CACHE BOOL
 set(HERMES_ENABLE_TEST_SUITE ON CACHE BOOL
   "Enable the test suite")
 
-set(HERMES_BUILD_APPLE_FRAMEWORK ON CACHE BOOL
+set(HERMES_BUILD_APPLE_FRAMEWORK OFF CACHE BOOL
   "Whether to build the libhermes target as a framework bundle or dylib on Apple platforms")
 
-set(IMPORT_HOST_COMPILERS "" CACHE FILEPATH
-  "Import the hermesc compiler from another build using the given CMake file.")
+set(HERMES_BUILD_LEAN_LIBHERMES OFF CACHE BOOL "Exclude the Hermes compiler from libhermes.")
 
-# On Windows, produce static libraries by default so that tests and tools work
-# without needing to move DLLs around.
-# On Emscripten, there is no concept of a shared library.
-if(WIN32 OR EMSCRIPTEN)
-  set(DEFAULT_BUILD_SHARED_LIBS OFF)
-else()
-  set(DEFAULT_BUILD_SHARED_LIBS ON)
+set(HERMES_BUILD_SHARED_JSI OFF CACHE BOOL "Build JSI as a shared library.")
+
+set(IMPORT_HOST_COMPILERS "" CACHE FILEPATH
+  "Import the shermes and hermesc compiler from another build using the given CMake file.")
+
+set(HERMESVM_INTERNAL_JAVASCRIPT_NATIVE OFF CACHE BOOL
+  "Use natively compiled InternalJavaScript. Set OFF to use bytecode version")
+
+# 0: JIT is disabled
+# 1: JIT is enabled if supported by the platform
+# 2: JIT is enabled
+set(HERMESVM_ALLOW_JIT 0 CACHE STRING "JIT mode: 0 (off), 1 (auto) or 2 (force on)")
+
+set(HERMES_ALLOW_BOOST_CONTEXT 1 CACHE STRING
+   "Use Boost.Context fibers: 0 (off), 1 (auto) or 2 (force on)")
+
+# Used in the compiler, for various compilation statistics.
+set(LLVM_FORCE_ENABLE_STATS OFF CACHE BOOL
+  "Enable gathering, printing of Statistics.")
+
+set(QEMU_RUN_PREFIX "" CACHE STRING
+  "Command prefix for invoking cross-compiled binaries with QEMU.")
+
+set(JSI_UNSTABLE ON CACHE BOOL "Enable the JSI unstable APIs.")
+
+if (NOT QEMU_RUN_PREFIX STREQUAL "")
+  add_definitions(-DQEMU_MODE)
 endif()
 
-set(HERMES_BUILD_SHARED_JSI ${DEFAULT_BUILD_SHARED_LIBS} CACHE BOOL "Build JSI as a shared library.")
+# Used to force enable slow statistics even in release builds.
+set(HERMES_FORCE_SLOW_STATS OFF CACHE BOOL
+  "Force enable HERMES_SLOW_STATISTIC even when HERMES_SLOW_DEBUG is off.")
 
-set(BUILD_SHARED_LIBS ${DEFAULT_BUILD_SHARED_LIBS} CACHE BOOL "Prefer producing shared libraries.")
+if(HERMES_FORCE_SLOW_STATS)
+  # Also enable regular statistics when slow stats are forced on
+  set(LLVM_FORCE_ENABLE_STATS ON)
+endif()
 
-if (HERMES_IS_ANDROID)
-  add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_JAVA)
+# This definition is used by source that must be kept identical between Hermes and
+# Static Hermes, but needs to behave differently in each case.
+add_definitions(-DSTATIC_HERMES)
+
+if (HERMES_UNICODE_LITE)
+  add_definitions(-DHERMES_PLATFORM_UNICODE=HERMES_PLATFORM_UNICODE_LITE)
 endif()
 
 # Configure Windows-specific build settings
@@ -312,12 +355,6 @@ if(WIN32)
 endif()
 
 if(HERMES_CHECK_NATIVE_STACK)
-  if (WIN32)
-    message(
-      FATAL_ERROR
-      "Native stack checking not supported on Windows"
-    )
-  endif()
   add_definitions(-DHERMES_CHECK_NATIVE_STACK)
 endif()
 
@@ -325,38 +362,27 @@ if (HERMES_IS_MOBILE_BUILD)
   add_definitions(-DHERMES_IS_MOBILE_BUILD)
 endif()
 
-# Enable debug mode by default
-if ((NOT GENERATOR_IS_MULTI_CONFIG) AND CMAKE_BUILD_TYPE STREQUAL "")
-    set(CMAKE_BUILD_TYPE Debug)
+if (HERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
+  add_definitions(-DHERMESVM_INTERNAL_JAVASCRIPT_NATIVE)
 endif()
 
 if (HERMES_STATIC_LINK)
   append("-static" CMAKE_EXE_LINKER_FLAGS)
   set(HERMES_USE_STATIC_ICU ON)
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
-  set(HERMES_BUILD_SHARED_JSI OFF)
-  set(BUILD_SHARED_LIBS OFF)
 endif()
 
 if (NOT HERMES_USING_LLD_LINK)
   # Check if the linker supports deleting unused sections and ICF.
-  # We can't simply CHECK_CXX_COMPILER_FLAG("-Wl,--gc-sections" ..) because CMake
-  # will compile and link separately and only passes the flag during compilation.
-  # TODO: Use check_linker_flag once we have CMake 3.18.
-  set(OLD_CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,--gc-sections")
-  CHECK_CXX_COMPILER_FLAG("" HAVE_GC_SECTIONS)
-
+# These are GNU ld / lld flags, so skip them for MSVC.
+#if(NOT MSVC)
+  check_linker_flag(CXX "LINKER:--gc-sections" HAVE_GC_SECTIONS)
   # Only check for -dead_strip on Apple because some linkers may interpret it
   # as "-d -e ad_strip".
   if(APPLE)
-    set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,-dead_strip")
-    CHECK_CXX_COMPILER_FLAG("" HAVE_DEAD_STRIP)
+    check_linker_flag(CXX "LINKER:-dead_strip" HAVE_DEAD_STRIP)
   endif()
-
-  set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS} -Wl,--icf=safe")
-  CHECK_CXX_COMPILER_FLAG("" HAVE_ICF)
-  set(CMAKE_EXE_LINKER_FLAGS "${OLD_CMAKE_EXE_LINKER_FLAGS}")
+  check_linker_flag(CXX "LINKER:--icf=safe" HAVE_ICF)
 
   if(HAVE_GC_SECTIONS)
     add_flag_if_supported("-ffunction-sections" FUNCTION_SECTIONS)
@@ -376,10 +402,6 @@ endif()
 # Make the HERMES_RELEASE_VERSION accessible for version printing in C++.
 if(HERMES_RELEASE_VERSION)
     add_definitions(-DHERMES_RELEASE_VERSION="${HERMES_RELEASE_VERSION}")
-endif()
-
-if(HERMES_ENABLE_IR_INSTRUMENTATION)
-    add_definitions(-DHERMES_ENABLE_IR_INSTRUMENTATION)
 endif()
 
 add_definitions(-DHERMESVM_GC_${HERMESVM_GCKIND})
@@ -404,16 +426,54 @@ endif()
 if(HERMESVM_INDIRECT_THREADING)
     add_definitions(-DHERMESVM_INDIRECT_THREADING)
 endif()
-if(HERMESVM_ALLOW_COMPRESSED_POINTERS)
-    add_definitions(-DHERMESVM_ALLOW_COMPRESSED_POINTERS)
+
+# Configure HERMESVM_COMPRESSED_POINTERS and HERMESVM_BOXED_DOUBLES. There are
+# only three valid states:
+#   COMPRESSED=false BOXED=false  => Heap uses 64-bit HV
+#   COMPRESSED=true  BOXED=true   => 64-bit native ptr, heap uses 32-bit HV with
+#                                    compressed pointers
+#   COMPRESSED=false BOXED=true   => Heap uses native-ptr size HV
+#
+# Additionally, only with COMPRESSED=true, if allowed, HERMESVM_CONTIGUOUS_HEAP
+# is set.
+set(HERMESVM_COMPRESSED_POINTERS OFF)
+set(HERMESVM_BOXED_DOUBLES OFF)
+set(HERMESVM_CONTIGUOUS_HEAP OFF)
+if(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_64")
+  # Do nothing.
+elseif(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_PREFER32")
+  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
+    # Box doubles on 32-bit systems.
+    set(HERMESVM_BOXED_DOUBLES ON)
+  else()
+    # Compressed pointers are only enabled on 64 bit systems with Hades GC.
+    if (HERMESVM_GCKIND MATCHES HADES)
+      set(HERMESVM_COMPRESSED_POINTERS ON)
+      set(HERMESVM_BOXED_DOUBLES ON)
+      if(HERMESVM_ALLOW_CONTIGUOUS_HEAP)
+        set(HERMESVM_CONTIGUOUS_HEAP ON)
+      endif()
+    endif()
+  endif()
+elseif(HERMESVM_HEAP_HV_MODE STREQUAL "HEAP_HV_BOXED")
+  set(HERMESVM_BOXED_DOUBLES ON)
+else()
+  message(SEND_ERROR "Invalid HERMESVM_HEAP_HV_MODE: ${HERMESVM_HEAP_HV_MODE}")
 endif()
-if(HERMESVM_ALLOW_CONTIGUOUS_HEAP)
-    add_definitions(-DHERMESVM_ALLOW_CONTIGUOUS_HEAP)
+if (HERMESVM_COMPRESSED_POINTERS)
+  add_definitions(-DHERMESVM_COMPRESSED_POINTERS)
 endif()
+if (HERMESVM_BOXED_DOUBLES)
+  add_definitions(-DHERMESVM_BOXED_DOUBLES)
+endif()
+if (HERMESVM_CONTIGUOUS_HEAP)
+  add_definitions(-DHERMESVM_CONTIGUOUS_HEAP)
+endif()
+
 if(HERMESVM_ALLOW_HUGE_PAGES)
     add_definitions(-DHERMESVM_ALLOW_HUGE_PAGES)
 endif()
-add_definitions(-DHERMESVM_HEAP_SEGMENT_SIZE_KB=${HERMESVM_HEAP_SEGMENT_SIZE_KB})
+add_definitions(-DHERMESVM_LOG_HEAP_SEGMENT_SIZE=${HERMESVM_LOG_HEAP_SEGMENT_SIZE})
 if(HERMESVM_ALLOW_CONCURRENT_GC)
     add_definitions(-DHERMESVM_ALLOW_CONCURRENT_GC)
 endif()
@@ -430,17 +490,49 @@ if(HERMESVM_CRASH_TRACE)
     add_definitions(-DHERMESVM_CRASH_TRACE=1)
 endif()
 if (HERMES_ENABLE_ADDRESS_SANITIZER)
-    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
-    # GCC does not automatically link libpthread when using ASAN
-    append("-lpthread" CMAKE_EXE_LINKER_FLAGS)
+    append("-fsanitize=address" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+    # MSVC handles ASAN runtime linking automatically when objects compiled with
+    # /fsanitize=address are linked. Don't pass the flag to the linker on MSVC.
+    if (MSVC)
+        # MSVC needs these debug information for ASAN to report errors correctly.
+        append("/Zi" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+        append("/DEBUG" CMAKE_EXE_LINKER_FLAGS)
+        # Disable asan sanitization on contaienrs, which causes redefinition error
+        # on VS2022 when building llvh.
+        add_compile_definitions(_DISABLE_VECTOR_ANNOTATION)
+
+        get_filename_component(MSVC_BIN_DIR ${CMAKE_CXX_COMPILER} DIRECTORY)
+        # Define the paths to the ASAN Release and Debug DLLs.
+        set(ASAN_RELEASE_DLL "${MSVC_BIN_DIR}/clang_rt.asan_dynamic-x86_64.dll")
+        set(ASAN_DEBUG_DLL   "${MSVC_BIN_DIR}/clang_rt.asan_dbg_dynamic-x86_64.dll")
+    else()
+        append("-fsanitize=address" CMAKE_EXE_LINKER_FLAGS)
+        # GCC does not automatically link libpthread when using ASAN
+        append("-lpthread" CMAKE_EXE_LINKER_FLAGS)
+    endif()
 endif()
 if (HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER)
-    add_definitions(-DHERMES_UBSAN)
-    # Do not enable the vptr sanitizer, as it requires RTTI.
-    append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    # MSVC does not support UBSan
+    if (MSVC)
+        message(WARNING "Undefined Behavior Sanitizer is not supported on MSVC, ignoring HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER")
+    else()
+        add_definitions(-DHERMES_UBSAN)
+        # Do not enable the vptr sanitizer, as it requires RTTI.
+        append("-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover=undefined" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+        # Function signature sanitization produces false positives on Apple platforms.
+        # https://github.com/llvm/llvm-project/issues/109074
+        if (APPLE)
+            add_flag_if_supported("-fno-sanitize=function" APPLE_NO_SANITIZE_FUNCTION)
+        endif()
+    endif()
 endif()
 if (HERMES_ENABLE_THREAD_SANITIZER)
-    append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    # MSVC does not support TSan.
+    if (MSVC)
+        message(WARNING "Thread Sanitizer is not supported on MSVC, ignoring HERMES_ENABLE_THREAD_SANITIZER")
+    else()
+        append("-fsanitize=thread" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
+    endif()
 endif()
 if (HERMES_ENABLE_TRACE_PC_GUARD)
     append("-fsanitize-coverage=trace-pc-guard" CMAKE_CXX_FLAGS CMAKE_C_FLAGS CMAKE_EXE_LINKER_FLAGS)
@@ -456,14 +548,11 @@ if(HERMES_FACEBOOK_BUILD)
     add_definitions(-DHERMES_FACEBOOK_BUILD)
 endif()
 if(HERMESVM_EXCEPTION_ON_OOM)
-    set(HERMES_ENABLE_EH_RTTI ON)
+    set(HERMES_ENABLE_EH ON)
     add_definitions(-DHERMESVM_EXCEPTION_ON_OOM)
 endif()
 if(HERMESVM_PLATFORM_LOGGING)
     add_definitions(-DHERMESVM_PLATFORM_LOGGING)
-endif()
-if(HERMES_RUN_WASM)
-    add_definitions(-DHERMES_RUN_WASM)
 endif()
 if (NOT (ANDROID_LINUX_PERF_PATH STREQUAL ""))
   add_definitions(-DANDROID_LINUX_PERF_PATH="${ANDROID_LINUX_PERF_PATH}")
@@ -497,9 +586,46 @@ if (HERMES_HARDENED)
   add_definitions(-DHERMES_HARDENED)
 endif()
 
+if (HERMESVM_ALLOW_JIT)
+  add_definitions(-DHERMESVM_ALLOW_JIT=${HERMESVM_ALLOW_JIT})
+endif ()
+
+if (HERMES_ALLOW_BOOST_CONTEXT EQUAL 0)
+    set(HERMES_USE_BOOST_CONTEXT 0)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 2)
+    set(HERMES_USE_BOOST_CONTEXT 1)
+elseif (HERMES_ALLOW_BOOST_CONTEXT EQUAL 1)
+    if (HERMES_ENABLE_ADDRESS_SANITIZER OR EMSCRIPTEN)
+        set(HERMES_USE_BOOST_CONTEXT 0)
+    else()
+        set(HERMES_USE_BOOST_CONTEXT 1)
+    endif()
+else ()
+    message(FATAL_ERROR "Invalid HERMES_ALLOW_BOOST_CONTEXT value ${HERMES_ALLOW_BOOST_CONTEXT}")
+endif ()
+# Use BOOST_CONTEXT_LIB to rever to boost_context as a dependency, regardless of
+# whether it is enabled.
+if (HERMES_USE_BOOST_CONTEXT)
+    set(BOOST_CONTEXT_LIB boost_context)
+else()
+    set(BOOST_CONTEXT_LIB )
+endif()
+add_definitions(-DHERMES_USE_BOOST_CONTEXT=${HERMES_USE_BOOST_CONTEXT})
+
+if(HERMES_FORCE_SLOW_STATS)
+  add_definitions(-DHERMES_FORCE_SLOW_STATS)
+endif()
+
+
 if (GCC_COMPATIBLE)
   # Don't export symbols unless we explicitly say so
   append("-fvisibility=hidden" CMAKE_CXX_FLAGS CMAKE_C_FLAGS)
+  # We depend on reading/writing certain properties in C++ objects in generated
+  # C code through C structs that mirror those C++ objects. This means that
+  # unrelated types may alias in our code, and we must disable strict aliasing.
+  # We would also like to avoid arbitrary UB on signed integer and pointer
+  # overflow, so disable strict overflow as well.
+  append("-fno-strict-aliasing -fno-strict-overflow" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   # Note: Windows-specific flags (security, DLL warnings) are in HermesWindows.cmake
   # C4068 unknown pragma
@@ -512,39 +638,40 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -wd4530")
   # Parallelize build
   if (HERMES_MSVC_MP)
-    add_compile_options( /MP )
+    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/MP>)
   endif()
+  # MSVC does not have strict aliasing so there is no need to support it.
+  # Similar to GCC/Clang above, disable strict signed integer overflow.
+  # TODO: Investigate disabling strict signed integer overflow for MSVC
+  # append("/d2UndefIntOverflow-" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
 # Export a JSON file with the compilation commands that external tools can use
 # to analyze the source code of the project.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Attempt to use system ICU first, if none specified.
 # Don't need ICU on Apple, Emscripten, and Android.
-if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID)
+if (APPLE OR EMSCRIPTEN OR HERMES_IS_ANDROID OR HERMES_UNICODE_LITE)
   set(ICU_FOUND 1)
 endif()
 
 if (NOT ICU_FOUND)
-  if (NOT ICU_ROOT)
-    set(FB_ICU_ROOT_A "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-5-glibc-2.23/9bc6787")
-    set(FB_ICU_ROOT_B "/mnt/gvfs/third-party2/icu/4e8f3e00e1c7d7315fd006903a9ff7f073dfc02b/53.1/gcc-4.8.1-glibc-2.17/c3f970a/")
-    if(EXISTS ${FB_ICU_ROOT_A})
-      set(ICU_ROOT ${FB_ICU_ROOT_A})
-    elseif(EXISTS ${FB_ICU_ROOT_B})
-      set(ICU_ROOT ${FB_ICU_ROOT_B})
-    endif()
-  endif()
   set(CMAKE_FIND_LIBRARY_SUFFIXES_OLD "${CMAKE_FIND_LIBRARY_SUFFIXES}")
   if (HERMES_USE_STATIC_ICU)
     add_definitions(-DU_STATIC_IMPLEMENTATION)
     set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
   endif()
 
-  # FindICU uses ICU_ROOT variable as a hint
-  # Include 'uc' twice for static libraries that depend on each other.
-  find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+  if (HERMES_ENABLE_INTL)
+    # Attempt to locate a system-installed ICU. A minimum version of 65 is
+    # required because our ICU-based Intl implementation relies on APIs introduced
+    # in version 65.
+    # Include 'uc' twice for static libraries that depend on each other.
+    find_global_package(ICU 65 COMPONENTS uc i18n data uc)
+  else()
+    # Include 'uc' twice for static libraries that depend on each other.
+    find_global_package(ICU 52 COMPONENTS uc i18n data uc)
+  endif()
 
   set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_FIND_LIBRARY_SUFFIXES_OLD}")
 
@@ -559,51 +686,36 @@ if (NOT ICU_FOUND)
   endif()
 endif()
 
-# ICU is available on Windows, but only since Windows 10 v1703.
-# Therefore, use it only as fallback.
-# TODO: (vmoroz) Review it as a part of Intl work.
-if (NOT ICU_FOUND AND HERMES_ENABLE_WIN10_ICU_FALLBACK AND
-    WIN32 # Windows 32 or 64 bit
-    # We used to check for at least Windows 10 version 1703 (aka Creators Update)
-    # but the new compliant images return 6.2. Everybody should be running
-    # the right version of windows now.
-    # NOT ${CMAKE_SYSTEM_VERSION} VERSION_LESS "10.0.15063"
-    )
-  add_definitions(-DUSE_WIN10_ICU)
-  set(ICU_FOUND 1)
-  set(ICU_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/external/icu_decls)
-  set(ICU_LIBRARIES
-    icuuc icuin
-  )
-  include_directories(${ICU_INCLUDE_DIRS})
-  message("Using Windows 10 built-in ICU")
-endif()
+## Windows ICU: loaded at runtime via impl_win/IcuProvider*.cpp.
+## No link-time ICU dependency needed for Intl on Windows.
 
-# If we have no ICU, then error out.
-if (NOT ICU_FOUND)
+# If we have no ICU, then error out (except on Windows where ICU is
+# loaded at runtime via impl_win/IcuProvider*.cpp).
+if (NOT ICU_FOUND AND NOT WIN32)
   message(FATAL_ERROR "Unable to find ICU.")
 endif()
 
 # Declare a function that links ICU for the given target.
 # This adds the correct -rpath link flag as necessary.
 function(hermes_link_icu target_name)
-  get_target_property(target_type ${target_name} TYPE)
-  # TODO: (vmoroz) Fix as a part of Intl work.
-  # target_link_libraries(${target_name} ${ICU_LIBRARIES})
+  if(ICU_LIBRARIES)
+    get_target_property(target_type ${target_name} TYPE)
+    target_link_libraries(${target_name} ${ICU_LIBRARIES})
 
-  if (HERMES_USE_STATIC_ICU)
-    if ((NOT EMSCRIPTEN) AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
-      target_link_libraries(${target_name} dl pthread)
-    elseif(target_type MATCHES "MODULE_LIBRARY|SHARED_LIBRARY")
-      message(WARNING "ICU cannot be statically linked against shared library target ${target_name}")
+    if (HERMES_USE_STATIC_ICU)
+      if ((NOT EMSCRIPTEN) AND target_type MATCHES "EXECUTABLE|STATIC_LIBRARY")
+        target_link_libraries(${target_name} dl pthread)
+      elseif(target_type MATCHES "MODULE_LIBRARY|SHARED_LIBRARY")
+        message(WARNING "ICU cannot be statically linked against shared library target ${target_name}")
+      endif()
     endif()
-  endif()
 
-  if (ICU_RPATH)
-    set_property(TARGET ${target_name} APPEND PROPERTY
-                  INSTALL_RPATH ${ICU_RPATH})
-    set_property(TARGET ${target_name} PROPERTY
-                  BUILD_WITH_INSTALL_RPATH TRUE)
+    if (ICU_RPATH)
+      set_property(TARGET ${target_name} APPEND PROPERTY
+                    INSTALL_RPATH ${ICU_RPATH})
+      set_property(TARGET ${target_name} PROPERTY
+                    BUILD_WITH_INSTALL_RPATH TRUE)
+    endif()
   endif()
 endfunction()
 
@@ -615,21 +727,6 @@ else()
   set(FOUNDATION "")
 endif()
 
-if (HERMES_USE_FLOWPARSER)
-  if (CMAKE_SYSTEM_NAME STREQUAL Darwin AND NOT HERMES_BUILD_32_BITS)
-    set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-mac.a)
-  elseif (CMAKE_SYSTEM_NAME STREQUAL Linux AND NOT HERMES_BUILD_32_BITS)
-    set(LIBFLOWPARSER ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/libflowparser-linux.a)
-  else()
-    set(LIBFLOWPARSER "")
-    set(HERMES_USE_FLOWPARSER OFF)
-  endif()
-endif()
-
-if (HERMES_USE_FLOWPARSER)
-  add_definitions(-DHERMES_USE_FLOWPARSER)
-endif()
-
 if (HERMES_ENABLE_DEBUGGER)
   add_definitions(-DHERMES_ENABLE_DEBUGGER)
 endif()
@@ -638,15 +735,11 @@ if (HERMES_MEMORY_INSTRUMENTATION)
   add_definitions(-DHERMES_MEMORY_INSTRUMENTATION)
 endif()
 
-# Disables the GCC 64-to-32 bit truncation diagnostic if the compiler supports
-# -Wshorten-64-to-32.
-check_cxx_compiler_flag("-Wshorten-64-to-32" CXX_SUPPORTS_SHORTEN_64_TO_32)
-if (${CXX_SUPPORTS_SHORTEN_64_TO_32})
-  add_definitions(-DHERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32)
-endif()
-
 set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LANGUAGE_STANDARD "c++17")
 
+if (JSI_UNSTABLE)
+    add_definitions(-DJSI_UNSTABLE)
+endif()
 # JSI_DIR has always priority over other folders.
 # It's used by React Native when building Hermes from source so
 # the copy of JSI inside `react-native/ReactCommon/jsi` can be used.
@@ -660,6 +753,8 @@ elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/API/jsi)
   set(HERMES_JSI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/API/jsi)
 elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../jsi)
   set(HERMES_JSI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../jsi)
+elseif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../../jsi)
+  set(HERMES_JSI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../jsi)
 else()
   message(FATAL_ERROR "Unable to find jsi.")
 endif()
@@ -679,9 +774,9 @@ include_directories(
 )
 
 include_directories(BEFORE
+  ${CMAKE_CURRENT_BINARY_DIR}/lib/config
   ${CMAKE_CURRENT_BINARY_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/flowparser/include
   ${CMAKE_CURRENT_SOURCE_DIR}/external
   )
 
@@ -689,7 +784,13 @@ if(HERMES_IS_ANDROID)
   find_package(fbjni REQUIRED CONFIG)
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+if("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
+  # MSVC requires c++20, because of the use of designated initializers in the codebase.
+  set(CMAKE_CXX_STANDARD 20)
+else()
+  set(CMAKE_CXX_STANDARD 17)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -700,7 +801,6 @@ add_subdirectory(public)
 add_subdirectory(external)
 add_subdirectory(API)
 add_subdirectory(android/intltest/java/com/facebook/hermes/test)
-add_subdirectory(unsupported)
 
 if(HERMES_ENABLE_TOOLS)
   add_subdirectory(tools)
@@ -715,10 +815,6 @@ add_subdirectory(${HERMES_JSI_DIR}/jsi ${CMAKE_CURRENT_BINARY_DIR}/jsi)
 set(BUILD_SHARED_LIBS ${save_BUILD_SHARED_LIBS})
 set(CMAKE_POSITION_INDEPENDENT_CODE ${save_CMAKE_POSITION_INDEPENDENT_CODE})
 
-if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
-    add_subdirectory(facebook)
-endif()
-
 # Configure the test suites
 #
 if(HERMES_ENABLE_TEST_SUITE)
@@ -727,6 +823,7 @@ if(HERMES_ENABLE_TEST_SUITE)
   endif()
 
   add_subdirectory(unittests)
+  add_subdirectory(test/static_asserts)
 
   list(APPEND HERMES_TEST_DEPS
     HermesUnitTests
@@ -740,6 +837,14 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbc-deltaprep
     hbc-diff
     dependency-extractor
+    shermes-dep
+    compileJS
+    emhermesc
+    hermes-jsi
+    hermes-jsi-lean
+    hermes-jsi-shared
+    hermes-jsi-lean-shared
+    hermes_rt
     )
 
   set(coverage_directory "")
@@ -751,9 +856,9 @@ if(HERMES_ENABLE_TEST_SUITE)
     test_exec_root=${CMAKE_CURRENT_BINARY_DIR}/test
     unittests_dir=${CMAKE_CURRENT_BINARY_DIR}/unittests
     debugger_enabled=${HERMES_ENABLE_DEBUGGER}
+    jit_enabled=${HERMESVM_ALLOW_JIT}
     intl_enabled=${HERMES_ENABLE_INTL}
     regexp_unicode_properties_enabled=${HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES}
-    use_flowparser=${HERMES_USE_FLOWPARSER}
     hbc_deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     dependency_extractor=${HERMES_TOOLS_OUTPUT_DIR}/dependency-extractor
     FileCheck=${HERMES_TOOLS_OUTPUT_DIR}/FileCheck
@@ -763,14 +868,27 @@ if(HERMES_ENABLE_TEST_SUITE)
     hbcdump=${HERMES_TOOLS_OUTPUT_DIR}/hbcdump
     hbc-deltaprep=${HERMES_TOOLS_OUTPUT_DIR}/hbc-deltaprep
     hbc_diff=${HERMES_TOOLS_OUTPUT_DIR}/hbc-diff
-    build_mode="$<IF:$<CONFIG:Debug>,dbg,opt>"
+    slow_debug=$<IF:$<CONFIG:Debug>,${HERMES_SLOW_DEBUG},OFF>
+    debug_options=$<IF:$<CONFIG:Debug>,ON,OFF>
     exception_on_oom_enabled=${HERMESVM_EXCEPTION_ON_OOM}
     profiler=${HERMES_PROFILER_MODE_IN_LIT_TEST}
     gc=${HERMESVM_GCKIND}
     ubsan=${HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER}
+    asan=${HERMES_ENABLE_ADDRESS_SANITIZER}
     coverage=${coverage_directory}
+    shermes=${HERMES_TOOLS_OUTPUT_DIR}/shermes
     check_native_stack=${HERMES_CHECK_NATIVE_STACK}
+    unicode_lite=${HERMES_UNICODE_LITE}
+    contrib_extensions_enabled=${HERMES_ENABLE_CONTRIB_EXTENSIONS}
+    qemu_run_prefix=${QEMU_RUN_PREFIX}
+    hermes_rt=${HERMES_TOOLS_OUTPUT_DIR}/hermes_rt
     )
+
+  if(NOT "${HERMES_EXTERNAL_ICU_DIR}" STREQUAL "")
+    list(APPEND HERMES_LIT_TEST_PARAMS_BASE
+      external_icu_dir=${HERMES_EXTERNAL_ICU_DIR}
+      external_icu_version=${HERMES_EXTERNAL_ICU_VERSION})
+  endif()
 
   set(HERMES_LIT_TEST_PARAMS
     ${HERMES_LIT_TEST_PARAMS_BASE}
@@ -792,6 +910,15 @@ if(HERMES_ENABLE_TEST_SUITE)
     ARGS ${HERMES_TEST_EXTRA_ARGS}
     )
   set_target_properties(check-hermes PROPERTIES FOLDER "Hermes regression tests")
+
+  list(APPEND SHERMES_TEST_DEPS shermes-dep)
+  add_lit_testsuite(check-shermes "Running the Static Hermes regression tests"
+    ${CMAKE_CURRENT_SOURCE_DIR}/test/shermes
+    PARAMS ${HERMES_LIT_TEST_PARAMS}
+    DEPENDS ${SHERMES_TEST_DEPS}
+    ARGS ${HERMES_TEST_EXTRA_ARGS}
+    )
+  set_target_properties(check-shermes PROPERTIES FOLDER "Static Hermes regression tests")
 
   # update-lit will regenerate the expectations for all tests that are verified with FileCheckOrRegen.
   # All other tests are run normally.

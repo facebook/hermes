@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_DEBUGGERAPI_H
-#define HERMES_DEBUGGERAPI_H
+#pragma once
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
@@ -501,5 +500,3 @@ class EventObserver {
 } // namespace facebook
 
 #endif // !HERMES_ENABLE_DEBUGGER
-
-#endif // HERMES_DEBUGGERAPI_H

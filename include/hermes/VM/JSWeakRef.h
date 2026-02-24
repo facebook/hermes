@@ -36,9 +36,10 @@ class JSWeakRef final : public JSObject {
 
   HermesValue deref(Runtime &runtime) const;
 
-  // This allocates a new WeakRef pointing to the given target. This should only
-  // be called once.
-  void setTarget(Runtime &runtime, Handle<JSObject> target);
+  /// This allocates a new WeakRef pointing to the given target. This should
+  /// only be called once.
+  /// \pre \p target must be an Object or non-registered Symbol.
+  void setTarget(Runtime &runtime, SmallHermesValue target);
 
   friend void JSWeakRefBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
@@ -55,7 +56,7 @@ class JSWeakRef final : public JSObject {
       : JSObject(runtime, *parent, *clazz), ref_(nullptr) {}
 
  private:
-  WeakRef<JSObject> ref_;
+  WeakRefObjOrSym ref_;
 };
 
 } // namespace vm

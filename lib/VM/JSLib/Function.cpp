@@ -16,6 +16,9 @@
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Operations.h"
+#include "hermes/VM/PropertyAccessor.h"
+#include "hermes/VM/Runtime-inline.h"
+#include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 
@@ -25,16 +28,21 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Function.
 
-Handle<JSObject> createFunctionConstructor(Runtime &runtime) {
+HermesValue createFunctionConstructor(Runtime &runtime) {
   auto functionPrototype = Handle<Callable>::vmcast(&runtime.functionPrototype);
 
-  auto cons = defineSystemConstructor<JSFunction>(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Function),
       functionConstructor,
       functionPrototype,
       1,
-      CellKind::JSFunctionKind);
+      lv.cons);
 
   // Function.prototype.xxx() methods.
   defineMethod(
@@ -44,20 +52,25 @@ Handle<JSObject> createFunctionConstructor(Runtime &runtime) {
       nullptr,
       functionPrototypeToString,
       0);
-  defineMethod(
-      runtime,
-      functionPrototype,
-      Predefined::getSymbolID(Predefined::apply),
-      nullptr,
-      functionPrototypeApply,
-      2);
-  defineMethod(
-      runtime,
-      functionPrototype,
-      Predefined::getSymbolID(Predefined::call),
-      nullptr,
-      functionPrototypeCall,
-      1);
+  runtime.registerBuiltin(
+      BuiltinMethod::HermesBuiltin_functionPrototypeApply,
+      defineMethod(
+          runtime,
+          functionPrototype,
+          Predefined::getSymbolID(Predefined::apply),
+          nullptr,
+          functionPrototypeApply,
+          2));
+
+  runtime.registerBuiltin(
+      BuiltinMethod::HermesBuiltin_functionPrototypeCall,
+      defineMethod(
+          runtime,
+          functionPrototype,
+          Predefined::getSymbolID(Predefined::call),
+          nullptr,
+          functionPrototypeCall,
+          1));
   defineMethod(
       runtime,
       functionPrototype,
@@ -70,7 +83,7 @@ Handle<JSObject> createFunctionConstructor(Runtime &runtime) {
   dpf.writable = 0;
   dpf.enumerable = 0;
   dpf.configurable = 0;
-  (void)defineMethod(
+  runtime.functionPrototypeSymbolHasInstance = defineMethod(
       runtime,
       functionPrototype,
       Predefined::getSymbolID(Predefined::SymbolHasInstance),
@@ -80,17 +93,48 @@ Handle<JSObject> createFunctionConstructor(Runtime &runtime) {
       1,
       dpf);
 
-  return cons;
+  // Define .callee and .arguments properties to throw always. In accordance
+  // with ES2023 10.2.4 AddRestrictedFunctionProperties.
+  auto accessor =
+      Handle<PropertyAccessor>::vmcast(&runtime.throwTypeErrorAccessor);
+  PropertyFlags pf;
+  pf.clear();
+  pf.enumerable = 0;
+  pf.configurable = 1;
+  pf.accessor = 1;
+  auto res = JSObject::defineNewOwnProperty(
+      functionPrototype,
+      runtime,
+      Predefined::getSymbolID(Predefined::caller),
+      pf,
+      accessor);
+  (void)res;
+  assert(res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
+  res = JSObject::defineNewOwnProperty(
+      functionPrototype,
+      runtime,
+      Predefined::getSymbolID(Predefined::arguments),
+      pf,
+      accessor);
+  (void)res;
+  assert(res != ExecutionStatus::EXCEPTION && "defineNewOwnProperty() failed");
+
+  return lv.cons.getHermesValue();
 }
 
-CallResult<HermesValue>
-functionConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Normal);
 }
 
-CallResult<HermesValue>
-functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
+
+  struct : public Locals {
+    PinnedValue<> propValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   auto func = args.dyncastThis<Callable>();
   if (!func) {
@@ -99,7 +143,7 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   }
 
   /// Append the current function name to the \p strBuf.
-  auto appendFunctionName = [&func, &runtime](SmallU16String<64> &strBuf) {
+  auto appendFunctionName = [&func, &runtime, &lv](SmallU16String<64> &strBuf) {
     // Extract the name.
     auto propRes = JSObject::getNamed_RJS(
         func, runtime, Predefined::getSymbolID(Predefined::name));
@@ -109,8 +153,8 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 
     // Convert the name to string, unless it is undefined.
     if (!(*propRes)->isUndefined()) {
-      auto strRes =
-          toString_RJS(runtime, runtime.makeHandle(std::move(*propRes)));
+      lv.propValue = std::move(*propRes);
+      auto strRes = toString_RJS(runtime, lv.propValue);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -122,34 +166,41 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   // Deal with JSFunctions that has a source String ID. That implies this
   // function need a non-default toString implementation.
   if (auto jsFunc = dyn_vmcast<JSFunction>(*func)) {
-    if (auto sourceID = jsFunc->getCodeBlock(runtime)->getFunctionSourceID()) {
+    RuntimeModule *runtimeModule = jsFunc->getCodeBlock()->getRuntimeModule();
+    bool nativeCode = false;
+
+    // If the module's functions are builtins, all show [native code].
+    if (runtimeModule->funcsAreBuiltins()) {
+      nativeCode = true;
+    } else if (auto sourceID = jsFunc->getCodeBlock()->getFunctionSourceID()) {
       StringPrimitive *source =
-          jsFunc->getCodeBlock(runtime)
-              ->getRuntimeModule()
-              ->getLazyRootModule()
-              ->getStringPrimFromStringIDMayAllocate(*sourceID);
+          runtimeModule->getStringPrimFromStringIDMayAllocate(*sourceID);
       // Empty source marks implementation-hidden function, fabricate a source
       // code string that imitate a NativeFunction.
       if (source->getStringLength() == 0) {
-        SmallU16String<64> strBuf{};
-        strBuf.append("function ");
-        if (LLVM_UNLIKELY(
-                appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
-          return ExecutionStatus::EXCEPTION;
-        }
-        strBuf.append("() { [native code] }");
-        return StringPrimitive::create(runtime, strBuf);
+        nativeCode = true;
       } else {
         // Otherwise, it's the preserved source code.
         return HermesValue::encodeStringValue(source);
       }
-    };
+    }
+
+    if (nativeCode) {
+      SmallU16String<64> strBuf{};
+      strBuf.append("function ");
+      if (LLVM_UNLIKELY(
+              appendFunctionName(strBuf) == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+      strBuf.append("() { [native code] }");
+      return StringPrimitive::create(runtime, strBuf);
+    }
   }
 
   SmallU16String<64> strBuf{};
-  if (vmisa<JSAsyncFunction>(*func)) {
+  if (Callable::isAsyncFunction(*func)) {
     strBuf.append("async function ");
-  } else if (vmisa<JSGeneratorFunction>(*func)) {
+  } else if (Callable::isGeneratorFunction(*func)) {
     strBuf.append("function *");
   } else {
     strBuf.append("function ");
@@ -199,8 +250,8 @@ functionPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::create(runtime, strBuf);
 } // namespace vm
 
-CallResult<HermesValue>
-functionPrototypeApply(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeApply(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
   auto func = args.dyncastThis<Callable>();
   if (LLVM_UNLIKELY(!func)) {
@@ -230,8 +281,8 @@ functionPrototypeApply(void *, Runtime &runtime, NativeArgs args) {
       .toCallResultHermesValue();
 }
 
-CallResult<HermesValue>
-functionPrototypeCall(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeCall(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto func = args.dyncastThis<Callable>();
   if (LLVM_UNLIKELY(!func)) {
     return runtime.raiseTypeError("Can't call() non-callable");
@@ -252,8 +303,8 @@ functionPrototypeCall(void *, Runtime &runtime, NativeArgs args) {
   return res->getHermesValue();
 }
 
-CallResult<HermesValue>
-functionPrototypeBind(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeBind(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto target = Handle<Callable>::dyn_vmcast(args.getThisHandle());
   if (!target) {
     return runtime.raiseTypeError("Can't bind() a non-callable");
@@ -263,8 +314,10 @@ functionPrototypeBind(void *, Runtime &runtime, NativeArgs args) {
       runtime, target, args.getArgCount(), args.begin());
 }
 
-CallResult<HermesValue>
-functionPrototypeSymbolHasInstance(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> functionPrototypeSymbolHasInstance(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   /// 1. Let F be the this value.
   auto F = args.getThisHandle();
   /// 2. Return OrdinaryHasInstance(F, V).

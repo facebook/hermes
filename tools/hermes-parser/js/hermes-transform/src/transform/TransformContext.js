@@ -366,7 +366,7 @@ export function getTransformContext(): TransformContextAdditions {
       return nodes.map((node_: ?T): DetachedNode<?ESNode> => {
         const node: ?ESNode = node_;
         if (node == null) {
-          // $FlowExpectedError[incompatible-return]
+          // $FlowExpectedError[incompatible-type]
           return node;
         }
         return shallowCloneNode<ESNode>(node, {});

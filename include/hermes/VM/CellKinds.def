@@ -28,9 +28,7 @@
 
 CELL_KIND(Uninitialized)
 CELL_KIND(FillerCell)
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
 CELL_KIND(Freelist)
-#endif
 CELL_KIND(DynamicUTF16StringPrimitive)
 CELL_KIND(DynamicASCIIStringPrimitive)
 CELL_KIND(BufferedUTF16StringPrimitive)
@@ -44,16 +42,15 @@ CELL_KIND(Domain)
 CELL_KIND(HiddenClass)
 CELL_KIND(ArrayStorage)
 CELL_KIND(ArrayStorageSmall)
-CELL_KIND(SegmentedArray)
-CELL_KIND(SegmentedArraySmall)
-CELL_KIND(Segment)
-CELL_KIND(SegmentSmall)
 CELL_KIND(PropertyAccessor)
 CELL_KIND(Environment)
-CELL_KIND(HashMapEntry)
-CELL_KIND(OrderedHashMap)
 CELL_KIND(BoxedDouble)
 CELL_KIND(NativeState)
+CELL_KIND(BigIntPrimitive)
+
+// DummyObject/LargeDummyObject used only in tests.
+CELL_KIND(DummyObject)
+CELL_KIND(LargeDummyObject)
 
 CELL_CLASS(JSObject, "Object")
 CELL_CLASS(DecoratedObject, "DecoratedObject")
@@ -86,37 +83,58 @@ CELL_CLASS(JSDate, "Date")
 CELL_CLASS(JSRegExp, "RegExp")
 CELL_CLASS(JSRegExpStringIterator, "RegExp String Iterator")
 CELL_CLASS(RequireContext, "RequireContext")
-CELL_CLASS(JSGenerator, "Generator")
+CELL_CLASS(JSGeneratorObject, "GeneratorObject")
 CELL_CLASS(JSProxy, "Proxy")
 CELL_CLASS(JSBigInt, "BigInt")
+CELL_CLASS(FastArray, "FastArray")
 
+// The ordering of Callables is set up carefully. We want to be able to
+// express overlapping regions: all Native functions, and functions
+// which may or may not make their own `this` when called as a
+// constructor. Luckily, Native functions don't span all 3 kinds of
+// constructor ranges, so we can lay out the native functions
+// contiguously between the two constructor ranges they do occupy.
+
+// Unknown if these callables make `this`. This is also where we put
+// callables that are not allowed to be called as a constructor.
 CELL_KIND(BoundFunction)
+// *NativeFunction begin*
 CELL_KIND(NativeFunction)
+// Makes own `this`.
 CELL_KIND(NativeConstructor)
-CELL_CLASS(JSCallableProxy, "CallableProxy")
 CELL_KIND(FinalizableNativeFunction)
-CELL_KIND(JSGeneratorFunction)
-CELL_KIND(GeneratorInnerFunction)
-CELL_KIND(JSAsyncFunction)
+// *NativeFunction end*, including JSCallableProxy
+CELL_CLASS(JSCallableProxy, "CallableProxy")
+CELL_KIND(NativeJSClass)
+CELL_KIND(JSClass)
+// Expects a made `this` parameter.
 CELL_CLASS(JSFunction, "Function")
-
-CELL_KIND(BigIntPrimitive)
-
-// Dummy object used only in tests.
-CELL_KIND(DummyObject)
+CELL_KIND(NativeJSFunction)
 
 // Update AllCells, below, if new CellKinds are added.
 // (AllCells is useful for checking that a CellKind is valid.)
 
 // Define inheritance ranges.
-CELL_RANGE(AllCells, Uninitialized, DummyObject)
-CELL_RANGE(Object, JSObject, JSFunction)
+CELL_RANGE(AllCells, Uninitialized, NativeJSFunction)
+CELL_RANGE(Object, JSObject, NativeJSFunction)
 CELL_RANGE(DecoratedObject, DecoratedObject, HostObject)
 CELL_RANGE(ArrayImpl, Arguments, JSArray)
-CELL_RANGE(Callable, BoundFunction, JSFunction)
-CELL_RANGE(CodeBlockFunction, JSGeneratorFunction, JSFunction)
-CELL_RANGE(NativeFunction, NativeFunction, FinalizableNativeFunction)
-CELL_RANGE(TypedArrayBase, Int8Array, BigUint64Array)
+
+CELL_RANGE(Callable, BoundFunction, NativeJSFunction)
+// The following ranges describe the behavior of Callables when they are
+// invoked as a constructor.
+// These callables may or may not make their own `this`. Some may not be
+// allowed to be called as a constructor at all.
+CELL_RANGE(CallableUnknownMakesThis, BoundFunction, NativeFunction)
+// These callables make their own `this` when called as a constructor.
+CELL_RANGE(CallableMakesThis, NativeConstructor, JSClass)
+// These callables expect a populated `this` when called as a constructor.
+CELL_RANGE(CallableExpectsThis, JSFunction, NativeJSFunction)
+
+CELL_RANGE(CodeBlockFunction, JSClass, JSFunction)
+CELL_RANGE(NativeFunction, NativeFunction, JSCallableProxy)
+CELL_RANGE(TypedArrayBase, Uint8Array, BigInt64Array)
+CELL_RANGE(NoAllocTypedArray, Uint8Array, Float64Array)
 CELL_RANGE(WeakMapImplBase, JSWeakMap, JSWeakSet)
 CELL_RANGE(
     StringPrimitive,

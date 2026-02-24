@@ -20,6 +20,7 @@ const CallableVTable FinalizableNativeFunction::vt{
         VTable(
             CellKind::FinalizableNativeFunctionKind,
             cellSize<FinalizableNativeFunction>(),
+            /* allowLargeAlloc */ false,
             FinalizableNativeFunction::_finalizeImpl),
         FinalizableNativeFunction::_getOwnIndexedRangeImpl,
         FinalizableNativeFunction::_haveOwnIndexedImpl,
@@ -29,8 +30,25 @@ const CallableVTable FinalizableNativeFunction::vt{
         FinalizableNativeFunction::_deleteOwnIndexedImpl,
         FinalizableNativeFunction::_checkAllOwnIndexedImpl,
     },
-    FinalizableNativeFunction::_newObjectImpl,
     FinalizableNativeFunction::_callImpl};
+
+CallResult<PseudoHandle<>> FinalizableNativeFunction::_callImpl(
+    Handle<Callable> selfHandle,
+    Runtime &runtime) {
+  CallResult<PseudoHandle<>> res =
+      _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
+  if (LLVM_UNLIKELY(res != ExecutionStatus::EXCEPTION)) {
+    StackFramePtr newFrame{runtime.getStackPointer()};
+    bool isConstructCall = !newFrame.getNewTargetRef().isUndefined();
+    // FinalizableNativeFunction must return an object value when it's called as
+    // a constructor.
+    if (isConstructCall && !(*res)->isObject()) {
+      return runtime.raiseTypeError(
+          "FinalizableNativeFunction constructor must return an object");
+    }
+  }
+  return res;
+}
 
 void FinalizableNativeFunctionBuildMeta(
     const GCCell *cell,
@@ -48,6 +66,24 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     FinalizeNativeFunctionPtr finalizePtr,
     SymbolID name,
     unsigned paramCount) {
+  return create(
+      runtime,
+      context,
+      functionPtr,
+      finalizePtr,
+      name,
+      paramCount,
+      runtime.makeNullHandle<JSObject>());
+}
+
+CallResult<HermesValue> FinalizableNativeFunction::create(
+    Runtime &runtime,
+    void *context,
+    NativeFunctionPtr functionPtr,
+    FinalizeNativeFunctionPtr finalizePtr,
+    SymbolID name,
+    unsigned paramCount,
+    Handle<JSObject> prototypeObjectHandle) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime.functionPrototype);
 
   auto *cell = runtime.makeAFixed<FinalizableNativeFunction, HasFinalizer::Yes>(
@@ -60,16 +96,13 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
       finalizePtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
 
-  auto prototypeObjectHandle = runtime.makeNullHandle<JSObject>();
-
   auto st = defineNameLengthAndPrototype(
       selfHandle,
       runtime,
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      false);
+      Callable::WritablePrototype::Yes);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -83,6 +116,7 @@ const ObjectVTable HostObject::vt{
     VTable(
         CellKind::HostObjectKind,
         cellSize<HostObject>(),
+        /* allowLargeAlloc */ false,
         HostObject::_finalizeImpl),
     HostObject::_getOwnIndexedRangeImpl,
     HostObject::_haveOwnIndexedImpl,
@@ -105,11 +139,7 @@ CallResult<HermesValue> HostObject::createWithoutPrototype(
   auto parentHandle = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
   HostObject *hostObj = runtime.makeAFixed<HostObject, HasFinalizer::Yes>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<HostObject>()),
-      std::move(proxy));
+      runtime, parentHandle, runtime.hostObjectClass, std::move(proxy));
 
   hostObj->flags_.hostObject = true;
 

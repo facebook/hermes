@@ -16,16 +16,13 @@
 
 namespace hermes {
 template <typename K, typename V>
-class ScopedHashTableNode {
+class ScopedHashTableNode : public std::pair<const K, V> {
  public:
-  K key_;
-  V value_;
-
   ScopedHashTableNode<K, V> *nextShadowed_{nullptr};
   ScopedHashTableNode<K, V> *nextInScope_{nullptr};
   uint32_t depth_;
   ScopedHashTableNode(uint32_t depth, const K &key, const V &value)
-      : key_(key), value_(value), depth_(depth) {}
+      : std::pair<const K, V>(key, value), depth_(depth) {}
 };
 
 template <typename K, typename V>
@@ -63,20 +60,25 @@ class ScopedHashTable {
   // The current scope. Owned by the user.
   ScopedHashTableScope<K, V> *scope_{nullptr};
 
-  /// Unlinks the innermost Node for a key and returns it.
-  ScopedHashTableNode<K, V> *pop(const K &key) {
-    ScopedHashTableNode<K, V> *&entry = map_[key];
+  /// Unlinks the specified entry, which must be the innermost, and returns it.
+  ScopedHashTableNode<K, V> *pop(typename decltype(map_)::iterator it) {
+    auto *entry = it->second;
     assert(entry && "Asked to pop an empty scope value");
     assert(
         entry->depth_ == scope_->depth_ &&
         "Asked to pop value not from innermost scope");
     auto *ret = entry;
     if (entry->nextShadowed_) {
-      entry = entry->nextShadowed_;
+      it->second = entry->nextShadowed_;
     } else {
-      map_.erase(key);
+      map_.erase(it);
     }
     return ret;
+  }
+
+  /// Unlinks the innermost Node for a key and returns it.
+  ScopedHashTableNode<K, V> *pop(const K &key) {
+    return pop(map_.find(key));
   }
 
   /// Unlinks and deallocates all keys in the current scope.
@@ -86,7 +88,7 @@ class ScopedHashTable {
     auto *current = scope_->head_;
     while (current) {
       assert(current->depth_ == scope_->depth_ && "Bad scope link");
-      auto *popped = pop(current->key_);
+      auto *popped = pop(current->first);
       assert(current == popped && "Unexpected innermost value for key");
       current = current->nextInScope_;
       // All nodes deallocated here.
@@ -96,7 +98,7 @@ class ScopedHashTable {
   }
 
   /// Create a new node and insert it into the current scope.
-  void insertNewNode(
+  ScopedHashTableNode<K, V> *insertNewNode(
       ScopedHashTableScope<K, V> *const scope,
       const K &key,
       const V &value,
@@ -104,48 +106,93 @@ class ScopedHashTable {
     // All Nodes allocated here.
     auto *update = new ScopedHashTableNode<K, V>(scope->depth_, key, value);
     assert(
-        (!entry || entry->depth_ <= scope->depth_) &&
+        (!entry || entry->depth_ < scope->depth_) &&
         "Can't insert values under existing names");
     update->nextShadowed_ = entry;
     update->nextInScope_ = scope->head_;
     scope->head_ = update;
     entry = update;
+    return update;
   }
 
  public:
+  using value_type = std::pair<const K, V>;
+
   ScopedHashTable() : map_() {}
   ~ScopedHashTable() {
     assert(!scope_ && "Scopes remain when destructing ScopedHashTable");
     assert(!map_.size() && "Elements remaining in map without scope!");
   }
 
-  /// Inserts a new key into the given scope. A key may not be inserted
-  /// such that it would be shadowed by another scope currently in effect.
-  void insertIntoScope(
+  /// Attempt to insert an element into the specified scope.
+  /// Semantics equivalent to std::map::try_emplace(). Returns a pair with an
+  /// iterator to the K, V pair and a bool indicating whether the insertion took
+  /// place.
+  /// Note that a key may not be inserted in the non-current scope such that it
+  /// would be shadowed by another scope currently in effect. Doing so is
+  /// undefined behavior.
+  std::pair<value_type *, bool> tryEmplaceIntoScope(
       ScopedHashTableScope<K, V> *const scope,
       const K &key,
       const V &value) {
-    assert(scope && "No currently defined scope");
-    insertNewNode(scope, key, value, map_[key]);
+    ScopedHashTableNode<K, V> *&entry = map_[key];
+    if (entry && entry->depth_ == scope->depth_) {
+      // The key exists in the current scope.
+      return {entry, false};
+    } else {
+      // Otherwise, create a new node in the current scope.
+      return {insertNewNode(scope, key, value, entry), true};
+    }
   }
 
-  /// Inserts a value into the current scope.
-  void insert(const K &key, const V &value) {
-    insertIntoScope(scope_, key, value);
+  /// Attempt to insert an element into the current scope.
+  /// Semantics equivalent to std::map::try_emplace(). Returns a pair with an
+  /// iterator to the K,V pair and a bool indicating whether the insertion took
+  /// place.
+  auto try_emplace(const K &key, const V &value) {
+    return tryEmplaceIntoScope(scope_, key, value);
   }
 
   /// If the key exists in the current scope, update its value to the specified
   /// one. Otherwise, create a new entry in current scope.
   void setInCurrentScope(const K &key, const V &value) {
     assert(scope_ && "No currently defined scope");
-    ScopedHashTableNode<K, V> *&entry = map_[key];
-    if (entry && entry->depth_ == scope_->depth_) {
-      // If the key exists in the current scope, update the value.
-      entry->value_ = value;
-    } else {
-      // Otherwise, create a new node in the current scope.
-      insertNewNode(scope_, key, value, entry);
-    }
+    auto [it, inserted] = tryEmplaceIntoScope(scope_, key, value);
+    if (!inserted)
+      it->second = value;
+  }
+
+  /// Erase the specified node from the current scope.
+  /// If the node doesn't exist in the current scope, do nothing and return
+  /// false. This function is O(number-of-elements-in-cur-scope).
+  ///
+  /// \return true if the node was found in the current scope and deleted,
+  ///     otherwise false.
+  bool eraseFromCurrentScope(const K &key) {
+    auto it = map_.find(key);
+    if (it == map_.end())
+      return false;
+
+    ScopedHashTableNode<K, V> *node = it->second;
+    if (node->depth_ != scope_->depth_)
+      return false;
+
+    // Find the previous node in the current scope.
+    ScopedHashTableNode<K, V> **pNext = &scope_->head_;
+    while (*pNext != node)
+      pNext = &(*pNext)->nextInScope_;
+
+    // Unlink the node from the current scope.
+    *pNext = node->nextInScope_;
+
+    // Unlink the node from the hash table.
+    pop(it);
+
+    // Finally deallocate the node.
+    delete node;
+
+    // We succeeded in deleting it!
+    return true;
   }
 
   /// Returns 1 if the value is defined, 0 if it's not.
@@ -159,7 +206,16 @@ class ScopedHashTable {
     if (result == map_.end())
       return V();
 
-    return result->second->value_;
+    return result->second->second;
+  }
+
+  /// Return a pointer to the innermost value for a key, or nullptr if none.
+  V *find(const K &key) {
+    auto result = map_.find(key);
+    if (result == map_.end())
+      return nullptr;
+
+    return &result->second->second;
   }
 
   // Gets all values currently in scope.
@@ -168,9 +224,23 @@ class ScopedHashTable {
         new llvh::DenseMap<K, V>(map_.size())};
     for (auto &pair : map_) {
       assert(pair.second && "Node is null");
-      (*result)[pair.first] = pair.second->value_;
+      (*result)[pair.first] = pair.second->second;
     }
     return result;
+  }
+
+  /// \return a pointer to the value for a key if it exists in the current
+  /// scope, or nullptr if none.
+  V *findInCurrentScope(const K &key) {
+    auto result = map_.find(key);
+    if (result == map_.end())
+      return nullptr;
+
+    // Result is not in the current scope.
+    if (result->second->depth_ != scope_->depth_)
+      return nullptr;
+
+    return &result->second->second;
   }
 
   // Gets keys in each scope. This may correspond to a \p ScopeChain.

@@ -17,7 +17,6 @@ int main(void) {
 
 #include <hermes/DebuggerAPI.h>
 #include <hermes/Support/OSCompat.h>
-#include <hermes/Support/OptValue.h>
 #include <hermes/hermes.h>
 #include <jsi/jsi.h>
 #include <signal.h>
@@ -134,12 +133,8 @@ std::string chompToken(std::string *str, const char *separators = " \t") {
 }
 
 void printUsageAndExit() {
-  std::cerr << "USAGE: hdb"
-               " [--break-at-start]"
-               " [--break-after <secs>]"
-               " [--lazy|--eager|--smart]"
-               " [--[no-]bs] [--[no-]block-scope]"
-               " <input JS file>\n";
+  std::cerr
+      << "USAGE: hdb [--break-at-start] [--break-after <secs>] [--lazy|--eager|--smart] <input JS file>\n";
   exit(EXIT_FAILURE);
 }
 
@@ -149,7 +144,7 @@ struct Options {
   hermes::vm::CompilationMode compilationMode{
       hermes::vm::ForceEagerCompilation};
   double breakAfterDelay{-1.}; // -1 disables breakAfterDelay
-  hermes::OptValue<bool> enableBlockScoping{};
+  bool enableBlockScoping{false};
 };
 
 Options getCommandLineOptions(int argc, char **argv) {
@@ -179,11 +174,6 @@ Options getCommandLineOptions(int argc, char **argv) {
       result.compilationMode = hermes::vm::ForceEagerCompilation;
     } else if (strcmp(arg, "--smart") == 0) {
       result.compilationMode = hermes::vm::SmartCompilation;
-    } else if (strcmp(arg, "-bs") == 0 || strcmp(arg, "--block-scope") == 0) {
-      result.enableBlockScoping = true;
-    } else if (
-        strcmp(arg, "-no-bs") == 0 || strcmp(arg, "--no-block-scope") == 0) {
-      result.enableBlockScoping = false;
     } else if (strcmp(arg, "--break-after") == 0) {
       char *endptr = nullptr;
       char *strValue = nextArg();
@@ -194,6 +184,8 @@ Options getCommandLineOptions(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
       result.breakAfterDelay = breakAfterDelay;
+    } else if (strcmp(arg, "--Xes6-block-scoping") == 0) {
+      result.enableBlockScoping = true;
     } else {
       printUsageAndExit();
     }
@@ -440,7 +432,7 @@ struct HDBDebugger : public debugger::EventObserver {
         if (breakpointId == debugger::kInvalidBreakpoint) {
           // Failed to set the breakpoint.
           // TODO: Improve error reporting here.
-          std::cout << "Invalid or duplicate breakpoint not set\n";
+          std::cout << "Invalid breakpoint not set\n";
         } else {
           const auto info = debugger.getBreakpointInfo(breakpointId);
           const auto &loc =
@@ -784,13 +776,14 @@ int main(int argc, char **argv) {
       (std::istreambuf_iterator<char>(fileStream)),
       std::istreambuf_iterator<char>());
 
-  hermes::vm::RuntimeConfig::Builder optsBuilder;
-  optsBuilder.withCompilationMode(options.compilationMode);
-  if (options.enableBlockScoping) {
-    optsBuilder.withEnableBlockScoping(*options.enableBlockScoping);
-  }
-  std::unique_ptr<HermesRuntime> runtime =
-      makeHermesRuntime(optsBuilder.build());
+  hermes::vm::RuntimeConfig config =
+      hermes::vm::RuntimeConfig::Builder()
+          .withMicrotaskQueue(true)
+          .withCompilationMode(options.compilationMode)
+          .withES6BlockScoping(options.enableBlockScoping)
+          .build();
+
+  std::unique_ptr<HermesRuntime> runtime = makeHermesRuntime(config);
   HDBDebugger debugger(*runtime);
   runtime->getDebugger().setEventObserver(&debugger);
   runtime->getDebugger().setShouldPauseOnScriptLoad(options.breakAtStart);

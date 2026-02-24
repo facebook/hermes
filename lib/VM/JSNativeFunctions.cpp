@@ -20,12 +20,6 @@
 #include "hermes/VM/PrimitiveBox.h"
 
 #include <limits>
-
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -57,11 +51,7 @@ static llvh::DenseMap<const void *, const char *> funcNames() {
 
   static const void *const functionPointers[] = {
 #define NATIVE_FUNCTION(func) (void *)func,
-
-  // Creator functions are overloaded, we have to cast them to CreatorFunction *
-  // first.
-#define NATIVE_CONSTRUCTOR(func) \
-  (void *)(NativeConstructor::CreatorFunction *)func,
+#define NATIVE_CONSTRUCTOR(func) (void *)func,
 #include "hermes/VM/NativeFunctions.def"
 #undef NATIVE_FUNCTION
 #undef NATIVE_CONSTRUCTOR
@@ -96,10 +86,6 @@ static const char *getFunctionNameImpl(void *func) {
 }
 
 const char *getFunctionName(NativeFunctionPtr func) {
-  return getFunctionNameImpl((void *)func);
-}
-
-const char *getFunctionName(NativeConstructor::CreatorFunction *func) {
   return getFunctionNameImpl((void *)func);
 }
 

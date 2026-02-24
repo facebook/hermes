@@ -10,12 +10,14 @@
 
 import type {
   ArrowFunctionExpression as ArrowFunctionExpressionType,
+  BlockStatement as BlockStatementType,
   ClassDeclaration as ClassDeclarationType,
   DeclareFunction as DeclareFunctionType,
   ESNode,
   FunctionTypeAnnotation as FunctionTypeAnnotationType,
   Identifier as IdentifierType,
   InterpreterDirective as InterpreterDirectiveType,
+  Statement as StatementType,
   Token as TokenType,
   Comment as CommentType,
   TemplateElement as TemplateElementType,
@@ -63,11 +65,11 @@ export function ArrowFunctionExpression(props: {
     expression: props.body.type !== 'BlockStatement',
     params: props.params.map(n => asDetachedNode(n)),
     body: asDetachedNode(props.body),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     returnType: asDetachedNode(props.returnType),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     predicate: asDetachedNode(props.predicate),
     async: props.async,
   });
@@ -79,8 +81,8 @@ export type ClassDeclarationProps = {
   +id?: ?MaybeDetachedNode<ClassDeclarationType['id']>,
   +typeParameters?: ?MaybeDetachedNode<ClassDeclarationType['typeParameters']>,
   +superClass?: ?MaybeDetachedNode<ClassDeclarationType['superClass']>,
-  +superTypeParameters?: ?MaybeDetachedNode<
-    ClassDeclarationType['superTypeParameters'],
+  +superTypeArguments?: ?MaybeDetachedNode<
+    ClassDeclarationType['superTypeArguments'],
   >,
   // make this optional as it's rarer that people would want to include them
   +implements?: $ReadOnlyArray<
@@ -98,14 +100,14 @@ export function ClassDeclaration(props: {
 }): DetachedNode<ClassDeclarationType> {
   const node = detachedProps<ClassDeclarationType>(props.parent, {
     type: 'ClassDeclaration',
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     id: asDetachedNode(props.id),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     typeParameters: asDetachedNode(props.typeParameters),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     superClass: asDetachedNode(props.superClass),
-    // $FlowFixMe[incompatible-call]
-    superTypeParameters: asDetachedNode(props.superTypeParameters),
+    // $FlowFixMe[incompatible-type]
+    superTypeArguments: asDetachedNode(props.superTypeArguments),
     decorators: (props.decorators ?? []).map(n => asDetachedNode(n)),
     implements: (props.implements ?? []).map(n => asDetachedNode(n)),
     body: asDetachedNode(props.body),
@@ -149,7 +151,7 @@ export function Identifier(props: {
     type: 'Identifier',
     name: props.name,
     optional: props.optional ?? false,
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     typeAnnotation: asDetachedNode(props.typeAnnotation),
   });
   setParentPointersInDirectChildren(node);
@@ -177,7 +179,7 @@ export function Program(props: {
     comments: props.comments ?? [],
     interpreter:
       props.interpreter != null
-        ? // $FlowFixMe[incompatible-call]
+        ? // $FlowFixMe[incompatible-type]
           asDetachedNode<InterpreterDirectiveType>({
             type: 'InterpreterDirective',
             value: props.interpreter,
@@ -209,7 +211,7 @@ export function DeclareFunction(props: {
         typeAnnotation: asDetachedNode(props.functionType),
       }),
     }),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     predicate: asDetachedNode(props.predicate),
   });
   setParentPointersInDirectChildren(node);
@@ -233,6 +235,22 @@ export function MemberExpression(props: {
     property: asDetachedNode(props.property),
     computed: props.computed,
     optional: props.optional ?? false,
+  });
+  setParentPointersInDirectChildren(node);
+  return node;
+}
+
+// Ignore the hermes-specific `implicit` property.
+export type BlockStatementProps = {
+  +body: $ReadOnlyArray<MaybeDetachedNode<StatementType>>,
+};
+export function BlockStatement(props: {
+  ...$ReadOnly<BlockStatementProps>,
+  +parent?: ESNode,
+}): DetachedNode<BlockStatementType> {
+  const node = detachedProps<BlockStatementType>(props.parent, {
+    type: 'BlockStatement',
+    body: props.body.map(n => asDetachedNode(n)),
   });
   setParentPointersInDirectChildren(node);
   return node;

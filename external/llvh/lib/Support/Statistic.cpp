@@ -32,6 +32,7 @@
 #include "llvh/Support/Timer.h"
 #include "llvh/Support/YAMLTraits.h"
 #include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/DebugOptions.h"
 #include <algorithm>
 #include <cstring>
 using namespace llvh;
@@ -39,17 +40,21 @@ using namespace llvh;
 /// -stats - Command line option to cause transformations to emit stats about
 /// what they did.
 ///
-static cl::opt<bool> Stats(
-    "stats",
-    cl::desc("Enable statistics output from program (available with Asserts)"),
-    cl::Hidden);
-
-static cl::opt<bool> StatsAsJSON("stats-json",
-                                 cl::desc("Display statistics as json data"),
-                                 cl::Hidden);
-
+static bool Stats;
+static bool StatsAsJSON;
 static bool Enabled;
 static bool PrintOnExit;
+
+void llvh::initStatisticOptions() {
+  static cl::opt<bool, true> registerStats{
+      "stats",
+      cl::desc(
+          "Enable statistics output from program (available with Asserts)"),
+      cl::location(Stats), cl::Hidden};
+  static cl::opt<bool, true> registerStatsAsJson{
+      "stats-json", cl::desc("Display statistics as json data"),
+      cl::location(StatsAsJSON), cl::Hidden};
+}
 
 namespace {
 /// This class is used in a ManagedStatic so that it is created on demand (when

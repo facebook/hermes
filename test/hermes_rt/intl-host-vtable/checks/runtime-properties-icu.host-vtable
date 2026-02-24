@@ -1,0 +1,4 @@
+// Host-provided vtable expected output for runtime-properties-icu.js.
+// The modified vtable sets provider_name to "host-test".
+// CHECK: ICU Provider: host-test
+// CHECK-NEXT: ICU Version: 78

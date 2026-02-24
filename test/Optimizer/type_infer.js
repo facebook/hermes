@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O | %FileCheckOrRegen %s --match-full-lines
 
 // Make sure we can remove all trampolines from our code.
 
@@ -48,68 +48,65 @@ function test_unary(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [sink, test_one, test_unary]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2 : undefined, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %test_one#0#1()#3 : undefined, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "test_one" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %test_unary#0#1()#4 : undefined, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "test_unary" : string
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_unary": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %sink(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) empty: any, empty: any, %test_unary(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "test_unary": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function sink#0#1()#2 : undefined
-// CHECK-NEXT:S{sink#0#1()#2} = []
+// CHECK:function sink(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_one#0#1(x, y)#3 : undefined
-// CHECK-NEXT:S{test_one#0#1()#3} = []
+// CHECK:function test_one(x: any, y: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_one#0#1()#3}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %x, 2 : number
-// CHECK-NEXT:  %2 = CallInst %x, undefined : undefined, undefined : undefined, %1 : string|number
-// CHECK-NEXT:  %3 = CallInst %x, undefined : undefined, undefined : undefined, 4 : number
-// CHECK-NEXT:  %4 = BinaryOperatorInst '*', %x, 2 : number
-// CHECK-NEXT:  %5 = BinaryOperatorInst '*', %x, 2 : number
-// CHECK-NEXT:  %6 = BinaryOperatorInst '+', %4 : number, %5 : number
-// CHECK-NEXT:  %7 = CallInst %x, undefined : undefined, undefined : undefined, %6 : number
-// CHECK-NEXT:  %8 = AsInt32Inst %x
-// CHECK-NEXT:  %9 = AsInt32Inst %x
-// CHECK-NEXT:  %10 = BinaryOperatorInst '+', %8 : number, %9 : number
-// CHECK-NEXT:  %11 = CallInst %x, undefined : undefined, undefined : undefined, %10 : number
-// CHECK-NEXT:  %12 = CallInst %x, undefined : undefined, undefined : undefined, "hibye" : string
-// CHECK-NEXT:  %13 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %14 = CallInst %x, undefined : undefined, undefined : undefined, %13 : string|number|bigint
-// CHECK-NEXT:  %15 = BinaryOperatorInst '+', "hi" : string, %y
-// CHECK-NEXT:  %16 = CallInst %x, undefined : undefined, undefined : undefined, %15 : string
-// CHECK-NEXT:  %17 = CallInst %x, undefined : undefined, undefined : undefined, 0 : number
-// CHECK-NEXT:  %18 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %19 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %20 = BinaryOperatorInst '+', %18 : object, %19 : object
-// CHECK-NEXT:  %21 = CallInst %x, undefined : undefined, undefined : undefined, %20 : string|number|bigint
-// CHECK-NEXT:  %22 = CallInst %x, undefined : undefined, undefined : undefined, NaN : number
-// CHECK-NEXT:  %23 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %2 = BinaryAddInst (:string|number) %0: any, 2: number
+// CHECK-NEXT:  %3 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: string|number
+// CHECK-NEXT:  %4 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 4: number
+// CHECK-NEXT:  %5 = BinaryMultiplyInst (:number) %0: any, 2: number
+// CHECK-NEXT:  %6 = BinaryMultiplyInst (:number) %0: any, 2: number
+// CHECK-NEXT:  %7 = FAddInst (:number) %5: number, %6: number
+// CHECK-NEXT:  %8 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: number
+// CHECK-NEXT:  %9 = AsInt32Inst (:number) %0: any
+// CHECK-NEXT:  %10 = AsInt32Inst (:number) %0: any
+// CHECK-NEXT:  %11 = FAddInst (:number) %9: number, %10: number
+// CHECK-NEXT:  %12 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: number
+// CHECK-NEXT:  %13 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, "hibye": string
+// CHECK-NEXT:  %14 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
+// CHECK-NEXT:  %15 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %14: string|number|bigint
+// CHECK-NEXT:  %16 = BinaryAddInst (:string) "hi": string, %1: any
+// CHECK-NEXT:  %17 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %16: string
+// CHECK-NEXT:  %18 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
+// CHECK-NEXT:  %19 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %20 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %21 = BinaryAddInst (:string|number|bigint) %19: object, %20: object
+// CHECK-NEXT:  %22 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %21: string|number|bigint
+// CHECK-NEXT:  %23 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, NaN: number
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_unary#0#1(x)#4 : undefined
-// CHECK-NEXT:S{test_unary#0#1()#4} = []
+// CHECK:function test_unary(x: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_unary#0#1()#4}
-// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = UnaryOperatorInst 'void', %x
-// CHECK-NEXT:  %3 = CallInst %1, undefined : undefined, undefined : undefined, %2 : undefined
-// CHECK-NEXT:  %4 = UnaryOperatorInst '!', %x
-// CHECK-NEXT:  %5 = CallInst %1, undefined : undefined, undefined : undefined, %4 : boolean
-// CHECK-NEXT:  %6 = AsNumericInst %x
-// CHECK-NEXT:  %7 = CallInst %1, undefined : undefined, undefined : undefined, %6 : number|bigint
-// CHECK-NEXT:  %8 = UnaryOperatorInst 'typeof', %x
-// CHECK-NEXT:  %9 = CallInst %1, undefined : undefined, undefined : undefined, %8 : string
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %2 = UnaryVoidInst (:undefined) %0: any
+// CHECK-NEXT:  %3 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: undefined
+// CHECK-NEXT:  %4 = UnaryBangInst (:boolean) %0: any
+// CHECK-NEXT:  %5 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: boolean
+// CHECK-NEXT:  %6 = AsNumericInst (:number|bigint) %0: any
+// CHECK-NEXT:  %7 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: number|bigint
+// CHECK-NEXT:  %8 = TypeOfInst (:string) %0: any
+// CHECK-NEXT:  %9 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

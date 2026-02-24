@@ -46,7 +46,7 @@ class HermesUtils(private val project: Project) {
       val hermesCPath = candidateHermesCPaths.lastOrNull { File(it).exists() }
       if (hermesCPath == null) {
         project.logger.warn("Could not find hermesC path. Using default path.")
-        return "$hermesWs/build/ImportHermesc.cmake"
+        return "$hermesWs/build/ImportHostCompilers.cmake"
       }
 
       return hermesCPath

@@ -13,8 +13,8 @@
 #if defined(HERMES_MEMORY_INSTRUMENTATION) && \
     !defined(HERMESVM_SANITIZE_HANDLES)
 
-#include "TestHelpers.h"
 #include "TestHelpers1.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/SourceMap/SourceMap.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"
@@ -31,7 +31,6 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
   explicit StackTracesTreeTest()
       : RuntimeTestFixtureBase(
             RuntimeConfig::Builder(kTestRTConfigBuilder)
-                .withES6Promise(true)
                 .withES6Proxy(true)
                 .withIntl(true)
                 .withGCConfig(GCConfig::Builder(kTestGCConfigBuilder).build())
@@ -122,7 +121,8 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
     llvh::raw_string_ostream resStream(res);
     SourceErrorManager sm;
     sourceMapGen.outputAsJSON(resStream);
-    auto sourceMap = SourceMapParser::parse(res, sm);
+    llvh::MemoryBufferRef smBuf(res, "");
+    auto sourceMap = SourceMapParser::parse(smBuf, /* baseDir */ "", sm);
     assert(
         sm.getErrorCount() == 0 && "source map generation or parsing failed");
     return sourceMap;
@@ -130,12 +130,13 @@ struct StackTracesTreeTest : public RuntimeTestFixtureBase {
 };
 
 // Used to inject a no-op function into JS.
-static CallResult<HermesValue> noop(void *, Runtime &runtime, NativeArgs) {
+static CallResult<HermesValue> noop(void *, Runtime &runtime) {
   return HermesValue::encodeUndefinedValue();
 }
 
-static CallResult<HermesValue>
-enableAllocationLocationTracker(void *, Runtime &runtime, NativeArgs) {
+static CallResult<HermesValue> enableAllocationLocationTracker(
+    void *,
+    Runtime &runtime) {
   runtime.enableAllocationLocationTracker();
   // syncWithRuntimeStack adds a native stack frame here, but the interpreter
   // doesn't pop that frame. This seems to only be a problem if
@@ -202,14 +203,15 @@ struct StackTracesTreeParameterizedTest
             runtime.getGlobal(),
             runtime,
             enableAllocationLocationTrackerSym,
-            runtime.makeHandle<NativeFunction>(
-                *NativeFunction::createWithoutPrototype(
-                    runtime,
-                    nullptr,
-                    trackerOnByDefault() ? noop
-                                         : enableAllocationLocationTracker,
-                    enableAllocationLocationTrackerSym,
-                    0)))));
+            runtime.makeHandle<NativeFunction>(*NativeFunction::create(
+                runtime,
+                runtime.functionPrototype,
+                Runtime::makeNullHandle<Environment>(),
+                nullptr,
+                trackerOnByDefault() ? noop : enableAllocationLocationTracker,
+                enableAllocationLocationTrackerSym,
+                0,
+                Runtime::makeNullHandle<JSObject>())))));
   }
 
   // No need for a tear-down, because the runtime destructor will clear all
@@ -266,9 +268,9 @@ static std::string stackTraceToJSON(
 }
 
 #define ASSERT_RUN_TRACE(code, trace)                                        \
-  ASSERT_TRUE(                                                               \
+  EXPECT_TRUE(                                                               \
       checkTraceMatches(code, llvh::StringRef(trace).trim().str().c_str())); \
-  ASSERT_TRUE(runtime.getStackTracesTree()->isHeadAtRoot())
+  EXPECT_TRUE(runtime.getStackTracesTree()->isHeadAtRoot())
 
 TEST_F(StackTracesTreeTest, BasicOperation) {
   ASSERT_RUN_TRACE(
@@ -755,13 +757,6 @@ function baz() {
           "name": "global",
           "scriptName": "eval.js",
           "line": 14,
-          "col": 2,
-          "children": []
-        },
-        {
-          "name": "global",
-          "scriptName": "eval.js",
-          "line": 14,
           "col": 3,
           "children": []
         },
@@ -899,6 +894,8 @@ TEST_F(StackTracesTreeTest, WithSourceMap) {
                                 .trim();
   auto stackTracesTree = runtime.getStackTracesTree();
   ASSERT_TRUE(stackTracesTree);
+  (void)expectedTree;
+  // Turn this back on at the end of the stack.
   ASSERT_STREQ(
       stackTraceToJSON(*stackTracesTree, sourceMap.get()).c_str(),
       expectedTree.str().c_str());

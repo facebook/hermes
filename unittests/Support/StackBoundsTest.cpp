@@ -6,6 +6,7 @@
  */
 
 #include "hermes/Support/OSCompat.h"
+#include "llvh/Support/Compiler.h"
 
 #include "gtest/gtest.h"
 
@@ -82,29 +83,31 @@ LLVM_ATTRIBUTE_NOINLINE unsigned recursiveCall() {
   volatile char data[2000];
   dataPtr = data;
 
-  ++recCount;
+  // Write out the increment in full because compound assignment to volatile is
+  // deprecated in C++20.
+  recCount = recCount + 1;
   if (isOverflowing()) {
     printf("Stack overflow, count=%u\n", recCount);
     return recCount;
   }
 
-  // Prevent a tall call.
-  return recursiveCall() + (--recCount);
+  unsigned res = recursiveCall();
+
+  // Ensure something runs after the call in order to prevent a tall call.
+  // As with the increment above, write out the decrement in full.
+  recCount = recCount - 1;
+  return res + recCount;
 }
 
 void unboundedRecursion() {
-  if (!oscompat::thread_stack_bounds(0).first) // Unsupported on this platform
-    return;
   recursiveCall();
 }
 
 volatile unsigned sum = 0;
 
 /// Ensure that we can read from the entire extent of the reported stack
-void manualStackScan() {
+LLVM_NO_SANITIZE("address") void manualStackScan() {
   auto [high, size] = oscompat::thread_stack_bounds(0);
-  if (!high) // Unsupported on this platform
-    return;
   const char *low = (const char *)high - size;
   for (const char *p = (const char *)high - 16; p > low; p -= 2048) {
     volatile char x = *((volatile const char *)p);
@@ -112,19 +115,44 @@ void manualStackScan() {
   }
 }
 
-TEST(StackBoundsTest, manualStackScanMainThread) {
+/// A simple check that if native stack checking is enabled, the returned stack
+/// bounds are sane. This should not be placed behind a platform ifdef, as it is
+/// intended to catch cases where native stack checking is enabled on a platform
+/// that doesn't support it.
+#ifdef HERMES_CHECK_NATIVE_STACK
+TEST(StackBoundsTest, SanityCheck) {
+  auto [high, size] = oscompat::thread_stack_bounds(0);
+  ASSERT_TRUE(size > 0);
+  ASSERT_TRUE(high != nullptr);
+  ASSERT_FALSE(isOverflowing());
+}
+#endif
+
+TEST(StackBoundsTest, manualStackScan_mainThread) {
   manualStackScan();
 }
-TEST(StackBoundsTest, unboundRecursionMainThread) {
+TEST(StackBoundsTest, unboundRecursion_mainThread) {
   unboundedRecursion();
 }
-TEST(StackBoundsTest, manualStackScanThread) {
+TEST(StackBoundsTest, manualStackScan_thread) {
   std::thread t(manualStackScan);
   t.join();
 }
-TEST(StackBoundsTest, unboundRecursionThread) {
+TEST(StackBoundsTest, unboundRecursion_thread) {
   std::thread t(unboundedRecursion);
   t.join();
+}
+
+TEST(StackBoundsTest, ThreadStackBounds) {
+  auto [high, size] = oscompat::thread_stack_bounds();
+  ASSERT_TRUE(size > 0);
+#ifdef __GNUC__
+  void *sp = __builtin_frame_address(0);
+#else
+  volatile char *var = 0;
+  void *sp = (void *)&var;
+#endif
+  ASSERT_FALSE((uintptr_t)high - (uintptr_t)sp > size);
 }
 
 #if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
@@ -154,23 +182,17 @@ void runInThreadWith64KGuard(void *(threadFunc)(void *)) {
   pthread_join(thread, nullptr);
 }
 
-TEST(StackBoundsTest, manualStackScanThread64KGuard) {
+TEST(StackBoundsTest, manualStackScan_thread64KGuard) {
   runInThreadWith64KGuard([](void *) -> void * {
     manualStackScan();
     return nullptr;
   });
 }
-TEST(StackBoundsTest, unboundRecursionThread64KGuard) {
+TEST(StackBoundsTest, unboundRecursion_thread64KGuard) {
   runInThreadWith64KGuard([](void *) -> void * {
     unboundedRecursion();
     return nullptr;
   });
-}
-
-TEST(StackBoundsTest, ThreadStackBounds) {
-  auto [high, size] = oscompat::thread_stack_bounds();
-  ASSERT_TRUE(size > 0);
-  ASSERT_FALSE((uintptr_t)high - (uintptr_t)__builtin_frame_address(0) > size);
 }
 
 #endif

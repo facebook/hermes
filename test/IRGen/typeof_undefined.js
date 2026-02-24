@@ -5,27 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 -hermes-parser -dump-ir -strict %s | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -O0 -hermes-parser -dump-ir -strict %s 2>&1 | %FileCheck %s --match-full-lines --check-prefix=WARN
+// RUN: %hermesc -O0 -hermes-parser -dump-ir -strict %s 2>&1 | %FileCheckOrRegen %s --match-full-lines
 
 var x = typeof foo;
 
-// WARN:{{.*}}/typeof_undefined.js:11:16: warning: the variable "foo" was not declared in function "global"
-// WARN-NEXT:var x = typeof foo;
-// WARN-NEXT:               ^~~
-
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [x]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = UnaryOperatorInst 'typeof', %3
-// CHECK-NEXT:  %5 = StorePropertyInst %4, globalObject : object, "x" : string
-// CHECK-NEXT:  %6 = LoadStackInst %1
-// CHECK-NEXT:  %7 = ReturnInst %6
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "x": string
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %5 = TypeOfInst (:string) %4: any
+// CHECK-NEXT:       StorePropertyStrictInst %5: string, globalObject: object, "x": string
+// CHECK-NEXT:  %7 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end

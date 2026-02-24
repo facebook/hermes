@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/CommandLine.h"
@@ -16,9 +17,10 @@
 #include "llvh/Support/raw_ostream.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
 #include "hermes/BCGen/HBC/StringKind.h"
-#include "hermes/Public/Buffer.h"
+#include "hermes/BCGen/LiteralBufferBuilder.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
+#include "hermes/Support/Buffer.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/LEB128.h"
 #include "hermes/Support/MemoryBuffer.h"
@@ -58,7 +60,7 @@ using namespace hermes::inst;
 
 using llvh::MutableArrayRef;
 using llvh::raw_fd_ostream;
-using SLG = hermes::hbc::SerializedLiteralGenerator;
+using SLG = hermes::SerializedLiteralGenerator;
 
 /* This tool is highly dependent upon the current bytecode format.
  *
@@ -134,7 +136,7 @@ class UsageCounter : public BytecodeVisitor {
       if (auto pos =
               debugInfo->getLocationForAddress(offsets->sourceLocations, 0)) {
         emitter_.emitKeyValue(
-            "file", debugInfo->getFilenameByID(pos->filenameId));
+            "file", debugInfo->getUTF8FilenameByID(pos->filenameId));
         emitter_.emitKeyValue("line", pos->line);
         emitter_.emitKeyValue("column", pos->column);
       }
@@ -142,7 +144,8 @@ class UsageCounter : public BytecodeVisitor {
     emitter_.emitKeyValue("virtualOffset", virtualOffsets_[currentFuncId_]);
     emitter_.emitKeyValue(
         "bytecodeSize",
-        bcProvider_->getFunctionHeader(currentFuncId_).bytecodeSizeInBytes());
+        bcProvider_->getFunctionHeader(currentFuncId_)
+            .getBytecodeSizeInBytes());
     emitter_.closeDict();
   }
 
@@ -150,10 +153,6 @@ class UsageCounter : public BytecodeVisitor {
   void emitGlobalInfo() {
     appendRecord("headers:global:bundle", 0, sizeof(BytecodeFileHeader));
     appendRecord("headers:global:debuginfo", 0, sizeof(DebugInfoHeader));
-    appendRecord(
-        "headers:global:debuginfo:stringtable",
-        0,
-        bcProvider_->getDebugInfo()->getStringTableSizeBytes());
     // FIXME: Some padding is not included.
   }
 
@@ -164,7 +163,7 @@ class UsageCounter : public BytecodeVisitor {
     opcodeStart_ = (uintptr_t)bytecodeStart;
     opcodeEnd_ = llvh::alignAddr(
         bytecodeStart +
-            bcProvider_->getFunctionHeader(funcId).bytecodeSizeInBytes(),
+            bcProvider_->getFunctionHeader(funcId).getBytecodeSizeInBytes(),
         sizeof(uint32_t));
     functionEnd_ = opcodeEnd_;
 
@@ -202,59 +201,6 @@ class UsageCounter : public BytecodeVisitor {
           offsets->sourceLocations,
           offset - offsets->sourceLocations);
     }
-
-    if (offsets->scopeDescData &&
-        offsets->scopeDescData != DebugOffsets::NO_OFFSET) {
-      auto data = bcProvider_->getDebugInfo()->viewData().getData();
-      unsigned start = offsets->scopeDescData +
-          bcProvider_->getDebugInfo()->scopeDescDataOffset();
-      unsigned offset = start;
-      int64_t trash;
-
-      // Read parent id
-      offset += readSignedLEB128(data, offset, &trash);
-
-      // read flags
-      offset += readSignedLEB128(data, offset, &trash);
-
-      // Read variable count
-      int64_t count;
-      offset += readSignedLEB128(data, offset, &count);
-      // Read variables
-      for (int64_t i = 0; i < count; i++) {
-        int64_t stringLength;
-        offset += readSignedLEB128(data, offset, &stringLength);
-        offset += stringLength;
-      }
-      appendRecord(
-          "debuginfo:scopedescdata", offsets->scopeDescData, offset - start);
-    }
-
-    if (offsets->textifiedCallees &&
-        offsets->textifiedCallees != DebugOffsets::NO_OFFSET) {
-      auto data = bcProvider_->getDebugInfo()->viewData().getData();
-      unsigned start = offsets->textifiedCallees +
-          bcProvider_->getDebugInfo()->textifiedCalleeOffset();
-      unsigned offset = start;
-      int64_t count;
-      int64_t trash;
-
-      // Read entry count
-      offset += readSignedLEB128(data, offset, &count);
-
-      // Read entries
-      for (int64_t i = 0; i < count; i++) {
-        // loc
-        offset += readSignedLEB128(data, offset, &trash);
-
-        // function name
-        int64_t stringLength;
-        offset += readSignedLEB128(data, offset, &stringLength);
-        offset += stringLength;
-      }
-      appendRecord(
-          "debuginfo:functionname", offsets->textifiedCallees, offset - start);
-    }
   }
 
   void afterStart() override {
@@ -264,14 +210,14 @@ class UsageCounter : public BytecodeVisitor {
     // We always have a small header, and sometimes a large one too.
     appendRecord(
         "headers:function:small", currentFuncId_, sizeof(SmallFuncHeader));
-    if (header.flags().overflowed) {
+    if (header.getFlags().getOverflowed()) {
       appendRecord(
           "headers:function:large", currentFuncId_, sizeof(FunctionHeader));
     }
 
-    countStringLiteral(header.functionName());
+    countStringLiteral(header.getFunctionName());
 
-    if (header.flags().hasExceptionHandler) {
+    if (header.getFlags().getHasExceptionHandler()) {
       // Exception tables are not deduplicated by function.
       appendRecord(
           "headers:exceptions",
@@ -284,9 +230,9 @@ class UsageCounter : public BytecodeVisitor {
     }
 
     appendRecord(
-        "bytecode:instructions", header.offset(), opcodeEnd_ - opcodeStart_);
+        "bytecode:instructions", header.getOffset(), opcodeEnd_ - opcodeStart_);
     appendRecord(
-        "bytecode:tables:jump", header.offset(), functionEnd_ - opcodeEnd_);
+        "bytecode:tables:jump", header.getOffset(), functionEnd_ - opcodeEnd_);
 
     countDebugInfo();
 
@@ -359,13 +305,6 @@ class UsageCounter : public BytecodeVisitor {
 
     unsigned bundleOffset = (uintptr_t)(*ind + buff - bundleStart_);
     switch (tag) {
-      case SLG::ByteStringTag: {
-        uint8_t val = llvh::support::endian::read<uint8_t, 1>(
-            buff + *ind, llvh::support::endianness::little);
-        appendRecord("data:literalbuffer:bytestring", bundleOffset, 1);
-        countStringLiteral(val);
-        *ind += 1;
-      } break;
       case SLG::ShortStringTag: {
         uint16_t val = llvh::support::endian::read<uint16_t, 1>(
             buff + *ind, llvh::support::endianness::little);
@@ -389,6 +328,7 @@ class UsageCounter : public BytecodeVisitor {
         *ind += 4;
       } break;
       case SLG::NullTag:
+      case SLG::UndefinedTag:
       case SLG::TrueTag:
       case SLG::FalseTag:
         break;
@@ -418,15 +358,16 @@ class UsageCounter : public BytecodeVisitor {
     }
   }
 
-  void visitSwitchImm(const inst::Inst *inst) {
-    assert(inst->opCode == inst::OpCode::SwitchImm);
+  void visitUIntSwitchImm(const inst::Inst *inst) {
+    assert(inst->opCode == inst::OpCode::UIntSwitchImm);
 
     const auto *curJmpTableView =
         reinterpret_cast<const uint32_t *>(llvh::alignAddr(
-            (const uint8_t *)inst + inst->iSwitchImm.op2, sizeof(uint32_t)));
+            (const uint8_t *)inst + inst->iUIntSwitchImm.op2,
+            sizeof(uint32_t)));
 
-    unsigned start = inst->iSwitchImm.op4;
-    unsigned end = inst->iSwitchImm.op5;
+    unsigned start = inst->iUIntSwitchImm.op4;
+    unsigned end = inst->iUIntSwitchImm.op5;
     assert(start < end && "Jump table spans negative range");
     unsigned count = end - start + 1;
 
@@ -448,38 +389,47 @@ class UsageCounter : public BytecodeVisitor {
 
     // Count non-string misc references
     switch (opcode) {
-      case OpCode::SwitchImm:
-        visitSwitchImm(inst);
+      case OpCode::UIntSwitchImm:
+        visitUIntSwitchImm(inst);
         break;
-      case OpCode::NewObjectWithBuffer:
+      case OpCode::NewObjectWithBuffer: {
+        ShapeTableEntry shapeInfo =
+            bcProvider_->getObjectShapeTable()[inst->iNewObjectWithBuffer.op2];
+        auto numProps = shapeInfo.numProps;
         countSerializedLiterals(
             bcProvider_->getObjectKeyBuffer(),
-            inst->iNewObjectWithBuffer.op4,
-            inst->iNewObjectWithBuffer.op3);
+            shapeInfo.keyBufferOffset,
+            numProps);
         countSerializedLiterals(
-            bcProvider_->getObjectValueBuffer(),
-            inst->iNewObjectWithBuffer.op5,
-            inst->iNewObjectWithBuffer.op3);
+            bcProvider_->getLiteralValueBuffer(),
+            inst->iNewObjectWithBuffer.op3,
+            numProps);
         break;
-      case OpCode::NewObjectWithBufferLong:
+      }
+      case OpCode::NewObjectWithBufferLong: {
+        ShapeTableEntry shapeInfo =
+            bcProvider_
+                ->getObjectShapeTable()[inst->iNewObjectWithBufferLong.op2];
+        auto numProps = shapeInfo.numProps;
         countSerializedLiterals(
             bcProvider_->getObjectKeyBuffer(),
-            inst->iNewObjectWithBufferLong.op4,
-            inst->iNewObjectWithBufferLong.op3);
+            shapeInfo.keyBufferOffset,
+            numProps);
         countSerializedLiterals(
-            bcProvider_->getObjectValueBuffer(),
-            inst->iNewObjectWithBufferLong.op5,
-            inst->iNewObjectWithBufferLong.op3);
+            bcProvider_->getLiteralValueBuffer(),
+            inst->iNewObjectWithBufferLong.op3,
+            numProps);
         break;
+      }
       case OpCode::NewArrayWithBuffer:
         countSerializedLiterals(
-            bcProvider_->getArrayBuffer(),
+            bcProvider_->getLiteralValueBuffer(),
             inst->iNewArrayWithBuffer.op4,
             inst->iNewArrayWithBuffer.op3);
         break;
       case OpCode::NewArrayWithBufferLong:
         countSerializedLiterals(
-            bcProvider_->getArrayBuffer(),
+            bcProvider_->getLiteralValueBuffer(),
             inst->iNewArrayWithBufferLong.op4,
             inst->iNewArrayWithBufferLong.op3);
         break;
@@ -518,7 +468,7 @@ llvh::DenseMap<unsigned, unsigned> getVirtualOffsets(
   for (unsigned i = 0, e = bc->getFunctionCount(); i < e; i++) {
     auto header = bc->getFunctionHeader(i);
     map[i] = virtualOffset;
-    virtualOffset += header.bytecodeSizeInBytes();
+    virtualOffset += header.getBytecodeSizeInBytes();
   }
   return map;
 }

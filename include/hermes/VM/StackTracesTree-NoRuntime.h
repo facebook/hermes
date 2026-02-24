@@ -13,20 +13,16 @@
 #ifndef HERMES_STACK_TRACES_TREE_NO_RUNTIME_H
 #define HERMES_STACK_TRACES_TREE_NO_RUNTIME_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/OptValue.h"
-#include "hermes/Support/StringSetVector.h"
 
 #include "llvh/ADT/DenseMap.h"
 
 #include <cstdint>
 #include <map>
 #include <memory>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -165,6 +161,4 @@ struct StackTracesTreeNode {
 
 } // namespace vm
 } // namespace hermes
-#pragma GCC diagnostic pop
-
 #endif // HERMES_STACK_TRACES_TREE_NO_RUNTIME_H

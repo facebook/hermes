@@ -7,6 +7,7 @@
 
 // RUN: %hermes -target=HBC -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 // REQUIRES: !slow_debug
 
 // At one point, growing a Set (or other user of OrderedHashMap) to a

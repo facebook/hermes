@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
-// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods -gc-sanitize-handles=0.1 %t.hbc | %FileCheck --match-full-lines %s
 
 print("WeakMap");
 // CHECK-LABEL: WeakMap
@@ -62,7 +62,7 @@ m.set(b, 88);
 print(m.get(a), m.get(b));
 // CHECK-NEXT: 12 88
 try { m.set(1, 2) } catch(e) { print('caught', e.name, e.message) }
-// CHECK-NEXT: caught TypeError WeakMap key must be an Object
+// CHECK-NEXT: caught TypeError WeakMap key must be an Object or non-registered Symbol
 try { WeakMap.prototype.set.call([], a, 3) } catch(e) { print('caught', e.name, e.message) }
 // CHECK-NEXT: caught TypeError WeakMap.prototype.set can only be called on a WeakMap
 
@@ -107,6 +107,9 @@ m.set(a, 10);
   m.set(b, 12);
   print(HermesInternal.getWeakSize(m));
 // CHECK-NEXT: 2
+// Keep b alive here so that it won't get collected when calling getWeakSize().
+  print(m.get(b));
+// CHECK-NEXT: 12
   for (var i = 0; i < 10000; ++i) {
     m.set({}, 12);
   }
@@ -135,6 +138,26 @@ map.set(key, value);
 gc();
 print(typeof map.get(key))
 // CHECK-NEXT: string
+
+print('WeakMap Symbol key');
+// CHECK-LABEL: WeakMap Symbol key
+var m = new WeakMap();
+var s = Symbol("test");
+m.set(s, 11);
+gc();
+print(m.get(s));
+// CHECK-NEXT: 11
+print(m.get(Symbol("test")));
+// CHECK-NEXT: undefined
+var s2 = Symbol.for("test");
+print(m.has(s2));
+// CHECK-NEXT: false
+try { m.set(s2, 11) } catch (e) { print('caught', e.name, e.message); }
+// CHECK-NEXT: caught TypeError WeakMap key must be an Object or non-registered Symbol
+print(m.delete(s));
+// CHECK-NEXT: true
+print(m.has(s));
+// CHECK-NEXT: false
 
 
 // Ensure some reuse occurred.

@@ -7,7 +7,7 @@
 
 #include "gtest/gtest.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/Allocator.h"

@@ -108,7 +108,7 @@ describe('traverse', () => {
         expect(() => {
           // $FlowExpectedError[cannot-write]
           context.getScope = () => {};
-        }).toThrowError(/Cannot assign to read only property 'getScope'/);
+        }).toThrow(/Cannot assign to read only property 'getScope'/);
       },
     }));
   });

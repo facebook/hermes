@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function sink(a) { }
 
@@ -40,186 +40,203 @@ function loop_member_expr_lhs() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [sink, simple_for_in_loop, for_in_loop_with_break_continue, for_in_loop_with_named_break, check_var_decl_for_in_loop, loop_member_expr_lhs]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %simple_for_in_loop#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "simple_for_in_loop" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %for_in_loop_with_break_continue#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "for_in_loop_with_break_continue" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %for_in_loop_with_named_break#0#1()#5, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "for_in_loop_with_named_break" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %check_var_decl_for_in_loop#0#1()#6, %0
-// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "check_var_decl_for_in_loop" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %loop_member_expr_lhs#0#1()#7, %0
-// CHECK-NEXT:  %12 = StorePropertyInst %11 : closure, globalObject : object, "loop_member_expr_lhs" : string
-// CHECK-NEXT:  %13 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %14 = StoreStackInst undefined : undefined, %13
-// CHECK-NEXT:  %15 = LoadStackInst %13
-// CHECK-NEXT:  %16 = ReturnInst %15
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_for_in_loop": string
+// CHECK-NEXT:       DeclareGlobalVarInst "for_in_loop_with_break_continue": string
+// CHECK-NEXT:       DeclareGlobalVarInst "for_in_loop_with_named_break": string
+// CHECK-NEXT:       DeclareGlobalVarInst "check_var_decl_for_in_loop": string
+// CHECK-NEXT:       DeclareGlobalVarInst "loop_member_expr_lhs": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_for_in_loop(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "simple_for_in_loop": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %for_in_loop_with_break_continue(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "for_in_loop_with_break_continue": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %for_in_loop_with_named_break(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "for_in_loop_with_named_break": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %check_var_decl_for_in_loop(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "check_var_decl_for_in_loop": string
+// CHECK-NEXT:  %17 = CreateFunctionInst (:object) %0: environment, %VS0: any, %loop_member_expr_lhs(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %17: object, globalObject: object, "loop_member_expr_lhs": string
+// CHECK-NEXT:  %19 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %19: any
+// CHECK-NEXT:  %21 = LoadStackInst (:any) %19: any
+// CHECK-NEXT:        ReturnInst %21: any
 // CHECK-NEXT:function_end
 
-// CHECK:function sink#0#1(a)#2
-// CHECK-NEXT:S{sink#0#1()#2} = [a#2]
+// CHECK:scope %VS1 [a: any]
+
+// CHECK:function sink(a: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.a]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_for_in_loop#0#1(obj)#3
-// CHECK-NEXT:S{simple_for_in_loop#0#1()#3} = [obj#3, prop#3]
+// CHECK:scope %VS2 [obj: any, prop: any]
+
+// CHECK:function simple_for_in_loop(obj: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_in_loop#0#1()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#3], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop#3], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop#3], %0
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = LoadFrameInst [obj#3], %0
-// CHECK-NEXT:  %9 = StoreStackInst %8, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.obj]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.prop]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS2.prop]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %9 = AllocStackInst (:number) $?anon_3_size: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS2.obj]: any
+// CHECK-NEXT:        StoreStackInst %10: any, %7: any
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:        GetPNamesInst %6: any, %7: any, %8: number, %9: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %13 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
+// CHECK-NEXT:        GetNextPNameInst %12: any, %7: any, %8: number, %9: number, %6: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = LoadStackInst %10
-// CHECK-NEXT:  %15 = StoreFrameInst %14, [prop#3], %0
-// CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %17 = LoadFrameInst [prop#3], %0
-// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, undefined : undefined, %17
-// CHECK-NEXT:  %19 = BranchInst %BB2
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %16: any, [%VS2.prop]: any
+// CHECK-NEXT:  %18 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS2.prop]: any
+// CHECK-NEXT:  %20 = CallInst (:any) %18: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %19: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
-// CHECK:function for_in_loop_with_break_continue#0#1(obj)#4
-// CHECK-NEXT:S{for_in_loop_with_break_continue#0#1()#4} = [obj#4, prop#4]
+// CHECK:scope %VS3 [obj: any, prop: any]
+
+// CHECK:function for_in_loop_with_break_continue(obj: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{for_in_loop_with_break_continue#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#4], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop#4], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop#4], %0
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = LoadFrameInst [obj#4], %0
-// CHECK-NEXT:  %9 = StoreStackInst %8, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.obj]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.prop]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS3.prop]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %9 = AllocStackInst (:number) $?anon_3_size: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS3.obj]: any
+// CHECK-NEXT:        StoreStackInst %10: any, %7: any
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:        GetPNamesInst %6: any, %7: any, %8: number, %9: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %13 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
+// CHECK-NEXT:        GetNextPNameInst %12: any, %7: any, %8: number, %9: number, %6: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %14 = LoadStackInst %10
-// CHECK-NEXT:  %15 = StoreFrameInst %14, [prop#4], %0
-// CHECK-NEXT:  %16 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %17 = LoadFrameInst [prop#4], %0
-// CHECK-NEXT:  %18 = CallInst %16, undefined : undefined, undefined : undefined, %17
-// CHECK-NEXT:  %19 = BranchInst %BB1
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %16: any, [%VS3.prop]: any
+// CHECK-NEXT:  %18 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS3.prop]: any
+// CHECK-NEXT:  %20 = CallInst (:any) %18: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %19: any
+// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS4 [obj: any, prop: any]
+
+// CHECK:function for_in_loop_with_named_break(obj: any): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.obj]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.prop]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS4.prop]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %9 = AllocStackInst (:number) $?anon_3_size: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS4.obj]: any
+// CHECK-NEXT:        StoreStackInst %10: any, %7: any
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:        GetPNamesInst %6: any, %7: any, %8: number, %9: number, %BB2, %BB3
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        BranchInst %BB1
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        GetNextPNameInst %12: any, %7: any, %8: number, %9: number, %6: any, %BB2, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %20 = BranchInst %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %21 = BranchInst %BB2
+// CHECK-NEXT:  %17 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %17: any, [%VS4.prop]: any
+// CHECK-NEXT:  %19 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [%VS4.prop]: any
+// CHECK-NEXT:  %21 = CallInst (:any) %19: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
-// CHECK:function for_in_loop_with_named_break#0#1(obj)#5
-// CHECK-NEXT:S{for_in_loop_with_named_break#0#1()#5} = [obj#5, prop#5]
+// CHECK:scope %VS5 [obj: any, prop: any]
+
+// CHECK:function check_var_decl_for_in_loop(obj: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{for_in_loop_with_named_break#0#1()#5}
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#5], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop#5], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [prop#5], %0
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = LoadFrameInst [obj#5], %0
-// CHECK-NEXT:  %9 = StoreStackInst %8, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %obj: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.obj]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS5.prop]: any
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %7 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_3_size: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS5.obj]: any
+// CHECK-NEXT:        StoreStackInst %9: any, %6: any
+// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:        GetPNamesInst %5: any, %6: any, %7: number, %8: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = BranchInst %BB3
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %14 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %15 = LoadStackInst %10
-// CHECK-NEXT:  %16 = StoreFrameInst %15, [prop#5], %0
-// CHECK-NEXT:  %17 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %18 = LoadFrameInst [prop#5], %0
-// CHECK-NEXT:  %19 = CallInst %17, undefined : undefined, undefined : undefined, %18
-// CHECK-NEXT:  %20 = BranchInst %BB1
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %21 = BranchInst %BB2
+// CHECK-NEXT:        GetNextPNameInst %11: any, %6: any, %7: number, %8: number, %5: any, %BB1, %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %11: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %15: any, [%VS5.prop]: any
+// CHECK-NEXT:  %17 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [%VS5.prop]: any
+// CHECK-NEXT:  %19 = CallInst (:any) %17: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %18: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end
 
-// CHECK:function check_var_decl_for_in_loop#0#1(obj)#6
-// CHECK-NEXT:S{check_var_decl_for_in_loop#0#1()#6} = [obj#6, prop#6]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{check_var_decl_for_in_loop#0#1()#6}
-// CHECK-NEXT:  %1 = StoreFrameInst %obj, [obj#6], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [prop#6], %0
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %7 = LoadFrameInst [obj#6], %0
-// CHECK-NEXT:  %8 = StoreStackInst %7, %4
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %10 = GetPNamesInst %3, %4, %5, %6, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %12 = GetNextPNameInst %9, %4, %5, %6, %3, %BB1, %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = LoadStackInst %9
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [prop#6], %0
-// CHECK-NEXT:  %15 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %16 = LoadFrameInst [prop#6], %0
-// CHECK-NEXT:  %17 = CallInst %15, undefined : undefined, undefined : undefined, %16
-// CHECK-NEXT:  %18 = BranchInst %BB2
-// CHECK-NEXT:function_end
+// CHECK:scope %VS6 [x: any]
 
-// CHECK:function loop_member_expr_lhs#0#1()#7
-// CHECK-NEXT:S{loop_member_expr_lhs#0#1()#7} = [x#7]
+// CHECK:function loop_member_expr_lhs(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{loop_member_expr_lhs#0#1()#7}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#7], %0
-// CHECK-NEXT:  %2 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %3 = StoreFrameInst %2 : object, [x#7], %0
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_base
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_2_idx
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_size
-// CHECK-NEXT:  %8 = AllocArrayInst 3 : number, 1 : number, 2 : number, 3 : number
-// CHECK-NEXT:  %9 = StoreStackInst %8 : object, %5
-// CHECK-NEXT:  %10 = AllocStackInst $?anon_4_prop
-// CHECK-NEXT:  %11 = GetPNamesInst %4, %5, %6, %7, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS6.x]: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS6.x]: any
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_1_base: any
+// CHECK-NEXT:  %7 = AllocStackInst (:number) $?anon_2_idx: any
+// CHECK-NEXT:  %8 = AllocStackInst (:number) $?anon_3_size: any
+// CHECK-NEXT:  %9 = AllocArrayInst (:object) 3: number, 1: number, 2: number, 3: number
+// CHECK-NEXT:        StoreStackInst %9: object, %6: any
+// CHECK-NEXT:  %11 = AllocStackInst (:any) $?anon_4_prop: any
+// CHECK-NEXT:        GetPNamesInst %5: any, %6: any, %7: number, %8: number, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %12 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %13 = LoadFrameInst [x#7], %0
-// CHECK-NEXT:  %14 = LoadPropertyInst %13, "y" : string
-// CHECK-NEXT:  %15 = CallInst %12, undefined : undefined, undefined : undefined, %14
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS6.x]: any
+// CHECK-NEXT:  %15 = LoadPropertyInst (:any) %14: any, "y": string
+// CHECK-NEXT:  %16 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %15: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %17 = GetNextPNameInst %10, %5, %6, %7, %4, %BB1, %BB3
+// CHECK-NEXT:        GetNextPNameInst %11: any, %6: any, %7: number, %8: number, %5: any, %BB1, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %18 = LoadStackInst %10
-// CHECK-NEXT:  %19 = LoadFrameInst [x#7], %0
-// CHECK-NEXT:  %20 = StorePropertyInst %18, %19, "y" : string
-// CHECK-NEXT:  %21 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %22 = LoadFrameInst [x#7], %0
-// CHECK-NEXT:  %23 = LoadPropertyInst %22, "y" : string
-// CHECK-NEXT:  %24 = CallInst %21, undefined : undefined, undefined : undefined, %23
-// CHECK-NEXT:  %25 = BranchInst %BB2
+// CHECK-NEXT:  %19 = LoadStackInst (:any) %11: any
+// CHECK-NEXT:  %20 = LoadFrameInst (:any) %1: environment, [%VS6.x]: any
+// CHECK-NEXT:        StorePropertyLooseInst %19: any, %20: any, "y": string
+// CHECK-NEXT:  %22 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %23 = LoadFrameInst (:any) %1: environment, [%VS6.x]: any
+// CHECK-NEXT:  %24 = LoadPropertyInst (:any) %23: any, "y": string
+// CHECK-NEXT:  %25 = CallInst (:any) %22: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %24: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end

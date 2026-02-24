@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // We previously implemented BoundFunction as a lazy object if the target was
 // lazy. This resulted in incorrect behaviour if the target was updated after

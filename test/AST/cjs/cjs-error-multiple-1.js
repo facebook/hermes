@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -commonjs %S/cjs-error-multiple-1.js %S/cjs-error-multiple-2.js 2>&1 ) | %FileCheck %s
+// RUN: (! %hermesc -dump-transformed-ast -commonjs %S/cjs-error-multiple-1.js %S/cjs-error-multiple-2.js 2>&1 ) | %FileCheck %s
 
 require('./cjs-error-multiple-2.js');
 

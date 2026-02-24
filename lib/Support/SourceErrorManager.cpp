@@ -109,7 +109,7 @@ void SourceErrorManager::dumpCoords(
     llvh::raw_ostream &OS,
     const SourceCoords &coords) {
   if (coords.isValid()) {
-    OS << getSourceUrl(coords.bufId) << ":" << coords.line << "," << coords.col;
+    OS << getSourceUrl(coords.bufId) << ":" << coords.line << ":" << coords.col;
   } else {
     OS << "none:0,0";
   }
@@ -285,7 +285,9 @@ inline void SourceErrorManager::FindLineCache::fillCoords(
   result.col = loc.getPointer() - lineRef.data() + 1;
 }
 
-bool SourceErrorManager::findBufferLineAndLoc(SMLoc loc, SourceCoords &result) {
+bool SourceErrorManager::findUntranslatedBufferLineAndLoc(
+    llvh::SMLoc loc,
+    SourceCoords &result) {
   if (!loc.isValid()) {
     result.bufId = 0;
     return false;
@@ -330,11 +332,10 @@ bool SourceErrorManager::findBufferLineAndLoc(SMLoc loc, SourceCoords &result) {
 
 bool SourceErrorManager::findBufferLineAndLoc(
     llvh::SMLoc loc,
-    hermes::SourceErrorManager::SourceCoords &result,
-    bool translate) {
-  if (!findBufferLineAndLoc(loc, result))
+    SourceCoords &result) {
+  if (!findUntranslatedBufferLineAndLoc(loc, result))
     return false;
-  if (translate && translator_)
+  if (translator_)
     translator_->translate(result);
   return true;
 }
@@ -352,12 +353,15 @@ const llvh::MemoryBuffer *SourceErrorManager::findBufferForLoc(
   return sm_.getMemoryBuffer(bufID);
 }
 
-SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
-  if (!coords.isValid())
+std::pair<SMLoc, SMLoc> SourceErrorManager::findForCoordsImpl(
+    unsigned bufId,
+    unsigned line,
+    OptValue<unsigned> col) {
+  if (bufId == 0)
     return {};
 
   // TODO: optimize this with caching, etc.
-  auto *buffer = getSourceBuffer(coords.bufId);
+  auto *buffer = getSourceBuffer(bufId);
   if (!buffer)
     return {};
 
@@ -369,7 +373,7 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   const char *lineEnd;
   while ((lineEnd = (const char *)std::memchr(cur, '\n', end - cur)) !=
              nullptr &&
-         lineNumber != coords.line) {
+         lineNumber != line) {
     ++lineNumber;
     cur = lineEnd + 1;
   }
@@ -380,7 +384,7 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
 
   // The last line we found is [cur..lineEnd) and its number is lineNumber.
   // Is it the right one?
-  if (lineNumber != coords.line)
+  if (lineNumber != line)
     return {};
 
   // Trim a CR at start and end to account for all crazy line endings.
@@ -389,11 +393,15 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   if (cur != lineEnd && *(lineEnd - 1) == '\r')
     --lineEnd;
 
+  if (!col.hasValue()) {
+    return {SMLoc::getFromPointer(cur), SMLoc::getFromPointer(lineEnd)};
+  }
+
   // Special case for empty line.
   if (cur == lineEnd) {
     // Column 1 or 0 in an empty line should work.
-    if (coords.col <= 1)
-      return SMLoc::getFromPointer(cur);
+    if (col.getValue() <= 1)
+      return {SMLoc::getFromPointer(cur), SMLoc::getFromPointer(lineEnd)};
     return {};
   }
 
@@ -409,9 +417,12 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
   // ASCII is easy - just add the offset.
   if (LLVM_LIKELY(!utf8)) {
     // Is the column in range?
-    if (coords.col > (size_t)(lineEnd - cur))
+    if (col.getValue() > (size_t)(lineEnd - cur))
       return {};
-    return SMLoc::getFromPointer(cur + coords.col - 1);
+    return {
+        SMLoc::getFromPointer(cur + col.getValue() - 1),
+        SMLoc::getFromPointer(lineEnd)};
+    ;
   }
 
   // Scan for the column while accounting for multi-byte characters.
@@ -420,15 +431,13 @@ SMLoc SourceErrorManager::findSMLocFromCoords(SourceCoords coords) {
     // Skip continuation bytes.
     if (isUTF8ContinuationByte(*cur))
       continue;
-    if (++column == coords.col)
-      return SMLoc::getFromPointer(cur);
+    if (++column == col.getValue())
+      return {SMLoc::getFromPointer(cur), SMLoc::getFromPointer(lineEnd)};
   }
 
   return {};
 }
 
-/// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the error
-/// output options
 std::pair<std::string, std::string> SourceErrorManager::buildSourceAndCaretLine(
     const llvh::SMDiagnostic &diag,
     SourceErrorOutputOptions opts) {
@@ -534,22 +543,26 @@ std::pair<std::string, std::string> SourceErrorManager::buildSourceAndCaretLine(
   return {std::move(narrowSourceLine), std::move(caretLine)};
 }
 
-void SourceErrorManager::printDiagnostic(
+/// Print a diagnostic to stderr, respecting the error output options.
+/// If \p tag is non-null, print it before the diagnostic kind. It differenties
+/// between the original and the translated location.
+static void printDiagnosticHelper(
     const llvh::SMDiagnostic &diag,
-    void *ctx) {
+    const SourceErrorOutputOptions &opts,
+    const char *tag) {
   using llvh::raw_ostream;
-  const SourceErrorManager *self = static_cast<SourceErrorManager *>(ctx);
-  const SourceErrorOutputOptions opts = self->outputOptions_;
   auto &S = llvh::errs();
 
   llvh::StringRef filename = diag.getFilename();
+  // 1-based line number.
   int lineNo = diag.getLineNo();
+  // 0-based column number.
   int columnNo = diag.getColumnNo();
 
   // Helpers to conditionally set or reset a color
-  auto changeColor = [&](raw_ostream::Colors color) {
+  auto changeColor = [&](raw_ostream::Colors color, bool bold = true) {
     if (opts.showColors)
-      S.changeColor(color, true);
+      S.changeColor(color, bold);
   };
 
   auto resetColor = [&]() {
@@ -566,6 +579,10 @@ void SourceErrorManager::printDiagnostic(
         S << ':' << (columnNo + 1);
     }
     S << ": ";
+  }
+  if (tag) {
+    changeColor(raw_ostream::CYAN, false);
+    S << tag << ' ';
   }
 
   switch (diag.getKind()) {
@@ -592,24 +609,60 @@ void SourceErrorManager::printDiagnostic(
   S << diag.getMessage() << '\n';
   resetColor();
 
-  if (lineNo == -1 || columnNo == -1)
+  if (lineNo == -1 || columnNo == -1 || diag.getLineContents().empty())
     return;
 
   std::string sourceLine;
   std::string caretLine;
-  std::tie(sourceLine, caretLine) = buildSourceAndCaretLine(diag, opts);
+  std::tie(sourceLine, caretLine) =
+      SourceErrorManager::buildSourceAndCaretLine(diag, opts);
 
   // Check for non-ASCII characters, which may have a width > 1
   // If we find them, don't try to show the caret line
   // TODO: bravely teach buildSourceAndCaretLine to use wcwidth(), lifting this
   // restriction
-  bool showCaret = isAllASCII(sourceLine.begin(), sourceLine.end());
+  bool showCaret = isAllASCII(sourceLine);
 
   S << sourceLine << '\n';
   if (showCaret) {
     changeColor(raw_ostream::GREEN);
     S << caretLine << '\n';
     resetColor();
+  }
+}
+
+void SourceErrorManager::printDiagnostic(
+    const llvh::SMDiagnostic &diag,
+    void *ctx) {
+  const SourceErrorManager *self = static_cast<SourceErrorManager *>(ctx);
+
+  SourceCoords rawCoords(
+      self->findBufferIdForLoc(diag.getLoc()),
+      diag.getLineNo(),
+      diag.getColumnNo() + 1);
+  SourceCoords translated = rawCoords;
+  if (self->translator_)
+    self->translator_->translate(translated);
+
+  if (translated.isValid() && translated != rawCoords) {
+    // If the translator changed the location, print the original location
+    // first.
+    printDiagnosticHelper(
+        llvh::SMDiagnostic(
+            self->sm_,
+            SMLoc(),
+            self->getBufferFileName(translated.bufId).str(),
+            translated.line,
+            translated.col - 1,
+            diag.getKind(),
+            diag.getMessage(),
+            {},
+            {}),
+        self->outputOptions_,
+        "[original]");
+    printDiagnosticHelper(diag, self->outputOptions_, "[transpiled]");
+  } else {
+    printDiagnosticHelper(diag, self->outputOptions_, nullptr);
   }
 }
 

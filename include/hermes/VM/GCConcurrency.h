@@ -21,8 +21,7 @@ namespace vm {
 /// Hades will run with a single thread that interleaves work with the YG and
 /// OG. Has no effect on non-Hades GCs.
 static constexpr bool kConcurrentGC =
-#if defined(HERMESVM_ALLOW_CONCURRENT_GC) && \
-    (defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME))
+#if defined(HERMESVM_ALLOW_CONCURRENT_GC) && defined(HERMESVM_GC_HADES)
     // Only use Hades concurrently if on a 64-bit platform.
     sizeof(void *) == 8
 #else

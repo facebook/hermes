@@ -467,4 +467,57 @@ describe('Object properties', () => {
     `);
     expectBabelAlignment(testCase);
   });
+
+  test('Location of object literal method does not contain key', () => {
+    // We know the structure
+    const ast: $FlowFixMe = parseForSnapshot(`({key/*comment*/(){}})`, {
+      preserveRange: true,
+    });
+    expect(ast.body[0].expression.properties[0]).toMatchInlineSnapshot(`
+      {
+        "computed": false,
+        "key": {
+          "name": "key",
+          "optional": false,
+          "range": [
+            2,
+            5,
+          ],
+          "type": "Identifier",
+          "typeAnnotation": null,
+        },
+        "kind": "init",
+        "method": true,
+        "range": [
+          2,
+          20,
+        ],
+        "shorthand": false,
+        "type": "Property",
+        "value": {
+          "async": false,
+          "body": {
+            "body": [],
+            "range": [
+              18,
+              20,
+            ],
+            "type": "BlockStatement",
+          },
+          "expression": false,
+          "generator": false,
+          "id": null,
+          "params": [],
+          "predicate": null,
+          "range": [
+            16,
+            20,
+          ],
+          "returnType": null,
+          "type": "FunctionExpression",
+          "typeParameters": null,
+        },
+      }
+    `);
+  });
 });

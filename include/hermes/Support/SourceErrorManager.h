@@ -8,8 +8,8 @@
 #ifndef HERMES_SUPPORT_SOURCEERRORMANAGER_H
 #define HERMES_SUPPORT_SOURCEERRORMANAGER_H
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Support/OptValue.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/Support/Warning.h"
 
 #include "llvh/ADT/DenseMap.h"
@@ -76,8 +76,11 @@ class SourceErrorManager {
   /// identifies a location in the source. This is the "decoded" form of SMLoc.
   class SourceCoords {
    public:
+    /// 1-based buffer id.
     unsigned bufId = 0;
+    /// 1-based line number.
     unsigned line = 0;
+    /// 1-based column.
     unsigned col = 0;
 
     SourceCoords() = default;
@@ -98,6 +101,13 @@ class SourceErrorManager {
       if (line != o.line)
         return line < o.line;
       return col < o.col;
+    }
+
+    bool operator==(const SourceCoords &o) const {
+      return bufId == o.bufId && line == o.line && col == o.col;
+    }
+    bool operator!=(const SourceCoords &o) const {
+      return !(*this == o);
     }
   };
 
@@ -427,21 +437,32 @@ class SourceErrorManager {
   /// Find the bufferId, line and column of the specified location \p loc.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.
-  bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result);
+  bool findUntranslatedBufferLineAndLoc(SMLoc loc, SourceCoords &result);
 
   /// Find the bufferId, line and column of the specified location \p loc.
-  /// Optionally perform source coordinate translation depending on
-  /// \p translate.
+  /// and perform source coordinate translation.
   /// \return true on success, false if could not be found, in which case
   ///     result.isValid() would also return false.
-  bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result, bool translate);
+  bool findBufferLineAndLoc(SMLoc loc, SourceCoords &result);
 
   /// Given a \p loc, return the buffer that the location is in.
   /// Returns nullptr if the buffer is not found.
   const llvh::MemoryBuffer *findBufferForLoc(SMLoc loc) const;
 
   /// Find the SMLoc corresponding to the supplied source coordinates.
-  SMLoc findSMLocFromCoords(SourceCoords coords);
+  SMLoc findSMLocFromCoords(SourceCoords coords) {
+    auto [result, lineEnd] =
+        findForCoordsImpl(coords.bufId, coords.line, coords.col);
+    return result;
+  }
+
+  /// Find the SMRange corresponding to the line.
+  /// \param bufId 1-based buffer ID.
+  /// \param line 1-based line number.
+  SMRange findSMRangeForLine(unsigned bufId, unsigned line) {
+    auto [result, lineEnd] = findForCoordsImpl(bufId, line, llvh::None);
+    return SMRange(result, lineEnd);
+  }
 
   /// Given an SMDiagnostic, return {sourceLine, caretLine}, respecting the
   /// error output options
@@ -469,8 +490,16 @@ class SourceErrorManager {
       SMRange sm,
       const Twine &msg,
       Subsystem subsystem);
-  void message(DiagKind dk, SMRange sm, const Twine &msg, Subsystem subsystem);
-  void message(DiagKind dk, SMLoc loc, const Twine &msg, Subsystem subsystem);
+  void message(
+      DiagKind dk,
+      SMRange sm,
+      const Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified);
+  void message(
+      DiagKind dk,
+      SMLoc loc,
+      const Twine &msg,
+      Subsystem subsystem = Subsystem::Unspecified);
 
   void error(
       SMLoc loc,
@@ -633,6 +662,15 @@ class SourceErrorManager {
   unsigned indexToVirtualBufferId(unsigned index) const {
     return index | kVirtualBufIdTag;
   }
+
+  /// \param bufId 1-based buffer ID.
+  /// \param line 1-based line number.
+  /// \param col 1-based line number.
+  /// \return if the column is specified, return the location of the line/column
+  /// and the end of the line. If the column is not specified, return the
+  /// location of the start of the line and the end of the line.
+  std::pair<SMLoc, SMLoc>
+  findForCoordsImpl(unsigned bufId, unsigned line, OptValue<unsigned> col);
 };
 
 /// RAII to enable message buffering and restore the previous state of

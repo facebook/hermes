@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -Xhermes-internal-test-methods %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods | %FileCheck --match-full-lines %s
 "use strict";
 
 print("HermesInternal");

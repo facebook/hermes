@@ -18,7 +18,7 @@ function format(code: string) {
     ...prettierConfig,
     parser: 'hermes',
     requirePragma: false,
-    plugins: [require('../src/index.js')],
+    plugins: [require.resolve('../index.mjs')],
   };
   return prettier.format(code, options);
 }
@@ -26,7 +26,7 @@ function format(code: string) {
 describe('Match expression', () => {
   test('empty', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {};
       `),
     ).toMatchInlineSnapshot(`
@@ -38,16 +38,20 @@ describe('Match expression', () => {
 
   test('body', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-        0: f(),
-        1: (f(), 1),
+        0 => f(),
+        1 => (f(), 1),
+        2 => y => 1,
+        3 => z = 1,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        0: f(),
-        1: (f(), 1),
+        0 => f(),
+        1 => (f(), 1),
+        2 => (y => 1),
+        3 => (z = 1),
       };
       "
     `);
@@ -55,37 +59,77 @@ describe('Match expression', () => {
 
   test('guards', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-         1 if b: true,
-         'foo' if f(): true,
-         2 if x < y: true,
-         3 if (f(), x): true,
+         1 if (b) => true,
+         'foo' if (f()) => true,
+         2 if (x < y) => true,
+         3 if ((f(), x)) => true,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        1 if b: true,
-        'foo' if f(): true,
-        2 if x < y: true,
-        3 if (f(), x): true,
+        1 if (b) => true,
+        'foo' if (f()) => true,
+        2 if (x < y) => true,
+        3 if ((f(), x)) => true,
       };
       "
     `);
   });
 
+  test('long guards', async () => {
+    expect(
+      await format(`
+       const e = match (x) {
+         LoooongEnumBlorpType.Foo | LoooongEnumBlorpType.Bar if (loooong.bortLongBaz > 0) => 1,
+         LoooongEnumBlorpType.LooongFoo | LoooongEnumBlorpType.LooongBar | LoooongEnumBlorpType.LooongBaz if (loooooooooooooooooong.bortLongBaz > looooooooooooong) => 1,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "const e = match (x) {
+        LoooongEnumBlorpType.Foo | LoooongEnumBlorpType.Bar
+          if (loooong.bortLongBaz > 0) => 1,
+        | LoooongEnumBlorpType.LooongFoo
+        | LoooongEnumBlorpType.LooongBar
+        | LoooongEnumBlorpType.LooongBaz
+          if (loooooooooooooooooong.bortLongBaz > looooooooooooong) => 1,
+      };
+      "
+    `);
+  });
   test('sequence expressions: always with parens', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x, y) {
-         1: (x, y),
-         2 if (x, y): 0,
+         1 => (x, y),
+         2 if ((x, y)) => 0,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match ((x, y)) {
-        1: (x, y),
-        2 if (x, y): 0,
+        1 => (x, y),
+        2 if ((x, y)) => 0,
+      };
+      "
+    `);
+  });
+
+  test('JSX body', async () => {
+    expect(
+      await format(`
+       const e = match (x) {
+         1 => <div />,
+         loooooooooooooooooooooooooooooooooooooooooong => <MyComponent><span>Some children inside</span></MyComponent>,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "const e = match (x) {
+        1 => <div />,
+        loooooooooooooooooooooooooooooooooooooooooong =>
+          <MyComponent>
+            <span>Some children inside</span>
+          </MyComponent>,
       };
       "
     `);
@@ -93,42 +137,42 @@ describe('Match expression', () => {
 
   test('patterns: core', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-         "s": 1,
-         true: 1,
-         null: 1,
-         3: 1,
-         4n: 1,
-         +5: 1,
-         -6: 1,
-         +7n: 1,
-         -8n: 1,
-         y: 1,
-         const y: y,
-         let y: y,
-         var y: y,
-         ('s'): 1,
-         _: 1,
+         "s" => 1,
+         true => 1,
+         null => 1,
+         3 => 1,
+         4n => 1,
+         +5 => 1,
+         -6 => 1,
+         +7n => 1,
+         -8n => 1,
+         y => 1,
+         const y => y,
+         let y => y,
+         var y => y,
+         ('s') => 1,
+         _ => 1,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        's': 1,
-        true: 1,
-        null: 1,
-        3: 1,
-        4n: 1,
-        +5: 1,
-        -6: 1,
-        +7n: 1,
-        -8n: 1,
-        y: 1,
-        const y: y,
-        let y: y,
-        var y: y,
-        's': 1,
-        _: 1,
+        's' => 1,
+        true => 1,
+        null => 1,
+        3 => 1,
+        4n => 1,
+        +5 => 1,
+        -6 => 1,
+        +7n => 1,
+        -8n => 1,
+        y => 1,
+        const y => y,
+        let y => y,
+        var y => y,
+        's' => 1,
+        _ => 1,
       };
       "
     `);
@@ -136,22 +180,22 @@ describe('Match expression', () => {
 
   test('patterns: member', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-         foo.bar: true,
-         foo[1]: true,
-         foo["bar"]: true,
-         foo.bar[1]: true,
-         foo[1].bar["baz"]: true,
+         foo.bar => true,
+         foo[1] => true,
+         foo["bar"] => true,
+         foo.bar[1] => true,
+         foo[1].bar["baz"] => true,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        foo.bar: true,
-        foo[1]: true,
-        foo['bar']: true,
-        foo.bar[1]: true,
-        foo[1].bar['baz']: true,
+        foo.bar => true,
+        foo[1] => true,
+        foo['bar'] => true,
+        foo.bar[1] => true,
+        foo[1].bar['baz'] => true,
       };
       "
     `);
@@ -159,57 +203,74 @@ describe('Match expression', () => {
 
   test('patterns: object', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-         {foo: 1, bar: 2}: 1,
-         {'foo': 1}: 1,
-         {111: true}: 1,
-         {foo: const y}: y,
-         {const x, let y, var z}: y,
-         {const x, ...const y}: y,
-         {const x, ...let y}: y,
-         {const x, ...var z}: y,
-         {const x, ...}: 1,
+         {foo: 1, bar: 2} => 1,
+         {'foo': 1} => 1,
+         {111: true} => 1,
+         {foo: const y} => y,
+         {const x, let y, var z} => y,
+         {const x, ...const y} => y,
+         {const x, ...let y} => y,
+         {const x, ...var z} => y,
+         {const x, ...} => 1,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        {foo: 1, bar: 2}: 1,
-        {'foo': 1}: 1,
-        {111: true}: 1,
-        {foo: const y}: y,
-        {const x, let y, var z}: y,
-        {const x, ...const y}: y,
-        {const x, ...let y}: y,
-        {const x, ...var z}: y,
-        {const x, ...}: 1,
+        {foo: 1, bar: 2} => 1,
+        {'foo': 1} => 1,
+        {111: true} => 1,
+        {foo: const y} => y,
+        {const x, let y, var z} => y,
+        {const x, ...const y} => y,
+        {const x, ...let y} => y,
+        {const x, ...var z} => y,
+        {const x, ...} => 1,
       };
       "
     `);
   });
 
+  test('patterns: instance', async () => {
+    expect(
+      await format(`
+       const e = match (x) {
+         Foo {foo: 1, bar: 2} => 1,
+         Foo.Bar {'foo': 1} => 1,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+     "const e = match (x) {
+       Foo {foo: 1, bar: 2} => 1,
+       Foo.Bar {'foo': 1} => 1,
+     };
+     "
+    `);
+  });
+
   test('patterns: array', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-         [10]: 1,
-         [const y, 1]: y,
-         [1, ...]: 1,
-         [1, 2, ...const rest]: rest,
-         [...let rest]: rest,
-         [...var rest]: rest,
-         [{nested: [1, const x]}]: x,
+         [10] => 1,
+         [const y, 1] => y,
+         [1, ...] => 1,
+         [1, 2, ...const rest] => rest,
+         [...let rest] => rest,
+         [...var rest] => rest,
+         [{nested: [1, const x]}] => x,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        [10]: 1,
-        [const y, 1]: y,
-        [1, ...]: 1,
-        [1, 2, ...const rest]: rest,
-        [...let rest]: rest,
-        [...var rest]: rest,
-        [{nested: [1, const x]}]: x,
+        [10] => 1,
+        [const y, 1] => y,
+        [1, ...] => 1,
+        [1, 2, ...const rest] => rest,
+        [...let rest] => rest,
+        [...var rest] => rest,
+        [{nested: [1, const x]}] => x,
       };
       "
     `);
@@ -217,24 +278,55 @@ describe('Match expression', () => {
 
   test('patterns: or & as', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-         "s" | true | null: 1,
-         {foo: 1 | 2}: 2,
-         {foo: [1] as y}: y,
-         {foo: 1 | 2 | 3 as y}: y,
-         {foo: (1 | 2 | 3) as y}: y,
-         {foo: [1] as const y}: y,
+         "s" | true | null => 1,
+         {foo: 1 | 2} => 2,
+         {foo: [1] as y} => y,
+         {foo: 1 | 2 | 3 as y} => y,
+         {foo: (1 | 2 | 3) as y} => y,
+         {foo: [1] as const y} => y,
+         {foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong} => 1,
+         [{foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong}] => 1,
+         [null, {foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong}] => 1,
+         {bork: {foo: 1, bar: 2, baz: 3} | {bar: 4, baz: 5, baz: 6} | {baz: loooooooooong, bar: loooooooong}} => 1,
+         {bar: looooooooooooooooooooooooooooooooooong, baz: loooooooooooooooooooooooong} | null | undefined => 1,
        };
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        's' | true | null: 1,
-        {foo: 1 | 2}: 2,
-        {foo: [1] as y}: y,
-        {foo: (1 | 2 | 3) as y}: y,
-        {foo: (1 | 2 | 3) as y}: y,
-        {foo: [1] as const y}: y,
+        's' | true | null => 1,
+        {foo: 1 | 2} => 2,
+        {foo: [1] as y} => y,
+        {foo: (1 | 2 | 3) as y} => y,
+        {foo: (1 | 2 | 3) as y} => y,
+        {foo: [1] as const y} => y,
+        | {foo: 1, bar: 2, baz: 3}
+        | {bar: 4, baz: 5, baz: 6}
+        | {baz: loooooooooong, bar: loooooooong} => 1,
+        [
+          | {foo: 1, bar: 2, baz: 3}
+          | {bar: 4, baz: 5, baz: 6}
+          | {baz: loooooooooong, bar: loooooooong},
+        ] => 1,
+        [
+          null,
+          (
+            | {foo: 1, bar: 2, baz: 3}
+            | {bar: 4, baz: 5, baz: 6}
+            | {baz: loooooooooong, bar: loooooooong}
+          ),
+        ] => 1,
+        {
+          bork:
+            | {foo: 1, bar: 2, baz: 3}
+            | {bar: 4, baz: 5, baz: 6}
+            | {baz: loooooooooong, bar: loooooooong},
+        } => 1,
+        {
+          bar: looooooooooooooooooooooooooooooooooong,
+          baz: loooooooooooooooooooooooong,
+        } | null | undefined => 1,
       };
       "
     `);
@@ -242,84 +334,88 @@ describe('Match expression', () => {
 
   test('long lines', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
-         2 if f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23): true,
-         fooooooooooooooooooooooooooooo: fooooooooooooooooooooooooooooooooooooooooooooooooooooooo,
-         foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: true,
-         foo["loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong"]: true,
-         foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooong[3333333333333333333333333333333333333333333333333333333333333333333333]: true,
-         {foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3}: 1,
-         {foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3, ...}: 1,
-         {foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3333333333333333333333333333333333333333333333333333333333333333333333}: 1,
-         [1, 2, 333333333333333333333333333333333333333333333333333333333333333333333]: 1,
-         [1, 2, 333333333333333333333333333333333333333333333333333333333333333333333, ...]: 1,
-         [{foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: [33333333333333333333]}]: 1,
-        fooooooooooooooooooooooooo | loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
-        (fooooooooooooooooooooooooo | loooooooooooooooooooooooooooooooooooooooooooooooooooooong) as foo: 1,
+         2 if (f(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)) => true,
+         fooooooooooooooooooooooooooooo => fooooooooooooooooooooooooooooooooooooooooooooooooooooooo,
+         foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong => true,
+         foo["loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong"] => true,
+         foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooong[3333333333333333333333333333333333333333333333333333333333333333333333] => true,
+         {foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3} => 1,
+         {foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3, ...} => 1,
+         {foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3333333333333333333333333333333333333333333333333333333333333333333333} => 1,
+         [1, 2, 333333333333333333333333333333333333333333333333333333333333333333333] => 1,
+         [1, 2, 333333333333333333333333333333333333333333333333333333333333333333333, ...] => 1,
+         [{foo: 1, bar: 2, loooooooooooooooooooooooooooooooooooooooooooooooooooooong: [33333333333333333333]}] => 1,
+        fooooooooooooooooooooooooo | loooooooooooooooooooooooooooooooooooooooooooooooooooooong => 1,
+        (fooooooooooooooooooooooooo | loooooooooooooooooooooooooooooooooooooooooooooooooooooong) as foo => 1,
        }
       `),
     ).toMatchInlineSnapshot(`
       "const e = match (x) {
-        2 if f(
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9,
-          10,
-          11,
-          12,
-          13,
-          14,
-          15,
-          16,
-          17,
-          18,
-          19,
-          20,
-          21,
-          22,
-          23,
-        ): true,
-        fooooooooooooooooooooooooooooo:
+        2
+          if (f(
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+          )) => true,
+        fooooooooooooooooooooooooooooo =>
           fooooooooooooooooooooooooooooooooooooooooooooooooooooooo,
-        foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: true,
+        foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong => true,
         foo[
           'loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong'
-        ]: true,
+        ] => true,
         foo.loooooooooooooooooooooooooooooooooooooooooooooooooooooong[
           3333333333333333333333333333333333333333333333333333333333333333333333
-        ]: true,
+        ] => true,
         {
           foo: 1,
           bar: 2,
           loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3,
-        }: 1,
+        } => 1,
         {
           foo: 1,
           bar: 2,
           loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 3,
           ...
-        }: 1,
+        } => 1,
         {
           foo: 1,
           bar: 2,
           loooooooooooooooooooooooooooooooooooooooooooooooooooooong:
             3333333333333333333333333333333333333333333333333333333333333333333333,
-        }: 1,
-        [1, 2, 333333333333333333333333333333333333333333333333333333333333333333333]:
+        } => 1,
+        [
           1,
+          2,
+          333333333333333333333333333333333333333333333333333333333333333333333,
+        ] => 1,
         [
           1,
           2,
           333333333333333333333333333333333333333333333333333333333333333333333,
           ...
-        ]: 1,
+        ] => 1,
         [
           {
             foo: 1,
@@ -327,11 +423,13 @@ describe('Match expression', () => {
             loooooooooooooooooooooooooooooooooooooooooooooooooooooong:
               [33333333333333333333],
           },
-        ]: 1,
-        fooooooooooooooooooooooooo |
-        loooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
-        (fooooooooooooooooooooooooo |
-        loooooooooooooooooooooooooooooooooooooooooooooooooooooong) as foo: 1,
+        ] => 1,
+        | fooooooooooooooooooooooooo
+        | loooooooooooooooooooooooooooooooooooooooooooooooooooooong => 1,
+        (
+          | fooooooooooooooooooooooooo
+          | loooooooooooooooooooooooooooooooooooooooooooooooooooooong
+        ) as foo => 1,
       };
       "
     `);
@@ -339,13 +437,13 @@ describe('Match expression', () => {
 
   test('comments', async () => {
     expect(
-      format(`
+      await format(`
        const e = match (x) {
          // bork
          [
            // bork bork
            1, 2,
-         ]:
+         ] =>
            // bork bork bork
            true,
        };
@@ -357,9 +455,34 @@ describe('Match expression', () => {
           // bork bork
           1,
           2,
-        ]:
+        ] =>
           // bork bork bork
           true,
+      };
+      "
+    `);
+  });
+
+  test('comments in multiline or patterns', async () => {
+    expect(
+      await format(`
+       const e = match (x) {
+         // aaa
+         | looooooooooooooooooooong
+         // bbb
+         | mooooooooooooooooooooong
+         // ccc
+         | boooooooooooooooooooooog => 1,
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "const e = match (x) {
+        // aaa
+        | looooooooooooooooooooong
+        // bbb
+        | mooooooooooooooooooooong
+        // ccc
+        | boooooooooooooooooooooog => 1,
       };
       "
     `);
@@ -367,9 +490,9 @@ describe('Match expression', () => {
 });
 
 describe('Match statement', () => {
-  test('empty', async () => {
+  test('no cases', async () => {
     expect(
-      format(`
+      await format(`
        match (x) {};
       `),
     ).toMatchInlineSnapshot(`
@@ -379,30 +502,45 @@ describe('Match statement', () => {
     `);
   });
 
+  test('empty body', async () => {
+    expect(
+      await format(`
+       match (x) {
+         1 => {}
+       };
+      `),
+    ).toMatchInlineSnapshot(`
+      "match (x) {
+        1 => {}
+      }
+      "
+    `);
+  });
+
   test('guards', async () => {
     expect(
-      format(`
+      await format(`
        match (a) {
-         1 if b: {
+         1 if (b) => {
            const x = 1;
          }
-         'foo' if f(): {
+         'foo' if (f()) => {
            const x = 2;
          }
-         2 if x < y: {
+         2 if (x < y) => {
            const x = 3;
          }
        }
       `),
     ).toMatchInlineSnapshot(`
       "match (a) {
-        1 if b: {
+        1 if (b) => {
           const x = 1;
         }
-        'foo' if f(): {
+        'foo' if (f()) => {
           const x = 2;
         }
-        2 if x < y: {
+        2 if (x < y) => {
           const x = 3;
         }
       }
@@ -412,16 +550,16 @@ describe('Match statement', () => {
 
   test('long lines', async () => {
     expect(
-      format(`
+      await format(`
        match (x) {
-         fooooooooooooooooooooooooooooo: {
+         fooooooooooooooooooooooooooooo => {
            fooooooooooooooooooooooooooooooooooooooooooooooooooooooo();
          }
        };
       `),
     ).toMatchInlineSnapshot(`
       "match (x) {
-        fooooooooooooooooooooooooooooo: {
+        fooooooooooooooooooooooooooooo => {
           fooooooooooooooooooooooooooooooooooooooooooooooooooooooo();
         }
       }
@@ -431,7 +569,7 @@ describe('Match statement', () => {
 
   test('big example', async () => {
     expect(
-      format(`
+      await format(`
        match (node) {
          {
            type: 'GenericTypeAnnotation',
@@ -445,7 +583,7 @@ describe('Match statement', () => {
            typeParameters: {
              params: [{type: 'TypeofTypeAnnotation', argument: 'Identifier', const name}],
            }
-         } if name.startsWith(designSystem): {
+         } if (name.startsWith(designSystem)) => {
            doStuffWithName(name);
          }
        }
@@ -455,18 +593,18 @@ describe('Match statement', () => {
         {
           type: 'GenericTypeAnnotation',
           id:
-            {type: 'Identifier', name: 'React$Element'} |
-            {
-              type: 'QualifiedTypeIdentifier',
-              qualification: {type: 'Identifier', name: 'React'},
-              name: 'Element',
-            },
+            | {type: 'Identifier', name: 'React$Element'}
+            | {
+                type: 'QualifiedTypeIdentifier',
+                qualification: {type: 'Identifier', name: 'React'},
+                name: 'Element',
+              },
           typeParameters:
             {
               params:
                 [{type: 'TypeofTypeAnnotation', argument: 'Identifier', const name}],
             },
-        } if name.startsWith(designSystem): {
+        } if (name.startsWith(designSystem)) => {
           doStuffWithName(name);
         }
       }

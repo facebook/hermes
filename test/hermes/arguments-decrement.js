@@ -5,49 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O %s
-// RUN: %hermes -O -Xdump-after-all %s 2>&1 | %FileCheck --match-full-lines %s --check-prefix CHKIR
-// RUN: %hermes -O -dump-ra %s | %FileCheck --match-full-lines %s --check-prefix CHKRA
+// RUN: %hermes -O -fno-inline %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec -fno-inline %s | %FileCheck --match-full-lines %s
 
 // This test exercises an issue found in LowerArgumentsArray in which PHI nodes
 // were not being properly updated.
-function decrementArguments() {
-    for (var i = 0; i < 2; i++) {
-        var var1 = () => var3 = 0;
-        var var3 = arguments;
-    }
-    return var3 - 1;
+function decrementArguments(flag) {
+  while (flag) {
+    flag = flag - 1;
+    var var1 = (() => (var3 = 123))();
+    var var3 = arguments;
+  }
+  return var3 - 1 + flag;
 }
 
-print(decrementArguments());
+print(decrementArguments(2));
+// CHECK: NaN
 
-
-// CHKIR-LABEL: *** AFTER Function pass LowerConstruction
-// CHKIR-LABEL: function decrementArguments#0#1()#2 : number
-// CHKIR-LABEL: %BB0:
-// CHKIR-LABEL: %BB1:
-// CHKIR-NEXT:   %4 = PhiInst undefined : undefined, %BB0, %2 : object, %BB1
-// CHKIR-NEXT:   %5 = PhiInst 0 : number, %BB0, %6 : number|bigint, %BB1
-// CHKIR-LABEL: %BB2:
-// CHKIR-LABEL: *** AFTER Function pass LowerArgumentsArray
-// CHKIR-LABEL: function decrementArguments#0#1()#2 : number
-// CHKIR-LABEL: %BB0:
-// CHKIR-LABEL: %BB1:
-// CHKIR-NEXT:   %5 = PhiInst undefined : undefined, %BB0, %15, %BB2
-//                 N.B. the broken hermesc would fail to update %BB2 in
-//                 the next instruction, thus having an invalid PHI node with an
-//                 operand that wasn't a predecessor node.
-// CHKIR-NEXT:   %6 = PhiInst 0 : number, %BB0, %7 : number|bigint, %BB2
-// CHKIR-LABEL: %BB3:
-// CHKIR-LABEL: %BB2:
-
-// CHKRA-LABEL: function decrementArguments#0#1()#2 : number
-// CHKRA-LABEL: %BB0:
-// CHKRA-LABEL: %BB1:
-// CHKRA-NEXT:   $Reg1 @7 [4...9) [18...19) 	%7 = PhiInst %5 : number, %BB0, %17 : number|bigint, %BB2
-// CHKRA-NEXT:   $Reg3 @8 [9...18)   %8 = UnaryOperatorInst '++', %7 : number|bigint
-// CHKRA-LABEL: %BB3:
-// CHKRA-LABEL: %BB2:
-// CHKRA-NEXT:   $Reg4 @15 [empty]    %15 = HBCReifyArgumentsInst %0
-// CHKRA-NEXT:   $Reg4 @16 [empty]    %16 = LoadStackInst %0
-// CHKRA-NEXT:   $Reg1 @17 [18...19)  %17 = MovInst %8 : number|bigint

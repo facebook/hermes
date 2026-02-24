@@ -24,11 +24,18 @@ bool runCustomOptimizationPasses(
 /// Run optimization passes corresponding to -O3
 void runFullOptimizationPasses(Module &M);
 
+/// Run optimization passes corresponding to -O4
+void runOptimizationPassesToFixedPoint(Module &M);
+
 /// Run optimization passes corresponding to -Og
 void runDebugOptimizationPasses(Module &M);
 
 /// Run optimization passes corresponding to -O0
 void runNoOptimizationPasses(Module &M);
+
+/// Run optimization passes for the native backend.
+void runNativeBackendOptimizationPasses(Module &M);
+
 } // namespace hermes
 
 #endif // HERMES_OPTIMIZER_PASSMANAGER_PIPELINE_H

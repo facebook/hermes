@@ -67,11 +67,11 @@ SmallString<256> buildString(
 } // namespace
 
 Literal *hermes::evalUnaryOperator(
-    UnaryOperatorInst::OpKind kind,
+    ValueKind kind,
     IRBuilder &builder,
     Literal *operand) {
   switch (kind) {
-    case UnaryOperatorInst::OpKind::MinusKind:
+    case ValueKind::UnaryMinusInstKind:
       // Negate constant integers.
       switch (operand->getKind()) {
         case ValueKind::LiteralNumberKind:
@@ -94,25 +94,8 @@ Literal *hermes::evalUnaryOperator(
           break;
       }
       break;
-    case UnaryOperatorInst::OpKind::TypeofKind:
-      switch (operand->getKind()) {
-        case ValueKind::GlobalObjectKind:
-        case ValueKind::LiteralNullKind:
-          return builder.getLiteralString("object");
-        case ValueKind::LiteralUndefinedKind:
-          return builder.getLiteralString("undefined");
-        case ValueKind::LiteralBoolKind:
-          return builder.getLiteralString("boolean");
-        case ValueKind::LiteralNumberKind:
-          return builder.getLiteralString("number");
-        case ValueKind::LiteralStringKind:
-          return builder.getLiteralString("string");
-        default:
-          break;
-      }
-      break;
 
-    case UnaryOperatorInst::OpKind::BangKind:
+    case ValueKind::UnaryBangInstKind:
       if (evalIsTrue(builder, operand)) {
         return builder.getLiteralBool(false);
       }
@@ -121,16 +104,16 @@ Literal *hermes::evalUnaryOperator(
       }
       break;
 
-    case UnaryOperatorInst::OpKind::VoidKind:
+    case ValueKind::UnaryVoidInstKind:
       return builder.getLiteralUndefined();
 
-    case UnaryOperatorInst::OpKind::IncKind:
+    case ValueKind::UnaryIncInstKind:
       if (auto *V = evalToNumber(builder, operand)) {
         return builder.getLiteralNumber(V->getValue() + 1);
       }
       break;
 
-    case UnaryOperatorInst::OpKind::DecKind:
+    case ValueKind::UnaryDecInstKind:
       if (auto *V = evalToNumber(builder, operand)) {
         return builder.getLiteralNumber(V->getValue() - 1);
       }
@@ -144,13 +127,13 @@ Literal *hermes::evalUnaryOperator(
 }
 
 Literal *hermes::evalBinaryOperator(
-    BinaryOperatorInst::OpKind kind,
+    ValueKind kind,
     IRBuilder &builder,
     Literal *lhs,
     Literal *rhs) LLVM_NO_SANITIZE("float-divide-by-zero");
 
 Literal *hermes::evalBinaryOperator(
-    BinaryOperatorInst::OpKind kind,
+    ValueKind kind,
     IRBuilder &builder,
     Literal *lhs,
     Literal *rhs) {
@@ -177,31 +160,33 @@ Literal *hermes::evalBinaryOperator(
 
   auto &ctx = builder.getModule()->getContext();
 
-  using OpKind = BinaryOperatorInst::OpKind;
-
   if (leftNaN || rightNaN) {
     switch (kind) {
-      case OpKind::EqualKind:
-      case OpKind::StrictlyEqualKind:
-      case OpKind::LessThanKind:
-      case OpKind::LessThanOrEqualKind:
-      case OpKind::GreaterThanKind:
-      case OpKind::GreaterThanOrEqualKind:
+      case ValueKind::BinaryEqualInstKind:
+      case ValueKind::BinaryStrictlyEqualInstKind:
+      case ValueKind::BinaryLessThanInstKind:
+      case ValueKind::BinaryLessThanOrEqualInstKind:
+      case ValueKind::BinaryGreaterThanInstKind:
+      case ValueKind::BinaryGreaterThanOrEqualInstKind:
         // Equality and order comparisons with NaN always evaluate to false,
         // even in cases like 'NaN == NaN' or 'NaN <= NaN'
         return builder.getLiteralBool(false);
-      case OpKind::NotEqualKind:
-      case OpKind::StrictlyNotEqualKind:
+      case ValueKind::BinaryNotEqualInstKind:
+      case ValueKind::BinaryStrictlyNotEqualInstKind:
         // Inequality comparisons with NaN always evaluate to true, even in
         // cases like 'NaN != NaN' or 'NaN !== NaN'
         return builder.getLiteralBool(true);
-      case OpKind::LeftShiftKind:
-      case OpKind::RightShiftKind:
-      case OpKind::UnsignedRightShiftKind:
+      case ValueKind::BinaryLeftShiftInstKind:
+      case ValueKind::BinaryRightShiftInstKind:
+      case ValueKind::BinaryUnsignedRightShiftInstKind:
         // The code for bitwise shift operators below properly handles
         // NaN, so we break out of the switch and go through to there
         break;
-      case OpKind::AddKind:
+      case ValueKind::BinaryAddInstKind:
+        // Cannot mixin BigInt and Number type (NaN)
+        if (leftTy.isBigIntType() || rightTy.isBigIntType())
+          return nullptr;
+
         // If we're trying to add NaN with a string, then we need to perform
         // string concatenation with "NaN" and the string operand
         if (leftStr) {
@@ -216,25 +201,22 @@ Literal *hermes::evalBinaryOperator(
           return builder.getLiteralString(result.str());
         }
 
+        // None of the operands are strings, so the expression evaluates
+        // to NaN
+        return builder.getLiteralNaN();
+      case ValueKind::BinarySubtractInstKind:
+      case ValueKind::BinaryMultiplyInstKind:
+      case ValueKind::BinaryDivideInstKind:
+      case ValueKind::BinaryModuloInstKind:
         // Cannot mixin BigInt and Number type (NaN)
         if (leftTy.isBigIntType() || rightTy.isBigIntType())
           return nullptr;
 
-        // None of the operands are strings, so the expression evaluates
-        // to NaN
-        return builder.getLiteralNaN();
-      case OpKind::SubtractKind:
-      case OpKind::MultiplyKind:
-      case OpKind::DivideKind:
-      case OpKind::ModuloKind:
-        // Cannot mixin BigInt and Number type (NaN)
-        if (leftTy.isBigIntType() || rightTy.isBigIntType())
-          return nullptr;
         // Binary arithmetic operations involving NaN evaluate to  NaN
         return builder.getLiteralNaN();
-      case OpKind::OrKind:
-      case OpKind::XorKind:
-      case OpKind::AndKind:
+      case ValueKind::BinaryOrInstKind:
+      case ValueKind::BinaryXorInstKind:
+      case ValueKind::BinaryAndInstKind:
         // The code for bitwise logical operators below properly handles
         // NaN, so we break out of the switch and go through to there
         break;
@@ -250,7 +232,7 @@ Literal *hermes::evalBinaryOperator(
   auto numericOrder = getNumericOrder(lhs, rhs);
 
   switch (kind) {
-    case OpKind::EqualKind: // ==
+    case ValueKind::BinaryEqualInstKind: // ==
       // Identical literals must be equal.
       if (lhs == rhs) {
         return builder.getLiteralBool(true);
@@ -282,7 +264,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::NotEqualKind: // !=
+    case ValueKind::BinaryNotEqualInstKind: // !=
       // Identical operands can't be non-equal.
       if (lhs == rhs) {
         return builder.getLiteralBool(false);
@@ -314,7 +296,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::StrictlyEqualKind: // ===
+    case ValueKind::BinaryStrictlyEqualInstKind: // ===
       // Identical literals must be equal.
       if (lhs == rhs) {
         return builder.getLiteralBool(true);
@@ -345,7 +327,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::StrictlyNotEqualKind: // !===
+    case ValueKind::BinaryStrictlyNotEqualInstKind: // !===
       // Identical operands can't be non-equal.
       if (lhs == rhs) {
         return builder.getLiteralBool(false);
@@ -372,7 +354,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::LessThanKind: // <
+    case ValueKind::BinaryLessThanInstKind: // <
       // Handle comparison to self:
       if (!leftTy.isUndefinedType() && lhs == rhs)
         return builder.getLiteralBool(false);
@@ -391,7 +373,7 @@ Literal *hermes::evalBinaryOperator(
         }
       }
       break;
-    case OpKind::LessThanOrEqualKind: // <=
+    case ValueKind::BinaryLessThanOrEqualInstKind: // <=
       // Handle comparison to self:
       if (!leftTy.isUndefinedType() && lhs == rhs)
         return builder.getLiteralBool(true);
@@ -411,7 +393,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::GreaterThanKind: // >
+    case ValueKind::BinaryGreaterThanInstKind: // >
       // Handle comparison to self:
       if (!leftTy.isUndefinedType() && lhs == rhs)
         return builder.getLiteralBool(false);
@@ -431,7 +413,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::GreaterThanOrEqualKind: // >=
+    case ValueKind::BinaryGreaterThanOrEqualInstKind: // >=
       // Handle comparison to self:
       if (!leftTy.isUndefinedType() && lhs == rhs)
         return builder.getLiteralBool(true);
@@ -451,9 +433,9 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::LeftShiftKind: // <<  (<<=)
-    case OpKind::RightShiftKind: // >>  (>>=)
-    case OpKind::UnsignedRightShiftKind: { // >>> (>>>=)
+    case ValueKind::BinaryLeftShiftInstKind: // <<  (<<=)
+    case ValueKind::BinaryRightShiftInstKind: // >>  (>>=)
+    case ValueKind::BinaryUnsignedRightShiftInstKind: { // >>> (>>>=)
       // Convert both operands to literal numbers if they can be.
       auto *lnum = evalToNumber(builder, lhs);
       auto *rnum = evalToNumber(builder, rhs);
@@ -464,19 +446,18 @@ Literal *hermes::evalBinaryOperator(
       uint32_t shiftCount = rnum->truncateToUInt32() & 0x1f;
       // Large enough to hold both int32_t and uint32_t values.
       int64_t result = 0;
-      if (kind == OpKind::LeftShiftKind) {
+      if (kind == ValueKind::BinaryLeftShiftInstKind) {
         // Truncate to unsigned so that the shift doesn't happen on negative
-        // values. Cast it to a 32-bit signed int to get the sign back, then
-        // promote to 64 bits.
+        // values. Cast it to a 32-bit signed int to get the sign back.
         result = static_cast<int32_t>(lnum->truncateToUInt32() << shiftCount);
-      } else if (kind == OpKind::RightShiftKind) {
-        result = static_cast<int64_t>(lnum->truncateToInt32() >> shiftCount);
+      } else if (kind == ValueKind::BinaryRightShiftInstKind) {
+        result = static_cast<int32_t>(lnum->truncateToInt32() >> shiftCount);
       } else {
-        result = static_cast<int64_t>(lnum->truncateToUInt32() >> shiftCount);
+        result = static_cast<uint32_t>(lnum->truncateToUInt32() >> shiftCount);
       }
       return builder.getLiteralNumber(result);
     }
-    case OpKind::AddKind: { // +   (+=)
+    case ValueKind::BinaryAddInstKind: { // +   (+=)
       // Handle numeric constants:
       if (leftLiteralNum && rightLiteralNum) {
         return builder.getLiteralNumber(
@@ -541,7 +522,7 @@ Literal *hermes::evalBinaryOperator(
 
       break;
     }
-    case OpKind::SubtractKind: // -   (-=)
+    case ValueKind::BinarySubtractInstKind: // -   (-=)
       // Handle numeric constants:
       if (leftLiteralNum && rightLiteralNum) {
         return builder.getLiteralNumber(
@@ -550,7 +531,7 @@ Literal *hermes::evalBinaryOperator(
 
       break;
 
-    case OpKind::MultiplyKind: // *   (*=)
+    case ValueKind::BinaryMultiplyInstKind: // *   (*=)
       // Handle numeric constants:
       if (leftLiteralNum && rightLiteralNum) {
         return builder.getLiteralNumber(
@@ -567,7 +548,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::DivideKind: // /   (/=)
+    case ValueKind::BinaryDivideInstKind: // /   (/=)
       if (leftLiteralNum && rightLiteralNum) {
         // This relies on IEEE 754 double division. All modern compilers
         // implement this.
@@ -575,7 +556,7 @@ Literal *hermes::evalBinaryOperator(
             leftLiteralNum->getValue() / rightLiteralNum->getValue());
       }
       break;
-    case OpKind::ModuloKind: // %   (%=)
+    case ValueKind::BinaryModuloInstKind: // %   (%=)
       // Note that fmod differs slightly from the ES spec with regards to how
       // numbers not representable by double are rounded. This difference can be
       // ignored in practice, so most JS VMs use fmod.
@@ -585,14 +566,14 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::ExponentiationKind: // ** (**=)
+    case ValueKind::BinaryExponentiationInstKind: // ** (**=)
       if (leftLiteralNum && rightLiteralNum) {
         return builder.getLiteralNumber(
             hermes::expOp(
                 leftLiteralNum->getValue(), rightLiteralNum->getValue()));
       }
       break;
-    case OpKind::OrKind: // |   (|=)
+    case ValueKind::BinaryOrInstKind: // |   (|=)
       if (leftLiteralNum && rightLiteralNum) {
         return builder.getLiteralNumber(
             leftLiteralNum->truncateToInt32() |
@@ -600,7 +581,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::XorKind: // ^   (^=)
+    case ValueKind::BinaryXorInstKind: // ^   (^=)
       if (leftLiteralNum && rightLiteralNum) {
         return builder.getLiteralNumber(
             leftLiteralNum->truncateToInt32() ^
@@ -608,7 +589,7 @@ Literal *hermes::evalBinaryOperator(
       }
 
       break;
-    case OpKind::AndKind: // &   (&=)
+    case ValueKind::BinaryAndInstKind: // &   (&=)
       if (leftLiteralNum && rightLiteralNum) {
         return builder.getLiteralNumber(
             leftLiteralNum->truncateToInt32() &
@@ -683,6 +664,16 @@ LiteralNumber *hermes::evalToInt32(IRBuilder &builder, Literal *operand) {
   }
   double val = lit->getValue();
   return builder.getLiteralNumber(truncateToInt32(val));
+}
+
+LiteralNumber *hermes::evalToUint32(IRBuilder &builder, Literal *operand) {
+  // Eval to a number first, then truncate to a 32-bit unsigned int.
+  LiteralNumber *lit = evalToNumber(builder, operand);
+  if (!lit) {
+    return nullptr;
+  }
+  double val = lit->getValue();
+  return builder.getLiteralNumber(truncateToUInt32(val));
 }
 
 LiteralBool *hermes::evalToBoolean(IRBuilder &builder, Value *operand) {

@@ -63,9 +63,7 @@ extends:
       ${{ if eq(parameters.MustPublish, false) }}:
         skipBuildTagsForGitHubPullRequests: true
     pool:
-      name: Azure-Pipelines-1ESPT-ExDShared
-      image: windows-latest
-      os: windows
+      name: fabric-internal-pool-large
     sdl:
       binskim:
         analyzeTarget: |
@@ -186,7 +184,7 @@ extends:
                 $(fakeBuildArg)
               displayName: Run unit tests
 
-            # Run JS regression tests after the build is finished.
+            # Run Lit tests which are mostly JS tests.
             - script: >
                 node .ado\scripts\build.js
                 --no-build
@@ -199,6 +197,20 @@ extends:
                 --file-version "$(fileVersion)"
                 $(fakeBuildArg)
               displayName: Run JS regression tests
+
+            # Run Test262 Intl tests.
+            - script: >
+                node .ado\scripts\build.js
+                --no-build
+                --test262-intl
+                --output-path $(Build.StagingDirectory)\out
+                --platform ${{ MatrixEntry.TargetCPU }}
+                --configuration release
+                ${{ MatrixEntry.BuildUWP }}
+                --semantic-version "$(semanticVersion)"
+                --file-version "$(fileVersion)"
+                $(fakeBuildArg)
+              displayName: Run Test262 Intl tests
 
             # Sign and publish symbols only for the CI builds and real builds.
           - ${{ if and(eq(parameters.MustPublish, true), eq(parameters.FakeBuild, false)) }}:

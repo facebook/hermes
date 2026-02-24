@@ -16,25 +16,21 @@
     "eslint-plugin-fb-flow": "^0.0.5",
     "eslint-plugin-flowtype": "^8.0.3",
     "eslint-plugin-jest": "^25.2.4",
-    "eslint-plugin-prettier": "^4.2.1",
-    "flow-bin": "^0.267.0",
+    "flow-bin": "^0.302.0",
     "glob": "^8.0.3",
-    "jest": "^29.2.2",
+    "jest": "^30.0.5",
     "jest-specific-snapshot": "^5.0.0",
     "mkdirp": "^1.0.4",
     "patch-package": "^6.5.0",
-    "prettier": "2.8.8",
-    "prettier-v3-for-testing": "npm:prettier@3.2.5"
-  },
-  "resolutions": {
-    "jest-snapshot": "^29.2.2"
+    "prettier": "3.6.2",
+    "prettier-plugin-hermes-parser": "*"
   },
   "scripts": {
     "build": "./scripts/build.sh",
     "build-prettier": "./scripts/build-prettier.sh",
     "lint": "eslint .",
     "flow": "flow",
-    "format": "prettier --config ./.prettierrc.json --write \"**/*.js\"",
+    "format": "./node_modules/prettier/bin/prettier.cjs --config ./.prettierrc.json --write \"**/*.js\"",
     "postinstall": "patch-package",
     "test": "NODE_OPTIONS=\"--experimental-vm-modules\" jest"
   },
@@ -46,5 +42,8 @@
     "hermes-transform",
     "babel-plugin-syntax-hermes-parser"
   ],
-  "dependencies": {}
+  "dependencies": {},
+  "resolutions": {
+    "lodash": "^4.17.23"
+  }
 }

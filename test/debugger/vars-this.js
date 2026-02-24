@@ -29,17 +29,11 @@ foo.f1();
 // CHECK-NEXT: Selected frame 0
 // CHECK-NEXT: this = 412
 // CHECK-NEXT: 1: f3 = function f3() { [bytecode] }
-// CHECK-NEXT: 2: ?anon_1_closure = function f1() { [bytecode] }
-// CHECK-NEXT: 2: ?anon_2_closure = function f2() { [bytecode] }
 // CHECK-NEXT: Selected frame 2
 // CHECK-NEXT: this = [object Object]
 // CHECK-NEXT: 0: f3 = function f3() { [bytecode] }
-// CHECK-NEXT: 1: ?anon_1_closure = function f1() { [bytecode] }
-// CHECK-NEXT: 1: ?anon_2_closure = function f2() { [bytecode] }
 // CHECK-NEXT: Selected frame 3
 // CHECK-NEXT: this = [object Object]
-// CHECK-NEXT: 1: ?anon_1_closure = function f1() { [bytecode] }
-// CHECK-NEXT: 1: ?anon_2_closure = function f2() { [bytecode] }
 // CHECK-NEXT: Selected frame 4
 // CHECK-NEXT: this = [object global]
 // CHECK-NEXT: Continuing execution

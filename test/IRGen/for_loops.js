@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function sink(a) { }
 
@@ -49,286 +49,261 @@ function test_init_update_exprs(param1) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [sink, simple_for_loop, simple_for_loop_break, simple_for_loop_break_label, simple_for_loop_continue, simple_for_loop_continue_label, for_loop_match, naked_for_loop, test_init_update_exprs]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %simple_for_loop#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "simple_for_loop" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %simple_for_loop_break#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "simple_for_loop_break" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %simple_for_loop_break_label#0#1()#5, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "simple_for_loop_break_label" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %simple_for_loop_continue#0#1()#6, %0
-// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "simple_for_loop_continue" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %simple_for_loop_continue_label#0#1()#7, %0
-// CHECK-NEXT:  %12 = StorePropertyInst %11 : closure, globalObject : object, "simple_for_loop_continue_label" : string
-// CHECK-NEXT:  %13 = CreateFunctionInst %for_loop_match#0#1()#8, %0
-// CHECK-NEXT:  %14 = StorePropertyInst %13 : closure, globalObject : object, "for_loop_match" : string
-// CHECK-NEXT:  %15 = CreateFunctionInst %naked_for_loop#0#1()#9, %0
-// CHECK-NEXT:  %16 = StorePropertyInst %15 : closure, globalObject : object, "naked_for_loop" : string
-// CHECK-NEXT:  %17 = CreateFunctionInst %test_init_update_exprs#0#1()#10, %0
-// CHECK-NEXT:  %18 = StorePropertyInst %17 : closure, globalObject : object, "test_init_update_exprs" : string
-// CHECK-NEXT:  %19 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %20 = StoreStackInst undefined : undefined, %19
-// CHECK-NEXT:  %21 = LoadStackInst %19
-// CHECK-NEXT:  %22 = ReturnInst %21
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_for_loop": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_for_loop_break": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_for_loop_break_label": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_for_loop_continue": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_for_loop_continue_label": string
+// CHECK-NEXT:       DeclareGlobalVarInst "for_loop_match": string
+// CHECK-NEXT:       DeclareGlobalVarInst "naked_for_loop": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_init_update_exprs": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_for_loop(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "simple_for_loop": string
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_for_loop_break(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "simple_for_loop_break": string
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_for_loop_break_label(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "simple_for_loop_break_label": string
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_for_loop_continue(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "simple_for_loop_continue": string
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_for_loop_continue_label(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "simple_for_loop_continue_label": string
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %VS0: any, %for_loop_match(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "for_loop_match": string
+// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %0: environment, %VS0: any, %naked_for_loop(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %24: object, globalObject: object, "naked_for_loop": string
+// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_init_update_exprs(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %26: object, globalObject: object, "test_init_update_exprs": string
+// CHECK-NEXT:  %28 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %28: any
+// CHECK-NEXT:  %30 = LoadStackInst (:any) %28: any
+// CHECK-NEXT:        ReturnInst %30: any
 // CHECK-NEXT:function_end
 
-// CHECK:function sink#0#1(a)#2
-// CHECK-NEXT:S{sink#0#1()#2} = [a#2]
+// CHECK:scope %VS1 [a: any]
+
+// CHECK:function sink(a: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#2], %0
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.a]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_for_loop#0#1()#3
-// CHECK-NEXT:S{simple_for_loop#0#1()#3} = [i#3]
+// CHECK:scope %VS2 [i: any]
+
+// CHECK:function simple_for_loop(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop#0#1()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#3], %0
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i#3], %0
-// CHECK-NEXT:  %3 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %5 = LoadFrameInst [i#3], %0
-// CHECK-NEXT:  %6 = CallInst %4, undefined : undefined, undefined : undefined, %5
-// CHECK-NEXT:  %7 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS2.i]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
+// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) %4: any, 10: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = LoadFrameInst [i#3], %0
-// CHECK-NEXT:  %10 = BinaryOperatorInst '<', %9, 10 : number
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB2, %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = LoadFrameInst [i#3], %0
-// CHECK-NEXT:  %13 = BinaryOperatorInst '<', %12, 10 : number
-// CHECK-NEXT:  %14 = CondBranchInst %13, %BB2, %BB4
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
+// CHECK-NEXT:  %9 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %8: any
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %15 = LoadFrameInst [i#3], %0
-// CHECK-NEXT:  %16 = BinaryOperatorInst '+', %15, 1 : number
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [i#3], %0
-// CHECK-NEXT:  %18 = BranchInst %BB5
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
+// CHECK-NEXT:  %13 = BinaryLessThanInst (:boolean) %12: any, 10: number
+// CHECK-NEXT:        CondBranchInst %13: boolean, %BB1, %BB2
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %15 = LoadFrameInst (:any) %1: environment, [%VS2.i]: any
+// CHECK-NEXT:  %16 = BinaryAddInst (:any) %15: any, 1: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %16: any, [%VS2.i]: any
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_for_loop_break#0#1()#4
-// CHECK-NEXT:S{simple_for_loop_break#0#1()#4} = [i#4]
+// CHECK:scope %VS3 [i: any]
+
+// CHECK:function simple_for_loop_break(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_break#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#4], %0
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i#4], %0
-// CHECK-NEXT:  %3 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS3.i]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS3.i]: any
+// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) %4: any, 10: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst [i#4], %0
-// CHECK-NEXT:  %7 = BinaryOperatorInst '<', %6, 10 : number
-// CHECK-NEXT:  %8 = CondBranchInst %7, %BB2, %BB3
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS4 [i: any]
+
+// CHECK:function simple_for_loop_break_label(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS4.i]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.i]: any
+// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) %4: any, 10: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB2, %BB3
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS5 [i: any]
+
+// CHECK:function simple_for_loop_continue(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS5.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS5.i]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) %4: any, 10: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %10 = BinaryLessThanInst (:boolean) %9: any, 10: number
+// CHECK-NEXT:        CondBranchInst %10: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = LoadFrameInst [i#4], %0
-// CHECK-NEXT:  %10 = BinaryOperatorInst '<', %9, 10 : number
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB2, %BB3
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS5.i]: any
+// CHECK-NEXT:  %13 = BinaryAddInst (:any) %12: any, 1: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %13: any, [%VS5.i]: any
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS6 [i: any]
+
+// CHECK:function simple_for_loop_continue_label(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS6.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS6.i]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %5 = BinaryLessThanInst (:boolean) %4: any, 10: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB2, %BB3
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       BranchInst %BB5
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %11 = BinaryLessThanInst (:boolean) %10: any, 10: number
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB2, %BB3
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = LoadFrameInst [i#4], %0
-// CHECK-NEXT:  %13 = BinaryOperatorInst '+', %12, 1 : number
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [i#4], %0
-// CHECK-NEXT:  %15 = BranchInst %BB4
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS6.i]: any
+// CHECK-NEXT:  %14 = BinaryAddInst (:any) %13: any, 1: number
+// CHECK-NEXT:        StoreFrameInst %1: environment, %14: any, [%VS6.i]: any
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS7 [a: any, b: any, c: any, d: any, e: any, f: any]
+
+// CHECK:function for_loop_match(a: any, b: any, c: any, d: any, e: any, f: any): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS7.a]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %b: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS7.b]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %c: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS7.c]: any
+// CHECK-NEXT:  %8 = LoadParamInst (:any) %d: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %8: any, [%VS7.d]: any
+// CHECK-NEXT:  %10 = LoadParamInst (:any) %e: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %10: any, [%VS7.e]: any
+// CHECK-NEXT:  %12 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: any, [%VS7.f]: any
+// CHECK-NEXT:  %14 = LoadFrameInst (:any) %1: environment, [%VS7.a]: any
+// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [%VS7.b]: any
+// CHECK-NEXT:  %17 = CallInst (:any) %16: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %17: any, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS7.d]: any
+// CHECK-NEXT:  %20 = CallInst (:any) %19: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS8 []
+
+// CHECK:function naked_for_loop(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       BranchInst %BB1
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS9 [param1: any, i: any]
+
+// CHECK:function test_init_update_exprs(param1: any): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS9: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %param1: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS9.param1]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS9.i]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 0: number, [%VS9.i]: any
+// CHECK-NEXT:       CondBranchInst false: boolean, %BB1, %BB2
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:       BranchInst %BB4
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       CondBranchInst false: boolean, %BB5, %BB6
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:       CondBranchInst false: boolean, %BB1, %BB2
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS9.i]: any
+// CHECK-NEXT:  %11 = AsNumericInst (:number|bigint) %10: any
+// CHECK-NEXT:  %12 = UnaryIncInst (:number|bigint) %11: number|bigint
+// CHECK-NEXT:        StoreFrameInst %1: environment, %12: number|bigint, [%VS9.i]: any
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:        BranchInst %BB8
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = BranchInst %BB5
-// CHECK-NEXT:function_end
-
-// CHECK:function simple_for_loop_break_label#0#1()#5
-// CHECK-NEXT:S{simple_for_loop_break_label#0#1()#5} = [i#5]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_break_label#0#1()#5}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#5], %0
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i#5], %0
-// CHECK-NEXT:  %3 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %6 = BranchInst %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst [i#5], %0
-// CHECK-NEXT:  %8 = BinaryOperatorInst '<', %7, 10 : number
-// CHECK-NEXT:  %9 = CondBranchInst %8, %BB3, %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %10 = LoadFrameInst [i#5], %0
-// CHECK-NEXT:  %11 = BinaryOperatorInst '<', %10, 10 : number
-// CHECK-NEXT:  %12 = CondBranchInst %11, %BB3, %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %13 = LoadFrameInst [i#5], %0
-// CHECK-NEXT:  %14 = BinaryOperatorInst '+', %13, 1 : number
-// CHECK-NEXT:  %15 = StoreFrameInst %14, [i#5], %0
-// CHECK-NEXT:  %16 = BranchInst %BB5
+// CHECK-NEXT:  %16 = LoadFrameInst (:any) %1: environment, [%VS9.param1]: any
+// CHECK-NEXT:        CondBranchInst false: boolean, %BB9, %BB10
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %17 = BranchInst %BB6
-// CHECK-NEXT:function_end
-
-// CHECK:function simple_for_loop_continue#0#1()#6
-// CHECK-NEXT:S{simple_for_loop_continue#0#1()#6} = [i#6]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_continue#0#1()#6}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#6], %0
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i#6], %0
-// CHECK-NEXT:  %3 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst [i#6], %0
-// CHECK-NEXT:  %7 = BinaryOperatorInst '<', %6, 10 : number
-// CHECK-NEXT:  %8 = CondBranchInst %7, %BB2, %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %9 = LoadFrameInst [i#6], %0
-// CHECK-NEXT:  %10 = BinaryOperatorInst '<', %9, 10 : number
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB2, %BB4
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = LoadFrameInst [i#6], %0
-// CHECK-NEXT:  %13 = BinaryOperatorInst '+', %12, 1 : number
-// CHECK-NEXT:  %14 = StoreFrameInst %13, [i#6], %0
-// CHECK-NEXT:  %15 = BranchInst %BB5
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %16 = BranchInst %BB3
-// CHECK-NEXT:function_end
-
-// CHECK:function simple_for_loop_continue_label#0#1()#7
-// CHECK-NEXT:S{simple_for_loop_continue_label#0#1()#7} = [i#7]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_for_loop_continue_label#0#1()#7}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#7], %0
-// CHECK-NEXT:  %2 = StoreFrameInst 0 : number, [i#7], %0
-// CHECK-NEXT:  %3 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %5 = BranchInst %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %6 = BranchInst %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst [i#7], %0
-// CHECK-NEXT:  %8 = BinaryOperatorInst '<', %7, 10 : number
-// CHECK-NEXT:  %9 = CondBranchInst %8, %BB3, %BB5
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %10 = LoadFrameInst [i#7], %0
-// CHECK-NEXT:  %11 = BinaryOperatorInst '<', %10, 10 : number
-// CHECK-NEXT:  %12 = CondBranchInst %11, %BB3, %BB5
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = LoadFrameInst [i#7], %0
-// CHECK-NEXT:  %14 = BinaryOperatorInst '+', %13, 1 : number
-// CHECK-NEXT:  %15 = StoreFrameInst %14, [i#7], %0
-// CHECK-NEXT:  %16 = BranchInst %BB6
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %17 = BranchInst %BB4
-// CHECK-NEXT:function_end
-
-// CHECK:function for_loop_match#0#1(a, b, c, d, e, f)#8
-// CHECK-NEXT:S{for_loop_match#0#1()#8} = [a#8, b#8, c#8, d#8, e#8, f#8]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{for_loop_match#0#1()#8}
-// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#8], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %b, [b#8], %0
-// CHECK-NEXT:  %3 = StoreFrameInst %c, [c#8], %0
-// CHECK-NEXT:  %4 = StoreFrameInst %d, [d#8], %0
-// CHECK-NEXT:  %5 = StoreFrameInst %e, [e#8], %0
-// CHECK-NEXT:  %6 = StoreFrameInst %f, [f#8], %0
-// CHECK-NEXT:  %7 = LoadFrameInst [a#8], %0
-// CHECK-NEXT:  %8 = CallInst %7, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %9 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadFrameInst [d#8], %0
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %12 = BranchInst %BB3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = LoadFrameInst [b#8], %0
-// CHECK-NEXT:  %15 = CallInst %14, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %16 = CondBranchInst %15, %BB2, %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %17 = LoadFrameInst [b#8], %0
-// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %19 = CondBranchInst %18, %BB2, %BB3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = LoadFrameInst [c#8], %0
-// CHECK-NEXT:  %21 = CallInst %20, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %22 = BranchInst %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %23 = LoadFrameInst [e#8], %0
-// CHECK-NEXT:  %24 = CallInst %23, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %25 = BranchInst %BB5
-// CHECK-NEXT:function_end
-
-// CHECK:function naked_for_loop#0#1()#9
-// CHECK-NEXT:S{naked_for_loop#0#1()#9} = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{naked_for_loop#0#1()#9}
-// CHECK-NEXT:  %1 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = BranchInst %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %5 = BranchInst %BB2
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %6 = BranchInst %BB5
-// CHECK-NEXT:function_end
-
-// CHECK:function test_init_update_exprs#0#1(param1)#10
-// CHECK-NEXT:S{test_init_update_exprs#0#1()#10} = [param1#10, i#10]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_init_update_exprs#0#1()#10}
-// CHECK-NEXT:  %1 = StoreFrameInst %param1, [param1#10], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [i#10], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 0 : number, [i#10], %0
-// CHECK-NEXT:  %4 = BranchInst %BB1
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = BranchInst %BB3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %6 = BranchInst %BB5
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = CondBranchInst false : boolean, %BB2, %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %8 = CondBranchInst false : boolean, %BB2, %BB4
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = LoadFrameInst [i#10], %0
-// CHECK-NEXT:  %10 = AsNumericInst %9
-// CHECK-NEXT:  %11 = UnaryOperatorInst '++', %10 : number|bigint
-// CHECK-NEXT:  %12 = StoreFrameInst %11, [i#10], %0
-// CHECK-NEXT:  %13 = BranchInst %BB6
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %14 = BranchInst %BB8
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %15 = LoadFrameInst [param1#10], %0
-// CHECK-NEXT:  %16 = BranchInst %BB10
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %17 = CondBranchInst false : boolean, %BB7, %BB9
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %18 = CondBranchInst false : boolean, %BB7, %BB9
+// CHECK-NEXT:        CondBranchInst false: boolean, %BB5, %BB6
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %19 = LoadFrameInst [i#10], %0
-// CHECK-NEXT:  %20 = UnaryOperatorInst '--', %19
-// CHECK-NEXT:  %21 = StoreFrameInst %20, [i#10], %0
-// CHECK-NEXT:  %22 = BranchInst %BB11
-// CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %23 = BranchInst %BB13
-// CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %24 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %19 = LoadFrameInst (:any) %1: environment, [%VS9.i]: any
+// CHECK-NEXT:  %20 = UnaryDecInst (:number|bigint) %19: any
+// CHECK-NEXT:        StoreFrameInst %1: environment, %20: number|bigint, [%VS9.i]: any
+// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:%BB9:
+// CHECK-NEXT:        BranchInst %BB12
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %25 = CondBranchInst false : boolean, %BB12, %BB14
-// CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %26 = CondBranchInst false : boolean, %BB12, %BB14
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %27 = BranchInst %BB15
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB11:
+// CHECK-NEXT:        CondBranchInst false: boolean, %BB9, %BB10
+// CHECK-NEXT:%BB12:
+// CHECK-NEXT:        BranchInst %BB11
 // CHECK-NEXT:function_end

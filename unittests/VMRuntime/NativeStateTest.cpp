@@ -7,7 +7,7 @@
 
 #include "hermes/VM/NativeState.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 
 using namespace hermes::vm;

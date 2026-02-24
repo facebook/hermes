@@ -10,11 +10,10 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/JSWeakMapImpl.h"
 #include "hermes/VM/LimitedStorageProvider.h"
-#include "hermes/VM/PointerBase.h"
 
 #include <deque>
 
@@ -24,7 +23,7 @@ namespace {
 
 TEST(GCOOMDeathTest, SuperSegment) {
   auto fn = [] {
-    using SuperSegmentCell = EmptyCell<GC::maxAllocationSize() * 2>;
+    using SuperSegmentCell = EmptyCell<GC::maxNormalAllocationSize() * 2>;
     auto runtime = DummyRuntime::create(kTestGCConfig);
     SuperSegmentCell::create(*runtime);
   };
@@ -35,23 +34,31 @@ static void exceedMaxHeap(
     GCConfig::Builder baseConfig = kTestGCConfigBaseBuilder) {
   static constexpr size_t kSegments = 10;
   static constexpr size_t kHeapSizeHint =
-      AlignedHeapSegment::maxSize() * kSegments;
+      FixedSizeHeapSegment::maxSize() * kSegments;
   // Only one of these cells will fit into a segment, with the maximum amount of
   // space wasted in the segment.
-  using AwkwardCell = EmptyCell<AlignedHeapSegment::maxSize() / 2 + 1>;
+  using AwkwardCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 2 + 1>;
 
   auto runtime =
       DummyRuntime::create(TestGCConfigFixedSize(kHeapSizeHint, baseConfig));
   DummyRuntime &rt = *runtime;
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<AwkwardCell> handles[20]; // kSegments + 2 + some extra
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Exceed the maximum size of the heap. Note we need 2 extra segments instead
   // of just one because Hades can sometimes hide the memory for a segment
   // during compaction.
   for (size_t i = 0; i < kSegments + 2; ++i)
-    rt.makeHandle(AwkwardCell::create(rt));
+    lv.handles[i] = AwkwardCell::create(rt);
 }
 
+// When handlesan is ON, we won't check the heap footprint when creating new
+// heap segment. And if mmap storage provider is used, there's no limit on the
+// number of segments as well. For simplicity, just disable these tests under
+// handlesan.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST(GCOOMDeathTest, Fragmentation) {
   EXPECT_OOM(exceedMaxHeap());
 }
@@ -77,6 +84,7 @@ TEST(GCOOMDeathTest, WeakMapMarking) {
   };
   EXPECT_OOM(fn());
 }
+#endif
 
 } // namespace
 

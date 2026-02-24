@@ -9,19 +9,17 @@
 #define HERMES_VM_GCCELL_H
 
 #include "hermes/Support/Algorithms.h"
+#include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/VTable.h"
+#include "hermes/VM/sh_mirror.h"
 
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -41,6 +39,27 @@ static constexpr uint32_t cellSize() {
 
 /// This class stores a CellKind and the size of a cell in 32 bits.
 class KindAndSize {
+  friend struct RuntimeOffsets;
+  using RawType = CompressedPointer::RawType;
+  static constexpr size_t kNumBits = sizeof(RawType) * 8;
+  static constexpr size_t kNumKindBits = 8;
+  // On 64 bit platforms without compressed pointers, just make the size 32 bits
+  // so that it can be accessed without any masking or shifting.
+  static constexpr size_t kNumSizeBits =
+      std::min<size_t>(kNumBits - kNumKindBits, 32);
+  static_assert(
+      kNumCellKinds < 256,
+      "More cell kinds than available kind bits.");
+
+  /// The size of the cell. Due to heap alignment, we are guaranteed that the
+  /// least significant bit will always be zero, so it can be used for the
+  /// mark bit. In order for that to work, this has to come first.
+  /// If this is 0, it means the cell has an actual size larger than
+  /// maxNormalSize() (in HadesGC, it must be allocated in a JumboHeapSegment).
+  RawType size_ : kNumSizeBits;
+  /// The CellKind of the cell.
+  RawType kind_ : kNumKindBits;
+
  public:
   size_t getSize() const {
     return size_;
@@ -61,25 +80,6 @@ class KindAndSize {
   static constexpr uint32_t maxSize() {
     return (1ULL << kNumSizeBits) - 1;
   }
-
- private:
-  using RawType = CompressedPointer::RawType;
-  static constexpr size_t kNumBits = sizeof(RawType) * 8;
-  static constexpr size_t kNumKindBits = 8;
-  // On 64 bit platforms without compressed pointers, just make the size 32 bits
-  // so that it can be accessed without any masking or shifting.
-  static constexpr size_t kNumSizeBits =
-      std::min<size_t>(kNumBits - kNumKindBits, 32);
-  static_assert(
-      kNumCellKinds < 256,
-      "More cell kinds than available kind bits.");
-
-  /// The size of the cell. Due to heap alignment, we are guaranteed that the
-  /// least significant bit will always be zero, so it can be used for the
-  /// mark bit. In order for that to work, this has to come first.
-  RawType size_ : kNumSizeBits;
-  /// The CellKind of the cell.
-  RawType kind_ : kNumKindBits;
 };
 
 static_assert(
@@ -90,6 +90,8 @@ static_assert(
 /// traversal in a contiguous space: given a pointer to the head, you
 /// can get the size, and thus get to the head of the next cell.
 class GCCell {
+  friend struct RuntimeOffsets;
+
   /// Either contains the CellKind and size of this cell, or a forwarding
   /// pointer.
   union {
@@ -113,10 +115,27 @@ class GCCell {
   GCCell(const GCCell &) = delete;
   void operator=(const GCCell &) = delete;
 
-  /// Return the allocated size of the object in bytes.
+  /// Return the allocated size of the object in bytes. This is fast but does
+  /// not work for GCCell with size larger than maxNormalSize(), for which we
+  /// set size_ to 0. For that case, getAllocatedSizeSlow() should be used
+  /// instead.
   uint32_t getAllocatedSize() const {
-    return kindAndSize_.getSize();
+    uint32_t sz = kindAndSize_.getSize();
+    assert(
+        sz &&
+        "GCCell with potentially zero size must call getAllocatedSizeSlow()");
+#ifdef HERMESVM_GC_HADES
+    assert(
+        AlignedHeapSegment::getSegmentSize(this) ==
+            FixedSizeHeapSegment::storageSize() &&
+        "getAllocatedSize() can only be called on GCCells that live in FixedSizeHeapSegment");
+#endif
+    return sz;
   }
+
+  /// Get the allocated size for any GCCell. This is slower than above version
+  /// but works for any GCCell.
+  inline size_t getAllocatedSizeSlow() const;
 
   /// Implementation of cellSize. Do not use this directly.
   template <class C>
@@ -163,33 +182,6 @@ class GCCell {
   /// NOTE: this should only be used by the GC.
   void setKindAndSize(KindAndSize kindAndSize) {
     kindAndSize_ = kindAndSize;
-  }
-
-  /// We distinguish between two styles of forwarding pointer:
-  /// "marked" and "unmarked".  When marked forwarding pointers are
-  /// used, we can make efficient queries on a GCCell to determine
-  /// whether a forwarding pointer has been installed.  (For example,
-  /// we might use a low order "mark" bit in the vtp_ field to
-  /// indicate that that holds a forwarding pointer.)  With unmarked
-  /// forwarding pointers, some external data (e.g., external
-  /// mark bits in mark/sweep/compact) must indicate whether the
-  /// GCCell currently holds a forwarding pointer; there is no
-  /// efficient query for this.
-
-  /// The next two functions define unmarked forwarding pointers.
-
-  /// Sets this cell to contain a forwarding pointer to another cell.
-  /// NOTE: this should only be used by the GC.
-  void setForwardingPointer(CompressedPointer cell) {
-    forwardingPointer_ = cell;
-  }
-
-  /// \return a forwarding pointer to another object, if one exists. If one
-  /// has not yet been set by \c setForwardingPointer(), this function is
-  /// guaranteed to not return a pointer into the GC heap.
-  /// NOTE: this should only be used by the GC.
-  CompressedPointer getForwardingPointer() const {
-    return forwardingPointer_;
   }
 
   /// These three functions implement marked forwarding pointers.
@@ -277,20 +269,25 @@ class GCCell {
     return forwardingPointer_.getRaw() & 0x1;
   }
 
-  static constexpr uint32_t maxSize() {
+  /// The maximum size for all normal GCCells (i.e., no large allocation
+  /// support). With large allocation, any object with size larger than this
+  /// will store 0 in its KindAndSize, and getAllocatedSizeSlow() must be used
+  /// to get its actual size.
+  static constexpr uint32_t maxNormalSize() {
     return KindAndSize::maxSize();
   }
 };
+
+static_assert(sizeof(GCCell) == sizeof(SHGCCell));
+/// We should be able to assume that any allocation in a FixedSizeHeapSegment
+/// has its size stored inline.
+static_assert(GCCell::maxNormalSize() >= FixedSizeHeapSegment::maxSize());
 
 /// A VariableSizeRuntimeCell is a GCCell with a variable size only known
 /// at runtime, whereas GCCell is for fixed-size objects.
 /// \see ArrayStorage for how to inherit from this class correctly.
 class VariableSizeRuntimeCell : public GCCell {
  public:
-  uint32_t getSize() const {
-    return getAllocatedSize();
-  }
-
   /// Sets the size of the current cell to be \p sz.
   /// NOTE: This should only be used by the GC, and only to shrink objects.
   /// \pre sz is already heap-aligned.
@@ -302,6 +299,9 @@ class VariableSizeRuntimeCell : public GCCell {
         sz >= sizeof(VariableSizeRuntimeCell) &&
         "Should not allocate a VariableSizeRuntimeCell of size less than "
         "the size of a cell");
+    assert(
+        sz <= maxNormalSize() && "Setting size of large object is not allowed");
+    assert(sz < getAllocatedSize() && "Can only shrink objects");
     setKindAndSize(KindAndSize{getKind(), sz});
   }
 };
@@ -321,6 +321,5 @@ static const char kInvalidHeapValue = (char)0xcc;
 
 } // namespace vm
 } // namespace hermes
-#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_GCCELL_H

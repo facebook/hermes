@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -strict -dump-ir -O0 -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-CHECK
-// RUN: %hermes -hermes-parser -non-strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-NONSTRICT
+// RUN: %hermesc -hermes-parser -strict -dump-ir -O0 -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-CHECK
+// RUN: %hermesc -hermes-parser -non-strict -dump-ir -O -include-globals=%s.d %s | %FileCheckOrRegen %s --match-full-lines --check-prefix=OPT-NONSTRICT
 
 // Ensure that global properties are not promoted.
 var a = 10;
@@ -16,49 +16,46 @@ process = null;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [a]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
-// CHECK-NEXT:  %3 = StorePropertyInst 10 : number, globalObject : object, "a" : string
-// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %5 = LoadPropertyInst globalObject : object, "a" : string
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
-// CHECK-NEXT:  %7 = CallInst %4, undefined : undefined, undefined : undefined, %5, %6
-// CHECK-NEXT:  %8 = StoreStackInst %7, %1
-// CHECK-NEXT:  %9 = TryStoreGlobalPropertyInst null : null, globalObject : object, "process" : string
-// CHECK-NEXT:  %10 = StoreStackInst null : null, %1
-// CHECK-NEXT:  %11 = LoadStackInst %1
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "a": string
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
+// CHECK-NEXT:       StorePropertyStrictInst 10: number, globalObject: object, "a": string
+// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %6 = LoadPropertyInst (:any) globalObject: object, "a": string
+// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
+// CHECK-NEXT:  %8 = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: any, %7: any
+// CHECK-NEXT:       StoreStackInst %8: any, %2: any
+// CHECK-NEXT:        TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
+// CHECK-NEXT:        StoreStackInst null: null, %2: any
+// CHECK-NEXT:  %12 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
-// OPT-CHECK:function global#0()#1 : null
-// OPT-CHECK-NEXT:globals = [a]
-// OPT-CHECK-NEXT:S{global#0()#1} = []
+// OPT-CHECK:function global(): null
 // OPT-CHECK-NEXT:%BB0:
-// OPT-CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// OPT-CHECK-NEXT:  %1 = StorePropertyInst 10 : number, globalObject : object, "a" : string
-// OPT-CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// OPT-CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "a" : string
-// OPT-CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
-// OPT-CHECK-NEXT:  %5 = CallInst %2, undefined : undefined, undefined : undefined, %3, %4
-// OPT-CHECK-NEXT:  %6 = TryStoreGlobalPropertyInst null : null, globalObject : object, "process" : string
-// OPT-CHECK-NEXT:  %7 = ReturnInst null : null
+// OPT-CHECK-NEXT:       DeclareGlobalVarInst "a": string
+// OPT-CHECK-NEXT:       StorePropertyStrictInst 10: number, globalObject: object, "a": string
+// OPT-CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// OPT-CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "a": string
+// OPT-CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
+// OPT-CHECK-NEXT:  %5 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: any, %4: any
+// OPT-CHECK-NEXT:       TryStoreGlobalPropertyStrictInst null: null, globalObject: object, "process": string
+// OPT-CHECK-NEXT:       ReturnInst null: null
 // OPT-CHECK-NEXT:function_end
 
-// OPT-NONSTRICT:function global#0()#1 : null
-// OPT-NONSTRICT-NEXT:globals = [a]
-// OPT-NONSTRICT-NEXT:S{global#0()#1} = []
+// OPT-NONSTRICT:function global(): null
 // OPT-NONSTRICT-NEXT:%BB0:
-// OPT-NONSTRICT-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// OPT-NONSTRICT-NEXT:  %1 = StorePropertyInst 10 : number, globalObject : object, "a" : string
-// OPT-NONSTRICT-NEXT:  %2 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// OPT-NONSTRICT-NEXT:  %3 = LoadPropertyInst globalObject : object, "a" : string
-// OPT-NONSTRICT-NEXT:  %4 = TryLoadGlobalPropertyInst globalObject : object, "process" : string
-// OPT-NONSTRICT-NEXT:  %5 = CallInst %2, undefined : undefined, undefined : undefined, %3, %4
-// OPT-NONSTRICT-NEXT:  %6 = StorePropertyInst null : null, globalObject : object, "process" : string
-// OPT-NONSTRICT-NEXT:  %7 = ReturnInst null : null
+// OPT-NONSTRICT-NEXT:       DeclareGlobalVarInst "a": string
+// OPT-NONSTRICT-NEXT:       StorePropertyLooseInst 10: number, globalObject: object, "a": string
+// OPT-NONSTRICT-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// OPT-NONSTRICT-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "a": string
+// OPT-NONSTRICT-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "process": string
+// OPT-NONSTRICT-NEXT:  %5 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %3: any, %4: any
+// OPT-NONSTRICT-NEXT:       StorePropertyLooseInst null: null, globalObject: object, "process": string
+// OPT-NONSTRICT-NEXT:       ReturnInst null: null
 // OPT-NONSTRICT-NEXT:function_end

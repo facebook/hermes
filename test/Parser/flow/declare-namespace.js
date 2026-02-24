@@ -36,7 +36,7 @@ declare namespace NS { import type T from "TM"; }
 // CHECK-NEXT:                "type": "StringLiteral",
 // CHECK-NEXT:                "value": "TM"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "assertions": [],
+// CHECK-NEXT:              "attributes": [],
 // CHECK-NEXT:              "importKind": "type"
 // CHECK-NEXT:            }
 // CHECK-NEXT:          ]
@@ -123,7 +123,7 @@ declare namespace both_type_and_value {
 // CHECK-NEXT:                "type": "StringLiteral",
 // CHECK-NEXT:                "value": "react"
 // CHECK-NEXT:              },
-// CHECK-NEXT:              "assertions": [],
+// CHECK-NEXT:              "attributes": [],
 // CHECK-NEXT:              "importKind": "value"
 // CHECK-NEXT:            }
 }

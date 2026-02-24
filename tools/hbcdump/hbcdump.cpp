@@ -9,8 +9,8 @@
 #include "ProfileAnalyzer.h"
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#include "hermes/Public/Buffer.h"
 #include "hermes/SourceMap/SourceMapParser.h"
+#include "hermes/Support/Buffer.h"
 #include "hermes/Support/MemoryBuffer.h"
 
 #include "llvh/ADT/SmallVector.h"
@@ -513,7 +513,7 @@ int main(int argc, char **argv) {
       return -1;
     }
     SourceErrorManager sm;
-    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get(), sm);
+    sourceMap = SourceMapParser::parse(*sourceMapBufOrErr.get().get(), {}, sm);
     if (!sourceMap) {
       llvh::errs() << "Error loading source map: " << SourceMapFilename << "\n";
       return -1;

@@ -6,6 +6,8 @@
  */
 
 // RUN: %hermes -non-strict -target=HBC -O %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -non-strict -target=HBC -O0 -lazy %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 function strictFunc() {
     "use strict";

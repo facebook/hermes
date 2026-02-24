@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function simple_test0() {
   var re = /(\w+)\s(\w+)/;
@@ -24,57 +24,63 @@ function simple_test1() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [simple_test0, simple_test1]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %simple_test0#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "simple_test0" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %simple_test1#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "simple_test1" : string
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %6 = StoreStackInst undefined : undefined, %5
-// CHECK-NEXT:  %7 = LoadStackInst %5
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_test0": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_test1": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_test0(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "simple_test0": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_test1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "simple_test1": string
+// CHECK-NEXT:  %7 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %7: any
+// CHECK-NEXT:  %9 = LoadStackInst (:any) %7: any
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_test0#0#1()#2
-// CHECK-NEXT:S{simple_test0#0#1()#2} = [re#2, str#2, newstr#2]
+// CHECK:scope %VS1 [re: any, str: any, newstr: any]
+
+// CHECK:function simple_test0(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_test0#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [re#2], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [str#2], %0
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [newstr#2], %0
-// CHECK-NEXT:  %4 = CreateRegExpInst "(\\\\w+)\\\\s(\\\\w+)" : string, "" : string
-// CHECK-NEXT:  %5 = StoreFrameInst %4 : regexp, [re#2], %0
-// CHECK-NEXT:  %6 = StoreFrameInst "John Smith" : string, [str#2], %0
-// CHECK-NEXT:  %7 = LoadFrameInst [str#2], %0
-// CHECK-NEXT:  %8 = LoadPropertyInst %7, "replace" : string
-// CHECK-NEXT:  %9 = LoadFrameInst [re#2], %0
-// CHECK-NEXT:  %10 = CallInst %8, undefined : undefined, %7, %9, "$2, $1" : string
-// CHECK-NEXT:  %11 = StoreFrameInst %10, [newstr#2], %0
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.re]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.str]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.newstr]: any
+// CHECK-NEXT:  %5 = CreateRegExpInst (:object) "(\\\\w+)\\\\s(\\\\w+)": string, "": string
+// CHECK-NEXT:       StoreFrameInst %1: environment, %5: object, [%VS1.re]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, "John Smith": string, [%VS1.str]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.str]: any
+// CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "replace": string
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.re]: any
+// CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, %8: any, %10: any, "$2, $1": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: any, [%VS1.newstr]: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_test1#0#1()#3
-// CHECK-NEXT:S{simple_test1#0#1()#3} = [re0#3, re1#3, re2#3, re3#3, re4#3]
+// CHECK:scope %VS2 [re0: any, re1: any, re2: any, re3: any, re4: any]
+
+// CHECK:function simple_test1(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple_test1#0#1()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [re0#3], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [re1#3], %0
-// CHECK-NEXT:  %3 = StoreFrameInst undefined : undefined, [re2#3], %0
-// CHECK-NEXT:  %4 = StoreFrameInst undefined : undefined, [re3#3], %0
-// CHECK-NEXT:  %5 = StoreFrameInst undefined : undefined, [re4#3], %0
-// CHECK-NEXT:  %6 = CreateRegExpInst "\\\\w+\\\\s" : string, "g" : string
-// CHECK-NEXT:  %7 = StoreFrameInst %6 : regexp, [re0#3], %0
-// CHECK-NEXT:  %8 = CreateRegExpInst "\\\\w+\\\\s" : string, "g" : string
-// CHECK-NEXT:  %9 = StoreFrameInst %8 : regexp, [re1#3], %0
-// CHECK-NEXT:  %10 = CreateRegExpInst "\\\\w+" : string, "" : string
-// CHECK-NEXT:  %11 = StoreFrameInst %10 : regexp, [re2#3], %0
-// CHECK-NEXT:  %12 = CreateRegExpInst "\\\\w+" : string, "g" : string
-// CHECK-NEXT:  %13 = StoreFrameInst %12 : regexp, [re3#3], %0
-// CHECK-NEXT:  %14 = CreateRegExpInst " " : string, "" : string
-// CHECK-NEXT:  %15 = StoreFrameInst %14 : regexp, [re4#3], %0
-// CHECK-NEXT:  %16 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.re0]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.re1]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.re2]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.re3]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.re4]: any
+// CHECK-NEXT:  %7 = CreateRegExpInst (:object) "\\\\w+\\\\s": string, "g": string
+// CHECK-NEXT:       StoreFrameInst %1: environment, %7: object, [%VS2.re0]: any
+// CHECK-NEXT:  %9 = CreateRegExpInst (:object) "\\\\w+\\\\s": string, "g": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS2.re1]: any
+// CHECK-NEXT:  %11 = CreateRegExpInst (:object) "\\\\w+": string, "": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %11: object, [%VS2.re2]: any
+// CHECK-NEXT:  %13 = CreateRegExpInst (:object) "\\\\w+": string, "g": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %13: object, [%VS2.re3]: any
+// CHECK-NEXT:  %15 = CreateRegExpInst (:object) " ": string, "": string
+// CHECK-NEXT:        StoreFrameInst %1: environment, %15: object, [%VS2.re4]: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

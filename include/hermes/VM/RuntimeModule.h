@@ -8,25 +8,23 @@
 #ifndef HERMES_VM_RUNTIMEMODULE_H
 #define HERMES_VM_RUNTIMEMODULE_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/IdentifierTable.h"
 
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/WeakRoot.h"
 
 #include "llvh/ADT/simple_ilist.h"
 
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
+template <typename HVType>
+class ArrayStorageBase;
 class CodeBlock;
 class Runtime;
 
@@ -48,15 +46,41 @@ union RuntimeModuleFlags {
     /// have lazy identifiers whose string content is a pointer to the string
     /// storage in the bytecode module. We should only make the first (biggest)
     /// module persistent.
+    /// This flag must not be set when creating a RuntimeModule for lazy
+    /// compiled Modules, because the BytecodeModule will change underneath the
+    /// provider, so the VM can't hold pointers into the storage.
     bool persistent : 1;
 
     /// Whether this runtime module's epilogue should be hidden in
     /// runtime.getEpilogues().
     bool hidesEpilogue : 1;
+
+    /// Whether functions in this module should be treated as builtins, meaning
+    /// Function.prototype.toString() returns "[native code]" instead of the
+    /// actual source. This is used for InternalJavaScript and extensions.
+    bool funcsAreBuiltins : 1;
   };
   uint8_t flags;
   RuntimeModuleFlags() : flags(0) {}
 };
+
+struct SwitchTargets {
+  // The offset of the basic block target corresponding to this switch case.
+  // The offset is relative to the address of the StringSwitchImm instruction.
+  int32_t bytecodeOffset = 0;
+  // The (absolute) address of the JIT code for the basic block target
+  // corresponding to this switch case.
+  void *jitCodeTarget = 0;
+};
+
+/// This DenseMap specialization is used at runtime to map string values
+/// used in switch statements to the proper branch target.  Note that
+/// it cannot use pointer equality -- the StringPrimitiveValueDenseMapInfo
+/// trait compares StringPrimitives by their values.
+using StringSwitchDenseMap = llvh::DenseMap<
+    StringPrimitive *,
+    SwitchTargets,
+    StringPrimitiveValueDenseMapInfo>;
 
 /// This class is used to store the non-instruction information needed to
 /// execute code. The RuntimeModule owns a BytecodeModule, from which it copies
@@ -75,6 +99,8 @@ union RuntimeModuleFlags {
 /// linked list which can be walked to perform memory management tasks.
 class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
  private:
+  friend struct RuntimeOffsets;
+
   friend StringID detail::mapStringMayAllocate(
       RuntimeModule &module,
       const char *str);
@@ -84,7 +110,19 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   /// The table maps from a sequential string id in the bytecode to an
   /// SymbolID.
-  std::vector<RootSymbolID> stringIDMap_;
+  std::vector<RootSymbolID> stringIDMap_{};
+
+  /// Lazy compilation: Next string ID to allocate when mapping strings.
+  StringID nextStringID_ = 0;
+
+  /// Lazy compilation: offset in stringKinds to begin at when importing the
+  /// stringIDMap_.
+  uint32_t stringKindsOffset_ = 0;
+
+  /// Lazy compilation: offset in identifierHashes to begin at when importing
+  /// the stringIDMap_.
+  /// Updated when importStringIDMapMayAllocate runs.
+  uint32_t identifierHashesOffset_ = 0;
 
   /// Weak pointer to a GC-managed Domain that owns this RuntimeModule.
   /// We use WeakRoot<Domain> here to express that the RuntimeModule does not
@@ -94,7 +132,14 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   WeakRoot<Domain> domain_;
 
   /// The table maps from a function index to a CodeBlock.
-  std::vector<CodeBlock *> functionMap_{};
+  std::vector<std::unique_ptr<CodeBlock>> functionMap_{};
+
+  /// Each StringSwitchImm instructions is assigned a small, dense
+  /// integer index at compile time.  This table has an entry for each
+  /// such index.  The corresponding table will be populated on first
+  /// use, and will map the case labels of the switch to the
+  /// corresponding branch offset.
+  std::vector<StringSwitchDenseMap> stringSwitchImmTables_;
 
   /// The byte-code provider for this RuntimeModule. The RuntimeModule is
   /// designed to own the provider exclusively, especially because in some
@@ -115,15 +160,21 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   /// scriptID.
   facebook::hermes::debugger::ScriptID scriptID_;
 
-  /// A map from NewObjectWithBuffer's <keyBufferIndex, numLiterals> tuple to
-  /// its shared hidden class.
-  /// During hashing, keyBufferIndex takes the top 24bits while numLiterals
-  /// becomes the lower 8bits of the key.
-  /// Cacheing will be skipped if keyBufferIndex is >= 2^24.
-  llvh::DenseMap<uint32_t, WeakRoot<HiddenClass>> objectLiteralHiddenClasses_;
+  /// A vector of cached hidden classes.
+  TransparentConservativeVector<WeakRoot<HiddenClass>>
+      objectLiteralHiddenClasses_;
+
+  /// Vector of AddPropertyCacheEntry, where each element is lazily allocated
+  /// whenever a CodeBlock needs a new entry.
+  /// Stored in a central location here for easier marking of roots.
+  TransparentConservativeVector<AddPropertyCacheEntry> addCacheEntries_;
 
   /// A map from template object ids to template objects.
   llvh::DenseMap<uint32_t, JSObject *> templateMap_;
+
+  /// Indexed by module id: the exports of each module.  isEmpty means
+  /// the module has not yet been initialized.
+  ArrayStorageBase<HermesValue> *moduleExports_{nullptr};
 
   /// Registers the created RuntimeModule with \p domain, resulting in
   /// \p domain owning it. The RuntimeModule will be freed when the
@@ -136,12 +187,6 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       facebook::hermes::debugger::ScriptID scriptID);
 
   CodeBlock *getCodeBlockSlowPath(unsigned index);
-
-#ifndef HERMESVM_LEAN
-  /// For a lazy module, this is the RuntimeModule that ultimately spawned it
-  // (the global function of the loaded file).
-  RuntimeModule *lazyRoot_;
-#endif
 
  public:
   ~RuntimeModule();
@@ -170,46 +215,6 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       RuntimeModuleFlags flags = {},
       facebook::hermes::debugger::ScriptID scriptID =
           facebook::hermes::debugger::kInvalidLocation);
-
-#ifndef HERMESVM_LEAN
-  /// Crates a lazy RuntimeModule as part of lazy compilation. This module
-  /// will contain only one CodeBlock that points to \p function.
-  static RuntimeModule *createLazyModule(
-      Runtime &runtime,
-      Handle<Domain> domain,
-      RuntimeModule *parent,
-      uint32_t functionID);
-
-  /// Verifies that there is only one CodeBlock in this module, and return it.
-  /// This is used when a lazy code block is created which should be the only
-  /// block in the module.
-  CodeBlock *getOnlyLazyCodeBlock() const {
-    assert(functionMap_.size() == 1 && functionMap_[0] && "Not a lazy module?");
-    return functionMap_[0];
-  }
-
-  /// Get the name symbol ID associated with the getOnlyLazyCodeBlock().
-  SymbolID getLazyName();
-
-  /// Initialize lazy modules created with \p createUninitialized.
-  /// Calls `initialize` and does a bit of extra work.
-  /// \param bytecode the bytecode data to initialize it with.
-  void initializeLazyMayAllocate(std::unique_ptr<hbc::BCProvider> bytecode);
-#endif
-
-  /// If this function was lazily compiled, return the RuntimeModule with the
-  /// file's global function (i.e. the first RM created when we started
-  /// interpreting and lazily compiling the source code). For other RMs,
-  /// e.g. those loaded from precompiled bytecode, this is just itself.
-  /// We also return this for RM created from serialization/deserialization.
-  /// Note that lazy and serialization are not intended to work together.
-  RuntimeModule *getLazyRootModule() {
-#if defined(HERMESVM_LEAN)
-    return this;
-#else
-    return lazyRoot_;
-#endif
-  }
 
   /// Initialize modules created with \p createUninitialized,
   /// but do not import the CJS module table, allowing us to always succeed.
@@ -277,15 +282,11 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 
   /// \return the CodeBlock for a function by function index.
   inline CodeBlock *getCodeBlockMayAllocate(unsigned index) {
+    assert(index < functionMap_.size() && "Index out of bounds");
     if (LLVM_LIKELY(functionMap_[index])) {
-      return functionMap_[index];
+      return functionMap_[index].get();
     }
     return getCodeBlockSlowPath(index);
-  }
-
-  /// \return whether this RuntimeModule has been initialized.
-  bool isInitialized() const {
-    return !bcProvider_->isLazy();
   }
 
   const hbc::BCProvider *getBytecode() const {
@@ -329,9 +330,18 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
   }
 
   /// \return a constant reference to the function map.
-  const std::vector<CodeBlock *> &getFunctionMap() {
+  const std::vector<std::unique_ptr<CodeBlock>> &getFunctionMap() {
     return functionMap_;
   }
+
+  StringSwitchDenseMap *getStringSwitchImmTables() {
+    return stringSwitchImmTables_.data();
+  }
+#ifndef NDEBUG
+  unsigned numStringSwitchImmTables() const {
+    return stringSwitchImmTables_.size();
+  }
+#endif
 
   /// \return the sourceURL, or an empty string if none.
   llvh::StringRef getSourceURL() const {
@@ -344,6 +354,12 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
     return flags_.hidesEpilogue;
   }
 
+  /// \return whether functions in this module should be treated as builtins,
+  /// i.e., their toString() returns "[native code]".
+  bool funcsAreBuiltins() const {
+    return flags_.funcsAreBuiltins;
+  }
+
   /// \return any trailing data after the real bytecode.
   llvh::ArrayRef<uint8_t> getEpilogue() const {
     return bcProvider_->getEpilogue();
@@ -353,11 +369,30 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
     return scriptID_;
   }
 
+  /// Allocate a new AddPropertyCacheEntry.
+  /// \return the index of the new entry, but if there's already too many to
+  /// allocate a new entry, return llvh::None.
+  /// Never returns 0.
+  /// The entry index will be at most
+  /// WritePropertyCacheEntry::kMaxAddCacheIndex.
+  OptValue<uint32_t> allocateAddCacheEntry();
+
+  /// \return the number of add cache entries.
+  size_t numAddCacheEntries() const {
+    return addCacheEntries_.size();
+  }
+
+  /// \return the add cache entry at \p index. Reference is invalidated upon
+  /// calling allocateAddCacheEntry.
+  AddPropertyCacheEntry &getAddCacheEntry(uint32_t index) {
+    return addCacheEntries_[index];
+  }
+
   /// Mark the non-weak roots owned by this RuntimeModule.
   void markRoots(RootAcceptor &acceptor, bool markLongLived);
 
-  /// Mark the long lived weak roots owned by this RuntimeModule.
-  void markLongLivedWeakRoots(WeakRootAcceptor &acceptor);
+  /// Mark the weak roots owned by this RuntimeModule.
+  void markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived);
 
   /// Mark the weak reference to the Domain which owns this RuntimeModule.
   void markDomainRef(WeakRootAcceptor &acceptor) {
@@ -380,22 +415,18 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
 #endif
 
   /// Find the cached hidden class for an object literal, if one exists.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
-  /// \param numLiterals number of literals used from key buffer of
-  /// NewObjectWithBuffer instruction.
+  /// \param shapeTableIndex is the ID of an object literal shape.
   /// \return the cached hidden class.
-  llvh::Optional<Handle<HiddenClass>> findCachedLiteralHiddenClass(
+  HiddenClass *findCachedLiteralHiddenClass(
       Runtime &runtime,
-      unsigned keyBufferIndex,
-      unsigned numLiterals) const;
+      uint32_t shapeTableIndex) const;
 
-  /// Try to cache the sharable hidden class for object literal. Cache will
-  /// be skipped if keyBufferIndex is >= 2^24.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction.
+  /// Set the cached hidden class for a given shape.
+  /// \param shapeTableIndex is the ID of an object literal shape.
   /// \param clazz the hidden class to cache.
-  void tryCacheLiteralHiddenClass(
+  void setCachedLiteralHiddenClass(
       Runtime &runtime,
-      unsigned keyBufferIndex,
+      unsigned shapeTableIndex,
       HiddenClass *clazz);
 
   /// Given \p templateObjectID, retrieve the cached template object.
@@ -417,6 +448,30 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
         "The template object already exists.");
     templateMap_[templateObjID] = templateObj.get();
   }
+
+  /// After a new lazy function has been compiled, update internal RuntimeModule
+  /// state with new data from the BCProvider.
+  void initAfterLazyCompilation();
+
+  /// Returns the module export for module \p modIndex.  This will be
+  /// empty if that module has not yet been initialized.
+  inline HermesValue getModuleExport(uint32_t modIndex) const;
+
+  /// Attempts to set the module export for module \p modIndex to \p modExport.
+  /// This may fail if \p modIndex is outside current capacity
+  /// of the cache, and attempts to reallocate it fail.  If that occurs,
+  /// the array size will remain unchanged.
+  void setModuleExport(Runtime &runtime, uint32_t modIndex, Handle<> modExport);
+
+  /// The \p cases pointer points the the start of the string switch
+  /// table for a StringSwitchImm instruction; \p size is the size of that
+  /// table. Initializes \p table, which must be the runtime table dedicated to
+  /// this instruction, to map the case labels to the right (bytecode) branch
+  /// offsets.  (JIT branch targets are left as 0.)
+  void initializeStringSwitchImmTable(
+      StringSwitchDenseMap &table,
+      const hbc::StringSwitchTableCase *cases,
+      uint32_t size);
 
  private:
   /// Import the string table from the supplied module.
@@ -452,36 +507,11 @@ class RuntimeModule final : public llvh::ilist_node<RuntimeModule> {
       StringID stringID,
       const StringTableEntry &entry,
       OptValue<uint32_t> mhash);
-
-  /// \return a unique hash key for object literal hidden class cache.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction(must be
-  /// less than 2^24).
-  /// \param numLiterals number of literals used from key buffer of
-  /// NewObjectWithBuffer instruction(must be less than 256).
-  static uint32_t getLiteralHiddenClassCacheHashKey(
-      unsigned keyBufferIndex,
-      unsigned numLiterals) {
-    assert(
-        canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals) &&
-        "<keyBufferIndex, numLiterals> tuple can't be used as cache key.");
-    return ((uint32_t)keyBufferIndex << 8) | numLiterals;
-  }
-
-  /// \return whether tuple <keyBufferIndex, numLiterals> can generate a
-  /// hidden class literal cache hash key or not.
-  /// \param keyBufferIndex value of NewObjectWithBuffer instruction. it must
-  /// be less than 256 to be used as a cache key.
-  static bool canGenerateLiteralHiddenClassCacheKey(
-      uint32_t keyBufferIndex,
-      unsigned numLiterals) {
-    return (keyBufferIndex & 0xFF000000) == 0 && numLiterals < 256;
-  }
 };
 
 using RuntimeModuleList = llvh::simple_ilist<RuntimeModule>;
 
 } // namespace vm
 } // namespace hermes
-#pragma GCC diagnostic pop
 
 #endif

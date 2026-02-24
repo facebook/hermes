@@ -77,7 +77,7 @@ function getPossibleTypes(parsedSelector: Selector): ?Array<ESNode['type']> {
       if (!(parsedSelector.value in FlowVisitorKeys)) {
         throw new Error(`Unexpected selector ${parsedSelector.value}`);
       }
-      // $FlowExpectedError[incompatible-return]
+      // $FlowExpectedError[incompatible-type]
       return [parsedSelector.value];
 
     case 'matches': {

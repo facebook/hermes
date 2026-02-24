@@ -159,7 +159,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20i
   var_i0 -= var_i1;
   var_l2 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = 247664u;
+  var_i0 = 95888u;
   var_i0 = w2c_hermes_strlen(instance, var_i0);
   var_l3 = var_i0;
   var_i1 = 2147483632u;
@@ -209,7 +209,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20i
     if (var_i0) {goto var_B2;}
     var_B3:;
     var_i0 = var_l5;
-    var_i1 = 247664u;
+    var_i1 = 95888u;
     var_i2 = var_l3;
     var_i0 = w2c_hermes_0x5F_memcpy(instance, var_i0, var_i1, var_i2);
     var_B2:;
@@ -271,11 +271,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20i
   w2c_hermes_abort(instance);
   UNREACHABLE;
   var_B0:;
-  var_i0 = 282993u;
+  var_i0 = 131201u;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = 282993u;
+    var_i0 = 131201u;
     var_i1 = 1u;
     i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
   }
@@ -283,7 +283,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20i
   var_i1 = 4u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l2;
-  var_i1 = 261948u;
+  var_i1 = 110180u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -348,14 +348,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedWithReceiver_RJS
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 120, var_i1);
       var_i0 = var_l7;
-      var_i1 = 64501u;
+      var_i1 = 61297u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 112, var_i1);
       var_i0 = var_l7;
       var_i1 = 60u;
       var_i0 += var_i1;
       var_p1 = var_i0;
       var_i1 = var_p2;
-      var_i2 = 5476u;
+      var_i2 = 5468u;
       var_i1 += var_i2;
       var_i2 = var_p2;
       var_i3 = var_p3;
@@ -385,7 +385,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedWithReceiver_RJS
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
       var_i0 = var_l7;
-      var_i1 = 20362u;
+      var_i1 = 20341u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
       var_i0 = var_l7;
       var_i1 = 192u;
@@ -730,7 +730,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringPrim0x28h
     var_i1 = var_l3;
     var_i2 = 8u;
     var_i1 += var_i2;
-    var_i2 = 70384u;
+    var_i2 = 67200u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallResult0x3Chermes0x3A0x3Avm0x3A0x3APseudoHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x2C0x200x28hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ACallResultSpecialize0x2960x3E0x20hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AallocateDynamicString0x3Cchar0x2C0x20true0x3E0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20llvh0x3A0x3AArrayRef0x3Cchar0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x29(instance, var_i0, var_i1, var_i2);
     goto var_B2;
     var_B3:;
@@ -748,7 +748,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringPrim0x28h
     var_i1 = var_l3;
     var_i2 = 16u;
     var_i1 += var_i2;
-    var_i2 = 70384u;
+    var_i2 = 67200u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallResult0x3Chermes0x3A0x3Avm0x3A0x3APseudoHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x2C0x200x28hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ACallResultSpecialize0x2960x3E0x20hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AallocateDynamicString0x3Cchar16_t0x2C0x20true0x3E0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20llvh0x3A0x3AArrayRef0x3Cchar16_t0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x29(instance, var_i0, var_i1, var_i2);
     var_B2:;
     var_l4 = var_i0;
@@ -787,7 +787,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringPrim0x28h
   var_i0 = var_l4;
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 40745u;
+  var_i0 = 40743u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_Bfunc:;
@@ -896,7 +896,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnPropertyInterna
       var_i0 = !(var_i0);
       if (var_i0) {
         var_i0 = var_p2;
-        var_i1 = 5476u;
+        var_i1 = 5468u;
         var_i0 += var_i1;
         var_i1 = var_p2;
         var_i2 = var_p3;
@@ -1197,7 +1197,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetComputedWithReceiver_
   var_i3 >>= (var_i4 & 31);
   var_i4 = 1020u;
   var_i3 &= var_i4;
-  var_i4 = 289808u;
+  var_i4 = 138008u;
   var_i3 += var_i4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 40u);
@@ -1371,7 +1371,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetComputedWithReceiver_
       var_i4 >>= (var_i5 & 31);
       var_i5 = 1020u;
       var_i4 &= var_i5;
-      var_i5 = 289808u;
+      var_i5 = 138008u;
       var_i4 += var_i5;
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 40u);
@@ -1703,18 +1703,18 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObjectBuildMeta0x28hermes0x3A0x3Avm0x3
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 60, var_i1);
   }
   var_i0 = var_p0;
-  var_i1 = 271408u;
+  var_i1 = 119616u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 68, var_i1);
   var_i0 = var_p0;
-  var_i1 = 21345u;
+  var_i1 = 21328u;
   var_i2 = 8u;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AMetadata0x3A0x3ABuilder0x3A0x3AaddField0x28char0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
   var_i0 = var_p0;
-  var_i1 = 33765u;
+  var_i1 = 33748u;
   var_i2 = 12u;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AMetadata0x3A0x3ABuilder0x3A0x3AaddField0x28char0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
   var_i0 = var_p0;
-  var_i1 = 51795u;
+  var_i1 = 51684u;
   var_i2 = 16u;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AMetadata0x3A0x3ABuilder0x3A0x3AaddField0x28char0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
   var_i0 = var_p0;
@@ -1729,7 +1729,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObjectBuildMeta0x28hermes0x3A0x3Avm0x3
       var_i2 = 2u;
       var_i1 <<= (var_i2 & 31);
       var_l2 = var_i1;
-      var_i2 = 271472u;
+      var_i2 = 119680u;
       var_i1 += var_i2;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
       var_i2 = var_l2;
@@ -1752,10 +1752,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3Acreate0x28hermes0x3A0x3Avm
   u32 var_i0, var_i1, var_i2, var_i3, var_i4;
   var_i0 = var_p0;
   var_i1 = var_p0;
-  var_i2 = 264u;
+  var_i2 = 256u;
   var_i1 += var_i2;
   var_i2 = var_p0;
-  var_i3 = 568u;
+  var_i3 = 560u;
   var_i2 += var_i3;
   var_i3 = var_p1;
   var_i4 = var_p2;
@@ -1771,11 +1771,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l2 = var_i1;
@@ -1784,7 +1784,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -1795,7 +1795,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i1 = var_l2;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_l2;
   var_i1 = 0u;
@@ -1805,7 +1805,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store32(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5624u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5616u);
   var_l3 = var_j0;
   var_i0 = var_l2;
   var_i1 = 0u;
@@ -1992,11 +1992,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     goto var_B3;
   }
   var_i0 = var_p2;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l8 = var_i1;
@@ -2005,7 +2005,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 16u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -2016,7 +2016,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
   var_i1 = var_l8;
   var_i2 = 16u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B15:;
   var_i0 = var_l8;
   var_i1 = 402653200u;
@@ -2039,7 +2039,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_l9;
@@ -2057,7 +2057,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     goto var_B17;
   }
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l9;
@@ -2075,7 +2075,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
   if (var_i0) {goto var_B17;}
   var_B18:;
   var_i0 = var_p2;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_p1;
   var_i2 = var_l8;
@@ -2144,14 +2144,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_i1);
         var_i0 = var_l7;
-        var_i1 = 64423u;
+        var_i1 = 61219u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
         var_i0 = var_l7;
         var_i1 = 100u;
         var_i0 += var_i1;
         var_p1 = var_i0;
         var_i1 = var_p2;
-        var_i2 = 5476u;
+        var_i2 = 5468u;
         var_i1 += var_i2;
         var_i2 = var_p2;
         var_i3 = var_p3;
@@ -2181,7 +2181,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_i1);
         var_i0 = var_l7;
-        var_i1 = 37706u;
+        var_i1 = 37704u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
         var_i0 = var_l7;
         var_i1 = 232u;
@@ -2296,14 +2296,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_i1);
     var_i0 = var_l7;
-    var_i1 = 64383u;
+    var_i1 = 61179u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
     var_i0 = var_l7;
     var_i1 = 100u;
     var_i0 += var_i1;
     var_p1 = var_i0;
     var_i1 = var_p2;
-    var_i2 = 5476u;
+    var_i2 = 5468u;
     var_i1 += var_i2;
     var_i2 = var_p2;
     var_i3 = var_p3;
@@ -2333,7 +2333,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_i1);
     var_i0 = var_l7;
-    var_i1 = 64683u;
+    var_i1 = 61479u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
     var_i0 = var_l7;
     var_i1 = 232u;
@@ -2391,14 +2391,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_i1);
       var_i0 = var_l7;
-      var_i1 = 64319u;
+      var_i1 = 61115u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
       var_i0 = var_l7;
       var_i1 = 100u;
       var_i0 += var_i1;
       var_p1 = var_i0;
       var_i1 = var_p2;
-      var_i2 = 5476u;
+      var_i2 = 5468u;
       var_i1 += var_i2;
       var_i2 = var_p2;
       var_i3 = var_p3;
@@ -2428,7 +2428,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_i1);
       var_i0 = var_l7;
-      var_i1 = 64683u;
+      var_i1 = 61479u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
       var_i0 = var_l7;
       var_i1 = 232u;
@@ -2746,11 +2746,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
       goto var_B43;
     }
     var_i0 = var_p2;
-    var_i1 = 1376u;
+    var_i1 = 1368u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p2;
-    var_i2 = 1372u;
+    var_i2 = 1364u;
     var_i1 += var_i2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     var_p1 = var_i1;
@@ -2759,7 +2759,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i0 = var_i0 <= var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = 16u;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -2770,7 +2770,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i1 = var_p1;
     var_i2 = 16u;
     var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
     var_B55:;
     var_i0 = var_p1;
     var_i1 = 402653200u;
@@ -2793,7 +2793,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i0 = var_i0 <= var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 1364u;
+      var_i1 = 1356u;
       var_i0 += var_i1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = var_p3;
@@ -2811,7 +2811,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
       goto var_B57;
     }
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p3;
@@ -2829,7 +2829,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     if (var_i0) {goto var_B57;}
     var_B58:;
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l8;
     var_i2 = var_p1;
@@ -2871,7 +2871,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i0 = !(var_i0);
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 5476u;
+      var_i1 = 5468u;
       var_i0 += var_i1;
       var_i1 = var_p2;
       var_i2 = var_p3;
@@ -3001,14 +3001,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_i1);
     var_i0 = var_l7;
-    var_i1 = 64501u;
+    var_i1 = 61297u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
     var_i0 = var_l7;
     var_i1 = 100u;
     var_i0 += var_i1;
     var_p1 = var_i0;
     var_i1 = var_p2;
-    var_i2 = 5476u;
+    var_i2 = 5468u;
     var_i1 += var_i2;
     var_i2 = var_p2;
     var_i3 = var_p3;
@@ -3038,7 +3038,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputNamedWithReceiver_RJS
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_i1);
     var_i0 = var_l7;
-    var_i1 = 20362u;
+    var_i1 = 20341u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
     var_i0 = var_l7;
     var_i1 = 232u;
@@ -3626,11 +3626,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l1 = var_i1;
@@ -3639,7 +3639,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -3650,7 +3650,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i1 = var_l1;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_l1;
   var_i1 = 0u;
@@ -3660,7 +3660,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 16u);
   i64_store32(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5624u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5616u);
   var_l2 = var_j0;
   var_i0 = var_l1;
   var_i1 = 0u;
@@ -3739,7 +3739,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_d2 = var_l18;
   var_i1 = var_d1 == var_d2;
   var_i0 &= var_i1;
-  var_l11 = var_i0;
+  var_l10 = var_i0;
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B1;}
   var_j0 = var_l16;
@@ -3751,7 +3751,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_i1 = var_p2;
   var_i2 = var_l8;
   var_i3 = 0u;
-  var_i4 = var_l11;
+  var_i4 = var_l10;
   var_i2 = var_i4 ? var_i2 : var_i3;
   var_l8 = var_i2;
   var_i3 = var_l9;
@@ -3760,7 +3760,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_i3 >>= (var_i4 & 31);
   var_i4 = 1020u;
   var_i3 &= var_i4;
-  var_i4 = 289808u;
+  var_i4 = 138008u;
   var_i3 += var_i4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 32u);
@@ -3781,7 +3781,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_i5 >>= (var_i6 & 31);
   var_i6 = 1020u;
   var_i5 &= var_i6;
-  var_i6 = 289808u;
+  var_i6 = 138008u;
   var_i5 += var_i6;
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5));
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 44u);
@@ -3905,14 +3905,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 132, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l11 = var_i0;
+  var_l10 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
   var_l8 = var_i0;
-  var_i1 = var_l11;
+  var_i1 = var_l10;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l11;
+    var_i0 = var_l10;
     var_i1 = var_l8;
     var_i2 = 8u;
     var_i1 += var_i2;
@@ -3922,7 +3922,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B11;
   }
-  var_i0 = var_l11;
+  var_i0 = var_l10;
   var_j1 = 18445477436851224575ull;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l8 = var_i0;
@@ -3972,9 +3972,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_l8 = var_i0;
   var_j1 = var_l17;
   var_i1 = (u32)(var_j1);
-  var_l11 = var_i1;
+  var_l10 = var_i1;
   var_i0 = var_i0 != var_i1;
-  var_l10 = var_i0;
+  var_l11 = var_i0;
   if (var_i0) {goto var_B16;}
   var_j0 = var_l16;
   var_i1 = var_p5;
@@ -4034,7 +4034,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_i5 >>= (var_i6 & 31);
   var_i6 = 1020u;
   var_i5 &= var_i6;
-  var_i6 = 289808u;
+  var_i6 = 138008u;
   var_i5 += var_i6;
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5));
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 44u);
@@ -4064,7 +4064,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     var_i0 = var_l7;
     var_j1 = var_l16;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_j1);
-    var_i0 = var_l11;
+    var_i0 = var_l10;
     var_i1 = var_p2;
     var_i2 = var_l7;
     var_i3 = 40u;
@@ -4090,7 +4090,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
         var_i0 = var_l7;
-        var_i1 = 64876u;
+        var_i1 = 61672u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
         var_i0 = var_l7;
         var_i1 = 0u;
@@ -4102,7 +4102,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
         var_i0 = var_l7;
-        var_i1 = 37707u;
+        var_i1 = 37705u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
         var_i0 = var_p0;
         var_i1 = var_p2;
@@ -4171,7 +4171,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     var_i0 = var_p2;
     var_i1 = var_p3;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AtoPropertyKey0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1);
-    var_p1 = var_i0;
+    var_l13 = var_i0;
     var_i1 = 4294967295u;
     var_i0 = var_i0 == var_i1;
     if (var_i0) {
@@ -4186,102 +4186,110 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     var_i0 = var_l7;
     var_i1 = 80u;
     var_i0 += var_i1;
-    var_l11 = var_i0;
+    var_l10 = var_i0;
     var_i0 = instance->w2c_0x5F_stack_pointer;
     var_i1 = 192u;
     var_i0 -= var_i1;
-    var_p3 = var_i0;
+    var_p1 = var_i0;
     instance->w2c_0x5F_stack_pointer = var_i0;
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_i1 = var_p2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l10 = var_i0;
-    var_i0 = var_p3;
+    var_p3 = var_i0;
+    var_i0 = var_p1;
     var_i1 = 156u;
     var_i0 += var_i1;
-    var_l12 = var_i0;
-    var_i1 = var_p3;
+    var_l11 = var_i0;
+    var_i1 = var_p1;
     var_i2 = 16u;
     var_i1 += var_i2;
     var_l8 = var_i1;
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_j1 = 17179869185ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_j1);
-    var_i0 = var_p3;
-    var_i1 = var_l12;
+    var_i0 = var_p1;
+    var_i1 = var_l11;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
-    var_i0 = var_p3;
-    var_i1 = var_l10;
+    var_i0 = var_p1;
+    var_i1 = var_p3;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_i1 = 0u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 180, var_i1);
-    var_i0 = var_p3;
-    var_i1 = var_p3;
+    var_i0 = var_p1;
+    var_i1 = var_p1;
     var_i2 = 144u;
     var_i1 += var_i2;
-    var_l12 = var_i1;
+    var_l11 = var_i1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_i1 = var_l8;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
     var_i0 = var_p2;
-    var_i1 = var_p3;
+    var_i1 = var_p1;
     var_i2 = 8u;
     var_i1 += var_i2;
-    var_l10 = var_i1;
+    var_p3 = var_i1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_p2;
-    var_i1 = 5616u;
+    var_i1 = 5608u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
-    var_i2 = var_p3;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
+    var_i2 = var_p1;
     var_i1 -= var_i2;
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
-      var_i0 = var_p3;
-      var_i1 = 184u;
+      var_i0 = var_p2;
+      var_i1 = 5612u;
       var_i0 += var_i1;
-      var_i1 = var_p2;
-      var_i2 = 5620u;
-      var_i1 += var_i2;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-      var_i0 = var_p2;
-      var_i1 = var_p3;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_p3 = var_i0;
+      var_i0 = var_p1;
+      var_i1 = instance->w2c_0x5F_stack_base;
       var_l8 = var_i1;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+      var_i0 = var_p1;
+      var_i1 = var_l8;
+      var_i2 = instance->w2c_0x5F_stack_end;
+      var_i3 = var_p3;
+      var_i2 += var_i3;
+      var_i1 -= var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
       var_i0 = var_p2;
-      var_i1 = var_p3;
+      var_i1 = var_p1;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
+      var_p3 = var_i1;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
+      var_i0 = var_p2;
+      var_i1 = var_p1;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
-      var_l10 = var_i1;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-      var_i0 = var_l8;
-      var_i1 = var_p3;
+      var_l8 = var_i1;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
+      var_i0 = var_p3;
+      var_i1 = var_p1;
       var_i0 -= var_i1;
-      var_i1 = var_l10;
+      var_i1 = var_l8;
       var_i0 = var_i0 > var_i1;
       if (var_i0) {goto var_B25;}
       var_i0 = var_p2;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-      var_l10 = var_i0;
+      var_p3 = var_i0;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-      var_l12 = var_i0;
-      var_i0 = var_l10;
+      var_l11 = var_i0;
+      var_i0 = var_p3;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
       var_l8 = var_i0;
     }
     var_i0 = var_l9;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_l13 = var_i0;
+    var_l12 = var_i0;
     var_i1 = 0u;
-    var_i2 = var_l13;
+    var_i2 = var_l12;
     var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
     var_i3 = 24u;
     var_i2 <<= (var_i3 & 31);
@@ -4292,7 +4300,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     var_l15 = var_i0;
     var_i1 = 20u;
     var_i0 += var_i1;
-    var_i1 = var_l13;
+    var_i1 = var_l12;
     var_i2 = 0u;
     var_i3 = var_l14;
     var_i4 = 1191182336u;
@@ -4302,16 +4310,16 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     var_i1 += var_i2;
     var_i2 = var_l15;
     var_i0 = var_i2 ? var_i0 : var_i1;
-    var_l13 = var_i0;
+    var_l12 = var_i0;
     var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
     var_j1 = 18446462598732840960ull;
     var_j0 |= var_j1;
     var_l16 = var_j0;
     var_i0 = var_l8;
-    var_i1 = var_l12;
+    var_i1 = var_l11;
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
-      var_i0 = var_l10;
+      var_i0 = var_p3;
       var_i1 = var_l8;
       var_i2 = 8u;
       var_i1 += var_i2;
@@ -4321,39 +4329,39 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
       goto var_B27;
     }
-    var_i0 = var_l10;
+    var_i0 = var_p3;
     var_j1 = var_l16;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
     var_l8 = var_i0;
     var_B27:;
-    var_i0 = var_l13;
+    var_i0 = var_l12;
     var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
     var_j1 = 18446462598732840960ull;
     var_j0 |= var_j1;
     var_l16 = var_j0;
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l12 = var_i0;
+    var_l11 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-    var_l10 = var_i0;
-    var_i1 = var_l12;
+    var_p3 = var_i0;
+    var_i1 = var_l11;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
-      var_i0 = var_l12;
-      var_i1 = var_l10;
+      var_i0 = var_l11;
+      var_i1 = var_p3;
       var_i2 = 8u;
       var_i1 += var_i2;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-      var_i0 = var_l10;
+      var_i0 = var_p3;
       var_j1 = var_l16;
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
       goto var_B29;
     }
-    var_i0 = var_l12;
+    var_i0 = var_l11;
     var_j1 = var_l16;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-    var_l10 = var_i0;
+    var_p3 = var_i0;
     var_B29:;
     var_i0 = var_l9;
     var_i1 = var_p2;
@@ -4363,8 +4371,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     var_i1 = 4294967295u;
     var_i0 = var_i0 == var_i1;
     if (var_i0) {
-      var_i0 = var_l11;
-      var_i1 = var_l11;
+      var_i0 = var_l10;
+      var_i1 = var_l10;
       var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1) + 1u);
       var_i2 = 8u;
       var_i1 <<= (var_i2 & 31);
@@ -4384,44 +4392,44 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     var_i0 &= var_i1;
     var_i0 = !(var_i0);
     if (var_i0) {
-      var_i0 = var_p3;
+      var_i0 = var_p1;
       var_i1 = 0u;
       i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_p3;
+      var_i0 = var_p1;
       var_i1 = 0u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      var_i0 = var_l11;
+      var_i0 = var_l10;
       var_i1 = var_l8;
       var_i2 = var_p2;
-      var_i3 = var_p1;
+      var_i3 = var_l13;
       var_i4 = var_p4;
       var_i5 = var_p5;
-      var_i6 = var_p3;
+      var_i6 = var_p1;
       w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_RJS0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6);
       goto var_B24;
     }
-    var_i0 = var_l11;
+    var_i0 = var_l10;
     var_i1 = var_p2;
-    var_i2 = var_p1;
+    var_i2 = var_l13;
     var_i3 = var_p4;
     var_i4 = var_l9;
-    var_i5 = var_l10;
+    var_i5 = var_p3;
     var_i6 = var_l8;
     var_i7 = var_p5;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AsetWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6, var_i7);
     goto var_B24;
     var_B25:;
-    var_i0 = var_l11;
+    var_i0 = var_l10;
     var_i1 = var_p2;
     var_i2 = 1u;
     var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i1, var_i2);
     i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
     var_B24:;
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_i1 = 8u;
     var_i0 += var_i1;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A0x7EGCScope0x280x29(instance, var_i0);
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_i1 = 192u;
     var_i0 += var_i1;
     instance->w2c_0x5F_stack_pointer = var_i0;
@@ -4527,7 +4535,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
       var_i0 = var_l7;
-      var_i1 = 64761u;
+      var_i1 = 61557u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
       var_i0 = var_l7;
       var_i1 = 0u;
@@ -4561,7 +4569,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
     i32_store16(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B0;
   }
-  var_i0 = var_l10;
+  var_i0 = var_l11;
   if (var_i0) {goto var_B15;}
   var_i0 = var_l8;
   var_i1 = 64u;
@@ -4808,7 +4816,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_i5 >>= (var_i6 & 31);
   var_i6 = 1020u;
   var_i5 &= var_i6;
-  var_i6 = 289808u;
+  var_i6 = 138008u;
   var_i5 += var_i6;
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5));
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 44u);
@@ -5216,7 +5224,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AputComputedWithReceiver_
   var_i5 >>= (var_i6 & 31);
   var_i6 = 1020u;
   var_i5 &= var_i6;
-  var_i6 = 289808u;
+  var_i6 = 138008u;
   var_i5 += var_i6;
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5));
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 44u);
@@ -5451,7 +5459,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetComputedPrimitiveDescr
       var_i4 >>= (var_i5 & 31);
       var_i5 = 1020u;
       var_i4 &= var_i5;
-      var_i5 = 289808u;
+      var_i5 = 138008u;
       var_i4 += var_i5;
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 36u);
@@ -5674,7 +5682,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetComputedPrimitiveDescr
       var_i4 >>= (var_i5 & 31);
       var_i5 = 1020u;
       var_i4 &= var_i5;
-      var_i5 = 289808u;
+      var_i5 = 138008u;
       var_i4 += var_i5;
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 36u);
@@ -6349,7 +6357,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AcreateNotUniquedL
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 43553u;
+  var_i0 = 43494u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_Bfunc:;
@@ -6627,147 +6635,6 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetComputedPropertyValue
   FUNC_EPILOGUE;
 }
 
-void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AexecuteCall10x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20bool0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u64 var_p4, u32 var_p5) {
-  u32 var_l6 = 0, var_l7 = 0, var_l8 = 0;
-  u64 var_l9 = 0, var_l10 = 0, var_l11 = 0;
-  FUNC_PROLOGUE;
-  u32 var_i0, var_i1, var_i2, var_i3, var_i4;
-  u64 var_j0, var_j1, var_j2;
-  var_i0 = instance->w2c_0x5F_stack_pointer;
-  var_i1 = 16u;
-  var_i0 -= var_i1;
-  var_l7 = var_i0;
-  var_l6 = var_i0;
-  var_i0 = var_l7;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5592u);
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
-  var_l7 = var_i1;
-  var_i0 -= var_i1;
-  var_i1 = 320u;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_p1;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l9 = var_j0;
-  var_i0 = var_p3;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l10 = var_j0;
-  var_i0 = var_l7;
-  var_p3 = var_i0;
-  var_i0 = var_p2;
-  var_i1 = 5616u;
-  var_i0 += var_i1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
-  var_i2 = var_l6;
-  var_i1 -= var_i2;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l6;
-    var_i1 = 8u;
-    var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l6;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_p3 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l6;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
-    var_l8 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_p3;
-    var_i1 = var_l6;
-    var_i0 -= var_i1;
-    var_i1 = var_l8;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {goto var_B1;}
-    var_i0 = var_p2;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5596u);
-    var_p3 = var_i0;
-  }
-  var_i0 = var_p2;
-  var_i1 = var_p3;
-  var_i2 = 4294967232u;
-  var_i1 -= var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_l11 = var_j0;
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l11;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445618173802708993ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l9;
-  var_j2 = 18445055223849287680ull;
-  var_i3 = var_p5;
-  var_j1 = var_i3 ? var_j1 : var_j2;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l9;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l10;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p4;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  var_i2 = var_p2;
-  var_i3 = var_p1;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i4 = 22u;
-  var_i3 >>= (var_i4 & 31);
-  var_i4 = 1020u;
-  var_i3 &= var_i4;
-  var_i4 = 289808u;
-  var_i3 += var_i4;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 60u);
-  CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32, u32, u32), w2c_hermes_t2, var_i3, instance->w2c_0x5F_indirect_function_table.data[var_i3].module_instance, var_i0, var_i1, var_i2);
-  goto var_B0;
-  var_B1:;
-  var_i0 = var_p2;
-  var_i1 = 1u;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i0, var_i1);
-  var_p1 = var_i0;
-  var_i0 = var_p0;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_B0:;
-  var_i0 = var_p2;
-  var_i1 = var_l7;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_l6;
-  var_i1 = 16u;
-  var_i0 += var_i1;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  FUNC_EPILOGUE;
-}
-
 void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AMarkAcceptor0x3A0x3Apush0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1) {
   u32 var_l2 = 0, var_l3 = 0, var_l4 = 0, var_l5 = 0, var_l6 = 0;
   FUNC_PROLOGUE;
@@ -6899,152 +6766,6 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AMarkAcceptor0x3A0x3Apush0
   FUNC_EPILOGUE;
 }
 
-void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AexecuteCall30x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20bool0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u64 var_p4, u64 var_p5, u64 var_p6) {
-  u32 var_l7 = 0, var_l8 = 0, var_l9 = 0;
-  u64 var_l10 = 0, var_l11 = 0, var_l12 = 0;
-  FUNC_PROLOGUE;
-  u32 var_i0, var_i1, var_i2, var_i3, var_i4;
-  u64 var_j0, var_j1;
-  var_i0 = instance->w2c_0x5F_stack_pointer;
-  var_i1 = 16u;
-  var_i0 -= var_i1;
-  var_l8 = var_i0;
-  var_l7 = var_i0;
-  var_i0 = var_l8;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5592u);
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
-  var_l8 = var_i1;
-  var_i0 -= var_i1;
-  var_i1 = 336u;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_p1;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l10 = var_j0;
-  var_i0 = var_p3;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l11 = var_j0;
-  var_i0 = var_l8;
-  var_p3 = var_i0;
-  var_i0 = var_p2;
-  var_i1 = 5616u;
-  var_i0 += var_i1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
-  var_i2 = var_l7;
-  var_i1 -= var_i2;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l7;
-    var_i1 = 8u;
-    var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l7;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_p3 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l7;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
-    var_l9 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_p3;
-    var_i1 = var_l7;
-    var_i0 -= var_i1;
-    var_i1 = var_l9;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {goto var_B1;}
-    var_i0 = var_p2;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5596u);
-    var_p3 = var_i0;
-  }
-  var_i0 = var_p2;
-  var_i1 = var_p3;
-  var_i2 = 80u;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_l12 = var_j0;
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l12;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 72, var_j1);
-  var_i0 = var_p3;
-  var_i1 = 4294967232u;
-  var_i0 -= var_i1;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445618173802708995ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l10;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l11;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p4;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p5;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p6;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  var_i2 = var_p2;
-  var_i3 = var_p1;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i4 = 22u;
-  var_i3 >>= (var_i4 & 31);
-  var_i4 = 1020u;
-  var_i3 &= var_i4;
-  var_i4 = 289808u;
-  var_i3 += var_i4;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 60u);
-  CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32, u32, u32), w2c_hermes_t2, var_i3, instance->w2c_0x5F_indirect_function_table.data[var_i3].module_instance, var_i0, var_i1, var_i2);
-  goto var_B0;
-  var_B1:;
-  var_i0 = var_p2;
-  var_i1 = 1u;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i0, var_i1);
-  var_p1 = var_i0;
-  var_i0 = var_p0;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_B0:;
-  var_i0 = var_p2;
-  var_i1 = var_l8;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_l7;
-  var_i1 = 16u;
-  var_i0 += var_i1;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  FUNC_EPILOGUE;
-}
-
 void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADynamicStringPrimitive0x3Cchar0x2C0x20false0x3E0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20llvh0x3A0x3AArrayRef0x3Cchar0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
   u32 var_l3 = 0, var_l4 = 0, var_l5 = 0;
   u64 var_l6 = 0;
@@ -7068,11 +6789,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADynamicStringPrimitive0x3Cchar0x2C0x20fa
   var_i0 &= var_i1;
   var_l4 = var_i0;
   var_i1 = var_p1;
-  var_i2 = 1376u;
+  var_i2 = 1368u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_p1;
-  var_i3 = 1372u;
+  var_i3 = 1364u;
   var_i2 += var_i3;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
   var_l3 = var_i2;
@@ -7080,7 +6801,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADynamicStringPrimitive0x3Cchar0x2C0x20fa
   var_i0 = var_i0 > var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l4;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -7091,7 +6812,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADynamicStringPrimitive0x3Cchar0x2C0x20fa
   var_i1 = var_l3;
   var_i2 = var_l4;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_l3;
   var_i1 = var_p2;
@@ -7295,7 +7016,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i3 >>= (var_i4 & 31);
   var_i4 = 1020u;
   var_i3 &= var_i4;
-  var_i4 = 289808u;
+  var_i4 = 138008u;
   var_i3 += var_i4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 48u);
@@ -7450,7 +7171,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_l5;
-    var_i1 = 50501u;
+    var_i1 = 50390u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -7483,7 +7204,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
     var_i3 >>= (var_i4 & 31);
     var_i4 = 1020u;
     var_i3 &= var_i4;
-    var_i4 = 289808u;
+    var_i4 = 138008u;
     var_i3 += var_i4;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 48u);
@@ -7496,7 +7217,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l8 = var_i0;
+  var_l7 = var_i0;
   var_i0 = var_p3;
   var_i1 = 255u;
   var_i0 &= var_i1;
@@ -7509,10 +7230,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 = var_i0 > var_i1;
   if (var_i0) {goto var_B21;}
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_l8;
+  var_i1 = var_l7;
   var_i2 = var_p3;
   var_i3 = 2u;
   var_i2 <<= (var_i3 & 31);
@@ -7563,10 +7284,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   goto var_B1;
   var_B21:;
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_l8;
+  var_i1 = var_l7;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 16u);
   var_i2 = var_p3;
   var_i3 = 2u;
@@ -7581,7 +7302,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   if (var_i0) {goto var_B19;}
   var_B20:;
   var_i0 = var_p2;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_l6;
   var_i2 = 7u;
@@ -7628,7 +7349,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p3 = var_i0;
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
@@ -7641,7 +7362,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p1;
     var_i2 = var_p3;
@@ -7652,7 +7373,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   goto var_B17;
   var_B18:;
-  var_i0 = var_l8;
+  var_i0 = var_l7;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_i1 = 128u;
   var_i0 &= var_i1;
@@ -7661,7 +7382,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 = var_p2;
   var_i1 = var_l6;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AtoPropertyKey0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1);
-  var_p3 = var_i0;
+  var_l10 = var_i0;
   var_i1 = 4294967295u;
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
@@ -7679,84 +7400,92 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 = var_l5;
   var_i1 = 12u;
   var_i0 += var_i1;
-  var_l8 = var_i0;
+  var_p4 = var_i0;
   var_i0 = instance->w2c_0x5F_stack_pointer;
   var_i1 = 192u;
   var_i0 -= var_i1;
-  var_p4 = var_i0;
+  var_p3 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_i1 = var_p2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_l7 = var_i0;
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_i1 = 156u;
   var_i0 += var_i1;
-  var_l9 = var_i0;
-  var_i1 = var_p4;
+  var_l8 = var_i0;
+  var_i1 = var_p3;
   var_i2 = 16u;
   var_i1 += var_i2;
   var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_j1);
-  var_i0 = var_p4;
-  var_i1 = var_l9;
+  var_i0 = var_p3;
+  var_i1 = var_l8;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_i1 = 0u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 180, var_i1);
-  var_i0 = var_p4;
-  var_i1 = var_p4;
+  var_i0 = var_p3;
+  var_i1 = var_p3;
   var_i2 = 144u;
   var_i1 += var_i2;
   var_l9 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
   var_i0 = var_p2;
-  var_i1 = var_p4;
+  var_i1 = var_p3;
   var_i2 = 8u;
   var_i1 += var_i2;
   var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
-  var_i2 = var_p4;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
+  var_i2 = var_p3;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_p4;
-    var_i1 = 184u;
-    var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
     var_i0 = var_p2;
-    var_i1 = var_p4;
+    var_i1 = 5612u;
+    var_i0 += var_i1;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l6 = var_i0;
+    var_i0 = var_p3;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+    var_i0 = var_p3;
+    var_i1 = var_l7;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l6;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
+    var_i0 = var_p2;
+    var_i1 = var_p3;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
     var_l6 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
-    var_i1 = var_p4;
+    var_i1 = var_p3;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
     var_l7 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
     var_i0 = var_l6;
-    var_i1 = var_p4;
+    var_i1 = var_p3;
     var_i0 -= var_i1;
     var_i1 = var_l7;
     var_i0 = var_i0 > var_i1;
@@ -7772,9 +7501,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l10 = var_i0;
+  var_l8 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l10;
+  var_i2 = var_l8;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
@@ -7785,7 +7514,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_l13 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l10;
+  var_i1 = var_l8;
   var_i2 = 0u;
   var_i3 = var_l12;
   var_i4 = 1191182336u;
@@ -7795,7 +7524,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i1 += var_i2;
   var_i2 = var_l13;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l10 = var_i0;
+  var_l8 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
@@ -7819,21 +7548,21 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l6 = var_i0;
   var_B32:;
-  var_i0 = var_l10;
+  var_i0 = var_l8;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l14 = var_j0;
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l9 = var_i0;
+  var_l8 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
   var_l7 = var_i0;
-  var_i1 = var_l9;
+  var_i1 = var_l8;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l9;
+    var_i0 = var_l8;
     var_i1 = var_l7;
     var_i2 = 8u;
     var_i1 += var_i2;
@@ -7843,7 +7572,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B34;
   }
-  var_i0 = var_l9;
+  var_i0 = var_l8;
   var_j1 = var_l14;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l7 = var_i0;
@@ -7856,8 +7585,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i1 = 4294967295u;
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
-    var_i0 = var_l8;
-    var_i1 = var_l8;
+    var_i0 = var_p4;
+    var_i1 = var_p4;
     var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1) + 1u);
     var_i2 = 8u;
     var_i1 <<= (var_i2 & 31);
@@ -7877,40 +7606,40 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 &= var_i1;
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = var_p4;
+    var_i0 = var_p3;
     var_i1 = 0u;
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-    var_i0 = var_p4;
+    var_i0 = var_p3;
     var_i1 = 0u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-    var_i0 = var_l8;
+    var_i0 = var_p4;
     var_i1 = var_l6;
     var_i2 = var_p2;
-    var_i3 = var_p3;
-    var_i4 = var_p4;
+    var_i3 = var_l10;
+    var_i4 = var_p3;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
     goto var_B29;
   }
-  var_i0 = var_l8;
+  var_i0 = var_p4;
   var_i1 = var_p2;
-  var_i2 = var_p3;
+  var_i2 = var_l10;
   var_i3 = var_p1;
   var_i4 = var_l7;
   var_i5 = var_l6;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AdeleteWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5);
   goto var_B29;
   var_B30:;
-  var_i0 = var_l8;
+  var_i0 = var_p4;
   var_i1 = var_p2;
   var_i2 = 1u;
   var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i1, var_i2);
   i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_B29:;
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_i1 = 8u;
   var_i0 += var_i1;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A0x7EGCScope0x280x29(instance, var_i0);
-  var_i0 = var_p4;
+  var_i0 = var_p3;
   var_i1 = 192u;
   var_i0 += var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
@@ -7921,7 +7650,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteComputed0x28hermes
   var_i0 = var_p0;
   var_i1 = var_p2;
   var_i2 = var_l11;
-  var_i3 = 47457u;
+  var_i3 = 47375u;
   var_i4 = var_l5;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AproxyOpFlags0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x2C0x20char0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3ACallResult0x3Cbool0x2C0x200x28hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ACallResultSpecialize0x2910x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
   goto var_B1;
@@ -8226,7 +7955,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
   var_i4 >>= (var_i5 & 31);
   var_i5 = 1020u;
   var_i4 &= var_i5;
-  var_i5 = 289808u;
+  var_i5 = 138008u;
   var_i4 += var_i5;
   var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
   var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 36u);
@@ -8248,7 +7977,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
     var_i3 >>= (var_i4 & 31);
     var_i4 = 1020u;
     var_i3 &= var_i4;
-    var_i4 = 289808u;
+    var_i4 = 138008u;
     var_i3 += var_i4;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 40u);
@@ -8382,7 +8111,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
       var_i5 >>= (var_i6 & 31);
       var_i6 = 1020u;
       var_i5 &= var_i6;
-      var_i6 = 289808u;
+      var_i6 = 138008u;
       var_i5 += var_i6;
       var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5));
       var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 44u);
@@ -8430,7 +8159,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
         var_i0 = var_l7;
-        var_i1 = 46563u;
+        var_i1 = 46481u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
         var_i0 = var_p0;
         var_i1 = var_p2;
@@ -8494,7 +8223,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
     var_i3 >>= (var_i4 & 31);
     var_i4 = 1020u;
     var_i3 &= var_i4;
-    var_i4 = 289808u;
+    var_i4 = 138008u;
     var_i3 += var_i4;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 48u);
@@ -8637,13 +8366,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
     i32_store16(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B0;
   }
-  var_i0 = 70384u;
+  var_i0 = 67200u;
   var_l9 = var_i0;
   var_j0 = var_l14;
   var_j1 = 18445899648779419648ull;
   var_i0 = var_j0 >= var_j1;
   if (var_i0) {
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_p1;
     var_i2 = var_l8;
     var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
@@ -8733,7 +8462,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
       var_i0 = var_l7;
-      var_i1 = 17183u;
+      var_i1 = 17166u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -8780,7 +8509,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
   var_i2 = var_p2;
   var_i3 = var_l10;
   var_i4 = var_p5;
-  var_i5 = 70392u;
+  var_i5 = 67208u;
   var_i6 = var_p4;
   var_i7 = 256u;
   var_i6 &= var_i7;
@@ -8792,7 +8521,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnComputedPrimiti
   var_i5 >>= (var_i6 & 31);
   var_i6 = 1020u;
   var_i5 &= var_i6;
-  var_i6 = 289808u;
+  var_i6 = 138008u;
   var_i5 += var_i6;
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5));
   var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 44u);
@@ -8983,144 +8712,6 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHiddenC
   var_Bfunc:;
   FUNC_EPILOGUE;
   return var_i0;
-}
-
-void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AexecuteCall00x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20bool0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u32 var_p4) {
-  u32 var_l5 = 0, var_l6 = 0, var_l7 = 0;
-  u64 var_l8 = 0, var_l9 = 0, var_l10 = 0;
-  FUNC_PROLOGUE;
-  u32 var_i0, var_i1, var_i2, var_i3, var_i4;
-  u64 var_j0, var_j1, var_j2;
-  var_i0 = instance->w2c_0x5F_stack_pointer;
-  var_i1 = 16u;
-  var_i0 -= var_i1;
-  var_l6 = var_i0;
-  var_l5 = var_i0;
-  var_i0 = var_l6;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5592u);
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
-  var_l6 = var_i1;
-  var_i0 -= var_i1;
-  var_i1 = 312u;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_p1;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l8 = var_j0;
-  var_i0 = var_p3;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l9 = var_j0;
-  var_i0 = var_l6;
-  var_p3 = var_i0;
-  var_i0 = var_p2;
-  var_i1 = 5616u;
-  var_i0 += var_i1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
-  var_i2 = var_l5;
-  var_i1 -= var_i2;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l5;
-    var_i1 = 8u;
-    var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l5;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_p3 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l5;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
-    var_l7 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_p3;
-    var_i1 = var_l5;
-    var_i0 -= var_i1;
-    var_i1 = var_l7;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {goto var_B1;}
-    var_i0 = var_p2;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5596u);
-    var_p3 = var_i0;
-  }
-  var_i0 = var_p2;
-  var_i1 = var_p3;
-  var_i2 = 56u;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_l10 = var_j0;
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l10;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445618173802708992ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l8;
-  var_j2 = 18445055223849287680ull;
-  var_i3 = var_p4;
-  var_j1 = var_i3 ? var_j1 : var_j2;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l8;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l9;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  var_i2 = var_p2;
-  var_i3 = var_p1;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i4 = 22u;
-  var_i3 >>= (var_i4 & 31);
-  var_i4 = 1020u;
-  var_i3 &= var_i4;
-  var_i4 = 289808u;
-  var_i3 += var_i4;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 60u);
-  CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32, u32, u32), w2c_hermes_t2, var_i3, instance->w2c_0x5F_indirect_function_table.data[var_i3].module_instance, var_i0, var_i1, var_i2);
-  goto var_B0;
-  var_B1:;
-  var_i0 = var_p2;
-  var_i1 = 1u;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i0, var_i1);
-  var_p1 = var_i0;
-  var_i0 = var_p0;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_B0:;
-  var_i0 = var_p2;
-  var_i1 = var_l6;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_l5;
-  var_i1 = 16u;
-  var_i0 += var_i1;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  FUNC_EPILOGUE;
 }
 
 u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedDescriptorUnsafe0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3ANamedPropertyDescriptor0x260x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u32 var_p4) {
@@ -9413,147 +9004,6 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ABigIntP
   return var_i0;
 }
 
-void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AexecuteCall20x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20bool0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u64 var_p4, u64 var_p5) {
-  u32 var_l6 = 0, var_l7 = 0, var_l8 = 0;
-  u64 var_l9 = 0, var_l10 = 0, var_l11 = 0;
-  FUNC_PROLOGUE;
-  u32 var_i0, var_i1, var_i2, var_i3, var_i4;
-  u64 var_j0, var_j1;
-  var_i0 = instance->w2c_0x5F_stack_pointer;
-  var_i1 = 16u;
-  var_i0 -= var_i1;
-  var_l7 = var_i0;
-  var_l6 = var_i0;
-  var_i0 = var_l7;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5592u);
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
-  var_l7 = var_i1;
-  var_i0 -= var_i1;
-  var_i1 = 328u;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_p1;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l9 = var_j0;
-  var_i0 = var_p3;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l10 = var_j0;
-  var_i0 = var_l7;
-  var_p3 = var_i0;
-  var_i0 = var_p2;
-  var_i1 = 5616u;
-  var_i0 += var_i1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
-  var_i2 = var_l6;
-  var_i1 -= var_i2;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l6;
-    var_i1 = 8u;
-    var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l6;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_p3 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l6;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
-    var_l8 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_p3;
-    var_i1 = var_l6;
-    var_i0 -= var_i1;
-    var_i1 = var_l8;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {goto var_B1;}
-    var_i0 = var_p2;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5596u);
-    var_p3 = var_i0;
-  }
-  var_i0 = var_p2;
-  var_i1 = var_p3;
-  var_i2 = 72u;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_l11 = var_j0;
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l11;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445618173802708994ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l9;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l10;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p4;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p5;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  var_i2 = var_p2;
-  var_i3 = var_p1;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i4 = 22u;
-  var_i3 >>= (var_i4 & 31);
-  var_i4 = 1020u;
-  var_i3 &= var_i4;
-  var_i4 = 289808u;
-  var_i3 += var_i4;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 60u);
-  CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32, u32, u32), w2c_hermes_t2, var_i3, instance->w2c_0x5F_indirect_function_table.data[var_i3].module_instance, var_i0, var_i1, var_i2);
-  goto var_B0;
-  var_B1:;
-  var_i0 = var_p2;
-  var_i1 = 1u;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i0, var_i1);
-  var_p1 = var_i0;
-  var_i0 = var_p0;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_B0:;
-  var_i0 = var_p2;
-  var_i1 = var_l7;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_l6;
-  var_i1 = 16u;
-  var_i0 += var_i1;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  FUNC_EPILOGUE;
-}
-
 void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
   u32 var_l3 = 0, var_l4 = 0, var_l5 = 0, var_l6 = 0, var_l7 = 0;
   FUNC_PROLOGUE;
@@ -9578,7 +9028,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
     var_i0 = var_l3;
-    var_i1 = 22519u;
+    var_i1 = 22502u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p1;
@@ -9590,7 +9040,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0
     goto var_B0;
   }
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l5 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 512u);
@@ -9611,7 +9061,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
     var_i0 = var_l3;
-    var_i1 = 61379u;
+    var_i1 = 58202u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p1;
@@ -9692,7 +9142,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_l3;
-  var_i1 = 22519u;
+  var_i1 = 22502u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p1;
@@ -9983,7 +9433,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AexecuteConstruct10x28her
     var_i3 >>= (var_i4 & 31);
     var_i4 = 1020u;
     var_i3 &= var_i4;
-    var_i4 = 289808u;
+    var_i4 = 138008u;
     var_i3 += var_i4;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 56u);
@@ -10109,7 +9559,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetSymbolHandle0x2
   var_i3 = var_l4;
   var_i4 = 8u;
   var_i3 += var_i4;
-  var_i4 = 70384u;
+  var_i4 = 67200u;
   var_i5 = var_p3;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallResult0x3Chermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x200x28hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ACallResultSpecialize0x2900x3E0x20hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetOrCreateIdentifier0x3Cchar0x3E0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20llvh0x3A0x3AArrayRef0x3Cchar0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5);
   var_i0 = var_l4;
@@ -10186,7 +9636,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AinitializeMissingProp
   var_l3 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l6 = var_i0;
   var_i0 = var_p0;
@@ -10197,7 +9647,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AinitializeMissingProp
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
   var_l7 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_l8 = var_i0;
@@ -10214,7 +9664,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AinitializeMissingProp
     var_i2 = var_l7;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
     var_i0 = var_p1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
     var_l8 = var_i0;
     var_i0 = var_l5;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 32u);
@@ -10232,7 +9682,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AinitializeMissingProp
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B3;}
   var_i0 = var_p1;
-  var_i1 = 4821u;
+  var_i1 = 4813u;
   var_i0 += var_i1;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
@@ -10324,7 +9774,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AinitializeMissingProp
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_l2 = var_i0;
     var_i0 = var_p1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
     var_i1 = var_p0;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     var_i2 = 16u;
@@ -10613,7 +10063,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AinitializeMissingProp
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_l2 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
@@ -10626,7 +10076,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AinitializeMissingProp
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p0;
     var_i2 = var_l2;
@@ -10674,11 +10124,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADynamicStringPrimitive0x3Cchar16_t0x2C0x
   var_i0 &= var_i1;
   var_l4 = var_i0;
   var_i1 = var_p1;
-  var_i2 = 1376u;
+  var_i2 = 1368u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_p1;
-  var_i3 = 1372u;
+  var_i3 = 1364u;
   var_i2 += var_i3;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
   var_l3 = var_i2;
@@ -10686,7 +10136,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADynamicStringPrimitive0x3Cchar16_t0x2C0x
   var_i0 = var_i0 > var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l4;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -10697,7 +10147,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADynamicStringPrimitive0x3Cchar16_t0x2C0x
   var_i1 = var_l3;
   var_i2 = var_l4;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_l3;
   var_i1 = var_p2;
@@ -10795,31 +10245,41 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AisExtensible0x28hermes0x
     var_l3 = var_i1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_p2;
-    var_i1 = 5616u;
+    var_i1 = 5608u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
     var_i2 = var_p1;
     var_i1 -= var_i2;
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
+      var_i0 = var_p2;
+      var_i1 = 5612u;
+      var_i0 += var_i1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_l4 = var_i0;
       var_i0 = var_p1;
-      var_i1 = var_p2;
-      var_i2 = 5620u;
-      var_i1 += var_i2;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+      var_i1 = instance->w2c_0x5F_stack_base;
+      var_l3 = var_i1;
+      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+      var_i0 = var_p1;
+      var_i1 = var_l3;
+      var_i2 = instance->w2c_0x5F_stack_end;
+      var_i3 = var_l4;
+      var_i2 += var_i3;
+      var_i1 -= var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
       var_i0 = var_p2;
       var_i1 = var_p1;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
       var_l4 = var_i1;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
       var_i0 = var_p2;
       var_i1 = var_p1;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
       var_l3 = var_i1;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
       var_i0 = var_l4;
       var_i1 = var_p1;
       var_i0 -= var_i1;
@@ -11015,7 +10475,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AisExtensible0x28hermes0x
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
       var_i0 = var_p1;
-      var_i1 = 29087u;
+      var_i1 = 29070u;
       i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -11160,33 +10620,41 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_p2 = var_i1;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
       var_i0 = var_l6;
-      var_i1 = 5616u;
+      var_i1 = 5608u;
       var_i0 += var_i1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = var_l6;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
       var_i2 = var_l3;
       var_i1 -= var_i2;
       var_i0 = var_i0 < var_i1;
       if (var_i0) {
-        var_i0 = var_l3;
-        var_i1 = 304u;
+        var_i0 = var_l6;
+        var_i1 = 5612u;
         var_i0 += var_i1;
-        var_i1 = var_l6;
-        var_i2 = 5620u;
-        var_i1 += var_i2;
-        var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-        w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+        var_p0 = var_i0;
+        var_i0 = var_l3;
+        var_i1 = instance->w2c_0x5F_stack_base;
+        var_p1 = var_i1;
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 304, var_i1);
+        var_i0 = var_l3;
+        var_i1 = var_p1;
+        var_i2 = instance->w2c_0x5F_stack_end;
+        var_i3 = var_p0;
+        var_i2 += var_i3;
+        var_i1 -= var_i2;
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 308, var_i1);
         var_i0 = var_l6;
         var_i1 = var_l3;
         var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 304u);
         var_p0 = var_i1;
-        i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
         var_i0 = var_l6;
         var_i1 = var_l3;
         var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 308u);
         var_p1 = var_i1;
-        i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
         var_i0 = var_p0;
         var_i1 = var_l3;
         var_i0 -= var_i1;
@@ -11231,7 +10699,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
       var_j1 = 18446462598732840960ull;
       var_j0 |= var_j1;
-      var_l27 = var_j0;
+      var_l28 = var_j0;
       var_i0 = var_p0;
       var_i1 = var_l4;
       var_i0 = var_i0 > var_i1;
@@ -11242,12 +10710,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 += var_i2;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
         var_i0 = var_l4;
-        var_j1 = var_l27;
+        var_j1 = var_l28;
         i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
         goto var_B7;
       }
       var_i0 = var_p2;
-      var_j1 = var_l27;
+      var_j1 = var_l28;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
       var_l4 = var_i0;
       var_B7:;
@@ -11255,7 +10723,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
       var_j1 = 18446462598732840960ull;
       var_j0 |= var_j1;
-      var_l27 = var_j0;
+      var_l28 = var_j0;
       var_i0 = var_l6;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
       var_p0 = var_i0;
@@ -11271,12 +10739,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 += var_i2;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
         var_i0 = var_p1;
-        var_j1 = var_l27;
+        var_j1 = var_l28;
         i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
         goto var_B9;
       }
       var_i0 = var_p0;
-      var_j1 = var_l27;
+      var_j1 = var_l28;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
       var_p1 = var_i0;
       var_B9:;
@@ -11292,10 +10760,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       if (var_i0) {goto var_B3;}
       var_i0 = var_p2;
       var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l27 = var_j0;
+      var_l28 = var_j0;
       var_j1 = 18445899648779419648ull;
       var_i0 = var_j0 >= var_j1;
-      var_j1 = var_l27;
+      var_j1 = var_l28;
       var_j2 = 4294967295ull;
       var_j1 &= var_j2;
       var_j2 = 0ull;
@@ -11344,11 +10812,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       if (var_i0) {goto var_B3;}
       var_i0 = var_l3;
       var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 72u);
-      var_l27 = var_j0;
+      var_l28 = var_j0;
       var_j1 = 18445899648779419648ull;
       var_i0 = var_j0 >= var_j1;
       if (var_i0) {
-        var_j0 = var_l27;
+        var_j0 = var_l28;
         var_i0 = (u32)(var_j0);
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
         var_i1 = 436207616u;
@@ -11372,12 +10840,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 += var_i2;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
         var_i0 = var_l4;
-        var_j1 = var_l27;
+        var_j1 = var_l28;
         i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
         goto var_B14;
       }
       var_i0 = var_p1;
-      var_j1 = var_l27;
+      var_j1 = var_l28;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
       var_l4 = var_i0;
       var_B14:;
@@ -11400,7 +10868,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 272, var_i1);
       var_i0 = var_l3;
-      var_i1 = 32909u;
+      var_i1 = 32892u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 264, var_i1);
       var_i0 = var_l6;
       var_i1 = var_l3;
@@ -11413,12 +10881,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseTypeErrorForValue0x28hermes0x3A0x3Avm0x3A0x3ATwineChar160x20const0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ATwineChar160x20const0x260x29(instance, var_i0, var_i1, var_i2, var_i3);
       goto var_B3;
       var_B12:;
-      var_j0 = var_l27;
+      var_j0 = var_l28;
       var_j1 = 4294967295ull;
       var_j0 &= var_j1;
       var_j1 = 18446462598732840960ull;
       var_j0 |= var_j1;
-      var_l27 = var_j0;
+      var_l28 = var_j0;
       var_i0 = var_l6;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
       var_p0 = var_i0;
@@ -11434,12 +10902,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 += var_i2;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
         var_i0 = var_p2;
-        var_j1 = var_l27;
+        var_j1 = var_l28;
         i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
         goto var_B16;
       }
       var_i0 = var_p0;
-      var_j1 = var_l27;
+      var_j1 = var_l28;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
       var_p2 = var_i0;
       var_B16:;
@@ -11471,7 +10939,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       }
       var_i0 = var_l3;
       var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 312u);
-      var_l27 = var_j0;
+      var_l28 = var_j0;
       var_i0 = var_l6;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
       var_p0 = var_i0;
@@ -11487,12 +10955,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 += var_i2;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
         var_i0 = var_p1;
-        var_j1 = var_l27;
+        var_j1 = var_l28;
         i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
         goto var_B19;
       }
       var_i0 = var_p0;
-      var_j1 = var_l27;
+      var_j1 = var_l28;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
       var_p1 = var_i0;
       var_B19:;
@@ -11524,7 +10992,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 312, var_i1);
         var_i0 = var_l3;
-        var_i1 = 40025u;
+        var_i1 = 40023u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 304, var_i1);
         var_i0 = var_l6;
         var_i1 = var_l3;
@@ -11556,7 +11024,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_j0 = (u64)(var_i0);
       var_j1 = 18446462598732840960ull;
       var_j0 |= var_j1;
-      var_l27 = var_j0;
+      var_l29 = var_j0;
       var_i0 = var_l6;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
       var_p0 = var_i0;
@@ -11572,12 +11040,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 += var_i2;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
         var_i0 = var_p1;
-        var_j1 = var_l27;
+        var_j1 = var_l29;
         i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
         goto var_B22;
       }
       var_i0 = var_p0;
-      var_j1 = var_l27;
+      var_j1 = var_l29;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
       var_p1 = var_i0;
       var_B22:;
@@ -11634,17 +11102,17 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_i2 = 304u;
       var_i1 += var_i2;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      var_i0 = 70384u;
+      var_i0 = 67200u;
       var_l8 = var_i0;
       var_i0 = var_p2;
       var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l27 = var_j0;
+      var_l29 = var_j0;
       var_j1 = 18445899648779419648ull;
       var_i0 = var_j0 >= var_j1;
       if (var_i0) {
-        var_i0 = 70384u;
+        var_i0 = 67200u;
         var_i1 = var_p2;
-        var_j2 = var_l27;
+        var_j2 = var_l29;
         var_i2 = (u32)(var_j2);
         var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
         var_i3 = 520093696u;
@@ -11665,10 +11133,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 468, var_i1);
       var_i0 = var_l8;
       var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l27 = var_j0;
+      var_l29 = var_j0;
       var_j1 = 18445899648779419648ull;
       var_i0 = var_j0 >= var_j1;
-      var_j1 = var_l27;
+      var_j1 = var_l29;
       var_j2 = 4294967295ull;
       var_j1 &= var_j2;
       var_j2 = 0ull;
@@ -11679,15 +11147,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_j0 = var_l28;
         var_i0 = !(var_j0);
         if (var_i0) {goto var_B4;}
-        var_j0 = 0ull;
-        var_l27 = var_j0;
         goto var_B26;
       }
       var_j0 = var_l28;
       var_i0 = !(var_j0);
       if (var_i0) {goto var_B4;}
-      var_j0 = 0ull;
-      var_l27 = var_j0;
       var_L28: 
         var_i0 = var_l3;
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 440u);
@@ -12930,7 +12394,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
             var_i1 = 3u;
             i32_store(&instance->w2c_memory, (u64)(var_i0) + 272, var_i1);
             var_i0 = var_l3;
-            var_i1 = 22187u;
+            var_i1 = 22170u;
             i32_store(&instance->w2c_memory, (u64)(var_i0) + 264, var_i1);
             var_i0 = var_l6;
             var_i1 = var_l3;
@@ -13125,7 +12589,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
           var_i1 = 3u;
           i32_store(&instance->w2c_memory, (u64)(var_i0) + 272, var_i1);
           var_i0 = var_l3;
-          var_i1 = 22257u;
+          var_i1 = 22240u;
           i32_store(&instance->w2c_memory, (u64)(var_i0) + 264, var_i1);
           var_i0 = var_l6;
           var_i1 = var_l3;
@@ -13226,7 +12690,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 272, var_i1);
         var_i0 = var_l3;
-        var_i1 = 33193u;
+        var_i1 = 33176u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 264, var_i1);
         var_i0 = var_l6;
         var_i1 = var_l3;
@@ -13332,7 +12796,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
   var_i3 >>= (var_i4 & 31);
   var_i4 = 1020u;
   var_i3 &= var_i4;
-  var_i4 = 289808u;
+  var_i4 = 138008u;
   var_i3 += var_i4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 28u);
@@ -13499,7 +12963,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
       var_i4 >>= (var_i5 & 31);
       var_i5 = 1020u;
       var_i4 &= var_i5;
-      var_i5 = 289808u;
+      var_i5 = 138008u;
       var_i4 += var_i5;
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 36u);
@@ -13659,7 +13123,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
   var_l24 = var_i0;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 5476u;
+    var_i1 = 5468u;
     var_i0 += var_i1;
     var_l22 = var_i0;
     var_i0 = var_l13;
@@ -13848,7 +13312,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnPropertyKeys0x28her
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B163;}
   var_i0 = var_p1;
-  var_i1 = 5476u;
+  var_i1 = 5468u;
   var_i0 += var_i1;
   var_l15 = var_i0;
   var_i0 = 0u;
@@ -14780,7 +14244,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AerrorWithChar0x28hermes0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_i1);
   var_i0 = var_l3;
-  var_i1 = 65970u;
+  var_i1 = 62766u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
   var_i0 = 18u;
   var_B0:;
@@ -15425,7 +14889,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnComputedPrimitiveD
     var_i4 >>= (var_i5 & 31);
     var_i5 = 1020u;
     var_i4 &= var_i5;
-    var_i5 = 289808u;
+    var_i5 = 138008u;
     var_i4 += var_i5;
     var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
     var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 36u);
@@ -15671,7 +15135,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnComputedPrimitiveD
     var_i4 >>= (var_i5 & 31);
     var_i5 = 1020u;
     var_i4 &= var_i5;
-    var_i5 = 289808u;
+    var_i5 = 138008u;
     var_i4 += var_i5;
     var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
     var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 36u);
@@ -15953,7 +15417,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetOwnComputedDescriptor
       var_i3 >>= (var_i4 & 31);
       var_i4 = 1020u;
       var_i3 &= var_i4;
-      var_i4 = 289808u;
+      var_i4 = 138008u;
       var_i3 += var_i4;
       var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
       var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 40u);
@@ -16140,11 +15604,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHermesValue320x3A0x3AencodeHermesValue0x2
     goto var_Bfunc;
   }
   var_i0 = var_p1;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l2 = var_i1;
@@ -16153,7 +15617,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHermesValue320x3A0x3AencodeHermesValue0x2
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 16u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -16164,7 +15628,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHermesValue320x3A0x3AencodeHermesValue0x2
   var_i1 = var_l2;
   var_i2 = 16u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B12:;
   var_i0 = var_l2;
   var_i1 = 402653200u;
@@ -16474,33 +15938,41 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetOwnProperty0x28hermes0
   var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l6;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l6;
-    var_i1 = 96u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l8 = var_i0;
+    var_i0 = var_l6;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 96, var_i1);
+    var_i0 = var_l6;
+    var_i1 = var_l7;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l8;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 100, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l6;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 96u);
     var_l8 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l6;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 100u);
     var_l7 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
     var_i0 = var_l8;
     var_i1 = var_l6;
     var_i0 -= var_i1;
@@ -16826,7 +16298,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetOwnProperty0x28hermes0
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
       var_i0 = var_l6;
-      var_i1 = 50574u;
+      var_i1 = 50463u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 96, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -16868,7 +16340,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetOwnProperty0x28hermes0
       var_i1 = 52u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 92, var_i1);
       var_i0 = var_l6;
-      var_i1 = 62316u;
+      var_i1 = 59139u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
       var_i0 = var_l6;
       var_i1 = var_l6;
@@ -16912,7 +16384,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetOwnProperty0x28hermes0
     var_i1 = 60u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 84, var_i1);
     var_i0 = var_l6;
-    var_i1 = 62389u;
+    var_i1 = 59212u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
     var_i0 = var_l6;
     var_i1 = var_l6;
@@ -17074,7 +16546,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetOwnProperty0x28hermes0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
     var_i0 = var_l6;
-    var_i1 = 64903u;
+    var_i1 = 61699u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 96, var_i1);
     var_i0 = var_l6;
     var_i1 = 0u;
@@ -17145,7 +16617,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetOwnProperty0x28hermes0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
   var_i0 = var_l6;
-  var_i1 = 64798u;
+  var_i1 = 61594u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 96, var_i1);
   var_i0 = var_l6;
   var_i1 = 0u;
@@ -17157,7 +16629,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetOwnProperty0x28hermes0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_l6;
-  var_i1 = 21312u;
+  var_i1 = 21295u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p2;
@@ -17309,33 +16781,41 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
     var_l5 = var_i1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_p2;
-    var_i1 = 5616u;
+    var_i1 = 5608u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
     var_i2 = var_p1;
     var_i1 -= var_i2;
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
-      var_i0 = var_p1;
-      var_i1 = 8u;
+      var_i0 = var_p2;
+      var_i1 = 5612u;
       var_i0 += var_i1;
-      var_i1 = var_p2;
-      var_i2 = 5620u;
-      var_i1 += var_i2;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_p3 = var_i0;
+      var_i0 = var_p1;
+      var_i1 = instance->w2c_0x5F_stack_base;
+      var_l5 = var_i1;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+      var_i0 = var_p1;
+      var_i1 = var_l5;
+      var_i2 = instance->w2c_0x5F_stack_end;
+      var_i3 = var_p3;
+      var_i2 += var_i3;
+      var_i1 -= var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
       var_i0 = var_p2;
       var_i1 = var_p1;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
       var_p3 = var_i1;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
       var_i0 = var_p2;
       var_i1 = var_p1;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
       var_l5 = var_i1;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
       var_i0 = var_p3;
       var_i1 = var_p1;
       var_i0 -= var_i1;
@@ -17590,7 +17070,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
       var_i0 = var_p1;
-      var_i1 = 29282u;
+      var_i1 = 29265u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
       var_i0 = var_p4;
       var_i1 = var_p2;
@@ -17632,7 +17112,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
     var_i0 = var_p0;
     var_i1 = var_p2;
     var_i2 = var_l11;
-    var_i3 = 61575u;
+    var_i3 = 58398u;
     var_i4 = var_l6;
     var_i5 = 12u;
     var_i4 += var_i5;
@@ -17656,7 +17136,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
   }
   var_i0 = var_p1;
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 736u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 728u);
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
     var_i0 = var_l6;
@@ -17669,7 +17149,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_l6;
-    var_i1 = 32383u;
+    var_i1 = 32366u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -17710,7 +17190,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
           var_i1 = 3u;
           i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
           var_i0 = var_l6;
-          var_i1 = 53908u;
+          var_i1 = 53759u;
           i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
           var_i0 = var_p0;
           var_i1 = var_p2;
@@ -17742,7 +17222,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
       if (var_i0) {goto var_L21;}
     var_B20:;
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
@@ -17754,7 +17234,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_p1;
       var_i2 = var_p3;
@@ -17788,7 +17268,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetParent0x28hermes0x3A0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_l6;
-    var_i1 = 61575u;
+    var_i1 = 58398u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -17873,7 +17353,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     var_i1 = 148u;
     var_i0 += var_i1;
     var_i1 = var_p2;
-    var_i2 = 5476u;
+    var_i2 = 5468u;
     var_i1 += var_i2;
     var_i2 = var_p2;
     var_i3 = var_p3;
@@ -18130,7 +17610,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_p3 = var_i0;
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_l6 = var_i0;
@@ -18144,13 +17624,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_l7;
       var_i2 = var_p3;
       w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
       var_i0 = var_p2;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
       var_l6 = var_i0;
     }
     var_i0 = var_l7;
@@ -18171,7 +17651,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_l7;
       var_i2 = var_p3;
@@ -18182,7 +17662,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     var_B11:;
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
@@ -18195,7 +17675,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     var_i0 = var_i0 == var_i1;
     if (var_i0) {goto var_B16;}
     var_i0 = var_p2;
-    var_i1 = 4821u;
+    var_i1 = 4813u;
     var_i0 += var_i1;
     var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
     var_i0 = !(var_i0);
@@ -18206,7 +17686,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     var_i0 = !(var_i0);
     if (var_i0) {goto var_B16;}
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l7;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AsnapshotWriteBarrierInternal0x28hermes0x3A0x3Avm0x3A0x3ACompressedPointer0x29(instance, var_i0, var_i1);
@@ -18246,7 +17726,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
     var_i1 = 128u;
     var_i0 += var_i1;
     var_i1 = var_p2;
-    var_i2 = 5476u;
+    var_i2 = 5468u;
     var_i1 += var_i2;
     var_i2 = var_p2;
     var_i3 = var_p3;
@@ -18346,7 +17826,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
   var_i1 = 108u;
   var_i0 += var_i1;
   var_i1 = var_p2;
-  var_i2 = 5476u;
+  var_i2 = 5468u;
   var_i1 += var_i2;
   var_i2 = var_p2;
   var_i3 = var_p3;
@@ -18458,11 +17938,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
   var_l6 = var_i0;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_l8 = var_i0;
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p4;
@@ -18537,7 +18017,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddProperty0x28hermes
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   goto var_B0;
   var_B6:;
-  var_i0 = 40745u;
+  var_i0 = 40743u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_B5:;
@@ -19112,7 +18592,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AhasComputed0x28hermes0x3
   var_i3 >>= (var_i4 & 31);
   var_i4 = 1020u;
   var_i3 &= var_i4;
-  var_i4 = 289808u;
+  var_i4 = 138008u;
   var_i3 += var_i4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 32u);
@@ -19305,1648 +18785,6 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3Aadvance0x280x29(w2c_herm
   return var_i0;
 }
 
-u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3ArecordStackTrace0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSError0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20bool0x2C0x20hermes0x3A0x3Avm0x3A0x3ACodeBlock0x2A0x2C0x20hermes0x3A0x3Ainst0x3A0x3AInst0x20const0x2A0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u32 var_p4) {
-  u32 var_l5 = 0, var_l6 = 0, var_l7 = 0, var_l8 = 0, var_l9 = 0, var_l10 = 0, var_l11 = 0, var_l12 = 0, 
-      var_l13 = 0, var_l14 = 0, var_l15 = 0;
-  u64 var_l16 = 0, var_l17 = 0;
-  f64 var_l18 = 0;
-  FUNC_PROLOGUE;
-  u32 var_i0, var_i1, var_i2, var_i3, var_i4, var_i5;
-  u64 var_j0, var_j1, var_j2, var_j3;
-  f64 var_d0, var_d1, var_d2, var_d3, var_d4;
-  var_i0 = instance->w2c_0x5F_stack_pointer;
-  var_i1 = 208u;
-  var_i0 -= var_i1;
-  var_l6 = var_i0;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = 1u;
-  var_l15 = var_i0;
-  var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
-  if (var_i0) {goto var_B0;}
-  var_i0 = var_p3;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_p2;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_l5 = var_i0;
-  var_i1 = var_p1;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5588u);
-  var_i0 = var_i0 == var_i1;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_l5;
-  var_i1 = 48u;
-  var_i0 -= var_i1;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l16 = var_j0;
-  var_j1 = 48ull;
-  var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
-  var_i0 = (u32)(var_j0);
-  var_i1 = 4294967295u;
-  var_i0 = var_i0 == var_i1;
-  if (var_i0) {
-    var_j0 = var_l16;
-    var_j1 = 18445899648779419648ull;
-    var_i0 = var_j0 < var_j1;
-    if (var_i0) {goto var_B1;}
-    var_j0 = var_l16;
-    var_i0 = (u32)(var_j0);
-    var_l5 = var_i0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_i1 = 1224736768u;
-    var_i0 -= var_i1;
-    var_i1 = 67108863u;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {goto var_B1;}
-    var_i0 = var_p1;
-    var_i1 = 1288u;
-    var_i0 += var_i1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_i1 = var_l5;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 24u);
-    var_i0 ^= var_i1;
-    goto var_B2;
-  }
-  var_j0 = var_l16;
-  var_i0 = (u32)(var_j0);
-  var_B2:;
-  if (var_i0) {goto var_B0;}
-  var_B1:;
-  var_i0 = 12u;
-  var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
-  var_l8 = var_i0;
-  var_i1 = 0u;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
-  var_i0 = var_l8;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p1;
-  var_i1 = 1376u;
-  var_i0 += var_i1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_p1;
-  var_i2 = 1372u;
-  var_i1 += var_i2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_l5 = var_i1;
-  var_i0 -= var_i1;
-  var_i1 = 15u;
-  var_i0 = var_i0 <= var_i1;
-  if (var_i0) {
-    var_i0 = var_p1;
-    var_i1 = 816u;
-    var_i0 += var_i1;
-    var_i1 = 16u;
-    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-    var_l5 = var_i0;
-    goto var_B4;
-  }
-  var_i0 = var_p1;
-  var_i1 = var_l5;
-  var_i2 = 16u;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
-  var_B4:;
-  var_i0 = var_l5;
-  var_j1 = 251658256ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_l5;
-  var_j0 = (u64)(var_i0);
-  var_j1 = 18446462598732840960ull;
-  var_j0 |= var_j1;
-  var_l16 = var_j0;
-  var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l5 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l7 = var_i0;
-  var_i1 = var_l5;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l5;
-    var_i1 = var_l7;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l7;
-    var_j1 = var_l16;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B6;
-  }
-  var_i0 = var_l5;
-  var_j1 = var_l16;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l7 = var_i0;
-  var_B6:;
-  var_i0 = var_l6;
-  var_i1 = var_l7;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
-  var_i0 = var_p2;
-  if (var_i0) {goto var_B13;}
-  var_i0 = var_p3;
-  if (var_i0) {
-    var_i0 = var_p4;
-    var_i1 = var_p3;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_i0 -= var_i1;
-    var_l9 = var_i0;
-    var_i0 = var_l8;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l5 = var_i0;
-    var_i1 = var_l8;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_l12 = var_i1;
-    var_i0 = var_i0 < var_i1;
-    if (var_i0) {
-      var_i0 = var_l5;
-      var_i1 = var_l9;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      var_i0 = var_l5;
-      var_i1 = var_p3;
-      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_l8;
-      var_i1 = var_l5;
-      var_i2 = 8u;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      goto var_B15;
-    }
-    var_i0 = var_l5;
-    var_i1 = var_l8;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    var_l10 = var_i1;
-    var_i0 -= var_i1;
-    var_i1 = 3u;
-    var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
-    var_l11 = var_i0;
-    var_i1 = 1u;
-    var_i0 += var_i1;
-    var_p4 = var_i0;
-    var_i1 = 536870912u;
-    var_i0 = var_i0 >= var_i1;
-    if (var_i0) {goto var_B11;}
-    var_i0 = 536870911u;
-    var_i1 = var_l12;
-    var_i2 = var_l10;
-    var_i1 -= var_i2;
-    var_l12 = var_i1;
-    var_i2 = 2u;
-    var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
-    var_l13 = var_i1;
-    var_i2 = var_p4;
-    var_i3 = var_p4;
-    var_i4 = var_l13;
-    var_i3 = var_i3 < var_i4;
-    var_i1 = var_i3 ? var_i1 : var_i2;
-    var_i2 = var_l12;
-    var_i3 = 2147483640u;
-    var_i2 = var_i2 >= var_i3;
-    var_i0 = var_i2 ? var_i0 : var_i1;
-    var_p4 = var_i0;
-    var_i1 = 536870912u;
-    var_i0 = var_i0 >= var_i1;
-    if (var_i0) {goto var_B12;}
-    var_i0 = var_p4;
-    var_i1 = 3u;
-    var_i0 <<= (var_i1 & 31);
-    var_l12 = var_i0;
-    var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
-    var_l13 = var_i0;
-    var_i1 = var_l11;
-    var_i2 = 3u;
-    var_i1 <<= (var_i2 & 31);
-    var_i0 += var_i1;
-    var_p4 = var_i0;
-    var_i1 = var_l9;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-    var_i0 = var_p4;
-    var_i1 = var_p3;
-    i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-    var_i0 = var_p4;
-    var_i1 = 8u;
-    var_i0 += var_i1;
-    var_l9 = var_i0;
-    var_i0 = var_l5;
-    var_i1 = var_l10;
-    var_i0 = var_i0 != var_i1;
-    if (var_i0) {
-      var_L18: 
-        var_i0 = var_p4;
-        var_i1 = 8u;
-        var_i0 -= var_i1;
-        var_p4 = var_i0;
-        var_i1 = var_l5;
-        var_i2 = 8u;
-        var_i1 -= var_i2;
-        var_l5 = var_i1;
-        var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
-        i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-        var_i0 = var_l5;
-        var_i1 = var_l10;
-        var_i0 = var_i0 != var_i1;
-        if (var_i0) {goto var_L18;}
-    }
-    var_i0 = var_l8;
-    var_i1 = var_l12;
-    var_i2 = var_l13;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
-    var_i0 = var_l8;
-    var_i1 = var_l9;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-    var_i0 = var_l8;
-    var_i1 = var_p4;
-    i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-    var_i0 = var_l10;
-    var_i0 = !(var_i0);
-    if (var_i0) {goto var_B15;}
-    var_i0 = var_l10;
-    w2c_hermes_dlfree(instance, var_i0);
-    var_B15:;
-    var_i0 = var_p1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l10 = var_i0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 172u);
-    var_l9 = var_i0;
-    var_i0 = var_l10;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-    var_l12 = var_i0;
-    var_p4 = var_i0;
-    var_i0 = var_l10;
-    var_l5 = var_i0;
-    var_i0 = var_p3;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_l11 = var_i0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
-    var_p3 = var_i0;
-    if (var_i0) {
-      var_i0 = var_l11;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
-      var_i1 = 816u;
-      var_i0 += var_i1;
-      var_i1 = var_p3;
-      w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AweakRefReadBarrier0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x29(instance, var_i0, var_i1);
-      var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-      var_l5 = var_i0;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-      var_p4 = var_i0;
-    }
-    var_i0 = var_p3;
-    var_j0 = (u64)(var_i0);
-    var_j1 = 18446462598732840960ull;
-    var_j0 |= var_j1;
-    var_l16 = var_j0;
-    var_i0 = var_l5;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_i1 = var_p4;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {
-      var_i0 = var_l5;
-      var_i1 = var_p4;
-      var_i2 = 8u;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-      var_i0 = var_p4;
-      var_j1 = var_l16;
-      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-      goto var_B20;
-    }
-    var_i0 = var_l5;
-    var_j1 = var_l16;
-    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-    var_p4 = var_i0;
-    var_B20:;
-    var_i0 = var_l7;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_p3 = var_i0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l5 = var_i0;
-    var_i0 = !(var_i0);
-    if (var_i0) {goto var_B23;}
-    var_i0 = var_l5;
-    var_i1 = 2u;
-    var_i0 <<= (var_i1 & 31);
-    var_i1 = var_p3;
-    var_i0 += var_i1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_i1 = var_p4;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    var_i0 = var_i0 != var_i1;
-    if (var_i0) {goto var_B23;}
-    var_i0 = 1u;
-    goto var_B22;
-    var_B23:;
-    var_i0 = var_l6;
-    var_i1 = 12u;
-    var_i0 += var_i1;
-    var_i1 = var_p1;
-    var_i2 = var_p4;
-    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3Apush_back0x28hermes0x3A0x3Avm0x3A0x3AMutableHandle0x3Chermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2);
-    var_B22:;
-    var_p3 = var_i0;
-    var_i0 = var_l10;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 136u);
-    var_i1 = var_l9;
-    var_i2 = 2u;
-    var_i1 <<= (var_i2 & 31);
-    var_i0 += var_i1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_p4 = var_i0;
-    var_i0 = var_l10;
-    var_i1 = var_l9;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
-    var_i0 = var_l10;
-    var_i1 = var_l12;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l10;
-    var_i1 = var_p4;
-    var_i2 = 128u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 168, var_i1);
-    var_i0 = var_p3;
-    if (var_i0) {goto var_B13;}
-    goto var_B8;
-  }
-  var_i0 = var_l8;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l5 = var_i0;
-  var_i1 = var_l8;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-  var_l7 = var_i1;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l5;
-    var_j1 = 0ull;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    var_i0 = var_l8;
-    var_i1 = var_l5;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-    goto var_B13;
-  }
-  var_i0 = var_l5;
-  var_i1 = var_l8;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_p3 = var_i1;
-  var_i0 -= var_i1;
-  var_i1 = 3u;
-  var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
-  var_l10 = var_i0;
-  var_i1 = 1u;
-  var_i0 += var_i1;
-  var_p4 = var_i0;
-  var_i1 = 536870912u;
-  var_i0 = var_i0 >= var_i1;
-  if (var_i0) {goto var_B11;}
-  var_i0 = 536870911u;
-  var_i1 = var_l7;
-  var_i2 = var_p3;
-  var_i1 -= var_i2;
-  var_l7 = var_i1;
-  var_i2 = 2u;
-  var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
-  var_l9 = var_i1;
-  var_i2 = var_p4;
-  var_i3 = var_p4;
-  var_i4 = var_l9;
-  var_i3 = var_i3 < var_i4;
-  var_i1 = var_i3 ? var_i1 : var_i2;
-  var_i2 = var_l7;
-  var_i3 = 2147483640u;
-  var_i2 = var_i2 >= var_i3;
-  var_i0 = var_i2 ? var_i0 : var_i1;
-  var_p4 = var_i0;
-  var_i1 = 536870912u;
-  var_i0 = var_i0 >= var_i1;
-  if (var_i0) {goto var_B12;}
-  var_i0 = var_p4;
-  var_i1 = 3u;
-  var_i0 <<= (var_i1 & 31);
-  var_l7 = var_i0;
-  var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
-  var_l9 = var_i0;
-  var_i1 = var_l10;
-  var_i2 = 3u;
-  var_i1 <<= (var_i2 & 31);
-  var_i0 += var_i1;
-  var_p4 = var_i0;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p4;
-  var_i1 = 8u;
-  var_i0 += var_i1;
-  var_l10 = var_i0;
-  var_i0 = var_p3;
-  var_i1 = var_l5;
-  var_i0 = var_i0 != var_i1;
-  if (var_i0) {
-    var_L26: 
-      var_i0 = var_p4;
-      var_i1 = 8u;
-      var_i0 -= var_i1;
-      var_p4 = var_i0;
-      var_i1 = var_l5;
-      var_i2 = 8u;
-      var_i1 -= var_i2;
-      var_l5 = var_i1;
-      var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
-      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-      var_i0 = var_p3;
-      var_i1 = var_l5;
-      var_i0 = var_i0 != var_i1;
-      if (var_i0) {goto var_L26;}
-  }
-  var_i0 = var_l8;
-  var_i1 = var_l7;
-  var_i2 = var_l9;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
-  var_i0 = var_l8;
-  var_i1 = var_l10;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-  var_i0 = var_l8;
-  var_i1 = var_p4;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_i0 = var_p3;
-  var_i0 = !(var_i0);
-  if (var_i0) {goto var_B13;}
-  var_i0 = var_p3;
-  w2c_hermes_dlfree(instance, var_i0);
-  var_B13:;
-  var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_l5 = var_i0;
-  var_i1 = var_p1;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5588u);
-  var_l10 = var_i1;
-  var_i0 = var_i0 != var_i1;
-  if (var_i0) {
-    var_L28: 
-      var_i0 = var_l5;
-      var_i1 = 16u;
-      var_i0 -= var_i1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-      var_p3 = var_i0;
-      var_i0 = var_l5;
-      var_i1 = 24u;
-      var_i0 -= var_i1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l7 = var_i0;
-      var_i0 = var_l10;
-      var_i1 = var_l5;
-      var_i2 = 8u;
-      var_i1 -= var_i2;
-      var_l12 = var_i1;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      var_p4 = var_i1;
-      var_i0 = var_i0 == var_i1;
-      if (var_i0) {goto var_B29;}
-      var_i0 = var_p4;
-      var_i1 = 48u;
-      var_i0 -= var_i1;
-      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l16 = var_j0;
-      var_j1 = 48ull;
-      var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
-      var_i0 = (u32)(var_j0);
-      var_i1 = 4294967295u;
-      var_i0 = var_i0 == var_i1;
-      if (var_i0) {
-        var_j0 = var_l16;
-        var_j1 = 18445899648779419648ull;
-        var_i0 = var_j0 < var_j1;
-        if (var_i0) {goto var_B29;}
-        var_j0 = var_l16;
-        var_i0 = (u32)(var_j0);
-        var_p4 = var_i0;
-        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-        var_i1 = 1224736768u;
-        var_i0 -= var_i1;
-        var_i1 = 67108863u;
-        var_i0 = var_i0 > var_i1;
-        if (var_i0) {goto var_B29;}
-        var_i0 = var_p1;
-        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1288u);
-        var_i1 = var_p4;
-        var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 24u);
-        var_i0 ^= var_i1;
-        goto var_B30;
-      }
-      var_j0 = var_l16;
-      var_i0 = (u32)(var_j0);
-      var_B30:;
-      var_p4 = var_i0;
-      var_i1 = var_l7;
-      var_i2 = var_p4;
-      var_i0 = var_i2 ? var_i0 : var_i1;
-      var_l7 = var_i0;
-      var_B29:;
-      var_i0 = var_p3;
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B33;}
-      var_i0 = var_l7;
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B33;}
-      var_i0 = var_p3;
-      var_i1 = var_l7;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-      var_i0 -= var_i1;
-      var_l9 = var_i0;
-      var_i0 = var_l8;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-      var_l5 = var_i0;
-      var_i1 = var_l8;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-      var_l11 = var_i1;
-      var_i0 = var_i0 < var_i1;
-      if (var_i0) {
-        var_i0 = var_l5;
-        var_i1 = var_l9;
-        i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-        var_i0 = var_l5;
-        var_i1 = var_l7;
-        i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-        var_i0 = var_l8;
-        var_i1 = var_l5;
-        var_i2 = 8u;
-        var_i1 += var_i2;
-        i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-        goto var_B34;
-      }
-      var_i0 = var_l5;
-      var_i1 = var_l8;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      var_p3 = var_i1;
-      var_i0 -= var_i1;
-      var_i1 = 3u;
-      var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
-      var_l13 = var_i0;
-      var_i1 = 1u;
-      var_i0 += var_i1;
-      var_p4 = var_i0;
-      var_i1 = 536870912u;
-      var_i0 = var_i0 >= var_i1;
-      if (var_i0) {goto var_B11;}
-      var_i0 = 536870911u;
-      var_i1 = var_l11;
-      var_i2 = var_p3;
-      var_i1 -= var_i2;
-      var_l11 = var_i1;
-      var_i2 = 2u;
-      var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
-      var_l14 = var_i1;
-      var_i2 = var_p4;
-      var_i3 = var_p4;
-      var_i4 = var_l14;
-      var_i3 = var_i3 < var_i4;
-      var_i1 = var_i3 ? var_i1 : var_i2;
-      var_i2 = var_l11;
-      var_i3 = 2147483640u;
-      var_i2 = var_i2 >= var_i3;
-      var_i0 = var_i2 ? var_i0 : var_i1;
-      var_p4 = var_i0;
-      var_i1 = 536870912u;
-      var_i0 = var_i0 >= var_i1;
-      if (var_i0) {goto var_B12;}
-      var_i0 = var_p4;
-      var_i1 = 3u;
-      var_i0 <<= (var_i1 & 31);
-      var_l11 = var_i0;
-      var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
-      var_l14 = var_i0;
-      var_i1 = var_l13;
-      var_i2 = 3u;
-      var_i1 <<= (var_i2 & 31);
-      var_i0 += var_i1;
-      var_p4 = var_i0;
-      var_i1 = var_l9;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      var_i0 = var_p4;
-      var_i1 = var_l7;
-      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_p4;
-      var_i1 = 8u;
-      var_i0 += var_i1;
-      var_l9 = var_i0;
-      var_i0 = var_p3;
-      var_i1 = var_l5;
-      var_i0 = var_i0 != var_i1;
-      if (var_i0) {
-        var_L37: 
-          var_i0 = var_p4;
-          var_i1 = 8u;
-          var_i0 -= var_i1;
-          var_p4 = var_i0;
-          var_i1 = var_l5;
-          var_i2 = 8u;
-          var_i1 -= var_i2;
-          var_l5 = var_i1;
-          var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
-          i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-          var_i0 = var_p3;
-          var_i1 = var_l5;
-          var_i0 = var_i0 != var_i1;
-          if (var_i0) {goto var_L37;}
-      }
-      var_i0 = var_l8;
-      var_i1 = var_l11;
-      var_i2 = var_l14;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
-      var_i0 = var_l8;
-      var_i1 = var_l9;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      var_i0 = var_l8;
-      var_i1 = var_p4;
-      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_p3;
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B34;}
-      var_i0 = var_p3;
-      w2c_hermes_dlfree(instance, var_i0);
-      var_B34:;
-      var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-      var_l5 = var_i0;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 172u);
-      var_l9 = var_i0;
-      var_i0 = var_l5;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-      var_l11 = var_i0;
-      var_p4 = var_i0;
-      var_i0 = var_l5;
-      var_p3 = var_i0;
-      var_i0 = var_l7;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l13 = var_i0;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
-      var_l7 = var_i0;
-      if (var_i0) {
-        var_i0 = var_l13;
-        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
-        var_i1 = 816u;
-        var_i0 += var_i1;
-        var_i1 = var_l7;
-        w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AweakRefReadBarrier0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x29(instance, var_i0, var_i1);
-        var_i0 = var_p1;
-        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-        var_p3 = var_i0;
-        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-        var_p4 = var_i0;
-      }
-      var_i0 = var_l7;
-      var_j0 = (u64)(var_i0);
-      var_j1 = 18446462598732840960ull;
-      var_j0 |= var_j1;
-      var_l16 = var_j0;
-      var_i0 = var_p3;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-      var_i1 = var_p4;
-      var_i0 = var_i0 > var_i1;
-      if (var_i0) {
-        var_i0 = var_p3;
-        var_i1 = var_p4;
-        var_i2 = 8u;
-        var_i1 += var_i2;
-        i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-        var_i0 = var_p4;
-        var_j1 = var_l16;
-        i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-        goto var_B39;
-      }
-      var_i0 = var_p3;
-      var_j1 = var_l16;
-      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-      var_p4 = var_i0;
-      var_B39:;
-      var_i0 = var_l6;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 12u);
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-      var_p3 = var_i0;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-      var_l7 = var_i0;
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B42;}
-      var_i0 = var_l7;
-      var_i1 = 2u;
-      var_i0 <<= (var_i1 & 31);
-      var_i1 = var_p3;
-      var_i0 += var_i1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-      var_i1 = var_p4;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      var_i0 = var_i0 != var_i1;
-      if (var_i0) {goto var_B42;}
-      var_i0 = 1u;
-      goto var_B41;
-      var_B42:;
-      var_i0 = var_l6;
-      var_i1 = 12u;
-      var_i0 += var_i1;
-      var_i1 = var_p1;
-      var_i2 = var_p4;
-      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3Apush_back0x28hermes0x3A0x3Avm0x3A0x3AMutableHandle0x3Chermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2);
-      var_B41:;
-      var_p3 = var_i0;
-      var_i0 = var_l5;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 136u);
-      var_i1 = var_l9;
-      var_i2 = 2u;
-      var_i1 <<= (var_i2 & 31);
-      var_i0 += var_i1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-      var_p4 = var_i0;
-      var_i0 = var_l5;
-      var_i1 = var_l9;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
-      var_i0 = var_l5;
-      var_i1 = var_l11;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-      var_i0 = var_l5;
-      var_i1 = var_p4;
-      var_i2 = 128u;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 168, var_i1);
-      var_i0 = var_p3;
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B8;}
-      goto var_B32;
-      var_B33:;
-      var_i0 = var_l8;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-      var_l5 = var_i0;
-      var_i1 = var_l8;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-      var_l7 = var_i1;
-      var_i0 = var_i0 < var_i1;
-      if (var_i0) {
-        var_i0 = var_l5;
-        var_j1 = 0ull;
-        i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-        var_i0 = var_l8;
-        var_i1 = var_l5;
-        var_i2 = 8u;
-        var_i1 += var_i2;
-        i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-        goto var_B32;
-      }
-      var_i0 = var_l5;
-      var_i1 = var_l8;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      var_p3 = var_i1;
-      var_i0 -= var_i1;
-      var_i1 = 3u;
-      var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
-      var_l9 = var_i0;
-      var_i1 = 1u;
-      var_i0 += var_i1;
-      var_p4 = var_i0;
-      var_i1 = 536870912u;
-      var_i0 = var_i0 >= var_i1;
-      if (var_i0) {goto var_B11;}
-      var_i0 = 536870911u;
-      var_i1 = var_l7;
-      var_i2 = var_p3;
-      var_i1 -= var_i2;
-      var_l7 = var_i1;
-      var_i2 = 2u;
-      var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
-      var_l11 = var_i1;
-      var_i2 = var_p4;
-      var_i3 = var_p4;
-      var_i4 = var_l11;
-      var_i3 = var_i3 < var_i4;
-      var_i1 = var_i3 ? var_i1 : var_i2;
-      var_i2 = var_l7;
-      var_i3 = 2147483640u;
-      var_i2 = var_i2 >= var_i3;
-      var_i0 = var_i2 ? var_i0 : var_i1;
-      var_p4 = var_i0;
-      var_i1 = 536870912u;
-      var_i0 = var_i0 >= var_i1;
-      if (var_i0) {goto var_B12;}
-      var_i0 = var_p4;
-      var_i1 = 3u;
-      var_i0 <<= (var_i1 & 31);
-      var_l7 = var_i0;
-      var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
-      var_l11 = var_i0;
-      var_i1 = var_l9;
-      var_i2 = 3u;
-      var_i1 <<= (var_i2 & 31);
-      var_i0 += var_i1;
-      var_p4 = var_i0;
-      var_j1 = 0ull;
-      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-      var_i0 = var_p4;
-      var_i1 = 8u;
-      var_i0 += var_i1;
-      var_l9 = var_i0;
-      var_i0 = var_p3;
-      var_i1 = var_l5;
-      var_i0 = var_i0 != var_i1;
-      if (var_i0) {
-        var_L45: 
-          var_i0 = var_p4;
-          var_i1 = 8u;
-          var_i0 -= var_i1;
-          var_p4 = var_i0;
-          var_i1 = var_l5;
-          var_i2 = 8u;
-          var_i1 -= var_i2;
-          var_l5 = var_i1;
-          var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
-          i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-          var_i0 = var_p3;
-          var_i1 = var_l5;
-          var_i0 = var_i0 != var_i1;
-          if (var_i0) {goto var_L45;}
-      }
-      var_i0 = var_l8;
-      var_i1 = var_l7;
-      var_i2 = var_l11;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
-      var_i0 = var_l8;
-      var_i1 = var_l9;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      var_i0 = var_l8;
-      var_i1 = var_p4;
-      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_p3;
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B32;}
-      var_i0 = var_p3;
-      w2c_hermes_dlfree(instance, var_i0);
-      var_B32:;
-      var_i0 = var_l10;
-      var_i1 = var_l12;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      var_l5 = var_i1;
-      var_i0 = var_i0 != var_i1;
-      if (var_i0) {goto var_L28;}
-  }
-  var_i0 = var_p1;
-  var_i1 = 816u;
-  var_i0 += var_i1;
-  var_l9 = var_i0;
-  var_i0 = var_l6;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 12u);
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_p3 = var_i0;
-  var_i0 = var_p1;
-  var_i1 = 1364u;
-  var_i0 += var_i1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_p0;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_i2 = 28u;
-  var_i1 += var_i2;
-  var_p4 = var_i1;
-  var_i2 = 4290772992u;
-  var_i1 &= var_i2;
-  var_i0 = var_i0 != var_i1;
-  if (var_i0) {
-    var_i0 = var_l9;
-    var_i1 = var_p4;
-    var_i2 = var_p3;
-    w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
-  }
-  var_i0 = var_p4;
-  var_i1 = var_p3;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_i0 = var_l8;
-  var_i1 = var_l8;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
-  var_i2 = 8u;
-  var_i1 -= var_i2;
-  var_l5 = var_i1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-  var_i0 = var_l5;
-  var_i1 = var_l8;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_i0 -= var_i1;
-  var_p3 = var_i0;
-  var_i1 = 8216560u;
-  var_i0 = var_i0 <= var_i1;
-  if (var_i0) {
-    var_i0 = var_p3;
-    var_i1 = 1u;
-    var_i0 >>= (var_i1 & 31);
-    var_i1 = 15u;
-    var_i0 += var_i1;
-    var_p4 = var_i0;
-    var_i1 = 2147483640u;
-    var_i0 &= var_i1;
-    var_p3 = var_i0;
-    var_i1 = var_p1;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1376u);
-    var_i2 = var_p1;
-    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1372u);
-    var_l5 = var_i2;
-    var_i1 -= var_i2;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {
-      var_i0 = var_l9;
-      var_i1 = var_p3;
-      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-      var_l5 = var_i0;
-      goto var_B50;
-    }
-    var_i0 = var_p1;
-    var_i1 = var_p3;
-    var_i2 = var_l5;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
-    var_B50:;
-    var_i0 = var_l5;
-    var_j1 = 0ull;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    var_i0 = var_l5;
-    var_i1 = var_p4;
-    var_i2 = 16777208u;
-    var_i1 &= var_i2;
-    var_i2 = 251658240u;
-    var_i1 |= var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-    goto var_B48;
-  }
-  var_i0 = var_p1;
-  var_i1 = var_p3;
-  var_i2 = 3u;
-  var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3AthrowExcessiveCapacityError0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1);
-  var_i0 = !(var_i0);
-  if (var_i0) {goto var_B47;}
-  var_B48:;
-  var_i0 = var_l5;
-  var_j0 = (u64)(var_i0);
-  var_j1 = 18446462598732840960ull;
-  var_j0 |= var_j1;
-  var_l16 = var_j0;
-  var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_p3 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l5 = var_i0;
-  var_i1 = var_p3;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_p3;
-    var_i1 = var_l5;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l5;
-    var_j1 = var_l16;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B52;
-  }
-  var_i0 = var_p3;
-  var_j1 = var_l16;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l5 = var_i0;
-  var_B52:;
-  var_i0 = var_l6;
-  var_i1 = var_l5;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 200, var_i1);
-  var_i0 = var_l6;
-  var_i1 = var_p1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
-  var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_p3 = var_i0;
-  var_i0 = var_l6;
-  var_i1 = 172u;
-  var_i0 += var_i1;
-  var_p4 = var_i0;
-  var_i1 = var_l6;
-  var_i2 = 32u;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_i0 = var_l6;
-  var_j1 = 17179869185ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_j1);
-  var_i0 = var_l6;
-  var_i1 = var_p4;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_i1);
-  var_i0 = var_l6;
-  var_i1 = var_p3;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
-  var_i0 = var_l6;
-  var_i1 = 0u;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 196, var_i1);
-  var_i0 = var_l6;
-  var_i1 = var_l6;
-  var_i2 = 160u;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 192, var_i1);
-  var_i0 = var_p1;
-  var_i1 = var_l6;
-  var_i2 = 24u;
-  var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-  var_i0 = var_l6;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-  var_i0 = var_l6;
-  var_i1 = var_l6;
-  var_i2 = 40u;
-  var_i1 += var_i2;
-  var_l11 = var_i1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
-  var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_p4 = var_i0;
-  var_i1 = var_p1;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5588u);
-  var_l13 = var_i1;
-  var_i0 = var_i0 == var_i1;
-  if (var_i0) {goto var_B10;}
-  var_i0 = var_p1;
-  var_i1 = 5476u;
-  var_i0 += var_i1;
-  var_l12 = var_i0;
-  var_i0 = 0u;
-  var_l5 = var_i0;
-  var_i0 = 0u;
-  var_l7 = var_i0;
-  var_L55: 
-    var_i0 = var_l5;
-    var_i1 = 1u;
-    var_i2 = var_p2;
-    var_i0 = var_i2 ? var_i0 : var_i1;
-    if (var_i0) {
-      var_i0 = var_l6;
-      var_j1 = 18445055223849287680ull;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      var_i0 = 70384u;
-      var_p3 = var_i0;
-      var_i0 = var_p4;
-      var_i1 = 48u;
-      var_i0 -= var_i1;
-      var_l10 = var_i0;
-      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l16 = var_j0;
-      var_j1 = 18445899648779419648ull;
-      var_i0 = var_j0 >= var_j1;
-      if (var_i0) {
-        var_i0 = 70384u;
-        var_i1 = var_l10;
-        var_j2 = var_l16;
-        var_i2 = (u32)(var_j2);
-        var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
-        var_i3 = 1140850688u;
-        var_i2 -= var_i3;
-        var_i3 = 150994944u;
-        var_i2 = var_i2 >= var_i3;
-        var_i0 = var_i2 ? var_i0 : var_i1;
-        var_p3 = var_i0;
-      }
-      var_i0 = var_p3;
-      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-      var_l17 = var_j0;
-      var_j1 = 18445899648779419648ull;
-      var_i0 = var_j0 < var_j1;
-      if (var_i0) {goto var_B60;}
-      var_j0 = var_l17;
-      var_j1 = 4294967295ull;
-      var_j0 &= var_j1;
-      var_i0 = !(var_j0);
-      if (var_i0) {goto var_B60;}
-      var_i0 = var_l6;
-      var_j1 = 18446744069414584320ull;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
-      var_i0 = var_l6;
-      var_i1 = 1u;
-      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 10, var_i1);
-      var_i0 = var_l6;
-      var_i1 = 1u;
-      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 206, var_i1);
-      var_i0 = var_p3;
-      var_i1 = var_p1;
-      var_i2 = 140u;
-      var_i3 = var_l6;
-      var_i4 = 10u;
-      var_i3 += var_i4;
-      var_i4 = var_l6;
-      var_i5 = 16u;
-      var_i4 += var_i5;
-      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedDescriptorUnsafe0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3ANamedPropertyDescriptor0x260x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
-      var_l10 = var_i0;
-      if (var_i0) {goto var_B61;}
-      var_i0 = var_l6;
-      var_i1 = 1u;
-      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
-      var_i0 = var_l6;
-      var_i1 = 1u;
-      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 206, var_i1);
-      var_i0 = var_p3;
-      var_i1 = var_p1;
-      var_i2 = 139u;
-      var_i3 = var_l6;
-      var_i4 = 8u;
-      var_i3 += var_i4;
-      var_i4 = var_l6;
-      var_i5 = 16u;
-      var_i4 += var_i5;
-      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedDescriptorUnsafe0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3ANamedPropertyDescriptor0x260x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
-      var_l10 = var_i0;
-      if (var_i0) {goto var_B61;}
-      var_i0 = var_l6;
-      var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0) + 16u);
-      var_p3 = var_i0;
-      goto var_B59;
-      var_B61:;
-      var_i0 = var_l6;
-      var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0) + 16u);
-      var_p3 = var_i0;
-      var_i1 = 1296u;
-      var_i0 &= var_i1;
-      if (var_i0) {goto var_B59;}
-      var_j0 = 18445055223849287680ull;
-      var_l16 = var_j0;
-      var_i0 = var_l6;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
-      var_p3 = var_i0;
-      var_i1 = 4u;
-      var_i0 = var_i0 <= var_i1;
-      if (var_i0) {
-        var_i0 = var_l10;
-        var_i1 = var_p3;
-        var_i2 = 2u;
-        var_i1 <<= (var_i2 & 31);
-        var_i0 += var_i1;
-        var_i1 = 20u;
-        var_i0 += var_i1;
-        goto var_B72;
-      }
-      var_i0 = var_l10;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
-      var_i1 = var_p3;
-      var_i2 = 2u;
-      var_i1 <<= (var_i2 & 31);
-      var_i0 += var_i1;
-      var_i1 = 12u;
-      var_i0 -= var_i1;
-      var_B72:;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-      var_p3 = var_i0;
-      var_i1 = 15u;
-      var_i0 &= var_i1;
-      var_i1 = 1u;
-      var_i0 -= var_i1;
-      switch (var_i0) {
-        case 0: goto var_B70;
-        case 1: goto var_B69;
-        case 2: goto var_B68;
-        case 3: goto var_B67;
-        case 4: goto var_B66;
-        case 5: goto var_B65;
-        case 6: goto var_B64;
-        case 7: goto var_B71;
-        case 8: goto var_B70;
-        case 9: goto var_B69;
-        case 10: goto var_B68;
-        case 11: goto var_B67;
-        case 12: goto var_B66;
-        case 13: goto var_B62;
-        case 14: goto var_B63;
-        default: goto var_B71;
-      }
-      var_B71:;
-      var_i0 = var_l6;
-      var_i1 = var_p3;
-      var_j1 = (u64)(var_i1);
-      var_j2 = 18446462598732840960ull;
-      var_j1 |= var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B70:;
-      var_i0 = var_l6;
-      var_i1 = var_p3;
-      var_i2 = 4294967288u;
-      var_i1 &= var_i2;
-      var_j1 = (u64)(var_i1);
-      var_j2 = 18446181123756130304ull;
-      var_j1 |= var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B69:;
-      var_i0 = var_l6;
-      var_i1 = var_p3;
-      var_i2 = 4294967288u;
-      var_i1 &= var_i2;
-      var_j1 = (u64)(var_i1);
-      var_j2 = 18445899648779419648ull;
-      var_j1 |= var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B68:;
-      var_i0 = var_l6;
-      var_j1 = 9221120237041090560ull;
-      var_i2 = var_p3;
-      var_i3 = 4294967288u;
-      var_i2 &= var_i3;
-      var_d2 = f64_load(&instance->w2c_memory, (u64)(var_i2) + 8u);
-      var_l18 = var_d2;
-      var_j2 = i64_reinterpret_f64(var_d2);
-      var_d3 = var_l18;
-      var_d4 = var_l18;
-      var_i3 = var_d3 != var_d4;
-      var_j1 = var_i3 ? var_j1 : var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B67:;
-      var_i0 = var_l6;
-      var_i1 = var_p3;
-      var_i2 = 3u;
-      var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
-      var_d1 = (f64)(s32)(var_i1);
-      f64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_d1);
-      goto var_B58;
-      var_B66:;
-      var_i0 = var_l6;
-      var_i1 = var_p3;
-      var_i2 = 3u;
-      var_i1 >>= (var_i2 & 31);
-      var_j1 = (u64)(var_i1);
-      var_j2 = 18445477436314353664ull;
-      var_j1 |= var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B65:;
-      var_i0 = var_l6;
-      var_i1 = var_p3;
-      var_i2 = 15u;
-      var_i1 = var_i1 > var_i2;
-      var_j1 = (u64)(var_i1);
-      var_j2 = 18445336698825998336ull;
-      var_j1 |= var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B64:;
-      var_i0 = var_l6;
-      var_j1 = 18444773748872577024ull;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B63:;
-      var_j0 = 18445195961337643008ull;
-      var_l16 = var_j0;
-      var_B62:;
-      var_i0 = var_l6;
-      var_j1 = var_l16;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B60:;
-      var_j0 = var_l16;
-      var_j1 = 48ull;
-      var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
-      var_i0 = (u32)(var_j0);
-      var_i1 = 4294967295u;
-      var_i0 = var_i0 == var_i1;
-      if (var_i0) {goto var_B58;}
-      var_j0 = var_l16;
-      var_i0 = (u32)(var_j0);
-      var_p3 = var_i0;
-      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AgetNameMayAllocate0x280x290x20const(instance, var_i0);
-      var_i1 = 536870909u;
-      var_i0 = var_i0 > var_i1;
-      if (var_i0) {goto var_B58;}
-      var_i0 = var_l6;
-      var_i1 = var_l12;
-      var_i2 = var_p1;
-      var_i3 = var_p3;
-      var_i3 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AgetNameMayAllocate0x280x290x20const(instance, var_i3);
-      var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringPrim0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x29(instance, var_i1, var_i2, var_i3);
-      var_j1 = (u64)(var_i1);
-      var_j2 = 18445899648779419648ull;
-      var_j1 |= var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      goto var_B58;
-      var_B59:;
-      var_i0 = var_p3;
-      var_i1 = 1024u;
-      var_i0 &= var_i1;
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B58;}
-      var_i0 = var_l6;
-      var_i1 = var_l12;
-      var_i2 = var_p1;
-      var_i3 = 429u;
-      var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringPrim0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x29(instance, var_i1, var_i2, var_i3);
-      var_j1 = (u64)(var_i1);
-      var_j2 = 18445899648779419648ull;
-      var_j1 |= var_j2;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-      var_B58:;
-      var_i0 = var_l6;
-      var_i1 = 200u;
-      var_i0 += var_i1;
-      var_i1 = var_p1;
-      var_i2 = var_l7;
-      var_i3 = 1u;
-      var_i2 += var_i3;
-      var_l10 = var_i2;
-      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3Ashift0x28hermes0x3A0x3Avm0x3A0x3AMutableHandle0x3Chermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x2C0x20unsigned0x20int0x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1, var_i2);
-      var_i0 = !(var_i0);
-      if (var_i0) {goto var_B54;}
-      var_i0 = 7u;
-      var_p3 = var_i0;
-      var_i0 = var_l6;
-      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 32u);
-      var_l16 = var_j0;
-      var_j1 = 47ull;
-      var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
-      var_i0 = (u32)(var_j0);
-      var_i1 = 14u;
-      var_i0 += var_i1;
-      switch (var_i0) {
-        case 0: goto var_B74;
-        case 1: goto var_B75;
-        case 2: goto var_B82;
-        case 3: goto var_B81;
-        case 4: goto var_B80;
-        case 5: goto var_B79;
-        case 6: goto var_B75;
-        case 7: goto var_B75;
-        case 8: goto var_B78;
-        case 9: goto var_B78;
-        case 10: goto var_B77;
-        case 11: goto var_B77;
-        case 12: goto var_B76;
-        case 13: goto var_B76;
-        default: goto var_B75;
-      }
-      var_B82:;
-      var_i0 = 14u;
-      var_p3 = var_i0;
-      goto var_B74;
-      var_B81:;
-      var_i0 = 15u;
-      var_p3 = var_i0;
-      goto var_B74;
-      var_B80:;
-      var_i0 = 6u;
-      var_i1 = 22u;
-      var_j2 = var_l16;
-      var_j3 = 1ull;
-      var_j2 &= var_j3;
-      var_i2 = !(var_j2);
-      var_i0 = var_i2 ? var_i0 : var_i1;
-      var_p3 = var_i0;
-      goto var_B74;
-      var_B79:;
-      var_j0 = var_l16;
-      var_i0 = (u32)(var_j0);
-      var_i1 = 3u;
-      var_i0 <<= (var_i1 & 31);
-      var_i1 = 5u;
-      var_i0 |= var_i1;
-      var_p3 = var_i0;
-      goto var_B74;
-      var_B78:;
-      var_j0 = var_l16;
-      var_i0 = (u32)(var_j0);
-      var_i1 = 2u;
-      var_i0 |= var_i1;
-      var_p3 = var_i0;
-      goto var_B74;
-      var_B77:;
-      var_j0 = var_l16;
-      var_i0 = (u32)(var_j0);
-      var_i1 = 1u;
-      var_i0 |= var_i1;
-      var_p3 = var_i0;
-      goto var_B74;
-      var_B76:;
-      var_j0 = var_l16;
-      var_i0 = (u32)(var_j0);
-      var_p3 = var_i0;
-      goto var_B74;
-      var_B75:;
-      var_j0 = var_l16;
-      var_d0 = f64_reinterpret_i64(var_j0);
-      var_l18 = var_d0;
-      var_d0 = wasm_fabs(var_d0);
-      var_d1 = 2147483648;
-      var_i0 = var_d0 < var_d1;
-      if (var_i0) {
-        var_d0 = var_l18;
-        var_i0 = I32_TRUNC_S_F64(var_d0);
-        goto var_B83;
-      }
-      var_i0 = 2147483648u;
-      var_B83:;
-      var_i1 = 3u;
-      var_i0 <<= (var_i1 & 31);
-      var_p3 = var_i0;
-      var_i1 = 3u;
-      var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
-      var_d0 = (f64)(s32)(var_i0);
-      var_j0 = i64_reinterpret_f64(var_d0);
-      var_j1 = var_l16;
-      var_i0 = var_j0 == var_j1;
-      if (var_i0) {
-        var_i0 = var_p3;
-        var_i1 = 4u;
-        var_i0 |= var_i1;
-        var_p3 = var_i0;
-        goto var_B74;
-      }
-      var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1376u);
-      var_i1 = var_p1;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1372u);
-      var_p3 = var_i1;
-      var_i0 -= var_i1;
-      var_i1 = 15u;
-      var_i0 = var_i0 <= var_i1;
-      if (var_i0) {
-        var_i0 = var_l9;
-        var_i1 = 16u;
-        var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-        var_p3 = var_i0;
-        goto var_B86;
-      }
-      var_i0 = var_p1;
-      var_i1 = var_p3;
-      var_i2 = 16u;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
-      var_B86:;
-      var_i0 = var_p3;
-      var_i1 = 402653200u;
-      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_p3;
-      var_j1 = var_l16;
-      i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-      var_i0 = var_p3;
-      var_i1 = 3u;
-      var_i0 |= var_i1;
-      var_p3 = var_i0;
-      var_B74:;
-      var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
-      var_i1 = var_l6;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 200u);
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      var_i2 = var_l7;
-      var_i3 = 2u;
-      var_i2 <<= (var_i3 & 31);
-      var_i1 += var_i2;
-      var_i2 = 8u;
-      var_i1 += var_i2;
-      var_l7 = var_i1;
-      var_i2 = 4290772992u;
-      var_i1 &= var_i2;
-      var_i0 = var_i0 != var_i1;
-      if (var_i0) {
-        var_i0 = var_l9;
-        var_i1 = var_l7;
-        var_i2 = var_p3;
-        w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCHermesValueBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue320x29(instance, var_i0, var_i1, var_i2);
-      }
-      var_i0 = var_l7;
-      var_i1 = var_p3;
-      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_l6;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 160u);
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-      var_p3 = var_i0;
-      var_i0 = var_l6;
-      var_i1 = 0u;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 196, var_i1);
-      var_i0 = var_l6;
-      var_i1 = var_l11;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
-      var_i0 = var_l6;
-      var_i1 = var_p3;
-      var_i2 = 128u;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 192, var_i1);
-      var_i0 = var_l10;
-      var_l7 = var_i0;
-    }
-    var_i0 = var_l5;
-    var_i1 = 1u;
-    var_i0 += var_i1;
-    var_l5 = var_i0;
-    var_i0 = var_l13;
-    var_i1 = var_p4;
-    var_i2 = 8u;
-    var_i1 -= var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    var_p4 = var_i1;
-    var_i0 = var_i0 != var_i1;
-    if (var_i0) {goto var_L55;}
-  var_i0 = var_l6;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 200u);
-  var_l5 = var_i0;
-  goto var_B10;
-  var_B54:;
-  var_i0 = var_p1;
-  var_j1 = 18444773748872577024ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 712, var_j1);
-  var_i0 = 70384u;
-  var_l5 = var_i0;
-  goto var_B10;
-  var_B47:;
-  var_i0 = var_p1;
-  var_j1 = 18444773748872577024ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 712, var_j1);
-  var_i0 = 70384u;
-  var_l5 = var_i0;
-  goto var_B9;
-  var_B12:;
-  w2c_hermes_std0x3A0x3A_0x5F20x3A0x3A_0x5Fthrow_out_of_range0x5Babi0x3Av150070x5D0x28char0x20const0x2A0x29(instance);
-  UNREACHABLE;
-  var_B11:;
-  w2c_hermes_abort(instance);
-  UNREACHABLE;
-  var_B10:;
-  var_i0 = var_l6;
-  var_i1 = 24u;
-  var_i0 += var_i1;
-  w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A0x7EGCScope0x280x29(instance, var_i0);
-  var_B9:;
-  var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_p3 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
-  var_p2 = var_i0;
-  var_i0 = var_p3;
-  var_i1 = var_l8;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
-  var_i0 = var_p2;
-  if (var_i0) {
-    var_i0 = var_p2;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_p3 = var_i0;
-    if (var_i0) {
-      var_i0 = var_p2;
-      var_i1 = var_p3;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-      var_i0 = var_p3;
-      w2c_hermes_dlfree(instance, var_i0);
-    }
-    var_i0 = var_p2;
-    w2c_hermes_dlfree(instance, var_i0);
-  }
-  var_i0 = var_l5;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_p2 = var_i0;
-  var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
-  var_i1 = var_p0;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_i2 = 32u;
-  var_i1 += var_i2;
-  var_p0 = var_i1;
-  var_i2 = 4290772992u;
-  var_i1 &= var_i2;
-  var_i0 = var_i0 != var_i1;
-  if (var_i0) {
-    var_i0 = var_l9;
-    var_i1 = var_p0;
-    var_i2 = var_p2;
-    w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
-  }
-  var_i0 = var_p0;
-  var_i1 = var_p2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  goto var_B0;
-  var_B8:;
-  var_i0 = var_l8;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_p0 = var_i0;
-  if (var_i0) {
-    var_i0 = var_l8;
-    var_i1 = var_p0;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-    var_i0 = var_p0;
-    w2c_hermes_dlfree(instance, var_i0);
-  }
-  var_i0 = var_l8;
-  w2c_hermes_dlfree(instance, var_i0);
-  var_i0 = 0u;
-  var_l15 = var_i0;
-  var_B0:;
-  var_i0 = var_l6;
-  var_i1 = 208u;
-  var_i0 += var_i1;
-  instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_l15;
-  FUNC_EPILOGUE;
-  return var_i0;
-}
-
 void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringViewForDev0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x290x20const(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3) {
   u64 var_l4 = 0;
   FUNC_PROLOGUE;
@@ -20965,7 +18803,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringViewForD
   var_j1 = 40802189312ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_j1);
   var_i0 = var_p0;
-  var_i1 = 59504u;
+  var_i1 = 56327u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   goto var_Bfunc;
   var_B1:;
@@ -20973,7 +18811,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringViewForD
   var_j1 = 49392123904ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_j1);
   var_i0 = var_p0;
-  var_i1 = 59567u;
+  var_i1 = 56390u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   goto var_Bfunc;
   var_B0:;
@@ -20985,7 +18823,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringViewForD
     var_j1 = 49392123904ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_j1);
     var_i0 = var_p0;
-    var_i1 = 59555u;
+    var_i1 = 56378u;
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_Bfunc;
   }
@@ -21656,7 +19494,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADomain0x3A0x3Acreate0x28hermes0x3A0x3Avm0
   u32 var_i0, var_i1, var_i2, var_i3, var_i4;
   u64 var_j1;
   var_i0 = var_p0;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l1 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 560u);
@@ -21973,11 +19811,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Acreate0x28hermes0x3A0x3Av
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l6;
   var_i1 = var_p0;
-  var_i2 = 5664u;
+  var_i2 = 5656u;
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p0;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l2 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 560u);
@@ -22118,7 +19956,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Acreate0x28hermes0x3A0x3Av
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p1;
   var_i1 = var_p0;
-  var_i2 = 5476u;
+  var_i2 = 5468u;
   var_i1 += var_i2;
   var_i2 = var_p0;
   var_i3 = 14u;
@@ -22126,7 +19964,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_l2 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
@@ -22138,7 +19976,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l3;
     var_i2 = var_l2;
@@ -22194,24 +20032,24 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetComputed0x28hermes0x3A
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l7 = var_i0;
+  var_l6 = var_i0;
   var_i0 = var_l5;
   var_i1 = 156u;
   var_i0 += var_i1;
-  var_l6 = var_i0;
+  var_l8 = var_i0;
   var_i1 = var_l5;
   var_i2 = 16u;
   var_i1 += var_i2;
-  var_l8 = var_i1;
+  var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l5;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_j1);
   var_i0 = var_l5;
-  var_i1 = var_l6;
+  var_i1 = var_l8;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_l5;
-  var_i1 = var_l7;
+  var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l5;
   var_i1 = 0u;
@@ -22220,45 +20058,53 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetComputed0x28hermes0x3A
   var_i1 = var_l5;
   var_i2 = 144u;
   var_i1 += var_i2;
-  var_l10 = var_i1;
+  var_l8 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
   var_i0 = var_l5;
-  var_i1 = var_l8;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l5;
   var_i2 = 8u;
   var_i1 += var_i2;
-  var_l9 = var_i1;
+  var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l5;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l5;
-    var_i1 = 184u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l7 = var_i0;
+    var_i0 = var_l5;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l6 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+    var_i0 = var_l5;
+    var_i1 = var_l6;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l7;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l5;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
     var_l7 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l5;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
     var_l6 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
     var_i0 = var_l7;
     var_i1 = var_l5;
     var_i0 -= var_i1;
@@ -22267,74 +20113,45 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetComputed0x28hermes0x3A
     if (var_i0) {goto var_B1;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l9 = var_i0;
+    var_l6 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l10 = var_i0;
-    var_i0 = var_l9;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
     var_l8 = var_i0;
+    var_i0 = var_l6;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l7 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l11 = var_i0;
+  var_l9 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l11;
+  var_i2 = var_l9;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
-  var_l7 = var_i2;
+  var_l10 = var_i2;
   var_i3 = 1107296256u;
   var_i2 = var_i2 == var_i3;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l6 = var_i0;
+  var_l11 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l11;
+  var_i1 = var_l9;
   var_i2 = 0u;
-  var_i3 = var_l7;
+  var_i3 = var_l10;
   var_i4 = 1191182336u;
   var_i3 = var_i3 == var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
   var_i2 = 32u;
   var_i1 += var_i2;
-  var_i2 = var_l6;
+  var_i2 = var_l11;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l6 = var_i0;
+  var_l9 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l12 = var_j0;
-  var_i0 = var_l8;
-  var_i1 = var_l10;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l9;
-    var_i1 = var_l8;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l8;
-    var_j1 = var_l12;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B3;
-  }
-  var_i0 = var_l9;
-  var_j1 = var_l12;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l8 = var_i0;
-  var_B3:;
-  var_i0 = var_l6;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_j1 = 18446462598732840960ull;
-  var_j0 |= var_j1;
-  var_l12 = var_j0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l6 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l7 = var_i0;
-  var_i1 = var_l6;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_l7;
+  var_i1 = var_l8;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_l6;
@@ -22345,12 +20162,41 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetComputed0x28hermes0x3A
     var_i0 = var_l7;
     var_j1 = var_l12;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B5;
+    goto var_B3;
   }
   var_i0 = var_l6;
   var_j1 = var_l12;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l7 = var_i0;
+  var_B3:;
+  var_i0 = var_l9;
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l12 = var_j0;
+  var_i0 = var_p2;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l8 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l6 = var_i0;
+  var_i1 = var_l8;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l8;
+    var_i1 = var_l6;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l6;
+    var_j1 = var_l12;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B5;
+  }
+  var_i0 = var_l8;
+  var_j1 = var_l12;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l6 = var_i0;
   var_B5:;
   var_i0 = var_p1;
   var_i1 = var_p2;
@@ -22382,7 +20228,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetComputed0x28hermes0x3A
   var_i0 = !(var_i0);
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = var_l8;
+    var_i1 = var_l7;
     var_i2 = var_p2;
     var_i3 = var_p3;
     var_i4 = var_p4;
@@ -22393,8 +20239,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetComputed0x28hermes0x3A
   var_i1 = var_p2;
   var_i2 = var_p3;
   var_i3 = var_p1;
-  var_i4 = var_l7;
-  var_i5 = var_l8;
+  var_i4 = var_l6;
+  var_i5 = var_l7;
   var_i6 = var_p4;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AgetWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6);
   goto var_B0;
@@ -22421,45 +20267,1644 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetComputed0x28hermes0x3A
   FUNC_EPILOGUE;
 }
 
-u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1) {
-  u32 var_l2 = 0;
+u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3ArecordStackTrace0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSError0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20bool0x2C0x20hermes0x3A0x3Avm0x3A0x3ACodeBlock0x2A0x2C0x20hermes0x3A0x3Ainst0x3A0x3AInst0x20const0x2A0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u32 var_p4) {
+  u32 var_l5 = 0, var_l6 = 0, var_l7 = 0, var_l8 = 0, var_l9 = 0, var_l10 = 0, var_l11 = 0, var_l12 = 0, 
+      var_l13 = 0, var_l14 = 0, var_l15 = 0;
+  u64 var_l16 = 0, var_l17 = 0;
+  f64 var_l18 = 0;
   FUNC_PROLOGUE;
-  u32 var_i0, var_i1, var_i2, var_i3, var_i4;
+  u32 var_i0, var_i1, var_i2, var_i3, var_i4, var_i5;
+  u64 var_j0, var_j1, var_j2, var_j3;
+  f64 var_d0, var_d1, var_d2, var_d3, var_d4;
   var_i0 = instance->w2c_0x5F_stack_pointer;
-  var_i1 = 16u;
+  var_i1 = 208u;
   var_i0 -= var_i1;
-  var_l2 = var_i0;
+  var_l6 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_l2;
+  var_i0 = 1u;
+  var_l15 = var_i0;
+  var_i0 = var_p0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
+  if (var_i0) {goto var_B0;}
+  var_i0 = var_p3;
+  if (var_i0) {goto var_B1;}
+  var_i0 = var_p2;
+  if (var_i0) {goto var_B1;}
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
+  var_l5 = var_i0;
   var_i1 = var_p1;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5580u);
+  var_i0 = var_i0 == var_i1;
+  if (var_i0) {goto var_B1;}
+  var_i0 = var_l5;
+  var_i1 = 48u;
+  var_i0 -= var_i1;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l16 = var_j0;
+  var_j1 = 48ull;
+  var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
+  var_i0 = (u32)(var_j0);
+  var_i1 = 4294967295u;
+  var_i0 = var_i0 == var_i1;
+  if (var_i0) {
+    var_j0 = var_l16;
+    var_j1 = 18445899648779419648ull;
+    var_i0 = var_j0 < var_j1;
+    if (var_i0) {goto var_B1;}
+    var_j0 = var_l16;
+    var_i0 = (u32)(var_j0);
+    var_l5 = var_i0;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_i1 = 1224736768u;
+    var_i0 -= var_i1;
+    var_i1 = 67108863u;
+    var_i0 = var_i0 > var_i1;
+    if (var_i0) {goto var_B1;}
+    var_i0 = var_p1;
+    var_i1 = 1276u;
+    var_i0 += var_i1;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_i1 = var_l5;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 24u);
+    var_i0 ^= var_i1;
+    goto var_B2;
+  }
+  var_j0 = var_l16;
+  var_i0 = (u32)(var_j0);
+  var_B2:;
+  if (var_i0) {goto var_B0;}
+  var_B1:;
+  var_i0 = 12u;
+  var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
+  var_l8 = var_i0;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+  var_i0 = var_l8;
+  var_j1 = 0ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+  var_i0 = var_p1;
+  var_i1 = 1368u;
+  var_i0 += var_i1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_i1 = var_p1;
+  var_i2 = 1364u;
+  var_i1 += var_i2;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_l5 = var_i1;
+  var_i0 -= var_i1;
+  var_i1 = 15u;
+  var_i0 = var_i0 <= var_i1;
+  if (var_i0) {
+    var_i0 = var_p1;
+    var_i1 = 808u;
+    var_i0 += var_i1;
+    var_i1 = 16u;
+    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_l5 = var_i0;
+    goto var_B4;
+  }
+  var_i0 = var_p1;
+  var_i1 = var_l5;
+  var_i2 = 16u;
+  var_i1 += var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
+  var_B4:;
+  var_i0 = var_l5;
+  var_j1 = 251658256ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+  var_i0 = var_l5;
+  var_j0 = (u64)(var_i0);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l16 = var_j0;
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l5 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l7 = var_i0;
+  var_i1 = var_l5;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l5;
+    var_i1 = var_l7;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l7;
+    var_j1 = var_l16;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B6;
+  }
+  var_i0 = var_l5;
+  var_j1 = var_l16;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l7 = var_i0;
+  var_B6:;
+  var_i0 = var_l6;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
-  var_i0 = var_l2;
+  var_i0 = var_p2;
+  if (var_i0) {goto var_B13;}
+  var_i0 = var_p3;
+  if (var_i0) {
+    var_i0 = var_p4;
+    var_i1 = var_p3;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
+    var_i0 -= var_i1;
+    var_l9 = var_i0;
+    var_i0 = var_l8;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+    var_l5 = var_i0;
+    var_i1 = var_l8;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
+    var_l12 = var_i1;
+    var_i0 = var_i0 < var_i1;
+    if (var_i0) {
+      var_i0 = var_l5;
+      var_i1 = var_l9;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+      var_i0 = var_l5;
+      var_i1 = var_p3;
+      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+      var_i0 = var_l8;
+      var_i1 = var_l5;
+      var_i2 = 8u;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+      goto var_B15;
+    }
+    var_i0 = var_l5;
+    var_i1 = var_l8;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+    var_l10 = var_i1;
+    var_i0 -= var_i1;
+    var_i1 = 3u;
+    var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
+    var_l11 = var_i0;
+    var_i1 = 1u;
+    var_i0 += var_i1;
+    var_p4 = var_i0;
+    var_i1 = 536870912u;
+    var_i0 = var_i0 >= var_i1;
+    if (var_i0) {goto var_B11;}
+    var_i0 = 536870911u;
+    var_i1 = var_l12;
+    var_i2 = var_l10;
+    var_i1 -= var_i2;
+    var_l12 = var_i1;
+    var_i2 = 2u;
+    var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
+    var_l13 = var_i1;
+    var_i2 = var_p4;
+    var_i3 = var_p4;
+    var_i4 = var_l13;
+    var_i3 = var_i3 < var_i4;
+    var_i1 = var_i3 ? var_i1 : var_i2;
+    var_i2 = var_l12;
+    var_i3 = 2147483640u;
+    var_i2 = var_i2 >= var_i3;
+    var_i0 = var_i2 ? var_i0 : var_i1;
+    var_p4 = var_i0;
+    var_i1 = 536870912u;
+    var_i0 = var_i0 >= var_i1;
+    if (var_i0) {goto var_B12;}
+    var_i0 = var_p4;
+    var_i1 = 3u;
+    var_i0 <<= (var_i1 & 31);
+    var_l12 = var_i0;
+    var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
+    var_l13 = var_i0;
+    var_i1 = var_l11;
+    var_i2 = 3u;
+    var_i1 <<= (var_i2 & 31);
+    var_i0 += var_i1;
+    var_p4 = var_i0;
+    var_i1 = var_l9;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+    var_i0 = var_p4;
+    var_i1 = var_p3;
+    i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+    var_i0 = var_p4;
+    var_i1 = 8u;
+    var_i0 += var_i1;
+    var_l9 = var_i0;
+    var_i0 = var_l5;
+    var_i1 = var_l10;
+    var_i0 = var_i0 != var_i1;
+    if (var_i0) {
+      var_L18: 
+        var_i0 = var_p4;
+        var_i1 = 8u;
+        var_i0 -= var_i1;
+        var_p4 = var_i0;
+        var_i1 = var_l5;
+        var_i2 = 8u;
+        var_i1 -= var_i2;
+        var_l5 = var_i1;
+        var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
+        i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+        var_i0 = var_l5;
+        var_i1 = var_l10;
+        var_i0 = var_i0 != var_i1;
+        if (var_i0) {goto var_L18;}
+    }
+    var_i0 = var_l8;
+    var_i1 = var_l12;
+    var_i2 = var_l13;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+    var_i0 = var_l8;
+    var_i1 = var_l9;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+    var_i0 = var_l8;
+    var_i1 = var_p4;
+    i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+    var_i0 = var_l10;
+    var_i0 = !(var_i0);
+    if (var_i0) {goto var_B15;}
+    var_i0 = var_l10;
+    w2c_hermes_dlfree(instance, var_i0);
+    var_B15:;
+    var_i0 = var_p1;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+    var_l10 = var_i0;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 172u);
+    var_l9 = var_i0;
+    var_i0 = var_l10;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l12 = var_i0;
+    var_p4 = var_i0;
+    var_i0 = var_l10;
+    var_l5 = var_i0;
+    var_i0 = var_p3;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l11 = var_i0;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
+    var_p3 = var_i0;
+    if (var_i0) {
+      var_i0 = var_l11;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
+      var_i1 = 808u;
+      var_i0 += var_i1;
+      var_i1 = var_p3;
+      w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AweakRefReadBarrier0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x29(instance, var_i0, var_i1);
+      var_i0 = var_p1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+      var_l5 = var_i0;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+      var_p4 = var_i0;
+    }
+    var_i0 = var_p3;
+    var_j0 = (u64)(var_i0);
+    var_j1 = 18446462598732840960ull;
+    var_j0 |= var_j1;
+    var_l16 = var_j0;
+    var_i0 = var_l5;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
+    var_i1 = var_p4;
+    var_i0 = var_i0 > var_i1;
+    if (var_i0) {
+      var_i0 = var_l5;
+      var_i1 = var_p4;
+      var_i2 = 8u;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+      var_i0 = var_p4;
+      var_j1 = var_l16;
+      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+      goto var_B20;
+    }
+    var_i0 = var_l5;
+    var_j1 = var_l16;
+    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+    var_p4 = var_i0;
+    var_B20:;
+    var_i0 = var_l7;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_p3 = var_i0;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+    var_l5 = var_i0;
+    var_i0 = !(var_i0);
+    if (var_i0) {goto var_B23;}
+    var_i0 = var_l5;
+    var_i1 = 2u;
+    var_i0 <<= (var_i1 & 31);
+    var_i1 = var_p3;
+    var_i0 += var_i1;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+    var_i1 = var_p4;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+    var_i0 = var_i0 != var_i1;
+    if (var_i0) {goto var_B23;}
+    var_i0 = 1u;
+    goto var_B22;
+    var_B23:;
+    var_i0 = var_l6;
+    var_i1 = 12u;
+    var_i0 += var_i1;
+    var_i1 = var_p1;
+    var_i2 = var_p4;
+    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3Apush_back0x28hermes0x3A0x3Avm0x3A0x3AMutableHandle0x3Chermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2);
+    var_B22:;
+    var_p3 = var_i0;
+    var_i0 = var_l10;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 136u);
+    var_i1 = var_l9;
+    var_i2 = 2u;
+    var_i1 <<= (var_i2 & 31);
+    var_i0 += var_i1;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_p4 = var_i0;
+    var_i0 = var_l10;
+    var_i1 = var_l9;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
+    var_i0 = var_l10;
+    var_i1 = var_l12;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l10;
+    var_i1 = var_p4;
+    var_i2 = 128u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 168, var_i1);
+    var_i0 = var_p3;
+    if (var_i0) {goto var_B13;}
+    goto var_B8;
+  }
+  var_i0 = var_l8;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l5 = var_i0;
+  var_i1 = var_l8;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
+  var_l7 = var_i1;
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l5;
+    var_j1 = 0ull;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    var_i0 = var_l8;
+    var_i1 = var_l5;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+    goto var_B13;
+  }
+  var_i0 = var_l5;
+  var_i1 = var_l8;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_p3 = var_i1;
+  var_i0 -= var_i1;
+  var_i1 = 3u;
+  var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
+  var_l10 = var_i0;
   var_i1 = 1u;
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 11, var_i1);
-  var_i0 = var_l2;
+  var_i0 += var_i1;
+  var_p4 = var_i0;
+  var_i1 = 536870912u;
+  var_i0 = var_i0 >= var_i1;
+  if (var_i0) {goto var_B11;}
+  var_i0 = 536870911u;
+  var_i1 = var_l7;
+  var_i2 = var_p3;
+  var_i1 -= var_i2;
+  var_l7 = var_i1;
+  var_i2 = 2u;
+  var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
+  var_l9 = var_i1;
+  var_i2 = var_p4;
+  var_i3 = var_p4;
+  var_i4 = var_l9;
+  var_i3 = var_i3 < var_i4;
+  var_i1 = var_i3 ? var_i1 : var_i2;
+  var_i2 = var_l7;
+  var_i3 = 2147483640u;
+  var_i2 = var_i2 >= var_i3;
+  var_i0 = var_i2 ? var_i0 : var_i1;
+  var_p4 = var_i0;
+  var_i1 = 536870912u;
+  var_i0 = var_i0 >= var_i1;
+  if (var_i0) {goto var_B12;}
+  var_i0 = var_p4;
+  var_i1 = 3u;
+  var_i0 <<= (var_i1 & 31);
+  var_l7 = var_i0;
+  var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
+  var_l9 = var_i0;
+  var_i1 = var_l10;
+  var_i2 = 3u;
+  var_i1 <<= (var_i2 & 31);
+  var_i0 += var_i1;
+  var_p4 = var_i0;
+  var_j1 = 0ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+  var_i0 = var_p4;
+  var_i1 = 8u;
+  var_i0 += var_i1;
+  var_l10 = var_i0;
+  var_i0 = var_p3;
+  var_i1 = var_l5;
+  var_i0 = var_i0 != var_i1;
+  if (var_i0) {
+    var_L26: 
+      var_i0 = var_p4;
+      var_i1 = 8u;
+      var_i0 -= var_i1;
+      var_p4 = var_i0;
+      var_i1 = var_l5;
+      var_i2 = 8u;
+      var_i1 -= var_i2;
+      var_l5 = var_i1;
+      var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
+      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+      var_i0 = var_p3;
+      var_i1 = var_l5;
+      var_i0 = var_i0 != var_i1;
+      if (var_i0) {goto var_L26;}
+  }
+  var_i0 = var_l8;
+  var_i1 = var_l7;
+  var_i2 = var_l9;
+  var_i1 += var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+  var_i0 = var_l8;
+  var_i1 = var_l10;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+  var_i0 = var_l8;
+  var_i1 = var_p4;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i0 = var_p3;
+  var_i0 = !(var_i0);
+  if (var_i0) {goto var_B13;}
+  var_i0 = var_p3;
+  w2c_hermes_dlfree(instance, var_i0);
+  var_B13:;
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
+  var_l5 = var_i0;
+  var_i1 = var_p1;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5580u);
+  var_l10 = var_i1;
+  var_i0 = var_i0 != var_i1;
+  if (var_i0) {
+    var_L28: 
+      var_i0 = var_l5;
+      var_i1 = 16u;
+      var_i0 -= var_i1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_p3 = var_i0;
+      var_i0 = var_l5;
+      var_i1 = 24u;
+      var_i0 -= var_i1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_l7 = var_i0;
+      var_i0 = var_l10;
+      var_i1 = var_l5;
+      var_i2 = 8u;
+      var_i1 -= var_i2;
+      var_l12 = var_i1;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_p4 = var_i1;
+      var_i0 = var_i0 == var_i1;
+      if (var_i0) {goto var_B29;}
+      var_i0 = var_p4;
+      var_i1 = 48u;
+      var_i0 -= var_i1;
+      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+      var_l16 = var_j0;
+      var_j1 = 48ull;
+      var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
+      var_i0 = (u32)(var_j0);
+      var_i1 = 4294967295u;
+      var_i0 = var_i0 == var_i1;
+      if (var_i0) {
+        var_j0 = var_l16;
+        var_j1 = 18445899648779419648ull;
+        var_i0 = var_j0 < var_j1;
+        if (var_i0) {goto var_B29;}
+        var_j0 = var_l16;
+        var_i0 = (u32)(var_j0);
+        var_p4 = var_i0;
+        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+        var_i1 = 1224736768u;
+        var_i0 -= var_i1;
+        var_i1 = 67108863u;
+        var_i0 = var_i0 > var_i1;
+        if (var_i0) {goto var_B29;}
+        var_i0 = var_p1;
+        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1276u);
+        var_i1 = var_p4;
+        var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 24u);
+        var_i0 ^= var_i1;
+        goto var_B30;
+      }
+      var_j0 = var_l16;
+      var_i0 = (u32)(var_j0);
+      var_B30:;
+      var_p4 = var_i0;
+      var_i1 = var_l7;
+      var_i2 = var_p4;
+      var_i0 = var_i2 ? var_i0 : var_i1;
+      var_l7 = var_i0;
+      var_B29:;
+      var_i0 = var_p3;
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B33;}
+      var_i0 = var_l7;
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B33;}
+      var_i0 = var_p3;
+      var_i1 = var_l7;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
+      var_i0 -= var_i1;
+      var_l9 = var_i0;
+      var_i0 = var_l8;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+      var_l5 = var_i0;
+      var_i1 = var_l8;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
+      var_l11 = var_i1;
+      var_i0 = var_i0 < var_i1;
+      if (var_i0) {
+        var_i0 = var_l5;
+        var_i1 = var_l9;
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+        var_i0 = var_l5;
+        var_i1 = var_l7;
+        i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+        var_i0 = var_l8;
+        var_i1 = var_l5;
+        var_i2 = 8u;
+        var_i1 += var_i2;
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+        goto var_B34;
+      }
+      var_i0 = var_l5;
+      var_i1 = var_l8;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_p3 = var_i1;
+      var_i0 -= var_i1;
+      var_i1 = 3u;
+      var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
+      var_l13 = var_i0;
+      var_i1 = 1u;
+      var_i0 += var_i1;
+      var_p4 = var_i0;
+      var_i1 = 536870912u;
+      var_i0 = var_i0 >= var_i1;
+      if (var_i0) {goto var_B11;}
+      var_i0 = 536870911u;
+      var_i1 = var_l11;
+      var_i2 = var_p3;
+      var_i1 -= var_i2;
+      var_l11 = var_i1;
+      var_i2 = 2u;
+      var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
+      var_l14 = var_i1;
+      var_i2 = var_p4;
+      var_i3 = var_p4;
+      var_i4 = var_l14;
+      var_i3 = var_i3 < var_i4;
+      var_i1 = var_i3 ? var_i1 : var_i2;
+      var_i2 = var_l11;
+      var_i3 = 2147483640u;
+      var_i2 = var_i2 >= var_i3;
+      var_i0 = var_i2 ? var_i0 : var_i1;
+      var_p4 = var_i0;
+      var_i1 = 536870912u;
+      var_i0 = var_i0 >= var_i1;
+      if (var_i0) {goto var_B12;}
+      var_i0 = var_p4;
+      var_i1 = 3u;
+      var_i0 <<= (var_i1 & 31);
+      var_l11 = var_i0;
+      var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
+      var_l14 = var_i0;
+      var_i1 = var_l13;
+      var_i2 = 3u;
+      var_i1 <<= (var_i2 & 31);
+      var_i0 += var_i1;
+      var_p4 = var_i0;
+      var_i1 = var_l9;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+      var_i0 = var_p4;
+      var_i1 = var_l7;
+      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+      var_i0 = var_p4;
+      var_i1 = 8u;
+      var_i0 += var_i1;
+      var_l9 = var_i0;
+      var_i0 = var_p3;
+      var_i1 = var_l5;
+      var_i0 = var_i0 != var_i1;
+      if (var_i0) {
+        var_L37: 
+          var_i0 = var_p4;
+          var_i1 = 8u;
+          var_i0 -= var_i1;
+          var_p4 = var_i0;
+          var_i1 = var_l5;
+          var_i2 = 8u;
+          var_i1 -= var_i2;
+          var_l5 = var_i1;
+          var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
+          i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+          var_i0 = var_p3;
+          var_i1 = var_l5;
+          var_i0 = var_i0 != var_i1;
+          if (var_i0) {goto var_L37;}
+      }
+      var_i0 = var_l8;
+      var_i1 = var_l11;
+      var_i2 = var_l14;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+      var_i0 = var_l8;
+      var_i1 = var_l9;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+      var_i0 = var_l8;
+      var_i1 = var_p4;
+      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+      var_i0 = var_p3;
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B34;}
+      var_i0 = var_p3;
+      w2c_hermes_dlfree(instance, var_i0);
+      var_B34:;
+      var_i0 = var_p1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+      var_l5 = var_i0;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 172u);
+      var_l9 = var_i0;
+      var_i0 = var_l5;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+      var_l11 = var_i0;
+      var_p4 = var_i0;
+      var_i0 = var_l5;
+      var_p3 = var_i0;
+      var_i0 = var_l7;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_l13 = var_i0;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
+      var_l7 = var_i0;
+      if (var_i0) {
+        var_i0 = var_l13;
+        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
+        var_i1 = 808u;
+        var_i0 += var_i1;
+        var_i1 = var_l7;
+        w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AweakRefReadBarrier0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x29(instance, var_i0, var_i1);
+        var_i0 = var_p1;
+        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+        var_p3 = var_i0;
+        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+        var_p4 = var_i0;
+      }
+      var_i0 = var_l7;
+      var_j0 = (u64)(var_i0);
+      var_j1 = 18446462598732840960ull;
+      var_j0 |= var_j1;
+      var_l16 = var_j0;
+      var_i0 = var_p3;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
+      var_i1 = var_p4;
+      var_i0 = var_i0 > var_i1;
+      if (var_i0) {
+        var_i0 = var_p3;
+        var_i1 = var_p4;
+        var_i2 = 8u;
+        var_i1 += var_i2;
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+        var_i0 = var_p4;
+        var_j1 = var_l16;
+        i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+        goto var_B39;
+      }
+      var_i0 = var_p3;
+      var_j1 = var_l16;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+      var_p4 = var_i0;
+      var_B39:;
+      var_i0 = var_l6;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 12u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_p3 = var_i0;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+      var_l7 = var_i0;
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B42;}
+      var_i0 = var_l7;
+      var_i1 = 2u;
+      var_i0 <<= (var_i1 & 31);
+      var_i1 = var_p3;
+      var_i0 += var_i1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+      var_i1 = var_p4;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_i0 = var_i0 != var_i1;
+      if (var_i0) {goto var_B42;}
+      var_i0 = 1u;
+      goto var_B41;
+      var_B42:;
+      var_i0 = var_l6;
+      var_i1 = 12u;
+      var_i0 += var_i1;
+      var_i1 = var_p1;
+      var_i2 = var_p4;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3Apush_back0x28hermes0x3A0x3Avm0x3A0x3AMutableHandle0x3Chermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2);
+      var_B41:;
+      var_p3 = var_i0;
+      var_i0 = var_l5;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 136u);
+      var_i1 = var_l9;
+      var_i2 = 2u;
+      var_i1 <<= (var_i2 & 31);
+      var_i0 += var_i1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_p4 = var_i0;
+      var_i0 = var_l5;
+      var_i1 = var_l9;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
+      var_i0 = var_l5;
+      var_i1 = var_l11;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+      var_i0 = var_l5;
+      var_i1 = var_p4;
+      var_i2 = 128u;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 168, var_i1);
+      var_i0 = var_p3;
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B8;}
+      goto var_B32;
+      var_B33:;
+      var_i0 = var_l8;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+      var_l5 = var_i0;
+      var_i1 = var_l8;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
+      var_l7 = var_i1;
+      var_i0 = var_i0 < var_i1;
+      if (var_i0) {
+        var_i0 = var_l5;
+        var_j1 = 0ull;
+        i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+        var_i0 = var_l8;
+        var_i1 = var_l5;
+        var_i2 = 8u;
+        var_i1 += var_i2;
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+        goto var_B32;
+      }
+      var_i0 = var_l5;
+      var_i1 = var_l8;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_p3 = var_i1;
+      var_i0 -= var_i1;
+      var_i1 = 3u;
+      var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
+      var_l9 = var_i0;
+      var_i1 = 1u;
+      var_i0 += var_i1;
+      var_p4 = var_i0;
+      var_i1 = 536870912u;
+      var_i0 = var_i0 >= var_i1;
+      if (var_i0) {goto var_B11;}
+      var_i0 = 536870911u;
+      var_i1 = var_l7;
+      var_i2 = var_p3;
+      var_i1 -= var_i2;
+      var_l7 = var_i1;
+      var_i2 = 2u;
+      var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
+      var_l11 = var_i1;
+      var_i2 = var_p4;
+      var_i3 = var_p4;
+      var_i4 = var_l11;
+      var_i3 = var_i3 < var_i4;
+      var_i1 = var_i3 ? var_i1 : var_i2;
+      var_i2 = var_l7;
+      var_i3 = 2147483640u;
+      var_i2 = var_i2 >= var_i3;
+      var_i0 = var_i2 ? var_i0 : var_i1;
+      var_p4 = var_i0;
+      var_i1 = 536870912u;
+      var_i0 = var_i0 >= var_i1;
+      if (var_i0) {goto var_B12;}
+      var_i0 = var_p4;
+      var_i1 = 3u;
+      var_i0 <<= (var_i1 & 31);
+      var_l7 = var_i0;
+      var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
+      var_l11 = var_i0;
+      var_i1 = var_l9;
+      var_i2 = 3u;
+      var_i1 <<= (var_i2 & 31);
+      var_i0 += var_i1;
+      var_p4 = var_i0;
+      var_j1 = 0ull;
+      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+      var_i0 = var_p4;
+      var_i1 = 8u;
+      var_i0 += var_i1;
+      var_l9 = var_i0;
+      var_i0 = var_p3;
+      var_i1 = var_l5;
+      var_i0 = var_i0 != var_i1;
+      if (var_i0) {
+        var_L45: 
+          var_i0 = var_p4;
+          var_i1 = 8u;
+          var_i0 -= var_i1;
+          var_p4 = var_i0;
+          var_i1 = var_l5;
+          var_i2 = 8u;
+          var_i1 -= var_i2;
+          var_l5 = var_i1;
+          var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
+          i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+          var_i0 = var_p3;
+          var_i1 = var_l5;
+          var_i0 = var_i0 != var_i1;
+          if (var_i0) {goto var_L45;}
+      }
+      var_i0 = var_l8;
+      var_i1 = var_l7;
+      var_i2 = var_l11;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+      var_i0 = var_l8;
+      var_i1 = var_l9;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+      var_i0 = var_l8;
+      var_i1 = var_p4;
+      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+      var_i0 = var_p3;
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B32;}
+      var_i0 = var_p3;
+      w2c_hermes_dlfree(instance, var_i0);
+      var_B32:;
+      var_i0 = var_l10;
+      var_i1 = var_l12;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_l5 = var_i1;
+      var_i0 = var_i0 != var_i1;
+      if (var_i0) {goto var_L28;}
+  }
+  var_i0 = var_p1;
+  var_i1 = 808u;
+  var_i0 += var_i1;
+  var_l9 = var_i0;
+  var_i0 = var_l6;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 12u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_p3 = var_i0;
+  var_i0 = var_p1;
+  var_i1 = 1356u;
+  var_i0 += var_i1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 5664u;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_i2 = 28u;
+  var_i1 += var_i2;
+  var_p4 = var_i1;
+  var_i2 = 4290772992u;
+  var_i1 &= var_i2;
+  var_i0 = var_i0 != var_i1;
+  if (var_i0) {
+    var_i0 = var_l9;
+    var_i1 = var_p4;
+    var_i2 = var_p3;
+    w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
+  }
+  var_i0 = var_p4;
+  var_i1 = var_p3;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i0 = var_l8;
+  var_i1 = var_l8;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
+  var_i2 = 8u;
+  var_i1 -= var_i2;
+  var_l5 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+  var_i0 = var_l5;
+  var_i1 = var_l8;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_i0 -= var_i1;
+  var_p3 = var_i0;
+  var_i1 = 8216560u;
+  var_i0 = var_i0 <= var_i1;
+  if (var_i0) {
+    var_i0 = var_p3;
+    var_i1 = 1u;
+    var_i0 >>= (var_i1 & 31);
+    var_i1 = 15u;
+    var_i0 += var_i1;
+    var_p4 = var_i0;
+    var_i1 = 2147483640u;
+    var_i0 &= var_i1;
+    var_p3 = var_i0;
+    var_i1 = var_p1;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1368u);
+    var_i2 = var_p1;
+    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1364u);
+    var_l5 = var_i2;
+    var_i1 -= var_i2;
+    var_i0 = var_i0 > var_i1;
+    if (var_i0) {
+      var_i0 = var_l9;
+      var_i1 = var_p3;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+      var_l5 = var_i0;
+      goto var_B50;
+    }
+    var_i0 = var_p1;
+    var_i1 = var_p3;
+    var_i2 = var_l5;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
+    var_B50:;
+    var_i0 = var_l5;
+    var_j1 = 0ull;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    var_i0 = var_l5;
+    var_i1 = var_p4;
+    var_i2 = 16777208u;
+    var_i1 &= var_i2;
+    var_i2 = 251658240u;
+    var_i1 |= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+    goto var_B48;
+  }
+  var_i0 = var_p1;
+  var_i1 = var_p3;
+  var_i2 = 3u;
+  var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3AthrowExcessiveCapacityError0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1);
+  var_i0 = !(var_i0);
+  if (var_i0) {goto var_B47;}
+  var_B48:;
+  var_i0 = var_l5;
+  var_j0 = (u64)(var_i0);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l16 = var_j0;
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_p3 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l5 = var_i0;
+  var_i1 = var_p3;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_p3;
+    var_i1 = var_l5;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l5;
+    var_j1 = var_l16;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B52;
+  }
+  var_i0 = var_p3;
+  var_j1 = var_l16;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l5 = var_i0;
+  var_B52:;
+  var_i0 = var_l6;
+  var_i1 = var_l5;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 200, var_i1);
+  var_i0 = var_l6;
+  var_i1 = var_p1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_p3 = var_i0;
+  var_i0 = var_l6;
+  var_i1 = 172u;
+  var_i0 += var_i1;
+  var_p4 = var_i0;
+  var_i1 = var_l6;
+  var_i2 = 32u;
+  var_i1 += var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i0 = var_l6;
+  var_j1 = 17179869185ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_j1);
+  var_i0 = var_l6;
+  var_i1 = var_p4;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_i1);
+  var_i0 = var_l6;
+  var_i1 = var_p3;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
+  var_i0 = var_l6;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 196, var_i1);
+  var_i0 = var_l6;
+  var_i1 = var_l6;
+  var_i2 = 160u;
+  var_i1 += var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 192, var_i1);
+  var_i0 = var_p1;
+  var_i1 = var_l6;
+  var_i2 = 24u;
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-  var_i0 = var_p0;
-  var_i1 = 816u;
-  var_i0 += var_i1;
-  var_i1 = var_l2;
-  var_i2 = 12u;
+  var_i0 = var_l6;
+  var_j1 = 18445055223849287680ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+  var_i0 = var_l6;
+  var_i1 = var_l6;
+  var_i2 = 40u;
   var_i1 += var_i2;
-  var_i2 = var_l2;
-  var_i3 = 4u;
-  var_i2 += var_i3;
-  var_i3 = var_l2;
-  var_i4 = 11u;
-  var_i3 += var_i4;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x2A0x20hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AmakeA0x3Chermes0x3A0x3Avm0x3A0x3AJSError0x2C0x20true0x2C0x200x28hermes0x3A0x3Avm0x3A0x3AHasFinalizer0x2910x2C0x200x28hermes0x3A0x3Avm0x3A0x3ALongLived0x2900x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHiddenClass0x3E0x2C0x20bool0x260x3E0x28unsigned0x20int0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHiddenClass0x3E0x260x260x2C0x20bool0x260x29(instance, var_i0, var_i1, var_i2, var_i3);
+  var_l11 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
+  var_p4 = var_i0;
+  var_i1 = var_p1;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5580u);
+  var_l13 = var_i1;
+  var_i0 = var_i0 == var_i1;
+  if (var_i0) {goto var_B10;}
+  var_i0 = var_p1;
+  var_i1 = 5468u;
+  var_i0 += var_i1;
+  var_l12 = var_i0;
+  var_i0 = 0u;
+  var_l5 = var_i0;
+  var_i0 = 0u;
+  var_l7 = var_i0;
+  var_L55: 
+    var_i0 = var_l5;
+    var_i1 = 1u;
+    var_i2 = var_p2;
+    var_i0 = var_i2 ? var_i0 : var_i1;
+    if (var_i0) {
+      var_i0 = var_l6;
+      var_j1 = 18445055223849287680ull;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      var_i0 = 67200u;
+      var_p3 = var_i0;
+      var_i0 = var_p4;
+      var_i1 = 48u;
+      var_i0 -= var_i1;
+      var_l10 = var_i0;
+      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+      var_l16 = var_j0;
+      var_j1 = 18445899648779419648ull;
+      var_i0 = var_j0 >= var_j1;
+      if (var_i0) {
+        var_i0 = 67200u;
+        var_i1 = var_l10;
+        var_j2 = var_l16;
+        var_i2 = (u32)(var_j2);
+        var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
+        var_i3 = 1140850688u;
+        var_i2 -= var_i3;
+        var_i3 = 150994944u;
+        var_i2 = var_i2 >= var_i3;
+        var_i0 = var_i2 ? var_i0 : var_i1;
+        var_p3 = var_i0;
+      }
+      var_i0 = var_p3;
+      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+      var_l17 = var_j0;
+      var_j1 = 18445899648779419648ull;
+      var_i0 = var_j0 < var_j1;
+      if (var_i0) {goto var_B60;}
+      var_j0 = var_l17;
+      var_j1 = 4294967295ull;
+      var_j0 &= var_j1;
+      var_i0 = !(var_j0);
+      if (var_i0) {goto var_B60;}
+      var_i0 = var_l6;
+      var_j1 = 18446744069414584320ull;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
+      var_i0 = var_l6;
+      var_i1 = 1u;
+      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 10, var_i1);
+      var_i0 = var_l6;
+      var_i1 = 1u;
+      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 206, var_i1);
+      var_i0 = var_p3;
+      var_i1 = var_p1;
+      var_i2 = 140u;
+      var_i3 = var_l6;
+      var_i4 = 10u;
+      var_i3 += var_i4;
+      var_i4 = var_l6;
+      var_i5 = 16u;
+      var_i4 += var_i5;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedDescriptorUnsafe0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3ANamedPropertyDescriptor0x260x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
+      var_l10 = var_i0;
+      if (var_i0) {goto var_B61;}
+      var_i0 = var_l6;
+      var_i1 = 1u;
+      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+      var_i0 = var_l6;
+      var_i1 = 1u;
+      i32_store16(&instance->w2c_memory, (u64)(var_i0) + 206, var_i1);
+      var_i0 = var_p3;
+      var_i1 = var_p1;
+      var_i2 = 139u;
+      var_i3 = var_l6;
+      var_i4 = 8u;
+      var_i3 += var_i4;
+      var_i4 = var_l6;
+      var_i5 = 16u;
+      var_i4 += var_i5;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedDescriptorUnsafe0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3ANamedPropertyDescriptor0x260x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
+      var_l10 = var_i0;
+      if (var_i0) {goto var_B61;}
+      var_i0 = var_l6;
+      var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0) + 16u);
+      var_p3 = var_i0;
+      goto var_B59;
+      var_B61:;
+      var_i0 = var_l6;
+      var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0) + 16u);
+      var_p3 = var_i0;
+      var_i1 = 1296u;
+      var_i0 &= var_i1;
+      if (var_i0) {goto var_B59;}
+      var_j0 = 18445055223849287680ull;
+      var_l16 = var_j0;
+      var_i0 = var_l6;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
+      var_p3 = var_i0;
+      var_i1 = 4u;
+      var_i0 = var_i0 <= var_i1;
+      if (var_i0) {
+        var_i0 = var_l10;
+        var_i1 = var_p3;
+        var_i2 = 2u;
+        var_i1 <<= (var_i2 & 31);
+        var_i0 += var_i1;
+        var_i1 = 20u;
+        var_i0 += var_i1;
+        goto var_B72;
+      }
+      var_i0 = var_l10;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
+      var_i1 = var_p3;
+      var_i2 = 2u;
+      var_i1 <<= (var_i2 & 31);
+      var_i0 += var_i1;
+      var_i1 = 12u;
+      var_i0 -= var_i1;
+      var_B72:;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_p3 = var_i0;
+      var_i1 = 15u;
+      var_i0 &= var_i1;
+      var_i1 = 1u;
+      var_i0 -= var_i1;
+      switch (var_i0) {
+        case 0: goto var_B70;
+        case 1: goto var_B69;
+        case 2: goto var_B68;
+        case 3: goto var_B67;
+        case 4: goto var_B66;
+        case 5: goto var_B65;
+        case 6: goto var_B64;
+        case 7: goto var_B71;
+        case 8: goto var_B70;
+        case 9: goto var_B69;
+        case 10: goto var_B68;
+        case 11: goto var_B67;
+        case 12: goto var_B66;
+        case 13: goto var_B62;
+        case 14: goto var_B63;
+        default: goto var_B71;
+      }
+      var_B71:;
+      var_i0 = var_l6;
+      var_i1 = var_p3;
+      var_j1 = (u64)(var_i1);
+      var_j2 = 18446462598732840960ull;
+      var_j1 |= var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B70:;
+      var_i0 = var_l6;
+      var_i1 = var_p3;
+      var_i2 = 4294967288u;
+      var_i1 &= var_i2;
+      var_j1 = (u64)(var_i1);
+      var_j2 = 18446181123756130304ull;
+      var_j1 |= var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B69:;
+      var_i0 = var_l6;
+      var_i1 = var_p3;
+      var_i2 = 4294967288u;
+      var_i1 &= var_i2;
+      var_j1 = (u64)(var_i1);
+      var_j2 = 18445899648779419648ull;
+      var_j1 |= var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B68:;
+      var_i0 = var_l6;
+      var_j1 = 9221120237041090560ull;
+      var_i2 = var_p3;
+      var_i3 = 4294967288u;
+      var_i2 &= var_i3;
+      var_d2 = f64_load(&instance->w2c_memory, (u64)(var_i2) + 8u);
+      var_l18 = var_d2;
+      var_j2 = i64_reinterpret_f64(var_d2);
+      var_d3 = var_l18;
+      var_d4 = var_l18;
+      var_i3 = var_d3 != var_d4;
+      var_j1 = var_i3 ? var_j1 : var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B67:;
+      var_i0 = var_l6;
+      var_i1 = var_p3;
+      var_i2 = 3u;
+      var_i1 = (u32)((s32)var_i1 >> (var_i2 & 31));
+      var_d1 = (f64)(s32)(var_i1);
+      f64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_d1);
+      goto var_B58;
+      var_B66:;
+      var_i0 = var_l6;
+      var_i1 = var_p3;
+      var_i2 = 3u;
+      var_i1 >>= (var_i2 & 31);
+      var_j1 = (u64)(var_i1);
+      var_j2 = 18445477436314353664ull;
+      var_j1 |= var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B65:;
+      var_i0 = var_l6;
+      var_i1 = var_p3;
+      var_i2 = 15u;
+      var_i1 = var_i1 > var_i2;
+      var_j1 = (u64)(var_i1);
+      var_j2 = 18445336698825998336ull;
+      var_j1 |= var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B64:;
+      var_i0 = var_l6;
+      var_j1 = 18444773748872577024ull;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B63:;
+      var_j0 = 18445195961337643008ull;
+      var_l16 = var_j0;
+      var_B62:;
+      var_i0 = var_l6;
+      var_j1 = var_l16;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B60:;
+      var_j0 = var_l16;
+      var_j1 = 48ull;
+      var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
+      var_i0 = (u32)(var_j0);
+      var_i1 = 4294967295u;
+      var_i0 = var_i0 == var_i1;
+      if (var_i0) {goto var_B58;}
+      var_j0 = var_l16;
+      var_i0 = (u32)(var_j0);
+      var_p3 = var_i0;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AgetNameMayAllocate0x280x290x20const(instance, var_i0);
+      var_i1 = 536870909u;
+      var_i0 = var_i0 > var_i1;
+      if (var_i0) {goto var_B58;}
+      var_i0 = var_l6;
+      var_i1 = var_l12;
+      var_i2 = var_p1;
+      var_i3 = var_p3;
+      var_i3 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AgetNameMayAllocate0x280x290x20const(instance, var_i3);
+      var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringPrim0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x29(instance, var_i1, var_i2, var_i3);
+      var_j1 = (u64)(var_i1);
+      var_j2 = 18445899648779419648ull;
+      var_j1 |= var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      goto var_B58;
+      var_B59:;
+      var_i0 = var_p3;
+      var_i1 = 1024u;
+      var_i0 &= var_i1;
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B58;}
+      var_i0 = var_l6;
+      var_i1 = var_l12;
+      var_i2 = var_p1;
+      var_i3 = 429u;
+      var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetStringPrim0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x29(instance, var_i1, var_i2, var_i3);
+      var_j1 = (u64)(var_i1);
+      var_j2 = 18445899648779419648ull;
+      var_j1 |= var_j2;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+      var_B58:;
+      var_i0 = var_l6;
+      var_i1 = 200u;
+      var_i0 += var_i1;
+      var_i1 = var_p1;
+      var_i2 = var_l7;
+      var_i3 = 1u;
+      var_i2 += var_i3;
+      var_l10 = var_i2;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3Ashift0x28hermes0x3A0x3Avm0x3A0x3AMutableHandle0x3Chermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x2C0x20unsigned0x20int0x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1, var_i2);
+      var_i0 = !(var_i0);
+      if (var_i0) {goto var_B54;}
+      var_i0 = 7u;
+      var_p3 = var_i0;
+      var_i0 = var_l6;
+      var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 32u);
+      var_l16 = var_j0;
+      var_j1 = 47ull;
+      var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
+      var_i0 = (u32)(var_j0);
+      var_i1 = 14u;
+      var_i0 += var_i1;
+      switch (var_i0) {
+        case 0: goto var_B74;
+        case 1: goto var_B75;
+        case 2: goto var_B82;
+        case 3: goto var_B81;
+        case 4: goto var_B80;
+        case 5: goto var_B79;
+        case 6: goto var_B75;
+        case 7: goto var_B75;
+        case 8: goto var_B78;
+        case 9: goto var_B78;
+        case 10: goto var_B77;
+        case 11: goto var_B77;
+        case 12: goto var_B76;
+        case 13: goto var_B76;
+        default: goto var_B75;
+      }
+      var_B82:;
+      var_i0 = 14u;
+      var_p3 = var_i0;
+      goto var_B74;
+      var_B81:;
+      var_i0 = 15u;
+      var_p3 = var_i0;
+      goto var_B74;
+      var_B80:;
+      var_i0 = 6u;
+      var_i1 = 22u;
+      var_j2 = var_l16;
+      var_j3 = 1ull;
+      var_j2 &= var_j3;
+      var_i2 = !(var_j2);
+      var_i0 = var_i2 ? var_i0 : var_i1;
+      var_p3 = var_i0;
+      goto var_B74;
+      var_B79:;
+      var_j0 = var_l16;
+      var_i0 = (u32)(var_j0);
+      var_i1 = 3u;
+      var_i0 <<= (var_i1 & 31);
+      var_i1 = 5u;
+      var_i0 |= var_i1;
+      var_p3 = var_i0;
+      goto var_B74;
+      var_B78:;
+      var_j0 = var_l16;
+      var_i0 = (u32)(var_j0);
+      var_i1 = 2u;
+      var_i0 |= var_i1;
+      var_p3 = var_i0;
+      goto var_B74;
+      var_B77:;
+      var_j0 = var_l16;
+      var_i0 = (u32)(var_j0);
+      var_i1 = 1u;
+      var_i0 |= var_i1;
+      var_p3 = var_i0;
+      goto var_B74;
+      var_B76:;
+      var_j0 = var_l16;
+      var_i0 = (u32)(var_j0);
+      var_p3 = var_i0;
+      goto var_B74;
+      var_B75:;
+      var_j0 = var_l16;
+      var_d0 = f64_reinterpret_i64(var_j0);
+      var_l18 = var_d0;
+      var_d0 = wasm_fabs(var_d0);
+      var_d1 = 2147483648;
+      var_i0 = var_d0 < var_d1;
+      if (var_i0) {
+        var_d0 = var_l18;
+        var_i0 = I32_TRUNC_S_F64(var_d0);
+        goto var_B83;
+      }
+      var_i0 = 2147483648u;
+      var_B83:;
+      var_i1 = 3u;
+      var_i0 <<= (var_i1 & 31);
+      var_p3 = var_i0;
+      var_i1 = 3u;
+      var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
+      var_d0 = (f64)(s32)(var_i0);
+      var_j0 = i64_reinterpret_f64(var_d0);
+      var_j1 = var_l16;
+      var_i0 = var_j0 == var_j1;
+      if (var_i0) {
+        var_i0 = var_p3;
+        var_i1 = 4u;
+        var_i0 |= var_i1;
+        var_p3 = var_i0;
+        goto var_B74;
+      }
+      var_i0 = var_p1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1368u);
+      var_i1 = var_p1;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
+      var_p3 = var_i1;
+      var_i0 -= var_i1;
+      var_i1 = 15u;
+      var_i0 = var_i0 <= var_i1;
+      if (var_i0) {
+        var_i0 = var_l9;
+        var_i1 = 16u;
+        var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+        var_p3 = var_i0;
+        goto var_B86;
+      }
+      var_i0 = var_p1;
+      var_i1 = var_p3;
+      var_i2 = 16u;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
+      var_B86:;
+      var_i0 = var_p3;
+      var_i1 = 402653200u;
+      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+      var_i0 = var_p3;
+      var_j1 = var_l16;
+      i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
+      var_i0 = var_p3;
+      var_i1 = 3u;
+      var_i0 |= var_i1;
+      var_p3 = var_i0;
+      var_B74:;
+      var_i0 = var_p1;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
+      var_i1 = var_l6;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 200u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_i2 = var_l7;
+      var_i3 = 2u;
+      var_i2 <<= (var_i3 & 31);
+      var_i1 += var_i2;
+      var_i2 = 8u;
+      var_i1 += var_i2;
+      var_l7 = var_i1;
+      var_i2 = 4290772992u;
+      var_i1 &= var_i2;
+      var_i0 = var_i0 != var_i1;
+      if (var_i0) {
+        var_i0 = var_l9;
+        var_i1 = var_l7;
+        var_i2 = var_p3;
+        w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCHermesValueBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue320x29(instance, var_i0, var_i1, var_i2);
+      }
+      var_i0 = var_l7;
+      var_i1 = var_p3;
+      i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+      var_i0 = var_l6;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 160u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+      var_p3 = var_i0;
+      var_i0 = var_l6;
+      var_i1 = 0u;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 196, var_i1);
+      var_i0 = var_l6;
+      var_i1 = var_l11;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
+      var_i0 = var_l6;
+      var_i1 = var_p3;
+      var_i2 = 128u;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 192, var_i1);
+      var_i0 = var_l10;
+      var_l7 = var_i0;
+    }
+    var_i0 = var_l5;
+    var_i1 = 1u;
+    var_i0 += var_i1;
+    var_l5 = var_i0;
+    var_i0 = var_l13;
+    var_i1 = var_p4;
+    var_i2 = 8u;
+    var_i1 -= var_i2;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+    var_p4 = var_i1;
+    var_i0 = var_i0 != var_i1;
+    if (var_i0) {goto var_L55;}
+  var_i0 = var_l6;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 200u);
+  var_l5 = var_i0;
+  goto var_B10;
+  var_B54:;
+  var_i0 = var_p1;
+  var_j1 = 18444773748872577024ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 704, var_j1);
+  var_i0 = 67200u;
+  var_l5 = var_i0;
+  goto var_B10;
+  var_B47:;
+  var_i0 = var_p1;
+  var_j1 = 18444773748872577024ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 704, var_j1);
+  var_i0 = 67200u;
+  var_l5 = var_i0;
+  goto var_B9;
+  var_B12:;
+  w2c_hermes_std0x3A0x3A_0x5F20x3A0x3A_0x5Fthrow_out_of_range0x5Babi0x3Av150070x5D0x28char0x20const0x2A0x29(instance);
+  UNREACHABLE;
+  var_B11:;
+  w2c_hermes_abort(instance);
+  UNREACHABLE;
+  var_B10:;
+  var_i0 = var_l6;
+  var_i1 = 24u;
+  var_i0 += var_i1;
+  w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A0x7EGCScope0x280x29(instance, var_i0);
+  var_B9:;
+  var_i0 = var_p0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_p3 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
+  var_p2 = var_i0;
+  var_i0 = var_p3;
+  var_i1 = var_l8;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
+  var_i0 = var_p2;
+  if (var_i0) {
+    var_i0 = var_p2;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_p3 = var_i0;
+    if (var_i0) {
+      var_i0 = var_p2;
+      var_i1 = var_p3;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+      var_i0 = var_p3;
+      w2c_hermes_dlfree(instance, var_i0);
+    }
+    var_i0 = var_p2;
+    w2c_hermes_dlfree(instance, var_i0);
+  }
+  var_i0 = var_l5;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_p2 = var_i0;
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
+  var_i1 = var_p0;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_i2 = 32u;
+  var_i1 += var_i2;
+  var_p0 = var_i1;
+  var_i2 = 4290772992u;
+  var_i1 &= var_i2;
+  var_i0 = var_i0 != var_i1;
+  if (var_i0) {
+    var_i0 = var_l9;
+    var_i1 = var_p0;
+    var_i2 = var_p2;
+    w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
+  }
+  var_i0 = var_p0;
+  var_i1 = var_p2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  goto var_B0;
+  var_B8:;
+  var_i0 = var_l8;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p0 = var_i0;
-  var_i0 = var_l2;
-  var_i1 = 16u;
+  if (var_i0) {
+    var_i0 = var_l8;
+    var_i1 = var_p0;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+    var_i0 = var_p0;
+    w2c_hermes_dlfree(instance, var_i0);
+  }
+  var_i0 = var_l8;
+  w2c_hermes_dlfree(instance, var_i0);
+  var_i0 = 0u;
+  var_l15 = var_i0;
+  var_B0:;
+  var_i0 = var_l6;
+  var_i1 = 208u;
   var_i0 += var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_p0;
+  var_i0 = var_l15;
   FUNC_EPILOGUE;
   return var_i0;
 }
@@ -22478,11 +21923,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
   var_l6 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l5 = var_i1;
@@ -22491,7 +21936,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -22502,7 +21947,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
   var_i1 = var_l5;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p1;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
@@ -22573,7 +22018,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
       var_i0 = var_l6;
-      var_i1 = 33495u;
+      var_i1 = 33478u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
       var_i0 = var_p0;
       var_i1 = var_l6;
@@ -22592,7 +22037,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
     var_i1 = var_i1 == var_i2;
     if (var_i1) {goto var_B4;}
     var_i0 = var_p0;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_l5;
@@ -22605,7 +22050,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p0;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_p2;
       var_i2 = var_p1;
@@ -22635,16 +22080,16 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
     goto var_B8;
   }
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1376u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1368u);
   var_i1 = var_p0;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1372u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
   var_p3 = var_i1;
   var_i0 -= var_i1;
   var_i1 = 15u;
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 16u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -22655,7 +22100,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
   var_i1 = var_p3;
   var_i2 = 16u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B10:;
   var_i0 = var_p3;
   var_i1 = 402653200u;
@@ -22669,7 +22114,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
   var_B8:;
   var_p3 = var_i0;
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l5;
@@ -22682,7 +22127,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateNoAllocPropStorage0x
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p1;
     var_i2 = var_p3;
@@ -22730,7 +22175,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetSymbolHandle0x2
   var_i3 = var_l4;
   var_i4 = 8u;
   var_i3 += var_i4;
-  var_i4 = 70384u;
+  var_i4 = 67200u;
   var_i5 = var_p3;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallResult0x3Chermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x200x28hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ACallResultSpecialize0x2900x3E0x20hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AgetOrCreateIdentifier0x3Cchar16_t0x3E0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20llvh0x3A0x3AArrayRef0x3Cchar16_t0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5);
   var_i0 = var_l4;
@@ -24362,7 +23807,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AlazyCompileImpl0x28herme
   if (var_i0) {goto var_B8;}
   var_i0 = var_l5;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
-  var_i1 = 73u;
+  var_i1 = 72u;
   var_i0 = var_i0 != var_i1;
   if (var_i0) {goto var_B8;}
   var_i0 = var_l6;
@@ -25992,7 +25437,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AlazyCompileImpl0x28herme
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_j1);
   var_i0 = var_l3;
-  var_i1 = 261248u;
+  var_i1 = 109456u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_B67:;
   var_i0 = var_p1;
@@ -26342,7 +25787,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l7 = var_i0;
+  var_l6 = var_i0;
   var_i0 = var_p4;
   var_i1 = 156u;
   var_i0 += var_i1;
@@ -26350,7 +25795,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i1 = var_p4;
   var_i2 = 16u;
   var_i1 += var_i2;
-  var_l6 = var_i1;
+  var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p4;
   var_j1 = 17179869185ull;
@@ -26359,7 +25804,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i1 = var_l8;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_p4;
-  var_i1 = var_l7;
+  var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_p4;
   var_i1 = 0u;
@@ -26368,45 +25813,53 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i1 = var_p4;
   var_i2 = 144u;
   var_i1 += var_i2;
-  var_l7 = var_i1;
+  var_l8 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
   var_i0 = var_p4;
-  var_i1 = var_l6;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
   var_i0 = var_p2;
   var_i1 = var_p4;
   var_i2 = 8u;
   var_i1 += var_i2;
-  var_l8 = var_i1;
+  var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_p4;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_p4;
-    var_i1 = 184u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l6 = var_i0;
+    var_i0 = var_p4;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+    var_i0 = var_p4;
+    var_i1 = var_l7;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l6;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
     var_i0 = var_p2;
     var_i1 = var_p4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
     var_l6 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_p4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
     var_l7 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
     var_i0 = var_l6;
     var_i1 = var_p4;
     var_i0 -= var_i1;
@@ -26415,12 +25868,12 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
     if (var_i0) {goto var_B5;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l8 = var_i0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l7 = var_i0;
-    var_i0 = var_l8;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
     var_l6 = var_i0;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
+    var_l8 = var_i0;
+    var_i0 = var_l6;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l7 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
@@ -26452,8 +25905,37 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l14 = var_j0;
+  var_i0 = var_l7;
+  var_i1 = var_l8;
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l6;
+    var_i1 = var_l7;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l7;
+    var_j1 = var_l14;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B7;
+  }
   var_i0 = var_l6;
-  var_i1 = var_l7;
+  var_j1 = var_l14;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l7 = var_i0;
+  var_B7:;
+  var_i0 = var_l9;
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l14 = var_j0;
+  var_i0 = var_p2;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l8 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l6 = var_i0;
+  var_i1 = var_l8;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_l8;
@@ -26464,41 +25946,12 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
     var_i0 = var_l6;
     var_j1 = var_l14;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B7;
+    goto var_B9;
   }
   var_i0 = var_l8;
   var_j1 = var_l14;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l6 = var_i0;
-  var_B7:;
-  var_i0 = var_l9;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_j1 = 18446462598732840960ull;
-  var_j0 |= var_j1;
-  var_l14 = var_j0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l7 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l8 = var_i0;
-  var_i1 = var_l7;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l7;
-    var_i1 = var_l8;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l8;
-    var_j1 = var_l14;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B9;
-  }
-  var_i0 = var_l7;
-  var_j1 = var_l14;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l8 = var_i0;
   var_B9:;
   var_i0 = var_p1;
   var_i1 = var_p2;
@@ -26536,7 +25989,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
     var_i1 = 0u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_l10;
-    var_i1 = var_l6;
+    var_i1 = var_l7;
     var_i2 = var_p2;
     var_i3 = var_p3;
     var_i4 = var_p4;
@@ -26544,7 +25997,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
     goto var_B4;
   }
   var_i0 = var_p2;
-  var_i1 = 5476u;
+  var_i1 = 5468u;
   var_i0 += var_i1;
   var_i1 = var_p2;
   var_i2 = var_p3;
@@ -26557,17 +26010,17 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_p1 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l7 = var_i0;
+  var_l8 = var_i0;
   var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = var_l7;
+    var_i1 = var_l8;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l7;
+    var_i0 = var_l8;
     var_j1 = var_l14;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B13;
@@ -26575,14 +26028,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i0 = var_p1;
   var_j1 = var_l14;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l7 = var_i0;
+  var_l8 = var_i0;
   var_B13:;
   var_i0 = var_l10;
   var_i1 = var_p2;
-  var_i2 = var_l7;
+  var_i2 = var_l8;
   var_i3 = var_l9;
-  var_i4 = var_l8;
-  var_i5 = var_l6;
+  var_i4 = var_l6;
+  var_i5 = var_l7;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AdeleteWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5);
   goto var_B4;
   var_B5:;
@@ -26607,7 +26060,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i0 = var_p0;
   var_i1 = var_p2;
   var_i2 = var_l11;
-  var_i3 = 47457u;
+  var_i3 = 47375u;
   var_i4 = var_l5;
   var_i5 = 8u;
   var_i4 += var_i5;
@@ -26635,14 +26088,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 120, var_i1);
       var_i0 = var_l5;
-      var_i1 = 64501u;
+      var_i1 = 61297u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 112, var_i1);
       var_i0 = var_l5;
       var_i1 = 60u;
       var_i0 += var_i1;
       var_p1 = var_i0;
       var_i1 = var_p2;
-      var_i2 = 5476u;
+      var_i2 = 5468u;
       var_i1 += var_i2;
       var_i2 = var_p2;
       var_i3 = var_p3;
@@ -26672,7 +26125,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
       var_i0 = var_l5;
-      var_i1 = 50631u;
+      var_i1 = 50520u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
       var_i0 = var_l5;
       var_i1 = 192u;
@@ -26710,7 +26163,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p3;
@@ -26728,7 +26181,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
     goto var_B17;
   }
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p3;
@@ -26746,7 +26199,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   if (var_i0) {goto var_B17;}
   var_B18:;
   var_i0 = var_p2;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_p3;
   var_i2 = 7u;
@@ -26793,7 +26246,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p3 = var_i0;
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
@@ -26806,7 +26259,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdeleteNamed0x28hermes0x3
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p1;
     var_i2 = var_p3;
@@ -26838,11 +26291,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l2 = var_i1;
@@ -26851,7 +26304,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -26862,7 +26315,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i1 = var_l2;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_l2;
   var_i1 = 0u;
@@ -26872,7 +26325,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 16u);
   i64_store32(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5624u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5616u);
   var_l6 = var_j0;
   var_i0 = var_l2;
   var_i1 = 0u;
@@ -26942,15 +26395,15 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
       var_i0 &= var_i1;
       var_l4 = var_i0;
       var_i1 = var_p0;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1376u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1368u);
       var_i2 = var_p0;
-      var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1372u);
+      var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1364u);
       var_l2 = var_i2;
       var_i1 -= var_i2;
       var_i0 = var_i0 > var_i1;
       if (var_i0) {
         var_i0 = var_p0;
-        var_i1 = 816u;
+        var_i1 = 808u;
         var_i0 += var_i1;
         var_i1 = var_l4;
         var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -26961,7 +26414,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
       var_i1 = var_l2;
       var_i2 = var_l4;
       var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
       var_B9:;
       var_i0 = var_l2;
       var_j1 = 0ull;
@@ -26983,13 +26436,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
     var_B7:;
     var_i0 = var_l2;
     var_i1 = var_p0;
-    var_i2 = 816u;
+    var_i2 = 808u;
     var_i1 += var_i2;
     var_l4 = var_i1;
     var_i2 = var_p1;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x3A0x3AresizeWithinCapacity0x28hermes0x3A0x3Avm0x3A0x3AArrayStorageBase0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue320x3E0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AHadesGC0x260x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1, var_i2);
     var_i0 = var_p0;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_l3;
@@ -27018,7 +26471,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 != var_i1;
   if (var_i0) {goto var_B2;}
   var_B3:;
-  var_i0 = 40745u;
+  var_i0 = 40743u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_B2:;
@@ -27058,7 +26511,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnProperty0x28hermes
     var_i1 = 8u;
     var_i0 += var_i1;
     var_i1 = var_p2;
-    var_i2 = 5476u;
+    var_i2 = 5468u;
     var_i1 += var_i2;
     var_i2 = var_p2;
     var_i3 = var_p3;
@@ -27351,7 +26804,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnProperty0x28hermes
   goto var_B0;
   var_B1:;
   var_i0 = var_l7;
-  var_i1 = 64357u;
+  var_i1 = 61153u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_l7;
   var_i1 = 3u;
@@ -27368,7 +26821,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnProperty0x28hermes
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 100, var_i1);
   var_i0 = var_l7;
-  var_i1 = 64683u;
+  var_i1 = 61479u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
   var_i0 = var_l7;
   var_i1 = 1u;
@@ -27414,11 +26867,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l5 = var_i1;
@@ -27427,7 +26880,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -27438,13 +26891,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i1 = var_l5;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p2;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l6 = var_j0;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5648u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5640u);
   var_l7 = var_j0;
   var_i0 = var_l5;
   var_i1 = 0u;
@@ -27464,7 +26917,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_p2 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l5;
@@ -27476,7 +26929,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p3;
     var_i2 = var_p2;
@@ -27484,7 +26937,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   }
   var_i0 = var_l5;
   var_i1 = var_p0;
-  var_i2 = 1288u;
+  var_i2 = 1276u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_p4;
@@ -27496,7 +26949,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_p1 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_i1 = var_l5;
   var_i2 = 28u;
   var_i1 += var_i2;
@@ -27506,7 +26959,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p2;
     var_i2 = var_p1;
@@ -27529,126 +26982,173 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   return var_i0;
 }
 
-u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AsetMessage0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSError0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
-  u32 var_l3 = 0, var_l4 = 0;
-  u64 var_l5 = 0;
+u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AsetupStack0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(w2c_hermes* instance, u32 var_p0, u32 var_p1) {
+  u32 var_l2 = 0, var_l3 = 0, var_l4 = 0, var_l5 = 0;
   FUNC_PROLOGUE;
-  u32 var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6, var_i7;
-  u64 var_j0, var_j1, var_j2;
+  u32 var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6, var_i7, 
+      var_i8, var_i9;
+  u64 var_j0, var_j1;
   var_i0 = instance->w2c_0x5F_stack_pointer;
-  var_i1 = 32u;
+  var_i1 = 208u;
   var_i0 -= var_i1;
-  var_l3 = var_i0;
+  var_l2 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = 70384u;
-  var_l4 = var_i0;
-  var_i0 = var_p2;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l5 = var_j0;
-  var_j1 = 18445899648779419648ull;
-  var_i0 = var_j0 >= var_j1;
+  var_i0 = var_p1;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 664u);
+  var_j1 = 47ull;
+  var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
+  var_i0 = (u32)(var_j0);
+  var_i1 = 4294967284u;
+  var_i0 = var_i0 == var_i1;
   if (var_i0) {
-    var_i0 = 70384u;
-    var_i1 = var_p2;
-    var_j2 = var_l5;
-    var_i2 = (u32)(var_j2);
-    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
-    var_i3 = 50331648u;
-    var_i2 -= var_i3;
-    var_i3 = 134217728u;
-    var_i2 = var_i2 >= var_i3;
-    var_i0 = var_i2 ? var_i0 : var_i1;
-    var_l4 = var_i0;
-  }
-  var_i0 = var_l4;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l5 = var_j0;
-  var_j1 = 18445899648779419648ull;
-  var_i0 = var_j0 >= var_j1;
-  var_j1 = var_l5;
-  var_j2 = 4294967295ull;
-  var_j1 &= var_j2;
-  var_j2 = 0ull;
-  var_i1 = var_j1 != var_j2;
-  var_i0 &= var_i1;
-  var_i0 = !(var_i0);
-  if (var_i0) {
-    var_i0 = var_l3;
+    var_i0 = var_l2;
     var_i1 = var_p1;
-    var_i2 = var_p2;
-    var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AtoString_RJS0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i1, var_i2);
-    var_p2 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
-    var_i0 = var_p2;
-    var_i1 = 4294967295u;
-    var_i0 = var_i0 == var_i1;
-    if (var_i0) {goto var_B2;}
-    var_i0 = var_l3;
-    var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 28u);
-    var_j1 = 18445899648779419648ull;
-    var_j0 |= var_j1;
-    var_l5 = var_j0;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_p1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_p2 = var_i0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l3 = var_i0;
+    var_i0 = var_l2;
+    var_i1 = 172u;
+    var_i0 += var_i1;
     var_l4 = var_i0;
-    var_i1 = var_p2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
-    var_i0 = var_i0 < var_i1;
-    if (var_i0) {
-      var_i0 = var_p2;
-      var_i1 = var_l4;
-      var_i2 = 8u;
-      var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-      var_i0 = var_l4;
-      var_j1 = var_l5;
-      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-      var_i0 = var_l4;
-      goto var_B4;
-    }
-    var_i0 = var_p2;
-    var_j1 = var_l5;
-    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-    var_B4:;
-    var_l4 = var_i0;
+    var_i1 = var_l2;
+    var_i2 = 32u;
+    var_i1 += var_i2;
+    var_l5 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+    var_i0 = var_l2;
+    var_j1 = 17179869185ull;
+    i64_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_j1);
+    var_i0 = var_l2;
+    var_i1 = var_l4;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_i1);
+    var_i0 = var_l2;
+    var_i1 = var_l3;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
+    var_i0 = var_l2;
+    var_i1 = 0u;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 196, var_i1);
+    var_i0 = var_l2;
+    var_i1 = var_l2;
+    var_i2 = 160u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 192, var_i1);
+    var_i0 = var_l2;
+    var_i1 = var_l5;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
+    var_i0 = var_p1;
+    var_i1 = var_l2;
+    var_i2 = 24u;
+    var_i1 += var_i2;
+    var_l4 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+    var_i0 = var_p1;
+    var_i1 = var_p1;
+    var_i2 = var_p1;
+    var_i3 = var_p1;
+    var_i4 = 192u;
+    var_i3 += var_i4;
+    var_l3 = var_i3;
+    var_i4 = 0u;
+    var_i5 = 483u;
+    var_i6 = 14u;
+    var_i7 = 0u;
+    var_i8 = 0u;
+    var_i2 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ANativeFunction0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20void0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3ACallResult0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x200x28hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ACallResultSpecialize0x2920x3E0x200x280x2A0x290x28void0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ANativeArgs0x290x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20unsigned0x20int0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20unsigned0x20int0x29(instance, var_i2, var_i3, var_i4, var_i5, var_i6, var_i7, var_i8);
+    var_i3 = var_p1;
+    var_i4 = var_l3;
+    var_i5 = 0u;
+    var_i6 = 484u;
+    var_i7 = 14u;
+    var_i8 = 1u;
+    var_i9 = 0u;
+    var_i3 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ANativeFunction0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20void0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3ACallResult0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x200x28hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ACallResultSpecialize0x2920x3E0x200x280x2A0x290x28void0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ANativeArgs0x290x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20unsigned0x20int0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20unsigned0x20int0x29(instance, var_i3, var_i4, var_i5, var_i6, var_i7, var_i8, var_i9);
+    var_j1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3APropertyAccessor0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x29(instance, var_i1, var_i2, var_i3);
+    i64_store(&instance->w2c_memory, (u64)(var_i0) + 664, var_j1);
+    var_i0 = var_l4;
+    w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A0x7EGCScope0x280x29(instance, var_i0);
   }
-  var_i0 = var_l3;
-  var_i1 = 318u;
+  var_i0 = var_l2;
+  var_i1 = 236u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
-  var_i0 = var_l3;
+  var_i0 = var_l2;
   var_i1 = 0u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
-  var_i0 = var_l3;
-  var_i1 = 318u;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
-  var_i0 = var_l3;
-  var_i1 = 0u;
+  var_i0 = var_l2;
+  var_i1 = 236u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
-  var_i0 = var_l3;
+  var_i0 = var_l2;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 204, var_i1);
+  var_i0 = var_l2;
   var_i1 = 20u;
   var_i0 += var_i1;
   var_i1 = var_p0;
   var_i2 = var_p1;
-  var_i3 = 141u;
-  var_i4 = var_l3;
+  var_i3 = 143u;
+  var_i4 = var_l2;
   var_i5 = 16u;
   var_i4 += var_i5;
-  var_i5 = var_l4;
-  var_i6 = var_l3;
+  var_i5 = var_p1;
+  var_i6 = 664u;
+  var_i5 += var_i6;
+  var_i6 = var_l2;
   var_i7 = 12u;
   var_i6 += var_i7;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnPropertyInternal0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3ADefinePropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6);
-  var_i0 = var_l3;
-  var_i0 = i32_load8_s(&instance->w2c_memory, (u64)(var_i0) + 20u);
-  goto var_B0;
-  var_B2:;
-  var_i0 = 0u;
-  var_B0:;
+  var_i0 = var_l2;
+  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 20u);
+  var_i0 = !(var_i0);
+  if (var_i0) {
+    var_i0 = var_p1;
+    var_j1 = 18444773748872577024ull;
+    i64_store(&instance->w2c_memory, (u64)(var_i0) + 704, var_j1);
+  }
+  var_i0 = var_l2;
+  var_i1 = 208u;
+  var_i0 += var_i1;
+  instance->w2c_0x5F_stack_pointer = var_i0;
+  var_i0 = 1u;
+  FUNC_EPILOGUE;
+  return var_i0;
+}
+
+u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1) {
+  u32 var_l2 = 0;
+  FUNC_PROLOGUE;
+  u32 var_i0, var_i1, var_i2, var_i3, var_i4;
+  var_i0 = instance->w2c_0x5F_stack_pointer;
+  var_i1 = 16u;
+  var_i0 -= var_i1;
+  var_l2 = var_i0;
+  instance->w2c_0x5F_stack_pointer = var_i0;
+  var_i0 = var_l2;
+  var_i1 = var_p1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
+  var_i0 = var_l2;
+  var_i1 = 1u;
+  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 11, var_i1);
+  var_i0 = var_l2;
+  var_i1 = var_p0;
+  var_i2 = 5656u;
+  var_i1 += var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+  var_i0 = var_p0;
+  var_i1 = 808u;
+  var_i0 += var_i1;
+  var_i1 = var_l2;
+  var_i2 = 12u;
+  var_i1 += var_i2;
+  var_i2 = var_l2;
+  var_i3 = 4u;
+  var_i2 += var_i3;
+  var_i3 = var_l2;
+  var_i4 = 11u;
+  var_i3 += var_i4;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x2A0x20hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AmakeA0x3Chermes0x3A0x3Avm0x3A0x3AJSError0x2C0x20true0x2C0x200x28hermes0x3A0x3Avm0x3A0x3AHasFinalizer0x2910x2C0x200x28hermes0x3A0x3Avm0x3A0x3ALongLived0x2900x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHiddenClass0x3E0x2C0x20bool0x260x3E0x28unsigned0x20int0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHiddenClass0x3E0x260x260x2C0x20bool0x260x29(instance, var_i0, var_i1, var_i2, var_i3);
   var_p0 = var_i0;
-  var_i0 = var_l3;
-  var_i1 = 32u;
+  var_i0 = var_l2;
+  var_i1 = 16u;
   var_i0 += var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
@@ -27671,11 +27171,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3Acreate0x28hermes0x3A
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l2;
   var_i1 = var_p0;
-  var_i2 = 5648u;
+  var_i2 = 5640u;
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p0;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_l2;
   var_i2 = 12u;
@@ -27716,7 +27216,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcreateDataBlock0x28h
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B1;}
   var_i0 = var_p0;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 512u);
   var_i1 = var_p2;
@@ -27733,7 +27233,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcreateDataBlock0x28h
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l4;
-    var_i1 = 38683u;
+    var_i1 = 38681u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
     var_i1 = var_l4;
@@ -27764,7 +27264,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcreateDataBlock0x28h
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l4;
-  var_i1 = 38683u;
+  var_i1 = 38681u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p0;
   var_i1 = var_l4;
@@ -27780,7 +27280,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcreateDataBlock0x28h
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1284u;
+  var_i2 = 1272u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_l5;
@@ -27795,7 +27295,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcreateDataBlock0x28h
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
   var_i0 = var_p0;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
@@ -27814,13 +27314,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcreateDataBlock0x28h
 }
 
 void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSArray0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u32 var_p4) {
-  u32 var_l5 = 0, var_l6 = 0;
+  u32 var_l5 = 0;
   u64 var_l8 = 0;
-  f64 var_l7 = 0;
+  f64 var_l6 = 0, var_l7 = 0;
   FUNC_PROLOGUE;
   u32 var_i0, var_i1, var_i2, var_i3, var_i4;
   u64 var_j0, var_j1;
-  f64 var_d0, var_d1;
+  f64 var_d0, var_d1, var_d2;
   var_i0 = instance->w2c_0x5F_stack_pointer;
   var_i1 = 4294967232u;
   var_i0 += var_i1;
@@ -27835,24 +27335,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
     var_j0 = var_l8;
     var_d0 = f64_reinterpret_i64(var_j0);
     var_l7 = var_d0;
-    var_d0 = wasm_fabs(var_d0);
-    var_d1 = 2147483648;
-    var_i0 = var_d0 < var_d1;
-    if (var_i0) {
-      var_d0 = var_l7;
-      var_i0 = I32_TRUNC_S_F64(var_d0);
-      goto var_B4;
-    }
-    var_i0 = 2147483648u;
-    var_B4:;
-    var_l6 = var_i0;
-    var_d0 = (f64)(s32)(var_i0);
-    var_d1 = var_l7;
-    var_i0 = var_d0 == var_d1;
-    if (var_i0) {goto var_B2;}
-    var_d0 = var_l7;
-    var_i0 = w2c_hermes_hermes0x3A0x3AtruncateToInt32SlowPath0x28double0x29(instance, var_d0);
-    var_l6 = var_i0;
+    var_l6 = var_d0;
     goto var_B2;
   }
   var_i0 = var_l5;
@@ -27867,27 +27350,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
   if (var_i0) {goto var_B1;}
   var_i0 = var_l5;
   var_d0 = f64_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
+  var_l6 = var_d0;
   var_l7 = var_d0;
-  var_d0 = wasm_fabs(var_d0);
-  var_d1 = 2147483648;
-  var_i0 = var_d0 < var_d1;
-  if (var_i0) {
-    var_d0 = var_l7;
-    var_i0 = I32_TRUNC_S_F64(var_d0);
-    goto var_B6;
-  }
-  var_i0 = 2147483648u;
-  var_B6:;
-  var_l6 = var_i0;
-  var_i0 = var_l6;
-  var_d0 = (f64)(s32)(var_i0);
-  var_d1 = var_l7;
-  var_i0 = var_d0 != var_d1;
-  if (var_i0) {
-    var_d0 = var_l7;
-    var_i0 = w2c_hermes_hermes0x3A0x3AtruncateToInt32SlowPath0x28double0x29(instance, var_d0);
-    var_l6 = var_i0;
-  }
   var_i0 = var_p3;
   var_i0 = i32_load16_s(&instance->w2c_memory, (u64)(var_i0) + 6u);
   var_i1 = 4294967293u;
@@ -27907,7 +27371,21 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
   var_d0 = f64_load(&instance->w2c_memory, (u64)(var_i0) + 56u);
   var_l7 = var_d0;
   var_B2:;
-  var_i0 = var_l6;
+  var_d0 = var_l6;
+  var_d1 = 4294967296;
+  var_i0 = var_d0 < var_d1;
+  var_d1 = var_l6;
+  var_d2 = 0;
+  var_i1 = var_d1 >= var_d2;
+  var_i0 &= var_i1;
+  if (var_i0) {
+    var_d0 = var_l6;
+    var_i0 = I32_TRUNC_U_F64(var_d0);
+    goto var_B4;
+  }
+  var_i0 = 0u;
+  var_B4:;
+  var_p3 = var_i0;
   var_d0 = (f64)(var_i0);
   var_d1 = var_l7;
   var_i0 = var_d0 != var_d1;
@@ -27922,7 +27400,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l5;
-    var_i1 = 44547u;
+    var_i1 = 44465u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -27936,15 +27414,15 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
   var_i0 = var_l5;
   var_i1 = var_p4;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_p3 = var_i1;
+  var_p4 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l5;
-  var_i1 = var_p3;
+  var_i1 = var_p4;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p1;
   var_i2 = var_p2;
-  var_i3 = var_l6;
+  var_i3 = var_p3;
   var_i4 = var_l5;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSArray0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
   goto var_B0;
@@ -27978,7 +27456,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AcopyToNewDictionary0x2
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 12u);
   var_l5 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l6 = var_i0;
   var_i1 = 40u;
@@ -28010,12 +27488,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AcopyToNewDictionary0x2
   var_i1 = 0u;
   i32_store16(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_l3;
-  var_i1 = 70384u;
+  var_i1 = 67200u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_p2 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l3;
@@ -28081,7 +27559,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AcopyToNewDictionary0x2
     var_p2 = var_i0;
   }
   var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_l4 = var_i0;
   var_i1 = var_l3;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
@@ -28097,7 +27575,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AcopyToNewDictionary0x2
     var_i2 = var_p2;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
     var_i0 = var_p1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
     var_l4 = var_i0;
   }
   var_i0 = var_l5;
@@ -28114,7 +27592,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AcopyToNewDictionary0x2
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B5;}
   var_i0 = var_p1;
-  var_i1 = 4821u;
+  var_i1 = 4813u;
   var_i0 += var_i1;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
@@ -28307,11 +27785,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AaddSegmentExtentToCrashMa
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 13, var_i1);
   var_i0 = var_l4;
-  var_i1 = 59671u;
+  var_i1 = 56494u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l4;
-  var_i1 = 59676u;
+  var_i1 = 56499u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 5, var_j1);
   var_i0 = var_l3;
@@ -28367,7 +27845,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AaddSegmentExtentToCrashMa
   var_i0 += var_i1;
   var_p1 = var_i0;
   var_i1 = 18u;
-  var_i2 = 40301u;
+  var_i2 = 40299u;
   var_i3 = var_l3;
   var_i0 = w2c_hermes_snprintf(instance, var_i0, var_i1, var_i2, var_i3);
   var_i0 = var_p0;
@@ -28460,8 +27938,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3Aoom0x28std0x3A0x3A_0x5F20x
   var_i0 = var_l2;
   var_i1 = var_l3;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
-  var_i0 = 59288u;
-  var_i1 = 60725u;
+  var_i0 = 56111u;
+  var_i1 = 57548u;
   var_i2 = var_l2;
   var_i3 = 16u;
   var_i2 += var_i3;
@@ -28469,7 +27947,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3Aoom0x28std0x3A0x3A_0x5F20x
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 28u);
   var_p0 = var_i0;
-  var_i1 = 55858u;
+  var_i1 = 55697u;
   var_i2 = var_l3;
   var_i3 = var_p0;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
@@ -28479,7 +27957,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3Aoom0x28std0x3A0x3A_0x5F20x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 60, var_i1);
   var_i0 = var_l2;
-  var_i1 = 59198u;
+  var_i1 = 56021u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
   var_i0 = var_l2;
   var_j1 = var_l4;
@@ -28524,7 +28002,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar0x3E0x3A0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
     var_i0 = var_l3;
-    var_i1 = 22519u;
+    var_i1 = 22502u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p1;
@@ -28536,7 +28014,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar0x3E0x3A0
     goto var_B0;
   }
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l5 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 512u);
@@ -28554,7 +28032,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar0x3E0x3A0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
     var_i0 = var_l3;
-    var_i1 = 61379u;
+    var_i1 = 58202u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p1;
@@ -28631,7 +28109,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar0x3E0x3A0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_l3;
-  var_i1 = 22519u;
+  var_i1 = 22502u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p1;
@@ -29506,7 +28984,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3AfindOrAdd0x28herm
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l4;
@@ -29522,13 +29000,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3AfindOrAdd0x28herm
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B22;}
   var_i0 = var_p2;
-  var_i1 = 4821u;
+  var_i1 = 4813u;
   var_i0 += var_i1;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B22;}
   var_i0 = var_p2;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
@@ -29693,151 +29171,194 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AgetDebugSourceLocations
   FUNC_EPILOGUE;
 }
 
-void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AexecuteCall40x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20bool0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u64 var_p4, u64 var_p5, u64 var_p6, u64 var_p7) {
-  u32 var_l8 = 0, var_l9 = 0, var_l10 = 0;
-  u64 var_l11 = 0, var_l12 = 0, var_l13 = 0;
+u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSString0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
+  u32 var_l3 = 0, var_l4 = 0, var_l5 = 0, var_l6 = 0;
+  u64 var_l7 = 0, var_l8 = 0;
+  f64 var_l9 = 0;
   FUNC_PROLOGUE;
   u32 var_i0, var_i1, var_i2, var_i3, var_i4;
   u64 var_j0, var_j1;
+  f64 var_d0, var_d1;
   var_i0 = instance->w2c_0x5F_stack_pointer;
   var_i1 = 16u;
   var_i0 -= var_i1;
-  var_l9 = var_i0;
-  var_l8 = var_i0;
-  var_i0 = var_l9;
+  var_l4 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5592u);
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
-  var_l9 = var_i1;
-  var_i0 -= var_i1;
-  var_i1 = 344u;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {goto var_B1;}
-  var_i0 = var_p1;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l11 = var_j0;
-  var_i0 = var_p3;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l12 = var_j0;
-  var_i0 = var_l9;
-  var_p3 = var_i0;
-  var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i0 = var_p0;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
-  var_i2 = var_l8;
-  var_i1 -= var_i2;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l8;
-    var_i1 = 8u;
-    var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l8;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_p3 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
-    var_i0 = var_p2;
-    var_i1 = var_l8;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
-    var_l10 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_p3;
-    var_i1 = var_l8;
-    var_i0 -= var_i1;
-    var_i1 = var_l10;
-    var_i0 = var_i0 > var_i1;
-    if (var_i0) {goto var_B1;}
-    var_i0 = var_p2;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5596u);
-    var_p3 = var_i0;
-  }
-  var_i0 = var_p2;
-  var_i1 = var_p3;
-  var_i2 = 88u;
+  var_i1 = var_p0;
+  var_i2 = 1364u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5608u);
-  var_l13 = var_j0;
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l13;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 0ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 72, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445618173802708996ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_j1);
-  var_i0 = var_p3;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l11;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_l12;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p4;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p5;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p6;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p3;
-  var_j1 = var_p7;
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_l3 = var_i1;
+  var_i0 -= var_i1;
+  var_i1 = 39u;
+  var_i0 = var_i0 <= var_i1;
+  if (var_i0) {
+    var_i0 = var_p0;
+    var_i1 = 808u;
+    var_i0 += var_i1;
+    var_i1 = 40u;
+    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_l3 = var_i0;
+    goto var_B0;
+  }
   var_i0 = var_p0;
-  var_i1 = var_p1;
-  var_i2 = var_p2;
-  var_i3 = var_p1;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i4 = 22u;
-  var_i3 >>= (var_i4 & 31);
-  var_i4 = 1020u;
-  var_i3 &= var_i4;
-  var_i4 = 289808u;
-  var_i3 += var_i4;
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
-  var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 60u);
-  CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32, u32, u32), w2c_hermes_t2, var_i3, instance->w2c_0x5F_indirect_function_table.data[var_i3].module_instance, var_i0, var_i1, var_i2);
-  goto var_B0;
-  var_B1:;
-  var_i0 = var_p2;
-  var_i1 = 1u;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i0, var_i1);
-  var_p1 = var_i0;
-  var_i0 = var_p0;
-  var_j1 = 18445055223849287680ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_p0;
-  var_i1 = var_p1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i1 = var_l3;
+  var_i2 = 40u;
+  var_i1 += var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p2;
-  var_i1 = var_l9;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
-  var_i0 = var_l8;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l7 = var_j0;
+  var_i0 = var_p0;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5624u);
+  var_l8 = var_j0;
+  var_i0 = var_l3;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
+  var_i0 = var_l3;
+  var_j1 = var_l8;
+  i64_store32(&instance->w2c_memory, (u64)(var_i0) + 12, var_j1);
+  var_i0 = var_l3;
+  var_j1 = var_l7;
+  i64_store32(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
+  var_i0 = var_l3;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+  var_i0 = var_l3;
+  var_i1 = var_p1;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_l5 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
+  var_i0 = 24u;
+  var_p2 = var_i0;
+  var_i0 = var_p0;
+  var_i1 = 1356u;
+  var_i0 += var_i1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_i1 = var_l3;
+  var_i2 = 20u;
+  var_i1 += var_i2;
+  var_l6 = var_i1;
+  var_i2 = 4290772992u;
+  var_i1 &= var_i2;
+  var_i0 = var_i0 != var_i1;
+  if (var_i0) {
+    var_i0 = var_p0;
+    var_i1 = 808u;
+    var_i0 += var_i1;
+    var_i1 = var_l6;
+    var_i2 = var_l5;
+    w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3ArelocationWriteBarrier0x28void0x20const0x2A0x2C0x20void0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
+    var_i0 = var_l3;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+    var_i1 = 24u;
+    var_i0 |= var_i1;
+    var_p2 = var_i0;
+  }
+  var_i0 = var_l3;
+  var_i1 = 922746920u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i0 = var_l3;
+  var_i1 = var_p2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+  var_i0 = var_l3;
+  var_j1 = 60129542158ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+  var_i0 = var_l3;
+  var_j1 = 60129542158ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
+  var_i0 = var_l3;
+  var_j0 = (u64)(var_i0);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l7 = var_j0;
+  var_i0 = var_p0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_p2 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l3 = var_i0;
+  var_i1 = var_p2;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_p2;
+    var_i1 = var_l3;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l3;
+    var_j1 = var_l7;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B3;
+  }
+  var_i0 = var_p2;
+  var_j1 = var_l7;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l3 = var_i0;
+  var_B3:;
+  var_i0 = var_l4;
+  var_i1 = 0u;
+  i32_store16(&instance->w2c_memory, (u64)(var_i0) + 14, var_i1);
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_i1 = 2147483647u;
+  var_i0 &= var_i1;
+  var_d0 = (f64)(var_i0);
+  var_l9 = var_d0;
+  var_i0 = var_p0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_p2 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_p1 = var_i0;
+  var_i1 = var_p2;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_p2;
+    var_i1 = var_p1;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_p1;
+    var_d1 = var_l9;
+    f64_store(&instance->w2c_memory, (u64)(var_i0), var_d1);
+    goto var_B5;
+  }
+  var_i0 = var_p2;
+  var_d1 = var_l9;
+  var_j1 = i64_reinterpret_f64(var_d1);
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_p1 = var_i0;
+  var_B5:;
+  var_i0 = var_l4;
+  var_i1 = var_l4;
+  var_i1 = i32_load16_u(&instance->w2c_memory, (u64)(var_i1) + 14u);
+  i32_store16(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
+  var_i0 = var_l3;
+  var_i1 = var_p0;
+  var_i2 = 85u;
+  var_i3 = var_l4;
+  var_i4 = 12u;
+  var_i3 += var_i4;
+  var_i4 = var_p1;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineNewOwnProperty0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
+  var_p0 = var_i0;
+  var_i0 = var_l4;
   var_i1 = 16u;
   var_i0 += var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
+  var_i0 = var_l3;
+  var_i1 = 4294967295u;
+  var_i2 = var_p0;
+  var_i0 = var_i2 ? var_i0 : var_i1;
   FUNC_EPILOGUE;
+  return var_i0;
 }
 
 void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSRegExp0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AStringPrimitive0x3E0x2C0x20unsigned0x20int0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u32 var_p4) {
@@ -30005,13 +29526,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_j1);
     var_i0 = var_l6;
     var_i1 = var_p2;
-    var_i2 = 5620u;
+    var_i2 = 5612u;
     var_i1 += var_i2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_l6;
     var_i1 = var_p2;
-    var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+    var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     var_i0 = var_l6;
     var_i1 = 16u;
@@ -30215,7 +29736,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
     var_i0 = var_l6;
-    var_i1 = 55188u;
+    var_i1 = 55039u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l6;
@@ -30674,13 +30195,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_j1);
   var_i0 = var_l6;
   var_i1 = var_p2;
-  var_i2 = 5620u;
+  var_i2 = 5612u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l6;
   var_i1 = var_p2;
-  var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l6;
   var_i1 = 16u;
@@ -30886,7 +30407,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_l6;
-  var_i1 = 55188u;
+  var_i1 = 55039u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l6;
@@ -31266,13 +30787,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
   var_i0 = var_p2;
   var_i1 = var_p3;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 544, var_j1);
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 536, var_j1);
   var_i0 = var_p2;
   var_i1 = var_p1;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 552, var_j1);
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 544, var_j1);
   var_i0 = var_p2;
-  var_i1 = 744u;
+  var_i1 = 736u;
   var_i0 += var_i1;
   var_p3 = var_i0;
   var_i1 = var_l5;
@@ -31282,7 +30803,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
   if (var_i0) {goto var_B84;}
   var_i0 = var_p4;
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 748u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 740u);
   var_p1 = var_i1;
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
@@ -31298,17 +30819,17 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
   }
   var_i0 = var_p4;
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 752u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 744u);
   var_i0 = var_i0 > var_i1;
   if (var_i0) {
     var_i0 = 0u;
     var_p1 = var_i0;
     var_i0 = var_p2;
     var_i1 = 0u;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 748, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 740, var_i1);
     var_i0 = var_p3;
     var_i1 = var_p2;
-    var_i2 = 756u;
+    var_i2 = 748u;
     var_i1 += var_i2;
     var_i2 = var_p4;
     var_i3 = 12u;
@@ -31361,7 +30882,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Asearch0x28hermes0x3A0x3A
   var_B85:;
   var_i0 = var_p2;
   var_i1 = var_p4;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 748, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 740, var_i1);
   var_i0 = var_p0;
   var_i1 = var_l5;
   var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1) + 160u);
@@ -31489,24 +31010,24 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l6 = var_i0;
+  var_l5 = var_i0;
   var_i0 = var_l4;
   var_i1 = 228u;
   var_i0 += var_i1;
-  var_l5 = var_i0;
+  var_l7 = var_i0;
   var_i1 = var_l4;
   var_i2 = 88u;
   var_i1 += var_i2;
-  var_l7 = var_i1;
+  var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l4;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 220, var_j1);
   var_i0 = var_l4;
-  var_i1 = var_l5;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 216, var_i1);
   var_i0 = var_l4;
-  var_i1 = var_l6;
+  var_i1 = var_l5;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 84, var_i1);
   var_i0 = var_l4;
   var_i1 = 0u;
@@ -31515,45 +31036,53 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
   var_i1 = var_l4;
   var_i2 = 216u;
   var_i1 += var_i2;
-  var_l9 = var_i1;
+  var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 248, var_i1);
   var_i0 = var_l4;
-  var_i1 = var_l7;
+  var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 244, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l4;
   var_i2 = 80u;
   var_i1 += var_i2;
-  var_l8 = var_i1;
+  var_l5 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l4;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l4;
-    var_i1 = 8u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l6 = var_i0;
+    var_i0 = var_l4;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l5 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+    var_i0 = var_l4;
+    var_i1 = var_l5;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l6;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
     var_l6 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
     var_l5 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
     var_i0 = var_l6;
     var_i1 = var_l4;
     var_i0 -= var_i1;
@@ -31562,74 +31091,45 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
     if (var_i0) {goto var_B1;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l8 = var_i0;
+    var_l5 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l9 = var_i0;
-    var_i0 = var_l8;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
     var_l7 = var_i0;
+    var_i0 = var_l5;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l6 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l10 = var_i0;
+  var_l8 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l10;
+  var_i2 = var_l8;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
-  var_l6 = var_i2;
+  var_l9 = var_i2;
   var_i3 = 1107296256u;
   var_i2 = var_i2 == var_i3;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l5 = var_i0;
+  var_l10 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l10;
+  var_i1 = var_l8;
   var_i2 = 0u;
-  var_i3 = var_l6;
+  var_i3 = var_l9;
   var_i4 = 1191182336u;
   var_i3 = var_i3 == var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
   var_i2 = 32u;
   var_i1 += var_i2;
-  var_i2 = var_l5;
+  var_i2 = var_l10;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l5 = var_i0;
+  var_l8 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l11 = var_j0;
-  var_i0 = var_l7;
-  var_i1 = var_l9;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l8;
-    var_i1 = var_l7;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l7;
-    var_j1 = var_l11;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B3;
-  }
-  var_i0 = var_l8;
-  var_j1 = var_l11;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l7 = var_i0;
-  var_B3:;
-  var_i0 = var_l5;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_j1 = 18446462598732840960ull;
-  var_j0 |= var_j1;
-  var_l11 = var_j0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l5 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l6 = var_i0;
-  var_i1 = var_l5;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_l6;
+  var_i1 = var_l7;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_l5;
@@ -31640,12 +31140,41 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
     var_i0 = var_l6;
     var_j1 = var_l11;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B5;
+    goto var_B3;
   }
   var_i0 = var_l5;
   var_j1 = var_l11;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l6 = var_i0;
+  var_B3:;
+  var_i0 = var_l8;
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l11 = var_j0;
+  var_i0 = var_p2;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l7 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l5 = var_i0;
+  var_i1 = var_l7;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l7;
+    var_i1 = var_l5;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l5;
+    var_j1 = var_l11;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B5;
+  }
+  var_i0 = var_l7;
+  var_j1 = var_l11;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l5 = var_i0;
   var_B5:;
   var_i0 = var_p1;
   var_i1 = var_p2;
@@ -31685,7 +31214,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
     var_i1 = var_p1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 76, var_i1);
     var_i0 = var_p0;
-    var_i1 = var_l7;
+    var_i1 = var_l6;
     var_i2 = var_p2;
     var_i3 = var_l4;
     var_i4 = 4u;
@@ -31698,8 +31227,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
   var_i0 += var_i1;
   var_i1 = var_p1;
   var_i2 = var_p2;
-  var_i3 = var_l6;
-  var_i4 = var_l7;
+  var_i3 = var_l5;
+  var_i4 = var_l6;
   var_j4 = i64_load(&instance->w2c_memory, (u64)(var_i4));
   var_i5 = 0u;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AexecuteCall10x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20bool0x29(instance, var_i0, var_i1, var_i2, var_i3, var_j4, var_i5);
@@ -31723,7 +31252,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
     var_i1 = var_l4;
     var_i2 = 52u;
     var_i1 += var_i2;
-    var_i2 = var_l7;
+    var_i2 = var_l6;
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
     var_i3 = var_p2;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AisExtensible0x28hermes0x3A0x3Avm0x3A0x3APseudoHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(instance, var_i1, var_i2, var_i3);
@@ -31757,7 +31286,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
     var_i2 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i1) + 16, var_i2);
     var_i1 = var_l4;
-    var_i2 = 29345u;
+    var_i2 = 29328u;
     i32_store(&instance->w2c_memory, (u64)(var_i1) + 8, var_i2);
     var_i1 = var_p0;
     var_i2 = var_p2;
@@ -31785,7 +31314,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3ApreventExtensions0x28herm
   var_i2 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i1) + 16, var_i2);
   var_i1 = var_l4;
-  var_i2 = 47419u;
+  var_i2 = 47337u;
   i32_store(&instance->w2c_memory, (u64)(var_i1) + 8, var_i2);
   var_i1 = var_p0;
   var_i2 = var_p2;
@@ -31892,7 +31421,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AownPropertyKeys0x28hermes0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l4;
-  var_i1 = 43170u;
+  var_i1 = 43111u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p1;
   var_i1 = var_l4;
@@ -31921,7 +31450,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AownPropertyKeys0x28hermes0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_l4;
-    var_i1 = 65493u;
+    var_i1 = 62289u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_l4;
     var_i1 = 0u;
@@ -31994,17 +31523,17 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i0 = var_l7;
   var_i1 = 276u;
   var_i0 += var_i1;
-  var_l9 = var_i0;
+  var_l10 = var_i0;
   var_i1 = var_l7;
   var_i2 = 136u;
   var_i1 += var_i2;
-  var_l10 = var_i1;
+  var_l9 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l7;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 268, var_j1);
   var_i0 = var_l7;
-  var_i1 = var_l9;
+  var_i1 = var_l10;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 264, var_i1);
   var_i0 = var_l7;
   var_i1 = var_l8;
@@ -32016,45 +31545,53 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i1 = var_l7;
   var_i2 = 264u;
   var_i1 += var_i2;
-  var_l12 = var_i1;
+  var_l10 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 296, var_i1);
   var_i0 = var_l7;
-  var_i1 = var_l10;
+  var_i1 = var_l9;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 292, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l7;
   var_i2 = 128u;
   var_i1 += var_i2;
-  var_l11 = var_i1;
+  var_l8 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l7;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l7;
-    var_i1 = 40u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l8 = var_i0;
+    var_i0 = var_l7;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l9 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
+    var_i0 = var_l7;
+    var_i1 = var_l9;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l8;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 44, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l7;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 40u);
     var_l8 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l7;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 44u);
     var_l9 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
     var_i0 = var_l8;
     var_i1 = var_l7;
     var_i0 -= var_i1;
@@ -32063,77 +31600,77 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     if (var_i0) {goto var_B1;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l11 = var_i0;
+    var_l8 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l12 = var_i0;
-    var_i0 = var_l11;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
     var_l10 = var_i0;
+    var_i0 = var_l8;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l9 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l13 = var_i0;
+  var_l11 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l13;
+  var_i2 = var_l11;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
-  var_l8 = var_i2;
+  var_l12 = var_i2;
   var_i3 = 1107296256u;
   var_i2 = var_i2 == var_i3;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l9 = var_i0;
+  var_l13 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l13;
+  var_i1 = var_l11;
   var_i2 = 0u;
-  var_i3 = var_l8;
+  var_i3 = var_l12;
   var_i4 = 1191182336u;
   var_i3 = var_i3 == var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
   var_i2 = 32u;
   var_i1 += var_i2;
-  var_i2 = var_l9;
+  var_i2 = var_l13;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l9 = var_i0;
+  var_l11 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l14 = var_j0;
-  var_i0 = var_l10;
-  var_i1 = var_l12;
+  var_i0 = var_l9;
+  var_i1 = var_l10;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l11;
-    var_i1 = var_l10;
+    var_i0 = var_l8;
+    var_i1 = var_l9;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l10;
+    var_i0 = var_l9;
     var_j1 = var_l14;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B3;
   }
-  var_i0 = var_l11;
+  var_i0 = var_l8;
   var_j1 = var_l14;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l10 = var_i0;
+  var_l9 = var_i0;
   var_B3:;
-  var_i0 = var_l9;
+  var_i0 = var_l11;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l14 = var_j0;
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l9 = var_i0;
+  var_l10 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
   var_l8 = var_i0;
-  var_i1 = var_l9;
+  var_i1 = var_l10;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l9;
+    var_i0 = var_l10;
     var_i1 = var_l8;
     var_i2 = 8u;
     var_i1 += var_i2;
@@ -32143,7 +31680,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B5;
   }
-  var_i0 = var_l9;
+  var_i0 = var_l10;
   var_j1 = var_l14;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l8 = var_i0;
@@ -32152,7 +31689,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i1 = var_p2;
   var_i2 = 77u;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3AfindTrap0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3APredefined0x3A0x3AStr0x29(instance, var_i0, var_i1, var_i2);
-  var_p1 = var_i0;
+  var_l10 = var_i0;
   var_i1 = 4294967295u;
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
@@ -32164,7 +31701,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     i32_store16(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B0;
   }
-  var_i0 = var_p1;
+  var_i0 = var_l10;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l14 = var_j0;
   var_j1 = 18445899648779419648ull;
@@ -32180,21 +31717,21 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     var_i0 = var_l7;
     var_i1 = var_p4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    var_p4 = var_i1;
+    var_p1 = var_i1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 124, var_i1);
     var_i0 = var_l7;
     var_i1 = var_p6;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    var_p1 = var_i1;
+    var_p4 = var_i1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 120, var_i1);
     var_i0 = var_l7;
-    var_i1 = var_p4;
+    var_i1 = var_p1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
     var_i0 = var_l7;
-    var_i1 = var_p1;
+    var_i1 = var_p4;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
-    var_i1 = var_l10;
+    var_i1 = var_l9;
     var_i2 = var_p2;
     var_i3 = var_p3;
     var_i4 = var_l7;
@@ -32210,10 +31747,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i0 = var_l7;
   var_i1 = var_p4;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_p4 = var_i1;
+  var_p1 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_l7;
-  var_i1 = var_p4;
+  var_i1 = var_p1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 100, var_i1);
   var_i0 = var_l7;
   var_i1 = 104u;
@@ -32239,10 +31776,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i0 = var_l7;
   var_i1 = 80u;
   var_i0 += var_i1;
-  var_i1 = var_p1;
+  var_i1 = var_l10;
   var_i2 = var_p2;
   var_i3 = var_l8;
-  var_i4 = var_l10;
+  var_i4 = var_l9;
   var_j4 = i64_load(&instance->w2c_memory, (u64)(var_i4));
   var_i5 = var_p3;
   var_j5 = i64_load(&instance->w2c_memory, (u64)(var_i5));
@@ -32281,7 +31818,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_l7;
-      var_i1 = 47378u;
+      var_i1 = 47296u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -32307,14 +31844,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_p1 = var_i0;
+  var_p4 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
   var_l8 = var_i0;
-  var_i1 = var_p1;
+  var_i1 = var_p4;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_p1;
+    var_i0 = var_p4;
     var_i1 = var_l8;
     var_i2 = 8u;
     var_i1 += var_i2;
@@ -32324,7 +31861,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B13;
   }
-  var_i0 = var_p1;
+  var_i0 = var_p4;
   var_j1 = 18445055223849287680ull;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l8 = var_i0;
@@ -32334,14 +31871,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_p1 = var_i0;
+  var_p4 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
   var_l8 = var_i0;
-  var_i1 = var_p1;
+  var_i1 = var_p4;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_p1;
+    var_i0 = var_p4;
     var_i1 = var_l8;
     var_i2 = 8u;
     var_i1 += var_i2;
@@ -32351,7 +31888,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B15;
   }
-  var_i0 = var_p1;
+  var_i0 = var_p4;
   var_j1 = 18445477436851224575ull;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l8 = var_i0;
@@ -32362,7 +31899,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i0 = var_l7;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l10;
+  var_i1 = var_l9;
   var_i2 = var_p2;
   var_i3 = var_p3;
   var_i4 = var_l7;
@@ -32390,13 +31927,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i0 = var_l7;
   var_i1 = 16u;
   var_i0 += var_i1;
-  var_i1 = var_l10;
+  var_i1 = var_l9;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_p2;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AisExtensible0x28hermes0x3A0x3Avm0x3A0x3APseudoHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(instance, var_i0, var_i1, var_i2);
   var_i0 = var_l7;
   var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0) + 16u);
-  var_p1 = var_i0;
+  var_p4 = var_i0;
   var_i1 = 255u;
   var_i0 &= var_i1;
   var_i0 = !(var_i0);
@@ -32409,7 +31946,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     i32_store16(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B0;
   }
-  var_i0 = var_p4;
+  var_i0 = var_p1;
   var_i1 = 36u;
   var_i0 &= var_i1;
   var_p3 = var_i0;
@@ -32419,7 +31956,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i0 &= var_i1;
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = var_p1;
+    var_i0 = var_p4;
     var_i1 = 256u;
     var_i0 &= var_i1;
     var_i0 = !(var_i0);
@@ -32434,7 +31971,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_l7;
-      var_i1 = 29204u;
+      var_i1 = 29187u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -32459,7 +31996,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_l7;
-    var_i1 = 29404u;
+    var_i1 = 29387u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -32471,7 +32008,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
     goto var_B0;
   }
   var_i0 = var_p2;
-  var_i1 = var_p4;
+  var_i1 = var_p1;
   var_i2 = var_p5;
   var_i3 = var_l7;
   var_i3 = i32_load16_u(&instance->w2c_memory, (u64)(var_i3) + 32u);
@@ -32508,7 +32045,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AdefineOwnProperty0x28herm
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
   var_i0 = var_l7;
-  var_i1 = 29510u;
+  var_i1 = 29493u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p2;
@@ -32812,7 +32349,7 @@ u64 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetComputedSlotValueUnsaf
     var_i3 >>= (var_i4 & 31);
     var_i4 = 1020u;
     var_i3 &= var_i4;
-    var_i4 = 289808u;
+    var_i4 = 138008u;
     var_i3 += var_i4;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 40u);
@@ -32903,7 +32440,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetComputedPropertyValue
       var_i4 >>= (var_i5 & 31);
       var_i5 = 1020u;
       var_i4 &= var_i5;
-      var_i5 = 289808u;
+      var_i5 = 138008u;
       var_i4 += var_i5;
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
       var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 40u);
@@ -33065,7 +32602,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p2 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
@@ -33078,7 +32615,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p3;
     var_i2 = var_p2;
@@ -33203,11 +32740,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
       goto var_B9;
     }
     var_i0 = var_p1;
-    var_i1 = 1376u;
+    var_i1 = 1368u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
-    var_i2 = 1372u;
+    var_i2 = 1364u;
     var_i1 += var_i2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     var_p2 = var_i1;
@@ -33216,7 +32753,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_i0 = var_i0 <= var_i1;
     if (var_i0) {
       var_i0 = var_p1;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = 16u;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -33227,7 +32764,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_i1 = var_p2;
     var_i2 = 16u;
     var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
     var_B21:;
     var_i0 = var_p2;
     var_i1 = 402653200u;
@@ -33241,7 +32778,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_p2 = var_i0;
     var_B9:;
     var_i0 = var_p1;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p0;
@@ -33258,7 +32795,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p1;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_p4;
       var_i2 = var_p2;
@@ -33278,11 +32815,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   var_i0 = !(var_i0);
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 1376u;
+    var_i1 = 1368u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
-    var_i2 = 1372u;
+    var_i2 = 1364u;
     var_i1 += var_i2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     var_p2 = var_i1;
@@ -33291,7 +32828,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
       var_i0 = var_p1;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = 24u;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -33302,7 +32839,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_i1 = var_p2;
     var_i2 = 24u;
     var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
     var_B26:;
     var_i0 = var_p2;
     var_j1 = 0ull;
@@ -33327,7 +32864,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
     var_p2 = var_i0;
     var_i0 = var_p1;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p0;
@@ -33340,7 +32877,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p1;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_l6;
       var_i2 = var_p2;
@@ -33410,7 +32947,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p2 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
@@ -33423,7 +32960,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l6;
     var_i2 = var_p2;
@@ -33443,7 +32980,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   if (var_i0) {
     var_i0 = var_p2;
     var_i1 = var_p1;
-    var_i2 = 816u;
+    var_i2 = 808u;
     var_i1 += var_i2;
     var_i2 = var_l7;
     var_i3 = 4u;
@@ -33456,7 +32993,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHermesValue320x3A0x3AencodeHermesValue0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(instance, var_j0, var_i1);
   var_p2 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
@@ -33474,7 +33011,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p4;
     var_i2 = var_p2;
@@ -33490,7 +33027,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AaddOwnPropertyImpl0x28her
   instance->w2c_0x5F_stack_pointer = var_i0;
   goto var_B5;
   var_B6:;
-  var_i0 = 40745u;
+  var_i0 = 40743u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_B5:;
@@ -33569,7 +33106,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AscanWord0x28char0x20cons
     var_j1 = 94489280513ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
     var_i0 = var_l3;
-    var_i1 = 246992u;
+    var_i1 = 95216u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_l4;
     var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0));
@@ -33602,13 +33139,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AscanWord0x28char0x20cons
     var_j1 = 77309411332ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
     var_i0 = var_l3;
-    var_i1 = 247172u;
+    var_i1 = 95396u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
     var_i0 = var_l3;
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l3;
-    var_i1 = 65970u;
+    var_i1 = 62766u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
     var_i1 = var_l3;
@@ -33656,11 +33193,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSNumber0x3A0x3Acreate0x28hermes0x3A0x3Av
   u64 var_j0, var_j1;
   f64 var_d1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l3 = var_i1;
@@ -33669,7 +33206,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSNumber0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -33680,10 +33217,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSNumber0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i1 = var_l3;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p0;
-  var_i1 = 5648u;
+  var_i1 = 5640u;
   var_i0 += var_i1;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l4 = var_j0;
@@ -33720,11 +33257,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Avm
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l2 = var_i1;
@@ -33733,7 +33270,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Avm
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -33744,10 +33281,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Avm
   var_i1 = var_l2;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p0;
-  var_i1 = 5656u;
+  var_i1 = 5648u;
   var_i0 += var_i1;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l3 = var_j0;
@@ -33874,7 +33411,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AtoString0x28hermes0x3A0x3A
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 5476u;
+    var_i1 = 5468u;
     var_i0 += var_i1;
     var_i1 = var_p1;
     var_i2 = 147u;
@@ -33989,7 +33526,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AtoString0x28hermes0x3A0x3A
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 5476u;
+    var_i1 = 5468u;
     var_i0 += var_i1;
     var_i1 = var_p1;
     var_i2 = 14u;
@@ -34048,7 +33585,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AtoString0x28hermes0x3A0x3A
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_l2;
-    var_i1 = 22519u;
+    var_i1 = 22502u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p1;
     var_i1 = var_l2;
@@ -34247,6 +33784,133 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AtoString0x28hermes0x3A0x3A
   return var_i0;
 }
 
+u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AsetMessage0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSError0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
+  u32 var_l3 = 0, var_l4 = 0;
+  u64 var_l5 = 0;
+  FUNC_PROLOGUE;
+  u32 var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6, var_i7;
+  u64 var_j0, var_j1, var_j2;
+  var_i0 = instance->w2c_0x5F_stack_pointer;
+  var_i1 = 32u;
+  var_i0 -= var_i1;
+  var_l3 = var_i0;
+  instance->w2c_0x5F_stack_pointer = var_i0;
+  var_i0 = 67200u;
+  var_l4 = var_i0;
+  var_i0 = var_p2;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l5 = var_j0;
+  var_j1 = 18445899648779419648ull;
+  var_i0 = var_j0 >= var_j1;
+  if (var_i0) {
+    var_i0 = 67200u;
+    var_i1 = var_p2;
+    var_j2 = var_l5;
+    var_i2 = (u32)(var_j2);
+    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
+    var_i3 = 50331648u;
+    var_i2 -= var_i3;
+    var_i3 = 134217728u;
+    var_i2 = var_i2 >= var_i3;
+    var_i0 = var_i2 ? var_i0 : var_i1;
+    var_l4 = var_i0;
+  }
+  var_i0 = var_l4;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l5 = var_j0;
+  var_j1 = 18445899648779419648ull;
+  var_i0 = var_j0 >= var_j1;
+  var_j1 = var_l5;
+  var_j2 = 4294967295ull;
+  var_j1 &= var_j2;
+  var_j2 = 0ull;
+  var_i1 = var_j1 != var_j2;
+  var_i0 &= var_i1;
+  var_i0 = !(var_i0);
+  if (var_i0) {
+    var_i0 = var_l3;
+    var_i1 = var_p1;
+    var_i2 = var_p2;
+    var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AtoString_RJS0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i1, var_i2);
+    var_p2 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
+    var_i0 = var_p2;
+    var_i1 = 4294967295u;
+    var_i0 = var_i0 == var_i1;
+    if (var_i0) {goto var_B2;}
+    var_i0 = var_l3;
+    var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 28u);
+    var_j1 = 18445899648779419648ull;
+    var_j0 |= var_j1;
+    var_l5 = var_j0;
+    var_i0 = var_p1;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+    var_p2 = var_i0;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l4 = var_i0;
+    var_i1 = var_p2;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+    var_i0 = var_i0 < var_i1;
+    if (var_i0) {
+      var_i0 = var_p2;
+      var_i1 = var_l4;
+      var_i2 = 8u;
+      var_i1 += var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+      var_i0 = var_l4;
+      var_j1 = var_l5;
+      i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+      var_i0 = var_l4;
+      goto var_B4;
+    }
+    var_i0 = var_p2;
+    var_j1 = var_l5;
+    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+    var_B4:;
+    var_l4 = var_i0;
+  }
+  var_i0 = var_l3;
+  var_i1 = 318u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
+  var_i0 = var_l3;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
+  var_i0 = var_l3;
+  var_i1 = 318u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
+  var_i0 = var_l3;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
+  var_i0 = var_l3;
+  var_i1 = 20u;
+  var_i0 += var_i1;
+  var_i1 = var_p0;
+  var_i2 = var_p1;
+  var_i3 = 141u;
+  var_i4 = var_l3;
+  var_i5 = 16u;
+  var_i4 += var_i5;
+  var_i5 = var_l4;
+  var_i6 = var_l3;
+  var_i7 = 12u;
+  var_i6 += var_i7;
+  w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnPropertyInternal0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3ADefinePropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6);
+  var_i0 = var_l3;
+  var_i0 = i32_load8_s(&instance->w2c_memory, (u64)(var_i0) + 20u);
+  goto var_B0;
+  var_B2:;
+  var_i0 = 0u;
+  var_B0:;
+  var_p0 = var_i0;
+  var_i0 = var_l3;
+  var_i1 = 32u;
+  var_i0 += var_i1;
+  instance->w2c_0x5F_stack_pointer = var_i0;
+  var_i0 = var_p0;
+  FUNC_EPILOGUE;
+  return var_i0;
+}
+
 void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AgetDebugInfo0x28hermes0x3A0x3Avm0x3A0x3ACodeBlock0x2A0x2C0x20unsigned0x20int0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
   u32 var_l3 = 0;
   FUNC_PROLOGUE;
@@ -34320,11 +33984,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBoolean0x3A0x3Acreate0x28hermes0x3A0x3A
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l3 = var_i1;
@@ -34333,7 +33997,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBoolean0x3A0x3Acreate0x28hermes0x3A0x3A
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -34344,10 +34008,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBoolean0x3A0x3Acreate0x28hermes0x3A0x3A
   var_i1 = var_l3;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p0;
-  var_i1 = 5632u;
+  var_i1 = 5624u;
   var_i0 += var_i1;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l4 = var_j0;
@@ -34402,7 +34066,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3Adetach0x28hermes0x3A
   var_i0 = !(var_i0);
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 1284u;
+    var_i1 = 1272u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_l4 = var_i0;
@@ -34410,14 +34074,14 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3Adetach0x28hermes0x3A
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
     var_l5 = var_i0;
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l3;
     var_i2 = var_l3;
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 24u);
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AdebitExternalMemory0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x2C0x20unsigned0x20int0x29(instance, var_i0, var_i1, var_i2);
     var_i0 = var_p0;
-    var_i1 = 1176u;
+    var_i1 = 1168u;
     var_i0 += var_i1;
     var_i1 = var_l4;
     var_i2 = var_l5;
@@ -34449,7 +34113,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3Adetach0x28hermes0x3A
   var_i4 = var_l2;
   var_i5 = 12u;
   var_i4 += var_i5;
-  var_i5 = 70392u;
+  var_i5 = 67208u;
   var_i6 = var_l2;
   var_i7 = 8u;
   var_i6 += var_i7;
@@ -34476,7 +34140,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3Adetach0x28hermes0x3A
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_l2;
-  var_i1 = 60781u;
+  var_i1 = 57604u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = 0u;
   var_i1 = var_p0;
@@ -34577,11 +34241,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
       goto var_B6;
     }
     var_i0 = var_p2;
-    var_i1 = 1376u;
+    var_i1 = 1368u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p2;
-    var_i2 = 1372u;
+    var_i2 = 1364u;
     var_i1 += var_i2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     var_p3 = var_i1;
@@ -34590,7 +34254,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
     var_i0 = var_i0 <= var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = 16u;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -34601,7 +34265,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
     var_i1 = var_p3;
     var_i2 = 16u;
     var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
     var_B8:;
     var_i0 = var_p3;
     var_i1 = 402653200u;
@@ -34618,7 +34282,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
     var_B6:;
     var_p1 = var_i0;
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_l7;
@@ -34630,7 +34294,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_p3;
       var_i2 = var_p1;
@@ -34914,7 +34578,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
           var_i1 = var_l5;
           var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 96u);
           var_l7 = var_i1;
-          var_i2 = 5476u;
+          var_i2 = 5468u;
           var_i1 += var_i2;
           var_i2 = var_l7;
           var_i3 = var_l16;
@@ -35209,11 +34873,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
     goto var_B17;
   }
   var_i0 = var_p2;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l6 = var_i1;
@@ -35222,7 +34886,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 16u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -35233,7 +34897,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
   var_i1 = var_l6;
   var_i2 = 16u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B36:;
   var_i0 = var_l6;
   var_i1 = 402653200u;
@@ -35247,7 +34911,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
   var_B17:;
   var_l6 = var_i0;
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
@@ -35260,7 +34924,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p1;
     var_i2 = var_l6;
@@ -35290,7 +34954,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
       var_i0 = var_l5;
-      var_i1 = 64451u;
+      var_i1 = 61247u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 96, var_i1);
       var_i0 = var_l5;
       var_i1 = var_p1;
@@ -35309,7 +34973,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 64, var_i1);
       var_i0 = 0u;
       var_i1 = 0u;
-      var_i2 = 18550u;
+      var_i2 = 18529u;
       var_i3 = var_l5;
       var_i0 = w2c_hermes_snprintf(instance, var_i0, var_i1, var_i2, var_i3);
       var_p3 = var_i0;
@@ -35340,7 +35004,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AsetLength0x28hermes0x3A0x
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
       var_i0 = var_l5;
-      var_i1 = 64683u;
+      var_i1 = 61479u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
       var_i0 = var_l5;
       var_i1 = 144u;
@@ -35411,7 +35075,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArray0x3A0x3AcreateClass0x28hermes0x3A0
   var_i1 = 4u;
   var_i0 += var_i1;
   var_i1 = var_p0;
-  var_i2 = 5648u;
+  var_i2 = 5640u;
   var_i1 += var_i2;
   var_i2 = var_p0;
   var_i3 = 85u;
@@ -35461,7 +35125,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 35742u;
+    var_i1 = 35707u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -35566,7 +35230,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
   var_j1 = 18445899648779419648ull;
   var_i0 = var_j0 >= var_j1;
   if (var_i0) {
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_j2 = var_l9;
     var_i2 = (u32)(var_j2);
@@ -35589,7 +35253,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
     var_i1 = var_j1 != var_j2;
     var_i0 &= var_i1;
     if (var_i0) {goto var_B10;}
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_i2 = var_l7;
     var_i3 = 4278190080u;
@@ -35605,7 +35269,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
     var_l10 = var_j0;
     goto var_B9;
   }
-  var_i0 = 70384u;
+  var_i0 = 67200u;
   var_p3 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l9 = var_j0;
@@ -35669,7 +35333,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
   var_i1 = 248u;
   var_i0 += var_i1;
   var_i1 = var_p2;
-  var_i2 = 70392u;
+  var_i2 = 67208u;
   var_i3 = var_l5;
   var_i4 = 16u;
   var_i3 -= var_i4;
@@ -35687,7 +35351,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B0;
   }
-  var_i0 = 70392u;
+  var_i0 = 67208u;
   var_i1 = var_l5;
   var_i2 = 24u;
   var_i1 -= var_i2;
@@ -35744,7 +35408,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_p1;
-      var_i1 = 44706u;
+      var_i1 = 44624u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -35809,7 +35473,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt8ArrayConstructor0x28void0x2A0x2C0x20
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 44801u;
+    var_i1 = 44719u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -36215,7 +35879,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 35742u;
+    var_i1 = 35707u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -36320,7 +35984,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
   var_j1 = 18445899648779419648ull;
   var_i0 = var_j0 >= var_j1;
   if (var_i0) {
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_j2 = var_l9;
     var_i2 = (u32)(var_j2);
@@ -36343,7 +36007,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = var_j1 != var_j2;
     var_i0 &= var_i1;
     if (var_i0) {goto var_B10;}
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_i2 = var_l7;
     var_i3 = 4278190080u;
@@ -36359,7 +36023,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
     var_l10 = var_j0;
     goto var_B9;
   }
-  var_i0 = 70384u;
+  var_i0 = 67200u;
   var_p3 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l9 = var_j0;
@@ -36423,7 +36087,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
   var_i1 = 248u;
   var_i0 += var_i1;
   var_i1 = var_p2;
-  var_i2 = 70392u;
+  var_i2 = 67208u;
   var_i3 = var_l5;
   var_i4 = 16u;
   var_i3 -= var_i4;
@@ -36473,7 +36137,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 46066u;
+    var_i1 = 45984u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -36489,7 +36153,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
   var_l7 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
   var_l4 = var_i0;
-  var_i0 = 70392u;
+  var_i0 = 67208u;
   var_i1 = var_l5;
   var_i2 = 24u;
   var_i1 -= var_i2;
@@ -36519,7 +36183,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_p1;
-      var_i1 = 46190u;
+      var_i1 = 46108u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -36546,7 +36210,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_p1;
-      var_i1 = 44706u;
+      var_i1 = 44624u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -36613,7 +36277,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt32ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 44801u;
+    var_i1 = 44719u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -37226,7 +36890,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AregisterLazyIdenti
   var_i0 = var_p2;
   goto var_B0;
   var_B1:;
-  var_i0 = 43553u;
+  var_i0 = 43494u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_B0:;
@@ -37383,7 +37047,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
       var_p2 = var_i0;
       var_i0 = var_p1;
-      var_i1 = 1364u;
+      var_i1 = 1356u;
       var_i0 += var_i1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = var_l5;
@@ -37395,7 +37059,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
       var_i0 = var_i0 != var_i1;
       if (var_i0) {
         var_i0 = var_p1;
-        var_i1 = 816u;
+        var_i1 = 808u;
         var_i0 += var_i1;
         var_i1 = var_p3;
         var_i2 = var_p2;
@@ -37406,7 +37070,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
       i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     }
     var_i0 = var_p1;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p0;
@@ -37419,7 +37083,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
     var_i0 = var_i0 == var_i1;
     if (var_i0) {goto var_B8;}
     var_i0 = var_p1;
-    var_i1 = 4821u;
+    var_i1 = 4813u;
     var_i0 += var_i1;
     var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
     var_i0 = !(var_i0);
@@ -37430,7 +37094,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
     var_i0 = !(var_i0);
     if (var_i0) {goto var_B8;}
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p2;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AsnapshotWriteBarrierInternal0x28hermes0x3A0x3Avm0x3A0x3ACompressedPointer0x29(instance, var_i0, var_i1);
@@ -37538,7 +37202,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
   var_i3 = var_p2;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ATransitionMap0x3A0x3AinsertNew0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3ATransition0x20const0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHiddenClass0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3);
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_p3 = var_i0;
   var_i0 = var_p0;
@@ -37546,7 +37210,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
   var_l5 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
@@ -37580,7 +37244,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AupdateProperty0x28herm
   var_i0 = var_p2;
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 40745u;
+  var_i0 = 40743u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_Bfunc:;
@@ -37654,7 +37318,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddToPropertyMap0x28he
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_p2 = var_i0;
     var_i0 = var_p1;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p0;
@@ -37667,7 +37331,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AaddToPropertyMap0x28he
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p1;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_p0;
       var_i2 = var_p2;
@@ -37730,6 +37394,30 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = 0u;
   w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Aunique_ptr0x3Chermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3ACollectionStats0x2C0x20std0x3A0x3A_0x5F20x3A0x3Adefault_delete0x3Chermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3ACollectionStats0x3E0x3E0x3A0x3Areset0x5Babi0x3Av150070x5D0x28hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3ACollectionStats0x2A0x29(instance, var_i0, var_i1);
   var_i0 = var_p0;
+  var_i1 = 4016u;
+  var_i0 += var_i1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l1 = var_i0;
+  if (var_i0) {
+    var_i0 = var_l1;
+    var_i1 = var_l1;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
+    var_i2 = 1u;
+    var_i1 -= var_i2;
+    var_l2 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+    var_i0 = var_l2;
+    var_i1 = 4294967295u;
+    var_i0 = var_i0 == var_i1;
+    if (var_i0) {
+      var_i0 = var_l1;
+      var_i1 = var_l1;
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
+      CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32), w2c_hermes_t3, var_i1, instance->w2c_0x5F_indirect_function_table.data[var_i1].module_instance, var_i0);
+    }
+  }
+  var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4012u);
   var_l7 = var_i0;
   var_i0 = var_p0;
@@ -37762,7 +37450,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
       var_i1 = 20u;
       var_i0 += var_i1;
       var_l4 = var_i0;
-      goto var_B2;
+      goto var_B4;
     }
     var_i0 = var_l8;
     var_i1 = 20u;
@@ -37812,8 +37500,8 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i1 += var_i2;
     var_l5 = var_i1;
     var_i0 = var_i0 == var_i1;
-    if (var_i0) {goto var_B2;}
-    var_L4: 
+    if (var_i0) {goto var_B4;}
+    var_L6: 
       var_i0 = var_l2;
       var_i1 = var_l2;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 16u);
@@ -37825,22 +37513,22 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
         var_i1 = 16u;
         var_i0 += var_i1;
-        goto var_B6;
+        goto var_B8;
       }
       var_i0 = var_l1;
       var_i0 = !(var_i0);
-      if (var_i0) {goto var_B5;}
+      if (var_i0) {goto var_B7;}
       var_i0 = var_l1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = 20u;
       var_i0 += var_i1;
-      var_B6:;
+      var_B8:;
       var_l3 = var_i0;
       var_i0 = var_l1;
       var_i1 = var_l3;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
       CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32), w2c_hermes_t3, var_i1, instance->w2c_0x5F_indirect_function_table.data[var_i1].module_instance, var_i0);
-      var_B5:;
+      var_B7:;
       var_i0 = var_l2;
       var_i1 = 24u;
       var_i0 += var_i1;
@@ -37862,14 +37550,14 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
       var_i0 = var_l2;
       var_i1 = var_l5;
       var_i0 = var_i0 != var_i1;
-      if (var_i0) {goto var_L4;}
+      if (var_i0) {goto var_L6;}
     var_i0 = var_l8;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
     var_l1 = var_i0;
     var_i0 = var_l8;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
     var_l9 = var_i0;
-    var_B2:;
+    var_B4:;
     var_i0 = var_l4;
     var_i1 = 0u;
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
@@ -37880,7 +37568,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i1 = 8u;
     var_i0 = var_i0 > var_i1;
     if (var_i0) {
-      var_L10: 
+      var_L12: 
         var_i0 = var_l1;
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
         w2c_hermes_dlfree(instance, var_i0);
@@ -37898,7 +37586,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
         var_l2 = var_i0;
         var_i1 = 8u;
         var_i0 = var_i0 > var_i1;
-        if (var_i0) {goto var_L10;}
+        if (var_i0) {goto var_L12;}
     }
     var_i0 = 85u;
     var_l1 = var_i0;
@@ -37908,18 +37596,18 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i1 = 1u;
     var_i0 -= var_i1;
     switch (var_i0) {
-      case 0: goto var_B12;
-      case 1: goto var_B13;
-      default: goto var_B11;
+      case 0: goto var_B14;
+      case 1: goto var_B15;
+      default: goto var_B13;
     }
-    var_B13:;
+    var_B15:;
     var_i0 = 170u;
     var_l1 = var_i0;
-    var_B12:;
+    var_B14:;
     var_i0 = var_l8;
     var_i1 = var_l1;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
-    var_B11:;
+    var_B13:;
     var_i0 = var_l7;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 76u);
     var_l1 = var_i0;
@@ -37927,8 +37615,8 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 80u);
     var_l2 = var_i1;
     var_i0 = var_i0 == var_i1;
-    if (var_i0) {goto var_B14;}
-    var_L15: 
+    if (var_i0) {goto var_B16;}
+    var_L17: 
       var_i0 = var_l1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       w2c_hermes_dlfree(instance, var_i0);
@@ -37938,7 +37626,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
       var_l1 = var_i0;
       var_i1 = var_l2;
       var_i0 = var_i0 != var_i1;
-      if (var_i0) {goto var_L15;}
+      if (var_i0) {goto var_L17;}
     var_i0 = var_l7;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 80u);
     var_l1 = var_i0;
@@ -37946,7 +37634,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 76u);
     var_l2 = var_i1;
     var_i0 = var_i0 == var_i1;
-    if (var_i0) {goto var_B14;}
+    if (var_i0) {goto var_B16;}
     var_i0 = var_l7;
     var_i1 = var_l1;
     var_i2 = var_l2;
@@ -37958,7 +37646,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i2 &= var_i3;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
-    var_B14:;
+    var_B16:;
     var_i0 = var_l7;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 72u);
     var_l2 = var_i0;
@@ -38013,7 +37701,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_l1 = var_i0;
   var_i0 = !(var_i0);
-  if (var_i0) {goto var_B20;}
+  if (var_i0) {goto var_B22;}
   var_i0 = var_l1;
   var_i1 = var_l1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
@@ -38022,7 +37710,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 -= var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_l2;
-  if (var_i0) {goto var_B20;}
+  if (var_i0) {goto var_B22;}
   var_i0 = var_l1;
   var_i1 = var_l1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
@@ -38030,7 +37718,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32), w2c_hermes_t3, var_i1, instance->w2c_0x5F_indirect_function_table.data[var_i1].module_instance, var_i0);
   var_i0 = var_l1;
   w2c_hermes_std0x3A0x3A_0x5F20x3A0x3A_0x5Fshared_weak_count0x3A0x3A_0x5Frelease_weak0x280x29(instance, var_i0);
-  var_B20:;
+  var_B22:;
   var_i0 = var_p0;
   var_i1 = 0u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 712, var_i1);
@@ -38045,7 +37733,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = 9u;
   var_i0 = var_i0 >= var_i1;
   if (var_i0) {
-    var_L22: 
+    var_L24: 
       var_i0 = var_l1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       w2c_hermes_dlfree(instance, var_i0);
@@ -38064,7 +37752,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
       var_l3 = var_i0;
       var_i1 = 8u;
       var_i0 = var_i0 > var_i1;
-      if (var_i0) {goto var_L22;}
+      if (var_i0) {goto var_L24;}
   }
   var_i0 = 8u;
   var_l2 = var_i0;
@@ -38074,23 +37762,23 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = 1u;
   var_i0 -= var_i1;
   switch (var_i0) {
-    case 0: goto var_B24;
-    case 1: goto var_B25;
-    default: goto var_B23;
+    case 0: goto var_B26;
+    case 1: goto var_B27;
+    default: goto var_B25;
   }
-  var_B25:;
+  var_B27:;
   var_i0 = 16u;
   var_l2 = var_i0;
-  var_B24:;
+  var_B26:;
   var_i0 = var_p0;
   var_i1 = var_l2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 708, var_i1);
-  var_B23:;
+  var_B25:;
   var_i0 = var_l1;
   var_i1 = var_l9;
   var_i0 = var_i0 == var_i1;
-  if (var_i0) {goto var_B26;}
-  var_L27: 
+  if (var_i0) {goto var_B28;}
+  var_L29: 
     var_i0 = var_l1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     w2c_hermes_dlfree(instance, var_i0);
@@ -38100,7 +37788,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_l1 = var_i0;
     var_i1 = var_l9;
     var_i0 = var_i0 != var_i1;
-    if (var_i0) {goto var_L27;}
+    if (var_i0) {goto var_L29;}
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 700u);
   var_l1 = var_i0;
@@ -38108,7 +37796,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 696u);
   var_l2 = var_i1;
   var_i0 = var_i0 == var_i1;
-  if (var_i0) {goto var_B26;}
+  if (var_i0) {goto var_B28;}
   var_i0 = var_p0;
   var_i1 = var_l1;
   var_i2 = var_l2;
@@ -38120,7 +37808,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i2 &= var_i3;
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 700, var_i1);
-  var_B26:;
+  var_B28:;
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 692u);
   var_l2 = var_i0;
@@ -38143,7 +37831,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i1 = 20u;
     var_i0 += var_i1;
     var_l3 = var_i0;
-    goto var_B29;
+    goto var_B31;
   }
   var_i0 = var_l4;
   var_i1 = 20u;
@@ -38187,8 +37875,8 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 += var_i2;
   var_l2 = var_i1;
   var_i0 = var_i0 == var_i1;
-  if (var_i0) {goto var_B29;}
-  var_L31: 
+  if (var_i0) {goto var_B31;}
+  var_L33: 
     var_i0 = var_l6;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AAlignedHeapSegment0x3A0x3A0x7EAlignedHeapSegment0x280x29(instance, var_i0);
     var_i1 = 16u;
@@ -38211,14 +37899,14 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_i0 = var_l2;
     var_i1 = var_l6;
     var_i0 = var_i0 != var_i1;
-    if (var_i0) {goto var_L31;}
+    if (var_i0) {goto var_L33;}
   var_i0 = var_l4;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_l5 = var_i0;
   var_i0 = var_l4;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
   var_l9 = var_i0;
-  var_B29:;
+  var_B31:;
   var_i0 = var_l3;
   var_i1 = 0u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
@@ -38229,7 +37917,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = 8u;
   var_i0 = var_i0 > var_i1;
   if (var_i0) {
-    var_L34: 
+    var_L36: 
       var_i0 = var_l5;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       w2c_hermes_dlfree(instance, var_i0);
@@ -38247,7 +37935,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
       var_l6 = var_i0;
       var_i1 = 8u;
       var_i0 = var_i0 > var_i1;
-      if (var_i0) {goto var_L34;}
+      if (var_i0) {goto var_L36;}
   }
   var_i0 = 128u;
   var_l5 = var_i0;
@@ -38257,18 +37945,18 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = 1u;
   var_i0 -= var_i1;
   switch (var_i0) {
-    case 0: goto var_B36;
-    case 1: goto var_B37;
-    default: goto var_B35;
+    case 0: goto var_B38;
+    case 1: goto var_B39;
+    default: goto var_B37;
   }
-  var_B37:;
+  var_B39:;
   var_i0 = 256u;
   var_l5 = var_i0;
-  var_B36:;
+  var_B38:;
   var_i0 = var_l4;
   var_i1 = var_l5;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
-  var_B35:;
+  var_B37:;
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 600u);
   var_l3 = var_i0;
@@ -38276,8 +37964,8 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 604u);
   var_l2 = var_i1;
   var_i0 = var_i0 == var_i1;
-  if (var_i0) {goto var_B38;}
-  var_L39: 
+  if (var_i0) {goto var_B40;}
+  var_L41: 
     var_i0 = var_l3;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     w2c_hermes_dlfree(instance, var_i0);
@@ -38287,7 +37975,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
     var_l3 = var_i0;
     var_i1 = var_l2;
     var_i0 = var_i0 != var_i1;
-    if (var_i0) {goto var_L39;}
+    if (var_i0) {goto var_L41;}
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 604u);
   var_l1 = var_i0;
@@ -38295,7 +37983,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 600u);
   var_l2 = var_i1;
   var_i0 = var_i0 == var_i1;
-  if (var_i0) {goto var_B38;}
+  if (var_i0) {goto var_B40;}
   var_i0 = var_p0;
   var_i1 = var_l1;
   var_i2 = var_l2;
@@ -38307,7 +37995,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i2 &= var_i3;
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 604, var_i1);
-  var_B38:;
+  var_B40:;
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 596u);
   var_l2 = var_i0;
@@ -38333,7 +38021,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 544u);
   var_l1 = var_i0;
   var_i0 = !(var_i0);
-  if (var_i0) {goto var_B42;}
+  if (var_i0) {goto var_B44;}
   var_i0 = var_l1;
   var_i1 = var_l1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
@@ -38342,7 +38030,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   var_i1 -= var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_l2;
-  if (var_i0) {goto var_B42;}
+  if (var_i0) {goto var_B44;}
   var_i0 = var_l1;
   var_i1 = var_l1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
@@ -38350,7 +38038,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3A0x7EHadesGC0x280x29(w2c_he
   CALL_INDIRECT(instance->w2c_0x5F_indirect_function_table, void (*)(void*, u32), w2c_hermes_t3, var_i1, instance->w2c_0x5F_indirect_function_table.data[var_i1].module_instance, var_i0);
   var_i0 = var_l1;
   w2c_hermes_std0x3A0x3A_0x5F20x3A0x3A_0x5Fshared_weak_count0x3A0x3A_0x5Frelease_weak0x280x29(instance, var_i0);
-  var_B42:;
+  var_B44:;
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 528u);
   var_l2 = var_i0;
@@ -38408,7 +38096,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Abasic_string0x3Cchar0x2C0x20std0x3A0x3A_0x5F20x3A0x3Achar_traits0x3Cchar0x3E0x2C0x20std0x3A0x3A_0x5F20x3A0x3Aallocator0x3Cchar0x3E0x3E0x3A0x3A_0x5Finit_copy_ctor_external0x28char0x20const0x2A0x2C0x20unsigned0x20long0x29(instance, var_i0, var_i1, var_i2);
   var_B0:;
   var_i0 = var_l4;
-  var_i1 = 45302u;
+  var_i1 = 45220u;
   var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1));
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 204, var_i1);
   var_i0 = var_l4;
@@ -38418,7 +38106,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 205, var_i1);
   var_i0 = var_l4;
-  var_i1 = 45298u;
+  var_i1 = 45216u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 200, var_i1);
   var_i0 = var_l3;
@@ -38477,11 +38165,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   var_j1 = 9223372105574252556ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 192, var_j1);
   var_i0 = var_l3;
-  var_i1 = 42921u;
+  var_i1 = 42862u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l3;
-  var_i1 = 42913u;
+  var_i1 = 42854u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l3;
@@ -38535,7 +38223,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   var_l3 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
-  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4017u);
+  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4020u);
   if (var_i0) {
     var_i0 = var_l3;
     var_i1 = 36u;
@@ -38551,7 +38239,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
     if (var_i0) {
       var_i0 = var_p0;
       var_i1 = 0u;
-      i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4017, var_i1);
+      i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4020, var_i1);
       goto var_B4;
     }
     var_i0 = var_p0;
@@ -38731,14 +38419,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
     var_j1 = (u64)(var_i1);
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_j1);
     var_i0 = var_l4;
-    var_i1 = 40787u;
+    var_i1 = 40785u;
     var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1));
     i32_store8(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
     var_i0 = var_l4;
     var_i1 = 9u;
     i32_store8(&instance->w2c_memory, (u64)(var_i0) + 187, var_i1);
     var_i0 = var_l4;
-    var_i1 = 40779u;
+    var_i1 = 40777u;
     var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_j1);
     var_i0 = var_l4;
@@ -38768,13 +38456,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
     var_i1 = var_p0;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
     var_i0 = var_l4;
-    var_i1 = 271016u;
+    var_i1 = 119224u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_l4;
-    var_i1 = 270984u;
+    var_i1 = 119192u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_l4;
-    var_i1 = 270924u;
+    var_i1 = 119132u;
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     var_i0 = var_p0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
@@ -38805,10 +38493,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
     var_i1 = var_l4;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
     var_i0 = var_l3;
-    var_i1 = 271136u;
+    var_i1 = 119344u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_l3;
-    var_i1 = 271044u;
+    var_i1 = 119252u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_p0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
@@ -38971,7 +38659,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
         var_i2 = var_l6;
         var_i3 = 56u;
         var_i2 *= var_i3;
-        var_i3 = 282996u;
+        var_i3 = 131204u;
         var_i2 += var_i3;
         w2c_hermes_hermes0x3A0x3Avm0x3A0x3ASlotVisitor0x3Chermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AEvacAcceptor0x3Ctrue0x3E0x3E0x3A0x3Avisit0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AMetadata0x3A0x3ASlotOffsets0x20const0x260x29(instance, var_i0, var_i1, var_i2);
         var_i0 = var_l4;
@@ -39020,13 +38708,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   var_i1 = var_p0;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l4;
-  var_i1 = 271260u;
+  var_i1 = 119468u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l4;
-  var_i1 = 271228u;
+  var_i1 = 119436u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_l4;
-  var_i1 = 271168u;
+  var_i1 = 119376u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
@@ -39057,10 +38745,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   var_i1 = var_l4;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l8;
-  var_i1 = 271380u;
+  var_i1 = 119588u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l8;
-  var_i1 = 271288u;
+  var_i1 = 119496u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
@@ -39222,7 +38910,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
           var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
           var_i3 = 56u;
           var_i2 *= var_i3;
-          var_i3 = 282996u;
+          var_i3 = 131204u;
           var_i2 += var_i3;
           var_i3 = var_l22;
           var_i4 = var_l17;
@@ -39290,7 +38978,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
               var_i2 >>= (var_i3 & 31);
               var_i3 = 56u;
               var_i2 *= var_i3;
-              var_i3 = 282996u;
+              var_i3 = 131204u;
               var_i2 += var_i3;
               var_l5 = var_i2;
               w2c_hermes_hermes0x3A0x3Avm0x3A0x3ASlotVisitor0x3Chermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AEvacAcceptor0x3Cfalse0x3E0x3E0x3A0x3AvisitFields0x28char0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AMetadata0x3A0x3ASlotOffsets0x20const0x260x29(instance, var_i0, var_i1, var_i2);
@@ -39330,7 +39018,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
             var_i2 >>= (var_i3 & 31);
             var_i3 = 56u;
             var_i2 *= var_i3;
-            var_i3 = 282996u;
+            var_i3 = 131204u;
             var_i2 += var_i3;
             var_l5 = var_i2;
             w2c_hermes_hermes0x3A0x3Avm0x3A0x3ASlotVisitor0x3Chermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AEvacAcceptor0x3Cfalse0x3E0x3E0x3A0x3AvisitFields0x28char0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AMetadata0x3A0x3ASlotOffsets0x20const0x260x29(instance, var_i0, var_i1, var_i2);
@@ -39395,7 +39083,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
           var_i2 >>= (var_i3 & 31);
           var_i3 = 56u;
           var_i2 *= var_i3;
-          var_i3 = 282996u;
+          var_i3 = 131204u;
           var_i2 += var_i3;
           var_i3 = var_l22;
           var_i4 = var_l17;
@@ -39455,7 +39143,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
       var_i2 = var_l5;
       var_i3 = 56u;
       var_i2 *= var_i3;
-      var_i3 = 282996u;
+      var_i3 = 131204u;
       var_i2 += var_i3;
       var_l3 = var_i2;
       w2c_hermes_hermes0x3A0x3Avm0x3A0x3ASlotVisitor0x3Chermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AEvacAcceptor0x3Cfalse0x3E0x3E0x3A0x3AvisitFields0x28char0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AMetadata0x3A0x3ASlotOffsets0x20const0x260x29(instance, var_i0, var_i1, var_i2);
@@ -39638,7 +39326,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
         var_i3 >>= (var_i4 & 31);
         var_i4 = 1020u;
         var_i3 &= var_i4;
-        var_i4 = 289808u;
+        var_i4 = 138008u;
         var_i3 += var_i4;
         var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
         var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 16u);
@@ -39661,7 +39349,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4392u);
   var_l33 = var_j0;
   var_i0 = var_p0;
-  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4019u);
+  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4022u);
   if (var_i0) {
     var_i0 = var_p0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 548u);
@@ -39698,11 +39386,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
     var_i1 = 7u;
     i32_store8(&instance->w2c_memory, (u64)(var_i0) + 175, var_i1);
     var_i0 = var_l4;
-    var_i1 = 33078u;
+    var_i1 = 33061u;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
     var_i0 = var_l4;
-    var_i1 = 33081u;
+    var_i1 = 33064u;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 167, var_i1);
     var_i0 = var_l4;
@@ -39781,7 +39469,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
         var_i0 >>= (var_i1 & 31);
         var_i1 = 1020u;
         var_i0 &= var_i1;
-        var_i1 = 289808u;
+        var_i1 = 138008u;
         var_i0 += var_i1;
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
@@ -39939,11 +39627,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
     var_i1 = 0u;
     i32_store8(&instance->w2c_memory, (u64)(var_i0) + 11, var_i1);
     var_i0 = var_l3;
-    var_i1 = 59145u;
+    var_i1 = 55968u;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_l3;
-    var_i1 = 59148u;
+    var_i1 = 55971u;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 7, var_i1);
     var_i0 = var_p0;
@@ -40343,7 +40031,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   var_i0 = var_d0 <= var_d1;
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B71;}
-  var_i0 = 247664u;
+  var_i0 = 95888u;
   var_i0 = w2c_hermes_strlen(instance, var_i0);
   var_p1 = var_i0;
   var_i1 = 2147483632u;
@@ -40393,7 +40081,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AyoungGenCollection0x28std
   if (var_i0) {goto var_B84;}
   var_B85:;
   var_i0 = var_p2;
-  var_i1 = 247664u;
+  var_i1 = 95888u;
   var_i2 = var_p1;
   var_i0 = w2c_hermes_0x5F_memcpy(instance, var_i0, var_i1, var_i2);
   var_B84:;
@@ -40588,11 +40276,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AcreateSegment0x280x29(w2c
   var_j1 += var_j2;
   var_i0 = var_j0 <= var_j1;
   if (var_i0) {
-    var_i0 = 282993u;
+    var_i0 = 131201u;
     var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
     var_i0 = !(var_i0);
     if (var_i0) {
-      var_i0 = 282993u;
+      var_i0 = 131201u;
       var_i1 = 1u;
       i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
     }
@@ -40600,7 +40288,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AcreateSegment0x280x29(w2c
     var_i1 = 1u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
     var_i0 = var_l2;
-    var_i1 = 261948u;
+    var_i1 = 110180u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 60, var_i1);
     var_i0 = var_p0;
     var_i1 = var_l2;
@@ -40626,7 +40314,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AcreateSegment0x280x29(w2c
   var_i1 = 4u;
   var_i0 += var_i1;
   var_i1 = var_l4;
-  var_i2 = 21923u;
+  var_i2 = 21906u;
   var_i3 = var_l4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 8u);
@@ -41267,7 +40955,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AMarkAcceptor0x3A0x3AdrainS
     var_i0 >>= (var_i1 & 31);
     var_i1 = 56u;
     var_i0 *= var_i1;
-    var_i1 = 282996u;
+    var_i1 = 131204u;
     var_i0 += var_i1;
     var_l6 = var_i0;
     var_l7 = var_i0;
@@ -42256,18 +41944,18 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3ACollectionStats0x3A0x3Age
   var_j1 = 9223372174293729299ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_j1);
   var_i0 = var_l2;
-  var_i1 = 62457u;
+  var_i1 = 59280u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l2;
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 19, var_i1);
   var_i0 = var_l2;
-  var_i1 = 62472u;
+  var_i1 = 59295u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 15, var_i1);
   var_i0 = var_l2;
-  var_i1 = 62465u;
+  var_i1 = 59288u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_p0;
@@ -43316,7 +43004,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 35742u;
+    var_i1 = 35707u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -43421,7 +43109,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
   var_j1 = 18445899648779419648ull;
   var_i0 = var_j0 >= var_j1;
   if (var_i0) {
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_j2 = var_l9;
     var_i2 = (u32)(var_j2);
@@ -43444,7 +43132,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
     var_i1 = var_j1 != var_j2;
     var_i0 &= var_i1;
     if (var_i0) {goto var_B10;}
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_i2 = var_l7;
     var_i3 = 4278190080u;
@@ -43460,7 +43148,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
     var_l10 = var_j0;
     goto var_B9;
   }
-  var_i0 = 70384u;
+  var_i0 = 67200u;
   var_p3 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l9 = var_j0;
@@ -43524,7 +43212,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
   var_i1 = 248u;
   var_i0 += var_i1;
   var_i1 = var_p2;
-  var_i2 = 70392u;
+  var_i2 = 67208u;
   var_i3 = var_l5;
   var_i4 = 16u;
   var_i3 -= var_i4;
@@ -43574,7 +43262,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 46066u;
+    var_i1 = 45984u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -43590,7 +43278,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
   var_l7 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
   var_l4 = var_i0;
-  var_i0 = 70392u;
+  var_i0 = 67208u;
   var_i1 = var_l5;
   var_i2 = 24u;
   var_i1 -= var_i2;
@@ -43620,7 +43308,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_p1;
-      var_i1 = 46190u;
+      var_i1 = 46108u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -43647,7 +43335,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_p1;
-      var_i1 = 44706u;
+      var_i1 = 44624u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -43714,7 +43402,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AFloat64ArrayConstructor0x28void0x2A0x2C0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 44801u;
+    var_i1 = 44719u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -44119,7 +43807,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l3;
-  var_i1 = 22519u;
+  var_i1 = 22502u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p1;
@@ -44131,7 +43819,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0
   goto var_B0;
   var_B1:;
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l5 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 512u);
@@ -44159,7 +43847,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar16_t0x3E0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l3;
-    var_i1 = 61379u;
+    var_i1 = 58202u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p1;
@@ -44456,11 +44144,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADomain0x3A0x3AaddRuntimeModule0x28hermes
   instance->w2c_0x5F_stack_pointer = var_i0;
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 282993u;
+  var_i0 = 131201u;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = 282993u;
+    var_i0 = 131201u;
     var_i1 = 1u;
     i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
   }
@@ -44468,14 +44156,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADomain0x3A0x3AaddRuntimeModule0x28hermes
   var_i1 = 5u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l4;
-  var_i1 = 261948u;
+  var_i1 = 110180u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l4;
   var_i1 = var_l4;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_l4;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3Aoom0x28std0x3A0x3A_0x5F20x3A0x3Aerror_code0x29(instance, var_i0, var_i1);
@@ -44528,6 +44216,73 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AgetVirtualOffset0x280x29
       if (var_i0) {goto var_L1;}
   }
   var_i0 = var_l1;
+  FUNC_EPILOGUE;
+  return var_i0;
+}
+
+u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSSymbol0x3A0x3Acreate0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
+  u32 var_l3 = 0;
+  u64 var_l4 = 0, var_l5 = 0;
+  FUNC_PROLOGUE;
+  u32 var_i0, var_i1, var_i2;
+  u64 var_j0, var_j1;
+  var_i0 = var_p0;
+  var_i1 = 1368u;
+  var_i0 += var_i1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_i1 = var_p0;
+  var_i2 = 1364u;
+  var_i1 += var_i2;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_l3 = var_i1;
+  var_i0 -= var_i1;
+  var_i1 = 39u;
+  var_i0 = var_i0 <= var_i1;
+  if (var_i0) {
+    var_i0 = var_p0;
+    var_i1 = 808u;
+    var_i0 += var_i1;
+    var_i1 = 40u;
+    var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_l3 = var_i0;
+    goto var_B0;
+  }
+  var_i0 = var_p0;
+  var_i1 = var_l3;
+  var_i2 = 40u;
+  var_i1 += var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
+  var_B0:;
+  var_i0 = var_p0;
+  var_i1 = 5624u;
+  var_i0 += var_i1;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l4 = var_j0;
+  var_i0 = var_p2;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l5 = var_j0;
+  var_i0 = var_l3;
+  var_i1 = var_p1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
+  var_i0 = var_l3;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
+  var_i0 = var_l3;
+  var_j1 = var_l4;
+  i64_store32(&instance->w2c_memory, (u64)(var_i0) + 12, var_j1);
+  var_i0 = var_l3;
+  var_j1 = var_l5;
+  i64_store32(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
+  var_i0 = var_l3;
+  var_j1 = 956301352ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+  var_i0 = var_l3;
+  var_j1 = 60129542158ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
+  var_i0 = var_l3;
+  var_j1 = 60129542158ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
+  var_i0 = var_l3;
   FUNC_EPILOGUE;
   return var_i0;
 }
@@ -44609,7 +44364,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
     var_i0 = var_p3;
     var_i1 = 2u;
     var_i0 <<= (var_i1 & 31);
-    var_i1 = 267060u;
+    var_i1 = 115284u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_p0 = var_i0;
@@ -44639,7 +44394,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_l5;
-    var_i1 = 66021u;
+    var_i1 = 62817u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
     var_i0 = var_p1;
     var_i1 = var_l5;
@@ -44818,7 +44573,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B9;}
   var_i0 = var_p1;
-  var_i1 = 5476u;
+  var_i1 = 5468u;
   var_i0 += var_i1;
   var_l22 = var_i0;
   var_i0 = var_p3;
@@ -45114,7 +44869,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_l4 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
@@ -45127,7 +44882,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l7;
     var_i2 = var_l4;
@@ -45158,7 +44913,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_p2 = var_i0;
     var_i0 = var_p1;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p0;
@@ -45171,7 +44926,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p1;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_l7;
       var_i2 = var_p2;
@@ -45201,7 +44956,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSRegExp0x3A0x3Ainitialize0x28hermes0x3A0
     var_i4 = var_l5;
     var_i5 = 12u;
     var_i4 += var_i5;
-    var_i5 = 70432u;
+    var_i5 = 67248u;
     var_i6 = var_l5;
     var_i7 = 8u;
     var_i6 += var_i7;
@@ -45278,14 +45033,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetTargetAndHandler0x28he
   FUNC_PROLOGUE;
   u32 var_i0, var_i1, var_i2, var_i3, var_i4, var_i5;
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l5 = var_i0;
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p2 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_l4 = var_i0;
@@ -45324,7 +45079,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetTargetAndHandler0x28he
     var_i2 = var_p2;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i0, var_i1, var_i2);
     var_i0 = var_p1;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
     var_l4 = var_i0;
   }
   var_i0 = var_p0;
@@ -45369,24 +45124,24 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l9 = var_i0;
+  var_l7 = var_i0;
   var_i0 = var_l6;
   var_i1 = 156u;
   var_i0 += var_i1;
-  var_l7 = var_i0;
+  var_l9 = var_i0;
   var_i1 = var_l6;
   var_i2 = 16u;
   var_i1 += var_i2;
-  var_l10 = var_i1;
+  var_l8 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l6;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_j1);
   var_i0 = var_l6;
-  var_i1 = var_l7;
+  var_i1 = var_l9;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_l6;
-  var_i1 = var_l9;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l6;
   var_i1 = 0u;
@@ -45395,110 +45150,118 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
   var_i1 = var_l6;
   var_i2 = 144u;
   var_i1 += var_i2;
-  var_l8 = var_i1;
+  var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
   var_i0 = var_l6;
-  var_i1 = var_l10;
+  var_i1 = var_l8;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l6;
   var_i2 = 8u;
   var_i1 += var_i2;
-  var_l11 = var_i1;
+  var_l9 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l6;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l6;
-    var_i1 = 184u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l7 = var_i0;
+    var_i0 = var_l6;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l8 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+    var_i0 = var_l6;
+    var_i1 = var_l8;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l7;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l6;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
-    var_l9 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l6;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
-    var_l7 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_l9;
+    var_l8 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
+    var_i0 = var_l7;
     var_i1 = var_l6;
     var_i0 -= var_i1;
-    var_i1 = var_l7;
+    var_i1 = var_l8;
     var_i0 = var_i0 > var_i1;
     if (var_i0) {goto var_B1;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l11 = var_i0;
+    var_l9 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l8 = var_i0;
-    var_i0 = var_l11;
+    var_l7 = var_i0;
+    var_i0 = var_l9;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-    var_l10 = var_i0;
+    var_l8 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l12 = var_i0;
+  var_l10 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l12;
+  var_i2 = var_l10;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
-  var_l9 = var_i2;
+  var_l11 = var_i2;
   var_i3 = 1107296256u;
   var_i2 = var_i2 == var_i3;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l7 = var_i0;
+  var_l12 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l12;
+  var_i1 = var_l10;
   var_i2 = 0u;
-  var_i3 = var_l9;
+  var_i3 = var_l11;
   var_i4 = 1191182336u;
   var_i3 = var_i3 == var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
   var_i2 = 32u;
   var_i1 += var_i2;
-  var_i2 = var_l7;
+  var_i2 = var_l12;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l7 = var_i0;
+  var_l10 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l13 = var_j0;
-  var_i0 = var_l8;
-  var_i1 = var_l10;
+  var_i0 = var_l7;
+  var_i1 = var_l8;
   var_i0 = var_i0 > var_i1;
   if (var_i0) {
-    var_i0 = var_l11;
-    var_i1 = var_l10;
+    var_i0 = var_l9;
+    var_i1 = var_l8;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l10;
+    var_i0 = var_l8;
     var_j1 = var_l13;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B3;
   }
-  var_i0 = var_l11;
+  var_i0 = var_l9;
   var_j1 = var_l13;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l10 = var_i0;
+  var_l8 = var_i0;
   var_B3:;
-  var_i0 = var_l7;
+  var_i0 = var_l10;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
@@ -45531,7 +45294,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
   var_i1 = var_p2;
   var_i2 = 66u;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3AfindTrap0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3APredefined0x3A0x3AStr0x29(instance, var_i0, var_i1, var_i2);
-  var_p1 = var_i0;
+  var_l10 = var_i0;
   var_i1 = 4294967295u;
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
@@ -45543,7 +45306,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
     i32_store16(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B0;
   }
-  var_i0 = var_p1;
+  var_i0 = var_l10;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l13 = var_j0;
   var_j1 = 18445899648779419648ull;
@@ -45563,7 +45326,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
     var_i1 = 0u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_p0;
-    var_i1 = var_l10;
+    var_i1 = var_l8;
     var_i2 = var_p2;
     var_i3 = var_p3;
     var_i4 = var_p4;
@@ -45578,7 +45341,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
   var_i0 = !(var_i0);
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 5476u;
+    var_i1 = 5468u;
     var_i0 += var_i1;
     var_i1 = var_p2;
     var_i2 = var_p3;
@@ -45589,27 +45352,27 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
     var_l13 = var_j0;
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_p3 = var_i0;
+    var_p1 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-    var_l8 = var_i0;
-    var_i1 = var_p3;
+    var_l7 = var_i0;
+    var_i1 = var_p1;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
-      var_i0 = var_p3;
-      var_i1 = var_l8;
+      var_i0 = var_p1;
+      var_i1 = var_l7;
       var_i2 = 8u;
       var_i1 += var_i2;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-      var_i0 = var_l8;
+      var_i0 = var_l7;
       var_j1 = var_l13;
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
       goto var_B9;
     }
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_j1 = var_l13;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-    var_l8 = var_i0;
+    var_l7 = var_i0;
     goto var_B9;
   }
   var_i0 = var_p3;
@@ -45619,35 +45382,35 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AsetNamed0x28hermes0x3A0x3
   var_l13 = var_j0;
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_p3 = var_i0;
+  var_p1 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l8 = var_i0;
-  var_i1 = var_p3;
+  var_l7 = var_i0;
+  var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_p3;
-    var_i1 = var_l8;
+    var_i0 = var_p1;
+    var_i1 = var_l7;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l8;
+    var_i0 = var_l7;
     var_j1 = var_l13;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B9;
   }
-  var_i0 = var_p3;
+  var_i0 = var_p1;
   var_j1 = var_l13;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l8 = var_i0;
+  var_l7 = var_i0;
   var_B9:;
   var_i0 = var_p0;
   var_i1 = var_p2;
-  var_i2 = var_l8;
+  var_i2 = var_l7;
   var_i3 = var_p4;
-  var_i4 = var_p1;
+  var_i4 = var_l10;
   var_i5 = var_l9;
-  var_i6 = var_l10;
+  var_i6 = var_l8;
   var_i7 = var_p5;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AsetWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6, var_i7);
   goto var_B0;
@@ -45916,17 +45679,17 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
   var_i0 = var_l4;
   var_i1 = 156u;
   var_i0 += var_i1;
-  var_l7 = var_i0;
+  var_l6 = var_i0;
   var_i1 = var_l4;
   var_i2 = 16u;
   var_i1 += var_i2;
-  var_l6 = var_i1;
+  var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l4;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_j1);
   var_i0 = var_l4;
-  var_i1 = var_l7;
+  var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_l4;
   var_i1 = var_l5;
@@ -45938,59 +45701,67 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
   var_i1 = var_l4;
   var_i2 = 144u;
   var_i1 += var_i2;
-  var_l5 = var_i1;
+  var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
   var_i0 = var_l4;
-  var_i1 = var_l6;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l4;
   var_i2 = 8u;
   var_i1 += var_i2;
-  var_l7 = var_i1;
+  var_l5 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l4;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l4;
-    var_i1 = 184u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l5 = var_i0;
+    var_i0 = var_l4;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+    var_i0 = var_l4;
+    var_i1 = var_l7;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l5;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
-    var_l6 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    var_l5 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
-    var_l5 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_l6;
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
+    var_i0 = var_l5;
     var_i1 = var_l4;
     var_i0 -= var_i1;
-    var_i1 = var_l5;
+    var_i1 = var_l7;
     var_i0 = var_i0 > var_i1;
     if (var_i0) {goto var_B1;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l7 = var_i0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
     var_l5 = var_i0;
-    var_i0 = var_l7;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
     var_l6 = var_i0;
+    var_i0 = var_l5;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l7 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
@@ -46022,38 +45793,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l11 = var_j0;
-  var_i0 = var_l5;
-  var_i1 = var_l6;
+  var_i0 = var_l6;
+  var_i1 = var_l7;
   var_i0 = var_i0 > var_i1;
-  if (var_i0) {
-    var_i0 = var_l7;
-    var_i1 = var_l6;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l6;
-    var_j1 = var_l11;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B3;
-  }
-  var_i0 = var_l7;
-  var_j1 = var_l11;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l6 = var_i0;
-  var_B3:;
-  var_i0 = var_l8;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_j1 = 18446462598732840960ull;
-  var_j0 |= var_j1;
-  var_l11 = var_j0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l5 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l7 = var_i0;
-  var_i1 = var_l5;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
-  var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_l5;
     var_i1 = var_l7;
@@ -46063,12 +45805,41 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
     var_i0 = var_l7;
     var_j1 = var_l11;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B5;
+    goto var_B3;
   }
   var_i0 = var_l5;
   var_j1 = var_l11;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l7 = var_i0;
+  var_B3:;
+  var_i0 = var_l8;
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l11 = var_j0;
+  var_i0 = var_p2;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l6 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l5 = var_i0;
+  var_i1 = var_l6;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l6;
+    var_i1 = var_l5;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l5;
+    var_j1 = var_l11;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B5;
+  }
+  var_i0 = var_l6;
+  var_j1 = var_l11;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l5 = var_i0;
   var_B5:;
   var_i0 = var_p1;
   var_i1 = var_p2;
@@ -46113,7 +45884,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
     var_i0 = var_p1;
     var_i1 = 1u;
     i32_store16(&instance->w2c_memory, (u64)(var_i0) + 14, var_i1);
-    var_i0 = var_l6;
+    var_i0 = var_l7;
     var_i1 = var_p2;
     var_i2 = var_p3;
     var_i3 = var_p1;
@@ -46123,7 +45894,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
     var_i5 = 4u;
     var_i4 += var_i5;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetNamedDescriptorUnsafe0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3ANamedPropertyDescriptor0x260x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
-    var_l6 = var_i0;
+    var_l5 = var_i0;
     var_i0 = !(var_i0);
     if (var_i0) {
       var_i0 = var_p0;
@@ -46143,7 +45914,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
     if (var_i0) {
       var_i0 = var_p0;
       var_i1 = var_p2;
-      var_i2 = var_l6;
+      var_i2 = var_l5;
       var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x20hermes0x3A0x3Avm0x3A0x3AHandleRootOwner0x3A0x3AmakeHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x28hermes0x3A0x3Avm0x3A0x3ACallable0x2A0x29(instance, var_i1, var_i2);
       var_i2 = var_p2;
       var_i3 = var_p3;
@@ -46166,7 +45937,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
     goto var_B0;
   }
   var_i0 = var_p2;
-  var_i1 = 5476u;
+  var_i1 = 5468u;
   var_i0 += var_i1;
   var_i1 = var_p2;
   var_i2 = var_p3;
@@ -46179,17 +45950,17 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_p1 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l5 = var_i0;
+  var_l6 = var_i0;
   var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = var_l5;
+    var_i1 = var_l6;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l5;
+    var_i0 = var_l6;
     var_j1 = var_l11;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B12;
@@ -46197,14 +45968,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasNamed0x28hermes0x3A0x3
   var_i0 = var_p1;
   var_j1 = var_l11;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l5 = var_i0;
+  var_l6 = var_i0;
   var_B12:;
   var_i0 = var_p0;
   var_i1 = var_p2;
-  var_i2 = var_l5;
+  var_i2 = var_l6;
   var_i3 = var_l8;
-  var_i4 = var_l7;
-  var_i5 = var_l6;
+  var_i4 = var_l5;
+  var_i5 = var_l7;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AhasWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5);
   goto var_B0;
   var_B1:;
@@ -46241,24 +46012,24 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasComputed0x28hermes0x3A
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l6 = var_i0;
+  var_l5 = var_i0;
   var_i0 = var_l4;
   var_i1 = 156u;
   var_i0 += var_i1;
-  var_l5 = var_i0;
+  var_l7 = var_i0;
   var_i1 = var_l4;
   var_i2 = 16u;
   var_i1 += var_i2;
-  var_l7 = var_i1;
+  var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l4;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_j1);
   var_i0 = var_l4;
-  var_i1 = var_l5;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_l4;
-  var_i1 = var_l6;
+  var_i1 = var_l5;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l4;
   var_i1 = 0u;
@@ -46267,45 +46038,53 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasComputed0x28hermes0x3A
   var_i1 = var_l4;
   var_i2 = 144u;
   var_i1 += var_i2;
-  var_l9 = var_i1;
+  var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
   var_i0 = var_l4;
-  var_i1 = var_l7;
+  var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l4;
   var_i2 = 8u;
   var_i1 += var_i2;
-  var_l8 = var_i1;
+  var_l5 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l4;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l4;
-    var_i1 = 184u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l6 = var_i0;
+    var_i0 = var_l4;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l5 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+    var_i0 = var_l4;
+    var_i1 = var_l5;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l6;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
     var_l6 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l4;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
     var_l5 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
     var_i0 = var_l6;
     var_i1 = var_l4;
     var_i0 -= var_i1;
@@ -46314,74 +46093,45 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasComputed0x28hermes0x3A
     if (var_i0) {goto var_B1;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l8 = var_i0;
+    var_l5 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l9 = var_i0;
-    var_i0 = var_l8;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
     var_l7 = var_i0;
+    var_i0 = var_l5;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+    var_l6 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l10 = var_i0;
+  var_l8 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l10;
+  var_i2 = var_l8;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
-  var_l6 = var_i2;
+  var_l9 = var_i2;
   var_i3 = 1107296256u;
   var_i2 = var_i2 == var_i3;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l5 = var_i0;
+  var_l10 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l10;
+  var_i1 = var_l8;
   var_i2 = 0u;
-  var_i3 = var_l6;
+  var_i3 = var_l9;
   var_i4 = 1191182336u;
   var_i3 = var_i3 == var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
   var_i2 = 32u;
   var_i1 += var_i2;
-  var_i2 = var_l5;
+  var_i2 = var_l10;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l5 = var_i0;
+  var_l8 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l11 = var_j0;
-  var_i0 = var_l7;
-  var_i1 = var_l9;
-  var_i0 = var_i0 < var_i1;
-  if (var_i0) {
-    var_i0 = var_l8;
-    var_i1 = var_l7;
-    var_i2 = 8u;
-    var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l7;
-    var_j1 = var_l11;
-    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B3;
-  }
-  var_i0 = var_l8;
-  var_j1 = var_l11;
-  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l7 = var_i0;
-  var_B3:;
-  var_i0 = var_l5;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_j1 = 18446462598732840960ull;
-  var_j0 |= var_j1;
-  var_l11 = var_j0;
-  var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l5 = var_i0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l6 = var_i0;
-  var_i1 = var_l5;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_l6;
+  var_i1 = var_l7;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_l5;
@@ -46392,12 +46142,41 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasComputed0x28hermes0x3A
     var_i0 = var_l6;
     var_j1 = var_l11;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    goto var_B5;
+    goto var_B3;
   }
   var_i0 = var_l5;
   var_j1 = var_l11;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l6 = var_i0;
+  var_B3:;
+  var_i0 = var_l8;
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_j1 = 18446462598732840960ull;
+  var_j0 |= var_j1;
+  var_l11 = var_j0;
+  var_i0 = var_p2;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l7 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_l5 = var_i0;
+  var_i1 = var_l7;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l7;
+    var_i1 = var_l5;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_l5;
+    var_j1 = var_l11;
+    i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+    goto var_B5;
+  }
+  var_i0 = var_l7;
+  var_j1 = var_l11;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_l5 = var_i0;
   var_B5:;
   var_i0 = var_p1;
   var_i1 = var_p2;
@@ -46429,7 +46208,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasComputed0x28hermes0x3A
   var_i0 = !(var_i0);
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = var_l7;
+    var_i1 = var_l6;
     var_i2 = var_p2;
     var_i3 = var_p3;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AhasComputed0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3);
@@ -46439,8 +46218,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AhasComputed0x28hermes0x3A
   var_i1 = var_p2;
   var_i2 = var_p3;
   var_i3 = var_p1;
-  var_i4 = var_l6;
-  var_i5 = var_l7;
+  var_i4 = var_l5;
+  var_i5 = var_l6;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AhasWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5);
   goto var_B0;
   var_B1:;
@@ -46503,7 +46282,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   var_i1 = var_l2;
   var_i2 = 200u;
   var_i1 += var_i2;
-  var_l6 = var_i1;
+  var_l4 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 232, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l5;
@@ -46512,86 +46291,94 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   var_i1 = var_l2;
   var_i2 = 4294967232u;
   var_i1 -= var_i2;
-  var_l7 = var_i1;
+  var_l3 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p1;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l2;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l2;
-    var_i1 = 8u;
+    var_i0 = var_p1;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p1;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l5 = var_i0;
+    var_i0 = var_l2;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l3 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+    var_i0 = var_l2;
+    var_i1 = var_l3;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l5;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
     var_i0 = var_p1;
     var_i1 = var_l2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
-    var_l3 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    var_l5 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p1;
     var_i1 = var_l2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 12u);
-    var_l4 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_l3;
+    var_l3 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
+    var_i0 = var_l5;
     var_i1 = var_l2;
     var_i0 -= var_i1;
-    var_i1 = var_l4;
+    var_i1 = var_l3;
     var_i0 = var_i0 > var_i1;
     if (var_i0) {goto var_B2;}
     var_i0 = var_p1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l7 = var_i0;
+    var_l3 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l6 = var_i0;
-    var_i0 = var_l7;
+    var_l4 = var_i0;
+    var_i0 = var_l3;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
     var_l5 = var_i0;
   }
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l8 = var_i0;
+  var_l6 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l8;
+  var_i2 = var_l6;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
-  var_l3 = var_i2;
+  var_l7 = var_i2;
   var_i3 = 1107296256u;
   var_i2 = var_i2 == var_i3;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l4 = var_i0;
+  var_l8 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l8;
+  var_i1 = var_l6;
   var_i2 = 0u;
-  var_i3 = var_l3;
+  var_i3 = var_l7;
   var_i4 = 1191182336u;
   var_i3 = var_i3 == var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
   var_i2 = 32u;
   var_i1 += var_i2;
-  var_i2 = var_l4;
+  var_i2 = var_l8;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l4 = var_i0;
+  var_l6 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l9 = var_j0;
-  var_i0 = var_l5;
-  var_i1 = var_l6;
-  var_i0 = var_i0 < var_i1;
+  var_i0 = var_l4;
+  var_i1 = var_l5;
+  var_i0 = var_i0 > var_i1;
   if (var_i0) {
-    var_i0 = var_l7;
+    var_i0 = var_l3;
     var_i1 = var_l5;
     var_i2 = 8u;
     var_i1 += var_i2;
@@ -46601,12 +46388,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B4;
   }
-  var_i0 = var_l7;
+  var_i0 = var_l3;
   var_j1 = var_l9;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l5 = var_i0;
   var_B4:;
-  var_i0 = var_l4;
+  var_i0 = var_l6;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
@@ -46636,7 +46423,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   var_l3 = var_i0;
   var_B6:;
   var_i0 = 4294967295u;
-  var_l6 = var_i0;
+  var_l4 = var_i0;
   var_i0 = var_p0;
   var_i1 = var_p1;
   var_i2 = 67u;
@@ -46662,7 +46449,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetPrototypeOf0x28hermes0x3A0x3Avm0x3A0x3APseudoHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(instance, var_i0, var_i1);
-    var_l6 = var_i0;
+    var_l4 = var_i0;
     goto var_B0;
   }
   var_i0 = var_l2;
@@ -46681,14 +46468,14 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   if (var_i0) {goto var_B1;}
   var_i0 = var_l2;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 56u);
-  var_l10 = var_j0;
+  var_l9 = var_j0;
   var_j1 = 48ull;
   var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
   var_i0 = (u32)(var_j0);
   var_i1 = 4294967295u;
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B9;}
-  var_j0 = var_l10;
+  var_j0 = var_l9;
   var_j1 = 47ull;
   var_j0 = (u64)((s64)var_j0 >> (var_j1 & 63));
   var_i0 = (u32)(var_j0);
@@ -46705,7 +46492,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l2;
-  var_i1 = 43619u;
+  var_i1 = 43560u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p1;
   var_i1 = var_l2;
@@ -46715,18 +46502,18 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   goto var_B1;
   var_B9:;
   var_j0 = 18446462598732840960ull;
-  var_l9 = var_j0;
-  var_j0 = var_l10;
+  var_l10 = var_j0;
+  var_j0 = var_l9;
   var_j1 = 18445899648779419648ull;
   var_i0 = var_j0 >= var_j1;
   if (var_i0) {
     var_j0 = 18446462598732840960ull;
-    var_j1 = var_l10;
+    var_j1 = var_l9;
     var_j2 = 4294967295ull;
     var_j1 &= var_j2;
     var_j2 = 18446462598732840960ull;
     var_j1 |= var_j2;
-    var_j2 = var_l10;
+    var_j2 = var_l9;
     var_i2 = (u32)(var_j2);
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
     var_i3 = 436207616u;
@@ -46734,7 +46521,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
     var_i3 = 855638016u;
     var_i2 = var_i2 >= var_i3;
     var_j0 = var_i2 ? var_j0 : var_j1;
-    var_l9 = var_j0;
+    var_l10 = var_j0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
@@ -46751,12 +46538,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
     var_i0 = var_l3;
-    var_j1 = var_l9;
+    var_j1 = var_l10;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B11;
   }
   var_i0 = var_p0;
-  var_j1 = var_l9;
+  var_j1 = var_l10;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l3 = var_i0;
   var_B11:;
@@ -46780,18 +46567,18 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   if (var_i0) {
     var_i0 = var_l3;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-    var_l6 = var_i0;
+    var_l4 = var_i0;
     goto var_B0;
   }
   var_i0 = var_l5;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AgetPrototypeOf0x28hermes0x3A0x3Avm0x3A0x3APseudoHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(instance, var_i0, var_i1);
-  var_l6 = var_i0;
+  var_l4 = var_i0;
   var_i1 = 4294967295u;
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B1;}
-  var_i0 = var_l6;
+  var_i0 = var_l4;
   var_i1 = var_l3;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i0 = var_i0 == var_i1;
@@ -46806,7 +46593,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l2;
-  var_i1 = 45860u;
+  var_i1 = 45778u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p1;
   var_i1 = var_l2;
@@ -46820,7 +46607,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i0, var_i1);
   var_B1:;
   var_i0 = 4294967295u;
-  var_l6 = var_i0;
+  var_l4 = var_i0;
   var_B0:;
   var_i0 = var_l2;
   var_i1 = 4294967232u;
@@ -46830,7 +46617,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetPrototypeOf0x28hermes0x
   var_i1 = 240u;
   var_i0 += var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = var_l6;
+  var_i0 = var_l4;
   FUNC_EPILOGUE;
   return var_i0;
 }
@@ -46851,24 +46638,24 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_l8 = var_i0;
+  var_l6 = var_i0;
   var_i0 = var_l5;
   var_i1 = 156u;
   var_i0 += var_i1;
-  var_l6 = var_i0;
+  var_l8 = var_i0;
   var_i1 = var_l5;
   var_i2 = 16u;
   var_i1 += var_i2;
-  var_l9 = var_i1;
+  var_l7 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l5;
   var_j1 = 17179869185ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_j1);
   var_i0 = var_l5;
-  var_i1 = var_l6;
+  var_i1 = var_l8;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_l5;
-  var_i1 = var_l8;
+  var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l5;
   var_i1 = 0u;
@@ -46877,110 +46664,118 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
   var_i1 = var_l5;
   var_i2 = 144u;
   var_i1 += var_i2;
-  var_l7 = var_i1;
+  var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 176, var_i1);
   var_i0 = var_l5;
-  var_i1 = var_l9;
+  var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 172, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l5;
   var_i2 = 8u;
   var_i1 += var_i2;
-  var_l10 = var_i1;
+  var_l8 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l5;
   var_i1 -= var_i2;
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_l5;
-    var_i1 = 184u;
+    var_i0 = var_p2;
+    var_i1 = 5612u;
     var_i0 += var_i1;
-    var_i1 = var_p2;
-    var_i2 = 5620u;
-    var_i1 += var_i2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l6 = var_i0;
+    var_i0 = var_l5;
+    var_i1 = instance->w2c_0x5F_stack_base;
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 184, var_i1);
+    var_i0 = var_l5;
+    var_i1 = var_l7;
+    var_i2 = instance->w2c_0x5F_stack_end;
+    var_i3 = var_l6;
+    var_i2 += var_i3;
+    var_i1 -= var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 188, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l5;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 184u);
-    var_l8 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+    var_l6 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
     var_i0 = var_p2;
     var_i1 = var_l5;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 188u);
-    var_l6 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-    var_i0 = var_l8;
+    var_l7 = var_i1;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
+    var_i0 = var_l6;
     var_i1 = var_l5;
     var_i0 -= var_i1;
-    var_i1 = var_l6;
+    var_i1 = var_l7;
     var_i0 = var_i0 > var_i1;
     if (var_i0) {goto var_B1;}
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_l10 = var_i0;
+    var_l8 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 168u);
-    var_l7 = var_i0;
-    var_i0 = var_l10;
+    var_l6 = var_i0;
+    var_i0 = var_l8;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-    var_l9 = var_i0;
+    var_l7 = var_i0;
   }
   var_i0 = var_p1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l11 = var_i0;
+  var_l9 = var_i0;
   var_i1 = 0u;
-  var_i2 = var_l11;
+  var_i2 = var_l9;
   var_i2 = i32_load8_u(&instance->w2c_memory, (u64)(var_i2) + 3u);
   var_i3 = 24u;
   var_i2 <<= (var_i3 & 31);
-  var_l8 = var_i2;
+  var_l10 = var_i2;
   var_i3 = 1107296256u;
   var_i2 = var_i2 == var_i3;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l6 = var_i0;
+  var_l11 = var_i0;
   var_i1 = 20u;
   var_i0 += var_i1;
-  var_i1 = var_l11;
+  var_i1 = var_l9;
   var_i2 = 0u;
-  var_i3 = var_l8;
+  var_i3 = var_l10;
   var_i4 = 1191182336u;
   var_i3 = var_i3 == var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
   var_i2 = 32u;
   var_i1 += var_i2;
-  var_i2 = var_l6;
+  var_i2 = var_l11;
   var_i0 = var_i2 ? var_i0 : var_i1;
-  var_l6 = var_i0;
+  var_l9 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l12 = var_j0;
-  var_i0 = var_l7;
-  var_i1 = var_l9;
+  var_i0 = var_l6;
+  var_i1 = var_l7;
   var_i0 = var_i0 > var_i1;
   if (var_i0) {
-    var_i0 = var_l10;
-    var_i1 = var_l9;
+    var_i0 = var_l8;
+    var_i1 = var_l7;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l9;
+    var_i0 = var_l7;
     var_j1 = var_l12;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B3;
   }
-  var_i0 = var_l10;
+  var_i0 = var_l8;
   var_j1 = var_l12;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l9 = var_i0;
+  var_l7 = var_i0;
   var_B3:;
-  var_i0 = var_l6;
+  var_i0 = var_l9;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
@@ -47013,7 +46808,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
   var_i1 = var_p2;
   var_i2 = 65u;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3AfindTrap0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3APredefined0x3A0x3AStr0x29(instance, var_i0, var_i1, var_i2);
-  var_p1 = var_i0;
+  var_l9 = var_i0;
   var_i1 = 4294967295u;
   var_i0 = var_i0 == var_i1;
   if (var_i0) {
@@ -47025,7 +46820,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B0;
   }
-  var_i0 = var_p1;
+  var_i0 = var_l9;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l12 = var_j0;
   var_j1 = 18445899648779419648ull;
@@ -47045,7 +46840,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
     var_i1 = 0u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
     var_i0 = var_p0;
-    var_i1 = var_l9;
+    var_i1 = var_l7;
     var_i2 = var_p2;
     var_i3 = var_p3;
     var_i4 = var_p4;
@@ -47060,7 +46855,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
   var_i0 = !(var_i0);
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 5476u;
+    var_i1 = 5468u;
     var_i0 += var_i1;
     var_i1 = var_p2;
     var_i2 = var_p3;
@@ -47071,27 +46866,27 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
     var_l12 = var_j0;
     var_i0 = var_p2;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-    var_p3 = var_i0;
+    var_p1 = var_i0;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-    var_l7 = var_i0;
-    var_i1 = var_p3;
+    var_l6 = var_i0;
+    var_i1 = var_p1;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
     var_i0 = var_i0 < var_i1;
     if (var_i0) {
-      var_i0 = var_p3;
-      var_i1 = var_l7;
+      var_i0 = var_p1;
+      var_i1 = var_l6;
       var_i2 = 8u;
       var_i1 += var_i2;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-      var_i0 = var_l7;
+      var_i0 = var_l6;
       var_j1 = var_l12;
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
       goto var_B9;
     }
-    var_i0 = var_p3;
+    var_i0 = var_p1;
     var_j1 = var_l12;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-    var_l7 = var_i0;
+    var_l6 = var_i0;
     goto var_B9;
   }
   var_i0 = var_p3;
@@ -47101,34 +46896,34 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3AgetNamed0x28hermes0x3A0x3
   var_l12 = var_j0;
   var_i0 = var_p2;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
-  var_p3 = var_i0;
+  var_p1 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l7 = var_i0;
-  var_i1 = var_p3;
+  var_l6 = var_i0;
+  var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
-    var_i0 = var_p3;
-    var_i1 = var_l7;
+    var_i0 = var_p1;
+    var_i1 = var_l6;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l7;
+    var_i0 = var_l6;
     var_j1 = var_l12;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B9;
   }
-  var_i0 = var_p3;
+  var_i0 = var_p1;
   var_j1 = var_l12;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l7 = var_i0;
+  var_l6 = var_i0;
   var_B9:;
   var_i0 = var_p0;
   var_i1 = var_p2;
-  var_i2 = var_l7;
-  var_i3 = var_p1;
+  var_i2 = var_l6;
+  var_i3 = var_l9;
   var_i4 = var_l8;
-  var_i5 = var_l9;
+  var_i5 = var_l7;
   var_i6 = var_p4;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3A0x28anonymous0x20namespace0x290x3A0x3AgetWithTrap0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3ACallable0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6);
   goto var_B0;
@@ -47162,11 +46957,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3Acreate0x28hermes0x3A0x3Avm
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l1 = var_i1;
@@ -47175,7 +46970,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3Acreate0x28hermes0x3A0x3Avm
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -47186,15 +46981,15 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSProxy0x3A0x3Acreate0x28hermes0x3A0x3Avm
   var_i1 = var_l1;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p0;
-  var_i1 = 5640u;
+  var_i1 = 5632u;
   var_i0 += var_i1;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l2 = var_j0;
-  var_i0 = 70384u;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
+  var_i0 = var_p0;
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
   var_l3 = var_j0;
   var_i0 = var_l1;
   var_i1 = 0u;
@@ -47597,7 +47392,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdatePropertyFlagsWitho
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p2 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
@@ -47610,7 +47405,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdatePropertyFlagsWitho
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p0;
     var_i2 = var_p2;
@@ -47896,7 +47691,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_p3 = var_i0;
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
@@ -47909,7 +47704,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_p5;
       var_i2 = var_p3;
@@ -48048,11 +47843,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
         goto var_B23;
       }
       var_i0 = var_p2;
-      var_i1 = 1376u;
+      var_i1 = 1368u;
       var_i0 += var_i1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = var_p2;
-      var_i2 = 1372u;
+      var_i2 = 1364u;
       var_i1 += var_i2;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
       var_p6 = var_i1;
@@ -48061,7 +47856,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
       var_i0 = var_i0 <= var_i1;
       if (var_i0) {
         var_i0 = var_p2;
-        var_i1 = 816u;
+        var_i1 = 808u;
         var_i0 += var_i1;
         var_i1 = 16u;
         var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -48072,7 +47867,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
       var_i1 = var_p6;
       var_i2 = 16u;
       var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
       var_B35:;
       var_i0 = var_p6;
       var_i1 = 402653200u;
@@ -48095,7 +47890,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
       var_i0 = var_i0 <= var_i1;
       if (var_i0) {
         var_i0 = var_p2;
-        var_i1 = 1364u;
+        var_i1 = 1356u;
         var_i0 += var_i1;
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
         var_i1 = var_p1;
@@ -48113,7 +47908,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
         goto var_B37;
       }
       var_i0 = var_p2;
-      var_i1 = 1364u;
+      var_i1 = 1356u;
       var_i0 += var_i1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = var_p1;
@@ -48131,7 +47926,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
       if (var_i0) {goto var_B37;}
       var_B38:;
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_p4;
       var_i2 = var_p5;
@@ -48264,11 +48059,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
       goto var_B41;
     }
     var_i0 = var_p2;
-    var_i1 = 1376u;
+    var_i1 = 1368u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p2;
-    var_i2 = 1372u;
+    var_i2 = 1364u;
     var_i1 += var_i2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     var_p6 = var_i1;
@@ -48277,7 +48072,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
     var_i0 = var_i0 <= var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = 16u;
       var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -48288,7 +48083,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
     var_i1 = var_p6;
     var_i2 = 16u;
     var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
     var_B53:;
     var_i0 = var_p6;
     var_i1 = 402653200u;
@@ -48311,7 +48106,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
     var_i0 = var_i0 <= var_i1;
     if (var_i0) {
       var_i0 = var_p2;
-      var_i1 = 1364u;
+      var_i1 = 1356u;
       var_i0 += var_i1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = var_p1;
@@ -48329,7 +48124,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
       goto var_B55;
     }
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
@@ -48347,7 +48142,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
     if (var_i0) {goto var_B55;}
     var_B56:;
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p4;
     var_i2 = var_p5;
@@ -48368,7 +48163,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p1;
@@ -48386,7 +48181,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
     goto var_B58;
   }
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
@@ -48404,7 +48199,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AupdateOwnProperty0x28her
   if (var_i0) {goto var_B58;}
   var_B59:;
   var_i0 = var_p2;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_p4;
   var_i2 = 14u;
@@ -48440,7 +48235,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetNamedSlotValueUnsafe0
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p0;
@@ -48458,7 +48253,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetNamedSlotValueUnsafe0
     goto var_B0;
   }
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
@@ -48476,7 +48271,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AsetNamedSlotValueUnsafe0
   if (var_i0) {goto var_B0;}
   var_B1:;
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_p2;
   var_i2 = var_p3;
@@ -48509,7 +48304,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AhasNamedOrIndexed0x28her
   var_i1 = 36u;
   var_i0 += var_i1;
   var_i1 = var_p2;
-  var_i2 = 5476u;
+  var_i2 = 5468u;
   var_i1 += var_i2;
   var_i2 = var_p2;
   var_i3 = var_p3;
@@ -48549,7 +48344,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AhasNamedOrIndexed0x28her
   var_i3 >>= (var_i4 & 31);
   var_i4 = 1020u;
   var_i3 &= var_i4;
-  var_i4 = 289808u;
+  var_i4 = 138008u;
   var_i3 += var_i4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 32u);
@@ -49067,7 +48862,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p1 = var_i0;
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l2;
@@ -49079,7 +48874,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l3;
     var_i2 = var_p1;
@@ -49100,11 +48895,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
     var_i1 &= var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   }
-  var_i0 = 70384u;
+  var_i0 = 67200u;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p1 = var_i0;
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_i1 = var_l2;
   var_i2 = 8u;
   var_i1 += var_i2;
@@ -49114,7 +48909,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l3;
     var_i2 = var_p1;
@@ -49312,7 +49107,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
       var_i0 = var_l7;
-      var_i1 = 50472u;
+      var_i1 = 50361u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
       var_i0 = var_p1;
       var_i1 = var_l7;
@@ -49359,7 +49154,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l7;
-    var_i1 = 50472u;
+    var_i1 = 50361u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p1;
     var_i1 = var_l7;
@@ -49416,7 +49211,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
         var_i0 = var_l7;
-        var_i1 = 50472u;
+        var_i1 = 50361u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
         var_i0 = var_p1;
         var_i1 = var_l7;
@@ -49478,7 +49273,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
         var_i0 = var_l7;
-        var_i1 = 50472u;
+        var_i1 = 50361u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
         var_i0 = var_p1;
         var_i1 = var_l7;
@@ -49523,7 +49318,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
       var_i0 = var_l7;
-      var_i1 = 50103u;
+      var_i1 = 49992u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
       var_i0 = var_p1;
       var_i1 = var_l7;
@@ -49593,7 +49388,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l7;
-    var_i1 = 50472u;
+    var_i1 = 50361u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p1;
     var_i1 = var_l7;
@@ -49620,7 +49415,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
     var_p6 = var_i0;
     var_i0 = var_p1;
-    var_i1 = 1364u;
+    var_i1 = 1356u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i1 = var_p2;
@@ -49632,7 +49427,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
     var_i0 = var_i0 != var_i1;
     if (var_i0) {
       var_i0 = var_p1;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_l9;
       var_i2 = var_p6;
@@ -49648,7 +49443,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
   var_p5 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
@@ -49660,7 +49455,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AcheckPropertyUpdate0x28h
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p2;
     var_i2 = var_p5;
@@ -49808,7 +49603,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3Aerror0x28hermes0x3A0x3Av
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l2;
-  var_i1 = 65970u;
+  var_i1 = 62766u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   goto var_B0;
   var_B1:;
@@ -49837,7 +49632,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3Aerror0x28hermes0x3A0x3Av
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l2;
-  var_i1 = 65970u;
+  var_i1 = 62766u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l6;
@@ -50099,13 +49894,13 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AconsumeUnicode0x280x29(
   var_j1 = 77309411331ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
   var_i0 = var_l3;
-  var_i1 = 18791u;
+  var_i1 = 18770u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_l3;
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l3;
-  var_i1 = 65970u;
+  var_i1 = 62766u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p1;
@@ -50123,7 +49918,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AconsumeUnicode0x280x29(
   var_j1 = 141733920769ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
   var_i0 = var_l3;
-  var_i1 = 247038u;
+  var_i1 = 95262u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l2;
   var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0));
@@ -50399,19 +50194,19 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
   goto var_B3;
   var_B11:;
   var_i0 = var_p0;
-  var_i1 = 46549u;
+  var_i1 = 46467u;
   var_i2 = 2u;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AscanWord0x28char0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AJSONTokenKind0x29(instance, var_i0, var_i1, var_i2);
   goto var_B3;
   var_B10:;
   var_i0 = var_p0;
-  var_i1 = 47479u;
+  var_i1 = 47397u;
   var_i2 = 3u;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AscanWord0x28char0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AJSONTokenKind0x29(instance, var_i0, var_i1, var_i2);
   goto var_B3;
   var_B9:;
   var_i0 = var_p0;
-  var_i1 = 43548u;
+  var_i1 = 43489u;
   var_i2 = 4u;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AscanWord0x28char0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AJSONTokenKind0x29(instance, var_i0, var_i1, var_i2);
   goto var_B3;
@@ -50547,7 +50342,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
   var_i1 = 4u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l3;
-  var_i1 = 247106u;
+  var_i1 = 95330u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p0;
   var_i1 = var_l3;
@@ -50620,7 +50415,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
     var_i1 = 4u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l3;
-    var_i1 = 247106u;
+    var_i1 = 95330u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
     var_i1 = var_l3;
@@ -50754,7 +50549,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
         i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
         var_i0 = 0u;
         var_i1 = var_l2;
-        var_i2 = 5476u;
+        var_i2 = 5468u;
         var_i1 += var_i2;
         var_i2 = var_l2;
         var_i3 = var_p1;
@@ -50794,13 +50589,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
         var_j1 = 77309411332ull;
         i64_store(&instance->w2c_memory, (u64)(var_i0) + 128, var_j1);
         var_i0 = var_p1;
-        var_i1 = 247220u;
+        var_i1 = 95444u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 120, var_i1);
         var_i0 = var_p1;
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 112, var_i1);
         var_i0 = var_p1;
-        var_i1 = 65970u;
+        var_i1 = 62766u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
         var_i0 = var_l2;
         var_i1 = var_p1;
@@ -51384,13 +51179,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
     var_j1 = 77309411331ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 128, var_j1);
     var_i0 = var_p1;
-    var_i1 = 18791u;
+    var_i1 = 18770u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 120, var_i1);
     var_i0 = var_p1;
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 112, var_i1);
     var_i0 = var_p1;
-    var_i1 = 65970u;
+    var_i1 = 62766u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
     var_i0 = var_l2;
     var_i1 = var_p1;
@@ -51412,13 +51207,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
     var_j1 = 77309411331ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 128, var_j1);
     var_i0 = var_p1;
-    var_i1 = 18791u;
+    var_i1 = 18770u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 120, var_i1);
     var_i0 = var_p1;
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 112, var_i1);
     var_i0 = var_p1;
-    var_i1 = 65970u;
+    var_i1 = 62766u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
     var_i0 = var_l2;
     var_i1 = var_p1;
@@ -51434,7 +51229,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
     var_j1 = 107374182401ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 128, var_j1);
     var_i0 = var_p1;
-    var_i1 = 247308u;
+    var_i1 = 95532u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 104, var_i1);
     var_i0 = var_l2;
     var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0));
@@ -51593,11 +51388,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
           var_i0 &= var_i1;
           var_l2 = var_i0;
           var_i1 = var_p1;
-          var_i2 = 1376u;
+          var_i2 = 1368u;
           var_i1 += var_i2;
           var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
           var_i2 = var_p1;
-          var_i3 = 1372u;
+          var_i3 = 1364u;
           var_i2 += var_i3;
           var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
           var_l4 = var_i2;
@@ -51605,7 +51400,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
           var_i0 = var_i0 > var_i1;
           if (var_i0) {
             var_i0 = var_p1;
-            var_i1 = 816u;
+            var_i1 = 808u;
             var_i0 += var_i1;
             var_i1 = var_l2;
             var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -51616,7 +51411,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
           var_i1 = var_l2;
           var_i2 = var_l4;
           var_i1 += var_i2;
-          i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+          i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
           var_B77:;
           var_i0 = var_l4;
           var_i1 = var_l7;
@@ -51801,11 +51596,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
         var_i0 &= var_i1;
         var_l2 = var_i0;
         var_i1 = var_p1;
-        var_i2 = 1376u;
+        var_i2 = 1368u;
         var_i1 += var_i2;
         var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
         var_i2 = var_p1;
-        var_i3 = 1372u;
+        var_i3 = 1364u;
         var_i2 += var_i3;
         var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
         var_l5 = var_i2;
@@ -51813,7 +51608,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
         var_i0 = var_i0 > var_i1;
         if (var_i0) {
           var_i0 = var_p1;
-          var_i1 = 816u;
+          var_i1 = 808u;
           var_i0 += var_i1;
           var_i1 = var_l2;
           var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -51824,7 +51619,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
         var_i1 = var_l2;
         var_i2 = var_l5;
         var_i1 += var_i2;
-        i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+        i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
         var_B86:;
         var_i0 = var_l5;
         var_i1 = var_l9;
@@ -51964,13 +51759,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
       var_j1 = 77309411332ull;
       i64_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_j1);
       var_i0 = var_l3;
-      var_i1 = 247220u;
+      var_i1 = 95444u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
       var_i0 = var_l3;
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
       var_i0 = var_l3;
-      var_i1 = 65970u;
+      var_i1 = 62766u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 136, var_i1);
       var_i0 = var_p1;
       var_i1 = var_l3;
@@ -52549,13 +52344,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
   var_j1 = 77309411331ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_j1);
   var_i0 = var_l3;
-  var_i1 = 18791u;
+  var_i1 = 18770u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
   var_i0 = var_l3;
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_l3;
-  var_i1 = 65970u;
+  var_i1 = 62766u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 136, var_i1);
   var_i0 = var_p1;
   var_i1 = var_l3;
@@ -52577,13 +52372,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
   var_j1 = 77309411331ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_j1);
   var_i0 = var_l3;
-  var_i1 = 18791u;
+  var_i1 = 18770u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 152, var_i1);
   var_i0 = var_l3;
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 144, var_i1);
   var_i0 = var_l3;
-  var_i1 = 65970u;
+  var_i1 = 62766u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 136, var_i1);
   var_i0 = var_p1;
   var_i1 = var_l3;
@@ -52599,7 +52394,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
   var_j1 = 107374182401ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 160, var_j1);
   var_i0 = var_l3;
-  var_i1 = 247308u;
+  var_i1 = 95532u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 136, var_i1);
   var_i0 = var_l2;
   var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0));
@@ -52641,7 +52436,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSONLexer0x3A0x3AadvanceHelper0x28bool0x2
   var_j1 = 94489280513ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_j1);
   var_i0 = var_l8;
-  var_i1 = 246992u;
+  var_i1 = 95216u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l2;
   var_i0 = i32_load16_u(&instance->w2c_memory, (u64)(var_i0));
@@ -52724,11 +52519,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Av
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AOrderedHashMap0x3A0x3AiteratorNext0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHashMapEntry0x2A0x290x20const(instance, var_i0, var_i1);
   var_l5 = var_i0;
   var_i0 = var_p2;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l7 = var_i0;
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l3;
@@ -52825,7 +52620,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Av
   var_i1 = 1u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l3 = var_i1;
@@ -52836,7 +52631,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Av
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B10;}
   var_i0 = var_p2;
-  var_i1 = 4821u;
+  var_i1 = 4813u;
   var_i0 += var_i1;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
@@ -52881,11 +52676,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Avm
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l2 = var_i1;
@@ -52894,7 +52689,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Avm
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -52905,10 +52700,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSMapIteratorImpl0x3C0x28hermes0x3A0x3Avm
   var_i1 = var_l2;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p0;
-  var_i1 = 5656u;
+  var_i1 = 5648u;
   var_i0 += var_i1;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l3 = var_j0;
@@ -53089,14 +52884,14 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5556u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5548u);
   var_l4 = var_i0;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l3 = var_i1;
@@ -53105,7 +52900,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -53116,13 +52911,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i1 = var_l3;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p2;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l6 = var_j0;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5648u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5640u);
   var_l7 = var_j0;
   var_i0 = var_l3;
   var_i1 = 0u;
@@ -53137,12 +52932,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i1 = 0u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_l3;
-  var_i1 = 70384u;
+  var_i1 = 67200u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_p2 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l3;
@@ -53154,7 +52949,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l5;
     var_i2 = var_p2;
@@ -53162,7 +52957,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   }
   var_i0 = var_l3;
   var_i1 = var_p0;
-  var_i2 = 1288u;
+  var_i2 = 1276u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_l4;
@@ -53174,7 +52969,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_p1 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_i1 = var_l3;
   var_i2 = 28u;
   var_i1 += var_i2;
@@ -53184,7 +52979,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3Acreate0x28hermes0x3A0x3
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p2;
     var_i2 = var_p1;
@@ -53216,7 +53011,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AgetFunctionNameAtIndex0x28
   u64 var_j0, var_j1, var_j2;
   f64 var_d0, var_d1;
   var_i0 = var_p0;
-  var_i1 = 5476u;
+  var_i1 = 5468u;
   var_i0 += var_i1;
   var_l7 = var_i0;
   var_i1 = var_p0;
@@ -53419,7 +53214,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AgetFunctionNameAtIndex0x28
   var_l3 = var_j1;
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_B13:;
-  var_i0 = 70384u;
+  var_i0 = 67200u;
   var_p0 = var_i0;
   var_j0 = var_l3;
   var_j1 = 18445899648779419648ull;
@@ -53429,7 +53224,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSError0x3A0x3AgetFunctionNameAtIndex0x28
   var_i0 = !(var_j0);
   if (var_i0) {goto var_B15;}
   var_i0 = var_l6;
-  var_i1 = 70384u;
+  var_i1 = 67200u;
   var_j2 = var_l3;
   var_i2 = (u32)(var_j2);
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 4u);
@@ -53626,11 +53421,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBigInt0x3A0x3Acreate0x28hermes0x3A0x3Av
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l3 = var_i1;
@@ -53639,7 +53434,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBigInt0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -53650,13 +53445,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBigInt0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i1 = var_l3;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p2;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l4 = var_j0;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5632u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5624u);
   var_l5 = var_j0;
   var_i0 = var_l3;
   var_i1 = 0u;
@@ -53676,7 +53471,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBigInt0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_p1 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l3;
@@ -53688,7 +53483,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSBigInt0x3A0x3Acreate0x28hermes0x3A0x3Av
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p2;
     var_i2 = var_p1;
@@ -53743,11 +53538,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayIterator0x3A0x3Acreate0x28hermes0x
   u32 var_i0, var_i1, var_i2;
   u64 var_j0, var_j1;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l3 = var_i1;
@@ -53756,7 +53551,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayIterator0x3A0x3Acreate0x28hermes0x
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -53767,13 +53562,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayIterator0x3A0x3Acreate0x28hermes0x
   var_i1 = var_l3;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 592u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 584u);
   var_l5 = var_j0;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5664u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5656u);
   var_l6 = var_j0;
   var_i0 = var_l3;
   var_i1 = 0u;
@@ -53793,7 +53588,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayIterator0x3A0x3Acreate0x28hermes0x
   var_p1 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l3;
@@ -53805,7 +53600,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayIterator0x3A0x3Acreate0x28hermes0x
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l4;
     var_i2 = var_p1;
@@ -53831,11 +53626,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcopyDataBlockBytes0
   var_i0 = var_p5;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 5308u);
+    var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 5300u);
     var_i0 = !(var_i0);
     if (var_i0) {goto var_B0;}
     var_i0 = var_p0;
-    var_i1 = 1284u;
+    var_i1 = 1272u;
     var_i0 += var_i1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_p0 = var_i0;
@@ -53855,7 +53650,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3AcopyDataBlockBytes0
   }
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 38573u;
+  var_i0 = 38571u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_Bfunc:;
@@ -54048,11 +53843,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AsaveGenerator0x28herm
   var_l4 = var_i0;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_l7 = var_i0;
     var_i0 = var_p0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
     var_l5 = var_i0;
     var_i1 = var_l4;
     var_i2 = 3u;
@@ -54072,7 +53867,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AsaveGenerator0x28herm
       var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
       var_l8 = var_j0;
       var_i0 = var_p0;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
       var_i1 = var_p1;
       var_i2 = 4290772992u;
       var_i1 &= var_i2;
@@ -54099,7 +53894,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AsaveGenerator0x28herm
       if (var_i0) {goto var_L1;}
   }
   var_i0 = var_p0;
-  var_i1 = 1288u;
+  var_i1 = 1276u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l3;
@@ -54127,7 +53922,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   u64 var_j0, var_j1, var_j2, var_j3;
   f64 var_d0, var_d1;
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
   var_l6 = var_i0;
   var_i1 = 32u;
   var_i0 -= var_i1;
@@ -54140,11 +53935,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
   var_l4 = var_i0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l4;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l3 = var_i1;
@@ -54153,7 +53948,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_l4;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -54164,10 +53959,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i1 = var_l3;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B0:;
   var_i0 = var_l4;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5648u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5640u);
   var_l7 = var_i0;
   var_i0 = var_l3;
   var_i1 = var_l4;
@@ -54178,11 +53973,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i1 = 0u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_l4;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l10 = var_i0;
   var_i0 = var_l4;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l3;
@@ -54202,7 +53997,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i1 = var_l7;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l4;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_i1 = var_l3;
   var_i2 = 12u;
   var_i1 += var_i2;
@@ -54273,7 +54068,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B6;}
   var_i0 = var_l4;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_i1 = var_l3;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = 28u;
@@ -54353,7 +54148,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i4 = 18u;
   var_i3 += var_i4;
   var_i4 = var_l4;
-  var_i5 = 600u;
+  var_i5 = 592u;
   var_i4 += var_i5;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineNewOwnProperty0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
   var_i0 = !(var_i0);
@@ -54383,7 +54178,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i4 = 14u;
   var_i3 += var_i4;
   var_i4 = var_l4;
-  var_i5 = 560u;
+  var_i5 = 552u;
   var_i4 += var_i5;
   var_p1 = var_i4;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineNewOwnProperty0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3APropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4);
@@ -54439,7 +54234,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B13;}
   var_i0 = var_l4;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l8 = var_i0;
   var_i0 = var_l6;
@@ -54557,9 +54352,9 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
       goto var_B15;
     }
     var_i0 = var_l4;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1376u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1368u);
     var_i1 = var_l4;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1372u);
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
     var_p1 = var_i1;
     var_i0 -= var_i1;
     var_i1 = 15u;
@@ -54575,7 +54370,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
     var_i1 = var_p1;
     var_i2 = 16u;
     var_i1 += var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
     var_B27:;
     var_i0 = var_p1;
     var_i1 = 402653200u;
@@ -54594,7 +54389,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AreifyArgumentsSlowPath
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 28u);
     var_p1 = var_i0;
     var_i0 = var_l4;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
     var_i1 = var_p2;
     var_i2 = var_p0;
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 20u);
@@ -54684,7 +54479,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 44, var_i1);
     var_i0 = var_l5;
-    var_i1 = 28930u;
+    var_i1 = 28913u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_l5;
     var_i1 = var_l5;
@@ -54773,7 +54568,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i1 = 500u;
   var_i0 += var_i1;
   var_i1 = var_p0;
-  var_i2 = 5476u;
+  var_i2 = 5468u;
   var_i1 += var_i2;
   var_i2 = var_p0;
   var_i3 = var_p2;
@@ -54862,12 +54657,12 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
     }
     var_i1 = var_p0;
     var_j2 = 18444773748872577024ull;
-    i64_store(&instance->w2c_memory, (u64)(var_i1) + 712, var_j2);
+    i64_store(&instance->w2c_memory, (u64)(var_i1) + 704, var_j2);
     var_i1 = var_l5;
     var_i2 = 40u;
     i32_store(&instance->w2c_memory, (u64)(var_i1) + 324, var_i2);
     var_i1 = var_l5;
-    var_i2 = 59514u;
+    var_i2 = 56337u;
     i32_store(&instance->w2c_memory, (u64)(var_i1) + 320, var_i2);
     var_i1 = var_l5;
     var_i2 = var_l5;
@@ -55120,7 +54915,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
   var_i0 = var_l5;
-  var_i1 = 64476u;
+  var_i1 = 61272u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
   var_i0 = var_l5;
   var_i1 = 24u;
@@ -55153,7 +54948,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
   var_i0 = var_l5;
-  var_i1 = 64476u;
+  var_i1 = 61272u;
   var_p2 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
   var_i0 = var_l5;
@@ -55181,7 +54976,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i1 = var_p2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 120, var_i1);
   var_i0 = var_l5;
-  var_i1 = 65424u;
+  var_i1 = 62220u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 136, var_i1);
   var_i0 = var_l5;
   var_i1 = 72u;
@@ -55207,7 +55002,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 224, var_i1);
   var_i0 = var_l5;
-  var_i1 = 64682u;
+  var_i1 = 61478u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 216, var_i1);
   var_i0 = var_l5;
   var_i1 = 2u;
@@ -55267,7 +55062,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 304, var_i1);
   var_i0 = var_l5;
-  var_i1 = 64683u;
+  var_i1 = 61479u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 296, var_i1);
   var_i0 = var_l5;
   var_i1 = 2u;
@@ -55343,7 +55138,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 408, var_i1);
     var_i0 = var_l5;
-    var_i1 = 30448u;
+    var_i1 = 30431u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 400, var_i1);
     var_i0 = var_p0;
     var_i1 = var_l5;
@@ -55401,7 +55196,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 408, var_i1);
       var_i0 = var_l5;
-      var_i1 = 37304u;
+      var_i1 = 37251u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 400, var_i1);
       var_i0 = var_p0;
       var_i1 = var_l5;
@@ -55526,7 +55321,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 408, var_i1);
   var_i0 = var_l5;
-  var_i1 = 47343u;
+  var_i1 = 47261u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 400, var_i1);
   var_i0 = var_p0;
   var_i1 = var_l5;
@@ -55546,7 +55341,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AputByIdTransient_RJS0x
   var_i0 = var_l6;
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 54787u;
+  var_i0 = 54638u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_Bfunc:;
@@ -55565,9 +55360,9 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AimplCallBuiltin0x28her
   var_l5 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5720u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5712u);
   var_i1 = var_p0;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5816u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5808u);
   var_l6 = var_i1;
   var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1) + 2u);
   var_i2 = 2u;
@@ -55576,7 +55371,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AimplCallBuiltin0x28her
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_l7 = var_i0;
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5596u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5588u);
   var_l4 = var_i0;
   var_i1 = 16u;
   var_i0 -= var_i1;
@@ -55692,7 +55487,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AgetArgumentsPropByVal
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B2;}
   var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
   var_l10 = var_i0;
   var_i0 = var_p1;
   var_i1 = var_p3;
@@ -55908,7 +55703,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AgetArgumentsPropByVal
     var_i4 >>= (var_i5 & 31);
     var_i5 = 1020u;
     var_i4 &= var_i5;
-    var_i5 = 289808u;
+    var_i5 = 138008u;
     var_i4 += var_i5;
     var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4));
     var_i4 = i32_load(&instance->w2c_memory, (u64)(var_i4) + 40u);
@@ -56179,7 +55974,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B1;}
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_p3;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AweakRefReadBarrier0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x29(instance, var_i0, var_i1);
@@ -56258,7 +56053,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
   var_l10 = var_i0;
   var_B9:;
   var_i0 = var_p1;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5624u);
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5616u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l21 = var_j0;
@@ -56561,7 +56356,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p4 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l8;
@@ -56573,7 +56368,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p3;
     var_i2 = var_p4;
@@ -56658,7 +56453,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 28u);
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_p4 = var_i0;
     var_i0 = 0u;
@@ -56770,9 +56565,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
         goto var_B30;
       }
       var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1376u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1368u);
       var_i1 = var_p1;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1372u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
       var_l7 = var_i1;
       var_i0 -= var_i1;
       var_i1 = 15u;
@@ -56788,7 +56583,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
       var_i1 = var_l7;
       var_i2 = 16u;
       var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
       var_B42:;
       var_i0 = var_l7;
       var_i1 = 402653200u;
@@ -56809,7 +56604,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
       var_i0 = var_i0 <= var_i1;
       if (var_i0) {
         var_i0 = var_p1;
-        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+        var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
         var_i1 = var_p3;
         var_i2 = var_p2;
         var_i3 = 2u;
@@ -56825,7 +56620,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateObjectFromBuffe
         goto var_B44;
       }
       var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
       var_i1 = var_p3;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 16u);
       var_i2 = var_p2;
@@ -56891,7 +56686,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   if (var_i0) {
     var_i0 = var_p1;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l5;
     w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AweakRefReadBarrier0x28hermes0x3A0x3Avm0x3A0x3AGCCell0x2A0x29(instance, var_i0, var_i1);
@@ -56949,18 +56744,18 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_p0;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_p2 = var_i0;
   var_i0 = var_l7;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 12u);
   var_l8 = var_i0;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_p1 = var_i1;
@@ -56978,13 +56773,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_i1 = var_p1;
   var_i2 = 4294967232u;
   var_i1 -= var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B5:;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 200u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 192u);
   var_l11 = var_j0;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5664u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5656u);
   var_l10 = var_j0;
   var_i0 = var_p1;
   var_i1 = 0u;
@@ -57004,7 +56799,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_p4 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
@@ -57022,7 +56817,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   }
   var_i0 = var_p1;
   var_i1 = var_p0;
-  var_i2 = 1288u;
+  var_i2 = 1276u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_l5;
@@ -57034,7 +56829,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_p4 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
   var_i1 = var_p1;
   var_i2 = 28u;
   var_i1 += var_i2;
@@ -57129,9 +56924,9 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
     var_i1 &= var_i2;
     var_l6 = var_i1;
     var_i2 = var_p0;
-    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1376u);
+    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1368u);
     var_i3 = var_p0;
-    var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 1372u);
+    var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 1364u);
     var_p1 = var_i3;
     var_i2 -= var_i3;
     var_i1 = var_i1 > var_i2;
@@ -57146,7 +56941,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
     var_i2 = var_p1;
     var_i3 = var_l6;
     var_i2 += var_i3;
-    i32_store(&instance->w2c_memory, (u64)(var_i1) + 1372, var_i2);
+    i32_store(&instance->w2c_memory, (u64)(var_i1) + 1364, var_i2);
     var_B16:;
     var_i1 = var_p1;
     var_j2 = 0ull;
@@ -57285,7 +57080,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   var_l10 = var_j1;
   var_i1 = var_p0;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1356u);
   var_j2 = var_l11;
   var_i2 = (u32)(var_j2);
   var_i3 = 8u;
@@ -57320,7 +57115,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
       var_l10 = var_j1;
       var_i1 = var_p0;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1356u);
       var_i2 = var_p4;
       var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
       var_i3 = var_p1;
@@ -57354,7 +57149,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_p4 = var_i1;
   var_i1 = var_p0;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1356u);
   var_i2 = var_p3;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
   var_i3 = 40u;
@@ -57379,7 +57174,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_i1 = var_i1 == var_i2;
   if (var_i1) {goto var_B4;}
   var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
   var_i1 = 48u;
   var_i0 -= var_i1;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
@@ -57479,16 +57274,16 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   goto var_B30;
   var_B31:;
   var_i0 = var_p0;
-  var_i1 = 632u;
+  var_i1 = 624u;
   var_i0 += var_i1;
   var_l6 = var_i0;
   var_B30:;
   var_i0 = var_p0;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p0;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_p2 = var_i1;
@@ -57497,7 +57292,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 40u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -57508,13 +57303,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_i1 = var_p2;
   var_i2 = 40u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B33:;
   var_i0 = var_l6;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l11 = var_j0;
   var_i0 = var_p0;
-  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5632u);
+  var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 5624u);
   var_l10 = var_j0;
   var_i0 = var_p2;
   var_j1 = 0ull;
@@ -57532,7 +57327,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_p3 = var_i0;
   var_i0 = var_p0;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
@@ -57544,7 +57339,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateGenerator_RJS0x2
   var_i0 = var_i0 != var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_p1;
     var_i2 = var_p3;
@@ -57637,7 +57432,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateArrayFromBuffer
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 12u);
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_l8 = var_i0;
     var_i0 = 0u;
@@ -57749,9 +57544,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateArrayFromBuffer
         goto var_B4;
       }
       var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1376u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1368u);
       var_i1 = var_p1;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1372u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
       var_p5 = var_i1;
       var_i0 -= var_i1;
       var_i1 = 15u;
@@ -57767,7 +57562,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateArrayFromBuffer
       var_i1 = var_p5;
       var_i2 = 16u;
       var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
       var_B16:;
       var_i0 = var_p5;
       var_i1 = 402653200u;
@@ -57786,7 +57581,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInterpreter0x3A0x3AcreateArrayFromBuffer
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 28u);
       var_p5 = var_i0;
       var_i0 = var_p1;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
       var_i1 = var_p3;
       var_i2 = var_p2;
       var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 20u);
@@ -57897,7 +57692,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 35742u;
+    var_i1 = 35707u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -58002,7 +57797,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
   var_j1 = 18445899648779419648ull;
   var_i0 = var_j0 >= var_j1;
   if (var_i0) {
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_j2 = var_l9;
     var_i2 = (u32)(var_j2);
@@ -58025,7 +57820,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = var_j1 != var_j2;
     var_i0 &= var_i1;
     if (var_i0) {goto var_B10;}
-    var_i0 = 70384u;
+    var_i0 = 67200u;
     var_i1 = var_l4;
     var_i2 = var_l7;
     var_i3 = 4278190080u;
@@ -58041,7 +57836,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
     var_l10 = var_j0;
     goto var_B9;
   }
-  var_i0 = 70384u;
+  var_i0 = 67200u;
   var_p3 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
   var_l9 = var_j0;
@@ -58105,7 +57900,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
   var_i1 = 248u;
   var_i0 += var_i1;
   var_i1 = var_p2;
-  var_i2 = 70392u;
+  var_i2 = 67208u;
   var_i3 = var_l5;
   var_i4 = 16u;
   var_i3 -= var_i4;
@@ -58154,7 +57949,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 46066u;
+    var_i1 = 45984u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -58170,7 +57965,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
   var_l7 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
   var_l4 = var_i0;
-  var_i0 = 70392u;
+  var_i0 = 67208u;
   var_i1 = var_l5;
   var_i2 = 24u;
   var_i1 -= var_i2;
@@ -58200,7 +57995,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_p1;
-      var_i1 = 46190u;
+      var_i1 = 46108u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -58227,7 +58022,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
       var_i1 = 3u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
       var_i0 = var_p1;
-      var_i1 = 44706u;
+      var_i1 = 44624u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
       var_i0 = var_p0;
       var_i1 = var_p2;
@@ -58294,7 +58089,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AInt16ArrayConstructor0x28void0x2A0x2C0x2
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
     var_i0 = var_p1;
-    var_i1 = 44801u;
+    var_i1 = 44719u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 40, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -58922,7 +58717,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3Areserve0x28unsign
   var_l2 = var_i0;
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = 54812u;
+    var_i0 = 54663u;
     w2c_hermes_llvh0x3A0x3Areport_bad_alloc_error0x28char0x20const0x2A0x2C0x20bool0x29(instance, var_i0);
   }
   var_i0 = var_p0;
@@ -60217,7 +60012,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AcreateNotUniquedS
   var_i1 |= var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p3;
@@ -60365,7 +60160,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AcreateNotUniquedS
           var_i1 = 3u;
           i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
           var_i0 = var_l5;
-          var_i1 = 22519u;
+          var_i1 = 22502u;
           i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
           var_i0 = var_l6;
           var_i1 = var_l5;
@@ -60519,7 +60314,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AcreateNotUniquedS
         goto var_B13;
       }
       var_i0 = var_l6;
-      var_i1 = 816u;
+      var_i1 = 808u;
       var_i0 += var_i1;
       var_i1 = var_l7;
       var_i2 = 15u;
@@ -60771,7 +60566,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AcreateNotUniquedS
         var_i1 = 3u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
         var_i0 = var_l5;
-        var_i1 = 22519u;
+        var_i1 = 22502u;
         i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
         var_i0 = var_l6;
         var_i1 = var_l5;
@@ -60935,7 +60730,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AcreateNotUniquedS
       goto var_B32;
     }
     var_i0 = var_l6;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l7;
     var_i2 = 1u;
@@ -61402,7 +61197,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AcreateNotUniquedS
   instance->w2c_0x5F_stack_pointer = var_i0;
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 43553u;
+  var_i0 = 43494u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_Bfunc:;
@@ -61919,7 +61714,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AIdentifierTable0x3A0x3AallocIDAndInsert0x
   var_i0 = var_l6;
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 43553u;
+  var_i0 = 43494u;
   w2c_hermes_hermes0x3A0x3Ahermes_fatal0x28char0x20const0x2A0x29(instance, var_i0);
   UNREACHABLE;
   var_Bfunc:;
@@ -61982,7 +61777,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AdeleteProperty0x28herm
   var_i1 |= var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l4;
@@ -62001,13 +61796,13 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3AdeleteProperty0x28herm
   var_i0 = var_i0 == var_i1;
   if (var_i0) {goto var_B1;}
   var_i0 = var_p1;
-  var_i1 = 4821u;
+  var_i1 = 4813u;
   var_i0 += var_i1;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B1;}
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_i1 = var_l4;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
@@ -62046,7 +61841,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3Acreate0x28hermes0x3A0
   u32 var_i0, var_i1, var_i2;
   u64 var_j1, var_j2;
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l8 = var_i0;
   var_i1 = 40u;
@@ -62085,7 +61880,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHiddenClass0x3A0x3Acreate0x28hermes0x3A0
   var_p2 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
   var_i0 = var_p1;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_l7;
@@ -62142,18 +61937,18 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwaitForCollectionToFinish
     var_j1 = 9223372174293729299ull;
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 292, var_j1);
     var_i0 = var_l3;
-    var_i1 = 62369u;
+    var_i1 = 59192u;
     var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     var_i0 = var_l3;
     var_i1 = 0u;
     i32_store8(&instance->w2c_memory, (u64)(var_i0) + 19, var_i1);
     var_i0 = var_l3;
-    var_i1 = 62384u;
+    var_i1 = 59207u;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 15, var_i1);
     var_i0 = var_l3;
-    var_i1 = 62377u;
+    var_i1 = 59200u;
     var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
     i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
     var_i0 = var_l2;
@@ -62210,11 +62005,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwaitForCollectionToFinish
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 156u);
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 192, var_i1);
     var_i0 = var_l2;
-    var_i1 = 45323u;
+    var_i1 = 45241u;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 148, var_i1);
     var_i0 = var_l2;
-    var_i1 = 45326u;
+    var_i1 = 45244u;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 151, var_i1);
     var_i0 = var_l2;
@@ -62653,11 +62448,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AremoveSegmentExtentFromCr
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 13, var_i1);
   var_i0 = var_l3;
-  var_i1 = 59671u;
+  var_i1 = 56494u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l3;
-  var_i1 = 59676u;
+  var_i1 = 56499u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 5, var_j1);
   var_i0 = var_l2;
@@ -62766,11 +62561,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_j1 = 9223372105574252557ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_j1);
   var_i0 = var_l3;
-  var_i1 = 21134u;
+  var_i1 = 21113u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 5, var_j1);
   var_i0 = var_l3;
-  var_i1 = 21129u;
+  var_i1 = 21108u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l3;
@@ -62817,11 +62612,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 23, var_i1);
   var_i0 = var_l5;
-  var_i1 = 53191u;
+  var_i1 = 53080u;
   var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1));
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 22, var_i1);
   var_i0 = var_l5;
-  var_i1 = 53189u;
+  var_i1 = 53078u;
   var_i1 = i32_load16_u(&instance->w2c_memory, (u64)(var_i1));
   i32_store16(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_l5;
@@ -62906,7 +62701,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_j1);
   var_i0 = var_p0;
   var_i1 = 0u;
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4017, var_i1);
+  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4020, var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 600u);
   var_l6 = var_i0;
@@ -63000,10 +62795,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_i1 = var_p0;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p1;
-  var_i1 = 270676u;
+  var_i1 = 118884u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p1;
-  var_i1 = 270620u;
+  var_i1 = 118828u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
@@ -63055,7 +62850,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_l3 = var_i0;
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = 54812u;
+    var_i0 = 54663u;
     w2c_hermes_llvh0x3A0x3Areport_bad_alloc_error0x28char0x20const0x2A0x2C0x20bool0x29(instance, var_i0);
   }
   var_i0 = var_p1;
@@ -63100,7 +62895,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_l3 = var_i0;
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = 54812u;
+    var_i0 = 54663u;
     w2c_hermes_llvh0x3A0x3Areport_bad_alloc_error0x28char0x20const0x2A0x2C0x20bool0x29(instance, var_i0);
   }
   var_i0 = var_p1;
@@ -63169,10 +62964,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   }
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_i1);
   var_i0 = var_l5;
-  var_i1 = 270864u;
+  var_i1 = 119072u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_i1);
   var_i0 = var_l5;
-  var_i1 = 270772u;
+  var_i1 = 118980u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
@@ -63194,7 +62989,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_p1 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
-  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4017u);
+  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4020u);
   if (var_i0) {goto var_B11;}
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 616u);
@@ -63507,7 +63302,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_i0 = 28u;
   var_i0 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i0);
   var_l3 = var_i0;
-  var_i1 = 270896u;
+  var_i1 = 119104u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l3;
   var_j1 = 0ull;
@@ -63565,11 +63360,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AoldGenCollection0x28std0x
   var_i1 = 7u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 11, var_i1);
   var_i0 = var_p1;
-  var_i1 = 59145u;
+  var_i1 = 55968u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p1;
-  var_i1 = 59148u;
+  var_i1 = 55971u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 3, var_i1);
   var_i0 = var_p1;
@@ -63685,11 +63480,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AincrementalCollect0x28boo
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 43, var_i1);
   var_i0 = var_l9;
-  var_i1 = 45672u;
+  var_i1 = 45590u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 36, var_i1);
   var_i0 = var_l9;
-  var_i1 = 45675u;
+  var_i1 = 45593u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 39, var_i1);
   var_i0 = var_l1;
@@ -63732,14 +63527,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AincrementalCollect0x28boo
   var_j1 = 9223372174293729296ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_j1);
   var_i0 = var_l1;
-  var_i1 = 45663u;
+  var_i1 = 45581u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l1;
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l1;
-  var_i1 = 45671u;
+  var_i1 = 45589u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_l4;
@@ -63844,10 +63639,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AincrementalCollect0x28boo
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4008u);
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l4;
-  var_i1 = 270864u;
+  var_i1 = 119072u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l4;
-  var_i1 = 270772u;
+  var_i1 = 118980u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
@@ -64253,7 +64048,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AincrementalCollect0x28boo
   var_i1 = var_p0;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l4;
-  var_i1 = 270708u;
+  var_i1 = 118916u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
@@ -64678,7 +64473,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AincrementalCollect0x28boo
         var_i0 >>= (var_i1 & 31);
         var_i1 = 1020u;
         var_i0 &= var_i1;
-        var_i1 = 289808u;
+        var_i1 = 138008u;
         var_i0 += var_i1;
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 24u);
@@ -64883,7 +64678,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AincrementalCollect0x28boo
       var_i0 >>= (var_i1 & 31);
       var_i1 = 1020u;
       var_i0 &= var_i1;
-      var_i1 = 289808u;
+      var_i1 = 138008u;
       var_i0 += var_i1;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
@@ -65278,18 +65073,18 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AgetKindAsStr0x280x290x20c
   var_j1 = 9223372174293729299ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_j1);
   var_i0 = var_p1;
-  var_i1 = 62457u;
+  var_i1 = 59280u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_p1;
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 19, var_i1);
   var_i0 = var_p1;
-  var_i1 = 62472u;
+  var_i1 = 59295u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 15, var_i1);
   var_i0 = var_p1;
-  var_i1 = 62465u;
+  var_i1 = 59288u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   FUNC_EPILOGUE;
@@ -66200,7 +65995,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AfinalizeAll0x280x29(w2c_h
         var_i3 >>= (var_i4 & 31);
         var_i4 = 1020u;
         var_i3 &= var_i4;
-        var_i4 = 289808u;
+        var_i4 = 138008u;
         var_i3 += var_i4;
         var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
         var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 16u);
@@ -66273,7 +66068,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AfinalizeAll0x280x29(w2c_h
     var_i2 >>= (var_i3 & 31);
     var_i3 = 1020u;
     var_i2 &= var_i3;
-    var_i3 = 289808u;
+    var_i3 = 138008u;
     var_i2 += var_i3;
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 16u);
@@ -66366,7 +66161,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AfinalizeAll0x280x29(w2c_h
         var_i0 >>= (var_i1 & 31);
         var_i1 = 1020u;
         var_i0 &= var_i1;
-        var_i1 = 289808u;
+        var_i1 = 138008u;
         var_i0 += var_i1;
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
         var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
@@ -66502,7 +66297,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3Acollect0x28std0x3A0x3A_0x
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
   var_i1 = 0u;
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4017, var_i1);
+  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4020, var_i1);
   var_i0 = var_p1;
   var_i0 = i32_load8_s(&instance->w2c_memory, (u64)(var_i0) + 11u);
   var_i1 = 0u;
@@ -66699,7 +66494,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AcheckTripwireAndSubmitSta
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 508u);
   if (var_i0) {goto var_B1;}
   var_i0 = var_l1;
-  var_i1 = 270476u;
+  var_i1 = 118684u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_p0;
   var_i1 = 1u;
@@ -69675,7 +69470,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i1 = 0u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p0;
-  var_i1 = 270384u;
+  var_i1 = 118592u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p0;
   var_i1 = var_l7;
@@ -69847,7 +69642,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_d0 = f64_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
   var_l11 = var_d0;
   var_i0 = var_p0;
-  var_i1 = 61u;
+  var_i1 = 59u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 364, var_i1);
   var_i0 = var_p0;
   var_d1 = var_l11;
@@ -69885,9 +69680,6 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i1 = 0u;
   var_i2 = 96u;
   var_i0 = w2c_hermes_0x5F_memset(instance, var_i0, var_i1, var_i2);
-  var_i0 = var_p0;
-  var_i1 = 1u;
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 464, var_i1);
   var_i0 = var_l6;
   var_i1 = var_p3;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 72u);
@@ -70077,11 +69869,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_j1 = 9223372105574252556ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_j1);
   var_i0 = var_p1;
-  var_i1 = 43061u;
+  var_i1 = 43002u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p1;
-  var_i1 = 43053u;
+  var_i1 = 42994u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_p1;
@@ -70090,6 +69882,43 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i0 = var_l6;
   var_i1 = 15u;
   var_i0 += var_i1;
+  var_i1 = var_l6;
+  var_i2 = 16u;
+  var_i1 += var_i2;
+  var_i0 = w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Arandom_device0x3A0x3Arandom_device0x28std0x3A0x3A_0x5F20x3A0x3Abasic_string0x3Cchar0x2C0x20std0x3A0x3A_0x5F20x3A0x3Achar_traits0x3Cchar0x3E0x2C0x20std0x3A0x3A_0x5F20x3A0x3Aallocator0x3Cchar0x3E0x3E0x20const0x260x29(instance, var_i0, var_i1);
+  var_p2 = var_i0;
+  var_i0 = var_l6;
+  var_i0 = i32_load8_s(&instance->w2c_memory, (u64)(var_i0) + 27u);
+  var_i1 = 0u;
+  var_i0 = (u32)((s32)var_i0 < (s32)var_i1);
+  if (var_i0) {
+    var_i0 = var_l6;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
+    w2c_hermes_dlfree(instance, var_i0);
+  }
+  var_i0 = var_p0;
+  var_i1 = w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Arandom_device0x3A0x3Aoperator0x280x290x280x29(instance);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 464, var_i1);
+  var_i0 = var_l6;
+  var_i1 = 16u;
+  var_i1 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i1);
+  var_p1 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
+  var_i0 = var_l6;
+  var_j1 = 9223372105574252556ull;
+  i64_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_j1);
+  var_i0 = var_p1;
+  var_i1 = 43002u;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+  var_i0 = var_p1;
+  var_i1 = 42994u;
+  var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
+  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
+  var_i0 = var_p1;
+  var_i1 = 0u;
+  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
+  var_i0 = var_p2;
   var_i1 = var_l6;
   var_i2 = 16u;
   var_i1 += var_i2;
@@ -70116,11 +69945,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_j1 = 9223372105574252556ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_j1);
   var_i0 = var_p1;
-  var_i1 = 43061u;
+  var_i1 = 43002u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p1;
-  var_i1 = 43053u;
+  var_i1 = 42994u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_p1;
@@ -70131,7 +69960,6 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i2 = 16u;
   var_i1 += var_i2;
   var_i0 = w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Arandom_device0x3A0x3Arandom_device0x28std0x3A0x3A_0x5F20x3A0x3Abasic_string0x3Cchar0x2C0x20std0x3A0x3A_0x5F20x3A0x3Achar_traits0x3Cchar0x3E0x2C0x20std0x3A0x3A_0x5F20x3A0x3Aallocator0x3Cchar0x3E0x3E0x20const0x260x29(instance, var_i0, var_i1);
-  var_p2 = var_i0;
   var_i0 = var_l6;
   var_i0 = i32_load8_s(&instance->w2c_memory, (u64)(var_i0) + 27u);
   var_i1 = 0u;
@@ -70144,48 +69972,12 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i0 = var_p0;
   var_i1 = w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Arandom_device0x3A0x3Aoperator0x280x290x280x29(instance);
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 472, var_i1);
-  var_i0 = var_l6;
-  var_i1 = 16u;
-  var_i1 = w2c_hermes_operator0x20new0x28unsigned0x20long0x29(instance, var_i1);
-  var_p1 = var_i1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
-  var_i0 = var_l6;
-  var_j1 = 9223372105574252556ull;
-  i64_store(&instance->w2c_memory, (u64)(var_i0) + 20, var_j1);
-  var_i0 = var_p1;
-  var_i1 = 43061u;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
-  var_i0 = var_p1;
-  var_i1 = 43053u;
-  var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
-  i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p1;
-  var_i1 = 0u;
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
-  var_i0 = var_p2;
-  var_i1 = var_l6;
-  var_i2 = 16u;
-  var_i1 += var_i2;
-  var_i0 = w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Arandom_device0x3A0x3Arandom_device0x28std0x3A0x3A_0x5F20x3A0x3Abasic_string0x3Cchar0x2C0x20std0x3A0x3A_0x5F20x3A0x3Achar_traits0x3Cchar0x3E0x2C0x20std0x3A0x3A_0x5F20x3A0x3Aallocator0x3Cchar0x3E0x3E0x20const0x260x29(instance, var_i0, var_i1);
-  var_i0 = var_l6;
-  var_i0 = i32_load8_s(&instance->w2c_memory, (u64)(var_i0) + 27u);
-  var_i1 = 0u;
-  var_i0 = (u32)((s32)var_i0 < (s32)var_i1);
-  if (var_i0) {
-    var_i0 = var_l6;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
-    w2c_hermes_dlfree(instance, var_i0);
-  }
-  var_i0 = var_p0;
-  var_i1 = w2c_hermes_std0x3A0x3A_0x5F20x3A0x3Arandom_device0x3A0x3Aoperator0x280x290x280x29(instance);
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 476, var_i1);
   var_i0 = instance->w2c_0x5F_stack_pointer;
   var_i1 = 16u;
   var_i0 -= var_i1;
   var_p1 = var_i0;
   instance->w2c_0x5F_stack_pointer = var_i0;
-  var_i0 = 290320u;
+  var_i0 = 138528u;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = 4294967295u;
   var_i0 = var_i0 != var_i1;
@@ -70205,21 +69997,21 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
     var_i0 += var_i1;
     var_p2 = var_i0;
     var_L24: 
-      var_i0 = 290320u;
+      var_i0 = 138528u;
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
       var_i1 = 1u;
       var_i0 = var_i0 == var_i1;
       if (var_i0) {goto var_L24;}
-    var_i0 = 290320u;
+    var_i0 = 138528u;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     var_i0 = !(var_i0);
     if (var_i0) {
-      var_i0 = 290320u;
+      var_i0 = 138528u;
       var_i1 = 1u;
       i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
       var_i0 = var_p2;
       w2c_hermes_void0x20std0x3A0x3A_0x5F20x3A0x3A_0x5Fcall_once_proxy0x5Babi0x3Av150070x5D0x3Cstd0x3A0x3A_0x5F20x3A0x3Atuple0x3Chermes0x3A0x3Avm0x3A0x3AbuildMetadataTable0x280x290x3A0x3A0x24_00x260x260x3E0x3E0x28void0x2A0x29(instance, var_i0);
-      var_i0 = 290320u;
+      var_i0 = 138528u;
       var_i1 = 4294967295u;
       i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     }
@@ -70253,7 +70045,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i0 += var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
-  var_i1 = 270500u;
+  var_i1 = 118708u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p3;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
@@ -70367,7 +70159,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_j1);
   var_i0 = var_p1;
-  var_i1 = 270592u;
+  var_i1 = 118800u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p1;
   var_j1 = 0ull;
@@ -70378,6 +70170,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i0 = var_p1;
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 28, var_j1);
+  var_i0 = var_p0;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4016, var_i1);
   var_i0 = var_p0;
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 4008, var_j1);
@@ -70397,24 +70192,19 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p0;
-  var_i1 = 4016u;
-  var_i0 += var_i1;
-  var_i1 = 0u;
-  i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_i0 = var_p0;
   var_i1 = var_p3;
   var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1) + 104u);
   var_i2 = 1u;
   var_i1 ^= var_i2;
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4017, var_i1);
+  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4020, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p3;
   var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1) + 106u);
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4018, var_i1);
+  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4021, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p3;
   var_i1 = i32_load8_u(&instance->w2c_memory, (u64)(var_i1) + 105u);
-  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4019, var_i1);
+  i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4022, var_i1);
   var_i0 = var_p3;
   var_d0 = f64_load(&instance->w2c_memory, (u64)(var_i0) + 16u);
   var_l11 = var_d0;
@@ -70673,19 +70463,19 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 19, var_i1);
   var_i0 = var_p1;
-  var_i1 = 62472u;
+  var_i1 = 59295u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 15, var_i1);
   var_i0 = var_p1;
-  var_i1 = 62465u;
+  var_i1 = 59288u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_p1;
-  var_i1 = 62457u;
+  var_i1 = 59280u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_p2;
-  var_i1 = 59288u;
+  var_i1 = 56111u;
   var_i2 = var_p1;
   var_i3 = var_p2;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
@@ -70818,7 +70608,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AHadesGC0x28hermes0x3A0x3A
   var_i1 = 34u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 80, var_i1);
   var_i0 = var_l7;
-  var_i1 = 42871u;
+  var_i1 = 42812u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 76, var_i1);
   var_i0 = var_l7;
   var_i1 = 68u;
@@ -70963,9 +70753,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i0 = instance->w2c_0x5F_stack_pointer;
   var_i1 = 32u;
   var_i0 -= var_i1;
-  var_l9 = var_i0;
+  var_l5 = var_i0;
   var_l6 = var_i0;
-  var_i0 = var_l9;
+  var_i0 = var_l5;
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = 7u;
   var_l5 = var_i0;
@@ -71071,11 +70861,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
     goto var_B0;
   }
   var_i0 = var_p2;
-  var_i1 = 1376u;
+  var_i1 = 1368u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p2;
-  var_i2 = 1372u;
+  var_i2 = 1364u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_l5 = var_i1;
@@ -71084,7 +70874,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = 16u;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -71095,7 +70885,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i1 = var_l5;
   var_i2 = 16u;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B12:;
   var_i0 = var_l5;
   var_i1 = 402653200u;
@@ -71109,11 +70899,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_l5 = var_i0;
   var_B0:;
   var_i0 = var_p2;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l10 = var_i0;
   var_i0 = var_p2;
-  var_i1 = 1364u;
+  var_i1 = 1356u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
@@ -71173,10 +70963,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i1 = var_p3;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5592u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5584u);
   var_i1 = var_p2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
-  var_l9 = var_i1;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5588u);
+  var_p4 = var_i1;
   var_i0 -= var_i1;
   var_i1 = 3u;
   var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
@@ -71187,10 +70977,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_l15 = var_j2;
   var_i2 = (u32)(var_j2);
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 36u);
-  var_l7 = var_i2;
+  var_l9 = var_i2;
   var_i3 = 7u;
   var_i2 += var_i3;
-  var_i3 = var_l7;
+  var_i3 = var_l9;
   var_i4 = 4294967288u;
   var_i3 = var_i3 > var_i4;
   var_i1 = var_i3 ? var_i1 : var_i2;
@@ -71204,45 +70994,51 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i0 = (u32)(var_j0);
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 8u);
   var_l14 = var_j0;
-  var_i0 = var_l9;
-  var_p4 = var_i0;
   var_i0 = var_p2;
   var_i1 = var_p2;
-  var_i2 = 5616u;
+  var_i2 = 5608u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_p2;
-  var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 5612u);
+  var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 5604u);
   var_i3 = var_l6;
   var_i2 -= var_i3;
   var_i1 = var_i1 < var_i2;
   if (var_i1) {
-    var_i1 = var_l6;
-    var_i2 = 16u;
+    var_i1 = var_p2;
+    var_i2 = 5612u;
     var_i1 += var_i2;
-    var_i2 = var_p2;
-    var_i3 = 5620u;
-    var_i2 += var_i3;
-    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
-    w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i1, var_i2);
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+    var_l7 = var_i1;
+    var_i1 = var_l6;
+    var_i2 = instance->w2c_0x5F_stack_base;
+    var_l8 = var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i1) + 16, var_i2);
+    var_i1 = var_l6;
+    var_i2 = var_l8;
+    var_i3 = instance->w2c_0x5F_stack_end;
+    var_i4 = var_l7;
+    var_i3 += var_i4;
+    var_i2 -= var_i3;
+    i32_store(&instance->w2c_memory, (u64)(var_i1) + 20, var_i2);
     var_i1 = var_p2;
     var_i2 = var_l6;
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 16u);
-    var_p4 = var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i1) + 5612, var_i2);
+    var_l7 = var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i1) + 5604, var_i2);
     var_i1 = var_p2;
     var_i2 = var_l6;
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 20u);
     var_l8 = var_i2;
-    i32_store(&instance->w2c_memory, (u64)(var_i1) + 5616, var_i2);
-    var_i1 = var_p4;
+    i32_store(&instance->w2c_memory, (u64)(var_i1) + 5608, var_i2);
+    var_i1 = var_l7;
     var_i2 = var_l6;
     var_i1 -= var_i2;
     var_i2 = var_l8;
     var_i1 = var_i1 > var_i2;
     if (var_i1) {goto var_B18;}
     var_i1 = var_p2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5588u);
   } else {
     var_i1 = var_p4;
   }
@@ -71250,67 +71046,67 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i3 = 3u;
   var_i2 <<= (var_i3 & 31);
   var_i1 += var_i2;
-  var_p4 = var_i1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
+  var_l5 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5588, var_i1);
   var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5608u);
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5600u);
   var_l16 = var_j0;
-  var_i0 = var_p4;
+  var_i0 = var_l5;
   var_i1 = 24u;
   var_i0 -= var_i1;
-  var_l5 = var_i0;
+  var_l7 = var_i0;
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p4;
+  var_i0 = var_l5;
   var_i1 = 8u;
   var_i0 -= var_i1;
   var_j1 = var_l16;
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p4;
+  var_i0 = var_l5;
   var_i1 = 32u;
   var_i0 -= var_i1;
-  var_i1 = var_l7;
+  var_i1 = var_l9;
   var_j1 = (u64)(var_i1);
   var_j2 = 18445618173802708992ull;
   var_j1 |= var_j2;
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p4;
+  var_i0 = var_l5;
   var_i1 = 40u;
   var_i0 -= var_i1;
   var_j1 = 18445055223849287680ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p4;
+  var_i0 = var_l5;
   var_i1 = 48u;
   var_i0 -= var_i1;
   var_j1 = var_l15;
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_p4;
+  var_i0 = var_l5;
   var_i1 = 56u;
   var_i0 -= var_i1;
   var_j1 = var_l14;
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-  var_i0 = var_l5;
+  var_i0 = var_l7;
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = var_l7;
+  var_i0 = var_l9;
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B20;}
-  var_i0 = var_p4;
+  var_i0 = var_l5;
   var_i1 = 4294967232u;
   var_i0 += var_i1;
-  var_p4 = var_i0;
+  var_l7 = var_i0;
   var_i0 = 0u;
   var_l5 = var_i0;
-  var_i0 = var_l7;
+  var_i0 = var_l9;
   var_i1 = 4u;
   var_i0 = var_i0 >= var_i1;
   if (var_i0) {
-    var_i0 = var_l7;
+    var_i0 = var_l9;
     var_i1 = 4294967292u;
     var_i0 &= var_i1;
-    var_l13 = var_i0;
+    var_l11 = var_i0;
     var_L22: 
-      var_i0 = var_p4;
+      var_i0 = var_l7;
       var_i1 = var_l5;
       var_i2 = 3u;
       var_i1 <<= (var_i2 & 31);
@@ -71324,7 +71120,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
       var_i1 += var_i2;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-      var_i0 = var_p4;
+      var_i0 = var_l7;
       var_i1 = var_l5;
       var_i2 = 4294967295u;
       var_i1 ^= var_i2;
@@ -71339,7 +71135,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
       var_i1 += var_i2;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-      var_i0 = var_p4;
+      var_i0 = var_l7;
       var_i1 = 4294967294u;
       var_i2 = var_l5;
       var_i1 -= var_i2;
@@ -71355,7 +71151,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
       var_i1 += var_i2;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-      var_i0 = var_p4;
+      var_i0 = var_l7;
       var_i1 = var_l8;
       var_i0 -= var_i1;
       var_i1 = var_p3;
@@ -71373,18 +71169,18 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
       var_i1 = 4u;
       var_i0 += var_i1;
       var_l12 = var_i0;
-      var_i1 = var_l13;
+      var_i1 = var_l11;
       var_i0 = var_i0 != var_i1;
       if (var_i0) {goto var_L22;}
   }
-  var_i0 = var_l7;
+  var_i0 = var_l9;
   var_i1 = 3u;
   var_i0 &= var_i1;
-  var_l7 = var_i0;
+  var_l9 = var_i0;
   var_i0 = !(var_i0);
   if (var_i0) {goto var_B20;}
   var_L23: 
-    var_i0 = var_p4;
+    var_i0 = var_l7;
     var_i1 = var_l5;
     var_i2 = 3u;
     var_i1 <<= (var_i2 & 31);
@@ -71400,11 +71196,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
     var_i1 += var_i2;
     var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1) + 8u);
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
-    var_i0 = var_l11;
+    var_i0 = var_l13;
     var_i1 = 1u;
     var_i0 += var_i1;
-    var_l11 = var_i0;
-    var_i1 = var_l7;
+    var_l13 = var_i0;
+    var_i1 = var_l9;
     var_i0 = var_i0 != var_i1;
     if (var_i0) {goto var_L23;}
   var_B20:;
@@ -71413,22 +71209,22 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i0 += var_i1;
   var_i1 = var_p2;
   var_i2 = var_p2;
-  var_i3 = 1288u;
+  var_i3 = 1276u;
   var_i2 += var_i3;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
   var_i3 = var_p1;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 24u);
   var_i2 ^= var_i3;
-  var_l5 = var_i2;
+  var_p3 = var_i2;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 8u);
   if (var_i2) {
-    var_i2 = var_l5;
+    var_i2 = var_p3;
   } else {
     var_j2 = 18445055223849287680ull;
     var_l14 = var_j2;
     var_i2 = 0u;
-    var_i3 = var_l5;
+    var_i3 = var_p3;
     var_i4 = var_p2;
     var_i3 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeBlock0x3A0x3AlazyCompileImpl0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(instance, var_i3, var_i4);
     var_i3 = !(var_i3);
@@ -71437,14 +71233,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
     var_p3 = var_i2;
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 36u);
-    var_l7 = var_i2;
+    var_l5 = var_i2;
     var_i2 = 0u;
     var_i3 = var_l6;
     var_i4 = 12u;
     var_i3 += var_i4;
     var_i4 = var_p2;
     var_i5 = var_p2;
-    var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 1288u);
+    var_i5 = i32_load(&instance->w2c_memory, (u64)(var_i5) + 1276u);
     var_i6 = var_p3;
     var_i6 = i32_load(&instance->w2c_memory, (u64)(var_i6) + 24u);
     var_i5 ^= var_i6;
@@ -71462,7 +71258,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
     var_i6 = 25u;
     var_i5 >>= (var_i6 & 31);
     var_B25:;
-    var_i6 = var_l7;
+    var_i6 = var_l5;
     var_i5 += var_i6;
     var_i6 = 2u;
     var_i5 += var_i6;
@@ -71474,26 +71270,26 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
     var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
     var_p3 = var_i2;
     var_i2 = var_p2;
-    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1364u);
+    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1356u);
     var_i3 = var_p1;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i4 = 40u;
     var_i3 += var_i4;
-    var_p4 = var_i3;
+    var_l5 = var_i3;
     var_i4 = 4290772992u;
     var_i3 &= var_i4;
     var_i2 = var_i2 != var_i3;
     if (var_i2) {
       var_i2 = var_l10;
-      var_i3 = var_p4;
+      var_i3 = var_l5;
       var_i4 = var_p3;
       w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AwriteBarrierSlow0x28hermes0x3A0x3Avm0x3A0x3AGCPointerBase0x20const0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3AGCCell0x20const0x2A0x29(instance, var_i2, var_i3, var_i4);
     }
-    var_i2 = var_p4;
+    var_i2 = var_l5;
     var_i3 = var_p3;
     i32_store(&instance->w2c_memory, (u64)(var_i2), var_i3);
     var_i2 = var_p2;
-    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1288u);
+    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 1276u);
     var_i3 = var_p1;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 24u);
@@ -71519,16 +71315,16 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3AcallInnerF
   var_i1 = 1u;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i0, var_i1);
   var_B17:;
-  var_l5 = var_i0;
+  var_p1 = var_i0;
   var_i0 = var_p0;
   var_j1 = var_l14;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_p0;
-  var_i1 = var_l5;
+  var_i1 = var_p1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p2;
-  var_i1 = var_l9;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
+  var_i1 = var_p4;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5588, var_i1);
   var_i0 = var_l6;
   var_i1 = 32u;
   var_i0 += var_i1;
@@ -71768,7 +71564,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3A0x7EGCBase0x280x290x2E1(w2c
   FUNC_PROLOGUE;
   u32 var_i0, var_i1, var_i2;
   var_i0 = var_p0;
-  var_i1 = 270384u;
+  var_i1 = 118592u;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 496u);
@@ -72025,7 +71821,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 4u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 48877u;
+  var_i1 = 48788u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72040,7 +71836,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 6u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 436, var_i1);
   var_i0 = var_l2;
-  var_i1 = 35105u;
+  var_i1 = 35070u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 432, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72055,7 +71851,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 7u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 436, var_i1);
   var_i0 = var_l2;
-  var_i1 = 42525u;
+  var_i1 = 42466u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 432, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72250,7 +72046,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 8u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 428, var_i1);
   var_i0 = var_l2;
-  var_i1 = 40409u;
+  var_i1 = 40407u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 424, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72267,7 +72063,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 8u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 59165u;
+  var_i1 = 55988u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72285,7 +72081,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 11u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 59153u;
+  var_i1 = 55976u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72321,7 +72117,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 9u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 46297u;
+  var_i1 = 46215u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72340,7 +72136,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 15u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 34921u;
+  var_i1 = 34886u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72359,7 +72155,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 15u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 34279u;
+  var_i1 = 34262u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72378,7 +72174,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 11u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 46307u;
+  var_i1 = 46225u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72411,7 +72207,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 7u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 412, var_i1);
   var_i0 = var_l2;
-  var_i1 = 44173u;
+  var_i1 = 44114u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 408, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72428,7 +72224,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 14u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 34295u;
+  var_i1 = 34278u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72447,7 +72243,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 9u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 49197u;
+  var_i1 = 49108u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72470,7 +72266,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 12u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 49217u;
+  var_i1 = 49128u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72499,7 +72295,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 11u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 49258u;
+  var_i1 = 49169u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72517,7 +72313,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 12u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 44992u;
+  var_i1 = 44910u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72536,7 +72332,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 14u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 44990u;
+  var_i1 = 44908u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72568,7 +72364,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 10u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 47305u;
+  var_i1 = 47223u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72589,7 +72385,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 10u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 47294u;
+  var_i1 = 47212u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72610,7 +72406,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 14u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 49243u;
+  var_i1 = 49154u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72639,7 +72435,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 13u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 47280u;
+  var_i1 = 47198u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72660,7 +72456,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 13u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 47266u;
+  var_i1 = 47184u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72681,7 +72477,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 13u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 46340u;
+  var_i1 = 46258u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72705,7 +72501,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 18u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 34995u;
+  var_i1 = 34960u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72730,7 +72526,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 15u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 59297u;
+  var_i1 = 56120u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72752,7 +72548,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 19u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
   var_i0 = var_l2;
-  var_i1 = 34975u;
+  var_i1 = 34940u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72772,7 +72568,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 11u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 404, var_i1);
   var_i0 = var_l2;
-  var_i1 = 34283u;
+  var_i1 = 34266u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 400, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -72800,7 +72596,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 18u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 40726u;
+      var_i1 = 40724u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -72844,7 +72640,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 6u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 53110u;
+      var_i1 = 52999u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -72890,7 +72686,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 14u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 48882u;
+      var_i1 = 48793u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -72936,7 +72732,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 5u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 47260u;
+      var_i1 = 47178u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -72985,7 +72781,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 8u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 41526u;
+      var_i1 = 41467u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73006,7 +72802,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 11u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 41535u;
+      var_i1 = 41476u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73024,7 +72820,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 12u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 54120u;
+      var_i1 = 53971u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73043,7 +72839,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 13u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 54106u;
+      var_i1 = 53957u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73062,7 +72858,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 7u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 46354u;
+      var_i1 = 46272u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73081,7 +72877,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 8u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 46319u;
+      var_i1 = 46237u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73100,7 +72896,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 11u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 44194u;
+      var_i1 = 44135u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73119,7 +72915,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 12u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 44181u;
+      var_i1 = 44122u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73138,7 +72934,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 13u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 828, var_i1);
       var_i0 = var_l2;
-      var_i1 = 40395u;
+      var_i1 = 40393u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 824, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73157,7 +72953,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
       var_i1 = 4u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 396, var_i1);
       var_i0 = var_l2;
-      var_i1 = 34526u;
+      var_i1 = 34491u;
       i32_store(&instance->w2c_memory, (u64)(var_i0) + 392, var_i1);
       var_i0 = var_l2;
       var_i1 = var_l2;
@@ -73234,6 +73030,26 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x
   var_i1 = 832u;
   var_i0 += var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
+  FUNC_EPILOGUE;
+}
+
+void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AcheckTripwire0x28unsigned0x20long0x290x3A0x3ACtx0x3A0x3AcreateSnapshotToFile0x28std0x3A0x3A_0x5F20x3A0x3Abasic_string0x3Cchar0x2C0x20std0x3A0x3A_0x5F20x3A0x3Achar_traits0x3Cchar0x3E0x2C0x20std0x3A0x3A_0x5F20x3A0x3Aallocator0x3Cchar0x3E0x3E0x20const0x260x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
+  FUNC_PROLOGUE;
+  u32 var_i0, var_i1;
+  var_i0 = 121601u;
+  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
+  var_i0 = !(var_i0);
+  if (var_i0) {
+    var_i0 = 121601u;
+    var_i1 = 1u;
+    i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  }
+  var_i0 = var_p0;
+  var_i1 = 109936u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+  var_i0 = var_p0;
+  var_i1 = 52u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   FUNC_EPILOGUE;
 }
 
@@ -73663,7 +73479,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar0x3E0x3A0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_l3;
-  var_i1 = 22519u;
+  var_i1 = 22502u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p0;
   var_i1 = var_p1;
@@ -73675,7 +73491,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar0x3E0x3A0
   goto var_B0;
   var_B1:;
   var_i0 = var_p1;
-  var_i1 = 816u;
+  var_i1 = 808u;
   var_i0 += var_i1;
   var_l5 = var_i0;
   var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0) + 512u);
@@ -73703,7 +73519,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AExternalStringPrimitive0x3Cchar0x3E0x3A0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l3;
-    var_i1 = 61379u;
+    var_i1 = 58202u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p1;
@@ -73955,7 +73771,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3Acreate0x28hermes0x
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 96, var_i1);
     var_i0 = var_l2;
-    var_i1 = 65292u;
+    var_i1 = 62088u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 88, var_i1);
     var_i0 = var_l2;
     var_i1 = 196607u;
@@ -73971,7 +73787,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3Acreate0x28hermes0x
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
     var_i0 = 0u;
     var_i1 = 0u;
-    var_i2 = 18550u;
+    var_i2 = 18529u;
     var_i3 = var_l2;
     var_i0 = w2c_hermes_snprintf(instance, var_i0, var_i1, var_i2, var_i3);
     var_p1 = var_i0;
@@ -74002,7 +73818,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3Acreate0x28hermes0x
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l2;
-    var_i1 = 35243u;
+    var_i1 = 35208u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_l2;
     var_i1 = 168u;
@@ -74069,11 +73885,11 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3Acreate0x28hermes0x
   var_i0 &= var_i1;
   var_l4 = var_i0;
   var_i1 = var_p0;
-  var_i2 = 1376u;
+  var_i2 = 1368u;
   var_i1 += var_i2;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   var_i2 = var_p0;
-  var_i3 = 1372u;
+  var_i3 = 1364u;
   var_i2 += var_i3;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
   var_l3 = var_i2;
@@ -74081,7 +73897,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3Acreate0x28hermes0x
   var_i0 = var_i0 > var_i1;
   if (var_i0) {
     var_i0 = var_p0;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_i1 = var_l4;
     var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AallocSlow0x28unsigned0x20int0x29(instance, var_i0, var_i1);
@@ -74092,7 +73908,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADictPropertyMap0x3A0x3Acreate0x28hermes0x
   var_i1 = var_l3;
   var_i2 = var_l4;
   var_i1 += var_i2;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
   var_B2:;
   var_i0 = var_l3;
   var_j1 = 4294967295ull;
@@ -74222,11 +74038,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACopyableVector0x3Chermes0x3A0x3Avm0x3A0x
   instance->w2c_0x5F_stack_pointer = var_i0;
   goto var_Bfunc;
   var_B0:;
-  var_i0 = 282993u;
+  var_i0 = 131201u;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = !(var_i0);
   if (var_i0) {
-    var_i0 = 282993u;
+    var_i0 = 131201u;
     var_i1 = 1u;
     i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
   }
@@ -74234,7 +74050,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACopyableVector0x3Chermes0x3A0x3Avm0x3A0x
   var_i1 = 5u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l3;
-  var_i1 = 261948u;
+  var_i1 = 110180u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l3;
   var_i1 = var_l3;
@@ -74253,10 +74069,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeCoverageProfiler0x3A0x3AglobalMutex0x
   FUNC_PROLOGUE;
   u32 var_i0, var_i1;
   u64 var_j1;
-  var_i0 = 290136u;
+  var_i0 = 138336u;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   if (var_i0) {
-    var_i0 = 290132u;
+    var_i0 = 138332u;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     goto var_Bfunc;
   }
@@ -74271,10 +74087,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeCoverageProfiler0x3A0x3AglobalMutex0x
   var_i0 = var_l0;
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = 290136u;
+  var_i0 = 138336u;
   var_i1 = 1u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_i0 = 290132u;
+  var_i0 = 138332u;
   var_i1 = var_l0;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l0;
@@ -74288,10 +74104,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeCoverageProfiler0x3A0x3AallProfilers0
   FUNC_PROLOGUE;
   u32 var_i0, var_i1;
   u64 var_j1;
-  var_i0 = 290128u;
+  var_i0 = 138328u;
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
   if (var_i0) {
-    var_i0 = 290124u;
+    var_i0 = 138324u;
     var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
     goto var_Bfunc;
   }
@@ -74306,10 +74122,10 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACodeCoverageProfiler0x3A0x3AallProfilers0
   var_i0 = var_l0;
   var_j1 = 0ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
-  var_i0 = 290128u;
+  var_i0 = 138328u;
   var_i1 = 1u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  var_i0 = 290124u;
+  var_i0 = 138324u;
   var_i1 = var_l0;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l0;
@@ -74663,7 +74479,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AextractOwnLengthProperty
   var_j1 = 18446744069414584320ull;
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 24, var_j1);
   var_i0 = var_p2;
-  var_i1 = 5476u;
+  var_i1 = 5468u;
   var_i0 += var_i1;
   var_i1 = var_p2;
   var_i2 = 85u;
@@ -74812,6 +74628,132 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ACallable0x3A0x3AextractOwnLengthProperty
   var_i1 = 4294967232u;
   var_i0 -= var_i1;
   instance->w2c_0x5F_stack_pointer = var_i0;
+  FUNC_EPILOGUE;
+}
+
+void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSString0x3A0x3A_setOwnIndexedImpl0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3, u32 var_p4) {
+  u32 var_l5 = 0, var_l6 = 0;
+  f64 var_l7 = 0;
+  FUNC_PROLOGUE;
+  u32 var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6;
+  u64 var_j1;
+  f64 var_d0, var_d1;
+  var_i0 = instance->w2c_0x5F_stack_pointer;
+  var_i1 = 16u;
+  var_i0 -= var_i1;
+  var_l5 = var_i0;
+  instance->w2c_0x5F_stack_pointer = var_i0;
+  var_i0 = var_p3;
+  var_i1 = var_p1;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 20u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
+  var_i2 = 2147483647u;
+  var_i1 &= var_i2;
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_p0;
+    var_i1 = var_p0;
+    var_i1 = i32_load16_u(&instance->w2c_memory, (u64)(var_i1));
+    var_i2 = 65024u;
+    var_i1 &= var_i2;
+    var_i2 = 1u;
+    var_i1 |= var_i2;
+    i32_store16(&instance->w2c_memory, (u64)(var_i0), var_i1);
+    goto var_B0;
+  }
+  var_i0 = var_p3;
+  var_d0 = (f64)(var_i0);
+  var_l7 = var_d0;
+  var_i0 = var_p2;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_l6 = var_i0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
+  var_p3 = var_i0;
+  var_i1 = var_l6;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
+  var_i0 = var_i0 < var_i1;
+  if (var_i0) {
+    var_i0 = var_l6;
+    var_i1 = var_p3;
+    var_i2 = 8u;
+    var_i1 += var_i2;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
+    var_i0 = var_p3;
+    var_d1 = var_l7;
+    f64_store(&instance->w2c_memory, (u64)(var_i0), var_d1);
+    goto var_B2;
+  }
+  var_i0 = var_l6;
+  var_d1 = var_l7;
+  var_j1 = i64_reinterpret_f64(var_d1);
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
+  var_p3 = var_i0;
+  var_B2:;
+  var_i0 = var_p2;
+  var_i1 = var_p3;
+  var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AvalueToSymbolID0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x29(instance, var_i0, var_i1);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_p3 = var_i0;
+  var_i0 = var_l5;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
+  var_i0 = var_l5;
+  var_i1 = 319u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
+  var_i0 = var_l5;
+  var_i1 = 319u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
+  var_i0 = var_l5;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i0 = var_p0;
+  var_i1 = var_p1;
+  var_i2 = var_p2;
+  var_i3 = var_p3;
+  var_i4 = var_l5;
+  var_i5 = 4u;
+  var_i4 += var_i5;
+  var_i5 = var_p4;
+  var_i6 = var_l5;
+  w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSObject0x3A0x3AdefineOwnPropertyInternal0x28hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AJSObject0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ASymbolID0x2C0x20hermes0x3A0x3Avm0x3A0x3ADefinePropertyFlags0x2C0x20hermes0x3A0x3Avm0x3A0x3AHandle0x3Chermes0x3A0x3Avm0x3A0x3AHermesValue0x3E0x2C0x20hermes0x3A0x3Avm0x3A0x3APropOpFlags0x29(instance, var_i0, var_i1, var_i2, var_i3, var_i4, var_i5, var_i6);
+  var_B0:;
+  var_i0 = var_l5;
+  var_i1 = 16u;
+  var_i0 += var_i1;
+  instance->w2c_0x5F_stack_pointer = var_i0;
+  FUNC_EPILOGUE;
+}
+
+u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSString0x3A0x3A_haveOwnIndexedImpl0x28hermes0x3A0x3Avm0x3A0x3AJSObject0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20unsigned0x20int0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
+  FUNC_PROLOGUE;
+  u32 var_i0, var_i1;
+  var_i0 = var_p0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_i1 = 2147483647u;
+  var_i0 &= var_i1;
+  var_i1 = var_p2;
+  var_i0 = var_i0 > var_i1;
+  FUNC_EPILOGUE;
+  return var_i0;
+}
+
+void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSString0x3A0x3A_getOwnIndexedRangeImpl0x28hermes0x3A0x3Avm0x3A0x3AJSObject0x2A0x2C0x20hermes0x3A0x3Avm0x3A0x3ARuntime0x260x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
+  FUNC_PROLOGUE;
+  u32 var_i0, var_i1, var_i2;
+  var_i0 = var_p1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
+  var_p1 = var_i0;
+  var_i0 = var_p0;
+  var_i1 = 0u;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i0 = var_p0;
+  var_i1 = var_p1;
+  var_i2 = 2147483647u;
+  var_i1 &= var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   FUNC_EPILOGUE;
 }
 
@@ -75077,7 +75019,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSFunction0x3A0x3A_callImpl0x28hermes0x3
   var_i0 = var_l3;
   var_i1 = var_p2;
   var_i2 = var_p2;
-  var_i3 = 1288u;
+  var_i3 = 1276u;
   var_i2 += var_i3;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
   var_i3 = var_p1;
@@ -75183,7 +75125,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i1 = var_l4;
   var_i2 = 72u;
   var_i1 += var_i2;
-  var_l7 = var_i1;
+  var_l6 = var_i1;
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_l4;
   var_j1 = 17179869185ull;
@@ -75203,7 +75145,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i1 += var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 232, var_i1);
   var_i0 = var_l4;
-  var_i1 = var_l7;
+  var_i1 = var_l6;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 228, var_i1);
   var_i0 = var_p2;
   var_i1 = var_l4;
@@ -75211,14 +75153,14 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i1 -= var_i2;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p2;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5608u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5600u);
   var_p3 = var_i0;
   var_i1 = 48u;
   var_i0 -= var_i1;
   var_l5 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3Adetail0x3A0x3Aslots0x28hermes0x3A0x3Avm0x3A0x3AJSObject0x2A0x29(instance, var_i0);
-  var_l7 = var_i0;
+  var_l6 = var_i0;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0));
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
@@ -75247,7 +75189,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
   var_l8 = var_i0;
   var_B0:;
-  var_i0 = var_l7;
+  var_i0 = var_l6;
   var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
@@ -75256,17 +75198,17 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 4u);
   var_p1 = var_i0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 164u);
-  var_l7 = var_i0;
+  var_l6 = var_i0;
   var_i1 = var_p1;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 168u);
   var_i0 = var_i0 < var_i1;
   if (var_i0) {
     var_i0 = var_p1;
-    var_i1 = var_l7;
+    var_i1 = var_l6;
     var_i2 = 8u;
     var_i1 += var_i2;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 164, var_i1);
-    var_i0 = var_l7;
+    var_i0 = var_l6;
     var_j1 = var_l16;
     i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
     goto var_B2;
@@ -75274,7 +75216,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i0 = var_p1;
   var_j1 = var_l16;
   var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCScope0x3A0x3A_newChunkAndPHV0x28hermes0x3A0x3Avm0x3A0x3AHermesValue0x29(instance, var_i0, var_j1);
-  var_l7 = var_i0;
+  var_l6 = var_i0;
   var_B2:;
   var_i0 = var_l5;
   var_i1 = var_p2;
@@ -75323,10 +75265,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i0 = !(var_i0);
   if (var_i0) {
     var_i0 = var_p2;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5592u);
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 5584u);
     var_i1 = var_p2;
-    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
-    var_l7 = var_i1;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5588u);
+    var_l6 = var_i1;
     var_i0 -= var_i1;
     var_i1 = 3u;
     var_i0 = (u32)((s32)var_i0 >> (var_i1 & 31));
@@ -75339,7 +75281,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     var_i4 = 4294967288u;
     var_i3 = var_i3 > var_i4;
     var_i1 = var_i3 ? var_i1 : var_i2;
-    var_l5 = var_i1;
+    var_p1 = var_i1;
     var_j1 = (u64)(var_i1);
     var_j2 = 32ull;
     var_j1 += var_j2;
@@ -75348,7 +75290,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     var_i0 = var_p3;
     var_i1 = 56u;
     var_i0 -= var_i1;
-    var_l6 = var_i0;
+    var_l7 = var_i0;
     var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
     var_l17 = var_j0;
     var_i0 = var_l12;
@@ -75357,56 +75299,62 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     var_i0 = var_l8;
     var_j0 = i64_load(&instance->w2c_memory, (u64)(var_i0));
     var_l19 = var_j0;
-    var_i0 = var_l7;
-    var_p1 = var_i0;
     var_i0 = var_p2;
     var_i1 = var_p2;
-    var_i2 = 5616u;
+    var_i2 = 5608u;
     var_i1 += var_i2;
     var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
     var_i2 = var_p2;
-    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 5612u);
+    var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 5604u);
     var_i3 = var_l4;
     var_i2 -= var_i3;
     var_i1 = var_i1 < var_i2;
     if (var_i1) {
-      var_i1 = var_l4;
-      var_i2 = 8u;
+      var_i1 = var_p2;
+      var_i2 = 5612u;
       var_i1 += var_i2;
-      var_i2 = var_p2;
-      var_i3 = 5620u;
-      var_i2 += var_i3;
-      var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2));
-      w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i1, var_i2);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+      var_p3 = var_i1;
+      var_i1 = var_l4;
+      var_i2 = instance->w2c_0x5F_stack_base;
+      var_l5 = var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i1) + 8, var_i2);
+      var_i1 = var_l4;
+      var_i2 = var_l5;
+      var_i3 = instance->w2c_0x5F_stack_end;
+      var_i4 = var_p3;
+      var_i3 += var_i4;
+      var_i2 -= var_i3;
+      i32_store(&instance->w2c_memory, (u64)(var_i1) + 12, var_i2);
       var_i1 = var_p2;
       var_i2 = var_l4;
       var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 8u);
-      var_p1 = var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i1) + 5612, var_i2);
+      var_p3 = var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i1) + 5604, var_i2);
       var_i1 = var_p2;
       var_i2 = var_l4;
       var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 12u);
-      var_p3 = var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i1) + 5616, var_i2);
-      var_i1 = var_p1;
+      var_l5 = var_i2;
+      i32_store(&instance->w2c_memory, (u64)(var_i1) + 5608, var_i2);
+      var_i1 = var_p3;
       var_i2 = var_l4;
       var_i1 -= var_i2;
-      var_i2 = var_p3;
+      var_i2 = var_l5;
       var_i1 = var_i1 > var_i2;
       if (var_i1) {goto var_B6;}
       var_i1 = var_p2;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5596u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5588u);
     } else {
-      var_i1 = var_p1;
+      var_i1 = var_l6;
     }
-    var_i2 = var_l5;
+    var_i2 = var_p1;
     var_i3 = 3u;
     var_i2 <<= (var_i3 & 31);
     var_i1 += var_i2;
     var_p1 = var_i1;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5588, var_i1);
     var_i0 = var_p2;
-    var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5608u);
+    var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 5600u);
     var_l20 = var_j0;
     var_i0 = var_p1;
     var_i1 = 24u;
@@ -75471,10 +75419,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i1 = 8u;
       var_i0 -= var_i1;
       var_l5 = var_i0;
-      var_i1 = var_l6;
+      var_i1 = var_l7;
       var_i2 = 8u;
       var_i1 -= var_i2;
-      var_l6 = var_i1;
+      var_l7 = var_i1;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
       var_i0 = var_p1;
@@ -75497,7 +75445,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i0 = var_l5;
       var_i1 = 8u;
       var_i0 -= var_i1;
-      var_i1 = var_l6;
+      var_i1 = var_l7;
       var_i2 = 8u;
       var_i1 -= var_i2;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
@@ -75505,7 +75453,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i0 = var_l5;
       var_i1 = 16u;
       var_i0 -= var_i1;
-      var_i1 = var_l6;
+      var_i1 = var_l7;
       var_i2 = 16u;
       var_i1 -= var_i2;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
@@ -75513,7 +75461,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i0 = var_l5;
       var_i1 = 24u;
       var_i0 -= var_i1;
-      var_i1 = var_l6;
+      var_i1 = var_l7;
       var_i2 = 24u;
       var_i1 -= var_i2;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
@@ -75522,10 +75470,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i1 = 32u;
       var_i0 -= var_i1;
       var_l5 = var_i0;
-      var_i1 = var_l6;
+      var_i1 = var_l7;
       var_i2 = 32u;
       var_i1 -= var_i2;
-      var_l6 = var_i1;
+      var_l7 = var_i1;
       var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
       i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
       var_i0 = var_p1;
@@ -75546,7 +75494,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     var_i3 >>= (var_i4 & 31);
     var_i4 = 1020u;
     var_i3 &= var_i4;
-    var_i4 = 289808u;
+    var_i4 = 138008u;
     var_i3 += var_i4;
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
     var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 60u);
@@ -75565,8 +75513,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     }
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     var_i0 = var_p2;
-    var_i1 = var_l7;
-    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
+    var_i1 = var_l6;
+    i32_store(&instance->w2c_memory, (u64)(var_i0) + 5588, var_i1);
     goto var_B4;
   }
   var_i0 = var_p2;
@@ -75591,7 +75539,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   if (var_i0) {
     var_i0 = var_p2;
-    var_i1 = 816u;
+    var_i1 = 808u;
     var_i0 += var_i1;
     var_l13 = var_i0;
     var_i0 = var_p3;
@@ -75602,7 +75550,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i0 = 7u;
       var_p1 = var_i0;
       var_i0 = var_l15;
-      var_i1 = var_l6;
+      var_i1 = var_l7;
       var_i2 = 3u;
       var_i1 <<= (var_i2 & 31);
       var_i0 -= var_i1;
@@ -75707,9 +75655,9 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
         goto var_B18;
       }
       var_i0 = var_p2;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1376u);
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1368u);
       var_i1 = var_p2;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1372u);
+      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 1364u);
       var_l5 = var_i1;
       var_i0 -= var_i1;
       var_i1 = 15u;
@@ -75725,7 +75673,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i1 = var_l5;
       var_i2 = 16u;
       var_i1 += var_i2;
-      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1372, var_i1);
+      i32_store(&instance->w2c_memory, (u64)(var_i0) + 1364, var_i1);
       var_B30:;
       var_i0 = var_l5;
       var_i1 = 402653200u;
@@ -75744,8 +75692,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 28u);
       var_l14 = var_i0;
       var_i0 = var_p2;
-      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1364u);
-      var_i1 = var_l6;
+      var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 1356u);
+      var_i1 = var_l7;
       var_i2 = var_l5;
       var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 20u);
       var_i1 -= var_i2;
@@ -75796,10 +75744,10 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
       var_i0 = var_l5;
       var_i1 = var_p1;
       i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-      var_i0 = var_l6;
+      var_i0 = var_l7;
       var_i1 = 1u;
       var_i0 += var_i1;
-      var_l6 = var_i0;
+      var_l7 = var_i0;
       var_i1 = var_l9;
       var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
       var_i0 = var_i0 < var_i1;
@@ -75819,7 +75767,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     var_i0 += var_i1;
     var_i1 = var_l11;
     var_i2 = var_p2;
-    var_i3 = var_l7;
+    var_i3 = var_l6;
     var_i4 = var_l8;
     var_j4 = i64_load(&instance->w2c_memory, (u64)(var_i4));
     var_i5 = var_l10;
@@ -75860,7 +75808,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
     var_i0 = var_l4;
-    var_i1 = 32769u;
+    var_i1 = 32752u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_p0;
     var_i1 = var_p2;
@@ -75879,14 +75827,12 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     goto var_B4;
   }
-  var_i0 = 0u;
-  var_l6 = var_i0;
   var_i0 = var_l4;
   var_i1 = 8u;
   var_i0 += var_i1;
   var_i1 = var_l11;
   var_i2 = var_p2;
-  var_i3 = var_l7;
+  var_i3 = var_l6;
   var_i4 = var_l8;
   var_j4 = i64_load(&instance->w2c_memory, (u64)(var_i4));
   var_i5 = var_p3;
@@ -75917,8 +75863,8 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_proxyNativeCall0
   var_i1 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AraiseStackOverflow0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x3A0x3AStackOverflowKind0x29(instance, var_i1, var_i2);
   i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   var_i0 = var_p2;
-  var_i1 = var_l7;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5596, var_i1);
+  var_i1 = var_l6;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5588, var_i1);
   var_B4:;
   var_i0 = var_l4;
   var_i1 = 4294967232u;
@@ -75944,37 +75890,47 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_newObjectImpl0x28
   instance->w2c_0x5F_stack_pointer = var_i0;
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
-  var_l6 = var_i0;
+  var_l4 = var_i0;
   var_i0 = var_p1;
-  var_i1 = 5616u;
+  var_i1 = 5608u;
   var_i0 += var_i1;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
   var_i1 = var_p1;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5612u);
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 5604u);
   var_i2 = var_l3;
   var_i1 -= var_i2;
   var_i0 = var_i0 >= var_i1;
   if (var_i0) {goto var_B1;}
+  var_i0 = var_p1;
+  var_i1 = 5612u;
+  var_i0 += var_i1;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+  var_l5 = var_i0;
   var_i0 = var_l3;
-  var_i1 = var_p1;
-  var_i2 = 5620u;
-  var_i1 += var_i2;
-  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  w2c_hermes_hermes0x3A0x3Aoscompat0x3A0x3Athread_stack_bounds0x28unsigned0x20int0x29(instance, var_i0, var_i1);
+  var_i1 = instance->w2c_0x5F_stack_base;
+  var_l6 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
+  var_i0 = var_l3;
+  var_i1 = var_l6;
+  var_i2 = instance->w2c_0x5F_stack_end;
+  var_i3 = var_l5;
+  var_i2 += var_i3;
+  var_i1 -= var_i2;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
   var_i0 = var_p1;
   var_i1 = var_l3;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-  var_l4 = var_i1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5612, var_i1);
+  var_l5 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5604, var_i1);
   var_i0 = var_p1;
   var_i1 = var_l3;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 4u);
-  var_l5 = var_i1;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5616, var_i1);
-  var_i0 = var_l4;
+  var_l6 = var_i1;
+  i32_store(&instance->w2c_memory, (u64)(var_i0) + 5608, var_i1);
+  var_i0 = var_l5;
   var_i1 = var_l3;
   var_i0 -= var_i1;
-  var_i1 = var_l5;
+  var_i1 = var_l6;
   var_i0 = var_i0 <= var_i1;
   if (var_i0) {goto var_B1;}
   var_i0 = var_l3;
@@ -75991,7 +75947,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_newObjectImpl0x28
   var_i1 = 44u;
   var_i0 += var_i1;
   var_i1 = var_p1;
-  var_i2 = var_l6;
+  var_i2 = var_l4;
   var_i2 = i32_load(&instance->w2c_memory, (u64)(var_i2) + 32u);
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AisConstructor0x28hermes0x3A0x3Avm0x3A0x3ARuntime0x260x2C0x20hermes0x3A0x3Avm0x3A0x3ACallable0x2A0x29(instance, var_i0, var_i1, var_i2);
   var_i0 = var_l3;
@@ -76020,7 +75976,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_newObjectImpl0x28
     var_i1 = 3u;
     i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
     var_i0 = var_l3;
-    var_i1 = 36069u;
+    var_i1 = 36034u;
     i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
     var_i0 = var_p1;
     var_i1 = var_l3;
@@ -76070,7 +76026,7 @@ u32 w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSCallableProxy0x3A0x3A_newObjectImpl0x28
   var_i3 >>= (var_i4 & 31);
   var_i4 = 1020u;
   var_i3 &= var_i4;
-  var_i4 = 289808u;
+  var_i4 = 138008u;
   var_i3 += var_i4;
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3));
   var_i3 = i32_load(&instance->w2c_memory, (u64)(var_i3) + 56u);
@@ -76107,7 +76063,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AJSArrayBuffer0x3A0x3A_finalizeImpl0x28he
   var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 28u);
   if (var_i0) {goto var_B0;}
   var_i0 = var_p1;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 468u);
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 464u);
   var_l2 = var_i0;
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);
@@ -76354,11 +76310,11 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AttiReached0x280x29(w2c_he
   FUNC_PROLOGUE;
   u32 var_i0, var_i1;
   var_i0 = var_p0;
-  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4018u);
+  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0) + 4021u);
   if (var_i0) {
     var_i0 = var_p0;
     var_i1 = 0u;
-    i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4017, var_i1);
+    i32_store8(&instance->w2c_memory, (u64)(var_i0) + 4020, var_i1);
   }
   FUNC_EPILOGUE;
 }
@@ -76377,7 +76333,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AprintStats0x28hermes0x3A0
   var_i1 = var_p1;
   w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AprintStats0x28hermes0x3A0x3AJSONEmitter0x260x29(instance, var_i0, var_i1);
   var_i0 = var_l2;
-  var_i1 = 55896u;
+  var_i1 = 55735u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 56, var_i1);
   var_i0 = var_l2;
   var_i1 = 8u;
@@ -76399,22 +76355,22 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AprintStats0x28hermes0x3A0
   var_i1 = 0u;
   i32_store8(&instance->w2c_memory, (u64)(var_i0) + 19, var_i1);
   var_i0 = var_l3;
-  var_i1 = 62472u;
+  var_i1 = 59295u;
   var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 15, var_i1);
   var_i0 = var_l3;
-  var_i1 = 62465u;
+  var_i1 = 59288u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_j1);
   var_i0 = var_l3;
-  var_i1 = 62457u;
+  var_i1 = 59280u;
   var_j1 = i64_load(&instance->w2c_memory, (u64)(var_i1));
   i64_store(&instance->w2c_memory, (u64)(var_i0), var_j1);
   var_i0 = var_l2;
   var_i1 = 9u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 76, var_i1);
   var_i0 = var_l2;
-  var_i1 = 36906u;
+  var_i1 = 36853u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 72, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -76446,7 +76402,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AprintStats0x28hermes0x3A0
   var_i1 = 5u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 52, var_i1);
   var_i0 = var_l2;
-  var_i1 = 33616u;
+  var_i1 = 33599u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 48, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -76463,7 +76419,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AprintStats0x28hermes0x3A0
   var_i1 = 15u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 76, var_i1);
   var_i0 = var_l2;
-  var_i1 = 34310u;
+  var_i1 = 34293u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 72, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -76585,7 +76541,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AHadesGC0x3A0x3AgetHeapInfoWithMallocSize
   var_i1 = var_p1;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_l2;
-  var_i1 = 270736u;
+  var_i1 = 118944u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_l2;
   var_i1 = var_l2;
@@ -77993,7 +77949,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGeneratorInnerFunction0x3A0x3A_callImpl0
   var_i1 = 3u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 16, var_i1);
   var_i0 = var_p1;
-  var_i1 = 52288u;
+  var_i1 = 52177u;
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 8, var_i1);
   var_i0 = var_p2;
   var_i1 = var_p1;
@@ -78264,7 +78220,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AoomDetail0x28llvh0x3A0x3AM
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 12, var_i1);
   var_i0 = var_p1;
   var_i1 = var_l5;
-  var_i2 = 18359u;
+  var_i2 = 18338u;
   var_i3 = var_l3;
   var_i0 = w2c_hermes_snprintf(instance, var_i0, var_i1, var_i2, var_i3);
   var_i0 = var_l3;
@@ -78320,46 +78276,6 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AgetHeapInfoWithMallocSize0
   var_i2 = 7u;
   var_i1 <<= (var_i2 & 31);
   i32_store(&instance->w2c_memory, (u64)(var_i0) + 32, var_i1);
-  FUNC_EPILOGUE;
-}
-
-void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AcheckTripwire0x28unsigned0x20long0x290x3A0x3ACtx0x3A0x3AcreateSnapshot0x28std0x3A0x3A_0x5F20x3A0x3Abasic_ostream0x3Cchar0x2C0x20std0x3A0x3A_0x5F20x3A0x3Achar_traits0x3Cchar0x3E0x3E0x260x2C0x20bool0x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2, u32 var_p3) {
-  FUNC_PROLOGUE;
-  u32 var_i0, var_i1;
-  var_i0 = 273393u;
-  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
-  var_i0 = !(var_i0);
-  if (var_i0) {
-    var_i0 = 273393u;
-    var_i1 = 1u;
-    i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  }
-  var_i0 = var_p0;
-  var_i1 = 261704u;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-  var_i0 = var_p0;
-  var_i1 = 52u;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  FUNC_EPILOGUE;
-}
-
-void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AcheckTripwire0x28unsigned0x20long0x290x3A0x3ACtx0x3A0x3AcreateSnapshotToFile0x28std0x3A0x3A_0x5F20x3A0x3Abasic_string0x3Cchar0x2C0x20std0x3A0x3A_0x5F20x3A0x3Achar_traits0x3Cchar0x3E0x2C0x20std0x3A0x3A_0x5F20x3A0x3Aallocator0x3Cchar0x3E0x3E0x20const0x260x29(w2c_hermes* instance, u32 var_p0, u32 var_p1, u32 var_p2) {
-  FUNC_PROLOGUE;
-  u32 var_i0, var_i1;
-  var_i0 = 273393u;
-  var_i0 = i32_load8_u(&instance->w2c_memory, (u64)(var_i0));
-  var_i0 = !(var_i0);
-  if (var_i0) {
-    var_i0 = 273393u;
-    var_i1 = 1u;
-    i32_store8(&instance->w2c_memory, (u64)(var_i0), var_i1);
-  }
-  var_i0 = var_p0;
-  var_i1 = 261704u;
-  i32_store(&instance->w2c_memory, (u64)(var_i0) + 4, var_i1);
-  var_i0 = var_p0;
-  var_i1 = 52u;
-  i32_store(&instance->w2c_memory, (u64)(var_i0), var_i1);
   FUNC_EPILOGUE;
 }
 
@@ -78508,7 +78424,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AEvalErrorConstructor0x28void0x2A0x2C0x20
       var_i8;
   u64 var_j0, var_j1;
   var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 72u);
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 64u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l5 = var_j0;
@@ -78546,12 +78462,12 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AEvalErrorConstructor0x28void0x2A0x2C0x20
   var_i4 = var_p0;
   var_i5 = 8u;
   var_i4 -= var_i5;
-  var_i5 = 70392u;
+  var_i5 = 67208u;
   var_i6 = var_p3;
   var_i6 = i32_load(&instance->w2c_memory, (u64)(var_i6) + 4u);
   var_p2 = var_i6;
   var_i4 = var_i6 ? var_i4 : var_i5;
-  var_i5 = 70392u;
+  var_i5 = 67208u;
   var_i6 = var_p0;
   var_i7 = 16u;
   var_i6 -= var_i7;
@@ -78572,7 +78488,7 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AErrorConstructor0x28void0x2A0x2C0x20herm
       var_i8;
   u64 var_j0, var_j1;
   var_i0 = var_p2;
-  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 40u);
+  var_j0 = i64_load32_u(&instance->w2c_memory, (u64)(var_i0) + 32u);
   var_j1 = 18446462598732840960ull;
   var_j0 |= var_j1;
   var_l5 = var_j0;
@@ -78610,12 +78526,12 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3AErrorConstructor0x28void0x2A0x2C0x20herm
   var_i4 = var_p0;
   var_i5 = 8u;
   var_i4 -= var_i5;
-  var_i5 = 70392u;
+  var_i5 = 67208u;
   var_i6 = var_p3;
   var_i6 = i32_load(&instance->w2c_memory, (u64)(var_i6) + 4u);
   var_p2 = var_i6;
   var_i4 = var_i6 ? var_i4 : var_i5;
-  var_i5 = 70392u;
+  var_i5 = 67208u;
   var_i6 = var_p0;
   var_i7 = 16u;
   var_i6 -= var_i7;
@@ -79690,37 +79606,66 @@ void w2c_hermes_hermes0x3A0x3Avm0x3A0x3ADomain0x3A0x3A_finalizeImpl0x28hermes0x3
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 36u);
   var_l2 = var_i0;
-  var_i0 = var_p0;
-  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 40u);
+  var_i1 = var_p0;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 40u);
+  var_l3 = var_i1;
+  var_i1 = !(var_i1);
+  if (var_i1) {goto var_B0;}
+  var_i0 = var_l2;
+  var_i1 = var_l3;
+  var_i2 = 2u;
+  var_i1 <<= (var_i2 & 31);
+  var_i0 += var_i1;
   var_l3 = var_i0;
-  if (var_i0) {
-    var_i0 = var_l2;
-    var_i1 = var_l3;
-    var_i2 = 2u;
-    var_i1 <<= (var_i2 & 31);
-    var_i0 += var_i1;
-    var_l3 = var_i0;
+  var_i0 = var_p1;
+  var_i1 = 360u;
+  var_i0 += var_i1;
+  var_p1 = var_i0;
+  var_L1: 
     var_i0 = var_p1;
-    var_i1 = 360u;
-    var_i0 += var_i1;
-    var_p1 = var_i0;
-    var_L1: 
-      var_i0 = var_p1;
-      var_i1 = var_l2;
-      var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
-      w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AIDTracker0x3A0x3AuntrackNative0x28void0x20const0x2A0x29(instance, var_i0, var_i1);
-      var_i0 = var_l2;
-      var_i1 = 4u;
-      var_i0 += var_i1;
-      var_l2 = var_i0;
-      var_i1 = var_l3;
-      var_i0 = var_i0 != var_i1;
-      if (var_i0) {goto var_L1;}
-    var_i0 = var_p0;
-    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 36u);
-  } else {
+    var_i1 = var_l2;
+    var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1));
+    w2c_hermes_hermes0x3A0x3Avm0x3A0x3AGCBase0x3A0x3AIDTracker0x3A0x3AuntrackNative0x28void0x20const0x2A0x29(instance, var_i0, var_i1);
     var_i0 = var_l2;
-  }
+    var_i1 = 4u;
+    var_i0 += var_i1;
+    var_l2 = var_i0;
+    var_i1 = var_l3;
+    var_i0 = var_i0 != var_i1;
+    if (var_i0) {goto var_L1;}
+  var_i0 = var_p0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 36u);
+  var_l2 = var_i0;
+  var_i1 = var_p0;
+  var_i1 = i32_load(&instance->w2c_memory, (u64)(var_i1) + 40u);
+  var_p1 = var_i1;
+  var_i1 = !(var_i1);
+  if (var_i1) {goto var_B0;}
+  var_i0 = var_l2;
+  var_i1 = var_p1;
+  var_i2 = 2u;
+  var_i1 <<= (var_i2 & 31);
+  var_i0 += var_i1;
+  var_p1 = var_i0;
+  var_L2: 
+    var_i0 = var_l2;
+    var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0));
+    var_l3 = var_i0;
+    if (var_i0) {
+      var_i0 = var_l3;
+      var_i0 = w2c_hermes_hermes0x3A0x3Avm0x3A0x3ARuntimeModule0x3A0x3A0x7ERuntimeModule0x280x29(instance, var_i0);
+      w2c_hermes_dlfree(instance, var_i0);
+    }
+    var_i0 = var_l2;
+    var_i1 = 4u;
+    var_i0 += var_i1;
+    var_l2 = var_i0;
+    var_i1 = var_p1;
+    var_i0 = var_i0 != var_i1;
+    if (var_i0) {goto var_L2;}
+  var_i0 = var_p0;
+  var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 36u);
+  var_B0:;
   w2c_hermes_dlfree(instance, var_i0);
   var_i0 = var_p0;
   var_i0 = i32_load(&instance->w2c_memory, (u64)(var_i0) + 20u);

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ir %s
+// RUN: %hermesc -dump-ir %s
 //
 // Test for a regression where we were asserting because bodies of fionally
 // statements are visited more than once.

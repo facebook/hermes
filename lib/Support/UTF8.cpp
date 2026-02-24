@@ -187,7 +187,7 @@ void convertUTF16ToUTF8WithSingleSurrogates(
       dest.push_back(static_cast<char>(c));
       continue;
     }
-    char32_t c32 = static_cast<char32_t>(c);
+    char32_t c32 = c;
     char buff[UTF8CodepointMaxBytes];
     char *ptr = buff;
     encodeUTF8(ptr, c32);
@@ -195,6 +195,53 @@ void convertUTF16ToUTF8WithSingleSurrogates(
   }
 }
 
+#if LLVM_PTR_SIZE == 8 && (defined(__clang__) || defined(__GNUC__))
+/// Check for non-ASCII characters in unaligned 8-byte chunks. The key idea is
+/// that unaligned loads are fast on modern hardware, and it is better to load
+/// the same data twice than to perform a conditional branch.
+/// This is about 2x faster than isAllASCII_32 on an M1 MacBook Pro.
+/// Idea from https://github.com/nadavrot/memset_benchmark.
+bool isAllASCII(const uint8_t *start, const uint8_t *end) {
+  /// Unaligned data types.
+  typedef uint16_t __attribute__((aligned(1))) u16;
+  typedef uint32_t __attribute__((aligned(1))) u32;
+  typedef uint64_t __attribute__((aligned(1))) u64;
+
+  static constexpr uint64_t kMask = 0x8080808080808080ull;
+  size_t len = end - start;
+  if (len <= 4) {
+    if (len == 0)
+      return true;
+    // len >= 1
+    if (len <= 2)
+      return ((*start | *(end - 1)) & 0x80) == 0;
+    // len == 3 || len == 4
+    return ((*((const u16 *)start) | *((const u16 *)(end - 2))) & 0x8080) == 0;
+  }
+
+  if (len <= 16) {
+    if (len < 8) {
+      // 4 <= len < 8
+      return ((*((const u32 *)start) | *((const u32 *)(end - 4))) & kMask) == 0;
+    }
+    // 8 <= len <= 16
+    // This could be handled by the loop below, but this is faster.
+    return ((*((const u64 *)start) | *((const u64 *)(end - 8))) & kMask) == 0;
+  }
+
+  // len > 16
+  const uint8_t *lastLL = end - 8;
+  do {
+    if (*(const u64 *)start & kMask)
+      return false;
+    start += 8;
+  } while (start < lastLL);
+  return (*((const u64 *)lastLL) & kMask) == 0;
+}
+
+#else
+
+/// Check for non-ASCII characters in 4-byte aligned chunks.
 bool isAllASCII(const uint8_t *start, const uint8_t *end) {
   const uint8_t *cursor = start;
   size_t len = end - start;
@@ -233,27 +280,14 @@ bool isAllASCII(const uint8_t *start, const uint8_t *end) {
   return true;
 }
 
-void convertUTF8WithSurrogatesToUTF8WithReplacements(
-    std::string &output,
-    llvh::StringRef input) {
-  // Temporary buffer to convert input to UTF16.
-  llvh::SmallVector<char16_t, 8> ustr;
-  // The temporary string cannot possibly have more characters than input. Using
-  // reserve avoids default-initializing the elements.
-  ustr.reserve(input.size());
-  // ustr is pessimistically allocated, so pass a raw pointer to its contents to
-  // convertUTF8WithSurrogatesToUTF16. The alternative is to use a
-  // std::back_inserter that would resize the buffer if needed. It turns out
-  // that the resulting code using std::back_inserter is considerably larger.
-  char16_t *ustrEnd =
-      convertUTF8WithSurrogatesToUTF16(ustr.data(), input.begin(), input.end());
-  // Sanity-check for buffer overflow.
-  assert(
-      static_cast<uintptr_t>(ustrEnd - ustr.data()) <= ustr.capacity() &&
-      "buffer overflow while converting UTF8 surrogates");
-  // Now convert the UTF16 string to UTF8 without surrogates.
-  convertUTF16ToUTF8WithReplacements(
-      output, llvh::makeArrayRef(ustr.data(), ustrEnd));
+#endif
+
+bool isAllASCII(const char16_t *start, const char16_t *end) {
+  for (; start != end; ++start) {
+    if (*start > 0x7F)
+      return false;
+  }
+  return true;
 }
 
 } // namespace hermes

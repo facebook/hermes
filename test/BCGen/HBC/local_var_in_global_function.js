@@ -27,38 +27,41 @@ print(e);
 
 // Auto-generated content below. Please do not modify manually.
 
-// RA:function global#0()#1
-// RA-NEXT:globals = [inner, e]
-// RA-NEXT:S{global#0()#1} = [?anon_1_e#1]
+// RA:scope %VS0 [e: any]
+
+// RA:function global(): any
 // RA-NEXT:%BB0:
-// RA-NEXT:  $Reg1 @0 [1...10) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
-// RA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCLoadConstInst "global" : string
-// RA-NEXT:  $Reg0 @2 [3...18) 	%2 = HBCGetGlobalObjectInst
-// RA-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : string, %2 : object, "e" : string
-// RA-NEXT:  $Reg2 @4 [empty]	%4 = TryStartInst %BB1, %BB2
+// RA-NEXT:                 DeclareGlobalVarInst "inner": string
+// RA-NEXT:                 DeclareGlobalVarInst "e": string
+// RA-NEXT:  {r0}      %2 = LIRGetGlobalObjectInst (:object)
+// RA-NEXT:  {r1}      %3 = LIRLoadConstInst (:string) "global": string
+// RA-NEXT:                 StorePropertyLooseInst {r1} %3: string, {r0} %2: object, "e": string
+// RA-NEXT:                 TryStartInst %BB1, %BB2
 // RA-NEXT:%BB1:
-// RA-NEXT:  $Reg2 @7 [8...9) 	%5 = CatchInst
-// RA-NEXT:  $Reg2 @8 [empty]	%6 = HBCStoreToEnvironmentInst %0, %5, [?anon_1_e#1]
-// RA-NEXT:  $Reg1 @9 [10...11) 	%7 = HBCCreateFunctionInst %local#0#1()#2, %0
-// RA-NEXT:  $Reg1 @10 [empty]	%8 = StorePropertyInst %7 : closure, %2 : object, "local" : string
-// RA-NEXT:  $Reg3 @11 [12...16) 	%9 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-// RA-NEXT:  $Reg1 @12 [13...15) 	%10 = TryLoadGlobalPropertyInst %2 : object, "local" : string
-// RA-NEXT:  $Reg2 @13 [14...19) 	%11 = HBCLoadConstInst undefined : undefined
-// RA-NEXT:  $Reg1 @14 [15...16) 	%12 = HBCCallNInst %10, undefined : undefined, %11 : undefined
-// RA-NEXT:  $Reg1 @15 [empty]	%13 = HBCCallNInst %9, undefined : undefined, %11 : undefined, %12
-// RA-NEXT:  $Reg1 @16 [17...19) 	%14 = TryLoadGlobalPropertyInst %2 : object, "print" : string
-// RA-NEXT:  $Reg0 @17 [18...19) 	%15 = LoadPropertyInst %2 : object, "e" : string
-// RA-NEXT:  $Reg0 @18 [19...20) 	%16 = HBCCallNInst %14, undefined : undefined, %11 : undefined, %15
-// RA-NEXT:  $Reg0 @19 [empty]	%17 = ReturnInst %16
+// RA-NEXT:  {r2}      %6 = CatchInst (:any)
+// RA-NEXT:  {r1}      %7 = HBCCreateFunctionEnvironmentInst (:environment) %VS0: any, %parentScope: environment
+// RA-NEXT:                 StoreFrameInst {r1} %7: environment, {r2} %6: any, [%VS0.e]: any
+// RA-NEXT:  {r1}      %9 = CreateFunctionInst (:object) {r1} %7: environment, %VS0: any, %local(): functionCode
+// RA-NEXT:                 StorePropertyLooseInst {r1} %9: object, {r0} %2: object, "local": string
+// RA-NEXT:  {r3}     %11 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
+// RA-NEXT:  {r1}     %12 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "local": string
+// RA-NEXT:  {r2}     %13 = LIRLoadConstInst (:undefined) undefined: undefined
+// RA-NEXT:  {r1}     %14 = HBCCallNInst (:any) {r1} %12: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined
+// RA-NEXT:  {r1}     %15 = HBCCallNInst (:any) {r3} %11: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r1} %14: any
+// RA-NEXT:  {r1}     %16 = TryLoadGlobalPropertyInst (:any) {r0} %2: object, "print": string
+// RA-NEXT:  {r0}     %17 = LoadPropertyInst (:any) {r0} %2: object, "e": string
+// RA-NEXT:  {r0}     %18 = HBCCallNInst (:any) {r1} %16: any, empty: any, false: boolean, empty: any, undefined: undefined, {r2} %13: undefined, {r0} %17: any
+// RA-NEXT:                 ReturnInst {r0} %18: any
 // RA-NEXT:%BB2:
-// RA-NEXT:  $Reg2 @5 [6...7) 	%18 = HBCLoadConstInst "local" : string
-// RA-NEXT:  $Reg2 @6 [empty]	%19 = ThrowInst %18 : string
+// RA-NEXT:  {r1}     %20 = LIRLoadConstInst (:string) "local": string
+// RA-NEXT:                 ThrowInst {r1} %20: string, %BB1
 // RA-NEXT:function_end
 
-// RA:function local#0#1()#2
-// RA-NEXT:S{local#0#1()#2} = []
+// RA:scope %VS0 [e: any]
+
+// RA:function local(): any
 // RA-NEXT:%BB0:
-// RA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCResolveEnvironment %S{global#0()#1}, %S{local#0#1()#2}
-// RA-NEXT:  $Reg0 @1 [2...3) 	%1 = HBCLoadFromEnvironmentInst %0, [?anon_1_e#1@global]
-// RA-NEXT:  $Reg0 @2 [empty]	%2 = ReturnInst %1
+// RA-NEXT:  {r0}      %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// RA-NEXT:  {r0}      %1 = LoadFrameInst (:any) {r0} %0: environment, [%VS0.e]: any
+// RA-NEXT:                 ReturnInst {r0} %1: any
 // RA-NEXT:function_end

@@ -7,8 +7,10 @@
 
 #include "hermes/VM/Callable.h"
 
+#include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/VM/ArrayLike.h"
 #include "hermes/VM/BuildMetadata.h"
+#include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSError.h"
@@ -23,16 +25,64 @@
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StackFrame-inline.h"
+#include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/static_h.h"
 
 #include "llvh/ADT/ArrayRef.h"
-#pragma GCC diagnostic push
+#include "llvh/ADT/ScopeExit.h"
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
+
+namespace {
+
+/// A helper to convert a SH-style function into a CallResult-style function.
+template <typename Res, typename FnPtr, typename ProfileFn>
+inline CallResult<Res>
+_callWrapper(FnPtr functionPtr, Runtime &runtime, const ProfileFn &profileFn) {
+  // ScopedNativeDepthTracker depthTracker{runtime};
+  // if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+  //   return runtime.raiseStackOverflow(
+  //       Runtime::StackOverflowKind::NativeStack);
+  // }
+
+  StackFramePtr newFrame{runtime.getStackPointer()};
+
+  // Ensure the IP was correctly saved before we create the new frame.
+  runtime.validateSavedIPBeforeCall();
+
+  // If we call into the JIT (either directly or transitively), it may modify
+  // the saved IP. Make sure the IP is restored before we return to the caller.
+  auto restoreIP = llvh::make_scope_exit(
+      [&newFrame, &runtime]() { runtime.setCurrentIP(newFrame.getSavedIP()); });
+
+  SHJmpBuf jBuf;
+  SHLocals *locals = runtime.shLocals;
+  if (LLVM_LIKELY(_sh_try(getSHRuntime(runtime), &jBuf) == 0)) {
+#ifdef HERMESVM_PROFILER_NATIVECALL
+    auto t1 = HERMESVM_RDTSC();
+#endif
+    SHLegacyValue res = functionPtr(&runtime);
+#ifdef HERMESVM_PROFILER_NATIVECALL
+    profileFn(HERMESVM_RDTSC() - t1);
+#endif
+    _sh_end_try(getSHRuntime(runtime), &jBuf);
+
+    if constexpr (std::is_same_v<Res, HermesValue>)
+      return HermesValue::fromRaw(res.raw);
+    else
+      return createPseudoHandle(HermesValue::fromRaw(res.raw));
+  } else {
+    auto oldFrame = newFrame.getPreviousFramePointer();
+    SHLegacyValue exc = _sh_catch(
+        getSHRuntime(runtime), locals, oldFrame, newFrame.ptr() - oldFrame);
+    runtime.setThrownValue(HermesValue::fromRaw(exc.raw));
+    return ExecutionStatus::EXCEPTION;
+  }
+}
+
+} // unnamed namespace
 
 //===----------------------------------------------------------------------===//
 // class Environment
@@ -64,19 +114,32 @@ std::string Callable::_snapshotNameImpl(GCCell *cell, GC &gc) {
 }
 #endif
 
-CallResult<PseudoHandle<JSObject>> Callable::_newObjectImpl(
-    Handle<Callable> /*selfHandle*/,
-    Runtime &runtime,
-    Handle<JSObject> parentHandle) {
-  return JSObject::create(runtime, parentHandle);
+/// \return the inferred parent of a Callable based on its \p kind.
+static Handle<JSObject> inferredParent(Runtime &runtime, FuncKind kind) {
+  if (kind == FuncKind::Generator) {
+    return runtime.generatorFunctionPrototype;
+  } else if (kind == FuncKind::Async) {
+    return runtime.asyncFunctionPrototype;
+  } else {
+    assert(kind == FuncKind::Normal && "Unsupported function kind");
+    return runtime.functionPrototype;
+  }
 }
 
 void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
   // lazy functions can be Bound or JS Functions.
   if (auto jsFun = Handle<JSFunction>::dyn_vmcast(fn)) {
-    const CodeBlock *codeBlock = jsFun->getCodeBlock(runtime);
+    const CodeBlock *codeBlock = jsFun->getCodeBlock();
+
+    // Set the actual non-lazy hidden class.
+    Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
+        *inferredParent(
+            runtime, (FuncKind)codeBlock->getHeaderFlags().getKind()),
+        numOverlapSlots<JSFunction>());
+    jsFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
+
     // Create empty object for prototype.
-    auto prototypeParent = vmisa<JSGeneratorFunction>(*jsFun)
+    auto prototypeParent = Callable::isGeneratorFunction(*jsFun)
         ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
         : Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
@@ -87,7 +150,7 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
     // generator functions.
     auto prototypeObjectHandle =
         codeBlock->getHeaderFlags().isCallProhibited(/* construct */ true) &&
-            !vmisa<JSGeneratorFunction>(*jsFun)
+            !Callable::isGeneratorFunction(*jsFun)
         ? Runtime::makeNullHandle<JSObject>()
         : runtime.makeHandle(JSObject::create(runtime, prototypeParent));
 
@@ -97,8 +160,45 @@ void Callable::defineLazyProperties(Handle<Callable> fn, Runtime &runtime) {
         codeBlock->getNameMayAllocate(),
         codeBlock->getParamCount() - 1,
         prototypeObjectHandle,
-        Callable::WritablePrototype::Yes,
-        codeBlock->isStrictMode());
+        Callable::WritablePrototype::Yes);
+    assert(
+        cr != ExecutionStatus::EXCEPTION && "failed to define length and name");
+    (void)cr;
+  } else if (auto nativeFun = Handle<NativeJSFunction>::dyn_vmcast(fn)) {
+    // Set the actual non-lazy hidden class.
+    Handle<HiddenClass> newClass = runtime.getHiddenClassForPrototype(
+        *inferredParent(runtime, (FuncKind)nativeFun->getFunctionInfo()->kind),
+        numOverlapSlots<NativeJSFunction>());
+    nativeFun->updateClassNoAllocPropStorageUnsafe(runtime, *newClass);
+
+    auto prototypeParent = Callable::isGeneratorFunction(*nativeFun)
+        ? Handle<JSObject>::vmcast(&runtime.generatorPrototype)
+        : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+
+    // According to ES12 26.7.4, AsyncFunction instances do not have a
+    // 'prototype' property, hence we need to set an null handle here.
+    // Functions that cannot be used with `new` should also not define a
+    // 'prototype' property, such as arrow functions per 15.3.4, except for
+    // generator functions.
+    auto prototypeObjectHandle =
+        nativeFun->getFunctionInfo()->prohibit_invoke ==
+                ProhibitInvoke::Construct &&
+            !Callable::isGeneratorFunction(*nativeFun)
+        ? Runtime::makeNullHandle<JSObject>()
+        : runtime.makeHandle(JSObject::create(runtime, prototypeParent));
+
+    const SHNativeFuncInfo *funcInfo = nativeFun->getFunctionInfo();
+    assert(funcInfo && "funcInfo cannot be null for a lazy NativeJSFunction");
+    const SHUnit *unit = nativeFun->getUnit();
+    SymbolID name = SymbolID::unsafeCreate(unit->symbols[funcInfo->name_index]);
+    uint32_t argCount = funcInfo->arg_count;
+    auto cr = Callable::defineNameLengthAndPrototype(
+        fn,
+        runtime,
+        name,
+        argCount,
+        prototypeObjectHandle,
+        Callable::WritablePrototype::Yes);
     assert(
         cr != ExecutionStatus::EXCEPTION && "failed to define length and name");
     (void)cr;
@@ -114,8 +214,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     SymbolID name,
     unsigned paramCount,
     Handle<JSObject> prototypeObjectHandle,
-    WritablePrototype writablePrototype,
-    bool strictMode) {
+    WritablePrototype writablePrototype) {
   PropertyFlags pf;
   pf.clear();
   pf.enumerable = 0;
@@ -143,27 +242,13 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
   // Length is the number of formal arguments.
   // 10.2.9 SetFunctionLength is performed during 10.2.3 OrdinaryFunctionCreate.
   auto lengthHandle =
-      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(paramCount));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(paramCount));
   DEFINE_PROP(selfHandle, P::length, lengthHandle);
 
   // Define the name.
   // 10.2.8 SetFunctionName is performed after 10.2.3 OrdinaryFunctionCreate.
   auto nameHandle = runtime.makeHandle(runtime.getStringPrimFromSymbolID(name));
   DEFINE_PROP(selfHandle, P::name, nameHandle);
-
-  if (strictMode) {
-    // Define .callee and .arguments properties: throw always in strict mode.
-    auto accessor =
-        Handle<PropertyAccessor>::vmcast(&runtime.throwTypeErrorAccessor);
-
-    pf.clear();
-    pf.enumerable = 0;
-    pf.configurable = 0;
-    pf.accessor = 1;
-
-    DEFINE_PROP(selfHandle, P::caller, accessor);
-    DEFINE_PROP(selfHandle, P::arguments, accessor);
-  }
 
   if (prototypeObjectHandle) {
     // Set its 'prototype' property.
@@ -174,7 +259,7 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
     pf.configurable = 0;
     DEFINE_PROP(selfHandle, P::prototype, prototypeObjectHandle);
 
-    if (LLVM_LIKELY(!vmisa<JSGeneratorFunction>(*selfHandle))) {
+    if (LLVM_LIKELY(!Callable::isGeneratorFunction(*selfHandle))) {
       // Set the 'constructor' property in the prototype object.
       // This must not be set for GeneratorFunctions, because
       // prototypes must not point back to their constructors.
@@ -190,6 +275,25 @@ ExecutionStatus Callable::defineNameLengthAndPrototype(
   return ExecutionStatus::RETURNED;
 
 #undef DEFINE_PROP
+}
+
+bool Callable::isGeneratorFunction(Callable *fn) {
+  if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
+    return jsFun->getCodeBlock()->getHeaderFlags().getKind() ==
+        FuncKind::Generator;
+  } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
+    return nativeFun->getFunctionInfo()->kind == FuncKind::Generator;
+  }
+  return false;
+}
+
+bool Callable::isAsyncFunction(Callable *fn) {
+  if (auto *jsFun = dyn_vmcast<JSFunction>(fn)) {
+    return jsFun->getCodeBlock()->getHeaderFlags().getKind() == FuncKind::Async;
+  } else if (auto *nativeFun = dyn_vmcast<NativeJSFunction>(fn)) {
+    return nativeFun->getFunctionInfo()->kind == FuncKind::Async;
+  }
+  return false;
 }
 
 /// Execute this function with no arguments. This is just a convenience
@@ -349,51 +453,96 @@ CallResult<PseudoHandle<>> Callable::executeCall(
 CallResult<PseudoHandle<>> Callable::executeConstruct0(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
-  auto thisVal = Callable::createThisForConstruct_RJS(selfHandle, runtime);
-  if (LLVM_UNLIKELY(thisVal == ExecutionStatus::EXCEPTION)) {
+  CallResult<PseudoHandle<HermesValue>> thisArgRes =
+      Callable::createThisForConstruct_RJS(selfHandle, runtime, selfHandle);
+  if (LLVM_UNLIKELY(thisArgRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto thisValHandle = runtime.makeHandle<JSObject>(std::move(thisVal->get()));
-  auto result = executeCall0(selfHandle, runtime, thisValHandle, true);
+  struct : public Locals {
+    PinnedValue<> thisArg;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.thisArg = std::move(*thisArgRes);
+  auto result = executeCall0(selfHandle, runtime, lv.thisArg, true);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*result)->isObject() ? std::move(result)
                                : CallResult<PseudoHandle<>>(createPseudoHandle(
-                                     thisValHandle.getHermesValue()));
+                                     lv.thisArg.getHermesValue()));
 }
 
 CallResult<PseudoHandle<>> Callable::executeConstruct1(
     Handle<Callable> selfHandle,
     Runtime &runtime,
     Handle<> param1) {
-  auto thisVal = Callable::createThisForConstruct_RJS(selfHandle, runtime);
-  if (LLVM_UNLIKELY(thisVal == ExecutionStatus::EXCEPTION)) {
+  CallResult<PseudoHandle<>> thisArgRes =
+      Callable::createThisForConstruct_RJS(selfHandle, runtime, selfHandle);
+  if (LLVM_UNLIKELY(thisArgRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto thisValHandle = runtime.makeHandle<JSObject>(std::move(thisVal->get()));
+  struct : public Locals {
+    PinnedValue<> thisArg;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.thisArg = std::move(*thisArgRes);
   CallResult<PseudoHandle<>> result =
-      executeCall1(selfHandle, runtime, thisValHandle, *param1, true);
+      executeCall1(selfHandle, runtime, lv.thisArg, *param1, true);
   if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return (*result)->isObject() ? std::move(result)
                                : CallResult<PseudoHandle<>>(createPseudoHandle(
-                                     thisValHandle.getHermesValue()));
+                                     lv.thisArg.getHermesValue()));
 }
 
-CallResult<PseudoHandle<JSObject>> Callable::createThisForConstruct_RJS(
-    Handle<Callable> selfHandle,
-    Runtime &runtime) {
-  CallResult<PseudoHandle<>> prototypeProp = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
-  if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
+CallResult<PseudoHandle<>> Callable::createThisForConstruct_RJS(
+    Handle<> callee,
+    Runtime &runtime,
+    Handle<> newTarget) {
+  if (LLVM_UNLIKELY(!isConstructor(runtime, *callee))) {
+    return runtime.raiseTypeError(
+        "This function cannot be used as a constructor.");
+  }
+  // Don't verify newTarget if it's the same as callee.
+  if (callee->getRaw() != newTarget->getRaw()) {
+    if (LLVM_UNLIKELY(!isConstructor(runtime, *newTarget))) {
+      return runtime.raiseTypeError(
+          "new.target cannot be used as a constructor.");
+    }
+  }
+
+  // Advance past bound functions to see what we will actually be invoking.
+  auto *calleeTargetFunc = vmcast<Callable>(*callee);
+  auto *newTargetPtr = vmcast<Callable>(*newTarget);
+  while (auto *bound = dyn_vmcast<BoundFunction>(calleeTargetFunc)) {
+    NoAllocScope scope(runtime);
+    calleeTargetFunc = bound->getTarget(runtime);
+    // From ES15 10.4.1.2 [[Construct]] Step 5: If SameValue(F, newTarget) is
+    // true, set newTarget to target.
+    if (bound == newTargetPtr) {
+      newTargetPtr = calleeTargetFunc;
+    }
+  }
+
+  // Callables that make their own this should be given undefined in a construct
+  // call.
+  if (Callable::makesOwnThis(calleeTargetFunc)) {
+    return createPseudoHandle(HermesValue::encodeUndefinedValue());
+  }
+
+  struct : public Locals {
+    PinnedValue<Callable> newTarget;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.newTarget = newTargetPtr;
+
+  auto thisArgRes = ordinaryCreateFromConstructor_RJS(
+      runtime, lv.newTarget, runtime.objectPrototype);
+  if (LLVM_UNLIKELY(thisArgRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> prototype = vmisa<JSObject>(prototypeProp->get())
-      ? runtime.makeHandle<JSObject>(prototypeProp->get())
-      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
-  return Callable::newObject(selfHandle, runtime, prototype);
+  return createPseudoHandle(thisArgRes->getHermesValue());
 }
 
 CallResult<double> Callable::extractOwnLengthProperty_RJS(
@@ -458,6 +607,7 @@ const CallableVTable BoundFunction::vt{
         VTable(
             CellKind::BoundFunctionKind,
             cellSize<BoundFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -479,13 +629,13 @@ const CallableVTable BoundFunction::vt{
         BoundFunction::_deleteOwnIndexedImpl,
         BoundFunction::_checkAllOwnIndexedImpl,
     },
-    BoundFunction::_newObjectImpl_RJS,
     BoundFunction::_callImpl};
 
 void BoundFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<BoundFunction>());
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const BoundFunction *>(cell);
+  mb.setJitCall(BoundFunction::_jitCallImpl);
   mb.setVTable(&BoundFunction::vt);
   mb.addField("target", &self->target_);
   mb.addField("argStorage", &self->argStorage_);
@@ -498,38 +648,50 @@ CallResult<HermesValue> BoundFunction::create(
     ConstArgIterator argsWithThis) {
   unsigned argCount = argCountWithThis > 0 ? argCountWithThis - 1 : 0;
 
+  struct : public Locals {
+    PinnedValue<ArrayStorage> arrStorage;
+    PinnedValue<BoundFunction> self;
+    PinnedValue<JSObject> proto;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   // Copy the arguments. If we don't have any, we must at least initialize
   // 'this' to 'undefined'.
   auto arrRes = ArrayStorage::create(runtime, argCount + 1);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto arrHandle = runtime.makeMutableHandle(vmcast<ArrayStorage>(*arrRes));
-
+  lv.arrStorage.castAndSetHermesValue<ArrayStorage>(*arrRes);
   if (argCountWithThis) {
     for (unsigned i = 0; i != argCountWithThis; ++i) {
-      ArrayStorage::push_back(arrHandle, runtime, Handle<>(&argsWithThis[i]));
+      ArrayStorage::push_back(
+          lv.arrStorage, runtime, Handle<>(&argsWithThis[i]));
     }
   } else {
     // Don't need to worry about resizing since it was created with a capacity
     // of at least 1.
-    ArrayStorage::push_back(arrHandle, runtime, Runtime::getUndefinedValue());
+    ArrayStorage::push_back(
+        lv.arrStorage, runtime, Runtime::getUndefinedValue());
   }
+  CallResult<PseudoHandle<JSObject>> protoRes =
+      getPrototypeOf(Handle<JSObject>::vmcast(target), runtime);
+  if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.proto = std::move(*protoRes);
 
   auto *cell = runtime.makeAFixed<BoundFunction>(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      lv.proto,
       runtime.getHiddenClassForPrototype(
           runtime.functionPrototypeRawPtr, numOverlapSlots<BoundFunction>()),
       target,
-      arrHandle);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  if (initializeLengthAndName_RJS(selfHandle, runtime, target, argCount) ==
+      lv.arrStorage);
+  lv.self = JSObjectInit::initToPointer(runtime, cell);
+  if (initializeLengthAndName_RJS(lv.self, runtime, target, argCount) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return selfHandle.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
@@ -554,7 +716,7 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
 
   // Length is the number of formal arguments.
   auto length = runtime.makeHandle(
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           argCount >= *targetLength ? 0.0 : *targetLength - argCount));
   if (LLVM_UNLIKELY(
           JSObject::defineNewOwnProperty(
@@ -586,8 +748,8 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
   if (LLVM_UNLIKELY(boundNameSym == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<StringPrimitive> boundNameHandle(
-      runtime, identifierTable.getStringPrim(runtime, **boundNameSym));
+  Handle<StringPrimitive> boundNameHandle = runtime.makeHandle(
+      identifierTable.getStringPrim(runtime, **boundNameSym));
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
   dpf.enumerable = 0;
@@ -602,73 +764,11 @@ ExecutionStatus BoundFunction::initializeLengthAndName_RJS(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // Define .callee and .arguments properties: throw always in bound functions.
-  auto accessor =
-      Handle<PropertyAccessor>::vmcast(&runtime.throwTypeErrorAccessor);
-
-  pf.clear();
-  pf.enumerable = 0;
-  pf.configurable = 0;
-  pf.accessor = 1;
-
-  if (LLVM_UNLIKELY(
-          JSObject::defineNewOwnProperty(
-              selfHandle,
-              runtime,
-              Predefined::getSymbolID(Predefined::caller),
-              pf,
-              accessor) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  if (LLVM_UNLIKELY(
-          JSObject::defineNewOwnProperty(
-              selfHandle,
-              runtime,
-              Predefined::getSymbolID(Predefined::arguments),
-              pf,
-              accessor) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
   return ExecutionStatus::RETURNED;
-}
-
-CallResult<PseudoHandle<JSObject>> BoundFunction::_newObjectImpl_RJS(
-    Handle<Callable> selfHandle,
-    Runtime &runtime,
-    Handle<JSObject>) {
-  auto *self = vmcast<BoundFunction>(*selfHandle);
-
-  // If it is a chain of bound functions, skip directly to the end.
-  while (auto *targetAsBound =
-             dyn_vmcast<BoundFunction>(self->getTarget(runtime)))
-    self = targetAsBound;
-
-  auto targetHandle = runtime.makeHandle(self->getTarget(runtime));
-
-  // We must duplicate the [[Construct]] functionality here.
-
-  // Obtain "target.prototype".
-  auto propRes = JSObject::getNamed_RJS(
-      targetHandle, runtime, Predefined::getSymbolID(Predefined::prototype));
-  if (propRes == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
-  auto prototype = runtime.makeHandle(std::move(*propRes));
-
-  // If target.prototype is an object, use it, otherwise use the standard
-  // object prototype.
-  return targetHandle->getVT()->newObject(
-      targetHandle,
-      runtime,
-      prototype->isObject()
-          ? Handle<JSObject>::vmcast(prototype)
-          : Handle<JSObject>::vmcast(&runtime.objectPrototype));
 }
 
 CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     BoundFunction *self,
-    const Inst *ip,
     Runtime &runtime) {
   ScopedNativeDepthTracker depthTracker{runtime};
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -679,18 +779,32 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
   StackFramePtr originalCalleeFrame = StackFramePtr(runtime.getStackPointer());
   // Save the original newTarget since we will overwrite it.
   HermesValue originalNewTarget = originalCalleeFrame.getNewTargetRef();
+  Callable *originalNewTargetPtr = originalNewTarget.isUndefined()
+      ? nullptr
+      : vmcast<Callable>(originalNewTarget);
+  // From ES15 10.4.1.2 [[Construct]] Step 5: If SameValue(F, newTarget) is
+  // true, set newTarget to target. Target in this context means the bound
+  // function target. If this boolean is true, then we will set new.target to
+  // target as the spec says.
+  bool forwardNewTarget = false;
   // Save the original arg count since we will lose it.
   auto originalArgCount = originalCalleeFrame.getArgCount();
   // Keep track of the total arg count.
   auto totalArgCount = originalArgCount;
 
+#ifndef NDEBUG
   auto callerFrame = runtime.getCurrentFrame();
+#endif
+  struct : Locals {
+    PinnedValue<> savedThisArg;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   // We must preserve the "thisArg" passed to us by the caller because it is in
   // a register that is not supposed to be modified by a call. Copy it to the
   // scratch register in the caller's frame.
   // Note that since there is only one scratch reg, we must process all chained
   // bound calls in one go (which is more efficient anyway).
-  callerFrame.getScratchRef() = originalCalleeFrame.getThisArgRef();
+  lv.savedThisArg = originalCalleeFrame.getThisArgRef();
 
   // Pop the stack down to the first argument, erasing the call frame - we don't
   // need the call frame since we will build a new one.
@@ -730,6 +844,14 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     std::uninitialized_copy_n(
         self->getArgsWithThis(runtime) + 1, boundArgCount, ArgIterator(stack));
 
+    // We need to do this check at each layer of bound functions, since in the
+    // spec, each bound function would be a invoked separately, and each
+    // invocation compares the callee of the construct to the original
+    // new.target.
+    if (self == originalNewTargetPtr) {
+      forwardNewTarget = true;
+    }
+
     // Loop while the target is another bound function.
     auto *targetAsBound = dyn_vmcast<BoundFunction>(self->getTarget(runtime));
     if (!targetAsBound)
@@ -744,20 +866,22 @@ CallResult<PseudoHandle<>> BoundFunction::_boundCall(
     // stack.
     auto *stack = runtime.allocUninitializedStack(
         StackFrameLayout::CallerExtraRegistersAtEnd + 1);
+    auto callee = HermesValue::encodeObjectValue(self->getTarget(runtime));
 
     // Initialize the new frame metadata.
     auto newCalleeFrame = StackFramePtr::initFrame(
         stack,
         runtime.getCurrentFrame(),
-        ip,
+        runtime.getCurrentIP(),
+        nullptr,
         nullptr,
         totalArgCount,
-        HermesValue::encodeObjectValue(self->getTarget(runtime)),
-        originalNewTarget);
+        callee,
+        forwardNewTarget ? callee : originalNewTarget);
     // Initialize "thisArg". When constructing we must use the original 'this',
     // not the bound one.
     newCalleeFrame.getThisArgRef() = !originalNewTarget.isUndefined()
-        ? static_cast<HermesValue>(callerFrame.getScratchRef())
+        ? *lv.savedThisArg
         : self->getArgsWithThis(runtime)[0];
 
     res =
@@ -778,15 +902,15 @@ bail:
   StackFramePtr::initFrame(
       originalCalleeFrame.ptr(),
       StackFramePtr{},
-      ip,
+      runtime.getCurrentIP(),
+      nullptr,
       nullptr,
       0,
       HermesValue::encodeEmptyValue(),
       HermesValue::encodeEmptyValue());
 
   // Restore "thisArg" and clear the scratch register to avoid a leak.
-  originalCalleeFrame.getThisArgRef() = callerFrame.getScratchRef();
-  callerFrame.getScratchRef() = HermesValue::encodeUndefinedValue();
+  originalCalleeFrame.getThisArgRef() = *lv.savedThisArg;
 
   return res;
 }
@@ -796,7 +920,189 @@ CallResult<PseudoHandle<>> BoundFunction::_callImpl(
     Runtime &runtime) {
   // Pass `nullptr` as the IP because this function is never called
   // from the interpreter, which should use `_boundCall` directly.
-  return _boundCall(vmcast<BoundFunction>(selfHandle.get()), nullptr, runtime);
+  return _boundCall(vmcast<BoundFunction>(selfHandle.get()), runtime);
+}
+
+HermesValue BoundFunction::_jitCallImpl(Runtime *runtime, JSObject *self) {
+  auto res = [&] {
+    GCScopeMarkerRAII marker{*runtime};
+    return _boundCall(vmcast<BoundFunction>(self), *runtime);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(runtime);
+  return res->get();
+}
+
+//===----------------------------------------------------------------------===//
+// class NativeJSFunction
+
+const CallableVTable NativeJSFunction::vt{
+    {
+        VTable(
+            CellKind::NativeJSFunctionKind,
+            cellSize<NativeJSFunction>(),
+            /* allowLargeAlloc */ false,
+            nullptr,
+            nullptr,
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                NativeJSFunction::_snapshotNameImpl,
+                NativeJSFunction::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}
+#endif
+            ),
+        NativeJSFunction::_getOwnIndexedRangeImpl,
+        NativeJSFunction::_haveOwnIndexedImpl,
+        NativeJSFunction::_getOwnIndexedPropertyFlagsImpl,
+        NativeJSFunction::_getOwnIndexedImpl,
+        NativeJSFunction::_setOwnIndexedImpl,
+        NativeJSFunction::_deleteOwnIndexedImpl,
+        NativeJSFunction::_checkAllOwnIndexedImpl,
+    },
+    NativeJSFunction::_callImpl};
+
+void NativeJSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSFunction>());
+  CallableBuildMeta(cell, mb);
+  mb.setJitCall(NativeJSFunction::_jitCallImpl);
+  mb.setVTable(&NativeJSFunction::vt);
+}
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+std::string NativeJSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
+  return "NativeJSFunction";
+}
+#endif
+
+Handle<NativeJSFunction> NativeJSFunction::create(
+    Runtime &runtime,
+    Handle<JSObject> parentHandle,
+    Handle<Environment> parentEnvHandle,
+    NativeJSFunctionPtr functionPtr,
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit) {
+  auto *cell = runtime.makeAFixed<NativeJSFunction>(
+      runtime,
+      parentHandle,
+      runtime.lazyObjectClass,
+      parentEnvHandle,
+      functionPtr,
+      funcInfo,
+      unit);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+  selfHandle->flags_.lazyObject = 1;
+  return selfHandle;
+}
+
+Handle<NativeJSFunction> NativeJSFunction::createWithInferredParent(
+    Runtime &runtime,
+    Handle<Environment> parentEnvHandle,
+    NativeJSFunctionPtr functionPtr,
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit) {
+  return NativeJSFunction::create(
+      runtime,
+      inferredParent(runtime, (FuncKind)funcInfo->kind),
+      parentEnvHandle,
+      functionPtr,
+      funcInfo,
+      unit);
+}
+
+/// This is a lightweight and unsafe wrapper intended to be used only by the
+/// interpreter. Its purpose is to avoid needlessly exposing the private
+/// fields.
+CallResult<PseudoHandle<>> NativeJSFunction::_nativeCall(
+    NativeJSFunction *self,
+    Runtime &runtime) {
+  return _callWrapper<PseudoHandle<>>(
+      self->functionPtr_, runtime, [=](uint64_t duration) {
+#ifdef HERMESVM_PROFILER_NATIVECALL
+        self->callDuration_ = duration;
+        ++self->callCount_;
+#endif
+      });
+}
+
+CallResult<PseudoHandle<>> NativeJSFunction::_callImpl(
+    Handle<Callable> selfHandle,
+    Runtime &runtime) {
+  // SHLJS code needs to run in the context of an existing GCScope:
+  // - When it is invoked from the interpreter, it uses the interpreter's
+  // GCScope.
+  // - When invoked directly from native as root, the caller must ensure a
+  // GCScope.
+  // - When invoked from an unknown context using this virtual call, we need
+  // a GCScope to ensure safety.
+  GCScope gcScope{runtime};
+  return _nativeCall(vmcast<NativeJSFunction>(selfHandle.get()), runtime);
+}
+
+HermesValue NativeJSFunction::_jitCallImpl(Runtime *runtime, JSObject *self) {
+  SHLegacyValue res = vmcast<NativeJSFunction>(self)->functionPtr_(runtime);
+  return *toPHV(&res);
+}
+
+//===----------------------------------------------------------------------===//
+// class NativeJSClass
+
+const CallableVTable NativeJSClass::vt{
+    {
+        VTable(
+            CellKind::NativeJSClassKind,
+            cellSize<NativeJSClass>(),
+            /*allowLargeAlloc*/ false,
+            nullptr,
+            nullptr,
+            nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+            ,
+            VTable::HeapSnapshotMetadata{
+                HeapSnapshot::NodeType::Closure,
+                NativeJSClass::_snapshotNameImpl,
+                NativeJSClass::_snapshotAddEdgesImpl,
+                nullptr,
+                nullptr}
+#endif
+            ),
+        NativeJSClass::_getOwnIndexedRangeImpl,
+        NativeJSClass::_haveOwnIndexedImpl,
+        NativeJSClass::_getOwnIndexedPropertyFlagsImpl,
+        NativeJSClass::_getOwnIndexedImpl,
+        NativeJSClass::_setOwnIndexedImpl,
+        NativeJSClass::_deleteOwnIndexedImpl,
+        NativeJSClass::_checkAllOwnIndexedImpl,
+    },
+    NativeJSClass::_callImpl};
+
+void NativeJSClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeJSClass>());
+  NativeJSFunctionBuildMeta(cell, mb);
+  mb.setVTable(&NativeJSClass::vt);
+}
+
+Handle<NativeJSClass> NativeJSClass::create(
+    Runtime &runtime,
+    Handle<JSObject> parentHandle,
+    Handle<Environment> parentEnvHandle,
+    NativeJSFunctionPtr functionPtr,
+    const SHNativeFuncInfo *funcInfo,
+    const SHUnit *unit) {
+  auto *cell = runtime.makeAFixed<NativeJSClass>(
+      runtime,
+      parentHandle,
+      runtime.lazyObjectClass,
+      parentEnvHandle,
+      functionPtr,
+      funcInfo,
+      unit);
+  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
+  selfHandle->flags_.lazyObject = 1;
+  return selfHandle;
 }
 
 //===----------------------------------------------------------------------===//
@@ -807,6 +1113,7 @@ const CallableVTable NativeFunction::vt{
         VTable(
             CellKind::NativeFunctionKind,
             cellSize<NativeFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -828,12 +1135,12 @@ const CallableVTable NativeFunction::vt{
         NativeFunction::_deleteOwnIndexedImpl,
         NativeFunction::_checkAllOwnIndexedImpl,
     },
-    NativeFunction::_newObjectImpl,
     NativeFunction::_callImpl};
 
 void NativeFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<NativeFunction>());
   CallableBuildMeta(cell, mb);
+  mb.setJitCall(&NativeFunction::_jitCallImpl);
   mb.setVTable(&NativeFunction::vt);
 }
 
@@ -847,6 +1154,7 @@ std::string NativeFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
 Handle<NativeFunction> NativeFunction::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle,
+    Handle<Environment> parentEnvHandle,
     void *context,
     NativeFunctionPtr functionPtr,
     SymbolID name,
@@ -859,6 +1167,7 @@ Handle<NativeFunction> NativeFunction::create(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(*parentHandle, reservedSlots),
+      parentEnvHandle,
       context,
       functionPtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
@@ -873,44 +1182,7 @@ Handle<NativeFunction> NativeFunction::create(
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      false);
-  (void)st;
-  assert(
-      st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
-
-  return selfHandle;
-}
-
-Handle<NativeFunction> NativeFunction::create(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    Handle<Environment> parentEnvHandle,
-    void *context,
-    NativeFunctionPtr functionPtr,
-    SymbolID name,
-    unsigned paramCount,
-    Handle<JSObject> prototypeObjectHandle,
-    unsigned additionalSlotCount) {
-  auto *cell = runtime.makeAFixed<NativeFunction>(
-      runtime,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle,
-          numOverlapSlots<NativeFunction>() + additionalSlotCount),
-      parentEnvHandle,
-      context,
-      functionPtr);
-  auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  auto st = defineNameLengthAndPrototype(
-      selfHandle,
-      runtime,
-      name,
-      paramCount,
-      prototypeObjectHandle,
-      Callable::WritablePrototype::Yes,
-      false);
+      Callable::WritablePrototype::Yes);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -924,12 +1196,34 @@ CallResult<PseudoHandle<>> NativeFunction::_callImpl(
   return _nativeCall(vmcast<NativeFunction>(selfHandle.get()), runtime);
 }
 
-CallResult<PseudoHandle<JSObject>> NativeFunction::_newObjectImpl(
-    Handle<Callable>,
-    Runtime &runtime,
-    Handle<JSObject>) {
-  return runtime.raiseTypeError(
-      "This function cannot be used as a constructor.");
+HermesValue NativeFunction::_jitCallImpl(Runtime *rt, JSObject *self) {
+  Runtime &runtime = *rt;
+  auto newFrame = runtime.setCurrentFrameToTopOfStack();
+  auto res = [&]() -> CallResult<HermesValue> {
+    ScopedNativeDepthTracker depthTracker{runtime};
+    if (LLVM_UNLIKELY(depthTracker.overflowed())) {
+      return runtime.raiseStackOverflow(
+          Runtime::StackOverflowKind::NativeStack);
+    }
+
+    // We don't need to allocate CalleeExtraRegistersAtStart here because the
+    // only register is DebugEnvironment, which is not useful in a
+    // NativeFunction.
+    static_assert(
+        StackFrameLayout::FirstLocal - 1 ==
+            StackFrameLayout::DebugEnvironment &&
+        StackFrameLayout::CalleeExtraRegistersAtStart == 1);
+
+    GCScopeMarkerRAII marker{runtime};
+    auto *nfSelf = vmcast<NativeFunction>(self);
+    return nfSelf->functionPtr_(nfSelf->context_, runtime);
+  }();
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(rt);
+
+  runtime.restoreStackAndPreviousFrame(newFrame);
+  return *res;
 }
 
 //===----------------------------------------------------------------------===//
@@ -939,6 +1233,15 @@ template <class From>
 static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
     PseudoHandle<From> &&other) {
   return PseudoHandle<JSObject>{std::move(other)};
+}
+
+template <class From>
+static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
+    CallResult<From *> other) {
+  if (LLVM_UNLIKELY(other == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return PseudoHandle<JSObject>::create(*other);
 }
 
 template <class From>
@@ -962,13 +1265,19 @@ static CallResult<PseudoHandle<JSObject>> toCallResultPseudoHandleJSObject(
   return PseudoHandle<JSObject>{other};
 }
 
-template <class NativeClass>
-CallResult<PseudoHandle<JSObject>> NativeConstructor::creatorFunction(
+CallResult<PseudoHandle<JSObject>> NativeConstructor::parentForNewThis_RJS(
     Runtime &runtime,
-    Handle<JSObject> prototype,
-    void *) {
-  return toCallResultPseudoHandleJSObject(
-      NativeClass::create(runtime, prototype));
+    Handle<Callable> newTarget,
+    Handle<JSObject> nativeCtorProto) {
+  // Slow path, only taken when called via super (or Reflect.construct.)
+  CallResult<PseudoHandle<>> prototypeProp = JSObject::getNamed_RJS(
+      newTarget, runtime, Predefined::getSymbolID(Predefined::prototype));
+  if (LLVM_UNLIKELY(prototypeProp == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (vmisa<JSObject>(prototypeProp->get()))
+    return PseudoHandle<JSObject>::vmcast(std::move(prototypeProp.getValue()));
+  return PseudoHandle<JSObject>{nativeCtorProto};
 }
 
 #define NATIVE_CONSTRUCTOR(fun)                    \
@@ -982,6 +1291,7 @@ const CallableVTable NativeConstructor::vt{
         VTable(
             CellKind::NativeConstructorKind,
             cellSize<NativeConstructor>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1003,7 +1313,6 @@ const CallableVTable NativeConstructor::vt{
         NativeConstructor::_deleteOwnIndexedImpl,
         NativeConstructor::_checkAllOwnIndexedImpl,
     },
-    NativeConstructor::_newObjectImpl,
     NativeConstructor::_callImpl};
 
 void NativeConstructorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -1017,15 +1326,18 @@ CallResult<PseudoHandle<>> NativeConstructor::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
   StackFramePtr newFrame{runtime.getStackPointer()};
-
-  if (newFrame.isConstructorCall()) {
-    auto consHandle = Handle<NativeConstructor>::vmcast(selfHandle);
+  auto newTarget = newFrame.getNewTargetRef();
+  assert(
+      newTarget.isUndefined() ||
+      vmisa<Callable>(newTarget) &&
+          "new.target for a NativeConstructor should either be undefined or a callable");
+  auto res = NativeFunction::_callImpl(selfHandle, runtime);
+  if (LLVM_LIKELY(res != ExecutionStatus::EXCEPTION)) {
     assert(
-        consHandle->targetKind_ ==
-            vmcast<JSObject>(newFrame.getThisArgRef())->getKind() &&
-        "call(construct=true) called without the correct 'this' value");
+        (newTarget.isUndefined() || vmisa<JSObject>(res->getHermesValue())) &&
+        "NativeConstructor needs to return an object when called as constructor.");
   }
-  return NativeFunction::_callImpl(selfHandle, runtime);
+  return res;
 }
 #endif
 
@@ -1037,6 +1349,7 @@ const CallableVTable JSFunction::vt{
         VTable(
             CellKind::JSFunctionKind,
             cellSize<JSFunction>(),
+            /* allowLargeAlloc */ false,
             nullptr,
             nullptr,
             nullptr
@@ -1058,7 +1371,6 @@ const CallableVTable JSFunction::vt{
         JSFunction::_deleteOwnIndexedImpl,
         JSFunction::_checkAllOwnIndexedImpl,
     },
-    JSFunction::_newObjectImpl,
     JSFunction::_callImpl};
 
 void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -1066,6 +1378,7 @@ void JSFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   CallableBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFunction *>(cell);
   mb.addField("domain", &self->domain_);
+  mb.setJitCall(JSFunction::_jitCallImpl);
   mb.setVTable(&JSFunction::vt);
 }
 
@@ -1079,8 +1392,7 @@ PseudoHandle<JSFunction> JSFunction::create(
       runtime,
       domain,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSFunction>()),
+      runtime.lazyObjectClass,
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
@@ -1088,31 +1400,68 @@ PseudoHandle<JSFunction> JSFunction::create(
   return self;
 }
 
+PseudoHandle<JSFunction> JSFunction::createWithInferredParent(
+    Runtime &runtime,
+    Handle<Domain> domain,
+    Handle<Environment> envHandle,
+    CodeBlock *codeBlock) {
+  auto parentHandle =
+      inferredParent(runtime, (FuncKind)codeBlock->getHeaderFlags().getKind());
+  return create(runtime, domain, parentHandle, envHandle, codeBlock);
+}
+
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 void JSFunction::addLocationToSnapshot(
     HeapSnapshot &snap,
     HeapSnapshot::NodeID id,
     GC &gc) const {
-  if (auto location = codeBlock_.get(gc)->getSourceLocation()) {
+  if (auto location = codeBlock_->getSourceLocationForFunction()) {
     snap.addLocation(
         id,
-        codeBlock_.get(gc)->getRuntimeModule()->getScriptID(),
+        codeBlock_->getRuntimeModule()->getScriptID(),
         location->line,
         location->column);
   }
 }
 #endif
 
+CallResult<HermesValue> JSFunction::_jittedCall(
+    JITCompiledFunctionPtr functionPtr,
+    Runtime &runtime) {
+  // We should not need a GCScope here because all calls to _jittedCall
+  // originate either in the interpreter, NativeJSFunctions, or other JIT code.
+  // Deep recursion purely between these 3 should not produce excess handles.
+  return _callWrapper<HermesValue>(functionPtr, runtime, [](uint64_t) {});
+}
+
 CallResult<PseudoHandle<>> JSFunction::_callImpl(
     Handle<Callable> selfHandle,
     Runtime &runtime) {
   auto *self = vmcast<JSFunction>(selfHandle.get());
-  CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-  result = runtime.interpretFunction(self->getCodeBlock(runtime));
-  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+
+  if (auto *jitPtr = self->getCodeBlock()->getJITCompiled()) {
+    GCScope scope{runtime};
+    return _callWrapper<PseudoHandle<>>(jitPtr, runtime, [](uint64_t) {});
   }
+
+  CallResult<HermesValue> result = self->_interpret(runtime);
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+
   return createPseudoHandle(*result);
+}
+
+HermesValue JSFunction::_jitCallImpl(Runtime *runtime, JSObject *self) {
+  auto *jsSelf = vmcast<JSFunction>(self);
+
+  if (auto *jitPtr = jsSelf->getCodeBlock()->getJITCompiled())
+    return jitPtr(runtime);
+
+  CallResult<HermesValue> result = jsSelf->_interpret(*runtime);
+  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(runtime);
+
+  return *result;
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
@@ -1122,7 +1471,7 @@ std::string JSFunction::_snapshotNameImpl(GCCell *cell, GC &gc) {
   if (!funcName.empty()) {
     return funcName;
   }
-  return self->codeBlock_.get(gc)->getNameString(gc.getCallbacks());
+  return self->codeBlock_->getNameString();
 }
 
 void JSFunction::_snapshotAddEdgesImpl(
@@ -1137,7 +1486,7 @@ void JSFunction::_snapshotAddEdgesImpl(
   snap.addNamedEdge(
       HeapSnapshot::EdgeType::Shortcut,
       "codeBlock",
-      gc.getIDTracker().getNativeID(self->codeBlock_.get(gc)));
+      gc.getIDTracker().getNativeID(self->codeBlock_));
 }
 
 void JSFunction::_snapshotAddLocationsImpl(
@@ -1150,13 +1499,14 @@ void JSFunction::_snapshotAddLocationsImpl(
 #endif
 
 //===----------------------------------------------------------------------===//
-// class JSAsyncFunction
+// class JSClass
 
-const CallableVTable JSAsyncFunction::vt{
+const CallableVTable JSClass::vt{
     {
         VTable(
-            CellKind::JSAsyncFunctionKind,
-            cellSize<JSAsyncFunction>(),
+            CellKind::JSClassKind,
+            cellSize<JSClass>(),
+            /*allowLargeAlloc*/ false,
             nullptr,
             nullptr,
             nullptr
@@ -1164,272 +1514,44 @@ const CallableVTable JSAsyncFunction::vt{
             ,
             VTable::HeapSnapshotMetadata{
                 HeapSnapshot::NodeType::Closure,
-                JSAsyncFunction::_snapshotNameImpl,
-                JSAsyncFunction::_snapshotAddEdgesImpl,
+                JSClass::_snapshotNameImpl,
+                JSClass::_snapshotAddEdgesImpl,
                 nullptr,
-                nullptr}
+                JSClass::_snapshotAddLocationsImpl}
 #endif
             ),
-        JSAsyncFunction::_getOwnIndexedRangeImpl,
-        JSAsyncFunction::_haveOwnIndexedImpl,
-        JSAsyncFunction::_getOwnIndexedPropertyFlagsImpl,
-        JSAsyncFunction::_getOwnIndexedImpl,
-        JSAsyncFunction::_setOwnIndexedImpl,
-        JSAsyncFunction::_deleteOwnIndexedImpl,
-        JSAsyncFunction::_checkAllOwnIndexedImpl,
+        JSClass::_getOwnIndexedRangeImpl,
+        JSClass::_haveOwnIndexedImpl,
+        JSClass::_getOwnIndexedPropertyFlagsImpl,
+        JSClass::_getOwnIndexedImpl,
+        JSClass::_setOwnIndexedImpl,
+        JSClass::_deleteOwnIndexedImpl,
+        JSClass::_checkAllOwnIndexedImpl,
     },
-    JSAsyncFunction::_newObjectImpl,
-    JSAsyncFunction::_callImpl};
+    JSClass::_callImpl};
 
-void JSAsyncFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSAsyncFunction>());
+void JSClassBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
+  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSClass>());
   JSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&JSAsyncFunction::vt);
+  mb.setVTable(&JSClass::vt);
 }
 
-PseudoHandle<JSAsyncFunction> JSAsyncFunction::create(
+PseudoHandle<JSClass> JSClass::create(
     Runtime &runtime,
     Handle<Domain> domain,
     Handle<JSObject> parentHandle,
     Handle<Environment> envHandle,
     CodeBlock *codeBlock) {
-  auto *cell = runtime.makeAFixed<JSAsyncFunction, kHasFinalizer>(
+  auto *cell = runtime.makeAFixed<JSClass, kHasFinalizer>(
       runtime,
       domain,
       parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSAsyncFunction>()),
+      runtime.lazyObjectClass,
       envHandle,
       codeBlock);
   auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
   self->flags_.lazyObject = 1;
   return self;
-}
-
-//===----------------------------------------------------------------------===//
-// class JSGeneratorFunction
-
-const CallableVTable JSGeneratorFunction::vt{
-    {
-        VTable(
-            CellKind::JSGeneratorFunctionKind,
-            cellSize<JSGeneratorFunction>(),
-            nullptr,
-            nullptr,
-            nullptr
-#ifdef HERMES_MEMORY_INSTRUMENTATION
-            ,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                JSGeneratorFunction::_snapshotNameImpl,
-                JSGeneratorFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}
-#endif
-            ),
-        JSGeneratorFunction::_getOwnIndexedRangeImpl,
-        JSGeneratorFunction::_haveOwnIndexedImpl,
-        JSGeneratorFunction::_getOwnIndexedPropertyFlagsImpl,
-        JSGeneratorFunction::_getOwnIndexedImpl,
-        JSGeneratorFunction::_setOwnIndexedImpl,
-        JSGeneratorFunction::_deleteOwnIndexedImpl,
-        JSGeneratorFunction::_checkAllOwnIndexedImpl,
-    },
-    JSGeneratorFunction::_newObjectImpl,
-    JSGeneratorFunction::_callImpl};
-
-void JSGeneratorFunctionBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSGeneratorFunction>());
-  JSFunctionBuildMeta(cell, mb);
-  mb.setVTable(&JSGeneratorFunction::vt);
-}
-
-PseudoHandle<JSGeneratorFunction> JSGeneratorFunction::create(
-    Runtime &runtime,
-    Handle<Domain> domain,
-    Handle<JSObject> parentHandle,
-    Handle<Environment> envHandle,
-    CodeBlock *codeBlock) {
-  auto *cell = runtime.makeAFixed<JSGeneratorFunction, kHasFinalizer>(
-      runtime,
-      domain,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<JSGeneratorFunction>()),
-      envHandle,
-      codeBlock);
-  auto self = JSObjectInit::initToPseudoHandle(runtime, cell);
-  self->flags_.lazyObject = 1;
-  return self;
-}
-
-//===----------------------------------------------------------------------===//
-// class GeneratorInnerFunction
-
-const CallableVTable GeneratorInnerFunction::vt{
-    {
-        VTable(
-            CellKind::GeneratorInnerFunctionKind,
-            cellSize<GeneratorInnerFunction>(),
-            nullptr,
-            nullptr,
-            nullptr
-#ifdef HERMES_MEMORY_INSTRUMENTATION
-            ,
-            VTable::HeapSnapshotMetadata{
-                HeapSnapshot::NodeType::Closure,
-                GeneratorInnerFunction::_snapshotNameImpl,
-                GeneratorInnerFunction::_snapshotAddEdgesImpl,
-                nullptr,
-                nullptr}
-#endif
-            ),
-        GeneratorInnerFunction::_getOwnIndexedRangeImpl,
-        GeneratorInnerFunction::_haveOwnIndexedImpl,
-        GeneratorInnerFunction::_getOwnIndexedPropertyFlagsImpl,
-        GeneratorInnerFunction::_getOwnIndexedImpl,
-        GeneratorInnerFunction::_setOwnIndexedImpl,
-        GeneratorInnerFunction::_deleteOwnIndexedImpl,
-        GeneratorInnerFunction::_checkAllOwnIndexedImpl,
-    },
-    GeneratorInnerFunction::_newObjectImpl,
-    GeneratorInnerFunction::_callImpl};
-
-void GeneratorInnerFunctionBuildMeta(
-    const GCCell *cell,
-    Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(
-      JSObject::numOverlapSlots<GeneratorInnerFunction>());
-  JSFunctionBuildMeta(cell, mb);
-  const auto *self = static_cast<const GeneratorInnerFunction *>(cell);
-  mb.setVTable(&GeneratorInnerFunction::vt);
-  mb.addField("savedContext", &self->savedContext_);
-  mb.addField("result", &self->result_);
-}
-
-CallResult<Handle<GeneratorInnerFunction>> GeneratorInnerFunction::create(
-    Runtime &runtime,
-    Handle<Domain> domain,
-    Handle<JSObject> parentHandle,
-    Handle<Environment> envHandle,
-    CodeBlock *codeBlock,
-    NativeArgs args) {
-  auto *cell = runtime.makeAFixed<GeneratorInnerFunction>(
-      runtime,
-      domain,
-      parentHandle,
-      runtime.getHiddenClassForPrototype(
-          *parentHandle, numOverlapSlots<GeneratorInnerFunction>()),
-      envHandle,
-      codeBlock,
-      args.getArgCount());
-  auto self = JSObjectInit::initToHandle(runtime, cell);
-
-  const uint32_t ctxSize = getContextSize(codeBlock, args.getArgCount());
-
-  auto ctxRes = ArrayStorage::create(runtime, ctxSize, ctxSize);
-  if (LLVM_UNLIKELY(ctxRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto ctx = runtime.makeHandle<ArrayStorage>(*ctxRes);
-
-  // Set "this" as the first element.
-  ctx->set(0, args.getThisArg(), runtime.getHeap());
-
-  // Set the rest of the arguments.
-  // Argument i goes in slot i+1 to account for the "this".
-  for (uint32_t i = 0, e = args.getArgCount(); i < e; ++i) {
-    ctx->set(i + 1, args.getArg(i), runtime.getHeap());
-  }
-
-  self->savedContext_.set(runtime, ctx.get(), runtime.getHeap());
-
-  return self;
-}
-
-/// Call the callable with arguments already on the stack.
-CallResult<PseudoHandle<>> GeneratorInnerFunction::callInnerFunction(
-    Handle<GeneratorInnerFunction> selfHandle,
-    Runtime &runtime,
-    Handle<> arg,
-    Action action) {
-  auto self = Handle<GeneratorInnerFunction>::vmcast(selfHandle);
-
-  SmallHermesValue shv =
-      SmallHermesValue::encodeHermesValue(arg.getHermesValue(), runtime);
-  self->result_.set(shv, runtime.getHeap());
-  self->action_ = action;
-
-  auto ctx = runtime.makeMutableHandle(selfHandle->savedContext_);
-  // Account for the `this` argument stored as the first element of ctx.
-  const uint32_t argCount = self->argCount_;
-  // Generators cannot be used as constructors, so newTarget is always
-  // undefined.
-  HermesValue newTarget = HermesValue::encodeUndefinedValue();
-  ScopedNativeCallFrame frame{
-      runtime,
-      argCount, // Account for `this`.
-      selfHandle.getHermesValue(),
-      newTarget,
-      ctx->at(0)};
-  if (LLVM_UNLIKELY(frame.overflowed()))
-    return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
-  for (ArrayStorage::size_type i = 0, e = argCount; i < e; ++i) {
-    frame->getArgRef(i) = ctx->at(i + 1);
-  }
-
-  // Force lazy compilation immediately in order to size the context properly.
-  // We're about to call the function anyway, so this doesn't reduce laziness.
-  // Note that this will do nothing after the very first time a lazy function
-  // is called, so we only resize before we save any registers at all.
-  if (LLVM_UNLIKELY(selfHandle->getCodeBlock(runtime)->isLazy())) {
-    if (LLVM_UNLIKELY(
-            selfHandle->getCodeBlock(runtime)->lazyCompile(runtime) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (LLVM_UNLIKELY(
-            ArrayStorage::resize(
-                ctx,
-                runtime,
-                getContextSize(
-                    selfHandle->getCodeBlock(runtime),
-                    selfHandle->argCount_)) == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    selfHandle->savedContext_.set(runtime, ctx.get(), runtime.getHeap());
-  }
-
-  return JSFunction::_callImpl(selfHandle, runtime);
-}
-
-void GeneratorInnerFunction::restoreStack(Runtime &runtime) {
-  const uint32_t frameOffset = getFrameOffsetInContext();
-  const uint32_t frameSize = getFrameSizeInContext(runtime);
-  // Start at the lower end of the range to be copied.
-  PinnedHermesValue *dst = runtime.getCurrentFrame().ptr();
-  assert(
-      dst + frameSize <= runtime.getStackPointer() &&
-      "writing off the end of the stack");
-  const GCHermesValue *src =
-      savedContext_.getNonNull(runtime)->data() + frameOffset;
-  GCHermesValueUtil::copyToPinned(src, src + frameSize, dst);
-}
-
-void GeneratorInnerFunction::saveStack(Runtime &runtime) {
-  const uint32_t frameOffset = getFrameOffsetInContext();
-  const uint32_t frameSize = getFrameSizeInContext(runtime);
-  // Start at the lower end of the range to be copied.
-  PinnedHermesValue *first = runtime.getCurrentFrame().ptr();
-  assert(
-      first + frameSize <= runtime.getStackPointer() &&
-      "reading off the end of the stack");
-  // Use GCHermesValue::copy to ensure write barriers are executed.
-  GCHermesValue::copy(
-      first,
-      first + frameSize,
-      savedContext_.getNonNull(runtime)->data() + frameOffset,
-      runtime.getHeap());
 }
 
 } // namespace vm

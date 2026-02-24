@@ -13,6 +13,7 @@ namespace hermes {
 namespace vm {
 
 std::array<const VTable *, kNumCellKinds> VTable::vtableArray;
+std::array<ObjectJitCallPtr, kNumCellKinds> VTable::jitCallArray;
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 std::string VTable::HeapSnapshotMetadata::nameForNode(GCCell *cell, GC &gc)

@@ -22,15 +22,15 @@ TEST(RegisterAllocatorTest, RegisterFileTest) {
   RegisterFile File;
 
   // We are starting with an empty register file.
-  EXPECT_EQ(File.getNumLiveRegisters(), 0u);
-  EXPECT_EQ(File.getMaxRegisterUsage(), 0u);
+  EXPECT_EQ(File.getNumLiveRegisters(RegClass::Other), 0u);
+  EXPECT_EQ(File.getMaxRegisterUsage(RegClass::Other), 0u);
 
   // Allocate a few registers.
-  Register R1 = File.allocateRegister();
-  Register R2 = File.allocateRegister();
-  Register R3 = File.allocateRegister();
+  Register R1 = File.allocateRegister(RegClass::Other);
+  Register R2 = File.allocateRegister(RegClass::Other);
+  Register R3 = File.allocateRegister(RegClass::Other);
   // Make sure we know which registers are alive.
-  EXPECT_EQ(File.getMaxRegisterUsage(), 3u);
+  EXPECT_EQ(File.getMaxRegisterUsage(RegClass::Other), 3u);
   EXPECT_TRUE(File.isUsed(R1));
   EXPECT_TRUE(File.isUsed(R2));
   EXPECT_TRUE(File.isUsed(R3));
@@ -39,7 +39,7 @@ TEST(RegisterAllocatorTest, RegisterFileTest) {
   EXPECT_FALSE(File.isFree(R2));
   EXPECT_FALSE(File.isFree(R3));
 
-  EXPECT_EQ(File.getMaxRegisterUsage(), 3u);
+  EXPECT_EQ(File.getMaxRegisterUsage(RegClass::Other), 3u);
 
   // Make sure we can kill registers and things keep working.
   File.killRegister(R2);
@@ -50,26 +50,26 @@ TEST(RegisterAllocatorTest, RegisterFileTest) {
   EXPECT_TRUE(File.isFree(R2));
 
   // Make sure we can reuse the freed register.
-  Register R4 = File.allocateRegister();
-  EXPECT_EQ(File.getMaxRegisterUsage(), 3u);
+  Register R4 = File.allocateRegister(RegClass::Other);
+  EXPECT_EQ(File.getMaxRegisterUsage(RegClass::Other), 3u);
 
   File.killRegister(R1);
   File.killRegister(R3);
   File.killRegister(R4);
 
   // Make sure that all registers have been freed.
-  EXPECT_EQ(File.getNumLiveRegisters(), 0u);
+  EXPECT_EQ(File.getNumLiveRegisters(RegClass::Other), 0u);
 
   // Make sure we can allocate lots of registers and free them in some order.
   std::vector<Register> regs;
   for (int i = 0; i < 1000; i++) {
-    regs.push_back(File.allocateRegister());
+    regs.push_back(File.allocateRegister(RegClass::Other));
   }
   for (auto &R : regs) {
     File.killRegister(R);
   }
   // Make sure that all registers have been freed again.
-  EXPECT_EQ(File.getNumLiveRegisters(), 0u);
+  EXPECT_EQ(File.getNumLiveRegisters(RegClass::Other), 0u);
 }
 
 } // end anonymous namespace

@@ -33,8 +33,8 @@
 /// If, on the other hand, it is faster, then we can focus on higher level
 /// optimizations.
 //===----------------------------------------------------------------------===//
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/Operations.h"
@@ -111,7 +111,7 @@ L1:
 
   const unsigned FRAME_SIZE = 9;
 
-  auto emit = [&](BytecodeFunctionGenerator &builder, int pass) {
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
     builder.emitLoadParam(0, 1);
     builder.emitLoadConstDoubleDirect(1, 0);
     builder.emitLoadConstDoubleDirect(4, 1);
@@ -126,49 +126,38 @@ L1:
     JCOND(builder.emitJLessEqualN, L(3), 2, 4);
     LABEL(4, builder.emitMul(3, 3, 2));
     builder.emitSubN(2, 2, 4);
-    JCOND(builder.emitJGreaterN, L(4), 2, 4);
+    JCOND(builder.emitJLessN, L(4), 4, 2);
     LABEL(3, builder.emitAddN(1, 1, 3));
     builder.emitSubN(0, 0, 4);
-    JCOND(builder.emitJGreaterEqualN, L(2), 0, 5);
+    JCOND(builder.emitJLessEqualN, L(2), 5, 0);
     LABEL(1, builder.emitAddEmptyString(1, 1));
     builder.emitRet(1);
   };
 
   // Pass 0 - resolve labels.
   {
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-    emit(*BFG, 0);
+    BytecodeInstructionGenerator BFG;
+    emit(BFG, 0);
   }
 
   // Pass 1 - build the actual code.
 
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-  emit(*BFG, 1);
+  SimpleBytecodeBuilder BMG;
+  BytecodeInstructionGenerator BFG;
+  emit(BFG, 1);
+  BMG.addFunction(2, FRAME_SIZE, BFG.acquireBytecode());
+  auto buffer = BMG.generateBytecodeBuffer();
 
-  std::unique_ptr<BytecodeModule> BM(new BytecodeModule(1));
-  BM->setFunction(
-      0,
-      BFG->generateBytecodeFunction(
-          hermes::Function::DefinitionKind::ES5Function,
-          hermes::ValueKind::FunctionKind,
-          true,
-          0,
-          0));
   runtimeModule->initializeWithoutCJSModulesMayAllocate(
-      BCProviderFromSrc::createBCProviderFromSrc(std::move(BM)));
-  auto codeBlock = CodeBlock::createCodeBlock(
-      runtimeModule,
-      runtimeModule->getBytecode()->getFunctionHeader(0),
-      runtimeModule->getBytecode()->getBytecode(0),
-      0);
+      BCProviderFromBuffer::createBCProviderFromBuffer(std::move(buffer))
+          .first);
+  auto *codeBlock = runtimeModule->getCodeBlockMayAllocate(0);
 
   ScopedNativeCallFrame newFrame{
       runtime, 2, nullptr, false, HermesValue::encodeUndefinedValue()};
   assert(!newFrame.overflowed() && "Frame allocation should not have failed");
-  newFrame->getArgRef(0) = HermesValue::encodeUntrustedNumberValue(loopc);
-  newFrame->getArgRef(1) = HermesValue::encodeUntrustedNumberValue(factc);
+  newFrame->getArgRef(0) = HermesValue::encodeTrustedNumberValue(loopc);
+  newFrame->getArgRef(1) = HermesValue::encodeTrustedNumberValue(factc);
 
   auto status = runtime.interpretFunction(codeBlock);
   assert(status == ExecutionStatus::RETURNED);

@@ -7,6 +7,7 @@
 
 // RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 // Test object literals hidden class caching behavior in dictionary mode.
 
 // Create objects with more than 64 properties to make its hidden class go into dictionary mode.

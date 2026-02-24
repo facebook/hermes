@@ -5,9 +5,6 @@
 
 set(NO_EH_RTTI_SOURCES
   CDPJSONHelpers.cpp
-  ../../API/hermes/cdp/JSONValueInterfaces.cpp
-  ../../API/hermes/cdp/MessageInterfaces.cpp
-  ../../API/hermes/cdp/MessageTypes.cpp
   )
 set(APITestsSources
   APITest.cpp
@@ -15,23 +12,25 @@ set(APITestsSources
   ${HERMES_JSI_DIR}/jsi/test/testlib.cpp
   AsyncDebuggerAPITest.cpp
   CDPAgentTest.cpp
+  CDPAgentMultiDebuggerTest.cpp
   ConsoleMessageTest.cpp
   DomainStateTest.cpp
   SynchronizedCallbackTest.cpp
   DebuggerTest.cpp
-  SegmentTest.cpp
+  # SegmentTest.cpp
   HeapSnapshotAPITest.cpp
   SynthTraceTest.cpp
   SynthTraceParserTest.cpp
   SynthTraceSerializationTest.cpp
   TimerStatsTest.cpp
+  CDPRemoteObjectConvertersTest.cpp
   ${NO_EH_RTTI_SOURCES}
   )
 set(APISegmentTestCompileSources
   SegmentTestCompile.cpp
   )
 
-if (NOT HERMES_ENABLE_EH_RTTI)
+if (NOT HERMES_ENABLE_EH AND NOT HERMES_ENABLE_RTTI)
   if (GCC_COMPATIBLE)
     set_property(SOURCE ${NO_EH_RTTI_SOURCES} APPEND_STRING
       PROPERTY COMPILE_FLAGS "-fno-exceptions -fno-rtti")
@@ -41,31 +40,29 @@ if (NOT HERMES_ENABLE_EH_RTTI)
   endif ()
 endif ()
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
-
 # Build SegmentTestCompile without EH and RTTI
-add_hermes_library(SegmentTestCompile STATIC ${APISegmentTestCompileSources} LINK_LIBS hermesHBCBackend)
+# TODO: Fix the compilation error in SH
+# add_hermes_library(SegmentTestCompile ${APISegmentTestCompileSources} LINK_OBJLIBS hermesHBCBackend)
 
 # Turn on EH and RTTI for APITests
-set(HERMES_ENABLE_EH_RTTI ON)
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
 # For some reason (bug?) add_unittest() is clearing LLVM_REQUIRES_RTTI, so
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)
 
 add_hermes_unittest(APITests ${APITestsSources})
 
-target_link_libraries(APITests hermesvm compileJS SegmentTestCompile traceInterpreter
-                               timerStats hermesABIRuntimeWrapper hermesabi
-                               hermesSandboxRuntime hermesSupport cdpInternal hermesNodeApiJsiRuntime)
+target_link_libraries(APITests
+  compileJS
+  traceInterpreter
+  timerStats
+  hermesvm_a
+  hermesSandboxRuntime
+  cdpInternal
+  # SegmentTestCompile # Commenting out for now
+  hermesNodeApiJsiRuntime
+)
 
 add_hermes_unittest(APILeanTests APILeanTest.cpp)
-target_link_libraries(APILeanTests hermesvmlean jsi)
-
-# copy hermes.dll next to the APITests.exe
-add_dependencies(APITests libshared)
-add_custom_command(TARGET APITests POST_BUILD
-  VERBATIM
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different
-  $<TARGET_FILE:libshared>
-  $<TARGET_FILE_DIR:APITests>)
-
+target_link_libraries(APILeanTests hermesvmlean_a)

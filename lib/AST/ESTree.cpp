@@ -36,6 +36,25 @@ NodeList &getParams(FunctionLikeNode *node) {
   }
 }
 
+Node *getTypeParameters(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return nullptr;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_typeParameters;
+    case NodeKind::ArrowFunctionExpression:
+      return cast<ArrowFunctionExpressionNode>(node)->_typeParameters;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_typeParameters;
+#if HERMES_PARSE_FLOW
+    case NodeKind::ComponentDeclaration:
+      return cast<ComponentDeclarationNode>(node)->_typeParameters;
+#endif
+  }
+}
+
 BlockStatementNode *getBlockStatement(FunctionLikeNode *node) {
   switch (node->getKind()) {
     default:
@@ -58,6 +77,36 @@ BlockStatementNode *getBlockStatement(FunctionLikeNode *node) {
     case NodeKind::HookDeclaration:
       return cast<BlockStatementNode>(cast<HookDeclarationNode>(node)->_body);
 #endif
+  }
+}
+
+Node *getIdentifier(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return nullptr;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_id;
+    case NodeKind::ArrowFunctionExpression:
+      return nullptr;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_id;
+  }
+}
+
+Node *getReturnType(FunctionLikeNode *node) {
+  switch (node->getKind()) {
+    default:
+      assert(
+          node->getKind() == NodeKind::Program && "invalid FunctionLikeNode");
+      return nullptr;
+    case NodeKind::FunctionExpression:
+      return cast<FunctionExpressionNode>(node)->_returnType;
+    case NodeKind::ArrowFunctionExpression:
+      return cast<ArrowFunctionExpressionNode>(node)->_returnType;
+    case NodeKind::FunctionDeclaration:
+      return cast<FunctionDeclarationNode>(node)->_returnType;
   }
 }
 
@@ -134,20 +183,6 @@ bool hasSimpleParams(FunctionLikeNode *node) {
   return true;
 }
 
-bool hasParamExpressions(FunctionLikeNode *node) {
-  for (Node &param : getParams(node)) {
-    if (isa<AssignmentPatternNode>(param))
-      return true;
-#if HERMES_PARSE_FLOW
-    if (isa<ComponentParameterNode>(param) &&
-        isa<AssignmentPatternNode>(
-            cast<ComponentParameterNode>(&param)->_local))
-      return false;
-#endif
-  }
-  return false;
-}
-
 bool isGenerator(FunctionLikeNode *node) {
   switch (node->getKind()) {
     default:
@@ -188,6 +223,55 @@ bool isAsync(FunctionLikeNode *node) {
       return false;
 #endif
   }
+}
+
+Node *&getSuperClass(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return cast<ClassExpressionNode>(node)->_superClass;
+    case NodeKind::ClassDeclaration:
+      return cast<ClassDeclarationNode>(node)->_superClass;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
+IdentifierNode *getClassID(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return llvh::dyn_cast_or_null<IdentifierNode>(
+          cast<ClassExpressionNode>(node)->_id);
+    case NodeKind::ClassDeclaration:
+      return dyn_cast<IdentifierNode>(cast<ClassDeclarationNode>(node)->_id);
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
+ClassBodyNode *getClassBody(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return cast<ClassBodyNode>(cast<ClassExpressionNode>(node)->_body);
+    case NodeKind::ClassDeclaration:
+      return cast<ClassBodyNode>(cast<ClassDeclarationNode>(node)->_body);
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
+}
+
+ESTree::NodeList &getDecorators(ClassLikeNode *node) {
+  switch (node->getKind()) {
+    case NodeKind::ClassExpression:
+      return cast<ClassExpressionNode>(node)->_decorators;
+    case NodeKind::ClassDeclaration:
+      return cast<ClassDeclarationNode>(node)->_decorators;
+    default:
+      break;
+  }
+  llvm_unreachable("invalid ClassLikeNode");
 }
 
 } // namespace ESTree

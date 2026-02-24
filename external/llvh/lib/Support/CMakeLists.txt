@@ -11,10 +11,12 @@ add_hermes_library(LLVHSupport
     ErrorHandling.cpp
     FileCheck.cpp
     FoldingSet.cpp
+    FormatVariadic.cpp
     GraphWriter.cpp
     Hashing.cpp
     Host.cpp
     InitLLVM.cpp
+    JSON.cpp
     LineIterator.cpp
     Locale.cpp
     ManagedStatic.cpp
@@ -48,14 +50,16 @@ add_hermes_library(LLVHSupport
     TargetParser.cpp
     Threading.cpp
     Timer.cpp
+    ToolOutputFile.cpp
     Triple.cpp
     Twine.cpp
     Unicode.cpp
     Valgrind.cpp
     Watchdog.cpp
-    LINK_LIBS LLVHDemangle ${TERMINFO_LIBS}
+    WithColor.cpp
+    LINK_OBJLIBS LLVHDemangle ${TERMINFO_LIBS}
 )
 
 if (LLVM_PTHREAD_LIB)
-    target_link_libraries(LLVHSupport ${LLVM_PTHREAD_LIB})
+    target_link_libraries(LLVHSupport_obj ${LLVM_PTHREAD_LIB})
 endif()

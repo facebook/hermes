@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -commonjs -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -commonjs -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s
 
 // CHECK-LABEL:  "body": {
 // CHECK-NEXT:     "type": "BlockStatement",
@@ -115,7 +115,7 @@ import {foo, bar as baz} from 'other';
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "assertions": [],
+// CHECK-NEXT:         "attributes": [],
 // CHECK-NEXT:         "importKind": "value",
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {

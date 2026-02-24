@@ -1,7 +1,6 @@
 name: build-hermesc-apple
 
-on:
-  workflow_call
+on: workflow_call
 
 jobs:
   build-hermesc-apple:

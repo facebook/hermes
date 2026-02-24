@@ -6,23 +6,16 @@
  */
 
 #define DEBUG_TYPE "tdzdedup"
-#include "hermes/Optimizer/Scalar/TDZDedup.h"
 #include "hermes/ADT/ScopedHashTable.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
-#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/DenseSet.h"
-#include "llvh/ADT/Hashing.h"
-#include "llvh/ADT/STLExtras.h"
-#include "llvh/Support/RecyclingAllocator.h"
 
-STATISTIC(NumTDZFrameDedup, "Number of TDZ frame checks eliminated");
-STATISTIC(NumTDZStackDedup, "Number of TDZ stack checks eliminated");
-STATISTIC(NumTDZOtherDedup, "Number of TDZ other checks eliminated");
 STATISTIC(NumTDZDedup, "Number of TDZ instructions eliminated");
 
 namespace hermes {
@@ -38,7 +31,7 @@ using ScopeType = hermes::ScopedHashTableScope<Value *, bool>;
 // a depth first traversal of the tree. This includes scopes for values and
 // loads as well as the generation. There is a child iterator so that the
 // children do not need to be store spearately.
-class StackNode : public DomTreeDFS::StackNode<TDZDedupContext> {
+class StackNode : public DomTreeDFS::StackNode {
  public:
   inline StackNode(TDZDedupContext *ctx, const DominanceInfoNode *n);
 
@@ -53,7 +46,9 @@ class StackNode : public DomTreeDFS::StackNode<TDZDedupContext> {
 class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
  public:
   TDZDedupContext(Function *F, DominanceInfo &DT)
-      : DomTreeDFS::Visitor<TDZDedupContext, StackNode>(DT), F_(F) {}
+      : DomTreeDFS::Visitor<TDZDedupContext, StackNode>(DT),
+        F_(F),
+        builder_(F) {}
 
   bool run();
 
@@ -63,6 +58,7 @@ class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
   friend StackNode;
 
   Function *const F_;
+  IRBuilder builder_;
 
   /// All TDZ state variables are collected here.
   llvh::DenseSet<Value *> tdzState_{};
@@ -83,14 +79,13 @@ class TDZDedupContext : public DomTreeDFS::Visitor<TDZDedupContext, StackNode> {
 };
 
 inline StackNode::StackNode(TDZDedupContext *ctx, const DominanceInfoNode *n)
-    : DomTreeDFS::StackNode<TDZDedupContext>(ctx, n),
-      scope_{ctx->availableValues_} {}
+    : DomTreeDFS::StackNode(n), scope_{ctx->availableValues_} {}
 
 bool TDZDedupContext::run() {
   // First, collect all TDZ state variables.
   for (auto &BB : *F_) {
     for (auto &I : BB) {
-      auto *TIU = llvh::dyn_cast<ThrowIfEmptyInst>(&I);
+      auto *TIU = llvh::dyn_cast<ThrowIfInst>(&I);
       if (!TIU)
         continue;
 
@@ -125,8 +120,8 @@ bool TDZDedupContext::processNode(StackNode *SN) {
   for (auto &inst : *BB) {
     // The storage containing the value that can potentially be empty.
     Value *tdzStorage = nullptr;
-    ThrowIfEmptyInst *TIE = nullptr;
-    if ((TIE = llvh::dyn_cast<ThrowIfEmptyInst>(&inst)) != nullptr) {
+    ThrowIfInst *TIE = nullptr;
+    if ((TIE = llvh::dyn_cast<ThrowIfInst>(&inst)) != nullptr) {
       auto *checkedValue = TIE->getCheckedValue();
 
       if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(checkedValue)) {
@@ -168,29 +163,30 @@ bool TDZDedupContext::processNode(StackNode *SN) {
       continue;
     }
 
-    // Handle only ThrowIfEmpty from here on.
+    // Handle only ThrowIf from here on.
     if (!TIE)
       continue;
 
     // The TDZ state is known to be true, so we can eliminate the check
     // instruction.
-    TIE->replaceAllUsesWith(TIE->getCheckedValue());
     destroyer.add(TIE);
     changed = true;
     ++NumTDZDedup;
 
-    // Attempt to destroy the load too, to save work in other passes.
-    if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(TIE->getCheckedValue())) {
-      ++NumTDZFrameDedup;
-      if (LFI->hasOneUser())
-        destroyer.add(LFI);
-    } else if (
-        auto *LSI = llvh::dyn_cast<LoadStackInst>(TIE->getCheckedValue())) {
-      ++NumTDZStackDedup;
-      if (LSI->hasOneUser())
-        destroyer.add(LSI);
+    // If ThrowIf has no users, we will attempt to destroy the load too, to
+    // save work in other passes.
+    if (!TIE->hasUsers()) {
+      if ((llvh::isa<LoadFrameInst>(TIE->getCheckedValue()) ||
+           llvh::isa<LoadStackInst>(TIE->getCheckedValue())) &&
+          TIE->getCheckedValue()->hasOneUser()) {
+        destroyer.add(llvh::cast<Instruction>(TIE->getCheckedValue()));
+      }
     } else {
-      ++NumTDZOtherDedup;
+      builder_.setInsertionPoint(TIE);
+      builder_.setLocation(TIE->getLocation());
+      auto *cast = builder_.createUnionNarrowTrustedInst(
+          TIE->getCheckedValue(), TIE->getType());
+      TIE->replaceAllUsesWith(cast);
     }
   }
 
@@ -199,14 +195,19 @@ bool TDZDedupContext::processNode(StackNode *SN) {
 
 } // end anonymous namespace
 
-bool TDZDedup::runOnFunction(Function *F) {
-  DominanceInfo DT{F};
-  TDZDedupContext CCtx{F, DT};
-  return CCtx.run();
-}
+Pass *createTDZDedup() {
+  class TDZDedup : public FunctionPass {
+   public:
+    explicit TDZDedup() : FunctionPass("TDZDedup") {}
+    ~TDZDedup() override = default;
 
-std::unique_ptr<Pass> createTDZDedup() {
-  return std::make_unique<TDZDedup>();
+    bool runOnFunction(Function *F) override {
+      DominanceInfo DT{F};
+      TDZDedupContext CCtx{F, DT};
+      return CCtx.run();
+    }
+  };
+  return new TDZDedup();
 }
 
 } // namespace hermes

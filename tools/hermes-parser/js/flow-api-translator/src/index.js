@@ -53,7 +53,7 @@ export async function translateFlowDefToTSDef(
   });
 
   return print(
-    // $FlowExpectedError[incompatible-call] - this is fine as we're providing the visitor keys
+    // $FlowExpectedError[incompatible-type] - this is fine as we're providing the visitor keys
     tsAST,
     mutatedCode,
     {

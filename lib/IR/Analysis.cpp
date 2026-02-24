@@ -25,7 +25,9 @@ using llvh::dbgs;
 using llvh::Optional;
 using llvh::outs;
 
-void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
+/// Visit basic blocks in post order starting from \p BB, appending them into \p
+/// order.
+static void visitPostOrder(BasicBlock *BB, std::vector<BasicBlock *> &order) {
   struct State {
     BasicBlock *BB;
     succ_iterator cur, end;
@@ -37,6 +39,7 @@ void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
   llvh::SmallVector<State, 32> stack{};
 
   stack.emplace_back(BB);
+  visited.insert(BB);
   do {
     while (stack.back().cur != stack.back().end) {
       BB = *stack.back().cur++;
@@ -49,30 +52,17 @@ void PostOrderAnalysis::visitPostOrder(BasicBlock *BB, BlockList &order) {
   } while (!stack.empty());
 }
 
-PostOrderAnalysis::PostOrderAnalysis(Function *F) : ctx_(F->getContext()) {
-  assert(Order.empty() && "vector must be empty");
-
+std::vector<BasicBlock *> hermes::postOrderAnalysis(Function *F) {
+  std::vector<BasicBlock *> order;
   BasicBlock *entry = &*F->begin();
 
   // Finally, do an PO scan from the entry block.
-  visitPostOrder(entry, Order);
+  visitPostOrder(entry, order);
 
   assert(
-      !Order.empty() && Order[Order.size() - 1] == entry &&
+      !order.empty() && order[order.size() - 1] == entry &&
       "Entry block must be the last element in the vector");
-}
-
-void PostOrderAnalysis::dump() {
-  IRPrinter D(ctx_, outs());
-  D.visit(*Order[0]->getParent());
-
-  outs() << "Blocks: ";
-
-  for (auto &BB : Order) {
-    outs() << "BB" << D.BBNamer.getNumber(BB) << " ";
-  }
-
-  outs() << "\n";
+  return order;
 }
 
 // Perform depth-first search to identify loops. The loop header of a block B is
@@ -207,64 +197,193 @@ BasicBlock *LoopAnalysis::getLoopPreheader(const BasicBlock *BB) const {
   return nullptr;
 }
 
-static llvh::Optional<int> &nextScopeDepth(llvh::Optional<int> &depth) {
-  if (depth) {
-    *depth -= 1;
+std::pair<llvh::DenseMap<BasicBlock *, size_t>, size_t>
+hermes::getBlockTryDepths(Function *F) {
+  // Map basic blocks inside a try to the number of try statements they are
+  // nested in.
+  llvh::DenseMap<BasicBlock *, size_t> blockTryDepths;
+
+  // The maximum nesting depth we have observed so far.
+  size_t maxDepth = 0;
+
+  // Stack of basic blocks to visit. The second element in the pair represents
+  // the nesting depth on entry to that block.
+  llvh::SmallVector<std::pair<BasicBlock *, size_t>, 4> stack;
+
+  llvh::DenseSet<BasicBlock *> visited;
+  visited.insert(&F->front());
+  stack.push_back({&F->front(), 0});
+
+  while (!stack.empty()) {
+    auto [BB, depth] = stack.pop_back_val();
+
+    // If the block starts with a CatchInst, it ends the nearest
+    // try, decrement the depth for this block and all successors.
+    if (llvh::isa<CatchInst>(&BB->front()))
+      --depth;
+
+    if (depth) {
+      maxDepth = std::max(maxDepth, depth);
+      blockTryDepths.try_emplace(BB, depth);
+    }
+
+    if (auto *TEI = llvh::dyn_cast<TryEndInst>(BB->getTerminator())) {
+      // If the block ends with a TryEndInst, decrement the depth and handle
+      // only the branch target successor.
+      --depth;
+      if (visited.insert(TEI->getBranchDest()).second)
+        stack.emplace_back(TEI->getBranchDest(), depth);
+    } else if (llvh::isa<BaseThrowInst>(BB->getTerminator())) {
+      // Do nothing.
+    } else {
+      // If the block ends with a TryStartInst, increment the depth
+      if (llvh::isa<TryStartInst>(BB->getTerminator()))
+        ++depth;
+      for (auto *succ : successors(BB))
+        if (visited.insert(succ).second)
+          stack.emplace_back(succ, depth);
+    }
   }
-  return depth;
+  return {std::move(blockTryDepths), maxDepth};
 }
 
-FunctionScopeAnalysis::ScopeData
-FunctionScopeAnalysis::calculateFunctionScopeData(
-    ScopeDesc *scopeDesc,
-    llvh::Optional<int> depth) {
-  auto entry = lexicalScopeDescMap_.find(scopeDesc);
-  if (entry != lexicalScopeDescMap_.end()) {
-    return entry->second;
+namespace {
+/// A Java-like iterator that returns basic blocks (in an undefined order) and
+/// provides the closest surrounding try (if any) for each. Additionally, it
+/// constructs a map from basic block to a surrounding try. The map can be
+/// moved out after the iterator has finished.
+class SurroundingTryBlockIterator {
+  bool hasTry_ = false;
+  // Stack of basic blocks to visit, and the TryStartInst on entry of that
+  // block.
+  llvh::SmallVector<std::pair<BasicBlock *, TryStartInst *>, 4> stack_;
+  // Holds a mapping from basic block -> innermost enclosing TryStartInst,
+  // accounting for Catch/TryEnd.
+  llvh::DenseMap<BasicBlock *, TryStartInst *> blockToEnclosingTry_;
+
+  /// The current basic block.
+  BasicBlock *BB_;
+  /// The innermost enclosing TryStartInst for the current basic block.
+  TryStartInst *enclosingTry_;
+
+ public:
+  explicit SurroundingTryBlockIterator(Function *F) {
+    stack_.emplace_back(&*F->begin(), nullptr);
+    blockToEnclosingTry_[&*F->begin()] = nullptr;
   }
 
-  if (!scopeDesc->hasFunction()) {
-    // The only scope that doesn't have a function is the Module's initial
-    // scope.
-    assert(scopeDesc->getParent() == nullptr);
+  /// Return true if the function has at least one try block.
+  bool hasTry() const {
+    return hasTry_;
+  }
+
+  /// Returns the current basic block. Successors can be modified but will
+  /// have no effect on the iterator.
+  BasicBlock *getBB() const {
+    return BB_;
+  }
+
+  /// Returns the innermost enclosing TryStartInst for the current basic block.
+  TryStartInst *getEnclosingTry() const {
+    return enclosingTry_;
+  }
+
+  /// Return a reference to the BB -> surrounding try map. It can be moved out.
+  /// This method can only be called once iteration has completed.
+  llvh::DenseMap<BasicBlock *, TryStartInst *> &getBlockToEnclosingTry() {
+    assert(
+        stack_.empty() && "Cannot access blockToEnclosingTry while iterating");
+    return blockToEnclosingTry_;
+  }
+
+  /// The main iteration method. Returns true if there is a current block and
+  /// that can be queried, followed by another call to next(). Returns false
+  /// if iteration has completed.
+  bool next() {
+    if (stack_.empty())
+      return false;
+
+    auto [BB, enclosingTry] = stack_.pop_back_val();
+    BB_ = BB;
+    enclosingTry_ = enclosingTry;
+
+    // If this BB ends with a TryStartInst, store the try body block here.
+    BasicBlock *tryBody = nullptr;
+
+    if (auto *TSI = llvh::dyn_cast<TryStartInst>(BB->getTerminator())) {
+      tryBody = TSI->getTryBody();
+      hasTry_ = true;
+    } else if (llvh::isa<TryEndInst>(BB->getTerminator())) {
+      // If this block ends with a TryEnd, pop off to the nearest try.
+      assert(
+          enclosingTry && "encountered TryEnd without an enclosing TryStart");
+      assert(
+          blockToEnclosingTry_.find(enclosingTry->getParent()) !=
+              blockToEnclosingTry_.end() &&
+          "enclosingTry should already be in map.");
+      enclosingTry = blockToEnclosingTry_[enclosingTry->getParent()];
+    } else if (auto *BTI = llvh::dyn_cast<BaseThrowInst>(BB->getTerminator())) {
+      // If this block ends with a BaseThrowInst with a catch target, pop off to
+      // the nearest try.
+      if (BTI->hasCatchTarget()) {
+        assert(
+            enclosingTry &&
+            "encountered BaseThrowInst with catch target without an enclosing TryStart");
+        assert(
+            blockToEnclosingTry_.find(enclosingTry->getParent()) !=
+                blockToEnclosingTry_.end() &&
+            "BaseThrowInst's enclosingTry should already be in map.");
+        enclosingTry = blockToEnclosingTry_[enclosingTry->getParent()];
+      }
+    }
+
+    for (auto *succ : successors(BB)) {
+      // Only update the enclosing try when we are going to enter the try body.
+      auto *succEnclosingTry = succ == tryBody
+          ? llvh::cast<TryStartInst>(BB->getTerminator())
+          : enclosingTry;
+
+      auto [_, inserted] =
+          blockToEnclosingTry_.try_emplace(succ, succEnclosingTry);
+      if (inserted) {
+        // Only explore this BB if we haven't visited it before.
+        stack_.push_back({succ, succEnclosingTry});
+      }
+    }
+
+    return true;
+  }
+};
+} // anonymous namespace
+
+llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
+hermes::findEnclosingTrysPerBlock(Function *F) {
+  SurroundingTryBlockIterator it(F);
+  while (it.next())
+    ;
+
+  if (it.hasTry()) {
+    return {std::move(it.getBlockToEnclosingTry())};
   } else {
-    // If the function is a CommonJS module,
-    // then it won't have a CreateFunctionInst, so calculate the depth manually.
-    Function *F = scopeDesc->getFunction();
-    Module *module = F->getParent();
-    if (module->findCJSModule(F)) {
-      return ScopeData{1, false};
-    }
+    return llvh::None;
   }
-
-  ScopeData ret = ScopeData::orphan();
-  if (ScopeDesc *parentScope = scopeDesc->getParent()) {
-    ScopeData parentData =
-        calculateFunctionScopeData(parentScope, nextScopeDepth(depth));
-    if (!parentData.orphaned && (parentData.depth >= 0 || depth)) {
-      assert(!depth || (depth == parentData.depth));
-      ret = ScopeData(parentData.depth + 1);
-    }
-  } else if (depth) {
-    ret = ScopeData(*depth);
-  }
-
-  LLVM_DEBUG({
-    if (ret.orphaned) {
-      dbgs() << "Orphaned scope in function \""
-             << scopeDesc->getFunction()->getInternalNameStr() << "\"\n";
-    }
-  });
-
-  lexicalScopeDescMap_[scopeDesc] = ret;
-  return ret;
 }
 
-Optional<int32_t> FunctionScopeAnalysis::getScopeDepth(ScopeDesc *S) {
-  ScopeData sd = calculateFunctionScopeData(S);
-  if (sd.orphaned)
-    return llvh::None;
-  return sd.depth;
+bool hermes::fixupCatchTargets(Function *F) {
+  SurroundingTryBlockIterator it(F);
+  bool changed = false;
+
+  while (it.next()) {
+    BasicBlock *BB = it.getBB();
+    TryStartInst *enclosingTry = it.getEnclosingTry();
+
+    if (auto *BTI = llvh::dyn_cast<BaseThrowInst>(BB->getTerminator())) {
+      changed |= BTI->updateCatchTarget(
+          enclosingTry ? enclosingTry->getCatchTarget() : nullptr);
+    }
+  }
+
+  return changed;
 }
 
 #undef DEBUG_TYPE

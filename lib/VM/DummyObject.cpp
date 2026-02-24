@@ -19,6 +19,7 @@ namespace testhelpers {
 const VTable DummyObject::vt{
     CellKind::DummyObjectKind,
     cellSize<DummyObject>(),
+    /* allowLargeAlloc */ false,
     _finalizeImpl,
     _mallocSizeImpl,
     nullptr
@@ -35,7 +36,7 @@ const VTable DummyObject::vt{
 
 DummyObject::DummyObject(GC &gc) : other(), x(1), y(2) {
   hvBool.setNonPtr(HermesValue::encodeBoolValue(true), gc);
-  hvDouble.setNonPtr(HermesValue::encodeUntrustedNumberValue(3.14), gc);
+  hvDouble.setNonPtr(HermesValue::encodeTrustedNumberValue(3.14), gc);
   hvNative.setNonPtr(HermesValue::encodeNativeUInt32(0xE), gc);
   hvUndefined.setNonPtr(HermesValue::encodeUndefinedValue(), gc);
   hvEmpty.setNonPtr(HermesValue::encodeEmptyValue(), gc);
@@ -62,7 +63,7 @@ void DummyObject::setPointer(GC &gc, DummyObject *obj) {
 
 DummyObject *DummyObject::create(GC &gc, PointerBase &base) {
   auto *cell = gc.makeAFixed<DummyObject, HasFinalizer::Yes>(gc);
-  cell->finalizerCallback.set(gc, nullptr);
+  cell->finalizerCallback = nullptr;
   cell->weak.emplace(base, gc, cell);
   return cell;
 }
@@ -76,15 +77,12 @@ bool DummyObject::classof(const GCCell *cell) {
 
 void DummyObject::_finalizeImpl(GCCell *cell, GC &gc) {
   auto *self = vmcast<DummyObject>(cell);
-  auto callback = self->finalizerCallback.get(gc);
-  if (callback)
-    (*callback)();
+  if (self->finalizerCallback)
+    (*self->finalizerCallback)();
   if (self->weak)
     self->weak->releaseSlot();
   self->releaseExtMem(gc);
 
-  // Callback is assumed to point to allocated memory
-  delete callback;
   self->~DummyObject();
 }
 

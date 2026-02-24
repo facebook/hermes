@@ -15,7 +15,7 @@
 namespace hermes {
 namespace vm {
 const ObjectVTable JSCallSite::vt{
-    VTable(CellKind::JSCallSiteKind, cellSize<JSCallSite>(), nullptr, nullptr),
+    VTable(CellKind::JSCallSiteKind, cellSize<JSCallSite>()),
     JSCallSite::_getOwnIndexedRangeImpl,
     JSCallSite::_haveOwnIndexedImpl,
     JSCallSite::_getOwnIndexedPropertyFlagsImpl,
@@ -70,10 +70,15 @@ CallResult<HermesValue> JSCallSite::create(
 CallResult<HermesValue> JSCallSite::getFunctionName(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
-  Handle<JSError> error = runtime.makeHandle(selfHandle->error_);
+  struct : public Locals {
+    PinnedValue<JSError> error;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.error = selfHandle->error_.get(runtime);
 
   auto functionName = JSError::getFunctionNameAtIndex(
-      runtime, error, selfHandle->stackFrameIndex_);
+      runtime, lv.error, selfHandle->stackFrameIndex_);
   return functionName ? functionName.getHermesValue()
                       : HermesValue::encodeNullValue();
 }
@@ -81,7 +86,9 @@ CallResult<HermesValue> JSCallSite::getFunctionName(
 CallResult<HermesValue> JSCallSite::getFileName(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
-  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  const BytecodeStackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  if (!sti)
+    return HermesValue::encodeNullValue();
   if (sti->codeBlock) {
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
@@ -96,7 +103,7 @@ CallResult<HermesValue> JSCallSite::getFileName(
       auto debugInfo = runtimeModule->getBytecode()->getDebugInfo();
 
       std::string utf8Storage;
-      llvh::StringRef fileName = hbc::getStringFromEntry(
+      llvh::StringRef fileName = hbc::getUTF8StringFromEntry(
           debugInfo->getFilenameTable()[location->filenameId],
           debugInfo->getFilenameStorage(),
           utf8Storage);
@@ -115,16 +122,18 @@ CallResult<HermesValue> JSCallSite::getFileName(
 CallResult<HermesValue> JSCallSite::getLineNumber(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
-  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  const BytecodeStackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  if (!sti)
+    return HermesValue::encodeNullValue();
   if (sti->codeBlock) {
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
     if (location) {
-      return HermesValue::encodeUntrustedNumberValue(location->line);
+      return HermesValue::encodeTrustedNumberValue(location->line);
     } else {
       // Add 1 to the CJSModuleOffset to account for 1-based indexing of
       // symbolication tools.
-      return HermesValue::encodeUntrustedNumberValue(
+      return HermesValue::encodeTrustedNumberValue(
           sti->codeBlock->getRuntimeModule()->getBytecode()->getSegmentID() +
           1);
     }
@@ -135,12 +144,14 @@ CallResult<HermesValue> JSCallSite::getLineNumber(
 CallResult<HermesValue> JSCallSite::getColumnNumber(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
-  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  const BytecodeStackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  if (!sti)
+    return HermesValue::encodeNullValue();
   if (sti->codeBlock) {
     OptValue<hbc::DebugSourceLocation> location =
         JSError::getDebugInfo(sti->codeBlock, sti->bytecodeOffset);
     if (location) {
-      return HermesValue::encodeUntrustedNumberValue(location->column);
+      return HermesValue::encodeTrustedNumberValue(location->column);
     }
   }
   return HermesValue::encodeNullValue();
@@ -149,9 +160,11 @@ CallResult<HermesValue> JSCallSite::getColumnNumber(
 CallResult<HermesValue> JSCallSite::getBytecodeAddress(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
-  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  const BytecodeStackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  if (!sti)
+    return HermesValue::encodeNullValue();
   if (sti->codeBlock) {
-    return HermesValue::encodeUntrustedNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         sti->bytecodeOffset + sti->codeBlock->getVirtualOffset());
   }
   return HermesValue::encodeNullValue();
@@ -160,7 +173,9 @@ CallResult<HermesValue> JSCallSite::getBytecodeAddress(
 CallResult<HermesValue> JSCallSite::isNative(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
-  const StackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  const BytecodeStackTraceInfo *sti = getStackTraceInfo(runtime, selfHandle);
+  if (!sti)
+    return HermesValue::encodeNullValue();
   return HermesValue::encodeBoolValue(!sti->codeBlock);
 }
 
@@ -230,7 +245,7 @@ CallResult<HermesValue> JSCallSite::getPromiseIndex(
   return HermesValue::encodeNullValue();
 }
 
-const StackTraceInfo *JSCallSite::getStackTraceInfo(
+const BytecodeStackTraceInfo *JSCallSite::getStackTraceInfo(
     Runtime &runtime,
     Handle<JSCallSite> selfHandle) {
   JSError *error = selfHandle->error_.getNonNull(runtime);
@@ -243,7 +258,8 @@ const StackTraceInfo *JSCallSite::getStackTraceInfo(
   //   1. stacktrace's ownership is managed (indirectly) by selfHandle (i.e.,
   //      the CallSite object); and
   //   2. stacktrace is not modified after it is created.
-  return &stacktrace->at(selfHandle->stackFrameIndex_);
+  const auto &frame = stacktrace->at(selfHandle->stackFrameIndex_);
+  return std::get_if<BytecodeStackTraceInfo>(&frame);
 }
 
 } // namespace vm

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s
 
 print(!0);
 
@@ -33,37 +33,33 @@ print(!false);
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %5 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst globalObject : object, "NaN" : string
-// CHECK-NEXT:  %9 = UnaryOperatorInst '!', %8
-// CHECK-NEXT:  %10 = CallInst %7, undefined : undefined, undefined : undefined, %9 : boolean
-// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %12 = CallInst %11, undefined : undefined, undefined : undefined, false : boolean
-// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %16 = CallInst %15, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %17 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %18 = CallInst %17, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %19 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %20 = CallInst %19, undefined : undefined, undefined : undefined, false : boolean
-// CHECK-NEXT:  %21 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %22 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %23 = UnaryOperatorInst '!', %22
-// CHECK-NEXT:  %24 = CallInst %21, undefined : undefined, undefined : undefined, %23 : boolean
-// CHECK-NEXT:  %25 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %26 = CallInst %25, undefined : undefined, undefined : undefined, false : boolean
-// CHECK-NEXT:  %27 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %28 = CallInst %27, undefined : undefined, undefined : undefined, true : boolean
-// CHECK-NEXT:  %29 = ReturnInst %28
+// CHECK-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %1 = CallInst (:any) %0: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %13 = CallInst (:any) %12: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %14 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %15 = CallInst (:any) %14: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %17 = CallInst (:any) %16: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %18 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %19 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %20 = UnaryBangInst (:boolean) %19: any
+// CHECK-NEXT:  %21 = CallInst (:any) %18: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %20: boolean
+// CHECK-NEXT:  %22 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %23 = CallInst (:any) %22: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, false: boolean
+// CHECK-NEXT:  %24 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %25 = CallInst (:any) %24: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, true: boolean
+// CHECK-NEXT:        ReturnInst %25: any
 // CHECK-NEXT:function_end

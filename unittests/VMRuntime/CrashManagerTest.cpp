@@ -13,26 +13,27 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
+#include "hermes/VM/LargeDummyObject.h"
 #include "hermes/VM/LimitedStorageProvider.h"
-#include "hermes/VM/PointerBase.h"
 
 #include <deque>
 
 using namespace hermes;
 using namespace hermes::vm;
+using namespace testhelpers;
 
 using ::testing::MatchesRegex;
 
 namespace {
 
 // We make this not FixedSize, to allow direct allocation in the old generation.
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
 
 class TestCrashManager : public CrashManager {
  public:
@@ -45,16 +46,27 @@ class TestCrashManager : public CrashManager {
   void setHeapInfo(const HeapInformation & /*heapInfo*/) override {}
 
   void setCustomData(const char *key, const char *value) override {
-    customData_[std::string(key)] = std::string(value);
+    auto result = customData_.emplace(key, value);
+    if (llvh::StringRef(key).endswith(":YG")) {
+      // This happens when the YG segment is promoted to OG and YG is reset to
+      // a new segment.
+      result.first->second = value;
+    } else {
+      assert(
+          result.second && "No duplicate keys allowed, except for YG segment");
+    }
   }
   void setContextualCustomData(const char *key, const char *value) override {
-    contextualCustomData_[std::string(key)] = std::string(value);
+    contextualCustomData_[std::string{key}] = std::string{value};
   }
   void removeCustomData(const char *key) override {
-    customData_.erase(std::string(key));
+    [[maybe_unused]] auto nRemoved = customData_.erase(std::string(key));
+    assert(nRemoved == 1 && "key must exist");
   }
   void removeContextualCustomData(const char *key) override {
-    contextualCustomData_.erase(std::string(key));
+    [[maybe_unused]] auto nRemoved =
+        contextualCustomData_.erase(std::string(key));
+    assert(nRemoved == 1 && "key must exist");
   }
 
   const std::unordered_map<std::string, std::string> &customData() {
@@ -85,31 +97,32 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
       gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<SegmentCell> handles[25];
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Allocate 25 segments.  By the time we're done, this should fill
   // the YG (which will have grown to a full segment size), and 24 OG
   // segments.
   for (size_t i = 0; i < 8; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[i] = SegmentCell::create(rt);
   }
-  auto marker = scope.createMarker();
-  (void)marker;
   for (size_t i = 0; i < 17; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[8 + i] = SegmentCell::create(rt);
   }
 
 #ifdef HERMESVM_GC_HADES
   static constexpr char numberedSegmentFmt[] = "XYZ:HeapSegment:%d";
   static constexpr std::string_view ygSegmentName = "XYZ:HeapSegment:YG";
 
-  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
+  const auto &customData = testCrashMgr->customData();
   uint32_t numHeapSegmentsYG = 0;
   uint32_t numHeapSegmentsNumbered = 0;
   int32_t keyNum;
-  for (const auto &[key, payload] : contextualCustomData) {
-    // Keeps track whether key represents a HeapSegment so that payload can be
-    // validated below.
+  for (const auto &[key, payload] : customData) {
+    // Keeps track whether key represents an FixedSizeHeapSegment so that
+    // payload can be validated below.
     bool validatePayload = false;
     if (key == ygSegmentName) {
       validatePayload = true;
@@ -122,13 +135,15 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
     }
 
     if (validatePayload) {
-      void *ptr = nullptr;
-      int numArgsWritten = std::sscanf(payload.c_str(), "%p", &ptr);
-      EXPECT_EQ(numArgsWritten, 1);
+      char *ptr = nullptr, *ptrEnd = nullptr;
+      int numArgsWritten = std::sscanf(payload.c_str(), "%p:%p", &ptr, &ptrEnd);
+      EXPECT_EQ(numArgsWritten, 2);
       // The pointer value itself doesn't matter, as long as it is one of the
       // segments in the heap. That would require exposing more GC APIs though,
       // so just check that it was parsed as non-null.
       EXPECT_NE(ptr, nullptr);
+      // There should be no JumboHeapSegment in this test.
+      EXPECT_EQ(ptrEnd, ptr + FixedSizeHeapSegment::kSize);
     }
   }
   EXPECT_EQ(1, numHeapSegmentsYG);
@@ -137,7 +152,9 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
 }
 #endif // HERMESVM_SANITIZE_HANDLES
 
-#ifdef HERMESVM_GC_HADES
+// When handlesan is ON, more collections are triggered and we might observe
+// different custom data in CrashManager, so disable it here.
+#if defined(HERMESVM_GC_HADES) && !defined(HERMESVM_SANITIZE_HANDLES)
 TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   // Turn on the "direct to OG" allocation feature.
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)
@@ -152,26 +169,128 @@ TEST(CrashManagerTest, PromotedYGHasCorrectName) {
       gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<SegmentCell> handles[3];
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   // Fill up YG at least once, to make sure promotion keeps the right name.
   for (size_t i = 0; i < 3; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[i] = SegmentCell::create(rt);
   }
 
-  const auto &contextualCustomData = testCrashMgr->contextualCustomData();
-  EXPECT_EQ(4, contextualCustomData.size());
+  const auto &customData = testCrashMgr->customData();
+  EXPECT_EQ(5, customData.size());
   // Make sure the value for YG is the actual YG segment.
-  const std::string ygAddress = contextualCustomData.at("XYZ:HeapSegment:YG");
-  void *ptr = nullptr;
-  int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p", &ptr);
-  EXPECT_EQ(numArgsWritten, 1);
+  const std::string ygAddress = customData.at("XYZ:HeapSegment:YG");
+  char *ptr = nullptr, *ptrEnd = nullptr;
+  int numArgsWritten = std::sscanf(ygAddress.c_str(), "%p:%p", &ptr, &ptrEnd);
+  EXPECT_EQ(numArgsWritten, 2);
   EXPECT_TRUE(rt.getHeap().inYoungGen(ptr));
+  // There should be no JumboHeapSegment in this test.
+  EXPECT_EQ(ptrEnd, ptr + FixedSizeHeapSegment::kSize);
 
   // Test if all the segments are numbered correctly.
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:1"), 1);
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:2"), 1);
-  EXPECT_EQ(contextualCustomData.count("XYZ:HeapSegment:3"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:1"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:2"), 1);
+  EXPECT_EQ(customData.count("XYZ:HeapSegment:3"), 1);
+}
+
+TEST(CrashManagerTest, RemoveCustomDataWhenFree) {
+  // Turn on the "direct to OG" allocation feature.
+  GCConfig gcConfig =
+      GCConfig::Builder(kTestGCConfigBuilder)
+          .withName("XYZ")
+          .withInitHeapSize(1 << HERMESVM_LOG_HEAP_SEGMENT_SIZE)
+          .withMaxHeapSize(1 << (HERMESVM_LOG_HEAP_SEGMENT_SIZE + 3))
+          .build();
+  auto testCrashMgr = std::make_shared<TestCrashManager>();
+  auto runtime = DummyRuntime::create(
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
+  DummyRuntime &rt = *runtime;
+  const auto &customData = testCrashMgr->customData();
+  {
+    struct : Locals {
+      PinnedValue<SegmentCell> h1;
+      PinnedValue<SegmentCell> h2;
+      PinnedValue<SegmentCell> h3;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
+
+    lv.h1 = SegmentCell::createLongLived(rt);
+    lv.h2 = SegmentCell::createLongLived(rt);
+    lv.h3 = SegmentCell::createLongLived(rt);
+    // YG segment (two entries) + 3 OG segments created above + GCKind entry.
+    EXPECT_EQ(6, customData.size());
+
+    lv.h3 = nullptr;
+    // The segment for h3 will be compacted.
+    rt.collect();
+    // Make sure we don't remove the wrong entry.
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:2"), 1);
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:3"), 1);
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:4"), 0);
+  }
+
+  {
+    struct : Locals {
+      PinnedValue<SegmentCell> h1;
+      PinnedValue<SegmentCell> h2;
+      PinnedValue<SegmentCell> h3;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
+    lv.h1 = SegmentCell::create(rt);
+    lv.h2 = SegmentCell::createLongLived(rt);
+    // Trigger a YG collection, which starts an OG collection and prepares
+    // compaction.
+    lv.h3 = SegmentCell::create(rt);
+    EXPECT_EQ(customData.count("XYZ:HeapSegment:COMPACT"), 1);
+  }
+
+  // Release the runtime.
+  runtime.reset();
+  // All custom data should be removed.
+  EXPECT_EQ(0, customData.size());
+}
+
+TEST(CrashManagerTest, JumboSegmentExtentTest) {
+  GCConfig gcConfig =
+      GCConfig::Builder(kTestGCConfigBuilder)
+          .withName("XYZ")
+          .withInitHeapSize(1 << HERMESVM_LOG_HEAP_SEGMENT_SIZE)
+          .withMaxHeapSize(1 << (HERMESVM_LOG_HEAP_SEGMENT_SIZE + 3))
+          .build();
+
+  auto testCrashMgr = std::make_shared<TestCrashManager>();
+  auto runtime = DummyRuntime::create(
+      gcConfig, DummyRuntime::defaultProvider(), testCrashMgr);
+  DummyRuntime &rt = *runtime;
+  auto &customData = testCrashMgr->customData();
+
+  struct : Locals {
+    PinnedValue<SegmentCell> h1;
+    PinnedValue<SegmentCell> h2;
+    PinnedValue<LargeDummyObject> h3;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
+
+  lv.h1 = SegmentCell::create(rt);
+  lv.h2 = SegmentCell::createLongLived(rt);
+  // This jumbo heap segment should occupy the space of 3 * kSegmentUnitSize.
+  lv.h3 = LargeDummyObject::create(
+      FixedSizeHeapSegment::storageSize() * 2, rt.getHeap());
+
+  // YG + one normal OG segment + one jumbo segment + GC kind entry.
+  EXPECT_EQ(customData.size(), 5);
+  EXPECT_EQ(1, customData.count("XYZ:HeapSegment:YG"));
+  EXPECT_EQ(1, customData.count("XYZ:HeapSegment:1"));
+  EXPECT_EQ(1, customData.count("XYZ:HeapSegment:2"));
+  auto jumboSegmentData = customData.find("XYZ:HeapSegment:3");
+  ASSERT_TRUE(jumboSegmentData != customData.end());
+
+  char *low = nullptr, *high = nullptr;
+  std::sscanf(jumboSegmentData->second.c_str(), "%p:%p", &low, &high);
+  EXPECT_EQ(high - low, 3 * AlignedHeapSegment::kSegmentUnitSize);
 }
 #endif
 

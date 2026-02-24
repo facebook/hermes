@@ -11,10 +11,12 @@
 'use strict';
 
 import type {
+  BlockStatement,
   ESNode,
   Expression,
   Identifier,
   JSXIdentifier,
+  Program,
   StringLiteral,
 } from 'hermes-estree';
 import type {ClassFieldInitializerScope} from './ClassFieldInitializerScope';
@@ -66,7 +68,7 @@ function isStrictScope(scope: Scope, isMethodDefinition: boolean): boolean {
     return false;
   }
 
-  const body = (() => {
+  const body = ((): false | Program | BlockStatement => {
     if (scope.type === ScopeType.Function) {
       if (scope.block.type === 'ArrowFunctionExpression') {
         if (scope.block.body.type !== 'BlockStatement') {
@@ -123,7 +125,7 @@ function registerScope(scopeManager: ScopeManager, scope: Scope): void {
 }
 
 function asScope(scope: ScopeBase<$FlowFixMe, $FlowFixMe, $FlowFixMe>): Scope {
-  // $FlowExpectedError[incompatible-return] - it's impossible to tell flow this is safe
+  // $FlowExpectedError[incompatible-type] - it's impossible to tell flow this is safe
   return scope;
 }
 
@@ -244,17 +246,24 @@ type VariableScope =
     this.type = type;
 
     this.__dynamic =
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Global || this.type === ScopeType.With;
 
     this.block = block;
 
     this.variableScope =
       this.type === ScopeType.ClassFieldInitializer ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.ClassStaticBlock ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Function ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Global ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.Module ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.DeclareModule ||
+      // $FlowFixMe[invalid-compare]
       this.type === ScopeType.DeclareNamespace
         ? // $FlowFixMe[incompatible-type] not possible to teach flow this is safe
           this

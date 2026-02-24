@@ -36,7 +36,7 @@ describe('babel-plugin-syntax-hermes-parser', () => {
 
       const a = 1;"
     `);
-    expect(parseSpy).toBeCalledTimes(1);
+    expect(parseSpy).toHaveBeenCalledTimes(1);
   });
 
   test('should parse files without @flow annotation', () => {
@@ -49,7 +49,7 @@ describe('babel-plugin-syntax-hermes-parser', () => {
 
       const a = 1;"
     `);
-    expect(parseSpy).toBeCalledTimes(1);
+    expect(parseSpy).toHaveBeenCalledTimes(1);
   });
 
   test('should skip TypeScript files', () => {
@@ -63,7 +63,7 @@ describe('babel-plugin-syntax-hermes-parser', () => {
 
       const a = 1;"
     `);
-    expect(parseSpy).toBeCalledTimes(0);
+    expect(parseSpy).toHaveBeenCalledTimes(0);
   });
 
   test('should parse component syntax when enabled', () => {
@@ -79,7 +79,7 @@ describe('babel-plugin-syntax-hermes-parser', () => {
 
       function Foo() {}"
     `);
-    expect(parseSpy).toBeCalledTimes(1);
+    expect(parseSpy).toHaveBeenCalledTimes(1);
   });
 
   describe("with parseLangTypes = 'flow'", () => {
@@ -93,7 +93,7 @@ describe('babel-plugin-syntax-hermes-parser', () => {
 
       const a = 1;"
     `);
-      expect(parseSpy).toBeCalledTimes(1);
+      expect(parseSpy).toHaveBeenCalledTimes(1);
     });
 
     test('should skip files without @flow annotation ', () => {
@@ -102,7 +102,7 @@ describe('babel-plugin-syntax-hermes-parser', () => {
         plugins: [[hermesParserPlugin, {parseLangTypes: 'flow'}]],
       });
       expect(output.code).toBe(code);
-      expect(parseSpy).toBeCalledTimes(0);
+      expect(parseSpy).toHaveBeenCalledTimes(0);
     });
   });
 });

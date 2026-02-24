@@ -11,6 +11,7 @@
 #include "dtoa/dtoa.h"
 #include "hermes/Support/Conversions.h"
 
+#include "hermes/Support/FastStrToDouble.h"
 #include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/StringSwitch.h"
 
@@ -113,32 +114,27 @@ void JSLexer::initializeReservedIdentifiers() {
 #include "hermes/Parser/TokenKinds.def"
 }
 
+char JSLexer::optimisticSkipWhitespace() {
+  while (char cur = *curCharPtr_) {
+    switch (cur) {
+      case ' ':
+      case '\t':
+      case '\v':
+      case '\f':
+        ++curCharPtr_;
+        continue;
+
+      default:
+        return cur;
+    }
+  }
+  return '\0';
+}
+
 bool JSLexer::isLetFollowedByDeclStart() {
   assert(
       token_.getKind() == TokenKind::identifier &&
       token_.getIdentifier()->str() == "let");
-
-  /// Skip over whitespace that doesn't need to modify any flags in the JSLexer.
-  /// Does not skip over newlines due to newLineBeforeCurrentToken_.
-  /// Does not skip over comments.
-  /// Used to avoid lookahead.
-  /// \return the character at curCharPtr_ at the end.
-  auto optimisticSkipWhitespace = [this]() -> char {
-    while (char cur = *curCharPtr_) {
-      switch (cur) {
-        case ' ':
-        case '\t':
-        case '\v':
-        case '\f':
-          ++curCharPtr_;
-          continue;
-
-        default:
-          return cur;
-      }
-    }
-    return '\0';
-  };
 
   const char curChar = optimisticSkipWhitespace();
 
@@ -177,6 +173,83 @@ bool JSLexer::isLetFollowedByDeclStart() {
       (*nextTokenKind == TokenKind::identifier ||
        *nextTokenKind == TokenKind::l_brace ||
        *nextTokenKind == TokenKind::l_square);
+}
+
+bool JSLexer::isUsingFollowedByIdentifier(const Keywords &kw) {
+  assert(
+      token_.getKind() == TokenKind::identifier &&
+      token_.getIdentifier() == kw.identUsing);
+  // Checking for:
+  // using [no LineTerminator here] Identifier
+  //      ^
+
+  const char *savedPtr = curCharPtr_;
+  char curChar = optimisticSkipWhitespace();
+  curCharPtr_ = savedPtr;
+
+  // Check for newline - if present, this is not a using declaration.
+  if (curChar == '\r' || curChar == '\n') {
+    return false;
+  }
+
+  // Fast path: next char starts an ASCII identifier.
+  if (isASCIIIdentifierStart(curChar)) {
+    return true;
+  }
+
+  // Slow path: use lookahead with RequireNoNewLine=true.
+  OptValue<TokenKind> nextTokenKind =
+      lookahead1</* RequireNoNewLine */ true>(llvh::None);
+  return nextTokenKind.hasValue() && *nextTokenKind == TokenKind::identifier;
+}
+
+bool JSLexer::isAwaitUsingFollowedByIdentifier(const Keywords &kw) {
+  assert(
+      token_.getKind() == TokenKind::identifier &&
+      token_.getIdentifier() == kw.identAwait);
+  // Checking for:
+  // await [no LineTerminator here] using [no LineTerminator here] Identifier
+  //      ^
+
+  const char *savedPtr = curCharPtr_;
+
+  // Skip whitespace after 'await' (no newlines allowed).
+  char curChar = optimisticSkipWhitespace();
+
+  // Check for newline.
+  if (curChar == '\r' || curChar == '\n') {
+    curCharPtr_ = savedPtr;
+    return false;
+  }
+
+  // Fast path: check if next chars are 'using' followed by whitespace
+  // and an ASCII identifier.
+  // Note that we can just check character by character because the buffer is
+  // null-terminated.
+  if (curChar == 'u' && curCharPtr_[1] == 's' && curCharPtr_[2] == 'i' &&
+      curCharPtr_[3] == 'n' && curCharPtr_[4] == 'g' &&
+      !isASCIIIdentifierContinue(curCharPtr_[5])) {
+    curCharPtr_ += 5;
+    curChar = optimisticSkipWhitespace();
+
+    curCharPtr_ = savedPtr;
+
+    // Check for newline between 'using' and identifier.
+    if (curChar == '\r' || curChar == '\n') {
+      return false;
+    }
+
+    if (isASCIIIdentifierStart(curChar)) {
+      return true;
+    }
+  }
+
+  // Slow path.
+  // There might be comments, newlines, UTF-8 identifiers, etc.
+  curCharPtr_ = savedPtr;
+  OptValue<TokenKind> optNext =
+      lookahead2</* RequireNoNewLine */ true>(kw.identUsing);
+  return optNext.hasValue() && *optNext == TokenKind::identifier;
 }
 
 const Token *JSLexer::advance(GrammarContext grammarContext) {
@@ -351,7 +424,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
       // ? ?? ?.
       case '?':
         token_.setStart(curCharPtr_);
-        if (curCharPtr_[1] == '.' && !isdigit(curCharPtr_[2])) {
+        if (curCharPtr_[1] == '.' && !isASCIIDigit(curCharPtr_[2])) {
           // OptionalChainingPunctuator ::
           // ?. [lookahead does not contain DecimalDigit]
           // This is done to prevent `x?.3:y` from being recognized
@@ -602,9 +675,8 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
             LLVM_UNLIKELY(grammarContext == GrammarContext::Type)) {
           scanIdentifierFastPathInContext(curCharPtr_, grammarContext);
         } else {
+          token_.setPunctuator(TokenKind::at);
           curCharPtr_ += 1;
-          errorRange(token_.getStartLoc(), "unrecognized character '@'");
-          continue;
         }
         break;
 
@@ -641,7 +713,7 @@ const Token *JSLexer::advance(GrammarContext grammarContext) {
         token_.setStart(curCharPtr_);
         uint32_t ch = decodeUTF8();
 
-        if (isUnicodeOnlyLetter(ch)) {
+        if (isUnicodeOnlyIDStart(ch)) {
           tmpStorage_.clear();
           appendUnicodeToStorage(ch);
           scanIdentifierPartsInContext(grammarContext);
@@ -755,7 +827,7 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
         if (ch == ';' && curCharPtr_ != numberStart) {
           curCharPtr_++;
           return codePoint;
-        } else if (isdigit(ch)) {
+        } else if (isASCIIDigit(ch)) {
           ch -= '0';
         } else {
           ch |= 32;
@@ -789,7 +861,7 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
         if (ch == ';' && curCharPtr_ != numberStart) {
           curCharPtr_++;
           return codePoint;
-        } else if (isdigit(ch)) {
+        } else if (isASCIIDigit(ch)) {
           // Check that this number is representable as a code point
           codePoint = codePoint * 10 + (ch - '0');
           if (codePoint > UNICODE_MAX_VALUE) {
@@ -822,7 +894,7 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
 
         curCharPtr_++;
         return it->second;
-      } else if (((ch | 32) >= 'a' && (ch | 32) <= 'z') || isdigit(ch)) {
+      } else if (((ch | 32) >= 'a' && (ch | 32) <= 'z') || isASCIIDigit(ch)) {
         ++curCharPtr_;
       } else {
         break;
@@ -837,11 +909,8 @@ llvh::Optional<uint32_t> JSLexer::consumeHTMLEntityOptional() {
 #endif
 
 bool JSLexer::isCurrentTokenADirective() {
-  // The current token must be a string literal without escapes.
-  if (token_.getKind() != TokenKind::string_literal ||
-      token_.getStringLiteralContainsEscapes()) {
+  if (token_.getKind() != TokenKind::string_literal)
     return false;
-  }
 
   const char *ptr = curCharPtr_;
 
@@ -1030,6 +1099,65 @@ OptValue<TokenKind> JSLexer::lookahead1(OptValue<TokenKind> expectedToken) {
 
 template OptValue<TokenKind> JSLexer::lookahead1<true>(OptValue<TokenKind>);
 template OptValue<TokenKind> JSLexer::lookahead1<false>(OptValue<TokenKind>);
+
+template <bool RequireNoNewLine>
+OptValue<TokenKind> JSLexer::lookahead2(UniqueString *expectedIdent) {
+  assert(
+      (token_.getKind() == TokenKind::identifier || token_.isResWord()) &&
+      "unsupported current token");
+  UniqueString *savedIdent = token_.getResWordOrIdentifier();
+  TokenKind savedKind = token_.getKind();
+  SMLoc start = token_.getStartLoc();
+  SMLoc end = token_.getEndLoc();
+  const char *cur = curCharPtr_;
+  SourceErrorManager::SaveAndSuppressMessages suppress(&sm_);
+
+  // Remove any comments that were stored during the lookahead.
+  auto savedCommentStorageSize = commentStorage_.size();
+  auto savedTokenStorageSize = storeTokens_ ? tokenStorage_.size() : 0;
+  auto restoreScope = llvh::make_scope_exit([&] {
+    if (storeComments_)
+      commentStorage_.erase(
+          commentStorage_.begin() + savedCommentStorageSize,
+          commentStorage_.end());
+    // Undo the storage for the tokens we advanced to.
+    if (LLVM_UNLIKELY(storeTokens_)) {
+      tokenStorage_.erase(
+          tokenStorage_.begin() + savedTokenStorageSize, tokenStorage_.end());
+    }
+    // Restore the original token.
+    token_.setStart(start.getPointer());
+    token_.setEnd(end.getPointer());
+    if (savedKind == TokenKind::identifier) {
+      token_.setIdentifier(savedIdent);
+    } else {
+      token_.setResWord(savedKind, savedIdent);
+    }
+    seek(SMLoc::getFromPointer(cur));
+  });
+
+  advance();
+  if (RequireNoNewLine && isNewLineBeforeCurrentToken()) {
+    return llvh::None;
+  }
+
+  // If the next token isn't the expected identifier, bail.
+  if (token_.getKind() != TokenKind::identifier ||
+      token_.getIdentifier() != expectedIdent) {
+    return llvh::None;
+  }
+
+  // Advance to the token we're looking ahead to.
+  advance();
+  if (RequireNoNewLine && isNewLineBeforeCurrentToken()) {
+    return llvh::None;
+  }
+
+  return token_.getKind();
+}
+
+template OptValue<TokenKind> JSLexer::lookahead2<true>(UniqueString *);
+template OptValue<TokenKind> JSLexer::lookahead2<false>(UniqueString *);
 
 uint32_t JSLexer::consumeUnicodeEscape() {
   assert(*curCharPtr_ == '\\');
@@ -1487,7 +1615,7 @@ void JSLexer::scanNumber(GrammarContext grammarContext) {
     }
   }
 
-  while (isdigit(*curCharPtr_) ||
+  while (isASCIIDigit(*curCharPtr_) ||
          (radix == 16 && (*curCharPtr_ | 32) >= 'a' &&
           (*curCharPtr_ | 32) <= 'f') ||
          (*curCharPtr_ == '_')) {
@@ -1516,7 +1644,7 @@ fraction:
   // We arrive here after we have consumed the decimal dot ".".
   //
   real = true;
-  while (isdigit(*curCharPtr_) || *curCharPtr_ == '_') {
+  while (isASCIIDigit(*curCharPtr_) || *curCharPtr_ == '_') {
     seenSeparator |= *curCharPtr_ == '_';
     ++curCharPtr_;
   }
@@ -1534,11 +1662,11 @@ exponent:
   real = true;
   if (*curCharPtr_ == '+' || *curCharPtr_ == '-')
     ++curCharPtr_;
-  if (isdigit(*curCharPtr_)) {
+  if (isASCIIDigit(*curCharPtr_)) {
     do {
       seenSeparator |= *curCharPtr_ == '_';
       ++curCharPtr_;
-    } while (isdigit(*curCharPtr_) || *curCharPtr_ == '_');
+    } while (isASCIIDigit(*curCharPtr_) || *curCharPtr_ == '_');
   } else {
     ok = false;
   }
@@ -1561,9 +1689,20 @@ end:
           parseIntWithRadixDigits</* AllowNumericSeparator */ true>(
               digits, radix, [](uint8_t) {})) {
         // This is a BigInt.
-        rawStorage_.clear();
-        rawStorage_.append(raw);
-        token_.setBigIntLiteral(getStringLiteral(rawStorage_));
+        // ESTree spec:
+        // bigint property is the string representation of the BigInt value. It
+        // must contain only decimal digits and not include numeric separators
+        // (_) or the suffix n.
+        // Filter out the characters we don't want.
+        // Drop the last character from `raw` because that's the 'n',
+        // and skip over all '_'.
+        tmpStorage_.clear();
+        for (char c : raw.drop_back(1)) {
+          if (c != '_')
+            tmpStorage_.push_back(c);
+        }
+        token_.setBigIntLiteral(
+            getStringLiteral(tmpStorage_), getStringLiteral(raw));
         return;
       }
 
@@ -1635,7 +1774,6 @@ end:
       }
     }
 
-    // We need a zero-terminated buffer for hermes_g_strtod().
     llvh::SmallString<32> buf;
     buf.reserve(curCharPtr_ - start + 1);
     if (LLVM_UNLIKELY(seenSeparator)) {
@@ -1650,13 +1788,13 @@ end:
           // properly because of the radix==16 check.
           char prev = *(it - 1);
           char next = *(it + 1);
-          if (!isdigit(prev) &&
+          if (!isASCIIDigit(prev) &&
               !(radix == 16 && 'a' <= (prev | 32) && (prev | 32) <= 'f')) {
             errorRange(
                 token_.getStartLoc(),
                 "numeric separator must come after a digit");
           } else if (
-              !isdigit(next) &&
+              !isASCIIDigit(next) &&
               !(radix == 16 && 'a' <= (next | 32) && (next | 32) <= 'f')) {
             errorRange(
                 token_.getStartLoc(),
@@ -1667,12 +1805,13 @@ end:
     } else {
       buf.append(start, curCharPtr_);
     }
-    buf.push_back(0);
-    char *endPtr;
-    val = ::hermes_g_strtod(buf.data(), &endPtr);
-    if (endPtr != &buf.back()) {
+    Char8StrToDoubleParseResult parseRes =
+        fastStrToDouble(llvh::ArrayRef<char>{buf});
+    if (LLVM_UNLIKELY(parseRes.ptr != buf.data() + buf.size())) {
       errorRange(token_.getStartLoc(), "invalid numeric literal");
       val = std::numeric_limits<double>::quiet_NaN();
+    } else {
+      val = parseRes.value;
     }
   } else {
     if (legacyOctal &&
@@ -2348,8 +2487,13 @@ exitLoop:
 }
 
 UniqueString *JSLexer::convertSurrogatesInString(llvh::StringRef str) {
+  llvh::SmallVector<char16_t, 8> ustr;
+  ustr.reserve(str.size());
+  char16_t *ustrEnd =
+      convertUTF8WithSurrogatesToUTF16(ustr.data(), str.begin(), str.end());
   std::string output;
-  convertUTF8WithSurrogatesToUTF8WithReplacements(output, str);
+  convertUTF16ToUTF8WithReplacements(
+      output, llvh::makeArrayRef(ustr.data(), ustrEnd));
   return strTab_.getString(output);
 }
 

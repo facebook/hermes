@@ -46,6 +46,21 @@ class FinalizableNativeFunction final : public NativeFunction {
       SymbolID name,
       unsigned paramCount);
 
+  /// Create an instance of FinalizableNativeFunction with a prototype.
+  /// \param functionPtr the host function
+  /// \param finalizePtr the finalizer function
+  /// \param name the name of the function
+  /// \param paramCount number of parameters (excluding `this`)
+  /// \param prototypeObjectHandle the value for .prototype
+  static CallResult<HermesValue> create(
+      Runtime &runtime,
+      void *context,
+      NativeFunctionPtr functionPtr,
+      FinalizeNativeFunctionPtr finalizePtr,
+      SymbolID name,
+      unsigned paramCount,
+      Handle<JSObject> prototypeObjectHandle);
+
   void *getContext() {
     return context_;
   }
@@ -57,13 +72,24 @@ class FinalizableNativeFunction final : public NativeFunction {
       void *context,
       NativeFunctionPtr functionPtr,
       FinalizeNativeFunctionPtr finalizePtr)
-      : NativeFunction(runtime, parent, clazz, context, functionPtr),
+      : NativeFunction(
+            runtime,
+            parent,
+            clazz,
+            Runtime::makeNullHandle<Environment>(),
+            context,
+            functionPtr),
         finalizePtr_(finalizePtr) {}
 
  protected:
   ~FinalizableNativeFunction() {
     finalizePtr_(context_);
   }
+
+  /// Call the native function with arguments already on the stack.
+  static CallResult<PseudoHandle<>> _callImpl(
+      Handle<Callable> selfHandle,
+      Runtime &runtime);
 
   static void _finalizeImpl(GCCell *cell, GC &) {
     auto *self = vmcast<FinalizableNativeFunction>(cell);
@@ -88,8 +114,9 @@ class HostObjectProxy : public DecoratedObject::Decoration {
 
   // This is called to query names of properties.  In case of failure it will
   // return \c ExecutionStatus::EXCEPTION, and set the runtime's thrown Value
-  // as appropriate.
-  virtual CallResult<Handle<JSArray>> getHostPropertyNames() = 0;
+  // as appropriate. The result is stored in the provided MutableHandle.
+  virtual ExecutionStatus getHostPropertyNames(
+      MutableHandle<JSArray> result) = 0;
 };
 
 class HostObject final : public DecoratedObject {
@@ -116,8 +143,8 @@ class HostObject final : public DecoratedObject {
     return getProxy()->set(name, value);
   }
 
-  CallResult<Handle<JSArray>> getHostPropertyNames() {
-    return getProxy()->getHostPropertyNames();
+  ExecutionStatus getHostPropertyNames(MutableHandle<JSArray> result) {
+    return getProxy()->getHostPropertyNames(result);
   }
 
   HostObjectProxy *getProxy() {

@@ -5,11 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -dump-ir -O -fno-inline -non-strict %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -target=HBC -dump-ir -O -fno-inline -non-strict %s | %FileCheckOrRegen --match-full-lines %s
 //
-// Ensure that Hermes-specific optimizations (parameter type inference) are performed in non-strict
-// mode. We need to disable inlining because it inlines foo() completely and we can't see the
-// inference.
+// Test the effect of optimizations functions in non-strict mode, since their callsites cannot be analyzed.
 
 function main()  {
   function foo(p1) {
@@ -20,29 +18,24 @@ function main()  {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [main]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2 : undefined, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "main" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "main": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %main(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "main": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function main#0#1()#2 : undefined
-// CHECK-NEXT:S{main#0#1()#2} = []
+// CHECK:function main(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo#1#2()#3 : string, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 2 : number
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:string) %0: object, %foo(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, 2: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#1#2(p1)#3 : string
-// CHECK-NEXT:S{foo#1#2()#3} = []
+// CHECK:function foo(p1: any): string [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#1#2()#3}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', "value" : string, 2 : number
-// CHECK-NEXT:  %2 = ReturnInst %1 : string
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %p1: any
+// CHECK-NEXT:  %1 = BinaryAddInst (:string) "value": string, %0: any
+// CHECK-NEXT:       ReturnInst %1: string
 // CHECK-NEXT:function_end

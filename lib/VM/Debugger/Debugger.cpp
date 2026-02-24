@@ -9,6 +9,7 @@
 
 #include "hermes/VM/Debugger/Debugger.h"
 
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Inst/InstDecode.h"
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Callable.h"
@@ -21,11 +22,8 @@
 #include "hermes/VM/RuntimeModule.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringView.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
+#ifdef HERMES_ENABLE_DEBUGGER
 
 namespace hermes {
 namespace vm {
@@ -36,7 +34,8 @@ namespace fhd = ::facebook::hermes::debugger;
 // These instructions won't recursively invoke the interpreter,
 // and we also can't easily determine where they will jump to.
 static inline bool shouldSingleStep(OpCode opCode) {
-  return opCode == OpCode::Throw || opCode == OpCode::SwitchImm;
+  return opCode == OpCode::Throw || opCode == OpCode::UIntSwitchImm ||
+      opCode == OpCode::StringSwitchImm;
 }
 
 static StringView getFunctionName(
@@ -54,97 +53,7 @@ static std::string getFileNameAsUTF8(
     RuntimeModule *runtimeModule,
     uint32_t filenameId) {
   const auto *debugInfo = runtimeModule->getBytecode()->getDebugInfo();
-  return debugInfo->getFilenameByID(filenameId);
-}
-
-/// \returns the IP in \p cb, which is the given \p frame (0 being the top most
-/// frame). This is either the current program IP, or the return IP following a
-/// call instruction.
-static unsigned
-getIPOffsetInBlock(Runtime &runtime, const CodeBlock *cb, uint32_t frame) {
-  if (frame == 0) {
-    // The current IP in cb is the current program IP if this is top most frame.
-    return cb->getOffsetOf(runtime.getCurrentIP());
-  }
-
-  // Otherwise, IP for frame N is stored in frame N - 1.
-  auto prevFrameInfo = runtime.stackFrameInfoByIndex(frame - 1);
-  return cb->getOffsetOf(prevFrameInfo->frame->getSavedIP());
-}
-
-/// Used when accessing the scope descriptor information for a particular
-/// bytecode.
-struct ScopeRegAndDescriptorChain {
-  /// Which register contains the Environment.
-  unsigned reg;
-
-  /// All scope descriptor chain.
-  llvh::SmallVector<hbc::DebugScopeDescriptor, 4> scopeDescs;
-};
-
-/// \return a pair with its first element being the number of register that
-/// holds the Environment at the runtime's current IP, and its second, the scope
-/// chain containing the block and all its lexical parents, including the global
-/// scope. \return none if the scope chain is unavailable.
-static llvh::Optional<ScopeRegAndDescriptorChain>
-scopeDescChainForBlock(Runtime &runtime, const CodeBlock *cb, uint32_t frame) {
-  OptValue<hbc::DebugSourceLocation> locationOpt =
-      cb->getSourceLocation(getIPOffsetInBlock(runtime, cb, frame));
-
-  if (!locationOpt) {
-    return llvh::None;
-  }
-
-  unsigned envReg = locationOpt->envReg;
-  if (envReg == hbc::DebugSourceLocation::NO_REG) {
-    // The debug information doesn't know where the environment is stored.
-    return llvh::None;
-  }
-
-  ScopeRegAndDescriptorChain ret;
-  ret.reg = envReg;
-  RuntimeModule *runtimeModule = cb->getRuntimeModule();
-  const hbc::BCProvider *bytecode = runtimeModule->getBytecode();
-  const hbc::DebugInfo *debugInfo = bytecode->getDebugInfo();
-
-  OptValue<unsigned> currentScopeDescOffset = locationOpt->scopeAddress;
-  while (currentScopeDescOffset) {
-    ret.scopeDescs.push_back(
-        debugInfo->getScopeDescriptor(*currentScopeDescOffset));
-
-    currentScopeDescOffset = ret.scopeDescs.back().parentOffset;
-  }
-
-  return ret;
-}
-
-/// \return the first (inner-most) scope descriptor in \p frame.
-static OptValue<uint32_t> getScopeDescIndexForFrame(
-    const llvh::SmallVectorImpl<hbc::DebugScopeDescriptor> &scopeDescs,
-    uint32_t frame) {
-  // newFrame is a flag indicating that the next scope descriptor belongs to a
-  // new frame in the call stack. The default value (true) represents the fact
-  // that the top most scope should always be included in the result.
-  bool newFrame = true;
-
-  // counts the number of new frames see in the scope descriptor chain.
-  uint32_t numSeenFrames = 0;
-  for (uint32_t i = 0, end = scopeDescs.size(); i < end; ++i) {
-    const hbc::DebugScopeDescriptor &currScopeDesc = scopeDescs[i];
-    if (newFrame) {
-      // currScopeDesc is the top-most scope descriptor in a new frame. The
-      // search is over if numSeenFrames equals frame.
-      if (numSeenFrames == frame) {
-        return i;
-      }
-      ++numSeenFrames;
-    }
-    // A new frame is found if currScopeDesc is not an inner scope (i.e., it is
-    // the first scope in its function).
-    newFrame = !currScopeDesc.flags.isInnerScope;
-  }
-
-  return llvh::None;
+  return debugInfo->getUTF8FilenameByID(filenameId);
 }
 
 void Debugger::triggerAsyncPause(AsyncPauseKind kind) {
@@ -242,6 +151,18 @@ ExecutionStatus Debugger::runDebugger(
       isDebugging_ = false;
       return ExecutionStatus::RETURNED;
     }
+
+    auto res = runUntilValidPauseLocation(state);
+    if (res == ExecutionStatus::EXCEPTION) {
+      return res.getStatus();
+    }
+    if (!*res) {
+      // If we shouldn't run the debugger loop (because we're about to return,
+      // call, e.g.)
+      asyncTriggerPauseReason_ = PauseReason::AsyncTriggerImplicit;
+      return ExecutionStatus::RETURNED;
+    }
+
     pauseReason = PauseReason::AsyncTriggerImplicit;
   } else if (runReason == RunReason::AsyncBreakExplicit) {
     // The user requested an async break, so we can clear stepping state
@@ -251,6 +172,18 @@ ExecutionStatus Debugger::runDebugger(
       clearTempBreakpoints();
       curStepMode_ = llvh::None;
     }
+
+    auto res = runUntilValidPauseLocation(state);
+    if (res == ExecutionStatus::EXCEPTION) {
+      return res.getStatus();
+    }
+    if (!*res) {
+      // If we shouldn't run the debugger loop (because we're about to return,
+      // call, e.g.)
+      asyncTriggerPauseReason_ = PauseReason::AsyncTriggerExplicit;
+      return ExecutionStatus::RETURNED;
+    }
+
     pauseReason = PauseReason::AsyncTriggerExplicit;
   } else {
     assert(runReason == RunReason::Opcode && "Unknown run reason");
@@ -293,56 +226,28 @@ ExecutionStatus Debugger::runDebugger(
           breakpointOpt->callStackDepths.count(
               runtime_.getCurrentFrameOffset())) {
         // This is in fact a temp breakpoint we want to stop on right now.
-        assert(curStepMode_ && "no step to finish");
+        assert(
+            (curStepMode_ || asyncTriggerPauseReason_) && "no step to finish");
         clearTempBreakpoints();
-        auto locationOpt = getLocationForState(state);
 
-        if (*curStepMode_ == StepMode::Into ||
-            *curStepMode_ == StepMode::Over) {
-          // If we're not stepping out, then we need to finish the step
-          // in progress.
-          // Otherwise, we just need to stop at the breakpoint site.
-          while (!locationOpt.hasValue() || locationOpt->statement == 0 ||
-                 sameStatementDifferentInstruction(state, preStepState_)) {
-            // Move to the next source location.
-            OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
-
-            if (curCode == OpCode::Ret) {
-              // We're stepping out now.
-              breakpointCaller(/*forRestorationBreakpoint*/ false);
-              pauseOnAllCodeBlocks_ = true;
-              curStepMode_ = StepMode::Out;
-              isDebugging_ = false;
-              return ExecutionStatus::RETURNED;
-            }
-
-            // These instructions won't recursively invoke the interpreter,
-            // and we also can't easily determine where they will jump to,
-            // so use single-step mode.
-            if (shouldSingleStep(curCode)) {
-              ExecutionStatus status = stepInstruction(state);
-              if (status == ExecutionStatus::EXCEPTION) {
-                breakpointExceptionHandler(state);
-                isDebugging_ = false;
-                return status;
-              }
-              locationOpt = getLocationForState(state);
-              continue;
-            }
-
-            // Set a breakpoint at the next instruction and continue.
-            breakAtPossibleNextInstructions(state);
-            if (*curStepMode_ == StepMode::Into) {
-              pauseOnAllCodeBlocks_ = true;
-            }
-            isDebugging_ = false;
-            return ExecutionStatus::RETURNED;
-          }
+        // We need to finish the step in progress. After receiving a STEP
+        // command in a previous debuggerLoop execution, we might still have a
+        // step to finish. So now that runDebugger is executing again, we need
+        // to finish the step to get to a known instruction with debug location
+        // in order to begin the debuggerLoop again.
+        auto res = runUntilValidPauseLocation(state);
+        if (res == ExecutionStatus::EXCEPTION || !*res) {
+          // If we hit an exception, or we shouldn't run the debugger loop
+          // (because we're about to return, call, e.g.)
+          return res.getStatus();
         }
+        // Continue to run the debugger loop.
 
         // Done stepping.
+        pauseReason =
+            curStepMode_ ? PauseReason::StepFinish : *asyncTriggerPauseReason_;
         curStepMode_ = llvh::None;
-        pauseReason = PauseReason::StepFinish;
+        asyncTriggerPauseReason_ = llvh::None;
       } else {
         // We don't want to stop on this Step breakpoint.
         isDebugging_ = false;
@@ -379,14 +284,21 @@ ExecutionStatus Debugger::runDebugger(
       // ignoring the debugger statement.
       if (breakpointOpt.hasValue()) {
         assert(
-            breakpointOpt->user.hasValue() &&
+            !breakpointOpt->userBreakpointIDs.empty() &&
             "must be stopped on a user breakpoint");
-        const auto &condition =
-            userBreakpoints_[*breakpointOpt->user].condition;
-        if (checkBreakpointCondition(condition)) {
-          pauseReason = PauseReason::Breakpoint;
-          breakpoint = *(breakpointOpt->user);
-        } else {
+        // Evaluate conditions in creation order, short-circuiting on first
+        // true.
+        bool shouldPause = false;
+        for (BreakpointID id : breakpointOpt->userBreakpointIDs) {
+          const auto &condition = userBreakpoints_[id].condition;
+          if (checkBreakpointCondition(condition)) {
+            pauseReason = PauseReason::Breakpoint;
+            breakpoint = id;
+            shouldPause = true;
+            break;
+          }
+        }
+        if (!shouldPause) {
           isDebugging_ = false;
           return ExecutionStatus::RETURNED;
         }
@@ -540,13 +452,58 @@ ExecutionStatus Debugger::debuggerLoop(
   }
 }
 
-void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
-  // This function should only be called on the main RuntimeModule and not on
-  // any "child" RuntimeModules it may create through lazy compilation.
-  assert(
-      module == module->getLazyRootModule() &&
-      "Expected to only run on lazy root module");
+CallResult<bool> Debugger::runUntilValidPauseLocation(InterpreterState &state) {
+  auto locationOpt = getLocationForState(state);
 
+  // Stop if we're already at a valid location.
+  // If we're in the middle of an actual step, continue if the location
+  // information doesn't indicate that we're at the next step-finish point.
+  // Conditioned on curStepMode_ because this may be called during AsyncTrigger
+  // trying to find a good place to stop.
+  while (!locationOpt.hasValue() ||
+         (curStepMode_ &&
+          (locationOpt->statement == 0 ||
+           sameStatementDifferentInstruction(state, preStepState_)))) {
+    // Move to the next source location.
+    OpCode curCode = getRealOpCode(state.codeBlock, state.offset);
+
+    if (curCode == OpCode::Ret) {
+      // We're stepping out now.
+      breakpointCaller(/*forRestorationBreakpoint*/ false);
+      pauseOnAllCodeBlocks_ = true;
+      curStepMode_ = StepMode::Out;
+      isDebugging_ = false;
+      return false;
+    }
+
+    // These instructions won't recursively invoke the interpreter,
+    // and we also can't easily determine where they will jump to,
+    // so use single-step mode.
+    if (shouldSingleStep(curCode)) {
+      ExecutionStatus status = stepInstruction(state);
+      if (status == ExecutionStatus::EXCEPTION) {
+        breakpointExceptionHandler(state);
+        isDebugging_ = false;
+        return ExecutionStatus::EXCEPTION;
+      }
+      locationOpt = getLocationForState(state);
+      continue;
+    }
+
+    // Set a breakpoint at the next instruction and continue.
+    breakAtPossibleNextInstructions(state);
+    if (curStepMode_ && *curStepMode_ == StepMode::Into) {
+      pauseOnAllCodeBlocks_ = true;
+    }
+    isDebugging_ = false;
+    return false;
+  }
+
+  assert(locationOpt.hasValue());
+  return true;
+}
+
+void Debugger::willExecuteModule(RuntimeModule *module, CodeBlock *codeBlock) {
   if (!getShouldPauseOnScriptLoad())
     return;
   // We want to pause on the first instruction of this module.
@@ -563,15 +520,15 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
   }
 
   llvh::DenseSet<CodeBlock *> unloadingBlocks;
-  for (auto *block : module->getFunctionMap()) {
+  for (const auto &block : module->getFunctionMap()) {
     if (block) {
-      unloadingBlocks.insert(block);
+      unloadingBlocks.insert(block.get());
     }
   }
 
   for (auto &bp : userBreakpoints_) {
     if (unloadingBlocks.count(bp.second.codeBlock)) {
-      unresolveBreakpointLocation(bp.second);
+      unresolveBreakpointLocation(bp.second, bp.first);
     }
   }
 
@@ -583,7 +540,8 @@ void Debugger::willUnloadModule(RuntimeModule *module) {
     auto it = breakpointLocations_.find(ptr);
     if (it != breakpointLocations_.end()) {
       auto &location = it->second;
-      assert(!location.user.hasValue() && "Unexpected user breakpoint");
+      assert(
+          location.userBreakpointIDs.empty() && "Unexpected user breakpoint");
       uninstallBreakpoint(bp.codeBlock, bp.offset, location.opCode);
       breakpointLocations_.erase(it);
     }
@@ -648,6 +606,24 @@ auto Debugger::getCallFrameInfo(const CodeBlock *codeBlock, uint32_t ipOffset)
   return frameInfo;
 }
 
+auto Debugger::getNativeCallFrameInfo(const SHUnit *unit, SHSrcLoc loc) const
+    -> CallFrameInfo {
+  CallFrameInfo frameInfo;
+  // If unit is nonnull then we have a valid location and can use the fields
+  // in loc. Otherwise, it is an unknown location.
+  if (unit) {
+    // TODO: Set the function name if we have it.
+    frameInfo.functionName = "(native)";
+    frameInfo.location.line = loc.line;
+    frameInfo.location.column = loc.column;
+    frameInfo.location.fileId = unit->script_id;
+  } else {
+    frameInfo.functionName = "(native)";
+  }
+
+  return frameInfo;
+}
+
 auto Debugger::getStackTrace() const -> StackTrace {
   // It's ok for the frame to be a native frame (i.e. null CodeBlock and null
   // IP), but there must be a frame.
@@ -663,8 +639,7 @@ auto Debugger::getStackTrace() const -> StackTrace {
   // Also note that each frame saves its caller's code block and IP (the
   // SavedCodeBlock and SavedIP). We obtain the current code location by getting
   // the Callee CodeBlock of the top frame.
-  const CodeBlock *codeBlock =
-      runtime_.getCurrentFrame()->getCalleeCodeBlock(runtime_);
+  const CodeBlock *codeBlock = runtime_.getCurrentFrame()->getCalleeCodeBlock();
   const inst::Inst *ip = runtime_.getCurrentIP();
   GCScopeMarkerRAII marker2{runtime_};
   for (auto cf : runtime_.getStackFrames()) {
@@ -701,7 +676,7 @@ auto Debugger::getStackTrace() const -> StackTrace {
       // frame's saved IP.
       StackFramePtr prev = cf->getPreviousFrame();
       assert(prev && "bound function calls must have a caller");
-      if (CodeBlock *parentCB = prev->getCalleeCodeBlock(runtime_)) {
+      if (CodeBlock *parentCB = prev->getCalleeCodeBlock()) {
         codeBlock = parentCB;
       }
     }
@@ -720,19 +695,9 @@ auto Debugger::createBreakpoint(const SourceLocation &loc) -> BreakpointID {
   breakpoint.enabled = true;
   bool resolved = resolveBreakpointLocation(breakpoint);
 
-  BreakpointID breakpointId;
+  BreakpointID breakpointId = nextBreakpointId_++;
   if (resolved) {
-    auto breakpointLoc =
-        getBreakpointLocation(breakpoint.codeBlock, breakpoint.offset);
-    if (breakpointLoc.hasValue() && breakpointLoc->user) {
-      // Don't set duplicate user breakpoint.
-      return kInvalidBreakpoint;
-    }
-
-    breakpointId = nextBreakpointId_++;
     setUserBreakpoint(breakpoint.codeBlock, breakpoint.offset, breakpointId);
-  } else {
-    breakpointId = nextBreakpointId_++;
   }
 
   userBreakpoints_[breakpointId] = std::move(breakpoint);
@@ -760,7 +725,7 @@ void Debugger::deleteBreakpoint(BreakpointID id) {
 
   auto &breakpoint = it->second;
   if (breakpoint.enabled && breakpoint.isResolved()) {
-    unsetUserBreakpoint(breakpoint);
+    unsetUserBreakpoint(breakpoint, id);
   }
   userBreakpoints_.erase(it);
 }
@@ -769,7 +734,7 @@ void Debugger::deleteAllBreakpoints() {
   for (auto &it : userBreakpoints_) {
     auto &breakpoint = it.second;
     if (breakpoint.enabled && breakpoint.isResolved()) {
-      unsetUserBreakpoint(breakpoint);
+      unsetUserBreakpoint(breakpoint, it.first);
     }
   }
   userBreakpoints_.clear();
@@ -791,7 +756,7 @@ void Debugger::setBreakpointEnabled(BreakpointID id, bool enable) {
   } else if (!enable && breakpoint.enabled) {
     breakpoint.enabled = false;
     if (breakpoint.isResolved()) {
-      unsetUserBreakpoint(breakpoint);
+      unsetUserBreakpoint(breakpoint, id);
     }
   }
 }
@@ -836,7 +801,7 @@ void Debugger::setUserBreakpoint(
     uint32_t offset,
     BreakpointID id) {
   BreakpointLocation &location = installBreakpoint(codeBlock, offset);
-  location.user = id;
+  location.userBreakpointIDs.insert(id);
 }
 
 void Debugger::doSetNonUserBreakpoint(
@@ -891,7 +856,15 @@ void Debugger::setOnLoadBreakpoint(CodeBlock *codeBlock, uint32_t offset) {
   assert(location.count() && "invalid count following set breakpoint");
 }
 
-void Debugger::unsetUserBreakpoint(const Breakpoint &breakpoint) {
+void Debugger::unsetUserBreakpoint(
+    const Breakpoint &breakpoint,
+    BreakpointID id) {
+#ifndef NDEBUG
+  auto it = userBreakpoints_.find(id);
+  assert(
+      it != userBreakpoints_.end() && &it->second == &breakpoint &&
+      "ID must map to the provided breakpoint");
+#endif
   CodeBlock *codeBlock = breakpoint.codeBlock;
   uint32_t offset = breakpoint.offset;
 
@@ -908,8 +881,10 @@ void Debugger::unsetUserBreakpoint(const Breakpoint &breakpoint) {
 
   auto &location = locIt->second;
 
-  assert(location.user && "no user breakpoints to unset");
-  location.user = llvh::None;
+  assert(!location.userBreakpointIDs.empty() && "no user breakpoints to unset");
+  bool removed = location.userBreakpointIDs.remove(id);
+  assert(removed && "breakpoint ID not found in user set");
+  (void)removed;
   if (location.count() == 0) {
     // No more reason to keep this location around.
     // Unpatch it from the opcode stream and delete it from the map.
@@ -956,10 +931,10 @@ void Debugger::breakpointCaller(bool forRestorationBreakpoint) {
     assert(
         frameIt != callFrames.end() &&
         "The frame that has saved ip cannot be the bottom frame");
-  } while (!frameIt->getCalleeCodeBlock(runtime_));
+  } while (!frameIt->getCalleeCodeBlock());
   // In the frame below, the 'calleeClosureORCB' register contains
   // the code block we need.
-  CodeBlock *codeBlock = frameIt->getCalleeCodeBlock(runtime_);
+  CodeBlock *codeBlock = frameIt->getCalleeCodeBlock();
   assert(codeBlock && "The code block must exist since we have ip");
   // Track the call stack depth that the breakpoint would be set on.
 
@@ -1135,18 +1110,47 @@ ExecutionStatus Debugger::processInstUnderDebuggerOpCode(
   return ExecutionStatus::RETURNED;
 }
 
-/// Starting from scope \p i, add and \p return the number of variables in the
-/// frame. The frame ends in the first scope that's not an inner scope.
-static unsigned getFrameSize(
-    const llvh::SmallVector<hbc::DebugScopeDescriptor, 4> &scopeDescs,
-    uint32_t i) {
-  unsigned frameSize = 0;
+/// \return the debug scoping info at \p frame. Returns None if there's not
+/// valid info that can be found.
+static OptValue<hbc::DebugScopingInfo>
+getScopingInfo(const Runtime &runtime, const CodeBlock *cb, uint32_t frame) {
+  const Inst *curIP;
+  if (frame == 0) {
+    // When frame is 0, the correct IP cannot be found anywhere in the
+    // JS call stack. It's instead saved in the Runtime.
+    curIP = runtime.getCurrentIP();
+  } else {
+    auto savedIPFrameInfoOpt = runtime.stackFrameInfoByIndex(frame - 1);
+    if (!savedIPFrameInfoOpt) {
+      return llvh::None;
+    }
+    curIP = savedIPFrameInfoOpt->frame->getSavedIP();
+  }
+  auto offset = cb->getOffsetOf(curIP);
+  auto srcLocOpt = cb->getSourceLocation(offset);
+  // This bytecode offset does not have valid scoping information.
+  if (!srcLocOpt || srcLocOpt->envIdx == 0) {
+    return llvh::None;
+  }
+  const hbc::DebugInfo *debugInfo =
+      cb->getRuntimeModule()->getBytecode()->getDebugInfo();
+  return debugInfo->getScopingInfoAt(srcLocOpt->envIdx);
+};
 
-  do {
-    frameSize += scopeDescs[i].names.size();
-  } while (scopeDescs[i++].flags.isInnerScope);
-
-  return frameSize;
+/// \return the Environment value described by \p scopingInfo.
+static Environment *getEnvironmentForScopingInfo(
+    Runtime &runtime,
+    const Runtime::StackFrameInfo &frameInfo,
+    const hbc::DebugScopingInfo &scopingInfo) {
+  if (scopingInfo.isRegister()) {
+    auto *frameRegs = &frameInfo.frame.getFirstLocalRef();
+    return vmcast<Environment>(frameRegs[scopingInfo.getRegister()]);
+  } else {
+    assert(scopingInfo.isSpilledSlot() && "expected spilled slot");
+    Environment *curEnv =
+        frameInfo.frame.getCalleeClosureUnsafe()->getEnvironment(runtime);
+    return vmcast<Environment>(curEnv->slot(scopingInfo.getSpilledSlot()));
+  }
 }
 
 auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
@@ -1160,27 +1164,21 @@ auto Debugger::getLexicalInfoInFrame(uint32_t frame) const -> LexicalInfo {
     result.variableCountsByScope_.push_back(0);
     return result;
   }
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
   if (!cb) {
     // Native functions have no saved code block.
     result.variableCountsByScope_.push_back(0);
     return result;
   }
-
-  llvh::Optional<ScopeRegAndDescriptorChain> envRegAndDescChain =
-      scopeDescChainForBlock(runtime_, cb, frame);
-  if (!envRegAndDescChain) {
-    // Binary was compiled without variable debug info.
+  auto scopingInfoOpt = getScopingInfo(runtime_, cb, frame);
+  if (!scopingInfoOpt) {
     result.variableCountsByScope_.push_back(0);
     return result;
   }
+  const auto &scopingInfo = *scopingInfoOpt;
 
-  const llvh::SmallVector<hbc::DebugScopeDescriptor, 4> &scopeDescs =
-      envRegAndDescChain->scopeDescs;
-  uint32_t currFrame = 0;
-  while (auto idx = getScopeDescIndexForFrame(scopeDescs, currFrame++)) {
-    result.variableCountsByScope_.push_back(getFrameSize(scopeDescs, *idx));
-  }
+  result.variableCountsByScope_ =
+      cb->getVariableCounts(scopingInfo.lexicalScopeIdxInParentFunction());
   return result;
 }
 
@@ -1204,70 +1202,36 @@ HermesValue Debugger::getVariableInFrame(
     // TODO: support them.
     return undefined;
   }
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
   assert(cb && "Unexpectedly null code block");
-  llvh::Optional<ScopeRegAndDescriptorChain> envRegAndDescChain =
-      scopeDescChainForBlock(runtime_, cb, frame);
-  if (!envRegAndDescChain) {
-    // Binary was compiled without variable debug info.
+
+  auto scopingInfoOpt = getScopingInfo(runtime_, cb, frame);
+  if (!scopingInfoOpt) {
+    return undefined;
+  }
+  const auto &scopingInfo = *scopingInfoOpt;
+
+  auto varInfo = cb->getVariableInfoAtDepth(
+      scopeDepth, variableIndex, scopingInfo.lexicalScopeIdxInParentFunction());
+
+  if (varInfo.envDepth == UINT32_MAX) {
     return undefined;
   }
 
-  const llvh::SmallVector<hbc::DebugScopeDescriptor, 4> &scopeDescs =
-      envRegAndDescChain->scopeDescs;
-
-  // Find the scope desc for the requested scope. This is the inner most scope
-  // in the given frame.
-  auto idx = getScopeDescIndexForFrame(scopeDescs, scopeDepth);
-  if (!idx) {
-    // Invalid scope frame.
-    return undefined;
-  }
-
-  // Find the first (top most) scope in the scope chain.
-  const PinnedHermesValue &envPHV =
-      (&frameInfo->frame.getFirstLocalRef())[envRegAndDescChain->reg];
-  assert(envPHV.isObject() && dyn_vmcast<Environment>(envPHV));
-
-  // Descend the environment chain to the desired depth, or stop at null. We may
-  // get a null environment if it has not been created.
-  MutableHandle<Environment> env(runtime_, vmcast<Environment>(envPHV));
-  unsigned varScopeIndex = *idx;
-  for (uint32_t i = varScopeIndex; env && i > 0; --i) {
-    env = env->getParentEnvironment(runtime_);
-  }
-
-  // Now find variableIndex in the current frame. variableIndex could be
-  // indexing into an outer scope, thus we need to find the real target scope
-  // within the current frame.
-  bool newFrame = false;
-  while (env && env->getSize() <= variableIndex) {
-    // If newFrame was set to true on the previous iteration, then this
-    // iteration is now accessing variables in an Environment that doesn't
-    // belong to the requested frame.
-    assert(!newFrame && "accessing variables from another frame");
-    (void)newFrame;
-
-    // Adjust the variableIndex to take into account the current environment.
-    variableIndex -= env->getSize();
-    env = env->getParentEnvironment(runtime_);
-
-    // Sanity-check: ensuring that this loop doesn't cross the frame boundary,
-    // i.e., the current scopeDescs[varScopeIndex] os an inner scope.
-    newFrame = !scopeDescs[varScopeIndex++].flags.isInnerScope;
-  }
-
-  if (!env) {
-    return undefined;
-  }
-  assert(varScopeIndex < scopeDescs.size() && "OOB scope desc access");
-
-  // If the caller needs the variable name, populate it.
   if (outName)
-    *outName = scopeDescs[varScopeIndex].names[variableIndex];
+    *outName = varInfo.name;
+
+  // Get the current environment.
+  Environment *env =
+      getEnvironmentForScopingInfo(runtime_, *frameInfo, scopingInfo);
+
+  // Now descend the environment chain to the desired depth, or stop at null.
+  // We may get a null environment if it has not been created.
+  for (uint32_t i = 0; env && i < varInfo.envDepth; i++)
+    env = env->getParentEnvironment(runtime_);
 
   // Now we can get the variable, or undefined if we have no environment.
-  return env->slot(variableIndex);
+  return env ? env->slot(varInfo.slotInEnv) : undefined;
 }
 
 HermesValue Debugger::getThisValue(uint32_t frame) const {
@@ -1309,8 +1273,18 @@ HermesValue Debugger::getExceptionAsEvalResult(
       const auto stackTraceCopy = *stackTracePtr;
       std::vector<CallFrameInfo> frames;
       frames.reserve(stackTraceCopy.size());
-      for (const StackTraceInfo &sti : stackTraceCopy)
-        frames.push_back(getCallFrameInfo(sti.codeBlock, sti.bytecodeOffset));
+      for (const auto &frame : stackTraceCopy) {
+        if (auto *bcFrame = std::get_if<BytecodeStackTraceInfo>(&frame)) {
+          frames.push_back(
+              getCallFrameInfo(bcFrame->codeBlock, bcFrame->bytecodeOffset));
+        } else if (
+            auto *nativeFrame = std::get_if<NativeStackTraceInfo>(&frame)) {
+          frames.push_back(
+              getNativeCallFrameInfo(nativeFrame->first, nativeFrame->second));
+        } else {
+          assert(false && "Unknown stack frame type");
+        }
+      }
       outMetadata->exceptionDetails.stackTrace_ = StackTrace{std::move(frames)};
     }
   }
@@ -1329,64 +1303,66 @@ HermesValue Debugger::evalInFrame(
   if (!frameInfo) {
     return HermesValue::encodeUndefinedValue();
   }
+  struct : public vm::Locals {
+    PinnedValue<> result;
+    PinnedValue<> savedThrownValue;
+    PinnedValue<Environment> environment;
+  } lv;
+  LocalsRAII lraii{runtime_, &lv};
 
-  MutableHandle<> resultHandle(runtime_);
+  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock();
+  // Trying to eval on a non-bytecode frame doesn't work.
+  if (!cb) {
+    return HermesValue::encodeUndefinedValue();
+  }
+
+  auto scopingInfoOpt = getScopingInfo(runtime_, cb, frame);
+  if (!scopingInfoOpt) {
+    return HermesValue::encodeUndefinedValue();
+  }
+  const auto &scopingInfo = *scopingInfoOpt;
+
+  lv.environment =
+      getEnvironmentForScopingInfo(runtime_, *frameInfo, scopingInfo);
+
   bool singleFunction = false;
 
-  const CodeBlock *cb = frameInfo->frame->getCalleeCodeBlock(runtime_);
-  llvh::Optional<ScopeRegAndDescriptorChain> envRegAndScopeChain =
-      scopeDescChainForBlock(runtime_, cb, frame);
+  // If we are debugging inside of a class constuctor, we make an arrow
+  // function for the eval expression. It would be invalid to call that arrow
+  // function with a non-undefined new.target.
+  Handle<> newTarget =
+      vmisa<JSClass>(*frameInfo->frame->getCalleeClosureHandleUnsafe())
+      ? Runtime::getUndefinedValue()
+      : Handle<>(&frameInfo->frame->getNewTargetRef());
 
   // Interpreting code requires that the `thrownValue_` is empty.
   // Save it temporarily so we can restore it after the evalInEnvironment.
-  Handle<> savedThrownValue = runtime_.makeHandle(runtime_.getThrownValue());
+  lv.savedThrownValue = runtime_.getThrownValue();
   runtime_.clearThrownValue();
 
-  CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
-
-  if (!envRegAndScopeChain) {
-    result = runtime_.raiseError("Can't evalInFrame: Environment not found");
-  } else {
-    // Use the Environment for the current instruction.
-    const PinnedHermesValue &env =
-        (&frameInfo->frame.getFirstLocalRef())[envRegAndScopeChain->reg];
-    assert(env.isObject() && dyn_vmcast<Environment>(env));
-
-    // Create the scope chain. The scope chain should represent each
-    // Scope/Environment's names (without any accessible name from other
-    // scopes).
-    ScopeChain chain;
-    for (const hbc::DebugScopeDescriptor &scopeDesc :
-         envRegAndScopeChain->scopeDescs) {
-      chain.scopes.emplace_back();
-      ScopeChainItem &scopeItem = chain.scopes.back();
-      for (const llvh::StringRef &name : scopeDesc.names) {
-        scopeItem.variables.push_back(name);
-      }
-    }
-
-    result = evalInEnvironment(
-        runtime_,
-        src,
-        Handle<Environment>::vmcast(runtime_, env),
-        chain,
-        Handle<>(&frameInfo->frame->getThisArgRef()),
-        false,
-        singleFunction);
-  }
+  CallResult<HermesValue> result = evalInEnvironment(
+      runtime_,
+      src,
+      false,
+      lv.environment,
+      cb,
+      Handle<>(&frameInfo->frame->getThisArgRef()),
+      newTarget,
+      singleFunction,
+      scopingInfo.lexicalScopeIdxInParentFunction());
 
   // Check if an exception was thrown.
   if (result.getStatus() == ExecutionStatus::EXCEPTION) {
-    resultHandle = getExceptionAsEvalResult(outMetadata);
+    lv.result = getExceptionAsEvalResult(outMetadata);
   } else {
     assert(
         !result->isEmpty() &&
         "eval result should not be empty unless exception was thrown");
-    resultHandle = *result;
+    lv.result = *result;
   }
 
-  runtime_.setThrownValue(savedThrownValue.getHermesValue());
-  return *resultHandle;
+  runtime_.setThrownValue(lv.savedThrownValue.getHermesValue());
+  return *lv.result;
 }
 
 llvh::Optional<std::pair<InterpreterState, uint32_t>> Debugger::findCatchTarget(
@@ -1417,7 +1393,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
 
   OptValue<hbc::DebugSearchResult> locationOpt{};
 
-#ifndef HERMESVM_LEAN
   // If we could have lazy code blocks, compile them before we try to resolve.
   // Eagerly compile code blocks that may contain the location.
   // This is done using a search in which we enumerate all CodeBlocks in the
@@ -1429,6 +1404,13 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   // skipping any CodeBlocks we've seen before.
   GCScope gcScope{runtime_};
   for (auto &runtimeModule : runtime_.getRuntimeModules()) {
+    const auto &request = breakpoint.requestedLocation;
+    if (request.fileId != kInvalidLocation &&
+        request.fileId != runtimeModule.getScriptID()) {
+      // User specified a file, so skip the other files.
+      continue;
+    }
+
     llvh::DenseSet<CodeBlock *> visited{};
     std::vector<CodeBlock *> toVisit{};
     for (uint32_t i = 0, e = runtimeModule.getNumCodeBlocks(); i < e; ++i) {
@@ -1437,12 +1419,32 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       toVisit.push_back(runtimeModule.getCodeBlockMayAllocate(i));
     }
 
+    // Up to 2 locations to check for lazy compilation.
+    SMLoc locStart;
+    OptValue<SMLoc> locEnd;
+    if (request.column == kInvalidLocation) {
+      SMRange range =
+          hbc::findSMRangeForLine(runtimeModule.getBytecode(), request.line);
+      locStart = range.Start;
+      locEnd = range.End;
+    } else {
+      locStart = hbc::findSMLocFromCoords(
+          runtimeModule.getBytecode(), request.line, request.column);
+      locEnd = llvh::None;
+    }
+    if (!locStart.isValid()) {
+      // Unable to resolve a location in this runtimeModule.
+      continue;
+    }
+
     while (!toVisit.empty()) {
       GCScopeMarkerRAII marker{gcScope};
       CodeBlock *codeBlock = toVisit.back();
       toVisit.pop_back();
 
-      if (!codeBlock || !codeBlock->isLazy()) {
+      assert(codeBlock && "CodeBlock should be initialized");
+
+      if (!codeBlock->isLazy()) {
         // When looking for a lazy code block to expand,
         // there's no point looking at the non-lazy ones.
         continue;
@@ -1454,17 +1456,12 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       }
 
       visited.insert(codeBlock);
-      auto start = codeBlock->getLazyFunctionStartLoc();
-      auto end = codeBlock->getLazyFunctionEndLoc();
 
-      const auto &request = breakpoint.requestedLocation;
-      if ((start.line < request.line && request.line < end.line) ||
-          ((start.line == request.line || request.line == end.line) &&
-           (start.col <= request.column && request.column <= end.col))) {
+      if (codeBlock->coordsInLazyFunction(locStart, locEnd)) {
         // The code block probably contains the breakpoint we want to set.
         // First, we compile it.
         if (LLVM_UNLIKELY(
-                codeBlock->lazyCompile(runtime_) ==
+                codeBlock->compileLazyFunction(runtime_) ==
                 ExecutionStatus::EXCEPTION)) {
           // TODO: how to better handle this?
           runtime_.clearThrownValue();
@@ -1485,7 +1482,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
       }
     }
   }
-#endif
 
   // Iterate backwards through runtime modules, under the assumption that
   // modules at the end of the list were added more recently, and are more
@@ -1498,10 +1494,6 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
     auto &runtimeModule = *it;
     GCScope gcScope{runtime_};
 
-    if (!runtimeModule.isInitialized()) {
-      // Uninitialized module.
-      continue;
-    }
     if (!runtimeModule.getBytecode()->getDebugInfo()) {
       // No debug info in this module, keep going.
       continue;
@@ -1580,10 +1572,17 @@ bool Debugger::resolveBreakpointLocation(Breakpoint &breakpoint) const {
   return false;
 }
 
-void Debugger::unresolveBreakpointLocation(Breakpoint &breakpoint) {
+void Debugger::unresolveBreakpointLocation(
+    Breakpoint &breakpoint,
+    BreakpointID id) {
+  auto it = userBreakpoints_.find(id);
+  assert(
+      it != userBreakpoints_.end() && &it->second == &breakpoint &&
+      "ID must map to the provided breakpoint");
+  (void)it;
   assert(breakpoint.isResolved() && "Breakpoint already unresolved");
   if (breakpoint.enabled) {
-    unsetUserBreakpoint(breakpoint);
+    unsetUserBreakpoint(breakpoint, id);
   }
   breakpoint.resolvedLocation.reset();
   breakpoint.codeBlock = nullptr;
@@ -1592,11 +1591,6 @@ void Debugger::unresolveBreakpointLocation(Breakpoint &breakpoint) {
 
 auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
   for (auto &runtimeModule : runtime_.getRuntimeModules()) {
-    if (!runtimeModule.isInitialized()) {
-      // Uninitialized module.
-      continue;
-    }
-
     auto *debugInfo = runtimeModule.getBytecode()->getDebugInfo();
     if (!debugInfo) {
       // No debug info in this module, keep going.
@@ -1605,7 +1599,7 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
 
     for (const auto &file : debugInfo->viewFiles()) {
       if (resolveScriptId(&runtimeModule, file.filenameId) == scriptId) {
-        if (file.sourceMappingUrlId == fhd::kInvalidBreakpoint) {
+        if (file.sourceMappingUrlId == hbc::kInvalidSourceMappingUrlId) {
           return "";
         }
         return getFileNameAsUTF8(
@@ -1620,15 +1614,6 @@ auto Debugger::getSourceMappingUrl(ScriptID scriptId) const -> String {
 auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
   std::vector<SourceLocation> loadedScripts;
   for (auto &runtimeModule : runtime_.getRuntimeModules()) {
-    if (!runtimeModule.isInitialized()) {
-      // Uninitialized module.
-      continue;
-    }
-    // Only include a RuntimeModule if it's the root module
-    if (runtimeModule.getLazyRootModule() != &runtimeModule) {
-      continue;
-    }
-
     auto *debugInfo = runtimeModule.getBytecode()->getDebugInfo();
     if (!debugInfo) {
       // No debug info in this module, keep going.
@@ -1642,7 +1627,7 @@ auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
     auto globalCodeBlock =
         runtimeModule.getCodeBlockMayAllocate(globalFunctionIndex);
     OptValue<hbc::DebugSourceLocation> debugSrcLoc =
-        globalCodeBlock->getSourceLocation();
+        globalCodeBlock->getSourceLocationForFunction();
     if (!debugSrcLoc) {
       continue;
     }
@@ -1651,7 +1636,7 @@ auto Debugger::getLoadedScripts() const -> std::vector<SourceLocation> {
     loc.fileId = resolveScriptId(&runtimeModule, debugSrcLoc->filenameId);
     loc.line = debugSrcLoc->line;
     loc.column = debugSrcLoc->column;
-    loc.fileName = debugInfo->getFilenameByID(debugSrcLoc->filenameId);
+    loc.fileName = debugInfo->getUTF8FilenameByID(debugSrcLoc->filenameId);
 
     loadedScripts.push_back(loc);
   }
@@ -1666,5 +1651,7 @@ auto Debugger::resolveScriptId(
 
 } // namespace vm
 } // namespace hermes
+
+#endif
 
 #endif // HERMES_ENABLE_DEBUGGER

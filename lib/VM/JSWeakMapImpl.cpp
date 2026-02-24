@@ -9,11 +9,7 @@
 
 #include "hermes/VM/Casting.h"
 #include "hermes/VM/Runtime-inline.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -28,20 +24,25 @@ void JSWeakMapImplBase::WeakMapImplBaseBuildMeta(
 
 /// Set a key/value, overwriting the previous value at that key,
 /// or add a new key/value if the key doesn't exist.
-ExecutionStatus JSWeakMapImplBase::setValue(
+void JSWeakMapImplBase::setValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key,
+    Handle<> key,
     Handle<> value) {
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   // No allocations should occur while a WeakRefKey is live.
   NoAllocScope noAlloc{runtime};
-  WeakRefLookupKey lookupKey{runtime, key};
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
+  WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT::iterator it = self->set_.find_as(lookupKey);
 
   if (it != self->set_.end()) {
     // Key already exists, update existing value.
     it->setMappedValue(*value);
-    return ExecutionStatus::RETURNED;
+    return;
   }
 
   // If we have exceeded the target size, check and clear unused entries before
@@ -49,12 +50,10 @@ ExecutionStatus JSWeakMapImplBase::setValue(
   if (self->set_.size() >= self->targetSize_) {
     self->clearFreeableEntries();
   }
-  WeakRefKey mapKey{runtime, key, *value, *self};
+  WeakRefKey mapKey{runtime, keyObjOrSym, hash, *value, *self};
   auto result = self->set_.insert(mapKey);
   (void)result;
   assert(result.second && "unable to add a new value to map");
-
-  return ExecutionStatus::RETURNED;
 }
 
 /// Delete a key/value in the map.
@@ -62,9 +61,14 @@ ExecutionStatus JSWeakMapImplBase::setValue(
 bool JSWeakMapImplBase::deleteValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key) {
+    Handle<> key) {
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   NoAllocScope noAlloc{runtime};
-  WeakRefLookupKey lookupKey{runtime, key};
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
+  WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT ::iterator it = self->set_.find_as(lookupKey);
   if (it == self->set_.end()) {
     return false;
@@ -78,9 +82,14 @@ bool JSWeakMapImplBase::deleteValue(
 bool JSWeakMapImplBase::hasValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key) {
+    Handle<> key) {
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   NoAllocScope noAlloc{runtime};
-  WeakRefLookupKey lookupKey{runtime, key};
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
+  WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT::iterator it = self->set_.find_as(lookupKey);
   return it != self->set_.end();
 }
@@ -88,9 +97,14 @@ bool JSWeakMapImplBase::hasValue(
 HermesValue JSWeakMapImplBase::getValue(
     Handle<JSWeakMapImplBase> self,
     Runtime &runtime,
-    Handle<JSObject> key) {
+    Handle<> key) {
+  assert(
+      canBeHeldWeakly(runtime, *key) &&
+      "key can only be Object or non-registered Symbol");
+  auto keyObjOrSym = SmallHermesValue::encodeHermesValue(*key, runtime);
   NoAllocScope noAlloc{runtime};
-  WeakRefLookupKey lookupKey{runtime, key};
+  uint32_t hash = runtime.gcStableHashHermesValue(*key);
+  WeakRefLookupKey lookupKey{keyObjOrSym, hash};
   DenseSetT::iterator it = self->set_.find_as(lookupKey);
   if (it == self->set_.end()) {
     return HermesValue::encodeUndefinedValue();
@@ -155,9 +169,7 @@ void JSWeakMapImplBase::_snapshotAddEdgesImpl(
     }
     auto indexName = std::to_string(edge_index++);
     snap.addNamedEdge(
-        HeapSnapshot::EdgeType::Weak,
-        indexName,
-        gc.getObjectID(key.getKeyNonNull(gc.getPointerBase(), gc)));
+        HeapSnapshot::EdgeType::Weak, indexName, key.getKeyObjectID(gc));
 
     auto mappedValue = key.getMappedValue(gc);
     if (auto id = gc.getSnapshotID(mappedValue)) {
@@ -210,6 +222,7 @@ const ObjectVTable JSWeakMapImpl<C>::vt{
     VTable(
         C,
         cellSize<JSWeakMapImpl>(),
+        /* allowLargeAlloc */ false,
         JSWeakMapImpl::_finalizeImpl,
         JSWeakMapImpl::_mallocSizeImpl,
         nullptr

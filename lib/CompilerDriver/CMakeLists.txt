@@ -7,18 +7,18 @@ set(source_files
   CompilerDriver.cpp
 )
 
-add_hermes_library(hermesCompilerDriver STATIC ${source_files}
-  LINK_LIBS
+add_hermes_library(hermesCompilerDriver ${source_files}
+  LINK_OBJLIBS
   hermesADT
   hermesAST
   hermesAST2JS
   hermesInst
+  hermesSHBackend
   hermesHBCBackend
   hermesBackend
   hermesOptimizer
   hermesFrontend
   hermesParser
-  hermesFlowParser
   hermesSupport
   zip
 )

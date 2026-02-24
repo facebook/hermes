@@ -11,7 +11,7 @@
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/StringView.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 
@@ -27,6 +27,9 @@ namespace {
 
 using IdentifierTableLargeHeapTest = LargeHeapRuntimeTestFixture;
 
+// When handlesan is ON, there could be symbols freed when creating new symbols
+// in the test, so we can't reliably assert about the create symbol index.
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
   IdentifierTable &table = runtime.getIdentifierTable();
 
@@ -87,6 +90,7 @@ TEST_F(IdentifierTableLargeHeapTest, LookupTest) {
       0u,
       (uint64_t)runtime.getStringPrimFromSymbolID(sb) % (uint64_t)HeapAlign);
 }
+#endif
 
 using IdentifierTableTest = RuntimeTestFixture;
 
@@ -113,9 +117,11 @@ TEST(IdentifierTableDeathTest, LazyExternalSymbolTooBig) {
     GCScope gcScope{runtime};
     auto &idTable = runtime.getIdentifierTable();
 
-    const auto extSize = (1 << 24) +
-        std::max(kTestGCConfig.getMaxHeapSize(),
-                 toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
+    const size_t extSize =
+        (1 << 24) +
+        std::max<uint64_t>(
+            kTestGCConfig.getMaxHeapSize(),
+            toRValue(StringPrimitive::EXTERNAL_STRING_THRESHOLD));
 
     // A string of this size is definitely too big to be allocated.
     ASSERT_FALSE(runtime.getHeap().canAllocExternalMemory(extSize));
@@ -123,7 +129,7 @@ TEST(IdentifierTableDeathTest, LazyExternalSymbolTooBig) {
     std::string buf(extSize, '\0');
     ASCIIRef ref{buf.data(), extSize};
 
-    SymbolID symbol = idTable.registerLazyIdentifier(ref);
+    SymbolID symbol = idTable.registerLazyIdentifier(runtime, ref);
     idTable.getStringPrim(runtime, symbol);
   };
   EXPECT_DEATH_IF_SUPPORTED(fn(), "Unhandled out of memory exception");
@@ -157,13 +163,15 @@ TEST_F(IdentifierTableTest, ConsecutiveIncreasingSymbolIDAlloc) {
     size_t idx = 0;
     for (auto &s : ascii) {
       auto r = createASCIIRef(s.c_str());
-      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+      EXPECT_EQ(
+          idTable.registerLazyIdentifier(runtime, r).unsafeGetIndex(), idx++)
           << "Uniqued ASCII First Round";
     }
 
     for (auto &s : utf16) {
       auto r = createUTF16Ref(s.c_str());
-      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+      EXPECT_EQ(
+          idTable.registerLazyIdentifier(runtime, r).unsafeGetIndex(), idx++)
           << "Uniqued UTF16 First Round";
     }
 
@@ -179,13 +187,15 @@ TEST_F(IdentifierTableTest, ConsecutiveIncreasingSymbolIDAlloc) {
     size_t idx = 0;
     for (auto &s : ascii) {
       auto r = createASCIIRef(s.c_str());
-      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+      EXPECT_EQ(
+          idTable.registerLazyIdentifier(runtime, r).unsafeGetIndex(), idx++)
           << "Uniqued ASCII Second Round";
     }
 
     for (auto &s : utf16) {
       auto r = createUTF16Ref(s.c_str());
-      EXPECT_EQ(idTable.registerLazyIdentifier(r).unsafeGetIndex(), idx++)
+      EXPECT_EQ(
+          idTable.registerLazyIdentifier(runtime, r).unsafeGetIndex(), idx++)
           << "Uniqued UTF16 Second Round";
     }
 

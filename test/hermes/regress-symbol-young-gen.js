@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // There was a bug that would cause a crash if Symbols were allocated in the
 // young gen because the IdentifierTable is only marked during full GCs.

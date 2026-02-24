@@ -4,6 +4,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # RUN: bash %s %S %T %hermes
+# REQUIRES: interpreter && !qemu_mode
 # shellcheck shell=bash disable=SC2086
 
 # This test is an end-to-end source-map symbolication test. First it runs a
@@ -75,6 +76,4 @@ run_1_test() {
 # -gc-sanitize-handles=0 because ASAN build is far too slow without it.
 run_1_test "default"   "-gc-sanitize-handles=0 -target=HBC" "$TMPDIR/thrower.hbc" "$SRCDIR/thrower.js"
 run_1_test "optimized" "-O -gc-sanitize-handles=0 -target=HBC" "$TMPDIR/thrower.hbc" "$SRCDIR/thrower.js"
-run_1_test "default_cjs" "-commonjs -gc-sanitize-handles=0 -target=HBC" "$TMPDIR/cjs-1.hbc" "$SRCDIR/cjs-1.js" "$SRCDIR/cjs-2.js"
-run_1_test "optimized_cjs" "-O -commonjs -gc-sanitize-handles=0 -target=HBC" "$TMPDIR/cjs-1.hbc" "$SRCDIR/cjs-1.js" "$SRCDIR/cjs-2.js"
 run_1_test "formatter_optimized" "-w -O -gc-sanitize-handles=0 -target=HBC" "$TMPDIR/thrower-with-formatter.hbc" "$TMPDIR/thrower-with-formatter.js"

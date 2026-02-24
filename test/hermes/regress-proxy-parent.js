@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // We previously set the parent of a proxy to Object.prototype, which is
 // incorrect and may be observed by the prototype traversal in the error stack

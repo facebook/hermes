@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: ! %hermes %s | %hermesc --dump-ir - %s 2>&1 | %FileCheck --match-whole-lines %s
+// RUN: ! %shermes -exec %s | %hermesc --dump-ir - %s 2>&1 | %FileCheck --match-whole-lines %s
 
 // CHECK: <stdin>:1:8: error: Too many nested expressions/statements/declarations
 

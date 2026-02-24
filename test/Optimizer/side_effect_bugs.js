@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s --match-full-lines
 
 // Make sure we are not removing the binary operator. "In" may throw.
 function test0() {
@@ -14,20 +14,16 @@ function test0() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [test0]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %test0#0#1()#2 : undefined, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "test0" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "test0": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %test0(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "test0": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test0#0#1()#2 : undefined
-// CHECK-NEXT:S{test0#0#1()#2} = []
+// CHECK:function test0(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test0#0#1()#2}
-// CHECK-NEXT:  %1 = BinaryOperatorInst 'in', "foo" : string, true : boolean
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = BinaryInInst (:boolean) "foo": string, true: boolean
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -10,7 +10,7 @@ function(add_hermes_unittest test_dirname)
   add_unittest(HermesUnitTests ${test_dirname} ${ARGN})
   # gtest uses LLVHSupport, so LLVHSupport needs to be listed after gtest on
   # the link line.
-  target_link_libraries(${test_dirname} LLVHSupport)
+#  target_link_libraries(${test_dirname} LLVHSupport)
   target_compile_definitions(${test_dirname} PUBLIC UNIT_TEST)
 endfunction()
 
@@ -33,7 +33,9 @@ add_subdirectory(Support)
 add_subdirectory(dtoa)
 add_subdirectory(PlatformIntl)
 add_subdirectory(PlatformUnicode)
+# API tests rely on the interpreter.
 add_subdirectory(API)
 add_subdirectory(ADT)
 add_subdirectory(Optimizer)
 add_subdirectory(NodeApi)
+add_subdirectory(NodeApiJsi)

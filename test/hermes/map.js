@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 
 print("Map prototype and constructor");
@@ -47,6 +48,23 @@ print(m.size, m.get(1), m.get(3));
 // CHECK-NEXT: 2 2 4
 try { new Map([null]); } catch (e) { print('caught', e.name) }
 // CHECK-NEXT: caught TypeError
+
+var m = new Map([[1,2], [3,4]]);
+var m2 = new Map(m);
+print(m2.size, m2.get(1), m2.get(3));
+// CHECK-NEXT: 2 2 4
+
+var m = new Map([[1,2], [3,4]]);
+m[Symbol.iterator] = function() {
+  return {
+    next() {
+      return { value: undefined, done: true };
+    }
+  }
+}
+var m = new Map(m);
+print(m.size);
+// CHECK-NEXT: 0
 
 var oldSet = Map.prototype.set;
 Map.prototype.set = 123;
@@ -363,3 +381,109 @@ testClear(o1, o2, o3);
 testIteration();
 testForEach();
 testZero();
+
+print('Map.groupBy');
+// CHECK-LABEL: Map.groupBy
+
+var result1 = Map.groupBy([1, 2, 3, 4, 5], (item) => item > 2);
+print(result1.get(false));
+print(result1.get(true));
+// CHECK-NEXT: 1,2
+// CHECK-NEXT: 3,4,5
+
+var result2 = Map.groupBy([1, 2, 3, 4, 5], (item) => item % 2 ? "odd" : "even");
+print(result2.get("odd"));
+print(result2.get("even"));
+// CHECK-NEXT: 1,3,5
+// CHECK-NEXT: 2,4
+
+// Test with mixed types
+var result3 = Map.groupBy([1, 'a', 2, 'b', 3, 'c'], (item) => typeof item);
+print(result3.get("number"));
+print(result3.get("string"));
+// CHECK-NEXT: 1,2,3
+// CHECK-NEXT: a,b,c
+
+const inventory = [
+  { name: "bananas", quantity: 0 },
+  { name: "goat", quantity: 0 },
+  { name: "cherries", quantity: 3 },
+  { name: "fish", quantity: 4 },
+];
+const result4 = Map.groupBy(inventory, (item) => item.quantity > 0 ? "inStock" : 'outOfStock');
+print(JSON.stringify(result4.get("inStock")));
+print(JSON.stringify(result4.get("outOfStock")));
+// CHECK-NEXT: [{"name":"cherries","quantity":3},{"name":"fish","quantity":4}]
+// CHECK-NEXT: [{"name":"bananas","quantity":0},{"name":"goat","quantity":0}]
+
+var objKey1 = {type: 'positive'};
+var objKey2 = {type: 'negative'};
+var result5 = Map.groupBy([1, -2, 3, -4], (item) => item > 0 ? objKey1 : objKey2);
+print(result5.get(objKey1));
+print(result5.get(objKey2));
+// CHECK-NEXT: 1,3
+// CHECK-NEXT: -2,-4
+
+try {
+  Map.groupBy({}, (item) => typeof item);
+} catch (e) {
+  print(e.name);
+}
+// CHECK-NEXT: TypeError
+
+const iterableWhichThrows = {
+  [Symbol.iterator]() {
+    throw "Error from iterable";
+  },
+};
+try {
+  Map.groupBy(iterableWhichThrows, (item) => typeof item);
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Error from iterable
+
+const iteratorWhichThrows = {
+  [Symbol.iterator]() {
+    return this;
+  },
+  next() {
+    throw "Error from iterator";
+  },
+};
+try {
+  Map.groupBy(iteratorWhichThrows, (item) => typeof item);
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Error from iterator
+
+const iteratorWhichCloses = {
+  [Symbol.iterator]() {
+    return this;
+  },
+  next() {
+    return {};
+  },
+  return() {
+    print("Closing iterator");
+  },
+};
+try {
+  Map.groupBy(iteratorWhichCloses, () => {
+    throw "Error from callback 1";
+  });
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Closing iterator
+// CHECK-NEXT: Error from callback 1
+
+try {
+  Map.groupBy([1, 2, 3], () => {
+    throw "Error from callback 2";
+  });
+} catch (e) {
+  print(e);
+}
+// CHECK-NEXT: Error from callback 2

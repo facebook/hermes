@@ -8,31 +8,31 @@
 #ifndef HERMES_BCGEN_HBC_BYTECODE_H
 #define HERMES_BCGEN_HBC_BYTECODE_H
 
-#include "llvh/ADT/ArrayRef.h"
-
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/DebugInfo.h"
 #include "hermes/BCGen/HBC/StringKind.h"
-#include "hermes/IRGen/IRGen.h"
+#include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
+#include "hermes/BCGen/ShapeTableEntry.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/BigIntSupport.h"
 #include "hermes/Support/StringTableEntry.h"
 #include "hermes/Utils/Options.h"
 
-#include <memory>
-#pragma GCC diagnostic push
+#include "llvh/ADT/ArrayRef.h"
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
+#include <memory>
+
 namespace hermes {
 class SourceMapGenerator;
 
-namespace hbc {
+namespace sema {
+class SemContext;
+}
 
-using llvh::ArrayRef;
+namespace hbc {
+class BCProviderFromSrc;
 
 // This class represents the in-memory representation of the bytecode function.
 class BytecodeFunction {
@@ -52,13 +52,33 @@ class BytecodeFunction {
   /// Offsets of this function in debug info.
   DebugOffsets debugOffsets_{};
 
+  /// Offset of the function info entry for this function, or 0 if none exists.
+  uint32_t infoOffset = 0;
+
   /// List of exception handlers.
   std::vector<HBCExceptionHandlerInfo> exceptions_;
 
-  /// Data to lazily compile this BytecodeFunction, if applicable.
-  std::unique_ptr<LazyCompilationData> lazyCompilationData_{};
+  /// Data to compile more code within this BytecodeFunction, if applicable.
+  /// If this function is NOT lazy, the IR function is used for compiling new
+  /// 'eval' code as a child.
+  /// This effectively owns the IR function, and will destroy it when it is
+  /// destroyed.
+  /// If the IR function is destroyed prior to the BytecodeFunction,
+  /// this must be reset to nullptr.
+  Function *functionIR_ = nullptr;
+
+  /// Error message if this was a lazy function which failed to compile.
+  /// Stored here to avoid rerunning compilation.
+  /// Compilation can fail even in bytecode generation, and running IRGen again
+  /// for new bytecode and/or having to deal with half-emitted child functions
+  /// would be inconvenient.
+  /// This is an early error, which would have been caught as a SyntaxError in
+  /// eager mode.
+  llvh::Optional<std::string> lazyCompileError_{};
 
  public:
+  std::vector<DebugScopingInfo> scopingInfo;
+
   /// Used during serialization. \p opcodes will be swapped after this call.
   explicit BytecodeFunction(
       std::vector<opcode_atom_t> &&opcodesAndJumpTables,
@@ -67,6 +87,9 @@ class BytecodeFunction {
       : opcodesAndJumpTables_(std::move(opcodesAndJumpTables)),
         header_(std::move(header)),
         exceptions_(std::move(exceptionHandlers)) {}
+
+  /// Destroys the IR Function if it's not null.
+  ~BytecodeFunction();
 
   const FunctionHeader &getHeader() const {
     return header_;
@@ -77,51 +100,45 @@ class BytecodeFunction {
   }
 
   void setOffset(uint32_t offset) {
-    header_.offset = offset;
+    header_.setOffset(offset);
   }
   uint32_t getOffset() const {
-    return header_.offset;
+    return header_.getOffset();
   }
 
   void setInfoOffset(uint32_t offset) {
-    header_.infoOffset = offset;
+    infoOffset = offset;
+  }
+  uint32_t getInfoOffset() const {
+    return infoOffset;
   }
 
   bool isStrictMode() const {
-    return header_.flags.strictMode;
+    return header_.flags.getStrictMode();
   }
 
   /// Return the entire opcode array for execution, including the inlined jump
   /// tables.
-  ArrayRef<opcode_atom_t> getOpcodeArray() const {
+  llvh::ArrayRef<opcode_atom_t> getOpcodeArray() const {
     return opcodesAndJumpTables_;
   }
 
   /// Return only the opcodes for serialisation. The jump tables need to be
   /// accessed separately so they can be correctly inlined.
-  ArrayRef<opcode_atom_t> getOpcodesOnly() const {
-    return {opcodesAndJumpTables_.data(), header_.bytecodeSizeInBytes};
+  llvh::ArrayRef<opcode_atom_t> getOpcodesOnly() const {
+    return {opcodesAndJumpTables_.data(), header_.getBytecodeSizeInBytes()};
   }
 
   /// Return the jump table portion of the opcode array. This is useful for the
   /// bytecode serialisation code when it is aligning the jump tables.
-  ArrayRef<uint32_t> getJumpTablesOnly() const;
-
-  bool hasExceptionHandlers() const {
-    return exceptions_.size() > 0;
-  }
+  llvh::ArrayRef<uint32_t> getJumpTablesOnly() const;
 
   uint32_t getExceptionHandlerCount() const {
     return exceptions_.size();
   }
 
-  ArrayRef<HBCExceptionHandlerInfo> getExceptionHandlers() const {
+  llvh::ArrayRef<HBCExceptionHandlerInfo> getExceptionHandlers() const {
     return exceptions_;
-  }
-
-  bool hasDebugInfo() const {
-    return debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET ||
-        debugOffsets_.scopeDescData != DebugOffsets::NO_OFFSET;
   }
 
   const DebugOffsets *getDebugOffsets() const {
@@ -130,27 +147,53 @@ class BytecodeFunction {
 
   void setDebugOffsets(DebugOffsets offsets) {
     debugOffsets_ = offsets;
-    header_.flags.hasDebugInfo = hasDebugInfo();
+    header_.flags.setHasDebugInfo(
+        debugOffsets_.sourceLocations != DebugOffsets::NO_OFFSET);
   }
 
-  LazyCompilationData *getLazyCompilationData() const {
-    return lazyCompilationData_.get();
+  void setFunctionIR(Function *functionIR) {
+    functionIR_ = functionIR;
   }
-
-  void setLazyCompilationData(std::unique_ptr<LazyCompilationData> data) {
-    lazyCompilationData_ = std::move(data);
+  Function *getFunctionIR() {
+    return functionIR_;
   }
 
   /// \return true if the function should be compiled lazily.
   bool isLazy() const {
-    return (bool)lazyCompilationData_;
+    return functionIR_ && functionIR_->isLazy();
+  }
+
+  /// Set the lazy compile error.
+  /// May only be called once.
+  void setLazyCompileError(std::string &&error) {
+    assert(
+        !lazyCompileError_.hasValue() && "Cannot set lazy compile error twice");
+    lazyCompileError_ = std::move(error);
+  }
+  /// \return the lazy compile error if this function has already failed to
+  /// compile once.
+  llvh::Optional<llvh::StringRef> getLazyCompileError() const {
+    if (lazyCompileError_) {
+      return llvh::StringRef{*lazyCompileError_};
+    }
+    return llvh::None;
   }
 };
 
-// This class represents the in-memory representation of the bytecode module.
+/// This class represents the in-memory representation of the bytecode module.
+/// It contains pointers into Context, so it must not outlive the associated
+/// Context.
 class BytecodeModule {
   using FunctionList = std::vector<std::unique_ptr<BytecodeFunction>>;
   using SerializableBufferTy = std::vector<unsigned char>;
+
+  /// Pointer to owning BCProviderFromSrc if this BytecodeModule is owned
+  /// by a BCProviderFromSrc, nullptr otherwise.
+  /// Allows updating the table references in the BCProvider when a new
+  /// lazy function is compiled.
+  /// If running from source, there's always a BCProviderFromSrc, so this will
+  /// always be set to non-null.
+  BCProviderFromSrc *bcProviderFromSrc_ = nullptr;
 
   /// A list of bytecode functions.
   FunctionList functions_{};
@@ -166,44 +209,35 @@ class BytecodeModule {
   /// marked as identifiers, in order.
   std::vector<uint32_t> identifierHashes_;
 
-  /// The global string table, a list of <offset, length> pair to represent
-  /// each string in the string storage.
-  std::vector<StringTableEntry> stringTable_;
+  /// The global string table to represent each string in the string storage.
+  StringLiteralTable stringTable_{};
 
-  /// The global string storage. A sequence of bytes.
-  std::vector<unsigned char> stringStorage_;
+  /// The global bigint table for assigning IDs to bigints.
+  bigint::UniquingBigIntTable bigIntTable_;
 
-  /// The bigint digit table. This is a list of pairs of (offset, lengths)
-  /// into bigIntStorage_.
-  std::vector<bigint::BigIntTableEntry> bigIntTable_;
-
-  /// The buffer with bigint literal bytes.
-  std::vector<uint8_t> bigIntStorage_;
-
-  /// The regexp bytecode buffer.
-  std::vector<unsigned char> regExpStorage_;
-
-  /// The regexp bytecode table. This is a list of pairs of (offset, lengths)
-  /// into regExpStorage_.
-  std::vector<RegExpTableEntry> regExpTable_;
+  /// The list of unique RegExp objects.
+  UniquingRegExpTable regExpTable_;
 
   /// A table containing debug info (if compiled with -g).
   DebugInfo debugInfo_;
 
-  /// Array Buffer table.
-  SerializableBufferTy arrayBuffer_;
+  /// Object/Array Literal Value Buffer table.
+  SerializableBufferTy literalValueBuffer_;
 
   /// Object Key Buffer table.
   SerializableBufferTy objKeyBuffer_;
 
-  /// Object Value Buffer table.
-  SerializableBufferTy objValBuffer_;
+  /// Object shape table.
+  std::vector<ShapeTableEntry> objShapeTable_;
 
   /// The segment ID corresponding to this BytecodeModule.
   /// This uniquely identifies this BytecodeModule within a set of modules
   /// which were compiled at the same time (and will correspond to a set of
   /// RuntimeModules in a Domain).
   uint32_t segmentID_;
+
+  /// The number of StringSwitchImm instructions in the BytecodeModule.
+  uint32_t numStringSwitchImm_{0};
 
   /// Table which indicates where to find the different CommonJS modules.
   /// Mapping from {filename ID => function index}.
@@ -225,51 +259,32 @@ class BytecodeModule {
   BytecodeOptions options_{};
 
  public:
-  /// Used during serialization.
-  explicit BytecodeModule(
-      uint32_t functionCount,
-      std::vector<StringKind::Entry> &&stringKinds,
-      std::vector<uint32_t> &&identifierHashes,
-      std::vector<StringTableEntry> &&stringTable,
-      std::vector<unsigned char> &&stringStorage,
-      std::vector<bigint::BigIntTableEntry> &&bigIntTable,
-      std::vector<uint8_t> &&bigIntStorage,
-      std::vector<RegExpTableEntry> &&regExpTable,
-      std::vector<unsigned char> &&regExpStorage,
-      uint32_t globalFunctionIndex,
-      std::vector<unsigned char> &&arrayBuffer,
-      std::vector<unsigned char> &&objKeyBuffer,
-      std::vector<unsigned char> &&objValBuffer,
-      uint32_t segmentID,
-      std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTable,
-      std::vector<std::pair<uint32_t, uint32_t>> &&cjsModuleTableStatic,
-      std::vector<std::pair<uint32_t, uint32_t>> &&functionSourceTable,
-      BytecodeOptions options)
-      : globalFunctionIndex_(globalFunctionIndex),
-        stringKinds_(std::move(stringKinds)),
-        identifierHashes_(std::move(identifierHashes)),
-        stringTable_(std::move(stringTable)),
-        stringStorage_(std::move(stringStorage)),
-        bigIntTable_(std::move(bigIntTable)),
-        bigIntStorage_(std::move(bigIntStorage)),
-        regExpStorage_(std::move(regExpStorage)),
-        regExpTable_(std::move(regExpTable)),
-        arrayBuffer_(std::move(arrayBuffer)),
-        objKeyBuffer_(std::move(objKeyBuffer)),
-        objValBuffer_(std::move(objValBuffer)),
-        segmentID_(segmentID),
-        cjsModuleTable_(std::move(cjsModuleTable)),
-        cjsModuleTableStatic_(std::move(cjsModuleTableStatic)),
-        functionSourceTable_(std::move(functionSourceTable)),
-        options_(options) {
-    functions_.resize(functionCount);
-  }
-
   /// Create a simple BytecodeModule with only functionCount set.
   explicit BytecodeModule(uint32_t functionCount) {
     functions_.resize(functionCount);
   }
 
+  /// Create an empty BytecodeModule with no functions.
+  explicit BytecodeModule() = default;
+
+  /// Destructor cleans up any Function IR that's been kept around for Eval
+  /// data.
+  ~BytecodeModule();
+
+  /// Set the bcProviderFromSrc_ field to an owning BCProviderFromSrc.
+  void setBCProviderFromSrc(BCProviderFromSrc *bcProviderFromSrc) {
+    bcProviderFromSrc_ = bcProviderFromSrc;
+  }
+  /// Set the bcProviderFromSrc_ field to an owning BCProviderFromSrc.
+  BCProviderFromSrc *getBCProviderFromSrc() {
+    return bcProviderFromSrc_;
+  }
+
+  /// Add an uncompiled BytecodeFunction to the table, to track that we will
+  /// eventually compile it.
+  void addFunction() {
+    functions_.push_back(nullptr);
+  }
   const FunctionList &getFunctionTable() const {
     return functions_;
   }
@@ -277,6 +292,9 @@ class BytecodeModule {
     return functions_.size();
   }
 
+  void setGlobalFunctionIndex(uint32_t global) {
+    globalFunctionIndex_ = global;
+  }
   uint32_t getGlobalFunctionIndex() const {
     return globalFunctionIndex_;
   }
@@ -288,6 +306,33 @@ class BytecodeModule {
 
   BytecodeFunction &getGlobalCode() {
     return getFunction(globalFunctionIndex_);
+  }
+
+  /// Create the stringKinds_ and identifierHashes_ fields based on the
+  /// stringTable.
+  void populateStringMetadataFromStringTable() {
+    assert(stringKinds_.empty() && "String table must be empty");
+    stringKinds_ = stringTable_.getStringKinds();
+    identifierHashes_ = stringTable_.getIdentifierHashes();
+  }
+
+  /// Create the stringKinds_ and identifierHashes_ fields based on the existing
+  /// stringTable_, only copying the data for strings added since the last
+  /// initialization of the fields.
+  /// Used for lazy compilation, where the BytecodeModule is appended to as we
+  /// compile new lazy functions.
+  /// \param startIdx the index of stringTable_'s strings_ from which to start
+  /// generating the kinds and hashes.
+  void appendStringMetadataFromStringTable(uint32_t startIdx) {
+    auto newKinds = stringTable_.getStringKinds(startIdx);
+    stringKinds_.insert(stringKinds_.end(), newKinds.begin(), newKinds.end());
+    auto newHashes = stringTable_.getIdentifierHashes(startIdx);
+    identifierHashes_.insert(
+        identifierHashes_.end(), newHashes.begin(), newHashes.end());
+  }
+
+  StringLiteralTable &getStringLiteralTableMut() {
+    return stringTable_;
   }
 
   llvh::ArrayRef<StringKind::Entry> getStringKinds() const {
@@ -303,49 +348,98 @@ class BytecodeModule {
     return identifierHashes_;
   }
 
+  unsigned getIdentifierID(llvh::StringRef str) const {
+    return stringTable_.getIdentifierID(str);
+  }
+  unsigned getStringID(llvh::StringRef str) const {
+    return stringTable_.getStringID(str);
+  }
+
   uint32_t getStringTableSize() const {
-    return stringTable_.size();
+    return stringTable_.count();
   }
 
   StringTableEntry::StringTableRefTy getStringTable() const {
-    return stringTable_;
+    return stringTable_.getStringTableView();
   }
 
   uint32_t getStringStorageSize() const {
-    return stringStorage_.size();
+    return stringTable_.getStringStorageView().size();
   }
 
   StringTableEntry::StringStorageRefTy getStringStorage() const {
-    return stringStorage_;
+    return stringTable_.getStringStorageView();
+  }
+
+  uint32_t addBigInt(bigint::ParsedBigInt &&bigint) {
+    return bigIntTable_.addBigInt(std::move(bigint));
   }
 
   llvh::ArrayRef<bigint::BigIntTableEntry> getBigIntTable() const {
-    return bigIntTable_;
+    return bigIntTable_.getEntryList();
   }
 
   llvh::ArrayRef<uint8_t> getBigIntStorage() const {
-    return bigIntStorage_;
+    return bigIntTable_.getDigitsBuffer();
+  }
+
+  /// Add a new RegExp to the module.
+  /// \param regExp the RegExp object to add, stored in the Context.
+  uint32_t addRegExp(CompiledRegExp *regExp) {
+    return regExpTable_.addRegExp(regExp);
   }
 
   llvh::ArrayRef<RegExpTableEntry> getRegExpTable() const {
-    return regExpTable_;
+    return regExpTable_.getEntryList();
   }
 
-  llvh::ArrayRef<unsigned char> getRegExpStorage() const {
-    return regExpStorage_;
+  llvh::ArrayRef<uint8_t> getRegExpStorage() const {
+    return regExpTable_.getBytecodeBuffer();
   }
 
+  void setSegmentID(uint32_t segmentID) {
+    segmentID_ = segmentID;
+  }
   uint32_t getSegmentID() const {
     return segmentID_;
+  }
+
+  /// Returns the total number of StringSwitchImm instructions in the module.
+  uint32_t getNumStringSwitchImmInstrs() const {
+    return numStringSwitchImm_;
+  }
+  /// Notes that a new StringSwitchImm instruction has been created.
+  /// Counts the number created, returning a unique 0-based index for
+  /// each such instruction.
+  uint32_t addStringSwitchImmInstr() {
+    return numStringSwitchImm_++;
+  }
+
+  void addCJSModule(uint32_t functionID, uint32_t nameID) {
+    assert(
+        cjsModuleTableStatic_.empty() &&
+        "Statically resolved modules must be in cjsModulesStatic_");
+    cjsModuleTable_.push_back({nameID, functionID});
   }
 
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTable() const {
     return cjsModuleTable_;
   }
 
+  void addCJSModuleStatic(uint32_t moduleID, uint32_t functionID) {
+    assert(
+        cjsModuleTableStatic_.empty() &&
+        "Statically resolved modules must be in cjsModulesStatic_");
+    cjsModuleTableStatic_.push_back({moduleID, functionID});
+  }
+
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getCJSModuleTableStatic()
       const {
     return cjsModuleTableStatic_;
+  }
+
+  void addFunctionSource(uint32_t functionID, uint32_t stringID) {
+    functionSourceTable_.push_back({functionID, stringID});
   }
 
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> getFunctionSourceTable() const {
@@ -356,16 +450,29 @@ class BytecodeModule {
     return debugInfo_;
   }
 
-  void setDebugInfo(DebugInfo info) {
-    debugInfo_ = std::move(info);
+  /// Initialize the literal buffers.
+  void initializeSerializedLiterals(
+      std::vector<unsigned char> &&literalValueBuffer,
+      std::vector<unsigned char> &&objKeyBuffer,
+      std::vector<ShapeTableEntry> &&objShapeTable) {
+    literalValueBuffer_ = std::move(literalValueBuffer);
+    objKeyBuffer_ = std::move(objKeyBuffer);
+    objShapeTable_ = std::move(objShapeTable);
   }
 
-  uint32_t getArrayBufferSize() const {
-    return arrayBuffer_.size();
-  }
-
-  ArrayRef<unsigned char> getArrayBuffer() const {
-    return arrayBuffer_;
+  /// Append to the buffers based on the buffers passed in.
+  void appendSerializedLiterals(
+      std::vector<unsigned char> &&literalValueBuffer,
+      std::vector<unsigned char> &&objKeyBuffer,
+      std::vector<ShapeTableEntry> &&objShapeTable) {
+    literalValueBuffer_.insert(
+        literalValueBuffer_.end(),
+        literalValueBuffer.begin(),
+        literalValueBuffer.end());
+    objKeyBuffer_.insert(
+        objKeyBuffer_.end(), objKeyBuffer.begin(), objKeyBuffer.end());
+    objShapeTable_.insert(
+        objShapeTable_.end(), objShapeTable.begin(), objShapeTable.end());
   }
 
   /// Returns the amount of bytes in the object key buffer
@@ -373,32 +480,46 @@ class BytecodeModule {
     return objKeyBuffer_.size();
   }
 
-  /// Returns the amount of bytes in the object value buffer
-  uint32_t getObjectValueBufferSize() const {
-    return objValBuffer_.size();
+  /// Returns the amount of bytes in the literal value buffer.
+  uint32_t getLiteralValueBufferSize() const {
+    return literalValueBuffer_.size();
   }
 
-  /// Returns a pair of arrays, where the first array represents the
-  /// object keys and the second array represents the object values.
-  std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>> getObjectBuffer()
-      const {
-    return {
-        ArrayRef<unsigned char>(objKeyBuffer_),
-        ArrayRef<unsigned char>(objValBuffer_)};
+  /// Returns the amount of bytes in the literal value buffer.
+  uint32_t getObjectShapeTableSize() const {
+    return objShapeTable_.size();
+  }
+
+  /// Returns a reference to the literal value buffer.
+  llvh::ArrayRef<unsigned char> getLiteralValueBuffer() const {
+    return literalValueBuffer_;
+  }
+
+  /// Returns a reference to the object keys.
+  llvh::ArrayRef<unsigned char> getObjectKeyBuffer() const {
+    return llvh::ArrayRef<unsigned char>(objKeyBuffer_);
+  }
+
+  /// Returns a reference to the object shapes.
+  llvh::ArrayRef<ShapeTableEntry> getObjectShapeTable() const {
+    return objShapeTable_;
   }
 
   /// Returns a pair, where the first element is the key buffer starting at
   /// keyIdx and the second element is the value buffer starting at valIdx
-  std::pair<ArrayRef<unsigned char>, ArrayRef<unsigned char>>
+  std::pair<llvh::ArrayRef<unsigned char>, llvh::ArrayRef<unsigned char>>
   getObjectBufferAtOffset(unsigned keyIdx, unsigned valIdx) const {
     return {
-        ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
-        ArrayRef<unsigned char>(objValBuffer_).slice(valIdx)};
+        llvh::ArrayRef<unsigned char>(objKeyBuffer_).slice(keyIdx),
+        llvh::ArrayRef<unsigned char>(literalValueBuffer_).slice(valIdx)};
   }
 
   /// Populate the source map \p sourceMap with the debug information.
   void populateSourceMap(SourceMapGenerator *sourceMap) const;
 
+  BytecodeOptions &getBytecodeOptionsMut() {
+    return options_;
+  }
   BytecodeOptions getBytecodeOptions() const {
     return options_;
   }
@@ -406,6 +527,5 @@ class BytecodeModule {
 
 } // namespace hbc
 } // namespace hermes
-#pragma GCC diagnostic pop
 
 #endif

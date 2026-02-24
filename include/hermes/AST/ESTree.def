@@ -48,9 +48,8 @@ ESTREE_NODE_8_ARGS(
 ESTREE_IGNORE_IF_EMPTY(FunctionExpression, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(FunctionExpression, returnType)
 ESTREE_IGNORE_IF_EMPTY(FunctionExpression, predicate)
-ESTREE_NODE_8_ARGS(
+ESTREE_NODE_7_ARGS(
     ArrowFunctionExpression, FunctionLike,
-    NodePtr, id, true,
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, typeParameters, true,
@@ -169,7 +168,17 @@ ESTREE_LAST(LoopStatement)
 
 ESTREE_NODE_0_ARGS(DebuggerStatement, Statement)
 ESTREE_NODE_0_ARGS(EmptyStatement, Statement)
-ESTREE_NODE_1_ARGS(BlockStatement, Statement, NodeList, body, false)
+// The Hermes Parser inserts implicit BlockStatements in certain cases,
+// notably around function declarations used directly as the body of 'if'.
+// This is done to ensure semantics are the same as if there were braces,
+// or in arrow function expression bodies.
+// The 'implicit' flag indicates whether the block statement was implicitly
+// added.
+ESTREE_NODE_2_ARGS(BlockStatement, Statement,
+    NodeList, body, false,
+    NodeBoolean, implicit, false
+)
+ESTREE_IGNORE_IF_EMPTY(BlockStatement, implicit)
 ESTREE_NODE_1_ARGS(StaticBlock, Statement, NodeList, body, false)
 ESTREE_NODE_1_ARGS(BreakStatement, Statement, NodePtr, label, true)
 ESTREE_NODE_1_ARGS(ContinueStatement, Statement, NodePtr, label, true)
@@ -288,7 +297,7 @@ ESTREE_NODE_1_ARGS(
 ESTREE_NODE_2_ARGS(
     ImportExpression, Base,
     NodePtr, source, false,
-    NodePtr, attributes, true)
+    NodePtr, options, true)
 
 ESTREE_FIRST(CallExpressionLike, Base)
 ESTREE_NODE_3_ARGS(
@@ -492,76 +501,88 @@ ESTREE_NODE_6_ARGS(
     NodeBoolean, method, false,
     NodeBoolean, shorthand, false)
 
+ESTREE_NODE_1_ARGS(
+    Decorator, Base,
+    NodePtr, expression, false)
+
+ESTREE_FIRST(ClassLike, Base)
 ESTREE_NODE_7_ARGS(
-    ClassDeclaration, Base,
+    ClassDeclaration, ClassLike,
     NodePtr, id, true,
     NodePtr, typeParameters, true,
     NodePtr, superClass, true,
-    NodePtr, superTypeParameters, true,
+    NodePtr, superTypeArguments, true,
     NodeList, implements, false,
     NodeList, decorators, false,
     NodePtr, body, false)
 ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, typeParameters)
-ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, superTypeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, superTypeArguments)
 ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, implements)
 ESTREE_IGNORE_IF_EMPTY(ClassDeclaration, decorators)
 
 ESTREE_NODE_7_ARGS(
-    ClassExpression, Base,
+    ClassExpression, ClassLike,
     NodePtr, id, true,
     NodePtr, typeParameters, true,
     NodePtr, superClass, true,
-    NodePtr, superTypeParameters, true,
+    NodePtr, superTypeArguments, true,
     NodeList, implements, false,
     NodeList, decorators, false,
     NodePtr, body, false)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, typeParameters)
-ESTREE_IGNORE_IF_EMPTY(ClassExpression, superTypeParameters)
+ESTREE_IGNORE_IF_EMPTY(ClassExpression, superTypeArguments)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, implements)
 ESTREE_IGNORE_IF_EMPTY(ClassExpression, decorators)
+ESTREE_LAST(ClassLike)
 
 ESTREE_NODE_1_ARGS(
     ClassBody, Base,
     NodeList, body, false)
 
-ESTREE_NODE_9_ARGS(
+ESTREE_NODE_10_ARGS(
     ClassProperty, Base,
     NodePtr, key, false,
     NodePtr, value, true,
     NodeBoolean, computed, false,
     NodeBoolean, static, false,
+    NodeList, decorators, false,
     NodeBoolean, declare, false,
     NodeBoolean, optional, false,
     NodePtr, variance, true,
     NodePtr, typeAnnotation, true,
     NodePtr, tsModifiers, true)
+ESTREE_IGNORE_IF_EMPTY(ClassProperty, decorators)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, variance)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, optional)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, typeAnnotation)
 ESTREE_IGNORE_IF_EMPTY(ClassProperty, tsModifiers)
 
-ESTREE_NODE_8_ARGS(
+ESTREE_NODE_9_ARGS(
     ClassPrivateProperty, Base,
     NodePtr, key, false,
     NodePtr, value, true,
     NodeBoolean, static, false,
+    NodeList, decorators, false,
     NodeBoolean, declare, false,
     NodeBoolean, optional, false,
     NodePtr, variance, true,
     NodePtr, typeAnnotation, true,
     NodePtr, tsModifiers, true)
+ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, decorators)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, variance)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, optional)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, typeAnnotation)
 ESTREE_IGNORE_IF_EMPTY(ClassPrivateProperty, tsModifiers)
 
-ESTREE_NODE_5_ARGS(
+ESTREE_NODE_6_ARGS(
     MethodDefinition, Base,
     NodePtr, key, false,
     NodePtr, value, false,
     NodeLabel, kind, false,
     NodeBoolean, computed, false,
-    NodeBoolean, static, false)
+    NodeBoolean, static, false,
+    NodeList, decorators, false)
+ESTREE_IGNORE_IF_EMPTY(MethodDefinition, decorators)
 
 // Imports ========================================
 
@@ -569,7 +590,7 @@ ESTREE_NODE_4_ARGS(
     ImportDeclaration, Base,
     NodeList, specifiers, false,
     NodePtr, source, false,
-    NodeList, assertions, true,
+    NodeList, attributes, true,
     NodeLabel, importKind, false)
 
 ESTREE_NODE_3_ARGS(
@@ -718,6 +739,11 @@ ESTREE_NODE_2_ARGS(
   NodePtr, base, false, // MatchIdentifierPattern | MatchMemberPattern
   NodePtr, property, false // Identifier | Literal
 )
+ESTREE_NODE_2_ARGS(
+  MatchInstancePattern, MatchPattern,
+  NodePtr, targetConstructor, false, // MatchIdentifierPattern | MatchMemberPattern
+  NodePtr, properties, false // MatchInstanceObjectPattern
+)
 
 ESTREE_LAST(MatchPattern)
 
@@ -727,6 +753,11 @@ ESTREE_NODE_3_ARGS(
   NodePtr, key, false, // Identifier | Literal
   NodePtr, pattern, false, // MatchPattern
   NodeBoolean, shorthand, false // boolean
+)
+ESTREE_NODE_2_ARGS(
+  MatchInstanceObjectPattern, Base,
+  NodeList, properties, false, // [ MatchObjectPatternProperty ]
+  NodePtr, rest, true // MatchRestPattern | null
 )
 ESTREE_NODE_1_ARGS(
   MatchRestPattern, Base,
@@ -846,6 +877,10 @@ ESTREE_NODE_0_ARGS(AnyTypeAnnotation, Flow)
 ESTREE_NODE_0_ARGS(MixedTypeAnnotation, Flow)
 ESTREE_NODE_0_ARGS(BigIntTypeAnnotation, Flow)
 ESTREE_NODE_0_ARGS(VoidTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(NeverTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(UnknownTypeAnnotation, Flow)
+ESTREE_NODE_0_ARGS(UndefinedTypeAnnotation, Flow)
+
 ESTREE_NODE_5_ARGS(
     FunctionTypeAnnotation, Flow,
     NodeList, params, false,
@@ -900,7 +935,7 @@ ESTREE_NODE_2_ARGS(
     NodePtr, id, false)
 ESTREE_NODE_2_ARGS(
     TupleTypeAnnotation, Flow,
-    NodeList, types, false,
+    NodeList, elementTypes, false,
     NodeBoolean, inexact, false)
 ESTREE_NODE_2_ARGS(
     TupleTypeSpreadElement, Flow,
@@ -959,11 +994,13 @@ ESTREE_NODE_3_ARGS(
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, right, false)
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_6_ARGS(
     OpaqueType, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, impltype, false,
+    NodePtr, lowerBound, true,
+    NodePtr, upperBound, true,
     NodePtr, supertype, true)
 
 ESTREE_NODE_4_ARGS(
@@ -978,11 +1015,13 @@ ESTREE_NODE_3_ARGS(
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, right, false)
-ESTREE_NODE_4_ARGS(
+ESTREE_NODE_6_ARGS(
     DeclareOpaqueType, Flow,
     NodePtr, id, false,
     NodePtr, typeParameters, true,
     NodePtr, impltype, true,
+    NodePtr, lowerBound, true,
+    NodePtr, upperBound, true,
     NodePtr, supertype, true)
 ESTREE_NODE_4_ARGS(
     DeclareInterface, Flow,
@@ -1194,6 +1233,39 @@ ESTREE_NODE_3_ARGS(
     NodePtr, name, false,
     NodePtr, local, false,
     NodeBoolean, shorthand, false)
+
+ESTREE_NODE_4_ARGS(
+    RecordDeclaration, Flow,
+    NodePtr, id, false,
+    NodePtr, typeParameters, true,
+    NodeList, implements, false,
+    NodePtr, body, false)
+ESTREE_NODE_2_ARGS(
+    RecordDeclarationImplements, Flow,
+    NodePtr, id, false,
+    NodePtr, typeArguments, true)
+ESTREE_NODE_1_ARGS(
+    RecordDeclarationBody, Flow,
+    NodeList, elements, false)
+ESTREE_NODE_3_ARGS(
+    RecordDeclarationProperty, Flow,
+    NodePtr, key, false,
+    NodePtr, typeAnnotation, false,
+    NodePtr, defaultValue, true)
+ESTREE_NODE_3_ARGS(
+    RecordDeclarationStaticProperty, Flow,
+    NodePtr, key, false,
+    NodePtr, typeAnnotation, false,
+    NodePtr, value, false)
+
+ESTREE_NODE_3_ARGS(
+    RecordExpression, Flow,
+    NodePtr, recordConstructor, false,
+    NodePtr, typeArguments, true,
+    NodePtr, properties, false)
+ESTREE_NODE_1_ARGS(
+   RecordExpressionProperties, Flow,
+   NodeList, properties, false)
 
 ESTREE_LAST(Flow)
 
@@ -1425,6 +1497,18 @@ ESTREE_NODE_3_ARGS(
 
 ESTREE_LAST(Cover)
 
+// ================================================
+// Static Hermes-specific nodes
+
+ESTREE_NODE_0_ARGS(SHBuiltin, Base)
+
+// ================================================
+// FlowChecker generated nodes
+
+ESTREE_NODE_1_ARGS(
+    ImplicitCheckedCast, Base,
+    NodePtr, argument, false)
+
 #endif
 
 #undef ESTREE_FIRST
@@ -1442,3 +1526,4 @@ ESTREE_LAST(Cover)
 #undef ESTREE_NODE_7_ARGS
 #undef ESTREE_NODE_8_ARGS
 #undef ESTREE_NODE_9_ARGS
+#undef ESTREE_NODE_10_ARGS

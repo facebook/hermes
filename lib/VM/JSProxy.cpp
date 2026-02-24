@@ -11,16 +11,11 @@
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
-#include "hermes/VM/OrderedHashMap.h"
+#include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/PropertyAccessor.h"
 
-#include "llvh/ADT/SmallSet.h"
+#include "llvh/ADT/SetVector.h"
 
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -101,8 +96,7 @@ PseudoHandle<JSProxy> JSProxy::create(Runtime &runtime) {
       // Proxy should not have an observable prototype, so we just set it to
       // null.
       Runtime::makeNullHandle<JSObject>(),
-      runtime.getHiddenClassForPrototype(
-          nullptr, JSObject::numOverlapSlots<JSProxy>()));
+      runtime.proxyClass);
 
   proxy->flags_.proxyObject = true;
 
@@ -492,20 +486,14 @@ CallResult<bool> JSProxy::getOwnProperty(
   if (trapRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   // 7. If trap is undefined, then
   if (!*trapRes) {
     //   a. Return ? target.[[GetOwnProperty]](P).
     return valueOrAccessor
         ? JSObject::getOwnComputedDescriptor(
-              target,
-              runtime,
-              nameValHandle,
-              tmpPropNameStorage,
-              desc,
-              *valueOrAccessor)
+              target, runtime, nameValHandle, desc, *valueOrAccessor)
         : JSObject::getOwnComputedDescriptor(
-              target, runtime, nameValHandle, tmpPropNameStorage, desc);
+              target, runtime, nameValHandle, desc);
   }
   // 8. Let trapResultObj be ? Call(trap, handler, « target, P »).
   // 9. If Type(trapResultObj) is neither Object nor Undefined, throw a
@@ -524,12 +512,7 @@ CallResult<bool> JSProxy::getOwnProperty(
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target,
-      runtime,
-      nameValHandle,
-      tmpPropNameStorage,
-      targetDesc,
-      targetValueOrAccessor);
+      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -690,14 +673,8 @@ CallResult<bool> JSProxy::defineOwnProperty(
   // 11. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetDescValueOrAccessor{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target,
-      runtime,
-      nameValHandle,
-      tmpPropNameStorage,
-      targetDesc,
-      targetDescValueOrAccessor);
+      target, runtime, nameValHandle, targetDesc, targetDescValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -774,9 +751,8 @@ CallResult<bool> hasWithTrap(
   if (!trapResult) {
     //   a. Let targetDesc be ? target.[[GetOwnProperty]](P).
     ComputedPropertyDescriptor targetDesc;
-    MutableHandle<SymbolID> tmpPropNameStorage{runtime};
     CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-        target, runtime, nameValHandle, tmpPropNameStorage, targetDesc);
+        target, runtime, nameValHandle, targetDesc);
     if (targetDescRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -892,14 +868,8 @@ CallResult<PseudoHandle<>> getWithTrap(
   // 9. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target,
-      runtime,
-      nameValHandle,
-      tmpPropNameStorage,
-      targetDesc,
-      targetValueOrAccessor);
+      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1033,14 +1003,8 @@ CallResult<bool> setWithTrap(
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target,
-      runtime,
-      nameValHandle,
-      tmpPropNameStorage,
-      targetDesc,
-      targetValueOrAccessor);
+      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1175,14 +1139,8 @@ CallResult<bool> deleteWithTrap(
   // 10. Let targetDesc be ? target.[[GetOwnProperty]](P).
   ComputedPropertyDescriptor targetDesc;
   MutableHandle<> targetValueOrAccessor{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   CallResult<bool> targetDescRes = JSObject::getOwnComputedDescriptor(
-      target,
-      runtime,
-      nameValHandle,
-      tmpPropNameStorage,
-      targetDesc,
-      targetValueOrAccessor);
+      target, runtime, nameValHandle, targetDesc, targetValueOrAccessor);
   if (targetDescRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1302,7 +1260,7 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> resultHandle = *resultRes;
+  Handle<JSArray> resultHandle = runtime.makeHandle(std::move(*resultRes));
   MutableHandle<> elemHandle{runtime};
   uint32_t resultIndex = 0;
   GCScopeMarkerRAII marker{runtime};
@@ -1325,7 +1283,11 @@ CallResult<PseudoHandle<JSArray>> filterKeys(
         continue;
       }
     }
-    JSArray::setElementAt(resultHandle, runtime, resultIndex++, elemHandle);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(
+                resultHandle, runtime, resultIndex++, elemHandle) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
   assert(
       (!okFlags.getIncludeNonEnumerable() || resultIndex == count) &&
@@ -1344,6 +1306,10 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
     Handle<JSObject> selfHandle,
     Runtime &runtime,
     OwnKeysFlags okFlags) {
+  struct : Locals {
+    PinnedValue<JSMap> map;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   GCScope gcScope{runtime};
   ScopedNativeDepthTracker depthTracker(runtime);
   if (LLVM_UNLIKELY(depthTracker.overflowed())) {
@@ -1407,19 +1373,19 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   if (LLVM_UNLIKELY(trapResultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> trapResult = *trapResultRes;
-  CallResult<PseudoHandle<OrderedHashMap>> dupcheckRes =
-      OrderedHashMap::create(runtime);
-  if (LLVM_UNLIKELY(dupcheckRes == ExecutionStatus::EXCEPTION)) {
+  Handle<JSArray> trapResult = runtime.makeHandle(std::move(*trapResultRes));
+  lv.map = JSMap::create(runtime, runtime.mapPrototype);
+  if (LLVM_UNLIKELY(
+          JSMap::initializeStorage(lv.map, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<OrderedHashMap> dupcheck = runtime.makeHandle(std::move(*dupcheckRes));
   if (LLVM_UNLIKELY(
           createListFromArrayLike_RJS(
               trapResultArray,
               runtime,
               count,
-              [&dupcheck, &trapResult](
+              [&lv, &trapResult](
                   Runtime &runtime, uint64_t index, PseudoHandle<> value) {
                 Handle<> valHandle = runtime.makeHandle(std::move(value));
                 if (!valHandle->isString() && !valHandle->isSymbol()) {
@@ -1427,34 +1393,33 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
                       valHandle,
                       " ownKeys trap result element is not String or Symbol");
                 }
-                if (OrderedHashMap::has(dupcheck, runtime, valHandle)) {
+                if (lv.map->has(runtime, *valHandle)) {
                   return runtime.raiseTypeErrorForValue(
                       "ownKeys trap result has duplicate ", valHandle, "");
                 }
                 if (LLVM_UNLIKELY(
-                        OrderedHashMap::insert(
-                            dupcheck, runtime, valHandle, valHandle) ==
+                        JSMap::insert(lv.map, runtime, valHandle, valHandle) ==
                         ExecutionStatus::EXCEPTION))
-                  return ExecutionStatus::RETURNED;
+                  return ExecutionStatus::EXCEPTION;
                 if (valHandle->isString()) {
                   Handle<StringPrimitive> str =
                       Handle<StringPrimitive>::vmcast(valHandle);
-                  OptValue<uint32_t> strAsIndexOpt = toArrayIndex(runtime, str);
-                  // Convert index keys
+                  OptValue<uint32_t> strAsIndexOpt = toArrayIndex(*str);
+                  // Convert index keys to numbers to match the format
+                  // returned by getOwnPropertyKeys.
                   if (strAsIndexOpt) {
                     HermesValue strAsIndexValue =
                         HermesValue::encodeTrustedNumberValue(
                             static_cast<double>(strAsIndexOpt.getValue()));
-                    JSArray::setElementAt(
+                    return JSArray::setElementAt(
                         trapResult,
                         runtime,
                         index,
                         runtime.makeHandle(strAsIndexValue));
-                    return ExecutionStatus::RETURNED;
                   }
                 }
-                JSArray::setElementAt(trapResult, runtime, index, valHandle);
-                return ExecutionStatus::RETURNED;
+                return JSArray::setElementAt(
+                    trapResult, runtime, index, valHandle);
               }) == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1480,8 +1445,7 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
   // 13. Assert: targetKeys contains no duplicate entries.
   // 14. Let targetConfigurableKeys be a new empty List.
   // 15. Let targetNonconfigurableKeys be a new empty List.
-  llvh::SmallSet<uint32_t, 8> nonConfigurable;
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  llvh::SmallSetVector<uint32_t, 8> nonConfigurable;
   // 16. For each element key of targetKeys, do
   GCScopeMarkerRAII marker{runtime};
   for (uint32_t i = 0, len = JSArray::getLength(*targetKeys, runtime); i < len;
@@ -1493,7 +1457,6 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
         target,
         runtime,
         runtime.makeHandle(targetKeys->at(runtime, i).unboxToHV(runtime)),
-        tmpPropNameStorage,
         desc);
     if (descRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;

@@ -4,9 +4,8 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesInstrumentation
-  STATIC
   PerfEventsLinux.cpp
   ProcessStats.cpp
   StatSamplingThread.cpp
-  LINK_LIBS hermesSupport
+  LINK_OBJLIBS hermesSupport
 )

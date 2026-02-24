@@ -30,51 +30,35 @@ const yargs = require('yargs');
  * It is supposed to run in CI environment, not on a developer's machine.
  *
  * For a dry run, this script will:
- *  * Version the commitly release of the form `0.x.y-commitly-<YY:mm:DDThh:MM>-<commit-sha>`
+ *  * Version the same as for the release
  *  * publish with a `--dry-run` flag
  *
- * For a commitly run, this script will:
- *  * Version the commitly release of the form `0.x.y-commitly-<YY:mm:DDThh:MM>-<commit-sha>`
- *  * Publish to npm using `nightly` tag
- *
  * For a release run, this script will:
- *  * Version the release by the tag version that triggered CI
+ *  * Version the release by the version specified in the CMakeLists.txt
  *  * Publish to npm
- *     * using `latest` tag if commit is currently tagged `latest`
- *     * or otherwise `{major}.{minor}-stable`
+ *     * without setting a tag
  */
 async function main() {
   const argv = yargs
     .option('t', {
       alias: 'builtType',
       describe: 'The type of build you want to perform.',
-      choices: ['dry-run', 'commitly', 'release'],
+      choices: ['dry-run', 'release'],
       default: 'dry-run',
-    })
-    .option('v', {
-      alias: 'hermesVersion',
-      describe: 'Use a specific version instead of generating one.',
-      type: 'string',
     })
     .strict().argv;
 
   // $FlowFixMe[prop-missing]
   const buildType = argv.builtType;
-  // $FlowFixMe[prop-missing]
-  const hermesVersion = argv.hermesVersion;
 
   if (!validateBuildType(buildType)) {
     throw new Error(`Unsupported build type: ${buildType}`);
   }
 
-  if (hermesVersion && buildType !== 'release') {
-    await updatePackageJsonVersion(hermesVersion);
-  }
-
   const result = await publishNpm(buildType);
 
   if (result && result.code) {
-    const version = hermesVersion ? hermesVersion : await getVersion(buildType);
+    const version = await getVersion(buildType);
     throw new Error(`Failed to publish hermes-compiler@${version}`);
   }
 }
@@ -85,11 +69,9 @@ async function publishNpm(
   let tagFlag = '';
 
   if (buildType === 'dry-run') {
-    tagFlag = ` --tag nightly --dry-run`;
-  } else if (buildType === 'commitly') {
-    tagFlag = ` --tag nightly`;
+    tagFlag = ` --dry-run`;
   } else if (buildType === 'release') {
-    tagFlag = ` --tag latest-v0`;
+    tagFlag = ` --tag latest-v1`;
   }
 
   const packagePath = path.join(REPO_ROOT, 'npm', 'hermes-compiler');

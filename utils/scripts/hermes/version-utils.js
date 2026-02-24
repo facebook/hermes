@@ -9,7 +9,7 @@
  */
 
 /*::
-export type BuildType = 'dry-run' | 'release' | 'commitly';
+export type BuildType = 'dry-run' | 'release';
 export type Version = {
     version: string,
     major: string,
@@ -29,31 +29,22 @@ function validateBuildType(
   buildType /*: string */,
   // $FlowFixMe[incompatible-type-guard]
 ) /*: buildType is BuildType */ {
-  const validBuildTypes = new Set(['release', 'dry-run', 'commitly']);
+  const validBuildTypes = new Set(['release', 'dry-run']);
 
   // $FlowFixMe[incompatible-return]
   // $FlowFixMe[incompatible-type-guard]
   return validBuildTypes.has(buildType);
 }
 
-// commitly version: 0.x.y-commitly-<YY:mm:DDThh:MM>-<commit-sha>
 async function getVersion(buildType /*: BuildType */) /*: Promise<string> */ {
-  const currentCommit = getCurrentCommit();
-  const shortCommit = currentCommit.slice(0, 9);
-
   const mainVersion = await getMainVersion();
 
-  if (['commitly', 'dry-run'].includes(buildType)) {
-    const date = new Date();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const dateIdentifier =
-      date.toISOString().slice(0, -14).replace(/[-]/g, '') +
-      `${hours}${minutes}`;
-    return `${mainVersion}-commitly-${dateIdentifier}-${shortCommit}`;
+  if (buildType === 'dry-run') {
+    const currentCommit = getCurrentCommit();
+    const shortCommit = currentCommit.slice(0, 9);
+    return `${mainVersion}-${shortCommit}`;
   }
 
-  // release
   return mainVersion;
 }
 
@@ -67,6 +58,7 @@ async function getMainVersion() /*: Promise<string> */ {
   const packageJson = JSON.parse(
     await fs.readFile(hermesCompilerPackageJsonPath, 'utf-8'),
   );
+
   return packageJson.version;
 }
 
@@ -81,28 +73,8 @@ async function updateGradlePropertiesFile(
   );
 }
 
-async function updatePackageJsonVersion(
-  version /*: string */,
-) /*: Promise<void> */ {
-  const hermesCompilerPackageJsonPath = path.join(
-    REPO_ROOT,
-    'npm',
-    'hermes-compiler',
-    'package.json',
-  );
-  const packageJson = JSON.parse(
-    await fs.readFile(hermesCompilerPackageJsonPath, 'utf-8'),
-  );
-  packageJson.version = version;
-  await fs.writeFile(
-    hermesCompilerPackageJsonPath,
-    JSON.stringify(packageJson, null, 2) + '\n',
-  );
-}
-
 module.exports = {
   validateBuildType,
   getVersion,
   updateGradlePropertiesFile,
-  updatePackageJsonVersion,
 };

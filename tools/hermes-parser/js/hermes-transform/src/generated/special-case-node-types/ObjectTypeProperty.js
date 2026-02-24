@@ -72,7 +72,7 @@ export function ObjectTypePropertySignature(props: {
     proto: props.proto ?? false,
     static: props.static ?? false,
     value: asDetachedNode(props.value),
-    // $FlowFixMe[incompatible-call]
+    // $FlowFixMe[incompatible-type]
     variance: asDetachedNode(props.variance),
   });
   setParentPointersInDirectChildren(node);

@@ -16,10 +16,16 @@ namespace hermes {
 namespace vm {
 
 /// Convert all arguments to string and print them followed by new line.
-CallResult<HermesValue> print(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> print(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope scope(runtime);
   auto marker = scope.createMarker();
   bool first = true;
+
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   for (Handle<> arg : args.handles()) {
     scope.flushToMarker(marker);
@@ -30,8 +36,8 @@ CallResult<HermesValue> print(void *, Runtime &runtime, NativeArgs args) {
     if (!first)
       llvh::outs() << " ";
     SmallU16String<32> tmp;
-    llvh::outs() << StringPrimitive::createStringView(
-                        runtime, runtime.makeHandle(std::move(*res)))
+    lv.strHandle.castAndSetHermesValue<StringPrimitive>(res->getHermesValue());
+    llvh::outs() << StringPrimitive::createStringView(runtime, lv.strHandle)
                         .getUTF16Ref(tmp);
     first = false;
   }

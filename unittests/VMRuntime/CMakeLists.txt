@@ -3,20 +3,18 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(HERMES_LINK_COMPONENTS LLVHSupport)
-
 # Some sources here have conflicting names for free functions, so disable unity
 # builds if they have been globally enabled.
 set(CMAKE_UNITY_BUILD OFF)
 
+# Some tests are disabled due to needing HBC to run in Static Hermes.
 set(RTSources
   AlignedHeapSegmentTest.cpp
-  AlignedStorageTest.cpp
   ArrayTest.cpp
   ArrayStorageTest.cpp
   Base64UtilTest.cpp
   BigIntPrimitiveTest.cpp
-  BytecodeProviderTest.cpp
+  BCProviderTest.cpp
   CallResultTest.cpp
   CardObjectBoundaryNCTest.cpp
   CardTableNCTest.cpp
@@ -31,7 +29,6 @@ set(RTSources
   GCBasicsTest.cpp
   GCFinalizerTest.cpp
   GCFragmentationTest.cpp
-  GCGuardPageNCTest.cpp
   GCInitTest.cpp
   GCLazySegmentNCTest.cpp
   GCObjectIterationTest.cpp
@@ -45,7 +42,6 @@ set(RTSources
   InstrumentationAPITest.cpp
   InternalPropertiesTest.cpp
   InterpreterTest.cpp
-  IRInstrumentationTest.cpp
   JSLibTest.cpp
   JSONParseTest.cpp
   JSTypedArrayTest.cpp
@@ -56,11 +52,12 @@ set(RTSources
   ObjectModelTest.cpp
   OperationsTest.cpp
   PredefinedStringsTest.cpp
+  PropertyCacheTest.cpp
+  ProfileGeneratorTest.cpp
   HandleTest.cpp
   RuntimeConfigTest.cpp
   SamplingHeapProfilerTest.cpp
   SamplingProfilerTest.cpp
-  SegmentedArrayTest.cpp
   SmallHermesValueTest.cpp
   SmallXStringTest.cpp
   StaticBuiltinsTest.cpp
@@ -70,7 +67,7 @@ set(RTSources
   StringPrimitiveTest.cpp
   StringViewTest.cpp
   SymbolIDTest.cpp
-  TestHelpers.cpp TestHelpers.h
+  VMRuntimeTestHelpers.cpp VMRuntimeTestHelpers.h
   TestHelpers1.cpp TestHelpers1.h
   TwineChar16Test.cpp
   WeakValueMapTest.cpp
@@ -79,18 +76,11 @@ set(RTSources
 
 add_hermes_unittest(HermesVMRuntimeTests
   ${RTSources}
+  LINK_LIBS hermesvm_a
   )
 
-target_link_libraries(HermesVMRuntimeTests
-  hermesVMRuntime
-  hermesAST
-  hermesHBCBackend
-  hermesBackend
-  hermesOptimizer
-  hermesFrontend
-  hermesParser
-  hermesSupport
-  dtoa
- )
-
 add_subdirectory(Instrumentation)
+
+if(HERMESVM_ALLOW_JIT)
+  add_subdirectory(JIT)
+endif()

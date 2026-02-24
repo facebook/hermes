@@ -7,44 +7,25 @@
 
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 
+#include "BytecodeGenerator.h"
+
 #include <cassert>
 
 namespace hermes {
 namespace hbc {
 
-namespace {
-
-/// Works out the String Kind for the string \p str depending on whether it
-/// \p isIdentifier or not.
-StringKind::Kind kind(llvh::StringRef str, bool isIdentifier) {
-  if (isIdentifier) {
-    return StringKind::Identifier;
-  } else {
-    return StringKind::String;
-  }
-}
-
-} // namespace
-
-StringLiteralIDMapping::StringLiteralIDMapping(
-    ConsecutiveStringStorage storage,
-    std::vector<bool> isIdentifier)
+StringLiteralTable::StringLiteralTable(
+    ConsecutiveStringStorage &&storage,
+    llvh::BitVector &&isIdentifier)
     : storage_(std::move(storage)), isIdentifier_(std::move(isIdentifier)) {
-  // Initialize our tables by decoding our storage's string table.
-  std::string utf8Storage;
-  uint32_t count = storage_.count();
-  assert(isIdentifier_.size() == count);
-  for (uint32_t i = 0; i < count; i++) {
-    uint32_t j = strings_.insert(storage_.getStringAtIndex(i, utf8Storage));
-    assert(i == j && "Duplicate string in storage.");
-    (void)j;
-  }
+  populateStringsTableFromStorage();
 }
 
-std::vector<uint32_t> StringLiteralTable::getIdentifierHashes() const {
+std::vector<uint32_t> StringLiteralTable::getIdentifierHashes(
+    uint32_t start) const {
   std::vector<uint32_t> result;
-  assert(strings_.size() == isIdentifier_.size());
-  for (size_t i = 0; i < strings_.size(); ++i) {
+  assert(stringsKeys_.size() == isIdentifier_.size());
+  for (size_t i = start; i < stringsKeys_.size(); ++i) {
     if (!isIdentifier_[i]) {
       continue;
     }
@@ -54,27 +35,151 @@ std::vector<uint32_t> StringLiteralTable::getIdentifierHashes() const {
   return result;
 }
 
-std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
+std::vector<StringKind::Entry> StringLiteralTable::getStringKinds(
+    uint32_t start) const {
   StringKind::Accumulator acc;
 
-  assert(strings_.size() == isIdentifier_.size());
-  for (size_t i = 0; i < strings_.size(); ++i) {
-    acc.push_back(kind(strings_[i], isIdentifier_[i]));
+  assert(stringsKeys_.size() == isIdentifier_.size());
+  for (size_t i = start, e = isIdentifier_.size(); i < e; ++i) {
+    acc.push_back(
+        isIdentifier_[i] ? StringKind::Identifier : StringKind::String);
   }
 
   return std::move(acc).entries();
 }
 
-/* static */ StringLiteralTable UniquingStringLiteralAccumulator::toTable(
-    UniquingStringLiteralAccumulator accum,
-    bool optimize) {
-  auto &storage = accum.storage_;
-  auto &strings = accum.strings_;
-  auto &isIdentifier = accum.isIdentifier_;
-  auto &numIdentifierRefs = accum.numIdentifierRefs_;
+void StringLiteralTable::addString(llvh::StringRef str, bool isIdentifier) {
+  assert(stringsKeys_.size() == isIdentifier_.size());
 
-  const size_t existingStrings = storage.count();
-  const size_t allStrings = strings.size();
+  // Need to do a lookup and then an insertion, because the StringRef will point
+  // to the string in stringsKeys_, like StringSetVector does.
+  auto it = strings_.find(str);
+  if (it == strings_.end()) {
+    // Brand new string, add it to the deque and update isIdentifier_.
+    size_t newIdx = stringsKeys_.size();
+    stringsKeys_.emplace_back(str);
+    strings_.try_emplace(stringsKeys_.back(), newIdx);
+    isIdentifier_.push_back(isIdentifier);
+    numIdentifierRefs_.push_back(1);
+    assert(isIdentifier_[newIdx] == isIdentifier && "isIdentifier_ wrong");
+    return;
+  }
+
+  // String already exists.
+
+  if (!isIdentifier) {
+    // If we're not inserting an identifier, no extra information to record.
+    // Done.
+    return;
+  }
+
+  uint32_t id = it->second;
+
+  // DO NOT update isIdentifier for existing strings.
+  // In lazy compilation, we must add a new string to the mapping and update the
+  // strings_ table to point to the new string, which will be used for any
+  // future references to it.
+  // In this way, the stringsKeys_ deque may contain the same string at most
+  // twice: once as a non-identifier and then later as an identifier.
+  const size_t existingStrings = storage_.count();
+
+  if (isIdentifier_[id]) {
+    // We're inserting an identifier, but the string is already marked as an
+    // identifier.
+    // Update the numIdentifierRefs_ and that's it.
+    if (id >= existingStrings) {
+      // We only track the frequency of new strings, so the ID needs to be
+      // translated.
+      if (numIdentifierRefs_[id - existingStrings] != UINT32_MAX) {
+        ++numIdentifierRefs_[id - existingStrings];
+      }
+    }
+    return;
+  }
+
+  // Now, we're inserting an identifier, and the string is not marked as an
+  // identifier already, so we need to either update the existing string or
+  // add a new string to stringsKeys if it's not already committed to the
+  // ConsecutiveStringStorage.
+  assert(isIdentifier && !isIdentifier_[id] && "already checked above");
+
+  if (id < existingStrings) {
+    // The string is already in the storage, so we can't update
+    // the storage.  Instead, we need to add a new string to the
+    // stringsKeys_ deque and update strings_.
+    size_t newIdx = stringsKeys_.size();
+    stringsKeys_.emplace_back(str);
+    isIdentifier_.push_back(true);
+    numIdentifierRefs_.push_back(1);
+    // Update strings_ to have the new ID.
+    it->second = newIdx;
+  } else {
+    // The string is not in the storage, so we can just update isIdentifier_.
+    isIdentifier_[id] = true;
+    if (id >= existingStrings) {
+      // We only track the frequency of new strings, so the ID needs to be
+      // translated.
+      if (numIdentifierRefs_[id - existingStrings] != UINT32_MAX) {
+        ++numIdentifierRefs_[id - existingStrings];
+      }
+    }
+  }
+}
+
+void StringLiteralTable::tryEnsure8BitStringIDForIdentifier(
+    llvh::StringRef str) {
+  auto it = strings_.find(str);
+  if (it == strings_.end())
+    return;
+  uint32_t id = it->second;
+  if (!isIdentifier_[id])
+    return;
+  const size_t existingStrings = storage_.count();
+
+  // We only track the frequency of new strings, so the ID needs to be
+  // translated.
+  // If this is NOT a new string (i.e. id < existingStrings), then we can't
+  // do anything about its ID so we dont do anything.
+  if (id >= existingStrings)
+    numIdentifierRefs_[id - existingStrings] = UINT32_MAX;
+}
+
+void StringLiteralTable::populateStorage(
+    StringLiteralTable::OptimizeMode mode) {
+  switch (mode) {
+    case OptimizeMode::None:
+      return appendStorageLazy();
+    case OptimizeMode::Reorder:
+      return sortAndRemap(false);
+    case OptimizeMode::ReorderAndPack:
+      return sortAndRemap(true);
+  }
+}
+
+void StringLiteralTable::populateStringsTableFromStorage() {
+  // Initialize our tables by decoding our storage's string table.
+  stringsKeys_.clear();
+  strings_.clear();
+  std::string utf8Storage;
+  uint32_t count = storage_.count();
+  assert(isIdentifier_.size() == count);
+  for (uint32_t i = 0; i < count; i++) {
+    stringsKeys_.emplace_back(storage_.getUTF8StringAtIndex(i, utf8Storage));
+    auto [it, inserted] =
+        strings_.try_emplace(stringsKeys_.back(), stringsKeys_.size() - 1);
+    if (!inserted) {
+      // Overwrite the existing entry with the new index.
+      // A duplicate entry in stringsKeys_ will only happen if the same string
+      // is used first as a non-identifier and then as an identifier.
+      assert(isIdentifier_[stringsKeys_.size() - 1] && "must be an identifier");
+      it->second = stringsKeys_.size() - 1;
+    }
+  }
+}
+
+void StringLiteralTable::sortAndRemap(bool optimize) {
+  const size_t existingStrings = storage_.count();
+  const size_t allStrings = stringsKeys_.size();
   const size_t newStrings = allStrings - existingStrings;
   assert(
       existingStrings <= allStrings &&
@@ -126,21 +231,24 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   indices.reserve(newStrings);
 
   for (size_t i = existingStrings; i < allStrings; ++i) {
-    indices.emplace_back(i, strings[i], kind(strings[i], isIdentifier[i]));
+    indices.emplace_back(
+        i,
+        stringsKeys_[i],
+        isIdentifier_[i] ? StringKind::Identifier : StringKind::String);
   }
 
   // Sort indices of new strings by frequency of identifier references.
   std::stable_sort(
       indices.begin(),
       indices.end(),
-      [&numIdentifierRefs, existingStrings](const Index &a, const Index &b) {
+      [this, existingStrings](const Index &a, const Index &b) {
         assert(a.origIndex >= existingStrings && "Sorting an old string");
         assert(b.origIndex >= existingStrings && "Sorting an old string");
 
         auto ai = a.origIndex - existingStrings;
         auto bi = b.origIndex - existingStrings;
 
-        return numIdentifierRefs[ai] > numIdentifierRefs[bi];
+        return numIdentifierRefs_[ai] > numIdentifierRefs_[bi];
       });
 
   // Take an index into all the strings, and map it to an index in to a data
@@ -174,11 +282,11 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
       refs.emplace_back(i.str);
     }
     ConsecutiveStringStorage newStrings(refs, optimize);
-    storage.appendStorage(std::move(newStrings));
+    storage_.appendStorage(std::move(newStrings));
   }
 
   // Associate the new string table index entries with their string kind.
-  auto tableView = storage.getStringTableView();
+  auto tableView = storage_.getStringTableView();
   std::vector<KindedEntry> kindedEntries;
   kindedEntries.reserve(newStrings);
 
@@ -199,10 +307,28 @@ std::vector<StringKind::Entry> StringLiteralTable::getStringKinds() const {
   // Write the re-ordered entries back into the table.
   for (size_t i = 0, j = existingStrings; i < newStrings; ++i, ++j) {
     tableView[j] = kindedEntries[i].entry;
-    isIdentifier[j] = kindedEntries[i].kind != StringKind::String;
+    isIdentifier_[j] = kindedEntries[i].kind != StringKind::String;
   }
 
-  return StringLiteralTable{std::move(storage), std::move(isIdentifier)};
+  // Update the strings table with the new storage.
+  populateStringsTableFromStorage();
+  numIdentifierRefs_.clear();
+}
+
+void StringLiteralTable::appendStorageLazy() {
+  const size_t existingStrings = storage_.count();
+  const size_t allStrings = stringsKeys_.size();
+
+  {
+    std::vector<llvh::StringRef> refs;
+    refs.reserve(allStrings - existingStrings);
+    for (size_t i = existingStrings; i < allStrings; ++i) {
+      refs.emplace_back(stringsKeys_[i]);
+    }
+    storage_.appendStorage(ConsecutiveStringStorage{refs});
+  }
+
+  assert(storage_.count() == stringsKeys_.size() && "must map all strings");
 }
 
 } // namespace hbc

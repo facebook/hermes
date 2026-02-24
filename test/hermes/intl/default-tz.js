@@ -8,6 +8,7 @@
 
 // RUN: TZ=US/Pacific %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // REQUIRES: intl
+// UNSUPPORTED: windows
 
 print("test default timezone");
 // CHECK-LABEL: test default timezone

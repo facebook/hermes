@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: (! %hermesc -dump-ast %s 2>&1 ) | %FileCheck --match-full-lines %s
 
 // Ensure we can handle too many nested expressions.
 (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((

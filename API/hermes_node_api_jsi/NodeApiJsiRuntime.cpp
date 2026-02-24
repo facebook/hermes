@@ -1232,27 +1232,40 @@ NodeApiJsiRuntime::~NodeApiJsiRuntime() {
 jsi::Value NodeApiJsiRuntime::evaluateJavaScript(
     const std::shared_ptr<const jsi::Buffer> &buffer,
     const std::string &sourceURL) {
-  return evaluatePreparedJavaScript(prepareJavaScript(buffer, sourceURL));
-}
-
-std::shared_ptr<const jsi::PreparedJavaScript>
-NodeApiJsiRuntime::prepareJavaScript(
-    const std::shared_ptr<const jsi::Buffer> &sourceBuffer,
-    std::string sourceURL) {
   NodeApiScope scope{*this};
-  jsr_prepared_script script{};
-  napi_status status = jsrApi_->jsr_create_prepared_script(
+  AutoRestore<std::string> sourceURLScope{sourceURL_, sourceURL};
+  napi_value result{};
+  CHECK_NAPI(jsrApi_->jsr_run_script_buffer(
       env_,
-      sourceBuffer->data(),
-      sourceBuffer->size(),
+      buffer->data(),
+      buffer->size(),
       [](void * /*data*/, void *deleterData) {
         delete reinterpret_cast<std::shared_ptr<const jsi::Buffer> *>(
             deleterData);
       },
-      new std::shared_ptr<const jsi::Buffer>(sourceBuffer),
+      new std::shared_ptr<const jsi::Buffer>(buffer),
       sourceURL.c_str(),
-      &script);
-  CHECK_NAPI(status); // Not for the call to keep better automated formatting.
+      &result));
+  return toJsiValue(result);
+}
+
+std::shared_ptr<const jsi::PreparedJavaScript>
+NodeApiJsiRuntime::prepareJavaScript(
+    const std::shared_ptr<const jsi::Buffer> &buffer,
+    std::string sourceURL) {
+  NodeApiScope scope{*this};
+  jsr_prepared_script script{};
+  CHECK_NAPI(jsrApi_->jsr_create_prepared_script(
+      env_,
+      buffer->data(),
+      buffer->size(),
+      [](void * /*data*/, void *deleterData) {
+        delete reinterpret_cast<std::shared_ptr<const jsi::Buffer> *>(
+            deleterData);
+      },
+      new std::shared_ptr<const jsi::Buffer>(buffer),
+      sourceURL.c_str(),
+      &script));
   return std::make_shared<NodeApiPreparedJavaScript>(
       env_, script, std::move(sourceURL));
 }
@@ -1662,8 +1675,8 @@ jsi::Object NodeApiJsiRuntime::createObject(
   // access to the hostObject's get, set, and getPropertyNames methods. There is
   // a special symbol property ID, 'hostObjectSymbol', used to access the
   // hostObjectWrapper from the Proxy.
-  napi_value hostObjectHolder = createExternalObject(
-      std::make_unique<std::shared_ptr<jsi::HostObject>>(
+  napi_value hostObjectHolder =
+      createExternalObject(std::make_unique<std::shared_ptr<jsi::HostObject>>(
           std::move(hostObject)));
   napi_value obj = createNodeApiObject();
   setProperty(
@@ -2475,7 +2488,7 @@ NodeApiJsiRuntime::PropNameIDView::PropNameIDView(
     NodeApiJsiRuntime * /*runtime*/,
     napi_value propertyId) noexcept
     : propertyId_{make<jsi::PropNameID>(
-          new (std::addressof(pointerStore_)) NodeApiStackOnlyPointerValue(
+          new(std::addressof(pointerStore_)) NodeApiStackOnlyPointerValue(
               propertyId,
               NodeApiPointerValueKind::StringPropNameID))} {}
 
@@ -3009,14 +3022,13 @@ void NodeApiJsiRuntime::setElement(
     napi_callback_info info) noexcept {
   HostFunctionWrapper *hostFuncWrapper{};
   size_t argc{};
-  CHECK_NAPI_ELSE_CRASH(
-      JSRuntimeApi::current()->napi_get_cb_info(
-          env,
-          info,
-          &argc,
-          nullptr,
-          nullptr,
-          reinterpret_cast<void **>(&hostFuncWrapper)));
+  CHECK_NAPI_ELSE_CRASH(JSRuntimeApi::current()->napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      nullptr,
+      nullptr,
+      reinterpret_cast<void **>(&hostFuncWrapper)));
   CHECK_ELSE_CRASH(hostFuncWrapper, "Cannot find the host function");
   NodeApiJsiRuntime &runtime = hostFuncWrapper->runtime();
   NodeApiPointerValueScope scope{runtime};
@@ -3025,9 +3037,8 @@ void NodeApiJsiRuntime::setElement(
       [&env, &info, &argc, &runtime, &hostFuncWrapper]() {
         SmallBuffer<napi_value, MaxStackArgCount> napiArgs(argc);
         napi_value thisArg{};
-        CHECK_NAPI_ELSE_CRASH(
-            JSRuntimeApi::current()->napi_get_cb_info(
-                env, info, &argc, napiArgs.data(), &thisArg, nullptr));
+        CHECK_NAPI_ELSE_CRASH(JSRuntimeApi::current()->napi_get_cb_info(
+            env, info, &argc, napiArgs.data(), &thisArg, nullptr));
         CHECK_ELSE_CRASH(napiArgs.size() == argc, "Wrong argument count");
         const JsiValueView jsiThisArg{&runtime, thisArg};
         JsiValueViewArgs jsiArgs(
@@ -3149,14 +3160,13 @@ void NodeApiJsiRuntime::setProxyTrap(
     NodeApiJsiRuntime *runtime{};
     napi_value args[argCount]{};
     size_t actualArgCount{argCount};
-    CHECK_NAPI_ELSE_CRASH(
-        JSRuntimeApi::current()->napi_get_cb_info(
-            env,
-            info,
-            &actualArgCount,
-            args,
-            nullptr,
-            reinterpret_cast<void **>(&runtime)));
+    CHECK_NAPI_ELSE_CRASH(JSRuntimeApi::current()->napi_get_cb_info(
+        env,
+        info,
+        &actualArgCount,
+        args,
+        nullptr,
+        reinterpret_cast<void **>(&runtime)));
     CHECK_ELSE_CRASH(
         actualArgCount == argCount, "proxy trap requires argCount arguments.");
     NodeApiPointerValueScope scope{*runtime};
@@ -3636,6 +3646,32 @@ napi_status NAPI_CDECL default_jsr_close_napi_env_scope(
 
 // TODO: Ensure that we either load all three functions or use their default
 // versions and never mix and match.
+
+// Default implementation of jsr_run_script_buffer if it is not provided by
+// JS engine. It return napi_ref as a jsr_prepared_script that wraps up an
+// object with a "script" property string.
+napi_status NAPI_CDECL default_jsr_run_script_buffer(
+    napi_env env,
+    const uint8_t *script_data,
+    size_t script_length,
+    jsr_data_delete_cb script_delete_cb,
+    void *deleter_data,
+    const char * /*source_url*/,
+    napi_value *result) {
+  Microsoft::NodeApiJsi::JSRuntimeApi *jsrApi =
+      Microsoft::NodeApiJsi::JSRuntimeApi::current();
+  jsr_prepared_script preparedScript{};
+  NAPI_CALL(jsrApi->jsr_create_prepared_script(
+      env,
+      script_data,
+      script_length,
+      script_delete_cb,
+      deleter_data,
+      nullptr,
+      &preparedScript));
+  NAPI_CALL(jsrApi->jsr_prepared_script_run(env, preparedScript, result));
+  return jsrApi->jsr_delete_prepared_script(env, preparedScript);
+}
 
 // Default implementation of jsr_create_prepared_script if it is not provided by
 // JS engine. It return napi_ref as a jsr_prepared_script that wraps up an

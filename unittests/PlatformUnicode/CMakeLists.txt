@@ -15,3 +15,11 @@ add_hermes_unittest(PlatformUnicodeTests
 target_link_libraries(PlatformUnicodeTests
   hermesPlatformUnicode
   )
+
+if(HERMES_ENABLE_INTL)
+  target_link_libraries(PlatformUnicodeTests
+    hermesPlatformIntl
+    hermesBCP47Parser
+    hermesPublic
+    )
+endif()

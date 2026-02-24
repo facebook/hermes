@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_SAMPLINGPROFILER_H
-#define HERMES_PUBLIC_SAMPLINGPROFILER_H
+#pragma once
 
 #include <hermes/Public/HermesExport.h>
 
@@ -269,5 +268,3 @@ class HERMES_EXPORT Profile {
 } // namespace sampling_profiler
 } // namespace hermes
 } // namespace facebook
-
-#endif

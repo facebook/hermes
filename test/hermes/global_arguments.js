@@ -7,11 +7,17 @@
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
-var x = 0
-if (typeof arguments == 'undefined') {
-	x = 1;
+// arguments doesn't exist in global scope. 
+// v8 fails this test since it has a global property "arguments".
+
+print(typeof arguments)
+//CHECK: undefined
+
+try {
+    print(arguments);
+} catch (e) {
+    print(e);
 }
-
-print(x)
-//CHECK-LABEL: 0
+//CHECK-NEXT: ReferenceError: Property 'arguments' doesn't exist

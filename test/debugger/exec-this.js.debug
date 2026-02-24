@@ -1,9 +1,0 @@
-exec +this
-exec this + 7
-finish
-exec String(this)
-exec this + 'asdf'
-finish
-exec +this
-exec this + 3
-continue

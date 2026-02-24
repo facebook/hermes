@@ -23,6 +23,8 @@ namespace vm {
 
 /// This function declares a new system constructor (the likes of 'Object' and
 /// 'Array') with a specified object to be used as the 'prototype' property.
+/// This function must only be called during initialization and the assumption
+/// is that all object operations will succeed. Thus, it should never fail.
 /// - First, it creates a new NativeFunction object for the constructor, with
 ///   Function.prototype as the internal prototype.
 /// - Initializes the native function's 'prototype' property with the supplied
@@ -37,10 +39,10 @@ namespace vm {
 /// \param prototypeObjectHandle the object instance to set in the 'prototype'
 ///   property of the constructor.
 /// \param paramCount the number of declared constructor parameters
-/// The second version takes an additional parameter:
 /// \param constructorProtoObjectHandle the prototype to set for the
 ///   constructor function
-/// \return the created constructor function.
+/// \param constructorOut a mutable handle to store the created constructor
+/// \return the created constructor function, stored in \p constructorOut.
 Handle<NativeConstructor> defineSystemConstructor(
     Runtime &runtime,
     SymbolID name,
@@ -48,8 +50,7 @@ Handle<NativeConstructor> defineSystemConstructor(
     Handle<JSObject> prototypeObjectHandle,
     Handle<JSObject> constructorProtoObjectHandle,
     unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind);
+    MutableHandle<NativeConstructor> constructorOut);
 
 Handle<NativeConstructor> defineSystemConstructor(
     Runtime &runtime,
@@ -57,31 +58,14 @@ Handle<NativeConstructor> defineSystemConstructor(
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
     unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind);
-
-template <class NativeClass>
-Handle<NativeConstructor> defineSystemConstructor(
-    Runtime &runtime,
-    SymbolID name,
-    NativeFunctionPtr nativeFunctionPtr,
-    Handle<JSObject> prototypeObjectHandle,
-    unsigned paramCount,
-    CellKind targetKind) {
-  return defineSystemConstructor(
-      runtime,
-      name,
-      nativeFunctionPtr,
-      prototypeObjectHandle,
-      paramCount,
-      NativeConstructor::creatorFunction<NativeClass>,
-      targetKind);
-}
+    MutableHandle<NativeConstructor> constructorOut);
 
 /// Define a method in an object instance.
 /// Currently, it's only used to define global %HermesInternal object in
 /// createHermesInternalObject(), with different flags, i.e. writable = 0 and
-/// configurable = 0.
+/// configurable = 0. This function must only be called during initialization
+/// and the assumption is that all object operations will succeed.
+/// Thus, it should never fail.
 /// \param objectHandle the instance where the method is defined.
 /// \param propertyName the key in objectHandle to insert the method at.
 /// \param methodName the value of the function.name property.
@@ -90,7 +74,7 @@ Handle<NativeConstructor> defineSystemConstructor(
 /// \param paramCount the number of declared method parameters
 /// \param dpf the flags to set on the newly defined property.
 /// \return the new NativeFunction.
-CallResult<HermesValue> defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID propertyName,
@@ -101,42 +85,12 @@ CallResult<HermesValue> defineMethod(
     DefinePropertyFlags dpf);
 
 /// Define a method in an object instance.
-/// Currently, it's only used to define global %HermesInternal object in
-/// createHermesInternalObject(), with different flags, i.e. writable = 0 and
-/// configurable = 0.
-/// \param objectHandle the instance where the method is defined.
-/// \param name the key in objectHandle to insert the method at.
-/// \param context the context to pass to the native function.
-/// \param nativeFunctionPtr the native function implementing the method.
-/// \param paramCount the number of declared method parameters
-/// \param dpf the flags to set on the newly defined property.
-/// \return the new NativeFunction.
-inline CallResult<HermesValue> defineMethod(
-    Runtime &runtime,
-    Handle<JSObject> objectHandle,
-    SymbolID name,
-    void *context,
-    NativeFunctionPtr nativeFunctionPtr,
-    unsigned paramCount,
-    DefinePropertyFlags dpf) {
-  return defineMethod(
-      runtime,
-      objectHandle,
-      name,
-      name,
-      context,
-      nativeFunctionPtr,
-      paramCount,
-      dpf);
-}
-
-/// Define a method in an object instance.
 /// \param objectHandle the instance where the method is defined.
 /// \param name the name of the method.
 /// \param context the context to pass to the native function.
 /// \param nativeFunctionPtr the native function implementing the method.
 /// \param paramCount the number of declared method parameters
-void defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,
@@ -212,17 +166,10 @@ void defineProperty(
     Handle<> value,
     DefinePropertyFlags dpf);
 
-/// Call the IteratorClose operation following an exception being thrown.
-/// \pre runtime.thrownValue_ must be populated with a thrown value.
-/// \return ExecutionStatus::EXCEPTION
-ExecutionStatus iteratorCloseAndRethrow(
-    Runtime &runtime,
-    Handle<JSObject> iterator);
-
 /// Create and initialize the global Object constructor. Populate the methods
 /// of Object and Object.prototype.
 /// \return the global Object constructor.
-Handle<JSObject> createObjectConstructor(Runtime &runtime);
+HermesValue createObjectConstructor(Runtime &runtime);
 
 /// Built-in Object.prototype.toString.
 CallResult<HermesValue> directObjectPrototypeToString(
@@ -232,8 +179,8 @@ CallResult<HermesValue> directObjectPrototypeToString(
 /// Create and initialize the global Error constructor, as well as all
 /// the native error constructors. Populate the instance and prototype methods.
 #define ALL_ERROR_TYPE(name) \
-  Handle<JSObject> create##name##Constructor(Runtime &runtime);
-#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+  HermesValue create##name##Constructor(Runtime &runtime);
+#include "hermes/VM/NativeErrorTypes.def"
 
 /// Populate the internal CallSite.prototype.
 void populateCallSitePrototype(Runtime &runtime);
@@ -241,47 +188,47 @@ void populateCallSitePrototype(Runtime &runtime);
 /// Create and initialize the global String constructor. Populate the methods
 /// of String and String.prototype.
 /// \return the global String constructor.
-Handle<JSObject> createStringConstructor(Runtime &runtime);
+HermesValue createStringConstructor(Runtime &runtime);
 
 /// Create and initialize the global BigInt constructor. Populate the methods
 /// of BigInt and BigInt.prototype.
 /// \return the global BigInt constructor.
-Handle<JSObject> createBigIntConstructor(Runtime &runtime);
+void createBigIntConstructor(Runtime &runtime);
 
 /// Create and initialize the global Function constructor. Populate the methods
 /// of Function and Function.prototype.
 /// \return the global Function constructor.
-Handle<JSObject> createFunctionConstructor(Runtime &runtime);
+HermesValue createFunctionConstructor(Runtime &runtime);
 
 /// Create and initialize the global Number constructor. Populate the methods
 /// of Number and Number.prototype.
 /// \return the global Number constructor.
-Handle<JSObject> createNumberConstructor(Runtime &runtime);
+HermesValue createNumberConstructor(Runtime &runtime);
 
 /// Create and initialize the global Boolean constructor. Populate the methods
 /// of Boolean and Boolean.prototype.
 /// \return the global Boolean constructor.
-Handle<JSObject> createBooleanConstructor(Runtime &runtime);
+HermesValue createBooleanConstructor(Runtime &runtime);
 
 /// Create and initialize the global Date constructor. Populate the methods
 /// of Date and Date.prototype.
 /// \return the global Date constructor.
-Handle<JSObject> createDateConstructor(Runtime &runtime);
+HermesValue createDateConstructor(Runtime &runtime);
 
 /// Create and initialize the global Math object, populating its value
 /// and function properties.
-Handle<JSObject> createMathObject(Runtime &runtime);
+HermesValue createMathObject(Runtime &runtime);
 
 /// Create and initialize the global Proxy constructor, populating its methods.
 /// \return the global Proxy constructor.
-Handle<JSObject> createProxyConstructor(Runtime &runtime);
+HermesValue createProxyConstructor(Runtime &runtime);
 
 // Forward declaration.
 class JSLibFlags;
 
 /// Create and initialize the global %HermesInternal object, populating its
 /// value and function properties.
-Handle<JSObject> createHermesInternalObject(
+HermesValue createHermesInternalObject(
     Runtime &runtime,
     const JSLibFlags &jsLibFlags);
 
@@ -295,21 +242,24 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime);
 
 /// Create and initialize the global JSON object, populating its value
 /// and function properties.
-Handle<JSObject> createJSONObject(Runtime &runtime);
+void createJSONObject(Runtime &runtime, MutableHandle<JSObject> result);
 
 /// Create and initialize the global Reflect object, populating its value
 /// and function properties.
-Handle<JSObject> createReflectObject(Runtime &runtime);
+void createReflectObject(Runtime &runtime, MutableHandle<JSObject> result);
 
 /// Create and initialize the global RegExp constructor. Populate the methods
 /// of RegExp and RegExp.prototype.
 /// \return the global RegExp constructor.
-Handle<JSObject> createRegExpConstructor(Runtime &runtime);
+HermesValue createRegExpConstructor(Runtime &runtime);
 
 /// ES6.0 21.2.3.2.3 Runtime Semantics: RegExpCreate ( P, F )
 /// Creates a new RegExp with provided pattern \p P, and flags \p F.
-CallResult<Handle<JSRegExp>>
-regExpCreate(Runtime &runtime, Handle<> P, Handle<> F);
+ExecutionStatus regExpCreate(
+    Runtime &runtime,
+    Handle<> P,
+    Handle<> F,
+    MutableHandle<JSRegExp> regExpOut);
 
 /// ES6.0 21.2.5.2.1
 /// Implemented in RegExp.cpp
@@ -319,10 +269,11 @@ regExpExec(Runtime &runtime, Handle<JSObject> R, Handle<StringPrimitive> S);
 /// Runs the RegExp.prototype.exec() function (ES5.1 15.10.6.2)
 /// with a this value of \p regexp, with the argument \p S.
 /// \return a new array as the result, null pointer if there were no matches.
-CallResult<Handle<JSArray>> directRegExpExec(
+ExecutionStatus directRegExpExec(
     Handle<JSRegExp> regexp,
     Runtime &runtime,
-    Handle<StringPrimitive> S);
+    Handle<StringPrimitive> S,
+    MutableHandle<JSArray> resultOut);
 
 /// ES6.0 21.1.3.14.1
 /// Implemented in RegExp.cpp
@@ -369,53 +320,50 @@ advanceStringIndex(const StringPrimitive *S, uint64_t index, bool unicode);
 /// Create and initialize the global Array constructor. Populate the methods
 /// of Array and Array.prototype.
 /// \return the global Array constructor.
-Handle<JSObject> createArrayConstructor(Runtime &runtime);
+HermesValue createArrayConstructor(Runtime &runtime);
 
-Handle<JSObject> createArrayBufferConstructor(Runtime &runtime);
+HermesValue createArrayBufferConstructor(Runtime &runtime);
 
-Handle<JSObject> createDataViewConstructor(Runtime &runtime);
+HermesValue createDataViewConstructor(Runtime &runtime);
 
-Handle<JSObject> createTypedArrayBaseConstructor(Runtime &runtime);
+HermesValue createTypedArrayBaseConstructor(Runtime &runtime);
 
 #define TYPED_ARRAY(name, type) \
-  Handle<JSObject> create##name##ArrayConstructor(Runtime &runtime);
+  HermesValue create##name##ArrayConstructor(Runtime &runtime);
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
 /// Create and initialize the global Set constructor. Populate the methods
 /// of Set.prototype.
-Handle<JSObject> createSetConstructor(Runtime &runtime);
+HermesValue createSetConstructor(Runtime &runtime);
 
 /// Create SetIterator.prototype and populate methods.
-Handle<JSObject> createSetIteratorPrototype(Runtime &runtime);
+HermesValue createSetIteratorPrototype(Runtime &runtime);
 
 /// Create and initialize the global Map constructor. Populate the methods
 /// of Map.prototype.
-Handle<JSObject> createMapConstructor(Runtime &runtime);
+HermesValue createMapConstructor(Runtime &runtime);
 
 /// Create MapIterator.prototype and populate methods.
-Handle<JSObject> createMapIteratorPrototype(Runtime &runtime);
+HermesValue createMapIteratorPrototype(Runtime &runtime);
 
 /// Create the WeakMap constructor and populate methods.
-Handle<JSObject> createWeakMapConstructor(Runtime &runtime);
+HermesValue createWeakMapConstructor(Runtime &runtime);
 
 /// Create the WeakSet constructor and populate methods.
-Handle<JSObject> createWeakSetConstructor(Runtime &runtime);
+HermesValue createWeakSetConstructor(Runtime &runtime);
 
 /// Create the WeakRef constructor and populate methods.
-Handle<JSObject> createWeakRefConstructor(Runtime &runtime);
+HermesValue createWeakRefConstructor(Runtime &runtime);
 
 /// Create the Symbol constructor and populate methods.
-Handle<JSObject> createSymbolConstructor(Runtime &runtime);
+void createSymbolConstructor(Runtime &runtime);
 
 /// Create the GeneratorFunction constructor and populate methods.
-Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime);
+HermesValue createGeneratorFunctionConstructor(Runtime &runtime);
 
 /// Create the AsyncFunction constructor and populate methods.
-Handle<JSObject> createAsyncFunctionConstructor(Runtime &runtime);
-
-/// Create the TextEncoder constructor and populate methods.
-Handle<JSObject> createTextEncoderConstructor(Runtime &runtime);
+HermesValue createAsyncFunctionConstructor(Runtime &runtime);
 
 /// Create the IteratorPrototype.
 void populateIteratorPrototype(Runtime &runtime);
@@ -446,15 +394,17 @@ CallResult<HermesValue> createDynamicFunction(
 CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
-    const ScopeChain &scopeChain,
-    bool isStrict,
-    bool singleFunction);
+    bool strictCaller,
+    const CodeBlock *codeBlock,
+    bool singleFunction = false);
 
 /// ES10 23.1.1.2 AddEntriesFromIterable
 /// Calls a callback with each pair of [key, value] from an iterable.
 /// \param target the object to which to add the entries
 /// \param iterable iterable which contains pairs of [key, value].
 ///     Must not be undefined or null.
+/// \param method (optional) the Symbol.iterator method of the iterable,
+///   if the caller has already retrieved it.
 /// \param adder the callback for actually adding properties, with signature:
 ///     ExecutionStatus adder(Runtime &runtime, Handle<> key, Handle<> value);
 template <typename AdderCB>
@@ -462,6 +412,7 @@ CallResult<HermesValue> addEntriesFromIterable(
     Runtime &runtime,
     Handle<JSObject> target,
     Handle<> iterable,
+    llvh::Optional<Handle<Callable>> method,
     AdderCB adder) {
   GCScope gcScope{runtime};
   // 2. Assert: iterable is present, and is neither undefined nor null.
@@ -469,17 +420,19 @@ CallResult<HermesValue> addEntriesFromIterable(
       !iterable->isUndefined() && !iterable->isNull() &&
       "iterable cannot be undefined or null");
   // 3. Let iteratorRecord be ? GetIterator(iterable).
-  CallResult<IteratorRecord> iterRes = getIterator(runtime, iterable);
+  CallResult<CheckedIteratorRecord> iterRes =
+      getCheckedIterator(runtime, iterable, method);
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   auto iteratorRecord = *iterRes;
 
-  MutableHandle<JSObject> nextItem{runtime};
-  MutableHandle<> key{runtime};
-  MutableHandle<> value{runtime};
-  Handle<> zero = HandleRootOwner::getZeroValue();
-  Handle<> one = HandleRootOwner::getOneValue();
+  struct : public Locals {
+    PinnedValue<JSObject> nextItem;
+    PinnedValue<> key;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   auto marker = gcScope.createMarker();
 
   // 4. Repeat,
@@ -494,9 +447,10 @@ CallResult<HermesValue> addEntriesFromIterable(
       return target.getHermesValue();
     }
     // c. Let nextItem be ? IteratorValue(next).
-    nextItem = vmcast<JSObject>(nextRes->getHermesValue());
+    lv.nextItem.template castAndSetHermesValue<JSObject>(
+        nextRes->getHermesValue());
     auto nextItemRes = JSObject::getNamed_RJS(
-        nextItem, runtime, Predefined::getSymbolID(Predefined::value));
+        lv.nextItem, runtime, Predefined::getSymbolID(Predefined::value));
     if (LLVM_UNLIKELY(nextItemRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -507,29 +461,30 @@ CallResult<HermesValue> addEntriesFromIterable(
       (void)runtime.raiseTypeError("Iterator value must be an object");
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    nextItem = PseudoHandle<JSObject>::vmcast(std::move(*nextItemRes));
+    lv.nextItem.template castAndSetHermesValue<JSObject>(
+        nextItemRes->getHermesValue());
 
     // e. Let k be Get(nextItem, "0").
-    auto keyRes = JSObject::getComputed_RJS(nextItem, runtime, zero);
+    auto keyRes = getIndexed_RJS(runtime, lv.nextItem, 0);
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       // f. If k is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, k).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    key = std::move(*keyRes);
+    lv.key = std::move(*keyRes);
 
     // g. Let v be Get(nextItem, "1").
-    auto valueRes = JSObject::getComputed_RJS(nextItem, runtime, one);
+    auto valueRes = getIndexed_RJS(runtime, lv.nextItem, 1);
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       // h. If v is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, v).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
-    value = std::move(*valueRes);
+    lv.value = std::move(*valueRes);
 
     // i. Let status be Call(adder, target, « k.[[Value]], v.[[Value]] »).
     if (LLVM_UNLIKELY(
-            adder(runtime, key, value) == ExecutionStatus::EXCEPTION)) {
+            adder(runtime, lv.key, lv.value) == ExecutionStatus::EXCEPTION)) {
       // j. If status is an abrupt completion,
       //    return ? IteratorClose(iteratorRecord, status).
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
@@ -540,18 +495,13 @@ CallResult<HermesValue> addEntriesFromIterable(
       "loop must terminate with 'return' when iteration is complete");
 }
 
-#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
-/// Default no-op IR instrumentation hooks (__instrument).
-Handle<JSObject> createInstrumentObject(Runtime &runtime);
-#endif
-
 } // namespace vm
 
 #ifdef HERMES_ENABLE_INTL
 namespace intl {
 
 // TODO T65916424: Consider how we can move this somewhere more modular.
-vm::Handle<vm::JSObject> createIntlObject(vm::Runtime &runtime);
+vm::HermesValue createIntlObject(vm::Runtime &runtime);
 
 } // namespace intl
 #endif

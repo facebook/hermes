@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s
+// RUN: %hermesc -O -dump-ir %s
 
 // In this example, the store for 'bar' was removed since 'baz' is never called.
 // Having no stores caused an assertion failure, even though all loads were dead

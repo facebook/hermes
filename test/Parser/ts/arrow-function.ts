@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-ts -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
-// RUN: %hermes -parse-jsx -parse-ts -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-ts -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-jsx -parse-ts -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -21,7 +21,6 @@ var x = (foo: number): number => 3;
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "Identifier",
@@ -65,7 +64,6 @@ var x = (foo: number = 3): number => 3;
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "AssignmentPattern",
@@ -117,7 +115,6 @@ var x = (foo: number = 3) => 3;
 // CHECK-NEXT:           "type": "VariableDeclarator",
 // CHECK-NEXT:           "init": {
 // CHECK-NEXT:             "type": "ArrowFunctionExpression",
-// CHECK-NEXT:             "id": null,
 // CHECK-NEXT:             "params": [
 // CHECK-NEXT:               {
 // CHECK-NEXT:                 "type": "AssignmentPattern",

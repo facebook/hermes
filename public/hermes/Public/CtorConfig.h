@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_CTORCONFIG_H
-#define HERMES_PUBLIC_CTORCONFIG_H
+#pragma once
 
 #include <utility>
 
@@ -144,5 +143,3 @@
   if (newConfig.has##NAME()) {                         \
     with##NAME(newConfig.config_.get##NAME());         \
   }
-
-#endif //  HERMES_PUBLIC_CTORCONFIG_H

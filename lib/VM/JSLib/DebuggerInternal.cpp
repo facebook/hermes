@@ -15,7 +15,8 @@ namespace vm {
 #ifdef HERMES_ENABLE_DEBUGGER
 
 Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
-  Handle<JSObject> intern = runtime.makeHandle(JSObject::create(runtime));
+  runtime.debuggerInternalObject_ = JSObject::create(runtime);
+  Handle<JSObject> intern{runtime.debuggerInternalObject_};
 
   // Configurable property stored in the Debugger
   // To be used when a debugger transitions to an attached state.
@@ -23,7 +24,7 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
       runtime,
       intern,
       runtime.getIdentifierTable().registerLazyIdentifier(
-          createASCIIRef("isDebuggerAttached")),
+          runtime, createASCIIRef("isDebuggerAttached")),
       nullptr,
       isDebuggerAttached,
       nullptr,
@@ -36,7 +37,7 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
       runtime,
       intern,
       runtime.getIdentifierTable().registerLazyIdentifier(
-          createASCIIRef("shouldPauseOnThrow")),
+          runtime, createASCIIRef("shouldPauseOnThrow")),
       nullptr,
       shouldPauseOnThrow,
       nullptr,
@@ -44,19 +45,16 @@ Handle<JSObject> createDebuggerInternalObject(Runtime &runtime) {
       false);
 
   JSObject::preventExtensions(*intern);
-  runtime.debuggerInternalObject_ = intern.getHermesValue();
 
   return intern;
 }
 
-CallResult<HermesValue>
-isDebuggerAttached(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> isDebuggerAttached(void *ctx, Runtime &runtime) {
   return HermesValue::encodeBoolValue(
       runtime.getDebugger().getIsDebuggerAttached());
 }
 
-CallResult<HermesValue>
-shouldPauseOnThrow(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> shouldPauseOnThrow(void *ctx, Runtime &runtime) {
   bool shouldPauseOnThrow = runtime.getDebugger().getPauseOnThrowMode() !=
       facebook::hermes::debugger::PauseOnThrowMode::None;
   return HermesValue::encodeBoolValue(shouldPauseOnThrow);

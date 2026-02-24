@@ -24,9 +24,9 @@ public class JSRuntime implements AutoCloseable {
     try {
       // The OSS build produces two .so files, so both need
       // to be loaded to initialize JNI context.
-      SoLoader.loadLibrary("hermesvm");
+      SoLoader.loadLibrary("hermes");
     } catch (UnsatisfiedLinkError e) {
-      // FB Internal build doesn't produce a separate libhermesvm,
+      // FB Internal build doesn't produce a separate libhermes,
       // so just ignore this failure.
     }
     SoLoader.loadLibrary("jsijni");

@@ -5,6 +5,7 @@
 
 set(OptimizerSources
   Scalar/InstructionEscapeAnalysisTest.cpp
+  PassManager/PassManagerTest.cpp
   )
 
 add_hermes_unittest(HermesOptimizerTests

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s
+// RUN: %hermesc -hermes-parser -dump-ir %s -O | %FileCheckOrRegen --match-full-lines %s
 
 function simple(x, y) {
   var t = 9;
@@ -72,114 +72,108 @@ function badThrow() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [simple, control_flow, control_catch, multi, badThrow]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %simple#0#1()#2 : number, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "simple" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %control_flow#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "control_flow" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %control_catch#0#1()#4 : number, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "control_catch" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %multi#0#1()#5 : number, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "multi" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %badThrow#0#1()#6 : number, %0
-// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "badThrow" : string
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "simple": string
+// CHECK-NEXT:       DeclareGlobalVarInst "control_flow": string
+// CHECK-NEXT:       DeclareGlobalVarInst "control_catch": string
+// CHECK-NEXT:       DeclareGlobalVarInst "multi": string
+// CHECK-NEXT:       DeclareGlobalVarInst "badThrow": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %simple(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "simple": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) empty: any, empty: any, %control_flow(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "control_flow": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) empty: any, empty: any, %control_catch(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "control_catch": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) empty: any, empty: any, %multi(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "multi": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) empty: any, empty: any, %badThrow(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "badThrow": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function simple#0#1(x, y)#2 : number
-// CHECK-NEXT:S{simple#0#1()#2} = []
+// CHECK:function simple(x: any, y: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple#0#1()#2}
-// CHECK-NEXT:  %1 = CondBranchInst %x, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = BranchInst %BB2
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = PhiInst 19 : number, %BB1, 9 : number, %BB0
-// CHECK-NEXT:  %4 = ReturnInst %3 : number
+// CHECK-NEXT:  %3 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
+// CHECK-NEXT:       ReturnInst %3: number
 // CHECK-NEXT:function_end
 
-// CHECK:function control_flow#0#1(x, y)#3
-// CHECK-NEXT:S{control_flow#0#1()#3} = []
+// CHECK:function control_flow(x: any, y: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{control_flow#0#1()#3}
-// CHECK-NEXT:  %1 = CondBranchInst %x, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = CondBranchInst %y, %BB1, %BB3
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       CondBranchInst %0: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = PhiInst 4 : number, %BB3, 19 : number, %BB0, 15 : number, %BB2
-// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %3 : number, 1 : number
-// CHECK-NEXT:  %5 = BinaryOperatorInst '-', %x, 1 : number
-// CHECK-NEXT:  %6 = CondBranchInst %5 : number, %BB4, %BB5
+// CHECK-NEXT:       CondBranchInst %1: any, %BB2, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %4 = PhiInst (:number) 4: number, %BB3, 19: number, %BB0, 15: number, %BB1
+// CHECK-NEXT:  %5 = FAddInst (:number) %4: number, 1: number
+// CHECK-NEXT:  %6 = BinarySubtractInst (:number) %0: any, 1: number
+// CHECK-NEXT:       CondBranchInst %6: number, %BB5, %BB4
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = BranchInst %BB1
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %8 = CondBranchInst %y, %BB6, %BB4
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %9 = PhiInst 15 : number, %BB6, %4 : number, %BB5, %y, %BB1
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:       CondBranchInst %1: any, %BB6, %BB5
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %10 = PhiInst (:any) 15: number, %BB6, %5: number, %BB4, %1: any, %BB2
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %11 = BranchInst %BB4
+// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:function_end
 
-// CHECK:function control_catch#0#1(x, y)#4 : number
-// CHECK-NEXT:S{control_catch#0#1()#4} = []
+// CHECK:function control_catch(x: any, y: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $t
-// CHECK-NEXT:  %1 = CreateScopeInst %S{control_catch#0#1()#4}
-// CHECK-NEXT:  %2 = StoreStackInst 9 : number, %0 : number
-// CHECK-NEXT:  %3 = CondBranchInst %x, %BB1, %BB2
+// CHECK-NEXT:  %0 = AllocStackInst (:number) $t: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreStackInst 9: number, %0: number
+// CHECK-NEXT:       CondBranchInst %1: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = TryStartInst %BB3, %BB4
+// CHECK-NEXT:       TryStartInst %BB3, %BB4
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = LoadStackInst %0 : number
-// CHECK-NEXT:  %6 = ReturnInst %5 : number
+// CHECK-NEXT:  %5 = LoadStackInst (:number) %0: number
+// CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = CatchInst
-// CHECK-NEXT:  %8 = LoadStackInst %0 : number
-// CHECK-NEXT:  %9 = ReturnInst %8 : number
+// CHECK-NEXT:  %7 = CatchInst (:any)
+// CHECK-NEXT:  %8 = LoadStackInst (:number) %0: number
+// CHECK-NEXT:       ReturnInst %8: number
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst globalObject : object, "j" : string
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB5, %BB6
+// CHECK-NEXT:  %10 = TryLoadGlobalPropertyInst (:any) globalObject: object, "j": string
+// CHECK-NEXT:        CondBranchInst %10: any, %BB5, %BB6
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = ThrowInst 3 : number
+// CHECK-NEXT:        ThrowInst 3: number, %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %13 = StoreStackInst 19 : number, %0 : number
-// CHECK-NEXT:  %14 = BranchInst %BB7
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %15 = TryEndInst
-// CHECK-NEXT:  %16 = BranchInst %BB2
+// CHECK-NEXT:        StoreStackInst 19: number, %0: number
+// CHECK-NEXT:        TryEndInst %BB3, %BB2
 // CHECK-NEXT:function_end
 
-// CHECK:function multi#0#1(x, y)#5 : number
-// CHECK-NEXT:S{multi#0#1()#5} = []
+// CHECK:function multi(x: any, y: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{multi#0#1()#5}
-// CHECK-NEXT:  %1 = CondBranchInst %x, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       CondBranchInst %0: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = BranchInst %BB2
+// CHECK-NEXT:       BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %3 = PhiInst 19 : number, %BB1, 9 : number, %BB0
-// CHECK-NEXT:  %4 = PhiInst 19 : number, %BB1, 9 : number, %BB0
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %3 : number, %4 : number
-// CHECK-NEXT:  %6 = ReturnInst %5 : number
+// CHECK-NEXT:  %3 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
+// CHECK-NEXT:  %4 = PhiInst (:number) 19: number, %BB1, 9: number, %BB0
+// CHECK-NEXT:  %5 = FAddInst (:number) %4: number, %3: number
+// CHECK-NEXT:       ReturnInst %5: number
 // CHECK-NEXT:function_end
 
-// CHECK:function badThrow#0#1()#6 : number
-// CHECK-NEXT:S{badThrow#0#1()#6} = []
+// CHECK:function badThrow(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = AllocStackInst $result
-// CHECK-NEXT:  %1 = CreateScopeInst %S{badThrow#0#1()#6}
-// CHECK-NEXT:  %2 = StoreStackInst -1 : number, %0 : number
-// CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:  %0 = AllocStackInst (:number) $result: any
+// CHECK-NEXT:       StoreStackInst -1: number, %0: number
+// CHECK-NEXT:       TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = CatchInst
-// CHECK-NEXT:  %5 = LoadStackInst %0 : number
-// CHECK-NEXT:  %6 = ReturnInst %5 : number
+// CHECK-NEXT:  %3 = CatchInst (:any)
+// CHECK-NEXT:  %4 = LoadStackInst (:number) %0: number
+// CHECK-NEXT:       ReturnInst %4: number
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = StoreStackInst 100 : number, %0 : number
-// CHECK-NEXT:  %8 = ThrowInst "hello" : string
+// CHECK-NEXT:       StoreStackInst 100: number, %0: number
+// CHECK-NEXT:       ThrowInst "hello": string, %BB1
 // CHECK-NEXT:function_end

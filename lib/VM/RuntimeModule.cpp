@@ -7,15 +7,17 @@
 
 #include "hermes/VM/RuntimeModule.h"
 
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/Support/PerfSection.h"
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Domain.h"
 #include "hermes/VM/HiddenClass.h"
+#include "hermes/VM/ModuleExportsCache.h"
 #include "hermes/VM/Predefined.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
 namespace hermes {
@@ -32,11 +34,11 @@ RuntimeModule::RuntimeModule(
       flags_(flags),
       sourceURL_(sourceURL),
       scriptID_(scriptID) {
+  // Reserve add cache entry 0 as an "always miss" entry.
+  addCacheEntries_.emplace_back();
+
   runtime_.addRuntimeModule(this);
   Domain::addRuntimeModule(domain, runtime, this);
-#ifndef HERMESVM_LEAN
-  lazyRoot_ = this;
-#endif
 }
 
 SymbolID RuntimeModule::createSymbolFromStringIDMayAllocate(
@@ -67,13 +69,8 @@ RuntimeModule::~RuntimeModule() {
   runtime_.getCrashManager().unregisterMemory(this);
   runtime_.removeRuntimeModule(this);
 
-  // We may reference other CodeBlocks through lazy compilation, but we only
-  // own the ones that reference us.
-  for (auto *block : functionMap_) {
-    if (block != nullptr && block->getRuntimeModule() == this) {
-      runtime_.getHeap().getIDTracker().untrackNative(block);
-      delete block;
-    }
+  for (const auto &block : functionMap_) {
+    runtime_.getHeap().getIDTracker().untrackNative(block.get());
   }
   runtime_.getHeap().getIDTracker().untrackNative(&functionMap_);
 }
@@ -125,6 +122,10 @@ void RuntimeModule::initializeWithoutCJSModulesMayAllocate(
   bcProvider_ = std::move(bytecode);
   importStringIDMapMayAllocate();
   initializeFunctionMap();
+  // Initialize the object literal hidden class cache.
+  auto numObjShapes = bcProvider_->getObjectShapeTable().size();
+  objectLiteralHiddenClasses_.resize(numObjShapes);
+  stringSwitchImmTables_.resize(bcProvider_->getNumStringSwitchImmInstrs());
 }
 
 ExecutionStatus RuntimeModule::initializeMayAllocate(
@@ -136,92 +137,32 @@ ExecutionStatus RuntimeModule::initializeMayAllocate(
   return ExecutionStatus::RETURNED;
 }
 
+void RuntimeModule::initAfterLazyCompilation() {
+  importStringIDMapMayAllocate();
+  initializeFunctionMap();
+  // Initialize the object literal hidden class cache.
+  auto numObjShapes = bcProvider_->getObjectShapeTable().size();
+  objectLiteralHiddenClasses_.resize(numObjShapes);
+  assert(
+      bcProvider_->getNumStringSwitchImmInstrs() >=
+          stringSwitchImmTables_.size() &&
+      "Number of string switches detected should only grow.");
+  stringSwitchImmTables_.resize(bcProvider_->getNumStringSwitchImmInstrs());
+}
+
 CodeBlock *RuntimeModule::getCodeBlockSlowPath(unsigned index) {
-#ifndef HERMESVM_LEAN
   if (bcProvider_->isFunctionLazy(index)) {
-    auto *lazyModule = RuntimeModule::createLazyModule(
-        runtime_, getDomain(runtime_), this, index);
-    functionMap_[index] = lazyModule->getOnlyLazyCodeBlock();
-    return functionMap_[index];
+    functionMap_[index] = CodeBlock::createCodeBlock(
+        this, bcProvider_->getFunctionHeader(index), nullptr, index);
+    return functionMap_[index].get();
   }
-#endif
   functionMap_[index] = CodeBlock::createCodeBlock(
       this,
       bcProvider_->getFunctionHeader(index),
       bcProvider_->getBytecode(index),
       index);
-  return functionMap_[index];
+  return functionMap_[index].get();
 }
-
-#ifndef HERMESVM_LEAN
-RuntimeModule *RuntimeModule::createLazyModule(
-    Runtime &runtime,
-    Handle<Domain> domain,
-    RuntimeModule *parent,
-    uint32_t functionID) {
-  auto RM = createUninitialized(runtime, domain);
-  RM->lazyRoot_ = parent->lazyRoot_;
-  // Copy the lazy root's script ID for lazy modules.
-  RM->scriptID_ = RM->lazyRoot_->scriptID_;
-
-  // Set the bcProvider's BytecodeModule to point to the parent's.
-  assert(parent->isInitialized() && "Parent module must have been initialized");
-
-  auto *bcFunction = &((hbc::BCProviderFromSrc *)parent->getBytecode())
-                          ->getBytecodeModule()
-                          ->getFunction(functionID);
-
-  RM->bcProvider_ = hbc::BCProviderLazy::createBCProviderLazy(bcFunction);
-
-  // We don't know which function index this block will eventually represent,
-  // so just add it as 0 to ensure ownership. We'll move it later in
-  // `initializeLazy`.
-  RM->functionMap_.emplace_back(
-      CodeBlock::createCodeBlock(
-          RM, RM->bcProvider_->getFunctionHeader(functionID), {}, functionID));
-
-  // The module doesn't have a string table until we've compiled the block,
-  // so just add the string name as 0 in the mean time for f.name to work via
-  // getLazyName(). Since it's in the stringIDMap_, it'll be correctly GC'd.
-  RM->stringIDMap_.emplace_back(parent->getSymbolIDFromStringIDMayAllocate(
-      bcFunction->getHeader().functionName));
-
-  return RM;
-}
-
-SymbolID RuntimeModule::getLazyName() {
-  assert(functionMap_.size() == 1 && "Not a lazy module?");
-  assert(stringIDMap_.size() == 1 && "Missing lazy function name symbol");
-  assert(this->stringIDMap_[0].isValid() && "Invalid function name symbol");
-  return this->stringIDMap_[0];
-}
-
-void RuntimeModule::initializeLazyMayAllocate(
-    std::unique_ptr<hbc::BCProvider> bytecode) {
-  // Clear the old data provider first.
-  bcProvider_ = nullptr;
-
-  // Initialize without CJS module table because this compilation is done
-  // separately, and the bytecode will not contain a module table.
-  initializeWithoutCJSModulesMayAllocate(std::move(bytecode));
-
-  // createLazyCodeBlock added a single codeblock as functionMap_[0]
-  assert(functionMap_[0] && "Missing first entry");
-
-  // We should move it to the index where it's supposed to be. This ensures a
-  // 1-1 relationship between codeblocks and bytecodefunctions, which the
-  // debugger relies on for setting step-out breakpoints in all functions.
-  if (bcProvider_->getGlobalFunctionIndex() == 0) {
-    // No move needed
-    return;
-  }
-  assert(
-      !functionMap_[bcProvider_->getGlobalFunctionIndex()] &&
-      "Entry point is already occupied");
-  functionMap_[bcProvider_->getGlobalFunctionIndex()] = functionMap_[0];
-  functionMap_[0] = nullptr;
-}
-#endif
 
 void RuntimeModule::importStringIDMapMayAllocate() {
   assert(bcProvider_ && "Uninitialized RuntimeModule");
@@ -229,8 +170,6 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   GCScope scope(runtime_);
 
   auto strTableSize = bcProvider_->getStringCount();
-
-  stringIDMap_.clear();
 
   // Populate the string ID map with empty identifiers.
   stringIDMap_.resize(strTableSize, RootSymbolID(SymbolID::empty()));
@@ -256,31 +195,38 @@ void RuntimeModule::importStringIDMapMayAllocate() {
   // then this is an underestimate.
   runtime_.getIdentifierTable().reserve(hashes.size());
   {
-    StringID strID = 0;
-    uint32_t hashID = 0;
+    uint32_t hashID = identifierHashesOffset_;
 
-    for (auto entry : kinds) {
+    for (auto entry : kinds.drop_front(stringKindsOffset_)) {
       switch (entry.kind()) {
         case StringKind::String:
-          strID += entry.count();
+          nextStringID_ += entry.count();
           break;
 
         case StringKind::Identifier:
-          for (uint32_t i = 0; i < entry.count(); ++i, ++strID, ++hashID) {
+          for (uint32_t i = 0; i < entry.count();
+               ++i, ++nextStringID_, ++hashID) {
             createSymbolFromStringIDMayAllocate(
-                strID, bcProvider_->getStringTableEntry(strID), hashes[hashID]);
+                nextStringID_,
+                bcProvider_->getStringTableEntry(nextStringID_),
+                hashes[hashID]);
           }
           break;
       }
     }
 
-    assert(strID == strTableSize && "Should map every string in the bytecode.");
+    assert(
+        nextStringID_ == strTableSize &&
+        "Should map every string in the bytecode.");
     assert(hashID == hashes.size() && "Should hash all identifiers.");
   }
 
   if (runtime_.getVMExperimentFlags() & experiments::MAdviseStringsRandom) {
     bcProvider_->adviseStringTableRandom();
   }
+
+  stringKindsOffset_ = bcProvider_->getStringKinds().size();
+  identifierHashesOffset_ = bcProvider_->getIdentifierHashes().size();
 
   if (strTableSize == 0) {
     // If the string table turns out to be empty,
@@ -363,7 +309,8 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   if (flags_.persistent) {
     // Registering a lazy identifier does not allocate, so we do not need a
     // GC scope.
-    id = runtime_.getIdentifierTable().registerLazyIdentifier(str, hash);
+    id = runtime_.getIdentifierTable().registerLazyIdentifier(
+        runtime_, str, hash);
   } else {
     // Accessing a symbol non-lazily may allocate in the GC heap, so add a scope
     // marker.
@@ -373,6 +320,15 @@ SymbolID RuntimeModule::mapStringMayAllocate(
   }
   stringIDMap_[stringID] = RootSymbolID(id);
   return id;
+}
+
+OptValue<uint32_t> RuntimeModule::allocateAddCacheEntry() {
+  if (addCacheEntries_.size() < WritePropertyCacheEntry::kMaxAddCacheIndex) {
+    uint32_t index = addCacheEntries_.size();
+    addCacheEntries_.emplace_back();
+    return index;
+  }
+  return llvh::None;
 }
 
 void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
@@ -386,67 +342,99 @@ void RuntimeModule::markRoots(RootAcceptor &acceptor, bool markLongLived) {
         acceptor.accept(symbol);
       }
     }
-  }
-}
-
-void RuntimeModule::markLongLivedWeakRoots(WeakRootAcceptor &acceptor) {
-  for (auto &cbPtr : functionMap_) {
-    // Only mark a CodeBlock is its non-null, and has not been scanned
-    // previously in this top-level markRoots invocation.
-    if (cbPtr != nullptr && cbPtr->getRuntimeModule() == this) {
-      cbPtr->markCachedHiddenClasses(runtime_, acceptor);
-    }
-  }
-  for (auto &entry : objectLiteralHiddenClasses_) {
-    if (entry.second) {
-      acceptor.acceptWeak(entry.second);
-    }
-  }
-}
-
-llvh::Optional<Handle<HiddenClass>> RuntimeModule::findCachedLiteralHiddenClass(
-    Runtime &runtime,
-    unsigned keyBufferIndex,
-    unsigned numLiterals) const {
-  if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
-    const auto cachedHiddenClassIter = objectLiteralHiddenClasses_.find(
-        getLiteralHiddenClassCacheHashKey(keyBufferIndex, numLiterals));
-    if (cachedHiddenClassIter != objectLiteralHiddenClasses_.end()) {
-      if (HiddenClass *const cachedHiddenClass =
-              cachedHiddenClassIter->second.get(runtime, runtime.getHeap())) {
-        return runtime_.makeHandle(cachedHiddenClass);
+    for (auto &table : stringSwitchImmTables_) {
+      for (auto &[str, _] : table) {
+        acceptor.acceptPtr(str);
       }
     }
   }
-  return llvh::None;
+
+  acceptor.acceptPtr(moduleExports_);
 }
 
-void RuntimeModule::tryCacheLiteralHiddenClass(
-    Runtime &runtime,
-    unsigned keyBufferIndex,
-    HiddenClass *clazz) {
-  auto numLiterals = clazz->getNumProperties();
-  if (canGenerateLiteralHiddenClassCacheKey(keyBufferIndex, numLiterals)) {
-    assert(
-        !findCachedLiteralHiddenClass(runtime, keyBufferIndex, numLiterals)
-             .hasValue() &&
-        "Why are we caching an item already cached?");
-    objectLiteralHiddenClasses_[getLiteralHiddenClassCacheHashKey(
-                                    keyBufferIndex, numLiterals)]
-        .set(runtime, clazz);
+void RuntimeModule::markWeakRoots(
+    WeakRootAcceptor &acceptor,
+    bool markLongLived) {
+  if (markLongLived) {
+    for (auto &cbPtr : functionMap_) {
+      // Only mark a CodeBlock is its non-null, and has not been scanned
+      // previously in this top-level markRoots invocation.
+      if (cbPtr != nullptr && cbPtr->getRuntimeModule() == this) {
+        cbPtr->markWeakElementsInCaches(runtime_, acceptor);
+      }
+    }
+    for (auto &entry : objectLiteralHiddenClasses_) {
+      acceptor.acceptWeak(entry);
+    }
   }
+
+  if (markLongLived) {
+    for (auto &entry : addCacheEntries_) {
+      acceptor.acceptWeak(entry.startClazz);
+      acceptor.acceptWeak(entry.resultClazz);
+      acceptor.acceptWeak(entry.parent);
+    }
+  } else {
+    for (auto &entry : addCacheEntries_) {
+      acceptor.acceptWeak(entry.parent);
+    }
+  }
+}
+
+HiddenClass *RuntimeModule::findCachedLiteralHiddenClass(
+    Runtime &runtime,
+    uint32_t shapeTableIndex) const {
+  assert(
+      shapeTableIndex < objectLiteralHiddenClasses_.size() &&
+      "Invalid shape table index");
+  return objectLiteralHiddenClasses_[shapeTableIndex].get(
+      runtime, runtime.getHeap());
+}
+
+void RuntimeModule::setCachedLiteralHiddenClass(
+    Runtime &runtime,
+    unsigned shapeTableIndex,
+    HiddenClass *clazz) {
+  assert(
+      !findCachedLiteralHiddenClass(runtime, shapeTableIndex) &&
+      "Why are we caching an item already cached?");
+  objectLiteralHiddenClasses_[shapeTableIndex].set(runtime, clazz);
 }
 
 size_t RuntimeModule::additionalMemorySize() const {
   return stringIDMap_.capacity() * sizeof(SymbolID) +
-      objectLiteralHiddenClasses_.getMemorySize() +
+      addCacheEntries_.capacity_in_bytes() +
+      objectLiteralHiddenClasses_.size() * sizeof(WeakRoot<HiddenClass>) +
       templateMap_.getMemorySize();
+}
+
+/// Set the module export for module \p modIndex to \p modExport.
+void RuntimeModule::setModuleExport(
+    Runtime &runtime,
+    uint32_t modIndex,
+    Handle<> modExport) {
+  module_export_cache::set(runtime, moduleExports_, modIndex, modExport);
+}
+
+void RuntimeModule::initializeStringSwitchImmTable(
+    StringSwitchDenseMap &table,
+    const hbc::StringSwitchTableCase *cases,
+    uint32_t size) {
+  assert(
+      table.empty() &&
+      "precondition -- should only be called with empty table.");
+  for (unsigned i = 0; i < size; i++) {
+    const hbc::StringSwitchTableCase &switchCase = cases[i];
+    StringPrimitive *strPrim =
+        getStringPrimFromStringIDMayAllocate(switchCase.caseLabelStringID);
+    table[strPrim].bytecodeOffset = switchCase.target;
+  }
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
 void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
   // Create a native node for each CodeBlock owned by this module.
-  for (const CodeBlock *cb : functionMap_) {
+  for (const auto &cb : functionMap_) {
     // Skip the null code blocks, they are lazily inserted the first time
     // they are used.
     if (cb && cb->getRuntimeModule() == this) {
@@ -455,7 +443,7 @@ void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
       snap.endNode(
           HeapSnapshot::NodeType::Native,
           "CodeBlock",
-          gc.getNativeID(cb),
+          gc.getNativeID(cb.get()),
           sizeof(CodeBlock) + cb->additionalMemorySize(),
           0);
     }
@@ -465,7 +453,7 @@ void RuntimeModule::snapshotAddNodes(GC &gc, HeapSnapshot &snap) const {
   snap.beginNode();
   // Create an edge to each CodeBlock owned by this module.
   for (int i = 0, e = functionMap_.size(); i < e; i++) {
-    const CodeBlock *cb = functionMap_[i];
+    const CodeBlock *cb = functionMap_[i].get();
     // Skip the null code blocks, they are lazily inserted the first time
     // they are used.
     if (cb && cb->getRuntimeModule() == this) {

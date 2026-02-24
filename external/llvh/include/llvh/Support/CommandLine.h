@@ -187,7 +187,7 @@ public:
 };
 
 // The general Option Category (used as default category).
-extern OptionCategory GeneralCategory;
+OptionCategory &getGeneralCategory();
 
 //===----------------------------------------------------------------------===//
 // SubCommand class
@@ -323,7 +323,7 @@ protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
                   enum OptionHidden Hidden)
       : Occurrences(OccurrencesFlag), Value(0), HiddenFlag(Hidden),
-        Formatting(NormalFormatting), Misc(0), Category(&GeneralCategory) {}
+        Formatting(NormalFormatting), Misc(0), Category(&getGeneralCategory()) {}
 
   inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
 

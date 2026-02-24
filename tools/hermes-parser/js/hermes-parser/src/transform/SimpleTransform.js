@@ -29,7 +29,9 @@ import {
  *     children are then traversed.
  *   - return null, signals the node should be deleted from the AST.
  */
-export type TransformCallback = (node: ESNode) => ESNode | null;
+export type TransformCallback = (
+  node: ESNode,
+) => ESNode | $ReadOnlyArray<ESNode> | null;
 
 export type TransformOptions = $ReadOnly<{
   /** The callback function which is called on entering each node. */
@@ -39,10 +41,20 @@ export type TransformOptions = $ReadOnly<{
   visitorKeys?: ?VisitorKeysType,
 }>;
 
-function setParentPointer(node: ESNode, parent: ?ESNode): void {
+function setParentPointer(
+  node: ESNode | $ReadOnlyArray<ESNode>,
+  parent: ?ESNode,
+): void {
   if (parent != null) {
-    // $FlowExpectedError[cannot-write]
-    node.parent = parent;
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        // $FlowExpectedError[cannot-write]
+        item.parent = parent;
+      }
+    } else {
+      // $FlowExpectedError[cannot-write]
+      node.parent = parent;
+    }
   }
 }
 
@@ -63,15 +75,23 @@ export class SimpleTransform {
         // Ensure the parent pointers are correctly set before entering the node.
         setParentPointer(node, parent);
 
-        const resultNode = options.transform(node);
+        const resultNode: ESNode | $ReadOnlyArray<ESNode> | null =
+          options.transform(node);
         if (resultNode !== node) {
-          let traversedResultNode = null;
+          let traversedResultNode: ESNode | $ReadOnlyArray<ESNode> | null =
+            null;
 
           if (resultNode != null) {
             // Ensure the new node has the correct parent pointers before recursing again.
             setParentPointer(resultNode, parent);
 
-            traversedResultNode = this.transform(resultNode, options);
+            if (Array.isArray(resultNode)) {
+              traversedResultNode = resultNode
+                .map(item => this.transform(item, options))
+                .filter(item => item != null);
+            } else {
+              traversedResultNode = this.transform(resultNode, options);
+            }
           }
 
           if (parent == null) {
@@ -80,7 +100,13 @@ export class SimpleTransform {
                 'SimpleTransform infra error: Parent not set on non root node, this should not be possible',
               );
             }
-            resultRootNode = traversedResultNode;
+            if (Array.isArray(traversedResultNode)) {
+              throw new Error(
+                'SimpleTransform: invalid array result for root node',
+              );
+            } else {
+              resultRootNode = traversedResultNode;
+            }
           } else if (traversedResultNode == null) {
             removeNodeOnParent(node, parent, options.visitorKeys);
           } else {

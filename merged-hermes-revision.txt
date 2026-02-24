@@ -1,4 +1,0 @@
-Commit Hash: bbebefee22a49d8edfe2de80350edd5e9ce52794
-Tag: no tag
-Date: 11/08/2025
-Branch: main

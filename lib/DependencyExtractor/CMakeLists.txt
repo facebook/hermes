@@ -7,8 +7,8 @@ set(source_files
   DependencyExtractor.cpp
 )
 
-add_hermes_library(hermesDependencyExtractor STATIC ${source_files}
-  LINK_LIBS
+add_hermes_library(hermesDependencyExtractor ${source_files}
+  LINK_OBJLIBS
   hermesAST
   hermesParser
   hermesSupport

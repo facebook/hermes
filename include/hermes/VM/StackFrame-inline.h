@@ -26,16 +26,31 @@ inline Handle<Callable> StackFramePtrT<isConst>::getCalleeClosureHandleUnsafe()
 
 template <bool isConst>
 typename StackFramePtrT<isConst>::QualifiedCB *
-StackFramePtrT<isConst>::getCalleeCodeBlock(Runtime &runtime) const {
+StackFramePtrT<isConst>::getCalleeCodeBlock() const {
   auto &ref = getCalleeClosureOrCBRef();
   if (ref.isObject()) {
     if (auto *func = dyn_vmcast<JSFunction>(ref))
-      return func->getCodeBlock(runtime);
+      return func->getCodeBlock();
     else
       return nullptr;
   } else {
     return ref.template getNativePointer<CodeBlock>();
   }
+}
+
+template <bool isConst>
+inline Handle<Environment> StackFramePtrT<isConst>::getDebugEnvironmentHandle()
+    const {
+  return !vmisa<Environment>(getDebugEnvironmentRef())
+      ? HandleRootOwner::makeNullHandle<Environment>()
+      : Handle<Environment>::vmcast_or_null(&getDebugEnvironmentRef());
+}
+
+template <bool isConst>
+inline Environment *StackFramePtrT<isConst>::getDebugEnvironment() const {
+  return !vmisa<Environment>(getDebugEnvironmentRef())
+      ? nullptr
+      : vmcast_or_null<Environment>(getDebugEnvironmentRef());
 }
 
 } // namespace vm

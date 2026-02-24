@@ -38,88 +38,96 @@ function protoShorthandMix2(func) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [protoShorthand, protoShorthandDup, protoShorthandMix1, protoShorthandMix2]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %protoShorthand#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "protoShorthand" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %protoShorthandDup#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "protoShorthandDup" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %protoShorthandMix1#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "protoShorthandMix1" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %protoShorthandMix2#0#1()#5, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "protoShorthandMix2" : string
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
-// CHECK-NEXT:  %11 = LoadStackInst %9
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "protoShorthand": string
+// CHECK-NEXT:       DeclareGlobalVarInst "protoShorthandDup": string
+// CHECK-NEXT:       DeclareGlobalVarInst "protoShorthandMix1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "protoShorthandMix2": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %protoShorthand(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "protoShorthand": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %protoShorthandDup(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "protoShorthandDup": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %protoShorthandMix1(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "protoShorthandMix1": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %protoShorthandMix2(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "protoShorthandMix2": string
+// CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
-// CHECK:function protoShorthand#0#1(func)#2
-// CHECK-NEXT:S{protoShorthand#0#1()#2} = [func#2, __proto__#2]
+// CHECK:scope %VS1 [func: any, __proto__: any]
+
+// CHECK:function protoShorthand(func: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthand#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func#2], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [__proto__#2], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__#2], %0
-// CHECK-NEXT:  %4 = AllocObjectInst 3 : number, empty
-// CHECK-NEXT:  %5 = LoadFrameInst [__proto__#2], %0
-// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %4 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %7 = StoreNewOwnPropertyInst 2 : number, %4 : object, "a" : string, true : boolean
-// CHECK-NEXT:  %8 = StoreNewOwnPropertyInst 3 : number, %4 : object, "b" : string, true : boolean
-// CHECK-NEXT:  %9 = ReturnInst %4 : object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.__proto__]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS1.__proto__]: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS1.__proto__]: any
+// CHECK-NEXT:       DefineOwnPropertyInst %7: any, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:       DefineOwnPropertyInst 2: number, %6: object, "a": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 3: number, %6: object, "b": string, true: boolean
+// CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 
-// CHECK:function protoShorthandDup#0#1(func)#3
-// CHECK-NEXT:S{protoShorthandDup#0#1()#3} = [func#3, __proto__#3]
+// CHECK:scope %VS2 [func: any, __proto__: any]
+
+// CHECK:function protoShorthandDup(func: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthandDup#0#1()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func#3], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [__proto__#3], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__#3], %0
-// CHECK-NEXT:  %4 = AllocObjectInst 1 : number, empty
-// CHECK-NEXT:  %5 = LoadFrameInst [__proto__#3], %0
-// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst null : null, %4 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %7 = LoadFrameInst [__proto__#3], %0
-// CHECK-NEXT:  %8 = StoreOwnPropertyInst %7, %4 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %9 = ReturnInst %4 : object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.__proto__]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS2.__proto__]: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS2.__proto__]: any
+// CHECK-NEXT:       DefineOwnPropertyInst null: null, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS2.__proto__]: any
+// CHECK-NEXT:        DefineOwnPropertyInst %9: any, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 
-// CHECK:function protoShorthandMix1#0#1(func)#4
-// CHECK-NEXT:S{protoShorthandMix1#0#1()#4} = [func#4, __proto__#4]
+// CHECK:scope %VS3 [func: any, __proto__: any]
+
+// CHECK:function protoShorthandMix1(func: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthandMix1#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func#4], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [__proto__#4], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__#4], %0
-// CHECK-NEXT:  %4 = AllocObjectInst 1 : number, empty
-// CHECK-NEXT:  %5 = LoadFrameInst [__proto__#4], %0
-// CHECK-NEXT:  %6 = StoreNewOwnPropertyInst %5, %4 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %7 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %8 = CallBuiltinInst [HermesBuiltin.silentSetPrototypeOf] : number, undefined : undefined, undefined : undefined, %4 : object, %7 : object
-// CHECK-NEXT:  %9 = ReturnInst %4 : object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS3.__proto__]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS3.__proto__]: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS3.__proto__]: any
+// CHECK-NEXT:       DefineOwnPropertyInst %7: any, %6: object, "__proto__": string, true: boolean
+// CHECK-NEXT:  %9 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %10 = CallBuiltinInst (:any) [HermesBuiltin.silentSetPrototypeOf]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: object, %9: object
+// CHECK-NEXT:        ReturnInst %6: object
 // CHECK-NEXT:function_end
 
-// CHECK:function protoShorthandMix2#0#1(func)#5
-// CHECK-NEXT:S{protoShorthandMix2#0#1()#5} = [func#5, __proto__#5]
+// CHECK:scope %VS4 [func: any, __proto__: any]
+
+// CHECK:function protoShorthandMix2(func: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{protoShorthandMix2#0#1()#5}
-// CHECK-NEXT:  %1 = StoreFrameInst %func, [func#5], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [__proto__#5], %0
-// CHECK-NEXT:  %3 = StoreFrameInst 42 : number, [__proto__#5], %0
-// CHECK-NEXT:  %4 = AllocObjectInst 0 : number, empty
-// CHECK-NEXT:  %5 = AllocObjectInst 1 : number, %4 : object
-// CHECK-NEXT:  %6 = LoadFrameInst [__proto__#5], %0
-// CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6, %5 : object, "__proto__" : string, true : boolean
-// CHECK-NEXT:  %8 = ReturnInst %5 : object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %func: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.func]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS4.__proto__]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 42: number, [%VS4.__proto__]: any
+// CHECK-NEXT:  %6 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %7 = AllocObjectLiteralInst (:object) %6: object
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS4.__proto__]: any
+// CHECK-NEXT:       DefineOwnPropertyInst %8: any, %7: object, "__proto__": string, true: boolean
+// CHECK-NEXT:        ReturnInst %7: object
 // CHECK-NEXT:function_end

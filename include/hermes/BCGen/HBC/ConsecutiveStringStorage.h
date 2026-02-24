@@ -9,7 +9,6 @@
 #define HERMES_SUPPORT_STRINGSTORAGE_H
 
 #include "hermes/Support/OptValue.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/Support/StringTableEntry.h"
 
 #include "llvh/ADT/ArrayRef.h"
@@ -30,7 +29,7 @@ namespace hbc {
 /// storage \p storage, converting UTF16 strings to UTF8 using
 /// \p utf8ConversionStorage if necessary.
 /// \return a StringRef of the string.
-llvh::StringRef getStringFromEntry(
+llvh::StringRef getUTF8StringFromEntry(
     const StringTableEntry &entry,
     llvh::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage);
@@ -53,19 +52,6 @@ class ConsecutiveStringStorage {
 
   /// A consecutive storage of char sequences.
   std::vector<unsigned char> storage_{};
-
-  /// Whether the string table is still valid to use.
-  bool isTableValid_{true};
-
-  /// Whether the string storage is still valid to use.
-  bool isStorageValid_{true};
-
-  inline void ensureTableValid() const {
-    assert(isTableValid_ && "String Table no longer valid");
-  }
-  inline void ensureStorageValid() const {
-    assert(isStorageValid_ && "String Storage no longer valid");
-  }
 
  public:
   ConsecutiveStringStorage() = default;
@@ -98,37 +84,28 @@ class ConsecutiveStringStorage {
 
   /// \returns a view to the current table.
   StringTableRefTy getStringTableView() const {
-    ensureTableValid();
     return strTable_;
   }
 
   MutStringTableRefTy getStringTableView() {
-    ensureTableValid();
     return strTable_;
   }
 
   /// \returns the number of strings contained in this storage.
   size_t count() const {
-    ensureTableValid();
     return strTable_.size();
   }
 
-  /// \returns a reference to the string table. Notice that whoever receives
-  /// the table may temper, swap or destroy the content. Hence after this
-  /// call, the string table is no longer valid to use.
-  std::vector<StringTableEntry> acquireStringTable() {
-    ensureTableValid();
-    isTableValid_ = false;
-    return std::move(strTable_);
+  /// \returns the string table and the storage.
+  /// Consumes the ConsecutiveStringStorage, after which it must not be used.
+  std::pair<std::vector<StringTableEntry>, std::vector<unsigned char>>
+  acquireStringTableAndStorage() && {
+    return {std::move(strTable_), std::move(storage_)};
   };
 
-  /// \returns a reference to the string storage. Notice that whoever receives
-  /// the table may temper, swap or destroy the content. Hence after this
-  /// call, the string table is no longer valid to use.
-  std::vector<unsigned char> acquireStringStorage() {
-    ensureStorageValid();
-    isStorageValid_ = false;
-    return std::move(storage_);
+  /// \returns a view to the current table.
+  StringStorageRefTy getStringStorageView() const {
+    return storage_;
   }
 
   /// \return the hash of the string represented by the \p i'th entry, as it
@@ -142,7 +119,7 @@ class ConsecutiveStringStorage {
   /// UTF16 strings to UTF8 using \p storage if necessary.
   /// \return a StringRef of the string, which may or may not reference
   /// \p storage.
-  llvh::StringRef getStringAtIndex(
+  llvh::StringRef getUTF8StringAtIndex(
       uint32_t idx,
       std::string &utf8ConversionStorage) const;
 };

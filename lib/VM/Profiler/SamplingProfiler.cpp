@@ -17,9 +17,9 @@
 
 #include "llvh/Support/Compiler.h"
 
-#include "ChromeTraceSerializer.h"
 #include "ProfileGenerator.h"
 #include "SamplingProfilerSampler.h"
+#include "TraceSerializer.h"
 
 #include <fcntl.h>
 #include <cassert>
@@ -73,17 +73,26 @@ void SamplingProfiler::markRoots(RootAcceptor &acceptor) {
 uint32_t SamplingProfiler::walkRuntimeStack(
     StackTrace &sampleStorage,
     InLoom inLoom,
-    uint32_t startIndex) {
-  unsigned count = startIndex;
+    MayAllocate mayAllocate) {
+  unsigned numSkipped = 0;
 
   // TODO: capture leaf frame IP.
   const Inst *ip = nullptr;
   for (ConstStackFramePtr frame : runtime_.getStackFrames()) {
+    // Out of space in the pre-allocated buffer. If we are executing this in
+    // signal handler, truncate the stack trace to the most recent frames.
+    // Otherwise, grow the buffer.
+    if (sampleStorage.stack.size() == sampleStorage.stack.capacity() &&
+        mayAllocate == MayAllocate::No) {
+      ++numSkipped;
+      continue;
+    }
+
+    StackFrame frameStorage;
     // Whether we successfully captured a stack frame or not.
     bool capturedFrame = true;
-    auto &frameStorage = sampleStorage.stack[count];
     // Check if it is pure JS frame.
-    auto *calleeCodeBlock = frame.getCalleeCodeBlock(runtime_);
+    auto *calleeCodeBlock = frame.getCalleeCodeBlock();
     if (calleeCodeBlock != nullptr) {
       frameStorage.kind = StackFrame::FrameKind::JSFunction;
       frameStorage.jsFrame.functionId = calleeCodeBlock->getFunctionID();
@@ -116,21 +125,17 @@ uint32_t SamplingProfiler::walkRuntimeStack(
     // Update ip to caller for next iteration.
     ip = frame.getSavedIP();
     if (capturedFrame) {
-      ++count;
-      if (count >= sampleStorage.stack.size()) {
-        break;
-      }
+      sampleStorage.stack.push_back(std::move(frameStorage));
     }
   }
   sampleStorage.tid = threadID_;
   sampleStorage.timeStamp = std::chrono::steady_clock::now();
-  return count;
+  return numSkipped;
 }
 
 SamplingProfiler::SamplingProfiler(Runtime &runtime)
     : threadID_{oscompat::global_thread_id()}, runtime_{runtime} {
   threadNames_[threadID_] = oscompat::thread_name();
-  sampling_profiler::Sampler::get()->registerRuntime(this);
 }
 
 void SamplingProfiler::dumpSampledStackGlobal(llvh::raw_ostream &OS) {
@@ -181,30 +186,29 @@ void SamplingProfiler::dumpSampledStack(llvh::raw_ostream &OS) {
   }
 }
 
-void SamplingProfiler::dumpChromeTraceGlobal(llvh::raw_ostream &OS) {
+void SamplingProfiler::dumpTraceryTraceGlobal(llvh::raw_ostream &OS) {
   auto globalProfiler = sampling_profiler::Sampler::get();
   std::lock_guard<std::mutex> lk(globalProfiler->profilerLock_);
   if (!globalProfiler->profilers_.empty()) {
     auto *localProfiler = *globalProfiler->profilers_.begin();
-    localProfiler->dumpChromeTrace(OS);
+    localProfiler->dumpTraceryTrace(OS);
   }
+}
+
+void SamplingProfiler::dumpTraceryTrace(llvh::raw_ostream &OS) {
+  std::lock_guard<std::mutex> lk(runtimeDataLock_);
+  auto pid = oscompat::process_id();
+  hermes::vm::serializeAsTraceryTrace(
+      *this, OS, TraceFormat::create(pid, threadNames_, sampledStacks_));
+  clear();
 }
 
 void SamplingProfiler::dumpChromeTrace(llvh::raw_ostream &OS) {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  auto pid = oscompat::process_id();
-  ChromeTraceSerializer serializer(
-      *this, ChromeTraceFormat::create(pid, threadNames_, sampledStacks_));
-  serializer.serialize(OS);
-  clear();
-}
-
-void SamplingProfiler::serializeInDevToolsFormat(llvh::raw_ostream &OS) {
-  std::lock_guard<std::mutex> lk(runtimeDataLock_);
-  hermes::vm::serializeAsProfilerProfile(
+  hermes::vm::serializeAsChromeTrace(
       *this,
       OS,
-      ChromeTraceFormat::create(
+      TraceFormat::create(
           oscompat::process_id(), threadNames_, sampledStacks_));
   clear();
 }
@@ -261,7 +265,7 @@ void SamplingProfiler::resume() {
   std::lock_guard<std::mutex> lk(runtimeDataLock_);
   assert(suspendCount_ > 0 && "resume() without suspend()");
   if (--suspendCount_ == 0) {
-    preSuspendStackDepth_ = 0;
+    preSuspendStackStorage_.stack.clear();
   }
 }
 
@@ -275,13 +279,18 @@ void SamplingProfiler::recordPreSuspendStack(
     suspendExtraInfo.gcFrame = &(*(retPair.first));
   }
 
+  assert(
+      preSuspendStackStorage_.stack.size() == 0 &&
+      "Pre-suspend stack storage should be empty before sampling.");
+
+  preSuspendStackStorage_.stack.resize(1);
+
   auto &leafFrame = preSuspendStackStorage_.stack[0];
   leafFrame.kind = StackFrame::FrameKind::SuspendFrame;
   leafFrame.suspendFrame = suspendExtraInfo;
 
   // Leaf frame slot has been used, filling from index 1.
-  preSuspendStackDepth_ =
-      walkRuntimeStack(preSuspendStackStorage_, InLoom::No, 1);
+  walkRuntimeStack(preSuspendStackStorage_, InLoom::No, MayAllocate::Yes);
 }
 
 bool operator==(

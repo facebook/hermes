@@ -11,6 +11,7 @@
 
 #include <cstdint>
 #include "Windows.Globalization.h"
+#include "hermes/Platform/Intl/hermes_icu.h"
 
 namespace hermes {
 namespace platform_unicode {
@@ -387,19 +388,77 @@ void dateFormat(
   }
 }
 
+/// Try to convert case using ICU via the hermes_icu_vtable.
+/// Returns true if ICU handled the conversion, false if caller should
+/// fall back to Windows NLS APIs.
+static bool convertToCaseICU(
+    llvh::SmallVectorImpl<char16_t> &buf,
+    CaseConversion targetCase,
+    bool useCurrentLocale) {
+  const hermes_icu_vtable *icu = hermes_icu_get_active_vtable();
+  if (!icu)
+    return false;
+
+  auto converter = targetCase == CaseConversion::ToUpper
+      ? icu->u_strToUpper
+      : icu->u_strToLower;
+  if (!converter)
+    return false;
+
+  // ICU locale: "" = root locale (language-independent Unicode rules),
+  // nullptr = default locale (current system locale).
+  const char *locale = useCurrentLocale ? nullptr : "";
+
+  // First call to get the required output length.
+  const UChar *src = reinterpret_cast<const UChar *>(buf.data());
+  int32_t srcLen = buf.size();
+  UErrorCode err = U_ZERO_ERROR;
+  int32_t resultLen = converter(nullptr, 0, src, srcLen, locale, &err);
+  if (U_FAILURE(err) && err != U_BUFFER_OVERFLOW_ERROR)
+    return false;
+  if (resultLen <= 0)
+    return false;
+
+  llvh::SmallVector<char16_t, 64> output{};
+  output.resize(resultLen);
+  err = U_ZERO_ERROR;
+  resultLen = converter(
+      reinterpret_cast<UChar *>(output.data()),
+      output.size(),
+      src,
+      srcLen,
+      locale,
+      &err);
+  if (U_FAILURE(err))
+    return false;
+
+  output.resize(resultLen);
+  buf = output;
+  return true;
+}
+
 void convertToCase(
     llvh::SmallVectorImpl<char16_t> &buf,
     CaseConversion targetCase,
     bool useCurrentLocale) {
   if (buf.size() == 0)
     return;
+
+  // Try ICU first for full Unicode SpecialCasing support
+  // (e.g., ß → SS, final sigma Σ → ς).
+  if (convertToCaseICU(buf, targetCase, useCurrentLocale))
+    return;
+
+  // Fall back to Windows NLS APIs when ICU is not available.
   DWORD dwFlags =
       targetCase == CaseConversion::ToUpper ? LCMAP_UPPERCASE : LCMAP_LOWERCASE;
   dwFlags |= LCMAP_LINGUISTIC_CASING;
   static_assert(
       sizeof(wchar_t) == sizeof(char16_t), "sizeof(wchar_t) == sizeof(UChar)");
+  LPCWSTR localeName =
+      useCurrentLocale ? LOCALE_NAME_USER_DEFAULT : LOCALE_NAME_INVARIANT;
   int sizeEstimate = LCMapStringEx(
-      useCurrentLocale ? LOCALE_NAME_USER_DEFAULT : LOCALE_NAME_INVARIANT,
+      localeName,
       dwFlags,
       reinterpret_cast<LPCWSTR>(buf.data()),
       buf.size(),
@@ -412,7 +471,7 @@ void convertToCase(
     llvh::SmallVector<char16_t, 64> output{};
     output.resize(sizeEstimate);
     int charsWritten = LCMapStringEx(
-        LOCALE_NAME_USER_DEFAULT,
+        localeName,
         dwFlags,
         reinterpret_cast<LPCWSTR>(buf.data()),
         buf.size(),
@@ -421,7 +480,7 @@ void convertToCase(
         nullptr /* lpVersionInformation */,
         nullptr /* lpReserved */,
         0 /* sortHandle */);
-    assert (charsWritten > 0 && "LCMapStringEx failed !");
+    assert(charsWritten > 0 && "LCMapStringEx failed !");
     buf = output;
   }
 }

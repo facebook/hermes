@@ -9,15 +9,18 @@
 // RUN: %hermes -enable-hermes-internal=false %s | %FileCheck --match-full-lines --check-prefix=CHKHID %s
 // RUN: %hermes -Xhermes-internal-test-methods=true %s | %FileCheck --match-full-lines --check-prefix=CHKIME %s
 // RUN: %hermes -Xhermes-internal-test-methods=false %s | %FileCheck --match-full-lines --check-prefix=CHKIMD %s
+// RUN: %shermes -exec %s -Wx,-enable-hermes-internal=true | %FileCheck --match-full-lines --check-prefix=CHKHIE %s
+// RUN: %shermes -exec %s -Wx,-enable-hermes-internal=false | %FileCheck --match-full-lines --check-prefix=CHKHID %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods=true | %FileCheck --match-full-lines --check-prefix=CHKIME %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods=false | %FileCheck --match-full-lines --check-prefix=CHKIMD %s
 
 // concat
 // hasPromise
-// hasES6Class
 // setPromiseRejectionTrackingHook
 // enablePromiseRejectionTracker
 // enqueueJob
 // useEngineQueue
-var SAFE_FIELDS_COUNT = 7;
+var SAFE_FIELDS_COUNT = 6;
 
 // Check that we can disable unsafe fields of HermesInternal.
 print(Object.getOwnPropertyNames(HermesInternal).length)

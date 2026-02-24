@@ -24,7 +24,7 @@ export async function transform(
   visitors: TransformVisitor,
   prettierOptions: {...} = {},
 ): Promise<string> {
-  const parseResult = await parse(originalCode);
+  const parseResult = parse(originalCode);
 
   const {ast, astWasMutated, mutatedCode} = transformAST(parseResult, visitors);
   if (!astWasMutated) {

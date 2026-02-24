@@ -18,7 +18,7 @@ function getOptions() {
     ...prettierConfig,
     parser: 'hermes',
     requirePragma: false,
-    plugins: [require('../src/index.js')],
+    plugins: [require.resolve('../index.mjs')],
   };
 }
 
@@ -73,7 +73,7 @@ declare hook useFoo(
   // Trailing comment
 ): SomeComponent;
     `;
-    const output = prettier.format(code, getOptions());
+    const output = await prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
       "declare hook useFoo(): void;
 

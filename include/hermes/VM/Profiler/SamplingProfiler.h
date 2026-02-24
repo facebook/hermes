@@ -114,10 +114,10 @@ class SamplingProfiler {
     ThreadId tid{0};
     /// Timestamp when the stack trace is taken.
     TimeStampType timeStamp;
-    /// Captured stack frames.
+    /// Captured stack frames, starting from the most recent frame.
     std::vector<StackFrame> stack;
 
-    explicit StackTrace(uint32_t preallocatedSize) : stack(preallocatedSize) {}
+    explicit StackTrace() = default;
     explicit StackTrace(
         ThreadId tid,
         TimeStampType ts,
@@ -125,6 +125,8 @@ class SamplingProfiler {
         const std::vector<StackFrame>::iterator stackEnd)
         : tid(tid), timeStamp(ts), stack(stackStart, stackEnd) {}
   };
+
+  enum class MayAllocate { No, Yes };
 
   /// \return true if this SamplingProfiler belongs to the current running
   /// thread. The current thread can change (e.g. in the time between
@@ -166,9 +168,6 @@ class SamplingProfiler {
  private:
   friend struct sampling_profiler::Sampler;
 
-  /// Max size of sampleStorage_.
-  static const int kMaxStackDepth = 500;
-
   /// Protect data specific to a runtime, such as the sampled stacks,
   /// domains, and thread associated with the runtime.
   std::mutex runtimeDataLock_;
@@ -183,11 +182,9 @@ class SamplingProfiler {
   // protected by runtimeDataLock_.
   /// The counter of how many suspend calls are pending -- i.e., need to be
   /// resume()d.
-  volatile uint32_t suspendCount_{0};
-  /// The actual sampled stack depth in preSuspendStackStorage_.
-  volatile uint32_t preSuspendStackDepth_{0};
+  uint32_t suspendCount_{0};
   /// JS stack captured at time of GC.
-  StackTrace preSuspendStackStorage_{kMaxStackDepth};
+  StackTrace preSuspendStackStorage_{};
 
   /// Prellocated map that contains thread names mapping.
   ThreadNamesMap threadNames_;
@@ -230,16 +227,18 @@ class SamplingProfiler {
   enum class InLoom { No, Yes };
 
   /// Walk runtime stack frames and store in \p sampleStorage.
-  /// This function is called from signal handler so should obey all
-  /// rules of signal handler(no lock, no memory allocation etc...)
-  /// \param startIndex specifies the start index in \p sampleStorage to fill.
+  /// When this function is being invoked from signal handler, it should obey
+  /// all rules of signal handler(no lock, no memory allocation etc...)
+  /// \param sampleStorage references the buffer where stack frames will be
+  /// stored.
   /// \param inLoom specifies this function is being invoked in a Loom callback.
-  /// \return total number of stack frames captured in \p sampleStorage
-  /// including existing frames before \p startIndex.
+  /// \param mayAllocate specifies whether this function may allocate memory.
+  /// \return the number of frames that aren't stored in \p sampleStorage
+  /// due to insufficient space.
   uint32_t walkRuntimeStack(
       StackTrace &sampleStorage,
       InLoom inLoom,
-      uint32_t startIndex = 0);
+      MayAllocate mayAllocate);
 
  private:
   /// Record JS stack at time of suspension, caller must hold
@@ -268,8 +267,8 @@ class SamplingProfiler {
   /// NOTE: this is for manual testing purpose.
   void dumpSampledStack(llvh::raw_ostream &OS);
 
-  /// Dump sampled stack to \p OS in chrome trace format.
-  void dumpChromeTrace(llvh::raw_ostream &OS);
+  /// Dump sampled stack to \p OS in tracery trace format.
+  void dumpTraceryTrace(llvh::raw_ostream &OS);
 
   /// Dump sampled stack trace to data structure that can be used by third
   /// parties.
@@ -281,13 +280,13 @@ class SamplingProfiler {
   /// https://chromedevtools.github.io/devtools-protocol/tot/Profiler/#type-Profile
   ///
   /// for a description.
-  void serializeInDevToolsFormat(llvh::raw_ostream &OS);
+  void dumpChromeTrace(llvh::raw_ostream &OS);
 
   /// Static wrapper for dumpSampledStack.
   static void dumpSampledStackGlobal(llvh::raw_ostream &OS);
 
-  /// Static wrapper for dumpChromeTrace.
-  static void dumpChromeTraceGlobal(llvh::raw_ostream &OS);
+  /// Static wrapper for dumpTraceryTrace.
+  static void dumpTraceryTraceGlobal(llvh::raw_ostream &OS);
 
   /// Enable and start profiling.
   static bool enable(double meanHzFreq = 100);

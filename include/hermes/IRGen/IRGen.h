@@ -19,53 +19,28 @@ namespace hermes {
 
 using DeclarationFileListTy = std::vector<ESTree::ProgramNode *>;
 
-namespace hbc {
+namespace sema {
+class SemContext;
+}
 
-struct LazyCompilationData {
-  /// The context used by IRGen.
-  std::shared_ptr<Context> context;
-
-  /// The variables in scope at the point where the function is defined.
-  SerializedScopePtr parentScope;
-
-  /// The original name of the function, as found in the source.
-  Identifier originalName;
-  /// The generated name of the variable holding the function in the parent's
-  /// frame, which is what we need to look up to reference ourselves. It is only
-  /// set if there is an alias binding from \c originalName (which must be
-  /// valid) and said variable, which must have a different name (since it is
-  /// generated). Function::lazyClosureAlias_.
-  Identifier closureAlias;
-
-  /// The source buffer ID in which we can find the function source.
-  uint32_t bufferId;
-
-  /// The source span of the function.
-  SMRange span;
-
-  /// The type of function, e.g. statement or expression.
-  ESTree::NodeKind nodeKind;
-
-  /// Whether or not the function is strict.
-  bool strictMode;
-
-  /// The Yield param to restore when parsing.
-  bool paramYield;
-
-  /// The Await param to restore when parsing.
-  bool paramAwait;
-};
-} // namespace hbc
+namespace flow {
+class FlowContext;
+}
 
 /// Lowers an ESTree program into Hermes IR in \p M.
-/// \param declFileList a list of parsed global property definition files.
-/// \param scopeChain identifiers in the environment, if compiling for local
-/// eval. \returns True if an error occured and a message was emitted.
-bool generateIRFromESTree(
-    ESTree::NodePtr node,
+void generateIRFromESTree(
     Module *M,
-    const DeclarationFileListTy &declFileList,
-    const ScopeChain &scopeChain);
+    sema::SemContext &semCtx,
+    flow::FlowContext &flowContext,
+    ESTree::NodePtr node,
+    llvh::StringRef topLevelFunctionName = "global");
+
+/// Lowers an ESTree program into Hermes IR in \p M.
+void generateIRFromESTree(
+    Module *M,
+    sema::SemContext &semCtx,
+    ESTree::NodePtr node,
+    llvh::StringRef topLevelFunctionName = "global");
 
 /// Lowers an ESTree program into Hermes IR in \p M without a top-level
 /// function, so that it can be used as a CommonJS module.
@@ -76,21 +51,36 @@ bool generateIRFromESTree(
 ///           (index when reading filenames for the first time).
 /// \param filename the relative filename to the CommonJS module.
 void generateIRForCJSModule(
+    sema::SemContext &semContext,
     ESTree::FunctionExpressionNode *node,
     uint32_t segmentID,
     uint32_t id,
     llvh::StringRef filename,
-    Module *M,
-    Function *topLevelFunction,
-    const DeclarationFileListTy &declFileList);
-
-/// Generate IR from the AST of a previously pre-parsed "lazy" function by
-/// parsing it again and validating it. On error, a stub function which throws
-/// a SyntaxError will be emitted instead.
-/// \return the newly generated function IR and lexical scope root
-std::pair<Function *, Function *> generateLazyFunctionIR(
-    hbc::LazyCompilationData *lazyData,
     Module *M);
+
+/// Generate IR for a lazy function.
+/// Populates the module with any new Functions created as a result.
+/// \param F the lazy function to lower, with a LazyCompilationDataInst as the
+/// body.
+/// \param node the AST node associated with the lazy function.
+/// \param semCtx the semantic context for resolution.
+/// \return the newly generated function for lazyData.
+Function *generateLazyFunctionIR(
+    Function *F,
+    ESTree::FunctionLikeNode *node,
+    sema::SemContext &semCtx);
+
+/// Generate IR for strict-mode local eval, in a new function.
+/// Populates the module with any new Functions created as a result.
+/// \param M the module to add the new Functions to.
+/// \param evalDataInst contains needed information to seed irgen.
+/// \param semCtx the semantic context for resolution.
+/// \return the newly generated function.
+Function *generateEvalIR(
+    Module *M,
+    EvalCompilationDataInst *evalDataInst,
+    ESTree::FunctionLikeNode *node,
+    sema::SemContext &semCtx);
 
 } // namespace hermes
 

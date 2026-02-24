@@ -7,6 +7,7 @@
 
 // RUN: %hermes -Xhermes-internal-test-methods -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermesc -O -emit-binary -out %t.hbc %s && %hermes -Xhermes-internal-test-methods %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods | %FileCheck --match-full-lines %s
 
 print("Check .length");
 // CHECK-LABEL: Check .length
@@ -140,3 +141,39 @@ try {
     print(e.constructor === TypeError);
     // CHECK-NEXT: true
 }
+
+print("Check byteLength and byteOffset on detached ArrayBuffer");
+// CHECK-LABEL: Check byteLength and byteOffset on detached ArrayBuffer
+var buffer = new ArrayBuffer(16);
+var view = new DataView(buffer, 4, 8);
+HermesInternal.detachArrayBuffer(buffer);
+try {
+    view.byteLength;
+    print('Should not reach here');
+} catch (e) {
+    print('byteLength threw', e.constructor === TypeError);
+    // CHECK-NEXT: byteLength threw true
+}
+try {
+    view.byteOffset;
+    print('Should not reach here');
+} catch (e) {
+    print('byteOffset threw', e.constructor === TypeError);
+    // CHECK-NEXT: byteOffset threw true
+}
+
+print("Check ArrayBuffer byteLength on detached buffer");
+// CHECK-LABEL: Check ArrayBuffer byteLength on detached buffer
+var ab = new ArrayBuffer(10);
+HermesInternal.detachArrayBuffer(ab);
+print(ab.byteLength);
+// CHECK-NEXT: 0
+
+print("Check ArrayBuffer.prototype.detached");
+// CHECK-LABEL: Check ArrayBuffer.prototype.detached
+var ab = new ArrayBuffer(10);
+print(ab.detached);
+// CHECK-NEXT: false
+HermesInternal.detachArrayBuffer(ab);
+print(ab.detached);
+// CHECK-NEXT: true

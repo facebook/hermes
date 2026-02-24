@@ -10,11 +10,6 @@
 #include "hermes/VM/BuildMetadata.h"
 #include "hermes/VM/Callable.h"
 
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -42,7 +37,7 @@ void TypedArrayBaseBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 std::pair<uint32_t, uint32_t> JSTypedArrayBase::_getOwnIndexedRangeImpl(
     JSObject *selfObj,
-    Runtime &) {
+    PointerBase &) {
   auto *self = vmcast<JSTypedArrayBase>(selfObj);
   return {0, self->getLength()};
 }
@@ -365,7 +360,7 @@ CallResult<Handle<JSTypedArrayBase>> JSTypedArray<T, C>::allocateSpecies(
   auto callRes = Callable::executeConstruct1(
       *possibleCons,
       runtime,
-      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(length)));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(length)));
   if (callRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -491,13 +486,12 @@ HermesValue JSTypedArray<T, C>::_getOwnIndexedImpl(
   auto *self = vmcast<JSTypedArray>(selfObj.get());
 
   if (LLVM_UNLIKELY(!self->attached(runtime))) {
-    noAllocs.release();
-    // NOTE: This should be a TypeError to be fully spec-compliant, but
-    // getOwnIndexed is not allowed to return an exception.
-    return _getOwnRetEncoder<T>::encodeMayAlloc(runtime, 0);
+    // ES15 10.4.5.4 [[Get]]
+    // Return undefined if array buffer is detached.
+    return HermesValue::encodeUndefinedValue();
   }
   if (LLVM_LIKELY(index < self->getLength())) {
-    auto elem = self->at(runtime, index);
+    auto elem = self->monoAt(runtime, index);
     noAllocs.release();
     return _getOwnRetEncoder<T>::encodeMayAlloc(runtime, elem);
   }
@@ -562,11 +556,12 @@ CallResult<bool> JSTypedArray<T, C>::_setOwnIndexedImpl(
   }
   T destValue = JSTypedArray<T, C>::toDestType(*res);
   if (LLVM_UNLIKELY(!typedArrayHandle->attached(runtime))) {
-    return runtime.raiseTypeError(
-        "Cannot set a value into a detached ArrayBuffer");
+    // ES15 10.4.5.5 [[Set]]
+    // Return true if array buffer is detached.
+    return true;
   }
   if (LLVM_LIKELY(index < typedArrayHandle->getLength())) {
-    typedArrayHandle->at(runtime, index) = destValue;
+    typedArrayHandle->monoAt(runtime, index) = destValue;
   }
   return true;
 }

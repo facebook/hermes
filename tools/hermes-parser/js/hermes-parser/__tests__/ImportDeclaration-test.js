@@ -30,40 +30,40 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "value",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "importKind": null,
-                  "imported": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "value",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "importKind": null,
+                 "imported": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -71,37 +71,37 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "value",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "importKind": null,
-                  "imported": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "value",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "importKind": null,
+                 "imported": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });
@@ -118,33 +118,33 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "value",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "value",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -152,32 +152,32 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "value",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "value",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });
@@ -194,33 +194,33 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "value",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportNamespaceSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "value",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportNamespaceSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -228,32 +228,32 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "value",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportNamespaceSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "value",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportNamespaceSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });
@@ -270,49 +270,49 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "value",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-                {
-                  "importKind": null,
-                  "imported": {
-                    "name": "Bar",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "local": {
-                    "name": "Bar",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "value",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+               {
+                 "importKind": null,
+                 "imported": {
+                   "name": "Bar",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "local": {
+                   "name": "Bar",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -320,44 +320,44 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "value",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-                {
-                  "importKind": null,
-                  "imported": {
-                    "name": "Bar",
-                    "type": "Identifier",
-                  },
-                  "local": {
-                    "name": "Bar",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "value",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+               {
+                 "importKind": null,
+                 "imported": {
+                   "name": "Bar",
+                   "type": "Identifier",
+                 },
+                 "local": {
+                   "name": "Bar",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });
@@ -374,42 +374,42 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "value",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-                {
-                  "local": {
-                    "name": "Bar",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportNamespaceSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "value",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+               {
+                 "local": {
+                   "name": "Bar",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportNamespaceSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -417,39 +417,39 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "value",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-                {
-                  "local": {
-                    "name": "Bar",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportNamespaceSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "value",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+               {
+                 "local": {
+                   "name": "Bar",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportNamespaceSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });
@@ -469,56 +469,56 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "value",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "importKind": "type",
-                  "imported": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportSpecifier",
-                },
-                {
-                  "importKind": "typeof",
-                  "imported": {
-                    "name": "Bar",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "local": {
-                    "name": "Bar",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "value",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "importKind": "type",
+                 "imported": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportSpecifier",
+               },
+               {
+                 "importKind": "typeof",
+                 "imported": {
+                   "name": "Bar",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "local": {
+                   "name": "Bar",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -526,49 +526,49 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "value",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "importKind": "type",
-                  "imported": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportSpecifier",
-                },
-                {
-                  "importKind": "typeof",
-                  "imported": {
-                    "name": "Bar",
-                    "type": "Identifier",
-                  },
-                  "local": {
-                    "name": "Bar",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "value",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "importKind": "type",
+                 "imported": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportSpecifier",
+               },
+               {
+                 "importKind": "typeof",
+                 "imported": {
+                   "name": "Bar",
+                   "type": "Identifier",
+                 },
+                 "local": {
+                   "name": "Bar",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });
@@ -588,33 +588,33 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "type",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "type",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -622,32 +622,32 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "type",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "type",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });
@@ -667,33 +667,33 @@ describe('ImportDeclaration', () => {
 
     test('ESTree', () => {
       expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "assertions": [],
-              "importKind": "typeof",
-              "source": {
-                "literalType": "string",
-                "raw": "'Foo'",
-                "type": "Literal",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "optional": false,
-                    "type": "Identifier",
-                    "typeAnnotation": null,
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "attributes": [],
+             "importKind": "typeof",
+             "source": {
+               "literalType": "string",
+               "raw": "'Foo'",
+               "type": "Literal",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "optional": false,
+                   "type": "Identifier",
+                   "typeAnnotation": null,
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectEspreeAlignment(testCase);
     });
@@ -701,32 +701,32 @@ describe('ImportDeclaration', () => {
     test('Babel', () => {
       expect(parseForSnapshot(testCase.code, {babel: true}))
         .toMatchInlineSnapshot(`
-        {
-          "body": [
-            {
-              "importKind": "typeof",
-              "source": {
-                "extra": {
-                  "raw": "'Foo'",
-                  "rawValue": "Foo",
-                },
-                "type": "StringLiteral",
-                "value": "Foo",
-              },
-              "specifiers": [
-                {
-                  "local": {
-                    "name": "Foo",
-                    "type": "Identifier",
-                  },
-                  "type": "ImportDefaultSpecifier",
-                },
-              ],
-              "type": "ImportDeclaration",
-            },
-          ],
-          "type": "Program",
-        }
+       {
+         "body": [
+           {
+             "importKind": "typeof",
+             "source": {
+               "extra": {
+                 "raw": "'Foo'",
+                 "rawValue": "Foo",
+               },
+               "type": "StringLiteral",
+               "value": "Foo",
+             },
+             "specifiers": [
+               {
+                 "local": {
+                   "name": "Foo",
+                   "type": "Identifier",
+                 },
+                 "type": "ImportDefaultSpecifier",
+               },
+             ],
+             "type": "ImportDeclaration",
+           },
+         ],
+         "type": "Program",
+       }
       `);
       expectBabelAlignment(testCase);
     });

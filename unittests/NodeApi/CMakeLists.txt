@@ -33,34 +33,56 @@ function(add_node_api_module MODULE_TARGET)
     LIBRARY_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
     RUNTIME_OUTPUT_DIRECTORY ${MODULE_OUTPUT_DIR}
     SUFFIX .node
+    PREFIX ""
   )
+
+  # Remember the target so we can wire it up as a dependency of the test
+  # executable later. This ensures the native addon is built even when the
+  # default "all" target is not.
+  set_property(GLOBAL APPEND PROPERTY NODE_API_TEST_MODULE_TARGETS ${MODULE_TARGET})
 endfunction()
 
 add_subdirectory(test)
 
 # Turn on EH and RTTI for node_lite and NodeApiTests
-set(HERMES_ENABLE_EH_RTTI ON)
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
 
 # For some reason (bug?) add_unittest() is clearing LLVM_REQUIRES_RTTI, so
 # we need to set this one.
 set(LLVM_ENABLE_RTTI ON)
 
-add_hermes_executable(node_lite
-  child_process.cpp
+if(WIN32)
+  set(CHILD_PROCESS_SRC child_process_windows.cpp)
+  set(NODE_LITE_PLATFORM_SRC node_lite_windows.cpp)
+else()
+  set(CHILD_PROCESS_SRC child_process_posix.cpp)
+  set(NODE_LITE_PLATFORM_SRC node_lite_posix.cpp)
+endif()
+
+add_executable(node_lite
+  ${CHILD_PROCESS_SRC}
   child_process.h
   compat.h
   node_lite.cpp
   node_lite.h
   node_lite_hermes.cpp
-  node_lite_windows.cpp
+  ${NODE_LITE_PLATFORM_SRC}
   string_utils.cpp
   string_utils.h
 )
 target_link_libraries(node_lite PRIVATE libshared)
+if(UNIX AND NOT APPLE)
+  target_link_libraries(node_lite PRIVATE dl)
+endif()
 target_include_directories(node_lite
   PRIVATE
     ../../API/hermes_node_api/node_api
-    ../../API/hermes_shared
+)
+
+target_compile_definitions(node_lite
+  PRIVATE
+    NODE_API_EXPERIMENTAL_NO_WARNING
 )
 
 target_include_directories(node_lite
@@ -77,7 +99,7 @@ add_custom_command(TARGET node_lite POST_BUILD
 )
 
 add_hermes_unittest(NodeApiTests
-  child_process.cpp
+  ${CHILD_PROCESS_SRC}
   child_process.h
   string_utils.cpp
   string_utils.h
@@ -90,3 +112,9 @@ target_link_libraries(NodeApiTests libshared)
 
 # transform test JS files to be Hermes-compatible
 add_dependencies(NodeApiTests transformJSFiles node_lite)
+
+get_property(_node_api_module_targets GLOBAL PROPERTY NODE_API_TEST_MODULE_TARGETS)
+if(_node_api_module_targets)
+  list(REMOVE_DUPLICATES _node_api_module_targets)
+  add_dependencies(NodeApiTests ${_node_api_module_targets})
+endif()

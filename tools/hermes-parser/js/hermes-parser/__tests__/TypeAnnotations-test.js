@@ -72,7 +72,6 @@ describe('Literal', () => {
           type: 'TypeAlias',
           right: {
             type: 'BigIntLiteralTypeAnnotation',
-            // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
             value: BigInt(4321),
           },
         },
@@ -80,8 +79,7 @@ describe('Literal', () => {
           type: 'TypeAlias',
           right: {
             type: 'BigIntLiteralTypeAnnotation',
-            // $FlowExpectedError[cannot-resolve-name] - not supported by flow yet
-            value: BigInt(1234),
+            value: 1234n,
           },
         },
       ],
@@ -316,7 +314,6 @@ describe('Keyword Types', () => {
   };
 
   test('Emitted `.value` type is correct', () => {
-    // Also assert that the literal's `.value` is the correct instance type
     expect(parse(testCase.code)).toMatchObject({
       type: 'Program',
       body: [
@@ -723,13 +720,13 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
-                "inexact": false,
-                "type": "TupleTypeAnnotation",
-                "types": [
+                "elementTypes": [
                   {
                     "type": "StringTypeAnnotation",
                   },
                 ],
+                "inexact": false,
+                "type": "TupleTypeAnnotation",
               },
               "type": "TypeAlias",
               "typeParameters": null,
@@ -797,9 +794,7 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
-                "inexact": false,
-                "type": "TupleTypeAnnotation",
-                "types": [
+                "elementTypes": [
                   {
                     "label": null,
                     "type": "TupleTypeSpreadElement",
@@ -815,6 +810,8 @@ describe('TupleTypeAnnotation', () => {
                     },
                   },
                 ],
+                "inexact": false,
+                "type": "TupleTypeAnnotation",
               },
               "type": "TypeAlias",
               "typeParameters": null,
@@ -882,9 +879,7 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
-                "inexact": false,
-                "type": "TupleTypeAnnotation",
-                "types": [
+                "elementTypes": [
                   {
                     "elementType": {
                       "type": "NumberTypeAnnotation",
@@ -903,6 +898,8 @@ describe('TupleTypeAnnotation', () => {
                     },
                   },
                 ],
+                "inexact": false,
+                "type": "TupleTypeAnnotation",
               },
               "type": "TypeAlias",
               "typeParameters": null,
@@ -970,9 +967,9 @@ describe('TupleTypeAnnotation', () => {
                 "typeAnnotation": null,
               },
               "right": {
+                "elementTypes": [],
                 "inexact": true,
                 "type": "TupleTypeAnnotation",
-                "types": [],
               },
               "type": "TypeAlias",
               "typeParameters": null,
@@ -1225,5 +1222,125 @@ describe('TypeCastExpression', () => {
       }
     `);
     expectBabelAlignment(testCase);
+  });
+});
+
+describe('unknown/never/undefined', () => {
+  const testCase: AlignmentCase = {
+    code: `
+      type T0 = unknown;
+      type T1 = never;
+      type T2 = undefined;
+    `,
+    espree: {expectToFail: false},
+    babel: {expectToFail: false},
+  };
+
+  test('ESTree', () => {
+    expect(parseForSnapshot(testCase.code)).toMatchInlineSnapshot(`
+     {
+       "body": [
+         {
+           "id": {
+             "name": "T0",
+             "optional": false,
+             "type": "Identifier",
+             "typeAnnotation": null,
+           },
+           "right": {
+             "type": "UnknownTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T1",
+             "optional": false,
+             "type": "Identifier",
+             "typeAnnotation": null,
+           },
+           "right": {
+             "type": "NeverTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T2",
+             "optional": false,
+             "type": "Identifier",
+             "typeAnnotation": null,
+           },
+           "right": {
+             "type": "UndefinedTypeAnnotation",
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+       ],
+       "type": "Program",
+     }
+    `);
+  });
+
+  test('Babel', () => {
+    expect(parseForSnapshot(testCase.code, {babel: true}))
+      .toMatchInlineSnapshot(`
+     {
+       "body": [
+         {
+           "id": {
+             "name": "T0",
+             "type": "Identifier",
+           },
+           "right": {
+             "id": {
+               "name": "unknown",
+               "type": "Identifier",
+             },
+             "type": "GenericTypeAnnotation",
+             "typeParameters": null,
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T1",
+             "type": "Identifier",
+           },
+           "right": {
+             "id": {
+               "name": "never",
+               "type": "Identifier",
+             },
+             "type": "GenericTypeAnnotation",
+             "typeParameters": null,
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+         {
+           "id": {
+             "name": "T2",
+             "type": "Identifier",
+           },
+           "right": {
+             "id": {
+               "name": "undefined",
+               "type": "Identifier",
+             },
+             "type": "GenericTypeAnnotation",
+             "typeParameters": null,
+           },
+           "type": "TypeAlias",
+           "typeParameters": null,
+         },
+       ],
+       "type": "Program",
+     }
+    `);
   });
 });

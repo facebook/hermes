@@ -204,14 +204,18 @@ childProcess.stdout.on('data', (data) => {
     // Find the message
     const messagePosition = line.indexOf('{');
     if (messagePosition === -1) {
-      throw new Error(`IPC missing message: ${line}`);
+      // Not an IPC message - likely output from the debugged script
+      console.log(line);
+      continue;
     }
 
     // Parse the type from the first character
     const typeLength = 1;
     const type = line.substring(0, typeLength);
     if (type !== messageIPCType) {
-      throw new Error(`Unexpected IPC command type: ${type}`);
+      // Not a message IPC - likely output from the debugged script
+      console.log(line);
+      continue;
     }
 
     // Parse the client ID from after the type, until the message

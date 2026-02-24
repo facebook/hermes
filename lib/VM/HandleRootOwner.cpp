@@ -17,22 +17,6 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class HandleRootOwner
 
-const PinnedHermesValue HandleRootOwner::nullPointer_{
-    HermesValue::encodeNullptrObjectValueUnsafe()};
-const PinnedHermesValue HandleRootOwner::undefinedValue_{
-    HermesValue::encodeUndefinedValue()};
-const PinnedHermesValue HandleRootOwner::nullValue_{
-    HermesValue::encodeNullValue()};
-const PinnedHermesValue HandleRootOwner::emptyValue_{
-    HermesValue::encodeEmptyValue()};
-const PinnedHermesValue HandleRootOwner::trueValue_{
-    HermesValue::encodeBoolValue(true)};
-const PinnedHermesValue HandleRootOwner::falseValue_{
-    HermesValue::encodeBoolValue(false)};
-const PinnedHermesValue HandleRootOwner::zeroValue_{HVConstants::kZero};
-const PinnedHermesValue HandleRootOwner::oneValue_{HVConstants::kOne};
-const PinnedHermesValue HandleRootOwner::negOneValue_{HVConstants::kNegOne};
-
 void HandleRootOwner::markGCScopes(RootAcceptor &acceptor) {
   for (GCScope *gcScope = topGCScope_; gcScope; gcScope = gcScope->prevScope_)
     gcScope->mark(acceptor);

@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O0 -target=HBC -lazy %s | %FileCheck --match-full-lines %s
 
 function betterToString(value) {
   if (Array.isArray(value)) {
@@ -202,6 +203,15 @@ var nonobjProto = function() {};
 nonobjProto.prototype = 1;
 assert.equal(Reflect.construct(nonobjProto, []) instanceof Object, true);
 assert.equal(Reflect.construct(Date, [], nonobjProto) instanceof Date, true);
+
+// Non-object new.target.prototype results in Object.prototype being used.
+(function () {
+  function bar() {}
+  function foo() {}
+  foo.prototype = 5;
+  let arr = Reflect.construct(bar, [], foo);
+  assert.equal(Object.getPrototypeOf(arr), Object.prototype);
+})();
 
 print('defineProperty');
 // CHECK-LABEL: defineProperty

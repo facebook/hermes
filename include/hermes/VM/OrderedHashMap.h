@@ -8,6 +8,7 @@
 #ifndef HERMES_VM_ORDERED_HASHMAP_H
 #define HERMES_VM_ORDERED_HASHMAP_H
 
+#include "hermes/ADT/ManagedChunkedList.h"
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/Runtime.h"
@@ -17,176 +18,414 @@
 namespace hermes {
 namespace vm {
 
-/// HashMapEntry is a gc-managed entry in the OrderedHashMap.
-/// We use HashMapEntry to form two separate linked lists,
-/// one that tracks the insertion order for iteration purpose, one
-/// tracks the list of entries in a hash table bucket for hash operations.
-class HashMapEntry final : public GCCell {
- public:
-  static const VTable vt;
+struct HashSetEntry {
+  static constexpr uint8_t kElementsPerEntry = 1;
+};
 
-  /// The key.
-  GCHermesValue key;
+struct HashMapEntry {
+  static constexpr uint8_t kElementsPerEntry = 2;
+};
 
-  /// The value.
-  GCHermesValue value;
-
-  /// Previous entry in insertion order.
-  GCPointer<HashMapEntry> prevIterationEntry{nullptr};
-
-  /// Next entry in insertion order.
-  GCPointer<HashMapEntry> nextIterationEntry{nullptr};
-
-  /// Next entry in the hash table bucket.
-  GCPointer<HashMapEntry> nextEntryInBucket{nullptr};
-
-  static constexpr CellKind getCellKind() {
-    return CellKind::HashMapEntryKind;
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::HashMapEntryKind;
-  }
-
-  static CallResult<PseudoHandle<HashMapEntry>> create(Runtime &runtime);
-
-  /// Indicates whether this entry has been deleted.
-  bool isDeleted() const {
-    assert(key.isEmpty() == value.isEmpty() && "Inconsistent deleted status");
-    return value.isEmpty();
-  }
-
-  /// Mark this entry as deleted.
-  void markDeleted(Runtime &runtime) {
-    key.setNonPtr(HermesValue::encodeEmptyValue(), runtime.getHeap());
-    value.setNonPtr(HermesValue::encodeEmptyValue(), runtime.getHeap());
-  }
-}; // HashMapEntry
-
-/// OrderedHashMap is a gc-managed hash map that maintains insertion order.
-/// The map contains two conceptual parts: a standard chained hash table,
-/// to store and lookup HermesValue; a linked list to maintain the insertion
+/// OrderedHashMapBase is a hash map implementation that maintains insertion
 /// order.
-/// When an element is added, it's always appended to the end of the linked
-/// list. When an element is deleted, we mark it as deleted and remove it
-/// from the linked list, unless it's the last element.
-/// Iterators are pointers to the entries, which are always linked according
-/// to insertion order.
-/// When the size of the hash table becomes unreasonably large or small
-/// comparing to the number of alive elements, we will rehash the table.
-/// We always make sure that any entry at any moment can successfully find
-/// the next entry according to insertion order, and rely on GC to manage
-/// the "deleted" entries", free them when no more iterators are before
-/// that entry.
-class OrderedHashMap final : public GCCell {
-  friend void OrderedHashMapBuildMeta(
-      const GCCell *cell,
-      Metadata::Builder &mb);
+///
+/// The map contains two conceptual parts:
+/// 1) An ArrayStorageSmall representing a standard hash table with open
+/// addressing, to store numbers that could be used to index into the data table
+/// discussed in #2.
+/// 2) A data table, which is an ArrayStorageSmall that stores the entry's key
+/// and value in-place. This eliminates the need to create a new GCCell for each
+/// entry of the hash table.
+///
+/// The data table is used in insertion order. When a new entry is added to the
+/// hash table, the entry is appended to the data table. The key and value of
+/// the entry are stored in-place at those slots. And then the hash table stores
+/// a number that allows us to index into the data table to look at the values
+/// later. When deleting an entry, the key and value elements in the data table
+/// are set to empty values to signify that they've been deleted.
+///
+/// When the number of alive elements and deleted elements exceeds thresholds,
+/// we will perform a rehash. When rehashing, a new data table is allocated and
+/// only the elements that aren't deleted are copied to the new data table.
+///
+/// Iterators can simply keep an index to the data table because all the values
+/// are appended in insertion order. When performing clear and rehash
+/// operations, we will eagerly update all active iterators, which we keep track
+/// of in iteratorIndices_. This differs from other engines, but our assumption
+/// is that in practice most code won't be keeping around many active iterators.
+/// The iterator indices need to be updated because clear and rehash will remove
+/// deleted elements, so indices to the data table need to be updated.
+///
+/// We chose linear probing for open addressing. It's simple and possibly faster
+/// than quadratic probing because of memory locality. With a simple test case
+/// to insert integers as keys, we didn't see any performance gain with
+/// quadratic probing.
+///
+/// BucketType in the class template refers to either HashMapEntry or
+/// HashSetEntry depending on whether we're storing keys only, or key/value
+/// pairs. Derived in the class template should be the child gc-managed class.
+template <typename BucketType, typename Derived>
+class OrderedHashMapBase {
+ private:
+  class IteratorIndex;
 
  public:
-  static const VTable vt;
+  using Entry = BucketType;
+  using StorageType = ArrayStorageSmall;
 
-  static constexpr CellKind getCellKind() {
-    return CellKind::OrderedHashMapKind;
-  }
-  static bool classof(const GCCell *cell) {
-    return cell->getKind() == CellKind::OrderedHashMapKind;
-  }
+  /// This is a helper RAII class to hand out to consumers of
+  /// OrderedHashMapBase. It is used as context parameter to the iterator
+  /// related functions. Internally it contains the IteratorIndex holding where
+  /// the iterator should read next. It'll also handle marking IteratorIndex as
+  /// free during destruction.
+  class IteratorContext {
+   public:
+    /// Constructs an uninitialized instance
+    explicit IteratorContext() {}
+    /// Constructs an initialized instance with IteratorIndex
+    explicit IteratorContext(
+        IteratorIndex &index,
+        const std::shared_ptr<ManagedChunkedList<IteratorIndex>> &storage)
+        : index_(&index), storage_(storage) {
+      assert(storage != nullptr && "Must hold shared ownership of the storage");
+    }
 
-  static CallResult<PseudoHandle<OrderedHashMap>> create(Runtime &runtime);
+    /// Destructor handles marking the IteratorIndex as free for
+    /// ManagedChunkedList.
+    ~IteratorContext() {
+      reset();
+    }
 
+    /// \return true if there is an IteratorIndex stored in this context
+    bool initialized() const {
+      return index_ != nullptr;
+    }
+
+    /// Mark the internal IteratorIndex as free and clear reference to it.
+    void reset();
+
+    /// Move constructor & assignment operator are allowed.
+    IteratorContext(IteratorContext &&other)
+        : index_(other.index_), storage_(std::move(other.storage_)) {
+      other.index_ = nullptr;
+    }
+
+    IteratorContext &operator=(IteratorContext &&other) {
+      reset();
+      index_ = other.index_;
+      storage_ = std::move(other.storage_);
+      other.index_ = nullptr;
+      return *this;
+    }
+
+    /// Disallow copy constructor & assignment operator.
+    IteratorContext(const IteratorContext &) = delete;
+    IteratorContext &operator=(const IteratorContext &) = delete;
+
+   private:
+    friend class OrderedHashMapBase;
+
+    /// Optionally holds a pointer of IteratorIndex. This is used to know
+    /// which element in the data table an iterator should access next.
+    IteratorIndex *index_ = nullptr;
+
+    // Holds shared ownership of the ManagedChunkedList to ensure the pointer
+    // held by \p index_ remains valid. This is because there is no guarantee to
+    // the ordering of finalizers being run. Also see comment on
+    // OrderedHashMapBase's \p iteratorIndices_.
+    std::shared_ptr<ManagedChunkedList<IteratorIndex>> storage_ = nullptr;
+  };
+
+  static void buildMetadata(const GCCell *cell, Metadata::Builder &mb);
+
+  /// This method takes in a runtime to compute the hash for key, but does not
+  /// allocate. Thus, it is safe to take in HermesValue here.
   /// \return true if the map contains a given HermesValue.
-  static bool has(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  bool has(Runtime &runtime, HermesValue key) const;
 
+  /// This method takes in a runtime to compute the hash for key, but does not
+  /// allocate. Thus, it is safe to take in HermesValue here.
   /// Lookup \p key in the table and \return the value if exists.
   /// Otherwise \return undefined.
-  static HermesValue
-  get(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  SmallHermesValue get(Runtime &runtime, HermesValue key) const;
 
-  /// Lookup \p key in the table and \return the value if exists.
-  /// Otherwise \return nullptr.
-  static HashMapEntry *
-  find(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  /// Insert a key/value pair, if not already existing. Function enabled only if
+  /// this is a Map.
+  template <typename = std::enable_if<std::is_same_v<BucketType, HashMapEntry>>>
+  static ExecutionStatus
+  insert(Handle<Derived> self, Runtime &runtime, Handle<> key, Handle<> value);
 
-  /// Insert a key/value pair into the map, if not already existing.
-  static ExecutionStatus insert(
-      Handle<OrderedHashMap> self,
-      Runtime &runtime,
-      Handle<> key,
-      Handle<> value);
+  /// Insert a key, if not already existing. Function enabled only if this is a
+  /// Set.
+  template <typename = std::enable_if<std::is_same_v<BucketType, HashSetEntry>>>
+  static ExecutionStatus
+  insert(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
   /// Erase a HermesValue from the map, \return true if succeed.
-  static bool
-  erase(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key);
+  static bool erase(Handle<Derived> self, Runtime &runtime, Handle<> key);
 
-  /// Clear the map.  The \p gc parameter is necessary for write barriers.
-  void clear(Runtime &runtime);
+  /// Clear the map.
+  static ExecutionStatus clear(Handle<Derived> self, Runtime &runtime);
 
   /// \return the size of the map.
   uint32_t size() const {
+    assertInitialized();
     return size_;
   }
 
-  /// \return the next element in insertion order.
-  /// If \p entry is nullptr, we are starting the iteration from the first
-  /// entry that is not deleted.
-  /// Otherwise, we look for the next element after \p entry that is not
-  /// deleted.
-  HashMapEntry *iteratorNext(Runtime &runtime, HashMapEntry *entry = nullptr)
+  /// Creates a new iterator.
+  /// \return IteratorContext that caller should be using in subsequent calls to
+  /// other iterator functions
+  IteratorContext newIterator(Runtime &runtime);
+
+  /// Advances the iterator and updates the context.
+  /// \param iterCtx IteratorContext to be modified. On success, the internal
+  /// IteratorIndex is updated.
+  /// \return true if the iterator successfully advances to the next hash table
+  /// element, false if the iterator reaches the end of all hash table elements.
+  bool advanceIterator(Runtime &runtime, IteratorContext &iterCtx);
+
+  /// Reads the key. This must be used immediately after \c advanceIterator
+  /// before any other operations are done on the hash table.
+  /// \param iterCtx IteratorContext must be initialized
+  /// \return Key of the hash table entry where the iterator is currently at
+  HermesValue iteratorKey(Runtime &runtime, const IteratorContext &iterCtx)
       const;
 
-  OrderedHashMap(Runtime &runtime, Handle<ArrayStorageSmall> hashTableStorage);
+  /// Reads the value. This must be used immediately after \c advanceIterator
+  /// before any other operations are done on the hash table.
+  /// \param iterCtx IteratorContext must be initialized
+  /// \return Value of the hash table entry where the iterator is currently at
+  HermesValue iteratorValue(Runtime &runtime, const IteratorContext &iterCtx)
+      const;
+
+  explicit OrderedHashMapBase() {}
+
+  /// This function should be invoked by child class' finalizer to do any final
+  /// tasks on the GC before destructor gets called.
+  void cleanUp(GCCell *self, GC &gc) {
+    uint32_t capacityInBytes = hashTable_.size() * sizeof(uint32_t);
+    gc.debitExternalMemory(self, capacityInBytes);
+  }
+
+  /// Allocate the internal element storage.
+  static ExecutionStatus initializeStorage(
+      Handle<Derived> self,
+      Runtime &runtime);
+
+ protected:
+  /// Initial capacity of the hash table. Note that if this changes,
+  /// test/hermes/set-iterator.js also needs to be updated because the tests
+  /// depends on knowing when rehashes happen.
+  static constexpr uint32_t kInitialCapacity = 16;
+
+  void assertInitialized() const {
+    assert(hashTable_.size() > 0 && "Element storage uninitialized.");
+    assert(dataTable_ && "Data Table uninitialized.");
+  }
 
  private:
   /// The hashtable, with size always equal to capacity_. The number of
   /// reachable entries from hashTable_ should be equal to size_.
-  GCPointer<ArrayStorageSmall> hashTable_{nullptr};
+  std::vector<uint32_t> hashTable_{};
 
-  /// The first entry ever inserted. We need this entry to begin an iteration.
-  GCPointer<HashMapEntry> firstIterationEntry_{nullptr};
+  /// The data table is where the actual data for each hash table entry is
+  /// stored. It's an array where each entry can use up multiple elements. For
+  /// example, for a Map, the key and the value would take up 2 elements in the
+  /// array. We do this so that we could avoid doing new allocation for each
+  /// entry of the hash table. Less allocations mean less GC time.
+  GCPointer<StorageType> dataTable_{nullptr};
 
-  /// The last entry inserted. We need it to add new elements afterwards.
-  GCPointer<HashMapEntry> lastIterationEntry_{nullptr};
+  /// Stores the index to the data table where an iterator is supposed to read
+  /// the value next. Upon each rehash and clear, all of the indices will be
+  /// updated. The ManagedChunkedList takes care of allocating space when
+  /// needed, making use of the free elements, and provides a way to loop
+  /// through existing elements.
+  ///
+  /// The ManagedChunkedList is held in a shared_ptr for two reasons:
+  /// 1) This class hands out IteratorContext to JSMapImpl and
+  /// JSMapIteratorImpl. This class doesn't keep a list of objects that hold
+  /// IteratorContext, so there is no way for it to null out IteratorIndex
+  /// pointers.
+  /// 2) There is no ordering guarantee on the finalizers of JSMapImpl and
+  /// JSMapIteratorImpl. It is possible for the JSMapImpl finalizer to run first
+  /// before the JSMapIteratorImpl finalizer.
+  ///
+  /// Since in the JSMapIteratorImpl finalizer, it needs to mark IteratorIndex
+  /// as free, the ManagedChunkedList needs to stay alive for that finalizer.
+  std::shared_ptr<ManagedChunkedList<IteratorIndex>> iteratorIndices_{nullptr};
 
-  /// Initial capacity of the hash table.
-  static constexpr uint32_t INITIAL_CAPACITY = 16;
+  /// The multiplier that the hash table grows or shrinks by each rehash.
+  /// Note that if this changes, test/hermes/set-iterator.js also needs to be
+  /// updated because the tests depends on knowing when rehashes happen.
+  static constexpr uint32_t kGrowOrShrinkFactor{2};
 
-  /// Maximum capacity cannot exceed the maximum capacity of the underlying
-  /// ArrayStorage.
-  // It needs to be less than 1/4th the max 32-bit integer in order to use an
-  // integer-based load factor check of 0.75.
-  static constexpr uint32_t MAX_CAPACITY =
-      std::min(ArrayStorageSmall::maxElements(), UINT32_MAX / 4);
+  /// Maximum capacity of the hash table. This is checked in rehash() and we
+  /// won't grow the capacity past this number. This is calculated so that the
+  /// data table size won't overflow uint32_t.
+  static constexpr uint32_t kMaxCapacity =
+      StorageType::maxCapacityNoOverflow() / kGrowOrShrinkFactor /
+      BucketType::kElementsPerEntry;
+
+  /// For representing when the hash table element is unused.
+  static constexpr uint32_t kHashTableElementUnused = kMaxCapacity + 1;
+  /// For epresenting when the hash table element is deleted.
+  static constexpr uint32_t kHashTableElementDeleted = kMaxCapacity + 2;
 
   /// Capacity of the hash table.
-  uint32_t capacity_{INITIAL_CAPACITY};
+  uint32_t capacity_{kInitialCapacity};
 
   /// Number of alive entries in the storage.
   uint32_t size_{0};
 
-  /// Hash a HermesValue to an index to our hash table.
-  static uint32_t
-  hashToBucket(Handle<OrderedHashMap> self, Runtime &runtime, Handle<> key) {
-    auto hash = runtime.gcStableHashHermesValue(key);
-    assert(
-        (self->capacity_ & (self->capacity_ - 1)) == 0 &&
-        "capacity_ must be power of 2");
-    return hash & (self->capacity_ - 1);
+  /// Number of deleted entries in the storage. The count will be reset during
+  /// rehash and clear.
+  uint32_t deletedCount_{0};
+
+  /// \param hashTableCapacity hash table's capacity in number of elements
+  /// \return the actual number of elements to allocate for data table based on
+  /// the desired hash table capacity
+  static constexpr uint32_t dataTableAllocationSize(
+      uint32_t hashTableCapacity) {
+    // Once the hash table reaches the rehash threshold, we're going to allocate
+    // a new data table. Therefore, there is no need to allocate space for the
+    // entire hash table capacity. By allocating less than the whole hash table
+    // capacity, we save on memory usage and get better perf.
+    return rehashThreshold(hashTableCapacity) * BucketType::kElementsPerEntry;
   }
 
-  /// Remove a node from the linked list.
-  void removeLinkedListNode(Runtime &runtime, HashMapEntry *entry, GC &gc);
+  /// Hash a HermesValue to an index to our hash table.
+  static uint32_t
+  hashToBucket(uint32_t capacity, Runtime &runtime, HermesValue key) {
+    auto hash = runtime.gcStableHashHermesValue(key);
+    assert((capacity & (capacity - 1)) == 0 && "capacity_ must be power of 2");
+    return hash & (capacity - 1);
+  }
 
-  /// Lookup an entry with key as \p key in a given \p bucket.
-  HashMapEntry *
-  lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key);
+  /// Lookup an entry with key as \p key in a given \p bucket (hash).
+  /// \return If found, returns the pair of the corresponding data table index
+  /// and the bucket index for it. If not found, then data table key index won't
+  /// be available, and the bucket index would be the bucket available for the
+  /// \p key.
+  std::pair<OptValue<uint32_t>, uint32_t>
+  lookupInBucket(Runtime &runtime, uint32_t bucket, HermesValue key) const;
 
-  /// Adjust the capacity of the hashtable and rehash if necessary.
-  /// We make decisions based on the Load Factor (size / capacity).
-  /// Rehash if load factor is outside of the range of [0.25, 0.75].
-  static ExecutionStatus rehashIfNecessary(
-      Handle<OrderedHashMap> self,
-      Runtime &runtime);
-}; // OrderedHashMap
+  /// Perform a rehash operation by removing all deleted entries and re-insert
+  /// them into new allocated hash table and data table. The old hash table and
+  /// data table are discarded. The new capacity will be calculated by
+  /// checkedNextCapacity(). Note that this function will always run rehash even
+  /// if the new capacity is same as before. In such case, all the deleted
+  /// bucket will be removed and become empty bucket.
+  /// \param beforeAdd if true, we use current size + 1 to calculate the new
+  /// capacity. This is used when calling from doInsert() because we're about to
+  /// add one more entry. Otherwise, we use current size to calculate the new
+  /// capacity. This is used when calling from erase(), so the size shouldn't
+  /// increase.
+  static ExecutionStatus
+  rehash(Handle<Derived> self, Runtime &runtime, bool beforeAdd = false);
+
+  /// This function updates all active iterator indices to adjust the value
+  /// after a rehash. A rehash will remove any deleted entries of the
+  /// OrderedHashMap, so indices need to be adjusted to account for those
+  /// removed entries.
+  void updateIteratorIndicesForRehash(Runtime &runtime);
+
+  /// Determine if we should shrink the hash table based on the current key
+  /// count and capacity.
+  static bool shouldShrink(uint32_t capacity, uint32_t keyCount) {
+    // Divide the capacity to get the number we want for comparison. Division
+    // ensures there won't be overflow.
+    return keyCount <= capacity / 8 &&
+        capacity > OrderedHashMapBase::kInitialCapacity;
+  }
+
+  /// Determine if we should rehash the hash table based on the current key
+  /// count, delete count and capacity.
+  static constexpr bool
+  shouldRehash(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount) {
+    return (keyCount + deleteCount) >= rehashThreshold(capacity);
+  }
+
+  /// Determine the number of elements (alive and deleted) before a rehash
+  /// should happen.
+  static constexpr uint32_t rehashThreshold(uint32_t capacity) {
+    // `>> 1` means that we're using a load factor of 0.5 Note that if this
+    // changes, test/hermes/set-iterator.js also needs to be updated because the
+    // tests depends on knowing when rehashes happen.
+    return capacity >> 1;
+  }
+
+  /// Calculate the next capacity based on the current capacity and key count.
+  /// If there are enough unused capacity, then the next capacity will shrink.
+  /// Capacity will grow otherwise. In the case that capacity cannot grow
+  /// anymore, due to the increase would exceed kMaxCapacity, then RangeError
+  /// will be raised.
+  static CallResult<uint32_t>
+  checkedNextCapacity(Runtime &runtime, uint32_t capacity, uint32_t keyCount) {
+    if (!capacity)
+      return OrderedHashMapBase::kInitialCapacity;
+
+    if (shouldShrink(capacity, keyCount)) {
+      assert(
+          (capacity / kGrowOrShrinkFactor) >=
+          OrderedHashMapBase::kInitialCapacity);
+      return capacity / kGrowOrShrinkFactor;
+    }
+    static_assert(
+        kMaxCapacity <= UINT32_MAX / kGrowOrShrinkFactor,
+        "Avoid overflow on multiplying capacity by kGrowOrShrinkFactor");
+    uint32_t newCapacity = capacity * kGrowOrShrinkFactor;
+    if (LLVM_UNLIKELY(newCapacity > kMaxCapacity)) {
+      if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+        return runtime.raiseRangeError("Cannot insert new data. Map is full.");
+      } else {
+        return runtime.raiseRangeError("Cannot insert new data. Set is full.");
+      }
+    }
+    return capacity * kGrowOrShrinkFactor;
+  }
+
+  /// Check if the bucket is deleted or not.
+  static bool isDeleted(SmallHermesValue bucket) {
+    return bucket.isNull();
+  }
+
+  /// Mark the bucket as deleted.
+  static void deleteBucket(
+      Handle<Derived> self,
+      Runtime &runtime,
+      uint32_t bucket,
+      uint32_t dataTableKeyIndex) {
+    // Use EmptyValue to indicate the corresponding elements in the data table
+    // are deleted.
+    self->dataTable_.getNonNull(runtime)->setNonPtr(
+        dataTableKeyIndex,
+        SmallHermesValue::encodeEmptyValue(),
+        runtime.getHeap());
+    if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+      self->dataTable_.getNonNull(runtime)->setNonPtr(
+          dataTableKeyIndex + 1,
+          SmallHermesValue::encodeEmptyValue(),
+          runtime.getHeap());
+    }
+
+    assert(bucket < self->capacity_ && "Hash table index >= capacity.");
+    self->hashTable_[bucket] = kHashTableElementDeleted;
+  }
+
+  /// Helper function for inserting key or key/value pair into the container.
+  /// This is used by the public insert() functions and only for adding keys
+  /// that don't already exist. This will update the hash table as well as
+  /// appending key (and value if applicable) to the data table.
+  static ExecutionStatus doInsert(
+      Handle<Derived> self,
+      Runtime &runtime,
+      uint32_t bucket,
+      Handle<> key,
+      Handle<> value);
+
+}; // OrderedHashMapBase
+
 } // namespace vm
 } // namespace hermes
 #endif // HERMES_VM_ORDERED_HASHMAP_H

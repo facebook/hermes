@@ -18,7 +18,7 @@ function getOptions() {
     ...prettierConfig,
     parser: 'hermes',
     requirePragma: false,
-    plugins: [require('../src/index.js')],
+    plugins: [require.resolve('../index.mjs')],
   };
 }
 
@@ -71,7 +71,7 @@ declare component MyComponent(
   // Trailing comment
 ) renders SomeComponent;
     `;
-    const output = prettier.format(code, getOptions());
+    const output = await prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
       "declare component MyComponent();
 

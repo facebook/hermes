@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck %s --match-full-lines
+// REQUIRES: interpreter
 
 var global = Function("return this")();
 

@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/Support/MemoryBuffer.h"
@@ -25,15 +25,14 @@ enum ExecutionStatus {
   LoadFileFailed,
 };
 
-static std::array<const char *, 15> sectionNames = {
+static std::array<const char *, 14> sectionNames = {
     {"Total",
      "Function headers",
      "Small string table",
      "Overflow string table",
      "String storage",
-     "Array buffer",
+     "Literal value buffer",
      "Object key buffer",
-     "Object value buffer",
      "Regexp table",
      "Regexp storage",
      "CommonJS module table",
@@ -102,9 +101,8 @@ static ExecutionStatus diffFiles(
         bytecode->getOverflowStringTableEntries().size() *
         sizeof(hbc::OverflowStringTableEntry));
     fileSizes[i].push_back(bytecode->getStringStorage().size());
-    fileSizes[i].push_back(bytecode->getArrayBuffer().size());
+    fileSizes[i].push_back(bytecode->getLiteralValueBuffer().size());
     fileSizes[i].push_back(bytecode->getObjectKeyBuffer().size());
-    fileSizes[i].push_back(bytecode->getObjectValueBuffer().size());
     fileSizes[i].push_back(
         bytecode->getRegExpTable().size() * sizeof(RegExpTableEntry));
     fileSizes[i].push_back(bytecode->getRegExpStorage().size());
@@ -128,13 +126,25 @@ static ExecutionStatus diffFiles(
       }
     }
     auto lastFuncHeader = bytecode->getFunctionHeader(lastFuncId);
-    auto lastFuncEnd = lastFuncStart + lastFuncHeader.bytecodeSizeInBytes();
+    auto lastFuncEnd = lastFuncStart + lastFuncHeader.getBytecodeSizeInBytes();
     fileSizes[i].push_back(lastFuncEnd - start);
 
     // function info, debug info
-    auto firstFuncHeader = bytecode->getFunctionHeader(0);
-    auto funcInfoStart = firstFuncHeader.infoOffset();
     auto debugInfoStart = fileHeader->debugInfoOffset;
+
+    // If there is no func info, the func info starts and ends at the debug info
+    // start.
+    auto funcInfoStart = debugInfoStart;
+
+    // Iterate to find the first function that actually has info allocated for
+    // it.
+    for (const auto &header : bytecode->getSmallFunctionHeaders()) {
+      if (header.flags.getOverflowed()) {
+        funcInfoStart = header.getLargeHeaderOffset();
+        break;
+      }
+    }
+
     fileSizes[i].push_back(debugInfoStart - funcInfoStart);
     fileSizes[i].push_back(fileHeader->fileLength - debugInfoStart);
 
@@ -146,7 +156,8 @@ static ExecutionStatus diffFiles(
     hbc::BCProvider *raw_bc = bytecode.get();
     hbc::BytecodeDisassembler disas(std::move(bytecode));
     for (uint32_t funcId = 0; funcId < functionCount; ++funcId) {
-      uint32_t size = raw_bc->getFunctionHeader(funcId).bytecodeSizeInBytes();
+      uint32_t size =
+          raw_bc->getFunctionHeader(funcId).getBytecodeSizeInBytes();
       funcHashToSize[i].insert(
           std::make_pair(disas.fuzzyHashBytecode(funcId), size));
     }

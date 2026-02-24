@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser %s
+// RUN: %hermesc -dump-ir %s
 
 // Make sure we can find the "program->body" section of the ESTree json file
 // without crashing.

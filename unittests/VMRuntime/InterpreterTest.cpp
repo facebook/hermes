@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
 #include "hermes/VM/Operations.h"
@@ -21,6 +21,8 @@
 
 using namespace hermes::vm;
 using namespace hermes::hbc;
+
+namespace vmdetail = hermes::vm::detail;
 
 /// Associate a label with an instruction. Use it like this:
 /// \begincode
@@ -59,6 +61,19 @@ using namespace hermes::hbc;
       name(labels[L] - jmps[line]); \
   } while (0);
 
+/// Emit an jump builtin to label. Use it like this:
+/// \begincode
+///   JMP(builder.emitJmpBuiltinIs, L(2), builtinIdx, reg);
+/// \endcode
+#define JMP_BUILTINIS(name, L, idx, reg)      \
+  do {                                        \
+    int line = __LINE__;                      \
+    if (pass == 0)                            \
+      jmps[line] = name(0, idx, reg);         \
+    else                                      \
+      name(labels[L] - jmps[line], idx, reg); \
+  } while (0);
+
 /// Make labels more noticeable in the source by always using this macro to
 /// refer to them.
 #define L(x) x
@@ -66,8 +81,8 @@ using namespace hermes::hbc;
 namespace {
 
 /// Convert all arguments to string and print them followed by new line.
-static CallResult<HermesValue>
-print(void *, Runtime &runtime, NativeArgs args) {
+static CallResult<HermesValue> print(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope scope(runtime);
   bool first = true;
 
@@ -93,24 +108,22 @@ class InterpreterFunctionTest : public RuntimeTestFixture {
  private:
   Handle<Domain> domain;
   RuntimeModule *runtimeModule;
-  BytecodeModuleGenerator BMG;
+  SimpleBytecodeBuilder builder;
   bool hasRun = false;
   CallResult<HermesValue> result{ExecutionStatus::EXCEPTION};
 
  protected:
-  std::unique_ptr<BytecodeFunctionGenerator> BFG;
+  BytecodeInstructionGenerator instGen;
 
   InterpreterFunctionTest()
       : RuntimeTestFixture(),
         domain(runtime.makeHandle(Domain::create(runtime))),
-        runtimeModule(RuntimeModule::createUninitialized(runtime, domain)) {
-    BFG = BytecodeFunctionGenerator::create(BMG, 1);
-  }
+        runtimeModule(RuntimeModule::createUninitialized(runtime, domain)) {}
 
   CallResult<HermesValue> run() {
     assert(!hasRun);
-    BFG->bytecodeGenerationComplete();
-    auto *codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+    builder.addFunction(1, 1, instGen.acquireBytecode());
+    auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
     ScopedNativeCallFrame frame(
         runtime,
         0,
@@ -162,39 +175,40 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
   StringID resultID = 2;
 
   const int FRAME_SIZE = 16;
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
+  SimpleBytecodeBuilder builder;
+  BytecodeInstructionGenerator instGen;
 
-  BFG->emitLoadConstDoubleDirect(0, 10);
-  BFG->emitLoadConstDoubleDirect(1, 2);
-  BFG->emitSubN(2, 0, 1);
-  BFG->emitGetGlobalObject(0);
-  BFG->emitGetById(1, 0, 1, printID);
-  BFG->emitLoadConstUndefined(3);
-  BFG->emitMov(
+  instGen.emitLoadConstDoubleDirect(0, 10);
+  instGen.emitLoadConstDoubleDirect(1, 2);
+  instGen.emitSubN(2, 0, 1);
+  instGen.emitGetGlobalObject(0);
+  instGen.emitGetById(1, 0, 0, printID);
+  instGen.emitLoadConstUndefined(3);
+  instGen.emitMov(
       static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::ThisArg), 3);
-  BFG->emitLoadConstString(
+  instGen.emitLoadConstString(
       static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg), resultID);
-  BFG->emitMov(
+  instGen.emitMov(
       static_cast<unsigned>(FRAME_SIZE + StackFrameLayout::FirstArg - 1), 2);
-  BFG->emitCall(3, 1, 3);
-  BFG->emitRet(2);
-  BFG->setHighestReadCacheIndex(1);
-  BFG->setHighestWriteCacheIndex(0);
+  instGen.emitCall(3, 1, 3);
+  instGen.emitRet(2);
 
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  builder.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
-  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "print"), printID);
-  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "result="), resultID);
+  ASSERT_EQ(vmdetail::mapStringMayAllocate(*runtimeModule, "print"), printID);
+  ASSERT_EQ(
+      vmdetail::mapStringMayAllocate(*runtimeModule, "result="), resultID);
 
-  auto printFn = runtime.makeHandle<NativeFunction>(
-      *NativeFunction::createWithoutPrototype(
-          runtime,
-          nullptr,
-          print,
-          Predefined::getSymbolID(Predefined::emptyString),
-          0));
+  auto printFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
+      runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
+      nullptr,
+      print,
+      Predefined::getSymbolID(Predefined::emptyString),
+      0,
+      Runtime::makeNullHandle<JSObject>()));
 
   // Define the 'print' function.
   (void)JSObject::putNamed_RJS(
@@ -208,7 +222,7 @@ TEST_F(InterpreterTest, SimpleSmokeTest) {
     ScopedNativeCallFrame frame(
         runtime,
         0,
-        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeNativePointer(codeBlock),
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(frame.overflowed());
@@ -243,7 +257,7 @@ L2:
   std::map<int, int> labels{};
   std::map<int, int> jmps{};
 
-  auto emit = [&](BytecodeFunctionGenerator &builder, int pass) {
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
     builder.emitLoadParam(0, 1);
     builder.emitMov(1, 0);
     builder.emitLoadConstDoubleDirect(2, 1);
@@ -257,17 +271,16 @@ L2:
 
   // Pass 0 - resolve labels.
   {
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
-    emit(*BFG, 0);
+    BytecodeInstructionGenerator instGen;
+    emit(instGen, 0);
   }
 
   // Pass 1 - build the actual code.
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, 3);
-  emit(*BFG, 1);
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  SimpleBytecodeBuilder builder;
+  BytecodeInstructionGenerator instGen;
+  emit(instGen, 1);
+  builder.addFunction(1, 3, instGen.acquireBytecode());
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
   CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
   {
@@ -278,7 +291,7 @@ L2:
         HermesValue::encodeUndefinedValue(),
         HermesValue::encodeUndefinedValue());
     ASSERT_FALSE(newFrame.overflowed());
-    newFrame->getArgRef(0) = HermesValue::encodeUntrustedNumberValue(5);
+    newFrame->getArgRef(0) = HermesValue::encodeTrustedNumberValue(5);
     status = runtime.interpretFunction(codeBlock);
   }
   auto frames = runtime.getStackFrames();
@@ -292,7 +305,7 @@ L2:
 TEST_F(InterpreterTest, RecursiveFactorialTest) {
   auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
-  auto factID = detail::mapStringMayAllocate(*runtimeModule, "fact");
+  auto factID = vmdetail::mapStringMayAllocate(*runtimeModule, "fact");
 
   /*
    get_arg    reg0, 1           ; load n
@@ -316,7 +329,7 @@ L1:
   std::map<int, int> jmps{};
   const unsigned FRAME_SIZE = 16;
 
-  auto emit = [&](BytecodeFunctionGenerator &builder, int pass) {
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
     builder.emitLoadParam(0, 1);
     builder.emitLoadConstDoubleDirect(1, 2);
     JCOND(builder.emitJGreater, L(1), 0, 1);
@@ -333,19 +346,16 @@ L1:
 
   // Pass 0 - resolve labels.
   {
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-    emit(*BFG, 0);
+    BytecodeInstructionGenerator instGen;
+    emit(instGen, 0);
   }
 
   // Pass 1 - build the actual code.
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
-  emit(*BFG, 1);
-  BFG->setHighestReadCacheIndex(255);
-  BFG->setHighestWriteCacheIndex(255);
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  SimpleBytecodeBuilder BMG;
+  BytecodeInstructionGenerator instGen;
+  emit(instGen, 1);
+  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
 
   Handle<JSFunction> factFn = runtime.makeHandle(
       JSFunction::create(
@@ -372,7 +382,7 @@ L1:
           HermesValue::encodeUndefinedValue(),
           HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
-      newFrame->getArgRef(0) = HermesValue::encodeUntrustedNumberValue(2);
+      newFrame->getArgRef(0) = HermesValue::encodeTrustedNumberValue(2);
       status = runtime.interpretFunction(codeBlock);
     }
     auto frames = runtime.getStackFrames();
@@ -389,11 +399,11 @@ L1:
       ScopedNativeCallFrame newFrame(
           runtime,
           1,
-          HermesValue::encodeUndefinedValue(),
+          HermesValue::encodeNativePointer(codeBlock),
           HermesValue::encodeUndefinedValue(),
           HermesValue::encodeUndefinedValue());
       ASSERT_FALSE(newFrame.overflowed());
-      newFrame->getArgRef(0) = HermesValue::encodeUntrustedNumberValue(5);
+      newFrame->getArgRef(0) = HermesValue::encodeTrustedNumberValue(5);
       status = runtime.interpretFunction(codeBlock);
     }
     auto frames = runtime.getStackFrames();
@@ -405,32 +415,111 @@ L1:
   }
 }
 
+TEST_F(InterpreterTest, TestJmpBuiltinIs) {
+  auto *runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
+
+  StringID functionID = 1;
+  StringID callID = 2;
+
+  std::map<int, int> labels{};
+  std::map<int, int> jmps{};
+  const unsigned FRAME_SIZE = 16;
+  SimpleBytecodeBuilder builder;
+
+  auto emit = [&](BytecodeInstructionGenerator &builder, int pass) {
+    builder.emitGetGlobalObject(0);
+    builder.emitGetById(0, 0, 0, functionID);
+    builder.emitGetById(0, 0, 0, callID);
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIs,
+        L(1),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeCall,
+        0);
+    builder.emitUnreachable();
+    // Use LoadConstUndefined for convenience because JMP_BUILTINIS isn't an
+    // expression so it's hard to put it directly into LABEL.
+    LABEL(L(1), builder.emitLoadConstUndefined(1));
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIsNot,
+        L(2),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeApply,
+        0);
+    builder.emitUnreachable();
+    LABEL(L(2), builder.emitLoadConstUndefined(1));
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIsLong,
+        L(3),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeCall,
+        0);
+    builder.emitUnreachable();
+    LABEL(L(3), builder.emitLoadConstUndefined(1));
+    JMP_BUILTINIS(
+        builder.emitJmpBuiltinIsNotLong,
+        L(4),
+        (uint8_t)hermes::BuiltinMethod::HermesBuiltin_functionPrototypeApply,
+        0);
+    builder.emitUnreachable();
+    LABEL(L(4), builder.emitLoadConstUndefined(0));
+    builder.emitRet(1);
+  };
+  // Pass 0 - resolve labels.
+  {
+    BytecodeInstructionGenerator instGen;
+    emit(instGen, 0);
+  }
+
+  // Pass 1 - build the actual code.
+  SimpleBytecodeBuilder BMG;
+  BytecodeInstructionGenerator instGen;
+  emit(instGen, 1);
+  BMG.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
+
+  ASSERT_EQ(
+      vmdetail::mapStringMayAllocate(*runtimeModule, "Function"), functionID);
+  ASSERT_EQ(vmdetail::mapStringMayAllocate(*runtimeModule, "call"), callID);
+
+  CallResult<HermesValue> status{ExecutionStatus::EXCEPTION};
+  {
+    ScopedNativeCallFrame frame(
+        runtime,
+        0,
+        HermesValue::encodeNativePointer(codeBlock),
+        HermesValue::encodeUndefinedValue(),
+        HermesValue::encodeUndefinedValue());
+    ASSERT_FALSE(frame.overflowed());
+    status = runtime.interpretFunction(codeBlock);
+  }
+
+  ASSERT_TRUE(status.getValue().isUndefined());
+}
+
 TEST_F(InterpreterFunctionTest, GetByIdSlowPathChecksForExceptions) {
-  BFG->emitLoadConstUndefined(0);
-  BFG->emitGetById(0, 0, 0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstUndefined(0);
+  instGen.emitGetById(0, 0, 0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::EXCEPTION, run());
 }
 
 TEST_F(InterpreterFunctionTest, PutByIdSlowPathChecksForExceptions) {
-  BFG->emitLoadConstUndefined(0);
-  BFG->emitPutById(0, 0, 0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstUndefined(0);
+  instGen.emitPutByIdStrict(0, 0, 0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::EXCEPTION, run());
 }
 
 TEST_F(InterpreterFunctionTest, TestNot) {
-  BFG->emitLoadConstFalse(0);
-  BFG->emitNot(0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstFalse(0);
+  instGen.emitNot(0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::RETURNED, run());
   EXPECT_TRUE(getResultAsBool());
 }
 
 TEST_F(InterpreterFunctionTest, TestToString) {
-  BFG->emitLoadConstFalse(0);
-  BFG->emitAddEmptyString(0, 0);
-  BFG->emitRet(0);
+  instGen.emitLoadConstFalse(0);
+  instGen.emitAddEmptyString(0, 0);
+  instGen.emitRet(0);
   ASSERT_EQ(ExecutionStatus::RETURNED, run());
   SmallU16String<8> tmp;
   getResultAsString()->appendUTF16String(tmp);
@@ -440,8 +529,7 @@ TEST_F(InterpreterFunctionTest, TestToString) {
 #if defined(NDEBUG) && !defined(HERMES_UBSAN) && \
     !LLVM_THREAD_SANITIZER_BUILD && !LLVM_ADDRESS_SANITIZER_BUILD
 // Returns the native stack pointer of the callee frame.
-static CallResult<HermesValue>
-getSP(void *, Runtime &runtime, NativeArgs args) {
+static CallResult<HermesValue> getSP(void *, Runtime &runtime) {
   int dummy;
   return HermesValue::encodeNativePointer(&dummy);
 }
@@ -488,28 +576,28 @@ TEST_F(InterpreterTest, FrameSizeTest) {
   StringID getSPID = 1;
 
   const unsigned FRAME_SIZE = 16;
-  BytecodeModuleGenerator BMG;
-  auto BFG = BytecodeFunctionGenerator::create(BMG, FRAME_SIZE);
+  SimpleBytecodeBuilder builder;
+  BytecodeInstructionGenerator instGen;
 
-  BFG->emitGetGlobalObject(0);
-  BFG->emitGetById(1, 0, 1, getSPID);
-  BFG->emitCall(0, 1, 0);
-  BFG->emitRet(0);
-  BFG->setHighestReadCacheIndex(1);
-  BFG->setHighestWriteCacheIndex(0);
+  instGen.emitGetGlobalObject(0);
+  instGen.emitGetById(1, 0, 0, getSPID);
+  instGen.emitCall(0, 1, 0);
+  instGen.emitRet(0);
 
-  BFG->bytecodeGenerationComplete();
-  auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+  builder.addFunction(1, FRAME_SIZE, instGen.acquireBytecode(), 1, 0);
+  auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, builder);
 
-  ASSERT_EQ(detail::mapStringMayAllocate(*runtimeModule, "getSP"), getSPID);
+  ASSERT_EQ(vmdetail::mapStringMayAllocate(*runtimeModule, "getSP"), getSPID);
 
-  auto getSPFn = runtime.makeHandle<NativeFunction>(
-      *NativeFunction::createWithoutPrototype(
-          runtime,
-          nullptr,
-          getSP,
-          Predefined::getSymbolID(Predefined::emptyString),
-          0));
+  auto getSPFn = runtime.makeHandle<NativeFunction>(*NativeFunction::create(
+      runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
+      nullptr,
+      getSP,
+      Predefined::getSymbolID(Predefined::emptyString),
+      0,
+      Runtime::makeNullHandle<JSObject>()));
 
   // Define the 'getSP' function.
   (void)JSObject::putNamed_RJS(

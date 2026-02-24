@@ -35,55 +35,70 @@ namespace {
 CallResult<std::u16string> stringFromJS(
     Runtime &runtime,
     PseudoHandle<> value) {
+  struct : public Locals {
+    PinnedValue<> valueHandle;
+    PinnedValue<StringPrimitive> strHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.valueHandle = std::move(value);
+
   CallResult<PseudoHandle<StringPrimitive>> strRes =
-      toString_RJS(runtime, runtime.makeHandle(std::move(value)));
+      toString_RJS(runtime, lv.valueHandle);
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto view = vm::StringPrimitive::createStringView(
-      runtime, runtime.makeHandle(std::move(*strRes)));
+  lv.strHandle = std::move(*strRes);
+  auto view = vm::StringPrimitive::createStringView(runtime, lv.strHandle);
   return std::u16string(view.begin(), view.end());
 }
 
 CallResult<HermesValue> localesToJS(
     Runtime &runtime,
-    CallResult<std::vector<std::u16string>> result) {
-  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+    std::vector<std::u16string> &&result) {
+  struct : public Locals {
+    PinnedValue<JSArray> array;
+    PinnedValue<> name;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
-  CallResult<Handle<JSArray>> arrayRes =
-      JSArray::create(runtime, result->size(), result->size());
+  auto arrayRes = JSArray::create(runtime, result.size(), result.size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = *arrayRes;
-  MutableHandle<> name{runtime};
+  lv.array = std::move(*arrayRes);
   uint64_t index = 0;
   GCScopeMarkerRAII marker{runtime};
-  for (auto &locale : *result) {
+  for (auto &locale : result) {
     marker.flush();
     CallResult<HermesValue> nameRes =
         StringPrimitive::createEfficient(runtime, std::move(locale));
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    name = *nameRes;
-    JSArray::setElementAt(array, runtime, index++, name);
+    lv.name = nameRes.getValue();
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(lv.array, runtime, index++, lv.name) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
-  return array.getHermesValue();
+  return lv.array.getHermesValue();
 }
 
 CallResult<HermesValue> optionsToJS(
     Runtime &runtime,
     platform_intl::Options result) {
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<> key;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   CallResult<PseudoHandle<JSObject>> objRes = JSObject::create(runtime);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> obj = runtime.makeHandle(std::move(*objRes));
-  MutableHandle<> key{runtime};
-  MutableHandle<> value{runtime};
+  lv.obj = std::move(*objRes);
   GCScopeMarkerRAII marker{runtime};
   for (auto &kv : result) {
     marker.flush();
@@ -92,11 +107,11 @@ CallResult<HermesValue> optionsToJS(
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    key = *keyRes;
+    lv.key = keyRes.getValue();
     if (kv.second.isBool()) {
-      value = HermesValue::encodeBoolValue(kv.second.getBool());
+      lv.value = HermesValue::encodeBoolValue(kv.second.getBool());
     } else if (kv.second.isNumber()) {
-      value = HermesValue::encodeUntrustedNumberValue(kv.second.getNumber());
+      lv.value = HermesValue::encodeTrustedNumberValue(kv.second.getNumber());
     } else {
       assert(kv.second.isString() && "Option is neither bool nor string");
       CallResult<HermesValue> strRes = StringPrimitive::createEfficient(
@@ -104,27 +119,38 @@ CallResult<HermesValue> optionsToJS(
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      value = *strRes;
+      lv.value = strRes.getValue();
     }
-    auto putRes = JSObject::putComputed_RJS(obj, runtime, key, value);
+    // Use defineOwnComputedPrimitive ([[DefineOwnProperty]]) instead of
+    // putComputed_RJS ([[Set]]) to avoid triggering setters on
+    // Object.prototype installed by taint-Object-prototype tests.
+    DefinePropertyFlags dpf =
+        DefinePropertyFlags::getDefaultNewPropertyFlags();
+    auto putRes = JSObject::defineOwnComputedPrimitive(
+        lv.obj, runtime, lv.key, dpf, lv.value);
     if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    assert(*putRes && "put returned false on a plain object");
   }
-  return obj.getHermesValue();
+  return lv.obj.getHermesValue();
 }
 
-CallResult<Handle<JSObject>> partToJS(
+ExecutionStatus partToJS(
     Runtime &runtime,
-    std::unordered_map<std::u16string, std::u16string> result) {
+    std::unordered_map<std::u16string, std::u16string> &&result,
+    MutableHandle<JSObject> out) {
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<> key;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   CallResult<PseudoHandle<JSObject>> objRes = JSObject::create(runtime);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> obj = runtime.makeHandle(std::move(*objRes));
-  MutableHandle<> key{runtime};
-  MutableHandle<> value{runtime};
+  lv.obj = std::move(*objRes);
   GCScopeMarkerRAII marker{runtime};
   for (auto &kv : result) {
     marker.flush();
@@ -134,49 +160,58 @@ CallResult<Handle<JSObject>> partToJS(
     if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    key = *keyRes;
+    lv.key = keyRes.getValue();
     CallResult<HermesValue> valueRes =
         StringPrimitive::createEfficient(runtime, std::move(kv.second));
     if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    value = *valueRes;
-    auto putRes = JSObject::putComputed_RJS(obj, runtime, key, value);
+    lv.value = valueRes.getValue();
+    DefinePropertyFlags dpf =
+        DefinePropertyFlags::getDefaultNewPropertyFlags();
+    auto putRes = JSObject::defineOwnComputedPrimitive(
+        lv.obj, runtime, lv.key, dpf, lv.value);
     if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-
-    assert(*putRes && "put returned false on a plain object");
   }
 
-  return obj;
+  out.castAndSetHermesValue<JSObject>(lv.obj.getHermesValue());
+  return ExecutionStatus::RETURNED;
 }
 
 CallResult<HermesValue> partsToJS(
     Runtime &runtime,
-    CallResult<std::vector<std::unordered_map<std::u16string, std::u16string>>>
-        result) {
-  if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+    std::vector<std::unordered_map<std::u16string, std::u16string>> &&result) {
+  struct : public Locals {
+    PinnedValue<JSArray> array;
+    PinnedValue<JSObject> partObj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
-  CallResult<Handle<JSArray>> arrayRes =
-      JSArray::create(runtime, result->size(), result->size());
+  auto arrayRes = JSArray::create(runtime, result.size(), result.size());
   if (LLVM_UNLIKELY(arrayRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSArray> array = *arrayRes;
+  lv.array = std::move(*arrayRes);
   uint64_t index = 0;
   GCScopeMarkerRAII marker{runtime};
-  for (auto &part : *result) {
+  for (auto &part : result) {
     marker.flush();
-    CallResult<Handle<JSObject>> partRes = partToJS(runtime, std::move(part));
-    if (LLVM_UNLIKELY(partRes == ExecutionStatus::EXCEPTION)) {
+    if (LLVM_UNLIKELY(
+            partToJS(
+                runtime,
+                std::move(part),
+                MutableHandle<JSObject>{lv.partObj}) ==
+            ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    JSArray::setElementAt(array, runtime, index++, *partRes);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(lv.array, runtime, index++, lv.partObj) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
-  return array.getHermesValue();
+  return lv.array.getHermesValue();
 }
 
 CallResult<std::vector<std::u16string>> normalizeLocales(
@@ -195,21 +230,27 @@ CallResult<std::vector<std::u16string>> normalizeLocales(
     return ret;
   }
 
+  struct : public Locals {
+    PinnedValue<JSObject> localeObj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   CallResult<HermesValue> objRes = toObject(runtime, locales);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto localeObj = runtime.makeHandle(vmcast<JSObject>(*objRes));
+  lv.localeObj.castAndSetHermesValue<JSObject>(objRes.getValue());
 
-  CallResult<uint64_t> lengthRes = getArrayLikeLength_RJS(localeObj, runtime);
+  CallResult<uint64_t> lengthRes =
+      getArrayLikeLength_RJS(lv.localeObj, runtime);
   if (LLVM_UNLIKELY(lengthRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  bool isProxy = localeObj->isProxyObject();
+  bool isProxy = lv.localeObj->isProxyObject();
   if (LLVM_UNLIKELY(
           createListFromArrayLike_RJS(
-              localeObj,
+              lv.localeObj,
               runtime,
               *lengthRes,
               [&ret, isProxy](
@@ -328,9 +369,13 @@ CallResult<platform_intl::Options> normalizeOptions(
     return ret;
   }
 
-  MutableHandle<> name{runtime};
-  MutableHandle<> value{runtime};
-  MutableHandle<StringPrimitive> strValue{runtime};
+  struct : public Locals {
+    PinnedValue<> name;
+    PinnedValue<> value;
+    PinnedValue<StringPrimitive> strValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   GCScopeMarkerRAII marker{runtime};
   for (const OptionData &pod : optionData) {
     marker.flush();
@@ -339,10 +384,10 @@ CallResult<platform_intl::Options> normalizeOptions(
     if (LLVM_UNLIKELY(nameRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    name = *nameRes;
+    lv.name = nameRes.getValue();
 
     CallResult<PseudoHandle<>> valRes =
-        JSObject::getComputed_RJS(optionsObj, runtime, name);
+        JSObject::getComputed_RJS(optionsObj, runtime, lv.name);
     if (LLVM_UNLIKELY(valRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -355,8 +400,8 @@ CallResult<platform_intl::Options> normalizeOptions(
       ret.emplace(
           pod.name, platform_intl::Option(toBoolean(valRes->getHermesValue())));
     } else if (pod.kind == platform_intl::Option::Kind::Number) {
-      value = std::move(*valRes);
-      CallResult<HermesValue> numRes = toNumber_RJS(runtime, value);
+      lv.value = std::move(*valRes);
+      CallResult<HermesValue> numRes = toNumber_RJS(runtime, lv.value);
       if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -365,14 +410,14 @@ CallResult<platform_intl::Options> normalizeOptions(
       assert(
           pod.kind == platform_intl::Option::Kind::String &&
           "Unknown option kind");
-      value = std::move(*valRes);
+      lv.value = std::move(*valRes);
       CallResult<PseudoHandle<StringPrimitive>> strRes =
-          toString_RJS(runtime, value);
+          toString_RJS(runtime, lv.value);
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      strValue = std::move(*strRes);
-      auto view = StringPrimitive::createStringView(runtime, strValue);
+      lv.strValue = std::move(*strRes);
+      auto view = StringPrimitive::createStringView(runtime, lv.strValue);
       ret.emplace(
           pod.name,
           platform_intl::Option(std::u16string(view.begin(), view.end())));
@@ -447,6 +492,7 @@ CallResult<HermesValue> intlServiceConstructor(
     Runtime &runtime,
     NativeArgs args,
     llvh::ArrayRef<OptionData> optionData,
+    Handle<NativeConstructor> serviceConstructor,
     Handle<JSObject> servicePrototype,
     unsigned int additionalSlots) {
   CallResult<std::vector<std::u16string>> localesRes =
@@ -475,33 +521,42 @@ CallResult<HermesValue> intlServiceConstructor(
   }
   std::unique_ptr<T> native = std::move(*nativeRes);
 
-  auto typeHandle = runtime.makeHandle(
-      HermesValue::encodeUntrustedNumberValue((uint32_t)T::getNativeType()));
-  auto setType = [&](Handle<DecoratedObject> obj) {
-    auto res = JSObject::defineNewOwnProperty(
-        obj,
-        runtime,
-        Predefined::getSymbolID(Predefined::InternalPropertyIntlNativeType),
-        PropertyFlags::defaultNewNamedPropertyFlags(),
-        typeHandle);
-    (void)res;
-    assert(res != ExecutionStatus::EXCEPTION && "Setting type cannot fail.");
-  };
-
-  // If constructor, use the allocated object
-  if (args.isConstructorCall()) {
-    Handle<DecoratedObject> selfHandle = args.vmcastThis<DecoratedObject>();
-    selfHandle->setDecoration(std::move(native));
-    setType(selfHandle);
-    return HermesValue::encodeUndefinedValue();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<DecoratedObject> self;
+    PinnedValue<HermesValue> typeVal;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          !args.isConstructorCall() ||
+          (args.getNewTarget().getRaw() ==
+           serviceConstructor.getHermesValue().getRaw()))) {
+    lv.selfParent = servicePrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            servicePrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
   }
+  lv.self = DecoratedObject::create(
+      runtime, servicePrototype, std::move(native), additionalSlots);
 
-  // Otherwise allocate a new one.
-  auto newHandle = runtime.makeHandle(
-      DecoratedObject::create(
-          runtime, servicePrototype, std::move(native), additionalSlots));
-  setType(newHandle);
-  return newHandle.getHermesValue();
+  lv.typeVal =
+      HermesValue::encodeTrustedNumberValue((uint32_t)T::getNativeType());
+  auto res = JSObject::defineNewOwnProperty(
+      lv.self,
+      runtime,
+      Predefined::getSymbolID(Predefined::InternalPropertyIntlNativeType),
+      PropertyFlags::defaultNewNamedPropertyFlags(),
+      lv.typeVal);
+  (void)res;
+  assert(res != ExecutionStatus::EXCEPTION && "Setting type cannot fail.");
+  return lv.self.getHermesValue();
 }
 
 // T is a class from platform_intl which has an appropriate
@@ -522,8 +577,11 @@ CallResult<HermesValue> intlServiceSupportedLocalesOf(
     return ExecutionStatus::EXCEPTION;
   }
 
-  return localesToJS(
-      runtime, T::supportedLocalesOf(runtime, *localesRes, *optionsRes));
+  auto cr = T::supportedLocalesOf(runtime, *localesRes, *optionsRes);
+  if (cr == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  return localesToJS(runtime, std::move(cr.getValue()));
 }
 
 // This checks that the handle is valid (the caller may have used
@@ -613,32 +671,26 @@ void setCollator(
       SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
-CallResult<PseudoHandle<JSObject>>
-intlCollatorCreator(Runtime &runtime, Handle<JSObject> parentHandle, void *) {
-  return createPseudoHandle<JSObject>(
-      DecoratedObject::create(
-          runtime,
-          parentHandle,
-          nullptr,
-          static_cast<unsigned int>(CollatorSlotIndexes::COUNT))
-          .get());
-}
-
 void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
   // Create %CollatorPrototype% intrinsic.  Properties will be added later.
-  Handle<JSObject> prototype = runtime.makeHandle(JSObject::create(runtime));
-  runtime.intlCollatorPrototype = prototype.getHermesValue();
+  runtime.intlCollatorPrototype = JSObject::create(runtime);
+  Handle<JSObject> prototype{runtime.intlCollatorPrototype};
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> constructor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   // Create %Collator% intrinsic.
-  Handle<NativeConstructor> constructor = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Collator),
       intlCollatorConstructor,
       prototype,
       0,
-      intlCollatorCreator,
-      CellKind::DecoratedObjectKind);
-  runtime.intlCollator = constructor.getHermesValue();
+      lv.constructor);
+  runtime.intlCollator.castAndSetHermesValue<NativeConstructor>(
+      lv.constructor.getHermesValue());
 
   {
     DefinePropertyFlags dpf{};
@@ -646,7 +698,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
 
     defineProperty(
         runtime,
-        constructor,
+        lv.constructor,
         Predefined::getSymbolID(Predefined::prototype),
         prototype,
         dpf);
@@ -654,7 +706,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
 
   defineMethod(
       runtime,
-      constructor,
+      lv.constructor,
       Predefined::getSymbolID(Predefined::supportedLocalesOf),
       nullptr,
       intlCollatorSupportedLocalesOf,
@@ -666,7 +718,7 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       prototype,
       Predefined::getSymbolID(Predefined::constructor),
-      constructor);
+      lv.constructor);
 
   {
     auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -705,28 +757,31 @@ void defineIntlCollator(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       intl,
       Predefined::getSymbolID(Predefined::Collator),
-      constructor);
+      lv.constructor);
 }
 
 } // namespace
 
-CallResult<HermesValue>
-intlCollatorConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceConstructor<platform_intl::Collator>(
       runtime,
       args,
       kCollatorOptions,
+      Handle<NativeConstructor>::vmcast(&runtime.intlCollator),
       Handle<JSObject>::vmcast(&runtime.intlCollatorPrototype),
       static_cast<unsigned int>(CollatorSlotIndexes::COUNT));
 }
 
-CallResult<HermesValue>
-intlCollatorSupportedLocalesOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorSupportedLocalesOf(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceSupportedLocalesOf<platform_intl::Collator>(runtime, args);
 }
 
-CallResult<HermesValue>
-intlCollatorCompare(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorCompare(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *nf = vmcast<NativeFunction>(
       runtime.getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> collatorHandle =
@@ -748,12 +803,13 @@ intlCollatorCompare(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(yRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeUntrustedNumberValue(
-      collator->compare(*xRes, *yRes));
+  return HermesValue::encodeTrustedNumberValue(collator->compare(*xRes, *yRes));
 }
 
-CallResult<HermesValue>
-intlCollatorPrototypeCompareGetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlCollatorPrototypeCompareGetter(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> collatorHandle = args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::Collator *> collatorRes =
@@ -769,12 +825,15 @@ intlCollatorPrototypeCompareGetter(void *, Runtime &runtime, NativeArgs args) {
     return boundCompare.getHermesValue();
   }
 
-  Handle<NativeFunction> compare = NativeFunction::createWithoutPrototype(
+  Handle<NativeFunction> compare = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlCollatorCompare,
       Predefined::getSymbolID(Predefined::emptyString),
       2,
+      Runtime::makeNullHandle<JSObject>(),
       static_cast<unsigned int>(CollatorCompareSlotIndexes::COUNT));
   setCollator(compare, runtime, collatorHandle);
 
@@ -785,8 +844,8 @@ intlCollatorPrototypeCompareGetter(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlCollatorPrototypeResolvedOptions(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> collatorHandle = args.dyncastThis<DecoratedObject>();
 
   CallResult<platform_intl::Collator *> collatorRes =
@@ -853,35 +912,27 @@ void setDateTimeFormat(
       SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
-CallResult<PseudoHandle<JSObject>> intlDateTimeFormatCreator(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    void *) {
-  return createPseudoHandle<JSObject>(
-      DecoratedObject::create(
-          runtime,
-          parentHandle,
-          nullptr,
-          static_cast<unsigned int>(DTFSlotIndexes::COUNT))
-          .get());
-}
-
 void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
   // Create %DateTimeFormatPrototype% intrinsic.  Properties will be added
   // later.
-  Handle<JSObject> prototype = runtime.makeHandle(JSObject::create(runtime));
-  runtime.intlDateTimeFormatPrototype = prototype.getHermesValue();
+  runtime.intlDateTimeFormatPrototype = JSObject::create(runtime);
+  Handle<JSObject> prototype{runtime.intlDateTimeFormatPrototype};
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> constructor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   // Create %DateTimeFormat% intrinsic.
-  Handle<NativeConstructor> constructor = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::DateTimeFormat),
       intlDateTimeFormatConstructor,
       prototype,
       0,
-      intlDateTimeFormatCreator,
-      CellKind::DecoratedObjectKind);
-  runtime.intlDateTimeFormat = constructor.getHermesValue();
+      lv.constructor);
+  runtime.intlDateTimeFormat.castAndSetHermesValue<NativeConstructor>(
+      lv.constructor.getHermesValue());
 
   {
     DefinePropertyFlags dpf{};
@@ -889,7 +940,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
 
     defineProperty(
         runtime,
-        constructor,
+        lv.constructor,
         Predefined::getSymbolID(Predefined::prototype),
         prototype,
         dpf);
@@ -897,7 +948,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
 
   defineMethod(
       runtime,
-      constructor,
+      lv.constructor,
       Predefined::getSymbolID(Predefined::supportedLocalesOf),
       nullptr,
       intlDateTimeFormatSupportedLocalesOf,
@@ -909,7 +960,7 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       prototype,
       Predefined::getSymbolID(Predefined::constructor),
-      constructor);
+      lv.constructor);
 
   {
     auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -956,25 +1007,28 @@ void defineIntlDateTimeFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       intl,
       Predefined::getSymbolID(Predefined::DateTimeFormat),
-      constructor);
+      lv.constructor);
 }
 
 } // namespace
 
-CallResult<HermesValue>
-intlDateTimeFormatConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDateTimeFormatConstructor(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceConstructor<platform_intl::DateTimeFormat>(
       runtime,
       args,
       kDTFOptions,
+      Handle<NativeConstructor>::vmcast(&runtime.intlDateTimeFormat),
       Handle<JSObject>::vmcast(&runtime.intlDateTimeFormatPrototype),
       static_cast<unsigned int>(DTFSlotIndexes::COUNT));
 }
 
 CallResult<HermesValue> intlDateTimeFormatSupportedLocalesOf(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceSupportedLocalesOf<platform_intl::DateTimeFormat>(
       runtime, args);
 }
@@ -989,7 +1043,7 @@ CallResult<double> dateNowValue(Runtime &runtime, NativeArgs args) {
     // a. Let x be Call(%Date_now%, undefined).
     // Reusing NativeArgs is kind of a hack, but dateNow doesn't use
     // it (or the context arg), so this is ok.
-    CallResult<HermesValue> dateRes = dateNow(nullptr, runtime, args);
+    CallResult<HermesValue> dateRes = dateNow(nullptr, runtime);
     if (LLVM_UNLIKELY(dateRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1015,8 +1069,8 @@ CallResult<double> dateNowValue(Runtime &runtime, NativeArgs args) {
 
 } // namespace
 
-CallResult<HermesValue>
-intlDateTimeFormatFormat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDateTimeFormatFormat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *nf = vmcast<NativeFunction>(
       runtime.getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> dateTimeFormatHandle =
@@ -1039,8 +1093,8 @@ intlDateTimeFormatFormat(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> dateTimeFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1059,12 +1113,15 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
     return boundFormat.getHermesValue();
   }
 
-  Handle<NativeFunction> format = NativeFunction::createWithoutPrototype(
+  Handle<NativeFunction> format = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlDateTimeFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
       1,
+      Runtime::makeNullHandle<JSObject>(),
       static_cast<unsigned int>(DTFFormatSlotIndexes::COUNT));
   setDateTimeFormat(format, runtime, dateTimeFormatHandle);
 
@@ -1075,8 +1132,8 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatGetter(
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeFormatToParts(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> dateTimeFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1098,8 +1155,8 @@ CallResult<HermesValue> intlDateTimeFormatPrototypeFormatToParts(
 
 CallResult<HermesValue> intlDateTimeFormatPrototypeResolvedOptions(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> dateTimeFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1169,34 +1226,26 @@ void setNumberFormat(
       SmallHermesValue::encodeObjectValue(value.get(), runtime));
 }
 
-CallResult<PseudoHandle<JSObject>> intlNumberFormatCreator(
-    Runtime &runtime,
-    Handle<JSObject> parentHandle,
-    void *) {
-  return createPseudoHandle<JSObject>(
-      DecoratedObject::create(
-          runtime,
-          parentHandle,
-          nullptr,
-          static_cast<unsigned int>(NFSlotIndexes::COUNT))
-          .get());
-}
-
 void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
   // Create %NumberFormatPrototype% intrinsic.  Properties will be added later.
-  Handle<JSObject> prototype = runtime.makeHandle(JSObject::create(runtime));
-  runtime.intlNumberFormatPrototype = prototype.getHermesValue();
+  runtime.intlNumberFormatPrototype = JSObject::create(runtime);
+  Handle<JSObject> prototype{runtime.intlNumberFormatPrototype};
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> constructor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   // Create %NumberFormat% intrinsic.
-  Handle<NativeConstructor> constructor = defineSystemConstructor(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::NumberFormat),
       intlNumberFormatConstructor,
       prototype,
       0,
-      intlNumberFormatCreator,
-      CellKind::DecoratedObjectKind);
-  runtime.intlNumberFormat = constructor.getHermesValue();
+      lv.constructor);
+  runtime.intlNumberFormat.castAndSetHermesValue<NativeConstructor>(
+      lv.constructor.getHermesValue());
 
   {
     DefinePropertyFlags dpf{};
@@ -1204,7 +1253,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
 
     defineProperty(
         runtime,
-        constructor,
+        lv.constructor,
         Predefined::getSymbolID(Predefined::prototype),
         prototype,
         dpf);
@@ -1212,7 +1261,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
 
   defineMethod(
       runtime,
-      constructor,
+      lv.constructor,
       Predefined::getSymbolID(Predefined::supportedLocalesOf),
       nullptr,
       intlNumberFormatSupportedLocalesOf,
@@ -1224,7 +1273,7 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       prototype,
       Predefined::getSymbolID(Predefined::constructor),
-      constructor);
+      lv.constructor);
 
   {
     auto dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
@@ -1273,29 +1322,32 @@ void defineIntlNumberFormat(Runtime &runtime, Handle<JSObject> intl) {
       runtime,
       intl,
       Predefined::getSymbolID(Predefined::NumberFormat),
-      constructor);
+      lv.constructor);
 }
 
 } // namespace
 
-CallResult<HermesValue>
-intlNumberFormatConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberFormatConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceConstructor<platform_intl::NumberFormat>(
       runtime,
       args,
       kNumberFormatOptions,
+      Handle<NativeConstructor>::vmcast(&runtime.intlNumberFormat),
       Handle<JSObject>::vmcast(&runtime.intlNumberFormatPrototype),
       static_cast<unsigned int>(NFSlotIndexes::COUNT));
 }
 
-CallResult<HermesValue>
-intlNumberFormatSupportedLocalesOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberFormatSupportedLocalesOf(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return intlServiceSupportedLocalesOf<platform_intl::NumberFormat>(
       runtime, args);
 }
 
-CallResult<HermesValue>
-intlNumberFormatFormat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberFormatFormat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *nf = vmcast<NativeFunction>(
       runtime.getCurrentFrame()->getCalleeClosureUnsafe());
   PseudoHandle<DecoratedObject> numberFormatHandle =
@@ -1320,8 +1372,8 @@ intlNumberFormatFormat(void *, Runtime &runtime, NativeArgs args) {
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> numberFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1340,12 +1392,15 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
     return boundFormat.getHermesValue();
   }
 
-  Handle<NativeFunction> format = NativeFunction::createWithoutPrototype(
+  Handle<NativeFunction> format = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       intlNumberFormatFormat,
       Predefined::getSymbolID(Predefined::emptyString),
       1,
+      Runtime::makeNullHandle<JSObject>(),
       static_cast<unsigned int>(NFFormatSlotIndexes::COUNT));
   setNumberFormat(format, runtime, numberFormatHandle);
 
@@ -1356,8 +1411,8 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> numberFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1382,8 +1437,8 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
 
 CallResult<HermesValue> intlNumberFormatPrototypeResolvedOptions(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<DecoratedObject> numberFormatHandle =
       args.dyncastThis<DecoratedObject>();
 
@@ -1502,8 +1557,10 @@ CallResult<HermesValue> intlDatePrototypeToSomeLocaleString(
 
 } // namespace
 
-CallResult<HermesValue>
-intlDatePrototypeToLocaleDateString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDatePrototypeToLocaleDateString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   JSDate *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime.raiseTypeError(
@@ -1512,8 +1569,10 @@ intlDatePrototypeToLocaleDateString(void *, Runtime &runtime, NativeArgs args) {
   return intlDatePrototypeToSomeLocaleString(runtime, args, date, kDTODate);
 }
 
-CallResult<HermesValue>
-intlDatePrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDatePrototypeToLocaleString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   JSDate *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime.raiseTypeError(
@@ -1523,8 +1582,10 @@ intlDatePrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
       runtime, args, date, kDTODate | kDTOTime);
 }
 
-CallResult<HermesValue>
-intlDatePrototypeToLocaleTimeString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlDatePrototypeToLocaleTimeString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   JSDate *date = dyn_vmcast<JSDate>(args.getThisArg());
   if (!date) {
     return runtime.raiseTypeError(
@@ -1533,8 +1594,10 @@ intlDatePrototypeToLocaleTimeString(void *, Runtime &runtime, NativeArgs args) {
   return intlDatePrototypeToSomeLocaleString(runtime, args, date, kDTOTime);
 }
 
-CallResult<HermesValue>
-intlNumberPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlNumberPrototypeToLocaleString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   double x;
   if (args.getThisArg().isNumber()) {
     x = args.getThisArg().getNumber();
@@ -1566,8 +1629,10 @@ intlNumberPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
   return StringPrimitive::createEfficient(runtime, (*nfRes)->format(x));
 }
 
-CallResult<HermesValue>
-intlStringPrototypeLocaleCompare(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> intlStringPrototypeLocaleCompare(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime.raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
@@ -1599,14 +1664,14 @@ intlStringPrototypeLocaleCompare(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return HermesValue::encodeUntrustedNumberValue(
+  return HermesValue::encodeTrustedNumberValue(
       (*collatorRes)->compare(*thisRes, *thatRes));
 }
 
 CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime.raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
@@ -1633,8 +1698,8 @@ CallResult<HermesValue> intlStringPrototypeToLocaleLowerCase(
 
 CallResult<HermesValue> intlStringPrototypeToLocaleUpperCase(
     void *,
-    Runtime &runtime,
-    NativeArgs args) {
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isUndefined() || args.getThisArg().isNull()) {
     return runtime.raiseTypeError(
         "String.prototype.localeCompare called on null or undefined");
@@ -1665,26 +1730,35 @@ namespace intl {
 
 namespace { // Intl impl stuff.
 
-vm::CallResult<vm::HermesValue>
-intlGetCanonicalLocales(void *, vm::Runtime &runtime, vm::NativeArgs args) {
+vm::CallResult<vm::HermesValue> intlGetCanonicalLocales(
+    void *,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   vm::CallResult<std::vector<std::u16string>> localesRes =
       vm::normalizeLocales(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(localesRes == vm::ExecutionStatus::EXCEPTION)) {
     return vm::ExecutionStatus::EXCEPTION;
   }
 
-  return vm::localesToJS(
-      runtime, platform_intl::getCanonicalLocales(runtime, *localesRes));
+  auto cr = platform_intl::getCanonicalLocales(runtime, *localesRes);
+  if (cr == vm::ExecutionStatus::EXCEPTION) {
+    return vm::ExecutionStatus::EXCEPTION;
+  }
+  return vm::localesToJS(runtime, std::move(cr.getValue()));
 }
 
 } // namespace
 
-vm::Handle<vm::JSObject> createIntlObject(vm::Runtime &runtime) {
-  vm::Handle<vm::JSObject> intl =
-      runtime.makeHandle(vm::JSObject::create(runtime));
+vm::HermesValue createIntlObject(vm::Runtime &runtime) {
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSObject> intl;
+  } lv;
+  vm::LocalsRAII lraii(runtime, &lv);
+
+  lv.intl = vm::JSObject::create(runtime);
   defineMethod(
       runtime,
-      intl,
+      lv.intl,
       vm::Predefined::getSymbolID(vm::Predefined::getCanonicalLocales),
       nullptr,
       intlGetCanonicalLocales,
@@ -1697,16 +1771,16 @@ vm::Handle<vm::JSObject> createIntlObject(vm::Runtime &runtime) {
 
     defineProperty(
         runtime,
-        intl,
+        lv.intl,
         vm::Predefined::getSymbolID(vm::Predefined::SymbolToStringTag),
         runtime.getPredefinedStringHandle(vm::Predefined::Intl),
         dpf);
   }
 
-  vm::defineIntlCollator(runtime, intl);
-  vm::defineIntlDateTimeFormat(runtime, intl);
-  vm::defineIntlNumberFormat(runtime, intl);
-  return intl;
+  vm::defineIntlCollator(runtime, lv.intl);
+  vm::defineIntlDateTimeFormat(runtime, lv.intl);
+  vm::defineIntlNumberFormat(runtime, lv.intl);
+  return lv.intl.getHermesValue();
 }
 
 } // namespace intl

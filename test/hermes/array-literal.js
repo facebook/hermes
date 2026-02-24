@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -O -exec %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 // Test that literal arrays work.
 "use strict";

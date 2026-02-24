@@ -200,8 +200,6 @@ uint64_t global_thread_id();
 /// \return (higher stack bound, size) of the current thread.
 ///   The stack overflows when an address is no longer within
 ///   the bounds [high - size, high).
-///   Will return (nullptr, 0) if the platform doesn't support checking the
-///   stack bounds.
 std::pair<const void *, size_t> thread_stack_bounds(unsigned gap = 0);
 
 namespace detail {
@@ -238,10 +236,6 @@ std::vector<bool> sched_getaffinity();
 /// \return the CPU core where this thread is currently scheduled,
 /// or -1 on error.
 int sched_getcpu();
-
-/// \return a monotonically increasing count of time, where the unit depends on
-/// the implementation.
-uint64_t cpu_cycle_counter();
 
 #ifdef _WINDOWS
 

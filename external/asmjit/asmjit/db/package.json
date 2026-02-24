@@ -1,0 +1,29 @@
+{
+  "name": "asmdb",
+  "version": "0.1.0",
+  "license": "Unlicense",
+  "engines": { "node": ">=8" },
+
+  "description": "Instructions database and utilities for X86/X64 and ARM (THUMB/A32/A64) architectures.",
+  "keywords": [
+    "asm", "assembler", "database", "instructions",
+    "arm", "thumb", "thumb2", "a32", "a64", "aarch32", "aarch64",
+    "x86", "x86_64", "x64", "amd64"
+  ],
+
+  "homepage": "https://github.com/asmjit/asmjit/db",
+  "bugs": {
+    "url": "https://github.com/asmjit/asmjit/issues"
+  },
+
+  "contributors": [
+    "Petr Kobalicek <kobalicek.petr@gmail.com> (kobalicek.com)"
+  ],
+
+  "main": "index.js",
+
+  "repository" : {
+    "type": "git",
+    "url": "https://github.com/asmjit/asmjit.git"
+  }
+}

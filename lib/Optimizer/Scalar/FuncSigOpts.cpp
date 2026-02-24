@@ -60,13 +60,23 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   IRBuilder builder(F);
 
-  llvh::SmallVector<CallInst *, 8> callsites;
-  if (!getCallSites(F, callsites))
+  if (!F->allCallsitesKnown())
     return false;
 
+  auto callsites = getKnownCallsites(F);
   LLVM_DEBUG(dbgs() << "-- Has " << callsites.size() << " call sites\n");
 
-  unsigned numFormalParam = F->getParameters().size();
+  if (callsites.empty()) {
+    // If we don't have any callsites, don't change any arguments.
+    // This is necessary for us to ensure that we're not replacing arguments
+    // with default values despite no callsites actually passing them in,
+    // because for typed functions, the new value might not be compatible
+    // with the typed instructions which use the parameter as an operand.
+    // The function should be deleted in the future anyway.
+    return false;
+  }
+
+  unsigned numFormalParam = F->getJSDynamicParams().size();
 
   // This vector saves the union of all callees for each parameter.
   // Null is used to mark non-literal or diverged parameters. False means
@@ -74,19 +84,23 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
   Literal *undef = builder.getLiteralUndefined();
   llvh::SmallVector<std::pair<Literal *, bool>, 8> args(
       numFormalParam, {undef, false});
-
   // A list of unused arguments passed by the caller.
-  llvh::SmallVector<std::pair<CallInst *, unsigned>, 8> unusedParams;
+  struct UnusedArg {
+    BaseCallInst *call;
+    unsigned idx;
+    /// null if idx doesn't represent a formal arg.
+    JSDynamicParam *param;
+  };
+  llvh::SmallVector<UnusedArg, 8> unusedParams;
 
   // For each call site:
-  for (CallInst *caller : callsites) {
-    // For each parameter in the callee:
-    for (unsigned i = 0; i < numFormalParam; i++) {
+  for (BaseCallInst *caller : callsites) {
+    for (uint32_t i = 0; i < numFormalParam; i++) {
       // Get the arg that matches the i'th parameter. Unpassed parameters are
       // converted into undefs.
       Value *arg = undef;
-      if (i < caller->getNumArguments() - 1)
-        arg = caller->getArgument(i + 1);
+      if (i < caller->getNumArguments())
+        arg = caller->getArgument(i);
 
       auto *L = llvh::dyn_cast<Literal>(arg);
       if (L) {
@@ -114,13 +128,16 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
       }
     }
 
-    // Find the unused arguments in the call site.
-    // For each argument in the call site(excluding the 'this' argument).
-    for (unsigned i = 1, e = caller->getNumArguments(); i < e; i++) {
+    for (unsigned i = 0, e = caller->getNumArguments(); i < e; i++) {
       // Remember which arguments are unused by the callee (parameters with no
       // users and undeclared parameters).
-      if (i > numFormalParam || !F->getParameters()[i - 1]->hasUsers()) {
-        unusedParams.push_back({caller, i});
+      if (i >= numFormalParam || !F->getJSDynamicParam(i)->hasUsers()) {
+        // Defer setting the type of the JSDynamicParam until we actually set
+        // the arg to undefined, to keep all the changes in the same place.
+        unusedParams.push_back(
+            {caller,
+             i,
+             i < numFormalParam ? F->getJSDynamicParam(i) : nullptr});
       }
     }
   }
@@ -129,31 +146,43 @@ static bool performFSO(Function *F, std::vector<Function *> &worklist) {
 
   bool changed = false;
 
-  unsigned paramIdx = 0;
-  for (auto *P : F->getParameters()) {
-    LLVM_DEBUG(dbgs() << "-- Inspecting param " << P->getName().str() << ".\n");
-
-    if (Literal *L = args[paramIdx].first) {
+  {
+    IRBuilder::InstructionDestroyer destroyer{};
+    for (uint32_t paramIdx = 0, e = F->getJSDynamicParams().size();
+         paramIdx < e;
+         ++paramIdx) {
+      JSDynamicParam *P = F->getJSDynamicParam(paramIdx);
       LLVM_DEBUG(
-          dbgs() << "-- Found literal " << L->getKindStr() << " for param "
-                 << P->getName().str() << ".\n");
-      P->replaceAllUsesWith(L);
-      changed = true;
-      NumParamOpt++;
-    }
+          dbgs() << "-- Inspecting param " << P->getName().str() << ".\n");
 
-    paramIdx++;
+      if (Literal *L = args[paramIdx].first) {
+        LLVM_DEBUG(
+            dbgs() << "-- Found literal " << L->getKindStr() << " for param "
+                   << P->getName().str() << ".\n");
+
+        for (auto *I : P->getUsers()) {
+          I->replaceAllUsesWith(L);
+          destroyer.add(I);
+          changed = true;
+        }
+
+        NumParamOpt++;
+      }
+    }
   }
 
   llvh::DenseSet<Function *> toRedo;
 
-  // Replace all unused arguments with undef.
+  // Replace all unused arguments with 0 (which is cheap to create).
+  Literal *zero = builder.getLiteralPositiveZero();
   for (auto &arg : unusedParams) {
-    auto *prevArg = arg.first->getArgument(arg.second);
+    Value *prevArg = arg.call->getArgument(arg.idx);
     if (!llvh::isa<Literal>(prevArg))
-      toRedo.insert(arg.first->getParent()->getParent());
+      toRedo.insert(arg.call->getParent()->getParent());
 
-    arg.first->setArgument(undef, arg.second);
+    arg.call->setArgument(zero, arg.idx);
+    if (arg.param)
+      arg.param->setType(Type::createUint32());
     NumArgsOpt++;
   }
 
@@ -170,8 +199,9 @@ bool FuncSigOpts::runOnModule(Module *M) {
   std::vector<Function *> worklist;
 
   for (auto &F : *M) {
-    if (M->findCJSModule(&F)) {
-      // If the function is a top-level CommonJS module, skip it.
+    if (F.isGlobalScope() || M->findCJSModule(&F)) {
+      // If the function is a top-level CommonJS module or a global function,
+      // skip it.
       continue;
     }
 
@@ -188,8 +218,8 @@ bool FuncSigOpts::runOnModule(Module *M) {
   return changed;
 }
 
-std::unique_ptr<Pass> hermes::createFuncSigOpts() {
-  return std::make_unique<FuncSigOpts>();
+Pass *hermes::createFuncSigOpts() {
+  return new FuncSigOpts();
 }
 
 #undef DEBUG_TYPE

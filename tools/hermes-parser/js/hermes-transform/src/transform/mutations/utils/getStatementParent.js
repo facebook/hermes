@@ -19,9 +19,7 @@ import type {
 
 import {InvalidStatementError} from '../../Errors';
 
-export function getStatementParent(
-  target: ModuleDeclaration | Statement,
-): $ReadOnly<
+type StatementParent = $ReadOnly<
   | {
       type: 'single',
       parent: StatementParentSingle,
@@ -33,7 +31,11 @@ export function getStatementParent(
       key: string,
       targetIndex: number,
     },
-> {
+>;
+
+export function getStatementParent(
+  target: ModuleDeclaration | Statement,
+): StatementParent {
   function assertValidStatementLocation<T: $ReadOnly<interface {type: string}>>(
     parentWithType: T,
     ...invalidKeys: $ReadOnlyArray<$Keys<T>>
@@ -43,6 +45,7 @@ export function getStatementParent(
       const value = parentWithType[key];
 
       if (
+        // $FlowFixMe[invalid-compare]
         value === target ||
         (Array.isArray(value) && value.includes(target))
       ) {
@@ -63,7 +66,7 @@ export function getStatementParent(
   }
 
   const parent = target.parent;
-  const result = (() => {
+  const result: StatementParent = (() => {
     switch (parent.type) {
       case 'IfStatement': {
         assertValidStatementLocation(parent, 'test');
@@ -134,6 +137,7 @@ export function getStatementParent(
     // array insertions are already validated by the getAssertedIndex function
     result.targetIndex == null &&
     // $FlowExpectedError[prop-missing]
+    // $FlowFixMe[invalid-compare]
     result.parent[result.key] !== target
   ) {
     throw new InvalidStatementError(

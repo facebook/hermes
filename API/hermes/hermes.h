@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_HERMES_H
-#define HERMES_HERMES_H
+#pragma once
 
 #include <exception>
 #include <list>
@@ -18,7 +17,7 @@
 #include <hermes/Public/HermesExport.h>
 #include <hermes/Public/RuntimeConfig.h>
 #include <hermes/Public/SamplingProfiler.h>
-#include <jsi/hermes.h>
+#include <jsi/hermes-interfaces.h>
 #include <jsi/jsi.h>
 #include <unordered_map>
 
@@ -30,6 +29,7 @@ namespace hermes {
 namespace vm {
 class GCExecTrace;
 class Runtime;
+class SerializedValue;
 } // namespace vm
 } // namespace hermes
 
@@ -172,7 +172,31 @@ class HERMES_EXPORT IHermesTestHelpers : public jsi::ICast {
   ~IHermesTestHelpers() = default;
 };
 
-class HermesRuntime : public jsi::Runtime, public IHermes {
+#ifdef JSI_UNSTABLE
+// Interface for methods that are exposed for tracing purposes.
+class IHermesTracingHelpers : public jsi::ICast {
+ public:
+  static constexpr jsi::UUID uuid{
+      0x74ac2c4e,
+      0xc660,
+      0x11f0,
+      0x8de9,
+      0x0242ac120002};
+
+  // Returns the secret for obtaining the underlying SerializedValue object
+  virtual const ::hermes::vm::SerializedValue *getHermesSerializedValue(
+      const jsi::Serialized &serialized) const = 0;
+  virtual const std::shared_ptr<jsi::Serialized> makeSerialized(
+      ::hermes::vm::SerializedValue &value) const = 0;
+
+ protected:
+  ~IHermesTracingHelpers() = default;
+};
+#endif
+
+class HermesRuntime : public jsi::Runtime,
+                      public IHermes,
+                      public IHermesSHUnit {
  public:
   /// Similar to jsi::Runtime, HermesRuntime is treated as an object, rather
   /// than a pure interface. This is to prevent breaking usages of
@@ -194,6 +218,7 @@ HERMES_EXPORT jsi::ICast *makeHermesRootAPI();
 ///
 /// Can serve as a starting point with tweaks to re-enable needed features:
 ///   auto conf = hardenedHermesRuntimeConfig().rebuild();
+///   conf.withArrayBuffer(true);
 ///   ...
 ///   auto runtime = makeHermesRuntime(conf.build());
 HERMES_EXPORT ::hermes::vm::RuntimeConfig hardenedHermesRuntimeConfig();
@@ -201,11 +226,17 @@ HERMES_EXPORT ::hermes::vm::RuntimeConfig hardenedHermesRuntimeConfig();
 HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
+
+/// Create a HermesRuntime for the given config without throwing any exceptions.
+/// This is safe to be called from code that is compiled without exceptions.
+/// Returns nullptr on failure.
+HERMES_EXPORT std::unique_ptr<HermesRuntime> makeHermesRuntimeNoThrow(
+    const ::hermes::vm::RuntimeConfig &runtimeConfig =
+        ::hermes::vm::RuntimeConfig()) noexcept;
+
 HERMES_EXPORT std::unique_ptr<jsi::ThreadSafeRuntime>
 makeThreadSafeHermesRuntime(
     const ::hermes::vm::RuntimeConfig &runtimeConfig =
         ::hermes::vm::RuntimeConfig());
 } // namespace hermes
 } // namespace facebook
-
-#endif

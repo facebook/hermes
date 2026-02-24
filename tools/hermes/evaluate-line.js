@@ -63,23 +63,23 @@ C_STRING((function() {
   function prettyPrintPromise(value, visited) {
     var internalColor = colors.cyan;
     var internals = "";
-    switch(value['_i']) {
+    switch(value['_y']) {
       case 0:
         internals = "<pending>";
         break;
       case 1:
         internals = "<fulfilled: " + colors.reset +
-            prettyPrintRec(value['_j'], visited) +
+            prettyPrintRec(value['_z'], visited) +
             internalColor + ">";
         break;
       case 2:
         internals = "<rejected: " + colors.reset +
-            prettyPrintRec(value['_j'], visited) +
+            prettyPrintRec(value['_z'], visited) +
             internalColor + ">";
         break;
       case 3:
         // the case of an "adopted" promise; print the adoptee promise instead.
-        return prettyPrintPromise(value['_j'], visited);
+        return prettyPrintPromise(value['_z'], visited);
       default:
         break;
     };
@@ -87,7 +87,7 @@ C_STRING((function() {
 
     var elements = [];
     var propNames = Object.getOwnPropertyNames(value);
-    var internalNames = ['_h', '_i', '_j', '_k'];
+    var internalNames = ['_x', '_y', '_z', '_A'];
     for (var i = 0; i < propNames.length; ++i) {
       var prop = propNames[i];
       // hide internal properties.
@@ -251,13 +251,14 @@ C_STRING((function() {
         elements.push(prettyPrintProp(value, prop, visited));
       }
     }
-    if (value.constructor && value.constructor.name && value.constructor.name !== "Object") {
-      return value.constructor.name + ' { ' + elements.join(', ') + ' }';
-    } else if (value[Symbol.toStringTag]) {
+    if (value[Symbol.toStringTag]) {
       // For any built-in objects whose printing is not specialized, we prefix its
       // 19.4.2.15 Symbol.toStringTag value to help with disambiguation. This covers cases
       // including Generator, {String, RegExp, Map, Set, Array}Iterator, Math, JSON, etc.
       return value[Symbol.toStringTag] + ' { ' + elements.join(', ') + ' }';
+    }
+    else if (value.constructor && value.constructor.name && value.constructor.name !== "Object") {
+      return value.constructor.name + ' { ' + elements.join(', ') + ' }';
     } else {
       return '{ ' + elements.join(', ') + ' }';
     }

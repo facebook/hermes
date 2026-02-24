@@ -23,6 +23,7 @@
 using namespace hermes;
 
 STATISTIC(NumCSE, "Number of instructions CSE'd");
+STATISTIC(NumRequireCSE, "Number of require calls CSE'd");
 
 //===----------------------------------------------------------------------===//
 //                                Simple Value
@@ -45,7 +46,23 @@ struct CSEValue {
 
   /// Return true if we know how to CSE this instruction.
   static bool canHandle(Instruction *Inst) {
-    return isSimpleSideEffectFreeInstruction(Inst);
+    // Calls to metro's require function are idempotent (for a given module id).
+    // Consider the heap separated into a portion private to require (i.e.,
+    // the data structure that keeps track of what modules have been
+    // initialized), and the rest of the heap.  The module init functions
+    // can access and update the "rest of the heap", but not the data stucture
+    // private to require (more specifically, the portion of that data stucture
+    // relevant to the given module id).  Require uses its private data
+    // structure to ensure that the module init function runs only on the first
+    // call for a module id.  Thus, require calls as a whole are idempotent.
+    if (Inst->getAttributesRef(Inst->getModule()).isMetroRequire) {
+      assert(Inst->getKind() == ValueKind::CallInstKind);
+      return true;
+    }
+    // Check that the instruction can be freely reordered and deduplicated, and
+    // that it is not a terminator.
+    return !llvh::isa<TerminatorInst>(Inst) && Inst->getSideEffect().isPure() &&
+        !Inst->getSideEffect().getFirstInBlock();
   }
 };
 } // end anonymous namespace
@@ -65,7 +82,7 @@ struct DenseMapInfo<CSEValue> {
 } // end namespace llvh
 
 unsigned llvh::DenseMapInfo<CSEValue>::getHashValue(CSEValue Val) {
-  return Val.inst_->getHashCode();
+  return Val.inst_->getSimpleHashCode();
 }
 
 bool llvh::DenseMapInfo<CSEValue>::isEqual(CSEValue LHS, CSEValue RHS) {
@@ -97,7 +114,7 @@ using ScopedHTType = llvh::ScopedHashTable<
 // a depth first traversal of the tree. This includes scopes for values and
 // loads as well as the generation. There is a child iterator so that the
 // children do not need to be store spearately.
-class StackNode : public DomTreeDFS::StackNode<CSEContext> {
+class StackNode : public DomTreeDFS::StackNode {
  public:
   inline StackNode(CSEContext *ctx, const DominanceInfoNode *n);
 
@@ -132,8 +149,7 @@ class CSEContext : public DomTreeDFS::Visitor<CSEContext, StackNode> {
 };
 
 inline StackNode::StackNode(CSEContext *ctx, const DominanceInfoNode *n)
-    : DomTreeDFS::StackNode<CSEContext>(ctx, n),
-      scope_{ctx->availableValues_} {}
+    : DomTreeDFS::StackNode(n), scope_{ctx->availableValues_} {}
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -158,6 +174,11 @@ bool CSEContext::processNode(StackNode *SN) {
     // Now that we know we have an instruction we understand see if the
     // instruction has an available value.  If so, use it.
     if (Value *V = availableValues_.lookup(&Inst)) {
+      if (AreStatisticsEnabled() &&
+          Inst.getAttributes(Inst.getModule()).isMetroRequire) {
+        NumRequireCSE++;
+      }
+
       Inst.replaceAllUsesWith(V);
       destroyer.add(&Inst);
       changed = true;
@@ -178,8 +199,8 @@ bool CSE::runOnFunction(Function *F) {
   return CCtx.run();
 }
 
-std::unique_ptr<Pass> hermes::createCSE() {
-  return std::make_unique<CSE>();
+Pass *hermes::createCSE() {
+  return new CSE();
 }
 
 #undef DEBUG_TYPE

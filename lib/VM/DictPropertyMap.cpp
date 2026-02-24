@@ -10,47 +10,27 @@
 #include "hermes/Support/Statistic.h"
 #include "hermes/VM/SymbolID-inline.h"
 
-HERMES_SLOW_STATISTIC(NumDictLookups, "Number of dictionary lookups");
-HERMES_SLOW_STATISTIC(NumExtraHashProbes, "Number of extra hash probes");
-
 namespace hermes {
 namespace vm {
 
 struct DictPropertyMap::detail {
-  /// The upper bound of the search when trying to find the maximum capacity
-  /// of this object, given GC::maxAllocationSize().
-  /// It was chosen to be a value that is certain to not fit into an allocation;
-  /// at the same time we want to make it smaller, so/ we have arbitrarily
-  /// chosen to divide the max allocation size by two, which is still guaranteed
-  /// not to fit.
-  static constexpr uint32_t kSearchUpperBound = GC::maxAllocationSize() / 2;
-
-  static_assert(
-      !DictPropertyMap::constWouldFitAllocation(kSearchUpperBound),
-      "kSearchUpperBound should not fit into an allocation");
-
-  /// The maximum capacity of DictPropertyMap, given GC::maxAllocationSize().
-  static constexpr uint32_t kMaxCapacity =
-      DictPropertyMap::constFindMaxCapacity(0, kSearchUpperBound);
-
-  // Double-check that kMaxCapacity is reasonable.
-  static_assert(
-      DictPropertyMap::constApproxAllocSize64(kMaxCapacity) <=
-          GC::maxAllocationSize(),
-      "invalid kMaxCapacity");
-
-  // Ensure that it is safe to double capacities without checking for overflow
-  // until we exceed kMaxCapacity.
+  static constexpr size_type kMaxCapacity =
+      hermes::vm::detail::DPMHashPair::maxDescIndex();
+  // Ensure that it is safe to double capacities without checking for
+  // overflow until we exceed kMaxCapacity.
   static_assert(
       kMaxCapacity < (1u << 31),
       "kMaxCapacity is unrealistically large");
-
   static_assert(
-      DictPropertyMap::HashPair::canStore(kMaxCapacity),
-      "too few bits to store max possible descriptor index");
+      constApproxAllocSize64(kMaxCapacity) <=
+          std::numeric_limits<size_type>::max(),
+      "Maximum capacity should not make the allocation size overflow");
 };
 
-const VTable DictPropertyMap::vt{CellKind::DictPropertyMapKind, 0};
+const VTable DictPropertyMap::vt{
+    CellKind::DictPropertyMapKind,
+    0,
+    /* allowLargeAlloc */ true};
 
 void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const DictPropertyMap *>(cell);
@@ -61,68 +41,32 @@ void DictPropertyMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
       sizeof(DictPropertyMap::DescriptorPair));
 }
 
-DictPropertyMap::size_type DictPropertyMap::getMaxCapacity() {
-  return detail::kMaxCapacity;
-}
-
 CallResult<PseudoHandle<DictPropertyMap>> DictPropertyMap::create(
     Runtime &runtime,
     size_type capacity) {
-  if (LLVM_UNLIKELY(capacity > detail::kMaxCapacity)) {
+  if (LLVM_UNLIKELY(capacity > getMaxCapacity())) {
     return runtime.raiseRangeError(
-        TwineChar16("Property storage exceeds ") + detail::kMaxCapacity +
+        TwineChar16("Property storage exceeds ") + getMaxCapacity() +
         " properties");
   }
   size_type hashCapacity = calcHashCapacity(capacity);
-  auto *cell = runtime.makeAVariable<DictPropertyMap>(
+  auto *cell = runtime.makeAVariable<
+      DictPropertyMap,
+      HasFinalizer::No,
+      LongLived::No,
+      CanBeLarge::Yes,
+      MayFail::Yes>(
       allocationSize(capacity, hashCapacity), capacity, hashCapacity);
+  if (LLVM_UNLIKELY(!cell)) {
+    return runtime.raiseRangeError(
+        TwineChar16("Property storage with capacity ") + capacity +
+        " fails to allocate");
+  }
   return createPseudoHandle(cell);
 }
 
-std::pair<bool, DictPropertyMap::HashPair *> DictPropertyMap::lookupEntryFor(
-    DictPropertyMap *self,
-    SymbolID symbolID) {
-  ++NumDictLookups;
-
-  size_type const mask = self->hashCapacity_ - 1;
-  size_type index = hash(symbolID) & mask;
-
-  // Probing step.
-  size_type step = 1;
-  // Save the address of the start of the table to avoid recalculating it.
-  HashPair *const tableStart = self->getHashPairs();
-  // The first deleted entry we found.
-  HashPair *deleted = nullptr;
-
-  assert(symbolID.isValid() && "looking for an invalid SymbolID");
-
-  for (;;) {
-    HashPair *curEntry = tableStart + index;
-
-    if (curEntry->isValid()) {
-      if (self->isMatch(curEntry, symbolID))
-        return {true, curEntry};
-    } else if (curEntry->isEmpty()) {
-      // If we encountered an empty pair, the search is over - we failed.
-      // Return either this entry or a deleted one, if we encountered one.
-
-      return {false, deleted ? deleted : curEntry};
-    } else {
-      assert(curEntry->isDeleted() && "unexpected HashPair state");
-      // The first time we encounter a deleted entry, record it so we can
-      // potentially reuse it for insertion.
-      if (!deleted)
-        deleted = curEntry;
-    }
-
-    ++NumExtraHashProbes;
-    index = (index + step) & mask;
-    ++step;
-  }
-}
-
 ExecutionStatus DictPropertyMap::grow(
-    MutableHandle<DictPropertyMap> &selfHandleRef,
+    MutableHandle<DictPropertyMap> selfHandleRef,
     Runtime &runtime,
     size_type newCapacity) {
   auto res = create(runtime, newCapacity);
@@ -132,7 +76,7 @@ ExecutionStatus DictPropertyMap::grow(
   auto *newSelf = res->get();
   auto *self = *selfHandleRef;
 
-  selfHandleRef = newSelf;
+  selfHandleRef.set(newSelf);
 
   auto *dst = newSelf->getDescriptorPairs();
   size_type count = 0;
@@ -197,7 +141,7 @@ ExecutionStatus DictPropertyMap::grow(
 
 CallResult<std::pair<NamedPropertyDescriptor *, bool>>
 DictPropertyMap::findOrAdd(
-    MutableHandle<DictPropertyMap> &selfHandleRef,
+    MutableHandle<DictPropertyMap> selfHandleRef,
     Runtime &runtime,
     SymbolID id) {
   auto *self = *selfHandleRef;
@@ -222,9 +166,9 @@ DictPropertyMap::findOrAdd(
       // exactly at kMaxCapacity, there is nothing we can do, so grow() will
       // simply fail.
       newCapacity = self->numProperties_ * 2;
-      if (newCapacity > detail::kMaxCapacity)
+      if (newCapacity > getMaxCapacity())
         newCapacity =
-            std::max(toRValue(detail::kMaxCapacity), self->numProperties_ + 1);
+            std::max(toRValue(getMaxCapacity()), self->numProperties_ + 1);
     } else {
       // Calculate the new capacity to be exactly as much as we need to
       // accommodate the deleted list plus one extra property. It it happens

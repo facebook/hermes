@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -non-strict %s
+// RUN: %hermesc -dump-transformed-ast -non-strict %s
 
 // Assertion failure because parser incorrectly recognized this as a directive
 // but the AST validator did not.

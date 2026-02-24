@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "aiMerge": {
+    "provider": "claude",
+    "model": "haiku"
+  },
+  "dependencies": [
+    {
+      "name": "hermes",
+      "localPath": "."
+    },
+    {
+      "name": "icu-small",
+      "localPath": "external/icu-small"
+    },
+    {
+      "name": "test262",
+      "localPath": "external/test262"
+    }
+  ]
+}

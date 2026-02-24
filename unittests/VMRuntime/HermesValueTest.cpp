@@ -7,7 +7,7 @@
 
 #include "hermes/VM/HermesValue.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringRefUtils.h"
@@ -22,21 +22,21 @@ using namespace hermes::vm;
 
 namespace {
 
-int32_t getRandomInt32(int32_t lower, int32_t upper) {
+[[maybe_unused]] int32_t getRandomInt32(int32_t lower, int32_t upper) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_int_distribution<int64_t> uniform_dist(lower, upper);
   return uniform_dist(e1);
 }
 
-uint64_t getRandomUInt64(uint64_t lower, uint64_t upper) {
+[[maybe_unused]] uint64_t getRandomUInt64(uint64_t lower, uint64_t upper) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_int_distribution<uint64_t> uniform_dist(lower, upper);
   return uniform_dist(e1);
 }
 
-double getRandomDouble(double lower, double upper) {
+[[maybe_unused]] double getRandomDouble(double lower, double upper) {
   std::random_device r;
   std::default_random_engine e1(r());
   std::uniform_real_distribution<double> uniform_dist(lower, upper);
@@ -52,6 +52,7 @@ TEST(HermesValueTest, ConstexprTagsTest) {
 
 using HermesValueRuntimeTest = RuntimeTestFixture;
 
+#ifndef HERMESVM_SANITIZE_HANDLES
 TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
   // Encode the null value.
   {
@@ -62,7 +63,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isPointer());
     EXPECT_FALSE(V.isNumber());
@@ -78,7 +78,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isPointer());
     EXPECT_FALSE(V.isNumber());
@@ -95,7 +94,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isPointer());
     EXPECT_FALSE(V.isNumber());
@@ -112,7 +110,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V.isNull());
     EXPECT_FALSE(V.isDouble());
     EXPECT_FALSE(V.isString());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isNumber());
     EXPECT_FALSE(V.isSymbol());
@@ -127,7 +124,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(V2.isDouble());
     EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V2.isString());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isNumber());
     EXPECT_FALSE(V.isSymbol());
@@ -139,14 +135,13 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
   for (int i = 0; i < 1000; i++) {
     // Check that we can encode the whole range of doubles.
     double value = getRandomDouble(DBL_MIN, DBL_MAX);
-    auto V = HermesValue::encodeUntrustedNumberValue(value);
+    auto V = HermesValue::encodeTrustedNumberValue(value);
     EXPECT_TRUE(V.isDouble());
     EXPECT_TRUE(V.isNumber());
     EXPECT_FALSE(V.isUndefined());
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isBigInt());
     EXPECT_FALSE(V.isString());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isNull());
     EXPECT_FALSE(V.isPointer());
@@ -162,7 +157,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     auto V = HermesValue::encodeTrustedNumberValue(value);
     EXPECT_TRUE(V.isNumber());
     EXPECT_TRUE(V.isDouble());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isUndefined());
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isBigInt());
@@ -185,7 +179,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(T.isBigInt());
     EXPECT_FALSE(T.isString());
     EXPECT_FALSE(T.isNull());
-    EXPECT_FALSE(T.isNativeValue());
     EXPECT_FALSE(T.isPointer());
     EXPECT_FALSE(T.isNumber());
     EXPECT_FALSE(T.isSymbol());
@@ -198,7 +191,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_FALSE(F.isBigInt());
     EXPECT_FALSE(F.isString());
     EXPECT_FALSE(F.isNull());
-    EXPECT_FALSE(F.isNativeValue());
     EXPECT_FALSE(F.isPointer());
     EXPECT_FALSE(F.getBool());
     EXPECT_FALSE(F.isNumber());
@@ -214,7 +206,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
         StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"hello"));
     auto V = HermesValue::encodeStringValue(message.get());
     EXPECT_TRUE(V.isString());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isBigInt());
@@ -230,7 +221,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
         StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"hi"));
     auto V2 = HermesValue::encodeStringValue(message2.get());
     EXPECT_TRUE(V2.isString());
-    EXPECT_FALSE(V2.isNativeValue());
     EXPECT_FALSE(V2.isBool());
     EXPECT_FALSE(V2.isObject());
     EXPECT_FALSE(V.isBigInt());
@@ -252,7 +242,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     auto H = BigIntPrimitive::fromSignedNoThrow(runtime, 0);
     auto V = HermesValue::encodeBigIntValue(H.get());
     EXPECT_TRUE(V.isBigInt());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isBool());
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isString());
@@ -267,7 +256,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     auto H2 = BigIntPrimitive::fromSignedNoThrow(runtime, 0);
     auto V2 = HermesValue::encodeBigIntValue(H2.get());
     EXPECT_TRUE(V2.isBigInt());
-    EXPECT_FALSE(V2.isNativeValue());
     EXPECT_FALSE(V2.isBool());
     EXPECT_FALSE(V2.isObject());
     EXPECT_FALSE(V2.isString());
@@ -291,7 +279,6 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     auto V = HermesValue::encodeSymbolValue(value);
     EXPECT_FALSE(V.isNumber());
     EXPECT_FALSE(V.isDouble());
-    EXPECT_FALSE(V.isNativeValue());
     EXPECT_FALSE(V.isUndefined());
     EXPECT_FALSE(V.isObject());
     EXPECT_FALSE(V.isBigInt());
@@ -303,10 +290,11 @@ TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
     EXPECT_EQ(value, V.getSymbol());
   }
 }
+#endif
 
 TEST(HermesValueTest, NanTest) {
   double v1 = HermesValue::encodeNaNValue().getDouble();
-  double v2 = HermesValue::encodeUntrustedNumberValue(
+  double v2 = HermesValue::encodeTrustedNumberValue(
                   std::numeric_limits<double>::quiet_NaN())
                   .getDouble();
   EXPECT_TRUE(std::isnan(v1));
@@ -320,8 +308,8 @@ TEST(HermesValueTest, HVConstantsTest) {
   auto A = HVConstants::kZero;
   auto B = HVConstants::kOne;
   auto C = HVConstants::kNegOne;
-  auto D = HermesValue::encodeUntrustedNumberValue(0);
-  auto E = HermesValue::encodeUntrustedNumberValue(1);
+  auto D = HermesValue::encodeTrustedNumberValue(0);
+  auto E = HermesValue::encodeTrustedNumberValue(1);
   auto F = HermesValue::encodeTrustedNumberValue(-1);
 
   EXPECT_TRUE(A == D);
@@ -333,8 +321,8 @@ TEST(HermesValueTest, EqualityTest) {
   auto A = HermesValue::encodeNullValue();
   auto B = HermesValue::encodeUndefinedValue();
   auto C = HermesValue::encodeUndefinedValue();
-  auto D = HermesValue::encodeUntrustedNumberValue(1.23);
-  auto E = HermesValue::encodeUntrustedNumberValue(1.23);
+  auto D = HermesValue::encodeTrustedNumberValue(1.23);
+  auto E = HermesValue::encodeTrustedNumberValue(1.23);
   auto F = HermesValue::encodeTrustedNumberValue(274);
   auto G = HermesValue::encodeTrustedNumberValue(274);
 
@@ -384,7 +372,7 @@ TEST(HermesValueTest, OutputStreamTest) {
   EXPECT_EQ("undefined", OS.str());
 
   result.clear();
-  OS << HermesValue::encodeUntrustedNumberValue(1.23);
+  OS << HermesValue::encodeTrustedNumberValue(1.23);
   EXPECT_EQ("[double 1.230000e+00]", OS.str());
 
   result.clear();

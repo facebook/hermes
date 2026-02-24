@@ -5,12 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 
 #include "hermes/VM/Profiler/CodeCoverageProfiler.h"
 
 #include "llvh/ADT/StringRef.h"
+#include "llvh/Support/Compiler.h"
 #include "llvh/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -28,21 +29,23 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
   CodeCoverageProfilerTest() {
     CodeCoverageProfiler::enableGlobal();
   }
+  ~CodeCoverageProfilerTest() {
+    CodeCoverageProfiler::disableGlobal();
+  }
 
  protected:
   static CodeCoverageProfiler::FuncInfo getFuncInfo(
       Runtime &runtime,
       Handle<JSFunction> func) {
-    auto bcProvider =
-        func->getCodeBlock(runtime)->getRuntimeModule()->getBytecode();
-    auto functionId = func->getCodeBlock(runtime)->getFunctionID();
+    auto bcProvider = func->getCodeBlock()->getRuntimeModule()->getBytecode();
+    auto functionId = func->getCodeBlock()->getFunctionID();
     auto debugInfo = bcProvider->getDebugInfo();
     auto debugOffsets = bcProvider->getDebugOffsets(functionId);
     if (debugInfo && debugOffsets &&
         debugOffsets->sourceLocations != hbc::DebugOffsets::NO_OFFSET) {
       if (auto pos = debugInfo->getLocationForAddress(
               debugOffsets->sourceLocations, 0 /* opcodeOffset */)) {
-        auto file = debugInfo->getFilenameByID(pos->filenameId);
+        auto file = debugInfo->getUTF8FilenameByID(pos->filenameId);
         auto line = pos->line - 1; // Normalised to zero-based
         auto column = pos->column - 1; // Normalised to zero-based
         return {line, column, file};
@@ -51,8 +54,7 @@ class CodeCoverageProfilerTest : public RuntimeTestFixture {
     const uint32_t segmentID = bcProvider->getSegmentID();
     const uint32_t funcVirtualOffset =
         bcProvider->getVirtualOffsetForFunction(functionId);
-    const std::string sourceURL =
-        func->getRuntimeModule(runtime)->getSourceURL();
+    const std::string sourceURL = func->getRuntimeModule()->getSourceURL();
     return {segmentID, funcVirtualOffset, sourceURL};
   }
 
@@ -117,9 +119,8 @@ TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnused) {
 // Right now, this just tests that we can simultaneously run two code coverage
 // profilers.
 // Disabled for Apple ASAN builds because it causes a native stack overflow
-// as a result of the large minimum stack gap (threads used by std::async have
-// smaller stack sizes). Consider enabling it again with larger stack for
-// std::async.
+// as a result of the large minimum stack gap.
+// Consider enabling it again with larger stack for std::async.
 #if !(LLVM_ADDRESS_SANITIZER_BUILD && defined(__APPLE__))
 TEST_F(CodeCoverageProfilerTest, BasicFunctionUsedUnusedTwoRuntimes) {
   auto runtime2 = newRuntime();
@@ -236,6 +237,29 @@ TEST_F(CodeCoverageProfilerTest, FunctionsFromMultipleDomains) {
   EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUsed2));
   EXPECT_FALSE(
       isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcUnused));
+}
+
+TEST_F(CodeCoverageProfilerTest, LazyFunction) {
+  hbc::CompileFlags flags;
+  flags.lazy = true;
+  // Force lazy compilation.
+  flags.preemptiveFileCompilationThreshold = 0;
+  flags.preemptiveFunctionCompilationThreshold = 0;
+  CallResult<HermesValue> res = runtime.run(
+      "var foo; var bar = function() { foo = function() { return 5; }; return foo;}; bar()(); foo;",
+      "file:///fake.js",
+      flags);
+  EXPECT_FALSE(isException(res));
+
+  std::unordered_map<std::string, std::vector<CodeCoverageProfiler::FuncInfo>>
+      executedFuncInfos = CodeCoverageProfiler::getExecutedFunctions();
+  std::vector<CodeCoverageProfiler::FuncInfo> testRuntimeExecutedFuncInfos =
+      executedFuncInfos.find(runtime.getHeap().getName())->second;
+
+  Handle<JSFunction> funcFoo = runtime.makeHandle(vmcast<JSFunction>(*res));
+  // Global + bar + foo.
+  EXPECT_EQ(testRuntimeExecutedFuncInfos.size(), 3);
+  EXPECT_TRUE(isFuncExecuted(runtime, testRuntimeExecutedFuncInfos, funcFoo));
 }
 
 } // namespace CodeCoverageTest

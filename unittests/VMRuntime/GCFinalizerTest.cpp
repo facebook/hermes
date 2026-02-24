@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/VM/AllocResult.h"
 #include "hermes/VM/DummyObject.h"
@@ -28,10 +28,8 @@ using testhelpers::DummyObject;
 static DummyObject *
 createWithFinalizeCount(PointerBase &base, GC &gc, int *numFinalized) {
   auto *obj = DummyObject::create(gc, base);
-  obj->finalizerCallback.set(
-      gc, new DummyObject::Callback([numFinalized]() mutable {
-        (*numFinalized)++;
-      }));
+  obj->finalizerCallback = std::make_unique<DummyObject::Callback>(
+      [numFinalized]() mutable { (*numFinalized)++; });
   return obj;
 }
 
@@ -40,9 +38,12 @@ TEST(GCFinalizerTest, NoDeadFinalizables) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<DummyObject> obj;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
   DummyObject::create(rt.getHeap(), rt);
-  rt.makeHandle(createWithFinalizeCount(rt, rt.getHeap(), &finalized));
+  lv.obj = createWithFinalizeCount(rt, rt.getHeap(), &finalized);
   rt.collect();
 
   ASSERT_EQ(0, finalized);
@@ -53,9 +54,12 @@ TEST(GCFinalizerTest, FinalizablesOnly) {
   auto runtime = DummyRuntime::create(kTestGCConfigSmall);
   DummyRuntime &rt = *runtime;
 
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<DummyObject> obj;
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
   createWithFinalizeCount(rt, rt.getHeap(), &finalized);
-  rt.makeHandle(createWithFinalizeCount(rt, rt.getHeap(), &finalized));
+  lv.obj = createWithFinalizeCount(rt, rt.getHeap(), &finalized);
   rt.collect();
 
   ASSERT_EQ(1, finalized);
@@ -67,12 +71,16 @@ TEST(GCFinalizerTest, MultipleCollect) {
   DummyRuntime &rt = *runtime;
 
   {
-    GCScope scope{rt};
+    struct : Locals {
+      PinnedValue<DummyObject> obj1;
+      PinnedValue<DummyObject> obj2;
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
     createWithFinalizeCount(rt, rt.getHeap(), &finalized);
     DummyObject::create(rt.getHeap(), rt);
     createWithFinalizeCount(rt, rt.getHeap(), &finalized);
-    rt.makeHandle(createWithFinalizeCount(rt, rt.getHeap(), &finalized));
-    rt.makeHandle(DummyObject::create(rt.getHeap(), rt));
+    lv.obj1 = createWithFinalizeCount(rt, rt.getHeap(), &finalized);
+    lv.obj2 = DummyObject::create(rt.getHeap(), rt);
     rt.collect();
 
     ASSERT_EQ(2, finalized);
@@ -88,9 +96,13 @@ TEST(GCFinalizerTest, FinalizeAllOnRuntimeDestructDummyRuntime) {
   {
     auto rt = DummyRuntime::create(kTestGCConfigSmall);
 
-    GCScope scope{*rt};
-    rt->makeHandle(createWithFinalizeCount(*rt, rt->getHeap(), &finalized));
-    rt->makeHandle(createWithFinalizeCount(*rt, rt->getHeap(), &finalized));
+    struct : Locals {
+      PinnedValue<DummyObject> obj1;
+      PinnedValue<DummyObject> obj2;
+    } lv;
+    DummyLocalsRAII lraii{*rt, &lv};
+    lv.obj1 = createWithFinalizeCount(*rt, rt->getHeap(), &finalized);
+    lv.obj2 = createWithFinalizeCount(*rt, rt->getHeap(), &finalized);
 
     // Collect once to get the objects into the old gen, then a second time
     // to get their mark bits set in their stable locations.

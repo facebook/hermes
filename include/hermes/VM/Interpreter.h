@@ -11,10 +11,11 @@
 
 #include "hermes/VM/Runtime.h"
 
-class CodeBlock;
-
 namespace hermes {
 namespace vm {
+
+class CodeBlock;
+
 /// This class is a convenience wrapper for the interpreter implementation that
 /// needs access to the private fields of Runtime, but doesn't belong in
 /// Runtime.
@@ -22,7 +23,7 @@ class Interpreter {
  public:
   /// Allocate a generator for the specified function and the specified
   /// environment. \param funcIndex function index in the global function table.
-  static CallResult<PseudoHandle<JSGenerator>> createGenerator_RJS(
+  static CallResult<PseudoHandle<JSGeneratorObject>> createGenerator_RJS(
       Runtime &runtime,
       RuntimeModule *runtimeModule,
       unsigned funcIndex,
@@ -46,7 +47,8 @@ class Interpreter {
       Handle<Callable> curFunction,
       bool strictMode);
 
-  /// Slow path for GetArgumentsPropByVal resReg, propNameReg, lazyReg.
+  /// Slow path for GetArgumentsPropByVal resReg, propNameReg, lazyReg
+  /// (both the strict and loose variants).
   ///
   /// It assumes that the "fast path" has already taken care of the case when
   /// the 'lazyReg' is still uninitialized and 'propNameReg' is a valid integer
@@ -85,28 +87,41 @@ class Interpreter {
       Runtime &runtime,
       PinnedHermesValue *callTarget);
 
-  /// Fast path to get primitive value \p base's own properties by name \p id
-  /// without boxing.
-  /// Primitive own properties are properties fetching values from primitive
-  /// value itself.
-  /// Currently the only primitive own property is String.prototype.length.
-  /// If the fast path property does not exist, return Empty.
-  static PseudoHandle<>
-  tryGetPrimitiveOwnPropertyById(Runtime &runtime, Handle<> base, SymbolID id);
-
   /// Implement OpCode::GetById/TryGetById when the base is not an object.
+  static CallResult<PseudoHandle<>> getByIdTransientWithReceiver_RJS(
+      Runtime &runtime,
+      Handle<> base,
+      SymbolID id,
+      Handle<> receiver);
   static CallResult<PseudoHandle<>>
-  getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id);
-
-  /// Fast path for getByValTransient() -- avoid boxing for \p base if it is
-  /// string primitive and \p nameHandle is an array index.
-  /// If the property does not exist, return Empty.
-  static PseudoHandle<>
-  getByValTransientFast(Runtime &runtime, Handle<> base, Handle<> nameHandle);
+  getByIdTransient_RJS(Runtime &runtime, Handle<> base, SymbolID id) {
+    return getByIdTransientWithReceiver_RJS(runtime, base, id, base);
+  }
 
   /// Implement OpCode::GetByVal when the base is not an object.
+  static CallResult<PseudoHandle<>> getByValTransientWithReceiver_RJS(
+      Runtime &runtime,
+      Handle<> base,
+      Handle<> name,
+      Handle<> receiver);
   static CallResult<PseudoHandle<>>
-  getByValTransient_RJS(Runtime &runtime, Handle<> base, Handle<> name);
+  getByValTransient_RJS(Runtime &runtime, Handle<> base, Handle<> name) {
+    return getByValTransientWithReceiver_RJS(runtime, base, name, base);
+  }
+
+  /// Implement the slow path for PutById.
+  /// \param base HermesValue to store into.
+  /// \param value HermesValue to store.
+  /// \param idVal the name of the property.
+  static ExecutionStatus putByIdSlowPath_RJS(
+      Runtime &runtime,
+      CodeBlock *curCodeBlock,
+      PinnedHermesValue *base,
+      PinnedHermesValue *value,
+      uint8_t cacheIdx,
+      SymbolID id,
+      bool strictMode,
+      bool tryProp);
 
   /// Implement OpCode::PutById/TryPutById when the base is not an object.
   static ExecutionStatus putByIdTransient_RJS(
@@ -137,17 +152,25 @@ class Interpreter {
       Runtime &runtime,
       InterpreterState &state);
 
-  /// Populates an object with literal values from the object buffer.
-  /// \param numLiterals the amount of literals to read from the buffer.
-  /// \param keyBufferIndex the first element of the key buffer to read.
-  /// \param valBufferIndex the first element of the val buffer to read.
+  /// \return the HiddenClass for a new object created from the \p
+  ///   shapeTableIndex.
+  static CallResult<HiddenClass *> getHiddenClassForBuffer(
+      Runtime &runtime,
+      CodeBlock *curCodeBlock,
+      Handle<JSObject> parent,
+      unsigned shapeTableIndex);
+
+  /// Constructs an object via literal buffers in the bytecode file.
+  /// \param parent the parent of the newly created object.
+  /// \param shapeTableIndex the index of the shape element.
+  /// \param valBufferOffset the first element of the val buffer to read.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
   static CallResult<PseudoHandle<>> createObjectFromBuffer(
       Runtime &runtime,
       CodeBlock *curCodeBlock,
-      unsigned numLiterals,
-      unsigned keyBufferIndex,
-      unsigned valBufferIndex);
+      Handle<JSObject> parent,
+      unsigned shapeTableIndex,
+      unsigned valBufferOffset);
 
   /// Populates an array with literal values from the array buffer.
   /// \param numLiterals the amount of literals to read from the buffer.
@@ -160,19 +183,21 @@ class Interpreter {
       unsigned numLiterals,
       unsigned bufferIndex);
 
+  /// Create a JSRegExp for the precompiled regexp bytecode.
+  /// \param patternID the pattern string.
+  /// \param flagsID the flags string.
+  /// \param regexpId the regexp bytecode ID.
+  static PseudoHandle<JSRegExp> createRegExp(
+      Runtime &runtime,
+      CodeBlock *curCodeBlock,
+      SymbolID patternID,
+      SymbolID flagsID,
+      uint32_t regexpId);
+
   /// Implements global variable declaration as per ES2023 16.1.7.10.a.i.
   /// \return ExecutionStatus::EXCEPTION if the global object cannot be
   /// expanded.
   static ExecutionStatus declareGlobalVarImpl(
-      Runtime &runtime,
-      CodeBlock *curCodeBlock,
-      const Inst *ip);
-
-  /// Implements the restricted global property check as per
-  /// ES2023 16.1.7.3.[cd].
-  /// \return ExecutionStatus::EXCEPTION if the global object already has a
-  /// restricted property with the name provided in \p ip.
-  static ExecutionStatus throwIfHasRestrictedGlobalPropertyImpl(
       Runtime &runtime,
       CodeBlock *curCodeBlock,
       const Inst *ip);
@@ -201,7 +226,7 @@ class Interpreter {
     ExecutionStatus status = runtime.debugger_.runDebugger(reason, state);
     codeBlock = state.codeBlock;
     ip = state.codeBlock->getOffsetPtr(state.offset);
-    frameRegs = &runtime.currentFrame_.getFirstLocalRef();
+    frameRegs = &StackFramePtr(toPHV(runtime.currentFrame)).getFirstLocalRef();
     return status;
   }
 #endif
@@ -217,12 +242,12 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
-  static ExecutionStatus casePutOwnByVal(
+  static ExecutionStatus caseDefineOwnByVal(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
-  static ExecutionStatus casePutOwnGetterSetterByVal(
+  static ExecutionStatus caseDefineOwnGetterSetterByVal(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
@@ -236,9 +261,93 @@ class Interpreter {
       PinnedHermesValue *frameRegs,
       const inst::Inst *ip);
 
+  static ExecutionStatus casePopulateArrayLiteral(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
   static ExecutionStatus caseGetPNameList(
       Runtime &runtime,
       PinnedHermesValue *frameRegs,
+      const Inst *ip);
+  static ExecutionStatus caseGetNextPName(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
+  static ExecutionStatus caseDelByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus caseGetByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus caseGetByValWithReceiver(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus casePutByVal(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+  static ExecutionStatus casePutByValWithReceiver(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  static ExecutionStatus caseNewObjectWithBufferAndParent(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      const inst::Inst *ip);
+
+  /// Interpreter implementation for creating a RegExp object. Unlike the other
+  /// out-of-line cases, this takes a CodeBlock* and does not return an
+  /// ExecutionStatus.
+  static void caseCreateRegExp(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
+      const inst::Inst *ip);
+
+  /// \return the `this` to be used for a construct call on \p callee, with \p
+  /// newTarget as the new.target. We need to take special care when \p callee
+  /// is a NativeConstructor, ES6 function, or JSCallableProxy. In these cases,
+  /// those functions will create their own `this`, so this function will
+  /// \return undefined.
+  static CallResult<HermesValue> createThisImpl(
+      Runtime &runtime,
+      PinnedHermesValue *callee,
+      PinnedHermesValue *newTarget,
+      uint8_t cacheIdx,
+      CodeBlock *curCodeBlock);
+
+  /// Create a class, as per ES2023 15.7.14.
+  static ExecutionStatus caseCreateClass(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs);
+
+  static ExecutionStatus defineOwnByIdSlowPath(
+      Runtime &runtime,
+      SmallHermesValue valueToStore,
+      CodeBlock *curCodeBlock,
+      PinnedHermesValue *frameRegs,
+      const inst::Inst *ip);
+
+  /// Create a unique symbol value.
+  static ExecutionStatus caseCreatePrivateName(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      const Inst *ip);
+
+  /// Create a unique symbol value.
+  static ExecutionStatus casePrivateIsIn(
+      Runtime &runtime,
+      PinnedHermesValue *frameRegs,
+      CodeBlock *curCodeBlock,
       const Inst *ip);
 
   /// Evaluate callBuiltin and store the result in the register stack. it must

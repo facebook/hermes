@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // Check iterator closing in array destructoring with exceptions.
 

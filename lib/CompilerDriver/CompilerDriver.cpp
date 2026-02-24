@@ -7,16 +7,17 @@
 
 #include "hermes/CompilerDriver/CompilerDriver.h"
 
+#include "hermes/AST/ASTUtils.h"
 #include "hermes/AST/CommonJS.h"
 #include "hermes/AST/Context.h"
 #include "hermes/AST/ESTreeJSONDumper.h"
-#include "hermes/AST/SemValidate.h"
+#include "hermes/AST/TS2Flow.h"
+#include "hermes/AST/TransformAST.h"
 #include "hermes/AST2JS/AST2JS.h"
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/BCGen/RegAlloc.h"
-#include "hermes/ConsoleHost/ConsoleHost.h"
-#include "hermes/FlowParser/FlowParser.h"
+#include "hermes/BCGen/SH/SH.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -28,6 +29,8 @@
 #include "hermes/Parser/JSONParser.h"
 #include "hermes/Parser/JSParser.h"
 #include "hermes/Runtime/Libhermes.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/SourceMap/SourceMapTranslator.h"
@@ -35,10 +38,13 @@
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/OptValue.h"
+#include "hermes/Support/OutputStream.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Support/Warning.h"
+#include "hermes/Utils/CompilerRuntimeFlags.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
+#include "hermes/VM/JIT/Config.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/Debug.h"
@@ -73,7 +79,6 @@ using llvh::cl::list;
 using llvh::cl::opt;
 using llvh::cl::OptionCategory;
 using llvh::cl::Positional;
-using llvh::cl::ReallyHidden;
 using llvh::cl::value_desc;
 using llvh::cl::values;
 using llvh::cl::ValuesClass;
@@ -150,6 +155,7 @@ enum class OptLevel {
   O0,
   Og,
   OMax,
+  OFixedPoint,
 };
 
 cl::opt<OptLevel> OptimizationLevel(
@@ -158,7 +164,8 @@ cl::opt<OptLevel> OptimizationLevel(
     cl::values(
         clEnumValN(OptLevel::O0, "O0", "No optimizations"),
         clEnumValN(OptLevel::Og, "Og", "Optimizations suitable for debugging"),
-        clEnumValN(OptLevel::OMax, "O", "Expensive optimizations")),
+        clEnumValN(OptLevel::OMax, "O", "Expensive optimizations"),
+        clEnumValN(OptLevel::OFixedPoint, "O4", "Optimize to fixed point")),
     cl::cat(CompilerCategory));
 
 enum class StaticBuiltinSetting {
@@ -187,8 +194,9 @@ cl::opt<StaticBuiltinSetting> StaticBuiltins(
     cl::cat(CompilerCategory));
 
 static list<std::string> CustomOptimize(
-    "custom-opt",
+    "Xcustom-opt",
     desc("Custom optimzations"),
+    llvh::cl::CommaSeparated,
     Hidden,
     cat(CompilerCategory));
 
@@ -202,6 +210,7 @@ static opt<OutputFormatKind> DumpTarget(
             DumpTransformedAST,
             "dump-transformed-ast",
             "Dump the transformed AST as text after validation"),
+        clEnumValN(DumpSema, "dump-sema", "Sema tables"),
         clEnumValN(DumpJS, "dump-js", "Dump the AST as JS"),
         clEnumValN(
             DumpTransformedJS,
@@ -217,19 +226,62 @@ static opt<OutputFormatKind> DumpTarget(
             DumpLRA,
             "dump-lra",
             "Dump register-allocated Lowered IR as text"),
-        clEnumValN(
-            DumpPostRA,
-            "dump-postra",
-            "Dump the Lowered IR after register allocation"),
         clEnumValN(DumpBytecode, "dump-bytecode", "Dump bytecode as text"),
         clEnumValN(EmitBundle, "emit-binary", "Emit compiled binary")),
     cat(CompilerCategory));
+
+static list<std::string> DumpFunctions(
+    "Xdump-functions",
+    desc("Only dump the IR for the given functions"),
+    Hidden,
+    llvh::cl::CommaSeparated,
+    cat(CompilerCategory));
+static list<std::string> NoDumpFunctions(
+    "Xno-dump-functions",
+    desc("Exclude the given functions from IR dumps"),
+    Hidden,
+    llvh::cl::CommaSeparated,
+    cat(CompilerCategory));
+
+cl::opt<bool> EnableAsserts(
+    "enable-asserts",
+#ifdef NDEBUG
+    cl::desc("(default false) Whether assertions in compiled code are enabled"),
+    cl::init(false),
+#else
+    cl::desc("(default true) Whether assertions in compiled code are enabled"),
+    cl::init(true),
+#endif
+    cl::cat(CompilerCategory));
 
 static opt<bool> Pretty(
     "pretty",
     init(true),
     desc("Pretty print JSON, JS or disassembled bytecode"),
     cat(CompilerCategory));
+
+#if HERMES_PARSE_FLOW
+static opt<bool> Typed(
+    "typed",
+    init(false),
+    desc("Enable typed mode"),
+    cat(CompilerCategory));
+#else
+static constexpr bool Typed = false;
+#endif
+
+CLFlag StdGlobals(
+    'f',
+    "std-globals",
+    true,
+    "registration of standard globals",
+    CompilerCategory);
+
+cl::opt<bool> Script(
+    "script",
+    cl::desc("Enable script mode"),
+    cl::init(false),
+    cl::cat(CompilerCategory));
 
 static llvh::cl::alias _PrettyJSON(
     "pretty-json",
@@ -246,13 +298,6 @@ static llvh::cl::alias _PrettyDisassemble(
 static opt<bool> unused_HermesParser(
     "hermes-parser",
     desc("Treat the input as JavaScript"),
-    Hidden,
-    cat(CompilerCategory));
-
-static opt<bool> FlowParser(
-    "Xflow-parser",
-    init(false),
-    desc("Use libflowparser instead of the hermes parser"),
     Hidden,
     cat(CompilerCategory));
 
@@ -285,50 +330,22 @@ opt<bool> BasicBlockProfiling(
     init(false),
     desc("Enable basic block profiling (HBC only)"));
 
-opt<bool> EnableBlockScoping(
-    "block-scoping",
-    desc("Enables block scoping support."),
-    init(false),
-    Hidden,
-    cat(CompilerCategory));
-static llvh::cl::alias _EnableBlockScoping(
-    "bs",
-    desc("Alias for --block-scoping"),
-    Hidden,
-    llvh::cl::aliasopt(EnableBlockScoping));
+opt<std::string> ProfilingOutFile(
+    "profiling-out",
+    desc("File to write profiling info to"));
 
-opt<bool> ES6Class(
-    "Xes6-class",
-    init(false),
-    desc("Enable support for ES6 Class"),
-    Hidden,
-    cat(CompilerCategory));
-
-opt<bool>
-    EnableEval("enable-eval", init(true), desc("Enable support for eval()"));
-
-// This is normally a compiler option, but it also applies to strings given
-// to eval or the Function constructor.
-opt<bool> VerifyIR(
-    "verify-ir",
-#ifdef HERMES_SLOW_DEBUG
+opt<bool> MetroRequireOpt(
+    "Xmetro-require",
     init(true),
-#else
-    init(false),
+    desc("Optimize Metro require calls."),
     Hidden,
-#endif
-    desc("Verify the IR after creating it"),
     cat(CompilerCategory));
 
-opt<bool> EmitAsyncBreakCheck(
-    "emit-async-break-check",
-    desc("Emit instruction to check async break request"),
-    init(false),
-    cat(CompilerCategory));
+hermes::CompilerRuntimeFlags compilerRuntimeFlags;
 
-opt<bool> OptimizedEval(
-    "optimized-eval",
-    desc("Turn on compiler optimizations in eval."),
+opt<bool> PrintCompilerTiming(
+    "ftime-report",
+    desc("Turn on compiler timing output."),
     init(false));
 
 static list<std::string> IncludeGlobals(
@@ -338,16 +355,16 @@ static list<std::string> IncludeGlobals(
         "specified more than once)"),
     value_desc("filename"));
 
-enum BytecodeFormatKind {
-  HBC,
-};
+enum BytecodeFormatKind { HBC, SH };
 
 // Enable Debug Options to be specified on the command line
 static opt<BytecodeFormatKind> BytecodeFormat(
     "target",
     init(HBC),
     desc("Set the bytecode format:"),
-    values(clEnumVal(HBC, "Emit HBC bytecode (default)")),
+    values(
+        clEnumVal(HBC, "Emit HBC bytecode (default)"),
+        clEnumVal(SH, "Emit Static Hermes source")),
     cat(CompilerCategory));
 
 static opt<std::string> BytecodeOutputFilename(
@@ -368,15 +385,27 @@ static cl::opt<DebugLevel> DebugInfoLevel(
     cl::desc("Choose debug info level:"),
     cl::init(DebugLevel::g1),
     cl::values(
-        clEnumValN(DebugLevel::g3, "g", "Equivalent to -g3"),
+        clEnumValN(DebugLevel::g2, "g", "Equivalent to -g2"),
         clEnumValN(DebugLevel::g0, "g0", "Do not emit debug info"),
         clEnumValN(DebugLevel::g1, "g1", "Emit location info for backtraces"),
         clEnumValN(
             DebugLevel::g2,
             "g2",
             "Emit location info for all instructions"),
-        clEnumValN(DebugLevel::g3, "g3", "Emit full info for debugging")),
+        clEnumValN(
+            DebugLevel::g2,
+            "g3",
+            "** Deprecated, full debug info cannot be generated via this tool. This behaves the same as -g2 **")),
     cl::cat(CompilerCategory));
+
+opt<bool> Xg3(
+    "Xg3",
+    init(false),
+    desc(
+        "Emit full info for debugging. Since debugging cannot be done through the hermes "
+        "tool directly, this only makes sense to be used in the context of IR/BC tests."),
+    Hidden,
+    cat(CompilerCategory));
 
 static opt<std::string> InputSourceMap(
     "source-map",
@@ -388,22 +417,11 @@ static opt<bool> OutputSourceMap(
     desc("Emit a source map to the output filename with .map extension"),
     cat(CompilerCategory));
 
-static opt<bool> DumpOperandRegisters(
-    "dump-operand-registers",
-    desc("Dump registers assigned to instruction operands"),
-    cat(CompilerCategory));
-
-static opt<bool> DumpSourceLevelScope(
-    "dump-source-level-scope",
-    desc("Print the instruction's source-level scope."),
-    init(false),
-    cat(CompilerCategory));
-
-static opt<bool> DumpTextifiedCallee(
-    "dump-textified-callee",
-    desc("Print the Call instruction's textified callee."),
-    init(false),
-    cat(CompilerCategory));
+cl::opt<bool> DumpRegisterInterval(
+    "dump-register-interval",
+    cl::desc("Dump the liveness interval of allocated registers"),
+    cl::init(false),
+    cl::cat(CompilerCategory));
 
 static opt<bool> DumpUseList(
     "dump-instr-uselist",
@@ -437,45 +455,17 @@ static opt<bool> IncludeRawASTProp(
     Hidden,
     cat(CompilerCategory));
 
-static opt<bool> DumpBeforeAll(
-    "Xdump-before-all",
+static opt<bool> DumpBetweenPasses(
+    "Xdump-between-passes",
     init(false),
     Hidden,
-    desc("Dump the IR before every optimization pass"),
+    desc("Print IR after every optimization pass"),
     cat(CompilerCategory));
 
-static list<std::string> DumpBefore(
-    "Xdump-before",
-    Hidden,
-    desc("Dump the IR before each given pass"),
-    cat(CompilerCategory));
-
-static opt<bool> DumpAfterAll(
-    "Xdump-after-all",
+static opt<bool> Colors(
+    "colors",
     init(false),
-    Hidden,
-    desc("Dump the IR after every optimization pass"),
-    cat(CompilerCategory));
-
-static list<std::string> DumpAfter(
-    "Xdump-after",
-    Hidden,
-    desc("Dump the IR after each given pass"),
-    cat(CompilerCategory));
-
-static list<std::string> FunctionsToDump(
-    "Xfunctions-to-dump",
-    Hidden,
-    desc("Only dump the IR for the given functions"),
-    cat(CompilerCategory));
-
-static opt<bool> GenerateNamesForAnonymousFunctions(
-    "Xgen-names-anon-functions",
-    init(false),
-    ReallyHidden,
-    desc(
-        "Instructs the compiler to create a synthetic label for anonymous "
-        "functions"),
+    desc("Use colors in some dumps"),
     cat(CompilerCategory));
 
 #ifndef NDEBUG
@@ -522,6 +512,13 @@ static opt<bool> ParseFlowComponentSyntax(
 static opt<bool> ParseFlowMatch(
     "Xparse-flow-match",
     desc("Parse Flow match statements and expressions"),
+    init(false),
+    Hidden,
+    cat(CompilerCategory));
+
+static opt<bool> ParseFlowRecords(
+    "Xparse-flow-records",
+    desc("Parse Flow record declarations and expressions"),
     init(false),
     Hidden,
     cat(CompilerCategory));
@@ -588,12 +585,63 @@ static opt<bool> ReusePropCache(
 static CLFlag
     Inline('f', "inline", true, "inlining of functions", CompilerCategory);
 
+static CLFlag ReorderRegisters(
+    'f',
+    "reorder-registers",
+    true,
+    "reorder registers for better JIT performance",
+    CompilerCategory);
+
+static opt<unsigned> InlineMaxSize(
+    "Xinline-max-size",
+    cl::init(OptimizationSettings::kDefaultInlineMaxSize),
+    cl::desc("Suppress inlining of functions larger than the given size"),
+    cl::Hidden,
+    cl::cat(CompilerCategory));
+
+static opt<bool> LegacyMem2Reg(
+    "Xlegacy-mem2reg",
+    init(false),
+    Hidden,
+    desc("Use the legacy Mem2Reg pass."),
+    cat(CompilerCategory));
+
 static CLFlag StripFunctionNames(
     'f',
     "strip-function-names",
     false,
     "Strip function names to reduce string table size",
     CompilerCategory);
+
+static opt<bool> Test262(
+    "test262",
+    init(false),
+    Hidden,
+    desc("Increase compliance with test262 by moving more checks to runtime"),
+    cat(CompilerCategory));
+
+static opt<bool> EnableFastNoncompliant(
+    "Xenable-fast-noncompliant",
+    init(false),
+    Hidden,
+    desc(
+        "UNSUPPORTED: Enable all options that result in faster, but noncompliant, behavior."),
+    cat(CompilerCategory));
+
+static opt<bool> EnableTDZ(
+    "Xenable-tdz",
+    init(false),
+    Hidden,
+    desc("UNSUPPORTED: Enable TDZ checks for let/const"),
+    cat(CompilerCategory));
+
+static opt<bool> EnableFastDestructure(
+    "Xenable-fast-destructure",
+    init(false),
+    Hidden,
+    desc(
+        "UNSUPPORTED: Enable a faster, but non-compliant, array destructuring."),
+    cat(CompilerCategory));
 
 #define WARNING_CATEGORY(name, specifier, description) \
   static CLFlag name##Warning(                         \
@@ -614,19 +662,6 @@ static opt<unsigned> PadFunctionBodiesPercent(
     Hidden,
     cat(CompilerCategory));
 
-static opt<bool> InstrumentIR(
-    "instrument",
-    desc("Instrument code for dynamic analysis"),
-    init(false),
-    Hidden,
-    cat(CompilerCategory));
-
-static CLFlag UseUnsafeIntrinsics(
-    'f',
-    "unsafe-intrinsics",
-    false,
-    "Recognize and lower Asm.js/Wasm unsafe compiler intrinsics.",
-    CompilerCategory);
 } // namespace cl
 
 namespace {
@@ -709,93 +744,6 @@ memoryBufferFromZipFile(zip_t *zip, const char *path, bool silent = false) {
   return buf;
 }
 
-/// Manage an output file safely.
-class OutputStream {
- public:
-  /// Creates an empty object.
-  OutputStream() : os_(nullptr) {}
-  /// Create an object which initially holds the \p defaultStream.
-  OutputStream(llvh::raw_ostream &defaultStream) : os_(&defaultStream) {}
-
-  ~OutputStream() {
-    discard();
-  }
-
-  /// Replaces the stream with an open stream to a temporary file
-  /// named based on \p fileName.  This method will write error
-  /// messages, if any, to llvh::errs().  This method can only be
-  /// called once on an object.  \return true if the temp file was
-  /// created and false otherwise.  If the object is destroyed without
-  /// close() being called, the temp file is removed.
-  bool open(llvh::Twine fileName, llvh::sys::fs::OpenFlags openFlags) {
-    assert(!fdos_ && "OutputStream::open() can be called only once.");
-
-    // Newer versions of llvm have a safe createUniqueFile overload
-    // which takes OpenFlags.  Hermes's llvm doesn't, so we have to do
-    // it this way, which is a hypothetical race.
-    std::error_code EC = llvh::sys::fs::getPotentiallyUniqueFileName(
-        fileName + ".%%%%%%", tempName_);
-    if (EC) {
-      llvh::errs() << "Failed to get temp file for " << fileName << ": "
-                   << EC.message() << '\n';
-      return false;
-    }
-
-    fdos_ = std::make_unique<raw_fd_ostream>(tempName_, EC, openFlags);
-    if (EC) {
-      llvh::errs() << "Failed to open file " << tempName_ << ": "
-                   << EC.message() << '\n';
-      fdos_.reset();
-      return false;
-    }
-    os_ = fdos_.get();
-    fileName_ = fileName.str();
-    return true;
-  }
-
-  /// If a temporary file was created, it is renamed to \p fileName.
-  /// If renaming fails, it will be deleted.  This method will write
-  /// error messages, if any, to llvh::errs().  \return true if a temp
-  /// file was never created or was renamed here; or false otherwise.
-  bool close() {
-    if (!fdos_) {
-      return true;
-    }
-    fdos_->close();
-    fdos_.reset();
-    std::error_code EC = llvh::sys::fs::rename(tempName_, fileName_);
-    if (EC) {
-      llvh::errs() << "Failed to write file " << fileName_ << ": "
-                   << EC.message() << '\n';
-      llvh::sys::fs::remove(tempName_);
-      return false;
-    }
-    return true;
-  }
-
-  /// If a temporary file was created, it is deleted.
-  void discard() {
-    if (!fdos_) {
-      return;
-    }
-
-    fdos_->close();
-    fdos_.reset();
-    llvh::sys::fs::remove(tempName_);
-  }
-
-  raw_ostream &os() {
-    assert(os_ && "OutputStream never initialized");
-    return *os_;
-  }
-
- private:
-  llvh::raw_ostream *os_;
-  llvh::SmallString<32> tempName_;
-  std::unique_ptr<raw_fd_ostream> fdos_;
-  std::string fileName_;
-};
-
 /// Loads global definitions from MemoryBuffer and adds the definitions to \p
 /// declFileList.
 /// \return true on success, false on error.
@@ -839,7 +787,9 @@ SourceErrorOutputOptions guessErrorOutputOptions() {
 /// If using CJS modules, return a FunctionExpressionNode, else a ProgramNode.
 ESTree::NodePtr parseJS(
     std::shared_ptr<Context> &context,
-    sem::SemContext &semCtx,
+    sema::SemContext &semCtx,
+    flow::FlowContext *flowContext,
+    const DeclarationFileListTy &ambientDecls,
     std::unique_ptr<llvh::MemoryBuffer> fileBuf,
     std::unique_ptr<SourceMap> sourceMap = nullptr,
     std::shared_ptr<SourceMapTranslator> sourceMapTranslator = nullptr,
@@ -870,13 +820,12 @@ ESTree::NodePtr parseJS(
     mode = parser::LazyParse;
   }
 
+  bool shouldWrapInIIFE = cl::Typed && !cl::Script;
+  if (shouldWrapInIIFE)
+    context->setAllowReturnOutsideFunction(true);
+
   Optional<ESTree::ProgramNode *> parsedJs;
 
-#ifdef HERMES_USE_FLOWPARSER
-  if (cl::FlowParser) {
-    parsedJs = parser::parseFlowParser(*context, fileBufId);
-  } else
-#endif
   {
     parser::JSParser jsParser(*context, fileBufId, mode);
     parsedJs = jsParser.parse();
@@ -921,8 +870,48 @@ ESTree::NodePtr parseJS(
     return parsedAST;
   }
 
-  if (!hermes::sem::validateAST(*context, semCtx, parsedAST)) {
+#if HERMES_PARSE_TS
+  // Convert TS AST to Flow AST as an intermediate step until we have a
+  // separate TS type checker.
+  if (flowContext && context->getParseTS()) {
+    parsedAST =
+        convertTSToFlow(*context, llvh::cast<ESTree::ProgramNode>(parsedAST));
+    if (!parsedAST) {
+      return nullptr;
+    }
+  }
+#endif
+
+  parsedAST = hermes::transformASTForCompilation(*context, parsedAST);
+  if (!parsedAST)
     return nullptr;
+
+  // If we are executing in typed mode and not script, then wrap the program.
+  if (shouldWrapInIIFE) {
+    parsedAST = wrapInIIFE(context, llvh::cast<ESTree::ProgramNode>(parsedAST));
+    // In case this API decides it can fail in the future, check for a
+    // nullptr.
+    if (!parsedAST) {
+      return nullptr;
+    }
+  }
+
+  if (!wrapCJSModule) {
+    if (!hermes::sema::resolveAST(
+            *context,
+            semCtx,
+            flowContext,
+            llvh::cast<ESTree::ProgramNode>(parsedAST),
+            ambientDecls)) {
+      return nullptr;
+    }
+  } else {
+    if (!hermes::sema::resolveCommonJSAST(
+            *context,
+            semCtx,
+            llvh::cast<ESTree::FunctionExpressionNode>(parsedAST))) {
+      return nullptr;
+    }
   }
 
   if (cl::DumpTarget == DumpTransformedAST) {
@@ -936,6 +925,9 @@ ESTree::NodePtr parseJS(
         cl::DumpSourceLocation,
         cl::IncludeRawASTProp ? ESTreeRawProp::Include
                               : ESTreeRawProp::Exclude);
+  }
+  if (cl::DumpTarget == DumpSema) {
+    sema::semDump(llvh::outs(), *context, semCtx, flowContext, parsedAST);
   }
   if (cl::DumpTarget == DumpTransformedJS) {
     hermes::generateJS(llvh::outs(), parsedAST, cl::Pretty /* pretty */);
@@ -985,6 +977,16 @@ bool validateFlags() {
     err("Error! Cannot use both -strict and -non-strict");
   }
 
+  if (cl::EnableFastNoncompliant) {
+    if (cl::EnableTDZ) {
+      err("Error! Cannot enable both TDZ and fast noncompliance");
+    }
+  }
+
+  if (cl::Xg3 && cl::OptimizationLevel == cl::OptLevel::OMax) {
+    err("Error! Full debug info is not compatible with full optimization");
+  }
+
   // Validate bytecode output file.
   if (cl::DumpTarget == EmitBundle && cl::BytecodeOutputFilename.empty() &&
       oscompat::isatty(STDOUT_FILENO)) {
@@ -1001,8 +1003,6 @@ bool validateFlags() {
   if (cl::LazyCompilation) {
     if (cl::BytecodeFormat != cl::BytecodeFormatKind::HBC)
       err("-lazy only works with -target=HBC");
-    if (cl::DumpTarget != Execute)
-      err("-lazy only works when executing");
     if (cl::OptimizationLevel > cl::OptLevel::Og)
       err("-lazy does not work with -O");
     if (cl::BytecodeMode) {
@@ -1045,11 +1045,15 @@ bool validateFlags() {
       err("You can only dump bytecode for HBC bytecode file.");
   }
 
-#ifndef HERMES_ENABLE_IR_INSTRUMENTATION
-  if (cl::InstrumentIR) {
-    err("Instrumentation is requested, but support is not compiled in");
-  }
+#if !defined(HERMES_PARSE_FLOW) && !defined(HERMES_PARSE_TS)
+  // Cannot compile in typed mode if no parser support is available.
+  if (cl::Typed)
+    err("error: no typed dialect parser is configured");
 #endif
+
+  if (cl::CommonJS && cl::Typed) {
+    err("error: CommonJS modules are not supported in typed mode");
+  }
 
   return !errored;
 }
@@ -1097,57 +1101,40 @@ static void setWarningsAreErrorsFromFlags(SourceErrorManager &sm) {
   }
 }
 
-static llvh::SmallDenseSet<llvh::StringRef> stringListOptToDenseSet(
-    const llvh::cl::list<std::string> &list) {
-  llvh::SmallDenseSet<llvh::StringRef> ret;
-  for (llvh::StringRef s : list) {
-    ret.insert(s);
-  }
-  return ret;
-}
-
-void initializeDumpOptions(
-    CodeGenerationSettings::DumpSettings &dumpSettings,
-    const llvh::cl::opt<bool> &dumpAll,
-    const llvh::cl::list<std::string> &passes) {
-  dumpSettings.all = dumpAll;
-  dumpSettings.passes = stringListOptToDenseSet(passes);
-}
-
 /// Create a Context, respecting the command line flags.
 /// \return the Context.
 std::shared_ptr<Context> createContext(
     std::unique_ptr<Context::ResolutionTable> resolutionTable,
     std::vector<uint32_t> segments) {
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.dumpOperandRegisters = cl::DumpOperandRegisters;
-  codeGenOpts.dumpSourceLevelScope = cl::DumpSourceLevelScope;
-  codeGenOpts.dumpTextifiedCallee = cl::DumpTextifiedCallee;
+  codeGenOpts.test262 = cl::Test262;
+  codeGenOpts.enableTDZ = !cl::EnableFastNoncompliant && cl::EnableTDZ;
+  codeGenOpts.enableFastDestructure =
+      cl::EnableFastNoncompliant || cl::EnableFastDestructure;
+  codeGenOpts.dumpRegisterInterval = cl::DumpRegisterInterval;
   codeGenOpts.dumpUseList = cl::DumpUseList;
   codeGenOpts.dumpSourceLocation =
       cl::DumpSourceLocation != LocationDumpMode::None;
-  initializeDumpOptions(
-      codeGenOpts.dumpBefore, cl::DumpBeforeAll, cl::DumpBefore);
-  initializeDumpOptions(codeGenOpts.dumpAfter, cl::DumpAfterAll, cl::DumpAfter);
-  codeGenOpts.functionsToDump = stringListOptToDenseSet(cl::FunctionsToDump);
-  codeGenOpts.generateNameForUnnamedFunctions =
-      cl::GenerateNamesForAnonymousFunctions;
-  if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
-    codeGenOpts.unlimitedRegisters = false;
-  }
-  codeGenOpts.instrumentIR = cl::InstrumentIR;
-  codeGenOpts.enableBlockScoping = cl::EnableBlockScoping;
+  codeGenOpts.dumpIRBetweenPasses = cl::DumpBetweenPasses;
+  codeGenOpts.verifyIRBetweenPasses = cl::compilerRuntimeFlags.VerifyIR;
+  codeGenOpts.colors = cl::Colors;
+  codeGenOpts.dumpFunctions.insert(
+      cl::DumpFunctions.begin(), cl::DumpFunctions.end());
+  codeGenOpts.noDumpFunctions.insert(
+      cl::NoDumpFunctions.begin(), cl::NoDumpFunctions.end());
+  codeGenOpts.timeCompiler = cl::PrintCompilerTiming;
 
   OptimizationSettings optimizationOpts;
 
-  // Enable aggressiveNonStrictModeOptimizations if the target is HBC.
-  optimizationOpts.aggressiveNonStrictModeOptimizations =
-      cl::BytecodeFormat == cl::BytecodeFormatKind::HBC;
-
-  optimizationOpts.inlining = cl::OptimizationLevel != cl::OptLevel::O0 &&
-      cl::BytecodeFormat == cl::BytecodeFormatKind::HBC && cl::Inline;
+  optimizationOpts.inlining =
+      cl::OptimizationLevel != cl::OptLevel::O0 && cl::Inline;
+  optimizationOpts.inlineMaxSize = cl::InlineMaxSize;
 
   optimizationOpts.reusePropCache = cl::ReusePropCache;
+
+  // Auto enable static builtins in typed mode.
+  if (cl::Typed && cl::StaticBuiltins != cl::StaticBuiltinSetting::ForceOff)
+    cl::StaticBuiltins = cl::StaticBuiltinSetting::ForceOn;
 
   // When the setting is auto-detect, we will set the correct value after
   // parsing.
@@ -1155,18 +1142,25 @@ std::shared_ptr<Context> createContext(
       cl::StaticBuiltins == cl::StaticBuiltinSetting::ForceOn;
   optimizationOpts.staticRequire = cl::StaticRequire;
 
-  optimizationOpts.useUnsafeIntrinsics = cl::UseUnsafeIntrinsics;
+  optimizationOpts.useLegacyMem2Reg = cl::LegacyMem2Reg;
+
+  optimizationOpts.limitRecursiveInlining =
+      (cl::OptimizationLevel == cl::OptLevel::OFixedPoint);
 
   auto context = std::make_shared<Context>(
-      codeGenOpts,
+      std::move(codeGenOpts),
       optimizationOpts,
+      nullptr,
       std::move(resolutionTable),
       std::move(segments));
 
-  // Default is non-strict mode.
-  context->setStrictMode(!cl::NonStrictMode && cl::StrictMode);
-  context->setEnableEval(cl::EnableEval);
-  context->setConvertES6Classes(cl::ES6Class);
+  // Default is non-strict mode, unless it is typed..
+  context->setStrictMode((!cl::NonStrictMode && cl::StrictMode) || cl::Typed);
+  context->setEnableEval(cl::compilerRuntimeFlags.EnableEval);
+  context->setEnableES6BlockScoping(cl::compilerRuntimeFlags.ES6BlockScoping);
+  context->setEnableAsyncGenerators(
+      cl::compilerRuntimeFlags.EnableAsyncGenerators);
+  context->setMetroRequireOpt(cl::MetroRequireOpt);
   context->getSourceErrorManager().setOutputOptions(guessErrorOutputOptions());
 
   setWarningsAreErrorsFromFlags(context->getSourceErrorManager());
@@ -1190,8 +1184,9 @@ std::shared_ptr<Context> createContext(
         defaultFlags.preemptiveFunctionCompilationThreshold);
   }
 
-  if (cl::EagerCompilation || cl::DumpTarget != Execute ||
-      cl::OptimizationLevel > cl::OptLevel::Og) {
+  if (cl::BytecodeFormat != cl::BytecodeFormatKind::HBC ||
+      cl::DumpTarget != Execute || cl::OptimizationLevel > cl::OptLevel::Og ||
+      cl::EagerCompilation) {
     // Make sure nothing is lazy
     context->setLazyCompilation(false);
   } else if (cl::LazyCompilation) {
@@ -1204,8 +1199,8 @@ std::shared_ptr<Context> createContext(
     context->setLazyCompilation(true);
   }
 
-  if (cl::CommonJS && cl::DumpTarget == DumpTransformedAST) {
-    context->setTransformCJSModules(true);
+  if (cl::CommonJS) {
+    context->setUseCJSModules(true);
   }
 
 #if HERMES_PARSE_JSX
@@ -1215,11 +1210,20 @@ std::shared_ptr<Context> createContext(
 #endif
 
 #if HERMES_PARSE_FLOW
+  // If no type parser is specified, use flow by default.
+  if (cl::Typed && !cl::ParseFlow
+#if HERMES_PARSE_TS
+      && !cl::ParseTS
+#endif
+  )
+    cl::ParseFlow = true;
+
   if (cl::ParseFlow) {
     context->setParseFlow(ParseFlowSetting::ALL);
   }
   context->setParseFlowComponentSyntax(cl::ParseFlowComponentSyntax);
   context->setParseFlowMatch(cl::ParseFlowMatch);
+  context->setParseFlowRecords(cl::ParseFlowRecords);
 #endif
 
 #if HERMES_PARSE_TS
@@ -1228,7 +1232,7 @@ std::shared_ptr<Context> createContext(
   }
 #endif
 
-  if (cl::DebugInfoLevel >= cl::DebugLevel::g3) {
+  if (cl::Xg3) {
     context->setDebugInfoSetting(DebugInfoSetting::ALL);
   } else if (cl::DebugInfoLevel == cl::DebugLevel::g2) {
     context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
@@ -1236,7 +1240,7 @@ std::shared_ptr<Context> createContext(
     // -g1 or -g0. If -g0, we'll strip debug info later.
     context->setDebugInfoSetting(DebugInfoSetting::THROWING);
   }
-  context->setEmitAsyncBreakCheck(cl::EmitAsyncBreakCheck);
+  context->setEmitAsyncBreakCheck(cl::compilerRuntimeFlags.EmitAsyncBreakCheck);
   return context;
 }
 
@@ -1636,8 +1640,8 @@ std::unique_ptr<Context::ResolutionTable> readResolutionTable(
 /// printed.
 bool generateIRForSourcesAsCJSModules(
     Module &M,
-    sem::SemContext &semCtx,
-    const DeclarationFileListTy &declFileList,
+    sema::SemContext &semCtx,
+    const DeclarationFileListTy &ambientDecls,
     SegmentTable fileBufs,
     SourceMapGenerator *sourceMapGen) {
   auto context = M.shareContext();
@@ -1656,18 +1660,18 @@ bool generateIRForSourcesAsCJSModules(
   // (main) module, from which other modules may be `require`d.
   auto globalMemBuffer = llvh::MemoryBuffer::getMemBufferCopy("", "<global>");
 
-  auto *globalAST = parseJS(context, semCtx, std::move(globalMemBuffer));
+  auto *globalAST = parseJS(
+      context, semCtx, nullptr, ambientDecls, std::move(globalMemBuffer));
   if (generateIR) {
     // If we aren't planning to do anything with the IR,
     // don't attempt to generate it.
-    generateIRFromESTree(globalAST, &M, declFileList, {});
+    generateIRFromESTree(&M, semCtx, globalAST);
   }
 
   std::vector<std::unique_ptr<SourceMap>> inputSourceMaps{};
   inputSourceMaps.push_back(nullptr);
   std::vector<std::string> sources{"<global>"};
 
-  Function *topLevelFunction = generateIR ? M.getTopLevelFunction() : nullptr;
   llvh::DenseSet<uint32_t> generatedModuleIDs;
   for (auto &entry : fileBufs) {
     uint32_t segmentID = entry.first;
@@ -1681,7 +1685,7 @@ bool generateIRForSourcesAsCJSModules(
         if (moduleInSegment.sourceMap) {
           SourceErrorManager sm;
           auto inputMap =
-              SourceMapParser::parse(*moduleInSegment.sourceMap, sm);
+              SourceMapParser::parse(*moduleInSegment.sourceMap, {}, sm);
           if (!inputMap) {
             // parse() returns nullptr on failure and reports its own errors.
             return false;
@@ -1700,6 +1704,8 @@ bool generateIRForSourcesAsCJSModules(
       auto *ast = parseJS(
           context,
           semCtx,
+          nullptr,
+          {},
           std::move(fileBuf),
           /*sourceMap*/ nullptr,
           /*sourceMapTranslator*/ nullptr,
@@ -1711,13 +1717,12 @@ bool generateIRForSourcesAsCJSModules(
         continue;
       }
       generateIRForCJSModule(
+          semCtx,
           cast<ESTree::FunctionExpressionNode>(ast),
           segmentID,
           moduleInSegment.id,
           llvh::sys::path::remove_leading_dotslash(filename),
-          &M,
-          topLevelFunction,
-          declFileList);
+          &M);
     }
   }
 
@@ -1801,20 +1806,22 @@ CompileResult processBytecodeFile(std::unique_ptr<llvh::MemoryBuffer> fileBuf) {
 /// suitable for immediate execution (i.e. no expectation of persistence).
 /// \return the compile result.
 CompileResult generateBytecodeForExecution(
-    Module &M,
-    const BytecodeGenerationOptions &genOptions) {
-  std::shared_ptr<Context> context = M.shareContext();
+    hbc::BCProviderFromSrc::CompilationData &&compilationData) {
+  std::shared_ptr<Context> context = compilationData.M->shareContext();
   CompileResult result{Success};
   if (cl::BytecodeFormat == cl::BytecodeFormatKind::HBC) {
-    auto BM =
-        hbc::generateBytecodeModule(&M, M.getTopLevelFunction(), genOptions);
+    auto BM = hbc::generateBytecodeModule(
+        compilationData.M.get(),
+        compilationData.M->getTopLevelFunction(),
+        compilationData.genOptions);
     if (auto N = context->getSourceErrorManager().getErrorCount()) {
       llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
       return BackendError;
     }
 
-    result.bytecodeProvider =
-        hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(BM));
+    assert(BM && "BytecodeModule should not be null if no errors");
+    result.bytecodeProvider = hbc::BCProviderFromSrc::createFromBytecodeModule(
+        std::move(BM), std::move(compilationData));
   } else {
     llvm_unreachable("Invalid bytecode kind for execution");
     result = InvalidFlags;
@@ -1828,7 +1835,8 @@ CompileResult generateBytecodeForExecution(
 /// The corresponding base bytecode will be removed from \baseBytecodeMap.
 CompileResult generateBytecodeForSerialization(
     raw_ostream &OS,
-    Module &M,
+    const std::shared_ptr<Module> &M,
+    const std::shared_ptr<sema::SemContext> &semCtx,
     const BytecodeGenerationOptions &genOptions,
     const SHA1 &sourceHash,
     hermes::OptValue<uint32_t> segment,
@@ -1844,26 +1852,48 @@ CompileResult generateBytecodeForSerialization(
       // have one owner.
       baseBytecodeMap.erase(itr);
     }
-    auto bytecodeModule = hbc::generateBytecode(
-        &M,
-        OS,
-        genOptions,
-        sourceHash,
-        segment,
-        sourceMapGenOrNull,
-        std::move(baseBCProvider));
+    std::unique_ptr<hbc::BytecodeModule> bytecodeModule =
+        hbc::generateBytecodeModule(
+            M.get(),
+            M->getTopLevelFunction(),
+            genOptions,
+            segment,
+            std::move(baseBCProvider));
 
-    if (auto N = M.getContext().getSourceErrorManager().getErrorCount()) {
+    if (bytecodeModule) {
+      if (genOptions.format == OutputFormatKind::EmitBundle) {
+        hbc::serializeBytecodeModule(
+            *bytecodeModule, sourceHash, OS, genOptions);
+      }
+      // Now that the BytecodeFunctions know their offsets into the stream, we
+      // can populate the source map.
+      if (sourceMapGenOrNull)
+        bytecodeModule->populateSourceMap(sourceMapGenOrNull);
+    }
+
+    if (auto N = M->getContext().getSourceErrorManager().getErrorCount()) {
       llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
       return BackendError;
     }
 
     if (cl::DumpTarget == DumpBytecode) {
       std::unique_ptr<hbc::BCProviderFromSrc> provider =
-          hbc::BCProviderFromSrc::createBCProviderFromSrc(
-              std::move(bytecodeModule));
+          hbc::BCProviderFromSrc::createFromBytecodeModule(
+              std::move(bytecodeModule),
+              hbc::BCProviderFromSrc::CompilationData(genOptions, M, semCtx));
       provider->setSourceHash(sourceHash);
       disassembleBytecode(std::move(provider));
+    }
+  } else if (cl::BytecodeFormat == cl::BytecodeFormatKind::SH) {
+    if (sourceMapGenOrNull) {
+      llvh::dbgs() << "Source maps not supported with SH";
+      return InvalidFlags;
+    }
+    sh::generateSH(M.get(), OS, genOptions);
+
+    if (auto N = M->getContext().getSourceErrorManager().getErrorCount()) {
+      llvh::errs() << "Emitted " << N << " errors in the backend. exiting.\n";
+      return BackendError;
     }
   } else {
     llvm_unreachable("Invalid bytecode kind");
@@ -1916,14 +1946,13 @@ CompileResult processSourceFiles(
   DeclarationFileListTy declFileList;
 
   // Load the runtime library.
-  std::unique_ptr<llvh::MemoryBuffer> libBuffer;
-  switch (cl::BytecodeFormat) {
-    case cl::BytecodeFormatKind::HBC:
-      libBuffer = llvh::MemoryBuffer::getMemBuffer(libhermes);
-      break;
-  }
-  if (!loadGlobalDefinition(*context, std::move(libBuffer), declFileList)) {
-    return LoadGlobalsFailed;
+  if (cl::StdGlobals) {
+    if (!loadGlobalDefinition(
+            *context,
+            llvh::MemoryBuffer::getMemBuffer(libhermes),
+            declFileList)) {
+      return LoadGlobalsFailed;
+    }
   }
 
   // Load the global property definitions.
@@ -1944,21 +1973,21 @@ CompileResult processSourceFiles(
     sourceMapGen = SourceMapGenerator{};
   }
 
-  Module M(context);
-  sem::SemContext semCtx{};
+  auto M = std::make_shared<Module>(context);
+  auto semCtx = std::make_shared<sema::SemContext>(*context);
 
-  if (cl::CommonJS) {
+  if (context->getUseCJSModules()) {
     // Allow the IR generation function to populate inputSourceMaps to ensure
     // proper source map ordering.
     if (!generateIRForSourcesAsCJSModules(
-            M,
-            semCtx,
+            *M,
+            *semCtx,
             declFileList,
             std::move(fileBufs),
             sourceMapGen ? &*sourceMapGen : nullptr)) {
       return ParsingFailed;
     }
-    if (cl::DumpTarget < DumpIR) {
+    if (cl::DumpTarget < ViewCFG) {
       return Success;
     }
   } else {
@@ -1972,7 +2001,7 @@ CompileResult processSourceFiles(
     std::unique_ptr<SourceMap> sourceMap{nullptr};
     if (mainFileBuf.sourceMap) {
       SourceErrorManager sm;
-      sourceMap = SourceMapParser::parse(*mainFileBuf.sourceMap, sm);
+      sourceMap = SourceMapParser::parse(*mainFileBuf.sourceMap, {}, sm);
       if (!sourceMap) {
         // parse() returns nullptr on failure and reports its own errors.
         return InputFileError;
@@ -1982,19 +2011,25 @@ CompileResult processSourceFiles(
     auto sourceMapTranslator =
         std::make_shared<SourceMapTranslator>(context->getSourceErrorManager());
     context->getSourceErrorManager().setTranslator(sourceMapTranslator);
+
+    flow::FlowContext flowContext;
     ESTree::NodePtr ast = parseJS(
         context,
-        semCtx,
+        *semCtx,
+        cl::Typed ? &flowContext : nullptr,
+        declFileList,
         std::move(mainFileBuf.file),
         std::move(sourceMap),
         sourceMapTranslator);
     if (!ast) {
+      if (auto N = context->getSourceErrorManager().getErrorCount())
+        llvh::errs() << "Emitted " << N << " errors. exiting.\n";
       return ParsingFailed;
     }
     if (cl::DumpTarget < DumpIR) {
       return Success;
     }
-    generateIRFromESTree(ast, &M, declFileList, {});
+    generateIRFromESTree(&*M, *semCtx, flowContext, ast);
   }
 
   // Bail out if there were any errors. We can't ensure that the module is in
@@ -2004,11 +2039,19 @@ CompileResult processSourceFiles(
     return ParsingFailed;
   }
 
+  // Verify the IR before we run optimizations on it.
+  if (cl::compilerRuntimeFlags.VerifyIR) {
+    if (!verifyModule(*M, &llvh::errs())) {
+      llvh::errs() << "IRGen produced invalid IR\n";
+      return VerificationFailed;
+    }
+  }
+
   // Run custom optimization pipeline.
   if (!cl::CustomOptimize.empty()) {
     std::vector<std::string> opts(
         cl::CustomOptimize.begin(), cl::CustomOptimize.end());
-    if (!runCustomOptimizationPasses(M, opts)) {
+    if (!runCustomOptimizationPasses(*M, opts)) {
       llvh::errs() << "Invalid custom optimizations selected.\n\n"
                    << PassManager::getCustomPassText();
       return InvalidFlags;
@@ -2016,13 +2059,16 @@ CompileResult processSourceFiles(
   } else {
     switch (cl::OptimizationLevel) {
       case cl::OptLevel::O0:
-        runNoOptimizationPasses(M);
+        runNoOptimizationPasses(*M);
         break;
       case cl::OptLevel::Og:
-        runDebugOptimizationPasses(M);
+        runDebugOptimizationPasses(*M);
         break;
       case cl::OptLevel::OMax:
-        runFullOptimizationPasses(M);
+        runFullOptimizationPasses(*M);
+        break;
+      case cl::OptLevel::OFixedPoint:
+        runOptimizationPassesToFixedPoint(*M);
         break;
     }
   }
@@ -2033,36 +2079,27 @@ CompileResult processSourceFiles(
     return OptimizationFailed;
   }
 
-  // In dbg builds, verify the module before we emit bytecode.
-  if (cl::VerifyIR) {
-    bool failedVerification = verifyModule(M, &llvh::errs());
-    if (failedVerification) {
-      M.dump();
-      return VerificationFailed;
-    }
-    assert(!failedVerification && "Module verification failed!");
-  }
-
   if (cl::DumpTarget == DumpIR) {
-    M.dump();
+    M->dump();
     return Success;
   }
 
 #ifndef NDEBUG
   if (cl::DumpTarget == ViewCFG) {
-    M.viewGraph();
+    M->viewGraph();
     return Success;
   }
 #endif
 
   BytecodeGenerationOptions genOptions{cl::DumpTarget};
   genOptions.optimizationEnabled = cl::OptimizationLevel > cl::OptLevel::Og;
-  genOptions.prettyDisassemble = cl::Pretty;
   genOptions.basicBlockProfiling = cl::BasicBlockProfiling;
   // The static builtin setting should be set correctly after command line
   // options parsing and js parsing. Set the bytecode header flag here.
   genOptions.staticBuiltinsEnabled = context->getStaticBuiltinOptimization();
   genOptions.padFunctionBodiesPercent = cl::PadFunctionBodiesPercent;
+  genOptions.verifyIR = cl::compilerRuntimeFlags.VerifyIR;
+  genOptions.emitAsserts = cl::EnableAsserts;
 
   // If the user requests to output a source map, then do not also emit debug
   // info into the bytecode.
@@ -2070,13 +2107,15 @@ CompileResult processSourceFiles(
       cl::OutputSourceMap || cl::DebugInfoLevel == cl::DebugLevel::g0;
 
   genOptions.stripFunctionNames = cl::StripFunctionNames;
+  genOptions.reorderRegisters = cl::ReorderRegisters;
 
   // If the dump target is None, return bytecode in an executable form.
   if (cl::DumpTarget == Execute) {
     assert(
         !sourceMapGen &&
         "validateFlags() should enforce no source map output for execution");
-    return generateBytecodeForExecution(M, genOptions);
+    return generateBytecodeForExecution(
+        hbc::BCProviderFromSrc::CompilationData{genOptions, M, semCtx});
   }
 
   BaseBytecodeMap baseBytecodeMap;
@@ -2098,6 +2137,7 @@ CompileResult processSourceFiles(
     auto result = generateBytecodeForSerialization(
         fileOS.os(),
         M,
+        semCtx,
         genOptions,
         sourceHash,
         llvh::None,
@@ -2133,6 +2173,7 @@ CompileResult processSourceFiles(
       auto segResult = generateBytecodeForSerialization(
           fileOS.os(),
           M,
+          semCtx,
           genOptions,
           sourceHash,
           segment,
@@ -2197,6 +2238,9 @@ void printHermesVersion(
 #endif
 #ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
       << "    Unicode RegExp Property Escapes\n"
+#endif
+#if HERMESVM_JIT
+      << "    JIT\n"
 #endif
       << "    Zip file input\n";
   }

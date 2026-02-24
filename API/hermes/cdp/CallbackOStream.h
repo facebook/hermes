@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_CALLBACKOSTREAM_H
-#define HERMES_CDP_CALLBACKOSTREAM_H
+#pragma once
 
 #include <functional>
 #include <memory>
@@ -21,7 +20,8 @@ namespace cdp {
 /// Subclass of \c std::ostream where flushing is implemented through a
 /// callback.  Writes are collected in a buffer.  When filled, the buffer's
 /// contents are emptied out and sent to a callback.
-struct CallbackOStream : public std::ostream {
+class CallbackOStream : public std::ostream {
+ public:
   /// Signature of callback called to flush buffer contents.  Accepts the buffer
   /// as a string.  Returns a boolean indicating whether flushing succeeded.
   /// Callback failure will be translated to stream failure.  If the callback
@@ -45,7 +45,8 @@ struct CallbackOStream : public std::ostream {
  private:
   /// \c std::streambuf sub-class backed by a std::string buffer and
   /// implementing overflow by calling a callback.
-  struct StreamBuf : public std::streambuf {
+  class StreamBuf : public std::streambuf {
+   public:
     /// Construct a new streambuf.  Parameters are the same as those of
     /// \c CallbackOStream .
     StreamBuf(size_t sz, Fn cb);
@@ -86,5 +87,3 @@ struct CallbackOStream : public std::ostream {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_CALLBACKOSTREAM_H

@@ -20,6 +20,23 @@ using llvh::ArrayRef;
 using llvh::BitVector;
 using llvh::DenseMap;
 
+/// A register class identifies a set of registers with similar properties.
+enum class RegClass : uint8_t {
+  /// A "dummy" register used for no-output instructions.
+  NoOutput,
+  /// A value that is known to be a number.
+  Number,
+  /// A value that is known to be a non-pointer value.
+  NonPtr,
+  /// A value that can be anything.
+  Other,
+  /// The last entry.
+  _last,
+};
+
+/// An alias to make it explicit that a value is a register index.
+using RegIndex = uint32_t;
+
 /// This is an instance of a bytecode register. It's just a wrapper around a
 /// simple integer index. Register is passed by value and must remain a small
 /// wrapper around an integer.
@@ -28,17 +45,53 @@ class Register {
   static const unsigned InvalidRegister = ~0u;
   static const unsigned TombstoneRegister = ~0u - 1;
 
+  /// Bits reserved for the register class.
+  static constexpr unsigned kClassWidth = 4;
+  /// Remaining bits for the register index.
+  static constexpr unsigned kIndexWidth = 32 - kClassWidth;
+
+  /// The class and the index are packed inside a 32-bit word. We use a union
+  /// and a bitfield struct for convenient access.
+  union {
+    struct {
+      /// The register class.
+      uint32_t class_ : kClassWidth;
+      /// The index withing the register class.
+      uint32_t index_ : kIndexWidth;
+    };
+    /// An opaque 32-bit value holding both the index and the class.
+    uint32_t value_;
+  };
+
+  /// Constructor to set the whole value, only used by special values.
+  explicit constexpr Register(uint32_t value) : value_(value) {}
+
+  /// DenseMap needs access to the private value for hashing.
+  friend llvh::DenseMapInfo<Register>;
+
  public:
-  explicit Register(unsigned val = InvalidRegister) : value(val) {}
+  explicit constexpr Register() : value_(InvalidRegister) {}
+
+  explicit constexpr Register(RegClass regClass, RegIndex index)
+      : class_((uint32_t)regClass), index_(index) {
+    assert(index < (1u << kIndexWidth) && "register index too large");
+  }
 
   /// \returns true if this is a valid result.
   bool isValid() const {
-    return value != InvalidRegister;
+    return value_ != InvalidRegister;
   }
 
-  /// \returns the numeric value of the register.
-  unsigned getIndex() const {
-    return value;
+  /// \returns the register class of the register.
+  RegClass getClass() const {
+    return static_cast<RegClass>(class_);
+  }
+
+  /// \returns the numeric value of the register within the class.
+  /// NOTE: All reg classes index from 0, this is not a global register number,
+  /// and isn't to be used directly in the VM. Use getHVMRegisterIndex for that.
+  RegIndex getIndexInClass() const {
+    return index_;
   }
 
   /// Marks an empty register in the map.
@@ -46,31 +99,29 @@ class Register {
     return Register(TombstoneRegister);
   }
 
- private:
-  /// The numeric number of the register.
-  unsigned value;
-
  public:
   bool operator==(Register RHS) const {
-    return value == RHS.value;
+    return value_ == RHS.value_;
   }
   bool operator!=(Register RHS) const {
     return !(*this == RHS);
   }
 
-  /// \returns true if the register RHS comes right after this one.
-  /// For example, R5 comes after R4.
+  /// \returns true if the register RHS comes right after this one in the same
+  /// class. For example, (Number,5) comes after (Number,4).
   bool isConsecutive(Register RHS) const {
-    return getIndex() + 1 == RHS.getIndex();
+    return getIndexInClass() + 1 == RHS.getIndexInClass() &&
+        getClass() == RHS.getClass();
   }
 
-  /// \return the n'th consecutive register after the current register.
-  Register getConsecutive(unsigned count = 1) {
-    return Register(getIndex() + count);
+  /// \return the n'th consecutive register after the current register
+  /// in the same class.
+  Register getConsecutive(unsigned count = 1) const {
+    return Register(getClass(), getIndexInClass() + count);
   }
 
   static bool compare(const Register &a, const Register &b) {
-    return a.getIndex() < b.getIndex();
+    return a.value_ < b.value_;
   }
 };
 
@@ -81,7 +132,7 @@ class RegisterFile {
   // can only grow (and not shrink). This is how we keep track of the max number
   // of allocated register. There is no need to shrink the register file because
   // the compile time wins are negligable.
-  llvh::BitVector registers;
+  llvh::BitVector registers_[(size_t)RegClass::_last]{};
 
  public:
   RegisterFile(const RegisterFile &) = delete;
@@ -95,24 +146,42 @@ class RegisterFile {
   bool isFree(Register r);
 
   /// \returns a register that's currently unused.
-  Register allocateRegister();
+  Register allocateRegister(RegClass regClass);
 
   /// Reserves \p n consecutive registers at the end of the register file.
   /// 'n' consecutive registers will be allocated and the first one is returned.
-  Register tailAllocateConsecutive(unsigned n);
+  Register tailAllocateConsecutive(RegClass regClass, unsigned n);
 
   /// Free the register \p reg and make it available for re-allocation.
   void killRegister(Register reg);
 
   /// \returns the number of currently allocated registers.
-  unsigned getNumLiveRegisters() {
-    return registers.size() - registers.count();
+  unsigned getNumLiveRegisters(RegClass regClass) const {
+    return registers(regClass).size() - registers(regClass).count();
   }
 
   /// \returns the number of registers that were ever created.
-  unsigned getMaxRegisterUsage() {
-    return registers.size();
+  unsigned getMaxRegisterUsage(RegClass regClass) const {
+    return registers(regClass).size();
   }
+
+  /// \return the BitVector tracking registers of \p regClass.
+  llvh::BitVector &registers(RegClass regClass) {
+    return registers_[(size_t)regClass];
+  }
+  /// \return the BitVector tracking registers of \p regClass.
+  const llvh::BitVector &registers(RegClass regClass) const {
+    return registers_[(size_t)regClass];
+  }
+
+  /// Clear all register files except for the one of RegClass::Other,
+  /// and add the number of registers removed from type-specific reg classes to
+  /// the Other class.
+  /// \post There are no more allocated registers in any classes besides
+  /// Other and NoOutput.
+  /// Used by SpillRegisters to make everything into Other registers before
+  /// reserving and spilling.
+  void convertTypeSpecificRegsToOther();
 
   /// Verify the internal state of the register file.
   void verify();
@@ -123,7 +192,6 @@ class RegisterFile {
 
 class Function;
 class Instruction;
-class ScopeCreationInst;
 class PhiInst;
 class CallInst;
 
@@ -291,6 +359,16 @@ class RegisterAllocator {
   /// Holds the live interval of each instruction.
   llvh::SmallVector<Interval, 32> instructionInterval_;
 
+  /// How many registers are numbers.
+  /// Allocated regs [0, numberRegCount_).
+  /// Populated after reorderRegsByType.
+  uint32_t numberRegCount_ = 0;
+
+  /// How many registers are nonPointers.
+  /// Allocated regs [numberRegCount_, numberRegCount_ + nonPointerRegCount_).
+  /// Populated after reorderRegsByType.
+  uint32_t nonPtrRegCount_ = 0;
+
   /// Returns the last index allocated.
   unsigned getMaxInstrIndex() {
     return instructionsByNumbers_.size();
@@ -336,18 +414,19 @@ class RegisterAllocator {
 
   Function *F;
 
+  /// Whether there are any try/catch statements in the function.
+  bool hasTry_ = false;
+
  public:
+  using RegisterType = Register;
+
   /// Dump the status of the allocator in a textual form.
   void dump();
 
   /// \returns the computed live interval for the instruction \p I.
   Interval &getInstructionInterval(Instruction *I);
 
-  /// \return The register assigned to \p Value, if it is available at \p At; or
-  /// an invalid Register if \p Value is not available at \p At.
-  Register getRegisterForInstructionAt(Instruction *Value, Instruction *At);
-
-  explicit RegisterAllocator(Function *func) : F(func) {}
+  explicit RegisterAllocator(Function *func);
 
   virtual ~RegisterAllocator() = default;
 
@@ -393,16 +472,19 @@ class RegisterAllocator {
   /// \p values is a list of values to be assigned consecutive registers.
   ///  nullptr values are also allocated a register but not registered.
   /// \returns the first register in the sequence.
-  Register reserve(ArrayRef<Value *> values);
+  Register reserve(RegClass regClass, ArrayRef<Value *> values);
 
   /// Reserves \n count registers that will be manually managed by the user.
-  Register reserve(unsigned count = 1);
+  Register reserve(RegClass regClass, unsigned count = 1);
 
   /// Free a register that was allocated with 'reserve'.
   void free(Register reg);
 
   /// \return the register allocated for the value \p V.
   Register getRegister(Value *I);
+
+  /// \return the register allocated for the value \p V which may be None.
+  hermes::OptValue<Register> getOptionalRegister(Value *I) const;
 
   /// Marks the value \p as being allocated to \p R.
   void updateRegister(Value *I, Register R);
@@ -414,62 +496,18 @@ class RegisterAllocator {
   /// In here we assume that the registers are allocated consecutively
   /// and that allocating this number of registers will cover all of the
   /// registers that were allocated during the lifetime of the program.
-  virtual unsigned getMaxRegisterUsage() {
-    return file.getMaxRegisterUsage();
+  unsigned getMaxRegisterUsage(RegClass regClass) const {
+    return file.getMaxRegisterUsage(regClass);
   }
-};
 
-/// Analysis for mapping Instructions to the VM register holding its lexical
-/// Environment (or the closest one that's available). In the following example
-///
-///  1: CreateEnvironment r0
-///  2: LoadConstDouble r1, 1.0
-///  3: LoadConstDouble r2, 2.0
-///  4: AddN r0, r1, r2
-///  5: AddN r0, r0, r0
-///
-/// registerAndScopeForInstruction(1): invalid Register
-/// registerAndScopeForInstruction(2): r0
-/// registerAndScopeForInstruction(3): r0
-/// registerAndScopeForInstruction(4): r0
-/// registerAndScopeForInstruction(5): invalid Register
-///
-/// This analysis use the register allocation to provide that information, and
-/// thus register allocation must be done prior to using
-/// registerAndScopeForInstruction. However, the analysis should be created
-/// before register allocation is performed. That's necessary as the analysis
-/// pre-allocated the environment registers upon initialization in case the code
-/// is being compiled with debug information.
-class ScopeRegisterAnalysis {
-  ScopeRegisterAnalysis(const ScopeRegisterAnalysis &) = delete;
-  void operator=(const ScopeRegisterAnalysis &) = delete;
-
- public:
-  /// Initializes this scope register analysis object. In full debug info
-  /// generation mode this constructor will also pre-allocate the environment
-  /// registers.
-  explicit ScopeRegisterAnalysis(Function *F, RegisterAllocator &RA);
-
-  /// \return a pair with the register and the ScopeDesc for the Environment
-  /// that's available at \p Inst. This Environment may be the one representing
-  /// the lexical scope for \p Inst or, if that's not available, one of its
-  /// parents; if no Environments are available at \p Inst, returns
-  /// std::pair(invalid register, nullptr ScopeDesc);
-  std::pair<Register, ScopeDesc *> registerAndScopeForInstruction(
-      Instruction *Inst);
+  /// Convert all type-specific registers to RegClass::Other by modifying the
+  /// register files. Used when spilling to allow us to have low HVM register
+  /// indices by clearing out anything before Other.
+  void convertTypeSpecificRegsToOther();
 
  private:
-  /// \return a pair with the register and the ScopeDesc for the Environment
-  /// created by \p SCI if it is available at \p Inst. If it's not available,
-  /// recursively try to find the closest Environment that's available at
-  /// \p Inst; if no Environments are available at \p Inst, returns
-  /// std::pair(invalid register, nullptr ScopeDesc);
-  std::pair<Register, ScopeDesc *> registerAndScopeAt(
-      Instruction *Inst,
-      ScopeCreationInst *SCI);
-
-  RegisterAllocator &RA_;
-  llvh::DenseMap<ScopeDesc *, ScopeCreationInst *> scopeCreationInsts_;
+  /// \return the RegClass in which \p inst should be allocated.
+  RegClass getRegClass(Instruction *inst);
 };
 
 } // namespace hermes

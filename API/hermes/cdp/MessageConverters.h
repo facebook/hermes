@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_MESSAGECONVERTERS_H
-#define HERMES_CDP_MESSAGECONVERTERS_H
+#pragma once
 
 #include <regex>
 #include <string>
@@ -81,5 +80,3 @@ std::unique_ptr<Profile> makeProfile(const std::string &value);
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_MESSAGECONVERTERS_H

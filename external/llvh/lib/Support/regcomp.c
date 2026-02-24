@@ -49,16 +49,6 @@
 
 #include "llvh/Config/config.h"
 
-#if defined __has_attribute
-  #if __has_attribute(fallthrough)
-    #define FALLTHROUGH __attribute__ ((fallthrough))
-  #else
-    #define FALLTHROUGH (void)0
-  #endif
-#else
-  #define FALLTHROUGH (void)0
-#endif
-
 /* character-class table */
 static struct cclass {
 	const char *name;
@@ -547,7 +537,7 @@ p_ere_exp(struct parse *p)
 		break;
 	case '{':		/* okay as ordinary except if digit follows */
 		REQUIRE(!MORE() || !isdigit((uch)PEEK()), REG_BADRPT);
-		FALLTHROUGH;
+		/* FALLTHROUGH */
 	default:
 		ordinary(p, c);
 		break;
@@ -743,7 +733,7 @@ p_simp_re(struct parse *p,
 		break;
 	case '*':
 		REQUIRE(starordinary, REG_BADRPT);
-		FALLTHROUGH;
+		/* FALLTHROUGH */
 	default:
 		ordinary(p, (char)c);
 		break;
@@ -1645,7 +1635,7 @@ findmust(struct parse *p, struct re_guts *g)
 					return;
 				}
 			} while (OP(s) != O_QUEST && OP(s) != O_CH);
-			FALLTHROUGH;
+			/* fallthrough */
 		default:		/* things that break a sequence */
 			if (newlen > g->mlen) {		/* ends one */
 				start = newstart;

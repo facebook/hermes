@@ -1,2 +1,5 @@
-# Avoid modifying the line endings for lit tests since they change the output.
-test/** text eol=lf
+# Force LF line endings for test files. Test assertions contain hard-coded
+# byte offsets and string values that assume LF line endings.
+test/**/*.js text eol=lf
+test/**/*.js.txt text eol=lf
+test/**/*.sh text eol=lf

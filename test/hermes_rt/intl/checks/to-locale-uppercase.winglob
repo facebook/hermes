@@ -1,0 +1,10 @@
+// WinGlob expected output for to-locale-uppercase.js
+// WinGlob uses LCMapStringEx. German sharp-s stays as-is (no STRASSE).
+// CHECK-LABEL: get locale uppercase test
+// CHECK-NEXT: TEST
+// CHECK-NEXT: ISTANBUL
+// CHECK-NEXT: İSTANBUL
+// CHECK-NEXT: STRAßE
+// CHECK-NEXT: CAFÉTÉRIA IĮ̀
+// CHECK-NEXT: CAFÉTÉRİA İĮ̀
+// CHECK-NEXT: 0

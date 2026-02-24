@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 -hermes-parser -dump-ir %s -non-strict 2>&1 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -O0 -hermes-parser -dump-ir %s -non-strict 2>&1 | %FileCheckOrRegen %s --match-full-lines
 
 function one() { return s; return s; }
 
@@ -15,58 +15,52 @@ function three() { return z; return z;}
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [one, two, three]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %one#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "one" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %two#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "two" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %three#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "three" : string
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %8 = StoreStackInst undefined : undefined, %7
-// CHECK-NEXT:  %9 = LoadStackInst %7
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "two": string
+// CHECK-NEXT:       DeclareGlobalVarInst "three": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "one": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %two(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "two": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %three(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "three": string
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
+// CHECK-NEXT:  %12 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
-// CHECK:function one#0#1()#2
-// CHECK-NEXT:S{one#0#1()#2} = []
+// CHECK:scope %VS1 []
+
+// CHECK:function one(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{one#0#1()#2}
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
-// CHECK:function two#0#1()#3
-// CHECK-NEXT:S{two#0#1()#3} = []
+// CHECK:scope %VS2 []
+
+// CHECK:function two(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{two#0#1()#3}
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "s" : string
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "t" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "s": string
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
-// CHECK:function three#0#1()#4
-// CHECK-NEXT:S{three#0#1()#4} = []
+// CHECK:scope %VS3 []
+
+// CHECK:function three(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{three#0#1()#4}
-// CHECK-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "z" : string
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "z" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = TryLoadGlobalPropertyInst (:any) globalObject: object, "z": string
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end

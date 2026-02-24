@@ -8,16 +8,25 @@
  * @format
  */
 
+import type {Expression} from 'hermes-estree';
+
 export type ParserOptions = {
   allowReturnOutsideFunction?: boolean,
   babel?: boolean,
   flow?: 'all' | 'detect',
   enableExperimentalComponentSyntax?: boolean,
   enableExperimentalFlowMatchSyntax?: boolean,
+  enableExperimentalFlowRecordSyntax?: boolean,
   reactRuntimeTarget?: '18' | '19',
   sourceFilename?: string,
   sourceType?: 'module' | 'script' | 'unambiguous',
   tokens?: boolean,
+  transformOptions?: {
+    +TransformEnumSyntax?: {
+      +enable: boolean,
+      +getRuntime?: () => Expression,
+    },
+  },
 };
 
 export const ParserOptionsKeys: $ReadOnlySet<$Keys<ParserOptions>> = new Set([
@@ -26,8 +35,10 @@ export const ParserOptionsKeys: $ReadOnlySet<$Keys<ParserOptions>> = new Set([
   'flow',
   'enableExperimentalComponentSyntax',
   'enableExperimentalFlowMatchSyntax',
+  'enableExperimentalFlowRecordSyntax',
   'reactRuntimeTarget',
   'sourceFilename',
   'sourceType',
   'tokens',
+  'transformOptions',
 ]);

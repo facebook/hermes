@@ -7,10 +7,12 @@
 
 #include "hermes/VM/HiddenClass.h"
 
-#include "hermes/VM/ArrayStorage.h"
+#include "hermes/VM/HostModel.h"
+#include "hermes/VM/JSCallableProxy.h"
+#include "hermes/VM/JSProxy.h"
 #include "hermes/VM/Runtime.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 
@@ -49,8 +51,8 @@ TEST_F(HiddenClassTest, SmokeTest) {
   MutableHandle<HiddenClass> y{runtime};
   MutableHandle<HiddenClass> z{runtime};
 
-  auto rootHnd = runtime.makeHandle<HiddenClass>(
-      runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)));
+  auto rootHnd =
+      runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(runtime));
 
   ASSERT_EQ(0u, rootHnd->getNumProperties());
   ASSERT_FALSE(rootHnd->isDictionary());
@@ -123,27 +125,22 @@ TEST_F(HiddenClassTest, SmokeTest) {
   // Find all properties in x.
   NamedPropertyDescriptor desc;
   {
-    auto found = HiddenClass::findProperty(
-        x, runtime, *aHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(x, runtime, *aHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(0u, desc.slot);
-    found = HiddenClass::findProperty(
-        x, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
-    found = HiddenClass::findProperty(
-        x, runtime, *cHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *cHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(2u, desc.slot);
-    found = HiddenClass::findProperty(
-        x, runtime, *dHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *dHnd, desc);
     ASSERT_FALSE(found);
   }
 
   {
     // Read-only x.b
-    auto found = HiddenClass::findProperty(
-        x, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(x, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_TRUE(desc.flags.writable);
@@ -154,8 +151,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
     ASSERT_EQ(x->getNumProperties(), newClz->getNumProperties());
     x = *newClz;
 
-    found = HiddenClass::findProperty(
-        x, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_FALSE(desc.flags.writable);
@@ -190,8 +186,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
 
   {
     // Read-only z.b
-    auto found = HiddenClass::findProperty(
-        z, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(z, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_TRUE(desc.flags.writable);
@@ -202,8 +197,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
     ASSERT_EQ(z->getNumProperties(), newClz->getNumProperties());
     z = *newClz;
 
-    found = HiddenClass::findProperty(
-        z, runtime, *bHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(z, runtime, *bHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(1u, desc.slot);
     ASSERT_FALSE(desc.flags.writable);
@@ -220,8 +214,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
   // Turn x into a dictionary by erasing x.a
 
   {
-    auto found = HiddenClass::findProperty(
-        x, runtime, *aHnd, PropertyFlags::invalid(), desc);
+    auto found = HiddenClass::findProperty(x, runtime, *aHnd, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(0u, desc.slot);
 
@@ -231,8 +224,7 @@ TEST_F(HiddenClassTest, SmokeTest) {
     ASSERT_TRUE(x1->isDictionary());
     ASSERT_EQ(2u, x1->getNumProperties());
 
-    found = HiddenClass::findProperty(
-        x1, runtime, *aHnd, PropertyFlags::invalid(), desc);
+    found = HiddenClass::findProperty(x1, runtime, *aHnd, desc);
     ASSERT_FALSE(found);
 
     x = *x1;
@@ -272,8 +264,8 @@ TEST_F(HiddenClassTest, AccessorsTest) {
   MutableHandle<HiddenClass> x{runtime};
   MutableHandle<HiddenClass> y{runtime};
 
-  auto rootCls = runtime.makeHandle<HiddenClass>(
-      runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)));
+  auto rootCls =
+      runtime.makeHandle<HiddenClass>(HiddenClass::createRoot(runtime));
 
   ASSERT_FALSE(rootCls->getMayHaveAccessor());
 
@@ -323,8 +315,7 @@ TEST_F(HiddenClassTest, AccessorsTest) {
   {
     // delete y.a
     NamedPropertyDescriptor desc;
-    auto found =
-        HiddenClass::findProperty(y, runtime, *aSym, accessorFlags, desc);
+    auto found = HiddenClass::findProperty(y, runtime, *aSym, desc);
     ASSERT_TRUE(found);
     ASSERT_EQ(0u, desc.slot);
     y = HiddenClass::deleteProperty(y, runtime, *found);
@@ -356,10 +347,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
       runtime, createUTF16Ref(u"d"));
 
   // Add y.a, y.b, y.c
-  MutableHandle<HiddenClass> y{
-      runtime,
-      vmcast<HiddenClass>(
-          runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
+  MutableHandle<HiddenClass> y{runtime, HiddenClass::createRoot(runtime)};
   {
     // y.a
     auto addRes = HiddenClass::addProperty(
@@ -400,30 +388,26 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   ASSERT_EQ(y->getNumProperties(), yClone->getNumProperties());
   ASSERT_TRUE(yClone->isDictionary());
   // Check each property
-  auto found = HiddenClass::findProperty(
-      yClone, runtime, *aHnd, PropertyFlags::invalid(), desc);
+  auto found = HiddenClass::findProperty(yClone, runtime, *aHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(0u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      yClone, runtime, *bHnd, PropertyFlags::invalid(), desc);
+  found = HiddenClass::findProperty(yClone, runtime, *bHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(1u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      yClone, runtime, *cHnd, PropertyFlags::invalid(), desc);
+  found = HiddenClass::findProperty(yClone, runtime, *cHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(2u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
   // Turn y into a dictionary y3 by deleting y.a
-  found = HiddenClass::findProperty(
-      y, runtime, *aHnd, PropertyFlags::invalid(), desc);
+  found = HiddenClass::findProperty(y, runtime, *aHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(0u, desc.slot);
 
@@ -454,22 +438,22 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
   ASSERT_EQ(y->getNumProperties(), partlyFrozenSingleton->getNumProperties());
   ASSERT_TRUE(partlyFrozenSingleton->isDictionary());
   // Check each property
-  found = HiddenClass::findProperty(
-      partlyFrozenSingleton, runtime, *aHnd, PropertyFlags::invalid(), desc);
+  found =
+      HiddenClass::findProperty(partlyFrozenSingleton, runtime, *aHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(0u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
   ASSERT_FALSE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      partlyFrozenSingleton, runtime, *bHnd, PropertyFlags::invalid(), desc);
+  found =
+      HiddenClass::findProperty(partlyFrozenSingleton, runtime, *bHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(1u, desc.slot);
   ASSERT_TRUE(desc.flags.writable);
   ASSERT_TRUE(desc.flags.configurable);
 
-  found = HiddenClass::findProperty(
-      partlyFrozenSingleton, runtime, *cHnd, PropertyFlags::invalid(), desc);
+  found =
+      HiddenClass::findProperty(partlyFrozenSingleton, runtime, *cHnd, desc);
   ASSERT_TRUE(found);
   ASSERT_EQ(2u, desc.slot);
   ASSERT_FALSE(desc.flags.writable);
@@ -488,10 +472,7 @@ TEST_F(HiddenClassTest, UpdatePropertyFlagsWithoutTransitionsTest) {
 }
 
 TEST_F(HiddenClassTest, ForEachProperty) {
-  MutableHandle<HiddenClass> clazz{
-      runtime,
-      vmcast<HiddenClass>(
-          runtime.ignoreAllocationFailure(HiddenClass::createRoot(runtime)))};
+  MutableHandle<HiddenClass> clazz{runtime, HiddenClass::createRoot(runtime)};
 
   auto aHnd = *runtime.getIdentifierTable().getSymbolHandle(
       runtime, createUTF16Ref(u"a"));
@@ -553,6 +534,22 @@ TEST_F(HiddenClassTest, ReservedSlots) {
     ASSERT_RETURNED(addRes);
     EXPECT_EQ(i, addRes->second);
   }
+
+  // Verify that the saved HiddenClasses for Proxies and HostObjects are
+  // different from the equivalent "normal" HiddenClasses.
+  EXPECT_NE(
+      *runtime.proxyClass,
+      *runtime.getHiddenClassForPrototype(
+          nullptr, JSObject::numOverlapSlots<JSProxy>()));
+  EXPECT_NE(
+      *runtime.callableProxyClass,
+      *runtime.getHiddenClassForPrototype(
+          nullptr, JSObject::numOverlapSlots<JSCallableProxy>()));
+  EXPECT_NE(
+      *runtime.hostObjectClass,
+      *runtime.getHiddenClassForPrototype(
+          runtime.objectPrototypeRawPtr,
+          JSObject::numOverlapSlots<HostObject>()));
 }
 
 } // namespace

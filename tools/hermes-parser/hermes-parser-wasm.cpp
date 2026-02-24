@@ -6,9 +6,10 @@
  */
 
 #include "hermes/AST/Context.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/Parser/FlowHelpers.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/Support/Algorithms.h"
 
 #include "llvh/ADT/StringRef.h"
@@ -35,6 +36,7 @@ extern "C" ParseResult *hermesParse(
     bool detectFlow,
     bool enableExperimentalComponentSyntax,
     bool enableExperimentalFlowMatchSyntax,
+    bool enableExperimentalRecordSyntax,
     bool tokens,
     bool allowReturnOutsideFunction) {
   std::unique_ptr<ParseResult> result = std::make_unique<ParseResult>();
@@ -64,8 +66,9 @@ extern "C" ParseResult *hermesParse(
   context->setParseFlow(parseFlowSetting);
   context->setParseFlowComponentSyntax(enableExperimentalComponentSyntax);
   context->setParseFlowMatch(enableExperimentalFlowMatchSyntax);
+  context->setParseFlowRecords(enableExperimentalRecordSyntax);
   context->setParseJSX(true);
-  context->setTransformCJSModules(true);
+  context->setUseCJSModules(true);
   context->setAllowReturnOutsideFunction(allowReturnOutsideFunction);
 
   std::unique_ptr<parser::JSParser> jsParser =
@@ -97,8 +100,8 @@ extern "C" ParseResult *hermesParse(
   serialize(*parsedJs, &context->getSourceErrorManager(), *result, tokens);
 
   // Run semantic validation after AST has been serialized
-  sem::SemContext semContext{};
-  validateASTForParser(*context, semContext, *parsedJs);
+  sema::SemContext semContext{*context};
+  resolveASTForParser(*context, semContext, *parsedJs);
 
   // Return first error if errors are detected during semantic validation
   if (diagHandler.hasError()) {

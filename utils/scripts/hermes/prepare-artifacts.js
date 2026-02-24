@@ -21,8 +21,8 @@ function copyHermesBinaries() {
 
   // Create directories for npm/hermes-compiler/hermesc binaries
   mkdir('-p', './npm/hermes-compiler/hermesc/osx-bin');
-  mkdir('-p', './npm/hermes-compiler/hermesc/win64-bin');
   mkdir('-p', './npm/hermes-compiler/hermesc/linux64-bin');
+  mkdir('-p', './npm/hermes-compiler/hermesc/win64-bin');
 
   const osxBinDir = path.join(HERMES_WS_DIR, 'osx-bin');
   const osxReleaseDir = path.join(osxBinDir, 'Release');

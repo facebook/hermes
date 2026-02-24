@@ -1,0 +1,15 @@
+diff --git a/include/llvh/ADT/simple_ilist.h b/include/llvh/ADT/simple_ilist.h
+--- a/include/llvh/ADT/simple_ilist.h
++++ b/include/llvh/ADT/simple_ilist.h
+@@ -101,7 +101,10 @@ public:
+   using difference_type = ptrdiff_t;
+ 
+   simple_ilist() = default;
+-  ~simple_ilist() = default;
++  /// This used to be a default destructor, but it was changed to suppress a bug
++  /// in Apple clang version 14.0.3 (clang-1403.0.22.14.1). It would incorrectly
++  /// treat this object as trivially copyable.
++  ~simple_ilist() {}
+ 
+   // No copy constructors.
+   simple_ilist(const simple_ilist &) = delete;

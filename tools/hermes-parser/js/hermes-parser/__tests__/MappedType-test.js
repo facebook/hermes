@@ -41,7 +41,9 @@ describe('MappedType', () => {
 
     test('ESTree', async () => {
       expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
-      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+      expect(await printForSnapshotESTree(code)).toBe(
+        'type Mapped = {[key in keyof (O | Z)]: O[key]};',
+      );
     });
 
     test('Babel', async () => {

@@ -6,7 +6,8 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT license.
 
-set(HERMES_ENABLE_EH_RTTI ON)
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
 
 # Windows-specific configuration for hermesvm targets (defined in ../hermes)
 if(MSVC)
@@ -43,9 +44,7 @@ target_link_libraries(libshared
   PRIVATE
     hermesinspector
     hermesNodeApi
-    hermesParser
-    hermesVMRuntime
-    hermesvm
+    hermesvm_a
 )
 target_link_options(libshared PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
 

@@ -26,9 +26,12 @@ using std::span;
  */
 template <typename T>
 struct span {
+  constexpr span() noexcept : data_{nullptr}, size_{0} {}
   constexpr span(std::initializer_list<T> il) noexcept
       : data_{const_cast<T*>(il.begin())}, size_{il.size()} {}
   constexpr span(T* data, size_t size) noexcept : data_{data}, size_{size} {}
+  template <size_t N>
+  constexpr span(T (&arr)[N]) noexcept : data_{arr}, size_{N} {}
 
   [[nodiscard]] constexpr T* data() const noexcept { return data_; }
 

@@ -9,16 +9,23 @@ set -f
 
 all=0
 force=0
+interactive=0
 if [ "$1" == "-a" ]; then
   shift
   all=1
 elif [ "$1" == "-f" ]; then
   shift
   force=1
+elif [ "$1" == "-i" ]; then
+  shift
+  interactive=1
 fi
 
 [ -n "$1" ] && {
-  echo "$0: Too many arguments" >&2
+  echo "Usage: $0 [-a|-f|-i]" >&2
+  echo "  -a: Format all files" >&2
+  echo "  -f: Force format files in last commit without prompting" >&2
+  echo "  -i: Interactive mode, show diff and ask before applying changes" >&2
   exit 1
 }
 
@@ -38,11 +45,17 @@ if [ ! -x "$clang_format" ]; then
   echo "ERROR: Must have clang-format in PATH"
   exit 1
 fi
-clang_format_version="$("$clang_format" --version)"
-if echo "$clang_format_version" | grep -q -v '12.0.*'
-then
-   printf "ERROR: clang-format's version must match 12.0.*\n  clang-format path: %s\n  clang-format --version: %s" "$clang_format" "$clang_format_version"
-   exit 1
+
+# Determine which diff command to use
+if [ -t 1 ] && diff --color=always /dev/null /dev/null >/dev/null 2>&1; then
+  # Terminal supports color and GNU diff with color is available
+  diff_cmd=(diff --color=always -u)
+elif which colordiff >/dev/null 2>&1; then
+  # Use colordiff as alternative
+  diff_cmd=(colordiff -u)
+else
+  # Fallback to plain diff
+  diff_cmd=(diff -u)
 fi
 
 THIS_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -51,11 +64,11 @@ cd "$THIS_DIR"/../ || exit 1
 have_changes=0       # We have uncommitted changes
 authored_previous=0  # We authored the most recent commit on this branch
 
-if [[ $(hg status -mard 2>/dev/null) ]]; then
+if [[ $(git status --porcelain 2>/dev/null) ]]; then
   have_changes=1
 fi
 
-if hg log -l 1 --template="{author}" | grep -q -e "<$USER@" -e "^$USER$"
+if git log -1 --pretty=format:"%an <%ae>" | grep -q -e "<$USER@" -e "^$USER" -e "<$USER>" -e "$USER@"
 then
   authored_previous=1
 fi
@@ -70,10 +83,10 @@ if (( all )); then
   )
 elif (( have_changes )); then
   echo "Formatting only modified files..."
-  files=( $(hg st . -man --include "**.{h,cpp,inc,def,mm,m}") )
+  files=( $(git diff --name-only --diff-filter=ACMR | grep -E '\.(h|cpp|inc|def|mm|m)$') )
 
 elif (( authored_previous )) || (( force )); then
-  last_commit_files=( $(hg st . -man --change . | grep -E '\.(h|cpp|inc|def|mm|m)$') )
+  last_commit_files=( $(git diff-tree --no-commit-id --name-only -r HEAD | grep -E '\.(h|cpp|inc|def|mm|m)$') )
   echo "There are no modified files, but you authored the last commit:"
   printf '  %s\n' "${last_commit_files[@]}"
   if (( !force )); then
@@ -91,11 +104,42 @@ else
 fi
 
 for f in "${files[@]}"; do
-  before=$(date -r "$f")
-  "$clang_format" --verbose -i -style=file "$f" 2>&1 | tr -d "\n"
-  echo -n '...'
-  after=$(date -r "$f")
-  test "$before" = "$after" && echo "ok" || echo "reformatted"
+  if [ ! -f "$f" ]; then
+    echo "File not found: $f (skipping)"
+    continue
+  fi
+
+  # Create a temporary file for the formatted content
+  temp_file=$(mktemp)
+  "$clang_format" -style=file "$f" > "$temp_file"
+
+  # Check if the file would be modified
+  if ! diff -q "$f" "$temp_file" >/dev/null 2>&1; then
+    echo "File would be reformatted: $f"
+
+    # Always show the differences with color
+    "${diff_cmd[@]}" "$f" "$temp_file" | sed "s|$temp_file|$f (formatted)|"
+
+    if (( interactive )); then
+      # Ask user whether to apply changes
+      read -r -p "Apply these changes? [y/N] " reply
+      if [[ $reply == [Yy] ]]; then
+        cp "$temp_file" "$f"
+        echo "Changes applied to $f"
+      else
+        echo "Changes not applied to $f"
+      fi
+    else
+      # Apply changes without asking
+      cp "$temp_file" "$f"
+      echo "Reformatted: $f"
+    fi
+  else
+    echo "No changes needed for $f"
+  fi
+
+  # Clean up the temporary file
+  rm -f "$temp_file"
 done
-echo
+
 echo "Done"

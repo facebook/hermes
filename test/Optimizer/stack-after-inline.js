@@ -9,6 +9,7 @@
 // Perform stack promotion after inlining
 
 function f1(num) {
+    'use strict';
     function bar() {
         return num;
     }
@@ -17,19 +18,16 @@ function f1(num) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [f1]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "f1": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %f1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "f1": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f1#0#1(num)#2
-// CHECK-NEXT:S{f1#0#1()#2} = []
+// CHECK:function f1(num: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst %num
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %num: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end

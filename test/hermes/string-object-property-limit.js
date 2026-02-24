@@ -5,13 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes %s | %FileCheck --match-full-lines %s
-// REQUIRES: !slow_debug
+// RUN: %hermes -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
+// UNSUPPORTED: slow_debug || gc_malloc
 
 try {
   var a = new String("foo");
   for (var j = 0; true; j++) {
-    a[j] = {};
+    a[j] = undefined;
   }
 } catch (e) {
   print(e.message);

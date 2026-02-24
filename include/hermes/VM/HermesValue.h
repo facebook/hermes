@@ -5,115 +5,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-//===----------------------------------------------------------------------===//
-/// \file
-/// This header defines the "NaN-boxing" encoding format used to represent
-/// values in Hermes.
-///
-/// NaN-boxing relies on the representation of doubles in IEEE-754:
-///
-/// \pre
-/// s   eeeeeee,eeee mmmm,mmmmmmmm,mmmmmmmm,mmmmmmmm,mmmmmmmm,mmmmmmmm,mmmmmmmm
-/// |   |            |
-/// 63  62           51                                                       0
-///
-/// s: 1-bit sign
-/// e: 11-bit exponent
-/// m: 52-bit mantissa
-/// \endpre
-///
-/// An exponent of all 1-s (0x7ff) and a non-zero mantissa is used to encode
-/// NaN. So, as long as the top 12 bits are 0x7ff or 0xfff and the bottom 52
-/// bits are not 0, we can store any bit pattern in the bottom bits and it will
-/// be interpreted as NaN.
-///
-/// This is what the "canonical quiet NaN" looks like:
-/// \pre
-/// 0   1111111,1111 1000,00000000,00000000,00000000,00000000,00000000,00000000
-/// |   |            |
-/// 63  62           51                                                       0
-/// \endpre
-///
-/// Note that the sign bit can have any value.
-/// We have chosen to set the sign bit as 1 and encode out 3-bit type tag in
-/// bits 50-48. The type tag cannot be zero because it's reserved for the
-/// "canonical quiet NaN". Thus our type tags range between:
-/// \pre
-/// 1   1111111,1111 1111,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx
-///   and
-/// 1   1111111,1111 1001,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx,xxxxxxxx
-/// \endpre
-///
-/// Masking only the top 16 bits, our tag range is [0xffff .. 0xfff9].
-/// Anything lower than 0xfff8 represents a real number, specifically 0xfff8
-/// covers the "canonical quiet NaN".
-///
-/// Extended Tags
-/// =============
-/// This leaves us with 48 data bits and only 7 tags. In some cases we don't
-/// need the full 48 bits, allowing us to extend the width of the tag. We have
-/// chosen to reserve the last 3 tags (0xfffd, 0xfffe, 0xffff) for full width
-/// 48-bit data, and to extend the first 4 tags with one bit to the right.
-/// We call the resulting 4-bit tag an "extended tag".
-///
-/// Heap Pointer Encoding
-/// ================
-/// On 32-bit platforms clearly we have enough bits to encode any pointer in
-/// the low word.
-///
-/// On 64-bit platforms, we could theoretically arrange our own heap to fit
-/// within the available 48-bits. In practice however that is not necessary
-/// (yet) because current 64-bit platforms use at most 48 bits of virtual
-/// address space. x86-64 requires bit 47 to be sign extended into the top 16
-/// bits (leaving effectively 47 address bits), while Linux ARM64 simply
-/// requires the top N bits (depending on configuration, but at least 16) be all
-/// 0 or all 1. In both cases negative values are used for kernel addresses
-/// (top bit 1).
-///
-/// Since in our case we never need to represent a kernel address - all
-/// addresses are within our own heap - we know that the top bit is 0 and we
-/// don't need to store it leaving us with exactly 48-bits.
-///
-/// Should the OS requirements change in the distant future, we can "squeeze" 3
-/// more bits by relying on the 8-byte alignment of all our allocations and
-/// shifting the values to the right. That is still not needed however.
-///
-/// Native Pointer Encoding
-/// ================
-/// We also have limited support for storing a native pointer in a HermesValue.
-/// When doing so, we do not associate a tag with the native pointer and instead
-/// require that the pointer is a valid non-NaN double bit-for-bit. It is the
-/// caller's responsibility to keep track of where these native pointers are
-/// stored.
-///
-/// Native pointers cannot be NaN-boxed because on platforms where the ARM
-/// memory tagging extension is enabled, the top byte may also have bits set
-/// in it. On Android, these tags are added in the 56th to 59th bits of pointers
-/// allocated in the native heap. However, as long as it is only the top byte
-/// and the bottom 48 bits that have non-zero values, we are guaranteed that the
-/// value will not be a NaN.
-///
-/// Fortunately, since the native pointers will appear as doubles to anything
-/// other than the code that created them, anything that scans HermesValues
-/// (e.g. the GC or heap snapshots), will simply ignore them.
-
 #ifndef HERMES_VM_HERMESVALUE_H
 #define HERMES_VM_HERMESVALUE_H
 
 #include "hermes/Support/Conversions.h"
+#include "hermes/VM/CompressedPointer.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/SymbolID.h"
+#include "hermes/VM/sh_legacy_value.h"
 
 #include "llvh/Support/raw_ostream.h"
 
 #include <cassert>
 #include <cmath>
 #include <cstdint>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace llvh {
 class raw_ostream;
 }
@@ -130,70 +36,80 @@ template <typename T>
 class PseudoHandle;
 
 // Only used for HV32 API compatibility.
-class PointerBase;
 class GCCell;
 class Runtime;
 
+// Ensure that HermesValue tags are handled correctly by updating this every
+// time the HERMESVALUE_VERSION changes, and going through the JIT and updating
+static_assert(
+    HERMESVALUE_VERSION == 2,
+    "HermesValue version mismatch, HermesValue methods may need to be updated");
+
 /// A NaN-box encoded value.
-class HermesValue {
+class HermesValue : public HermesValueBase {
  public:
-  using TagType = intptr_t;
+  using TagType = HVTagType;
   /// Tags are defined as 16-bit values positioned at the high bits of a 64-bit
   /// word.
   enum class Tag : TagType {
     /// If tag < FirstTag, the encoded value is a double.
-    First = llvh::SignExtend32<8>(0xf9),
-    EmptyInvalid = First,
-    UndefinedNull,
-    BoolSymbol,
-    NativeValue,
+    First = HVTag_First,
+    EmptyInvalid = HVTag_EmptyInvalid,
+    UndefinedNull = HVTag_UndefinedNull,
+    BoolSymbol = HVTag_BoolSymbol,
+#ifdef HERMESVM_BOXED_DOUBLES
+    RawHV32 = HVTag_RawHV32,
+#endif
 
     /// Pointer tags start here.
-    FirstPointer,
-    Str = FirstPointer,
-    BigInt,
-    Object,
-    Last = llvh::SignExtend32<8>(0xff),
+    FirstPointer = HVTag_FirstPointer,
+    Str = HVTag_Str,
+    BigInt = HVTag_BigInt,
+    Object = HVTag_Object,
+    Last = HVTag_Last,
   };
   static_assert(Tag::Object <= Tag::Last, "Tags overflow");
 
   /// An "extended tag", occupying one extra bit.
   enum class ETag : TagType {
-    Empty = (TagType)Tag::EmptyInvalid * 2,
+    Empty = HVETag_Empty,
 #ifdef HERMES_SLOW_DEBUG
     /// An invalid hermes value is one that should never exist in normal
     /// operation, it can be used as a sigil to indicate a programming failure.
-    Invalid = (TagType)Tag::EmptyInvalid * 2 + 1,
+    Invalid = HVETag_Invalid,
 #endif
-    Undefined = (TagType)Tag::UndefinedNull * 2,
-    Null = (TagType)Tag::UndefinedNull * 2 + 1,
-    Bool = (TagType)Tag::BoolSymbol * 2,
-    Symbol = (TagType)Tag::BoolSymbol * 2 + 1,
-    Native1 = (TagType)Tag::NativeValue * 2,
-    Native2 = (TagType)Tag::NativeValue * 2 + 1,
-    Str1 = (TagType)Tag::Str * 2,
-    Str2 = (TagType)Tag::Str * 2 + 1,
-    BigInt1 = (TagType)Tag::BigInt * 2,
-    BigInt2 = (TagType)Tag::BigInt * 2 + 1,
-    Object1 = (TagType)Tag::Object * 2,
-    Object2 = (TagType)Tag::Object * 2 + 1,
+    Undefined = HVETag_Undefined,
+    Null = HVETag_Null,
+    Bool = HVETag_Bool,
+    Symbol = HVETag_Symbol,
+#ifdef HERMESVM_BOXED_DOUBLES
+    RawHV32_1 = HVETag_RawHV32_1,
+    RawHV32_2 = HVETag_RawHV32_2,
+#endif
+    Str1 = HVETag_Str1,
+    Str2 = HVETag_Str2,
+    BigInt1 = HVETag_BigInt1,
+    BigInt2 = HVETag_BigInt2,
+    Object1 = HVETag_Object1,
+    Object2 = HVETag_Object2,
 
-    FirstPointer = Str1,
+    FirstPointer = HVETag_FirstPointer,
+    LastNumberOrCompressible = HVETag_LastNumberOrCompressible,
   };
 
   /// Number of bits used in the high part to encode the sign, exponent and tag.
-  static constexpr unsigned kNumTagExpBits = 16;
+  static constexpr unsigned kNumTagExpBits = kHV_NumTagExpBits;
   /// Number of bits available for data storage.
-  static constexpr unsigned kNumDataBits = (64 - kNumTagExpBits);
+  static constexpr unsigned kNumDataBits = kHV_NumDataBits;
 
   /// Width of a tag in bits. The tag is aligned to the right of the top bits.
-  static constexpr unsigned kTagWidth = 3;
-  static constexpr unsigned kTagMask = (1 << kTagWidth) - 1;
+  static constexpr unsigned kTagWidth = kHV_TagWidth;
+  static constexpr unsigned kTagMask = kHV_TagMask;
   /// Mask to extract the data from the whole 64-bit word.
-  static constexpr uint64_t kDataMask = (1ull << kNumDataBits) - 1;
+  static constexpr uint64_t kDataMask = kHV_DataMask;
 
-  static constexpr unsigned kETagWidth = 4;
-  static constexpr unsigned kETagMask = (1 << kETagWidth) - 1;
+  static constexpr unsigned kETagWidth = kHV_ETagWidth;
+  static constexpr unsigned kETagMask = kHV_ETagMask;
 
   /// Assert that the pointer can be encoded in \c kNumDataBits.
   static void validatePointer(const void *ptr) {
@@ -216,15 +132,20 @@ class HermesValue {
   constexpr inline static HermesValue fromRaw(RawType raw) {
     return HermesValue(raw);
   }
+  constexpr inline static HermesValue fromTagAndValue(Tag tag, RawType value) {
+    return HermesValue(value, tag);
+  }
 
-  /// Dump the contents to stderr.
-  void dump(llvh::raw_ostream &stream = llvh::errs()) const;
+  /// Dump the contents with \n.
+  void dump(llvh::raw_ostream &stream) const;
+  /// Dump the contents to stderr with \n.
+  void dump() const;
 
   inline Tag getTag() const {
-    return (Tag)((int64_t)raw_ >> kNumDataBits);
+    return (Tag)((int64_t)this->raw >> kNumDataBits);
   }
   inline ETag getETag() const {
-    return (ETag)((int64_t)raw_ >> (kNumDataBits - 1));
+    return (ETag)((int64_t)this->raw >> (kNumDataBits - 1));
   }
 
   /// Combine two tags into an 8-bit value.
@@ -279,11 +200,13 @@ class HermesValue {
     return encodeBigIntValueUnsafe(val);
   }
 
+  /// Encode a 32-bit unsigned integer bit-for-bit as a HermesValue. We know
+  /// that the resulting value will always be a valid non-NaN double.
   inline static HermesValue encodeNativeUInt32(uint32_t val) {
-    HermesValue RV(val, Tag::NativeValue);
+    HermesValue RV(val);
     assert(
-        RV.isNativeValue() && RV.getNativeUInt32() == val &&
-        "native value doesn't fit");
+        RV.isDouble() && RV.getNativeUInt32() == val &&
+        "Native value encoding failed");
     return RV;
   }
 
@@ -302,7 +225,7 @@ class HermesValue {
   }
 
   constexpr inline static HermesValue encodeBoolValue(bool val) {
-    return HermesValue((uint64_t)(val), ETag::Bool);
+    return HermesValue((uint64_t)(val) << kHV_BoolBitIdx, ETag::Bool);
   }
 
   inline static constexpr HermesValue encodeNullValue() {
@@ -323,16 +246,6 @@ class HermesValue {
   }
 #endif
 
-  /// Encode a numeric value into the best possible representation based on the
-  /// static type of the parameter. Right now we only have one representation
-  /// (double), but that could change in the future.
-  inline static HermesValue encodeUntrustedNumberValue(double num) {
-    if (LLVM_UNLIKELY(std::isnan(num))) {
-      return encodeNaNValue();
-    }
-    return HermesValue(llvh::DoubleToBits(num));
-  }
-
   /// Encodes \p num as a hermes value without checking for NaNs.
   /// Should only be used in for values coming from locations within the VM,
   /// where we know any NaN will be the quiet NaN.
@@ -340,16 +253,6 @@ class HermesValue {
     HermesValue RV(llvh::DoubleToBits(num));
     assert(RV.isDouble() && "value not representable as double");
     return RV;
-  }
-
-  /// Encode a numeric value into the best possible representation based on the
-  /// static type of the parameter. Right now we only have one representation
-  /// (double), but that could change in the future.
-  template <typename T>
-  inline static
-      typename std::enable_if<std::is_integral<T>::value, HermesValue>::type
-      encodeUntrustedNumberValue(T num) {
-    return encodeTrustedNumberValue((double)num);
   }
 
   /// Encodes \p num as a hermes value without safety checkings.
@@ -363,9 +266,36 @@ class HermesValue {
     return encodeTrustedNumberValue((double)num);
   }
 
+  /// Encode a numeric value into the best possible representation based on the
+  /// static type of the parameter. Right now we only have one representation
+  /// (double), but that could change in the future.
+  inline static HermesValue encodeUntrustedNumberValue(double num) {
+    if (LLVM_UNLIKELY(std::isnan(num))) {
+      return encodeNaNValue();
+    }
+    return HermesValue(llvh::DoubleToBits(num));
+  }
+
+  /// Encode a numeric value into the best possible representation based on the
+  /// static type of the parameter. Right now we only have one representation
+  /// (double), but that could change in the future.
+  template <typename T>
+  inline static
+      typename std::enable_if<std::is_integral<T>::value, HermesValue>::type
+      encodeUntrustedNumberValue(T num) {
+    return encodeTrustedNumberValue((double)num);
+  }
+
   static HermesValue encodeNaNValue() {
     return HermesValue(
         llvh::DoubleToBits(std::numeric_limits<double>::quiet_NaN()));
+  }
+
+  /// Create a HermesValue that has the raw representation 0. This value must
+  /// never become visible to user code, and is guaranteed to be ignored by the
+  /// GC.
+  static constexpr HermesValue encodeRawZeroValueUnsafe() {
+    return HermesValue{0};
   }
 
   /// Keeping tag constant, make a new HermesValue with \p val stored in it.
@@ -395,15 +325,17 @@ class HermesValue {
     return getETag() == ETag::Invalid;
   }
 #endif
-  inline bool isNativeValue() const {
-    return getTag() == Tag::NativeValue;
-  }
   inline bool isSymbol() const {
     return getETag() == ETag::Symbol;
   }
   inline bool isBool() const {
     return getETag() == ETag::Bool;
   }
+#ifdef HERMESVM_BOXED_DOUBLES
+  inline bool isRawHV32() const {
+    return getTag() == Tag::RawHV32;
+  }
+#endif
   inline bool isObject() const {
     return getTag() == Tag::Object;
   }
@@ -414,10 +346,17 @@ class HermesValue {
     return getTag() == Tag::BigInt;
   }
   inline bool isDouble() const {
-    return raw_ < ((uint64_t)Tag::First << kNumDataBits);
+    return this->raw < ((uint64_t)Tag::First << kNumDataBits);
+  }
+  /// Return true if this value is either to a number, or is encoded entirely in
+  /// its most significant 29 bits, with the rest being 0. This is used by
+  /// HermesValue32 to determine whether the value should be considered for
+  /// storage in "compressed HV64" form.
+  inline bool isNumberOrCompressible() const {
+    return (uint32_t)getETag() <= (uint32_t)ETag::LastNumberOrCompressible;
   }
   inline bool isPointer() const {
-    return raw_ >= ((uint64_t)Tag::FirstPointer << kNumDataBits);
+    return this->raw >= ((uint64_t)Tag::FirstPointer << kNumDataBits);
   }
   inline bool isNumber() const {
     return isDouble();
@@ -427,43 +366,46 @@ class HermesValue {
     // NaN. All the other bits must be equal to the NaN bit pattern, since we
     // only use the quiet NaN to represent NaN.
     uint64_t kMask = llvh::maskLeadingZeros<uint64_t>(1);
-    return (this->raw_ & kMask) == (encodeNaNValue().raw_ & kMask);
+    return (this->raw & kMask) == (encodeNaNValue().raw & kMask);
   }
 
-  inline RawType getRaw() const {
-    return raw_;
+  inline constexpr RawType getRaw() const {
+    return this->raw;
   }
 
   inline void *getPointer() const {
     assert(isPointer());
     // Mask out the tag.
-    return reinterpret_cast<void *>(raw_ & kDataMask);
+    return reinterpret_cast<void *>(this->raw & kDataMask);
   }
 
   inline double getDouble() const {
     assert(isDouble());
-    return llvh::BitsToDouble(raw_);
+    return llvh::BitsToDouble(this->raw);
   }
 
+  /// Get a native uint32 value stored in the HermesValue. This must only be
+  /// used in instances where the caller knows the type of this value, since
+  /// there is no corresponding tag (it just looks like a double).
   inline uint32_t getNativeUInt32() const {
-    assert(isNativeValue());
-    return (uint32_t)raw_;
+    assert(isDouble() && "Native uint32 must look like a double.");
+    return (uint32_t)this->raw;
   }
 
   template <class T>
   inline T *getNativePointer() const {
     assert(isDouble() && "Native pointers must look like doubles.");
-    return reinterpret_cast<T *>(raw_);
+    return reinterpret_cast<T *>(this->raw);
   }
 
   inline SymbolID getSymbol() const {
     assert(isSymbol());
-    return SymbolID::unsafeCreate((uint32_t)raw_);
+    return SymbolID::unsafeCreate((uint32_t)this->raw);
   }
 
   inline bool getBool() const {
     assert(isBool());
-    return (bool)(raw_ & 0x1);
+    return _sh_ljs_get_bool(*this);
   }
 
   inline StringPrimitive *getString() const {
@@ -549,15 +491,15 @@ class HermesValue {
   /// sure that \p this is not an address in the heap, is treated as a root
   /// location.
   void setNoBarrier(HermesValue hv) {
-    raw_ = hv.raw_;
+    this->raw = hv.raw;
   }
 
  private:
-  constexpr explicit HermesValue(uint64_t val) : raw_(val) {}
+  constexpr explicit HermesValue(uint64_t val) : HermesValueBase{val} {}
   constexpr explicit HermesValue(uint64_t val, Tag tag)
-      : raw_(val | ((uint64_t)tag << kNumDataBits)) {}
+      : HermesValueBase{val | ((uint64_t)tag << kNumDataBits)} {}
   constexpr explicit HermesValue(uint64_t val, ETag etag)
-      : raw_(val | ((uint64_t)etag << (kNumDataBits - 1))) {}
+      : HermesValueBase{val | ((uint64_t)etag << (kNumDataBits - 1))} {}
 
   /// Default move assignment operator used by friends
   /// (PseudoHandle<HermesValue>) in order to allow for move assignment in those
@@ -565,9 +507,6 @@ class HermesValue {
   /// require making PseudoHandle<T> not TriviallyCopyable (because we would
   /// have to template or handwrite the move assignment operator).
   HermesValue &operator=(HermesValue &&) = default;
-
-  // 64 raw bits stored and reinterpreted as necessary.
-  uint64_t raw_;
 
   friend class PseudoHandle<HermesValue>;
   friend struct HVConstants;
@@ -577,9 +516,11 @@ static_assert(
     std::is_trivial<HermesValue>::value,
     "HermesValue must be trivial");
 
-/// Encode common double constants to HermesValue.
-/// The tricks is that that we know the bit patterns of known constants.
+/// Encode common double constants to HermesValue. The encode functions cannot
+/// be used because they are not constepxr, so we use the bit patterns of known
+/// constants.
 struct HVConstants {
+  static_assert(HERMESVALUE_VERSION == 2, "HVConstants version mismatch");
   static constexpr HermesValue kZero = HermesValue(0);
   static constexpr HermesValue kOne = HermesValue(0x3ff0ull << 48);
   static constexpr HermesValue kNegOne = HermesValue(0xbff0ull << 48);
@@ -605,32 +546,29 @@ class PinnedHermesValue : public HermesValue {
   inline PinnedHermesValue &operator=(PseudoHandle<T> &&hv);
 } HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
 
-// All HermesValues stored in heap object should be of this
-// type. Hides assignment operator, but provides set operations that
-// do a write barrier for pointer values, or else assert that the new
-// value is not a pointer.
+/// The base implementation of GC aware HermesValue types. Specifically, types
+/// for HermesValues that live in normal objects and objects supporting large
+/// allocation subclass this. We use this base type in SlotAcceptor and places
+/// that we don't need to specially handle large allocation. All set() methods
+/// (except setNonPtr()) can only be defined and called on subclasses.
+/// Hides assignment operator, but provides set operations that do a write
+/// barrier for pointer values, or else assert that the new value is not a
+/// pointer.
 template <typename HVType>
-class GCHermesValueBase final : public HVType {
+class GCHermesValueBaseImpl : public HVType {
+ protected:
+  GCHermesValueBaseImpl() : HVType(HVType::encodeUndefinedValue()) {}
+
+  /// Initialize the base HV, assuming all necessary write barriers have been
+  /// performed in constructors of subclasses.
+  GCHermesValueBaseImpl(const HVType &hv) : HVType(hv) {}
+
  public:
-  GCHermesValueBase() : HVType(HVType::encodeUndefinedValue()) {}
-  /// Initialize a GCHermesValue from another HV. Performs a write barrier.
-  template <typename NeedsBarriers = std::true_type>
-  GCHermesValueBase(HVType hv, GC &gc);
-  /// Initialize a GCHermesValue from a non-pointer HV. Might perform a write
-  /// barrier, depending on the GC.
-  /// NOTE: The last parameter is unused, but acts as an overload selector.
-  template <typename NeedsBarriers = std::true_type>
-  GCHermesValueBase(HVType hv, GC &gc, std::nullptr_t);
-  GCHermesValueBase(const HVType &) = delete;
-
-  /// The HermesValue \p hv may be an object pointer.  Assign the
-  /// value, and perform any necessary write barriers.
-  template <typename NeedsBarriers = std::true_type>
-  inline void set(HVType hv, GC &gc);
-
   /// The HermesValue \p hv must not be an object pointer.  Assign the
   /// value.
   /// Some GCs still need to do a write barrier though, so pass a GC parameter.
+  /// Note that this can be used for any object, since the value is not a
+  /// pointer which does not require a special barrier for now.
   inline void setNonPtr(HVType hv, GC &gc);
 
   /// Force a write barrier to occur on this value, as if the value was being
@@ -639,6 +577,48 @@ class GCHermesValueBase final : public HVType {
   /// NOTE: This barrier is typically used when a variable-sized object's length
   /// decreases.
   inline void unreachableWriteBarrier(GC &gc);
+
+  /// This is unsafe to use if the memory region being copied into (pointed to
+  /// by \p result) is reachable by the GC (for instance, memory within the
+  /// size of an ArrayStorage), since it does not update elements atomically.
+  /// This must be used if the owning object supports large allocation.
+  static inline GCHermesValueBaseImpl<HVType> *uninitialized_copy(
+      GCHermesValueBaseImpl<HVType> *first,
+      GCHermesValueBaseImpl<HVType> *last,
+      GCHermesValueBaseImpl<HVType> *result,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
+  /// unreachable.
+  static inline void rangeUnreachableWriteBarrier(
+      GCHermesValueBaseImpl<HVType> *first,
+      GCHermesValueBaseImpl<HVType> *last,
+      GC &gc);
+};
+
+template <typename HVType>
+class GCHermesValueImpl final : public GCHermesValueBaseImpl<HVType> {
+ public:
+  GCHermesValueImpl() : GCHermesValueBaseImpl<HVType>() {}
+
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier. This
+  /// must not be used if it lives in an object that supports large allocation.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueImpl(HVType hv, GC &gc);
+
+  /// Initialize a GCHermesValue from a non-pointer HV without performing write
+  /// barrier.
+  /// NOTE: The last parameter is unused, but acts as an overload selector.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueImpl(HVType hv, GC &gc, std::nullptr_t);
+
+  GCHermesValueImpl(const HVType &) = delete;
+
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers.
+  template <typename NeedsBarriers = std::true_type>
+  inline void set(HVType hv, GC &gc);
 
   /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
   /// value \p fill.  If the fill value is an object pointer, must
@@ -658,46 +638,88 @@ class GCHermesValueBase final : public HVType {
   static inline OutputIt
   copy(InputIt first, InputIt last, OutputIt result, GC &gc);
 
-  /// Same as \p copy, but the range [result, result + (last - first)) has not
-  /// been previously initialized. Cannot use this on previously initialized
-  /// memory, as it will use an incorrect write barrier.
-  template <typename InputIt, typename OutputIt>
-  static inline OutputIt
-  uninitialized_copy(InputIt first, InputIt last, OutputIt result, GC &gc);
-
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  /// Same as \p copy, but specialized for raw pointers.
-  static inline GCHermesValueBase<HVType> *copy(
-      GCHermesValueBase<HVType> *first,
-      GCHermesValueBase<HVType> *last,
-      GCHermesValueBase<HVType> *result,
-      GC &gc);
-#endif
-
-  /// Same as \p uninitialized_copy, but specialized for raw pointers. This is
-  /// unsafe to use if the memory region being copied into (pointed to by
-  /// \p result) is reachable by the GC (for instance, memory within the
-  /// size of an ArrayStorage), since it does not update elements atomically.
-  static inline GCHermesValueBase<HVType> *uninitialized_copy(
-      GCHermesValueBase<HVType> *first,
-      GCHermesValueBase<HVType> *last,
-      GCHermesValueBase<HVType> *result,
-      GC &gc);
-
   /// Copies a range of values and performs a write barrier on each.
   template <typename InputIt, typename OutputIt>
   static inline OutputIt
   copy_backward(InputIt first, InputIt last, OutputIt result, GC &gc);
+};
 
-  /// Same as \c unreachableWriteBarrier, but for a range of values all becoming
-  /// unreachable.
-  static inline void rangeUnreachableWriteBarrier(
-      GCHermesValueBase<HVType> *first,
-      GCHermesValueBase<HVType> *last,
+template <typename HVType>
+class GCHermesValueInLargeObjImpl final : public GCHermesValueBaseImpl<HVType> {
+ public:
+  GCHermesValueInLargeObjImpl() : GCHermesValueBaseImpl<HVType>() {}
+
+  /// Initialize a GCHermesValue from another HV. Performs a write barrier using
+  /// \p owningObj, which owns this GCHermesValue and may support large
+  /// allocation.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueInLargeObjImpl(HVType hv, const GCCell *owningObj, GC &gc);
+
+  /// Initialize a GCHermesValue from a non-pointer HV without performing write
+  /// barrier.
+  /// NOTE: The last parameter is unused, but acts as an overload selector.
+  template <typename NeedsBarriers = std::true_type>
+  GCHermesValueInLargeObjImpl(HVType hv, GC &gc, std::nullptr_t);
+
+  GCHermesValueInLargeObjImpl(const HVType &) = delete;
+
+  /// The HermesValue \p hv may be an object pointer. Assign the value, and
+  /// perform any necessary write barriers. \p owningObj is the object that
+  /// contains this GCHermesValueBase, and it may support large allocation.
+  /// for which the object pointer is needed by writer barriers.
+  template <typename NeedsBarriers = std::true_type>
+  inline void set(HVType hv, const GCCell *owningObj, GC &gc);
+
+  /// Fills a region of GCHermesValues defined by [\p first, \p last) with the
+  /// value \p fill.  If the fill value is an object pointer, must provide a
+  /// non-null \p gc argument, to perform write barriers.
+  template <typename InputIt>
+  static inline void fill(
+      InputIt first,
+      InputIt last,
+      HVType fill,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Same as \p fill except the range expressed by  [\p first, \p last) has not
+  /// been previously initialized. Cannot use this on previously initialized
+  /// memory, as it will use an incorrect write barrier.
+  template <typename InputIt>
+  static inline void uninitialized_fill(
+      InputIt first,
+      InputIt last,
+      HVType fill,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Copies a range of values and performs a write barrier on each.
+  template <typename InputIt, typename OutputIt>
+  static inline OutputIt copy(
+      InputIt first,
+      InputIt last,
+      OutputIt result,
+      const GCCell *owningObj,
+      GC &gc);
+
+  /// Copies a range of values and performs a write barrier on each.
+  template <typename InputIt, typename OutputIt>
+  static inline OutputIt copy_backward(
+      InputIt first,
+      InputIt last,
+      OutputIt result,
+      const GCCell *owningObj,
       GC &gc);
 };
 
-using GCHermesValue = GCHermesValueBase<HermesValue>;
+/// Base type for GC aware HermesValues. This should only be used when we don't
+/// need to handle large allocation specially.
+using GCHermesValueBase = GCHermesValueBaseImpl<HermesValue>;
+
+/// GCHermesValue stored in a normal object.
+using GCHermesValue = GCHermesValueImpl<HermesValue>;
+
+/// GCHermesValue stored in an object that supports large allocation.
+using GCHermesValueInLargeObj = GCHermesValueInLargeObjImpl<HermesValue>;
 
 /// copyToPinned is harder to generalise since it also depends on
 /// PinnedHermesValue, so we keep it in a separate struct for now.
@@ -709,10 +731,23 @@ struct GCHermesValueUtil {
       PinnedHermesValue *result);
 };
 
-llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue hv);
+/// Dump a SHLegacyValue to \p OS.
+llvh::raw_ostream &dumpHermesValue(llvh::raw_ostream &OS, SHLegacyValue lhv);
+/// Dump a SHLegacyValue to llvh::errs() with \n.
+void dumpHermesValue(SHLegacyValue lhv);
+
+inline llvh::raw_ostream &operator<<(llvh::raw_ostream &OS, HermesValue lhv) {
+  return dumpHermesValue(OS, lhv);
+}
+
+inline PinnedHermesValue *toPHV(SHLegacyValue *shv) {
+  return static_cast<PinnedHermesValue *>(shv);
+}
+inline const PinnedHermesValue *toPHV(const SHLegacyValue *shv) {
+  return static_cast<const PinnedHermesValue *>(shv);
+}
 
 } // end namespace vm
 } // end namespace hermes
-#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_HERMESVALUE_H

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -commonjs -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-flow -commonjs -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL:   "body": {
 // CHECK-NEXT:     "type": "BlockStatement",
@@ -125,6 +125,8 @@ export type T = string;
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
 // CHECK-NEXT:         "impltype": null,
+// CHECK-NEXT:         "lowerBound": null,
+// CHECK-NEXT:         "upperBound": null,
 // CHECK-NEXT:         "supertype": null,
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -187,6 +189,8 @@ export type T = string;
 // CHECK-NEXT:           }
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "impltype": null,
+// CHECK-NEXT:         "lowerBound": null,
+// CHECK-NEXT:         "upperBound": null,
 // CHECK-NEXT:         "supertype": null,
 // CHECK-NEXT:         "loc": {
 // CHECK-NEXT:           "start": {
@@ -218,6 +222,8 @@ export type T = string;
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "typeParameters": null,
 // CHECK-NEXT:         "impltype": null,
+// CHECK-NEXT:         "lowerBound": null,
+// CHECK-NEXT:         "upperBound": null,
 // CHECK-NEXT:         "supertype": {
 // CHECK-NEXT:           "type": "StringTypeAnnotation",
 // CHECK-NEXT:           "loc": {

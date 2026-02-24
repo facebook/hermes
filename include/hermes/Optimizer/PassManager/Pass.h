@@ -10,8 +10,6 @@
 
 #include "llvh/ADT/StringRef.h"
 
-#include <memory>
-
 namespace hermes {
 
 class Function;
@@ -29,28 +27,31 @@ class Pass {
   enum class PassKind {
     Function,
     Module,
+    // Kinds below this are for "passes" used only in the implementation of
+    // PassManager; these are not actual optimization passes.
+    FixedPointLoop,
   };
 
  private:
   /// Stores the kind of derived class.
-  const PassKind kind;
+  const PassKind kind_;
   /// The textual name of the pass.
-  llvh::StringRef name;
+  llvh::StringRef name_;
 
  public:
   /// Constructor. \p K indicates the kind of pass this is.
-  explicit Pass(Pass::PassKind K, llvh::StringRef name) : kind(K), name(name) {}
+  Pass(Pass::PassKind K, llvh::StringRef name) : kind_(K), name_(name) {}
 
   virtual ~Pass() = default;
 
   /// Returns the kind of the pass.
   PassKind getKind() const {
-    return kind;
+    return kind_;
   }
 
   /// Returns the textual name of the pass.
   llvh::StringRef getName() const {
-    return name;
+    return name_;
   }
 };
 
@@ -85,7 +86,7 @@ class ModulePass : public Pass {
 };
 
 /// Pass header declaration.
-#define PASS(ID, NAME, DESCRIPTION) std::unique_ptr<Pass> create##ID();
+#define PASS(ID, NAME, DESCRIPTION) Pass *create##ID();
 #include "Passes.def"
 
 } // namespace hermes

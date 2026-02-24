@@ -8,10 +8,10 @@
 #ifndef HERMES_CONSOLEHOST_CONSOLEHOST_H
 #define HERMES_CONSOLEHOST_CONSOLEHOST_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/CompilerDriver/CompilerDriver.h"
-#include "hermes/ConsoleHost/MemorySizeParser.h"
 #include "hermes/Public/RuntimeConfig.h"
+#include "hermes/Support/MemorySizeParser.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/instrumentation/StatSamplingThread.h"
 
@@ -129,17 +129,58 @@ struct ExecuteOptions {
   /// Enable basic block profiling.
   bool basicBlockProfiling{false};
 
+  // If non-empty, write profiling output to this file, rather than
+  // to stderr.
+  std::string profilingOutFile;
+
   /// Stop after creating the RuntimeModule.
   bool stopAfterInit{false};
 
   /// Execution time limit.
   uint32_t timeLimit{0};
 
+  /// Dump JIT'ed code.
+  unsigned dumpJITCode{0};
+
+  /// The jitdump file descriptor used for perf profiling.
+  int perfProfJitDumpFd{-1};
+
+  /// The debug information file path used for perf profiling. This serves as a
+  /// fake "source file" that we use for storing debug information from the JIT.
+  std::string perfProfDebugInfoFile;
+
+  /// The file descriptor for writing the above debug information file.
+  int perfProfDebugInfoFd{-1};
+
+  /// Fatally crash on any JIT compilation error.
+  bool jitCrashOnError{false};
+
+  /// Emit asserts in JIT'ed code
+  bool jitEmitAsserts{false};
+
+  /// Emit counters in JIT'ed code.
+  bool jitEmitCounters{false};
+
+  /// If non-null, holds statistics for every garbage collection that occurs.
+  const std::vector<::hermes::vm::GCAnalyticsEvent> *gcAnalyticsEvents{nullptr};
+
   /// Perform a full GC just before printing any statistics.
   bool forceGCBeforeStats{false};
 
-  /// Run the sampling profiler.
-  bool sampleProfiling{false};
+  enum class SampleProfilingMode {
+    /// No sampling profiler.
+    None,
+    /// Chrome devtools format.
+    Chrome,
+    /// Tracery format.
+    Tracery,
+  };
+
+  /// If not None, run sampling profiler and dump the result.
+  SampleProfilingMode sampleProfiling{SampleProfilingMode::None};
+
+  /// Sampling profiler frequency.
+  double sampleProfilingFreq{100};
 
   /// Start tracking heap objects before executing bytecode.
   bool heapTimeline{false};

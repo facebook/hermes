@@ -8,36 +8,41 @@
 #ifndef HERMES_VM_CODEBLOCK_H
 #define HERMES_VM_CODEBLOCK_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "JIT/Config.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/IdentifierTable.h"
 #include "hermes/VM/Profiler.h"
 #include "hermes/VM/PropertyCache.h"
-#include "hermes/VM/SerializedLiteralParser.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/Optional.h"
 #include "llvh/Support/TrailingObjects.h"
 
 #include <memory>
 #include <vector>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
 class RuntimeModule;
 class CodeBlock;
 
+/// A pointer to JIT-compiled function.
+typedef HermesValue (*JITCompiledFunctionPtr)(Runtime *runtime);
+
 /// A sequence of instructions representing the body of a function.
-class CodeBlock final
-    : private llvh::TrailingObjects<CodeBlock, PropertyCacheEntry> {
+class CodeBlock final : private llvh::TrailingObjects<
+                            CodeBlock,
+                            ReadPropertyCacheEntry,
+                            WritePropertyCacheEntry,
+                            PrivateNameCacheEntry> {
   friend TrailingObjects;
+  friend struct RuntimeOffsets;
+
   /// Points to the runtime module with the information required for this code
   /// block.
   RuntimeModule *const runtimeModule_;
@@ -51,51 +56,64 @@ class CodeBlock final
   /// ID of this function in the module's function list.
   uint32_t functionID_;
 
+#ifndef HERMESVM_JIT
+#error "JIT config not included"
+#endif
+#if HERMESVM_JIT
+  /// Set to true if for some reason we don't want to JIT this block, for
+  /// example because it contains constructs that the JIT can't handle.
+  bool dontJIT_ = false;
+
+  /// If this CodeBlock was compiled, a pointer to the body.
+  JITCompiledFunctionPtr JITCompiled_ = nullptr;
+
+  /// Function execution count.
+  /// Ideally, a function's hotness should also include if it has a loop and how
+  /// hot that loop is.
+  uint32_t executionCount_ = 0;
+#endif
+
 #ifdef HERMES_ENABLE_DEBUGGER
   /// The number of breakpoints currently installed in this function.
   uint32_t numInstalledBreakpoints_ = 0;
 #endif
 
-  /// Total size of the property cache.
-  const uint32_t propertyCacheSize_;
+  /// Total size of the property caches.
+  const uint32_t readPropertyCacheSize_;
+  const uint32_t writePropertyCacheSize_;
 
-  /// Offset of the write property cache, which occurs after the read property
-  /// cache.
-  const uint32_t writePropCacheOffset_;
-
-#ifndef HERMESVM_LEAN
-  /// Compiles a lazy CodeBlock. Intended to be called from lazyCompile.
-  ExecutionStatus lazyCompileImpl(Runtime &runtime);
-#endif
-
-  /// Helper function for getting start and end locations.
-  /// Given an SMLoc, returns the source coordinates of it in the lazy function.
-  /// \param start if true, return the start coordinates, else end coordinates.
-  SourceErrorManager::SourceCoords getLazyFunctionLoc(bool start) const;
-
-  /// \return the base pointer of the property cache.
-  PropertyCacheEntry *propertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>();
-  }
-
-  PropertyCacheEntry *writePropertyCache() {
-    return getTrailingObjects<PropertyCacheEntry>() + writePropCacheOffset_;
-  }
+  /// Total size of the private name cache.
+  const uint32_t privateNameCacheSize_;
 
   CodeBlock(
       RuntimeModule *runtimeModule,
       hbc::RuntimeFunctionHeader header,
       const uint8_t *bytecode,
       uint32_t functionID,
-      uint32_t cacheSize,
-      uint32_t writePropCacheOffset)
+      uint32_t readCacheSize,
+      uint32_t writeCacheSize,
+      uint32_t privateNameCacheSize)
       : runtimeModule_(runtimeModule),
         functionHeader_(header),
         bytecode_(bytecode),
         functionID_(functionID),
-        propertyCacheSize_(cacheSize),
-        writePropCacheOffset_(writePropCacheOffset) {
-    std::uninitialized_fill_n(propertyCache(), cacheSize, PropertyCacheEntry{});
+        readPropertyCacheSize_(readCacheSize),
+        writePropertyCacheSize_(writeCacheSize),
+        privateNameCacheSize_(privateNameCacheSize) {
+    std::uninitialized_fill_n(
+        readPropertyCache(), readCacheSize, ReadPropertyCacheEntry{});
+    std::uninitialized_fill_n(
+        writePropertyCache(), writeCacheSize, WritePropertyCacheEntry{});
+    std::uninitialized_fill_n(
+        privateNameCache(), privateNameCacheSize, PrivateNameCacheEntry{});
+  }
+
+  size_t numTrailingObjects(OverloadToken<ReadPropertyCacheEntry>) const {
+    return readPropertyCacheSize_;
+  }
+
+  size_t numTrailingObjects(OverloadToken<WritePropertyCacheEntry>) const {
+    return writePropertyCacheSize_;
   }
 
  public:
@@ -103,29 +121,6 @@ class CodeBlock final
   /// ID written/read by JS function profiler on first/later function events.
   ProfilerID profilerID{NO_PROFILER_ID};
 #endif
-
-  /// Create a CodeBlock for a given runtime module \p runtimeModule. The result
-  /// must be deallocated via delete, which is overridden.
-  /// TODO: it would be nice to have this return a unique_ptr with a custom
-  /// deleter; however lazy compilation requires that multiple RuntimeModules
-  /// reference the same CodeBlock, so it is not yet possible.
-  static CodeBlock *create(
-      RuntimeModule *runtimeModule,
-      hbc::RuntimeFunctionHeader header,
-      const uint8_t *bytecode,
-      uint32_t functionID,
-      uint32_t cacheSize,
-      uint32_t writePropCacheOffset) {
-    auto allocSize = totalSizeToAlloc<PropertyCacheEntry>(cacheSize);
-    void *mem = checkedMalloc(allocSize);
-    return new (mem) CodeBlock(
-        runtimeModule,
-        header,
-        bytecode,
-        functionID,
-        cacheSize,
-        writePropCacheOffset);
-  }
 
   /// Override of delete that balances the memory allocated in our create()
   /// function. Note the destructor has run already.
@@ -135,14 +130,25 @@ class CodeBlock final
 
   using const_iterator = const uint8_t *;
 
+  /// \return the base pointers of the property caches.
+  ReadPropertyCacheEntry *readPropertyCache() {
+    return getTrailingObjects<ReadPropertyCacheEntry>();
+  }
+
+  WritePropertyCacheEntry *writePropertyCache() {
+    return getTrailingObjects<WritePropertyCacheEntry>();
+  }
+
+  /// \return the base pointer of the private name cache.
+  PrivateNameCacheEntry *privateNameCache() {
+    return getTrailingObjects<PrivateNameCacheEntry>();
+  }
+
   uint32_t getParamCount() const {
-    return functionHeader_.paramCount();
+    return functionHeader_.getParamCount();
   }
   uint32_t getFrameSize() const {
-    return functionHeader_.frameSize();
-  }
-  uint32_t getEnvironmentSize() const {
-    return functionHeader_.environmentSize();
+    return functionHeader_.getFrameSize();
   }
   uint32_t getFunctionID() const {
     return functionID_;
@@ -158,44 +164,36 @@ class CodeBlock final
   /// backtraces when debug info is not present.
   uint32_t getVirtualOffset() const;
 
-  SerializedLiteralParser getArrayBufferIter(
-      uint32_t idx,
-      unsigned int numLiterals) const;
-
-  SerializedLiteralParser getObjectBufferKeyIter(
-      uint32_t idx,
-      unsigned int numLiterals) const;
-
-  SerializedLiteralParser getObjectBufferValueIter(
-      uint32_t idx,
-      unsigned int numLiterals) const;
-
   RuntimeModule *getRuntimeModule() const {
     return runtimeModule_;
   }
 
+  const hbc::RuntimeFunctionHeader &getFunctionHeader() const {
+    return functionHeader_;
+  }
+
   hbc::FunctionHeaderFlag getHeaderFlags() const {
-    return functionHeader_.flags();
+    return functionHeader_.getFlags();
   }
 
   bool isStrictMode() const {
-    return functionHeader_.flags().strictMode;
+    return functionHeader_.getFlags().getStrictMode();
   }
 
   SymbolID getNameMayAllocate() const;
 
   /// \return The name of this code block, as a UTF-8 encoded string.
   /// Does no JS heap allocation.
-  std::string getNameString(GCBase::GCCallbacks &runtime) const;
+  std::string getNameString() const;
 
   const_iterator begin() const {
     return bytecode_;
   }
   const_iterator end() const {
-    return bytecode_ + functionHeader_.bytecodeSizeInBytes();
+    return bytecode_ + functionHeader_.getBytecodeSizeInBytes();
   }
   llvh::ArrayRef<uint8_t> getOpcodeArray() const {
-    return {bytecode_, functionHeader_.bytecodeSizeInBytes()};
+    return {bytecode_, functionHeader_.getBytecodeSizeInBytes()};
   }
 
   /// \return true when \p inst is in this code block, false otherwise.
@@ -208,16 +206,14 @@ class CodeBlock final
 
   /// \return the source location of the given instruction offset \p offset in
   /// the code block \p codeBlock.
-  OptValue<hbc::DebugSourceLocation> getSourceLocation(
-      uint32_t offset = 0) const;
+  OptValue<hbc::DebugSourceLocation> getSourceLocation(uint32_t offset) const;
+
+  /// \return the source location of the function.
+  OptValue<hbc::DebugSourceLocation> getSourceLocationForFunction() const;
 
   /// Look up the function source table and \return the String ID associated
   /// with the current function if an entry is found, or llvh::None if not.
   OptValue<uint32_t> getFunctionSourceID() const;
-
-  OptValue<uint32_t> getScopeDescDataOffset() const;
-
-  OptValue<uint32_t> getTextifiedCalleeOffset() const;
 
   const inst::Inst *getOffsetPtr(uint32_t offset) const {
     assert(begin() + offset < end() && "offset out of bounds");
@@ -233,56 +229,131 @@ class CodeBlock final
     return offset;
   }
 
-#ifndef HERMESVM_LEAN
   /// Checks whether this function is lazily compiled.
   bool isLazy() const {
-    // null bytecode_ indicates that this is a lazy code block.
     return !bytecode_;
   }
 
-  /// Compiles this CodeBlock, if it's lazy and not already compiled.
-  ExecutionStatus lazyCompile(Runtime &runtime) {
-    if (LLVM_UNLIKELY(isLazy())) {
-      return lazyCompileImpl(runtime);
-    }
-    return ExecutionStatus::RETURNED;
+  /// Compile this function, which must be lazy.
+  /// \pre isLazy() is true.
+  ExecutionStatus compileLazyFunction(Runtime &runtime);
+
+  /// \pre isLazy() is true.
+  /// \return whether the coordinates are in the lazy function.
+  bool coordsInLazyFunction(SMLoc loc, OptValue<SMLoc> end) const;
+
+  /// \return a vector representing the number of Variables for each depth
+  ///   of the VariableScope chain, starting from \p
+  ///   lexicalScopeIdxInParentFunction.
+  std::vector<uint32_t> getVariableCounts(
+      uint32_t lexicalScopeIdxInParentFunction) const;
+
+  /// \param depth the depth of the VariableScope to lookup, 0 is the
+  ///   the current CodeBlock.
+  /// \param variableIndex the index of the Variable in the VariableScope.
+  /// \param lexicalScopeIdxInParentFunction the lexical scope idx to start the
+  ///   search at.
+  ///   \return a tuple of <var name, env depth, slot in env>.
+  hbc::VariableInfoAtDepth getVariableInfoAtDepth(
+      uint32_t depth,
+      uint32_t variableIndex,
+      uint32_t lexicalScopeIdxInParentFunction) const;
+
+#if HERMESVM_JIT
+  /// \return true if JIT is disabled for this function.
+  bool getDontJIT() const {
+    return dontJIT_;
+  }
+
+  /// Enable or disable JIT compilation of this function.
+  void setDontJIT(bool dontJIT) {
+    dontJIT_ = dontJIT;
+  }
+
+  /// \return the native code for this function, or null if it hasn't been
+  ///   compiled to native.
+  JITCompiledFunctionPtr getJITCompiled() const {
+    return JITCompiled_;
+  }
+
+  /// Set the native code for this function.
+  void setJITCompiled(JITCompiledFunctionPtr JITCompiled) {
+    JITCompiled_ = JITCompiled;
+  }
+
+  /// Increment the function execution count.
+  void incrementExecutionCount() {
+    executionCount_++;
+  }
+
+  /// \return the function execution count
+  uint32_t getExecutionCount() const {
+    return executionCount_;
+  }
+
+  /// Reset the function execution count to 0
+  void clearExecutionCount() {
+    executionCount_ = 0;
   }
 #else
-  /// Checks whether this function is lazily compiled.
-  bool isLazy() const {
-    return false;
+  /// \return true if JIT is disabled for this function.
+  bool getDontJIT() const {
+    return true;
   }
-  ExecutionStatus lazyCompile(Runtime &) {
-    return ExecutionStatus::RETURNED;
+
+  /// Enable or disable JIT compilation of this function.
+  void setDontJIT(bool dontJIT) {}
+
+  /// \return the native code for this function, or null if it hasn't been
+  ///   compiled to native.
+  JITCompiledFunctionPtr getJITCompiled() const {
+    return nullptr;
   }
+
+  /// Set the native code for this function.
+  void setJITCompiled(JITCompiledFunctionPtr JITCompiled) {}
+
+  /// Increment the function executionCount_ count
+  void incrementExecutionCount() {}
+
+  /// \return the function executionCount_ count as 0 if the JIT is not enabled
+  uint32_t getExecutionCount() const {
+    return 0;
+  }
+
+  /// Reset the function executionCount_ count to 0
+  void clearExecutionCount() {}
 #endif
 
-  /// Get the start location of this function, if it's lazy.
-  SourceErrorManager::SourceCoords getLazyFunctionStartLoc() const {
-    return getLazyFunctionLoc(true);
+  inline ReadPropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
+    assert(idx < readPropertyCacheSize_ && "idx out of ReadCache bound");
+    return &readPropertyCache()[idx];
   }
 
-  /// Get the end location of this function, if it's lazy.
-  SourceErrorManager::SourceCoords getLazyFunctionEndLoc() const {
-    return getLazyFunctionLoc(false);
+  inline WritePropertyCacheEntry *getWriteCacheEntry(uint8_t idx) {
+    assert(idx < writePropertyCacheSize_ && "idx out of WriteCache bound");
+    return &writePropertyCache()[idx];
   }
 
-  inline PropertyCacheEntry *getReadCacheEntry(uint8_t idx) {
-    assert(idx < writePropCacheOffset_ && "idx out of ReadCache bound");
-    return &propertyCache()[idx];
+  inline PrivateNameCacheEntry *getPrivateNameCacheEntry(uint8_t idx) {
+    assert(idx < privateNameCacheSize_ && "idx out of PrivateNameCache bound");
+    return &privateNameCache()[idx];
   }
 
-  inline PropertyCacheEntry *getWriteCacheEntry(uint8_t idx) {
-    assert(
-        writePropCacheOffset_ + idx < propertyCacheSize_ &&
-        "idx out of WriteCache bound");
-    return &propertyCache()[writePropCacheOffset_ + idx];
-  }
+  /// Traverse through elements of the different caches in this code block and
+  /// mark any weak ones. This means all hidden classes in the property caches
+  /// and weak symbols in the private name cache.
+  void markWeakElementsInCaches(Runtime &runtime, WeakRootAcceptor &acceptor);
 
-  // Mark all hidden classes in the property cache as roots.
-  void markCachedHiddenClasses(Runtime &runtime, WeakRootAcceptor &acceptor);
-
-  static CodeBlock *createCodeBlock(
+  /// Create a CodeBlock for a given runtime module \p runtimeModule.
+  /// The result must be deallocated via the overridden delete operator,
+  /// which is why we use unique_ptr.
+  /// \param runtimeModule the RuntimeModule that it will belong to.
+  /// \param header the header of the function.
+  /// \param bytecode the bytecode of the function.
+  /// \param functionID the ID of the function in the bytecode.
+  /// \return a unique pointer to the CodeBlock.
+  static std::unique_ptr<CodeBlock> createCodeBlock(
       RuntimeModule *runtimeModule,
       hbc::RuntimeFunctionHeader header,
       const uint8_t *bytecode,
@@ -291,7 +362,8 @@ class CodeBlock final
   /// \return an estimate of the size of additional memory used by this
   /// CodeBlock.
   size_t additionalMemorySize() const {
-    return propertyCacheSize_ * sizeof(PropertyCacheEntry);
+    return (readPropertyCacheSize_ * sizeof(ReadPropertyCacheEntry)) +
+        (writePropertyCacheSize_ * sizeof(WritePropertyCacheEntry));
   }
 
 #ifdef HERMES_ENABLE_DEBUGGER
@@ -317,6 +389,5 @@ class CodeBlock final
 
 } // namespace vm
 } // namespace hermes
-#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_CODEBLOCK_H

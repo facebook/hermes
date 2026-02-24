@@ -22,3 +22,11 @@ it.next();
 it.next('hi');
 print(obj.hi);
 // CHECK: 1
+
+var objWithMethod = { method() {} };
+try {
+  new objWithMethod.method();
+} catch (e) {
+  print(e.name, e.message);
+// CHECK: TypeError Function is not a constructor
+}

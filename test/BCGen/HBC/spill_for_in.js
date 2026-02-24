@@ -61,10 +61,6 @@ function foo() {
 
 //CHECK:      {{.*}} GetNextPName {{.*}}
 //CHECK-NEXT: {{.*}} JmpUndefined {{.*}}
-//CHECK-NEXT: {{.*}} MovLong {{.*}}
-//CHECK-NEXT: {{.*}} MovLong {{.*}}
-//CHECK-NEXT: {{.*}} MovLong {{.*}}
-//CHECK-NEXT: {{.*}} MovLong {{.*}}
   var count=0;
   for(var arg in count) {
     count++;

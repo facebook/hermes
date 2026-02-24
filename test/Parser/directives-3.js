@@ -5,46 +5,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -non-strict %s 2>&1 ) | %FileCheck --match-full-lines %s
+// RUN: %hermesc -dump-ast %s | %FileCheck --match-full-lines %s
+"two \
+lines";
 
-// Make sure we scan directive prologues before doing everything else.
-
-function f1() {
-    "use strict" // comment
-     delete x;
-//CHECK: {{.*}}directives-3.js:14:6: error: 'delete' of a variable is not allowed in strict mode
-//CHECK-NEXT:      delete x;
-//CHECK-NEXT:      ^~~~~~~~
-
-}
-
-function f2() {
-    "use strict" /* comment */ ;
-     delete x;
-//CHECK: {{.*}}directives-3.js:23:6: error: 'delete' of a variable is not allowed in strict mode
-//CHECK-NEXT:      delete x;
-//CHECK-NEXT:      ^~~~~~~~
-
-}
-
-function f3() {
-    "use strict" /* comment */
-     delete x;
-//CHECK: {{.*}}directives-3.js:32:6: error: 'delete' of a variable is not allowed in strict mode
-//CHECK-NEXT:      delete x;
-//CHECK-NEXT:      ^~~~~~~~
-
-}
-
-function f4(eval) {
-//CHECK: {{.*}}directives-3.js:39:13: error: cannot declare 'eval'
-//CHECK-NEXT: function f4(eval) {
-//CHECK-NEXT:             ^~~~
-
-    "use strict"
-}
-
-function f5(eval) {"use strict"  }
-//CHECK: {{.*}}directives-3.js:47:13: error: cannot declare 'eval'
-//CHECK-NEXT: function f5(eval) {"use strict"  }
-//CHECK-NEXT:             ^~~~
+// CHECK:      {
+// CHECK-NEXT:   "type": "Program",
+// CHECK-NEXT:   "body": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:       "type": "ExpressionStatement",
+// CHECK-NEXT:       "expression": {
+// CHECK-NEXT:         "type": "StringLiteral",
+// CHECK-NEXT:         "value": "two lines"
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "directive": "two \\\nlines"
+// CHECK-NEXT:     }
+// CHECK-NEXT:   ]
+// CHECK-NEXT: }

@@ -20,7 +20,7 @@ We have successfully converted **3 major external dependencies** from FetchConte
 - **Performance Improvement**: 87% faster CMake configuration (6.2s vs 48.5s)
 
 ### 2. Boost (Header-only Components)
-- **Location**: `external/boost/`
+- **Location**: `external/boost2/`
 - **Version**: 1.76.0 (22 components)
 - **Source**: https://archives.boost.io/release/1.76.0/source/boost_1_76_0.zip
 - **Status**: ✅ **Complete**

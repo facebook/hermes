@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 var y = 2;
 y.bar = 3;
@@ -20,45 +20,40 @@ function sink(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [y, sink]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = StorePropertyInst 2 : number, globalObject : object, "y" : string
-// CHECK-NEXT:  %6 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %7 = StorePropertyInst 3 : number, %6, "bar" : string
-// CHECK-NEXT:  %8 = StoreStackInst 3 : number, %3
-// CHECK-NEXT:  %9 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %10 = LoadPropertyInst globalObject : object, "y" : string
-// CHECK-NEXT:  %11 = CallInst %9, undefined : undefined, undefined : undefined, %10
-// CHECK-NEXT:  %12 = StoreStackInst %11, %3
-// CHECK-NEXT:  %13 = LoadStackInst %3
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "y": string
+// CHECK-NEXT:       DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:  %3 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %3: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %5: any
+// CHECK-NEXT:       StorePropertyLooseInst 2: number, globalObject: object, "y": string
+// CHECK-NEXT:  %8 = LoadPropertyInst (:any) globalObject: object, "y": string
+// CHECK-NEXT:       StorePropertyLooseInst 3: number, %8: any, "bar": string
+// CHECK-NEXT:        StoreStackInst 3: number, %5: any
+// CHECK-NEXT:  %11 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %12 = LoadPropertyInst (:any) globalObject: object, "y": string
+// CHECK-NEXT:  %13 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: any
+// CHECK-NEXT:        StoreStackInst %13: any, %5: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %5: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
-// CHECK:function sink#0#1(x, y)#2
-// CHECK-NEXT:S{sink#0#1()#2} = [x#2, y#2]
+// CHECK:scope %VS1 [x: any, y: any]
+
+// CHECK:function sink(x: any, y: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %y, [y#2], %0
-// CHECK-NEXT:  %3 = LoadFrameInst [x#2], %0
-// CHECK-NEXT:  %4 = LoadPropertyInst %3, "bar" : string
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = LoadFrameInst [x#2], %0
-// CHECK-NEXT:  %7 = LoadPropertyInst %6, "bar" : string
-// CHECK-NEXT:  %8 = ReturnInst %7
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = LoadFrameInst [x#2], %0
-// CHECK-NEXT:  %10 = LoadFrameInst [y#2], %0
-// CHECK-NEXT:  %11 = LoadPropertyInst %9, %10
-// CHECK-NEXT:  %12 = ReturnInst %11
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %13 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %6: any, "bar": string
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end

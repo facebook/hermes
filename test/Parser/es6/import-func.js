@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -20,7 +20,7 @@ import('foo')
 // CHECK-NEXT:           "type": "StringLiteral",
 // CHECK-NEXT:           "value": "foo"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "attributes": null
+// CHECK-NEXT:         "options": null
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "directive": null
 // CHECK-NEXT:     },
@@ -41,7 +41,7 @@ import('foo')
 // CHECK-NEXT:             "type": "StringLiteral",
 // CHECK-NEXT:             "value": "foo"
 // CHECK-NEXT:           },
-// CHECK-NEXT:           "attributes": null
+// CHECK-NEXT:           "options": null
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "operator": "+"
 // CHECK-NEXT:       },
@@ -73,7 +73,7 @@ function func() {
 // CHECK-NEXT:                     "type": "StringLiteral",
 // CHECK-NEXT:                     "value": "foo"
 // CHECK-NEXT:                   },
-// CHECK-NEXT:                   "attributes": null
+// CHECK-NEXT:                   "options": null
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "property": {
 // CHECK-NEXT:                   "type": "Identifier",

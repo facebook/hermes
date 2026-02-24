@@ -6,6 +6,11 @@
  */
 
 // RUN: %hermes -Wno-direct-eval -O %s | %FileCheck --match-full-lines %s
+// We need to distinguish global scope eval from anonymous function eval.
+// This test needs to treat the var statement as local scope to an anonymous
+// function. T173289597
+// XFAIL: true
+
 
 // In this eval, the `var Math` declaration should be hoisted,
 // causing Math to be undefined prior to the conditional check,

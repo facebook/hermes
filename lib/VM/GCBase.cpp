@@ -14,7 +14,6 @@
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/CellKind.h"
 #include "hermes/VM/JSWeakMapImpl.h"
-#include "hermes/VM/RootAndSlotAcceptorDefault.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/SmallHermesValue-inline.h"
 #include "hermes/VM/VTable.h"
@@ -29,11 +28,7 @@
 #include <clocale>
 #include <stdexcept>
 #include <system_error>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 using llvh::format;
 
 namespace hermes {
@@ -130,16 +125,6 @@ void GCBase::runtimeWillExecute() {
 }
 
 #ifdef HERMES_MEMORY_INSTRUMENTATION
-std::error_code GCBase::createSnapshotToFile(const std::string &fileName) {
-  std::error_code code;
-  llvh::raw_fd_ostream os(fileName, code, llvh::sys::fs::FileAccess::FA_Write);
-  if (code) {
-    return code;
-  }
-  createSnapshot(os, true);
-  return std::error_code{};
-}
-
 namespace {
 
 constexpr HeapSnapshot::NodeID objectIDForRootSection(
@@ -155,26 +140,52 @@ constexpr HeapSnapshot::NodeID objectIDForRootSection(
 }
 
 // Abstract base class for all snapshot acceptors.
-struct SnapshotAcceptor : public RootAndSlotAcceptorWithNamesDefault {
-  using RootAndSlotAcceptorWithNamesDefault::accept;
-
+struct SnapshotAcceptor : public RootAcceptorWithNames {
   SnapshotAcceptor(PointerBase &base, HeapSnapshot &snap)
-      : RootAndSlotAcceptorWithNamesDefault(base), snap_(snap) {}
+      : pointerBase_(base), snap_(snap) {}
 
-  void acceptHV(HermesValue &hv, const char *name) override {
+  using RootAcceptorWithNames::accept;
+
+  virtual void acceptHV(HermesValue &hv, const char *name) {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer());
       accept(ptr, name);
     }
   }
-  void acceptSHV(SmallHermesValue &hv, const char *name) override {
+  virtual void acceptSHV(SmallHermesValue &hv, const char *name) {
     if (hv.isPointer()) {
       GCCell *ptr = static_cast<GCCell *>(hv.getPointer(pointerBase_));
       accept(ptr, name);
     }
   }
 
+  virtual void acceptSym(SymbolID, const char *) {}
+
+  void accept(PinnedHermesValue &hv, const char *name) override {
+    assert((!hv.isPointer() || hv.getPointer()) && "Value is not nullable.");
+    acceptHV(hv, name);
+  }
+  void acceptNullable(PinnedHermesValue &hv, const char *name) override {
+    acceptHV(hv, name);
+  }
+  void accept(const RootSymbolID &sym, const char *name) override {
+    acceptSym(sym, name);
+  }
+
+  void accept(GCPointerBase &ptr, const char *name) {
+    auto *p = ptr.get(pointerBase_);
+    accept(p, name);
+  }
+  void accept(GCHermesValueBase &hv, const char *name) {
+    acceptHV(hv, name);
+  }
+  void accept(GCSmallHermesValueBase &hv, const char *name) {
+    acceptSHV(hv, name);
+  }
+  void accept(const GCSymbolID &sym, const char *name) {}
+
  protected:
+  PointerBase &pointerBase_;
   HeapSnapshot &snap_;
 };
 
@@ -313,20 +324,28 @@ struct EdgeAddingAcceptor : public SnapshotAcceptor {
 };
 
 struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
-                                     public WeakAcceptorDefault {
+                                     public WeakRootAcceptor {
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
   SnapshotRootSectionAcceptor(PointerBase &base, HeapSnapshot &snap)
-      : SnapshotAcceptor(base, snap), WeakAcceptorDefault(base) {}
+      : SnapshotAcceptor(base, snap) {}
 
   void accept(GCCell *&, const char *) override {
     // While adding edges to root sections, there's no need to do anything for
     // pointers.
   }
 
-  void acceptWeak(GCCell *&ptr) override {
+  void acceptWeak(WeakRootBase &ptr) override {
     // Same goes for weak pointers.
+  }
+
+  void acceptWeakSym(WeakRootSymbolID &ws) override {
+    // Same goes for weak symbols.
+  }
+
+  void acceptWeak(WeakSmallHermesValue &wshv) override {
+    // Same goes for weak pointers/symbols.
   }
 
   void beginRootSection(Section section) override {
@@ -346,8 +365,7 @@ struct SnapshotRootSectionAcceptor : public SnapshotAcceptor,
   int rootSectionNum_{1};
 };
 
-struct SnapshotRootAcceptor : public SnapshotAcceptor,
-                              public WeakAcceptorDefault {
+struct SnapshotRootAcceptor : public SnapshotAcceptor, public WeakRootAcceptor {
   using SnapshotAcceptor::accept;
   using WeakRootAcceptor::acceptWeak;
 
@@ -356,7 +374,6 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
       HeapSnapshot &snap,
       GCBase::SavedNumRootEdges &numRootEdges)
       : SnapshotAcceptor(gc.getPointerBase(), snap),
-        WeakAcceptorDefault(gc.getPointerBase()),
         gc_(gc),
         numRootEdges_(numRootEdges) {}
 
@@ -364,18 +381,46 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
     pointerAccept(ptr, name, false);
   }
 
-  void acceptWeak(GCCell *&ptr) override {
+  void acceptWeak(WeakRootBase &wr) override {
+    auto *ptr = wr.getNoBarrierUnsafe(gc_.getPointerBase());
     pointerAccept(ptr, nullptr, true);
   }
 
+  void acceptWeak(WeakSmallHermesValue &wshv) override {
+    if (wshv.isPointer()) {
+      GCCell *ptr = wshv.getPointerNoBarrierUnsafe(gc_.getPointerBase());
+      pointerAccept(ptr, nullptr, true);
+    }
+    if (wshv.isSymbol()) {
+      acceptSym(wshv.getSymbolNoBarrierUnsafe(), nullptr, true);
+    }
+  }
+
+  void acceptWeakSym(WeakRootSymbolID &ws) override {
+    acceptSym(ws.getNoBarrierUnsafe(), nullptr, true);
+  }
+
   void acceptSym(SymbolID sym, const char *name) override {
+    acceptSym(sym, name, false);
+  }
+
+  void acceptSym(SymbolID sym, const char *name, bool weak) {
     if (sym.isInvalid()) {
       return;
     }
     auto nameRef = llvh::StringRef::withNullAsEmpty(name);
     const auto id = gc_.getObjectID(sym);
     if (!nameRef.empty()) {
-      snap_.addNamedEdge(HeapSnapshot::EdgeType::Internal, nameRef, id);
+      snap_.addNamedEdge(
+          weak ? HeapSnapshot::EdgeType::Weak
+               : HeapSnapshot::EdgeType::Internal,
+          nameRef,
+          id);
+    } else if (weak) {
+      // TODO: Figure out if we can just add these weak edges as indexed instead
+      // of named
+      std::string numericName = std::to_string(nextEdge_++);
+      snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
     } else {
       // Unnamed edges get indices.
       snap_.addIndexedEdge(HeapSnapshot::EdgeType::Element, nextEdge_++, id);
@@ -468,6 +513,8 @@ struct SnapshotRootAcceptor : public SnapshotAcceptor,
           nameRef,
           id);
     } else if (weak) {
+      // TODO: Figure out if we can just add these weak edges as indexed instead
+      // of named
       std::string numericName = std::to_string(nextEdge_++);
       snap_.addNamedEdge(HeapSnapshot::EdgeType::Weak, numericName.c_str(), id);
     } else {
@@ -550,21 +597,18 @@ void GCBase::createSnapshotImpl(
   // the loop.
   PrimitiveNodeAcceptor primitiveAcceptor(
       getPointerBase(), snap, getIDTracker());
-  SlotVisitorWithNames<PrimitiveNodeAcceptor> primitiveVisitor{
-      primitiveAcceptor};
   // Add a node for each object in the heap.
   const auto snapshotForObject =
-      [&snap, &primitiveVisitor, &gc, this](GCCell *cell) {
+      [&snap, &primitiveAcceptor, &gc, this](GCCell *cell) {
         auto &allocationLocationTracker = getAllocationLocationTracker();
         // First add primitive nodes.
-        markCellWithNames(primitiveVisitor, cell);
+        markCellWithNames(primitiveAcceptor, cell);
         EdgeAddingAcceptor acceptor(gc, snap);
-        SlotVisitorWithNames<EdgeAddingAcceptor> visitor(acceptor);
         // Allow nodes to add extra nodes not in the JS heap.
         cell->getVT()->snapshotMetaData.addNodes(cell, gc, snap);
         snap.beginNode();
         // Add all internal edges first.
-        markCellWithNames(visitor, cell);
+        markCellWithNames(acceptor, cell);
         // Allow nodes to add custom edges not represented by metadata.
         cell->getVT()->snapshotMetaData.addEdges(cell, gc, snap);
         auto stackTracesTreeNode =
@@ -574,7 +618,7 @@ void GCBase::createSnapshotImpl(
             cell->getVT()->snapshotMetaData.nodeType(),
             cell->getVT()->snapshotMetaData.nameForNode(cell, gc),
             gc.getObjectID(cell),
-            cell->getAllocatedSize(),
+            cell->getAllocatedSizeSlow(),
             stackTracesTreeNode ? stackTracesTreeNode->id : 0);
       };
   gc.forAllObjs(snapshotForObject);
@@ -699,7 +743,17 @@ void GCBase::checkTripwire(size_t dataSize) {
     Ctx(GCBase *gc) : gc_(gc) {}
 
     std::error_code createSnapshotToFile(const std::string &path) override {
-      return gc_->createSnapshotToFile(path);
+      std::error_code code;
+      llvh::raw_fd_ostream os(path, code, llvh::sys::fs::FileAccess::FA_Write);
+      if (code) {
+        return code;
+      }
+      // We currently cannot call collect() to perform a full collection here
+      // because this is typically called while gcMutex_ is already held. While
+      // we could refactor it to work, it is unlikely to provide much value
+      // since the tripwire is invoked shortly after a collection anyway.
+      gc_->createSnapshot(os, true);
+      return std::error_code{};
     }
 
     std::error_code createSnapshot(std::ostream &os, bool captureNumericValue)
@@ -859,60 +913,32 @@ void GCBase::printStats(JSONEmitter &json) {
   json.emitKeyValue(
       "totalAllocatedBytes", formatSize(info.totalAllocatedBytes).bytes);
   json.closeDict();
-
-  json.emitKey("collections");
-  json.openArray();
-  for (const auto &event : analyticsEvents_) {
-    json.openDict();
-    json.emitKeyValue("runtimeDescription", event.runtimeDescription);
-    json.emitKeyValue("gcKind", event.gcKind);
-    json.emitKeyValue("collectionType", event.collectionType);
-    json.emitKeyValue("cause", event.cause);
-    json.emitKeyValue("duration", event.duration.count());
-    json.emitKeyValue("cpuDuration", event.cpuDuration.count());
-    json.emitKeyValue("preAllocated", event.allocated.before);
-    json.emitKeyValue("postAllocated", event.allocated.after);
-    json.emitKeyValue("preSize", event.size.before);
-    json.emitKeyValue("postSize", event.size.after);
-    json.emitKeyValue("preExternal", event.external.before);
-    json.emitKeyValue("postExternal", event.external.after);
-    json.emitKeyValue("survivalRatio", event.survivalRatio);
-    json.emitKey("tags");
-    json.openArray();
-    for (const auto &tag : event.tags) {
-      json.emitValue(tag);
-    }
-    json.closeArray();
-    json.closeDict();
-  }
-  json.closeArray();
 }
 
 void GCBase::recordGCStats(
-    const GCAnalyticsEvent &event,
+    const InternalAnalyticsEvent &event,
     CumulativeHeapStats *stats,
-    bool onMutator) {
+    bool onMutator,
+    bool fromNewCollection) {
   // Hades OG collections do not block the mutator, and so do not contribute to
   // the max pause time or the total execution time.
   if (onMutator)
-    stats->gcWallTime.record(
-        std::chrono::duration<double>(event.duration).count());
-  stats->gcCPUTime.record(
-      std::chrono::duration<double>(event.cpuDuration).count());
+    stats->gcWallTime.record(event.durationSecs);
+  stats->gcCPUTime.record(event.cpuDurationSecs);
   stats->finalHeapSize = event.size.after;
   stats->usedBefore.record(event.allocated.before);
   stats->usedAfter.record(event.allocated.after);
-  stats->numCollections++;
+  stats->numCollections += fromNewCollection ? 1 : 0;
 }
 
-void GCBase::recordGCStats(const GCAnalyticsEvent &event, bool onMutator) {
+void GCBase::recordGCStats(
+    const InternalAnalyticsEvent &event,
+    bool onMutator,
+    bool fromNewCollection) {
   if (analyticsCallback_) {
     analyticsCallback_(event);
   }
-  if (recordGcStats_) {
-    analyticsEvents_.push_back(event);
-  }
-  recordGCStats(event, &cumStats_, onMutator);
+  recordGCStats(event, &cumStats_, onMutator, fromNewCollection);
 }
 
 void GCBase::oom(std::error_code reason) {
@@ -961,65 +987,16 @@ bool GCBase::shouldSanitizeHandles() {
 }
 #endif
 
-#ifdef HERMESVM_GC_RUNTIME
-
-#define GCBASE_BARRIER_1(name, type1)                     \
-  void GCBase::name(type1 arg1) {                         \
-    runtimeGCDispatch([&](auto *gc) { gc->name(arg1); }); \
-  }
-
-#define GCBASE_BARRIER_2(name, type1, type2)                    \
-  void GCBase::name(type1 arg1, type2 arg2) {                   \
-    runtimeGCDispatch([&](auto *gc) { gc->name(arg1, arg2); }); \
-  }
-
-GCBASE_BARRIER_2(writeBarrier, const GCHermesValue *, HermesValue);
-GCBASE_BARRIER_2(writeBarrier, const GCSmallHermesValue *, SmallHermesValue);
-GCBASE_BARRIER_2(writeBarrier, const GCPointerBase *, const GCCell *);
-GCBASE_BARRIER_2(constructorWriteBarrier, const GCHermesValue *, HermesValue);
-GCBASE_BARRIER_2(
-    constructorWriteBarrier,
-    const GCSmallHermesValue *,
-    SmallHermesValue);
-GCBASE_BARRIER_2(
-    constructorWriteBarrier,
-    const GCPointerBase *,
-    const GCCell *);
-GCBASE_BARRIER_2(writeBarrierRange, const GCHermesValue *, uint32_t);
-GCBASE_BARRIER_2(writeBarrierRange, const GCSmallHermesValue *, uint32_t);
-GCBASE_BARRIER_2(constructorWriteBarrierRange, const GCHermesValue *, uint32_t);
-GCBASE_BARRIER_2(
-    constructorWriteBarrierRange,
-    const GCSmallHermesValue *,
-    uint32_t);
-GCBASE_BARRIER_1(snapshotWriteBarrier, const GCHermesValue *);
-GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSmallHermesValue *);
-GCBASE_BARRIER_1(snapshotWriteBarrier, const GCPointerBase *);
-GCBASE_BARRIER_1(snapshotWriteBarrier, const GCSymbolID *);
-GCBASE_BARRIER_2(snapshotWriteBarrierRange, const GCHermesValue *, uint32_t);
-GCBASE_BARRIER_2(
-    snapshotWriteBarrierRange,
-    const GCSmallHermesValue *,
-    uint32_t);
-GCBASE_BARRIER_1(weakRefReadBarrier, HermesValue);
-GCBASE_BARRIER_1(weakRefReadBarrier, GCCell *);
-
-#undef GCBASE_BARRIER_1
-#undef GCBASE_BARRIER_2
-#endif
-
-WeakRefSlot *GCBase::allocWeakSlot(CompressedPointer ptr) {
-  return &weakSlots_.add(ptr);
+WeakRefSlot *GCBase::allocWeakSlot(SmallHermesValue target) {
+  return &weakSlots_.add(target);
 }
 
 WeakMapEntrySlot *GCBase::allocWeakMapEntrySlot(
-    JSObject *key,
+    SmallHermesValue key,
     HermesValue value,
     JSWeakMapImplBase *owner) {
   return &weakMapEntrySlots_.add(
-      CompressedPointer::encode(key, getPointerBase()),
-      value,
-      CompressedPointer::encode(owner, getPointerBase()));
+      key, value, CompressedPointer::encode(owner, getPointerBase()));
 }
 
 HeapSnapshot::NodeID GCBase::getObjectID(const GCCell *cell) {
@@ -1372,7 +1349,7 @@ void GCBase::AllocationLocationTracker::enable(
   uint64_t numBytes = 0;
   gc_->forAllObjs([&numObjects, &numBytes, this](GCCell *cell) {
     numObjects++;
-    numBytes += cell->getAllocatedSize();
+    numBytes += cell->getAllocatedSizeSlow();
     gc_->getObjectID(cell);
   });
   fragmentCallback_ = std::move(callback);
@@ -1754,7 +1731,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     }
   };
 
-  struct HeapSizeDiagnosticAcceptor final : public RootAndSlotAcceptor {
+  struct HeapSizeDiagnosticAcceptor final : public RootAcceptor {
     // Can't be static in a local class.
     const int64_t HINT8_MIN = -(1 << 7);
     const int64_t HINT8_MAX = (1 << 7) - 1;
@@ -1770,14 +1747,12 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
 
     HeapSizeDiagnosticAcceptor(PointerBase &pb) : pointerBase_{pb} {}
 
-    using SlotAcceptor::accept;
-
     void accept(GCCell *&ptr) override {
       diagnostic.stats.breakdown["Pointer"].count++;
       diagnostic.stats.breakdown["Pointer"].size += sizeof(GCCell *);
     }
 
-    void accept(GCPointerBase &ptr) override {
+    void accept(GCPointerBase &ptr) {
       diagnostic.stats.breakdown["GCPointer"].count++;
       diagnostic.stats.breakdown["GCPointer"].size += sizeof(GCPointerBase);
     }
@@ -1791,11 +1766,11 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
           diagnostic.stats.breakdown["HermesValue"],
           sizeof(PinnedHermesValue));
     }
-    void accept(GCHermesValue &hv) override {
+    void accept(GCHermesValueBase &hv) {
       acceptHV(
           hv, diagnostic.stats.breakdown["HermesValue"], sizeof(GCHermesValue));
     }
-    void accept(GCSmallHermesValue &shv) override {
+    void accept(GCSmallHermesValueBase &shv) {
       acceptHV(
           shv.toHV(pointerBase_),
           diagnostic.stats.breakdown["SmallHermesValue"],
@@ -1847,8 +1822,6 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
         hvType = "Undefined";
       } else if (hv.isEmpty()) {
         hvType = "Empty";
-      } else if (hv.isNativeValue()) {
-        hvType = "NativeValue";
       } else {
         assert(false && "Should be no other hermes values");
       }
@@ -1859,7 +1832,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
     void accept(const RootSymbolID &sym) override {
       acceptSym(sym);
     }
-    void accept(const GCSymbolID &sym) override {
+    void accept(const GCSymbolID &sym) {
       acceptSym(sym);
     }
     void acceptSym(SymbolID sym) {
@@ -1882,7 +1855,7 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
   hermesLog("HermesGC", "%s:", "Heap contents");
   HeapSizeDiagnosticAcceptor acceptor{getPointerBase()};
   forAllObjs([&acceptor, this](GCCell *cell) {
-    markCell(cell, acceptor);
+    markCell(acceptor, cell);
     acceptor.diagnostic.numCell++;
     if (cell->isVariableSize()) {
       acceptor.diagnostic.numVariableSizedObject++;

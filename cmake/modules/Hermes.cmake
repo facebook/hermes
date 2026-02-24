@@ -6,6 +6,7 @@
 include(CheckCXXCompilerFlag)
 include(CheckCCompilerFlag)
 include(CheckCXXSourceCompiles)
+include(CheckLinkerFlag)
 include(CMakePrintHelpers)
 
 set(HERMES_TOOLS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin/${CMAKE_CFG_INTDIR}")
@@ -68,60 +69,93 @@ else (WIN32)
   endif (FUCHSIA OR UNIX)
 endif (WIN32)
 
-function(hermes_update_compile_flags name)
-  get_property(sources TARGET ${name} PROPERTY SOURCES)
-  if ("${sources}" MATCHES "\\.c(;|$)")
-    set(update_src_props ON)
-  endif ()
-
+# Set C++ exception handling and RTTI flags for a target.
+# Uses generator expressions to apply flags only to C++ source files,
+# so it works correctly even for targets with mixed C and C++ sources.
+function(hermes_update_cxx_flags name)
   set(flags "")
 
-  if (NOT HERMES_ENABLE_EH_RTTI)
+  if (HERMES_ENABLE_EH)
     if (GCC_COMPATIBLE)
-      set(flags "${flags} -fno-exceptions -fno-rtti")
+      list(APPEND flags -fexceptions)
     elseif (MSVC)
-      set(flags "${flags} /EHs-c- /GR-")
+      list(APPEND flags /EHsc)
+    endif ()
+  else ()
+    if (GCC_COMPATIBLE)
+      list(APPEND flags -fno-exceptions)
+    elseif (MSVC)
+      list(APPEND flags /EHs-c-)
     endif ()
   endif ()
 
-  if (update_src_props)
-    foreach (fn ${sources})
-      get_filename_component(suf ${fn} EXT)
-      if ("${suf}" STREQUAL ".cpp")
-        set_property(SOURCE ${fn} APPEND_STRING PROPERTY
-          COMPILE_FLAGS "${flags}")
-      endif ()
-    endforeach ()
+  if (HERMES_ENABLE_RTTI)
+    if (GCC_COMPATIBLE)
+      list(APPEND flags -frtti)
+    elseif (MSVC)
+      list(APPEND flags /GR)
+    endif ()
   else ()
-    # Update target props, since all sources are C++.
-    set_property(TARGET ${name} APPEND_STRING PROPERTY
-      COMPILE_FLAGS "${flags}")
+    if (GCC_COMPATIBLE)
+      list(APPEND flags -fno-rtti)
+    elseif (MSVC)
+      list(APPEND flags /GR-)
+    endif ()
   endif ()
 
-  if (MSVC)
-    # Temporary avoid the auto-vectorization optimization since VS 17.14.0 produces incorrect code.
-    # Set /O1 only for Release configs using modern CMake target_compile_options.
-    target_compile_options(${name} PRIVATE $<$<CONFIG:Release>:/O1>)
-  endif ()
+  # Use generator expression to apply flags only to C++ files.
+  target_compile_options(${name} PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:${flags}>")
 endfunction()
 
+# LINK_OBJLIBS links in object libraries created by Hermes
+# LINK_LIBS links in regular libraries
 function(add_hermes_library name)
-  cmake_parse_arguments(ARG "" "" "LINK_LIBS" ${ARGN})
-  add_library(${name} STATIC ${ARG_UNPARSED_ARGUMENTS})
-  target_link_libraries(${name} ${ARG_LINK_LIBS} ${HERMES_LINK_COMPONENTS})
-  set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
-  hermes_update_compile_flags(${name})
-  if (HERMES_ENABLE_BITCODE)
-    target_compile_options(${name} PUBLIC "-fembed-bitcode")
-  endif ()
+  cmake_parse_arguments(ARG "OBJECT;STATIC;SHARED" "" "LINK_OBJLIBS;LINK_LIBS" ${ARGN})
+
+  if(ARG_STATIC OR ARG_SHARED)
+    if(ARG_SHARED)
+      add_library(${name} SHARED ${ARG_UNPARSED_ARGUMENTS})
+    else()
+      add_library(${name} STATIC ${ARG_UNPARSED_ARGUMENTS})
+    endif()
+    target_link_libraries(${name} ${ARG_LINK_OBJLIBS} ${ARG_LINK_LIBS})
+    set_property(TARGET ${name} PROPERTY POSITION_INDEPENDENT_CODE ON)
+    hermes_update_cxx_flags(${name})
+  else()
+    # When asking to link an OBJECT library (the default), we create an OBJECT
+    # library with a suffix _obj, which depends on all object libraries in
+    # LINK_OBJLIBS with added suffixes and the static libraries in LINK_LIBS.
+    # Then we create a static library which depends on name_obj and the libraries
+    # in LINK_OBJLIBS, but without the suffixes.
+    #
+    # In this way, "name_obj" pulls in all interface settings from the other _obj
+    # libraries, while "name.a" contains the files from "name_obj" and depends
+    # on the other *static* libraries.
+    #
+    # The static library "name.a" can be used as before. Note that all this
+    # avoids compiling an object file more than once (ordinarily an object file
+    # is compiled for every target that includes it).
+    add_library(${name}_obj OBJECT ${ARG_UNPARSED_ARGUMENTS})
+    foreach(lib ${ARG_LINK_OBJLIBS})
+      target_link_libraries(${name}_obj ${lib}_obj)
+    endforeach(lib)
+    target_link_libraries(${name}_obj ${ARG_LINK_LIBS})
+    set_property(TARGET ${name}_obj PROPERTY POSITION_INDEPENDENT_CODE ON)
+    hermes_update_cxx_flags(${name}_obj)
+
+    add_library(${name} STATIC)
+    target_link_libraries(${name} ${name}_obj ${ARG_LINK_OBJLIBS})
+  endif()
 endfunction(add_hermes_library)
 
+
 function(add_hermes_executable name)
-  cmake_parse_arguments(ARG "" "" "LINK_LIBS" ${ARGN})
+  cmake_parse_arguments(ARG "" "" "LINK_OBJLIBS;LINK_LIBS" ${ARGN})
   add_executable(${name} ${ARG_UNPARSED_ARGUMENTS})
-  target_link_libraries(${name} ${ARG_LINK_LIBS} ${HERMES_LINK_COMPONENTS})
+  target_link_libraries(${name} ${ARG_LINK_OBJLIBS} ${ARG_LINK_LIBS})
   target_link_options(${name} PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
-  hermes_update_compile_flags(${name})
+  hermes_update_cxx_flags(${name})
 endfunction(add_hermes_executable)
 
 function(add_hermes_tool name)
@@ -135,6 +169,16 @@ function(add_hermes_tool name)
 
   set_property(TARGET ${name} PROPERTY RUNTIME_OUTPUT_DIRECTORY
     "${HERMES_TOOLS_OUTPUT_DIR}")
+
+  if (HERMES_ENABLE_ADDRESS_SANITIZER AND MSVC)
+    # Copy ASAN DLL to the executable's directory after building.
+    add_custom_command(TARGET ${name} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<$<CONFIG:Debug>:${ASAN_DEBUG_DLL}>$<$<NOT:$<CONFIG:Debug>>:${ASAN_RELEASE_DLL}>"
+        "$<TARGET_FILE_DIR:${name}>"
+        COMMENT "Copying ASan DLL: ${ASAN_DLL} -> $<TARGET_FILE_DIR:${name}>"
+    )
+  endif()
 endfunction(add_hermes_tool)
 
 # find_package()is not able to find packages specified with <name>_DIR if
@@ -222,6 +266,11 @@ if (XCODE)
 endif ()
 
 if (MSVC)
+  # Remove CMake's default exception handling flags to avoid D9025 warnings
+  # when we set our own in hermes_update_cxx_flags()
+  string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+  string(REPLACE "/EHsc" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
   if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19.0)
     # For MSVC 2013, disable iterator null pointer checking in debug mode,
     # especially so std::equal(nullptr, nullptr, nullptr) will not assert.
@@ -306,6 +355,7 @@ if (MSVC)
       # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
       -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
+      -wd4576 # Suppress 'a parenthesized type followed by an initializer list is a non-standard explicit type conversion syntax'
 
       # Ideally, we'd like this warning to be enabled, but MSVC 2013 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
@@ -336,6 +386,7 @@ if (GCC_COMPATIBLE)
 
   append("-Wextra -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
   append("-Wcast-qual" CMAKE_CXX_FLAGS)
+  append("-Wno-invalid-offsetof" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
   # false positives with empty {}. Turn them on otherwise (they're off by

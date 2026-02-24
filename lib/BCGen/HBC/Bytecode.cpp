@@ -6,12 +6,29 @@
  */
 
 #include "hermes/BCGen/HBC/Bytecode.h"
+
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/SourceMap/SourceMapGenerator.h"
 
 #include "llvh/ADT/SmallVector.h"
 
-using namespace hermes;
-using namespace hbc;
+namespace hermes {
+namespace hbc {
+
+/// Destructor cleans up any Function IR that's been kept around for Eval
+/// data.
+BytecodeModule::~BytecodeModule() {
+  // Run destructors on all BytecodeFunctions, freeing any IR they've
+  // been keeping around for local eval.
+  // Run this before resetForMoreCompilation to reduce the number of users of
+  // VariableScopes as much as possible.
+  functions_.clear();
+
+  // Clean up any other parts of the IR that are no longer used.
+  if (bcProviderFromSrc_) {
+    bcProviderFromSrc_->getModule()->resetForMoreCompilation();
+  }
+}
 
 void BytecodeModule::setFunction(
     uint32_t index,
@@ -34,17 +51,25 @@ void BytecodeModule::populateSourceMap(SourceMapGenerator *sourceMap) const {
   uint32_t offset = 0;
   for (const auto &func : functions_) {
     functionOffsets.push_back(offset);
-    offset += func->getHeader().bytecodeSizeInBytes;
+    offset += func->getHeader().getBytecodeSizeInBytes();
   }
   debugInfo_.populateSourceMap(
       sourceMap, std::move(functionOffsets), segmentID_);
 }
 
-ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
+BytecodeFunction::~BytecodeFunction() {
+  if (functionIR_) {
+    functionIR_->replaceAllUsesWith(nullptr);
+    functionIR_->eraseFromCompiledFunctionsNoDestroy();
+    Value::destroy(functionIR_);
+  }
+}
+
+llvh::ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
   // The jump tables (if there are any) start at the nearest 4-byte boundary
   // from the end of the opcodes.
   uint32_t jumpTableStartIdx =
-      llvh::alignTo<sizeof(uint32_t)>(header_.bytecodeSizeInBytes);
+      llvh::alignTo<sizeof(uint32_t)>(header_.getBytecodeSizeInBytes());
 
   if (jumpTableStartIdx > opcodesAndJumpTables_.size()) {
     return {};
@@ -58,3 +83,6 @@ ArrayRef<uint32_t> BytecodeFunction::getJumpTablesOnly() const {
 
   return {jumpTableStart, jumpTableSize};
 }
+
+} // namespace hbc
+} // namespace hermes

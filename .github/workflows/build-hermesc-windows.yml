@@ -1,7 +1,6 @@
 name: build-hermesc-windows
 
-on:
-  workflow_call
+on: workflow_call
 
 jobs:
   build-hermesc-windows:
@@ -52,7 +51,7 @@ jobs:
           $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
 
           cd $Env:GITHUB_WORKSPACE
-          cmake -S . -B build_release -G 'Visual Studio 17 2022' -Ax64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF
+          cmake -S . -B build_release -G 'Visual Studio 17 2022' -Ax64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True
           if (-not $?) { throw "Failed to configure Hermes" }
           echo "Running windows build..."
           cd build_release

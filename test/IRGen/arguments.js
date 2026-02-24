@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir -non-strict %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir -non-strict %s -O
+// RUN: %hermesc -hermes-parser -dump-ir -non-strict %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir -non-strict %s -O
 
 // Code that doesn't require creation of the expensive object.
 function cheap() {
@@ -30,80 +30,85 @@ function shadow(arguments) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [cheap, expensive, cond, shadow]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %cheap#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "cheap" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %expensive#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "expensive" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %cond#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "cond" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %shadow#0#1()#5, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "shadow" : string
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
-// CHECK-NEXT:  %11 = LoadStackInst %9
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "cheap": string
+// CHECK-NEXT:       DeclareGlobalVarInst "expensive": string
+// CHECK-NEXT:       DeclareGlobalVarInst "cond": string
+// CHECK-NEXT:       DeclareGlobalVarInst "shadow": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %cheap(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "cheap": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %expensive(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "expensive": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %cond(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "cond": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %shadow(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "shadow": string
+// CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
-// CHECK:function cheap#0#1()#2
-// CHECK-NEXT:S{cheap#0#1()#2} = []
+// CHECK:scope %VS1 []
+
+// CHECK:function cheap(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{cheap#0#1()#2}
-// CHECK-NEXT:  %1 = CreateArgumentsInst
-// CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "length" : string
-// CHECK-NEXT:  %3 = LoadPropertyInst %1 : object, 0 : number
-// CHECK-NEXT:  %4 = BinaryOperatorInst '+', %2, %3
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS1: any, %1: environment
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "length": string
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: object, 0: number
+// CHECK-NEXT:  %5 = BinaryAddInst (:any) %3: any, %4: any
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function expensive#0#1()#3
-// CHECK-NEXT:S{expensive#0#1()#3} = []
+// CHECK:scope %VS2 []
+
+// CHECK:function expensive(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{expensive#0#1()#3}
-// CHECK-NEXT:  %1 = CreateArgumentsInst
-// CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "length" : string
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "cheap" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1 : object
-// CHECK-NEXT:  %5 = BinaryOperatorInst '+', %2, %4
-// CHECK-NEXT:  %6 = LoadPropertyInst %1 : object, 0 : number
-// CHECK-NEXT:  %7 = BinaryOperatorInst '+', %5, %6
-// CHECK-NEXT:  %8 = ReturnInst %7
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS2: any, %1: environment
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "length": string
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "cheap": string
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %0: object
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) %3: any, %5: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) %0: object, 0: number
+// CHECK-NEXT:  %8 = BinaryAddInst (:any) %6: any, %7: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function cond#0#1()#4
-// CHECK-NEXT:S{cond#0#1()#4} = []
+// CHECK:scope %VS3 []
+
+// CHECK:function cond(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{cond#0#1()#4}
-// CHECK-NEXT:  %1 = CreateArgumentsInst
-// CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "length" : string
-// CHECK-NEXT:  %3 = CondBranchInst %2, %BB1, %BB2
+// CHECK-NEXT:  %0 = CreateArgumentsLooseInst (:object)
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %0: object, "length": string
+// CHECK-NEXT:       CondBranchInst %3: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = LoadPropertyInst %1 : object, 1 : number
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %0: object, 1: number
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = BranchInst %BB3
+// CHECK-NEXT:       BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function shadow#0#1(arguments)#5
-// CHECK-NEXT:S{shadow#0#1()#5} = [arguments#5]
+// CHECK:scope %VS4 [arguments: any]
+
+// CHECK:function shadow(arguments: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{shadow#0#1()#5}
-// CHECK-NEXT:  %1 = StoreFrameInst %arguments, [arguments#5], %0
-// CHECK-NEXT:  %2 = LoadFrameInst [arguments#5], %0
-// CHECK-NEXT:  %3 = LoadPropertyInst %2, "length" : string
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %arguments: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.arguments]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS4.arguments]: any
+// CHECK-NEXT:  %5 = LoadPropertyInst (:any) %4: any, "length": string
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end

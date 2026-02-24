@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes %s 2>&1 ) | %FileCheck %s
+// RUN: (! %hermesc -dump-transformed-ast %s 2>&1 ) | %FileCheck %s
 
 print(/[b-a]/);
 //CHECK: {{.*}}regexp.js:10:7: error: Invalid regular expression: Character class range out of order

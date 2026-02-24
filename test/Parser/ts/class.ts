@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-ts -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-ts -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -36,7 +36,7 @@ class C<T> extends D<U> {}
 // CHECK-NEXT:         "type": "Identifier",
 // CHECK-NEXT:         "name": "D"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "superTypeParameters": {
+// CHECK-NEXT:       "superTypeArguments": {
 // CHECK-NEXT:         "type": "TSTypeParameterInstantiation",
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {
@@ -82,7 +82,7 @@ class C<T> extends D<U> {}
 // CHECK-NEXT:           "type": "Identifier",
 // CHECK-NEXT:           "name": "D"
 // CHECK-NEXT:         },
-// CHECK-NEXT:         "superTypeParameters": {
+// CHECK-NEXT:         "superTypeArguments": {
 // CHECK-NEXT:           "type": "TSTypeParameterInstantiation",
 // CHECK-NEXT:           "params": [
 // CHECK-NEXT:             {

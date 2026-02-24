@@ -35,7 +35,7 @@ export function DeclareExportDefaultDeclaration(props: {
     props.parent,
     {
       type: 'DeclareExportDeclaration',
-      // $FlowFixMe[incompatible-call]
+      // $FlowFixMe[incompatible-type]
       declaration: asDetachedNode(props.declaration),
       specifiers: [],
       source: null,
@@ -59,7 +59,7 @@ export function DeclareExportDeclarationNamedWithDeclaration(props: {
     props.parent,
     {
       type: 'DeclareExportDeclaration',
-      // $FlowFixMe[incompatible-call]
+      // $FlowFixMe[incompatible-type]
       declaration: asDetachedNode(props.declaration),
       specifiers: [],
       source: null,
@@ -90,7 +90,7 @@ export function DeclareExportDeclarationNamedWithSpecifiers(props: {
       type: 'DeclareExportDeclaration',
       declaration: null,
       specifiers: props.specifiers.map(n => asDetachedNode(n)),
-      // $FlowFixMe[incompatible-call]
+      // $FlowFixMe[incompatible-type]
       source: asDetachedNode(props.source),
       default: false,
     },

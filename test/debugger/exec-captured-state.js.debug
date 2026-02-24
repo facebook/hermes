@@ -1,0 +1,20 @@
+exec +this
+exec this + 7
+finish
+exec String(this)
+exec this + 'asdf'
+finish
+exec +this
+exec this + 3
+continue
+exec new.target.prop
+continue
+exec this.a
+exec new.target.b
+finish
+exec this.a
+exec new.target.b
+continue
+exec super.prop
+finish
+exec super.prop

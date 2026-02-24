@@ -36,19 +36,20 @@ const prettierConfig = Object.freeze({
   trailingComma: 'all',
   bracketSpacing: false,
   bracketSameLine: true,
+  plugins: ['prettier-plugin-hermes-parser'],
   parser: 'hermes',
 });
 
 declare function parse(
   code: string,
-  opts: {...ParserOptions, babel: true},
+  opts: $ReadOnly<{...ParserOptions, babel: true}>,
 ): BabelFile;
 // eslint-disable-next-line no-redeclare
 declare function parse(
   code: string,
   opts?:
-    | {...ParserOptions, babel?: false | void}
-    | {...ParserOptions, babel: false},
+    | $ReadOnly<{...ParserOptions, babel?: false | void}>
+    | $ReadOnly<{...ParserOptions, babel: false}>,
 ): ESTreeProgram;
 // eslint-disable-next-line no-redeclare
 export function parse(code: string, options: ParserOptions) {
@@ -66,18 +67,22 @@ export function parseForSnapshot(
     preserveRange,
     enableExperimentalComponentSyntax,
     enableExperimentalFlowMatchSyntax,
-  }: {
+    enableExperimentalFlowRecordSyntax,
+  }: $ReadOnly<{
     preserveRange?: boolean,
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
     enableExperimentalFlowMatchSyntax?: boolean,
-  } = {},
+    enableExperimentalFlowRecordSyntax?: boolean,
+  }> = {},
 ): mixed {
   const parseOpts = {
     enableExperimentalComponentSyntax:
       enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
-      enableExperimentalFlowMatchSyntax ?? false,
+      enableExperimentalFlowMatchSyntax ?? true,
+    enableExperimentalFlowRecordSyntax:
+      enableExperimentalFlowRecordSyntax ?? true,
   };
   if (babel === true) {
     return cleanASTForSnapshot(
@@ -103,11 +108,15 @@ export function parseForSnapshotESTree(code: string): mixed {
 }
 export function printForSnapshotBabel(
   code: string,
-  options?: {reactRuntimeTarget?: ParserOptions['reactRuntimeTarget']},
+  options?: $ReadOnly<{
+    reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
+    transformOptions?: ParserOptions['transformOptions'],
+  }>,
 ): Promise<string> {
   return printForSnapshot(code, {
     babel: true,
     reactRuntimeTarget: options?.reactRuntimeTarget,
+    transformOptions: options?.transformOptions,
   });
 }
 export function parseForSnapshotBabel(code: string): mixed {
@@ -120,20 +129,27 @@ export async function printForSnapshot(
     babel,
     enableExperimentalComponentSyntax,
     enableExperimentalFlowMatchSyntax,
+    enableExperimentalFlowRecordSyntax,
     reactRuntimeTarget,
-  }: {
+    transformOptions,
+  }: $ReadOnly<{
     babel?: boolean,
     enableExperimentalComponentSyntax?: boolean,
     enableExperimentalFlowMatchSyntax?: boolean,
+    enableExperimentalFlowRecordSyntax?: boolean,
     reactRuntimeTarget?: ParserOptions['reactRuntimeTarget'],
-  } = {},
+    transformOptions?: ParserOptions['transformOptions'],
+  }> = {},
 ): Promise<string> {
   const parseOpts = {
     enableExperimentalComponentSyntax:
       enableExperimentalComponentSyntax ?? true,
     enableExperimentalFlowMatchSyntax:
-      enableExperimentalFlowMatchSyntax ?? false,
+      enableExperimentalFlowMatchSyntax ?? true,
+    enableExperimentalFlowRecordSyntax:
+      enableExperimentalFlowRecordSyntax ?? true,
     reactRuntimeTarget,
+    transformOptions,
   };
   if (babel === true) {
     const ast = parse(source, {
@@ -150,11 +166,11 @@ export async function printForSnapshot(
 
 export function cleanASTForSnapshot(
   ast: ESNode,
-  options?: {
+  options?: $ReadOnly<{
     preserveRange?: boolean,
     babel?: boolean,
     enforceLocationInformation?: boolean,
-  },
+  }>,
 ): mixed {
   SimpleTraverser.traverse(ast, {
     enter(node) {

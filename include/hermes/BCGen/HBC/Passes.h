@@ -8,13 +8,12 @@
 #ifndef HERMES_BCGEN_HBC_PASSES_H
 #define HERMES_BCGEN_HBC_PASSES_H
 
-#include "hermes/BCGen/BCOpt.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/BCGen/HBC/ISel.h"
-#include "hermes/BCGen/HBC/Passes.h"
+#include "hermes/BCGen/HBC/HVMRegisterAllocator.h"
+#include "hermes/BCGen/MovElimination.h"
+#include "hermes/BCGen/RegAlloc.h"
 
 namespace hermes {
 namespace hbc {
@@ -24,34 +23,18 @@ using llvh::dyn_cast;
 using llvh::isa;
 
 class LoadConstants : public FunctionPass {
-  /// Check whether a particular operand of an instruction must stay
-  /// as literal and hence cannot be lowered into load_const instruction.
+  /// Check whether a particular operand of an instruction may stay
+  /// as a literal, either because the corresponding HBC instruction encodes the
+  /// value as an immediate, or because there exists a variant HBC instruction
+  /// encoding the value as an immediate, and this variant is guaranteed to be
+  /// selected in instruction selection.  In these cases, the literal value
+  /// need not be lowered into load_const instruction.
   bool operandMustBeLiteral(Instruction *Inst, unsigned opIndex);
 
  public:
   explicit LoadConstants() : FunctionPass("LoadConstants") {}
   ~LoadConstants() override = default;
 
-  bool runOnFunction(Function *F) override;
-};
-
-class LoadParameters : public FunctionPass {
- public:
-  explicit LoadParameters() : FunctionPass("LoadParameters") {}
-  ~LoadParameters() override = default;
-  bool runOnFunction(Function *F) override;
-};
-
-/// Lower LoadFrameInst, StoreFrameInst and CreateFunctionInst.
-class LowerLoadStoreFrameInst : public FunctionPass {
-  /// Decide the correct scope to use when dealing with given variable.
-  ScopeCreationInst *
-  getScope(IRBuilder &builder, Variable *var, ScopeCreationInst *environment);
-
- public:
-  explicit LowerLoadStoreFrameInst()
-      : FunctionPass("LowerLoadStoreFrameInst") {}
-  ~LowerLoadStoreFrameInst() override = default;
   bool runOnFunction(Function *F) override;
 };
 
@@ -75,20 +58,13 @@ class DedupReifyArguments : public FunctionPass {
   bool runOnFunction(Function *F) override;
 };
 
-class LowerConstruction : public FunctionPass {
- public:
-  explicit LowerConstruction() : FunctionPass("LowerConstruction") {}
-  ~LowerConstruction() override = default;
-  bool runOnFunction(Function *F) override;
-};
-
 /// Lower calls into a series of parameter moves followed by a call with
 /// those moved values. Should only run once, right before MovElimination.
-class LowerCalls : public FunctionPass {
+class InitCallFrame : public FunctionPass {
  public:
-  explicit LowerCalls(HVMRegisterAllocator &RA)
-      : FunctionPass("LowerCalls"), RA_(RA) {}
-  ~LowerCalls() override = default;
+  explicit InitCallFrame(HVMRegisterAllocator &RA)
+      : FunctionPass("InitCallFrame"), RA_(RA) {}
+  ~InitCallFrame() override = default;
   bool runOnFunction(Function *F) override;
 
  protected:
@@ -109,10 +85,10 @@ class RecreateCheapValues : public FunctionPass {
   HVMRegisterAllocator &RA_;
 };
 
-/// This pass removes unnecessary Movs and HBCLoadConstInsts that have been
+/// This pass removes unnecessary Movs and LIRLoadConstInsts that have been
 /// introduced after CSE by register allocation.
-/// It keeps track of all registers that are written to by HBCLoadConstInst
-/// or by Movs whose operand is a HBCLoadConstInst, and removes all successive
+/// It keeps track of all registers that are written to by LIRLoadConstInst
+/// or by Movs whose operand is a LIRLoadConstInst, and removes all successive
 /// instructions that write the same value to that register until it is written
 /// to by a different instruction.
 class LoadConstantValueNumbering : public FunctionPass {
@@ -135,11 +111,18 @@ class SpillRegisters : public FunctionPass {
   ~SpillRegisters() override = default;
   bool runOnFunction(Function *F) override;
 
+  /// \param regHVMIndex the HVM register index for a Register.
+  /// \return whether the register \p regHVMIndex is a "short" register,
+  /// false if the register requires spilling.
+  static bool isShort(unsigned regHVMIndex) {
+    return regHVMIndex < boundary_;
+  }
+
  protected:
   HVMRegisterAllocator &RA_;
   /// The first "high" register.
   static const int boundary_ = 256;
-  /// The registers from 0 to reserved_ are used for temp space.
+  /// The "Other" registers from 0 to reserved_ are used for temp space.
   /// The most we'll currently need appears to be 6 for GetByPNameInst.
   static const int reserved_ = 6;
 
@@ -147,21 +130,52 @@ class SpillRegisters : public FunctionPass {
   bool requiresShortOperand(Instruction *I, int op);
   bool modifiesOperandRegister(Instruction *I, int op);
 
-  bool isShort(Register reg) {
-    return reg.getIndex() < boundary_;
-  }
+  /// \pre \p i < reserved_.
+  /// \return the "Other" reserved register at index \p i.
   Register getReserved(int i) {
     assert(i < reserved_ && "Using too many reserved regs.");
-    return Register(i);
+    return Register(RegClass::Other, i);
   }
   // Push up all register from 0 to reserved_ to use as temp space.
   void reserveLowRegisters(Function *F) {
+    auto numberRegCount = RA_.getMaxRegisterUsage(RegClass::Number);
+    auto nonPtrRegCount = RA_.getMaxRegisterUsage(RegClass::NonPtr);
+    RA_.convertTypeSpecificRegsToOther();
     RA_.allocateSpillTempCount(reserved_);
     for (auto &BB : F->getBasicBlockList()) {
       for (auto &inst : BB) {
-        if (RA_.isAllocated(&inst)) {
-          auto reg = RA_.getRegister(&inst);
-          RA_.updateRegister(&inst, reg.getConsecutive(reserved_));
+        if (!inst.hasOutput() || !RA_.isAllocated(&inst)) {
+          continue;
+        }
+        Register reg = RA_.getRegister(&inst);
+        // Remap registers into the "Other" class while keeping the ordering the
+        // same. Keep reserved_ registers at the start.
+        switch (reg.getClass()) {
+          case RegClass::Number:
+            RA_.updateRegister(
+                &inst,
+                Register(RegClass::Other, reg.getIndexInClass() + reserved_));
+            break;
+          case RegClass::NonPtr:
+            RA_.updateRegister(
+                &inst,
+                Register(
+                    RegClass::Other,
+                    reg.getIndexInClass() + reserved_ + numberRegCount));
+            break;
+          case RegClass::Other:
+            // Shift "Other" registers up by reserved_.
+            RA_.updateRegister(
+                &inst,
+                Register(
+                    RegClass::Other,
+                    reg.getIndexInClass() + reserved_ + numberRegCount +
+                        nonPtrRegCount));
+            break;
+          case RegClass::NoOutput:
+            break;
+          case RegClass::_last:
+            hermes_fatal("invalid register class for spilling");
         }
       }
     }

@@ -18,7 +18,7 @@ function getOptions() {
     ...prettierConfig,
     parser: 'hermes',
     requirePragma: false,
-    plugins: [require('../src/index.js')],
+    plugins: [require.resolve('../index.mjs')],
   };
 }
 
@@ -88,7 +88,7 @@ component MyComponent(
 
 component MyComponent() /* Trailing comment */ {}
     `;
-    const output = prettier.format(code, getOptions());
+    const output = await prettier.format(code, getOptions());
     expect(output).toMatchInlineSnapshot(`
       "component MyComponent() {}
 

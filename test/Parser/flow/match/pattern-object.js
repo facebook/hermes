@@ -27,7 +27,7 @@ const e = match (x) {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cases": [
 
-  {foo: 1, bar: 2}: 1,
+  {foo: 1, bar: 2} => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -77,7 +77,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {'foo': 1}: 1,
+  {'foo': 1} => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -111,7 +111,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {111: true}: 1,
+  {111: true} => 1,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -145,7 +145,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {foo: const y}: y,
+  {foo: const y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -178,7 +178,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {const x, let y, var z}: y,
+  {const x, let y, var z} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -243,7 +243,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {const x, ...const y}: y,
+  {const x, ...const y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -286,7 +286,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {const x, ...let y}: y,
+  {const x, ...let y} => y,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -329,7 +329,7 @@ const e = match (x) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  {const x, ...}: x,
+  {const x, ...} => x,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",

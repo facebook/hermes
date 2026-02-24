@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s  -custom-opt="stackpromotion" -custom-opt="mem2reg" -custom-opt="dce" | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -dump-ir %s -Xcustom-opt=simplestackpromotion,mem2reg,dce | %FileCheckOrRegen %s --match-full-lines
 
 function test_two(x,y,z) {
   function test00() {}
@@ -14,19 +14,18 @@ function test_two(x,y,z) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [test_two]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %test_two#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "test_two" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_two(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "test_two": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_two#0#1(x, y, z)#2
-// CHECK-NEXT:S{test_two#0#1()#2} = []
+// CHECK:function test_two(x: any, y: any, z: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_two#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -10,7 +10,7 @@
 
 #include "llvh/Support/AlignOf.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include <climits>
 #include <random>
@@ -230,8 +230,8 @@ TEST_F(StringPrimTest, StringsAreMemcpySafeMicrosoftSTL) {
   using Str = CopyableBasicString<char>;
   Str *orig = new (::malloc(sizeof(Str))) Str(100, 'a');
   Str *copy = (Str *)::malloc(sizeof(Str));
-  ::memcpy(copy, orig, sizeof(Str));
-  ::memset(orig, 0xAA, sizeof(Str));
+  ::memcpy((void *)copy, orig, sizeof(Str));
+  ::memset((void *)orig, 0xAA, sizeof(Str));
   ::free(orig);
 
   ASSERT_EQ(100, copy->size());

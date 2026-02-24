@@ -11,6 +11,7 @@
 #include "hermes/VM/Predefined.h"
 
 #include "gtest/gtest.h"
+#include "llvh/ADT/BitVector.h"
 
 #include <cctype>
 #include <string>
@@ -50,22 +51,21 @@ TEST(StringStorageTest, GetStringFromEntryTest) {
   hbc::ConsecutiveStringStorage storage{strings};
   std::string utf8;
   for (uint32_t i = 0; i < strings.size(); i++) {
-    EXPECT_EQ(strings[i], storage.getStringAtIndex(i, utf8));
+    EXPECT_EQ(strings[i], storage.getUTF8StringAtIndex(i, utf8));
   }
 }
 
 TEST(StringStorageTest, ConsecutiveStringStorageTest) {
-  hbc::UniquingStringLiteralAccumulator USLA;
+  hbc::StringLiteralTable SLT;
 
-  USLA.addString("hello", /* isIdentifier */ false);
-  USLA.addString("hello", /* isIdentifier */ false);
-  USLA.addString("world", /* isIdentifier */ false);
-  USLA.addString("some string", /* isIdentifier */ false);
-  USLA.addString("", /* isIdentifier */ false);
-  USLA.addString("hello", /* isIdentifier */ false);
+  SLT.addString("hello", /* isIdentifier */ false);
+  SLT.addString("hello", /* isIdentifier */ false);
+  SLT.addString("world", /* isIdentifier */ false);
+  SLT.addString("some string", /* isIdentifier */ false);
+  SLT.addString("", /* isIdentifier */ false);
+  SLT.addString("hello", /* isIdentifier */ false);
 
-  hbc::StringLiteralTable SLT =
-      hbc::UniquingStringLiteralAccumulator::toTable(std::move(USLA));
+  SLT.populateStorage(hbc::StringLiteralTable::OptimizeMode::Reorder);
 
   EXPECT_EQ(SLT.count(), 4);
   EXPECT_EQ(SLT.getStringID(""), 0);
@@ -77,7 +77,7 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
 
   const char *hex = "0123456789ABCDEF";
 
-  for (char ch : SLT.acquireStringStorage()) {
+  for (char ch : SLT.getStringStorageView()) {
     if (std::isalpha(ch)) {
       result += ch;
     } else {
@@ -93,7 +93,7 @@ TEST(StringStorageTest, ConsecutiveStringStorageTest) {
 TEST(StringStorageTest, PackingStringStorageTest) {
   std::vector<llvh::StringRef> strings{"phab", "alphabet", "soup", "ou"};
   hbc::ConsecutiveStringStorage storage(strings);
-  const auto data = storage.acquireStringStorage();
+  const auto data = storage.getStringStorageView();
   llvh::StringRef dataAsStr((const char *)data.data(), data.size());
   EXPECT_EQ(dataAsStr.str(), "phabalphabetsoupou");
 }
@@ -111,8 +111,8 @@ static void test1OptimizingStringStorage(
   std::string info = " from test on line " + std::to_string(line);
   std::unique_ptr<hbc::ConsecutiveStringStorage> baseConsecutiveStrStorage;
   hbc::ConsecutiveStringStorage storage(strings, true /* optimize */);
-  auto index = storage.acquireStringTable();
-  auto data = storage.acquireStringStorage();
+  auto index = storage.getStringTableView();
+  auto data = storage.getStringStorageView();
   llvh::StringRef dataAsString((const char *)data.data(), data.size());
   size_t idx = 0;
   for (const auto &p : index) {
@@ -594,13 +594,13 @@ TEST(StringStorageTest, NoHang) {
 /// with optimizations enabled.
 hbc::StringLiteralTable tableForStrings(
     llvh::ArrayRef<llvh::StringRef> strings,
-    hbc::UniquingStringLiteralAccumulator accum = {}) {
+    hbc::StringLiteralTable slt = {}) {
   for (auto str : strings) {
-    accum.addString(str, /* isIdentifier */ false);
+    slt.addString(str, /* isIdentifier */ false);
   }
 
-  return hbc::UniquingStringLiteralAccumulator::toTable(
-      std::move(accum), /* optimize */ true);
+  slt.populateStorage(hbc::StringLiteralTable::OptimizeMode::ReorderAndPack);
+  return slt;
 }
 
 TEST(StringStorageTest, DeltaOptimizingModeTest) {
@@ -614,8 +614,8 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "ecoc",        "octpeseta",  "nationachime", "ationremass"};
 
   auto baseTable = tableForStrings(baseStrings);
-  std::vector<unsigned char> baseBuffer = baseTable.acquireStringStorage();
-  std::vector<StringTableEntry> baseEntries = baseTable.acquireStringTable();
+  auto baseBuffer = baseTable.getStringStorageView();
+  auto baseEntries = baseTable.getStringTableView();
 
   // Create a new table starting with the base storage.
   std::vector<llvh::StringRef> newStrings = {
@@ -626,16 +626,16 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
       "pilger",       "omisminium",  "miniummoiley", "deepmost",
       "amomisminium", "ucetminyan",  "lierendrafty"};
 
-  hbc::UniquingStringLiteralAccumulator baseAccumulator{
-      hbc::ConsecutiveStringStorage{
-          std::vector<StringTableEntry>{baseEntries},
-          std::vector<unsigned char>{baseBuffer}},
-      std::vector<bool>(baseEntries.size(), false)};
+  llvh::BitVector isIdentifier(baseEntries.size(), false);
+  hbc::ConsecutiveStringStorage storage{
+      std::move(baseEntries), std::move(baseBuffer)};
+  hbc::StringLiteralTable baseTableForDelta{
+      std::move(storage), std::move(isIdentifier)};
 
-  auto newTable = tableForStrings(newStrings, std::move(baseAccumulator));
+  auto newTable = tableForStrings(newStrings, std::move(baseTableForDelta));
 
   // Verify that the new storage buffer starts with the base storage buffer.
-  auto newBuffer = newTable.acquireStringStorage();
+  auto newBuffer = newTable.getStringStorageView();
   ASSERT_TRUE(newBuffer.size() > baseBuffer.size());
   EXPECT_TRUE(
       std::equal(baseBuffer.begin(), baseBuffer.end(), newBuffer.begin()));
@@ -644,6 +644,34 @@ TEST(StringStorageTest, DeltaOptimizingModeTest) {
   for (auto str : baseStrings) {
     EXPECT_EQ(baseTable.getStringID(str), newTable.getStringID(str));
   }
+}
+
+TEST(StringStorageTest, DeltaOptimizingModeIdentifierTest) {
+  std::vector<llvh::StringRef> baseStrings = {"foo", "bar", "baz"};
+
+  auto baseTable = tableForStrings(baseStrings);
+  auto baseBuffer = baseTable.getStringStorageView();
+  auto baseEntries = baseTable.getStringTableView();
+
+  llvh::BitVector isIdentifier(baseEntries.size(), false);
+  hbc::ConsecutiveStringStorage storage{
+      std::move(baseEntries), std::move(baseBuffer)};
+  hbc::StringLiteralTable table{std::move(storage), std::move(isIdentifier)};
+
+  ASSERT_EQ(3, table.count());
+  EXPECT_EQ(0, table.getStringID("bar"));
+  EXPECT_EQ(1, table.getStringID("baz"));
+  EXPECT_EQ(2, table.getStringID("foo"));
+
+  table.addString("bar", /* isIdentifier */ true);
+  table.addString("quux", /* isIdentifier */ false);
+  table.addString("foo", /* isIdentifier */ false);
+
+  table.populateStorage(hbc::StringLiteralTable::OptimizeMode::ReorderAndPack);
+  EXPECT_EQ(5, table.count());
+  EXPECT_EQ(1, table.getStringID("baz"));
+  EXPECT_EQ(2, table.getStringID("foo"));
+  EXPECT_EQ(4, table.getIdentifierID("bar"));
 }
 
 TEST(StringAccumulatorTest, Ordering) {
@@ -663,20 +691,19 @@ TEST(StringAccumulatorTest, Ordering) {
   //
   // This test verified the grouping into categories.
 
-  hbc::UniquingStringLiteralAccumulator USLA;
+  hbc::StringLiteralTable SLT;
 
-  USLA.addString("Object", /* isIdentifier */ true);
-  USLA.addString("String", /* isIdentifier */ false);
-  USLA.addString("Id0", /* isIdentifier */ true);
-  USLA.addString("Str0", /* isIdentifier */ false);
-  USLA.addString("Str1", /* isIdentifier */ false);
-  USLA.addString("Id1", /* isIdentifier */ true);
-  USLA.addString("Function", /* isIdentifier */ true);
-  USLA.addString("Str2", /* isIdentifier */ false);
-  USLA.addString("Id2", /* isIdentifier */ true);
+  SLT.addString("Object", /* isIdentifier */ true);
+  SLT.addString("String", /* isIdentifier */ false);
+  SLT.addString("Id0", /* isIdentifier */ true);
+  SLT.addString("Str0", /* isIdentifier */ false);
+  SLT.addString("Str1", /* isIdentifier */ false);
+  SLT.addString("Id1", /* isIdentifier */ true);
+  SLT.addString("Function", /* isIdentifier */ true);
+  SLT.addString("Str2", /* isIdentifier */ false);
+  SLT.addString("Id2", /* isIdentifier */ true);
 
-  auto SLT = hbc::UniquingStringLiteralAccumulator::toTable(
-      std::move(USLA), /* optimize */ false);
+  SLT.populateStorage(hbc::StringLiteralTable::OptimizeMode::Reorder);
 
   std::vector<llvh::StringRef> expectedStrings{
       "Str0",

@@ -468,6 +468,10 @@ public:
     return static_cast<DerivedTy &>(*this);
   }
 
+  friend bool operator==(const DerivedTy &LHS, const DerivedTy &RHS) {
+    return LHS.Ptr == RHS.Ptr;
+  }
+
   bool operator==(const DerivedTy &RHS) const { return Ptr == RHS.Ptr; }
 
   DerivedTy &operator++() { // Preincrement

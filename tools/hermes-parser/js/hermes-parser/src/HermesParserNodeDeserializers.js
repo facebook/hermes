@@ -56,7 +56,6 @@ function deserializeArrowFunctionExpression() {
   return {
     type: 'ArrowFunctionExpression',
     loc: this.addEmptyLoc(),
-    id: this.deserializeNode(),
     params: this.deserializeNodeList(),
     body: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
@@ -182,8 +181,10 @@ function deserializeBlockStatement() {
     type: 'BlockStatement',
     loc: this.addEmptyLoc(),
     body: this.deserializeNodeList(),
+    implicit: this.deserializeBoolean(),
   };
 }
+
 function deserializeStaticBlock() {
   return {
     type: 'StaticBlock',
@@ -376,7 +377,7 @@ function deserializeImportExpression() {
     type: 'ImportExpression',
     loc: this.addEmptyLoc(),
     source: this.deserializeNode(),
-    attributes: this.deserializeNode(),
+    options: this.deserializeNode(),
   };
 }
 function deserializeCallExpressionLikeFirst() {
@@ -601,6 +602,16 @@ function deserializeProperty() {
     shorthand: this.deserializeBoolean(),
   };
 }
+function deserializeDecorator() {
+  return {
+    type: 'Decorator',
+    loc: this.addEmptyLoc(),
+    expression: this.deserializeNode(),
+  };
+}
+function deserializeClassLikeFirst() {
+  throw new Error('ClassLike' + ' should not appear in program buffer');
+}
 function deserializeClassDeclaration() {
   return {
     type: 'ClassDeclaration',
@@ -608,7 +619,7 @@ function deserializeClassDeclaration() {
     id: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     superClass: this.deserializeNode(),
-    superTypeParameters: this.deserializeNode(),
+    superTypeArguments: this.deserializeNode(),
     implements: this.deserializeNodeList(),
     decorators: this.deserializeNodeList(),
     body: this.deserializeNode(),
@@ -622,13 +633,16 @@ function deserializeClassExpression() {
     id: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     superClass: this.deserializeNode(),
-    superTypeParameters: this.deserializeNode(),
+    superTypeArguments: this.deserializeNode(),
     implements: this.deserializeNodeList(),
     decorators: this.deserializeNodeList(),
     body: this.deserializeNode(),
   };
 }
 
+function deserializeClassLikeLast() {
+  throw new Error('ClassLike' + ' should not appear in program buffer');
+}
 function deserializeClassBody() {
   return {
     type: 'ClassBody',
@@ -644,6 +658,7 @@ function deserializeClassProperty() {
     value: this.deserializeNode(),
     computed: this.deserializeBoolean(),
     static: this.deserializeBoolean(),
+    decorators: this.deserializeNodeList(),
     declare: this.deserializeBoolean(),
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
@@ -659,6 +674,7 @@ function deserializeClassPrivateProperty() {
     key: this.deserializeNode(),
     value: this.deserializeNode(),
     static: this.deserializeBoolean(),
+    decorators: this.deserializeNodeList(),
     declare: this.deserializeBoolean(),
     optional: this.deserializeBoolean(),
     variance: this.deserializeNode(),
@@ -676,15 +692,17 @@ function deserializeMethodDefinition() {
     kind: this.deserializeString(),
     computed: this.deserializeBoolean(),
     static: this.deserializeBoolean(),
+    decorators: this.deserializeNodeList(),
   };
 }
+
 function deserializeImportDeclaration() {
   return {
     type: 'ImportDeclaration',
     loc: this.addEmptyLoc(),
     specifiers: this.deserializeNodeList(),
     source: this.deserializeNode(),
-    assertions: this.deserializeNodeList(),
+    attributes: this.deserializeNodeList(),
     importKind: this.deserializeString(),
   };
 }
@@ -899,6 +917,14 @@ function deserializeMatchMemberPattern() {
     property: this.deserializeNode(),
   };
 }
+function deserializeMatchInstancePattern() {
+  return {
+    type: 'MatchInstancePattern',
+    loc: this.addEmptyLoc(),
+    targetConstructor: this.deserializeNode(),
+    properties: this.deserializeNode(),
+  };
+}
 function deserializeMatchPatternLast() {
   throw new Error('MatchPattern' + ' should not appear in program buffer');
 }
@@ -909,6 +935,14 @@ function deserializeMatchObjectPatternProperty() {
     key: this.deserializeNode(),
     pattern: this.deserializeNode(),
     shorthand: this.deserializeBoolean(),
+  };
+}
+function deserializeMatchInstanceObjectPattern() {
+  return {
+    type: 'MatchInstanceObjectPattern',
+    loc: this.addEmptyLoc(),
+    properties: this.deserializeNodeList(),
+    rest: this.deserializeNode(),
   };
 }
 function deserializeMatchRestPattern() {
@@ -1104,6 +1138,15 @@ function deserializeBigIntTypeAnnotation() {
 function deserializeVoidTypeAnnotation() {
   return {type: 'VoidTypeAnnotation', loc: this.addEmptyLoc()};
 }
+function deserializeNeverTypeAnnotation() {
+  return {type: 'NeverTypeAnnotation', loc: this.addEmptyLoc()};
+}
+function deserializeUnknownTypeAnnotation() {
+  return {type: 'UnknownTypeAnnotation', loc: this.addEmptyLoc()};
+}
+function deserializeUndefinedTypeAnnotation() {
+  return {type: 'UndefinedTypeAnnotation', loc: this.addEmptyLoc()};
+}
 function deserializeFunctionTypeAnnotation() {
   return {
     type: 'FunctionTypeAnnotation',
@@ -1204,7 +1247,7 @@ function deserializeTupleTypeAnnotation() {
   return {
     type: 'TupleTypeAnnotation',
     loc: this.addEmptyLoc(),
-    types: this.deserializeNodeList(),
+    elementTypes: this.deserializeNodeList(),
     inexact: this.deserializeBoolean(),
   };
 }
@@ -1322,6 +1365,8 @@ function deserializeOpaqueType() {
     id: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     impltype: this.deserializeNode(),
+    lowerBound: this.deserializeNode(),
+    upperBound: this.deserializeNode(),
     supertype: this.deserializeNode(),
   };
 }
@@ -1351,6 +1396,8 @@ function deserializeDeclareOpaqueType() {
     id: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     impltype: this.deserializeNode(),
+    lowerBound: this.deserializeNode(),
+    upperBound: this.deserializeNode(),
     supertype: this.deserializeNode(),
   };
 }
@@ -1722,6 +1769,65 @@ function deserializeComponentParameter() {
     shorthand: this.deserializeBoolean(),
   };
 }
+function deserializeRecordDeclaration() {
+  return {
+    type: 'RecordDeclaration',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    typeParameters: this.deserializeNode(),
+    implements: this.deserializeNodeList(),
+    body: this.deserializeNode(),
+  };
+}
+function deserializeRecordDeclarationImplements() {
+  return {
+    type: 'RecordDeclarationImplements',
+    loc: this.addEmptyLoc(),
+    id: this.deserializeNode(),
+    typeArguments: this.deserializeNode(),
+  };
+}
+function deserializeRecordDeclarationBody() {
+  return {
+    type: 'RecordDeclarationBody',
+    loc: this.addEmptyLoc(),
+    elements: this.deserializeNodeList(),
+  };
+}
+function deserializeRecordDeclarationProperty() {
+  return {
+    type: 'RecordDeclarationProperty',
+    loc: this.addEmptyLoc(),
+    key: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+    defaultValue: this.deserializeNode(),
+  };
+}
+function deserializeRecordDeclarationStaticProperty() {
+  return {
+    type: 'RecordDeclarationStaticProperty',
+    loc: this.addEmptyLoc(),
+    key: this.deserializeNode(),
+    typeAnnotation: this.deserializeNode(),
+    value: this.deserializeNode(),
+  };
+}
+function deserializeRecordExpression() {
+  return {
+    type: 'RecordExpression',
+    loc: this.addEmptyLoc(),
+    recordConstructor: this.deserializeNode(),
+    typeArguments: this.deserializeNode(),
+    properties: this.deserializeNode(),
+  };
+}
+function deserializeRecordExpressionProperties() {
+  return {
+    type: 'RecordExpressionProperties',
+    loc: this.addEmptyLoc(),
+    properties: this.deserializeNodeList(),
+  };
+}
 function deserializeFlowLast() {
   throw new Error('Flow' + ' should not appear in program buffer');
 }
@@ -2086,6 +2192,16 @@ function deserializeCoverTypedIdentifier() {
 function deserializeCoverLast() {
   throw new Error('Cover' + ' should not appear in program buffer');
 }
+function deserializeSHBuiltin() {
+  return {type: 'SHBuiltin', loc: this.addEmptyLoc()};
+}
+function deserializeImplicitCheckedCast() {
+  return {
+    type: 'ImplicitCheckedCast',
+    loc: this.addEmptyLoc(),
+    argument: this.deserializeNode(),
+  };
+}
 module.exports = [
   deserializeEmpty,
   deserializeMetadata,
@@ -2114,6 +2230,7 @@ module.exports = [
   deserializeDebuggerStatement,
   deserializeEmptyStatement,
   deserializeBlockStatement,
+
   deserializeStaticBlock,
   deserializeBreakStatement,
   deserializeContinueStatement,
@@ -2173,16 +2290,20 @@ module.exports = [
   deserializeTaggedTemplateExpression,
   deserializeTemplateElement,
   deserializeProperty,
+  deserializeDecorator,
+  deserializeClassLikeFirst,
   deserializeClassDeclaration,
 
   deserializeClassExpression,
 
+  deserializeClassLikeLast,
   deserializeClassBody,
   deserializeClassProperty,
 
   deserializeClassPrivateProperty,
 
   deserializeMethodDefinition,
+
   deserializeImportDeclaration,
   deserializeImportSpecifier,
   deserializeImportDefaultSpecifier,
@@ -2215,8 +2336,10 @@ module.exports = [
   deserializeMatchOrPattern,
   deserializeMatchAsPattern,
   deserializeMatchMemberPattern,
+  deserializeMatchInstancePattern,
   deserializeMatchPatternLast,
   deserializeMatchObjectPatternProperty,
+  deserializeMatchInstanceObjectPattern,
   deserializeMatchRestPattern,
   deserializeJSXFirst,
   deserializeJSXIdentifier,
@@ -2253,6 +2376,9 @@ module.exports = [
   deserializeMixedTypeAnnotation,
   deserializeBigIntTypeAnnotation,
   deserializeVoidTypeAnnotation,
+  deserializeNeverTypeAnnotation,
+  deserializeUnknownTypeAnnotation,
+  deserializeUndefinedTypeAnnotation,
   deserializeFunctionTypeAnnotation,
   deserializeHookTypeAnnotation,
   deserializeFunctionTypeParam,
@@ -2327,6 +2453,13 @@ module.exports = [
   deserializeEnumBigIntMember,
   deserializeEnumBooleanMember,
   deserializeComponentParameter,
+  deserializeRecordDeclaration,
+  deserializeRecordDeclarationImplements,
+  deserializeRecordDeclarationBody,
+  deserializeRecordDeclarationProperty,
+  deserializeRecordDeclarationStaticProperty,
+  deserializeRecordExpression,
+  deserializeRecordExpressionProperties,
   deserializeFlowLast,
   deserializeTSFirst,
   deserializeTSTypeAnnotation,
@@ -2383,4 +2516,6 @@ module.exports = [
   deserializeCoverRestElement,
   deserializeCoverTypedIdentifier,
   deserializeCoverLast,
+  deserializeSHBuiltin,
+  deserializeImplicitCheckedCast,
 ];

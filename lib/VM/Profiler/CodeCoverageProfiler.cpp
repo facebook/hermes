@@ -38,6 +38,10 @@ void CodeCoverageProfiler::markExecutedSlowPath(CodeBlock *codeBlock) {
   std::lock_guard<std::mutex> lk(localMutex_);
   std::vector<bool> &moduleFuncMap =
       getModuleFuncMapRef(codeBlock->getRuntimeModule());
+  // If codeBlock is lazily compiled, its FunctionID may not exist in the
+  // moduleFuncMap. Resize it to avoid out-of-bound access.
+  moduleFuncMap.resize(
+      codeBlock->getRuntimeModule()->getBytecode()->getFunctionCount());
 
   const auto funcId = codeBlock->getFunctionID();
   assert(
@@ -83,7 +87,7 @@ CodeCoverageProfiler::getExecutedFunctionsLocal() {
           if (auto pos = debugInfo->getLocationForAddress(
                   offsets->sourceLocations, 0 /* opcodeOffset */)) {
             const std::string file =
-                debugInfo->getFilenameByID(pos->filenameId);
+                debugInfo->getUTF8FilenameByID(pos->filenameId);
             const uint32_t line = pos->line - 1; // Normalising to zero-based
             const uint32_t column =
                 pos->column - 1; // Normalising to zero-based

@@ -17,14 +17,17 @@ namespace node_api_tests {
 /*static*/ std::filesystem::path TestFixtureBase::node_lite_path_;
 /*static*/ std::filesystem::path TestFixtureBase::js_root_dir_;
 
+std::filesystem::path ResolveNodeLitePath(const std::filesystem::path& exePath);
+
 /*static*/ void TestFixtureBase::InitializeGlobals(
-    const char* exePathStr) noexcept {
-  fs::path exePath = fs::canonical(exePathStr);
+    const char* test_exe_path) noexcept {
+  fs::path exePath = fs::canonical(test_exe_path);
 
   fs::path nodeLitePath =
-      fs::path(exePathStr).replace_filename("node_lite.exe");
+      ResolveNodeLitePath(fs::path(test_exe_path));
   if (!fs::exists(nodeLitePath)) {
-    std::cerr << "Error: Cannot find node_lite.exe." << std::endl;
+    std::cerr << "Error: Cannot find node_lite executable at "
+              << nodeLitePath << std::endl;
     exit(1);
   }
   TestFixtureBase::node_lite_path_ = nodeLitePath;
@@ -102,6 +105,15 @@ struct NodeApiTestFixture : TestFixtureBase {
 
 std::string SanitizeName(const std::string& name) {
   return ReplaceAll(ReplaceAll(name, "-", "_"), ".", "_");
+}
+
+std::filesystem::path ResolveNodeLitePath(const std::filesystem::path& exePath) {
+  fs::path nodeLitePath = exePath;
+  nodeLitePath.replace_filename("node_lite");
+#if defined(_WIN32)
+  nodeLitePath += ".exe";
+#endif
+  return nodeLitePath;
 }
 
 }  // namespace node_api_tests

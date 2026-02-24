@@ -20,16 +20,21 @@ namespace vm {
 
 //===----------------------------------------------------------------------===//
 
-Handle<JSObject> createWeakRefConstructor(Runtime &runtime) {
+HermesValue createWeakRefConstructor(Runtime &runtime) {
   auto weakRefPrototype = Handle<JSObject>::vmcast(&runtime.weakRefPrototype);
 
-  auto cons = defineSystemConstructor<JSWeakRef>(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::WeakRef),
       weakRefConstructor,
       weakRefPrototype,
       1,
-      CellKind::JSWeakRefKind);
+      lv.cons);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.writable = 0;
@@ -56,39 +61,64 @@ Handle<JSObject> createWeakRefConstructor(Runtime &runtime) {
       weakRefPrototypeDeref,
       0);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 // ES2021 26.1.1.1
-CallResult<HermesValue>
-weakRefConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakRefConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(
         "WeakRef() called in function context instead of constructor");
   }
 
-  auto target = args.dyncastArg<JSObject>(0);
-  // 2. If Type(target) is not Object, throw a TypeError exception.
-  if (LLVM_UNLIKELY(!target)) {
-    return runtime.raiseTypeError("target argument is not an object");
+  auto target = args.getArgHandle(0);
+  // 2. If Type(target) is not Object/non-registered Symbol, throw a TypeError
+  // exception.
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *target))) {
+    return runtime.raiseTypeError(
+        "target argument is not an object or non-registered symbol");
   }
+
+  // Create the `this` for JSWeakRef.
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSWeakRef> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.weakRefConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.weakRefPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.weakRefPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  lv.self = JSWeakRef::create(runtime, lv.selfParent);
 
   // When a WeakRef is created with a target:
   // 4. Perform AddToKeptObjects(target).
   runtime.addToKeptObjects(target);
 
   // 5. Set weakRef.[[WeakRefTarget]] to target.
-  auto self = args.vmcastThis<JSWeakRef>();
-  self->setTarget(runtime, target);
+  auto targetSHV = SmallHermesValue::encodeHermesValue(*target, runtime);
+  lv.self->setTarget(runtime, targetSHV);
 
   // 6. Return weakRef.
-  return self.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
 // ES2021 26.1.4.1
-CallResult<HermesValue>
-weakRefPrototypeDeref(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakRefPrototypeDeref(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto selfHandle = args.dyncastThis<JSWeakRef>();
   if (LLVM_UNLIKELY(!selfHandle)) {
     return runtime.raiseTypeError(
@@ -99,11 +129,16 @@ weakRefPrototypeDeref(void *, Runtime &runtime, NativeArgs args) {
   if (val.isUndefined())
     return val;
 
-  Handle<JSObject> targetHandle = runtime.makeHandle<JSObject>(val);
+  struct : public Locals {
+    PinnedValue<> targetHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.targetHandle = val;
   // If the target is not empty, then
   // 2a. Perform AddToKeptObjects
-  runtime.addToKeptObjects(targetHandle);
-  return targetHandle.getHermesValue();
+  runtime.addToKeptObjects(lv.targetHandle);
+  return lv.targetHandle.getHermesValue();
 }
 
 } // namespace vm

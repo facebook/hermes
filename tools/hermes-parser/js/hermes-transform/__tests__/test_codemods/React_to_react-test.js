@@ -45,14 +45,14 @@ describe('React to react', () => {
  * @format
  */
 
-import React from 'React';
-import type React from 'React';
-import React, {useRef} from 'React';
-import type React, {useRef} from 'React';
-import {useRef} from 'React';
+import React1 from 'React';
+import type React2 from 'React';
+import React3, {useRef1} from 'React';
+import type React4, {useRef2} from 'React';
+import {useRef3} from 'React';
 
-const React = require('React');
-const {useRef} = require('React');
+const React5 = require('React');
+const {useRef4} = require('React');
 
 function foo() {
   const state = require('React').useState();
@@ -67,14 +67,14 @@ function foo() {
  * @format
  */
 
-import React from 'react';
-import type React from 'react';
-import React, {useRef} from 'react';
-import type React, {useRef} from 'react';
-import {useRef} from 'react';
+import React1 from 'react';
+import type React2 from 'react';
+import React3, {useRef1} from 'react';
+import type React4, {useRef2} from 'react';
+import {useRef3} from 'react';
 
-const React = require('react');
-const {useRef} = require('react');
+const React5 = require('react');
+const {useRef4} = require('react');
 
 function foo() {
   const state = require('react').useState();

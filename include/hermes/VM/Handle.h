@@ -9,7 +9,6 @@
 #define HERMES_VM_HANDLE_H
 
 #include "hermes/VM/Casting.h"
-#include "hermes/VM/GCBase.h"
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/GCPointer.h"
 #include "hermes/VM/HermesValueTraits.h"
@@ -31,6 +30,32 @@ template <typename T>
 class Handle;
 template <typename T>
 class MutableHandle;
+template <typename T>
+class PinnedValue;
+
+/// A helper type, specialized on whether we are casting to a cell or a
+/// non-cell.
+template <typename T, bool isCell = HermesValueTraits<T>::is_cell>
+struct HermesValueCast {
+  /// In debug mode, check that the value is of the correct type and assert
+  /// if it isn't.
+  static void assertValid(HermesValue x) {
+#ifndef NDEBUG
+    (void)vmcast<T>(x);
+#endif
+  }
+};
+
+template <typename T>
+struct HermesValueCast<T, false> {
+  /// In debug mode, check that the value is of the correct type and assert
+  /// if it isn't.
+  static void assertValid(HermesValue x) {
+#ifndef NDEBUG
+    (void)HermesValueTraits<T>::decode(x);
+#endif
+  }
+};
 
 /// This class is used in performance-sensitive context in situations where we
 /// want to encode in the function signature that allocations may be performed,
@@ -90,9 +115,15 @@ class PseudoHandle {
   constexpr PseudoHandle() : value_(traits_type::defaultValue()) {}
   PseudoHandle(Handle<T> handle) : value_(*handle) {}
 
+  /// Implicitly convert from a PinnedValue of compatible type.
+  template <
+      typename U,
+      typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  /* implicit */ PseudoHandle(const PinnedValue<U> &pv) : value_(*pv) {}
+
   /// Conveniently construct PseudoHandle<HermesValue> from a PinnedHermesValue
   /// pointer.
-  explicit PseudoHandle(PinnedHermesValue *pvalue) : value_(*pvalue) {
+  explicit PseudoHandle(const PinnedHermesValue *pvalue) : value_(*pvalue) {
     static_assert(
         std::is_same<value_type, HermesValue>::value,
         "This constructor can only be used for PseudoHandle<HermesValue>");
@@ -163,6 +194,95 @@ class PseudoHandle {
   static inline PseudoHandle dyn_vmcast(PseudoHandle<U> &&other);
 };
 
+/// A simple typed wrapper around a PinnedHermesValue, providing convenient
+/// conversion to/from a Handle<T>.
+template <typename T = HermesValue>
+class PinnedValue : private PinnedHermesValue {
+  template <class U>
+  friend class Handle;
+  friend struct RootAcceptor;
+
+  using traits_type = HermesValueTraits<T>;
+  using value_type = typename traits_type::value_type;
+  using arrow_type = typename traits_type::arrow_type;
+
+ public:
+  constexpr PinnedValue() : PinnedValue(traits_type::defaultValue()) {}
+
+  /// Copy and move constructors are disabled, to avoid accidentally passing
+  /// PinnedValue by value, since its location must always be known to the GC.
+  PinnedValue(const PinnedValue &) = delete;
+  PinnedValue(PinnedValue &&) = delete;
+
+  constexpr PinnedValue(value_type val)
+      : PinnedHermesValue(traits_type::encode(val)) {}
+
+  PinnedValue &operator=(PinnedValue &&) = default;
+  PinnedValue &operator=(const PinnedValue &other) = default;
+
+  PinnedValue &operator=(const Handle<T> &handle) {
+    setNoBarrier(handle.getHermesValue());
+    return *this;
+  }
+  PinnedValue &operator=(value_type val) {
+    setNoBarrier(traits_type::encode(val));
+    return *this;
+  }
+
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  PinnedValue &operator=(PseudoHandle<U> &&other) {
+    setNoBarrier(other.getHermesValue());
+    other.invalidate();
+    return *this;
+  }
+
+  /// Assign the HermesValue \p val to this PinnedValue, asserting that it
+  /// has type U which is compatible with T. This allows assigning a HermesValue
+  /// with a known type to the PinnedValue without having to extract a
+  /// pointer/symbol from it only to then re-encode it.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  void castAndSetHermesValue(HermesValue val) {
+    HermesValueCast<U>::assertValid(val);
+    setNoBarrier(val);
+  }
+
+  value_type get() const {
+    return traits_type::decode(*this);
+  }
+  value_type operator*() const {
+    return get();
+  }
+  arrow_type operator->() const {
+    return traits_type::arrow(*this);
+  }
+
+  HermesValue getHermesValue() const {
+    return *this;
+  }
+
+  /// A method to obtaim a reference to the underlying PinnedHermesValue, but
+  /// only if T is actually HermesValue.
+  PinnedHermesValue *getPinnedHermesValue() {
+    static_assert(
+        std::is_same<T, HermesValue>::value,
+        "This method can only be used for PinnedValue<HermesValue>");
+    return this;
+  }
+
+  void clear() {
+    setNoBarrier(HermesValue::encodeRawZeroValueUnsafe());
+  }
+  bool isCleared() const {
+    return raw == 0;
+  }
+};
+
 /// A HermesValue in the current GCScope which is trackable by the GC and will
 /// be correctly marked and updated if objects are moved. The value is valid
 /// while the owning GCScope object is alive.
@@ -172,6 +292,8 @@ class PseudoHandle {
 /// This is the base object factoring out common code from the type-specific
 /// versions.
 class HandleBase {
+  template <typename U>
+  friend class MutableHandle;
 #ifndef NDEBUG
   /// In debug mode we store the GCScope that created us so we can update its
   /// active handle count in our destructor.
@@ -266,30 +388,6 @@ static_assert(
     "Handle must fit in a register and be trivially copyable");
 #endif
 
-/// A helper type, specialized on whether we are casting to a cell or a
-/// non-cell.
-template <typename T, bool isCell = HermesValueTraits<T>::is_cell>
-struct HermesValueCast {
-  /// In debug mode, check that the value is of the correct type and assert
-  /// if it isn't.
-  static void assertValid(HermesValue x) {
-#ifndef NDEBUG
-    (void)vmcast<T>(x);
-#endif
-  }
-};
-
-template <typename T>
-struct HermesValueCast<T, false> {
-  /// In debug mode, check that the value is of the correct type and assert
-  /// if it isn't.
-  static void assertValid(HermesValue x) {
-#ifndef NDEBUG
-    (void)HermesValueTraits<T>::decode(x);
-#endif
-  }
-};
-
 /// A HermesValue in the current GCScope which is trackable by the GC and will
 /// be correctly marked and updated if objects are moved. The value is valid
 /// while the owning GCScope object is alive.
@@ -312,12 +410,17 @@ class Handle : public HandleBase {
  public:
   using value_type = typename HermesValueTraits<T>::value_type;
 
+ protected:
+  friend class HandleRootOwner;
+  friend class Runtime;
+
   /// Allocate a new handle in the current GCScope
   explicit Handle(HandleRootOwner &runtime, value_type value)
       : HandleBase(runtime, HermesValueTraits<T>::encode(value)) {};
   explicit Handle(GCScope *inScope, value_type value)
       : HandleBase(inScope, HermesValueTraits<T>::encode(value)) {};
 
+ public:
   /// Create a Handle aliasing a non-movable HermesValue without
   /// allocating a handle.
   explicit Handle(const PinnedHermesValue *valueAddr)
@@ -326,6 +429,13 @@ class Handle : public HandleBase {
         std::is_same<value_type, HermesValue>::value,
         "This constructor can only be used for Handle<HermesValue>");
   }
+
+  /// Implicitly convert from a PinnedValue of a compatible type.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  /* implicit */ Handle(const PinnedValue<U> &pv) : HandleBase(&pv) {}
 
   /// Convert between compatible types.
   template <
@@ -360,9 +470,11 @@ class Handle : public HandleBase {
   }
 
   /// \return true if it contains a non-null pointer.
-  /// I couldn't find a way to disable this operator for non-pointers.
+  template <
+      typename U = T,
+      typename = typename std::enable_if<HermesValueTraits<U>::is_cell>::type>
   explicit operator bool() const {
-    return handleRef()->isPointer() && handleRef()->getPointer();
+    return handleRef()->getPointer();
   }
 
   typename HermesValueTraits<T>::arrow_type operator->() const {
@@ -391,6 +503,14 @@ class Handle : public HandleBase {
     return Handle<T>(valueAddr, true);
   }
 
+  /// Create a Handle from aliasing a PinnedValue and assert that the
+  /// value has the correct type.
+  template <typename U>
+  static Handle<T> vmcast(const PinnedValue<U> *pv) {
+    HermesValueCast<T>::assertValid(*pv);
+    return Handle<T>(pv, true);
+  }
+
   /// Create a Handle from aliasing a pinned HermesValue and assert that the
   /// value has the correct type.
   static Handle<T> vmcast_or_null(const PinnedHermesValue *valueAddr) {
@@ -400,7 +520,8 @@ class Handle : public HandleBase {
 
   /// Cast the argument to the desired type and assert if it doesn't have the
   /// correct type.
-  static Handle<T> vmcast(const HandleBase &other) {
+  template <typename U>
+  static Handle<T> vmcast(const Handle<U> &other) {
     HermesValueCast<T>::assertValid(other.getHermesValue());
     return Handle<T>(other, true);
   }
@@ -412,7 +533,8 @@ class Handle : public HandleBase {
     return Handle<T>(other, true);
   }
 
-  static Handle<T> dyn_vmcast(const HandleBase &other);
+  template <typename U>
+  static Handle<T> dyn_vmcast(const Handle<U> &other);
 
   /// Create a handle based on a potentially invalid address.
   /// For example, this is used in CallResult for exception values.
@@ -433,9 +555,6 @@ static_assert(
 /// explicit as possible by using this class.
 template <typename T>
 class MutableHandle : public Handle<T> {
-  MutableHandle(const MutableHandle &) = delete;
-  void operator=(const MutableHandle &) = delete;
-
   /// Alias a MutableHandle with a non-movable HermesValue without any checks.
   explicit MutableHandle(PinnedHermesValue *valueAddr, bool dummy)
       : Handle<T>(valueAddr, dummy) {}
@@ -449,8 +568,19 @@ class MutableHandle : public Handle<T> {
       value_type value = HermesValueTraits<T>::defaultValue())
       : Handle<T>(runtime, value) {}
 
-  /// A move constructor.
-  MutableHandle(MutableHandle &&sc) : Handle<T>(std::move(sc)) {}
+  /// Construct a new Handle by aliasing an existing PinnedValue of the same
+  /// type.
+  /* implicit */ MutableHandle(const PinnedValue<T> &pv) : Handle<T>(pv) {}
+
+  MutableHandle(const MutableHandle &sc) = default;
+  MutableHandle(MutableHandle &&sc) = default;
+
+  /// Copy constructor from MutableHandle<U> where U is compatible with T.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<T, U>::value>::type>
+  MutableHandle(const MutableHandle<U> &sc) : Handle<T>(sc) {}
 
   MutableHandle &operator=(MutableHandle &&sc) {
     *HandleBase::handleRef() = *sc.handleRef();
@@ -472,8 +602,26 @@ class MutableHandle : public Handle<T> {
     set(HermesValueTraits<T>::defaultValue());
   }
 
+  void set(PseudoHandle<T> &&other) {
+    set(other.get());
+    other.invalidate();
+  }
+
   void set(value_type value) {
     *HandleBase::handleRef() = HermesValueTraits<T>::encode(value);
+  }
+
+  /// Assign the HermesValue \p val to this MutableHandle, asserting that it
+  /// has type U which is compatible with T. This allows assigning a HermesValue
+  /// with a known type to the PinnedValue without having to extract a
+  /// pointer/symbol from it only to then re-encode it.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  void castAndSetHermesValue(HermesValue val) {
+    HermesValueCast<U>::assertValid(val);
+    *HandleBase::handleRef() = val;
   }
 
   /// Create a MutableHandle from a pinned HermesValue and assert that the value
@@ -487,16 +635,106 @@ class MutableHandle : public Handle<T> {
   /// where the MutableHandle<> is an output-only value, so we don't want to
   /// unnecessarily initialize it to a value compatible with its type.
   static MutableHandle<T> aliasForOutput(PinnedHermesValue *valueAddr) {
-#ifdef HERMES_SLOW_DEBUG
-    *valueAddr = HermesValue::encodeInvalidValue();
-#endif
+    // It may seem like a good idea to set valueAddr to an invalid value in
+    // debug builds, in an effort to catch reads on this MutableHandle before a
+    // write has been issued. But, this would be incorect for a couple of
+    // reasons. First, writing to a MutableHandle triggers a check to make sure
+    // the handle doesn't currently contain invalid, to guard against using
+    // flushed handles. Second, this would prevent this method from being useful
+    // in certain situations in the interpreter. An output-only register may be
+    // aliased to an input register, so we could inadvertently clobber an input
+    // register before we've read it if we used this method on it.
     return MutableHandle<T>(valueAddr, true);
+  }
+
+  /// A version of \c aliasForOutput() that takes a \c MutableHandle<U>.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<T, U>::value>::type>
+  static MutableHandle aliasForOutput(const MutableHandle<U> &other) {
+    return MutableHandle(
+        const_cast<PinnedHermesValue *>(other.handleRef()), true);
+  }
+
+  PinnedHermesValue *unsafeGetPinnedHermesValue() {
+    return HandleBase::handleRef();
   }
 } HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
 
 static_assert(
     sizeof(MutableHandle<>) == sizeof(HandleBase),
     "MutableHandle must be a thin wrapper on top of Handle");
+
+/// An RAII object to manage the use of a pre-allocated PinnedValue as a handle.
+/// It must not be recursively reused, and it clears the value on destruction.
+template <typename T>
+class UsePinnedValueRAII {
+  PinnedHermesValue &phv_;
+
+ public:
+  using value_type = typename HermesValueTraits<T>::value_type;
+
+  explicit UsePinnedValueRAII(PinnedHermesValue &phv) : phv_(phv) {
+    assert(
+        phv.getRaw() == 0 &&
+        "PinnedHermesValue is not cleared - possible recursive reuse?");
+  }
+  ~UsePinnedValueRAII() {
+    phv_ = HermesValue::encodeRawZeroValueUnsafe();
+  }
+
+  // Disallow copying and moving.
+  UsePinnedValueRAII(const UsePinnedValueRAII &) = delete;
+  void operator=(const UsePinnedValueRAII &) = delete;
+
+  Handle<T> hnd() const {
+    return Handle<T>(&phv_);
+  }
+  MutableHandle<T> mut() {
+    return MutableHandle<T>::aliasForOutput(&phv_);
+  }
+
+  operator Handle<T>() const {
+    return Handle<T>(&phv_);
+  }
+  operator MutableHandle<T>() {
+    return MutableHandle<T>::aliasForOutput(&phv_);
+  }
+
+  UsePinnedValueRAII &operator=(value_type value) {
+    phv_ = HermesValueTraits<T>::encode(value);
+    return *this;
+  }
+  void set(value_type value) {
+    phv_ = HermesValueTraits<T>::encode(value);
+  }
+
+  value_type get() const {
+    return HermesValueTraits<T>::decode(phv_);
+  }
+
+  /// Assign the HermesValue \p val to this PinnedValue, asserting that it
+  /// has type U which is compatible with T. This allows assigning a HermesValue
+  /// with a known type to the PinnedValue without having to extract a
+  /// pointer/symbol from it only to then re-encode it.
+  template <
+      typename U,
+      typename =
+          typename std::enable_if<IsHermesValueConvertible<U, T>::value>::type>
+  void castAndSetHermesValue(HermesValue val) {
+    HermesValueCast<U>::assertValid(val);
+    phv_ = val;
+  }
+
+  HermesValue getHermesValue() const {
+    return phv_;
+  }
+
+  PinnedHermesValue *getPinnedHermesValue() {
+    return &phv_;
+  }
+};
 
 /// Create a \c PseudoHandle from a pointer.
 template <typename T>

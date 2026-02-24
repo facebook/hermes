@@ -5,10 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <hermes/ConsoleHost/RuntimeFlags.h>
 #include <hermes/Support/Algorithms.h>
 #include <hermes/Support/MemoryBuffer.h>
 #include <hermes/TraceInterpreter.h>
+#include <hermes/VM/JIT/Config.h>
+#include <hermes/VM/RuntimeFlags.h>
 #include <hermes/hermes.h>
 #include <hermes/hermes_tracing.h>
 
@@ -20,11 +21,19 @@
 #include <iostream>
 #include <tuple>
 
+#ifndef _WIN32
+#include <dlfcn.h>
+#endif
+
+using namespace hermes;
+using namespace hermes::vm;
+
 using MarkerAction =
     facebook::hermes::tracing::TraceInterpreter::ExecuteOptions::MarkerAction;
 
 namespace cl {
 
+using llvh::cl::cat;
 using llvh::cl::desc;
 using llvh::cl::init;
 using llvh::cl::list;
@@ -39,8 +48,20 @@ using llvh::cl::Required;
 static opt<std::string>
     TraceFile(desc("input trace file"), Positional, Required);
 
-static list<std::string>
-    BytecodeFiles(desc("input bytecode files"), Positional, OneOrMore);
+static list<std::string> CodeFiles(
+    desc(
+        "input bytecode files or shermes unit names and hashes"
+        "(when -shermes flag is set, on non-Windows platforms)."
+        "For bytecode files, it's passed as 'file1 file2 file3 ..'. For shermes"
+        "input, it's passed as 'hash1 unit_fn1 hash2 unit_fn2...'."),
+    Positional,
+    OneOrMore);
+
+// shermes doesn't support Windows.
+#ifndef _WIN32
+static opt<bool>
+    Shermes("shermes", desc("Use the shermes native backend"), init(false));
+#endif
 
 static opt<std::string> Marker(
     "marker",
@@ -125,53 +146,53 @@ static opt<bool> DisableSourceHashCheck(
 /// @name Common flags from Hermes VM
 /// @{
 
-static opt<bool> GCAllocYoung(
-    "gc-alloc-young",
-    desc("Determines whether to (initially) allocate in the young generation"),
-    cat(GCCategory),
-    init(false));
+struct Flags : public cli::RuntimeFlags {
+  opt<bool> GCBeforeStats{
+      "gc-before-stats",
+      desc("Perform a full GC just before printing statistics at exit"),
+      cat(GCCategory),
+      init(false)};
 
-static opt<bool> GCRevertToYGAtTTI(
-    "gc-revert-to-yg-at-tti",
-    desc(
-        "Determines whether to revert to young generation, if necessary, at "
-        "TTI notification"),
-    cat(GCCategory),
-    init(true));
+  opt<bool> GCPrintCollectionStats{
+      "gc-print-collection-stats",
+      desc("Output statistics for each garbage collection at exit"),
+      cat(GCCategory),
+      init(false)};
 
-static opt<bool> GCBeforeStats(
-    "gc-before-stats",
-    desc("Perform a full GC just before printing statistics at exit"),
-    cat(GCCategory),
-    init(false));
+  opt<bool> BasicBlockProfiling{
+      "basic-block-profiling",
+      init(false),
+      desc("Enable basic block profiling (HBC only)")};
 
-static opt<bool> GCPrintStats(
-    "gc-print-stats",
-    desc("Output summary garbage collection statistics at exit"),
-    cat(GCCategory),
-    init(true));
+  opt<std::string> ProfilingOutFile{
+      "profiling-out",
+      desc("File to write profiling info to")};
 
-static opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused(
-    "release-unused",
-    desc("How aggressively to return unused memory to the OS."),
-    init(GCConfig::getDefaultShouldReleaseUnused()),
-    llvh::cl::values(
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedNone,
-            "none",
-            "Don't try to release unused memory."),
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedOld,
-            "old",
-            "Only old gen, on full collections."),
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedYoungOnFull,
-            "young-on-full",
-            "Also young gen, but only on full collections."),
-        clEnumValN(
-            ::hermes::vm::kReleaseUnusedYoungAlways,
-            "young-always",
-            "Also young gen, also on young gen collections")));
+  opt<::hermes::vm::ReleaseUnused> ShouldReleaseUnused{
+      "release-unused",
+      desc("How aggressively to return unused memory to the OS."),
+      cat(GCCategory),
+      init(GCConfig::getDefaultShouldReleaseUnused()),
+      llvh::cl::values(
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedNone,
+              "none",
+              "Don't try to release unused memory."),
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedOld,
+              "old",
+              "Only old gen, on full collections."),
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedYoungOnFull,
+              "young-on-full",
+              "Also young gen, but only on full collections."),
+          clEnumValN(
+              ::hermes::vm::kReleaseUnusedYoungAlways,
+              "young-always",
+              "Also young gen, also on young gen collections"))};
+};
+
+Flags flags{};
 
 /// @}
 
@@ -189,7 +210,7 @@ static llvh::Optional<T> execOption(const cl::opt<T> &clOpt) {
 
 // Must do this special case explicitly, because of the MemorySizeParser.
 static llvh::Optional<::hermes::vm::gcheapsize_t> execOption(
-    const cl::opt<cl::MemorySize, false, cl::MemorySizeParser> &clOpt) {
+    const cl::opt<cli::MemorySize, false, cli::MemorySizeParser> &clOpt) {
   if (clOpt.getNumOccurrences() > 0) {
     return clOpt.bytes;
   } else {
@@ -213,6 +234,16 @@ static const char *fileExtensionForAction(MarkerAction action) {
   }
 }
 
+/// Convert the hash hex string to hermes::SHA1.
+static hermes::SHA1 stringToSHA1(const std::string &hexStr) {
+  hermes::SHA1 sha;
+  assert(hexStr.size() == sha.size() * 2 && "Invalid hash string length");
+  for (size_t j = 0; j < sha.size(); j++) {
+    sha[j] = std::stoi(hexStr.substr(2 * j, 2), nullptr, 16);
+  }
+  return sha;
+}
+
 int main(int argc, char **argv) {
   // Print a stack trace if we signal out.
   llvh::sys::PrintStackTraceOnErrorSignal("Hermes synth");
@@ -224,6 +255,31 @@ int main(int argc, char **argv) {
   using namespace facebook::hermes::tracing;
   try {
     TraceInterpreter::ExecuteOptions options;
+
+    if (cl::flags.BasicBlockProfiling && (cl::Reps > 1)) {
+      llvh::errs() << "Warning: -basic-block-profiling and -reps set.  "
+                   << "Profiling info will be written separately after "
+                   << "each rep, which probably isn't what you want.\n";
+    }
+
+#ifndef _WIN32
+    if (cl::Shermes && !cl::Trace.empty()) {
+      llvh::errs() << "Shermes does not support tracing\n";
+      return EXIT_FAILURE;
+    }
+#endif
+
+#if !HERMESVM_JIT
+    if (cl::flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off) {
+      llvh::errs() << "JIT is not enabled in this build\n";
+      return EXIT_FAILURE;
+    }
+#endif
+
+    if (cl::flags.DumpJITCode) {
+      llvh::errs() << "synth does not support -Xdump-jitcode\n";
+      return EXIT_FAILURE;
+    }
 
     // These are not config parameters: just set them according to the
     // runtime flag.
@@ -238,8 +294,13 @@ int main(int argc, char **argv) {
           options.marker, fileExtensionForAction(options.action), tmpfile);
       options.profileFileName = std::string{tmpfile.begin(), tmpfile.end()};
     }
-    options.forceGCBeforeStats = cl::GCBeforeStats;
+    options.forceGCBeforeStats = cl::flags.GCBeforeStats;
+    options.enableJIT = cl::flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off;
+    options.forceJIT = cl::flags.JIT == cli::VMOnlyRuntimeFlags::JITMode::Force;
     options.disableSourceHashCheck = cl::DisableSourceHashCheck;
+
+    options.basicBlockProfiling = cl::flags.BasicBlockProfiling;
+    options.profilingOutFile = cl::flags.ProfilingOutFile;
 
     // These are the config parameters.
 
@@ -247,28 +308,28 @@ int main(int argc, char **argv) {
     // if -gc-print-stats is specified false explicitly, and
     // -gc-before-stats is also false.
     bool shouldPrintGCStats = true;
-    if (cl::GCPrintStats.getNumOccurrences() > 0) {
-      shouldPrintGCStats = (cl::GCPrintStats || cl::GCBeforeStats);
+    if (cl::flags.GCPrintStats.getNumOccurrences() > 0) {
+      shouldPrintGCStats = (cl::flags.GCPrintStats || cl::flags.GCBeforeStats);
     }
 
-    llvh::Optional<::hermes::vm::gcheapsize_t> minHeapSize =
-        execOption(cl::MinHeapSize);
     llvh::Optional<::hermes::vm::gcheapsize_t> initHeapSize =
-        execOption(cl::InitHeapSize);
+        execOption(cl::flags.InitHeapSize);
     llvh::Optional<::hermes::vm::gcheapsize_t> maxHeapSize =
-        execOption(cl::MaxHeapSize);
-    llvh::Optional<double> occupancyTarget = execOption(cl::OccupancyTarget);
+        execOption(cl::flags.MaxHeapSize);
+    llvh::Optional<double> occupancyTarget =
+        execOption(cl::flags.OccupancyTarget);
     llvh::Optional<::hermes::vm::ReleaseUnused> shouldReleaseUnused =
-        execOption(cl::ShouldReleaseUnused);
-    llvh::Optional<bool> allocInYoung = execOption(cl::GCAllocYoung);
-    llvh::Optional<bool> revertToYGAtTTI = execOption(cl::GCRevertToYGAtTTI);
-    options.shouldTrackIO = execOption(cl::TrackBytecodeIO);
+        execOption(cl::flags.ShouldReleaseUnused);
+    llvh::Optional<bool> allocInYoung = execOption(cl::flags.GCAllocYoung);
+    llvh::Optional<bool> revertToYGAtTTI =
+        execOption(cl::flags.GCRevertToYGAtTTI);
+    options.shouldTrackIO = execOption(cl::flags.TrackBytecodeIO);
     options.bytecodeWarmupPercent = execOption(cl::BytecodeWarmupPercent);
-    llvh::Optional<double> sanitizeRate = execOption(cl::GCSanitizeRate);
+    llvh::Optional<double> sanitizeRate = execOption(cl::flags.GCSanitizeRate);
     // The type of this case is complicated, so just do it explicitly.
     llvh::Optional<int64_t> sanitizeRandomSeed;
-    if (cl::GCSanitizeRandomSeed) {
-      sanitizeRandomSeed = cl::GCSanitizeRandomSeed;
+    if (cl::flags.GCSanitizeRandomSeed) {
+      sanitizeRandomSeed = cl::flags.GCSanitizeRandomSeed;
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
@@ -276,12 +337,19 @@ int main(int argc, char **argv) {
       llvh::EnableStatistics();
 #endif
 
-    options.gcConfigBuilder.withShouldRecordStats(shouldPrintGCStats);
-    if (minHeapSize) {
-      options.gcConfigBuilder.withMinHeapSize(*minHeapSize);
+    std::vector<GCAnalyticsEvent> gcAnalyticsEvents;
+    if (shouldPrintGCStats) {
+      options.gcConfigBuilder.withShouldRecordStats(true);
+      if (cl::flags.GCPrintCollectionStats) {
+        options.gcAnalyticsEvents = &gcAnalyticsEvents;
+        options.gcConfigBuilder.withAnalyticsCallback(
+            [&gcAnalyticsEvents](const ::hermes::vm::GCAnalyticsEvent &event) {
+              gcAnalyticsEvents.push_back(event);
+            });
+      }
     }
     if (initHeapSize) {
-      options.gcConfigBuilder.withMinHeapSize(*initHeapSize);
+      options.gcConfigBuilder.withInitHeapSize(*initHeapSize);
     }
     if (maxHeapSize) {
       options.gcConfigBuilder.withMaxHeapSize(*maxHeapSize);
@@ -309,12 +377,18 @@ int main(int argc, char **argv) {
       options.gcConfigBuilder.withSanitizeConfig(sanitizeConfigBuilder.build());
     }
 
-    std::vector<std::string> bytecodeFiles{
-        cl::BytecodeFiles.begin(), cl::BytecodeFiles.end()};
-    if (cl::DisableSourceHashCheck && bytecodeFiles.size() != 1) {
-      throw std::invalid_argument(
-          "Must have single bytecode file to disable source hash check");
+    std::vector<std::string> bytecodeFiles;
+#ifndef _WIN32
+    if (!cl::Shermes)
+#endif
+    {
+      bytecodeFiles = {cl::CodeFiles.begin(), cl::CodeFiles.end()};
+      if (cl::DisableSourceHashCheck && bytecodeFiles.size() != 1) {
+        throw std::invalid_argument(
+            "Must have single bytecode file to disable source hash check");
+      }
     }
+
     if (!cl::Trace.empty()) {
       // If this is tracing mode, get the trace instead of the stats.
       options.gcConfigBuilder.withShouldRecordStats(false);
@@ -350,9 +424,45 @@ int main(int argc, char **argv) {
 
       llvh::outs() << "\nWrote output trace to: " << cl::Trace << "\n";
     } else {
-      llvh::outs() << TraceInterpreter::execAndGetStats(
-                          cl::TraceFile, bytecodeFiles, options)
-                   << "\n";
+#ifndef _WIN32
+      if (cl::Shermes) {
+        assert(cl::CodeFiles.size() % 2 == 0 && "Invalid shermes input");
+        // Lookup the SHUnitCreator function for each source hash.
+        std::map<::hermes::SHA1, SHUnitCreator> shermesUnitCreatorFns;
+        for (size_t i = 0; i < cl::CodeFiles.size(); i += 2) {
+          auto sha1 = stringToSHA1(cl::CodeFiles[i]);
+          auto &unitFnName = cl::CodeFiles[i + 1];
+          void *handle = dlopen(nullptr, RTLD_LAZY);
+          if (!handle)
+            throw std::runtime_error(dlerror());
+          auto *unitCreatorFn =
+              (SHUnitCreator)dlsym(handle, unitFnName.c_str());
+          if (!unitCreatorFn)
+            throw std::runtime_error(dlerror());
+          shermesUnitCreatorFns.emplace(sha1, unitCreatorFn);
+        }
+
+        auto createRuntime = [](const ::hermes::vm::RuntimeConfig &config) {
+          auto hermesRoot =
+              facebook::jsi::castInterface<facebook::hermes::IHermesRootAPI>(
+                  facebook::hermes::makeHermesRootAPI());
+          return hermesRoot->makeHermesRuntime(config);
+        };
+
+        llvh::outs() << TraceInterpreter::execNativeWithRuntime(
+                            cl::TraceFile,
+                            shermesUnitCreatorFns,
+                            options,
+                            createRuntime)
+                     << "\n";
+
+      } else
+#endif
+      {
+        llvh::outs() << TraceInterpreter::execAndGetStats(
+                            cl::TraceFile, bytecodeFiles, options)
+                     << "\n";
+      }
     }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
@@ -366,8 +476,8 @@ int main(int argc, char **argv) {
     return 0;
   } catch (const std::invalid_argument &e) {
     std::cerr << "Invalid argument: " << e.what() << std::endl;
-  } catch (const std::system_error &e) {
-    std::cerr << "System error: " << e.what() << std::endl;
+  } catch (const std::runtime_error &e) {
+    std::cerr << "Runtime error: " << e.what() << std::endl;
   }
   return 1;
 }

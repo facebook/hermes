@@ -39,6 +39,11 @@
 #ifndef DEFINE_RET_TARGET
 #define DEFINE_RET_TARGET(...)
 #endif
+// Whenever a new value buffer user is added, be sure to add a new
+// handler in the delta mode code for literal buffers.
+#ifndef DEFINE_VALUE_BUFFER_USER
+#define DEFINE_VALUE_BUFFER_USER(...)
+#endif
 #ifndef ASSERT_EQUAL_LAYOUT1
 #define ASSERT_EQUAL_LAYOUT1(a, b)
 #endif
@@ -81,12 +86,20 @@ DEFINE_OPCODE_0(Unreachable)
 /// Create an object from a static map of values, as for var={'a': 3}.
 /// Any non-constant elements can be set afterwards with PutOwnByInd.
 /// Arg1 is the destination.
-/// Arg2 is a preallocation size hint.
-/// Arg3 is the number of static elements.
-/// Arg4 is the index in the object key buffer table.
-/// Arg5 is the index in the object val buffer table.
-DEFINE_OPCODE_5(NewObjectWithBuffer, Reg8, UInt16, UInt16, UInt16, UInt16)
-DEFINE_OPCODE_5(NewObjectWithBufferLong, Reg8, UInt16, UInt16, UInt32, UInt32)
+/// Arg2 is the index in the object shape table.
+/// Arg3 is the offset in the object val buffer table.
+DEFINE_OPCODE_3(NewObjectWithBuffer, Reg8, UInt16, UInt16)
+DEFINE_OPCODE_3(NewObjectWithBufferLong, Reg8, UInt32, UInt32)
+DEFINE_VALUE_BUFFER_USER(NewObjectWithBuffer)
+DEFINE_VALUE_BUFFER_USER(NewObjectWithBufferLong)
+
+/// Create an object from a static map of values, setting its parent.
+/// Arg1 is the destination.
+/// Arg2 is the parent.
+/// Arg3 is the index in the object shape table.
+/// Arg4 is the offset in the object val buffer table.
+DEFINE_OPCODE_4(NewObjectWithBufferAndParent, Reg8, Reg8, UInt32, UInt32)
+DEFINE_VALUE_BUFFER_USER(NewObjectWithBufferAndParent)
 
 /// Create a new, empty Object using the built-in constructor (regardless of
 /// whether it was overridden).
@@ -101,17 +114,43 @@ DEFINE_OPCODE_1(NewObject, Reg8)
 DEFINE_OPCODE_2(NewObjectWithParent, Reg8, Reg8)
 
 /// Create an array from a static list of values, as for var=[1,2,3].
-/// Any non-constant elements can be set afterwards with PutOwnByIndex.
+/// Any non-constant elements can be set afterwards with DefineOwnByIndex.
 /// Arg1 is the destination.
 /// Arg2 is a preallocation size hint.
 /// Arg3 is the number of static elements.
-/// Arg4 is the index in the array buffer table.
+/// Arg4 is the offset in the array buffer table.
 DEFINE_OPCODE_4(NewArrayWithBuffer, Reg8, UInt16, UInt16, UInt16)
 DEFINE_OPCODE_4(NewArrayWithBufferLong, Reg8, UInt16, UInt16, UInt32)
+DEFINE_VALUE_BUFFER_USER(NewArrayWithBuffer)
+DEFINE_VALUE_BUFFER_USER(NewArrayWithBufferLong)
 
 /// Create a new array of a given size.
 /// Arg1 = new Array(Arg2)
 DEFINE_OPCODE_2(NewArray, Reg8, UInt16)
+
+/// Create a new FastArray.
+/// Arg1 = new FastArray(Arg2)
+DEFINE_OPCODE_2(NewFastArray, Reg8, UInt16)
+
+/// Get the length of a FastArray.
+/// Arg1 = Arg2.length
+DEFINE_OPCODE_2(FastArrayLength, Reg8, Reg8)
+
+/// Load from a FastArray.
+/// Arg1 = Arg2[Arg3]
+DEFINE_OPCODE_3(FastArrayLoad, Reg8, Reg8, Reg8)
+
+/// Store to a FastArray.
+/// Arg1[Arg2] = Arg3
+DEFINE_OPCODE_3(FastArrayStore, Reg8, Reg8, Reg8)
+
+/// Push an element onto the end of a FastArray.
+/// Arg1.push(Arg2)
+DEFINE_OPCODE_2(FastArrayPush, Reg8, Reg8)
+
+/// Append a FastArray onto another FastArray.
+/// Arg1.append(Arg2)
+DEFINE_OPCODE_2(FastArrayAppend, Reg8, Reg8)
 
 /// Arg1 = Arg2 (Register copy)
 DEFINE_OPCODE_2(Mov, Reg8, Reg8)
@@ -160,6 +199,9 @@ DEFINE_OPCODE_3(Add, Reg8, Reg8, Reg8)
 
 /// Arg1 = Arg2 + Arg3 (Numeric addition, skips number check)
 DEFINE_OPCODE_3(AddN, Reg8, Reg8, Reg8)
+
+/// Arg1 = Arg2 + Arg3 (String concat, skips string check)
+DEFINE_OPCODE_3(AddS, Reg8, Reg8, Reg8)
 
 /// Arg1 = Arg2 * Arg3 (JS multiplication)
 DEFINE_OPCODE_3(Mul, Reg8, Reg8, Reg8)
@@ -214,9 +256,32 @@ DEFINE_OPCODE_3(InstanceOf, Reg8, Reg8, Reg8)
 /// Arg1 = Arg2 in Arg3 (JS relational 'in')
 DEFINE_OPCODE_3(IsIn, Reg8, Reg8, Reg8)
 
-/// Get an environment (scope) from N levels up the stack.
-/// 0 is the current environment, 1 is the caller's environment, etc.
-DEFINE_OPCODE_2(GetEnvironment, Reg8, UInt8)
+/// Arg1 = Arg2 in Arg3 (JS relational 'in' for private names.)
+/// Arg2 must be a symbol.
+/// Arg4 is a private name cache index used to speed up the above operation.
+/// Note that this performs different logic than a normal `in` check. This
+/// instruction does not consult the prototype chain or trigger any proxy
+/// traps. It is a direct check on the own properties of the input object.
+DEFINE_OPCODE_4(PrivateIsIn, Reg8, Reg8, Reg8, Reg8)
+
+/// Arg1 = typeof Arg2 is in Arg3 (TypeOfIsTypes, see Typeof.h)
+DEFINE_OPCODE_3(TypeOfIs, Reg8, Reg8, UInt16)
+
+/// Get an environment (scope) from N levels up relative to the current
+/// function's enclosing environment. 0 retrieves the environment from the
+/// closure, 1 retrieves its parent, etc.
+DEFINE_OPCODE_2(GetParentEnvironment, Reg8, UInt8)
+
+/// Get an environment by traversing the scope chain.
+/// Arg1 is the destination.
+/// Arg2 is the environment from which to start traversing.
+/// Arg3 is the number of levels up the scope chain to go.
+DEFINE_OPCODE_3(GetEnvironment, Reg8, Reg8, UInt8)
+
+/// Get the environment from a closure.
+/// Arg1 is the destination.
+/// Arg2 is the closure from which to read.
+DEFINE_OPCODE_2(GetClosureEnvironment, Reg8, Reg8)
 
 /// Store a value in an environment.
 /// StoreNPToEnvironment[L] store a non-pointer value in an environment
@@ -242,24 +307,34 @@ DEFINE_OPCODE_1(GetGlobalObject, Reg8)
 /// Arg1 = NewTarget
 DEFINE_OPCODE_1(GetNewTarget, Reg8)
 
-/// Create a new environment, to store values captured by closures.
-DEFINE_OPCODE_1(CreateEnvironment, Reg8)
+/// Get the parent of a given object. The parent will either be an object or null.
+/// Arg1 = destination register to write the parent.
+/// Arg2 = the object.
+DEFINE_OPCODE_2(LoadParentNoTraps, Reg8, Reg8)
 
-/// Create a new inner environment, to store values captured by closures.
+/// Create a new environment, using the current function's enclosing environment
+/// as the parent.
 /// Arg1 is the destination.
-/// Arg2 is the parent environment.
-/// Arg3 is the number of slots in the environment.
-DEFINE_OPCODE_3(CreateInnerEnvironment, Reg8, Reg8, UInt32)
+/// Arg2 is the size of the new environment.
+DEFINE_OPCODE_2(CreateFunctionEnvironment, Reg8, UInt8)
+
+/// Create a top level environment, without a parent.
+/// TODO: Consider removing this in favor of using CreateEnvironment by using a
+///       different scheme for encoding the top level environment.
+/// Arg1 is the destination.
+/// Arg2 is the size of the new environment.
+DEFINE_OPCODE_2(CreateTopLevelEnvironment, Reg8, UInt32)
+
+/// Create a new environment with the given parent.
+/// Arg1 is the destination.
+/// Arg2 is the parent environment to use.
+/// Arg3 is the size of the new environment.
+DEFINE_OPCODE_3(CreateEnvironment, Reg8, Reg8, UInt32)
 
 /// Declare a global variable by string table index.
 /// The variable will be set to undefined.
 DEFINE_OPCODE_1(DeclareGlobalVar, UInt32)
 OPERAND_STRING_ID(DeclareGlobalVar, 1)
-
-/// Checks if globalThis has a restricted global property with the given name.
-/// Arg1 is the name to check.
-DEFINE_OPCODE_1(ThrowIfHasRestrictedGlobalProperty, UInt32)
-OPERAND_STRING_ID(ThrowIfHasRestrictedGlobalProperty, 1)
 
 /// Get an object property by string table index.
 /// Arg1 = Arg2[stringtable[Arg4]]
@@ -271,6 +346,16 @@ OPERAND_STRING_ID(GetByIdShort, 4)
 OPERAND_STRING_ID(GetById, 4)
 OPERAND_STRING_ID(GetByIdLong, 4)
 
+/// Get an object property by string table index, with a specified receiver.
+/// Arg1 = Arg2[stringtable[Arg5]]
+/// Arg1 is the destination.
+/// Arg2 is the object to begin the property look up.
+/// Arg3 is a cache index used to speed up the above operation.
+/// Arg4 is receiver.
+/// Arg5 is the string id.
+DEFINE_OPCODE_5(GetByIdWithReceiverLong, Reg8, Reg8, UInt8, Reg8, UInt32)
+OPERAND_STRING_ID(GetByIdWithReceiverLong, 5)
+
 /// Get an object property by string table index, or throw if not found.
 /// This is similar to GetById, but intended for use with global variables
 /// where Arg2 = GetGlobalObject.
@@ -281,59 +366,68 @@ OPERAND_STRING_ID(TryGetByIdLong, 4)
 
 /// Set an object property by string index.
 /// Arg1[stringtable[Arg4]] = Arg2.
-DEFINE_OPCODE_4(PutById, Reg8, Reg8, UInt8, UInt16)
-DEFINE_OPCODE_4(PutByIdLong, Reg8, Reg8, UInt8, UInt32)
-OPERAND_STRING_ID(PutById, 4)
-OPERAND_STRING_ID(PutByIdLong, 4)
+DEFINE_OPCODE_4(PutByIdLoose, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(PutByIdStrict, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(PutByIdLooseLong, Reg8, Reg8, UInt8, UInt32)
+DEFINE_OPCODE_4(PutByIdStrictLong, Reg8, Reg8, UInt8, UInt32)
+OPERAND_STRING_ID(PutByIdLoose, 4)
+OPERAND_STRING_ID(PutByIdStrict, 4)
+OPERAND_STRING_ID(PutByIdLooseLong, 4)
+OPERAND_STRING_ID(PutByIdStrictLong, 4)
 
 /// Set an object property by string index, or throw if undeclared.
 /// This is similar to PutById, but intended for use with global variables
 /// where Arg1 = GetGlobalObject.
-DEFINE_OPCODE_4(TryPutById, Reg8, Reg8, UInt8, UInt16)
-DEFINE_OPCODE_4(TryPutByIdLong, Reg8, Reg8, UInt8, UInt32)
-OPERAND_STRING_ID(TryPutById, 4)
-OPERAND_STRING_ID(TryPutByIdLong, 4)
+DEFINE_OPCODE_4(TryPutByIdLoose, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(TryPutByIdStrict, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(TryPutByIdLooseLong, Reg8, Reg8, UInt8, UInt32)
+DEFINE_OPCODE_4(TryPutByIdStrictLong, Reg8, Reg8, UInt8, UInt32)
+OPERAND_STRING_ID(TryPutByIdLoose, 4)
+OPERAND_STRING_ID(TryPutByIdStrict, 4)
+OPERAND_STRING_ID(TryPutByIdLooseLong, 4)
+OPERAND_STRING_ID(TryPutByIdStrictLong, 4)
 
-/// Create a new own property on an object. This is similar to PutById, but
-/// the destination must be an object, it only deals with own properties,
-/// ignoring the prototype chain, and the property must not already be defined.
-/// Similarly to PutById, the property name cannot be a valid array index.
-/// Arg1 is the destination object, which is known to be an object.
-/// Arg2 is the value to write.
-/// Arg3 is the string table ID of the property name.
-/// Arg1[stringtable[Arg3]] = Arg2
-DEFINE_OPCODE_3(PutNewOwnByIdShort, Reg8, Reg8, UInt8)
-DEFINE_OPCODE_3(PutNewOwnById, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(PutNewOwnByIdLong, Reg8, Reg8, UInt32)
-OPERAND_STRING_ID(PutNewOwnByIdShort, 3)
-OPERAND_STRING_ID(PutNewOwnById, 3)
-OPERAND_STRING_ID(PutNewOwnByIdLong, 3)
-
-/// Create a new non-enumerable own property on an object. This is the same as
-/// PutNewOwnById, but creates the property with different enumerability.
+/// Set an existing own property identified at a slot index.
 /// Arg1 is the destination object.
 /// Arg2 is the value to write.
-/// Arg3 is the string table ID of the property name.
-/// Arg1[stringtable[Arg3]] = Arg2
-DEFINE_OPCODE_3(PutNewOwnNEById, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(PutNewOwnNEByIdLong, Reg8, Reg8, UInt32)
-OPERAND_STRING_ID(PutNewOwnNEById, 3)
-OPERAND_STRING_ID(PutNewOwnNEByIdLong, 3)
+/// Arg3 is the hidden class slot index.
+/// Arg1[Arg3] = Arg2;
+DEFINE_OPCODE_3(PutOwnBySlotIdx, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(PutOwnBySlotIdxLong, Reg8, Reg8, UInt32)
 
-// The "NE" versions must be ordered after the "normal" versions.
-ASSERT_MONOTONE_INCREASING(
-    PutNewOwnByIdShort,
-    PutNewOwnById,
-    PutNewOwnByIdLong,
-    PutNewOwnNEById,
-    PutNewOwnNEByIdLong)
+/// Get an existing own property at a given slot index.
+/// Arg1 is the result register.
+/// Arg2 is the object.
+/// Arg3 is the hidden class slot index.
+/// Arg2[Arg3] = Arg2;
+DEFINE_OPCODE_3(GetOwnBySlotIdx, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(GetOwnBySlotIdxLong, Reg8, Reg8, UInt32)
+
+/// Define an object own property by string index.
+/// Arg1[stringtable[Arg4]] = Arg2.
+/// Arg3 is a cache index.
+DEFINE_OPCODE_4(DefineOwnById, Reg8, Reg8, UInt8, UInt16)
+DEFINE_OPCODE_4(DefineOwnByIdLong, Reg8, Reg8, UInt8, UInt32)
+OPERAND_STRING_ID(DefineOwnByIdLong, 4)
 
 /// Assign a value to a constant integer own property which will be created as
 /// enumerable. This is used (potentially in conjunction with
 /// NewArrayWithBuffer) for arr=[foo,bar] initializations.
 /// Arg1[Arg3] = Arg2;
-DEFINE_OPCODE_3(PutOwnByIndex, Reg8, Reg8, UInt8)
-DEFINE_OPCODE_3(PutOwnByIndexL, Reg8, Reg8, UInt32)
+DEFINE_OPCODE_3(DefineOwnByIndex, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(DefineOwnByIndexL, Reg8, Reg8, UInt32)
+
+/// Define an own property in a dense JavaScript array at a specific index.
+/// Requires that the array is dense and that the ArrayStorage
+/// underlying it has a size which is greater than the arrayIndex operand.
+/// Arg1[Arg3] = Arg2;
+/// Arg1 is the dense array object where the property will be defined.
+/// Arg2 is the value to be stored.
+/// Arg3 is the array index where the property will be stored.
+/// NOTE: The "L" version only goes up to 16-bit array indices,
+/// because NewArray only takes UInt16 argument.
+DEFINE_OPCODE_3(DefineOwnInDenseArray, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_3(DefineOwnInDenseArrayL, Reg8, Reg8, UInt16)
 
 /// Set an own property identified by value.
 /// Arg1 is the destination object.
@@ -342,28 +436,61 @@ DEFINE_OPCODE_3(PutOwnByIndexL, Reg8, Reg8, UInt32)
 /// Arg4 : bool -> enumerable. If true, the property is created as enumerable,
 ///        non-enumerable otherwise.
 /// Arg1[Arg3] = Arg2;
-DEFINE_OPCODE_4(PutOwnByVal, Reg8, Reg8, Reg8, UInt8)
-
-/// Delete a property by string table index.
-/// Arg1 = delete Arg2[stringtable[Arg3]]
-DEFINE_OPCODE_3(DelById, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(DelByIdLong, Reg8, Reg8, UInt32)
-OPERAND_STRING_ID(DelById, 3)
-OPERAND_STRING_ID(DelByIdLong, 3)
+DEFINE_OPCODE_4(DefineOwnByVal, Reg8, Reg8, Reg8, UInt8)
 
 /// Get a property by value. Constants string values should instead use GetById.
 /// Arg1 = Arg2[Arg3]
 DEFINE_OPCODE_3(GetByVal, Reg8, Reg8, Reg8)
+/// Get a property by value, for the special case where the property is a
+/// numeric literal that is a uint8_t integer. Arg1 = Arg2[Arg3]
+DEFINE_OPCODE_3(GetByIndex, Reg8, Reg8, UInt8)
+
+/// Get a property by value with a specified receiver.
+/// Arg1 = Arg2[Arg3]
+/// Arg1 is the destination register.
+/// Arg2 is the object to begin the property look up. It must be an object.
+/// Arg3 is the property key.
+/// Arg4 is the receiver.
+DEFINE_OPCODE_4(GetByValWithReceiver, Reg8, Reg8, Reg8, Reg8)
 
 /// Set a property by value. Constant string values should instead use GetById
 /// (unless they are array indices according to ES5.1 section 15.4, in which
 /// case this is still the right opcode).
 /// Arg1[Arg2] = Arg3
-DEFINE_OPCODE_3(PutByVal, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(PutByValLoose, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(PutByValStrict, Reg8, Reg8, Reg8)
+
+/// Set a property by value, with a specified receiver.
+/// Arg1[Arg2] = Arg3
+/// Arg4 is the receiver
+/// Arg5 is true if this operation is strict, false for loose.
+DEFINE_OPCODE_5(PutByValWithReceiver, Reg8, Reg8, Reg8, Reg8, UInt8)
 
 /// Delete a property by value (when the value is not known at compile time).
 /// Arg1 = delete Arg2[Arg3]
-DEFINE_OPCODE_3(DelByVal, Reg8, Reg8, Reg8)
+/// Arg4 : Integer value set to 1 for strict mode semantics, 0 for loose.
+DEFINE_OPCODE_4(DelByVal, Reg8, Reg8, Reg8, UInt8)
+
+/// Add a private property to an object. This must be a new property.
+/// The property will be added with the privateName flag set on the PropertyFlags.
+/// Arg1[Arg2] = Arg3
+DEFINE_OPCODE_3(AddOwnPrivateBySym, Reg8, Reg8, Reg8)
+
+/// Get a private property from an object.
+/// Arg1 = Arg2[Arg5]
+/// Arg1 is the result
+/// Arg2 is the object to read from.
+/// Arg3 is a private name cache index used to speed up the above operation.
+/// Arg4 is the symbol value of the private name.
+DEFINE_OPCODE_4(GetOwnPrivateBySym, Reg8, Reg8, UInt8, Reg8)
+
+/// Store a private property to an object.
+/// Arg1[Arg5] = Arg2
+/// Arg1 is the object to store to.
+/// Arg2 is the value to store.
+/// Arg3 is a private name cache index used to speed up the above operation.
+/// Arg4 is the symbol value of the private name.
+DEFINE_OPCODE_4(PutOwnPrivateBySym, Reg8, Reg8, UInt8, Reg8)
 
 /// Add a getter and a setter for a property by value.
 /// Object.defineProperty(Arg1, Arg2, { get: Arg3, set: Arg4 }).
@@ -372,7 +499,7 @@ DEFINE_OPCODE_3(DelByVal, Reg8, Reg8, Reg8)
 /// Arg3 is the getter closure or undefined
 /// Arg4 is the setter closure or undefined
 /// Arg5 : boolean - if true, the property will be enumerable.
-DEFINE_OPCODE_5(PutOwnGetterSetterByVal, Reg8, Reg8, Reg8, Reg8, UInt8)
+DEFINE_OPCODE_5(DefineOwnGetterSetterByVal, Reg8, Reg8, Reg8, Reg8, UInt8)
 
 /// Get the list of properties from an object to implement for..in loop.
 /// Returns Arg1, which is the register that holds array of properties.
@@ -391,10 +518,10 @@ DEFINE_OPCODE_4(GetPNameList, Reg8, Reg8, Reg8, Reg8)
 DEFINE_OPCODE_5(GetNextPName, Reg8, Reg8, Reg8, Reg8, Reg8)
 
 ///!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-/// NOTE: the ordering of Call, CallN, Construct, CallLong, ConstructLong is
-/// important. The "long" versions are defined after the "short" versions.
-/// It is important for efficiency that all Calls have contiguous opcodes, with
-/// wider instructions appearing after narrower ones.
+/// NOTE: the ordering of the Call instructions is important. The "long"
+/// versions are defined after the "short" versions. It is important for
+/// efficiency that all Calls have contiguous opcodes, with wider
+/// instructions appearing after narrower ones.
 
 /// Call a function.
 /// Arg1 is the destination of the return value.
@@ -420,16 +547,14 @@ DEFINE_RET_TARGET(Construct)
 DEFINE_OPCODE_3(Call1, Reg8, Reg8, Reg8)
 DEFINE_RET_TARGET(Call1)
 
-/// Call a function directly without a closure.
+/// Call a function with an explicitly specified `new.target`.
 /// Arg1 is the destination of the return value.
-/// Arg2 is the number of arguments, assumed to be found in reverse order
-///      from the end of the current frame. The first argument 'this'
-///      is assumed to be created with CreateThis.
-/// Arg3 is index in the function table.
-/// Note that we expect the variable-sized argument to be last.
-DEFINE_OPCODE_3(CallDirect, Reg8, UInt8, UInt16)
-OPERAND_FUNCTION_ID(CallDirect, 3)
-DEFINE_RET_TARGET(CallDirect)
+/// Arg2 is the closure to invoke.
+/// Arg3 is the value of new.target
+/// Arg4 is the number of arguments, assumed to be found in reverse order
+///      from the end of the current frame.
+DEFINE_OPCODE_4(CallWithNewTarget, Reg8, Reg8, Reg8, UInt8)
+DEFINE_RET_TARGET(CallWithNewTarget)
 
 /// Call a function with two args.
 /// Arg1 is the destination of the return value.
@@ -458,30 +583,30 @@ DEFINE_RET_TARGET(Call3)
 DEFINE_OPCODE_6(Call4, Reg8, Reg8, Reg8, Reg8, Reg8, Reg8)
 DEFINE_RET_TARGET(Call4)
 
-/// Identical to Call, but allowing more arguments.
-DEFINE_OPCODE_3(CallLong, Reg8, Reg8, UInt32)
-DEFINE_RET_TARGET(CallLong)
+/// Identical to CallWithNewTarget, but allowing more arguments.
+/// arg4 is a register containing a number, instead of a literal number.
+/// This is done to decrease the size of this opcode.
+DEFINE_OPCODE_4(CallWithNewTargetLong, Reg8, Reg8, Reg8, Reg8)
+DEFINE_RET_TARGET(CallWithNewTargetLong)
 
-/// Identical to Construct, but allowing more arguments.
-DEFINE_OPCODE_3(ConstructLong, Reg8, Reg8, UInt32)
-DEFINE_RET_TARGET(ConstructLong)
-
-/// Identical to CallDirect, but the function index is 32-bit.
-DEFINE_OPCODE_3(CallDirectLongIndex, Reg8, UInt8, UInt32)
-DEFINE_RET_TARGET(CallDirectLongIndex)
+/// A Metro require call.
+/// Arg1 is the destination of the return value.
+/// Arg2 is the closure to invoke.
+/// Arg3 is the module index argument, as an immediate.
+DEFINE_OPCODE_3(CallRequire, Reg8, Reg8, UInt32)
+DEFINE_RET_TARGET(CallRequire)
 
 // Enforce the order.
 ASSERT_MONOTONE_INCREASING(
     Call,
     Construct,
     Call1,
-    CallDirect,
+    CallWithNewTarget,
     Call2,
     Call3,
     Call4,
-    CallLong,
-    ConstructLong,
-    CallDirectLongIndex)
+    CallWithNewTargetLong,
+    CallRequire)
 
 /// Call a builtin function.
 /// Note this is NOT marked as a Ret target, because the callee is native
@@ -521,8 +646,8 @@ DEFINE_OPCODE_1(Catch, Reg8)
 
 /// ES6 18.2.1.1 PerformEval(Arg2, evalRealm, strictCaller=true, direct=true)
 /// Arg1 is the destination of the return value.
-/// Arg2 is the value to eval.
-/// Arg3 is a boolean which is true if the eval should be performed in strict mode.
+/// Arg2 is the eval text
+/// Arg3 is a bool indicating strictCaller
 DEFINE_OPCODE_3(DirectEval, Reg8, Reg8, UInt8)
 
 /// Throw an exception.
@@ -533,6 +658,15 @@ DEFINE_OPCODE_1(Throw, Reg8)
 /// Arg1 is the destination of the return value
 /// Arg2 is the value to check
 DEFINE_OPCODE_2(ThrowIfEmpty, Reg8, Reg8)
+
+/// If Arg2 is Undefined, throw ReferenceError, otherwise move it into Arg1.
+/// Arg1 is the destination of the return value
+/// Arg2 is the value to check
+DEFINE_OPCODE_2(ThrowIfUndefined, Reg8, Reg8)
+
+/// If Arg1 is not Empty, throw ReferenceError.
+/// Arg1 is the checked this of a derived constructor.
+DEFINE_OPCODE_1(ThrowIfThisInitialized, Reg8)
 
 /// Implementation dependent debugger action.
 DEFINE_OPCODE_0(Debugger)
@@ -546,39 +680,48 @@ DEFINE_OPCODE_0(AsyncBreakCheck)
 /// all the overflowed profile points have index zero.
 DEFINE_OPCODE_1(ProfilePoint, UInt16)
 
+/// Create a base class.
+/// Arg1 is the output register for the the closure.
+/// Arg2 is the output register for the home object.
+/// Arg3 is the current environment.
+/// Arg4 is index in the function table.
+DEFINE_OPCODE_4(CreateBaseClass, Reg8, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_4(CreateBaseClassLongIndex, Reg8, Reg8, Reg8, UInt32)
+
+/// Create a derived class.
+/// Arg1 is the output register for the the closure.
+/// Arg2 is the output register for the home object.
+/// Arg3 is the current environment.
+/// Arg4 is the superClass.
+/// Arg5 is index in the function table.
+DEFINE_OPCODE_5(CreateDerivedClass, Reg8, Reg8, Reg8, Reg8, UInt16)
+DEFINE_OPCODE_5(CreateDerivedClassLongIndex, Reg8, Reg8, Reg8, Reg8, UInt32)
+
 /// Create a closure.
 /// Arg1 is the register in which to store the closure.
-/// Arg2 is the current environment as loaded by GetEnvironment 0.
+/// Arg2 is the parent environment of the closure, or undefined.
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateClosure, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateClosureLongIndex, Reg8, Reg8, UInt32)
 OPERAND_FUNCTION_ID(CreateClosure, 3)
 OPERAND_FUNCTION_ID(CreateClosureLongIndex, 3)
 
-/// Create a closure for a GeneratorFunction.
-/// Arg1 is the register in which to store the closure.
-/// Arg2 is the current environment as loaded by GetEnvironment 0.
-/// Arg3 is index in the function table.
-DEFINE_OPCODE_3(CreateGeneratorClosure, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(CreateGeneratorClosureLongIndex, Reg8, Reg8, UInt32)
-OPERAND_FUNCTION_ID(CreateGeneratorClosure, 3)
-OPERAND_FUNCTION_ID(CreateGeneratorClosureLongIndex, 3)
-
-/// Create a closure for an AsyncFunction.
-/// Arg1 is the register in which to store the closure.
-/// Arg2 is the current environment as loaded by GetEnvironment 0.
-/// Arg3 is index in the function table.
-DEFINE_OPCODE_3(CreateAsyncClosure, Reg8, Reg8, UInt16)
-DEFINE_OPCODE_3(CreateAsyncClosureLongIndex, Reg8, Reg8, UInt32)
-OPERAND_FUNCTION_ID(CreateAsyncClosure, 3)
-OPERAND_FUNCTION_ID(CreateAsyncClosureLongIndex, 3)
-
-/// Allocate an empty, uninitialized object (immediately before a constructor).
+/// Allocate an empty, uninitialized object to be used as the `this` parameter
+/// in a `new` expression. Some closures are responsible for making their own
+/// `this`, so in these cases this instruction will simply return undefined.
 /// Arg1 is the destination register.
-/// Arg2 is the prototype to assign it.
-/// Arg3 is the constructor closure that will be used*.
-/// * To allow internal constructors to have special objects allocated.
-DEFINE_OPCODE_3(CreateThis, Reg8, Reg8, Reg8)
+/// Arg2 is the constructor closure that will be invoked.
+/// Arg3 is a cache index used to speed up fetching the new target prototype
+/// property.
+DEFINE_OPCODE_3(CreateThisForNew, Reg8, Reg8, UInt8)
+
+/// Allocate an empty, uninitialized object to be used as the `this` parameter
+/// in a `new` expression.
+/// Arg1 is the destination register.
+/// Arg2 is the constructor closure that will be invoked.
+/// Arg3 is the new.target.
+/// Arg4 is a cache index used to speed up fetching the new target prototype property.
+DEFINE_OPCODE_4(CreateThisForSuper, Reg8, Reg8, Reg8, UInt8)
 
 /// Choose the result of a constructor: 'this' or a returned object.
 /// Arg1 is the result.
@@ -643,6 +786,9 @@ DEFINE_OPCODE_2(ToNumeric, Reg8, Reg8)
 /// Convert a value to a 32-bit signed integer.
 /// Arg1 = Arg2 | 0
 DEFINE_OPCODE_2(ToInt32, Reg8, Reg8)
+/// Convert a value to a 32-bit unsigned integer.
+/// Arg1 = Arg2 >>> 0
+DEFINE_OPCODE_2(ToUint32, Reg8, Reg8)
 
 /// Convert a value to a string as if evaluating the expression:
 ///     Arg1 = "" + Arg2
@@ -650,6 +796,15 @@ DEFINE_OPCODE_2(ToInt32, Reg8, Reg8)
 ///     Arg1 = ToString(ToPrimitive(Arg2, PreferredType::NONE))
 /// with ToPrimitive (ES5.1 9.1) and ToString (ES5.1 9.8).
 DEFINE_OPCODE_2(AddEmptyString, Reg8, Reg8)
+
+/// Create a new primitive symbol, taking in a string description as input.
+/// This is almost equivalent to the following JS, with the important distinction
+/// an object is not computed- just the raw SymbolID.
+///   Arg1 is the result.
+///   Arg2 is the string id for the symbol description.
+///   Arg1 = new Symbol(Arg2)
+DEFINE_OPCODE_2(CreatePrivateName, Reg8, UInt32)
+OPERAND_STRING_ID(CreatePrivateName, 2)
 
 // `arguments` opcodes all work with a lazy register that contains either
 // undefined or a reified array. On the first ReifyArguments, the register
@@ -662,7 +817,8 @@ DEFINE_OPCODE_2(AddEmptyString, Reg8, Reg8)
 /// Arg2 is the index.
 /// Arg3 is the lazy loaded register.
 /// Arg1 = arguments[Arg2]
-DEFINE_OPCODE_3(GetArgumentsPropByVal, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(GetArgumentsPropByValLoose, Reg8, Reg8, Reg8)
+DEFINE_OPCODE_3(GetArgumentsPropByValStrict, Reg8, Reg8, Reg8)
 
 /// Get the length of the 'arguments' array.
 /// Arg1 is the result.
@@ -673,7 +829,12 @@ DEFINE_OPCODE_2(GetArgumentsLength, Reg8, Reg8)
 /// Create an actual 'arguments' array, if get-by-index and length isn't enough.
 /// Arg1 is the lazy loaded register, which afterwards will contain a proper
 ///      object that can be used by non-*Arguments* opcodes like Return.
-DEFINE_OPCODE_1(ReifyArguments, Reg8)
+DEFINE_OPCODE_1(ReifyArgumentsStrict, Reg8)
+DEFINE_OPCODE_1(ReifyArgumentsLoose, Reg8)
+
+/// Convert a value to a property key, used to evaluate a ComputedPropertyName.
+/// Arg1 = ToPropertyKey(Arg2)
+DEFINE_OPCODE_2(ToPropertyKey, Reg8, Reg8)
 
 /// Create a regular expression.
 /// Arg1 is the result.
@@ -688,9 +849,9 @@ OPERAND_STRING_ID(CreateRegExp, 3)
 /// input or to the default block if out of range (or not right type)
 /// Arg 1 is the value to be branched upon
 /// Arg 2 is the relative offset of the jump table to be used by this
-/// instruction. Jump tables are appended to the bytecode. Arg 3 is the relative
-/// offset for the "default" jump. Arg 4 is the unsigned min value, if arg 1 is
-/// less than this value jmp to
+///   instruction. Jump tables are appended to the bytecode.
+/// Arg 3 is the relative offset for the "default" jump.
+/// Arg 4 is the unsigned min value, if arg 1 is/ less than this value jmp to
 ///   default block
 /// Arg 5 is the unsigned max value, if arg 1 is greater than this value jmp to
 ///   default block.
@@ -699,26 +860,26 @@ OPERAND_STRING_ID(CreateRegExp, 3)
 /// is located at offset ip + arg2 + arg1 - arg4. We subtract arg4 to avoid
 /// wasting space when compiling denses switches that do not start at zero. Note
 /// that Arg2 is *unaligned* it is dynamically aligned at runtime.
-DEFINE_OPCODE_5(SwitchImm, Reg8, UInt32, Addr32, UInt32, UInt32)
+DEFINE_OPCODE_5(UIntSwitchImm, Reg8, UInt32, Addr32, UInt32, UInt32)
 
-/// Start the generator by jumping to the next instruction to begin.
-/// Restore the stack frame if this generator has previously been suspended.
-DEFINE_OPCODE_0(StartGenerator)
-
-/// Resume generator by performing one of the following user-requested actions:
-/// - next(val): Set Arg1 to val, Arg2 to false, run next instruction
-/// - return(val): Set Arg1 to val, Arg2 to true, run next instruction
-/// - throw(val): Throw val as an error
-/// Arg1 is the result provided by the user.
-/// Arg2 is a boolean which is true if the user requested a return().
-DEFINE_OPCODE_2(ResumeGenerator, Reg8, Reg8)
-
-/// Set the generator status to complete, but do not return.
-DEFINE_OPCODE_0(CompleteGenerator)
+/// All-string switch (switch all of whose case labels are string literals).
+/// Arg 1 is the value to be branched upon
+/// Arg 2 is a global index for this StringSwitchImm instruction in the
+/// bytecode file.
+/// Arg 3 is the relative offset of the string switch table.  A string switch
+///   table is a sequence of pairs:
+///   <UInt32 string table index, UInt32 jump targets>
+/// Arg 4 is the relative offset for the "default" jump.
+/// Arg 5 is the size of the string switch table.
+///
+/// Given the above, the jump table entry for a given value (that is in range)
+/// is located at offset ip + arg3.  Note that Arg3 is *unaligned*; it is
+/// dynamically aligned at runtime.
+DEFINE_OPCODE_5(StringSwitchImm, Reg8, UInt32, UInt32, Addr32, UInt32)
 
 /// Create a generator.
 /// Arg1 is the register in which to store the generator.
-/// Arg2 is the current environment as loaded by GetEnvironment 0.
+/// Arg2 is the parent environment of the generator, or undefined.
 /// Arg3 is index in the function table.
 DEFINE_OPCODE_3(CreateGenerator, Reg8, Reg8, UInt16)
 DEFINE_OPCODE_3(CreateGeneratorLongIndex, Reg8, Reg8, UInt32)
@@ -754,25 +915,35 @@ DEFINE_OPCODE_3(IteratorNext, Reg8, Reg8, Reg8)
 /// See IR.md for IteratorCloseInst.
 DEFINE_OPCODE_2(IteratorClose, Reg8, UInt8)
 
+/// Arg1 [out] is the result.
+/// Arg2 [in] is the source (must be an object).
+DEFINE_OPCODE_2(TypedLoadParent, Reg8, Reg8)
+
 // Jump instructions must be defined through the following DEFINE_JUMP macros.
 // The numeric suffix indicates number of operands the instruction takes.
 // The macros will automatically generate two opcodes for each definition,
 // one short jump that takes Addr8 as target and one long jump that takes
 // Addr32 as target. The address is relative to the offset of the instruction.
+#ifndef DEFINE_JUMP_1
 #define DEFINE_JUMP_1(name)           \
   DEFINE_OPCODE_1(name, Addr8)        \
   DEFINE_OPCODE_1(name##Long, Addr32) \
   DEFINE_JUMP_LONG_VARIANT(name, name##Long)
+#endif
 
+#ifndef DEFINE_JUMP_2
 #define DEFINE_JUMP_2(name)                 \
   DEFINE_OPCODE_2(name, Addr8, Reg8)        \
   DEFINE_OPCODE_2(name##Long, Addr32, Reg8) \
   DEFINE_JUMP_LONG_VARIANT(name, name##Long)
+#endif
 
+#ifndef DEFINE_JUMP_3
 #define DEFINE_JUMP_3(name)                       \
   DEFINE_OPCODE_3(name, Addr8, Reg8, Reg8)        \
   DEFINE_OPCODE_3(name##Long, Addr32, Reg8, Reg8) \
   DEFINE_JUMP_LONG_VARIANT(name, name##Long)
+#endif
 
 /// Unconditional branch to Arg1.
 DEFINE_JUMP_1(Jmp)
@@ -781,9 +952,12 @@ DEFINE_JUMP_2(JmpTrue)
 DEFINE_JUMP_2(JmpFalse)
 /// Jump if the value is undefined.
 DEFINE_JUMP_2(JmpUndefined)
-/// Save the provided value, yield, and signal the VM to restart execution
-/// at the provided target.
-DEFINE_JUMP_1(SaveGenerator)
+
+/// Jump if the type matches the TypeOfIsTypes in Arg3.
+/// Arg1 is the target.
+/// Arg2 is the value to test.
+/// Arg3 is the TypeOfIsTypes (see Typeof.h).
+DEFINE_OPCODE_3(JmpTypeOfIs, Addr32, Reg8, UInt16)
 
 /// Conditional branches to Arg1 based on Arg2 and Arg3.
 /// The *N branches assume numbers and are illegal for other types.
@@ -803,64 +977,40 @@ DEFINE_JUMP_3(JLessEqualN)
 DEFINE_JUMP_3(JNotLessEqualN)
 DEFINE_JUMP_3(JGreater)
 DEFINE_JUMP_3(JNotGreater)
-DEFINE_JUMP_3(JGreaterN)
-DEFINE_JUMP_3(JNotGreaterN)
 DEFINE_JUMP_3(JGreaterEqual)
 DEFINE_JUMP_3(JNotGreaterEqual)
-DEFINE_JUMP_3(JGreaterEqualN)
-DEFINE_JUMP_3(JNotGreaterEqualN)
 DEFINE_JUMP_3(JEqual)
 DEFINE_JUMP_3(JNotEqual)
 DEFINE_JUMP_3(JStrictEqual)
 DEFINE_JUMP_3(JStrictNotEqual)
 
-#ifdef HERMES_RUN_WASM
-/// Arg1 = Arg2 + Arg3 (32-bit integer addition)
-DEFINE_OPCODE_3(Add32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 - Arg3 (32-bit integer subtraction)
-DEFINE_OPCODE_3(Sub32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 * Arg3 (32-bit integer multiplication)
-DEFINE_OPCODE_3(Mul32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 / Arg3 (32-bit signed integer division)
-DEFINE_OPCODE_3(Divi32, Reg8, Reg8, Reg8)
-/// Arg1 = Arg2 / Arg3 (32-bit unsigned integer division)
-DEFINE_OPCODE_3(Divu32, Reg8, Reg8, Reg8)
-
-/// Arg1 = HEAP8[Arg3] (load signed 8-bit integer)
-DEFINE_OPCODE_3(Loadi8, Reg8, Reg8, Reg8)
-/// Arg1 = HEAPU8[Arg3] (load unsigned 8-bit integer)
-DEFINE_OPCODE_3(Loadu8, Reg8, Reg8, Reg8)
-/// Arg1 = HEAP16[Arg3 >> 1] (load signed 16-bit integer)
-DEFINE_OPCODE_3(Loadi16, Reg8, Reg8, Reg8)
-/// Arg1 = HEAPU16[Arg3 >> 1] (load unsigned 16-bit integer)
-DEFINE_OPCODE_3(Loadu16, Reg8, Reg8, Reg8)
-/// Arg1 = HEAP32[Arg3 >> 2] (load signed 32-bit integer)
-DEFINE_OPCODE_3(Loadi32, Reg8, Reg8, Reg8)
-/// Arg1 = HEAPU32[Arg3 >> 2] (load unsigned 32-bit integer)
-DEFINE_OPCODE_3(Loadu32, Reg8, Reg8, Reg8)
-
-/// HEAP8[Arg2] = Arg3 (store signed or unsigned 8-bit integer)
-DEFINE_OPCODE_3(Store8, Reg8, Reg8, Reg8)
-/// HEAP16[Arg2] = Arg3 (store signed or unsigned 16-bit integer)
-DEFINE_OPCODE_3(Store16, Reg8, Reg8, Reg8)
-/// HEAP32[Arg2] = Arg3 (store signed or unsigned 32-bit integer)
-DEFINE_OPCODE_3(Store32, Reg8, Reg8, Reg8)
-#endif
+DEFINE_OPCODE_3(JmpBuiltinIs, Addr8, UInt8, Reg8)
+DEFINE_OPCODE_3(JmpBuiltinIsLong, Addr32, UInt8, Reg8)
+DEFINE_JUMP_LONG_VARIANT(JmpBuiltinIs, JmpBuiltinIsLong)
+DEFINE_OPCODE_3(JmpBuiltinIsNot, Addr8, UInt8, Reg8)
+DEFINE_OPCODE_3(JmpBuiltinIsNotLong, Addr32, UInt8, Reg8)
+DEFINE_JUMP_LONG_VARIANT(JmpBuiltinIsNot, JmpBuiltinIsNotLong)
 
 // Implementations can rely on the following pairs of instructions having the
 // same number and type of operands.
 ASSERT_EQUAL_LAYOUT3(Call, Construct)
 ASSERT_EQUAL_LAYOUT4(GetById, TryGetById)
-ASSERT_EQUAL_LAYOUT4(PutById, TryPutById)
-ASSERT_EQUAL_LAYOUT3(PutNewOwnById, PutNewOwnNEById)
-ASSERT_EQUAL_LAYOUT3(PutNewOwnByIdLong, PutNewOwnNEByIdLong)
+ASSERT_EQUAL_LAYOUT4(PutByIdLoose, PutByIdStrict)
+ASSERT_EQUAL_LAYOUT4(PutByIdLoose, TryPutByIdLoose)
+ASSERT_EQUAL_LAYOUT4(PutByIdLoose, TryPutByIdStrict)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, PutByIdLooseLong)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, PutByIdStrictLong)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdLooseLong)
+ASSERT_EQUAL_LAYOUT3(PutByIdLoose, TryPutByIdStrictLong)
 ASSERT_EQUAL_LAYOUT3(Add, AddN)
 ASSERT_EQUAL_LAYOUT3(Sub, SubN)
 ASSERT_EQUAL_LAYOUT3(Mul, MulN)
+ASSERT_EQUAL_LAYOUT1(ReifyArgumentsLoose, ReifyArgumentsStrict)
+ASSERT_EQUAL_LAYOUT3(GetArgumentsPropByValLoose, GetArgumentsPropByValStrict)
 
-// Call and CallLong must agree on the first 2 parameters.
-ASSERT_EQUAL_LAYOUT2(Call, CallLong)
-ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)
+// CallWithNewTarget and CallWithNewTargetLong must agree on the first 2
+// parameters.
+ASSERT_EQUAL_LAYOUT2(CallWithNewTarget, CallWithNewTargetLong)
 
 #undef DEFINE_JUMP_1
 #undef DEFINE_JUMP_2
@@ -878,6 +1028,7 @@ ASSERT_EQUAL_LAYOUT2(Construct, ConstructLong)
 #undef DEFINE_OPCODE
 #undef DEFINE_JUMP_LONG_VARIANT
 #undef DEFINE_RET_TARGET
+#undef DEFINE_VALUE_BUFFER_USER
 #undef ASSERT_EQUAL_LAYOUT1
 #undef ASSERT_EQUAL_LAYOUT2
 #undef ASSERT_EQUAL_LAYOUT3

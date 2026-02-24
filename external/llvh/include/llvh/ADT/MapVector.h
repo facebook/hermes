@@ -13,6 +13,7 @@
 // a std::vector.
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef LLVM_ADT_MAPVECTOR_H
 #define LLVM_ADT_MAPVECTOR_H
 
@@ -25,12 +26,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 
 namespace llvh {
 
@@ -118,6 +113,19 @@ public:
                   "Cannot call lookup() if ValueT is not copyable.");
     typename MapType::const_iterator Pos = Map.find(Key);
     return Pos == Map.end()? ValueT() : Vector[Pos->second].second;
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.  Has const and non-const overloads.
+  const ValueT &at(const KeyT &Key) const {
+    typename MapType::const_iterator Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
+  }
+  ValueT &at(const KeyT &Key) {
+    typename MapType::const_iterator Pos = Map.find(Key);
+    assert(Pos != Map.end() && "MapVector::at failed due to a missing key");
+    return Vector[Pos->second].second;
   }
 
   std::pair<iterator, bool> insert(const std::pair<KeyT, ValueT> &KV) {
@@ -241,7 +249,5 @@ struct SmallMapVector
 };
 
 } // end namespace llvh
-
-#pragma GCC diagnostic pop
 
 #endif // LLVM_ADT_MAPVECTOR_H

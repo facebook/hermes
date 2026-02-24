@@ -6,6 +6,7 @@
  */
 
 #include "hermes/BCGen/Lowering.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
@@ -38,7 +39,6 @@ bool SwitchLowering::runOnFunction(Function *F) {
 void SwitchLowering::lowerSwitchIntoIfs(SwitchInst *switchInst) {
   IRBuilder builder(switchInst->getParent()->getParent());
   builder.setLocation(switchInst->getLocation());
-  builder.setCurrentSourceLevelScope(switchInst->getSourceLevelScope());
 
   BasicBlock *defaultDest = switchInst->getDefaultDestination();
   BasicBlock *next = defaultDest;
@@ -60,7 +60,7 @@ void SwitchLowering::lowerSwitchIntoIfs(SwitchInst *switchInst) {
     auto *pred = builder.createBinaryOperatorInst(
         caseEntry.first,
         switchInst->getInputValue(),
-        BinaryOperatorInst::OpKind::StrictlyEqualKind);
+        ValueKind::BinaryStrictlyEqualInstKind);
     // Cond branch - if the predicate of the comparison is true then jump
     // into the destination block. Otherwise jump to the next comparison in
     // the chain.
@@ -69,9 +69,11 @@ void SwitchLowering::lowerSwitchIntoIfs(SwitchInst *switchInst) {
     // Update any phis in the destination block.
     copyPhiTarget(caseEntry.second, currentBlock, ifBlock);
 
-    if (next == defaultDest) {
-      // If this block is responsible for jumps to the default block,
-      // update phi nodes there too (true on the first iteration).
+    if (next == defaultDest && caseEntry.second != next) {
+      // If this block is responsible for jumps to the default block (true on
+      // the first iteration), and the default block is distinct from the
+      // destination of this block (which we have already updated) update phi
+      // nodes in the default block too.
       copyPhiTarget(next, currentBlock, ifBlock);
     }
 
@@ -130,344 +132,95 @@ void SwitchLowering::erasePhiTarget(BasicBlock *block, BasicBlock *toDelete) {
   }
 }
 
-/// Starting from the given \p entry block, use the given DominanceInfo to
-/// examine all blocks that satisfy \p pred and attempt to construct the longest
-/// possible ordered chain of blocks such that each block dominates the block
-/// after it. This is done by traversing the dominance tree, until we encounter
-/// two blocks that satisfy pred and do not have a dominance relationship. Note
-/// that the last block in the chain will dominate all remaining blocks that
-/// satisfy \p pred.
-/// \return the longest ordered chain of blocks that satisfy \p pred.
-template <typename Func>
-static llvh::SmallVector<BasicBlock *, 4> orderBlocksByDominance(
-    const DominanceInfo &DI,
-    BasicBlock *entry,
-    Func &&pred) {
-  class OrderBlocksContext : public DomTreeDFS::Visitor<
-                                 OrderBlocksContext,
-                                 DomTreeDFS::StackNode<OrderBlocksContext>> {
-    /// The given predicate to determine whether a block should be considered.
-    Func pred_;
-
-    /// When we encounter branching, i.e. for a given basic block, if multiple
-    /// of the basic blocks dominated by that basic block all contain users of
-    /// allocInst_, we can not append any of those basic blocks to
-    /// sortedBasicBlocks_. Furthermore, we can not append any other basic
-    /// blocks to sortedBasicBlocks_ because the branch already exists.
-    bool stopAddingBasicBlock_{false};
-
-    /// List of basic blocks that satisfy the predicate, ordered by dominance
-    /// relationship.
-    llvh::SmallVector<BasicBlock *, 4> sortedBasicBlocks_{};
-
-   public:
-    OrderBlocksContext(
-        const DominanceInfo &DI,
-        BasicBlock *entryBlock,
-        Func &&pred)
-        : DomTreeDFS::Visitor<
-              OrderBlocksContext,
-              DomTreeDFS::StackNode<OrderBlocksContext>>(DI),
-          pred_(std::forward<Func>(pred)) {
-      // Perform the DFS to populate sortedBasicBlocks_.
-      this->DFS(this->DT_.getNode(entryBlock));
-    }
-
-    llvh::SmallVector<BasicBlock *, 4> get() && {
-      return std::move(sortedBasicBlocks_);
-    }
-
-    /// Called by DFS recursively to process each node. Note that the return
-    /// value isn't actually used.
-    bool processNode(DomTreeDFS::StackNode<OrderBlocksContext> *SN) {
-      assert(!SN->isDone() && "Visiting same basic block twice");
-
-      BasicBlock *BB = SN->node()->getBlock();
-      // If BB does not satisfy the predicate, proceed to the next block.
-      if (!pred_(BB))
-        return false;
-
-      while (!sortedBasicBlocks_.empty() &&
-             !this->DT_.properlyDominates(sortedBasicBlocks_.back(), BB)) {
-        // If the last basic block in the list does not dominate BB,
-        // it means BB and that last basic block are in parallel branches
-        // of previous basic blocks. We cannot doing any lowering into
-        // any of these basic blocks. So we roll back one basic block,
-        // and mark the fact that we can no longer append any more basic blocks
-        // afterwards because of the existence of basic blocks.
-        // The DFS process needs to continue, as we may roll back even more
-        // basic blocks.
-        sortedBasicBlocks_.pop_back();
-        stopAddingBasicBlock_ = true;
-      }
-      if (!stopAddingBasicBlock_) {
-        sortedBasicBlocks_.push_back(BB);
-        return true;
-      }
-      return false;
-    }
-  };
-
-  return OrderBlocksContext(DI, entry, std::forward<Func>(pred)).get();
-}
-
-LowerAllocObject::StoreList LowerAllocObject::collectStores(
-    AllocObjectInst *allocInst,
-    const BlockUserMap &userBasicBlockMap,
-    const DominanceInfo &DI) {
-  // Sort the basic blocks that contain users of allocInst by dominance.
-  auto sortedBlocks = orderBlocksByDominance(
-      DI, allocInst->getParent(), [&userBasicBlockMap](BasicBlock *BB) {
-        return userBasicBlockMap.find(BB) != userBasicBlockMap.end();
-      });
-
-  // Iterate over the sorted blocks to collect StoreNewOwnPropertyInst users
-  // until we encounter a nullptr indicating we should stop.
-  StoreList instrs;
-  for (BasicBlock *BB : sortedBlocks) {
-    for (StoreNewOwnPropertyInst *I : userBasicBlockMap.find(BB)->second) {
-      // If I is null, we cannot consider additional stores.
-      if (!I)
-        return instrs;
-      instrs.push_back(I);
-    }
-  }
-  return instrs;
-}
-
-bool LowerAllocObject::runOnFunction(Function *F) {
-  /// If we can still append to \p stores, check if the user \p U is an eligible
-  /// store to \p A. If so, append it to \p stores, if not, append nullptr to
-  /// indicate that subsequent users in the basic block should not be
-  /// considered.
-  auto tryAdd = [](AllocObjectInst *A, Instruction *U, StoreList &stores) {
-    // If the store list has been terminated by a nullptr, we have already
-    // encountered a non-SNOP user of A in this block. Ignore this user.
-    if (!stores.empty() && !stores.back())
-      return;
-    auto *SI = llvh::dyn_cast<StoreNewOwnPropertyInst>(U);
-    if (!SI || SI->getStoredValue() == A || !SI->getIsEnumerable()) {
-      // A user that's not a StoreNewOwnPropertyInst storing into the object
-      // created by allocInst. We have to stop processing here. Note that we
-      // check the stored value instead of the target object so that we omit
-      // the case where an object is stored into itself. While it should
-      // technically be safe, this maintains the invariant that stop as soon
-      // the allocated object is used as something other than the target of a
-      // StoreNewOwnPropertyInst.
-      stores.push_back(nullptr);
-    } else {
-      assert(
-          SI->getObject() == A &&
-          "SNOP using allocInst must use it as object or value");
-      stores.push_back(SI);
-    }
-  };
-
-  // For each basic block, collect an ordered list of stores into
-  // AllocObjectInsts that should be considered for lowering into a buffer.
-  llvh::DenseMap<AllocObjectInst *, BlockUserMap> allocUsers;
-  for (BasicBlock &BB : *F)
-    for (Instruction &I : BB)
-      for (size_t i = 0; i < I.getNumOperands(); ++i)
-        if (auto *A = llvh::dyn_cast<AllocObjectInst>(I.getOperand(i)))
-          tryAdd(A, &I, allocUsers[A][&BB]);
-
+bool LowerAllocObjectLiteral::runOnFunction(Function *F) {
   bool changed = false;
-  DominanceInfo DI(F);
-  for (const auto &[A, userBasicBlockMap] : allocUsers) {
-    // Collect the stores that are guaranteed to execute before any other user
-    // of this object.
-    auto stores = collectStores(A, userBasicBlockMap, DI);
-    changed |= lowerAllocObjectBuffer(A, stores, UINT16_MAX);
+  llvh::SmallVector<AllocObjectLiteralInst *, 4> allocs;
+  for (BasicBlock &BB : *F) {
+    // We need to increase the iterator before calling lowerAllocObjectBuffer.
+    // Otherwise deleting the instruction will invalidate the iterator.
+    for (auto it = BB.begin(), e = BB.end(); it != e;) {
+      if (auto *A = llvh::dyn_cast<BaseAllocObjectLiteralInst>(&*it++)) {
+        changed |= lowerAllocObjectBuffer(A);
+      }
+    }
   }
 
   return changed;
 }
 
-// Number of bytes saved for serializing a literal into the buffer.
-// Estimated with the example of an integer. Substract the cost of serializing
-// the int and a 1-byte tag.
-static constexpr int32_t kLiteralSavedBytes = static_cast<int32_t>(
-    sizeof(inst::LoadConstIntInst) + sizeof(inst::PutNewOwnByIdInst) -
-    sizeof(int32_t) - 1);
-// Number of bytes cost for serializing a non-literal into the buffer.
-// Cost includes a 1-byte tag and replacing with a longer put instruction.
-static constexpr int32_t kNonLiteralCostBytes = static_cast<int32_t>(
-    1 + sizeof(inst::PutByIdInst) - sizeof(inst::PutNewOwnByIdInst));
-// Max number of non-literals we allow to serialize into the buffer.
-// The number is chosen to be small and can allow most literals to be serialized
-// for most cases.
-static constexpr uint32_t kNonLiteralPlaceholderLimit = 3;
+bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
+    BaseAllocObjectLiteralInst *allocInst) {
+  Function *F = allocInst->getParent()->getParent();
+  IRBuilder builder(F);
+  uint32_t size = allocInst->getKeyValuePairCount();
 
-/// Whether the given value \v V can be serialized into the object literal
-/// buffer.
-static bool canSerialize(Value *V) {
-  if (auto *LCI = llvh::dyn_cast_or_null<HBCLoadConstInst>(V)) {
-    Literal *L = LCI->getConst();
-    return llvh::isa<LiteralNull>(L) || llvh::isa<LiteralBool>(L) ||
-        llvh::isa<LiteralNumber>(L) || llvh::isa<LiteralString>(L);
-  }
-  return false;
-}
-
-uint32_t LowerAllocObject::estimateBestNumElemsToSerialize(
-    const StoreList &users,
-    bool hasParent) {
-  // We want to track curSaving to avoid serializing too many place holders
-  // which ends up causing a big size regression.
-  // We set curSaving to be the delta of the size of two instructions to avoid
-  // serializing a literal object with only one entry, which turns out to
-  // significantly increase bytecode size.
-  int32_t curSaving = static_cast<int32_t>(sizeof(inst::NewObjectInst)) -
-      static_cast<int32_t>(sizeof(inst::NewObjectWithBufferInst));
-  // If there is a parent set on the new object, account for the CallBuiltin to
-  // explicitly set it.
-  if (hasParent)
-    curSaving -= sizeof(inst::CallBuiltinInst);
-  int32_t maxSaving = 0;
-  uint32_t optimumStopIndex = 0;
-  uint32_t nonLiteralPlaceholderCount = 0;
-
-  uint32_t curSize = 0;
-  for (StoreNewOwnPropertyInst *I : users) {
-    ++curSize;
-    assert(
-        (llvh::isa<LiteralString>(I->getProperty()) ||
-         llvh::isa<LiteralNumber>(I->getProperty())) &&
-        "StoreNewOwnPropertyInst property must be literal.");
-    if (canSerialize(I->getStoredValue())) {
-      // Property Value is a literal that's not undefined.
-      curSaving += kLiteralSavedBytes;
-      if (curSaving > maxSaving) {
-        maxSaving = curSaving;
-        optimumStopIndex = curSize;
-      }
-    } else {
-      // Property Value is computed. we could try to store a null as
-      // placeholder, and set the proper value latter.
-      if (llvh::isa<LiteralNumber>(I->getProperty())) {
-        // If the key is a number, we can't set it latter with PutById, so
-        // have to skip it. We only need to check if it's an instance of
-        // LiteralNumber because LowerNumericProperties must have lowered any
-        // number-like property to LiteralNumber.
-        // We don't need to stop the whole process because a numeric literal
-        // property can be inserted in any order. So it's safe to skip it
-        // in the lowering.
-        continue;
-      }
-      if (nonLiteralPlaceholderCount == kNonLiteralPlaceholderLimit) {
-        // We have reached the maximum number of place holders we can put.
-        break;
-      }
-      nonLiteralPlaceholderCount++;
-      curSaving -= kNonLiteralCostBytes;
-    }
-  }
-  return optimumStopIndex;
-}
-
-bool LowerAllocObject::lowerAllocObjectBuffer(
-    AllocObjectInst *allocInst,
-    const StoreList &users,
-    uint32_t maxSize) {
-  auto size = estimateBestNumElemsToSerialize(
-      users, !llvh::isa<EmptySentinel>(allocInst->getParentObject()));
+  // Should not create LIRAllocObjectFromBufferInst for an object with 0
+  // properties.
   if (size == 0) {
     return false;
   }
-  size = std::min(maxSize, size);
 
-  Function *F = allocInst->getParent()->getParent();
-  IRBuilder builder(F);
-  HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map;
-  for (uint32_t i = 0; i < size; ++i) {
-    StoreNewOwnPropertyInst *I = users[i];
-    Literal *propLiteral = nullptr;
-    // Property name can be either a LiteralNumber or a LiteralString.
-    if (auto *LN = llvh::dyn_cast<LiteralNumber>(I->getProperty())) {
-      assert(
-          LN->convertToArrayIndex() &&
-          "LiteralNumber can be a property name only if it can be converted to array index.");
-      propLiteral = LN;
-    } else {
-      propLiteral = cast<LiteralString>(I->getProperty());
-    }
-
-    auto *loadInst = llvh::dyn_cast<HBCLoadConstInst>(I->getStoredValue());
-    // Not counting undefined as literal since the parser doesn't
-    // support it.
-    if (canSerialize(loadInst)) {
-      prop_map.push_back(
-          std::pair<Literal *, Literal *>(propLiteral, loadInst->getConst()));
-      I->eraseFromParent();
-    } else if (llvh::isa<LiteralString>(propLiteral)) {
-      // If prop is a literal number, there is no need to put it into the
-      // buffer or change the instruction.
-      // Otherwise, use null as placeholder, and
-      // later a PutById instruction will overwrite it with correct value.
-      prop_map.push_back(
-          std::pair<Literal *, Literal *>(
-              propLiteral, builder.getLiteralNull()));
-
-      // Since we will be defining this property twice, once in the buffer
-      // once setting the correct value later, we can no longer use
-      // StoreNewOwnPropertyInst. Replace this instruction with
-      // StorePropertyInst.
-      builder.setLocation(I->getLocation());
-      builder.setCurrentSourceLevelScope(I->getSourceLevelScope());
-      builder.setInsertionPoint(I);
-      auto *NI = builder.createStorePropertyInst(
-          I->getStoredValue(), I->getObject(), I->getProperty());
-      I->replaceAllUsesWith(NI);
-      I->eraseFromParent();
-    }
-  }
-
+  // Replace AllocObjectLiteral with LIRAllocObjectFromBufferInst
   builder.setLocation(allocInst->getLocation());
-  builder.setCurrentSourceLevelScope(allocInst->getSourceLevelScope());
-  builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createHBCAllocObjectFromBufferInst(
-      prop_map, allocInst->getSize());
+  builder.setInsertionPointAfter(allocInst);
+  LIRAllocObjectFromBufferInst::ObjectPropertyMap propMap;
 
-  // HBCAllocObjectFromBuffer does not take a prototype argument. So if the
-  // AllocObjectInst had a prototype set, make an explicit call to set it.
-  if (!llvh::isa<EmptySentinel>(allocInst->getParentObject())) {
-    builder.createCallBuiltinInst(
-        BuiltinMethod::HermesBuiltin_silentSetPrototypeOf,
-        {alloc, allocInst->getParentObject()});
+  bool hasSeenNumericProp = false;
+  for (unsigned i = 0; i < size; i++) {
+    Literal *propKey = allocInst->getKey(i);
+#ifndef NDEBUG
+    if (auto *keyStr = llvh::dyn_cast<LiteralString>(propKey)) {
+      assert(
+          !toArrayIndex(keyStr->getValue().str()).hasValue() &&
+          "LiteralString that looks like an array index should have been converted to a number.");
+    }
+#endif
+    Value *propVal = allocInst->getValue(i);
+    bool isNumericKey = llvh::isa<LiteralNumber>(propKey);
+    hasSeenNumericProp |= isNumericKey;
+    if (SerializedLiteralGenerator::isSerializableLiteral(propVal)) {
+      propMap.push_back({propKey, llvh::cast<Literal>(propVal)});
+    } else {
+      // Add the literal key in with a dummy placeholder value.
+      propMap.push_back(
+          std::pair<Literal *, Literal *>(propKey, builder.getLiteralNull()));
+      // Patch the placeholder with the correct value.
+      if (hasSeenNumericProp) {
+        // We don't assume the runtime storage and layout of numeric properties.
+        // So, if we have encountered a numeric property, we cannot store
+        // directly into a slot.
+        if (isNumericKey) {
+          builder.createDefineOwnPropertyInst(
+              propVal, allocInst, propKey, IRBuilder::PropEnumerable::Yes);
+        } else {
+          // For non-numeric keys, StorePropertyInst is more efficient because
+          // it can be cached off the string ID.
+          builder.createStorePropertyInst(propVal, allocInst, propKey);
+        }
+      } else {
+        // If we haven't encountered a numeric property, we can store
+        // directly into a slot.
+        builder.createPrStoreInst(
+            propVal,
+            allocInst,
+            i,
+            cast<LiteralString>(propKey),
+            propVal->getType().isNonPtr());
+      }
+    }
   }
+
+  // Emit LIRAllocObjectFromBufferInst.
+  // First, we reset insertion location.
+  builder.setLocation(allocInst->getLocation());
+  builder.setInsertionPoint(allocInst);
+  auto *alloc = builder.createLIRAllocObjectFromBufferInst(
+      allocInst->getParentObject(), propMap);
+
   allocInst->replaceAllUsesWith(alloc);
   allocInst->eraseFromParent();
 
   return true;
-}
-
-bool LowerStoreInstrs::runOnFunction(Function *F) {
-  IRBuilder builder(F);
-  IRBuilder::InstructionDestroyer destroyer;
-  bool changed = false;
-
-  PostOrderAnalysis PO(F);
-  llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
-  for (auto *bbit : order) {
-    for (auto &it : bbit->getInstList()) {
-      auto *SSI = llvh::dyn_cast<StoreStackInst>(&it);
-      if (!SSI)
-        continue;
-
-      Value *ptr = SSI->getPtr();
-      Value *val = SSI->getValue();
-
-      builder.setInsertionPoint(&it);
-      auto dstReg = RA_.getRegister(ptr);
-      auto *mov = builder.createMovInst(val);
-      RA_.updateRegister(mov, dstReg);
-      it.replaceAllUsesWith(mov);
-      destroyer.add(&it);
-      changed = true;
-    }
-  }
-  return changed;
 }
 
 bool LowerNumericProperties::stringToNumericProperty(
@@ -495,21 +248,92 @@ bool LowerNumericProperties::runOnFunction(Function *F) {
   bool changed = false;
   for (BasicBlock &BB : *F) {
     for (Instruction &Inst : BB) {
-      if (llvh::isa<LoadPropertyInst>(&Inst)) {
+      if (llvh::isa<BaseLoadPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, LoadPropertyInst::PropertyIdx);
       } else if (llvh::isa<StorePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, StorePropertyInst::PropertyIdx);
-      } else if (llvh::isa<StoreOwnPropertyInst>(&Inst)) {
+      } else if (llvh::isa<DefineOwnPropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
-            builder, Inst, StoreOwnPropertyInst::PropertyIdx);
+            builder, Inst, DefineOwnPropertyInst::PropertyIdx);
       } else if (llvh::isa<DeletePropertyInst>(&Inst)) {
         changed |= stringToNumericProperty(
             builder, Inst, DeletePropertyInst::PropertyIdx);
-      } else if (llvh::isa<StoreGetterSetterInst>(&Inst)) {
+      } else if (llvh::isa<DefineOwnGetterSetterInst>(&Inst)) {
         changed |= stringToNumericProperty(
-            builder, Inst, StoreGetterSetterInst::PropertyIdx);
+            builder, Inst, DefineOwnGetterSetterInst::PropertyIdx);
+      } else if (llvh::isa<AllocObjectLiteralInst>(&Inst)) {
+        auto allocInst = cast<AllocObjectLiteralInst>(&Inst);
+        for (unsigned i = 0; i < allocInst->getKeyValuePairCount(); i++) {
+          changed |= stringToNumericProperty(
+              builder, Inst, AllocObjectLiteralInst::getKeyOperandIdx(i));
+        }
+      }
+    }
+  }
+  return changed;
+}
+
+static llvh::SmallVector<Value *, 4> getArgumentsWithoutThis(CallInst *CI) {
+  llvh::SmallVector<Value *, 4> args;
+  for (size_t i = 1; i < CI->getNumArguments(); i++) {
+    args.push_back(CI->getArgument(i));
+  }
+  return args;
+}
+
+bool LowerCalls::runOnFunction(Function *F) {
+  IRBuilder::InstructionDestroyer destroyer;
+  const Module *mod = F->getParent();
+  IRBuilder builder(F);
+  bool changed = false;
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto *CI = llvh::dyn_cast<CallInst>(&I)) {
+        if (CI->getAttributes(mod).isMetroRequire) {
+          // We'll convert calls with this attribute to a specific
+          // bytecode later.
+          continue;
+        }
+
+        unsigned argCount = CI->getNumArguments();
+        if (argCount > UINT8_MAX) {
+          builder.setLocation(CI->getLocation());
+          builder.setInsertionPoint(CI);
+          auto *replacement = builder.createHBCCallWithArgCount(
+              CI->getCallee(),
+              CI->getTarget(),
+              CI->getCalleeIsAlwaysClosure()->getValue(),
+              CI->getEnvironment(),
+              CI->getNewTarget(),
+              builder.getLiteralNumber(argCount),
+              CI->getThis(),
+              getArgumentsWithoutThis(CI));
+          CI->replaceAllUsesWith(replacement);
+          destroyer.add(CI);
+          changed = true;
+          continue;
+        }
+        // HBCCallNInst can only be used when new.target is undefined.
+        if (HBCCallNInst::kMinArgs <= argCount &&
+            argCount <= HBCCallNInst::kMaxArgs &&
+            llvh::isa<LiteralUndefined>(CI->getNewTarget())) {
+          builder.setLocation(CI->getLocation());
+          builder.setInsertionPoint(CI);
+          HBCCallNInst *newCall = builder.createHBCCallNInst(
+              CI->getCallee(),
+              CI->getTarget(),
+              CI->getCalleeIsAlwaysClosure()->getValue(),
+              CI->getEnvironment(),
+              CI->getNewTarget(),
+              CI->getThis(),
+              getArgumentsWithoutThis(CI));
+          newCall->setType(CI->getType());
+          CI->replaceAllUsesWith(newCall);
+          destroyer.add(CI);
+          changed = true;
+        }
       }
     }
   }
@@ -527,7 +351,6 @@ bool LimitAllocArray::runOnFunction(Function *F) {
       IRBuilder builder(F);
       builder.setInsertionPointAfter(inst);
       builder.setLocation(inst->getLocation());
-      builder.setCurrentSourceLevelScope(inst->getSourceLevelScope());
 
       // Checks if any operand of an AllocArray is unserializable.
       // If it finds one, the loop removes it along with every operand past it.
@@ -543,7 +366,7 @@ bool LimitAllocArray::runOnFunction(Function *F) {
               inst->getOperand(i)->getKind() == ValueKind::LiteralUndefinedKind;
           if (seenUnserializable) {
             e--;
-            builder.createStoreOwnPropertyInst(
+            builder.createDefineOwnPropertyInst(
                 inst->getOperand(i),
                 inst,
                 builder.getLiteralNumber(ind),
@@ -565,7 +388,7 @@ bool LimitAllocArray::runOnFunction(Function *F) {
       // 0 to totalElems.
       for (unsigned i = inst->getElementCount() - 1; i >= maxSize_; i--) {
         int operandOffset = AllocArrayInst::ElementStartIdx + i;
-        builder.createStoreOwnPropertyInst(
+        builder.createDefineOwnPropertyInst(
             inst->getOperand(operandOffset),
             inst,
             builder.getLiteralNumber(i),
@@ -578,17 +401,16 @@ bool LimitAllocArray::runOnFunction(Function *F) {
   return changed;
 }
 
-bool LowerCondBranch::isOperatorSupported(BinaryOperatorInst::OpKind op) {
-  using OpKind = BinaryOperatorInst::OpKind;
-  switch (op) {
-    case OpKind::LessThanKind: // <
-    case OpKind::LessThanOrEqualKind: // <=
-    case OpKind::GreaterThanKind: // >
-    case OpKind::GreaterThanOrEqualKind: // >=
-    case OpKind::StrictlyEqualKind:
-    case OpKind::StrictlyNotEqualKind:
-    case OpKind::NotEqualKind: // !=
-    case OpKind::EqualKind: // ==
+bool LowerCondBranch::isOperatorSupported(ValueKind kind) {
+  switch (kind) {
+    case ValueKind::BinaryLessThanInstKind: // <
+    case ValueKind::BinaryLessThanOrEqualInstKind: // <=
+    case ValueKind::BinaryGreaterThanInstKind: // >
+    case ValueKind::BinaryGreaterThanOrEqualInstKind: // >=
+    case ValueKind::BinaryStrictlyEqualInstKind:
+    case ValueKind::BinaryStrictlyNotEqualInstKind:
+    case ValueKind::BinaryNotEqualInstKind: // !=
+    case ValueKind::BinaryEqualInstKind: // ==
       return true;
     default:
       return false;
@@ -599,24 +421,19 @@ bool LowerCondBranch::runOnFunction(Function *F) {
   IRBuilder builder(F);
   bool changed = false;
 
+  IRBuilder::InstructionDestroyer destroyer{};
+
   for (auto &BB : *F) {
-    llvh::DenseMap<CondBranchInst *, CompareBranchInst *> condToCompMap;
+    auto *cbInst = llvh::dyn_cast<CondBranchInst>(BB.getTerminator());
+    // This also matches constructors.
+    if (!cbInst)
+      continue;
 
-    for (auto &I : BB) {
-      auto *cbInst = llvh::dyn_cast<CondBranchInst>(&I);
-      // This also matches constructors.
-      if (!cbInst)
-        continue;
+    Value *cond = cbInst->getCondition();
 
-      Value *cond = cbInst->getCondition();
-
+    if (auto *binopInst = llvh::dyn_cast<BinaryOperatorInst>(cond)) {
       // If the condition has more than one user, we can't lower it.
       if (!cond->hasOneUser())
-        continue;
-
-      // The condition must be a binary operator.
-      auto binopInst = llvh::dyn_cast<BinaryOperatorInst>(cond);
-      if (!binopInst)
         continue;
 
       auto *LHS = binopInst->getLeftHandSide();
@@ -624,78 +441,69 @@ bool LowerCondBranch::runOnFunction(Function *F) {
 
       // The condition must either be side-effect free, or it must be the
       // previous instruction.
-      if (binopInst->hasSideEffect())
+      if (binopInst->getSideEffect().mayReadOrWorse())
         if (cbInst->getPrevNode() != binopInst)
           continue;
 
       // Only certain operators are supported.
-      if (!isOperatorSupported(binopInst->getOperatorKind()))
+      if (!isOperatorSupported(binopInst->getKind()))
         continue;
 
       builder.setInsertionPoint(cbInst);
       builder.setLocation(cbInst->getLocation());
-      builder.setCurrentSourceLevelScope(cbInst->getSourceLevelScope());
-      auto *cmpBranch = builder.createCompareBranchInst(
+      auto *cmpBranch = builder.createHBCCompareBranchInst(
           LHS,
           RHS,
-          binopInst->getOperatorKind(),
+          HBCCompareBranchInst::fromBinaryOperatorValueKind(
+              binopInst->getKind()),
           cbInst->getTrueDest(),
           cbInst->getFalseDest());
 
-      condToCompMap[cbInst] = cmpBranch;
+      cbInst->replaceAllUsesWith(cmpBranch);
+      destroyer.add(cbInst);
+      destroyer.add(binopInst);
       changed = true;
-    }
+    } else if (auto *fcompare = llvh::dyn_cast<FCompareInst>(cond)) {
+      // The condition is pure and fast to execute, so it doesn't matter how
+      // many users it has.
+      assert(fcompare->getSideEffect().isPure() && "FCompare has side effect");
 
-    for (const auto &cbiter : condToCompMap) {
-      auto binopInst =
-          llvh::dyn_cast<BinaryOperatorInst>(cbiter.first->getCondition());
+      auto *LHS = fcompare->getLeft();
+      auto *RHS = fcompare->getRight();
 
-      cbiter.first->replaceAllUsesWith(condToCompMap[cbiter.first]);
-      cbiter.first->eraseFromParent();
-      binopInst->eraseFromParent();
+      builder.setInsertionPoint(cbInst);
+      builder.setLocation(cbInst->getLocation());
+      auto *cmpBranch = builder.createHBCFCompareBranchInst(
+          LHS,
+          RHS,
+          HBCFCompareBranchInst::fromFCompareValueKind(fcompare->getKind()),
+          cbInst->getTrueDest(),
+          cbInst->getFalseDest());
+
+      cbInst->replaceAllUsesWith(cmpBranch);
+      destroyer.add(cbInst);
+      if (!fcompare->hasUsers())
+        destroyer.add(fcompare);
+      changed = true;
+    } else if (auto *typeOfIs = llvh::dyn_cast<TypeOfIsInst>(cond)) {
+      builder.setInsertionPoint(cbInst);
+      builder.setLocation(cbInst->getLocation());
+      auto *cmpBranch = builder.createHBCCmpBrTypeOfIsInst(
+          typeOfIs->getArgument(),
+          typeOfIs->getTypes(),
+          cbInst->getTrueDest(),
+          cbInst->getFalseDest());
+
+      cbInst->replaceAllUsesWith(cmpBranch);
+      destroyer.add(cbInst);
+      if (!typeOfIs->hasUsers())
+        destroyer.add(typeOfIs);
+      changed = true;
+    } else {
+      continue;
     }
   }
   return changed;
-}
-
-bool LowerExponentiationOperator::runOnFunction(Function *F) {
-  IRBuilder builder{F};
-  llvh::DenseSet<Instruction *> toTransform{};
-  bool changed = false;
-
-  for (BasicBlock &bb : *F) {
-    for (auto it = bb.begin(), e = bb.end(); it != e; /* empty */) {
-      auto *inst = &*it;
-      // Increment iterator before potentially erasing inst and invalidating
-      // iteration.
-      ++it;
-      if (auto *binOp = llvh::dyn_cast<BinaryOperatorInst>(inst)) {
-        if (binOp->getOperatorKind() ==
-            BinaryOperatorInst::OpKind::ExponentiationKind) {
-          changed |= lowerExponentiationOperator(builder, binOp);
-        }
-      }
-    }
-  }
-
-  return changed;
-}
-
-bool LowerExponentiationOperator::lowerExponentiationOperator(
-    IRBuilder &builder,
-    BinaryOperatorInst *binOp) {
-  assert(
-      binOp->getOperatorKind() ==
-          BinaryOperatorInst::OpKind::ExponentiationKind &&
-      "lowerExponentiationOperator must take a ** operator");
-  // Replace a ** b with HermesInternal.exponentiationOperator(a, b)
-  builder.setInsertionPoint(binOp);
-  auto *result = builder.createCallBuiltinInst(
-      BuiltinMethod::HermesBuiltin_exponentiationOperator,
-      {binOp->getLeftHandSide(), binOp->getRightHandSide()});
-  binOp->replaceAllUsesWith(result);
-  binOp->eraseFromParent();
-  return true;
 }
 
 #undef DEBUG_TYPE

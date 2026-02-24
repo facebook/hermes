@@ -18,9 +18,6 @@ function(add_lit_target target comment)
   cmake_parse_arguments(ARG "" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
   set(LIT_ARGS "${ARG_ARGS} ${LLVH_LIT_ARGS}")
   separate_arguments(LIT_ARGS)
-  if (NOT CMAKE_CFG_INTDIR STREQUAL ".")
-    list(APPEND LIT_ARGS --param build_mode=${CMAKE_CFG_INTDIR})
-  endif ()
 
   set(LIT_COMMAND "${Python_EXECUTABLE};${HERMES_LIT_PATH}")
   list(APPEND LIT_COMMAND ${LIT_ARGS})
@@ -91,7 +88,7 @@ function(add_unittest test_suite test_name)
 
   add_hermes_executable(${test_name} ${ARGN})
 
-  target_link_libraries(${test_name} gtest_main gtest)
+  target_link_libraries(${test_name} gtest_main)
 
   add_dependencies(${test_suite} ${test_name})
   get_target_property(test_suite_folder ${test_suite} FOLDER)

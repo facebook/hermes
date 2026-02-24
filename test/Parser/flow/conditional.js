@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
-// RUN: %hermes -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -48,7 +48,6 @@ foo ? bar : baz;
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "consequent": {
 // CHECK-NEXT:           "type": "ArrowFunctionExpression",
-// CHECK-NEXT:           "id": null,
 // CHECK-NEXT:           "params": [],
 // CHECK-NEXT:           "body": {
 // CHECK-NEXT:             "type": "Identifier",
@@ -72,7 +71,6 @@ foo ? bar1 => (baz1) : bar2 => (baz2);
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "alternate": {
 // CHECK-NEXT:           "type": "ArrowFunctionExpression",
-// CHECK-NEXT:           "id": null,
 // CHECK-NEXT:           "params": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
@@ -88,7 +86,6 @@ foo ? bar1 => (baz1) : bar2 => (baz2);
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "consequent": {
 // CHECK-NEXT:           "type": "ArrowFunctionExpression",
-// CHECK-NEXT:           "id": null,
 // CHECK-NEXT:           "params": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
@@ -117,7 +114,6 @@ foo ? (bar1 => (baz1)) : bar2 => (baz2);
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "alternate": {
 // CHECK-NEXT:           "type": "ArrowFunctionExpression",
-// CHECK-NEXT:           "id": null,
 // CHECK-NEXT:           "params": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",
@@ -133,7 +129,6 @@ foo ? (bar1 => (baz1)) : bar2 => (baz2);
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "consequent": {
 // CHECK-NEXT:           "type": "ArrowFunctionExpression",
-// CHECK-NEXT:           "id": null,
 // CHECK-NEXT:           "params": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:               "type": "Identifier",

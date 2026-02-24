@@ -9,10 +9,7 @@
 #include <jsi/jsi.h>
 
 using facebook::hermes::HermesRuntime;
-using facebook::hermes::IHermesRootAPI;
-using facebook::hermes::makeHermesRootAPI;
 using facebook::hermes::makeHermesRuntime;
-using facebook::jsi::castInterface;
 using facebook::jsi::HostObject;
 using facebook::jsi::JSIException;
 using facebook::jsi::Object;
@@ -32,8 +29,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // for validity (for performance purposes).
   // Discard inputs that would be interpreted as bytecode to avoid reporting
   // those as errors.
-  auto *hermesRoot = castInterface<IHermesRootAPI>(makeHermesRootAPI());
-  if (hermesRoot->isHermesBytecode(data, size)) {
+  if (HermesRuntime::isHermesBytecode(data, size)) {
     return 0;
   }
 
@@ -72,7 +68,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   try {
     runtime->evaluateJavaScript(std::make_unique<StringBuffer>(s), "");
-  } catch (const JSIException &) {
+  } catch (const JSIException &e) {
     // Swallow JS-based exceptions.
     // The fuzzer will generate a lot of invalid JS, and if this causes an
     // exception to be thrown evaluating it, that's alright.

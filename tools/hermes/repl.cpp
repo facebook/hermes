@@ -27,6 +27,9 @@
 #include "hermes/VM/SmallXString.h"
 #include "hermes/VM/StringView.h"
 
+#include "hermes/hermes.h"
+#include "jsi/jsi.h"
+
 #if HAVE_LIBREADLINE
 #include <readline/history.h>
 #include <readline/readline.h>
@@ -320,7 +323,14 @@ static void printError(const char *message, bool hasColors) {
 
 // This is the vm driver.
 int repl(const vm::RuntimeConfig &config) {
-  std::shared_ptr<vm::Runtime> runtime = vm::Runtime::create(config);
+  // Create HermesRuntime (JSI wrapper) - this installs JSI extensions like
+  // TextEncoder. We then extract the underlying vm::Runtime for low-level
+  // operations.
+  auto hermesRuntime = facebook::hermes::makeHermesRuntime(config);
+  auto *runtime = static_cast<vm::Runtime *>(
+      facebook::jsi::castInterface<facebook::hermes::IHermes>(
+          hermesRuntime.get())
+          ->getVMRuntimeUnsafe());
 
   vm::GCScope gcScope(*runtime);
   ConsoleHostContext ctx{*runtime};

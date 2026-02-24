@@ -8,4 +8,5 @@
 // RUN: %hermes -O -target=HBC %s
 // RUN: %hermes -O -target=HBC -lazy %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc
+// RUN: %shermes -exec %s
 ''['']

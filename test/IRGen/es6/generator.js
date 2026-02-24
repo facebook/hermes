@@ -41,409 +41,421 @@ var initializer = function*(x = foo()) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [simple2, yieldStar, destr, initializer, simple, useResult, loop]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %simple#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "simple" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %useResult#0#1()#4, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "useResult" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %loop#0#1()#6, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "loop" : string
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %8 = StoreStackInst undefined : undefined, %7
-// CHECK-NEXT:  %9 = CreateFunctionInst %simple2#0#1()#8, %0
-// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "simple2" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %yieldStar#0#1()#10, %0
-// CHECK-NEXT:  %12 = StorePropertyInst %11 : closure, globalObject : object, "yieldStar" : string
-// CHECK-NEXT:  %13 = CreateFunctionInst %destr#0#1()#12, %0
-// CHECK-NEXT:  %14 = StorePropertyInst %13 : closure, globalObject : object, "destr" : string
-// CHECK-NEXT:  %15 = CreateFunctionInst %initializer#0#1()#14, %0
-// CHECK-NEXT:  %16 = StorePropertyInst %15 : closure, globalObject : object, "initializer" : string
-// CHECK-NEXT:  %17 = LoadStackInst %7
-// CHECK-NEXT:  %18 = ReturnInst %17
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "simple": string
+// CHECK-NEXT:       DeclareGlobalVarInst "useResult": string
+// CHECK-NEXT:       DeclareGlobalVarInst "loop": string
+// CHECK-NEXT:       DeclareGlobalVarInst "simple2": string
+// CHECK-NEXT:       DeclareGlobalVarInst "yieldStar": string
+// CHECK-NEXT:       DeclareGlobalVarInst "destr": string
+// CHECK-NEXT:       DeclareGlobalVarInst "initializer": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "simple": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %useResult(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "useResult": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %loop(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "loop": string
+// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %14: any
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple2(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "simple2": string
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %VS0: any, %yieldStar(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "yieldStar": string
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %VS0: any, %destr(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "destr": string
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %VS0: any, %initializer(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "initializer": string
+// CHECK-NEXT:  %24 = LoadStackInst (:any) %14: any
+// CHECK-NEXT:        ReturnInst %24: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simple#0#1()#2
-// CHECK-NEXT:S{simple#0#1()#2} = []
+// CHECK:function simple(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple#0#1()#2}
-// CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_simple#1#2()#3, %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : object
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %"simple 1#"(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
-// CHECK:function ?anon_0_simple#1#2()#3
-// CHECK-NEXT:S{?anon_0_simple#1#2()#3} = []
+// CHECK:function useResult(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_simple#1#2()#3}
-// CHECK-NEXT:  %1 = StartGeneratorInst
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %3 = ResumeGeneratorInst %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_isReturn
-// CHECK-NEXT:  %7 = SaveAndYieldInst 1 : number, %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %"useResult 1#"(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:function loop(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %"loop 1#"(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:function simple2(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %"simple2 1#"(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:function yieldStar(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %"yieldStar 1#"(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:function destr(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %"destr 1#"(): functionCode
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: object
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:function initializer(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %2 = CreateGeneratorInst (:object) %1: environment, %VS0: any, %"initializer 1#"(): functionCode
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) %2: object, "next": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, %2: object
+// CHECK-NEXT:       ReturnInst %2: object
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS1 []
+
+// CHECK:generator inner "simple 1#"(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst %3
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS1: any, %4: environment
+// CHECK-NEXT:  %6 = AllocStackInst (:boolean) $?anon_1_isReturn: any
+// CHECK-NEXT:       SaveAndYieldInst 1: number, false: boolean, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst %6
-// CHECK-NEXT:  %10 = LoadStackInst %6
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB4, %BB5
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: boolean
+// CHECK-NEXT:  %10 = LoadStackInst (:boolean) %6: boolean
+// CHECK-NEXT:        CondBranchInst %10: boolean, %BB5, %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = ReturnInst %9
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:function_end
 
-// CHECK:function useResult#0#1()#4
-// CHECK-NEXT:S{useResult#0#1()#4} = [x#4]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{useResult#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [x#4], %0
-// CHECK-NEXT:  %2 = CreateGeneratorInst %?anon_0_useResult#1#4()#5, %0
-// CHECK-NEXT:  %3 = ReturnInst %2 : object
-// CHECK-NEXT:function_end
+// CHECK:scope %VS2 [x: any]
 
-// CHECK:function ?anon_0_useResult#1#4()#5
-// CHECK-NEXT:S{?anon_0_useResult#1#4()#5} = [x#5]
+// CHECK:generator inner "useResult 1#"(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_useResult#1#4()#5}
-// CHECK-NEXT:  %1 = StartGeneratorInst
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %3 = ResumeGeneratorInst %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = StoreFrameInst undefined : undefined, [x#5], %0
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_1_isReturn
-// CHECK-NEXT:  %8 = SaveAndYieldInst 1 : number, %BB3
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst %3
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS2: any, %4: environment
+// CHECK-NEXT:       StoreFrameInst %5: environment, undefined: undefined, [%VS2.x]: any
+// CHECK-NEXT:  %7 = AllocStackInst (:boolean) $?anon_1_isReturn: any
+// CHECK-NEXT:       SaveAndYieldInst 1: number, false: boolean, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = ResumeGeneratorInst %7
-// CHECK-NEXT:  %11 = LoadStackInst %7
-// CHECK-NEXT:  %12 = CondBranchInst %11, %BB4, %BB5
+// CHECK-NEXT:  %10 = ResumeGeneratorInst (:any) %7: boolean
+// CHECK-NEXT:  %11 = LoadStackInst (:boolean) %7: boolean
+// CHECK-NEXT:        CondBranchInst %11: boolean, %BB5, %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:        StoreFrameInst %5: environment, %10: any, [%VS2.x]: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %13 = StoreFrameInst %10, [x#5], %0
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %15 = ReturnInst %10
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
-// CHECK:function loop#0#1()#6
-// CHECK-NEXT:S{loop#0#1()#6} = [i#6]
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{loop#0#1()#6}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [i#6], %0
-// CHECK-NEXT:  %2 = CreateGeneratorInst %?anon_0_loop#1#6()#7, %0
-// CHECK-NEXT:  %3 = ReturnInst %2 : object
-// CHECK-NEXT:function_end
+// CHECK:scope %VS3 [x: any, i: any]
 
-// CHECK:function ?anon_0_loop#1#6(x)#7
-// CHECK-NEXT:S{?anon_0_loop#1#6()#7} = [x#7, i#7]
+// CHECK:generator inner "loop 1#"(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_loop#1#6()#7}
-// CHECK-NEXT:  %1 = StartGeneratorInst
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %3 = ResumeGeneratorInst %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = StoreFrameInst %x, [x#7], %0
-// CHECK-NEXT:  %7 = StoreFrameInst undefined : undefined, [i#7], %0
-// CHECK-NEXT:  %8 = StoreFrameInst 0 : number, [i#7], %0
-// CHECK-NEXT:  %9 = BranchInst %BB3
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = ReturnInst %3
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS3: any, %4: environment
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %5: environment, %6: any, [%VS3.x]: any
+// CHECK-NEXT:       StoreFrameInst %5: environment, undefined: undefined, [%VS3.i]: any
+// CHECK-NEXT:       StoreFrameInst %5: environment, 0: number, [%VS3.i]: any
+// CHECK-NEXT:        CondBranchInst true: boolean, %BB3, %BB4
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ReturnInst %1: any
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %5: environment, [%VS3.x]: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %5: environment, [%VS3.i]: any
+// CHECK-NEXT:  %14 = AsNumericInst (:number|bigint) %13: any
+// CHECK-NEXT:  %15 = UnaryIncInst (:number|bigint) %14: number|bigint
+// CHECK-NEXT:        StoreFrameInst %5: environment, %15: number|bigint, [%VS3.i]: any
+// CHECK-NEXT:  %17 = LoadPropertyInst (:any) %12: any, %14: number|bigint
+// CHECK-NEXT:  %18 = AllocStackInst (:boolean) $?anon_1_isReturn: any
+// CHECK-NEXT:        SaveAndYieldInst %17: any, false: boolean, %BB6
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %11 = LoadFrameInst [x#7], %0
-// CHECK-NEXT:  %12 = LoadFrameInst [i#7], %0
-// CHECK-NEXT:  %13 = AsNumericInst %12
-// CHECK-NEXT:  %14 = UnaryOperatorInst '++', %13 : number|bigint
-// CHECK-NEXT:  %15 = StoreFrameInst %14, [i#7], %0
-// CHECK-NEXT:  %16 = LoadPropertyInst %11, %13 : number|bigint
-// CHECK-NEXT:  %17 = AllocStackInst $?anon_1_isReturn
-// CHECK-NEXT:  %18 = SaveAndYieldInst %16, %BB5
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:        CondBranchInst true: boolean, %BB3, %BB4
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %19 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %20 = CondBranchInst true : boolean, %BB4, %BB6
+// CHECK-NEXT:  %22 = ResumeGeneratorInst (:any) %18: boolean
+// CHECK-NEXT:  %23 = LoadStackInst (:boolean) %18: boolean
+// CHECK-NEXT:        CondBranchInst %23: boolean, %BB8, %BB7
 // CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %21 = CondBranchInst true : boolean, %BB4, %BB6
+// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %22 = BranchInst %BB7
+// CHECK-NEXT:        ReturnInst %22: any
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS4 []
+
+// CHECK:generator inner "simple2 1#"(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS4: any, %4: environment
+// CHECK-NEXT:  %6 = AllocStackInst (:boolean) $?anon_1_isReturn: any
+// CHECK-NEXT:       SaveAndYieldInst 1: number, false: boolean, %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst %1: any
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %9 = ResumeGeneratorInst (:any) %6: boolean
+// CHECK-NEXT:  %10 = LoadStackInst (:boolean) %6: boolean
+// CHECK-NEXT:        CondBranchInst %10: boolean, %BB5, %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %23 = ResumeGeneratorInst %17
-// CHECK-NEXT:  %24 = LoadStackInst %17
-// CHECK-NEXT:  %25 = CondBranchInst %24, %BB9, %BB10
+// CHECK-NEXT:        ReturnInst %9: any
+// CHECK-NEXT:function_end
+
+// CHECK:scope %VS5 []
+
+// CHECK:generator inner "yieldStar 1#"(): any
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %4 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %5 = CreateScopeInst (:environment) %VS5: any, %4: environment
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %8 = GetBuiltinClosureInst (:object) [globalThis.Symbol]: number
+// CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: object, "iterator": string
+// CHECK-NEXT:  %10 = LoadPropertyInst (:any) %7: any, %9: any
+// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, %7: any
+// CHECK-NEXT:  %12 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: any, "iterator is not an object": string
+// CHECK-NEXT:  %13 = LoadPropertyInst (:any) %11: any, "next": string
+// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_1_received: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %14: any
+// CHECK-NEXT:  %16 = AllocStackInst (:boolean) $?anon_2_isReturn: any
+// CHECK-NEXT:  %17 = AllocStackInst (:any) $?anon_3_result: any
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ReturnInst %1: any
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:  %20 = LoadStackInst (:any) %14: any
+// CHECK-NEXT:  %21 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, %11: any, %20: any
+// CHECK-NEXT:  %22 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %21: any, "iterator.next() did not return an object": string
+// CHECK-NEXT:        StoreStackInst %21: any, %17: any
+// CHECK-NEXT:  %24 = LoadPropertyInst (:any) %21: any, "done": string
+// CHECK-NEXT:        CondBranchInst %24: any, %BB5, %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:        SaveAndYieldInst %21: any, true: boolean, %BB6
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %27 = LoadStackInst (:any) %17: any
+// CHECK-NEXT:  %28 = LoadPropertyInst (:any) %27: any, "value": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:        TryStartInst %BB8, %BB9
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        TryEndInst %BB8, %BB16
+// CHECK-NEXT:%BB8:
+// CHECK-NEXT:  %32 = CatchInst (:any)
+// CHECK-NEXT:  %33 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: any, "throw": string
+// CHECK-NEXT:  %34 = BinaryStrictlyEqualInst (:any) %33: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %34: any, %BB18, %BB17
+// CHECK-NEXT:%BB9:
+// CHECK-NEXT:  %36 = ResumeGeneratorInst (:any) %16: boolean
+// CHECK-NEXT:        StoreStackInst %36: any, %14: any
+// CHECK-NEXT:  %38 = LoadStackInst (:boolean) %16: boolean
+// CHECK-NEXT:        CondBranchInst %38: boolean, %BB10, %BB7
 // CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %26 = BranchInst %BB8
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %27 = ReturnInst %23
-// CHECK-NEXT:function_end
-
-// CHECK:function simple2#0#1()#8
-// CHECK-NEXT:S{simple2#0#1()#8} = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{simple2#0#1()#8}
-// CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_simple2#1#8()#9, %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : object
-// CHECK-NEXT:function_end
-
-// CHECK:function ?anon_0_simple2#1#8()#9
-// CHECK-NEXT:S{?anon_0_simple2#1#8()#9} = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_simple2#1#8()#9}
-// CHECK-NEXT:  %1 = StartGeneratorInst
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %3 = ResumeGeneratorInst %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_isReturn
-// CHECK-NEXT:  %7 = SaveAndYieldInst 1 : number, %BB3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst %3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = ResumeGeneratorInst %6
-// CHECK-NEXT:  %10 = LoadStackInst %6
-// CHECK-NEXT:  %11 = CondBranchInst %10, %BB4, %BB5
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = ReturnInst %9
-// CHECK-NEXT:function_end
-
-// CHECK:function yieldStar#0#1()#10
-// CHECK-NEXT:S{yieldStar#0#1()#10} = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{yieldStar#0#1()#10}
-// CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_yieldStar#1#10()#11, %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : object
-// CHECK-NEXT:function_end
-
-// CHECK:function ?anon_0_yieldStar#1#10()#11
-// CHECK-NEXT:S{?anon_0_yieldStar#1#10()#11} = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_yieldStar#1#10()#11}
-// CHECK-NEXT:  %1 = StartGeneratorInst
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %3 = ResumeGeneratorInst %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %8 = TryLoadGlobalPropertyInst globalObject : object, "Symbol" : string
-// CHECK-NEXT:  %9 = LoadPropertyInst %8, "iterator" : string
-// CHECK-NEXT:  %10 = LoadPropertyInst %7, %9
-// CHECK-NEXT:  %11 = CallInst %10, undefined : undefined, %7
-// CHECK-NEXT:  %12 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %11, "iterator is not an object" : string
-// CHECK-NEXT:  %13 = LoadPropertyInst %11, "next" : string
-// CHECK-NEXT:  %14 = AllocStackInst $?anon_1_received
-// CHECK-NEXT:  %15 = StoreStackInst undefined : undefined, %14
-// CHECK-NEXT:  %16 = AllocStackInst $?anon_2_isReturn
-// CHECK-NEXT:  %17 = AllocStackInst $?anon_3_result
-// CHECK-NEXT:  %18 = BranchInst %BB3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %19 = ReturnInst %3
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %20 = LoadStackInst %14
-// CHECK-NEXT:  %21 = CallInst %13, undefined : undefined, %11, %20
-// CHECK-NEXT:  %22 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %21, "iterator.next() did not return an object" : string
-// CHECK-NEXT:  %23 = StoreStackInst %21, %17
-// CHECK-NEXT:  %24 = LoadPropertyInst %21, "done" : string
-// CHECK-NEXT:  %25 = CondBranchInst %24, %BB4, %BB5
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %26 = TryStartInst %BB6, %BB7
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %27 = LoadStackInst %17
-// CHECK-NEXT:  %28 = LoadPropertyInst %27, "value" : string
-// CHECK-NEXT:  %29 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %30 = ResumeGeneratorInst %16
-// CHECK-NEXT:  %31 = StoreStackInst %30, %14
-// CHECK-NEXT:  %32 = LoadStackInst %16
-// CHECK-NEXT:  %33 = CondBranchInst %32, %BB9, %BB3
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %34 = CatchInst
-// CHECK-NEXT:  %35 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, undefined : undefined, %11, "throw" : string
-// CHECK-NEXT:  %36 = CompareBranchInst '===', %35, undefined : undefined, %BB10, %BB11
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %37 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %38 = SaveAndYieldInst %21, %BB8
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %39 = StoreStackInst %30, %14
-// CHECK-NEXT:  %40 = BranchInst %BB12
+// CHECK-NEXT:        StoreStackInst %36: any, %14: any
+// CHECK-NEXT:        TryEndInst %BB8, %BB11
+// CHECK-NEXT:%BB11:
+// CHECK-NEXT:  %42 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: any, "return": string
+// CHECK-NEXT:  %43 = BinaryStrictlyEqualInst (:any) %42: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %43: any, %BB13, %BB12
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %41 = TryEndInst
-// CHECK-NEXT:  %42 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, undefined : undefined, %11, "return" : string
-// CHECK-NEXT:  %43 = CompareBranchInst '===', %42, undefined : undefined, %BB13, %BB14
+// CHECK-NEXT:  %45 = LoadStackInst (:any) %14: any
+// CHECK-NEXT:  %46 = CallInst (:any) %42: any, empty: any, false: boolean, empty: any, undefined: undefined, %11: any, %45: any
+// CHECK-NEXT:  %47 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %46: any, "iterator.return() did not return an object": string
+// CHECK-NEXT:  %48 = LoadPropertyInst (:any) %46: any, "done": string
+// CHECK-NEXT:        CondBranchInst %48: any, %BB14, %BB15
+// CHECK-NEXT:%BB13:
+// CHECK-NEXT:        ReturnInst %36: any
 // CHECK-NEXT:%BB14:
-// CHECK-NEXT:  %44 = LoadStackInst %14
-// CHECK-NEXT:  %45 = CallInst %42, undefined : undefined, %11, %44
-// CHECK-NEXT:  %46 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %45, "iterator.return() did not return an object" : string
-// CHECK-NEXT:  %47 = LoadPropertyInst %45, "done" : string
-// CHECK-NEXT:  %48 = CondBranchInst %47, %BB15, %BB16
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %49 = ReturnInst %30
+// CHECK-NEXT:  %51 = LoadPropertyInst (:any) %46: any, "value": string
+// CHECK-NEXT:        ReturnInst %51: any
 // CHECK-NEXT:%BB15:
-// CHECK-NEXT:  %50 = LoadPropertyInst %45, "value" : string
-// CHECK-NEXT:  %51 = ReturnInst %50
+// CHECK-NEXT:        SaveAndYieldInst %46: any, true: boolean, %BB6
 // CHECK-NEXT:%BB16:
-// CHECK-NEXT:  %52 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %53 = SaveAndYieldInst %45, %BB8
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB17:
-// CHECK-NEXT:  %54 = BranchInst %BB18
+// CHECK-NEXT:  %55 = CallInst (:any) %33: any, empty: any, false: boolean, empty: any, undefined: undefined, %11: any, %32: any
+// CHECK-NEXT:  %56 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %55: any, "iterator.throw() did not return an object": string
+// CHECK-NEXT:  %57 = LoadPropertyInst (:any) %55: any, "done": string
+// CHECK-NEXT:        CondBranchInst %57: any, %BB19, %BB20
 // CHECK-NEXT:%BB18:
-// CHECK-NEXT:  %55 = TryEndInst
-// CHECK-NEXT:  %56 = BranchInst %BB3
-// CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %57 = CallInst %35, undefined : undefined, %11, %34
-// CHECK-NEXT:  %58 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %57, "iterator.throw() did not return an object" : string
-// CHECK-NEXT:  %59 = LoadPropertyInst %57, "done" : string
-// CHECK-NEXT:  %60 = CondBranchInst %59, %BB19, %BB20
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %61 = CallBuiltinInst [HermesBuiltin.getMethod] : number, undefined : undefined, undefined : undefined, %11, "return" : string
-// CHECK-NEXT:  %62 = CompareBranchInst '===', %61, undefined : undefined, %BB21, %BB22
+// CHECK-NEXT:  %59 = CallBuiltinInst (:any) [HermesBuiltin.getMethod]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %11: any, "return": string
+// CHECK-NEXT:  %60 = BinaryStrictlyEqualInst (:any) %59: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %60: any, %BB22, %BB21
 // CHECK-NEXT:%BB19:
-// CHECK-NEXT:  %63 = StoreStackInst %57, %17
-// CHECK-NEXT:  %64 = BranchInst %BB4
+// CHECK-NEXT:        StoreStackInst %55: any, %17: any
+// CHECK-NEXT:        BranchInst %BB5
 // CHECK-NEXT:%BB20:
-// CHECK-NEXT:  %65 = CallBuiltinInst [HermesBuiltin.generatorSetDelegated] : number, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %66 = SaveAndYieldInst %57, %BB8
-// CHECK-NEXT:%BB22:
-// CHECK-NEXT:  %67 = CallInst %61, undefined : undefined, %11
-// CHECK-NEXT:  %68 = CallBuiltinInst [HermesBuiltin.ensureObject] : number, undefined : undefined, undefined : undefined, %67, "iterator.return() did not return an object" : string
-// CHECK-NEXT:  %69 = BranchInst %BB21
+// CHECK-NEXT:        SaveAndYieldInst %55: any, true: boolean, %BB6
 // CHECK-NEXT:%BB21:
-// CHECK-NEXT:  %70 = CallBuiltinInst [HermesBuiltin.throwTypeError] : number, undefined : undefined, undefined : undefined, "yield* delegate must have a .throw() method" : string
-// CHECK-NEXT:  %71 = ThrowInst undefined : undefined
+// CHECK-NEXT:  %65 = CallInst (:any) %59: any, empty: any, false: boolean, empty: any, undefined: undefined, %11: any
+// CHECK-NEXT:  %66 = CallBuiltinInst (:any) [HermesBuiltin.ensureObject]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %65: any, "iterator.return() did not return an object": string
+// CHECK-NEXT:        BranchInst %BB22
+// CHECK-NEXT:%BB22:
+// CHECK-NEXT:        ThrowTypeErrorInst "yield* delegate must have a .throw() method": string
 // CHECK-NEXT:function_end
 
-// CHECK:function destr#0#1()#12
-// CHECK-NEXT:S{destr#0#1()#12} = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{destr#0#1()#12}
-// CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_destr#1#12()#13, %0
-// CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "next" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1 : object
-// CHECK-NEXT:  %4 = ReturnInst %1 : object
-// CHECK-NEXT:function_end
+// CHECK:scope %VS6 [x: any]
 
-// CHECK:function ?anon_0_destr#1#12(?anon_2_param)#13
-// CHECK-NEXT:S{?anon_0_destr#1#12()#13} = [x#13]
+// CHECK:generator inner "destr 1#"(?anon_2_param: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_destr#1#12()#13}
-// CHECK-NEXT:  %1 = StartGeneratorInst
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %3 = ResumeGeneratorInst %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_isReturn_entry
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_3_iter
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_4_sourceOrNext
-// CHECK-NEXT:  %9 = StoreStackInst %?anon_2_param, %8
-// CHECK-NEXT:  %10 = IteratorBeginInst %8
-// CHECK-NEXT:  %11 = StoreStackInst %10, %7
-// CHECK-NEXT:  %12 = AllocStackInst $?anon_5_iterDone
-// CHECK-NEXT:  %13 = StoreStackInst undefined : undefined, %12
-// CHECK-NEXT:  %14 = AllocStackInst $?anon_6_iterValue
-// CHECK-NEXT:  %15 = StoreStackInst undefined : undefined, %14
-// CHECK-NEXT:  %16 = BranchInst %BB3
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %17 = ReturnInst %3
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %18 = ResumeGeneratorInst %6
-// CHECK-NEXT:  %19 = LoadStackInst %6
-// CHECK-NEXT:  %20 = CondBranchInst %19, %BB5, %BB6
+// CHECK-NEXT:  %4 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS6: any, %5: environment
+// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [%VS6.x]: any
+// CHECK-NEXT:  %8 = LoadParamInst (:any) %?anon_2_param: any
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_3_iter: any
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_4_sourceOrNext: any
+// CHECK-NEXT:        StoreStackInst %8: any, %10: any
+// CHECK-NEXT:  %12 = IteratorBeginInst (:any) %10: any
+// CHECK-NEXT:        StoreStackInst %12: any, %9: any
+// CHECK-NEXT:  %14 = AllocStackInst (:any) $?anon_5_iterDone: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %14: any
+// CHECK-NEXT:  %16 = AllocStackInst (:any) $?anon_6_iterValue: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %16: any
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %21 = IteratorNextInst %7, %8
-// CHECK-NEXT:  %22 = LoadStackInst %7
-// CHECK-NEXT:  %23 = BinaryOperatorInst '===', %22, undefined : undefined
-// CHECK-NEXT:  %24 = StoreStackInst %23, %12
-// CHECK-NEXT:  %25 = CondBranchInst %23, %BB7, %BB8
-// CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %26 = StoreStackInst %21, %14
-// CHECK-NEXT:  %27 = BranchInst %BB7
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %28 = LoadStackInst %14
-// CHECK-NEXT:  %29 = StoreFrameInst %28, [x#13], %0
-// CHECK-NEXT:  %30 = LoadStackInst %12
-// CHECK-NEXT:  %31 = CondBranchInst %30, %BB9, %BB10
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %32 = IteratorCloseInst %7, false : boolean
-// CHECK-NEXT:  %33 = BranchInst %BB9
-// CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %34 = SaveAndYieldInst undefined : undefined, %BB4
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %35 = LoadFrameInst [x#13], %0
-// CHECK-NEXT:  %36 = AllocStackInst $?anon_8_isReturn
-// CHECK-NEXT:  %37 = SaveAndYieldInst %35, %BB11
+// CHECK-NEXT:  %20 = ResumeGeneratorInst (:any) %4: boolean
+// CHECK-NEXT:  %21 = LoadStackInst (:boolean) %4: boolean
+// CHECK-NEXT:        CondBranchInst %21: boolean, %BB10, %BB9
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %23 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:  %24 = IteratorNextInst (:any) %9: any, %23: any
+// CHECK-NEXT:  %25 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %26 = BinaryStrictlyEqualInst (:any) %25: any, undefined: undefined
+// CHECK-NEXT:        StoreStackInst %26: any, %14: any
+// CHECK-NEXT:        CondBranchInst %26: any, %BB6, %BB5
 // CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %38 = ReturnInst %18
+// CHECK-NEXT:        StoreStackInst %24: any, %16: any
+// CHECK-NEXT:        BranchInst %BB6
+// CHECK-NEXT:%BB6:
+// CHECK-NEXT:  %31 = LoadStackInst (:any) %16: any
+// CHECK-NEXT:        StoreFrameInst %6: environment, %31: any, [%VS6.x]: any
+// CHECK-NEXT:  %33 = LoadStackInst (:any) %14: any
+// CHECK-NEXT:        CondBranchInst %33: any, %BB8, %BB7
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %35 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:  %36 = IteratorCloseInst (:any) %35: any, false: boolean
+// CHECK-NEXT:        BranchInst %BB8
+// CHECK-NEXT:%BB8:
+// CHECK-NEXT:        SaveAndYieldInst undefined: undefined, false: boolean, %BB3
+// CHECK-NEXT:%BB9:
+// CHECK-NEXT:  %39 = LoadFrameInst (:any) %6: environment, [%VS6.x]: any
+// CHECK-NEXT:  %40 = AllocStackInst (:boolean) $?anon_8_isReturn: any
+// CHECK-NEXT:        SaveAndYieldInst %39: any, false: boolean, %BB11
+// CHECK-NEXT:%BB10:
+// CHECK-NEXT:        ReturnInst %20: any
 // CHECK-NEXT:%BB11:
-// CHECK-NEXT:  %39 = ResumeGeneratorInst %36
-// CHECK-NEXT:  %40 = LoadStackInst %36
-// CHECK-NEXT:  %41 = CondBranchInst %40, %BB12, %BB13
-// CHECK-NEXT:%BB13:
-// CHECK-NEXT:  %42 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %43 = ResumeGeneratorInst (:any) %40: boolean
+// CHECK-NEXT:  %44 = LoadStackInst (:boolean) %40: boolean
+// CHECK-NEXT:        CondBranchInst %44: boolean, %BB13, %BB12
 // CHECK-NEXT:%BB12:
-// CHECK-NEXT:  %43 = ReturnInst %39
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB13:
+// CHECK-NEXT:        ReturnInst %43: any
 // CHECK-NEXT:function_end
 
-// CHECK:function initializer#0#1()#14
-// CHECK-NEXT:S{initializer#0#1()#14} = []
-// CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{initializer#0#1()#14}
-// CHECK-NEXT:  %1 = CreateGeneratorInst %?anon_0_initializer#1#14()#15, %0
-// CHECK-NEXT:  %2 = LoadPropertyInst %1 : object, "next" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, %1 : object
-// CHECK-NEXT:  %4 = ReturnInst %1 : object
-// CHECK-NEXT:function_end
+// CHECK:scope %VS7 [x: any]
 
-// CHECK:function ?anon_0_initializer#1#14(x)#15
-// CHECK-NEXT:S{?anon_0_initializer#1#14()#15} = [x#15]
+// CHECK:generator inner "initializer 1#"(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{?anon_0_initializer#1#14()#15}
-// CHECK-NEXT:  %1 = StartGeneratorInst
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_0_isReturn_prologue
-// CHECK-NEXT:  %3 = ResumeGeneratorInst %2
-// CHECK-NEXT:  %4 = LoadStackInst %2
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = AllocStackInst $?anon_1_isReturn_entry
-// CHECK-NEXT:  %7 = BinaryOperatorInst '!==', %x, undefined : undefined
-// CHECK-NEXT:  %8 = CondBranchInst %7, %BB3, %BB4
+// CHECK-NEXT:  %0 = AllocStackInst (:boolean) $?anon_0_isReturn_prologue: any
+// CHECK-NEXT:  %1 = ResumeGeneratorInst (:any) %0: boolean
+// CHECK-NEXT:  %2 = LoadStackInst (:boolean) %0: boolean
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = ReturnInst %3
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %10 = ResumeGeneratorInst %6
-// CHECK-NEXT:  %11 = LoadStackInst %6
-// CHECK-NEXT:  %12 = CondBranchInst %11, %BB6, %BB7
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %14 = CallInst %13, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %15 = BranchInst %BB3
+// CHECK-NEXT:  %4 = AllocStackInst (:boolean) $?anon_1_isReturn_entry: any
+// CHECK-NEXT:  %5 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %6 = CreateScopeInst (:environment) %VS7: any, %5: environment
+// CHECK-NEXT:       StoreFrameInst %6: environment, undefined: undefined, [%VS7.x]: any
+// CHECK-NEXT:  %8 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %9 = BinaryStrictlyNotEqualInst (:any) %8: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %9: any, %BB5, %BB4
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        ReturnInst %1: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %16 = PhiInst %x, %BB2, %14, %BB4
-// CHECK-NEXT:  %17 = StoreFrameInst %16, [x#15], %0
-// CHECK-NEXT:  %18 = SaveAndYieldInst undefined : undefined, %BB5
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %19 = AllocStackInst $?anon_2_isReturn
-// CHECK-NEXT:  %20 = SaveAndYieldInst 1 : number, %BB8
+// CHECK-NEXT:  %12 = ResumeGeneratorInst (:any) %4: boolean
+// CHECK-NEXT:  %13 = LoadStackInst (:boolean) %4: boolean
+// CHECK-NEXT:        CondBranchInst %13: boolean, %BB7, %BB6
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %16 = CallInst (:any) %15: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %18 = PhiInst (:any) %8: any, %BB1, %16: any, %BB4
+// CHECK-NEXT:        StoreFrameInst %6: environment, %18: any, [%VS7.x]: any
+// CHECK-NEXT:        SaveAndYieldInst undefined: undefined, false: boolean, %BB3
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %21 = ReturnInst %10
+// CHECK-NEXT:  %21 = AllocStackInst (:boolean) $?anon_2_isReturn: any
+// CHECK-NEXT:        SaveAndYieldInst 1: number, false: boolean, %BB8
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:%BB8:
-// CHECK-NEXT:  %22 = ResumeGeneratorInst %19
-// CHECK-NEXT:  %23 = LoadStackInst %19
-// CHECK-NEXT:  %24 = CondBranchInst %23, %BB9, %BB10
-// CHECK-NEXT:%BB10:
-// CHECK-NEXT:  %25 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %24 = ResumeGeneratorInst (:any) %21: boolean
+// CHECK-NEXT:  %25 = LoadStackInst (:boolean) %21: boolean
+// CHECK-NEXT:        CondBranchInst %25: boolean, %BB10, %BB9
 // CHECK-NEXT:%BB9:
-// CHECK-NEXT:  %26 = ReturnInst %22
+// CHECK-NEXT:        ReturnInst undefined: undefined
+// CHECK-NEXT:%BB10:
+// CHECK-NEXT:        ReturnInst %24: any
 // CHECK-NEXT:function_end

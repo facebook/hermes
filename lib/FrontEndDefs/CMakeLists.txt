@@ -7,4 +7,4 @@ set(source_files
   Builtins.cpp
 )
 
-add_hermes_library(hermesFrontEndDefs STATIC ${source_files})
+add_hermes_library(hermesFrontEndDefs ${source_files})

@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_SYNTHTRACEPARSER_H
-#define HERMES_SYNTHTRACEPARSER_H
+#pragma once
 
 #include <tuple>
 
@@ -36,5 +35,3 @@ parseSynthTrace(const std::string &tracefile);
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_SYNTHTRACEPARSER_H

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s
+// RUN: %hermesc -hermes-parser -dump-ir %s
 
 // Make sure we are not crashing on directives.
 "use strict";

@@ -10,13 +10,15 @@
 #include "hermes/Optimizer/Scalar/Utils.h"
 
 #include "hermes/IR/Analysis.h"
-#include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
+#include "hermes/IR/IRUtils.h"
 #include "hermes/IR/Instrs.h"
 
-using namespace hermes;
+#include "llvh/ADT/SetVector.h"
 
-Value *hermes::isStoreOnceVariable(Variable *V) {
+namespace hermes {
+
+Value *isStoreOnceVariable(Variable *V) {
   Value *res = nullptr;
 
   for (auto *U : V->getUsers()) {
@@ -40,7 +42,7 @@ Value *hermes::isStoreOnceVariable(Variable *V) {
   return res;
 }
 
-Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
+Value *isStoreOnceStackLocation(AllocStackInst *AS) {
   Value *res = nullptr;
 
   for (auto *U : AS->getUsers()) {
@@ -70,95 +72,43 @@ Value *hermes::isStoreOnceStackLocation(AllocStackInst *AS) {
   return res;
 }
 
-Function *hermes::getCallee(Value *callee) {
-  // This is a direct call.
-  if (auto *F = llvh::dyn_cast<Function>(callee)) {
-    return F;
-  }
-
-  // This is a direct use of a closure.
-  if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(callee)) {
-    return CFI->getFunctionCode();
-  }
-
-  // If we load from a frame variable, check if this is a non-global store-only
-  // variable.
-  if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(callee)) {
-    auto *V = LFI->getLoadVariable();
-
-    if (Value *singleValue = isStoreOnceVariable(V))
-      return getCallee(singleValue);
-  }
-
-  return nullptr;
-}
-
-bool hermes::isDirectCallee(Value *C, CallInst *CI) {
-  if (CI->getCallee() != C)
-    return false;
-
-  if (CI->getNewTarget() == C) {
-    return false;
-  }
-
-  for (int i = 0, e = CI->getNumArguments(); i < e; i++) {
-    // Check if C is captured.
-    if (C == CI->getArgument(i))
-      return false;
-  }
-
-  return true;
-}
-
-bool hermes::getCallSites(
-    Function *F,
-    llvh::SmallVectorImpl<CallInst *> &callsites) {
-  for (auto *CU : F->getUsers()) {
-    auto *CFI = cast<CreateFunctionInst>(CU);
-
-    // Collect direct calls.
-    for (auto *U : CFI->getUsers()) {
-      auto *CI = llvh::dyn_cast<CallInst>(U);
-      if (CI && isDirectCallee(CFI, CI)) {
-        callsites.push_back(CI);
-        continue;
-      }
-
-      // Check if the variable is stored somewhere.
-      auto *SFI = llvh::dyn_cast<StoreFrameInst>(U);
-      if (!SFI)
-        return false;
-
-      // If the variable is analyzable then try to see where the closure
-      // goes.
-      Variable *V = SFI->getVariable();
-      if (!isStoreOnceVariable(V))
-        return false;
-
-      for (auto *VU : V->getUsers()) {
-        if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(VU)) {
-          if (!LFI->hasOneUser())
-            return false;
-
-          Value *loadUser = LFI->getUsers()[0];
-          if (auto *loadUserCI = llvh::dyn_cast<CallInst>(loadUser)) {
-            if (loadUserCI && isDirectCallee(LFI, loadUserCI)) {
-              callsites.push_back(loadUserCI);
-              continue;
-            }
-          }
-
-          // Unknown load used.
-          return false;
-        }
-      }
+llvh::SmallVector<BaseCallInst *, 2> getKnownCallsites(Function *F) {
+  llvh::SmallVector<BaseCallInst *, 2> result{};
+  for (Instruction *user : F->getUsers()) {
+    if (auto *call = llvh::dyn_cast<BaseCallInst>(user)) {
+      assert(
+          call->getTarget() == F &&
+          "invalid usage of Function as operand of BaseCallInst");
+      result.push_back(call);
     }
   }
-  return true;
+  return result;
+}
+
+BasicBlock *splitBasicBlock(
+    BasicBlock *BB,
+    BasicBlock::InstListType::iterator it) {
+  Function *F = BB->getParent();
+
+  IRBuilder builder(F);
+  auto *newBB = builder.createBasicBlock(F);
+
+  for (auto *succ : successors(BB))
+    updateIncomingPhiValues(succ, BB, newBB);
+
+  // Move the instructions after the split point into the new BB.
+  newBB->getInstList().splice(
+      newBB->end(), BB->getInstList(), it, BB->getInstList().end());
+
+  // setParent is not called by splice, so add it ourselves.
+  for (auto &movedInst : *newBB)
+    movedInst.setParent(newBB);
+
+  return newBB;
 }
 
 /// Delete all incoming arrows from \p incoming in PhiInsts in \p blockToModify.
-bool hermes::deleteIncomingBlockFromPhis(
+bool deleteIncomingBlockFromPhis(
     BasicBlock *blockToModify,
     BasicBlock *incoming) {
   bool changed = false;
@@ -179,10 +129,29 @@ bool hermes::deleteIncomingBlockFromPhis(
   return changed;
 }
 
-void hermes::splitCriticalEdge(
-    IRBuilder *builder,
-    BasicBlock *from,
-    BasicBlock *to) {
+Value *getSinglePhiValue(PhiInst *P) {
+  Value *incoming = nullptr;
+  for (int i = 0, e = P->getNumEntries(); i < e; i++) {
+    auto E = P->getEntry(i);
+    // Ignore self edges.
+    if (E.first == P)
+      continue;
+
+    // Record the first valid input.
+    if (!incoming) {
+      incoming = E.first;
+      continue;
+    }
+
+    // Found another unique value. Bail out.
+    if (incoming != E.first)
+      return nullptr;
+  }
+
+  return incoming;
+}
+
+void splitCriticalEdge(IRBuilder *builder, BasicBlock *from, BasicBlock *to) {
   // Special case: If the target block is Catch block, there's only one
   // possible arrow and we can't insert anything between them. Just
   // start writing after the Catch statement.
@@ -224,22 +193,106 @@ void hermes::splitCriticalEdge(
   builder->setInsertionPoint(branch);
 }
 
-bool hermes::isSimpleSideEffectFreeInstruction(Instruction *I) {
-  if (I->hasSideEffect()) {
-    return false;
+bool deleteUnusedVariables(Module *M) {
+  bool changed = false;
+  auto &scopeList = M->getVariableScopes();
+  for (auto it = scopeList.begin(); it != scopeList.end();) {
+    // If the scope is unused, delete the whole scope.
+    if (!it->hasUsers()) {
+      // Remove the scope from its parent. Note that its children are also dead,
+      // but may still have users in dead functions, so just move them to the
+      // parent and leave it to function DCE to eliminate their usage.
+      it->removeFromScopeChain();
+      scopeList.erase(it++);
+      continue;
+    }
+
+    llvh::SmallVectorImpl<Variable *> &vars = it->getVariables();
+    ++it;
+    // Delete variables without any users. Do this in a separate loop since we
+    // are putting vars in an invalid state.
+    for (Variable *&var : vars) {
+      if (!var->hasUsers()) {
+        Value::destroy(var);
+        var = nullptr;
+        changed = true;
+      }
+    }
+    // Clean up the variable list to remove destroyed entries.
+    llvh::erase_if(vars, [](Variable *var) { return !var; });
   }
-  switch (I->getKind()) {
-    case ValueKind::GetNewTargetInstKind:
-    case ValueKind::UnaryOperatorInstKind:
-    case ValueKind::BinaryOperatorInstKind:
-    case ValueKind::HBCResolveEnvironmentKind:
-    case ValueKind::HBCLoadConstInstKind:
-    case ValueKind::HBCGetGlobalObjectInstKind:
-      return true;
-    default:
-      return false;
-  }
-  llvm_unreachable("unreachable");
+
+  return changed;
 }
+
+bool deleteUnusedFunctionsAndVariables(Module *M) {
+  // A list of unused functions to deallocate from memory.
+  // We need to destroy the memory at the very end of this function because a
+  // dead function may have a variable that is referenced by an inner function
+  // (which will also become dead once the outer function is removed). However,
+  // we cannot destroy the outer function right away until we destroy the inner
+  // function.
+  llvh::SmallVector<Function *, 16> toDestroy;
+
+  bool changed = false, localChanged = false;
+  do {
+    // A list of unused functions to remove from the module without being
+    // destroyed. We have to collect these separately since we can't remove the
+    // functions as we iterate over the module.
+    llvh::SmallSetVector<Function *, 16> toRemove;
+    for (auto &F : *M) {
+      // Delete any functions that do not have any uses other than in their own
+      // bodies. The top level function does not have an explicit user, so check
+      // for it directly.
+      if (&F != M->getTopLevelFunction() &&
+          llvh::all_of(F.getUsers(), [&F](Instruction *user) {
+            // Use must be from another function to be meaningful.
+            return user->getFunction() == &F;
+          })) {
+        toRemove.insert(&F);
+      }
+    }
+
+    // We erase the basic blocks and instructions from each function in
+    // toRemove, and also remove the function from the module. However, the
+    // memory of the function remains alive.
+    for (size_t i = 0; i < toRemove.size(); ++i) {
+      auto *F = toRemove[i];
+
+      // All users of F must also be dead so add them to the worklist. This is
+      // also necessary for correctness since it avoids leaving dangling
+      // references.
+      for (auto *U : F->getUsers())
+        toRemove.insert(U->getFunction());
+
+      F->eraseFromParentNoDestroy();
+      toDestroy.push_back(F);
+    }
+    localChanged = !toRemove.empty();
+    changed |= localChanged;
+  } while (localChanged);
+
+  // Now that all instructions have been destroyed from each dead function, it's
+  // now safe to destroy them including the variables in them.
+  for (auto *F : toDestroy) {
+    assert(F->empty() && "All basic blocks should have been deleted.");
+    Value::destroy(F);
+  }
+
+  // Deleting functions will make some variables unused, delete them.
+  changed |= deleteUnusedVariables(M);
+  return changed;
+}
+
+bool functionHasTryCatch(Function *F) {
+  for (const auto &BB : *F) {
+    if (llvh::isa<TryStartInst>(BB.getTerminator())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+} // namespace hermes
 
 #undef DEBUG_TYPE

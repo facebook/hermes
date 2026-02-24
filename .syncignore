@@ -1,0 +1,46 @@
+# Local-only: Azure DevOps CI/CD
+/.ado/
+
+# Local-only: repo configuration
+/.config/
+/.gitattributes
+/.test262-version
+/CMakePresets.json
+/SECURITY.md
+/guardian_baselines.gdnbaselines
+/merged-hermes-revision.txt
+
+# Local-only: developer tools
+/dev.ps1
+/sync-manifest.json
+/sync-config.json
+/.syncignore
+
+# Local-only: external dependencies not in upstream
+/external/boost2/
+/external/folly/
+/external/icu-small/
+/external/react-native/
+/external/test262/
+/external/ExternalDependenciesSummary.md
+
+# Local-only: Windows API extensions
+/API/hermes_node_api/
+/API/hermes_node_api_jsi/
+/API/hermes_shared/
+
+# Local-only: Windows unit tests
+/unittests/NodeAPI/
+/unittests/NodeApiJsi/
+
+# Local-only: Windows CMake modules
+/cmake/modules/GitCommands.cmake
+/cmake/modules/HermesWindows.cmake
+/cmake/modules/SourceLink.cmake
+
+# Upstream code excluded to reduce security scan noise
+/unsupported/
+
+# Local-only: tools not in upstream
+/tools/fork-sync/
+/tools/hermes_rt/

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen --match-full-lines %s
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 var x = {
     1: 10,
@@ -20,49 +20,54 @@ var x = {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [x]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 [?obj: object]
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
-// CHECK-NEXT:  %3 = AllocObjectInst 3 : number, empty
-// CHECK-NEXT:  %4 = StoreNewOwnPropertyInst null : null, %3 : object, "1" : string, true : boolean
-// CHECK-NEXT:  %5 = CreateFunctionInst %"get a"#0#1()#2, %0
-// CHECK-NEXT:  %6 = StoreGetterSetterInst %5 : closure, undefined : undefined, %3 : object, "a" : string, true : boolean
-// CHECK-NEXT:  %7 = CreateFunctionInst %"get 1"#0#1()#3, %0
-// CHECK-NEXT:  %8 = CreateFunctionInst %"set 1"#0#1()#4, %0
-// CHECK-NEXT:  %9 = StoreGetterSetterInst %7 : closure, %8 : closure, %3 : object, "1" : string, true : boolean
-// CHECK-NEXT:  %10 = StoreNewOwnPropertyInst null : null, %3 : object, "b" : string, true : boolean
-// CHECK-NEXT:  %11 = StoreOwnPropertyInst 12 : number, %3 : object, "b" : string, true : boolean
-// CHECK-NEXT:  %12 = StorePropertyInst %3 : object, globalObject : object, "x" : string
-// CHECK-NEXT:  %13 = LoadStackInst %1
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "x": string
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
+// CHECK-NEXT:  %4 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:       StoreFrameInst %0: environment, %4: object, [%VS0.?obj]: object
+// CHECK-NEXT:       DefineOwnPropertyInst null: null, %4: object, "1": string, true: boolean
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"get a"(): functionCode
+// CHECK-NEXT:       DefineOwnGetterSetterInst %7: object, undefined: undefined, %4: object, "a": string, true: boolean
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"get 1"(): functionCode
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) %0: environment, %VS0: any, %"set 1"(): functionCode
+// CHECK-NEXT:        DefineOwnGetterSetterInst %9: object, %10: object, %4: object, "1": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst null: null, %4: object, "b": string, true: boolean
+// CHECK-NEXT:        DefineOwnPropertyInst 12: number, %4: object, "b": string, true: boolean
+// CHECK-NEXT:        StorePropertyLooseInst %4: object, globalObject: object, "x": string
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
-// CHECK:function "get a"#0#1()#2
-// CHECK-NEXT:S{"get a"#0#1()#2} = []
+// CHECK:scope %VS1 []
+
+// CHECK:function "get a"(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{"get a"#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst "a" : string
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       ReturnInst "a": string
 // CHECK-NEXT:function_end
 
-// CHECK:function "get 1"#0#1()#3
-// CHECK-NEXT:S{"get 1"#0#1()#3} = []
+// CHECK:scope %VS2 []
+
+// CHECK:function "get 1"(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{"get 1"#0#1()#3}
-// CHECK-NEXT:  %1 = ReturnInst 21 : number
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:       ReturnInst 21: number
 // CHECK-NEXT:function_end
 
-// CHECK:function "set 1"#0#1(x)#4
-// CHECK-NEXT:S{"set 1"#0#1()#4} = [x#4]
+// CHECK:scope %VS3 [x: any]
+
+// CHECK:function "set 1"(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{"set 1"#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

@@ -14,11 +14,7 @@
 #include "hermes/VM/StackTracesTree.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -113,7 +109,7 @@ void StackTracesTree::syncWithRuntimeStack(Runtime &runtime) {
     // the interpreter.
     StackFramePtr prev = cf.getPreviousFrame();
     if (prev != framesEnd) {
-      if (CodeBlock *parentCB = prev.getCalleeCodeBlock(runtime)) {
+      if (CodeBlock *parentCB = prev.getCalleeCodeBlock()) {
         assert(
             (!savedCodeBlock || savedCodeBlock == parentCB) &&
             "If savedCodeBlock is non-null, it should match the parent's "
@@ -127,7 +123,7 @@ void StackTracesTree::syncWithRuntimeStack(Runtime &runtime) {
       // sense laying around. But that matches the behavior of enabling from the
       // beginning. When a fix for the non-synced version is found, remove this
       // branch as well.
-      savedCodeBlock = cf.getCalleeCodeBlock(runtime);
+      savedCodeBlock = cf.getCalleeCodeBlock();
       savedIP = savedCodeBlock->getOffsetPtr(0);
     }
     stack.emplace_back(savedCodeBlock, savedIP);
@@ -169,8 +165,9 @@ StackTracesTreeNode::SourceLoc StackTracesTree::computeSourceLoc(
   auto scriptID = runtimeModule->getScriptID();
   int32_t lineNo, columnNo;
   if (location) {
-    scriptName = runtimeModule->getBytecode()->getDebugInfo()->getFilenameByID(
-        location->filenameId);
+    scriptName =
+        runtimeModule->getBytecode()->getDebugInfo()->getUTF8FilenameByID(
+            location->filenameId);
     lineNo = location->line;
     columnNo = location->column;
   } else {
@@ -234,7 +231,7 @@ void StackTracesTree::pushCallStack(
   //   }
   //   Object.defineProperty(foo, 'name', {writable:true, value: 'bar'});
   //
-  auto nameStr = codeBlock->getNameString(runtime.getHeap().getCallbacks());
+  auto nameStr = codeBlock->getNameString();
   auto nameID =
       nameStr.empty() ? anonymousFunctionID_ : strings_->insert(nameStr);
 

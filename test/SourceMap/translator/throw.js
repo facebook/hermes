@@ -17,4 +17,8 @@ function helper() {
   throw new Error("exception is thrown");
 }
 
-entryPoint();
+try {
+   entryPoint();
+} catch (e) {
+    print(e.stack);
+}

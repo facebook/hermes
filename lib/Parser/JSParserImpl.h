@@ -135,9 +135,8 @@ class JSParserImpl {
   /// On success, returns a pointer to the \c JSParserImpl object that can be
   /// queried for various attributes of the just pre-parsed file, e.g. static
   /// builtins or magic URLs.
-  static std::shared_ptr<JSParserImpl> preParseBuffer(
-      Context &context,
-      uint32_t bufferId);
+  static std::shared_ptr<JSParserImpl>
+  preParseBuffer(Context &context, uint32_t bufferId, bool strict);
 
   /// Parse the AST of a specified function type at a given starting point.
   /// This is used for lazy compilation to parse and compile the function on
@@ -168,6 +167,8 @@ class JSParserImpl {
 
   /// Current compilation context.
   Context &context_;
+  /// The Keywords created by the Context.
+  const Keywords &kw_;
   /// Source error and buffer manager.
   SourceErrorManager &sm_;
   /// Source code lexer.
@@ -218,6 +219,32 @@ class JSParserImpl {
   /// so we can recover directive nodes back in the lazyParse pass.
   llvh::SmallVector<UniqueString *, 1> seenDirectives_{};
 
+  /// Whether the current function is an arrow function.
+  /// Only set/restored by SaveFunctionState when entering/exiting a new
+  /// function.
+  bool isArrowFunction_ = false;
+
+  /// Whether the nearest enclosing non-arrow function contains an arrow
+  /// function.
+  /// Used only in PreParse phase to send information to SemanticResolver for
+  /// from the LazyParse phase.
+  /// Only updated by SaveFunctionState.
+  ///   * Set to true when entering an arrow function.
+  ///   * Set to false when entering a non-arrow function.
+  ///   * Unchanged when leaving an arrow function.
+  ///   * Restored to previous value when leaving a non-arrow function.
+  bool containsArrowFunctions_ = false;
+
+  /// Whether the nearest enclosing non-arrow function may contain an arrow
+  /// function using arguments.
+  /// Used only in PreParse phase to send information to SemanticResolver
+  /// for from the LazyParse phase.
+  /// Only set by SaveFunctionState or when parsing a primary expression as
+  /// 'arguments' IdentifierNode.
+  ///   * Unchanged when leaving an arrow function.
+  ///   * Restored to previous value when leaving a non-arrow function.
+  bool mayContainArrowFunctionsUsingArguments_ = false;
+
 #if HERMES_PARSE_JSX
   /// Incremented when inside a JSX tag and decremented when leaving it.
   /// Used to know whether to lex JS values or JSX text.
@@ -251,6 +278,7 @@ class JSParserImpl {
   UniqueString *packageIdent_;
   UniqueString *privateIdent_;
   UniqueString *protectedIdent_;
+  UniqueString *prototypeIdent_;
   UniqueString *publicIdent_;
   UniqueString *staticIdent_;
   UniqueString *methodIdent_;
@@ -263,8 +291,8 @@ class JSParserImpl {
   UniqueString *valueIdent_;
   UniqueString *typeIdent_;
   UniqueString *asyncIdent_;
+  UniqueString *argumentsIdent_;
   UniqueString *awaitIdent_;
-  UniqueString *assertIdent_;
 
 #if HERMES_PARSE_FLOW
 
@@ -310,13 +338,12 @@ class JSParserImpl {
 
   UniqueString *matchIdent_;
   UniqueString *underscoreIdent_;
+
+  UniqueString *recordIdent_;
 #endif
 
 #if HERMES_PARSE_TS
   UniqueString *readonlyIdent_;
-  UniqueString *neverIdent_;
-  UniqueString *undefinedIdent_;
-  UniqueString *unknownIdent_;
 #endif
 
 #if HERMES_PARSE_FLOW || HERMES_PARSE_TS
@@ -324,6 +351,9 @@ class JSParserImpl {
   UniqueString *isIdent_;
   UniqueString *inferIdent_;
   UniqueString *constIdent_;
+  UniqueString *neverIdent_;
+  UniqueString *undefinedIdent_;
+  UniqueString *unknownIdent_;
 #endif
 
   /// String representation of all tokens.
@@ -495,6 +525,23 @@ class JSParserImpl {
     return tok_->getKind() == TokenKind::identifier &&
         tok_->getIdentifier() == ident;
   }
+  /// \param range is the source range of the \p ident, must be valid.
+  /// \return true if the \p ident is unescaped.
+  static bool isUnescaped(UniqueString *ident, SMRange range) {
+    assert(range.isValid() && "range must be valid");
+    // Unescaped identifier is the same as the length of the identifier,
+    // because the escapes add extra characters.
+    size_t tokLen = range.End.getPointer() - range.Start.getPointer();
+    return tokLen == ident->str().size();
+  }
+  /// \return true if the current token is the specified identifier
+  /// without any escapes. It checks this by calling isUnescaped().
+  bool checkUnescaped(UniqueString *ident) const {
+    if (tok_->getKind() != TokenKind::identifier ||
+        tok_->getIdentifier() != ident)
+      return false;
+    return isUnescaped(ident, tok_->getSourceRange());
+  }
   /// Check whether the current token is one of the specified ones. \returns
   /// true if it is.
   bool check(TokenKind kind1, TokenKind kind2) const {
@@ -518,12 +565,15 @@ class JSParserImpl {
   /// Check whether the current token begins a Declaration.
   bool checkDeclaration() {
     if (checkN(
-            TokenKind::rw_function, TokenKind::rw_const, TokenKind::rw_class) ||
-        (check(asyncIdent_) && checkAsyncFunction())) {
+            TokenKind::rw_function,
+            TokenKind::rw_const,
+            TokenKind::rw_class,
+            TokenKind::at) ||
+        (checkUnescaped(asyncIdent_) && checkAsyncFunction())) {
       return true;
     }
 
-    if (check(letIdent_)) {
+    if (checkUnescaped(letIdent_)) {
       if (isStrictMode()) {
         return true;
       }
@@ -536,6 +586,15 @@ class JSParserImpl {
       return lexer_.isLetFollowedByDeclStart();
     }
 
+    if (checkUnescaped(kw_.identUsing)) {
+      return lexer_.isUsingFollowedByIdentifier(kw_);
+    }
+
+    if (paramAwait_ && checkUnescaped(awaitIdent_) &&
+        lexer_.isAwaitUsingFollowedByIdentifier(kw_)) {
+      return true;
+    }
+
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow()) {
       if (context_.getParseFlowComponentSyntax() &&
@@ -544,6 +603,9 @@ class JSParserImpl {
       }
       if (context_.getParseFlowComponentSyntax() &&
           checkHookDeclarationFlow()) {
+        return true;
+      }
+      if (checkRecordDeclarationFlow()) {
         return true;
       }
       if (check(opaqueIdent_)) {
@@ -752,6 +814,10 @@ class JSParserImpl {
   /// \param param [In, Yield]
   Optional<ESTree::VariableDeclarationNode *> parseLexicalDeclaration(
       Param param);
+  /// Parse a 'using' or 'await using' declaration.
+  /// \param param [In, Yield]
+  Optional<ESTree::VariableDeclarationNode *> parseUsingDeclaration(
+      Param param);
   /// Parse a VariableStatement or LexicalDeclaration.
   /// \param param [Yield]
   Optional<ESTree::VariableDeclarationNode *> parseVariableStatement(
@@ -760,22 +826,27 @@ class JSParserImpl {
   /// Parse a PrivateName starting with the '#'.
   Optional<ESTree::PrivateNameNode *> parsePrivateName();
 
-  /// Parse a list of variable declarations. \returns a dummy value but the
-  /// optionality still encodes the error condition.
+  /// Whether to allow binding patterns in the variable declaration.
+  enum class VariableDeclAllowPattern { No, Yes };
+
+  /// Parse a list of variable declarations.
+  /// \return true on success, false on error.
   /// \param param [In, Yield]
   /// \param declLoc is the location of the `rw_var` token and is used for error
   /// display.
-  Optional<const char *> parseVariableDeclarationList(
+  bool parseVariableDeclarationList(
       Param param,
       ESTree::NodeList &declList,
-      SMLoc declLoc);
+      SMLoc declLoc,
+      VariableDeclAllowPattern allowPattern = VariableDeclAllowPattern::Yes);
 
   /// \param param [In, Yield]
   /// \param declLoc is the location of the let/var/const token and is used for
   /// error display.
   Optional<ESTree::VariableDeclaratorNode *> parseVariableDeclaration(
       Param param,
-      SMLoc declLoc);
+      SMLoc declLoc,
+      VariableDeclAllowPattern allowPattern);
 
   /// Ensure that all destructuring declarations in the specified declaration
   /// node are initialized and report errors if they are not.
@@ -820,6 +891,10 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parsePrimaryExpression();
   Optional<ESTree::ArrayExpressionNode *> parseArrayLiteral();
+  /// Inner loop of parsing the object property elements.
+  /// \param elemList is the output list of object property element nodes.
+  /// \return false if there was an error.
+  bool parseObjectProperties(ESTree::NodeList &elemList);
   Optional<ESTree::ObjectExpressionNode *> parseObjectLiteral();
   Optional<ESTree::Node *> parseSpreadElement();
   Optional<ESTree::Node *> parsePropertyAssignment(bool eagerly);
@@ -854,11 +929,8 @@ class JSParserImpl {
       SMLoc startLoc,
       ESTree::Node *expr);
 
-  /// Returns a dummy Optional<> just to indicate success or failure like all
-  /// other functions.
-  Optional<const char *> parseArguments(
-      ESTree::NodeList &argList,
-      SMLoc &endLoc);
+  /// \return false on error.
+  bool parseArguments(ESTree::NodeList &argList, SMLoc &endLoc);
 
   /// \param startLoc the start location of the expression
   /// \param objectLoc the location of the object part of the expression and is
@@ -905,12 +977,21 @@ class JSParserImpl {
   ///     the code `new a?.b()` is not valid.
   Optional<ESTree::Node *> parseNewExpressionOrOptionalExpression(
       IsConstructorCall isConstructorCall);
-  Optional<ESTree::Node *> parseLeftHandSideExpression();
+  /// Indicates whether we are parsing the argument to a class `extends`.
+  enum class IsClassHeritageArgument { No, Yes };
+  /// Parse a LHS expression.
+  /// \param isClassHeritageArgument is Yes if we are parsing a class `extends`
+  /// argument.
+  Optional<ESTree::Node *> parseLeftHandSideExpression(
+      IsClassHeritageArgument isClassHeritageArgument);
   /// Parse the remainder of a LHS expression after parsing a "new or optional
   /// expression". Includes parsing the type args and call args.
+  /// \param isClassHeritageArgument is Yes if we are parsing a class `extends`
+  /// argument.
   Optional<ESTree::Node *> parseLeftHandSideExpressionTail(
       SMLoc startLoc,
-      ESTree::Node *expr);
+      ESTree::Node *expr,
+      IsClassHeritageArgument isClassHeritageArgument);
   Optional<ESTree::Node *> parsePostfixExpression();
   Optional<ESTree::Node *> parseUnaryExpression();
 
@@ -936,6 +1017,9 @@ class JSParserImpl {
   Optional<ESTree::YieldExpressionNode *> parseYieldExpression(
       Param param = ParamIn);
 
+  bool parseDecoratorList(ESTree::NodeList &list);
+  Optional<ESTree::DecoratorNode *> parseDecorator();
+
   Optional<ESTree::ClassDeclarationNode *> parseClassDeclaration(Param param);
   Optional<ESTree::ClassExpressionNode *> parseClassExpression();
 
@@ -946,13 +1030,26 @@ class JSParserImpl {
   /// \param if the name is provided, the type params if provided, nullptr
   /// otherwise.
   /// \param kind whether the class is a declaration or expression.
+  /// \param decorators the decorator list, empty if no decorators.
   Optional<ESTree::Node *> parseClassTail(
       SMLoc startLoc,
       ESTree::Node *name,
       ESTree::Node *typeParams,
-      ClassParseKind kind);
+      ClassParseKind kind,
+      ESTree::NodeList &&decorators);
 
   Optional<ESTree::ClassBodyNode *> parseClassBody(SMLoc startLoc);
+
+  /// Inner loop of parsing the class body.
+  /// \param body is the output list of class element nodes.
+  /// \param[in/out] constructor is the constructor node that has been parsed
+  ///  already, or nullptr if there's none.
+  /// \param eagerly force non-lazy parsing.
+  /// \return false if there was an error.
+  bool parseClassBodyImpl(
+      ESTree::NodeList &body,
+      ESTree::Node *&constructor,
+      bool eagerly);
 
   Optional<ESTree::Node *> parseClassElement(
       bool isStatic,
@@ -960,6 +1057,7 @@ class JSParserImpl {
       bool declare,
       bool readonly,
       ESTree::NodeLabel accessibility,
+      ESTree::NodeList &&decorators,
       bool eagerly = false);
 
   /// Reparse the specified node as arrow function parameter list and store the
@@ -981,8 +1079,10 @@ class JSParserImpl {
   /// \param forceAsync set to true when it is already known that the arrow
   ///   function expression is 'async'. This occurs when there are no parens
   ///   around the argument list.
+  /// \param forceEagerly force any arrow functions to be eagerly parsed.
   Optional<ESTree::Node *> parseArrowFunctionExpression(
       Param param,
+      bool forceEagerly,
       ESTree::Node *leftExpr,
       bool hasNewLine,
       ESTree::Node *typeParams,
@@ -1027,8 +1127,10 @@ class JSParserImpl {
       ESTree::Node *node,
       bool inDecl);
 
+  /// \param forceEagerly force any arrow functions to be eagerly parsed.
   Optional<ESTree::Node *> parseAssignmentExpression(
       Param param = ParamIn,
+      bool forceEagerly = false,
       AllowTypedArrowFunction allowTypedArrowFunction =
           AllowTypedArrowFunction::Yes,
       CoverTypedParameters coverTypedParameters = CoverTypedParameters::Yes,
@@ -1041,7 +1143,7 @@ class JSParserImpl {
   /// Parse a FromClause and return the string literal representing the source.
   Optional<ESTree::StringLiteralNode *> parseFromClause();
 
-  bool parseAssertClause(ESTree::NodeList &attributes);
+  bool parseWithClause(ESTree::NodeList &attributes);
 
   Optional<ESTree::ImportDeclarationNode *> parseImportDeclaration();
 
@@ -1241,13 +1343,43 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseMatchExpressionFlow(
       SMLoc start,
       ESTree::Node *argument);
+  Optional<ESTree::Node *> parseMatchCaseGuardFlow();
   Optional<ESTree::Node *> parseMatchPatternFlow();
   Optional<ESTree::Node *> parseMatchSubpatternFlow();
   Optional<ESTree::IdentifierNode *> parseMatchBindingIdentifierFlow();
   Optional<ESTree::MatchBindingPatternNode *> parseMatchBindingPatternFlow();
   Optional<ESTree::Node *> parseMatchRestPatternFlow();
   Optional<ESTree::Node *> parseMatchObjectPatternFlow();
+  Optional<ESTree::Node *> parseMatchInstanceObjectPatternFlow();
+  /// Helper to parse the common structure of properties and rest for both
+  /// parseMatchObjectPatternFlow and parseMatchInstanceObjectPatternFlow.
+  /// \param[out] properties populated with the parsed properties.
+  /// \param[out] rest populated with the optional rest pattern.
+  /// \return true on success, false on error.
+  bool parseMatchObjectPatternPropertiesFlow(
+      SMLoc start,
+      ESTree::NodeList &properties,
+      ESTree::Node *&rest);
   Optional<ESTree::Node *> parseMatchArrayPatternFlow();
+
+  /// Checks if we are at the start of a Flow record declaration:
+  /// `record` [no LineTerminator here] <Identifier>
+  bool checkRecordDeclarationFlow();
+  Optional<ESTree::Node *> parseRecordDeclarationFlow(SMLoc start);
+  Optional<ESTree::RecordDeclarationImplementsNode *>
+  parseRecordDeclarationImplementsFlow();
+
+  /// Checks if we are at the start of a Flow record declaration.
+  /// \param expr the potential constructor of the record
+  bool checkRecordExpressionFlow(ESTree::NodePtr expr);
+  /// Parse a RecordExpression: MyRecord<TypeArgs>? { properties }
+  /// \param startLoc the start location of the expression
+  /// \param constructor the record constructor identifier (e.g., MyRecord)
+  /// \param typeArgs optional type arguments parsed before the '{'
+  Optional<ESTree::Node *> parseRecordExpressionFlow(
+      SMLoc startLoc,
+      ESTree::NodePtr constructor,
+      ESTree::NodePtr typeArgs);
 
   enum class TypeAliasKind { None, Declare, Opaque, DeclareOpaque };
   Optional<ESTree::Node *> parseTypeAliasFlow(SMLoc start, TypeAliasKind kind);
@@ -1360,7 +1492,14 @@ class JSParserImpl {
 
   Optional<ESTree::Node *> parseTypeParamsFlow();
   Optional<ESTree::Node *> parseTypeParamFlow();
-  Optional<ESTree::Node *> parseTypeArgsFlow();
+
+  /// \param trailingGrammarContext the grammar context to use to advance past
+  /// the final '>' in type arguments. Used to disambiguate between
+  /// JSX-initiated type arguments and Flow-based type arguments, because JSX
+  /// must allow for JSX identifiers immediately after the closing '>'.
+  Optional<ESTree::Node *> parseTypeArgsFlow(
+      JSLexer::GrammarContext trailingGrammarContext =
+          JSLexer::GrammarContext::Type);
 
   /// \param[out] params the parameters, populated by reference.
   /// \param[out] thisConstraint the type annotation for 'this'.
@@ -1515,21 +1654,54 @@ class JSParserImpl {
   }
 #endif
 
-  /// RAII to save and restore the current setting of "strict mode" and
-  /// "seen directives".
-  class SaveStrictModeAndSeenDirectives {
+  /// RAII to save and restore the current setting of fields that are used on a
+  /// per-function basis.
+  /// Handles arrow functions differently than non-arrow functions because they
+  /// shouldn't restore the information about nested arrow functions (that info
+  /// needs to be sent to the nearest non-arrow function).
+  /// Sets containsArrowFunctions_ and mayContainArrowFunctionsUsingArguments_
+  /// to false if we're entering a non-arrow function.
+  /// Sets isArrowFunction_ based on the constructor.
+  class SaveFunctionState {
     JSParserImpl *const parser_;
     const bool oldStrictMode_;
     const unsigned oldSeenDirectiveSize_;
+    const bool oldIsArrowFunction_;
+    const bool oldContainsArrowFunctions_;
+    const bool oldMayContainArrowFunctionsUsingArguments_;
 
    public:
-    explicit SaveStrictModeAndSeenDirectives(JSParserImpl *parser)
+    /// \param isArrowFunction whether we're about to enter an arrow function.
+    explicit SaveFunctionState(
+        JSParserImpl *parser,
+        bool isArrowFunction = false)
         : parser_(parser),
           oldStrictMode_(parser->isStrictMode()),
-          oldSeenDirectiveSize_(parser->getSeenDirectives().size()) {}
-    ~SaveStrictModeAndSeenDirectives() {
+          oldSeenDirectiveSize_(parser->getSeenDirectives().size()),
+          oldIsArrowFunction_(parser->isArrowFunction_),
+          oldContainsArrowFunctions_(parser->containsArrowFunctions_),
+          oldMayContainArrowFunctionsUsingArguments_(
+              parser->mayContainArrowFunctionsUsingArguments_) {
+      parser->isArrowFunction_ = isArrowFunction;
+      if (isArrowFunction) {
+        parser->containsArrowFunctions_ = true;
+      } else {
+        // Set flags to false when entering non-arrow functions.
+        parser->containsArrowFunctions_ = false;
+        parser->mayContainArrowFunctionsUsingArguments_ = false;
+      }
+    }
+    ~SaveFunctionState() {
       parser_->setStrictMode(oldStrictMode_);
       parser_->getSeenDirectives().resize(oldSeenDirectiveSize_);
+      if (!parser_->isArrowFunction_) {
+        // Restore the state when leaving non-arrow functions,
+        // but this information must be propagated for arrow functions.
+        parser_->containsArrowFunctions_ = oldContainsArrowFunctions_;
+        parser_->mayContainArrowFunctionsUsingArguments_ =
+            oldMayContainArrowFunctionsUsingArguments_;
+      }
+      parser_->isArrowFunction_ = oldIsArrowFunction_;
     }
   };
 

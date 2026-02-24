@@ -101,7 +101,10 @@ public:
   using difference_type = ptrdiff_t;
 
   simple_ilist() = default;
-  ~simple_ilist() = default;
+  /// This used to be a default destructor, but it was changed to suppress a bug
+  /// in Apple clang version 14.0.3 (clang-1403.0.22.14.1). It would incorrectly
+  /// treat this object as trivially copyable.
+  ~simple_ilist() {}
 
   // No copy constructors.
   simple_ilist(const simple_ilist &) = delete;
@@ -136,10 +139,22 @@ public:
     return std::distance(begin(), end());
   }
 
-  reference front() { return *begin(); }
-  const_reference front() const { return *begin(); }
-  reference back() { return *rbegin(); }
-  const_reference back() const { return *rbegin(); }
+  reference front() {
+    assert(!empty());
+    return *begin();
+  }
+  const_reference front() const {
+    assert(!empty());
+    return *begin();
+  }
+  reference back() {
+    assert(!empty());
+    return *rbegin();
+  }
+  const_reference back() const {
+    assert(!empty());
+    return *rbegin();
+  }
 
   /// Insert a node at the front; never copies.
   void push_front(reference Node) { insert(begin(), Node); }
@@ -148,10 +163,16 @@ public:
   void push_back(reference Node) { insert(end(), Node); }
 
   /// Remove the node at the front; never deletes.
-  void pop_front() { erase(begin()); }
+  void pop_front() {
+    assert(!empty());
+    erase(begin());
+  }
 
   /// Remove the node at the back; never deletes.
-  void pop_back() { erase(--end()); }
+  void pop_back() {
+    assert(!empty());
+    erase(--end());
+  }
 
   /// Swap with another list in place using std::swap.
   void swap(simple_ilist &X) { std::swap(*this, X); }
@@ -206,6 +227,21 @@ public:
   iterator erase(iterator First, iterator Last) {
     list_base_type::removeRange(*First.getNodePtr(), *Last.getNodePtr());
     return Last;
+  }
+
+  /// \return an iterator to the node before the first node (the sentinel). This
+  /// is an advanced method, only useful in combination with
+  /// \c _erase_between().
+  iterator _before_begin() { return iterator(Sentinel); }
+
+  /// Erase the elements between (but not including) \p Start and \p End,
+  /// without touching the erased elements. In essence, this simply connects
+  /// \c Start directly to \c End.
+  /// Note that the start iterator is not a fully normal iterator, it could be
+  /// the sentinel.
+  /// This is an advanced method.
+  void _erase_between(iterator Start, iterator End) {
+    list_base_type::removeBetween(*Start.getNodePtr(), *End.getNodePtr());
   }
 
   /// Remove a node by iterator and dispose of it.

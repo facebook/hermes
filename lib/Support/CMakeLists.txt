@@ -3,25 +3,34 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-set(link_libs
+set(LINK_OBJLIBS
     dtoa
     hermesPlatform
-    hermesPlatformUnicode)
+    hermesPlatformUnicode
+    LLVHSupport)
 
 if (ANDROID)
-  list(APPEND link_libs log)
+  set(LINK_LIBS log)
 endif()
 
+if (HERMES_USE_BOOST_CONTEXT)
+  include_directories(${PROJECT_SOURCE_DIR}/external/boost/boost_1_86_0)
+endif()
+
+include_directories(${PROJECT_SOURCE_DIR}/external/dragonbox/)
+include_directories(${PROJECT_SOURCE_DIR}/external/fast_float/)
+
 add_hermes_library(hermesSupport
-        Allocator.cpp
         Base64.cpp
         Base64vlq.cpp
         BigIntSupport.cpp
         CheckedMalloc.cpp
         Conversions.cpp
         ErrorHandling.cpp
-        InternalIdentifierMaker.cpp
+        FastDoubleToDecimal.cpp
+        FastStrToDouble.cpp
         JSONEmitter.cpp
+        MD5.cpp
         OSCompatCommon.cpp
         OSCompatEmscripten.cpp
         OSCompatPosix.cpp
@@ -30,6 +39,8 @@ add_hermes_library(hermesSupport
         PerfSection.cpp
         SemaphorePosix.cpp
         SerialExecutor.cpp
+        StackExecutor.cpp
+        StackOverflowGuard.cpp
         SHA1.cpp
         SNPrintfBuf.cpp
         SourceErrorManager.cpp
@@ -38,5 +49,8 @@ add_hermes_library(hermesSupport
         UTF8.cpp
         UTF16Stream.cpp
         LEB128.cpp
-        LINK_LIBS ${link_libs}
+        MemorySizeParser.cpp
+        RandomSeedParser.cpp
+        LINK_OBJLIBS ${LINK_OBJLIBS} ${BOOST_CONTEXT_LIB}
+        LINK_LIBS ${LINK_LIBS}
 )

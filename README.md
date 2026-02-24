@@ -1,7 +1,6 @@
 # Hermes JS Engine
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebook/hermes/blob/HEAD/LICENSE)
 [![npm version](https://img.shields.io/npm/v/hermes-engine.svg?style=flat)](https://www.npmjs.com/package/hermes-engine)
-[![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/hermes.svg)](https://bugs.chromium.org/p/oss-fuzz/issues/list?sort=-opened&can=1&q=proj:hermes)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/facebook/hermes/blob/HEAD/CONTRIBUTING.md)
 <img src="./doc/img/logo.svg" alt="Hermes logo - large H with wings" align="right" width="20%"/>
 
@@ -12,6 +11,8 @@ If you're only interested in using pre-built Hermes in a new or existing React N
 > Noted that each Hermes release is aimed at a specific RN version. The rule of thumb is to always follow [Hermes releases](https://github.com/facebook/hermes/releases) strictly. Version mismatch can result in instant crash of your apps in the worst case scenario.
 
 If you want to know how to build and hack on Hermes directly, and/or integrate Hermes built from source into a React Native app then read on.
+
+**[Hermes Blog](doc/blog/README.md)** - Technical articles and deep dives into Hermes internals.
 
 The instructions here very briefly cover steps to build the Hermes CLI. They assume you have typical native development tools setup for your OS, and support for cmake and Ninja. For more details of required dependencies, building Hermes with different options, etc. follow these links instead:
 
@@ -25,7 +26,7 @@ The following commands should get you going in a Windows Command Prompt:
 mkdir hermes_workingdir
 cd hermes_workingdir
 git clone https://github.com/facebook/hermes.git
-cmake -S hermes -B build -G Ninja
+cmake -S hermes -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build ./build
 ```
 

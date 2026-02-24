@@ -16,6 +16,8 @@ set(source_files
   DictPropertyMap.cpp
   Domain.cpp
   DummyObject.cpp
+  LargeDummyObject.cpp
+  FastArray.cpp
   GCBase.cpp
   OrderedHashMap.cpp
   HandleRootOwner.cpp
@@ -31,7 +33,7 @@ set(source_files
   JSDataView.cpp
   JSDate.cpp
   JSError.cpp
-  JSGenerator.cpp
+  JSGeneratorObject.cpp
   JSObject.cpp
   JSProxy.cpp
   JSRegExp.cpp
@@ -44,23 +46,23 @@ set(source_files
   LimitedStorageProvider.cpp
   DecoratedObject.cpp
   HostModel.cpp
+  ModuleExportsCache.cpp
   NativeState.cpp
   Operations.cpp
   PredefinedStringIDs.cpp
   PrimitiveBox.cpp
   PropertyAccessor.cpp
   Runtime.cpp Runtime-profilers.cpp
+  RuntimeFlags.cpp
   RuntimeModule.cpp
-  Profiler/ChromeTraceSerializer.cpp
+  Profiler/TraceSerializer.cpp
   Profiler/CodeCoverageProfiler.cpp
-  Profiler/InlineCacheProfiler.cpp
   Profiler/ProfileGenerator.cpp
   Profiler/SamplingProfiler.cpp
   Profiler/SamplingProfilerPosix.cpp
   Profiler/SamplingProfilerWindows.cpp
   Profiler/SamplingProfilerSampler.cpp
-  SegmentedArray.cpp
-  SerializedLiteralParser.cpp
+  SerializedValue.cpp
   SingleObject.cpp
   StackFrame.cpp
   StackTracesTree.cpp
@@ -73,6 +75,11 @@ set(source_files
   StringRefUtils.cpp
   VTable.cpp
   Metadata.cpp
+  StaticH.cpp
+  StaticHInit.cpp
+  StaticHUnit.cpp
+
+  JIT/DiscoverBB.cpp
 
   detail/IdentifierHashTable.cpp
 
@@ -93,14 +100,14 @@ set(source_files
   JSLib/IteratorPrototype.cpp
   JSLib/HermesInternal.cpp
   JSLib/HermesBuiltin.cpp
-  JSLib/Instrument.cpp
   JSLib/Intl.cpp
   JSLib/JSLibInternal.cpp JSLib/JSLibInternal.h
   JSLib/JSLibStorage.cpp
   JSLib/Map.cpp
   JSLib/Math.cpp
   JSLib/JSON.cpp
-  JSLib/RuntimeJSONUtils.cpp
+  JSLib/RuntimeJSONParse.cpp
+  JSLib/RuntimeJSONStringify.cpp
   JSLib/JSONLexer.cpp
   JSLib/Object.cpp
   JSLib/Proxy.cpp
@@ -125,7 +132,6 @@ set(source_files
   JSLib/eval.cpp
   JSLib/escape.cpp
   JSLib/require.cpp
-  JSLib/TextEncoder.cpp
 )
 
 if (${HERMESVM_GCKIND} STREQUAL "MALLOC")
@@ -133,20 +139,31 @@ if (${HERMESVM_GCKIND} STREQUAL "MALLOC")
 elseif (${HERMESVM_GCKIND} STREQUAL "HADES")
   list(APPEND source_files
             gcs/AlignedHeapSegment.cpp
-            gcs/AlignedStorage.cpp
-            gcs/CardTableNC.cpp
+            gcs/CardBoundaryTable.cpp
             gcs/FillerCell.cpp
             gcs/HadesGC.cpp
   )
 elseif (${HERMESVM_GCKIND} STREQUAL "RUNTIME")
   list(APPEND source_files
-          gcs/AlignedHeapSegment.cpp gcs/AlignedStorage.cpp
-          gcs/CardTableNC.cpp gcs/FillerCell.cpp
+          gcs/AlignedHeapSegment.cpp
+          gcs/CardBoundaryTable.cpp gcs/FillerCell.cpp
           gcs/HadesGC.cpp
   )
 else()
   message(WARNING "Not linking garbage collector")
 endif()
+
+set(JITLIBS)
+if (HERMESVM_ALLOW_JIT)
+  list(APPEND source_files
+          JIT/RuntimeOffsets.h
+          JIT/arm64/JitEmitter.cpp JIT/arm64/JitEmitter.h
+          JIT/arm64/JIT.cpp
+          JIT/arm64/JitHandlers.cpp JIT/arm64/JitHandlers.h
+          JIT/PerfJitDump.cpp
+  )
+  set(JITLIBS asmjit)
+endif ()
 
 list(APPEND source_files
   Debugger/Debugger.cpp
@@ -166,37 +183,14 @@ elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
   set_source_files_properties(DecoratedObject.cpp HostModel.cpp PROPERTIES COMPILE_FLAGS /GR)
 endif()
 
-set(link_libs
-  hermesADT
-  hermesInst
-  hermesRegex
-  hermesSupport
-  hermesPlatform
-  hermesInternalBytecode
-  hermesPublic
-  dtoa
-)
-
-if (WIN32)
-  list(APPEND link_libs winmm)
+# Take dependencies on hermesPublic and hermesapi so their headers are exposed.
+# On Windows, link winmm for timeBeginPeriod/timeEndPeriod used by SamplingProfilerSampler.
+if(WIN32)
+  set(VM_PLATFORM_LIBS winmm)
 endif()
 
-if(HERMES_ENABLE_INTL)
-  list(APPEND link_libs hermesPlatformIntl)
-endif()
-
-add_hermes_library(hermesVMRuntime STATIC ${source_files}
-    LINK_LIBS
-    ${link_libs}
-    hermesHBCBackend
-    hermesParser
-)
-
-add_hermes_library(hermesVMRuntimeLean STATIC ${source_files}
-    LINK_LIBS
-    ${link_libs}
-    hermesHBCBackendLean
-)
-target_compile_definitions(hermesVMRuntimeLean PUBLIC HERMESVM_LEAN)
+add_hermes_library(hermesVMRuntime ${source_files}
+        LINK_OBJLIBS hermesPublic hermesapi
+        LINK_LIBS ${JITLIBS} ${VM_PLATFORM_LIBS})
 
 add_subdirectory(Instrumentation)

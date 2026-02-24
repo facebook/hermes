@@ -9,7 +9,7 @@
 
 #if HERMESVM_SAMPLING_PROFILER_AVAILABLE
 
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/HBC.h"
 
 #include <gtest/gtest.h>
 
@@ -62,13 +62,11 @@ size_t countUniqueSourceScriptURLs(
 
 TEST(ProfileGeneratorTest, Empty) {
   auto runtime = makeRuntime();
-  auto profile = executeWhileSampling(runtime, []() {});
+  auto profile = runtime->samplingProfiler->dumpAsProfile();
 
   EXPECT_EQ(profile.getSamplesCount(), 0);
 }
 
-// Disabled for now because the captured number of unique URLs is not guaranteed
-// to be 64.
 TEST(ProfileGeneratorTest, DISABLED_MultipleUniqueScriptURLs) {
   int kNumberOfUniqueSourceScriptURLs = 64;
 

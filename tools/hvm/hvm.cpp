@@ -15,23 +15,23 @@
 #include "llvh/Support/Signals.h"
 #include "llvh/Support/raw_ostream.h"
 
-#ifndef HERMESVM_LEAN
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
-#endif
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 #include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
-#include "hermes/ConsoleHost/RuntimeFlags.h"
-#include "hermes/Public/Buffer.h"
 #include "hermes/Support/Algorithms.h"
+#include "hermes/Support/Buffer.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/PageAccessTracker.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/RuntimeFlags.h"
 
 #define DEBUG_TYPE "hvm"
 
 using namespace hermes;
+
+namespace {
 
 static llvh::cl::opt<std::string> InputFilename(
     llvh::cl::desc("input file"),
@@ -39,7 +39,6 @@ static llvh::cl::opt<std::string> InputFilename(
     llvh::cl::Positional);
 
 // Lean VM doesn't include the disassembler.
-#ifndef HERMESVM_LEAN
 static llvh::cl::opt<bool> Disassemble(
     "d",
     llvh::cl::desc("Disassemble bytecode"));
@@ -48,7 +47,6 @@ static llvh::cl::opt<bool> PrettyDisassemble(
     "pretty-disassemble",
     llvh::cl::init(true),
     llvh::cl::desc("Pretty print the disassembled bytecode"));
-#endif
 
 static llvh::cl::opt<unsigned> Repeat(
     "Xrepeat",
@@ -56,30 +54,17 @@ static llvh::cl::opt<unsigned> Repeat(
     llvh::cl::init(1),
     llvh::cl::Hidden);
 
-static llvh::cl::opt<bool> GCPrintStats(
-    "gc-print-stats",
-    llvh::cl::desc("Output summary garbage collection statistics at exit"),
-    llvh::cl::cat(cl::GCCategory),
-    llvh::cl::init(false));
+struct Flags : public cli::RuntimeFlags {
+  llvh::cl::opt<bool> GCPrintCollectionStats{
+      "gc-print-collection-stats",
+      llvh::cl::desc("Output statistics for each garbage collection at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
+};
 
-static llvh::cl::opt<bool> EnableBlockScoping(
-    "block-scoping",
-    llvh::cl::desc("Enables block scoping support."),
-    llvh::cl::init(false),
-    llvh::cl::Hidden,
-    llvh::cl::cat(cl::RuntimeCategory));
-static llvh::cl::alias _EnableBlockScoping(
-    "bs",
-    llvh::cl::desc("Alias for --block-scoping"),
-    llvh::cl::Hidden,
-    llvh::cl::aliasopt(EnableBlockScoping));
+Flags flags{};
 
-static llvh::cl::opt<bool> ES6Class(
-    "Xes6-class",
-    llvh::cl::init(false),
-    llvh::cl::desc("Enable support for ES6 Class"),
-    llvh::cl::Hidden,
-    llvh::cl::cat(cl::RuntimeCategory));
+} // anonymous namespace
 
 // This is the vm driver.
 int main(int argc, char **argv) {
@@ -88,6 +73,10 @@ int main(int argc, char **argv) {
   llvh::sys::PrintStackTraceOnErrorSignal("hvm");
   llvh::PrettyStackTraceProgram X(argc, argv);
   llvh::llvm_shutdown_obj Y;
+
+  // Enable the microtask queue in the CLI by default.
+  flags.MicrotaskQueue.setInitialValue(true);
+
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes VM driver\n");
 
   llvh::ErrorOr<std::unique_ptr<llvh::MemoryBuffer>> FileBufOrErr =
@@ -111,7 +100,6 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<hbc::BCProvider> bytecode = std::move(ret.first);
 
-#ifndef HERMESVM_LEAN
   if (Disassemble) {
     hermes::hbc::BytecodeDisassembler disassembler(std::move(bytecode));
     disassembler.setOptions(
@@ -119,38 +107,46 @@ int main(int argc, char **argv) {
                           : hermes::hbc::DisassemblyOptions::None);
     disassembler.disassemble(llvh::outs());
   }
-#endif
 
   ExecuteOptions options;
+
+  auto gcConfigBuilder = vm::GCConfig::Builder()
+                             .withInitHeapSize(flags.InitHeapSize.bytes)
+                             .withMaxHeapSize(flags.MaxHeapSize.bytes)
+                             .withSanitizeConfig(
+                                 vm::GCSanitizeConfig::Builder()
+                                     .withSanitizeRate(flags.GCSanitizeRate)
+                                     .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                     .build())
+                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+                             .withName("hvm");
+
+  std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
+  if (flags.GCPrintStats || flags.GCPrintCollectionStats) {
+    gcConfigBuilder.withShouldRecordStats(true);
+    if (flags.GCPrintCollectionStats) {
+      options.gcAnalyticsEvents = &gcAnalyticsEvents;
+      gcConfigBuilder.withAnalyticsCallback(
+          [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
+            gcAnalyticsEvents.push_back(event);
+          });
+    }
+  }
+
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(
-              vm::GCConfig::Builder()
-                  .withInitHeapSize(cl::InitHeapSize.bytes)
-                  .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                  .withSanitizeConfig(
-                      vm::GCSanitizeConfig::Builder()
-                          .withSanitizeRate(cl::GCSanitizeRate)
-                          .withRandomSeed(cl::GCSanitizeRandomSeed)
-                          .build())
-                  .withShouldRecordStats(GCPrintStats)
-                  .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                  .withName("hvm")
-                  .build())
-          .withEnableBlockScoping(EnableBlockScoping)
-          .withES6Promise(cl::ES6Promise)
-          .withES6Proxy(cl::ES6Proxy)
-          .withES6Class(ES6Class)
-          .withIntl(cl::Intl)
-          .withMicrotaskQueue(cl::MicrotaskQueue)
-          .withTrackIO(cl::TrackBytecodeIO)
-          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withGCConfig(gcConfigBuilder.build())
+          .withMaxNumRegisters(flags.MaxNumRegisters)
+          .withES6Proxy(flags.ES6Proxy)
+          .withIntl(flags.Intl)
+          .withMicrotaskQueue(flags.MicrotaskQueue)
+          .withTrackIO(flags.TrackBytecodeIO)
+          .withEnableHermesInternal(flags.EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
-              cl::EnableHermesInternalTestMethods)
-          .withMaxNumRegisters(1024 * 1024)
+              flags.EnableHermesInternalTestMethods)
           .build();
 
-  options.stopAfterInit = cl::StopAfterInit;
+  options.stopAfterInit = flags.StopAfterInit;
 
   bool success;
   if (Repeat <= 1) {

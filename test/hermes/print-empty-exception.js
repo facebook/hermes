@@ -6,6 +6,7 @@
  */
 
 // RUN: (! %hermes -O %s 2>&1 ) | %FileCheck %s
+// RUN: (! %shermes -exec %s 2>&1 ) | %FileCheck %s
 
 var error = {
   stack: {

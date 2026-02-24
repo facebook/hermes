@@ -56,7 +56,7 @@ class JSString final : public JSObject {
   /// Return the [[PrimitiveValue]] internal property as a string.
   static StringPrimitive *getPrimitiveString(
       const JSString *self,
-      Runtime &runtime) {
+      PointerBase &runtime) {
     return self->primitiveValue_.get(runtime);
   }
 
@@ -89,7 +89,7 @@ class JSString final : public JSObject {
   /// \return the range of indexes (end-exclusive) in the array.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *selfObj,
-      Runtime &runtime);
+      PointerBase &runtime);
 
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.
@@ -211,7 +211,7 @@ class JSBigInt final : public JSObject {
   /// Return the [[PrimitiveValue]] internal property as a bigint.
   static BigIntPrimitive *getPrimitiveBigInt(
       const JSBigInt *self,
-      Runtime &runtime) {
+      PointerBase &runtime) {
     return self->primitiveValue_.get(runtime);
   }
 

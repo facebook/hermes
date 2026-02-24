@@ -41,8 +41,8 @@ void populateStringIteratorPrototype(Runtime &runtime) {
 }
 
 /// ES6.0 21.1.5.2.1 %StringIteratorPrototype%.next ( ) 1-3
-CallResult<HermesValue>
-stringIteratorPrototypeNext(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> stringIteratorPrototypeNext(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let O be the this value.
   // 2. If Type(O) is not Object, throw a TypeError exception.
   // 3. If O does not have all of the internal slots of a String Iterator

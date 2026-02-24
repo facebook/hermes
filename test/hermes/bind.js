@@ -6,6 +6,7 @@
  */
 
 // RUN: LC_ALL=C.UTF-8 %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: LC_ALL=C.UTF-8 %shermes -exec %s | %FileCheck --match-full-lines %s
 
 "use strict";
 
@@ -84,3 +85,39 @@ try {
 Object.defineProperty(foo, "length", {value: {valueOf: function() {throw TypeError("HAHA!");}}});
 print(foo.bind(null).length);
 //CHECK-NEXT: 0
+
+// new.target is set to target function, not bound function.
+function bar() {
+  print(new.target === bar);
+}
+var barBound = bar.bind();
+new barBound();
+//CHECK-NEXT: true
+
+// new.target is setup correctly in nested bound function calls.
+(function (){
+  function a() {
+    print(new.target === a);
+  }
+  var boundA = a.bind();
+  var boundA2 = boundA.bind();
+  let o = Reflect.construct(boundA2, [], boundA);
+//CHECK-NEXT: true
+  print(Object.getPrototypeOf(o).constructor === a);
+//CHECK-NEXT: true
+  new boundA2();
+//CHECK-NEXT: true
+})();
+
+
+function baz() {}
+
+Object.setPrototypeOf(baz, foo);
+var bazBound = baz.bind(null);
+print(Object.getPrototypeOf(bazBound) === Object.getPrototypeOf(baz));
+//CHECK-NEXT: true
+
+Object.setPrototypeOf(baz, null);
+var bazBound = Function.prototype.bind.apply(baz, bar);
+print(Object.getPrototypeOf(bazBound));
+//CHECK-NEXT: null

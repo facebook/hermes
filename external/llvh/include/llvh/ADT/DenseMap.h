@@ -30,12 +30,6 @@
 #include <type_traits>
 #include <utility>
 
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
-
 namespace llvh {
 
 namespace detail {
@@ -191,6 +185,19 @@ public:
     if (LookupBucketFor(Val, TheBucket))
       return TheBucket->getSecond();
     return ValueT();
+  }
+
+  /// at - Return the entry for the specified key, or abort if no such
+  /// entry exists.  Has const and non-const overloads.
+  const ValueT &at(const_arg_type_t<KeyT> Val) const {
+    auto Iter = this->find(std::move(Val));                             \
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key"); \
+    return Iter->second;
+  }
+  ValueT &at(const_arg_type_t<KeyT> Val) {
+    auto Iter = this->find(std::move(Val));                             \
+    assert(Iter != this->end() && "DenseMap::at failed due to a missing key"); \
+    return Iter->second;
   }
 
   // Inserts key,value pair into the map if the key isn't already in the map.
@@ -1235,6 +1242,5 @@ inline size_t capacity_in_bytes(const DenseMap<KeyT, ValueT, KeyInfoT> &X) {
 }
 
 } // end namespace llvh
-#pragma GCC diagnostic pop
 
 #endif // LLVM_ADT_DENSEMAP_H

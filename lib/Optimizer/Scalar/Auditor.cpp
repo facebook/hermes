@@ -8,8 +8,10 @@
 #define DEBUG_TYPE "auditor"
 
 #include "hermes/Optimizer/Scalar/Auditor.h"
+
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
 #include "llvh/Support/Debug.h"
@@ -24,11 +26,8 @@ STATISTIC(
     CallsProp,
     "Number of call instructions: callee obtained from prop lookup");
 STATISTIC(
-    CallsFrameGlobal,
-    "Number of call instructions: callee obtained from top-level frame");
-STATISTIC(
-    CallsFrameLocal,
-    "Number of call instructions: callee obtained from local frame");
+    CallsFrame,
+    "Number of call instructions: callee obtained from frame");
 STATISTIC(
     CallsStack,
     "Number of call instructions: callee obtained from stack");
@@ -43,6 +42,10 @@ STATISTIC(
     CallsOther,
     "Number of call instructions: callee obtained in other ways");
 STATISTIC(Calls, "Number of call instructions of all kinds");
+STATISTIC(GetParentScopes, "Number of GetParentScopeInst instructions");
+STATISTIC(ResolveScopes, "Number of ResolveScopeInst instructions");
+STATISTIC(GetClosureScopes, "Number of GetClosureScopeInst instructions");
+STATISTIC(Functions, "Number of functions");
 
 STATISTIC(TypeUndefined, "Number of instructions with type undefined");
 STATISTIC(TypeNull, "Number of instructions with type null");
@@ -50,12 +53,14 @@ STATISTIC(TypeBool, "Number of instructions with type boolean");
 STATISTIC(TypeString, "Number of instructions with type string");
 STATISTIC(TypeNumber, "Number of instructions with type number");
 STATISTIC(TypeObject, "Number of instructions with type object");
-STATISTIC(TypeClosure, "Number of instructions with type closure");
-STATISTIC(TypeRegexp, "Number of instruction with type regexp");
 STATISTIC(TypeAny, "Number of instructions with type any");
 STATISTIC(TypeOther, "Number of instructions with type other");
 
-static void auditCallInstructions(Function *F) {
+#if !defined(NDEBUG) || LLVM_FORCE_ENABLE_STATS
+STATISTIC(NumTryCatchFunctions, "Number of Functions with try/catch");
+#endif
+
+static void auditInstructions(Function *F) {
   for (BasicBlock &BB : *F) {
     for (Instruction &II : BB) {
       if (II.getKind() == ValueKind::CallInstKind) {
@@ -72,13 +77,7 @@ static void auditCallInstructions(Function *F) {
             CallsProp += 1;
             break;
           case ValueKind::LoadFrameInstKind: {
-            auto *LFI = cast<LoadFrameInst>(callee);
-            Variable *V = LFI->getLoadVariable();
-            if (V->getParent()->isGlobalScope()) {
-              CallsFrameGlobal += 1;
-            } else {
-              CallsFrameLocal += 1;
-            }
+            CallsFrame += 1;
           } break;
           case ValueKind::LoadStackInstKind:
             CallsStack += 1;
@@ -86,7 +85,7 @@ static void auditCallInstructions(Function *F) {
           case ValueKind::PhiInstKind:
             CallsPhi += 1;
             break;
-          case ValueKind::ParameterKind:
+          case ValueKind::JSDynamicParamKind:
             CallsParameter += 1;
             break;
           case ValueKind::CallInstKind:
@@ -97,6 +96,12 @@ static void auditCallInstructions(Function *F) {
             CallsOther += 1;
             break;
         }
+      } else if (II.getKind() == ValueKind::GetParentScopeInstKind) {
+        GetParentScopes++;
+      } else if (II.getKind() == ValueKind::ResolveScopeInstKind) {
+        ResolveScopes++;
+      } else if (II.getKind() == ValueKind::GetClosureScopeInstKind) {
+        GetClosureScopes++;
       }
     }
   }
@@ -119,11 +124,7 @@ static void auditInferredTypes(Function *F) {
         TypeNumber++;
       } else if (t.isObjectType()) {
         TypeObject++;
-      } else if (t.isClosureType()) {
-        TypeClosure++;
-      } else if (t.isRegExpType()) {
-        TypeRegexp++;
-      } else if (t.isAnyType()) {
+      } else if (t.canBeAny()) {
         TypeAny++;
       } else {
         // Other cases not counted above, e.g. union types.
@@ -136,7 +137,7 @@ static void auditInferredTypes(Function *F) {
 bool Auditor::runOnFunction(Function *F) {
   LLVM_DEBUG(dbgs() << "Auditing calls in " << F->getInternalNameStr() << "\n");
 
-  auditCallInstructions(F);
+  auditInstructions(F);
 
   LLVM_DEBUG(
       dbgs() << "Auditing instruction return types in "
@@ -144,11 +145,19 @@ bool Auditor::runOnFunction(Function *F) {
 
   auditInferredTypes(F);
 
+  Functions++;
+
+#if !defined(NDEBUG) || LLVM_FORCE_ENABLE_STATS
+  if (functionHasTryCatch(F)) {
+    NumTryCatchFunctions++;
+  }
+#endif
+
   return false;
 }
 
-std::unique_ptr<Pass> hermes::createAuditor() {
-  return std::make_unique<Auditor>();
+Pass *hermes::createAuditor() {
+  return new Auditor();
 }
 
 #undef DEBUG_TYPE

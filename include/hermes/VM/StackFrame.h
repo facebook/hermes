@@ -8,10 +8,10 @@
 #ifndef HERMES_VM_STACKFRAME_H
 #define HERMES_VM_STACKFRAME_H
 
-#include "hermes/BCGen/HBC/StackFrameLayout.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/NativeArgs.h"
+#include "hermes/VMLayouts/StackFrameLayout.h"
 
 #include <iterator>
 #include <type_traits>
@@ -19,6 +19,8 @@
 namespace llvh {
 class raw_ostream;
 }
+
+struct SHLocals;
 
 namespace hermes {
 namespace inst {
@@ -100,10 +102,11 @@ class StackFramePtrT {
 
   // Declare convenience accessors to the underlying HermesValue slots.
   _HERMESVM_DEFINE_STACKFRAME_REF(FirstLocal)
-  _HERMESVM_DEFINE_STACKFRAME_REF(Scratch)
+  _HERMESVM_DEFINE_STACKFRAME_REF(DebugEnvironment)
   _HERMESVM_DEFINE_STACKFRAME_REF(PreviousFrame)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedIP)
   _HERMESVM_DEFINE_STACKFRAME_REF(SavedCodeBlock)
+  _HERMESVM_DEFINE_STACKFRAME_REF(SHLocals)
   _HERMESVM_DEFINE_STACKFRAME_REF(ArgCount)
   _HERMESVM_DEFINE_STACKFRAME_REF(NewTarget)
   _HERMESVM_DEFINE_STACKFRAME_REF(CalleeClosureOrCB)
@@ -135,6 +138,31 @@ class StackFramePtrT {
     return getSavedCodeBlockRef().template getNativePointer<CodeBlock>();
   }
 
+  /// \return The current SHLocals.
+  const SHLocals *getSHLocals() const {
+    return getSHLocalsRef().template getNativePointer<const SHLocals>();
+  }
+
+  /// \return a handle holding the callee debug environment.
+  /// The environment associated with the callee's stack frame, that is, the
+  /// Environment created by the last CreateEnvironment instruction to execute
+  /// in the callee's stack frame. It is null if debugging support is not
+  /// present, or if no CreateEnvironment instruction has executed, which is
+  /// possible if we are early in the code block, or with optimized code. This
+  /// is stored in the call frame so that the debugger can gain access to the
+  /// Environment at arbitrary frames. Note this is managed by the GC.
+  inline Handle<Environment> getDebugEnvironmentHandle() const;
+
+  /// \return the callee debug environment.
+  /// The environment associated with the callee's stack frame, that is, the
+  /// Environment created by the last CreateEnvironment instruction to execute
+  /// in the callee's stack frame. It is null if debugging support is not
+  /// present, or if no CreateEnvironment instruction has executed, which is
+  /// possible if we are early in the code block, or with optimized code. This
+  /// is stored in the call frame so that the debugger can gain access to the
+  /// Environment at arbitrary frames. Note this is managed by the GC.
+  inline Environment *getDebugEnvironment() const;
+
   /// \return the number of JavaScript arguments passed to the callee excluding
   /// \c "this".
   uint32_t getArgCount() const {
@@ -161,7 +189,7 @@ class StackFramePtrT {
   /// \return the callee's CodeBlock, i.e. the CodeBlock that is executing in
   ///   this frame. It could be nullptr if calleeClosure is a Callable but not
   ///   a JSFunction.
-  QualifiedCB *getCalleeCodeBlock(Runtime &runtime) const;
+  inline QualifiedCB *getCalleeCodeBlock() const;
 
   /// \return true if this is a constructor being invoked by \c new.
   bool isConstructorCall() const {
@@ -200,6 +228,7 @@ class StackFramePtrT {
       StackFramePtrT previousFrame,
       const Inst *savedIP,
       const CodeBlock *savedCodeBlock,
+      const SHLocals *locals,
       uint32_t argCount,
       HermesValue calleeClosureOrCB,
       HermesValue newTarget) {
@@ -209,6 +238,8 @@ class StackFramePtrT {
         HermesValue::encodeNativePointer(savedIP);
     stackPointer[StackFrameLayout::SavedCodeBlock] =
         HermesValue::encodeNativePointer(savedCodeBlock);
+    stackPointer[StackFrameLayout::SHLocals] =
+        HermesValue::encodeNativePointer(locals);
     stackPointer[StackFrameLayout::ArgCount] =
         HermesValue::encodeNativeUInt32(argCount);
     stackPointer[StackFrameLayout::NewTarget] = newTarget;
@@ -224,6 +255,7 @@ class StackFramePtrT {
       StackFramePtrT previousFrame,
       const Inst *savedIP,
       const CodeBlock *savedCodeBlock,
+      const SHLocals *locals,
       uint32_t argCount,
       Callable *calleeClosure,
       bool construct) {
@@ -232,6 +264,7 @@ class StackFramePtrT {
         previousFrame,
         savedIP,
         savedCodeBlock,
+        locals,
         argCount,
         HermesValue::encodeObjectValue(calleeClosure),
         construct ? HermesValue::encodeObjectValue(calleeClosure)
@@ -241,7 +274,7 @@ class StackFramePtrT {
   /// Create an instance of NativeArgs pointing to the arguments in this
   /// frame.
   NativeArgs getNativeArgs() const {
-    return NativeArgs{argsBegin(), getArgCount(), &getNewTargetRef()};
+    return NativeArgs{argsBegin(), getArgCount()};
   }
 };
 

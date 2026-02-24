@@ -15,6 +15,28 @@
 // This file provides portable definitions of compiler specific macros
 // It is modelled after LLVM's Compiler.h
 
+/// Force a symbol to be treated as used, even if unused.
+#if defined(__GNUC__) || defined(__clang__)
+#define HERMES_FORCE_USED [[gnu::used]]
+#else
+#define HERMES_FORCE_USED
+#endif
+
+/// Force a symbol to be treated as used, even if unused, but only in debug
+/// builds.
+#ifndef NDEBUG
+#define HERMES_FORCE_USED_IN_DEBUG HERMES_FORCE_USED
+#else
+#define HERMES_FORCE_USED_IN_DEBUG
+#endif
+
+/// Like LLVM_ATTRIBUTE_NORETURN, but only in release builds.
+#ifndef NDEBUG
+#define HERMES_ALWAYS_INLINE
+#else
+#define HERMES_ALWAYS_INLINE LLVM_ATTRIBUTE_ALWAYS_INLINE
+#endif
+
 // Force MSVC to enable empty base class optimization; this is necessary
 // for PointerBase alignment requirements in some cases when using
 // HERMESVM_CONTIGUOUS_HEAP
@@ -56,8 +78,26 @@
 #define HERMES_ATTRIBUTE_FORMAT(archetype, string_index, first_to_check)
 #endif
 
+/// Force the linkage type of a declaration to be internal to a given file. This
+/// is useful when some type needs to be forward-declared in a header, but is
+/// only used in a cpp file, so the compiler should optimize it accordingly.
+#if __has_attribute(internal_linkage)
+#define HERMES_ATTRIBUTE_INTERNAL_LINKAGE __attribute__((internal_linkage))
+#else
+#define HERMES_ATTRIBUTE_INTERNAL_LINKAGE
+#endif
+
 #ifndef LLVM_PTR_SIZE
 #error "LLVM_PTR_SIZE needs to be defined"
+#endif
+
+// If the build system has not defined HERMES_UBSAN, check if the compiler makes
+// that information available. This only currently works with clang, but is
+// useful for internal builds, where we do not control ubsan.
+#if !defined(HERMES_UBSAN) && defined(__has_feature)
+#if __has_feature(undefined_behavior_sanitizer)
+#define HERMES_UBSAN
+#endif
 #endif
 
 // In fbcode we might have bigger code samples during development due to
@@ -66,6 +106,19 @@
 #if !defined(HERMES_FBCODE_BUILD) && !defined(HERMES_LARGE_STACK_DEPTH) && \
     (defined(HERMES_UBSAN) || LLVM_ADDRESS_SANITIZER_BUILD)
 #define HERMES_LIMIT_STACK_DEPTH
+#endif
+
+/// __builtin_constant_p allows us to determine if a value is a compile time
+/// constant. It is not available on all compilers so define a wrapper.
+#ifdef __has_builtin
+#if __has_builtin(__builtin_constant_p)
+#define HERMES_BUILTIN_CONSTANT_P(x) __builtin_constant_p(x)
+#endif
+#endif
+
+/// If the compiler does not support __builtin_constant_p, always produce false.
+#ifndef HERMES_BUILTIN_CONSTANT_P
+#define HERMES_BUILTIN_CONSTANT_P(x) false
 #endif
 
 #if LLVM_THREAD_SANITIZER_BUILD

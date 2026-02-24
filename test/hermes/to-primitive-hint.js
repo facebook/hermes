@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -target=HBC %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 // Check that toPrimitive() is called with the correct hint
 
 var x = {

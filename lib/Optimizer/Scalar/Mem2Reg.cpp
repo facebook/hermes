@@ -5,13 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+//===----------------------------------------------------------------------===//
+/// \file
+///
+/// This optimization promotes stack allocations into virtual registers.
+/// The algorithm is based on:
+///
+/// Sreedhar and Gao. A linear time algorithm for placing phi-nodes. POPL '95.
+//===----------------------------------------------------------------------===//
+
 #define DEBUG_TYPE "mem2reg"
 
-#include "hermes/Optimizer/Scalar/Mem2Reg.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
@@ -28,93 +37,17 @@ using llvh::SmallPtrSet;
 using llvh::SmallVector;
 using llvh::SmallVectorImpl;
 
-static const int kFrameSizeThreshold = 128;
-
 STATISTIC(NumPhi, "Number of Phi inserted");
 STATISTIC(NumAlloc, "Number of AllocStack removed");
 
 STATISTIC(NumLoad, "Number of loads eliminated");
 STATISTIC(NumStore, "Number of stores eliminated");
 STATISTIC(NumSOL, "Number of store only locations");
-STATISTIC(NumInitVar, "Number of init once variables");
 
 using BlockSet = llvh::DenseSet<BasicBlock *>;
 using BlockToInstMap = llvh::DenseMap<BasicBlock *, Instruction *>;
 
-/// \returns the single initializer if the variable \p V is initializes once
-/// (in the lexical scope that it belongs to).
-static bool getSingleInitializer(Variable *V) {
-  StoreFrameInst *singleStore = nullptr;
-
-  for (auto *U : V->getUsers()) {
-    if (auto *S = llvh::dyn_cast<StoreFrameInst>(U)) {
-      // This is not the first store.
-      if (singleStore)
-        return false;
-
-      // Initialization happens not in the lexical scope.
-      if (S->getParent()->getParent() != V->getParent()->getFunction())
-        return false;
-
-      singleStore = S;
-    }
-  }
-
-  return singleStore;
-}
-
-/// Add the variables that the function \p F is capturing into \p capturedVars.
-/// Notice that the function F may have sub-closures that capture variables.
-/// This method does a recursive scan and collects all captured variables.
-static void collectCapturedVariables(
-    llvh::DenseSet<Variable *> &capturedLoads,
-    llvh::DenseSet<Variable *> &capturedStores,
-    Function *F) {
-  // For all instructions in the function:
-  for (auto blockIter = F->begin(), e = F->end(); blockIter != e; ++blockIter) {
-    BasicBlock *BB = &*blockIter;
-    for (auto &instIter : *BB) {
-      Instruction *II = &instIter;
-
-      // Recursively check capturing functions by inspecting the created
-      // closure.
-      if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
-        collectCapturedVariables(
-            capturedLoads, capturedStores, CF->getFunctionCode());
-        continue;
-      }
-
-      if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-        Variable *V = LF->getLoadVariable();
-        if (V->getParent()->getFunction() != F) {
-          capturedLoads.insert(V);
-        }
-      }
-
-      if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-        auto *V = SF->getVariable();
-        if (V->getParent()->getFunction() != F) {
-          capturedStores.insert(V);
-        }
-      }
-    }
-  }
-}
-
 static bool promoteLoads(BasicBlock *BB) {
-  // Check if this block is the entry block.
-  Function *F = BB->getParent();
-  bool isEntryBlock = (BB == &*F->begin());
-
-  // A list of un-clobbered variable stored values in flight.
-  // All of these values are known to be valid for replacement at the current
-  // iteration point.
-  llvh::DenseMap<Variable *, Value *> knownFrameValues;
-
-  /// A list of variables that are known to stay constant during the lifetime
-  /// of the current function.
-  llvh::DenseMap<Variable *, Value *> constFrameValues;
-
   // Uncaptured AllocStack instructions don't alias with other memory locations
   // and may only be accessed by LoadStack/StoreStack instructions. We can
   // optimize them without inspecting side effects. Even 'call' instructions
@@ -124,16 +57,6 @@ static bool promoteLoads(BasicBlock *BB) {
   // try-catch blocks) must be wiped out on side effects because exceptions
   // modify the expected control flow.
   llvh::DenseMap<AllocStackInst *, Value *> knownStackValues;
-
-  // A list of captured variables that are accessed by loads.
-  llvh::DenseSet<Variable *> capturedVariableLoads;
-  // A list of captured variables that are accessed by stores.
-  llvh::DenseSet<Variable *> capturedVariableStores;
-
-  // In the entry block we can keep track of which variables have been captured
-  // by inspecting the closures that we generate.
-  bool usePreciseCaptureAnalysis = isEntryBlock;
-
   IRBuilder::InstructionDestroyer destroyer;
 
   bool changed = false;
@@ -147,18 +70,10 @@ static bool promoteLoads(BasicBlock *BB) {
       continue;
     }
 
-    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-      Variable *var = SF->getVariable();
-
-      // Record the value stored to the frame:
-      knownFrameValues[var] = SF->getValue();
-      continue;
-    }
-
-    // If the instructions writes to memory and one of its operands is
+    // If the instructions writes to the stack and one of its operands is
     // an alloca (any alloca), remove that alloca from the known stack
     // values.
-    if (II->mayWriteMemory()) {
+    if (II->getSideEffect().getWriteStack()) {
       for (unsigned i = 0, e = II->getNumOperands(); i != e; ++i) {
         if (auto *ASI = llvh::dyn_cast<AllocStackInst>(II->getOperand(i)))
           knownStackValues.erase(ASI);
@@ -187,83 +102,6 @@ static bool promoteLoads(BasicBlock *BB) {
       changed = true;
       continue;
     }
-
-    // Try to replace the LoadFrame with a recently saved value.
-    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-      Variable *dest = LF->getLoadVariable();
-
-      // If this variable is known to be constant during the lifetime of the
-      // function then use a previous load.
-      auto constEntry = constFrameValues.find(dest);
-      if (constEntry != constFrameValues.end() &&
-          dest->getParent()->getFunction() != LF->getParent()->getParent()) {
-        // Replace all uses of the load with the recently stored value.
-        LF->replaceAllUsesWith(constEntry->second);
-        ++NumInitVar;
-
-        // We have no use of this load now. Remove it.
-        destroyer.add(LF);
-        changed = true;
-        continue;
-      }
-
-      // The first time we load from a constant variable we need to save the
-      // content we are loading.
-      if (getSingleInitializer(dest)) {
-        constFrameValues[dest] = LF;
-      }
-
-      // Search the list of volatile loads.
-      auto entry = knownFrameValues.find(dest);
-
-      // We can replace a load with a previously saved value for that variable.
-      // unless the saved value was generated by a "non-throwing" load and this
-      // load is "throwing".
-      if (entry == knownFrameValues.end() || !entry->second) {
-        knownFrameValues[dest] = LF;
-        continue;
-      }
-
-      // Replace all uses of the load with the recently stored value.
-      LF->replaceAllUsesWith(entry->second);
-      ++NumLoad;
-
-      // We have no use of this load now. Remove it.
-      destroyer.add(LF);
-      changed = true;
-      continue;
-    }
-
-    if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
-      // Collect the captured variables.
-      if (usePreciseCaptureAnalysis) {
-        collectCapturedVariables(
-            capturedVariableLoads,
-            capturedVariableStores,
-            CF->getFunctionCode());
-      }
-    }
-
-    // Invalidate the variable storage if we can't be sure that the instruction
-    // is side-effect free and can't touch our variables.
-    if (II->mayWriteMemory()) {
-      // limit the size of knownFrameValues in case a function is large, as
-      // large functions slow down considerably here
-      if (usePreciseCaptureAnalysis &&
-          knownFrameValues.size() < kFrameSizeThreshold) {
-        // Erase all non-local variables.
-        for (auto &I : knownFrameValues) {
-          // We don't care about variables that are captured as "load variables"
-          // because loading the variable does not invalidate the loaded value.
-          if (I.first->getParent()->getFunction() != F ||
-              capturedVariableStores.count(I.first)) {
-            I.second = nullptr;
-          }
-        }
-      } else {
-        knownFrameValues.clear();
-      }
-    }
   }
 
   return changed;
@@ -272,51 +110,16 @@ static bool promoteLoads(BasicBlock *BB) {
 static bool eliminateStores(
     BasicBlock *BB,
     llvh::ArrayRef<AllocStackInst *> unsafeAllocas) {
-  // Check if this block is the entry block.
-  Function *F = BB->getParent();
-  bool isEntryBlock = (BB == &*F->begin());
-
-  // A list of un-clobbered frame stored values in flight.
-  llvh::DenseMap<Variable *, StoreFrameInst *> prevStoreFrame;
-
   // A list of un-clobbered stack store instructions.
   llvh::DenseMap<AllocStackInst *, StoreStackInst *> prevStoreStack;
 
   // Deletes instructions when we leave the function.
   IRBuilder::InstructionDestroyer destroyer;
 
-  // A list of variables that are known to be captured.
-  llvh::DenseSet<Variable *> capturedVariables;
-
-  // In the entry block we can keep track of which variables have been captured
-  // by inspecting the closures that we generate.
-  bool usePreciseCaptureAnalysis = isEntryBlock;
-
   bool changed = false;
 
   for (auto &it : *BB) {
     Instruction *II = &it;
-
-    // Try to delete the previous store based on the current store.
-    if (auto *SF = llvh::dyn_cast<StoreFrameInst>(II)) {
-      auto *V = SF->getVariable();
-      auto entry = prevStoreFrame.find(V);
-
-      if (entry != prevStoreFrame.end()) {
-        // Found store-after-store. Mark the previous store for deletion.
-        if (entry->second) {
-          destroyer.add(entry->second);
-          ++NumStore;
-          changed = true;
-        }
-
-        entry->second = SF;
-        continue;
-      }
-
-      prevStoreFrame[V] = SF;
-      continue;
-    }
 
     // Try to delete the previous store based on the current store.
     if (auto *SS = llvh::dyn_cast<StoreStackInst>(II)) {
@@ -339,54 +142,25 @@ static bool eliminateStores(
       continue;
     }
 
-    // Invalidate the frame store storage.
-    if (auto *LF = llvh::dyn_cast<LoadFrameInst>(II)) {
-      auto *V = LF->getLoadVariable();
-      prevStoreFrame[V] = nullptr;
-      continue;
+    auto sideEffect = II->getSideEffect();
+
+    // If this instruction can read from the stack, we should invalidate all of
+    // its stack operands.
+    if (sideEffect.getReadStack()) {
+      for (size_t i = 0, e = II->getNumOperands(); i < e; ++i)
+        if (auto *AS = llvh::dyn_cast<AllocStackInst>(II->getOperand(i)))
+          prevStoreStack[AS] = nullptr;
     }
 
-    // Invalidate the stack store storage.
-    if (auto *LS = llvh::dyn_cast<LoadStackInst>(II)) {
-      AllocStackInst *AS = LS->getPtr();
-      prevStoreStack[AS] = nullptr;
-      continue;
-    }
+    // Note that we deliberately fall through to the below check since reading
+    // from the stack and throwing are not mutually exclusive.
 
-    if (II->mayExecute()) {
+    // If this instruction may throw, we cannot coalesce stores to unsafe
+    // allocas across it, since the stored value may be observed if the thrown
+    // exception is caught.
+    if (sideEffect.getThrow()) {
       for (auto *A : unsafeAllocas) {
         prevStoreStack[A] = nullptr;
-      }
-    }
-
-    // Invalidate the store frame storage if we can't be sure that the
-    // instruction is side-effect free and can't touch our variables.
-    if (II->mayReadMemory()) {
-      // In no-capture mode the local variables are preserved because they have
-      // not been captured. This means that we only need to invalidate the
-      // variables that don't belong to this function.
-      // limit the size of knownFrameValues in case a function is large, as
-      // large functions slow down considerably here
-      if (usePreciseCaptureAnalysis &&
-          prevStoreFrame.size() < kFrameSizeThreshold) {
-        // Erase all non-local variables.
-        for (auto &I : prevStoreFrame) {
-          if (I.first->getParent()->getFunction() != F ||
-              capturedVariables.count(I.first)) {
-            I.second = nullptr;
-          }
-        }
-      } else {
-        // Invalidate all variables.
-        prevStoreFrame.clear();
-      }
-    }
-
-    if (auto *CF = llvh::dyn_cast<CreateFunctionInst>(II)) {
-      // Collect the captured variables.
-      if (usePreciseCaptureAnalysis) {
-        collectCapturedVariables(
-            capturedVariables, capturedVariables, CF->getFunctionCode());
       }
     }
   }
@@ -430,27 +204,23 @@ static bool eliminateStoreOnlyLocations(BasicBlock *BB) {
   return changed;
 }
 
-/// \returns true if \p ASI is used in a catch block, or is used by an
+/// \returns true if \p ASI is used in a try block, or is used by an
 /// instruction other than LoadStackInst/StoreStackInst (like GetPNamesInst).
 /// In that case it is not subject to SSA conversion.
-///
-/// "catch" blocks are special because most instructions (all throwing ones)
-/// have an implicit edge to them and we can't analyze the control flow, thus
-/// we must be conservative when dealing with variables accessed there.
 static bool isUnsafeStackLocation(
     AllocStackInst *ASI,
-    DominanceInfo *DT,
-    BlockSet &exceptionHandlingBlocks) {
+    const llvh::DenseMap<BasicBlock *, size_t> &blockTryDepths) {
   // For all users of the stack allocation:
   for (auto *U : ASI->getUsers()) {
-    if (llvh::isa<LoadStackInst>(U) || llvh::isa<StoreStackInst>(U)) {
-      // If the load/store is used inside of a catch block then we consider this
-      // variable as captured.
-      for (auto *BB : exceptionHandlingBlocks) {
-        if (DT->dominates(BB, U->getParent()))
-          return true;
-      }
-      // Instruction is not in catch blocks.
+    if (llvh::isa<LoadStackInst>(U))
+      continue;
+
+    // If the location is stored to from a try block, it cannot be safely
+    // promoted to SSA, since an exception thrown prior to the store may be
+    // caught in the same function, making the store observable.
+    if (llvh::isa<StoreStackInst>(U)) {
+      if (blockTryDepths.count(U->getParent()))
+        return true;
       continue;
     }
 
@@ -463,21 +233,13 @@ static bool isUnsafeStackLocation(
 
 /// Collect all of the allocas in the program in two lists. \p allocas that are
 /// optimizable, and \p unsafe, which are allocas that we can't optimize because
-/// they are used by catch blocks or non-load/store instructions.
+/// they are used in try blocks or non-load/store instructions.
 static void collectStackAllocations(
     Function *F,
-    DominanceInfo *DT,
     SmallVectorImpl<AllocStackInst *> &allocas,
     SmallVectorImpl<AllocStackInst *> &unsafe) {
-  // Collect all of the blocks that are roots of catch regions.
-  BlockSet exceptionHandlingBlocks;
-  for (auto &BB : *F) {
-    Instruction *I = &*BB.begin();
-    if (llvh::isa<TryStartInst>(BB.getTerminator()) ||
-        llvh::isa<CatchInst>(I)) {
-      exceptionHandlingBlocks.insert(&BB);
-    }
-  }
+  // Collect all of the basic blocks that are enclosed by try's.
+  auto [blockTryDepths, maxTryDepth] = getBlockTryDepths(F);
 
   // For each instruction in the basic block:
   for (auto &BB : *F) {
@@ -486,9 +248,8 @@ static void collectStackAllocations(
       if (!ASI)
         continue;
 
-      // Don't touch captured stack allocations that are used by non-load/store
-      // instructions directly.
-      if (isUnsafeStackLocation(ASI, DT, exceptionHandlingBlocks)) {
+      // Check if the stack location is safe for SSA conversion.
+      if (isUnsafeStackLocation(ASI, blockTryDepths)) {
         unsafe.push_back(ASI);
         continue;
       }
@@ -724,6 +485,8 @@ static void promoteAllocStackToSSA(
       auto *val = getLiveOutValue(pred, phiLoc, DT, stores);
       phi->addEntry(val, pred);
     }
+
+    phi->setType(ASI->getType());
   }
 
   {
@@ -746,7 +509,36 @@ static void promoteAllocStackToSSA(
   LLVM_DEBUG(llvh::dbgs() << " Finished placing Phis \n");
 }
 
-bool Mem2Reg::runOnFunction(Function *F) {
+/// Optimize PHI nodes in \p F where all incoming values that are not self-edges
+/// are the same, by replacing them with that single source value.
+static bool simplifyPhiInsts(Function *F) {
+  bool changed = false;
+  bool localChanged;
+  do {
+    localChanged = false;
+    for (auto &BB : *F) {
+      IRBuilder::InstructionDestroyer destroyer;
+      for (auto &I : BB) {
+        auto *P = llvh::dyn_cast<PhiInst>(&I);
+        if (!P)
+          break;
+
+        // The PHI has a single incoming value. Replace all uses of the PHI with
+        // the incoming value.
+        if (auto *incoming = getSinglePhiValue(P)) {
+          localChanged = true;
+          P->replaceAllUsesWith(incoming);
+          destroyer.add(P);
+        }
+      }
+    }
+    changed |= localChanged;
+  } while (localChanged);
+
+  return changed;
+}
+
+static bool mem2reg(Function *F) {
   bool changed = false;
   DominanceInfo D(F);
 
@@ -760,7 +552,7 @@ bool Mem2Reg::runOnFunction(Function *F) {
   // a list of stack allocations that are unsafe to optimize.
   SmallVector<AllocStackInst *, 16> unsafeAllocations;
 
-  collectStackAllocations(F, &D, allocations, unsafeAllocations);
+  collectStackAllocations(F, allocations, unsafeAllocations);
 
   LLVM_DEBUG(
       dbgs() << "Optimizing loads and stores in " << F->getInternalNameStr()
@@ -779,17 +571,28 @@ bool Mem2Reg::runOnFunction(Function *F) {
 
   allocations.clear();
   unsafeAllocations.clear();
-  collectStackAllocations(F, &D, allocations, unsafeAllocations);
+  collectStackAllocations(F, allocations, unsafeAllocations);
 
   for (auto *ASI : allocations) {
     promoteAllocStackToSSA(ASI, D, domTreeLevels);
   }
 
+  simplifyPhiInsts(F);
+
   return changed;
 }
 
-std::unique_ptr<Pass> hermes::createMem2Reg() {
-  return std::make_unique<Mem2Reg>();
+Pass *hermes::createMem2Reg() {
+  class Mem2Reg : public FunctionPass {
+   public:
+    explicit Mem2Reg() : hermes::FunctionPass("Mem2Reg") {}
+    ~Mem2Reg() override = default;
+
+    bool runOnFunction(Function *F) override {
+      return mem2reg(F);
+    }
+  };
+  return new Mem2Reg();
 }
 
 #undef DEBUG_TYPE

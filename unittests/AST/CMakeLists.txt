@@ -6,7 +6,8 @@
 set(ASTSources
   JSONTest.cpp
   ESTreeTest.cpp
-  ValidatorTest.cpp
+  ResolverTest.cpp
+  VisitorTest.cpp
   )
 
 add_hermes_unittest(HermesASTTests
@@ -15,6 +16,5 @@ add_hermes_unittest(HermesASTTests
 
 target_link_libraries(HermesASTTests
  hermesParser
- hermesAST
- hermesSupport
+ hermesSema
  )

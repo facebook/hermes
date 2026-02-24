@@ -7,7 +7,7 @@
 
 package com.facebook.hermes.test;
 
-import static org.assertj.core.api.Java6Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import android.content.res.AssetManager;
 import android.os.Build;
@@ -76,7 +76,7 @@ public class HermesIntlAndroidTest {
               .toString());
 
       String result = rt.getGlobalStringProperty("formattedDate");
-      assertThat(result).isEqualTo("8/13, 10:00 AM");
+      assertThat(result).matches("8/13,\\s*10:00\\s*AM");
     }
   }
 
@@ -96,7 +96,7 @@ public class HermesIntlAndroidTest {
               .toString());
 
       String result = rt.getGlobalStringProperty("formattedDate");
-      assertThat(result).isEqualTo("9/24, 6:00 PM");
+      assertThat(result).matches("9/24,\\s*6:00\\s*PM");
     }
   }
 

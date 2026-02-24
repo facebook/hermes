@@ -12,8 +12,8 @@
 #include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/DictPropertyMap.h"
 #include "hermes/VM/GCPointer-inline.h"
+#include "hermes/VM/JIT/Config.h"
 #include "hermes/VM/PropertyDescriptor.h"
-#include "hermes/VM/SegmentedArray.h"
 #include "hermes/VM/WeakValueMap.h"
 
 #include <functional>
@@ -22,14 +22,8 @@
 namespace hermes {
 namespace vm {
 
-/// The storage type used for properties. Its size may be restricted depending
-/// on the current configuration, for example because it must fit in a single
-/// heap segment.
+/// The storage type used for properties.
 using PropStorage = ArrayStorageSmall;
-
-/// The storage type used for large arrays that don't necessarily fit in a
-/// single heap segment.
-using BigStorage = SegmentedArray;
 
 /// Flags associated with a hidden class.
 struct ClassFlags {
@@ -257,6 +251,51 @@ class TransitionMap {
 
 class HiddenClass final : public GCCell {
   friend void HiddenClassBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend struct RuntimeOffsets;
+
+  /// Optional property map of all properties defined by this hidden class.
+  /// This includes \c symbolID_, \c parent_->symbolID_, \c
+  /// parent_->parent_->symbolID_ and so on (in reverse order).
+  /// It is constructed lazily when needed, or is "stolen" from the parent class
+  /// when a transition is performed from the parent class to this one.
+  ///
+  /// NOTE: May be cleared by the GC for any HiddenClass not in a Handle.
+  GCPointer<DictPropertyMap> propertyMap_{};
+
+  /// The parent hidden class which contains a transition from itself to this
+  /// one keyed on \c symbolID_+propertyFlags_. It can be null if there is no
+  /// parent.
+  GCPointer<HiddenClass> parent_;
+
+  /// Cache that contains for-in property names for objects of this class.
+  /// Never used in dictionary mode.
+  GCPointer<ArrayStorageSmall> forInCache_{};
+
+  /// The symbol that was added when transitioning to this hidden class.
+  const GCSymbolID symbolID_;
+  /// The flags of the added symbol.
+  const PropertyFlags propertyFlags_;
+
+  /// Total number of properties encoded in the entire chain from this class
+  /// to the root. Note that some transitions do not introduce a new property,
+  /// so this is not the same as the length of the transition chain.
+  /// Before we enter "dictionary mode", this determines the offset of a new
+  /// property.
+  unsigned numProperties_;
+
+#if HERMESVM_JIT
+  /// A unique identifier for this hidden class, lazily assigned by the JIT,
+  /// when it needs to keep track of the hidden class cheaply.
+  /// 0 means not assigned yet.
+  uint16_t lazyJITId_ = 0;
+#endif
+
+  /// Flags associated with this hidden class.
+  ClassFlags flags_{};
+
+  /// This hash table encodes the transitions from this class to child classes
+  /// keyed on the property being added (or updated) and its flags.
+  detail::TransitionMap transitionMap_;
 
  public:
   using Transition = detail::Transition;
@@ -266,6 +305,21 @@ class HiddenClass final : public GCCell {
 
   static const VTable vt;
 
+  HiddenClass(
+      Runtime &runtime,
+      ClassFlags flags,
+      Handle<HiddenClass> parent,
+      SymbolID symbolID,
+      PropertyFlags propertyFlags,
+      unsigned numProperties)
+      : parent_(runtime, *parent, runtime.getHeap()),
+        symbolID_(symbolID),
+        propertyFlags_(propertyFlags),
+        numProperties_(numProperties),
+        flags_(flags) {
+    assert(propertyFlags.isValid() && "propertyFlags must be valid");
+  }
+
   static constexpr CellKind getCellKind() {
     return CellKind::HiddenClassKind;
   }
@@ -273,9 +327,14 @@ class HiddenClass final : public GCCell {
     return cell->getKind() == CellKind::HiddenClassKind;
   }
 
+  /// \return the maximum number of properties that a hidden class can have.
+  static constexpr auto maxNumProperties() {
+    return DictPropertyMap::getMaxCapacity();
+  }
+
   /// Create a "root" hidden class - one that doesn't define any properties, but
   /// is a starting point for a hierarchy.
-  static CallResult<HermesValue> createRoot(Runtime &runtime);
+  static HiddenClass *createRoot(Runtime &runtime);
 
   /// \return true if this hidden class is guaranteed to be a leaf.
   /// It can return false negatives, so it should only be used for stats
@@ -283,6 +342,15 @@ class HiddenClass final : public GCCell {
   bool isKnownLeaf() const {
     return transitionMap_.isKnownEmpty();
   }
+
+#if HERMESVM_JIT
+  uint16_t getLazyJITId() const {
+    return lazyJITId_;
+  }
+  void setLazyJITId(uint16_t id) {
+    lazyJITId_ = id;
+  }
+#endif
 
   /// \return the number of own properties described by this hidden class.
   /// This corresponds to the size of the property map, if it is initialized.
@@ -316,11 +384,11 @@ class HiddenClass final : public GCCell {
   }
 
   /// \return The for-in cache if one has been set, otherwise nullptr.
-  BigStorage *getForInCache(Runtime &runtime) const {
+  ArrayStorageSmall *getForInCache(Runtime &runtime) const {
     return forInCache_.get(runtime);
   }
 
-  void setForInCache(BigStorage *arr, Runtime &runtime) {
+  void setForInCache(ArrayStorageSmall *arr, Runtime &runtime) {
     forInCache_.set(runtime, arr, runtime.getHeap());
   }
 
@@ -373,15 +441,11 @@ class HiddenClass final : public GCCell {
 
   /// Look for a property in the property map. If the property is found, return
   /// a \c PropertyPos identifying it and store its descriptor in \p desc.
-  /// \param expectedFlags if valid, we can search the transition table for this
-  ///   property with these precise flags. If found in the transition table,
-  ///   we don't need to create a property map.
   /// \return the "position" of the property, if found.
-  static OptValue<PropertyPos> findProperty(
+  static inline OptValue<PropertyPos> findProperty(
       PseudoHandle<HiddenClass> self,
       Runtime &runtime,
       SymbolID name,
-      PropertyFlags expectedFlags,
       NamedPropertyDescriptor &desc);
 
   /// Same operation as \p findProperty, but does not do any allocations.
@@ -479,24 +543,9 @@ class HiddenClass final : public GCCell {
   /// \return true if all properties are non-writable and non-configurable
   static bool areAllReadOnly(Handle<HiddenClass> selfHandle, Runtime &runtime);
 
-  HiddenClass(
-      Runtime &runtime,
-      ClassFlags flags,
-      Handle<HiddenClass> parent,
-      SymbolID symbolID,
-      PropertyFlags propertyFlags,
-      unsigned numProperties)
-      : symbolID_(symbolID),
-        propertyFlags_(propertyFlags),
-        flags_(flags),
-        numProperties_(numProperties),
-        parent_(runtime, *parent, runtime.getHeap()) {
-    assert(propertyFlags.isValid() && "propertyFlags must be valid");
-  }
-
  private:
   /// Allocate a new hidden class instance with the supplied parameters.
-  static CallResult<HermesValue> create(
+  static HiddenClass *create(
       Runtime &runtime,
       ClassFlags flags,
       Handle<HiddenClass> parent,
@@ -518,6 +567,14 @@ class HiddenClass final : public GCCell {
       Handle<HiddenClass> selfHandle,
       Runtime &runtime,
       bool noCache = false);
+
+  /// Like findProperty, but for the case where we know that propertyMap_ is
+  /// null. This serves as the out-of-line slow path for findProperty.
+  static OptValue<PropertyPos> findPropertyNoMap(
+      PseudoHandle<HiddenClass> self,
+      Runtime &runtime,
+      SymbolID name,
+      NamedPropertyDescriptor &desc);
 
   /// Add a new property pair (\p name and \p desc) to the property map (which
   /// must have been initialized).
@@ -554,43 +611,6 @@ class HiddenClass final : public GCCell {
 #endif
 
  private:
-  /// The symbol that was added when transitioning to this hidden class.
-  const GCSymbolID symbolID_;
-  /// The flags of the added symbol.
-  const PropertyFlags propertyFlags_;
-
-  /// Flags associated with this hidden class.
-  ClassFlags flags_{};
-
-  /// Total number of properties encoded in the entire chain from this class
-  /// to the root. Note that some transitions do not introduce a new property,
-  /// so this is not the same as the length of the transition chain.
-  /// Before we enter "dictionary mode", this determines the offset of a new
-  /// property.
-  unsigned numProperties_;
-
-  /// Optional property map of all properties defined by this hidden class.
-  /// This includes \c symbolID_, \c parent_->symbolID_, \c
-  /// parent_->parent_->symbolID_ and so on (in reverse order).
-  /// It is constructed lazily when needed, or is "stolen" from the parent class
-  /// when a transition is performed from the parent class to this one.
-  ///
-  /// NOTE: May be cleared by the GC for any HiddenClass not in a Handle.
-  GCPointer<DictPropertyMap> propertyMap_{};
-
-  /// This hash table encodes the transitions from this class to child classes
-  /// keyed on the property being added (or updated) and its flags.
-  detail::TransitionMap transitionMap_;
-
-  /// The parent hidden class which contains a transition from itself to this
-  /// one keyed on \c symbolID_+propertyFlags_. It can be null if there is no
-  /// parent.
-  GCPointer<HiddenClass> parent_;
-
-  /// Cache that contains for-in property names for objects of this class.
-  /// Never used in dictionary mode.
-  GCPointer<BigStorage> forInCache_{};
-
   /// Computes the updated class flags for a class with flags \p flags for when
   /// a property is added or updated with property flags \p pf and based on
   /// whether a new index like property has been added.
@@ -656,6 +676,30 @@ inline ClassFlags HiddenClass::computeFlags(
   // has been set, all subsequent classes must have this property marked.
   flags.mayHaveAccessor |= pf.accessor;
   return flags;
+}
+
+inline OptValue<HiddenClass::PropertyPos> HiddenClass::findProperty(
+    PseudoHandle<HiddenClass> self,
+    Runtime &runtime,
+    SymbolID name,
+    NamedPropertyDescriptor &desc) {
+  if (LLVM_UNLIKELY(!self->propertyMap_)) {
+    return findPropertyNoMap(std::move(self), runtime, name, desc);
+  }
+
+  auto *propMap = self->propertyMap_.getNonNull(runtime);
+  {
+    // propMap is a raw pointer.  We assume that find does no allocation.
+    NoAllocScope noAlloc(runtime);
+    auto found = DictPropertyMap::find(propMap, name);
+    if (!found)
+      return llvh::None;
+    // Technically, the last use of propMap occurs before the call here, so
+    // it would be legal for the call to allocate.  If that were ever the case,
+    // we would move "found" out of scope, and terminate the NoAllocScope here.
+    desc = DictPropertyMap::getDescriptorPair(propMap, *found)->second;
+    return *found;
+  }
 }
 
 } // namespace vm

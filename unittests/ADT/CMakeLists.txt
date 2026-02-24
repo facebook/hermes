@@ -9,7 +9,10 @@ set(ADTSources
   ConsumableRangeTest.cpp
   SafeIntTest.cpp
   ScopedHashTable.cpp
+  PersistentScopedMapTest.cpp
   WordBitSet.cpp
+  OwningFoldingSet.cpp
+  TransparentConservativeVectorTest.cpp
   )
 
 add_hermes_unittest(HermesADTTests

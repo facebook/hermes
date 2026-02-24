@@ -22,6 +22,7 @@ export * from './ImplicitGlobalVariableDefinition';
 export * from './ImportBindingDefinition';
 export * from './NamespaceNameDefinition';
 export * from './ParameterDefinition';
+export * from './RecordNameDefinition';
 export * from './TypeDefinition';
 export * from './TypeParameterDefinition';
 export * from './VariableDefinition';

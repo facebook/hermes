@@ -11,14 +11,12 @@
 
 #include "hermes/BCGen/HBC/Bytecode.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/IRGen/IRGen.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/PerfSection.h"
 #include "hermes/Support/SimpleDiagHandler.h"
 #include "hermes/VM/GCPointer-inline.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/VM/RuntimeModule.h"
-#include "hermes/VM/SerializedLiteralParser.h"
 
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/ErrorHandling.h"
@@ -27,7 +25,6 @@ namespace hermes {
 namespace vm {
 
 using namespace hermes::inst;
-using SLP = SerializedLiteralParser;
 
 #ifdef HERMES_SLOW_DEBUG
 
@@ -120,38 +117,57 @@ static void validateInstructions(ArrayRef<uint8_t> list, unsigned frameSize) {
 
 #endif
 
-CodeBlock *CodeBlock::createCodeBlock(
+std::unique_ptr<CodeBlock> CodeBlock::createCodeBlock(
     RuntimeModule *runtimeModule,
     hbc::RuntimeFunctionHeader header,
     const uint8_t *bytecode,
     uint32_t functionID) {
 #ifdef HERMES_SLOW_DEBUG
-  validateInstructions(
-      {bytecode, header.bytecodeSizeInBytes()}, header.frameSize());
+  if (bytecode)
+    validateInstructions(
+        {bytecode, header.getBytecodeSizeInBytes()}, header.getFrameSize());
 #endif
 
-  // Compute size needed for caching from the highest accessed indices.
-  // If the highest access index is 0, that function does not use this cache at
-  // all so there is no reason to allocate it. If the function does access the
-  // cache we need to allocate an extra slot for the no-cache indicator.
-  auto sizeComputer = [](uint8_t highest) -> uint32_t {
-    return highest == 0 ? 0 : highest + 1;
+  // Compute size needed for caches.  The bytecode instructions have
+  // one byte for cache indices.  If the number of cache entries
+  // needed in a function reaches 256, we reserve index 255 to mean
+  // "overflow", don't cache -- the cache size won't grow beyond 256.
+  // But we only have one byte in the function header for the size.
+  // So we encode 256 as 255: a size of 255 could mean that there are
+  // actually 255 elements, or that there are 256.  Here we make sure
+  // that the cache is big enough in that case, by conservatively
+  // adding one element when the size is 255.
+  auto sizeComputer = [](uint8_t size) -> uint32_t {
+    static_assert(hbc::PROPERTY_CACHING_DISABLED == 255);
+    return size == hbc::PROPERTY_CACHING_DISABLED ? 256 : size;
   };
 
-  uint32_t readCacheSize = sizeComputer(header.highestReadCacheIndex());
-  uint32_t cacheSize =
-      readCacheSize + sizeComputer(header.highestWriteCacheIndex());
+  uint32_t readCacheSize = sizeComputer(header.getReadCacheSize());
+  uint32_t writeCacheSize = sizeComputer(header.getWriteCacheSize());
+  uint32_t privateNameCacheSize =
+      sizeComputer(header.getPrivateNameCacheSize());
 
-#ifndef HERMESVM_LEAN
   bool isCodeBlockLazy = !bytecode;
-  if (!runtimeModule->isInitialized() || isCodeBlockLazy) {
+  if (isCodeBlockLazy) {
     readCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
-    cacheSize = 2 * readCacheSize;
+    writeCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
+    privateNameCacheSize = sizeComputer(std::numeric_limits<uint8_t>::max());
   }
-#endif
 
-  return CodeBlock::create(
-      runtimeModule, header, bytecode, functionID, cacheSize, readCacheSize);
+  auto allocSize = totalSizeToAlloc<
+      ReadPropertyCacheEntry,
+      WritePropertyCacheEntry,
+      PrivateNameCacheEntry>(
+      readCacheSize, writeCacheSize, privateNameCacheSize);
+  void *mem = checkedMalloc(allocSize);
+  return std::unique_ptr<CodeBlock>(new (mem) CodeBlock(
+      runtimeModule,
+      header,
+      bytecode,
+      functionID,
+      readCacheSize,
+      writeCacheSize,
+      privateNameCacheSize));
 }
 
 int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
@@ -159,47 +175,14 @@ int32_t CodeBlock::findCatchTargetOffset(uint32_t exceptionOffset) {
       functionID_, exceptionOffset);
 }
 
-SLP CodeBlock::getArrayBufferIter(uint32_t idx, unsigned int numLiterals)
-    const {
-  return SLP{
-      runtimeModule_->getBytecode()->getArrayBuffer().slice(idx),
-      numLiterals,
-      runtimeModule_};
-}
-
-SLP CodeBlock::getObjectBufferKeyIter(uint32_t idx, unsigned int numLiterals)
-    const {
-  return SLP{
-      runtimeModule_->getBytecode()->getObjectKeyBuffer().slice(idx),
-      numLiterals,
-      nullptr};
-}
-
-SLP CodeBlock::getObjectBufferValueIter(uint32_t idx, unsigned int numLiterals)
-    const {
-  return SLP{
-      runtimeModule_->getBytecode()->getObjectValueBuffer().slice(idx),
-      numLiterals,
-      runtimeModule_};
-}
-
 SymbolID CodeBlock::getNameMayAllocate() const {
-#ifndef HERMESVM_LEAN
-  if (isLazy()) {
-    return runtimeModule_->getLazyName();
-  }
-#endif
   return runtimeModule_->getSymbolIDFromStringIDMayAllocate(
-      functionHeader_.functionName());
+      functionHeader_.getFunctionName());
 }
 
-std::string CodeBlock::getNameString(GCBase::GCCallbacks &runtime) const {
-#ifndef HERMESVM_LEAN
-  if (isLazy()) {
-    return runtime.convertSymbolToUTF8(runtimeModule_->getLazyName());
-  }
-#endif
-  return runtimeModule_->getStringFromStringID(functionHeader_.functionName());
+std::string CodeBlock::getNameString() const {
+  return runtimeModule_->getStringFromStringID(
+      functionHeader_.getFunctionName());
 }
 
 OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
@@ -215,32 +198,6 @@ OptValue<uint32_t> CodeBlock::getDebugSourceLocationsOffset() const {
 
 OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
     uint32_t offset) const {
-#ifndef HERMESVM_LEAN
-  if (LLVM_UNLIKELY(isLazy())) {
-    assert(offset == 0 && "Function is lazy, but debug offset >0 specified");
-
-    auto *provider = (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
-    auto *func = provider->getBytecodeFunction();
-    auto *lazyData = func->getLazyCompilationData();
-    auto sourceLoc = lazyData->span.Start;
-
-    SourceErrorManager::SourceCoords coords;
-    if (!lazyData->context->getSourceErrorManager().findBufferLineAndLoc(
-            sourceLoc, coords)) {
-      return llvh::None;
-    }
-
-    hbc::DebugSourceLocation location;
-    location.line = coords.line;
-    location.column = coords.col;
-    // We don't actually have a filename table, so we can't really provide
-    // this. Fortunately the location of uncompiled codeblocks is primarily
-    // used by heap snapshots, which substitutes it for the SourceID anyways.
-    location.filenameId = facebook::hermes::debugger::kInvalidLocation;
-    return location;
-  }
-#endif
-
   auto debugLocsOffset = getDebugSourceLocationsOffset();
   if (!debugLocsOffset) {
     return llvh::None;
@@ -252,14 +209,76 @@ OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocation(
       ->getLocationForAddress(*debugLocsOffset, offset);
 }
 
+OptValue<hbc::DebugSourceLocation> CodeBlock::getSourceLocationForFunction()
+    const {
+  auto debugLocsOffset = getDebugSourceLocationsOffset();
+  if (!debugLocsOffset) {
+    return llvh::None;
+  }
+
+  return getRuntimeModule()
+      ->getBytecode()
+      ->getDebugInfo()
+      ->getLocationForFunction(*debugLocsOffset);
+}
+
+ExecutionStatus CodeBlock::compileLazyFunction(Runtime &runtime) {
+  assert(isLazy() && "Laziness has not been checked");
+  auto *provider = runtimeModule_->getBytecode();
+
+  bool success;
+  llvh::StringRef errMsg;
+  executeInStack(
+      runtime.getStackExecutor(), [&success, &errMsg, &provider, this]() {
+        std::tie(success, errMsg) =
+            hbc::compileLazyFunction(provider, functionID_);
+      });
+  if (!success) {
+    // Raise a SyntaxError to be consistent with eval().
+    return runtime.raiseSyntaxError(llvh::StringRef{errMsg});
+  }
+
+  functionHeader_ =
+      runtimeModule_->getBytecode()->getFunctionHeader(functionID_);
+  bytecode_ = runtimeModule_->getBytecode()->getBytecode(functionID_);
+  runtimeModule_->initAfterLazyCompilation();
+
+  return ExecutionStatus::RETURNED;
+}
+
+bool CodeBlock::coordsInLazyFunction(SMLoc loc, OptValue<SMLoc> end) const {
+  assert(isLazy() && "function is not lazy");
+
+  return hbc::coordsInLazyFunction(
+      runtimeModule_->getBytecode(), functionID_, loc, end);
+}
+
+std::vector<uint32_t> CodeBlock::getVariableCounts(
+    uint32_t lexicalScopeIdxInParentFunction) const {
+  return hbc::getVariableCounts(
+      runtimeModule_->getBytecode(),
+      functionID_,
+      lexicalScopeIdxInParentFunction);
+}
+
+hbc::VariableInfoAtDepth CodeBlock::getVariableInfoAtDepth(
+    uint32_t depth,
+    uint32_t variableIndex,
+    uint32_t lexicalScopeIdxInParentFunction) const {
+  return hbc::getVariableInfoAtDepth(
+      runtimeModule_->getBytecode(),
+      functionID_,
+      depth,
+      variableIndex,
+      lexicalScopeIdxInParentFunction);
+}
+
 OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   // Note that for the case of lazy compilation, the function sources had been
   // reserved into the function source table of the root bytecode module.
   // For non-lazy module, the lazy root module is itself.
   llvh::ArrayRef<std::pair<uint32_t, uint32_t>> table =
-      runtimeModule_->getLazyRootModule()
-          ->getBytecode()
-          ->getFunctionSourceTable();
+      runtimeModule_->getBytecode()->getFunctionSourceTable();
 
   // Performs a binary search since the function source table is sorted by the
   // 1st value. We could further optimize the lookup by loading it as a map in
@@ -278,109 +297,30 @@ OptValue<uint32_t> CodeBlock::getFunctionSourceID() const {
   }
 }
 
-OptValue<uint32_t> CodeBlock::getScopeDescDataOffset() const {
-  auto *debugOffsets =
-      runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
-  if (!debugOffsets)
-    return llvh::None;
-  uint32_t ret = debugOffsets->scopeDescData;
-  if (ret == hbc::DebugOffsets::NO_OFFSET)
-    return llvh::None;
-  return ret;
-}
-
-OptValue<uint32_t> CodeBlock::getTextifiedCalleeOffset() const {
-  auto *debugOffsets =
-      runtimeModule_->getBytecode()->getDebugOffsets(functionID_);
-  if (!debugOffsets)
-    return llvh::None;
-  uint32_t ret = debugOffsets->textifiedCallees;
-  if (ret == hbc::DebugOffsets::NO_OFFSET)
-    return llvh::None;
-  return ret;
-}
-
-SourceErrorManager::SourceCoords CodeBlock::getLazyFunctionLoc(
-    bool start) const {
-  assert(isLazy() && "Function must be lazy");
-  SourceErrorManager::SourceCoords coords;
-#ifndef HERMESVM_LEAN
-  auto *provider = (hbc::BCProviderLazy *)getRuntimeModule()->getBytecode();
-  auto *func = provider->getBytecodeFunction();
-  auto *lazyData = func->getLazyCompilationData();
-  lazyData->context->getSourceErrorManager().findBufferLineAndLoc(
-      start ? lazyData->span.Start : lazyData->span.End, coords);
-#endif
-  return coords;
-}
-
-#ifndef HERMESVM_LEAN
-namespace {
-std::unique_ptr<hbc::BytecodeModule> compileLazyFunction(
-    hbc::LazyCompilationData *lazyData) {
-  assert(lazyData);
-  LLVM_DEBUG(
-      llvh::dbgs() << "Compiling lazy function " << lazyData->originalName
-                   << "\n");
-
-  Module M{lazyData->context};
-  auto pair = hermes::generateLazyFunctionIR(lazyData, &M);
-  Function *entryPoint = pair.first;
-  Function *lexicalRoot = pair.second;
-
-  // We look up source map URLs by iterating modules and finding the first one
-  // with a matching buffer id, which will be the root module. These lazily
-  // compiled compiled modules therefore don't need to duplicate the URL,
-  // which can be several MB if it encodes the source map itself.
-  BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults();
-  opts.stripSourceMappingURL = true;
-
-  auto bytecodeModule =
-      hbc::generateBytecodeModule(&M, lexicalRoot, entryPoint, opts);
-
-  return bytecodeModule;
-}
-} // namespace
-
-ExecutionStatus CodeBlock::lazyCompileImpl(Runtime &runtime) {
-  assert(isLazy() && "Laziness has not been checked");
-  PerfSection perf("Lazy function compilation");
-  auto *provider = (hbc::BCProviderLazy *)runtimeModule_->getBytecode();
-  auto *func = provider->getBytecodeFunction();
-  auto *lazyData = func->getLazyCompilationData();
-  SourceErrorManager &manager = lazyData->context->getSourceErrorManager();
-  SimpleDiagHandlerRAII outputManager{manager};
-  auto bcModule = compileLazyFunction(lazyData);
-
-  if (manager.getErrorCount()) {
-    // Raise a SyntaxError to be consistent with eval().
-    return runtime.raiseSyntaxError(
-        llvh::StringRef{outputManager.getErrorString()});
-  }
-
-  assert(bcModule && "No errors, yet no bcModule");
-
-  runtimeModule_->initializeLazyMayAllocate(
-      hbc::BCProviderFromSrc::createBCProviderFromSrc(std::move(bcModule)));
-  // Reset all meta lazyData of the CodeBlock to point to the newly
-  // generated bytecode module.
-  functionID_ = runtimeModule_->getBytecode()->getGlobalFunctionIndex();
-  functionHeader_ =
-      runtimeModule_->getBytecode()->getFunctionHeader(functionID_);
-  bytecode_ = runtimeModule_->getBytecode()->getBytecode(functionID_);
-
-  return ExecutionStatus::RETURNED;
-}
-#endif // HERMESVM_LEAN
-
-void CodeBlock::markCachedHiddenClasses(
+void CodeBlock::markWeakElementsInCaches(
     Runtime &runtime,
     WeakRootAcceptor &acceptor) {
   for (auto &prop :
-       llvh::makeMutableArrayRef(propertyCache(), propertyCacheSize_)) {
+       llvh::makeMutableArrayRef(readPropertyCache(), readPropertyCacheSize_)) {
     if (prop.clazz) {
       acceptor.acceptWeak(prop.clazz);
     }
+    if (prop.negMatchClazz) {
+      acceptor.acceptWeak(prop.negMatchClazz);
+    }
+  }
+  for (auto &prop : llvh::makeMutableArrayRef(
+           writePropertyCache(), writePropertyCacheSize_)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
+  }
+  for (auto &prop :
+       llvh::makeMutableArrayRef(privateNameCache(), privateNameCacheSize_)) {
+    if (prop.clazz) {
+      acceptor.acceptWeak(prop.clazz);
+    }
+    acceptor.acceptWeakSym(prop.nameVal);
   }
 }
 

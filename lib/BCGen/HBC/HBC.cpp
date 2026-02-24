@@ -7,682 +7,668 @@
 
 #include "hermes/BCGen/HBC/HBC.h"
 
-#include "hermes/BCGen/BCOpt.h"
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
-#include "hermes/BCGen/HBC/BytecodeStream.h"
-#include "hermes/BCGen/HBC/ISel.h"
-#include "hermes/BCGen/HBC/Passes.h"
-#include "hermes/BCGen/HBC/Passes/FuncCallNOpts.h"
-#include "hermes/BCGen/HBC/Passes/InsertProfilePoint.h"
-#include "hermes/BCGen/HBC/Passes/LowerBuiltinCalls.h"
-#include "hermes/BCGen/HBC/Passes/OptEnvironmentInit.h"
-#include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
-#include "hermes/BCGen/Lowering.h"
-#include "hermes/IR/Analysis.h"
-#include "hermes/IR/CFG.h"
-#include "hermes/IR/IR.h"
-#include "hermes/IR/IRBuilder.h"
-#include "hermes/IR/IRVerifier.h"
-#include "hermes/IR/Instrs.h"
-#include "hermes/Optimizer/PassManager/Pass.h"
-#include "hermes/Optimizer/PassManager/PassManager.h"
+#include "BytecodeGenerator.h"
+#include "hermes/AST/TransformAST.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
+#include "hermes/IRGen/IRGen.h"
+#include "hermes/Optimizer/PassManager/Pipeline.h"
+#include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
+#include "hermes/Support/MemoryBuffer.h"
 #include "hermes/Support/PerfSection.h"
-#include "hermes/Support/UTF8.h"
+#include "hermes/Support/SimpleDiagHandler.h"
+
+#include "llvh/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "hbc-backend"
 
-using namespace hermes;
-using namespace hbc;
+namespace hermes {
+namespace hbc {
+
+void fullOptimizationPipeline(Module &M) {
+  hermes::runFullOptimizationPasses(M);
+}
+
+std::pair<std::unique_ptr<BCProvider>, std::string> createBCProviderFromSrc(
+    std::unique_ptr<Buffer> buffer,
+    llvh::StringRef sourceURL,
+    llvh::StringRef sourceMap,
+    const CompileFlags &compileFlags,
+    llvh::StringRef topLevelFunctionName,
+    SourceErrorManager::DiagHandlerTy diagHandler,
+    void *diagContext,
+    const std::function<void(Module &)> &runOptimizationPasses,
+    const BytecodeGenerationOptions &defaultBytecodeGenerationOptions) {
+  return BCProviderFromSrc::create(
+      std::move(buffer),
+      sourceURL,
+      sourceMap,
+      compileFlags,
+      topLevelFunctionName,
+      diagHandler,
+      diagContext,
+      runOptimizationPasses,
+      defaultBytecodeGenerationOptions);
+}
+
+std::unique_ptr<BytecodeModule> generateBytecodeModule(
+    Module *M,
+    Function *entryPoint,
+    const BytecodeGenerationOptions &options,
+    hermes::OptValue<uint32_t> segment,
+    std::unique_ptr<BCProviderBase> baseBCProvider) {
+  PerfSection perf("Bytecode Generation");
+  auto bm = std::make_unique<BytecodeModule>();
+  FileAndSourceMapIdCache debugIdCache{};
+
+  bool success =
+      BytecodeModuleGenerator{
+          *bm, M, debugIdCache, options, std::move(baseBCProvider)}
+          .generate(entryPoint, segment);
+
+  return success ? std::move(bm) : nullptr;
+}
+
+bool generateBytecodeFunctionLazy(
+    BytecodeModule &bm,
+    Module *M,
+    Function *lazyFunc,
+    uint32_t lazyFuncID,
+    FileAndSourceMapIdCache &debugIdCache,
+    const BytecodeGenerationOptions &options) {
+  return BytecodeModuleGenerator{bm, M, debugIdCache, options, nullptr}
+      .generateLazyFunctions(lazyFunc, lazyFuncID);
+}
+
+std::unique_ptr<BytecodeModule> generateBytecodeModuleForEval(
+    Module *M,
+    Function *entryPoint,
+    const BytecodeGenerationOptions &options) {
+  PerfSection perf("Bytecode Generation");
+  auto bm = std::make_unique<BytecodeModule>();
+  FileAndSourceMapIdCache debugIdCache{};
+
+  bool success = BytecodeModuleGenerator{*bm, M, debugIdCache, options, nullptr}
+                     .generateForEval(entryPoint);
+
+  return success ? std::move(bm) : nullptr;
+}
 
 namespace {
 
-// If we have less than this number of instructions in a Function, and we're
-// not compiling in optimized mode, take shortcuts during register allocation.
-// 250 was chosen so that registers will fit in a single byte even after some
-// have been reserved for function parameters.
-const unsigned kFastRegisterAllocationThreshold = 250;
-
-// If register allocation is expected to take more than this number of bytes of
-// RAM, and we're not trying to optimize, use a simpler pass to reduce compile
-// time memory usage.
-const uint64_t kRegisterAllocationMemoryLimit = 10L * 1024 * 1024;
-
-void lowerIR(Module *M, const BytecodeGenerationOptions &options) {
-  if (M->isLowered())
-    return;
-
-  PassManager PM{M->getContext().getCodeGenerationSettings()};
-  PM.addPass<LowerLoadStoreFrameInst>();
-  if (options.optimizationEnabled) {
-    // OptEnvironmentInit needs to run before LowerConstants.
-    PM.addPass<OptEnvironmentInit>();
-  }
-  // LowerExponentiationOperator needs to run before LowerBuiltinCalls because
-  // it introduces calls to HermesInternal.
-  PM.addPass<LowerExponentiationOperator>();
-  // LowerBuiltinCalls needs to run before the rest of the lowering.
-  PM.addPass<LowerBuiltinCalls>();
-  // It is important to run LowerNumericProperties before LoadConstants
-  // as LowerNumericProperties could generate new constants.
-  PM.addPass<LowerNumericProperties>();
-  PM.addPass<LowerConstruction>();
-  PM.addPass<LowerArgumentsArray>();
-  PM.addPass<LimitAllocArray>(UINT16_MAX);
-  PM.addPass<DedupReifyArguments>();
-  PM.addPass<LowerSwitchIntoJumpTables>();
-  PM.addPass<SwitchLowering>();
-  PM.addPass<LoadConstants>();
-  PM.addPass<LoadParameters>();
-  if (options.optimizationEnabled) {
-    // Lowers AllocObjects and its sequential literal properties into a single
-    // HBCAllocObjectFromBufferInst
-    PM.addPass<LowerAllocObject>();
-    // Reduce comparison and conditional jump to single comparison jump
-    PM.addPass<LowerCondBranch>();
-    // Turn Calls into CallNs.
-    PM.addPass<FuncCallNOpts>();
-    // Move loads to child blocks if possible.
-    PM.addCodeMotion();
-    // Eliminate common HBCLoadConstInsts.
-    PM.addCSE();
-    // Drop unused HBCLoadParamInsts.
-    PM.addDCE();
-  }
-
-  // Move StartGenerator instructions to the start of functions.
-  PM.addHoistStartGenerator();
-
-  PM.run(M);
-  M->setLowered(true);
-
-  if (options.verifyIR &&
-      verifyModule(*M, &llvh::errs(), VerificationMode::IR_VALID)) {
-    M->dump();
-    hermes_fatal("IR verification failed");
-  }
-}
-
-/// Used in delta optimizing mode.
-/// \return a UniquingStringLiteralAccumulator seeded with strings  from a
-/// bytecode provider \p bcProvider.
-UniquingStringLiteralAccumulator stringAccumulatorFromBCProvider(
-    const BCProviderBase &bcProvider) {
-  uint32_t count = bcProvider.getStringCount();
-
-  std::vector<StringTableEntry> entries;
-  std::vector<bool> isIdentifier;
-
-  entries.reserve(count);
-  isIdentifier.reserve(count);
-
-  {
-    unsigned i = 0;
-    for (auto kindEntry : bcProvider.getStringKinds()) {
-      bool isIdentRun = kindEntry.kind() != StringKind::String;
-      for (unsigned j = 0; j < kindEntry.count(); ++j, ++i) {
-        entries.push_back(bcProvider.getStringTableEntry(i));
-        isIdentifier.push_back(isIdentRun);
-      }
-    }
-
-    assert(i == count && "Did not initialise every string");
-  }
-
-  auto strStorage = bcProvider.getStringStorage();
-  ConsecutiveStringStorage css{std::move(entries), strStorage.vec()};
-
-  return UniquingStringLiteralAccumulator{
-      std::move(css), std::move(isIdentifier)};
-}
-
-/// A container that deduplicates byte sequences, while keeping the original
-/// insertion order with the duplicates. Note: strings are used as a
-/// representation for code reuse and simplicity, but the contents are meant to
-/// be interpreted as unsigned bytes.
-/// It maintains:
-/// - a StringSetVector containing the uniqued strings.
-/// - a vector mapping each originally inserted string in order to an index in
-///   the StringSetVector.
-/// This is a specialized class used only by \c LiteralBufferBuilder.
-/// NOTE: We use std::string instead of std::vector<uint8_t> for code reuse.
-class UniquedStringVector {
+/// Data for the compileLazyFunctionWorker.
+class LazyCompilationThreadData {
  public:
-  /// Append a string.
-  void push_back(llvh::StringRef str) {
-    indexInSet_.push_back(set_.insert(str));
-  }
+  /// Input: the bytecode module to compile.
+  hbc::BCProviderFromSrc *const provider;
+  /// Input: The function ID to compile.
+  uint32_t const funcID;
+  /// Output: whether the compilation succeeded.
+  bool success = false;
+  /// Output: the error message, if success=false.
+  std::string error{};
 
-  /// \return how many strings the vector contains, in other words, how many
-  ///     times \c push_back() was called.
-  size_t size() const {
-    return indexInSet_.size();
-  }
-
-  /// \return the begin iterator over the uniqued set of strings in insertion
-  ///  order.
-  StringSetVector::const_iterator beginSet() const {
-    return set_.begin();
-  }
-  /// \return the end iterator over the uniqued set of strings in insertion
-  ///  order.
-  StringSetVector::const_iterator endSet() const {
-    return set_.end();
-  }
-
-  /// \return the index in the uniqued set corresponding to the insertion index
-  ///     \p insertionIndex.
-  uint32_t indexInSet(size_t insertionIndex) const {
-    return indexInSet_[insertionIndex];
-  }
-
- private:
-  /// The uniqued string set in insertion order.
-  StringSetVector set_{};
-  /// Index into the set of each original non-deduplicated string in insertion
-  /// order.
-  std::vector<uint32_t> indexInSet_{};
+  explicit LazyCompilationThreadData(
+      hbc::BCProviderFromSrc *provider,
+      uint32_t funcID)
+      : provider(provider), funcID(funcID) {}
 };
 
-/// A utility class which collects all serialized literals from a module,
-/// optionally deduplicates them, and installs them in the
-/// BytecodeModuleGenerator.
-class LiteralBufferBuilder {
+/// Worker function for the compileLazyFunction, intended to be run in a
+/// thread with a fresh stack to prevent stack overflows.
+/// \param argPtr[in/out] pointer to the the LazyCompilationThreadData to use as
+///   input/output.
+static void compileLazyFunctionWorker(void *argPtr) {
+  LazyCompilationThreadData *data =
+      reinterpret_cast<LazyCompilationThreadData *>(argPtr);
+  hbc::BCProviderFromSrc *provider = data->provider;
+  uint32_t funcID = data->funcID;
+
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
+  Function *F = lazyFunc.getFunctionIR();
+  assert(F && "no lazy IR for lazy function");
+
+  SourceErrorManager &manager =
+      F->getParent()->getContext().getSourceErrorManager();
+  SimpleDiagHandlerRAII outputManager{manager};
+  Context &context = F->getParent()->getContext();
+
+  const LazyCompilationDataInst *lazyDataInst = F->getLazyCompilationDataInst();
+  assert(lazyDataInst && "function must be lazy");
+  const LazyCompilationData &lazyData = lazyDataInst->getData();
+
+  LLVM_DEBUG(
+      llvh::dbgs() << "Compiling lazy " << F->getDescriptiveDefinitionKindStr()
+                   << ": " << F->getOriginalOrInferredName() << " @ ";
+      manager.dumpCoords(llvh::dbgs(), F->getSourceRange().Start);
+      llvh::dbgs() << "\n");
+
+  // Free the AST once we're done compiling this function.
+  AllocationScope alloc(context.getAllocator());
+
+  parser::JSParser parser(context, lazyData.bufferId, parser::LazyParse);
+
+  // Note: we don't know the parent's strictness, which we need to pass, but
+  // we can just use the child's strictness, which is always stricter or equal
+  // to the parent's.
+  parser.setStrictMode(lazyData.strictMode);
+
+  auto optParsed = parser.parseLazyFunction(
+      lazyData.nodeKind,
+      lazyData.paramYield,
+      lazyData.paramAwait,
+      F->getSourceRange().Start);
+
+  sema::SemContext *semCtx = provider->getSemCtx();
+  assert(semCtx && "missing semantic data to compile");
+
+  if (!optParsed) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  optParsed = hermes::transformASTForCompilation(context, *optParsed);
+
+  // A non-null home object means the parent function context could reference
+  // super.
+  bool parentHadSuperBinding = lazyDataInst->getHomeObject();
+  // If parsing or resolution fails, report the error and return.
+  if (!optParsed ||
+      !sema::resolveASTLazy(
+          context,
+          *semCtx,
+          llvh::cast<ESTree::FunctionLikeNode>(*optParsed),
+          lazyData.semInfo,
+          parentHadSuperBinding)) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  assert(F && "no IR to compileLazyFunction");
+
+  Function *func = hermes::generateLazyFunctionIR(
+      F, llvh::cast<ESTree::FunctionLikeNode>(*optParsed), *semCtx);
+  if (outputManager.haveErrors()) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  Module *M = provider->getModule();
+  assert(M && "missing IR data to compile");
+  if (!hbc::generateBytecodeFunctionLazy(
+          *provider->getBytecodeModule(),
+          M,
+          func,
+          funcID,
+          provider->getFileAndSourceMapIdCache(),
+          provider->getBytecodeGenerationOptions())) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  data->success = true;
+}
+
+/// Data for the compileEvalWorker.
+class EvalThreadData {
  public:
-  /// Constructor.
-  /// \param m the IR module to process.
-  /// \param shouldVisitFunction a predicate indicating whether a function
-  ///     should be processed or not. (In some cases like segment splitting we
-  ///     want to exclude part of the module.)
-  /// \param bmGen the BytecodeModuleGenerator to use.
-  /// \param optimize whether to deduplicate the serialized literals.
-  LiteralBufferBuilder(
-      Module *m,
-      const std::function<bool(Function const *)> &shouldVisitFunction,
-      BytecodeModuleGenerator &bmGen,
-      bool optimize)
-      : M_(m),
-        shouldVisitFunction_(shouldVisitFunction),
-        bmGen_(bmGen),
-        optimize_(optimize),
-        literalGenerator_(bmGen) {}
+  /// Input: The source to compile.
+  std::unique_ptr<Buffer> src;
+  /// Input: the enclosing bytecode module.
+  hbc::BCProviderFromSrc *const provider;
+  /// Input: The function ID to compile.
+  uint32_t const enclosingFuncID;
+  /// Input: The CompileFlags to use.
+  const CompileFlags &compileFlags;
+  /// Input: the lexical scope to perform the eval in.
+  uint32_t lexicalScopeIdxInParentFunction;
+  /// Output: whether the compilation succeeded.
+  bool success = false;
+  /// Output: Result if success=true.
+  std::unique_ptr<BCProviderFromSrc> result{};
+  /// Output: the error message, if success=false.
+  std::string error{};
 
-  /// Do everything: collect the literals, optionally deduplicate them, install
-  /// them in the BytecodeModuleGenerator.
-  void generate();
-
- private:
-  /// Traverse the module, skipping functions that should not be visited,
-  /// and collect all serialized array and object literals and the corresponding
-  /// instruction.
-  void traverse();
-
-  // Serialization handlers for different instructions.
-
-  void serializeLiteralFor(AllocArrayInst *AAI);
-  void serializeLiteralFor(HBCAllocObjectFromBufferInst *AOFB);
-
-  /// Serialize the the input literals \p elements into the UniquedStringVector
-  /// \p dest.
-  /// \p isKeyBuffer: whether this is generating object literal key buffer or
-  /// not.
-  void serializeInto(
-      UniquedStringVector &dest,
-      llvh::ArrayRef<Literal *> elements,
-      bool isKeyBuffer);
-
- private:
-  /// The IR module to process.
-  Module *const M_;
-  /// A predicate indicating whether a function should be processed or not. (In
-  /// some cases like segment splitting we want to exclude part of the module.)
-  const std::function<bool(const Function *)> &shouldVisitFunction_;
-  /// The BytecodeModuleGenerator to use.
-  BytecodeModuleGenerator &bmGen_;
-  /// Whether to deduplicate the serialized literals.
-  bool const optimize_;
-
-  /// The stateless generator object.
-  SerializedLiteralGenerator literalGenerator_;
-
-  /// Temporary buffer to serialize literals into. We keep it around instead
-  /// of allocating a new one every time.
-  std::vector<unsigned char> tempBuffer_{};
-
-  /// Each element is a serialized array literal.
-  UniquedStringVector arrays_{};
-
-  /// Each element records the instruction whose literal was serialized at the
-  /// corresponding index in \c arrays_.
-  std::vector<const Instruction *> arraysInst_{};
-
-  /// Each element is the keys portion of a serialized object literal.
-  UniquedStringVector objKeys_{};
-
-  /// Each element is the values portion of a serialized object literal.
-  UniquedStringVector objVals_{};
-
-  /// Each element records the instruction whose literal was serialized at the
-  /// corresponding index in \c objKeys_/objVals_.
-  std::vector<const Instruction *> objInst_{};
+  EvalThreadData(
+      std::unique_ptr<Buffer> src,
+      hbc::BCProviderFromSrc *provider,
+      uint32_t enclosingFuncID,
+      const CompileFlags &compileFlags,
+      uint32_t lexicalScopeIdxInParentFunction)
+      : src(std::move(src)),
+        provider(provider),
+        enclosingFuncID(enclosingFuncID),
+        compileFlags(compileFlags),
+        lexicalScopeIdxInParentFunction(lexicalScopeIdxInParentFunction) {}
 };
 
-void LiteralBufferBuilder::generate() {
-  traverse();
+static void compileEvalWorker(void *argPtr) {
+  EvalThreadData *data = reinterpret_cast<EvalThreadData *>(argPtr);
+  hbc::BCProviderFromSrc *provider = data->provider;
+  uint32_t enclosingFuncID = data->enclosingFuncID;
 
-  // Construct the serialized storage, optionally optimizing it.
-  ConsecutiveStringStorage arrayStorage{
-      arrays_.beginSet(), arrays_.endSet(), std::true_type{}, optimize_};
-  ConsecutiveStringStorage keyStorage{
-      objKeys_.beginSet(), objKeys_.endSet(), std::true_type{}, optimize_};
-  ConsecutiveStringStorage valStorage{
-      objVals_.beginSet(), objVals_.endSet(), std::true_type{}, optimize_};
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &enclosingFunc = bcModule->getFunction(enclosingFuncID);
+  Function *F = enclosingFunc.getFunctionIR();
 
-  // Populate the offset map.
-  BytecodeModuleGenerator::LiteralOffsetMapTy literalOffsetMap{};
-
-  // Visit all array literals.
-  auto arrayView = const_cast<const ConsecutiveStringStorage &>(arrayStorage)
-                       .getStringTableView();
-  for (size_t i = 0, e = arraysInst_.size(); i != e; ++i) {
-    assert(
-        literalOffsetMap.count(arraysInst_[i]) == 0 &&
-        "instruction literal can't be serialized twice");
-    uint32_t arrayIndexInSet = arrays_.indexInSet(i);
-    literalOffsetMap[arraysInst_[i]] = BytecodeModuleGenerator::LiteralOffset{
-        arrayView[arrayIndexInSet].getOffset(), UINT32_MAX};
-  }
-
-  // Visit all object literals - they are split in two buffers.
-  auto keyView = const_cast<const ConsecutiveStringStorage &>(keyStorage)
-                     .getStringTableView();
-  auto valView = const_cast<const ConsecutiveStringStorage &>(valStorage)
-                     .getStringTableView();
-  for (size_t i = 0, e = objInst_.size(); i != e; ++i) {
-    assert(
-        literalOffsetMap.count(objInst_[i]) == 0 &&
-        "instruction literal can't be serialized twice");
-    uint32_t keyIndexInSet = objKeys_.indexInSet(i);
-    uint32_t valIndexInSet = objVals_.indexInSet(i);
-    literalOffsetMap[objInst_[i]] = BytecodeModuleGenerator::LiteralOffset{
-        keyView[keyIndexInSet].getOffset(), valView[valIndexInSet].getOffset()};
-  }
-
-  bmGen_.initializeSerializedLiterals(
-      arrayStorage.acquireStringStorage(),
-      keyStorage.acquireStringStorage(),
-      valStorage.acquireStringStorage(),
-      std::move(literalOffsetMap));
-}
-
-void LiteralBufferBuilder::traverse() {
-  for (auto &F : *M_) {
-    if (!shouldVisitFunction_(&F))
-      continue;
-
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        if (auto *AAI = dyn_cast<AllocArrayInst>(&I)) {
-          serializeLiteralFor(AAI);
-        } else if (auto *AOFB = dyn_cast<HBCAllocObjectFromBufferInst>(&I)) {
-          serializeLiteralFor(AOFB);
-        }
-      }
-    }
-  }
-}
-
-void LiteralBufferBuilder::serializeInto(
-    UniquedStringVector &dest,
-    llvh::ArrayRef<Literal *> elements,
-    bool isKeyBuffer) {
-  tempBuffer_.clear();
-  literalGenerator_.serializeBuffer(elements, tempBuffer_, isKeyBuffer);
-  dest.push_back(
-      llvh::StringRef((const char *)tempBuffer_.data(), tempBuffer_.size()));
-}
-
-void LiteralBufferBuilder::serializeLiteralFor(AllocArrayInst *AAI) {
-  SmallVector<Literal *, 8> elements;
-  for (unsigned i = 0, e = AAI->getElementCount(); i < e; ++i) {
-    elements.push_back(cast<Literal>(AAI->getArrayElement(i)));
-  }
-
-  serializeInto(arrays_, elements, false);
-  arraysInst_.push_back(AAI);
-}
-
-void LiteralBufferBuilder::serializeLiteralFor(
-    HBCAllocObjectFromBufferInst *AOFB) {
-  unsigned e = AOFB->getKeyValuePairCount();
-  if (!e)
+  if (!F) {
+    data->success = false;
+    data->error =
+        "Unable to find scope data for local eval (generators are unsupported)";
     return;
-
-  SmallVector<Literal *, 8> objKeys;
-  SmallVector<Literal *, 8> objVals;
-  for (unsigned ind = 0; ind != e; ++ind) {
-    auto keyValuePair = AOFB->getKeyValuePair(ind);
-    objKeys.push_back(cast<Literal>(keyValuePair.first));
-    objVals.push_back(cast<Literal>(keyValuePair.second));
   }
 
-  serializeInto(objKeys_, objKeys, true);
-  serializeInto(objVals_, objVals, false);
-  assert(
-      objKeys_.size() == objVals_.size() &&
-      "objKeys_ and objVals_ must be the same size");
-  objInst_.push_back(AOFB);
-}
-}; // namespace
+  SourceErrorManager &manager =
+      F->getParent()->getContext().getSourceErrorManager();
+  SimpleDiagHandlerRAII outputManager{manager};
+  Context &context = F->getParent()->getContext();
 
-std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
-    Module *M,
-    Function *entryPoint,
-    const BytecodeGenerationOptions &options,
-    hermes::OptValue<uint32_t> segment,
-    SourceMapGenerator *sourceMapGen,
-    std::unique_ptr<BCProviderBase> baseBCProvider) {
-  return generateBytecodeModule(
-      M,
-      entryPoint,
-      entryPoint,
-      options,
-      segment,
-      sourceMapGen,
-      std::move(baseBCProvider));
+  context.setEmitAsyncBreakCheck(data->compileFlags.emitAsyncBreakCheck);
+  context.setEnableES6BlockScoping(data->compileFlags.enableES6BlockScoping);
+  context.setEnableAsyncGenerators(data->compileFlags.enableAsyncGenerators);
+  context.setDebugInfoSetting(
+      data->compileFlags.debug ? DebugInfoSetting::ALL
+                               : DebugInfoSetting::THROWING);
+
+  EvalCompilationDataInst *evalDataInst = F->getEvalCompilationDataInst();
+  if (!evalDataInst) {
+    data->success = false;
+    data->error = "Unable to find scope data for function in eval";
+    return;
+  }
+  const EvalCompilationData &evalData = evalDataInst->getData();
+  auto *funcInfo = evalData.semInfo;
+  sema::LexicalScope *lexScope =
+      funcInfo->getScopes()[data->lexicalScopeIdxInParentFunction];
+
+  // Free the AST once we're done compiling this function.
+  AllocationScope alloc(context.getAllocator());
+
+  int fileBufId = context.getSourceErrorManager().addNewSourceBuffer(
+      std::make_unique<HermesLLVMMemoryBuffer>(std::move(data->src), "eval"));
+
+  auto parserMode = parser::FullParse;
+
+  // NOTE: We don't use lazy compilation if eval requests it but the AST Context
+  // doesn't allow it.
+  // Eager compilation is really just a version of lazy compilation with very
+  // small functions, so it won't violate invariants on what the caller is
+  // expecting. e.g. when 'eval' calls this function with lazy compilation
+  // enabled, it copies the source into the MemoryBuffer.
+  if (context.isLazyCompilation() && data->compileFlags.lazy) {
+    auto preParser = parser::JSParser::preParseBuffer(
+        context, fileBufId, data->compileFlags.strict);
+    if (!preParser) {
+      data->success = false;
+      data->error = outputManager.getErrorString();
+      return;
+    }
+    preParser->registerMagicURLs();
+    parserMode = parser::LazyParse;
+  }
+
+  parser::JSParser parser(context, fileBufId, parserMode);
+  parser.setStrictMode(data->compileFlags.strict);
+
+  auto optParsed = parser.parse();
+  if (!optParsed) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  if (optParsed && parserMode != parser::LazyParse) {
+    parser.registerMagicURLs();
+  }
+
+  // Make a new SemContext which is a child of the SemContext we're referring
+  // to, allowing it to be freed when the eval is complete and the
+  // BCProviderFromSrc is destroyed.
+  std::shared_ptr<sema::SemContext> semCtx = std::make_shared<sema::SemContext>(
+      context, provider->shareSemCtx(), lexScope);
+
+  optParsed = llvh::cast<ESTree::ProgramNode>(
+      hermes::transformASTForCompilation(context, *optParsed));
+
+  // A non-null home object means the parent function context could reference
+  // super.
+  bool parentHadSuperBinding = evalDataInst->getHomeObject() != nullptr;
+  // If parsing or resolution fails, report the error and return.
+  if (!optParsed ||
+      !sema::resolveASTInScope(
+          context,
+          *semCtx,
+          llvh::cast<ESTree::ProgramNode>(*optParsed),
+          evalData.semInfo,
+          parentHadSuperBinding)) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  Function *newFunc = hermes::generateEvalIR(
+      F->getParent(),
+      evalDataInst,
+      llvh::cast<ESTree::FunctionLikeNode>(*optParsed),
+      *semCtx);
+  if (outputManager.haveErrors()) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  BytecodeGenerationOptions bcGenOpts =
+      provider->getBytecodeGenerationOptions();
+  bcGenOpts.verifyIR = data->compileFlags.verifyIR;
+
+  Module *M = provider->getModule();
+  assert(M && "missing IR data to compile");
+  auto bm = hbc::generateBytecodeModuleForEval(M, newFunc, bcGenOpts);
+  if (!bm) {
+    data->success = false;
+    data->error = outputManager.getErrorString();
+    return;
+  }
+
+  data->success = true;
+  data->result = BCProviderFromSrc::createFromBytecodeModule(
+      std::move(bm),
+      BCProviderFromSrc::CompilationData{
+          provider->getBytecodeGenerationOptions(),
+          provider->shareModule(),
+          semCtx});
 }
 
-/// Encode a Unicode codepoint into a UTF8 sequence and append it to \p
-/// storage. Code points above 0xFFFF are encoded into UTF16, and the
-/// resulting surrogate pair values are encoded individually into UTF8.
-static inline void appendUnicodeToStorage(
-    uint32_t cp,
-    llvh::SmallVectorImpl<char> &storage) {
-  // Sized to allow for two 16-bit values to be encoded.
-  // A 16-bit value takes up to three bytes encoded in UTF-8.
-  char buf[8];
-  char *d = buf;
-  // We need to normalize code points which would be encoded with a surrogate
-  // pair. Note that this produces technically invalid UTF-8.
-  if (LLVM_LIKELY(cp < 0x10000)) {
-    hermes::encodeUTF8(d, cp);
+} // namespace
+
+std::pair<bool, llvh::StringRef> compileLazyFunction(
+    hbc::BCProvider *baseProvider,
+    uint32_t funcID) {
+  auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
+
+  if (auto errMsgOpt = provider->getBytecodeModule()
+                           ->getFunction(funcID)
+                           .getLazyCompileError()) {
+    return {false, *errMsgOpt};
+  }
+
+  // Use this callback-style API to reduce conflicts with stable for now.
+  LazyCompilationThreadData data{provider, funcID};
+  compileLazyFunctionWorker(&data);
+
+  if (data.success) {
+    return std::make_pair(true, llvh::StringRef{});
   } else {
-    assert(cp <= UNICODE_MAX_VALUE && "invalid Unicode value");
-    cp -= 0x10000;
-    hermes::encodeUTF8(d, UTF16_HIGH_SURROGATE + ((cp >> 10) & 0x3FF));
-    hermes::encodeUTF8(d, UTF16_LOW_SURROGATE + (cp & 0x3FF));
+    BytecodeFunction &bcFunc =
+        provider->getBytecodeModule()->getFunction(funcID);
+    bcFunc.setLazyCompileError(std::move(data.error));
+    return std::make_pair(false, *bcFunc.getLazyCompileError());
   }
-  storage.append(buf, d);
 }
 
-std::unique_ptr<BytecodeModule> hbc::generateBytecodeModule(
-    Module *M,
-    Function *lexicalTopLevel,
-    Function *entryPoint,
-    const BytecodeGenerationOptions &options,
-    hermes::OptValue<uint32_t> segment,
-    SourceMapGenerator *sourceMapGen,
-    std::unique_ptr<BCProviderBase> baseBCProvider) {
-  PerfSection perf("Bytecode Generation");
-  lowerIR(M, options);
+SMLoc findSMLocFromCoords(
+    hbc::BCProvider *baseProvider,
+    uint32_t line,
+    uint32_t col) {
+  if (!llvh::isa<BCProviderFromSrc>(baseProvider))
+    return SMLoc{};
 
-  if (options.format == DumpLIR)
-    M->dump();
+  auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  assert(bcModule && "no bytecode module while debugging");
+  hbc::BytecodeFunction &globalFunc =
+      bcModule->getFunction(provider->getGlobalFunctionIndex());
+  Function *F = globalFunc.getFunctionIR();
+  assert(F && "no IR for global function while debugging");
 
-  BytecodeModuleGenerator BMGen(options);
+  SourceErrorManager &manager =
+      provider->getModule()->getContext().getSourceErrorManager();
 
-  if (segment) {
-    BMGen.setSegmentID(*segment);
-  }
-  // Empty if all functions should be generated (i.e. bundle splitting was not
-  // requested).
-  llvh::DenseSet<Function *> functionsToGenerate = segment
-      ? M->getFunctionsInSegment(*segment)
-      : llvh::DenseSet<Function *>{};
-
-  /// \return true if we should generate function \p f.
-  std::function<bool(const Function *)> shouldGenerate;
-  if (segment) {
-    shouldGenerate = [entryPoint, &functionsToGenerate](const Function *f) {
-      return f == entryPoint || functionsToGenerate.count(f) > 0;
-    };
-  } else {
-    shouldGenerate = [](const Function *) { return true; };
-  }
-
-  /// Mapping of the source text UTF-8 to the modified UTF-16-like
-  /// representation used by string literal encoding.
-  /// See appendUnicodeToStorage.
-  /// If a function source isn't in this map, then it's entirely ASCII and can
-  /// be added to the string table unmodified.
-  /// This allows us to add strings to the StringLiteralTable,
-  /// which will convert actual UTF-8 to UTF-16 automatically if it's detected,
-  /// meaning we'd not be able to directly look up the original function source
-  /// in the table.
-  llvh::DenseMap<llvh::StringRef, llvh::SmallVector<char, 32>>
-      unicodeFunctionSources{};
-
-  { // Collect all the strings in the bytecode module into a storage.
-    // If we are in delta optimizing mode, start with the string storage from
-    // our base bytecode provider.
-    auto strings = baseBCProvider
-        ? stringAccumulatorFromBCProvider(*baseBCProvider)
-        : UniquingStringLiteralAccumulator{};
-
-    auto addStringOrIdent = [&strings](llvh::StringRef str, bool isIdentifier) {
-      strings.addString(str, isIdentifier);
-    };
-
-    auto addString = [&strings](llvh::StringRef str) {
-      strings.addString(str, /* isIdentifier */ false);
-    };
-
-    traverseLiteralStrings(M, shouldGenerate, addStringOrIdent);
-
-    if (options.stripFunctionNames) {
-      addString(kStrippedFunctionName);
-    }
-
-    /// Add the original function source \p str to the \c strings table.
-    /// If it's not ASCII, re-encode it using the string table's string literal
-    /// encoding and map from the original source to the newly encoded source in
-    /// unicodeFunctionSources,so it can be reused below.
-    auto addFunctionSource = [&strings,
-                              &unicodeFunctionSources](llvh::StringRef str) {
-      if (hermes::isAllASCII(str.begin(), str.end())) {
-        // Fast path, no re-encoding needed.
-        strings.addString(str, /* isIdentifier */ false);
-      } else {
-        auto &storage = unicodeFunctionSources[str];
-        if (!storage.empty())
-          return;
-        for (const char *cur = str.begin(), *e = str.end(); cur != e;
-             /* increment in body */) {
-          if (LLVM_UNLIKELY(isUTF8Start(*cur))) {
-            // Decode and re-encode the character and append it to the string
-            // storage
-            appendUnicodeToStorage(
-                hermes::_decodeUTF8SlowPath<false>(
-                    cur, [](const llvh::Twine &) {}),
-                storage);
-          } else {
-            storage.push_back(*cur);
-            ++cur;
-          }
-        }
-        strings.addString(
-            llvh::StringRef{storage.begin(), storage.size()},
-            /* isIdentifier */ false);
-      }
-    };
-
-    // Populate strings table and if the source of a function contains unicode,
-    // add an entry to the unicodeFunctionSources.
-    traverseFunctions(
-        M,
-        shouldGenerate,
-        addString,
-        addFunctionSource,
-        options.stripFunctionNames);
-
-    if (!M->getCJSModulesResolved()) {
-      traverseCJSModuleNames(M, shouldGenerate, addString);
-    }
-
-    BMGen.initializeStringTable(
-        UniquingStringLiteralAccumulator::toTable(
-            std::move(strings), options.optimizationEnabled));
-  }
-
-  // Generate the serialized literal buffers.
-  {
-    LiteralBufferBuilder litBuilder{
-        M, shouldGenerate, BMGen, options.optimizationEnabled};
-    litBuilder.generate();
-  }
-
-  // Add each function to BMGen so that each function has a unique ID.
-  for (auto &F : *M) {
-    if (!shouldGenerate(&F)) {
-      continue;
-    }
-
-    unsigned index = BMGen.addFunction(&F);
-    if (&F == entryPoint) {
-      BMGen.setEntryPointIndex(index);
-    }
-
-    auto *cjsModule = M->findCJSModule(&F);
-    if (cjsModule) {
-      if (M->getCJSModulesResolved()) {
-        BMGen.addCJSModuleStatic(cjsModule->id, index);
-      } else {
-        BMGen.addCJSModule(index, BMGen.getStringID(cjsModule->filename.str()));
-      }
-    }
-
-    // Add entries to function source table for non-default source.
-    if (!F.isGlobalScope()) {
-      if (auto source = F.getSourceRepresentationStr()) {
-        auto it = unicodeFunctionSources.find(*source);
-        // If the original source was mapped to a re-encoded one in
-        // unicodeFunctionSources, then use the re-encoded source to lookup the
-        // string ID. Otherwise it's ASCII and can be used directly.
-        if (it != unicodeFunctionSources.end()) {
-          BMGen.addFunctionSource(
-              index,
-              BMGen.getStringID(
-                  llvh::StringRef{it->second.begin(), it->second.size()}));
-        } else {
-          BMGen.addFunctionSource(index, BMGen.getStringID(*source));
-        }
-      }
-    }
-  }
-  assert(BMGen.getEntryPointIndex() != -1 && "Entry point not added");
-
-  // Construct the relative function scope depth map.
-  FunctionScopeAnalysis scopeAnalysis{lexicalTopLevel};
-
-  // Allow reusing the debug cache between functions
-  FileAndSourceMapIdCache debugCache{};
-
-  // Bytecode generation for each function.
-  for (auto &F : *M) {
-    if (!shouldGenerate(&F)) {
-      continue;
-    }
-
-    std::unique_ptr<BytecodeFunctionGenerator> funcGen;
-
-    if (F.isLazy()) {
-      funcGen = BytecodeFunctionGenerator::create(BMGen, 0);
-    } else {
-      HVMRegisterAllocator RA(&F);
-      ScopeRegisterAnalysis SRA(&F, RA);
-      if (!options.optimizationEnabled) {
-        RA.setFastPassThreshold(kFastRegisterAllocationThreshold);
-        RA.setMemoryLimit(kRegisterAllocationMemoryLimit);
-      }
-      PostOrderAnalysis PO(&F);
-      /// The order of the blocks is reverse-post-order, which is a simply
-      /// topological sort.
-      llvh::SmallVector<BasicBlock *, 16> order(PO.rbegin(), PO.rend());
-      RA.allocate(order);
-
-      if (options.format == DumpRA) {
-        RA.dump();
-      }
-
-      PassManager PM{M->getContext().getCodeGenerationSettings()};
-      PM.addPass<LowerStoreInstrs>(RA);
-      PM.addPass<LowerCalls>(RA);
-      if (options.optimizationEnabled) {
-        PM.addPass<MovElimination>(RA);
-        PM.addPass<RecreateCheapValues>(RA);
-        PM.addPass<LoadConstantValueNumbering>(RA);
-      }
-      PM.addPass<SpillRegisters>(RA);
-      if (options.basicBlockProfiling) {
-        // Insert after all other passes so that it sees final basic block
-        // list.
-        PM.addPass<InsertProfilePoint>();
-      }
-      PM.run(&F);
-
-      if (options.format == DumpLRA)
-        RA.dump();
-
-      if (options.format == DumpPostRA)
-        F.dump();
-
-      funcGen =
-          BytecodeFunctionGenerator::create(BMGen, RA.getMaxRegisterUsage());
-      HBCISel hbciSel(
-          &F, funcGen.get(), RA, scopeAnalysis, SRA, options, debugCache);
-      hbciSel.generate(sourceMapGen);
-    }
-
-    if (funcGen->hasEncodingError()) {
-      M->getContext().getSourceErrorManager().error(
-          F.getSourceRange().Start, "Error encoding bytecode");
-      return nullptr;
-    }
-    BMGen.setFunctionGenerator(&F, std::move(funcGen));
-  }
-
-  return BMGen.generate();
+  // Convert the coords to SMLoc to check for membership, because that's simpler
+  // than converting the exclusive end SMLoc of the function to coords,
+  // plus it only requires one conversion.
+  SourceErrorManager::SourceCoords coords{
+      manager.findBufferIdForLoc(F->getSourceRange().Start), line, col};
+  return manager.findSMLocFromCoords(coords);
 }
 
-std::unique_ptr<BytecodeModule> hbc::generateBytecode(
-    Module *M,
-    raw_ostream &OS,
-    const BytecodeGenerationOptions &options,
-    const SHA1 &sourceHash,
-    hermes::OptValue<uint32_t> segment,
-    SourceMapGenerator *sourceMapGen,
-    std::unique_ptr<BCProviderBase> baseBCProvider) {
-  auto BM = generateBytecodeModule(
-      M,
-      M->getTopLevelFunction(),
-      options,
-      segment,
-      sourceMapGen,
-      std::move(baseBCProvider));
+SMRange findSMRangeForLine(hbc::BCProvider *baseProvider, uint32_t line) {
+  if (!llvh::isa<BCProviderFromSrc>(baseProvider))
+    return SMRange{};
 
-  if (!BM) {
+  auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  assert(bcModule && "no bytecode module while debugging");
+  hbc::BytecodeFunction &globalFunc =
+      bcModule->getFunction(provider->getGlobalFunctionIndex());
+  Function *F = globalFunc.getFunctionIR();
+  assert(F && "no IR for global function while debugging");
+
+  SourceErrorManager &manager =
+      provider->getModule()->getContext().getSourceErrorManager();
+
+  // Convert the coords to SMLoc to check for membership, because that's simpler
+  // than converting the exclusive end SMLoc of the function to coords,
+  // plus it only requires one conversion.
+  return manager.findSMRangeForLine(
+      manager.findBufferIdForLoc(F->getSourceRange().Start), line);
+}
+
+bool coordsInLazyFunction(
+    hbc::BCProvider *baseProvider,
+    uint32_t funcID,
+    SMLoc loc,
+    OptValue<SMLoc> end) {
+  auto *provider = llvh::cast<BCProviderFromSrc>(baseProvider);
+  hbc::BytecodeModule *bcModule = provider->getBytecodeModule();
+  hbc::BytecodeFunction &lazyFunc = bcModule->getFunction(funcID);
+  assert(lazyFunc.isLazy() && "function is not lazy");
+  Function *F = lazyFunc.getFunctionIR();
+  assert(F && "no lazy IR for lazy function");
+
+  if (!loc.isValid())
+    return false;
+
+  bool startsIn = F->getSourceRange().Start.getPointer() <= loc.getPointer() &&
+      loc.getPointer() < F->getSourceRange().End.getPointer();
+  // If the loc is in the function, we're done.
+  if (startsIn)
+    return true;
+
+  // If the end is specified, check if the range is larger than the function.
+  if (end.hasValue()) {
+    return loc.getPointer() <= F->getSourceRange().Start.getPointer() &&
+        F->getSourceRange().End.getPointer() <= end.getValue().getPointer();
+  }
+
+  // Otherwise, failed.
+  return false;
+}
+
+std::pair<std::unique_ptr<BCProvider>, std::string> compileEvalModule(
+    std::unique_ptr<Buffer> src,
+    hbc::BCProvider *provider,
+    uint32_t enclosingFuncID,
+    const CompileFlags &compileFlags,
+    uint32_t lexicalScopeIdxInParentFunction) {
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
+  if (!providerFromSrc) {
+    return std::make_pair(
+        std::unique_ptr<BCProviderFromSrc>{},
+        "Code compiled without support for eval");
+  }
+  // Use this callback-style API to reduce conflicts with stable for now.
+  EvalThreadData data{
+      std::move(src),
+      providerFromSrc,
+      enclosingFuncID,
+      compileFlags,
+      lexicalScopeIdxInParentFunction};
+  compileEvalWorker(&data);
+
+  return data.success
+      ? std::make_pair(std::move(data.result), "")
+      : std::make_pair(std::unique_ptr<BCProviderFromSrc>{}, data.error);
+}
+
+/// \return true if \p decl should be shown when collecting variables.
+static bool shouldListDecl(sema::Decl *decl) {
+  if (decl->special == sema::Decl::Special::Arguments)
+    return false;
+  switch (decl->kind) {
+    case sema::Decl::Kind::Let:
+    case sema::Decl::Kind::Const:
+    case sema::Decl::Kind::Catch:
+    case sema::Decl::Kind::ES5Catch:
+    case sema::Decl::Kind::Var:
+    case sema::Decl::Kind::Parameter:
+      return true;
+    default:
+      return false;
+  }
+}
+
+/// \return the sema::FunctionInfo for function \p funcID, living in \p
+/// BCProvider, or nullptr if none can be found.
+static const sema::FunctionInfo *getFunctionInfo(
+    hbc::BCProvider *provider,
+    uint32_t funcID) {
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::dyn_cast<hbc::BCProviderFromSrc>(provider);
+  if (!providerFromSrc) {
+    return nullptr;
+  }
+  hbc::BytecodeModule *bcModule = providerFromSrc->getBytecodeModule();
+  hbc::BytecodeFunction &bcFunc = bcModule->getFunction(funcID);
+  Function *F = bcFunc.getFunctionIR();
+  if (!F) {
+    return nullptr;
+  }
+  auto &evalData = F->getEvalCompilationDataInst()->getData();
+  return evalData.semInfo;
+}
+
+std::vector<uint32_t> getVariableCounts(
+    hbc::BCProvider *provider,
+    uint32_t funcID,
+    uint32_t lexicalScopeIdxInParentFunction) {
+  auto *funcInfo = getFunctionInfo(provider, funcID);
+  if (!funcInfo)
+    return std::vector<uint32_t>({0});
+  sema::LexicalScope *lexScope =
+      funcInfo->getScopes()[lexicalScopeIdxInParentFunction];
+  assert(lexScope && "lexical scope cannot be null.");
+  std::vector<uint32_t> counts;
+  for (auto *cur = lexScope; cur; cur = cur->parentScope) {
+    counts.push_back(llvh::count_if(cur->decls, shouldListDecl));
+  }
+  return counts;
+}
+
+VariableInfoAtDepth getVariableInfoAtDepth(
+    hbc::BCProvider *provider,
+    uint32_t funcID,
+    uint32_t depth,
+    uint32_t variableIndex,
+    uint32_t lexicalScopeIdxInParentFunction) {
+  auto *funcInfo = getFunctionInfo(provider, funcID);
+  if (!funcInfo)
     return {};
+  sema::LexicalScope *lexScope =
+      funcInfo->getScopes()[lexicalScopeIdxInParentFunction];
+  assert(lexScope && "lexical scope cannot be null.");
+  auto *beginLexScope = lexScope;
+  for (size_t i = 0; i < depth; i++) {
+    lexScope = lexScope->parentScope;
+    assert(lexScope && "depth out of bounds");
   }
 
-  if (options.format == OutputFormatKind::EmitBundle) {
-    assert(BM != nullptr);
-    BytecodeSerializer BS{OS, options};
-    BS.serialize(*BM, sourceHash);
+  /// In order to avoid having to search through the entire `decls` array each
+  /// time, the result of the last call is cached, and used to try to restart
+  /// the search from that point. This struct is the cache information.
+  struct CachedValues {
+    // The lexical scope queried.
+    sema::LexicalScope *lexScope = nullptr;
+    // The variable index queried.
+    uint32_t variableIndex = UINT32_MAX;
+    // The resulting index into the lexical scope's decl that satisfies the
+    // variableIndex search.
+    uint32_t declIdx = UINT32_MAX;
+  };
+  hbc::BCProviderFromSrc *providerFromSrc =
+      llvh::cast<hbc::BCProviderFromSrc>(provider);
+  sema::SemContext *semCtx = providerFromSrc->getSemCtx();
+  if (!semCtx->customData2) {
+    // The lifetime of this cache has to be tied to the lifetime of the
+    // SemContext. A SemContext could be destoryed and allocated again. there's
+    // then a potential for a new LexicalScope in the same place but with
+    // different data. Use shared_ptr to make sure it isn't accessible after the
+    // SemContext is freed.
+    semCtx->customData2 = std::make_shared<CachedValues>();
   }
-  // Now that the BytecodeFunctions know their offsets into the stream, we can
-  // populate the source map.
-  if (sourceMapGen)
-    BM->populateSourceMap(sourceMapGen);
-  return BM;
+  auto *cache = static_cast<CachedValues *>(semCtx->customData2.get());
+
+  const auto &decls = lexScope->decls;
+  // This is how many listable decls we need to find in order to satisfy the
+  // search for \p variableIdx.
+  uint32_t targetListableDeclsSeen = variableIndex + 1;
+  // The index we found the matching decl. Initialized to out of bounds.
+  uint32_t declIdx = 0;
+  // When iterating through the decls, how many user-presentable decls have been
+  // seen.
+  uint32_t listableDeclsSeen;
+  uint32_t beginDeclIdx;
+  // Only reuse the cached values when searching for a subsequent variableIdx on
+  // the same lexical scope as last time.
+  if (lexScope == cache->lexScope && variableIndex > cache->variableIndex) {
+    beginDeclIdx = cache->declIdx;
+    listableDeclsSeen = cache->variableIndex;
+  } else {
+    beginDeclIdx = 0;
+    listableDeclsSeen = 0;
+  }
+  for (size_t i = beginDeclIdx, e = decls.size(); i < e; ++i) {
+    if (shouldListDecl(decls[i])) {
+      if (++listableDeclsSeen == targetListableDeclsSeen) {
+        declIdx = i;
+        break;
+      }
+    }
+  }
+  assert(
+      listableDeclsSeen == targetListableDeclsSeen &&
+      "variable at variableIdx not found");
+  sema::Decl *decl = decls[declIdx];
+  auto *varForDecl = static_cast<Variable *>(getDeclCustomData(decl));
+
+  // Calculate how many steps is required to get to the target VariableScope.
+  VariableScope *curVS = getLexicalScopeCustomData(beginLexScope);
+  VariableScope *targetVS = getLexicalScopeCustomData(lexScope);
+  assert(curVS && targetVS && "VariableScope must be set for lexical scopes");
+  uint32_t varScopeDepth = 0;
+  for (; curVS; curVS = curVS->getParentScope()) {
+    if (curVS == targetVS) {
+      break;
+    }
+    ++varScopeDepth;
+  }
+  assert(curVS && "target VariableScope could not be reached");
+
+  cache->lexScope = lexScope;
+  cache->variableIndex = variableIndex;
+  cache->declIdx = declIdx;
+  return {
+      decl->name.str(), varScopeDepth, varForDecl->getIndexInVariableList()};
 }
+
+} // namespace hbc
+} // namespace hermes
 
 #undef DEBUG_TYPE

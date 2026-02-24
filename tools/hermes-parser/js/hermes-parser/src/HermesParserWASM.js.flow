@@ -44,10 +44,20 @@ export type HermesParserWASM = $ReadOnly<{
     (
       'hermesParse',
       'number',
-      ['number', 'number', 'number', 'number', 'number', 'number', 'number'],
+      [
+        'number',
+        'number',
+        'number',
+        'number',
+        'number',
+        'number',
+        'number',
+        'number',
+      ],
     ): (
       number,
       number,
+      CBoolean,
       CBoolean,
       CBoolean,
       CBoolean,

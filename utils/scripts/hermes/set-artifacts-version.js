@@ -17,7 +17,6 @@ const {
   getVersion,
   validateBuildType,
   updateGradlePropertiesFile,
-  updatePackageJsonVersion,
 } = require('./version-utils');
 const {promises: fs} = require('fs');
 const path = require('path');
@@ -29,17 +28,13 @@ const config = {
       type: 'string',
       short: 'b',
     },
-    hermesVersion: {
-      type: 'string',
-      short: 'v',
-    },
     help: {type: 'boolean'},
   },
 };
 
 async function main() {
   const {
-    values: {'build-type': buildType, hermesVersion, help},
+    values: {'build-type': buildType, help},
     /* $FlowFixMe[incompatible-call] Natural Inference rollout. See
      * https://fburl.com/workplace/6291gfvu */
   } = parseArgs(config);
@@ -51,8 +46,7 @@ async function main() {
   Updates version in gradle.proparties file.
 
   Options:
-    --build-type       One of ['dry-run', 'commitly', 'release'].
-    --version          Use a specific version instead of generating one.
+    --build-type       One of ['dry-run', 'release'].
     `);
     return;
   }
@@ -61,13 +55,8 @@ async function main() {
     throw new Error(`Unsupported build type: ${buildType}`);
   }
 
-  let version = hermesVersion;
-  if (!version) {
-    version = await getVersion(buildType);
-  }
-
+  const version = await getVersion(buildType);
   await updateGradlePropertiesFile(version);
-  await updatePackageJsonVersion(version);
 }
 
 if (require.main === module) {

@@ -15,15 +15,14 @@
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
 
-#define INCLUDE_ALL_INSTRS
-
 using namespace hermes;
 
 unsigned TerminatorInst::getNumSuccessors() const {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
-    return I->getNumSuccessors();
+    return I->getNumSuccessorsImpl();
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
 
   llvm_unreachable("not a terminator?!");
@@ -33,7 +32,8 @@ BasicBlock *TerminatorInst::getSuccessor(unsigned idx) const {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
-    return I->getSuccessor(idx);
+    return I->getSuccessorImpl(idx);
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
 
   llvm_unreachable("not a terminator?!");
@@ -43,145 +43,106 @@ void TerminatorInst::setSuccessor(unsigned idx, BasicBlock *B) {
 #undef TERMINATOR
 #define TERMINATOR(CLASS, PARENT)           \
   if (auto I = llvh::dyn_cast<CLASS>(this)) \
-    return I->setSuccessor(idx, B);
+    return I->setSuccessorImpl(idx, B);
+#define BEGIN_TERMINATOR(NAME, PARENT) TERMINATOR(NAME, PARENT)
 #include "hermes/IR/Instrs.def"
 
   llvm_unreachable("not a terminator?!");
 }
 
-bool hermes::isSideEffectFree(Type T) {
-  return T.isPrimitive();
-}
-
 const char *UnaryOperatorInst::opStringRepr[] =
-    {"delete", "void", "typeof", "+", "-", "~", "!", "++", "--"};
+    {"void", "-", "~", "!", "++", "--"};
 
 const char *BinaryOperatorInst::opStringRepr[] = {
-    "",   "==", "!=",  "===", "!==", "<", "<=", ">",         ">=",
-    "<<", ">>", ">>>", "+",   "-",   "*", "/",  "%",         "|",
-    "^",  "&",  "**",  "",    "",    "",  "in", "instanceof"};
+    "==", "!=", "===", "!==", "<",  "<=", ">",         ">=",
+    "<<", ">>", ">>>", "+",   "-",  "*",  "/",         "%",
+    "|",  "^",  "&",   "**",  "in", "in", "instanceof"};
 
 const char *BinaryOperatorInst::assignmentOpStringRepr[] = {
-    "=",   "",    "",     "",    "",    "",      "",   "",   "",
-    "<<=", ">>=", ">>>=", "+=",  "-=",  "*=",    "/=", "%=", "|=",
-    "^=",  "&=",  "**=",  "||=", "&&=", "\?\?=", "",   ""};
+    "",   "",   "",   "",   "",   "",   "",   "",    "<<=", ">>=", ">>>=", "+=",
+    "-=", "*=", "/=", "%=", "|=", "^=", "&=", "**=", "",    "",    ""};
 
-UnaryOperatorInst::OpKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
-  for (int i = 0; i < static_cast<int>(BinaryOperatorInst::OpKind::LAST_OPCODE);
-       i++) {
-    if (op == UnaryOperatorInst::opStringRepr[i]) {
-      return static_cast<UnaryOperatorInst::OpKind>(i);
-    }
+ValueKind UnaryOperatorInst::parseOperator(llvh::StringRef op) {
+  for (int i = 0; i < HERMES_IR_CLASS_LENGTH(UnaryOperatorInst); ++i) {
+    if (op == UnaryOperatorInst::opStringRepr[i])
+      return HERMES_IR_OFFSET_TO_KIND(UnaryOperatorInst, i);
   }
 
   llvm_unreachable("invalid operator string");
 }
 
-SideEffectKind UnaryOperatorInst::getSideEffect() {
-  if (getOperatorKind() == OpKind::DeleteKind) {
-    return SideEffectKind::Unknown;
+SideEffect UnaryOperatorInst::getSideEffectImpl() const {
+  if (getSingleOperand()->getType().isPrimitive()) {
+    return SideEffect{}.setIdempotent();
   }
 
-  if (isSideEffectFree(getSingleOperand()->getType())) {
-    return SideEffectKind::None;
-  }
-
-  switch (getOperatorKind()) {
-    case OpKind::VoidKind: // void
-    case OpKind::TypeofKind: // typeof
-      return SideEffectKind::None;
+  switch (getKind()) {
+    case ValueKind::UnaryVoidInstKind: // void
+      return SideEffect{}.setIdempotent();
 
     default:
       break;
   }
 
-  return SideEffectKind::Unknown;
+  return SideEffect::createExecute();
 }
 
-static BinaryOperatorInst::OpKind parseOperator_impl(
+static ValueKind parseOperator_impl(
     llvh::StringRef op,
     const char **lookup_table) {
-  for (int i = 0; i < static_cast<int>(BinaryOperatorInst::OpKind::LAST_OPCODE);
-       i++) {
-    if (op == lookup_table[i]) {
-      return static_cast<BinaryOperatorInst::OpKind>(i);
-    }
+  for (int i = 0; i < HERMES_IR_CLASS_LENGTH(BinaryOperatorInst); ++i) {
+    if (op == lookup_table[i])
+      return HERMES_IR_OFFSET_TO_KIND(BinaryOperatorInst, i);
   }
 
   llvm_unreachable("invalid operator string");
 }
 
-BinaryOperatorInst::OpKind BinaryOperatorInst::parseOperator(
-    llvh::StringRef op) {
+ValueKind BinaryOperatorInst::parseOperator(llvh::StringRef op) {
   return parseOperator_impl(op, opStringRepr);
 }
 
-BinaryOperatorInst::OpKind BinaryOperatorInst::parseAssignmentOperator(
-    llvh::StringRef op) {
+ValueKind BinaryOperatorInst::parseAssignmentOperator(llvh::StringRef op) {
   return parseOperator_impl(op, assignmentOpStringRepr);
 }
 
-llvh::Optional<BinaryOperatorInst::OpKind>
-BinaryOperatorInst::tryGetReverseOperator(BinaryOperatorInst::OpKind op) {
-  switch (op) {
-    // Commutative operators
-    case OpKind::EqualKind:
-    case OpKind::NotEqualKind:
-    case OpKind::StrictlyEqualKind:
-    case OpKind::StrictlyNotEqualKind:
-    case OpKind::AddKind:
-    case OpKind::MultiplyKind:
-    case OpKind::OrKind:
-    case OpKind::XorKind:
-    case OpKind::AndKind:
-      return op;
-
-    // Rewritable operators
-    case OpKind::LessThanKind:
-      return OpKind::GreaterThanKind;
-    case OpKind::LessThanOrEqualKind:
-      return OpKind::GreaterThanOrEqualKind;
-    case OpKind::GreaterThanKind:
-      return OpKind::LessThanKind;
-    case OpKind::GreaterThanOrEqualKind:
-      return OpKind::LessThanOrEqualKind;
-
-    default:
-      return llvh::None;
-  }
-}
-
-SideEffectKind
-BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
+SideEffect BinaryOperatorInst::getBinarySideEffect(
+    Type leftTy,
+    Type rightTy,
+    ValueKind op) {
   switch (op) {
     // The 'in' and 'instanceof' operators may execute arbitrary code, or throw
     // when given primitive types:
-    case OpKind::InKind:
-    case OpKind::InstanceOfKind:
-      return SideEffectKind::Unknown;
+    case ValueKind::BinaryInInstKind:
+    case ValueKind::BinaryInstanceOfInstKind:
+      return SideEffect::createExecute();
+
+    // Checking for a private property cannot execute any JS, but it can throw.
+    case ValueKind::BinaryPrivateInInstKind:
+      return SideEffect{}.setThrow();
 
     // Strict equality does not throw or have other side effects (per
     // ES5 11.9.6).
-    case OpKind::StrictlyNotEqualKind:
-    case OpKind::StrictlyEqualKind:
-      return SideEffectKind::None;
+    case ValueKind::BinaryStrictlyNotEqualInstKind:
+    case ValueKind::BinaryStrictlyEqualInstKind:
+      return SideEffect{}.setIdempotent();
 
-    case OpKind::EqualKind:
-    case OpKind::NotEqualKind:
-    case OpKind::LessThanKind:
-    case OpKind::LessThanOrEqualKind:
-    case OpKind::GreaterThanKind:
-    case OpKind::GreaterThanOrEqualKind:
+    case ValueKind::BinaryEqualInstKind:
+    case ValueKind::BinaryNotEqualInstKind:
+    case ValueKind::BinaryLessThanInstKind:
+    case ValueKind::BinaryLessThanOrEqualInstKind:
+    case ValueKind::BinaryGreaterThanInstKind:
+    case ValueKind::BinaryGreaterThanOrEqualInstKind:
       // This instruction does not read/write memory if the LHS and RHS types
       // are known to be primitive.
       if (leftTy.isPrimitive() && rightTy.isPrimitive())
-        return SideEffectKind::None;
+        return SideEffect{}.setIdempotent();
       break;
 
-    case OpKind::UnsignedRightShiftKind:
-    case OpKind::DivideKind:
-    case OpKind::ModuloKind:
-    case OpKind::ExponentiationKind:
+    case ValueKind::BinaryUnsignedRightShiftInstKind:
+    case ValueKind::BinaryDivideInstKind:
+    case ValueKind::BinaryModuloInstKind:
+    case ValueKind::BinaryExponentiationInstKind:
       // We can only reason about primitive types.
       if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
         break;
@@ -191,51 +152,51 @@ BinaryOperatorInst::getBinarySideEffect(Type leftTy, Type rightTy, OpKind op) {
       // - BigInt division by zero.
       // - BigInt as exponent can't be negative
       if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
-        return SideEffectKind::Unknown;
+        return SideEffect{}.setThrow();
       // We have primitive operands that are not BigInt.
-      return SideEffectKind::None;
+      return SideEffect{}.setIdempotent();
 
-    case OpKind::AddKind:
+    case ValueKind::BinaryAddInstKind:
       // We can only reason about primitive types.
       if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
         break;
       // If one of the operands is a string, it is side effect free.
       if (leftTy.isStringType() || rightTy.isStringType())
-        return SideEffectKind::None;
+        return SideEffect{}.setIdempotent();
       [[fallthrough]];
 
-    case OpKind::LeftShiftKind:
-    case OpKind::RightShiftKind:
-    case OpKind::SubtractKind:
-    case OpKind::MultiplyKind:
-    case OpKind::OrKind:
-    case OpKind::XorKind:
-    case OpKind::AndKind:
+    case ValueKind::BinaryLeftShiftInstKind:
+    case ValueKind::BinaryRightShiftInstKind:
+    case ValueKind::BinarySubtractInstKind:
+    case ValueKind::BinaryMultiplyInstKind:
+    case ValueKind::BinaryOrInstKind:
+    case ValueKind::BinaryXorInstKind:
+    case ValueKind::BinaryAndInstKind:
       // We can only reason about primitive types.
       if (!leftTy.isPrimitive() || !rightTy.isPrimitive())
         break;
       // If both operands are BigInt, it is side effect free.
       if (leftTy.isBigIntType() && rightTy.isBigIntType())
-        return SideEffectKind::None;
+        return SideEffect{}.setIdempotent();
       // However BigInt arithmetic operands don't mix with any other type.
       if (leftTy.canBeBigInt() || rightTy.canBeBigInt())
-        return SideEffectKind::Unknown;
+        return SideEffect{}.setThrow();
       // We have primitive operands that are not BigInt.
-      return SideEffectKind::None;
+      return SideEffect{}.setIdempotent();
 
     default:
       hermes_fatal("Invalid binary operator");
   }
 
   // This binary operation may execute arbitrary code.
-  return SideEffectKind::Unknown;
+  return SideEffect::createExecute();
 }
 
 SwitchInst::SwitchInst(
     Value *input,
     BasicBlock *defaultBlock,
-    const ValueListType &values,
-    const BasicBlockListType &blocks)
+    llvh::ArrayRef<Literal *> values,
+    llvh::ArrayRef<BasicBlock *> blocks)
     : TerminatorInst(ValueKind::SwitchInstKind) {
   pushOperand(input);
   pushOperand(defaultBlock);
@@ -258,22 +219,22 @@ unsigned SwitchInst::getNumCasePair() const {
 }
 
 std::pair<Literal *, BasicBlock *> SwitchInst::getCasePair(unsigned i) const {
-  // The values and lables are twined together. Find the index of the pair
+  // The values and labels are twined together. Find the index of the pair
   // that we are fetching and return the two values.
   unsigned base = i * 2 + FirstCaseIdx;
   return std::make_pair(
       cast<Literal>(getOperand(base)), cast<BasicBlock>(getOperand(base + 1)));
 }
 
-BasicBlock *SwitchInst::getSuccessor(unsigned idx) const {
-  assert(idx < getNumSuccessors() && "getSuccessor out of bound!");
+BasicBlock *SwitchInst::getSuccessorImpl(unsigned idx) const {
+  assert(idx < getNumSuccessorsImpl() && "getSuccessor out of bound!");
   if (idx == 0)
     return getDefaultDestination();
   return getCasePair(idx - 1).second;
 }
 
-void SwitchInst::setSuccessor(unsigned idx, BasicBlock *B) {
-  assert(idx < getNumSuccessors() && "setSuccessor out of bound!");
+void SwitchInst::setSuccessorImpl(unsigned idx, BasicBlock *B) {
+  assert(idx < getNumSuccessorsImpl() && "setSuccessor out of bound!");
   if (idx == 0) {
     setOperand(B, DefaultBlockIdx);
     return;
@@ -297,6 +258,7 @@ PhiInst::PhiInst(const ValueListType &values, const BasicBlockListType &blocks)
     pushOperand(values[i]);
     pushOperand(blocks[i]);
   }
+  recalculateResultType();
 }
 
 unsigned PhiInst::getNumEntries() const {
@@ -318,14 +280,40 @@ std::pair<Value *, BasicBlock *> PhiInst::getEntry(unsigned i) const {
 void PhiInst::updateEntry(unsigned i, Value *val, BasicBlock *BB) {
   setOperand(val, indexOfPhiEntry(i));
   setOperand(BB, indexOfPhiEntry(i) + 1);
+  recalculateResultType();
 }
 
 void PhiInst::addEntry(Value *val, BasicBlock *BB) {
   pushOperand(val);
   pushOperand(BB);
+  setType(Type::unionTy(getType(), val->getType()));
 }
 
 void PhiInst::removeEntry(unsigned index) {
+  removeEntryHelper(index);
+  recalculateResultType();
+}
+
+void PhiInst::removeEntry(BasicBlock *BB) {
+  bool needRecalc = false;
+  unsigned i = 0;
+  // For each one of the entries:
+  while (i < getNumEntries()) {
+    // If this entry is from the BB we want to remove, then remove it.
+    if (getEntry(i).second == BB) {
+      removeEntryHelper(i);
+      needRecalc = true;
+      // keep the current iteration index.
+      continue;
+    }
+    // Else, move to the next entry.
+    i++;
+  }
+  if (needRecalc)
+    recalculateResultType();
+}
+
+void PhiInst::removeEntryHelper(unsigned index) {
   // Remove the pair at the right offset. See calculation of getEntry above.
   unsigned startIdx = indexOfPhiEntry(index);
   // Remove the value:
@@ -335,27 +323,25 @@ void PhiInst::removeEntry(unsigned index) {
   removeOperand(startIdx);
 }
 
-void PhiInst::removeEntry(BasicBlock *BB) {
-  unsigned i = 0;
-  // For each one of the entries:
-  while (i < getNumEntries()) {
-    // If this entry is from the BB we want to remove, then remove it.
-    if (getEntry(i).second == BB) {
-      removeEntry(i);
-      // keep the current iteration index.
-      continue;
+void PhiInst::recalculateResultType() {
+  Type res = Type::createNoType();
+  for (unsigned i = 0, e = getNumEntries(); i != e; ++i) {
+    // It's possible the Phi has a nullptr operand,
+    // e.g. if the value was erased but this Phi wasn't erased yet.
+    // setOperand handles this scenario gracefully, so Phi must as well.
+    if (getEntry(i).first) {
+      res = Type::unionTy(res, getEntry(i).first->getType());
     }
-    // Else, move to the next entry.
-    i++;
   }
+  setType(res);
 }
 
 GetPNamesInst::GetPNamesInst(
     BasicBlock *parent,
-    Value *iteratorAddr,
-    Value *baseAddr,
-    Value *indexAddr,
-    Value *sizeAddr,
+    AllocStackInst *iteratorAddr,
+    AllocStackInst *baseAddr,
+    AllocStackInst *indexAddr,
+    AllocStackInst *sizeAddr,
     BasicBlock *onEmpty,
     BasicBlock *onSome)
     : TerminatorInst(ValueKind::GetPNamesInstKind) {
@@ -369,11 +355,11 @@ GetPNamesInst::GetPNamesInst(
 
 GetNextPNameInst::GetNextPNameInst(
     BasicBlock *parent,
-    Value *propertyAddr,
-    Value *baseAddr,
-    Value *indexAddr,
-    Value *sizeAddr,
-    Value *iteratorAddr,
+    AllocStackInst *propertyAddr,
+    AllocStackInst *baseAddr,
+    AllocStackInst *indexAddr,
+    AllocStackInst *sizeAddr,
+    AllocStackInst *iteratorAddr,
     BasicBlock *onLast,
     BasicBlock *onSome)
     : TerminatorInst(ValueKind::GetNextPNameInstKind) {
@@ -386,21 +372,32 @@ GetNextPNameInst::GetNextPNameInst(
   pushOperand(onSome);
 }
 
-SwitchImmInst::SwitchImmInst(
+BaseSwitchImmInst::BaseSwitchImmInst(
+    ValueKind kind,
+    Value *input,
+    BasicBlock *defaultBlock,
+    LiteralNumber *size)
+    : TerminatorInst(kind) {
+  pushOperand(input);
+  pushOperand(defaultBlock);
+  pushOperand(size);
+}
+
+UIntSwitchImmInst::UIntSwitchImmInst(
     Value *input,
     BasicBlock *defaultBlock,
     LiteralNumber *minValue,
     LiteralNumber *size,
     const ValueListType &values,
     const BasicBlockListType &blocks)
-    : TerminatorInst(ValueKind::SwitchImmInstKind) {
-  pushOperand(input);
-  pushOperand(defaultBlock);
-
+    : BaseSwitchImmInst(
+          ValueKind::UIntSwitchImmInstKind,
+          input,
+          defaultBlock,
+          size) {
   assert(minValue->isUInt32Representible() && "minValue must be uint32_t");
   pushOperand(minValue);
   assert(size->isUInt32Representible() && "size must be uint32_t");
-  pushOperand(size);
   assert(
       minValue->asUInt32() + size->asUInt32() >= minValue->asUInt32() &&
       "minValue + size must not overflow");
@@ -416,57 +413,47 @@ SwitchImmInst::SwitchImmInst(
   }
 }
 
-BasicBlock *SwitchImmInst::getSuccessor(unsigned idx) const {
-  assert(idx < getNumSuccessors() && "getSuccessor out of bound!");
-  if (idx == 0)
-    return getDefaultDestination();
-  return getCasePair(idx - 1).second;
+StringSwitchImmInst::StringSwitchImmInst(
+    Value *input,
+    BasicBlock *defaultBlock,
+    LiteralNumber *size,
+    const ValueListType &values,
+    const BasicBlockListType &blocks)
+    : BaseSwitchImmInst(
+          ValueKind::StringSwitchImmInstKind,
+          input,
+          defaultBlock,
+          size) {
+  assert(blocks.size() && "Empty switch statement (no cases?)");
+  assert(values.size() == blocks.size() && "Block-value pairs mismatch");
+
+  // Push the switch targets.
+  for (size_t i = 0, e = values.size(); i < e; ++i) {
+    pushOperand(values[i]);
+    pushOperand(blocks[i]);
+  }
 }
 
-void SwitchImmInst::setSuccessor(unsigned idx, BasicBlock *B) {
-  assert(idx < getNumSuccessors() && "setSuccessor out of bound!");
+BasicBlock *BaseSwitchImmInst::getSuccessorImpl(unsigned idx) const {
+  assert(idx < getNumSuccessorsImpl() && "getSuccessor out of bound!");
+  if (idx == 0)
+    return getDefaultDestination();
+  return getSwitchTarget(idx - 1);
+}
+
+void BaseSwitchImmInst::setSuccessorImpl(unsigned idx, BasicBlock *B) {
+  assert(idx < getNumSuccessorsImpl() && "setSuccessor out of bound!");
   if (idx == 0) {
     setOperand(B, DefaultBlockIdx);
     return;
   }
-  setOperand(B, FirstCaseIdx + (idx - 1) * 2 + 1);
-}
-
-Instruction::Variety Instruction::getVariety() const {
-  const ValueKind kind = getKind();
-
-  // Get the operator kind, if the instruction has one.
-  unsigned operatorKind;
-  switch (kind) {
-    case ValueKind::BinaryOperatorInstKind:
-      operatorKind = static_cast<unsigned>(
-          cast<BinaryOperatorInst>(this)->getOperatorKind());
-      break;
-
-    case ValueKind::UnaryOperatorInstKind:
-      operatorKind = static_cast<unsigned>(
-          cast<UnaryOperatorInst>(this)->getOperatorKind());
-      break;
-
-    case ValueKind::CompareBranchInstKind:
-      operatorKind = static_cast<unsigned>(
-          cast<CompareBranchInst>(this)->getOperatorKind());
-      break;
-
-    default:
-      operatorKind = 0;
-      break;
-  }
-
-  // Combine the two kinds into a single value.
-  return Variety(std::make_pair(static_cast<unsigned>(kind), operatorKind));
+  setOperand(B, getFirstCaseIdx() + (idx - 1) * 2 + 1);
 }
 
 bool Instruction::isIdenticalTo(const Instruction *RHS) const {
-  // Check if both instructions have the same variety and number of operands.
+  // Check if both instructions have the same kind and number of operands.
   // This should filter out most cases.
-  if (getVariety() != RHS->getVariety() ||
-      getNumOperands() != RHS->getNumOperands())
+  if (getKind() != RHS->getKind() || getNumOperands() != RHS->getNumOperands())
     return false;
 
   // Check operands.
@@ -492,8 +479,12 @@ class InstructionHashConstructor
 };
 } // namespace
 
-llvh::hash_code Instruction::getHashCode() const {
-  llvh::hash_code hc = llvh::hash_combine(getVariety(), getNumOperands());
+llvh::hash_code Instruction::getSimpleHashCode() const {
+  assert(
+      getKind() != ValueKind::PhiInstKind &&
+      "Simple hash code doesn't handle Phi's, because they allow loops.");
+  llvh::hash_code hc =
+      llvh::hash_combine((unsigned)getKind(), getNumOperands());
 
   // Check operands.
   for (unsigned i = 0, e = getNumOperands(); i != e; ++i)

@@ -1,0 +1,6 @@
+exec this.#name
+exec A.f1
+exec A.f2
+continue
+exec A.f2
+continue

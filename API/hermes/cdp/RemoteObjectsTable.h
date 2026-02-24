@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_REMOTEOBJECTSTABLE_H
-#define HERMES_CDP_REMOTEOBJECTSTABLE_H
+#pragma once
 
 #include <cstdint>
 #include <unordered_map>
@@ -126,5 +125,3 @@ class RemoteObjectsTable {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_REMOTEOBJECTSTABLE_H

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function func() {
   var foo = [,,"a"];
@@ -14,26 +14,29 @@ function func() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [func]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %func#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "func" : string
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = LoadStackInst %3
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "func": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %func(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "func": string
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
-// CHECK:function func#0#1()#2
-// CHECK-NEXT:S{func#0#1()#2} = [foo#2]
+// CHECK:scope %VS1 [foo: any]
+
+// CHECK:function func(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{func#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [foo#2], %0
-// CHECK-NEXT:  %2 = AllocArrayInst 3 : number
-// CHECK-NEXT:  %3 = StoreOwnPropertyInst "a" : string, %2 : object, 2 : number, true : boolean
-// CHECK-NEXT:  %4 = StoreFrameInst %2 : object, [foo#2], %0
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS1.foo]: any
+// CHECK-NEXT:  %3 = AllocArrayInst (:object) 3: number
+// CHECK-NEXT:       DefineOwnInDenseArrayInst "a": string, %3: object, 2: number
+// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS1.foo]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

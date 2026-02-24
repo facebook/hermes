@@ -37,12 +37,9 @@ if(HERMES_WINDOWS_FORCE_NATIVE_BUILD)
   set(CMAKE_CROSSCOMPILING FALSE)
 endif()
 
-# Set default for HERMES_MSVC_USE_PLATFORM_UNICODE_WINGLOB
-if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
-  set(DEFAULT_HERMES_MSVC_USE_PLATFORM_UNICODE_WINGLOB OFF)
-else()
-  set(DEFAULT_HERMES_MSVC_USE_PLATFORM_UNICODE_WINGLOB ON)
-endif()
+# Use Windows NLS (WinGlob) for Unicode on all Windows targets including UWP.
+# ICU headers are not available at compile time (ICU is loaded at runtime).
+set(DEFAULT_HERMES_MSVC_USE_PLATFORM_UNICODE_WINGLOB ON)
 
 option(HERMES_MSVC_USE_PLATFORM_UNICODE_WINGLOB "Use platform Unicode WINGLOB" ${DEFAULT_HERMES_MSVC_USE_PLATFORM_UNICODE_WINGLOB})
 if (HERMES_MSVC_USE_PLATFORM_UNICODE_WINGLOB)
@@ -87,6 +84,16 @@ function(hermes_windows_configure_clang_flags)
     
     # Security flags
     set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -fstack-protector-all")
+    set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -Xclang -gsrc-hash=sha256")
+
+    # On 32-bit x86, Clang assumes 16-byte stack alignment for SSE but the
+    # Windows x86 ABI only guarantees 4-byte alignment.  Without explicit
+    # realignment, SSE codegen in deep floating-point call chains (e.g. ICU's
+    # uprv_floor → ClockMath::floorDivide → Grego::timeToFields) can corrupt
+    # the /GS stack cookie, causing false stack-buffer-overrun aborts.
+    if(HERMES_WINDOWS_TARGET_PLATFORM STREQUAL "x86")
+      set(CLANG_CXX_FLAGS "${CLANG_CXX_FLAGS} -mstackrealign")
+    endif()
    
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CLANG_CXX_FLAGS}" PARENT_SCOPE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CLANG_CXX_FLAGS}" PARENT_SCOPE)
@@ -123,6 +130,14 @@ function(hermes_windows_configure_msvc_flags)
     set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /wd4646")
     # C4312: 'reinterpret_cast': conversion from 'X' to 'hermes::vm::GCCell *' of greater size
     set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /wd4312")
+    # C4703: potentially uninitialized local pointer variable used
+    # /sdl re-promotes this after upstream Hermes.cmake's -wd4703; re-suppress it.
+    set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /wd4703")
+
+    # Silence C++20 deprecation of std::is_pod used in upstream llvh headers.
+    # /sdl promotes C4996 (deprecation) to an error; this targeted macro avoids
+    # modifying the vendored llvh code.
+    set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /D_SILENCE_CXX20_IS_POD_DEPRECATION_WARNING")
 
     # Apply flags to both C and C++
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${MSVC_CXX_FLAGS}" PARENT_SCOPE)
@@ -159,6 +174,12 @@ function(hermes_windows_configure_lld_flags)
     list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:/DEFAULTLIB:ucrtd.lib")
   endif()
 
+  # Enable Large Address Aware for x86 builds, allowing up to 4GB of virtual
+  # address space on 64-bit Windows (default is 2GB for 32-bit executables).
+  if(HERMES_WINDOWS_TARGET_PLATFORM STREQUAL "x86")
+    list(APPEND HERMES_EXTRA_LINKER_FLAGS "LINKER:/LARGEADDRESSAWARE")
+  endif()
+
   set(HERMES_EXTRA_LINKER_FLAGS "${HERMES_EXTRA_LINKER_FLAGS}" PARENT_SCOPE)
 endfunction()
 
@@ -166,6 +187,12 @@ endfunction()
 function(hermes_windows_configure_msvc_linker_flags)
   # Debug information (common to debug and release)
   list(APPEND MSVC_COMMON_LINKER_FLAGS "LINKER:/DEBUG:FULL")
+
+  # Enable Large Address Aware for x86 builds, allowing up to 4GB of virtual
+  # address space on 64-bit Windows (default is 2GB for 32-bit executables).
+  if(HERMES_WINDOWS_TARGET_PLATFORM STREQUAL "x86")
+    list(APPEND MSVC_COMMON_LINKER_FLAGS "LINKER:/LARGEADDRESSAWARE")
+  endif()
 
   # Debug-specific flags
   set(MSVC_DEBUG_LINKER_FLAGS "${MSVC_COMMON_LINKER_FLAGS}")
@@ -196,7 +223,7 @@ function(hermes_windows_configure_msvc_linker_flags)
   # Deterministic builds
   list(APPEND MSVC_RELEASE_LINKER_FLAGS "LINKER:/BREPRO")
 
-  set(HERMES_EXTRA_LINKER_FLAGS 
+  set(HERMES_EXTRA_LINKER_FLAGS
     "$<$<CONFIG:Debug>:${MSVC_DEBUG_LINKER_FLAGS}>"
     "$<$<CONFIG:Release>:${MSVC_RELEASE_LINKER_FLAGS}>"
     PARENT_SCOPE

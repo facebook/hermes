@@ -18,37 +18,33 @@
 #include "llvh/Support/ConvertUTF.h"
 #include "llvh/Support/raw_ostream.h"
 
-#ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
-#include "hermes/Optimizer/PassManager/Pipeline.h"
-#endif
-
 namespace hermes {
 namespace vm {
 
 CallResult<HermesValue> evalInEnvironment(
     Runtime &runtime,
     llvh::StringRef utf8code,
+    bool strictCaller,
     Handle<Environment> environment,
-    const ScopeChain &scopeChain,
+    const CodeBlock *codeBlock,
     Handle<> thisArg,
-    bool isStrict,
-    bool singleFunction) {
-#ifdef HERMESVM_LEAN
-  return runtime.raiseEvalUnsupported(utf8code);
-#else
+    Handle<> newTarget,
+    bool singleFunction,
+    OptValue<uint32_t> lexicalScopeIdxInParentFunction) {
   if (!runtime.enableEval) {
     return runtime.raiseEvalUnsupported(utf8code);
   }
 
   hbc::CompileFlags compileFlags;
-  compileFlags.strict = isStrict;
+  compileFlags.strict = strictCaller;
   compileFlags.includeLibHermes = false;
   compileFlags.verifyIR = runtime.verifyEvalIR;
   compileFlags.emitAsyncBreakCheck = runtime.asyncBreakCheckInEval;
-  compileFlags.enableBlockScoping = runtime.enableBlockScopingInEval;
   compileFlags.lazy =
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
-  compileFlags.enableES6Classes = runtime.hasES6Class();
+  compileFlags.enableES6BlockScoping = runtime.hasES6BlockScoping();
+  compileFlags.enableAsyncGenerators = runtime.hasAsyncGenerators();
+  compileFlags.requireSingleFunction = singleFunction;
 #ifdef HERMES_ENABLE_DEBUGGER
   // Required to allow stepping and examining local variables in eval'd code
   compileFlags.debug = true;
@@ -57,10 +53,10 @@ CallResult<HermesValue> evalInEnvironment(
   std::function<void(Module &)> runOptimizationPasses;
 #ifdef HERMESVM_ENABLE_OPTIMIZATION_AT_RUNTIME
   if (runtime.optimizedEval)
-    runOptimizationPasses = runFullOptimizationPasses;
+    runOptimizationPasses = hbc::fullOptimizationPipeline;
 #endif
 
-  std::unique_ptr<hbc::BCProviderFromSrc> bytecode;
+  std::unique_ptr<hbc::BCProvider> bytecode;
   {
     std::unique_ptr<hermes::Buffer> buffer;
     if (compileFlags.lazy) {
@@ -71,22 +67,57 @@ CallResult<HermesValue> evalInEnvironment(
           llvh::MemoryBuffer::getMemBuffer(utf8code)));
     }
 
-    auto bytecode_err = hbc::BCProviderFromSrc::createBCProviderFromSrc(
-        std::move(buffer),
-        "",
-        nullptr,
-        compileFlags,
-        scopeChain,
-        {},
-        nullptr,
-        runOptimizationPasses);
-    if (!bytecode_err.first) {
-      return runtime.raiseSyntaxError(TwineChar16(bytecode_err.second));
+    if (codeBlock) {
+      assert(
+          lexicalScopeIdxInParentFunction &&
+          "lexical scope required for non-global eval");
+      assert(
+          !singleFunction && "Function constructor must always be global eval");
+      // Local eval.
+      std::unique_ptr<hbc::BCProvider> newBCProvider;
+      std::string error;
+      executeInStack(
+          runtime.getStackExecutor(),
+          [&newBCProvider,
+           &error,
+           &buffer,
+           codeBlock,
+           compileFlags,
+           lexicalScopeIdxInParentFunction]() {
+            std::tie(newBCProvider, error) = hbc::compileEvalModule(
+                std::move(buffer),
+                codeBlock->getRuntimeModule()->getBytecode(),
+                codeBlock->getFunctionID(),
+                compileFlags,
+                *lexicalScopeIdxInParentFunction);
+          });
+      if (!newBCProvider) {
+        return runtime.raiseSyntaxError(llvh::StringRef(error));
+      }
+      bytecode = std::move(newBCProvider);
+    } else {
+      // Global eval.
+      // Creates a new AST Context and compiles everything independently:
+      // new SemContext, new IR Module, everything.
+      std::pair<std::unique_ptr<hbc::BCProvider>, std::string> bytecode_err;
+      executeInStack(
+          runtime.getStackExecutor(),
+          [&bytecode_err, &buffer, compileFlags, &runOptimizationPasses]() {
+            bytecode_err = hbc::createBCProviderFromSrc(
+                std::move(buffer),
+                "",
+                {},
+                compileFlags,
+                "eval",
+                {},
+                nullptr,
+                runOptimizationPasses);
+          });
+      if (!bytecode_err.first) {
+        return runtime.raiseSyntaxError(TwineChar16(bytecode_err.second));
+      }
+      bytecode = std::move(bytecode_err.first);
     }
-    if (singleFunction && !bytecode_err.first->isSingleFunction()) {
-      return runtime.raiseSyntaxError("Invalid function expression");
-    }
-    bytecode = std::move(bytecode_err.first);
   }
 
   // TODO: pass a sourceURL derived from a '//# sourceURL' comment.
@@ -96,15 +127,15 @@ CallResult<HermesValue> evalInEnvironment(
       RuntimeModuleFlags{},
       sourceURL,
       environment,
-      thisArg);
-#endif
+      thisArg,
+      newTarget);
 }
 
 CallResult<HermesValue> directEval(
     Runtime &runtime,
     Handle<StringPrimitive> str,
-    const ScopeChain &scopeChain,
-    bool isStrict,
+    bool strictCaller,
+    const CodeBlock *codeBlock,
     bool singleFunction) {
   // Convert the code into UTF8.
   std::string code;
@@ -119,14 +150,17 @@ CallResult<HermesValue> directEval(
   return evalInEnvironment(
       runtime,
       code,
+      strictCaller,
       Runtime::makeNullHandle<Environment>(),
-      scopeChain,
+      codeBlock,
       runtime.getGlobal(),
-      isStrict,
-      singleFunction);
+      Runtime::getUndefinedValue(),
+      singleFunction,
+      /* lexScope */ llvh::None);
 }
 
-CallResult<HermesValue> eval(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> eval(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
 
   if (!args.getArg(0).isString()) {
@@ -134,7 +168,7 @@ CallResult<HermesValue> eval(void *, Runtime &runtime, NativeArgs args) {
   }
 
   return directEval(
-      runtime, args.dyncastArg<StringPrimitive>(0), {}, false, false);
+      runtime, args.dyncastArg<StringPrimitive>(0), false, nullptr, false);
 }
 
 } // namespace vm

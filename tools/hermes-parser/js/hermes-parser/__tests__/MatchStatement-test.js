@@ -10,8 +10,7 @@
 
 import {printForSnapshot} from '../__test_utils__/parse';
 
-const transform = (src: string) =>
-  printForSnapshot(src, {babel: true, enableExperimentalFlowMatchSyntax: true});
+const transform = (src: string) => printForSnapshot(src, {babel: true});
 
 function runMatchStmt(code: string, x: mixed): mixed {
   const f: $FlowFixMe = new Function(
@@ -49,22 +48,63 @@ describe('MatchStatement', () => {
     );
   });
 
+  test('simple and same named binding', async () => {
+    const code = `
+      function f(x) {
+        match (x) {
+          [const x] => {
+            out = x;
+          }
+          const x => {
+            out = x;
+          }
+        }
+      }
+      f(x);
+    `;
+    const output = await transform(code);
+    expect(output).toMatchInlineSnapshot(`
+      "function f(x) {
+        $$gen$m0: {
+          const $$gen$m1 = x;
+
+          if (Array.isArray($$gen$m1) && $$gen$m1.length === 1) {
+            const x = $$gen$m1[0];
+            out = x;
+            break $$gen$m0;
+          }
+
+          {
+            const x = $$gen$m1;
+            out = x;
+            break $$gen$m0;
+          }
+        }
+      }
+
+      f(x);"
+    `);
+
+    expect(runMatchStmt(output, [1])).toBe(1);
+    expect(runMatchStmt(output, 2)).toBe(2);
+  });
+
   test('simple and guards', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           out = 0;
         }
-        'b': {
+        'b' => {
           out = 1;
         }
-        'c' if no(): {
+        'c' if (no()) => {
           out = 2
         }
-        'd' if yes(): {
+        'd' if (yes()) => {
           out = 3
         }
-        _: {
+        _ => {
           out = 4;
         }
       }
@@ -113,10 +153,10 @@ describe('MatchStatement', () => {
   test('simple or', async () => {
     const code = `
       match (x) {
-        'a' | 'b': {
+        'a' | 'b' => {
           out = 0;
         }
-        _: {
+        _ => {
           out = 1;
         }
       }
@@ -144,10 +184,10 @@ describe('MatchStatement', () => {
   test('no wildcard', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           out = 0;
         }
-        'b': {
+        'b' => {
           out = 1;
         }
       }
@@ -179,7 +219,7 @@ describe('MatchStatement', () => {
   test('only wildcard', async () => {
     const code = `
       match (x) {
-        _: {
+        _ => {
           out = 0;
         }
       }
@@ -200,7 +240,7 @@ describe('MatchStatement', () => {
   test('complex argument', async () => {
     const code = `
       match (x()) {
-        'a': {
+        'a' => {
           out = 0;
         }
       }
@@ -225,10 +265,10 @@ describe('MatchStatement', () => {
   test('NaN', async () => {
     const code = `
       match (x) {
-        NaN: {
+        NaN => {
           out = 0;
         }
-        _: {
+        _ => {
           out = 1;
         }
       }
@@ -255,10 +295,10 @@ describe('MatchStatement', () => {
   test('guard', async () => {
     const code = `
       match (x) {
-        'a' if yes(): {
+        'a' if (yes()) => {
           out = 0;
         }
-        _: {
+        _ => {
           out = 1;
         }
       }
@@ -287,10 +327,10 @@ describe('MatchStatement', () => {
   test('binding', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           out = 0;
         }
-        const a: {
+        const a => {
           out = a;
         }
       }
@@ -298,13 +338,15 @@ describe('MatchStatement', () => {
     const output = await transform(code);
     expect(output).toMatchInlineSnapshot(`
       "$$gen$m0: {
-        if (x === 'a') {
+        const $$gen$m1 = x;
+
+        if ($$gen$m1 === 'a') {
           out = 0;
           break $$gen$m0;
         }
 
         {
-          const a = x;
+          const a = $$gen$m1;
           out = a;
           break $$gen$m0;
         }
@@ -318,13 +360,13 @@ describe('MatchStatement', () => {
   test('object and array patterns', async () => {
     const code = `
       match (x) {
-        ['a']: {
+        ['a'] => {
           out = 0;
         }
-        {b: 'b'}: {
+        {b: 'b'} => {
           out = 1;
         }
-        _: {
+        _ => {
           out = 2;
         }
       }
@@ -337,7 +379,7 @@ describe('MatchStatement', () => {
           break $$gen$m0;
         }
 
-        if (typeof x === "object" && x !== null && x.b === 'b') {
+        if ((typeof x === "object" && x !== null || typeof x === "function") && x.b === 'b') {
           out = 1;
           break $$gen$m0;
         }
@@ -357,16 +399,16 @@ describe('MatchStatement', () => {
   test('object and array bindings', async () => {
     const code = `
       match (x) {
-        [const a]: {
+        [const a] => {
           out = a;
         }
-        {const b}: {
+        {const b} => {
           out = b;
         }
-        const a if no(): {
+        const a if (no()) => {
           out = a;
         }
-        _: {
+        _ => {
           out = 3;
         }
       }
@@ -374,20 +416,22 @@ describe('MatchStatement', () => {
     const output = await transform(code);
     expect(output).toMatchInlineSnapshot(`
       "$$gen$m0: {
-        if (Array.isArray(x) && x.length === 1) {
-          const a = x[0];
+        const $$gen$m1 = x;
+
+        if (Array.isArray($$gen$m1) && $$gen$m1.length === 1) {
+          const a = $$gen$m1[0];
           out = a;
           break $$gen$m0;
         }
 
-        if (typeof x === "object" && x !== null && "b" in x) {
-          const b = x.b;
+        if ((typeof $$gen$m1 === "object" && $$gen$m1 !== null || typeof $$gen$m1 === "function") && "b" in $$gen$m1) {
+          const b = $$gen$m1.b;
           out = b;
           break $$gen$m0;
         }
 
         {
-          const a = x;
+          const a = $$gen$m1;
 
           if (no()) {
             out = a;
@@ -409,20 +453,20 @@ describe('MatchStatement', () => {
   test('nested', async () => {
     const code = `
       match (x) {
-        [const a]: {
+        [const a] => {
           match (a) {
-            foo: {
+            foo => {
               out = 0;
             }
-            bar.a: {
+            bar.a => {
               out = 1;
             }
-            _: {
+            _ => {
               out = 2;
             }
           }
         }
-        _: {
+        _ => {
           out = 3;
         }
       }
@@ -430,23 +474,25 @@ describe('MatchStatement', () => {
     const output = await transform(code);
     expect(output).toMatchInlineSnapshot(`
       "$$gen$m0: {
-        if (Array.isArray(x) && x.length === 1) {
-          const a = x[0];
+        const $$gen$m1 = x;
 
-          $$gen$m1: {
+        if (Array.isArray($$gen$m1) && $$gen$m1.length === 1) {
+          const a = $$gen$m1[0];
+
+          $$gen$m2: {
             if (a === foo) {
               out = 0;
-              break $$gen$m1;
+              break $$gen$m2;
             }
 
             if (a === bar.a) {
               out = 1;
-              break $$gen$m1;
+              break $$gen$m2;
             }
 
             {
               out = 2;
-              break $$gen$m1;
+              break $$gen$m2;
             }
           }
 
@@ -469,11 +515,11 @@ describe('MatchStatement', () => {
   test('variable in body does not conflict', async () => {
     const code = `
       match (x) {
-        'a': {
+        'a' => {
           const a = 0;
           out = a;
         }
-        _: {
+        _ => {
           const a = 1;
           out = a;
         }
@@ -504,7 +550,7 @@ describe('MatchStatement', () => {
     const code = `
       while (true) {
         match (x) {
-          _: {
+          _ => {
             break;
           }
         }
@@ -526,5 +572,130 @@ describe('MatchStatement', () => {
     `);
 
     expect(runMatchStmt(output, 'xxx')).toBe(0);
+  });
+
+  test('yield and yield*', async () => {
+    const code = `
+      function* final() {
+        yield 'end';
+      }
+      function* f() {
+        let index = 0;
+        while (true) {
+          match (index) {
+            const i if (i < x) => {
+              yield i;
+            }
+            _ => {
+              yield* final();
+              break;
+            }
+          }
+          index++;
+        }
+      }
+      const iterable = {[Symbol.iterator]: f};
+      out = [];
+      for (const item of iterable) {
+        out.push(item);
+      }
+    `;
+
+    const output = await transform(code);
+    expect(output).toMatchInlineSnapshot(`
+      "function* final() {
+        yield 'end';
+      }
+
+      function* f() {
+        let index = 0;
+
+        while (true) {
+          $$gen$m0: {
+            const $$gen$m1 = index;
+            {
+              const i = $$gen$m1;
+
+              if (i < x) {
+                yield i;
+                break $$gen$m0;
+              }
+            }
+            {
+              yield* final();
+              break;
+              break $$gen$m0;
+            }
+          }
+
+          index++;
+        }
+      }
+
+      const iterable = {
+        [Symbol.iterator]: f
+      };
+      out = [];
+
+      for (const item of iterable) {
+        out.push(item);
+      }"
+    `);
+
+    expect(runMatchStmt(output, 1)).toEqual([0, 'end']);
+    expect(runMatchStmt(output, 3)).toEqual([0, 1, 2, 'end']);
+  });
+
+  test('await', async () => {
+    const code = `
+      async function val(v) {
+        return v;
+      }
+      async function f() {
+        match (x) {
+          1 => {
+            return await val(1);
+          }
+          2 => {
+            return await val(2);
+          }
+          _ => {
+            return 0;
+          }
+        }
+      }
+      out = f();
+    `;
+    const output = await transform(code);
+    expect(output).toMatchInlineSnapshot(`
+      "async function val(v) {
+        return v;
+      }
+
+      async function f() {
+        $$gen$m0: {
+          if (x === 1) {
+            return await val(1);
+            break $$gen$m0;
+          }
+
+          if (x === 2) {
+            return await val(2);
+            break $$gen$m0;
+          }
+
+          {
+            return 0;
+            break $$gen$m0;
+          }
+        }
+      }
+
+      out = f();"
+    `);
+
+    expect(await runMatchStmt(output, 1)).toBe(1);
+    expect(await runMatchStmt(output, 2)).toBe(2);
+    expect(await runMatchStmt(output, 'xxx')).toBe(0);
   });
 });

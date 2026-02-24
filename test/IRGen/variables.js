@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function same_func_name(same_param_name) {
   function same_func_name(same_param_name) {
@@ -28,93 +28,118 @@ function level0(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [same_func_name, sink, level0]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %same_func_name#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "same_func_name" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %sink#0#1()#5, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %level0#0#1()#6, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "level0" : string
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %8 = StoreStackInst undefined : undefined, %7
-// CHECK-NEXT:  %9 = LoadStackInst %7
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "same_func_name": string
+// CHECK-NEXT:       DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:       DeclareGlobalVarInst "level0": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %same_func_name(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "same_func_name": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %level0(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "level0": string
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
+// CHECK-NEXT:  %12 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
-// CHECK:function same_func_name#0#1(same_param_name)#2
-// CHECK-NEXT:S{same_func_name#0#1()#2} = [same_param_name#2, same_func_name#2]
+// CHECK:scope %VS1 [same_param_name: any, same_func_name: any]
+
+// CHECK:function same_func_name(same_param_name: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{same_func_name#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %same_param_name, [same_param_name#2], %0
-// CHECK-NEXT:  %2 = CreateFunctionInst %"same_func_name 1#"#1#2()#3, %0
-// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [same_func_name#2], %0
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %same_param_name: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.same_param_name]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS1: any, %"same_func_name 1#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS1.same_func_name]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function "same_func_name 1#"#1#2(same_param_name)#3
-// CHECK-NEXT:S{"same_func_name 1#"#1#2()#3} = [same_param_name#3, same_func_name#3]
+// CHECK:scope %VS2 [a: any, b: any, c: any]
+
+// CHECK:function sink(a: any, b: any, c: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{"same_func_name 1#"#1#2()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst %same_param_name, [same_param_name#3], %0
-// CHECK-NEXT:  %2 = CreateFunctionInst %"same_func_name 2#"#2#3()#4, %0
-// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [same_func_name#3], %0
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.a]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %b: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS2.b]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %c: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS2.c]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function "same_func_name 2#"#2#3(same_param_name)#4
-// CHECK-NEXT:S{"same_func_name 2#"#2#3()#4} = [same_param_name#4]
+// CHECK:scope %VS3 [x: any, level1: any]
+
+// CHECK:function level0(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{"same_func_name 2#"#2#3()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst %same_param_name, [same_param_name#4], %0
-// CHECK-NEXT:  %2 = LoadFrameInst [same_param_name#4], %0
-// CHECK-NEXT:  %3 = ReturnInst %2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS3: any, %level1(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS3.level1]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function sink#0#1(a, b, c)#5
-// CHECK-NEXT:S{sink#0#1()#5} = [a#5, b#5, c#5]
+// CHECK:scope %VS4 [same_param_name: any, same_func_name: any]
+
+// CHECK:function "same_func_name 1#"(same_param_name: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#5}
-// CHECK-NEXT:  %1 = StoreFrameInst %a, [a#5], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %b, [b#5], %0
-// CHECK-NEXT:  %3 = StoreFrameInst %c, [c#5], %0
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %same_param_name: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.same_param_name]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS4: any, %"same_func_name 2#"(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS4.same_func_name]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function level0#0#1(x)#6
-// CHECK-NEXT:S{level0#0#1()#6} = [x#6, level1#6]
+// CHECK:scope %VS5 [y: any, level2: any]
+
+// CHECK:function level1(y: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{level0#0#1()#6}
-// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#6], %0
-// CHECK-NEXT:  %2 = CreateFunctionInst %level1#1#6()#7, %0
-// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [level1#6], %0
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS3: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.y]: any
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %1: environment, %VS5: any, %level2(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: object, [%VS5.level2]: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function level1#1#6(y)#7
-// CHECK-NEXT:S{level1#1#6()#7} = [y#7, level2#7]
+// CHECK:scope %VS6 [same_param_name: any]
+
+// CHECK:function "same_func_name 2#"(same_param_name: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{level1#1#6()#7}
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y#7], %0
-// CHECK-NEXT:  %2 = CreateFunctionInst %level2#6#7()#8, %0
-// CHECK-NEXT:  %3 = StoreFrameInst %2 : closure, [level2#7], %0
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS4: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %same_param_name: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.same_param_name]: any
+// CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS6.same_param_name]: any
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function level2#6#7(z)#8
-// CHECK-NEXT:S{level2#6#7()#8} = [z#8]
+// CHECK:scope %VS7 [z: any]
+
+// CHECK:function level2(z: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{level2#6#7()#8}
-// CHECK-NEXT:  %1 = StoreFrameInst %z, [z#8], %0
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %3 = LoadFrameInst [x#6@level0], %0
-// CHECK-NEXT:  %4 = LoadFrameInst [y#7@level1], %0
-// CHECK-NEXT:  %5 = LoadFrameInst [z#8], %0
-// CHECK-NEXT:  %6 = CallInst %2, undefined : undefined, undefined : undefined, %3, %4, %5
-// CHECK-NEXT:  %7 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS5: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS7.z]: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %5 = ResolveScopeInst (:environment) %VS3: any, %VS5: any, %0: environment
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %5: environment, [%VS3.x]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %0: environment, [%VS5.y]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS7.z]: any
+// CHECK-NEXT:  %9 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %6: any, %7: any, %8: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

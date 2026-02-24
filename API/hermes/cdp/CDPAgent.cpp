@@ -9,6 +9,7 @@
 #include "CDPDebugAPI.h"
 #include "ConsoleMessage.h"
 #include "DebuggerDomainAgent.h"
+#include "DebuggerDomainCoordinator.h"
 #include "HeapProfilerDomainAgent.h"
 #include "ProfilerDomainAgent.h"
 #include "RuntimeDomainAgent.h"
@@ -92,14 +93,16 @@ class CDPAgentImpl {
  private:
   /// Collection of domain-specific message handlers. These handlers require
   /// exclusive access to the runtime (whereas the CDP Agent can be used from)
-  /// arbitrary threads), so all methods on this struct are expected to be
-  /// called with exclusive access to the runtime.
-  struct DomainAgentsImpl {
+  /// arbitrary threads), so all methods of this class are expected to be called
+  /// with exclusive access to the runtime.
+  class DomainAgentsImpl {
+   public:
     // Create a new collection of domain agents.
     DomainAgentsImpl(
         int32_t executionContextID,
         HermesRuntime &runtime,
         debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+        DebuggerDomainCoordinator &debuggerDomainCoordinator,
         ConsoleMessageStorage &consoleMessageStorage,
         ConsoleMessageDispatcher &consoleMessageDispatcher,
         SynchronizedOutboundCallback messageCallback,
@@ -132,6 +135,7 @@ class CDPAgentImpl {
     int32_t executionContextID_;
     HermesRuntime &runtime_;
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI_;
+    DebuggerDomainCoordinator &debuggerDomainCoordinator_;
     ConsoleMessageStorage &consoleMessageStorage_;
     ConsoleMessageDispatcher &consoleMessageDispatcher_;
 
@@ -161,7 +165,8 @@ class CDPAgentImpl {
   /// DomainAgentsImpl and domain agents might hold onto JSI values, via
   /// RemoteObjectsTable, we want to be sure that everything is cleaned up prior
   /// to the HermesRuntime going away.
-  struct DomainAgents {
+  class DomainAgents {
+   public:
     // Create a new collection of domain agents.
     DomainAgents(
         int32_t executionContextID,
@@ -310,6 +315,7 @@ CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
     int32_t executionContextID,
     HermesRuntime &runtime,
     debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+    DebuggerDomainCoordinator &debuggerDomainCoordinator,
     ConsoleMessageStorage &consoleMessageStorage,
     ConsoleMessageDispatcher &consoleMessageDispatcher,
     SynchronizedOutboundCallback messageCallback,
@@ -318,6 +324,7 @@ CDPAgentImpl::DomainAgentsImpl::DomainAgentsImpl(
     : executionContextID_(executionContextID),
       runtime_(runtime),
       asyncDebuggerAPI_(asyncDebuggerAPI),
+      debuggerDomainCoordinator_(debuggerDomainCoordinator),
       consoleMessageStorage_(consoleMessageStorage),
       consoleMessageDispatcher_(consoleMessageDispatcher),
       messageCallback_(std::move(messageCallback)),
@@ -334,6 +341,7 @@ void CDPAgentImpl::DomainAgentsImpl::initialize() {
       executionContextID_,
       runtime_,
       asyncDebuggerAPI_,
+      debuggerDomainCoordinator_,
       messageCallback_,
       objTable_,
       *debuggerAgentState_);
@@ -546,6 +554,7 @@ CDPAgentImpl::DomainAgents::DomainAgents(
               executionContextID,
               cdpDebugAPI.runtime(),
               cdpDebugAPI.asyncDebuggerAPI(),
+              cdpDebugAPI.debuggerDomainCoordinator(),
               cdpDebugAPI.consoleMessageStorage_,
               cdpDebugAPI.consoleMessageDispatcher_,
               std::move(messageCallback),

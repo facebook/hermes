@@ -19,14 +19,12 @@ BasicBlock *IRBuilder::createBasicBlock(Function *Parent) {
   return new BasicBlock(Parent);
 }
 
-Function *IRBuilder::createFunction(
-    ScopeDesc *scopeDesc,
+NormalFunction *IRBuilder::createFunction(
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
-    bool isGlobal,
     Function *insertBefore) {
   // Function must have a name. If the source doesn't provide the function name,
   // Hermes will try to infer the name from the name of a variable or property
@@ -34,24 +32,21 @@ Function *IRBuilder::createFunction(
   if (!OriginalName.isValid()) {
     OriginalName = createIdentifier("");
   }
-  return new Function(
+  return new NormalFunction(
       M,
-      scopeDesc,
       OriginalName,
       definitionKind,
       strictMode,
-      sourceVisibility,
-      isGlobal,
+      customDirectives,
       sourceRange,
       insertBefore);
 }
 
 GeneratorFunction *IRBuilder::createGeneratorFunction(
-    ScopeDesc *scopeDesc,
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
     Function *insertBefore) {
   if (!OriginalName.isValid()) {
@@ -61,84 +56,54 @@ GeneratorFunction *IRBuilder::createGeneratorFunction(
   }
   return new GeneratorFunction(
       M,
-      scopeDesc,
       OriginalName,
       definitionKind,
       strictMode,
-      sourceVisibility,
-      /* isGlobal */ false,
-      sourceRange,
-      insertBefore);
-}
-
-GeneratorInnerFunction *IRBuilder::createGeneratorInnerFunction(
-    ScopeDesc *scopeDesc,
-    Identifier OriginalName,
-    Function::DefinitionKind definitionKind,
-    bool strictMode,
-    SMRange sourceRange,
-    Function *insertBefore) {
-  if (!OriginalName.isValid()) {
-    // Function must have a name, even it's empty.
-    // Eventually we will give it a properly inferred name.
-    OriginalName = createIdentifier("");
-  }
-  return new GeneratorInnerFunction(
-      M,
-      scopeDesc,
-      OriginalName,
-      definitionKind,
-      strictMode,
-      /* isGlobal */ false,
+      customDirectives,
       sourceRange,
       insertBefore);
 }
 
 Function *IRBuilder::createTopLevelFunction(
-    ScopeDesc *scopeDesc,
+    llvh::StringRef topLevelFunctionName,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange) {
   // Notice that this synthesized name is not a legal javascript name and
   // can't collide with functions in the processed program.
-  return createFunction(
-      scopeDesc,
-      "global",
+  auto *F = createFunction(
+      topLevelFunctionName,
       Function::DefinitionKind::ES5Function,
       strictMode,
-      sourceVisibility,
-      sourceRange,
-      true);
+      customDirectives,
+      sourceRange);
+  M->setTopLevelFunction(F);
+  return F;
 }
 
-Function *IRBuilder::createFunction(
-    ScopeDesc *scopeDesc,
+NormalFunction *IRBuilder::createFunction(
     llvh::StringRef OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
-    bool isGlobal,
     Function *insertBefore) {
   Identifier OrigIden =
       OriginalName.empty() ? Identifier{} : createIdentifier(OriginalName);
   return createFunction(
-      scopeDesc,
       OrigIden,
       definitionKind,
       strictMode,
-      sourceVisibility,
+      customDirectives,
       sourceRange,
-      isGlobal,
       insertBefore);
 }
 
 AsyncFunction *IRBuilder::createAsyncFunction(
-    ScopeDesc *scopeDesc,
     Identifier OriginalName,
     Function::DefinitionKind definitionKind,
     bool strictMode,
-    SourceVisibility sourceVisibility,
+    CustomDirectives customDirectives,
     SMRange sourceRange,
     Function *insertBefore) {
   if (!OriginalName.isValid()) {
@@ -148,12 +113,10 @@ AsyncFunction *IRBuilder::createAsyncFunction(
   }
   return new AsyncFunction(
       M,
-      scopeDesc,
       OriginalName,
       definitionKind,
       strictMode,
-      sourceVisibility,
-      /* isGlobal */ false,
+      customDirectives,
       sourceRange,
       insertBefore);
 }
@@ -170,30 +133,52 @@ GlobalObjectProperty *IRBuilder::createGlobalObjectProperty(
       M->getContext().getIdentifier(name), declared);
 }
 
-Parameter *IRBuilder::createParameter(Function *Parent, Identifier Name) {
-  return new Parameter(Parent, Name, false);
+/// Add a new JS parameter to function \p Parent.
+JSDynamicParam *IRBuilder::createJSDynamicParam(
+    Function *parent,
+    Identifier name) {
+  auto *param = new JSDynamicParam(parent, name);
+  parent->addJSDynamicParam(param);
+  return param;
 }
 
-Parameter *IRBuilder::createParameter(Function *Parent, llvh::StringRef Name) {
-  return createParameter(Parent, createIdentifier(Name));
+/// Add a new JS parameter to function \p Parent.
+JSDynamicParam *IRBuilder::createJSDynamicParam(
+    Function *parent,
+    llvh::StringRef name) {
+  auto *param = new JSDynamicParam(parent, createIdentifier(name));
+  parent->addJSDynamicParam(param);
+  return param;
 }
 
-Parameter *IRBuilder::createThisParameter(Function *Parent) {
-  return new Parameter(Parent, createIdentifier("this"), true);
+JSDynamicParam *IRBuilder::createJSThisParam(Function *parent) {
+  auto *param = new JSDynamicParam(parent, createIdentifier("<this>"));
+  parent->addJSThisParam(param);
+  return param;
 }
 
 Variable *IRBuilder::createVariable(
-    ScopeDesc *Parent,
-    Variable::DeclKind declKind,
-    Identifier Name) {
-  return new Variable(Parent, declKind, Name);
+    VariableScope *Parent,
+    Identifier Name,
+    Type type,
+    bool hidden) {
+  auto *var = new Variable(Parent, Name, hidden);
+  var->setType(type);
+  return var;
 }
 
 Variable *IRBuilder::createVariable(
-    ScopeDesc *Parent,
-    Variable::DeclKind declKind,
-    llvh::StringRef Name) {
-  return createVariable(Parent, declKind, createIdentifier(Name));
+    VariableScope *Parent,
+    const llvh::Twine &Name,
+    Type type,
+    bool hidden) {
+  return createVariable(Parent, createIdentifier(Name), type, hidden);
+}
+
+VariableScope *IRBuilder::createVariableScope(VariableScope *parentScope) {
+  auto *newScope = new VariableScope(parentScope);
+  M->getVariableScopes().push_back(newScope);
+  return newScope;
 }
 
 LiteralNumber *IRBuilder::getLiteralNumber(double value) {
@@ -209,6 +194,10 @@ LiteralNumber *IRBuilder::getLiteralNegativeZero() {
   return M->getLiteralNumber(-0.0);
 }
 
+LiteralNumber *IRBuilder::getLiteralInfinity() {
+  return M->getLiteralNumber(std::numeric_limits<double>::infinity());
+}
+
 LiteralNumber *IRBuilder::getLiteralNaN() {
   return M->getLiteralNumber(std::numeric_limits<double>::quiet_NaN());
 }
@@ -217,7 +206,7 @@ LiteralBigInt *IRBuilder::getLiteralBigInt(UniqueString *value) {
   return M->getLiteralBigInt(value);
 }
 
-LiteralString *IRBuilder::getLiteralString(llvh::StringRef value) {
+LiteralString *IRBuilder::getLiteralString(const llvh::Twine &value) {
   Identifier Iden = createIdentifier(value);
   return getLiteralString(Iden);
 }
@@ -250,7 +239,7 @@ EmptySentinel *IRBuilder::getEmptySentinel() {
   return M->getEmptySentinel();
 }
 
-Identifier IRBuilder::createIdentifier(llvh::StringRef str) {
+Identifier IRBuilder::createIdentifier(const llvh::Twine &str) {
   return M->getContext().getIdentifier(str);
 }
 
@@ -279,19 +268,18 @@ CatchInst *IRBuilder::createCatchInst() {
   return CI;
 }
 
-ThrowInst *IRBuilder::createThrowInst(Value *thrownValue) {
-  auto *TI = new ThrowInst(thrownValue);
+ThrowInst *IRBuilder::createThrowInst(
+    Value *thrownValue,
+    BasicBlock *catchTarget) {
+  auto *TI = new ThrowInst(thrownValue, catchTarget);
   insert(TI);
   return TI;
 }
 
-CheckHasInstanceInst *IRBuilder::createCheckHasInstanceInst(
-    AllocStackInst *result,
-    Value *left,
-    Value *right,
-    BasicBlock *onTrue,
-    BasicBlock *onFalse) {
-  auto *TI = new CheckHasInstanceInst(result, left, right, onTrue, onFalse);
+ThrowTypeErrorInst *IRBuilder::createThrowTypeErrorInst(
+    Value *message,
+    BasicBlock *catchTarget) {
+  auto *TI = new ThrowTypeErrorInst(message, catchTarget);
   insert(TI);
   return TI;
 }
@@ -304,21 +292,43 @@ TryStartInst *IRBuilder::createTryStartInst(
   return I;
 }
 
-TryEndInst *IRBuilder::createTryEndInst() {
-  auto *I = new TryEndInst();
+TryEndInst *IRBuilder::createTryEndInst(
+    BasicBlock *catchBlock,
+    BasicBlock *branchBlock) {
+  auto *I = new TryEndInst(catchBlock, branchBlock);
   insert(I);
   return I;
 }
 
-AllocStackInst *IRBuilder::createAllocStackInst(llvh::StringRef varName) {
-  Identifier Iden = createIdentifier(varName);
-  return createAllocStackInst(Iden);
+BranchIfBuiltinInst *IRBuilder::createBranchIfBuiltinInst(
+    BuiltinMethod::Enum builtinIndex,
+    Value *argument,
+    BasicBlock *catchBlock,
+    BasicBlock *branchBlock) {
+  auto *I = new BranchIfBuiltinInst(
+      getLiteralBuiltinIdx(builtinIndex), argument, catchBlock, branchBlock);
+  insert(I);
+  return I;
 }
 
-AllocStackInst *IRBuilder::createAllocStackInst(Identifier varName) {
+AllocStackInst *IRBuilder::createAllocStackInst(
+    const llvh::Twine &varName,
+    Type type) {
+  Identifier Iden = createIdentifier(varName);
+  return createAllocStackInst(Iden, type);
+}
+
+AllocStackInst *IRBuilder::createAllocStackInst(Identifier varName, Type type) {
   auto *AHI = new AllocStackInst(varName);
+  AHI->setType(type);
   insert(AHI);
   return AHI;
+}
+
+ToPropertyKeyInst *IRBuilder::createToPropertyKeyInst(Value *val) {
+  auto *ANI = new ToPropertyKeyInst(val);
+  insert(ANI);
+  return ANI;
 }
 
 AsNumberInst *IRBuilder::createAsNumberInst(Value *val) {
@@ -339,47 +349,90 @@ AsInt32Inst *IRBuilder::createAsInt32Inst(Value *val) {
   return AII;
 }
 
+AsUint32Inst *IRBuilder::createAsUint32Inst(Value *val) {
+  auto *AUI = new AsUint32Inst(val);
+  insert(AUI);
+  return AUI;
+}
+
 AddEmptyStringInst *IRBuilder::createAddEmptyStringInst(Value *val) {
   auto *I = new AddEmptyStringInst(val);
   insert(I);
   return I;
 }
 
-ThrowIfHasRestrictedGlobalPropertyInst *
-IRBuilder::createThrowIfHasRestrictedGlobalPropertyInst(
-    llvh::StringRef property) {
-  auto *HRGP =
-      new ThrowIfHasRestrictedGlobalPropertyInst(getLiteralString(property));
-  insert(HRGP);
-  return HRGP;
+CreatePrivateNameInst *IRBuilder::createCreatePrivateNameInst(
+    LiteralString *descStr) {
+  auto *I = new CreatePrivateNameInst(descStr);
+  insert(I);
+  return I;
 }
 
-CreateScopeInst *IRBuilder::createCreateScopeInst(ScopeDesc *scopeDesc) {
-  auto CII = new CreateScopeInst(scopeDesc);
-  insert(CII);
-  return CII;
-}
-
-CreateInnerScopeInst *IRBuilder::createCreateInnerScopeInst(
-    ScopeCreationInst *parentScope,
-    ScopeDesc *scopeDesc) {
-  auto CISI = new CreateInnerScopeInst(parentScope, scopeDesc);
-  insert(CISI);
-  return CISI;
+CreateClassInst *IRBuilder::createCreateClassInst(
+    BaseScopeInst *scope,
+    Function *code,
+    Value *superClass,
+    AllocStackInst *homeObjectOutput) {
+  auto CC = new CreateClassInst(scope, code, superClass, homeObjectOutput);
+  insert(CC);
+  return CC;
 }
 
 CreateFunctionInst *IRBuilder::createCreateFunctionInst(
-    Function *code,
-    ScopeCreationInst *environment) {
-  auto CFI = new CreateFunctionInst(code, environment);
+    BaseScopeInst *scope,
+    Function *code) {
+  auto CFI = new CreateFunctionInst(scope, scope->getVariableScope(), code);
   insert(CFI);
   return CFI;
 }
 
+GetParentScopeInst *IRBuilder::createGetParentScopeInst(
+    VariableScope *scope,
+    JSSpecialParam *parentScopeParam) {
+  auto GPS = new GetParentScopeInst(scope, parentScopeParam);
+  insert(GPS);
+  return GPS;
+}
+
+CreateScopeInst *IRBuilder::createCreateScopeInst(
+    VariableScope *scope,
+    Value *parentScope) {
+  auto CSI = new CreateScopeInst(scope, parentScope);
+  insert(CSI);
+  return CSI;
+}
+
+ResolveScopeInst *IRBuilder::createResolveScopeInst(
+    VariableScope *scope,
+    VariableScope *startVarScope,
+    Instruction *startScope) {
+  auto RSI = new ResolveScopeInst(scope, startVarScope, startScope);
+  insert(RSI);
+  return RSI;
+}
+
+LIRResolveScopeInst *IRBuilder::createLIRResolveScopeInst(
+    VariableScope *scope,
+    Instruction *startScope,
+    LiteralNumber *numLevels) {
+  auto LRSI = new LIRResolveScopeInst(scope, startScope, numLevels);
+  insert(LRSI);
+  return LRSI;
+}
+
+GetClosureScopeInst *IRBuilder::createGetClosureScopeInst(
+    VariableScope *scope,
+    Function *F,
+    Value *closure) {
+  auto *GCSI = new GetClosureScopeInst(scope, F, closure);
+  insert(GCSI);
+  return GCSI;
+}
+
 LoadFrameInst *IRBuilder::createLoadFrameInst(
-    Variable *ptr,
-    ScopeCreationInst *scope) {
-  auto LI = new LoadFrameInst(ptr, scope);
+    Instruction *scope,
+    Variable *ptr) {
+  auto LI = new LoadFrameInst(scope, ptr);
   insert(LI);
   return LI;
 }
@@ -391,10 +444,10 @@ LoadStackInst *IRBuilder::createLoadStackInst(AllocStackInst *ptr) {
 }
 
 StoreFrameInst *IRBuilder::createStoreFrameInst(
+    Instruction *scope,
     Value *storedValue,
-    Variable *ptr,
-    ScopeCreationInst *scope) {
-  auto SI = new StoreFrameInst(storedValue, ptr, scope);
+    Variable *ptr) {
+  auto SI = new StoreFrameInst(scope, storedValue, ptr);
   insert(SI);
   return SI;
 }
@@ -408,42 +461,88 @@ StoreStackInst *IRBuilder::createStoreStackInst(
 }
 
 CallInst *IRBuilder::createCallInst(
-    LiteralString *textifiedCallee,
     Value *callee,
+    Value *target,
+    bool calleeIsAlwaysClosure,
+    Value *env,
+    Value *newTarget,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  LiteralUndefined *newTarget = getLiteralUndefined();
-  auto CI = new CallInst(textifiedCallee, callee, newTarget, thisValue, args);
+  auto CI = new CallInst(
+      callee,
+      target,
+      getLiteralBool(calleeIsAlwaysClosure),
+      env,
+      newTarget,
+      thisValue,
+      args);
+  insert(CI);
+  return CI;
+}
+
+HBCCallWithArgCountInst *IRBuilder::createHBCCallWithArgCount(
+    Value *callee,
+    Value *target,
+    bool calleeIsAlwaysClosure,
+    Value *env,
+    Value *newTarget,
+    LiteralNumber *argCount,
+    Value *thisValue,
+    ArrayRef<Value *> args) {
+  auto CI = new HBCCallWithArgCountInst(
+      callee,
+      target,
+      getLiteralBool(calleeIsAlwaysClosure),
+      env,
+      newTarget,
+      argCount,
+      thisValue,
+      args);
   insert(CI);
   return CI;
 }
 
 HBCCallNInst *IRBuilder::createHBCCallNInst(
-    LiteralString *textifiedCallee,
     Value *callee,
+    Value *target,
+    bool calleeIsAlwaysClosure,
+    Value *env,
+    Value *newTarget,
     Value *thisValue,
     ArrayRef<Value *> args) {
-  LiteralUndefined *newTarget = getLiteralUndefined();
-  auto CI =
-      new HBCCallNInst(textifiedCallee, callee, newTarget, thisValue, args);
+  auto CI = new HBCCallNInst(
+      callee,
+      target,
+      getLiteralBool(calleeIsAlwaysClosure),
+      env,
+      newTarget,
+      thisValue,
+      args);
   insert(CI);
   return CI;
-}
-
-ConstructInst *IRBuilder::createConstructInst(
-    Value *constructor,
-    Value *newTarget,
-    ArrayRef<Value *> args) {
-  LiteralUndefined *thisValue = getLiteralUndefined();
-  auto *inst = new ConstructInst(constructor, newTarget, thisValue, args);
-  insert(inst);
-  return inst;
 }
 
 LoadPropertyInst *IRBuilder::createLoadPropertyInst(
     Value *object,
     Value *property) {
   auto LPI = new LoadPropertyInst(object, property);
+  insert(LPI);
+  return LPI;
+}
+
+LoadPropertyWithReceiverInst *IRBuilder::createLoadPropertyWithReceiverInst(
+    Value *object,
+    Value *property,
+    Value *receiver) {
+  auto LPI = new LoadPropertyWithReceiverInst(object, property, receiver);
+  insert(LPI);
+  return LPI;
+}
+
+LoadOwnPrivateFieldInst *IRBuilder::createLoadOwnPrivateFieldInst(
+    Value *object,
+    Value *property) {
+  auto LPI = new LoadOwnPrivateFieldInst(object, property);
   insert(LPI);
   return LPI;
 }
@@ -463,24 +562,91 @@ TryLoadGlobalPropertyInst *IRBuilder::createTryLoadGlobalPropertyInst(
 DeletePropertyInst *IRBuilder::createDeletePropertyInst(
     Value *object,
     Value *property) {
-  auto DPI = new DeletePropertyInst(object, property);
+  if (Block->getParent()->isStrictMode())
+    return createDeletePropertyStrictInst(object, property);
+  else
+    return createDeletePropertyLooseInst(object, property);
+}
+DeletePropertyLooseInst *IRBuilder::createDeletePropertyLooseInst(
+    Value *object,
+    Value *property) {
+  auto DPI = new DeletePropertyLooseInst(object, property);
   insert(DPI);
   return DPI;
+}
+DeletePropertyStrictInst *IRBuilder::createDeletePropertyStrictInst(
+    Value *object,
+    Value *property) {
+  auto DPI = new DeletePropertyStrictInst(object, property);
+  insert(DPI);
+  return DPI;
+}
+
+StorePropertyWithReceiverInst *IRBuilder::createStorePropertyWithReceiverInst(
+    Value *storedValue,
+    Value *object,
+    Value *property,
+    Value *receiver,
+    StoreStrict isStrict) {
+  auto SPI = new StorePropertyWithReceiverInst(
+      storedValue,
+      object,
+      property,
+      receiver,
+      getLiteralBool(isStrict == StoreStrict::Yes));
+  insert(SPI);
+  return SPI;
 }
 
 StorePropertyInst *IRBuilder::createStorePropertyInst(
     Value *storedValue,
     Value *object,
     Value *property) {
-  auto SPI = new StorePropertyInst(storedValue, object, property);
+  if (Block->getParent()->isStrictMode())
+    return createStorePropertyStrictInst(storedValue, object, property);
+  else
+    return createStorePropertyLooseInst(storedValue, object, property);
+}
+StorePropertyLooseInst *IRBuilder::createStorePropertyLooseInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto SPI = new StorePropertyLooseInst(storedValue, object, property);
   insert(SPI);
   return SPI;
 }
+StorePropertyStrictInst *IRBuilder::createStorePropertyStrictInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto SPI = new StorePropertyStrictInst(storedValue, object, property);
+  insert(SPI);
+  return SPI;
+}
+
 TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
     Value *storedValue,
     LiteralString *property) {
-  auto *inst =
-      new TryStoreGlobalPropertyInst(storedValue, getGlobalObject(), property);
+  if (Block->getParent()->isStrictMode())
+    return createTryStoreGlobalPropertyStrictInst(storedValue, property);
+  else
+    return createTryStoreGlobalPropertyLooseInst(storedValue, property);
+}
+TryStoreGlobalPropertyLooseInst *
+IRBuilder::createTryStoreGlobalPropertyLooseInst(
+    Value *storedValue,
+    LiteralString *property) {
+  auto *inst = new TryStoreGlobalPropertyLooseInst(
+      storedValue, getGlobalObject(), property);
+  insert(inst);
+  return inst;
+}
+TryStoreGlobalPropertyStrictInst *
+IRBuilder::createTryStoreGlobalPropertyStrictInst(
+    Value *storedValue,
+    LiteralString *property) {
+  auto *inst = new TryStoreGlobalPropertyStrictInst(
+      storedValue, getGlobalObject(), property);
   insert(inst);
   return inst;
 }
@@ -490,12 +656,12 @@ TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
   return createTryStoreGlobalPropertyInst(storedValue, property->getName());
 }
 
-StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
+DefineOwnPropertyInst *IRBuilder::createDefineOwnPropertyInst(
     Value *storedValue,
     Value *object,
     Value *property,
     PropEnumerable isEnumerable) {
-  auto SPI = new StoreOwnPropertyInst(
+  auto SPI = new DefineOwnPropertyInst(
       storedValue,
       object,
       property,
@@ -503,27 +669,39 @@ StoreOwnPropertyInst *IRBuilder::createStoreOwnPropertyInst(
   insert(SPI);
   return SPI;
 }
-StoreNewOwnPropertyInst *IRBuilder::createStoreNewOwnPropertyInst(
+
+DefineOwnInDenseArrayInst *IRBuilder::createDefineOwnInDenseArrayInst(
     Value *storedValue,
     Value *object,
-    Literal *property,
-    PropEnumerable isEnumerable) {
-  auto *inst = new StoreNewOwnPropertyInst(
-      storedValue,
-      object,
-      property,
-      getLiteralBool(isEnumerable == PropEnumerable::Yes));
+    LiteralNumber *arrayIndex) {
+  auto *inst = new DefineOwnInDenseArrayInst(storedValue, object, arrayIndex);
+  insert(inst);
+  return inst;
+}
+StoreOwnPrivateFieldInst *IRBuilder::createStoreOwnPrivateFieldInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto *inst = new StoreOwnPrivateFieldInst(storedValue, object, property);
+  insert(inst);
+  return inst;
+}
+AddOwnPrivateFieldInst *IRBuilder::createAddOwnPrivateFieldInst(
+    Value *storedValue,
+    Value *object,
+    Value *property) {
+  auto *inst = new AddOwnPrivateFieldInst(storedValue, object, property);
   insert(inst);
   return inst;
 }
 
-StoreGetterSetterInst *IRBuilder::createStoreGetterSetterInst(
+DefineOwnGetterSetterInst *IRBuilder::createDefineOwnGetterSetterInst(
     Value *storedGetter,
     Value *storedSetter,
     Value *object,
     Value *property,
     PropEnumerable isEnumerable) {
-  auto *SGSI = new StoreGetterSetterInst(
+  auto *SGSI = new DefineOwnGetterSetterInst(
       storedGetter,
       storedSetter,
       object,
@@ -593,19 +771,15 @@ StorePropertyInst *IRBuilder::createStorePropertyInst(
 TryStoreGlobalPropertyInst *IRBuilder::createTryStoreGlobalPropertyInst(
     Value *storedValue,
     Identifier property) {
-  auto *inst = new TryStoreGlobalPropertyInst(
-      storedValue, getGlobalObject(), getLiteralString(property));
-  insert(inst);
-  return inst;
+  return createTryStoreGlobalPropertyInst(
+      storedValue, getLiteralString(property));
 }
 
-AllocObjectInst *IRBuilder::createAllocObjectInst(
-    uint32_t size,
-    Value *parent) {
-  auto AOI = new AllocObjectInst(
-      M->getLiteralNumber(size), parent ? parent : getEmptySentinel());
-  insert(AOI);
-  return AOI;
+AllocFastArrayInst *IRBuilder::createAllocFastArrayInst(
+    LiteralNumber *sizeHint) {
+  auto A = new AllocFastArrayInst(sizeHint);
+  insert(A);
+  return A;
 }
 
 AllocArrayInst *IRBuilder::createAllocArrayInst(
@@ -622,26 +796,54 @@ AllocArrayInst *IRBuilder::createAllocArrayInst(
   return createAllocArrayInst(this->getLiteralNumber(sizeHint), val_list);
 }
 
-CreateArgumentsInst *IRBuilder::createCreateArgumentsInst() {
-  auto CAI = new CreateArgumentsInst();
+GetTemplateObjectInst *IRBuilder::createGetTemplateObjectInst(
+    uint32_t templateObjID,
+    bool dup,
+    llvh::ArrayRef<LiteralString *> rawStrings,
+    llvh::ArrayRef<Value *> cookedStrings) {
+  auto *inst = new GetTemplateObjectInst(
+      getLiteralNumber(templateObjID),
+      getLiteralBool(dup),
+      rawStrings,
+      cookedStrings);
+  insert(inst);
+  return inst;
+}
+
+CreateArgumentsLooseInst *IRBuilder::createCreateArgumentsLooseInst() {
+  auto *CAI = new CreateArgumentsLooseInst();
+  insert(CAI);
+  return CAI;
+}
+CreateArgumentsStrictInst *IRBuilder::createCreateArgumentsStrictInst() {
+  auto *CAI = new CreateArgumentsStrictInst();
   insert(CAI);
   return CAI;
 }
 
-GetNewTargetInst *IRBuilder::createGetNewTargetInst() {
-  auto *inst = new GetNewTargetInst();
+GetNewTargetInst *IRBuilder::createGetNewTargetInst(Value *newTargetParam) {
+  auto *inst = new GetNewTargetInst(newTargetParam);
   insert(inst);
   return inst;
 }
 
-ThrowIfEmptyInst *IRBuilder::createThrowIfEmptyInst(Value *checkedValue) {
-  auto *inst = new ThrowIfEmptyInst(checkedValue);
+ThrowIfInst *IRBuilder::createThrowIfInst(
+    Value *checkedValue,
+    Type invalidTypes) {
+  auto *inst = new ThrowIfInst(checkedValue, getLiteralIRType(invalidTypes));
   insert(inst);
   return inst;
 }
 
-HBCGetGlobalObjectInst *IRBuilder::createHBCGetGlobalObjectInst() {
-  auto inst = new HBCGetGlobalObjectInst();
+ThrowIfThisInitializedInst *IRBuilder::createThrowIfThisInitializedInst(
+    Value *subclassCheckedThis) {
+  auto *inst = new ThrowIfThisInitializedInst(subclassCheckedThis);
+  insert(inst);
+  return inst;
+}
+
+LIRGetGlobalObjectInst *IRBuilder::createLIRGetGlobalObjectInst() {
+  auto inst = new LIRGetGlobalObjectInst();
   insert(inst);
   return inst;
 }
@@ -655,19 +857,30 @@ CreateRegExpInst *IRBuilder::createRegExpInst(
   return res;
 }
 
-UnaryOperatorInst *IRBuilder::createUnaryOperatorInst(
-    Value *value,
-    UnaryOperatorInst::OpKind opKind) {
-  auto UOI = new UnaryOperatorInst(value, opKind);
+TypeOfInst *IRBuilder::createTypeOfInst(Value *input) {
+  auto *inst = new TypeOfInst(input);
+  insert(inst);
+  return inst;
+}
+
+TypeOfIsInst *IRBuilder::createTypeOfIsInst(
+    Value *input,
+    LiteralTypeOfIsTypes *types) {
+  auto *inst = new TypeOfIsInst(input, types);
+  insert(inst);
+  return inst;
+}
+
+UnaryOperatorInst *
+IRBuilder::createUnaryOperatorInst(Value *value, ValueKind kind, Type type) {
+  auto UOI = new UnaryOperatorInst(kind, value, type);
   insert(UOI);
   return UOI;
 }
 
-BinaryOperatorInst *IRBuilder::createBinaryOperatorInst(
-    Value *left,
-    Value *right,
-    BinaryOperatorInst::OpKind opKind) {
-  auto BOI = new BinaryOperatorInst(left, right, opKind);
+BinaryOperatorInst *
+IRBuilder::createBinaryOperatorInst(Value *left, Value *right, ValueKind kind) {
+  auto BOI = new BinaryOperatorInst(kind, left, right);
   insert(BOI);
   return BOI;
 }
@@ -675,8 +888,8 @@ BinaryOperatorInst *IRBuilder::createBinaryOperatorInst(
 SwitchInst *IRBuilder::createSwitchInst(
     Value *input,
     BasicBlock *defaultBlock,
-    const SwitchInst::ValueListType &values,
-    const SwitchInst::BasicBlockListType &blocks) {
+    llvh::ArrayRef<Literal *> values,
+    llvh::ArrayRef<BasicBlock *> blocks) {
   auto SI = new SwitchInst(input, defaultBlock, values, blocks);
   insert(SI);
   return SI;
@@ -698,10 +911,10 @@ PhiInst *IRBuilder::createPhiInst(
 }
 
 GetPNamesInst *IRBuilder::createGetPNamesInst(
-    Value *iteratorAddr,
-    Value *baseAddr,
-    Value *indexAddr,
-    Value *sizeAddr,
+    AllocStackInst *iteratorAddr,
+    AllocStackInst *baseAddr,
+    AllocStackInst *indexAddr,
+    AllocStackInst *sizeAddr,
     BasicBlock *onEmpty,
     BasicBlock *onSome) {
   auto GP = new GetPNamesInst(
@@ -717,11 +930,11 @@ GetPNamesInst *IRBuilder::createGetPNamesInst(
 }
 
 GetNextPNameInst *IRBuilder::createGetNextPNameInst(
-    Value *propertyAddr,
-    Value *baseAddr,
-    Value *indexAddr,
-    Value *sizeAddr,
-    Value *iteratorAddr,
+    AllocStackInst *propertyAddr,
+    AllocStackInst *baseAddr,
+    AllocStackInst *indexAddr,
+    AllocStackInst *sizeAddr,
+    AllocStackInst *iteratorAddr,
     BasicBlock *onLast,
     BasicBlock *onSome) {
   auto GNP = new GetNextPNameInst(
@@ -763,150 +976,150 @@ DebuggerInst *IRBuilder::createDebuggerInst() {
 
 SaveAndYieldInst *IRBuilder::createSaveAndYieldInst(
     Value *result,
+    LiteralBool *isDelegated,
     BasicBlock *nextBlock) {
-  auto *I = new SaveAndYieldInst(result, nextBlock);
+  auto *I = new SaveAndYieldInst(result, isDelegated, nextBlock);
   insert(I);
   return I;
 }
 
 CreateGeneratorInst *IRBuilder::createCreateGeneratorInst(
-    Function *innerFn,
-    ScopeCreationInst *environment) {
-  auto *I = new CreateGeneratorInst(innerFn, environment);
+    BaseScopeInst *scope,
+    NormalFunction *innerFn) {
+  auto *I = new CreateGeneratorInst(scope, scope->getVariableScope(), innerFn);
   insert(I);
   return I;
 }
 
-StartGeneratorInst *IRBuilder::createStartGeneratorInst() {
-  auto *I = new StartGeneratorInst();
-  insert(I);
-  return I;
-}
-
-ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(Value *isReturn) {
+ResumeGeneratorInst *IRBuilder::createResumeGeneratorInst(
+    AllocStackInst *isReturn) {
   auto *I = new ResumeGeneratorInst(isReturn);
   insert(I);
   return I;
 }
 
-HBCResolveEnvironment *IRBuilder::createHBCResolveEnvironment(
-    ScopeDesc *originScopeDesc,
-    ScopeDesc *targetScopeDesc) {
-  auto RSC = new HBCResolveEnvironment(originScopeDesc, targetScopeDesc);
-  insert(RSC);
-  return RSC;
+HBCResolveParentEnvironmentInst *
+IRBuilder::createHBCResolveParentEnvironmentInst(
+    VariableScope *scope,
+    LiteralNumber *numLevels,
+    JSSpecialParam *parentScopeParam) {
+  auto *inst =
+      new HBCResolveParentEnvironmentInst(scope, numLevels, parentScopeParam);
+  insert(inst);
+  return inst;
 }
 
-HBCStoreToEnvironmentInst *IRBuilder::createHBCStoreToEnvironmentInst(
-    Value *env,
-    Value *toPut,
-    Variable *var) {
-  auto PSI = new HBCStoreToEnvironmentInst(env, toPut, var);
-  insert(PSI);
-  return PSI;
-}
-
-HBCLoadFromEnvironmentInst *IRBuilder::createHBCLoadFromEnvironmentInst(
-    Value *env,
-    Variable *var) {
-  auto GSI = new HBCLoadFromEnvironmentInst(env, var);
-  insert(GSI);
-  return GSI;
-}
-
-SwitchImmInst *IRBuilder::createSwitchImmInst(
+UIntSwitchImmInst *IRBuilder::createUIntSwitchImmInst(
     Value *input,
     BasicBlock *defaultBlock,
     LiteralNumber *minValue,
     LiteralNumber *size,
-    const SwitchImmInst::ValueListType &values,
-    const SwitchImmInst::BasicBlockListType &blocks) {
+    const UIntSwitchImmInst::ValueListType &values,
+    const UIntSwitchImmInst::BasicBlockListType &blocks) {
+  auto inst = new UIntSwitchImmInst(
+      input, defaultBlock, minValue, size, values, blocks);
+  insert(inst);
+  return inst;
+}
+
+StringSwitchImmInst *IRBuilder::createStringSwitchImmInst(
+    Value *input,
+    BasicBlock *defaultBlock,
+    LiteralNumber *size,
+    const StringSwitchImmInst::ValueListType &values,
+    const StringSwitchImmInst::BasicBlockListType &blocks) {
   auto inst =
-      new SwitchImmInst(input, defaultBlock, minValue, size, values, blocks);
+      new StringSwitchImmInst(input, defaultBlock, size, values, blocks);
   insert(inst);
   return inst;
 }
 
 DirectEvalInst *IRBuilder::createDirectEvalInst(
-    Value *operand,
-    LiteralBool *isStrict) {
-  auto *inst = new DirectEvalInst(operand, isStrict);
+    Value *evalText,
+    bool strictCaller) {
+  auto *inst = new DirectEvalInst(evalText, getLiteralBool(strictCaller));
   insert(inst);
   return inst;
 }
 
-HBCLoadConstInst *IRBuilder::createHBCLoadConstInst(Literal *value) {
-  auto inst = new HBCLoadConstInst(value);
+DeclareGlobalVarInst *IRBuilder::createDeclareGlobalVarInst(
+    LiteralString *name) {
+  auto *inst = new DeclareGlobalVarInst(name);
   insert(inst);
   return inst;
 }
 
-HBCLoadParamInst *IRBuilder::createHBCLoadParamInst(LiteralNumber *value) {
-  auto inst = new HBCLoadParamInst(value);
+LIRLoadConstInst *IRBuilder::createLIRLoadConstInst(Literal *value) {
+  auto inst = new LIRLoadConstInst(value);
   insert(inst);
   return inst;
 }
 
-HBCCreateEnvironmentInst *IRBuilder::createHBCCreateEnvironmentInst(
-    ScopeDesc *scopeDesc) {
-  auto inst = new HBCCreateEnvironmentInst(scopeDesc);
+LoadParamInst *IRBuilder::createLoadParamInst(JSDynamicParam *param) {
+  auto inst = new LoadParamInst(param);
   insert(inst);
   return inst;
 }
 
-HBCCreateInnerEnvironmentInst *IRBuilder::createHBCCreateInnerEnvironmentInst(
-    ScopeCreationInst *parentScope,
-    ScopeDesc *scopeDesc) {
-  auto inst = new HBCCreateInnerEnvironmentInst(parentScope, scopeDesc);
+HBCCreateFunctionEnvironmentInst *
+IRBuilder::createHBCCreateFunctionEnvironmentInst(
+    VariableScope *scope,
+    JSSpecialParam *parentScopeParam) {
+  auto *inst = new HBCCreateFunctionEnvironmentInst(scope, parentScopeParam);
   insert(inst);
   return inst;
 }
 
-HBCGetThisNSInst *IRBuilder::createHBCGetThisNSInst() {
-  auto inst = new HBCGetThisNSInst();
+LIRGetThisNSInst *IRBuilder::createLIRGetThisNSInst() {
+  auto inst = new LIRGetThisNSInst();
   insert(inst);
   return inst;
 }
-HBCGetArgumentsPropByValInst *IRBuilder::createHBCGetArgumentsPropByValInst(
+LIRGetArgumentsPropByValLooseInst *
+IRBuilder::createLIRGetArgumentsPropByValLooseInst(
     Value *index,
     AllocStackInst *lazyReg) {
-  auto inst = new HBCGetArgumentsPropByValInst(index, lazyReg);
+  auto inst = new LIRGetArgumentsPropByValLooseInst(index, lazyReg);
   insert(inst);
   return inst;
 }
-HBCGetArgumentsLengthInst *IRBuilder::createHBCGetArgumentsLengthInst(
+LIRGetArgumentsPropByValStrictInst *
+IRBuilder::createLIRGetArgumentsPropByValStrictInst(
+    Value *index,
     AllocStackInst *lazyReg) {
-  auto inst = new HBCGetArgumentsLengthInst(lazyReg);
+  auto inst = new LIRGetArgumentsPropByValStrictInst(index, lazyReg);
   insert(inst);
   return inst;
 }
-HBCReifyArgumentsInst *IRBuilder::createHBCReifyArgumentsInst(
+LIRGetArgumentsLengthInst *IRBuilder::createLIRGetArgumentsLengthInst(
+    Value *lazyRegValue) {
+  auto inst = new LIRGetArgumentsLengthInst(lazyRegValue);
+  insert(inst);
+  return inst;
+}
+LIRReifyArgumentsLooseInst *IRBuilder::createLIRReifyArgumentsLooseInst(
     AllocStackInst *lazyReg) {
-  auto inst = new HBCReifyArgumentsInst(lazyReg);
+  auto inst = new LIRReifyArgumentsLooseInst(lazyReg);
   insert(inst);
   return inst;
 }
-HBCCreateThisInst *IRBuilder::createHBCCreateThisInst(
-    Value *prototype,
-    Value *closure) {
-  auto inst = new HBCCreateThisInst(prototype, closure);
+LIRReifyArgumentsStrictInst *IRBuilder::createLIRReifyArgumentsStrictInst(
+    AllocStackInst *lazyReg) {
+  auto inst = new LIRReifyArgumentsStrictInst(lazyReg);
   insert(inst);
   return inst;
 }
-HBCConstructInst *IRBuilder::createHBCConstructInst(
+CreateThisInst *IRBuilder::createCreateThisInst(
     Value *closure,
-    Value *newTarget,
-    Value *thisValue,
-    ArrayRef<Value *> arguments) {
-  auto inst = new HBCConstructInst(closure, newTarget, thisValue, arguments);
+    Value *newTarget) {
+  auto inst = new CreateThisInst(closure, newTarget, getEmptySentinel());
   insert(inst);
   return inst;
 }
-HBCGetConstructedObjectInst *IRBuilder::createHBCGetConstructedObjectInst(
-    HBCCreateThisInst *thisValue,
-    HBCConstructInst *constructorReturnValue) {
-  auto inst =
-      new HBCGetConstructedObjectInst(thisValue, constructorReturnValue);
+GetConstructedObjectInst *IRBuilder::createGetConstructedObjectInst(
+    Instruction *thisValue,
+    Value *constructorReturnValue) {
+  auto inst = new GetConstructedObjectInst(thisValue, constructorReturnValue);
   insert(inst);
   return inst;
 }
@@ -920,84 +1133,74 @@ HBCProfilePointInst *IRBuilder::createHBCProfilePointInst(uint16_t pointIndex) {
 CallBuiltinInst *IRBuilder::createCallBuiltinInst(
     BuiltinMethod::Enum builtinIndex,
     ArrayRef<Value *> arguments) {
-  LiteralUndefined *undefined = getLiteralUndefined();
-  LiteralUndefined *newTarget = undefined;
-  LiteralUndefined *thisValue = undefined;
   auto *inst = new CallBuiltinInst(
-      getLiteralNumber(builtinIndex), newTarget, thisValue, arguments);
+      getLiteralBuiltinIdx(builtinIndex),
+      getEmptySentinel(),
+      getLiteralBool(false),
+      getEmptySentinel(),
+      getLiteralUndefined(),
+      arguments);
   insert(inst);
   return inst;
 }
 
 GetBuiltinClosureInst *IRBuilder::createGetBuiltinClosureInst(
     BuiltinMethod::Enum builtinIndex) {
-  auto *inst = new GetBuiltinClosureInst(getLiteralNumber(builtinIndex));
+  auto *inst = new GetBuiltinClosureInst(getLiteralBuiltinIdx(builtinIndex));
   insert(inst);
   return inst;
 }
 
-#ifdef HERMES_RUN_WASM
-CallIntrinsicInst *IRBuilder::createCallIntrinsicInst(
-    WasmIntrinsics::Enum intrinsicsIndex,
-    ArrayRef<Value *> arguments) {
-  auto *inst =
-      new CallIntrinsicInst(getLiteralNumber(intrinsicsIndex), arguments);
-  insert(inst);
-  return inst;
-}
-#endif
-
-HBCCallDirectInst *IRBuilder::createHBCCallDirectInst(
-    LiteralString *textifiedCallee,
-    Function *callee,
-    Value *thisValue,
-    ArrayRef<Value *> arguments) {
-  LiteralUndefined *newTarget = getLiteralUndefined();
-  auto *inst = new HBCCallDirectInst(
-      textifiedCallee, callee, newTarget, thisValue, arguments);
+LIRSpillMovInst *IRBuilder::createLIRSpillMovInst(Instruction *value) {
+  auto *inst = new LIRSpillMovInst(value);
   insert(inst);
   return inst;
 }
 
-HBCCreateFunctionInst *IRBuilder::createHBCCreateFunctionInst(
-    Function *function,
-    Value *env) {
-  auto inst = new HBCCreateFunctionInst(function, env);
+LIRAllocObjectFromBufferInst *IRBuilder::createLIRAllocObjectFromBufferInst(
+    Value *parentObj,
+    LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map) {
+  auto *inst = new LIRAllocObjectFromBufferInst(parentObj, prop_map);
   insert(inst);
   return inst;
 }
 
-HBCSpillMovInst *IRBuilder::createHBCSpillMovInst(Instruction *value) {
-  auto *inst = new HBCSpillMovInst(value);
+AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
+    const AllocObjectLiteralInst::ObjectPropertyMap &propMap,
+    Value *parentObject) {
+  auto *inst = new AllocObjectLiteralInst(
+      parentObject ? parentObject : getEmptySentinel(), propMap);
   insert(inst);
   return inst;
 }
 
-HBCCreateGeneratorInst *IRBuilder::createHBCCreateGeneratorInst(
-    Function *function,
-    Value *env) {
-  auto *inst = new HBCCreateGeneratorInst(function, env);
+AllocTypedObjectInst *IRBuilder::createAllocTypedObjectInst(
+    const AllocTypedObjectInst::ObjectPropertyMap &propMap,
+    Value *parentObject) {
+  auto *inst = new AllocTypedObjectInst(
+      parentObject ? parentObject : getEmptySentinel(), propMap);
   insert(inst);
   return inst;
 }
 
-HBCAllocObjectFromBufferInst *IRBuilder::createHBCAllocObjectFromBufferInst(
-    HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map,
-    uint32_t size) {
-  auto *inst =
-      new HBCAllocObjectFromBufferInst(M->getLiteralNumber(size), prop_map);
-  insert(inst);
-  return inst;
-}
-
-CompareBranchInst *IRBuilder::createCompareBranchInst(
+HBCCompareBranchInst *IRBuilder::createHBCCompareBranchInst(
     Value *left,
     Value *right,
-    BinaryOperatorInst::OpKind opKind,
+    ValueKind kind,
     BasicBlock *trueBlock,
     BasicBlock *falseBlock) {
   auto *inst =
-      new CompareBranchInst(left, right, opKind, trueBlock, falseBlock);
+      new HBCCompareBranchInst(kind, left, right, trueBlock, falseBlock);
+  insert(inst);
+  return inst;
+}
+
+HBCCmpBrTypeOfIsInst *IRBuilder::createHBCCmpBrTypeOfIsInst(
+    Value *arg,
+    LiteralTypeOfIsTypes *types,
+    BasicBlock *trueBlock,
+    BasicBlock *falseBlock) {
+  auto *inst = new HBCCmpBrTypeOfIsInst(arg, types, trueBlock, falseBlock);
   insert(inst);
   return inst;
 }
@@ -1011,14 +1214,14 @@ IteratorBeginInst *IRBuilder::createIteratorBeginInst(
 
 IteratorNextInst *IRBuilder::createIteratorNextInst(
     AllocStackInst *iterator,
-    AllocStackInst *sourceOrNext) {
+    Value *sourceOrNext) {
   auto *I = new IteratorNextInst(iterator, sourceOrNext);
   insert(I);
   return I;
 }
 
 IteratorCloseInst *IRBuilder::createIteratorCloseInst(
-    AllocStackInst *iterator,
+    Value *iterator,
     bool ignoreInnerException) {
   auto *I =
       new IteratorCloseInst(iterator, getLiteralBool(ignoreInnerException));
@@ -1030,6 +1233,228 @@ UnreachableInst *IRBuilder::createUnreachableInst() {
   auto *I = new UnreachableInst();
   insert(I);
   return I;
+}
+
+PrLoadInst *IRBuilder::createPrLoadInst(
+    Value *object,
+    size_t propIndex,
+    LiteralString *propName,
+    Type checkedType) {
+  auto *I = new PrLoadInst(
+      object, getLiteralNumber((double)propIndex), propName, checkedType);
+  insert(I);
+  return I;
+}
+
+PrStoreInst *IRBuilder::createPrStoreInst(
+    Value *storedValue,
+    Value *object,
+    size_t propIndex,
+    LiteralString *propName,
+    bool nonPointer) {
+  auto *I = new PrStoreInst(
+      storedValue,
+      object,
+      getLiteralNumber((double)propIndex),
+      propName,
+      getLiteralBool(nonPointer));
+  insert(I);
+  return I;
+}
+
+FastArrayLoadInst *IRBuilder::createFastArrayLoadInst(
+    Value *array,
+    Value *index,
+    Type checkedType) {
+  auto *I = new FastArrayLoadInst(array, index, checkedType);
+  insert(I);
+  return I;
+}
+
+FastArrayStoreInst *IRBuilder::createFastArrayStoreInst(
+    Value *storedValue,
+    Value *array,
+    Value *index) {
+  auto *I = new FastArrayStoreInst(storedValue, array, index);
+  insert(I);
+  return I;
+}
+
+FastArrayPushInst *IRBuilder::createFastArrayPushInst(
+    Value *pushedValue,
+    Value *array) {
+  auto *I = new FastArrayPushInst(pushedValue, array);
+  insert(I);
+  return I;
+}
+FastArrayAppendInst *IRBuilder::createFastArrayAppendInst(
+    Value *other,
+    Value *array) {
+  auto *I = new FastArrayAppendInst(other, array);
+  insert(I);
+  return I;
+}
+
+FastArrayLengthInst *IRBuilder::createFastArrayLengthInst(Value *array) {
+  auto *I = new FastArrayLengthInst(array);
+  insert(I);
+  return I;
+}
+
+LoadParentNoTrapsInst *IRBuilder::createLoadParentNoTrapsInst(Value *object) {
+  auto *inst = new LoadParentNoTrapsInst(object);
+  insert(inst);
+  return inst;
+}
+
+TypedLoadParentInst *IRBuilder::createTypedLoadParentInst(Value *object) {
+  auto *inst = new TypedLoadParentInst(object);
+  insert(inst);
+  return inst;
+}
+
+FUnaryMathInst *IRBuilder::createFUnaryMathInst(ValueKind kind, Value *arg) {
+  auto *inst = new FUnaryMathInst(kind, arg);
+  insert(inst);
+  return inst;
+}
+FBinaryMathInst *
+IRBuilder::createFBinaryMathInst(ValueKind kind, Value *left, Value *right) {
+  auto *inst = new FBinaryMathInst(kind, left, right);
+  insert(inst);
+  return inst;
+}
+
+FCompareInst *
+IRBuilder::createFCompareInst(ValueKind kind, Value *left, Value *right) {
+  auto *inst = new FCompareInst(kind, left, right);
+  insert(inst);
+  return inst;
+}
+
+HBCFCompareBranchInst *IRBuilder::createHBCFCompareBranchInst(
+    Value *left,
+    Value *right,
+    ValueKind kind,
+    BasicBlock *trueBlock,
+    BasicBlock *falseBlock) {
+  auto *inst =
+      new HBCFCompareBranchInst(kind, left, right, trueBlock, falseBlock);
+  insert(inst);
+  return inst;
+}
+
+StringConcatInst *IRBuilder::createStringConcatInst(
+    llvh::ArrayRef<Value *> operands) {
+  auto *inst = new StringConcatInst(operands);
+  insert(inst);
+  return inst;
+}
+
+HBCStringConcatInst *IRBuilder::createHBCStringConcatInst(
+    Value *left,
+    Value *right) {
+  auto *inst = new HBCStringConcatInst(left, right);
+  insert(inst);
+  return inst;
+}
+
+UnionNarrowTrustedInst *IRBuilder::createUnionNarrowTrustedInst(
+    Value *value,
+    Type type) {
+  auto *inst = new UnionNarrowTrustedInst(value, type);
+  insert(inst);
+  return inst;
+}
+
+CheckedTypeCastInst *IRBuilder::createCheckedTypeCastInst(
+    Value *value,
+    Type type) {
+  auto *inst = new CheckedTypeCastInst(value, getLiteralIRType(type));
+  insert(inst);
+  return inst;
+}
+
+LIRDeadValueInst *IRBuilder::createLIRDeadValueInst(Type type) {
+  auto *inst = new LIRDeadValueInst(type);
+  insert(inst);
+  return inst;
+}
+
+LiteralNativeSignature *IRBuilder::getLiteralNativeSignature(
+    NativeSignature *sig) {
+  return M->getLiteralNativeSignature(sig);
+}
+LiteralNativeExtern *IRBuilder::getLiteralNativeExtern(
+    NativeExtern *nativeExtern) {
+  return M->getLiteralNativeExtern(nativeExtern);
+}
+
+NativeCallInst *IRBuilder::createNativeCallInst(
+    Type type,
+    Value *callee,
+    NativeSignature *sig,
+    ArrayRef<Value *> args) {
+  auto *inst =
+      new NativeCallInst(type, callee, getLiteralNativeSignature(sig), args);
+  insert(inst);
+  return inst;
+}
+
+LazyCompilationDataInst *IRBuilder::createLazyCompilationDataInst(
+    LazyCompilationData &&data,
+    Variable *capturedThis,
+    Value *capturedNewTarget,
+    Variable *capturedArguments,
+    Variable *homeObject,
+    Variable *classCtxConstructor,
+    Variable *classCtxInitFuncVar,
+    VariableScope *parentVarScope) {
+  auto *inst = new LazyCompilationDataInst(
+      std::move(data),
+      capturedThis ? static_cast<Value *>(capturedThis) : getEmptySentinel(),
+      capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
+      capturedArguments ? static_cast<Value *>(capturedArguments)
+                        : getEmptySentinel(),
+      homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
+      classCtxConstructor ? static_cast<Value *>(classCtxConstructor)
+                          : getEmptySentinel(),
+      classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
+                          : getEmptySentinel(),
+      parentVarScope);
+  insert(inst);
+  return inst;
+}
+
+EvalCompilationDataInst *IRBuilder::createEvalCompilationDataInst(
+    EvalCompilationData &&data,
+    Variable *capturedThis,
+    Value *capturedNewTarget,
+    Variable *capturedArguments,
+    Variable *homeObject,
+    Variable *classCtxConstructor,
+    Variable *classCtxInitFuncVar,
+    ArrayRef<VariableScope *> varScopes) {
+  auto *inst = new EvalCompilationDataInst(
+      std::move(data),
+      capturedThis ? static_cast<Value *>(capturedThis) : getEmptySentinel(),
+      capturedNewTarget ? capturedNewTarget : getLiteralUndefined(),
+      capturedArguments ? static_cast<Value *>(capturedArguments)
+                        : getEmptySentinel(),
+      homeObject ? static_cast<Value *>(homeObject) : getEmptySentinel(),
+      classCtxConstructor ? static_cast<Value *>(classCtxConstructor)
+                          : getEmptySentinel(),
+      classCtxInitFuncVar ? static_cast<Value *>(classCtxInitFuncVar)
+                          : getEmptySentinel(),
+      varScopes);
+  insert(inst);
+  return inst;
+}
+
+GetNativeRuntimeInst *IRBuilder::createGetNativeRuntimeInst() {
+  auto *inst = new GetNativeRuntimeInst();
+  insert(inst);
+  return inst;
 }
 
 inline void IRBuilder::justInsert(Instruction *Inst) {
@@ -1055,8 +1480,28 @@ void IRBuilder::insert(Instruction *Inst) {
   }
   Inst->setStatementIndex(statement);
 
+  if (auto envIDOpt = getFunction()->getEnvironmentID()) {
+    Inst->setEnvironmentID(*envIDOpt);
+  } else {
+    Inst->setEnvironmentID(
+        InsertionPoint != Block->getInstList().end()
+            ? InsertionPoint->getEnvironmentID()
+            : 0);
+  }
+
+  // Set the statement of the new instruction based on the current function's
+  // statement counter.
+  if (auto lexScope = getFunction()->getLexicalScope()) {
+    Inst->setLexicalScope(*lexScope);
+  } else {
+    // Try to inherit the lexical scope of the instruction we're inserting at.
+    Inst->setLexicalScope(
+        InsertionPoint != Block->getInstList().end()
+            ? InsertionPoint->getLexicalScope()
+            : nullptr);
+  }
+
   Inst->setLocation(Location);
-  Inst->setSourceLevelScope(CurrentSourceLevelScope);
 
   return justInsert(Inst);
 }
@@ -1121,19 +1566,20 @@ Instruction *IRBuilder::cloneInst(
     llvh::ArrayRef<Value *> operands) {
   Instruction *inst;
   switch (source->getKind()) {
-#define INCLUDE_ALL_INSTRS
 #define DEF_VALUE(name, parent)                    \
   case ValueKind::name##Kind:                      \
     inst = new name(cast<name>(source), operands); \
     break;
+#define DEF_TAG(name, parent)                          \
+  case ValueKind::name##Kind:                          \
+    inst = new parent(cast<parent>(source), operands); \
+    break;
 
 #include "hermes/IR/Instrs.def"
-#undef INCLUDE_ALL_INSTRS
     default:
       llvm_unreachable("invalid kind");
   }
 
-  inst->setSourceLevelScope(CurrentSourceLevelScope);
   justInsert(inst);
   return inst;
 }

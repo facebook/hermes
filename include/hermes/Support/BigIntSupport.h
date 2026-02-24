@@ -9,6 +9,7 @@
 #define HERMES_SUPPORT_BIGINT_H
 
 #include "hermes/Support/Compiler.h"
+#include "hermes/Support/HermesSafeMath.h"
 
 #include "llvh/ADT/ArrayRef.h"
 #include "llvh/ADT/DenseMap.h"
@@ -20,11 +21,7 @@
 #include <optional>
 #include <string>
 #include <vector>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace bigint {
 
@@ -440,6 +437,9 @@ using BigIntBytes = std::vector<uint8_t>;
 struct BigIntTableEntry {
   uint32_t offset;
   uint32_t length;
+
+  BigIntTableEntry(uint32_t offset, uint32_t length)
+      : offset(offset), length(length) {}
 };
 
 inline bool operator==(
@@ -460,12 +460,20 @@ class UniquingBigIntTable {
   /// StringRefs reference data owned by the bigints_ field.
   llvh::DenseMap<KeyType, uint32_t> keysToIndex_;
 
+  /// List of bigint table entries.
+  std::vector<BigIntTableEntry> entries_;
+
+  /// Buffer containing all bigint bytes.
+  BigIntBytes bytes_;
+
   /// A UniquingBigIntTable may not be copied.
   UniquingBigIntTable(const UniquingBigIntTable &) = delete;
   void operator=(const UniquingBigIntTable &) = delete;
 
  public:
   UniquingBigIntTable() = default;
+  UniquingBigIntTable(UniquingBigIntTable &&) = default;
+  UniquingBigIntTable &operator=(UniquingBigIntTable &&) = default;
 
   /// Adds a bigint to the table if not already present.
   /// \return the ID of the bigint.
@@ -475,7 +483,17 @@ class UniquingBigIntTable {
       return iter->second;
     }
 
-    const uint32_t index = bigints_.size();
+    if (entries_.empty()) {
+      entries_.emplace_back(0, bigint.getBytes().size());
+    } else {
+      const BigIntTableEntry &back = entries_.back();
+      entries_.emplace_back(
+          back.offset + back.length, bigint.getBytes().size());
+    }
+    auto newBytes = bigint.getBytes();
+    bytes_.insert(bytes_.end(), newBytes.begin(), newBytes.end());
+    const uint32_t index = safePossiblyNarrowingCast<uint32_t>(
+        bigints_.size(), "too many BigInts created");
     bigints_.push_back(std::move(bigint));
     keysToIndex_[keyFor(bigints_.back())] = index;
     return index;
@@ -487,10 +505,14 @@ class UniquingBigIntTable {
   }
 
   /// Return the bigint entry list.
-  std::vector<BigIntTableEntry> getEntryList() const;
+  llvh::ArrayRef<BigIntTableEntry> getEntryList() const {
+    return entries_;
+  }
 
   /// Return the combined bytecode buffer.
-  BigIntBytes getDigitsBuffer() const;
+  const BigIntBytes &getDigitsBuffer() const {
+    return bytes_;
+  }
 
  private:
   static KeyType keyFor(const ParsedBigInt &parsedBigInt) {
@@ -500,6 +522,5 @@ class UniquingBigIntTable {
 
 } // namespace bigint
 } // namespace hermes
-#pragma GCC diagnostic pop
 
 #endif // HERMES_SUPPORT_BIGINT_H

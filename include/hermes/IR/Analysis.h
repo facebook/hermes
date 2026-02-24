@@ -22,60 +22,7 @@ namespace hermes {
 /// basic blocks that are not linked to the entry blocks (catch blocks),
 /// and LLVM's graph traits expect all blocks to be reachable from the entry
 /// blocks. The analysis does not enumerate unreachable blocks.
-class PostOrderAnalysis {
-  using BlockList = std::vector<BasicBlock *>;
-
-  /// The AST context, which here is only used by Dump().
-  Context &ctx_;
-
-  /// Holds the ordered list of basic blocks.
-  BlockList Order;
-
-  /// This function does the recursive scan of the function. \p BB is the basic
-  /// block that starts the scan. \p order is the ordered list of blocks, and
-  /// the output.
-  static void visitPostOrder(BasicBlock *BB, BlockList &order);
-
- public:
-  explicit PostOrderAnalysis(Function *F);
-
-  void dump();
-
-  using iterator = decltype(Order)::iterator;
-  using const_iterator = decltype(Order)::const_iterator;
-  using reverse_iterator = decltype(Order)::reverse_iterator;
-  using const_reverse_iterator = decltype(Order)::const_reverse_iterator;
-
-  using range = llvh::iterator_range<iterator>;
-  using const_range = llvh::iterator_range<const_iterator>;
-  using reverse_range = llvh::iterator_range<reverse_iterator>;
-  using const_reverse_range = llvh::iterator_range<const_reverse_iterator>;
-
-  inline iterator begin() {
-    return Order.begin();
-  }
-  inline iterator end() {
-    return Order.end();
-  }
-  inline reverse_iterator rbegin() {
-    return Order.rbegin();
-  }
-  inline reverse_iterator rend() {
-    return Order.rend();
-  }
-  inline const_iterator begin() const {
-    return Order.begin();
-  }
-  inline const_iterator end() const {
-    return Order.end();
-  }
-  inline const_reverse_iterator rbegin() const {
-    return Order.rbegin();
-  }
-  inline const_reverse_iterator rend() const {
-    return Order.rend();
-  }
-};
+std::vector<BasicBlock *> postOrderAnalysis(Function *F);
 
 /// This analysis finds out which blocks are part of loops, and identifies
 /// header and preheader blocks. All blocks in cycles of the CFG are considered
@@ -127,95 +74,40 @@ class LoopAnalysis {
   BasicBlock *getLoopPreheader(const BasicBlock *BB) const;
 };
 
-/// This analysis generates the scope info for each function.
-/// Global code has scope depth of 0. All other functions
-/// have depth bigger than 0.
-class FunctionScopeAnalysis {
-  struct ScopeData {
-    /// The depth in the scope chain. The global scope has depth 0, each
-    /// function nesting level increases this by 1. Placeholder functions (which
-    /// represent the lexical environment in local eval) have negative depths.
-    int32_t depth;
-
-    /// Indicates that the function has no scope data, because while the
-    /// function was added to the bytecode module, no instruction could be found
-    /// to create it.
-    bool orphaned;
-
-    ScopeData(int32_t depth = 0, bool orphaned = false)
-        : depth(depth), orphaned(orphaned) {}
-
-    /// Convenience function. \return an orphaned ScopeData.
-    static ScopeData orphan() {
-      return ScopeData(0, true);
-    }
-  };
-
-  using LexicalScopeDescMap = llvh::DenseMap<const ScopeDesc *, ScopeData>;
-  LexicalScopeDescMap lexicalScopeDescMap_{};
-
-  /// Recursively calculate the scope data of \p scopeDesc. \p depth is
-  /// specified during analysis initialization so scopes before the top level
-  /// can be initialized.
-  /// \return the ScopeData of the function.
-  ScopeData calculateFunctionScopeData(
-      ScopeDesc *scopeDesc,
-      llvh::Optional<int> depth = llvh::None);
-
-  static Function *computeParent(
-      ScopeDesc *thisScope,
-      ScopeDesc *parentScope,
-      const ScopeData &sd);
-
- public:
-  explicit FunctionScopeAnalysis(Function *entryPoint) {
-    ScopeData data =
-        calculateFunctionScopeData(entryPoint->getFunctionScopeDesc(), 0);
-    assert(!data.orphaned && data.depth == 0);
-    (void)data;
-  }
-
-  /// Lazily get the scope depth of \p S.
-  llvh::Optional<int32_t> getScopeDepth(ScopeDesc *S);
-};
-
 /// A namespace encapsulating utilities for implementing optimization passes
 /// based on a DFS visit of a dominator tree.
 namespace DomTreeDFS {
 
-/// StackNode - contains all the needed information to create a stack for
-/// doing a depth first traversal of the tree. This includes scopes for values
-/// and loads as well as the generation. There is a child iterator so that the
-/// children do not need to be stored separately.
-template <typename Visitor>
+/// StackNode - contains the needed information to create a stack for doing
+/// a depth first traversal of a dominator tree.
+/// It can be subclassed to attach more information like scoped tables, etc.
 class StackNode {
  public:
   StackNode(const StackNode &) = delete;
   void operator=(const StackNode &) = delete;
 
-  StackNode(Visitor *, const DominanceInfoNode *n)
+  StackNode(const DominanceInfoNode *n)
       : node_(n), childIter_(n->begin()), endIter_(n->end()), done_(false) {}
+  /// A convenience constructor matching the signature of the derived class.
+  StackNode(void *, const DominanceInfoNode *n) : StackNode(n) {}
 
-  // Accessors.
+  /// The dominator tree node associated with this stack node.
   const DominanceInfoNode *node() {
     return node_;
   }
-  // Return nullptr when the end is reached, or the next child otherwise.
-  DominanceInfoNode *nextChild() {
-    return childIter_ == endIter_ ? nullptr : *childIter_++;
-  }
-  bool isDone() {
-    return done_;
-  }
-  void markDone() {
-    done_ = true;
-  }
 
  private:
-  // Members.
+  template <typename Derived, typename StackNode>
+  friend class Visitor;
+
+  /// The dominator tree node associated with this stack node.
   const DominanceInfoNode *node_;
+  /// The next child of the dominance tree node to process.
   DominanceInfoNode::const_iterator childIter_;
+  /// The end iterator of child dominance tree nodes.
   const DominanceInfoNode::const_iterator endIter_;
+  /// This flag indicates that this dominance tree node has been processed
+  /// and we have moved onto iterating its children.
   bool done_;
 };
 
@@ -229,11 +121,11 @@ class Visitor {
     return static_cast<Derived *>(this);
   }
 
-  StackNode *newNode(const DominanceInfoNode *n) {
+  StackNode *newStackEntry(const DominanceInfoNode *n) {
     auto *sn = nodeAllocator_.Allocate();
     return new (sn) StackNode(derived(), n);
   }
-  void freeNode(StackNode *n) {
+  void freeStackEntry(StackNode *n) {
     n->~StackNode();
     nodeAllocator_.Deallocate(n);
   }
@@ -244,38 +136,41 @@ class Visitor {
   Visitor(const DominanceInfo &DT) : DT_(DT) {}
 
   /// Starting DFS from root node.
+  /// \return the changed flag.
   bool DFS() {
     return DFS(DT_.getRootNode());
   }
 
   /// Starting DFS from a specific node.
+  /// \return the changed flag.
   bool DFS(const DominanceInfoNode *DIN) {
-    llvh::SmallVector<StackNode *, 4> nodesToProcess;
+    llvh::SmallVector<StackNode *, 4> stack{};
 
     bool changed = false;
 
     // Process the root node.
-    nodesToProcess.push_back(newNode(DIN));
+    stack.push_back(newStackEntry(DIN));
 
     // Process the stack.
-    while (!nodesToProcess.empty()) {
+    while (!stack.empty()) {
       // Grab the first item off the stack. Set the current generation, remove
       // the node from the stack, and process it.
-      StackNode *toProcess = nodesToProcess.back();
+      StackNode *toProcess = stack.back();
 
       // Check if the node needs to be processed.
-      if (!toProcess->isDone()) {
+      if (!toProcess->done_) {
         // Process the node.
         changed |= derived()->processNode(toProcess);
         // This node has been processed.
-        toProcess->markDone();
-      } else if (auto *child = toProcess->nextChild()) {
+        toProcess->done_ = true;
+      } else if (toProcess->childIter_ != toProcess->endIter_) {
+        auto *dn = *toProcess->childIter_++;
         // Push the next child onto the stack.
-        nodesToProcess.push_back(newNode(child));
+        stack.push_back(newStackEntry(dn));
       } else {
         // It has been processed, and there are no more children to process,
         // so pop it off the stack
-        freeNode(nodesToProcess.pop_back_val());
+        freeStackEntry(stack.pop_back_val());
       }
     }
 
@@ -284,6 +179,24 @@ class Visitor {
 };
 
 } // namespace DomTreeDFS
+
+/// Construct a map from each basic block in \p F to the number of enclosing
+/// try's. Note that unreachable blocks, and blocks with a nesting depth of 0,
+/// are excluded from the map.
+/// \return a pair containing the map, and the maximum nesting depth of try's in
+/// this function.
+std::pair<llvh::DenseMap<BasicBlock *, size_t>, size_t> getBlockTryDepths(
+    Function *F);
+
+/// Construct a map from BB to enclosing trys, accounting for TryEnd/Catch.
+/// \return None if there were no trys in the function.
+llvh::Optional<llvh::DenseMap<BasicBlock *, TryStartInst *>>
+findEnclosingTrysPerBlock(Function *F);
+
+/// Update that all throw terminators to have correct catch targets: the closest
+/// surrounding catch or null, of there is none.
+/// \return true if anything changed.
+bool fixupCatchTargets(Function *F);
 
 } // end namespace hermes
 

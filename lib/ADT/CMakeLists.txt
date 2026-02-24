@@ -4,9 +4,6 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesADT
-        CompactArray.cpp
+  CompactArray.cpp
+  LINK_OBJLIBS hermesSupport
 )
-
-target_link_libraries(hermesADT
-  hermesSupport
-  )

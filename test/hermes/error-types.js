@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O -target=HBC -Werror %s
+// RUN: %shermes -exec %s
 "use strict";
 
 var x;

@@ -27,7 +27,7 @@ const e = match (a) {
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "cases": [
 
-  1: true,
+  1 => true,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -46,7 +46,7 @@ const e = match (a) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  'foo': false,
+  'foo' => false,
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",
@@ -64,7 +64,7 @@ const e = match (a) {
 // CHECK-NEXT:                "guard": null
 // CHECK-NEXT:              },
 
-  2: {obj: 'literal'},
+  2 => {obj: 'literal'},
 
 // CHECK-NEXT:              {
 // CHECK-NEXT:                "type": "MatchExpressionCase",

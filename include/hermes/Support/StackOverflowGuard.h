@@ -27,10 +27,14 @@
 #ifndef HERMES_SUPPORT_STACKOVERFLOWGUARD_H
 #define HERMES_SUPPORT_STACKOVERFLOWGUARD_H
 
-#include <cstddef>
-#include "hermes/Support/OSCompat.h"
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 #include "llvh/Support/Compiler.h"
-#include "llvh/Support/raw_ostream.h"
+
+#include <cstddef>
+#include <cstdint>
 
 namespace hermes {
 
@@ -65,9 +69,14 @@ class StackOverflowGuard {
     // We know that nativeStackSize_ <= nativeStackHigh_
     // (because otherwise the stack wouldn't fit in the memory),
     // so the overflowed difference will be greater than nativeStackSize_.
-    if (LLVM_LIKELY(!(
-            (uintptr_t)nativeStackHigh - (uintptr_t)__builtin_frame_address(0) >
-            nativeStackSize))) {
+#ifdef _MSC_VER
+    void *stackPointer = _AddressOfReturnAddress();
+#else
+    void *stackPointer = __builtin_frame_address(0);
+#endif
+    if (LLVM_LIKELY(
+            !((uintptr_t)nativeStackHigh - (uintptr_t)stackPointer >
+              nativeStackSize))) {
       // Fast path: quickly check the stored stack bounds.
       // NOTE: It is possible to have a false negative here (highly unlikely).
       // If the program creates many threads and destroys them, a new
@@ -91,14 +100,7 @@ class StackOverflowGuard {
   /// Sets \c stackLow_ \c stackHigh_.
   /// \return true if the native stack is overflowing the bounds of the
   ///   current thread.
-  bool isStackOverflowingSlowPath() {
-    auto [highPtr, size] = oscompat::thread_stack_bounds(nativeStackGap);
-    nativeStackHigh = (const char *)highPtr;
-    nativeStackSize = size;
-    return LLVM_UNLIKELY(
-        (uintptr_t)nativeStackHigh - (uintptr_t)__builtin_frame_address(0) >
-        nativeStackSize);
-  }
+  bool isStackOverflowingSlowPath();
 };
 
 #else
@@ -121,6 +123,23 @@ class StackOverflowGuard {
   /// maxCallDepth.
   inline bool isOverflowing() {
     return callDepth > maxCallDepth;
+  }
+
+  class CallFrameRAII;
+};
+
+/// A simple RAII class to help users increment/decrement frame depth if
+/// necessary.
+class [[nodiscard]] StackOverflowGuard::CallFrameRAII {
+  StackOverflowGuard &guard_;
+
+ public:
+  explicit CallFrameRAII(StackOverflowGuard &guard) : guard_(guard) {
+    ++guard_.callDepth;
+  }
+
+  ~CallFrameRAII() {
+    --guard_.callDepth;
   }
 };
 

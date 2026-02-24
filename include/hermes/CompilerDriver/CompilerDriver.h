@@ -8,8 +8,9 @@
 #ifndef HERMES_COMPILERDRIVER_COMPILERDRIVER_H
 #define HERMES_COMPILERDRIVER_COMPILERDRIVER_H
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
+#include "hermes/Utils/CompilerRuntimeFlags.h"
 #include "llvh/Support/raw_ostream.h"
 
 namespace hermes {
@@ -95,13 +96,9 @@ void printHermesCompilerVersion(llvh::raw_ostream &s);
 namespace cl {
 /// The following flags are used by both the compiler and the VM driver.
 extern llvh::cl::opt<bool> BasicBlockProfiling;
-extern llvh::cl::opt<bool> EmitAsyncBreakCheck;
-extern llvh::cl::opt<bool> EnableBlockScoping;
-extern llvh::cl::opt<bool> EnableEval;
+extern llvh::cl::opt<std::string> ProfilingOutFile;
 extern llvh::cl::list<std::string> InputFilenames;
-extern llvh::cl::opt<bool> OptimizedEval;
-extern llvh::cl::opt<bool> VerifyIR;
-extern llvh::cl::opt<bool> ES6Class;
-
+extern llvh::cl::opt<bool> PrintCompilerTiming;
+extern ::hermes::CompilerRuntimeFlags compilerRuntimeFlags;
 } // namespace cl
 #endif

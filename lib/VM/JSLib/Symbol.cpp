@@ -20,27 +20,33 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createSymbolConstructor(Runtime &runtime) {
+void createSymbolConstructor(Runtime &runtime) {
   auto symbolPrototype = Handle<JSObject>::vmcast(&runtime.symbolPrototype);
 
-  auto cons = defineSystemConstructor<JSSymbol>(
+  struct : public Locals {
+    PinnedValue<SymbolID> symbolHandle;
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Symbol),
       symbolConstructor,
       symbolPrototype,
       0,
-      CellKind::JSSymbolKind);
+      lv.cons);
 
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::predefinedFor),
       nullptr,
       symbolFor,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::keyFor),
       nullptr,
       symbolKeyFor,
@@ -56,74 +62,88 @@ Handle<JSObject> createSymbolConstructor(Runtime &runtime) {
   dpf.setConfigurable = 0;
   dpf.setValue = 1;
 
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolHasInstance);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::hasInstance),
-      runtime.makeHandle(
-          Predefined::getSymbolID(Predefined::SymbolHasInstance)),
+      lv.symbolHandle,
       dpf);
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolIterator);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::iterator),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolIterator)),
+      lv.symbolHandle,
       dpf);
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolAsyncIterator);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::asyncIterator),
+      lv.symbolHandle,
+      dpf);
+  lv.symbolHandle =
+      Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable);
+  defineProperty(
+      runtime,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isConcatSpreadable),
-      runtime.makeHandle(
-          Predefined::getSymbolID(Predefined::SymbolIsConcatSpreadable)),
+      lv.symbolHandle,
       dpf);
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolToPrimitive);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::toPrimitive),
-      runtime.makeHandle(
-          Predefined::getSymbolID(Predefined::SymbolToPrimitive)),
+      lv.symbolHandle,
       dpf);
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolToStringTag);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::toStringTag),
-      runtime.makeHandle(
-          Predefined::getSymbolID(Predefined::SymbolToStringTag)),
+      lv.symbolHandle,
       dpf);
 
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolMatch);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::match),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolMatch)),
+      lv.symbolHandle,
       dpf);
 
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolMatchAll);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::matchAll),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolMatchAll)),
+      lv.symbolHandle,
       dpf);
 
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolSearch);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::search),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolSearch)),
+      lv.symbolHandle,
       dpf);
 
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolReplace);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::replace),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolReplace)),
+      lv.symbolHandle,
       dpf);
 
+  lv.symbolHandle = Predefined::getSymbolID(Predefined::SymbolSplit);
   defineProperty(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::split),
-      runtime.makeHandle(Predefined::getSymbolID(Predefined::SymbolSplit)),
+      lv.symbolHandle,
       dpf);
 
   // Symbol.prototype.xxx methods.
@@ -170,30 +190,31 @@ Handle<JSObject> createSymbolConstructor(Runtime &runtime) {
       symbolPrototypeValueOf,
       1,
       dpf);
-
-  return cons;
 }
 
-CallResult<HermesValue>
-symbolConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.isConstructorCall()) {
     return runtime.raiseTypeError("Symbol is not a constructor");
   }
 
-  MutableHandle<StringPrimitive> descString{runtime};
+  struct : public Locals {
+    PinnedValue<StringPrimitive> descString;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   if (args.getArg(0).isUndefined()) {
     // If description is undefined, the descString will eventually be "".
-    descString = runtime.getPredefinedString(Predefined::emptyString);
+    lv.descString = runtime.getPredefinedString(Predefined::emptyString);
   } else {
     auto descStringRes = toString_RJS(runtime, args.getArgHandle(0));
     if (LLVM_UNLIKELY(descStringRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    descString = descStringRes->get();
+    lv.descString = descStringRes->get();
   }
 
-  auto symbolRes =
-      runtime.getIdentifierTable().createNotUniquedSymbol(runtime, descString);
+  auto symbolRes = runtime.getIdentifierTable().createNotUniquedSymbol(
+      runtime, lv.descString);
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -201,22 +222,28 @@ symbolConstructor(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeSymbolValue(*symbolRes);
 }
 
-CallResult<HermesValue> symbolFor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolFor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto cr = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto key = runtime.makeHandle(std::move(*cr));
 
-  auto symbolRes = runtime.getSymbolRegistry().getSymbolForKey(runtime, key);
+  struct : public Locals {
+    PinnedValue<StringPrimitive> key;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.key = std::move(*cr);
+  auto symbolRes = runtime.getSymbolRegistry().getSymbolForKey(runtime, lv.key);
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return HermesValue::encodeSymbolValue(*symbolRes);
 }
 
-CallResult<HermesValue>
-symbolKeyFor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolKeyFor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(!args.getArg(0).isSymbol())) {
     return runtime.raiseTypeError("Symbol.keyFor() requires a symbol argument");
   }
@@ -233,41 +260,49 @@ symbolKeyFor(void *, Runtime &runtime, NativeArgs args) {
 
 /// ES10.0 19.4.3.2 get Symbol.prototype.description
 /// TODO(T79770380): make the Symbol(undefined) case spec-conformant.
-CallResult<HermesValue>
-symbolPrototypeDescriptionGetter(void *, Runtime &runtime, NativeArgs args) {
-  MutableHandle<SymbolID> sym{runtime};
+CallResult<HermesValue> symbolPrototypeDescriptionGetter(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  struct : public Locals {
+    PinnedValue<SymbolID> sym;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   // 1. Let s be the this value.
   // 2. Let sym be ? thisSymbolValue(s).
   if (args.getThisArg().isSymbol()) {
-    sym = args.vmcastThis<SymbolID>().get();
+    lv.sym = args.vmcastThis<SymbolID>().get();
   } else if (auto symHandle = args.dyncastThis<JSSymbol>()) {
-    sym = symHandle->getPrimitiveSymbol();
+    lv.sym = symHandle->getPrimitiveSymbol();
   } else {
     return runtime.raiseTypeError(
         "Symbol.prototype.description can only be called on Symbol");
   }
 
   // 3. Return sym.[[Description]].
-  StringPrimitive *desc = runtime.getStringPrimFromSymbolID(*sym);
+  StringPrimitive *desc = runtime.getStringPrimFromSymbolID(lv.sym.get());
   return HermesValue::encodeStringValue(desc);
 }
 
 /// ES10 19.4.3.3 Symbol.prototype.toString ( )
-CallResult<HermesValue>
-symbolPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let sym be ? thisSymbolValue(this value).
-  MutableHandle<SymbolID> sym{runtime};
+  struct : public Locals {
+    PinnedValue<SymbolID> sym;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
   if (args.getThisArg().isSymbol()) {
-    sym = args.vmcastThis<SymbolID>().get();
+    lv.sym = args.vmcastThis<SymbolID>().get();
   } else if (auto symHandle = args.dyncastThis<JSSymbol>()) {
-    sym = symHandle->getPrimitiveSymbol();
+    lv.sym = symHandle->getPrimitiveSymbol();
   } else {
     return runtime.raiseTypeError(
         "Symbol.prototype.toString can only be called on Symbol");
   }
 
   // 2. Return SymbolDescriptiveString(sym).
-  auto str = symbolDescriptiveString(runtime, sym);
+  auto str = symbolDescriptiveString(runtime, lv.sym);
   if (LLVM_UNLIKELY(str == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -275,8 +310,8 @@ symbolPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES10 19.4.3.4 Symbol.prototype.valueOf ( )
-CallResult<HermesValue>
-symbolPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> symbolPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Return ? thisSymbolValue(this value).
   if (args.getThisArg().isSymbol()) {
     return args.getThisArg();

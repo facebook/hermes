@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/BCProviderFromSrc.h"
 #include "hermes/Support/MemoryBuffer.h"
 #include "hermes/VM/Runtime.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 
@@ -20,6 +20,18 @@ using namespace hermes::vm;
 using namespace hermes::hbc;
 
 namespace {
+
+/// Assert that obj.prop is normal
+#define EXPECT_PROPERTY_NORMAL(obj, prop)                                   \
+  {                                                                         \
+    NamedPropertyDescriptor desc;                                           \
+    ASSERT_TRUE(                                                            \
+        JSObject::getNamedDescriptorPredefined(obj, runtime, prop, desc) != \
+        nullptr);                                                           \
+    EXPECT_TRUE(desc.flags.writable);                                       \
+    EXPECT_TRUE(desc.flags.configurable);                                   \
+    EXPECT_FALSE(desc.flags.staticBuiltin);                                 \
+  }
 
 /// Assert that obj.prop is frozen and the static builtin flag is marked.
 #define EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(obj, prop)              \
@@ -39,11 +51,21 @@ static void verifyAllBuiltinsFrozen(Runtime &runtime) {
   GCScope gcScope{runtime};
   auto global = runtime.getGlobal();
   Predefined::getSymbolID(Predefined::isArray);
+#define NORMAL_OBJECT(object) \
+  {EXPECT_PROPERTY_NORMAL(global, Predefined::object)}
 #define BUILTIN_OBJECT(object) \
   {EXPECT_PROPERTY_FROZEN_AND_MARKED_AS_STATIC(global, Predefined::object)}
 
   MutableHandle<JSObject> objHandle{runtime};
 
+#define NORMAL_METHOD(object, method)                            \
+  {                                                              \
+    auto objectID = Predefined::getSymbolID(Predefined::object); \
+    auto cr = JSObject::getNamed_RJS(global, runtime, objectID); \
+    ASSERT_NE(cr, ExecutionStatus::EXCEPTION);                   \
+    objHandle = vmcast<JSObject>(cr->get());                     \
+    EXPECT_PROPERTY_NORMAL(objHandle, Predefined::method);       \
+  }
 #define BUILTIN_METHOD(object, method)                           \
   {                                                              \
     auto objectID = Predefined::getSymbolID(Predefined::object); \

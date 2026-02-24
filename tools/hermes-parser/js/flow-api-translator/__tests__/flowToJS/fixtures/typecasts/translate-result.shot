@@ -17,7 +17,7 @@ const yyy = '';
 xxx;
 ({xxx: 0, yyy: 'hey'});
 xxx => xxx + 1;
-xxx, yyy;
+(xxx, yyy);
 xxx;
 
 // Note: re-enable formatting after Prettier is updated to handle \`as\` expressions

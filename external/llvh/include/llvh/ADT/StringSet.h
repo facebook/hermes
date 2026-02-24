@@ -34,6 +34,7 @@ namespace llvh {
       for (StringRef X : S)
         insert(X);
     }
+    using StringMap<char, AllocatorTy>::StringMap;
 
     std::pair<typename base::iterator, bool> insert(StringRef Key) {
       assert(!Key.empty());

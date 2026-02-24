@@ -8,11 +8,14 @@
 // RUN: %hermes -O -target=HBC %s 2>&1 | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC %s -lazy 2>&1 | %FileCheck --match-full-lines %s
 // XFAIL: windows
-// UNSUPPORTED: ubsan
+// UNSUPPORTED: ubsan || asan
 
 // Hermes has a 256 limit on the number of scopes nesting. This test ensures
 // that the compiler will handle applications that require more scopes
 // gracefully -- i.e., it won't crash, nor emit bad bytecode.
+//
+// Disabled under ASAN because parser reports nesting overflow much earlier
+// and prevents the tested error from being reported.
 
 try {
     eval('"use strict";\n' +

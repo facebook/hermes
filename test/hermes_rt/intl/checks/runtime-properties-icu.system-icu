@@ -1,0 +1,4 @@
+// System ICU expected output for runtime-properties-icu.js
+// hermes_icu_load_from_path sets provider_name to "custom".
+// CHECK: ICU Provider: custom
+// CHECK-NEXT: ICU Version: 0

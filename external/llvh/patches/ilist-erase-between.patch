@@ -1,0 +1,52 @@
+diff --git a/include/llvh/ADT/ilist_base.h b/include/llvh/ADT/ilist_base.h
+--- a/include/llvh/ADT/ilist_base.h
++++ b/include/llvh/ADT/ilist_base.h
+@@ -50,6 +50,13 @@
+     Final->setNext(nullptr);
+   }
+ 
++  /// Connect the elements Start and End, effectively removing all elements
++  /// between them.
++  static void removeBetweenImpl(node_base_type &Start, node_base_type &End) {
++    End.setPrev(&Start);
++    Start.setNext(&End);
++  }
++
+   static void transferBeforeImpl(node_base_type &Next, node_base_type &First,
+                                  node_base_type &Last) {
+     if (&Next == &Last || &First == &Last)
+@@ -82,6 +89,9 @@
+   template <class T> static void removeRange(T &First, T &Last) {
+     removeRangeImpl(First, Last);
+   }
++  template <class T> static void removeBetween(T &Start, T &End) {
++    removeBetweenImpl(Start, End);
++  }
+ 
+   template <class T> static void transferBefore(T &Next, T &First, T &Last) {
+     transferBeforeImpl(Next, First, Last);
+diff --git a/include/llvh/ADT/simple_ilist.h b/include/llvh/ADT/simple_ilist.h
+--- a/include/llvh/ADT/simple_ilist.h
++++ b/include/llvh/ADT/simple_ilist.h
+@@ -208,6 +208,21 @@
+     return Last;
+   }
+ 
++  /// \return an iterator to the node before the first node (the sentinel). This
++  /// is an advanced method, only useful in combination with
++  /// \c _erase_between().
++  iterator _before_begin() { return iterator(Sentinel); }
++
++  /// Erase the elements between (but not including) \p Start and \p End,
++  /// without touching the erased elements. In essence, this simply connects
++  /// \c Start directly to \c End.
++  /// Note that the start iterator is not a fully normal iterator, it could be
++  /// the sentinel.
++  /// This is an advanced method.
++  void _erase_between(iterator Start, iterator End) {
++    list_base_type::removeBetween(*Start.getNodePtr(), *End.getNodePtr());
++  }
++
+   /// Remove a node by iterator and dispose of it.
+   template <class Disposer>
+   iterator eraseAndDispose(iterator I, Disposer dispose) {

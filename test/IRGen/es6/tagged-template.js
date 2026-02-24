@@ -22,12 +22,12 @@ function oneSub() {
   return dummy`${666}`;
 }
 
-function dup() {
-  return dummy`hello world${1 + 2}!!!`;
+function dup(x) {
+  return dummy`hello world${1 + x}!!!`;
 }
 
-function notDup() {
-  return dummy`hello\nworld${1 + 2}!!!`;
+function notDup(x) {
+  return dummy`hello\nworld${1 + x}!!!`;
 }
 
 function memberExpr() {
@@ -46,8 +46,8 @@ function callExpr() {
 
 /// Some more test cases to check template object id.
 
-function dup2() {
-  return dummy`hello world${1 + 2}!!!`;
+function dup2(x) {
+  return dummy`hello world${1 + x}!!!`;
 }
 
 function dup3() {
@@ -60,195 +60,215 @@ function helloWorld() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [dummy, emptyString, oneString, oneSub, dup, notDup, memberExpr, callExpr, dup2, dup3, helloWorld]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %dummy#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %emptyString#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "emptyString" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %oneString#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "oneString" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %oneSub#0#1()#5, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "oneSub" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %dup#0#1()#6, %0
-// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "dup" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %notDup#0#1()#7, %0
-// CHECK-NEXT:  %12 = StorePropertyInst %11 : closure, globalObject : object, "notDup" : string
-// CHECK-NEXT:  %13 = CreateFunctionInst %memberExpr#0#1()#8, %0
-// CHECK-NEXT:  %14 = StorePropertyInst %13 : closure, globalObject : object, "memberExpr" : string
-// CHECK-NEXT:  %15 = CreateFunctionInst %callExpr#0#1()#9, %0
-// CHECK-NEXT:  %16 = StorePropertyInst %15 : closure, globalObject : object, "callExpr" : string
-// CHECK-NEXT:  %17 = CreateFunctionInst %dup2#0#1()#12, %0
-// CHECK-NEXT:  %18 = StorePropertyInst %17 : closure, globalObject : object, "dup2" : string
-// CHECK-NEXT:  %19 = CreateFunctionInst %dup3#0#1()#13, %0
-// CHECK-NEXT:  %20 = StorePropertyInst %19 : closure, globalObject : object, "dup3" : string
-// CHECK-NEXT:  %21 = CreateFunctionInst %helloWorld#0#1()#14, %0
-// CHECK-NEXT:  %22 = StorePropertyInst %21 : closure, globalObject : object, "helloWorld" : string
-// CHECK-NEXT:  %23 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %24 = StoreStackInst undefined : undefined, %23
-// CHECK-NEXT:  %25 = LoadStackInst %23
-// CHECK-NEXT:  %26 = ReturnInst %25
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "dummy": string
+// CHECK-NEXT:       DeclareGlobalVarInst "emptyString": string
+// CHECK-NEXT:       DeclareGlobalVarInst "oneString": string
+// CHECK-NEXT:       DeclareGlobalVarInst "oneSub": string
+// CHECK-NEXT:       DeclareGlobalVarInst "dup": string
+// CHECK-NEXT:       DeclareGlobalVarInst "notDup": string
+// CHECK-NEXT:       DeclareGlobalVarInst "memberExpr": string
+// CHECK-NEXT:       DeclareGlobalVarInst "callExpr": string
+// CHECK-NEXT:       DeclareGlobalVarInst "dup2": string
+// CHECK-NEXT:        DeclareGlobalVarInst "dup3": string
+// CHECK-NEXT:        DeclareGlobalVarInst "helloWorld": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dummy(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "dummy": string
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) %0: environment, %VS0: any, %emptyString(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "emptyString": string
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) %0: environment, %VS0: any, %oneString(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "oneString": string
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) %0: environment, %VS0: any, %oneSub(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "oneSub": string
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dup(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "dup": string
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) %0: environment, %VS0: any, %notDup(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "notDup": string
+// CHECK-NEXT:  %24 = CreateFunctionInst (:object) %0: environment, %VS0: any, %memberExpr(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %24: object, globalObject: object, "memberExpr": string
+// CHECK-NEXT:  %26 = CreateFunctionInst (:object) %0: environment, %VS0: any, %callExpr(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %26: object, globalObject: object, "callExpr": string
+// CHECK-NEXT:  %28 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dup2(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %28: object, globalObject: object, "dup2": string
+// CHECK-NEXT:  %30 = CreateFunctionInst (:object) %0: environment, %VS0: any, %dup3(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %30: object, globalObject: object, "dup3": string
+// CHECK-NEXT:  %32 = CreateFunctionInst (:object) %0: environment, %VS0: any, %helloWorld(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %32: object, globalObject: object, "helloWorld": string
+// CHECK-NEXT:  %34 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %34: any
+// CHECK-NEXT:  %36 = LoadStackInst (:any) %34: any
+// CHECK-NEXT:        ReturnInst %36: any
 // CHECK-NEXT:function_end
 
-// CHECK:function dummy#0#1()#2
-// CHECK-NEXT:S{dummy#0#1()#2} = []
+// CHECK:scope %VS1 []
+
+// CHECK:function dummy(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{dummy#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function emptyString#0#1()#3
-// CHECK-NEXT:S{emptyString#0#1()#3} = []
+// CHECK:scope %VS2 []
+
+// CHECK:function emptyString(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{emptyString#0#1()#3}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 0 : number, true : boolean, "" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 0: number, true: boolean, "": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function oneString#0#1()#4
-// CHECK-NEXT:S{oneString#0#1()#4} = []
+// CHECK:scope %VS3 []
+
+// CHECK:function oneString(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{oneString#0#1()#4}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 1 : number, true : boolean, "hello" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 1: number, true: boolean, "hello": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function oneSub#0#1()#5
-// CHECK-NEXT:S{oneSub#0#1()#5} = []
+// CHECK:scope %VS4 []
+
+// CHECK:function oneSub(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{oneSub#0#1()#5}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 2 : number, true : boolean, "" : string, "" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1, 666 : number
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 2: number, true: boolean, "": string, "": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any, 666: number
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function dup#0#1()#6
-// CHECK-NEXT:S{dup#0#1()#6} = []
+// CHECK:scope %VS5 [x: any]
+
+// CHECK:function dup(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{dup#0#1()#6}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1, %2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS5.x]: any
+// CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS5.x]: any
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) 1: number, %5: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function notDup#0#1()#7
-// CHECK-NEXT:S{notDup#0#1()#7} = []
+// CHECK:scope %VS6 [x: any]
+
+// CHECK:function notDup(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{notDup#0#1()#7}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 4 : number, false : boolean, "hello\\\\nworld" : string, "!!!" : string, "hello\\nworld" : string, "!!!" : string
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1, %2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS6: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS6.x]: any
+// CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 4: number, false: boolean, "hello\\\\nworld": string, "!!!": string, "hello\\nworld": string, "!!!": string
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS6.x]: any
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) 1: number, %5: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function memberExpr#0#1()#8
-// CHECK-NEXT:S{memberExpr#0#1()#8} = [obj#8]
+// CHECK:scope %VS7 [obj: any]
+
+// CHECK:function memberExpr(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{memberExpr#0#1()#8}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [obj#8], %0
-// CHECK-NEXT:  %2 = AllocObjectInst 1 : number, empty
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %4 = StoreNewOwnPropertyInst %3, %2 : object, "func" : string, true : boolean
-// CHECK-NEXT:  %5 = StoreFrameInst %2 : object, [obj#8], %0
-// CHECK-NEXT:  %6 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
-// CHECK-NEXT:  %7 = LoadFrameInst [obj#8], %0
-// CHECK-NEXT:  %8 = LoadPropertyInst %7, "func" : string
-// CHECK-NEXT:  %9 = CallInst %8, undefined : undefined, %7, %6
-// CHECK-NEXT:  %10 = ReturnInst %9
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS7: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS7.obj]: any
+// CHECK-NEXT:  %3 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %4 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:       DefineOwnPropertyInst %4: any, %3: object, "func": string, true: boolean
+// CHECK-NEXT:       StoreFrameInst %1: environment, %3: object, [%VS7.obj]: any
+// CHECK-NEXT:  %7 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS7.obj]: any
+// CHECK-NEXT:  %9 = LoadPropertyInst (:any) %8: any, "func": string
+// CHECK-NEXT:  %10 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, %8: any, %7: any
+// CHECK-NEXT:        ReturnInst %10: any
 // CHECK-NEXT:function_end
 
-// CHECK:function callExpr#0#1()#9
-// CHECK-NEXT:S{callExpr#0#1()#9} = [func#9]
+// CHECK:scope %VS8 [func: any]
+
+// CHECK:function callExpr(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{callExpr#0#1()#9}
-// CHECK-NEXT:  %1 = CreateFunctionInst %func#1#9()#10, %0
-// CHECK-NEXT:  %2 = StoreFrameInst %1 : closure, [func#9], %0
-// CHECK-NEXT:  %3 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 5 : number, true : boolean, "hello world!" : string
-// CHECK-NEXT:  %4 = LoadFrameInst [func#9], %0
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined, %3
-// CHECK-NEXT:  %7 = ReturnInst %6
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS8: any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS8: any, %func(): functionCode
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: object, [%VS8.func]: any
+// CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 5: number, true: boolean, "hello world!": string
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS8.func]: any
+// CHECK-NEXT:  %6 = CallInst (:any) %5: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %7 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any
+// CHECK-NEXT:       ReturnInst %7: any
 // CHECK-NEXT:function_end
 
-// CHECK:function func#1#9()#10
-// CHECK-NEXT:S{func#1#9()#10} = []
+// CHECK:scope %VS9 [x: any]
+
+// CHECK:function dup2(x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{func#1#9()#10}
-// CHECK-NEXT:  %1 = CreateFunctionInst %""#9#10()#11, %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : closure
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS9: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS9.x]: any
+// CHECK-NEXT:  %4 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
+// CHECK-NEXT:  %5 = LoadFrameInst (:any) %1: environment, [%VS9.x]: any
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) 1: number, %5: any
+// CHECK-NEXT:  %7 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %8 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: any, %6: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function ""#9#10()#11
-// CHECK-NEXT:S{""#9#10()#11} = []
+// CHECK:scope %VS10 []
+
+// CHECK:function dup3(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{""#9#10()#11}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS10: any, %0: environment
+// CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 3: number, true: boolean, "hello world": string, "!!!": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any, 7: number
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function dup2#0#1()#12
-// CHECK-NEXT:S{dup2#0#1()#12} = []
+// CHECK:scope %VS11 []
+
+// CHECK:function helloWorld(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{dup2#0#1()#12}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', 1 : number, 2 : number
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined, %1, %2
-// CHECK-NEXT:  %5 = ReturnInst %4
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %6 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS11: any, %0: environment
+// CHECK-NEXT:  %2 = GetTemplateObjectInst (:any) 6: number, true: boolean, "hello": string, " world!!!": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "dummy": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %2: any, 0: number
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function dup3#0#1()#13
-// CHECK-NEXT:S{dup3#0#1()#13} = []
+// CHECK:scope %VS12 []
+
+// CHECK:function func(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{dup3#0#1()#13}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 3 : number, true : boolean, "hello world" : string, "!!!" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1, 7 : number
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS8: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS12: any, %0: environment
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %1: environment, %VS12: any, %""(): functionCode
+// CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end
 
-// CHECK:function helloWorld#0#1()#14
-// CHECK-NEXT:S{helloWorld#0#1()#14} = []
+// CHECK:scope %VS13 []
+
+// CHECK:function ""(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{helloWorld#0#1()#14}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.getTemplateObject] : number, undefined : undefined, undefined : undefined, 6 : number, true : boolean, "hello" : string, " world!!!" : string
-// CHECK-NEXT:  %2 = LoadPropertyInst globalObject : object, "dummy" : string
-// CHECK-NEXT:  %3 = CallInst %2, undefined : undefined, undefined : undefined, %1, 0 : number
-// CHECK-NEXT:  %4 = ReturnInst %3
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS12: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS13: any, %0: environment
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

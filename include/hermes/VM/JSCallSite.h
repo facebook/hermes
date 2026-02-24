@@ -149,8 +149,9 @@ class JSCallSite final : public JSObject {
  private:
   friend void JSCallSiteBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
-  /// \return the StrackTraceInfo related to this JSCallSite.
-  static const StackTraceInfo *getStackTraceInfo(
+  /// \return the BytecodeStackTraceInfo related to this JSCallSite. Will be
+  /// nullptr if the corresponding frame is a NativeStackTraceInfo.
+  static const BytecodeStackTraceInfo *getStackTraceInfo(
       Runtime &runtime,
       Handle<JSCallSite> selfHandle);
 

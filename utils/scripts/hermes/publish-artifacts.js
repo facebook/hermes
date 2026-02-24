@@ -17,7 +17,6 @@ import type {BuildType} from './version-utils';
 const {
   getVersion,
   updateGradlePropertiesFile,
-  updatePackageJsonVersion,
   validateBuildType,
 } = require('./version-utils');
 const {echo, exec, exit, popd, pushd} = require('shelljs');
@@ -28,43 +27,29 @@ async function main() {
     .option('t', {
       alias: 'builtType',
       describe: 'The type of build you want to perform.',
-      choices: ['dry-run', 'commitly', 'release'],
+      choices: ['dry-run', 'release'],
       default: 'dry-run',
-    })
-    .option('v', {
-      alias: 'hermesVersion',
-      describe: 'Use a specific version instead of generating one.',
-      type: 'string',
     })
     .strict().argv;
 
   // $FlowFixMe[prop-missing]
   const buildType = argv.builtType;
-  // $FlowFixMe[prop-missing]
-  const hermesVersion = argv.hermesVersion;
 
   if (!validateBuildType(buildType)) {
     throw new Error(`Unsupported build type: ${buildType}`);
   }
 
-  await publishArtifacts(buildType, hermesVersion);
+  await publishArtifacts(buildType);
 }
 
-async function publishArtifacts(
-  buildType /*: BuildType */,
-  hermesVersion /*: string */,
-) {
+async function publishArtifacts(buildType /*: BuildType */) {
   if (buildType === 'dry-run') {
     console.log('Skipping publishing artifacts because --dry-run is set.');
     return;
   }
 
-  let version = hermesVersion;
-  if (!version) {
-    version = await getVersion(buildType);
-  }
+  const version = await getVersion(buildType);
   await updateGradlePropertiesFile(version);
-  await updatePackageJsonVersion(version);
 
   pushd('android');
   await publishAndroidArtifactsToMaven(version, buildType);
@@ -76,13 +61,7 @@ function publishAndroidArtifactsToMaven(
   releaseVersion /*: string */,
   buildType /*: BuildType */,
 ) {
-  // We want to gate ourselves against accidentally publishing a 1.x or a 1000.x on
-  // maven central which will break the semver for our artifacts.
-  if (
-    buildType === 'release' &&
-    releaseVersion.startsWith('0.') &&
-    !releaseVersion.startsWith('0.0.0')
-  ) {
+  if (buildType === 'release') {
     // -------- For stable releases, we also need to close and release the staging repository.
     if (
       exec(
@@ -95,9 +74,7 @@ function publishAndroidArtifactsToMaven(
       exit(1);
     }
   } else {
-    echo(
-      'Nothing to do as this is not a stable release - Commitlies Android artifacts are published by build_android',
-    );
+    echo('Nothing to do as this is not a stable release');
   }
 
   echo('Finished publishing Android artifacts to Maven Central');
@@ -107,13 +84,7 @@ function publishExternalArtifactsToMaven(
   releaseVersion /*: string */,
   buildType /*: BuildType */,
 ) {
-  // We want to gate ourselves against accidentally publishing a 1.x or a 1000.x on
-  // maven central which will break the semver for our artifacts.
-  if (
-    buildType === 'release' &&
-    releaseVersion.startsWith('0.') &&
-    !releaseVersion.startsWith('0.0.0')
-  ) {
+  if (buildType === 'release') {
     // -------- For stable releases, we do the publishing and close the staging repository.
     // This can't be done earlier in build_android because this artifact are partially built by the iOS jobs.
     if (
@@ -127,17 +98,7 @@ function publishExternalArtifactsToMaven(
       exit(1);
     }
   } else {
-    const isSnapshot = buildType === 'commitly';
-    // -------- For nightly releases, we only need to publish the snapshot to Sonatype snapshot repo.
-    if (
-      exec(
-        './gradlew :ios-artifacts:publishToSonatype -PisSnapshot=' +
-          isSnapshot.toString(),
-      ).code
-    ) {
-      echo('Failed to publish external artifacts to Sonatype (Maven Central)');
-      exit(1);
-    }
+    echo('Nothing to do as this is not a stable release');
   }
 
   echo('Finished publishing external artifacts to Maven Central');

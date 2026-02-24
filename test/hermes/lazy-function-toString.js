@@ -13,6 +13,9 @@
 function foo(x) { "show source"; }
 
 (function bar() {
+  function baz() { "show source"; return 'baz;' }
     print(foo.toString());
     // CHECK: function foo(x) { "show source"; }
+    print(baz.toString());
+    // CHECK: function baz() { "show source"; return 'baz;' }
 })()

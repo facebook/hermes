@@ -16,11 +16,7 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringView.h"
 #include "llvh/Support/ConvertUTF.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -95,18 +91,19 @@ CallResult<HermesValue> StringPrimitive::createEfficientImpl(
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    auto output = runtime.makeHandle<StringPrimitive>(*result);
     // Copy directly into the StringPrimitive storage.
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4244)
 #endif
-
-    std::copy(str.begin(), str.end(), output->castToASCIIPointerForWrite());
+    std::copy(
+        str.begin(),
+        str.end(),
+        vmcast<StringPrimitive>(*result)->castToASCIIPointerForWrite());
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-    return output.getHermesValue();
+    return *result;
   }
 
   return StringPrimitive::create(runtime, str);
@@ -202,8 +199,7 @@ CallResult<HermesValue> StringPrimitive::createEfficient(
 CallResult<HermesValue> StringPrimitive::createDynamic(
     Runtime &runtime,
     UTF16Ref str) {
-  return createDynamicWithKnownEncoding(
-      runtime, str, isAllASCII(str.begin(), str.end()));
+  return createDynamicWithKnownEncoding(runtime, str, isAllASCII(str));
 }
 
 CallResult<HermesValue> StringPrimitive::createDynamicWithKnownEncoding(
@@ -249,13 +245,6 @@ bool StringPrimitive::sliceEquals(
   }
   return stringRefEquals(
       castToUTF16Ref(start, length), other->castToUTF16Ref());
-}
-
-bool StringPrimitive::equals(const StringPrimitive *other) const {
-  if (this == other) {
-    return true;
-  }
-  return sliceEquals(0, getStringLength(), other);
 }
 
 bool StringPrimitive::equals(const StringView &other) const {
@@ -333,6 +322,14 @@ CallResult<HermesValue> StringPrimitive::slice(
 
   SafeUInt32 safeLen(length);
 
+  // Special case for 1-character strings, some of which are cached in the
+  // runtime.
+  if (length == 1) {
+    char16_t ch = str->isASCII() ? str->castToASCIIPointer()[start]
+                                 : str->castToUTF16Pointer()[start];
+    return runtime.getCharacterString(ch).getHermesValue();
+  }
+
   auto builder =
       StringBuilder::createStringBuilder(runtime, safeLen, str->isASCII());
   if (builder == ExecutionStatus::EXCEPTION) {
@@ -374,6 +371,11 @@ void StringPrimitive::appendUTF16String(char16_t *ptr) const {
     const char16_t *src = castToUTF16Pointer();
     std::copy(src, src + getStringLength(), ptr);
   }
+}
+
+uint32_t StringPrimitive::computeHash() const {
+  return isASCII() ? hermes::hashString(castToASCIIRef())
+                   : hermes::hashString(castToUTF16Ref());
 }
 
 StringView StringPrimitive::createStringViewMustBeFlat(
@@ -668,11 +670,12 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::create(
     appendToCopyableString(contents, right);
   }
 
-  auto storageHnd = runtime.makeHandle<ExternalStringPrimitive<T>>(
+  UsePinnedValueRAII<ExternalStringPrimitive<T>> storage{runtime.hvStorageTmp};
+  storage.template castAndSetHermesValue<ExternalStringPrimitive<T>>(
       runtime.ignoreAllocationFailure(
           ExternalStringPrimitive<T>::create(runtime, std::move(contents))));
 
-  return create(runtime, len, storageHnd);
+  return create(runtime, len, storage);
 }
 
 template <typename T>
@@ -702,8 +705,11 @@ PseudoHandle<StringPrimitive> BufferedStringPrimitive<T>::append(
       storage, storage->calcExternalMemorySize() - oldExternalMem);
 
   noAlloc.release();
+  UsePinnedValueRAII<ExternalStringPrimitive<T>> storageHandle{
+      runtime.hvStorageTmp};
+  storageHandle = storage;
   return BufferedStringPrimitive<T>::create(
-      runtime, storage->contents_.size(), runtime.makeHandle(storage));
+      runtime, storage->contents_.size(), storageHandle);
 }
 
 PseudoHandle<StringPrimitive> internalConcatStringPrimitives(

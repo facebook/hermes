@@ -262,18 +262,20 @@ TEST(JSLexerTest, BigIntTest) {
         " 0n"
         " 1n"
         " 1000n"
+        " 12_34n"
         " 1928371289378129381212398n"
         " 0xdeadbeefn"
         " 0b10101100101n",
         sm,
         alloc);
 
-    LEX_EXPECT_BIGINT("0n", lex);
-    LEX_EXPECT_BIGINT("1n", lex);
-    LEX_EXPECT_BIGINT("1000n", lex);
-    LEX_EXPECT_BIGINT("1928371289378129381212398n", lex);
-    LEX_EXPECT_BIGINT("0xdeadbeefn", lex);
-    LEX_EXPECT_BIGINT("0b10101100101n", lex);
+    LEX_EXPECT_BIGINT("0", lex);
+    LEX_EXPECT_BIGINT("1", lex);
+    LEX_EXPECT_BIGINT("1000", lex);
+    LEX_EXPECT_BIGINT("1234", lex);
+    LEX_EXPECT_BIGINT("1928371289378129381212398", lex);
+    LEX_EXPECT_BIGINT("0xdeadbeef", lex);
+    LEX_EXPECT_BIGINT("0b10101100101", lex);
   }
 
   {
@@ -1144,8 +1146,9 @@ TEST(JSLexerTest, AtSignTest) {
     ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
 
+    ASSERT_EQ(TokenKind::at, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
-    EXPECT_EQ(1, sm.getErrorCount());
+    EXPECT_EQ(0, sm.getErrorCount());
   }
   {
     JSLexer::Allocator alloc;
@@ -1159,11 +1162,13 @@ TEST(JSLexerTest, AtSignTest) {
     ASSERT_EQ(TokenKind::l_brace, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::r_brace, lex.advance()->getKind());
 
+    ASSERT_EQ(TokenKind::at, lex.advance()->getKind());
     ASSERT_EQ(TokenKind::eof, lex.advance()->getKind());
-    EXPECT_EQ(1, sm.getErrorCount());
+    EXPECT_EQ(0, sm.getErrorCount());
   }
 }
 
+#if HERMES_PARSE_JSX
 TEST(JSLexerTest, JSXTest) {
   JSLexer::Allocator alloc;
   SourceErrorManager sm;
@@ -1182,6 +1187,7 @@ TEST(JSLexerTest, JSXTest) {
   ASSERT_EQ(TokenKind::jsx_text, lex.advanceInJSXChild()->getKind());
   EXPECT_STREQ("qwerty", lex.getCurToken()->getJSXTextRaw()->c_str());
 }
+#endif
 
 TEST(JSLexerTest, StoreCommentsTest) {
   JSLexer::Allocator alloc;

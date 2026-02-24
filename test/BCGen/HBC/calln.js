@@ -24,90 +24,87 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // Auto-generated content below. Please do not modify manually.
 
-// LRA:function global#0()#1 : undefined
-// LRA-NEXT:globals = [foo1, foo2, foo3, foo4, foo5]
-// LRA-NEXT:S{global#0()#1} = []
+// LRA:function global(): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg0 @0 [1...11) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
-// LRA-NEXT:  $Reg2 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo1#0#1()#2 : undefined, %0
-// LRA-NEXT:  $Reg1 @2 [3...12) 	%2 = HBCGetGlobalObjectInst
-// LRA-NEXT:  $Reg2 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "foo1" : string
-// LRA-NEXT:  $Reg2 @4 [5...6) 	%4 = HBCCreateFunctionInst %foo2#0#1()#3 : undefined, %0
-// LRA-NEXT:  $Reg2 @5 [empty]	%5 = StorePropertyInst %4 : closure, %2 : object, "foo2" : string
-// LRA-NEXT:  $Reg2 @6 [7...8) 	%6 = HBCCreateFunctionInst %foo3#0#1()#4 : undefined, %0
-// LRA-NEXT:  $Reg2 @7 [empty]	%7 = StorePropertyInst %6 : closure, %2 : object, "foo3" : string
-// LRA-NEXT:  $Reg2 @8 [9...10) 	%8 = HBCCreateFunctionInst %foo4#0#1()#5 : undefined, %0
-// LRA-NEXT:  $Reg2 @9 [empty]	%9 = StorePropertyInst %8 : closure, %2 : object, "foo4" : string
-// LRA-NEXT:  $Reg0 @10 [11...12) 	%10 = HBCCreateFunctionInst %foo5#0#1()#6 : undefined, %0
-// LRA-NEXT:  $Reg0 @11 [empty]	%11 = StorePropertyInst %10 : closure, %2 : object, "foo5" : string
-// LRA-NEXT:  $Reg0 @12 [13...14) 	%12 = HBCLoadConstInst undefined : undefined
-// LRA-NEXT:  $Reg0 @13 [empty]	%13 = ReturnInst %12 : undefined
+// LRA-NEXT:                 DeclareGlobalVarInst "foo1": string
+// LRA-NEXT:                 DeclareGlobalVarInst "foo2": string
+// LRA-NEXT:                 DeclareGlobalVarInst "foo3": string
+// LRA-NEXT:                 DeclareGlobalVarInst "foo4": string
+// LRA-NEXT:                 DeclareGlobalVarInst "foo5": string
+// LRA-NEXT:  {r1}      %5 = LIRGetGlobalObjectInst (:object)
+// LRA-NEXT:  {np0}     %6 = LIRLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %7 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo1(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %7: object, {r1} %5: object, "foo1": string
+// LRA-NEXT:  {r0}      %9 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo2(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %9: object, {r1} %5: object, "foo2": string
+// LRA-NEXT:  {r0}     %11 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo3(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %11: object, {r1} %5: object, "foo3": string
+// LRA-NEXT:  {r0}     %13 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo4(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %13: object, {r1} %5: object, "foo4": string
+// LRA-NEXT:  {r0}     %15 = CreateFunctionInst (:object) {np0} %6: undefined, empty: any, %foo5(): functionCode
+// LRA-NEXT:                 StorePropertyLooseInst {r0} %15: object, {r1} %5: object, "foo5": string
+// LRA-NEXT:                 ReturnInst {np0} %6: undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo1#0#1(f)#2 : undefined
-// LRA-NEXT:S{foo1#0#1()#2} = []
+// LRA:function foo1(f: any): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg1 @0 [1...3) 	%0 = HBCLoadParamInst 1 : number
-// LRA-NEXT:  $Reg0 @1 [2...4) 	%1 = HBCLoadConstInst undefined : undefined
-// LRA-NEXT:  $Reg2           	%2 = ImplicitMovInst %1 : undefined
-// LRA-NEXT:  $Reg1 @2 [empty]	%3 = HBCCallNInst %0, undefined : undefined, %1 : undefined
-// LRA-NEXT:  $Reg0 @3 [empty]	%4 = ReturnInst %1 : undefined
+// LRA-NEXT:  {np0}     %0 = LIRLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %1 = LoadParamInst (:any) %f: any
+// LRA-NEXT:  {r1}      %2 = ImplicitMovInst (:undefined) {np0} %0: undefined
+// LRA-NEXT:  {r0}      %3 = HBCCallNInst (:any) {r0} %1: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %0: undefined
+// LRA-NEXT:                 ReturnInst {np0} %0: undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo2#0#1(f)#2 : undefined
-// LRA-NEXT:S{foo2#0#1()#2} = []
+// LRA:function foo2(f: any): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg2 @0 [1...4) 	%0 = HBCLoadParamInst 1 : number
-// LRA-NEXT:  $Reg0 @1 [2...5) 	%1 = HBCLoadConstInst undefined : undefined
-// LRA-NEXT:  $Reg1 @2 [3...4) 	%2 = HBCLoadConstInst 1 : number
-// LRA-NEXT:  $Reg4           	%3 = ImplicitMovInst %1 : undefined
-// LRA-NEXT:  $Reg3           	%4 = ImplicitMovInst %2 : number
-// LRA-NEXT:  $Reg1 @3 [empty]	%5 = HBCCallNInst %0, undefined : undefined, %1 : undefined, %2 : number
-// LRA-NEXT:  $Reg0 @4 [empty]	%6 = ReturnInst %1 : undefined
+// LRA-NEXT:  {n0}      %0 = LIRLoadConstInst (:number) 1: number
+// LRA-NEXT:  {np0}     %1 = LIRLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %2 = LoadParamInst (:any) %f: any
+// LRA-NEXT:  {r2}      %3 = ImplicitMovInst (:undefined) {np0} %1: undefined
+// LRA-NEXT:  {r1}      %4 = ImplicitMovInst (:number) {n0} %0: number
+// LRA-NEXT:  {r0}      %5 = HBCCallNInst (:any) {r0} %2: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %1: undefined, {n0} %0: number
+// LRA-NEXT:                 ReturnInst {np0} %1: undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo3#0#1(f)#2 : undefined
-// LRA-NEXT:S{foo3#0#1()#2} = []
+// LRA:function foo3(f: any): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg3 @0 [1...5) 	%0 = HBCLoadParamInst 1 : number
-// LRA-NEXT:  $Reg0 @1 [2...6) 	%1 = HBCLoadConstInst undefined : undefined
-// LRA-NEXT:  $Reg2 @2 [3...5) 	%2 = HBCLoadConstInst 1 : number
-// LRA-NEXT:  $Reg1 @3 [4...5) 	%3 = HBCLoadConstInst 2 : number
-// LRA-NEXT:  $Reg6           	%4 = ImplicitMovInst %1 : undefined
-// LRA-NEXT:  $Reg5           	%5 = ImplicitMovInst %2 : number
-// LRA-NEXT:  $Reg4           	%6 = ImplicitMovInst %3 : number
-// LRA-NEXT:  $Reg1 @4 [empty]	%7 = HBCCallNInst %0, undefined : undefined, %1 : undefined, %2 : number, %3 : number
-// LRA-NEXT:  $Reg0 @5 [empty]	%8 = ReturnInst %1 : undefined
+// LRA-NEXT:  {n0}      %0 = LIRLoadConstInst (:number) 2: number
+// LRA-NEXT:  {n1}      %1 = LIRLoadConstInst (:number) 1: number
+// LRA-NEXT:  {np0}     %2 = LIRLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %3 = LoadParamInst (:any) %f: any
+// LRA-NEXT:  {r3}      %4 = ImplicitMovInst (:undefined) {np0} %2: undefined
+// LRA-NEXT:  {r2}      %5 = ImplicitMovInst (:number) {n1} %1: number
+// LRA-NEXT:  {r1}      %6 = ImplicitMovInst (:number) {n0} %0: number
+// LRA-NEXT:  {r0}      %7 = HBCCallNInst (:any) {r0} %3: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %2: undefined, {n1} %1: number, {n0} %0: number
+// LRA-NEXT:                 ReturnInst {np0} %2: undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo4#0#1(f)#2 : undefined
-// LRA-NEXT:S{foo4#0#1()#2} = []
+// LRA:function foo4(f: any): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg4 @0 [1...6) 	%0 = HBCLoadParamInst 1 : number
-// LRA-NEXT:  $Reg0 @1 [2...7) 	%1 = HBCLoadConstInst undefined : undefined
-// LRA-NEXT:  $Reg3 @2 [3...6) 	%2 = HBCLoadConstInst 1 : number
-// LRA-NEXT:  $Reg2 @3 [4...6) 	%3 = HBCLoadConstInst 2 : number
-// LRA-NEXT:  $Reg1 @4 [5...6) 	%4 = HBCLoadConstInst 3 : number
-// LRA-NEXT:  $Reg8           	%5 = ImplicitMovInst %1 : undefined
-// LRA-NEXT:  $Reg7           	%6 = ImplicitMovInst %2 : number
-// LRA-NEXT:  $Reg6           	%7 = ImplicitMovInst %3 : number
-// LRA-NEXT:  $Reg5           	%8 = ImplicitMovInst %4 : number
-// LRA-NEXT:  $Reg1 @5 [empty]	%9 = HBCCallNInst %0, undefined : undefined, %1 : undefined, %2 : number, %3 : number, %4 : number
-// LRA-NEXT:  $Reg0 @6 [empty]	%10 = ReturnInst %1 : undefined
+// LRA-NEXT:  {n0}      %0 = LIRLoadConstInst (:number) 3: number
+// LRA-NEXT:  {n1}      %1 = LIRLoadConstInst (:number) 2: number
+// LRA-NEXT:  {n2}      %2 = LIRLoadConstInst (:number) 1: number
+// LRA-NEXT:  {np0}     %3 = LIRLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %4 = LoadParamInst (:any) %f: any
+// LRA-NEXT:  {r4}      %5 = ImplicitMovInst (:undefined) {np0} %3: undefined
+// LRA-NEXT:  {r3}      %6 = ImplicitMovInst (:number) {n2} %2: number
+// LRA-NEXT:  {r2}      %7 = ImplicitMovInst (:number) {n1} %1: number
+// LRA-NEXT:  {r1}      %8 = ImplicitMovInst (:number) {n0} %0: number
+// LRA-NEXT:  {r0}      %9 = HBCCallNInst (:any) {r0} %4: any, empty: any, false: boolean, empty: any, undefined: undefined, {np0} %3: undefined, {n2} %2: number, {n1} %1: number, {n0} %0: number
+// LRA-NEXT:                 ReturnInst {np0} %3: undefined
 // LRA-NEXT:function_end
 
-// LRA:function foo5#0#1(f)#2 : undefined
-// LRA-NEXT:S{foo5#0#1()#2} = []
+// LRA:function foo5(f: any): undefined
 // LRA-NEXT:%BB0:
-// LRA-NEXT:  $Reg5 @0 [1...7) 	%0 = HBCLoadParamInst 1 : number
-// LRA-NEXT:  $Reg0 @1 [2...8) 	%1 = HBCLoadConstInst undefined : undefined
-// LRA-NEXT:  $Reg9 @2 [3...7) 	%2 = HBCLoadConstInst 1 : number
-// LRA-NEXT:  $Reg8 @3 [4...7) 	%3 = HBCLoadConstInst 2 : number
-// LRA-NEXT:  $Reg7 @4 [5...7) 	%4 = HBCLoadConstInst 3 : number
-// LRA-NEXT:  $Reg6 @5 [6...7) 	%5 = HBCLoadConstInst 4 : number
-// LRA-NEXT:  $Reg10           	%6 = HBCLoadConstInst undefined : undefined
-// LRA-NEXT:  $Reg1 @6 [empty]	%7 = CallInst %0, undefined : undefined, %6 : undefined, %2 : number, %3 : number, %4 : number, %5 : number
-// LRA-NEXT:  $Reg0 @7 [empty]	%8 = ReturnInst %1 : undefined
+// LRA-NEXT:  {r1}      %0 = LIRLoadConstInst (:number) 4: number
+// LRA-NEXT:  {r2}      %1 = LIRLoadConstInst (:number) 3: number
+// LRA-NEXT:  {r3}      %2 = LIRLoadConstInst (:number) 2: number
+// LRA-NEXT:  {r4}      %3 = LIRLoadConstInst (:number) 1: number
+// LRA-NEXT:  {np0}     %4 = LIRLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %5 = LoadParamInst (:any) %f: any
+// LRA-NEXT:  {r5}      %6 = LIRLoadConstInst (:undefined) undefined: undefined
+// LRA-NEXT:  {r0}      %7 = CallInst (:any) {r0} %5: any, empty: any, false: boolean, empty: any, undefined: undefined, {r5} %6: undefined, {r4} %3: number, {r3} %2: number, {r2} %1: number, {r1} %0: number
+// LRA-NEXT:                 ReturnInst {np0} %4: undefined
 // LRA-NEXT:function_end
 
 // BCGEN:Bytecode File Information:
@@ -118,6 +115,10 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:  BigInt count: 0
 // BCGEN-NEXT:  String Kind Entry count: 2
 // BCGEN-NEXT:  RegExp count: 0
+// BCGEN-NEXT:  StringSwitchImm count: 0
+// BCGEN-NEXT:  Key buffer size (bytes): 0
+// BCGEN-NEXT:  Value buffer size (bytes): 0
+// BCGEN-NEXT:  Shape table count: 0
 // BCGEN-NEXT:  Segment ID: 0
 // BCGEN-NEXT:  CommonJS module count: 0
 // BCGEN-NEXT:  CommonJS module count (static): 0
@@ -134,73 +135,72 @@ function foo5(f) { f(1, 2, 3, 4); }
 // BCGEN-NEXT:i4[ASCII, 18..21] #D0BDA900: foo4
 // BCGEN-NEXT:i5[ASCII, 22..25] #D0BDAD11: foo5
 
-// BCGEN:Function<global>(1 params, 3 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
+// BCGEN:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
+// BCGEN-NEXT:Offset in debug table: source 0x0000
 // BCGEN-NEXT:    DeclareGlobalVar  "foo1"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo2"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo3"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo4"
 // BCGEN-NEXT:    DeclareGlobalVar  "foo5"
-// BCGEN-NEXT:    CreateEnvironment r0
-// BCGEN-NEXT:    CreateClosure     r2, r0, Function<foo1>
-// BCGEN-NEXT:    GetGlobalObject   r1
-// BCGEN-NEXT:    PutById           r1, r2, 1, "foo1"
-// BCGEN-NEXT:    CreateClosure     r2, r0, Function<foo2>
-// BCGEN-NEXT:    PutById           r1, r2, 2, "foo2"
-// BCGEN-NEXT:    CreateClosure     r2, r0, Function<foo3>
-// BCGEN-NEXT:    PutById           r1, r2, 3, "foo3"
-// BCGEN-NEXT:    CreateClosure     r2, r0, Function<foo4>
-// BCGEN-NEXT:    PutById           r1, r2, 4, "foo4"
-// BCGEN-NEXT:    CreateClosure     r0, r0, Function<foo5>
-// BCGEN-NEXT:    PutById           r1, r0, 5, "foo5"
+// BCGEN-NEXT:    GetGlobalObject   r2
 // BCGEN-NEXT:    LoadConstUndefined r0
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo1>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 0, "foo1"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo2>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 1, "foo2"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo3>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 2, "foo3"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo4>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 3, "foo4"
+// BCGEN-NEXT:    CreateClosure     r1, r0, Function<foo5>
+// BCGEN-NEXT:    PutByIdLoose      r2, r1, 4, "foo5"
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<foo1>(2 params, 9 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x001d, scope 0x0000, textified callees 0x0000
-// BCGEN-NEXT:    LoadParam         r1, 1
+// BCGEN:Function<foo1>(2 params, 10 registers, 0 numbers, 1 non-pointers):
+// BCGEN-NEXT:Offset in debug table: source 0x0023
 // BCGEN-NEXT:    LoadConstUndefined r0
+// BCGEN-NEXT:    LoadParam         r1, 1
 // BCGEN-NEXT:    Call1             r1, r1, r0
 // BCGEN-NEXT:    Ret               r0
 
-// BCGEN:Function<foo2>(2 params, 11 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x002a, scope 0x0000, textified callees 0x0000
+// BCGEN:Function<foo2>(2 params, 12 registers, 1 numbers, 1 non-pointers):
+// BCGEN-NEXT:Offset in debug table: source 0x002b
+// BCGEN-NEXT:    LoadConstUInt8    r0, 1
+// BCGEN-NEXT:    LoadConstUndefined r1
 // BCGEN-NEXT:    LoadParam         r2, 1
-// BCGEN-NEXT:    LoadConstUndefined r0
+// BCGEN-NEXT:    Call2             r2, r2, r1, r0
+// BCGEN-NEXT:    Ret               r1
+
+// BCGEN:Function<foo3>(2 params, 14 registers, 2 numbers, 1 non-pointers):
+// BCGEN-NEXT:Offset in debug table: source 0x0033
+// BCGEN-NEXT:    LoadConstUInt8    r0, 2
 // BCGEN-NEXT:    LoadConstUInt8    r1, 1
-// BCGEN-NEXT:    Call2             r1, r2, r0, r1
-// BCGEN-NEXT:    Ret               r0
-
-// BCGEN:Function<foo3>(2 params, 13 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0037, scope 0x0000, textified callees 0x0000
+// BCGEN-NEXT:    LoadConstUndefined r2
 // BCGEN-NEXT:    LoadParam         r3, 1
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    LoadConstUInt8    r2, 1
+// BCGEN-NEXT:    Call3             r3, r3, r2, r1, r0
+// BCGEN-NEXT:    Ret               r2
+
+// BCGEN:Function<foo4>(2 params, 16 registers, 3 numbers, 1 non-pointers):
+// BCGEN-NEXT:Offset in debug table: source 0x003b
+// BCGEN-NEXT:    LoadConstUInt8    r0, 3
 // BCGEN-NEXT:    LoadConstUInt8    r1, 2
-// BCGEN-NEXT:    Call3             r1, r3, r0, r2, r1
-// BCGEN-NEXT:    Ret               r0
-
-// BCGEN:Function<foo4>(2 params, 15 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0044, scope 0x0000, textified callees 0x0000
+// BCGEN-NEXT:    LoadConstUInt8    r2, 1
+// BCGEN-NEXT:    LoadConstUndefined r3
 // BCGEN-NEXT:    LoadParam         r4, 1
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    LoadConstUInt8    r3, 1
-// BCGEN-NEXT:    LoadConstUInt8    r2, 2
-// BCGEN-NEXT:    LoadConstUInt8    r1, 3
-// BCGEN-NEXT:    Call4             r1, r4, r0, r3, r2, r1
-// BCGEN-NEXT:    Ret               r0
+// BCGEN-NEXT:    Call4             r4, r4, r3, r2, r1, r0
+// BCGEN-NEXT:    Ret               r3
 
-// BCGEN:Function<foo5>(2 params, 17 registers, 0 symbols):
-// BCGEN-NEXT:Offset in debug table: source 0x0051, scope 0x0000, textified callees 0x0000
-// BCGEN-NEXT:    LoadParam         r5, 1
-// BCGEN-NEXT:    LoadConstUndefined r0
-// BCGEN-NEXT:    LoadConstUInt8    r9, 1
-// BCGEN-NEXT:    LoadConstUInt8    r8, 2
-// BCGEN-NEXT:    LoadConstUInt8    r7, 3
+// BCGEN:Function<foo5>(2 params, 18 registers, 4 numbers, 1 non-pointers):
+// BCGEN-NEXT:Offset in debug table: source 0x0043
 // BCGEN-NEXT:    LoadConstUInt8    r6, 4
+// BCGEN-NEXT:    LoadConstUInt8    r7, 3
+// BCGEN-NEXT:    LoadConstUInt8    r8, 2
+// BCGEN-NEXT:    LoadConstUInt8    r9, 1
+// BCGEN-NEXT:    LoadConstUndefined r4
+// BCGEN-NEXT:    LoadParam         r5, 1
 // BCGEN-NEXT:    LoadConstUndefined r10
-// BCGEN-NEXT:    Call              r1, r5, 5
-// BCGEN-NEXT:    Ret               r0
+// BCGEN-NEXT:    Call              r5, r5, 5
+// BCGEN-NEXT:    Ret               r4
 
 // BCGEN:Debug filename table:
 // BCGEN-NEXT:  0: {{.*}}calln.js
@@ -210,30 +210,24 @@ function foo5(f) { f(1, 2, 3, 4); }
 
 // BCGEN:Debug source table:
 // BCGEN-NEXT:  0x0000  function idx 0, starts at line 13 col 1
-// BCGEN-NEXT:    bc 34: line 13 col 1 scope offset 0x0000 env r2
-// BCGEN-NEXT:    bc 45: line 13 col 1 scope offset 0x0000 env r2
-// BCGEN-NEXT:    bc 56: line 13 col 1 scope offset 0x0000 env r2
-// BCGEN-NEXT:    bc 67: line 13 col 1 scope offset 0x0000 env r2
-// BCGEN-NEXT:    bc 78: line 13 col 1 scope offset 0x0000 env r0
-// BCGEN-NEXT:  0x001d  function idx 1, starts at line 13 col 1
-// BCGEN-NEXT:    bc 5: line 13 col 21 scope offset 0x0000 env none
-// BCGEN-NEXT:  0x002a  function idx 2, starts at line 15 col 1
-// BCGEN-NEXT:    bc 8: line 15 col 21 scope offset 0x0000 env none
-// BCGEN-NEXT:  0x0037  function idx 3, starts at line 17 col 1
-// BCGEN-NEXT:    bc 11: line 17 col 21 scope offset 0x0000 env none
-// BCGEN-NEXT:  0x0044  function idx 4, starts at line 19 col 1
-// BCGEN-NEXT:    bc 14: line 19 col 21 scope offset 0x0000 env none
-// BCGEN-NEXT:  0x0051  function idx 5, starts at line 23 col 1
-// BCGEN-NEXT:    bc 19: line 23 col 21 scope offset 0x0000 env none
-// BCGEN-NEXT:  0x005e  end of debug source table
-
-// BCGEN:Debug scope descriptor table:
-// BCGEN-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
-// BCGEN-NEXT:  0x0003  end of debug scope descriptor table
-
-// BCGEN:Textified callees table:
-// BCGEN-NEXT:  0x0000  entries: 0
-// BCGEN-NEXT:  0x0001  end of textified callees table
-
-// BCGEN:Debug string table:
-// BCGEN-NEXT:  0x0000  end of debug string table
+// BCGEN-NEXT:    bc 0: line 13 col 1
+// BCGEN-NEXT:    bc 5: line 13 col 1
+// BCGEN-NEXT:    bc 10: line 13 col 1
+// BCGEN-NEXT:    bc 15: line 13 col 1
+// BCGEN-NEXT:    bc 20: line 13 col 1
+// BCGEN-NEXT:    bc 34: line 13 col 1
+// BCGEN-NEXT:    bc 45: line 13 col 1
+// BCGEN-NEXT:    bc 56: line 13 col 1
+// BCGEN-NEXT:    bc 67: line 13 col 1
+// BCGEN-NEXT:    bc 78: line 13 col 1
+// BCGEN-NEXT:  0x0023  function idx 1, starts at line 13 col 1
+// BCGEN-NEXT:    bc 5: line 13 col 21
+// BCGEN-NEXT:  0x002b  function idx 2, starts at line 15 col 1
+// BCGEN-NEXT:    bc 8: line 15 col 21
+// BCGEN-NEXT:  0x0033  function idx 3, starts at line 17 col 1
+// BCGEN-NEXT:    bc 11: line 17 col 21
+// BCGEN-NEXT:  0x003b  function idx 4, starts at line 19 col 1
+// BCGEN-NEXT:    bc 14: line 19 col 21
+// BCGEN-NEXT:  0x0043  function idx 5, starts at line 23 col 1
+// BCGEN-NEXT:    bc 19: line 23 col 21
+// BCGEN-NEXT:  0x004b  end of debug source table

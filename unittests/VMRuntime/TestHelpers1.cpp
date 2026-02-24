@@ -6,12 +6,12 @@
  */
 
 #include "TestHelpers1.h"
-#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
-#include "hermes/BCGen/HBC/TraverseLiteralStrings.h"
 #include "hermes/BCGen/HBC/UniquingStringLiteralTable.h"
 #include "hermes/IRGen/IRGen.h"
 #include "hermes/Parser/JSParser.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/Utils/Options.h"
 #include "llvh/Support/SHA1.h"
 
@@ -30,10 +30,10 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   /* Parse source */
   SourceErrorManager sm;
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.unlimitedRegisters = false;
   OptimizationSettings optSettings;
   optSettings.staticBuiltins = flags.staticBuiltins;
-  auto context = std::make_shared<Context>(sm, codeGenOpts, optSettings);
+  auto context =
+      std::make_shared<Context>(sm, std::move(codeGenOpts), optSettings);
   if (sourceMapGen) {
     context->setDebugInfoSetting(DebugInfoSetting::SOURCE_MAP);
     sourceMapGen->addSource("JavaScript");
@@ -42,16 +42,15 @@ std::vector<uint8_t> hermes::bytecodeForSource(
   parser::JSParser jsParser(*context, std::move(sourceBuf));
   auto parsed = jsParser.parse();
   assert(parsed.hasValue() && "Failed to parse source");
-  sem::SemContext semCtx{};
-  auto validated = validateAST(*context, semCtx, *parsed);
+  sema::SemContext semCtx(*context);
+  auto validated = resolveAST(*context, semCtx, *parsed);
   (void)validated;
   assert(validated && "Failed to validate source");
   auto *ast = parsed.getValue();
 
   /* Generate IR */
   Module M(context);
-  DeclarationFileListTy declFileList;
-  hermes::generateIRFromESTree(ast, &M, declFileList, {});
+  hermes::generateIRFromESTree(&M, semCtx, ast);
 
   /* Generate and serialize bytecode module */
   auto bytecodeGenOpts = BytecodeGenerationOptions::defaults();
@@ -63,10 +62,17 @@ std::vector<uint8_t> hermes::bytecodeForSource(
           reinterpret_cast<const uint8_t *>(source), strlen(source)});
   llvh::SmallVector<char, 0> bytecodeVector;
   llvh::raw_svector_ostream OS(bytecodeVector);
-  BytecodeSerializer BS{OS, bytecodeGenOpts};
-  auto BM = generateBytecode(
-      &M, OS, bytecodeGenOpts, sourceHash, llvh::None, sourceMapGen, nullptr);
+  std::unique_ptr<BytecodeModule> BM = generateBytecodeModule(
+      &M, M.getTopLevelFunction(), bytecodeGenOpts, llvh::None);
   assert(BM != nullptr && "Failed to generate bytecode module");
+
+  if (bytecodeGenOpts.format == OutputFormatKind::EmitBundle) {
+    hbc::serializeBytecodeModule(*BM, sourceHash, OS, bytecodeGenOpts);
+  }
+  // Now that the BytecodeFunctions know their offsets into the stream, we
+  // can populate the source map.
+  if (sourceMapGen)
+    BM->populateSourceMap(sourceMapGen);
 
   return std::vector<uint8_t>{bytecodeVector.begin(), bytecodeVector.end()};
 }

@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // REQUIRES: intl
+// UNSUPPORTED: windows
 
 print("get canonical locales test");
 // CHECK-LABEL: get canonical locales test

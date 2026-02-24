@@ -127,7 +127,6 @@ char *dtoa_fixedpoint(
 void g_freedtoa(dtoa_alloc *dalloc, char *);
 
 char *g_fmt(char *, double);
-double hermes_g_strtod(const char *s00, char **se);
 
 #ifdef __cplusplus
 }

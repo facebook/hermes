@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -Xhermes-internal-test-methods -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-Xhermes-internal-test-methods | %FileCheck --match-full-lines %s
 
 print("START");
 // CHECK: START

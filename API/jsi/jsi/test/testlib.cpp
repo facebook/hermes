@@ -1460,7 +1460,7 @@ TEST_P(JSITest, MicrotasksTest) {
     EXPECT_EQ(
         rt.global().getProperty(rt, "globalValue").asString(rt).utf8(rt),
         "hello world");
-  } catch (const JSINativeException& ex) {
+  } catch (const JSINativeException&) {
     // queueMicrotask() is unimplemented by some runtimes, ignore such failures.
   }
 }

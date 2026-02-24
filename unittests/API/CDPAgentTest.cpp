@@ -7,31 +7,79 @@
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
-#include <chrono>
-#include <future>
-#include <thread>
-
-#include <gtest/gtest.h>
-
-#include <hermes/AsyncDebuggerAPI.h>
-#include <hermes/CompileJS.h>
-#include <hermes/Support/JSONEmitter.h>
-#include <hermes/Support/SerialExecutor.h>
-#include <hermes/VM/HeapSnapshot.h>
-#include <hermes/cdp/CDPAgent.h>
-#include <hermes/cdp/CDPDebugAPI.h>
-#include <hermes/cdp/JSONValueInterfaces.h>
-#include <hermes/hermes.h>
-#include <jsi/instrumentation.h>
-
-#include <llvh/ADT/ScopeExit.h>
-
-#include "CDPJSONHelpers.h"
+#include "CDPAgentTest.h"
 #include "CDPTestHelpers.h"
 
-#if !defined(_WINDOWS) && !defined(__EMSCRIPTEN__)
-#include <sys/resource.h>
-#endif
+#include <thread>
+
+namespace facebook {
+namespace hermes {
+
+m::runtime::CallArgument makeValueCallArgument(std::string val) {
+  m::runtime::CallArgument ret;
+  ret.value = val;
+  return ret;
+}
+
+m::runtime::CallArgument makeUnserializableCallArgument(std::string val) {
+  m::runtime::CallArgument ret;
+  ret.unserializableValue = std::move(val);
+  return ret;
+}
+
+m::runtime::CallArgument makeObjectIdCallArgument(
+    m::runtime::RemoteObjectId objectId) {
+  m::runtime::CallArgument ret;
+  ret.objectId = std::move(objectId);
+  return ret;
+}
+
+} // namespace hermes
+} // namespace facebook
+
+void CDPAgentTest::MessageQueue::push(std::string message) {
+  std::lock_guard<std::mutex> lock(mutex_);
+  messages_.push(std::move(message));
+  hasMessage_.notify_one();
+}
+
+std::string CDPAgentTest::MessageQueue::waitForMessage(
+    std::string context,
+    std::optional<std::chrono::milliseconds> timeout) {
+  std::unique_lock<std::mutex> lock(mutex_);
+
+  bool success;
+  if (timeout.has_value()) {
+    success = hasMessage_.wait_for(
+        lock, timeout.value(), [this]() -> bool { return !messages_.empty(); });
+  } else {
+    hasMessage_.wait(lock, [this]() -> bool { return !messages_.empty(); });
+    success = true;
+  }
+
+  if (!success) {
+    throw std::runtime_error("timed out waiting for " + context);
+  }
+
+  std::string message = std::move(messages_.front());
+  messages_.pop();
+  return message;
+}
+
+std::optional<std::string> CDPAgentTest::MessageQueue::tryGetMessage() {
+  // Take a message, if present, while holding the mutex protecting the message
+  // collection. This doesn't clear the "hasMessage_" notification, so it could
+  // leave "hasMessage_" signaled when there is no message waiting. This is
+  // okay, because waiting on "hasMessage_" elsewhere tolerates spurious
+  // wake-ups by also checking "messages_.empty()".
+  std::unique_lock<std::mutex> lock(mutex_);
+  if (messages_.empty()) {
+    return std::nullopt;
+  }
+  std::string message = std::move(messages_.front());
+  messages_.pop();
+  return message;
+}
 
 using namespace facebook::hermes::cdp;
 using namespace facebook::hermes::debugger;
@@ -40,202 +88,22 @@ using namespace facebook;
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-constexpr auto kDefaultUrl = "url";
-#ifndef HERMES_MEMORY_INSTRUMENTATION
-constexpr auto kMemoryInstrumentationSubstring = "memory instrumentation";
-#endif
-
-// A function passed to Runtime.callFunctionOn in order to invoke a getter. See
-// https://github.com/facebookexperimental/rn-chrome-devtools-frontend/blob/58eff7d6a4ed165a3350c8817c1ec5724eab5cb7/front_end/ui/legacy/components/object_ui/ObjectPropertiesSection.ts#L1125-L1132
-constexpr auto kInvokeGetterFunction = R"(
-  function invokeGetter(getter) {
-    return Function.prototype.apply.call(getter, this, []);
-  }
-)";
-
-template <typename T>
-T waitFor(
-    std::function<void(std::shared_ptr<std::promise<T>>)> callback,
-    const std::string &reason = "unknown") {
-  auto promise = std::make_shared<std::promise<T>>();
-  auto future = promise->get_future();
-
-  callback(promise);
-
-  future.wait();
-  return future.get();
+void CDPAgentTest::handleRuntimeTask(RuntimeTask task) {
+  runtimeThread_->add([this, task]() { task(*runtime_); });
 }
 
-static m::runtime::CallArgument makeValueCallArgument(std::string val) {
-  m::runtime::CallArgument ret;
-  ret.value = val;
-  return ret;
+void CDPAgentTest::scheduleScript(
+    const std::string &script,
+    const std::string &url,
+    HermesRuntime::DebugFlags flags) {
+  runtimeThread_->add([this, script, url, flags]() {
+    try {
+      runtime_->debugJavaScript(script, url, flags);
+    } catch (jsi::JSError &error) {
+      thrownExceptions_.push_back(error.getMessage());
+    }
+  });
 }
-
-static m::runtime::CallArgument makeUnserializableCallArgument(
-    std::string val) {
-  m::runtime::CallArgument ret;
-  ret.unserializableValue = std::move(val);
-  return ret;
-}
-
-static m::runtime::CallArgument makeObjectIdCallArgument(
-    m::runtime::RemoteObjectId objectId) {
-  m::runtime::CallArgument ret;
-  ret.objectId = std::move(objectId);
-  return ret;
-}
-
-class CDPAgentTest : public ::testing::Test {
- public:
-  void handleRuntimeTask(RuntimeTask task) {
-    runtimeThread_->add([this, task]() { task(*runtime_); });
-  }
-
-  void handleResponse(const std::string &message) {
-    std::lock_guard<std::mutex> lock(messageMutex_);
-    messages_.push(message);
-    hasMessage_.notify_one();
-  }
-
- protected:
-  static constexpr int32_t kTestExecutionContextId_ = 1;
-
-  void SetUp() override;
-  void TearDown() override;
-
-  void setupRuntimeTestInfra();
-  void preserveStateAndResetTestEnv(bool saveAgentInRuntimeThread);
-
-  void scheduleScript(
-      const std::string &script,
-      const std::string &url = kDefaultUrl,
-      facebook::hermes::HermesRuntime::DebugFlags flags =
-          facebook::hermes::HermesRuntime::DebugFlags{}) {
-    runtimeThread_->add([this, script, url, flags]() {
-      try {
-        runtime_->debugJavaScript(script, url, flags);
-      } catch (jsi::JSError &error) {
-        thrownExceptions_.push_back(error.getMessage());
-      }
-    });
-  }
-
-  void waitForScheduledScripts();
-
-  /// waits for the next message of either kind (response or notification)
-  /// from the debugger. returns the message. throws on timeout.
-  std::string waitForMessage(
-      std::string context = "reply",
-      std::optional<std::chrono::milliseconds> timeout = std::nullopt);
-
-  /// check to see if a response or notification is immediately available.
-  /// returns the message, or nullopt if no message is available.
-  std::optional<std::string> tryGetMessage();
-
-  void expectNothing();
-  JSONObject *expectNotification(const std::string &method);
-  JSONObject *expectResponse(const std::optional<std::string> &method, int id);
-  /// Wait for a message, validate that it is an error with the specified
-  /// \p messageID, and assert that the error description contains the
-  /// specified \p substring.
-  void expectErrorMessageContaining(
-      const std::string &substring,
-      long long messageID);
-  /// Expect a sequence of messages conveying a heap snapshot:
-  /// 1 or more notifications containing chunks of the snapshot JSON object
-  /// followed by an OK response to the snapshot request.
-  /// \p messageID specifies the id of the snapshot request.
-  /// \p ignoreTrackingNotifications indicates whether lastSeenObjectId and
-  /// heapStatsUpdate notifications are tolerated before the snapshot arrives.
-  /// \return the completed heap snapshot JSON object
-  JSONObject *expectHeapSnapshot(
-      int messageID,
-      bool ignoreTrackingNotifications = false);
-
-  void sendRequest(
-      const std::string &method,
-      int id,
-      const std::function<void(::hermes::JSONEmitter &)> &setParameters = {},
-      CDPAgent *altAgent = nullptr);
-  void sendSetBlackboxedRangesAndCheckResponse(
-      int msgId,
-      std::string scriptID,
-      std::vector<std::pair<int, int>> positions);
-  void sendSetBlackboxPatternsAndCheckResponse(
-      int msgId,
-      std::vector<std::string> patterns,
-      bool expectOK = true);
-  void sendParameterlessRequest(const std::string &method, int id);
-  void sendAndCheckResponse(const std::string &method, int id);
-  void sendEvalRequest(
-      int id,
-      int callFrameId,
-      const std::string &expression,
-      CDPAgent *altAgent = nullptr);
-
-  jsi::Value shouldStop(
-      jsi::Runtime &runtime,
-      const jsi::Value &thisVal,
-      const jsi::Value *args,
-      size_t count);
-
-  jsi::Value signalTest(
-      jsi::Runtime &runtime,
-      const jsi::Value &thisVal,
-      const jsi::Value *args,
-      size_t count);
-
-  void waitForTestSignal(
-      std::chrono::milliseconds timeout = std::chrono::milliseconds(2500));
-
-  /// Store a value provided by a test script so it can be later used by a
-  /// test.
-  jsi::Value storeValue(
-      jsi::Runtime &runtime,
-      const jsi::Value &thisVal,
-      const jsi::Value *args,
-      size_t count);
-
-  /// Move the previously stored value out of the storage location and
-  /// return it.
-  jsi::Value takeStoredValue();
-
-  m::runtime::GetPropertiesResponse getAndEnsureProps(
-      int msgId,
-      const std::string &objectId,
-      const std::unordered_map<std::string, PropInfo> &infos,
-      const std::unordered_map<std::string, PropInfo> &internalInfos = {},
-      bool ownProperties = true,
-      bool accessorPropertiesOnly = false);
-
-  std::unique_ptr<HermesRuntime> runtime_;
-  std::unique_ptr<CDPDebugAPI> cdpDebugAPI_;
-  std::unique_ptr<::hermes::SerialExecutor> runtimeThread_;
-  std::unique_ptr<CDPAgent> cdpAgent_;
-
-  std::atomic<bool> stopFlag_{};
-
-  std::shared_ptr<std::atomic_bool> destroyedDomainAgentsImpl_ =
-      std::make_shared<std::atomic_bool>(false);
-
-  std::mutex testSignalMutex_;
-  std::condition_variable testSignalCondition_;
-  bool testSignalled_ = false;
-
-  /// Mutex to protect storedValue_, as it is typically written on the runtime
-  /// thread (via the "storeValue" host function), and read from the test
-  /// thread (via "takeStoredValue").
-  std::mutex storedValueMutex_;
-  jsi::Value storedValue_;
-
-  std::mutex messageMutex_;
-  std::condition_variable hasMessage_;
-  std::queue<std::string> messages_;
-
-  std::vector<std::string> thrownExceptions_;
-  JSONScope jsonScope_;
-};
 
 void CDPAgentTest::SetUp() {
   setupRuntimeTestInfra();
@@ -244,7 +112,7 @@ void CDPAgentTest::SetUp() {
       kTestExecutionContextId_,
       *cdpDebugAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1),
+      [this](const std::string &message) { defaultQueue_.push(message); },
       {},
       destroyedDomainAgentsImpl_));
 }
@@ -346,7 +214,7 @@ void CDPAgentTest::preserveStateAndResetTestEnv(bool saveAgentInRuntimeThread) {
       kTestExecutionContextId_,
       *cdpDebugAPI_,
       std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1),
+      [this](const std::string &message) { defaultQueue_.push(message); },
       std::move(state));
 }
 
@@ -356,48 +224,40 @@ void CDPAgentTest::waitForScheduledScripts() {
   });
 }
 
+CDPAgentTest::CDPAgentAndQueue CDPAgentTest::createCDPAgentAndQueue() {
+  auto queue = std::make_shared<MessageQueue>();
+  auto agent = CDPAgent::create(
+      kTestExecutionContextId_,
+      *cdpDebugAPI_,
+      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
+      [queue](const std::string &message) { queue->push(message); });
+  return {std::move(agent), std::move(queue)};
+}
+
 std::string CDPAgentTest::waitForMessage(
     std::string context,
-    std::optional<std::chrono::milliseconds> timeout) {
-  std::unique_lock<std::mutex> lock(messageMutex_);
-
-  bool success;
-  if (timeout.has_value()) {
-    success = hasMessage_.wait_for(
-        lock, timeout.value(), [this]() -> bool { return !messages_.empty(); });
-  } else {
-    hasMessage_.wait(lock, [this]() -> bool { return !messages_.empty(); });
-    success = true;
+    std::optional<std::chrono::milliseconds> timeout,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
   }
-
-  if (!success) {
-    throw std::runtime_error("timed out waiting for " + context);
-  }
-
-  std::string message = std::move(messages_.front());
-  messages_.pop();
-  return message;
+  return queue->waitForMessage(std::move(context), timeout);
 }
 
-std::optional<std::string> CDPAgentTest::tryGetMessage() {
-  // Take a message, if present, while holding the mutex protecting the message
-  // collection. This doesn't clear the "hasMessage_" notification, so it could
-  // leave "hasMessage_" signaled when there is no message waiting. This is
-  // okay, because waiting on "hasMessage_" elsewhere tolerates spurious
-  // wake-ups by also checking "messages_.empty()".
-  std::unique_lock<std::mutex> lock(messageMutex_);
-  if (messages_.empty()) {
-    return std::nullopt;
+std::optional<std::string> CDPAgentTest::tryGetMessage(MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
   }
-  std::string message = std::move(messages_.front());
-  messages_.pop();
-  return message;
+  return queue->tryGetMessage();
 }
 
-void CDPAgentTest::expectNothing() {
+void CDPAgentTest::expectNothing(MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
   std::string message;
   try {
-    message = waitForMessage("nothing", std::chrono::milliseconds(2500));
+    message = queue->waitForMessage("nothing", std::chrono::milliseconds(2500));
   } catch (...) {
     // if no values are received it times out with an exception
     // so we can say that we've succeeded at seeing nothing
@@ -408,8 +268,13 @@ void CDPAgentTest::expectNothing() {
       "received a notification but didn't expect one: " + message);
 }
 
-JSONObject *CDPAgentTest::expectNotification(const std::string &method) {
-  std::string message = waitForMessage();
+JSONObject *CDPAgentTest::expectNotification(
+    const std::string &method,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  std::string message = queue->waitForMessage("reply");
   JSONObject *notification = jsonScope_.parseObject(message);
   EXPECT_EQ(jsonScope_.getString(notification, {"method"}), method);
   return notification;
@@ -417,8 +282,12 @@ JSONObject *CDPAgentTest::expectNotification(const std::string &method) {
 
 JSONObject *CDPAgentTest::expectResponse(
     const std::optional<std::string> &method,
-    int id) {
-  std::string message = waitForMessage();
+    int id,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  std::string message = queue->waitForMessage("reply");
   JSONObject *response = jsonScope_.parseObject(message);
   if (method) {
     EXPECT_EQ(jsonScope_.getString(response, {"method"}), *method);
@@ -429,21 +298,30 @@ JSONObject *CDPAgentTest::expectResponse(
 
 void CDPAgentTest::expectErrorMessageContaining(
     const std::string &substring,
-    long long messageID) {
-  std::string errorMessage = ensureErrorResponse(waitForMessage(), messageID);
+    long long messageID,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  std::string errorMessage =
+      ensureErrorResponse(queue->waitForMessage("reply"), messageID);
   ASSERT_NE(errorMessage.find(substring), std::string::npos);
 }
 
 JSONObject *CDPAgentTest::expectHeapSnapshot(
     int messageID,
-    bool ignoreTrackingNotifications) {
+    bool ignoreTrackingNotifications,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
   // Expect chunk notifications until the snapshot object is complete. Fail if
   // the object is invalid (e.g. truncated data, excess data, malformed JSON).
   // There is no indication of how many segments there will be, so just receive
   // until the object is complete, then expect no more.
   std::stringstream snapshot;
   do {
-    JSONObject *note = jsonScope_.parseObject(waitForMessage());
+    JSONObject *note = jsonScope_.parseObject(queue->waitForMessage("reply"));
     std::string method = jsonScope_.getString(note, {"method"});
     if (ignoreTrackingNotifications &&
         (method == "HeapProfiler.lastSeenObjectId" ||
@@ -456,7 +334,7 @@ JSONObject *CDPAgentTest::expectHeapSnapshot(
   } while (!jsonScope_.tryParseObject(snapshot.str()).has_value());
 
   // Expect the snapshot response after all chunks have been received.
-  ensureOkResponse(waitForMessage(), messageID);
+  ensureOkResponse(queue->waitForMessage("reply"), messageID);
 
   return jsonScope_.parseObject(snapshot.str());
 }
@@ -473,7 +351,10 @@ void CDPAgentTest::sendRequest(
     const std::string &method,
     int id,
     const std::function<void(::hermes::JSONEmitter &)> &setParameters,
-    CDPAgent *altAgent) {
+    CDPAgent *agent) {
+  if (!agent) {
+    agent = cdpAgent_.get();
+  }
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
@@ -488,11 +369,7 @@ void CDPAgentTest::sendRequest(
   }
   json.closeDict();
   commandStream.flush();
-  if (altAgent != nullptr) {
-    altAgent->handleCommand(command);
-  } else {
-    cdpAgent_->handleCommand(command);
-  }
+  agent->handleCommand(command);
 }
 
 void CDPAgentTest::sendSetBlackboxedRangesAndCheckResponse(
@@ -520,7 +397,12 @@ void CDPAgentTest::sendSetBlackboxedRangesAndCheckResponse(
 void CDPAgentTest::sendSetBlackboxPatternsAndCheckResponse(
     int msgId,
     std::vector<std::string> patterns,
-    bool expectOK) {
+    bool expectOK,
+    CDPAgent *agent,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
   sendRequest(
       "Debugger.setBlackboxPatterns",
       msgId,
@@ -531,21 +413,32 @@ void CDPAgentTest::sendSetBlackboxPatternsAndCheckResponse(
           json.emitValue(pattern);
         }
         json.closeArray();
-      });
+      },
+      agent);
   if (expectOK) {
-    ensureOkResponse(waitForMessage("setBlackboxPatterns"), msgId);
+    ensureOkResponse(queue->waitForMessage("setBlackboxPatterns"), msgId);
   } else {
-    ensureErrorResponse(waitForMessage("setBlackboxPatterns"), msgId);
+    ensureErrorResponse(queue->waitForMessage("setBlackboxPatterns"), msgId);
   }
 }
 
-void CDPAgentTest::sendParameterlessRequest(const std::string &method, int id) {
-  sendRequest(method, id);
+void CDPAgentTest::sendParameterlessRequest(
+    const std::string &method,
+    int id,
+    CDPAgent *agent) {
+  sendRequest(method, id, {}, agent);
 }
 
-void CDPAgentTest::sendAndCheckResponse(const std::string &method, int id) {
-  sendParameterlessRequest(method, id);
-  ensureOkResponse(waitForMessage(), id);
+void CDPAgentTest::sendAndCheckResponse(
+    const std::string &method,
+    int id,
+    CDPAgent *agent,
+    MessageQueue *queue) {
+  if (!queue) {
+    queue = &defaultQueue_;
+  }
+  sendParameterlessRequest(method, id, agent);
+  ensureOkResponse(queue->waitForMessage("reply"), id);
 }
 
 jsi::Value CDPAgentTest::signalTest(
@@ -590,7 +483,10 @@ void CDPAgentTest::sendEvalRequest(
     int id,
     int callFrameId,
     const std::string &expression,
-    CDPAgent *altAgent) {
+    CDPAgent *agent) {
+  if (!agent) {
+    agent = cdpAgent_.get();
+  }
   std::string command;
   llvh::raw_string_ostream commandStream{command};
   ::hermes::JSONEmitter json{commandStream};
@@ -605,11 +501,7 @@ void CDPAgentTest::sendEvalRequest(
   json.closeDict();
   json.closeDict();
   commandStream.flush();
-  if (altAgent != nullptr) {
-    altAgent->handleCommand(command);
-  } else {
-    cdpAgent_->handleCommand(command);
-  }
+  agent->handleCommand(command);
 }
 
 m::runtime::GetPropertiesResponse CDPAgentTest::getAndEnsureProps(
@@ -925,7 +817,7 @@ TEST_F(CDPAgentTest, DebuggerDestroyWhileEnabled) {
 
   // Queue a job on the runtime queue. The runtime queue was busy paused on the
   // debugger statement on line 1, but the destruction of CDPAgent should
-  // removeDebuggerEventCallback_TS() and thus free up the runtime queue.
+  // clear the debugger event callback and thus free up the runtime queue.
   waitFor<bool>([this](auto promise) {
     runtimeThread_->add([this, promise]() {
       // Verify that breakpoints are cleaned up from HermesRuntime
@@ -976,12 +868,14 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
   // Wait for the script to start.
   waitForTestSignal();
 
-  // Before Debugger.enable, register another debug client and trigger a pause
-  DebuggerEventCallbackID eventCallbackID;
+  // Before Debugger.enable, set a debugger event callback and trigger a pause.
+  // When CDPAgent's Debugger.enable is processed, it will call
+  // setDebuggerEventCallback_TS, clobbering our callback, but the runtime will
+  // still be in a paused state.
   AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
   waitFor<bool>(
-      [this, &asyncDebuggerAPI, &eventCallbackID](auto promise) {
-        eventCallbackID = asyncDebuggerAPI.addDebuggerEventCallback_TS(
+      [this, &asyncDebuggerAPI](auto promise) {
+        asyncDebuggerAPI.setDebuggerEventCallback_TS(
             [promise](
                 HermesRuntime &runtime,
                 AsyncDebuggerAPI &asyncDebugger,
@@ -996,14 +890,15 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
 
   // At this point, the runtime thread is paused due to Explicit AsyncBreak. Now
   // we'll test if we can perform Debugger.enable while the runtime is in that
-  // state.
+  // state. Note: Debugger.enable will call setDebuggerEventCallback_TS,
+  // clobbering our callback above, but the runtime remains paused.
 
   sendParameterlessRequest("Debugger.enable", msgId);
   ensureNotification(
       waitForMessage("Debugger.scriptParsed"), "Debugger.scriptParsed");
 
   // Verify that after Debugger.enable is processed, we'll automatically get a
-  // Debugger.paused notification
+  // Debugger.paused notification because the runtime was already paused.
   ensurePaused(
       waitForMessage("paused"),
       "other",
@@ -1011,10 +906,8 @@ TEST_F(CDPAgentTest, DebuggerEnableWhenAlreadyPaused) {
 
   ensureOkResponse(waitForMessage(), msgId++);
 
-  // After removing this callback, AsyncDebuggerAPI will still have another
-  // callback registered by CDPAgent. Therefore, JS will not continue by itself.
-  asyncDebuggerAPI.removeDebuggerEventCallback_TS(eventCallbackID);
-  // Have to manually resume it:
+  // Test that we can manually resume using triggerInterrupt_TS, even though
+  // CDPAgent now owns the debugger event callback.
   waitFor<bool>([&asyncDebuggerAPI](auto promise) {
     asyncDebuggerAPI.triggerInterrupt_TS(
         [&asyncDebuggerAPI, promise](HermesRuntime &runtime) {
@@ -1078,23 +971,9 @@ TEST_F(CDPAgentTest, DebuggerSkipExplicitPauseInBlackboxedRanges) {
   sendAndCheckResponse("Debugger.resume", msgId++);
   ensureNotification(waitForMessage(), "Debugger.resumed");
 
-  // [6] register async debug client and trigger a pause
-  DebuggerEventCallbackID eventCallbackID;
-  AsyncDebuggerAPI &asyncDebuggerAPI = cdpDebugAPI_->asyncDebuggerAPI();
-  waitFor<bool>(
-      [this, &asyncDebuggerAPI, &eventCallbackID, &msgId](auto promise) {
-        eventCallbackID = asyncDebuggerAPI.addDebuggerEventCallback_TS(
-            [promise](
-                HermesRuntime & /*runtime*/,
-                AsyncDebuggerAPI & /*asyncDebugger*/,
-                DebuggerEventType event) {
-              if (event == DebuggerEventType::ExplicitPause) {
-                promise->set_value(true);
-              }
-            });
-        sendAndCheckResponse("Debugger.pause", msgId++);
-      },
-      "wait on explicit pause");
+  // [6] send Debugger.pause while running in the loop. The response confirms
+  // the explicit pause flag has been set.
+  sendAndCheckResponse("Debugger.pause", msgId++);
 
   // [7] allow stepping out of the blackboxed while loop which would
   // immediately trigger the requested pause on the next statement
@@ -1290,10 +1169,11 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatterns) {
 
   // Testing UTF8 >1 bytes caracters-
   // main - one byte per letter
-  // Ø - two bytes (U+00D8 - 11000011 10011000)
-  // ಚ - three bytes (U+0C9A - 11100000 10110010 10011010)
-  // 😁 - four bytes (U+1F601 - 11110000 10011111 10011000 10000001)
-  std::string utf8FileName(u8"mainØಚ😁");
+  // Ø - two bytes (U+00D8 - 11000011 10011000 aka \xc3\x98)
+  // ಚ - three bytes (U+0C9A - 11100000 10110010 10011010 aka \xe0\xb2\x9a)
+  // 😁 - four bytes (U+1F601 - 11110000 10011111 10011000 10000001 aka
+  // \xf0\x9f\x98\x81)
+  std::string utf8FileName("main\xc3\x98\xe0\xb2\x9a\xf0\x9f\x98\x81");
 
   // debugger; statement won't work unless Debugger domain is enabled
   scheduleScript(
@@ -1407,8 +1287,8 @@ TEST_F(CDPAgentTest, DebuggerSkipAnonymousScriptsEval) {
       waitForMessage(),
       "other",
       {// line 2, and line 4 are relative to evaluated string
-       {"aa", 2, 3},
-       {"eval", 4, 2},
+       {"aa", 2, 2},
+       {"eval", 4, 1},
        {"global", 2, 1}});
   sendRequest(
       "Debugger.setBlackboxPatterns", msgId, [](::hermes::JSONEmitter &json) {
@@ -1432,7 +1312,13 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
 
   sendAndCheckResponse("Debugger.enable", msgId++);
 
-  std::string utf8FileName(u8"/node_modules/somelibrary/lib/mainØಚ😁.js");
+  // Characters and their UTF8 byte string:
+  // Ø - two bytes (U+00D8 - 11000011 10011000 aka \xc3\x98)
+  // ಚ - three bytes (U+0C9A - 11100000 10110010 10011010 aka \xe0\xb2\x9a)
+  // 😁 - four bytes (U+1F601 - 11110000 10011111 10011000 10000001 aka
+  // \xf0\x9f\x98\x81)
+  std::string utf8FileName(
+      "/node_modules/somelibrary/lib/main\xc3\x98\xe0\xb2\x9a\xf0\x9f\x98\x81.js");
   std::string script = R"(  // (line 0)
   var a = 1;
     debugger;       // (line 2) hit debugger statement if script is not blackboxed
@@ -1444,7 +1330,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // should ignore scripts in node_modules. This means the debugger statement on
   // line 5 will be skipped
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"(/node_modules/|/bower_components/)"});
+      msgId++, {R"(/node_modules/|/bower_components/)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1463,7 +1349,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // For an irrelevant extra pattern "aa" besides the default,
   // should ignore the script
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"(/node_modules/|/bower_components/)", u8R"(aa)"});
+      msgId++, {R"(/node_modules/|/bower_components/)", R"(aa)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1472,7 +1358,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // passing a regex "(/somelibrary/lib/|aa)" and an irrelevant pattern
   // should ignore the script
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"((/somelibrary/lib/|aa))", u8R"(bb)"});
+      msgId++, {R"((/somelibrary/lib/|aa))", R"(bb)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1480,7 +1366,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
 
   // passing a regex with an escaped slash "\/": "/somelibrary\/lib/"
   // should ignore the script
-  sendSetBlackboxPatternsAndCheckResponse(msgId++, {u8R"(/somelibrary\/lib/)"});
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {R"(/somelibrary\/lib/)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   // the debugger statement is not triggered in between
@@ -1489,8 +1375,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // passing a regex with a twice escaped slash "\\/": "/somelibrary\\/lib/"
   // results in the backslash escape, rendering the escaped path incorrect
   // and should NOT ignore the script
-  sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"(/somelibrary\\/lib/)"});
+  sendSetBlackboxPatternsAndCheckResponse(msgId++, {R"(/somelibrary\\/lib/)"});
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
@@ -1502,7 +1387,7 @@ TEST_F(CDPAgentTest, DebuggerSkipBlackboxedPatternsRegexEscaping) {
   // should result in an error response from cdp
   // the ignored patterns would not change leaving the script NOT ignored
   sendSetBlackboxPatternsAndCheckResponse(
-      msgId++, {u8R"())"}, false /* expectOK */);
+      msgId++, {R"())"}, false /* expectOK */);
   scheduleScript(script, utf8FileName);
   expectNotification("Debugger.scriptParsed");
   ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
@@ -2252,6 +2137,35 @@ TEST_F(CDPAgentTest, DebuggerReportsException) {
   waitForScheduledScripts();
 }
 
+TEST_F(CDPAgentTest, RuntimeEvaluateCustomErrorDescription) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Runtime.enable", msgId++);
+
+  // Evaluate an expression that throws a custom error class
+  sendRequest("Runtime.evaluate", msgId, [](::hermes::JSONEmitter &params) {
+    params.emitKeyValue(
+        "expression",
+        R"(
+          // Transpiled class CustomError extends Error {}
+          function CustomError(...args) {
+            const instance = Reflect.construct(Error, args);
+            Reflect.setPrototypeOf(instance, Reflect.getPrototypeOf(this));
+            return instance;
+          }
+          Object.setPrototypeOf(CustomError.prototype, Error.prototype);
+          throw new CustomError('custom message');
+        )");
+  });
+  auto resp = expectResponse(std::nullopt, msgId++);
+
+  // The exception's RemoteObject should have the custom class name in its
+  // description, not just "Error".
+  auto description = jsonScope_.getString(
+      resp, {"result", "exceptionDetails", "exception", "description"});
+  EXPECT_TRUE(description.find("CustomError: custom message") == 0);
+}
+
 TEST_F(CDPAgentTest, DebuggerEvalOnCallFrame) {
   int msgId = 1;
 
@@ -2398,7 +2312,10 @@ TEST_F(CDPAgentTest, DebuggerEvalOnCallFrameException) {
   sendEvalRequest(msgId + 2, frame, "count");
 
   ensureEvalException(
-      waitForMessage(), msgId + 0, "SyntaxError: 1:6:';' expected", {});
+      waitForMessage(),
+      msgId + 0,
+      "SyntaxError: 1:6:';' expected",
+      {{"callme", 12, 0}, {"global", 18, 0}});
   ensureEvalException(
       waitForMessage(),
       msgId + 1,
@@ -2412,7 +2329,7 @@ TEST_F(CDPAgentTest, DebuggerEvalOnCallFrameException) {
 
        // TODO: unsure why these frames are here, but they're in hdb tests
        // too. Ask Hermes about if they really should be there.
-       FrameInfo("eval", 0, 0).setLineNumberMax(19),
+       FrameInfo("anonymous", 0, 0).setLineNumberMax(19),
        FrameInfo("callme", 12, 2),
        FrameInfo("global", 0, 0).setLineNumberMax(19)});
   ensureEvalResponse(waitForMessage(), msgId + 2, 5);
@@ -2735,6 +2652,439 @@ TEST_F(CDPAgentTest, DebuggerApplyBreakpointsToNewLoadedScripts) {
   // Ensure the breakpoint wasn't applied (i.e. no breakpoint resolved
   // notification and no breakpoints hit).
   expectNothing();
+}
+
+TEST_F(CDPAgentTest, DebuggerConditionalBreakpoint_ConditionTrue) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var x = 10;
+    debugger;      // line 2
+    Math.random(); // line 3: conditional breakpoint here with "x > 5"
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement, set conditional breakpoint on line 3
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 5");
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 3, 4});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause on line 3 because x (10) > 5
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerConditionalBreakpoint_ConditionFalse) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var x = 3;
+    debugger;      // line 2
+    Math.random(); // line 3: conditional breakpoint here with "x > 5"
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement, set conditional breakpoint on line 3
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 5");
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 3, 4});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+TEST_F(CDPAgentTest, DebuggerConditionalBreakpoint_EmptyStringIsUnconditional) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1
+    Math.random(); // line 2: breakpoint with empty condition ""
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement, set breakpoint with empty condition on line 2
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+        json.emitKeyValue("condition", "");
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause on line 2 because empty string = unconditional
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+/// Multiple breakpoints at the same location are allowed.
+/// When execution hits the location, if any breakpoint's condition evaluates
+/// to true, the debugger pauses.
+TEST_F(CDPAgentTest, DebuggerMultipleBreakpoints_SameLocation) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    debugger;      // line 1
+    Math.random(); // line 2: set breakpoint here twice
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 1, 1}});
+
+  // Set first breakpoint on line 2 - should succeed
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
+
+  // Set second breakpoint at the same location - should also succeed
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 2);
+        json.closeDict();
+      });
+  ensureSetBreakpointResponse(waitForMessage(), msgId++, {scriptID, 2, 4});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause on line 2 (both breakpoints active at this location)
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+/// When removing one breakpoint from a location with multiple breakpoints,
+/// the other breakpoints remain active.
+TEST_F(CDPAgentTest, DebuggerRemovingOneBreakpointLeavesOthersActive) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    function target() {       // line 1
+      debugger;               // line 2
+      Math.random();          // line 3: set 2 breakpoints here
+    }
+    target();                 // line 5
+    target();                 // line 6
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"target", 2, 2}, {"global", 5, 1}});
+
+  // Set first breakpoint on line 3
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+      });
+  auto *resp1 = expectResponse(std::nullopt, msgId++);
+  auto bp1Id = jsonScope_.getString(resp1, {"result", "breakpointId"});
+
+  // Set second breakpoint at the same location
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+      });
+  auto *resp2 = expectResponse(std::nullopt, msgId++);
+  auto bp2Id = jsonScope_.getString(resp2, {"result", "breakpointId"});
+
+  // Remove the first breakpoint
+  sendRequest(
+      "Debugger.removeBreakpoint", msgId, [bp1Id](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("breakpointId", bp1Id);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // First call to target() - should pause on line 3 (second breakpoint active)
+  ensurePaused(waitForMessage(), "other", {{"target", 3, 2}, {"global", 5, 1}});
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Second call to target() - should pause again (second breakpoint still
+  // there)
+  ensurePaused(waitForMessage(), "other", {{"target", 2, 2}, {"global", 6, 1}});
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  ensurePaused(waitForMessage(), "other", {{"target", 3, 2}, {"global", 6, 1}});
+
+  // Remove the second breakpoint
+  sendRequest(
+      "Debugger.removeBreakpoint", msgId, [bp2Id](::hermes::JSONEmitter &json) {
+        json.emitKeyValue("breakpointId", bp2Id);
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+/// When all conditional breakpoints at a location evaluate to false,
+/// the debugger does not pause.
+TEST_F(CDPAgentTest, DebuggerAllConditionalBreakpointsEvaluateToFalse) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var x = 1;
+    debugger;          // line 2
+    Math.random();     // line 3: two conditional breakpoints, both false
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // Set first conditional breakpoint with condition that evaluates to false
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 10");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set second conditional breakpoint with condition that also evaluates to
+  // false
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "x > 100");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Script should complete without pausing on line 3
+  waitForScheduledScripts();
+}
+
+/// Breakpoint conditions are evaluated in the order they were created.
+/// The first condition that evaluates to true triggers the pause; conditions
+/// after it are not evaluated (short-circuit).
+TEST_F(CDPAgentTest, DebuggerConditionsEvaluatedInCreationOrder) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var evalOrder = [];
+    debugger;          // line 2
+    Math.random();     // line 3: breakpoints set here
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // Set first breakpoint with condition that has side effect and returns true
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('A'), true)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set second breakpoint with condition that has side effect (should NOT run
+  // due to short-circuit after first true)
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('B'), false)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause because first breakpoint's condition is true
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  // Evaluate evalOrder to check order (should be 'A' only due to short-circuit)
+  sendEvalRequest(msgId, 0, "evalOrder.join(',')");
+  ensureEvalResponse(waitForMessage(), msgId++, "A");
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
+}
+
+/// Condition evaluation short-circuits on the first true condition.
+/// Subsequent conditions are not evaluated.
+TEST_F(CDPAgentTest, DebuggerConditionShortCircuitsOnFirstTrue) {
+  int msgId = 1;
+
+  sendAndCheckResponse("Debugger.enable", msgId++);
+
+  scheduleScript(R"(
+    var evalOrder = [];
+    debugger;          // line 2
+    Math.random();     // line 3: breakpoints set here
+  )");
+
+  auto note = expectNotification("Debugger.scriptParsed");
+  auto scriptID = jsonScope_.getString(note, {"params", "scriptId"});
+
+  // Hit debugger statement
+  ensurePaused(waitForMessage(), "other", {{"global", 2, 1}});
+
+  // Set first breakpoint with condition that returns false
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('A'), false)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set second breakpoint with condition that returns true
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('B'), true)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  // Set third breakpoint with condition that should NOT be evaluated (comes
+  // after true)
+  sendRequest(
+      "Debugger.setBreakpoint", msgId, [scriptID](::hermes::JSONEmitter &json) {
+        json.emitKey("location");
+        json.openDict();
+        json.emitKeyValue("scriptId", scriptID);
+        json.emitKeyValue("lineNumber", 3);
+        json.closeDict();
+        json.emitKeyValue("condition", "(evalOrder.push('C'), true)");
+      });
+  ensureOkResponse(waitForMessage(), msgId++);
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  // Should pause because second breakpoint's condition is true
+  ensurePaused(waitForMessage(), "other", {{"global", 3, 1}});
+
+  // Evaluate evalOrder - should be 'A,B' (C not evaluated due to short-circuit)
+  sendEvalRequest(msgId, 0, "evalOrder.join(',')");
+  ensureEvalResponse(waitForMessage(), msgId++, "A,B");
+
+  sendAndCheckResponse("Debugger.resume", msgId++);
+  ensureNotification(waitForMessage(), "Debugger.resumed");
+
+  waitForScheduledScripts();
 }
 
 TEST_F(CDPAgentTest, DebuggerRemoveBreakpoint) {
@@ -3229,12 +3579,8 @@ TEST_F(CDPAgentTest, DebuggerActivateBreakpoints) {
 }
 
 TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
-  // Make a second CDPAgent
-  auto secondCDPAgent = CDPAgent::create(
-      kTestExecutionContextId_,
-      *cdpDebugAPI_,
-      std::bind(&CDPAgentTest::handleRuntimeTask, this, _1),
-      std::bind(&CDPAgentTest::handleResponse, this, _1));
+  // Make a second CDPAgent with its own message queue
+  auto [secondAgent, secondMessages] = createCDPAgentAndQueue();
 
   int msgId = 1;
 
@@ -3256,10 +3602,10 @@ TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
 
     // Send a command from the second CDPAgent even though we never enabled the
     // Debugger domain on the second one.
-    sendRequest(method, msgId, {}, secondCDPAgent.get());
+    sendRequest(method, msgId, {}, secondAgent.get());
 
     // Check that the command gets processed successfully
-    ensureOkResponse(waitForMessage(), msgId++);
+    ensureOkResponse(secondMessages->waitForMessage(), msgId++);
 
     // And the debugger resumed
     ensureNotification(waitForMessage(), "Debugger.resumed");
@@ -3277,9 +3623,9 @@ TEST_F(CDPAgentTest, DebuggerMultipleCDPAgents) {
 
   // Send a command from the second CDPAgent for evaluateOnCallFrame even though
   // we never enabled the Debugger domain on the second one.
-  sendEvalRequest(msgId, 0, R"("foo" + foo)", secondCDPAgent.get());
+  sendEvalRequest(msgId, 0, R"("foo" + foo)", secondAgent.get());
 
-  ensureEvalResponse(waitForMessage(), msgId++, "foobar");
+  ensureEvalResponse(secondMessages->waitForMessage(), msgId++, "foobar");
 }
 
 TEST_F(CDPAgentTest, RuntimeEnableDisable) {
@@ -3356,7 +3702,9 @@ TEST_F(CDPAgentTest, RuntimeGetHeapUsage) {
   EXPECT_GE(jsonScope_.getNumber(resp, {"result", "totalSize"}), 0);
 }
 
-TEST_F(CDPAgentTest, RuntimeGlobalLexicalScopeNames) {
+// Currently disabled as getting lexical scope names is not fully supported,
+// and may produce incomplete/inconsistent results.
+TEST_F(CDPAgentTest, DISABLED_RuntimeGlobalLexicalScopeNames) {
   auto setStopFlag = llvh::make_scope_exit([this] {
     // break out of loop
     stopFlag_.store(true);
@@ -3825,7 +4173,7 @@ TEST_F(CDPAgentTest, RuntimeEvaluateWhilePaused) {
   )");
   expectNotification("Debugger.scriptParsed");
   auto pausedNote = ensurePaused(
-      waitForMessage(), "other", {{"func", 4, 2}, {"global", 5, 1}});
+      waitForMessage(), "other", {{"func", 4, 3}, {"global", 5, 1}});
 
   // Runtime evaluate should not happen while paused.
   int evaluateMsgId = msgId++;

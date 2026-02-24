@@ -14,8 +14,13 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createWeakSetConstructor(Runtime &runtime) {
+HermesValue createWeakSetConstructor(Runtime &runtime) {
   auto weakSetPrototype = Handle<JSObject>::vmcast(&runtime.weakSetPrototype);
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   defineMethod(
       runtime,
@@ -51,51 +56,76 @@ Handle<JSObject> createWeakSetConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::WeakSet),
       dpf);
 
-  auto cons = defineSystemConstructor<JSWeakSet>(
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::WeakSet),
       weakSetConstructor,
       weakSetPrototype,
       0,
-      CellKind::JSWeakSetKind);
+      lv.cons);
 
   // ES6.0 23.4.3.1
   defineProperty(
       runtime,
       weakSetPrototype,
       Predefined::getSymbolID(Predefined::constructor),
-      cons);
+      lv.cons);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
-CallResult<HermesValue>
-weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   if (LLVM_UNLIKELY(!args.isConstructorCall())) {
     return runtime.raiseTypeError("WeakSet must be called as a constructor");
   }
 
-  auto selfHandle = args.dyncastThis<JSWeakSet>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSWeakSet> self;
+    PinnedValue<Callable> adder;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.weakSetConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.weakSetPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.weakSetPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  auto selfRes = JSWeakSet::create(runtime, lv.selfParent);
+  if (LLVM_UNLIKELY(selfRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.self = std::move(*selfRes);
 
   if (args.getArgCount() == 0 || args.getArg(0).isUndefined() ||
       args.getArg(0).isNull()) {
-    return selfHandle.getHermesValue();
+    return lv.self.getHermesValue();
   }
 
   auto propRes = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::add));
+      lv.self, runtime, Predefined::getSymbolID(Predefined::add));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto adder =
-      Handle<Callable>::dyn_vmcast(runtime.makeHandle(std::move(*propRes)));
-  if (LLVM_UNLIKELY(!adder)) {
+  if (auto callable = dyn_vmcast<Callable>(propRes->getHermesValue())) {
+    lv.adder = callable;
+  } else {
     return runtime.raiseTypeError("Property 'add' for WeakSet is not callable");
   }
 
-  auto iterRes = getIterator(runtime, args.getArgHandle(0));
+  auto iterRes = getCheckedIterator(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(iterRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -111,7 +141,7 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
     }
     if (!*nextRes) {
       // Done with iteration.
-      return selfHandle.getHermesValue();
+      return lv.self.getHermesValue();
     }
     auto nextValueRes = JSObject::getNamed_RJS(
         *nextRes, runtime, Predefined::getSymbolID(Predefined::value));
@@ -121,7 +151,7 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
 
     if (LLVM_UNLIKELY(
             Callable::executeCall1(
-                adder, runtime, selfHandle, nextValueRes->get()) ==
+                lv.adder, runtime, lv.self, nextValueRes->get()) ==
             ExecutionStatus::EXCEPTION)) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
@@ -130,55 +160,50 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-weakSetPrototypeAdd(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetPrototypeAdd(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto M = args.dyncastThis<JSWeakSet>();
   if (LLVM_UNLIKELY(!M)) {
     return runtime.raiseTypeError(
         "WeakSet.prototype.add can only be called on a WeakSet");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
-    return runtime.raiseTypeError("WeakSet key must be an Object");
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
+    return runtime.raiseTypeError(
+        "WeakSet key must be an Object or non-registered Symbol");
   }
 
-  if (LLVM_UNLIKELY(
-          JSWeakSet::setValue(
-              M, runtime, key, HandleRootOwner::getUndefinedValue()) ==
-          ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
+  JSWeakSet::setValue(M, runtime, key, HandleRootOwner::getUndefinedValue());
   return M.getHermesValue();
 }
 
-CallResult<HermesValue>
-weakSetPrototypeDelete(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetPrototypeDelete(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto M = args.dyncastThis<JSWeakSet>();
   if (LLVM_UNLIKELY(!M)) {
     return runtime.raiseTypeError(
         "WeakSet.prototype.delete can only be called on a WeakSet");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
     return HermesValue::encodeBoolValue(false);
   }
 
   return HermesValue::encodeBoolValue(JSWeakSet::deleteValue(M, runtime, key));
 }
 
-CallResult<HermesValue>
-weakSetPrototypeHas(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> weakSetPrototypeHas(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto M = args.dyncastThis<JSWeakSet>();
   if (LLVM_UNLIKELY(!M)) {
     return runtime.raiseTypeError(
         "WeakSet.prototype.has can only be called on a WeakSet");
   }
 
-  auto key = args.dyncastArg<JSObject>(0);
-  if (LLVM_UNLIKELY(!key)) {
+  auto key = args.getArgHandle(0);
+  if (LLVM_UNLIKELY(!canBeHeldWeakly(runtime, *key))) {
     return HermesValue::encodeBoolValue(false);
   }
 

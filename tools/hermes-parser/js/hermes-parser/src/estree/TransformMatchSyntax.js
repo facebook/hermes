@@ -18,13 +18,17 @@ import type {ParserOptions} from '../ParserOptions';
 import type {
   BinaryExpression,
   BreakStatement,
+  DestructuringObjectProperty,
   ESNode,
   Expression,
   Identifier,
   Literal,
   MatchExpression,
+  MatchIdentifierPattern,
   MatchMemberPattern,
+  MatchObjectPatternProperty,
   MatchPattern,
+  MatchRestPattern,
   MatchStatement,
   MemberExpression,
   ObjectPattern,
@@ -53,20 +57,21 @@ import {
   numberLiteral,
   stringLiteral,
   throwStatement,
+  typeofExpression,
   variableDeclaration,
 } from '../utils/Builders';
-import {createGenID} from '../utils/GenID';
+import GenID from '../utils/GenID';
 
 /**
  * Generated identifiers.
  * `GenID` is initialized in the transform.
  */
-let GenID: ?ReturnType<typeof createGenID> = null;
+let genID: GenID | null = null;
 function genIdent(): Identifier {
-  if (GenID == null) {
+  if (genID == null) {
     throw Error('GenID must be initialized at the start of the transform.');
   }
-  return ident(GenID.genID());
+  return ident(genID.id());
 }
 
 /**
@@ -84,6 +89,7 @@ type Condition =
   | {type: 'is-nan', key: Key}
   | {type: 'array', key: Key, length: number, lengthOp: 'eq' | 'gte'}
   | {type: 'object', key: Key}
+  | {type: 'instanceof', key: Key, constructor: Expression}
   | {type: 'prop-exists', key: Key, propName: string}
   | {type: 'or', orConditions: Array<Array<Condition>>};
 
@@ -192,6 +198,7 @@ function needsPropExistsCond(pattern: MatchPattern): boolean {
     case 'MatchLiteralPattern':
     case 'MatchUnaryPattern':
     case 'MatchObjectPattern':
+    case 'MatchInstancePattern':
     case 'MatchArrayPattern':
       return false;
     case 'MatchAsPattern': {
@@ -202,6 +209,74 @@ function needsPropExistsCond(pattern: MatchPattern): boolean {
       const {patterns} = pattern;
       return patterns.some(needsPropExistsCond);
     }
+  }
+}
+
+/**
+ * Analyzes properties of both object patterns and instance patterns.
+ */
+function analyzeProperties(
+  key: Key,
+  pattern: MatchPattern,
+  seenBindingNames: Set<string>,
+  properties: ReadonlyArray<MatchObjectPatternProperty>,
+  rest: MatchRestPattern | null,
+): {
+  conditions: Array<Condition>,
+  bindings: Array<Binding>,
+} {
+  const conditions: Array<Condition> = [];
+  const bindings: Array<Binding> = [];
+  const objKeys: Array<Identifier | Literal> = [];
+  const seenNames = new Set<string>();
+
+  properties.forEach(prop => {
+    const {key: objKey, pattern: propPattern} = prop;
+    objKeys.push(objKey);
+    const name = objKeyToString(objKey);
+    if (seenNames.has(name)) {
+      throw createSyntaxError(
+        propPattern,
+        `Duplicate property name '${name}' in match object pattern.`,
+      );
+    }
+    seenNames.add(name);
+    const propKey: Key = key.concat(objKey);
+    if (needsPropExistsCond(propPattern)) {
+      conditions.push({
+        type: 'prop-exists',
+        key,
+        propName: name,
+      });
+    }
+    const {conditions: childConditions, bindings: childBindings} =
+      analyzePattern(propPattern, propKey, seenBindingNames);
+    conditions.push(...childConditions);
+    bindings.push(...childBindings);
+  });
+  if (rest != null && rest.argument != null) {
+    const {id, kind} = rest.argument;
+    checkDuplicateBindingName(seenBindingNames, rest.argument, id.name);
+    checkBindingKind(pattern, kind);
+    bindings.push({
+      type: 'object-rest',
+      key,
+      exclude: objKeys,
+      kind,
+      id,
+    });
+  }
+  return {conditions, bindings};
+}
+
+function constructorExpression(
+  constructor: MatchIdentifierPattern | MatchMemberPattern,
+): Expression {
+  switch (constructor.type) {
+    case 'MatchIdentifierPattern':
+      return constructor.id;
+    case 'MatchMemberPattern':
+      return convertMemberPattern(constructor);
   }
 }
 
@@ -279,7 +354,7 @@ function analyzePattern(
       const [id, kind] =
         target.type === 'MatchBindingPattern'
           ? [target.id, target.kind]
-          : [target, 'const'];
+          : [target, ('const': 'const')];
       checkDuplicateBindingName(seenBindingNames, pattern, id.name);
       checkBindingKind(pattern, kind);
       const binding: Binding = {type: 'id', key, kind, id};
@@ -315,46 +390,39 @@ function analyzePattern(
     }
     case 'MatchObjectPattern': {
       const {properties, rest} = pattern;
-      const conditions: Array<Condition> = [{type: 'object', key}];
-      const bindings: Array<Binding> = [];
-      const objKeys: Array<Identifier | Literal> = [];
-      const seenNames = new Set<string>();
-      properties.forEach(prop => {
-        const {key: objKey, pattern: propPattern} = prop;
-        objKeys.push(objKey);
-        const name = objKeyToString(objKey);
-        if (seenNames.has(name)) {
-          throw createSyntaxError(
-            propPattern,
-            `Duplicate property name '${name}' in match object pattern.`,
-          );
-        }
-        seenNames.add(name);
-        const propKey: Key = key.concat(objKey);
-        if (needsPropExistsCond(propPattern)) {
-          conditions.push({
-            type: 'prop-exists',
-            key,
-            propName: name,
-          });
-        }
-        const {conditions: childConditions, bindings: childBindings} =
-          analyzePattern(propPattern, propKey, seenBindingNames);
-        conditions.push(...childConditions);
-        bindings.push(...childBindings);
-      });
-      if (rest != null && rest.argument != null) {
-        const {id, kind} = rest.argument;
-        checkDuplicateBindingName(seenBindingNames, rest.argument, id.name);
-        checkBindingKind(pattern, kind);
-        bindings.push({
-          type: 'object-rest',
+      const {conditions: propertyConditions, bindings} = analyzeProperties(
+        key,
+        pattern,
+        seenBindingNames,
+        properties,
+        rest,
+      );
+      const conditions: Array<Condition> = [
+        {type: 'object', key},
+        ...propertyConditions,
+      ];
+      return {conditions, bindings};
+    }
+    case 'MatchInstancePattern': {
+      const {
+        targetConstructor,
+        properties: {properties, rest},
+      } = pattern;
+      const {conditions: propertyConditions, bindings} = analyzeProperties(
+        key,
+        pattern,
+        seenBindingNames,
+        properties,
+        rest,
+      );
+      const conditions: Array<Condition> = [
+        {
+          type: 'instanceof',
           key,
-          exclude: objKeys,
-          kind,
-          id,
-        });
-      }
+          constructor: constructorExpression(targetConstructor),
+        },
+        ...propertyConditions,
+      ];
       return {conditions, bindings};
     }
     case 'MatchOrPattern': {
@@ -476,29 +544,38 @@ function testsOfCondition(
       return [isArray, lengthCheck];
     }
     case 'object': {
-      // typeof <x> === 'object' && <x> !== null
+      // (typeof <x> === 'object' && <x> !== null) || typeof <x> === 'function'
       const {key} = condition;
-      const typeofObject: BinaryExpression = {
-        type: 'BinaryExpression',
-        left: {
-          type: 'UnaryExpression',
-          operator: 'typeof',
-          argument: expressionOfKey(root, key),
-          prefix: true,
-          ...etc(),
-        },
-        right: stringLiteral('object'),
-        operator: '===',
-        ...etc(),
-      };
-      const notNull = {
+      const typeofObject = typeofExpression(
+        expressionOfKey(root, key),
+        'object',
+      );
+      const typeofFunction = typeofExpression(
+        expressionOfKey(root, key),
+        'function',
+      );
+      const notNull: BinaryExpression = {
         type: 'BinaryExpression',
         left: expressionOfKey(root, key),
         right: nullLiteral(),
         operator: '!==',
         ...etc(),
       };
-      return [typeofObject, notNull];
+      return [
+        disjunction([conjunction([typeofObject, notNull]), typeofFunction]),
+      ];
+    }
+    case 'instanceof': {
+      const {key, constructor} = condition;
+      return [
+        {
+          type: 'BinaryExpression',
+          left: expressionOfKey(root, key),
+          right: constructor,
+          operator: 'instanceof',
+          ...etc(),
+        },
+      ];
     }
     case 'prop-exists': {
       // <propName> in <x>
@@ -563,7 +640,7 @@ function statementsOfBindings(
         const destructuring: ObjectPattern = {
           type: 'ObjectPattern',
           properties: exclude
-            .map(prop =>
+            .map((prop): DestructuringObjectProperty =>
               prop.type === 'Identifier'
                 ? {
                     type: 'Property',
@@ -702,13 +779,13 @@ function mapMatchExpression(node: MatchExpression): Expression {
   const {argument, cases} = node;
   const {hasBindings, hasWildcard, analyses} = analyzeCases(cases);
 
-  const isSimpleArgument = calculateSimpleArgument(argument);
+  const isSimpleArgument = !hasBindings && calculateSimpleArgument(argument);
   const genRoot: Identifier | null = !isSimpleArgument ? genIdent() : null;
   const root: Expression = genRoot == null ? argument : genRoot;
 
   // No bindings and a simple argument means we can use nested conditional
   // expressions.
-  if (!hasBindings && isSimpleArgument) {
+  if (isSimpleArgument) {
     const wildcardAnalaysis = hasWildcard ? analyses.pop() : null;
     const lastBody =
       wildcardAnalaysis != null
@@ -737,7 +814,7 @@ function mapMatchExpression(node: MatchExpression): Expression {
   // If the original argument is simple, no need for a new variable.
   const statements: Array<Statement> = analyses.map(
     ({conditions, bindings, guard, body}) => {
-      const returnNode = {
+      const returnNode: Statement = {
         type: 'ReturnStatement',
         argument: body,
         ...etc(),
@@ -799,10 +876,10 @@ function mapMatchExpression(node: MatchExpression): Expression {
  */
 function mapMatchStatement(node: MatchStatement): Statement {
   const {argument, cases} = node;
-  const {hasWildcard, analyses} = analyzeCases(cases);
+  const {hasBindings, hasWildcard, analyses} = analyzeCases(cases);
 
   const topLabel: Identifier = genIdent();
-  const isSimpleArgument = calculateSimpleArgument(argument);
+  const isSimpleArgument = !hasBindings && calculateSimpleArgument(argument);
   const genRoot: Identifier | null = !isSimpleArgument ? genIdent() : null;
   const root: Expression = genRoot == null ? argument : genRoot;
 
@@ -882,7 +959,7 @@ export function transformProgram(
 ): Program {
   // Initialize so each file transformed starts freshly incrementing the
   // variable name counter, and has its own usage tracking.
-  GenID = createGenID('m');
+  genID = new GenID('m');
   return SimpleTransform.transformProgram(program, {
     transform(node: ESNode) {
       switch (node.type) {
@@ -896,12 +973,12 @@ export function transformProgram(
           // A rudimentary check to avoid some collisions with our generated
           // variable names. Ideally, we would have access a scope analyzer
           // inside the transform instead.
-          if (GenID == null) {
+          if (genID == null) {
             throw Error(
               'GenID must be initialized at the start of the transform.',
             );
           }
-          GenID.addUsage(node.name);
+          genID.addUsage(node.name);
           return node;
         }
         default: {

@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_CDPAGENT_H
-#define HERMES_CDP_CDPAGENT_H
+#pragma once
 
 #include <atomic>
 #include <string>
@@ -29,7 +28,8 @@ class CDPDebugAPI;
 
 /// Public-facing wrapper for internal CDP state that can be preserved across
 /// reloads.
-struct HERMES_EXPORT State {
+class HERMES_EXPORT State {
+ public:
   /// Incomplete type that stores the actual state.
   struct Private;
 
@@ -129,5 +129,3 @@ class HERMES_EXPORT CDPAgent {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_CDPAGENT_H

@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_GCCONFIG_H
-#define HERMES_PUBLIC_GCCONFIG_H
+#pragma once
 
 #include "hermes/Public/CtorConfig.h"
 #include "hermes/Public/GCTripwireContext.h"
@@ -25,10 +24,9 @@ namespace hermes {
 namespace vm {
 
 /// A type big enough to accomodate the entire allocated address space.
-/// Individual allocations are always 'uint32_t', but on a 64-bit machine we
-/// might want to accommodate a larger total heap (or not, in which case we keep
-/// it 32-bit).
-using gcheapsize_t = uint32_t;
+/// Individual allocations are always 'uint32_t', but on a 64-bit machine, when
+/// compressed pointer is OFF, we want to accommodate a larger total heap.
+using gcheapsize_t = size_t;
 
 /// Represents a value before and after an event.
 /// NOTE: Not a std::pair because using the names are more readable than first
@@ -144,9 +142,6 @@ enum class GCEventKind {
 /// Parameters for GC Initialisation.  Check documentation in README.md
 /// constexpr indicates that the default value is constexpr.
 #define GC_FIELDS(F)                                                     \
-  /* Minimum heap size hint. */                                          \
-  F(constexpr, gcheapsize_t, MinHeapSize, 0)                             \
-                                                                         \
   /* Initial heap size hint. */                                          \
   F(constexpr, gcheapsize_t, InitHeapSize, 32 << 20)                     \
                                                                          \
@@ -206,19 +201,6 @@ enum class GCEventKind {
   /* GC_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
-  if (builder.hasMinHeapSize()) {
-    if (builder.hasInitHeapSize()) {
-      // If both are specified, normalize the initial size up to the minimum,
-      // if necessary.
-      InitHeapSize_ = std::max(MinHeapSize_, InitHeapSize_);
-    } else {
-      // If the minimum is set explicitly, but the initial heap size is not,
-      // use the minimum as the initial size.
-      InitHeapSize_ = MinHeapSize_;
-    }
-  }
-  assert(InitHeapSize_ >= MinHeapSize_);
-
   // Make sure the max is at least the Init.
   MaxHeapSize_ = std::max(InitHeapSize_, MaxHeapSize_);
 })
@@ -227,5 +209,3 @@ _HERMES_CTORCONFIG_STRUCT(GCConfig, GC_FIELDS, {
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMES_PUBLIC_GCCONFIG_H

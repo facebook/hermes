@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 if (typeof print === "undefined")
     var print = console.log;

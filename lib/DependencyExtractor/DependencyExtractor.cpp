@@ -91,7 +91,7 @@ class DependencyExtractor {
 
   /// Perform the extraction on whole AST.
   void doIt(Node *rootNode) {
-    visitESTreeNode(*this, rootNode);
+    visitESTreeNodeNoReplace(*this, rootNode);
   }
 
   /// A dummy implementation of the AST stack overflow protocol.

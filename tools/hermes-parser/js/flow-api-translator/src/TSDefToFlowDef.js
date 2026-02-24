@@ -32,17 +32,21 @@ const DUMMY_COMMON = {
   parent: DUMMY_PARENT,
 };
 
+type LooseOmit<O: interface {}, K: $Keys<$FlowFixMe>> = Pick<
+  O,
+  Exclude<$Keys<O>, K>,
+>;
 function constructFlowNode<T: FlowESTree.BaseNode>(
-  node: $Diff<T, FlowESTree.BaseNode>,
+  node: LooseOmit<NoInfer<T>, 'parent'>,
 ): T {
   return {
-    ...node,
+    ...(node: $FlowFixMe),
     ...DUMMY_COMMON,
   };
 }
 
 const makeCommentOwnLine =
-  // $FlowExpectedError[incompatible-cast] - trust me this re-type is 100% safe
+  // $FlowExpectedError[incompatible-type] - trust me this re-type is 100% safe
   (makeCommentOwnLineOriginal: (string, mixed) => string);
 
 export function TSDefToFlowDef(
@@ -92,7 +96,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     return buildCodeFrame(node, message, code, false);
   }
   function addErrorComment(node: FlowESTree.ESNode, message: string): void {
-    const comment = {
+    const comment: TSESTree.Comment = {
       type: 'Block',
       loc: DUMMY_LOC,
       value: `*${EOL} * ${message.replace(
@@ -108,7 +112,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     // $FlowExpectedError[prop-missing]
     // $FlowExpectedError[cannot-write]
     node.comments ??= [];
-    // $FlowExpectedError[incompatible-cast]
+    // $FlowExpectedError[incompatible-type]
     (node.comments: Array<TSESTree.Comment>).push(comment);
   }
   function unsupportedAnnotation(
@@ -178,7 +182,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         ),
         extends: Transform.ClassDeclarationSuperClass(
           node.superClass,
-          node.superTypeParameters,
+          node.superTypeArguments,
         ),
         mixins: [],
         body: Transform.ClassDeclarationBody(node.body),
@@ -198,12 +202,12 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
             break;
           case 'TSAbstractPropertyDefinition':
           case 'PropertyDefinition':
-            // $FlowFixMe[incompatible-call] ambiguous node
+            // $FlowFixMe[incompatible-type] ambiguous node
             Transform._translateIntoObjectProp(classItem, properties, indexers);
             break;
           case 'MethodDefinition':
           case 'TSAbstractMethodDefinition':
-            // $FlowFixMe[incompatible-call] ambiguous node
+            // $FlowFixMe[incompatible-type] ambiguous node
             Transform._translateIntoObjectMethod(classItem, properties);
             break;
         }
@@ -221,7 +225,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
 
     static ClassDeclarationSuperClass(
       superClass: ?TSESTree.LeftHandSideExpression,
-      superTypeParameters: ?TSESTree.TSTypeParameterInstantiation,
+      superTypeArguments: ?TSESTree.TSTypeParameterInstantiation,
     ): [FlowESTree.InterfaceExtends] | [] {
       if (superClass == null) {
         return [];
@@ -235,7 +239,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           type: 'InterfaceExtends',
           id,
           typeParameters:
-            Transform.TSTypeParameterInstantiationOpt(superTypeParameters),
+            Transform.TSTypeParameterInstantiationOpt(superTypeArguments),
         }),
       ];
     }
@@ -253,7 +257,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         type: 'ClassImplements',
         id: Transform.Identifier(node.expression),
         typeParameters: Transform.TSTypeParameterInstantiationOpt(
-          node.typeParameters,
+          node.typeArguments,
         ),
       });
     }
@@ -584,7 +588,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
               importKind:
                 specifier.importKind === 'value'
                   ? null
-                  : specifier.importKind ?? null,
+                  : (specifier.importKind ?? null),
             });
         }
       });
@@ -602,7 +606,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           node.importKind === 'type'
             ? 'typeof'
             : node.importKind,
-        assertions: [],
+        attributes: [],
         specifiers,
       });
     }
@@ -1058,7 +1062,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           objectType: base,
           indexType: constructFlowNode<FlowESTree.StringLiteralTypeAnnotation>({
             type: 'StringLiteralTypeAnnotation',
-            // $FlowFixMe[incompatible-call]
+            // $FlowFixMe[incompatible-type]
             value: name,
             // $FlowFixMe[incompatible-type]
             raw: `'${name}'`,
@@ -1179,7 +1183,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           'interface extends',
         ),
         typeParameters: Transform.TSTypeParameterInstantiationOpt(
-          node.typeParameters,
+          node.typeArguments,
         ),
       });
     }
@@ -1259,11 +1263,11 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
           node.optional === '+'
             ? 'PlusOptional'
             : node.optional === '-'
-            ? 'MinusOptional'
-            : // eslint-disable-next-line no-extra-boolean-cast
-            Boolean(node.optional)
-            ? 'Optional'
-            : null,
+              ? 'MinusOptional'
+              : // eslint-disable-next-line no-extra-boolean-cast
+                Boolean(node.optional)
+                ? 'Optional'
+                : null,
       });
       return constructFlowNode<FlowESTree.ObjectTypeAnnotation>({
         type: 'ObjectTypeAnnotation',
@@ -1289,13 +1293,13 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
               body: [],
             })
           : node.body.type === 'TSModuleDeclaration'
-          ? (() => {
-              throw translationError(node, 'nested module declarations');
-            })()
-          : constructFlowNode<FlowESTree.BlockStatement>({
-              type: 'BlockStatement',
-              body: node.body.body.flatMap(s => Transform.Statement(s)),
-            });
+            ? (() => {
+                throw translationError(node, 'nested module declarations');
+              })()
+            : constructFlowNode<FlowESTree.BlockStatement>({
+                type: 'BlockStatement',
+                body: node.body.body.flatMap(s => Transform.Statement(s)),
+              });
       if (node.id.type === 'Literal') {
         return constructFlowNode<FlowESTree.DeclareModule>({
           type: 'DeclareModule',
@@ -1436,7 +1440,9 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
     ): FlowESTree.TupleTypeAnnotation {
       return constructFlowNode<FlowESTree.TupleTypeAnnotation>({
         type: 'TupleTypeAnnotation',
-        types: node.elementTypes.map(node => Transform.TSTypeAnnotation(node)),
+        elementTypes: node.elementTypes.map(node =>
+          Transform.TSTypeAnnotation(node),
+        ),
         inexact: false,
       });
     }
@@ -1703,16 +1709,16 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
               key.type === 'Identifier'
                 ? Transform.Identifier(key, false)
                 : key.type === 'PrivateIdentifier'
-                ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
-                    type: 'PrivateIdentifier',
-                    name: key.name,
-                  }): $FlowFixMe)
-                : constructFlowNode<FlowESTree.StringLiteral>({
-                    type: 'Literal',
-                    literalType: 'string',
-                    value: String(key.value),
-                    raw: JSON.stringify(String(key.value)),
-                  }),
+                  ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
+                      type: 'PrivateIdentifier',
+                      name: key.name,
+                    }): $FlowFixMe)
+                  : constructFlowNode<FlowESTree.StringLiteral>({
+                      type: 'Literal',
+                      literalType: 'string',
+                      value: String(key.value),
+                      raw: JSON.stringify(String(key.value)),
+                    }),
             value: Transform.TSTypeAnnotationOpt(
               prop.typeAnnotation?.typeAnnotation,
             ),
@@ -1758,16 +1764,16 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         originalKey.type === 'Identifier'
           ? Transform.Identifier(originalKey, false)
           : originalKey.type === 'PrivateIdentifier'
-          ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
-              type: 'PrivateIdentifier',
-              name: originalKey.name,
-            }): $FlowFixMe)
-          : constructFlowNode<FlowESTree.StringLiteral>({
-              type: 'Literal',
-              literalType: 'string',
-              value: String(originalKey.value),
-              raw: JSON.stringify(String(originalKey.value)),
-            });
+            ? (constructFlowNode<FlowESTree.PrivateIdentifier>({
+                type: 'PrivateIdentifier',
+                name: originalKey.name,
+              }): $FlowFixMe)
+            : constructFlowNode<FlowESTree.StringLiteral>({
+                type: 'Literal',
+                literalType: 'string',
+                value: String(originalKey.value),
+                raw: JSON.stringify(String(originalKey.value)),
+              });
       const value = Transform.TSFunctionType(
         {
           type: 'TSFunctionType',
@@ -1971,7 +1977,7 @@ const getTransforms = (originalCode: string, opts: TranslationOptions) => {
         type: 'GenericTypeAnnotation',
         id: Transform.EntityNameToTypeIdentifier(node.typeName),
         typeParameters: Transform.TSTypeParameterInstantiationOpt(
-          node.typeParameters,
+          node.typeArguments,
         ),
       });
     }

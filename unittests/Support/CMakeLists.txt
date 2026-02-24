@@ -11,7 +11,9 @@ set(SupportSources
   ConversionsTest.cpp
   CtorConfigTest.cpp
   Base64Test.cpp
+  BitFieldTest.cpp
   HashStringTest.cpp
+  HermesSafeMathTest.cpp
   JSONEmitterTest.cpp
   LEB128Test.cpp
   OptValueTest.cpp
@@ -19,12 +21,15 @@ set(SupportSources
   PageAccessTrackerTest.cpp
   PlatformLoggingTest.cpp
   RegexTest.cpp
+  SerialExecutorTest.cpp
+  SimpleLRUTest.cpp
   SNPrintfBufTest.cpp
   SourceErrorManagerTest.cpp
   StackBoundsTest.cpp
   StatsAccumulatorTest.cpp
   StringSetVectorTest.cpp
   UnicodeTest.cpp
+  test_sh_fp_trunc.cpp
   )
 
 add_hermes_unittest(HermesSupportTests

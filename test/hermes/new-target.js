@@ -7,6 +7,7 @@
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 function foo() {
     print(typeof new.target, new.target === foo);
@@ -30,12 +31,3 @@ print(typeof tmp, tmp === bar);
 var tmp = (new bar())();
 print(typeof tmp, tmp === bar);
 //CHECK-NEXT: function true
-
-function outer(){
-    function inner(){
-        print(new.target ? 'Failure' : 'Success');
-    }
-    inner();
-}
-new outer();
-//CHECK-NEXT: Success

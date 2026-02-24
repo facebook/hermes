@@ -31,8 +31,10 @@ NAMED_PROP(IntlNativeType)
 NAMED_PROP(NativeState)
 NAMED_PROP(ArrayBufferExternalFinalizer)
 NAMED_PROP(ExternalMemoryPressure)
-NAMED_PROP(TextEncoderType)
 NAMED_PROP(NodeApiData)
+
+/// A reserved symbol ID to use for the HC transition to the frozen state.
+NAMED_PROP(FreezeTransition)
 
 #undef PROP
 #undef NAMED_PROP

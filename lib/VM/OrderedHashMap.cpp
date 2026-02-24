@@ -6,6 +6,7 @@
  */
 
 #include "hermes/VM/OrderedHashMap.h"
+#include "hermes/VM/JSMapImpl.h"
 
 #include "hermes/Support/ErrorHandling.h"
 #include "hermes/VM/BuildMetadata.h"
@@ -15,377 +16,603 @@
 namespace hermes {
 namespace vm {
 //===----------------------------------------------------------------------===//
-// class HashMapEntry
+// class OrderedHashMapBase
 
-const VTable HashMapEntry::vt{
-    CellKind::HashMapEntryKind,
-    cellSize<HashMapEntry>()};
-
-void HashMapEntryBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const HashMapEntry *>(cell);
-  mb.setVTable(&HashMapEntry::vt);
-  mb.addField("key", &self->key);
-  mb.addField("value", &self->value);
-  mb.addField("prevIterationEntry", &self->prevIterationEntry);
-  mb.addField("nextIterationEntry", &self->nextIterationEntry);
-  mb.addField("nextEntryInBucket", &self->nextEntryInBucket);
+template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::IteratorContext::reset() {
+  if (index_ != nullptr) {
+    index_->free();
+  }
+  index_ = nullptr;
+  storage_ = nullptr;
 }
 
-CallResult<PseudoHandle<HashMapEntry>> HashMapEntry::create(Runtime &runtime) {
-  return createPseudoHandle(runtime.makeAFixed<HashMapEntry>());
+/// A ManagedChunkedList element that stores the iterator index that should be
+/// accessed next.
+template <typename BucketType, typename Derived>
+class OrderedHashMapBase<BucketType, Derived>::IteratorIndex {
+ public:
+  /// \return the iterator index value
+  uint32_t getValue() const {
+    assert(!isFree() && "Value not present");
+    return value_;
+  }
+
+  /// Sets the iterator index value
+  void setValue(uint32_t value) {
+    assert(!isFree() && "Value not present");
+    value_ = value;
+  }
+
+  /// \return whether an initial iteration has been done using this
+  /// IteratorIndex
+  bool getIsFirstIteration() const {
+    assert(!isFree() && "Value not present");
+    return isFirstIteration_;
+  }
+
+  /// Sets the state indicating whether an initial iteration has been done
+  /// using this IteratorIndex. This is needed because we want to skip
+  /// advancing the index value one time after a clear or if it's newly
+  /// created.
+  void setIsFirstIteration(bool isFirstIteration) {
+    assert(!isFree() && "Value not present");
+    isFirstIteration_ = isFirstIteration;
+    if (isFirstIteration)
+      value_ = 0;
+  }
+
+  /// Set the element to free, this can be called from either the mutator
+  /// (when destroying an iterator) or the background thread (in finalizer).
+  void free() {
+    /// There are three operations related to this atomic variable:
+    /// 1. Freeing the element on background thread.
+    /// 2. Checking if the element is free on the mutator.
+    /// 3. Freeing and reusing the element on the mutator.
+    /// Since the only operation that background thread can do with the
+    /// element is freeing it, we don't need a barrier to order the store.
+    free_.store(true, std::memory_order_relaxed);
+  }
+
+  // Methods required by ManagedChunkedList.
+
+  IteratorIndex() = default;
+
+  /// \return true if the element has been freed. As noted in free(), since
+  /// background thread can only free a element, we don't need a stricter
+  /// order.
+  bool isFree() const {
+    return free_.load(std::memory_order_relaxed);
+  }
+
+  /// Get the next free element. Must not be called when this instance is
+  /// occupied with a value.
+  IteratorIndex *getNextFree() {
+    assert(isFree() && "Can only get nextFree on a free element");
+    return nextFree_;
+  }
+
+  /// Set the next free element. Must not be called when this instance is
+  /// occupied with a value.
+  void setNextFree(IteratorIndex *nextFree) {
+    assert(isFree() && "Can only set nextFree on a free element");
+    nextFree_ = nextFree;
+  }
+
+  /// Emplace new value to this element.
+  void emplace() {
+    assert(isFree() && "Emplacing already occupied element");
+    free_.store(false, std::memory_order_relaxed);
+    setIsFirstIteration(true);
+  }
+
+ private:
+  union {
+    /// Stores the index to the data table.
+    uint32_t value_;
+    IteratorIndex *nextFree_;
+  };
+  /// Indicates whether an iteration has been performed using this
+  /// IteratorIndex. This is used for newly created IteratorIndex and any
+  /// active IteratorIndex when a clear operation is performed on the hash
+  /// table. Used by the advanceIterator function to know whether to update
+  /// the index value.
+  bool isFirstIteration_;
+  /// Atomic state represents whether the element is free. It can be written
+  /// by background thread (in finalizer) and read/written by mutator.
+  std::atomic<bool> free_{true};
+};
+
+template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::buildMetadata(
+    const GCCell *cell,
+    Metadata::Builder &mb) {
+  const auto *self = static_cast<const Derived *>(cell);
+  mb.addField("dataTable", &self->dataTable_);
 }
 
-//===----------------------------------------------------------------------===//
-// class OrderedHashMap
-
-const VTable OrderedHashMap::vt{
-    CellKind::OrderedHashMapKind,
-    cellSize<OrderedHashMap>()};
-
-void OrderedHashMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  const auto *self = static_cast<const OrderedHashMap *>(cell);
-  mb.setVTable(&OrderedHashMap::vt);
-  mb.addField("hashTable", &self->hashTable_);
-  mb.addField("firstIterationEntry", &self->firstIterationEntry_);
-  mb.addField("lastIterationEntry", &self->lastIterationEntry_);
-}
-
-OrderedHashMap::OrderedHashMap(
-    Runtime &runtime,
-    Handle<ArrayStorageSmall> hashTableStorage)
-    : hashTable_(runtime, hashTableStorage.get(), runtime.getHeap()) {}
-
-CallResult<PseudoHandle<OrderedHashMap>> OrderedHashMap::create(
+/// Allocate the internal element storage.
+template <typename BucketType, typename Derived>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::initializeStorage(
+    Handle<Derived> self,
     Runtime &runtime) {
-  auto arrRes =
-      ArrayStorageSmall::create(runtime, INITIAL_CAPACITY, INITIAL_CAPACITY);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
+  self->hashTable_.resize(kInitialCapacity, kHashTableElementUnused);
+  runtime.getHeap().creditExternalMemory(
+      *self, kInitialCapacity * sizeof(uint32_t));
+
+  // Create data table with corresponding capacity, but start off with 0 size.
+  // Entries will be appended as the hash table receives elements.
+  auto dataTableRes = StorageType::create(
+      runtime, dataTableAllocationSize(kInitialCapacity), 0 /* size */);
+  if (LLVM_UNLIKELY(dataTableRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto hashTableStorage = runtime.makeHandle<ArrayStorageSmall>(*arrRes);
 
-  return createPseudoHandle(
-      runtime.makeAFixed<OrderedHashMap>(runtime, hashTableStorage));
-}
+  auto *dataTable = vmcast<StorageType>(*dataTableRes);
+  self->dataTable_.setNonNull(runtime, dataTable, runtime.getHeap());
 
-void OrderedHashMap::removeLinkedListNode(
-    Runtime &runtime,
-    HashMapEntry *entry,
-    GC &gc) {
-  assert(
-      entry != lastIterationEntry_.get(runtime) &&
-      "Cannot remove the last entry");
-  if (entry->prevIterationEntry) {
-    entry->prevIterationEntry.getNonNull(runtime)->nextIterationEntry.set(
-        runtime, entry->nextIterationEntry, gc);
-  }
-  if (entry->nextIterationEntry) {
-    entry->nextIterationEntry.getNonNull(runtime)->prevIterationEntry.set(
-        runtime, entry->prevIterationEntry, gc);
-  }
-  if (entry == firstIterationEntry_.get(runtime)) {
-    firstIterationEntry_.set(runtime, entry->nextIterationEntry, gc);
-  }
-  entry->prevIterationEntry.setNull(runtime.getHeap());
-}
+  // Create iterator metadata storage
+  self->iteratorIndices_ = std::make_shared<ManagedChunkedList<IteratorIndex>>(
+      0.5 /* occupancyRatio */, 0.5 /* sizingWeight */);
 
-static HashMapEntry *castToMapEntry(SmallHermesValue shv, PointerBase &base) {
-  if (shv.isEmpty())
-    return nullptr;
-  return vmcast<HashMapEntry>(shv.getObject(base));
-}
-
-HashMapEntry *OrderedHashMap::lookupInBucket(
-    Runtime &runtime,
-    uint32_t bucket,
-    HermesValue key) {
-  assert(
-      hashTable_.getNonNull(runtime)->size() == capacity_ &&
-      "Inconsistent capacity");
-  auto *entry =
-      castToMapEntry(hashTable_.getNonNull(runtime)->at(bucket), runtime);
-  while (entry && !isSameValueZero(entry->key, key)) {
-    entry = entry->nextEntryInBucket.get(runtime);
-  }
-  return entry;
-}
-
-ExecutionStatus OrderedHashMap::rehashIfNecessary(
-    Handle<OrderedHashMap> self,
-    Runtime &runtime) {
-  uint32_t newCapacity = self->capacity_;
-  // NOTE: we have ensured that self->capacity_ * 4 never overflows uint32_t by
-  // setting MAX_CAPACITY to the appropriate value. self->size_ is always <=
-  // self->capacity_, so this applies to self->size_ as well.
-  static_assert(
-      MAX_CAPACITY < UINT32_MAX / 4,
-      "Avoid overflow checks on multiplying capacity by 4");
-  if (self->size_ * 4 > self->capacity_ * 3) {
-    // Load factor is more than 0.75, need to increase the capacity.
-    newCapacity = self->capacity_ * 2;
-    if (LLVM_UNLIKELY(newCapacity > MAX_CAPACITY)) {
-      // We maintain the invariant that the capacity_ is a power of two.
-      // Therefore, if doubling would exceed the max, we revert to the
-      // previous value.  (Assert the invariant to make it clear.)
-      assert(
-          (self->capacity_ & (self->capacity_ - 1)) == 0 &&
-          "capacity_ must be power of 2");
-      newCapacity = self->capacity_;
-    }
-  } else if (
-      self->size_ * 4 < self->capacity_ && self->capacity_ > INITIAL_CAPACITY) {
-    // Load factor is less than 0.25, and we are not at initial cap.
-    newCapacity = self->capacity_ / 2;
-  }
-  if (newCapacity == self->capacity_) {
-    // No need to rehash.
-    return ExecutionStatus::RETURNED;
-  }
-  assert(
-      self->size_ && self->firstIterationEntry_ && self->lastIterationEntry_ &&
-      "We should never be rehashing when there are no elements");
-
-  // Set new capacity first to update the hash function.
-  self->capacity_ = newCapacity;
-
-  // Create a new hash table.
-  auto arrRes = ArrayStorageSmall::create(runtime, newCapacity, newCapacity);
-  if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto newHashTable = runtime.makeHandle<ArrayStorageSmall>(*arrRes);
-
-  // Now re-add all entries to the hash table.
-  MutableHandle<HashMapEntry> entry{runtime};
-  MutableHandle<HashMapEntry> oldNextInBucket{runtime};
-  MutableHandle<> keyHandle{runtime};
-  GCScopeMarkerRAII marker{runtime};
-  for (unsigned i = 0, len = self->hashTable_.getNonNull(runtime)->size();
-       i < len;
-       ++i) {
-    entry =
-        castToMapEntry(self->hashTable_.getNonNull(runtime)->at(i), runtime);
-    while (entry) {
-      marker.flush();
-      keyHandle = entry->key;
-      uint32_t bucket = hashToBucket(self, runtime, keyHandle);
-      oldNextInBucket = entry->nextEntryInBucket.get(runtime);
-      if (newHashTable->at(bucket).isEmpty()) {
-        // Empty bucket.
-        entry->nextEntryInBucket.setNull(runtime.getHeap());
-      } else {
-        // There are already a bucket head.
-        entry->nextEntryInBucket.set(
-            runtime,
-            vmcast<HashMapEntry>(newHashTable->at(bucket).getObject(runtime)),
-            runtime.getHeap());
-      }
-      // Update bucket head to the new entry.
-      newHashTable->set(
-          bucket,
-          SmallHermesValue::encodeObjectValue(*entry, runtime),
-          runtime.getHeap());
-
-      entry = *oldNextInBucket;
-    }
-  }
-
-  self->hashTable_.setNonNull(runtime, newHashTable.get(), runtime.getHeap());
-  assert(
-      self->hashTable_.getNonNull(runtime)->size() == self->capacity_ &&
-      "Inconsistent capacity");
   return ExecutionStatus::RETURNED;
 }
 
-bool OrderedHashMap::has(
-    Handle<OrderedHashMap> self,
+template <typename BucketType, typename Derived>
+std::pair<OptValue<uint32_t>, uint32_t>
+OrderedHashMapBase<BucketType, Derived>::lookupInBucket(
     Runtime &runtime,
-    Handle<> key) {
-  auto bucket = hashToBucket(self, runtime, key);
-  return self->lookupInBucket(runtime, bucket, key.getHermesValue());
-}
+    uint32_t bucket,
+    HermesValue key) const {
+  assert(hashTable_.size() == capacity_ && "Inconsistent capacity");
+  [[maybe_unused]] const uint32_t firstBucket = bucket;
 
-HashMapEntry *OrderedHashMap::find(
-    Handle<OrderedHashMap> self,
-    Runtime &runtime,
-    Handle<> key) {
-  auto bucket = hashToBucket(self, runtime, key);
-  return self->lookupInBucket(runtime, bucket, key.getHermesValue());
-}
+  NoAllocScope noAlloc{runtime};
+  NoHandleScope noHandle{runtime};
 
-HermesValue OrderedHashMap::get(
-    Handle<OrderedHashMap> self,
-    Runtime &runtime,
-    Handle<> key) {
-  auto *entry = find(self, runtime, key);
-  if (!entry) {
-    return HermesValue::encodeUndefinedValue();
+  // We can deref the handles because we are in NoAllocScope.
+  StorageType *dataTable = dataTable_.getNonNull(runtime);
+  const uint32_t mask = capacity_ - 1;
+
+  // Each bucket must be either kHashTableElementUnused,
+  // kHashTableElementDeleted, or an index to the data table.
+  uint32_t dataTableKeyIndex;
+  assert(bucket < capacity_ && "Hash table index >= capacity.");
+  while ((dataTableKeyIndex = hashTable_[bucket]) != kHashTableElementUnused) {
+    if (dataTableKeyIndex != kHashTableElementDeleted) {
+      auto keySHV = dataTable->at(dataTableKeyIndex);
+      if (isSameValueZero(keySHV.unboxToHV(runtime), key)) {
+        return {dataTableKeyIndex, bucket};
+      }
+    }
+
+    bucket = (bucket + 1) & mask;
+    assert(bucket != firstBucket && "Hash table has wrapped around");
   }
-  return entry->value;
+
+  return {llvh::None, bucket};
 }
 
-ExecutionStatus OrderedHashMap::insert(
-    Handle<OrderedHashMap> self,
+template <typename BucketType, typename Derived>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::rehash(
+    Handle<Derived> self,
+    Runtime &runtime,
+    bool beforeAdd) {
+  struct : public Locals {
+    PinnedValue<StorageType> newDataTable;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  const CallResult<uint32_t> newCapacity = checkedNextCapacity(
+      runtime, self->capacity_, self->size_ + (beforeAdd ? 1 : 0));
+  if (LLVM_UNLIKELY(newCapacity == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // Set new capacity first to update the hash function.
+  self->capacity_ = *newCapacity;
+
+  // Create a new hash table.
+  std::vector<uint32_t> newHashTable;
+  newHashTable.resize(*newCapacity, kHashTableElementUnused);
+  runtime.getHeap().creditExternalMemory(
+      *self, *newCapacity * sizeof(uint32_t));
+
+  // Create a new data table.
+  auto dataTableRes = StorageType::create(
+      runtime,
+      dataTableAllocationSize(*newCapacity),
+      self->size_ * BucketType::kElementsPerEntry);
+  if (LLVM_UNLIKELY(dataTableRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.newDataTable.template castAndSetHermesValue<StorageType>(*dataTableRes);
+
+  // Now re-add all entries to the hash table.
+  uint32_t totalEntries = self->size_ + self->deletedCount_;
+  uint32_t newDataTableKeyIndex = 0;
+  uint32_t oldDataTableKeyIndex = 0;
+
+  NoHandleScope noHandle{runtime};
+
+  const uint32_t mask = self->capacity_ - 1;
+  for (uint32_t i = 0; i < totalEntries; ++i) {
+    auto keySHV =
+        self->dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex);
+    if (!keySHV.isEmpty()) {
+      uint32_t bucket =
+          hashToBucket(self->capacity_, runtime, keySHV.unboxToHV(runtime));
+      [[maybe_unused]] const uint32_t firstBucket = bucket;
+      assert(bucket < *newCapacity && "Hash table index >= new capacity.");
+      while (newHashTable[bucket] != kHashTableElementUnused) {
+        // Find another bucket if it is already used.
+        bucket = (bucket + 1) & mask;
+        assert(firstBucket != bucket && "Hash table is full!");
+        assert(bucket < *newCapacity && "Hash table index >= new capacity.");
+      }
+      // Set the new entry to the bucket.
+      lv.newDataTable->set(newDataTableKeyIndex, keySHV, runtime.getHeap());
+      if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+        auto valueSHV =
+            self->dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex + 1);
+        lv.newDataTable->set(
+            newDataTableKeyIndex + 1, valueSHV, runtime.getHeap());
+      }
+      assert(bucket < *newCapacity && "Hash table index >= new capacity.");
+      newHashTable[bucket] = newDataTableKeyIndex;
+
+      newDataTableKeyIndex += BucketType::kElementsPerEntry;
+    }
+    oldDataTableKeyIndex += BucketType::kElementsPerEntry;
+  }
+
+  NoAllocScope noAlloc{runtime};
+
+  OrderedHashMapBase<BucketType, Derived> *rawSelf = *self;
+
+  // Adjust any active iterators to handle the fact that we removed deleted
+  // entries in the new data table.
+  rawSelf->updateIteratorIndicesForRehash(runtime);
+
+  rawSelf->deletedCount_ = 0;
+  uint32_t oldSizeInBytes = rawSelf->hashTable_.size() * sizeof(uint32_t);
+  rawSelf->hashTable_ = std::move(newHashTable);
+  runtime.getHeap().debitExternalMemory(*self, oldSizeInBytes);
+  rawSelf->dataTable_.setNonNull(runtime, *lv.newDataTable, runtime.getHeap());
+  return ExecutionStatus::RETURNED;
+}
+
+template <typename BucketType, typename Derived>
+void OrderedHashMapBase<BucketType, Derived>::updateIteratorIndicesForRehash(
+    Runtime &runtime) {
+  // For each of the deleted entry, we store the entry index to help iterators
+  // adjust their entry index in the next step.
+  // Suppose you have the following data table (kElementsPerEntry = 1), and 'x'
+  // marks the deleted entries.
+  // entry index: 0 1 2 3 4 5 6 7 8
+  //            : 0 x 2 x 4 x 6 x 8
+  // We'll record the deleted indices as: [1 3 5 7]
+  std::vector<uint32_t> deletedEntryIndices;
+  deletedEntryIndices.reserve(deletedCount_);
+  uint32_t oldDataTableKeyIndex = 0;
+  for (uint32_t i = 0; i < size_ + deletedCount_; i++) {
+    auto shv = dataTable_.getNonNull(runtime)->at(oldDataTableKeyIndex);
+    if (shv.isEmpty()) {
+      // Entry is deleted
+      deletedEntryIndices.push_back(i);
+    }
+    oldDataTableKeyIndex += BucketType::kElementsPerEntry;
+  }
+  assert(
+      deletedEntryIndices.size() == deletedCount_ &&
+      "Should encounter same number of deleted elements as the deletedCount_");
+
+  // Update all iterators to adjust their indices for the rehash. We take the
+  // IteratorIndex's value and reduce it by the number of deleted elements that
+  // occur before that index.
+  //
+  // For example, if we have the following data table (kElementsPerEntry = 1):
+  // entry index: 0 1 2 3 4 5 6 7 8
+  // values     : 0 x 2 x 4 x 6 x 8
+  // And the iterator has already navigated and printed the #4 entry, then the
+  // IteratorIndex value will be 5. Since there are 2 deleted entries already
+  // traversed (entry 1 and entry 3), the IteratorIndex value should become 3
+  // after the rehash (representing that we already navigated. #0, #2, and #4
+  // entries).
+  //
+  // In the new data table, the values are as follows:
+  // entry index: 0 1 2 3 4
+  // values     : 0 2 4 6 8
+  // Therefore, IteratorIndex value = 3 will allow the iterator to print the
+  // next value, which should be 6.
+  iteratorIndices_->forEach([&deletedEntryIndices](IteratorIndex &index) {
+    // Perform the std::lower_bound algorithm to do a binary search to find
+    // the first deleted entry index >= IteratorIndex value. Using the same
+    // example as above, the \p deletedEntryIndices would be [1 3 5 7].
+    // So for IteratorIndex value = 5, then \p firstEqualOrGreaterIter will
+    // be calculated to be the iterator pointing at index 2 of \p
+    // deletedEntryIndices. We then know the number of deleted entry indices
+    // that appeared before (entry 1 and entry 3).
+    //
+    // If, however, IteratorIndex value = 8 and there aren't any deleted
+    // entry index that is >= 8, then \p firstEqualOrGreaterIter will be
+    // deletedEntryIndices.end().
+    const uint32_t iteratorIndex = index.getValue();
+    auto firstEqualOrGreaterIter = std::lower_bound(
+        deletedEntryIndices.begin(), deletedEntryIndices.end(), iteratorIndex);
+
+    uint32_t numDeletedBeforeIndex =
+        std::distance(deletedEntryIndices.begin(), firstEqualOrGreaterIter);
+    index.setValue(iteratorIndex - numDeletedBeforeIndex);
+  });
+}
+
+template <typename BucketType, typename Derived>
+bool OrderedHashMapBase<BucketType, Derived>::has(
+    Runtime &runtime,
+    HermesValue key) const {
+  NoAllocScope noAlloc{runtime};
+  assertInitialized();
+  auto bucket = hashToBucket(capacity_, runtime, key);
+  return lookupInBucket(runtime, bucket, key).first.hasValue();
+}
+
+template <typename BucketType, typename Derived>
+SmallHermesValue OrderedHashMapBase<BucketType, Derived>::get(
+    Runtime &runtime,
+    HermesValue key) const {
+  NoAllocScope noAlloc{runtime};
+  assertInitialized();
+  auto bucket = hashToBucket(capacity_, runtime, key);
+  OptValue<uint32_t> dataTableKeyIndex =
+      lookupInBucket(runtime, bucket, key).first;
+  if (!dataTableKeyIndex.hasValue()) {
+    return SmallHermesValue::encodeUndefinedValue();
+  }
+  return dataTable_.getNonNull(runtime)->at(*dataTableKeyIndex + 1);
+}
+
+template <typename BucketType, typename Derived>
+template <typename>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key,
     Handle<> value) {
-  uint32_t bucket = hashToBucket(self, runtime, key);
-  if (auto *entry =
-          self->lookupInBucket(runtime, bucket, key.getHermesValue())) {
-    // Element already exists, update value and return.
-    entry->value.set(value.get(), runtime.getHeap());
-    return ExecutionStatus::RETURNED;
-  }
-  // Create a new entry, set the key and value.
-  auto crtRes = HashMapEntry::create(runtime);
-  if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto newMapEntry = runtime.makeHandle(std::move(*crtRes));
-  newMapEntry->key.set(key.get(), runtime.getHeap());
-  newMapEntry->value.set(value.get(), runtime.getHeap());
-  auto *curBucketFront =
-      castToMapEntry(self->hashTable_.getNonNull(runtime)->at(bucket), runtime);
-  if (curBucketFront) {
-    // If the bucket we are inserting to is not empty, we maintain the
-    // linked list properly.
-    newMapEntry->nextEntryInBucket.set(
-        runtime, curBucketFront, runtime.getHeap());
-  }
-  // Set the newly inserted entry as the front of this bucket chain.
-  self->hashTable_.getNonNull(runtime)->set(
-      bucket,
-      SmallHermesValue::encodeObjectValue(*newMapEntry, runtime),
-      runtime.getHeap());
+  self->assertInitialized();
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
 
-  if (!self->firstIterationEntry_) {
-    // If we are inserting the first ever element, update
-    // first iteration entry pointer.
-    self->firstIterationEntry_.set(
-        runtime, newMapEntry.get(), runtime.getHeap());
-    self->lastIterationEntry_.set(
-        runtime, newMapEntry.get(), runtime.getHeap());
-  } else {
-    // Connect the new entry with the last entry.
-    self->lastIterationEntry_.getNonNull(runtime)->nextIterationEntry.set(
-        runtime, newMapEntry.get(), runtime.getHeap());
-    newMapEntry->prevIterationEntry.set(
-        runtime, self->lastIterationEntry_, runtime.getHeap());
-
-    HashMapEntry *previousLastEntry = self->lastIterationEntry_.get(runtime);
-    self->lastIterationEntry_.set(
-        runtime, newMapEntry.get(), runtime.getHeap());
-
-    if (previousLastEntry && previousLastEntry->isDeleted()) {
-      // If the last entry was a deleted entry, we no longer need to keep it.
-      self->removeLinkedListNode(runtime, previousLastEntry, runtime.getHeap());
+  // Find the bucket for this key. If the entry already exists, update the value
+  // and return.
+  {
+    OptValue<uint32_t> dataTableKeyIndex;
+    uint32_t newBucket;
+    std::tie(dataTableKeyIndex, newBucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    bucket = newBucket;
+    if (dataTableKeyIndex.hasValue()) {
+      // Element for the key already exists, update value and return.
+      auto valueSHV =
+          SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
+      self->dataTable_.getNonNull(runtime)->set(
+          *dataTableKeyIndex + 1, valueSHV, runtime.getHeap());
+      return ExecutionStatus::RETURNED;
     }
   }
 
-  self->size_++;
-  return self->rehashIfNecessary(self, runtime);
+  return doInsert(self, runtime, bucket, key, value);
 }
 
-bool OrderedHashMap::erase(
-    Handle<OrderedHashMap> self,
+template <typename BucketType, typename Derived>
+template <typename>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::insert(
+    Handle<Derived> self,
     Runtime &runtime,
     Handle<> key) {
-  uint32_t bucket = hashToBucket(self, runtime, key);
-  HashMapEntry *prevEntry = nullptr;
-  auto *entry =
-      castToMapEntry(self->hashTable_.getNonNull(runtime)->at(bucket), runtime);
-  while (entry && !isSameValueZero(entry->key, key.getHermesValue())) {
-    prevEntry = entry;
-    entry = entry->nextEntryInBucket.get(runtime);
+  self->assertInitialized();
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
+
+  // Find the bucket for this key. If the entry already exists, then return.
+  {
+    OptValue<uint32_t> dataTableKeyIndex;
+    std::tie(dataTableKeyIndex, bucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    if (dataTableKeyIndex.hasValue()) {
+      return ExecutionStatus::RETURNED;
+    }
   }
-  if (!entry) {
+
+  return doInsert(
+      self, runtime, bucket, key, HandleRootOwner::getUndefinedValue());
+}
+
+template <typename BucketType, typename Derived>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::doInsert(
+    Handle<Derived> self,
+    Runtime &runtime,
+    uint32_t bucket,
+    Handle<> key,
+    Handle<> value) {
+  struct : public Locals {
+    PinnedValue<StorageType> dataTable;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // Run rehash if necessary before inserting.
+  if (shouldRehash(self->capacity_, self->size_, self->deletedCount_)) {
+    if (LLVM_UNLIKELY(
+            self->rehash(self, runtime, true) == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // Find a new empty bucket after rehash.
+    bucket = hashToBucket(self->capacity_, runtime, *key);
+    OptValue<uint32_t> dataTableKeyIndex;
+    std::tie(dataTableKeyIndex, bucket) =
+        self->lookupInBucket(runtime, bucket, key.getHermesValue());
+    assert(
+        !dataTableKeyIndex.hasValue() &&
+        "After rehash, we must be able to find an empty bucket");
+  }
+
+  // Store the data table index in \p hashTable_ so we can go from hash table to
+  // the actual data
+  assert(bucket < self->capacity_ && "Hash table index >= capacity.");
+  self->hashTable_[bucket] = self->dataTable_.getNonNull(runtime)->size();
+
+  lv.dataTable = self->dataTable_.getNonNull(runtime);
+  assert(
+      lv.dataTable->size() < lv.dataTable->capacity() &&
+      "Data table should always have enough capacity");
+  auto k = SmallHermesValue::encodeHermesValue(key.getHermesValue(), runtime);
+  lv.dataTable->pushWithinCapacity(runtime, k);
+  if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+    auto v =
+        SmallHermesValue::encodeHermesValue(value.getHermesValue(), runtime);
+    lv.dataTable->pushWithinCapacity(runtime, v);
+  }
+
+  self->size_++;
+  return ExecutionStatus::RETURNED;
+}
+
+template <typename BucketType, typename Derived>
+bool OrderedHashMapBase<BucketType, Derived>::erase(
+    Handle<Derived> self,
+    Runtime &runtime,
+    Handle<> key) {
+  self->assertInitialized();
+  uint32_t bucket = hashToBucket(self->capacity_, runtime, *key);
+  OptValue<uint32_t> dataTableKeyIndex;
+  std::tie(dataTableKeyIndex, bucket) =
+      self->lookupInBucket(runtime, bucket, key.getHermesValue());
+  if (!dataTableKeyIndex.hasValue()) {
     // Element does not exist.
     return false;
   }
 
-  if (prevEntry) {
-    // The entry we are deleting has a previous entry, update the link.
-    prevEntry->nextEntryInBucket.set(
-        runtime, entry->nextEntryInBucket, runtime.getHeap());
-  } else {
-    // The entry we are erasing is the front entry in the bucket, we need
-    // to update the bucket head to the next entry in the bucket, if not
-    // any, set to empty value.
-    self->hashTable_.getNonNull(runtime)->set(
-        bucket,
-        entry->nextEntryInBucket
-            ? SmallHermesValue::encodeObjectValue(entry->nextEntryInBucket)
-            : SmallHermesValue::encodeEmptyValue(),
-        runtime.getHeap());
-  }
-
-  entry->markDeleted(runtime);
+  // Mark the bucket as deleted. We remove this in rehash.
+  deleteBucket(self, runtime, bucket, *dataTableKeyIndex);
+  self->deletedCount_++;
   self->size_--;
 
-  // Now delete the entry from the iteration linked list.
-  // If we are deleting the last entry, don't remove it from the list yet.
-  // This will ensure that if any iterator out there is currently pointing to
-  // this entry, it will be able to follow on if we add new entries in the
-  // future.
-  if (entry != self->lastIterationEntry_.get(runtime)) {
-    self->removeLinkedListNode(runtime, entry, runtime.getHeap());
-  }
-
-  self->rehashIfNecessary(self, runtime);
+  if (shouldShrink(self->capacity_, self->size_))
+    self->rehash(self, runtime);
 
   return true;
 }
 
-HashMapEntry *OrderedHashMap::iteratorNext(
-    Runtime &runtime,
-    HashMapEntry *entry) const {
-  if (entry == nullptr) {
-    // Starting a new iteration from the first entry.
-    entry = firstIterationEntry_.get(runtime);
-  } else {
-    // Advance to the next entry.
-    entry = entry->nextIterationEntry.get(runtime);
-  }
-
-  // Make sure the entry we returned (if not nullptr) must not be deleted.
-  while (entry && entry->isDeleted()) {
-    entry = entry->nextIterationEntry.get(runtime);
-  }
-  return entry;
+template <typename BucketType, typename Derived>
+typename OrderedHashMapBase<BucketType, Derived>::IteratorContext
+OrderedHashMapBase<BucketType, Derived>::newIterator(Runtime &runtime) {
+  return IteratorContext(iteratorIndices_->add(), iteratorIndices_);
 }
 
-void OrderedHashMap::clear(Runtime &runtime) {
-  if (!firstIterationEntry_) {
+template <typename BucketType, typename Derived>
+bool OrderedHashMapBase<BucketType, Derived>::advanceIterator(
+    Runtime &runtime,
+    IteratorContext &iterCtx) {
+  uint32_t i = 0;
+
+  assert(iterCtx.initialized() && "Invalid IteratorContext");
+  IteratorIndex *index = iterCtx.index_;
+
+  // Check if the iterator was newly created or was reset due to clearing the
+  // OrderedHashMap. In both cases, we won't advance the index this time around
+  // since the index is already at 0.
+  if (!index->getIsFirstIteration()) {
+    // Advance to the next entry.
+    i = index->getValue() + 1;
+  } else {
+    index->setIsFirstIteration(false);
+  }
+
+  // The iterator index might be pointing to a deleted element, so need to
+  // iterate and find the next one that isn't deleted.
+  for (; i < size_ + deletedCount_; ++i) {
+    if (!dataTable_.getNonNull(runtime)
+             ->at(i * BucketType::kElementsPerEntry)
+             .isEmpty()) {
+      // Found valid element
+      index->setValue(i);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+template <typename BucketType, typename Derived>
+HermesValue OrderedHashMapBase<BucketType, Derived>::iteratorKey(
+    Runtime &runtime,
+    const IteratorContext &iterCtx) const {
+  assert(iterCtx.initialized() && "Invalid IteratorContext");
+  auto shv = dataTable_.getNonNull(runtime)->at(
+      iterCtx.index_->getValue() * BucketType::kElementsPerEntry);
+  assert(!shv.isEmpty() && "Invalid key encountered");
+  return shv.unboxToHV(runtime);
+}
+
+template <typename BucketType, typename Derived>
+HermesValue OrderedHashMapBase<BucketType, Derived>::iteratorValue(
+    Runtime &runtime,
+    const IteratorContext &iterCtx) const {
+  assert(iterCtx.initialized() && "Invalid IteratorContext");
+  if constexpr (std::is_same_v<BucketType, HashMapEntry>) {
+    auto shv = dataTable_.getNonNull(runtime)->at(
+        iterCtx.index_->getValue() * BucketType::kElementsPerEntry + 1);
+    assert(!shv.isEmpty() && "Invalid value encountered");
+    return shv.unboxToHV(runtime);
+  } else {
+    auto shv = dataTable_.getNonNull(runtime)->at(
+        iterCtx.index_->getValue() * BucketType::kElementsPerEntry);
+    assert(!shv.isEmpty() && "Invalid key encountered");
+    return shv.unboxToHV(runtime);
+  }
+}
+
+template <typename BucketType, typename Derived>
+ExecutionStatus OrderedHashMapBase<BucketType, Derived>::clear(
+    Handle<Derived> self,
+    Runtime &runtime) {
+  self->assertInitialized();
+  if (self->size_ == 0 && self->deletedCount_ == 0) {
     // Empty set.
-    return;
+    return ExecutionStatus::RETURNED;
   }
 
   // Clear the hash table.
-  for (unsigned i = 0; i < capacity_; ++i) {
-    auto entry = castToMapEntry(hashTable_.getNonNull(runtime)->at(i), runtime);
-    // Delete every element reachable from the hash table.
-    while (entry) {
-      entry->markDeleted(runtime);
-      entry = entry->nextEntryInBucket.get(runtime);
-    }
-    // Clear every element in the hash table.
-    hashTable_.getNonNull(runtime)->setNonPtr(
-        i, SmallHermesValue::encodeEmptyValue(), runtime.getHeap());
-  }
+  self->hashTable_ = std::vector<uint32_t>();
   // Resize the hash table to the initial size.
-  ArrayStorageSmall::resizeWithinCapacity(
-      hashTable_.getNonNull(runtime), runtime, INITIAL_CAPACITY);
-  capacity_ = INITIAL_CAPACITY;
+  self->hashTable_.resize(kInitialCapacity, kHashTableElementUnused);
+  self->capacity_ = kInitialCapacity;
 
-  // After clearing, we will still keep the last deleted entry
-  // in case there is an iterator out there
-  // pointing to the middle of the iteration chain. We need it to be
-  // able to merge back eventually.
-  firstIterationEntry_.set(runtime, lastIterationEntry_, runtime.getHeap());
-  firstIterationEntry_.getNonNull(runtime)->prevIterationEntry.setNull(
-      runtime.getHeap());
-  size_ = 0;
+  // Resize the data table back to 0.
+  self->dataTable_.getNonNull(runtime)->clear(runtime);
+
+  // Update all iterators back to index 0.
+  self->iteratorIndices_->forEach(
+      [](IteratorIndex &index) { index.setIsFirstIteration(true); });
+
+  self->deletedCount_ = 0;
+  self->size_ = 0;
+  return ExecutionStatus::RETURNED;
 }
+
+template class OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>;
+template class OrderedHashMapBase<HashSetEntry, JSMapImpl<CellKind::JSSetKind>>;
+
+template ExecutionStatus
+OrderedHashMapBase<HashMapEntry, JSMapImpl<CellKind::JSMapKind>>::insert(
+    Handle<JSMapImpl<CellKind::JSMapKind>> self,
+    Runtime &runtime,
+    Handle<> key,
+    Handle<> value);
+template ExecutionStatus
+OrderedHashMapBase<HashSetEntry, JSMapImpl<CellKind::JSSetKind>>::insert(
+    Handle<JSMapImpl<CellKind::JSSetKind>> self,
+    Runtime &runtime,
+    Handle<> key);
 
 } // namespace vm
 } // namespace hermes

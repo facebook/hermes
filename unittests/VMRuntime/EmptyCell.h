@@ -8,7 +8,7 @@
 #ifndef HERMES_UNITTESTS_VMRUNTIME_EMPTYCELL_H
 #define HERMES_UNITTESTS_VMRUNTIME_EMPTYCELL_H
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/FillerCell.h"
 #include "hermes/VM/GCCell.h"

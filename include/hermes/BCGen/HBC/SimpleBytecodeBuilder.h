@@ -10,7 +10,8 @@
 
 #include "hermes/BCGen/HBC/BytecodeFileFormat.h"
 #include "hermes/BCGen/HBC/BytecodeInstructionGenerator.h"
-#include "hermes/Public/Buffer.h"
+#include "hermes/BCGen/HBC/DebugInfo.h"
+#include "hermes/Support/Buffer.h"
 
 #include <memory>
 #include <vector>
@@ -33,14 +34,28 @@ class SimpleBytecodeBuilder {
     uint32_t frameSize;
     /// The opcodes.
     std::vector<opcode_atom_t> opcodes;
+    /// Header field for number of read cache slots.
+    uint8_t readCacheSize;
+    /// Header field for number of write cache slots.
+    uint8_t writeCacheSize;
+    /// Header field for number of private name cache slots.
+    uint8_t privateNameCacheSize;
+    /// Offset of the debug info, if not 0.
+    uint32_t infoOffset = 0;
 
     SimpleFunction(
         uint32_t paramCount,
         uint32_t frameSize,
-        std::vector<opcode_atom_t> &&opcodes)
+        std::vector<opcode_atom_t> &&opcodes,
+        uint8_t readCacheSize = 0,
+        uint8_t writeCacheSize = 0,
+        uint8_t privateNameCacheSize = 0)
         : paramCount(paramCount),
           frameSize(frameSize),
-          opcodes(std::move(opcodes)) {
+          opcodes(std::move(opcodes)),
+          readCacheSize(readCacheSize),
+          writeCacheSize(writeCacheSize),
+          privateNameCacheSize(privateNameCacheSize) {
       assert(paramCount > 0 && "paramCount must include 'this'");
     }
   };
@@ -49,14 +64,33 @@ class SimpleBytecodeBuilder {
   /// bytecode buffer.
   std::vector<SimpleFunction> functions_{};
 
+  /// Pointer to the debug info, if any.
+  DebugInfo *debugInfo_ = nullptr;
+
  public:
   /// Add a function to the builder. We only need the \p frameSize and
   /// \p opcodes.
+  /// \param highestReadCacheIndex the highestReadCacheIndex to set on the
+  /// FunctionHeader.
+  /// \param highestWriteCacheIndex the highestWriteCacheIndex to set on the
+  /// FunctionHeader.
   void addFunction(
       uint32_t paramCount,
       uint32_t frameSize,
-      std::vector<opcode_atom_t> &&opcodes) {
-    functions_.emplace_back(paramCount, frameSize, std::move(opcodes));
+      std::vector<opcode_atom_t> &&opcodes,
+      uint8_t highestReadCacheIndex = 0,
+      uint8_t highestWriteCacheIndex = 0) {
+    functions_.emplace_back(
+        paramCount,
+        frameSize,
+        std::move(opcodes),
+        highestReadCacheIndex,
+        highestWriteCacheIndex);
+  }
+
+  /// Set the debug info for the builder.
+  void setDebugInfo(DebugInfo *debugInfo) {
+    debugInfo_ = debugInfo;
   }
 
   /// Generate the bytecode buffer given the list of functions in the builder.

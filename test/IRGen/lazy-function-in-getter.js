@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -lazy %s
+// REQUIRES: interpreter
 // Just make sure this function doesn't crash
 
 function f() {

@@ -5,11 +5,7 @@ on:
     inputs:
       release-type:
         required: true
-        description: The type of release we are building. It could be commitly, release or dry-run
-        type: string
-      hermes-version:
-        required: true
-        description: The Hermes version to use for this build
+        description: The type of release we are building. It could be release or dry-run
         type: string
 
 jobs:
@@ -38,20 +34,12 @@ jobs:
         uses: ./.github/actions/yarn-install
       - name: Set artifacts version
         shell: bash
-        run: node ./utils/scripts/hermes/set-artifacts-version.js --build-type ${{ inputs.release-type }} --hermesVersion "${{ inputs.hermes-version }}"
+        run: node ./utils/scripts/hermes/set-artifacts-version.js --build-type ${{ inputs.release-type }}
       - name: Build android
         shell: bash
         run: |
           cd android
-
-          if [[ "${{ inputs.release-type }}" == "commitly" ]]; then
-            export ORG_GRADLE_PROJECT_isSnapshot="true"
-            TASKS="publishAndroidOnlyToMavenTempLocal publishAndroidOnlyToSonatype"
-          else
-            TASKS="publishAndroidOnlyToMavenTempLocal"
-          fi
-
-          ./gradlew $TASKS -PenableWarningsAsErrors=true
+          ./gradlew publishAndroidOnlyToMavenTempLocal :build -PenableWarningsAsErrors=true
       - name: Upload Maven Artifacts
         uses: actions/upload-artifact@v4.3.4
         with:

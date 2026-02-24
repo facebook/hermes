@@ -21,7 +21,7 @@ match (a) {
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "cases": [
 
-  1: {
+  1 => {
     const x = 1;
     f(x);
   },
@@ -79,7 +79,7 @@ match (a) {
 // CHECK-NEXT:          "guard": null
 // CHECK-NEXT:        },
 
-  'foo': {
+  'foo' => {
     // empty
   },
 
@@ -99,7 +99,7 @@ match (a) {
 // CHECK-NEXT:          "guard": null
 // CHECK-NEXT:        },
 
-  2: {
+  2 => {
     label: 'literal'
   },
 

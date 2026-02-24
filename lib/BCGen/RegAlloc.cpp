@@ -6,6 +6,8 @@
  */
 
 #include "hermes/BCGen/RegAlloc.h"
+
+#include "LivenessRegAllocIRPrinter.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRBuilder.h"
@@ -16,7 +18,6 @@
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <queue>
 
 #define DEBUG_TYPE "regalloc"
@@ -25,17 +26,33 @@ using namespace hermes;
 
 using llvh::dbgs;
 
-raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
+llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Register &reg) {
   if (!reg.isValid()) {
     OS << "Null";
   } else {
-    OS << "Reg" << reg.getIndex();
+    switch (reg.getClass()) {
+      case RegClass::NoOutput:
+        OS << "empty";
+        break;
+      case RegClass::Number:
+        OS << "n";
+        break;
+      case RegClass::NonPtr:
+        OS << "np";
+        break;
+      case RegClass::Other:
+        OS << "r";
+        break;
+      case RegClass::_last:
+        hermes_fatal("Invalid register class");
+    }
+    OS << reg.getIndexInClass();
   }
 
   return OS;
 }
 
-raw_ostream &llvh::operator<<(raw_ostream &OS, const Segment &segment) {
+llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Segment &segment) {
   if (segment.empty()) {
     OS << "[empty]";
     return OS;
@@ -45,7 +62,7 @@ raw_ostream &llvh::operator<<(raw_ostream &OS, const Segment &segment) {
   return OS;
 }
 
-raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
+llvh::raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
   Interval t = interval.compress();
   for (auto &s : t.segments_) {
     OS << s;
@@ -53,8 +70,26 @@ raw_ostream &llvh::operator<<(raw_ostream &OS, const Interval &interval) {
   return OS;
 }
 
+/// \return the register class of the instruction \p I.
+RegClass RegisterAllocator::getRegClass(Instruction *inst) {
+  if (!inst->hasOutput())
+    return RegClass::NoOutput;
+  // Treat all registers when there's a try as a pointer.
+  // We need the JIT to store them in the stack frame so that stores persist
+  // after longjmp back to handle exceptions, and the setjmp will be at the
+  // start of the function.
+  if (hasTry_)
+    return RegClass::Other;
+  Type t = inst->getType();
+  if (t.isNumberType())
+    return RegClass::Number;
+  if (t.isNonPtr())
+    return RegClass::NonPtr;
+  return RegClass::Other;
+}
+
 bool RegisterFile::isUsed(Register r) {
-  return !registers.test(r.getIndex());
+  return !registers(r.getClass()).test(r.getIndexInClass());
 }
 
 bool RegisterFile::isFree(Register r) {
@@ -65,50 +100,70 @@ void RegisterFile::killRegister(Register reg) {
   LLVM_DEBUG(dbgs() << "-- Releasing the register " << reg << "\n");
 
   assert(isUsed(reg) && "Killing an unused register!");
-  registers.set(reg.getIndex());
+  registers(reg.getClass()).set(reg.getIndexInClass());
   assert(isFree(reg) && "Error freeing register!");
+}
+
+void RegisterFile::convertTypeSpecificRegsToOther() {
+  size_t toAdd = 0;
+  static_assert((int)RegClass::NoOutput == 0, "NoOutput must be 0");
+  static_assert(
+      (int)RegClass::Other == (int)RegClass::_last - 1,
+      "Other must be the last class");
+  for (size_t i = 1; i < (size_t)RegClass::Other; ++i) {
+    // All non-Other registers are type-specific.
+    toAdd += registers_[i].count();
+    registers_[i].clear();
+  }
+  size_t newSize = toAdd + registers(RegClass::Other).size();
+  // None of the new registers are free, they're all pulled from the other
+  // classes, but it doesn't really matter because this function is only called
+  // after RegAlloc is done.
+  registers(RegClass::Other).resize(newSize, false);
 }
 
 void RegisterFile::verify() {}
 
 void RegisterFile::dump() {
   llvh::outs() << "\n";
-  for (unsigned i = 0; i < registers.size(); i++) {
-    llvh::outs() << (int)!registers.test(i);
+  for (size_t c = 0; c < (size_t)RegClass::_last; ++c) {
+    for (size_t i = 0, e = registers((RegClass)c).size(); i < e; ++i) {
+      llvh::outs() << (int)!registers((RegClass)c).test(i);
+    }
   }
   llvh::outs() << "\n";
 }
 
-Register RegisterFile::allocateRegister() {
+Register RegisterFile::allocateRegister(RegClass regClass) {
   // We first check for the 'all' case because we usually have a small number of
   // active bits (<64), so this operation is actually faster than the linear
   // scan.
-  if (registers.none()) {
+  if (registers(regClass).none()) {
     // If all bits are set, create a new register and return it.
-    unsigned numRegs = registers.size();
-    registers.resize(numRegs + 1, false);
-    Register R = Register(numRegs);
+    unsigned numRegs = registers(regClass).size();
+    registers(regClass).resize(numRegs + 1, false);
+    Register R = Register(regClass, numRegs);
     assert(isUsed(R) && "Error allocating a new register.");
     LLVM_DEBUG(dbgs() << "-- Creating the new register " << R << "\n");
     return R;
   }
 
   // Search for a free register to use.
-  int i = registers.find_first();
+  int i = registers(regClass).find_first();
   assert(i >= 0 && "Unexpected failure to allocate a register");
-  Register R(i);
+  Register R(regClass, (RegIndex)i);
   LLVM_DEBUG(dbgs() << "-- Assigning the free register " << R << "\n");
   assert(isFree(R) && "Error finding a free register");
-  registers.reset(i);
+  registers(regClass).reset(i);
   return R;
 }
 
-Register RegisterFile::tailAllocateConsecutive(unsigned n) {
+Register RegisterFile::tailAllocateConsecutive(RegClass regClass, unsigned n) {
   assert(n > 0 && "Can't request zero registers");
 
-  int lastUsed = registers.size() - 1;
+  int lastUsed = registers(regClass).size() - 1;
   while (lastUsed >= 0) {
-    if (!registers.test(lastUsed))
+    if (!registers(regClass).test(lastUsed))
       break;
 
     lastUsed--;
@@ -118,13 +173,23 @@ Register RegisterFile::tailAllocateConsecutive(unsigned n) {
 
   LLVM_DEBUG(
       dbgs() << "-- Found the last set bit at offset " << lastUsed << "\n");
-  registers.resize(std::max(registers.size(), firstClear + n), true);
-  registers.reset(firstClear, firstClear + n);
+  registers(regClass).resize(
+      std::max(registers(regClass).size(), firstClear + n), true);
+  registers(regClass).reset(firstClear, firstClear + n);
 
   LLVM_DEBUG(
       dbgs() << "-- Allocated tail consecutive registers of length " << n
-             << ", starting at " << Register(firstClear) << "\n");
-  return Register(firstClear);
+             << ", starting at " << Register(regClass, firstClear) << "\n");
+  return Register(regClass, firstClear);
+}
+
+RegisterAllocator::RegisterAllocator(Function *func) : F(func) {
+  for (auto &BB : *F) {
+    if (llvh::isa<TryStartInst>(BB.getTerminator())) {
+      hasTry_ = true;
+      break;
+    }
+  }
 }
 
 /// \returns true if the PHI node has an external user (that requires a
@@ -381,28 +446,6 @@ Interval &RegisterAllocator::getInstructionInterval(Instruction *I) {
   return instructionInterval_[idx];
 }
 
-Register RegisterAllocator::getRegisterForInstructionAt(
-    Instruction *Value,
-    Instruction *At) {
-  if (hasInstructionNumber(Value) && hasInstructionNumber(At)) {
-    Register valueReg = getRegister(Value);
-    unsigned loc = getInstructionNumber(At);
-    if (valueReg.isValid()) {
-      // Check all of valueReg's intervals, and see if any of those contain loc.
-      const Interval &i = getInstructionInterval(Value);
-      auto itBegin = i.segments_.begin(), itEnd = i.segments_.end();
-      if (std::find_if(itBegin, itEnd, [loc](const Segment &s) {
-            return s.contains(loc);
-          })) {
-        return valueReg;
-      }
-    }
-  }
-
-  // Value is not available at At; return an invalid register.
-  return Register{};
-}
-
 bool RegisterAllocator::isManuallyAllocatedInterval(Instruction *I) {
   if (hasTargetSpecificLowering(I))
     return true;
@@ -536,12 +579,16 @@ void RegisterAllocator::coalesce(
 }
 
 void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
+  // Only use RegClass::Other in this pass for now.
+  // TODO: Extend this in the future to have multiple register classes,
+  // which will require extra state in freeBlockLocals.
+
   // Make sure Phis and related Movs get the same register
   for (auto *bb : order) {
     for (auto &inst : *bb) {
       handleInstruction(&inst);
       if (auto *phi = llvh::dyn_cast<PhiInst>(&inst)) {
-        auto reg = file.allocateRegister();
+        auto reg = file.allocateRegister(RegClass::Other);
         updateRegister(phi, reg);
         for (int i = 0, e = phi->getNumEntries(); i < e; i++) {
           updateRegister(phi->getEntry(i).first, reg);
@@ -561,7 +608,7 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
   llvh::SmallVector<Register, 8> freeBlockLocals;
 
   // A dummy register used for all instructions that have no users.
-  Register deadReg = file.allocateRegister();
+  Register deadReg = file.allocateRegister(RegClass::Other);
 
   // Iterate in reverse, so we can cheaply determine whether an instruction
   // is local, and assign it a register accordingly.
@@ -571,48 +618,58 @@ void RegisterAllocator::allocateFastPass(ArrayRef<BasicBlock *> order) {
         // If this is using a local register, we know the register is free after
         // we visit the definition.
         auto reg = getRegister(&inst);
-        auto idx = reg.getIndex();
+        assert(reg.getClass() == RegClass::Other);
+        auto idx = reg.getIndexInClass();
         if (idx < blockLocals.size() && blockLocals.test(idx))
           freeBlockLocals.push_back(reg);
       } else {
         // Unallocated instruction means the result is dead, because all users
         // are visited first. Allocate a temporary register.
-        // Note that we cannot assert that the instruction has no users, because
-        // there may be users in dead blocks.
+        assert(!inst.hasUsers());
         updateRegister(&inst, deadReg);
       }
 
-      // Allocate a register to unallocated operands.
+      /// Allocate a register for instruction \p op.
+      auto allocReg =
+          [this, &freeBlockLocals, &blockLocals, bb](Instruction *op) {
+            // Skip if op is not an instruction or already has a register.
+            if (!op || isAllocated(op))
+              return;
+
+            if (op->getParent() != bb) {
+              // Live across blocks, allocate a global regigster.
+              updateRegister(op, file.allocateRegister(RegClass::Other));
+              return;
+            }
+
+            // We know this operand is local because:
+            // 1. The operand is in the same block as this one.
+            // 2. All blocks dominated by this block have been visited.
+            // 3. All users must be dominated by their def, since Phis are
+            //    allocated beforehand.
+            if (!freeBlockLocals.empty()) {
+              updateRegister(op, freeBlockLocals.pop_back_val());
+              return;
+            }
+
+            // No free local register, allocate another one.
+            Register reg = file.allocateRegister(RegClass::Other);
+            assert(reg.getClass() == RegClass::Other);
+            if (blockLocals.size() <= reg.getIndexInClass())
+              blockLocals.resize(reg.getIndexInClass() + 1);
+            blockLocals.set(reg.getIndexInClass());
+            updateRegister(op, reg);
+          };
+
+      // Allocate a register to the operands of the current instruction, and for
+      // its implicit environment operand.
       for (size_t i = 0, e = inst.getNumOperands(); i < e; ++i) {
         auto *op = llvh::dyn_cast<Instruction>(inst.getOperand(i));
-
-        // Skip if op is not an instruction or already has a register.
-        if (!op || isAllocated(op))
-          continue;
-
-        if (op->getParent() != bb) {
-          // Live across blocks, allocate a global regigster.
-          updateRegister(op, file.allocateRegister());
-          continue;
-        }
-
-        // We know this operand is local because:
-        // 1. The operand is in the same block as this one.
-        // 2. All blocks dominated by this block have been visited.
-        // 3. All users must be dominated by their def, since Phis are
-        //    allocated beforehand.
-        if (!freeBlockLocals.empty()) {
-          updateRegister(op, freeBlockLocals.pop_back_val());
-          continue;
-        }
-
-        // No free local register, allocate another one.
-        Register reg = file.allocateRegister();
-        if (blockLocals.size() <= reg.getIndex())
-          blockLocals.resize(reg.getIndex() + 1);
-        blockLocals.set(reg.getIndex());
-        updateRegister(op, reg);
+        allocReg(op);
       }
+
+      allocReg(
+          llvh::dyn_cast_or_null<Instruction>(inst.getImplicitEnvOperand()));
     }
   }
 }
@@ -762,7 +819,7 @@ void RegisterAllocator::allocate(ArrayRef<BasicBlock *> order) {
 
     // Allocate a register for the live interval that we are currently handling.
     if (!isAllocated(inst)) {
-      Register R = file.allocateRegister();
+      Register R = file.allocateRegister(getRegClass(inst));
       updateRegister(inst, R);
     }
 
@@ -829,20 +886,20 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
             "Livein but also killed in this block?");
       }
 
-      // Extend the lifetime of the operands.
-      for (int i = 0, e = it.getNumOperands(); i < e; i++) {
-        auto instOp = llvh::dyn_cast<Instruction>(it.getOperand(i));
-        if (!instOp)
-          continue;
+      /// Extend the lifetime of \p I.
+      auto extendLifetime = [this, &it, &instOffset](Instruction *I) {
+        if (!I)
+          return;
 
-        if (!hasInstructionNumber(instOp)) {
+        if (!hasInstructionNumber(I)) {
           assert(
               llvh::isa<PhiInst>(&it) &&
               "Only PhiInst should reference values from dead code");
-          continue;
+          (void)it;
+          return;
         }
 
-        auto operandIdx = getInstructionNumber(instOp);
+        auto operandIdx = getInstructionNumber(I);
         // Extend the lifetime of the interval to reach this instruction.
         // Include this instruction in the interval in order to make sure that
         // the register is not freed before the use.
@@ -853,7 +910,15 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
           auto seg = Segment(operandIdx + 1, instOffset + 1);
           instructionInterval_[operandIdx].add(seg);
         }
+      };
+
+      for (int i = 0, e = it.getNumOperands(); i < e; i++) {
+        auto instOp = llvh::dyn_cast<Instruction>(it.getOperand(i));
+        extendLifetime(instOp);
       }
+
+      extendLifetime(
+          llvh::dyn_cast_or_null<Instruction>(it.getImplicitEnvOperand()));
 
       // Extend the lifetime of the PHI to include the source basic blocks.
       if (auto *P = llvh::dyn_cast<PhiInst>(&it)) {
@@ -882,50 +947,23 @@ void RegisterAllocator::calculateLiveIntervals(ArrayRef<BasicBlock *> order) {
   } // for each block.
 }
 
-struct LivenessRegAllocIRPrinter : IRPrinter {
-  RegisterAllocator &allocator;
-
-  explicit LivenessRegAllocIRPrinter(
-      RegisterAllocator &RA,
-      llvh::raw_ostream &ost,
-      bool escape = false)
-      : IRPrinter(RA.getContext(), ost, escape), allocator(RA) {}
-
-  void printInstructionDestination(Instruction *I) override {
-    if (!allocator.isAllocated(I)) {
-      os << "$??? ";
-    } else {
-      os << "$" << allocator.getRegister(I) << " ";
-    }
-
-    if (allocator.hasInstructionNumber(I)) {
-      auto idx = allocator.getInstructionNumber(I);
-      Interval &ivl = allocator.getInstructionInterval(I);
-      os << "@" << idx << " " << ivl << "\t";
-    } else {
-      os << "          \t";
-    }
-
-    IRPrinter::printInstructionDestination(I);
-  }
-
-  void printValueLabel(Instruction *I, Value *V, unsigned opIndex) override {
-    IRPrinter::printValueLabel(I, V, opIndex);
-    auto codeGenOpts = I->getContext().getCodeGenerationSettings();
-    if (codeGenOpts.dumpOperandRegisters && allocator.isAllocated(V)) {
-      os << " @ $" << allocator.getRegister(V);
-    }
-  }
-};
-
 void RegisterAllocator::dump() {
-  LivenessRegAllocIRPrinter Printer(*this, llvh::outs());
+  LivenessRegAllocIRPrinter<RegisterAllocator, RegClass> Printer(
+      *this, llvh::outs());
   Printer.visitFunction(*F);
 }
 
 Register RegisterAllocator::getRegister(Value *I) {
   assert(isAllocated(I) && "Instruction is not allocated!");
   return allocated[I];
+}
+
+hermes::OptValue<Register> RegisterAllocator::getOptionalRegister(
+    Value *I) const {
+  if (auto it = allocated.find(I); it != allocated.end())
+    return it->second;
+  else
+    return llvh::None;
 }
 
 void RegisterAllocator::updateRegister(Value *I, Register R) {
@@ -936,13 +974,15 @@ bool RegisterAllocator::isAllocated(Value *I) {
   return allocated.count(I);
 }
 
-Register RegisterAllocator::reserve(unsigned count) {
-  return file.tailAllocateConsecutive(count);
+Register RegisterAllocator::reserve(RegClass regClass, unsigned count) {
+  return file.tailAllocateConsecutive(regClass, count);
 }
 
-Register RegisterAllocator::reserve(ArrayRef<Value *> values) {
+Register RegisterAllocator::reserve(
+    RegClass regClass,
+    ArrayRef<Value *> values) {
   assert(!values.empty() && "Can't reserve zero registers");
-  Register first = file.tailAllocateConsecutive(values.size());
+  Register first = file.tailAllocateConsecutive(regClass, values.size());
 
   Register T = first;
   for (auto *v : values) {
@@ -972,96 +1012,16 @@ unsigned RegisterAllocator::getInstructionNumber(Instruction *I) {
   return newIdx;
 }
 
+void RegisterAllocator::convertTypeSpecificRegsToOther() {
+  file.convertTypeSpecificRegsToOther();
+}
+
 unsigned llvh::DenseMapInfo<Register>::getHashValue(Register Val) {
-  return Val.getIndex();
+  return Val.value_;
 }
 
 bool llvh::DenseMapInfo<Register>::isEqual(Register LHS, Register RHS) {
-  return LHS.getIndex() == RHS.getIndex();
-}
-
-namespace {
-static bool preallocateScopeRegisters(const Context &c) {
-  return c.getDebugInfoSetting() == DebugInfoSetting::ALL;
-}
-} // namespace
-
-ScopeRegisterAnalysis::ScopeRegisterAnalysis(Function *F, RegisterAllocator &RA)
-    : RA_(RA) {
-  // Initialize the ScopeDesc -> ScopeCreationInst map; if emitting full debug
-  // info, scopeCreationInsts will be used to reserve/pre-allocate the
-  // environment registers for scopes in F.
-  llvh::SmallVector<Value *, 4> scopeCreationInsts;
-  for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
-      if (llvh::isa<HBCResolveEnvironment>(I)) {
-        // HBCResolveEnvironment instructions are used to fetch an environment
-        // outside of F. The debugger doesn't need access to these "resolved"
-        // environment.
-        continue;
-      } else if (auto *SCI = llvh::dyn_cast<ScopeCreationInst>(&I)) {
-        assert(
-            SCI->getCreatedScopeDesc()->getFunction() == F &&
-            "ScopeCreationInst that is creating a scope of another function");
-        scopeCreationInsts_[SCI->getCreatedScopeDesc()] = SCI;
-        if (preallocateScopeRegisters(F->getContext())) {
-          LLVM_DEBUG(
-              llvh::dbgs() << "Reserving register for ScopeCreationInst in "
-                           << F->getOriginalOrInferredName() << "\n");
-          scopeCreationInsts.push_back(SCI);
-        }
-      }
-    }
-  }
-
-  if (!scopeCreationInsts.empty()) {
-    RA_.reserve(scopeCreationInsts);
-  }
-}
-
-std::pair<Register, ScopeDesc *> ScopeRegisterAnalysis::registerAndScopeAt(
-    Instruction *Value,
-    ScopeCreationInst *SCI) {
-  // If SCI's value is available in a register, ensure that the register is
-  // holding SCI's result at loc.
-  Register sciReg = RA_.getRegisterForInstructionAt(Value, SCI);
-  if (sciReg.isValid()) {
-    return std::make_pair(sciReg, SCI->getCreatedScopeDesc());
-  }
-
-  // sciReg is not alive at Value, so try to see if SCI's parent scope is.
-  auto parentIt =
-      scopeCreationInsts_.find(SCI->getCreatedScopeDesc()->getParent());
-  if (parentIt == scopeCreationInsts_.end()) {
-    // SCI's Parent scope is not available in any register.
-    return std::make_pair(Register{}, nullptr);
-  }
-
-  // Try again, this time on SCI's parent Environment.
-  return registerAndScopeAt(Value, parentIt->second);
-}
-
-std::pair<Register, ScopeDesc *>
-ScopeRegisterAnalysis::registerAndScopeForInstruction(Instruction *Inst) {
-  if (ScopeDesc *originalScope = Inst->getSourceLevelScope()) {
-    auto sciIt = scopeCreationInsts_.find(originalScope);
-    if (sciIt != scopeCreationInsts_.end()) {
-      ScopeCreationInst *originalScopeCreation = sciIt->second;
-      if (!preallocateScopeRegisters(Inst->getContext())) {
-        return registerAndScopeAt(Inst, originalScopeCreation);
-      }
-      // Use the pre-allocated registers. This is needed because RA_ could have
-      // decided to use fast allocation, in which case instructions won't be
-      // numbered (and intervals won't be computed), meaning registerAndScopeAt
-      // above will not find the scope register.
-      assert(RA_.isAllocated(originalScopeCreation) && "should be allocated");
-      Register sciReg = RA_.getRegister(originalScopeCreation);
-      assert(sciReg.isValid() && "scope register should be valid.");
-      return std::make_pair(sciReg, originalScope);
-    }
-  }
-
-  return std::make_pair(Register{}, nullptr);
+  return LHS == RHS;
 }
 
 #undef DEBUG_TYPE

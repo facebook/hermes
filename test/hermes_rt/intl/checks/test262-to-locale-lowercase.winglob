@@ -1,0 +1,35 @@
+// WinGlob expected output for test262-to-locale-lowercase.js
+// WinGlob LCMapStringEx handles some edge cases differently from ICU.
+// CHECK-LABEL: get locale lowercase test for test262
+// CHECK-NEXT: false
+// CHECK-NEXT: i
+// CHECK-NEXT: ı̇
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: i
+// CHECK-NEXT: ı̇
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: false
+// CHECK-NEXT: false
+// CHECK-NEXT: false
+// CHECK-NEXT: false
+// CHECK-NEXT: false
+// CHECK-NEXT: false
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: true
+// CHECK-NEXT: false
+// CHECK-NEXT: false
+// CHECK-NEXT: false

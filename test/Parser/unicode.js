@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s
+// RUN: %hermesc -hermes-parser -dump-ir %s
 
 // Ensure Unicode characters are recognized correctly in identifiers.
 
@@ -19,3 +19,6 @@ var z_‿⁀⁔︳︴﹍﹎﹏＿ = 1.0;
 
 // Put them all together.
 {Ⅵ૬͓͋﹍͕͔: "𐒡"};
+
+// ID_Continue
+var $\u19da = 1;

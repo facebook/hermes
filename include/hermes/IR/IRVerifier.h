@@ -21,16 +21,19 @@ enum class VerificationMode {
   /// Validate that the IR is valid.
   IR_VALID,
   /// Validate that the IR optimized and ready for bytecode generation.
-  IR_OPTIMIZED
+  IR_OPTIMIZED,
+  /// Validate lowered IR.
+  IR_LOWERED,
 };
 
 /// \brief Check a module for errors.
 ///
-/// If there are no errors, the function returns false. If an error is
-/// found, a message describing the error is written to OS (if non-null)
-/// and true is returned.  Note that this function is a noop (returning
-/// false) in opt and dev builds and is only fully implemented in dbg
+/// If an error is found, a message describing the error is written to OS
+/// (if non-null) and false is returned.  Note that this function is a noop
+/// (returning true) in opt and dev builds and is only fully implemented in dbg
 /// builds due to impact on performance.
+///
+/// \return true if module is verified successfully, false otherwise.
 bool verifyModule(
     const Module &M,
     raw_ostream *OS = nullptr,

@@ -7,6 +7,7 @@
 
 // RUN: %hermes -target=HBC -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -target=HBC -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // class Hello
 function Hello(text) {
@@ -49,6 +50,31 @@ print("singleton", new Singleton() === singleton);
 //CHECK-NEXT: singleton true
 print("singleton", new Singleton() === singleton);
 //CHECK-NEXT: singleton true
+
+try {
+  new (5);
+} catch (e) {
+  print(e);
+//CHECK-NEXT: TypeError: 5 cannot be used as a constructor.
+}
+
+try {
+  new ({});
+} catch (e) {
+  print(e);
+//CHECK-NEXT: TypeError: Object cannot be used as a constructor.
+}
+
+(function () {
+  function foo() {}
+  print(Object.getPrototypeOf(new foo()).constructor === foo);
+//CHECK-NEXT: true
+  print(Object.getPrototypeOf(new Array()).constructor === Array);
+//CHECK-NEXT: true
+  let bound = Array.bind();
+  print(Object.getPrototypeOf(new bound()).constructor === Array);
+//CHECK-NEXT: true
+})();
 
 // A dummy constructor
 function MyClass() {}

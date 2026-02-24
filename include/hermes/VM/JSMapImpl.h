@@ -21,8 +21,17 @@ namespace vm {
 /// as a Set, and hence we share the same implementation for them, with
 /// different CellKind.
 template <CellKind C>
-class JSMapImpl final : public JSObject {
+class JSMapImpl final : public JSObject,
+                        public OrderedHashMapBase<
+                            std::conditional_t<
+                                C == CellKind::JSMapKind,
+                                HashMapEntry,
+                                HashSetEntry>,
+                            JSMapImpl<C>> {
+  using HashMapEntryType =
+      std::conditional_t<C == CellKind::JSMapKind, HashMapEntry, HashSetEntry>;
   using Super = JSObject;
+  using ContainerSuper = OrderedHashMapBase<HashMapEntryType, JSMapImpl<C>>;
 
  public:
   static const ObjectVTable vt;
@@ -38,72 +47,6 @@ class JSMapImpl final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> parentHandle);
 
-  /// Allocate the internal element storage.
-  static ExecutionStatus initializeStorage(
-      Handle<JSMapImpl> self,
-      Runtime &runtime) {
-    auto crtRes = OrderedHashMap::create(runtime);
-    if (LLVM_UNLIKELY(crtRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    auto storageHandle = runtime.makeHandle<OrderedHashMap>(std::move(*crtRes));
-    self->storage_.set(runtime, storageHandle.get(), runtime.getHeap());
-    return ExecutionStatus::RETURNED;
-  }
-
-  /// Advance iterator and return the next.
-  HashMapEntry *iteratorNext(Runtime &runtime, HashMapEntry *entry) {
-    return storage_.getNonNull(runtime)->iteratorNext(runtime, entry);
-  }
-
-  /// Add a value.
-  static void addValue(
-      Handle<JSMapImpl> self,
-      Runtime &runtime,
-      Handle<> key,
-      Handle<> value) {
-    self->assertInitialized();
-    OrderedHashMap::insert(
-        runtime.makeHandle<OrderedHashMap>(self->storage_),
-        runtime,
-        key,
-        value);
-  }
-
-  /// \return true if a key exists.
-  static bool hasKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
-    self->assertInitialized();
-    return OrderedHashMap::has(
-        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
-  }
-
-  static HermesValue
-  getValue(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
-    self->assertInitialized();
-    return OrderedHashMap::get(
-        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
-  }
-
-  /// Delelet a key. \return true if succeeds.
-  static bool
-  deleteKey(Handle<JSMapImpl> self, Runtime &runtime, Handle<> key) {
-    self->assertInitialized();
-    return OrderedHashMap::erase(
-        runtime.makeHandle<OrderedHashMap>(self->storage_), runtime, key);
-  }
-
-  /// \returns the size.
-  static uint32_t getSize(JSMapImpl *self, Runtime &runtime) {
-    self->assertInitialized();
-    return self->storage_.getNonNull(runtime)->size();
-  }
-
-  /// Clear all elements from the storage.
-  static void clear(Handle<JSMapImpl> self, Runtime &runtime) {
-    self->assertInitialized();
-    self->storage_.getNonNull(runtime)->clear(runtime);
-  }
-
   /// Call \p callbackfn for each entry, with \p thisArg as this.
   static ExecutionStatus forEach(
       Handle<JSMapImpl> self,
@@ -111,24 +54,17 @@ class JSMapImpl final : public JSObject {
       Handle<Callable> callbackfn,
       Handle<> thisArg) {
     self->assertInitialized();
-    MutableHandle<HashMapEntry> entry{runtime};
     GCScopeMarkerRAII marker{runtime};
-    for (entry = self->storage_.getNonNull(runtime)->iteratorNext(runtime);
-         entry;
-         entry = self->storage_.getNonNull(runtime)->iteratorNext(
-             runtime, entry.get())) {
+    auto iterCtx = self->newIterator(runtime);
+    while (self->advanceIterator(runtime, iterCtx)) {
       marker.flush();
-      HermesValue key = entry->key;
-      HermesValue value = entry->value;
-      assert(!key.isEmpty() && "Invalid key encountered");
-      assert(!value.isEmpty() && "Invalid value encountered");
       if (LLVM_UNLIKELY(
               Callable::executeCall3(
                   callbackfn,
                   runtime,
                   thisArg,
-                  value,
-                  key,
+                  self->iteratorValue(runtime, iterCtx),
+                  self->iteratorKey(runtime, iterCtx),
                   self.getHermesValue()) == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -136,8 +72,38 @@ class JSMapImpl final : public JSObject {
     return ExecutionStatus::RETURNED;
   }
 
-  /// Build the metadata for this map implementation, and store it into \p mb.
-  static void MapOrSetBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  /// Call the native \p callbackfn for each entry, with \p thisArg as this.
+  /// \param callback Number of parameters depends on if this is a Map or Set.
+  /// For Map, (Runtime&, HermesValue, HermesValue) -> ExecutionStatus. For Set,
+  /// (Runtime&, HermesValue) -> ExecutionStatus.
+  template <typename CB>
+  static ExecutionStatus
+  forEachNative(Handle<JSMapImpl> self, Runtime &runtime, CB callback) {
+    self->assertInitialized();
+    GCScopeMarkerRAII marker{runtime};
+    auto iterCtx = self->newIterator(runtime);
+    while (self->advanceIterator(runtime, iterCtx)) {
+      marker.flush();
+      if constexpr (std::is_same_v<HashMapEntryType, HashMapEntry>) {
+        if (LLVM_UNLIKELY(
+                callback(
+                    runtime,
+                    self->iteratorKey(runtime, iterCtx),
+                    self->iteratorValue(runtime, iterCtx)) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      } else {
+        if (LLVM_UNLIKELY(
+                callback(runtime, self->iteratorKey(runtime, iterCtx)) ==
+                ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      }
+    }
+
+    return ExecutionStatus::RETURNED;
+  }
 
   JSMapImpl(
       Runtime &runtime,
@@ -146,12 +112,8 @@ class JSMapImpl final : public JSObject {
       : JSObject(runtime, *parent, *clazz) {}
 
  private:
-  /// The underlying storage.
-  GCPointer<OrderedHashMap> storage_{nullptr};
-
-  void assertInitialized() {
-    assert(storage_ && "Element storage uninitialized.");
-  }
+  /// Finalizer function to be called when GC is cleaning up this object.
+  static void _finalizeImpl(GCCell *cell, GC &gc);
 };
 
 /// JSMapTypeTraits binds iterator type and its corresponding container type.
@@ -169,6 +131,10 @@ struct JSMapTypeTraits<CellKind::JSMapIteratorKind> {
 template <CellKind C>
 class JSMapIteratorImpl final : public JSObject {
   using Super = JSObject;
+  using HashMapEntryType = typename std::conditional<
+      C == CellKind::JSMapIteratorKind,
+      HashMapEntry,
+      HashSetEntry>::type;
 
  public:
   static const ObjectVTable vt;
@@ -208,23 +174,27 @@ class JSMapIteratorImpl final : public JSObject {
   static CallResult<HermesValue> nextElement(
       Handle<JSMapIteratorImpl> self,
       Runtime &runtime) {
-    MutableHandle<> value{runtime};
+    struct : public Locals {
+      PinnedValue<> value;
+    } lv;
+    LocalsRAII lraii(runtime, &lv);
     if (!self->iterationFinished_) {
       // Iteration has not yet reached the end previously.
       assert(self->data_ && "Storage uninitialized");
+      if (!self->iterCtx_.initialized()) {
+        self->iterCtx_ = self->data_.getNonNull(runtime)->newIterator(runtime);
+      }
       // Advance the iterator.
-      self->itr_.set(
-          runtime,
-          self->data_.getNonNull(runtime)->iteratorNext(
-              runtime, self->itr_.get(runtime)),
-          runtime.getHeap());
-      if (self->itr_) {
+      if (self->data_.getNonNull(runtime)->advanceIterator(
+              runtime, self->iterCtx_)) {
         switch (self->iterationKind_) {
           case IterationKind::Key:
-            value = self->itr_.getNonNull(runtime)->key;
+            lv.value = self->data_.getNonNull(runtime)->iteratorKey(
+                runtime, self->iterCtx_);
             break;
           case IterationKind::Value:
-            value = self->itr_.getNonNull(runtime)->value;
+            lv.value = self->data_.getNonNull(runtime)->iteratorValue(
+                runtime, self->iterCtx_);
             break;
           case IterationKind::Entry: {
             // If we are iterating both key and value, we need to create an
@@ -233,12 +203,22 @@ class JSMapIteratorImpl final : public JSObject {
             if (arrRes == ExecutionStatus::EXCEPTION) {
               return ExecutionStatus::EXCEPTION;
             }
-            auto arrHandle = *arrRes;
-            value = self->itr_.getNonNull(runtime)->key;
-            JSArray::setElementAt(arrHandle, runtime, 0, value);
-            value = self->itr_.getNonNull(runtime)->value;
-            JSArray::setElementAt(arrHandle, runtime, 1, value);
-            value = arrHandle.getHermesValue();
+            Handle<JSArray> arrHandle = runtime.makeHandle(std::move(*arrRes));
+            lv.value = self->data_.getNonNull(runtime)->iteratorKey(
+                runtime, self->iterCtx_);
+            if (LLVM_UNLIKELY(
+                    JSArray::setElementAt(arrHandle, runtime, 0, lv.value) ==
+                    ExecutionStatus::EXCEPTION))
+              return ExecutionStatus::EXCEPTION;
+            if constexpr (std::is_same_v<HashMapEntryType, HashMapEntry>) {
+              lv.value = self->data_.getNonNull(runtime)->iteratorValue(
+                  runtime, self->iterCtx_);
+            }
+            if (LLVM_UNLIKELY(
+                    JSArray::setElementAt(arrHandle, runtime, 1, lv.value) ==
+                    ExecutionStatus::EXCEPTION))
+              return ExecutionStatus::EXCEPTION;
+            lv.value = arrHandle.getHermesValue();
             break;
           };
           case IterationKind::NumKinds:
@@ -249,10 +229,11 @@ class JSMapIteratorImpl final : public JSObject {
         // If the next element in the iterator is invalid, we have
         // reached the end.
         self->iterationFinished_ = true;
+        self->iterCtx_.reset();
         self->data_.setNull(runtime.getHeap());
       }
     }
-    return createIterResultObject(runtime, value, self->iterationFinished_)
+    return createIterResultObject(runtime, lv.value, self->iterationFinished_)
         .getHermesValue();
   }
 
@@ -268,12 +249,16 @@ class JSMapIteratorImpl final : public JSObject {
       : JSObject(runtime, *parent, *clazz) {}
 
  private:
+  /// Finalizer function to be called when GC is cleaning up this object.
+  static void _finalizeImpl(GCCell *cell, GC &gc);
+
   /// The internal pointer to the Map data. nullptr if the iterator has not been
   /// initialized or the iteration has ended.
   GCPointer<JSMapImpl<JSMapTypeTraits<C>::ContainerKind>> data_{nullptr};
 
-  /// Iteration pointer to the element storage in the Map.
-  GCPointer<HashMapEntry> itr_{nullptr};
+  /// Holds context for the iterator.
+  typename JSMapImpl<JSMapTypeTraits<C>::ContainerKind>::IteratorContext
+      iterCtx_{};
 
   IterationKind iterationKind_;
 

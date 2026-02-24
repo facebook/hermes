@@ -1,0 +1,5 @@
+// External unicode.org ICU expected output for runtime-properties-icu.js.
+// hermes_icu_load_from_path sets provider_name to "custom" and
+// icu_version to the specified version (78).
+// CHECK: ICU Provider: custom
+// CHECK-NEXT: ICU Version: 78

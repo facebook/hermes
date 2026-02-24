@@ -11,6 +11,8 @@
 // some windows standard library macros that gtest-port.h relies on.
 #include <gtest/gtest.h>
 
+#include <regex>
+
 #include <hermes/CompileJS.h>
 #include <hermes/hermes.h>
 #include <jsi/instrumentation.h>
@@ -188,12 +190,14 @@ TEST_P(HeapSnapshotAPITest, HeapTimeline) {
   (void)roots;
   auto stackTreeNode = idNodeMap.find(traceNodeID);
   ASSERT_NE(stackTreeNode, idNodeMap.end());
-  EXPECT_EQ(
-      stackTreeNode->second->buildStackTrace(traceFunctionInfos, strings),
-      R"#(
-(root)(0) @ (0):0:0
-global(1) @ test.js(2):1:1
-alloc(2) @ test.js(2):1:27)#");
+  // Use regex to match the script ID since internal modules may be
+  // added/removed, changing the ID assigned to the test script.
+  std::regex expectedPattern(
+      R"#(\n\(root\)\(0\) @ \(0\):0:0\nglobal\(1\) @ test\.js\([0-9]+\):1:1\nalloc\(2\) @ test\.js\([0-9]+\):1:27)#");
+  std::string actualTrace =
+      stackTreeNode->second->buildStackTrace(traceFunctionInfos, strings);
+  EXPECT_TRUE(std::regex_match(actualTrace, expectedPattern))
+      << "Actual trace: " << actualTrace;
 }
 
 INSTANTIATE_TEST_CASE_P(

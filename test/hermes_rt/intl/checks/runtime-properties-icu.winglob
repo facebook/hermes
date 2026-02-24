@@ -1,0 +1,4 @@
+// WinGlob expected output for runtime-properties-icu.js
+// Provider is "winglob" with ICU version 0 (no ICU).
+// CHECK: ICU Provider: winglob
+// CHECK-NEXT: ICU Version: 0

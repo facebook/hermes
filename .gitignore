@@ -37,5 +37,16 @@ android/intltest/java/com/facebook/hermes/test/assets/**
 .vs
 .vscode
 
+.git/
+.idea/
+cmake-build*/
+
 # clangd cache
 .cache/
+
+# Compilation database
+compile_commands.json
+
+# fork-sync working directory
+.sync/
+/.claude/settings.local.json

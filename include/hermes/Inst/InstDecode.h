@@ -89,7 +89,7 @@ InstMetaData getInstMetaData(OpCode opCode);
 /// \return the decoded form of the specified instruction instance \p inst.
 DecodedInstruction decodeInstruction(const Inst *inst);
 
-/// \return whether \p opcode is a call opcode (Call, CallDirect, Construct,
+/// \return whether \p opcode is a call opcode (Call, Construct,
 /// CallLongIndex, etc). Note CallBuiltin is not really a Call.
 bool isCallType(OpCode opcode);
 

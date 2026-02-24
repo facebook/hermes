@@ -102,6 +102,11 @@ enum class NativeType {
 class Collator : public vm::DecoratedObject::Decoration {
  protected:
   Collator();
+#ifdef _WIN32
+  /// True if this instance was created using an ICU vtable provider.
+  /// Used by instance method dispatch to avoid consulting global state.
+  bool usesIcu_ = false;
+#endif
 
  public:
   ~Collator() override;
@@ -127,6 +132,9 @@ class Collator : public vm::DecoratedObject::Decoration {
 class DateTimeFormat : public vm::DecoratedObject::Decoration {
  protected:
   DateTimeFormat();
+#ifdef _WIN32
+  bool usesIcu_ = false;
+#endif
 
  public:
   ~DateTimeFormat() override;
@@ -153,6 +161,9 @@ class DateTimeFormat : public vm::DecoratedObject::Decoration {
 class NumberFormat : public vm::DecoratedObject::Decoration {
  protected:
   NumberFormat();
+#ifdef _WIN32
+  bool usesIcu_ = false;
+#endif
 
  public:
   ~NumberFormat() override;

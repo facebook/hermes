@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function sink() {}
 var x;
@@ -29,70 +29,79 @@ function delete_expr() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [x, sink, delete_parameter, delete_literal, delete_variable, delete_expr]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %sink#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "sink" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %delete_parameter#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "delete_parameter" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %delete_literal#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "delete_literal" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %delete_variable#0#1()#5, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "delete_variable" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %delete_expr#0#1()#6, %0
-// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "delete_expr" : string
-// CHECK-NEXT:  %11 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %12 = StoreStackInst undefined : undefined, %11
-// CHECK-NEXT:  %13 = LoadStackInst %11
-// CHECK-NEXT:  %14 = ReturnInst %13
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "sink": string
+// CHECK-NEXT:       DeclareGlobalVarInst "x": string
+// CHECK-NEXT:       DeclareGlobalVarInst "delete_parameter": string
+// CHECK-NEXT:       DeclareGlobalVarInst "delete_literal": string
+// CHECK-NEXT:       DeclareGlobalVarInst "delete_variable": string
+// CHECK-NEXT:       DeclareGlobalVarInst "delete_expr": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %sink(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "sink": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %delete_parameter(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "delete_parameter": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %delete_literal(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "delete_literal": string
+// CHECK-NEXT:  %13 = CreateFunctionInst (:object) %0: environment, %VS0: any, %delete_variable(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "delete_variable": string
+// CHECK-NEXT:  %15 = CreateFunctionInst (:object) %0: environment, %VS0: any, %delete_expr(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %15: object, globalObject: object, "delete_expr": string
+// CHECK-NEXT:  %17 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %17: any
+// CHECK-NEXT:  %19 = LoadStackInst (:any) %17: any
+// CHECK-NEXT:        ReturnInst %19: any
 // CHECK-NEXT:function_end
 
-// CHECK:function sink#0#1()#2
-// CHECK-NEXT:S{sink#0#1()#2} = []
+// CHECK:scope %VS1 []
+
+// CHECK:function sink(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{sink#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function delete_parameter#0#1(p)#3
-// CHECK-NEXT:S{delete_parameter#0#1()#3} = [p#3]
+// CHECK:scope %VS2 [p: any]
+
+// CHECK:function delete_parameter(p: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{delete_parameter#0#1()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst %p, [p#3], %0
-// CHECK-NEXT:  %2 = ReturnInst false : boolean
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %p: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.p]: any
+// CHECK-NEXT:       ReturnInst false: boolean
 // CHECK-NEXT:function_end
 
-// CHECK:function delete_literal#0#1()#4
-// CHECK-NEXT:S{delete_literal#0#1()#4} = []
+// CHECK:scope %VS3 []
+
+// CHECK:function delete_literal(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{delete_literal#0#1()#4}
-// CHECK-NEXT:  %1 = ReturnInst true : boolean
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:       ReturnInst true: boolean
 // CHECK-NEXT:function_end
 
-// CHECK:function delete_variable#0#1()#5
-// CHECK-NEXT:S{delete_variable#0#1()#5} = []
+// CHECK:scope %VS4 []
+
+// CHECK:function delete_variable(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{delete_variable#0#1()#5}
-// CHECK-NEXT:  %1 = DeletePropertyInst globalObject : object, "x" : string
-// CHECK-NEXT:  %2 = ReturnInst %1
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = DeletePropertyLooseInst (:any) globalObject: object, "x": string
+// CHECK-NEXT:       ReturnInst %2: any
 // CHECK-NEXT:function_end
 
-// CHECK:function delete_expr#0#1()#6
-// CHECK-NEXT:S{delete_expr#0#1()#6} = []
+// CHECK:scope %VS5 []
+
+// CHECK:function delete_expr(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{delete_expr#0#1()#6}
-// CHECK-NEXT:  %1 = LoadPropertyInst globalObject : object, "sink" : string
-// CHECK-NEXT:  %2 = CallInst %1, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %3 = ReturnInst true : boolean
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS5: any, %0: environment
+// CHECK-NEXT:  %2 = LoadPropertyInst (:any) globalObject: object, "sink": string
+// CHECK-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       ReturnInst true: boolean
 // CHECK-NEXT:function_end

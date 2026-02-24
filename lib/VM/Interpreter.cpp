@@ -16,10 +16,13 @@
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/CodeBlock.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/HandleRootOwner-inline.h"
+#include "hermes/VM/JIT/JIT.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSError.h"
-#include "hermes/VM/JSGenerator.h"
+#include "hermes/VM/JSGeneratorObject.h"
+#include "hermes/VM/JSObject-inline.h"
 #include "hermes/VM/JSProxy.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/JSTypedArray.h"
@@ -30,20 +33,17 @@
 #include "hermes/VM/RuntimeModule-inline.h"
 #include "hermes/VM/StackFrame-inline.h"
 #include "hermes/VM/StringPrimitive.h"
+#include "hermes/VM/StringPrimitiveValueDenseMapInfo-inline.h"
 #include "hermes/VM/StringView.h"
 #include "hermes/VM/WeakRoot-inline.h"
 
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/Format.h"
 #include "llvh/Support/raw_ostream.h"
 
 #include "Interpreter-internal.h"
 
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 using llvh::dbgs;
 using namespace hermes::inst;
 
@@ -57,45 +57,37 @@ HERMES_SLOW_STATISTIC(
     NumGetByIdProtoHits,
     "NumGetByIdProtoHits: Number of property 'read by id' cache hits for the prototype");
 HERMES_SLOW_STATISTIC(
-    NumGetByIdCacheEvicts,
-    "NumGetByIdCacheEvicts: Number of property 'read by id' cache evictions");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdFastPaths,
-    "NumGetByIdFastPaths: Number of property 'read by id' fast paths");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdAccessor,
-    "NumGetByIdAccessor: Number of property 'read by id' accessors");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdProto,
-    "NumGetByIdProto: Number of property 'read by id' in the prototype chain");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdNotFound,
-    "NumGetByIdNotFound: Number of property 'read by id' not found");
-HERMES_SLOW_STATISTIC(
-    NumGetByIdTransient,
-    "NumGetByIdTransient: Number of property 'read by id' of non-objects");
-HERMES_SLOW_STATISTIC(
     NumGetByIdDict,
     "NumGetByIdDict: Number of property 'read by id' of dictionaries");
+
+HERMES_SLOW_STATISTIC(NumGetByIndex, "NumGetByIndex: Number of GetByIndex");
+
+HERMES_SLOW_STATISTIC(NumGetByVal, "NumGetByVal: Number of GetByVal");
 HERMES_SLOW_STATISTIC(
-    NumGetByIdSlow,
-    "NumGetByIdSlow: Number of property 'read by id' slow path");
+    NumGetByValObjInd,
+    "NumGetByValObjInd: Number of GetByVal _,Obj,Index");
+HERMES_SLOW_STATISTIC(
+    NumGetByValArrInd,
+    "NumGetByValArrInd: Number of GetByVal _,JSArray,Index");
+HERMES_SLOW_STATISTIC(
+    NumGetByValTAInd,
+    "NumGetByValTAInd: Number of GetByVal _,TypedArray,Index");
+HERMES_SLOW_STATISTIC(
+    NumGetByValObjIndFast,
+    "NumGetByValObjIndFast: Number of GetByVal _,Obj,Index good fast paths");
 
 HERMES_SLOW_STATISTIC(
     NumPutById,
     "NumPutById: Number of property 'write by id' accesses");
 HERMES_SLOW_STATISTIC(
+    NumPutByIdSlowPaths,
+    "NumPutByIdSlowPaths: Number of property 'write by id' slow paths");
+HERMES_SLOW_STATISTIC(
     NumPutByIdCacheHits,
     "NumPutByIdCacheHits: Number of property 'write by id' cache hits");
 HERMES_SLOW_STATISTIC(
-    NumPutByIdCacheEvicts,
-    "NumPutByIdCacheEvicts: Number of property 'write by id' cache evictions");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdFastPaths,
-    "NumPutByIdFastPaths: Number of property 'write by id' fast paths");
-HERMES_SLOW_STATISTIC(
-    NumPutByIdTransient,
-    "NumPutByIdTransient: Number of property 'write by id' to non-objects");
+    NumPutByIdTransitionHits,
+    "NumPutByIdTransitionHits: Number of property 'write by id' transition hits");
 
 HERMES_SLOW_STATISTIC(
     NumNativeFunctionCalls,
@@ -114,8 +106,6 @@ namespace vm {
 /// code block.
 #define INIT_STATE_FOR_CODEBLOCK(codeBlock)                      \
   do {                                                           \
-    strictMode = (codeBlock)->isStrictMode();                    \
-    defaultPropOpFlags = DEFAULT_PROP_OP_FLAGS(strictMode);      \
     if (EnableCrashTrace) {                                      \
       auto *bc = (codeBlock)->getRuntimeModule()->getBytecode(); \
       bytecodeFileStart = bc->getRawBuffer().data();             \
@@ -127,26 +117,22 @@ namespace vm {
     }                                                            \
   } while (0)
 
-CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
+CallResult<PseudoHandle<JSGeneratorObject>> Interpreter::createGenerator_RJS(
     Runtime &runtime,
     RuntimeModule *runtimeModule,
     unsigned funcIndex,
     Handle<Environment> envHandle,
     NativeArgs args) {
-  auto gifRes = GeneratorInnerFunction::create(
+  auto innerFuncPH = JSFunction::create(
       runtime,
       runtimeModule->getDomain(runtime),
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
       envHandle,
-      runtimeModule->getCodeBlockMayAllocate(funcIndex),
-      args);
-  if (LLVM_UNLIKELY(gifRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
+      runtimeModule->getCodeBlockMayAllocate(funcIndex));
+  auto innerFunc = runtime.makeHandle(std::move(innerFuncPH));
 
-  auto generatorFunction = runtime.makeHandle(
-      vmcast<JSGeneratorFunction>(
-          runtime.getCurrentFrame().getCalleeClosureUnsafe()));
+  auto generatorFunction = Handle<JSFunction>::vmcast(
+      runtime.getCurrentFrame().getCalleeClosureHandleUnsafe());
 
   auto prototypeProp = JSObject::getNamed_RJS(
       generatorFunction,
@@ -159,7 +145,7 @@ CallResult<PseudoHandle<JSGenerator>> Interpreter::createGenerator_RJS(
       ? runtime.makeHandle<JSObject>(prototypeProp->get())
       : Handle<JSObject>::vmcast(&runtime.generatorPrototype);
 
-  return JSGenerator::create(runtime, *gifRes, prototype);
+  return JSGeneratorObject::create(runtime, innerFunc, prototype);
 }
 
 CallResult<Handle<Arguments>> Interpreter::reifyArgumentsSlowPath(
@@ -173,7 +159,7 @@ CallResult<Handle<Arguments>> Interpreter::reifyArgumentsSlowPath(
   if (LLVM_UNLIKELY(argRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<Arguments> args = *argRes;
+  Handle<Arguments> args = runtime.makeHandle(std::move(*argRes));
 
   for (uint32_t argIndex = 0; argIndex < argCount; ++argIndex) {
     SmallHermesValue shv =
@@ -213,7 +199,7 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
     auto strPrim = runtime.makeHandle(std::move(*strRes));
 
     // Check if the string is a valid argument index.
-    if (auto index = toArrayIndex(runtime, strPrim)) {
+    if (auto index = toArrayIndex(*strPrim)) {
       if (*index < frame.getArgCount()) {
         return createPseudoHandle(frame.getArgRef(*index));
       }
@@ -224,10 +210,9 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
       // somewhere up in the prototype chain. Since we want to avoid reifying,
       // check which it is:
       MutableHandle<JSObject> inObject{runtime};
-      MutableHandle<SymbolID> inNameTmpStorage{runtime};
-      ComputedPropertyDescriptor desc;
+      ComputedPropertyDescWithSymStorage desc{MutableHandle<SymbolID>{runtime}};
       JSObject::getComputedPrimitiveDescriptor(
-          objectPrototype, runtime, strPrim, inObject, inNameTmpStorage, desc);
+          objectPrototype, runtime, strPrim, inObject, desc);
 
       // If we couldn't find the property, just return 'undefined'.
       if (!inObject)
@@ -237,10 +222,7 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
       // reifying.
       if (!desc.flags.accessor) {
         return JSObject::getComputedSlotValue(
-            createPseudoHandle(inObject.get()),
-            runtime,
-            inNameTmpStorage,
-            desc);
+            createPseudoHandle(inObject.get()), runtime, desc);
       }
     }
 
@@ -248,7 +230,7 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
     if (runtime.symbolEqualsToStringPrim(
             Predefined::getSymbolID(Predefined::length), *strPrim)) {
       return createPseudoHandle(
-          HermesValue::encodeUntrustedNumberValue(frame.getArgCount()));
+          HermesValue::encodeTrustedNumberValue(frame.getArgCount()));
     }
   }
 
@@ -269,386 +251,23 @@ CallResult<PseudoHandle<>> Interpreter::getArgumentsPropByValSlowPath_RJS(
 CallResult<PseudoHandle<>> Interpreter::handleCallSlowPath(
     Runtime &runtime,
     PinnedHermesValue *callTarget) {
-  if (auto *native = dyn_vmcast<NativeFunction>(*callTarget)) {
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*callTarget))) {
+    return runtime.raiseTypeErrorForValue(
+        Handle<>(callTarget), " is not a function");
+  }
+#if HERMES_SLOW_STATISTIC_ENABLED
+  if (vmisa<NativeJSFunction>(*callTarget)) {
     ++NumNativeFunctionCalls;
-    // Call the native function directly
-    return NativeFunction::_nativeCall(native, runtime);
-  } else if (auto *bound = dyn_vmcast<BoundFunction>(*callTarget)) {
+  } else if (vmisa<NativeFunction>(*callTarget)) {
+    ++NumNativeFunctionCalls;
+  } else if (vmisa<BoundFunction>(*callTarget)) {
     ++NumBoundFunctionCalls;
-    // Call the bound function.
-    return BoundFunction::_boundCall(bound, runtime.getCurrentIP(), runtime);
-  } else {
-    return runtime.raiseTypeErrorForCallable(Handle<>(callTarget));
   }
-}
-
-inline PseudoHandle<> Interpreter::tryGetPrimitiveOwnPropertyById(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id) {
-  if (base->isString() && id == Predefined::getSymbolID(Predefined::length)) {
-    return createPseudoHandle(
-        HermesValue::encodeUntrustedNumberValue(
-            base->getString()->getStringLength()));
-  }
-  return createPseudoHandle(HermesValue::encodeEmptyValue());
-}
-
-CallResult<PseudoHandle<>> Interpreter::getByIdTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id) {
-  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
-  // method did, but that section doesn't exist in ES9 anymore.
-  // Instead, the [[Get]] Receiver argument serves a similar purpose.
-
-  // Fast path: try to get primitive own property directly first.
-  PseudoHandle<> valOpt = tryGetPrimitiveOwnPropertyById(runtime, base, id);
-  if (!valOpt->isEmpty()) {
-    return valOpt;
-  }
-
-  // get the property descriptor from primitive prototype without
-  // boxing with vm::toObject().  This is where any properties will
-  // be.
-  CallResult<Handle<JSObject>> primitivePrototypeResult =
-      getPrimitivePrototype(runtime, base);
-  if (primitivePrototypeResult == ExecutionStatus::EXCEPTION) {
-    // If an exception is thrown, likely we are trying to read property on
-    // undefined/null. Passing over the name of the property
-    // so that we could emit more meaningful error messages.
-    return amendPropAccessErrorMsgWithPropName(runtime, base, "read", id);
-  }
-
-  return JSObject::getNamedWithReceiver_RJS(
-      *primitivePrototypeResult, runtime, id, base);
-}
-
-PseudoHandle<> Interpreter::getByValTransientFast(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> nameHandle) {
-  if (base->isString()) {
-    // Handle most common fast path -- array index property for string
-    // primitive.
-    // Since primitive string cannot have index like property we can
-    // skip ObjectFlags::fastIndexProperties checking and directly
-    // checking index storage from StringPrimitive.
-
-    OptValue<uint32_t> arrayIndex = toArrayIndexFastPath(*nameHandle);
-    // Get character directly from primitive if arrayIndex is within range.
-    // Otherwise we need to fall back to prototype lookup.
-    if (arrayIndex &&
-        arrayIndex.getValue() < base->getString()->getStringLength()) {
-      return createPseudoHandle(
-          runtime
-              .getCharacterString(base->getString()->at(arrayIndex.getValue()))
-              .getHermesValue());
-    }
-  }
-  return createPseudoHandle(HermesValue::encodeEmptyValue());
-}
-
-CallResult<PseudoHandle<>> Interpreter::getByValTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> name) {
-  // This is similar to what ES5.1 8.7.1 special [[Get]] internal
-  // method did, but that section doesn't exist in ES9 anymore.
-  // Instead, the [[Get]] Receiver argument serves a similar purpose.
-
-  // Optimization: check fast path first.
-  PseudoHandle<> fastRes = getByValTransientFast(runtime, base, name);
-  if (!fastRes->isEmpty()) {
-    return fastRes;
-  }
-
-  auto res = toObject(runtime, base);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-
-  return JSObject::getComputedWithReceiver_RJS(
-      runtime.makeHandle<JSObject>(res.getValue()), runtime, name, base);
-}
-
-static ExecutionStatus
-transientObjectPutErrorMessage(Runtime &runtime, Handle<> base, SymbolID id) {
-  // Emit an error message that looks like:
-  // "Cannot create property '%{id}' on ${typeof base} '${String(base)}'".
-  StringView propName = runtime.getIdentifierTable().getStringView(runtime, id);
-  Handle<StringPrimitive> baseType =
-      runtime.makeHandle(vmcast<StringPrimitive>(typeOf(runtime, base)));
-  StringView baseTypeAsString =
-      StringPrimitive::createStringView(runtime, baseType);
-  MutableHandle<StringPrimitive> valueAsString{runtime};
-  if (base->isSymbol()) {
-    // Special workaround for Symbol which can't be stringified.
-    auto str = symbolDescriptiveString(runtime, Handle<SymbolID>::vmcast(base));
-    if (str != ExecutionStatus::EXCEPTION) {
-      valueAsString = *str;
-    } else {
-      runtime.clearThrownValue();
-      valueAsString = StringPrimitive::createNoThrow(
-          runtime, "<<Exception occurred getting the value>>");
-    }
-  } else {
-    auto str = toString_RJS(runtime, base);
-    assert(
-        str != ExecutionStatus::EXCEPTION &&
-        "Primitives should be convertible to string without exceptions");
-    valueAsString = std::move(*str);
-  }
-  StringView valueAsStringPrintable =
-      StringPrimitive::createStringView(runtime, valueAsString);
-
-  SmallU16String<32> tmp1;
-  SmallU16String<32> tmp2;
-  return runtime.raiseTypeError(
-      TwineChar16("Cannot create property '") + propName + "' on " +
-      baseTypeAsString.getUTF16Ref(tmp1) + " '" +
-      valueAsStringPrintable.getUTF16Ref(tmp2) + "'");
-}
-
-ExecutionStatus Interpreter::putByIdTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    SymbolID id,
-    Handle<> value,
-    bool strictMode) {
-  // ES5.1 8.7.2 special [[Get]] internal method.
-  // TODO: avoid boxing primitives unless we are calling an accessor.
-
-  // 1. Let O be ToObject(base)
-  auto res = toObject(runtime, base);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-    // If an exception is thrown, likely we are trying to convert
-    // undefined/null to an object. Passing over the name of the property
-    // so that we could emit more meaningful error messages.
-    return amendPropAccessErrorMsgWithPropName(runtime, base, "set", id);
-  }
-
-  auto O = runtime.makeHandle<JSObject>(res.getValue());
-
-  NamedPropertyDescriptor desc;
-  JSObject *propObj = JSObject::getNamedDescriptorUnsafe(O, runtime, id, desc);
-
-  // Is this a missing property, or a data property defined in the prototype
-  // chain? In both cases we would need to create an own property on the
-  // transient object, which is prohibited.
-  if (!propObj ||
-      (propObj != O.get() &&
-       (!desc.flags.accessor && !desc.flags.proxyObject))) {
-    if (strictMode) {
-      return transientObjectPutErrorMessage(runtime, base, id);
-    }
-    return ExecutionStatus::RETURNED;
-  }
-
-  // Modifying an own data property in a transient object is prohibited.
-  if (!desc.flags.accessor && !desc.flags.proxyObject) {
-    if (strictMode) {
-      return runtime.raiseTypeError(
-          "Cannot modify a property in a transient object");
-    }
-    return ExecutionStatus::RETURNED;
-  }
-
-  if (desc.flags.accessor) {
-    // This is an accessor.
-    auto *accessor = vmcast<PropertyAccessor>(
-        JSObject::getNamedSlotValueUnsafe(propObj, runtime, desc)
-            .getObject(runtime));
-
-    // It needs to have a setter.
-    if (!accessor->setter) {
-      if (strictMode) {
-        return runtime.raiseTypeError("Cannot modify a read-only accessor");
-      }
-      return ExecutionStatus::RETURNED;
-    }
-
-    CallResult<PseudoHandle<>> setRes =
-        accessor->setter.getNonNull(runtime)->executeCall1(
-            runtime.makeHandle(accessor->setter), runtime, base, *value);
-    if (setRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-  } else {
-    assert(desc.flags.proxyObject && "descriptor flags are impossible");
-    CallResult<bool> setRes = JSProxy::setNamed(
-        runtime.makeHandle(propObj), runtime, id, value, base);
-    if (setRes == ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    if (!*setRes && strictMode) {
-      return runtime.raiseTypeError("transient proxy set returned false");
-    }
-  }
-  return ExecutionStatus::RETURNED;
-}
-
-ExecutionStatus Interpreter::putByValTransient_RJS(
-    Runtime &runtime,
-    Handle<> base,
-    Handle<> name,
-    Handle<> value,
-    bool strictMode) {
-  auto idRes = valueToSymbolID(runtime, name);
-  if (idRes == ExecutionStatus::EXCEPTION)
-    return ExecutionStatus::EXCEPTION;
-
-  return putByIdTransient_RJS(runtime, base, **idRes, value, strictMode);
-}
-
-static Handle<HiddenClass> getHiddenClassForBuffer(
-    Runtime &runtime,
-    CodeBlock *curCodeBlock,
-    unsigned numLiterals,
-    unsigned keyBufferIndex) {
-  RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
-  if (auto clazzOpt = runtimeModule->findCachedLiteralHiddenClass(
-          runtime, keyBufferIndex, numLiterals))
-    return *clazzOpt;
-
-  MutableHandle<> tmpHandleKey{runtime};
-  MutableHandle<HiddenClass> clazz =
-      runtime.makeMutableHandle(*runtime.getHiddenClassForPrototype(
-          vmcast<JSObject>(runtime.objectPrototype),
-          JSObject::numOverlapSlots<JSObject>()));
-
-  GCScopeMarkerRAII marker{runtime};
-  auto keyGen =
-      curCodeBlock->getObjectBufferKeyIter(keyBufferIndex, numLiterals);
-  while (keyGen.hasNext()) {
-    auto key = keyGen.get(runtime);
-    SymbolID sym = [&] {
-      if (key.isSymbol())
-        return ID(key.getSymbol().unsafeGetIndex());
-
-      assert(key.isNumber() && "Key must be symbol or number");
-      tmpHandleKey = key;
-      // Note that since this handle has been created, the associated symbol
-      // will be automatically kept alive until we flush the marker.
-      // valueToSymbolID cannot fail because the key is known to be uint32.
-      Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
-      return *symHandle;
-    }();
-    auto addResult = HiddenClass::addProperty(
-        clazz, runtime, sym, PropertyFlags::defaultNewNamedPropertyFlags());
-    clazz = addResult->first;
-    marker.flush();
-  }
-
-  if (LLVM_LIKELY(!clazz->isDictionary())) {
-    assert(
-        numLiterals == clazz->getNumProperties() &&
-        "numLiterals should match hidden class property count.");
-    assert(
-        clazz->getNumProperties() < 256 &&
-        "cached hidden class should have property count less than 256");
-    runtimeModule->tryCacheLiteralHiddenClass(runtime, keyBufferIndex, *clazz);
-  }
-
-  return {clazz};
-}
-
-CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
-    Runtime &runtime,
-    CodeBlock *curCodeBlock,
-    unsigned numLiterals,
-    unsigned keyBufferIndex,
-    unsigned valBufferIndex) {
-  // Create a new object using the built-in constructor or cached hidden class.
-  // Note that the built-in constructor is empty, so we don't actually need to
-  // call it.
-  auto clazz = getHiddenClassForBuffer(
-      runtime, curCodeBlock, numLiterals, keyBufferIndex);
-  auto obj = runtime.makeHandle(JSObject::create(runtime, clazz));
-
-  auto valGen =
-      curCodeBlock->getObjectBufferValueIter(valBufferIndex, numLiterals);
-
-#ifndef NDEBUG
-  auto keyGen =
-      curCodeBlock->getObjectBufferKeyIter(keyBufferIndex, numLiterals);
+#else
+  (void)NumNativeFunctionCalls;
+  (void)NumBoundFunctionCalls;
 #endif
-
-  uint32_t propIndex = 0;
-  // keyGen should always have the same amount of elements as valGen
-  while (valGen.hasNext()) {
-#ifndef NDEBUG
-    {
-      GCScopeMarkerRAII marker{runtime};
-      // keyGen points to an element in the key buffer, which means it will
-      // only ever generate a Number or a Symbol. This means it will never
-      // allocate memory, and it is safe to not use a Handle.
-      SymbolID stringIdResult{};
-      auto key = keyGen.get(runtime);
-      if (key.isSymbol()) {
-        stringIdResult = ID(key.getSymbol().unsafeGetIndex());
-      } else {
-        auto keyHandle = runtime.makeHandle(
-            HermesValue::encodeUntrustedNumberValue(key.getNumber()));
-        auto idRes = valueToSymbolID(runtime, keyHandle);
-        assert(
-            idRes != ExecutionStatus::EXCEPTION &&
-            "valueToIdentifier() failed for uint32_t value");
-        stringIdResult = **idRes;
-      }
-      NamedPropertyDescriptor desc;
-      auto pos = HiddenClass::findProperty(
-          clazz,
-          runtime,
-          stringIdResult,
-          PropertyFlags::defaultNewNamedPropertyFlags(),
-          desc);
-      assert(
-          pos &&
-          "Should find this property in cached hidden class property table.");
-      assert(
-          desc.slot == propIndex &&
-          "propIndex should be the same as recorded in hidden class table.");
-    }
-#endif
-    // Explicitly make sure valGen.get() is called before obj.get() so that
-    // any allocation in valGen.get() won't invalidate the raw pointer
-    // returned from obj.get().
-    auto val = valGen.get(runtime);
-    auto shv = SmallHermesValue::encodeHermesValue(val, runtime);
-    // We made this object, it's not a Proxy.
-    JSObject::setNamedSlotValueUnsafe(obj.get(), runtime, propIndex, shv);
-    ++propIndex;
-  }
-
-  return createPseudoHandle(HermesValue::encodeObjectValue(*obj));
-}
-
-CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
-    Runtime &runtime,
-    CodeBlock *curCodeBlock,
-    unsigned numElements,
-    unsigned numLiterals,
-    unsigned bufferIndex) {
-  // Create a new array using the built-in constructor, and initialize
-  // the elements from a literal array buffer.
-  auto arrRes = JSArray::create(runtime, numElements, numElements);
-  if (arrRes == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  // Resize the array storage in advance.
-  auto arr = *arrRes;
-  JSArray::setStorageEndIndex(arr, runtime, numElements);
-
-  auto iter = curCodeBlock->getArrayBufferIter(bufferIndex, numLiterals);
-  JSArray::size_type i = 0;
-  while (iter.hasNext()) {
-    // NOTE: we must get the value in a separate step to guarantee ordering.
-    const auto value =
-        SmallHermesValue::encodeHermesValue(iter.get(runtime), runtime);
-    JSArray::unsafeSetExistingElementAt(*arr, runtime, i++, value);
-  }
-
-  return createPseudoHandle(HermesValue::encodeObjectValue(*arr));
+  return Callable::call(Handle<Callable>::vmcast(callTarget), runtime);
 }
 
 #ifndef NDEBUG
@@ -763,6 +382,7 @@ static inline const Inst *nextInstCall(const Inst *ip) {
       ((sizeof(inst::name##Inst) - minSize) \
        << (((uint8_t)OpCode::name - firstCall) * W))
 #include "hermes/BCGen/HBC/BytecodeList.def"
+
       ;
 #undef DEFINE_RET_TARGET
 
@@ -772,9 +392,12 @@ static inline const Inst *nextInstCall(const Inst *ip) {
 
 CallResult<HermesValue> Runtime::interpretFunctionImpl(
     CodeBlock *newCodeBlock) {
-  if (LLVM_UNLIKELY(
-          newCodeBlock->lazyCompile(*this) == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  if (LLVM_UNLIKELY(newCodeBlock->isLazy())) {
+    if (LLVM_UNLIKELY(
+            newCodeBlock->compileLazyFunction(*this) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
   }
 
 #if defined(HERMES_MEMORY_INSTRUMENTATION) || !defined(NDEBUG)
@@ -806,12 +429,25 @@ CallResult<HermesValue> Runtime::interpretFunctionImpl(
 #endif
 
   InterpreterState state{newCodeBlock, 0};
+  CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   if (HERMESVM_CRASH_TRACE &&
       (getVMExperimentFlags() & experiments::CrashTrace)) {
-    return Interpreter::interpretFunction<false, true>(*this, state);
+    res = Interpreter::interpretFunction<false, true>(*this, state);
   } else {
-    return Interpreter::interpretFunction<false, false>(*this, state);
+    res = Interpreter::interpretFunction<false, false>(*this, state);
   }
+
+  // Interpreter::interpretFunction saves/restores its IP via the runtime
+  // whenever a call out is made (see the CAPTURE_IP_* macros). Failing to
+  // preserve the IP across calls to this function disrupts interpreter calls
+  // further up the C++ callstack. Restore the IP in the runtime to the saved IP
+  // of the caller before returning.
+  // Note that we deliberately do not use a scope_exit for this, because we do
+  // not want to attempt to retrieve the IP from the register stack during
+  // unwinding of a C++ exception (if EXCEPTION_ON_OOM is enabled). Doing so
+  // would be incorrect, because the register stack will not have been unwound.
+  setCurrentIP(StackFramePtr(getStackPointer()).getSavedIP());
+  return res;
 }
 
 CallResult<HermesValue> Runtime::interpretFunction(CodeBlock *newCodeBlock) {
@@ -836,54 +472,14 @@ template <bool SingleStep, bool EnableCrashTrace>
 CallResult<HermesValue> Interpreter::interpretFunction(
     Runtime &runtime,
     InterpreterState &state) {
-  // The interpreter is re-entrant and also saves/restores its IP via the
-  // runtime whenever a call out is made (see the CAPTURE_IP_* macros). As such,
-  // failure to preserve the IP across calls to interpreterFunction() disrupt
-  // interpreter calls further up the C++ callstack. The RAII utility class
-  // below makes sure we always do this correctly.
-  //
-  // TODO: The IPs stored in the C++ callstack via this holder will generally be
-  // the same as in the JS stack frames via the Saved IP field. We can probably
-  // get rid of one of these redundant stores. Doing this isn't completely
-  // trivial as there are currently cases where we re-enter the interpreter
-  // without calling Runtime::saveCallerIPInStackFrame(), and there are features
-  // (I think mostly the debugger + stack traces) which implicitly rely on
-  // this behavior. At least their tests break if this behavior is not
-  // preserved.
-  struct IPSaver {
-    IPSaver(Runtime &runtime)
-        : ip_(runtime.getCurrentIP()), runtime_(runtime) {}
-
-    ~IPSaver() {
-      runtime_.setCurrentIP(ip_);
-    }
-
-   private:
-    const Inst *ip_;
-    Runtime &runtime_;
-  };
-  IPSaver ipSaver(runtime);
-
 #ifndef HERMES_ENABLE_DEBUGGER
   static_assert(!SingleStep, "can't use single-step mode without the debugger");
 #endif
-  // Make sure that the cache can use an optimization by avoiding a branch to
-  // access the property storage.
-  static_assert(
-      HiddenClass::kDictionaryThreshold <=
-          SegmentedArray::kValueToSegmentThreshold,
-      "Cannot avoid branches in cache check if the dictionary "
-      "crossover point is larger than the inline storage");
-
   CodeBlock *curCodeBlock = state.codeBlock;
   const Inst *ip = nullptr;
   // Points to the first local register in the current frame.
   // This eliminates the indirect load from Runtime and the -1 offset.
   PinnedHermesValue *frameRegs;
-  // Strictness of current function.
-  bool strictMode;
-  // Default flags when accessing properties.
-  PropOpFlags defaultPropOpFlags;
 
 // These CAPTURE_IP* macros should wrap around any major calls out of the
 // interpreter loop. They stash and retrieve the IP via the current Runtime
@@ -925,6 +521,25 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
 #endif // NDEBUG
 
+/// The ENCODE_HV_AS_SHV macro is intended to be used when we need to convert
+/// a HermesValue to a SmallHermesValue in interpreter code. It takes the
+/// HermesValue \p src and declares a new SmallHermesValue with name \p dst that
+/// contains the converted value. If boxed doubles are enabled, the conversion
+/// may allocate, and this will perform a CAPTURE_IP accordingly.
+#ifdef HERMESVM_BOXED_DOUBLES
+// When boxed doubles are enabled, encodeHermesValue may allocate when a double
+// is boxed, so we have to use CAPTURE_IP.
+#define ENCODE_HV_AS_SHV(dst, src) \
+  CAPTURE_IP_ASSIGN(               \
+      SmallHermesValue dst, SmallHermesValue::encodeHermesValue(src, runtime))
+#else
+// When boxed doubles are disabled, SmallHermesValue is identical to
+// HermesValue, but it is still technically a distinct type. So
+// encodeHermesValue is effectively just a cast.
+#define ENCODE_HV_AS_SHV(dst, src) \
+  SmallHermesValue dst = SmallHermesValue::encodeHermesValue(src, runtime);
+#endif
+
 /// \def DONT_CAPTURE_IP(expr)
 /// \param expr A call expression to a function external to the interpreter. The
 ///   expression should not make any allocations and the IP should be set
@@ -935,9 +550,6 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     (void)expr;                    \
   } while (false)
 
-// When performing a tail call, we need to set the runtime IP and leave it set.
-#define CAPTURE_IP_SET() runtime.setCurrentIP(ip)
-
   LLVM_DEBUG(dbgs() << "interpretFunction() called\n");
 
   ScopedNativeDepthTracker depthTracker{runtime};
@@ -945,9 +557,73 @@ CallResult<HermesValue> Interpreter::interpretFunction(
     return runtime.raiseStackOverflow(Runtime::StackOverflowKind::NativeStack);
   }
 
+  if (!SingleStep) {
+#ifdef HERMESVM_JIT
+    {
+      JITCompiledFunctionPtr jitPtr = curCodeBlock->getJITCompiled();
+      if (!jitPtr && runtime.jitContext_.shouldCompile(curCodeBlock)) {
+        // JIT compilation may allocate on the GC heap, e.g. to populate
+        // StringPrimitives in the IdentifierTable.
+        auto *oldCurrentIP = runtime.getCurrentIP();
+        // If there's a frame currently on the stack with a CodeBlock,
+        // then use its first opcode as the IP.
+        // Otherwise, use nullptr.
+        if (runtime.getCurrentFrame() != *runtime.getStackFrames().end()) {
+          runtime.setCurrentIP(
+              runtime.getCurrentFrame().getCalleeCodeBlock()
+                  ? (Inst const *)runtime.getCurrentFrame()
+                        .getCalleeCodeBlock()
+                        ->begin()
+                  : nullptr);
+        } else {
+          runtime.setCurrentIP(nullptr);
+        }
+        jitPtr = runtime.jitContext_.compile(runtime, curCodeBlock);
+        // Restore the currentIP field so nothing else is affected.
+        runtime.setCurrentIP(oldCurrentIP);
+      }
+      if (jitPtr) {
+        return JSFunction::_jittedCall(jitPtr, runtime);
+      }
+    }
+#endif
+
+    // Ensure the IP was correctly saved before we create the new frame.
+    runtime.validateSavedIPBeforeCall();
+
+    // Check for invalid invocation. This is done before setting up the stack so
+    // the exception appears to come from the call site.
+    auto newFrame = StackFramePtr(runtime.getStackPointer());
+    bool isCtorCall = newFrame.isConstructorCall();
+    if (LLVM_UNLIKELY(
+            curCodeBlock->getHeaderFlags().isCallProhibited(isCtorCall))) {
+      return runtime.raiseTypeError(
+          isCtorCall ? "Function is not a constructor"
+                     : "Class constructor invoked without new");
+    }
+
+    // Allocate the registers for the new frame. As with ProhibitInvoke, if this
+    // fails, we want the exception to come from the call site.
+    if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
+            curCodeBlock->getFrameSize() +
+            StackFrameLayout::CalleeExtraRegistersAtStart))) {
+      return runtime.raiseStackOverflow(
+          Runtime::StackOverflowKind::JSRegisterStack);
+    }
+
+    // Advance the frame pointer.
+    runtime.setCurrentFrame(newFrame);
+    // Point frameRegs to the first register in the new frame.
+    frameRegs = &newFrame.getFirstLocalRef();
+    ip = (Inst const *)curCodeBlock->begin();
+  }
+
   GCScope gcScope(runtime);
-  // Avoid allocating a handle dynamically by reusing this one.
-  MutableHandle<> tmpHandle(runtime);
+  struct : public Locals {
+    PinnedValue<> tmp;
+  } lv;
+  lv.tmp.clear();
+  LocalsRAII lvraii(runtime, &lv);
   CallResult<HermesValue> res{ExecutionStatus::EXCEPTION};
   CallResult<PseudoHandle<>> resPH{ExecutionStatus::EXCEPTION};
   CallResult<Handle<Arguments>> resArgs{ExecutionStatus::EXCEPTION};
@@ -957,7 +633,7 @@ CallResult<HermesValue> Interpreter::interpretFunction(
 
   // Mark the gcScope so we can clear all allocated handles.
   // Remember how many handles the scope has so we can clear them in the loop.
-  static constexpr unsigned KEEP_HANDLES = 1;
+  static constexpr unsigned KEEP_HANDLES = 0;
   assert(
       gcScope.getHandleCountDbg() == KEEP_HANDLES &&
       "scope has unexpected number of handles");
@@ -973,18 +649,14 @@ tailCall:
 
   runtime.getCodeCoverageProfiler().markExecuted(curCodeBlock);
 
-  if (!SingleStep) {
-    auto newFrame = runtime.setCurrentFrameToTopOfStack();
-    runtime.saveCallerIPInStackFrame();
+  // Update function executionCount_ count
+  curCodeBlock->incrementExecutionCount();
+
 #ifndef NDEBUG
-    runtime.invalidateCurrentIP();
+  runtime.invalidateCurrentIP();
 #endif
 
-    // Point frameRegs to the first register in the new frame. Note that at this
-    // moment technically it points above the top of the stack, but we are never
-    // going to access it.
-    frameRegs = &newFrame.getFirstLocalRef();
-
+  if (!SingleStep) {
 #ifndef NDEBUG
     LLVM_DEBUG(
         dbgs() << "function entry: stackLevel=" << runtime.getStackLevel()
@@ -1008,26 +680,6 @@ tailCall:
     }
 #endif
 
-    // Allocate the registers for the new frame.
-    if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
-            curCodeBlock->getFrameSize() +
-                StackFrameLayout::CalleeExtraRegistersAtStart,
-            HermesValue::encodeUndefinedValue())))
-      goto stackOverflow;
-
-    ip = (Inst const *)curCodeBlock->begin();
-
-    // Check for invalid invocation.
-    if (LLVM_UNLIKELY(curCodeBlock->getHeaderFlags().isCallProhibited(
-            newFrame.isConstructorCall()))) {
-      if (!newFrame.isConstructorCall()) {
-        CAPTURE_IP(
-            runtime.raiseTypeError("Class constructor invoked without new"));
-      } else {
-        CAPTURE_IP(runtime.raiseTypeError("Function is not a constructor"));
-      }
-      goto handleExceptionInParent;
-    }
   } else {
     // Point frameRegs to the first register in the frame.
     frameRegs = &runtime.getCurrentFrame().getFirstLocalRef();
@@ -1047,7 +699,7 @@ tailCall:
     HERMES_SLOW_ASSERT(                                                      \
         gcScope.getHandleCountDbg() == KEEP_HANDLES &&                       \
         "unaccounted handles were created");                                 \
-    HERMES_SLOW_ASSERT(tmpHandle->isUndefined() && "tmpHandle not cleared"); \
+    HERMES_SLOW_ASSERT(lv.tmp.isCleared() && "lv.tmp not cleared");          \
     RECORD_OPCODE_START_TIME;                                                \
     INC_OPCODE_COUNT;                                                        \
     if (EnableCrashTrace) {                                                  \
@@ -1069,14 +721,12 @@ tailCall:
 #define DISPATCH                                \
   BEFORE_OP_CODE;                               \
   if (SingleStep) {                             \
+    runtime.setCurrentIP(ip);                   \
     state.codeBlock = curCodeBlock;             \
     state.offset = CUROFFSET;                   \
     return HermesValue::encodeUndefinedValue(); \
   }                                             \
   goto *opcodeDispatch[(unsigned)ip->opCode]
-
-// Do nothing if we're not in a switch.
-#define INTERPRETER_FALLTHROUGH
 
 #else // HERMESVM_INDIRECT_THREADING
 
@@ -1084,14 +734,12 @@ tailCall:
 #define DEFAULT_CASE default:
 #define DISPATCH                                \
   if (SingleStep) {                             \
+    runtime.setCurrentIP(ip);                   \
     state.codeBlock = curCodeBlock;             \
     state.offset = CUROFFSET;                   \
     return HermesValue::encodeUndefinedValue(); \
   }                                             \
   continue
-
-// Fallthrough if we're in a switch.
-#define INTERPRETER_FALLTHROUGH [[fallthrough]]
 
 #endif // HERMESVM_INDIRECT_THREADING
 
@@ -1144,6 +792,7 @@ tailCall:
       const Inst *nextIP;
       uint32_t idVal;
       bool tryProp;
+      bool strictMode;
       uint32_t callArgCount;
       // This is HermesValue::getRaw(), since HermesValue cannot be assigned
       // to. It is meant to be used only for very short durations, in the
@@ -1171,100 +820,102 @@ tailCall:
 /// operands are numbers.
 /// \param name the name of the instruction. The fast path case will have a
 ///     "n" appended to the name.
-#define BINOP(name)                                                      \
-  CASE(name) {                                                           \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
-      /* Fast-path. */                                                   \
-      INTERPRETER_FALLTHROUGH;                                           \
-      CASE(name##N) {                                                    \
-        O1REG(name) = HermesValue::encodeTrustedNumberValue(             \
-            do##name(O2REG(name).getNumber(), O3REG(name).getNumber())); \
-        ip = NEXTINST(name);                                             \
-        DISPATCH;                                                        \
-      }                                                                  \
-    }                                                                    \
-    CAPTURE_IP(                                                          \
-        res = doOperSlowPath<do##name>(                                  \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
-    if (res == ExecutionStatus::EXCEPTION)                               \
-      goto exception;                                                    \
-    O1REG(name) = *res;                                                  \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
-    ip = NEXTINST(name);                                                 \
-    DISPATCH;                                                            \
+#define BINOP(name)                                                        \
+  CASE(name) {                                                             \
+    if (LLVM_LIKELY(                                                       \
+            _sh_ljs_are_both_non_nan_numbers(O2REG(name), O3REG(name)))) { \
+      /* Fast-path. */                                                     \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(                 \
+          do##name(O2REG(name).getNumber(), O3REG(name).getNumber()));     \
+      ip = NEXTINST(name);                                                 \
+      DISPATCH;                                                            \
+    }                                                                      \
+    CAPTURE_IP_ASSIGN(                                                     \
+        ExecutionStatus status,                                            \
+        doOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name));   \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))               \
+      goto exception;                                                      \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                               \
+    ip = NEXTINST(name);                                                   \
+    DISPATCH;                                                              \
+  }                                                                        \
+  CASE(name##N) {                                                          \
+    O1REG(name) = HermesValue::encodeTrustedNumberValue(                   \
+        do##name(O2REG(name).getNumber(), O3REG(name).getNumber()));       \
+    ip = NEXTINST(name);                                                   \
+    DISPATCH;                                                              \
   }
 
-#define INCDECOP(name)                                                        \
-  CASE(name) {                                                                \
-    if (LLVM_LIKELY(O2REG(name).isNumber())) {                                \
-      O1REG(name) = HermesValue::encodeTrustedNumberValue(                    \
-          do##name(O2REG(name).getNumber()));                                 \
-      ip = NEXTINST(name);                                                    \
-      DISPATCH;                                                               \
-    }                                                                         \
-    CAPTURE_IP(                                                               \
-        res =                                                                 \
-            doIncDecOperSlowPath<do##name>(runtime, Handle<>(&O2REG(name)))); \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                   \
-      goto exception;                                                         \
-    }                                                                         \
-    O1REG(name) = *res;                                                       \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                                  \
-    ip = NEXTINST(name);                                                      \
-    DISPATCH;                                                                 \
-  }
-
-/// Implement a shift instruction with a fast path where both
-/// operands are numbers.
-/// \param name the name of the instruction.
-#define SHIFTOP(name)                                                          \
+#define INCDECOP(name)                                                         \
   CASE(name) {                                                                 \
-    if (LLVM_LIKELY(                                                           \
-            O2REG(name).isNumber() &&                                          \
-            O3REG(name).isNumber())) { /* Fast-path. */                        \
-      auto lnum = hermes::truncateToInt32(O2REG(name).getNumber());            \
-      uint32_t rnum = hermes::truncateToInt32(O3REG(name).getNumber()) & 0x1f; \
-      O1REG(name) =                                                            \
-          HermesValue::encodeTrustedNumberValue(do##name(lnum, rnum));         \
+    if (LLVM_LIKELY(_sh_ljs_is_non_nan_number(O2REG(name)))) {                 \
+      O1REG(name) = HermesValue::encodeTrustedNumberValue(                     \
+          do##name(O2REG(name).getNumber()));                                  \
       ip = NEXTINST(name);                                                     \
       DISPATCH;                                                                \
     }                                                                          \
-    CAPTURE_IP(                                                                \
-        res = doShiftOperSlowPath<do##name>(                                   \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));         \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {                    \
+    CAPTURE_IP_ASSIGN(                                                         \
+        ExecutionStatus status,                                                \
+        doIncDecOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name)); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {                 \
       goto exception;                                                          \
     }                                                                          \
-    O1REG(name) = *res;                                                        \
     gcScope.flushToSmallCount(KEEP_HANDLES);                                   \
     ip = NEXTINST(name);                                                       \
     DISPATCH;                                                                  \
   }
 
+/// Implement a shift instruction with a fast path where both
+/// operands are numbers.
+/// \param name the name of the instruction.
+#define SHIFTOP(name)                                                         \
+  CASE(name) {                                                                \
+    int32_t lhsInt, rhsInt;                                                   \
+    if (LLVM_LIKELY(                                                          \
+            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&        \
+            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {       \
+      /* Fast - path. */                                                      \
+      uint32_t shiftAmt = rhsInt & 0x1f;                                      \
+      O1REG(name) =                                                           \
+          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, shiftAmt));  \
+      ip = NEXTINST(name);                                                    \
+      DISPATCH;                                                               \
+    }                                                                         \
+    CAPTURE_IP_ASSIGN(                                                        \
+        ExecutionStatus status,                                               \
+        doShiftOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name)); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {                \
+      goto exception;                                                         \
+    }                                                                         \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                  \
+    ip = NEXTINST(name);                                                      \
+    DISPATCH;                                                                 \
+  }
+
 /// Implement a binary bitwise instruction with a fast path where both
 /// operands are numbers.
 /// \param name the name of the instruction.
-#define BITWISEBINOP(name)                                               \
-  CASE(name) {                                                           \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
-      /* Fast-path. */                                                   \
-      O1REG(name) = HermesValue::encodeTrustedNumberValue(               \
-          do##name(                                                      \
-              hermes::truncateToInt32(O2REG(name).getNumber()),          \
-              hermes::truncateToInt32(O3REG(name).getNumber())));        \
-      ip = NEXTINST(name);                                               \
-      DISPATCH;                                                          \
-    }                                                                    \
-    CAPTURE_IP(                                                          \
-        res = doBitOperSlowPath<do##name>(                               \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {              \
-      goto exception;                                                    \
-    }                                                                    \
-    O1REG(name) = *res;                                                  \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
-    ip = NEXTINST(name);                                                 \
-    DISPATCH;                                                            \
+#define BITWISEBINOP(name)                                                  \
+  CASE(name) {                                                              \
+    int32_t lhsInt, rhsInt;                                                 \
+    if (LLVM_LIKELY(                                                        \
+            _sh_ljs_tryfast_truncate_to_int32(O2REG(name), &lhsInt) &&      \
+            _sh_ljs_tryfast_truncate_to_int32(O3REG(name), &rhsInt))) {     \
+      /* Fast-path. */                                                      \
+      O1REG(name) =                                                         \
+          HermesValue::encodeTrustedNumberValue(do##name(lhsInt, rhsInt));  \
+      ip = NEXTINST(name);                                                  \
+      DISPATCH;                                                             \
+    }                                                                       \
+    CAPTURE_IP_ASSIGN(                                                      \
+        ExecutionStatus status,                                             \
+        doBitOperSlowPath_RJS<do##name>(runtime, frameRegs, &ip->i##name)); \
+    if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {              \
+      goto exception;                                                       \
+    }                                                                       \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                                \
+    ip = NEXTINST(name);                                                    \
+    DISPATCH;                                                               \
   }
 
 /// Implement a comparison instruction.
@@ -1272,30 +923,30 @@ tailCall:
 /// \param oper the C++ operator to use to actually perform the fast arithmetic
 ///     comparison.
 /// \param operFuncName  function to call for the slow-path comparison.
-#define CONDOP(name, oper, operFuncName)                                 \
-  CASE(name) {                                                           \
-    if (LLVM_LIKELY(O2REG(name).isNumber() && O3REG(name).isNumber())) { \
-      /* Fast-path. */                                                   \
-      O1REG(name) = HermesValue::encodeBoolValue(                        \
-          O2REG(name).getNumber() oper O3REG(name).getNumber());         \
-      ip = NEXTINST(name);                                               \
-      DISPATCH;                                                          \
-    }                                                                    \
-    CAPTURE_IP(                                                          \
-        boolRes = operFuncName(                                          \
-            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));   \
-    if (boolRes == ExecutionStatus::EXCEPTION)                           \
-      goto exception;                                                    \
-    gcScope.flushToSmallCount(KEEP_HANDLES);                             \
-    O1REG(name) = HermesValue::encodeBoolValue(boolRes.getValue());      \
-    ip = NEXTINST(name);                                                 \
-    DISPATCH;                                                            \
+#define CONDOP(name, oper, operFuncName)                                   \
+  CASE(name) {                                                             \
+    if (LLVM_LIKELY(                                                       \
+            _sh_ljs_are_both_non_nan_numbers(O2REG(name), O3REG(name)))) { \
+      /* Fast-path. */                                                     \
+      O1REG(name) = HermesValue::encodeBoolValue(                          \
+          O2REG(name).getNumber() oper O3REG(name).getNumber());           \
+      ip = NEXTINST(name);                                                 \
+      DISPATCH;                                                            \
+    }                                                                      \
+    CAPTURE_IP(                                                            \
+        boolRes = operFuncName(                                            \
+            runtime, Handle<>(&O2REG(name)), Handle<>(&O3REG(name))));     \
+    if (boolRes == ExecutionStatus::EXCEPTION)                             \
+      goto exception;                                                      \
+    gcScope.flushToSmallCount(KEEP_HANDLES);                               \
+    O1REG(name) = HermesValue::encodeBoolValue(boolRes.getValue());        \
+    ip = NEXTINST(name);                                                   \
+    DISPATCH;                                                              \
   }
 
 /// Implement a comparison conditional jump with a fast path where both
 /// operands are numbers.
-/// \param name the name of the instruction. The fast path case will have a
-///     "N" appended to the name.
+/// \param name the name of the instruction.
 /// \param suffix  Optional suffix to be added to the end (e.g. Long)
 /// \param oper the C++ operator to use to actually perform the fast arithmetic
 ///     comparison.
@@ -1304,21 +955,17 @@ tailCall:
 /// \param falseDest  ip value if the conditional evaluates to false
 #define JCOND_IMPL(name, suffix, oper, operFuncName, trueDest, falseDest) \
   CASE(name##suffix) {                                                    \
-    if (LLVM_LIKELY(                                                      \
-            O2REG(name##suffix).isNumber() &&                             \
-            O3REG(name##suffix).isNumber())) {                            \
+    if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(                     \
+            O2REG(name##suffix), O3REG(name##suffix)))) {                 \
       /* Fast-path. */                                                    \
-      INTERPRETER_FALLTHROUGH;                                            \
-      CASE(name##N##suffix) {                                             \
-        if (O2REG(name##N##suffix)                                        \
-                .getNumber() oper O3REG(name##N##suffix)                  \
-                .getNumber()) {                                           \
-          ip = trueDest;                                                  \
-          DISPATCH;                                                       \
-        }                                                                 \
-        ip = falseDest;                                                   \
+      if (O2REG(name##suffix)                                             \
+              .getNumber() oper O3REG(name##suffix)                       \
+              .getNumber()) {                                             \
+        ip = trueDest;                                                    \
         DISPATCH;                                                         \
       }                                                                   \
+      ip = falseDest;                                                     \
+      DISPATCH;                                                           \
     }                                                                     \
     CAPTURE_IP(                                                           \
         boolRes = operFuncName(                                           \
@@ -1334,6 +981,19 @@ tailCall:
     }                                                                     \
     ip = falseDest;                                                       \
     DISPATCH;                                                             \
+  }
+
+/// Like JCOND_IMPL, but for cases where the operands are known to be numbers.
+#define JCOND_N_IMPL(name, suffix, oper, operFuncName, trueDest, falseDest) \
+  CASE(name##N##suffix) {                                                   \
+    if (O2REG(name##suffix)                                                 \
+            .getNumber() oper O3REG(name##suffix)                           \
+            .getNumber()) {                                                 \
+      ip = trueDest;                                                        \
+      DISPATCH;                                                             \
+    }                                                                       \
+    ip = falseDest;                                                         \
+    DISPATCH;                                                               \
   }
 
 /// Implement a strict equality conditional jump
@@ -1377,34 +1037,34 @@ tailCall:
   }
 
 /// Implement the long and short forms of a conditional jump, and its negation.
-#define JCOND(name, oper, operFuncName) \
-  JCOND_IMPL(                           \
-      J##name,                          \
-      ,                                 \
-      oper,                             \
-      operFuncName,                     \
-      IPADD(ip->iJ##name.op1),          \
-      NEXTINST(J##name));               \
-  JCOND_IMPL(                           \
-      J##name,                          \
-      Long,                             \
-      oper,                             \
-      operFuncName,                     \
-      IPADD(ip->iJ##name##Long.op1),    \
-      NEXTINST(J##name##Long));         \
-  JCOND_IMPL(                           \
-      JNot##name,                       \
-      ,                                 \
-      oper,                             \
-      operFuncName,                     \
-      NEXTINST(JNot##name),             \
-      IPADD(ip->iJNot##name.op1));      \
-  JCOND_IMPL(                           \
-      JNot##name,                       \
-      Long,                             \
-      oper,                             \
-      operFuncName,                     \
-      NEXTINST(JNot##name##Long),       \
+#define JCOND(name, oper, operFuncName, IMPL) \
+  IMPL(                                       \
+      J##name,                                \
+      ,                                       \
+      oper,                                   \
+      operFuncName,                           \
+      IPADD(ip->iJ##name.op1),                \
+      NEXTINST(J##name));                     \
+  IMPL(                                       \
+      J##name,                                \
+      Long,                                   \
+      oper,                                   \
+      operFuncName,                           \
+      IPADD(ip->iJ##name##Long.op1),          \
+      NEXTINST(J##name##Long));               \
+  IMPL(                                       \
+      JNot##name,                             \
+      ,                                       \
+      oper,                                   \
+      operFuncName,                           \
+      NEXTINST(JNot##name),                   \
+      IPADD(ip->iJNot##name.op1));            \
+  IMPL(                                       \
+      JNot##name,                             \
+      Long,                                   \
+      oper,                                   \
+      operFuncName,                           \
+      NEXTINST(JNot##name##Long),             \
       IPADD(ip->iJNot##name##Long.op1));
 
 /// Load a constant.
@@ -1465,9 +1125,9 @@ tailCall:
           O1REG(CoerceThisNS) = O2REG(CoerceThisNS);
         } else if (
             O2REG(CoerceThisNS).isNull() || O2REG(CoerceThisNS).isUndefined()) {
-          O1REG(CoerceThisNS) = runtime.global_;
+          O1REG(CoerceThisNS) = runtime.getGlobal().getHermesValue();
         } else {
-          tmpHandle = O2REG(CoerceThisNS);
+          lv.tmp = O2REG(CoerceThisNS);
           nextIP = NEXTINST(CoerceThisNS);
           goto coerceThisSlowPath;
         }
@@ -1480,9 +1140,9 @@ tailCall:
         } else if (
             FRAME.getThisArgRef().isNull() ||
             FRAME.getThisArgRef().isUndefined()) {
-          O1REG(LoadThisNS) = runtime.global_;
+          O1REG(LoadThisNS) = runtime.getGlobal().getHermesValue();
         } else {
-          tmpHandle = FRAME.getThisArgRef();
+          lv.tmp = FRAME.getThisArgRef();
           nextIP = NEXTINST(LoadThisNS);
           goto coerceThisSlowPath;
         }
@@ -1490,27 +1150,27 @@ tailCall:
         DISPATCH;
       }
     coerceThisSlowPath: {
-      CAPTURE_IP(res = toObject(runtime, tmpHandle));
+      CAPTURE_IP(res = toObject(runtime, lv.tmp));
       if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
         goto exception;
       }
       O1REG(CoerceThisNS) = res.getValue();
-      tmpHandle.clear();
+      lv.tmp.clear();
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
     }
 
-      CASE(ConstructLong) {
-        callArgCount = (uint32_t)ip->iConstructLong.op3;
-        nextIP = NEXTINST(ConstructLong);
-        callNewTarget = O2REG(ConstructLong).getRaw();
+      CASE(CallWithNewTarget) {
+        callArgCount = (uint32_t)ip->iCallWithNewTarget.op4;
+        nextIP = NEXTINST(CallWithNewTarget);
+        callNewTarget = O3REG(CallWithNewTarget).getRaw();
         goto doCall;
       }
-      CASE(CallLong) {
-        callArgCount = (uint32_t)ip->iCallLong.op3;
-        nextIP = NEXTINST(CallLong);
-        callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
+      CASE(CallWithNewTargetLong) {
+        callArgCount = O4REG(CallWithNewTarget).getNumber();
+        nextIP = NEXTINST(CallWithNewTargetLong);
+        callNewTarget = O3REG(CallWithNewTargetLong).getRaw();
         goto doCall;
       }
 
@@ -1521,7 +1181,7 @@ tailCall:
       CASE(Call1) {
         callArgCount = 1;
         nextIP = NEXTINST(Call1);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call1);
         callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
         goto doCall;
@@ -1530,7 +1190,7 @@ tailCall:
       CASE(Call2) {
         callArgCount = 2;
         nextIP = NEXTINST(Call2);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call2);
         fr.getArgRefUnsafe(0) = O4REG(Call2);
         callNewTarget = HermesValue::encodeUndefinedValue().getRaw();
@@ -1540,7 +1200,7 @@ tailCall:
       CASE(Call3) {
         callArgCount = 3;
         nextIP = NEXTINST(Call3);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call3);
         fr.getArgRefUnsafe(0) = O4REG(Call3);
         fr.getArgRefUnsafe(1) = O5REG(Call3);
@@ -1551,7 +1211,7 @@ tailCall:
       CASE(Call4) {
         callArgCount = 4;
         nextIP = NEXTINST(Call4);
-        StackFramePtr fr{runtime.stackPointer_};
+        StackFramePtr fr{runtime.getStackPointer()};
         fr.getArgRefUnsafe(-1) = O3REG(Call4);
         fr.getArgRefUnsafe(0) = O4REG(Call4);
         fr.getArgRefUnsafe(1) = O5REG(Call4);
@@ -1587,10 +1247,11 @@ tailCall:
       // Subtract 1 from callArgCount as 'this' is considered an argument in the
       // instruction, but not in the frame.
       auto newFrame = StackFramePtr::initFrame(
-          runtime.stackPointer_,
+          runtime.getStackPointer(),
           FRAME,
           ip,
           curCodeBlock,
+          /* SHLocals */ nullptr,
           callArgCount - 1,
           O2REG(Call),
           HermesValue::fromRaw(callNewTarget));
@@ -1605,13 +1266,66 @@ tailCall:
         runtime.pushCallStack(curCodeBlock, ip);
 #endif
 
-        CodeBlock *calleeBlock = func->getCodeBlock(runtime);
-        CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        CodeBlock *calleeBlock = func->getCodeBlock();
+        if (LLVM_UNLIKELY(calleeBlock->isLazy())) {
+          CAPTURE_IP_ASSIGN(
+              auto res, calleeBlock->compileLazyFunction(runtime));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+        }
+
+#ifdef HERMESVM_JIT
+        JITCompiledFunctionPtr jitPtr = calleeBlock->getJITCompiled();
+        if (!jitPtr && runtime.jitContext_.shouldCompile(calleeBlock)) {
+          // JIT compilation may allocate on the GC heap, e.g. to populate
+          // StringPrimitives in the IdentifierTable.
+          CAPTURE_IP_ASSIGN(
+              jitPtr, runtime.jitContext_.compile(runtime, calleeBlock));
+        }
+        if (jitPtr) {
+          CAPTURE_IP_ASSIGN(
+              auto rres, JSFunction::_jittedCall(jitPtr, runtime));
+          if (LLVM_UNLIKELY(rres == ExecutionStatus::EXCEPTION))
+            goto exception;
+          O1REG(Call) = *rres;
+          SLOW_DEBUG(
+              dbgs() << "JIT return value r" << (unsigned)ip->iCall.op1 << "="
+                     << DumpHermesValue(O1REG(Call)) << "\n");
+          ip = nextIP;
+          DISPATCH;
+        }
+#endif
+
+        // Check for invalid invocation.
+        bool isCtorCall = !HermesValue::fromRaw(callNewTarget).isUndefined();
+        if (LLVM_UNLIKELY(
+                calleeBlock->getHeaderFlags().isCallProhibited(isCtorCall))) {
+          CAPTURE_IP(runtime.raiseTypeError(
+              isCtorCall ? "Function is not a constructor"
+                         : "Class constructor invoked without new"));
           goto exception;
         }
+
+        // Allocate the registers for the new frame.
+        if (LLVM_UNLIKELY(!runtime.checkAndAllocStack(
+                calleeBlock->getFrameSize() +
+                StackFrameLayout::CalleeExtraRegistersAtStart))) {
+          CAPTURE_IP(runtime.raiseStackOverflow(
+              Runtime::StackOverflowKind::JSRegisterStack));
+          goto exception;
+        }
+
+        // Advance the frame pointer.
+        runtime.setCurrentFrame(newFrame);
+
+        // Update the executing CodeBlock to the callee.
         curCodeBlock = calleeBlock;
-        CAPTURE_IP_SET();
+        // Point frameRegs to the first register in the new frame.
+        frameRegs = &newFrame.getFirstLocalRef();
+        // Update the IP to the start of the callee.
+        ip = (Inst const *)curCodeBlock->begin();
+
         goto tailCall;
       }
       CAPTURE_IP(
@@ -1628,47 +1342,24 @@ tailCall:
       DISPATCH;
     }
 
-      CASE(CallDirect)
-      CASE(CallDirectLongIndex) {
-#ifdef HERMES_ENABLE_DEBUGGER
-        // Check for an async debugger request.
-        if (uint8_t asyncFlags =
-                runtime.testAndClearDebuggerAsyncBreakRequest()) {
-          RUN_DEBUGGER_ASYNC_BREAK(asyncFlags);
+      CASE(CallRequire) {
+        uint32_t modIndex = ip->iCallRequire.op3;
+        RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
+        HermesValue modExport = runtimeModule->getModuleExport(modIndex);
+        if (LLVM_LIKELY(!modExport.isEmpty())) {
+          // This is a cache hit.  Return the result obtained from the
+          // cache.
+          O1REG(CallRequire) = modExport;
+        } else {
+          CAPTURE_IP_ASSIGN(
+              ExecutionStatus res,
+              doCallRequireSlowPath_RJS(runtime, frameRegs, ip, runtimeModule));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+            goto exception;
           gcScope.flushToSmallCount(KEEP_HANDLES);
-          DISPATCH;
         }
-#endif
-
-        CAPTURE_IP_ASSIGN(
-            CodeBlock * calleeBlock,
-            ip->opCode == OpCode::CallDirect
-                ? curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
-                      ip->iCallDirect.op3)
-                : curCodeBlock->getRuntimeModule()->getCodeBlockMayAllocate(
-                      ip->iCallDirectLongIndex.op3));
-
-        auto newFrame = StackFramePtr::initFrame(
-            runtime.stackPointer_,
-            FRAME,
-            ip,
-            curCodeBlock,
-            (uint32_t)ip->iCallDirect.op2 - 1,
-            HermesValue::encodeNativePointer(calleeBlock),
-            HermesValue::encodeUndefinedValue());
-        (void)newFrame;
-
-        LLVM_DEBUG(dumpCallArguments(dbgs(), runtime, newFrame));
-
-        assert(!SingleStep && "can't single-step a call");
-
-        CAPTURE_IP_ASSIGN(auto res, calleeBlock->lazyCompile(runtime));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        curCodeBlock = calleeBlock;
-        CAPTURE_IP_SET();
-        goto tailCall;
+        ip = NEXTINST(CallRequire);
+        DISPATCH;
       }
 
       CASE(GetBuiltinClosure) {
@@ -1699,58 +1390,6 @@ tailCall:
           goto exception;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CallBuiltinLong);
-        DISPATCH;
-      }
-
-      CASE(CompleteGenerator) {
-        auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime.getCurrentFrame().getCalleeClosureUnsafe());
-        innerFn->setState(GeneratorInnerFunction::State::Completed);
-        ip = NEXTINST(CompleteGenerator);
-        DISPATCH;
-      }
-
-      CASE(SaveGenerator) {
-        DONT_CAPTURE_IP(
-            saveGenerator(runtime, frameRegs, IPADD(ip->iSaveGenerator.op1)));
-        ip = NEXTINST(SaveGenerator);
-        DISPATCH;
-      }
-      CASE(SaveGeneratorLong) {
-        DONT_CAPTURE_IP(saveGenerator(
-            runtime, frameRegs, IPADD(ip->iSaveGeneratorLong.op1)));
-        ip = NEXTINST(SaveGeneratorLong);
-        DISPATCH;
-      }
-
-      CASE(StartGenerator) {
-        auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime.getCurrentFrame().getCalleeClosureUnsafe());
-        if (innerFn->getState() ==
-            GeneratorInnerFunction::State::SuspendedStart) {
-          nextIP = NEXTINST(StartGenerator);
-        } else {
-          nextIP = innerFn->getNextIP(runtime);
-          innerFn->restoreStack(runtime);
-        }
-        innerFn->setState(GeneratorInnerFunction::State::Executing);
-        ip = nextIP;
-        DISPATCH;
-      }
-
-      CASE(ResumeGenerator) {
-        auto *innerFn = vmcast<GeneratorInnerFunction>(
-            runtime.getCurrentFrame().getCalleeClosureUnsafe());
-        O2REG(ResumeGenerator) = HermesValue::encodeBoolValue(
-            innerFn->getAction() == GeneratorInnerFunction::Action::Return);
-        // Write the result last in case it is the same register as O2REG.
-        O1REG(ResumeGenerator) = innerFn->getResult().unboxToHV(runtime);
-        innerFn->clearResult(runtime);
-        if (innerFn->getAction() == GeneratorInnerFunction::Action::Throw) {
-          runtime.setThrownValue(O1REG(ResumeGenerator));
-          goto exception;
-        }
-        ip = NEXTINST(ResumeGenerator);
         DISPATCH;
       }
 
@@ -1829,11 +1468,11 @@ tailCall:
       }
 
       CASE(Catch) {
-        assert(!runtime.thrownValue_.isEmpty() && "Invalid thrown value");
+        assert(!runtime.thrownValue_->isEmpty() && "Invalid thrown value");
         assert(
-            !isUncatchableError(runtime.thrownValue_) &&
+            !isUncatchableError(*runtime.thrownValue_) &&
             "Uncatchable thrown value was caught");
-        O1REG(Catch) = runtime.thrownValue_;
+        O1REG(Catch) = *runtime.thrownValue_;
         runtime.clearThrownValue();
 #ifdef HERMES_ENABLE_DEBUGGER
         // Signal to the debugger that we're done unwinding an exception,
@@ -1848,7 +1487,7 @@ tailCall:
         runtime.thrownValue_ = O1REG(Throw);
         SLOW_DEBUG(
             dbgs() << "Exception thrown: "
-                   << DumpHermesValue(runtime.thrownValue_) << "\n");
+                   << DumpHermesValue(*runtime.thrownValue_) << "\n");
         goto exception;
       }
 
@@ -1861,6 +1500,31 @@ tailCall:
         }
         O1REG(ThrowIfEmpty) = O2REG(ThrowIfEmpty);
         ip = NEXTINST(ThrowIfEmpty);
+        DISPATCH;
+      }
+
+      CASE(ThrowIfUndefined) {
+        if (LLVM_UNLIKELY(O2REG(ThrowIfUndefined).isUndefined())) {
+          SLOW_DEBUG(
+              dbgs() << "Throwing ReferenceError for undefined variable");
+          CAPTURE_IP(runtime.raiseReferenceError(
+              "accessing an uninitialized variable"));
+          goto exception;
+        }
+        O1REG(ThrowIfUndefined) = O2REG(ThrowIfUndefined);
+        ip = NEXTINST(ThrowIfUndefined);
+        DISPATCH;
+      }
+
+      CASE(ThrowIfThisInitialized) {
+        if (LLVM_UNLIKELY(!O1REG(ThrowIfThisInitialized).isEmpty())) {
+          SLOW_DEBUG(
+              dbgs() << "Throwing Error for already initialized subclass this");
+          CAPTURE_IP(runtime.raiseReferenceError(
+              "Cannot call super constructor twice"));
+          goto exception;
+        }
+        ip = NEXTINST(ThrowIfThisInitialized);
         DISPATCH;
       }
 
@@ -1957,6 +1621,32 @@ tailCall:
         // dispatch.
       }
 
+      CASE(CreateBaseClass) {
+        nextIP = NEXTINST(CreateBaseClass);
+        goto createClass;
+      }
+      CASE(CreateBaseClassLongIndex) {
+        nextIP = NEXTINST(CreateBaseClassLongIndex);
+        goto createClass;
+      }
+      CASE(CreateDerivedClassLongIndex) {
+        nextIP = NEXTINST(CreateDerivedClassLongIndex);
+        goto createClass;
+      }
+      CASE(CreateDerivedClass) {
+        nextIP = NEXTINST(CreateDerivedClass);
+        goto createClass;
+      }
+    createClass: {
+      CAPTURE_IP_ASSIGN(auto res, caseCreateClass(runtime, frameRegs));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        goto exception;
+      }
+      gcScope.flushToSmallCount(KEEP_HANDLES);
+      ip = nextIP;
+      DISPATCH;
+    }
+
       CASE(CreateClosure) {
         idVal = ip->iCreateClosure.op3;
         nextIP = NEXTINST(CreateClosure);
@@ -1971,65 +1661,14 @@ tailCall:
       auto *runtimeModule = curCodeBlock->getRuntimeModule();
       CAPTURE_IP(
           O1REG(CreateClosure) =
-              JSFunction::create(
+              JSFunction::createWithInferredParent(
                   runtime,
                   runtimeModule->getDomain(runtime),
-                  Handle<JSObject>::vmcast(&runtime.functionPrototype),
-                  Handle<Environment>::vmcast(&O2REG(CreateClosure)),
+                  O2REG(CreateClosure).isUndefined()
+                      ? Runtime::makeNullHandle<Environment>()
+                      : Handle<Environment>::vmcast(&O2REG(CreateClosure)),
                   runtimeModule->getCodeBlockMayAllocate(idVal))
                   .getHermesValue());
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
-
-      CASE(CreateAsyncClosure) {
-        idVal = ip->iCreateAsyncClosure.op3;
-        nextIP = NEXTINST(CreateAsyncClosure);
-        goto createAsyncClosure;
-      }
-      CASE(CreateAsyncClosureLongIndex) {
-        idVal = ip->iCreateAsyncClosureLongIndex.op3;
-        nextIP = NEXTINST(CreateAsyncClosureLongIndex);
-        goto createAsyncClosure;
-      }
-    createAsyncClosure: {
-      auto *runtimeModule = curCodeBlock->getRuntimeModule();
-      CAPTURE_IP_ASSIGN(
-          O1REG(CreateAsyncClosure),
-          JSAsyncFunction::create(
-              runtime,
-              runtimeModule->getDomain(runtime),
-              Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype),
-              Handle<Environment>::vmcast(&O2REG(CreateAsyncClosure)),
-              runtimeModule->getCodeBlockMayAllocate(idVal))
-              .getHermesValue());
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
-
-      CASE(CreateGeneratorClosure) {
-        idVal = ip->iCreateGeneratorClosure.op3;
-        nextIP = NEXTINST(CreateGeneratorClosure);
-        goto createGeneratorClosure;
-      }
-      CASE(CreateGeneratorClosureLongIndex) {
-        idVal = ip->iCreateGeneratorClosureLongIndex.op3;
-        nextIP = NEXTINST(CreateGeneratorClosureLongIndex);
-        goto createGeneratorClosure;
-      }
-    createGeneratorClosure: {
-      auto *runtimeModule = curCodeBlock->getRuntimeModule();
-      CAPTURE_IP_ASSIGN(
-          O1REG(CreateGeneratorClosure),
-          JSGeneratorFunction::create(
-              runtime,
-              runtimeModule->getDomain(runtime),
-              Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype),
-              Handle<Environment>::vmcast(&O2REG(CreateGeneratorClosure)),
-              runtimeModule->getCodeBlockMayAllocate(idVal))
-              .getHermesValue());
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
@@ -2042,7 +1681,9 @@ tailCall:
                 runtime,
                 curCodeBlock->getRuntimeModule(),
                 ip->iCreateGenerator.op3,
-                Handle<Environment>::vmcast(&O2REG(CreateGenerator)),
+                O2REG(CreateGenerator).isUndefined()
+                    ? Runtime::makeNullHandle<Environment>()
+                    : Handle<Environment>::vmcast(&O2REG(CreateGenerator)),
                 FRAME.getNativeArgs()));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
@@ -2073,10 +1714,8 @@ tailCall:
       }
 
       CASE(GetEnvironment) {
-        // The currently executing function must exist, so get the environment.
-        Environment *curEnv =
-            FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime);
-        for (unsigned level = ip->iGetEnvironment.op2; level; --level) {
+        Environment *curEnv = vmcast<Environment>(O2REG(GetEnvironment));
+        for (unsigned level = ip->iGetEnvironment.op3; level; --level) {
           assert(curEnv && "invalid environment relative level");
           curEnv = curEnv->getParentEnvironment(runtime);
         }
@@ -2085,28 +1724,72 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(CreateInnerEnvironment) {
-        CAPTURE_IP(
-            O1REG(CreateInnerEnvironment) = Environment::create(
-                runtime,
-                Handle<Environment>::vmcast(&O2REG(CreateInnerEnvironment)),
-                ip->iCreateInnerEnvironment.op3));
-        ip = NEXTINST(CreateInnerEnvironment);
+      CASE(GetParentEnvironment) {
+        // The currently executing function must exist, so get the environment.
+        Environment *curEnv =
+            FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime);
+        for (unsigned level = ip->iGetParentEnvironment.op2; level; --level) {
+          assert(curEnv && "invalid environment relative level");
+          curEnv = curEnv->getParentEnvironment(runtime);
+        }
+        O1REG(GetParentEnvironment) = HermesValue::encodeObjectValue(curEnv);
+        ip = NEXTINST(GetParentEnvironment);
+        DISPATCH;
+      }
+      CASE(GetClosureEnvironment) {
+        O1REG(GetClosureEnvironment) = HermesValue::encodeObjectValue(
+            vmcast<Callable>(O2REG(GetClosureEnvironment))
+                ->getEnvironment(runtime));
+        ip = NEXTINST(GetClosureEnvironment);
         DISPATCH;
       }
 
       CASE(CreateEnvironment) {
-        tmpHandle = HermesValue::encodeObjectValueUnsafe(
-            FRAME.getCalleeClosureUnsafe()->getEnvironment(runtime));
-
-        CAPTURE_IP(
-            O1REG(CreateEnvironment) = Environment::create(
+        CAPTURE_IP_ASSIGN(
+            HermesValue envHV,
+            Environment::create(
                 runtime,
-                Handle<Environment>::vmcast_or_null(tmpHandle),
-                curCodeBlock->getEnvironmentSize()));
+                Handle<Environment>::vmcast(&O2REG(CreateEnvironment)),
+                ip->iCreateEnvironment.op3));
 
-        tmpHandle = HermesValue::encodeUndefinedValue();
+        O1REG(CreateEnvironment) = envHV;
+#ifdef HERMES_ENABLE_DEBUGGER
+        FRAME.getDebugEnvironmentRef() = envHV;
+#endif
         ip = NEXTINST(CreateEnvironment);
+        DISPATCH;
+      }
+
+      CASE(CreateFunctionEnvironment) {
+        CAPTURE_IP_ASSIGN(
+            Environment * env,
+            Environment::create(
+                runtime,
+                FRAME.getCalleeClosureHandleUnsafe(),
+                ip->iCreateFunctionEnvironment.op2));
+
+        O1REG(CreateFunctionEnvironment) = HermesValue::encodeObjectValue(env);
+#ifdef HERMES_ENABLE_DEBUGGER
+        FRAME.getDebugEnvironmentRef() = O1REG(CreateFunctionEnvironment);
+#endif
+        lv.tmp.clear();
+        ip = NEXTINST(CreateFunctionEnvironment);
+        DISPATCH;
+      }
+
+      CASE(CreateTopLevelEnvironment) {
+        CAPTURE_IP_ASSIGN(
+            HermesValue envHV,
+            Environment::create(
+                runtime,
+                Runtime::makeNullHandle<Environment>(),
+                ip->iCreateTopLevelEnvironment.op2));
+
+        O1REG(CreateTopLevelEnvironment) = envHV;
+#ifdef HERMES_ENABLE_DEBUGGER
+        FRAME.getDebugEnvironmentRef() = envHV;
+#endif
+        ip = NEXTINST(CreateTopLevelEnvironment);
         DISPATCH;
       }
 
@@ -2157,7 +1840,7 @@ tailCall:
       }
 
       CASE(GetGlobalObject) {
-        O1REG(GetGlobalObject) = runtime.global_;
+        O1REG(GetGlobalObject) = runtime.getGlobal().getHermesValue();
         ip = NEXTINST(GetGlobalObject);
         DISPATCH;
       }
@@ -2165,6 +1848,19 @@ tailCall:
       CASE(GetNewTarget) {
         O1REG(GetNewTarget) = FRAME.getNewTargetRef();
         ip = NEXTINST(GetNewTarget);
+        DISPATCH;
+      }
+
+      CASE(LoadParentNoTraps) {
+        assert(
+            !vmcast<JSObject>(O2REG(LoadParentNoTraps))->isProxyObject() &&
+            "proxy is not supported");
+        auto *parent =
+            vmcast<JSObject>(O2REG(LoadParentNoTraps))->getParent(runtime);
+        O1REG(LoadParentNoTraps) = parent
+            ? HermesValue::encodeObjectValue(parent)
+            : HermesValue::encodeNullValue();
+        ip = NEXTINST(LoadParentNoTraps);
         DISPATCH;
       }
 
@@ -2178,478 +1874,441 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(ThrowIfHasRestrictedGlobalProperty) {
-        CAPTURE_IP_ASSIGN(
-            auto res,
-            throwIfHasRestrictedGlobalPropertyImpl(runtime, curCodeBlock, ip));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        ip = NEXTINST(ThrowIfHasRestrictedGlobalProperty);
-        DISPATCH;
-      }
+#ifndef NDEBUG
+#define INC_NUMGETBYIDDICT                                               \
+  if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary()) \
+    ++NumGetByIdDict;
+#else
+#define INC_NUMGETBYIDDICT (void)NumGetByIdDict;
+#endif
+
+#define GET_BY_ID_IMPL(name)                                                  \
+  ++NumGetById;                                                               \
+  if (LLVM_LIKELY(O2REG(name).isObject())) {                                  \
+    auto *obj = vmcast<JSObject>(O2REG(name));                                \
+    auto cacheIdx = ip->i##name.op3;                                          \
+    auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);             \
+    CompressedPointer clazzPtr{obj->getClassGCPtr()};                         \
+    INC_NUMGETBYIDDICT;                                                       \
+    /* If we have a cache hit, reuse the cached offset and immediately return \
+     * the property. */                                                       \
+    if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {                         \
+      ++NumGetByIdCacheHits;                                                  \
+      O1REG(name) = JSObject::getNamedSlotValueUnsafe(                        \
+                        obj, runtime, cacheEntry->getSlot())                  \
+                        .unboxToHV(runtime);                                  \
+      ip = NEXTINST(name);                                                    \
+      DISPATCH;                                                               \
+    }                                                                         \
+    if (LLVM_LIKELY(cacheEntry->negMatchClazz == clazzPtr)) {                 \
+      /* Proxy, HostObject and lazy objects have special hidden classes, so   \
+       * they should never match the cached class. */                         \
+      assert(!obj->getFlags().proxyObject);                                   \
+      assert(!obj->getFlags().hostObject);                                    \
+      assert(!obj->getFlags().lazyObject);                                    \
+      const GCPointer<JSObject> &parentGCPtr = obj->getParentGCPtr();         \
+      if (LLVM_LIKELY(parentGCPtr)) {                                         \
+        JSObject *parent = parentGCPtr.getNonNull(runtime);                   \
+        if (LLVM_LIKELY(cacheEntry->clazz == parent->getClassGCPtr())) {      \
+          ++NumGetByIdProtoHits;                                              \
+          /* We've already checked that this isn't a Proxy. */                \
+          O1REG(name) = JSObject::getNamedSlotValueUnsafe(                    \
+                            parent, runtime, cacheEntry->getSlot())           \
+                            .unboxToHV(runtime);                              \
+          ip = NEXTINST(name);                                                \
+          DISPATCH;                                                           \
+        }                                                                     \
+      }                                                                       \
+    }                                                                         \
+  }                                                                           \
+  CAPTURE_IP_ASSIGN(                                                          \
+      ExecutionStatus res,                                                    \
+      doGetByIdSlowPath_RJS(                                                  \
+          runtime, frameRegs, ip, curCodeBlock, idVal, tryProp));             \
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))                       \
+    goto exception;                                                           \
+  gcScope.flushToSmallCount(KEEP_HANDLES);                                    \
+  ip = NEXTINST(name);                                                        \
+  DISPATCH;
 
       CASE(TryGetByIdLong) {
         tryProp = true;
         idVal = ip->iTryGetByIdLong.op4;
-        nextIP = NEXTINST(TryGetByIdLong);
-        goto getById;
+        GET_BY_ID_IMPL(TryGetByIdLong);
       }
       CASE(GetByIdLong) {
         tryProp = false;
         idVal = ip->iGetByIdLong.op4;
-        nextIP = NEXTINST(GetByIdLong);
-        goto getById;
+        GET_BY_ID_IMPL(GetByIdLong);
       }
       CASE(GetByIdShort) {
         tryProp = false;
         idVal = ip->iGetByIdShort.op4;
-        nextIP = NEXTINST(GetByIdShort);
-        goto getById;
+        GET_BY_ID_IMPL(GetByIdShort);
       }
       CASE(TryGetById) {
         tryProp = true;
         idVal = ip->iTryGetById.op4;
-        nextIP = NEXTINST(TryGetById);
-        goto getById;
+        GET_BY_ID_IMPL(TryGetById);
       }
       CASE(GetById) {
         tryProp = false;
         idVal = ip->iGetById.op4;
-        nextIP = NEXTINST(GetById);
+        GET_BY_ID_IMPL(GetById);
       }
-    getById: {
-      ++NumGetById;
-      // NOTE: it is safe to use OnREG(GetById) here because all instructions
-      // have the same layout: opcode, registers, non-register operands, i.e.
-      // they only differ in the width of the last "identifier" field.
-      if (LLVM_LIKELY(O2REG(GetById).isObject())) {
-        auto *obj = vmcast<JSObject>(O2REG(GetById));
-        auto cacheIdx = ip->iGetById.op3;
-        auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
 
-#ifdef HERMESVM_PROFILER_BB
-        {
-          HERMES_SLOW_ASSERT(
-              gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-              "unaccounted handles were created");
-          auto objHandle = runtime.makeHandle(obj);
-          auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              cacheEntry->clazz.get(runtime, runtime.getHeap())));
-          CAPTURE_IP(runtime.recordHiddenClass(
-              curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
-          // obj may be moved by GC due to recordHiddenClass
-          obj = objHandle.get();
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-#endif
-        CompressedPointer clazzPtr{obj->getClassGCPtr()};
-#ifndef NDEBUG
-        if (vmcast<HiddenClass>(clazzPtr.getNonNull(runtime))->isDictionary())
-          ++NumGetByIdDict;
-#else
-        (void)NumGetByIdDict;
-#endif
+#undef INC_NUMGETBYIDDICT
+#undef GET_BY_ID_IMPL
 
-        // If we have a cache hit, reuse the cached offset and immediately
-        // return the property.
-        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
-          ++NumGetByIdCacheHits;
-          CAPTURE_IP(
-              O1REG(GetById) =
-                  JSObject::getNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-                      obj, runtime, cacheEntry->slot)
-                      .unboxToHV(runtime));
-          ip = nextIP;
-          DISPATCH;
-        }
-        auto id = ID(idVal);
-        NamedPropertyDescriptor desc;
-        CAPTURE_IP_ASSIGN(
-            OptValue<bool> fastPathResult,
-            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc));
-        if (LLVM_LIKELY(
-                fastPathResult.hasValue() && fastPathResult.getValue()) &&
-            !desc.flags.accessor) {
-          ++NumGetByIdFastPaths;
-
-          // cacheIdx == 0 indicates no caching so don't update the cache in
-          // those cases.
-          HiddenClass *clazz =
-              vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-          if (LLVM_LIKELY(!clazz->isDictionaryNoCache()) &&
-              LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
-#ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
-              ++NumGetByIdCacheEvicts;
-#else
-            (void)NumGetByIdCacheEvicts;
-#endif
-            // Cache the class, id and property slot.
-            cacheEntry->clazz = clazzPtr;
-            cacheEntry->slot = desc.slot;
-          }
-
-          assert(
-              !obj->isProxyObject() &&
-              "tryGetOwnNamedDescriptorFast returned true on Proxy");
-          CAPTURE_IP(
-              O1REG(GetById) =
-                  JSObject::getNamedSlotValueUnsafe(obj, runtime, desc)
-                      .unboxToHV(runtime));
-          ip = nextIP;
-          DISPATCH;
-        }
-
-        // The cache may also be populated via the prototype of the object.
-        // This value is only reliable if the fast path was a definite
-        // not-found.
-        if (fastPathResult.hasValue() && !fastPathResult.getValue() &&
-            LLVM_LIKELY(!obj->isProxyObject())) {
-          CAPTURE_IP_ASSIGN(JSObject * parent, obj->getParent(runtime));
-          // TODO: This isLazy check is because a lazy object is reported as
-          // having no properties and therefore cannot contain the property.
-          // This check does not belong here, it should be merged into
-          // tryGetOwnNamedDescriptorFast().
-          if (parent && cacheEntry->clazz == parent->getClassGCPtr() &&
-              LLVM_LIKELY(!obj->isLazy())) {
-            ++NumGetByIdProtoHits;
-            // We've already checked that this isn't a Proxy.
-            CAPTURE_IP(
-                O1REG(GetById) = JSObject::getNamedSlotValueUnsafe(
-                                     parent, runtime, cacheEntry->slot)
-                                     .unboxToHV(runtime));
-            ip = nextIP;
+      CASE(GetByIdWithReceiverLong) {
+        if (LLVM_LIKELY(O2REG(GetByIdWithReceiverLong).isObject())) {
+          auto *obj = vmcast<JSObject>(O2REG(GetByIdWithReceiverLong));
+          auto cacheIdx = ip->iGetByIdWithReceiverLong.op3;
+          auto *cacheEntry = curCodeBlock->getReadCacheEntry(cacheIdx);
+          CompressedPointer clazzPtr{obj->getClassGCPtr()};
+          // If we have a cache hit, reuse the cached offset and immediately
+          // return the property.
+          if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+            ++NumGetByIdCacheHits;
+            O1REG(GetByIdWithReceiverLong) =
+                JSObject::getNamedSlotValueUnsafe(
+                    obj, runtime, cacheEntry->getSlot())
+                    .unboxToHV(runtime);
+            ip = NEXTINST(GetByIdWithReceiverLong);
             DISPATCH;
           }
         }
-
-#ifdef HERMES_SLOW_DEBUG
-        // Call to getNamedDescriptorUnsafe is safe because `id` is kept alive
-        // by the IdentifierTable.
         CAPTURE_IP_ASSIGN(
-            JSObject * propObj,
-            JSObject::getNamedDescriptorUnsafe(
-                Handle<JSObject>::vmcast(&O2REG(GetById)), runtime, id, desc));
-        if (propObj) {
-          if (desc.flags.accessor)
-            ++NumGetByIdAccessor;
-          else if (propObj != vmcast<JSObject>(O2REG(GetById)))
-            ++NumGetByIdProto;
-        } else {
-          ++NumGetByIdNotFound;
-        }
-#else
-        (void)NumGetByIdAccessor;
-        (void)NumGetByIdProto;
-        (void)NumGetByIdNotFound;
-#endif
-#ifdef HERMES_SLOW_DEBUG
-        auto *savedClass = cacheIdx != hbc::PROPERTY_CACHING_DISABLED
-            ? cacheEntry->clazz.get(runtime, runtime.getHeap())
-            : nullptr;
-#endif
-        ++NumGetByIdSlow;
-        CAPTURE_IP(
-            resPH = JSObject::getNamed_RJS(
-                Handle<JSObject>::vmcast(&O2REG(GetById)),
-                runtime,
-                id,
-                !tryProp ? defaultPropOpFlags
-                         : defaultPropOpFlags.plusMustExist(),
-                cacheIdx != hbc::PROPERTY_CACHING_DISABLED ? cacheEntry
-                                                           : nullptr));
-        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+            ExecutionStatus res,
+            doGetByIdWithReceiverSlowPath_RJS(
+                runtime, frameRegs, ip, curCodeBlock));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
           goto exception;
-        }
-#ifdef HERMES_SLOW_DEBUG
-        if (cacheIdx != hbc::PROPERTY_CACHING_DISABLED && savedClass &&
-            cacheEntry->clazz.get(runtime, runtime.getHeap()) != savedClass) {
-          ++NumGetByIdCacheEvicts;
-        }
-#endif
-      } else {
-        ++NumGetByIdTransient;
-        assert(!tryProp && "TryGetById can only be used on the global object");
-        /* Slow path. */
-        CAPTURE_IP(
-            resPH = Interpreter::getByIdTransient_RJS(
-                runtime, Handle<>(&O2REG(GetById)), ID(idVal)));
-        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(GetByIdWithReceiverLong);
+        DISPATCH;
       }
-      O1REG(GetById) = resPH->get();
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
 
-      CASE(TryPutByIdLong) {
+      CASE(TryPutByIdLooseLong) {
         tryProp = true;
-        idVal = ip->iTryPutByIdLong.op4;
-        nextIP = NEXTINST(TryPutByIdLong);
+        strictMode = false;
+        idVal = ip->iTryPutByIdLooseLong.op4;
+        nextIP = NEXTINST(TryPutByIdLooseLong);
         goto putById;
       }
-      CASE(PutByIdLong) {
-        tryProp = false;
-        idVal = ip->iPutByIdLong.op4;
-        nextIP = NEXTINST(PutByIdLong);
-        goto putById;
-      }
-      CASE(TryPutById) {
+      CASE(TryPutByIdStrictLong) {
         tryProp = true;
-        idVal = ip->iTryPutById.op4;
-        nextIP = NEXTINST(TryPutById);
+        strictMode = true;
+        idVal = ip->iTryPutByIdStrictLong.op4;
+        nextIP = NEXTINST(TryPutByIdStrictLong);
         goto putById;
       }
-      CASE(PutById) {
+      CASE(PutByIdLooseLong) {
         tryProp = false;
-        idVal = ip->iPutById.op4;
-        nextIP = NEXTINST(PutById);
+        strictMode = false;
+        idVal = ip->iPutByIdLooseLong.op4;
+        nextIP = NEXTINST(PutByIdLooseLong);
+        goto putById;
+      }
+      CASE(PutByIdStrictLong) {
+        tryProp = false;
+        strictMode = true;
+        idVal = ip->iPutByIdStrictLong.op4;
+        nextIP = NEXTINST(PutByIdStrictLong);
+        goto putById;
+      }
+      CASE(TryPutByIdLoose) {
+        tryProp = true;
+        strictMode = false;
+        idVal = ip->iTryPutByIdLoose.op4;
+        nextIP = NEXTINST(TryPutByIdLoose);
+        goto putById;
+      }
+      CASE(TryPutByIdStrict) {
+        tryProp = true;
+        strictMode = true;
+        idVal = ip->iTryPutByIdStrict.op4;
+        nextIP = NEXTINST(TryPutByIdStrict);
+        goto putById;
+      }
+      CASE(PutByIdLoose) {
+        tryProp = false;
+        strictMode = false;
+        idVal = ip->iPutByIdLoose.op4;
+        nextIP = NEXTINST(PutByIdLoose);
+        goto putById;
+      }
+      CASE(PutByIdStrict) {
+        tryProp = false;
+        strictMode = true;
+        idVal = ip->iPutByIdStrict.op4;
+        nextIP = NEXTINST(PutByIdStrict);
       }
     putById: {
       ++NumPutById;
-      if (LLVM_LIKELY(O1REG(PutById).isObject())) {
-        CAPTURE_IP_ASSIGN(
-            SmallHermesValue shv,
-            SmallHermesValue::encodeHermesValue(O2REG(PutById), runtime));
-        auto *obj = vmcast<JSObject>(O1REG(PutById));
-        auto cacheIdx = ip->iPutById.op3;
+      if (LLVM_LIKELY(O1REG(PutByIdLoose).isObject())) {
+        ENCODE_HV_AS_SHV(shv, O2REG(PutByIdLoose));
+        auto *obj = vmcast<JSObject>(O1REG(PutByIdLoose));
+        auto cacheIdx = ip->iPutByIdLoose.op3;
         auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
 
-#ifdef HERMESVM_PROFILER_BB
-        {
-          HERMES_SLOW_ASSERT(
-              gcScope.getHandleCountDbg() == KEEP_HANDLES &&
-              "unaccounted handles were created");
-          auto shvHandle = runtime.makeHandle(shv.toHV(runtime));
-          auto objHandle = runtime.makeHandle(obj);
-          auto cacheHCPtr = vmcast_or_null<HiddenClass>(static_cast<GCCell *>(
-              cacheEntry->clazz.get(runtime, runtime.getHeap())));
-          CAPTURE_IP(runtime.recordHiddenClass(
-              curCodeBlock, ip, ID(idVal), obj->getClass(runtime), cacheHCPtr));
-          // shv/obj may be invalidated by recordHiddenClass
-          if (shv.isPointer())
-            shv.unsafeUpdatePointer(
-                static_cast<GCCell *>(shvHandle->getPointer()), runtime);
-          obj = objHandle.get();
-        }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-#endif
         CompressedPointer clazzPtr{obj->getClassGCPtr()};
         // If we have a cache hit, reuse the cached offset and immediately
         // return the property.
         if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
           ++NumPutByIdCacheHits;
-          CAPTURE_IP(
-              JSObject::setNamedSlotValueUnsafe<PropStorage::Inline::Yes>(
-                  obj, runtime, cacheEntry->slot, shv));
-          ip = nextIP;
-          DISPATCH;
-        }
-        auto id = ID(idVal);
-        NamedPropertyDescriptor desc;
-        CAPTURE_IP_ASSIGN(
-            OptValue<bool> hasOwnProp,
-            JSObject::tryGetOwnNamedDescriptorFast(obj, runtime, id, desc));
-        if (LLVM_LIKELY(hasOwnProp.hasValue() && hasOwnProp.getValue()) &&
-            !desc.flags.accessor && desc.flags.writable &&
-            !desc.flags.internalSetter) {
-          ++NumPutByIdFastPaths;
-
-          // cacheIdx == 0 indicates no caching so don't update the cache in
-          // those cases.
-          HiddenClass *clazz =
-              vmcast<HiddenClass>(clazzPtr.getNonNull(runtime));
-          if (LLVM_LIKELY(!clazz->isDictionary()) &&
-              LLVM_LIKELY(cacheIdx != hbc::PROPERTY_CACHING_DISABLED)) {
-#ifdef HERMES_SLOW_DEBUG
-            if (cacheEntry->clazz && cacheEntry->clazz != clazzPtr)
-              ++NumPutByIdCacheEvicts;
-#else
-            (void)NumPutByIdCacheEvicts;
-#endif
-            // Cache the class and property slot.
-            cacheEntry->clazz = clazzPtr;
-            cacheEntry->slot = desc.slot;
-          }
-
-          // This must be valid because an own property was already found.
-          CAPTURE_IP(
-              JSObject::setNamedSlotValueUnsafe(obj, runtime, desc.slot, shv));
+          JSObject::setNamedSlotValueUnsafe(
+              obj, runtime, cacheEntry->getSlot(), shv);
           ip = nextIP;
           DISPATCH;
         }
 
-        CAPTURE_IP_ASSIGN(
-            auto putRes,
-            JSObject::putNamed_RJS(
-                Handle<JSObject>::vmcast(&O1REG(PutById)),
-                runtime,
-                id,
-                Handle<>(&O2REG(PutById)),
-                !tryProp ? defaultPropOpFlags
-                         : defaultPropOpFlags.plusMustExist()));
-        if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-      } else {
-        ++NumPutByIdTransient;
-        assert(!tryProp && "TryPutById can only be used on the global object");
-        CAPTURE_IP_ASSIGN(
-            auto retStatus,
-            Interpreter::putByIdTransient_RJS(
-                runtime,
-                Handle<>(&O1REG(PutById)),
-                ID(idVal),
-                Handle<>(&O2REG(PutById)),
-                strictMode));
-        if (retStatus == ExecutionStatus::EXCEPTION) {
-          goto exception;
+        // Now check against the AddPropertyCacheEntry to ensure we can still
+        // use the cached information.
+        // NOTE: Need to check resultClazz in all cases because it's a
+        // weak reference that may have been freed even if the add cache is
+        // valid.
+        const auto &addCacheEntry =
+            curCodeBlock->getRuntimeModule()->getAddCacheEntry(
+                cacheEntry->getAddCacheIndex());
+        if (LLVM_LIKELY(addCacheEntry.startClazz == clazzPtr) &&
+            LLVM_LIKELY(addCacheEntry.resultClazz) &&
+            LLVM_LIKELY(
+                addCacheEntry.getParentEpoch() ==
+                runtime.getParentCacheEpoch()) &&
+            LLVM_LIKELY(addCacheEntry.parent == obj->getParentGCPtr())) {
+          HiddenClass *resultClazz =
+              addCacheEntry.resultClazz.getNonNull(runtime, runtime.getHeap());
+          ++NumPutByIdTransitionHits;
+          CAPTURE_IP(
+              JSObject::addNewOwnPropertyInSlot(
+                  obj, runtime, resultClazz, addCacheEntry.getSlot(), shv));
+          ip = nextIP;
+          DISPATCH;
         }
       }
+      ++NumPutByIdSlowPaths;
+      CAPTURE_IP_ASSIGN(
+          ExecutionStatus res,
+          doPutByIdSlowPath_RJS(
+              runtime,
+              frameRegs,
+              ip,
+              curCodeBlock,
+              idVal,
+              strictMode,
+              tryProp));
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+        goto exception;
       gcScope.flushToSmallCount(KEEP_HANDLES);
       ip = nextIP;
       DISPATCH;
     }
 
-      CASE(GetByVal) {
-        if (LLVM_LIKELY(O2REG(GetByVal).isObject())) {
-          CAPTURE_IP(
-              resPH = JSObject::getComputed_RJS(
-                  Handle<JSObject>::vmcast(&O2REG(GetByVal)),
+      CASE(GetByIndex) {
+        ++NumGetByIndex;
+        if (LLVM_LIKELY(O2REG(GetByIndex).isObject())) {
+          if (auto optRes = tryFastGetComputedNoAlloc(
                   runtime,
-                  Handle<>(&O3REG(GetByVal))));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          // This is the "slow path".
-          CAPTURE_IP(
-              resPH = Interpreter::getByValTransient_RJS(
-                  runtime,
-                  Handle<>(&O2REG(GetByVal)),
-                  Handle<>(&O3REG(GetByVal))));
-          if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
-            goto exception;
+                  vmcast<JSObject>(O2REG(GetByIndex)),
+                  ip->iGetByIndex.op3)) {
+            O1REG(GetByIndex) = *optRes;
+            ip = NEXTINST(GetByIndex);
+            DISPATCH;
           }
         }
+        // Otherwise...
+        // This is the "slow path".
+        lv.tmp = HermesValue::encodeTrustedNumberValue(ip->iGetByIndex.op3);
+        CAPTURE_IP(
+            resPH = Interpreter::getByValTransient_RJS(
+                runtime, Handle<>(&O2REG(GetByIndex)), lv.tmp));
+        lv.tmp.clear();
+        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(GetByVal) = resPH->get();
+        O1REG(GetByIndex) = resPH->get();
+        ip = NEXTINST(GetByIndex);
+        DISPATCH;
+      }
+
+      CASE(GetByVal) {
+        ++NumGetByVal;
+
+        // An efficient check whether the value is both a number and a uint32.
+        static_assert(
+            HERMESVALUE_VERSION == 2,
+            "HermesValue must use NaN-encoding for non-numbers");
+        uint32_t index;
+        if (sh_tryfast_f64_to_u32(O3REG(GetByVal).f64, index) &&
+            LLVM_LIKELY(O2REG(GetByVal).isObject())) {
+          ++NumGetByValObjInd;
+          if (HERMES_SLOW_STATISTIC_ENABLED) {
+            if (vmisa<ArrayImpl>(O2REG(GetByVal)))
+              ++NumGetByValArrInd;
+            else if (vmisa<JSTypedArrayBase>(O2REG(GetByVal)))
+              ++NumGetByValTAInd;
+          }
+
+          if (auto optRes = tryFastGetComputedNoAlloc(
+                  runtime, vmcast<JSObject>(O2REG(GetByVal)), index)) {
+            ++NumGetByValObjIndFast;
+            O1REG(GetByVal) = *optRes;
+            ip = NEXTINST(GetByVal);
+            DISPATCH;
+          }
+        }
+
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus res, caseGetByVal(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+          goto exception;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(GetByVal);
         DISPATCH;
       }
 
-      CASE(PutByVal) {
-        if (LLVM_LIKELY(O1REG(PutByVal).isObject())) {
-          CAPTURE_IP_ASSIGN(
-              auto putRes,
-              JSObject::putComputed_RJS(
-                  Handle<JSObject>::vmcast(&O1REG(PutByVal)),
-                  runtime,
-                  Handle<>(&O2REG(PutByVal)),
-                  Handle<>(&O3REG(PutByVal)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(putRes == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-        } else {
-          // This is the "slow path".
-          CAPTURE_IP_ASSIGN(
-              auto retStatus,
-              Interpreter::putByValTransient_RJS(
-                  runtime,
-                  Handle<>(&O1REG(PutByVal)),
-                  Handle<>(&O2REG(PutByVal)),
-                  Handle<>(&O3REG(PutByVal)),
-                  strictMode));
-          if (LLVM_UNLIKELY(retStatus == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
+      CASE_OUTOFLINE(GetByValWithReceiver);
+
+      CASE(DefineOwnById) {
+        assert(
+            O1REG(DefineOwnById).isObject() &&
+            "PutOwn requires object operand");
+        ENCODE_HV_AS_SHV(shv, O2REG(DefineOwnById));
+        auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
+        auto cacheIdx = ip->iDefineOwnById.op3;
+        auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+        CompressedPointer clazzPtr{obj->getClassGCPtr()};
+        // If we have a cache hit, reuse the cached offset and immediately
+        // write the property.
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+          JSObject::setNamedSlotValueUnsafe(
+              obj, runtime, cacheEntry->getSlot(), shv);
+          ip = NEXTINST(DefineOwnById);
+          DISPATCH;
+        }
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            defineOwnByIdSlowPath(runtime, shv, curCodeBlock, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+          goto exception;
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(PutByVal);
+        ip = NEXTINST(DefineOwnById);
+        DISPATCH;
+      }
+      CASE(DefineOwnByIdLong) {
+        assert(
+            O1REG(DefineOwnByIdLong).isObject() &&
+            "PutOwn requires object operand");
+        CAPTURE_IP_ASSIGN(
+            SmallHermesValue shv,
+            SmallHermesValue::encodeHermesValue(
+                O2REG(DefineOwnByIdLong), runtime));
+        auto *obj = vmcast<JSObject>(O1REG(DefineOwnById));
+        auto cacheIdx = ip->iDefineOwnByIdLong.op3;
+        auto *cacheEntry = curCodeBlock->getWriteCacheEntry(cacheIdx);
+        CompressedPointer clazzPtr{obj->getClassGCPtr()};
+        // If we have a cache hit, reuse the cached offset and immediately
+        // write the property.
+        if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr)) {
+          JSObject::setNamedSlotValueUnsafe(
+              obj, runtime, cacheEntry->getSlot(), shv);
+          ip = NEXTINST(DefineOwnByIdLong);
+          DISPATCH;
+        }
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            defineOwnByIdSlowPath(runtime, shv, curCodeBlock, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(DefineOwnByIdLong);
         DISPATCH;
       }
 
-      CASE(PutOwnByIndexL) {
-        nextIP = NEXTINST(PutOwnByIndexL);
-        idVal = ip->iPutOwnByIndexL.op3;
-        goto putOwnByIndex;
+      CASE(PutByValLoose)
+      CASE(PutByValStrict) {
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status, casePutByVal(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+          goto exception;
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(PutByValLoose);
+        DISPATCH;
       }
-      CASE(PutOwnByIndex) {
-        nextIP = NEXTINST(PutOwnByIndex);
-        idVal = ip->iPutOwnByIndex.op3;
+
+      CASE_OUTOFLINE(PutByValWithReceiver);
+
+      CASE(DefineOwnByIndexL) {
+        nextIP = NEXTINST(DefineOwnByIndexL);
+        idVal = ip->iDefineOwnByIndexL.op3;
+        goto DefineOwnByIndex;
       }
-    putOwnByIndex: {
-      tmpHandle = HermesValue::encodeUntrustedNumberValue(idVal);
+      CASE(DefineOwnByIndex) {
+        nextIP = NEXTINST(DefineOwnByIndex);
+        idVal = ip->iDefineOwnByIndex.op3;
+      }
+    DefineOwnByIndex: {
+      lv.tmp = HermesValue::encodeTrustedNumberValue(idVal);
       CAPTURE_IP(
           JSObject::defineOwnComputedPrimitive(
-              Handle<JSObject>::vmcast(&O1REG(PutOwnByIndex)),
+              Handle<JSObject>::vmcast(&O1REG(DefineOwnByIndex)),
               runtime,
-              tmpHandle,
+              lv.tmp,
               DefinePropertyFlags::getDefaultNewPropertyFlags(),
-              Handle<>(&O2REG(PutOwnByIndex))));
+              Handle<>(&O2REG(DefineOwnByIndex)),
+              PropOpFlags().plusThrowOnError()));
       gcScope.flushToSmallCount(KEEP_HANDLES);
-      tmpHandle.clear();
+      lv.tmp.clear();
       ip = nextIP;
       DISPATCH;
     }
 
-      CASE_OUTOFLINE(GetPNameList);
+      CASE(DefineOwnInDenseArray) {
+        // This instruction only makes sense if we know that the ArrayStorage is
+        // the same size as it was when it was created.
+        assert(JSArray::vt.trimSize_ == nullptr && "trimming must be disabled");
+        ENCODE_HV_AS_SHV(shv, O2REG(DefineOwnInDenseArray));
+        JSArray::unsafeSetExistingElementAt(
+            vmcast<JSArray>(O1REG(DefineOwnInDenseArray)),
+            runtime,
+            ip->iDefineOwnInDenseArray.op3,
+            shv);
+        ip = NEXTINST(DefineOwnInDenseArray);
+        DISPATCH;
+      }
+      CASE(DefineOwnInDenseArrayL) {
+        // This instruction only makes sense if we know that the ArrayStorage is
+        // the same size as it was when it was created.
+        assert(JSArray::vt.trimSize_ == nullptr && "trimming must be disabled");
+        ENCODE_HV_AS_SHV(shv, O2REG(DefineOwnInDenseArrayL));
+        JSArray::unsafeSetExistingElementAt(
+            vmcast<JSArray>(O1REG(DefineOwnInDenseArrayL)),
+            runtime,
+            ip->iDefineOwnInDenseArrayL.op3,
+            shv);
+        ip = NEXTINST(DefineOwnInDenseArrayL);
+        DISPATCH;
+      }
 
-      CASE(GetNextPName) {
+      CASE_OUTOFLINE(GetPNameList);
+      CASE_OUTOFLINE(GetNextPName);
+
+      CASE(ToPropertyKey) {
         {
-          assert(
-              vmisa<BigStorage>(O2REG(GetNextPName)) &&
-              "GetNextPName's second op must be BigStorage");
-          auto obj = Handle<JSObject>::vmcast(&O3REG(GetNextPName));
-          auto arr = Handle<BigStorage>::vmcast(&O2REG(GetNextPName));
-          uint32_t idx = O4REG(GetNextPName).getNumber();
-          uint32_t size = O5REG(GetNextPName).getNumber();
-          MutableHandle<JSObject> propObj{runtime};
-          MutableHandle<SymbolID> tmpPropNameStorage{runtime};
-          // Loop until we find a property which is present.
-          while (idx < size) {
-            tmpHandle = arr->at(runtime, idx);
-            ComputedPropertyDescriptor desc;
-            CAPTURE_IP_ASSIGN(
-                ExecutionStatus status,
-                JSObject::getComputedPrimitiveDescriptor(
-                    obj,
-                    runtime,
-                    tmpHandle,
-                    propObj,
-                    tmpPropNameStorage,
-                    desc));
-            if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-              goto exception;
-            }
-            if (LLVM_LIKELY(propObj))
-              break;
-            ++idx;
+          CAPTURE_IP_ASSIGN(
+              auto res,
+              toPropertyKey(runtime, Handle<>(&O2REG(ToPropertyKey))));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
           }
-          if (idx < size) {
-            // We must return the property as a string
-            if (tmpHandle->isNumber()) {
-              CAPTURE_IP_ASSIGN(auto status, toString_RJS(runtime, tmpHandle));
-              assert(
-                  status == ExecutionStatus::RETURNED &&
-                  "toString on number cannot fail");
-              tmpHandle = status->getHermesValue();
-            }
-            O4REG(GetNextPName) =
-                HermesValue::encodeUntrustedNumberValue(idx + 1);
-            // Write the result last in case it is the same register as O4REG.
-            O1REG(GetNextPName) = tmpHandle.get();
-          } else {
-            O1REG(GetNextPName) = HermesValue::encodeUndefinedValue();
-          }
+          O1REG(ToPropertyKey) = res->getHermesValue();
+          gcScope.flushToSmallCount(KEEP_HANDLES);
         }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        tmpHandle.clear();
-        ip = NEXTINST(GetNextPName);
+        ip = NEXTINST(ToPropertyKey);
         DISPATCH;
       }
 
@@ -2684,12 +2343,36 @@ tailCall:
       }
 
       CASE(ToInt32) {
-        CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(ToInt32))));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-          goto exception;
-        gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(ToInt32) = res.getValue();
+        int32_t argInt;
+        if (LLVM_LIKELY(
+                _sh_ljs_tryfast_truncate_to_int32(O2REG(ToInt32), &argInt))) {
+          /* Fast-path. */
+          O1REG(ToInt32) = HermesValue::encodeTrustedNumberValue(argInt);
+        } else {
+          CAPTURE_IP(res = toInt32_RJS(runtime, Handle<>(&O2REG(ToInt32))));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+            goto exception;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          O1REG(ToInt32) = res.getValue();
+        }
         ip = NEXTINST(ToInt32);
+        DISPATCH;
+      }
+
+      CASE(ToUint32) {
+        uint32_t argInt;
+        if (LLVM_LIKELY(
+                _sh_ljs_tryfast_truncate_to_uint32(O2REG(ToUint32), &argInt))) {
+          /* Fast-path. */
+          O1REG(ToUint32) = HermesValue::encodeTrustedNumberValue(argInt);
+        } else {
+          CAPTURE_IP(res = toUInt32_RJS(runtime, Handle<>(&O2REG(ToUint32))));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+            goto exception;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          O1REG(ToUint32) = res.getValue();
+        }
+        ip = NEXTINST(ToUint32);
         DISPATCH;
       }
 
@@ -2705,17 +2388,19 @@ tailCall:
                   PreferredType::NONE));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
             goto exception;
-          tmpHandle = res.getValue();
-          CAPTURE_IP_ASSIGN(auto strRes, toString_RJS(runtime, tmpHandle));
+          lv.tmp = res.getValue();
+          CAPTURE_IP_ASSIGN(auto strRes, toString_RJS(runtime, lv.tmp));
           if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
             goto exception;
-          tmpHandle.clear();
+          lv.tmp.clear();
           gcScope.flushToSmallCount(KEEP_HANDLES);
           O1REG(AddEmptyString) = strRes->getHermesValue();
           ip = NEXTINST(AddEmptyString);
         }
         DISPATCH;
       }
+
+      CASE_OUTOFLINE(CreatePrivateName);
 
       CASE(Jmp) {
         ip = IPADD(ip->iJmp.op1);
@@ -2767,19 +2452,65 @@ tailCall:
           ip = NEXTINST(JmpUndefinedLong);
         DISPATCH;
       }
+      CASE(JmpBuiltinIs) {
+        if (O3REG(JmpBuiltinIs).getRaw() ==
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIs.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIs.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIs);
+        }
+        DISPATCH;
+      }
+      CASE(JmpBuiltinIsLong) {
+        if (O3REG(JmpBuiltinIsLong).getRaw() ==
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIsLong.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIsLong.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIsLong);
+        }
+        DISPATCH;
+      }
+      CASE(JmpBuiltinIsNot) {
+        if (O3REG(JmpBuiltinIsNot).getRaw() !=
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIsNot.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIsNot.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIsNot);
+        }
+        DISPATCH;
+      }
+      CASE(JmpBuiltinIsNotLong) {
+        if (O3REG(JmpBuiltinIsNotLong).getRaw() !=
+            HermesValue::encodeObjectValue(
+                runtime.getBuiltinCallable(ip->iJmpBuiltinIsNotLong.op2))
+                .getRaw()) {
+          ip = IPADD(ip->iJmpBuiltinIsNotLong.op1);
+        } else {
+          ip = NEXTINST(JmpBuiltinIsNotLong);
+        }
+        DISPATCH;
+      }
       INCDECOP(Inc)
       INCDECOP(Dec)
+      CASE(AddN) {
+        O1REG(Add) = HermesValue::encodeTrustedNumberValue(
+            O2REG(Add).getNumber() + O3REG(Add).getNumber());
+        ip = NEXTINST(Add);
+        DISPATCH;
+      }
       CASE(Add) {
-        if (LLVM_LIKELY(
-                O2REG(Add).isNumber() &&
-                O3REG(Add).isNumber())) { /* Fast-path. */
-          INTERPRETER_FALLTHROUGH;
-          CASE(AddN) {
-            O1REG(Add) = HermesValue::encodeTrustedNumberValue(
-                O2REG(Add).getNumber() + O3REG(Add).getNumber());
-            ip = NEXTINST(Add);
-            DISPATCH;
-          }
+        if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(
+                O2REG(Add), O3REG(Add)))) { /* Fast-path. */
+          O1REG(Add) = HermesValue::encodeTrustedNumberValue(
+              O2REG(Add).getNumber() + O3REG(Add).getNumber());
+          ip = NEXTINST(Add);
+          DISPATCH;
         }
         CAPTURE_IP(
             res = addOp_RJS(
@@ -2792,19 +2523,36 @@ tailCall:
         ip = NEXTINST(Add);
         DISPATCH;
       }
+      CASE(AddS) {
+        CAPTURE_IP(
+            res = StringPrimitive::concat(
+                runtime,
+                Handle<StringPrimitive>::vmcast(&O2REG(AddS)),
+                Handle<StringPrimitive>::vmcast(&O3REG(AddS))));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        O1REG(AddS) = res.getValue();
+        ip = NEXTINST(AddS);
+        DISPATCH;
+      }
 
       CASE(BitNot) {
-        if (LLVM_LIKELY(O2REG(BitNot).isNumber())) { /* Fast-path. */
-          O1REG(BitNot) = HermesValue::encodeUntrustedNumberValue(
-              ~hermes::truncateToInt32(O2REG(BitNot).getNumber()));
+        int32_t argInt;
+        if (LLVM_LIKELY(
+                _sh_ljs_tryfast_truncate_to_int32(O2REG(BitNot), &argInt))) {
+          /* Fast-path. */
+          O1REG(BitNot) = HermesValue::encodeTrustedNumberValue(~argInt);
           ip = NEXTINST(BitNot);
           DISPATCH;
         }
-        CAPTURE_IP(res = doBitNotSlowPath(runtime, Handle<>(&O2REG(BitNot))));
-        if (res == ExecutionStatus::EXCEPTION) {
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            doBitNotSlowPath_RJS(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(BitNot) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(BitNot);
         DISPATCH;
@@ -2814,7 +2562,7 @@ tailCall:
         // If the arguments object hasn't been created yet.
         if (O2REG(GetArgumentsLength).isUndefined()) {
           O1REG(GetArgumentsLength) =
-              HermesValue::encodeUntrustedNumberValue(FRAME.getArgCount());
+              HermesValue::encodeTrustedNumberValue(FRAME.getArgCount());
           ip = NEXTINST(GetArgumentsLength);
           DISPATCH;
         }
@@ -2837,16 +2585,18 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(GetArgumentsPropByVal) {
+      CASE(GetArgumentsPropByValLoose)
+      CASE(GetArgumentsPropByValStrict) {
         // If the arguments object hasn't been created yet and we have a
         // valid integer index, we use the fast path.
-        if (O3REG(GetArgumentsPropByVal).isUndefined()) {
+        if (O3REG(GetArgumentsPropByValLoose).isUndefined()) {
           // If this is an integer index.
-          if (auto index = toArrayIndexFastPath(O2REG(GetArgumentsPropByVal))) {
+          if (auto index =
+                  toArrayIndexFastPath(O2REG(GetArgumentsPropByValLoose))) {
             // Is this an existing argument?
             if (*index < FRAME.getArgCount()) {
-              O1REG(GetArgumentsPropByVal) = FRAME.getArgRef(*index);
-              ip = NEXTINST(GetArgumentsPropByVal);
+              O1REG(GetArgumentsPropByValLoose) = FRAME.getArgRef(*index);
+              ip = NEXTINST(GetArgumentsPropByValLoose);
               DISPATCH;
             }
           }
@@ -2856,37 +2606,39 @@ tailCall:
             auto res,
             getArgumentsPropByValSlowPath_RJS(
                 runtime,
-                &O3REG(GetArgumentsPropByVal),
-                &O2REG(GetArgumentsPropByVal),
+                &O3REG(GetArgumentsPropByValLoose),
+                &O2REG(GetArgumentsPropByValLoose),
                 FRAME.getCalleeClosureHandleUnsafe(),
-                strictMode));
+                ip->opCode == OpCode::GetArgumentsPropByValStrict));
         if (res == ExecutionStatus::EXCEPTION) {
           goto exception;
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(GetArgumentsPropByVal) = res->getHermesValue();
-        ip = NEXTINST(GetArgumentsPropByVal);
+        O1REG(GetArgumentsPropByValLoose) = res->getHermesValue();
+        ip = NEXTINST(GetArgumentsPropByValLoose);
         DISPATCH;
       }
-
-      CASE(ReifyArguments) {
+      CASE(ReifyArgumentsLoose)
+      CASE(ReifyArgumentsStrict) {
         // If the arguments object was already created, do nothing.
-        if (!O1REG(ReifyArguments).isUndefined()) {
+        if (!O1REG(ReifyArgumentsLoose).isUndefined()) {
           assert(
-              O1REG(ReifyArguments).isObject() &&
+              O1REG(ReifyArgumentsLoose).isObject() &&
               "arguments lazy register is not an object");
-          ip = NEXTINST(ReifyArguments);
+          ip = NEXTINST(ReifyArgumentsLoose);
           DISPATCH;
         }
         CAPTURE_IP(
             resArgs = reifyArgumentsSlowPath(
-                runtime, FRAME.getCalleeClosureHandleUnsafe(), strictMode));
+                runtime,
+                FRAME.getCalleeClosureHandleUnsafe(),
+                ip->opCode == OpCode::ReifyArgumentsStrict));
         if (LLVM_UNLIKELY(resArgs == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(ReifyArguments) = resArgs->getHermesValue();
+        O1REG(ReifyArgumentsLoose) = resArgs->getHermesValue();
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        ip = NEXTINST(ReifyArguments);
+        ip = NEXTINST(ReifyArgumentsLoose);
         DISPATCH;
       }
 
@@ -2925,14 +2677,13 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
-                ip->iNewObjectWithBuffer.op3,
-                ip->iNewObjectWithBuffer.op4,
-                ip->iNewObjectWithBuffer.op5));
+                runtime.objectPrototype,
+                ip->iNewObjectWithBuffer.op2,
+                ip->iNewObjectWithBuffer.op3));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
         O1REG(NewObjectWithBuffer) = resPH->get();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewObjectWithBuffer);
         DISPATCH;
       }
@@ -2942,15 +2693,25 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
-                ip->iNewObjectWithBufferLong.op3,
-                ip->iNewObjectWithBufferLong.op4,
-                ip->iNewObjectWithBufferLong.op5));
+                runtime.objectPrototype,
+                ip->iNewObjectWithBufferLong.op2,
+                ip->iNewObjectWithBufferLong.op3));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
         O1REG(NewObjectWithBufferLong) = resPH->get();
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewObjectWithBufferLong);
+        DISPATCH;
+      }
+
+      CASE(NewObjectWithBufferAndParent) {
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            caseNewObjectWithBufferAndParent(
+                runtime, frameRegs, curCodeBlock, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
+          goto exception;
+        ip = NEXTINST(NewObjectWithBufferAndParent);
         DISPATCH;
       }
 
@@ -2967,8 +2728,79 @@ tailCall:
           }
           O1REG(NewArray) = createRes->getHermesValue();
         }
-        gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(NewArray);
+        DISPATCH;
+      }
+
+      CASE(NewFastArray) {
+        CAPTURE_IP_ASSIGN(
+            auto createRes, FastArray::create(runtime, ip->iNewFastArray.op2));
+        if (createRes == ExecutionStatus::EXCEPTION)
+          goto exception;
+        O1REG(NewFastArray) = *createRes;
+        ip = NEXTINST(NewFastArray);
+        DISPATCH;
+      }
+      CASE(FastArrayLength) {
+        O1REG(FastArrayLength) = HermesValue::encodeTrustedNumberValue(
+            vmcast<FastArray>(O2REG(FastArrayLength))
+                ->getLengthAsDouble(runtime));
+        ip = NEXTINST(FastArrayLength);
+        DISPATCH;
+      }
+      CASE(FastArrayLoad) {
+        double idx = O3REG(FastArrayStore).getNumber();
+        uint32_t intIndex = _sh_tryfast_f64_to_u32_cvt(idx);
+        auto *storage = vmcast<FastArray>(O2REG(FastArrayStore))
+                            ->unsafeGetIndexedStorage(runtime);
+
+        if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != idx)) {
+          CAPTURE_IP(runtime.raiseRangeError("array load index out of range"));
+          goto exception;
+        }
+
+        O1REG(FastArrayLoad) = storage->at(intIndex).unboxToHV(runtime);
+        ip = NEXTINST(FastArrayLoad);
+        DISPATCH;
+      }
+      CASE(FastArrayStore) {
+        double idx = O2REG(FastArrayStore).getNumber();
+        uint32_t intIndex = _sh_tryfast_f64_to_u32_cvt(idx);
+        ENCODE_HV_AS_SHV(shv, O3REG(FastArrayStore));
+        auto *storage = vmcast<FastArray>(O1REG(FastArrayStore))
+                            ->unsafeGetIndexedStorage(runtime);
+
+        if (LLVM_UNLIKELY(intIndex >= storage->size() || intIndex != idx)) {
+          CAPTURE_IP(runtime.raiseRangeError("array store index out of range"));
+          goto exception;
+        }
+
+        storage->set(intIndex, shv, runtime.getHeap());
+        ip = NEXTINST(FastArrayStore);
+        DISPATCH;
+      }
+      CASE(FastArrayPush) {
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            FastArray::push(
+                Handle<FastArray>::vmcast(&O1REG(FastArrayPush)),
+                runtime,
+                Handle<>(&O2REG(FastArrayPush))));
+        if (res == ExecutionStatus::EXCEPTION)
+          goto exception;
+        ip = NEXTINST(FastArrayPush);
+        DISPATCH;
+      }
+      CASE(FastArrayAppend) {
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            FastArray::append(
+                Handle<FastArray>::vmcast(&O1REG(FastArrayAppend)),
+                runtime,
+                Handle<FastArray>::vmcast(&O2REG(FastArrayAppend))));
+        if (res == ExecutionStatus::EXCEPTION)
+          goto exception;
+        ip = NEXTINST(FastArrayAppend);
         DISPATCH;
       }
 
@@ -2985,7 +2817,7 @@ tailCall:
         }
         O1REG(NewArrayWithBuffer) = resPH->get();
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        tmpHandle.clear();
+        lv.tmp.clear();
         ip = NEXTINST(NewArrayWithBuffer);
         DISPATCH;
       }
@@ -3003,31 +2835,42 @@ tailCall:
         }
         O1REG(NewArrayWithBufferLong) = resPH->get();
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        tmpHandle.clear();
+        lv.tmp.clear();
         ip = NEXTINST(NewArrayWithBufferLong);
         DISPATCH;
       }
 
-      CASE(CreateThis) {
-        // Registers: output, prototype, closure.
-        if (LLVM_UNLIKELY(!vmisa<Callable>(O3REG(CreateThis)))) {
-          CAPTURE_IP(runtime.raiseTypeError("constructor is not callable"));
-          goto exception;
-        }
+      CASE(CreateThisForSuper) {
         CAPTURE_IP_ASSIGN(
-            auto res,
-            Callable::newObject(
-                Handle<Callable>::vmcast(&O3REG(CreateThis)),
+            res,
+            createThisImpl(
                 runtime,
-                Handle<JSObject>::vmcast(
-                    O2REG(CreateThis).isObject() ? &O2REG(CreateThis)
-                                                 : &runtime.objectPrototype)));
+                &O2REG(CreateThisForSuper),
+                &O3REG(CreateThisForSuper),
+                ip->iCreateThisForSuper.op4,
+                curCodeBlock));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
+        O1REG(CreateThisForSuper) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        O1REG(CreateThis) = res->getHermesValue();
-        ip = NEXTINST(CreateThis);
+        ip = NEXTINST(CreateThisForSuper);
+        DISPATCH;
+      }
+
+      CASE(CreateThisForNew) {
+        CAPTURE_IP(
+            res = createThisImpl(
+                runtime,
+                &O2REG(CreateThisForNew),
+                &O2REG(CreateThisForNew),
+                ip->iCreateThisForNew.op3,
+                curCodeBlock));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        O1REG(CreateThisForNew) = *res;
+        ip = NEXTINST(CreateThisForNew);
         DISPATCH;
       }
 
@@ -3036,6 +2879,9 @@ tailCall:
         O1REG(SelectObject) = O3REG(SelectObject).isObject()
             ? O3REG(SelectObject)
             : O2REG(SelectObject);
+        assert(
+            O1REG(SelectObject).isObject() &&
+            "SelectObject should always produce an object");
         ip = NEXTINST(SelectObject);
         DISPATCH;
       }
@@ -3073,16 +2919,17 @@ tailCall:
         DISPATCH;
       }
       CASE(Negate) {
-        if (LLVM_LIKELY(O2REG(Negate).isNumber())) {
-          O1REG(Negate) = HermesValue::encodeUntrustedNumberValue(
-              -O2REG(Negate).getNumber());
+        if (LLVM_LIKELY(_sh_ljs_is_non_nan_number(O2REG(Negate)))) {
+          O1REG(Negate) =
+              HermesValue::encodeTrustedNumberValue(-O2REG(Negate).getNumber());
           ip = NEXTINST(Negate);
           DISPATCH;
         }
-        CAPTURE_IP(res = doNegateSlowPath(runtime, Handle<>(&O2REG(Negate))));
-        if (res == ExecutionStatus::EXCEPTION)
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            doNegateSlowPath_RJS(runtime, frameRegs, ip));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
           goto exception;
-        O1REG(Negate) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(Negate);
         DISPATCH;
@@ -3093,20 +2940,20 @@ tailCall:
         DISPATCH;
       }
       CASE(Mod) {
-        if (LLVM_LIKELY(O2REG(Mod).isNumber() && O3REG(Mod).isNumber())) {
+        if (LLVM_LIKELY(
+                _sh_ljs_are_both_non_nan_numbers(O2REG(Mod), O3REG(Mod)))) {
           /* Fast-path. */
-          O1REG(Mod) = HermesValue::encodeUntrustedNumberValue(
+          O1REG(Mod) = HermesValue::encodeTrustedNumberValue(
               doMod(O2REG(Mod).getNumber(), O3REG(Mod).getNumber()));
           ip = NEXTINST(Mod);
           DISPATCH;
         }
-        CAPTURE_IP(
-            res = doOperSlowPath<doMod>(
-                runtime, Handle<>(&O2REG(Mod)), Handle<>(&O3REG(Mod))));
-        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+        CAPTURE_IP_ASSIGN(
+            ExecutionStatus status,
+            doOperSlowPath_RJS<doMod>(runtime, frameRegs, &ip->iMod));
+        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
-        O1REG(Mod) = *res;
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(Mod);
         DISPATCH;
@@ -3149,187 +2996,134 @@ tailCall:
         DISPATCH;
       }
 
-      CASE(PutNewOwnByIdShort) {
-        nextIP = NEXTINST(PutNewOwnByIdShort);
-        idVal = ip->iPutNewOwnByIdShort.op3;
-        goto putOwnById;
-      }
-      CASE(PutNewOwnNEByIdLong)
-      CASE(PutNewOwnByIdLong) {
-        nextIP = NEXTINST(PutNewOwnByIdLong);
-        idVal = ip->iPutNewOwnByIdLong.op3;
-        goto putOwnById;
-      }
-      CASE(PutNewOwnNEById)
-      CASE(PutNewOwnById) {
-        nextIP = NEXTINST(PutNewOwnById);
-        idVal = ip->iPutNewOwnById.op3;
-      }
-    putOwnById: {
-      assert(
-          O1REG(PutNewOwnById).isObject() &&
-          "Object argument of PutNewOwnById must be an object");
-      CAPTURE_IP_ASSIGN(
-          auto res,
-          JSObject::defineNewOwnProperty(
-              Handle<JSObject>::vmcast(&O1REG(PutNewOwnById)),
-              runtime,
-              ID(idVal),
-              ip->opCode <= OpCode::PutNewOwnByIdLong
-                  ? PropertyFlags::defaultNewNamedPropertyFlags()
-                  : PropertyFlags::nonEnumerablePropertyFlags(),
-              Handle<>(&O2REG(PutNewOwnById))));
-      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-        goto exception;
-      }
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
-
-      CASE(DelByIdLong) {
-        idVal = ip->iDelByIdLong.op3;
-        nextIP = NEXTINST(DelByIdLong);
-        goto DelById;
-      }
-
-      CASE(DelById) {
-        idVal = ip->iDelById.op3;
-        nextIP = NEXTINST(DelById);
-      }
-    DelById: {
-      if (LLVM_LIKELY(O2REG(DelById).isObject())) {
-        CAPTURE_IP_ASSIGN(
-            auto status,
-            JSObject::deleteNamed(
-                Handle<JSObject>::vmcast(&O2REG(DelById)),
-                runtime,
-                ID(idVal),
-                defaultPropOpFlags));
-        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-          goto exception;
+      CASE(PrivateIsIn) {
+        if (LLVM_LIKELY(O3REG(PrivateIsIn).isObject())) {
+          auto *obj = vmcast<JSObject>(O3REG(PrivateIsIn));
+          auto cacheIdx = ip->iPrivateIsIn.op4;
+          auto *cacheEntry = curCodeBlock->getPrivateNameCacheEntry(cacheIdx);
+          CompressedPointer clazzPtr{obj->getClassGCPtr()};
+          SymbolID nameSym = O2REG(PrivateIsIn).getSymbol();
+          // If we have a cache hit, reuse the cached result.
+          if (LLVM_LIKELY(cacheEntry->clazz == clazzPtr) &&
+              LLVM_LIKELY(cacheEntry->nameVal == nameSym)) {
+            O1REG(PrivateIsIn) = HermesValue::encodeBoolValue(cacheEntry->slot);
+            ip = NEXTINST(PrivateIsIn);
+            DISPATCH;
+          }
         }
-        O1REG(DelById) = HermesValue::encodeBoolValue(status.getValue());
-      } else {
-        // This is the "slow path".
-        CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelById))));
+        CAPTURE_IP_ASSIGN(
+            auto res, casePrivateIsIn(runtime, frameRegs, curCodeBlock, ip));
         if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-          // If an exception is thrown, likely we are trying to convert
-          // undefined/null to an object. Passing over the name of the property
-          // so that we could emit more meaningful error messages.
-          CAPTURE_IP(amendPropAccessErrorMsgWithPropName(
-              runtime, Handle<>(&O2REG(DelById)), "delete", ID(idVal)));
           goto exception;
-        }
-        tmpHandle = res.getValue();
-        CAPTURE_IP_ASSIGN(
-            auto status,
-            JSObject::deleteNamed(
-                Handle<JSObject>::vmcast(tmpHandle),
-                runtime,
-                ID(idVal),
-                defaultPropOpFlags));
-        if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-          goto exception;
-        }
-        O1REG(DelById) = HermesValue::encodeBoolValue(status.getValue());
-        tmpHandle.clear();
-      }
-      gcScope.flushToSmallCount(KEEP_HANDLES);
-      ip = nextIP;
-      DISPATCH;
-    }
-
-      CASE(DelByVal) {
-        if (LLVM_LIKELY(O2REG(DelByVal).isObject())) {
-          CAPTURE_IP_ASSIGN(
-              auto status,
-              JSObject::deleteComputed(
-                  Handle<JSObject>::vmcast(&O2REG(DelByVal)),
-                  runtime,
-                  Handle<>(&O3REG(DelByVal)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
-        } else {
-          // This is the "slow path".
-          CAPTURE_IP(res = toObject(runtime, Handle<>(&O2REG(DelByVal))));
-          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-          tmpHandle = res.getValue();
-          CAPTURE_IP_ASSIGN(
-              auto status,
-              JSObject::deleteComputed(
-                  Handle<JSObject>::vmcast(tmpHandle),
-                  runtime,
-                  Handle<>(&O3REG(DelByVal)),
-                  defaultPropOpFlags));
-          if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
-            goto exception;
-          }
-          O1REG(DelByVal) = HermesValue::encodeBoolValue(status.getValue());
         }
         gcScope.flushToSmallCount(KEEP_HANDLES);
-        tmpHandle.clear();
-        ip = NEXTINST(DelByVal);
+        ip = NEXTINST(PrivateIsIn);
         DISPATCH;
       }
+
+      CASE(TypeOfIs) {
+        TypeOfIsTypes types(ip->iTypeOfIs.op3);
+        O1REG(TypeOfIs) =
+            HermesValue::encodeBoolValue(matchTypeOfIs(O2REG(TypeOfIs), types));
+        ip = NEXTINST(TypeOfIs);
+        DISPATCH;
+      }
+
+      CASE(PutOwnBySlotIdxLong) {
+        assert(
+            O1REG(PutOwnBySlotIdxLong).isObject() &&
+            "Object argument of PutOwnBySlotIdx must be an object");
+        ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdxLong));
+        JSObject::setNamedSlotValueUnsafe(
+            vmcast<JSObject>(O1REG(PutOwnBySlotIdxLong)),
+            runtime,
+            ip->iPutOwnBySlotIdxLong.op3,
+            shv);
+        ip = NEXTINST(PutOwnBySlotIdxLong);
+        DISPATCH;
+      }
+      CASE(PutOwnBySlotIdx) {
+        assert(
+            O1REG(PutOwnBySlotIdx).isObject() &&
+            "Object argument of PutOwnBySlotIdx must be an object");
+        ENCODE_HV_AS_SHV(shv, O2REG(PutOwnBySlotIdx));
+        JSObject::setNamedSlotValueUnsafe(
+            vmcast<JSObject>(O1REG(PutOwnBySlotIdx)),
+            runtime,
+            ip->iPutOwnBySlotIdx.op3,
+            shv);
+        ip = NEXTINST(PutOwnBySlotIdx);
+        DISPATCH;
+      }
+
+      CASE(GetOwnBySlotIdxLong) {
+        O1REG(GetOwnBySlotIdxLong) =
+            JSObject::getNamedSlotValueUnsafe(
+                vmcast<JSObject>(O2REG(GetOwnBySlotIdxLong)),
+                runtime,
+                ip->iGetOwnBySlotIdxLong.op3)
+                .unboxToHV(runtime);
+        ip = NEXTINST(GetOwnBySlotIdxLong);
+        DISPATCH;
+      }
+      CASE(GetOwnBySlotIdx) {
+        O1REG(GetOwnBySlotIdx) = JSObject::getNamedSlotValueUnsafe(
+                                     vmcast<JSObject>(O2REG(GetOwnBySlotIdx)),
+                                     runtime,
+                                     ip->iGetOwnBySlotIdx.op3)
+                                     .unboxToHV(runtime);
+        ip = NEXTINST(GetOwnBySlotIdx);
+        DISPATCH;
+      }
+
+      CASE_OUTOFLINE(DelByVal);
+
       CASE(CreateRegExp) {
-        {
-          // Create the RegExp object.
-          CAPTURE_IP(
-              O1REG(CreateRegExp) = JSRegExp::create(runtime).getHermesValue());
-          auto re = Handle<JSRegExp>::vmcast(&O1REG(CreateRegExp));
-          // Initialize the regexp.
-          CAPTURE_IP_ASSIGN(
-              auto pattern,
-              runtime.makeHandle(curCodeBlock->getRuntimeModule()
-                                     ->getStringPrimFromStringIDMayAllocate(
-                                         ip->iCreateRegExp.op2)));
-          CAPTURE_IP_ASSIGN(
-              auto flags,
-              runtime.makeHandle(curCodeBlock->getRuntimeModule()
-                                     ->getStringPrimFromStringIDMayAllocate(
-                                         ip->iCreateRegExp.op3)));
-          CAPTURE_IP_ASSIGN(
-              auto bytecode,
-              curCodeBlock->getRuntimeModule()->getRegExpBytecodeFromRegExpID(
-                  ip->iCreateRegExp.op4));
-          CAPTURE_IP(
-              JSRegExp::initialize(re, runtime, pattern, flags, bytecode));
-        }
+        CAPTURE_IP(caseCreateRegExp(runtime, frameRegs, curCodeBlock, ip));
         gcScope.flushToSmallCount(KEEP_HANDLES);
         ip = NEXTINST(CreateRegExp);
         DISPATCH;
       }
 
-      CASE(SwitchImm) {
-        if (LLVM_LIKELY(O1REG(SwitchImm).isNumber())) {
-          double numVal = O1REG(SwitchImm).getNumber();
+      CASE(UIntSwitchImm) {
+        if (LLVM_LIKELY(O1REG(UIntSwitchImm).isNumber())) {
+          double numVal = O1REG(UIntSwitchImm).getNumber();
           uint32_t uintVal = (uint32_t)numVal;
           if (LLVM_LIKELY(numVal == uintVal) && // Only integers.
-              LLVM_LIKELY(uintVal >= ip->iSwitchImm.op4) && // Bounds checking.
-              LLVM_LIKELY(uintVal <= ip->iSwitchImm.op5)) // Bounds checking.
+              LLVM_LIKELY(
+                  uintVal >= ip->iUIntSwitchImm.op4) && // Bounds checking.
+              LLVM_LIKELY(
+                  uintVal <= ip->iUIntSwitchImm.op5)) // Bounds checking.
           {
             // Calculate the offset into the bytecode where the jump table for
             // this SwitchImm starts.
             const uint8_t *tablestart = (const uint8_t *)llvh::alignAddr(
-                (const uint8_t *)ip + ip->iSwitchImm.op2, sizeof(uint32_t));
+                (const uint8_t *)ip + ip->iUIntSwitchImm.op2, sizeof(uint32_t));
 
             // Read the offset from the table.
             // Must be signed to account for backwards branching.
             const int32_t *loc =
-                (const int32_t *)tablestart + uintVal - ip->iSwitchImm.op4;
+                (const int32_t *)tablestart + uintVal - ip->iUIntSwitchImm.op4;
 
             ip = IPADD(*loc);
             DISPATCH;
           }
         }
         // Wrong type or out of range, jump to default.
-        ip = IPADD(ip->iSwitchImm.op3);
+        ip = IPADD(ip->iUIntSwitchImm.op3);
+        DISPATCH;
+      }
+      CASE(StringSwitchImm) {
+        // While it can't invoke any JS code, doStringSwitchImm (when
+        // it calls initializeStringSwitchImmTable) invokes operations
+        // that check that the current IP is set.  Thus, we must
+        // capture it here.  Note that we can't assign to ip directly
+        // within CAPTURE_IP_ASSIGN, because that assigns the original
+        // IP back to ip after evaluating the expression, so it would
+        // overwrite the new value.
+        CAPTURE_IP_ASSIGN(
+            const Inst *newIp, doStringSwitchImm(curCodeBlock, frameRegs, ip));
+        ip = newIp;
         DISPATCH;
       }
       LOAD_CONST(
@@ -3340,7 +3134,7 @@ tailCall:
           HermesValue::encodeTrustedNumberValue(ip->iLoadConstInt.op2));
       LOAD_CONST(
           LoadConstDouble,
-          HermesValue::encodeUntrustedNumberValue(ip->iLoadConstDouble.op2));
+          HermesValue::encodeTrustedNumberValue(ip->iLoadConstDouble.op2));
       LOAD_CONST_CAPTURE_IP(
           LoadConstString,
           HermesValue::encodeStringValue(
@@ -3401,10 +3195,13 @@ tailCall:
       CONDOP(LessEq, <=, lessEqualOp_RJS);
       CONDOP(Greater, >, greaterOp_RJS);
       CONDOP(GreaterEq, >=, greaterEqualOp_RJS);
-      JCOND(Less, <, lessOp_RJS);
-      JCOND(LessEqual, <=, lessEqualOp_RJS);
-      JCOND(Greater, >, greaterOp_RJS);
-      JCOND(GreaterEqual, >=, greaterEqualOp_RJS);
+      JCOND(Less, <, lessOp_RJS, JCOND_IMPL);
+      JCOND(Less, <, lessOp_RJS, JCOND_N_IMPL);
+      JCOND(LessEqual, <=, lessEqualOp_RJS, JCOND_IMPL);
+      JCOND(LessEqual, <=, lessEqualOp_RJS, JCOND_N_IMPL);
+
+      JCOND(Greater, >, greaterOp_RJS, JCOND_IMPL);
+      JCOND(GreaterEqual, >=, greaterEqualOp_RJS, JCOND_IMPL);
 
       JCOND_STRICT_EQ_IMPL(
           JStrictEqual, , IPADD(ip->iJStrictEqual.op1), NEXTINST(JStrictEqual));
@@ -3435,8 +3232,114 @@ tailCall:
           NEXTINST(JNotEqualLong),
           IPADD(ip->iJNotEqualLong.op1));
 
-      CASE_OUTOFLINE(PutOwnByVal);
-      CASE_OUTOFLINE(PutOwnGetterSetterByVal);
+      CASE(JmpTypeOfIs) {
+        TypeOfIsTypes types(ip->iJmpTypeOfIs.op3);
+        if (matchTypeOfIs(O2REG(JmpTypeOfIs), types)) {
+          ip = IPADD(ip->iJmpTypeOfIs.op1);
+        } else {
+          ip = NEXTINST(JmpTypeOfIs);
+        }
+        DISPATCH;
+      }
+
+      CASE(AddOwnPrivateBySym) {
+        CAPTURE_IP_ASSIGN(
+            auto res,
+            JSObject::defineNewOwnProperty(
+                Handle<JSObject>::vmcast(&O1REG(AddOwnPrivateBySym)),
+                runtime,
+                O3REG(AddOwnPrivateBySym).getSymbol(),
+                PropertyFlags::privateFieldPropertyFlags(),
+                Handle<>(&O2REG(AddOwnPrivateBySym))));
+        if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        gcScope.flushToSmallCount(KEEP_HANDLES);
+        ip = NEXTINST(AddOwnPrivateBySym);
+        DISPATCH;
+      }
+
+      CASE(GetOwnPrivateBySym) {
+        if (LLVM_LIKELY(O2REG(GetOwnPrivateBySym).isObject())) {
+          auto *obj = vmcast<JSObject>(O2REG(GetOwnPrivateBySym));
+          auto cacheIdx = ip->iGetOwnPrivateBySym.op3;
+          auto *cacheEntry = curCodeBlock->getPrivateNameCacheEntry(cacheIdx);
+          CompressedPointer clazzPtr{obj->getClassGCPtr()};
+          SymbolID nameSym = O4REG(GetOwnPrivateBySym).getSymbol();
+          // If we have a cache hit, reuse the cached result.
+          if (LLVM_LIKELY(
+                  cacheEntry->clazz == clazzPtr &&
+                  cacheEntry->nameVal == nameSym)) {
+            O1REG(GetOwnPrivateBySym) = JSObject::getNamedSlotValueUnsafe(
+                                            obj, runtime, cacheEntry->slot)
+                                            .unboxToHV(runtime);
+            ip = NEXTINST(GetOwnPrivateBySym);
+            DISPATCH;
+          }
+          CAPTURE_IP_ASSIGN(
+              auto res,
+              JSObject::getPrivateField(
+                  Handle<JSObject>::vmcast(&O2REG(GetOwnPrivateBySym)),
+                  runtime,
+                  Handle<SymbolID>::vmcast(&O4REG(GetOwnPrivateBySym)),
+                  cacheIdx == hbc::PROPERTY_CACHING_DISABLED ? nullptr
+                                                             : cacheEntry));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+          O1REG(GetOwnPrivateBySym) = *res;
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          ip = NEXTINST(GetOwnPrivateBySym);
+          DISPATCH;
+        } else {
+          CAPTURE_IP(runtime.raiseTypeError(
+              "cannot read private property of a non-object"));
+          goto exception;
+        }
+      }
+
+      CASE(PutOwnPrivateBySym) {
+        if (LLVM_LIKELY(O1REG(PutOwnPrivateBySym).isObject())) {
+          ENCODE_HV_AS_SHV(shv, O2REG(PutOwnPrivateBySym));
+          auto *obj = vmcast<JSObject>(O1REG(PutOwnPrivateBySym));
+          auto cacheIdx = ip->iPutOwnPrivateBySym.op3;
+          auto *cacheEntry = curCodeBlock->getPrivateNameCacheEntry(cacheIdx);
+          CompressedPointer clazzPtr{obj->getClassGCPtr()};
+          SymbolID nameSym = O4REG(PutOwnPrivateBySym).getSymbol();
+          if (LLVM_LIKELY(
+                  cacheEntry->clazz == clazzPtr &&
+                  cacheEntry->nameVal == nameSym)) {
+            JSObject::setNamedSlotValueUnsafe(
+                obj, runtime, cacheEntry->slot, shv);
+            ip = NEXTINST(PutOwnPrivateBySym);
+            DISPATCH;
+          }
+          // Slow path
+          CAPTURE_IP_ASSIGN(
+              auto res,
+              JSObject::setPrivateField(
+                  Handle<JSObject>::vmcast(&O1REG(PutOwnPrivateBySym)),
+                  runtime,
+                  Handle<SymbolID>::vmcast(&O4REG(PutOwnPrivateBySym)),
+                  Handle<>(&O2REG(PutOwnPrivateBySym)),
+                  cacheIdx == hbc::PROPERTY_CACHING_DISABLED
+                      ? nullptr
+                      : curCodeBlock->getPrivateNameCacheEntry(cacheIdx)));
+          if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+            goto exception;
+          }
+          gcScope.flushToSmallCount(KEEP_HANDLES);
+          ip = NEXTINST(GetOwnPrivateBySym);
+          DISPATCH;
+        } else {
+          CAPTURE_IP(runtime.raiseTypeError(
+              "cannot set private property of a non-object"));
+          goto exception;
+        }
+      }
+
+      CASE_OUTOFLINE(DefineOwnByVal);
+      CASE_OUTOFLINE(DefineOwnGetterSetterByVal);
       CASE_OUTOFLINE(DirectEval);
 
       CASE_OUTOFLINE(IteratorBegin);
@@ -3454,7 +3357,7 @@ tailCall:
                   Runtime::getEmptyValue()));
           if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
             if (ip->iIteratorClose.op2 &&
-                !isUncatchableError(runtime.thrownValue_)) {
+                !isUncatchableError(*runtime.thrownValue_)) {
               // Ignore inner exception.
               runtime.clearThrownValue();
             } else {
@@ -3467,127 +3370,13 @@ tailCall:
         DISPATCH;
       }
 
-#ifdef HERMES_RUN_WASM
-      // Asm.js/Wasm Intrinsics
-      CASE(Add32) {
-        O1REG(Add32) = HermesValue::encodeUntrustedNumberValue(
-            (int32_t)(int64_t)(O2REG(Add32).getNumber() +
-                               O3REG(Add32).getNumber()));
-        ip = NEXTINST(Add32);
+      CASE(TypedLoadParent) {
+        JSObject *parent =
+            vmcast<JSObject>(O2REG(TypedLoadParent))->getParent(runtime);
+        O1REG(TypedLoadParent) = HermesValue::encodeObjectValue(parent);
+        ip = NEXTINST(TypedLoadParent);
         DISPATCH;
       }
-      CASE(Sub32) {
-        O1REG(Sub32) = HermesValue::encodeUntrustedNumberValue(
-            (int32_t)(int64_t)(O2REG(Sub32).getNumber() -
-                               O3REG(Sub32).getNumber()));
-        ip = NEXTINST(Sub32);
-        DISPATCH;
-      }
-      CASE(Mul32) {
-        // Signedness matters for multiplication, but low 32 bits are the same
-        // regardless of signedness.
-        const uint32_t arg0 = (uint32_t)(int32_t)(O2REG(Mul32).getNumber());
-        const uint32_t arg1 = (uint32_t)(int32_t)(O3REG(Mul32).getNumber());
-        O1REG(Mul32) =
-            HermesValue::encodeUntrustedNumberValue((int32_t)(arg0 * arg1));
-        ip = NEXTINST(Mul32);
-        DISPATCH;
-      }
-      CASE(Divi32) {
-        const int32_t arg0 = (int32_t)(O2REG(Divi32).getNumber());
-        const int32_t arg1 = (int32_t)(O3REG(Divi32).getNumber());
-        O1REG(Divi32) = HermesValue::encodeUntrustedNumberValue(arg0 / arg1);
-        ip = NEXTINST(Divi32);
-        DISPATCH;
-      }
-      CASE(Divu32) {
-        const uint32_t arg0 = (uint32_t)(int32_t)(O2REG(Divu32).getNumber());
-        const uint32_t arg1 = (uint32_t)(int32_t)(O3REG(Divu32).getNumber());
-        O1REG(Divu32) =
-            HermesValue::encodeUntrustedNumberValue((int32_t)(arg0 / arg1));
-        ip = NEXTINST(Divu32);
-        DISPATCH;
-      }
-
-      CASE(Loadi8) {
-        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi8));
-        int8_t *basePtr = reinterpret_cast<int8_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi8).getNumber());
-        O1REG(Loadi8) = HermesValue::encodeUntrustedNumberValue(basePtr[addr]);
-        ip = NEXTINST(Loadi8);
-        DISPATCH;
-      }
-      CASE(Loadu8) {
-        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu8));
-        uint8_t *basePtr = reinterpret_cast<uint8_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu8).getNumber());
-        O1REG(Loadu8) = HermesValue::encodeUntrustedNumberValue(basePtr[addr]);
-        ip = NEXTINST(Loadu8);
-        DISPATCH;
-      }
-      CASE(Loadi16) {
-        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi16));
-        int16_t *basePtr = reinterpret_cast<int16_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi16).getNumber());
-        O1REG(Loadi16) =
-            HermesValue::encodeUntrustedNumberValue(basePtr[addr >> 1]);
-        ip = NEXTINST(Loadi16);
-        DISPATCH;
-      }
-      CASE(Loadu16) {
-        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu16));
-        uint16_t *basePtr = reinterpret_cast<uint16_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu16).getNumber());
-        O1REG(Loadu16) =
-            HermesValue::encodeUntrustedNumberValue(basePtr[addr >> 1]);
-        ip = NEXTINST(Loadu16);
-        DISPATCH;
-      }
-      CASE(Loadi32) {
-        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadi32));
-        int32_t *basePtr = reinterpret_cast<int32_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadi32).getNumber());
-        O1REG(Loadi32) =
-            HermesValue::encodeUntrustedNumberValue(basePtr[addr >> 2]);
-        ip = NEXTINST(Loadi32);
-        DISPATCH;
-      }
-      CASE(Loadu32) {
-        auto *mem = vmcast<JSTypedArrayBase>(O2REG(Loadu32));
-        uint32_t *basePtr = reinterpret_cast<uint32_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O3REG(Loadu32).getNumber());
-        O1REG(Loadu32) = HermesValue::encodeUntrustedNumberValue(
-            (int32_t)(basePtr[addr >> 2]));
-        ip = NEXTINST(Loadu32);
-        DISPATCH;
-      }
-
-      CASE(Store8) {
-        auto *mem = vmcast<JSTypedArrayBase>(O1REG(Store8));
-        int8_t *basePtr = reinterpret_cast<int8_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O2REG(Store8).getNumber());
-        basePtr[addr] = (int8_t)(int32_t)(O3REG(Store8).getNumber());
-        ip = NEXTINST(Store8);
-        DISPATCH;
-      }
-      CASE(Store16) {
-        auto *mem = vmcast<JSTypedArrayBase>(O1REG(Store16));
-        int16_t *basePtr = reinterpret_cast<int16_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O2REG(Store16).getNumber());
-        basePtr[addr >> 1] = (int16_t)(int32_t)(O3REG(Store16).getNumber());
-        ip = NEXTINST(Store16);
-        DISPATCH;
-      }
-      CASE(Store32) {
-        auto *mem = vmcast<JSTypedArrayBase>(O1REG(Store32));
-        int32_t *basePtr = reinterpret_cast<int32_t *>(mem->begin(runtime));
-        const uint32_t addr = (uint32_t)(int32_t)(O2REG(Store32).getNumber());
-        basePtr[addr >> 2] = (int32_t)(O3REG(Store32).getNumber());
-        // A nop for now.
-        ip = NEXTINST(Store32);
-        DISPATCH;
-      }
-#endif
 
       CASE(_last) {
         hermes_fatal("Invalid opcode _last");
@@ -3598,60 +3387,25 @@ tailCall:
         "All opcodes should dispatch to the next and not fallthrough "
         "to here");
 
-  // We arrive here if we couldn't allocate the registers for the current frame.
-  stackOverflow:
-    CAPTURE_IP(runtime.raiseStackOverflow(
-        Runtime::StackOverflowKind::JSRegisterStack));
-
-  // We arrive here when we raised an exception in a callee, but we don't want
-  // the callee to be able to handle it.
-  handleExceptionInParent:
-    // Restore the caller code block and IP.
-    curCodeBlock = FRAME.getSavedCodeBlock();
-    ip = FRAME.getSavedIP();
-
-    // Pop to the previous frame where technically the error happened.
-    frameRegs = &runtime.restoreStackAndPreviousFrame(FRAME).getFirstLocalRef();
-
-    // If we are coming from native code, return.
-    if (!curCodeBlock)
-      return ExecutionStatus::EXCEPTION;
-
-  // Handle the exception.
   exception:
     UPDATE_OPCODE_TIME_SPENT;
     assert(
-        !runtime.thrownValue_.isEmpty() &&
+        !runtime.thrownValue_->isEmpty() &&
         "thrownValue unavailable at exception");
 
     bool catchable = true;
-    // If this is an Error object that was thrown internally, it didn't have
-    // access to the current codeblock and IP, so collect the stack trace here.
-    if (auto *jsError = dyn_vmcast<JSError>(runtime.thrownValue_)) {
+    if (auto *jsError = dyn_vmcast<JSError>(*runtime.thrownValue_)) {
       catchable = jsError->catchable();
-      if (!jsError->getStackTrace()) {
-        // Temporarily clear the thrown value for following operations.
-        CAPTURE_IP_ASSIGN(
-            auto errorHandle,
-            runtime.makeHandle(vmcast<JSError>(runtime.thrownValue_)));
-        runtime.clearThrownValue();
-
-        CAPTURE_IP(
-            JSError::recordStackTrace(
-                errorHandle, runtime, false, curCodeBlock, ip));
-
-        // Restore the thrown value.
-        runtime.setThrownValue(errorHandle.getHermesValue());
-      }
     }
 
     gcScope.flushToSmallCount(KEEP_HANDLES);
-    tmpHandle.clear();
+    lv.tmp.clear();
 
 #ifdef HERMES_ENABLE_DEBUGGER
     if (SingleStep) {
       // If we're single stepping, don't bother with any more checks,
       // and simply signal that we should continue execution with an exception.
+      runtime.setCurrentIP(ip);
       state.codeBlock = curCodeBlock;
       state.offset = CUROFFSET;
       return ExecutionStatus::EXCEPTION;

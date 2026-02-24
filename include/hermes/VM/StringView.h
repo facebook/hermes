@@ -13,11 +13,7 @@
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringRefUtils.h"
 #include "hermes/VM/TwineChar16.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -223,7 +219,7 @@ class StringView {
 // probably not worth it.
 #ifndef NDEBUG
   StringView(const StringView &other) {
-    ::memcpy(this, &other, sizeof(*this));
+    ::memcpy((void *)this, &other, sizeof(*this));
     if (isHandle_)
       new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
   }
@@ -232,7 +228,7 @@ class StringView {
     if (this != &other) {
       if (isHandle_)
         strPrim().~Handle<StringPrimitive>();
-      ::memcpy(this, &other, sizeof(*this));
+      ::memcpy((void *)this, &other, sizeof(*this));
       if (isHandle_)
         new (strPrim_.buffer) Handle<StringPrimitive>(other.strPrim());
     }
@@ -437,5 +433,4 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const StringView &sv);
 } // namespace vm
 } // namespace hermes
 
-#pragma GCC diagnostic pop
 #endif // HERMES_VM_STRINGVIEW_H

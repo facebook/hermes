@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function f() {
   for (var j = 1; j < 1; j *= -8) {
@@ -19,21 +19,17 @@ f();
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [f]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %f#0#1()#2 : undefined, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f" : string
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "f" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:       DeclareGlobalVarInst "f": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %f(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "f": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "f": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function f#0#1()#2 : undefined
-// CHECK-NEXT:S{f#0#1()#2} = []
+// CHECK:function f(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

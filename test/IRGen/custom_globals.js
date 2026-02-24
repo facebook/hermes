@@ -5,22 +5,23 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir -include-globals %s.d %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir -include-globals %s.d %s -O
+// RUN: %hermesc -hermes-parser -dump-ir -include-globals %s.d %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir -include-globals %s.d %s -O
 
 var x = CustomGlobalProperty;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [x]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %2 = StoreStackInst undefined : undefined, %1
-// CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst globalObject : object, "CustomGlobalProperty" : string
-// CHECK-NEXT:  %4 = StorePropertyInst %3, globalObject : object, "x" : string
-// CHECK-NEXT:  %5 = LoadStackInst %1
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "x": string
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %2: any
+// CHECK-NEXT:  %4 = TryLoadGlobalPropertyInst (:any) globalObject: object, "CustomGlobalProperty": string
+// CHECK-NEXT:       StorePropertyLooseInst %4: any, globalObject: object, "x": string
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end

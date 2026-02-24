@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // This elicits particular caching behavior to ensure that a hidden class without a property map does not trigger a false positive in the prototype property cache.
 

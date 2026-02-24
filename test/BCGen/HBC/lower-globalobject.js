@@ -16,24 +16,22 @@ function foo() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKRA:function global#0()#1 : undefined
-// CHKRA-NEXT:globals = [x, foo]
-// CHKRA-NEXT:S{global#0()#1} = []
+// CHKRA:function global(): undefined
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
-// CHKRA-NEXT:  $Reg1 @1 [2...4) 	%1 = HBCCreateFunctionInst %foo#0#1()#2, %0
-// CHKRA-NEXT:  $Reg0 @2 [3...4) 	%2 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  $Reg0 @3 [empty]	%3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
-// CHKRA-NEXT:  $Reg0 @4 [5...6) 	%4 = HBCLoadConstInst undefined : undefined
-// CHKRA-NEXT:  $Reg0 @5 [empty]	%5 = ReturnInst %4 : undefined
+// CHKRA-NEXT:                 DeclareGlobalVarInst "x": string
+// CHKRA-NEXT:                 DeclareGlobalVarInst "foo": string
+// CHKRA-NEXT:  {r1}      %2 = LIRGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {np0}     %3 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHKRA-NEXT:  {r0}      %4 = CreateFunctionInst (:object) {np0} %3: undefined, empty: any, %foo(): functionCode
+// CHKRA-NEXT:                 StorePropertyLooseInst {r0} %4: object, {r1} %2: object, "foo": string
+// CHKRA-NEXT:                 ReturnInst {np0} %3: undefined
 // CHKRA-NEXT:function_end
 
-// CHKRA:function foo#0#1()#2
-// CHKRA-NEXT:S{foo#0#1()#2} = []
+// CHKRA:function foo(): any
 // CHKRA-NEXT:%BB0:
-// CHKRA-NEXT:  $Reg0 @0 [1...2) 	%0 = HBCGetGlobalObjectInst
-// CHKRA-NEXT:  $Reg0 @1 [2...3) 	%1 = LoadPropertyInst %0 : object, "x" : string
-// CHKRA-NEXT:  $Reg0 @2 [empty]	%2 = ReturnInst %1
+// CHKRA-NEXT:  {r0}      %0 = LIRGetGlobalObjectInst (:object)
+// CHKRA-NEXT:  {r0}      %1 = LoadPropertyInst (:any) {r0} %0: object, "x": string
+// CHKRA-NEXT:                 ReturnInst {r0} %1: any
 // CHKRA-NEXT:function_end
 
 // CHKBC:Bytecode File Information:
@@ -44,6 +42,10 @@ function foo() {
 // CHKBC-NEXT:  BigInt count: 0
 // CHKBC-NEXT:  String Kind Entry count: 2
 // CHKBC-NEXT:  RegExp count: 0
+// CHKBC-NEXT:  StringSwitchImm count: 0
+// CHKBC-NEXT:  Key buffer size (bytes): 0
+// CHKBC-NEXT:  Value buffer size (bytes): 0
+// CHKBC-NEXT:  Shape table count: 0
 // CHKBC-NEXT:  Segment ID: 0
 // CHKBC-NEXT:  CommonJS module count: 0
 // CHKBC-NEXT:  CommonJS module count (static): 0
@@ -57,21 +59,20 @@ function foo() {
 // CHKBC-NEXT:i1[ASCII, 6..8] #9290584E: foo
 // CHKBC-NEXT:i2[ASCII, 9..9] #0001E7F9: x
 
-// CHKBC:Function<global>(1 params, 2 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0000, scope 0x0000, textified callees 0x0000
+// CHKBC:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x0000
 // CHKBC-NEXT:    DeclareGlobalVar  "x"
 // CHKBC-NEXT:    DeclareGlobalVar  "foo"
-// CHKBC-NEXT:    CreateEnvironment r0
-// CHKBC-NEXT:    CreateClosure     r1, r0, Function<foo>
-// CHKBC-NEXT:    GetGlobalObject   r0
-// CHKBC-NEXT:    PutById           r0, r1, 1, "foo"
+// CHKBC-NEXT:    GetGlobalObject   r2
 // CHKBC-NEXT:    LoadConstUndefined r0
+// CHKBC-NEXT:    CreateClosure     r1, r0, Function<foo>
+// CHKBC-NEXT:    PutByIdLoose      r2, r1, 0, "foo"
 // CHKBC-NEXT:    Ret               r0
 
-// CHKBC:Function<foo>(1 params, 1 registers, 0 symbols):
-// CHKBC-NEXT:Offset in debug table: source 0x0009, scope 0x0000, textified callees 0x0000
+// CHKBC:Function<foo>(1 params, 1 registers, 0 numbers, 0 non-pointers):
+// CHKBC-NEXT:Offset in debug table: source 0x000e
 // CHKBC-NEXT:    GetGlobalObject   r0
-// CHKBC-NEXT:    GetByIdShort      r0, r0, 1, "x"
+// CHKBC-NEXT:    GetByIdShort      r0, r0, 0, "x"
 // CHKBC-NEXT:    Ret               r0
 
 // CHKBC:Debug filename table:
@@ -82,18 +83,9 @@ function foo() {
 
 // CHKBC:Debug source table:
 // CHKBC-NEXT:  0x0000  function idx 0, starts at line 11 col 1
-// CHKBC-NEXT:    bc 19: line 11 col 1 scope offset 0x0000 env r0
-// CHKBC-NEXT:  0x0009  function idx 1, starts at line 13 col 1
-// CHKBC-NEXT:    bc 2: line 14 col 10 scope offset 0x0000 env none
+// CHKBC-NEXT:    bc 0: line 11 col 1
+// CHKBC-NEXT:    bc 5: line 11 col 1
+// CHKBC-NEXT:    bc 19: line 11 col 1
+// CHKBC-NEXT:  0x000e  function idx 1, starts at line 13 col 1
+// CHKBC-NEXT:    bc 2: line 14 col 10
 // CHKBC-NEXT:  0x0016  end of debug source table
-
-// CHKBC:Debug scope descriptor table:
-// CHKBC-NEXT:  0x0000  lexical parent:   none, flags:    , variable count: 0
-// CHKBC-NEXT:  0x0003  end of debug scope descriptor table
-
-// CHKBC:Textified callees table:
-// CHKBC-NEXT:  0x0000  entries: 0
-// CHKBC-NEXT:  0x0001  end of textified callees table
-
-// CHKBC:Debug string table:
-// CHKBC-NEXT:  0x0000  end of debug string table

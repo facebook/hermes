@@ -61,6 +61,8 @@ struct PropertyFlags {
       /// descriptors synthesized by get*Descriptor methods, and never
       /// set in descriptors stored persistently.
       uint16_t proxyObject : 1;
+      /// The property is a private name.
+      uint16_t privateName : 1;
     };
 
     uint16_t _flags;
@@ -104,6 +106,17 @@ struct PropertyFlags {
     pf.enumerable = 0;
     pf.writable = 1;
     pf.configurable = 1;
+    return pf;
+  }
+
+  /// Return an instance of PropertyFlags initialized as writable,
+  /// non-configurable, non-enumerable, and privateName.
+  static PropertyFlags privateFieldPropertyFlags() {
+    PropertyFlags pf{};
+    pf.enumerable = 0;
+    pf.writable = 1;
+    pf.configurable = 0;
+    pf.privateName = 1;
     return pf;
   }
 
@@ -189,6 +202,31 @@ struct ComputedPropertyDescriptor : public PropertyDescriptor {
 inline bool operator==(PropertyDescriptor a, PropertyDescriptor b) {
   return a.flags == b.flags && a.slot == b.slot;
 }
+
+/// A special version of ComputedPropertyDescriptor that encapsulates temporary
+/// storage for a SymbolID that may be needed during the lifetime of the
+/// descriptor. Must be passed by reference.
+struct ComputedPropertyDescWithSymStorage : public ComputedPropertyDescriptor {
+  /// This is a temporary handle sometimes used internally to store SymbolIDs in
+  /// order to make sure they aren't collected for the lifetime of the
+  /// \c ComputedPropertyDescriptor.
+  /// Must not be modified or read by the caller.
+  MutableHandle<SymbolID> _tmpSymbolStorage;
+
+  explicit ComputedPropertyDescWithSymStorage(
+      MutableHandle<SymbolID> tmpSymbolStorage)
+      : ComputedPropertyDescriptor(), _tmpSymbolStorage(tmpSymbolStorage) {}
+
+  ComputedPropertyDescWithSymStorage(
+      const ComputedPropertyDescWithSymStorage &) = delete;
+  ComputedPropertyDescWithSymStorage &operator=(
+      const ComputedPropertyDescWithSymStorage &) = delete;
+
+  /// Return \c ComputedPropertyDescriptor to ignore slicing warnings.
+  const ComputedPropertyDescriptor &get() const {
+    return *this;
+  }
+};
 
 /// @}
 

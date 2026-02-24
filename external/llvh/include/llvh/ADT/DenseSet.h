@@ -124,6 +124,9 @@ public:
 
     Iterator& operator++() { ++I; return *this; }
     Iterator operator++(int) { auto T = *this; ++I; return T; }
+    friend bool operator==(const Iterator &X, const Iterator &Y) {
+      return X.I == Y.I;
+    }
     bool operator==(const ConstIterator& X) const { return I == X.I; }
     bool operator!=(const ConstIterator& X) const { return I != X.I; }
   };
@@ -149,6 +152,9 @@ public:
 
     ConstIterator& operator++() { ++I; return *this; }
     ConstIterator operator++(int) { auto T = *this; ++I; return T; }
+    friend bool operator==(const ConstIterator& L, const ConstIterator& R) {
+      return L.I == R.I;
+    }
     bool operator==(const ConstIterator& X) const { return I == X.I; }
     bool operator!=(const ConstIterator& X) const { return I != X.I; }
   };

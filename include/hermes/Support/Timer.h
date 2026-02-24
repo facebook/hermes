@@ -8,8 +8,9 @@
 #ifndef HERMES_SUPPORT_TIMER_H
 #define HERMES_SUPPORT_TIMER_H
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_STATS)
-// Debug - forward to llvm.
+#if !defined(NDEBUG) || !defined(HERMES_IS_MOBILE_BUILD)
+// Debug, or non-mobile build, where code size is not sensitive - forward to
+// llvm.
 #include "llvh/Support/Timer.h"
 
 namespace hermes {
@@ -17,6 +18,7 @@ using Timer = llvh::Timer;
 using TimerGroup = llvh::TimerGroup;
 using NamedRegionTimer = llvh::NamedRegionTimer;
 using TimeRegion = llvh::TimeRegion;
+static constexpr bool kTimerEnabled = true;
 } // namespace hermes
 
 #else
@@ -43,6 +45,7 @@ struct NamedRegionTimer {
 struct TimeRegion {
   TimeRegion(Timer *t) {}
 };
+static constexpr bool kTimerEnabled = false;
 } // namespace hermes
 
 #endif

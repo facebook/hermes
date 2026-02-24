@@ -10,7 +10,6 @@
 
 #include "hermes/VM/IterationKind.h"
 #include "hermes/VM/JSObject.h"
-#include "hermes/VM/SegmentedArray.h"
 
 namespace hermes {
 namespace vm {
@@ -18,6 +17,21 @@ namespace vm {
 /// A common implementation of "Array-like" objects.
 class ArrayImpl : public JSObject {
   using Super = JSObject;
+
+ public:
+  using size_type = uint32_t;
+  /// StorageType is the underlying storage that JSArray uses to put the values
+  /// into.
+  using StorageType = ArrayStorageSmall;
+
+ private:
+  /// The first index contained in the storage.
+  uint32_t beginIndex_{0};
+  /// Number of elements in the storage starting from \p beginIndex_.
+  uint32_t elemCount_{0};
+  /// The indexed storage for this array.
+  GCPointer<StorageType> indexedStorage_;
+
   friend void ArrayImplBuildMeta(const GCCell *cell, Metadata::Builder &mb);
 
  public:
@@ -30,10 +44,6 @@ class ArrayImpl : public JSObject {
 
   /// @name API for C++ users.
   /// @{
-  using size_type = uint32_t;
-  /// StorageType is the underlying storage that JSArray uses to put the values
-  /// into.
-  using StorageType = SegmentedArraySmall;
 
   /// Resize the internal storage. The ".length" property is not affected. It
   /// does \b NOT check for read-only properties.
@@ -42,21 +52,40 @@ class ArrayImpl : public JSObject {
       Runtime &runtime,
       uint32_t newLength);
 
+  /// Set the size of the storage to be \p newLength which must >= the current
+  /// size. The ".length" property is not affected. It does \b NOT check for
+  /// read-only properties.
+  static ExecutionStatus increaseStorageEndIndex(
+      Handle<ArrayImpl> selfHandle,
+      Runtime &runtime,
+      uint32_t newLength) {
+    assert(
+        newLength >= selfHandle->beginIndex_ + selfHandle->elemCount_ &&
+        "Must be growing");
+    // Check if the storage has already been initialized.
+    if (LLVM_LIKELY(selfHandle->indexedStorage_)) {
+      auto newElemCount = newLength - selfHandle->beginIndex_;
+      auto *indexedStorage = selfHandle->getIndexedStorageUnsafe(runtime);
+      // If the storage has sufficient capacity, just increase the size inline.
+      if (LLVM_LIKELY(newElemCount <= indexedStorage->capacity())) {
+        selfHandle->elemCount_ = newElemCount;
+        StorageType::growWithinCapacity(indexedStorage, runtime, newElemCount);
+        return ExecutionStatus::RETURNED;
+      }
+    }
+    // Fall back to the general case.
+    return setStorageEndIndex(selfHandle, runtime, newLength);
+  }
+
   /// Update the element at index \p index. If necessary, the array will be
   /// resized, but if it is an \c JSArray, it's \c .length property will not
   /// be affected.
-  /// Note that even though the underlying \c setOwnIndexed() interface defines
-  /// failure modes, our concrete implementation can never fail.
-  static void setElementAt(
+  [[nodiscard]] static ExecutionStatus setElementAt(
       Handle<ArrayImpl> selfHandle,
       Runtime &runtime,
       size_type index,
       Handle<> value) {
-    auto result = _setOwnIndexedImpl(selfHandle, runtime, index, value);
-    (void)result;
-    assert(
-        result != ExecutionStatus::EXCEPTION && *result &&
-        "JSArrayImpl::setElementAt() failing");
+    return _setOwnIndexedImpl(selfHandle, runtime, index, value).getStatus();
   }
 
   /// Update an array element, which must exist in storage. Elements with value
@@ -73,10 +102,10 @@ class ArrayImpl : public JSObject {
     assert(!self->flags_.noExtend && "this array cannot be extended");
 
     assert(
-        index >= self->beginIndex_ && index < self->endIndex_ &&
+        index >= self->beginIndex_ && index < self->getEndIndex() &&
         "array index out of range");
-    self->getIndexedStorage(runtime)->set(
-        runtime, index - self->beginIndex_, value);
+    self->getIndexedStorageUnsafe(runtime)->set(
+        index - self->beginIndex_, value, runtime.getHeap());
   }
 
   /// Set the element at index \p index to empty. This does not affect the
@@ -94,17 +123,34 @@ class ArrayImpl : public JSObject {
     return beginIndex_;
   }
 
+  /// \return the number of elements contained in the storage, starting from
+  /// \p beginIndex_.
+  size_type getElemCount() const {
+    return elemCount_;
+  }
+
+  /// Set the elemCount_.
+  /// Unsafe: caller must ensure that the number of elements in the storage are
+  /// the same as the final elemCount.
+  void setElemCountUnsafe(uint32_t elemCount) {
+    elemCount_ = elemCount;
+  }
+
   /// \return 1 + the index of the last element contained in the storage.
   size_type getEndIndex() const {
-    return endIndex_;
+    return beginIndex_ + elemCount_;
   }
 
   /// Return the value at index \p index, or \c empty if the index is not
   /// contained in the storage.
   const SmallHermesValue at(Runtime &runtime, size_type index) const {
-    return index >= beginIndex_ && index < endIndex_
-        ? getIndexedStorage(runtime)->at(runtime, index - beginIndex_)
-        : SmallHermesValue::encodeEmptyValue();
+    // Optimized range check: index should be
+    // [beginIndex_, beginIndex_+elemCount_). If we subtract beginIndex_ from
+    // index, values smaller than beginIndex_ will wrap around to the top of the
+    // range, so we can use a single comparison.
+    index -= beginIndex_;
+    return index < elemCount_ ? getIndexedStorageUnsafe(runtime)->at(index)
+                              : SmallHermesValue::encodeEmptyValue();
   }
 
   /// Return the value at index \p index.
@@ -114,8 +160,13 @@ class ArrayImpl : public JSObject {
 
   /// Get a pointer to the indexed storage for this array. The returned value
   /// may be null if there is no indexed storage.
-  StorageType *getIndexedStorage(PointerBase &base) const {
+  StorageType *getIndexedStorageNullable(PointerBase &base) const {
     return indexedStorage_.get(base);
+  }
+  /// Get a pointer to the indexed storage for this array. The indexed storage
+  /// must not be null.
+  StorageType *getIndexedStorageUnsafe(PointerBase &base) const {
+    return indexedStorage_.getNonNull(base);
   }
 
   /// Set the indexed storage of this array to be \p p. The pointer is allowed
@@ -174,7 +225,7 @@ class ArrayImpl : public JSObject {
   /// \return the range of indexes (end-exclusive) in the array.
   static std::pair<uint32_t, uint32_t> _getOwnIndexedRangeImpl(
       JSObject *selfObj,
-      Runtime &runtime);
+      PointerBase &runtime);
 
   /// Obtain an element from the "indexed storage" of this object. The storage
   /// itself is implementation dependent.
@@ -214,16 +265,8 @@ class ArrayImpl : public JSObject {
 
   /// Return the value at index \p index, which must be valid.
   const SmallHermesValue unsafeAt(Runtime &runtime, size_type index) const {
-    return getIndexedStorage(runtime)->at(runtime, index - beginIndex_);
+    return getIndexedStorageUnsafe(runtime)->at(index - beginIndex_);
   }
-
- private:
-  /// The first index contained in the storage.
-  uint32_t beginIndex_{0};
-  /// One past the last index contained in the storage.
-  uint32_t endIndex_{0};
-  /// The indexed storage for this array.
-  GCPointer<StorageType> indexedStorage_;
 };
 
 class Arguments final : public ArrayImpl {
@@ -245,7 +288,7 @@ class Arguments final : public ArrayImpl {
 
   /// Create an instance of Arguments, with size and capacity equal to \p length
   /// and a property "length" initialized to that value.
-  static CallResult<Handle<Arguments>> create(
+  static CallResult<PseudoHandle<Arguments>> create(
       Runtime &runtime,
       size_type length,
       Handle<Callable> curFunction,
@@ -292,14 +335,26 @@ class JSArray final : public ArrayImpl {
     return cell->getKind() == CellKind::JSArrayKind;
   }
 
+  /// \return the maximum capacity JSArray for which an object and indexed
+  /// storage can be allocated entirely at once in the GC young gen.
+  /// This is useful because we can allocate both the object and the indexed
+  /// storage easily in the JIT.
+  static constexpr inline uint32_t maxYoungGenAllocationCapacity() {
+    return StorageType::capacityForAllocationSize(
+        GC::maxYoungGenAllocationSize() - heapAlignSize(cellSize<JSArray>()));
+  }
+
   static uint32_t getLength(const JSArray *self, PointerBase &pb) {
     return getDirectSlotValue<lengthPropIndex()>(self).getNumber(pb);
   }
 
   /// Create an instance of Array, with [[Prototype]] initialized with
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
-  /// \p length. Does not allocate the return object's property storage array.
-  static CallResult<Handle<JSArray>> createNoAllocPropStorage(
+  /// \p length. Sets the size of the indexed property storage array to \p
+  /// length and sets the elemCount_ to \p length.
+  ///
+  /// Does not allocate the return object's property storage array.
+  static CallResult<PseudoHandle<JSArray>> createNoAllocPropStorage(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
@@ -310,14 +365,14 @@ class JSArray final : public ArrayImpl {
   /// \p prototypeHandle, with capacity for \p capacity elements and actual size
   /// \p length. It also allocates the return object's property storage array
   /// to hold all properties in \p classHandle.
-  static CallResult<Handle<JSArray>> createAndAllocPropStorage(
+  static CallResult<PseudoHandle<JSArray>> createAndAllocPropStorage(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       Handle<HiddenClass> classHandle,
       size_type capacity = 0,
       size_type length = 0);
 
-  static CallResult<Handle<JSArray>> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle,
       size_type capacity,
@@ -325,13 +380,13 @@ class JSArray final : public ArrayImpl {
     return createNoAllocPropStorage(
         runtime,
         prototypeHandle,
-        *prototypeHandle == runtime.arrayPrototype.getObject()
-            ? Handle<HiddenClass>::vmcast(&runtime.arrayClass)
+        *prototypeHandle == *runtime.arrayPrototype
+            ? runtime.arrayClass
             : createClass(runtime, prototypeHandle),
         capacity,
         length);
   }
-  static CallResult<Handle<JSArray>> create(
+  static CallResult<PseudoHandle<JSArray>> create(
       Runtime &runtime,
       Handle<JSObject> prototypeHandle) {
     return create(runtime, prototypeHandle, 0, 0);
@@ -339,7 +394,7 @@ class JSArray final : public ArrayImpl {
 
   /// Create an instance of Array, using the standard array prototype, with
   /// capacity for \p capacity elements and actual size \p length.
-  static CallResult<Handle<JSArray>>
+  static CallResult<PseudoHandle<JSArray>>
   create(Runtime &runtime, size_type capacity, size_type length);
 
   /// A convenience method for setting the \c .length property of the array.
@@ -356,7 +411,8 @@ class JSArray final : public ArrayImpl {
         selfHandle,
         runtime,
         Predefined::getSymbolID(Predefined::length),
-        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(newValue)));
+        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(newValue)),
+        opFlags);
   }
 
   template <typename NeedsBarrier>
@@ -367,13 +423,15 @@ class JSArray final : public ArrayImpl {
       NeedsBarrier needsBarrier)
       : ArrayImpl(runtime, *parent, *clazz, needsBarrier) {}
 
- private:
-  /// A helper to update the named '.length' property.
+  /// Write \p newLength directly to the length property of the array. The
+  /// caller must have already checked that the length is writable, and that the
+  /// end index does not need to be updated.
   static void
-  putLength(JSArray *self, Runtime &runtime, SmallHermesValue newLength) {
+  putLengthUnsafe(JSArray *self, Runtime &runtime, SmallHermesValue newLength) {
     setDirectSlotValue<lengthPropIndex()>(self, newLength, runtime.getHeap());
   }
 
+ private:
   /// Update the JavaScript '.length' property, which also resizes the array.
   /// The writability of the property \b MUST already have been checked.
   /// If not sure, use \c putNamed().
@@ -381,7 +439,7 @@ class JSArray final : public ArrayImpl {
       Handle<JSArray> selfHandle,
       Runtime &runtime,
       Handle<> newLength,
-      PropOpFlags opFlags) LLVM_NO_SANITIZE("float-cast-overflow");
+      PropOpFlags opFlags);
 
   /// Update the JavaScript '.length' property, which also resizes the array.
   /// The writability of the property \b MUST already have been checked.
@@ -398,6 +456,16 @@ class JSArray final : public ArrayImpl {
 /// ES6.0 22.1.5.
 class JSArrayIterator : public JSObject {
   using Super = JSObject;
+
+  /// [[IteratedObject]]
+  /// This is null if iteration has been completed.
+  GCPointer<JSObject> iteratedObject_;
+
+  /// [[ArrayIteratorNextIndex]]
+  uint64_t nextIndex_{0};
+
+  /// [[ArrayIterationKind]]
+  IterationKind iterationKind_;
 
   friend void JSArrayIteratorBuildMeta(
       const GCCell *cell,
@@ -431,17 +499,6 @@ class JSArrayIterator : public JSObject {
       : JSObject(runtime, *parent, *clazz),
         iteratedObject_(runtime, *iteratedObject, runtime.getHeap()),
         iterationKind_(iterationKind) {}
-
- private:
-  /// [[IteratedObject]]
-  /// This is null if iteration has been completed.
-  GCPointer<JSObject> iteratedObject_;
-
-  /// [[ArrayIteratorNextIndex]]
-  uint64_t nextIndex_{0};
-
-  /// [[ArrayIterationKind]]
-  IterationKind iterationKind_;
 };
 
 } // namespace vm

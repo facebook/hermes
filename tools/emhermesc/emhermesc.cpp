@@ -15,8 +15,9 @@
  * HermesCompiler.js is a module exposing the compiler interface to JS.
  */
 
-#include "hermes/AST/SemValidate.h"
 #include "hermes/BCGen/HBC/HBC.h"
+#include "hermes/Sema/SemContext.h"
+#include "hermes/Sema/SemResolve.h"
 #include "hermes/SourceMap/SourceMapParser.h"
 #include "hermes/Support/Algorithms.h"
 #include "hermes/Support/SimpleDiagHandler.h"
@@ -115,7 +116,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
     const char *sourceMapData,
     size_t sourceMapSize) {
   auto compileRes = std::make_unique<CompileResult>();
-  std::unique_ptr<SourceMap> sourceMap;
+  llvh::StringRef smRef;
 
   if (source[sourceSize - 1] != 0) {
     compileRes->error_ = "Input source must be zero-terminated";
@@ -128,14 +129,7 @@ extern "C" CompileResult *hermesCompileToBytecode(
       return compileRes.release();
     }
 
-    SourceErrorManager sm;
-    SimpleDiagHandlerRAII diagHandler(sm);
-    sourceMap = SourceMapParser::parse({sourceMapData, sourceMapSize - 1}, sm);
-    if (!sourceMap) {
-      compileRes->error_ =
-          "Failed to parse source map:" + diagHandler.getErrorString();
-      return compileRes.release();
-    }
+    smRef = {sourceMapData, sourceMapSize};
   }
 
   hbc::CompileFlags flags{};
@@ -143,10 +137,10 @@ extern "C" CompileResult *hermesCompileToBytecode(
 
   // Note that we are relying the zero termination provided by str.data(),
   // because the parser requires it.
-  auto res = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+  auto res = hbc::createBCProviderFromSrc(
       std::make_unique<hermes::Buffer>((const uint8_t *)source, sourceSize - 1),
       sourceURL ? sourceURL : "",
-      std::move(sourceMap),
+      smRef,
       flags);
   if (!res.first) {
     if (!res.second.empty())
@@ -161,12 +155,13 @@ extern "C" CompileResult *hermesCompileToBytecode(
   BytecodeGenerationOptions opts(::hermes::EmitBundle);
   opts.optimizationEnabled = false;
 
-  hbc::BytecodeSerializer BS{bcstream, opts};
-  BS.serialize(
+  hbc::serializeBytecodeModule(
       *res.first->getBytecodeModule(),
       llvh::SHA1::hash(
           llvh::makeArrayRef(
-              reinterpret_cast<const uint8_t *>(source), sourceSize - 1)));
+              reinterpret_cast<const uint8_t *>(source), sourceSize - 1)),
+      bcstream,
+      opts);
 
   return compileRes.release();
 }

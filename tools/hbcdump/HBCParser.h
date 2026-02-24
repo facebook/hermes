@@ -69,10 +69,10 @@ class HBCParser {
   uint32_t getBasicBlockOffset(uint32_t funcId, uint16_t profileIndex);
 
   /// Get debug source location information at \p opcodeOffset in \p funcId.
-  llvh::Optional<SourceMapTextLocation> getSourceLocation(
+  llvh::Optional<SourceTextLocation> getSourceLocation(
       uint32_t funcId,
       uint32_t offsetInFunction) {
-    return bcProvider_->getLocationForAddress(funcId, offsetInFunction);
+    return bcProvider_->getSourceTextLocation(funcId, offsetInFunction);
   }
 
   /// Get function id from its \p checksum.

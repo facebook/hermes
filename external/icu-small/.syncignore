@@ -1,0 +1,14 @@
+# Local-only build files (not in upstream)
+/CMakeLists.txt
+/hermes_icu_glue.cpp
+/hermes-icu.def
+/version.rc.in
+/icudata.c.in
+
+# Local-only metadata
+/sync-config.json
+/.syncignore
+
+# Tools files
+/source/tools/
+/source/python/icutools/

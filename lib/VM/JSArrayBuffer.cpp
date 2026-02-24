@@ -20,6 +20,7 @@ const ObjectVTable JSArrayBuffer::vt{
     VTable(
         CellKind::JSArrayBufferKind,
         cellSize<JSArrayBuffer>(),
+        /* allowLargeAlloc */ false,
         _finalizeImpl,
         _mallocSizeImpl,
         nullptr
@@ -57,6 +58,20 @@ PseudoHandle<JSArrayBuffer> JSArrayBuffer::create(
       runtime.getHiddenClassForPrototype(
           *parentHandle, numOverlapSlots<JSArrayBuffer>()));
   return JSObjectInit::initToPseudoHandle(runtime, cell);
+}
+
+PseudoHandle<JSArrayBuffer> JSArrayBuffer::createWithInternalDataBlock(
+    Runtime &runtime,
+    Handle<JSObject> parentHandle,
+    uint8_t *data,
+    size_type size) {
+  auto self = JSArrayBuffer::create(runtime, parentHandle);
+  self->attached_ = true;
+  self->data_ = data;
+  self->size_ = size;
+  self->external_ = false;
+  runtime.getHeap().creditExternalMemory(self.get(), size);
+  return self;
 }
 
 CallResult<Handle<JSArrayBuffer>> JSArrayBuffer::clone(
@@ -139,7 +154,7 @@ void JSArrayBuffer::_snapshotAddEdgesImpl(
   if (!self->attached() || self->external_) {
     return;
   }
-  if (uint8_t *data = self->data_.get(gc)) {
+  if (uint8_t *data = self->data_) {
     // While this is an internal edge, it is to a native node which is not
     // automatically added by the metadata.
     snap.addNamedEdge(
@@ -156,7 +171,7 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
   if (!self->attached() || self->external_) {
     return;
   }
-  if (uint8_t *data = self->data_.get(gc)) {
+  if (uint8_t *data = self->data_) {
     // Add the native node before the JSArrayBuffer node.
     snap.beginNode();
     snap.endNode(
@@ -170,34 +185,51 @@ void JSArrayBuffer::_snapshotAddNodesImpl(
 #endif
 
 void JSArrayBuffer::freeInternalBuffer(GC &gc) {
-  uint8_t *data = data_.get(gc);
+  uint8_t *data = data_;
   assert(attached() && "Buffer must be attached");
   assert((data || size_ == 0) && "Null buffers must have zero size");
   assert(!external_ && "External buffer cannot be freed");
 
   // Need to untrack the native memory that may have been tracked by snapshots.
-  gc.debitExternalMemory(this, size_);
-  gc.getIDTracker().untrackNative(data);
+  untrackInternalBuffer(gc);
   free(data);
 }
 
-ExecutionStatus JSArrayBuffer::detach(
-    Runtime &runtime,
-    Handle<JSArrayBuffer> self) {
+void JSArrayBuffer::untrackInternalBuffer(GC &gc) {
+  gc.debitExternalMemory(this, size_);
+  gc.getIDTracker().untrackNative(data_);
+}
+
+void JSArrayBuffer::detach(Runtime &runtime, Handle<JSArrayBuffer> self) {
   if (!self->attached())
-    return ExecutionStatus::RETURNED;
+    return;
   if (!self->external_)
     self->freeInternalBuffer(runtime.getHeap());
   else {
-    auto res = setExternalFinalizer(
-        runtime, self, HandleRootOwner::getUndefinedValue());
-    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-      return ExecutionStatus::EXCEPTION;
+    setExternalFinalizer(runtime, self, HandleRootOwner::getUndefinedValue());
   }
   // Note that whether a buffer is attached is independent of whether
   // it has allocated data.
+  self->data_ = nullptr;
+  self->size_ = 0;
+  self->external_ = false;
   self->attached_ = false;
-  return ExecutionStatus::RETURNED;
+}
+
+void JSArrayBuffer::ejectBufferUnsafe(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self) {
+  assert(self->attached() && "Buffer must be attached");
+  // Untrack the memory if the attached data block is internal.
+  if (!self->external_) {
+    self->untrackInternalBuffer(runtime.getHeap());
+  } else {
+    setExternalFinalizer(runtime, self, HandleRootOwner::getUndefinedValue());
+  }
+  self->data_ = nullptr;
+  self->size_ = 0;
+  self->external_ = false;
+  self->attached_ = false;
 }
 
 ExecutionStatus JSArrayBuffer::createDataBlock(
@@ -205,8 +237,7 @@ ExecutionStatus JSArrayBuffer::createDataBlock(
     Handle<JSArrayBuffer> self,
     size_type size,
     bool zero) {
-  if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
+  detach(runtime, self);
   uint8_t *data = nullptr;
   if (size > 0) {
     // If an external allocation of this size would exceed the GC heap size,
@@ -227,52 +258,93 @@ ExecutionStatus JSArrayBuffer::createDataBlock(
   }
 
   self->attached_ = true;
-  self->data_.set(runtime, data);
+  self->data_ = data;
   self->size_ = size;
   self->external_ = false;
   runtime.getHeap().creditExternalMemory(*self, size);
   return ExecutionStatus::RETURNED;
 }
 
-ExecutionStatus JSArrayBuffer::setExternalFinalizer(
+void JSArrayBuffer::setExternalFinalizer(
     Runtime &runtime,
     Handle<JSArrayBuffer> self,
     Handle<> value) {
-  auto res = JSObject::defineOwnProperty(
+  // We are setting an internal property with InternalForce() flag. The write
+  // should always go through, and we can skip the result check.
+  [[maybe_unused]] auto res = JSObject::defineOwnProperty(
       self,
       runtime,
       Predefined::getSymbolID(
           Predefined::InternalPropertyArrayBufferExternalFinalizer),
       DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      value);
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
-  if (LLVM_UNLIKELY(!*res))
-    return runtime.raiseTypeError("Cannot modify external buffer.");
-  return ExecutionStatus::RETURNED;
+      value,
+      PropOpFlags().plusInternalForce());
+  assert(
+      res == ExecutionStatus::RETURNED &&
+      "Writes to the external block internal property should never throw");
+  assert(
+      *res &&
+      "Writes to the external block internal property should never fail");
 }
 
-ExecutionStatus JSArrayBuffer::setExternalDataBlock(
+void JSArrayBuffer::setExternalDataBlock(
     Runtime &runtime,
     Handle<JSArrayBuffer> self,
     uint8_t *data,
     size_type size,
-    void *context,
-    FinalizeNativeStatePtr finalizePtr) {
-  if (LLVM_UNLIKELY(detach(runtime, self) == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
+    const std::shared_ptr<void> &context) {
+  struct : public Locals {
+    PinnedValue<NativeState> ns;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
-  // Set the external finalizer first, so that if it throws, the buffer is not
-  // left in an attached state.
-  auto *ns = NativeState::create(runtime, context, finalizePtr);
-  auto res = setExternalFinalizer(runtime, self, runtime.makeHandle(ns));
-  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
-    return ExecutionStatus::EXCEPTION;
+  detach(runtime, self);
+
+  auto contextPtr = new std::shared_ptr<void>(context);
+  auto finalizer = [](GC &gc, NativeState *ns) {
+    delete static_cast<std::shared_ptr<void> *>(ns->context());
+  };
+  lv.ns = NativeState::create(runtime, contextPtr, finalizer);
+  setExternalFinalizer(runtime, self, lv.ns);
   self->attached_ = true;
   self->size_ = size;
   self->external_ = true;
-  self->data_.set(runtime, data);
-  return ExecutionStatus::RETURNED;
+  self->data_ = data;
+}
+
+PseudoHandle<NativeState> JSArrayBuffer::getExternalFinalizerNativeState(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self) {
+  assert(
+      self->attached() && self->external() &&
+      "There must be an external buffer attached.");
+
+  // External buffer finalizer must be held by the NativeState at the specified
+  // internal property. Thus, we can retrieve the property without performing
+  // checks to see if it succeeds.
+  NamedPropertyDescriptor desc;
+  JSObject::getOwnNamedDescriptor(
+      self,
+      runtime,
+      Predefined::getSymbolID(
+          Predefined::InternalPropertyArrayBufferExternalFinalizer),
+      desc);
+  auto *ns = vmcast<NativeState>(
+      JSObject::getNamedSlotValueUnsafe(*self, runtime, desc)
+          .getObject(runtime));
+  return createPseudoHandle(ns);
+}
+
+std::shared_ptr<void> JSArrayBuffer::getExternalDataContext(
+    Runtime &runtime,
+    Handle<JSArrayBuffer> self) {
+  assert(
+      self->attached() && self->external() &&
+      "There must be an external buffer attached.");
+  NoAllocScope noAlloc(runtime);
+  NativeState *ns = getExternalFinalizerNativeState(runtime, self).get();
+  auto *contextPtr = static_cast<const std::shared_ptr<void> *>(ns->context());
+  return std::shared_ptr<void>(*contextPtr);
 }
 
 } // namespace vm

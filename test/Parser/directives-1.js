@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -non-strict %s
+// RUN: %hermesc -dump-ast -non-strict %s
 
 // Make sure we ignore non-directives.
 "use strict"+

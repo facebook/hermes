@@ -158,6 +158,7 @@ PUNCTUATOR(pipepipeequal,       "||=")
 PUNCTUATOR(questionquestionequal, "\?\?=")
 PUNCTUATOR(caretequal,          "^=")
 PUNCTUATOR(equalgreater,        "=>")
+PUNCTUATOR(at,                  "@")
 
 IDENT_OP(as_operator,           "as",   8)
 

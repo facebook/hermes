@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O0 -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function foo(f, g) {
   try {
@@ -17,45 +17,40 @@ function foo(f, g) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [foo]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %4 = StoreStackInst undefined : undefined, %3
-// CHECK-NEXT:  %5 = LoadStackInst %3
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#0#1(f, g)#2
-// CHECK-NEXT:S{foo#0#1()#2} = [f#2, g#2]
+// CHECK:scope %VS1 [f: any, g: any]
+
+// CHECK:function foo(f: any, g: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %f, [f#2], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %g, [g#2], %0
-// CHECK-NEXT:  %3 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %f: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.f]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %g: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.g]: any
+// CHECK-NEXT:       TryStartInst %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = CatchInst
-// CHECK-NEXT:  %5 = LoadFrameInst [g#2], %0
-// CHECK-NEXT:  %6 = CallInst %5, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %7 = ReturnInst %6
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %8 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %7 = CatchInst (:any)
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.g]: any
+// CHECK-NEXT:  %9 = CallInst (:any) %8: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        ReturnInst %9: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %9 = LoadFrameInst [f#2], %0
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %11 = BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = TryEndInst
-// CHECK-NEXT:  %13 = ReturnInst %10
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %14 = BranchInst %BB6
-// CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %15 = TryEndInst
-// CHECK-NEXT:  %16 = BranchInst %BB3
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %17 = BranchInst %BB3
+// CHECK-NEXT:  %11 = LoadFrameInst (:any) %1: environment, [%VS1.f]: any
+// CHECK-NEXT:  %12 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        TryEndInst %BB1, %BB3
+// CHECK-NEXT:%BB3:
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end

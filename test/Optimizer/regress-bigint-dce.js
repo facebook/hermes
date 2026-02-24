@@ -7,8 +7,6 @@
 
 // RUN: %hermesc -dump-ir %s -O | %FileCheckOrRegen %s --match-full-lines
 
-// This test fails in Hermes because IR dumping of bigints is broken.
-
 // Verify that arithmetic operations with a BigInt operand and non-BigInt
 // operand (except adds) are not DCE-d, because that would throw a runtime
 // exception.
@@ -24,84 +22,73 @@ function f8_ok() { 1 * "a"; }
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [f1_throws, f2_throws, f3_ok, f4_ok, f5_ok, f6_ok, f7_ok, f8_ok]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %f1_throws#0#1()#2 : undefined, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f1_throws" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %f2_throws#0#1()#3 : undefined, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "f2_throws" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %f3_ok#0#1()#4 : undefined, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "f3_ok" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %f4_ok#0#1()#5 : undefined, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "f4_ok" : string
-// CHECK-NEXT:  %9 = CreateFunctionInst %f5_ok#0#1()#6 : undefined, %0
-// CHECK-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "f5_ok" : string
-// CHECK-NEXT:  %11 = CreateFunctionInst %f6_ok#0#1()#7 : undefined, %0
-// CHECK-NEXT:  %12 = StorePropertyInst %11 : closure, globalObject : object, "f6_ok" : string
-// CHECK-NEXT:  %13 = CreateFunctionInst %f7_ok#0#1()#8 : undefined, %0
-// CHECK-NEXT:  %14 = StorePropertyInst %13 : closure, globalObject : object, "f7_ok" : string
-// CHECK-NEXT:  %15 = CreateFunctionInst %f8_ok#0#1()#9 : undefined, %0
-// CHECK-NEXT:  %16 = StorePropertyInst %15 : closure, globalObject : object, "f8_ok" : string
-// CHECK-NEXT:  %17 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "f1_throws": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f2_throws": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f3_ok": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f4_ok": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f5_ok": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f6_ok": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f7_ok": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f8_ok": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %f1_throws(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "f1_throws": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %f2_throws(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "f2_throws": string
+// CHECK-NEXT:  %12 = CreateFunctionInst (:object) empty: any, empty: any, %f3_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %12: object, globalObject: object, "f3_ok": string
+// CHECK-NEXT:  %14 = CreateFunctionInst (:object) empty: any, empty: any, %f4_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %14: object, globalObject: object, "f4_ok": string
+// CHECK-NEXT:  %16 = CreateFunctionInst (:object) empty: any, empty: any, %f5_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %16: object, globalObject: object, "f5_ok": string
+// CHECK-NEXT:  %18 = CreateFunctionInst (:object) empty: any, empty: any, %f6_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %18: object, globalObject: object, "f6_ok": string
+// CHECK-NEXT:  %20 = CreateFunctionInst (:object) empty: any, empty: any, %f7_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %20: object, globalObject: object, "f7_ok": string
+// CHECK-NEXT:  %22 = CreateFunctionInst (:object) empty: any, empty: any, %f8_ok(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %22: object, globalObject: object, "f8_ok": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f1_throws#0#1()#2 : undefined
-// CHECK-NEXT:S{f1_throws#0#1()#2} = []
+// CHECK:function f1_throws(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f1_throws#0#1()#2}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '<<', 1n : bigint, 1 : number
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = BinaryLeftShiftInst (:number) 1: bigint, 1: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f2_throws#0#1()#3 : undefined
-// CHECK-NEXT:S{f2_throws#0#1()#3} = []
+// CHECK:function f2_throws(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f2_throws#0#1()#3}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', 1n : bigint, 1 : number
-// CHECK-NEXT:  %2 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = BinaryAddInst (:number) 1: bigint, 1: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f3_ok#0#1()#4 : undefined
-// CHECK-NEXT:S{f3_ok#0#1()#4} = []
+// CHECK:function f3_ok(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f3_ok#0#1()#4}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f4_ok#0#1()#5 : undefined
-// CHECK-NEXT:S{f4_ok#0#1()#5} = []
+// CHECK:function f4_ok(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f4_ok#0#1()#5}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f5_ok#0#1()#6 : undefined
-// CHECK-NEXT:S{f5_ok#0#1()#6} = []
+// CHECK:function f5_ok(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f5_ok#0#1()#6}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f6_ok#0#1()#7 : undefined
-// CHECK-NEXT:S{f6_ok#0#1()#7} = []
+// CHECK:function f6_ok(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f6_ok#0#1()#7}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f7_ok#0#1()#8 : undefined
-// CHECK-NEXT:S{f7_ok#0#1()#8} = []
+// CHECK:function f7_ok(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f7_ok#0#1()#8}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f8_ok#0#1()#9 : undefined
-// CHECK-NEXT:S{f8_ok#0#1()#9} = []
+// CHECK:function f8_ok(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f8_ok#0#1()#9}
-// CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

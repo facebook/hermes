@@ -27,21 +27,22 @@ TEST(BuilderTest, SimpleSmokeTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
+  Builder.createTopLevelFunction("global", true);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "main",
-      Function::DefinitionKind::ES5Function,
-      true);
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BB = Builder.createBasicBlock(F);
-  Builder.createParameter(F, "argc");
-  Builder.createParameter(F, "argv");
+  Builder.createJSDynamicParam(F, "argc");
+  Builder.createJSDynamicParam(F, "argv");
   Builder.setInsertionBlock(BB);
-  Builder.createBranchInst(BB);
+  auto *branch = Builder.createBranchInst(BB);
+
+  EXPECT_EQ(F, branch->getFunction());
+  EXPECT_EQ(&M, branch->getModule());
 
   EXPECT_TRUE(F);
   EXPECT_TRUE(BB);
 
-  IRPrinter D(*Ctx, OS);
+  irdumper::IRPrinter D(*Ctx, OS);
   D.visit(M);
 
   std::string Res = OS.str();
@@ -54,12 +55,9 @@ TEST(BuilderTest, BuildCFG) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "forEach",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto Arg1 = Builder.createParameter(F, "num");
-  auto Arg2 = Builder.createParameter(F, "value");
+      "forEach", Function::DefinitionKind::ES5Function, true);
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
+  auto Arg2 = Builder.createJSDynamicParam(F, "value");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Loop = Builder.createBasicBlock(F);
@@ -84,21 +82,20 @@ TEST(BuilderTest, ReplaceAllUsesWith) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testRAUW",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto Cond = Builder.createParameter(F, "cond");
-  auto Arg2 = Builder.createParameter(F, "two");
-  auto Arg3 = Builder.createParameter(F, "three");
+      "testRAUW", Function::DefinitionKind::ES5Function, true);
+  auto Cond = Builder.createJSDynamicParam(F, "cond");
+  auto Arg2 = Builder.createJSDynamicParam(F, "two");
+  auto Arg3 = Builder.createJSDynamicParam(F, "three");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Left = Builder.createBasicBlock(F);
   auto Right = Builder.createBasicBlock(F);
 
   Builder.setInsertionBlock(Entry);
-  auto A0 = Builder.createAllocStackInst("some_variable");
-  auto A1 = Builder.createAllocStackInst("another_variable");
+  auto A0 =
+      Builder.createAllocStackInst("some_variable", Type::createAnyType());
+  auto A1 =
+      Builder.createAllocStackInst("another_variable", Type::createAnyType());
   Builder.createCondBranchInst(Cond, Left, Right);
 
   Builder.setInsertionBlock(Left);
@@ -170,15 +167,12 @@ TEST(BuilderTest, TestValueTypes) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "a_function_with_tests",
-      Function::DefinitionKind::ES5Function,
-      true);
+      "a_function_with_tests", Function::DefinitionKind::ES5Function, true);
 
-  auto Cond = Builder.createParameter(F, "cond");
+  auto Cond = Builder.createJSDynamicParam(F, "cond");
   Cond->setType(Type::createBoolean());
 
-  auto X = Builder.createParameter(F, "x");
+  auto X = Builder.createJSDynamicParam(F, "x");
   X->setType(Type::createNumber());
 
   Builder.setInsertionBlock(Builder.createBasicBlock(F));
@@ -202,45 +196,36 @@ TEST(BuilderTest, TestValueTypes) {
   EXPECT_TRUE(X->getType().isPrimitive());
   EXPECT_FALSE(X->getType().isNullType());
 
-  X->setType(Type::createClosure());
-  EXPECT_FALSE(X->getType().isNumberType());
-  EXPECT_TRUE(X->getType().isClosureType());
-  EXPECT_TRUE(X->getType().isObjectType());
-
   X->setType(Type::createBoolean());
   EXPECT_TRUE(X->getType().isBooleanType());
   EXPECT_FALSE(X->getType().isNoType());
 }
 
 TEST(BuilderTest, Types) {
-  Type T = Type::createAnyType();
+  Type T = Type::createAnyEmptyUninit();
   EXPECT_FALSE(T.isNoType());
-  EXPECT_TRUE(T.isAnyType());
+  EXPECT_TRUE(T.isAnyEmptyUninitType());
 
   Type W = Type::unionTy(Type::createNumber(), Type::createBoolean());
-  EXPECT_FALSE(W.isAnyType());
+  EXPECT_FALSE(W.isAnyEmptyUninitType());
   EXPECT_TRUE(W.isPrimitive());
   EXPECT_FALSE(W.isStringType());
   EXPECT_FALSE(W.isObjectType());
 
   EXPECT_EQ(
-      Type::createAnyType(),
-      Type::unionTy(Type::createAnyType(), Type::createBoolean()));
+      Type::createAnyEmptyUninit(),
+      Type::unionTy(Type::createAnyEmptyUninit(), Type::createBoolean()));
 
   EXPECT_EQ(
-      Type::createAnyType(),
-      Type::unionTy(Type::createAnyType(), Type::createBoolean()));
+      Type::createAnyEmptyUninit(),
+      Type::unionTy(Type::createAnyEmptyUninit(), Type::createBoolean()));
 
-  Type U = Type::unionTy(Type::createUndefined(), Type::createClosure());
-  EXPECT_FALSE(W.isObjectType());
-  EXPECT_FALSE(W.isBooleanType());
-  Type J = Type::intersectTy(U, Type::createClosure());
-  EXPECT_TRUE(J.isObjectType());
-  EXPECT_TRUE(J.isClosureType());
-  EXPECT_FALSE(J.isPrimitive());
+  Type U = Type::unionTy(Type::createUndefined(), Type::createObject());
+  EXPECT_FALSE(U.isObjectType());
+  EXPECT_FALSE(U.isBooleanType());
 
   Type R = Type::unionTy(Type::createNumber(), Type::createObject());
-  EXPECT_FALSE(R.isAnyType());
+  EXPECT_FALSE(R.isAnyEmptyUninitType());
   EXPECT_FALSE(R.isPrimitive());
   EXPECT_FALSE(R.isNumberType());
   EXPECT_FALSE(R.isObjectType());
@@ -251,21 +236,18 @@ TEST(BuilderTest, CreateAndManipulateFrameTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "a_function_with_a_scope",
-      Function::DefinitionKind::ES5Function,
-      true);
+      "a_function_with_a_scope", Function::DefinitionKind::ES5Function, true);
 
-  Builder.createParameter(F, "cond");
+  Builder.createJSDynamicParam(F, "cond");
 
-  auto X = Builder.createParameter(F, "x");
+  auto X = Builder.createJSDynamicParam(F, "x");
   Builder.setInsertionBlock(Builder.createBasicBlock(F));
 
   Identifier SomeName0 = Ctx->getIdentifier("some_name");
   Identifier SomeName1 = Ctx->getIdentifier("another_name");
 
-  auto A0 = Builder.createAllocStackInst(SomeName0);
-  auto A1 = Builder.createAllocStackInst(SomeName1);
+  auto A0 = Builder.createAllocStackInst(SomeName0, Type::createAnyType());
+  auto A1 = Builder.createAllocStackInst(SomeName1, Type::createAnyType());
 
   auto Val0 = Builder.createLoadStackInst(A0);
   auto Val1 = Builder.createLoadStackInst(A1);
@@ -281,19 +263,13 @@ TEST(BuilderTest, NestedFunctionFrameTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto Caller = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "caller",
-      Function::DefinitionKind::ES5Function,
-      true);
+      "caller", Function::DefinitionKind::ES5Function, true);
   auto Callee = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "callee",
-      Function::DefinitionKind::ES5Function,
-      true);
+      "callee", Function::DefinitionKind::ES5Function, true);
 
   Builder.setInsertionBlock(Builder.createBasicBlock(Caller));
-  auto A0 = Builder.createAllocStackInst("one");
-  auto A1 = Builder.createAllocStackInst("two");
+  auto A0 = Builder.createAllocStackInst("one", Type::createAnyType());
+  auto A1 = Builder.createAllocStackInst("two", Type::createAnyType());
   Builder.createReturnInst(Builder.createLoadStackInst(A0));
 
   Builder.setInsertionBlock(Builder.createBasicBlock(Callee));
@@ -313,13 +289,10 @@ TEST(BuilderTest, LiteralsTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testRAUW",
-      Function::DefinitionKind::ES5Function,
-      true);
-  Builder.createParameter(F, "cond");
-  Builder.createParameter(F, "two");
-  Builder.createParameter(F, "three");
+      "testRAUW", Function::DefinitionKind::ES5Function, true);
+  Builder.createJSDynamicParam(F, "cond");
+  Builder.createJSDynamicParam(F, "two");
+  Builder.createJSDynamicParam(F, "three");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Left = Builder.createBasicBlock(F);
@@ -390,12 +363,9 @@ TEST(BuilderTest, PropertyTest) {
   IRBuilder Builder(&M);
 
   auto *F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testProperties",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto *O = Builder.createParameter(F, "object");
-  auto *P = Builder.createParameter(F, "property");
+      "testProperties", Function::DefinitionKind::ES5Function, true);
+  auto *O = Builder.createJSDynamicParam(F, "object");
+  auto *P = Builder.createJSDynamicParam(F, "property");
 
   auto *Entry = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(Entry);

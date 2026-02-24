@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function logical_and(y, x) { return x && y }
 
@@ -18,125 +18,139 @@ function logical_and_or(y, x, z) { return x && (y || z) }
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [logical_and, logical_or, logical_and_and, logical_and_or]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %logical_and#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "logical_and" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %logical_or#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "logical_or" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %logical_and_and#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "logical_and_and" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %logical_and_or#0#1()#5, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "logical_and_or" : string
-// CHECK-NEXT:  %9 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %10 = StoreStackInst undefined : undefined, %9
-// CHECK-NEXT:  %11 = LoadStackInst %9
-// CHECK-NEXT:  %12 = ReturnInst %11
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "logical_and": string
+// CHECK-NEXT:       DeclareGlobalVarInst "logical_or": string
+// CHECK-NEXT:       DeclareGlobalVarInst "logical_and_and": string
+// CHECK-NEXT:       DeclareGlobalVarInst "logical_and_or": string
+// CHECK-NEXT:  %5 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_and(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "logical_and": string
+// CHECK-NEXT:  %7 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_or(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "logical_or": string
+// CHECK-NEXT:  %9 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_and_and(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "logical_and_and": string
+// CHECK-NEXT:  %11 = CreateFunctionInst (:object) %0: environment, %VS0: any, %logical_and_or(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "logical_and_or": string
+// CHECK-NEXT:  %13 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %13: any
+// CHECK-NEXT:  %15 = LoadStackInst (:any) %13: any
+// CHECK-NEXT:        ReturnInst %15: any
 // CHECK-NEXT:function_end
 
-// CHECK:function logical_and#0#1(y, x)#2
-// CHECK-NEXT:S{logical_and#0#1()#2} = [y#2, x#2]
+// CHECK:scope %VS1 [y: any, x: any]
+
+// CHECK:function logical_and(y: any, x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{logical_and#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y#2], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %x, [x#2], %0
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_logical
-// CHECK-NEXT:  %4 = LoadFrameInst [x#2], %0
-// CHECK-NEXT:  %5 = StoreStackInst %4, %3
-// CHECK-NEXT:  %6 = CondBranchInst %4, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.y]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.x]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_logical: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
+// CHECK-NEXT:       StoreStackInst %7: any, %6: any
+// CHECK-NEXT:       CondBranchInst %7: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %7 = LoadFrameInst [y#2], %0
-// CHECK-NEXT:  %8 = StoreStackInst %7, %3
-// CHECK-NEXT:  %9 = BranchInst %BB2
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.y]: any
+// CHECK-NEXT:        StoreStackInst %10: any, %6: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = LoadStackInst %3
-// CHECK-NEXT:  %11 = ReturnInst %10
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:function_end
 
-// CHECK:function logical_or#0#1(y, x)#3
-// CHECK-NEXT:S{logical_or#0#1()#3} = [y#3, x#3]
+// CHECK:scope %VS2 [y: any, x: any]
+
+// CHECK:function logical_or(y: any, x: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{logical_or#0#1()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y#3], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %x, [x#3], %0
-// CHECK-NEXT:  %3 = AllocStackInst $?anon_0_logical
-// CHECK-NEXT:  %4 = LoadFrameInst [x#3], %0
-// CHECK-NEXT:  %5 = StoreStackInst %4, %3
-// CHECK-NEXT:  %6 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %7 = LoadFrameInst [y#3], %0
-// CHECK-NEXT:  %8 = StoreStackInst %7, %3
-// CHECK-NEXT:  %9 = BranchInst %BB1
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS2.y]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS2.x]: any
+// CHECK-NEXT:  %6 = AllocStackInst (:any) $?anon_0_logical: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS2.x]: any
+// CHECK-NEXT:       StoreStackInst %7: any, %6: any
+// CHECK-NEXT:       CondBranchInst %7: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = LoadStackInst %3
-// CHECK-NEXT:  %11 = ReturnInst %10
-// CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS2.y]: any
+// CHECK-NEXT:        StoreStackInst %10: any, %6: any
+// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %13 = LoadStackInst (:any) %6: any
+// CHECK-NEXT:        ReturnInst %13: any
 // CHECK-NEXT:function_end
 
-// CHECK:function logical_and_and#0#1(y, x, z)#4
-// CHECK-NEXT:S{logical_and_and#0#1()#4} = [y#4, x#4, z#4]
+// CHECK:scope %VS3 [y: any, x: any, z: any]
+
+// CHECK:function logical_and_and(y: any, x: any, z: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{logical_and_and#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y#4], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %x, [x#4], %0
-// CHECK-NEXT:  %3 = StoreFrameInst %z, [z#4], %0
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_logical
-// CHECK-NEXT:  %5 = AllocStackInst $?anon_1_logical
-// CHECK-NEXT:  %6 = LoadFrameInst [x#4], %0
-// CHECK-NEXT:  %7 = StoreStackInst %6, %5
-// CHECK-NEXT:  %8 = CondBranchInst %6, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.y]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS3.x]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS3.z]: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_0_logical: any
+// CHECK-NEXT:  %9 = AllocStackInst (:any) $?anon_1_logical: any
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS3.x]: any
+// CHECK-NEXT:        StoreStackInst %10: any, %9: any
+// CHECK-NEXT:        CondBranchInst %10: any, %BB3, %BB4
+// CHECK-NEXT:%BB1:
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS3.z]: any
+// CHECK-NEXT:        StoreStackInst %13: any, %8: any
+// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %8: any
+// CHECK-NEXT:        ReturnInst %16: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %9 = LoadFrameInst [z#4], %0
-// CHECK-NEXT:  %10 = StoreStackInst %9, %4
-// CHECK-NEXT:  %11 = BranchInst %BB4
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [%VS3.y]: any
+// CHECK-NEXT:        StoreStackInst %18: any, %9: any
+// CHECK-NEXT:        BranchInst %BB4
 // CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = LoadStackInst %4
-// CHECK-NEXT:  %13 = ReturnInst %12
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %14 = LoadFrameInst [y#4], %0
-// CHECK-NEXT:  %15 = StoreStackInst %14, %5
-// CHECK-NEXT:  %16 = BranchInst %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %17 = LoadStackInst %5
-// CHECK-NEXT:  %18 = StoreStackInst %17, %4
-// CHECK-NEXT:  %19 = CondBranchInst %17, %BB3, %BB4
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %21 = LoadStackInst (:any) %9: any
+// CHECK-NEXT:        StoreStackInst %21: any, %8: any
+// CHECK-NEXT:        CondBranchInst %21: any, %BB1, %BB2
 // CHECK-NEXT:function_end
 
-// CHECK:function logical_and_or#0#1(y, x, z)#5
-// CHECK-NEXT:S{logical_and_or#0#1()#5} = [y#5, x#5, z#5]
+// CHECK:scope %VS4 [y: any, x: any, z: any]
+
+// CHECK:function logical_and_or(y: any, x: any, z: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{logical_and_or#0#1()#5}
-// CHECK-NEXT:  %1 = StoreFrameInst %y, [y#5], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %x, [x#5], %0
-// CHECK-NEXT:  %3 = StoreFrameInst %z, [z#5], %0
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_logical
-// CHECK-NEXT:  %5 = LoadFrameInst [x#5], %0
-// CHECK-NEXT:  %6 = StoreStackInst %5, %4
-// CHECK-NEXT:  %7 = CondBranchInst %5, %BB1, %BB2
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS4: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS4.y]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS4.x]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS4.z]: any
+// CHECK-NEXT:  %8 = AllocStackInst (:any) $?anon_0_logical: any
+// CHECK-NEXT:  %9 = LoadFrameInst (:any) %1: environment, [%VS4.x]: any
+// CHECK-NEXT:        StoreStackInst %9: any, %8: any
+// CHECK-NEXT:        CondBranchInst %9: any, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = AllocStackInst $?anon_1_logical
-// CHECK-NEXT:  %9 = LoadFrameInst [y#5], %0
-// CHECK-NEXT:  %10 = StoreStackInst %9, %8
-// CHECK-NEXT:  %11 = CondBranchInst %9, %BB3, %BB4
+// CHECK-NEXT:  %12 = AllocStackInst (:any) $?anon_1_logical: any
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS4.y]: any
+// CHECK-NEXT:        StoreStackInst %13: any, %12: any
+// CHECK-NEXT:        CondBranchInst %13: any, %BB4, %BB3
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %12 = LoadStackInst %4
-// CHECK-NEXT:  %13 = ReturnInst %12
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = LoadFrameInst [z#5], %0
-// CHECK-NEXT:  %15 = StoreStackInst %14, %8
-// CHECK-NEXT:  %16 = BranchInst %BB3
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %8: any
+// CHECK-NEXT:        ReturnInst %16: any
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %17 = LoadStackInst %8
-// CHECK-NEXT:  %18 = StoreStackInst %17, %4
-// CHECK-NEXT:  %19 = BranchInst %BB2
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %20 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %18 = LoadFrameInst (:any) %1: environment, [%VS4.z]: any
+// CHECK-NEXT:        StoreStackInst %18: any, %12: any
+// CHECK-NEXT:        BranchInst %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:  %21 = LoadStackInst (:any) %12: any
+// CHECK-NEXT:        StoreStackInst %21: any, %8: any
+// CHECK-NEXT:        BranchInst %BB2
 // CHECK-NEXT:function_end

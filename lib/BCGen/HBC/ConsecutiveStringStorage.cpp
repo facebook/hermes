@@ -8,7 +8,7 @@
 #define DEBUG_TYPE "stringstorage"
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 
-#include "hermes/BCGen/HBC/BytecodeDataProvider.h"
+#include "hermes/BCGen/HBC/BCProvider.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/Support/JenkinsHash.h"
 #include "hermes/Support/Statistic.h"
@@ -764,9 +764,6 @@ template ConsecutiveStringStorage::ConsecutiveStringStorage(
     bool optimize);
 
 uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {
-  ensureTableValid();
-  ensureStorageValid();
-
   auto &entry = strTable_[i];
   uint32_t length = entry.getLength();
   assert(
@@ -783,12 +780,16 @@ uint32_t ConsecutiveStringStorage::getEntryHash(size_t i) const {
 }
 
 void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
-  ensureTableValid();
-  ensureStorageValid();
   // If we have not yet been written, just acquire the rhs.
   if (strTable_.empty()) {
     *this = std::move(rhs);
     return;
+  }
+  // Ensure 2-byte alignment.
+  // The rhs has been constructed assuming that it starts at a 2-byte aligned
+  // offset, so we need to keep that invariant.
+  if (storage_.size() % sizeof(char16_t)) {
+    storage_.push_back('\0');
   }
   // Offset incoming string entries by the size of our storage, and append the
   // incoming storage. Don't bother to offset if the string is empty; this
@@ -803,16 +804,15 @@ void ConsecutiveStringStorage::appendStorage(ConsecutiveStringStorage &&rhs) {
   storage_.insert(storage_.end(), rhs.storage_.begin(), rhs.storage_.end());
 }
 
-llvh::StringRef ConsecutiveStringStorage::getStringAtIndex(
+llvh::StringRef ConsecutiveStringStorage::getUTF8StringAtIndex(
     uint32_t idx,
     std::string &utf8ConversionStorage) const {
-  ensureTableValid();
-  ensureStorageValid();
-  assert(idx < strTable_.size() && "getStringAtIndex: invalid index");
-  return getStringFromEntry(strTable_[idx], storage_, utf8ConversionStorage);
+  assert(idx < strTable_.size() && "getUTF8StringAtIndex: invalid index");
+  return getUTF8StringFromEntry(
+      strTable_[idx], storage_, utf8ConversionStorage);
 }
 
-llvh::StringRef getStringFromEntry(
+llvh::StringRef getUTF8StringFromEntry(
     const StringTableEntry &entry,
     llvh::ArrayRef<unsigned char> storage,
     std::string &utf8ConversionStorage) {

@@ -365,7 +365,7 @@ assert.deepStrictEqual(test_object.TestGetProperty(), {
 
   assert.throws(() => {
     delete obj.x;
-  }, /(Cannot delete property 'x' of #<Object>)|(TypeError: Property 'x' is not configurable)/);
+  }, /(Cannot delete property 'x' of #<Object>)|(TypeError: Property is not configurable)/);
 
   // Sealed objects allow updating existing properties,
   // so this should not throw.
@@ -389,5 +389,5 @@ assert.deepStrictEqual(test_object.TestGetProperty(), {
 
   assert.throws(() => {
     delete obj.x;
-  }, /(Cannot delete property 'x' of #<Object>)|(TypeError: Property 'x' is not configurable)/);
+  }, /(Cannot delete property 'x' of #<Object>)|(TypeError: Property is not configurable)/);
 }

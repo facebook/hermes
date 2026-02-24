@@ -6,7 +6,7 @@
 // This source code is licensed under the MIT license found in the
 // LICENSE file in the root directory of this source tree.
 
-// RUN: cat %s | %hermes -Xes6-promise -prompt="" -prompt2="" | %FileCheck --match-full-lines %s
+// RUN: cat %s | %hermes -prompt="" -prompt2="" | %FileCheck --match-full-lines %s
 
 "pretty Promise"
 // CHECK-LABEL: "pretty Promise"

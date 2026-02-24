@@ -8,35 +8,41 @@
 #ifndef HERMES_VM_JSERROR_H
 #define HERMES_VM_JSERROR_H
 
+#include <variant>
+
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/SmallXString.h"
+#include "hermes/VM/static_h.h"
 
 namespace hermes {
 namespace vm {
 
-/// StackTraceInfo holds information of an entry in the stacktrace upon
-/// exceptions. We only need to store the CodeBlock and bytecode offset
-/// to obtain the full function name/file name/position later when we
-/// need to generate the stacktrace string.
-/// We store the domains for the CodeBlocks within the JSError to ensure that
-/// the CodeBlocks never get freed, and thus every StackTraceInfo is still
-/// valid.
-struct StackTraceInfo {
+/// BytecodeStackTraceInfo holds information of an entry in the stacktrace
+/// upon exceptions. We only need to store the CodeBlock and bytecode offset to
+/// obtain the full function name/file name/position later when we need to
+/// generate the stacktrace string. We store the domains for the CodeBlocks
+/// within the JSError to ensure that the CodeBlocks never get freed, and thus
+/// every BytecodeStackTraceInfo is still valid.
+struct BytecodeStackTraceInfo {
   /// The code block of the function.
   CodeBlock *codeBlock;
 
   /// The bytecode offset where exception was thrown.
   uint32_t bytecodeOffset;
 
-  StackTraceInfo(CodeBlock *codeBlock, uint32_t bytecodeOffset)
+  BytecodeStackTraceInfo(CodeBlock *codeBlock, uint32_t bytecodeOffset)
       : codeBlock(codeBlock), bytecodeOffset(bytecodeOffset) {}
 
-  StackTraceInfo(const StackTraceInfo &) = default;
+  BytecodeStackTraceInfo(const BytecodeStackTraceInfo &) = default;
 
-  StackTraceInfo(StackTraceInfo &&) = default;
+  BytecodeStackTraceInfo(BytecodeStackTraceInfo &&) = default;
 };
-using StackTrace = std::vector<StackTraceInfo>;
+// A native trace consists of a source location and an associated SHUnit.
+using NativeStackTraceInfo = std::pair<const SHUnit *, SHSrcLoc>;
+
+using StackTrace =
+    std::vector<std::variant<BytecodeStackTraceInfo, NativeStackTraceInfo>>;
 using StackTracePtr = std::unique_ptr<StackTrace>;
 
 /// Error Object.
@@ -66,21 +72,15 @@ class JSError final : public JSObject {
       Handle<JSObject> prototype);
 
   /// If the stack trace is not set, attempt to record it by walking the runtime
-  /// stack. If the top call frame indicates a JS callee, but the codeBlock and
-  /// ip are not supplied, return without doing anything. This handles the case
-  /// when an exception is thrown from within the current code block.
+  /// stack. This will correctly dispatch to recording either the interpreter or
+  /// native call stack.
   ///
   /// \param skipTopFrame don't record the topmost frame. This is used when
   ///   we want to skip the Error() constructor itself.
-  /// \param codeBlock optional current CodeBlock.
-  /// \param ip if \c codeBlock is not \c nullptr, the instruction in the
-  ///   current CodeBlock.
   static ExecutionStatus recordStackTrace(
       Handle<JSError> selfHandle,
       Runtime &runtime,
-      bool skipTopFrame = false,
-      CodeBlock *codeBlock = nullptr,
-      const Inst *ip = nullptr);
+      bool skipTopFrame = false);
 
   /// Define the stack setter and getter, for later stack trace creation.
   /// May be used on JSError instances, or on any JSObject that has a
@@ -110,14 +110,12 @@ class JSError final : public JSObject {
 
   /// When called, construct the stacktrace string based on the value of
   /// stacktrace_, and reset the stack property to the stacktrace string.
-  friend CallResult<HermesValue>
-  errorStackGetter(void *, Runtime &runtime, NativeArgs args);
+  friend CallResult<HermesValue> errorStackGetter(void *, Runtime &runtime);
 
   /// This is called when someone manually set the stack property to
   /// an error object, which should happen rarely. It destroys the
   /// stack access and replace it with a regular property.
-  friend CallResult<HermesValue>
-  errorStackSetter(void *, Runtime &runtime, NativeArgs args);
+  friend CallResult<HermesValue> errorStackSetter(void *, Runtime &runtime);
 
   /// Pop frames from the stack trace until we encounter a frame attributed to
   /// \p callable, and pop that frame too. No frames are skipped if a matching
@@ -191,6 +189,24 @@ class JSError final : public JSObject {
       Runtime &runtime,
       Handle<JSError> selfHandle,
       Handle<JSObject> targetHandle,
+      SmallU16String<32> &stack);
+
+  /// Append the stack information in \p frame to \p stack.
+  /// \param virtualOffsetCache cache CodeBlocks and their associated virtual
+  ///  bytecode offset.
+  /// \param frame the frame to add.
+  /// \param stack output destination.
+  static void appendBytecodeFrame(
+      llvh::DenseMap<const CodeBlock *, uint32_t> &virtualOffsetCache,
+      const BytecodeStackTraceInfo *frame,
+      SmallU16String<32> &stack);
+
+  /// Append the stack information in \p frame to \p stack.
+  /// \param frame the frame to add.
+  /// \param stack output destination.
+  static void appendNativeFrame(
+      Runtime &runtime,
+      const NativeStackTraceInfo *frame,
       SmallU16String<32> &stack);
 
   /// Construct the callSites array for Error.prepareStackTrace.

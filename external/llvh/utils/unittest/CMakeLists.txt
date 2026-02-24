@@ -38,7 +38,7 @@ if(CXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG)
   add_definitions("-Wno-covered-switch-default")
 endif()
 
-set(HERMES_ENABLE_EH_RTTI ON)
+set(HERMES_ENABLE_RTTI 1)
 add_definitions( -DGTEST_HAS_RTTI=0 )
 
 if (NOT LLVM_ENABLE_THREADS)
@@ -50,13 +50,14 @@ if (LLVM_PTHREAD_LIBRARY_PATH)
   list(APPEND LIBS pthread)
 endif()
 
-add_hermes_library(gtest
+add_hermes_library(gtest STATIC
   googletest/src/gtest-all.cc
   googlemock/src/gmock-all.cc
 
+  LINK_OBJLIBS
+  LLVHSupport # Depends on llvh::raw_ostream
   LINK_LIBS
   ${LIBS}
-  LLVHSupport # Depends on llvh::raw_ostream
 )
 
 add_subdirectory(UnitTestMain)

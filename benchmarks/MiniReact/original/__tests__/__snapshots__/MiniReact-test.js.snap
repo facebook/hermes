@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`it renders custom components 1`] = `"<article><div><h1>hello</h1></div></article>"`;
+
+exports[`it renders host element trees 1`] = `"<div><h1>Hello</h1> world!</div>"`;
+
+exports[`it updates custom components 1`] = `"<article>HELLO</article>"`;
+
+exports[`it updates custom components 2`] = `"<h1>hello</h1>"`;

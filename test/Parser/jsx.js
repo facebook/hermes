@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-jsx -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-jsx -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK: {
 // CHECK-NEXT:   "type": "Program",
@@ -656,7 +656,6 @@
 // CHECK-NEXT:                 "type": "JSXExpressionContainer",
 // CHECK-NEXT:                 "expression": {
 // CHECK-NEXT:                   "type": "ArrowFunctionExpression",
-// CHECK-NEXT:                   "id": null,
 // CHECK-NEXT:                   "params": [],
 // CHECK-NEXT:                   "body": {
 // CHECK-NEXT:                     "type": "BlockStatement",

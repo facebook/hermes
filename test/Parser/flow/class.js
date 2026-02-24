@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -34,7 +34,7 @@ class C<T> extends S<T> implements I1<T>, I2 {}
 // CHECK-NEXT:         "type": "Identifier",
 // CHECK-NEXT:         "name": "S"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "superTypeParameters": {
+// CHECK-NEXT:       "superTypeArguments": {
 // CHECK-NEXT:         "type": "TypeParameterInstantiation",
 // CHECK-NEXT:         "params": [
 // CHECK-NEXT:           {

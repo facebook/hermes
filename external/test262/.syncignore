@@ -1,0 +1,39 @@
+# Local-only metadata
+/sync-config.json
+/.syncignore
+
+# Exclude CI/CD and repo infrastructure
+/.circleci/
+/.github/
+/.editorconfig
+/.gitattributes
+/.gitignore
+/.hgignore
+/.npmrc
+
+# Exclude docs, tools, and other non-test content
+/docs/
+/implementation-contributed/
+/rfcs/
+/src/
+/tools/
+
+# Exclude root files we don't need (avoid security scan noise)
+/CODEOWNERS
+/CODE_OF_CONDUCT.md
+/CONTRIBUTING.md
+/ECMA TR-104.pdf
+/INTERPRETING.md
+/README.md
+/excludelist.xml
+/features.txt
+/github-deploy-key.enc
+/lint.exceptions
+/make.py
+/package.json
+
+# Exclude all test suites by default, re-include only what we need
+# Note: must use /test/*/ (not /test/) so negation patterns work —
+# gitignore cannot re-include children of an excluded parent directory.
+/test/*/
+!/test/intl402/

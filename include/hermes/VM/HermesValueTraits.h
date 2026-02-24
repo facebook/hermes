@@ -37,15 +37,13 @@ HERMES_VM_GCOBJECT(DecoratedObject);
 HERMES_VM_GCOBJECT(DictPropertyMap);
 HERMES_VM_GCOBJECT(Domain);
 HERMES_VM_GCOBJECT(Environment);
+HERMES_VM_GCOBJECT(FastArray);
 HERMES_VM_GCOBJECT(FinalizableNativeFunction);
-HERMES_VM_GCOBJECT(GeneratorInnerFunction);
-HERMES_VM_GCOBJECT(HashMapEntry);
 HERMES_VM_GCOBJECT(HiddenClass);
 HERMES_VM_GCOBJECT(HostObject);
 HERMES_VM_GCOBJECT(JSArray);
 HERMES_VM_GCOBJECT(JSArrayBuffer);
 HERMES_VM_GCOBJECT(JSArrayIterator);
-HERMES_VM_GCOBJECT(JSAsyncFunction);
 HERMES_VM_GCOBJECT(JSBigInt);
 HERMES_VM_GCOBJECT(JSBoolean);
 HERMES_VM_GCOBJECT(JSCallSite);
@@ -54,8 +52,8 @@ HERMES_VM_GCOBJECT(JSDataView);
 HERMES_VM_GCOBJECT(JSDate);
 HERMES_VM_GCOBJECT(JSError);
 HERMES_VM_GCOBJECT(JSFunction);
-HERMES_VM_GCOBJECT(JSGenerator);
-HERMES_VM_GCOBJECT(JSGeneratorFunction);
+HERMES_VM_GCOBJECT(JSClass);
+HERMES_VM_GCOBJECT(JSGeneratorObject);
 HERMES_VM_GCOBJECT(JSNumber);
 HERMES_VM_GCOBJECT(JSObject);
 HERMES_VM_GCOBJECT(JSProxy);
@@ -67,19 +65,23 @@ HERMES_VM_GCOBJECT(JSSymbol);
 HERMES_VM_GCOBJECT(JSTypedArrayBase);
 HERMES_VM_GCOBJECT(JSWeakMapImplBase);
 HERMES_VM_GCOBJECT(JSWeakRef);
+HERMES_VM_GCOBJECT(NativeJSFunction);
+HERMES_VM_GCOBJECT(NativeJSClass);
 HERMES_VM_GCOBJECT(NativeConstructor);
 HERMES_VM_GCOBJECT(NativeFunction);
 HERMES_VM_GCOBJECT(NativeState);
-HERMES_VM_GCOBJECT(OrderedHashMap);
 HERMES_VM_GCOBJECT(PropertyAccessor);
 HERMES_VM_GCOBJECT(RequireContext);
 HERMES_VM_GCOBJECT(StringPrimitive);
 
 namespace testhelpers {
 struct DummyObject;
-}
+struct LargeDummyObject;
+} // namespace testhelpers
 template <>
 struct IsGCObject<testhelpers::DummyObject> : public std::true_type {};
+template <>
+struct IsGCObject<testhelpers::LargeDummyObject> : public std::true_type {};
 
 // Typed arrays use templates and cannot use the macro above
 template <typename T, CellKind C>
@@ -243,6 +245,12 @@ template <>
 struct HermesValueTraits<StringPrimitive, true>
     : public StringTraitsImpl<StringPrimitive> {};
 template <>
+struct HermesValueTraits<ExternalStringPrimitive<char>, true>
+    : public StringTraitsImpl<ExternalStringPrimitive<char>> {};
+template <>
+struct HermesValueTraits<ExternalStringPrimitive<char16_t>, true>
+    : public StringTraitsImpl<ExternalStringPrimitive<char16_t>> {};
+template <>
 struct HermesValueTraits<BufferedStringPrimitive<char>, true>
     : public StringTraitsImpl<BufferedStringPrimitive<char>> {};
 template <>
@@ -283,14 +291,17 @@ struct IsHermesValueConvertible {
   using ToTraits = HermesValueTraits<To>;
 
   static constexpr bool value =
-      // Anything is convertable to HermesValue.
-      std::is_same<To, HermesValue>::value ||
       // A type is convertable to itself.
       std::is_same<From, To>::value ||
       // An object can be converted to its base class.
       (FromTraits::is_cell && ToTraits::is_cell &&
        std::is_base_of<To, From>::value);
 };
+
+/// Specialize converting to a HermesValue. Anything is convertible to
+/// HermesValue.
+template <class From>
+struct IsHermesValueConvertible<From, HermesValue> : std::true_type {};
 
 } // namespace vm
 } // namespace hermes

@@ -1,0 +1,9 @@
+{
+  "name": "hermes-fork-sync",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@rnx-kit/fork-sync": "^0.2.0"
+  }
+}

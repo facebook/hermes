@@ -5,24 +5,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheck %s
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O | %FileCheck %s
 
-
-//CHECK-LABEL:function global#0()#1 : undefined
-//CHECK-NEXT:globals = [main]
-//CHECK-NEXT:S{global#0()#1} = []
+//CHECK-LABEL:function global(): undefined
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-//CHECK-NEXT:  %1 = CreateFunctionInst %main#0#1()#2 : undefined, %0
-//CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "main" : string
-//CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+//CHECK-NEXT:       DeclareGlobalVarInst "main": string
+//CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %main(): functionCode
+//CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "main": string
+//CHECK-NEXT:       ReturnInst undefined: undefined
 //CHECK-NEXT:function_end
-
-//CHECK-LABEL:function main#0#1()#2 : undefined
-//CHECK-NEXT:S{main#0#1()#2} = []
+//CHECK-EMPTY:
+//CHECK-NEXT:function main(): undefined
 //CHECK-NEXT:%BB0:
-//CHECK-NEXT:  %0 = CreateScopeInst %S{main#0#1()#2}
-//CHECK-NEXT:  %1 = ReturnInst undefined : undefined
+//CHECK-NEXT:       ReturnInst undefined: undefined
 //CHECK-NEXT:function_end
 
 // No more functions in this module.
@@ -36,4 +31,11 @@ function main() {
   var x1 = function () { return function () { return "nested" + k } }
   var x2 = function () { return 1 + 2 }
 
+  function f1() {
+    function f2() {
+      return function f3() {
+        f2();
+      };
+    }
+  }
 }

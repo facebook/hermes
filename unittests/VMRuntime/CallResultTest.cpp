@@ -8,7 +8,7 @@
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/Runtime.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include <climits>
 

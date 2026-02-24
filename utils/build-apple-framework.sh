@@ -9,7 +9,7 @@
 
 CURR_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 
-IMPORT_HOST_COMPILERS_PATH=${HERMES_OVERRIDE_HERMESC_PATH:-$PWD/build_host_hermesc/ImportHostCompilers.cmake}
+IMPORT_HERMESC_PATH=${HERMES_OVERRIDE_HERMESC_PATH:-$PWD/build_host_hermesc/ImportHostCompilers.cmake}
 BUILD_TYPE=${BUILD_TYPE:-Debug}
 
 HERMES_PATH="$CURR_SCRIPT_DIR/.."
@@ -66,7 +66,7 @@ function get_release_version {
 function build_host_hermesc {
   echo "Building hermesc"
   pushd "$HERMES_PATH" > /dev/null || exit 1
-    cmake -S . -B build_host_hermesc -DJSI_DIR="$JSI_PATH"
+    cmake -S . -B build_host_hermesc -DJSI_DIR="$JSI_PATH" -DCMAKE_BUILD_TYPE=Release
     cmake --build ./build_host_hermesc --target hermesc -j "${NUM_CORES}"
   popd > /dev/null || exit 1
 }
@@ -94,18 +94,15 @@ function configure_apple_framework {
     xcode_15_flags="LINKER:-ld_classic"
   fi
 
-  # For catalyst, we need to set some additional C and Cxx flags
+  # For catalyst, we need to set the target triple to use the macabi environment.
+  # The architecture in -target is overridden by CMake's -arch flags, so we can use
+  # any architecture here (arm64). CMake will add -arch x86_64 and -arch arm64 which
+  # correctly override just the architecture portion while preserving ios-macabi.
+  boost_context_flag=""
   shared_clang_flags=""
   if [[ $1 == "catalyst" ]]; then
-    # return the right target flags for catalyst depending on the architecture
-    if [[ $2 == "x86_64" ]]; then
-      shared_clang_flags="-target x86_64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
-    elif [[ $2 == "arm64" ]]; then
-      shared_clang_flags="-target arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
-    else
-      echo "Error: unknown architecture passed $1"
-      exit 1
-    fi
+    boost_context_flag="-DHERMES_ALLOW_BOOST_CONTEXT=0"
+    shared_clang_flags="-target arm64-apple-ios$3-macabi -isystem ${CMAKE_OSX_SYSROOT}/System/iOSSupport/usr/include"
   fi
 
   pushd "$HERMES_PATH" > /dev/null || exit 1
@@ -124,28 +121,38 @@ function configure_apple_framework {
       -DHERMES_BUILD_SHARED_JSI:BOOLEAN=false \
       -DCMAKE_CXX_FLAGS:STRING="-gdwarf $shared_clang_flags" \
       -DCMAKE_C_FLAGS:STRING="-gdwarf $shared_clang_flags" \
-      -DIMPORT_HOST_COMPILERS:PATH="$IMPORT_HOST_COMPILERS_PATH" \
-      -DHERMES_RELEASE_VERSION="$(get_release_version)" \
+      -DIMPORT_HOST_COMPILERS:PATH="$IMPORT_HERMESC_PATH" \
       -DJSI_DIR="$JSI_PATH" \
-      -DCMAKE_BUILD_TYPE="$cmake_build_type"
+      -DHERMES_RELEASE_VERSION="$(get_release_version)" \
+      -DCMAKE_BUILD_TYPE="$cmake_build_type" \
+      $boost_context_flag
     popd > /dev/null || exit 1
 }
 
+function generate_dSYM {
+    TARGET_PLATFORM="$1"
+
+    DSYM_PATH="$PWD/build_$TARGET_PLATFORM/lib/hermesvm.framework.dSYM"
+    xcrun dsymutil "$PWD/build_$TARGET_PLATFORM/lib/hermesvm.framework/hermesvm" --out "$DSYM_PATH"
+    mkdir -p "$PWD/destroot/Library/Frameworks/$TARGET_PLATFORM"
+    cp -R "$DSYM_PATH" "$PWD/destroot/Library/Frameworks/$TARGET_PLATFORM"
+}
+
 function build_host_hermesc_if_needed {
-  if [[ ! -f "$IMPORT_HOST_COMPILERS_PATH" ]]; then
+  if [[ ! -f "$IMPORT_HERMESC_PATH" ]]; then
     build_host_hermesc
   else
-    echo "[HermesC] Skipping! Found an existent hermesc already at: $IMPORT_HOST_COMPILERS_PATH"
+    echo "[HermesC] Skipping! Found an existent hermesc already at: $IMPORT_HERMESC_PATH"
   fi
 }
 
 # Utility function to build an Apple framework
 function build_apple_framework {
-  # Only build host HermesC if no file found at $IMPORT_HOST_COMPILERS_PATH
+  # Only build host HermesC if no file found at $IMPORT_HERMESC_PATH
   build_host_hermesc_if_needed
 
-  # Confirm ImportHostCompilers.cmake is now available.
-  [ ! -f "$IMPORT_HOST_COMPILERS_PATH" ] &&
+  # Confirm ImportHermesc.cmake is now available.
+  [ ! -f "$IMPORT_HERMESC_PATH" ] &&
   echo "Host hermesc is required to build apple frameworks!"
 
   # $1: platform, $2: architectures, $3: deployment target
@@ -155,13 +162,12 @@ function build_apple_framework {
   pushd "$HERMES_PATH" > /dev/null || exit 1
     mkdir -p "destroot/Library/Frameworks/$1"
     cmake --build "./build_$1" --target hermesvm -j "${NUM_CORES}"
-    # Produce the dSYM.
-    xcrun dsymutil "./build_$1/lib/hermesvm.framework/hermesvm" -o "./build_$1/lib/hermesvm.framework.dSYM"
     cp -R "./build_$1"/lib/hermesvm.framework* "destroot/Library/Frameworks/$1"
+    generate_dSYM "$1"
 
     # In a MacOS build, also produce the hermes and hermesc CLI tools.
     if [[ $1 == macosx ]]; then
-      cmake --build "./build_$1" --target hermesc hermes -j "${NUM_CORES}"
+      cmake --build "./build_$1" --target hermesc hermesvm -j "${NUM_CORES}"
       mkdir -p destroot/bin
       cp "./build_$1/bin"/* "destroot/bin"
     fi
@@ -175,12 +181,6 @@ function build_apple_framework {
 
     mkdir -p destroot/include/hermes/cdp
     cp API/hermes/cdp/*.h destroot/include/hermes/cdp
-
-    mkdir -p destroot/include/hermes/inspector
-    cp API/hermes/inspector/*.h destroot/include/hermes/inspector
-
-    mkdir -p destroot/include/hermes/inspector/chrome
-    cp API/hermes/inspector/chrome/*.h destroot/include/hermes/inspector/chrome
 
     mkdir -p destroot/include/jsi
     cp "$JSI_PATH"/jsi/*.h destroot/include/jsi
@@ -205,12 +205,6 @@ function prepare_dest_root_for_ci {
 
   mkdir -p destroot/include/hermes/cdp
   cp API/hermes/cdp/*.h destroot/include/hermes/cdp
-
-  mkdir -p destroot/include/hermes/inspector
-  cp API/hermes/inspector/*.h destroot/include/hermes/inspector
-
-  mkdir -p destroot/include/hermes/inspector/chrome
-  cp API/hermes/inspector/chrome/*.h destroot/include/hermes/inspector/chrome
 
   mkdir -p destroot/include/jsi
   cp "$JSI_PATH"/jsi/*.h destroot/include/jsi

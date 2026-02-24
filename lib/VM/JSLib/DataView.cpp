@@ -11,11 +11,7 @@
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/StringPrimitive.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -23,8 +19,8 @@ namespace vm {
 /// @{
 
 // ES6 24.2.4.1
-CallResult<HermesValue>
-dataViewPrototypeBuffer(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeBuffer(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -34,25 +30,33 @@ dataViewPrototypeBuffer(void *, Runtime &runtime, NativeArgs args) {
 }
 
 // ES6 24.2.4.2
-CallResult<HermesValue>
-dataViewPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeByteLength(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
         "DataView.prototype.byteLength called on a non DataView object");
   }
-  return HermesValue::encodeUntrustedNumberValue(self->byteLength());
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError(
+        "DataView.prototype.byteLength called on a detached ArrayBuffer");
+  }
+  return HermesValue::encodeTrustedNumberValue(self->byteLength());
 }
 
 // ES6 24.2.4.3
-CallResult<HermesValue>
-dataViewPrototypeByteOffset(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeByteOffset(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
         "DataView.prototype.byteOffset called on a non DataView object");
   }
-  return HermesValue::encodeUntrustedNumberValue(self->byteOffset());
+  if (!self->attached(runtime)) {
+    return runtime.raiseTypeError(
+        "DataView.prototype.byteOffset called on a detached ArrayBuffer");
+  }
+  return HermesValue::encodeTrustedNumberValue(self->byteOffset());
 }
 
 // ES6 24.2.4.5 - 22.2.4.20 && ES 2018 24.3.1.1
@@ -75,8 +79,8 @@ CallResult<HermesValue> dataViewPrototypeGetEncoder(
 }
 
 template <typename T>
-CallResult<HermesValue>
-dataViewPrototypeGet(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeGet(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -107,8 +111,8 @@ constexpr bool isBigIntCellKind() {
 }
 
 template <typename T, CellKind C>
-CallResult<HermesValue>
-dataViewPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewPrototypeSet(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSDataView>();
   if (!self) {
     return runtime.raiseTypeError(
@@ -143,15 +147,12 @@ dataViewPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
 }
 } // namespace
 
-#define TYPED_ARRAY(name, type)                                   \
-  CallResult<HermesValue> dataViewPrototypeGet##name(             \
-      void *ctx, Runtime &rt, NativeArgs args) {                  \
-    return dataViewPrototypeGet<type>(ctx, rt, args);             \
-  }                                                               \
-  CallResult<HermesValue> dataViewPrototypeSet##name(             \
-      void *ctx, Runtime &rt, NativeArgs args) {                  \
-    return dataViewPrototypeSet<type, CellKind::name##ArrayKind>( \
-        ctx, rt, args);                                           \
+#define TYPED_ARRAY(name, type)                                                \
+  CallResult<HermesValue> dataViewPrototypeGet##name(void *ctx, Runtime &rt) { \
+    return dataViewPrototypeGet<type>(ctx, rt);                                \
+  }                                                                            \
+  CallResult<HermesValue> dataViewPrototypeSet##name(void *ctx, Runtime &rt) { \
+    return dataViewPrototypeSet<type, CellKind::name##ArrayKind>(ctx, rt);     \
   }
 #define TYPED_ARRAY_NO_CLAMP
 #include "hermes/VM/TypedArrays.def"
@@ -161,14 +162,35 @@ dataViewPrototypeSet(void *, Runtime &runtime, NativeArgs args) {
 /// @}
 
 // ES 2018 24.3.2.1
-CallResult<HermesValue>
-dataViewConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> dataViewConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(
         "DataView() called in function context instead of constructor");
   }
-  auto self = args.vmcastThis<JSDataView>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSDataView> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.dataViewConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.dataViewPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.dataViewPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  lv.self = JSDataView::create(runtime, lv.selfParent);
+
   auto buffer = args.dyncastArg<JSArrayBuffer>(0);
   auto byteLength = args.getArgHandle(2);
   // 2. If Type(buffer) is not Object, throw a TypeError exception
@@ -216,19 +238,25 @@ dataViewConstructor(void *, Runtime &runtime, NativeArgs args) {
           "<= the length of the buffer");
     }
   }
-  self->setBuffer(runtime, *buffer, offset, viewByteLength);
-  return self.getHermesValue();
+  lv.self->setBuffer(runtime, *buffer, offset, viewByteLength);
+  return lv.self.getHermesValue();
 }
 
-Handle<JSObject> createDataViewConstructor(Runtime &runtime) {
+HermesValue createDataViewConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.dataViewPrototype);
-  auto cons = defineSystemConstructor<JSDataView>(
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::DataView),
       dataViewConstructor,
       proto,
       1,
-      CellKind::JSDataViewKind);
+      lv.cons);
 
   // DataView.prototype.xxx() methods.
   defineAccessor(
@@ -289,7 +317,7 @@ Handle<JSObject> createDataViewConstructor(Runtime &runtime) {
 
   // DataView.xxx() methods.
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
 } // namespace vm

@@ -28,12 +28,9 @@ TEST(IRVerifierTest, BasicBlockTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "forEach",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto Arg1 = Builder.createParameter(F, "num");
-  auto Arg2 = Builder.createParameter(F, "value");
+      "forEach", Function::DefinitionKind::ES5Function, true);
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
+  auto Arg2 = Builder.createJSDynamicParam(F, "value");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Loop = Builder.createBasicBlock(F);
@@ -53,14 +50,14 @@ TEST(IRVerifierTest, BasicBlockTest) {
   Builder.createReturnInst(Arg2);
 
   // So far so good, this will pass
-  EXPECT_FALSE(verifyModule(M));
+  EXPECT_TRUE(verifyModule(M));
 
   auto Bad = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(Bad);
   Builder.createReturnInst(Arg2);
 
   // A dead basic block was added, and hence will fail to verify
-  EXPECT_TRUE(verifyModule(M, &errs(), VerificationMode::IR_OPTIMIZED));
+  EXPECT_FALSE(verifyModule(M, &errs(), VerificationMode::IR_OPTIMIZED));
 }
 
 TEST(IRVerifierTest, ReturnInstTest) {
@@ -68,25 +65,20 @@ TEST(IRVerifierTest, ReturnInstTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testReturn",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto Arg1 = Builder.createParameter(F, "num");
+      "testReturn", Function::DefinitionKind::ES5Function, true);
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
   Arg1->setType(Type::createNumber());
 
   auto Body = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(Body);
-  auto Return = Builder.createReturnInst(Arg1);
-  Return->setType(Type::createNumber());
+  Builder.createReturnInst(Arg1);
 
   // Everything should pass so far
-  EXPECT_FALSE(verifyModule(M));
+  EXPECT_TRUE(verifyModule(M));
 
-  Return->setType(Type::createNumber());
   Builder.createReturnInst(Arg1);
   // This will also fail as there are now multiple return instrs in the BB
-  EXPECT_TRUE(verifyModule(M));
+  EXPECT_FALSE(verifyModule(M));
 }
 
 TEST(IRVerifierTest, BranchInstTest) {
@@ -94,27 +86,28 @@ TEST(IRVerifierTest, BranchInstTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testBranch",
-      Function::DefinitionKind::ES5Function,
-      true);
+      "testBranch", Function::DefinitionKind::ES5Function, true);
 
   auto BB1 = Builder.createBasicBlock(F);
   auto BB2 = Builder.createBasicBlock(F);
+  auto BB3 = Builder.createBasicBlock(F);
 
   Builder.setInsertionBlock(BB1);
   Builder.createBranchInst(BB2);
 
   Builder.setInsertionBlock(BB2);
-  Builder.createBranchInst(BB1);
+  Builder.createBranchInst(BB3);
+
+  Builder.setInsertionBlock(BB3);
+  Builder.createBranchInst(BB2);
 
   // Everything should pass
-  EXPECT_FALSE(verifyModule(M));
+  EXPECT_TRUE(verifyModule(M));
 
   Builder.createBranchInst(BB2);
 
   // This will fail as there are now multple branch instrs in the same BB
-  EXPECT_TRUE(verifyModule(M));
+  EXPECT_FALSE(verifyModule(M));
 }
 
 TEST(IRVerifierTest, DominanceTest) {
@@ -122,11 +115,8 @@ TEST(IRVerifierTest, DominanceTest) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testBranch",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto Arg1 = Builder.createParameter(F, "num");
+      "testBranch", Function::DefinitionKind::ES5Function, true);
+  auto Arg1 = Builder.createJSDynamicParam(F, "num");
 
   auto Body = Builder.createBasicBlock(F);
 
@@ -137,24 +127,44 @@ TEST(IRVerifierTest, DominanceTest) {
 
   // This tries to verify that if an instruction A is an operand of another
   // instruction B, A should dominate B.
-  EXPECT_FALSE(verifyModule(M, &errs()));
+  EXPECT_TRUE(verifyModule(M, &errs()));
 }
 
-TEST(IRVerifierTest, ScopeWithoutVariableScope) {
+TEST(IRVerifierTest, TryStructureTest) {
   auto Ctx = std::make_shared<Context>();
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testScopeWithoutVariableScope",
-      Function::DefinitionKind::ES5Function,
-      true);
-  Builder.setInsertionBlock(Builder.createBasicBlock(F));
-  Builder.createUnreachableInst();
+      "testBranch", Function::DefinitionKind::ES5Function, true);
 
-  F->getFunctionScopeDesc()->createInnerScope();
-  EXPECT_TRUE(verifyModule(M, &errs()));
+  auto entry = Builder.createBasicBlock(F);
+  // This BB will be reachable from both outside of a try and inside of a try.
+  auto illegalBB = Builder.createBasicBlock(F);
+  auto tryStartBB = Builder.createBasicBlock(F);
+  auto tryBodyBB = Builder.createBasicBlock(F);
+  auto catchBB = Builder.createBasicBlock(F);
+
+  Builder.setInsertionBlock(entry);
+  // Here we reach illegalBB from outside a try.
+  Builder.createCondBranchInst(
+      Builder.getLiteralBool(true), tryStartBB, illegalBB);
+
+  Builder.setInsertionBlock(tryStartBB);
+  Builder.createTryStartInst(tryBodyBB, catchBB);
+
+  // Here we reach illegalBB from inside a try.
+  Builder.setInsertionBlock(tryBodyBB);
+  Builder.createBranchInst(illegalBB);
+
+  Builder.setInsertionBlock(catchBB);
+  Builder.createReturnInst(Builder.getLiteralUndefined());
+
+  Builder.setInsertionBlock(illegalBB);
+  Builder.createReturnInst(Builder.getLiteralUndefined());
+
+  EXPECT_FALSE(verifyModule(M, &llvh::nulls()));
 }
+
 #endif // HERMES_SLOW_DEBUG
 
 } // end anonymous namespace

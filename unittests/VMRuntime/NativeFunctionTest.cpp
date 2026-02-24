@@ -6,7 +6,7 @@
  */
 
 #include "AdditionalSlots.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/JSError.h"
@@ -21,12 +21,15 @@ using NativeFunctionTest = RuntimeTestFixture;
 
 TEST_F(NativeFunctionTest, AdditionalSlots) {
   GCScope scope{runtime, "NativeFunctionTest"};
-  auto handle = NativeFunction::createWithoutPrototype(
+  auto handle = NativeFunction::create(
       runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       nullptr,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
+      Runtime::makeNullHandle<JSObject>(),
       numAdditionalSlotsForTest<NativeFunction>());
   testAdditionalSlots(runtime, handle);
 }
@@ -37,15 +40,7 @@ TEST(NativeFunctionNameTest, SmokeTest) {
       "dataViewPrototypeGetInt8", getFunctionName(dataViewPrototypeGetInt8));
   EXPECT_STREQ(
       "dataViewPrototypeSetInt8", getFunctionName(dataViewPrototypeSetInt8));
-
-  using CreatorFunction = NativeConstructor::CreatorFunction;
-  CreatorFunction *func = NativeConstructor::creatorFunction<JSError>;
-  EXPECT_STREQ(
-      "NativeConstructor::creatorFunction<JSError>", getFunctionName(func));
-
-  func = NativeConstructor::creatorFunction<
-      JSTypedArray<int16_t, CellKind::Int16ArrayKind>>;
-  EXPECT_STREQ(
-      "NativeConstructor::creatorFunction<Int16Array>", getFunctionName(func));
+  EXPECT_STREQ("ErrorConstructor", getFunctionName(ErrorConstructor));
+  EXPECT_STREQ("Int16ArrayConstructor", getFunctionName(Int16ArrayConstructor));
 }
 } // namespace

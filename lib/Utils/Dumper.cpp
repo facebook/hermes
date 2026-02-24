@@ -21,16 +21,32 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/IRVisitor.h"
 #include "hermes/IR/Instrs.h"
-#include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
 #include "hermes/Support/Statistic.h"
 #include "hermes/Utils/Dumper.h"
-
-using namespace hermes;
 
 using llvh::dyn_cast;
 using llvh::isa;
 
-namespace hermes {
+namespace hermes::irdumper {
+
+IRPrinter::IRPrinter(
+    Context &ctx,
+    bool usePersistent,
+    llvh::raw_ostream &ost,
+    bool escape,
+    bool labelAllInsts)
+    : indent_(0),
+      ctx_(ctx),
+      sm_(ctx.getSourceErrorManager()),
+      os_(ost),
+      colors_(ctx.getCodeGenerationSettings().colors && os_.has_colors()),
+      needEscape_(escape),
+      tempNamer_(
+          usePersistent && ctx.getPersistentIRNamer()
+              ? nullptr
+              : new Namer(usePersistent)),
+      namer_(tempNamer_ ? *tempNamer_ : *ctx.getPersistentIRNamer()),
+      labelAllInsts_(labelAllInsts) {}
 
 std::string IRPrinter::escapeStr(llvh::StringRef name) {
   std::string s = name.str();
@@ -77,215 +93,257 @@ std::string IRPrinter::quoteStr(llvh::StringRef name) {
   return name.str();
 }
 
-void InstructionNamer::clear() {
-  Counter = 0;
-  InstrMap.clear();
-}
-unsigned InstructionNamer::getNumber(Value *T) {
-  auto It = InstrMap.find(T);
-  if (It != InstrMap.end()) {
-    return It->second;
-  }
-  InstrMap[T] = Counter;
-  return Counter++;
+void ValueNamer::clear() {
+  currentGen_ = 0;
+  counter_ = 0;
+  map_.clear();
 }
 
-void IRPrinter::printTypeLabel(Type T) {
-  // We don't print type annotations for unknown types.
-  if (T.isAnyType())
+void ValueNamer::nextGeneration() {
+  for (auto it = map_.begin(), end = map_.end(); it != end;) {
+    auto cur = it++;
+    if (cur->second.visitedGen != currentGen_) {
+      map_.erase(cur);
+    }
+  }
+
+  currentGen_ ^= 1;
+}
+
+unsigned ValueNamer::getNumber(const Value *v) {
+  ValueKind kind = v->getKind();
+  auto [it, inserted] =
+      map_.try_emplace(v, ValueT(kind, currentGen_, counter_));
+  if (inserted) {
+    ++counter_;
+  } else {
+    if (it->second.visitedGen != currentGen_)
+      it->second.visitedGen = currentGen_;
+    if (it->second.kind != kind) {
+      // If the kind of the value has changed, reset the counter.
+      it->second.kind = kind;
+      it->second.number = counter_++;
+    }
+  }
+  return it->second.number;
+}
+
+VariableNamer::Name VariableNamer::getName(Variable *var) {
+  auto [varIt, newVar] = varMap_.try_emplace(var, 0);
+  if (newVar) {
+    varIt->second =
+        ++namesCounts_[std::make_pair(var->getParent(), var->getName())];
+  }
+
+  return Name{var->getName(), varIt->second - 1};
+}
+
+llvh::raw_ostream &operator<<(
+    llvh::raw_ostream &os,
+    const VariableNamer::Name &n) {
+  // If the name is empty or contains spaces, quote it.
+  if (n.name.str().count(' ') || n.name.str().empty())
+    os << '"' << n.name << '"';
+  else
+    os << n.name;
+  if (n.suffix)
+    os << "#" << n.suffix;
+  return os;
+}
+
+void IRPrinter::printTypeLabel(Value *v) {
+  // Don't print the type of basic blocks or certain literals.
+  if (llvh::isa<BasicBlock>(v) || llvh::isa<LiteralIRType>(v) ||
+      llvh::isa<LiteralTypeOfIsTypes>(v))
     return;
-  os << " : " << T;
+  setColor(Color::Type);
+  os_ << ": " << v->getType();
+  resetColor();
 }
 
 void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
   auto &ctx = I->getContext();
-  if (isa<CallBuiltinInst>(I) && opIndex == CallInst::CalleeIdx) {
-    os << "["
-       << getBuiltinMethodName(cast<CallBuiltinInst>(I)->getBuiltinIndex())
-       << "]";
-#ifdef HERMES_RUN_WASM
-  } else if (isa<CallIntrinsicInst>(I) && opIndex == 0) {
-    os << "["
-       << getWasmIntrinsicsName(
-              cast<CallIntrinsicInst>(I)->getIntrinsicsIndex())
-       << "]";
-#endif
-  } else if (isa<GetBuiltinClosureInst>(I) && opIndex == 0) {
-    os << "["
-       << getBuiltinMethodName(
-              cast<GetBuiltinClosureInst>(I)->getBuiltinIndex())
-       << "]";
+  if (auto *builtinIdx = dyn_cast<LiteralBuiltinIdx>(V)) {
+    os_ << "[" << getBuiltinMethodName(builtinIdx->getData()) << "]";
   } else if (auto LBI = dyn_cast<LiteralBigInt>(V)) {
-    os << LBI->getValue()->str();
+    os_ << LBI->getValue()->str();
   } else if (auto LS = dyn_cast<LiteralString>(V)) {
-    os << escapeStr(ctx.toString(LS->getValue()));
+    os_ << escapeStr(ctx.toString(LS->getValue()));
   } else if (auto LB = dyn_cast<LiteralBool>(V)) {
-    os << (LB->getValue() ? "true" : "false");
+    os_ << (LB->getValue() ? "true" : "false");
   } else if (auto LN = dyn_cast<LiteralNumber>(V)) {
     const auto Num = LN->getValue();
     if (Num == 0 && std::signbit(Num)) {
       // Ensure we output -0 correctly
-      os << "-0";
+      os_ << "-0";
     } else {
       char buf[NUMBER_TO_STRING_BUF_SIZE];
       numberToString(LN->getValue(), buf, sizeof(buf));
-      os << buf;
+      os_ << buf;
     }
   } else if (isa<LiteralEmpty>(V)) {
-    os << "empty";
+    os_ << "empty";
+  } else if (isa<LiteralUninit>(V)) {
+    os_ << "uninit";
   } else if (isa<LiteralNull>(V)) {
-    os << "null";
+    os_ << "null";
   } else if (isa<LiteralUndefined>(V)) {
-    os << "undefined";
+    os_ << "undefined";
   } else if (isa<GlobalObject>(V)) {
-    os << "globalObject";
+    os_ << "globalObject";
   } else if (isa<EmptySentinel>(V)) {
-    os << "empty";
+    os_ << "empty";
   } else if (isa<Instruction>(V)) {
-    os << "%" << InstNamer.getNumber(V);
+    setColor(Color::Name);
+    os_ << "%" << namer_.getInstNumber(llvh::cast<Instruction>(V));
+    resetColor();
   } else if (isa<BasicBlock>(V)) {
-    os << "%BB" << BBNamer.getNumber(V);
+    setColor(Color::Name);
+    os_ << "%BB" << namer_.getBBNumber(llvh::cast<BasicBlock>(V));
+    resetColor();
   } else if (auto L = dyn_cast<Label>(V)) {
     auto Name = L->get();
-    os << "$" << quoteStr(ctx.toString(Name));
-  } else if (auto P = dyn_cast<Parameter>(V)) {
+    os_ << "$" << quoteStr(ctx.toString(Name));
+  } else if (auto P = dyn_cast<JSDynamicParam>(V)) {
     auto Name = P->getName();
-    os << "%" << ctx.toString(Name);
+    os_ << "%" << ctx.toString(Name);
+  } else if (auto P = dyn_cast<JSSpecialParam>(V)) {
+    auto Name = P->getName();
+    os_ << "%" << ctx.toString(Name);
   } else if (auto F = dyn_cast<Function>(V)) {
-    os << "%";
-    printFunctionName(F, PrintFunctionParams::No);
-  } else if (auto S = dyn_cast<ScopeDesc>(V)) {
-    os << "%";
-    printScopeLabel(S);
+    os_ << "%" << quoteStr(ctx.toString(F->getInternalName())) << "()";
+  } else if (auto VS = dyn_cast<VariableScope>(V)) {
+    os_ << "%VS" << namer_.getScopeNumber(VS);
   } else if (auto VR = dyn_cast<Variable>(V)) {
-    os << "[";
-    printVariableName(VR);
-    if (I->getParent()->getParent() != VR->getParent()->getFunction()) {
-      llvh::StringRef scopeName =
-          VR->getParent()->getFunction()->getInternalNameStr();
-      os << "@" << quoteStr(scopeName);
-    }
-    os << "]";
+    os_ << "[%VS" << namer_.getScopeNumber(VR->getParent()) << "."
+        << namer_.getVarName(VR) << "]";
+  } else if (auto *lt = llvh::dyn_cast<LiteralIRType>(V)) {
+    os_ << "type(" << lt->getData() << ")";
+  } else if (auto *lt = llvh::dyn_cast<LiteralTypeOfIsTypes>(V)) {
+    os_ << "typeOfIs(" << lt->getData() << ")";
+  } else if (auto *NS = llvh::dyn_cast<LiteralNativeSignature>(V)) {
+    os_ << '"';
+    NS->getData()->format(os_);
+    os_ << '"';
+  } else if (auto *NE = llvh::dyn_cast<LiteralNativeExtern>(V)) {
+    NativeExtern *ne = NE->getData();
+    os_ << "extern_c(";
+    ne->signature()->format(os_, ne->name()->c_str());
+    if (ne->declared())
+      os_ << " /*declared*/";
+    os_ << ")";
   } else {
     llvm_unreachable("Invalid value");
   }
 
-  printTypeLabel(V->getType());
+  printTypeLabel(V);
 }
 
 void IRPrinter::printFunctionHeader(Function *F) {
+  auto &Ctx = F->getContext();
   std::string defKindStr = F->getDefinitionKindStr(false);
 
-  os << defKindStr << " ";
-  printFunctionName(F, PrintFunctionParams::Yes);
-  printTypeLabel(F->getType());
-}
-
-void IRPrinter::printFunctionVariables(Function *F) {
-  bool hasGlobals = false;
-  if (F->isGlobalScope()) {
-    auto &Ctx = F->getContext();
-    bool first2 = true;
-    for (auto *GP : F->getParent()->getGlobalProperties()) {
-      if (!GP->isDeclared())
-        continue;
-      if (first2) {
-        hasGlobals = true;
-        os << "globals = [";
-      } else {
-        os << ", ";
-      }
-      os << Ctx.toString(GP->getName()->getValue());
-      first2 = false;
+  os_ << defKindStr << " " << quoteStr(Ctx.toString(F->getInternalName()))
+      << "(";
+  uint32_t idx = 0u - 1;
+  for (auto *P : F->getJSDynamicParams()) {
+    ++idx;
+    // Skip "this".
+    if (idx == 0)
+      continue;
+    // Comma before the second param
+    if (idx > 1) {
+      os_ << ", ";
     }
-    if (!first2)
-      os << "]";
+    os_ << P->getName().str();
+    printTypeLabel(P);
   }
-
-  bool printNewLine = hasGlobals;
-  F->forEachScope([&](ScopeDesc *S) {
-    if (printNewLine) {
-      os << "\n";
-    }
-    printNewLine = true;
-    printScopeLabel(S);
-    os << " = [";
-    bool first = true;
-    for (auto V : S->getVariables()) {
-      if (!first) {
-        os << ", ";
-      }
-      printVariableName(V);
-      printTypeLabel(V->getType());
-      first = false;
-    }
-    os << "]";
-  });
+  os_ << ")";
+  setColor(Color::Type);
+  os_ << ": " << F->getReturnType();
+  resetColor();
+  os_ << " " << F->getAttributes(F->getParent()).getDescriptionStr();
 }
 
-void IRPrinter::printInstructionDestination(Instruction *I) {
-  os << "%" << InstNamer.getNumber(I);
+void IRPrinter::visitVariableScope(const hermes::VariableScope &VS) {
+  bool first = true;
+  os_.indent(indent_);
+  os_ << "scope %VS" << namer_.getScopeNumber(&VS) << " [";
+  for (auto *V : VS.getVariables()) {
+    if (!first) {
+      os_ << ", ";
+    }
+    os_ << namer_.getVarName(V);
+    printTypeLabel(V);
+    first = false;
+  }
+  os_ << "]\n\n";
+}
+
+bool IRPrinter::printInstructionDestination(Instruction *I) {
+  unsigned number = namer_.getInstNumber(I);
+  if (labelAllInsts_ || I->hasOutput()) {
+    setColor(Color::Name);
+    os_ << "%" << number;
+    resetColor();
+    return true;
+  } else {
+    // Calculate the width of the printed number.
+    unsigned width = 1;
+    while (number > 9) {
+      number /= 10;
+      ++width;
+    }
+    os_ << ' ';
+    os_.indent(width);
+    return false;
+  }
 }
 
 void IRPrinter::printInstruction(Instruction *I) {
-  printInstructionDestination(I);
-  os << " = ";
-  os << I->getName();
+  if (printInstructionDestination(I))
+    os_ << " = ";
+  else
+    os_ << "   ";
+  setColor(Color::Inst);
+  os_ << I->getName();
+  resetColor();
+
+  if (!I->getAttributes(I->getModule()).isEmpty()) {
+    os_ << " " << I->getAttributes(I->getModule()).getDescriptionStr();
+  }
+
+  // Don't print the type of instructions without output.
+  if (I->hasOutput()) {
+    os_ << " (";
+    setColor(Color::Type);
+    os_ << ':' << I->getType();
+    resetColor();
+    os_ << ")";
+  }
 
   bool first = true;
 
-  if (auto *binop = dyn_cast<BinaryOperatorInst>(I)) {
-    os << " '" << binop->getOperatorStr() << "'";
-    first = false;
-  } else if (auto *cmpbr = dyn_cast<CompareBranchInst>(I)) {
-    os << " '" << cmpbr->getOperatorStr() << "'";
-    first = false;
-  } else if (auto *unop = dyn_cast<UnaryOperatorInst>(I)) {
-    os << " '" << unop->getOperatorStr() << "'";
-    first = false;
-  }
-
   for (int i = 0, e = I->getNumOperands(); i < e; i++) {
-    Value *O = I->getOperand(i);
-    os << (first ? " " : ", ");
-    printValueLabel(I, O, i);
+    os_ << (first ? " " : ", ");
+    printValueLabel(I, I->getOperand(i), i);
     first = false;
   }
 
-  auto codeGenOpts = I->getContext().getCodeGenerationSettings();
-  const char *prefix = " // ";
-
-  if (codeGenOpts.dumpTextifiedCallee) {
-    auto &ctx = I->getParent()->getParent()->getContext();
-    if (auto call = llvh::dyn_cast<CallInst>(I)) {
-      if (LiteralString *textifiedCallee = call->getTextifiedCallee()) {
-        os << prefix << "textified callee: "
-           << escapeStr(ctx.toString(textifiedCallee->getValue()));
-        prefix = ", ";
-      }
-    }
-  }
-  if (codeGenOpts.dumpSourceLevelScope) {
-    if (auto *originalScope = I->getSourceLevelScope()) {
-      os << prefix << "scope: ";
-      printScopeLabel(originalScope);
-      prefix = ", ";
-    }
-  }
-
+  const auto &codeGenOpts = I->getContext().getCodeGenerationSettings();
   // Print the use list if there is any user for the instruction.
   if (!codeGenOpts.dumpUseList || I->getUsers().empty())
     return;
 
   llvh::DenseSet<Instruction *> Visited;
-  os << prefix << "users:";
+  os_ << " // users:";
   for (auto &U : I->getUsers()) {
     auto *II = cast<Instruction>(U);
     assert(II && "Expecting user to be an Instruction");
     if (Visited.find(II) != Visited.end())
       continue;
     Visited.insert(II);
-    os << " %" << InstNamer.getNumber(II);
+    os_ << " %" << namer_.getInstNumber(II);
   }
 }
 
@@ -294,8 +352,8 @@ void IRPrinter::printSourceLocation(SMLoc loc) {
   if (!sm_.findBufferLineAndLoc(loc, coords))
     return;
 
-  os << sm_.getSourceUrl(coords.bufId) << ":" << coords.line << ":"
-     << coords.col;
+  os_ << sm_.getSourceUrl(coords.bufId) << ":" << coords.line << ":"
+      << coords.col;
 }
 
 void IRPrinter::printSourceLocation(SMRange rng) {
@@ -304,142 +362,149 @@ void IRPrinter::printSourceLocation(SMRange rng) {
       !sm_.findBufferLineAndLoc(rng.End, end))
     return;
 
-  os << "[" << sm_.getSourceUrl(start.bufId) << ":" << start.line << ":"
-     << start.col << " ... " << sm_.getSourceUrl(end.bufId) << ":" << end.line
-     << ":" << end.col << ")";
-}
-
-void IRPrinter::printScopeLabel(ScopeDesc *S) {
-  os << "S{";
-  printFunctionName(S->getFunction(), PrintFunctionParams::No);
-  printScopeRange(S, S->getFunction()->getFunctionScopeDesc());
-  os << "}";
-}
-
-void IRPrinter::printScope(ScopeDesc *S) {
-  os << "#" << ScopeNamer.getNumber(S);
-}
-
-void IRPrinter::printScopeRange(ScopeDesc *Start, ScopeDesc *End) {
-  if (Start != End) {
-    printScopeRange(Start->getParent(), End);
-    printScope(Start);
-  }
-}
-
-void IRPrinter::printScopeChain(ScopeDesc *S) {
-  if (S && S->getParent()) {
-    printScope(S->getParent());
-  }
-  printScope(S);
-}
-
-void IRPrinter::printFunctionName(
-    Function *F,
-    PrintFunctionParams printFunctionParams) {
-  auto &ctx = F->getContext();
-  os << quoteStr(ctx.toString(F->getInternalName()));
-  printScopeChain(F->getFunctionScopeDesc()->getParent());
-  os << "(";
-  if (printFunctionParams != PrintFunctionParams::No) {
-    bool first = true;
-    for (auto P : F->getParameters()) {
-      if (!first) {
-        os << ", ";
-      }
-      os << ctx.toString(P->getName());
-      printTypeLabel(P->getType());
-      first = false;
-    }
-  }
-  os << ")";
-  printScope(F->getFunctionScopeDesc());
-}
-
-void IRPrinter::printVariableName(Variable *V) {
-  ScopeDesc *VS = V->getParent();
-  auto &ctx = VS->getFunction()->getContext();
-  os << ctx.toString(V->getName());
-  printScope(VS);
+  os_ << "[" << sm_.getSourceUrl(start.bufId) << ":" << start.line << ":"
+      << start.col << " ... " << sm_.getSourceUrl(end.bufId) << ":" << end.line
+      << ":" << end.col << ")";
 }
 
 void IRPrinter::visitModule(const Module &M) {
-  ScopeNamer.clear();
-  visitScope(*M.getInitialScope());
-
   // Use IRVisitor dispatch to visit each individual function.
   for (auto &F : M)
     visit(F);
 }
 
-void IRPrinter::visitScope(const ScopeDesc &S) {
-  ScopeNamer.getNumber(const_cast<ScopeDesc *>(&S));
-  for (ScopeDesc *inner : S.getInnerScopes()) {
-    visitScope(*inner);
-  }
-}
-
 void IRPrinter::visitFunction(const Function &F) {
   auto *UF = const_cast<Function *>(&F);
-  os.indent(Indent);
-  BBNamer.clear();
-  InstNamer.clear();
-  // Number all instructions sequentially.
+  llvh::SmallVector<BasicBlock *, 8> order{};
   for (auto &BB : *UF)
-    for (auto &I : BB) {
-      InstNamer.getNumber(&I);
+    order.push_back(&BB);
+  visitFunction(F, order);
+}
+
+void IRPrinter::visitFunction(
+    const Function &F,
+    llvh::ArrayRef<BasicBlock *> order) {
+  if (!ctx_.getCodeGenerationSettings().dumpFunctions.empty()) {
+    if (!ctx_.getCodeGenerationSettings().dumpFunctions.count(
+            F.getInternalNameStr()))
+      return;
+  }
+  if (ctx_.getCodeGenerationSettings().noDumpFunctions.count(
+          F.getInternalNameStr())) {
+    return;
+  }
+
+  auto *UF = const_cast<Function *>(&F);
+  namer_.newFunction(&F);
+  for (auto *BB : order) {
+    // Number all basic blocks sequentially.
+    namer_.getBBNumber(BB);
+    // Number all instructions sequentially.
+    for (auto &I : *BB) {
+      namer_.getInstNumber(&I);
+
+      // Dump the scopes that are being encountered for the first time.
+      for (size_t i = 0; i < I.getNumOperands(); i++)
+        if (auto *VS = dyn_cast<VariableScope>(I.getOperand(i)))
+          if (dumpedScopes_.insert(VS).second)
+            visit(*VS);
     }
+  }
 
+  os_.indent(indent_);
   printFunctionHeader(UF);
-  os << "\n";
-  printFunctionVariables(UF);
-  os << "\n";
+  os_ << "\n";
 
-  auto codeGenOpts = F.getContext().getCodeGenerationSettings();
+  const auto &codeGenOpts = F.getContext().getCodeGenerationSettings();
   if (codeGenOpts.dumpSourceLocation) {
-    os << "source location: ";
+    os_ << "source location: ";
     printSourceLocation(F.getSourceRange());
-    os << "\n";
+    os_ << "\n";
   }
 
   // Use IRVisitor dispatch to visit the basic blocks.
-  for (auto &BB : F) {
-    visit(BB);
+  for (auto *BB : order) {
+    visit(*BB);
   }
 
-  os.indent(Indent);
-  os << "function_end" << "\n";
-  os << "\n";
+  os_.indent(indent_);
+  os_ << "function_end" << "\n";
+  os_ << "\n";
 }
 
 void IRPrinter::visitBasicBlock(const BasicBlock &BB) {
   auto *UBB = const_cast<BasicBlock *>(&BB);
-  os.indent(Indent);
-  os << "%BB" << BBNamer.getNumber(UBB) << ":\n";
-  Indent += 2;
+  os_.indent(indent_);
+  setColor(Color::Name);
+  os_ << "%BB" << namer_.getBBNumber(UBB) << ":\n";
+  resetColor();
+  indent_ += 2;
 
   // Use IRVisitor dispatch to visit the instructions.
-  for (auto &I : BB) {
+  for (auto &I : BB)
     visit(I);
-  }
 
-  Indent -= 2;
+  indent_ -= 2;
 }
 
 void IRPrinter::visitInstruction(const Instruction &I) {
   auto *UII = const_cast<Instruction *>(&I);
-  auto codeGenOpts = I.getContext().getCodeGenerationSettings();
+  const auto &codeGenOpts = I.getContext().getCodeGenerationSettings();
   if (codeGenOpts.dumpSourceLocation) {
-    os << "; ";
+    os_ << "; ";
     printSourceLocation(UII->getLocation());
-    os << "\n";
+    os_ << "\n";
   }
-  os.indent(Indent);
+  os_.indent(indent_);
   printInstruction(UII);
-  os << "\n";
+  os_ << "\n";
 }
 
-} // namespace hermes
+/// A simple palette for IR dumping, superficially inspired by Godbolt's LLVM IR
+/// palette.
+static struct {
+  llvh::raw_ostream::Colors color;
+  // -1 means select default color, false means not bold, true means bold.
+  int8_t bold;
+} s_palette[] = {
+    // None
+    {llvh::raw_ostream::Colors::BLACK, -1},
+    // Inst
+    {llvh::raw_ostream::Colors::BLACK, -1},
+    // Type like :number.
+    {llvh::raw_ostream::Colors::GREEN, false},
+    // Name like %15 or %BB3
+    /* BLUE looks better, but sometimes fades in dark mode. */
+    /* {raw_ostream::Colors::BLUE, false}, */
+    {llvh::raw_ostream::Colors::RED, false},
+    // Register like {loc1}
+    {llvh::raw_ostream::Colors::MAGENTA, false},
+};
+static_assert(
+    sizeof(s_palette) / sizeof(s_palette[0]) == (size_t)IRPrinter::Color::_last,
+    "palette size mismatch");
+
+void IRPrinter::setColor(IRPrinter::Color color) {
+  assert(color < Color::_last && "invalid color");
+  unsigned ind = (unsigned)color;
+  if (s_palette[ind].bold < 0)
+    resetColor();
+  else
+    _changeColor(s_palette[ind].color, s_palette[ind].bold);
+}
+
+void IRPrinter::resetColor() {
+  if (colors_)
+    os_.resetColor();
+}
+
+void IRPrinter::_changeColor(
+    llvh::raw_ostream::Colors Color,
+    bool Bold,
+    bool BG) {
+  if (colors_)
+    os_.changeColor(Color, Bold, BG);
+}
 
 namespace {
 
@@ -454,7 +519,8 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
       Context &ctx,
       llvh::raw_ostream &ost,
       llvh::StringRef Title)
-      : os(ost), Printer(ctx, ost, /* escape output */ true) {
+      : os(ost), Printer(ctx, false, ost, /* escape output */ true, false) {
+    Printer.disableColors();
     os << " digraph g {\n graph [ rankdir = \"TD\" ];\n";
     os << "labelloc=\"t\"; ";
     os << " node [ fontsize = \"16\" shape = \"record\" ]; edge [ ];\n";
@@ -489,7 +555,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
     // InstNamer table before we dump all the instructions.
     for (auto &BB : F) {
       for (auto &II : BB) {
-        (void)Printer.InstNamer.getNumber(const_cast<Instruction *>(&II));
+        (void)Printer.namer_.getInstNumber(const_cast<Instruction *>(&II));
       }
     }
 
@@ -508,7 +574,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
     os << "\"" << toString(BB) << "\"";
     os << "[ label = \"{ ";
 
-    os << " { <self> | <head> \\<\\<%BB" << Printer.BBNamer.getNumber(BB)
+    os << " { <self> | <head> \\<\\<%BB" << Printer.namer_.getBBNumber(BB)
        << "\\>\\> | } ";
 
     int counter = 0;
@@ -535,7 +601,7 @@ struct DottyPrinter : public IRVisitor<DottyPrinter, void> {
 
 } // anonymous namespace
 
-void hermes::viewGraph(Function *F) {
+void viewGraph(Function *F) {
 #ifndef NDEBUG
   auto &Ctx = F->getContext();
   llvh::StringRef Name = Ctx.toString(F->getInternalName());
@@ -560,3 +626,5 @@ void hermes::viewGraph(Function *F) {
   llvh::errs() << " done. \n";
 #endif
 }
+
+} // namespace hermes::irdumper

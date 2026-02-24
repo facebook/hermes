@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 "use strict";
 
 print('Number');
@@ -127,8 +128,8 @@ print((1).toLocaleString());
 // CHECK-NEXT: 1
 
 var infinityString = (+Infinity).toLocaleString();
-var expected = globalThis.Intl ? "+∞" : "Infinity";
-print(infinityString === expected);
+// ICU returns "∞", Apple returns "+∞", no-Intl returns "Infinity"
+print(infinityString === "∞" || infinityString === "+∞" || infinityString === "Infinity");
 // CHECK-NEXT: true
 
 print((-3.14).toLocaleString());

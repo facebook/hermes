@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -commonjs -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -commonjs -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL:   "body": {
 // CHECK-NEXT:     "type": "BlockStatement",
@@ -214,6 +214,8 @@ declare export opaque type T;
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null,
 // CHECK-NEXT:           "impltype": null,
+// CHECK-NEXT:           "lowerBound": null,
+// CHECK-NEXT:           "upperBound": null,
 // CHECK-NEXT:           "supertype": null
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "specifiers": [],

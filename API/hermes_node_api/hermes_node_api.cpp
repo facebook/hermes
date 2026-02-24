@@ -70,23 +70,21 @@
 // TODO: Simplify non-Node-API API
 
 // The Node-API implementation always contains experimental code.
+#include "hermes/VM/CallResult.h"
 #define NAPI_EXPERIMENTAL
 #define NODE_API_EXPERIMENTAL_NO_WARNING
 
 #include "hermes_node_api.h"
 
-#include "hermes/SourceMap/SourceMapParser.h"
-#include "hermes/Support/SimpleDiagHandler.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
-#include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSError.h"
-#include "hermes/VM/JSProxy.h"
+#include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSTypedArray.h"
-#include "hermes/VM/PrimitiveBox.h"
+#include "hermes/VM/Operations.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/Support/ConvertUTF.h"
@@ -128,10 +126,10 @@
 // Return error status with message.
 #define ERROR_STATUS(status, ...)         \
   ::hermes::node_api::setLastNativeError( \
-      env, (status), (__FILE__), (uint32_t)(__LINE__), __VA_ARGS__)
+      env, (status), (__FILE__), (uint32_t)(__LINE__), ##__VA_ARGS__)
 
 // Return napi_generic_failure with message.
-#define GENERIC_FAILURE(...) ERROR_STATUS(napi_generic_failure, __VA_ARGS__)
+#define GENERIC_FAILURE(...) ERROR_STATUS(napi_generic_failure, ##__VA_ARGS__)
 
 // Cast env to NodeApiEnvironment if it is not null.
 #define CHECKED_ENV(env)                                          \
@@ -223,6 +221,9 @@ struct hash<napi_type_tag> {
 
 namespace hermes::node_api {
 
+template <vm::CellKind>
+inline constexpr bool kAlwaysFalse = false;
+
 // The default version of Node-API to use when user did not request a specific
 // version. The version 8 was the last version that was active before Node-API
 // is added a mechanism to specify a Node-API version per module.
@@ -282,6 +283,7 @@ enum class NodeApiPredefined {
   allRejections,
   code,
   hostFunction,
+  napi_externalValue,
   napi_typeTag,
   onHandled,
   onUnhandled,
@@ -365,7 +367,7 @@ size_t convertUTF16ToUTF8WithReplacements(
     char *buf,
     size_t bufSize);
 
-napi_status checkJSPreconditions(napi_env env) noexcept;
+static napi_status checkJSPreconditions(napi_env env) noexcept;
 
 template <typename TLambda>
 class LambdaTask : public Task {
@@ -639,6 +641,7 @@ class NodeApiLinkedListBase {
 // heap. The GC roots are the vm::PinnedHermesValue instances.
 template <class T>
 class NodeApiLinkedList final : public NodeApiLinkedListBase {
+  // TODO: Restore or delete the static_assert
   // static_assert(
   //     std::is_base_of_v<Item, T>,
   //     "T must inherit from NodeApiLinkedListBase::Item.");
@@ -903,9 +906,9 @@ class NodeApiEnvironment {
       napi_value *result) noexcept;
 
   // Internal function to convert temporary key storage represented by a
-  // array-builder-like BigStorage to a JS Array.
+  // array-builder-like ArrayStorage to a JS Array.
   napi_status convertKeyStorageToArray(
-      vm::Handle<vm::BigStorage> keyStorage,
+      vm::Handle<vm::ArrayStorageSmall> keyStorage,
       uint32_t startIndex,
       uint32_t length,
       napi_key_conversion keyConversion,
@@ -987,19 +990,19 @@ class NodeApiEnvironment {
   // Internal function to check if object has a property with provided name.
   napi_status hasNamedProperty(
       vm::Handle<vm::JSObject> object,
-      vm::SymbolID key,
+      vm::SymbolID name,
       bool *result) noexcept;
 
   // Internal function to get property by name.
   napi_status getNamedProperty(
       vm::Handle<vm::JSObject> object,
-      vm::SymbolID key,
+      vm::SymbolID name,
       napi_value *result) noexcept;
 
   // Internal function to set property by name.
   napi_status setNamedProperty(
       vm::Handle<vm::JSObject> object,
-      vm::SymbolID key,
+      vm::SymbolID name,
       vm::Handle<> value,
       bool *optResult = nullptr) noexcept;
 
@@ -1035,7 +1038,7 @@ class NodeApiEnvironment {
   napi_status addObjectFinalizer(
       const vm::PinnedHermesValue *value,
       NodeApiReference *finalizer,
-      NodeApiExternalValue **externalValue) noexcept;
+      NodeApiExternalValue **result) noexcept;
 
   // Internal function to call finalizer callback.
   void callFinalizer(
@@ -1185,7 +1188,7 @@ class NodeApiEnvironment {
 
   // This method ensures all finalizers are drained before environment
   // destruction
-  void DeleteMe() noexcept;
+  void deleteMe() noexcept;
 
   // Thread-local storage for current environment
   static thread_local NodeApiEnvironment *tlsCurrentEnvironment_;
@@ -1451,9 +1454,8 @@ class NodeApiPostConditionScope {
 // Keep external data with an object.
 class NodeApiExternalValue final : public vm::DecoratedObject::Decoration {
  public:
-  NodeApiExternalValue(
-      const NodeApiRefCountedPtr<NodeApiPendingFinalizers>
-          &pendingFinalizers) noexcept
+  NodeApiExternalValue(const NodeApiRefCountedPtr<NodeApiPendingFinalizers>
+                           &pendingFinalizers) noexcept
       : pendingFinalizers_(pendingFinalizers) {}
   NodeApiExternalValue(
       const NodeApiRefCountedPtr<NodeApiPendingFinalizers> &pendingFinalizers,
@@ -1525,8 +1527,9 @@ class NodeApiHostFunctionContext final {
       void *nativeData) noexcept
       : env_{env}, hostCallback_{hostCallback}, nativeData_{nativeData} {}
 
-  static vm::CallResult<vm::HermesValue>
-  func(void *context, vm::Runtime &runtime, vm::NativeArgs hvArgs);
+  static vm::CallResult<vm::HermesValue> func(
+      void *context,
+      vm::Runtime &runtime);
 
   // Used to delete the context by function finalizer.
   static void finalize(void *context) {
@@ -1591,8 +1594,8 @@ class NodeApiCallbackInfo final {
 
 /*static*/ vm::CallResult<vm::HermesValue> NodeApiHostFunctionContext::func(
     void *context,
-    vm::Runtime &runtime,
-    vm::NativeArgs hvArgs) {
+    vm::Runtime &runtime) {
+  vm::NativeArgs hvArgs = runtime.getCurrentFrame().getNativeArgs();
   NodeApiHostFunctionContext *hfc =
       reinterpret_cast<NodeApiHostFunctionContext *>(context);
   NodeApiEnvironment &env = hfc->env_;
@@ -1600,6 +1603,30 @@ class NodeApiCallbackInfo final {
 
   NodeApiValueScope scope{env};
   vm::GCScope gcScope{runtime};
+
+  // FinalizableNativeFunction is in the CallableMakesThis range, so the
+  // runtime passes undefined as `this` for construct calls. Node-API
+  // constructors expect `this` to be a new object, so we create it here.
+  bool isConstructCall = !hvArgs.getNewTarget().isUndefined();
+  vm::MutableHandle<vm::JSObject> thisObj{runtime};
+  if (isConstructCall) {
+    vm::Handle<vm::Callable> newTarget =
+        vm::Handle<vm::Callable>::vmcast(runtime.makeHandle(hvArgs.getNewTarget()));
+    // Create a new object with new.target.prototype as its __proto__.
+    vm::CallResult<vm::PseudoHandle<vm::JSObject>> thisRes =
+        vm::ordinaryCreateFromConstructor_RJS(
+            runtime,
+            newTarget,
+            vm::Handle<vm::JSObject>::vmcast(&runtime.objectPrototype));
+    if (LLVM_UNLIKELY(thisRes == vm::ExecutionStatus::EXCEPTION)) {
+      return vm::ExecutionStatus::EXCEPTION;
+    }
+    thisObj = thisRes->get();
+    // Set the thisArg in the current frame so `napi_get_cb_info` returns it.
+    runtime.getCurrentFrame().getThisArgRef() =
+        vm::HermesValue::encodeObjectValue(thisObj.get());
+  }
+
   NodeApiCallbackInfo callbackInfo{*hfc, hvArgs};
   napi_value result{};
   vm::ExecutionStatus status = env.callIntoModule(
@@ -1611,6 +1638,15 @@ class NodeApiCallbackInfo final {
 
   if (status == vm::ExecutionStatus::EXCEPTION) {
     return vm::ExecutionStatus::EXCEPTION;
+  }
+
+  // For construct calls, if the callback didn't return an object, return
+  // the `this` object we created (matching standard [[Construct]] behavior).
+  if (isConstructCall) {
+    if (result && phv(result)->isObject()) {
+      return *phv(result);
+    }
+    return thisObj.getHermesValue();
   }
 
   if (result) {
@@ -1704,6 +1740,24 @@ class NodeApiRefTracker : public NodeApiLinkedListBase::Item {
   }
 };
 
+// Matching to Node.js code:
+// [X] static New                  ==> static create
+// [X] ~Reference()                ==> ~NodeApiReference()
+// [X] Ref()                       ==> incRefCount()
+// [X] Unref()                     ==> decRefCount
+// [X] Get()                       ==> value()
+// [X] ResetFinalizer()            ==> resetFinalizer()
+// [X] Data()                      ==> nativeData()
+// [X] refcount()                  ==> refCount()
+// [X] ownership()                 ==> ownership()
+// [X] ctor Reference              ==> ctor NodeApiReference
+// [X] virtual CallUserFinalizer() ==> callUserFinalizer()
+// [X] InvokeFinalizerFromGC()     ==> invokeFinalizerFromGC()
+// [ ] static WeakCallback         ==> // Find a way to associate with JSObject
+//                                     // the callback
+// [ ] SetWeak()                   ==> convertToWeakRootStorage()
+// [X] Finalize()                  ==> finalize()
+
 // Base reference wrapper around Hermes values with GC integration
 class NodeApiReference : public NodeApiRefTracker {
   friend class NodeApiFinalizerHolder; // Allow access to protected
@@ -1714,12 +1768,14 @@ class NodeApiReference : public NodeApiRefTracker {
       const vm::PinnedHermesValue *value,
       uint32_t initialRefCount,
       NodeApiReferenceOwnership ownership) noexcept {
+    // Make sure GC does not collect the value while we create the reference.
+    vm::GCScope scope{env.runtime()};
+    // vm::Handle<vm::HermesValue> handleValue =
+    // env.runtime().makeHandle(*value);
+
     NodeApiReference *reference = new (std::nothrow)
         NodeApiReference(env, value, initialRefCount, ownership);
-    if (reference != nullptr) {
-      reference->initializeStorage(env);
-      env.addReference(reference);
-    }
+    env.addReference(reference);
     return reference;
   }
 
@@ -1811,15 +1867,8 @@ class NodeApiReference : public NodeApiRefTracker {
         value_(*value),
         refCount_(initialRefCount),
         ownership_(ownership),
-        canBeWeak_(сanBeHeldWeakly(value)) {}
-
-  void initializeStorage(NodeApiEnvironment &env) noexcept {
+        canBeWeak_(сanBeHeldWeakly(value)) {
     if (refCount_ == 0) {
-      // Make sure GC does not collect the value while we convert it.
-      vm::GCScope scope{env.runtime()};
-      vm::Handle<vm::HermesValue> handleValue =
-          env.runtime().makeHandle(value_);
-
       convertToWeakRootStorage(env);
     }
   }
@@ -1842,10 +1891,6 @@ class NodeApiReference : public NodeApiRefTracker {
 
   void clearFinalizerHolder() noexcept {
     finalizerHolder_ = nullptr;
-  }
-
-  virtual bool needsFinalizerTracking() const noexcept {
-    return ownership_ == NodeApiReferenceOwnership::kRuntime;
   }
 
   void resetStorage() noexcept {
@@ -1950,15 +1995,17 @@ class NodeApiReference : public NodeApiRefTracker {
 
     ABORT_IF_FALSE(value_.isObject() && "Expected an Object");
 
-    if (needsFinalizerTracking()) {
-      if (finalizerHolder_ != nullptr) {
-        finalizerHolder_->addFinalizer(this);
-      } else {
-        NodeApiExternalValue *externalValue = nullptr;
-        if (env.addObjectFinalizer(&value_, this, &externalValue) == napi_ok &&
-            externalValue) {
-          finalizerHolder_ = externalValue->getFinalizerHolder();
-        }
+    // Check if finalizerHolder_ is not null and add directly if possible
+    if (finalizerHolder_ != nullptr) {
+      // Reuse existing finalizer holder - add this reference directly
+      finalizerHolder_->addFinalizer(this);
+    } else {
+      // Call addObjectFinalizer to get the NodeApiFinalizerHolder and set
+      // backlink
+      NodeApiExternalValue *externalValue = nullptr;
+      if (env.addObjectFinalizer(&value_, this, &externalValue) == napi_ok &&
+          externalValue) {
+        finalizerHolder_ = externalValue->getFinalizerHolder();
       }
     }
 
@@ -2022,10 +2069,7 @@ class NodeApiReferenceWithData final : public NodeApiReference {
     NodeApiReferenceWithData *reference =
         new (std::nothrow) NodeApiReferenceWithData(
             env, value, initialRefCount, ownership, nativeData);
-    if (reference != nullptr) {
-      reference->initializeStorage(env);
-      env.addReference(reference);
-    }
+    env.addReference(reference);
     return reference;
   }
 
@@ -2073,10 +2117,7 @@ class NodeApiReferenceWithFinalizer final : public NodeApiReference {
             nativeData,
             finalizeCallback,
             finalizeHint);
-    if (reference != nullptr) {
-      reference->initializeStorage(env);
-      env.addFinalizingReference(reference);
-    }
+    env.addFinalizingReference(reference);
     return reference;
   }
 
@@ -2088,11 +2129,6 @@ class NodeApiReferenceWithFinalizer final : public NodeApiReference {
   // Override to call user finalizer
   void callUserFinalizer() noexcept override {
     finalizer_.callFinalizer(env_);
-  }
-
-  bool needsFinalizerTracking() const noexcept override {
-    return finalizer_.hasFinalizer() ||
-        NodeApiReference::needsFinalizerTracking();
   }
 
   void invokeFinalizerFromGC() noexcept override {
@@ -2616,15 +2652,6 @@ napi_status checkJSErrorStatus(
   return CHECKED_ENV(env)->checkExecutionStatus(hermesStatus);
 }
 
-// Max size of the runtime's register stack.
-// The runtime register stack needs to be small enough to be allocated on the
-// native thread stack in Android (1MiB) and on MacOS's thread stack (512 KiB)
-// Calculated by: (thread stack size - size of runtime -
-// 8 memory pages for other stuff in the thread)
-constexpr unsigned kMaxNumRegisters =
-    (512 * 1024 - sizeof(vm::Runtime) - 4096 * 8) /
-    sizeof(vm::PinnedHermesValue);
-
 template <class T, std::size_t N>
 constexpr std::size_t size(const T (&array)[N]) noexcept {
   return N;
@@ -2788,12 +2815,12 @@ NodeApiEnvironment::NodeApiEnvironment(
     int32_t apiVersion,
     const NodeApiRefCountedPtr<NodeApiPendingFinalizers>
         &pendingFinalizers) noexcept
-    : runtime_(runtime),
+    : pendingFinalizers_(pendingFinalizers),
+      runtime_(runtime),
+      apiVersion_(apiVersion),
       compileFlags_(compileFlags),
       taskRunner_(std::move(taskRunner)),
-      unhandledErrorCallback_(unhandledErrorCallback),
-      apiVersion_(apiVersion),
-      pendingFinalizers_(pendingFinalizers) {
+      unhandledErrorCallback_(unhandledErrorCallback) {
   runtime_.addCustomRootsFunction([this](vm::GC *, vm::RootAcceptor &acceptor) {
     napiValueStack_.forEach([&](const vm::PinnedHermesValue &value) {
       acceptor.accept(const_cast<vm::PinnedHermesValue &>(value));
@@ -2829,22 +2856,28 @@ NodeApiEnvironment::NodeApiEnvironment(
       NodeApiPredefined::Promise,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("Promise"))));
+              runtime_, vm::createASCIIRef("Promise"))));
   setPredefinedProperty(
       NodeApiPredefined::allRejections,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("allRejections"))));
+              runtime_, vm::createASCIIRef("allRejections"))));
   setPredefinedProperty(
       NodeApiPredefined::code,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("code"))));
+              runtime_, vm::createASCIIRef("code"))));
   setPredefinedProperty(
       NodeApiPredefined::hostFunction,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("hostFunction"))));
+              runtime_, vm::createASCIIRef("hostFunction"))));
+  setPredefinedProperty(
+      NodeApiPredefined::napi_externalValue,
+      vm::HermesValue::encodeSymbolValue(
+          runtime_.getIdentifierTable().createNotUniquedLazySymbol(
+              vm::createASCIIRef(
+                  "node_api.externalValue.735e14c9-354f-489b-9f27-02acbc090975"))));
   setPredefinedProperty(
       NodeApiPredefined::napi_typeTag,
       vm::HermesValue::encodeSymbolValue(
@@ -2855,22 +2888,22 @@ NodeApiEnvironment::NodeApiEnvironment(
       NodeApiPredefined::onHandled,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("onHandled"))));
+              runtime_, vm::createASCIIRef("onHandled"))));
   setPredefinedProperty(
       NodeApiPredefined::onUnhandled,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("onUnhandled"))));
+              runtime_, vm::createASCIIRef("onUnhandled"))));
   setPredefinedProperty(
       NodeApiPredefined::reject,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("reject"))));
+              runtime_, vm::createASCIIRef("reject"))));
   setPredefinedProperty(
       NodeApiPredefined::resolve,
       vm::HermesValue::encodeSymbolValue(
           runtime_.getIdentifierTable().registerLazyIdentifier(
-              vm::createASCIIRef("resolve"))));
+              runtime_, vm::createASCIIRef("resolve"))));
 }
 
 NodeApiEnvironment::~NodeApiEnvironment() = default;
@@ -2882,13 +2915,13 @@ napi_status NodeApiEnvironment::incRefCount() noexcept {
 
 napi_status NodeApiEnvironment::decRefCount() noexcept {
   if (--refCount_ == 0) {
-    DeleteMe();
+    deleteMe();
   }
   return napi_status::napi_ok;
 }
 
 // Node.js-style controlled shutdown with finalizer drainage
-void NodeApiEnvironment::DeleteMe() noexcept {
+void NodeApiEnvironment::deleteMe() noexcept {
   // Set shutdown flag to prevent task runner scheduling BEFORE processing
   // finalizers
   isShuttingDown_ = true;
@@ -3082,7 +3115,7 @@ napi_status NodeApiEnvironment::clearLastNativeError() noexcept {
 
 static napi_status createJSError(
     napi_env env,
-    const vm::PinnedHermesValue &errorPrototype,
+    const vm::PinnedValue<vm::JSObject> &errorPrototype,
     napi_value code,
     napi_value message,
     napi_value *result) noexcept {
@@ -3103,7 +3136,7 @@ static napi_status createJSError(
 
 static napi_status throwJSError(
     napi_env env,
-    const vm::PinnedHermesValue &errorPrototype,
+    const vm::PinnedValue<vm::JSObject> &errorPrototype,
     const char *code,
     const char *message) noexcept {
   CHECK_STATUS(checkJSPreconditions(env));
@@ -3115,14 +3148,13 @@ static napi_status throwJSError(
   CHECK_STATUS(
       napi_create_string_utf8(env, message, NAPI_AUTO_LENGTH, &messageValue));
 
-  vm::Handle<vm::JSError> errorHandle = env->runtime_.makeHandle(
-      vm::JSError::create(
-          env->runtime_, asHandle<vm::JSObject>(&errorPrototype)));
+  vm::Handle<vm::JSError> errorHandle =
+      env->runtime_.makeHandle(vm::JSError::create(
+          env->runtime_, vm::Handle<vm::JSObject>::vmcast(&errorPrototype)));
   CHECK_STATUS(env->checkExecutionStatus(
       vm::JSError::recordStackTrace(errorHandle, env->runtime_)));
-  CHECK_STATUS(env->checkExecutionStatus(
-      vm::JSError::setMessage(
-          errorHandle, env->runtime_, asHandle(messageValue))));
+  CHECK_STATUS(env->checkExecutionStatus(vm::JSError::setMessage(
+      errorHandle, env->runtime_, asHandle(messageValue))));
   CHECK_STATUS(env->setJSErrorCode(errorHandle, nullptr, code));
 
   env->thrownJSError_ = errorHandle.getHermesValue();
@@ -3267,7 +3299,7 @@ napi_status NodeApiEnvironment::getForInPropertyNames(
   // by caching its results. This function takes the advantage from using it.
   uint32_t beginIndex;
   uint32_t endIndex;
-  vm::CallResult<vm::Handle<vm::BigStorage>> keyStorage =
+  vm::CallResult<vm::Handle<vm::ArrayStorageSmall>> keyStorage =
       vm::getForInPropertyNames(runtime_, object, beginIndex, endIndex);
   CHECK_STATUS(checkExecutionStatus(keyStorage.getStatus()));
   return convertKeyStorageToArray(
@@ -3275,24 +3307,30 @@ napi_status NodeApiEnvironment::getForInPropertyNames(
 }
 
 napi_status NodeApiEnvironment::convertKeyStorageToArray(
-    vm::Handle<vm::BigStorage> keyStorage,
+    vm::Handle<vm::ArrayStorageSmall> keyStorage,
     uint32_t startIndex,
     uint32_t length,
     napi_key_conversion keyConversion,
     napi_value *result) noexcept {
-  vm::CallResult<vm::Handle<vm::JSArray>> res =
+  vm::CallResult<vm::PseudoHandle<vm::JSArray>> res =
       vm::JSArray::create(runtime_, length, length);
   CHECK_STATUS(checkExecutionStatus(res.getStatus()));
-  vm::Handle<vm::JSArray> array = *res;
+  vm::Handle<vm::JSArray> array = runtime_.makeHandle(std::move(*res));
   if (keyConversion == napi_key_numbers_to_strings) {
     vm::GCScopeMarkerRAII marker{runtime_};
     vm::MutableHandle<> key{runtime_};
     for (size_t i = 0; i < length; ++i) {
-      key = runtime_.makeHandle(keyStorage->at(runtime_, startIndex + i));
+      key = runtime_.makeHandle(keyStorage->at(startIndex + i).toHV(runtime_));
       if (key->isNumber()) {
         CHECK_STATUS(convertIndexToString(key->getNumber(), &key));
+      } else if (key->isSymbol() && key->getSymbol().isUniqued()) {
+        vm::StringPrimitive *str =
+            runtime_.getStringPrimFromSymbolID(key->getSymbol());
+        key = vm::HermesValue::encodeStringValue(str);
       }
-      vm::JSArray::setElementAt(array, runtime_, i, key);
+      vm::ExecutionStatus status =
+          vm::JSArray::setElementAt(array, runtime_, i, key);
+      CHECK_STATUS(checkExecutionStatus(status));
       marker.flush();
     }
   } else {
@@ -3300,12 +3338,18 @@ napi_status NodeApiEnvironment::convertKeyStorageToArray(
     vm::NoAllocScope noAlloc{runtime_};
     vm::JSArray *arrPtr = array.get();
     for (uint32_t i = 0; i < length; ++i) {
-      vm::JSArray::unsafeSetExistingElementAt(
-          arrPtr,
-          runtime_,
-          i,
-          vm::SmallHermesValue::encodeHermesValue(
-              keyStorage->at(runtime_, startIndex + i), runtime_));
+      vm::SmallHermesValue key = keyStorage->at(startIndex + i);
+      if (key.isSymbol() && key.getSymbol().isUniqued()) {
+        vm::StringPrimitive *str =
+            runtime_.getStringPrimFromSymbolID(key.getSymbol());
+        vm::JSArray::unsafeSetExistingElementAt(
+            arrPtr,
+            runtime_,
+            i,
+            vm::SmallHermesValue::encodeStringValue(str, runtime_));
+      } else {
+        vm::JSArray::unsafeSetExistingElementAt(arrPtr, runtime_, i, key);
+      }
     }
   }
   return makeResultValue(array.getHermesValue(), result);
@@ -3320,7 +3364,9 @@ napi_status NodeApiEnvironment::convertToStringKeys(
     if (LLVM_UNLIKELY(key.isNumber())) {
       vm::MutableHandle<> strKey{runtime_};
       CHECK_STATUS(convertIndexToString(key.getNumber(), &strKey));
-      vm::JSArray::setElementAt(array, runtime_, i, strKey);
+      vm::ExecutionStatus status =
+          vm::JSArray::setElementAt(array, runtime_, i, strKey);
+      CHECK_STATUS(checkExecutionStatus(status));
       marker.flush();
     }
   }
@@ -3566,10 +3612,10 @@ unwrapObject(napi_env env, napi_value object, void **result) noexcept {
 vm::Handle<vm::DecoratedObject> NodeApiEnvironment::createExternalObject(
     void *nativeData,
     NodeApiExternalValue **externalValue) noexcept {
-  vm::Handle<vm::DecoratedObject> decoratedObj = runtime_.makeHandle(
-      vm::DecoratedObject::create(
+  vm::Handle<vm::DecoratedObject> decoratedObj =
+      runtime_.makeHandle(vm::DecoratedObject::create(
           runtime_,
-          asHandle<vm::JSObject>(&runtime_.objectPrototype),
+          vm::Handle<vm::JSObject>::vmcast(&runtime_.objectPrototype),
           std::make_unique<NodeApiExternalValue>(
               pendingFinalizers_, nativeData),
           /*additionalSlotCount:*/ 1));
@@ -3613,40 +3659,22 @@ napi_status NodeApiEnvironment::getExternalPropertyValue(
     NodeApiIfNotFound ifNotFound,
     NodeApiExternalValue **result) noexcept {
   NodeApiExternalValue *externalValue{};
-
-  if (object->isHostObject() || object->isProxyObject()) {
-    return ERROR_STATUS(
-        napi_invalid_arg,
-        "Cannot access Node-API external data on host or proxy objects");
-  }
-
-  vm::SymbolID dataSymbol =
-      vm::Predefined::getSymbolID(vm::Predefined::InternalPropertyNodeApiData);
-
-  vm::NamedPropertyDescriptor desc;
-  bool hasOwnProperty =
-      vm::JSObject::getOwnNamedDescriptor(object, runtime_, dataSymbol, desc);
-
-  if (hasOwnProperty) {
-    vm::NoAllocScope noAlloc{runtime_};
-    vm::SmallHermesValue slotValue =
-        vm::JSObject::getNamedSlotValueUnsafe(*object, runtime_, desc);
-    vm::HermesValue propertyValue = slotValue.unboxToHV(runtime_);
-    RETURN_STATUS_IF_FALSE(
-        vm::vmisa<vm::DecoratedObject>(propertyValue), napi_generic_failure);
-    externalValue = getExternalObjectValue(propertyValue);
+  napi_value napiExternalValue;
+  napi_status status = getPredefinedProperty(
+      object, NodeApiPredefined::napi_externalValue, &napiExternalValue);
+  if (status == napi_ok &&
+      vm::vmisa<vm::DecoratedObject>(*phv(napiExternalValue))) {
+    externalValue = getExternalObjectValue(*phv(napiExternalValue));
     RETURN_STATUS_IF_FALSE(externalValue != nullptr, napi_generic_failure);
   } else if (ifNotFound == NodeApiIfNotFound::ThenCreate) {
     vm::Handle<vm::DecoratedObject> decoratedObj =
         createExternalObject(nullptr, &externalValue);
-    vm::CallResult<bool> cr = vm::JSObject::defineOwnProperty(
+    CHECK_STATUS(defineOwnProperty(
         object,
-        runtime_,
-        dataSymbol,
-        vm::DefinePropertyFlags::getDefaultNewPropertyFlags(),
+        getPredefinedSymbol(NodeApiPredefined::napi_externalValue),
+        vm::DefinePropertyFlags::getNewNonEnumerableFlags(),
         decoratedObj,
-        vm::PropOpFlags().plusThrowOnError().plusInternalForce());
-    CHECK_STATUS(checkExecutionStatus(cr.getStatus()));
+        nullptr));
   }
   *result = externalValue;
   return clearLastNativeError();
@@ -3876,7 +3904,7 @@ NodeApiEnvironment::getTypedArrayName() noexcept {
   } else
 #include "hermes/VM/TypedArrays.def"
   {
-    static_assert(false, "Unexpected typed array");
+    static_assert(kAlwaysFalse<cellKind>, "Unexpected typed array");
   }
 }
 
@@ -3897,8 +3925,10 @@ napi_status NodeApiEnvironment::createPromise(
   // rejectFunction given to the executor. Since the execution is synchronous,
   // we allocate executorData on the callstack.
   struct ExecutorData {
-    static vm::CallResult<vm::HermesValue>
-    callback(void *context, vm::Runtime & /*runtime*/, vm::NativeArgs args) {
+    static vm::CallResult<vm::HermesValue> callback(
+        void *context,
+        vm::Runtime &runtime) {
+      vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
       return (reinterpret_cast<ExecutorData *>(context))->callback(args);
     }
 
@@ -3913,13 +3943,15 @@ napi_status NodeApiEnvironment::createPromise(
     vm::MutableHandle<> *reject{};
   } executorData{this, resolveFunction, rejectFunction};
 
-  vm::Handle<vm::NativeFunction> executorFunction =
-      vm::NativeFunction::createWithoutPrototype(
-          runtime_,
-          &executorData,
-          &ExecutorData::callback,
-          getPredefinedSymbol(NodeApiPredefined::Promise),
-          2);
+  vm::Handle<vm::NativeFunction> executorFunction = vm::NativeFunction::create(
+      runtime_,
+      vm::Handle<vm::JSObject>::vmcast(&runtime_.functionPrototype),
+      vm::Runtime::makeNullHandle<vm::Environment>(),
+      &executorData,
+      &ExecutorData::callback,
+      getPredefinedSymbol(NodeApiPredefined::Promise),
+      /*paramCount:*/ 2,
+      runtime_.makeNullHandle<vm::JSObject>());
   napi_value func = pushNewNodeApiValue(executorFunction.getHermesValue());
   return napi_new_instance(
       napiEnv(this), promiseConstructor, 1, &func, promise);
@@ -4166,46 +4198,23 @@ napi_status NAPI_CDECL napi_define_class(
   std::unique_ptr<NodeApiHostFunctionContext> context =
       std::make_unique<NodeApiHostFunctionContext>(
           *env, constructor, callbackData);
-  vm::PseudoHandle<vm::NativeConstructor> ctorRes =
-      vm::NativeConstructor::create(
-          env->runtime_,
-          parentHandle,
-          context.get(),
-          &NodeApiHostFunctionContext::func,
-          /*paramCount:*/ 0,
-          vm::NativeConstructor::creatorFunction<vm::JSObject>,
-          vm::CellKind::JSObjectKind);
-  vm::Handle<vm::NativeConstructor> classHandle =
-      env->runtime_.makeHandle(std::move(ctorRes));
-
-  vm::Handle<vm::NativeState> nsHanle = env->runtime_.makeHandle(
-      vm::NativeState::create(
-          env->runtime_,
-          context.release(),
-          &NodeApiHostFunctionContext::finalizeNS));
-
-  vm::CallResult<bool> res = vm::JSObject::defineOwnProperty(
-      classHandle,
-      env->runtime_,
-      vm::Predefined::getSymbolID(
-          vm::Predefined::InternalPropertyArrayBufferExternalFinalizer),
-      vm::DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      nsHanle);
-  CHECK_STATUS(env->checkExecutionStatus(res.getStatus()));
-  RETURN_STATUS_IF_FALSE_WITH_MESSAGE(
-      *res, napi_generic_failure, "Cannot set external finalizer for a class");
 
   vm::Handle<vm::JSObject> prototypeHandle{
       env->runtime_.makeHandle(vm::JSObject::create(env->runtime_))};
-  vm::ExecutionStatus st = vm::Callable::defineNameLengthAndPrototype(
-      vm::Handle<vm::Callable>::vmcast(classHandle),
-      env->runtime_,
-      nameHandle.get(),
-      /*paramCount:*/ 0,
-      prototypeHandle,
-      vm::Callable::WritablePrototype::Yes,
-      /*strictMode*/ false);
-  CHECK_STATUS(env->checkExecutionStatus(st));
+
+  vm::CallResult<vm::HermesValue> ctorRes =
+      vm::FinalizableNativeFunction::create(
+          env->runtime(),
+          context.get(),
+          &NodeApiHostFunctionContext::func,
+          &NodeApiHostFunctionContext::finalize,
+          nameHandle.get(),
+          /*paramCount:*/ 0,
+          prototypeHandle);
+  CHECK_STATUS(env->checkExecutionStatus(ctorRes.getStatus()));
+  context.release(); // the context is now owned by the func.
+
+  vm::Handle<> classHandle = env->runtime_.makeHandle(*ctorRes);
 
   for (size_t i = 0; i < propertyCount; ++i) {
     const napi_property_descriptor &propDesc = properties[i];
@@ -4310,13 +4319,23 @@ napi_status NAPI_CDECL napi_get_all_property_names(
   }
 
   // Collect all properties into the keyStorage.
-  vm::CallResult<vm::PseudoHandle<vm::BigStorage>> keyStorageRes =
-      vm::BigStorage::create(env->runtime_, 16);
+  // vm::CallResult<vm::PseudoHandle<vm::ArrayStorage>> keyStorageRes =
+  //     vm::ArrayStorage::create(env->runtime_, 16);
+  // if (keyStorageRes.getStatus() == vm::ExecutionStatus::EXCEPTION) {
+  //   return env->setJSException();
+  // }
+  // vm::MutableHandle<vm::ArrayStorage> keyStorageHandle =
+  //     env->runtime_.makeMutableHandle(keyStorageRes->get());
+  // uint32_t size{0};
+
+  vm::CallResult<vm::HermesValue> keyStorageRes =
+      vm::ArrayStorageSmall::create(env->runtime_, 16);
   if (keyStorageRes.getStatus() == vm::ExecutionStatus::EXCEPTION) {
     return env->setJSException();
   }
-  vm::MutableHandle<vm::BigStorage> keyStorageHandle =
-      env->runtime_.makeMutableHandle(keyStorageRes->get());
+  vm::MutableHandle<vm::ArrayStorageSmall> keyStorageHandle =
+      env->runtime_.makeMutableHandle(
+          vm::vmcast<vm::ArrayStorageSmall>(*keyStorageRes));
   uint32_t size{0};
 
   // Make sure that we do not include into the result properties that were
@@ -4389,7 +4408,6 @@ napi_status NAPI_CDECL napi_get_all_property_names(
 
       // Apply filter for the property descriptor flags
       if (useFilter) {
-        vm::MutableHandle<vm::SymbolID> tmpSymbolStorage{env->runtime_};
         vm::ComputedPropertyDescriptor desc;
         vm::CallResult<bool> hasDescriptorRes =
             vm::JSObject::getOwnComputedPrimitiveDescriptor(
@@ -4397,7 +4415,6 @@ napi_status NAPI_CDECL napi_get_all_property_names(
                 env->runtime_,
                 prop,
                 vm::JSObject::IgnoreProxy::No,
-                tmpSymbolStorage,
                 desc);
         CHECK_STATUS(env->checkExecutionStatus(hasDescriptorRes.getStatus()));
         if (*hasDescriptorRes) {
@@ -4415,8 +4432,8 @@ napi_status NAPI_CDECL napi_get_all_property_names(
         }
       }
 
-      CHECK_STATUS(env->checkExecutionStatus(
-          vm::BigStorage::push_back(keyStorageHandle, env->runtime_, prop)));
+      CHECK_STATUS(env->checkExecutionStatus(vm::ArrayStorageSmall::push_back(
+          keyStorageHandle, env->runtime_, prop)));
       ++size;
     }
 
@@ -4573,13 +4590,11 @@ napi_status NAPI_CDECL napi_has_own_property(
     return env->setJSException();
   }
 
-  vm::MutableHandle<vm::SymbolID> tmpSymbolStorage{env->runtime_};
   vm::ComputedPropertyDescriptor desc;
   vm::CallResult<bool> cr = vm::JSObject::getOwnComputedDescriptor(
       env->runtime_.makeHandle<vm::JSObject>(*objRes),
       env->runtime_,
       asHandle(key),
-      /*ref*/ tmpSymbolStorage,
       /*ref*/ desc);
   if (cr.getStatus() == vm::ExecutionStatus::EXCEPTION) {
     return env->setJSException();
@@ -4918,16 +4933,14 @@ napi_status NAPI_CDECL napi_define_properties(
             &localSetter));
       }
 
-      vm::CallResult<vm::HermesValue> propRes =
+      vm::PseudoHandle<vm::PropertyAccessor> propRes =
           vm::PropertyAccessor::create(env->runtime_, localGetter, localSetter);
-      if (propRes.getStatus() == vm::ExecutionStatus::EXCEPTION) {
-        return env->setJSException();
-      }
+
       CHECK_STATUS(env->defineOwnProperty(
           objHandle,
           *name,
           dpFlags,
-          env->runtime_.makeHandle(*propRes),
+          env->runtime_.makeHandle(std::move(propRes)),
           nullptr));
     } else {
       dpFlags.setValue = 1;
@@ -4999,18 +5012,7 @@ napi_is_array(napi_env env, napi_value value, bool *result) {
   CHECK_POSTCONDITIONS(env, /*valueStackDelta:*/ 0);
   CHECK_ARG(value);
   CHECK_ARG(result);
-
-  // First check if it's a direct JSArray instance
-  if (LLVM_LIKELY(vm::vmisa<vm::JSArray>(*phv(value)))) {
-    *result = true;
-    return env->clearLastNativeError();
-  }
-
-  // Fall back to vm::isArray for more thorough checking (handles proxies, etc.)
-  vm::CallResult<bool> cr =
-      vm::isArray(env->runtime_, vm::vmcast<vm::JSObject>(*phv(value)));
-  CHECK_STATUS(env->checkExecutionStatus(cr.getStatus()));
-  *result = *cr;
+  *result = vm::vmisa<vm::JSArray>(*phv(value));
   return env->clearLastNativeError();
 }
 
@@ -5022,28 +5024,15 @@ napi_get_array_length(napi_env env, napi_value value, uint32_t *result) {
   NodeApiValueScope scope{*env};
   vm::GCScope gcScope{env->runtime_};
   CHECK_ARG(value);
-
-  bool isArray = false;
-  CHECK_STATUS(napi_is_array(env, value, &isArray));
-  RETURN_STATUS_IF_FALSE(isArray, napi_array_expected);
-
-  if (LLVM_LIKELY(vm::vmisa<vm::JSArray>(*phv(value)))) {
-    *result = vm::JSArray::getLength(
-        vm::vmcast<vm::JSArray>(*phv(value)), env->runtime_);
-    return env->clearLastNativeError();
-  }
-
-  vm::CallResult<vm::PseudoHandle<>> cr = vm::JSObject::getNamed_RJS(
+  RETURN_STATUS_IF_FALSE(
+      vm::vmisa<vm::JSArray>(*phv(value)), napi_array_expected);
+  napi_value res;
+  CHECK_STATUS(env->getNamedProperty(
       asHandle<vm::JSObject>(value),
-      env->runtime_,
-      vm::Predefined::getSymbolID(vm::Predefined::length));
-  CHECK_STATUS(env->checkExecutionStatus(cr.getStatus()));
-
-  vm::Handle<vm::HermesValue> lenHandle =
-      env->runtime_.makeHandle(std::move(*cr));
-  auto lenRes = toLength(env->runtime_, lenHandle);
-  CHECK_STATUS(env->checkExecutionStatus(lenRes.getStatus()));
-  *result = lenRes->getNumber();
+      vm::Predefined::getSymbolID(vm::Predefined::length),
+      &res));
+  RETURN_STATUS_IF_FALSE(phv(res)->isNumber(), napi_number_expected);
+  *result = NodeApiDoubleConversion::toUint32(phv(res)->getDouble());
   return env->clearLastNativeError();
 }
 
@@ -5122,7 +5111,7 @@ napi_create_array_with_length(napi_env env, size_t length, napi_value *result) {
   CHECK_ARG(result);
 
   vm::GCScope gcScope{env->runtime_};
-  vm::CallResult<vm::Handle<vm::JSArray>> res = vm::JSArray::create(
+  vm::CallResult<vm::PseudoHandle<vm::JSArray>> res = vm::JSArray::create(
       env->runtime_, /*capacity:*/ length, /*length:*/ length);
   CHECK_STATUS(env->checkExecutionStatus(res.getStatus()));
   return env->makeResultValue(res->getHermesValue(), result);
@@ -6410,9 +6399,8 @@ napi_status NAPI_CDECL napi_open_escapable_handle_scope(
   CHECK_ARG(result);
 
   env->napiValueStack_.emplace(); // value to escape to parent scope
-  env->napiValueStack_.emplace(
-      vm::HermesValue::encodeNativeUInt32(
-          NodeApiEnvironment::kEscapableSentinelTag));
+  env->napiValueStack_.emplace(vm::HermesValue::encodeNativeUInt32(
+      NodeApiEnvironment::kEscapableSentinelTag));
 
   return napi_open_handle_scope(
       env, reinterpret_cast<napi_handle_scope *>(result));
@@ -6428,8 +6416,7 @@ napi_status NAPI_CDECL napi_close_escapable_handle_scope(
   RETURN_STATUS_IF_FALSE(
       env->napiValueStack_.size() > 1, napi_handle_scope_mismatch);
   vm::PinnedHermesValue &sentinelTag = env->napiValueStack_.top();
-  RETURN_STATUS_IF_FALSE(
-      sentinelTag.isNativeValue(), napi_handle_scope_mismatch);
+  RETURN_STATUS_IF_FALSE(sentinelTag.isDouble(), napi_handle_scope_mismatch);
   uint32_t sentinelTagValue = sentinelTag.getNativeUInt32();
   RETURN_STATUS_IF_FALSE(
       sentinelTagValue == NodeApiEnvironment::kEscapableSentinelTag ||
@@ -6456,7 +6443,7 @@ napi_status NAPI_CDECL napi_escape_handle(
       *stackScope <= env->napiValueStack_.size(), napi_invalid_arg);
 
   vm::PinnedHermesValue &sentinelTag = env->napiValueStack_[*stackScope - 1];
-  RETURN_STATUS_IF_FALSE(sentinelTag.isNativeValue(), napi_invalid_arg);
+  RETURN_STATUS_IF_FALSE(sentinelTag.isDouble(), napi_invalid_arg);
   uint32_t sentinelTagValue = sentinelTag.getNativeUInt32();
   RETURN_STATUS_IF_FALSE(
       sentinelTagValue != NodeApiEnvironment::kUsedEscapableSentinelTag,
@@ -6513,15 +6500,15 @@ napi_status NAPI_CDECL napi_new_instance(
   //    in 15.2.4
   //
   // Note that 13.2.2.1-4 are also handled by the call to newObject.
-  vm::CallResult<vm::PseudoHandle<vm::JSObject>> thisRes =
-      vm::Callable::createThisForConstruct_RJS(ctorHandle, env->runtime_);
+  vm::CallResult<vm::PseudoHandle<vm::HermesValue>> thisRes =
+      vm::Callable::createThisForConstruct_RJS(
+          ctorHandle, env->runtime_, ctorHandle);
   if (thisRes.getStatus() == vm::ExecutionStatus::EXCEPTION) {
     return env->setJSException();
   }
   // We need to capture this in case the ctor doesn't return an object,
   // we need to return this object.
-  vm::Handle<vm::JSObject> thisHandle =
-      env->runtime_.makeHandle(std::move(*thisRes));
+  vm::Handle<> thisHandle = env->runtime_.makeHandle(std::move(*thisRes));
 
   // 13.2.2.8:
   //    Let result be the result of calling the [[Call]] internal property of
@@ -6630,13 +6617,13 @@ napi_status NAPI_CDECL napi_create_arraybuffer(
   CHECK_ARG(result);
 
   vm::GCScope gcScope{env->runtime_};
-  vm::Handle<vm::JSArrayBuffer> buffer = env->runtime_.makeHandle(
-      vm::JSArrayBuffer::create(
+  vm::Handle<vm::JSArrayBuffer> buffer =
+      env->runtime_.makeHandle(vm::JSArrayBuffer::create(
           env->runtime_,
-          asHandle<vm::JSObject>(&env->runtime_.arrayBufferPrototype)));
-  CHECK_STATUS(env->checkExecutionStatus(
-      vm::JSArrayBuffer::createDataBlock(
-          env->runtime_, buffer, byteLength, true)));
+          vm::Handle<vm::JSObject>::vmcast(
+              &env->runtime_.arrayBufferPrototype)));
+  CHECK_STATUS(env->checkExecutionStatus(vm::JSArrayBuffer::createDataBlock(
+      env->runtime_, buffer, byteLength, true)));
   if (data != nullptr) {
     *data = buffer->getDataBlock(env->runtime_);
   }
@@ -6655,10 +6642,11 @@ napi_status NAPI_CDECL napi_create_external_arraybuffer(
   CHECK_ARG(result);
 
   vm::GCScope gcScope{env->runtime_};
-  vm::Handle<vm::JSArrayBuffer> buffer = env->runtime_.makeHandle(
-      vm::JSArrayBuffer::create(
+  vm::Handle<vm::JSArrayBuffer> buffer =
+      env->runtime_.makeHandle(vm::JSArrayBuffer::create(
           env->runtime_,
-          asHandle<vm::JSObject>(&env->runtime_.arrayBufferPrototype)));
+          vm::Handle<vm::JSObject>::vmcast(
+              &env->runtime_.arrayBufferPrototype)));
   if (externalData != nullptr) {
     std::unique_ptr<NodeApiExternalBuffer> externalBuffer =
         std::make_unique<NodeApiExternalBuffer>(
@@ -6667,17 +6655,15 @@ napi_status NAPI_CDECL napi_create_external_arraybuffer(
             byteLength,
             basicFinalize(finalizeCallback),
             finalizeHint);
-    CHECK_STATUS(env->checkExecutionStatus(
-        vm::JSArrayBuffer::setExternalDataBlock(
+    vm::JSArrayBuffer::setExternalDataBlock(
             env->runtime_,
             buffer,
             reinterpret_cast<uint8_t *>(externalData),
             byteLength,
-            externalBuffer.release(),
-            [](vm::GC & /*gc*/, vm::NativeState *ns) {
-              std::unique_ptr<NodeApiExternalBuffer> externalBuffer(
-                  reinterpret_cast<NodeApiExternalBuffer *>(ns->context()));
-            })));
+            std::shared_ptr<void>(externalBuffer.release(),
+                [](void *ptr) {
+                  delete reinterpret_cast<NodeApiExternalBuffer *>(ptr);
+                }));
   }
   return env->makeResultValue(buffer.getHermesValue(), result);
 }
@@ -6851,9 +6837,8 @@ napi_status NAPI_CDECL napi_get_typedarray_info(
 
   if (arrayBuffer != nullptr) {
     *arrayBuffer = array->attached(env->runtime_)
-        ? env->pushNewNodeApiValue(
-              vm::HermesValue::encodeObjectValue(
-                  array->getBuffer(env->runtime_)))
+        ? env->pushNewNodeApiValue(vm::HermesValue::encodeObjectValue(
+              array->getBuffer(env->runtime_)))
         : napiValue(&env->UndefinedHermesValue);
   }
 
@@ -6889,10 +6874,10 @@ napi_status NAPI_CDECL napi_create_dataview(
         "equal to the size in bytes of the array passed in");
     return ERROR_STATUS(napi_pending_exception);
   }
-  vm::Handle<vm::JSDataView> viewHandle = env->runtime_.makeHandle(
-      vm::JSDataView::create(
+  vm::Handle<vm::JSDataView> viewHandle =
+      env->runtime_.makeHandle(vm::JSDataView::create(
           env->runtime_,
-          asHandle<vm::JSObject>(&env->runtime_.dataViewPrototype)));
+          vm::Handle<vm::JSObject>::vmcast(&env->runtime_.dataViewPrototype)));
   viewHandle->setBuffer(env->runtime_, buffer, byteOffset, byteLength);
   return env->makeResultValue(viewHandle.getHermesValue(), result);
 }
@@ -7199,11 +7184,8 @@ napi_detach_arraybuffer(napi_env env, napi_value arrayBuffer) {
   RETURN_STATUS_IF_FALSE(
       vm::vmisa<vm::JSArrayBuffer>(*phv(arrayBuffer)),
       napi_arraybuffer_expected);
-  vm::ExecutionStatus status = vm::JSArrayBuffer::detach(
+  vm::JSArrayBuffer::detach(
       env->runtime_, asHandle<vm::JSArrayBuffer>(arrayBuffer));
-  if (status == vm::ExecutionStatus::EXCEPTION) {
-    return env->setJSException();
-  }
   return env->clearLastNativeError();
 }
 

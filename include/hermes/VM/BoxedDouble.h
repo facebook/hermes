@@ -18,6 +18,7 @@ namespace vm {
 /// integers.
 class BoxedDouble final : public GCCell {
   friend void BoxedDoubleBuildMeta(const GCCell *cell, Metadata::Builder &mb);
+  friend RuntimeOffsets;
 
   static const VTable vt;
 
@@ -40,6 +41,10 @@ class BoxedDouble final : public GCCell {
   double get() const {
     return value_;
   }
+
+ private:
+  /// Dummy function for static asserts that may need private fields.
+  static void staticAsserts();
 };
 
 } // namespace vm

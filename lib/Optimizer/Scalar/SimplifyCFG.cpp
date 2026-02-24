@@ -7,11 +7,12 @@
 
 #define DEBUG_TYPE "simplifycfg"
 
-#include "hermes/Optimizer/Scalar/SimplifyCFG.h"
 #include "hermes/IR/Analysis.h"
 #include "hermes/IR/CFG.h"
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/IREval.h"
+#include "hermes/IR/IRUtils.h"
+#include "hermes/Optimizer/PassManager/Pass.h"
 #include "hermes/Optimizer/Scalar/Utils.h"
 #include "hermes/Support/Statistic.h"
 
@@ -20,18 +21,7 @@
 
 using namespace hermes;
 
-STATISTIC(NumUnreachableBlock, "Number of unreachable blocks eliminated");
 STATISTIC(NumSB, "Number of static branches simplified");
-
-/// \returns true if the control-flow edge between \p src to \p dest crosses
-/// a catch region.
-static bool isCrossCatchRegionBranch(BasicBlock *src, BasicBlock *dest) {
-  auto kind = dest->front().getKind();
-  if (kind == ValueKind::TryStartInstKind ||
-      kind == ValueKind::TryEndInstKind || kind == ValueKind::CatchInstKind)
-    return true;
-  return false;
-}
 
 /// \returns true if the block \b BB is an input to a PHI node.
 static bool isUsedInPhiNode(BasicBlock *BB) {
@@ -333,9 +323,8 @@ static bool optimizeStaticBranches(Function *F) {
     if (dest == BB)
       continue;
 
-    // Don't handle edges that go across any catch region.
-    if (isCrossCatchRegionBranch(BB, dest))
-      continue;
+    // NOTE: we know that this edge cannot go across any catch regions because
+    // only TryEndInst can leave a try block.
 
     // Handle branches used in phi nodes specially.
     if (isUsedInPhiNode(BB)) {
@@ -385,78 +374,81 @@ static bool optimizeStaticBranches(Function *F) {
   return changed;
 }
 
-/// Process the deletion of the basic block, and erase it.
-static void deleteBasicBlock(BasicBlock *B) {
-  // Remove all uses of this basic block.
-
-  // Copy the uses of the block aside because removing the users invalidates the
-  // iterator.
-  Value::UseListTy users(B->getUsers().begin(), B->getUsers().end());
-
-  // Remove the block from all Phi instructions referring to it. Note that
-  // reachable blocks could end up with Phi instructions referring to
-  // unreachable blocks.
-  for (auto *I : users) {
-    if (auto *Phi = llvh::dyn_cast<PhiInst>(I)) {
-      Phi->removeEntry(B);
-      continue;
-    }
-  }
-
-  // There may still be uses of the block from other unreachable blocks.
-  B->replaceAllUsesWith(nullptr);
-  // Erase this basic block.
-  B->eraseFromParent();
-}
-
-/// Remove all the unreachable basic blocks.
-static bool removeUnreachedBasicBlocks(Function *F) {
+/// Insert an UnreachableInst after calls to noReturn functions.
+/// Update Phis so that they reference the newly inserted block.
+static bool terminateNoReturnCalls(Function *F) {
+  Module *M = F->getParent();
   bool changed = false;
+  IRBuilder builder(F);
 
-  // Visit all reachable blocks.
-  llvh::SmallPtrSet<BasicBlock *, 16> visited;
-  llvh::SmallVector<BasicBlock *, 32> workList;
+  // Adding to the BasicBlock list by splitting as we iterate.
+  for (auto bbit = F->begin(); bbit != F->end(); ++bbit) {
+    BasicBlock *BB = &*bbit;
+    for (auto it = BB->begin(), e = BB->end(); it != e; ++it) {
+      Instruction *inst = &*it;
+      CallInst *CI = llvh::dyn_cast<CallInst>(inst);
+      if (!CI)
+        continue;
+      Function *target = llvh::dyn_cast<Function>(CI->getTarget());
+      if (!target)
+        continue;
+      if (!target->getAttributes(M).noReturn)
+        continue;
 
-  workList.push_back(&*F->begin());
-  while (!workList.empty()) {
-    auto *BB = workList.pop_back_val();
-    // Already visited?
-    if (!visited.insert(BB).second)
-      continue;
+      // Skip call instruction.
+      ++it;
 
-    for (auto *succ : successors(BB))
-      workList.push_back(succ);
-  }
-
-  // Delete all blocks that weren't visited.
-  for (auto it = F->begin(), e = F->end(); it != e;) {
-    auto *BB = &*it++;
-    if (!visited.count(BB)) {
-      ++NumUnreachableBlock;
-      deleteBasicBlock(BB);
+      // Split block after call instruction.
+      splitBasicBlock(BB, it);
+      builder.setInsertionBlock(BB);
+      builder.createUnreachableInst();
       changed = true;
+      break;
     }
   }
 
   return changed;
 }
 
-bool SimplifyCFG::runOnFunction(hermes::Function *F) {
+static bool runSimplifyCFG(Module *M) {
   bool changed = false;
 
-  bool iterChanged = false;
-  // Keep iterating over deleting unreachable code and removing trampolines as
-  // long as we are making progress.
-  do {
-    iterChanged = optimizeStaticBranches(F) || removeUnreachedBasicBlocks(F);
-    changed |= iterChanged;
-  } while (iterChanged);
+  for (auto &F : *M) {
+    if (F.getAttributes(M).unreachable) {
+      replaceBodyWithUnreachable(&F);
+      changed = true;
+      continue;
+    }
 
+    if (terminateNoReturnCalls(&F)) {
+      changed = true;
+      deleteUnreachableBasicBlocks(&F);
+    }
+
+    // Keep iterating over deleting unreachable code and removing trampolines as
+    // long as we are making progress.
+    bool iterChanged = false;
+    do {
+      iterChanged =
+          optimizeStaticBranches(&F) || deleteUnreachableBasicBlocks(&F);
+      changed |= iterChanged;
+    } while (iterChanged);
+  }
+
+  changed |= deleteUnusedFunctionsAndVariables(M);
   return changed;
 }
 
-std::unique_ptr<Pass> hermes::createSimplifyCFG() {
-  return std::make_unique<SimplifyCFG>();
+Pass *hermes::createSimplifyCFG() {
+  class ThisPass : public ModulePass {
+   public:
+    explicit ThisPass() : ModulePass("SimplifyCFG") {}
+    ~ThisPass() override = default;
+    bool runOnModule(Module *M) override {
+      return runSimplifyCFG(M);
+    }
+  };
+  return new ThisPass();
 }
 
 #undef DEBUG_TYPE

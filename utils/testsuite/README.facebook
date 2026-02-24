@@ -1,0 +1,3 @@
+Module progress.py under this directory is from the version of LLVM used by
+Hermes (see external/llvh/utils/lit). A few modifications (mostly
+simplifications) are made to serve our use case.

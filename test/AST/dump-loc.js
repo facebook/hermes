@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=LOC
-// RUN: %hermes -dump-ast -dump-source-location=range -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=RANGE
+// RUN: %hermesc -dump-ast -dump-source-location=loc -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=LOC
+// RUN: %hermesc -dump-ast -dump-source-location=range -pretty-json %s | %FileCheck --match-full-lines %s --check-prefix=RANGE
 
 1;
 
@@ -65,19 +65,19 @@
 // RANGE-NEXT:         "value": 1,
 // RANGE-NEXT:         "raw": "1",
 // RANGE-NEXT:         "range": [
-// RANGE-NEXT:           441,
-// RANGE-NEXT:           442
+// RANGE-NEXT:           443,
+// RANGE-NEXT:           444
 // RANGE-NEXT:         ]
 // RANGE-NEXT:       },
 // RANGE-NEXT:       "directive": null,
 // RANGE-NEXT:       "range": [
-// RANGE-NEXT:         441,
-// RANGE-NEXT:         443
+// RANGE-NEXT:         443,
+// RANGE-NEXT:         445
 // RANGE-NEXT:       ]
 // RANGE-NEXT:     }
 // RANGE-NEXT:   ],
 // RANGE-NEXT:   "range": [
-// RANGE-NEXT:     441,
-// RANGE-NEXT:     443
+// RANGE-NEXT:     443,
+// RANGE-NEXT:     445 
 // RANGE-NEXT:   ]
 // RANGE-NEXT: }

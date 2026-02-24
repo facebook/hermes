@@ -18,7 +18,7 @@ space for JS objects.
 The heap is made out of many fixed-size regions of memory known as
 **heap segments** (or more briefly as **segments**). Currently these segments
 are 4 MiB, but this can be changed with the CMake build configuration variable
-`-DHERMESVM_HEAP_SEGMENT_SIZE_KB=number`. Memory is acquired and released on a
+`-DHERMESVM_LOG_HEAP_SEGMENT_SIZE=number`. Memory is acquired and released on a
 per-segment basis. Segments are allocated using `mmap` on POSIX systems and
 `VirtualAlloc` on Windows systems. These functions allow virtual memory to be
 requested for some space, and allows us to unmap subregions so that alignment

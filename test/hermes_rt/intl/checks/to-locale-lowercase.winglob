@@ -1,0 +1,13 @@
+// WinGlob expected output for to-locale-lowercase.js
+// WinGlob uses LCMapStringEx for case conversion. Differences from ICU:
+// - Turkish locale: different dotted-I handling
+// - Combining characters handled differently
+// CHECK-LABEL: get locale lowercase test
+// CHECK-NEXT: test
+// CHECK-NEXT: istanbul
+// CHECK-NEXT: istanbul
+// CHECK-NEXT: cafétéria iį̀
+// CHECK-NEXT: cafétérıa iį̀
+// CHECK-NEXT: cafétéria iį̀
+// CHECK-NEXT: u0001f3eb,̆iȧ
+// CHECK-NEXT: 0

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -commonjs -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -commonjs -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL:     "body": [
 
@@ -30,6 +30,6 @@ import type {x} from 'foo';
 // CHECK-NEXT:         "type": "StringLiteral",
 // CHECK-NEXT:         "value": "foo"
 // CHECK-NEXT:       },
-// CHECK-NEXT:       "assertions": [],
+// CHECK-NEXT:       "attributes": [],
 // CHECK-NEXT:       "importKind": "type"
 // CHECK-NEXT:     }

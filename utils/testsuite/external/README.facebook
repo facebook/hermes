@@ -1,0 +1,8 @@
+This directory includes utility code for parsing metadata in test262 test files.
+
+Only copied _monkeyYaml.py and parseTestRecord.py (renamed to parse_test262, and
+added typing annotations) from
+https://github.com/test262-utils/test262-harness-py/tree/master/src, and LICENSE
+from the Github repo.
+
+Downloaded from commit hash 278bcfaed0dcaa13936831fb1769d15e7c1e3b2b.

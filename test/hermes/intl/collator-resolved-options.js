@@ -7,6 +7,7 @@
 
 // RUN: LC_ALL=fr_FR _HERMES_TEST_LOCALE=fr_FR %hermes %s
 // REQUIRES: intl
+// UNSUPPORTED: windows
 
 function assert(pred, str) {
   if (!pred) {

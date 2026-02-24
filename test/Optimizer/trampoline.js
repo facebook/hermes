@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s --match-full-lines
 
 // Make sure we can remove all trampolines from our code.
 function test_one(x,y,z) {
@@ -38,65 +38,60 @@ function test_merge_blocks(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [test_one, test_catch_region, test_cond_branch, test_merge_blocks]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %test_one#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "test_one" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %test_catch_region#0#1()#3 : undefined, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "test_catch_region" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %test_cond_branch#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "test_cond_branch" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %test_merge_blocks#0#1()#5 : undefined, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "test_merge_blocks" : string
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_catch_region": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_cond_branch": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_merge_blocks": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %test_catch_region(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_catch_region": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %test_cond_branch(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_cond_branch": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %test_merge_blocks(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "test_merge_blocks": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_one#0#1(x, y, z)#2
-// CHECK-NEXT:S{test_one#0#1()#2} = []
+// CHECK:function test_one(x: any, y: any, z: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_one#0#1()#2}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '<', %x, %y
-// CHECK-NEXT:  %2 = CondBranchInst %1 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %2 = BinaryLessThanInst (:boolean) %0: any, %1: any
+// CHECK-NEXT:       CondBranchInst %2: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = ReturnInst %x
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %4 = BinaryOperatorInst '>', %y, 0 : number
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %5 = BinaryGreaterThanInst (:boolean) %1: any, 0: number
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function test_catch_region#0#1(x, y, z)#3 : undefined
-// CHECK-NEXT:S{test_catch_region#0#1()#3} = []
+// CHECK:function test_catch_region(x: any, y: any, z: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_catch_region#0#1()#3}
-// CHECK-NEXT:  %1 = TryStartInst %BB1, %BB2
+// CHECK-NEXT:       TryStartInst %BB1, %BB3
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %2 = CatchInst
-// CHECK-NEXT:  %3 = BranchInst %BB3
+// CHECK-NEXT:  %1 = CatchInst (:any)
+// CHECK-NEXT:       BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = BranchInst %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %6 = TryEndInst
-// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:       TryEndInst %BB1, %BB2
 // CHECK-NEXT:function_end
 
-// CHECK:function test_cond_branch#0#1(x, y)#4
-// CHECK-NEXT:S{test_cond_branch#0#1()#4} = []
+// CHECK:function test_cond_branch(x: any, y: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_cond_branch#0#1()#4}
-// CHECK-NEXT:  %1 = ReturnInst %x
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end
 
-// CHECK:function test_merge_blocks#0#1(x, y)#5 : undefined
-// CHECK-NEXT:S{test_merge_blocks#0#1()#5} = []
+// CHECK:function test_merge_blocks(x: any, y: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_merge_blocks#0#1()#5}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %2 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %3 = BinaryOperatorInst '+', %x, %y
-// CHECK-NEXT:  %4 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %2 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
+// CHECK-NEXT:  %3 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
+// CHECK-NEXT:  %4 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

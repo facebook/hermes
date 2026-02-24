@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -dump-ra %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -dump-ra %s -O
+// RUN: %hermesc -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -dump-ir %s -O
 
 function simple_test0(x, y) {
   return x instanceof y;
@@ -14,34 +14,32 @@ function simple_test0(x, y) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [simple_test0]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg1           	%0 = HBCCreateEnvironmentInst %S{global#0()#1}
-// CHECK-NEXT:  $Reg1           	%1 = HBCCreateFunctionInst %simple_test0#0#1()#2, %0
-// CHECK-NEXT:  $Reg2           	%2 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  $Reg0           	%3 = StorePropertyInst %1 : closure, %2 : object, "simple_test0" : string
-// CHECK-NEXT:  $Reg1           	%4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  $Reg2           	%5 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $Reg0           	%6 = StoreStackInst %5 : undefined, %4
-// CHECK-NEXT:  $Reg1           	%7 = LoadStackInst %4
-// CHECK-NEXT:  $Reg0           	%8 = ReturnInst %7
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "simple_test0": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %simple_test0(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "simple_test0": string
+// CHECK-NEXT:  %4 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:       StoreStackInst undefined: undefined, %4: any
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %4: any
+// CHECK-NEXT:       ReturnInst %6: any
 // CHECK-NEXT:function_end
 
-// CHECK:function simple_test0#0#1(x, y)#2
-// CHECK-NEXT:S{simple_test0#0#1()#2} = [x#2, y#2]
+// CHECK:scope %VS1 [x: any, y: any]
+
+// CHECK:function simple_test0(x: any, y: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  $Reg2           	%0 = HBCCreateEnvironmentInst %S{simple_test0#0#1()#2}
-// CHECK-NEXT:  $Reg3           	%1 = HBCLoadParamInst 1 : number
-// CHECK-NEXT:  $Reg1           	%2 = HBCLoadParamInst 2 : number
-// CHECK-NEXT:  $Reg0           	%3 = HBCStoreToEnvironmentInst %0, %1, [x#2]
-// CHECK-NEXT:  $Reg0           	%4 = HBCStoreToEnvironmentInst %0, %2, [y#2]
-// CHECK-NEXT:  $Reg1           	%5 = HBCLoadFromEnvironmentInst %0, [x#2]
-// CHECK-NEXT:  $Reg2           	%6 = HBCLoadFromEnvironmentInst %0, [y#2]
-// CHECK-NEXT:  $Reg1           	%7 = BinaryOperatorInst 'instanceof', %5, %6
-// CHECK-NEXT:  $Reg0           	%8 = ReturnInst %7
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  $???           	%9 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  $???           	%10 = ReturnInst %9 : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.y]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
+// CHECK-NEXT:  %7 = LoadFrameInst (:any) %1: environment, [%VS1.y]: any
+// CHECK-NEXT:  %8 = BinaryInstanceOfInst (:boolean) %6: any, %7: any
+// CHECK-NEXT:       ReturnInst %8: boolean
 // CHECK-NEXT:function_end

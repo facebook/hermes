@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xflow-parser %s | %FileCheck %s --match-full-lines
-// REQUIRES: flowparser
+// RUN: %hermes %s | %FileCheck %s --match-full-lines
+// RUN: %shermes -exec %s | %FileCheck %s --match-full-lines
 // XFAIL: *
 
 var obj = {

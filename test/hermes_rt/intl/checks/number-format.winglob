@@ -1,0 +1,4 @@
+// WinGlob expected output for number-format.js
+// WinGlob uses GetCurrencyFormatEx ("$2.00" vs ICU "2.00 euros").
+// CHECK: $2.00
+// CHECK: TypeError: Intl.NumberFormat.prototype.resolvedOptions called with incompatible 'this'

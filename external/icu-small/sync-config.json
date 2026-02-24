@@ -1,0 +1,8 @@
+{
+  "repo": "https://github.com/nodejs/node",
+  "branch": "main",
+  "commit": "c9acf345922bd758fbb3f16ee6256aa165260219",
+  "subDir": "deps/icu-small",
+  "tag": "",
+  "lastSync": "2026-02-21T22:25:18.611Z"
+}

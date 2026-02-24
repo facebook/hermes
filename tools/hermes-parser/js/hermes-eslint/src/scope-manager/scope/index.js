@@ -24,6 +24,7 @@ export * from './HookScope';
 export * from './GlobalScope';
 export * from './MatchCaseScope';
 export * from './ModuleScope';
+export * from './RecordScope';
 export * from './Scope';
 export * from './ScopeType';
 export * from './SwitchScope';

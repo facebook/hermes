@@ -8,79 +8,62 @@
 #ifndef HERMES_AST_CONTEXT_H
 #define HERMES_AST_CONTEXT_H
 
+#include "hermes/ADT/StringSetVector.h"
+#include "hermes/AST/Config.h"
 #include "hermes/Parser/PreParser.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/Allocator.h"
 #include "hermes/Support/SourceErrorManager.h"
 #include "hermes/Support/StringTable.h"
 
-#include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/StringRef.h"
 
 namespace hermes {
 
-namespace hbc {
-class BackendContext;
+namespace irdumper {
+class Namer;
 }
 
-#ifdef HERMES_RUN_WASM
-class EmitWasmIntrinsicsContext;
-#endif // HERMES_RUN_WASM
-
-struct CodeGenerationSettings_DumpSettings {
-  bool all{false};
-  llvh::SmallDenseSet<llvh::StringRef> passes;
-  llvh::SmallDenseSet<llvh::StringRef> functions;
-};
+class BackendContext;
+class NativeContext;
+class Context;
+struct NativeSettings;
 
 struct CodeGenerationSettings {
-  using DumpSettings = CodeGenerationSettings_DumpSettings;
-
+  /// Increase compliance with test262 by moving some checks to runtime.
+  bool test262{false};
   /// Whether we should emit TDZ checks.
-  bool const enableTDZ{false};
-  /// Whether we can assume there are unlimited number of registers.
-  /// This affects how we generate the IR, as we can decide whether
-  /// to hold as many temporary values as we like.
-  bool unlimitedRegisters{true};
-  /// Dump registers assigned to instruction operands.
-  bool dumpOperandRegisters{false};
+  bool enableTDZ{false};
+  /// Whether we should emit fast (non-compliant) array destructuring.
+  bool enableFastDestructure{false};
+  /// Dump register liveness intervals.
+  bool dumpRegisterInterval{false};
   /// Print source location information in IR dumps.
   bool dumpSourceLocation{false};
-  /// Print the original scope for each instruction.
-  bool dumpSourceLevelScope{false};
-  /// Print the textified callee of call instructions.
-  bool dumpTextifiedCallee{false};
   /// Print the use list if the instruction has any users.
   bool dumpUseList{false};
-  /// Instrument IR for dynamic checking (if support is compiled in).
-  bool instrumentIR{false};
-  /// Instructs IR Generation to use synthetic names for unnamed functions.
-  bool generateNameForUnnamedFunctions{false};
-  /// Whether block scoping is enabled.
-  bool enableBlockScoping{false};
-
-  /// Dump IR before each pass (if holds boolean), or the given passes (if holds
-  /// DensetSet).
-  DumpSettings dumpBefore;
-
-  /// Dump IR after each pass (if holds boolean), or the given passes (if holds
-  /// DensetSet).
-  DumpSettings dumpAfter;
-
-  /// Restricts inter-pass dump to the given functions. If empty, all functions
-  /// are dumped.
-  llvh::SmallDenseSet<llvh::StringRef> functionsToDump;
+  /// Dump IR after every pass.
+  bool dumpIRBetweenPasses{false};
+  /// Run the IRVerifier between every pass.
+  bool verifyIRBetweenPasses{false};
+  /// Use colors in IR dumps.
+  bool colors{false};
+  /// If not empty, restricts IR dumps only the given functions.
+  StringSetVector dumpFunctions;
+  /// Functions to exclude from IR dumps.
+  StringSetVector noDumpFunctions;
+  // Time the optimizer by phases.
+  bool timeCompiler{false};
 };
 
 struct OptimizationSettings {
-  /// Enable aggressive non-strict mode optimizations. These optimizations
-  /// assume that:
-  ///   - function arguments are never modified indirectly
-  ///   - local "eval()" or "with" are not used.
-  bool aggressiveNonStrictModeOptimizations{true};
-
   /// Enable any inlining of functions.
   bool inlining{true};
+
+  /// Maximum number of instructions (in addition to parameter handling)
+  /// that is allowed for inlining of small functions.
+  static constexpr unsigned kDefaultInlineMaxSize = 50;
+  unsigned inlineMaxSize{kDefaultInlineMaxSize};
 
   /// Reuse property cache entries for same property name.
   bool reusePropCache{true};
@@ -92,11 +75,23 @@ struct OptimizationSettings {
   /// Attempt to resolve CommonJS require() calls at compile time.
   bool staticRequire{false};
 
-  /// Recognize and emit Asm.js/Wasm unsafe compiler intrinsics.
-  bool useUnsafeIntrinsics{false};
+  /// If true, optimize Metro require calls into bytecodes.
+  bool metroRequireOpt{false};
+
+  /// Whether to use old Mem2Reg pass instead of SimpleMem2Reg. This may produce
+  /// better code for irreducible CFGs.
+  bool useLegacyMem2Reg{false};
+
+  /// Whether to use a more complicated condition to prevent recursive inlining
+  /// (which will prevent unbounded code growth in "opt-to-fixed-point"
+  /// compilations).
+  bool limitRecursiveInlining{false};
 };
 
 enum class DebugInfoSetting {
+  /// Don't emit any source locations info.
+  NONE,
+
   /// Only emit source locations for instructions that may throw, as required
   /// for generating error stack traces.
   THROWING,
@@ -151,6 +146,34 @@ enum class SourceVisibility {
   Sensitive,
 };
 
+/// Custom directives which were specified on a given function.
+struct CustomDirectives {
+  /// Source visibility of the given function.
+  SourceVisibility sourceVisibility{SourceVisibility::Default};
+
+  /// Whether we should _always_ attempt to inline the function,
+  /// regardless of the number of callsites it has.
+  /// It's possible the function can't be inlined if it contains
+  /// code which can't be inlined, but the heuristic won't reject it.
+  bool alwaysInline{false};
+
+  /// Whether we should _never_ attempt to inline the function.
+  /// Useful (at least) in tests.
+  bool noInline{false};
+};
+
+class Keywords {
+ public:
+#define HERMES_KEYWORD(name, string) UniqueString *const ident##name;
+#include "hermes/AST/Keywords.def"
+
+  explicit Keywords(Context &astContext);
+
+ private:
+  /// An unused field to handle the last "," in constructor init.
+  int const dummy_;
+};
+
 /// Holds shared dependencies and state.
 class Context {
  public:
@@ -191,6 +214,10 @@ class Context {
   /// A reference to the manager which we are using.
   SourceErrorManager &sm_;
 
+  /// Convenient storage of "keyword" identifiers used by various part of the
+  /// infrastructure.
+  Keywords kw_;
+
   /// Whether we are running in script mode. Default to strict.
   bool strictMode_{false};
 
@@ -229,14 +256,23 @@ class Context {
   /// also using Flow syntax.
   bool parseFlowMatch_{false};
 
+  /// If true, allow parsing Flow record declarations and expressions
+  /// when also using Flow syntax.
+  bool parseFlowRecords_{false};
+
   /// Whether to parse Flow type syntax.
   ParseFlowSetting parseFlow_{ParseFlowSetting::NONE};
 
   /// Whether to parse TypeScript syntax.
   bool parseTS_{false};
 
-  /// Whether to convert ES6 classes to ES5 functions
-  bool convertES6Classes_{false};
+  /// Whether to enable support for async generators
+  bool enableAsyncGenerators_{false};
+
+  /// Whether to enable support for ES6 block scoping.
+  /// TODO: This is intended to provide a temporary way to configure block
+  ///       scoping until we have debugger support for it.
+  bool enableES6BlockScoping_{false};
 
   /// If non-null, the resolution table which resolves static require().
   const std::unique_ptr<ResolutionTable> resolutionTable_;
@@ -258,39 +294,33 @@ class Context {
 
   /// The HBC backend context. We use a shared pointer to avoid any dependencies
   /// on its destructor.
-  std::shared_ptr<hbc::BackendContext> hbcBackendContext_{};
+  std::shared_ptr<BackendContext> hbcBackendContext_{};
 
-#ifdef HERMES_RUN_WASM
-  std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext_{};
-#endif // HERMES_RUN_WASM
+  /// The separate native context. It is automatically created on construction.
+  std::unique_ptr<NativeContext> nativeContext_;
+
+  std::unique_ptr<irdumper::Namer> persistentIRNamer_;
 
  public:
   explicit Context(
       SourceErrorManager &sm,
-      CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
+      CodeGenerationSettings &&codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
+      const NativeSettings *nativeSettings = nullptr,
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<uint32_t> segments = {})
-      : sm_(sm),
-        resolutionTable_(std::move(resolutionTable)),
-        segments_(std::move(segments)),
-        codeGenerationSettings_(std::move(codeGenOpts)),
-        optimizationSettings_(std::move(optimizationOpts)) {}
+      std::vector<uint32_t> segments = {});
 
   explicit Context(
-      CodeGenerationSettings codeGenOpts = CodeGenerationSettings(),
+      CodeGenerationSettings &&codeGenOpts = CodeGenerationSettings(),
       OptimizationSettings optimizationOpts = OptimizationSettings(),
+      const NativeSettings *nativeSettings = nullptr,
       std::unique_ptr<ResolutionTable> resolutionTable = nullptr,
-      std::vector<uint32_t> segments = {})
-      : ownSm_(new SourceErrorManager()),
-        sm_(*ownSm_),
-        resolutionTable_(std::move(resolutionTable)),
-        segments_(std::move(segments)),
-        codeGenerationSettings_(std::move(codeGenOpts)),
-        optimizationSettings_(std::move(optimizationOpts)) {}
+      std::vector<uint32_t> segments = {});
 
   Context(const Context &) = delete;
   void operator=(const Context &) = delete;
+
+  ~Context();
 
   Allocator &getAllocator() {
     return allocator_;
@@ -298,6 +328,10 @@ class Context {
 
   StringTable &getStringTable() {
     return stringTable_;
+  }
+
+  const Keywords &keywords() const {
+    return kw_;
   }
 
   void addCompiledRegExp(
@@ -342,8 +376,14 @@ class Context {
 
   /// Get or create a new identifier for the string \p str. The method copies
   /// the content of the string.
-  Identifier getIdentifier(llvh::StringRef str) {
+  Identifier getIdentifier(const llvh::Twine &str) {
     return stringTable_.getIdentifier(str);
+  }
+
+  /// Get or create a new identifier for the string value of a private name \p
+  /// str. The method copies the content of the string.
+  Identifier getPrivateNameIdentifier(UniqueString *str) {
+    return getIdentifier(llvh::Twine("#") + str->str());
   }
 
   /// Return the textual representation of the identifier.
@@ -379,18 +419,10 @@ class Context {
     return emitAsyncBreakCheck_;
   }
 
-  /// A hack to disable CJS modules while preserving the same interface.
-  void setUseCJSModules(bool useCJSModules) {}
-  bool getUseCJSModules() const {
-    return false;
-  }
-  /// SemanticValidator performs some AST transformations when CommonJS modules
-  /// are enabled. This attribute allows us to continue supporting those, while
-  /// code generation for CJS modules has been disabled.
-  void setTransformCJSModules(bool useCJSModules) {
+  void setUseCJSModules(bool useCJSModules) {
     useCJSModules_ = useCJSModules;
   }
-  bool getTransformCJSModules() const {
+  bool getUseCJSModules() const {
     return useCJSModules_;
   }
 
@@ -425,6 +457,13 @@ class Context {
     return parseFlowMatch_;
   }
 
+  void setParseFlowRecords(bool parseFlowRecords) {
+    parseFlowRecords_ = parseFlowRecords;
+  }
+  bool getParseFlowRecords() const {
+    return parseFlowRecords_;
+  }
+
   void setParseTS(bool parseTS) {
     parseTS_ = parseTS;
   }
@@ -432,16 +471,20 @@ class Context {
     return parseTS_;
   }
 
-  void setConvertES6Classes(bool convertES6Classes) {
-    convertES6Classes_ = convertES6Classes;
+  void setEnableAsyncGenerators(bool enableAsyncGenerators) {
+    enableAsyncGenerators_ = enableAsyncGenerators;
   }
 
-  bool getConvertES6Classes() const {
-#ifndef HERMES_FACEBOOK_BUILD
-    return convertES6Classes_;
-#else
-    return false;
-#endif
+  bool getEnableAsyncGenerators() const {
+    return enableAsyncGenerators_;
+  }
+
+  void setEnableES6BlockScoping(bool enableES6BlockScoping) {
+    enableES6BlockScoping_ = enableES6BlockScoping;
+  }
+
+  bool getEnableES6BlockScoping() const {
+    return enableES6BlockScoping_;
   }
 
   /// \return true if either TS or Flow is being parsed.
@@ -497,8 +540,16 @@ class Context {
     return optimizationSettings_.staticBuiltins;
   }
 
-  bool getUseUnsafeIntrinsics() const {
-    return optimizationSettings_.useUnsafeIntrinsics;
+  void setMetroRequireOpt(bool metroRequireOpt) {
+    optimizationSettings_.metroRequireOpt = metroRequireOpt;
+  }
+
+  bool getMetroRequireOpt() const {
+    return optimizationSettings_.metroRequireOpt;
+  }
+
+  bool getLimitRecursiveInlining() const {
+    return optimizationSettings_.limitRecursiveInlining;
   }
 
   const CodeGenerationSettings &getCodeGenerationSettings() const {
@@ -519,25 +570,28 @@ class Context {
     return allocator_.Allocate(size, alignment);
   }
 
-  hbc::BackendContext *getHBCBackendContext() {
+  BackendContext *getBackendContext() {
     return hbcBackendContext_.get();
   }
 
-  void setHBCBackendContext(
-      std::shared_ptr<hbc::BackendContext> hbcBackendContext) {
+  void setBackendContext(std::shared_ptr<BackendContext> hbcBackendContext) {
     hbcBackendContext_ = std::move(hbcBackendContext);
   }
 
-#ifdef HERMES_RUN_WASM
-  EmitWasmIntrinsicsContext *getWasmIntrinsicsContext() {
-    return wasmIntrinsicsContext_.get();
+  /// \return the native context.
+  NativeContext &getNativeContext() {
+    return *nativeContext_;
   }
 
-  void setWasmIntrinsicsContext(
-      std::shared_ptr<EmitWasmIntrinsicsContext> wasmIntrinsicsContext) {
-    wasmIntrinsicsContext_ = std::move(wasmIntrinsicsContext);
+  /// Create and install a new persistent namer for IR dumps.
+  void createPersistentIRNamer();
+  /// Clear and destroy the persistent namer for IR dumps.
+  void clearPersistentIRNamer();
+
+  /// Return the optional persistent namer used for IR dumps, or nullptr.
+  irdumper::Namer *getPersistentIRNamer() {
+    return persistentIRNamer_.get();
   }
-#endif // HERMES_RUN_WASM
 };
 
 } // namespace hermes

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -192,7 +192,7 @@ declare module WithImport {
 // CHECK-NEXT:               "type": "StringLiteral",
 // CHECK-NEXT:               "value": "Foo"
 // CHECK-NEXT:             },
-// CHECK-NEXT:             "assertions": [],
+// CHECK-NEXT:             "attributes": [],
 // CHECK-NEXT:             "importKind": "type"
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]

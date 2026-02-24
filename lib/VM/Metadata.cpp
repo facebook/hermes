@@ -18,7 +18,7 @@ using ArrayType = ArrayData::ArrayType;
 
 std::array<Metadata, kNumCellKinds> Metadata::metadataTable{};
 
-Metadata::Metadata(Builder &&mb) : vtp(mb.vtp_) {
+Metadata::Metadata(Builder &&mb) : vtp(mb.vtp_), jitCall(mb.jitCall_) {
   offsets.array = mb.array_;
   size_t i = 0;
 

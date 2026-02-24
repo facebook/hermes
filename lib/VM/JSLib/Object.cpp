@@ -12,6 +12,7 @@
 #include "Object.h"
 #include "JSLibInternal.h"
 
+#include "hermes/VM/ArrayStorage.h"
 #include "hermes/VM/HermesValueTraits.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/PrimitiveBox.h"
@@ -24,16 +25,21 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Object.
 
-Handle<JSObject> createObjectConstructor(Runtime &runtime) {
+HermesValue createObjectConstructor(Runtime &runtime) {
   auto objectPrototype = Handle<JSObject>::vmcast(&runtime.objectPrototype);
 
-  auto cons = defineSystemConstructor<JSObject>(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Object),
       objectConstructor,
       Handle<JSObject>::vmcast(&runtime.objectPrototype),
       1,
-      CellKind::JSObjectKind);
+      lv.cons);
   void *ctx = nullptr;
 
   // Object.prototype.xxx methods.
@@ -120,186 +126,194 @@ Handle<JSObject> createObjectConstructor(Runtime &runtime) {
   // Object.xxx() methods.
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getPrototypeOf),
       ctx,
       objectGetPrototypeOf,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertyDescriptor),
       ctx,
       objectGetOwnPropertyDescriptor,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertyDescriptors),
       ctx,
       objectGetOwnPropertyDescriptors,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertyNames),
       ctx,
       objectGetOwnPropertyNames,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::getOwnPropertySymbols),
       ctx,
       objectGetOwnPropertySymbols,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::groupBy),
+      ctx,
+      objectGroupBy,
+      2);
+  defineMethod(
+      runtime,
+      lv.cons,
       Predefined::getSymbolID(Predefined::hasOwn),
       ctx,
       objectHasOwn,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::seal),
       ctx,
       objectSeal,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::freeze),
       ctx,
       objectFreeze,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::fromEntries),
       ctx,
       objectFromEntries,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::preventExtensions),
       ctx,
       objectPreventExtensions,
       1);
 
   defineMethod(
-      runtime, cons, Predefined::getSymbolID(Predefined::is), ctx, objectIs, 2);
+      runtime,
+      lv.cons,
+      Predefined::getSymbolID(Predefined::is),
+      ctx,
+      objectIs,
+      2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isSealed),
       ctx,
       objectIsSealed,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isFrozen),
       ctx,
       objectIsFrozen,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isExtensible),
       ctx,
       objectIsExtensible,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::keys),
       ctx,
       objectKeys,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::values),
       ctx,
       objectValues,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::entries),
       ctx,
       objectEntries,
       1);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::create),
       ctx,
       objectCreate,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::defineProperty),
       ctx,
       objectDefineProperty,
       3);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::defineProperties),
       ctx,
       objectDefineProperties,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::assign),
       ctx,
       objectAssign,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::setPrototypeOf),
       ctx,
       objectSetPrototypeOf,
       2);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
-/// ES2024 20.1.1.1 Object() invoked as a function and as a
-/// constructor.
-CallResult<HermesValue>
-objectConstructor(void *, Runtime &runtime, NativeArgs args) {
+/// ES2024 20.1.1.1 Object constructor.
+CallResult<HermesValue> objectConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto &newTarget = args.getNewTarget();
   // 1. If NewTarget is neither undefined nor the active function object, then
   if (!newTarget.isUndefined() &&
-      newTarget.getRaw() != runtime.objectConstructor.getRaw()) {
+      newTarget.getRaw() !=
+          runtime.objectConstructor.getHermesValue().getRaw()) {
     // a. Return ? OrdinaryCreateFromConstructor(NewTarget,
     // "%Object.prototype%").
-    // This is a construct call, which means the object we want to create was
-    // actually already created for us in the caller and passed as `this`, so we
-    // can just use that.
-    assert(
-        args.getThisArg().isObject() &&
-        "'this' must be an object in a constructor call");
-    return args.getThisArg();
+    auto res = ordinaryCreateFromConstructor_RJS(
+        runtime,
+        Handle<Callable>::vmcast(&args.getNewTarget()),
+        runtime.objectPrototype);
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    return res->getHermesValue();
   }
 
   auto value = args.getArgHandle(0);
   // 2. If value is either undefined or null, return
   // OrdinaryObjectCreate(%Object.prototype%).
   if (value->isUndefined() || value->isNull()) {
-    // If this is a construct call directly on Object, then
-    // OrdinaryObjectCreate(%Object.prototype%) is the value of `this`.
-    if (newTarget.getRaw() == runtime.objectConstructor.getRaw()) {
-      return args.getThisArg();
-    }
     return JSObject::create(runtime).getHermesValue();
   }
 
@@ -320,14 +334,19 @@ CallResult<HermesValue> getPrototypeOf(Runtime &runtime, Handle<JSObject> obj) {
   return protoRes->getHermesValue();
 }
 
-CallResult<HermesValue>
-objectGetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectGetPrototypeOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   CallResult<HermesValue> res = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return getPrototypeOf(runtime, runtime.makeHandle(vmcast<JSObject>(*res)));
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.O.castAndSetHermesValue<JSObject>(*res);
+  return getPrototypeOf(runtime, lv.O);
 }
 
 CallResult<HermesValue> getOwnPropertyDescriptor(
@@ -335,11 +354,13 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
     Handle<JSObject> object,
     Handle<> key) {
   ComputedPropertyDescriptor desc;
-  MutableHandle<> valueOrAccessor{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  struct : public Locals {
+    PinnedValue<> valueOrAccessor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   {
     auto result = JSObject::getOwnComputedDescriptor(
-        object, runtime, key, tmpPropNameStorage, desc, valueOrAccessor);
+        object, runtime, key, desc, lv.valueOrAccessor);
     if (result == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -361,7 +382,7 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
     if (propRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    valueOrAccessor = std::move(*propRes);
+    lv.valueOrAccessor = std::move(*propRes);
   }
 
   DefinePropertyFlags dpFlags;
@@ -375,23 +396,31 @@ CallResult<HermesValue> getOwnPropertyDescriptor(
   dpFlags.setSetter = desc.flags.accessor;
   dpFlags.setValue = !desc.flags.accessor;
 
-  return objectFromPropertyDescriptor(runtime, dpFlags, valueOrAccessor);
+  return objectFromPropertyDescriptor(runtime, dpFlags, lv.valueOrAccessor);
 }
 
-CallResult<HermesValue>
-objectGetOwnPropertyDescriptor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectGetOwnPropertyDescriptor(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> O = runtime.makeHandle<JSObject>(objRes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.O.castAndSetHermesValue<JSObject>(objRes.getValue());
 
-  return getOwnPropertyDescriptor(runtime, O, args.getArgHandle(1));
+  return getOwnPropertyDescriptor(runtime, lv.O, args.getArgHandle(1));
 }
 
 /// ES10.0 19.1.2.9
-CallResult<HermesValue>
-objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectGetOwnPropertyDescriptors(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope{runtime};
 
   // 1. Let obj be ? ToObject(O).
@@ -399,11 +428,18 @@ objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> obj = runtime.makeHandle<JSObject>(objRes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<JSObject> descriptors;
+    PinnedValue<> key;
+    PinnedValue<> descriptor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.obj.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   // 2. Let ownKeys be ? obj.[[OwnPropertyKeys]]().
   auto ownKeysRes = JSObject::getOwnPropertyKeys(
-      obj,
+      lv.obj,
       runtime,
       OwnKeysFlags()
           .plusIncludeNonSymbols()
@@ -416,10 +452,7 @@ objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
   uint32_t len = JSArray::getLength(*ownKeys, runtime);
 
   // 3. Let descriptors be ! ObjectCreate(%ObjectPrototype%).
-  auto descriptors = runtime.makeHandle<JSObject>(JSObject::create(runtime));
-
-  MutableHandle<> key{runtime};
-  MutableHandle<> descriptor{runtime};
+  lv.descriptors = JSObject::create(runtime);
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
 
@@ -427,19 +460,19 @@ objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
   // 4. For each element key of ownKeys in List order, do
   for (uint32_t i = 0; i < len; ++i) {
     gcScope.flushToMarker(marker);
-    key = ownKeys->at(runtime, i).unboxToHV(runtime);
+    lv.key = ownKeys->at(runtime, i).unboxToHV(runtime);
     // a. Let desc be ? obj.[[GetOwnProperty]](key).
     // b. Let descriptor be ! FromPropertyDescriptor(desc).
-    auto descriptorRes = getOwnPropertyDescriptor(runtime, obj, key);
+    auto descriptorRes = getOwnPropertyDescriptor(runtime, lv.obj, lv.key);
     if (LLVM_UNLIKELY(descriptorRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // c. If descriptor is not undefined,
     //    perform !CreateDataProperty(descriptors, key, descriptor).
     if (!descriptorRes->isUndefined()) {
-      descriptor = *descriptorRes;
+      lv.descriptor = *descriptorRes;
       auto res = JSObject::defineOwnComputedPrimitive(
-          descriptors, runtime, key, dpf, descriptor);
+          lv.descriptors, runtime, lv.key, dpf, lv.descriptor);
       (void)res;
       assert(
           res != ExecutionStatus::EXCEPTION &&
@@ -447,7 +480,7 @@ objectGetOwnPropertyDescriptors(void *, Runtime &runtime, NativeArgs args) {
     }
   }
   // 5. Return descriptors.
-  return descriptors.getHermesValue();
+  return lv.descriptors.getHermesValue();
 }
 
 /// Return a list of property names belonging to this object. All
@@ -463,37 +496,48 @@ CallResult<HermesValue> getOwnPropertyKeysAsStrings(
     return ExecutionStatus::EXCEPTION;
   }
   auto array = *cr;
-  MutableHandle<> prop(runtime);
+  struct : public Locals {
+    PinnedValue<> prop;
+    PinnedValue<> stringValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   GCScope gcScope(runtime);
   auto marker = gcScope.createMarker();
   for (unsigned i = 0, e = array->getEndIndex(); i < e; ++i) {
     gcScope.flushToMarker(marker);
-    prop = array->at(runtime, i).unboxToHV(runtime);
-    if (prop->isString() || prop->isSymbol()) {
+    lv.prop = array->at(runtime, i).unboxToHV(runtime);
+    if (lv.prop->isString() || lv.prop->isSymbol()) {
       // Nothing to do if it's already a string or symbol.
       continue;
     }
-    assert(prop->isNumber() && "Property name is either string or number");
+    assert(lv.prop->isNumber() && "Property name is either string or number");
     // Otherwise convert it to a string and replace the element.
-    auto status = toString_RJS(runtime, prop);
+    auto status = toString_RJS(runtime, lv.prop);
     assert(
         status != ExecutionStatus::EXCEPTION &&
         "toString() on property name cannot fail");
-    JSArray::setElementAt(
-        array, runtime, i, runtime.makeHandle(std::move(*status)));
+    lv.stringValue = std::move(*status);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(array, runtime, i, lv.stringValue) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
   return array.getHermesValue();
 }
 
-CallResult<HermesValue>
-objectGetOwnPropertyNames(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectGetOwnPropertyNames(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto objHandle = runtime.makeHandle<JSObject>(objRes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle.castAndSetHermesValue<JSObject>(objRes.getValue());
   auto cr = getOwnPropertyKeysAsStrings(
-      objHandle,
+      lv.objHandle,
       runtime,
       OwnKeysFlags().plusIncludeNonSymbols().plusIncludeNonEnumerable());
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
@@ -502,14 +546,18 @@ objectGetOwnPropertyNames(void *, Runtime &runtime, NativeArgs args) {
   return *cr;
 }
 
-CallResult<HermesValue>
-objectGetOwnPropertySymbols(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectGetOwnPropertySymbols(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto objHandle = runtime.makeHandle<JSObject>(objRes.getValue());
-  auto cr = JSObject::getOwnPropertySymbols(objHandle, runtime);
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle.castAndSetHermesValue<JSObject>(objRes.getValue());
+  auto cr = JSObject::getOwnPropertySymbols(lv.objHandle, runtime);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -539,9 +587,13 @@ defineProperty(Runtime &runtime, NativeArgs args, PropOpFlags opFlags) {
 
   // 3. Let desc be ? ToPropertyDescriptor(Attributes).
   DefinePropertyFlags descFlags;
-  MutableHandle<> descValueOrAccessor{runtime};
+  struct : public Locals {
+    PinnedValue<> descValueOrAccessor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  MutableHandle<> valueAccessor{lv.descValueOrAccessor};
   if (toPropertyDescriptor(
-          args.getArgHandle(2), runtime, descFlags, descValueOrAccessor) ==
+          args.getArgHandle(2), runtime, descFlags, valueAccessor) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -549,11 +601,11 @@ defineProperty(Runtime &runtime, NativeArgs args, PropOpFlags opFlags) {
   // 4[throwOnError]. Perform ? DefinePropertyOrThrow(O, key, desc).
   // 4[!throwOnError]. Return ? O.[[DefineOwnProperty]](key, desc).
   return JSObject::defineOwnComputedPrimitive(
-      O, runtime, *keyRes, descFlags, descValueOrAccessor, opFlags);
+      O, runtime, *keyRes, descFlags, lv.descValueOrAccessor, opFlags);
 }
 
-CallResult<HermesValue>
-objectDefineProperty(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectDefineProperty(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // ES9 19.1.2.4
   CallResult<bool> res =
       defineProperty(runtime, args, PropOpFlags().plusThrowOnError());
@@ -573,18 +625,27 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
     return runtime.raiseTypeError(
         "Object.defineProperties() called on non-object");
   }
-  auto objHandle = runtime.makeHandle(objPtr);
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+    PinnedValue<JSObject> propsHandle;
+    PinnedValue<> propValue;
+    PinnedValue<> propName;
+    PinnedValue<ArrayStorage> valueOrAccessorStorage;
+    PinnedValue<> tempValueOrAccessor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle = objPtr;
 
   // Verify that the properties argument is also an object.
   auto objRes = toObject(runtime, props);
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto propsHandle = runtime.makeHandle<JSObject>(objRes.getValue());
+  lv.propsHandle.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   // Get the list of identifiers in props.
   auto cr = JSObject::getOwnPropertyKeys(
-      propsHandle,
+      lv.propsHandle,
       runtime,
       OwnKeysFlags()
           .plusIncludeSymbols()
@@ -592,7 +653,7 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
           // setIncludeNonEnumerable for proxies is necessary to get the right
           // traps in the right order.  The non-enumerable props will be
           // filtered out below.
-          .setIncludeNonEnumerable(propsHandle->isProxyObject()));
+          .setIncludeNonEnumerable(lv.propsHandle->isProxyObject()));
   if (cr == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -604,73 +665,86 @@ objectDefinePropertiesInternal(Runtime &runtime, Handle<> obj, Handle<> props) {
   // Iterate through every identifier, get the property descriptor
   // object, and store it in a list, according to Step 5.  What the
   // spec describes is a pair is represented in NewProps, which has
-  // three arguments because the spec descriptor is represented here
-  // by flags and a handle.
+  // the propNameIndex and flags. The valueOrAccessor is stored in
+  // ArrayStorage at the same index as this NewProps in the vector.
   struct NewProps {
     unsigned propNameIndex;
     DefinePropertyFlags flags;
-    MutableHandle<> valueOrAccessor;
 
-    NewProps(unsigned i, DefinePropertyFlags f, MutableHandle<> voa)
-        : propNameIndex(i), flags(f), valueOrAccessor(std::move(voa)) {}
+    NewProps(unsigned propIdx, DefinePropertyFlags f)
+        : propNameIndex(propIdx), flags(f) {}
   };
   llvh::SmallVector<NewProps, 4> newProps;
 
-  // We store each property name here. This is hoisted out of the loop
-  // to avoid allocating a handle per property.
-  MutableHandle<> propName{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  // Initialize ArrayStorage to hold valueOrAccessor values
+  uint32_t numProps = propNames->getEndIndex();
+  auto storageRes = ArrayStorage::create(runtime, numProps, numProps);
+  if (LLVM_UNLIKELY(storageRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.valueOrAccessorStorage.castAndSetHermesValue<ArrayStorage>(*storageRes);
 
-  for (unsigned i = 0, e = propNames->getEndIndex(); i < e; ++i) {
-    propName = propNames->at(runtime, i).unboxToHV(runtime);
+  for (unsigned i = 0, e = numProps; i < e; ++i) {
+    lv.propName = propNames->at(runtime, i).unboxToHV(runtime);
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedDescriptor(
-        propsHandle, runtime, propName, tmpPropNameStorage, desc);
+        lv.propsHandle, runtime, lv.propName, desc);
     if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (LLVM_UNLIKELY(!*descRes || !desc.flags.enumerable)) {
       continue;
     }
-    CallResult<PseudoHandle<>> propRes = propsHandle->isProxyObject()
-        ? JSObject::getComputed_RJS(propsHandle, runtime, propName)
+    CallResult<PseudoHandle<>> propRes = lv.propsHandle->isProxyObject()
+        ? JSObject::getComputed_RJS(lv.propsHandle, runtime, lv.propName)
         : JSObject::getComputedPropertyValueInternal_RJS(
-              propsHandle, runtime, propsHandle, desc);
+              lv.propsHandle, runtime, lv.propsHandle, desc);
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     DefinePropertyFlags flags;
-    MutableHandle<> valueOrAccessor{runtime};
+    // Initialize tempValueOrAccessor to undefined before each iteration
+    lv.tempValueOrAccessor = HermesValue::encodeUndefinedValue();
+    MutableHandle<> valueOrAccessor{lv.tempValueOrAccessor};
+    lv.propValue = std::move(*propRes);
     if (LLVM_UNLIKELY(
             toPropertyDescriptor(
-                runtime.makeHandle(std::move(*propRes)),
-                runtime,
-                flags,
-                valueOrAccessor) == ExecutionStatus::EXCEPTION)) {
+                lv.propValue, runtime, flags, valueOrAccessor) ==
+            ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    newProps.emplace_back(i, flags, std::move(valueOrAccessor));
+
+    // Store the value in ArrayStorage (newProps.size() is the index)
+    lv.valueOrAccessorStorage->set(
+        newProps.size(), valueOrAccessor.getHermesValue(), runtime.getHeap());
+    newProps.emplace_back(i, flags);
   }
 
   // For each descriptor in the list, add it to the object.
-  for (const auto &newProp : newProps) {
-    propName = propNames->at(runtime, newProp.propNameIndex).unboxToHV(runtime);
+  for (unsigned propIdx = 0; propIdx < newProps.size(); ++propIdx) {
+    const auto &newProp = newProps[propIdx];
+    lv.propName =
+        propNames->at(runtime, newProp.propNameIndex).unboxToHV(runtime);
+
+    // Get the value from ArrayStorage using the same index as newProps
+    lv.tempValueOrAccessor = lv.valueOrAccessorStorage->at(propIdx);
+
     auto result = JSObject::defineOwnComputedPrimitive(
-        objHandle,
+        lv.objHandle,
         runtime,
-        propName,
+        lv.propName,
         newProp.flags,
-        newProp.valueOrAccessor,
+        lv.tempValueOrAccessor,
         PropOpFlags().plusThrowOnError());
     if (result == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
   }
-  return objHandle.getHermesValue();
+  return lv.objHandle.getHermesValue();
 }
 
-CallResult<HermesValue>
-objectCreate(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectCreate(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // Verify this method is called with an object or with 'null'.
   auto obj = args.dyncastArg<JSObject>(0);
   if (!obj && !args.getArg(0).isNull()) {
@@ -684,16 +758,20 @@ objectCreate(void *, Runtime &runtime, NativeArgs args) {
     return newObj;
   }
   // Properties argument is present and not undefined.
-  auto cr =
-      objectDefinePropertiesInternal(runtime, runtime.makeHandle(newObj), arg1);
+  struct : public Locals {
+    PinnedValue<> newObjHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.newObjHandle = newObj;
+  auto cr = objectDefinePropertiesInternal(runtime, lv.newObjHandle, arg1);
   if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   return *cr;
 }
 
-CallResult<HermesValue>
-objectDefineProperties(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectDefineProperties(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto cr = objectDefinePropertiesInternal(
       runtime, args.getArgHandle(0), args.getArgHandle(1));
   if (cr == ExecutionStatus::EXCEPTION) {
@@ -702,7 +780,8 @@ objectDefineProperties(void *, Runtime &runtime, NativeArgs args) {
   return *cr;
 }
 
-CallResult<HermesValue> objectSeal(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectSeal(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objHandle = args.dyncastArg<JSObject>(0);
 
   if (!objHandle) {
@@ -716,8 +795,8 @@ CallResult<HermesValue> objectSeal(void *, Runtime &runtime, NativeArgs args) {
   return objHandle.getHermesValue();
 }
 
-CallResult<HermesValue>
-objectFreeze(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectFreeze(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objHandle = args.dyncastArg<JSObject>(0);
 
   if (!objHandle) {
@@ -731,8 +810,8 @@ objectFreeze(void *, Runtime &runtime, NativeArgs args) {
   return objHandle.getHermesValue();
 }
 
-CallResult<HermesValue>
-objectPreventExtensions(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPreventExtensions(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<JSObject> obj = args.dyncastArg<JSObject>(0);
 
   if (!obj) {
@@ -750,13 +829,14 @@ objectPreventExtensions(void *, Runtime &runtime, NativeArgs args) {
   return args.getArg(0);
 }
 
-CallResult<HermesValue> objectIs(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectIs(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return HermesValue::encodeBoolValue(
       isSameValue(args.getArg(0), args.getArg(1)));
 }
 
-CallResult<HermesValue>
-objectIsSealed(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectIsSealed(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objHandle = args.dyncastArg<JSObject>(0);
 
   if (!objHandle) {
@@ -767,8 +847,8 @@ objectIsSealed(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSObject::isSealed(objHandle, runtime));
 }
 
-CallResult<HermesValue>
-objectIsFrozen(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectIsFrozen(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objHandle = args.dyncastArg<JSObject>(0);
 
   if (!objHandle) {
@@ -779,8 +859,8 @@ objectIsFrozen(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeBoolValue(JSObject::isFrozen(objHandle, runtime));
 }
 
-CallResult<HermesValue>
-objectIsExtensible(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectIsExtensible(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   PseudoHandle<JSObject> obj =
       createPseudoHandle(dyn_vmcast<JSObject>(args.getArg(0)));
 
@@ -812,22 +892,26 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   if (namesRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
+  struct : public Locals {
+    PinnedValue<JSArray> names;
+    PinnedValue<JSArray> properties;
+    PinnedValue<StringPrimitive> name;
+    PinnedValue<> value;
+    PinnedValue<> entry;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   if (kind == EnumerableOwnPropertiesKind::Key && !objHandle->isProxyObject()) {
     return *namesRes;
   }
-  auto names = runtime.makeHandle<JSArray>(*namesRes);
-  uint32_t len = JSArray::getLength(*names, runtime);
+  lv.names.castAndSetHermesValue<JSArray>(*namesRes);
+  uint32_t len = JSArray::getLength(*lv.names, runtime);
 
   auto propertiesRes = JSArray::create(runtime, len, len);
   if (LLVM_UNLIKELY(propertiesRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto properties = *propertiesRes;
-
-  MutableHandle<StringPrimitive> name{runtime};
-  MutableHandle<> value{runtime};
-  MutableHandle<> entry{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  lv.properties = std::move(*propertiesRes);
 
   uint32_t targetIdx = 0;
 
@@ -836,20 +920,15 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
   // modified by a getter at any point in the loop, so `i` will not necessarily
   // correspond to `targetIdx`.
   auto marker = gcScope.createMarker();
-  for (uint32_t i = 0, len = JSArray::getLength(*names, runtime); i < len;
+  for (uint32_t i = 0, len = JSArray::getLength(*lv.names, runtime); i < len;
        ++i) {
     gcScope.flushToMarker(marker);
 
-    name = names->at(runtime, i).getString(runtime);
+    lv.name = lv.names->at(runtime, i).getString(runtime);
     // By calling getString, name is guaranteed to be primitive.
     ComputedPropertyDescriptor desc;
     CallResult<bool> descRes = JSObject::getOwnComputedPrimitiveDescriptor(
-        objHandle,
-        runtime,
-        name,
-        JSObject::IgnoreProxy::Yes,
-        tmpPropNameStorage,
-        desc);
+        objHandle, runtime, lv.name, JSObject::IgnoreProxy::Yes, desc);
     if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -863,14 +942,14 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      value = std::move(*valueRes);
+      lv.value = std::move(*valueRes);
     } else if (!objHandle->isProxyObject()) {
       continue;
     } else {
       // This is a proxy, so we need to call getOwnProperty() to see
       // if the value exists and is enumerable on the proxy.
       descRes =
-          JSProxy::getOwnProperty(objHandle, runtime, name, desc, nullptr);
+          JSProxy::getOwnProperty(objHandle, runtime, lv.name, desc, nullptr);
       if (LLVM_UNLIKELY(descRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -882,11 +961,11 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       // too.
       if (kind != EnumerableOwnPropertiesKind::Key) {
         auto valueRes =
-            JSProxy::getComputed(objHandle, runtime, name, objHandle);
+            JSProxy::getComputed(objHandle, runtime, lv.name, objHandle);
         if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
           return ExecutionStatus::EXCEPTION;
         }
-        value = std::move(*valueRes);
+        lv.value = std::move(*valueRes);
       }
     }
 
@@ -895,76 +974,98 @@ CallResult<HermesValue> enumerableOwnProperties_RJS(
       if (LLVM_UNLIKELY(entryRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      entry = entryRes->getHermesValue();
-      JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 0, name);
-      JSArray::setElementAt(Handle<JSArray>::vmcast(entry), runtime, 1, value);
+      lv.entry = entryRes->getHermesValue();
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(
+                  Handle<JSArray>::vmcast(&lv.entry), runtime, 0, lv.name) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(
+                  Handle<JSArray>::vmcast(&lv.entry), runtime, 1, lv.value) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
     } else if (kind == EnumerableOwnPropertiesKind::Value) {
-      entry = value.getHermesValue();
+      lv.entry = lv.value.getHermesValue();
     } else {
       assert(
           objHandle->isProxyObject() &&
           "Key kind did not return early but not proxy");
-      entry = names->at(runtime, i).unboxToHV(runtime);
+      lv.entry = lv.names->at(runtime, i).unboxToHV(runtime);
     }
 
     // The element must exist because we just read it.
-    JSArray::setElementAt(properties, runtime, targetIdx++, entry);
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(
+                lv.properties, runtime, targetIdx++, lv.entry) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
   }
 
   // Set length at the end only, because properties may be shorter than
   // names.size() - some properties may have been made non-enumerable by getters
   // in the loop.
   if (LLVM_UNLIKELY(
-          JSArray::setLengthProperty(properties, runtime, targetIdx) ==
+          JSArray::setLengthProperty(lv.properties, runtime, targetIdx) ==
           ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  return properties.getHermesValue();
+  return lv.properties.getHermesValue();
 }
 
-CallResult<HermesValue> objectKeys(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectKeys(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle.castAndSetHermesValue<JSObject>(*objRes);
   return enumerableOwnProperties_RJS(
-      runtime,
-      runtime.makeHandle<JSObject>(*objRes),
-      EnumerableOwnPropertiesKind::Key);
+      runtime, lv.objHandle, EnumerableOwnPropertiesKind::Key);
 }
 
-CallResult<HermesValue>
-objectValues(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectValues(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle.castAndSetHermesValue<JSObject>(*objRes);
   return enumerableOwnProperties_RJS(
-      runtime,
-      runtime.makeHandle<JSObject>(*objRes),
-      EnumerableOwnPropertiesKind::Value);
+      runtime, lv.objHandle, EnumerableOwnPropertiesKind::Value);
 }
 
-CallResult<HermesValue>
-objectEntries(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectEntries(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle.castAndSetHermesValue<JSObject>(*objRes);
   return enumerableOwnProperties_RJS(
-      runtime,
-      runtime.makeHandle<JSObject>(*objRes),
-      EnumerableOwnPropertiesKind::KeyValue);
+      runtime, lv.objHandle, EnumerableOwnPropertiesKind::KeyValue);
 }
 
 /// ES10 19.1.2.7 Object.fromEntries(iterable)
 /// Creates an object from an iterable of [key, value] pairs.
-CallResult<HermesValue>
-objectFromEntries(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectFromEntries(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Perform ? RequireObjectCoercible(iterable).
   if (args.getArg(0).isNull() || args.getArg(0).isUndefined()) {
     return runtime.raiseTypeError(
@@ -974,7 +1075,11 @@ objectFromEntries(void *, Runtime &runtime, NativeArgs args) {
   GCScopeMarkerRAII marker{runtime};
 
   // 2. Let obj be ObjectCreate(%ObjectPrototype%).
-  Handle<JSObject> obj = runtime.makeHandle(JSObject::create(runtime));
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.obj = JSObject::create(runtime);
   // 3. Assert: obj is an extensible ordinary object with no own properties.
 
   // 4. Let stepsDefine be the algorithm steps defined in
@@ -985,18 +1090,19 @@ objectFromEntries(void *, Runtime &runtime, NativeArgs args) {
   // 6. Return ? AddEntriesFromIterable(obj, iterable, adder).
   return addEntriesFromIterable(
       runtime,
-      obj,
+      lv.obj,
       args.getArgHandle(0),
-      [obj, &runtime](Runtime &, Handle<> key, Handle<> value) {
+      /* method */ llvh::None,
+      [&lv, &runtime](Runtime &, Handle<> key, Handle<> value) {
         const DefinePropertyFlags dpf =
             DefinePropertyFlags::getDefaultNewPropertyFlags();
         return JSObject::defineOwnComputed(
-            obj, runtime, key, dpf, value, PropOpFlags().plusThrowOnError());
+            lv.obj, runtime, key, dpf, value, PropOpFlags().plusThrowOnError());
       });
 }
 
-CallResult<HermesValue>
-objectAssign(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectAssign(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   vm::GCScope gcScope(runtime);
 
   // 1. Let to be ToObject(target).
@@ -1005,11 +1111,18 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
     // 2. ReturnIfAbrupt(to).
     return ExecutionStatus::EXCEPTION;
   }
-  auto toHandle = runtime.makeHandle<JSObject>(objRes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> toHandle;
+    PinnedValue<JSObject> fromHandle;
+    PinnedValue<> nextKeyHandle;
+    PinnedValue<> propValueHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.toHandle.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   // 3. If only one argument was passed, return to.
   if (LLVM_UNLIKELY(args.getArgCount() == 1)) {
-    return toHandle.getHermesValue();
+    return lv.toHandle.getHermesValue();
   }
 
   // 4. Let sources be the List of argument values starting with the second
@@ -1017,13 +1130,11 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
   // 5. For each element nextSource of sources, in ascending index order,
 
   // Handle for the current object being copied from.
-  MutableHandle<JSObject> fromHandle{runtime};
+  MutableHandle<JSObject> fromHandle{lv.fromHandle};
   // Handle for the next key to be processed when copying properties.
-  MutableHandle<> nextKeyHandle{runtime};
+  MutableHandle<> nextKeyHandle{lv.nextKeyHandle};
   // Handle for the property value being copied.
-  MutableHandle<> propValueHandle{runtime};
-  // Handle for the property value being copied.
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+  MutableHandle<> propValueHandle{lv.propValueHandle};
 
   for (uint32_t argIdx = 1; argIdx < args.getArgCount(); argIdx++) {
     GCScopeMarkerRAII markerOuter(gcScope);
@@ -1066,7 +1177,7 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
 
       // 5.c.i. Let desc be from.[[GetOwnProperty]](nextKey).
       auto descCr = JSObject::getOwnComputedDescriptor(
-          fromHandle, runtime, nextKeyHandle, tmpPropNameStorage, desc);
+          fromHandle, runtime, nextKeyHandle, desc);
       if (LLVM_UNLIKELY(descCr == ExecutionStatus::EXCEPTION)) {
         // 5.c.ii. ReturnIfAbrupt(desc).
         return ExecutionStatus::EXCEPTION;
@@ -1085,12 +1196,7 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
       CallResult<PseudoHandle<>> propRes = fromHandle->isProxyObject()
           ? JSObject::getComputed_RJS(fromHandle, runtime, nextKeyHandle)
           : JSObject::getComputedPropertyValue_RJS(
-                fromHandle,
-                runtime,
-                fromHandle,
-                tmpPropNameStorage,
-                desc,
-                nextKeyHandle);
+                fromHandle, runtime, fromHandle, desc, nextKeyHandle);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         // 5.c.iii.2. ReturnIfAbrupt(propValue).
         return ExecutionStatus::EXCEPTION;
@@ -1099,7 +1205,7 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
 
       // 5.c.iii.3. Let status be Set(to, nextKey, propValue, true).
       auto statusCr = JSObject::putComputed_RJS(
-          toHandle,
+          lv.toHandle,
           runtime,
           nextKeyHandle,
           propValueHandle,
@@ -1112,11 +1218,11 @@ objectAssign(void *, Runtime &runtime, NativeArgs args) {
   }
 
   // 6 Return to.
-  return toHandle.getHermesValue();
+  return lv.toHandle.getHermesValue();
 }
 
-CallResult<HermesValue>
-objectSetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectSetPrototypeOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   Handle<> O = args.getArgHandle(0);
   Handle<> proto = args.getArgHandle(1);
   // 1. Let O be RequireObjectCoercible(O).
@@ -1150,6 +1256,37 @@ objectSetPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
   return *O;
 }
 
+/// ES15.0 20.1.2.13 Object.groupBy ( items, callback )
+/// https://tc39.es/ecma262/#sec-object.groupby
+CallResult<HermesValue> objectGroupBy(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 2. Let obj be OrdinaryObjectCreate(null).
+  lv.obj = JSObject::create(runtime, Runtime::makeNullHandle<JSObject>());
+
+  // 1. Let groups be ? GroupBy(items, callbackfn, PROPERTY).
+  if (LLVM_UNLIKELY(
+          groupByProperty(
+              runtime, lv.obj, args.getArgHandle(0), args.getArgHandle(1)) ==
+          ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // NOTE: The below are handled by `groupByProperty` which directly acts on
+  // the above JSObject.
+  // 3. For each Record { [[Key]], [[Elements]] } g of groups, do
+  // a. Let elements be CreateArrayFromList(g.[[Elements]]).
+  // b. Perform ! CreateDataPropertyOrThrow(obj, g.[[Key]], elements).
+
+  // 4. Return obj.
+  return lv.obj.getHermesValue();
+}
+
 //===----------------------------------------------------------------------===//
 /// Object.prototype.
 
@@ -1170,18 +1307,22 @@ CallResult<HermesValue> directObjectPrototypeToString(
       return ExecutionStatus::EXCEPTION;
     }
 
-    auto O = runtime.makeHandle<JSObject>(res.getValue());
+    struct : public Locals {
+      PinnedValue<JSObject> O;
+      PinnedValue<StringPrimitive> tag;
+    } lv;
+    LocalsRAII lraii(runtime, &lv);
+    lv.O.castAndSetHermesValue<JSObject>(res.getValue());
     // 16. Let tag be Get (O, @@toStringTag).
     auto tagRes = JSObject::getNamed_RJS(
-        O, runtime, Predefined::getSymbolID(Predefined::SymbolToStringTag));
+        lv.O, runtime, Predefined::getSymbolID(Predefined::SymbolToStringTag));
     if (LLVM_UNLIKELY(tagRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
 
     if ((*tagRes)->isString()) {
-      auto tag = runtime.makeHandle(
-          PseudoHandle<StringPrimitive>::vmcast(std::move(*tagRes)));
-      SafeUInt32 tagLen(tag->getStringLength());
+      lv.tag = PseudoHandle<StringPrimitive>::vmcast(std::move(*tagRes)).get();
+      SafeUInt32 tagLen(lv.tag->getStringLength());
       tagLen.add(9);
       CallResult<StringBuilder> builder =
           StringBuilder::createStringBuilder(runtime, tagLen);
@@ -1191,47 +1332,47 @@ CallResult<HermesValue> directObjectPrototypeToString(
       // 19. Return the String that is the result of concatenating
       // "[object ", tag, and "]".
       builder->appendASCIIRef(ASCIIRef{"[object ", 8});
-      builder->appendStringPrim(tag);
+      builder->appendStringPrim(lv.tag);
       builder->appendCharacter(']');
       return builder->getStringPrimitive().getHermesValue();
     }
 
     // 18. If Type(tag) is not String, let tag be builtinTag.
-    CallResult<bool> isArrayRes = isArray(runtime, *O);
+    CallResult<bool> isArrayRes = isArray(runtime, lv.O.get());
     if (LLVM_UNLIKELY(isArrayRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     if (*isArrayRes) {
       // 6. If isArray is true, let builtinTag be "Array".
       str = runtime.getPredefinedString(Predefined::squareObject_JSArray);
-    } else if (vmisa<JSString>(O.getHermesValue())) {
+    } else if (vmisa<JSString>(lv.O.getHermesValue())) {
       // 7. Else, if O is an exotic String object, let builtinTag be "String".
       str = runtime.getPredefinedString(Predefined::squareObject_JSString);
-    } else if (vmisa<Arguments>(O.getHermesValue())) {
+    } else if (vmisa<Arguments>(lv.O.getHermesValue())) {
       // 8. Else, if O has an [[ParameterMap]] internal slot, let builtinTag be
       // "Arguments".
       str = runtime.getPredefinedString(Predefined::squareObject_Arguments);
-    } else if (vmisa<Callable>(O.getHermesValue())) {
+    } else if (vmisa<Callable>(lv.O.getHermesValue())) {
       // 9. Else, if O has a [[Call]] internal method, let builtinTag be
       // "Function".
       str = runtime.getPredefinedString(Predefined::squareObject_JSFunction);
-    } else if (vmisa<JSError>(O.getHermesValue())) {
+    } else if (vmisa<JSError>(lv.O.getHermesValue())) {
       // 10. Else, if O has an [[ErrorData]] internal slot, let builtinTag be
       // "Error".
       str = runtime.getPredefinedString(Predefined::squareObject_JSError);
-    } else if (vmisa<JSBoolean>(O.getHermesValue())) {
+    } else if (vmisa<JSBoolean>(lv.O.getHermesValue())) {
       // 11. Else, if O has a [[BooleanData]] internal slot, let builtinTag be
       // "Boolean".
       str = runtime.getPredefinedString(Predefined::squareObject_JSBoolean);
-    } else if (vmisa<JSNumber>(O.getHermesValue())) {
+    } else if (vmisa<JSNumber>(lv.O.getHermesValue())) {
       // 12. Else, if O has a [[NumberData]] internal slot, let builtinTag be
       // "Number".
       str = runtime.getPredefinedString(Predefined::squareObject_JSNumber);
-    } else if (vmisa<JSDate>(O.getHermesValue())) {
+    } else if (vmisa<JSDate>(lv.O.getHermesValue())) {
       // 13. Else, if O has a [[DateValue]] internal slot, let builtinTag be
       // "Date".
       str = runtime.getPredefinedString(Predefined::squareObject_JSDate);
-    } else if (vmisa<JSRegExp>(O.getHermesValue())) {
+    } else if (vmisa<JSRegExp>(lv.O.getHermesValue())) {
       // 14. Else, if O has a [[RegExpMatcher]] internal slot, let builtinTag be
       // "RegExp".
       str = runtime.getPredefinedString(Predefined::squareObject_JSRegExp);
@@ -1243,34 +1384,41 @@ CallResult<HermesValue> directObjectPrototypeToString(
   return HermesValue::encodeStringValue(str);
 }
 
-CallResult<HermesValue>
-objectPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return directObjectPrototypeToString(runtime, args.getThisHandle());
 }
 
-CallResult<HermesValue>
-objectPrototypeToLocaleString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeToLocaleString(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   GCScope gcScope(runtime);
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto selfHandle = runtime.makeHandle<JSObject>(objRes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> selfHandle;
+    PinnedValue<> propValue;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.selfHandle.castAndSetHermesValue<JSObject>(objRes.getValue());
   auto propRes = JSObject::getNamed_RJS(
-      selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
+      lv.selfHandle, runtime, Predefined::getSymbolID(Predefined::toString));
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  if (auto func = Handle<Callable>::dyn_vmcast(
-          runtime.makeHandle(std::move(*propRes)))) {
-    return Callable::executeCall0(func, runtime, selfHandle)
+  lv.propValue = std::move(*propRes);
+  if (auto func = Handle<Callable>::dyn_vmcast(Handle<>{lv.propValue})) {
+    return Callable::executeCall0(func, runtime, lv.selfHandle)
         .toCallResultHermesValue();
   }
   return runtime.raiseTypeError("toString must be callable");
 }
 
-CallResult<HermesValue>
-objectPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1281,9 +1429,8 @@ objectPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
 static CallResult<HermesValue>
 objectHasOwnHelper(Runtime &runtime, Handle<JSObject> O, Handle<> P) {
   ComputedPropertyDescriptor desc;
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
-  CallResult<bool> hasProp = JSObject::getOwnComputedDescriptor(
-      O, runtime, P, tmpPropNameStorage, desc);
+  CallResult<bool> hasProp =
+      JSObject::getOwnComputedDescriptor(O, runtime, P, desc);
   if (LLVM_UNLIKELY(hasProp == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1307,8 +1454,10 @@ objectHasOwnHelper(Runtime &runtime, Handle<JSObject> O, Handle<> P) {
 }
 
 /// ES11.0 19.1.3.2
-CallResult<HermesValue>
-objectPrototypeHasOwnProperty(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeHasOwnProperty(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   /// 1. Let P be ? ToPropertyKey(V).
   auto PRes = toPropertyKey(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(PRes == ExecutionStatus::EXCEPTION)) {
@@ -1321,18 +1470,26 @@ objectPrototypeHasOwnProperty(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   /// 3. Return ? HasOwnProperty(O, P).
-  Handle<JSObject> O = runtime.makeHandle<JSObject>(ORes.getValue());
-  return objectHasOwnHelper(runtime, O, *PRes);
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.O.castAndSetHermesValue<JSObject>(ORes.getValue());
+  return objectHasOwnHelper(runtime, lv.O, *PRes);
 }
 
-CallResult<HermesValue>
-objectHasOwn(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectHasOwn(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   /// 1. Let O be ? ToObject(O).
   auto ORes = toObject(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(ORes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> O = runtime.makeHandle<JSObject>(ORes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.O.castAndSetHermesValue<JSObject>(ORes.getValue());
 
   /// 2. Let P be ? ToPropertyKey(P).
   auto PRes = toPropertyKey(runtime, args.getArgHandle(1));
@@ -1340,11 +1497,11 @@ objectHasOwn(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
   /// 3. Return ? HasOwnProperty(O, P).
-  return objectHasOwnHelper(runtime, O, *PRes);
+  return objectHasOwnHelper(runtime, lv.O, *PRes);
 }
 
-CallResult<HermesValue>
-objectPrototypeIsPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeIsPrototypeOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (LLVM_UNLIKELY(!args.getArg(0).isObject())) {
     // If arg[0] is not an object, return false.
     return HermesValue::encodeBoolValue(false);
@@ -1353,7 +1510,11 @@ objectPrototypeIsPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<JSObject> objHandle = runtime.makeHandle<JSObject>(*res);
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle.castAndSetHermesValue<JSObject>(*res);
   PseudoHandle<JSObject> parent =
       createPseudoHandle(vmcast<JSObject>(args.getArg(0)));
   while (true) {
@@ -1366,27 +1527,29 @@ objectPrototypeIsPrototypeOf(void *, Runtime &runtime, NativeArgs args) {
       break;
     }
     parent = std::move(*protoRes);
-    if (parent.get() == objHandle.get()) {
+    if (parent.get() == lv.objHandle.get()) {
       return HermesValue::encodeBoolValue(true);
     }
   }
   return HermesValue::encodeBoolValue(false);
 }
 
-CallResult<HermesValue>
-objectPrototypePropertyIsEnumerable(void *, Runtime &runtime, NativeArgs args) {
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
+CallResult<HermesValue> objectPrototypePropertyIsEnumerable(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
   auto res = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  lv.objHandle.castAndSetHermesValue<JSObject>(res.getValue());
   ComputedPropertyDescriptor desc;
   auto status = JSObject::getOwnComputedDescriptor(
-      runtime.makeHandle<JSObject>(res.getValue()),
-      runtime,
-      args.getArgHandle(0),
-      tmpPropNameStorage,
-      desc);
+      lv.objHandle, runtime, args.getArgHandle(0), desc);
   if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1394,17 +1557,22 @@ objectPrototypePropertyIsEnumerable(void *, Runtime &runtime, NativeArgs args) {
       status.getValue() && desc.flags.enumerable);
 }
 
-CallResult<HermesValue>
-objectPrototypeProto_getter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeProto_getter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   CallResult<HermesValue> res = toObject(runtime, args.getThisHandle());
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return getPrototypeOf(runtime, runtime.makeHandle(vmcast<JSObject>(*res)));
+  struct : public Locals {
+    PinnedValue<JSObject> objHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.objHandle.castAndSetHermesValue<JSObject>(*res);
+  return getPrototypeOf(runtime, lv.objHandle);
 }
 
-CallResult<HermesValue>
-objectPrototypeProto_setter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeProto_setter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // thisArg must be coercible to Object.
   if (args.getThisArg().isNull() || args.getThisArg().isUndefined()) {
     return runtime.raiseTypeError("'this' is not coercible to JSObject");
@@ -1433,22 +1601,27 @@ objectPrototypeProto_setter(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-objectPrototypeDefineGetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeDefineGetter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<PropertyAccessor> accessor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.O.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   auto getter = args.dyncastArg<Callable>(1);
   if (!getter) {
     return runtime.raiseTypeError("__defineGetter__ getter not callable");
   }
 
-  HermesValue crtRes = PropertyAccessor::create(
+  auto crtRes = PropertyAccessor::create(
       runtime, getter, Runtime::makeNullHandle<Callable>());
-  auto accessor = runtime.makeHandle<PropertyAccessor>(crtRes);
+  lv.accessor = std::move(crtRes);
 
   DefinePropertyFlags dpf;
   dpf.setEnumerable = 1;
@@ -1458,11 +1631,11 @@ objectPrototypeDefineGetter(void *, Runtime &runtime, NativeArgs args) {
   dpf.setGetter = 1;
 
   auto res = JSObject::defineOwnComputed(
-      O,
+      lv.O,
       runtime,
       args.getArgHandle(0),
       dpf,
-      accessor,
+      lv.accessor,
       PropOpFlags().plusThrowOnError());
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1471,22 +1644,27 @@ objectPrototypeDefineGetter(void *, Runtime &runtime, NativeArgs args) {
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-objectPrototypeDefineSetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeDefineSetter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto objRes = toObject(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(objRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto O = runtime.makeHandle<JSObject>(objRes.getValue());
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<PropertyAccessor> accessor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.O.castAndSetHermesValue<JSObject>(objRes.getValue());
 
   auto setter = args.dyncastArg<Callable>(1);
   if (!setter) {
     return runtime.raiseTypeError("__defineSetter__ setter not callable");
   }
 
-  HermesValue crtRes = PropertyAccessor::create(
+  auto crtRes = PropertyAccessor::create(
       runtime, Runtime::makeNullHandle<Callable>(), setter);
-  auto accessor = runtime.makeHandle<PropertyAccessor>(crtRes);
+  lv.accessor = std::move(crtRes);
 
   DefinePropertyFlags dpf;
   dpf.setEnumerable = 1;
@@ -1496,11 +1674,11 @@ objectPrototypeDefineSetter(void *, Runtime &runtime, NativeArgs args) {
   dpf.setSetter = 1;
 
   auto res = JSObject::defineOwnComputed(
-      O,
+      lv.O,
       runtime,
       args.getArgHandle(0),
       dpf,
-      accessor,
+      lv.accessor,
       PropOpFlags().plusThrowOnError());
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -1525,14 +1703,18 @@ CallResult<PropertyAccessor *> lookupAccessor(
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  MutableHandle<JSObject> O = runtime.makeMutableHandle(vmcast<JSObject>(*res));
+  struct : public Locals {
+    PinnedValue<JSObject> O;
+    PinnedValue<> valueOrAccessor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.O.castAndSetHermesValue<JSObject>(*res);
   Handle<> key = args.getArgHandle(0);
-  MutableHandle<> valueOrAccessor{runtime};
-  MutableHandle<SymbolID> tmpPropNameStorage{runtime};
   do {
     ComputedPropertyDescriptor desc;
+    MutableHandle<> valueOrAccessorHandle{lv.valueOrAccessor};
     CallResult<bool> definedRes = JSObject::getOwnComputedDescriptor(
-        O, runtime, key, tmpPropNameStorage, desc, valueOrAccessor);
+        lv.O, runtime, key, desc, valueOrAccessorHandle);
     if (LLVM_UNLIKELY(definedRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
@@ -1540,22 +1722,26 @@ CallResult<PropertyAccessor *> lookupAccessor(
       if (!desc.flags.accessor) {
         break;
       }
-      return vmcast<PropertyAccessor>(valueOrAccessor.get());
+      return vmcast<PropertyAccessor>(lv.valueOrAccessor.getHermesValue());
     }
     CallResult<PseudoHandle<JSObject>> protoRes =
-        JSObject::getPrototypeOf(O, runtime);
+        JSObject::getPrototypeOf(PseudoHandle<JSObject>{lv.O}, runtime);
     if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    O = protoRes->get();
-  } while (O);
+    if (!*protoRes) {
+      lv.O = nullptr;
+    } else {
+      lv.O.castAndSetHermesValue<JSObject>(protoRes->getHermesValue());
+    }
+  } while (lv.O.get());
   return nullptr;
 }
 
 } // namespace
 
-CallResult<HermesValue>
-objectPrototypeLookupGetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeLookupGetter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   CallResult<PropertyAccessor *> accessorRes = lookupAccessor(runtime, args);
   if (LLVM_UNLIKELY(accessorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1566,8 +1752,8 @@ objectPrototypeLookupGetter(void *, Runtime &runtime, NativeArgs args) {
       : HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-objectPrototypeLookupSetter(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> objectPrototypeLookupSetter(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   CallResult<PropertyAccessor *> accessorRes = lookupAccessor(runtime, args);
   if (LLVM_UNLIKELY(accessorRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;

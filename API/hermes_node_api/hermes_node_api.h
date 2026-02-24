@@ -13,7 +13,6 @@
 
 #include <memory>
 #include <string>
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/VM/RuntimeModule.h"
 #include "node_api/node_api.h"
 

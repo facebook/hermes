@@ -37,6 +37,17 @@ JSR_API hermes_config_enable_default_crash_handler(
     jsr_config config,
     bool value);
 
+/// Set the Intl provider mode for a runtime.
+/// mode values: 0 = Default (global resolution),
+///              1 = ForceWinGlob (always use NLS APIs),
+///              2 = CustomVtable (use the provided vtable).
+/// vtable: ICU vtable pointer (only used when mode == 2, else pass NULL).
+struct hermes_icu_vtable;
+JSR_API hermes_config_set_intl_provider(
+    jsr_config config,
+    uint8_t mode,
+    const struct hermes_icu_vtable *vtable);
+
 //=============================================================================
 // Setting inspector singleton
 //=============================================================================

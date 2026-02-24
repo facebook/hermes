@@ -12,12 +12,10 @@
 #include "hermes/BCGen/HBC/ConsecutiveStringStorage.h"
 #include "hermes/BCGen/HBC/StreamVector.h"
 #include "hermes/BCGen/HBC/UniquingFilenameTable.h"
-#include "hermes/Public/DebuggerTypes.h"
 #include "hermes/Support/LEB128.h"
 #include "hermes/Support/OptValue.h"
 #include "hermes/Support/StringTable.h"
 #include "hermes/Support/UTF8.h"
-#include "llvh/ADT/DenseMap.h"
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/Format.h"
 
@@ -32,17 +30,96 @@ namespace hermes {
 class SourceMapGenerator;
 namespace hbc {
 
+/// Represent an invalid sourceMappingUrl index.
+constexpr uint32_t kInvalidSourceMappingUrlId = 0;
+
+/// Holds the required state to restore the environment information needed to
+/// perform an eval from the debugger.
+class DebugScopingInfo {
+  friend class OptValue<DebugScopingInfo>;
+
+  /// We use int64_t to represent all the possible locations the environment can
+  /// reside. There are 2 possible cases for what EnvLocationDescriptor means.
+  /// >=0: a register in the current function.
+  /// <0: this represents a spilled env, which can be found at a slot in the
+  /// parent environment.
+  /// The description of where to find the current scope-producing instruction.
+  int64_t envLocation_;
+  /// The idx of a sema::LexicalScope.
+  uint32_t lexicalScopeIdxInParentFunction_;
+
+  static constexpr int64_t kFirstRegLocation = 0;
+
+  DebugScopingInfo() = default;
+  DebugScopingInfo(int64_t envLocation, uint32_t lexicalScope)
+      : envLocation_(envLocation),
+        lexicalScopeIdxInParentFunction_(lexicalScope) {}
+
+ public:
+  /// Construct and \return a DebugScopingInfo encoding the given register \p
+  /// regNum as the environment location.
+  static DebugScopingInfo forRegister(uint32_t regNum, uint32_t lexicalScope) {
+    assert(regNum < UINT32_MAX);
+    return {kFirstRegLocation + static_cast<uint32_t>(regNum), lexicalScope};
+  }
+  /// \return EnvLocationDescriptor for the given spilled parent slot location.
+  /// Construct and \return a DebugScopingInfo encoding the given slot \p
+  /// slotInParentEnv as the environment location. \p slotInParentEnv cannot be
+  /// UINT32_MAX.
+  static DebugScopingInfo forSpilledSlot(
+      uint32_t slotInParentEnv,
+      uint32_t lexicalScope) {
+    assert(slotInParentEnv < UINT32_MAX);
+    return {-static_cast<int64_t>(slotInParentEnv + 1), lexicalScope};
+  }
+
+  /// \return true if the environment location is in a register.
+  bool isRegister() const {
+    return envLocation_ >= kFirstRegLocation;
+  }
+  /// \return the register number that \p envLocDesc describes.
+  uint32_t getRegister() const {
+    return static_cast<uint32_t>(envLocation_ - kFirstRegLocation);
+  }
+
+  /// \return true if the environment location is spilled into the parent
+  /// environment.
+  bool isSpilledSlot() const {
+    return envLocation_ < 0;
+  }
+  /// \return the slot in the parent that \p envLocDesc describes.
+  uint32_t getSpilledSlot() const {
+    assert(isSpilledSlot());
+    return static_cast<uint32_t>((-envLocation_) - 1);
+  }
+
+  /// \return the lexical scope idx.
+  uint32_t lexicalScopeIdxInParentFunction() const {
+    return lexicalScopeIdxInParentFunction_;
+  }
+
+  /// Friendly representation of this DebugScopingInfo for use in maps as a key.
+  using MapKeyTy = std::pair<int64_t, uint32_t>;
+
+  /// \return the contents of this DebugScopingInfo as a std::pair.
+  MapKeyTy asKey() const {
+    return {envLocation_, lexicalScopeIdxInParentFunction_};
+  }
+};
+
 /// The file name, line and column associated with a bytecode address.
+/// It could be invalid (e.g., has 0 line number), so users must check its
+/// validity before using it, unless explicitly stated by code returning it.
 struct DebugSourceLocation {
-  static constexpr uint32_t NO_REG = UINT32_MAX;
   // The bytecode offset of this debug info.
   uint32_t address{0};
   // The filename index in the filename table.
   uint32_t filenameId{0};
   // The sourceMappingUrl index in the string table.
-  // Use kInvalidBreakpoint for an invalid URL.
-  uint32_t sourceMappingUrlId{facebook::hermes::debugger::kInvalidBreakpoint};
+  // Use kInvalidSourceMappingUrlId for an invalid URL.
+  uint32_t sourceMappingUrlId{kInvalidSourceMappingUrlId};
   // The line count, 1 based.
+  // 0 indicates that there is no source location.
   uint32_t line{0};
   // The column count, 1 based.
   uint32_t column{0};
@@ -50,13 +127,11 @@ struct DebugSourceLocation {
   // Initialized to 0, to show that no statements have been generated yet.
   // Thus, we can see which instructions aren't part of any user-written code.
   uint32_t statement{0};
-  // The offset source-level scope descriptor that is "active" for this
-  // location. May temporarily hold a relocation that's resolved right
-  // before the source location is serialized.
-  uint32_t scopeAddress{0};
-  // The register holding the Environment with the active scope.
-  uint32_t envReg{NO_REG};
+  // 1 based index into a side table owned by DebugInfo. The side table is a
+  // list DebugScopingInfo entries. 0 indicates no env info.
+  uint32_t envIdx{0};
 
+  /// Construct an invalid DebugSourceLocation.
   DebugSourceLocation() {}
 
   DebugSourceLocation(
@@ -64,71 +139,27 @@ struct DebugSourceLocation {
       uint32_t filenameId,
       uint32_t line,
       uint32_t column,
-      uint32_t statement,
-      uint32_t scopeAddress,
-      uint32_t envReg)
+      uint32_t statement)
       : address(address),
         filenameId(filenameId),
         line(line),
         column(column),
-        statement(statement),
-        scopeAddress(scopeAddress),
-        envReg(envReg) {}
+        statement(statement) {}
 
   bool operator==(const DebugSourceLocation &rhs) const {
     return address == rhs.address && filenameId == rhs.filenameId &&
-        line == rhs.line && column == rhs.column &&
-        statement == rhs.statement && scopeAddress == rhs.scopeAddress &&
-        envReg == rhs.envReg;
+        line == rhs.line && column == rhs.column && statement == rhs.statement;
   }
 
   bool operator!=(const DebugSourceLocation &rhs) const {
     return !(*this == rhs);
   }
-};
 
-/// A deserialized scope descriptor.
-struct DebugScopeDescriptor {
-  /// Various flags about this scope descriptor. See the Bits enum below for a
-  /// description of each flag.
-  struct Flags {
-    /// Constructs a new Flags object with the given \p bits.
-    explicit Flags(uint32_t bits = 0);
-
-    /// Serializes this Flags object.
-    uint32_t toUint32() const;
-
-    /// This scope descriptor is an inner scope (i.e., a scope that's a child of
-    /// a Function outermost scope).
-    bool isInnerScope;
-
-    /// This scope descriptor is dynamic (i.e., it is a loop's top level scope).
-    bool isDynamic;
-
-   private:
-    enum class Bits {
-      InnerScope,
-      Dynamic,
-    };
-  };
-
-  /// The offset into the scope descriptor debug info where the descriptor for
-  /// this scope's parents is.
-  OptValue<unsigned> parentOffset;
-
-  Flags flags;
-
-  /// The names for the variables in this scope.
-  llvh::SmallVector<llvh::StringRef, 4> names;
-};
-
-/// The string representing a textual name for a call instruction's callee
-/// argument.
-struct DebugTextifiedCallee {
-  // The bytecode offset of this debug info.
-  uint32_t address{0};
-  // A textual name for the function being called. Must be a valid UTF8 string.
-  Identifier textifiedCallee;
+  /// \return true if this is a valid source location, i.e., non-zero line and
+  /// column number.
+  bool isValid() const {
+    return line != 0 && column != 0;
+  }
 };
 
 /// A type wrapping up the offsets into debugging data.
@@ -137,21 +168,12 @@ struct DebugOffsets {
   /// (DebugSourceLocation).
   uint32_t sourceLocations = NO_OFFSET;
 
-  /// Offset into the scope descriptor data section of the debugging data.
-  uint32_t scopeDescData = NO_OFFSET;
-
-  /// Offset into the textified callee data section of the debugging data.
-  uint32_t textifiedCallees = NO_OFFSET;
-
   /// Sentinel value indicating no offset.
   static constexpr uint32_t NO_OFFSET = UINT32_MAX;
 
   /// Constructors.
   DebugOffsets() = default;
-  DebugOffsets(uint32_t src, uint32_t scopeDesc, uint32_t tCallee)
-      : sourceLocations(src),
-        scopeDescData(scopeDesc),
-        textifiedCallees(tCallee) {}
+  DebugOffsets(uint32_t src) : sourceLocations(src) {}
 };
 
 /// A result of a search for a bytecode offset for where a line/column fall.
@@ -188,108 +210,102 @@ class DebugInfo {
   using DebugFileRegionList = llvh::SmallVector<DebugFileRegion, 1>;
 
  private:
-  /// Filename table for mapping to offsets and lengths in filenameStorage_.
-  std::vector<StringTableEntry> filenameTable_{};
-
-  /// String storage for filenames.
-  std::vector<unsigned char> filenameStorage_{};
+  UniquingFilenameTable filenameTable_;
 
   DebugFileRegionList files_{};
-  uint32_t scopeDescDataOffset_ = 0;
-  uint32_t textifiedCalleeOffset_ = 0;
-  uint32_t stringTableOffset_ = 0;
   StreamVector<uint8_t> data_{};
+  /// Side table holding all debug scoping information.
+  std::vector<DebugScopingInfo> scopingInfoTable_{};
+  /// Cache used to de-duplicte entries in the above table.
+  llvh::DenseMap<DebugScopingInfo::MapKeyTy, uint32_t> scopingInfoCache_{};
 
   /// Get source filename as string id.
   OptValue<uint32_t> getFilenameForAddress(uint32_t debugOffset) const;
-
-  /// Decodes a string at offset \p offset in \p data, updating offset in-place.
-  /// \return the decoded string.
-  llvh::StringRef decodeString(
-      uint32_t *inoutOffset,
-      llvh::ArrayRef<uint8_t> data) const;
 
  public:
   explicit DebugInfo() = default;
   /*implicit*/ DebugInfo(DebugInfo &&that) = default;
 
   explicit DebugInfo(
-      ConsecutiveStringStorage &&filenameStrings,
+      UniquingFilenameTable &&filenameTable,
       DebugFileRegionList &&files,
-      uint32_t scopeDescDataOffset,
-      uint32_t textifiedCalleeOffset,
-      uint32_t stringTableOffset,
       StreamVector<uint8_t> &&data)
-      : filenameTable_(filenameStrings.acquireStringTable()),
-        filenameStorage_(filenameStrings.acquireStringStorage()),
+      : filenameTable_(std::move(filenameTable)),
         files_(std::move(files)),
-        scopeDescDataOffset_(scopeDescDataOffset),
-        textifiedCalleeOffset_(textifiedCalleeOffset),
-        stringTableOffset_(stringTableOffset),
         data_(std::move(data)) {}
 
   explicit DebugInfo(
       std::vector<StringTableEntry> &&filenameStrings,
       std::vector<unsigned char> &&filenameStorage,
       DebugFileRegionList &&files,
-      uint32_t scopeDescDataOffset,
-      uint32_t textifiedCalleeOffset,
-      uint32_t stringTableOffset,
       StreamVector<uint8_t> &&data)
-      : filenameTable_(std::move(filenameStrings)),
-        filenameStorage_(std::move(filenameStorage)),
+      : filenameTable_(
+            ConsecutiveStringStorage{
+                std::move(filenameStrings),
+                std::move(filenameStorage)}),
         files_(std::move(files)),
-        scopeDescDataOffset_(scopeDescDataOffset),
-        textifiedCalleeOffset_(textifiedCalleeOffset),
-        stringTableOffset_(stringTableOffset),
         data_(std::move(data)) {}
 
   DebugInfo &operator=(DebugInfo &&that) = default;
 
+  llvh::DenseMap<DebugScopingInfo::MapKeyTy, uint32_t> &getScopingInfoCache() {
+    return scopingInfoCache_;
+  }
+  std::vector<DebugScopingInfo> &getScopingInfoTable() {
+    return scopingInfoTable_;
+  }
+  /// \return the element in the scoping info side table for \p envIdx, which is
+  /// 1-based.
+  DebugScopingInfo getScopingInfoAt(uint32_t envIdx) const {
+    assert(envIdx > 0 && "envIdx of 0 does not represent an element");
+    return scopingInfoTable_[envIdx - 1];
+  }
+
+  DebugFileRegionList &getFilesMut() {
+    return files_;
+  }
   const DebugFileRegionList &viewFiles() const {
     return files_;
+  }
+  void resetDataRef() {
+    return data_.resetRef();
+  }
+  std::vector<uint8_t> &getDataMut() {
+    return data_.getDataMut();
   }
   const StreamVector<uint8_t> &viewData() const {
     return data_;
   }
-  llvh::ArrayRef<StringTableEntry> getFilenameTable() const {
+  UniquingFilenameTable &getFilenameTableMut() {
     return filenameTable_;
   }
+  llvh::ArrayRef<StringTableEntry> getFilenameTable() const {
+    return filenameTable_.getStringTableView();
+  }
   llvh::ArrayRef<unsigned char> getFilenameStorage() const {
-    return filenameStorage_;
+    return filenameTable_.getStringStorageView();
   }
 
   /// Retrieve the filename for a given \p id in the filename table.
-  std::string getFilenameByID(uint32_t id) const {
-    assert(id < filenameTable_.size() && "Filename ID out of bounds");
+  std::string getUTF8FilenameByID(uint32_t id) const {
+    assert(id < getFilenameTable().size() && "Filename ID out of bounds");
     std::string utf8Storage;
-    return getStringFromEntry(filenameTable_[id], filenameStorage_, utf8Storage)
+    return getUTF8StringFromEntry(
+               getFilenameTable()[id], getFilenameStorage(), utf8Storage)
         .str();
   }
 
-  uint32_t scopeDescDataOffset() const {
-    return scopeDescDataOffset_;
-  }
-
-  uint32_t textifiedCalleeOffset() const {
-    return textifiedCalleeOffset_;
-  }
-
-  uint32_t stringTableOffset() const {
-    return stringTableOffset_;
-  }
-
   /// Get the location of \p offsetInFunction, given the function's debug
-  /// offset.
+  /// offset. None if there is no source location or it's invalid.
   OptValue<DebugSourceLocation> getLocationForAddress(
       uint32_t debugOffset,
       uint32_t offsetInFunction) const;
 
-  /// \return the name of the textified callee for the function called in the
-  /// given \p offsetInFunction. Encoding is UTF8.
-  OptValue<llvh::StringRef> getTextifiedCalleeUTF8(
-      uint32_t debugOffset,
-      uint32_t offsetInFunction) const;
+  /// Get the location of the start of the function with \p debugOffset.
+  /// None if there is no source location or it's invalid. Otherwise, always
+  /// returns a valid DebugSourceLocation.
+  OptValue<DebugSourceLocation> getLocationForFunction(
+      uint32_t debugOffset) const;
 
   /// Given a \p targetLine and optional \p targetColumn,
   /// find a bytecode address at which that location is listed in debug info.
@@ -300,82 +316,21 @@ class DebugInfo {
       uint32_t targetLine,
       OptValue<uint32_t> targetColumn) const;
 
-  /// Read the variable names at \p offset into the scope descriptor section
-  /// of the debug info. \return the list of variable names.
-  DebugScopeDescriptor getScopeDescriptor(uint32_t offset) const;
-
-  /// Reads out the parent function ID of the function whose lexical debug data
-  /// starts at \p offset. \return the ID of the parent function, or None if
-  /// none.
-  OptValue<uint32_t> getParentFunctionId(uint32_t offset) const;
-
-  /// \return the size in bytes of the source locations data.
-  uint32_t getSourceLocationsDataSizeBytes() const {
-    return scopeDescDataOffset_ - 0;
-  }
-
-  /// \return the size in bytes of the scope desc table data.
-  uint32_t getScopeDescDataSizeBytes() const {
-    return textifiedCalleeOffset_ - scopeDescDataOffset_;
-  }
-
-  /// \return the size in bytes of the textified callee data.
-  uint32_t getTextifiedCalleesDataSizeBytes() const {
-    return stringTableOffset_ - textifiedCalleeOffset_;
-  }
-
-  /// \return the size in bytes of the string table data.
-  uint32_t getStringTableSizeBytes() const {
-    return data_.size() - stringTableOffset_;
-  }
-
  private:
-  // clang-format off
-  /// Accessors for portions of data_, which looks like this:
-  /// [sourceLocations][scopeDescData][textifiedCallee][stringTable]
-  ///                  |              |                ^ stringTableOffset_
-  ///                  |              ^ textifiedCalleeOffset_
-  ///                  ^ scopeDescDataOffset_
-  // clang-format on
-
   /// \return the slice of data_ reflecting the source locations.
   llvh::ArrayRef<uint8_t> sourceLocationsData() const {
-    return data_.getData().slice(0, getSourceLocationsDataSizeBytes());
-  }
-
-  /// \return the slice of data_ reflecting the scope desc data
-  llvh::ArrayRef<uint8_t> scopeDescData() const {
-    return data_.getData().slice(
-        scopeDescDataOffset_, getScopeDescDataSizeBytes());
-  }
-
-  /// \return the slice of data_ reflecting the textified callee table.
-  llvh::ArrayRef<uint8_t> textifiedCalleeData() const {
-    return data_.getData().slice(
-        textifiedCalleeOffset_, getTextifiedCalleesDataSizeBytes());
-  }
-
-  /// \return the slice of data_ reflecting the string table data.
-  llvh::ArrayRef<uint8_t> stringTableData() const {
-    return data_.getData().slice(stringTableOffset_);
+    return data_.getData();
   }
 
   void disassembleFilenames(llvh::raw_ostream &OS) const;
   void disassembleFilesAndOffsets(llvh::raw_ostream &OS) const;
-  void disassembleScopeDescData(llvh::raw_ostream &OS) const;
-  void disassembleTextifiedCallee(llvh::raw_ostream &OS) const;
-  void disassembleStringTable(llvh::raw_ostream &OS) const;
 
  public:
   void disassemble(llvh::raw_ostream &OS) const {
     disassembleFilenames(OS);
     disassembleFilesAndOffsets(OS);
-    disassembleScopeDescData(OS);
-    disassembleTextifiedCallee(OS);
-    disassembleStringTable(OS);
   }
 
-#ifndef HERMESVM_LEAN
   /// Populate the given source map \p sourceMap with debug information.
   /// Each opcode with line and column information is mapped to its absolute
   /// offset in the bytecode file. To determine these absolute offsets, the
@@ -385,48 +340,25 @@ class DebugInfo {
       SourceMapGenerator *sourceMap,
       std::vector<uint32_t> &&functionOffsets,
       uint32_t segmentID) const;
-#endif
 };
 
 class DebugInfoGenerator {
  private:
-  /// A special offset for representing the most common entry in its table.
+  /// An offset into Debug Lexical Table pointing to a special entry,
+  /// representing the most common value in the Debug Lexical Table
+  /// (vars count: 0, lexical parent: none). When compiled without -g,
+  /// this common value applies to all functions without local variables.
+  /// This optimization reduces hbc bundle size.
   ///
-  /// For Scope Desc Table, it represents the most common info (vars count: 0,
-  /// lexical parent: none). When compiled without -g, this common value applies
-  /// to all functions without local variables. This optimization reduces hbc
-  /// bundle size; When compiled with -g, the lexical parent is none for the
-  /// global function, but not any other functions. As a result, this
-  /// optimization does not provide value.
-  ///
-  /// For textified callee table, it represents an empty table.
-  static constexpr uint32_t kMostCommonEntryOffset = 0;
+  /// When compiled with -g, the lexical parent is none for the global
+  /// function, but not any other functions. As a result, this optimization
+  /// does not provide value.
+  static constexpr uint32_t kEmptyLexicalDataOffset = 0;
 
   bool validData{true};
 
-  /// Serialized source location data.
-  std::vector<uint8_t> sourcesData_{};
-
-  /// String storage for filenames.
-  /// ConsecutiveStringStorage is not copy-constructible or copy-assignable.
-  ConsecutiveStringStorage filenameStrings_;
-
-  /// List of files mapping file ID to source location offsets.
-  DebugInfo::DebugFileRegionList files_{};
-
-  /// Serialized scope descriptors.
-  std::vector<uint8_t> scopeDescData_;
-
-  /// Serialized textified callee table.
-  std::vector<uint8_t> textifiedCallees_;
-
-  /// The debug info string table. All string entries in the debug info records
-  /// point to an entry in this table. Strings are encoded as size-prefixed,
-  /// UTF8-encoded payloads.
-  std::vector<uint8_t> stringTable_;
-
-  /// An index for strings in stringTable_.
-  llvh::DenseMap<UniqueString *, uint32_t> stringTableIndex_;
+  /// The DebugInfo object being generated.
+  DebugInfo &debugInfo_;
 
   int32_t delta(uint32_t to, uint32_t from) {
     int64_t diff = (int64_t)to - from;
@@ -438,47 +370,152 @@ class DebugInfoGenerator {
     return (int32_t)diff;
   }
 
-  /// Appends \p str to stringTable_ if not already present, then
-  /// appends \p str's offset in stringTable_ to the given \p data.
-  void appendString(std::vector<uint8_t> &data, Identifier str);
+  /// Appends a string \p str to the given \p data.
+  /// This first appends the string's length, followed by the string bytes.
+  static void appendString(std::vector<uint8_t> &data, llvh::StringRef str) {
+    appendSignedLEB128(data, int64_t(str.size()));
+    data.insert(data.end(), str.begin(), str.end());
+  }
 
   /// No copy constructor or copy assignment operator.
-  /// Note that filenameStrings_ is of type ConsecutiveStringStorage, which
-  /// is not copy-constructible or copy-assignable.
+  /// Note that filenameStrings_ is not copy-constructible or copy-assignable.
   DebugInfoGenerator(const DebugInfoGenerator &) = delete;
   DebugInfoGenerator &operator=(const DebugInfoGenerator &) = delete;
 
  public:
-  explicit DebugInfoGenerator(UniquingFilenameTable &&filenameTable);
+  explicit DebugInfoGenerator(DebugInfo &debugInfo) : debugInfo_(debugInfo) {}
 
   DebugInfoGenerator(DebugInfoGenerator &&) = default;
+
+  uint32_t sourceLocationsDataSize() const {
+    return debugInfo_.viewData().size();
+  }
+
+  /// Add a new filename to the table, returning an index into the table.
+  uint32_t addFilename(llvh::StringRef filename) {
+    return debugInfo_.getFilenameTableMut().addFilename(filename);
+  }
 
   uint32_t appendSourceLocations(
       const DebugSourceLocation &start,
       uint32_t functionIndex,
       llvh::ArrayRef<DebugSourceLocation> offsets);
 
-  /// Appends a scope descriptor with the given \p parentScopeID and
-  /// \p names to the scope descriptor table.
-  ///
-  /// \p names is the list of variables that live in the scope.
-  ///
-  /// \p flags contains the flags for \p names. See DebugScopeDescriptor::Flags.
-  ///
-  /// \returns the offset of the new scope descriptor in the table.
-  uint32_t appendScopeDesc(
-      OptValue<uint32_t> parentScopeID,
-      DebugScopeDescriptor::Flags flags,
-      llvh::ArrayRef<Identifier> names);
+  /// Add \p scopingInfo to a maintained list of DebugScopingInfo, and return a
+  /// 1-based index to find \p scopingInfo in that list.
+  uint32_t addScopingInfo(const DebugScopingInfo &scopingInfo);
 
-  /// Append the textified callee data to the debug data. \return the offset in
-  /// the textified callee table of the debug data.
-  uint32_t appendTextifiedCalleeData(
-      llvh::ArrayRef<DebugTextifiedCallee> textifiedCallees);
-
-  // Destructively move memory to a DebugInfo.
-  DebugInfo serializeWithMove();
+  // Finish generating the debug info.
+  void generate() &&;
 };
+
+namespace detail {
+
+/// A type used to iteratively deserialize function debug info.
+struct FunctionDebugInfoDeserializer {
+  /// Construct a deserializer that begins deserializing at \p offset in \p
+  /// data. It will deserialize until the function's debug info is finished
+  /// (address delta = -1) at which point isDone() will return true. The offset
+  /// of the next section can be obtained via getOffset().
+  /// isDone() will not be true until after the first call to next().
+  FunctionDebugInfoDeserializer(llvh::ArrayRef<uint8_t> data, uint32_t offset)
+      : data_(data), offset_(offset) {
+    functionIndex_ = decode1Int();
+    current_.line = decode1Int();
+    current_.column = decode1Int();
+    current_.envIdx = decode1Int();
+  }
+
+  /// \return the next debug location, or None if we reach the end.
+  /// Sample usage: while (auto loc = fdid.next()) {...}
+  OptValue<DebugSourceLocation> next() {
+    assert(!done_ && "next() called after done");
+
+    auto addressDelta = decode1Int();
+    if (addressDelta == -1) {
+      done_ = true;
+      return llvh::None;
+    }
+    current_.address += addressDelta;
+
+    // ldelta encoding: bits 3..32 contain the line delta.
+    // Bit 0 indicates the presence of location information.
+    // Bit 1 indicates the presence of statement information.
+    // Bit 2 indicates the presence of envIdx information.
+
+    int64_t lineDelta = decode1Int();
+    if ((lineDelta & 1) == 0) {
+      // No location information here, but not done yet.
+      return llvh::None;
+    }
+
+    int64_t columnDelta = decode1Int();
+    int64_t statementDelta = 0;
+    if ((lineDelta & 2) != 0) {
+      statementDelta = decode1Int();
+    }
+
+    int64_t envIdxDelta = 0;
+    if ((lineDelta & 4) != 0) {
+      envIdxDelta = decode1Int();
+    }
+
+    lineDelta >>= 3;
+
+    current_.line += lineDelta;
+    current_.column += columnDelta;
+    current_.statement += statementDelta;
+    current_.envIdx += envIdxDelta;
+    return current_;
+  }
+
+  /// \return whether we're done reading the debug info for this function.
+  /// next() must not be called when isDone() is true.
+  bool isDone() const {
+    return done_;
+  }
+
+  /// \return the offset of this deserializer in the data.
+  uint32_t getOffset() const {
+    return offset_;
+  }
+
+  /// \return the index of the function being deserialized.
+  uint32_t getFunctionIndex() const {
+    return functionIndex_;
+  }
+
+  /// \return the current source location. None if it's invalid.
+  OptValue<DebugSourceLocation> getCurrent() const {
+    if (current_.isValid())
+      return current_;
+    return llvh::None;
+  }
+
+  /// \return the current address. Note that the current offset may not have
+  /// location information, but it still has valid address.
+  uint32_t getCurrentAddress() const {
+    return current_.address;
+  }
+
+ private:
+  /// LEB-decode the next int.
+  int64_t decode1Int() {
+    int64_t result;
+    offset_ += readSignedLEB128(data_, offset_, &result);
+    return result;
+  }
+
+  llvh::ArrayRef<uint8_t> data_;
+  uint32_t offset_;
+
+  uint32_t functionIndex_;
+  DebugSourceLocation current_;
+
+  bool done_ = false;
+};
+
+} // namespace detail
 
 } // namespace hbc
 } // namespace hermes

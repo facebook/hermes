@@ -108,7 +108,7 @@ type A = 42n;
 // CHECK-NEXT:         "type": "TSLiteralType",
 // CHECK-NEXT:         "literal": {
 // CHECK-NEXT:           "type": "BigIntLiteral",
-// CHECK-NEXT:           "bigint": "42n"
+// CHECK-NEXT:           "bigint": "42"
 // CHECK-NEXT:         }
 // CHECK-NEXT:       }
 // CHECK-NEXT:     }

@@ -267,7 +267,7 @@ describe('flowToFlowDef', () => {
       `);
     });
   });
-  describe('FunctionDeclation', () => {
+  describe('FunctionDeclaration', () => {
     it('basic', async () => {
       await expectTranslate(
         `export function foo(): void {}`,
@@ -298,10 +298,28 @@ describe('flowToFlowDef', () => {
         `declare export function foo(bar: string, ...baz: Array<number>): void;`,
       );
     });
+    it('with destructured rest params', async () => {
+      await expectTranslate(
+        `export function foo(...{bar}: {bar: string}): void {}`,
+        `declare export function foo(...$$PARAM_0$$: {bar: string}): void;`,
+      );
+    });
     it('with default params', async () => {
       await expectTranslate(
         `export function foo(bar: string = 'hello'): void {}`,
-        `declare export function foo(bar: string): void;`,
+        `declare export function foo(bar?: string): void;`,
+      );
+    });
+    it('without identifier', async () => {
+      await expectTranslate(
+        `export function foo({foo = 'foo'}: Foo): void {}`,
+        `declare export function foo($$PARAM_0$$: Foo): void;`,
+      );
+    });
+    it('without identifier with default param', async () => {
+      await expectTranslate(
+        `export function foo({foo = 'foo'}: Foo = {}): void {}`,
+        `declare export function foo($$PARAM_0$$?: Foo): void;`,
       );
     });
     it('with predicates', async () => {
@@ -380,9 +398,11 @@ describe('flowToFlowDef', () => {
     it('property', async () => {
       await expectTranslate(
         `export class A {
+           /** foo documentation */
            foo: string = '';
          }`,
         `declare export class A {
+           /** foo documentation */
            foo: string;
          }`,
       );
@@ -436,11 +456,15 @@ describe('flowToFlowDef', () => {
     it('method', async () => {
       await expectTranslate(
         `export class A {
+           /** foo documentation */
            foo() {}
+           /** static bar documentation */
            static bar() {}
          }`,
         `declare export class A {
+           /** foo documentation */
            foo(): void;
+           /** static bar documentation */
            static bar(): void;
          }`,
       );
@@ -539,6 +563,22 @@ describe('flowToFlowDef', () => {
          export const bar = foo;`,
         `import {foo} from 'foo';
          declare export const bar: typeof foo;`,
+      );
+    });
+    it('with object type', async () => {
+      await expectTranslate(
+        `export const foo = {
+           /** Example documentation */
+           bar: 1,
+           /** This is useful */
+           baz(): number { return 123; }
+         };`,
+        `declare export const foo: {
+           /** Example documentation */
+           bar: 1,
+           /** This is useful */
+           baz(): number,
+         };`,
       );
     });
   });

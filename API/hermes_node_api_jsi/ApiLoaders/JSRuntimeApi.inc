@@ -39,6 +39,7 @@ JSR_JSI_FUNC(jsr_drain_microtasks)
 JSR_JSI_FUNC(jsr_get_description)
 JSR_JSI_FUNC(jsr_is_inspectable)
 JSR_JSI_FUNC(jsr_open_napi_env_scope)
+JSR_JSI_FUNC(jsr_run_script_buffer)
 
 // The JS runtime functions needed for prepared script.
 JSR_PREPARED_SCRIPT(jsr_create_prepared_script)

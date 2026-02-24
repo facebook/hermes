@@ -5,11 +5,7 @@ on:
     inputs:
       release-type:
         required: true
-        description: The type of release we are building. It could be commitly, release or dry-run
-        type: string
-      hermes-version:
-        required: true
-        description: The Hermes version to use for this build
+        description: The type of release we are building. It could be release or dry-run
         type: string
 
 jobs:
@@ -66,16 +62,16 @@ jobs:
         with:
           name: hermes-dSYM-Release
           path: /tmp/hermes/dSYM/Release
-      - name: Download windows-bin artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: hermes-win64-bin
-          path: /tmp/hermes/win64-bin
       - name: Download linux-bin artifacts
         uses: actions/download-artifact@v4
         with:
           name: hermes-linux-bin
           path: /tmp/hermes/linux64-bin
+      - name: Download windows-bin artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: hermes-win64-bin
+          path: /tmp/hermes/win64-bin
       - name: Show /tmp/hermes directory
         shell: bash
         run: ls -lR /tmp/hermes
@@ -93,7 +89,7 @@ jobs:
       - name: Publish artifacts
         shell: bash
         run: |
-          node ./utils/scripts/hermes/publish-artifacts.js -t ${{ inputs.release-type }} -v ${{ inputs.hermes-version }}
+          node ./utils/scripts/hermes/publish-artifacts.js -t ${{ inputs.release-type }}
       - name: Set npm credentials
         if: ${{ inputs.release-type == 'release' ||
           inputs.release-type == 'commitly' }}
@@ -102,7 +98,7 @@ jobs:
       - name: Publish to npm
         shell: bash
         run: |
-          node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }} -v ${{ inputs.hermes-version }}
+          node ./utils/scripts/hermes/publish-npm.js -t ${{ inputs.release-type }}
       - name: Upload npm logs
         uses: actions/upload-artifact@v4.3.4
         with:

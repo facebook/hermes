@@ -11,8 +11,6 @@
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
 
-#define INCLUDE_ALL_INSTRS
-
 namespace hermes {
 
 /// IRVisitorBase - This is a simple visitor class for Hermes IR nodes, allowing
@@ -35,6 +33,12 @@ class IRVisitorBase {
   ValueRetTy visit##CLASS(const CLASS &I) { \
     return asImpl().visit##PARENT(I);       \
   }
+#define MARK_FIRST(CLASS, PARENT) DEF_VALUE(CLASS, PARENT)
+#define BEGIN_VALUE(CLASS, PARENT) DEF_VALUE(CLASS, PARENT)
+#define DEF_TAG(NAME, PARENT)               \
+  ValueRetTy visit##NAME(const PARENT &I) { \
+    return asImpl().visit##PARENT(I);       \
+  }
 #include "hermes/IR/ValueKinds.def"
 };
 
@@ -55,6 +59,9 @@ class IRVisitor : public IRVisitorBase<ImplClass, ValueRetTy> {
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
     return asImpl().visit##CLASS(*llvh::cast<CLASS>(&V));
+#define DEF_TAG(NAME, PARENT) \
+  case ValueKind::NAME##Kind: \
+    return asImpl().visit##PARENT(*llvh::cast<PARENT>(&V));
 #include "hermes/IR/ValueKinds.def"
     }
     llvm_unreachable("Not reachable, all cases handled");
@@ -85,6 +92,9 @@ class InstructionVisitor : public IRVisitorBase<ImplClass, ValueRetTy> {
 #define DEF_VALUE(CLASS, PARENT) \
   case ValueKind::CLASS##Kind:   \
     return asImpl().visit##CLASS(*llvh::cast<CLASS>(&Inst));
+#define DEF_TAG(NAME, PARENT) \
+  case ValueKind::NAME##Kind: \
+    return asImpl().visit##NAME(*llvh::cast<PARENT>(&Inst));
 #include "hermes/IR/Instrs.def"
     }
     llvm_unreachable("Not reachable, all cases handled");
@@ -93,5 +103,4 @@ class InstructionVisitor : public IRVisitorBase<ImplClass, ValueRetTy> {
 
 } // end namespace hermes
 
-#undef INCLUDE_ALL_INSTRS
 #endif

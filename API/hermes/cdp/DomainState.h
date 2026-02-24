@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_DOMAINSTATE_H
-#define HERMES_CDP_DOMAINSTATE_H
+#pragma once
 
 #include <memory>
 #include <mutex>
@@ -32,7 +31,6 @@ namespace cdp {
 
 /// Base class for data to be stored in DomainState.
 struct StateValue {
- public:
   virtual ~StateValue() = default;
   virtual std::unique_ptr<StateValue> copy() const = 0;
 };
@@ -140,5 +138,3 @@ class DomainState {
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_DOMAINSTATE_H

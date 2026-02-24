@@ -86,7 +86,7 @@ void dumpInstruction(
     const regex::MatchChar16Insn *insn,
     llvh::raw_ostream &OS) {
   OS << "MatchChar16: ";
-  char32_t c = static_cast<char32_t>(insn->c);
+  char32_t c = insn->c;
   OS << llvh::format_hex(c, 4);
 }
 
@@ -147,7 +147,7 @@ void dumpInstruction(
     const regex::MatchCharICase16Insn *insn,
     llvh::raw_ostream &OS) {
   OS << "MatchCharICase16: ";
-  char32_t c = static_cast<char32_t>(insn->c);
+  char32_t c = insn->c;
   OS << llvh::format_hex(c, 4);
 }
 
@@ -360,27 +360,6 @@ llvh::Optional<CompiledRegExp> CompiledRegExp::tryCompile(
 
 llvh::ArrayRef<uint8_t> CompiledRegExp::getBytecode() const {
   return bytecode_;
-}
-
-std::vector<RegExpTableEntry> UniquingRegExpTable::getEntryList() const {
-  std::vector<RegExpTableEntry> result;
-  result.reserve(regexps_.size());
-  uint32_t offset = 0;
-  for (const auto &re : regexps_) {
-    uint32_t size = re->getBytecode().size();
-    result.push_back(RegExpTableEntry{offset, size});
-    offset += size;
-  }
-  return result;
-}
-
-RegExpBytecode UniquingRegExpTable::getBytecodeBuffer() const {
-  RegExpBytecode result;
-  for (const auto &re : regexps_) {
-    auto bytecode = re->getBytecode();
-    result.insert(result.end(), bytecode.begin(), bytecode.end());
-  }
-  return result;
 }
 
 void UniquingRegExpTable::disassemble(llvh::raw_ostream &OS) const {

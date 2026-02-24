@@ -15,7 +15,7 @@
 
 namespace llvh {
 
-extern cl::OptionCategory ColorCategory;
+extern cl::OptionCategory &getColorCategory();
 
 class raw_ostream;
 

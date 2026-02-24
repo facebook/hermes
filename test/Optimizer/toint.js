@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function foo (x) {
     return 1e20 | 0;
@@ -13,19 +13,15 @@ function foo (x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [foo]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : number, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#0#1(x)#2 : number
-// CHECK-NEXT:S{foo#0#1()#2} = []
+// CHECK:function foo(x: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst 1661992960 : number
+// CHECK-NEXT:       ReturnInst 1661992960: number
 // CHECK-NEXT:function_end

@@ -12,11 +12,7 @@
 #include "hermes/VM/Handle.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSObject.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -47,7 +43,6 @@ ExecutionStatus createListFromArrayLike_RJS(
     const ElementCB &elementCB) {
   GCScope gcScope(runtime);
   Handle<ArrayImpl> elemArray = Handle<ArrayImpl>::dyn_vmcast(arrayLikeHandle);
-  MutableHandle<> iHandle{runtime, HermesValue::encodeTrustedNumberValue(0)};
   auto marker = gcScope.createMarker();
   if (LLVM_LIKELY(elemArray)) {
     for (uint64_t elemIdx = 0; elemIdx < length; ++elemIdx) {
@@ -67,9 +62,8 @@ ExecutionStatus createListFromArrayLike_RJS(
       }
       // Slow path fallback: the actual getComputed on this,
       // because the real value could be up the prototype chain.
-      iHandle = HermesValue::encodeTrustedNumberValue(elemIdx);
       CallResult<PseudoHandle<>> propRes =
-          JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
+          getIndexed_RJS(runtime, arrayLikeHandle, elemIdx);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -83,9 +77,8 @@ ExecutionStatus createListFromArrayLike_RJS(
     // Not an array. Use this slow path.
     for (uint64_t elemIdx = 0; elemIdx < length; ++elemIdx) {
       gcScope.flushToMarker(marker);
-      iHandle = HermesValue::encodeTrustedNumberValue(elemIdx);
       CallResult<PseudoHandle<>> propRes =
-          JSObject::getComputed_RJS(arrayLikeHandle, runtime, iHandle);
+          getIndexed_RJS(runtime, arrayLikeHandle, elemIdx);
       if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
@@ -101,6 +94,5 @@ ExecutionStatus createListFromArrayLike_RJS(
 
 } // namespace vm
 } // namespace hermes
-#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_ARRAYLIKE_H

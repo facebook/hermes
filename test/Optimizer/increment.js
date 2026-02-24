@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O  | %FileCheckOrRegen %s
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O  | %FileCheckOrRegen %s
 
 function foo() {
   var k = 4;
@@ -22,21 +22,17 @@ foo()
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [foo]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : number, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %5 = ReturnInst %4
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       ReturnInst %4: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#0#1()#2 : number
-// CHECK-NEXT:S{foo#0#1()#2} = []
+// CHECK:function foo(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst 10 : number
+// CHECK-NEXT:       ReturnInst 10: number
 // CHECK-NEXT:function_end

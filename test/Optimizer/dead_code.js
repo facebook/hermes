@@ -5,58 +5,52 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O | %FileCheck %s --match-full-lines
-
-// Make sure we can remove all trampolines from our code.
-
-//CHECK-LABEL:function test_one#0#1(x, y, z)#2 : string
-//CHECK-NEXT:S{test_one#0#1()#2} = []
-//CHECK-NEXT:  %BB0:
-
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O | %FileCheckOrRegen %s --match-full-lines
 
 function test_one(x,y,z) {
-//CHECK-NEXT:    %0 = CreateScopeInst %S{test_one#0#1()#2}
-
-//CHECK-NEXT:    %1 = BinaryOperatorInst '+', %x, %y
   x + y
-
-//CHECK-NEXT:    %2 = BinaryOperatorInst '+', %x, 5 : number
   x + 5
-
-//CHECK-NEXT:    %3 = BinaryOperatorInst '+', false : boolean, %y
   false + y
-
-//DEAD!
   8 + false
-
-//DEAD!
   9 + "9"
-
-//DEAD!
   8 + false
-
-//DEAD!
   "hi" + "bye"
-
-//Alive - result is used.
-//CHECK-NEXT:    %4 = BinaryOperatorInst '+', "hi" : string, %z
   var t = "hi" + z
-
-//DEAD!
   null + "hi"
-
-//CHECK-NEXT:    %5 = ReturnInst %4 : string
-//CHECK-NEXT:function_end
   return t
 }
 
-//CHECK-LABEL:function test_two#0#1(x, y, z)#3 : undefined
-//CHECK-NEXT:S{test_two#0#1()#3} = []
-//CHECK-NEXT:  %BB0:
-//CHECK-NEXT:    %0 = CreateScopeInst %S{test_two#0#1()#3}
-//CHECK-NEXT:    %1 = ReturnInst undefined : undefined
-//CHECK-NEXT:function_end
 function test_two(x,y,z) {
   function test00() {}
   var test01 = function() {}
 }
+
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:function global(): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %test_two(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_two": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end
+
+// CHECK:function test_one(x: any, y: any, z: any): string
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:  %3 = BinaryAddInst (:string|number|bigint) %0: any, %1: any
+// CHECK-NEXT:  %4 = BinaryAddInst (:string|number) %0: any, 5: number
+// CHECK-NEXT:  %5 = BinaryAddInst (:string|number) false: boolean, %1: any
+// CHECK-NEXT:  %6 = BinaryAddInst (:string) "hi": string, %2: any
+// CHECK-NEXT:       ReturnInst %6: string
+// CHECK-NEXT:function_end
+
+// CHECK:function test_two(x: any, y: any, z: any): undefined
+// CHECK-NEXT:%BB0:
+// CHECK-NEXT:       ReturnInst undefined: undefined
+// CHECK-NEXT:function_end

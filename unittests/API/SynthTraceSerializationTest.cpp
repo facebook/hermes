@@ -285,9 +285,6 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
 
   auto gcConfig = rtConfig.getPropertyAsObject(*rt, "gcConfig");
   EXPECT_EQ(
-      conf.getGCConfig().getMinHeapSize(),
-      gcConfig.getProperty(*rt, "minHeapSize").asNumber());
-  EXPECT_EQ(
       conf.getGCConfig().getInitHeapSize(),
       gcConfig.getProperty(*rt, "initHeapSize").asNumber());
   EXPECT_EQ(
@@ -316,8 +313,6 @@ TEST_F(SynthTraceSerializationTest, TraceHeader) {
   EXPECT_EQ(
       conf.getMaxNumRegisters(),
       rtConfig.getProperty(*rt, "maxNumRegisters").asNumber());
-  EXPECT_EQ(
-      conf.getES6Promise(), rtConfig.getProperty(*rt, "ES6Promise").asBool());
   EXPECT_EQ(conf.getES6Proxy(), rtConfig.getProperty(*rt, "ES6Proxy").asBool());
   EXPECT_EQ(conf.getIntl(), rtConfig.getProperty(*rt, "Intl").asBool());
   EXPECT_EQ(

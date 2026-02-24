@@ -49,7 +49,7 @@ const = 1
   });
 
   test('Has error location', () => {
-    expect(() => parse('const = 1')).toThrowError(
+    expect(() => parse('const = 1')).toThrow(
       expect.objectContaining({
         loc: {
           line: 1,
@@ -223,7 +223,9 @@ component Foo() {}
 });
 
 test('Allow Flow match syntax', () => {
-  expect(() => parse('const e = match (x) {}')).toThrow(
+  expect(() =>
+    parse('const e = match (x) {}', {enableExperimentalFlowMatchSyntax: false}),
+  ).toThrow(
     new SyntaxError(
       `';' expected (1:20)
 const e = match (x) {}
@@ -231,9 +233,7 @@ const e = match (x) {}
     ),
   );
 
-  expect(
-    parse('const e = match (x) {}', {enableExperimentalFlowMatchSyntax: true}),
-  ).toMatchObject({
+  expect(parse('const e = match (x) {}')).toMatchObject({
     type: 'Program',
     body: [
       {
@@ -256,6 +256,31 @@ const e = match (x) {}
           },
         ],
         kind: 'const',
+      },
+    ],
+  });
+});
+
+test('Allow Flow record syntax', () => {
+  expect(() =>
+    parse('record R {}', {enableExperimentalFlowRecordSyntax: false}),
+  ).toThrow(new SyntaxError(`Failed to parse source`));
+
+  expect(parse('record R {}')).toMatchObject({
+    type: 'Program',
+    body: [
+      {
+        type: 'RecordDeclaration',
+        id: {
+          type: 'Identifier',
+          name: 'R',
+        },
+        implements: [],
+        typeParameters: null,
+        body: {
+          type: 'RecordDeclarationBody',
+          elements: [],
+        },
       },
     ],
   });

@@ -123,6 +123,12 @@ add_hermes_library(hermesinspector
   ${inspector_public_headers}
   ${CMAKE_CURRENT_BINARY_DIR}/version.rc)
 
+# The vendored folly library is not C++20 compatible with MSVC (removed
+# std::allocator typedefs, operator<=> rewriting ambiguities, etc.).
+# Since this inspector code is legacy and slated for removal, use C++17.
+set_target_properties(hermesinspector PROPERTIES CXX_STANDARD 17)
+set_target_properties(hermesinspector_obj PROPERTIES CXX_STANDARD 17)
+
 target_link_libraries(hermesinspector
   hermesNodeApi
   hermesPublic
@@ -133,6 +139,16 @@ hermes_link_icu(hermesinspector)
 # Export the required header directory
 target_include_directories(hermesinspector PUBLIC
   ../..
+  ${FOLLY_SOURCE}
+  ${REACT_NATIVE_SOURCE}/ReactCommon
+  ${REACT_NATIVE_SOURCE}/ReactCommon/runtimeexecutor
+  ${REACT_NATIVE_SOURCE_72}/ReactCommon)
+
+target_include_directories(hermesinspector_obj PUBLIC
+  ${PROJECT_SOURCE_DIR}/API
+  ${PROJECT_SOURCE_DIR}/API/jsi
+  ${PROJECT_SOURCE_DIR}/API/hermes_node_api/node_api
+  ${PROJECT_SOURCE_DIR}/public
   ${FOLLY_SOURCE}
   ${REACT_NATIVE_SOURCE}/ReactCommon
   ${REACT_NATIVE_SOURCE}/ReactCommon/runtimeexecutor

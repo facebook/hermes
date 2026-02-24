@@ -25,10 +25,7 @@ TEST(IRBasicBlockTest, BasicBlockConnectionTest) {
   Module M(Ctx);
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "main",
-      Function::DefinitionKind::ES5Function,
-      true);
+      "main", Function::DefinitionKind::ES5Function, true);
   auto BB1 = Builder.createBasicBlock(F);
   auto BB2 = Builder.createBasicBlock(F);
   Builder.setInsertionBlock(BB1);

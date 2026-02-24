@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes %s 2>&1 ) | %FileCheck %s
+// RUN: (! %hermesc -dump-ast %s 2>&1 ) | %FileCheck %s
 
 // Verify that invalid Unicode identifiers cause errors
 // to be emitted.

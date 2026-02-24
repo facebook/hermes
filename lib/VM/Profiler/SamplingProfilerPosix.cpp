@@ -20,7 +20,7 @@
 
 #include "llvh/Support/Compiler.h"
 
-#include "ChromeTraceSerializer.h"
+#include "TraceSerializer.h"
 
 // Determine if LOOM allowed as well as if it is supported by the target
 // platform. From this point on, the code should use
@@ -158,6 +158,11 @@ SamplingProfilerPosix::SamplingProfilerPosix(Runtime &rt)
       FBLoomTracerType::JAVASCRIPT, disable);
   loomDataPushEnabled_ = true;
 #endif
+
+  // Note that we cannot register this in the base class constructor, because
+  // all fields must be initialized before we register with the profiling
+  // thread.
+  sampling_profiler::Sampler::get()->registerRuntime(this);
 }
 
 SamplingProfilerPosix::~SamplingProfilerPosix() {
@@ -225,7 +230,8 @@ void SamplerPosix::profilingSignalHandler(int signo) {
       profilerInstance != nullptr &&
       "Why is SamplerPosix::instance_ not initialized yet?");
 
-  profilerInstance->walkRuntimeStack(localProfiler);
+  profilerInstance->walkRuntimeStack(
+      localProfiler, SamplingProfiler::MayAllocate::No);
 
   // Ensure that writes made in the handler are visible to the timer thread.
   profilerForSig_.store(nullptr);
@@ -409,8 +415,9 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
         "Why is Sampler::instance_ not initialized yet?");
     // Do not register domains for Loom profiling, since we don't use them for
     // symbolication.
-    sampledStackDepth = localProfiler->walkRuntimeStack(
-        profilerInstance->sampleStorage_, InLoom::Yes);
+    localProfiler->walkRuntimeStack(
+        profilerInstance->sampleStorage_, InLoom::Yes, MayAllocate::No);
+    sampledStackDepth = profilerInstance->sampleStorage_.stack.size();
   } else {
     // TODO: log "GC in process" meta event.
     sampledStackDepth = 0;
@@ -427,6 +434,7 @@ void SamplingProfilerPosix::collectStackForLoomCommon(
     const StackFrame &stackFrame = profilerInstance->sampleStorage_.stack[i];
     localProfiler->collectStackForLoomCommon(stackFrame, frames, i);
   }
+  profilerInstance->sampleStorage_.stack.clear();
   *depth = sampledStackDepth;
   if (*depth == 0) {
     return StackCollectionRetcode::EMPTY_STACK;

@@ -22,6 +22,7 @@
 #include "llvh/Support/Process.h"
 #include "llvh/Support/YAMLTraits.h"
 #include "llvh/Support/raw_ostream.h"
+#include "llvh/Support/DebugOptions.h"
 #include <limits>
 
 using namespace llvh;
@@ -41,15 +42,30 @@ static std::string &getLibSupportInfoOutputFilename() {
 static ManagedStatic<sys::SmartMutex<true> > TimerLock;
 
 namespace {
-  static cl::opt<bool>
-  TrackSpace("track-memory", cl::desc("Enable -time-passes memory "
+struct CreateTrackSpace {
+  static void *call() {
+    return new cl::opt<bool>("track-memory",
+                             cl::desc("Enable -time-passes memory "
                                       "tracking (this may be slow)"),
-             cl::Hidden);
+                             cl::Hidden);
+  }
+};
+static ManagedStatic<cl::opt<bool>, CreateTrackSpace> TrackSpace;
+struct CreateInfoOutputFilename {
+  static void *call() {
+    return new cl::opt<std::string, true>(
+        "info-output-file", cl::value_desc("filename"),
+        cl::desc("File to append -stats and -timer output to"), cl::Hidden,
+        cl::location(getLibSupportInfoOutputFilename()));
+  }
+};
+static ManagedStatic<cl::opt<std::string, true>, CreateInfoOutputFilename>
+    InfoOutputFilename;
+}
 
-  static cl::opt<std::string, true>
-  InfoOutputFilename("info-output-file", cl::value_desc("filename"),
-                     cl::desc("File to append -stats and -timer output to"),
-                   cl::Hidden, cl::location(getLibSupportInfoOutputFilename()));
+void llvh::initTimerOptions() {
+  *TrackSpace;
+  *InfoOutputFilename;
 }
 
 std::unique_ptr<raw_fd_ostream> llvh::CreateInfoOutputFile() {
@@ -107,7 +123,7 @@ Timer::~Timer() {
 }
 
 static inline size_t getMemUsage() {
-  if (!TrackSpace) return 0;
+  if (!*TrackSpace) return 0;
   return sys::Process::GetMallocUsage();
 }
 

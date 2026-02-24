@@ -1371,4 +1371,40 @@ foo(
 type A = {a(): void, b: () => void, get c(): void, set d(param: string): void};
 `);
   });
+
+  describe('New Flow Syntax Support', () => {
+    it('match', async () => {
+      const code = `\
+const x = match (x) { _ => 1 };
+`;
+      const result = await transform(code, context => ({
+        VariableDeclaration(node) {
+          context.insertBeforeStatement(
+            node,
+            t.VariableDeclaration({
+              kind: 'const',
+              declarations: [
+                t.VariableDeclarator({
+                  id: t.Identifier({
+                    name: 'y',
+                  }),
+                  init: t.NumericLiteral({
+                    value: 1,
+                    raw: '1',
+                  }),
+                }),
+              ],
+            }),
+          );
+        },
+      }));
+
+      expect(result).toBe(`\
+const y = 1;
+const x = match (x) {
+  _ => 1,
+};
+`);
+    });
+  });
 });

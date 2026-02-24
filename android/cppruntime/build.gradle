@@ -10,6 +10,11 @@ plugins {
   id("com.facebook.hermes.plugins.internal.hermesUtils")
 }
 
+repositories {
+  google()
+  mavenCentral()
+}
+
 buildDir = "${hermesUtils.hermesWs}/build_android/cppruntime"
 buildDir.mkdirs()
 
@@ -35,7 +40,7 @@ android {
   externalNativeBuild {
     cmake {
       version = hermesUtils.cmakeVersion
-      path "src/main/cpp/CMakeLists.txt"
+      path = "src/main/cpp/CMakeLists.txt"
       buildStagingDirectory = "${hermesUtils.hermesWs}/staging/cppruntime"
       buildStagingDirectory.mkdirs()
     }

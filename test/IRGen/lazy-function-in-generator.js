@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -lazy %s | %FileCheck %s --match-full-lines
+// REQUIRES: interpreter
 
 // Make sure we can correctly resolve scopes through lazily compiled
 // functions in lazily compiled generators.

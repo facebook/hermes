@@ -12,14 +12,11 @@
 #define NATIVE_FUNCTION(func)
 #endif
 
-#ifndef NATIVE_CONSTRUCTOR
-#define NATIVE_CONSTRUCTOR(func)
-#endif
-
 NATIVE_FUNCTION(arrayBufferConstructor)
 NATIVE_FUNCTION(arrayBufferIsView)
 
 NATIVE_FUNCTION(arrayBufferPrototypeByteLength)
+NATIVE_FUNCTION(arrayBufferPrototypeDetached)
 NATIVE_FUNCTION(arrayBufferPrototypeSlice)
 
 NATIVE_FUNCTION(arrayConstructor)
@@ -141,26 +138,23 @@ NATIVE_FUNCTION(functionPrototypeSymbolHasInstance)
 NATIVE_FUNCTION(functionPrototypeToString)
 NATIVE_FUNCTION(gc)
 NATIVE_FUNCTION(generatorFunctionConstructor)
-NATIVE_FUNCTION(generatorPrototypeNext)
-NATIVE_FUNCTION(generatorPrototypeReturnOrThrow)
+NATIVE_FUNCTION(generatorPrototypeResume)
 NATIVE_FUNCTION(hermesBuiltinCopyDataProperties)
 NATIVE_FUNCTION(hermesBuiltinCopyRestArgs)
 NATIVE_FUNCTION(hermesBuiltinArraySpread)
 NATIVE_FUNCTION(hermesBuiltinApply)
+NATIVE_FUNCTION(hermesBuiltinApplyArguments)
+NATIVE_FUNCTION(hermesBuiltinApplyWithNewTarget)
 NATIVE_FUNCTION(hermesBuiltinEnsureObject)
 NATIVE_FUNCTION(hermesBuiltinGetMethod)
 NATIVE_FUNCTION(hermesBuiltinExponentiate)
-NATIVE_FUNCTION(hermesBuiltinGetOriginalNativeErrorConstructor)
 NATIVE_FUNCTION(hermesBuiltinExportAll)
 NATIVE_FUNCTION(hermesBuiltinInitRegexNamedGroups)
 NATIVE_FUNCTION(hermesBuiltinThrowTypeError)
-NATIVE_FUNCTION(hermesBuiltinGeneratorSetDelegated)
+NATIVE_FUNCTION(hermesBuiltinThrowReferenceError)
 NATIVE_FUNCTION(hermesBuiltinGetTemplateObject)
 
-#ifdef HERMESVM_EXCEPTION_ON_OOM
 NATIVE_FUNCTION(hermesInternalGetCallStack)
-#endif // HERMESVM_EXCEPTION_ON_OOM
-
 NATIVE_FUNCTION(hermesInternalDetachArrayBuffer)
 NATIVE_FUNCTION(hermesInternalGetEpilogues)
 NATIVE_FUNCTION(hermesInternalGetFunctionLocation)
@@ -169,7 +163,6 @@ NATIVE_FUNCTION(hermesInternalGetRuntimeProperties)
 NATIVE_FUNCTION(hermesInternalGetWeakSize)
 NATIVE_FUNCTION(hermesInternalIsProxy)
 NATIVE_FUNCTION(hermesInternalHasPromise)
-NATIVE_FUNCTION(hermesInternalHasES6Class)
 NATIVE_FUNCTION(hermesInternalTTIReached)
 NATIVE_FUNCTION(hermesInternalTTRCReached)
 
@@ -183,7 +176,6 @@ NATIVE_FUNCTION(hermesInternalDrainJobs)
 NATIVE_FUNCTION(hermesInternalFuzzilli)
 #endif
 
-
 #ifdef HERMES_ENABLE_DEBUGGER
 NATIVE_FUNCTION(isDebuggerAttached)
 NATIVE_FUNCTION(shouldPauseOnThrow)
@@ -195,9 +187,11 @@ NATIVE_FUNCTION(iteratorPrototypeIterator)
 NATIVE_FUNCTION(errorCaptureStackTrace)
 NATIVE_FUNCTION(errorStackGetter)
 NATIVE_FUNCTION(errorStackSetter)
+NATIVE_FUNCTION(errorIsError)
 NATIVE_FUNCTION(jsonParse)
 NATIVE_FUNCTION(jsonStringify)
 NATIVE_FUNCTION(mapConstructor)
+NATIVE_FUNCTION(mapGroupBy)
 NATIVE_FUNCTION(mapIteratorPrototypeNext)
 NATIVE_FUNCTION(mapPrototypeClear)
 NATIVE_FUNCTION(mapPrototypeDelete)
@@ -242,6 +236,7 @@ NATIVE_FUNCTION(objectGetOwnPropertyDescriptors)
 NATIVE_FUNCTION(objectGetOwnPropertyNames)
 NATIVE_FUNCTION(objectGetOwnPropertySymbols)
 NATIVE_FUNCTION(objectGetPrototypeOf)
+NATIVE_FUNCTION(objectGroupBy)
 NATIVE_FUNCTION(objectHasOwn)
 NATIVE_FUNCTION(objectIs)
 NATIVE_FUNCTION(objectIsExtensible)
@@ -317,6 +312,13 @@ NATIVE_FUNCTION(setPrototypeForEach)
 NATIVE_FUNCTION(setPrototypeHas)
 NATIVE_FUNCTION(setPrototypeSizeGetter)
 NATIVE_FUNCTION(setPrototypeValues)
+NATIVE_FUNCTION(setPrototypeDifference)
+NATIVE_FUNCTION(setPrototypeIntersection)
+NATIVE_FUNCTION(setPrototypeIsDisjointFrom)
+NATIVE_FUNCTION(setPrototypeIsSubsetOf)
+NATIVE_FUNCTION(setPrototypeIsSupersetOf)
+NATIVE_FUNCTION(setPrototypeSymmetricDifference)
+NATIVE_FUNCTION(setPrototypeUnion)
 NATIVE_FUNCTION(silentObjectSetPrototypeOf)
 NATIVE_FUNCTION(stringConstructor)
 NATIVE_FUNCTION(stringRaw)
@@ -346,6 +348,8 @@ NATIVE_FUNCTION(stringPrototypeEndsWith)
 NATIVE_FUNCTION(stringPrototypeIncludesOrStartsWith)
 NATIVE_FUNCTION(stringPrototypeIndexOf)
 NATIVE_FUNCTION(stringPrototypeLastIndexOf)
+NATIVE_FUNCTION(stringPrototypeIsWellFormed)
+NATIVE_FUNCTION(stringPrototypeToWellFormed)
 NATIVE_FUNCTION(stringPrototypeMatch)
 NATIVE_FUNCTION(stringPrototypeMatchAll)
 NATIVE_FUNCTION(stringPrototypePad)
@@ -361,10 +365,6 @@ NATIVE_FUNCTION(symbolKeyFor)
 NATIVE_FUNCTION(symbolPrototypeToString)
 NATIVE_FUNCTION(symbolPrototypeDescriptionGetter)
 NATIVE_FUNCTION(symbolPrototypeValueOf)
-NATIVE_FUNCTION(textEncoderConstructor)
-NATIVE_FUNCTION(textEncoderPrototypeEncoding)
-NATIVE_FUNCTION(textEncoderPrototypeEncode)
-NATIVE_FUNCTION(textEncoderPrototypeEncodeInto)
 NATIVE_FUNCTION(throwTypeError)
 NATIVE_FUNCTION(typedArrayBaseConstructor)
 NATIVE_FUNCTION(typedArrayFrom)
@@ -405,44 +405,9 @@ NATIVE_FUNCTION(weakSetPrototypeHas)
 NATIVE_FUNCTION(weakRefConstructor)
 NATIVE_FUNCTION(weakRefPrototypeDeref)
 
-#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
-NATIVE_FUNCTION(instrumentDoNothing)
-NATIVE_FUNCTION(instrumentReturnNth)
-#endif
-
 #define ALL_ERROR_TYPE(name) NATIVE_FUNCTION(name##Constructor)
-#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+#include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
-
-// NativeConstructor
-
-// Creator functions
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSObject>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSFunction>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArray>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSArrayBuffer>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSBoolean>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDataView>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSDate>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSError>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSMap>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSBigInt>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSNumber>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSProxy>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSRegExp>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSet>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSString>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSSymbol>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakMap>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakSet>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSWeakRef>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSGeneratorFunction>)
-NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<JSAsyncFunction>)
-
-#define TYPED_ARRAY(name, type) \
-  NATIVE_CONSTRUCTOR(NativeConstructor::creatorFunction<name##Array>)
-#include "hermes/VM/TypedArrays.def"
-#undef TYPED_ARRAY
 
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: Consider how we can move these somewhere more modular.
@@ -478,4 +443,3 @@ NATIVE_FUNCTION(intlStringPrototypeToLocaleUpperCase)
 #endif
 
 #undef NATIVE_FUNCTION
-#undef NATIVE_CONSTRUCTOR

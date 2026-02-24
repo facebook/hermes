@@ -9,25 +9,28 @@
 #define HERMES_UNITTESTS_BCGEN_TESTHELPERS_H
 
 #include "hermes/AST/Context.h"
+#include "hermes/BCGen/HBC/Bytecode.h"
 
 #include <stdint.h>
 #include <vector>
-#include "hermes/BCGen/HBC/HBC.h"
 #include "llvh/ADT/SmallVector.h"
 
 namespace hermes {
 
-/// Compile source code \p source into Hermes bytecode module, asserting that it
-/// can be compiled successfully. \return the bytecode module.
+/// Compile source code \p source into Hermes bytecode, asserting that it can be
+/// compiled successfully.
+/// \return the bytecode module.
 std::unique_ptr<hbc::BytecodeModule> bytecodeModuleForSource(
     const char *source,
-    BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults());
+    BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults(),
+    bool optimize = false);
 
 /// Compile source code \p source into Hermes bytecode, asserting that it can be
 /// compiled successfully. \return the bytecode as a vector of bytes.
 std::vector<uint8_t> bytecodeForSource(
     const char *source,
-    BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults());
+    BytecodeGenerationOptions opts = BytecodeGenerationOptions::defaults(),
+    bool optimize = false);
 
 } // namespace hermes
 

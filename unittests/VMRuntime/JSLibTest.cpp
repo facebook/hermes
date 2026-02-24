@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
-#include "hermes/BCGen/HBC/BytecodeGenerator.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
 #include "hermes/VM/JSDate.h"
 #include "hermes/VM/JSLib/Sorting.h"
 #include "hermes/VM/PropertyAccessor.h"
@@ -31,13 +31,13 @@ TEST_F(JSLibTest, globalObjectConstTest) {
   GET_GLOBAL(NaN);
   EXPECT_TRUE(isSameValue(
       propRes->get(),
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::quiet_NaN())));
 
   GET_GLOBAL(Infinity);
   EXPECT_TRUE(isSameValue(
       propRes->get(),
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::infinity())));
 
   GET_GLOBAL(undefined);
@@ -54,19 +54,20 @@ TEST_F(JSLibTest, CreateObjectTest) {
   GET_VALUE(objectCons, prototype);
   auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
 
-  // create a new instance.
-  auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
+  // NativeConstructor take undefined `this`.
+  auto crtRes =
+      Callable::createThisForConstruct_RJS(objectCons, runtime, objectCons);
+  // Call the constructor.
   ASSERT_RETURNED(crtRes.getStatus());
-  auto newObj = runtime.makeHandle<JSObject>(std::move(*crtRes));
+  EXPECT_TRUE(crtRes->getHermesValue().isUndefined());
+
+  auto callRes = Callable::executeCall0(
+      objectCons, runtime, Runtime::getUndefinedValue(), true);
+  ASSERT_RETURNED(crtRes.getStatus());
+  auto newObj = runtime.makeHandle<JSObject>(std::move(*callRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newObj->getParent(runtime));
-
-  // Call the constructor.
-  auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
-  ASSERT_RETURNED(callRes.getStatus());
-  auto newObj1 = runtime.makeHandle<JSObject>(std::move(*callRes));
-  ASSERT_EQ(newObj, newObj1);
 }
 
 static Handle<JSObject> createObject(Runtime &runtime) {
@@ -77,24 +78,10 @@ static Handle<JSObject> createObject(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::Object));
   assert(propRes == ExecutionStatus::RETURNED);
   auto objectCons = runtime.makeHandle<Callable>(std::move(*propRes));
-
-  // Object.prototype.
-  propRes = JSObject::getNamed_RJS(
-      objectCons, runtime, Predefined::getSymbolID(Predefined::prototype));
-  assert(propRes == ExecutionStatus::RETURNED);
-  auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
-
-  // create a new instance.
-  auto crtRes = objectCons->newObject(objectCons, runtime, prototype);
-  assert(crtRes == ExecutionStatus::RETURNED);
-  auto newObj = runtime.makeHandle<JSObject>(std::move(*crtRes));
-
-  // Call the constructor.
-  auto callRes = Callable::executeCall0(objectCons, runtime, newObj, true);
+  auto callRes = Callable::executeCall0(
+      objectCons, runtime, Runtime::getUndefinedValue(), true);
   assert(callRes == ExecutionStatus::RETURNED);
-  return (*callRes)->isUndefined()
-      ? newObj
-      : runtime.makeHandle<JSObject>(std::move(*callRes));
+  return runtime.makeHandle<JSObject>(std::move(*callRes));
 }
 
 TEST_F(JSLibTest, ObjectToStringTest) {
@@ -113,7 +100,7 @@ TEST_F(JSLibTest, ObjectToStringTest) {
       toStringFn->executeCall0(
           toStringFn,
           runtime,
-          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))));
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(10))));
 
   // Check that toStringFn.call(toStringFn) is "[object Function]".
   EXPECT_CALLRESULT_STRING(
@@ -152,7 +139,7 @@ TEST_F(JSLibTest, ObjectSealTest) {
           obj,
           runtime,
           *prop1ID,
-          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   // Make sure it is configurable.
@@ -225,7 +212,7 @@ TEST_F(JSLibTest, ObjectFreezeTest) {
           obj,
           runtime,
           *prop1ID,
-          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   // Make sure it is configurable.
@@ -355,7 +342,7 @@ TEST_F(JSLibTest, ObjectGetPrototypeOfTest) {
           objProto,
           runtime,
           *prop1ID,
-          runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
+          runtime.makeHandle(HermesValue::encodeTrustedNumberValue(10))) !=
       ExecutionStatus::EXCEPTION);
 
   auto obj2 = createObject(runtime);
@@ -401,7 +388,7 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
             obj,
             runtime,
             *prop1ID,
-            runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(10))) !=
+            runtime.makeHandle(HermesValue::encodeTrustedNumberValue(10))) !=
         ExecutionStatus::EXCEPTION);
 
     // Object.getOwnPropertyDescriptor(obj).
@@ -461,11 +448,12 @@ TEST_F(JSLibTest, ObjectGetOwnPropertyDescriptorTest) {
     dpf.enumerable = 1;
     auto runtimeModule = RuntimeModule::createUninitialized(runtime, domain);
 
-    BytecodeModuleGenerator BMG;
-    auto BFG = BytecodeFunctionGenerator::create(BMG, 1);
-    BFG->emitLoadConstDouble(0, 18);
-    BFG->emitRet(0);
-    auto codeBlock = createCodeBlock(runtimeModule, runtime, BFG.get());
+    SimpleBytecodeBuilder BMG;
+    BytecodeInstructionGenerator BFG;
+    BFG.emitLoadConstDouble(0, 18);
+    BFG.emitRet(0);
+    BMG.addFunction(1, 1, BFG.acquireBytecode());
+    auto *codeBlock = createSimpleCodeBlock(runtimeModule, runtime, BMG);
     auto getter = runtime.makeHandle<JSFunction>(JSFunction::create(
         runtime,
         runtimeModule->getDomain(runtime),
@@ -554,7 +542,7 @@ TEST_F(JSLibTest, ObjectDefinePropertyTest) {
             .getValue());
 
     // Add value to the PropertyDescriptor.
-    auto value = HermesValue::encodeUntrustedNumberValue(123);
+    auto value = HermesValue::encodeTrustedNumberValue(123);
     ASSERT_TRUE(
         JSObject::putNamed_RJS(
             attributes,
@@ -709,7 +697,7 @@ TEST_F(JSLibTest, ObjectDefinePropertiesTest) {
             runtime.makeHandle(HermesValue::encodeBoolValue(true)),
             PropOpFlags().plusThrowOnError())
             .getValue());
-    auto value1 = HermesValue::encodeUntrustedNumberValue(123);
+    auto value1 = HermesValue::encodeTrustedNumberValue(123);
     ASSERT_TRUE(
         JSObject::putNamed_RJS(
             property1,
@@ -845,7 +833,7 @@ TEST_F(JSLibTest, ObjectCreateTest) {
             runtime.makeHandle(HermesValue::encodeBoolValue(true)),
             PropOpFlags().plusThrowOnError())
             .getValue());
-    auto value1 = HermesValue::encodeUntrustedNumberValue(123);
+    auto value1 = HermesValue::encodeTrustedNumberValue(123);
     ASSERT_TRUE(
         JSObject::putNamed_RJS(
             property1,
@@ -955,16 +943,13 @@ TEST_F(JSLibTest, CreateStringTest) {
   auto prototype = runtime.makeHandle<JSObject>(std::move(*propRes));
 
   // create a new instance.
-  auto crtRes = stringCons->newObject(stringCons, runtime, prototype);
+  auto crtRes = Callable::executeCall0(
+      stringCons, runtime, Runtime::getUndefinedValue(), true);
   ASSERT_RETURNED(crtRes.getStatus());
   auto newStr = runtime.makeHandle<JSObject>(std::move(*crtRes));
 
   // Make sure the prototype is correct.
   ASSERT_EQ(prototype.get(), newStr->getParent(runtime));
-
-  // Call the constructor.
-  ASSERT_RETURNED(
-      Callable::executeCall0(stringCons, runtime, newStr, true).getStatus());
 }
 
 TEST_F(JSLibTest, SmallSortTest) {

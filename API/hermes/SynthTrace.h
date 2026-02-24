@@ -5,13 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_SYNTHTRACE_H
-#define HERMES_SYNTHTRACE_H
+#pragma once
 
+#include "hermes/ADT/StringSetVector.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/Support/JSONEmitter.h"
 #include "hermes/Support/SHA1.h"
-#include "hermes/Support/StringSetVector.h"
 #include "hermes/VM/GCExecTrace.h"
 
 #include "jsi/jsi.h"
@@ -220,6 +219,8 @@ class SynthTrace {
   RECORD(GetPrototype)                   \
   RECORD(SetPrototype)                   \
   RECORD(DeleteProperty)                 \
+  RECORD(Serialize)                      \
+  RECORD(Deserialize)                    \
   RECORD(Global)
 
   /// RecordType is a tag used to differentiate which type of record it is.
@@ -1496,6 +1497,55 @@ class SynthTrace {
     void toJSONInternal(::hermes::JSONEmitter &json) const override;
   };
 
+  struct SerializeRecord final : public Record {
+    static constexpr RecordType type{RecordType::Serialize};
+    /// The jsi::Value being serialized
+    const TraceValue value_;
+
+    explicit SerializeRecord(TimeSinceStart time, TraceValue value)
+        : Record(time), value_(value) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      std::vector<ObjectID> uses;
+      pushIfTrackedValue(value_, uses);
+      return uses;
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
+  struct DeserializeRecord final : public Record {
+    static constexpr RecordType type{RecordType::Deserialize};
+    /// This mirrors the structure of vm::SerializedValue
+    std::vector<uint32_t> offsets_;
+    std::vector<uint8_t> content_;
+    std::vector<uint8_t> strings_;
+
+    explicit DeserializeRecord(
+        TimeSinceStart time,
+        const std::vector<uint32_t> &offsets,
+        const std::vector<uint8_t> &content,
+        const std::vector<uint8_t> &strings)
+        : Record(time),
+          offsets_(offsets),
+          content_(content),
+          strings_(strings) {}
+
+    RecordType getType() const override {
+      return type;
+    }
+
+    std::vector<ObjectID> uses() const override {
+      return {};
+    }
+
+    void toJSONInternal(::hermes::JSONEmitter &json) const override;
+  };
+
   struct GlobalRecord final : public Record {
     static constexpr RecordType type{RecordType::Global};
     const ObjectID objID_; // global's ObjectID returned from Runtime::global().
@@ -1523,5 +1573,3 @@ class SynthTrace {
 } // namespace tracing
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_SYNTHTRACE_H

@@ -11,6 +11,6 @@ exports[`flowDefToTSDef object/spread/leading/typeof 1`] = `
  * @format
  */
 
-type Foo = Omit<typeof T1, keyof ({prop: string})> & {prop: string};
+type Foo = Omit<typeof T1, keyof {prop: string}> & {prop: string};
 "
 `;

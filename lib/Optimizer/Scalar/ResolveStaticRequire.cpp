@@ -108,7 +108,6 @@ bool ResolveStaticRequireImpl::run() {
     builder_.setInsertionPointAfter(RR.call);
 
     builder_.setLocation(RR.call->getLocation());
-    builder_.setCurrentSourceLevelScope(RR.call->getSourceLevelScope());
 
     /// (CallBuiltin "requireFast", resolvedTarget)
     auto callHI = builder_.createCallBuiltinInst(
@@ -123,13 +122,15 @@ bool ResolveStaticRequireImpl::run() {
 }
 
 void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
+  // Modules have these arguments: (this, exports, require, module)
   assert(
-      moduleFunction->getParameters().size() == 3 &&
+      moduleFunction->getJSDynamicParams().size() == 4 &&
       "CJS module functions must have three parameters");
 
-  Parameter *requireParam = moduleFunction->getParameters()[1];
+  static constexpr unsigned kRequireIndex = 2;
   assert(
-      requireParam->getName().str() == "require" &&
+      moduleFunction->getJSDynamicParams()[kRequireIndex]->getName().str() ==
+          "require" &&
       "CJS module second parameter must be 'require'");
 
   // Visited instructions.
@@ -147,12 +148,17 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
 
   // Add all usages of the "require" parameter to the worklist, which then may
   // add more usages and so on.
-  addUsers(requireParam);
+  for (auto *I : moduleFunction->getJSDynamicParam(kRequireIndex)->getUsers()) {
+    assert(
+        llvh::isa<LoadParamInst>(I) &&
+        "Use of JSDynamicParam must be LoadParamInst");
+    addUsers(I);
+  }
 
   while (!workList.empty()) {
     Usage U = workList.pop_back_val();
 
-    if (auto *call = llvh::dyn_cast<CallInst>(U.I)) {
+    if (auto *call = llvh::dyn_cast<BaseCallInst>(U.I)) {
       // Make sure require() doesn't escape as a parameter.
       bool fail = false;
       for (unsigned numArgs = call->getNumArguments(), arg = 0; arg != numArgs;
@@ -173,7 +179,16 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       if (fail)
         continue;
 
-      if (llvh::isa<ConstructInst>(call) || llvh::isa<HBCConstructInst>(call)) {
+      if (!llvh::isa<CallInst>(call)) {
+        EM_.warning(
+            Warning::UnresolvedStaticRequire,
+            call->getLocation(),
+            "'require' used in unexpected way");
+        canResolve_ = false;
+        continue;
+      }
+
+      if (!llvh::isa<LiteralUndefined>(call->getNewTarget())) {
         EM_.warning(
             Warning::UnresolvedStaticRequire,
             call->getLocation(),
@@ -185,7 +200,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       assert(
           call->getCallee() == U.V && "Value is not used at all in CallInst");
 
-      resolveRequireCall(moduleFunction, call);
+      resolveRequireCall(moduleFunction, llvh::cast<CallInst>(call));
     } else if (auto *SS = llvh::dyn_cast<StoreStackInst>(U.I)) {
       // Storing "require" into a stack location.
 
@@ -220,7 +235,7 @@ void ResolveStaticRequireImpl::resolveCJSModule(Function *moduleFunction) {
       // Loading "require" from a frame variable.
 
       addUsers(LF);
-    } else if (auto *LPI = llvh::dyn_cast<LoadPropertyInst>(U.I)) {
+    } else if (auto *LPI = llvh::dyn_cast<BaseLoadPropertyInst>(U.I)) {
       if (LPI->getProperty() == U.V) {
         // `require` must not be used as a key in a LoadPropertyInst,
         // because it could be used in a getter and escape.
@@ -382,8 +397,8 @@ bool ResolveStaticRequire::runOnModule(Module *M) {
   return impl.run();
 }
 
-std::unique_ptr<Pass> createResolveStaticRequire() {
-  return std::make_unique<ResolveStaticRequire>();
+Pass *createResolveStaticRequire() {
+  return new ResolveStaticRequire();
 }
 
 } // namespace hermes

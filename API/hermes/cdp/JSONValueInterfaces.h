@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_CDP_JSONVALUEINTERFACES_H
-#define HERMES_CDP_JSONVALUEINTERFACES_H
+#pragma once
 
 #include <optional>
 #include <string>
@@ -39,5 +38,3 @@ bool jsonValsEQ(const JSONValue *A, const JSONValue *B);
 } // namespace cdp
 } // namespace hermes
 } // namespace facebook
-
-#endif // HERMES_CDP_JSONVALUEINTERFACES_H

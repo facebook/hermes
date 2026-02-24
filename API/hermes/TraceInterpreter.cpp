@@ -7,9 +7,11 @@
 
 #include <hermes/TraceInterpreter.h>
 
-#include <hermes/BCGen/HBC/BytecodeDataProvider.h>
+#include <hermes/BCGen/HBC/BCProvider.h>
+#include <hermes/Support/JSONEmitter.h>
 #include <hermes/SynthTraceParser.h>
 #include <hermes/TracingRuntime.h>
+#include <hermes/VM/SerializedValue.h>
 #include <hermes/VM/instrumentation/PerfEvents.h>
 #include <jsi/instrumentation.h>
 #include <llvh/Support/SHA1.h>
@@ -249,6 +251,26 @@ TraceInterpreter::TraceInterpreter(
   lastUses_ = std::move(lastUses);
 }
 
+TraceInterpreter::TraceInterpreter(
+    jsi::Runtime &rt,
+    const ExecuteOptions &options,
+    const SynthTrace &trace,
+    std::map<::hermes::SHA1, SHUnitCreator> shermesUnitCreatorFns)
+    : rt_(rt),
+      options_(options),
+      shermesUnitCreatorFns_(std::move(shermesUnitCreatorFns)),
+      trace_(trace),
+      gom_() {
+  // Add the global object to the global object map
+  if (trace.globalObjID()) {
+    gom_.emplace(*trace.globalObjID(), rt.global());
+  }
+
+  auto [lastUsePerObj, lastUses] = createLastUseMaps(trace.records());
+  lastUsePerObj_ = std::move(lastUsePerObj);
+  lastUses_ = std::move(lastUses);
+}
+
 /* static */
 std::string TraceInterpreter::execAndGetStats(
     const std::string &traceFile,
@@ -289,6 +311,43 @@ std::string TraceInterpreter::execWithRuntime(
   return std::get<0>(execFromMemoryBuffer(
       std::move(traceBuf), std::move(bytecodeBuffers), options, createRuntime));
 }
+
+#ifndef _WIN32
+/*static*/
+std::string TraceInterpreter::execNativeWithRuntime(
+    const std::string &traceFile,
+    const std::map<::hermes::SHA1, SHUnitCreator> &shermesUnitCreatorFns,
+    const ExecuteOptions &options,
+    const std::function<std::shared_ptr<jsi::Runtime>(
+        const ::hermes::vm::RuntimeConfig &runtimeConfig)> &createRuntime) {
+  auto errorOrFile = llvh::MemoryBuffer::getFile(traceFile);
+  if (!errorOrFile) {
+    throw std::system_error(errorOrFile.getError());
+  }
+  std::unique_ptr<llvh::MemoryBuffer> traceBuf = std::move(errorOrFile.get());
+
+  auto [trace, rtConfigBuilder, gcConfigBuilder] =
+      parseSynthTrace(std::move(traceBuf));
+  const auto &rtConfig =
+      merge(rtConfigBuilder, gcConfigBuilder, options, false, false);
+  std::vector<std::string> repGCStats(options.reps);
+  std::shared_ptr<jsi::Runtime> rt;
+  for (int rep = -options.warmupReps; rep < options.reps; ++rep) {
+    ::hermes::vm::instrumentation::PerfEvents::begin();
+    rt = createRuntime(rtConfig);
+
+    TraceInterpreter interpreter(*rt, options, trace, shermesUnitCreatorFns);
+    std::string stats = interpreter.executeRecordsWithMarkerOptions();
+    // If we're not warming up, save the stats.
+    if (rep >= 0) {
+      repGCStats[rep] = stats;
+    }
+  }
+  return rtConfig.getGCConfig().getShouldRecordStats()
+      ? mergeGCStats(repGCStats)
+      : "";
+}
+#endif
 
 /* static */
 std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>>
@@ -381,6 +440,9 @@ TraceInterpreter::getSourceHashToBundleMap(
         *options.shouldTrackIO && isBytecode && codeIsMmapped);
   }
 
+  rtConfigBuilder.withEnableJIT(options.enableJIT);
+  rtConfigBuilder.withForceJIT(options.forceJIT);
+
   // If (and only if) an out trace is requested, turn on tracing in the VM
   // as well.
   if (options.traceEnabled) {
@@ -457,7 +519,14 @@ std::string TraceInterpreter::exec(
     const SynthTrace &trace,
     std::map<::hermes::SHA1, std::shared_ptr<const jsi::Buffer>> bundles) {
   TraceInterpreter interpreter(rt, options, trace, std::move(bundles));
-  return interpreter.executeRecordsWithMarkerOptions();
+  std::string res = interpreter.executeRecordsWithMarkerOptions();
+#ifdef HERMESVM_PROFILER_BB
+  if (options.basicBlockProfiling) {
+    rt.instrumentation().writeBasicBlockProfileTraceToFile(
+        options.profilingOutFile);
+  }
+#endif
+  return res;
 }
 
 Function TraceInterpreter::createHostFunction(
@@ -682,6 +751,64 @@ jsi::PropNameID TraceInterpreter::getPropNameIDForUse(SynthTrace::ObjectID id) {
   return PropNameID{rt_, it->second};
 };
 
+jsi::Value TraceInterpreter::executeBeginExecJSRecord(
+    const SynthTrace::BeginExecJSRecord &bejsr) {
+  if (!bundles_.empty()) {
+    auto it = bundles_.find(bejsr.sourceHash());
+    if (it == bundles_.end()) {
+      if ((options_.disableSourceHashCheck ||
+           isAllZeroSourceHash(bejsr.sourceHash())) &&
+          bundles_.size() == 1) {
+        // Normally, if a bundle's source hash doesn't match, it would
+        // be an error. However, for convenience and backwards
+        // compatibility, allow an all-zero hash to automatically assume
+        // a bundle if that was the only bundle supplied.
+        it = bundles_.begin();
+      } else {
+        throw std::invalid_argument(
+            "Trace expected the source hash " +
+            ::hermes::hashAsString(bejsr.sourceHash()) +
+            ", that wasn't provided as a file");
+      }
+    }
+
+    // Copy the shared pointer to the buffer in case this file is
+    // executed multiple times.
+    auto bundle = it->second;
+    auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
+    if (!api->isHermesBytecode(bundle->data(), bundle->size())) {
+      llvh::errs()
+          << "Note: You are running from source code, not HBC bytecode.\n"
+          << "      This run will reflect dev performance, not production.\n";
+    }
+    // overallRetval is to be consumed when we get an EndExecJS record.
+    return rt_.evaluateJavaScript(bundle, bejsr.sourceURL());
+  }
+  assert(
+      !shermesUnitCreatorFns_.empty() &&
+      "No bundles or shermes unit files provided");
+  auto it = shermesUnitCreatorFns_.find(bejsr.sourceHash());
+  if (it == shermesUnitCreatorFns_.end()) {
+    if ((options_.disableSourceHashCheck ||
+         isAllZeroSourceHash(bejsr.sourceHash())) &&
+        shermesUnitCreatorFns_.size() == 1) {
+      // Normally, if a bundle's source hash doesn't match, it would
+      // be an error. However, for convenience and backwards
+      // compatibility, allow an all-zero hash to automatically assume
+      // a bundle if that was the only bundle supplied.
+      it = shermesUnitCreatorFns_.begin();
+    } else {
+      throw std::invalid_argument(
+          "Trace expected the source hash " +
+          ::hermes::hashAsString(bejsr.sourceHash()) +
+          ", that wasn't provided as a file");
+    }
+  }
+  auto shermesUnitCreatorFn = it->second;
+  auto *api = jsi::castInterface<hermes::IHermes>(&rt_);
+  return api->evaluateSHUnit(shermesUnitCreatorFn);
+}
+
 void TraceInterpreter::executeRecords() {
   llvh::SaveAndRestore<uint64_t> depthGuard(depth_, depth_ + 1);
   const std::vector<std::unique_ptr<SynthTrace::Record>> &records =
@@ -708,6 +835,11 @@ void TraceInterpreter::executeRecords() {
 #endif
 
   const auto endIndex = records.size();
+#ifdef JSI_UNSTABLE
+  ISerialization *serializationInterface = castInterface<ISerialization>(&rt_);
+  IHermesTracingHelpers *tracingHelpersInterface =
+      castInterface<IHermesTracingHelpers>(&rt_);
+#endif
   while (nextExecIndex_ < endIndex) {
     const auto currentExecIndex = nextExecIndex_++;
     eraseRefsBefore(currentExecIndex);
@@ -717,36 +849,7 @@ void TraceInterpreter::executeRecords() {
         case RecordType::BeginExecJS: {
           const auto &bejsr =
               record_cast<const SynthTrace::BeginExecJSRecord>(*rec);
-          auto it = bundles_.find(bejsr.sourceHash());
-          if (it == bundles_.end()) {
-            if ((options_.disableSourceHashCheck ||
-                 isAllZeroSourceHash(bejsr.sourceHash())) &&
-                bundles_.size() == 1) {
-              // Normally, if a bundle's source hash doesn't match, it would
-              // be an error. However, for convenience and backwards
-              // compatibility, allow an all-zero hash to automatically assume
-              // a bundle if that was the only bundle supplied.
-              it = bundles_.begin();
-            } else {
-              throw std::invalid_argument(
-                  "Trace expected the source hash " +
-                  ::hermes::hashAsString(bejsr.sourceHash()) +
-                  ", that wasn't provided as a file");
-            }
-          }
-
-          // Copy the shared pointer to the buffer in case this file is
-          // executed multiple times.
-          auto bundle = it->second;
-          auto *api = jsi::castInterface<IHermesRootAPI>(makeHermesRootAPI());
-          if (!api->isHermesBytecode(bundle->data(), bundle->size())) {
-            llvh::errs()
-                << "Note: You are running from source code, not HBC bytecode.\n"
-                << "      This run will reflect dev performance, not production.\n";
-          }
-          // overallRetval is to be consumed when we get an EndExecJS record.
-          overallRetval =
-              rt_.evaluateJavaScript(std::move(bundle), bejsr.sourceURL());
+          overallRetval = executeBeginExecJSRecord(bejsr);
           break;
         }
         case RecordType::EndExecJS: {
@@ -1212,6 +1315,42 @@ void TraceInterpreter::executeRecords() {
           }
           break;
         }
+        case RecordType::Serialize: {
+#ifdef JSI_UNSTABLE
+          const auto &record =
+              static_cast<const SynthTrace::SerializeRecord &>(*rec);
+          if (LLVM_UNLIKELY(!serializationInterface)) {
+            throw std::runtime_error(
+                "Encountered Serialize Record, but ISerialization not implemented");
+          }
+          auto value = traceValueToJSIValue(record.value_);
+          serializationInterface->serialize(value);
+#endif
+          break;
+        }
+        case RecordType::Deserialize: {
+#ifdef JSI_UNSTABLE
+          const auto &record =
+              static_cast<const SynthTrace::DeserializeRecord &>(*rec);
+          if (LLVM_UNLIKELY(!serializationInterface)) {
+            throw std::runtime_error(
+                "Encountered Deserialize Record, but ISerialization not implemented");
+          }
+          if (LLVM_UNLIKELY(!tracingHelpersInterface)) {
+            throw std::runtime_error(
+                "Encountered Deserialize Record, but IHermesTracingHelpers not implemented");
+          }
+          ::hermes::vm::SerializedValue serializedValue;
+          serializedValue.offsets = std::move(record.offsets_);
+          serializedValue.content = std::move(record.content_);
+          serializedValue.strings = std::move(record.strings_);
+
+          auto serialized =
+              tracingHelpersInterface->makeSerialized(serializedValue);
+          retval = serializationInterface->deserialize(serialized);
+#endif
+          break;
+        }
         case RecordType::Global: {
           const auto &record =
               static_cast<const SynthTrace::GlobalRecord &>(*rec);
@@ -1364,6 +1503,39 @@ std::string TraceInterpreter::printStats() {
   }
   std::string stats = rt_.instrumentation().getRecordedGCStats();
   ::hermes::vm::instrumentation::PerfEvents::endAndInsertStats(stats);
+
+  if (options_.gcAnalyticsEvents) {
+    llvh::raw_string_ostream os{stats};
+    os << "Collections:\n";
+    ::hermes::JSONEmitter json{os, /*pretty*/ true};
+    json.openArray();
+    for (const auto &event : *options_.gcAnalyticsEvents) {
+      json.openDict();
+      json.emitKeyValue("runtimeDescription", event.runtimeDescription);
+      json.emitKeyValue("gcKind", event.gcKind);
+      json.emitKeyValue("collectionType", event.collectionType);
+      json.emitKeyValue("cause", event.cause);
+      json.emitKeyValue("duration", event.duration.count());
+      json.emitKeyValue("cpuDuration", event.cpuDuration.count());
+      json.emitKeyValue("preAllocated", event.allocated.before);
+      json.emitKeyValue("postAllocated", event.allocated.after);
+      json.emitKeyValue("preSize", event.size.before);
+      json.emitKeyValue("postSize", event.size.after);
+      json.emitKeyValue("preExternal", event.external.before);
+      json.emitKeyValue("postExternal", event.external.after);
+      json.emitKeyValue("survivalRatio", event.survivalRatio);
+      json.emitKey("tags");
+      json.openArray();
+      for (const auto &tag : event.tags) {
+        json.emitValue(tag);
+      }
+      json.closeArray();
+      json.closeDict();
+    }
+    json.closeArray();
+    os << "\n";
+  }
+
 #ifdef HERMESVM_PROFILER_OPCODE
   stats += "\n";
   std::ostringstream os;

@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -79,7 +79,6 @@ function foo() {
 // CHECK-NEXT:                 "type": "SwitchCase",
 // CHECK-NEXT:                 "test": {
 // CHECK-NEXT:                   "type": "ArrowFunctionExpression",
-// CHECK-NEXT:                   "id": null,
 // CHECK-NEXT:                   "params": [],
 // CHECK-NEXT:                   "body": {
 // CHECK-NEXT:                     "type": "BlockStatement",

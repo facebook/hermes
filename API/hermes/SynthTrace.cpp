@@ -123,7 +123,6 @@ SynthTrace::SynthTrace(
     {
       json_->emitKey("gcConfig");
       json_->openDict();
-      json_->emitKeyValue("minHeapSize", conf.getGCConfig().getMinHeapSize());
       json_->emitKeyValue("initHeapSize", conf.getGCConfig().getInitHeapSize());
       json_->emitKeyValue("maxHeapSize", conf.getGCConfig().getMaxHeapSize());
       json_->emitKeyValue(
@@ -141,7 +140,6 @@ SynthTrace::SynthTrace(
       json_->closeDict();
     }
     json_->emitKeyValue("maxNumRegisters", conf.getMaxNumRegisters());
-    json_->emitKeyValue("ES6Promise", conf.getES6Promise());
     json_->emitKeyValue("ES6Proxy", conf.getES6Proxy());
     json_->emitKeyValue("Intl", conf.getIntl());
     json_->emitKeyValue("MicrotasksQueue", conf.getMicrotaskQueue());
@@ -154,8 +152,8 @@ SynthTrace::SynthTrace(
     json_->openDict();
     json_->emitKeyValue("nativePointerSize", sizeof(void *));
     json_->emitKeyValue(
-        "allowCompressedPointers",
-#ifdef HERMESVM_ALLOW_COMPRESSED_POINTERS
+        "compressedPointers",
+#ifdef HERMESVM_COMPRESSED_POINTERS
         true
 #else
         false
@@ -181,14 +179,6 @@ SynthTrace::SynthTrace(
     json_->emitKeyValue(
         "enableDebugger",
 #ifdef HERMES_ENABLE_DEBUGGER
-        true
-#else
-        false
-#endif
-    );
-    json_->emitKeyValue(
-        "enableIRInstrumentation",
-#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
         true
 #else
         false
@@ -645,6 +635,31 @@ void SynthTrace::DeletePropertyRecord::toJSONInternal(
   Record::toJSONInternal(json);
   json.emitKeyValue("objID", objID_);
   json.emitKeyValue("propID", encode(propID_));
+}
+
+void SynthTrace::SerializeRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKeyValue("value", encode(value_));
+}
+
+void SynthTrace::DeserializeRecord::toJSONInternal(
+    ::hermes::JSONEmitter &json) const {
+  Record::toJSONInternal(json);
+  json.emitKey("offsets");
+  json.openArray();
+  json.emitValues(llvh::ArrayRef<uint32_t>(offsets_.data(), offsets_.size()));
+  json.closeArray();
+
+  json.emitKey("content");
+  json.openArray();
+  json.emitValues(llvh::ArrayRef<uint8_t>(content_.data(), content_.size()));
+  json.closeArray();
+
+  json.emitKey("strings");
+  json.openArray();
+  json.emitValues(llvh::ArrayRef<uint8_t>(strings_.data(), strings_.size()));
+  json.closeArray();
 }
 
 void SynthTrace::GlobalRecord::toJSONInternal(JSONEmitter &json) const {

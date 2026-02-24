@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s
+// RUN: %shermes -exec %s
 
 // Check that Function.prototype.apply() doesn't crash because it
 // forgot to initialize the argument registers before a GC.

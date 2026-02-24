@@ -5,7 +5,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include "hermes/Public/Buffer.h"
 #include "hermes/Public/GCTripwireContext.h"
 #include "hermes/Public/JSOutOfMemoryError.h"
 
@@ -15,7 +14,6 @@
 /// type information across shared library boundaries.
 
 namespace hermes {
-Buffer::~Buffer() {}
 namespace vm {
 GCTripwireContext::~GCTripwireContext() {}
 JSOutOfMemoryError::~JSOutOfMemoryError() {}

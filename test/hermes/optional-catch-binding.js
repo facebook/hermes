@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 try {
   throw Error('hello');

@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -strict -Wno-undefined-variable -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -strict -Wno-undefined-variable -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -w -exec %s | %FileCheck --match-full-lines %s
 
 "use strict";
 

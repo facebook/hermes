@@ -38,6 +38,14 @@ class JSArrayBuffer final : public JSObject {
       Runtime &runtime,
       Handle<JSObject> prototype);
 
+  /// Create an ArrayBuffer and sets the data block to be used by this
+  /// JSArrayBuffer to be \p data with \p size.
+  static PseudoHandle<JSArrayBuffer> createWithInternalDataBlock(
+      Runtime &runtime,
+      Handle<JSObject> prototype,
+      uint8_t *data,
+      size_type size);
+
   /// ES7 24.1.1.4
   /// NOTE: since SharedArrayBuffer does not exist, this does not use the
   /// SpeciesConstructor, it always allocates a normal ArrayBuffer.
@@ -68,33 +76,38 @@ class JSArrayBuffer final : public JSObject {
       bool zero = true);
 
   /// Sets the data block used by this JSArrayBuffer to be \p data, with size
-  /// \p size. Ensures that \p finalizePtr is invoked with argument \p context
-  /// at some point after this JSArrayBuffer has been garbage collected.
-  /// \return ExecutionStatus::RETURNED iff the data block was successfully set.
-  static ExecutionStatus setExternalDataBlock(
+  /// \p size. The deleter of the shared pointer \p context should clean up the
+  /// external data when it is deallocated. The JS ArrayBuffer will share the
+  /// ownership of the external data via a shared pointer. When GC finalizes
+  /// this JSArrayBuffer, it will release its shared ownership.
+  static void setExternalDataBlock(
       Runtime &runtime,
       Handle<JSArrayBuffer> self,
       uint8_t *data,
       size_type size,
-      void *context,
-      FinalizeNativeStatePtr finalizePtr);
+      const std::shared_ptr<void> &context);
+
+  /// \return A shared pointer whose deleter cleans up the external data block,
+  /// specified when the external data was first set. In practice, users should
+  /// always set a valid pointer to clean up the data, so the context ptr should
+  /// not be null.
+  /// \pre attached() and external() must be true
+  static std::shared_ptr<void> getExternalDataContext(
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self);
 
   /// Retrieves a pointer to the held buffer.
   /// \return A pointer to the buffer owned by this object. This can be null
   ///   if the ArrayBuffer is empty.
   /// \pre attached() must be true
   uint8_t *getDataBlock(Runtime &runtime) {
-    // This check should never fail, because all ways to illegally access
-    // ArrayBuffer should raise exceptions. It's here as a last line of defense.
-    if (!runtime.hasArrayBuffer())
-      hermes_fatal("Illegal access to ArrayBuffer");
     assert(attached() && "Cannot get a data block from a detached ArrayBuffer");
-    return data_.get(runtime);
+    return data_;
   }
 
   /// Get the size of this buffer.
+  /// Returns 0 for detached buffers.
   size_type size() const {
-    assert(attached() && "Cannot get size from a detached ArrayBuffer");
     return size_;
   }
 
@@ -105,13 +118,26 @@ class JSArrayBuffer final : public JSObject {
     return attached_;
   }
 
-  /// Free the data block owned by this JSArrayBuffer.
-  void freeInternalBuffer(GC &gc);
+  /// Whether this JSArrayBuffer is attached to some external data block.
+  bool external() const {
+    return external_;
+  }
 
   /// Detaches this buffer from its data block, effectively freeing the storage
   /// and setting this ArrayBuffer to have zero size.  The \p gc argument allows
   /// the GC to be informed of this external memory deletion.
-  static ExecutionStatus detach(Runtime &runtime, Handle<JSArrayBuffer> self);
+  static void detach(Runtime &runtime, Handle<JSArrayBuffer> self);
+
+  /// Marks the JS ArrayBuffer as detached and "ejects" the held data block,
+  /// releasing JS ArrayBuffer's ownership of the data. If the data block is an
+  /// internal buffer, it is untracked from GC, but not freed. Otherwise, the
+  /// external buffer is untracked by NativeState holding the buffer. The
+  /// external buffer may be cleaned up if the NativeState was the only thing
+  /// holding on to the buffer. WARNING: This is very dangerous and users must
+  /// obtain the ownership of the data block through getDataBlock or
+  /// getExternalDataContext before ejectng the buffer. \pre attached() must be
+  /// true
+  static void ejectBufferUnsafe(Runtime &runtime, Handle<JSArrayBuffer> self);
 
  protected:
   static void _finalizeImpl(GCCell *cell, GC &gc);
@@ -122,15 +148,29 @@ class JSArrayBuffer final : public JSObject {
 #endif
 
  private:
-  /// Set the internal property that retains the NativeState owning the external
-  /// buffer to \p value.
-  static ExecutionStatus setExternalFinalizer(
+  /// Get the internal property that retains the NativeState owning the external
+  /// buffer
+  /// \pre attached() and external() must be true
+  static PseudoHandle<NativeState> getExternalFinalizerNativeState(
+      Runtime &runtime,
+      Handle<JSArrayBuffer> self);
+
+  /// Set the internal property that retains the NativeState owning the
+  /// external buffer to \p value.
+  static void setExternalFinalizer(
       Runtime &runtime,
       Handle<JSArrayBuffer> self,
       Handle<> value);
 
-  /// data_, size_, and external_ are only valid when attached_ is true.
-  XorPtr<uint8_t, XorPtrKeyID::ArrayBufferData> data_;
+  /// Free the data block owned by this JSArrayBuffer.
+  void freeInternalBuffer(GC &gc);
+
+  /// Untrack the internal buffer from GC snapshots
+  void untrackInternalBuffer(GC &gc);
+
+  /// data_ size_, and external_ are only valid when attached_ is true.
+  /// if detached_, data_ is nullptr, size_ is 0, and external_ is false.
+  uint8_t *data_;
   size_type size_;
   bool external_;
   bool attached_;

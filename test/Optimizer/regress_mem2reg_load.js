@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 // Make sure that Mem2Reg doesn't promote loads across writing
 // instructions with AllocStackInst operands.
@@ -17,50 +17,50 @@ function foo(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [foo]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : undefined, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#0#1(x)#2 : undefined
-// CHECK-NEXT:S{foo#0#1()#2} = []
+// CHECK:function foo(x: any): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = AllocStackInst $?anon_0_iter
-// CHECK-NEXT:  %2 = AllocStackInst $?anon_1_sourceOrNext
-// CHECK-NEXT:  %3 = StoreStackInst %x, %2
-// CHECK-NEXT:  %4 = IteratorBeginInst %2
-// CHECK-NEXT:  %5 = StoreStackInst %4, %1
-// CHECK-NEXT:  %6 = IteratorNextInst %1, %2
-// CHECK-NEXT:  %7 = LoadStackInst %1
-// CHECK-NEXT:  %8 = BinaryOperatorInst '===', %7, undefined : undefined
-// CHECK-NEXT:  %9 = CondBranchInst %8 : boolean, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %10 = BranchInst %BB1
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:  %1 = AllocStackInst (:any) $?anon_0_iter: any
+// CHECK-NEXT:  %2 = AllocStackInst (:any) $?anon_1_sourceOrNext: any
+// CHECK-NEXT:       StoreStackInst %0: any, %2: any
+// CHECK-NEXT:  %4 = IteratorBeginInst (:any) %2: any
+// CHECK-NEXT:       StoreStackInst %4: any, %1: any
+// CHECK-NEXT:  %6 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:  %7 = IteratorNextInst (:any) %1: any, %6: any
+// CHECK-NEXT:  %8 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %9 = BinaryStrictlyEqualInst (:boolean) %8: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %9: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %11 = PhiInst undefined : undefined, %BB0, %6, %BB2
-// CHECK-NEXT:  %12 = CondBranchInst %8 : boolean, %BB3, %BB4
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %13 = IteratorNextInst %1, %2
-// CHECK-NEXT:  %14 = LoadStackInst %1
-// CHECK-NEXT:  %15 = BinaryOperatorInst '===', %14, undefined : undefined
-// CHECK-NEXT:  %16 = CondBranchInst %15 : boolean, %BB3, %BB5
-// CHECK-NEXT:%BB5:
-// CHECK-NEXT:  %17 = BranchInst %BB3
+// CHECK-NEXT:        BranchInst %BB2
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %12 = PhiInst (:any) undefined: undefined, %BB0, %7: any, %BB1
+// CHECK-NEXT:        CondBranchInst %9: boolean, %BB5, %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %18 = PhiInst undefined : undefined, %BB1, undefined : undefined, %BB4, %13, %BB5
-// CHECK-NEXT:  %19 = PhiInst %8 : boolean, %BB1, %15 : boolean, %BB4, %15 : boolean, %BB5
-// CHECK-NEXT:  %20 = CondBranchInst %19 : boolean, %BB6, %BB7
-// CHECK-NEXT:%BB7:
-// CHECK-NEXT:  %21 = IteratorCloseInst %1, false : boolean
-// CHECK-NEXT:  %22 = BranchInst %BB6
+// CHECK-NEXT:  %14 = LoadStackInst (:any) %2: any
+// CHECK-NEXT:  %15 = IteratorNextInst (:any) %1: any, %14: any
+// CHECK-NEXT:  %16 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %17 = BinaryStrictlyEqualInst (:boolean) %16: any, undefined: undefined
+// CHECK-NEXT:        CondBranchInst %17: boolean, %BB5, %BB4
+// CHECK-NEXT:%BB4:
+// CHECK-NEXT:        BranchInst %BB5
+// CHECK-NEXT:%BB5:
+// CHECK-NEXT:  %20 = PhiInst (:any) undefined: undefined, %BB2, undefined: undefined, %BB3, %15: any, %BB4
+// CHECK-NEXT:  %21 = PhiInst (:boolean) %9: boolean, %BB2, %17: boolean, %BB3, %17: boolean, %BB4
+// CHECK-NEXT:        CondBranchInst %21: boolean, %BB7, %BB6
 // CHECK-NEXT:%BB6:
-// CHECK-NEXT:  %23 = TryLoadGlobalPropertyInst globalObject : object, "print" : string
-// CHECK-NEXT:  %24 = CallInst %23, undefined : undefined, undefined : undefined, %11, %18
-// CHECK-NEXT:  %25 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %23 = LoadStackInst (:any) %1: any
+// CHECK-NEXT:  %24 = IteratorCloseInst (:any) %23: any, false: boolean
+// CHECK-NEXT:        BranchInst %BB7
+// CHECK-NEXT:%BB7:
+// CHECK-NEXT:  %26 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %27 = CallInst (:any) %26: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %12: any, %20: any
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

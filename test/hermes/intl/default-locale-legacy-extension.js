@@ -7,6 +7,7 @@
 
 // RUN: _HERMES_TEST_LOCALE="en-GB@foo=bar" %hermes %s | %FileCheck --match-full-lines %s
 // REQUIRES: intl
+// UNSUPPORTED: windows
 
 print(Intl.Collator().resolvedOptions().locale);
 // CHECK: en-GB

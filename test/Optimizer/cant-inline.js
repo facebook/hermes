@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 // Make sure that we are not inlining if copyRestArgs() is used.
 
@@ -17,29 +17,23 @@ function outer1() {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [outer1]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %outer1#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "outer1" : string
-// CHECK-NEXT:  %3 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "outer1": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %outer1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "outer1": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function outer1#0#1()#2
-// CHECK-NEXT:S{outer1#0#1()#2} = []
+// CHECK:function outer1(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{outer1#0#1()#2}
-// CHECK-NEXT:  %1 = CreateFunctionInst %dontInline#1#2()#3, %0
-// CHECK-NEXT:  %2 = CallInst %1 : closure, undefined : undefined, undefined : undefined, 1 : number
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %dontInline(): functionCode
+// CHECK-NEXT:  %1 = CallInst (:any) %0: object, %dontInline(): functionCode, true: boolean, empty: any, undefined: undefined, undefined: undefined, 1: number
+// CHECK-NEXT:       ReturnInst %1: any
 // CHECK-NEXT:function_end
 
-// CHECK:function dontInline#1#2()#3
-// CHECK-NEXT:S{dontInline#1#2()#3} = []
+// CHECK:function dontInline(): any [allCallsitesKnownInStrictMode]
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{dontInline#1#2()#3}
-// CHECK-NEXT:  %1 = CallBuiltinInst [HermesBuiltin.copyRestArgs] : number, undefined : undefined, undefined : undefined, 0 : number
-// CHECK-NEXT:  %2 = ReturnInst %1
+// CHECK-NEXT:  %0 = CallBuiltinInst (:any) [HermesBuiltin.copyRestArgs]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, 0: number
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end

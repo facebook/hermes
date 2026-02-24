@@ -134,8 +134,6 @@ export function isExpression(node /*: ESNode */) /*: implies node is Expression 
     node.type === 'ThisExpression' ||
     node.type === 'ArrayExpression' ||
     node.type === 'ObjectExpression' ||
-    // $FlowFixMe[incompatible-type]
-    node.type === 'ObjectExpression' ||
     node.type === 'FunctionExpression' ||
     node.type === 'ArrowFunctionExpression' ||
     node.type === 'YieldExpression' ||
@@ -162,7 +160,9 @@ export function isExpression(node /*: ESNode */) /*: implies node is Expression 
     node.type === 'AsExpression' ||
     node.type === 'AsConstExpression' ||
     node.type === 'JSXFragment' ||
-    node.type === 'JSXElement'
+    node.type === 'JSXElement' ||
+    node.type === 'MatchExpression' ||
+    node.type === 'RecordExpression'
   );
 }
 
@@ -191,7 +191,9 @@ export function isStatement(node /*: ESNode */) /*: implies node is Statement */
     node.type === 'IfStatement' ||
     node.type === 'InterfaceDeclaration' ||
     node.type === 'LabeledStatement' ||
+    node.type === 'MatchStatement' ||
     node.type === 'OpaqueType' ||
+    node.type === 'RecordDeclaration' ||
     node.type === 'ReturnStatement' ||
     node.type === 'SwitchStatement' ||
     node.type === 'ThrowStatement' ||

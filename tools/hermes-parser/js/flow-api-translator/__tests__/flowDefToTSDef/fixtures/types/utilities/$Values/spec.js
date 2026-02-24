@@ -9,3 +9,4 @@
  */
 
 type T = $Values<Foo>;
+type T2 = Values<Bar>;

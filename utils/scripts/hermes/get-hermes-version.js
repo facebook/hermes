@@ -39,7 +39,7 @@ async function main() {
   Generates and outputs version string for the given build type.
 
   Options:
-    --build-type       One of ['dry-run', 'commitly', 'release'].
+    --build-type       One of ['dry-run', 'release'].
     `);
     return;
   }

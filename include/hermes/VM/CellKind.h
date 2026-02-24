@@ -22,6 +22,25 @@ enum class CellKind {
 #include "hermes/VM/CellKinds.def"
 };
 
+// Verify the following order of consecutive ranges:
+// [CallableUnknownMakesThis, CallableMakesThis, CallableExpectsThis]
+static_assert(
+    ((int)CellKind::CallableUnknownMakesThisKind_last + 1) ==
+    (int)CellKind::CallableMakesThisKind_first);
+static_assert(
+    ((int)CellKind::CallableMakesThisKind_last + 1) ==
+    (int)CellKind::CallableExpectsThisKind_first);
+// Verify that these callable ranges cover the entire callable range.
+static_assert(
+    CellKind::CallableKind_first ==
+    CellKind::CallableUnknownMakesThisKind_first);
+static_assert(
+    CellKind::CallableKind_last == CellKind::CallableExpectsThisKind_last);
+// We need the CallableExpectsThisKind range to end as the last CellKind, so we
+// can very efficiently check that a given CellKind comes from this range.
+static_assert(
+    CellKind::CallableExpectsThisKind_last == CellKind::AllCellsKind_last);
+
 /// \return true if the specified kind \p value is in the inclusive range
 /// between \p from and \p to.
 inline bool kindInRange(CellKind value, CellKind from, CellKind to) {

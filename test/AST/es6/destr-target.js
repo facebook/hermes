@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (%hermes -hermes-parser %s 2>&1 || true) | %FileCheck %s --match-full-lines
+// RUN: (%hermesc -dump-transformed-ast -hermes-parser %s 2>&1 || true) | %FileCheck %s --match-full-lines
 
 ({a : 0} = x)
 //CHECK: {{.*}}destr-target.js:10:7: error: invalid assignment left-hand side

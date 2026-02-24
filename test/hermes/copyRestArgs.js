@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -O0 -exec %s | %FileCheck --match-full-lines %s
 
 print("START");
 //CHECK: START

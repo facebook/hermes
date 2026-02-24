@@ -9,7 +9,6 @@
 /// \file
 /// ES6 24.1 ArrayBuffer
 //===----------------------------------------------------------------------===//
-
 #include "JSLibInternal.h"
 
 #include "hermes/VM/JSArrayBuffer.h"
@@ -17,11 +16,7 @@
 #include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/Operations.h"
 #include "hermes/VM/StringPrimitive.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -31,16 +26,22 @@ using std::min;
 /// @name Implementation
 /// @{
 
-Handle<JSObject> createArrayBufferConstructor(Runtime &runtime) {
+HermesValue createArrayBufferConstructor(Runtime &runtime) {
   auto arrayBufferPrototype =
       Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype);
-  auto cons = defineSystemConstructor<JSArrayBuffer>(
+
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::ArrayBuffer),
       arrayBufferConstructor,
       arrayBufferPrototype,
       1,
-      CellKind::JSArrayBufferKind);
+      lv.cons);
 
   // ArrayBuffer.prototype.xxx() methods.
   defineAccessor(
@@ -49,6 +50,15 @@ Handle<JSObject> createArrayBufferConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::byteLength),
       nullptr,
       arrayBufferPrototypeByteLength,
+      nullptr,
+      false,
+      true);
+  defineAccessor(
+      runtime,
+      arrayBufferPrototype,
+      Predefined::getSymbolID(Predefined::detached),
+      nullptr,
+      arrayBufferPrototypeDetached,
       nullptr,
       false,
       true);
@@ -73,23 +83,44 @@ Handle<JSObject> createArrayBufferConstructor(Runtime &runtime) {
   // ArrayBuffer.xxx() methods.
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::isView),
       nullptr,
       arrayBufferIsView,
       1);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayBufferConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
     return runtime.raiseTypeError(
         "ArrayBuffer() called in function context instead of constructor");
   }
-  auto self = args.vmcastThis<JSArrayBuffer>();
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<JSArrayBuffer> self;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.arrayBufferConstructor.getHermesValue().getRaw())) {
+    lv.selfParent = runtime.arrayBufferPrototype;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            runtime.arrayBufferPrototype);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
+  lv.self = JSArrayBuffer::create(runtime, lv.selfParent);
+
   auto length = args.getArgHandle(0);
 
   // 2. Let byteLength be ToIndex(length).
@@ -102,22 +133,22 @@ arrayBufferConstructor(void *, Runtime &runtime, NativeArgs args) {
   // 3. Return AllocateArrayBuffer(NewTarget, byteLength).
   // This object should not have been initialized yet, ensure this is true
   assert(
-      !self->attached() &&
+      !lv.self->attached() &&
       "A new array buffer should not have an existing buffer");
   if (byteLength > std::numeric_limits<JSArrayBuffer::size_type>::max()) {
     // On a non-64-bit platform and requested a buffer size greater than
     // this platform's size type can hold
     return runtime.raiseRangeError("Too large of a byteLength requested");
   }
-  if (JSArrayBuffer::createDataBlock(runtime, self, byteLength) ==
+  if (JSArrayBuffer::createDataBlock(runtime, lv.self, byteLength) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
-  return self.getHermesValue();
+  return lv.self.getHermesValue();
 }
 
-CallResult<HermesValue>
-arrayBufferIsView(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferIsView(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If Type(arg) is not Object, return false.
   // 2. If arg has a [[ViewedArrayBuffer]] internal slot, return true.
   // 3. Return false.
@@ -126,18 +157,30 @@ arrayBufferIsView(void *, Runtime &runtime, NativeArgs args) {
       vmisa<JSDataView>(args.getArg(0)));
 }
 
-CallResult<HermesValue>
-arrayBufferPrototypeByteLength(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferPrototypeByteLength(
+    void *,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto self = args.dyncastThis<JSArrayBuffer>();
   if (!self) {
     return runtime.raiseTypeError(
         "byteLength called on a non ArrayBuffer object");
   }
-  return HermesValue::encodeUntrustedNumberValue(self->size());
+  return HermesValue::encodeTrustedNumberValue(self->size());
 }
 
-CallResult<HermesValue>
-arrayBufferPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> arrayBufferPrototypeDetached(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  auto self = args.dyncastThis<JSArrayBuffer>();
+  if (!self) {
+    return runtime.raiseTypeError(
+        "detached called on a non ArrayBuffer object");
+  }
+  return HermesValue::encodeBoolValue(!self->attached());
+}
+
+CallResult<HermesValue> arrayBufferPrototypeSlice(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto start = args.getArgHandle(0);
   auto end = args.getArgHandle(1);
   // 1. Let O be the this value.
@@ -150,6 +193,11 @@ arrayBufferPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
     return runtime.raiseTypeError(
         "Called ArrayBuffer.prototype.slice on a non-ArrayBuffer");
   }
+
+  struct : public Locals {
+    PinnedValue<JSArrayBuffer> newBuf;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
 
   // 5. Let len be the value of O’s [[ArrayBufferByteLength]] internal slot.
   double len = self->size();
@@ -192,11 +240,12 @@ arrayBufferPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   // 15. Let new be Construct(ctor, «newLen»).
   // 16. ReturnIfAbrupt(new).
 
-  auto newBuf = runtime.makeHandle(
+  lv.newBuf.castAndSetHermesValue<JSArrayBuffer>(
       JSArrayBuffer::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype)));
+          runtime, Handle<JSObject>::vmcast(&runtime.arrayBufferPrototype))
+          .getHermesValue());
 
-  if (JSArrayBuffer::createDataBlock(runtime, newBuf, newLen_int) ==
+  if (JSArrayBuffer::createDataBlock(runtime, lv.newBuf, newLen_int) ==
       ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -208,7 +257,7 @@ arrayBufferPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   // slot < newLen, throw a TypeError exception.
   // 21. NOTE: Side-effects of the above steps may have detached O.
   // 22. If IsDetachedBuffer(O) is true, throw a TypeError exception.
-  if (!self->attached() || !newBuf->attached()) {
+  if (!self->attached() || !lv.newBuf->attached()) {
     return runtime.raiseTypeError("Cannot split with detached ArrayBuffers");
   }
 
@@ -216,9 +265,9 @@ arrayBufferPrototypeSlice(void *, Runtime &runtime, NativeArgs args) {
   // 24. Let toBuf be the value of new’s [[ArrayBufferData]] internal slot.
   // 25. Perform CopyDataBlockBytes(toBuf, 0, fromBuf, first, newLen).
   JSArrayBuffer::copyDataBlockBytes(
-      runtime, *newBuf, 0, *self, first_int, newLen_int);
+      runtime, *lv.newBuf, 0, *self, first_int, newLen_int);
   // 26. Return new.
-  return newBuf.getHermesValue();
+  return lv.newBuf.getHermesValue();
 }
 /// @}
 } // namespace vm

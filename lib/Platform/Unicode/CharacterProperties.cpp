@@ -31,8 +31,13 @@ struct UnicodeRangeComp {
 
 template <typename UnicodeRangeTable>
 inline bool lookup(const UnicodeRangeTable &table, const uint32_t cp) {
-  return std::binary_search(
-      std::begin(table), std::end(table), cp, UnicodeRangeComp());
+  if constexpr (sizeof(table) == 0) {
+    // If the array is empty, std::begin doesn't work (fails to compile).
+    return false;
+  } else {
+    return std::binary_search(
+        std::begin(table), std::end(table), cp, UnicodeRangeComp());
+  }
 }
 
 bool isUnicodeOnlyLetter(uint32_t cp) {
@@ -44,6 +49,52 @@ bool isUnicodeOnlyLetter(uint32_t cp) {
     return false;
 
   return lookup(UNICODE_LETTERS, cp);
+}
+
+bool isUnicodeOnlyIDStart(uint32_t cp) {
+  // "any character in the Unicode categories “Uppercase letter (Lu)”,
+  // “Lowercase letter (Ll)”, “Titlecase letter (Lt)”, “Modifier letter (Lm)”,
+  // “Other letter (Lo)”, or “Letter number (Nl)”".
+  // ASCII characters are not "UnicodeOnly" and so we return false.
+  if (cp <= 0x7F)
+    return false;
+
+  // Unicode spec defines ID_Start as:
+  //     Lu + Ll + Lt + Lm + Lo + Nl
+  //   + Other_ID_Start
+  //   - Pattern_Syntax
+  //   - Pattern_White_Space
+  // So check this by checking all UNICODE_LETTERS that aren't
+  // UNICODE_PATTERN_LETTER, and then check for Other_ID_Start.
+  //
+  // UNICODE_PATTERN_LETTER is all ther Pattern_White_Space and Pattern_Syntax
+  // that are also in the Letter categories.
+
+  return (lookup(UNICODE_LETTERS, cp) && !lookup(UNICODE_PATTERN_LETTER, cp)) ||
+      lookup(UNICODE_OTHER_ID_START, cp);
+}
+
+bool isUnicodeOnlyIDContinue(uint32_t cp) {
+  // ASCII characters are not "UnicodeOnly" and so we return false.
+  if (cp <= 0x7F)
+    return false;
+
+  // Unicode spec defines ID_Continue as:
+  // #  Generated from:
+  //     ID_Start
+  //   + Mn + Mc + Nd + Pc
+  //   + Other_ID_Continue
+  //   - Pattern_Syntax
+  //   - Pattern_White_Space
+  //
+  // UNICODE_PATTERN_CONTINUE is all the Pattern_White_Space and Pattern_Syntax
+  // that are also in the Mn, Mc, Nd, Pc categories.
+
+  return isUnicodeOnlyIDStart(cp) ||
+      ((lookup(UNICODE_COMBINING_MARK, cp) || lookup(UNICODE_DIGIT, cp) ||
+        lookup(UNICODE_CONNECTOR_PUNCTUATION, cp)) &&
+       !lookup(UNICODE_PATTERN_CONTINUE, cp)) ||
+      lookup(UNICODE_OTHER_ID_CONTINUE, cp);
 }
 
 // Special cased due to small number of separate values.

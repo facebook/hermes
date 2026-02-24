@@ -75,6 +75,10 @@ inline uint32_t utf16SurrogatePairToCodePoint(uint32_t lead, uint32_t trail) {
 
 /// \return true if the codepoint is not ASCII and is a Unicode letter.
 bool isUnicodeOnlyLetter(uint32_t cp);
+/// \return true if the codepoint is not ASCII and is a Unicode ID_Start.
+bool isUnicodeOnlyIDStart(uint32_t cp);
+/// \return true if the codepoint is not ASCII and is a Unicode ID_Continue.
+bool isUnicodeOnlyIDContinue(uint32_t cp);
 /// \return true if the codepoint is not ASCII and is a Unicode space.
 bool isUnicodeOnlySpace(uint32_t cp);
 /// \return true if the codepoint is in the Non-Spacing Mark or
@@ -85,22 +89,31 @@ bool isUnicodeDigit(uint32_t cp);
 /// \return true if the codepoint is in the Connector Punctuation category.
 bool isUnicodeConnectorPunctuation(uint32_t cp);
 
+/// \return true if the character is an ASCII digit (0-9).
+/// This is a safe replacement for isdigit() that handles non-ASCII characters
+/// correctly on all platforms.
+inline bool isASCIIDigit(uint32_t ch) {
+  return ch >= '0' && ch <= '9';
+}
+
 /// \return true if the codepoint has the ID_Start property and is ASCII.
 inline bool isASCIIIdentifierStart(uint32_t ch) {
   return ch == '_' || ch == '$' || ((ch | 32) >= 'a' && (ch | 32) <= 'z');
 }
 
+/// \return true if the codepoint has the ID_Continue property and is ASCII.
+inline bool isASCIIIdentifierContinue(uint32_t ch) {
+  return isASCIIIdentifierStart(ch) || ('0' <= ch && ch <= '9');
+}
+
 /// \return true if the codepoint has the ID_Start property.
 inline bool isUnicodeIDStart(uint32_t cp) {
-  return isASCIIIdentifierStart(cp) || isUnicodeOnlyLetter(cp);
+  return isASCIIIdentifierStart(cp) || isUnicodeOnlyIDStart(cp);
 }
 
 /// \return true if the codepoint has the ID_Continue property.
 inline bool isUnicodeIDContinue(uint32_t cp) {
-  // TODO: clearly this has to be optimized somehow
-  return isUnicodeIDStart(cp) || isUnicodeCombiningMark(cp) ||
-      isUnicodeDigit(cp) || isUnicodeConnectorPunctuation(cp) ||
-      cp == UNICODE_ZWNJ || cp == UNICODE_ZWJ;
+  return isASCIIIdentifierContinue(cp) || isUnicodeOnlyIDContinue(cp);
 }
 
 /// \return true if the codepoint is valid in a unicode property name

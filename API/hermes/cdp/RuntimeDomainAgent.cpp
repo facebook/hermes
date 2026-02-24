@@ -371,7 +371,7 @@ bool JSIPropNameIDSet::insert(jsi::PropNameID &&name) {
 RuntimeDomainAgent::RuntimeDomainAgent(
     int32_t executionContextID,
     HermesRuntime &runtime,
-    debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
+    const debugger::AsyncDebuggerAPI &asyncDebuggerAPI,
     SynchronizedOutboundCallback messageCallback,
     std::shared_ptr<RemoteObjectsTable> objTable,
     ConsoleMessageStorage &consoleMessageStorage,

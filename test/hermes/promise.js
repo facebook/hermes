@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xes6-promise %s | %FileCheck --match-full-lines %s
+// RUN: %hermes %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -Xmicrotask-queue %s | %FileCheck --match-full-lines %s
-// RUN: %hermesc -O -emit-binary -out %t.hbc %s && %hermes -Xes6-promise %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
 
 print('promise');
 // CHECK-LABEL: promise

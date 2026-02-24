@@ -11,7 +11,6 @@
 #include "hermes_api.h"
 #include "MurmurHash.h"
 #include "ScriptStore.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Runtime.h"
 #include "hermes/cdp/CDPAgent.h"
@@ -401,6 +400,12 @@ class ConfigWrapper {
     return napi_status::napi_ok;
   }
 
+  napi_status setIntlProvider(uint8_t mode, const void *vtable) {
+    intlProviderMode_ = mode;
+    intlIcuVtable_ = vtable;
+    return napi_status::napi_ok;
+  }
+
   napi_status enableInspector(bool value) {
     enableInspector_ = value;
     return napi_status::napi_ok;
@@ -482,6 +487,8 @@ class ConfigWrapper {
       config.withCrashMgr(crashManager);
     }
     config.withMicrotaskQueue(explicitMicrotasks_);
+    config.withIntlProviderMode(intlProviderMode_);
+    config.withIntlIcuVtable(intlIcuVtable_);
     return config.build();
   }
 
@@ -491,6 +498,8 @@ class ConfigWrapper {
   std::string inspectorRuntimeName_;
   uint16_t inspectorPort_{};
   bool inspectorBreakOnStart_{};
+  uint8_t intlProviderMode_{0};
+  const void *intlIcuVtable_{nullptr};
   bool explicitMicrotasks_{};
   std::function<void(napi_env env, napi_value value)> unhandledErrorCallback_{};
   std::shared_ptr<TaskRunner> taskRunner_;
@@ -519,36 +528,29 @@ class HermesExecutorRuntimeAdapter final
 class NodeApiScriptModel final {
  public:
   explicit NodeApiScriptModel(
-      std::unique_ptr<::hermes::hbc::BCProvider> bcProvider,
-      ::hermes::vm::RuntimeModuleFlags runtimeFlags,
-      std::string sourceURL,
-      bool isBytecode)
-      : bcProvider_(std::move(bcProvider)),
-        runtimeFlags_(runtimeFlags),
-        sourceURL_(std::move(sourceURL)),
-        isBytecode_(isBytecode) {}
+      std::shared_ptr<const ::hermes::Buffer> bytecodeBuffer,
+      std::shared_ptr<const ::hermes::Buffer> sourceBuffer,
+      std::string sourceURL)
+      : bytecodeBuffer_(std::move(bytecodeBuffer)),
+        sourceBuffer_(std::move(sourceBuffer)),
+        sourceURL_(std::move(sourceURL)) {}
 
-  std::shared_ptr<::hermes::hbc::BCProvider> bytecodeProvider() const {
-    return bcProvider_;
+  const std::shared_ptr<const ::hermes::Buffer> &bytecodeBuffer() const {
+    return bytecodeBuffer_;
   }
 
-  ::hermes::vm::RuntimeModuleFlags runtimeFlags() const {
-    return runtimeFlags_;
+  const std::shared_ptr<const ::hermes::Buffer> &sourceBuffer() const {
+    return sourceBuffer_;
   }
 
   const std::string &sourceURL() const {
     return sourceURL_;
   }
 
-  bool isBytecode() const {
-    return isBytecode_;
-  }
-
  private:
-  std::shared_ptr<::hermes::hbc::BCProvider> bcProvider_;
-  ::hermes::vm::RuntimeModuleFlags runtimeFlags_;
+  std::shared_ptr<const ::hermes::Buffer> bytecodeBuffer_;
+  std::shared_ptr<const ::hermes::Buffer> sourceBuffer_;
   std::string sourceURL_;
-  bool isBytecode_{false};
 };
 
 // Wraps script data as hermes::Buffer
@@ -602,6 +604,66 @@ class JsiSmallVectorBuffer final : public facebook::jsi::Buffer {
  private:
   llvh::SmallVector<char, 0> data_;
 };
+
+namespace {
+
+class StringBuffer : public ::hermes::Buffer {
+ public:
+  StringBuffer(std::string s) : s_(std::move(s)) {
+    data_ = reinterpret_cast<const uint8_t *>(s_.data());
+    size_ = s_.size();
+  }
+
+ private:
+  std::string s_;
+};
+
+/// A class which adapts a jsi buffer to a Hermes buffer.
+/// It also provides the ability to create a partial "view" into the buffer.
+class BufferAdapter final : public ::hermes::Buffer {
+ public:
+  explicit BufferAdapter(
+      const std::shared_ptr<const ::hermes::Buffer> &buf,
+      const uint8_t *data,
+      size_t size)
+      : buf_(buf) {
+    data_ = data;
+    size_ = size;
+  }
+
+  explicit BufferAdapter(const std::shared_ptr<const ::hermes::Buffer> &buf)
+      : BufferAdapter(buf, buf->data(), buf->size()) {}
+
+ private:
+  /// The buffer we are "adapting".
+  std::shared_ptr<const ::hermes::Buffer> buf_;
+};
+
+/// If the buffer contains an embedded terminating zero, shrink it, so it is
+/// one past the size, as per the LLVM MemoryBuffer convention. Otherwise, copy
+/// it into a new zero-terminated buffer.
+std::unique_ptr<BufferAdapter> ensureZeroTerminated(
+    const std::shared_ptr<::hermes::Buffer> &buf) {
+  size_t size = buf->size();
+  const uint8_t *data = buf->data();
+
+  // Check for zero termination
+  if (size != 0 && data[size - 1] == 0) {
+    return std::make_unique<BufferAdapter>(buf, data, size - 1);
+  } else {
+    // Copy into a zero-terminated instance.
+    return std::make_unique<BufferAdapter>(
+        std::make_shared<StringBuffer>(std::string((const char *)data, size)));
+  }
+}
+
+facebook::hermes::IHermesRootAPI *getHermesRootAPI() {
+  // The makeHermesRootAPI returns a singleton.
+  return facebook::jsi::castInterface<facebook::hermes::IHermesRootAPI>(
+      facebook::hermes::makeHermesRootAPI());
+}
+
+} // namespace
 
 class RuntimeWrapper {
  public:
@@ -712,9 +774,8 @@ class RuntimeWrapper {
   napi_status drainMicrotasks(int32_t maxCountHint, bool *result) noexcept {
     CHECK_ARG(result);
     if (hermesVMRuntime_.hasMicrotaskQueue()) {
-      CHECK_STATUS(
-          ::hermes::node_api::checkJSErrorStatus(
-              env_, hermesVMRuntime_.drainJobs()));
+      CHECK_STATUS(::hermes::node_api::checkJSErrorStatus(
+          env_, hermesVMRuntime_.drainJobs()));
     }
 
     hermesVMRuntime_.clearKeptObjects();
@@ -758,6 +819,141 @@ class RuntimeWrapper {
     return runPreparedScript(preparedScript, result);
   }
 
+  /// Compiles source to bytecode with optional cache lookup/persist.
+  /// On success, sets outBcProvider (always) and optionally
+  /// outBytecodeBuffer (when bytecode can be serialized).
+  /// outBytecodeBuffer is null when lazy functions prevent serialization.
+  napi_status compileSourceWithCache(
+      const std::shared_ptr<::hermes::Buffer> &sourceBuffer,
+      const std::string &sourceURL,
+      const ::hermes::hbc::CompileFlags &cflags,
+      std::unique_ptr<::hermes::hbc::BCProvider> &outBcProvider,
+      std::shared_ptr<const ::hermes::Buffer> &outBytecodeBuffer) noexcept {
+    // Build cache key if cache is available and not debugging.
+    facebook::jsi::ScriptSignature scriptSignature;
+    facebook::jsi::JSRuntimeSignature runtimeSignature;
+    const char *prepareTag = "perf";
+    bool useCache = scriptCache_ && !cflags.debug;
+
+    if (useCache) {
+      uint64_t hash{};
+      murmurhash(sourceBuffer->data(), sourceBuffer->size(), hash);
+      scriptSignature = {sourceURL, hash};
+      runtimeSignature = {"Hermes", HermesBuildVersion.version};
+    }
+
+    // Try loading from cache.
+    if (useCache) {
+      auto cached = scriptCache_->tryGetPreparedScript(
+          scriptSignature, runtimeSignature, prepareTag);
+      if (cached && cached->size() > 0) {
+        // Validate cached bytecode is loadable.
+        auto cachedHermesBuf = std::make_shared<JsiBuffer>(cached);
+        auto bcCheck =
+            ::hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+                std::make_unique<BufferAdapter>(cachedHermesBuf));
+        if (bcCheck.first) {
+          // Cache hit.
+          outBcProvider = std::move(bcCheck.first);
+          outBytecodeBuffer = std::move(cachedHermesBuf);
+          return ::hermes::node_api::clearLastNativeError(env_);
+        }
+        // Invalid cache entry; fall through to compile from source.
+      }
+    }
+
+    // Compile from source.
+    llvh::StringRef sourceMap;
+    auto bcErr = ::hermes::hbc::createBCProviderFromSrc(
+        ensureZeroTerminated(sourceBuffer), sourceURL, sourceMap, cflags);
+
+    if (!bcErr.first) {
+      return GENERIC_FAILURE(
+          "Compiling JS failed: " + std::move(bcErr.second) +
+          ", sourceURL: " + sourceURL);
+    }
+
+    outBcProvider = std::move(bcErr.first);
+
+    // Check for lazy functions - serialization cannot handle them.
+    for (uint32_t i = 0, e = outBcProvider->getFunctionCount(); i < e; ++i) {
+      if (outBcProvider->isFunctionLazy(i)) {
+        // Cannot serialize; return with outBytecodeBuffer = null.
+        return ::hermes::node_api::clearLastNativeError(env_);
+      }
+    }
+
+    // Serialize the compiled bytecode.
+    llvh::SmallVector<char, 0> bytecodeVec;
+    llvh::raw_svector_ostream bcStream(bytecodeVec);
+    ::hermes::BytecodeGenerationOptions opts(::hermes::EmitBundle);
+    ::hermes::hbc::serializeBytecodeModule(
+        *outBcProvider->getBytecodeModule(), {}, bcStream, opts);
+
+    outBytecodeBuffer = std::make_shared<StringBuffer>(
+        std::string(bytecodeVec.data(), bytecodeVec.size()));
+
+    // Persist to cache.
+    if (useCache) {
+      scriptCache_->persistPreparedScript(
+          std::make_shared<JsiSmallVectorBuffer>(std::move(bytecodeVec)),
+          scriptSignature,
+          runtimeSignature,
+          prepareTag);
+    }
+
+    return ::hermes::node_api::clearLastNativeError(env_);
+  }
+
+  napi_status runScriptBuffer(
+      const uint8_t *scriptData,
+      size_t scriptLength,
+      jsr_data_delete_cb scriptDeleteCallback,
+      void *deleterData,
+      const char *sourceURL,
+      napi_value *result) noexcept {
+    std::shared_ptr<ScriptDataBuffer> buffer =
+        std::make_shared<ScriptDataBuffer>(
+            scriptData, scriptLength, scriptDeleteCallback, deleterData);
+    std::string sourceURLStr = sourceURL ? sourceURL : "";
+
+    facebook::hermes::IHermesRootAPI *api = getHermesRootAPI();
+    bool isBytecode = api->isHermesBytecode(buffer->data(), buffer->size());
+
+    // Construct the BC provider either from buffer or source.
+    std::unique_ptr<::hermes::hbc::BCProvider> bcProvider;
+    ::hermes::vm::RuntimeModuleFlags runtimeFlags{};
+    if (isBytecode) {
+      auto bcErr =
+          ::hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+              std::make_unique<BufferAdapter>(buffer));
+      if (!bcErr.first) {
+        return GENERIC_FAILURE(
+            "Compiling JS failed: " + std::move(bcErr.second) +
+            ", sourceURL: " + sourceURLStr);
+      }
+      bcProvider = std::move(bcErr.first);
+      runtimeFlags.persistent = true;
+    } else {
+      std::shared_ptr<const ::hermes::Buffer> bytecodeBuffer;
+      CHECK_STATUS(compileSourceWithCache(
+          buffer, sourceURLStr, compileFlags_, bcProvider, bytecodeBuffer));
+      runtimeFlags.persistent = bcProvider->allowPersistent();
+    }
+
+    return ::hermes::node_api::runInNodeApiContext(
+        env_,
+        [&]() {
+          return hermesVMRuntime_.runBytecode(
+              std::move(bcProvider),
+              runtimeFlags,
+              sourceURL,
+              ::hermes::vm::Runtime::makeNullHandle<
+                  ::hermes::vm::Environment>());
+        },
+        result);
+  }
+
   napi_status createPreparedScript(
       const uint8_t *scriptData,
       size_t scriptLength,
@@ -765,120 +961,45 @@ class RuntimeWrapper {
       void *deleterData,
       const char *sourceURL,
       jsr_prepared_script *result) noexcept {
-    std::unique_ptr<ScriptDataBuffer> buffer =
-        std::make_unique<ScriptDataBuffer>(
+    std::shared_ptr<ScriptDataBuffer> buffer =
+        std::make_shared<ScriptDataBuffer>(
             scriptData, scriptLength, scriptDeleteCallback, deleterData);
+    std::string sourceURLStr = sourceURL ? sourceURL : "";
 
-    std::pair<std::unique_ptr<::hermes::hbc::BCProvider>, std::string> bcErr{};
-    ::hermes::vm::RuntimeModuleFlags runtimeFlags{};
-    runtimeFlags.persistent = true;
+    facebook::hermes::IHermesRootAPI *api = getHermesRootAPI();
+    bool isBytecode = api->isHermesBytecode(buffer->data(), buffer->size());
 
-    bool isBytecode = isHermesBytecode(buffer->data(), buffer->size());
-    // Save the first few bytes of the buffer so that we can later append them
-    // to any error message.
-    uint8_t bufPrefix[16];
-    const size_t bufSize = buffer->size();
-    std::memcpy(
-        bufPrefix, buffer->data(), std::min(sizeof(bufPrefix), bufSize));
-
-    // Construct the BC provider either from buffer or source.
+    // If input is already bytecode, store it directly.
     if (isBytecode) {
-      bcErr = ::hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-          std::move(buffer));
-    } else {
-#if defined(HERMESVM_LEAN)
-      bcErr.second = "prepareJavaScript source compilation not supported";
-#else
-
-      facebook::jsi::ScriptSignature scriptSignature;
-      facebook::jsi::JSRuntimeSignature runtimeSignature;
-      const char *prepareTag = "perf";
-
-      if (scriptCache_) {
-        uint64_t hash{};
-        bool isAscii = murmurhash(buffer->data(), buffer->size(), /*ref*/ hash);
-        facebook::jsi::JSRuntimeVersion_t runtimeVersion =
-            HermesBuildVersion.version;
-        scriptSignature = {std::string(sourceURL ? sourceURL : ""), hash};
-        runtimeSignature = {"Hermes", runtimeVersion};
-      }
-
-      std::shared_ptr<const facebook::jsi::Buffer> cache;
-      if (scriptCache_) {
-        cache = scriptCache_->tryGetPreparedScript(
-            scriptSignature, runtimeSignature, prepareTag);
-        bcErr = ::hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
-            std::make_unique<JsiBuffer>(std::move(cache)));
-      }
-
-      ::hermes::hbc::BCProviderFromSrc *bytecodeProviderFromSrc{};
-      if (!bcErr.first) {
-        std::
-            pair<std::unique_ptr<::hermes::hbc::BCProviderFromSrc>, std::string>
-                bcFromSrcErr =
-                    ::hermes::hbc::BCProviderFromSrc::createBCProviderFromSrc(
-                        std::move(buffer),
-                        std::string(sourceURL ? sourceURL : ""),
-                        nullptr,
-                        compileFlags_);
-        bytecodeProviderFromSrc = bcFromSrcErr.first.get();
-        bcErr = std::move(bcFromSrcErr);
-      }
-
-      if (scriptCache_ && bytecodeProviderFromSrc) {
-        ::hermes::hbc::BytecodeModule *bcModule =
-            bytecodeProviderFromSrc->getBytecodeModule();
-
-        // Serialize/deserialize can't handle lazy compilation as of now. Do a
-        // check to make sure there is no lazy BytecodeFunction in module_.
-        for (uint32_t i = 0; i < bcModule->getNumFunctions(); i++) {
-          if (bytecodeProviderFromSrc->isFunctionLazy(i)) {
-            goto CannotSerialize;
-          }
-        }
-
-        // Serialize the bytecode. Call BytecodeSerializer to do the heavy
-        // lifting. Write to a SmallVector first, so we can know the total bytes
-        // and write it first and make life easier for Deserializer. This is
-        // going to be slower than writing to Serializer directly but it's OK to
-        // slow down serialization if it speeds up Deserializer.
-        ::hermes::BytecodeGenerationOptions bytecodeGenOpts =
-            ::hermes::BytecodeGenerationOptions::defaults();
-        llvh::SmallVector<char, 0> bytecodeVector;
-        llvh::raw_svector_ostream outStream(bytecodeVector);
-        ::hermes::hbc::BytecodeSerializer bcSerializer{
-            outStream, bytecodeGenOpts};
-        bcSerializer.serialize(
-            *bcModule, bytecodeProviderFromSrc->getSourceHash());
-
-        scriptCache_->persistPreparedScript(
-            std::shared_ptr<const facebook::jsi::Buffer>(
-                new JsiSmallVectorBuffer(std::move(bytecodeVector))),
-            scriptSignature,
-            runtimeSignature,
-            prepareTag);
-      }
-#endif
-    }
-    if (!bcErr.first) {
-      std::string errorMessage;
-      llvh::raw_string_ostream stream(errorMessage);
-      stream << " Buffer size: " << bufSize << ", starts with: ";
-      for (size_t i = 0; i < sizeof(bufPrefix) && i < bufSize; ++i) {
-        stream << llvh::format_hex_no_prefix(bufPrefix[i], 2);
-      }
-      return GENERIC_FAILURE(
-          "Compiling JS failed: ", bcErr.second, stream.str());
+      *result = reinterpret_cast<jsr_prepared_script>(
+          new NodeApiScriptModel(std::move(buffer), nullptr, sourceURLStr));
+      return ::hermes::node_api::clearLastNativeError(env_);
     }
 
-#if !defined(HERMESVM_LEAN)
-  CannotSerialize:
-#endif
+    // Check if we should eagerly compile or defer (lazy compilation).
+    bool shouldEagerlyCompile = !compileFlags_.lazy ||
+        buffer->size() < compileFlags_.preemptiveFileCompilationThreshold;
+
+    if (shouldEagerlyCompile) {
+      // Eager compilation with cache support.
+      ::hermes::hbc::CompileFlags cflags = compileFlags_;
+      cflags.lazy = false;
+      std::unique_ptr<::hermes::hbc::BCProvider> bcProvider;
+      std::shared_ptr<const ::hermes::Buffer> bytecodeBuffer;
+      CHECK_STATUS(compileSourceWithCache(
+          buffer, sourceURLStr, cflags, bcProvider, bytecodeBuffer));
+
+      // bytecodeBuffer is always set for eager (no lazy functions possible).
+      *result = reinterpret_cast<jsr_prepared_script>(new NodeApiScriptModel(
+          std::move(bytecodeBuffer), nullptr, sourceURLStr));
+      return ::hermes::node_api::clearLastNativeError(env_);
+    }
+
+    // Lazy path: store source only, defer compilation.
     *result = reinterpret_cast<jsr_prepared_script>(new NodeApiScriptModel(
-        std::move(bcErr.first),
-        runtimeFlags,
-        sourceURL ? sourceURL : "",
-        isBytecode));
+        nullptr, // bytecodeBuffer
+        std::move(buffer), // sourceBuffer
+        sourceURLStr));
     return ::hermes::node_api::clearLastNativeError(env_);
   }
 
@@ -895,23 +1016,49 @@ class RuntimeWrapper {
     CHECK_ARG(preparedScript);
     const NodeApiScriptModel *hermesPrep =
         reinterpret_cast<NodeApiScriptModel *>(preparedScript);
-    return ::hermes::node_api::runInNodeApiContext(
-        env_,
-        [this, hermesPrep]() {
-          return hermesVMRuntime_.runBytecode(
-              hermesPrep->bytecodeProvider(),
-              hermesPrep->runtimeFlags(),
-              hermesPrep->sourceURL(),
-              ::hermes::vm::Runtime::makeNullHandle<
-                  ::hermes::vm::Environment>());
-        },
-        result);
-  }
 
-  // Internal function to check if buffer contains Hermes VM bytecode.
-  static bool isHermesBytecode(const uint8_t *data, size_t len) noexcept {
-    return ::hermes::hbc::BCProviderFromBuffer::isBytecodeStream(
-        llvh::ArrayRef<uint8_t>(data, len));
+    // Check which path: bytecode or source
+    if (hermesPrep->bytecodeBuffer()) {
+      // Bytecode path: create BCProvider and execute
+      std::pair<std::unique_ptr<::hermes::hbc::BCProvider>, std::string> bcErr =
+          ::hermes::hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+              std::make_unique<BufferAdapter>(hermesPrep->bytecodeBuffer()));
+
+      if (!bcErr.first) {
+        return GENERIC_FAILURE(
+            "Failed to create BCProvider from bytecode: " + bcErr.second);
+      }
+
+      ::hermes::vm::RuntimeModuleFlags runtimeFlags{};
+      runtimeFlags.persistent = true;
+      return ::hermes::node_api::runInNodeApiContext(
+          env_,
+          [&]() {
+            return hermesVMRuntime_.runBytecode(
+                std::move(bcErr.first),
+                runtimeFlags,
+                hermesPrep->sourceURL(),
+                ::hermes::vm::Runtime::makeNullHandle<
+                    ::hermes::vm::Environment>());
+          },
+          result);
+    } else {
+      // Source path: delegate to evaluateJavaScript
+      // Each runtime compiles independently, avoiding shared mutable state
+      return runScriptBuffer(
+          hermesPrep->sourceBuffer()->data(),
+          hermesPrep->sourceBuffer()->size(),
+          [](void * /*data*/, void *deleterData) {
+            std::shared_ptr<const ::hermes::Buffer> buf =
+                *reinterpret_cast<std::shared_ptr<const ::hermes::Buffer> *>(
+                    deleterData);
+            // Let the shared_ptr go out of scope to delete the buffer if needed
+          },
+          new std::shared_ptr<const ::hermes::Buffer>(
+              hermesPrep->sourceBuffer()),
+          hermesPrep->sourceURL().c_str(),
+          result);
+    }
   }
 
   napi_status initializeNativeModule(
@@ -999,19 +1146,13 @@ JSR_API hermes_dump_crash_data(jsr_runtime runtime, int32_t fd) {
   return CHECKED_RUNTIME(runtime)->dumpCrashData(fd);
 }
 
-static facebook::hermes::IHermesRootAPI *getHermesRootAPI() {
-  // The makeHermesRootAPI returns a singleton.
-  return facebook::jsi::castInterface<facebook::hermes::IHermesRootAPI>(
-      facebook::hermes::makeHermesRootAPI());
-}
-
 JSR_API hermes_sampling_profiler_enable() {
-  getHermesRootAPI()->enableSamplingProfiler();
+  facebook::hermes::getHermesRootAPI()->enableSamplingProfiler();
   return napi_ok;
 }
 
 JSR_API hermes_sampling_profiler_disable() {
-  getHermesRootAPI()->disableSamplingProfiler();
+  facebook::hermes::getHermesRootAPI()->disableSamplingProfiler();
   return napi_ok;
 }
 
@@ -1024,7 +1165,7 @@ JSR_API hermes_sampling_profiler_remove(jsr_runtime runtime) {
 }
 
 JSR_API hermes_sampling_profiler_dump_to_file(const char *filename) {
-  getHermesRootAPI()->dumpSampledTraceToFile(filename);
+  facebook::hermes::getHermesRootAPI()->dumpSampledTraceToFile(filename);
   return napi_ok;
 }
 
@@ -1044,6 +1185,14 @@ JSR_API hermes_config_enable_default_crash_handler(
     jsr_config config,
     bool value) {
   return CHECKED_CONFIG(config)->enableDefaultCrashHandler(value);
+}
+
+JSR_API hermes_config_set_intl_provider(
+    jsr_config config,
+    uint8_t mode,
+    const struct hermes_icu_vtable *vtable) {
+  return CHECKED_CONFIG(config)->setIntlProvider(
+      mode, static_cast<const void *>(vtable));
 }
 
 JSR_API jsr_config_enable_inspector(jsr_config config, bool value) {
@@ -1172,6 +1321,23 @@ JSR_API jsr_run_script(
     const char *source_url,
     napi_value *result) {
   return CHECKED_ENV_RUNTIME(env)->runScript(source, source_url, result);
+}
+
+JSR_API jsr_run_script_buffer(
+    napi_env env,
+    const uint8_t *script_data,
+    size_t script_length,
+    jsr_data_delete_cb script_delete_cb,
+    void *deleter_data,
+    const char *source_url,
+    napi_value *result) {
+  return CHECKED_ENV_RUNTIME(env)->runScriptBuffer(
+      script_data,
+      script_length,
+      script_delete_cb,
+      deleter_data,
+      source_url,
+      result);
 }
 
 JSR_API jsr_create_prepared_script(

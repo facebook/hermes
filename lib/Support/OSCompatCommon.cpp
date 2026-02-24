@@ -6,6 +6,7 @@
  */
 
 #include "hermes/Support/OSCompat.h"
+#include "hermes/Support/SlowAssert.h"
 
 namespace hermes {
 namespace oscompat {
@@ -22,6 +23,10 @@ std::pair<const void *, size_t> thread_stack_bounds(unsigned gap) {
   if (LLVM_UNLIKELY(!bounds.first)) {
     cachedBounds = bounds = detail::thread_stack_bounds_impl();
   }
+
+  // Check that the cached bounds don't change. This is useful for catching
+  // potential bugs in thread_stack_bounds_impl.
+  HERMES_SLOW_ASSERT(bounds == detail::thread_stack_bounds_impl());
 
   // Adjust for the gap here to allow caching with multiple gaps.
   auto [high, size] = bounds;

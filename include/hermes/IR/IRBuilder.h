@@ -13,12 +13,12 @@
 
 #include "llvh/ADT/SmallVector.h"
 #include "llvh/ADT/StringRef.h"
+#include "llvh/ADT/Twine.h"
 
 #include "hermes/AST/Context.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/IR/IR.h"
 #include "hermes/IR/Instrs.h"
-#include "hermes/Optimizer/Wasm/WasmIntrinsics.h"
 
 namespace hermes {
 
@@ -39,7 +39,6 @@ class IRBuilder {
   BasicBlock *Block{};
 
   SMLoc Location{};
-  ScopeDesc *CurrentSourceLevelScope{};
 
  public:
   explicit IRBuilder(Module *Mod) : M(Mod), InsertionPoint(nullptr) {}
@@ -51,6 +50,7 @@ class IRBuilder {
   //--------------------------------------------------------------------------//
 
   enum class PropEnumerable { No = 0, Yes = 1 };
+  enum class StoreStrict { No = 0, Yes = 1 };
 
   Module *getModule() {
     return M;
@@ -63,25 +63,21 @@ class IRBuilder {
   /// \param OriginalName the original name specified by the user.
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
-  Function *createFunction(
-      ScopeDesc *scopeDesc,
+  NormalFunction *createFunction(
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility = SourceVisibility::Default,
+      CustomDirectives customDirectives = CustomDirectives{},
       SMRange sourceRange = SMRange{},
-      bool isGlobal = false,
       Function *insertBefore = nullptr);
 
   /// Create a new Function and add it to the Module.
-  Function *createFunction(
-      ScopeDesc *scopeDesc,
+  NormalFunction *createFunction(
       llvh::StringRef OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility = SourceVisibility::Default,
+      CustomDirectives customDirectives = CustomDirectives{},
       SMRange sourceRange = SMRange{},
-      bool isGlobal = false,
       Function *insertBefore = nullptr);
 
   /// Create a new AsyncFunction and add it to the Module.
@@ -89,11 +85,10 @@ class IRBuilder {
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
   AsyncFunction *createAsyncFunction(
-      ScopeDesc *scopeDesc,
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
+      CustomDirectives customDirectives,
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
@@ -102,31 +97,18 @@ class IRBuilder {
   /// \param insertBefore Another function in the module where this function
   ///   should be inserted before. If null, appends to the end of the module.
   GeneratorFunction *createGeneratorFunction(
-      ScopeDesc *scopeDesc,
       Identifier OriginalName,
       Function::DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
-      SMRange sourceRange = SMRange{},
-      Function *insertBefore = nullptr);
-
-  /// Create a new GeneratorInnerFunction and add it to the Module.
-  /// \param OriginalName the original name specified by the user.
-  /// \param insertBefore Another function in the module where this function
-  ///   should be inserted before. If null, appends to the end of the module.
-  GeneratorInnerFunction *createGeneratorInnerFunction(
-      ScopeDesc *scopeDesc,
-      Identifier OriginalName,
-      Function::DefinitionKind definitionKind,
-      bool strictMode,
+      CustomDirectives customDirectives,
       SMRange sourceRange = SMRange{},
       Function *insertBefore = nullptr);
 
   /// Create the top level function representing the global scope.
   Function *createTopLevelFunction(
-      ScopeDesc *scopeDesc,
+      llvh::StringRef topLevelFunctionName,
       bool strictMode,
-      SourceVisibility sourceVisibility = SourceVisibility::Default,
+      CustomDirectives customDirectives = CustomDirectives{},
       SMRange sourceRange = SMRange{});
 
   /// Create a new global object property.
@@ -138,27 +120,32 @@ class IRBuilder {
       llvh::StringRef name,
       bool declared);
 
-  /// Add a new non-this parameter to function \p Parent.
-  Parameter *createParameter(Function *Parent, Identifier Name);
+  /// Add a new JS parameter to function \p Parent.
+  JSDynamicParam *createJSDynamicParam(Function *parent, Identifier name);
 
-  /// Add a new non-this parameter to function \p Parent.
-  Parameter *createParameter(Function *Parent, llvh::StringRef Name);
+  /// Add a new JS parameter to function \p Parent.
+  JSDynamicParam *createJSDynamicParam(Function *parent, llvh::StringRef name);
 
-  /// Add the 'this' parameter to function \p Parent.
-  /// Must only be done once per function.
-  Parameter *createThisParameter(Function *Parent);
-
-  /// Add a new variable to scope \p Parent.
-  Variable *createVariable(
-      ScopeDesc *Parent,
-      Variable::DeclKind declKind,
-      Identifier Name);
+  /// Add a JS this parameter to function \p Parent. This must be the first
+  /// parameter, and should only be called once per function.
+  JSDynamicParam *createJSThisParam(Function *parent);
 
   /// Add a new variable to scope \p Parent.
   Variable *createVariable(
-      ScopeDesc *Parent,
-      Variable::DeclKind declKind,
-      llvh::StringRef Name);
+      VariableScope *Parent,
+      Identifier Name,
+      Type type,
+      bool hidden);
+
+  /// Add a new variable to scope \p Parent.
+  Variable *createVariable(
+      VariableScope *Parent,
+      const llvh::Twine &Name,
+      Type type,
+      bool hidden);
+
+  /// Create a new VariableScope in the module.
+  VariableScope *createVariableScope(VariableScope *parentScope);
 
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
@@ -172,11 +159,14 @@ class IRBuilder {
   /// Create a new literal NaN.
   LiteralNumber *getLiteralNaN();
 
+  /// Create a new literal number value of Infinity.
+  LiteralNumber *getLiteralInfinity();
+
   /// Create a new literal BitInt of value \p value.
   LiteralBigInt *getLiteralBigInt(UniqueString *value);
 
   /// Create a new literal string of value \p value.
-  LiteralString *getLiteralString(llvh::StringRef value);
+  LiteralString *getLiteralString(const llvh::Twine &value);
 
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(Identifier value);
@@ -187,11 +177,28 @@ class IRBuilder {
   /// Create a new literal 'empty'.
   LiteralEmpty *getLiteralEmpty();
 
+  /// Return the "Uninit" literal singletone.
+  LiteralUninit *getLiteralUninit() {
+    return M->getLiteralUninit();
+  }
+
   /// Create a new literal 'undefined'.
   LiteralUndefined *getLiteralUndefined();
 
   /// Create a new literal null.
   LiteralNull *getLiteralNull();
+
+  LiteralBuiltinIdx *getLiteralBuiltinIdx(BuiltinMethod::Enum builtinIdx) {
+    return M->getLiteralBuiltinIdx(builtinIdx);
+  }
+
+  LiteralIRType *getLiteralIRType(Type type) {
+    return M->getLiteralIRType(type);
+  }
+
+  LiteralTypeOfIsTypes *getLiteralTypeOfIsTypes(TypeOfIsTypes types) {
+    return M->getLiteralTypeOfIsTypes(types);
+  }
 
   /// Return the GlobalObject value.
   GlobalObject *getGlobalObject();
@@ -200,7 +207,7 @@ class IRBuilder {
   EmptySentinel *getEmptySentinel();
 
   /// Convert llvh::StringRef to Identifier.
-  Identifier createIdentifier(llvh::StringRef str);
+  Identifier createIdentifier(const llvh::Twine &str);
 
   //--------------------------------------------------------------------------//
   //                          Statefull APIs.                                 //
@@ -254,10 +261,6 @@ class IRBuilder {
     return Location;
   }
 
-  void setCurrentSourceLevelScope(ScopeDesc *sourceLevelScope) {
-    CurrentSourceLevelScope = sourceLevelScope;
-  }
-
   /// Move instruction \p inst from its block to the insertion point in the
   /// current block. If the instruction is a terminator, correctly update the
   /// phi-nodes that refer to the old block and point then to the current one.
@@ -282,9 +285,11 @@ class IRBuilder {
 
   ReturnInst *createReturnInst(Value *Val);
 
-  AllocStackInst *createAllocStackInst(llvh::StringRef varName);
+  AllocStackInst *createAllocStackInst(const llvh::Twine &varName, Type type);
 
-  AllocStackInst *createAllocStackInst(Identifier varName);
+  AllocStackInst *createAllocStackInst(Identifier varName, Type type);
+
+  ToPropertyKeyInst *createToPropertyKeyInst(Value *val);
 
   AsNumberInst *createAsNumberInst(Value *val);
 
@@ -292,94 +297,187 @@ class IRBuilder {
 
   AsInt32Inst *createAsInt32Inst(Value *val);
 
+  AsUint32Inst *createAsUint32Inst(Value *val);
+
   AddEmptyStringInst *createAddEmptyStringInst(Value *val);
 
-  ThrowIfHasRestrictedGlobalPropertyInst *
-  createThrowIfHasRestrictedGlobalPropertyInst(llvh::StringRef property);
+  CreatePrivateNameInst *createCreatePrivateNameInst(LiteralString *descStr);
 
-  CreateScopeInst *createCreateScopeInst(ScopeDesc *scopeDesc);
-
-  CreateInnerScopeInst *createCreateInnerScopeInst(
-      ScopeCreationInst *parentScope,
-      ScopeDesc *scopeDesc);
+  CreateClassInst *createCreateClassInst(
+      BaseScopeInst *scope,
+      Function *code,
+      Value *superClass,
+      AllocStackInst *homeObjectOutput);
 
   CreateFunctionInst *createCreateFunctionInst(
-      Function *code,
-      ScopeCreationInst *environment);
+      BaseScopeInst *scope,
+      Function *code);
+
+  GetParentScopeInst *createGetParentScopeInst(
+      VariableScope *scope,
+      JSSpecialParam *parentScopeParam);
+
+  CreateScopeInst *createCreateScopeInst(
+      VariableScope *scope,
+      Value *parentScope);
+
+  ResolveScopeInst *createResolveScopeInst(
+      VariableScope *scope,
+      VariableScope *startVarScope,
+      Instruction *startScope);
+
+  LIRResolveScopeInst *createLIRResolveScopeInst(
+      VariableScope *scope,
+      Instruction *startScope,
+      LiteralNumber *numLevels);
+
+  GetClosureScopeInst *
+  createGetClosureScopeInst(VariableScope *scope, Function *F, Value *closure);
 
   LoadStackInst *createLoadStackInst(AllocStackInst *ptr);
 
-  LoadFrameInst *createLoadFrameInst(Variable *ptr, ScopeCreationInst *scope);
+  LoadFrameInst *createLoadFrameInst(Instruction *scope, Variable *ptr);
 
   StoreStackInst *createStoreStackInst(Value *storedValue, AllocStackInst *ptr);
 
-  StoreFrameInst *createStoreFrameInst(
-      Value *storedValue,
-      Variable *ptr,
-      ScopeCreationInst *scope);
+  StoreFrameInst *
+  createStoreFrameInst(Instruction *scope, Value *storedValue, Variable *ptr);
 
   CallInst *createCallInst(
-      LiteralString *textifiedCallee,
       Value *callee,
+      Value *target,
+      bool calleeIsAlwaysClosure,
+      Value *env,
+      Value *newTarget,
+      Value *thisValue,
+      ArrayRef<Value *> args);
+  CallInst *createCallInst(
+      Value *callee,
+      Value *newTarget,
+      Value *thisValue,
+      ArrayRef<Value *> args) {
+    return createCallInst(
+        callee,
+        getEmptySentinel(),
+        /* calleeIsAlwaysClosure */ false,
+        getEmptySentinel(),
+        newTarget,
+        thisValue,
+        args);
+  }
+
+  HBCCallWithArgCountInst *createHBCCallWithArgCount(
+      Value *callee,
+      Value *target,
+      bool calleeIsAlwaysClosure,
+      Value *env,
+      Value *newTarget,
+      LiteralNumber *argCount,
       Value *thisValue,
       ArrayRef<Value *> args);
 
   HBCCallNInst *createHBCCallNInst(
-      LiteralString *textifiedCallee,
       Value *callee,
-      Value *thisValue,
-      ArrayRef<Value *> args);
-
-  ConstructInst *createConstructInst(
-      Value *constructor,
+      Value *target,
+      bool calleeIsAlwaysClosure,
+      Value *env,
       Value *newTarget,
+      Value *thisValue,
       ArrayRef<Value *> args);
 
   CatchInst *createCatchInst();
 
-  ThrowInst *createThrowInst(Value *thrownValue);
+  ThrowInst *createThrowInst(
+      Value *thrownValue,
+      BasicBlock *catchTarget = nullptr);
 
-  CheckHasInstanceInst *createCheckHasInstanceInst(
-      AllocStackInst *result,
-      Value *left,
-      Value *right,
-      BasicBlock *onTrue,
-      BasicBlock *onFalse);
+  ThrowTypeErrorInst *createThrowTypeErrorInst(
+      Value *message,
+      BasicBlock *catchTarget = nullptr);
 
   TryStartInst *createTryStartInst(
       BasicBlock *tryBodyBlock,
       BasicBlock *catchTargetBlock);
 
-  TryEndInst *createTryEndInst();
+  TryEndInst *createTryEndInst(BasicBlock *catchBlock, BasicBlock *branchBlock);
+
+  BranchIfBuiltinInst *createBranchIfBuiltinInst(
+      BuiltinMethod::Enum builtinIndex,
+      Value *argument,
+      BasicBlock *catchBlock,
+      BasicBlock *branchBlock);
 
   DeletePropertyInst *createDeletePropertyInst(Value *object, Value *property);
+  DeletePropertyLooseInst *createDeletePropertyLooseInst(
+      Value *object,
+      Value *property);
+  DeletePropertyStrictInst *createDeletePropertyStrictInst(
+      Value *object,
+      Value *property);
 
   LoadPropertyInst *createLoadPropertyInst(Value *object, Value *property);
+  LoadPropertyWithReceiverInst *createLoadPropertyWithReceiverInst(
+      Value *object,
+      Value *property,
+      Value *receiver);
+  LoadOwnPrivateFieldInst *createLoadOwnPrivateFieldInst(
+      Value *object,
+      Value *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       LiteralString *property);
   TryLoadGlobalPropertyInst *createTryLoadGlobalPropertyInst(
       GlobalObjectProperty *property);
+
+  StorePropertyWithReceiverInst *createStorePropertyWithReceiverInst(
+      Value *storedValue,
+      Value *object,
+      Value *property,
+      Value *receiver,
+      StoreStrict isStrict);
 
   StorePropertyInst *
   createStorePropertyInst(Value *storedValue, Value *object, Value *property);
+  StorePropertyLooseInst *createStorePropertyLooseInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
+  StorePropertyStrictInst *createStorePropertyStrictInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
+
   TryStoreGlobalPropertyInst *createTryStoreGlobalPropertyInst(
       Value *storedValue,
       LiteralString *property);
   TryStoreGlobalPropertyInst *createTryStoreGlobalPropertyInst(
       Value *storedValue,
       GlobalObjectProperty *property);
-  StoreOwnPropertyInst *createStoreOwnPropertyInst(
+  TryStoreGlobalPropertyLooseInst *createTryStoreGlobalPropertyLooseInst(
+      Value *storedValue,
+      LiteralString *property);
+  TryStoreGlobalPropertyStrictInst *createTryStoreGlobalPropertyStrictInst(
+      Value *storedValue,
+      LiteralString *property);
+
+  DefineOwnPropertyInst *createDefineOwnPropertyInst(
       Value *storedValue,
       Value *object,
       Value *property,
       PropEnumerable isEnumerable);
-  StoreNewOwnPropertyInst *createStoreNewOwnPropertyInst(
+  DefineOwnInDenseArrayInst *createDefineOwnInDenseArrayInst(
       Value *storedValue,
       Value *object,
-      Literal *property,
-      PropEnumerable isEnumerable);
+      LiteralNumber *arrayIndex);
+  StoreOwnPrivateFieldInst *createStoreOwnPrivateFieldInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
+  AddOwnPrivateFieldInst *createAddOwnPrivateFieldInst(
+      Value *storedValue,
+      Value *object,
+      Value *property);
 
-  StoreGetterSetterInst *createStoreGetterSetterInst(
+  DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,
       Value *storedSetter,
       Value *object,
@@ -416,9 +514,15 @@ class IRBuilder {
       Value *storedValue,
       Identifier property);
 
-  AllocObjectInst *createAllocObjectInst(
-      uint32_t size,
-      Value *parent = nullptr);
+  AllocObjectLiteralInst *createAllocObjectLiteralInst(
+      const AllocObjectLiteralInst::ObjectPropertyMap &propMap = {},
+      Value *parentObject = nullptr);
+
+  AllocTypedObjectInst *createAllocTypedObjectInst(
+      const AllocTypedObjectInst::ObjectPropertyMap &propMap,
+      Value *parentObject);
+
+  AllocFastArrayInst *createAllocFastArrayInst(LiteralNumber *sizeHint);
 
   AllocArrayInst *createAllocArrayInst(
       LiteralNumber *sizeHint,
@@ -428,27 +532,43 @@ class IRBuilder {
       AllocArrayInst::ArrayValueList val_list,
       unsigned sizeHint);
 
-  CreateArgumentsInst *createCreateArgumentsInst();
+  GetTemplateObjectInst *createGetTemplateObjectInst(
+      uint32_t templateObjID,
+      bool dup,
+      llvh::ArrayRef<LiteralString *> rawStrings,
+      llvh::ArrayRef<Value *> cookedStrings);
 
-  GetNewTargetInst *createGetNewTargetInst();
+  CreateArgumentsLooseInst *createCreateArgumentsLooseInst();
+  CreateArgumentsStrictInst *createCreateArgumentsStrictInst();
 
-  ThrowIfEmptyInst *createThrowIfEmptyInst(Value *checkedValue);
+  GetNewTargetInst *createGetNewTargetInst(Value *newTargetParam);
 
-  HBCGetGlobalObjectInst *createHBCGetGlobalObjectInst();
+  ThrowIfInst *createThrowIfInst(Value *checkedValue, Type invalidTypes);
+
+  ThrowIfThisInitializedInst *createThrowIfThisInitializedInst(
+      Value *subclassCheckedThis);
+
+  LIRGetGlobalObjectInst *createLIRGetGlobalObjectInst();
 
   CreateRegExpInst *createRegExpInst(Identifier pattern, Identifier flags);
 
+  TypeOfInst *createTypeOfInst(Value *input);
+  TypeOfIsInst *createTypeOfIsInst(Value *input, LiteralTypeOfIsTypes *types);
+
   UnaryOperatorInst *createUnaryOperatorInst(
       Value *value,
-      UnaryOperatorInst::OpKind opKind);
+      ValueKind kind,
+      Type type = Type::createAnyType());
 
-  DirectEvalInst *createDirectEvalInst(Value *operand, LiteralBool *isStrict);
+  DirectEvalInst *createDirectEvalInst(Value *evalText, bool strictCaller);
+
+  DeclareGlobalVarInst *createDeclareGlobalVarInst(LiteralString *name);
 
   SwitchInst *createSwitchInst(
       Value *input,
       BasicBlock *defaultBlock,
-      const SwitchInst::ValueListType &values,
-      const SwitchInst::BasicBlockListType &blocks);
+      llvh::ArrayRef<Literal *> values,
+      llvh::ArrayRef<BasicBlock *> blocks);
 
   PhiInst *createPhiInst(
       const PhiInst::ValueListType &values,
@@ -456,25 +576,23 @@ class IRBuilder {
 
   PhiInst *createPhiInst();
 
-  BinaryOperatorInst *createBinaryOperatorInst(
-      Value *left,
-      Value *right,
-      BinaryOperatorInst::OpKind opKind);
+  BinaryOperatorInst *
+  createBinaryOperatorInst(Value *left, Value *right, ValueKind kind);
 
   GetPNamesInst *createGetPNamesInst(
-      Value *iteratorAddr,
-      Value *baseAddr,
-      Value *indexAddr,
-      Value *sizeAddr,
+      AllocStackInst *iteratorAddr,
+      AllocStackInst *baseAddr,
+      AllocStackInst *indexAddr,
+      AllocStackInst *sizeAddr,
       BasicBlock *onEmpty,
       BasicBlock *onSome);
 
   GetNextPNameInst *createGetNextPNameInst(
-      Value *propertyAddr,
-      Value *baseAddr,
-      Value *indexAddr,
-      Value *sizeAddr,
-      Value *iteratorAddr,
+      AllocStackInst *propertyAddr,
+      AllocStackInst *baseAddr,
+      AllocStackInst *indexAddr,
+      AllocStackInst *sizeAddr,
+      AllocStackInst *iteratorAddr,
       BasicBlock *onLast,
       BasicBlock *onSome);
 
@@ -488,112 +606,94 @@ class IRBuilder {
 
   SaveAndYieldInst *createSaveAndYieldInst(
       Value *result,
+      LiteralBool *isDelegated,
       BasicBlock *nextBlock);
 
   CreateGeneratorInst *createCreateGeneratorInst(
-      Function *innerFn,
-      ScopeCreationInst *environment);
+      BaseScopeInst *scope,
+      NormalFunction *innerFn);
 
-  StartGeneratorInst *createStartGeneratorInst();
-
-  ResumeGeneratorInst *createResumeGeneratorInst(Value *isReturn);
+  ResumeGeneratorInst *createResumeGeneratorInst(AllocStackInst *isReturn);
 
   //--------------------------------------------------------------------------//
   //                  Target specific insertions                              //
   //--------------------------------------------------------------------------//
 
-  HBCResolveEnvironment *createHBCResolveEnvironment(
-      ScopeDesc *originScopeDesc,
-      ScopeDesc *targetScopeDesc);
-  HBCStoreToEnvironmentInst *
-  createHBCStoreToEnvironmentInst(Value *env, Value *toPut, Variable *var);
-  HBCLoadFromEnvironmentInst *createHBCLoadFromEnvironmentInst(
-      Value *env,
-      Variable *var);
+  HBCResolveParentEnvironmentInst *createHBCResolveParentEnvironmentInst(
+      VariableScope *scope,
+      LiteralNumber *numLevels,
+      JSSpecialParam *parentScopeParam);
 
-  SwitchImmInst *createSwitchImmInst(
+  UIntSwitchImmInst *createUIntSwitchImmInst(
       Value *input,
       BasicBlock *defaultBlock,
       LiteralNumber *minValue,
       LiteralNumber *size,
-      const SwitchImmInst::ValueListType &values,
-      const SwitchImmInst::BasicBlockListType &blocks);
+      const UIntSwitchImmInst::ValueListType &values,
+      const BaseSwitchImmInst::BasicBlockListType &blocks);
 
-  HBCLoadConstInst *createHBCLoadConstInst(Literal *value);
+  StringSwitchImmInst *createStringSwitchImmInst(
+      Value *input,
+      BasicBlock *defaultBlock,
+      LiteralNumber *size,
+      const StringSwitchImmInst::ValueListType &values,
+      const BaseSwitchImmInst::BasicBlockListType &blocks);
 
-  HBCLoadParamInst *createHBCLoadParamInst(LiteralNumber *value);
+  LIRLoadConstInst *createLIRLoadConstInst(Literal *value);
 
-  HBCCreateEnvironmentInst *createHBCCreateEnvironmentInst(
-      ScopeDesc *scopeDesc);
+  LoadParamInst *createLoadParamInst(JSDynamicParam *param);
 
-  HBCCreateInnerEnvironmentInst *createHBCCreateInnerEnvironmentInst(
-      ScopeCreationInst *parentScope,
-      ScopeDesc *scopeDesc);
+  HBCCreateFunctionEnvironmentInst *createHBCCreateFunctionEnvironmentInst(
+      VariableScope *scope,
+      JSSpecialParam *parentScopeParam);
 
-  HBCGetThisNSInst *createHBCGetThisNSInst();
+  LIRGetThisNSInst *createLIRGetThisNSInst();
 
-  HBCGetArgumentsPropByValInst *createHBCGetArgumentsPropByValInst(
+  LIRGetArgumentsPropByValLooseInst *createLIRGetArgumentsPropByValLooseInst(
+      Value *index,
+      AllocStackInst *lazyReg);
+  LIRGetArgumentsPropByValStrictInst *createLIRGetArgumentsPropByValStrictInst(
       Value *index,
       AllocStackInst *lazyReg);
 
-  HBCGetArgumentsLengthInst *createHBCGetArgumentsLengthInst(
+  LIRGetArgumentsLengthInst *createLIRGetArgumentsLengthInst(
+      Value *lazyRegValue);
+
+  LIRReifyArgumentsLooseInst *createLIRReifyArgumentsLooseInst(
+      AllocStackInst *lazyReg);
+  LIRReifyArgumentsStrictInst *createLIRReifyArgumentsStrictInst(
       AllocStackInst *lazyReg);
 
-  HBCReifyArgumentsInst *createHBCReifyArgumentsInst(AllocStackInst *lazyReg);
+  CreateThisInst *createCreateThisInst(Value *closure, Value *newTarget);
 
-  HBCCreateThisInst *createHBCCreateThisInst(Value *prototype, Value *closure);
+  GetConstructedObjectInst *createGetConstructedObjectInst(
+      Instruction *thisValue,
+      Value *constructorReturnValue);
 
-  HBCConstructInst *createHBCConstructInst(
-      Value *closure,
-      Value *newTarget,
-      Value *thisValue,
-      ArrayRef<Value *> arguments);
-  HBCGetConstructedObjectInst *createHBCGetConstructedObjectInst(
-      HBCCreateThisInst *thisValue,
-      HBCConstructInst *constructorReturnValue);
   HBCProfilePointInst *createHBCProfilePointInst(uint16_t pointIndex);
 
   CallBuiltinInst *createCallBuiltinInst(
       BuiltinMethod::Enum builtinIndex,
       ArrayRef<Value *> arguments);
 
-  CallBuiltinInst *createCallBuiltinInstWithNewTarget(
-      BuiltinMethod::Enum builtinIndex,
-      Value *newTarget,
-      ArrayRef<Value *> arguments);
-
   GetBuiltinClosureInst *createGetBuiltinClosureInst(
       BuiltinMethod::Enum builtinIndex);
 
-#ifdef HERMES_RUN_WASM
-  CallIntrinsicInst *createCallIntrinsicInst(
-      WasmIntrinsics::Enum intrinsicsIndex,
-      ArrayRef<Value *> arguments);
-#endif
+  LIRSpillMovInst *createLIRSpillMovInst(Instruction *value);
 
-  HBCCallDirectInst *createHBCCallDirectInst(
-      LiteralString *textifiedCallee,
-      Function *callee,
-      Value *thisValue,
-      ArrayRef<Value *> arguments);
+  LIRAllocObjectFromBufferInst *createLIRAllocObjectFromBufferInst(
+      Value *parentObj,
+      LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
 
-  HBCCreateFunctionInst *createHBCCreateFunctionInst(
-      Function *function,
-      Value *env);
-  HBCSpillMovInst *createHBCSpillMovInst(Instruction *value);
-
-  HBCCreateGeneratorInst *createHBCCreateGeneratorInst(
-      Function *function,
-      Value *env);
-
-  HBCAllocObjectFromBufferInst *createHBCAllocObjectFromBufferInst(
-      HBCAllocObjectFromBufferInst::ObjectPropertyMap prop_map,
-      uint32_t size);
-
-  CompareBranchInst *createCompareBranchInst(
+  HBCCompareBranchInst *createHBCCompareBranchInst(
       Value *left,
       Value *right,
-      BinaryOperatorInst::OpKind opKind,
+      ValueKind kind,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock);
+  HBCCmpBrTypeOfIsInst *createHBCCmpBrTypeOfIsInst(
+      Value *arg,
+      LiteralTypeOfIsTypes *types,
       BasicBlock *trueBlock,
       BasicBlock *falseBlock);
 
@@ -601,13 +701,90 @@ class IRBuilder {
 
   IteratorNextInst *createIteratorNextInst(
       AllocStackInst *iterator,
-      AllocStackInst *sourceOrNext);
+      Value *sourceOrNext);
 
   IteratorCloseInst *createIteratorCloseInst(
-      AllocStackInst *iterator,
+      Value *iterator,
       bool ignoreInnerException);
 
   UnreachableInst *createUnreachableInst();
+
+  PrLoadInst *createPrLoadInst(
+      Value *object,
+      size_t propIndex,
+      LiteralString *propName,
+      Type checkedType);
+
+  /// \param nonPointer can be set to true when it is known that both the old
+  ///     and the new value are not pointers.
+  PrStoreInst *createPrStoreInst(
+      Value *storedValue,
+      Value *object,
+      size_t propIndex,
+      LiteralString *propName,
+      bool nonPointer);
+
+  FastArrayLoadInst *
+  createFastArrayLoadInst(Value *array, Value *index, Type checkedType);
+
+  FastArrayStoreInst *
+  createFastArrayStoreInst(Value *storedValue, Value *array, Value *index);
+  FastArrayPushInst *createFastArrayPushInst(Value *pushedValue, Value *array);
+  FastArrayAppendInst *createFastArrayAppendInst(Value *other, Value *array);
+  FastArrayLengthInst *createFastArrayLengthInst(Value *array);
+
+  LoadParentNoTrapsInst *createLoadParentNoTrapsInst(Value *object);
+  TypedLoadParentInst *createTypedLoadParentInst(Value *object);
+
+  FUnaryMathInst *createFUnaryMathInst(ValueKind kind, Value *arg);
+  FBinaryMathInst *
+  createFBinaryMathInst(ValueKind kind, Value *left, Value *right);
+  FCompareInst *createFCompareInst(ValueKind kind, Value *left, Value *right);
+  HBCFCompareBranchInst *createHBCFCompareBranchInst(
+      Value *left,
+      Value *right,
+      ValueKind kind,
+      BasicBlock *trueBlock,
+      BasicBlock *falseBlock);
+
+  StringConcatInst *createStringConcatInst(llvh::ArrayRef<Value *> operands);
+  HBCStringConcatInst *createHBCStringConcatInst(Value *left, Value *right);
+
+  UnionNarrowTrustedInst *createUnionNarrowTrustedInst(Value *value, Type type);
+  CheckedTypeCastInst *createCheckedTypeCastInst(Value *value, Type type);
+
+  LIRDeadValueInst *createLIRDeadValueInst(Type type);
+
+  LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *sig);
+
+  LiteralNativeExtern *getLiteralNativeExtern(NativeExtern *nativeExtern);
+
+  NativeCallInst *createNativeCallInst(
+      Type type,
+      Value *callee,
+      NativeSignature *sig,
+      ArrayRef<Value *> args);
+  GetNativeRuntimeInst *createGetNativeRuntimeInst();
+
+  LazyCompilationDataInst *createLazyCompilationDataInst(
+      LazyCompilationData &&data,
+      Variable *capturedThis,
+      Value *capturedNewTarget,
+      Variable *capturedArguments,
+      Variable *homeObject,
+      Variable *classCtxConstructor,
+      Variable *classCtxInitFuncVar,
+      VariableScope *parentVarScope);
+
+  EvalCompilationDataInst *createEvalCompilationDataInst(
+      EvalCompilationData &&data,
+      Variable *capturedThis,
+      Value *capturedNewTarget,
+      Variable *capturedArguments,
+      Variable *homeObject,
+      Variable *classCtxConstructor,
+      Variable *classCtxInitFuncVar,
+      ArrayRef<VariableScope *> varScopes);
 
   /// This is an RAII object that saves and restores the source location of the
   /// IRBuilder.

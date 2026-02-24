@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s
+// RUN: %hermesc -hermes-parser -dump-ir %s
 
 // In this test we generate the IR for interesting cases and make sure we don't crash.
 

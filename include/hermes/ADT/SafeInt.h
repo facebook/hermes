@@ -11,11 +11,7 @@
 #include <cassert>
 #include <cstdint>
 #include <limits>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 
 /// To avoid overflow, we introduce the SafeUInt32 which can be used
@@ -63,5 +59,4 @@ class SafeUInt32 {
 
 } // namespace hermes
 
-#pragma GCC diagnostic pop
 #endif

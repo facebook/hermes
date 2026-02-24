@@ -12,6 +12,14 @@ extern napi_status NAPI_CDECL default_jsr_get_description(napi_env env, const ch
 extern napi_status NAPI_CDECL default_jsr_queue_microtask(napi_env env, napi_value callback);
 extern napi_status NAPI_CDECL default_jsr_drain_microtasks(napi_env env, int32_t max_count_hint, bool *result);
 extern napi_status NAPI_CDECL default_jsr_is_inspectable(napi_env env, bool *result);
+extern napi_status NAPI_CDECL default_jsr_run_script_buffer(
+    napi_env env,
+    const uint8_t *script_utf8,
+    size_t script_length,
+    jsr_data_delete_cb script_delete_cb,
+    void *deleter_data,
+    const char *source_url,
+    napi_value *result);
 
 extern napi_status NAPI_CDECL default_jsr_create_prepared_script(
     napi_env env,

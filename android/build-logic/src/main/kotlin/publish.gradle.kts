@@ -37,7 +37,7 @@ publishing {
       pom {
         name.set("hermes")
         description.set("A JavaScript engine optimized for fast start-up of React Native apps")
-        url.set("https://github.com/facebook/hermes")
+        url.set("https://github.com/facebook/hermes/tree/static_h")
 
         developers {
           developer {

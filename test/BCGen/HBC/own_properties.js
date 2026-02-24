@@ -7,47 +7,44 @@
 
 // RUN: %hermes -O0 -target=HBC -dump-lir %s | %FileCheckOrRegen --match-full-lines %s
 
-// Test that StoreNewOwnPropertyInst is lowered to StoreOwnPropertyInst when
-// the property name is a valid array index.
-
 function foo() {
     return {a: 1, "10": 2, 11: 3, "999999999999999999999999": 4, ['42']: 5};
 }
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [foo]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = HBCCreateFunctionInst %foo#0#1()#2, %0
-// CHECK-NEXT:  %2 = HBCGetGlobalObjectInst
-// CHECK-NEXT:  %3 = StorePropertyInst %1 : closure, %2 : object, "foo" : string
-// CHECK-NEXT:  %4 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %5 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  %6 = StoreStackInst %5 : undefined, %4
-// CHECK-NEXT:  %7 = LoadStackInst %4
-// CHECK-NEXT:  %8 = ReturnInst %7
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %foo(): functionCode
+// CHECK-NEXT:  %3 = LIRGetGlobalObjectInst (:object)
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, %3: object, "foo": string
+// CHECK-NEXT:  %5 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:  %6 = LIRLoadConstInst (:undefined) undefined: undefined
+// CHECK-NEXT:       StoreStackInst %6: undefined, %5: any
+// CHECK-NEXT:  %8 = LoadStackInst (:any) %5: any
+// CHECK-NEXT:       ReturnInst %8: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#0#1()#2
-// CHECK-NEXT:S{foo#0#1()#2} = []
+// CHECK:scope %VS1 []
+
+// CHECK:function foo(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = HBCCreateEnvironmentInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = AllocObjectInst 5 : number, empty
-// CHECK-NEXT:  %2 = HBCLoadConstInst 1 : number
-// CHECK-NEXT:  %3 = StoreNewOwnPropertyInst %2 : number, %1 : object, "a" : string, true : boolean
-// CHECK-NEXT:  %4 = HBCLoadConstInst 2 : number
-// CHECK-NEXT:  %5 = StoreNewOwnPropertyInst %4 : number, %1 : object, 10 : number, true : boolean
-// CHECK-NEXT:  %6 = HBCLoadConstInst 3 : number
-// CHECK-NEXT:  %7 = StoreNewOwnPropertyInst %6 : number, %1 : object, 11 : number, true : boolean
-// CHECK-NEXT:  %8 = HBCLoadConstInst 4 : number
-// CHECK-NEXT:  %9 = StoreNewOwnPropertyInst %8 : number, %1 : object, "999999999999999999999999" : string, true : boolean
-// CHECK-NEXT:  %10 = HBCLoadConstInst 5 : number
-// CHECK-NEXT:  %11 = StoreOwnPropertyInst %10 : number, %1 : object, 42 : number, true : boolean
-// CHECK-NEXT:  %12 = ReturnInst %1 : object
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %13 = HBCLoadConstInst undefined : undefined
-// CHECK-NEXT:  %14 = ReturnInst %13 : undefined
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = AllocObjectLiteralInst (:object) empty: any
+// CHECK-NEXT:  %3 = LIRLoadConstInst (:number) 1: number
+// CHECK-NEXT:       DefineOwnPropertyInst %3: number, %2: object, "a": string, true: boolean
+// CHECK-NEXT:  %5 = LIRLoadConstInst (:number) 2: number
+// CHECK-NEXT:       DefineOwnPropertyInst %5: number, %2: object, 10: number, true: boolean
+// CHECK-NEXT:  %7 = LIRLoadConstInst (:number) 3: number
+// CHECK-NEXT:       DefineOwnPropertyInst %7: number, %2: object, 11: number, true: boolean
+// CHECK-NEXT:  %9 = LIRLoadConstInst (:number) 4: number
+// CHECK-NEXT:        DefineOwnPropertyInst %9: number, %2: object, "999999999999999999999999": string, true: boolean
+// CHECK-NEXT:  %11 = LIRLoadConstInst (:number) 5: number
+// CHECK-NEXT:        DefineOwnPropertyInst %11: number, %2: object, 42: number, true: boolean
+// CHECK-NEXT:        ReturnInst %2: object
 // CHECK-NEXT:function_end

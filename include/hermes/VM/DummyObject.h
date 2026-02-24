@@ -34,13 +34,7 @@ struct DummyObject final : public GCCell {
   uint32_t extraBytes{};
 
   using Callback = std::function<void()>;
-  /// While DummyObject is not used in prod, protecting function pointers
-  /// in here is useful to ensure that they won't be used to easily escalate
-  /// fake obj injections attacks to arbitrary code execution
-  XorPtr<
-      std::remove_pointer<Callback>::type,
-      XorPtrKeyID::DummyObjectFinalizerCallback>
-      finalizerCallback;
+  std::unique_ptr<Callback> finalizerCallback;
 
   DummyObject(GC &gc);
 

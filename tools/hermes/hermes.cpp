@@ -7,9 +7,9 @@
 
 #include "hermes/CompilerDriver/CompilerDriver.h"
 #include "hermes/ConsoleHost/ConsoleHost.h"
-#include "hermes/ConsoleHost/RuntimeFlags.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/Support/PageAccessTracker.h"
+#include "hermes/VM/RuntimeFlags.h"
 
 #include "llvh/ADT/SmallString.h"
 #include "llvh/ADT/SmallVector.h"
@@ -24,111 +24,155 @@
 
 #include "repl.h"
 
+#ifdef HERMES_ENABLE_PERF_PROF
+#include <fcntl.h>
+#endif
+
 using namespace hermes;
 
-namespace cl {
-using llvh::cl::opt;
+namespace {
+struct Flags : public cli::VMOnlyRuntimeFlags {
+  llvh::cl::opt<unsigned> Repeat{
+      "Xrepeat",
+      llvh::cl::desc("Repeat execution N number of times"),
+      llvh::cl::init(1),
+      llvh::cl::Hidden};
 
-static opt<unsigned> Repeat(
-    "Xrepeat",
-    llvh::cl::desc("Repeat execution N number of times"),
-    llvh::cl::init(1),
-    llvh::cl::Hidden);
+  llvh::cl::opt<bool> GCBeforeStats{
+      "gc-before-stats",
+      llvh::cl::desc(
+          "Perform a full GC just before printing statistics at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
 
-static opt<bool> RandomizeMemoryLayout(
-    "Xrandomize-memory-layout",
-    llvh::cl::desc("Randomize stack placement etc."),
-    llvh::cl::init(false),
-    llvh::cl::Hidden);
+  llvh::cl::opt<bool> GCPrintCollectionStats{
+      "gc-print-collection-stats",
+      llvh::cl::desc("Output statistics for each garbage collection at exit"),
+      llvh::cl::cat(GCCategory),
+      llvh::cl::init(false)};
 
-static opt<bool> GCAllocYoung(
-    "gc-alloc-young",
-    desc("Determines whether to (initially) allocate in the young generation"),
-    cat(GCCategory),
-    init(true));
+  llvh::cl::opt<unsigned> ExecutionTimeLimit{
+      "time-limit",
+      llvh::cl::desc(
+          "Number of milliseconds after which to abort JS execution"),
+      llvh::cl::init(0)};
+};
 
-static opt<bool> GCRevertToYGAtTTI(
-    "gc-revert-to-yg-at-tti",
-    desc(
-        "Determines whether to revert to young generation, if necessary, at "
-        "TTI notification"),
-    cat(GCCategory),
-    init(false));
+Flags flags;
 
-static opt<bool> GCBeforeStats(
-    "gc-before-stats",
-    desc("Perform a full GC just before printing statistics at exit"),
-    cat(GCCategory),
-    init(false));
-
-static opt<bool> GCPrintStats(
-    "gc-print-stats",
-    desc("Output summary garbage collection statistics at exit"),
-    cat(GCCategory),
-    init(false));
-
-static opt<unsigned> ExecutionTimeLimit(
-    "time-limit",
-    llvh::cl::desc("Number of milliseconds after which to abort JS execution"),
-    llvh::cl::init(0));
-} // namespace cl
+} // namespace
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
 /// \return an exit status.
 static int executeHBCBytecodeFromCL(
     std::unique_ptr<hbc::BCProvider> bytecode,
     const driver::BytecodeBufferInfo &info) {
-  auto recStats = (cl::GCPrintStats || cl::GCBeforeStats);
+#if !HERMESVM_JIT
+  if (flags.DumpJITCode || flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off) {
+    llvh::errs() << "JIT is not enabled in this build\n";
+    return EXIT_FAILURE;
+  }
+#endif
+
   ExecuteOptions options;
+
+  auto gcConfigBuilder = vm::GCConfig::Builder()
+                             .withInitHeapSize(flags.InitHeapSize.bytes)
+                             .withMaxHeapSize(flags.MaxHeapSize.bytes)
+                             .withOccupancyTarget(flags.OccupancyTarget)
+                             .withSanitizeConfig(
+                                 vm::GCSanitizeConfig::Builder()
+                                     .withSanitizeRate(flags.GCSanitizeRate)
+                                     .withRandomSeed(flags.GCSanitizeRandomSeed)
+                                     .build())
+                             .withShouldReleaseUnused(vm::kReleaseUnusedNone)
+                             .withAllocInYoung(flags.GCAllocYoung)
+                             .withRevertToYGAtTTI(flags.GCRevertToYGAtTTI);
+
+  std::vector<vm::GCAnalyticsEvent> gcAnalyticsEvents;
+  if (flags.GCPrintStats || flags.GCBeforeStats ||
+      flags.GCPrintCollectionStats) {
+    gcConfigBuilder.withShouldRecordStats(true);
+    if (flags.GCPrintCollectionStats) {
+      options.gcAnalyticsEvents = &gcAnalyticsEvents;
+      gcConfigBuilder.withAnalyticsCallback(
+          [&gcAnalyticsEvents](const vm::GCAnalyticsEvent &event) {
+            gcAnalyticsEvents.push_back(event);
+          });
+    }
+  }
+
   options.runtimeConfig =
       vm::RuntimeConfig::Builder()
-          .withGCConfig(
-              vm::GCConfig::Builder()
-                  .withMinHeapSize(cl::MinHeapSize.bytes)
-                  .withInitHeapSize(cl::InitHeapSize.bytes)
-                  .withMaxHeapSize(cl::MaxHeapSize.bytes)
-                  .withOccupancyTarget(cl::OccupancyTarget)
-                  .withSanitizeConfig(
-                      vm::GCSanitizeConfig::Builder()
-                          .withSanitizeRate(cl::GCSanitizeRate)
-                          .withRandomSeed(cl::GCSanitizeRandomSeed)
-                          .build())
-                  .withShouldRecordStats(recStats)
-                  .withShouldReleaseUnused(vm::kReleaseUnusedNone)
-                  .withAllocInYoung(cl::GCAllocYoung)
-                  .withRevertToYGAtTTI(cl::GCRevertToYGAtTTI)
-                  .build())
-          .withEnableBlockScoping(cl::EnableBlockScoping)
-          .withEnableEval(cl::EnableEval)
-          .withVerifyEvalIR(cl::VerifyIR)
-          .withOptimizedEval(cl::OptimizedEval)
-          .withAsyncBreakCheckInEval(cl::EmitAsyncBreakCheck)
-          .withVMExperimentFlags(cl::VMExperimentFlags)
-          .withES6Promise(cl::ES6Promise)
-          .withES6Proxy(cl::ES6Proxy)
-          .withES6Class(cl::ES6Class)
-          .withIntl(cl::Intl)
-          .withMicrotaskQueue(cl::MicrotaskQueue)
-          .withEnableSampleProfiling(cl::SampleProfiling)
-          .withRandomizeMemoryLayout(cl::RandomizeMemoryLayout)
-          .withTrackIO(cl::TrackBytecodeIO)
-          .withEnableHermesInternal(cl::EnableHermesInternal)
+          .withGCConfig(gcConfigBuilder.build())
+          .withMaxNumRegisters(flags.MaxNumRegisters)
+          .withEnableJIT(
+              flags.DumpJITCode ||
+              flags.JIT != cli::VMOnlyRuntimeFlags::JITMode::Off)
+          .withForceJIT(flags.JIT == cli::VMOnlyRuntimeFlags::JITMode::Force)
+          .withJITThreshold(flags.JITThreshold)
+          .withJITMemoryLimit(flags.JITMemoryLimit)
+          .withEnableEval(cl::compilerRuntimeFlags.EnableEval)
+          .withEnableAsyncGenerators(
+              cl::compilerRuntimeFlags.EnableAsyncGenerators)
+          .withVerifyEvalIR(cl::compilerRuntimeFlags.VerifyIR)
+          .withOptimizedEval(cl::compilerRuntimeFlags.OptimizedEval)
+          .withAsyncBreakCheckInEval(
+              cl::compilerRuntimeFlags.EmitAsyncBreakCheck)
+          .withVMExperimentFlags(flags.VMExperimentFlags)
+          .withES6Proxy(flags.ES6Proxy)
+          .withIntl(flags.Intl)
+          .withMicrotaskQueue(flags.MicrotaskQueue)
+          .withEnableSampleProfiling(
+              flags.SampleProfiling !=
+              ExecuteOptions::SampleProfilingMode::None)
+          .withRandomizeMemoryLayout(flags.RandomizeMemoryLayout)
+          .withTrackIO(flags.TrackBytecodeIO)
+          .withEnableHermesInternal(flags.EnableHermesInternal)
           .withEnableHermesInternalTestMethods(
-              cl::EnableHermesInternalTestMethods)
-          .withMaxNumRegisters(1024 * 1024)
+              flags.EnableHermesInternalTestMethods)
           .build();
 
   options.basicBlockProfiling = cl::BasicBlockProfiling;
+  options.profilingOutFile = cl::ProfilingOutFile;
 
   options.stopAfterInit = false;
-  options.timeLimit = cl::ExecutionTimeLimit;
-  options.stopAfterInit = cl::StopAfterInit;
-  options.forceGCBeforeStats = cl::GCBeforeStats;
-  options.sampleProfiling = cl::SampleProfiling;
-  options.heapTimeline = cl::HeapTimeline;
+  options.timeLimit = flags.ExecutionTimeLimit;
+  options.dumpJITCode = flags.DumpJITCode;
+  options.jitCrashOnError = flags.JITCrashOnError;
+  options.jitEmitAsserts = flags.JITEmitAsserts;
+  options.jitEmitCounters = flags.JITEmitCounters;
+  options.stopAfterInit = flags.StopAfterInit;
+  options.forceGCBeforeStats = flags.GCBeforeStats;
+  options.sampleProfiling = flags.SampleProfiling;
+  options.sampleProfilingFreq = flags.SampleProfilingFreq;
+  options.heapTimeline = flags.HeapTimeline;
+#ifdef HERMES_ENABLE_PERF_PROF
+  std::string jitdumpFile;
+  if (flags.PerfProf) {
+    llvh::raw_string_ostream sos{jitdumpFile};
+    // jitdump uses uint32_t for pid.
+    sos << llvh::format(
+        "%s/jit-%d.dump",
+        flags.PerfProfDir.c_str(),
+        (uint32_t)oscompat::process_id());
+    options.perfProfJitDumpFd =
+        open(sos.str().c_str(), O_CREAT | O_TRUNC | O_RDWR, 0666);
+    if (options.perfProfJitDumpFd == -1)
+      hermes_fatal("Failed to open jitdump file: " + jitdumpFile);
+    llvh::SmallString<256> debugInfoFile;
+    if (std::error_code error = llvh::sys::fs::createUniqueFile(
+            llvh::Twine(flags.PerfProfDir) + "/debuginfo-%%%%%%%%.txt",
+            options.perfProfDebugInfoFd,
+            debugInfoFile)) {
+      hermes_fatal("Fail to create debuginfo file for perf jitdump");
+    }
+    options.perfProfDebugInfoFile = debugInfoFile.str();
+  }
+#endif
 
   bool success;
-  if (cl::Repeat <= 1) {
+  if (flags.Repeat <= 1) {
     success = executeHBCBytecode(std::move(bytecode), options, &info.filename);
   } else {
     // The runtime is supposed to own the bytecode exclusively, but we
@@ -137,13 +181,23 @@ static int executeHBCBytecodeFromCL(
     std::shared_ptr<hbc::BCProvider> sharedBytecode = std::move(bytecode);
 
     success = true;
-    for (unsigned i = 0; i < cl::Repeat; ++i) {
+    for (unsigned i = 0; i < flags.Repeat; ++i) {
       success &= executeHBCBytecode(
           std::shared_ptr<hbc::BCProvider>{sharedBytecode},
           options,
           &info.filename);
     }
   }
+#ifdef HERMES_ENABLE_PERF_PROF
+  if (flags.PerfProf) {
+    if (close(options.perfProfJitDumpFd) == -1)
+      hermes_fatal("Fail to close jitdump file: " + jitdumpFile);
+    if (close(options.perfProfDebugInfoFd) == -1)
+      hermes_fatal(
+          "Fail to close debuginfo file: " + options.perfProfDebugInfoFile);
+  }
+
+#endif
   return success ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
@@ -151,24 +205,22 @@ static vm::RuntimeConfig getReplRuntimeConfig() {
   return vm::RuntimeConfig::Builder()
       .withGCConfig(
           vm::GCConfig::Builder()
-              .withInitHeapSize(cl::InitHeapSize.bytes)
-              .withMaxHeapSize(cl::MaxHeapSize.bytes)
+              .withInitHeapSize(flags.InitHeapSize.bytes)
+              .withMaxHeapSize(flags.MaxHeapSize.bytes)
               .withSanitizeConfig(
                   vm::GCSanitizeConfig::Builder()
-                      .withSanitizeRate(cl::GCSanitizeRate)
-                      .withRandomSeed(cl::GCSanitizeRandomSeed)
+                      .withSanitizeRate(flags.GCSanitizeRate)
+                      .withRandomSeed(flags.GCSanitizeRandomSeed)
                       .build())
-              .withShouldRecordStats(cl::GCPrintStats)
               .build())
-      .withEnableBlockScoping(cl::EnableBlockScoping)
-      .withVMExperimentFlags(cl::VMExperimentFlags)
-      .withES6Promise(cl::ES6Promise)
-      .withES6Proxy(cl::ES6Proxy)
-      .withES6Class(cl::ES6Class)
-      .withIntl(cl::Intl)
-      .withMicrotaskQueue(cl::MicrotaskQueue)
-      .withEnableHermesInternal(cl::EnableHermesInternal)
-      .withEnableHermesInternalTestMethods(cl::EnableHermesInternalTestMethods)
+      .withVMExperimentFlags(flags.VMExperimentFlags)
+      .withES6Proxy(flags.ES6Proxy)
+      .withEnableAsyncGenerators(cl::compilerRuntimeFlags.EnableAsyncGenerators)
+      .withIntl(flags.Intl)
+      .withMicrotaskQueue(flags.MicrotaskQueue)
+      .withEnableHermesInternal(flags.EnableHermesInternal)
+      .withEnableHermesInternalTestMethods(
+          flags.EnableHermesInternalTestMethods)
       .build();
 }
 
@@ -185,6 +237,9 @@ int main(int argc, char **argv) {
   llvh::llvm_shutdown_obj Y;
 #endif
 
+  // Enable the microtask queue in the CLI by default.
+  flags.MicrotaskQueue.setInitialValue(true);
+
   llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
 
@@ -195,8 +250,8 @@ int main(int argc, char **argv) {
   // Tell compiler to emit async break check if time-limit feature is enabled
   // so that user can turn on this feature with single ExecutionTimeLimit
   // option.
-  if (cl::ExecutionTimeLimit > 0) {
-    cl::EmitAsyncBreakCheck = true;
+  if (flags.ExecutionTimeLimit > 0) {
+    cl::compilerRuntimeFlags.EmitAsyncBreakCheck = true;
   }
 
   // Make sure any allocated alt signal stack is not considered a leak

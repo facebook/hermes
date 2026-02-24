@@ -23,9 +23,10 @@ namespace hermes {
 
 using llvh::ArrayRef;
 
-namespace sem {
+namespace sema {
+class LexicalScope;
 class FunctionInfo;
-} // namespace sem
+} // namespace sema
 
 namespace ESTree {
 
@@ -64,6 +65,7 @@ enum class NodeKind : uint32_t {
 #define ESTREE_NODE_7_ARGS(NAME, ...) NAME,
 #define ESTREE_NODE_8_ARGS(NAME, ...) NAME,
 #define ESTREE_NODE_9_ARGS(NAME, ...) NAME,
+#define ESTREE_NODE_10_ARGS(NAME, ...) NAME,
 #include "ESTree.def"
 };
 
@@ -161,6 +163,9 @@ class Node : public llvh::ilist_node<Node> {
 #define ESTREE_NODE_9_ARGS(NAME, ...) \
   case NodeKind::NAME:                \
     return #NAME;
+#define ESTREE_NODE_10_ARGS(NAME, ...) \
+  case NodeKind::NAME:                 \
+    return #NAME;
 
 #include "ESTree.def"
     }
@@ -232,6 +237,7 @@ void ESTreeVisit(Visitor &V, NodeList &Lst) {
 #define ESTREE_NODE_7_ARGS(NAME, ...) class NAME##Node;
 #define ESTREE_NODE_8_ARGS(NAME, ...) class NAME##Node;
 #define ESTREE_NODE_9_ARGS(NAME, ...) class NAME##Node;
+#define ESTREE_NODE_10_ARGS(NAME, ...) class NAME##Node;
 
 #include "ESTree.def"
 
@@ -256,13 +262,33 @@ inline Strictness makeStrictness(bool strictMode) {
   return strictMode ? Strictness::StrictMode : Strictness::NonStrictMode;
 }
 
+/// Decoration for any node which can create a lexical scope.
+class ScopeDecorationBase {
+  /// Associated lexical scope created by the AST node.
+  sema::LexicalScope *scope_{};
+
+ public:
+  /// Set the associated lexical scope.
+  /// \pre \p scope is non-null.
+  /// \pre the scope has not already been set.
+  void setScope(sema::LexicalScope *scope) {
+    assert(scope && "setting lexical scope to null");
+    assert(!scope_ && "lexical scope is already set");
+    scope_ = scope;
+  }
+
+  /// \return the associated lexical scope, nullptr if none associated.
+  sema::LexicalScope *getScope() const {
+    return scope_;
+  }
+};
+
 /// Decoration for all function-like nodes.
-class FunctionLikeDecoration {
-  sem::FunctionInfo *semInfo_{};
+class FunctionLikeDecoration : public ScopeDecorationBase {
+  sema::FunctionInfo *semInfo_{};
 
  public:
   Strictness strictness{Strictness::NotSet};
-  SourceVisibility sourceVisibility{SourceVisibility::Default};
 
   /// Whether this function was a method definition rather than using
   /// 'function'. Note that getters and setters are also considered method
@@ -270,13 +296,13 @@ class FunctionLikeDecoration {
   /// This is used for lazy reparsing of the function.
   bool isMethodDefinition{false};
 
-  void setSemInfo(sem::FunctionInfo *semInfo) {
+  void setSemInfo(sema::FunctionInfo *semInfo) {
     assert(semInfo && "setting semInfo to null");
     assert(!semInfo_ && "semInfo is already set");
     semInfo_ = semInfo;
   }
 
-  sem::FunctionInfo *getSemInfo() const {
+  sema::FunctionInfo *getSemInfo() const {
     assert(semInfo_ && "semInfo is not set!");
     return semInfo_;
   }
@@ -325,14 +351,15 @@ class StatementDecoration {};
 /// break/continue.
 class LoopStatementDecoration : public LabelDecorationBase {};
 
-class SwitchStatementDecoration : public LabelDecorationBase {};
+class SwitchStatementDecoration : public LabelDecorationBase,
+                                  public ScopeDecorationBase {};
 
 class BreakStatementDecoration : public GotoDecorationBase {};
 class ContinueStatementDecoration : public GotoDecorationBase {};
 
 class LabeledStatementDecoration : public LabelDecorationBase {};
 
-class BlockStatementDecoration {
+class BlockStatementDecoration : public ScopeDecorationBase {
  public:
   /// The source buffer id in which this block was found (see \p SourceMgr ).
   uint32_t bufferId;
@@ -342,7 +369,27 @@ class BlockStatementDecoration {
   bool paramYield{false};
   /// If this is a lazy block, the Await param to restore when eagerly parsing.
   bool paramAwait{false};
+  /// Whether this function contains an arrow function.
+  /// Used for lazy compilation to populate the FunctionInfo.
+  bool containsArrowFunctions = false;
+  /// Whether this function might contain an arrow function using arguments.
+  /// This will be used as a conservative estimate of whether a non-arrow
+  /// function needs to eagerly create and capture its Arguments object.
+  /// Used for lazy compilation to populate the FunctionInfo.
+  bool mayContainArrowFunctionsUsingArguments = false;
 };
+
+class StaticBlockDecoration : public ScopeDecorationBase {
+ public:
+  /// Function info for this static block.
+  sema::FunctionInfo *functionInfo{};
+};
+
+class ForStatementDecoration : public ScopeDecorationBase {};
+class ForInStatementDecoration : public ScopeDecorationBase {};
+class ForOfStatementDecoration : public ScopeDecorationBase {};
+
+class CatchClauseDecoration : public ScopeDecorationBase {};
 
 class JSXDecoration {};
 class FlowDecoration {};
@@ -353,6 +400,100 @@ class CoverDecoration {};
 
 class CallExpressionLikeDecoration {};
 class MemberExpressionLikeDecoration {};
+
+class ClassLikeDecoration : public ScopeDecorationBase {
+ public:
+  // If non-null, the decorated class has in implicit contructor,
+  // and this is the FunctionInfo for the synthetic Function for
+  // that constructor.
+  sema::FunctionInfo *implicitCtorFunctionInfo{};
+
+  // If non-null, the decorated class needs instance elements initialized, and
+  // this is the FunctionInfo for the synthetic Function in which those
+  // initializations are done.
+  sema::FunctionInfo *instanceElementsInitFunctionInfo{};
+
+  // If non-null, the decorated class has static field initializers, and this is
+  // the FunctionInfo for the synthetic Function in which those static
+  // initializations are done.
+  sema::FunctionInfo *staticElementsInitFunctionInfo{};
+};
+
+/// Identifiers keep track of which variable they have been resolved to,
+/// to avoid having to keep looking this up in a side table.
+/// Some identifiers may be marked "unresolvable", so the user must check
+/// prior to getting/setting the declaration itself.
+///
+/// An identifier is unresolvable in the presence of `eval` or `with`,
+/// for example:
+/// ```
+/// function foo(a) {
+///   eval(a);
+///   return b;
+/// }
+/// ```
+/// in loose mode, results in `b` being unresovable due to the possible
+/// introduction of a local variable called `b` by the `eval` call.
+///
+/// Similarly we can use `with`:
+/// ```
+/// with (a) {
+///   print(b);
+/// }
+/// ```
+/// in which case `b` is unresolvable because we don't know if `a` has a `b`
+/// property or not.
+class IdentifierDecoration {
+ private:
+  /// Unable to resolve due to presence of `eval` or `with`.
+  bool unresolvable_{false};
+
+ public:
+  /// This decoration stores a pointer to the "resolved" identifier. However,
+  /// in some very rare cases, the identifier in an initializing declaration
+  /// maps to one identifier being declared, and a different identifier being
+  /// initialized. So, we would need two pointers, which would be very wasteful
+  /// since this is an exceptionally rare case. In all "normal" cases, the two
+  /// pointers would either be equal, or only one would be set.
+  ///
+  /// We rely on the last observation to save memory. We keep only one pointer,
+  /// and three additional "state" bits to tell us what the pointer is. The
+  /// common cases are that we have either a "declaration decl", an
+  /// "expression decl", or both a "declaration decl" and an "expression decl",
+  /// having the same value and ths sharing the pointer. The exceptional case is
+  /// when we have a "declaration decl" and an "expression decl" with different
+  /// values. That is indicated by the third bit, in which case the "declaration
+  /// decl" is stored in a side table.
+  ///
+  /// There are only five valid states:
+  /// - 0
+  /// - HaveExpr
+  /// - HaveDecl
+  /// - HaveExpr + HaveDecl
+  /// - HaveExpr + SideDecl
+  enum {
+    /// There is an "expression decl" stored in \c decl_.
+    BitHaveExpr = 1,
+    /// There is a "declaration decl" stored in \c decl_.
+    BitHaveDecl = 2,
+    /// There is a "declaration decl" stored in a side table.
+    BitSideDecl = 4,
+  };
+
+  /// The interpretation of the value stored in \c decl_.
+  uint8_t declState_ = 0;
+
+  /// Declaration to which this is resolved, `nullptr` if no resolution
+  /// has been recorded yet.
+  void *decl_{nullptr};
+
+  bool isUnresolvable() const {
+    return unresolvable_;
+  }
+  void setUnresolvable() {
+    unresolvable_ = true;
+  }
+};
 
 namespace detail {
 /// We need to to be able customize some ESTree types when passing them through
@@ -386,8 +527,28 @@ struct DecoratorTrait<BlockStatementNode> {
   using Type = BlockStatementDecoration;
 };
 template <>
+struct DecoratorTrait<StaticBlockNode> {
+  using Type = StaticBlockDecoration;
+};
+template <>
 struct DecoratorTrait<BreakStatementNode> {
   using Type = BreakStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ForStatementNode> {
+  using Type = ForStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ForInStatementNode> {
+  using Type = ForInStatementDecoration;
+};
+template <>
+struct DecoratorTrait<ForOfStatementNode> {
+  using Type = ForOfStatementDecoration;
+};
+template <>
+struct DecoratorTrait<CatchClauseNode> {
+  using Type = CatchClauseDecoration;
 };
 template <>
 struct DecoratorTrait<ContinueStatementNode> {
@@ -402,8 +563,16 @@ struct DecoratorTrait<LabeledStatementNode> {
   using Type = LabeledStatementDecoration;
 };
 template <>
+struct DecoratorTrait<IdentifierNode> {
+  using Type = IdentifierDecoration;
+};
+template <>
 struct DecoratorTrait<ProgramNode> {
   using Type = ProgramDecoration;
+};
+template <>
+struct DecoratorTrait<ClassLikeNode> {
+  using Type = ClassLikeDecoration;
 };
 
 } // namespace detail
@@ -936,6 +1105,98 @@ using BaseNode = Node;
     }                                                                  \
   };
 
+#define ESTREE_NODE_10_ARGS(                                           \
+    NAME,                                                              \
+    BASE,                                                              \
+    ARG0TY,                                                            \
+    ARG0NM,                                                            \
+    ARG0OPT,                                                           \
+    ARG1TY,                                                            \
+    ARG1NM,                                                            \
+    ARG1OPT,                                                           \
+    ARG2TY,                                                            \
+    ARG2NM,                                                            \
+    ARG2OPT,                                                           \
+    ARG3TY,                                                            \
+    ARG3NM,                                                            \
+    ARG3OPT,                                                           \
+    ARG4TY,                                                            \
+    ARG4NM,                                                            \
+    ARG4OPT,                                                           \
+    ARG5TY,                                                            \
+    ARG5NM,                                                            \
+    ARG5OPT,                                                           \
+    ARG6TY,                                                            \
+    ARG6NM,                                                            \
+    ARG6OPT,                                                           \
+    ARG7TY,                                                            \
+    ARG7NM,                                                            \
+    ARG7OPT,                                                           \
+    ARG8TY,                                                            \
+    ARG8NM,                                                            \
+    ARG8OPT,                                                           \
+    ARG9TY,                                                            \
+    ARG9NM,                                                            \
+    ARG9OPT)                                                           \
+  class NAME##Node : public BASE##Node,                                \
+                     public detail::DecoratorTrait<NAME##Node>::Type { \
+   public:                                                             \
+    ARG0TY _##ARG0NM;                                                  \
+    ARG1TY _##ARG1NM;                                                  \
+    ARG2TY _##ARG2NM;                                                  \
+    ARG3TY _##ARG3NM;                                                  \
+    ARG4TY _##ARG4NM;                                                  \
+    ARG5TY _##ARG5NM;                                                  \
+    ARG6TY _##ARG6NM;                                                  \
+    ARG7TY _##ARG7NM;                                                  \
+    ARG8TY _##ARG8NM;                                                  \
+    ARG9TY _##ARG9NM;                                                  \
+    explicit NAME##Node(                                               \
+        detail::ParamTrait<ARG0TY>::Type ARG0NM##_,                    \
+        detail::ParamTrait<ARG1TY>::Type ARG1NM##_,                    \
+        detail::ParamTrait<ARG2TY>::Type ARG2NM##_,                    \
+        detail::ParamTrait<ARG3TY>::Type ARG3NM##_,                    \
+        detail::ParamTrait<ARG4TY>::Type ARG4NM##_,                    \
+        detail::ParamTrait<ARG5TY>::Type ARG5NM##_,                    \
+        detail::ParamTrait<ARG6TY>::Type ARG6NM##_,                    \
+        detail::ParamTrait<ARG7TY>::Type ARG7NM##_,                    \
+        detail::ParamTrait<ARG8TY>::Type ARG8NM##_,                    \
+        detail::ParamTrait<ARG9TY>::Type ARG9NM##_)                    \
+        : BASE##Node(NodeKind::NAME),                                  \
+          _##ARG0NM(std::move(ARG0NM##_)),                             \
+          _##ARG1NM(std::move(ARG1NM##_)),                             \
+          _##ARG2NM(std::move(ARG2NM##_)),                             \
+          _##ARG3NM(std::move(ARG3NM##_)),                             \
+          _##ARG4NM(std::move(ARG4NM##_)),                             \
+          _##ARG5NM(std::move(ARG5NM##_)),                             \
+          _##ARG6NM(std::move(ARG6NM##_)),                             \
+          _##ARG7NM(std::move(ARG7NM##_)),                             \
+          _##ARG8NM(std::move(ARG8NM##_)),                             \
+          _##ARG9NM(std::move(ARG9NM##_)) {}                           \
+    template <class Visitor>                                           \
+    void visit(Visitor &V) {                                           \
+      if (!V.shouldVisit(this)) {                                      \
+        return;                                                        \
+      }                                                                \
+      V.enter(this);                                                   \
+      ESTreeVisit(V, _##ARG0NM);                                       \
+      ESTreeVisit(V, _##ARG1NM);                                       \
+      ESTreeVisit(V, _##ARG2NM);                                       \
+      ESTreeVisit(V, _##ARG3NM);                                       \
+      ESTreeVisit(V, _##ARG4NM);                                       \
+      ESTreeVisit(V, _##ARG5NM);                                       \
+      ESTreeVisit(V, _##ARG6NM);                                       \
+      ESTreeVisit(V, _##ARG7NM);                                       \
+      ESTreeVisit(V, _##ARG8NM);                                       \
+      ESTreeVisit(V, _##ARG9NM);                                       \
+      V.leave(this);                                                   \
+    }                                                                  \
+                                                                       \
+    static bool classof(const Node *V) {                               \
+      return V->getKind() == NodeKind::NAME;                           \
+    }                                                                  \
+  };
+
 #include "ESTree.def"
 
 // Visit nodes.
@@ -979,19 +1240,98 @@ void ESTreeVisit(Visitor &V, NodePtr Node) {
 #define ESTREE_NODE_9_ARGS(NAME, ...) \
   case NodeKind::NAME:                \
     return cast<NAME##Node>(Node)->visit(V);
+#define ESTREE_NODE_10_ARGS(NAME, ...) \
+  case NodeKind::NAME:                 \
+    return cast<NAME##Node>(Node)->visit(V);
 
 #include "ESTree.def"
   }
 }
 
+/// Automatically get the specified decoration type from an ESTree node.
+template <typename Decoration>
+class GetDecorationHelper {
+ public:
+  static Decoration *get(Node *n) {
+    switch (n->getKind()) {
+#define ESTREE_NODE_0_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_1_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_2_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_3_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_4_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_5_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_6_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_7_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_8_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_9_ARGS(NAME, ...) \
+  case NodeKind::NAME:                \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_NODE_10_ARGS(NAME, ...) \
+  case NodeKind::NAME:                 \
+    return helper(llvh::cast<NAME##Node>(n));
+#define ESTREE_FIRST(NAME, ...)   \
+  case NodeKind::_##NAME##_First: \
+    return nullptr;
+#define ESTREE_LAST(NAME)        \
+  case NodeKind::_##NAME##_Last: \
+    return nullptr;
+#include "hermes/AST/ESTree.def"
+    }
+    llvm_unreachable("invalid node kind");
+  }
+
+ private:
+  static Decoration *helper(Decoration *d) {
+    return d;
+  }
+  static constexpr Decoration *helper(void *) {
+    return nullptr;
+  }
+};
+
+/// Return the decoration with the specified type, if it is attached to the
+/// node, or nullptr.
+template <typename Decoration>
+Decoration *getDecoration(Node *n) {
+  return GetDecorationHelper<Decoration>::get(n);
+}
+
 /// Return a reference to the parameter list of a FunctionLikeNode.
 NodeList &getParams(FunctionLikeNode *node);
+
+/// Return a reference to the type parameter list of a FunctionLikeNode,
+/// nullptr if it doesn't exist.
+Node *getTypeParameters(FunctionLikeNode *node);
 
 /// If the body of the function-like node is a block statement, return it,
 /// otherwise return nullptr.
 /// ProgramNode doesn't have a block statement body, as well as some arrow
 /// functions.
 BlockStatementNode *getBlockStatement(FunctionLikeNode *node);
+
+/// \return the name of the function.
+Node *getIdentifier(FunctionLikeNode *node);
+
+/// \return the return type of the function.
+Node *getReturnType(FunctionLikeNode *node);
 
 /// \return the object of the member expression node.
 Node *getObject(MemberExpressionLikeNode *node);
@@ -1012,14 +1352,23 @@ NodeList &getArguments(CallExpressionLikeNode *node);
 /// initializers.
 bool hasSimpleParams(FunctionLikeNode *node);
 
-/// \return true when \p node has parameter expressions.
-bool hasParamExpressions(FunctionLikeNode *node);
-
 /// \return true when \p node is a generator function.
 bool isGenerator(FunctionLikeNode *node);
 
 /// \return true when \p node is an async function.
 bool isAsync(FunctionLikeNode *node);
+
+/// \return the super class node of \p node.
+Node *&getSuperClass(ClassLikeNode *node);
+
+/// \return the IdentifierNode of \p node. Can be null.
+IdentifierNode *getClassID(ClassLikeNode *node);
+
+/// \return the body node of \p node.
+ClassBodyNode *getClassBody(ClassLikeNode *node);
+
+/// \return the body node of \p node.
+ESTree::NodeList &getDecorators(ClassLikeNode *node);
 
 /// Allow using \p NodeKind in \p llvh::DenseMaps.
 struct NodeKindInfo : llvh::DenseMapInfo<NodeKind> {

@@ -5,10 +5,8 @@
 
 set(source_files
   ConsoleHost.cpp
-  MemorySizeParser.cpp
-  RandomSeedParser.cpp
 )
 
-add_hermes_library(hermesConsoleHost STATIC ${source_files}
-  LINK_LIBS hermesVMRuntime hermesInstrumentation
+add_hermes_library(hermesConsoleHost ${source_files}
+  LINK_OBJLIBS hermesPublic hermesapi
 )

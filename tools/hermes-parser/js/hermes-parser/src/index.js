@@ -17,14 +17,16 @@ import type {BabelFile} from './babel/TransformESTreeToBabel';
 import * as HermesParser from './HermesParser';
 import HermesToESTreeAdapter from './HermesToESTreeAdapter';
 import FlowVisitorKeys from './generated/ESTreeVisitorKeys';
-import * as StripComponentSyntax from './estree/StripComponentSyntax';
+import * as TransformComponentSyntax from './estree/TransformComponentSyntax';
+import * as TransformEnumSyntax from './estree/TransformEnumSyntax';
 import * as TransformMatchSyntax from './estree/TransformMatchSyntax';
+import * as TransformRecordSyntax from './estree/TransformRecordSyntax';
 import * as StripFlowTypesForBabel from './estree/StripFlowTypesForBabel';
 import * as TransformESTreeToBabel from './babel/TransformESTreeToBabel';
 import * as StripFlowTypes from './estree/StripFlowTypes';
 
 const DEFAULTS = {
-  flow: 'detect',
+  flow: ('detect': 'detect'),
 };
 
 function getOptions(options?: ParserOptions = {...DEFAULTS}) {
@@ -53,6 +55,14 @@ function getOptions(options?: ParserOptions = {...DEFAULTS}) {
     options.enableExperimentalComponentSyntax = true; // Enable by default
   }
 
+  if (options.enableExperimentalFlowMatchSyntax == null) {
+    options.enableExperimentalFlowMatchSyntax = true; // Enable by default
+  }
+
+  if (options.enableExperimentalFlowRecordSyntax == null) {
+    options.enableExperimentalFlowRecordSyntax = true; // Enable by default
+  }
+
   options.tokens = options.tokens === true;
   options.allowReturnOutsideFunction =
     options.allowReturnOutsideFunction === true;
@@ -62,14 +72,14 @@ function getOptions(options?: ParserOptions = {...DEFAULTS}) {
 
 declare function parse(
   code: string,
-  opts: {...ParserOptions, babel: true},
+  opts: $ReadOnly<{...ParserOptions, babel: true}>,
 ): BabelFile;
 // eslint-disable-next-line no-redeclare
 declare function parse(
   code: string,
   opts?:
-    | {...ParserOptions, babel?: false | void}
-    | {...ParserOptions, babel: false},
+    | $ReadOnly<{...ParserOptions, babel?: false | void}>
+    | $ReadOnly<{...ParserOptions, babel: false}>,
 ): ESTreeProgram;
 
 // eslint-disable-next-line no-redeclare
@@ -88,10 +98,14 @@ export function parse(
   }
 
   const loweredESTreeAST = [
+    options.transformOptions?.TransformEnumSyntax?.enable
+      ? TransformEnumSyntax.transformProgram
+      : null,
     TransformMatchSyntax.transformProgram,
-    StripComponentSyntax.transformProgram,
+    TransformComponentSyntax.transformProgram,
+    TransformRecordSyntax.transformProgram,
     StripFlowTypesForBabel.transformProgram,
-  ].reduce((ast, transform) => transform(ast, options), estreeAST);
+  ].reduce((ast, transform) => transform?.(ast, options) ?? ast, estreeAST);
 
   return TransformESTreeToBabel.transformProgram(loweredESTreeAST, options);
 }
@@ -107,8 +121,10 @@ export * as astNodeMutationHelpers from './transform/astNodeMutationHelpers';
 export {default as mutateESTreeASTForPrettier} from './utils/mutateESTreeASTForPrettier';
 
 const Transforms = {
+  transformEnumSyntax: TransformEnumSyntax.transformProgram,
   transformMatchSyntax: TransformMatchSyntax.transformProgram,
-  stripComponentSyntax: StripComponentSyntax.transformProgram,
+  transformComponentSyntax: TransformComponentSyntax.transformProgram,
+  transformRecordSyntax: TransformRecordSyntax.transformProgram,
   stripFlowTypesForBabel: StripFlowTypesForBabel.transformProgram,
   stripFlowTypes: StripFlowTypes.transformProgram,
 };

@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+#
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+mkdir -p out
+./node_modules/typescript/bin/tsc --sourceMap input.ts --outFile out/file-sm.js
+./node_modules/typescript/bin/tsc --sourceMap --inlineSources input.ts --outFile out/file-sm-src.js
+./node_modules/typescript/bin/tsc --inlineSourceMap input.ts --outFile out/data-sm.js
+./node_modules/typescript/bin/tsc --inlineSourceMap --inlineSources input.ts --outFile out/data-sm-src.js

@@ -1,0 +1,16 @@
+/*
+ * Auto-generated from icudt78l.dat - do not edit.
+ * This file is produced at CMake configure time by converting the
+ * compressed ICU data file into a C byte array that gets compiled
+ * directly into hermes-icu.dll.
+ *
+ * The symbol name 'icudt78_dat' matches ICU's U_ICUDATA_ENTRY_POINT
+ * when built with U_DISABLE_RENAMING=1.
+ */
+
+#ifdef _MSC_VER
+__declspec(align(16))
+#else
+_Alignas(16)
+#endif
+const unsigned char icudt78_dat[] = { @ICU_DATA_BYTES@ };

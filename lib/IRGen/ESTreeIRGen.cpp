@@ -7,32 +7,22 @@
 
 #include "ESTreeIRGen.h"
 
+#include "hermes/IR/IRUtils.h"
+
+#include "llvh/ADT/ScopeExit.h"
 #include "llvh/ADT/SetVector.h"
 #include "llvh/ADT/StringSet.h"
 #include "llvh/Support/Debug.h"
 #include "llvh/Support/SaveAndRestore.h"
-
-#include <tuple>
 
 namespace hermes {
 namespace irgen {
 
 //===----------------------------------------------------------------------===//
 // Free standing helpers.
-Instruction *loadGlobalObjectProperty(
-    IRBuilder &builder,
-    GlobalObjectProperty *from,
-    bool inhibitThrow) {
-  if (from->isDeclared() || inhibitThrow) {
-    return builder.createLoadPropertyInst(
-        builder.getGlobalObject(), from->getName());
-  }
-  return builder.createTryLoadGlobalPropertyInst(from);
-}
 
 /// \returns true if \p node is a constant expression.
 bool isConstantExpr(ESTree::Node *node) {
-  // TODO: a little more aggressive constant folding.
   switch (node->getKind()) {
     case ESTree::NodeKind::StringLiteral:
     case ESTree::NodeKind::NumericLiteral:
@@ -41,139 +31,6 @@ bool isConstantExpr(ESTree::Node *node) {
       return true;
     default:
       return false;
-  }
-}
-
-/// Adds the \p parent -> \p child link in the nesting graph.
-static void
-buildDummyLexicalParent(IRBuilder &builder, Function *parent, Function *child) {
-  // FunctionScopeAnalysis works through CreateFunctionInsts, so we have to add
-  // that even though these functions are never invoked.
-  auto *block = builder.createBasicBlock(parent);
-  builder.setInsertionBlock(block);
-  builder.createUnreachableInst();
-  auto *csi = builder.createCreateScopeInst(parent->getFunctionScopeDesc());
-  auto *inst = builder.createCreateFunctionInst(child, csi);
-  builder.createReturnInst(inst);
-}
-
-static void populateScopeFromChainLink(
-    IRBuilder &builder,
-    ScopeDesc *scope,
-    const SerializedScope &chainLink) {
-  for (const auto &var : chainLink.variables) {
-    Variable *V = builder.createVariable(scope, var.declKind, var.name);
-    if (var.declKind == Variable::DeclKind::Const) {
-      V->setStrictImmutableBinding(var.strictImmutableBinding);
-    }
-  }
-}
-
-static std::tuple<Function *, ScopeDesc *> materializeScopeChain(
-    IRBuilder &builder,
-    Function *outmostFunction,
-    const SerializedScopePtr &chain) {
-  if (!chain) {
-    ScopeDesc *S = outmostFunction->getFunctionScopeDesc();
-    S->setSerializedScope(chain);
-    return std::make_tuple(outmostFunction, S);
-  }
-
-  if (!chain->parentScope) {
-    ScopeDesc *S = outmostFunction->getFunctionScopeDesc();
-    populateScopeFromChainLink(builder, S, *chain);
-    S->setSerializedScope(chain);
-    return std::make_tuple(outmostFunction, S);
-  }
-
-  auto [currFunction, parentScope] =
-      materializeScopeChain(builder, outmostFunction, chain->parentScope);
-
-  ScopeDesc *newScope = parentScope->createInnerScope();
-  if (!chain->originalName.isValid()) {
-    newScope->setFunction(currFunction);
-  } else {
-    Function *newFunc = builder.createFunction(
-        newScope,
-        chain->originalName,
-        Function::DefinitionKind::ES5Function,
-        false,
-        SourceVisibility::Sensitive,
-        {},
-        false);
-    buildDummyLexicalParent(builder, currFunction, newFunc);
-    currFunction = newFunc;
-  }
-  populateScopeFromChainLink(builder, newScope, *chain);
-  newScope->setSerializedScope(chain);
-  return std::make_tuple(currFunction, newScope);
-}
-
-static std::tuple<Function *, ScopeDesc *> materializeScopeChainForEval(
-    IRBuilder &builder,
-    ESTree::ProgramNode *program,
-    const SerializedScopePtr &chain) {
-  Function *outerFunction = builder.createFunction(
-      builder.getModule()->getInitialScope()->createInnerScope(),
-      "",
-      Function::DefinitionKind::ES5Function,
-      ESTree::isStrict(program->strictness),
-      program->sourceVisibility,
-      program->getSourceRange(),
-      true);
-
-  return std::make_tuple(
-      outerFunction,
-      std::get<ScopeDesc *>(
-          materializeScopeChain(builder, outerFunction, chain)));
-}
-
-static std::tuple<Function *, ScopeDesc *> materializeScopeChainForLazyFunction(
-    IRBuilder &builder,
-    hbc::LazyCompilationData *lazyData,
-    const SerializedScopePtr &chain) {
-  Function *topLevel = builder.createTopLevelFunction(
-      builder.getModule()->getInitialScope()->createInnerScope(),
-      lazyData->strictMode);
-
-  return std::make_tuple(
-      topLevel,
-      std::get<ScopeDesc *>(materializeScopeChain(builder, topLevel, chain)));
-}
-
-/// Recursively populate \p nameTable with \p scopeDesc's (and its parents')
-/// variables.
-static void populateNameTable(NameTableTy &nameTable, ScopeDesc *scopeDesc) {
-  if (auto *parent = scopeDesc->getParent()) {
-    // If scopeDesc has a parent scope, first add the definitions in it. This
-    // way, scopeDesc definitions will take priority over those in the parents.
-    populateNameTable(nameTable, parent);
-  }
-
-  // If scope->closureAlias is specified, we must create an alias binding
-  // between originalName (which must be valid) and the variable identified by
-  // closureAlias.
-  //
-  // We do this *before* inserting the other variables below to reflect that
-  // the closure alias is conceptually in an outside scope and also avoid the
-  // closure name incorrectly shadowing the same name inside the closure.
-  if (SerializedScopePtr link = scopeDesc->getSerializedScope()) {
-    if (link->closureAlias.isValid()) {
-      assert(link->originalName.isValid() && "Original name invalid");
-      assert(
-          link->originalName != link->closureAlias &&
-          "Original name must be different from the alias");
-
-      // NOTE: the closureAlias target must exist and must be a Variable.
-      auto *closureVar = cast<Variable>(nameTable.lookup(link->closureAlias));
-
-      // Re-create the alias.
-      nameTable.insert(link->originalName, closureVar);
-    }
-  }
-
-  for (Variable *var : scopeDesc->getVariables()) {
-    nameTable.insert(var->getName(), var);
   }
 }
 
@@ -193,9 +50,12 @@ Value *LReference::emitLoad() {
       assert(false && "empty cannot be loaded");
       return builder.getLiteralUndefined();
     case Kind::Member:
-      return builder.createLoadPropertyInst(base_, property_);
+      return irgen_
+          ->emitMemberLoad(
+              llvh::cast<ESTree::MemberExpressionNode>(ast_), base_, property_)
+          .result;
     case Kind::VarOrGlobal:
-      return irgen_->emitLoad(base_);
+      return irgen_->emitLoad(base_, false);
     case Kind::Destructuring:
       assert(false && "destructuring cannot be loaded");
       return builder.getLiteralUndefined();
@@ -207,14 +67,16 @@ Value *LReference::emitLoad() {
 }
 
 void LReference::emitStore(Value *value) {
-  auto &builder = getBuilder();
-
   switch (kind_) {
     case Kind::Empty:
       return;
     case Kind::Member:
-      builder.createStorePropertyInst(value, base_, property_);
-      return;
+      return irgen_->emitMemberStore(
+          llvh::cast<ESTree::MemberExpressionNode>(ast_),
+          value,
+          base_,
+          property_,
+          thisValue_);
     case Kind::VarOrGlobal:
       irgen_->emitStore(value, base_, declInit_);
       return;
@@ -222,7 +84,7 @@ void LReference::emitStore(Value *value) {
       return;
     case Kind::Destructuring:
       return irgen_->emitDestructuringAssignment(
-          declInit_, destructuringTarget_, value);
+          declInit_, llvh::cast<ESTree::PatternNode>(ast_), value);
   }
 
   llvm_unreachable("invalid LReference kind");
@@ -246,21 +108,60 @@ GlobalObjectProperty *LReference::castAsGlobalObjectProperty() const {
 // ESTreeIRGen
 
 ESTreeIRGen::ESTreeIRGen(
-    ESTree::Node *root,
-    const DeclarationFileListTy &declFileList,
     Module *M,
-    const ScopeChain &scopeChain)
+    sema::SemContext &semCtx,
+    flow::FlowContext &flowContext,
+    ESTree::Node *root)
     : Mod(M),
-      Builder(Mod),
-      instrumentIR_(M, Builder),
+      semCtx_(semCtx),
+      kw_(M->getContext().keywords()),
+      flowContext_(flowContext),
       Root(root),
-      DeclarationFileList(declFileList),
-      lexicalScopeChain(resolveScopeIdentifiers(scopeChain)),
-      identEval_(Builder.createIdentifier("eval")),
-      identLet_(Builder.createIdentifier("let")),
+      Builder(Mod),
       identDefaultExport_(Builder.createIdentifier("?default")) {}
 
-void ESTreeIRGen::doIt() {
+llvh::StringRef ESTreeIRGen::propertyKeyAsString(
+    llvh::SmallVectorImpl<char> &storage,
+    ESTree::Node *Key) {
+  // Handle String Literals.
+  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-string-literals
+  if (auto *Lit = llvh::dyn_cast<ESTree::StringLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading String Literal \"" << Lit->_value << "\"\n");
+    return Lit->_value->str();
+  }
+
+  // Handle identifiers as if they are String Literals.
+  if (auto *Iden = llvh::dyn_cast<ESTree::IdentifierNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading String Literal \"" << Iden->_name << "\"\n");
+    return Iden->_name->str();
+  }
+
+  // Handle Number Literals.
+  // http://www.ecma-international.org/ecma-262/6.0/#sec-literals-numeric-literals
+  if (auto *Lit = llvh::dyn_cast<ESTree::NumericLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading Numeric Literal \"" << Lit->_value << "\"\n");
+    storage.resize(NUMBER_TO_STRING_BUF_SIZE);
+    auto len = numberToString(Lit->_value, storage.data(), storage.size());
+    return llvh::StringRef(storage.begin(), len);
+  }
+
+  // Handle BigInt Literals, because they're a type of NumericLiteral.
+  // ES15 12.9.3
+  if (auto *Lit = llvh::dyn_cast<ESTree::BigIntLiteralNode>(Key)) {
+    LLVM_DEBUG(
+        llvh::dbgs() << "Loading BigInt Literal \"" << Lit->_bigint->str()
+                     << "\"\n");
+    return Lit->_bigint->str();
+  }
+
+  llvm_unreachable("Don't know this kind of property key");
+  return llvh::StringRef();
+}
+
+void ESTreeIRGen::doIt(llvh::StringRef topLevelFunctionName) {
   LLVM_DEBUG(llvh::dbgs() << "Processing top level program.\n");
 
   ESTree::ProgramNode *Program;
@@ -276,84 +177,32 @@ void ESTreeIRGen::doIt() {
   LLVM_DEBUG(llvh::dbgs() << "Found Program decl.\n");
 
   // The function which will "execute" the module.
-  Function *topLevelFunction;
-
-  // Function context used only when compiling in an existing lexical scope
-  // chain. It is only initialized if we have a lexical scope chain.
-  llvh::Optional<FunctionContext> wrapperFunctionContext{};
-
-  if (!lexicalScopeChain) {
-    topLevelFunction = Builder.createTopLevelFunction(
-        Mod->getInitialScope()->createInnerScope(),
-        ESTree::isStrict(Program->strictness),
-        Program->sourceVisibility,
-        Program->getSourceRange());
-
-  } else {
-    // If compiling in an existing lexical context, we need to install the
-    // scopes in a wrapper function, which represents the "global" code.
-    auto [wrapperFunction, parentScope] =
-        materializeScopeChainForEval(Builder, Program, lexicalScopeChain);
-
-    // Initialize the wrapper context.
-    wrapperFunctionContext.emplace(this, wrapperFunction, nullptr);
-    currentIRScopeDesc_ = parentScope;
-
-    // Restore the previously saved parent scopes.
-    populateNameTable(nameTable_, parentScope);
-
-    // Finally create the function which will actually be executed.
-    topLevelFunction = Builder.createFunction(
-        parentScope->createInnerScope(),
-        "eval",
-        Function::DefinitionKind::ES5Function,
-        ESTree::isStrict(Program->strictness),
-        Program->sourceVisibility,
-        Program->getSourceRange(),
-        false);
-
-    buildDummyLexicalParent(
-        Builder, parentScope->getFunction(), topLevelFunction);
-  }
-
-  Mod->setTopLevelFunction(topLevelFunction);
+  Function *const topLevelFunction = Builder.createTopLevelFunction(
+      topLevelFunctionName,
+      ESTree::isStrict(Program->strictness),
+      Program->getSemInfo()->customDirectives,
+      Program->getSourceRange());
 
   // Function context for topLevelFunction.
   FunctionContext topLevelFunctionContext{
       this, topLevelFunction, Program->getSemInfo()};
+  Function::ScopedLexicalScopeChange lexScopeChange(
+      curFunction()->function, Program->getSemInfo()->getFunctionBodyScope());
 
-  // IRGen needs a pointer to the outer-most context, which is either
-  // topLevelContext or wrapperFunctionContext, depending on whether the latter
-  // was created.
-  // We want to set the pointer to that outer-most context, but ensure that it
-  // doesn't outlive the context it is pointing to.
-  llvh::SaveAndRestore<FunctionContext *> saveTopLevelContext(
-      topLevelContext,
-      !wrapperFunctionContext.hasValue() ? &topLevelFunctionContext
-                                         : &wrapperFunctionContext.getValue());
-
-  // Now declare all externally supplied global properties, but only if we don't
-  // have a lexical scope chain.
-  if (!lexicalScopeChain) {
-    for (auto declFile : DeclarationFileList) {
-      processDeclarationFile(declFile);
-    }
-  }
-
-  emitFunctionPreamble(Builder.createBasicBlock(topLevelFunction));
-  initCaptureStateInES5Function();
-  emitTopLevelDeclarations(Program, Program, DoEmitParameters::Yes);
+  emitFunctionPrologue(
+      Program,
+      Builder.createBasicBlock(topLevelFunction),
+      InitES5CaptureState::Yes,
+      DoEmitDeclarations::Yes,
+      nullptr);
 
   Value *retVal;
   {
     // Allocate the return register, initialize it to undefined.
-    curFunction()->globalReturnRegister =
-        Builder.createAllocStackInst(genAnonymousLabelName("ret"));
+    curFunction()->globalReturnRegister = Builder.createAllocStackInst(
+        genAnonymousLabelName("ret"), Type::createAnyType());
     Builder.createStoreStackInst(
         Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
-
-    // Emit all CreateFunctionInsts for all global functions.
-    hoistCreateFunctions(Program);
 
     genBody(Program->_body);
 
@@ -362,259 +211,210 @@ void ESTreeIRGen::doIt() {
   }
 
   emitFunctionEpilogue(retVal);
+
+  drainCompilationQueue();
+}
+
+Function *ESTreeIRGen::doItInScope(EvalCompilationDataInst *evalDataInst) {
+  LLVM_DEBUG(llvh::dbgs() << "Processing program in scope.\n");
+  sema::LexicalScope *lexScope = semCtx_.getParentLexicalScope();
+  assert(lexScope && "SemCtx parent lexical scope cannot be null");
+  VariableScope *varScope = getLexicalScopeData(lexScope);
+  assert(varScope && "eval IRGen cannot have null variable scope");
+
+  ESTree::ProgramNode *Program;
+
+  Program = llvh::dyn_cast<ESTree::ProgramNode>(Root);
+
+  assert(Program && "missing 'Program' AST node");
+
+  LLVM_DEBUG(llvh::dbgs() << "Found Program decl.\n");
+
+  Function *const topLevelFunction = Mod->getTopLevelFunction();
+
+  // Function context for topLevelFunction.
+  FunctionContext topLevelFunctionContext{
+      this, topLevelFunction, Program->getSemInfo()};
+
+  emitLazyGlobalDeclarations(semCtx_.getGlobalScope());
+
+  auto defKind = Function::DefinitionKind::ES5Function;
+  if (evalDataInst->getCapturedThis()) {
+    // If evalDataInst has a populated captured this, that means we are stopped
+    // inside of an arrow function. The way to resolve new.target/this now is to
+    // pretend that we are executing in an arrow function. Then set up the
+    // captured state before we generate the program node.
+    // If not stopped in an arrow, then new.target/this will be resolved with
+    // normal IR for looking into the function's frame, which is populated when
+    // we invoke this top-level eval function.
+    defKind = Function::DefinitionKind::ES6Arrow;
+  }
+  // The function which will "execute" the module.
+  Function *const newFunc = Builder.createFunction(
+      "",
+      defKind,
+      ESTree::isStrict(Program->strictness),
+      Program->getSemInfo()->customDirectives,
+      Program->getSourceRange());
+
+  // Function context for topLevelFunction.
+  FunctionContext mainFunctionContext{this, newFunc, Program->getSemInfo()};
+  curFunction()->capturedState.newTarget = evalDataInst->getCapturedNewTarget();
+  curFunction()->capturedState.thisVal = evalDataInst->getCapturedThis();
+  curFunction()->capturedState.homeObject = evalDataInst->getHomeObject();
+
+  // If there was class context, restore it.
+  if (evalDataInst->getClsConstructor()) {
+    curFunction()->legacyClassContext = std::make_shared<LegacyClassContext>(
+        evalDataInst->getClsConstructor(),
+        evalDataInst->getClsInstElemInitFunc());
+  }
+
+  emitFunctionPrologue(
+      Program,
+      Builder.createBasicBlock(newFunc),
+      InitES5CaptureState::Yes,
+      DoEmitDeclarations::Yes,
+      varScope);
+
+  // Allocate the return register, initialize it to undefined.
+  curFunction()->globalReturnRegister = Builder.createAllocStackInst(
+      genAnonymousLabelName("ret"), Type::createAnyType());
+  Builder.createStoreStackInst(
+      Builder.getLiteralUndefined(), curFunction()->globalReturnRegister);
+
+  genBody(Program->_body);
+
+  Value *retVal =
+      Builder.createLoadStackInst(curFunction()->globalReturnRegister);
+
+  emitFunctionEpilogue(retVal);
+
+  drainCompilationQueue();
+
+  return newFunc;
 }
 
 void ESTreeIRGen::doCJSModule(
-    Function *topLevelFunction,
-    sem::FunctionInfo *semInfo,
+    sema::SemContext &semContext,
     uint32_t segmentID,
     uint32_t id,
     llvh::StringRef filename) {
   assert(Root && "no root in ESTreeIRGen");
   auto *func = cast<ESTree::FunctionExpressionNode>(Root);
-  assert(func && "doCJSModule without a module");
 
-  FunctionContext topLevelFunctionContext{this, topLevelFunction, semInfo};
-  llvh::SaveAndRestore<FunctionContext *> saveTopLevelContext(
-      topLevelContext, &topLevelFunctionContext);
-
-  // Now declare all externally supplied global properties, but only if we don't
-  // have a lexical scope chain.
-  assert(
-      !lexicalScopeChain &&
-      "Lexical scope chain not supported for CJS modules");
-  for (auto declFile : DeclarationFileList) {
-    processDeclarationFile(declFile);
+  // Take care of the additions to the global scope that this module could
+  // have done. A module can only add ambient global properties. Look for new
+  // ones (customData == nullptr) and declare them.
+  for (sema::Decl *decl : semContext.getGlobalScope()->decls) {
+    if (decl->kind == sema::Decl::Kind::UndeclaredGlobalProperty &&
+        !decl->customData) {
+      setDeclData(decl, Builder.createGlobalObjectProperty(decl->name, false));
+    }
   }
 
   Identifier functionName = Builder.createIdentifier("cjs_module");
-  Function *newFunc = genES5Function(functionName, nullptr, func);
+  Function *newFunc = genBasicFunction(functionName, func, nullptr);
+
+  drainCompilationQueue();
 
   Builder.getModule()->addCJSModule(
       segmentID, id, Builder.createIdentifier(filename), newFunc);
 }
 
-std::pair<Function *, Function *> ESTreeIRGen::doLazyFunction(
-    hbc::LazyCompilationData *lazyData) {
-  lexicalScopeChain = lazyData->parentScope;
+Function *ESTreeIRGen::doLazyFunction(Function *lazyFunc) {
+  LazyCompilationDataInst *lazyDataInst =
+      lazyFunc->getLazyCompilationDataInst();
 
-  // Create a top level function that will never be executed, because:
+  // Create a top level FunctionContext that will never be executed, because:
   // 1. IRGen assumes the first function always has global scope
   // 2. It serves as the root for dummy functions for lexical data
-  auto [topLevel, parentScope] = materializeScopeChainForLazyFunction(
-      Builder, lazyData, lexicalScopeChain);
+  FunctionContext topLevelFunctionContext{
+      this, Mod->getTopLevelFunction(), nullptr};
 
-  FunctionContext topLevelFunctionContext{this, topLevel, nullptr};
-
-  // Note that topLevel is the Module's top level function (i.e., global()), so
-  // currentIRScopeDesc_ is the descriptor for global()'s function scope. What
-  // we really need instead is the lazy function's parent scope in as the
-  // previous scope. Thus, manually set it here. Another option would be to
-  // recursively "install" the FunctionContexts of all encompassing functions,
-  // but that's not really necessary -- by setting currentIRScopeDesc_ to
-  // parentScope, the ESTreeIRGen object is in a "compatible" state, ready to
-  // generate code for the lazy function.
-  currentIRScopeDesc_ = parentScope;
-
-  // Save the top-level context, but ensure it doesn't outlive what it is
-  // pointing to.
-  llvh::SaveAndRestore<FunctionContext *> saveTopLevelContext(
-      topLevelContext, &topLevelFunctionContext);
+  emitLazyGlobalDeclarations(semCtx_.getGlobalScope());
 
   auto *node = cast<ESTree::FunctionLikeNode>(Root);
 
-  // Now restore scoping information in two separate ways.
-  populateNameTable(nameTable_, parentScope);
+  VariableScope *parentVarScope = lazyDataInst->getParentVarScope();
 
-  // If lazyData->closureAlias is specified, we must create an alias binding
-  // between originalName (which must be valid) and the variable identified by
-  // closureAlias.
-  Variable *parentVar = nullptr;
-  if (lazyData->closureAlias.isValid()) {
-    assert(lazyData->originalName.isValid() && "Original name invalid");
-    assert(
-        lazyData->originalName != lazyData->closureAlias &&
-        "Original name must be different from the alias");
+  auto *homeObj = lazyDataInst->getHomeObject();
+  CapturedState capturedState{
+      lazyDataInst->getCapturedThis(),
+      lazyDataInst->getCapturedNewTarget(),
+      lazyDataInst->getCapturedArguments(),
+      homeObj};
 
-    // NOTE: the closureAlias target must exist and must be a Variable.
-    parentVar = cast<Variable>(nameTable_.lookup(lazyData->closureAlias));
-
-    // Re-create the alias.
-    nameTable_.insert(lazyData->originalName, parentVar);
+  // If there was class context, restore it.
+  if (lazyDataInst->getClsConstructor()) {
+    curFunction()->legacyClassContext = std::make_shared<LegacyClassContext>(
+        lazyDataInst->getClsConstructor(),
+        lazyDataInst->getClsInstaneElemInitFunc());
   }
 
-  assert(
-      !llvh::isa<ESTree::ArrowFunctionExpressionNode>(node) &&
-      "lazy compilation not supported for arrow functions");
+  auto freeClsCtx = llvh::make_scope_exit([this]() {
+    if (curFunction()->legacyClassContext)
+      curFunction()->legacyClassContext.reset();
+  });
 
-  // Generators have had their lazy scope set up without setting one up
-  // for the inner functions. This means that we will never directly generate
-  // a GeneratorInnerFunction here.
-  Function *func = ESTree::isAsync(node)
-      ? genAsyncFunction(lazyData->originalName, parentVar, node)
-      : ESTree::isGenerator(node)
-      ? genGeneratorFunction(lazyData->originalName, parentVar, node)
-      : genES5Function(lazyData->originalName, parentVar, node, false);
-
-  // Now add the link between parentScope's function and func, completing the
-  // nesting graph for the lazy function.
-  buildDummyLexicalParent(Builder, parentScope->getFunction(), func);
-  return {func, topLevel};
-}
-
-std::pair<Value *, bool> ESTreeIRGen::declareVariableOrGlobalProperty(
-    ScopeDesc *inScope,
-    VarDecl::Kind declKind,
-    Identifier name) {
-  Value *found = nameTable_.lookup(name);
-
-  // If the variable is already declared in this scope, do not create a
-  // second instance.
-  if (found) {
-    if (auto *var = llvh::dyn_cast<Variable>(found)) {
-      if (var->getParent() == inScope)
-        return {found, false};
+  Function *compiledFunc;
+  if (auto *arrow = llvh::dyn_cast<ESTree::ArrowFunctionExpressionNode>(Root)) {
+    if (arrow->_async) {
+      compiledFunc = genAsyncFunction(
+          lazyFunc->getOriginalOrInferredName(),
+          arrow,
+          parentVarScope,
+          capturedState);
     } else {
-      assert(
-          llvh::isa<GlobalObjectProperty>(found) &&
-          "Invalid value found in name table");
-      if (inScope->isGlobalScope() &&
-          (declKind == VarDecl::Kind::Var ||
-           !Mod->getContext().getCodeGenerationSettings().enableBlockScoping)) {
-        // Only return the global property that was found if this is the global
-        // scope and the JS source is declaring a "var" global (i.e., a
-        // GlobalObjectProperty). This causes code like
-        //
-        // let undefined;
-        //
-        // to define a global variable, which will then, at runtime, be checked
-        // with ThrowIfHasRestrictedGlobalProperty to ensure it is a valid
-        // lexically scoped name for the given program.
-        return {found, false};
-      }
+      compiledFunc = genCapturingFunction(
+          lazyFunc->getOriginalOrInferredName(),
+          arrow,
+          parentVarScope,
+          capturedState,
+          Function::DefinitionKind::ES6Arrow);
     }
-  }
-
-  // Create a property if global scope, variable otherwise.
-  Value *res;
-  NameTableScopeTy *nameTableScope;
-  if (inScope->isGlobalScope() && declKind == VarDecl::Kind::Var) {
-    nameTableScope = topLevelContext->functionScope;
-    res = Builder.createGlobalObjectProperty(name, true);
   } else {
-    if (!Mod->getContext().getCodeGenerationSettings().enableTDZ) {
-      // short-circuit all declarations to be Var. TDZ dies here.
-      declKind = Variable::DeclKind::Var;
-    }
-
-    nameTableScope = curFunction()->blockScope;
-    res = Builder.createVariable(inScope, declKind, name);
+    // Generators have had their lazy scope set up without setting one up
+    // for the inner functions. This means that we will never directly generate
+    // a GeneratorInnerFunction here.
+    compiledFunc = ESTree::isAsync(node)
+        ? genAsyncFunction(
+              lazyFunc->getOriginalOrInferredName(),
+              node,
+              parentVarScope,
+              capturedState)
+        : ESTree::isGenerator(node) ? genGeneratorFunction(
+                                          lazyFunc->getOriginalOrInferredName(),
+                                          node,
+                                          parentVarScope,
+                                          homeObj)
+                                    : genBasicFunction(
+                                          lazyFunc->getOriginalOrInferredName(),
+                                          node,
+                                          parentVarScope,
+                                          /* superClassNode */ nullptr,
+                                          lazyFunc->getDefinitionKind(),
+                                          homeObj);
   }
 
-  // Register the variable in the scoped hash table.
-  nameTable_.insertIntoScope(nameTableScope, name, res);
-  return {res, true};
-}
+  drainCompilationQueue();
 
-GlobalObjectProperty *ESTreeIRGen::declareAmbientGlobalProperty(
-    Identifier name) {
-  // Avoid redefining global properties.
-  auto *prop = dyn_cast_or_null<GlobalObjectProperty>(nameTable_.lookup(name));
-  if (prop)
-    return prop;
+  // The lazyFunc will be destroyed when the BytecodeFunction
+  // is destroyed.
+  // It won't be needed again, even if there is an error later in the pipeline,
+  // because we store the error message in BytecodeFunction and reuse it,
+  // ensuring we never use the information in lazyFunc ever again.
 
-  LLVM_DEBUG(
-      llvh::dbgs() << "declaring ambient global property " << name << " "
-                   << name.getUnderlyingPointer() << "\n");
+  // Free the allocated legacy class context.
+  if (curFunction()->legacyClassContext)
+    curFunction()->legacyClassContext.reset();
 
-  prop = Builder.createGlobalObjectProperty(name, false);
-  nameTable_.insertIntoScope(topLevelContext->functionScope, name, prop);
-  return prop;
-}
-
-namespace {
-/// This visitor structs collects declarations within a single closure without
-/// descending into child closures.
-struct DeclHoisting {
-  /// The list of collected identifiers (variables and functions).
-  llvh::SmallVector<ESTree::VariableDeclaratorNode *, 8> decls{};
-
-  /// A list of functions that need to be hoisted and materialized before we
-  /// can generate the rest of the function.
-  llvh::SmallVector<ESTree::FunctionDeclarationNode *, 8> closures;
-
-  explicit DeclHoisting() = default;
-  ~DeclHoisting() = default;
-
-  /// Extract the variable name from the nodes that can define new variables.
-  /// The nodes that can define a new variable in the scope are:
-  /// VariableDeclarator and FunctionDeclaration>
-  void collectDecls(ESTree::Node *V) {
-    if (auto VD = llvh::dyn_cast<ESTree::VariableDeclaratorNode>(V)) {
-      return decls.push_back(VD);
-    }
-
-    if (auto FD = llvh::dyn_cast<ESTree::FunctionDeclarationNode>(V)) {
-      return closures.push_back(FD);
-    }
-  }
-
-  bool shouldVisit(ESTree::Node *V) {
-    // Collect declared names, even if we don't descend into children nodes.
-    collectDecls(V);
-
-    // Do not descend to child closures because the variables they define are
-    // not exposed to the outside function.
-    if (llvh::isa<ESTree::FunctionDeclarationNode>(V) ||
-        llvh::isa<ESTree::FunctionExpressionNode>(V) ||
-        llvh::isa<ESTree::ArrowFunctionExpressionNode>(V))
-      return false;
-    return true;
-  }
-
-  void enter(ESTree::Node *V) {}
-  void leave(ESTree::Node *V) {}
-};
-
-} // anonymous namespace.
-
-void ESTreeIRGen::processDeclarationFile(ESTree::ProgramNode *programNode) {
-  auto Program = dyn_cast_or_null<ESTree::ProgramNode>(programNode);
-  if (!Program)
-    return;
-
-  DeclHoisting DH;
-  Program->visit(DH);
-
-  // Create variable declarations for each of the hoisted variables.
-  for (auto vd : DH.decls)
-    declareAmbientGlobalProperty(getNameFieldFromID(vd->_id));
-  for (auto fd : DH.closures)
-    declareAmbientGlobalProperty(getNameFieldFromID(fd->_id));
-}
-
-Value *ESTreeIRGen::ensureVariableExists(ESTree::IdentifierNode *id) {
-  assert(id && "id must be a valid Identifier node");
-  Identifier name = getNameFieldFromID(id);
-
-  // Check if this is a known variable.
-  if (auto *var = nameTable_.lookup(name))
-    return var;
-
-  if (curFunction()->function->isStrictMode()) {
-    // Report a warning in strict mode.
-    auto currentFunc = Builder.getInsertionBlock()->getParent();
-
-    Builder.getModule()->getContext().getSourceErrorManager().warning(
-        Warning::UndefinedVariable,
-        id->getSourceRange(),
-        Twine("the variable \"") + name.str() + "\" was not declared in " +
-            currentFunc->getDescriptiveDefinitionKindStr() + " \"" +
-            currentFunc->getInternalNameStr() + "\"");
-  }
-
-  // Undeclared variable is an ambient global property.
-  return declareAmbientGlobalProperty(name);
+  // promotedDecls is used immediately and relies on IdentifierNode,
+  // which is deallocated between invocations of lazy compilation.
+  // Therefore, it is necessary to clear promotedDecls when freeing the
+  // AST in order to avoid dangling pointers.
+  semCtx_.clearPromotedDecls();
+  return compiledFunc;
 }
 
 Value *ESTreeIRGen::genMemberExpressionProperty(
@@ -635,6 +435,11 @@ Value *ESTreeIRGen::genMemberExpressionProperty(
     return Builder.getLiteralNumber(N->_value);
   }
 
+  if (auto *PN = llvh::dyn_cast<ESTree::PrivateNameNode>(getProperty(Mem))) {
+    auto *id = llvh::cast<ESTree::IdentifierNode>(PN->_id);
+    return genPrivateNameValue(id);
+  }
+
   // ESTree encodes property access as MemberExpression -> Identifier.
   auto Id = cast<ESTree::IdentifierNode>(getProperty(Mem));
 
@@ -649,8 +454,7 @@ bool ESTreeIRGen::canCreateLRefWithoutSideEffects(
     hermes::ESTree::Node *target) {
   // Check for an identifier bound to an existing local variable.
   if (auto *iden = llvh::dyn_cast<ESTree::IdentifierNode>(target)) {
-    return dyn_cast_or_null<Variable>(
-        nameTable_.lookup(getNameFieldFromID(iden)));
+    return llvh::isa<Variable>(resolveIdentifier(iden));
   }
 
   return false;
@@ -663,27 +467,60 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
   if (llvh::isa<ESTree::EmptyNode>(node)) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for EmptyNode.\n");
     return LReference(
-        LReference::Kind::Empty, this, false, nullptr, nullptr, sourceLoc);
+        LReference::Kind::Empty,
+        this,
+        false,
+        nullptr,
+        nullptr,
+        nullptr,
+        sourceLoc);
   }
 
   /// Create lref for member expression (ex: o.f).
   if (auto *ME = llvh::dyn_cast<ESTree::MemberExpressionNode>(node)) {
     LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for member expression.\n");
-    Value *obj = genExpression(ME->_object);
+
+    Value *obj;
+    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
+      auto *homeObjectVar = curFunction()->capturedState.homeObject;
+      auto *RSI = emitResolveScopeInstIfNeeded(homeObjectVar->getParent());
+      Value *homeObjectVal = Builder.createLoadFrameInst(RSI, homeObjectVar);
+      obj = Builder.createLoadParentNoTrapsInst(homeObjectVal);
+    } else {
+      obj = genExpression(ME->_object);
+    }
+
     Value *prop = genMemberExpressionProperty(ME);
+    Value *thisVal = nullptr;
+    // `thisVal` should only be set for `super` references.
+    if (llvh::isa<ESTree::SuperNode>(ME->_object)) {
+      thisVal = genThisExpression();
+    }
     return LReference(
-        LReference::Kind::Member, this, false, obj, prop, sourceLoc);
+        LReference::Kind::Member,
+        this,
+        false,
+        ME,
+        obj,
+        prop,
+        sourceLoc,
+        thisVal);
   }
 
   /// Create lref for identifiers  (ex: a).
   if (auto *iden = llvh::dyn_cast<ESTree::IdentifierNode>(node)) {
-    LLVM_DEBUG(llvh::dbgs() << "Creating an LRef for identifier.\n");
     LLVM_DEBUG(
-        llvh::dbgs() << "Looking for identifier \"" << getNameFieldFromID(iden)
-                     << "\"\n");
-    auto *var = ensureVariableExists(iden);
+        llvh::dbgs() << "Creating an LRef for identifier \""
+                     << getNameFieldFromID(iden) << "\"\n");
+    auto *var = resolveIdentifier(iden);
     return LReference(
-        LReference::Kind::VarOrGlobal, this, declInit, var, nullptr, sourceLoc);
+        LReference::Kind::VarOrGlobal,
+        this,
+        declInit,
+        nullptr,
+        var,
+        nullptr,
+        sourceLoc);
   }
 
   /// Create lref for variable decls (ex: var a).
@@ -706,7 +543,13 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
       node->getSourceRange(), "unsupported assignment target");
 
   return LReference(
-      LReference::Kind::Error, this, false, nullptr, nullptr, sourceLoc);
+      LReference::Kind::Error,
+      this,
+      false,
+      nullptr,
+      nullptr,
+      nullptr,
+      sourceLoc);
 }
 
 Value *ESTreeIRGen::genHermesInternalCall(
@@ -714,9 +557,9 @@ Value *ESTreeIRGen::genHermesInternalCall(
     Value *thisValue,
     ArrayRef<Value *> args) {
   return Builder.createCallInst(
-      CallInst::kNoTextifiedCallee,
       Builder.createLoadPropertyInst(
           Builder.createTryLoadGlobalPropertyInst("HermesInternal"), name),
+      /* newTarget */ Builder.getLiteralUndefined(),
       thisValue,
       args);
 }
@@ -735,16 +578,21 @@ void ESTreeIRGen::emitEnsureObject(Value *value, llvh::StringRef message) {
 }
 
 Value *ESTreeIRGen::emitIteratorSymbol() {
-  // FIXME: use the builtin value of @@iterator. Symbol could have been
-  // overridden.
   return Builder.createLoadPropertyInst(
-      Builder.createTryLoadGlobalPropertyInst("Symbol"), "iterator");
+      Builder.createGetBuiltinClosureInst(BuiltinMethod::globalThis_Symbol),
+      "iterator");
+}
+
+Value *ESTreeIRGen::emitAsyncIteratorSymbol() {
+  return Builder.createLoadPropertyInst(
+      Builder.createGetBuiltinClosureInst(BuiltinMethod::globalThis_Symbol),
+      "asyncIterator");
 }
 
 ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
   auto *method = Builder.createLoadPropertyInst(obj, emitIteratorSymbol());
-  auto *iterator =
-      Builder.createCallInst(CallInst::kNoTextifiedCallee, method, obj, {});
+  auto *iterator = Builder.createCallInst(
+      method, /* newTarget */ Builder.getLiteralUndefined(), obj, {});
 
   emitEnsureObject(iterator, "iterator is not an object");
   auto *nextMethod = Builder.createLoadPropertyInst(iterator, "next");
@@ -752,10 +600,25 @@ ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
   return {iterator, nextMethod};
 }
 
+ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetAsyncIteratorSlow(
+    Value *obj) {
+  auto *makeAsyncIterator = Builder.createGetBuiltinClosureInst(
+      BuiltinMethod::HermesBuiltin_makeAsyncIterator);
+
+  auto *iterator = Builder.createCallInst(
+      makeAsyncIterator,
+      Builder.getLiteralUndefined(),
+      Builder.getLiteralUndefined(),
+      {obj});
+  auto *nextMethod = Builder.createLoadPropertyInst(iterator, "next");
+
+  return {iterator, nextMethod};
+}
+
 Value *ESTreeIRGen::emitIteratorNextSlow(IteratorRecordSlow iteratorRecord) {
   auto *nextResult = Builder.createCallInst(
-      CallInst::kNoTextifiedCallee,
       iteratorRecord.nextMethod,
+      /* newTarget */ Builder.getLiteralUndefined(),
       iteratorRecord.iterator,
       {});
   emitEnsureObject(nextResult, "iterator.next() did not return an object");
@@ -770,33 +633,46 @@ Value *ESTreeIRGen::emitIteratorValueSlow(Value *iterResult) {
   return Builder.createLoadPropertyInst(iterResult, "value");
 }
 
-void ESTreeIRGen::emitIteratorCloseSlow(
+void ESTreeIRGen::_emitIteratorCloseImpl(
+    ESTree::Node *astNode,
     hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
-    bool ignoreInnerException) {
+    bool ignoreInnerException,
+    bool isAsyncIterator) {
   auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
   auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
 
   auto *returnMethod = genBuiltinCall(
       BuiltinMethod::HermesBuiltin_getMethod,
       {iteratorRecord.iterator, Builder.getLiteralString("return")});
-  Builder.createCompareBranchInst(
+  auto *returnIsUndefined = Builder.createBinaryOperatorInst(
       returnMethod,
       Builder.getLiteralUndefined(),
-      BinaryOperatorInst::OpKind::StrictlyEqualKind,
-      noReturn,
-      haveReturn);
+      ValueKind::BinaryStrictlyEqualInstKind);
+  Builder.createCondBranchInst(returnIsUndefined, noReturn, haveReturn);
 
   Builder.setInsertionBlock(haveReturn);
   if (ignoreInnerException) {
     emitTryCatchScaffolding(
         noReturn,
         // emitBody.
-        [this, returnMethod, &iteratorRecord]() {
-          Builder.createCallInst(
-              CallInst::kNoTextifiedCallee,
+        [this, returnMethod, &iteratorRecord, isAsyncIterator, astNode](
+            BasicBlock *catchBlock) {
+          SurroundingTry thisTry{
+              curFunction(),
+              astNode,
+              catchBlock,
+              {},
+              [](ESTree::Node *,
+                 ControlFlowChange cfc,
+                 BasicBlock *continueTarget) {}};
+
+          auto *callResult = Builder.createCallInst(
               returnMethod,
+              /* newTarget */ Builder.getLiteralUndefined(),
               iteratorRecord.iterator,
               {});
+          if (isAsyncIterator)
+            genYieldOrAwaitExpr(callResult);
         },
         // emitNormalCleanup.
         []() {},
@@ -807,24 +683,40 @@ void ESTreeIRGen::emitIteratorCloseSlow(
           Builder.createBranchInst(nextBlock);
         });
   } else {
-    auto *innerResult = Builder.createCallInst(
-        CallInst::kNoTextifiedCallee,
+    auto *callResult = Builder.createCallInst(
         returnMethod,
+        /* newTarget */ Builder.getLiteralUndefined(),
         iteratorRecord.iterator,
         {});
-    emitEnsureObject(innerResult, "iterator.return() did not return an object");
+    emitEnsureObject(
+        isAsyncIterator ? genYieldOrAwaitExpr(callResult) : callResult,
+        "iterator.return() did not return an object");
     Builder.createBranchInst(noReturn);
   }
 
   Builder.setInsertionBlock(noReturn);
 }
 
+void ESTreeIRGen::emitIteratorCloseSlow(
+    ESTree::Node *astNode,
+    hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
+    bool ignoreInnerException) {
+  _emitIteratorCloseImpl(astNode, iteratorRecord, ignoreInnerException, false);
+}
+
+void ESTreeIRGen::emitAsyncIteratorCloseSlow(
+    ESTree::Node *astNode,
+    hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
+    bool ignoreInnerException) {
+  _emitIteratorCloseImpl(astNode, iteratorRecord, ignoreInnerException, true);
+}
+
 ESTreeIRGen::IteratorRecord ESTreeIRGen::emitGetIterator(Value *obj) {
   // Each of these will be modified by "next", so we use a stack storage.
-  auto *iterStorage =
-      Builder.createAllocStackInst(genAnonymousLabelName("iter"));
-  auto *sourceOrNext =
-      Builder.createAllocStackInst(genAnonymousLabelName("sourceOrNext"));
+  auto *iterStorage = Builder.createAllocStackInst(
+      genAnonymousLabelName("iter"), Type::createAnyType());
+  auto *sourceOrNext = Builder.createAllocStackInst(
+      genAnonymousLabelName("sourceOrNext"), Type::createAnyType());
   Builder.createStoreStackInst(obj, sourceOrNext);
   auto *iter = Builder.createIteratorBeginInst(sourceOrNext);
   Builder.createStoreStackInst(iter, iterStorage);
@@ -849,20 +741,29 @@ void ESTreeIRGen::emitDestructuringArray(
     bool declInit,
     ESTree::ArrayPatternNode *targetPat,
     Value *source) {
+  if (auto *tuple = llvh::dyn_cast<flow::TupleType>(
+          flowContext_.getNodeTypeOrAny(targetPat)->info)) {
+    emitDestructuringTypedTuple(declInit, targetPat, tuple, source);
+    return;
+  }
+
   const IteratorRecord iteratorRecord = emitGetIterator(source);
 
   /// iteratorDone = undefined.
-  auto *iteratorDone =
-      Builder.createAllocStackInst(genAnonymousLabelName("iterDone"));
+  auto *iteratorDone = Builder.createAllocStackInst(
+      genAnonymousLabelName("iterDone"), Type::createAnyType());
   Builder.createStoreStackInst(Builder.getLiteralUndefined(), iteratorDone);
 
-  auto *value =
-      Builder.createAllocStackInst(genAnonymousLabelName("iterValue"));
+  auto *value = Builder.createAllocStackInst(
+      genAnonymousLabelName("iterValue"), Type::createAnyType());
 
   SharedExceptionHandler handler{};
-  handler.exc = Builder.createAllocStackInst(genAnonymousLabelName("exc"));
+  handler.exc = Builder.createAllocStackInst(
+      genAnonymousLabelName("exc"), Type::createAnyType());
   // All exception handlers branch to this block.
   handler.exceptionBlock = Builder.createBasicBlock(Builder.getFunction());
+  bool fastDestructure =
+      Mod->getContext().getCodeGenerationSettings().enableFastDestructure;
 
   bool first = true;
   bool emittedRest = false;
@@ -873,19 +774,36 @@ void ESTreeIRGen::emitDestructuringArray(
 
   /// If the previous LReference is valid and non-empty, store "value" into
   /// it and reset the LReference.
-  auto storePreviousValue = [&lref, &handler, this, value]() {
-    if (lref && !lref->isEmpty()) {
-      if (lref->canStoreWithoutSideEffects()) {
-        lref->emitStore(Builder.createLoadStackInst(value));
-      } else {
-        // If we can't store without side effects, wrap the store in try/catch.
-        emitTryWithSharedHandler(&handler, [this, &lref, value]() {
-          lref->emitStore(Builder.createLoadStackInst(value));
-        });
-      }
-      lref.reset();
-    }
-  };
+  auto storePreviousValue =
+      [&lref, &handler, this, value, iteratorRecord, fastDestructure]() {
+        if (lref && !lref->isEmpty()) {
+          if (fastDestructure || lref->canStoreWithoutSideEffects()) {
+            lref->emitStore(Builder.createLoadStackInst(value));
+          } else {
+            // If we can't store without side effects, wrap the store in
+            // try/catch.
+            emitTryWithSharedHandler(
+                &handler,
+                [this, &lref, value, iteratorRecord](BasicBlock *catchBlock) {
+                  SurroundingTry thisTry{
+                      curFunction(),
+                      lref->getNode(),
+                      catchBlock,
+                      {},
+                      [this, iteratorRecord](
+                          ESTree::Node *,
+                          ControlFlowChange cfc,
+                          BasicBlock *continueTarget) {
+                        if (cfc == ControlFlowChange::Break) {
+                          emitIteratorClose(iteratorRecord, false);
+                        }
+                      }};
+                  lref->emitStore(Builder.createLoadStackInst(value));
+                });
+          }
+          lref.reset();
+        }
+      };
 
   for (auto &elem : targetPat->_elements) {
     ESTree::Node *target = &elem;
@@ -919,13 +837,34 @@ void ESTreeIRGen::emitDestructuringArray(
         lref->emitStore(Builder.createLoadStackInst(value));
         lref.reset();
       }
-      emitTryWithSharedHandler(
-          &handler, [this, &lref, value, target, declInit]() {
-            // Store the previous value, if we have one.
-            if (lref && !lref->isEmpty())
-              lref->emitStore(Builder.createLoadStackInst(value));
-            lref = createLRef(target, declInit);
-          });
+      if (fastDestructure) {
+        if (lref && !lref->isEmpty())
+          lref->emitStore(Builder.createLoadStackInst(value));
+        lref = createLRef(target, declInit);
+      } else {
+        emitTryWithSharedHandler(
+            &handler,
+            [this, &lref, value, target, declInit, iteratorRecord](
+                BasicBlock *catchBlock) {
+              SurroundingTry thisTry{
+                  curFunction(),
+                  target,
+                  catchBlock,
+                  {},
+                  [this, iteratorRecord](
+                      ESTree::Node *,
+                      ControlFlowChange cfc,
+                      BasicBlock *continueTarget) {
+                    if (cfc == ControlFlowChange::Break) {
+                      emitIteratorClose(iteratorRecord, false);
+                    }
+                  }};
+              // Store the previous value, if we have one.
+              if (lref && !lref->isEmpty())
+                lref->emitStore(Builder.createLoadStackInst(value));
+              lref = createLRef(target, declInit);
+            });
+      }
     }
 
     // Pseudocode of the algorithm for a step:
@@ -990,7 +929,7 @@ void ESTreeIRGen::emitDestructuringArray(
           Builder.createBinaryOperatorInst(
               Builder.createLoadStackInst(value),
               Builder.getLiteralUndefined(),
-              BinaryOperatorInst::OpKind::StrictlyNotEqualKind),
+              ValueKind::BinaryStrictlyNotEqualInstKind),
           storeBlock,
           getDefaultBlock);
 
@@ -1000,7 +939,30 @@ void ESTreeIRGen::emitDestructuringArray(
 
       // getDefaultBlock:
       Builder.setInsertionBlock(getDefaultBlock);
-      Builder.createStoreStackInst(genExpression(init, nameHint), value);
+      if (fastDestructure) {
+        Builder.createStoreStackInst(genExpression(init, nameHint), value);
+      } else {
+        emitTryWithSharedHandler(
+            &handler,
+            [this, init, nameHint, value, iteratorRecord](
+                BasicBlock *catchBlock) {
+              SurroundingTry thisTry{
+                  curFunction(),
+                  init,
+                  catchBlock,
+                  {},
+                  [this, iteratorRecord](
+                      ESTree::Node *,
+                      ControlFlowChange cfc,
+                      BasicBlock *continueTarget) {
+                    if (cfc == ControlFlowChange::Break) {
+                      emitIteratorClose(iteratorRecord, false);
+                    }
+                  }};
+              Builder.createStoreStackInst(
+                  genExpression(init, nameHint), value);
+            });
+      }
       Builder.createBranchInst(storeBlock);
 
       // storeBlock:
@@ -1058,6 +1020,32 @@ void ESTreeIRGen::emitDestructuringArray(
   }
 }
 
+void ESTreeIRGen::emitDestructuringTypedTuple(
+    bool declInit,
+    ESTree::ArrayPatternNode *targetPat,
+    flow::TupleType *type,
+    Value *source) {
+  size_t i = 0;
+  for (ESTree::Node &elem : targetPat->_elements) {
+    // It's possible that getting the LRef will have side effects,
+    // so we must emit it before the PrLoad.
+    // We don't need a try/catch here because there's no iterator to close
+    // in typed mode.
+    // The PrLoad itself won't have side effects.
+    LReference elemLRef = createLRef(&elem, declInit);
+    assert(
+        i < type->getTypes().size() &&
+        "index out of bounds on typechecked tuple");
+    Value *val = Builder.createPrLoadInst(
+        source,
+        i,
+        Builder.getLiteralString(llvh::Twine(i)),
+        flowTypeToIRType(type->getTypes()[i]));
+    elemLRef.emitStore(val);
+    ++i;
+  }
+}
+
 void ESTreeIRGen::emitRestElement(
     bool declInit,
     ESTree::RestElementNode *rest,
@@ -1074,13 +1062,29 @@ void ESTreeIRGen::emitRestElement(
   if (canCreateLRefWithoutSideEffects(rest->_argument)) {
     lref = createLRef(rest->_argument, declInit);
   } else {
-    emitTryWithSharedHandler(handler, [this, &lref, rest, declInit]() {
-      lref = createLRef(rest->_argument, declInit);
-    });
+    emitTryWithSharedHandler(
+        handler,
+        [this, &lref, rest, declInit, iteratorRecord](BasicBlock *catchBlock) {
+          SurroundingTry thisTry{
+              curFunction(),
+              rest,
+              catchBlock,
+              {},
+              [this, iteratorRecord](
+                  ESTree::Node *,
+                  ControlFlowChange cfc,
+                  BasicBlock *continueTarget) {
+                if (cfc == ControlFlowChange::Break) {
+                  emitIteratorClose(iteratorRecord, false);
+                }
+              }};
+          lref = createLRef(rest->_argument, declInit);
+        });
   }
 
   auto *A = Builder.createAllocArrayInst({}, 0);
-  auto *n = Builder.createAllocStackInst(genAnonymousLabelName("n"));
+  auto *n = Builder.createAllocStackInst(
+      genAnonymousLabelName("n"), Type::createNumber());
 
   // n = 0.
   Builder.createStoreStackInst(Builder.getLiteralPositiveZero(), n);
@@ -1098,19 +1102,18 @@ void ESTreeIRGen::emitRestElement(
   // newValueBlock:
   Builder.setInsertionBlock(newValueBlock);
   auto *nVal = Builder.createLoadStackInst(n);
-  nVal->setType(Type::createNumber());
   // A[n] = stepValue;
   // Unfortunately this can throw because our arrays can have limited range.
   // The spec doesn't specify what to do in this case, but the reasonable thing
   // to do is to what we would if this was a for-of loop doing the same thing.
   // See section BindingRestElement:...BindingIdentifier, step f and g:
   // https://www.ecma-international.org/ecma-262/9.0/index.html#sec-destructuring-binding-patterns-runtime-semantics-iteratorbindinginitialization
-  emitTryWithSharedHandler(handler, [this, stepValue, A, nVal]() {
+  emitTryWithSharedHandler(handler, [this, stepValue, A, nVal](BasicBlock *) {
     Builder.createStorePropertyInst(stepValue, A, nVal);
   });
   // ++n;
   auto add = Builder.createBinaryOperatorInst(
-      nVal, Builder.getLiteralNumber(1), BinaryOperatorInst::OpKind::AddKind);
+      nVal, Builder.getLiteralNumber(1), ValueKind::BinaryAddInstKind);
   add->setType(Type::createNumber());
   Builder.createStoreStackInst(add, n);
   Builder.createBranchInst(notDoneBlock);
@@ -1120,7 +1123,17 @@ void ESTreeIRGen::emitRestElement(
   if (lref->canStoreWithoutSideEffects()) {
     lref->emitStore(A);
   } else {
-    emitTryWithSharedHandler(handler, [&lref, A]() { lref->emitStore(A); });
+    emitTryWithSharedHandler(handler, [&lref, A, this](BasicBlock *catchBlock) {
+      SurroundingTry thisTry{
+          curFunction(),
+          lref->getNode(),
+          catchBlock,
+          {},
+          [](ESTree::Node *,
+             ControlFlowChange cfc,
+             BasicBlock *continueTarget) {}};
+      lref->emitStore(A);
+    });
   }
 }
 
@@ -1147,21 +1160,13 @@ void ESTreeIRGen::emitDestructuringObject(
     // Use == instead of === to account for both undefined and null.
     Builder.createCondBranchInst(
         Builder.createBinaryOperatorInst(
-            source,
-            Builder.getLiteralNull(),
-            BinaryOperatorInst::OpKind::EqualKind),
+            source, Builder.getLiteralNull(), ValueKind::BinaryEqualInstKind),
         throwBB,
         doneBB);
 
     Builder.setInsertionBlock(throwBB);
-    genBuiltinCall(
-        BuiltinMethod::HermesBuiltin_throwTypeError,
-        {source,
-         Builder.getLiteralString(
-             "Cannot destructure 'undefined' or 'null'.")});
-    // throwTypeError will always throw.
-    // This throw is here to ensure well-formed IR, and will not run.
-    Builder.createThrowInst(Builder.getLiteralUndefined());
+    Builder.createThrowTypeErrorInst(
+        Builder.getLiteralString("Cannot destructure 'undefined' or 'null'."));
 
     Builder.setInsertionBlock(doneBB);
   }
@@ -1237,17 +1242,13 @@ void ESTreeIRGen::emitRestProperty(
   if (excludedItems.empty()) {
     excludedObj = Builder.getLiteralUndefined();
   } else {
-    // This size is only a hint as the true size may change if there are
-    // duplicates when computedExcludedItems is processed at run-time.
-    auto excludedSizeHint =
-        literalExcludedItems.size() + computedExcludedItems.size();
     // Explicitly set the prototype for the object created here so it isn't
     // initialized to Object.prototype, which may be modified by the user.
-    excludedObj = Builder.createAllocObjectInst(
-        excludedSizeHint, Builder.getLiteralNull());
+    excludedObj =
+        Builder.createAllocObjectLiteralInst({}, Builder.getLiteralNull());
 
     for (Literal *key : literalExcludedItems)
-      Builder.createStoreNewOwnPropertyInst(
+      Builder.createDefineOwnPropertyInst(
           zeroValue, excludedObj, key, IRBuilder::PropEnumerable::Yes);
 
     for (Value *key : computedExcludedItems) {
@@ -1257,7 +1258,7 @@ void ESTreeIRGen::emitRestProperty(
 
   auto *restValue = genBuiltinCall(
       BuiltinMethod::HermesBuiltin_copyDataProperties,
-      {Builder.createAllocObjectInst(0), source, excludedObj});
+      {Builder.createAllocObjectLiteralInst(), source, excludedObj});
 
   lref.emitStore(restValue);
 }
@@ -1280,7 +1281,7 @@ Value *ESTreeIRGen::emitOptionalInitialization(
       Builder.createBinaryOperatorInst(
           value,
           Builder.getLiteralUndefined(),
-          BinaryOperatorInst::OpKind::StrictlyNotEqualKind),
+          ValueKind::BinaryStrictlyNotEqualInstKind),
       storeBlock,
       getDefaultBlock);
 
@@ -1296,65 +1297,60 @@ Value *ESTreeIRGen::emitOptionalInitialization(
       {value, defaultValue}, {currentBlock, defaultResultBlock});
 }
 
-SerializedScopePtr ESTreeIRGen::resolveScopeIdentifiers(
-    const ScopeChain &chain) {
-  SerializedScopePtr current{};
-  for (auto it = chain.scopes.rbegin(), end = chain.scopes.rend(); it < end;
-       it++) {
-    auto next = std::make_shared<SerializedScope>();
-    next->variables.reserve(it->variables.size());
-    for (auto var : it->variables) {
-      constexpr bool immutableBinding = false;
-      next->variables.push_back(
-          SerializedScope::Declaration{
-              Builder.createIdentifier(var),
-              Variable::DeclKind::Var,
-              immutableBinding});
-    }
-    next->parentScope = current;
-    current = next;
-  }
-  return current;
-}
-
-SerializedScopePtr ESTreeIRGen::serializeScope(
-    ScopeDesc *S,
-    bool includeGlobal) {
-  // Serialize the global scope if and only if it's the only scope.
-  // We serialize the global scope to avoid re-declaring variables,
-  // and only do it once to avoid creating spurious scopes.
-  if (!S->getParent() || S->getSerializedScope()) {
-    return S->getSerializedScope();
-  }
-
-  auto scope = std::make_shared<SerializedScope>();
-  auto *func = S->getFunction();
-
-  if (S == func->getFunctionScopeDesc()) {
-    scope->originalName = func->getOriginalOrInferredName();
-    if (auto *closure = func->getLazyClosureAlias()) {
-      scope->closureAlias = closure->getName();
-    }
-  }
-  for (auto *var : S->getVariables()) {
-    scope->variables.push_back(
-        SerializedScope::Declaration{
-            var->getName(),
-            var->getDeclKind(),
-            var->getStrictImmutableBinding()});
-  }
-  scope->parentScope = serializeScope(S->getParent(), false);
-  return scope;
-}
-
 Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
   if (auto *var = llvh::dyn_cast<Variable>(from)) {
-    Instruction *res = Builder.createLoadFrameInst(var, currentIRScope_);
-    if (var->getObeysTDZ())
-      res = Builder.createThrowIfEmptyInst(res);
+    Instruction *res;
+    auto *RSI = emitResolveScopeInstIfNeeded(var->getParent());
+    if (var->getObeysTDZ()) {
+      // We don't need to perform a runtime check for TDZ when in the
+      // variable's function, since we know whether it has been initialized.
+      // TODO(T182345760): Move this TDZ check into the resolver.
+      if (llvh::isa<CreateScopeInst>(RSI)) {
+        // If not initialized, throw.
+        if (curFunction()->initializedTDZVars.count(var) == 0) {
+          // Report an error or warning using the builder's location.
+          assert(
+              Builder.getLocation().isValid() &&
+              "emitLoad() with invalid source location");
+          if (Builder.getLocation().isValid()) {
+            auto &sm = Mod->getContext().getSourceErrorManager();
+            sm.message(
+                Mod->getContext().getCodeGenerationSettings().test262
+                    ? SourceErrorManager::DK_Warning
+                    : SourceErrorManager::DK_Error,
+                Builder.getLocation(),
+                "TDZ violation: reading from uninitialized variable '" +
+                    var->getName().str() + "'");
+          }
+
+          auto *thr = Builder.createThrowIfInst(
+              Builder.getLiteralEmpty(), Type::createEmpty());
+          // Pretend that the instruction, which always throws, returns a
+          // value with the correct type.
+          thr->setType(Type::subtractTy(var->getType(), Type::createEmpty()));
+          thr->updateSavedResultType();
+          res = thr;
+        } else {
+          res = Builder.createUnionNarrowTrustedInst(
+              Builder.createLoadFrameInst(RSI, var),
+              Type::subtractTy(var->getType(), Type::createEmpty()));
+        }
+      } else {
+        res = Builder.createThrowIfInst(
+            Builder.createLoadFrameInst(RSI, var), Type::createEmpty());
+      }
+    } else {
+      res = Builder.createLoadFrameInst(RSI, var);
+    }
+
     return res;
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(from)) {
-    return loadGlobalObjectProperty(Builder, globalProp, inhibitThrow);
+    if (globalProp->isDeclared() || inhibitThrow) {
+      return Builder.createLoadPropertyInst(
+          Builder.getGlobalObject(), globalProp->getName());
+    } else {
+      return Builder.createTryLoadGlobalPropertyInst(globalProp);
+    }
   } else {
     llvm_unreachable("invalid value to load from");
   }
@@ -1363,72 +1359,107 @@ Instruction *ESTreeIRGen::emitLoad(Value *from, bool inhibitThrow) {
 Instruction *
 ESTreeIRGen::emitStore(Value *storedValue, Value *ptr, bool declInit) {
   if (auto *var = llvh::dyn_cast<Variable>(ptr)) {
-    if (!declInit && var->getObeysTDZ()) {
-      // Must verify whether the variable is initialized.
-      Builder.createThrowIfEmptyInst(
-          Builder.createLoadFrameInst(var, currentIRScope_));
-      if (var->getDeclKind() == Variable::DeclKind::Const) {
-        if (!var->getStrictImmutableBinding() &&
-            !curFunction()->function->isStrictMode()) {
-          // Ignore stores to non-strict immutable bindings in non-strict mode.
-          return nullptr;
-        }
+    auto *RSI = emitResolveScopeInstIfNeeded(var->getParent());
+    // TODO(T182345760): Move the TDZ tracking and checking into the resolver.
+    if (declInit) {
+      assert(
+          llvh::isa<CreateScopeInst>(RSI) &&
+          "variable must be initialized in its own function");
 
-        // Assignment to const-declared variables should result in a runtime
-        // TypeError exception, so raise it here.
-        Builder.getModule()->getContext().getSourceErrorManager().warning(
-            Builder.getLocation(), "Assignment to constant variable");
-        genRaiseNativeError(
-            Builder, NativeErrorTypes::TypeError, "can't modify const value");
-        // genRaiseNativeError emits a ThrowInst, which is itself a terminator;
-        // thus we can't append more instructions to the current basic block.
-        // Create another basic block, and set it as the insertion pointer. The
-        // newly-created basic block is unreachable, and will thus be removed
-        // during optimization.
-        BasicBlock *unlinked =
-            Builder.createBasicBlock(curFunction()->function);
-        Builder.setInsertionBlock(unlinked);
+      // If this is a TDZ variable, record that it has been initialized.
+      if (var->getObeysTDZ()) {
+        curFunction()->initializedTDZVars.insert(var);
+        // Note that a variable can be initialized more than once, for example
+        // when a "var" declaration is shadowed by a catch variable or a
+        // parameter.
+      }
+    } else {
+      if (var->getObeysTDZ()) {
+        // We don't need to perform a runtime check for TDZ when in the
+        // variable's function, since we know whether it has been initialized.
+        if (llvh::isa<CreateScopeInst>(RSI)) {
+          if (curFunction()->initializedTDZVars.count(var) == 0) {
+            // Report an error or warning using the builder's location.
+            assert(
+                Builder.getLocation().isValid() &&
+                "emitStore() with invalid source location");
+            if (Builder.getLocation().isValid()) {
+              auto &sm = Mod->getContext().getSourceErrorManager();
+              sm.message(
+                  Mod->getContext().getCodeGenerationSettings().test262
+                      ? SourceErrorManager::DK_Warning
+                      : SourceErrorManager::DK_Error,
+                  Builder.getLocation(),
+                  "TDZ violation: writing to uninitialized variable '" +
+                      var->getName().str() + "'");
+            }
+
+            auto thr = Builder.createThrowIfInst(
+                Builder.getLiteralEmpty(), Type::createEmpty());
+            thr->setType(Type::createUndefined());
+            thr->updateSavedResultType();
+          }
+        } else {
+          // Must verify whether the variable is initialized.
+          Builder.createThrowIfInst(
+              Builder.createLoadFrameInst(RSI, var), Type::createEmpty());
+        }
+      }
+      auto constness = var->getConstness();
+      if (constness == sema::Decl::Constness::Always ||
+          (Builder.getFunction()->isStrictMode() &&
+           constness == sema::Decl::Constness::StrictModeOnly)) {
+        // If this is a const variable being reassigned, throw a TypeError.
+        Builder.createThrowTypeErrorInst(Builder.getLiteralString(
+            "assignment to constant variable '" + var->getName().str() + "'"));
+        // Create a new block, since ThrowTypeError is a terminator.
+        Builder.setInsertionBlock(
+            Builder.createBasicBlock(Builder.getFunction()));
       }
     }
-    return Builder.createStoreFrameInst(storedValue, var, currentIRScope_);
+
+    return Builder.createStoreFrameInst(RSI, storedValue, var);
   } else if (auto *globalProp = llvh::dyn_cast<GlobalObjectProperty>(ptr)) {
-    if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode())
+    if (globalProp->isDeclared() || !Builder.getFunction()->isStrictMode()) {
       return Builder.createStorePropertyInst(
           storedValue, Builder.getGlobalObject(), globalProp->getName());
-    else
+    } else {
       return Builder.createTryStoreGlobalPropertyInst(storedValue, globalProp);
+    }
   } else {
-    llvm_unreachable("unvalid value to load from");
+    llvm_unreachable("invalid value to load from");
   }
 }
 
-void ESTreeIRGen::newDeclarativeEnvironment() {
-  ScopeDesc *blockScopeDesc = currentIRScopeDesc_->createInnerScope();
-  blockScopeDesc->setFunction(curFunction()->function);
-  currentIRScopeDesc_ = blockScopeDesc;
-  currentIRScope_ =
-      Builder.createCreateInnerScopeInst(currentIRScope_, blockScopeDesc);
-  Builder.setCurrentSourceLevelScope(currentIRScopeDesc_);
+Instruction *ESTreeIRGen::emitResolveScopeInstIfNeeded(
+    VariableScope *targetVarScope) {
+  auto [startScope, startVarScope] = getResolveScopeStart(
+      curFunction()->curScope(),
+      curFunction()->curScope()->getVariableScope(),
+      targetVarScope);
+  if (startVarScope == targetVarScope)
+    return startScope;
+  return Builder.createResolveScopeInst(
+      targetVarScope, startVarScope, startScope);
 }
 
-void ESTreeIRGen::blockDeclarationInstantiation(ESTree::Node *containingNode) {
-  newDeclarativeEnvironment();
-  createScopeBindings(currentIRScopeDesc_, containingNode);
-  genFunctionDeclarations(containingNode);
-  hoistCreateFunctions(containingNode);
+VariableScope *FunctionContext::getOrCreateInnerVariableScope(
+    ESTree::Node *node) {
+  auto [it, inserted] = innerScopes_.insert({node, nullptr});
+  if (inserted)
+    it->second =
+        irGen_->Builder.createVariableScope(currentScope_->getVariableScope());
+  assert(
+      it->second->getParentScope() == currentScope_->getVariableScope() &&
+      "Inner scope created from multiple contexts");
+  return it->second;
 }
 
-Instruction *ESTreeIRGen::genRaiseNativeError(
-    IRBuilder &builder,
-    NativeErrorTypes id,
-    llvh::StringRef msg) {
-  return builder.createThrowInst(builder.createCallInst(
-      CallInst::kNoTextifiedCallee,
-      builder.createCallBuiltinInst(
-          BuiltinMethod::HermesBuiltin_getOriginalNativeErrorConstructor,
-          builder.getLiteralNumber(static_cast<unsigned>(id))),
-      builder.getLiteralUndefined(),
-      builder.getLiteralString(msg)));
+void ESTreeIRGen::drainCompilationQueue() {
+  while (!compilationQueue_.empty()) {
+    compilationQueue_.front()();
+    compilationQueue_.pop_front();
+  }
 }
 
 } // namespace irgen

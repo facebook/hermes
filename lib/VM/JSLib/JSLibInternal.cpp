@@ -15,11 +15,7 @@
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -30,26 +26,25 @@ Handle<NativeConstructor> defineSystemConstructor(
     Handle<JSObject> prototypeObjectHandle,
     Handle<JSObject> constructorProtoObjectHandle,
     unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind) {
-  auto constructor = runtime.makeHandle(
-      NativeConstructor::create(
-          runtime,
-          constructorProtoObjectHandle,
-          nullptr,
-          nativeFunctionPtr,
-          paramCount,
-          creator,
-          targetKind));
+    MutableHandle<NativeConstructor> constructorOut) {
+  struct : public Locals {
+    PinnedValue<NativeConstructor> constructor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.constructor = NativeConstructor::create(
+      runtime,
+      constructorProtoObjectHandle,
+      nullptr,
+      nativeFunctionPtr,
+      paramCount);
 
   auto st = Callable::defineNameLengthAndPrototype(
-      constructor,
+      lv.constructor,
       runtime,
       name,
       paramCount,
       prototypeObjectHandle,
-      Callable::WritablePrototype::No,
-      false);
+      Callable::WritablePrototype::No);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -58,16 +53,18 @@ Handle<NativeConstructor> defineSystemConstructor(
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   auto res = JSObject::defineOwnProperty(
-      runtime.getGlobal(), runtime, name, dpf, constructor);
+      runtime.getGlobal(), runtime, name, dpf, lv.constructor);
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
   (void)res;
 
-  return constructor;
+  constructorOut.castAndSetHermesValue<NativeConstructor>(
+      lv.constructor.getHermesValue());
+  return constructorOut;
 }
 
-CallResult<HermesValue> defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID propertyName,
@@ -81,6 +78,7 @@ CallResult<HermesValue> defineMethod(
   auto method = NativeFunction::create(
       runtime,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
+      Runtime::makeNullHandle<Environment>(),
       context,
       nativeFunctionPtr,
       methodName,
@@ -94,7 +92,7 @@ CallResult<HermesValue> defineMethod(
       res != ExecutionStatus::EXCEPTION && *res &&
       "defineOwnProperty() failed");
 
-  return method.getHermesValue();
+  return method.get();
 }
 
 Handle<NativeConstructor> defineSystemConstructor(
@@ -103,8 +101,7 @@ Handle<NativeConstructor> defineSystemConstructor(
     NativeFunctionPtr nativeFunctionPtr,
     Handle<JSObject> prototypeObjectHandle,
     unsigned paramCount,
-    NativeConstructor::CreatorFunction *creator,
-    CellKind targetKind) {
+    MutableHandle<NativeConstructor> constructorOut) {
   return defineSystemConstructor(
       runtime,
       name,
@@ -112,11 +109,10 @@ Handle<NativeConstructor> defineSystemConstructor(
       prototypeObjectHandle,
       Handle<JSObject>::vmcast(&runtime.functionPrototype),
       paramCount,
-      creator,
-      targetKind);
+      constructorOut);
 }
 
-void defineMethod(
+NativeFunction *defineMethod(
     Runtime &runtime,
     Handle<JSObject> objectHandle,
     SymbolID name,
@@ -124,8 +120,15 @@ void defineMethod(
     NativeFunctionPtr nativeFunctionPtr,
     unsigned paramCount) {
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
-  (void)defineMethod(
-      runtime, objectHandle, name, context, nativeFunctionPtr, paramCount, dpf);
+  return defineMethod(
+      runtime,
+      objectHandle,
+      name,
+      name,
+      context,
+      nativeFunctionPtr,
+      paramCount,
+      dpf);
 }
 
 void defineAccessor(
@@ -146,11 +149,16 @@ void defineAccessor(
 
   GCScope gcScope{runtime};
 
+  struct : public Locals {
+    PinnedValue<NativeFunction> getter;
+    PinnedValue<NativeFunction> setter;
+    PinnedValue<PropertyAccessor> accessor;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   StringView nameView =
       runtime.getIdentifierTable().getStringView(runtime, methodName);
   assert(nameView.isASCII() && "Only ASCII accessors are supported");
-
-  MutableHandle<NativeFunction> getter{runtime};
   if (getterFunc) {
     // Set the name by prepending "get ".
     llvh::SmallString<32> getterName{"get "};
@@ -170,15 +178,14 @@ void defineAccessor(
     auto funcRes = NativeFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime.functionPrototype),
+        Runtime::makeNullHandle<Environment>(),
         context,
         getterFunc,
         getterFuncName,
         0,
         Runtime::makeNullHandle<JSObject>());
-    getter = funcRes.get();
+    lv.getter = funcRes.get();
   }
-
-  MutableHandle<NativeFunction> setter{runtime};
   if (setterFunc) {
     // Set the name by prepending "set ".
     llvh::SmallString<32> setterName{"set "};
@@ -198,16 +205,16 @@ void defineAccessor(
     auto funcRes = NativeFunction::create(
         runtime,
         Handle<JSObject>::vmcast(&runtime.functionPrototype),
+        Runtime::makeNullHandle<Environment>(),
         context,
         setterFunc,
         setterFuncName,
         1,
         Runtime::makeNullHandle<JSObject>());
-    setter = funcRes.get();
+    lv.setter = funcRes.get();
   }
 
-  auto accessor = runtime.makeHandle<PropertyAccessor>(
-      PropertyAccessor::create(runtime, getter, setter));
+  lv.accessor = PropertyAccessor::create(runtime, lv.getter, lv.setter);
 
   DefinePropertyFlags dpf{};
   dpf.setEnumerable = 1;
@@ -218,7 +225,7 @@ void defineAccessor(
   dpf.configurable = configurable;
 
   auto res = JSObject::defineOwnProperty(
-      objectHandle, runtime, propertyName, dpf, accessor);
+      objectHandle, runtime, propertyName, dpf, lv.accessor);
   (void)res;
   assert(
       res != ExecutionStatus::EXCEPTION && *res &&
@@ -247,23 +254,6 @@ void defineProperty(
   DefinePropertyFlags dpf = DefinePropertyFlags::getNewNonEnumerableFlags();
 
   return defineProperty(runtime, objectHandle, name, value, dpf);
-}
-
-ExecutionStatus iteratorCloseAndRethrow(
-    Runtime &runtime,
-    Handle<JSObject> iterator) {
-  auto completion = runtime.makeHandle(runtime.getThrownValue());
-  if (isUncatchableError(completion.getHermesValue())) {
-    // If an uncatchable exception was raised, do not swallow it, but instead
-    // propagate it.
-    return ExecutionStatus::EXCEPTION;
-  }
-  runtime.clearThrownValue();
-  auto status = iteratorClose(runtime, iterator, completion);
-  (void)status;
-  assert(
-      status == ExecutionStatus::EXCEPTION && "exception swallowed mistakenly");
-  return ExecutionStatus::EXCEPTION;
 }
 
 static std::vector<uint8_t> getReturnThisRegexBytecode() {
@@ -324,46 +314,75 @@ CallResult<HermesValue> createDynamicFunction(
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto params = *arrRes;
+  struct : public Locals {
+    PinnedValue<JSArray> params;
+    PinnedValue<StringPrimitive> body;
+    PinnedValue<StringPrimitive> param;
+    PinnedValue<StringPrimitive> element;
+    PinnedValue<JSFunction> function;
+    PinnedValue<JSObject> fallbackProto;
+    PinnedValue<JSObject> selfParent;
+    PinnedValue<Domain> domain;
+    PinnedValue<StringPrimitive> anonymousStr;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.params = std::move(*arrRes);
 
   // Body of the resultant function.
-  MutableHandle<StringPrimitive> body{runtime};
 
   // String length of the function in its entirety.
   // Account for commas in the argument list initially.
   // If at least two arguments to the function (3 in total), there's a comma.
   SafeUInt32 size{paramCount > 0 ? paramCount - 1 : 0};
 
-  // es2020 19.2.1.1.1 Runtime Semantics: CreateDynamicFunction: If
-  // NewTarget is given, such as with Reflect.construct, use
-  // NewParent.prototype as the parent.  The prototype on NewParent
-  // has already been looked up to use as the parent of 'this', so
-  // instead of looking it up again, just use this's parent.  If
-  // NewTarget isn't given, fall back to a default.
-  MutableHandle<JSObject> fallbackProto{runtime};
+  // es2020 19.2.1.1.1 Runtime Semantics: CreateDynamicFunction: If this is a
+  // construct call, we must use new.target.prototype as the parent of the
+  // function we are going to create. In order to avoid this `.prototype`
+  // lookup, we make an informed guess as to what the new.target is based on the
+  // function kind. If this guess is correct, we immediately know the
+  // `.prototype` without a lookup. We also use this precomputed parent in the
+  // case that the lookup gives a value which cannot be used as the parent, e.g.
+  // it's not a function.
+  PinnedValue<NativeConstructor> *expectedNewTarget;
   switch (kind) {
     case DynamicFunctionKind::Normal:
-      fallbackProto = Handle<JSObject>::vmcast(&runtime.functionPrototype);
+      lv.fallbackProto = Handle<JSObject>::vmcast(&runtime.functionPrototype);
+      expectedNewTarget = &runtime.functionConstructor;
       break;
     case DynamicFunctionKind::Generator:
-      fallbackProto =
+      lv.fallbackProto =
           Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
+      expectedNewTarget = &runtime.generatorFunctionConstructor;
       break;
     case DynamicFunctionKind::Async:
-      fallbackProto = Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype);
+      lv.fallbackProto =
+          Handle<JSObject>::vmcast(&runtime.asyncFunctionPrototype);
+      expectedNewTarget = &runtime.asyncFunctionConstructor;
       break;
     default:
       llvm_unreachable("unknown kind for CreateDynamicFunction.");
   }
 
-  Handle<JSObject> parent = !args.getNewTarget().isUndefined()
-      ? runtime.makeHandle(
-            vmcast<JSObject>(args.getThisArg())->getParent(runtime))
-      : fallbackProto;
+  if (LLVM_LIKELY(
+          !args.isConstructorCall() ||
+          (args.getNewTarget().getRaw() ==
+           expectedNewTarget->getHermesValue().getRaw()))) {
+    lv.selfParent = lv.fallbackProto;
+  } else {
+    CallResult<PseudoHandle<JSObject>> thisParentRes =
+        NativeConstructor::parentForNewThis_RJS(
+            runtime,
+            Handle<Callable>::vmcast(&args.getNewTarget()),
+            lv.fallbackProto);
+    if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    lv.selfParent = std::move(*thisParentRes);
+  }
 
   if (argCount == 0) {
     // No arguments, just set body to be the empty string.
-    body = runtime.getPredefinedString(Predefined::emptyString);
+    lv.body = runtime.getPredefinedString(Predefined::emptyString);
   } else {
     // If there's arguments, store the parameters and the provided body.
     auto marker = gcScope.createMarker();
@@ -373,9 +392,12 @@ CallResult<HermesValue> createDynamicFunction(
       if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
         return ExecutionStatus::EXCEPTION;
       }
-      auto param = runtime.makeHandle(std::move(*strRes));
-      JSArray::setElementAt(params, runtime, i, param);
-      size.add(param->getStringLength());
+      lv.param = std::move(*strRes);
+      if (LLVM_UNLIKELY(
+              JSArray::setElementAt(lv.params, runtime, i, lv.param) ==
+              ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      size.add(lv.param->getStringLength());
     }
 
     // Last parameter is the body.
@@ -383,17 +405,18 @@ CallResult<HermesValue> createDynamicFunction(
     if (strRes == ExecutionStatus::EXCEPTION) {
       return ExecutionStatus::EXCEPTION;
     }
-    body = strRes->get();
-    size.add(body->getStringLength());
+    lv.body = strRes->get();
+    size.add(lv.body->getStringLength());
 
     if (kind == DynamicFunctionKind::Normal && argCount == 1 &&
-        isReturnThis(body, runtime)) {
+        isReturnThis(lv.body, runtime)) {
       // If this raises an exception, we still return immediately.
+      lv.domain = Domain::create(runtime);
       return JSFunction::create(
                  runtime,
-                 runtime.makeHandle(Domain::create(runtime)),
-                 parent,
-                 Handle<Environment>(runtime, nullptr),
+                 lv.domain,
+                 lv.selfParent,
+                 runtime.makeNullHandle<Environment>(),
                  runtime.getReturnThisCodeBlock())
           .getHermesValue();
     }
@@ -431,11 +454,10 @@ CallResult<HermesValue> createDynamicFunction(
     return ExecutionStatus::EXCEPTION;
   }
   builder->appendASCIIRef(functionHeader);
-  MutableHandle<StringPrimitive> element{runtime};
   for (uint32_t i = 0; i < paramCount; ++i) {
     // Copy params into str.
-    element = params->at(runtime, i).getString(runtime);
-    builder->appendStringPrim(element);
+    lv.element = lv.params->at(runtime, i).getString(runtime);
+    builder->appendStringPrim(lv.element);
     if (i < paramCount - 1) {
       // If there's more params left to put, need to add a comma.
       // We wouldn't have entered the loop if paramCount == 0,
@@ -444,31 +466,30 @@ CallResult<HermesValue> createDynamicFunction(
     }
   }
   builder->appendASCIIRef(bodyHeader);
-  builder->appendStringPrim(body);
+  builder->appendStringPrim(lv.body);
   builder->appendASCIIRef(functionFooter);
 
   auto evalRes =
-      directEval(runtime, builder->getStringPrimitive(), {}, false, true);
+      directEval(runtime, builder->getStringPrimitive(), false, {}, true);
   if (evalRes == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  Handle<JSFunction> function =
-      runtime.makeHandle(vmcast<JSFunction>(evalRes.getValue()));
+  lv.function = vmcast<JSFunction>(evalRes.getValue());
 
   DefinePropertyFlags dpf = DefinePropertyFlags::getDefaultNewPropertyFlags();
   dpf.enumerable = 0;
   dpf.writable = 0;
 
   // Define the `name` correctly.
+  lv.anonymousStr = runtime.getStringPrimFromSymbolID(
+      Predefined::getSymbolID(Predefined::anonymous));
   if (JSObject::defineOwnProperty(
-          function,
+          lv.function,
           runtime,
           Predefined::getSymbolID(Predefined::name),
           dpf,
-          runtime.makeHandle(runtime.getStringPrimFromSymbolID(
-              Predefined::getSymbolID(Predefined::anonymous)))) ==
-      ExecutionStatus::EXCEPTION) {
+          lv.anonymousStr) == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
   }
 
@@ -476,14 +497,15 @@ CallResult<HermesValue> createDynamicFunction(
   // through to Runtime::runBytecode where the object is actually
   // created, but this is the only place we need to do this so it
   // keeps the code simpler.
-  CallResult<bool> parentRes = JSObject::setParent(*function, runtime, *parent);
+  CallResult<bool> parentRes =
+      JSObject::setParent(*lv.function, runtime, *lv.selfParent);
   if (LLVM_UNLIKELY(parentRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   assert(
       *parentRes && "Setting prototype on new dynamic function returned false");
 
-  return function.getHermesValue();
+  return lv.function.getHermesValue();
 }
 
 } // namespace vm

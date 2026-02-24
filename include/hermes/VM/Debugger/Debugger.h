@@ -19,8 +19,10 @@
 #include "hermes/VM/HermesValue.h"
 #include "hermes/VM/InterpreterState.h"
 #include "hermes/VM/RuntimeModule.h"
+#include "hermes/VM/static_h.h"
 #include "llvh/ADT/DenseSet.h"
 #include "llvh/ADT/MapVector.h"
+#include "llvh/ADT/SetVector.h"
 
 #include <atomic>
 #include <cstdint>
@@ -122,10 +124,10 @@ class Debugger {
     /// Opcode that was replaced.
     hbc::opcode_atom_t opCode;
 
-    /// If this location has a user breakpoint set,
-    /// then this is set to the ID of the user breakpoint.
-    /// Else, it's set to None.
-    OptValue<BreakpointID> user{llvh::None};
+    /// If this location has user breakpoint(s) set, their IDs are stored here
+    /// in creation order. When conditions are evaluated, they are checked in
+    /// this order, short-circuiting when any condition evaluates to true.
+    llvh::SmallSetVector<BreakpointID, 1> userBreakpointIDs{};
 
     /// Whether this location has an on-load breakpoint set.
     bool onLoad{false};
@@ -149,7 +151,8 @@ class Debugger {
 
     /// Total number of logical breakpoints set at this location.
     uint32_t count() const {
-      return callStackDepths.size() + (user ? 1 : 0) + (onLoad ? 1 : 0);
+      return callStackDepths.size() + userBreakpointIDs.size() +
+          (onLoad ? 1 : 0);
     }
   };
 
@@ -162,6 +165,11 @@ class Debugger {
   /// and it hasn't completed yet.
   /// The value indicates the type of step we're trying to take.
   OptValue<StepMode> curStepMode_{llvh::None};
+
+  /// If not None, the debugger is attempting to find a place to break after an
+  /// AsyncTrigger, and the PauseReason should be set to this value instead of
+  /// StepFinish.
+  OptValue<PauseReason> asyncTriggerPauseReason_{llvh::None};
 
   /// If true, all code blocks are breakpointed,
   /// and the debugger should stop on entering any code blocks.
@@ -454,6 +462,13 @@ class Debugger {
       PauseReason pauseReason,
       BreakpointID breakpoint);
 
+  /// Step until we reach an instruction with a valid location that we can pause
+  /// on (and continue stepping).
+  /// Call this to prevent attempting to report invalid locations as the current
+  /// location to the inspector.
+  /// \return true if the debugger loop should be run, false otherwise.
+  CallResult<bool> runUntilValidPauseLocation(InterpreterState &state);
+
   /// Gets a BreakpointLocation from breakpointLocations_ if it exists
   /// for the given codeBlock and offset, else creates one.
   /// Used by other functions which should be called to set breakpoints.
@@ -508,9 +523,9 @@ class Debugger {
   /// The breakpoint is set to be a one-shot.
   void setOnLoadBreakpoint(CodeBlock *codeBlock, uint32_t offset);
 
-  /// Unset user breakpoint \p breakpoint.
+  /// Unset user breakpoint with ID \p id at the location of \p breakpoint.
   /// Removes the location from breakpointLocations_ if no longer needed.
-  void unsetUserBreakpoint(const Breakpoint &breakpoint);
+  void unsetUserBreakpoint(const Breakpoint &breakpoint, BreakpointID id);
 
   /// Creates a step breakpoint at offset 0 of \p codeBlock,
   /// to be used while in the middle of a step and entering a
@@ -621,13 +636,16 @@ class Debugger {
   /// \return true if the breakpoint is successfully resolved.
   bool resolveBreakpointLocation(Breakpoint &breakpoint) const;
 
-  /// Unresolves the breakpoint.
-  void unresolveBreakpointLocation(Breakpoint &breakpoint);
+  /// Unresolves the breakpoint with ID \p id.
+  void unresolveBreakpointLocation(Breakpoint &breakpoint, BreakpointID id);
 
   /// \return a CallFrameInfo for a given code block \p codeBlock and IP offset
   /// into it \p ipOffset.
   CallFrameInfo getCallFrameInfo(const CodeBlock *codeBlock, uint32_t offset)
       const;
+
+  /// \return a CallFrameInfo for a given SHUnit \p unit and SHSrcLoc \p loc.
+  CallFrameInfo getNativeCallFrameInfo(const SHUnit *unit, SHSrcLoc loc) const;
 
   /// Get the jump target for an instruction (if it is a jump).
   llvh::Optional<uint32_t> findJumpTarget(CodeBlock *block, uint32_t offset);

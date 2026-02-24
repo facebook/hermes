@@ -48,6 +48,7 @@ function getParentKey(
         parent[key],
       )
     ) {
+      // $FlowFixMe[invalid-compare]
       if (parent[key] === target) {
         return {type: 'single', node: parent, key};
       }
@@ -74,7 +75,7 @@ function getParentKey(
 export function replaceNodeOnParent(
   originalNode: ESNode,
   originalNodeParent: ESNode,
-  nodeToReplaceWith: ESNode,
+  nodeToReplaceWith: ESNode | $ReadOnlyArray<ESNode>,
   visitorKeys?: ?VisitorKeysType,
 ): void {
   const replacementParent = getParentKey(
@@ -89,9 +90,16 @@ export function replaceNodeOnParent(
       // $FlowExpectedError[prop-missing]
       parent[replacementParent.key],
       replacementParent.targetIndex,
-      [nodeToReplaceWith],
+      Array.isArray(nodeToReplaceWith)
+        ? nodeToReplaceWith
+        : [nodeToReplaceWith],
     );
   } else {
+    if (Array.isArray(nodeToReplaceWith)) {
+      throw new Error(
+        `Cannot insert array into non-array parent type: ${parent.type}`,
+      );
+    }
     // $FlowExpectedError[prop-missing]
     parent[replacementParent.key] = nodeToReplaceWith;
   }

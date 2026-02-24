@@ -9,21 +9,27 @@
 
 #include "hermes/VM/Handle-inline.h"
 #include "hermes/VM/HermesValue.h"
-#include "hermes/VM/OrderedHashMap.h"
+#include "hermes/VM/JSMapImpl.h"
+#include "hermes/VM/RootAcceptor.h"
 #include "hermes/VM/Runtime.h"
-#include "hermes/VM/SlotAcceptor.h"
 #include "hermes/VM/StringPrimitive.h"
 
 namespace hermes {
 namespace vm {
 
 void SymbolRegistry::init(Runtime &runtime) {
-  stringMap_ = OrderedHashMap::create(runtime)->getHermesValue();
+  stringMap_ = JSMap::create(runtime, runtime.mapPrototype);
+
+  if (LLVM_UNLIKELY(
+          JSMap::initializeStorage(stringMap_, runtime) ==
+          ExecutionStatus::EXCEPTION)) {
+    hermes_fatal("Failed to initialize SymbolRegistry");
+  }
 }
 
 /// Mark the Strings and Symbols in the registry as roots.
 void SymbolRegistry::markRoots(RootAcceptor &acceptor) {
-  acceptor.accept(stringMap_);
+  acceptor.acceptNullablePV(stringMap_);
   // registeredSymbols_ doesn't need to be marked, because its contents are a
   // copy of the symbols present in the stringMap_.
 }
@@ -31,10 +37,14 @@ void SymbolRegistry::markRoots(RootAcceptor &acceptor) {
 CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
     Runtime &runtime,
     Handle<StringPrimitive> key) {
-  HashMapEntry *it = OrderedHashMap::find(
-      Handle<OrderedHashMap>::vmcast(&stringMap_), runtime, key);
-  if (it) {
-    return it->value.getSymbol();
+  struct : public Locals {
+    PinnedValue<SymbolID> symbol;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  SmallHermesValue hv = stringMap_->get(runtime, key.getHermesValue());
+  if (!hv.isUndefined()) {
+    return hv.getSymbol();
   }
 
   auto symbolRes =
@@ -42,19 +52,16 @@ CallResult<SymbolID> SymbolRegistry::getSymbolForKey(
   if (LLVM_UNLIKELY(symbolRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  Handle<SymbolID> symbol = runtime.makeHandle(*symbolRes);
+  lv.symbol = *symbolRes;
 
   if (LLVM_UNLIKELY(
-          OrderedHashMap::insert(
-              Handle<OrderedHashMap>::vmcast(&stringMap_),
-              runtime,
-              key,
-              symbol) == ExecutionStatus::EXCEPTION)) {
+          JSMap::insert(stringMap_, runtime, key, lv.symbol) ==
+          ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  registeredSymbols_.insert(symbol.get());
-  return symbol.get();
+  registeredSymbols_.insert(lv.symbol.get());
+  return lv.symbol.get();
 }
 
 } // namespace vm

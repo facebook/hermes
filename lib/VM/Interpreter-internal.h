@@ -124,24 +124,76 @@ inline double doDec(double d) {
   return d - 1;
 }
 
-template <auto Oper>
-CallResult<HermesValue>
-doOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template <auto Oper, typename InstType>
+ExecutionStatus doOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
 
-template <auto Oper>
-CallResult<HermesValue>
-doBitOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template <auto Oper, typename InstType>
+ExecutionStatus doBitOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
 
-template <auto Oper>
-CallResult<HermesValue>
-doShiftOperSlowPath(Runtime &runtime, Handle<> lhs, Handle<> rhs);
+template <auto Oper, typename InstType>
+ExecutionStatus doShiftOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
 
-template <auto Oper>
-CallResult<HermesValue> doIncDecOperSlowPath(Runtime &runtime, Handle<> src);
+template <auto Oper, typename InstType>
+ExecutionStatus doIncDecOperSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const InstType *inst);
 
-CallResult<HermesValue> doBitNotSlowPath(Runtime &runtime, Handle<> src);
+ExecutionStatus doBitNotSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip);
 
-CallResult<HermesValue> doNegateSlowPath(Runtime &runtime, Handle<> src);
+ExecutionStatus doNegateSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip);
+
+ExecutionStatus doCallRequireSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    RuntimeModule *runtimeModule);
+
+ExecutionStatus doGetByIdSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock,
+    uint32_t idVal,
+    bool tryProp);
+
+ExecutionStatus doGetByIdWithReceiverSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock);
+
+ExecutionStatus doPutByIdSlowPath_RJS(
+    Runtime &runtime,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip,
+    CodeBlock *curCodeBlock,
+    uint32_t idVal,
+    bool strictMode,
+    bool tryProp);
+
+/// Handle a StringSwitchImm instruction (which must be the kind of \p ip).
+/// Expects the Interpreter's current CodeBlock and frameRegisters in the first
+/// two arguments.  Returns the address of the next instruction to execute.
+const Inst *doStringSwitchImm(
+    CodeBlock *curCodeBlock,
+    PinnedHermesValue *frameRegs,
+    const Inst *ip);
 
 } // namespace vm
 } // namespace hermes

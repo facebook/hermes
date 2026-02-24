@@ -1,21 +1,23 @@
-name: RN Build Hermes
+name: RN Build Static Hermes
 
 on:
   workflow_dispatch:
     inputs:
       release-type:
         required: false
-        description: The type of release we are building. It could be commitly, release or dry-run
+        description: 'Release type (release, dry-run)'
         type: choice
         options:
           - release
-          - commitly
           - dry-run
-        default: dry-run
+        default: 'dry-run'
   pull_request:
+    branches:
+      - static_h
   push:
     branches:
-      - main
+      - 250829098.0.0-stable
+      - static_h
 
 jobs:
   set_release_type:
@@ -36,12 +38,10 @@ jobs:
         uses: ./.github/actions/yarn-install
       - id: set_release_type
         run: |
-          if [[ $EVENT_NAME == "push" && $REF == refs/tags/v* ]]; then
-            echo "Setting release type to release"
-            echo "RELEASE_TYPE=release" >> $GITHUB_OUTPUT
-          elif [[ $EVENT_NAME == "push" && $REF == refs/heads/main ]]; then
-            echo "Setting release type to commitly"
-            echo "RELEASE_TYPE=commitly" >> $GITHUB_OUTPUT
+          # Guard: never allow release mode on static_h branch
+          if [[ $REF == "refs/heads/static_h" ]]; then
+            echo "Branch is static_h, forcing dry-run mode"
+            echo "RELEASE_TYPE=dry-run" >> $GITHUB_OUTPUT
           elif [[ $EVENT_NAME == "workflow_dispatch" ]]; then
             echo "Setting release type to ${{ github.event.inputs.release-type }}"
             echo "RELEASE_TYPE=${{ github.event.inputs.release-type }}" >> $GITHUB_OUTPUT
@@ -58,14 +58,7 @@ jobs:
     uses: ./.github/workflows/build-hermesc-apple.yml
   build_apple_slices_hermes:
     uses: ./.github/workflows/build-apple-slices-hermes.yml
-    needs:
-      [
-        set_release_type,
-        build_hermesc_apple,
-      ]
-    with:
-      release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
-      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
+    needs: build_hermesc_apple
   build_hermes_macos:
     uses: ./.github/workflows/build-hermes-macos.yml
     needs: build_apple_slices_hermes
@@ -79,14 +72,6 @@ jobs:
     secrets: inherit
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
-      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
-  build_emscripten:
-    uses: ./.github/workflows/build-emscripten.yml
-  test-apple-runtime:
-    needs: build_hermes_macos
-    uses: ./.github/workflows/test-apple-runtime.yml
-  run-tests:
-    uses: ./.github/workflows/run-tests.yml
   publish:
     uses: ./.github/workflows/publish.yml
     secrets: inherit
@@ -99,7 +84,6 @@ jobs:
       ]
     with:
       release-type: ${{ needs.set_release_type.outputs.RELEASE_TYPE }}
-      hermes-version: ${{ needs.set_release_type.outputs.HERMES_VERSION }}
   create-tag:
     uses: ./.github/workflows/create-tag.yml
     needs: set_release_type

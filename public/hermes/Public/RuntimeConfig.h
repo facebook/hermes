@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_RUNTIMECONFIG_H
-#define HERMES_PUBLIC_RUNTIMECONFIG_H
+#pragma once
 
 #include "hermes/Public/CrashManager.h"
 #include "hermes/Public/CtorConfig.h"
@@ -48,6 +47,9 @@ class PinnedHermesValue;
   /* Native stack remaining before assuming overflow */                \
   F(constexpr, unsigned, NativeStackGap, 64 * 1024)                    \
                                                                        \
+  /* Whether or not the JIT is enabled */                              \
+  F(constexpr, bool, EnableJIT, false)                                 \
+                                                                       \
   /* Whether to allow eval and Function ctor */                        \
   F(constexpr, bool, EnableEval, true)                                 \
                                                                        \
@@ -60,20 +62,24 @@ class PinnedHermesValue;
   /* Whether to emit async break check instructions in eval code */    \
   F(constexpr, bool, AsyncBreakCheckInEval, true)                      \
                                                                        \
-  /* Support for ES6 Promise. */                                       \
-  F(constexpr, bool, ES6Promise, true)                                 \
-                                                                       \
   /* Support for ES6 Proxy. */                                         \
   F(constexpr, bool, ES6Proxy, true)                                   \
                                                                        \
-  /* Support for ES6 Class. */                                         \
-  F(constexpr, bool, ES6Class, false)                                  \
+  /* Support for ES6 block scoping. */                                 \
+  F(constexpr, bool, ES6BlockScoping, false)                           \
+                                                                       \
+  /* Support for async generators in eval. */                          \
+  F(constexpr, bool, EnableAsyncGenerators, false)                     \
                                                                        \
   /* Support for ECMA-402 Intl APIs. */                                \
   F(constexpr, bool, Intl, true)                                       \
                                                                        \
-  /* Support for ArrayBuffer, DataView and typed arrays. */            \
-  F(constexpr, bool, ArrayBuffer, true)                                \
+  /* Intl provider mode: 0=Default, 1=ForceWinGlob, 2=CustomVtable */ \
+  F(constexpr, uint8_t, IntlProviderMode, 0)                           \
+                                                                       \
+  /* Per-runtime ICU vtable (void* to avoid hermes_icu.h include). */  \
+  /* Only used when IntlProviderMode == 2 (CustomVtable). */           \
+  F(constexpr, const void *, IntlIcuVtable, nullptr)                   \
                                                                        \
   /* Support for using microtasks. */                                  \
   F(constexpr, bool, MicrotaskQueue, false)                            \
@@ -121,8 +127,14 @@ class PinnedHermesValue;
   /* The flags passed from a VM experiment */                          \
   F(constexpr, uint32_t, VMExperimentFlags, 0)                         \
                                                                        \
-  /* Whether or not block scoping is enabled */                        \
-  F(constexpr, bool, EnableBlockScoping, false)                        \
+  /* Force JIT compilation on all functions. */                        \
+  F(constexpr, bool, ForceJIT, false)                                  \
+                                                                       \
+  /* JIT compilation threshold (number of calls before JIT'ing). */    \
+  F(constexpr, uint32_t, JITThreshold, 1 << 5)                         \
+                                                                       \
+  /* JIT memory limit, after which no more code will be JIT'ed. */     \
+  F(constexpr, uint32_t, JITMemoryLimit, 32u << 20)                    \
   /* RUNTIME_FIELDS END */
 
 _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {})
@@ -131,5 +143,3 @@ _HERMES_CTORCONFIG_STRUCT(RuntimeConfig, RUNTIME_FIELDS, {})
 
 } // namespace vm
 } // namespace hermes
-
-#endif // HERMES_PUBLIC_RUNTIMECONFIG_H

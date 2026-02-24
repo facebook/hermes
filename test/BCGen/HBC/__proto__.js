@@ -5,59 +5,109 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermesc -O -dump-bytecode %s | %FileCheck --match-full-lines %s
+// RUN: %hermesc -O -dump-bytecode %s | %FileCheckOrRegen --match-full-lines %s
 
 // Code generation for static proto
 function staticProto() {
   return {__proto__: null, a: 2, b: 3, c: 4};
 }
-//CHECK-LABEL:Function<staticProto>(1 params, 11 registers, 0 symbols):
-//CHECK-NEXT:Offset in debug table: {{.*}}
-//CHECK-NEXT:    NewObjectWithBuffer r0, 3, 3, 0, 0
-//CHECK-NEXT:    LoadConstNull     r2
-//CHECK-NEXT:    Mov               r3, r0
-//CHECK-NEXT:    CallBuiltin       r1, "HermesBuiltin.silentSetPrototypeOf", 3
-//CHECK-NEXT:    Ret               r0
 
 function dynamicProto(func, getProto) {
   return {a: func(), b: 10, __proto__: getProto()};
 }
-//CHECK-LABEL:Function<dynamicProto>(3 params, 12 registers, 0 symbols):
-//CHECK-NEXT:Offset in debug table: {{.*}}
-//CHECK-NEXT:    NewObject         r0
-//CHECK-NEXT:    LoadParam         r1, 1
-//CHECK-NEXT:    LoadConstUndefined r2
-//CHECK-NEXT:    Call1             r1, r1, r2
-//CHECK-NEXT:    PutNewOwnByIdShort r0, r1, "a"
-//CHECK-NEXT:    LoadConstUInt8    r1, 10
-//CHECK-NEXT:    PutNewOwnByIdShort r0, r1, "b"
-//CHECK-NEXT:    LoadParam         r1, 2
-//CHECK-NEXT:    Call1             r3, r1, r2
-//CHECK-NEXT:    Mov               r4, r0
-//CHECK-NEXT:    CallBuiltin       r1, "HermesBuiltin.silentSetPrototypeOf", 3
-//CHECK-NEXT:    Ret               r0
 
-function sideEffectProto(){
-  var g = globalThis;
-  g.x = 10;
-  g.n = null;
-  return {__proto__:  (++g.x, g.n), a: g.x, b: 3, c: 4, d: 5};
-}
-//CHECK-LABEL:Function<sideEffectProto>(1 params, 12 registers, 0 symbols):
-//CHECK-NEXT: Offset in debug table: {{.*}}
-//CHECK-NEXT:     GetGlobalObject   r0
-//CHECK-NEXT:     TryGetById        r1, r0, 1, "globalThis"
-//CHECK-NEXT:     LoadConstUInt8    r0, 10
-//CHECK-NEXT:     PutById           r1, r0, 1, "x"
-//CHECK-NEXT:     LoadConstNull     r0
-//CHECK-NEXT:     PutById           r1, r0, 2, "n"
-//CHECK-NEXT:     GetByIdShort      r0, r1, 2, "x"
-//CHECK-NEXT:     Inc               r0, r0
-//CHECK-NEXT:     PutById           r1, r0, 1, "x"
-//CHECK-NEXT:     GetByIdShort      r3, r1, 3, "n"
-//CHECK-NEXT:     NewObjectWithBuffer r0, 4, 4, 4, 13
-//CHECK-NEXT:     Mov               r4, r0
-//CHECK-NEXT:     CallBuiltin       r2, "HermesBuiltin.silentSetPrototypeOf", 3
-//CHECK-NEXT:     GetByIdShort      r1, r1, 2, "x"
-//CHECK-NEXT:     PutById           r0, r1, 3, "a"
-//CHECK-NEXT:     Ret               r0
+// Auto-generated content below. Please do not modify manually.
+
+// CHECK:Bytecode File Information:
+// CHECK-NEXT:  Bytecode version number: {{.*}}
+// CHECK-NEXT:  Source hash: {{.*}}
+// CHECK-NEXT:  Function count: 3
+// CHECK-NEXT:  String count: 6
+// CHECK-NEXT:  BigInt count: 0
+// CHECK-NEXT:  String Kind Entry count: 2
+// CHECK-NEXT:  RegExp count: 0
+// CHECK-NEXT:  StringSwitchImm count: 0
+// CHECK-NEXT:  Key buffer size (bytes): 12
+// CHECK-NEXT:  Value buffer size (bytes): 19
+// CHECK-NEXT:  Shape table count: 2
+// CHECK-NEXT:  Segment ID: 0
+// CHECK-NEXT:  CommonJS module count: 0
+// CHECK-NEXT:  CommonJS module count (static): 0
+// CHECK-NEXT:  Function source count: 0
+// CHECK-NEXT:  Bytecode options:
+// CHECK-NEXT:    staticBuiltins: 0
+// CHECK-NEXT:    cjsModulesStaticallyResolved: 0
+
+// CHECK:Global String Table:
+// CHECK-NEXT:s0[ASCII, 0..5]: global
+// CHECK-NEXT:i1[ASCII, 4..4] #00018270: a
+// CHECK-NEXT:i2[ASCII, 6..6] #00018E43: b
+// CHECK-NEXT:i3[ASCII, 7..7] #00018A52: c
+// CHECK-NEXT:i4[ASCII, 8..19] #E721285C: dynamicProto
+// CHECK-NEXT:i5[ASCII, 20..30] #99489473: staticProto
+
+// CHECK:Literal Value Buffer:
+// CHECK-NEXT:[int 2]
+// CHECK-NEXT:[int 3]
+// CHECK-NEXT:[int 4]
+// CHECK-NEXT:null
+// CHECK-NEXT:[int 10]
+
+// CHECK:Object Key Buffer:
+// CHECK-NEXT:[String 1]
+// CHECK-NEXT:[String 2]
+// CHECK-NEXT:[String 3]
+// CHECK-NEXT:[String 1]
+// CHECK-NEXT:[String 2]
+
+// CHECK:Object Shape Table:
+// CHECK-NEXT:0[0, 3]
+// CHECK-NEXT:1[7, 2]
+
+// CHECK:Function<global>(1 params, 3 registers, 0 numbers, 1 non-pointers):
+// CHECK-NEXT:Offset in debug table: source 0x0000
+// CHECK-NEXT:    DeclareGlobalVar  "staticProto"
+// CHECK-NEXT:    DeclareGlobalVar  "dynamicProto"
+// CHECK-NEXT:    GetGlobalObject   r2
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<staticProto>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 0, "staticProto"
+// CHECK-NEXT:    CreateClosure     r1, r0, Function<dynamicProto>
+// CHECK-NEXT:    PutByIdLoose      r2, r1, 1, "dynamicProto"
+// CHECK-NEXT:    Ret               r0
+
+// CHECK:Function<staticProto>(1 params, 2 registers, 0 numbers, 1 non-pointers):
+// CHECK-NEXT:    LoadConstNull     r0
+// CHECK-NEXT:    NewObjectWithBufferAndParent r1, r0, 0, 0
+// CHECK-NEXT:    Ret               r1
+
+// CHECK:Function<dynamicProto>(3 params, 13 registers, 0 numbers, 1 non-pointers):
+// CHECK-NEXT:Offset in debug table: source 0x0011
+// CHECK-NEXT:    NewObjectWithBuffer r1, 1, 13
+// CHECK-NEXT:    LoadConstUndefined r0
+// CHECK-NEXT:    LoadParam         r2, 1
+// CHECK-NEXT:    Call1             r2, r2, r0
+// CHECK-NEXT:    PutOwnBySlotIdx   r1, r2, 0
+// CHECK-NEXT:    LoadParam         r2, 2
+// CHECK-NEXT:    Call1             r3, r2, r0
+// CHECK-NEXT:    Mov               r4, r1
+// CHECK-NEXT:    CallBuiltin       r2, "HermesBuiltin.silentSetPrototypeOf", 3
+// CHECK-NEXT:    Ret               r1
+
+// CHECK:Debug filename table:
+// CHECK-NEXT:  0: {{.*}}__proto__.js
+
+// CHECK:Debug file table:
+// CHECK-NEXT:  source table offset 0x0000: filename id 0
+
+// CHECK:Debug source table:
+// CHECK-NEXT:  0x0000  function idx 0, starts at line 11 col 1
+// CHECK-NEXT:    bc 0: line 11 col 1
+// CHECK-NEXT:    bc 5: line 11 col 1
+// CHECK-NEXT:    bc 19: line 11 col 1
+// CHECK-NEXT:    bc 30: line 11 col 1
+// CHECK-NEXT:  0x0011  function idx 2, starts at line 15 col 1
+// CHECK-NEXT:    bc 11: line 16 col 18
+// CHECK-NEXT:    bc 22: line 16 col 48
+// CHECK-NEXT:    bc 29: line 16 col 29
+// CHECK-NEXT:  0x001f  end of debug source table

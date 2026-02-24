@@ -5,108 +5,120 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef RUNTIME_HV_FIELD_PROTOTYPE
-#define RUNTIME_HV_FIELD_PROTOTYPE(name)
+#ifndef RUNTIME_HV_FIELD
+#error "RUNTIME_HV_FIELD must be defined"
 #endif
 
-#ifndef RUNTIME_HV_FIELD_INSTANCE
-#define RUNTIME_HV_FIELD_INSTANCE(name)
-#endif
+RUNTIME_HV_FIELD(objectConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(objectPrototype, JSObject)
 
-#ifndef RUNTIME_HV_FIELD_RUNTIMEMODULE
-#define RUNTIME_HV_FIELD_RUNTIMEMODULE(name)
-#endif
-
-RUNTIME_HV_FIELD_PROTOTYPE(objectPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(objectConstructor)
-RUNTIME_HV_FIELD_PROTOTYPE(errorConstructor)
-
-/// JSError and JSError.prototype, and constructor and prototype of all native
-/// error types.
-#define ALL_ERROR_TYPE(name)                  \
-  RUNTIME_HV_FIELD_PROTOTYPE(name##Prototype) \
-  RUNTIME_HV_FIELD_PROTOTYPE(name##Constructor)
-#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+/// All error constructors and prototypes.
+#define ALL_ERROR_TYPE(name)                           \
+RUNTIME_HV_FIELD(name##Constructor, NativeConstructor) \
+RUNTIME_HV_FIELD(name##Prototype, JSObject)
+#include "hermes/VM/NativeErrorTypes.def"
 #undef ALL_ERROR_TYPE
-RUNTIME_HV_FIELD_PROTOTYPE(functionPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(functionConstructor)
+RUNTIME_HV_FIELD(functionPrototype, NativeFunction)
+RUNTIME_HV_FIELD(functionConstructor, NativeConstructor)
 
-RUNTIME_HV_FIELD_PROTOTYPE(stringPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(bigintPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(numberPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(booleanPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(symbolPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(datePrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayPrototype)
+RUNTIME_HV_FIELD(stringConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(stringPrototype, JSString)
+RUNTIME_HV_FIELD(bigintPrototype, JSObject)
+RUNTIME_HV_FIELD(numberConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(numberPrototype, JSNumber)
+RUNTIME_HV_FIELD(booleanConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(booleanPrototype, JSBoolean)
+RUNTIME_HV_FIELD(symbolPrototype, JSObject)
+RUNTIME_HV_FIELD(dateConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(datePrototype, JSObject)
+RUNTIME_HV_FIELD(arrayConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(arrayPrototype, JSArray)
+RUNTIME_HV_FIELD(fastArrayPrototype, JSObject)
 
-RUNTIME_HV_FIELD_PROTOTYPE(arrayBufferPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(dataViewPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(typedArrayBasePrototype)
+RUNTIME_HV_FIELD(arrayBufferConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(arrayBufferPrototype, JSObject)
+RUNTIME_HV_FIELD(dataViewConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(dataViewPrototype, JSObject)
+RUNTIME_HV_FIELD(typedArrayBasePrototype, JSObject)
 
 /// %TypedArray%.prototype and constructor for each typed array.
-#define TYPED_ARRAY(name, type)                    \
-  RUNTIME_HV_FIELD_PROTOTYPE(name##ArrayPrototype) \
-  RUNTIME_HV_FIELD_PROTOTYPE(name##ArrayConstructor)
+#define TYPED_ARRAY(name, type)                             \
+  RUNTIME_HV_FIELD(name##ArrayPrototype, JSObject)          \
+  RUNTIME_HV_FIELD(name##ArrayConstructor, NativeConstructor)
 #include "hermes/VM/TypedArrays.def"
 #undef TYPED_ARRAY
 
-RUNTIME_HV_FIELD_PROTOTYPE(setPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(setIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(mapPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(mapIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(weakMapPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(weakSetPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(weakRefPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(typedArrayBaseConstructor)
+RUNTIME_HV_FIELD(setConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(setPrototype, JSObject)
+RUNTIME_HV_FIELD(setPrototypeAdd, NativeFunction)
+RUNTIME_HV_FIELD(setPrototypeValues, NativeFunction)
+RUNTIME_HV_FIELD(setPrototypeHas, NativeFunction)
+RUNTIME_HV_FIELD(setIteratorPrototype, JSObject)
+RUNTIME_HV_FIELD(mapConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(mapPrototype, JSObject)
+RUNTIME_HV_FIELD(mapPrototypeSet, NativeFunction)
+RUNTIME_HV_FIELD(mapPrototypeEntries, NativeFunction)
+RUNTIME_HV_FIELD(mapIteratorPrototype, JSObject)
+RUNTIME_HV_FIELD(weakMapConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(weakMapPrototype, JSObject)
+RUNTIME_HV_FIELD(weakSetConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(weakSetPrototype, JSObject)
+RUNTIME_HV_FIELD(weakRefConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(weakRefPrototype, JSObject)
+RUNTIME_HV_FIELD(regExpConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(regExpPrototype, JSObject)
+RUNTIME_HV_FIELD(typedArrayBaseConstructor, NativeConstructor)
 
-RUNTIME_HV_FIELD_PROTOTYPE(regExpLastInput)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpLastRegExp)
+RUNTIME_HV_FIELD(regExpLastInput, StringPrimitive)
+RUNTIME_HV_FIELD(regExpLastRegExp, JSRegExp)
 
-RUNTIME_HV_FIELD_PROTOTYPE(throwTypeErrorAccessor)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayClass)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpMatchClass)
+RUNTIME_HV_FIELD(throwTypeErrorAccessor, PropertyAccessor)
+RUNTIME_HV_FIELD(arrayClass, HiddenClass)
+RUNTIME_HV_FIELD(fastArrayClass, HiddenClass)
+RUNTIME_HV_FIELD(regExpMatchClass, HiddenClass)
+RUNTIME_HV_FIELD(lazyObjectClass, HiddenClass)
+RUNTIME_HV_FIELD(proxyClass, HiddenClass)
+RUNTIME_HV_FIELD(callableProxyClass, HiddenClass)
+RUNTIME_HV_FIELD(hostObjectClass, HiddenClass)
 
-RUNTIME_HV_FIELD_PROTOTYPE(iteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(arrayPrototypeValues)
-RUNTIME_HV_FIELD_PROTOTYPE(asyncFunctionPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(stringIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(regExpStringIteratorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(generatorPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(generatorFunctionPrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(parseIntFunction)
-RUNTIME_HV_FIELD_PROTOTYPE(parseFloatFunction)
-RUNTIME_HV_FIELD_PROTOTYPE(requireFunction)
-RUNTIME_HV_FIELD_PROTOTYPE(jsErrorStackAccessor)
-RUNTIME_HV_FIELD_PROTOTYPE(callSitePrototype)
-RUNTIME_HV_FIELD_PROTOTYPE(textEncoderPrototype)
+RUNTIME_HV_FIELD(iteratorPrototype, JSObject)
+RUNTIME_HV_FIELD(arrayIteratorPrototype, JSObject)
+RUNTIME_HV_FIELD(arrayPrototypeValues, NativeFunction)
+RUNTIME_HV_FIELD(asyncFunctionConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(asyncFunctionPrototype, JSObject)
+RUNTIME_HV_FIELD(stringIteratorPrototype, JSObject)
+RUNTIME_HV_FIELD(regExpStringIteratorPrototype, JSObject)
+RUNTIME_HV_FIELD(generatorPrototype, JSObject)
+RUNTIME_HV_FIELD(generatorFunctionConstructor, NativeConstructor)
+RUNTIME_HV_FIELD(generatorFunctionPrototype, JSObject)
+RUNTIME_HV_FIELD(parseIntFunction, NativeFunction)
+RUNTIME_HV_FIELD(parseFloatFunction, NativeFunction)
+RUNTIME_HV_FIELD(requireFunction, NativeFunction)
+RUNTIME_HV_FIELD(jsErrorStackAccessor, PropertyAccessor)
+RUNTIME_HV_FIELD(callSitePrototype, JSObject)
+RUNTIME_HV_FIELD(functionPrototypeSymbolHasInstance, NativeFunction)
 
 // TODO: for Serialization/Deserialization  after global object initialization
 // we record specialCodeBlockDomain_ and create runtimemodule later need to
 // revisit this in stage 2
-RUNTIME_HV_FIELD_RUNTIMEMODULE(specialCodeBlockDomain_)
+RUNTIME_HV_FIELD(specialCodeBlockDomain_, Domain)
 
-RUNTIME_HV_FIELD_INSTANCE(global_)
-RUNTIME_HV_FIELD_INSTANCE(thrownValue_)
-RUNTIME_HV_FIELD_INSTANCE(keptObjects_)
+RUNTIME_HV_FIELD(thrownValue_, HermesValue)
+RUNTIME_HV_FIELD(keptObjects_, JSMapImpl<CellKind::JSSetKind>)
 #ifdef HERMES_ENABLE_DEBUGGER
-RUNTIME_HV_FIELD_INSTANCE(debuggerInternalObject_)
+RUNTIME_HV_FIELD(debuggerInternalObject_, JSObject)
 #endif // HERMES_ENABLE_DEBUGGER
 
 #ifdef HERMES_ENABLE_INTL
 // TODO T65916424: move these out of Runtime
-RUNTIME_HV_FIELD_INSTANCE(intlCollator)
-RUNTIME_HV_FIELD_PROTOTYPE(intlCollatorPrototype)
-RUNTIME_HV_FIELD_INSTANCE(intlDateTimeFormat)
-RUNTIME_HV_FIELD_PROTOTYPE(intlDateTimeFormatPrototype)
-RUNTIME_HV_FIELD_INSTANCE(intlNumberFormat)
-RUNTIME_HV_FIELD_PROTOTYPE(intlNumberFormatPrototype)
+RUNTIME_HV_FIELD(intlCollator, NativeConstructor)
+RUNTIME_HV_FIELD(intlCollatorPrototype, JSObject)
+RUNTIME_HV_FIELD(intlDateTimeFormat, NativeConstructor)
+RUNTIME_HV_FIELD(intlDateTimeFormatPrototype, JSObject)
+RUNTIME_HV_FIELD(intlNumberFormat, NativeConstructor)
+RUNTIME_HV_FIELD(intlNumberFormatPrototype, JSObject)
 #endif
 
-RUNTIME_HV_FIELD_INSTANCE(promiseRejectionTrackingHook_)
+RUNTIME_HV_FIELD(promiseRejectionTrackingHook_, HermesValue)
 
-#undef RUNTIME_HV_FIELD_PROTOTYPE
-#undef RUNTIME_HV_FIELD_INSTANCE
-#undef RUNTIME_HV_FIELD_RUNTIMEMODULE
 #undef RUNTIME_HV_FIELD

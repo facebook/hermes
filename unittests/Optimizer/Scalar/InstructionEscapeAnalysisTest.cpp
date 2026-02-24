@@ -41,7 +41,6 @@ class InstructionEscapeAnalysisTest : public ::testing::Test {
         module_(context_),
         builder_(&module_),
         function_(builder_.createFunction(
-            module_.getInitialScope()->createInnerScope(),
             "main",
             Function::DefinitionKind::ES5Function,
             true)),
@@ -78,14 +77,14 @@ class InstructionEscapeAnalysisTest : public ::testing::Test {
   //   Just calls the InstructionEscapeAnalysis function.
 
   Instruction *createInstruction() {
-    return builder_.createAllocObjectInst(1);
+    return builder_.createAllocObjectLiteralInst();
   }
   Instruction *createInstruction(Value *dependency) {
     return builder_.createAsNumberInst(dependency);
   }
   Instruction *createInstruction(Value *dependency1, Value *dependency2) {
     return builder_.createBinaryOperatorInst(
-        dependency1, dependency2, BinaryOperatorInst::OpKind::AddKind);
+        dependency1, dependency2, ValueKind::BinaryAddInstKind);
   }
   std::vector<Instruction *> createInstructions(unsigned n) {
     std::vector<Instruction *> vec;

@@ -23,11 +23,12 @@ module.name_mapper='^hermes-eslint$' -> '<PROJECT_ROOT>/hermes-eslint/src/index.
 module.name_mapper='^hermes-transform$' -> '<PROJECT_ROOT>/hermes-transform/src/index.js'
 module.name_mapper='^prettier-plugin-hermes-parser$' -> '<PROJECT_ROOT>/prettier-plugin-hermes-parser/src/index.js'
 
-component_syntax=true
 enums=true
+component_syntax=false
+experimental.pattern_matching=false
 
 [version]
-^0.267.0
+^0.302.0
 
 [lints]
 untyped-type-import=error

@@ -7,6 +7,7 @@
 
 // RUN: %hermes -O -target=HBC %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O -target=HBC -emit-binary -out %t.hbc %s && %hermes %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 try {
   undefined.length;
@@ -34,7 +35,7 @@ try {
 } catch (e) {
   print(e);
 }
-// CHECK: TypeError: Cannot delete property 'length' of null
+// CHECK: TypeError: Cannot convert null value to object
 
 (function strict() {
   'use strict';

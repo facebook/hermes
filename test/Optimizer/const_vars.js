@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s     -O  | %FileCheckOrRegen %s
+// RUN: %hermesc -hermes-parser -dump-ir %s     -O  | %FileCheckOrRegen %s
 
 // Make sure that we are promoting t to a constant value in bar()
 function foo(p1) {
@@ -22,30 +22,24 @@ foo()()
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [foo]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo#0#1()#2 : closure, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo" : string
-// CHECK-NEXT:  %3 = LoadPropertyInst globalObject : object, "foo" : string
-// CHECK-NEXT:  %4 = CallInst %3, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %5 = CallInst %4, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %6 = ReturnInst %5
+// CHECK-NEXT:       DeclareGlobalVarInst "foo": string
+// CHECK-NEXT:  %1 = CreateFunctionInst (:object) empty: any, empty: any, %foo(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %1: object, globalObject: object, "foo": string
+// CHECK-NEXT:  %3 = LoadPropertyInst (:any) globalObject: object, "foo": string
+// CHECK-NEXT:  %4 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:  %5 = CallInst (:any) %4: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:       ReturnInst %5: any
 // CHECK-NEXT:function_end
 
-// CHECK:function foo#0#1(p1)#2 : closure
-// CHECK-NEXT:S{foo#0#1()#2} = []
+// CHECK:function foo(p1: any): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo#0#1()#2}
-// CHECK-NEXT:  %1 = CreateFunctionInst %bar#1#2()#3 : number, %0
-// CHECK-NEXT:  %2 = ReturnInst %1 : closure
+// CHECK-NEXT:  %0 = CreateFunctionInst (:object) empty: any, empty: any, %bar(): functionCode
+// CHECK-NEXT:       ReturnInst %0: object
 // CHECK-NEXT:function_end
 
-// CHECK:function bar#1#2()#3 : number
-// CHECK-NEXT:S{bar#1#2()#3} = []
+// CHECK:function bar(): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{bar#1#2()#3}
-// CHECK-NEXT:  %1 = ReturnInst 123 : number
+// CHECK-NEXT:       ReturnInst 123: number
 // CHECK-NEXT:function_end

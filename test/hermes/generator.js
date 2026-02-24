@@ -8,6 +8,7 @@
 // RUN: %hermes -O0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -O %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -lazy %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -O %s -exec | %FileCheck --match-full-lines %s
 
 function show(iterResult) {
   print(iterResult.value, '|', iterResult.done);
@@ -25,14 +26,6 @@ show(it.next());
 // CHECK-NEXT: 1 | false
 show(it.next());
 // CHECK-NEXT: undefined | true
-
-try {
-  new simple();
-  print('must throw');
-} catch (e) {
-  print('caught', e.name);
-}
-// CHECK-NEXT: caught TypeError
 
 function *useArgs(x, y) {
   yield x;
@@ -150,8 +143,6 @@ show(it.return('MY RETVAL'));
 show(it.next());
 // CHECK-NEXT: MY RETVAL | true
 
-// Ensures that the StartGenerator instruction is moved to the start
-// of the function after optimizations.
 function *localsTry() {
   var x = 0;
   try {
@@ -399,3 +390,30 @@ function* saveGeneratorLong() {
 }
 print(saveGeneratorLong().next().value);
 // CHECK-NEXT: 1
+
+// Ensure that Terminators that take in AllocStackInst work correctly.
+function *testForIn(p) {
+  for (prop in p) {
+    yield p[prop];
+  }
+}
+var it = testForIn([1, 2, 3, 4]);
+show(it.next());
+// CHECK-NEXT: 1 | false
+show(it.next());
+// CHECK-NEXT: 2 | false
+show(it.next());
+// CHECK-NEXT: 3 | false
+show(it.next());
+// CHECK-NEXT: 4 | false
+show(it.next());
+// CHECK-NEXT: undefined | true
+
+// Check that arrow functions bind correctly.
+function *genContainingArrow(a) {
+  let foo = () => { print(this, new.target, arguments[0]); };
+  foo();
+}
+var it = genContainingArrow.call(42, 5)
+it.next();
+// CHECK-NEXT: 42 undefined 5

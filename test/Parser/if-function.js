@@ -35,7 +35,8 @@ if (x) function f() {} else function f() {}
 // CHECK-NEXT:            "generator": false,
 // CHECK-NEXT:            "async": false
 // CHECK-NEXT:          }
-// CHECK-NEXT:        ]
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "implicit": true
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "alternate": {
 // CHECK-NEXT:        "type": "BlockStatement",
@@ -54,7 +55,8 @@ if (x) function f() {} else function f() {}
 // CHECK-NEXT:            "generator": false,
 // CHECK-NEXT:            "async": false
 // CHECK-NEXT:          }
-// CHECK-NEXT:        ]
+// CHECK-NEXT:        ],
+// CHECK-NEXT:        "implicit": true
 // CHECK-NEXT:      }
 // CHECK-NEXT:    }
 // CHECK-NEXT:  ]

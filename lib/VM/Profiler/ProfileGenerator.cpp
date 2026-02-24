@@ -36,7 +36,7 @@ static std::string getJSFunctionName(
     uint32_t funcId) {
   hbc::RuntimeFunctionHeader functionHeader =
       bcProvider->getFunctionHeader(funcId);
-  return bcProvider->getStringRefFromID(functionHeader.functionName()).str();
+  return bcProvider->getStringRefFromID(functionHeader.getFunctionName()).str();
 }
 
 static OptValue<hbc::DebugSourceLocation> getFunctionDefinitionSourceLocation(
@@ -234,7 +234,7 @@ class ProfileGenerator {
       // Bundle has debug info.
       auto filenameId = debugSourceLocation.getValue().filenameId;
       maybeSourceScriptURL =
-          bcProvider->getDebugInfo()->getFilenameByID(filenameId);
+          bcProvider->getDebugInfo()->getUTF8FilenameByID(filenameId);
     }
 
     std::optional<std::string_view> maybeSourceScriptURLView = std::nullopt;

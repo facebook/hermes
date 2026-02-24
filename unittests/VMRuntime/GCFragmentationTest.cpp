@@ -8,7 +8,7 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/DummyObject.h"
 #include "hermes/VM/GC.h"
@@ -30,42 +30,51 @@ TEST(GCFragmentationTest, TestCoalescing) {
   // allocate.
   static const size_t kNumAvailableSegments = kNumSegments + 1;
   static const size_t kHeapSize =
-      AlignedHeapSegment::maxSize() * kNumAvailableSegments;
+      FixedSizeHeapSegment::maxSize() * kNumAvailableSegments;
   static const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSize);
 
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
 
-  using SixteenthCell = EmptyCell<AlignedHeapSegment::maxSize() / 16>;
-  using EighthCell = EmptyCell<AlignedHeapSegment::maxSize() / 8>;
-  using QuarterCell = EmptyCell<AlignedHeapSegment::maxSize() / 4>;
+  using SixteenthCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 16>;
+  using EighthCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 8>;
+  using QuarterCell = EmptyCell<FixedSizeHeapSegment::maxSize() / 4>;
 
   {
-    GCScope scope(rt);
+    struct : Locals {
+      PinnedValue<SixteenthCell> cells[kNumOGSegments * 16];
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
     for (size_t i = 0; i < 16 * kNumOGSegments; i++)
-      rt.makeHandle(SixteenthCell::create(rt));
+      lv.cells[i] = SixteenthCell::create(rt);
   }
 
   // Hades needs a manually triggered full collection, since full collections
   // are started at the end of a YG GC.
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+#ifdef HERMESVM_GC_HADES
   rt.collect();
 #endif
 
   {
-    GCScope scope(rt);
+    struct : Locals {
+      PinnedValue<EighthCell> cells[8 * kNumOGSegments];
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
     for (size_t i = 0; i < 8 * kNumOGSegments; i++)
-      rt.makeHandle(EighthCell::create(rt));
+      lv.cells[i] = EighthCell::create(rt);
   }
 
-#if defined(HERMESVM_GC_HADES) || defined(HERMESVM_GC_RUNTIME)
+#ifdef HERMESVM_GC_HADES
   rt.collect();
 #endif
 
   {
-    GCScope scope(rt);
+    struct : Locals {
+      PinnedValue<QuarterCell> cells[4 * kNumOGSegments];
+    } lv;
+    DummyLocalsRAII lraii{rt, &lv};
     for (size_t i = 0; i < 4 * kNumOGSegments; i++)
-      rt.makeHandle(QuarterCell::create(rt));
+      lv.cells[i] = QuarterCell::create(rt);
   }
 }
 

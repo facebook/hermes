@@ -15,32 +15,32 @@ let hermesProfile = Profile(
 
       guard randomize else { return args }
 
-      if probability(0.5) { args.append("--compile") }
-      if probability(0.5) { args.append("--lazy-compilation") }
-      if probability(0.5) { args.append("--eager-compilation") }
-      if probability(0.5) { args.append("--optimize") }
-      if probability(0.5) { args.append("--async-break") }
-      if probability(0.5) { args.append("--block-scoping") }
-      if probability(0.5) { args.append("--random-mem-layout") }
+    if probability(0.5) { args.append("--compile") }
+    if probability(0.5) { args.append("--lazy-compilation") }
+    if probability(0.5) { args.append("--eager-compilation") }
+    if probability(0.5) { args.append("--optimize") }
+    if probability(0.5) { args.append("--async-break") }
+    if probability(0.5) { args.append("--block-scoping") }
+    if probability(0.5) { args.append("--random-mem-layout") }
 
-      return args
-    },
+    return args
+  },
 
-    processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
+  processEnv: ["UBSAN_OPTIONS": "handle_segv=0"],
 
-    maxExecsBeforeRespawn: 1000,
+  maxExecsBeforeRespawn: 1000,
 
-    timeout: 2000,
+  timeout: 2000,
 
-    codePrefix: """
+  codePrefix: """
                 function main(){
                 """,
 
-    codeSuffix: """
+  codeSuffix: """
                 }; main();
                 """,
 
-    ecmaVersion: ECMAScriptVersion.es6,
+  ecmaVersion: ECMAScriptVersion.es6,
 
     startupTests: [
         ("fuzzilli('FUZZILLI_PRINT', 'test')", .shouldSucceed),
@@ -49,9 +49,9 @@ let hermesProfile = Profile(
         ("fuzzilli('FUZZILLI_CRASH', 2)", .shouldCrash),
     ],
 
-    additionalCodeGenerators: [],
+  additionalCodeGenerators: [],
 
-    additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
+  additionalProgramTemplates: WeightedList<ProgramTemplate>([]),
 
     disabledCodeGenerators: ["AsyncArrowFunctionGenerator", "AsyncGeneratorFunctionGenerator", "ClassGenerator", "WithStatementGenerator", "JITFunctionGenerator", "GrowableSharedArrayBufferGenerator"],
     disabledMutators: [],

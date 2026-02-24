@@ -18,16 +18,21 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createBooleanConstructor(Runtime &runtime) {
+HermesValue createBooleanConstructor(Runtime &runtime) {
   auto booleanPrototype = Handle<JSBoolean>::vmcast(&runtime.booleanPrototype);
 
-  auto cons = defineSystemConstructor<JSBoolean>(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::Boolean),
       booleanConstructor,
       booleanPrototype,
       1,
-      CellKind::JSBooleanKind);
+      lv.cons);
 
   // Boolean.prototype.xxx methods.
   defineMethod(
@@ -45,24 +50,41 @@ Handle<JSObject> createBooleanConstructor(Runtime &runtime) {
       booleanPrototypeValueOf,
       0);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
-CallResult<HermesValue>
-booleanConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> booleanConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool value = toBoolean(args.getArg(0));
 
-  if (args.isConstructorCall()) {
-    auto *self = vmcast<JSBoolean>(args.getThisArg());
-    self->setPrimitiveBoolean(value);
-    return args.getThisArg();
+  if (!args.isConstructorCall()) {
+    return HermesValue::encodeBoolValue(value);
   }
 
-  return HermesValue::encodeBoolValue(value);
+  if (LLVM_LIKELY(
+          args.getNewTarget().getRaw() ==
+          runtime.booleanConstructor.getHermesValue().getRaw())) {
+    return JSBoolean::create(runtime, value, runtime.booleanPrototype)
+        .getHermesValue();
+  }
+  struct : public Locals {
+    PinnedValue<JSObject> selfParent;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  CallResult<PseudoHandle<JSObject>> thisParentRes =
+      NativeConstructor::parentForNewThis_RJS(
+          runtime,
+          Handle<Callable>::vmcast(&args.getNewTarget()),
+          runtime.booleanPrototype);
+  if (LLVM_UNLIKELY(thisParentRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.selfParent = std::move(*thisParentRes);
+  return JSBoolean::create(runtime, value, lv.selfParent).getHermesValue();
 }
 
-CallResult<HermesValue>
-booleanPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> booleanPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   bool value;
   if (args.getThisArg().isBool()) {
     value = args.getThisArg().getBool();
@@ -79,8 +101,8 @@ booleanPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
             : runtime.getPredefinedString(Predefined::falseStr));
 }
 
-CallResult<HermesValue>
-booleanPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> booleanPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   if (args.getThisArg().isBool()) {
     return args.getThisArg();
   }

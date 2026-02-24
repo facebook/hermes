@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck %s
+// RUN: %shermes -exec %s | %FileCheck %s
 "use strict";
 
 // Define an object with a read-only property stack. This should cause a

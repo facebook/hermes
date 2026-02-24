@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -O -dump-ir %s
+// RUN: %hermesc -O -dump-ir %s
 
 // This code caused mem2reg to generate PhiInsts with duplicate branches,
 // causing an assertion failure later.

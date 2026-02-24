@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: (! %hermes -dump-ast --pretty-json %s 2>&1) | %FileCheck %s --match-full-lines
+// RUN: (! %hermesc -dump-ast --pretty-json %s 2>&1) | %FileCheck %s --match-full-lines
 
 new obj ?. (arg);
 // // CHECK: {{.*}}:10:9: error: Constructor calls may not contain an optional chain

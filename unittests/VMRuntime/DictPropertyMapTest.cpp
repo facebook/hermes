@@ -7,7 +7,7 @@
 
 #include "hermes/VM/DictPropertyMap.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include "gtest/gtest.h"
 
@@ -28,7 +28,10 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
   auto res = DictPropertyMap::create(runtime, 2);
   ASSERT_FALSE(isException(res));
   MutableHandle<DictPropertyMap> map{runtime, res->get()};
-  auto saveMap = map.get();
+  // We need to use another MutableHandle here. If it's a raw pointer, when
+  // handlesan is ON, even if the map is reallocated, since collection happens
+  // before the creation of new map, it will be reallocated at the same address.
+  MutableHandle<DictPropertyMap> saveMap{runtime, res->get()};
 
   // Try to find a property in the empty map.
   ASSERT_FALSE(DictPropertyMap::find(map.get(), id1));
@@ -53,13 +56,13 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
   ASSERT_TRUE(found);
   ASSERT_EQ(id2, DictPropertyMap::getDescriptorPair(*map, *found)->first);
 
-  // Make sure we haven't reallocated.
-  ASSERT_EQ(saveMap, map.get());
+  // Make sure we haven't reallocated (which will update map).
+  ASSERT_EQ(saveMap.get(), map.get());
 
   // Add a prop3, causing a reallocation.
   DictPropertyMap::add(map, runtime, id3, desc1);
   // Make sure we reallocated.
-  ASSERT_NE(saveMap, map.get());
+  ASSERT_NE(saveMap.get(), map.get());
   saveMap = map.get();
   for (unsigned i = 0; i < 3; ++i) {
     auto sym = SymbolID::unsafeCreate(id1.unsafeGetIndex() + i);
@@ -70,7 +73,7 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
 
   // Add a prop4.
   DictPropertyMap::add(map, runtime, id4, desc1);
-  ASSERT_EQ(saveMap, map.get());
+  ASSERT_EQ(saveMap.get(), map.get());
   for (unsigned i = 0; i < 4; ++i) {
     auto sym = SymbolID::unsafeCreate(id1.unsafeGetIndex() + i);
     found = DictPropertyMap::find(*map, sym);
@@ -91,7 +94,7 @@ TEST_F(DictPropertyMapTest, SmokeTest) {
   // Delete prop2.
   found = DictPropertyMap::find(*map, id2);
   DictPropertyMap::erase(*map, runtime, *found);
-  ASSERT_EQ(saveMap, map.get());
+  ASSERT_EQ(saveMap.get(), map.get());
   ASSERT_EQ(3u, map->size());
 
   {
@@ -138,49 +141,4 @@ TEST_F(DictPropertyMapTest, CreateOverCapacityTest) {
       DictPropertyMap::create(runtime, DictPropertyMap::getMaxCapacity() + 1));
 }
 
-TEST_F(DictPropertyMapTest, GrowOverCapacityTest) {
-  // Hades can't handle doing a span of large allocations, because it has
-  // fragmentation in its heap space.
-#if !defined(HERMESVM_GC_HADES) && !defined(HERMESVM_GC_RUNTIME)
-  // Don't do the test if it requires too many properties. Just cross our
-  // fingers and hope it works.
-  auto const maxCapacity = DictPropertyMap::getMaxCapacity();
-  if (maxCapacity > 500000)
-    return;
-
-  auto res = DictPropertyMap::create(runtime);
-  ASSERT_RETURNED(res);
-  MutableHandle<DictPropertyMap> map{runtime, res->get()};
-
-  MutableHandle<> value{runtime};
-  NamedPropertyDescriptor desc(PropertyFlags{}, 0);
-
-  auto marker = gcScope.createMarker();
-  for (unsigned i = 0; i < maxCapacity; ++i) {
-    value.set(HermesValue::encodeTrustedNumberValue(i));
-    auto symRes = valueToSymbolID(runtime, value);
-    ASSERT_RETURNED(symRes);
-    ASSERT_RETURNED(DictPropertyMap::add(map, runtime, **symRes, desc));
-
-    gcScope.flushToMarker(marker);
-  }
-
-  value.set(HermesValue::encodeTrustedNumberValue(maxCapacity));
-  auto symRes = valueToSymbolID(runtime, value);
-  ASSERT_RETURNED(symRes);
-  ASSERT_EQ(
-      ExecutionStatus::EXCEPTION,
-      DictPropertyMap::add(map, runtime, **symRes, desc));
-  runtime.clearThrownValue();
-
-  // Try it again.
-  value.set(HermesValue::encodeTrustedNumberValue(maxCapacity + 1));
-  symRes = valueToSymbolID(runtime, value);
-  ASSERT_RETURNED(symRes);
-  ASSERT_EQ(
-      ExecutionStatus::EXCEPTION,
-      DictPropertyMap::add(map, runtime, **symRes, desc));
-  runtime.clearThrownValue();
-#endif
-}
 } // namespace

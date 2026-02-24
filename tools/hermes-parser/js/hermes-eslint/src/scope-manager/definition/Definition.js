@@ -20,6 +20,7 @@ import type {HookNameDefinition} from './HookNameDefinition';
 import type {ImplicitGlobalVariableDefinition} from './ImplicitGlobalVariableDefinition';
 import type {ImportBindingDefinition} from './ImportBindingDefinition';
 import type {ParameterDefinition} from './ParameterDefinition';
+import type {RecordNameDefinition} from './RecordNameDefinition';
 import type {TypeDefinition} from './TypeDefinition';
 import type {TypeParameterDefinition} from './TypeParameterDefinition';
 import type {VariableDefinition} from './VariableDefinition';
@@ -35,6 +36,7 @@ type Definition =
   | NamespaceNameDefinition
   | ParameterDefinition
   | EnumDefinition
+  | RecordNameDefinition
   | TypeDefinition
   | TypeParameterDefinition
   | VariableDefinition;

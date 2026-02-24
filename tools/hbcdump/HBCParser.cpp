@@ -6,6 +6,9 @@
  */
 
 #include "HBCParser.h"
+
+#include "hermes/Support/MD5.h"
+
 #include "llvh/Support/MD5.h"
 
 namespace hermes {
@@ -93,7 +96,7 @@ class BasicBlockRangeVisitor : public hermes::hbc::BytecodeVisitor {
   }
 
   void preVisitInstruction(OpCode opcode, const uint8_t *ip, int length) {
-    isBranchInst_ = opcode == OpCode::SwitchImm;
+    isBranchInst_ = opcode == OpCode::UIntSwitchImm;
   }
 
   void
@@ -197,14 +200,6 @@ ProfileIndexMap HBCParser::buildProfileIndexMap(unsigned funcId) {
   return profileIndexVisitor.getProfileIndexMap();
 }
 
-static llvh::MD5::MD5Result doMD5Checksum(llvh::ArrayRef<uint8_t> bytecode) {
-  llvh::MD5 md5;
-  llvh::MD5::MD5Result checksum;
-  md5.update(bytecode);
-  md5.final(checksum);
-  return checksum;
-}
-
 std::unordered_map<unsigned, std::string>
 HBCParser::generateFunctionChecksumMap() {
   std::unordered_map<unsigned, std::string> funcChecksumMap;
@@ -215,8 +210,9 @@ HBCParser::generateFunctionChecksumMap() {
     const uint8_t *bytecodeStart = bcProvider_->getBytecode(funcId);
     funcChecksumMap[funcId] =
         doMD5Checksum(
+            funcId,
             llvh::ArrayRef<uint8_t>(
-                bytecodeStart, functionHeader.bytecodeSizeInBytes()))
+                bytecodeStart, functionHeader.getBytecodeSizeInBytes()))
             .digest()
             .str();
   }

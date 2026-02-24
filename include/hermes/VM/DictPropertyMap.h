@@ -14,11 +14,7 @@
 #include "hermes/VM/SymbolID.h"
 
 #include "llvh/Support/TrailingObjects.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -116,7 +112,12 @@ class DPMHashPair {
   /// Returns true if idx is small enough to be stored as a descriptor index
   /// in this class.
   static constexpr bool canStore(uint32_t idx) {
-    return idx < ((1 << DESC_BITS) - FIRST_VALID);
+    return idx <= maxDescIndex();
+  }
+
+  /// The maximum index that can be hold.
+  static constexpr uint32_t maxDescIndex() {
+    return (1 << DESC_BITS) - FIRST_VALID - 1;
   }
 
  private:
@@ -125,14 +126,8 @@ class DPMHashPair {
 
   /// Number of bits of SymbolID to store. A static_assert checks that
   /// the max possible descriptor index can be stored in the other bits.
-#ifdef HERMESVM_GC_MALLOC
-  /// MallocGC supports allocations up to 4 GB. Each descriptor consumes at
-  /// least 16 bytes. Thus at least log(16) = 4 bits remain for the ID.
-  static constexpr size_t ID_BITS = 4;
-#else
   /// Could be slightly higher, but single byte is efficient to access.
   static constexpr size_t ID_BITS = 8;
-#endif
   static constexpr size_t ID_MASK = (1 << ID_BITS) - 1;
 
   /// Bits that can hold (max possible descriptor index + FIRST_VALID).
@@ -187,8 +182,10 @@ class DictPropertyMap final
     return cell->getKind() == CellKind::DictPropertyMapKind;
   }
 
-  /// Return the maximum possible capacity of DictPropMap.
-  static size_type getMaxCapacity();
+  /// Return the maximum possible capacity of DictPropertyMap.
+  static constexpr DictPropertyMap::size_type getMaxCapacity() {
+    return hermes::vm::detail::DPMHashPair::maxDescIndex();
+  }
 
   /// Create an instance of DictPropertyMap with the specified capacity.
   static CallResult<PseudoHandle<DictPropertyMap>> create(
@@ -254,7 +251,7 @@ class DictPropertyMap final
   /// \return a pair consisting of pointer to the property descriptor and a pool
   ///   denoting whether a new property was added.
   static CallResult<std::pair<NamedPropertyDescriptor *, bool>> findOrAdd(
-      MutableHandle<DictPropertyMap> &selfHandleRef,
+      MutableHandle<DictPropertyMap> selfHandleRef,
       Runtime &runtime,
       SymbolID id);
 
@@ -264,7 +261,7 @@ class DictPropertyMap final
   /// \p selfHandleRef pointer to the self handle, which may be updated if the
   ///     object is re-allocated.
   static ExecutionStatus add(
-      MutableHandle<DictPropertyMap> &selfHandleRef,
+      MutableHandle<DictPropertyMap> selfHandleRef,
       Runtime &runtime,
       SymbolID id,
       NamedPropertyDescriptor desc);
@@ -390,7 +387,7 @@ class DictPropertyMap final
   /// Search the hash table for \p symbolID. If found, return true and the
   /// and a pointer to the hash pair. If not found, return false and a pointer
   /// to the hash pair where it ought to be inserted.
-  std::pair<bool, HashPair *> static lookupEntryFor(
+  static inline std::pair<bool, HashPair *> lookupEntryFor(
       DictPropertyMap *self,
       SymbolID symbolID);
 
@@ -407,21 +404,26 @@ class DictPropertyMap final
   ///   object handle on output.
   /// \param newCapacity the capacity of the new object's descriptor array.
   static ExecutionStatus grow(
-      MutableHandle<DictPropertyMap> &selfHandleRef,
+      MutableHandle<DictPropertyMap> selfHandleRef,
       Runtime &runtime,
       size_type newCapacity);
 
   /// Gets the amount of memory required by this object for a given capacity.
-  static uint32_t allocationSize(
+  static size_type allocationSize(
       size_type descriptorCapacity,
       size_type hashCapacity) {
+    assert(
+        descriptorCapacity <= getMaxCapacity() &&
+        "descriptorCapacity exceeds the maximum allowed.");
+    assert(
+        hashCapacity <= calcHashCapacity(getMaxCapacity()) &&
+        "hashCapacity exceeds the maximum allowed.");
     return totalSizeToAlloc<DescriptorPair, HashPair>(
         descriptorCapacity, hashCapacity);
   }
 
-  /// Calculate the maximum capacity of DictPropertyMap at compile time using
-  /// binary search in the solution space, since we can't solve the equation
-  /// directly.
+  /// Calculate the maximum allocation size of DictPropertyMap at compile time
+  /// using approximated padding and getMaxCapacity().
   /// @{
 
   /// The maximum alignment padding a compiler might insert before a field or at
@@ -433,7 +435,7 @@ class DictPropertyMap final
   /// given a capacity. The calculation is performed using 64-bit arithmetic to
   /// avoid overflow.
   /// NOTE: it must not be used at runtime since it might be slow.
-  static constexpr uint64_t constApproxAllocSize64(uint32_t cap) {
+  static constexpr uint64_t constApproxAllocSize64(size_type cap) {
     static_assert(
         alignof(DictPropertyMap) <= kAlignPadding + 1,
         "DictPropertyMap exceeds supported alignment");
@@ -449,28 +451,6 @@ class DictPropertyMap final
         kAlignPadding +
         sizeof(DictPropertyMap::HashPair) * constCalcHashCapacity64(cap) +
         kAlignPadding;
-  }
-
-  /// Return true if DictPropertyMap with the specified capacity is guaranteed
-  /// to fit within the GC's maximum allocation size. The check is conservative:
-  /// it might a few return false negatives at the end of the range.
-  /// NOTE: it must not be used at runtime since it might be slow.
-  static constexpr bool constWouldFitAllocation(uint32_t cap) {
-    return constApproxAllocSize64(cap) <= GC::maxAllocationSize();
-  }
-
-  /// In the range of capacity values [lower ... upper), find the largest
-  /// value for which wouldFitAllocation() returns true.
-  /// NOTE: it must not be used at runtime since it might be slow.
-  static constexpr uint32_t constFindMaxCapacity(
-      uint32_t lower,
-      uint32_t upper) {
-    assert(constWouldFitAllocation(lower) && "lower must always fit");
-    if (upper - lower <= 1)
-      return lower;
-    const auto mid = (lower + upper) / 2;
-    return constWouldFitAllocation(mid) ? constFindMaxCapacity(mid, upper)
-                                        : constFindMaxCapacity(lower, mid);
   }
 
   /// A place to put things in order to avoid restrictions on using constexpr
@@ -584,6 +564,44 @@ inline DictPropertyMap::DescriptorPair *DictPropertyMap::getDescriptorPair(
   return res;
 }
 
+inline std::pair<bool, DictPropertyMap::HashPair *>
+DictPropertyMap::lookupEntryFor(DictPropertyMap *self, SymbolID symbolID) {
+  size_type const mask = self->hashCapacity_ - 1;
+  size_type index = hash(symbolID) & mask;
+
+  // Probing step.
+  size_type step = 1;
+  // Save the address of the start of the table to avoid recalculating it.
+  HashPair *const tableStart = self->getHashPairs();
+  // The first deleted entry we found.
+  HashPair *deleted = nullptr;
+
+  assert(symbolID.isValid() && "looking for an invalid SymbolID");
+
+  for (;;) {
+    HashPair *curEntry = tableStart + index;
+
+    if (curEntry->isValid()) {
+      if (self->isMatch(curEntry, symbolID))
+        return {true, curEntry};
+    } else if (curEntry->isEmpty()) {
+      // If we encountered an empty pair, the search is over - we failed.
+      // Return either this entry or a deleted one, if we encountered one.
+
+      return {false, deleted ? deleted : curEntry};
+    } else {
+      assert(curEntry->isDeleted() && "unexpected HashPair state");
+      // The first time we encounter a deleted entry, record it so we can
+      // potentially reuse it for insertion.
+      if (!deleted)
+        deleted = curEntry;
+    }
+
+    index = (index + step) & mask;
+    ++step;
+  }
+}
+
 inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(
     const DictPropertyMap *self,
     SymbolID id) {
@@ -599,7 +617,7 @@ inline OptValue<DictPropertyMap::PropertyPos> DictPropertyMap::find(
 }
 
 inline ExecutionStatus DictPropertyMap::add(
-    MutableHandle<DictPropertyMap> &selfHandleRef,
+    MutableHandle<DictPropertyMap> selfHandleRef,
     Runtime &runtime,
     SymbolID id,
     NamedPropertyDescriptor desc) {
@@ -615,5 +633,4 @@ inline ExecutionStatus DictPropertyMap::add(
 } // namespace vm
 } // namespace hermes
 
-#pragma GCC diagnostic pop
 #endif // HERMES_VM_DICTPROPERTYMAP_H

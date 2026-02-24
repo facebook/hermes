@@ -12,6 +12,9 @@
 #include <hermes/hermes.h>
 #include <memory>
 
+#include "hermes/BCGen/HBC/DebugInfo.h"
+#include "hermes/BCGen/HBC/SimpleBytecodeBuilder.h"
+
 #include <llvh/ADT/ScopeExit.h>
 
 using namespace facebook::hermes;
@@ -61,10 +64,7 @@ struct DebuggerAPITest : public ::testing::Test {
   std::shared_ptr<HermesRuntime> rt;
   TestEventObserver observer;
 
-  DebuggerAPITest()
-      : rt(makeHermesRuntime(((hermes::vm::RuntimeConfig::Builder())
-                                  .withEnableBlockScoping(true)
-                                  .build()))) {
+  DebuggerAPITest() : rt(makeHermesRuntime()) {
     rt->getDebugger().setEventObserver(&observer);
     observer.setRuntime(rt);
   }
@@ -270,7 +270,10 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level4");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  // Capture the fileId from the first JS frame - don't hardcode it since
+  // internal modules may be added/removed.
+  uint32_t firstEvalFileId = frame.location.fileId;
+  ASSERT_NE(firstEvalFileId, kInvalidLocation);
   ASSERT_EQ(frame.location.line, 3);
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "(native)");
@@ -284,7 +287,7 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level3");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 7);
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "(native)");
@@ -301,19 +304,19 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level2");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 11);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level1");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 16);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
-  ASSERT_EQ(frame.functionName, "global");
+  ASSERT_EQ(frame.functionName, "eval");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 2);
+  ASSERT_EQ(frame.location.fileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 19);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
@@ -350,25 +353,29 @@ TEST_F(DebuggerAPITest, CaptureStackTraceTest) {
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level3");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  // Capture the fileId for this eval - it should be different from
+  // firstEvalFileId since this is a new eval.
+  uint32_t secondEvalFileId = frame.location.fileId;
+  ASSERT_NE(secondEvalFileId, kInvalidLocation);
+  ASSERT_NE(secondEvalFileId, firstEvalFileId);
   ASSERT_EQ(frame.location.line, 3);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level2");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.fileId, secondEvalFileId);
   ASSERT_EQ(frame.location.line, 7);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
   ASSERT_EQ(frame.functionName, "level1");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.fileId, secondEvalFileId);
   ASSERT_EQ(frame.location.line, 11);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
-  ASSERT_EQ(frame.functionName, "global");
+  ASSERT_EQ(frame.functionName, "eval");
   ASSERT_EQ(frame.location.fileName, "");
-  ASSERT_EQ(frame.location.fileId, 3);
+  ASSERT_EQ(frame.location.fileId, secondEvalFileId);
   ASSERT_EQ(frame.location.line, 14);
 
   frame = stackTrace.callFrameForIndex(frameIndex++);
@@ -492,7 +499,88 @@ TEST_F(DebuggerAPITest, GetScopes) {
   EXPECT_GT(observer.lexicalInfos.size(), 0);
   auto &lexicalInfo = observer.lexicalInfos[0];
   EXPECT_GT(lexicalInfo.getScopesCount(), 0);
-  EXPECT_EQ(lexicalInfo.getVariablesCountInScope(0), 4);
+  EXPECT_EQ(lexicalInfo.getVariablesCountInScope(0), 1);
+}
+
+namespace {
+// A class which adapts a Hermes buffer to a jsi buffer.
+class BufferAdapter final : public facebook::jsi::Buffer {
+ public:
+  BufferAdapter(std::unique_ptr<hermes::Buffer> buf) : buf_(std::move(buf)) {}
+
+  const uint8_t *data() const override {
+    return buf_->data();
+  }
+
+  size_t size() const override {
+    return buf_->size();
+  }
+
+ private:
+  std::unique_ptr<hermes::Buffer> buf_;
+};
+
+/// \return the bytecode buffer for the async break test.
+static std::unique_ptr<hermes::Buffer> makeAsyncBreakCode() {
+  using Loc = hermes::hbc::DebugSourceLocation;
+  hermes::hbc::SimpleBytecodeBuilder builder;
+  hermes::hbc::BytecodeInstructionGenerator instGen;
+
+  hermes::hbc::DebugInfo debugInfo{};
+  hermes::hbc::DebugInfoGenerator debugGen{debugInfo};
+  debugGen.addFilename("test.js");
+
+  instGen.emitAsyncBreakCheck();
+  uint32_t offset = instGen.getCurrentLocation();
+  instGen.emitAddEmptyString(0, 0);
+  instGen.emitRet(0);
+
+  debugGen.appendSourceLocations(
+      Loc{0, 1, 0, 0, 0}, // Use filename 1 to generate a region.
+      0,
+      {
+          // AsyncBreakCheck, offset 0 has no source location
+          Loc{0, 0, 0, 0, 0},
+          // AddEmptyString, offset 1 has statement 1
+          Loc{offset, 0, 1, 1, 1},
+      });
+  std::move(debugGen).generate();
+  builder.setDebugInfo(&debugInfo);
+
+  EXPECT_FALSE(debugInfo.getLocationForAddress(0, 0).hasValue());
+  EXPECT_TRUE(debugInfo.getLocationForAddress(0, offset).hasValue());
+
+  builder.addFunction(1, 1, instGen.acquireBytecode());
+
+  return builder.generateBytecodeBuffer();
+};
+
+} // namespace
+
+TEST_F(DebuggerAPITest, ExplicitAsyncBreakLocationTest) {
+  observer.useCaptureStackTrace = true;
+  auto buffer = makeAsyncBreakCode();
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Explicit);
+  rt->evaluateJavaScript(
+      std::make_shared<BufferAdapter>(std::move(buffer)), "test.js");
+  EXPECT_EQ(
+      std::vector<PauseReason>({PauseReason::AsyncTriggerExplicit}),
+      observer.pauseReasons);
+  ASSERT_EQ(observer.stackTraces.size(), 1);
+  EXPECT_EQ(observer.stackTraces.front().callFrameForIndex(0).location.line, 1);
+}
+
+TEST_F(DebuggerAPITest, ImplicitAsyncBreakLocationTest) {
+  observer.useCaptureStackTrace = true;
+  auto buffer = makeAsyncBreakCode();
+  rt->getDebugger().triggerAsyncPause(AsyncPauseKind::Implicit);
+  rt->evaluateJavaScript(
+      std::make_shared<BufferAdapter>(std::move(buffer)), "test.js");
+  EXPECT_EQ(
+      std::vector<PauseReason>({PauseReason::AsyncTriggerImplicit}),
+      observer.pauseReasons);
+  ASSERT_EQ(observer.stackTraces.size(), 1);
+  EXPECT_EQ(observer.stackTraces.front().callFrameForIndex(0).location.line, 1);
 }
 
 #endif

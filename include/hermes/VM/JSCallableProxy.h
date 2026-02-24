@@ -38,8 +38,6 @@ class JSCallableProxy : public NativeFunction {
       Handle<JSObject> target,
       Handle<JSObject> handler);
 
-  CallResult<bool> isConstructor(Runtime &runtime);
-
   JSCallableProxy(
       Runtime &runtime,
       Handle<JSObject> parent,
@@ -48,17 +46,18 @@ class JSCallableProxy : public NativeFunction {
             runtime,
             parent,
             clazz,
+            Runtime::makeNullHandle<Environment>(),
             nullptr /* context */,
             &JSCallableProxy::_proxyNativeCall) {}
 
- private:
-  static CallResult<HermesValue>
-  _proxyNativeCall(void *, Runtime &runtime, NativeArgs);
+  /// \return the target function of this proxy. Can be nullptr (in the case of
+  /// a revoked proxy.)
+  Callable *getTarget(PointerBase &runtime) const {
+    return vmcast_or_null<Callable>(slots_.target.get(runtime));
+  }
 
-  static CallResult<PseudoHandle<JSObject>> _newObjectImpl(
-      Handle<Callable> callable,
-      Runtime &runtime,
-      Handle<JSObject> protoHandle);
+ private:
+  static CallResult<HermesValue> _proxyNativeCall(void *, Runtime &runtime);
 
   detail::ProxySlots slots_;
 };

@@ -29,64 +29,57 @@ function f5(x) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHKIR:function global#0()#1 : undefined
-// CHKIR-NEXT:globals = [f1, f2, f3, f4, f5]
-// CHKIR-NEXT:S{global#0()#1} = []
+// CHKIR:function global(): undefined
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHKIR-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
-// CHKIR-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f1" : string
-// CHKIR-NEXT:  %3 = CreateFunctionInst %f2#0#1()#3 : string, %0
-// CHKIR-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "f2" : string
-// CHKIR-NEXT:  %5 = CreateFunctionInst %f3#0#1()#4 : string, %0
-// CHKIR-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "f3" : string
-// CHKIR-NEXT:  %7 = CreateFunctionInst %f4#0#1()#5, %0
-// CHKIR-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "f4" : string
-// CHKIR-NEXT:  %9 = CreateFunctionInst %f5#0#1()#6, %0
-// CHKIR-NEXT:  %10 = StorePropertyInst %9 : closure, globalObject : object, "f5" : string
-// CHKIR-NEXT:  %11 = ReturnInst undefined : undefined
+// CHKIR-NEXT:       DeclareGlobalVarInst "f1": string
+// CHKIR-NEXT:       DeclareGlobalVarInst "f2": string
+// CHKIR-NEXT:       DeclareGlobalVarInst "f3": string
+// CHKIR-NEXT:       DeclareGlobalVarInst "f4": string
+// CHKIR-NEXT:       DeclareGlobalVarInst "f5": string
+// CHKIR-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %f1(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %5: object, globalObject: object, "f1": string
+// CHKIR-NEXT:  %7 = CreateFunctionInst (:object) empty: any, empty: any, %f2(): functionCode
+// CHKIR-NEXT:       StorePropertyLooseInst %7: object, globalObject: object, "f2": string
+// CHKIR-NEXT:  %9 = CreateFunctionInst (:object) empty: any, empty: any, %f3(): functionCode
+// CHKIR-NEXT:        StorePropertyLooseInst %9: object, globalObject: object, "f3": string
+// CHKIR-NEXT:  %11 = CreateFunctionInst (:object) empty: any, empty: any, %f4(): functionCode
+// CHKIR-NEXT:        StorePropertyLooseInst %11: object, globalObject: object, "f4": string
+// CHKIR-NEXT:  %13 = CreateFunctionInst (:object) empty: any, empty: any, %f5(): functionCode
+// CHKIR-NEXT:        StorePropertyLooseInst %13: object, globalObject: object, "f5": string
+// CHKIR-NEXT:        ReturnInst undefined: undefined
 // CHKIR-NEXT:function_end
 
-// CHKIR:function f1#0#1()#2
-// CHKIR-NEXT:S{f1#0#1()#2} = []
+// CHKIR:function f1(): any
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
-// CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHKIR-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
-// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, "hello" : string, 2 : number, "world" : string
-// CHKIR-NEXT:  %4 = ReturnInst %3
+// CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
+// CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
+// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, "hello": string, 2: number, "world": string
+// CHKIR-NEXT:       ReturnInst %2: any
 // CHKIR-NEXT:function_end
 
-// CHKIR:function f2#0#1()#3 : string
-// CHKIR-NEXT:S{f2#0#1()#3} = []
+// CHKIR:function f2(): string
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst %S{f2#0#1()#3}
-// CHKIR-NEXT:  %1 = ReturnInst "world" : string
+// CHKIR-NEXT:       ReturnInst "world": string
 // CHKIR-NEXT:function_end
 
-// CHKIR:function f3#0#1()#4 : string
-// CHKIR-NEXT:S{f3#0#1()#4} = []
+// CHKIR:function f3(): string
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst %S{f3#0#1()#4}
-// CHKIR-NEXT:  %1 = ReturnInst "" : string
+// CHKIR-NEXT:       ReturnInst "": string
 // CHKIR-NEXT:function_end
 
-// CHKIR:function f4#0#1()#5
-// CHKIR-NEXT:S{f4#0#1()#5} = []
+// CHKIR:function f4(): any
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst %S{f4#0#1()#5}
-// CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHKIR-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
-// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, "" : string, 666 : number
-// CHKIR-NEXT:  %4 = ReturnInst %3
+// CHKIR-NEXT:  %0 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
+// CHKIR-NEXT:  %1 = LoadPropertyInst (:any) %0: any, "concat": string
+// CHKIR-NEXT:  %2 = CallInst (:any) %1: any, empty: any, false: boolean, empty: any, undefined: undefined, "": string, 666: number
+// CHKIR-NEXT:       ReturnInst %2: any
 // CHKIR-NEXT:function_end
 
-// CHKIR:function f5#0#1(x)#6
-// CHKIR-NEXT:S{f5#0#1()#6} = []
+// CHKIR:function f5(x: any): any
 // CHKIR-NEXT:%BB0:
-// CHKIR-NEXT:  %0 = CreateScopeInst %S{f5#0#1()#6}
-// CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst globalObject : object, "HermesInternal" : string
-// CHKIR-NEXT:  %2 = LoadPropertyInst %1, "concat" : string
-// CHKIR-NEXT:  %3 = CallInst %2, undefined : undefined, "" : string, %x
-// CHKIR-NEXT:  %4 = ReturnInst %3
+// CHKIR-NEXT:  %0 = LoadParamInst (:any) %x: any
+// CHKIR-NEXT:  %1 = TryLoadGlobalPropertyInst (:any) globalObject: object, "HermesInternal": string
+// CHKIR-NEXT:  %2 = LoadPropertyInst (:any) %1: any, "concat": string
+// CHKIR-NEXT:  %3 = CallInst (:any) %2: any, empty: any, false: boolean, empty: any, undefined: undefined, "": string, %0: any
+// CHKIR-NEXT:       ReturnInst %3: any
 // CHKIR-NEXT:function_end

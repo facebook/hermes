@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s -O0 | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 // Simple test.
 function test_one(x,y,z) {
@@ -27,89 +27,98 @@ function test_three(x, one, two) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1
-// CHECK-NEXT:globals = [test_one, test_two, test_three]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:scope %VS0 []
+
+// CHECK:function global(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %test_one#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "test_one" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %test_two#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "test_two" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %test_three#0#1()#4, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "test_three" : string
-// CHECK-NEXT:  %7 = AllocStackInst $?anon_0_ret
-// CHECK-NEXT:  %8 = StoreStackInst undefined : undefined, %7
-// CHECK-NEXT:  %9 = LoadStackInst %7
-// CHECK-NEXT:  %10 = ReturnInst %9
+// CHECK-NEXT:  %0 = CreateScopeInst (:environment) %VS0: any, empty: any
+// CHECK-NEXT:       DeclareGlobalVarInst "test_one": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_two": string
+// CHECK-NEXT:       DeclareGlobalVarInst "test_three": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_one(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "test_one": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_two(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "test_two": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %test_three(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "test_three": string
+// CHECK-NEXT:  %10 = AllocStackInst (:any) $?anon_0_ret: any
+// CHECK-NEXT:        StoreStackInst undefined: undefined, %10: any
+// CHECK-NEXT:  %12 = LoadStackInst (:any) %10: any
+// CHECK-NEXT:        ReturnInst %12: any
 // CHECK-NEXT:function_end
 
-// CHECK:function test_one#0#1(x, y, z)#2
-// CHECK-NEXT:S{test_one#0#1()#2} = [x#2, y#2, z#2]
+// CHECK:scope %VS1 [x: any, y: any, z: any]
+
+// CHECK:function test_one(x: any, y: any, z: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_one#0#1()#2}
-// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#2], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %y, [y#2], %0
-// CHECK-NEXT:  %3 = StoreFrameInst %z, [z#2], %0
-// CHECK-NEXT:  %4 = LoadFrameInst [x#2], %0
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = LoadFrameInst [z#2], %0
-// CHECK-NEXT:  %7 = BranchInst %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS1: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS1.x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %y: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS1.y]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %z: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS1.z]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS1.x]: any
+// CHECK-NEXT:       CondBranchInst %8: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst [y#2], %0
-// CHECK-NEXT:  %9 = BranchInst %BB3
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS1.z]: any
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.y]: any
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %10 = PhiInst %8, %BB1, %6, %BB2
-// CHECK-NEXT:  %11 = ReturnInst %10
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %12 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %14 = PhiInst (:any) %12: any, %BB2, %10: any, %BB1
+// CHECK-NEXT:        ReturnInst %14: any
 // CHECK-NEXT:function_end
 
-// CHECK:function test_two#0#1()#3
-// CHECK-NEXT:S{test_two#0#1()#3} = [stop#3, age#3]
+// CHECK:scope %VS2 [stop: any, age: any]
+
+// CHECK:function test_two(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_two#0#1()#3}
-// CHECK-NEXT:  %1 = StoreFrameInst undefined : undefined, [stop#3], %0
-// CHECK-NEXT:  %2 = StoreFrameInst undefined : undefined, [age#3], %0
-// CHECK-NEXT:  %3 = StoreFrameInst false : boolean, [stop#3], %0
-// CHECK-NEXT:  %4 = StoreFrameInst 16 : number, [age#3], %0
-// CHECK-NEXT:  %5 = LoadFrameInst [age#3], %0
-// CHECK-NEXT:  %6 = BinaryOperatorInst '>', %5, 18 : number
-// CHECK-NEXT:  %7 = CondBranchInst %6, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %8 = StoreFrameInst true : boolean, [stop#3], %0
-// CHECK-NEXT:  %9 = BranchInst %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS2: any, %0: environment
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.stop]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, undefined: undefined, [%VS2.age]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, false: boolean, [%VS2.stop]: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, 16: number, [%VS2.age]: any
+// CHECK-NEXT:  %6 = LoadFrameInst (:any) %1: environment, [%VS2.age]: any
+// CHECK-NEXT:  %7 = BinaryGreaterThanInst (:boolean) %6: any, 18: number
+// CHECK-NEXT:       CondBranchInst %7: boolean, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %10 = StoreFrameInst 2 : number, [age#3], %0
-// CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:       StoreFrameInst %1: environment, true: boolean, [%VS2.stop]: any
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:        StoreFrameInst %1: environment, 2: number, [%VS2.age]: any
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = PhiInst 2 : number, %BB1, true : boolean, %BB2
-// CHECK-NEXT:  %13 = ReturnInst %12
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %13 = PhiInst (:boolean|number) 2: number, %BB2, true: boolean, %BB1
+// CHECK-NEXT:        ReturnInst %13: boolean|number
 // CHECK-NEXT:function_end
 
-// CHECK:function test_three#0#1(x, one, two)#4
-// CHECK-NEXT:S{test_three#0#1()#4} = [x#4, one#4, two#4]
+// CHECK:scope %VS3 [x: any, one: any, two: any]
+
+// CHECK:function test_three(x: any, one: any, two: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{test_three#0#1()#4}
-// CHECK-NEXT:  %1 = StoreFrameInst %x, [x#4], %0
-// CHECK-NEXT:  %2 = StoreFrameInst %one, [one#4], %0
-// CHECK-NEXT:  %3 = StoreFrameInst %two, [two#4], %0
-// CHECK-NEXT:  %4 = LoadFrameInst [x#4], %0
-// CHECK-NEXT:  %5 = CondBranchInst %4, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %6 = LoadFrameInst [two#4], %0
-// CHECK-NEXT:  %7 = CallInst %6, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %8 = BranchInst %BB3
+// CHECK-NEXT:  %0 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
+// CHECK-NEXT:  %1 = CreateScopeInst (:environment) %VS3: any, %0: environment
+// CHECK-NEXT:  %2 = LoadParamInst (:any) %x: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS3.x]: any
+// CHECK-NEXT:  %4 = LoadParamInst (:any) %one: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %4: any, [%VS3.one]: any
+// CHECK-NEXT:  %6 = LoadParamInst (:any) %two: any
+// CHECK-NEXT:       StoreFrameInst %1: environment, %6: any, [%VS3.two]: any
+// CHECK-NEXT:  %8 = LoadFrameInst (:any) %1: environment, [%VS3.x]: any
+// CHECK-NEXT:       CondBranchInst %8: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %9 = LoadFrameInst [one#4], %0
-// CHECK-NEXT:  %10 = CallInst %9, undefined : undefined, undefined : undefined
-// CHECK-NEXT:  %11 = BranchInst %BB3
+// CHECK-NEXT:  %10 = LoadFrameInst (:any) %1: environment, [%VS3.two]: any
+// CHECK-NEXT:  %11 = CallInst (:any) %10: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        BranchInst %BB3
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:  %13 = LoadFrameInst (:any) %1: environment, [%VS3.one]: any
+// CHECK-NEXT:  %14 = CallInst (:any) %13: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined
+// CHECK-NEXT:        BranchInst %BB3
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %12 = PhiInst %10, %BB1, %7, %BB2
-// CHECK-NEXT:  %13 = ReturnInst %12
-// CHECK-NEXT:%BB4:
-// CHECK-NEXT:  %14 = ReturnInst undefined : undefined
+// CHECK-NEXT:  %16 = PhiInst (:any) %14: any, %BB2, %11: any, %BB1
+// CHECK-NEXT:        ReturnInst %16: any
 // CHECK-NEXT:function_end

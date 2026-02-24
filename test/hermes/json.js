@@ -7,6 +7,7 @@
 
 // RUN: %hermes -non-strict -O -target=HBC -gc-sanitize-handles=0 %s | %FileCheck --match-full-lines %s
 // RUN: %hermes -non-strict -O -target=HBC -emit-binary -out %t.hbc %s && %hermes -gc-sanitize-handles=0 %t.hbc | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s -Wx,-gc-sanitize-handles=0 | %FileCheck --match-full-lines %s
 
 // This test was one of HandleSan's slowest at 30 seconds, so
 // -gc-sanitize-handles=0 is passed to reduce the risk of a timeout.
@@ -398,7 +399,7 @@ var obj = { toJSON: function() { return "foo"; } };
 print(JSON.stringify([obj]));
 // CHECK-NEXT: ["foo"]
 
-// Ensure there's no crash on overflows.
+// Verify that deeply nested structures can be parsed.
 var a = '';
 var b = '';
 for (var i = 0; i < 1000; ++i) {
@@ -407,8 +408,9 @@ for (var i = 0; i < 1000; ++i) {
   b += ']]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]';
 }
 var c = a + b;
-try { JSON.parse(c); } catch (e) { print('caught', e.name); }
-// CHECK-NEXT: caught RangeError
+JSON.parse(c);
+print("parse completed");
+// CHECK-NEXT: parse completed
 
 try {
   JSON.parse(
@@ -497,3 +499,28 @@ print(JSON.parse("1.2e2"));
 // CHECK-NEXT: 120
 print(JSON.parse("2.3E3"));
 // CHECK-NEXT: 2300
+
+function tryPrintParse(str) {
+  try {
+    print(JSON.parse(str));
+  } catch (e) {
+    print(e.constructor.name);
+  }
+}
+
+tryPrintParse("55e555555555555555555555555555555555551e-1000");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("55e55555555555555555555555555555555555");
+// CHECK-NEXT: Infinity
+tryPrintParse("1e-1000");
+// CHECK-NEXT: 0
+tryPrintParse("abc");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("123error");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("123.56.78");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("+52");
+// CHECK-NEXT: SyntaxError
+tryPrintParse("123.123.123.123");
+// CHECK-NEXT: SyntaxError

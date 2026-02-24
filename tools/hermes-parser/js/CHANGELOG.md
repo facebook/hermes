@@ -1,3 +1,136 @@
+## 0.33.3
+
+### `hermes-parser`
+- Do not parse record expression names starting with lowercase 'a'-'z'
+
+### `hermes-eslint`
+- Update support for record declarations
+
+### `flow-api-translator`
+- Support `never`, `undefined`, `unknown` type annotations
+
+## 0.33.2
+
+### `hermes-parser`
+- Always set `id` in `ArrowFunctionExpression` to `null`.
+- Do not enable Flow Enums transform by default, add option instead: `transformOptions: {TransformEnumSyntax: {enable: true}}`.
+
+## 0.33.1
+
+### `hermes-parser`
+- Fixed parser regression of a divide after a call with a trailing comma erroneously being intrepreted as a regex literal
+
+## 0.33.0
+
+### `hermes-parser`
+- Parse `unknown`, `never`, and `undefined` types as their own nodes (`UnknownTypeAnnotation`, `NeverTypeAnnotation`, `UndefinedTypeAnnotation`).
+- Renamed `TupleTypeAnnotation` property from `types` to `elementTypes` - matching Flow parser.
+- Renamed `ClassDeclaration`/`ClassExpression` property `superTypeParameters` to `superTypeArguments`.
+- Parse `match` instance patterns.
+- Parse record declarations and expressions.
+
+## 0.32.1
+
+### `hermes-parser`
+
+- Fix parsing of `require` calls.
+
+## 0.32.0
+
+### `hermes-transform`
+
+- Use `prettier-plugin-hermes-parser` to print transformed code if it's installed.
+
+## 0.31.2
+
+### `hermes-parser`
+- Parse `declare` of private class properties, e.g. `class C { declare #foo }`.
+- Fix parsing of JSX identifiers containing `-` when parsing JSX with type arguments, e.g. `<A<T> foo-bar=1 />`.
+
+## 0.31.0
+
+### `hermes-transform`
+
+- Remove support for Prettier v2
+
+### `prettier-plugin-hermes-parser`
+
+- Remove support for Prettier v2
+- Synced with recent Prettier main branch
+
+## 0.30.0
+
+### `hermes-parser`
+
+- Parse opaque type with both lower and upper bounds with `super` and `extends` syntax
+- Fix location of object literal method to not contain key.
+
+### `hermes-transform`
+
+- Make `parse` function synchronous
+
+### `flow-api-translator`
+
+- Fix Prettier v3 support
+
+## 0.29.1
+
+### `hermes-parser`
+- Fix issue with `match` transform when binding pattern has same name as argument
+
+## 0.29.0
+
+### `hermes-parser`
+- Fix BigInt string conversion
+- Rename `ImportExpression` field `attributes` to `options` to match ESTree
+- No longer wrap function declarations directly in `if` statement bodies with a block statement that is not in source
+- Use left paren location for start of object literal methods
+- Fix parsing of directives that contain escapes
+
+### `flow-api-translator`
+- Keep doc blocks attached to class properties and methods
+- Fix default type parameter generation
+
+## 0.28.1
+
+### `hermes-parser`
+* Fixed end location of arrow function body
+
+## 0.28.0
+
+### `flow-api-translator`
+* Make function arguments with a default assignment optional.
+* Translate `$ArrayBufferView` to `ArrayBufferView`.
+* Improve spread translation.
+* Translate to `ComponentRef` instead of deprecated `ElementRef`.
+
+### `hermes-parser`
+* Updates to experimental Flow pattern matching support (also in `hermes-estree`, `hermes-eslint`, `hermes-transform`, `prettier-plugin-hermes-parser`).
+* Fix bug that caused Flow typed code parsed with loose mode to never complete parsing in some cases.
+
+## 0.27.0
+
+### `hermes-parser`
+* Fix bug in one-sided "this" type guard
+* Fix methodish type annotation to accept a type guard return annotation
+
+### `flow-api-translator`
+* Retain comments attached to properties of object literal types
+* Generate equivalent type export for declare const exports in Flow to TS translation
+* Generate branded primitives instead of unknown type for opaque types without super type and type parameters
+* Generate proper object indexer for union types
+* Allow TS interfaces to extend qualified identifiers, Translate `$ArrayLike` to `ArrayLike`
+* Use `React.JSX` namespace instead of JSX
+* Declare export type along with the exported value of that type in TS generated defs
+* Change handling declaration export for classes from flow defs to TS defs
+* Support iterator conversion
+* Support for Symbol member expression in class method definition
+* Allow TS classes to extend qualified identifiers
+* Generate typeof for member expression in export object
+* Fix arrow function syntax for class properties
+* Allow usage of `typeof` with spread operator
+* Fix export syntax for object expressions
+
 ## 0.26.0
 
 ### `hermes-parser`

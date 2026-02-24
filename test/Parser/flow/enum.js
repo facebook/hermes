@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -184,7 +184,7 @@ enum E {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "init": {
 // CHECK-NEXT:               "type": "BigIntLiteral",
-// CHECK-NEXT:               "bigint": "1n"
+// CHECK-NEXT:               "bigint": "1"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
@@ -195,7 +195,7 @@ enum E {
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "init": {
 // CHECK-NEXT:               "type": "BigIntLiteral",
-// CHECK-NEXT:               "bigint": "2n"
+// CHECK-NEXT:               "bigint": "2"
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ],

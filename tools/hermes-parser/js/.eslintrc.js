@@ -17,7 +17,7 @@ module.exports = {
     es2021: true,
     node: true,
   },
-  plugins: ['eslint-comments', 'fb-flow', 'flowtype', 'prettier'],
+  plugins: ['eslint-comments', 'fb-flow', 'flowtype'],
   extends: [
     'eslint:recommended',
     'plugin:flowtype/recommended',
@@ -47,8 +47,6 @@ module.exports = {
 
     'flowtype/array-style-complex-type': ['error', 'verbose'],
     'flowtype/array-style-simple-type': ['error', 'verbose'],
-
-    'prettier/prettier': 'error',
 
     'no-undef': 'off',
     'flowtype/define-flow-type': 'off',

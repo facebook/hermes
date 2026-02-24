@@ -12,23 +12,25 @@
 #include "hermes/VM/GCDecl.h"
 #include "hermes/VM/HeapAlign.h"
 #include "hermes/VM/HeapSnapshot.h"
-#include "hermes/VM/PointerBase.h"
-#include "hermes/VM/SlotAcceptor.h"
+#include "hermes/VM/HermesValue.h"
+#include "hermes/VM/SmallHermesValue.h"
 
 #include "llvh/Support/raw_ostream.h"
 
 #include <cstdint>
 
-#pragma GCC diagnostic push
-
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
 // Forward declarations.
 class GCCell;
+
+class JSObject;
+
+/// Type for the jitCall pointer associated with each JSObject subtype. This
+/// allows the JIT to quickly dispatch calls without checking for the precise
+/// type of JSObject.
+typedef HermesValue (*ObjectJitCallPtr)(Runtime *, JSObject *);
 
 /// The "metadata" for an allocated GC cell: the kind of cell, and
 /// methods to "mark" (really, to invoke a GC callback on JS values in
@@ -111,6 +113,8 @@ struct VTable {
   /// If it is variable sized, it should inherit from \see
   /// VariableSizeRuntimeCell.
   const uint32_t size;
+  /// Whether the cell supports large allocation.
+  bool allowLargeAlloc;
   /// Called during GC when an object becomes unreachable. Must not perform any
   /// allocations or access any garbage-collectable objects.  Unless an
   /// operation is documented to be safe to call from a finalizer, it probably
@@ -135,6 +139,13 @@ struct VTable {
   /// initialized by buildMetadataTable.
   static std::array<const VTable *, kNumCellKinds> vtableArray;
 
+  /// Static array storing the JIT call function for each CellKind. Only
+  /// JSObject subtypes have an entry. This is initialized by
+  /// buildMetadataTable. We use a separate array from the vtable to avoid the
+  /// indirection of going throught the vtable pointer, and to make it
+  /// possible to load from the array with a single instruction.
+  static std::array<ObjectJitCallPtr, kNumCellKinds> jitCallArray;
+
   static const VTable *getVTable(CellKind c) {
     return vtableArray[static_cast<size_t>(c)];
   }
@@ -142,6 +153,7 @@ struct VTable {
   constexpr explicit VTable(
       CellKind kind,
       uint32_t size,
+      bool allowLargeAlloc = false,
       FinalizeCallback *finalize = nullptr,
       MallocSizeCallback *mallocSize = nullptr,
       TrimSizeCallback *trimSize = nullptr
@@ -158,6 +170,7 @@ struct VTable {
       )
       : kind(kind),
         size(heapAlignSize(size)),
+        allowLargeAlloc(allowLargeAlloc),
         finalize_(finalize),
         mallocSize_(mallocSize),
         trimSize_(trimSize)
@@ -224,6 +237,5 @@ llvh::raw_ostream &operator<<(llvh::raw_ostream &os, const VTable &vt);
 
 } // namespace vm
 } // namespace hermes
-#pragma GCC diagnostic pop
 
 #endif // HERMES_VM_VTABLE_H

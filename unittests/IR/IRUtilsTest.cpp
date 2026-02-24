@@ -25,21 +25,18 @@ TEST(IRUtilsTest, Dominators1) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testDominators1",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto Cond = Builder.createParameter(F, "cond");
-  auto Arg2 = Builder.createParameter(F, "two");
-  auto Arg3 = Builder.createParameter(F, "three");
+      "testDominators1", Function::DefinitionKind::ES5Function, true);
+  auto Cond = Builder.createJSDynamicParam(F, "cond");
+  auto Arg2 = Builder.createJSDynamicParam(F, "two");
+  auto Arg3 = Builder.createJSDynamicParam(F, "three");
 
   auto Entry = Builder.createBasicBlock(F);
   auto Left = Builder.createBasicBlock(F);
   auto Right = Builder.createBasicBlock(F);
 
   Builder.setInsertionBlock(Entry);
-  auto A0 = Builder.createAllocStackInst("A0");
-  auto A1 = Builder.createAllocStackInst("A1");
+  auto A0 = Builder.createAllocStackInst("A0", Type::createAnyType());
+  auto A1 = Builder.createAllocStackInst("A1", Type::createAnyType());
   Builder.createCondBranchInst(Cond, Left, Right);
 
   Builder.setInsertionBlock(Left);
@@ -64,11 +61,8 @@ TEST(IRUtilsTest, Dominators2) {
   Module M{Ctx};
   IRBuilder Builder(&M);
   auto F = Builder.createFunction(
-      M.getInitialScope()->createInnerScope(),
-      "testDominators1",
-      Function::DefinitionKind::ES5Function,
-      true);
-  auto Param = Builder.createParameter(F, "param");
+      "testDominators1", Function::DefinitionKind::ES5Function, true);
+  auto Param = Builder.createJSDynamicParam(F, "param");
   auto Entry = Builder.createBasicBlock(F);
 
   auto LastBB = Entry;

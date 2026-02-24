@@ -10,7 +10,7 @@
 #include "hermes_abi/hermes_abi.h"
 
 #include "hermes/ADT/ManagedChunkedList.h"
-#include "hermes/BCGen/HBC/BytecodeProviderFromSrc.h"
+#include "hermes/BCGen/HBC/HBC.h"
 #include "hermes/Public/RuntimeConfig.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/HostModel.h"
@@ -159,6 +159,9 @@ vm::Handle<vm::SymbolID> toHandle(HermesABISymbol sym) {
 vm::Handle<vm::SymbolID> toHandle(HermesABIPropNameID sym) {
   return toHandle<vm::SymbolID>(sym.pointer);
 }
+vm::Handle<vm::JSArray> toHandle(HermesABIArray arr) {
+  return toHandle<vm::JSArray>(arr.pointer);
+}
 vm::Handle<vm::BigIntPrimitive> toHandle(HermesABIBigInt bi) {
   return toHandle<vm::BigIntPrimitive>(bi.pointer);
 }
@@ -302,7 +305,9 @@ class HermesABIRuntimeImpl : public HermesABIRuntime {
   /// Create a Handle<HermesValue> from a HermesABIValue. Note that the Handle
   /// will be cheaply constructed from the existing PinnedHermesValue, so the
   /// HermesABIValue must outlive the Handle.
-  vm::Handle<> makeHandle(const HermesABIValue &val) {
+  vm::Handle<> makeVMHandle(
+      const HermesABIValue &val,
+      vm::PinnedHermesValue *numberStorage) {
     switch (abi::getValueKind(val)) {
       case HermesABIValueKindUndefined:
         return vm::Runtime::getUndefinedValue();
@@ -311,9 +316,9 @@ class HermesABIRuntimeImpl : public HermesABIRuntime {
       case HermesABIValueKindBoolean:
         return vm::Runtime::getBoolValue(abi::getBoolValue(val));
       case HermesABIValueKindNumber:
-        return rt->makeHandle(
-            vm::HermesValue::encodeUntrustedNumberValue(
-                abi::getNumberValue(val)));
+        *numberStorage = vm::HermesValue::encodeUntrustedNumberValue(
+            abi::getNumberValue(val));
+        return vm::Handle<>(numberStorage);
       case HermesABIValueKindString:
       case HermesABIValueKindObject:
       case HermesABIValueKindSymbol:
@@ -471,12 +476,8 @@ HermesABIValueOrError evaluate_javascript_source(
     const char *sourceURL,
     size_t sourceURLLength) {
   auto *hart = impl(abiRt);
-#ifdef HERMESVM_LEAN
-  hart->nativeExceptionMessage = "source compilation not supported";
-  return abi::createValueOrError(HermesABIErrorCodeNativeException);
-#else
   llvh::StringRef sourceURLRef(sourceURL, sourceURLLength);
-  auto bcErr = hbc::BCProviderFromSrc::createBCProviderFromSrc(
+  auto bcErr = hbc::createBCProviderFromSrc(
       std::make_unique<BufferWrapper>(source),
       sourceURLRef,
       /* sourceMap */ {},
@@ -487,7 +488,6 @@ HermesABIValueOrError evaluate_javascript_source(
   }
 
   return runBCProvider(hart, std::move(bcErr.first), sourceURLRef);
-#endif
 }
 
 HermesABIValueOrError evaluate_hermes_bytecode(
@@ -542,8 +542,10 @@ HermesABIBoolOrError has_object_property_from_value(
   auto *hart = impl(abiRt);
   auto &runtime = *hart->rt;
   vm::GCScope gcScope(runtime);
-  auto res =
-      vm::JSObject::hasComputed(toHandle(obj), runtime, hart->makeHandle(*key));
+
+  vm::PinnedHermesValue numberStorage;
+  auto res = vm::JSObject::hasComputed(
+      toHandle(obj), runtime, hart->makeVMHandle(*key, &numberStorage));
   if (res == vm::ExecutionStatus::EXCEPTION)
     return abi::createBoolOrError(HermesABIErrorCodeJSError);
   return abi::createBoolOrError(*res);
@@ -570,8 +572,10 @@ HermesABIValueOrError get_object_property_from_value(
   auto *hart = impl(abiRt);
   auto &runtime = *hart->rt;
   vm::GCScope gcScope(runtime);
+
+  vm::PinnedHermesValue numberStorage;
   auto res = vm::JSObject::getComputed_RJS(
-      toHandle(object), runtime, hart->makeHandle(*key));
+      toHandle(object), runtime, hart->makeVMHandle(*key, &numberStorage));
   if (res == vm::ExecutionStatus::EXCEPTION)
     return abi::createValueOrError(HermesABIErrorCodeJSError);
   return hart->createValueOrError(res->get());
@@ -600,11 +604,13 @@ HermesABIVoidOrError set_object_property_from_value(
   auto &runtime = *hart->rt;
   vm::GCScope gcScope(runtime);
 
+  vm::PinnedHermesValue numberStorageKey;
+  vm::PinnedHermesValue numberStorageVal;
   auto res = vm::JSObject::putComputed_RJS(
                  toHandle(obj),
                  runtime,
-                 hart->makeHandle(*key),
-                 hart->makeHandle(*val),
+                 hart->makeVMHandle(*key, &numberStorageKey),
+                 hart->makeVMHandle(*val, &numberStorageVal),
                  vm::PropOpFlags().plusThrowOnError())
                  .getStatus();
   if (res == vm::ExecutionStatus::EXCEPTION)
@@ -621,11 +627,12 @@ HermesABIVoidOrError set_object_property_from_propnameid(
   auto &runtime = *hart->rt;
   vm::GCScope gcScope(runtime);
 
+  vm::PinnedHermesValue numberStorage;
   auto res = vm::JSObject::putNamedOrIndexed(
                  toHandle(obj),
                  runtime,
                  *toHandle(name),
-                 hart->makeHandle(*val),
+                 hart->makeVMHandle(*val, &numberStorage),
                  vm::PropOpFlags().plusThrowOnError())
                  .getStatus();
   if (res == vm::ExecutionStatus::EXCEPTION)
@@ -648,38 +655,47 @@ HermesABIArrayOrError get_object_property_names(
   if (propsRes == vm::ExecutionStatus::EXCEPTION)
     return abi::createArrayOrError(HermesABIErrorCodeJSError);
 
-  vm::Handle<vm::SegmentedArray> props = *propsRes;
+  vm::Handle<vm::ArrayStorageSmall> props = *propsRes;
   size_t length = endIndex - beginIndex;
 
   auto retRes = vm::JSArray::create(runtime, length, length);
   if (retRes == vm::ExecutionStatus::EXCEPTION)
     return abi::createArrayOrError(HermesABIErrorCodeJSError);
-  vm::Handle<vm::JSArray> ret = *retRes;
-  vm::JSArray::setStorageEndIndex(ret, runtime, length);
-  vm::MutableHandle<> nameHnd{runtime};
+
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSArray> ret;
+    vm::PinnedValue<> nameHnd;
+  } lv;
+  vm::LocalsRAII lraii(runtime, &lv);
+
+  lv.ret.castAndSetHermesValue<vm::JSArray>(retRes->getHermesValue());
+  vm::JSArray::setStorageEndIndex(lv.ret, runtime, length);
 
   // Convert each property name to a string and store it in the result array.
   for (size_t i = 0; i < length; ++i) {
-    vm::HermesValue name = props->at(runtime, beginIndex + i);
-    vm::StringPrimitive *asString;
+    vm::SmallHermesValue name = props->at(beginIndex + i);
     if (name.isString()) {
-      asString = name.getString();
+      vm::JSArray::unsafeSetExistingElementAt(*lv.ret, runtime, i, name);
+    } else if (name.isSymbol()) {
+      // May allocate. 'name' must not be used afterwards.
+      vm::StringPrimitive *asString =
+          runtime.getStringPrimFromSymbolID(name.getSymbol());
+      auto strName = vm::SmallHermesValue::encodeStringValue(asString, runtime);
+      vm::JSArray::unsafeSetExistingElementAt(*lv.ret, runtime, i, strName);
     } else {
       assert(name.isNumber());
-      nameHnd = name;
-      auto asStrRes = vm::toString_RJS(runtime, nameHnd);
+      lv.nameHnd =
+          vm::HermesValue::encodeTrustedNumberValue(name.getNumber(runtime));
+      auto asStrRes = vm::toString_RJS(runtime, lv.nameHnd);
       if (asStrRes == vm::ExecutionStatus::EXCEPTION)
         return abi::createArrayOrError(HermesABIErrorCodeJSError);
-      asString = asStrRes->get();
+      auto strName =
+          vm::SmallHermesValue::encodeStringValue(asStrRes->get(), runtime);
+      vm::JSArray::unsafeSetExistingElementAt(*lv.ret, runtime, i, strName);
     }
-    vm::JSArray::unsafeSetExistingElementAt(
-        *ret,
-        runtime,
-        i,
-        vm::SmallHermesValue::encodeStringValue(asString, runtime));
   }
 
-  return hart->createArrayOrError(ret.getHermesValue());
+  return hart->createArrayOrError(lv.ret.getHermesValue());
 }
 
 HermesABIVoidOrError set_object_external_memory_pressure(
@@ -705,6 +721,11 @@ HermesABIVoidOrError set_object_external_memory_pressure(
           vm::Predefined::InternalPropertyExternalMemoryPressure),
       desc);
 
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::NativeState> nsHnd;
+  } lv;
+  vm::LocalsRAII lraii(rt, &lv);
+
   vm::NativeState *ns;
   if (exists) {
     ns = vm::vmcast<vm::NativeState>(
@@ -719,8 +740,8 @@ HermesABIVoidOrError set_object_external_memory_pressure(
     // This is the first time adding external memory to this object. Create a
     // new NativeState. We use the context pointer to store the external memory
     // amount.
-    auto nsHnd = rt.makeHandle(
-        vm::NativeState::create(rt, reinterpret_cast<void *>(0), debitMem));
+    lv.nsHnd =
+        vm::NativeState::create(rt, reinterpret_cast<void *>(0), debitMem);
 
     // Use defineNewOwnProperty to create the new property since we know it
     // doesn't exist. Note that this also bypasses the extensibility check on
@@ -731,10 +752,10 @@ HermesABIVoidOrError set_object_external_memory_pressure(
         vm::Predefined::getSymbolID(
             vm::Predefined::InternalPropertyExternalMemoryPressure),
         vm::PropertyFlags::defaultNewNamedPropertyFlags(),
-        nsHnd);
+        lv.nsHnd);
     if (LLVM_UNLIKELY(res == vm::ExecutionStatus::EXCEPTION))
       return abi::createVoidOrError(HermesABIErrorCodeJSError);
-    ns = *nsHnd;
+    ns = *lv.nsHnd;
   }
 
   // Ensure that the raw pointer `ns` remains valid.
@@ -776,29 +797,10 @@ HermesABIArrayOrError create_array(HermesABIRuntime *abiRt, size_t length) {
   return hart->createArrayOrError(result->getHermesValue());
 }
 
-HermesABISizeTOrError get_array_length(
-    HermesABIRuntime *abiRt,
-    HermesABIArray arr) {
+size_t get_array_length(HermesABIRuntime *abiRt, HermesABIArray arr) {
   auto *hart = impl(abiRt);
   auto &runtime = *hart->rt;
-  auto objHandle = toHandle<vm::JSObject>(arr.pointer);
-  if (auto *jsArr = vm::dyn_vmcast<vm::JSArray>(*objHandle)) {
-    return abi::createSizeTOrError(vm::JSArray::getLength(jsArr, runtime));
-  }
-
-  vm::GCScope gcScope(runtime);
-  auto getRes = vm::JSObject::getNamed_RJS(
-      objHandle, runtime, vm::Predefined::getSymbolID(vm::Predefined::length));
-  if (getRes == vm::ExecutionStatus::EXCEPTION) {
-    return abi::createSizeTOrError(HermesABIErrorCodeJSError);
-  }
-
-  auto lenHandle = runtime.makeHandle(std::move(*getRes));
-  auto lenRes = vm::toLength(runtime, lenHandle);
-  if (lenRes == vm::ExecutionStatus::EXCEPTION) {
-    return abi::createSizeTOrError(HermesABIErrorCodeJSError);
-  }
-  return abi::createSizeTOrError(lenRes->getNumber());
+  return vm::JSArray::getLength(*toHandle(arr), runtime);
 }
 
 HermesABIArrayBufferOrError create_arraybuffer_from_external_data(
@@ -808,24 +810,28 @@ HermesABIArrayBufferOrError create_arraybuffer_from_external_data(
   auto &runtime = *hart->rt;
 
   vm::GCScope gcScope(runtime);
-  auto arrayBuffer = runtime.makeHandle(
-      vm::JSArrayBuffer::create(
-          runtime,
-          vm::Handle<vm::JSObject>::vmcast(&runtime.arrayBufferPrototype)));
+
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSArrayBuffer> arrayBuffer;
+  } lv;
+  vm::LocalsRAII lraii(runtime, &lv);
+
+  lv.arrayBuffer = vm::JSArrayBuffer::create(
+      runtime, vm::Handle<vm::JSObject>::vmcast(&runtime.arrayBufferPrototype));
 
   // Set up the ArrayBuffer such that the data refers to the provided buffer,
   // and the finalizer will invoke the release method.
   auto size = buf->size;
   auto *data = buf->data;
-  auto finalize = [](vm::GC &, vm::NativeState *ns) {
-    auto *self = static_cast<HermesABIMutableBuffer *>(ns->context());
-    self->vtable->release(self);
-  };
-  auto res = vm::JSArrayBuffer::setExternalDataBlock(
-      runtime, arrayBuffer, data, size, buf, finalize);
-  if (res == vm::ExecutionStatus::EXCEPTION)
-    return abi::createArrayBufferOrError(HermesABIErrorCodeJSError);
-  return hart->createArrayBufferOrError(arrayBuffer.getHermesValue());
+  vm::JSArrayBuffer::setExternalDataBlock(
+      runtime,
+      lv.arrayBuffer,
+      data,
+      size,
+      std::shared_ptr<void>(buf, [](HermesABIMutableBuffer *buffer) {
+        buffer->vtable->release(buffer);
+      }));
+  return hart->createArrayBufferOrError(lv.arrayBuffer.getHermesValue());
 }
 
 HermesABIUint8PtrOrError get_arraybuffer_data(
@@ -936,12 +942,19 @@ HermesABIValueOrError call_as_constructor(
 
   auto &runtime = *hart->rt;
   vm::GCScope gcScope(runtime);
+
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::JSObject> objHandle;
+  } lv;
+  vm::LocalsRAII lraii(runtime, &lv);
+
   vm::Handle<vm::Callable> funcHandle = toHandle(fn);
 
   // Create the new object for the constructor call and save it in case the
   // function does not return an object.
-  auto thisRes = vm::Callable::createThisForConstruct_RJS(funcHandle, runtime);
-  auto objHandle = runtime.makeHandle<vm::JSObject>(std::move(*thisRes));
+  auto thisRes =
+      vm::Callable::createThisForConstruct_RJS(funcHandle, runtime, funcHandle);
+  lv.objHandle.castAndSetHermesValue<vm::JSObject>(thisRes->getHermesValue());
 
   // Set up the call frame and create space for the arguments.
   vm::ScopedNativeCallFrame newFrame{
@@ -949,7 +962,7 @@ HermesABIValueOrError call_as_constructor(
       static_cast<uint32_t>(count),
       funcHandle.getHermesValue(),
       funcHandle.getHermesValue(),
-      objHandle.getHermesValue()};
+      lv.objHandle.getHermesValue()};
   if (LLVM_UNLIKELY(newFrame.overflowed())) {
     (void)runtime.raiseStackOverflow(
         ::hermes::vm::Runtime::StackOverflowKind::NativeStack);
@@ -968,7 +981,7 @@ HermesABIValueOrError call_as_constructor(
   // If the result is not an object, return the this parameter.
   auto res = callRes->get();
   return hart->createValueOrError(
-      res.isObject() ? res : objHandle.getHermesValue());
+      res.isObject() ? res : lv.objHandle.getHermesValue());
 }
 
 /// A wrapper that holds the HermesABIRuntime and HostFunction, to allow the
@@ -993,8 +1006,10 @@ class HostFunctionWrapper {
     return func_;
   }
 
-  static vm::CallResult<vm::HermesValue>
-  call(void *hfCtx, vm::Runtime &runtime, vm::NativeArgs hvArgs) {
+  static vm::CallResult<vm::HermesValue> call(
+      void *hfCtx,
+      vm::Runtime &runtime) {
+    vm::NativeArgs hvArgs = runtime.getCurrentFrame().getNativeArgs();
     auto *self = static_cast<HostFunctionWrapper *>(hfCtx);
     auto *hart = self->hart_;
     assert(&runtime == hart->rt.get());
@@ -1122,7 +1137,8 @@ class HostObjectWrapper : public vm::HostObjectProxy {
   /// \return an array of Symbols representing the properties.
   /// TODO(T172475694): The ABI formally allows the HostObject implementation to
   /// return symbols, but the VM implementation cannot handle them yet.
-  vm::CallResult<vm::Handle<vm::JSArray>> getHostPropertyNames() override {
+  vm::ExecutionStatus getHostPropertyNames(
+      vm::MutableHandle<vm::JSArray> result) override {
     auto ret = ho_->vtable->get_own_keys(ho_, hart_);
     if (abi::isError(ret))
       return hart_->raiseError(abi::getError(ret));
@@ -1137,15 +1153,15 @@ class HostObjectWrapper : public vm::HostObjectProxy {
       return vm::ExecutionStatus::EXCEPTION;
     }
 
-    // Store each of the returned PropNameIDs as a symbol in the JSArray.
-    vm::Handle<vm::JSArray> arrayHandle = *arrayRes;
-    vm::JSArray::setStorageEndIndex(arrayHandle, runtime, size);
+    // Store the array in a PinnedValue first
+    result = std::move(*arrayRes);
+    vm::JSArray::setStorageEndIndex(result, runtime, size);
     for (size_t i = 0; i < size; ++i) {
       auto shv = vm::SmallHermesValue::encodeSymbolValue(*toHandle(names[i]));
-      vm::JSArray::unsafeSetExistingElementAt(*arrayHandle, runtime, i, shv);
+      vm::JSArray::unsafeSetExistingElementAt(*result, runtime, i, shv);
     }
     abiNames->vtable->release(abiNames);
-    return arrayHandle;
+    return vm::ExecutionStatus::RETURNED;
   }
 };
 
@@ -1211,6 +1227,11 @@ HermesABIVoidOrError set_native_state(
   auto &runtime = *hart->rt;
   vm::GCScope gcScope(runtime);
 
+  struct : public vm::Locals {
+    vm::PinnedValue<vm::NativeState> ns;
+  } lv;
+  vm::LocalsRAII lraii(runtime, &lv);
+
   auto finalize = [](vm::GC &, vm::NativeState *ns) {
     auto *self = static_cast<HermesABINativeState *>(ns->context());
     self->vtable->release(self);
@@ -1218,8 +1239,7 @@ HermesABIVoidOrError set_native_state(
   // Note that creating the vm::NativeState here takes ownership of abiState, so
   // if the below steps fail, abiState will simply be freed when the
   // vm::NativeState is garbage collected.
-  auto ns =
-      runtime.makeHandle(vm::NativeState::create(runtime, abiState, finalize));
+  lv.ns = vm::NativeState::create(runtime, abiState, finalize);
 
   auto h = toHandle(obj);
   if (h->isProxyObject()) {
@@ -1236,7 +1256,7 @@ HermesABIVoidOrError set_native_state(
       runtime,
       vm::Predefined::getSymbolID(vm::Predefined::InternalPropertyNativeState),
       vm::DefinePropertyFlags::getDefaultNewPropertyFlags(),
-      ns);
+      lv.ns);
   if (res == vm::ExecutionStatus::EXCEPTION) {
     return abi::createVoidOrError(HermesABIErrorCodeJSError);
   }
@@ -1247,23 +1267,9 @@ HermesABIVoidOrError set_native_state(
   return abi::createVoidOrError();
 }
 
-HermesABIBoolOrError object_is_array(
-    HermesABIRuntime *abiRt,
-    HermesABIObject object) {
-  auto objHandle = toHandle(object);
-  if (LLVM_LIKELY(vm::vmisa<vm::JSArray>(*objHandle))) {
-    return abi::createBoolOrError(true);
-  }
-  auto *hart = impl(abiRt);
-  auto &runtime = *hart->rt;
-  vm::GCScope gcScope(runtime);
-  auto result = vm::isArray(runtime, *objHandle);
-  if (result == vm::ExecutionStatus::EXCEPTION) {
-    return abi::createBoolOrError(HermesABIErrorCodeJSError);
-  }
-  return abi::createBoolOrError(*result);
+bool object_is_array(HermesABIRuntime *, HermesABIObject object) {
+  return vm::vmisa<vm::JSArray>(*toHandle(object));
 }
-
 bool object_is_arraybuffer(HermesABIRuntime *, HermesABIObject object) {
   return vm::vmisa<vm::JSArrayBuffer>(*toHandle(object));
 }

@@ -16,29 +16,29 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 // class JSMapImpl
 
-template <CellKind C>
-void JSMapImpl<C>::MapOrSetBuildMeta(
-    const GCCell *cell,
-    Metadata::Builder &mb) {
-  mb.addJSObjectOverlapSlots(JSObject::numOverlapSlots<JSMapImpl<C>>());
-  JSObjectBuildMeta(cell, mb);
-  const auto *self = static_cast<const JSMapImpl<C> *>(cell);
-  mb.addField("storage", &self->storage_);
-}
-
 void JSMapBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSMap::MapOrSetBuildMeta(cell, mb);
+  JSMap::buildMetadata(cell, mb);
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<JSMapImpl<CellKind::JSMapKind>>());
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSMap::vt);
 }
 
 void JSSetBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
-  JSSet::MapOrSetBuildMeta(cell, mb);
+  JSSet::buildMetadata(cell, mb);
+  mb.addJSObjectOverlapSlots(
+      JSObject::numOverlapSlots<JSMapImpl<CellKind::JSSetKind>>());
+  JSObjectBuildMeta(cell, mb);
   mb.setVTable(&JSSet::vt);
 }
 
 template <CellKind C>
 const ObjectVTable JSMapImpl<C>::vt{
-    VTable(C, cellSize<JSMapImpl<C>>()),
+    VTable(
+        C,
+        cellSize<JSMapImpl<C>>(),
+        false /* allowLargeAlloc */,
+        JSMapImpl<C>::_finalizeImpl),
     JSMapImpl::_getOwnIndexedRangeImpl,
     JSMapImpl::_haveOwnIndexedImpl,
     JSMapImpl::_getOwnIndexedPropertyFlagsImpl,
@@ -49,10 +49,17 @@ const ObjectVTable JSMapImpl<C>::vt{
 };
 
 template <CellKind C>
+void JSMapImpl<C>::_finalizeImpl(GCCell *cell, GC &gc) {
+  auto *self = vmcast<JSMapImpl<C>>(cell);
+  self->cleanUp(cell, gc);
+  self->~JSMapImpl<C>();
+}
+
+template <CellKind C>
 PseudoHandle<JSMapImpl<C>> JSMapImpl<C>::create(
     Runtime &runtime,
     Handle<JSObject> parentHandle) {
-  auto *cell = runtime.makeAFixed<JSMapImpl>(
+  auto *cell = runtime.makeAFixed<JSMapImpl, HasFinalizer::Yes>(
       runtime,
       parentHandle,
       runtime.getHiddenClassForPrototype(
@@ -74,7 +81,6 @@ void JSMapIteratorImpl<C>::MapOrSetIteratorBuildMeta(
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSMapIteratorImpl<C> *>(cell);
   mb.addField("data", &self->data_);
-  mb.addField("itr", &self->itr_);
 }
 
 void JSMapIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
@@ -89,7 +95,11 @@ void JSSetIteratorBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
 
 template <CellKind C>
 const ObjectVTable JSMapIteratorImpl<C>::vt = {
-    VTable(C, cellSize<JSMapIteratorImpl<C>>()),
+    VTable(
+        C,
+        cellSize<JSMapIteratorImpl<C>>(),
+        false /* allowLargeAlloc */,
+        JSMapIteratorImpl<C>::_finalizeImpl),
     JSMapIteratorImpl::_getOwnIndexedRangeImpl,
     JSMapIteratorImpl::_haveOwnIndexedImpl,
     JSMapIteratorImpl::_getOwnIndexedPropertyFlagsImpl,
@@ -100,10 +110,16 @@ const ObjectVTable JSMapIteratorImpl<C>::vt = {
 };
 
 template <CellKind C>
+void JSMapIteratorImpl<C>::_finalizeImpl(GCCell *cell, GC &gc) {
+  auto *self = vmcast<JSMapIteratorImpl<C>>(cell);
+  self->~JSMapIteratorImpl();
+}
+
+template <CellKind C>
 PseudoHandle<JSMapIteratorImpl<C>> JSMapIteratorImpl<C>::create(
     Runtime &runtime,
     Handle<JSObject> prototype) {
-  auto *cell = runtime.makeAFixed<JSMapIteratorImpl<C>>(
+  auto *cell = runtime.makeAFixed<JSMapIteratorImpl<C>, HasFinalizer::Yes>(
       runtime,
       prototype,
       runtime.getHiddenClassForPrototype(

@@ -123,7 +123,8 @@ Optional<ESTree::JSXOpeningElementNode *> JSParserImpl::parseJSXOpeningElement(
 
   ESTree::Node *typeArgs = nullptr;
   if (check(TokenKind::less)) {
-    auto optTypeArgs = parseTypeArgsFlow();
+    auto optTypeArgs =
+        parseTypeArgsFlow(JSLexer::GrammarContext::AllowJSXIdentifier);
     if (!optTypeArgs) {
       return None;
     }

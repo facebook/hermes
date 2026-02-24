@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -target=HBC -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
+// RUN: %hermesc -target=HBC -O -dump-ir %s | %FileCheckOrRegen --match-full-lines %s
 
 function foo1(a) {
+    'use strict';
     var add = function() {
         return 100;
     }
@@ -15,6 +16,7 @@ function foo1(a) {
 }
 
 function foo2(a) {
+    'use strict';
     var add = function(a, b) {
         return a + b;
     }
@@ -22,6 +24,7 @@ function foo2(a) {
 }
 
 function foo3(a) {
+    'use strict';
     var add = function(a, b) {
         return a ? a : b;
     }
@@ -29,6 +32,7 @@ function foo3(a) {
 }
 
 function foo4(a) {
+    'use strict';
     var add = function(a, b) {
         if (a < 0)
             return -1;
@@ -41,61 +45,57 @@ function foo4(a) {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [foo1, foo2, foo3, foo4]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %foo1#0#1()#2 : number, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "foo1" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %foo2#0#1()#4 : string|number, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "foo2" : string
-// CHECK-NEXT:  %5 = CreateFunctionInst %foo3#0#1()#6, %0
-// CHECK-NEXT:  %6 = StorePropertyInst %5 : closure, globalObject : object, "foo3" : string
-// CHECK-NEXT:  %7 = CreateFunctionInst %foo4#0#1()#8, %0
-// CHECK-NEXT:  %8 = StorePropertyInst %7 : closure, globalObject : object, "foo4" : string
-// CHECK-NEXT:  %9 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "foo1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo2": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo3": string
+// CHECK-NEXT:       DeclareGlobalVarInst "foo4": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %foo1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "foo1": string
+// CHECK-NEXT:  %6 = CreateFunctionInst (:object) empty: any, empty: any, %foo2(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %6: object, globalObject: object, "foo2": string
+// CHECK-NEXT:  %8 = CreateFunctionInst (:object) empty: any, empty: any, %foo3(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %8: object, globalObject: object, "foo3": string
+// CHECK-NEXT:  %10 = CreateFunctionInst (:object) empty: any, empty: any, %foo4(): functionCode
+// CHECK-NEXT:        StorePropertyLooseInst %10: object, globalObject: object, "foo4": string
+// CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function foo1#0#1(a)#2 : number
-// CHECK-NEXT:S{foo1#0#1()#2} = []
+// CHECK:function foo1(a: any): number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo1#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst 100 : number
+// CHECK-NEXT:       ReturnInst 100: number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo2#0#1(a)#4 : string|number
-// CHECK-NEXT:S{foo2#0#1()#4} = []
+// CHECK:function foo2(a: any): string|number
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo2#0#1()#4}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '+', %a, 10 : number
-// CHECK-NEXT:  %2 = ReturnInst %1 : string|number
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = BinaryAddInst (:string|number) %0: any, 10: number
+// CHECK-NEXT:       ReturnInst %1: string|number
 // CHECK-NEXT:function_end
 
-// CHECK:function foo3#0#1(a)#6
-// CHECK-NEXT:S{foo3#0#1()#6} = []
+// CHECK:function foo3(a: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo3#0#1()#6}
-// CHECK-NEXT:  %1 = CondBranchInst %a, %BB1, %BB2
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %2 = PhiInst %a, %BB1, 10 : number, %BB0
-// CHECK-NEXT:  %3 = ReturnInst %2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:       CondBranchInst %0: any, %BB2, %BB1
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %4 = BranchInst %BB2
+// CHECK-NEXT:  %2 = PhiInst (:any) %0: any, %BB2, 10: number, %BB0
+// CHECK-NEXT:       ReturnInst %2: any
+// CHECK-NEXT:%BB2:
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end
 
-// CHECK:function foo4#0#1(a)#8
-// CHECK-NEXT:S{foo4#0#1()#8} = []
+// CHECK:function foo4(a: any): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{foo4#0#1()#8}
-// CHECK-NEXT:  %1 = BinaryOperatorInst '<', %a, 0 : number
-// CHECK-NEXT:  %2 = CondBranchInst %1 : boolean, %BB1, %BB2
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %a: any
+// CHECK-NEXT:  %1 = BinaryLessThanInst (:boolean) %0: any, 0: number
+// CHECK-NEXT:       CondBranchInst %1: boolean, %BB1, %BB2
 // CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %3 = PhiInst 10 : number, %BB3, %a, %BB2, -1 : number, %BB0
-// CHECK-NEXT:  %4 = ReturnInst %3
+// CHECK-NEXT:  %3 = PhiInst (:any) 10: number, %BB3, %0: any, %BB2, -1: number, %BB0
+// CHECK-NEXT:       ReturnInst %3: any
 // CHECK-NEXT:%BB2:
-// CHECK-NEXT:  %5 = BinaryOperatorInst '==', %a, 0 : number
-// CHECK-NEXT:  %6 = CondBranchInst %5 : boolean, %BB3, %BB1
+// CHECK-NEXT:  %5 = BinaryEqualInst (:boolean) %0: any, 0: number
+// CHECK-NEXT:       CondBranchInst %5: boolean, %BB3, %BB1
 // CHECK-NEXT:%BB3:
-// CHECK-NEXT:  %7 = BranchInst %BB1
+// CHECK-NEXT:       BranchInst %BB1
 // CHECK-NEXT:function_end

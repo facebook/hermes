@@ -10,6 +10,6 @@
 
 throw new SyntaxError();
 // CHECK: Uncaught SyntaxError
-// CHECK-NEXT: at global ({{.*}})
+// CHECK-NEXT: at eval ({{.*}})
 // CHECK-NEXT: at eval (native)
 // CHECK-NEXT: at evaluateLine {{.*}}

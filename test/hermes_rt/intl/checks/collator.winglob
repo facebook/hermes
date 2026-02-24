@@ -1,0 +1,18 @@
+// WinGlob expected output for collator.js
+// WinGlob does not support phonebook collation or validate collation values.
+// CHECK-LABEL: Intl.Collator Test
+// CHECK-NEXT: a,ä,z,Z
+// CHECK-NEXT: a,z,Z,ä
+// CHECK-NEXT: a,z,Z,ä
+// CHECK-NEXT: a,ä,z,Z
+// CHECK-NEXT: of,öf
+// CHECK-NEXT: of,öf
+// CHECK-NEXT: of,öf
+// CHECK-NEXT: test1,test10,test2
+// CHECK-NEXT: test1,test2,test10
+// CHECK-NEXT: ["","...",".a.a","a  a","a  b","a\na","a\nb","a,b","aa","ab"]
+// CHECK-NEXT: ["...","","aa","a\na","a  a",".a.a","ab","a,b","a\nb","a  b"]
+// CHECK-NEXT: TypeError: Intl.Collator.prototype.resolvedOptions called with incompatible 'this'
+// CHECK-NEXT: RangeError: usage value is invalid.
+// CHECK-NEXT: RangeError: caseFirst value is invalid.
+// CHECK-NEXT: RangeError: sensitivity value is invalid.

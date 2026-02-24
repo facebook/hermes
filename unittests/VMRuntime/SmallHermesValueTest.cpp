@@ -7,7 +7,7 @@
 
 #include "hermes/VM/SmallHermesValue.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StringPrimitive.h"
@@ -83,6 +83,8 @@ TEST_F(SmallHermesValueRuntimeTest, BoolTest) {
   auto TSHV = SmallHermesValue::encodeHermesValue(
       HermesValue::encodeBoolValue(true), runtime);
   EXPECT_FALSE(TSHV.isPointer());
+  EXPECT_TRUE(TSHV.isBool());
+  EXPECT_TRUE(TSHV.getBool());
   auto THV = TSHV.unboxToHV(runtime);
   EXPECT_TRUE(THV.isBool());
   EXPECT_TRUE(THV.getBool());
@@ -91,6 +93,8 @@ TEST_F(SmallHermesValueRuntimeTest, BoolTest) {
   auto FSHV = SmallHermesValue::encodeHermesValue(
       HermesValue::encodeBoolValue(false), runtime);
   EXPECT_FALSE(FSHV.isPointer());
+  EXPECT_TRUE(FSHV.isBool());
+  EXPECT_FALSE(FSHV.getBool());
   auto FHV = FSHV.unboxToHV(runtime);
   EXPECT_TRUE(FHV.isBool());
   EXPECT_FALSE(FHV.getBool());
@@ -134,12 +138,45 @@ TEST_F(SmallHermesValueRuntimeTest, SmiTest) {
   };
 
   verifySmi(0);
-  verifySmi(llvh::minIntN(29));
-  verifySmi(llvh::maxIntN(29));
-
-  // Try some random SMIs.
+  // We can do min int values for large bit widths, but only because they're
+  // powers of 2 -- their mantissa has trailing zeros.
+  verifySmi(llvh::minIntN(40));
+  // For positive max values, which are all ones, the max we we can do is 19:
+  // The max N-bit integer has N-1 ones.  So that's 18 ones.
+  // One of these is an implicit leading 1 in floating point.  So 17 ones.
+  // 32 - (3 tag bits) - (1 sign bit) - (11 exponent bits) = 17;
+  verifySmi(llvh::maxIntN(19));
+  // Try some random SMIs (in the 19-bit range described above.
   for (int i = 0; i < 1000; i++)
-    verifySmi(getRandomInt32(llvh::minIntN(29), llvh::maxIntN(29)));
+    verifySmi(getRandomInt32(llvh::minIntN(19), llvh::maxIntN(19)));
+}
+
+TEST_F(SmallHermesValueRuntimeTest, EncodeNumberTest) {
+  // Encode SMIs.
+  auto verifySmi = [&](int64_t i) {
+    double d = static_cast<double>(i);
+    auto SHV = SmallHermesValue::encodeNumberValue(d, runtime);
+// When Handle-SAN is enabled, we put all numbers on the heap.
+#ifndef HERMESVM_SANITIZE_HANDLES
+    EXPECT_FALSE(SHV.isPointer());
+#endif
+    auto HV = SHV.unboxToHV(runtime);
+    EXPECT_TRUE(HV.isNumber()) << "SMI not encoded as number: " << i;
+    EXPECT_EQ(HV.getNumber(), d);
+  };
+
+  verifySmi(0);
+  // We can do min int values for large bit widths, but only because they're
+  // powers of 2 -- their mantissa has trailing zeros.
+  verifySmi(llvh::minIntN(40));
+  // For positive max values, which are all ones, the max we we can do is 19:
+  // The max N-bit integer has N-1 ones.  So that's 18 ones.
+  // One of these is an implicit leading 1 in floating point.  So 17 ones.
+  // 32 - (3 tag bits) - (1 sign bit) - (11 exponent bits) = 17;
+  verifySmi(llvh::maxIntN(19));
+  // Try some random SMIs (in the 19-bit range described above.
+  for (int i = 0; i < 1000; i++)
+    verifySmi(getRandomInt32(llvh::minIntN(19), llvh::maxIntN(19)));
 }
 
 TEST_F(SmallHermesValueRuntimeTest, SymbolTest) {
@@ -201,5 +238,144 @@ TEST_F(SmallHermesValueRuntimeTest, ObjectTest) {
   EXPECT_TRUE(HV.isObject());
   EXPECT_EQ(HV.getObject(), obj.get());
 }
+
+#ifdef HERMESVM_BOXED_DOUBLES
+#ifdef HERMESVM_COMPRESSED_POINTERS
+TEST_F(SmallHermesValueRuntimeTest, EncodeDecodeAsHV64) {
+  // SHV of compressible non-Number, e.g., Undefined
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeUndefinedValue();
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of compressible Number
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(0.0, runtime);
+#ifndef HERMESVM_SANITIZE_HANDLES
+    ASSERT_TRUE(SHV.isInlinedDouble());
+#endif
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of non-compressible Number
+  {
+    double d = std::numeric_limits<double>::max();
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(d, runtime);
+    ASSERT_TRUE(SHV.isBoxedDouble());
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Object
+  {
+    auto obj = JSObject::create(runtime);
+    SmallHermesValue SHV =
+        SmallHermesValue::encodeObjectValue(obj.get(), runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Symbol
+  {
+    auto sym = SymbolID::unsafeCreate(42);
+    SmallHermesValue SHV = SmallHermesValue::encodeSymbolValue(sym);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of String
+  {
+    auto str = StringPrimitive::createNoThrow(
+        runtime, createUTF16Ref(u"I'm a string"));
+    SmallHermesValue SHV = SmallHermesValue::encodeStringValue(*str, runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+}
+#else
+TEST_F(SmallHermesValueRuntimeTest, EncodeDecodeAsHV64) {
+  // SHV of compressible non-Number, e.g., Undefined
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeUndefinedValue();
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isUndefined());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of compressible Number
+  {
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(0.0, runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+#ifndef HERMESVM_SANITIZE_HANDLES
+    ASSERT_TRUE(SHV.isInlinedDouble());
+    EXPECT_TRUE(HV.isNumber());
+#else
+    ASSERT_TRUE(SHV.isBoxedDouble());
+    ASSERT_TRUE(HV.isRawHV32());
+#endif
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of non-compressible Number
+  {
+    double d = std::numeric_limits<double>::max();
+    SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(d, runtime);
+    ASSERT_TRUE(SHV.isBoxedDouble());
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Object
+  {
+    auto obj = JSObject::create(runtime);
+    SmallHermesValue SHV =
+        SmallHermesValue::encodeObjectValue(obj.get(), runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of Symbol
+  {
+    auto sym = SymbolID::unsafeCreate(42);
+    SmallHermesValue SHV = SmallHermesValue::encodeSymbolValue(sym);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+
+  // SHV of String
+  {
+    auto str = StringPrimitive::createNoThrow(
+        runtime, createUTF16Ref(u"I'm a string"));
+    SmallHermesValue SHV = SmallHermesValue::encodeStringValue(*str, runtime);
+    HermesValue HV = SHV.encodeAsHermesValue();
+    EXPECT_TRUE(HV.isRawHV32());
+    SmallHermesValue decodedSHV = SmallHermesValue::decodeFromHermesValue(HV);
+    ASSERT_EQ(SHV.getRaw(), decodedSHV.getRaw());
+  }
+}
+#endif
+#endif
 
 } // anonymous namespace.

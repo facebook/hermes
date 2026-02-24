@@ -11,7 +11,7 @@
 //CHECK-LABEL:Global String Table:
 //CHECK-NEXT: s0[ASCII, {{[0-9]+\.\.[0-9]+}}]: Done
 //CHECK-NEXT: s1[ASCII, {{[0-9]+\.\.[0-9]+}}]: abc
-//CHECK-NEXT: s2[ASCII, {{[0-9]+\.\.[0-9]+}}]: function-name-stripped
+//CHECK-NEXT: i2[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-F]+}}: function-name-stripped
 //CHECK-NEXT: i3[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-F]+}}: length
 //CHECK-NEXT: i4[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-F]+}}: print
 //CHECK-NEXT: i5[ASCII, {{[0-9]+\.\.[0-9]+}}] #{{[0-9A-F]+}}: substring

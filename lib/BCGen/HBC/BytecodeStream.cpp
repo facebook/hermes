@@ -7,13 +7,122 @@
 
 #include "hermes/BCGen/HBC/BytecodeStream.h"
 
-using namespace hermes;
-using namespace hbc;
+#include "hermes/BCGen/Exceptions.h"
+#include "hermes/BCGen/HBC/Bytecode.h"
+#include "hermes/BCGen/HBC/BytecodeFileFormat.h"
+#include "hermes/BCGen/HBC/DebugInfo.h"
+#include "hermes/BCGen/HBC/StreamVector.h"
+#include "hermes/Support/Buffer.h"
+
+namespace hermes {
+namespace hbc {
+
+namespace {
+
+class BytecodeSerializer {
+  friend void hermes::hbc::visitBytecodeSegmentsInOrder<BytecodeSerializer>(
+      BytecodeSerializer &);
+
+  /// Output Stream
+  llvh::raw_ostream &os_;
+  // Module being serialized.
+  BytecodeModule *bytecodeModule_;
+  /// Options controlling bytecode generation.
+  BytecodeGenerationOptions options_;
+  /// Current output offset.
+  size_t loc_{0};
+  /// Wheather we are doing a layout run.
+  bool isLayout_{true};
+  /// Total file length in bytes.
+  uint32_t fileLength_{0};
+  /// Offset of the debug info tables.
+  uint32_t debugInfoOffset_{0};
+  /// Count of overflow string entries, computed during layout phase.
+  uint32_t overflowStringEntryCount_{0};
+  /// Hash of everything written in non-layout mode so far.
+  llvh::SHA1 outputHasher_;
+
+  /// Each subsection of a function's `info' section is aligned thusly.
+  static constexpr uint32_t INFO_ALIGNMENT = 4;
+
+  template <typename T>
+  void writeBinaryArray(const llvh::ArrayRef<T> array) {
+    size_t size = sizeof(T) * array.size();
+    if (!isLayout_) {
+      outputHasher_.update(
+          llvh::ArrayRef<uint8_t>(
+              reinterpret_cast<const uint8_t *>(array.data()), size));
+      os_.write(reinterpret_cast<const char *>(array.data()), size);
+    }
+    loc_ += size;
+  }
+
+  template <typename T>
+  void writeBinary(const T &structure) {
+    return writeBinaryArray(llvh::ArrayRef<T>{&structure, 1});
+  }
+
+  /// Padding the binary according to the \p alignment.
+  void pad(unsigned alignment) {
+    // Support alignment as many as 8 bytes.
+    assert(
+        alignment > 0 && alignment <= 8 &&
+        ((alignment & (alignment - 1)) == 0));
+    if (loc_ % alignment == 0)
+      return;
+    unsigned bytes = alignment - loc_ % alignment;
+    for (unsigned i = 0; i < bytes; ++i) {
+      writeBinary('\0');
+    }
+  }
+
+  void serializeFunctionTable(BytecodeModule &BM);
+
+  void serializeCJSModuleTable(BytecodeModule &BM);
+
+  void serializeFunctionSourceTable(BytecodeModule &BM);
+
+  void serializeDebugInfo(BytecodeModule &BM);
+
+  void serializeExceptionHandlerTable(BytecodeFunction &BF);
+
+  void serializeDebugOffsets(BytecodeFunction &BF);
+
+  void serializeFunctionsBytecode(BytecodeModule &BM);
+  void serializeFunctionInfo(BytecodeFunction &BF);
+
+  void finishLayout(BytecodeModule &BM);
+
+  void visitFunctionHeaders();
+  void visitStringKinds();
+  void visitIdentifierHashes();
+  void visitSmallStringTable();
+  void visitOverflowStringTable();
+  void visitStringStorage();
+  void visitLiteralValueBuffer();
+  void visitObjectKeyBuffer();
+  void visitObjectShapeTable();
+  void visitBigIntTable();
+  void visitBigIntStorage();
+  void visitRegExpTable();
+  void visitRegExpStorage();
+  void visitCJSModuleTable();
+  void visitFunctionSourceTable();
+
+ public:
+  explicit BytecodeSerializer(
+      llvh::raw_ostream &OS,
+      BytecodeGenerationOptions options = BytecodeGenerationOptions::defaults())
+      : os_(OS), options_(options) {}
+
+  void serialize(BytecodeModule &BM, const SHA1 &sourceHash);
+};
 
 // ============================ File ============================
 void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
   bytecodeModule_ = &BM;
-  uint32_t cjsModuleCount = BM.getBytecodeOptions().cjsModulesStaticallyResolved
+  uint32_t cjsModuleCount =
+      BM.getBytecodeOptions().getCjsModulesStaticallyResolved()
       ? BM.getCJSModuleTableStatic().size()
       : BM.getCJSModuleTable().size();
   BytecodeFileHeader header{
@@ -32,9 +141,10 @@ void BytecodeSerializer::serialize(BytecodeModule &BM, const SHA1 &sourceHash) {
       static_cast<uint32_t>(BM.getBigIntStorage().size()),
       static_cast<uint32_t>(BM.getRegExpTable().size()),
       static_cast<uint32_t>(BM.getRegExpStorage().size()),
-      BM.getArrayBufferSize(),
+      BM.getLiteralValueBufferSize(),
       BM.getObjectKeyBufferSize(),
-      BM.getObjectValueBufferSize(),
+      static_cast<uint32_t>(BM.getObjectShapeTable().size()),
+      BM.getNumStringSwitchImmInstrs(),
       BM.getSegmentID(),
       cjsModuleCount,
       static_cast<uint32_t>(BM.getFunctionSourceTable().size()),
@@ -80,10 +190,18 @@ void BytecodeSerializer::serializeFunctionTable(BytecodeModule &BM) {
   for (auto &entry : BM.getFunctionTable()) {
     if (options_.stripDebugInfoSection) {
       // Change flag on the actual BF, so it's seen by serializeFunctionInfo.
-      entry->mutableFlags().hasDebugInfo = false;
+      entry->mutableFlags().setHasDebugInfo(false);
     }
     FunctionHeader header = entry->getHeader();
-    writeBinary(SmallFuncHeader(header));
+
+    // If an infoOffset has been set, create a header with the offset. Note that
+    // since the infoOffset is set by serializeFunctionInfo, this may differ
+    // between the layout and final runs, but this is fine because it is the
+    // same size.
+    if (isLayout_ || entry->getInfoOffset())
+      writeBinary(SmallFuncHeader(entry->getInfoOffset()));
+    else
+      writeBinary(SmallFuncHeader(header));
   }
 }
 
@@ -94,7 +212,7 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   debugInfoOffset_ = loc_;
 
   if (options_.stripDebugInfoSection) {
-    const DebugInfoHeader empty = {0, 0, 0, 0, 0, 0, 0};
+    const DebugInfoHeader empty = {0, 0, 0, 0};
     writeBinary(empty);
     return;
   }
@@ -104,18 +222,13 @@ void BytecodeSerializer::serializeDebugInfo(BytecodeModule &BM) {
   const auto filenameStorage = info.getFilenameStorage();
   const DebugInfo::DebugFileRegionList &files = info.viewFiles();
   const StreamVector<uint8_t> &data = info.viewData();
-  uint32_t scopeDescOffset = info.scopeDescDataOffset();
-  uint32_t tCalleeOffset = info.textifiedCalleeOffset();
-  uint32_t stOffset = info.stringTableOffset();
+  uint32_t lexOffset = data.size();
 
   DebugInfoHeader header{
       (uint32_t)filenameTable.size(),
       (uint32_t)filenameStorage.size(),
       (uint32_t)files.size(),
-      scopeDescOffset,
-      tCalleeOffset,
-      stOffset,
-      (uint32_t)data.size()};
+      lexOffset};
   writeBinary(header);
   writeBinaryArray(filenameTable);
   writeBinaryArray(filenameStorage);
@@ -146,7 +259,7 @@ void BytecodeSerializer::serializeFunctionSourceTable(BytecodeModule &BM) {
 
 // ==================== Exception Handler Table =====================
 void BytecodeSerializer::serializeExceptionHandlerTable(BytecodeFunction &BF) {
-  if (!BF.hasExceptionHandlers())
+  if (!BF.getHeader().flags.getHasExceptionHandler())
     return;
 
   pad(INFO_ALIGNMENT);
@@ -156,20 +269,9 @@ void BytecodeSerializer::serializeExceptionHandlerTable(BytecodeFunction &BF) {
   writeBinaryArray(BF.getExceptionHandlers());
 }
 
-// ========================= Array Buffer ==========================
-void BytecodeSerializer::serializeArrayBuffer(BytecodeModule &BM) {
-  writeBinaryArray(BM.getArrayBuffer());
-}
-
-void BytecodeSerializer::serializeObjectBuffer(BytecodeModule &BM) {
-  auto objectKeyValBufferPair = BM.getObjectBuffer();
-
-  writeBinaryArray(objectKeyValBufferPair.first);
-  writeBinaryArray(objectKeyValBufferPair.second);
-}
-
+// ========================= Buffers ==========================
 void BytecodeSerializer::serializeDebugOffsets(BytecodeFunction &BF) {
-  if (options_.stripDebugInfoSection || !BF.hasDebugInfo()) {
+  if (!BF.getHeader().flags.getHasDebugInfo()) {
     return;
   }
 
@@ -231,18 +333,24 @@ void BytecodeSerializer::serializeFunctionsBytecode(BytecodeModule &BM) {
 }
 
 void BytecodeSerializer::serializeFunctionInfo(BytecodeFunction &BF) {
+  FunctionHeader header = BF.getHeader();
+  // We only need function info if the function has exceptions, debug info, or
+  // its header does not fit in a small header. Otherwise, we can skip it.
+  if (!header.flags.getHasExceptionHandler() &&
+      !header.flags.getHasDebugInfo() &&
+      SmallFuncHeader::canFitInSmallHeader(header))
+    return;
+
   // Set the offset of this function's info. Any subsection that is present is
   // aligned to INFO_ALIGNMENT, so we also align the recorded offset to that.
-  if (isLayout_) {
-    BF.setInfoOffset(llvh::alignTo(loc_, INFO_ALIGNMENT));
-  }
+  auto infoOffset = llvh::alignTo(loc_, INFO_ALIGNMENT);
+  assert((isLayout_ || infoOffset == BF.getInfoOffset()) && "Offset mismatch");
+  BF.setInfoOffset(infoOffset);
 
   // Write large header if it doesn't fit in a small.
-  FunctionHeader header = BF.getHeader();
-  if (SmallFuncHeader(header).flags.overflowed) {
-    pad(INFO_ALIGNMENT);
-    writeBinary(header);
-  }
+
+  pad(INFO_ALIGNMENT);
+  writeBinary(header);
 
   // Serialize exception handlers.
   serializeExceptionHandlerTable(BF);
@@ -294,21 +402,19 @@ void BytecodeSerializer::visitStringStorage() {
   writeBinaryArray(bytecodeModule_->getStringStorage());
 }
 
-void BytecodeSerializer::visitArrayBuffer() {
+void BytecodeSerializer::visitLiteralValueBuffer() {
   pad(BYTECODE_ALIGNMENT);
-  serializeArrayBuffer(*bytecodeModule_);
+  writeBinaryArray(bytecodeModule_->getLiteralValueBuffer());
 }
 
 void BytecodeSerializer::visitObjectKeyBuffer() {
   pad(BYTECODE_ALIGNMENT);
-  auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
-  writeBinaryArray(objectKeyValBufferPair.first);
+  writeBinaryArray(bytecodeModule_->getObjectKeyBuffer());
 }
 
-void BytecodeSerializer::visitObjectValueBuffer() {
+void BytecodeSerializer::visitObjectShapeTable() {
   pad(BYTECODE_ALIGNMENT);
-  auto objectKeyValBufferPair = bytecodeModule_->getObjectBuffer();
-  writeBinaryArray(objectKeyValBufferPair.second);
+  writeBinaryArray(bytecodeModule_->getObjectShapeTable());
 }
 
 void BytecodeSerializer::visitBigIntTable() {
@@ -340,3 +446,15 @@ void BytecodeSerializer::visitFunctionSourceTable() {
   pad(BYTECODE_ALIGNMENT);
   serializeFunctionSourceTable(*bytecodeModule_);
 }
+} // namespace
+
+void serializeBytecodeModule(
+    BytecodeModule &BM,
+    const SHA1 &sourceHash,
+    llvh::raw_ostream &os,
+    BytecodeGenerationOptions options) {
+  BytecodeSerializer{os, options}.serialize(BM, sourceHash);
+}
+
+} // namespace hbc
+} // namespace hermes

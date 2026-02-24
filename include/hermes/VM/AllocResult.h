@@ -8,8 +8,6 @@
 #ifndef HERMES_VM_ALLOCRESULT_H
 #define HERMES_VM_ALLOCRESULT_H
 
-#include "hermes/VM/GCCell.h"
-
 namespace hermes {
 namespace vm {
 

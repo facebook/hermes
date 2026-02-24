@@ -40,7 +40,7 @@ declare module Foo {
 // CHECK-NEXT:              "type": "StringLiteral",
 // CHECK-NEXT:              "value": "baz"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "assertions": [],
+// CHECK-NEXT:            "attributes": [],
 // CHECK-NEXT:            "importKind": "value"
 // CHECK-NEXT:          }
 // CHECK-NEXT:        ]

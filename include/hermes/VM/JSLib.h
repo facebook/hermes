@@ -38,27 +38,34 @@ class JSLibFlags {
 
 void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags);
 
-/// Populate the builtin function entries in \b builtins using the corresponding
+/// Populate the builtin function entries in builtins using the corresponding
 /// \c BuiltinMethod::xxx index.
-void createHermesBuiltins(
-    Runtime &runtime,
-    llvh::MutableArrayRef<Callable *> builtins);
+void createHermesBuiltins(Runtime &runtime);
 
 std::unique_ptr<JSLibStorage> createJSLibStorage();
 
 /// eval() entry point. Evaluate the given source \p utf8code within the given
-/// \p environment, using the given \p scopeChain to resolve identifiers.
+/// \p environment. If a local eval is desired, then both codeBlock and
+/// lexicalScope must be set.
+/// \p strictCaller if true, the compiled code will be in strict mode.
 /// \p thisArg is the initial "this" value of the function being evaluated.
-/// If \p singleFunction is set, require that the output be only a single
-/// function. \return the result of evaluation.
+/// \p new.target is the initial "new.target" value of the function being
+/// evaluated.
+/// If \p singleFunction is set, require that the output be only a
+/// single function.
+/// \p lexicalScopeIdxInParentFunction the lexical scope to perform the eval in.
+/// None if performing a non-direct eval.
+/// \return the result of evaluation.
 CallResult<HermesValue> evalInEnvironment(
     Runtime &runtime,
     llvh::StringRef utf8code,
+    bool strictCaller,
     Handle<Environment> environment,
-    const ScopeChain &scopeChain,
+    const CodeBlock *codeBlock,
     Handle<> thisArg,
-    bool isStrict,
-    bool singleFunction);
+    Handle<> newTarget,
+    bool singleFunction,
+    OptValue<uint32_t> lexicalScopeIdxInParentFunction);
 
 /// If the target CJS module is not initialized, execute it.
 /// \param context the RequireContext to pass through the require.
@@ -71,15 +78,35 @@ CallResult<HermesValue> runRequireCall(
     uint32_t cjsModuleOffset);
 
 /// The [[ThrowTypeError]] internal function.
-CallResult<HermesValue>
-throwTypeError(void *, Runtime &runtime, NativeArgs args);
+CallResult<HermesValue> throwTypeError(void *, Runtime &runtime);
 
 enum class TypeErrorKind {
-  NonStrictOnly,
+  RestrictedProperty,
   InvalidDynamicRequire,
   // change this if more errors are added
   NumKinds
 };
+
+/// Check for the fast path for array methods that can be optimized when
+/// running on an extensible ordinary JSArray with the standard HiddenClass
+/// ('length' hasn't been modified) with no accessors or indexed properties in
+/// bounds in the prototype chain. The object must also have indexed storage
+/// that starts at 0 and ends at the length of the array.
+///
+/// \param arr the array to check for fast pathing.
+/// \param arrayClass Optional: the default HiddenClass of an array. If set,
+///   check that arr has this hidden class. This is a very fast (but
+///   restrictive) way to check whether ".length" has been changed to be
+///   read-only. If the caller doesn't care, or has already checked, this can
+///   be nullptr.
+/// \param len the length of \p arr.
+///
+/// \return whether we can use the fast path for Array methods on \p arr.
+bool arrayFastPathCheck(
+    Runtime &runtime,
+    JSArray *arr,
+    HiddenClass *arrayClass,
+    uint32_t len);
 
 } // namespace vm
 } // namespace hermes

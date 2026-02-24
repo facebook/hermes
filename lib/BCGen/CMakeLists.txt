@@ -4,12 +4,20 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesBackend
-  STATIC
   RegAlloc.cpp
-  BCOpt.cpp
+  BackendContext.cpp
   Lowering.cpp
+  LowerScopes.cpp
   Exceptions.cpp
-  LINK_LIBS hermesFrontend hermesOptimizer
+  SerializedLiteralGenerator.cpp
+  OptEnvironmentInit.cpp
+  LiteralBufferBuilder.cpp
+  LINK_OBJLIBS hermesFrontend hermesOptimizer
 )
 
 add_subdirectory(HBC)
+add_subdirectory(SH)
+
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/facebook)
+  add_subdirectory(facebook)
+endif()

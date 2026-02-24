@@ -6,41 +6,41 @@
  */
 
 // Treat all warnings as errors
-// RUN: ( ! %hermes -dump-ir -Werror %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Werror %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,ERROR-EVAL
 
 // Treat no warnings as errors
-// RUN: ( %hermes -dump-ir -Wno-error %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( %hermesc -dump-ir -Wno-error %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=WARN-UNDEFINED,WARN-EVAL
 
 // Treat specific warnings as errors
-// RUN: ( ! %hermes -dump-ir -Werror=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Werror=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,WARN-EVAL
-// RUN: ( ! %hermes -dump-ir -Werror=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Werror=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=WARN-UNDEFINED,ERROR-EVAL
-// RUN: ( ! %hermes -dump-ir -Werror=undefined-variable -Werror=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Werror=undefined-variable -Werror=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,ERROR-EVAL
 
 // Treat all except specific warnings as errors
-// RUN: ( ! %hermes -dump-ir -Werror -Wno-error=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Werror -Wno-error=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=WARN-UNDEFINED,ERROR-EVAL
-// RUN: ( ! %hermes -dump-ir -Werror -Wno-error=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Werror -Wno-error=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,WARN-EVAL
-// RUN: ( %hermes -dump-ir -Werror -Wno-error=undefined-variable -Wno-error=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( %hermesc -dump-ir -Werror -Wno-error=undefined-variable -Wno-error=direct-eval %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=WARN-UNDEFINED,WARN-EVAL
 
 // Rightmost flag takes precedence
-// RUN: ( %hermes -dump-ir -Werror -Wno-error %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( %hermesc -dump-ir -Werror -Wno-error %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=WARN-UNDEFINED,WARN-EVAL
-// RUN: ( ! %hermes -dump-ir -Wno-error -Werror %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Wno-error -Werror %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,ERROR-EVAL
-// RUN: ( ! %hermes -dump-ir -Wno-error -Werror=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Wno-error -Werror=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,WARN-EVAL
-// RUN: ( %hermes -dump-ir -Werror=undefined-variable -Wno-error %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( %hermesc -dump-ir -Werror=undefined-variable -Wno-error %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=WARN-UNDEFINED,WARN-EVAL
-// RUN: ( ! %hermes -dump-ir -Werror -Wno-error=undefined-variable -Werror=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Werror -Wno-error=undefined-variable -Werror=undefined-variable %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,ERROR-EVAL
-// RUN: ( ! %hermes -dump-ir -Wno-error=undefined-variable -Wno-error=direct-eval -Werror %s 2>&1 ) | %FileCheck %s --match-full-lines \
+// RUN: ( ! %hermesc -dump-ir -Wno-error=undefined-variable -Wno-error=direct-eval -Werror %s 2>&1 ) | %FileCheck %s --match-full-lines \
 // RUN:     --check-prefixes=ERROR-UNDEFINED,ERROR-EVAL
 
 "use strict";

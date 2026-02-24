@@ -5,17 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMES_PUBLIC_DEBUGGERTYPES_H
-#define HERMES_PUBLIC_DEBUGGERTYPES_H
+#pragma once
 
 #include <cstdint>
 #include <string>
 #include <vector>
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 class Debugger;
@@ -88,7 +83,7 @@ struct StackTrace {
 
  private:
   explicit StackTrace(std::vector<CallFrameInfo> frames)
-      : frames_(std::move(frames)) {}
+      : frames_(std::move(frames)) {};
   friend ProgramState;
   friend ::hermes::vm::Debugger;
   std::vector<CallFrameInfo> frames_;
@@ -196,5 +191,3 @@ struct BreakpointInfo {
 } // namespace debugger
 } // namespace hermes
 } // namespace facebook
-
-#endif

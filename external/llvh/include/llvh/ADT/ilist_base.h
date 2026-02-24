@@ -50,6 +50,13 @@ public:
     Final->setNext(nullptr);
   }
 
+  /// Connect the elements Start and End, effectively removing all elements
+  /// between them.
+  static void removeBetweenImpl(node_base_type &Start, node_base_type &End) {
+    End.setPrev(&Start);
+    Start.setNext(&End);
+  }
+
   static void transferBeforeImpl(node_base_type &Next, node_base_type &First,
                                  node_base_type &Last) {
     if (&Next == &Last || &First == &Last)
@@ -81,6 +88,9 @@ public:
   template <class T> static void remove(T &N) { removeImpl(N); }
   template <class T> static void removeRange(T &First, T &Last) {
     removeRangeImpl(First, Last);
+  }
+  template <class T> static void removeBetween(T &Start, T &End) {
+    removeBetweenImpl(Start, End);
   }
 
   template <class T> static void transferBefore(T &Next, T &First, T &Last) {

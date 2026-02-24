@@ -132,28 +132,11 @@ but in which it's not necessary to *always* incur the cost of handle allocation.
 and moving out of one invalidates it.
 This prevents the reuse of `PseudoHandle` after an allocating function call.
 
-#### Rules for using handles
+#### Rules for GC-safe code
 
-1. A function that can perform an allocation (even if it doesn't do it every
-   time) or calls a function that does, must accept and return only handles
-   (for GC-managed objects). It must also take a `Runtime*` as an argument.
-2. A function that accepts or returns handles is allowed (and can be assumed
-   to) allocate more handles, but the upper bound of allocated handles must be
-   static.
-3. The number of handles in a given GCScope should have a static upper limit.
-
-The motivation for these rules should be self-explanatory.  The practical
-implication of rule 2 and 3 is that recursion and loops that allocate handles
-in every iteration must be treated specially.  In case of recursion a new
-GCScope should be defined in each recurrence (is that the correct term?).  In
-case of a loop, there are a couple of possibilities:
-
-- in loops that are expected to be low iteration and not performance critical,
-  a new GCScope can be defined in the body of the loop.
-- otherwise a GCScope::Marker should be used to flush the allocated handles of
-  the previous iteration.
-- mutable handles can be used to avoid allocating a new handle on every
-  iteration.
+See [GCSafeCoding.md](GCSafeCoding.md) for the complete guide to writing correct
+and performant GC-safe C++ code, including the preferred `Locals` + `PinnedValue`
+API, handle usage, error handling patterns, and common mistakes.
 
 ## Object Model
 

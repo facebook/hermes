@@ -8,17 +8,17 @@
 #ifndef HERMES_IR_IR_H
 #define HERMES_IR_IR_H
 
+#include "hermes/ADT/OwningFoldingSet.h"
 #include "hermes/ADT/WordBitSet.h"
 #include "hermes/AST/Context.h"
-#include "hermes/FrontEndDefs/JavaScriptDeclKind.h"
+#include "hermes/AST/ESTree.h"
+#include "hermes/AST/NativeContext.h"
+#include "hermes/FrontEndDefs/Builtins.h"
+#include "hermes/FrontEndDefs/Typeof.h"
+#include "hermes/Sema/SemContext.h"
 #include "hermes/Support/Conversions.h"
 #include "hermes/Support/ScopeChain.h"
 
-#ifndef HERMESVM_LEAN
-#include "hermes/AST/ESTree.h"
-#endif
-
-#include "llvh/ADT/FoldingSet.h"
 #include "llvh/ADT/Hashing.h"
 #include "llvh/ADT/SmallPtrSet.h"
 #include "llvh/ADT/SmallVector.h"
@@ -37,57 +37,77 @@
 
 namespace hermes {
 
+namespace sema {
+class FunctionInfo;
+} // namespace sema
+
 class Module;
+class VariableScope;
 class Function;
 class BasicBlock;
-class Parameter;
+class JSDynamicParam;
 class Instruction;
 class Context;
 class TerminatorInst;
-class ScopeDesc;
-class Variable;
+class LazyCompilationDataInst;
+class EvalCompilationDataInst;
 
-/// This is an instance of a JavaScript type.
+/// Representation of a type in the IR. This roughly corresponds for JavaScript
+/// types, but represents lower level concepts like "empty" type for TDZ and
+/// integers.
 class Type {
+ public:
   // Encodes the JavaScript type hierarchy.
   enum TypeKind {
-    /// An uninitialized TDZ.
+    /// An TDZ variable before its declaration.
     Empty,
+    /// A typed variable after its declaration, but before initialization.
+    /// At runtime this maps to undefined.
+    Uninit,
     Undefined,
     Null,
     Boolean,
     String,
     Number,
     BigInt,
+    // ES2024 4.4.32 Symbol type (not the symbol object)
+    Symbol,
+    Environment,
+    // ES2024 6.2.12 Private Names. We currently happen to use symbols at
+    // runtime to represent private names, but conceptually private names are a
+    // different entity, and for example certain private operations can only
+    // operate on this type.
+    PrivateName,
+    /// Function code (IR Function value), not a closure.
+    FunctionCode,
     Object,
-    Closure, // Subtype of Object.
-    RegExp, // Subtype of Object.
 
     LAST_TYPE
   };
 
-  enum NumTypeKind {
-    Double,
-    Int32,
-    Uint32,
-
-    LAST_NUM_TYPE
-  };
+ private:
+  static_assert(LAST_TYPE <= 16, "Type tag must fit in 16 bits");
 
   /// Return the string representation of the type at index \p idx.
   llvh::StringRef getKindStr(TypeKind idx) const {
     // The strings below match the values in TypeKind.
     static const char *const names[] = {
         "empty",
+        "uninit",
         "undefined",
         "null",
         "boolean",
         "string",
         "number",
         "bigint",
-        "object",
-        "closure",
-        "regexp"};
+        "symbol",
+        "environment",
+        "privateName",
+        "functionCode",
+        "object"};
+    static_assert(
+        LAST_TYPE == (sizeof(names) / sizeof(char *)),
+        "Not all types have a defined string representation");
     return names[idx];
   }
 
@@ -97,42 +117,32 @@ class Type {
 #define NUM_BIT_TO_VAL(XX) (1 << NumTypeKind::XX)
 #define NUM_IS_VAL(XX) (numBitmask_ == (1 << NumTypeKind::XX))
 
-  // The 'Any' type means all possible types.
-  static constexpr uint16_t TYPE_ANY_MASK = (1u << TypeKind::LAST_TYPE) - 1;
+  // All possible types including "empty" and "uninit", but not including
+  // special internal types that are never mixed with other types.
+  static constexpr uint16_t TYPE_ANY_EMPTY_UNINIT_MASK =
+      ((1u << TypeKind::LAST_TYPE) - 1) & ~BIT_TO_VAL(Environment) &
+      ~BIT_TO_VAL(PrivateName) & ~BIT_TO_VAL(FunctionCode);
+  // All of the above types except "empty" and "uninit".
+  static constexpr uint16_t TYPE_ANY_MASK =
+      TYPE_ANY_EMPTY_UNINIT_MASK & ~BIT_TO_VAL(Empty) & ~BIT_TO_VAL(Uninit);
 
   static constexpr uint16_t PRIMITIVE_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(String) | BIT_TO_VAL(BigInt) | BIT_TO_VAL(Null) |
-      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean);
-
-  static constexpr uint16_t OBJECT_BITS =
-      BIT_TO_VAL(Object) | BIT_TO_VAL(Closure) | BIT_TO_VAL(RegExp);
+      BIT_TO_VAL(Undefined) | BIT_TO_VAL(Boolean) | BIT_TO_VAL(Symbol);
 
   static constexpr uint16_t NONPTR_BITS = BIT_TO_VAL(Number) |
       BIT_TO_VAL(Boolean) | BIT_TO_VAL(Null) | BIT_TO_VAL(Undefined);
 
-  static constexpr uint16_t ANY_NUM_BITS =
-      NUM_BIT_TO_VAL(Double) | NUM_BIT_TO_VAL(Int32) | NUM_BIT_TO_VAL(Uint32);
-
-  static constexpr uint16_t INTEGER_BITS =
-      NUM_BIT_TO_VAL(Int32) | NUM_BIT_TO_VAL(Uint32);
-
   /// Each bit represent the possibility of the type being the type that's
   /// represented in the enum entry.
-  uint16_t bitmask_{TYPE_ANY_MASK};
-  /// Each bit represent the possibility of the type being the subtype of number
-  /// that's represented in the number type enum entry. If the number bit is not
-  /// set, this bitmask is meaningless.
-  uint16_t numBitmask_{ANY_NUM_BITS};
+  uint16_t bitmask_{0};
 
   /// The constructor is only accessible by static builder methods.
-  constexpr explicit Type(uint16_t mask, uint16_t numMask = ANY_NUM_BITS)
-      : bitmask_(mask), numBitmask_(numMask) {}
+  constexpr explicit Type(uint16_t mask) : bitmask_(mask) {}
 
  public:
-  constexpr Type() = default;
-
   static constexpr Type unionTy(Type A, Type B) {
-    return Type(A.bitmask_ | B.bitmask_, A.numBitmask_ | B.numBitmask_);
+    return Type(A.bitmask_ | B.bitmask_);
   }
 
   static constexpr Type intersectTy(Type A, Type B) {
@@ -142,15 +152,14 @@ class Type {
   }
 
   static constexpr Type subtractTy(Type A, Type B) {
-    return Type(A.bitmask_ & ~B.bitmask_, A.numBitmask_ & ~B.numBitmask_);
-  }
-
-  constexpr bool isNoType() const {
-    return bitmask_ == 0;
+    return Type(A.bitmask_ & ~B.bitmask_);
   }
 
   static constexpr Type createNoType() {
     return Type(0);
+  }
+  static constexpr Type createAnyEmptyUninit() {
+    return Type(TYPE_ANY_EMPTY_UNINIT_MASK);
   }
   static constexpr Type createAnyType() {
     return Type(TYPE_ANY_MASK);
@@ -158,6 +167,9 @@ class Type {
   /// Create an uninitialized TDZ type.
   static constexpr Type createEmpty() {
     return Type(BIT_TO_VAL(Empty));
+  }
+  static constexpr Type createUninit() {
+    return Type(BIT_TO_VAL(Uninit));
   }
   static constexpr Type createUndefined() {
     return Type(BIT_TO_VAL(Undefined));
@@ -171,11 +183,26 @@ class Type {
   static constexpr Type createString() {
     return Type(BIT_TO_VAL(String));
   }
+  static constexpr Type createSymbol() {
+    return Type(BIT_TO_VAL(Symbol));
+  }
   static constexpr Type createObject() {
     return Type(BIT_TO_VAL(Object));
   }
   static constexpr Type createNumber() {
     return Type(BIT_TO_VAL(Number));
+  }
+  /// This is just an alias of createNumber(). We used to track whether a
+  /// number was known to be an integer, but we don't anymore. Still, we don't
+  /// want to lose the callsite information, so we keep this alias.
+  static constexpr Type createInt32() {
+    return createNumber();
+  }
+  /// This is just an alias of createNumber(). We used to track whether a
+  /// number was known to be an integer, but we don't anymore. Still, we don't
+  /// want to lose the callsite information, so we keep this alias.
+  static constexpr Type createUint32() {
+    return createNumber();
   }
   static constexpr Type createBigInt() {
     return Type(BIT_TO_VAL(BigInt));
@@ -183,23 +210,33 @@ class Type {
   static constexpr Type createNumeric() {
     return unionTy(createNumber(), createBigInt());
   }
-  static constexpr Type createClosure() {
-    return Type(BIT_TO_VAL(Closure));
+  static constexpr Type createEnvironment() {
+    return Type(BIT_TO_VAL(Environment));
   }
-  static constexpr Type createRegExp() {
-    return Type(BIT_TO_VAL(RegExp));
+  static constexpr Type createPrivateName() {
+    return Type(BIT_TO_VAL(PrivateName));
   }
-  static constexpr Type createInt32() {
-    return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Int32));
-  }
-  static constexpr Type createUint32() {
-    return Type(BIT_TO_VAL(Number), NUM_BIT_TO_VAL(Uint32));
+  static constexpr Type createFunctionCode() {
+    return Type(BIT_TO_VAL(FunctionCode));
   }
 
+  constexpr bool isNoType() const {
+    return bitmask_ == 0;
+  }
+
+  constexpr bool isAnyEmptyUninitType() const {
+    return bitmask_ == TYPE_ANY_EMPTY_UNINIT_MASK;
+  }
   constexpr bool isAnyType() const {
     return bitmask_ == TYPE_ANY_MASK;
   }
 
+  constexpr bool isEmptyType() const {
+    return IS_VAL(Empty);
+  }
+  constexpr bool isUninitType() const {
+    return IS_VAL(Uninit);
+  }
   constexpr bool isUndefinedType() const {
     return IS_VAL(Undefined);
   }
@@ -212,43 +249,58 @@ class Type {
   constexpr bool isStringType() const {
     return IS_VAL(String);
   }
-
-  bool isObjectType() const {
-    // One or more of OBJECT_BITS must be set, and no other bit must be set.
-    return bitmask_ && !(bitmask_ & ~OBJECT_BITS);
+  constexpr bool isObjectType() const {
+    return IS_VAL(Object);
   }
-
   constexpr bool isNumberType() const {
     return IS_VAL(Number);
   }
   constexpr bool isBigIntType() const {
     return IS_VAL(BigInt);
   }
-  constexpr bool isClosureType() const {
-    return IS_VAL(Closure);
+  constexpr bool isSymbolType() const {
+    return IS_VAL(Symbol);
   }
-  constexpr bool isRegExpType() const {
-    return IS_VAL(RegExp);
+  constexpr bool isEnvironmentType() const {
+    return IS_VAL(Environment);
   }
-  constexpr bool isInt32Type() const {
-    return IS_VAL(Number) && NUM_IS_VAL(Int32);
+  constexpr bool isPrivateNameType() const {
+    return IS_VAL(PrivateName);
   }
-  constexpr bool isUint32Type() const {
-    return IS_VAL(Number) && NUM_IS_VAL(Uint32);
+  constexpr bool isFunctionCodeType() const {
+    return IS_VAL(FunctionCode);
   }
-  constexpr bool isIntegerType() const {
-    return IS_VAL(Number) && (numBitmask_ && !(numBitmask_ & ~INTEGER_BITS));
+
+  /// \return the TypeKind of the first set bit. This is intended to be used
+  /// when there is single type set. If there are no types, it returns
+  /// LAST_TYPE.
+  TypeKind getFirstTypeKind() const {
+    auto res = LLVM_LIKELY(bitmask_)
+        ? (TypeKind)llvh::countTrailingZeros(bitmask_, llvh::ZB_Undefined)
+        : TypeKind::LAST_TYPE;
+    assert(res <= LAST_TYPE && "Invalid bitmask");
+    return res;
+  }
+
+  /// \return how many valid types are represented by this (union) type.
+  unsigned countTypes() const {
+    return llvh::countPopulation(bitmask_);
   }
 
   /// \return true if the type is one of the known javascript primitive types:
   /// Number, BigInt, Null, Boolean, String, Undefined.
   constexpr bool isKnownPrimitiveType() const {
-    return isPrimitive() && 1 == llvh::countPopulation(bitmask_);
+    return isPrimitive() && 1 == countTypes();
   }
 
   constexpr bool isPrimitive() const {
     // Check if any bit except the primitive bits is on.
     return bitmask_ && !(bitmask_ & ~PRIMITIVE_BITS);
+  }
+
+  /// \return true if any of the types are primitive.
+  constexpr bool canBePrimitive() const {
+    return (bitmask_ & PRIMITIVE_BITS) != 0;
   }
 
   /// \return true if the type is not referenced by a pointer in javascript.
@@ -283,6 +335,11 @@ class Type {
     return canBeType(Type::createBigInt());
   }
 
+  /// \returns true if this type can represent a symbol value.
+  constexpr bool canBeSymbol() const {
+    return canBeType(Type::createSymbol());
+  }
+
   /// \returns true if this type can represent a number value.
   constexpr bool canBeNumber() const {
     return canBeType(Type::createNumber());
@@ -291,11 +348,6 @@ class Type {
   /// \returns true if this type can represent an object.
   constexpr bool canBeObject() const {
     return canBeType(Type::createObject());
-  }
-
-  /// \returns true if this type can represent a subtype of object.
-  constexpr bool canBeObjectSubtype() const {
-    return bitmask_ & OBJECT_BITS;
   }
 
   /// \returns true if this type can represent a boolean value.
@@ -308,6 +360,11 @@ class Type {
     return canBeType(Type::createEmpty());
   }
 
+  /// \returns true if this type can represent an "uninit" value.
+  constexpr bool canBeUninit() const {
+    return canBeType(Type::createUninit());
+  }
+
   /// \returns true if this type can represent an undefined value.
   constexpr bool canBeUndefined() const {
     return canBeType(Type::createUndefined());
@@ -318,14 +375,9 @@ class Type {
     return canBeType(Type::createNull());
   }
 
-  /// \returns true if this type can represent a closure value.
-  constexpr bool canBeClosure() const {
-    return canBeType(Type::createClosure());
-  }
-
-  /// \returns true if this type can represent a regex value.
-  constexpr bool canBeRegex() const {
-    return canBeType(Type::createRegExp());
+  /// \returns true if this type can represent an "any" type value.
+  constexpr bool canBeAny() const {
+    return canBeType(Type::createAnyType());
   }
 
   /// Return true if this type is a proper subset of \p t. A "proper subset"
@@ -347,93 +399,288 @@ class Type {
   constexpr bool operator!=(Type RHS) const {
     return !(*this == RHS);
   }
+
+  class iterator;
+
+  /// Return an iterator over the types in this Type.
+  iterator begin() const;
+  /// Return an "end" iterator over the types in this Type.
+  iterator end() const;
+
+  /// Allow Type to be used as a llvh::FoldingSet.
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    ID.AddInteger(bitmask_);
+  }
 };
 
-/// This lattice describes the kind of side effect that instructions have.
-/// The side effects are organized in a hierarchy, and higher levels are a
-/// superset of lower levels. The exact semantics of the side effects levels are
-/// documented in the IR document.
-enum class SideEffectKind {
-  /// Does not read, write to memory.
-  None,
-  /// Instruction may read memory.
-  MayRead,
-  /// Instruction may read or write memory.
-  MayWrite,
-  /// The side effects of the instruction are unknown and we can't make any
-  /// assumptions.
-  Unknown,
+static_assert(sizeof(Type) == 2, "Type must not be too big");
+
+/// An iterator over the types in a Type.
+class Type::iterator {
+  friend class Type;
+  Type type_;
+  unsigned index_;
+
+  iterator(Type type, unsigned index) : type_(type), index_(index) {
+    skip();
+  }
+
+  /// Skip to the first set bit in the bitmask.
+  void skip() {
+    while (index_ < sizeof(type_.bitmask_) * CHAR_BIT &&
+           !(type_.bitmask_ & (1 << index_))) {
+      ++index_;
+    }
+  }
+
+ public:
+  bool operator==(const iterator &RHS) const {
+    return type_ == RHS.type_ && index_ == RHS.index_;
+  }
+  bool operator!=(const iterator &RHS) const {
+    return !(*this == RHS);
+  }
+
+  iterator &operator++() {
+    assert(index_ < sizeof(type_.bitmask_) * CHAR_BIT && "Out of bounds");
+    ++index_;
+    skip();
+    return *this;
+  }
+  iterator operator++(int) {
+    auto copy = *this;
+    ++*this;
+    return copy;
+  }
+
+  Type operator*() const {
+    assert(index_ < sizeof(type_.bitmask_) * CHAR_BIT && "Out of bounds");
+    return Type(1 << index_);
+  }
+};
+
+inline Type::iterator Type::begin() const {
+  return iterator(*this, 0);
+}
+inline Type::iterator Type::end() const {
+  return iterator(*this, sizeof(bitmask_) * CHAR_BIT);
+}
+} // namespace hermes
+
+namespace llvh {
+template <>
+struct FoldingSetTrait<hermes::Type> {
+  static inline void Profile(hermes::Type t, FoldingSetNodeID &ID) {
+    t.Profile(ID);
+  }
+};
+} // namespace llvh
+
+namespace hermes {
+
+/// Describes the potential side effects of an instruction. The side effects are
+/// described by a series of bits, each of which specifies a particular way in
+/// which this instruction may observe/modify the state of the world, or
+/// otherwise restrict its movement/deletion.
+class SideEffect {
+ public:
+  SideEffect() {
+    memset(this, 0, sizeof(SideEffect));
+  }
+
+  /// Define each of the fields in a SideEffect.
+  /// \c ReadStack and \c WriteStack imply that an instruction may read/write to
+  /// a stack location. Such an instruction must take an \c AllocStackInst
+  /// operand which it can read/write to.
+  /// \c ReadFrame and \c WriteFrame imply that an instruction may read/write
+  /// variables in the frame.
+  /// \c ReadHeap and \c WriteHeap imply that an instruction may read/write
+  /// objects and other values on the heap.
+  /// \c Throw implies that an instruction may throw an exception.
+  /// \c ExecuteJS implies that an instruction may execute arbitrary user
+  /// provided JS. An instruction with \c ExecuteJS set must also have bits set
+  /// for throwing and accessing the frame and heap.
+  /// \c FirstInBlock implies that an instruction must be at the start of a
+  /// basic block. An instruction with \c FirstInBlock set may only be preceded
+  /// by other instances of the same instruction.
+  /// \c Idempotent implies that repeated execution of an instruction will not
+  /// affect the state of the world or the result of the instruction. For
+  /// example, two identical instructions that have \p Idempotent set may be
+  /// merged if they are only separated by instructions that have no side
+  /// effects.
+  /// \c Unhoistable implies that an instruction must not be hoisted out of its
+  /// basic block (e.g. by CodeMotion) because it relies on preconditions which
+  /// aren't fully expressed only by its operands.
+
+#define SIDE_EFFECT_FIELDS \
+  FIELD(ReadStack)         \
+  FIELD(WriteStack)        \
+  FIELD(ReadFrame)         \
+  FIELD(WriteFrame)        \
+  FIELD(ReadHeap)          \
+  FIELD(WriteHeap)         \
+  FIELD(Throw)             \
+  FIELD(ExecuteJS)         \
+  FIELD(FirstInBlock)      \
+  FIELD(Idempotent)        \
+  FIELD(Unhoistable)
+
+#define FIELD(field)        \
+  bool get##field() const { \
+    return f##field##_;     \
+  }
+  SIDE_EFFECT_FIELDS
+#undef FIELD
+
+#define FIELD(field)         \
+  SideEffect &set##field() { \
+    f##field##_ = true;      \
+    return *this;            \
+  }
+  SIDE_EFFECT_FIELDS
+#undef FIELD
+
+  /// Create side effects for an instruction that may execute user JS. Executing
+  /// JS implies several other side-effects, so this helps populate them.
+  static SideEffect createExecute() {
+    return SideEffect{}
+        .setReadFrame()
+        .setReadHeap()
+        .setWriteFrame()
+        .setWriteHeap()
+        .setExecuteJS()
+        .setThrow();
+  }
+
+  /// Create side effects for an instruction that may have arbitrary side
+  /// effects, and should not be deleted or reordered. For now this is just an
+  /// alias for createExecute.
+  static SideEffect createUnknown() {
+    return createExecute();
+  }
+
+  /// Determine whether the given instruction modifies the state of the world in
+  /// any an observable way.
+  bool hasSideEffect() const {
+    // Note that we do not check ExecuteJS here because any observable
+    // side-effect of a call requires one of these other bits to be set.
+    return getWriteStack() || getWriteHeap() || getWriteFrame() || getThrow();
+  }
+
+  /// Determine if the instruction is pure. That is, whether separate
+  /// invocations of the instruction with the same operands will always yield
+  /// the same result, and will not modify the state of the world in any
+  /// observable way. Note that this excludes instructions that allocate (e.g.
+  /// AllocObject, CreateFunction) since they produce a different reference each
+  /// time.
+  bool isPure() const {
+    return !hasSideEffect() && !getReadStack() && !getReadHeap() &&
+        !getReadFrame() && getIdempotent();
+  }
+
+  /// Helper functions to expose the SideEffectKind interface.
+  /// TODO: Delete these once all instructions are migrated off SideEffectKind.
+  bool mayExecute() const {
+    return getThrow() || getExecuteJS();
+  }
+  bool mayWriteOrWorse() const {
+    return getWriteStack() || getWriteFrame() || getWriteHeap() || mayExecute();
+  }
+  bool mayReadOrWorse() const {
+    return getReadStack() || getReadFrame() || getReadHeap() ||
+        mayWriteOrWorse();
+  }
+
+  /// Check if these side effects are well formed. For now, this just checks
+  /// that we correctly set/unset bits when an instruction is marked as being
+  /// able to execute.
+  bool isWellFormed() const {
+    if (getExecuteJS()) {
+      // If an instruction may execute, it cannot be idempotent, and could throw
+      // or access the frame/heap.
+      if (getIdempotent() || !getReadFrame() || !getReadHeap() ||
+          !getWriteFrame() || !getWriteHeap() || !getThrow())
+        return false;
+    }
+    return true;
+  }
+
+ private:
+#define FIELD(field) bool f##field##_ : 1;
+  SIDE_EFFECT_FIELDS
+#undef FIELD
+#undef SIDE_EFFECT_FIELDS
 };
 
 enum class ValueKind : uint8_t {
-#define INCLUDE_ALL_INSTRS
+  First_ValueKind,
 #define DEF_VALUE(CLASS, PARENT) CLASS##Kind,
+#define BEGIN_VALUE(CLASS, PARENT) First_##CLASS##Kind,
+#define DEF_TAG(NAME, PARENT) NAME##Kind,
+#define END_VALUE(CLASS) Last_##CLASS##Kind,
 #define MARK_VALUE(CLASS) CLASS##Kind,
-#define MARK_FIRST(CLASS) First_##CLASS##Kind,
+#define MARK_FIRST(CLASS, PARENT) First_##CLASS##Kind,
 #define MARK_LAST(CLASS) Last_##CLASS##Kind,
 #include "hermes/IR/ValueKinds.def"
-#undef INCLUDE_ALL_INSTRS
+  Last_ValueKind,
 };
 
-/// \returns true if \p kind is equal to \p base or a subkind of it.
-static inline bool kindIsA(ValueKind kind, ValueKind base) {
-  switch (base) {
-    default:
-      return kind == base;
-#define INCLUDE_ALL_INSTRS
-#define MARK_FIRST(CLASS)                            \
-  case ValueKind::CLASS##Kind:                       \
-    return kind >= ValueKind::First_##CLASS##Kind && \
-        kind <= ValueKind::Last_##CLASS##Kind;
-#include "hermes/IR/ValueKinds.def"
-#undef INCLUDE_ALL_INSTRS
-  }
+static inline bool kindInRange(ValueKind kind, ValueKind from, ValueKind to) {
+  return kind > from && kind < to;
 }
 
-/// A linked list of function scopes provided as context during IRGen.
-/// This how e.g. the debugger can provide information that an identifier 'foo'
-/// should be captured from a function two levels down the lexical stack.
-class SerializedScope {
- public:
-  using Ptr = std::shared_ptr<const SerializedScope>;
-  /// A declaration (const/let/var) in this scope.
-  struct Declaration {
-    Identifier name;
-    JavaScriptDeclKind declKind;
-    bool strictImmutableBinding;
+/// Return true if the specified kind falls in the range of the specified class.
+#define HERMES_IR_KIND_IN_CLASS(kind, CLASS) \
+  kindInRange(                               \
+      kind, ValueKind::First_##CLASS##Kind, ValueKind::Last_##CLASS##Kind)
+
+/// Return the numeric offset of the specified kind from the first kind in the
+/// class.
+#define HERMES_IR_KIND_TO_OFFSET(CLASS, kind) \
+  ((int)(kind) - (int)ValueKind::First_##CLASS##Kind - 1)
+
+/// Convert from an offset to a ValueKind inside a class.
+#define HERMES_IR_OFFSET_TO_KIND(CLASS, offset) \
+  ((ValueKind)((int)ValueKind::First_##CLASS##Kind + (offset) + 1))
+
+/// Return number of values in an IR class.
+#define HERMES_IR_CLASS_LENGTH(CLASS) \
+  ((int)ValueKind::Last_##CLASS##Kind - (int)ValueKind::First_##CLASS##Kind - 1)
+
+/// A set of attributes to be associated with Values.
+union Attributes {
+  struct {
+#define ATTRIBUTE(_valueKind, name, _string) uint16_t name : 1;
+#include "hermes/IR/Attributes.def"
   };
-  /// Parent scope, if any.
-  Ptr parentScope;
-  /// Original name of the function, if any.
-  Identifier originalName;
-  /// The generated name of the variable holding the function in the parent's
-  /// frame, which is what we need to look up to reference ourselves. It is only
-  /// set if there is an alias binding from \c originalName (which must be
-  /// valid) and said variable, which must have a different name (since it is
-  /// generated). Function::lazyClosureAlias_.
-  Identifier closureAlias;
-  /// List of variable names in the frame.
-  llvh::SmallVector<Declaration, 16> variables;
-};
 
-using SerializedScopePtr = SerializedScope::Ptr;
+  uint16_t flags_;
 
-#ifndef HERMESVM_LEAN
-/// The source of a lazy AST node.
-struct LazySource {
-  /// The type of node (such as a FunctionDeclaration or FunctionExpression).
-  ESTree::NodeKind nodeKind{ESTree::NodeKind::Empty};
-  /// The source buffer id in which this function can be find.
-  uint32_t bufferId{0};
-  /// The range of the function within the buffer (the whole function node, not
-  /// just the lazily parsed body).
-  SMRange functionRange;
-  /// The Yield param to restore when eagerly parsing.
-  bool paramYield{false};
-  /// The Await param to restore when eagerly parsing.
-  bool paramAwait{false};
+  /// No attributes on construction.
+  explicit Attributes() : flags_(0) {
+    // Make sure the bits can fit into flags_.
+    static_assert(sizeof(Attributes) == sizeof(flags_), "too many attributes");
+  }
+
+  /// \return true if there are no attributes on the function.
+  bool isEmpty() const {
+    return flags_ == 0;
+  }
+
+  /// Clear all attributes on the function.
+  void clear() {
+    flags_ = 0;
+  }
+
+  llvh::hash_code hash() {
+    return flags_;
+  }
+
+  /// \return a string describing the attributes if there are any.
+  /// If there are no attributes, returns "".
+  /// If there are attributes returns, e.g. "[allCallsitesKnownInStrictMode]".
+  std::string getDescriptionStr() const;
 };
-#endif
 
 class Value {
  public:
@@ -450,13 +697,19 @@ class Value {
   // removes this requirement.
   friend class Module;
   friend class IRBuilder;
-  friend class ScopeDesc;
-  friend class Variable;
 
   ValueKind Kind;
 
+  /// Bitset of the attributes associated with this value.
+  /// If this exceeds 2 bytes, the actual storage should be moved to Module,
+  /// and this field replaced with a bit which indicates whether the storage
+  /// exists.
+  /// ValueKind is 1 byte and Type is 4 bytes, so we can store one uint16_t here
+  /// without increasing the size of Value.
+  Attributes attributes_;
+
   /// The JavaScript type of the value.
-  Type valueType;
+  Type valueType = Type::createAnyType();
 
   /// A list of users of this instruction.
   UseListTy Users;
@@ -478,6 +731,11 @@ class Value {
 
  protected:
   explicit Value(ValueKind k) {
+    static_assert(sizeof(Kind) == 1, "ValueKind too big");
+    static_assert(sizeof(attributes_) == 2, "attributes_ increases Value size");
+    static_assert(
+        sizeof(valueType) <= 4,
+        "Type aligning to 4 bytes allows attributes_ to not increase Value size");
     Kind = k;
   }
 
@@ -487,6 +745,9 @@ class Value {
 
   /// Run a Value's destructor and deallocate its memory.
   static void destroy(Value *V);
+
+  /// \return true if this instruction tracks its users.
+  inline bool tracksUsers() const;
 
   /// \return the users of the value.
   const UseListTy &getUsers() const;
@@ -510,12 +771,6 @@ class Value {
   /// Replaces all uses of the current value with \p Other.
   void replaceAllUsesWith(Value *Other);
 
-  /// Removes all uses of self
-  void removeAllUses();
-
-  /// \returns true if the value \p other is a user of this value.
-  bool hasUser(Value *other);
-
   /// \returns the kind of the value.
   ValueKind getKind() const {
     return Kind;
@@ -525,13 +780,43 @@ class Value {
   llvh::StringRef getKindStr() const;
 
   /// Sets a new type \p type to the value.
+  ///
+  /// Types for Instructions should only be set in the constructors
+  /// or during the TypeInference pass.
+  /// The only instructions which set the type in the constructor are
+  /// those with inherent types (see \c Instruction::getInherentType),
+  /// and those which are simply copying the types from a single operand
+  /// (e.g. MovInst, LIRLoadConstInst).
+  /// All other Instruction types will be set during inference in TypeInference.
   void setType(Type type) {
+#ifndef NDEBUG
+    if (llvh::isa<Function>(this)) {
+      assert(
+          type.isFunctionCodeType() &&
+          "Functions cannot have non-functionCode types");
+    }
+#endif
     valueType = type;
   }
 
   /// \returns the JavaScript type of the value.
   Type getType() const {
     return valueType;
+  }
+
+  /// Takes a Module parameter to allow easily moving the attributes_ storage
+  /// into Module if necessary in the future.
+  /// Will create default Attributes if they don't exist already.
+  /// \return the Attributes of this value.
+  Attributes &getAttributesRef(const Module *) {
+    return attributes_;
+  }
+  /// Takes a Module parameter to allow easily moving the attributes_ storage
+  /// into Module if necessary in the future.
+  /// \return the Attributes by value, because nonexistent attributes might not
+  ///   be stored anywhere if/when we use a side table.
+  Attributes getAttributes(const Module *) const {
+    return attributes_;
   }
 
   static bool classof(const Value *) {
@@ -555,146 +840,116 @@ class Value {
   }
 };
 
-/// This represents a "scope" in the JS Module. Conceptually, every function
-/// (including global()) in a JS module lives in a scope, and each function body
-/// defines a new scope.
-class ScopeDesc : public Value {
-  friend class Module;
-  friend class Value;
-  using VariableListType = llvh::SmallVector<Variable *, 8>;
-
-  ScopeDesc(const ScopeDesc &) = delete;
-  ScopeDesc &operator=(const ScopeDesc &) = delete;
-
-  ~ScopeDesc();
-
-  explicit ScopeDesc(ScopeDesc *p)
-      : Value(ValueKind::ScopeDescKind), parent_(p) {}
-
- public:
-  using ScopeListTy = llvh::SmallVector<ScopeDesc *, 8>;
-
-  /// \return a new inner scope in this scope. This is the only way for new
-  /// scopes to be created as all scopes in JS are nested within another scope,
-  /// with the exception of the scope where the global() function lives.
-  ScopeDesc *createInnerScope() {
-    auto *S = new ScopeDesc(this);
-    innerScopes_.emplace_back(S);
-    return S;
+/// Deleter for Values.
+struct ValueDeleter {
+  void operator()(Value *V) {
+    Value::destroy(V);
   }
-
-  ScopeDesc *getParent() const {
-    return parent_;
-  }
-
-  void relocateTo(ScopeDesc *newParent) {
-    assert(
-        newParent == parent_->getParent() &&
-        "multi-level scope nesting change");
-    parent_ = newParent;
-  }
-
-  ScopeListTy &getMutableInnerScopes() {
-    return innerScopes_;
-  }
-
-  const ScopeListTy &getInnerScopes() const {
-    return innerScopes_;
-  }
-
-  VariableListType &getMutableVariables() {
-    return variables_;
-  }
-
-  const VariableListType &getVariables() const {
-    return variables_;
-  }
-
-  void addVariable(Variable *V) {
-    variables_.emplace_back(V);
-  }
-
-  /// Return true if this is the global function scope.
-  bool isGlobalScope() const;
-
-  bool hasFunction() const {
-    return function_;
-  }
-
-  inline Function *getFunction() const;
-
-  inline void setFunction(Function *F);
-
-  void setSerializedScope(SerializedScopePtr serializedScope) {
-    assert(!serializedScope_ && "scope has already been serialized");
-    serializedScope_ = std::move(serializedScope);
-  }
-
-  SerializedScopePtr getSerializedScope() const {
-    return serializedScope_;
-  }
-
-  void setDynamic(bool v) {
-    dynamic_ = v;
-  }
-
-  bool getDynamic() const {
-    return dynamic_;
-  }
-
-  static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::ScopeDescKind;
-  }
-
- private:
-  ScopeDesc *parent_{};
-  ScopeListTy innerScopes_;
-
-  SerializedScopePtr serializedScope_;
-
-  Function *function_{};
-
-  VariableListType variables_;
-
-  bool dynamic_{};
 };
+
+/// \return the customData field of \p lexScope, casted to VariableScope. Can
+/// return null.
+VariableScope *getLexicalScopeCustomData(sema::LexicalScope *lexScope);
+
+/// \return the customData field of \p lexScope, casted to Value. Can return
+/// null.
+Value *getDeclCustomData(sema::Decl *decl);
 
 /// This represents a function parameter.
 class Parameter : public Value {
+  friend class Function;
   Parameter(const Parameter &) = delete;
   void operator=(const Parameter &) = delete;
 
   /// The function that contains this paramter.
-  Function *Parent;
+  Function *parent_;
 
   /// The formal name of the parameter
-  Identifier Name;
+  Identifier name_;
+
+  explicit Parameter(Function *parent, Identifier name)
+      : Value(ValueKind::ParameterKind), parent_(parent), name_(name) {
+    assert(parent_ && "Invalid parent");
+  }
 
  public:
-  explicit Parameter(Function *parent, Identifier name, bool isThisParameter);
-
-  void removeFromParent();
-
-  Context &getContext() const;
   Function *getParent() const {
-    return Parent;
+    return parent_;
   }
-  void setParent(Function *parent) {
-    Parent = parent;
+  /// \brief Return a constant reference to the value's name.
+  Identifier getName() const {
+    return name_;
+  }
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::ParameterKind;
+  }
+};
+
+/// Supertype of the types below, to factor out common code.
+/// Note that ctor is protected; can't create one of these.
+class JSParam : public Value {
+  JSParam(const JSParam &) = delete;
+  void operator=(const JSParam &) = delete;
+
+  /// The formal name of the parameter
+  Identifier name_;
+
+ protected:
+  JSParam(ValueKind kind, Function *parent, Identifier name)
+      : Value(kind), name_(name), parent_(parent) {
+    assert(parent_ && "Invalid parent");
+  }
+
+  /// The function that contains this paramter.
+  Function *parent_;
+
+ public:
+  Context &getContext() const;
+
+  Function *getParent() const {
+    return parent_;
   }
 
   /// \brief Return a constant reference to the value's name.
-  Identifier getName() const;
+  Identifier getName() const {
+    return name_;
+  }
+};
 
-  /// \returns true if this parameter is a 'this' parameter.
-  bool isThisParameter() const;
+/// This represents a JS function parameter, all of which are optional.
+class JSDynamicParam : public JSParam {
+  friend class Function;
+  friend class IRBuilder;
+  JSDynamicParam(const JSDynamicParam &) = delete;
+  void operator=(const JSDynamicParam &) = delete;
 
+  JSDynamicParam(Function *parent, Identifier name)
+      : JSParam(ValueKind::JSDynamicParamKind, parent, name) {}
+
+ public:
   /// Return the index of this parameter in the function's parameter list.
   /// "this" parameter is excluded from the list.
-  int getIndexInParamList() const;
+  uint32_t getIndexInParamList() const;
 
   static bool classof(const Value *V) {
-    return V->getKind() == ValueKind::ParameterKind;
+    return V->getKind() == ValueKind::JSDynamicParamKind;
+  }
+};
+
+/// This represents one of the "special" JS function parameters: newTarget,
+/// or parentScope.
+class JSSpecialParam : public JSParam {
+  friend class Function;
+  friend class IRBuilder;
+  JSSpecialParam(const JSSpecialParam &) = delete;
+  void operator=(const JSSpecialParam &) = delete;
+
+  JSSpecialParam(Function *parent, Identifier name)
+      : JSParam(ValueKind::JSSpecialParamKind, parent, name) {}
+
+ public:
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::JSSpecialParamKind;
   }
 };
 
@@ -747,7 +1002,7 @@ class Literal : public Value {
   explicit Literal(ValueKind k) : Value(k) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::LiteralKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), Literal);
   }
 };
 
@@ -762,6 +1017,20 @@ class LiteralEmpty : public Literal {
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::LiteralEmptyKind;
+  }
+};
+
+class LiteralUninit : public Literal {
+  LiteralUninit(const LiteralUninit &) = delete;
+  void operator=(const LiteralUninit &) = delete;
+
+ public:
+  explicit LiteralUninit() : Literal(ValueKind::LiteralUninitKind) {
+    setType(Type::createUninit());
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LiteralUninitKind;
   }
 };
 
@@ -859,6 +1128,11 @@ class LiteralNumber : public Literal, public llvh::FoldingSetNode {
   /// Check whether the number is positive zero.
   bool isPositiveZero() const {
     return value == 0.0 && !std::signbit(value);
+  }
+
+  /// Check whether the number is negative zero.
+  bool isNegativeZero() const {
+    return value == 0.0 && std::signbit(value);
   }
 
   /// Check whether the number can be represented in unsigned 8-bit integer
@@ -1005,80 +1279,137 @@ class GlobalObject : public Literal {
   }
 };
 
+template <class T, ValueKind K, Type typer() = Type::createAnyType>
+class LiteralWrapper : public Literal, public llvh::FoldingSetNode {
+ protected:
+  T data_;
+
+ public:
+  explicit LiteralWrapper(T data) : Literal(K), data_(data) {
+    setType(typer());
+  }
+
+  T getData() const {
+    return data_;
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == K;
+  }
+
+  static void Profile(llvh::FoldingSetNodeID &ID, T data) {
+    if constexpr (std::is_integral_v<T>)
+      ID.AddInteger(data);
+    else if constexpr (std::is_enum_v<T>)
+      ID.AddInteger(static_cast<std::underlying_type_t<T>>(data));
+    else if constexpr (std::is_pointer_v<T>)
+      ID.AddPointer(data);
+    else
+      ID.Add(data);
+  }
+
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    Profile(ID, data_);
+  }
+};
+
+using LiteralBuiltinIdx = LiteralWrapper<
+    BuiltinMethod::Enum,
+    ValueKind::LiteralBuiltinIdxKind,
+    Type::createNumber>;
+using LiteralIRType =
+    LiteralWrapper<Type, ValueKind::LiteralIRTypeKind, Type::createNull>;
+using LiteralTypeOfIsTypes = LiteralWrapper<
+    TypeOfIsTypes,
+    ValueKind::LiteralTypeOfIsTypesKind,
+    Type::createNull>;
+using LiteralNativeSignature =
+    LiteralWrapper<NativeSignature *, ValueKind::LiteralNativeSignatureKind>;
+using LiteralNativeExtern = LiteralWrapper<
+    NativeExtern *,
+    ValueKind::LiteralNativeExternKind,
+    Type::createNumber>;
+
 /// This represents a JavaScript variable, that's allocated in the function.
 class Variable : public Value {
  public:
-  using DeclKind = JavaScriptDeclKind;
-
  private:
   Variable(const Variable &) = delete;
   void operator=(const Variable &) = delete;
-
-  /// Declaration kind: var/let/const.
-  DeclKind declKind;
 
   /// The textual representation of the variable in the JavaScript program.
   Identifier text;
 
   /// The scope that owns the variable.
-  ScopeDesc *parent;
+  VariableScope *parent;
 
-  /// If true, this Variable represents a strict immutable binding as created by
-  ///
-  ///   ES2023 9.1.1.1.3 CreateImmutableBinding ( N, S )
-  ///
-  /// when S is true. By default, all DeclKind::Const Variables are strict
-  /// immutable bindings.
-  bool strictImmutableBinding_{};
+  /// Index used for a Variable that hasn't had its index assigned yet.
+  static constexpr uint32_t kUnresolvedIndex = UINT32_MAX;
 
- protected:
-  explicit Variable(
-      ValueKind k,
-      ScopeDesc *scope,
-      DeclKind declKind,
-      Identifier txt);
+  /// The index of the variable in the environment.
+  /// Initially set to kUnresolvedIndex, then set after register allocation.
+  /// Used for emitting loads/stores from environments using the variable.
+  /// Reused for variables that are captured in nested lazy functions, when they
+  /// are compiled.
+  uint32_t index_ = kUnresolvedIndex;
+
+  /// If true, this variable obeys the TDZ rules.
+  bool obeysTDZ_ = false;
+
+  /// The constness of this variable.
+  sema::Decl::Constness constness_ = sema::Decl::Constness::Never;
+
+  /// If true, this variable is hidden from e.g. the debugger.
+  /// Used for synthetic variables that don't correspond to user-defined
+  /// variables.
+  bool hidden_ = false;
 
  public:
-  explicit Variable(ScopeDesc *scope, DeclKind declKind, Identifier txt)
-      : Variable(ValueKind::VariableKind, scope, declKind, txt) {};
+  explicit Variable(VariableScope *scope, Identifier txt, bool hidden);
 
   ~Variable();
-
-  DeclKind getDeclKind() const {
-    return declKind;
-  }
 
   Identifier getName() const {
     return text;
   }
-  ScopeDesc *getParent() const {
+  VariableScope *getParent() const {
     return parent;
   }
 
-  void setParent(ScopeDesc *S) {
-    assert(parent->getParent() == S && "multi-level re-home not expected.");
-    parent = S;
+  /// Set the index of the variable in the environment.
+  /// \pre the index has not yet been set.
+  void setIndexInVariableList(uint32_t index) {
+    assert(!hasIndexInVariableList() && "Index can only be set once");
+    index_ = index;
+  }
+  /// \return whether the index of the variable has been set.
+  bool hasIndexInVariableList() const {
+    return index_ != kUnresolvedIndex;
+  }
+  /// \pre the index has been set.
+  /// \return the index of the variable in the environment.
+  uint32_t getIndexInVariableList() const {
+    assert(hasIndexInVariableList() && "Index not set yet");
+    return index_;
   }
 
   bool getObeysTDZ() const {
-    return declKind != DeclKind::Var;
+    return obeysTDZ_;
+  }
+  void setObeysTDZ(bool value) {
+    obeysTDZ_ = value;
   }
 
-  bool getStrictImmutableBinding() const {
-    return strictImmutableBinding_;
+  sema::Decl::Constness getConstness() const {
+    return constness_;
   }
-  void setStrictImmutableBinding(bool value) {
-    assert(
-        declKind == DeclKind::Const &&
-        "strict immutable binding is only meaningful for const Variables.");
-    strictImmutableBinding_ = value;
+  void setConstness(sema::Decl::Constness constness) {
+    constness_ = constness;
   }
 
-  /// Return the index of this variable in the function's variable list.
-  int getIndexInVariableList() const;
-
-  /// Creates and \return a copy of this Variable in \p newScope.
-  Variable *cloneIntoNewScope(ScopeDesc *newScope);
+  bool getHidden() const {
+    return hidden_;
+  }
 
   static bool classof(const Value *V) {
     return V->getKind() == ValueKind::VariableKind;
@@ -1086,29 +1417,19 @@ class Variable : public Value {
 };
 
 /// A property of the global object.
-class GlobalObjectProperty : public Value {
-  /// The module that owns it.
-  Module *parent_;
-
+class GlobalObjectProperty : public Value, public llvh::FoldingSetNode {
   /// The variable name.
   LiteralString *name_;
 
   /// Was it explicitly declared (which means that it is non-configurable).
-  bool declared_;
+  bool declared_ = false;
 
  public:
-  GlobalObjectProperty(Module *parent, LiteralString *name, bool declared)
-      : Value(ValueKind::GlobalObjectPropertyKind),
-        parent_(parent),
-        name_(name),
-        declared_(declared) {}
+  GlobalObjectProperty(LiteralString *name)
+      : Value(ValueKind::GlobalObjectPropertyKind), name_(name) {}
 
   static bool classof(const Value *v) {
     return v->getKind() == ValueKind::GlobalObjectPropertyKind;
-  }
-
-  Module *getParent() const {
-    return parent_;
   }
 
   LiteralString *getName() const {
@@ -1121,6 +1442,13 @@ class GlobalObjectProperty : public Value {
 
   void orDeclared(bool declared) {
     declared_ |= declared;
+  }
+
+  static void Profile(llvh::FoldingSetNodeID &ID, LiteralString *name) {
+    ID.AddPointer(name);
+  }
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    Profile(ID, name_);
   }
 };
 
@@ -1136,15 +1464,20 @@ class Instruction
   BasicBlock *Parent;
   /// Saves the instruction operands.
   llvh::SmallVector<Value::Use, 2> Operands;
-  ScopeDesc *SourceLevelScope{};
 
   SMLoc location_{};
   /// The statement of which this Instruction is a part.
   /// If 0, then there is no corresponding source statement.
   uint32_t statementIndex_{0};
 
-  /// \returns the side effect of the derived instruction.
-  SideEffectKind getDerivedSideEffect();
+  /// The nearest enclosing environment ID associated with this instruction.
+  /// 0 means no valid ID.
+  /// >= 1 refers to some Value* which can be found in the Function*.
+  uint32_t environmentId_{0};
+
+  /// The enclosing lexical scope that existed when this instruction was
+  /// created. This is set by the IRBuilder.
+  sema::LexicalScope *lexicalScope_{nullptr};
 
  protected:
   explicit Instruction(ValueKind kind) : Value(kind), Parent(nullptr) {}
@@ -1162,7 +1495,23 @@ class Instruction
   /// Add an operand to the operand list.
   void pushOperand(Value *Val);
 
+  /// Implementation of \c getInherentType, default implementation returns
+  /// None.
+  ///
+  /// Subclasses should override this and call it in the constructor if the
+  /// instructions themselves have an inherent type.
+  ///
+  /// \return a Type if the instruction has an inherent type, None otherwise.
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return llvh::None;
+  }
+
  public:
+  /// All scope creation IDs of this value or higher represent an index into a
+  /// list of environments maintained in the Function this instruction belongs
+  /// to.
+  static constexpr uint32_t kFirstScopeCreationIdIndex = 1;
+
   void setOperand(Value *Val, unsigned Index);
   Value *getOperand(unsigned Index) const;
   unsigned getNumOperands() const;
@@ -1172,6 +1521,36 @@ class Instruction
   /// to.
   WordBitSet<> getChangedOperands();
 
+  /// An "inherent type" is a type that the instruction will _always_ have,
+  /// regardless of the operands that it is provided with.
+  /// The inherent type MUST be the tightest type bound that can be placed
+  /// on the result of the instruction - it must not be possible to narrow
+  /// the inherent type through any kind of type inference.
+  ///
+  /// If an Instruction has an inherent type, the constructor should set the
+  /// type of the Instruction to the inherent type by calling
+  /// \c getInherentTypeImpl.
+  ///
+  /// \return a Type if the instruction has an inherent type, None otherwise.
+  llvh::Optional<Type> getInherentType();
+
+  /// \return whether this instruction has an output value.
+  bool hasOutput() const;
+
+  /// \return whether this instruction is a typed instruction and should not,
+  /// e.g. have its type inferred by TypeInference.
+  bool isTyped() const;
+
+  /// Returns true if any of the operands can have an "empty" or "uninit" type.
+  bool acceptsEmptyType() const;
+
+  /// Returns true if any of the operands can have an "empty" or "uninit" type.
+  /// The default implementation returns false. This method has to be overridden
+  /// by a few instructions that can handle an empty type (ThrowIf, Mov, etc).
+  bool acceptsEmptyTypeImpl() const {
+    return false;
+  }
+
   void setLocation(SMLoc loc) {
     location_ = loc;
   }
@@ -1180,13 +1559,6 @@ class Instruction
   }
   bool hasLocation() const {
     return location_.isValid();
-  }
-
-  void setSourceLevelScope(ScopeDesc *sourceLevelScope) {
-    SourceLevelScope = sourceLevelScope;
-  }
-  ScopeDesc *getSourceLevelScope() const {
-    return SourceLevelScope;
   }
 
   /// Update the statement that this Instruction belongs to.
@@ -1199,6 +1571,32 @@ class Instruction
     return statementIndex_;
   }
 
+  void setEnvironmentID(uint32_t enclosingScopeCreationID) {
+    environmentId_ = enclosingScopeCreationID;
+  }
+  /// Set the environment ID of the instruction to a sentinel value indicating
+  /// there's no valid environment ID information.
+  void clearEnvironmentID() {
+    environmentId_ = 0;
+  }
+  uint32_t getEnvironmentID() const {
+    return environmentId_;
+  }
+  /// \return an index into the IR `Function`'s environment list.
+  uint32_t getEnvironmentIDAsIndex() const {
+    assert(environmentId_ >= kFirstScopeCreationIdIndex);
+    return environmentId_ - kFirstScopeCreationIdIndex;
+  }
+  /// \return the implicit environment operand associated with this instruction.
+  Value *getImplicitEnvOperand() const;
+
+  void setLexicalScope(sema::LexicalScope *lexScope) {
+    lexicalScope_ = lexScope;
+  }
+  sema::LexicalScope *getLexicalScope() {
+    return lexicalScope_;
+  }
+
   /// A debug utility that dumps the textual representation of the IR to the
   /// given ostream, defaults to stdout.
   void dump(llvh::raw_ostream &os = llvh::outs()) const;
@@ -1208,36 +1606,22 @@ class Instruction
   /// occurrence of \p From.
   void replaceFirstOperandWith(Value *OldValue, Value *NewValue);
 
-  /// Erase all operands whose value is \p Value, and unregister the user.
-  void eraseOperand(Value *Value);
-
+  /// Move or insert an instruction at a given position. We deliberately do not
+  /// have iterator versions of these methods because these functions rely on
+  /// the position being a valid instruction (which is not the case with end
+  /// iterators, for instance).
   void insertBefore(Instruction *InsertPos);
   void insertAfter(Instruction *InsertPos);
   void moveBefore(Instruction *Later);
+
   void removeFromParent();
   void eraseFromParent();
 
   /// Return the name of the instruction.
   llvh::StringRef getName();
 
-  /// \returns true if the instruction has some side effect.
-  bool hasSideEffect() {
-    return getDerivedSideEffect() != SideEffectKind::None;
-  }
-
-  /// \returns true if the instruction may read memory.
-  bool mayReadMemory() {
-    return getDerivedSideEffect() >= SideEffectKind::MayRead;
-  }
-  /// \returns true if the instruction may write to memory.
-  bool mayWriteMemory() {
-    return getDerivedSideEffect() >= SideEffectKind::MayWrite;
-  }
-  /// \returns true if the instruction may execute code by means of throwing
-  /// an exception or by executing code.
-  bool mayExecute() {
-    return getDerivedSideEffect() > SideEffectKind::MayWrite;
-  }
+  /// \returns the side effect of the instruction.
+  SideEffect getSideEffect() const;
 
   Context &getContext() const;
   BasicBlock *getParent() const {
@@ -1247,37 +1631,19 @@ class Instruction
     Parent = parent;
   }
 
+  /// \return the Function to which this Instruction belongs.
+  inline Function *getFunction() const;
+
+  /// \return the Module to which this Instruction belongs.
+  inline Module *getModule() const;
+
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::InstructionKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), Instruction);
   }
 
-  /// An opaque class representing the variety of an instruction.
-  ///
-  /// Variety is more specific than ValueKind: it encapsulates all properties of
-  /// an instruction except its operands. For example, the "+" and "-" binary
-  /// operator instructions have the same getKind() but different getVariety().
-  class Variety {
-    friend class Instruction;
-    std::pair<unsigned, unsigned> kinds_;
-    explicit Variety(std::pair<unsigned, unsigned> kinds) : kinds_(kinds) {}
-
-   public:
-    bool operator==(const Variety &other) const {
-      return kinds_ == other.kinds_;
-    }
-    bool operator!=(const Variety &other) const {
-      return kinds_ != other.kinds_;
-    }
-    friend llvh::hash_code hash_value(Variety variety) {
-      return llvh::hash_value(variety.kinds_);
-    }
-  };
-
-  /// Return the variety of this instruction.
-  Variety getVariety() const;
-
   /// Return the hash code the this instruction.
-  llvh::hash_code getHashCode() const;
+  /// (The instruction cannot be a Phi, since that might have loops.)
+  llvh::hash_code getSimpleHashCode() const;
 
   /// Return true if \p RHS is equal to this instruction.
   bool isIdenticalTo(const Instruction *RHS) const;
@@ -1430,6 +1796,93 @@ struct ilist_alloc_traits<::hermes::BasicBlock> {
 
 namespace hermes {
 
+/// VariableScope is a lexical scope. This inherits from ilist_node twice, once
+/// for its owning list in the module, and again for the child list that each
+/// scope is part of. The ilist_tags used are just templated on type of the
+/// owner of the specific list, but they could be any type in principle.
+class VariableScope
+    : public Value,
+      public llvh::ilist_node<VariableScope, llvh::ilist_tag<Module>>,
+      public llvh::ilist_node<VariableScope, llvh::ilist_tag<VariableScope>> {
+  using VariableListType = llvh::SmallVector<Variable *, 8>;
+  using ChildListType =
+      llvh::simple_ilist<VariableScope, llvh::ilist_tag<VariableScope>>;
+
+  /// The variables associated with this scope.
+  VariableListType variables_;
+
+  /// The VariableScope representing the parent of this scope, or null if no
+  /// such scope exists.
+  VariableScope *parentScope_;
+
+  /// The list of children of this VariableScope. This is necessary so we can
+  /// update their parents if this scope is eliminated.
+  ChildListType children_;
+
+  /// The number of variables in this scope that are visible to the debugger.
+  /// Defaulted to UINT32_MAX to indicate that it hasn't been assigned yet.
+  uint32_t numVisibleVariables_ = UINT32_MAX;
+
+ public:
+  VariableScope(VariableScope *parentScope);
+
+  /// \returns a list of variables.
+  VariableListType &getVariables() {
+    return variables_;
+  }
+  /// \returns a list of variables.
+  llvh::ArrayRef<Variable *> getVariables() const {
+    return variables_;
+  }
+
+  /// \returns a list of children.
+  ChildListType &getChildren() {
+    return children_;
+  }
+
+  /// \return the number of variables that are visible in this scope.
+  /// The first numVisibleVariables in this VariableScope are visible to the
+  /// debugger.
+  uint32_t getNumVisibleVariables() const {
+    assert(numVisibleVariables_ != UINT32_MAX && "not assigned yet");
+    return numVisibleVariables_;
+  }
+
+  /// Add a variable \p V to the variable list.
+  void addVariable(Variable *V) {
+    variables_.push_back(V);
+  }
+
+  /// Get the parent scope, which may be null if there isn't one.
+  VariableScope *getParentScope() const {
+    return parentScope_;
+  }
+
+  /// Update the parent scope of this scope.
+  void setParentScope(VariableScope *parentScope);
+
+  /// Remove this scope from the scope chain, by moving all of its children to
+  /// instead be children of its parent.
+  void removeFromScopeChain();
+
+  /// Store the location of each Variable in the scope into the Variable itself.
+  /// This is done after functions using the VariableScope have been register
+  /// allocated, so the layout of environments corresponding to this
+  /// VariableScope must no longer change (no Variables added or removed).
+  void assignIndexToVariables();
+
+  ~VariableScope() {
+    // Free all variables.
+    for (auto *v : variables_) {
+      Value::destroy(v);
+    }
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::VariableScopeKind;
+  }
+};
+
 class Function : public llvh::ilist_node_with_parent<Function, Module>,
                  public Value {
   Function(const Function &) = delete;
@@ -1437,29 +1890,60 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
  public:
   using BasicBlockListType = llvh::iplist<BasicBlock>;
-  using ParameterListType = llvh::SmallVector<Parameter *, 8>;
 
   enum class DefinitionKind {
     ES5Function,
-    ES6Constructor,
+    ES6BaseConstructor,
+    ES6DerivedConstructor,
     ES6Arrow,
     ES6Method,
+    // This corresponds to the synthetic function we create in IRGen, which is
+    // the inner generator function passed as the argument to CreateGenerator.
+    GeneratorInner,
+    // This is a GeneratorInner function which is created as part of an async
+    // arrow.
+    GeneratorInnerArrow,
   };
+
+  /// Enum describing restrictions on how this function may be invoked.
+  enum class ProhibitInvoke {
+    ProhibitNone,
+    ProhibitConstruct,
+    ProhibitCall,
+  };
+
+  /// \return true when every callsite of this Function is absolutely known
+  /// and analyzable, even in the presence of Error structured stack trace.
+  bool allCallsitesKnown() const {
+    return getAttributes(parent_)._allCallsitesKnownInStrictMode && strictMode_;
+  }
+
+  /// \return true when every callsite of this Function is absolutely known
+  /// and analyzable except for perhaps the usage of Error structured stack
+  /// trace in loose mode.
+  bool allCallsitesKnownExceptErrorStructuredStackTrace() const {
+    return getAttributes(parent_)._allCallsitesKnownInStrictMode;
+  }
+
+  /// \return a ProhibitInvoke value representing restrictions on how this
+  /// function may be invoked.
+  ProhibitInvoke getProhibitInvoke() const;
 
  private:
   /// The Module owning this function.
   Module *parent_;
 
-  /// Indicates whether this is the global scope.
-  bool isGlobal_;
-
-  /// The function scope descriptor.
-  ScopeDesc *scopeDesc_;
-
   /// The basic blocks in this function.
   BasicBlockListType BasicBlockList{};
-  /// The function parameters.
-  ParameterListType Parameters;
+  /// JS parameters, which are all technically optional. "this" is at index 0.
+  llvh::SmallVector<JSDynamicParam *, 4> jsDynamicParams_{};
+  /// Flag indicating whether the JS "this" dynamic param has been added to
+  /// params.
+  bool jsThisAdded_ = false;
+  /// Parameter used as an operand in GetNewTarget to easily find all users.
+  JSSpecialParam newTargetParam_;
+  /// Parameter used as an operand in GetParentScope to easily find all users.
+  JSSpecialParam parentScopeParam_;
   /// The user-specified original name of the function,
   /// or if not specified (e.g. anonymous), the inferred name.
   /// If there was no inference, an empty string.
@@ -1470,15 +1954,14 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   const bool strictMode_{};
   /// The source location of the function.
   SMRange SourceRange{};
-  /// The source visibility of the function.
-  SourceVisibility sourceVisibility_;
+  /// Information on custom directives found in this function.
+  CustomDirectives customDirectives_{};
+
+  Type returnType_ = Type::createAnyType();
 
   /// A name derived from \c originalOrInferredName_, but unique in the Module.
   /// Used only for printing and diagnostic.
   Identifier internalName_;
-
-  /// The "this" parameter.
-  Parameter *thisParameter{};
 
   /// The number of expected arguments, derived from the formal parameters given
   /// in the function signature.
@@ -1494,105 +1977,58 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   /// and have cleared it in preparation for lowering steps.
   OptValue<uint32_t> statementCount_{0};
 
-#ifndef HERMESVM_LEAN
-  /// The source of a function, containing function type, range and buffer ID.
-  LazySource lazySource_;
+  /// The current sema::LexicalScope for the IR being generated in this
+  /// function.
+  /// lexicalScope_ can be null, indicating no lexical scope info is
+  /// available.
+  /// If lexicalScope_ is None we've completed IRGen and have cleared
+  /// it in preparation for lowering steps.
+  OptValue<sema::LexicalScope *> lexicalScope_{nullptr};
 
-  /// The SerializedScope of the lazyCompilationAst.
-  SerializedScopePtr lazyScope_{};
+  /// The current environment ID.
+  /// If environmentID_ == 0, then there's no information being recorded.
+  /// If environmentID_ >= 1, it represents the most recent environment created
+  /// in the function.
+  /// If environmentID_ is None we've completed IRGen and have cleared it in
+  /// preparation for lowering steps.
+  OptValue<uint32_t> environmentID_{0};
 
-  /// The parent's generated closure variable for this function. It is non-null
-  /// only if there is an alias binding from \c originalOrInferredName_ (which
-  /// must be valid) to said variable. Used only by lazy compilation.
-  ///
-  /// For a named function expresion:
-  ///     myExpression(function bar() { somecode; })
-  ///
-  /// We generate the code that's really more similar to:
-  ///     function anon_0_closure() {
-  ///         var bar=anon_0_closure;   // Nametable alias, not a real frameload
-  ///         somecode;
-  ///     }
-  ///     myExpression(anon_0_closure);
-  ///
-  /// When we generate the `function bar() {...}`, this field will be set to
-  /// the `anon_0_closure` variable to capture this relationship.
-  Variable *lazyClosureAlias_{};
-#endif
+  /// The two fields below are used only in "opt-to-fixed-point" compilation
+  /// mode.
 
-  template <typename H>
-  void forEachScopeImpl(Function *F, ScopeDesc *scopeDesc, H handler) {
-    if (scopeDesc->getFunction() != F) {
-      return;
-    }
+  /// The set of functions that have been inlined into this one.
+  llvh::DenseSet<Function *> inlinedInto_;
+  /// The set of functions that this function has been inlined into.
+  llvh::DenseSet<Function *> inlinedBy_;
 
-    handler(scopeDesc);
-
-    for (ScopeDesc *inner : scopeDesc->getInnerScopes()) {
-      forEachScopeImpl(F, inner, handler);
-    }
-  }
+  /// List of environments made by this function. Out of IRGen, this list is
+  /// filled only with `CreateScopeInst`s. However, after generators have been
+  /// lowered, this may contain `Variable`s for environments that have been
+  /// spilled.
+  llvh::SmallVector<Value *, 2> environments_;
 
  protected:
   explicit Function(
       ValueKind kind,
       Module *parent,
-      ScopeDesc *scopeDesc,
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
-      bool isGlobal,
+      CustomDirectives customDirectives,
       SMRange sourceRange,
       Function *insertBefore = nullptr);
 
  public:
-  /// \param parent Module this function will belong to.
-  /// \param scopeDesc The function's "body" scope.
-  /// \param originalName User-specified function name, or an empty string.
-  /// \param strictMode Whether this function uses strict mode.
-  /// \param isGlobal Whether this is the global (top-level) function.
-  /// \param sourceRange Range of source code this function comes from.
-  /// \param insertBefore Another function in \p parent where this function
-  ///   should be inserted before. If null, appends to the end of the module.
-  explicit Function(
-      Module *parent,
-      ScopeDesc *scopeDesc,
-      Identifier originalName,
-      DefinitionKind definitionKind,
-      bool strictMode,
-      SourceVisibility sourceVisibility,
-      bool isGlobal,
-      SMRange sourceRange,
-      Function *insertBefore = nullptr)
-      : Function(
-            ValueKind::FunctionKind,
-            parent,
-            scopeDesc,
-            originalName,
-            definitionKind,
-            strictMode,
-            sourceVisibility,
-            isGlobal,
-            sourceRange,
-            insertBefore) {}
-
   ~Function();
 
   Module *getParent() const {
     return parent_;
   }
 
-  ScopeDesc *getFunctionScopeDesc() const {
-    return scopeDesc_;
-  }
-
   /// \returns whether this is the top level function (i.e. global scope).
-  bool isGlobalScope() const {
-    return isGlobal_;
-  }
+  bool isGlobalScope() const;
 
-  /// \return whether this is a anonymous function.
+  /// \return whether this is an anonymous function.
   bool isAnonymous() const {
     return originalOrInferredName_.str().empty();
   }
@@ -1634,7 +2070,40 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   Context &getContext() const;
 
   void addBlock(BasicBlock *BB);
-  void addParameter(Parameter *A);
+
+  /// Set \p newEntry as the entry block to this function.
+  /// \p newEntry must already exist in this function's BasicBlockList.
+  void moveBlockToEntry(BasicBlock *newEntry);
+
+  /// Add a new JS parameter.
+  void addJSDynamicParam(JSDynamicParam *param);
+  /// Add the "this" JS parameter.
+  void addJSThisParam(JSDynamicParam *param);
+  /// \return true if JS "this" parameter was added.
+  bool jsThisAdded() const {
+    return jsThisAdded_;
+  }
+
+  Type getReturnType() const {
+    return returnType_;
+  }
+  void setReturnType(Type returnType) {
+    returnType_ = returnType;
+  }
+
+  /// \return the new.target parameter.
+  JSSpecialParam *getNewTargetParam() {
+    return &newTargetParam_;
+  }
+  /// \return the new.target parameter.
+  const JSSpecialParam *getNewTargetParam() const {
+    return &newTargetParam_;
+  }
+
+  /// \return the parent scope parameter.
+  JSSpecialParam *getParentScopeParam() {
+    return &parentScopeParam_;
+  }
 
   const BasicBlockListType &getBasicBlockList() const {
     return BasicBlockList;
@@ -1643,10 +2112,20 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     return BasicBlockList;
   }
 
+  /// Remove the function from the module's main function list.
+  /// Move the function to the compiled function list.
+  void moveToCompiledFunctionList();
+
   /// Erase all the basic blocks and instructions in this function.
   /// Then remove the function from the module, remove all references.
   /// However this does not deallocate (destroy) the memory of this function.
   void eraseFromParentNoDestroy();
+
+  /// Erase all the basic blocks and instructions in this function.
+  /// Then remove the function from the compiled functions list,
+  /// remove all references.
+  /// However this does not deallocate (destroy) the memory of this function.
+  void eraseFromCompiledFunctionsNoDestroy();
 
   /// A debug utility that dumps the textual representation of the IR to \p os,
   /// defaults to stdout.
@@ -1669,8 +2148,50 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   /// Return the source visibility of the function.
   SourceVisibility getSourceVisibility() const {
-    return sourceVisibility_;
+    return customDirectives_.sourceVisibility;
   }
+
+  /// \return whether the function should always be attempted to be inlined,
+  /// bypassing the heuristics that normally determine that.
+  bool getAlwaysInline() const {
+    return customDirectives_.alwaysInline;
+  }
+
+  /// \return whether the function never be attempted to be inlined,
+  /// bypassing the heuristics that normally determine that.
+  bool getNoInline() const {
+    return customDirectives_.noInline;
+  }
+
+  /// Set the function to be noInline.  Useful for certain cases, to
+  /// preserve information useful for optimizations that would be erased
+  /// by inlining.
+  void setNoInline() {
+    customDirectives_.noInline = true;
+  }
+
+  /// The four inlining-related functions below are used only in
+  /// "opt-to-fixed-point" compilation mode.
+
+  /// The set of functions that have been inlined into this one.
+  llvh::DenseSet<Function *> &inlinedInto() {
+    return inlinedInto_;
+  };
+  const llvh::DenseSet<Function *> &inlinedInto() const {
+    return inlinedInto_;
+  };
+
+  /// The set of functions that this function has been inlined into.
+  llvh::DenseSet<Function *> &inlinedBy() {
+    return inlinedBy_;
+  };
+  const llvh::DenseSet<Function *> &inlinedBy() const {
+    return inlinedBy_;
+  };
+
+  llvh::SmallVectorImpl<Value *> &environments() {
+    return environments_;
+  };
 
   OptValue<uint32_t> getStatementCount() const {
     return statementCount_;
@@ -1693,62 +2214,75 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
     statementCount_ = llvh::None;
   }
 
-  ParameterListType &getParameters() {
-    return Parameters;
+  OptValue<sema::LexicalScope *> getLexicalScope() const {
+    return lexicalScope_;
+  }
+  void setLexicalScope(sema::LexicalScope *lexScope) {
+    lexicalScope_ = lexScope;
+  }
+  void clearLexicalScope() {
+    lexicalScope_ = llvh::None;
+  }
+
+  /// \return the current environmentID of the Function.
+  OptValue<uint32_t> getEnvironmentID() const {
+    return environmentID_;
+  }
+
+  /// Set the current environmentID of the Function to \p envID.
+  void setEnvironmentID(uint32_t envID) {
+    environmentID_ = envID;
+  }
+
+  /// Clear the environmentID, signaling the end of IRGen for this Function.
+  void clearEnvironmentID() {
+    environmentID_ = llvh::None;
+  }
+
+  auto &getJSDynamicParams() {
+    return jsDynamicParams_;
+  }
+
+  const auto &getJSDynamicParams() const {
+    return jsDynamicParams_;
+  }
+  /// \return a JS parameter by index. Index 0 is "this", 1 the first declared
+  /// parameter, etc.
+  JSDynamicParam *getJSDynamicParam(uint32_t index) const {
+    return jsDynamicParams_[index];
   }
 
   void setExpectedParamCountIncludingThis(uint32_t count) {
     expectedParamCountIncludingThis_ = count;
   }
 
+  /// \return the number of params this function takes, including 'this'. Should
+  /// always return a number greater than 0.
   uint32_t getExpectedParamCountIncludingThis() const {
+    assert(
+        expectedParamCountIncludingThis_ > 0 &&
+        "there should always be at least the 'this' parameter");
     return expectedParamCountIncludingThis_;
   }
 
-  void setThisParameter(Parameter *thisParam) {
-    assert(!thisParameter && "This parameter can only be created once");
-    thisParameter = thisParam;
-  }
-  Parameter *getThisParameter() const {
-    return thisParameter;
-  }
+  /// \return the LazyCompilationDataInst at the start of the function,
+  /// or nullptr if there isn't one.
+  const LazyCompilationDataInst *getLazyCompilationDataInst() const;
+  LazyCompilationDataInst *getLazyCompilationDataInst();
 
-#ifndef HERMESVM_LEAN
-  LazySource &getLazySource() {
-    return lazySource_;
-  }
-
-  void setLazyScope(SerializedScopePtr vars) {
-    lazyScope_ = std::move(vars);
-  }
-  SerializedScopePtr getLazyScope() const {
-    return lazyScope_;
-  }
-
-  void setLazyClosureAlias(Variable *var) {
-    lazyClosureAlias_ = var;
-  }
-  Variable *getLazyClosureAlias() const {
-    return lazyClosureAlias_;
-  }
-#endif
+  /// \return the EvalCompilationDataInst at the start of the function,
+  /// or nullptr if there isn't one.
+  EvalCompilationDataInst *getEvalCompilationDataInst();
 
   /// \return true if the function should be compiled lazily.
   bool isLazy() const {
-#ifdef HERMESVM_LEAN
-    return false;
-#else
-    return lazySource_.nodeKind != ESTree::NodeKind::Empty;
-#endif
+    return getLazyCompilationDataInst() != nullptr;
   }
 
   using iterator = BasicBlockListType::iterator;
   using const_iterator = BasicBlockListType::const_iterator;
   using reverse_iterator = BasicBlockListType::reverse_iterator;
   using const_reverse_iterator = BasicBlockListType::const_reverse_iterator;
-
-  using arg_iterator = ParameterListType::iterator;
-  using const_arg_iterator = ParameterListType::const_iterator;
 
   inline iterator begin() {
     return BasicBlockList.begin();
@@ -1774,18 +2308,6 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
   inline const_reverse_iterator rend() const {
     return BasicBlockList.rend();
   }
-  inline arg_iterator arg_begin() {
-    return Parameters.begin();
-  }
-  inline arg_iterator arg_end() {
-    return Parameters.end();
-  }
-  inline const_arg_iterator arg_begin() const {
-    return Parameters.begin();
-  }
-  inline const_arg_iterator arg_end() const {
-    return Parameters.end();
-  }
   inline size_t size() const {
     return BasicBlockList.size();
   }
@@ -1801,75 +2323,104 @@ class Function : public llvh::ilist_node_with_parent<Function, Module>,
 
   void viewGraph();
 
-  /// Invokes \p handler for each scope belonging to this function.
-  template <typename H>
-  void forEachScope(H handler) {
-    forEachScopeImpl(this, this->getFunctionScopeDesc(), handler);
+  /// \return true if this is a GeneratorInner or GeneratorInnerArrow function.
+  bool isInnerGenerator() {
+    auto defKind = getDefinitionKind();
+    return defKind == DefinitionKind::GeneratorInner ||
+        defKind == DefinitionKind::GeneratorInnerArrow;
   }
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::FunctionKind);
+    return HERMES_IR_KIND_IN_CLASS(V->getKind(), Function);
+  }
+
+  /// This is an RAII object that saves and restores the sema::LexicalScope of
+  /// the Function. This can only be used during IRGen, since this expects that
+  /// the lexical scope of the function is never `None` on construction.
+  class ScopedLexicalScopeChange {
+    ScopedLexicalScopeChange(const ScopedLexicalScopeChange &) = delete;
+    void operator=(const ScopedLexicalScopeChange &) = delete;
+
+    Function *F_;
+    sema::LexicalScope *oldLexicalScope_;
+
+   public:
+    explicit ScopedLexicalScopeChange(Function *F, sema::LexicalScope *newScope)
+        : F_(F), oldLexicalScope_(*F->getLexicalScope()) {
+      if (newScope)
+        F->setLexicalScope(newScope);
+    }
+
+    ~ScopedLexicalScopeChange() {
+      // If since the constructor has run, the lexical scope has been cleared
+      // out, we shouldn't attempt to set anything. The lexical scope being set
+      // to `None` indicates the end of IRGen for the function, so we shouldn't
+      // take it out of that state.
+      if (F_->getLexicalScope().hasValue()) {
+        F_->setLexicalScope(oldLexicalScope_);
+      }
+    }
+  };
+};
+
+class NormalFunction final : public Function {
+ public:
+  /// \param parent Module this function will belong to.
+  /// \param originalName User-specified function name, or an empty string.
+  /// \param strictMode Whether this function uses strict mode.
+  /// \param isGlobal Whether this is the global (top-level) function.
+  /// \param sourceRange Range of source code this function comes from.
+  /// \param insertBefore Another function in \p parent where this function
+  ///   should be inserted before. If null, appends to the end of the module.
+  explicit NormalFunction(
+      Module *parent,
+      Identifier originalName,
+      DefinitionKind definitionKind,
+      bool strictMode,
+      CustomDirectives customDirectives,
+      SMRange sourceRange,
+      Function *insertBefore = nullptr)
+      : Function(
+            ValueKind::NormalFunctionKind,
+            parent,
+            originalName,
+            definitionKind,
+            strictMode,
+            customDirectives,
+            sourceRange,
+            insertBefore) {}
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::NormalFunctionKind;
   }
 };
 
+/// The "outer" generator function, used with CreateFunctionInst and invoked as
+/// a normal function.
 class GeneratorFunction final : public Function {
  public:
   explicit GeneratorFunction(
       Module *parent,
-      ScopeDesc *scopeDesc,
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
-      bool isGlobal,
+      CustomDirectives customDirectives,
       SMRange sourceRange,
       Function *insertBefore)
       : Function(
             ValueKind::GeneratorFunctionKind,
             parent,
-            scopeDesc,
             originalName,
             definitionKind,
             strictMode,
-            sourceVisibility,
-            isGlobal,
+            customDirectives,
             sourceRange,
             insertBefore) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GeneratorFunctionKind);
-  }
-};
-
-class GeneratorInnerFunction final : public Function {
- public:
-  explicit GeneratorInnerFunction(
-      Module *parent,
-      ScopeDesc *scopeDesc,
-      Identifier originalName,
-      DefinitionKind definitionKind,
-      bool strictMode,
-      bool isGlobal,
-      SMRange sourceRange,
-      Function *insertBefore)
-      : Function(
-            ValueKind::GeneratorInnerFunctionKind,
-            parent,
-            scopeDesc,
-            originalName,
-            definitionKind,
-            strictMode,
-            // TODO(T84292546): change to 'Sensitive' once the outer gen fn name
-            //  is used in the err stack trace instead of the inner gen fn name.
-            SourceVisibility::HideSource,
-            isGlobal,
-            sourceRange,
-            insertBefore) {
-    setType(Type::createAnyType());
-  }
-
-  static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::GeneratorInnerFunctionKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::GeneratorFunctionKind;
   }
 };
 
@@ -1877,28 +2428,25 @@ class AsyncFunction final : public Function {
  public:
   explicit AsyncFunction(
       Module *parent,
-      ScopeDesc *scopeDesc,
       Identifier originalName,
       DefinitionKind definitionKind,
       bool strictMode,
-      SourceVisibility sourceVisibility,
-      bool isGlobal,
+      CustomDirectives customDirectives,
       SMRange sourceRange,
       Function *insertBefore)
       : Function(
             ValueKind::AsyncFunctionKind,
             parent,
-            scopeDesc,
             originalName,
             definitionKind,
             strictMode,
-            sourceVisibility,
-            isGlobal,
+            customDirectives,
             sourceRange,
             insertBefore) {}
 
   static bool classof(const Value *V) {
-    return kindIsA(V->getKind(), ValueKind::AsyncFunctionKind);
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AsyncFunctionKind;
   }
 };
 
@@ -1917,9 +2465,26 @@ struct ilist_alloc_traits<::hermes::Function> {
   }
 };
 
+template <>
+struct ilist_alloc_traits<::hermes::VariableScope> {
+  static void deleteNode(::hermes::VariableScope *V) {
+    ::hermes::Value::destroy(V);
+  }
+};
+
 } // namespace llvh
 
 namespace hermes {
+
+class LowerBuiltinCallsContext;
+
+/// Shared state between optimization passes.
+class OptimizationContext {
+ public:
+  /// Used by LowerBuiltinCalls to cache information about identifiers and
+  /// builtin IDs.
+  std::shared_ptr<LowerBuiltinCallsContext> lowerBuiltinCallsContext = nullptr;
+};
 
 class Module : public Value {
   Module(const Module &) = delete;
@@ -1927,6 +2492,8 @@ class Module : public Value {
 
  public:
   using FunctionListType = llvh::iplist<Function>;
+  using VariableScopeListType =
+      llvh::iplist<VariableScope, llvh::ilist_tag<Module>>;
 
   using RawStringList = std::vector<LiteralString *>;
 
@@ -1940,36 +2507,57 @@ class Module : public Value {
   };
 
  private:
-  using GlobalObjectPropertyList = std::vector<GlobalObjectProperty *>;
-
   std::shared_ptr<Context> Ctx;
   /// Optionally specify the top level function, if it isn't the first one.
   Function *topLevelFunction_{};
 
   FunctionListType FunctionList{};
 
-  /// A list of all global properties, in the order of declaration.
-  GlobalObjectPropertyList globalPropertyList_{};
-  /// Mapping global property names to instances in the list.
-  llvh::DenseMap<Identifier, GlobalObjectProperty *> globalPropertyMap_{};
+  /// List of all the functions that have already been compiled,
+  /// which are retained to ensure their instructions stay alive,
+  /// importantly EvalCompilationDataInst and LazyCompilationDataInst.
+  /// Kept separate to avoid iterating over these because they've already been
+  /// compiled. We don't want to visit them during lowering, optimization, etc.
+  FunctionListType compiledFunctions_{};
 
-  /// The initial scope in a JS program.
-  ScopeDesc initialScope_{nullptr};
+  /// List of all the VariableScopes owned by this module.
+  VariableScopeListType variableScopes_{};
+
   GlobalObject globalObject_{};
   LiteralEmpty literalEmpty{};
+  LiteralUninit literalUninit_{};
   LiteralUndefined literalUndefined{};
   LiteralNull literalNull{};
   LiteralBool literalFalse{false};
   LiteralBool literalTrue{true};
   EmptySentinel emptySentinel_{};
 
-  using LiteralNumberFoldingSet = llvh::FoldingSet<LiteralNumber>;
-  using LiteralBigIntFoldingSet = llvh::FoldingSet<LiteralBigInt>;
-  using LiteralStringFoldingSet = llvh::FoldingSet<LiteralString>;
+  // Uniqued values.
 
-  LiteralNumberFoldingSet literalNumbers{};
-  LiteralBigIntFoldingSet literalBigInts{};
-  LiteralStringFoldingSet literalStrings{};
+  /// Utility class to create elements that are subclasses of Value in the
+  /// folding set. This is necessary because calling new on a type requires
+  /// access to its deleter when exceptions are enabled, but the deleter of
+  /// Value is private.
+  template <typename T>
+  struct ValueCreator {
+    template <typename... Args>
+    static T *create(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+  };
+
+  template <typename T>
+  using ValueOFS = OwningFoldingSet<T, ValueCreator<T>, ValueDeleter>;
+
+  ValueOFS<LiteralNumber> literalNumbers_{};
+  ValueOFS<LiteralBigInt> literalBigInts_{};
+  ValueOFS<LiteralString> literalStrings_{};
+  ValueOFS<GlobalObjectProperty> globalProperties_{};
+  ValueOFS<LiteralBuiltinIdx> literalBuiltinIdxs_{};
+  ValueOFS<LiteralIRType> literalIRTypes_{};
+  ValueOFS<LiteralTypeOfIsTypes> literalTypeOfIsTypes_{};
+  ValueOFS<LiteralNativeSignature> nativeSignatures_{};
+  ValueOFS<LiteralNativeExtern> nativeExterns_{};
 
   /// Map from an identifier to a number indicating how many times it has been
   /// used. This allows to construct unique internal names derived from regular
@@ -2005,6 +2593,9 @@ class Module : public Value {
   /// If empty, this has not been generated yet.
   CJSModuleUseGraph cjsModuleUseGraph_{};
 
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> jsModuleFactoryFunctions_;
+
   struct HashRawStrings {
     std::size_t operator()(const RawStringList &rawStrings) const {
       return llvh::hash_combine_range(rawStrings.begin(), rawStrings.end());
@@ -2017,6 +2608,12 @@ class Module : public Value {
 
   /// Set to true when lowerIR has been called on this Module.
   bool isLowered_{false};
+
+  /// Set to true when generator functions have been lowered.
+  bool areGeneratorsLowered_{false};
+
+  /// Extra data to be shared between optimization passes.
+  OptimizationContext optContext_{};
 
  public:
   explicit Module(std::shared_ptr<Context> ctx)
@@ -2052,39 +2649,55 @@ class Module : public Value {
     return FunctionList;
   }
 
+  const FunctionListType &getCompiledFunctionList() const {
+    return compiledFunctions_;
+  }
+  FunctionListType &getCompiledFunctionList() {
+    return compiledFunctions_;
+  }
+
   /// Set the top-level function of this module - the function that will be
   /// executed when the module is executed.
   void setTopLevelFunction(Function *topLevelFunction) {
     assert(
         topLevelFunction->getParent() == this &&
         "topLevelFunction from a different module");
+    assert(!topLevelFunction_ && "Top level function is already set.");
     topLevelFunction_ = topLevelFunction;
   }
 
   /// Return the top-level function.
   Function *getTopLevelFunction() {
-    assert(
-        !FunctionList.empty() && "top-level function hasn't been created yet");
+    assert(topLevelFunction_ && "top-level function hasn't been created yet");
     // If the top level function hasn't been overridden, return the first
     // function.
-    return !topLevelFunction_ ? &*FunctionList.begin() : topLevelFunction_;
+    return topLevelFunction_;
   }
 
-  using GlobalObjectPropertyIterator = GlobalObjectPropertyList::const_iterator;
-
-  llvh::iterator_range<GlobalObjectPropertyIterator> getGlobalProperties() {
-    return {globalPropertyList_.begin(), globalPropertyList_.end()};
+  /// Get the list of variable scopes owned by this module.
+  VariableScopeListType &getVariableScopes() {
+    return variableScopes_;
+  }
+  const VariableScopeListType &getVariableScopes() const {
+    return variableScopes_;
   }
 
-  /// Find the specified global property and return a pointer to it or nullptr.
-  GlobalObjectProperty *findGlobalProperty(Identifier name);
+  OptimizationContext &getOptimizationContext() {
+    return optContext_;
+  }
+  const OptimizationContext &getOptimizationContext() const {
+    return optContext_;
+  }
+
+  /// Assign index to all Variables in all VariableScopes.
+  void assignIndexToVariables() {
+    for (VariableScope &varScope : variableScopes_)
+      varScope.assignIndexToVariables();
+  }
 
   /// Create the specified global property if it doesn't exist. If it does
   /// exist, its declared property is updated by a logical OR.
   GlobalObjectProperty *addGlobalProperty(Identifier name, bool declared);
-
-  /// Remove the specified property from the list and free it.
-  void eraseGlobalProperty(GlobalObjectProperty *prop);
 
   /// Create a new literal number of value \p value.
   LiteralNumber *getLiteralNumber(double value);
@@ -2098,9 +2711,29 @@ class Module : public Value {
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
 
+  /// Create a new literal representing an IR type.
+  LiteralBuiltinIdx *getLiteralBuiltinIdx(BuiltinMethod::Enum builtinIdx);
+
+  /// Create a new literal representing an IR type.
+  LiteralIRType *getLiteralIRType(Type value);
+
+  /// Create a new literal representing TypeOfIsTypes.
+  LiteralTypeOfIsTypes *getLiteralTypeOfIsTypes(TypeOfIsTypes value);
+
+  /// Create a new LiteralNativeSignature.
+  LiteralNativeSignature *getLiteralNativeSignature(NativeSignature *data);
+
+  /// Create a new LiteralNativeExtern.
+  LiteralNativeExtern *getLiteralNativeExtern(NativeExtern *data);
+
   /// Create a new literal 'empty'.
   LiteralEmpty *getLiteralEmpty() {
     return &literalEmpty;
+  }
+
+  /// Return the Uninit literal singleton.
+  LiteralUninit *getLiteralUninit() {
+    return &literalUninit_;
   }
 
   /// Create a new literal 'undefined'.
@@ -2111,14 +2744,6 @@ class Module : public Value {
   /// Create a new literal null.
   LiteralNull *getLiteralNull() {
     return &literalNull;
-  }
-
-  ScopeDesc *getInitialScope() {
-    return &initialScope_;
-  }
-
-  const ScopeDesc *getInitialScope() const {
-    return &initialScope_;
   }
 
   /// Return the GlobalObject value.
@@ -2187,13 +2812,24 @@ class Module : public Value {
     cjsModulesResolved_ = cjsModulesResolved;
   }
 
+  /// The (JS) module factory function for the (hermes) module.
+  llvh::DenseSet<Function *> &jsModuleFactoryFunctions() {
+    return jsModuleFactoryFunctions_;
+  }
+  const llvh::DenseSet<Function *> &jsModuleFactoryFunctions() const {
+    return jsModuleFactoryFunctions_;
+  }
+
   /// \return the set of functions which are used by the modules in the segment
   /// specified by \p segment. Order is unspecified, so the return value
   /// should not be used for iteration, only for checking membership.
   llvh::DenseSet<Function *> getFunctionsInSegment(uint32_t segment);
 
-  /// Given a list of raw strings from a template literal, get its unique id.
-  uint32_t getTemplateObjectID(RawStringList &&rawStrings);
+  /// \param rawStrings a list of raw strings from a template literal
+  /// \return (rawStrings, id) where rawStrings is the stored string list,
+  ///   and the id is the newly allocated template object ID.
+  std::pair<llvh::ArrayRef<LiteralString *>, uint32_t> emplaceTemplateObject(
+      RawStringList &&rawStrings);
 
   bool isLowered() const {
     return isLowered_;
@@ -2201,6 +2837,14 @@ class Module : public Value {
 
   void setLowered(bool isLowered) {
     isLowered_ = isLowered;
+  }
+
+  bool areGeneratorsLowered() const {
+    return areGeneratorsLowered_;
+  }
+
+  void setGeneratorsLowered(bool lowered) {
+    areGeneratorsLowered_ = lowered;
   }
 
   inline iterator begin() {
@@ -2240,6 +2884,13 @@ class Module : public Value {
     return FunctionList.back();
   }
 
+  /// Delete all non top-level non-lazy functions and set the Module state to be
+  /// ready for compiling more code.
+  /// Delete unused VariableScopes to avoid unnecessary memory usage.
+  /// Avoids destroying a Module completely,
+  /// but allows it to be reused for another purpose.
+  void resetForMoreCompilation();
+
   void viewGraph();
   void dump(llvh::raw_ostream &os = llvh::outs()) const;
 
@@ -2247,25 +2898,33 @@ class Module : public Value {
     return V->getKind() == ValueKind::ModuleKind;
   }
 
+  /// The hash_code of the Module.  This is intended to detect changes made
+  /// by optimization passes; aspects not changed by such passes may
+  /// not be included in the hash value.
+  llvh::hash_code hash() const;
+
  private:
   /// Calculate the CJS module function graph, if it hasn't been calculated yet.
   /// Caches the result in cjsModuleUseGraph_.
   void populateCJSModuleUseGraph();
 };
 
-Function *ScopeDesc::getFunction() const {
-  assert(function_ && "function not set. Is this the initial scope?");
-  return function_;
-}
-
-void ScopeDesc::setFunction(Function *F) {
-  assert(!function_ && "Scopes shouldn't change functions.");
-  function_ = F;
-}
-
 /// The hash of a Type is the hash of its opaque value.
 static inline llvh::hash_code hash_value(Type V) {
   return V.hash();
+}
+
+inline bool Value::tracksUsers() const {
+  // We do not track users of literals because we never need to enumerate them
+  // and they can be very costly to maintain.
+  return !llvh::isa<Literal>(this);
+}
+
+inline Function *Instruction::getFunction() const {
+  return Parent->getParent();
+}
+inline Module *Instruction::getModule() const {
+  return getFunction()->getParent();
 }
 
 } // end namespace hermes

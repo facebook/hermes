@@ -29,6 +29,7 @@
 WARNING_CATEGORY_HIDDEN(NoWarning, "", "All warnings")
 WARNING_CATEGORY(UndefinedVariable, "undefined-variable", "Warning when an undefined variable is referenced")
 WARNING_CATEGORY(DirectEval, "direct-eval", "Warning when attempting a direct (local) eval")
+WARNING_CATEGORY(EvalDisabled, "eval-disabled", "Warning if invoking eval() when it is disabled")
 WARNING_CATEGORY(UnresolvedStaticRequire, "unresolved-static-require", "Warning when require calls cannot be resolved statically")
 WARNING_CATEGORY_HIDDEN(Misc, "misc", "Miscellaneous warnings")
 

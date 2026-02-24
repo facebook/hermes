@@ -234,6 +234,67 @@ def print_categories(unicode_data_lines):
         run_interval(unicode_data_lines, cat.split())
 
 
+def run_property_select(unicode_data_lines, args):
+    """
+    Output UnicodeRanges for PropList.txt.
+    args[0] is the name of the variable.
+
+    Includes all codepoints that match any property name given,
+    and if any 2-character arg is given, it must match one of the specified
+    category.
+    """
+    name = args[0]
+    include_prop = set()
+    include_cat = set()
+    for arg in args[1:]:
+        if len(arg) == 2:
+            include_cat.add(arg)
+        else:
+            include_prop.add(arg)
+    # Lines in the DerivedCoreProperties file look like:
+    # 0041..005A    ; Alphabetic # L&  [26]
+    # We want to extract the range, provided the property matches.
+    intervals = []
+    for line in unicode_data_lines:
+        fields = line.split()
+        # Skip lines that don't have the property.
+        prop = fields[2] if len(fields) > 2 else None
+        cat = fields[4] if len(fields) > 4 else None
+        if len(include_prop) > 0 and prop not in include_prop:
+            continue
+        if len(include_cat) > 0 and cat not in include_cat:
+            continue
+        # Parse the range, which comes before the ';'
+        range = parse_range(fields[0].strip())
+        intervals.append(range)
+
+    print_template(
+        """
+// static constexpr uint32_t ${name}_SIZE = $interval_count;
+static constexpr std::array<UnicodeRange, ${interval_count}> ${name} = {
+${intervals}
+};
+    """,
+        name=name,
+        interval_count=len(intervals),
+        intervals="\n".join(
+            "{" + hex(i[0]) + ", " + hex(i[1]) + "}," for i in intervals
+        ),
+    )
+
+
+def print_properties(unicode_data_lines):
+    """Output UnicodeRanges for PropLists."""
+    categories = [
+        "UNICODE_OTHER_ID_START Other_ID_Start",
+        "UNICODE_OTHER_ID_CONTINUE Other_ID_Continue",
+        "UNICODE_PATTERN_LETTER Pattern_Syntax Pattern_White_Space L& Ll Lt Lu Lm Lo",
+        "UNICODE_PATTERN_CONTINUE Pattern_Syntax Pattern_White_Space Mn Mc Nd Pc",
+    ]
+    for cat in categories:
+        run_property_select(unicode_data_lines, cat.split(" "))
+
+
 def get_assigned_codepoints(unicode_data_lines):
     """Gather intervals for all assigned Unicode codepoints."""
     cp_begin = None
@@ -550,12 +611,12 @@ class UnicodeProperties:
     def log_metrics(self):
         print(
             f"""
-string_offset_bits: {self._metrics['string_offset'].bit_length()}
-string_size_bits: {self._metrics['string_size'].bit_length()}
-range_pool_offset_bits: {self._metrics['range_pool_offset'].bit_length()}
-range_pool_size_bits: {self._metrics['range_pool_size'].bit_length()}
-range_array_pool_offset_bits: {self._metrics['range_array_pool_offset'].bit_length()}
-range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()}
+string_offset_bits: {self._metrics["string_offset"].bit_length()}
+string_size_bits: {self._metrics["string_size"].bit_length()}
+range_pool_offset_bits: {self._metrics["range_pool_offset"].bit_length()}
+range_pool_size_bits: {self._metrics["range_pool_size"].bit_length()}
+range_array_pool_offset_bits: {self._metrics["range_array_pool_offset"].bit_length()}
+range_array_pool_size_bits: {self._metrics["range_array_pool_size"].bit_length()}
               """,
             file=sys.stderr,
         )
@@ -735,9 +796,9 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             fields = split_fields(line)
             canonical_name = fields[1]
             if canonical_name in binary_property_aliases:
-                assert (
-                    len(binary_property_aliases[canonical_name]) == 0
-                ), "Duplicate canonical name"
+                assert len(binary_property_aliases[canonical_name]) == 0, (
+                    "Duplicate canonical name"
+                )
                 binary_property_aliases[canonical_name] = list(set(fields))
 
         is_known_name_or_alias = (
@@ -982,9 +1043,9 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
                     yield f"// {cat}: {name}"
                 if ranges is not None:
                     size = len(ranges) if range_size is None else range_size
-                    assert (
-                        offset + size < 0xFFFF
-                    ), "Range array offset+size exceeds uint16_t"
+                    assert offset + size < 0xFFFF, (
+                        "Range array offset+size exceeds uint16_t"
+                    )
                     self._metrics["range_pool_offset"] = max(
                         self._metrics["range_pool_offset"], offset
                     )
@@ -1029,9 +1090,9 @@ range_array_pool_size_bits: {self._metrics['range_array_pool_size'].bit_length()
             for name, (offset, size) in pool.range_array_pool():
                 if self.INCLUDE_COMMENTS:
                     yield f'// "{name}"'
-                assert (
-                    offset + size < 0xFFFF
-                ), "Range array map offset+size exceeds uint16_t"
+                assert offset + size < 0xFFFF, (
+                    "Range array map offset+size exceeds uint16_t"
+                )
                 self._metrics["range_array_pool_offset"] = max(
                     self._metrics["range_array_pool_offset"], offset
                 )
@@ -1299,6 +1360,7 @@ if __name__ == "__main__":
     print_header()
 
     print_categories(UnicodeDataFiles.get_lines("UnicodeData.txt"))
+    print_properties(UnicodeDataFiles.get_lines("PropList.txt"))
 
     unicode_properties = UnicodeProperties()
     unicode_properties.gather_general_category_properties()

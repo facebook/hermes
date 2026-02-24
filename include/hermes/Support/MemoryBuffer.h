@@ -8,7 +8,7 @@
 #ifndef HERMES_SUPPORT_MEMORYBUFFER_H
 #define HERMES_SUPPORT_MEMORYBUFFER_H
 
-#include "hermes/Public/Buffer.h"
+#include "hermes/Support/Buffer.h"
 #include "llvh/Support/MemoryBuffer.h"
 
 namespace hermes {
@@ -16,13 +16,10 @@ namespace hermes {
 // Used in hvm.cpp and hermes.cpp
 class MemoryBuffer : public Buffer {
  public:
-  MemoryBuffer(const llvh::MemoryBuffer *buffer) : buffer_(buffer) {
-    data_ = reinterpret_cast<const uint8_t *>(buffer_->getBufferStart());
-    size_ = buffer_->getBufferSize();
-  }
-
- private:
-  const llvh::MemoryBuffer *buffer_;
+  MemoryBuffer(const llvh::MemoryBuffer *buffer)
+      : Buffer(
+            (const uint8_t *)buffer->getBufferStart(),
+            buffer->getBufferSize()) {}
 };
 
 // Like MemoryBuffer, but owns the underlying llvh::MemoryBuffer
@@ -57,6 +54,24 @@ class HermesLLVMMemoryBuffer : public llvh::MemoryBuffer {
  private:
   std::string name_;
   std::unique_ptr<hermes::Buffer> data_;
+};
+
+/// A MemoryBuffer that owns the underlying data in a std::string.
+class StdStringLLVHMemoryBuffer : public llvh::MemoryBuffer {
+  std::string data_;
+  std::string name_;
+
+ public:
+  StdStringLLVHMemoryBuffer(std::string &&data, std::string &&name)
+      : data_(std::move(data)), name_(std::move(name)) {
+    init(data_.data(), data_.data() + data_.size(), true);
+  }
+  BufferKind getBufferKind() const override {
+    return BufferKind::MemoryBuffer_Malloc;
+  }
+  llvh::StringRef getBufferIdentifier() const override {
+    return name_;
+  }
 };
 
 } // namespace hermes

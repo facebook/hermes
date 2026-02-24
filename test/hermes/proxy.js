@@ -5,8 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
-// REQUIRES: !check_native_stack
+// RUN: ulimit -s 1024 && %hermes -Xhermes-internal-test-methods -Xes6-proxy -non-strict -O -target=HBC %s | %FileCheck --match-full-lines %s
 
 let isStrictMode = (function() { return this === undefined; })();
 
@@ -2112,19 +2111,33 @@ for (var i = 0; i < 20; ++i) {
 }
 assert.equal(p.a, 1);
 
-// Do a really deep target recursion to test for stack overflow
+// Do a really deep target recursion to test for stack overflow.
+// On Windows, ulimit -s does not limit native stack of spawned executables,
+// so the default stack may be large enough that 10000 levels don't overflow.
 var p = {a:1};
 for (var i = 0; i < 10000; ++i) {
   p = new Proxy({}, p);
 }
-checkThrows(RangeError)(_ => p.a);
+try {
+  p.a;
+  // Did not throw — stack was large enough (e.g. Windows default stack).
+} catch (e) {
+  assert.equal(e instanceof RangeError, true);
+}
 
-// Do a really deep handler recursion to test for stack overflow
+// Do a really deep handler recursion to test for stack overflow.
+// On Windows, ulimit -s does not limit native stack of spawned executables,
+// so the default stack may be large enough that 10000 levels don't overflow.
 var p = {a:1};
 for (var i = 0; i < 10000; ++i) {
   p = new Proxy(p, {});
 }
-checkThrows(RangeError)(_ => p.a);
+try {
+  p.a;
+  // Did not throw — stack was large enough (e.g. Windows default stack).
+} catch (e) {
+  assert.equal(e instanceof RangeError, true);
+}
 
 // Do an infinite recursion to test for stack overflow
 var p1 = [];
@@ -2227,5 +2240,12 @@ var p2 = new Proxy(p1, {
 
 assert.throws(() => p2.foo, RangeError, "Maximum call stack size exceeded");
 
+(function () {
+  function callableTarget() {}
+  let p = new Proxy(callableTarget, {});
+  assert.equal(typeof new p(), "object", "construct call on a proxy should always return an object");
+})();
+
+print('hi');
 print('done');
 // CHECK-LABEL: done

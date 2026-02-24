@@ -18,16 +18,21 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createBigIntConstructor(Runtime &runtime) {
-  auto bigintPrototype = Handle<JSObject>::vmcast(&runtime.bigintPrototype);
+void createBigIntConstructor(Runtime &runtime) {
+  Handle<JSObject> bigintPrototype{runtime.bigintPrototype};
 
-  auto cons = defineSystemConstructor<JSBigInt>(
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  defineSystemConstructor(
       runtime,
       Predefined::getSymbolID(Predefined::BigInt),
       bigintConstructor,
       bigintPrototype,
       1,
-      CellKind::JSBigIntKind);
+      lv.cons);
 
   // BigInt.prototype.xxx methods.
   // https://tc39.es/ecma262/#sec-properties-of-the-bigint-prototype-object
@@ -58,14 +63,14 @@ Handle<JSObject> createBigIntConstructor(Runtime &runtime) {
   // https://tc39.es/ecma262/#sec-properties-of-the-bigint-constructor
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::asIntN),
       reinterpret_cast<void *>(&BigIntPrimitive::asIntN),
       bigintTruncate,
       2);
   defineMethod(
       runtime,
-      cons,
+      lv.cons,
       Predefined::getSymbolID(Predefined::asUintN),
       reinterpret_cast<void *>(&BigIntPrimitive::asUintN),
       bigintTruncate,
@@ -81,20 +86,23 @@ Handle<JSObject> createBigIntConstructor(Runtime &runtime) {
       Predefined::getSymbolID(Predefined::SymbolToStringTag),
       runtime.getPredefinedStringHandle(Predefined::BigInt),
       dpf);
-
-  return cons;
 }
 
-CallResult<HermesValue>
-bigintConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // The bigint constructor is not a constructor according to
   // https://262.ecma-international.org/#sec-bigint-constructor
   if (args.isConstructorCall()) {
     return runtime.raiseTypeError("BigInt is not a constructor");
   }
 
-  auto hArg0 = runtime.makeHandle(args.getArg(0));
-  auto prim = toPrimitive_RJS(runtime, hArg0, PreferredType::NUMBER);
+  struct : public Locals {
+    PinnedValue<> hArg0;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.hArg0 = args.getArg(0);
+  auto prim = toPrimitive_RJS(runtime, lv.hArg0, PreferredType::NUMBER);
   if (LLVM_UNLIKELY(prim == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -103,19 +111,27 @@ bigintConstructor(void *, Runtime &runtime, NativeArgs args) {
     return numberToBigInt(runtime, prim->getNumber());
   }
 
-  return toBigInt_RJS(runtime, hArg0);
+  return toBigInt_RJS(runtime, lv.hArg0);
 }
 
-CallResult<HermesValue>
-bigintPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintPrototypeToLocaleString(
+    void *ctx,
+    Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto bigint = thisBigIntValue(runtime, args.getThisHandle());
   if (LLVM_UNLIKELY(bigint == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  struct : public Locals {
+    PinnedValue<> bigintHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   // Call toString, as JSC does.
   // TODO(T120187933): Format string according to locale.
-  auto res = toString_RJS(runtime, runtime.makeHandle(*bigint));
+  lv.bigintHandle = *bigint;
+  auto res = toString_RJS(runtime, lv.bigintHandle);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -123,8 +139,8 @@ bigintPrototypeToLocaleString(void *ctx, Runtime &runtime, NativeArgs args) {
   return res->getHermesValue();
 }
 
-CallResult<HermesValue>
-bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintPrototypeToString(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. Let x be ? thisBigIntValue(this value).
   auto x = thisBigIntValue(runtime, args.getThisHandle());
 
@@ -132,7 +148,12 @@ bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  Handle<BigIntPrimitive> xHandle = runtime.makeHandle(x->getBigInt());
+  struct : public Locals {
+    PinnedValue<BigIntPrimitive> xHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.xHandle.castAndSetHermesValue<BigIntPrimitive>(*x);
 
   // 2. If radix is undefined, let radixMV be 10.
   uint32_t radixMV = 10;
@@ -156,19 +177,20 @@ bigintPrototypeToString(void *, Runtime &runtime, NativeArgs args) {
 
   // 5. If radixMV = 10, return ! ToString(x).
   // 6. Return the String representation of x.
-  return BigIntPrimitive::toString(runtime, xHandle, radixMV);
+  return BigIntPrimitive::toString(
+      runtime, PseudoHandle<BigIntPrimitive>{lv.xHandle}, radixMV);
 }
 
-CallResult<HermesValue>
-bigintPrototypeValueOf(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintPrototypeValueOf(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return thisBigIntValue(runtime, args.getThisHandle());
 }
 
 using TruncateOp =
     CallResult<HermesValue> (*)(Runtime &, uint64_t, Handle<BigIntPrimitive>);
 
-CallResult<HermesValue>
-bigintTruncate(void *ctx, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> bigintTruncate(void *ctx, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto bitsRes = toIndex(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(bitsRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -180,8 +202,14 @@ bigintTruncate(void *ctx, Runtime &runtime, NativeArgs args) {
     return ExecutionStatus::EXCEPTION;
   }
 
+  struct : public Locals {
+    PinnedValue<BigIntPrimitive> bigintHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  lv.bigintHandle.castAndSetHermesValue<BigIntPrimitive>(*bigint);
   auto op = reinterpret_cast<TruncateOp>(ctx);
-  return (*op)(runtime, bits, runtime.makeHandle(bigint->getBigInt()));
+  return (*op)(runtime, bits, lv.bigintHandle);
 }
 
 } // namespace vm

@@ -14,27 +14,29 @@
 namespace hermes {
 namespace vm {
 
-Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
+HermesValue createGeneratorFunctionConstructor(Runtime &runtime) {
   auto proto = Handle<JSObject>::vmcast(&runtime.generatorFunctionPrototype);
 
-  auto cons = runtime.makeHandle(
-      NativeConstructor::create(
-          runtime,
-          Handle<JSObject>::vmcast(&runtime.functionConstructor),
-          nullptr,
-          generatorFunctionConstructor,
-          1,
-          NativeConstructor::creatorFunction<JSGeneratorFunction>,
-          CellKind::JSGeneratorFunctionKind));
+  struct : public Locals {
+    PinnedValue<NativeConstructor> cons;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  auto consRes = NativeConstructor::create(
+      runtime,
+      Handle<JSObject>::vmcast(&runtime.functionConstructor),
+      nullptr,
+      generatorFunctionConstructor,
+      1);
+  lv.cons.castAndSetHermesValue<NativeConstructor>(consRes.getHermesValue());
 
   auto st = Callable::defineNameLengthAndPrototype(
-      cons,
+      lv.cons,
       runtime,
       Predefined::getSymbolID(Predefined::GeneratorFunction),
       1,
       proto,
-      Callable::WritablePrototype::No,
-      false);
+      Callable::WritablePrototype::No);
   (void)st;
   assert(
       st != ExecutionStatus::EXCEPTION && "defineLengthAndPrototype() failed");
@@ -49,7 +51,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::constructor),
-      cons,
+      lv.cons,
       dpf);
 
   // The value of GeneratorFunction.prototype.prototype is the
@@ -58,7 +60,7 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
       runtime,
       proto,
       Predefined::getSymbolID(Predefined::prototype),
-      Handle<>(&runtime.generatorPrototype),
+      runtime.generatorPrototype,
       dpf);
 
   defineProperty(
@@ -68,11 +70,11 @@ Handle<JSObject> createGeneratorFunctionConstructor(Runtime &runtime) {
       runtime.getPredefinedStringHandle(Predefined::GeneratorFunction),
       dpf);
 
-  return cons;
+  return lv.cons.getHermesValue();
 }
 
-CallResult<HermesValue>
-generatorFunctionConstructor(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> generatorFunctionConstructor(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   return createDynamicFunction(runtime, args, DynamicFunctionKind::Generator);
 }
 

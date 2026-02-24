@@ -1,128 +1,73 @@
 version: 2.1
 
-orbs:
-  win: circleci/windows@2.4.0
-
 workflows:
   version: 2
   build:
     jobs:
-      - windows
-      - test-windows
+      - test-macos:
+          matrix:
+            parameters:
+              sanitize: ["ON", "OFF"]
+              gc: ["MALLOC", "HADES"]
+      - test-linux
 
 jobs:
-  test-windows:
-    executor:
-      name: win/default
-      version: 2023.10.1
-    environment:
-      - CMAKE_DIR: 'C:\Program Files\CMake\bin'
+  test-macos:
+    macos:
+      xcode: 13.4.1
+    resource_class: macos.m1.medium.gen1
+    parameters:
+      sanitize:
+        type: string
+      gc:
+        type: string
     steps:
       - checkout:
           path: hermes
       - run:
-          name: Set up dependencies
+          name: Setup dependencies
           command: |
-            choco install -y --no-progress cmake --version 3.14.7 --installargs 'ADD_CMAKE_TO_PATH=System'
-            if (-not $?) { throw "Failed to install CMake" }
-            ln -s (get-command python.exe).Path (get-command python.exe).Path.replace("python.exe", "python3.exe")
+            brew install cmake ninja
+            # Check out test262 at a pinned revision to reduce flakiness
+            git clone https://github.com/tc39/test262
+            cd test262
+            git checkout 62626e083bd506124aac6c799464d76c2c42851b
       - run:
-          name: Run Hermes regression tests
+          name: Run Hermes tests and test262
           command: |
-            $Env:PATH += ";$Env:CMAKE_DIR"
-            cmake -S hermes -B build -G 'Visual Studio 16 2019'
-            cmake --build build --target check-hermes -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
+            # Tests can take a long time to run, since we don't need to attach a debugger
+            # a Debug build with with -O2 lets us avoid timeouts and get results sooner.
+            cmake -S hermes -B build -GNinja -DHERMES_ENABLE_INTL=ON \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_CXX_FLAGS=-O2 -DCMAKE_C_FLAGS=-O2 \
+              -DHERMESVM_SANITIZE_HANDLES=<< parameters.sanitize >> \
+              -DHERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER=<< parameters.sanitize >> \
+              -DHERMES_ENABLE_ADDRESS_SANITIZER=<< parameters.sanitize >> \
+              -DHERMESVM_GCKIND=<< parameters.gc >>
+            cmake --build build
+            cmake --build build --target check-hermes
+            # TODO(zhaogang): test with --shermes flag as well once we address the harness
+            # code issue with shermes.
+            python3 hermes/utils/test_runner.py --test-intl test262/test -b build/bin
 
-  windows:
-    executor:
-      name: win/default
-      version: 2023.10.1
+  test-linux:
+    docker:
+      - image: ubuntu:jammy
     environment:
-      - HERMES_WS_DIR: 'C:\tmp\hermes'
-      - ICU_URL: "https://github.com/unicode-org/icu/releases/download/release-64-2/icu4c-64_2-Win64-MSVC2017.zip"
-      - MSBUILD_DIR: 'C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin'
-      - CMAKE_DIR: 'C:\Program Files\CMake\bin'
-      - RELEASE_FLAGS: -DCMAKE_BUILD_TYPE=Release -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=True -DHERMES_ENABLE_WIN10_ICU_FALLBACK=OFF
-      - TAR_NAME: 'hermes-cli-windows.tar.gz'
+      - DEBIAN_FRONTEND: noninteractive
+    working_directory: /root
     steps:
-      - checkout
-
-      - run:
-          name: Set up workspace
-          command: |
-            New-Item -ItemType Directory $Env:HERMES_WS_DIR
-            New-Item -ItemType Directory $Env:HERMES_WS_DIR\icu
-            New-Item -ItemType Directory $Env:HERMES_WS_DIR\staging
-            New-Item -ItemType Directory $Env:HERMES_WS_DIR\output
-            New-Item -ItemType SymbolicLink -Target . -Path $Env:HERMES_WS_DIR -Name hermes
-
-      - run:
-          name: Download ICU
-          command: |
-            cd $Env:HERMES_WS_DIR\icu
-            # If Invoke-WebRequest shows a progress bar, it will fail with
-            #   Win32 internal error "Access is denied" 0x5 occurred [...]
-            $progressPreference = 'silentlyContinue'
-            Invoke-WebRequest -Uri "$Env:ICU_URL" -OutFile "icu.zip"
-            Expand-Archive -Path "icu.zip" -DestinationPath "."
-
       - run:
           name: Install dependencies
           command: |
-            choco install -y --no-progress cmake --version 3.14.7 --installargs 'ADD_CMAKE_TO_PATH=System'
-            if (-not $?) { throw "Failed to install CMake" }
-            ln -s (get-command python.exe).Path (get-command python.exe).Path.replace("python.exe", "python3.exe")
-
+            apt update
+            apt install -y git openssh-client cmake build-essential \
+                libicu-dev zip python3 tzdata
+      - checkout:
+          path: hermes
       - run:
-          name: Assemble Windows runtime dependencies
+          name: Run Hermes regression tests
           command: |
-            cd $Env:HERMES_WS_DIR
-            Copy-Item -Path "icu\bin64\icu*.dll" -Destination "staging"
-            # Include MSVC++ 2015 redistributables
-            Copy-Item -Path "c:\windows\system32\msvcp140.dll" -Destination "staging"
-            Copy-Item -Path "c:\windows\system32\vcruntime140.dll" -Destination "staging"
-            Copy-Item -Path "c:\windows\system32\vcruntime140_1.dll" -Destination "staging"
-
-      - run:
-          name: Build Windows CLI
-          command: |
-            $Env:PATH += ";$Env:MSBUILD_DIR;$Env:CMAKE_DIR"
-            $Env:ICU_ROOT = "$Env:HERMES_WS_DIR\icu"
-            cd $Env:HERMES_WS_DIR
-            cmake -S hermes -B build -G 'Visual Studio 16 2019' -Ax64 -DHERMES_ENABLE_DEBUGGER=False $Env:RELEASE_FLAGS
-            if (-not $?) { throw "Failed to configure Hermes" }
-            cmake -S hermes -B build_hdb -G 'Visual Studio 16 2019' -Ax64 $Env:RELEASE_FLAGS
-            if (-not $?) { throw "Failed to configure Hermes" }
-            cmake --build ./build --config Release -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
-            if (-not $?) { throw "Failed to build Hermes" }
-            cmake --build ./build_hdb --config Release --target hdb -- -m /p:UseMultiToolTask=true -m /p:EnforceProcessCountAcrossBuilds=true
-            if (-not $?) { throw "Failed to build Hermes" }
-
-      - run:
-          name: Create CLI tarball
-          command: |
-            $Env:PATH += ";$Env:CMAKE_DIR"
-            cd $Env:HERMES_WS_DIR
-            Copy-Item -Path "build\bin\Release\hermes.exe" -Destination "staging"
-            Copy-Item -Path "build\bin\Release\hvm.exe" -Destination "staging"
-            Copy-Item -Path "build\bin\Release\hbcdump.exe" -Destination "staging"
-            Copy-Item -Path "build\bin\Release\hermesc.exe" -Destination "staging"
-            Copy-Item -Path "build_hdb\bin\Release\hdb.exe" -Destination "staging"
-            cd staging
-            cmake -E tar zcf ..\output\$Env:TAR_NAME .
-
-      - run:
-          name: Checksum artifacts
-          command: |
-            cd $Env:HERMES_WS_DIR\output
-            $hash = Get-FileHash -Path $Env:TAR_NAME -Algorithm SHA256
-            Write-Output ($hash.Hash + "  " + $Env:TAR_NAME) |
-                  Out-File -Encoding ASCII -FilePath ($Env:TAR_NAME +".sha256")
-
-      - store_artifacts:
-          path: c:\tmp\hermes\output
-
-      - persist_to_workspace:
-          root: c:\tmp\hermes\output
-          paths:
-            - .
+            cmake -S hermes -B build -DCMAKE_BUILD_TYPE=Debug
+            cmake --build build -j 2
+            cmake --build build --target check-hermes -j 4

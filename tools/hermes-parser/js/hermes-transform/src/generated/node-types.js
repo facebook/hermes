@@ -35,7 +35,6 @@ import type {
   BigIntLiteralTypeAnnotation as BigIntLiteralTypeAnnotationType,
   BigIntTypeAnnotation as BigIntTypeAnnotationType,
   BinaryExpression as BinaryExpressionType,
-  BlockStatement as BlockStatementType,
   BooleanLiteralTypeAnnotation as BooleanLiteralTypeAnnotationType,
   BooleanTypeAnnotation as BooleanTypeAnnotationType,
   BreakStatement as BreakStatementType,
@@ -65,6 +64,7 @@ import type {
   DeclareOpaqueType as DeclareOpaqueTypeType,
   DeclareTypeAlias as DeclareTypeAliasType,
   DeclareVariable as DeclareVariableType,
+  Decorator as DecoratorType,
   DoWhileStatement as DoWhileStatementType,
   EmptyStatement as EmptyStatementType,
   EmptyTypeAnnotation as EmptyTypeAnnotationType,
@@ -132,6 +132,8 @@ import type {
   MatchExpression as MatchExpressionType,
   MatchExpressionCase as MatchExpressionCaseType,
   MatchIdentifierPattern as MatchIdentifierPatternType,
+  MatchInstanceObjectPattern as MatchInstanceObjectPatternType,
+  MatchInstancePattern as MatchInstancePatternType,
   MatchLiteralPattern as MatchLiteralPatternType,
   MatchMemberPattern as MatchMemberPatternType,
   MatchObjectPattern as MatchObjectPatternType,
@@ -145,6 +147,7 @@ import type {
   MetaProperty as MetaPropertyType,
   MethodDefinition as MethodDefinitionType,
   MixedTypeAnnotation as MixedTypeAnnotationType,
+  NeverTypeAnnotation as NeverTypeAnnotationType,
   NewExpression as NewExpressionType,
   NullableTypeAnnotation as NullableTypeAnnotationType,
   NullLiteralTypeAnnotation as NullLiteralTypeAnnotationType,
@@ -165,6 +168,13 @@ import type {
   PropertyDefinition as PropertyDefinitionType,
   QualifiedTypeIdentifier as QualifiedTypeIdentifierType,
   QualifiedTypeofIdentifier as QualifiedTypeofIdentifierType,
+  RecordDeclaration as RecordDeclarationType,
+  RecordDeclarationBody as RecordDeclarationBodyType,
+  RecordDeclarationImplements as RecordDeclarationImplementsType,
+  RecordDeclarationProperty as RecordDeclarationPropertyType,
+  RecordDeclarationStaticProperty as RecordDeclarationStaticPropertyType,
+  RecordExpression as RecordExpressionType,
+  RecordExpressionProperties as RecordExpressionPropertiesType,
   RestElement as RestElementType,
   ReturnStatement as ReturnStatementType,
   SequenceExpression as SequenceExpressionType,
@@ -195,7 +205,9 @@ import type {
   TypeParameterInstantiation as TypeParameterInstantiationType,
   TypePredicate as TypePredicateType,
   UnaryExpression as UnaryExpressionType,
+  UndefinedTypeAnnotation as UndefinedTypeAnnotationType,
   UnionTypeAnnotation as UnionTypeAnnotationType,
+  UnknownTypeAnnotation as UnknownTypeAnnotationType,
   UpdateExpression as UpdateExpressionType,
   VariableDeclaration as VariableDeclarationType,
   VariableDeclarator as VariableDeclaratorType,
@@ -269,10 +281,6 @@ export type BinaryExpressionProps = {
   +operator: BinaryExpressionType['operator'],
 };
 
-export type BlockStatementProps = {
-  +body: $ReadOnlyArray<MaybeDetachedNode<BlockStatementType['body'][number]>>,
-};
-
 export type BooleanLiteralTypeAnnotationProps = {
   +value: BooleanLiteralTypeAnnotationType['value'],
   +raw: BooleanLiteralTypeAnnotationType['raw'],
@@ -309,8 +317,8 @@ export type ClassExpressionProps = {
   +id?: ?MaybeDetachedNode<ClassExpressionType['id']>,
   +typeParameters?: ?MaybeDetachedNode<ClassExpressionType['typeParameters']>,
   +superClass?: ?MaybeDetachedNode<ClassExpressionType['superClass']>,
-  +superTypeParameters?: ?MaybeDetachedNode<
-    ClassExpressionType['superTypeParameters'],
+  +superTypeArguments?: ?MaybeDetachedNode<
+    ClassExpressionType['superTypeArguments'],
   >,
   +implements: $ReadOnlyArray<
     MaybeDetachedNode<ClassExpressionType['implements'][number]>,
@@ -449,6 +457,8 @@ export type DeclareOpaqueTypeProps = {
   +id: MaybeDetachedNode<DeclareOpaqueTypeType['id']>,
   +typeParameters?: ?MaybeDetachedNode<DeclareOpaqueTypeType['typeParameters']>,
   +impltype?: ?MaybeDetachedNode<DeclareOpaqueTypeType['impltype']>,
+  +lowerBound?: ?MaybeDetachedNode<DeclareOpaqueTypeType['lowerBound']>,
+  +upperBound?: ?MaybeDetachedNode<DeclareOpaqueTypeType['upperBound']>,
   +supertype?: ?MaybeDetachedNode<DeclareOpaqueTypeType['supertype']>,
 };
 
@@ -461,6 +471,10 @@ export type DeclareTypeAliasProps = {
 export type DeclareVariableProps = {
   +id: MaybeDetachedNode<DeclareVariableType['id']>,
   +kind: DeclareVariableType['kind'],
+};
+
+export type DecoratorProps = {
+  +expression: MaybeDetachedNode<DecoratorType['expression']>,
 };
 
 export type DoWhileStatementProps = {
@@ -674,8 +688,8 @@ export type ImportDeclarationProps = {
     MaybeDetachedNode<ImportDeclarationType['specifiers'][number]>,
   >,
   +source: MaybeDetachedNode<ImportDeclarationType['source']>,
-  +assertions?: ?$ReadOnlyArray<
-    MaybeDetachedNode<ImportDeclarationType['assertions'][number]>,
+  +attributes?: ?$ReadOnlyArray<
+    MaybeDetachedNode<ImportDeclarationType['attributes'][number]>,
   >,
   +importKind: ImportDeclarationType['importKind'],
 };
@@ -686,7 +700,7 @@ export type ImportDefaultSpecifierProps = {
 
 export type ImportExpressionProps = {
   +source: MaybeDetachedNode<ImportExpressionType['source']>,
-  +attributes?: ?MaybeDetachedNode<ImportExpressionType['attributes']>,
+  +options?: ?MaybeDetachedNode<ImportExpressionType['options']>,
 };
 
 export type ImportNamespaceSpecifierProps = {
@@ -859,6 +873,20 @@ export type MatchIdentifierPatternProps = {
   +id: MaybeDetachedNode<MatchIdentifierPatternType['id']>,
 };
 
+export type MatchInstanceObjectPatternProps = {
+  +properties: $ReadOnlyArray<
+    MaybeDetachedNode<MatchInstanceObjectPatternType['properties'][number]>,
+  >,
+  +rest?: ?MaybeDetachedNode<MatchInstanceObjectPatternType['rest']>,
+};
+
+export type MatchInstancePatternProps = {
+  +targetConstructor: MaybeDetachedNode<
+    MatchInstancePatternType['targetConstructor'],
+  >,
+  +properties: MaybeDetachedNode<MatchInstancePatternType['properties']>,
+};
+
 export type MatchLiteralPatternProps = {
   +literal: MaybeDetachedNode<MatchLiteralPatternType['literal']>,
 };
@@ -922,9 +950,14 @@ export type MethodDefinitionProps = {
   +kind: MethodDefinitionType['kind'],
   +computed: MethodDefinitionType['computed'],
   +static: MethodDefinitionType['static'],
+  +decorators: $ReadOnlyArray<
+    MaybeDetachedNode<MethodDefinitionType['decorators'][number]>,
+  >,
 };
 
 export type MixedTypeAnnotationProps = {};
+
+export type NeverTypeAnnotationProps = {};
 
 export type NewExpressionProps = {
   +callee: MaybeDetachedNode<NewExpressionType['callee']>,
@@ -1018,6 +1051,8 @@ export type OpaqueTypeProps = {
   +id: MaybeDetachedNode<OpaqueTypeType['id']>,
   +typeParameters?: ?MaybeDetachedNode<OpaqueTypeType['typeParameters']>,
   +impltype: MaybeDetachedNode<OpaqueTypeType['impltype']>,
+  +lowerBound?: ?MaybeDetachedNode<OpaqueTypeType['lowerBound']>,
+  +upperBound?: ?MaybeDetachedNode<OpaqueTypeType['upperBound']>,
   +supertype?: ?MaybeDetachedNode<OpaqueTypeType['supertype']>,
 };
 
@@ -1045,6 +1080,9 @@ export type PropertyDefinitionProps = {
   +value?: ?MaybeDetachedNode<PropertyDefinitionType['value']>,
   +computed: PropertyDefinitionType['computed'],
   +static: PropertyDefinitionType['static'],
+  +decorators: $ReadOnlyArray<
+    MaybeDetachedNode<PropertyDefinitionType['decorators'][number]>,
+  >,
   +declare: PropertyDefinitionType['declare'],
   +optional: PropertyDefinitionType['optional'],
   +variance?: ?MaybeDetachedNode<PropertyDefinitionType['variance']>,
@@ -1065,6 +1103,60 @@ export type QualifiedTypeofIdentifierProps = {
     QualifiedTypeofIdentifierType['qualification'],
   >,
   +id: MaybeDetachedNode<QualifiedTypeofIdentifierType['id']>,
+};
+
+export type RecordDeclarationProps = {
+  +id: MaybeDetachedNode<RecordDeclarationType['id']>,
+  +typeParameters?: ?MaybeDetachedNode<RecordDeclarationType['typeParameters']>,
+  +implements: $ReadOnlyArray<
+    MaybeDetachedNode<RecordDeclarationType['implements'][number]>,
+  >,
+  +body: MaybeDetachedNode<RecordDeclarationType['body']>,
+};
+
+export type RecordDeclarationBodyProps = {
+  +elements: $ReadOnlyArray<
+    MaybeDetachedNode<RecordDeclarationBodyType['elements'][number]>,
+  >,
+};
+
+export type RecordDeclarationImplementsProps = {
+  +id: MaybeDetachedNode<RecordDeclarationImplementsType['id']>,
+  +typeArguments?: ?MaybeDetachedNode<
+    RecordDeclarationImplementsType['typeArguments'],
+  >,
+};
+
+export type RecordDeclarationPropertyProps = {
+  +key: MaybeDetachedNode<RecordDeclarationPropertyType['key']>,
+  +typeAnnotation: MaybeDetachedNode<
+    RecordDeclarationPropertyType['typeAnnotation'],
+  >,
+  +defaultValue?: ?MaybeDetachedNode<
+    RecordDeclarationPropertyType['defaultValue'],
+  >,
+};
+
+export type RecordDeclarationStaticPropertyProps = {
+  +key: MaybeDetachedNode<RecordDeclarationStaticPropertyType['key']>,
+  +typeAnnotation: MaybeDetachedNode<
+    RecordDeclarationStaticPropertyType['typeAnnotation'],
+  >,
+  +value: MaybeDetachedNode<RecordDeclarationStaticPropertyType['value']>,
+};
+
+export type RecordExpressionProps = {
+  +recordConstructor: MaybeDetachedNode<
+    RecordExpressionType['recordConstructor'],
+  >,
+  +typeArguments?: ?MaybeDetachedNode<RecordExpressionType['typeArguments']>,
+  +properties: MaybeDetachedNode<RecordExpressionType['properties']>,
+};
+
+export type RecordExpressionPropertiesProps = {
+  +properties: $ReadOnlyArray<
+    MaybeDetachedNode<RecordExpressionPropertiesType['properties'][number]>,
+  >,
 };
 
 export type RestElementProps = {
@@ -1143,8 +1235,8 @@ export type TryStatementProps = {
 };
 
 export type TupleTypeAnnotationProps = {
-  +types: $ReadOnlyArray<
-    MaybeDetachedNode<TupleTypeAnnotationType['types'][number]>,
+  +elementTypes: $ReadOnlyArray<
+    MaybeDetachedNode<TupleTypeAnnotationType['elementTypes'][number]>,
   >,
   +inexact: TupleTypeAnnotationType['inexact'],
 };
@@ -1223,11 +1315,15 @@ export type UnaryExpressionProps = {
   +prefix: UnaryExpressionType['prefix'],
 };
 
+export type UndefinedTypeAnnotationProps = {};
+
 export type UnionTypeAnnotationProps = {
   +types: $ReadOnlyArray<
     MaybeDetachedNode<UnionTypeAnnotationType['types'][number]>,
   >,
 };
+
+export type UnknownTypeAnnotationProps = {};
 
 export type UpdateExpressionProps = {
   +operator: UpdateExpressionType['operator'],
@@ -1431,18 +1527,6 @@ export function BinaryExpression(props: {
   return node;
 }
 
-export function BlockStatement(props: {
-  ...BlockStatementProps,
-  +parent?: ESNode,
-}): DetachedNode<BlockStatementType> {
-  const node = detachedProps<BlockStatementType>((props.parent: $FlowFixMe), {
-    type: 'BlockStatement',
-    body: props.body.map(n => asDetachedNodeForCodeGen(n)),
-  });
-  setParentPointersInDirectChildren((node: $FlowFixMe));
-  return node;
-}
-
 export function BooleanLiteralTypeAnnotation(props: {
   ...BooleanLiteralTypeAnnotationProps,
   +parent?: ESNode,
@@ -1541,7 +1625,7 @@ export function ClassExpression(props: {
     id: asDetachedNodeForCodeGen(props.id),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
     superClass: asDetachedNodeForCodeGen(props.superClass),
-    superTypeParameters: asDetachedNodeForCodeGen(props.superTypeParameters),
+    superTypeArguments: asDetachedNodeForCodeGen(props.superTypeArguments),
     implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
     decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
     body: asDetachedNodeForCodeGen(props.body),
@@ -1837,6 +1921,8 @@ export function DeclareOpaqueType(props: {
       id: asDetachedNodeForCodeGen(props.id),
       typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
       impltype: asDetachedNodeForCodeGen(props.impltype),
+      lowerBound: asDetachedNodeForCodeGen(props.lowerBound),
+      upperBound: asDetachedNodeForCodeGen(props.upperBound),
       supertype: asDetachedNodeForCodeGen(props.supertype),
     },
   );
@@ -1866,6 +1952,18 @@ export function DeclareVariable(props: {
     type: 'DeclareVariable',
     id: asDetachedNodeForCodeGen(props.id),
     kind: props.kind,
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function Decorator(props: {
+  ...DecoratorProps,
+  +parent?: ESNode,
+}): DetachedNode<DecoratorType> {
+  const node = detachedProps<DecoratorType>((props.parent: $FlowFixMe), {
+    type: 'Decorator',
+    expression: asDetachedNodeForCodeGen(props.expression),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
@@ -2338,7 +2436,7 @@ export function ImportDeclaration(props: {
       type: 'ImportDeclaration',
       specifiers: props.specifiers.map(n => asDetachedNodeForCodeGen(n)),
       source: asDetachedNodeForCodeGen(props.source),
-      assertions: props.assertions?.map(n => asDetachedNodeForCodeGen(n)),
+      attributes: props.attributes?.map(n => asDetachedNodeForCodeGen(n)),
       importKind: props.importKind,
     },
   );
@@ -2368,7 +2466,7 @@ export function ImportExpression(props: {
   const node = detachedProps<ImportExpressionType>((props.parent: $FlowFixMe), {
     type: 'ImportExpression',
     source: asDetachedNodeForCodeGen(props.source),
-    attributes: asDetachedNodeForCodeGen(props.attributes),
+    options: asDetachedNodeForCodeGen(props.options),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
@@ -2844,6 +2942,38 @@ export function MatchIdentifierPattern(props: {
   return node;
 }
 
+export function MatchInstanceObjectPattern(props: {
+  ...MatchInstanceObjectPatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchInstanceObjectPatternType> {
+  const node = detachedProps<MatchInstanceObjectPatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchInstanceObjectPattern',
+      properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
+      rest: asDetachedNodeForCodeGen(props.rest),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function MatchInstancePattern(props: {
+  ...MatchInstancePatternProps,
+  +parent?: ESNode,
+}): DetachedNode<MatchInstancePatternType> {
+  const node = detachedProps<MatchInstancePatternType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'MatchInstancePattern',
+      targetConstructor: asDetachedNodeForCodeGen(props.targetConstructor),
+      properties: asDetachedNodeForCodeGen(props.properties),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
 export function MatchLiteralPattern(props: {
   ...MatchLiteralPatternProps,
   +parent?: ESNode,
@@ -3012,6 +3142,7 @@ export function MethodDefinition(props: {
     kind: props.kind,
     computed: props.computed,
     static: props.static,
+    decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
@@ -3024,6 +3155,16 @@ export function MixedTypeAnnotation(
 ): DetachedNode<MixedTypeAnnotationType> {
   return detachedProps<MixedTypeAnnotationType>((props.parent: $FlowFixMe), {
     type: 'MixedTypeAnnotation',
+  });
+}
+
+export function NeverTypeAnnotation(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<NeverTypeAnnotationType> {
+  return detachedProps<NeverTypeAnnotationType>((props.parent: $FlowFixMe), {
+    type: 'NeverTypeAnnotation',
   });
 }
 
@@ -3239,6 +3380,8 @@ export function OpaqueType(props: {
     id: asDetachedNodeForCodeGen(props.id),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
     impltype: asDetachedNodeForCodeGen(props.impltype),
+    lowerBound: asDetachedNodeForCodeGen(props.lowerBound),
+    upperBound: asDetachedNodeForCodeGen(props.upperBound),
     supertype: asDetachedNodeForCodeGen(props.supertype),
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
@@ -3306,6 +3449,7 @@ export function PropertyDefinition(props: {
       value: asDetachedNodeForCodeGen(props.value),
       computed: props.computed,
       static: props.static,
+      decorators: props.decorators.map(n => asDetachedNodeForCodeGen(n)),
       declare: props.declare,
       optional: props.optional,
       variance: asDetachedNodeForCodeGen(props.variance),
@@ -3342,6 +3486,118 @@ export function QualifiedTypeofIdentifier(props: {
       type: 'QualifiedTypeofIdentifier',
       qualification: asDetachedNodeForCodeGen(props.qualification),
       id: asDetachedNodeForCodeGen(props.id),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclaration(props: {
+  ...RecordDeclarationProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationType> {
+  const node = detachedProps<RecordDeclarationType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclaration',
+      id: asDetachedNodeForCodeGen(props.id),
+      typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
+      implements: props.implements.map(n => asDetachedNodeForCodeGen(n)),
+      body: asDetachedNodeForCodeGen(props.body),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationBody(props: {
+  ...RecordDeclarationBodyProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationBodyType> {
+  const node = detachedProps<RecordDeclarationBodyType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationBody',
+      elements: props.elements.map(n => asDetachedNodeForCodeGen(n)),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationImplements(props: {
+  ...RecordDeclarationImplementsProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationImplementsType> {
+  const node = detachedProps<RecordDeclarationImplementsType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationImplements',
+      id: asDetachedNodeForCodeGen(props.id),
+      typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationProperty(props: {
+  ...RecordDeclarationPropertyProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationPropertyType> {
+  const node = detachedProps<RecordDeclarationPropertyType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationProperty',
+      key: asDetachedNodeForCodeGen(props.key),
+      typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+      defaultValue: asDetachedNodeForCodeGen(props.defaultValue),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordDeclarationStaticProperty(props: {
+  ...RecordDeclarationStaticPropertyProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordDeclarationStaticPropertyType> {
+  const node = detachedProps<RecordDeclarationStaticPropertyType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordDeclarationStaticProperty',
+      key: asDetachedNodeForCodeGen(props.key),
+      typeAnnotation: asDetachedNodeForCodeGen(props.typeAnnotation),
+      value: asDetachedNodeForCodeGen(props.value),
+    },
+  );
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordExpression(props: {
+  ...RecordExpressionProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordExpressionType> {
+  const node = detachedProps<RecordExpressionType>((props.parent: $FlowFixMe), {
+    type: 'RecordExpression',
+    recordConstructor: asDetachedNodeForCodeGen(props.recordConstructor),
+    typeArguments: asDetachedNodeForCodeGen(props.typeArguments),
+    properties: asDetachedNodeForCodeGen(props.properties),
+  });
+  setParentPointersInDirectChildren((node: $FlowFixMe));
+  return node;
+}
+
+export function RecordExpressionProperties(props: {
+  ...RecordExpressionPropertiesProps,
+  +parent?: ESNode,
+}): DetachedNode<RecordExpressionPropertiesType> {
+  const node = detachedProps<RecordExpressionPropertiesType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'RecordExpressionProperties',
+      properties: props.properties.map(n => asDetachedNodeForCodeGen(n)),
     },
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));
@@ -3566,7 +3822,7 @@ export function TupleTypeAnnotation(props: {
     (props.parent: $FlowFixMe),
     {
       type: 'TupleTypeAnnotation',
-      types: props.types.map(n => asDetachedNodeForCodeGen(n)),
+      elementTypes: props.elementTypes.map(n => asDetachedNodeForCodeGen(n)),
       inexact: props.inexact,
     },
   );
@@ -3754,6 +4010,19 @@ export function UnaryExpression(props: {
   return node;
 }
 
+export function UndefinedTypeAnnotation(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<UndefinedTypeAnnotationType> {
+  return detachedProps<UndefinedTypeAnnotationType>(
+    (props.parent: $FlowFixMe),
+    {
+      type: 'UndefinedTypeAnnotation',
+    },
+  );
+}
+
 export function UnionTypeAnnotation(props: {
   ...UnionTypeAnnotationProps,
   +parent?: ESNode,
@@ -3767,6 +4036,16 @@ export function UnionTypeAnnotation(props: {
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;
+}
+
+export function UnknownTypeAnnotation(
+  props: {
+    +parent?: ESNode,
+  } = {...null},
+): DetachedNode<UnknownTypeAnnotationType> {
+  return detachedProps<UnknownTypeAnnotationType>((props.parent: $FlowFixMe), {
+    type: 'UnknownTypeAnnotation',
+  });
 }
 
 export function UpdateExpression(props: {

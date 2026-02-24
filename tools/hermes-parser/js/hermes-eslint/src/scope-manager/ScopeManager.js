@@ -27,6 +27,7 @@ import {
   GlobalScope,
   MatchCaseScope,
   ModuleScope,
+  RecordScope,
   SwitchScope,
   TypeScope,
   WithScope,
@@ -157,7 +158,6 @@ class ScopeManager {
       throw new Error('currentScope was unexpectedly null.');
     }
 
-    // $FlowExpectedError[incompatible-return]
     return this.currentScope;
   }
   _nestScope<T: Scope>(scope: T): T {
@@ -295,6 +295,12 @@ class ScopeManager {
   nestMatchCaseScope(node: MatchCaseScope['block']): MatchCaseScope {
     return this._nestScope(
       new MatchCaseScope(this, this._assertCurrentScope(), node),
+    );
+  }
+
+  nestRecordScope(node: RecordScope['block']): RecordScope {
+    return this._nestScope(
+      new RecordScope(this, this._assertCurrentScope(), node),
     );
   }
 }

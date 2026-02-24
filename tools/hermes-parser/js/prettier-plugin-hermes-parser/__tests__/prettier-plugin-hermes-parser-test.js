@@ -11,20 +11,18 @@
 // $FlowExpectedError[cannot-resolve-module]
 import prettierConfig from '../../.prettierrc.json';
 
-import * as prettierV2 from 'prettier';
-// $FlowExpectedError[untyped-import]
-import * as prettierV3 from 'prettier-v3-for-testing/index.cjs';
+import * as prettierV3 from 'prettier';
 
 function getOptions() {
   return {
     ...prettierConfig,
     parser: 'hermes',
     requirePragma: false,
-    plugins: [require('../src/index.js')],
+    plugins: [require.resolve('../index.mjs')],
   };
 }
 
-async function runTestWithPrettier(prettier: typeof prettierV2) {
+async function runTestWithPrettier(prettier: typeof prettierV3) {
   const code = `
   // Function with graphql embed
   function foo() {
@@ -132,11 +130,62 @@ async function runTestWithPrettier(prettier: typeof prettierV2) {
 }
 
 describe('prettier-plugin-hermes-parser', () => {
-  it('uses plugin for v2', async () => {
-    await runTestWithPrettier(prettierV2);
-  });
-
   it('uses plugin for v3', async () => {
     await runTestWithPrettier(prettierV3);
+  });
+
+  it('formats JSX variable declaration stably', async () => {
+    const code = `const notFoundView = (
+      <LumaView   style={styles.root}
+      >{collectionHeader} </LumaView>
+    );`;
+
+    // First format
+    const firstPass = await prettierV3.format(code, getOptions());
+
+    // Assert the output
+    expect(firstPass).toMatchInlineSnapshot(`
+      "const notFoundView = (
+        <LumaView style={styles.root}>{collectionHeader} </LumaView>
+      );
+      "
+    `);
+
+    // Second format - should be identical to first (stability check)
+    const secondPass = await prettierV3.format(firstPass, getOptions());
+
+    expect(secondPass).toBe(firstPass);
+  });
+
+  it('does not add spurious empty lines in nested JSX', async () => {
+    const code = `
+      function Foo() {
+        return (
+          <View style={styles.root}>
+            <View style={styles.content}>
+              <Text>Hello</Text>
+              <Button onClick={handleClick} />
+            </View>
+            <Separator />
+          </View>
+        );
+      }
+    `;
+    const output = await prettierV3.format(code, getOptions());
+    // Should not have empty lines after opening tags or before closing tags
+    expect(output).toMatchInlineSnapshot(`
+      "function Foo() {
+        return (
+          <View style={styles.root}>
+            <View style={styles.content}>
+              <Text>Hello</Text>
+              <Button onClick={handleClick} />
+            </View>
+            <Separator />
+          </View>
+        );
+      }
+      "
+    `);
   });
 });

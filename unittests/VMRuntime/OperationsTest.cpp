@@ -11,7 +11,7 @@
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/StringView.h"
 
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 
 #include <limits>
 
@@ -59,42 +59,42 @@ TEST_F(OperationsTest, IsSameValueTest) {
   v2 = HermesValue::encodeBoolValue(false);
   IsSameValueTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(123.45);
-  v2 = HermesValue::encodeUntrustedNumberValue(123.45);
+  v1 = HermesValue::encodeTrustedNumberValue(123.45);
+  v2 = HermesValue::encodeTrustedNumberValue(123.45);
   IsSameValueTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(-0.0);
-  v2 = HermesValue::encodeUntrustedNumberValue(+0.0);
+  v1 = HermesValue::encodeTrustedNumberValue(-0.0);
+  v2 = HermesValue::encodeTrustedNumberValue(+0.0);
   IsSameValueTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
   IsSameValueTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
   IsSameValueTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       -std::numeric_limits<double>::infinity());
   IsSameValueTest(FALSE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(+0);
-  v2 = HermesValue::encodeUntrustedNumberValue(+0.0);
+  v2 = HermesValue::encodeTrustedNumberValue(+0.0);
   IsSameValueTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(-134);
-  v2 = HermesValue::encodeUntrustedNumberValue(-134.0);
+  v2 = HermesValue::encodeTrustedNumberValue(-134.0);
   IsSameValueTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(182);
-  v2 = HermesValue::encodeUntrustedNumberValue(182.54);
+  v2 = HermesValue::encodeTrustedNumberValue(182.54);
   IsSameValueTest(FALSE, v1, v2);
 
   auto nullObj = runtime.makeNullHandle<JSObject>();
@@ -130,7 +130,7 @@ TEST_F(OperationsTest, IsSameValueTest) {
   v2 = HermesValue::encodeBoolValue(true);
   IsSameValueTest(FALSE, v1, v2);
 
-  v2 = HermesValue::encodeUntrustedNumberValue(0);
+  v2 = HermesValue::encodeTrustedNumberValue(0);
   IsSameValueTest(FALSE, v1, v2);
 
   auto b1 = BigIntPrimitive::fromSignedNoThrow(runtime, 1);
@@ -189,47 +189,47 @@ TEST_F(OperationsTest, AbstractEqualityTest) {
   v2 = HermesValue::encodeBoolValue(false);
   AbstractEqualityTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(123.45);
-  v2 = HermesValue::encodeUntrustedNumberValue(123.45);
+  v1 = HermesValue::encodeTrustedNumberValue(123.45);
+  v2 = HermesValue::encodeTrustedNumberValue(123.45);
   AbstractEqualityTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
   AbstractEqualityTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
-  v2 = HermesValue::encodeUntrustedNumberValue(123.563);
+  v2 = HermesValue::encodeTrustedNumberValue(123.563);
   AbstractEqualityTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(-0.0);
-  v2 = HermesValue::encodeUntrustedNumberValue(+0.0);
+  v1 = HermesValue::encodeTrustedNumberValue(-0.0);
+  v2 = HermesValue::encodeTrustedNumberValue(+0.0);
   AbstractEqualityTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
   AbstractEqualityTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       -std::numeric_limits<double>::infinity());
   AbstractEqualityTest(FALSE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(+0);
-  v2 = HermesValue::encodeUntrustedNumberValue(+0.0);
+  v2 = HermesValue::encodeTrustedNumberValue(+0.0);
   AbstractEqualityTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(-134);
-  v2 = HermesValue::encodeUntrustedNumberValue(-134.0);
+  v2 = HermesValue::encodeTrustedNumberValue(-134.0);
   AbstractEqualityTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(182);
-  v2 = HermesValue::encodeUntrustedNumberValue(182.54);
+  v2 = HermesValue::encodeTrustedNumberValue(182.54);
   AbstractEqualityTest(FALSE, v1, v2);
 
   auto nullObj = runtime.makeNullHandle<JSObject>();
@@ -258,26 +258,26 @@ TEST_F(OperationsTest, AbstractEqualityTest) {
 
   auto s4 = StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"1000"));
   v1 = HermesValue::encodeStringValue(s4.get());
-  v2 = HermesValue::encodeUntrustedNumberValue(1000);
+  v2 = HermesValue::encodeTrustedNumberValue(1000);
   AbstractEqualityTest(TRUE, v1, v2);
 
   auto s5 =
       StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"Infinity"));
   v1 = HermesValue::encodeStringValue(s5.get());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
   AbstractEqualityTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeBoolValue(true);
-  v2 = HermesValue::encodeUntrustedNumberValue(1);
+  v2 = HermesValue::encodeTrustedNumberValue(1);
   AbstractEqualityTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeBoolValue(false);
-  v2 = HermesValue::encodeUntrustedNumberValue(0);
+  v2 = HermesValue::encodeTrustedNumberValue(0);
   AbstractEqualityTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeBoolValue(true);
-  v2 = HermesValue::encodeUntrustedNumberValue(153);
+  v2 = HermesValue::encodeTrustedNumberValue(153);
   AbstractEqualityTest(FALSE, v1, v2);
 
   // BigInt tests
@@ -364,7 +364,7 @@ TEST_F(OperationsTest, AbstractEqualityTest) {
   AbstractEqualityTest(FALSE, v1, v2);
 
   v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
-  v2 = HermesValue::encodeUntrustedNumberValue(281470698520320.0);
+  v2 = HermesValue::encodeTrustedNumberValue(281470698520320.0);
   AbstractEqualityTest(TRUE, v1, v2);
 
   // TODO: Test Object equality once Runtime::interpretFunction() is written.
@@ -405,47 +405,47 @@ TEST_F(OperationsTest, StrictEquaityTest) {
   v2 = HermesValue::encodeBoolValue(false);
   StrictEqualityTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(123.45);
-  v2 = HermesValue::encodeUntrustedNumberValue(123.45);
+  v1 = HermesValue::encodeTrustedNumberValue(123.45);
+  v2 = HermesValue::encodeTrustedNumberValue(123.45);
   StrictEqualityTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(-0.0);
-  v2 = HermesValue::encodeUntrustedNumberValue(+0.0);
+  v1 = HermesValue::encodeTrustedNumberValue(-0.0);
+  v2 = HermesValue::encodeTrustedNumberValue(+0.0);
   StrictEqualityTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
-  v2 = HermesValue::encodeUntrustedNumberValue(3);
+  v2 = HermesValue::encodeTrustedNumberValue(3);
   StrictEqualityTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::quiet_NaN());
   StrictEqualityTest(FALSE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
   StrictEqualityTest(TRUE, v1, v2);
 
-  v1 = HermesValue::encodeUntrustedNumberValue(
+  v1 = HermesValue::encodeTrustedNumberValue(
       std::numeric_limits<double>::infinity());
-  v2 = HermesValue::encodeUntrustedNumberValue(
+  v2 = HermesValue::encodeTrustedNumberValue(
       -std::numeric_limits<double>::infinity());
   StrictEqualityTest(FALSE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(+0);
-  v2 = HermesValue::encodeUntrustedNumberValue(+0.0);
+  v2 = HermesValue::encodeTrustedNumberValue(+0.0);
   StrictEqualityTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(-134);
-  v2 = HermesValue::encodeUntrustedNumberValue(-134.0);
+  v2 = HermesValue::encodeTrustedNumberValue(-134.0);
   StrictEqualityTest(TRUE, v1, v2);
 
   v1 = HermesValue::encodeTrustedNumberValue(182);
-  v2 = HermesValue::encodeUntrustedNumberValue(182.54);
+  v2 = HermesValue::encodeTrustedNumberValue(182.54);
   StrictEqualityTest(FALSE, v1, v2);
 
   auto nullObj = runtime.makeNullHandle<JSObject>();
@@ -557,7 +557,7 @@ TEST_F(OperationsTest, StrictEquaityTest) {
   StrictEqualityTest(FALSE, v1, v2);
 
   v1 = HermesValue::encodeBigIntValue(bigint0x00ffff00ffff00.get());
-  v2 = HermesValue::encodeUntrustedNumberValue(281470698520320.0);
+  v2 = HermesValue::encodeTrustedNumberValue(281470698520320.0);
   StrictEqualityTest(FALSE, v1, v2);
 }
 
@@ -576,7 +576,7 @@ TEST_F(OperationsTest, IsPrimitiveTest) {
   v = HermesValue::encodeBoolValue(true);
   EXPECT_TRUE(isPrimitive(v));
 
-  v = HermesValue::encodeUntrustedNumberValue(1.21);
+  v = HermesValue::encodeTrustedNumberValue(1.21);
   EXPECT_TRUE(isPrimitive(v));
 
   auto s =
@@ -622,12 +622,12 @@ TEST_F(OperationsTest, ToBooleanTest) {
   }
 
   {
-    EXPECT_FALSE(toBoolean(HermesValue::encodeUntrustedNumberValue(0)));
-    EXPECT_FALSE(toBoolean(HermesValue::encodeUntrustedNumberValue(-0.0)));
+    EXPECT_FALSE(toBoolean(HermesValue::encodeTrustedNumberValue(0)));
+    EXPECT_FALSE(toBoolean(HermesValue::encodeTrustedNumberValue(-0.0)));
     EXPECT_FALSE(toBoolean(HermesValue::encodeNaNValue()));
     EXPECT_FALSE(toBoolean(HermesValue::encodeTrustedNumberValue(0)));
 
-    EXPECT_TRUE(toBoolean(HermesValue::encodeUntrustedNumberValue(123.34)));
+    EXPECT_TRUE(toBoolean(HermesValue::encodeTrustedNumberValue(123.34)));
     EXPECT_TRUE(toBoolean(HermesValue::encodeTrustedNumberValue(123)));
   }
 }
@@ -645,7 +645,7 @@ TEST_F(OperationsTest, ToBooleanTest) {
   }
 
 #define DoubleToStringTest(result, value) \
-  ToStringTest(result, HermesValue::encodeUntrustedNumberValue(value));
+  ToStringTest(result, HermesValue::encodeTrustedNumberValue(value));
 
 #define SmallIntToStringTest(result, value) \
   ToStringTest(result, HermesValue::encodeTrustedNumberValue(value));
@@ -948,8 +948,7 @@ TEST_F(OperationsLargeHeapTest, ToNumberTest) {
     auto thrownProto =
         JSObject::getPrototypeOf(createPseudoHandle(thrownJSObject), runtime);
     ASSERT_NE(ExecutionStatus::EXCEPTION, thrownProto.getStatus());
-    EXPECT_EQ(
-        runtime.TypeErrorPrototype.getObject(runtime), thrownProto->get());
+    EXPECT_EQ(*runtime.TypeErrorPrototype, thrownProto->get());
     runtime.clearThrownValue();
   }
 
@@ -968,23 +967,23 @@ TEST_F(OperationsTest, ToIntegerTest) {
   ToIntegerTest(0, HermesValue::encodeNullValue());
   ToIntegerTest(0, HermesValue::encodeUndefinedValue());
 
-  ToIntegerTest(2, HermesValue::encodeUntrustedNumberValue(2.0));
-  ToIntegerTest(2, HermesValue::encodeUntrustedNumberValue(2.4));
-  ToIntegerTest(-2, HermesValue::encodeUntrustedNumberValue(-2.4));
+  ToIntegerTest(2, HermesValue::encodeTrustedNumberValue(2.0));
+  ToIntegerTest(2, HermesValue::encodeTrustedNumberValue(2.4));
+  ToIntegerTest(-2, HermesValue::encodeTrustedNumberValue(-2.4));
   ToIntegerTest(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::quiet_NaN()));
-  ToIntegerTest(0, HermesValue::encodeUntrustedNumberValue(-0.0));
-  ToIntegerTest(0, HermesValue::encodeUntrustedNumberValue(+0.0));
+  ToIntegerTest(0, HermesValue::encodeTrustedNumberValue(-0.0));
+  ToIntegerTest(0, HermesValue::encodeTrustedNumberValue(+0.0));
 
   ToIntegerTest(
       std::numeric_limits<double>::infinity(),
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::infinity()));
   ToIntegerTest(
       -std::numeric_limits<double>::infinity(),
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           -std::numeric_limits<double>::infinity()));
 }
 
@@ -1002,31 +1001,29 @@ TEST_F(OperationsTest, ToInt32Test) {
 
   ToInt32Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::infinity()));
   ToInt32Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           -std::numeric_limits<double>::infinity()));
 
-  ToInt32Test(2, HermesValue::encodeUntrustedNumberValue(2.0));
-  ToInt32Test(2, HermesValue::encodeUntrustedNumberValue(2.4));
-  ToInt32Test(-2, HermesValue::encodeUntrustedNumberValue(-2.4));
+  ToInt32Test(2, HermesValue::encodeTrustedNumberValue(2.0));
+  ToInt32Test(2, HermesValue::encodeTrustedNumberValue(2.4));
+  ToInt32Test(-2, HermesValue::encodeTrustedNumberValue(-2.4));
   ToInt32Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::quiet_NaN()));
-  ToInt32Test(0, HermesValue::encodeUntrustedNumberValue(-0.0));
-  ToInt32Test(0, HermesValue::encodeUntrustedNumberValue(+0.0));
+  ToInt32Test(0, HermesValue::encodeTrustedNumberValue(-0.0));
+  ToInt32Test(0, HermesValue::encodeTrustedNumberValue(+0.0));
 
+  ToInt32Test(1, HermesValue::encodeTrustedNumberValue(std::pow(2, 33) + 1.0));
+  ToInt32Test(-1, HermesValue::encodeTrustedNumberValue(std::pow(2, 33) - 1.0));
   ToInt32Test(
-      1, HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) + 1.0));
+      1238, HermesValue::encodeTrustedNumberValue(std::pow(2, 33) + 1238.0));
   ToInt32Test(
-      -1, HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) - 1.0));
-  ToInt32Test(
-      1238, HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) + 1238.0));
-  ToInt32Test(
-      -1238, HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) - 1238.0));
+      -1238, HermesValue::encodeTrustedNumberValue(std::pow(2, 33) - 1238.0));
 }
 
 #define ToUInt32Test(result, value)                        \
@@ -1043,34 +1040,33 @@ TEST_F(OperationsTest, ToUInt32Test) {
 
   ToUInt32Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::infinity()));
   ToUInt32Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           -std::numeric_limits<double>::infinity()));
 
-  ToUInt32Test(2, HermesValue::encodeUntrustedNumberValue(2.0));
-  ToUInt32Test(2, HermesValue::encodeUntrustedNumberValue(2.4));
+  ToUInt32Test(2, HermesValue::encodeTrustedNumberValue(2.0));
+  ToUInt32Test(2, HermesValue::encodeTrustedNumberValue(2.4));
   ToUInt32Test(
-      std::pow(2, 32) - 2, HermesValue::encodeUntrustedNumberValue(-2.4));
+      std::pow(2, 32) - 2, HermesValue::encodeTrustedNumberValue(-2.4));
   ToUInt32Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::quiet_NaN()));
-  ToUInt32Test(0, HermesValue::encodeUntrustedNumberValue(-0.0));
-  ToUInt32Test(0, HermesValue::encodeUntrustedNumberValue(+0.0));
+  ToUInt32Test(0, HermesValue::encodeTrustedNumberValue(-0.0));
+  ToUInt32Test(0, HermesValue::encodeTrustedNumberValue(+0.0));
 
-  ToUInt32Test(
-      1, HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) + 1.0));
+  ToUInt32Test(1, HermesValue::encodeTrustedNumberValue(std::pow(2, 33) + 1.0));
   ToUInt32Test(
       std::pow(2, 32) - 1,
-      HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) - 1.0));
+      HermesValue::encodeTrustedNumberValue(std::pow(2, 33) - 1.0));
   ToUInt32Test(
-      1238, HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) + 1238.0));
+      1238, HermesValue::encodeTrustedNumberValue(std::pow(2, 33) + 1238.0));
   ToUInt32Test(
       std::pow(2, 32) - 1238,
-      HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) - 1238.0));
+      HermesValue::encodeTrustedNumberValue(std::pow(2, 33) - 1238.0));
 }
 
 #define ToUInt16Test(result, value)                        \
@@ -1087,34 +1083,33 @@ TEST_F(OperationsTest, ToUInt16Test) {
 
   ToUInt16Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::infinity()));
   ToUInt16Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           -std::numeric_limits<double>::infinity()));
 
-  ToUInt16Test(2, HermesValue::encodeUntrustedNumberValue(2.0));
-  ToUInt16Test(2, HermesValue::encodeUntrustedNumberValue(2.4));
+  ToUInt16Test(2, HermesValue::encodeTrustedNumberValue(2.0));
+  ToUInt16Test(2, HermesValue::encodeTrustedNumberValue(2.4));
   ToUInt16Test(
-      std::pow(2, 16) - 2, HermesValue::encodeUntrustedNumberValue(-2.4));
+      std::pow(2, 16) - 2, HermesValue::encodeTrustedNumberValue(-2.4));
   ToUInt16Test(
       0,
-      HermesValue::encodeUntrustedNumberValue(
+      HermesValue::encodeTrustedNumberValue(
           std::numeric_limits<double>::quiet_NaN()));
-  ToUInt16Test(0, HermesValue::encodeUntrustedNumberValue(-0.0));
-  ToUInt16Test(0, HermesValue::encodeUntrustedNumberValue(+0.0));
+  ToUInt16Test(0, HermesValue::encodeTrustedNumberValue(-0.0));
+  ToUInt16Test(0, HermesValue::encodeTrustedNumberValue(+0.0));
 
-  ToUInt16Test(
-      1, HermesValue::encodeUntrustedNumberValue(std::pow(2, 18) + 1.0));
+  ToUInt16Test(1, HermesValue::encodeTrustedNumberValue(std::pow(2, 18) + 1.0));
   ToUInt16Test(
       std::pow(2, 16) - 1,
-      HermesValue::encodeUntrustedNumberValue(std::pow(2, 18) - 1.0));
+      HermesValue::encodeTrustedNumberValue(std::pow(2, 18) - 1.0));
   ToUInt16Test(
-      1238, HermesValue::encodeUntrustedNumberValue(std::pow(2, 33) + 1238.0));
+      1238, HermesValue::encodeTrustedNumberValue(std::pow(2, 33) + 1238.0));
   ToUInt16Test(
       std::pow(2, 16) - 1238,
-      HermesValue::encodeUntrustedNumberValue(std::pow(2, 18) - 1238.0));
+      HermesValue::encodeTrustedNumberValue(std::pow(2, 18) - 1238.0));
 }
 
 TEST_F(OperationsTest, ToObjectTest) {
@@ -1144,7 +1139,7 @@ TEST_F(OperationsTest, ToObjectTest) {
   {
     auto m = 1529.184;
     auto scopedVal =
-        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(m));
+        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(m));
     auto res = toObject(runtime, scopedVal);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res->isObject());
@@ -1272,12 +1267,12 @@ TEST_F(OperationsTest, getPrimitivePrototypeTest) {
     EXPECT_TRUE(std::isnan(res->getNumber()));                              \
   }
 
-#define DoubleAdditionTest(result, x, y)             \
-  {                                                  \
-    NumberAdditionTest(                              \
-        result,                                      \
-        HermesValue::encodeUntrustedNumberValue(x),  \
-        HermesValue::encodeUntrustedNumberValue(y)); \
+#define DoubleAdditionTest(result, x, y)           \
+  {                                                \
+    NumberAdditionTest(                            \
+        result,                                    \
+        HermesValue::encodeTrustedNumberValue(x),  \
+        HermesValue::encodeTrustedNumberValue(y)); \
   }
 
 TEST_F(OperationsTest, AdditionTest) {
@@ -1303,7 +1298,7 @@ TEST_F(OperationsTest, AdditionTest) {
         StringPrimitive::createNoThrow(runtime, createUTF16Ref(u"number: "));
     auto aHandle = runtime.makeHandle(HermesValue::encodeStringValue(a.get()));
     auto bHandle =
-        runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(1.4));
+        runtime.makeHandle(HermesValue::encodeTrustedNumberValue(1.4));
     res = addOp_RJS(runtime, aHandle, bHandle);
     EXPECT_EQ(ExecutionStatus::RETURNED, res.getStatus());
     EXPECT_TRUE(res.getValue().isString());
@@ -1316,20 +1311,20 @@ TEST_F(OperationsTest, AdditionTest) {
 
   {
     InvalidNumberAdditionTest(
-        HermesValue::encodeUntrustedNumberValue(
+        HermesValue::encodeTrustedNumberValue(
             std::numeric_limits<double>::quiet_NaN()),
-        HermesValue::encodeUntrustedNumberValue(1));
+        HermesValue::encodeTrustedNumberValue(1));
     InvalidNumberAdditionTest(
-        HermesValue::encodeUntrustedNumberValue(1),
-        HermesValue::encodeUntrustedNumberValue(
+        HermesValue::encodeTrustedNumberValue(1),
+        HermesValue::encodeTrustedNumberValue(
             std::numeric_limits<double>::quiet_NaN()));
   }
 
   {
     auto inf = std::numeric_limits<double>::infinity();
     InvalidNumberAdditionTest(
-        HermesValue::encodeUntrustedNumberValue(inf),
-        HermesValue::encodeUntrustedNumberValue(-inf));
+        HermesValue::encodeTrustedNumberValue(inf),
+        HermesValue::encodeTrustedNumberValue(-inf));
     DoubleAdditionTest(inf, inf, inf);
     DoubleAdditionTest(-inf, -inf, -inf);
     DoubleAdditionTest(inf, inf, 4);
@@ -1356,21 +1351,21 @@ TEST_F(OperationsTest, AdditionTest) {
   {
     NumberAdditionTest(
         4.0,
-        HermesValue::encodeUntrustedNumberValue(3.0),
+        HermesValue::encodeTrustedNumberValue(3.0),
         HermesValue::encodeBoolValue(true));
     NumberAdditionTest(
         3.0,
-        HermesValue::encodeUntrustedNumberValue(3.0),
+        HermesValue::encodeTrustedNumberValue(3.0),
         HermesValue::encodeBoolValue(false));
   }
 
   {
     InvalidNumberAdditionTest(
-        HermesValue::encodeUntrustedNumberValue(3.0),
+        HermesValue::encodeTrustedNumberValue(3.0),
         HermesValue::encodeUndefinedValue());
     NumberAdditionTest(
         3.0,
-        HermesValue::encodeUntrustedNumberValue(3.0),
+        HermesValue::encodeTrustedNumberValue(3.0),
         HermesValue::encodeNullValue());
   }
 
@@ -1393,8 +1388,7 @@ TEST_F(OperationsTest, NumberToBigIntTest) {
     auto thrownProto =
         JSObject::getPrototypeOf(createPseudoHandle(thrownJSObject), runtime);
     ASSERT_NE(ExecutionStatus::EXCEPTION, thrownProto.getStatus());
-    EXPECT_EQ(
-        runtime.RangeErrorPrototype.getObject(runtime), thrownProto->get());
+    EXPECT_EQ(*runtime.RangeErrorPrototype, thrownProto->get());
     runtime.clearThrownValue();
   }
 }

@@ -13,18 +13,20 @@ var glob = {prop: bar()};
 var re = /foo/i;
 glob.baz;
 bazz = "const-string";
-delete glob.baz;
 
 //CHECK:    DeclareGlobalVar  "glob"
 //CHECK:    DeclareGlobalVar  "re"
-//CHECK:    TryGetById        {{r[0-9]+}}, {{r[0-9]+}}, 1, "bar"
-//CHECK:    PutNewOwnByIdShort   {{r[0-9]+}}, {{r[0-9]+}}, "prop"
-//CHECK:    PutById           {{r[0-9]+}}, {{r[0-9]+}}, 1, "glob"
+//CHECK:    NewObjectWithBuffer {{r[0-9]+}}, 0, 0
+//CHECK:    GetGlobalObject   {{r[0-9]+}}
+//CHECK:    TryGetById        {{r[0-9]+}}, {{r[0-9]+}}, 0, "bar"
+//CHECK:    LoadConstUndefined {{r[0-9]+}}
+//CHECK:    Call1             {{r[0-9]+}}, {{r[0-9]+}}, {{r[0-9]+}}
+//CHECK:    PutOwnBySlotIdx   {{r[0-9]+}}, {{r[0-9]+}}, 0
+//CHECK:    PutByIdStrict     {{r[0-9]+}}, {{r[0-9]+}}, 0, "glob"
 //CHECK:    CreateRegExp      {{r[0-9]+}}, "foo", "i", 0
-//CHECK:    PutById           {{r[0-9]+}}, {{r[0-9]+}}, 2, "re"
-//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 2, "glob"
-//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 3, "baz"
+//CHECK:    PutByIdStrict     {{r[0-9]+}}, {{r[0-9]+}}, 1, "re"
+//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 1, "glob"
+//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 2, "baz"
 //CHECK:    LoadConstString   {{r[0-9]+}}, "const-string"
-//CHECK:    TryPutById        {{r[0-9]+}}, {{r[0-9]+}}, 3, "bazz"
-//CHECK:    GetByIdShort      {{r[0-9]+}}, {{r[0-9]+}}, 2, "glob"
-//CHECK:    DelById           {{r[0-9]+}}, {{r[0-9]+}}, "baz"
+//CHECK:    TryPutByIdStrict  {{r[0-9]+}}, {{r[0-9]+}}, 2, "bazz"
+//CHECK:    Ret               {{r[0-9]+}}

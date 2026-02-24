@@ -50,57 +50,69 @@ bool tryPromoteConstVariable(Variable *var) {
   return true;
 }
 
-/// If \p var is only ever stored to in its owning function \p func, create a
-/// copy of \p var on the stack. Use this stack variable for any loads from \p
-/// var in \p func. Note that the stores to the frame are not deleted, which
-/// means that loads in inner functions will continue to work correctly.
+/// If \p var is only ever stored to by directly writing to a CreateScopeInst,
+/// create a copy of \p var on the stack. Use this stack variable for any loads
+/// from \p var. Note that the stores to the frame are not deleted, which means
+/// that indirect loads through scope resolution instructions will continue to
+/// work correctly.
 /// \return true if the variable was promoted.
-bool tryCopyToStack(Variable *var) {
-  auto *func = var->getParent()->getFunction();
-  bool hasLoadInOwningFunction = false;
-  bool hasStoreInInnerFunction = false;
-  for (auto *U : var->getUsers()) {
-    bool owningFunc = U->getParent()->getParent() == func;
-    if (llvh::isa<LoadFrameInst>(U))
-      hasLoadInOwningFunction |= owningFunc;
-    else
-      hasStoreInInnerFunction |= !owningFunc;
-  }
+bool tryCopyToStack(Module *M, Variable *var) {
+  bool hasIndirectStore = false;
+  for (auto *U : var->getUsers())
+    if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(U))
+      hasIndirectStore |= !llvh::isa<CreateScopeInst>(SFI->getScope());
 
-  // If the variable is stored to from an inner function, we cannot attempt to
-  // create a copy of it on the stack. Note that this applies even if all stores
-  // are in the same inner function, because recursive invocations of that
-  // function need to modify the same frame variable.
-  // Likewise, if it doesn't have any loads that can use the new stack value, we
-  // don't need to create it. The latter prevents us from repeatedly creating
-  // new stack variables every time the pass runs.
-  if (hasStoreInInnerFunction || !hasLoadInOwningFunction)
+  // If the variable is stored to by resolving from an inner scope, we cannot
+  // attempt to create a copy of it on the stack. Note that this applies even if
+  // all stores use the same scope operand, because in an inner function,
+  // recursive invocations of that function need to modify the same frame
+  // variable.
+  if (hasIndirectStore)
     return false;
 
   LLVM_DEBUG(llvh::dbgs() << "Promoting Variable: " << var->getName() << "\n");
 
-  IRBuilder builder(func->getParent());
-
-  // AllocStack will be inserted at the very start of the function.
-  builder.setInsertionPoint(&*func->begin()->begin());
-  auto *stackVar = builder.createAllocStackInst(var->getName());
-
+  IRBuilder builder(M);
   IRBuilder::InstructionDestroyer destroyer;
 
+  // Map from a scope to the stack location that holds the value of var in that
+  // scope.
+  llvh::SmallDenseMap<CreateScopeInst *, AllocStackInst *> allocs;
+
   for (auto *U : var->getUsers()) {
-    // Replace all loads in the owning function with loads from the stack.
-    if (llvh::isa<LoadFrameInst>(U)) {
-      if (U->getParent()->getParent() == func) {
-        builder.setInsertionPoint(U);
-        auto *loadStack = builder.createLoadStackInst(stackVar);
-        U->replaceAllUsesWith(loadStack);
-        destroyer.add(U);
+    // Replace all loads directly from a CreateScopeInst with loads from the
+    // stack.
+    if (auto *LFI = llvh::dyn_cast<LoadFrameInst>(U)) {
+      if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(LFI->getScope())) {
+        // Create an AllocStackInst for this scope if one doesn't exist.
+        auto *&alloc = allocs[CSI];
+        if (!alloc) {
+          builder.setInsertionPoint(CSI);
+          alloc = builder.createAllocStackInst(var->getName(), var->getType());
+        }
+
+        // Replace the frame load with a load from the stack.
+        builder.setInsertionPoint(LFI);
+        auto *loadStack = builder.createLoadStackInst(alloc);
+        LFI->replaceAllUsesWith(loadStack);
+        destroyer.add(LFI);
       }
-    } else {
-      // Duplicate all stores so they also store to the stack.
-      auto *store = llvh::cast<StoreFrameInst>(U);
-      builder.setInsertionPoint(store);
-      builder.createStoreStackInst(store->getValue(), stackVar);
+    }
+  }
+
+  // If none of the loads were eligible, nothing changed.
+  if (allocs.empty())
+    return false;
+
+  for (auto *U : var->getUsers()) {
+    // Duplicate all stores so they also store to the stack location (if one
+    // exists).
+    if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(U)) {
+      auto *CSI = llvh::cast<CreateScopeInst>(SFI->getScope());
+      if (auto *alloc = allocs.lookup(CSI)) {
+        builder.setInsertionPoint(SFI);
+        builder.createStoreStackInst(SFI->getValue(), alloc);
+      }
     }
   }
 
@@ -126,47 +138,74 @@ bool tryDeleteStoreOnlyVariable(Variable *var) {
   return true;
 }
 
-/// Run SimpleStackPromotion on a single function.
-/// Iterates all variables of \p func, replacing them usage of them with SSA and
-/// stack values.
-bool runOnFunction(Function *F) {
+/// Run SimpleStackPromotion on a single variable \p var.
+bool runOnVariable(Module *M, Variable *var) {
   bool changed = false;
-  LLVM_DEBUG(
-      llvh::dbgs() << "Promoting variables in " << F->getInternalNameStr()
-                   << "\n");
 
-  llvh::SmallVectorImpl<Variable *> &vars =
-      F->getFunctionScopeDesc()->getMutableVariables();
-  for (Variable *var : vars) {
-    // Attempt to replace var with a literal if possible. Note that this removes
-    // all loads and stores from var, so we can skip the rest of the pass.
-    if (tryPromoteConstVariable(var)) {
-      changed = true;
-      continue;
-    }
-    // Try creating a copy of the variable on the stack if it is only ever
-    // stored to in the owning function. This allows us to eliminate all loads
-    // from the variable in the owning function.
-    changed |= tryCopyToStack(var);
-    // If the variable no longer has any loads at all, delete any remaining
-    // stores. This may happen because the program never loads from the
-    // variable, or because all loads from the variable were in the owning
-    // function as well, and were therefore eliminated by the stack copy.
-    changed |= tryDeleteStoreOnlyVariable(var);
-  }
-
-  // Delete variables without any users.
-  for (Variable *&var : vars) {
-    if (!var->hasUsers()) {
-      Value::destroy(var);
-      var = nullptr;
-      changed = true;
-    }
-  }
-  // Clean up the variable list to remove destroyed entries.
-  llvh::erase_if(vars, [](Variable *var) { return !var; });
+  // Attempt to replace var with a literal if possible. Note that this removes
+  // all loads and stores from var, so we can skip the rest of the pass.
+  if (tryPromoteConstVariable(var))
+    return true;
+  // Try creating a copy of the variable on the stack if it is only ever
+  // stored to in the owning function. This allows us to eliminate all loads
+  // from the variable in the owning function.
+  changed |= tryCopyToStack(M, var);
+  // If the variable no longer has any loads at all, delete any remaining
+  // stores. This may happen because the program never loads from the
+  // variable, or because all loads from the variable were in the owning
+  // function as well, and were therefore eliminated by the stack copy.
+  changed |= tryDeleteStoreOnlyVariable(var);
 
   return changed;
+}
+
+/// If the given scope \p CSI does not escape, we can promote all the variables
+/// inside it, regardless of whether they are captured elsewhere.
+bool runOnCreateScope(CreateScopeInst *CSI) {
+  // Check that CSI is only used as the scope operand of loads and stores.
+  // Anything else may cause it to escape.
+  for (auto *U : CSI->getUsers()) {
+    if (llvh::isa<LoadFrameInst>(U))
+      continue;
+
+    // For stores, ensure that the scope is not used as the stored value.
+    if (auto *SFI = llvh::dyn_cast<StoreFrameInst>(U))
+      if (SFI->getValue() != CSI)
+        continue;
+
+    return false;
+  }
+
+  IRBuilder builder(CSI->getFunction());
+  IRBuilder::InstructionDestroyer destroyer;
+
+  // Map from a Variable to the alloca we have created for it.
+  llvh::SmallDenseMap<Variable *, AllocStackInst *> allocs;
+
+  for (auto *U : CSI->getUsers()) {
+    auto *var = llvh::isa<LoadFrameInst>(U)
+        ? llvh::cast<LoadFrameInst>(U)->getLoadVariable()
+        : llvh::cast<StoreFrameInst>(U)->getVariable();
+
+    // Create an AllocStackInst for this variable if one doesn't exist.
+    auto *&alloc = allocs[var];
+    if (!alloc) {
+      builder.setInsertionPoint(CSI);
+      alloc = builder.createAllocStackInst(var->getName(), var->getType());
+    }
+    builder.setInsertionPoint(U);
+
+    // Replace the frame operation with one to the stack location.
+    auto *stackOp = llvh::isa<LoadFrameInst>(U)
+        ? (Instruction *)builder.createLoadStackInst(alloc)
+        : builder.createStoreStackInst(
+              llvh::cast<StoreFrameInst>(U)->getValue(), alloc);
+    U->replaceAllUsesWith(stackOp);
+    destroyer.add(U);
+  }
+  destroyer.add(CSI);
+
+  return true;
 }
 
 /// Promotes all non-captured variables into stack allocations.
@@ -175,14 +214,23 @@ bool runOnFunction(Function *F) {
 /// function, to allow local values to be forwarded.
 bool runSimpleStackPromotion(Module *M) {
   bool changed = false;
-  for (Function &func : *M)
-    changed |= runOnFunction(&func);
+  for (auto &VS : M->getVariableScopes()) {
+    // If we can prove a particular instance of this scope does not escape,
+    // promote that instance in its entirety.
+    for (auto *U : VS.getUsers())
+      if (auto *CSI = llvh::dyn_cast<CreateScopeInst>(U))
+        changed |= runOnCreateScope(CSI);
+
+    for (Variable *var : VS.getVariables())
+      changed |= runOnVariable(M, var);
+  }
+  changed |= deleteUnusedVariables(M);
   return changed;
 }
 
 } // namespace
 
-std::unique_ptr<Pass> createSimpleStackPromotion() {
+Pass *createSimpleStackPromotion() {
   class ThisPass : public ModulePass {
    public:
     explicit ThisPass() : ModulePass("SimpleStackPromotion") {}
@@ -192,7 +240,7 @@ std::unique_ptr<Pass> createSimpleStackPromotion() {
       return runSimpleStackPromotion(M);
     }
   };
-  return std::make_unique<ThisPass>();
+  return new ThisPass();
 }
 } // namespace hermes
 #undef DEBUG_TYPE

@@ -36,7 +36,6 @@ export const HERMES_AST_VISITOR_KEYS = {
     elementType: 'Node',
   },
   ArrowFunctionExpression: {
-    id: 'Node',
     params: 'NodeList',
     body: 'Node',
     typeParameters: 'Node',
@@ -96,7 +95,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     typeParameters: 'Node',
     superClass: 'Node',
-    superTypeParameters: 'Node',
+    superTypeArguments: 'Node',
     implements: 'NodeList',
     decorators: 'NodeList',
     body: 'Node',
@@ -105,7 +104,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     typeParameters: 'Node',
     superClass: 'Node',
-    superTypeParameters: 'Node',
+    superTypeArguments: 'Node',
     implements: 'NodeList',
     decorators: 'NodeList',
     body: 'Node',
@@ -208,6 +207,8 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     typeParameters: 'Node',
     impltype: 'Node',
+    lowerBound: 'Node',
+    upperBound: 'Node',
     supertype: 'Node',
   },
   DeclareTypeAlias: {
@@ -217,6 +218,9 @@ export const HERMES_AST_VISITOR_KEYS = {
   },
   DeclareVariable: {
     id: 'Node',
+  },
+  Decorator: {
+    expression: 'Node',
   },
   DoWhileStatement: {
     body: 'Node',
@@ -357,14 +361,14 @@ export const HERMES_AST_VISITOR_KEYS = {
   ImportDeclaration: {
     specifiers: 'NodeList',
     source: 'Node',
-    assertions: 'NodeList',
+    attributes: 'NodeList',
   },
   ImportDefaultSpecifier: {
     local: 'Node',
   },
   ImportExpression: {
     source: 'Node',
-    attributes: 'Node',
+    options: 'Node',
   },
   ImportNamespaceSpecifier: {
     local: 'Node',
@@ -476,6 +480,14 @@ export const HERMES_AST_VISITOR_KEYS = {
   MatchIdentifierPattern: {
     id: 'Node',
   },
+  MatchInstanceObjectPattern: {
+    properties: 'NodeList',
+    rest: 'Node',
+  },
+  MatchInstancePattern: {
+    targetConstructor: 'Node',
+    properties: 'Node',
+  },
   MatchLiteralPattern: {
     literal: 'Node',
   },
@@ -521,8 +533,10 @@ export const HERMES_AST_VISITOR_KEYS = {
   MethodDefinition: {
     key: 'Node',
     value: 'Node',
+    decorators: 'NodeList',
   },
   MixedTypeAnnotation: {},
+  NeverTypeAnnotation: {},
   NewExpression: {
     callee: 'Node',
     typeArguments: 'Node',
@@ -580,6 +594,8 @@ export const HERMES_AST_VISITOR_KEYS = {
     id: 'Node',
     typeParameters: 'Node',
     impltype: 'Node',
+    lowerBound: 'Node',
+    upperBound: 'Node',
     supertype: 'Node',
   },
   OptionalIndexedAccessType: {
@@ -597,6 +613,7 @@ export const HERMES_AST_VISITOR_KEYS = {
   PropertyDefinition: {
     key: 'Node',
     value: 'Node',
+    decorators: 'NodeList',
     variance: 'Node',
     typeAnnotation: 'Node',
   },
@@ -607,6 +624,37 @@ export const HERMES_AST_VISITOR_KEYS = {
   QualifiedTypeofIdentifier: {
     qualification: 'Node',
     id: 'Node',
+  },
+  RecordDeclaration: {
+    id: 'Node',
+    typeParameters: 'Node',
+    implements: 'NodeList',
+    body: 'Node',
+  },
+  RecordDeclarationBody: {
+    elements: 'NodeList',
+  },
+  RecordDeclarationImplements: {
+    id: 'Node',
+    typeArguments: 'Node',
+  },
+  RecordDeclarationProperty: {
+    key: 'Node',
+    typeAnnotation: 'Node',
+    defaultValue: 'Node',
+  },
+  RecordDeclarationStaticProperty: {
+    key: 'Node',
+    typeAnnotation: 'Node',
+    value: 'Node',
+  },
+  RecordExpression: {
+    recordConstructor: 'Node',
+    typeArguments: 'Node',
+    properties: 'Node',
+  },
+  RecordExpressionProperties: {
+    properties: 'NodeList',
   },
   RegExpLiteral: {},
   RestElement: {
@@ -657,7 +705,7 @@ export const HERMES_AST_VISITOR_KEYS = {
     finalizer: 'Node',
   },
   TupleTypeAnnotation: {
-    types: 'NodeList',
+    elementTypes: 'NodeList',
   },
   TupleTypeLabeledElement: {
     label: 'Node',
@@ -705,9 +753,11 @@ export const HERMES_AST_VISITOR_KEYS = {
   UnaryExpression: {
     argument: 'Node',
   },
+  UndefinedTypeAnnotation: {},
   UnionTypeAnnotation: {
     types: 'NodeList',
   },
+  UnknownTypeAnnotation: {},
   UpdateExpression: {
     argument: 'Node',
   },

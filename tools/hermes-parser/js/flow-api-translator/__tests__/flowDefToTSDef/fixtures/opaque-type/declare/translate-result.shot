@@ -11,6 +11,6 @@ exports[`flowDefToTSDef opaque-type/declare 1`] = `
  * @format
  */
 
-declare type T = unknown;
+declare type T = symbol & {__T__: string};
 "
 `;

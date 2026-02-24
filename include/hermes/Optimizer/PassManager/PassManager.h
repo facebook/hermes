@@ -10,12 +10,13 @@
 
 #include "hermes/Optimizer/PassManager/Pass.h"
 
-#include "hermes/AST/Context.h"
+#include "hermes/Support/Timer.h"
+
+#include "llvh/ADT/Hashing.h"
+#include "llvh/ADT/Optional.h"
 #include "llvh/ADT/StringRef.h"
 
 #include <memory>
-#include <utility>
-#include <vector>
 
 namespace hermes {
 
@@ -24,23 +25,66 @@ namespace hermes {
 /// the order of the passes, the order of the functions to be processed and the
 /// invalidation of analysis.
 class PassManager {
-  const CodeGenerationSettings &cgSettings_;
+  friend class FixedPointLoopPass;
+
+  /// The name of the PassManager.
+  llvh::StringRef pmName_;
+
+  using PassSeq = std::vector<std::unique_ptr<Pass>>;
   std::vector<std::unique_ptr<Pass>> pipeline_;
 
- public:
-  explicit PassManager(const CodeGenerationSettings &settings);
+  /// Whether the pipeline contains a loop.
+  bool pipelineContainsLoop_ = false;
 
+  /// A stack of the Pass sequences currently being constructed.
+  std::vector<PassSeq *> curPassSeqStack_;
+
+  /// If we take the hash of the Module after a pass, we record it here.
+  /// If \p moduleHashAfterLastPass_ is not llvh::None, it is a hash
+  /// value that was computed after the last pass was run.  If we run
+  /// a pass, we set \p moduleHashAfterLastPass_ to llvh::None.  But
+  /// if need want to compute a hash, and there have been no
+  /// intervening passes run, we can re-use this cache.  This is an
+  /// optimization when there are nested fixed-point loops, and the
+  /// inner one shares a boundary with the outer one.  For example,
+  /// say the outer loop runs one pass, then an inner loop.  At the
+  /// end of an iteration of the inner loop, we will compute the
+  /// module hash.  If that terminates the inner loop, we will return
+  /// to the outer loop, which has also finished an iteration.
+  /// Without this caching optimization, the outer loop would
+  /// recompute the hash.
+  llvh::Optional<llvh::hash_code> moduleHashAfterLastPass_;
+
+  /// Returns the current PassSeq to append passes to.
+  PassSeq *getCurrentPassSeq();
+
+  /// Returns the current hash of \p M.  (We assume that all passes
+  /// are run on \p M, or functions within \p M.)
+  llvh::hash_code getModuleHash(const Module &M);
+
+  /// Information used while running a pipeline.  Forward decl here;
+  /// full decl in PassManager.cpp
+  struct DynamicInfo;
+
+  /// Run the pass \p P on the module \p M, using the given \p dynInfo.
+  /// Returns false if the pass (or, if the pass is a FixedPointLoop, any
+  /// pass returned in the loop) fails verification.
+  bool runPassOnModule(Module *M, Pass *P, DynamicInfo &dynInfo);
+
+ public:
+  PassManager(llvh::StringRef pmName = "") : pmName_(pmName) {
+    curPassSeqStack_.emplace_back(&pipeline_);
+  }
   ~PassManager();
 
 /// Add a pass by appending its name.
-#define PASS(ID, NAME, DESCRIPTION)                       \
-  void add##ID() {                                        \
-    addPass(std::unique_ptr<Pass>(hermes::create##ID())); \
+#define PASS(ID, NAME, DESCRIPTION) \
+  void add##ID() {                  \
+    addPass(hermes::create##ID());  \
   }
 #include "Passes.def"
 
   /// Add a pass by name.
-  /// Note: Only works for passes that are part of Passes.def.
   bool addPassForName(llvh::StringRef name) {
 #define PASS(ID, NAME, DESCRIPTION) \
   if (name == NAME) {               \
@@ -51,35 +95,41 @@ class PassManager {
     return false;
   }
 
-  /// Lists and describes the passes in Passes.def.
-  static llvh::StringRef getCustomPassText() {
+  static std::string getCustomPassText() {
     return
 #define PASS(ID, NAME, DESCRIPTION) NAME ": " DESCRIPTION "\n"
 #include "Passes.def"
         ;
   }
 
-  /// Adds the pass \p Pass with the provided \p args to this pass manager.
-  template <typename Pass, typename... Args>
-  void addPass(Args &&...args) {
-    addPass(std::make_unique<Pass>(std::forward<Args>(args)...));
+  llvh::StringRef getName() const {
+    return pmName_;
   }
 
-  /// Runs this pass manager on the given Function \p F.
-  /// \pre Only FunctionPasses are registered with this PassManager.
+  /// Add a pass by reference.
+  void addPass(Pass *P);
+
+  /// Starts a fixed-point loop.  New passes, and loops, will
+  /// be added to this loop until a matching \p endFixedPointLoop()
+  /// call is made.
+  void beginFixedPointLoop(llvh::StringRef name, unsigned maxIters = 20);
+
+  /// Terminate the current fixed-point loop.  Requires that there is one.
+  /// The innermost unterminated fixed-point loop, if there is one, or else
+  /// the original pipeline, become the new pipeline to which passes are
+  /// appended.
+  void endFixedPointLoop();
+
   void run(Function *F);
 
-  /// Runs this pass manager on the given Module \p M.
-  void run(Module *M);
-
- private:
-  /// Adds \p P to the pipeline managed by this pass manager.
-  void addPass(std::unique_ptr<Pass> P);
-
-  /// \return A pass that dumps the IR before/after \p pass runs. The options
-  /// controlling the IR dump live in CodeGenSettings.
-  std::unique_ptr<Pass> makeDumpPass(std::unique_ptr<Pass> pass);
+  /// Run all the passes added.
+  /// If IR verification is enabled:
+  ///  Verify the IR between every pass. On the first failure, stop running any
+  ///  more passes and \return false. If all passes verified correctly, \return
+  ///  true.
+  /// If IR verification is not enabled, \return true.
+  bool run(Module *M);
 };
 } // namespace hermes
-
+#undef DEBUG_TYPE
 #endif // HERMES_OPTIMIZER_PASSMANAGER_PASSMANAGER_H

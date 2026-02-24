@@ -29,7 +29,6 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   "globalObjID": 258,
   "runtimeConfig": {
     "gcConfig": {
-      "minHeapSize": 1000,
       "initHeapSize": 33554432,
       "maxHeapSize": 536870912,
       "occupancyTarget": 0.75,
@@ -55,7 +54,6 @@ TEST_F(SynthTraceParserTest, ParseHeader) {
   EXPECT_EQ(trace.records().size(), 0);
 
   const ::hermes::vm::GCConfig &gcconf = rtconf.getGCConfig();
-  EXPECT_EQ(gcconf.getMinHeapSize(), 1000);
   EXPECT_EQ(gcconf.getInitHeapSize(), 33554432);
   EXPECT_EQ(gcconf.getMaxHeapSize(), 536870912);
   EXPECT_EQ(gcconf.getOccupancyTarget(), 0.75);
@@ -83,7 +81,6 @@ TEST_F(SynthTraceParserTest, RuntimeConfigDefaults) {
   auto result = parseSynthTrace(bufFromStr(src));
   hermes::vm::RuntimeConfig rtconf = std::get<1>(result).build();
 
-  EXPECT_EQ(rtconf.getGCConfig().getMinHeapSize(), 0);
   EXPECT_EQ(rtconf.getGCConfig().getInitHeapSize(), 33554432);
   EXPECT_EQ(rtconf.getGCConfig().getMaxHeapSize(), 3221225472);
   EXPECT_FALSE(rtconf.getEnableSampledStats());

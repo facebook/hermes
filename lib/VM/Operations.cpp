@@ -7,19 +7,25 @@
 
 #include "hermes/VM/Operations.h"
 
+#include "hermes/FrontEndDefs/Typeof.h"
 #include "hermes/Support/Conversions.h"
+#include "hermes/Support/FastStrToDouble.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Casting.h"
+#include "hermes/VM/FastArray.h"
+#include "hermes/VM/HostModel.h"
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSMapImpl.h"
 #include "hermes/VM/JSObject.h"
 #include "hermes/VM/JSRegExp.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/PropertyAccessor.h"
 #include "hermes/VM/Runtime.h"
+#include "hermes/VM/StaticHUtils.h"
 #include "hermes/VM/StringBuilder.h"
 #include "hermes/VM/StringPrimitive.h"
 #include "hermes/VM/StringView.h"
@@ -33,14 +39,6 @@
 
 namespace hermes {
 namespace vm {
-
-CallResult<Handle<SymbolID>> stringToSymbolID(
-    Runtime &runtime,
-    PseudoHandle<StringPrimitive> strPrim) {
-  // Unique the string.
-  return runtime.getIdentifierTable().getSymbolHandleFromPrimitive(
-      runtime, std::move(strPrim));
-}
 
 CallResult<Handle<SymbolID>> valueToSymbolID(
     Runtime &runtime,
@@ -93,21 +91,35 @@ HermesValue typeOf(Runtime &runtime, Handle<> valueHandle) {
   }
 }
 
-OptValue<uint32_t> toArrayIndex(
-    Runtime &runtime,
-    Handle<StringPrimitive> strPrim) {
-  auto view = StringPrimitive::createStringView(runtime, strPrim);
-  return toArrayIndex(view);
-}
-
-OptValue<uint32_t> toArrayIndex(StringView str) {
-  auto len = str.length();
-  if (str.isASCII()) {
-    const char *ptr = str.castToCharPtr();
-    return hermes::toArrayIndex(ptr, ptr + len);
+bool matchTypeOfIs(HermesValue arg, TypeOfIsTypes types) {
+  switch (arg.getETag()) {
+    case HermesValue::ETag::Undefined:
+      return types.hasUndefined();
+    case HermesValue::ETag::Null:
+      return types.hasNull();
+    case HermesValue::ETag::Str1:
+    case HermesValue::ETag::Str2:
+      return types.hasString();
+    case HermesValue::ETag::BigInt1:
+    case HermesValue::ETag::BigInt2:
+      return types.hasBigint();
+    case HermesValue::ETag::Bool:
+      return types.hasBoolean();
+    case HermesValue::ETag::Symbol:
+      return types.hasSymbol();
+    case HermesValue::ETag::Object1:
+    case HermesValue::ETag::Object2: {
+      CellKind kind = static_cast<GCCell *>(arg.getObject())->getKind();
+      // Check the CellKind to avoid having to include Callable.h here.
+      if (CellKind::CallableKind_first <= kind &&
+          kind <= CellKind::CallableKind_last)
+        return types.hasFunction();
+      else
+        return types.hasObject();
+    }
+    default:
+      return types.hasNumber();
   }
-  const char16_t *ptr = str.castToChar16Ptr();
-  return hermes::toArrayIndex(ptr, ptr + len);
 }
 
 bool isSameValue(HermesValue x, HermesValue y) {
@@ -121,9 +133,7 @@ bool isSameValue(HermesValue x, HermesValue y) {
     // If the tags are different, they must be different.
     return false;
   }
-  assert(
-      !x.isEmpty() && !x.isNativeValue() &&
-      "Empty and Native Value cannot be compared");
+  assert(!x.isEmpty() && "Empty cannot be compared");
 
   // Strings require deep comparison.
   if (x.isString()) {
@@ -139,20 +149,6 @@ bool isSameValue(HermesValue x, HermesValue y) {
 
   // Otherwise they are identical if the raw bits are the same.
   return x.getRaw() == y.getRaw();
-}
-
-bool isSameValueZero(HermesValue x, HermesValue y) {
-  if (x.isNumber() && y.isNumber() && x.getNumber() == y.getNumber()) {
-    // Takes care of +0 == -0.
-    return true;
-  }
-  return isSameValue(x, y);
-}
-
-bool isPrimitive(HermesValue val) {
-  assert(!val.isEmpty() && "empty value encountered");
-  assert(!val.isNativeValue() && "native value encountered");
-  return !val.isObject();
 }
 
 CallResult<HermesValue> ordinaryToPrimitive(
@@ -210,7 +206,6 @@ CallResult<HermesValue> ordinaryToPrimitive(
 CallResult<HermesValue>
 toPrimitive_RJS(Runtime &runtime, Handle<> valueHandle, PreferredType hint) {
   assert(!valueHandle->isEmpty() && "empty value is not allowed");
-  assert(!valueHandle->isNativeValue() && "native value is not allowed");
 
   if (!valueHandle->isObject())
     return *valueHandle;
@@ -263,9 +258,6 @@ bool toBoolean(HermesValue value) {
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Undefined:
     case HermesValue::ETag::Null:
       return false;
@@ -289,18 +281,14 @@ bool toBoolean(HermesValue value) {
 }
 
 /// ES5.1 9.8.1
-static CallResult<PseudoHandle<StringPrimitive>> numberToString(
-    Runtime &runtime,
-    double m) LLVM_NO_SANITIZE("float-cast-overflow");
-
-static CallResult<PseudoHandle<StringPrimitive>> numberToString(
+CallResult<PseudoHandle<StringPrimitive>> numberToStringPrimitive(
     Runtime &runtime,
     double m) {
   char buf8[hermes::NUMBER_TO_STRING_BUF_SIZE];
 
   // Optimization: Fast-case for positive integers < 2^31
-  int32_t n = static_cast<int32_t>(m);
-  if (m == static_cast<double>(n) && n > 0) {
+  int32_t n;
+  if (sh_tryfast_f64_to_i32(m, n) && n > 0) {
     // Write base 10 digits in reverse from end of buf8.
     char *p = buf8 + sizeof(buf8);
     do {
@@ -351,9 +339,6 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::BigInt1:
     case HermesValue::ETag::BigInt2: {
       const uint8_t kDefaultRadix = 10;
@@ -391,16 +376,47 @@ CallResult<PseudoHandle<StringPrimitive>> toString_RJS(
     case HermesValue::ETag::Symbol:
       return runtime.raiseTypeError("Cannot convert Symbol to string");
     default:
-      return numberToString(runtime, value.getNumber());
+      return numberToStringPrimitive(runtime, value.getNumber());
   }
 
   return createPseudoHandle(result);
 }
 
-double parseIntWithRadix(const StringView str, int radix) {
-  auto res =
-      hermes::parseIntWithRadix</* AllowNumericSeparator */ false>(str, radix);
-  return res ? res.getValue() : std::numeric_limits<double>::quiet_NaN();
+bool isStringWellFormedUnicode(StringPrimitive *string) {
+  if (string->isASCII()) {
+    // It's impossible for an ASCII string to contain any surrogates, so it must
+    // be well formed.
+    return true;
+  }
+
+  ArrayRef<char16_t> strRef = string->getStringRef<char16_t>();
+  // Check for lone surrogates by iterating through the string
+  for (size_t i = 0, len = strRef.size(); i < len; ++i) {
+    char16_t ch = strRef[i];
+    // Check if this character is a surrogate
+    if (ch >= UNICODE_SURROGATE_FIRST && ch <= UNICODE_SURROGATE_LAST) {
+      // If it's a high surrogate, check if there's a valid low surrogate
+      // following
+      if (isHighSurrogate(ch)) {
+        if (i + 1 < len) {
+          char16_t next = strRef[i + 1];
+          if (isLowSurrogate(next)) {
+            // Valid surrogate pair, skip the low surrogate
+            ++i;
+            continue;
+          }
+        }
+        // Lone surrogate: high surrogate without low counterpart
+        return false;
+      } else {
+        // Lone surrogate: low surrogate without high counterpart
+        return false;
+      }
+    }
+  }
+
+  // No lone surrogates found
+  return true;
 }
 
 /// ES5.1 9.3.1
@@ -420,6 +436,7 @@ static inline double stringToNumber(
   }
   if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::NegativeInfinity), *strPrim)) {
+    return -std::numeric_limits<double>::infinity();
   }
   if (runtime.symbolEqualsToStringPrim(
           Predefined::getSymbolID(Predefined::NaN), *strPrim)) {
@@ -485,8 +502,8 @@ static inline double stringToNumber(
     }
   }
 
-  // Finally, copy 16 bit chars into 8 bit chars and call dtoa.
-  llvh::SmallVector<char, 32> str8(len + 1);
+  // Finally, copy 16 bit chars into 8 bit chars and call fastStrToDouble.
+  llvh::SmallVector<char, 32> str8(len);
   uint32_t i = 0;
   for (auto c16 : str16) {
     // Check to ensure we only have valid number characters now.
@@ -498,11 +515,11 @@ static inline double stringToNumber(
     }
     ++i;
   }
-  str8[len] = '\0';
-  char *endPtr;
-  double result = ::hermes_g_strtod(str8.data(), &endPtr);
-  if (endPtr == str8.data() + len) {
-    return result;
+
+  Char8StrToDoubleParseResult parseRes =
+      fastStrToDouble(llvh::ArrayRef<char>{str8});
+  if (parseRes.ptr == str8.data() + len) {
+    return parseRes.value;
   }
 
   // If everything failed, return NaN.
@@ -519,9 +536,6 @@ CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2: {
       auto res = toPrimitive_RJS(runtime, valueHandle, PreferredType::NUMBER);
@@ -553,7 +567,7 @@ CallResult<HermesValue> toNumber_RJS(Runtime &runtime, Handle<> valueHandle) {
       // Already have a number, just return it.
       return value;
   }
-  return HermesValue::encodeUntrustedNumberValue(result);
+  return HermesValue::encodeTrustedNumberValue(result);
 }
 
 CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle) {
@@ -572,21 +586,6 @@ CallResult<HermesValue> toNumeric_RJS(Runtime &runtime, Handle<> valueHandle) {
 }
 
 CallResult<HermesValue> toLength(Runtime &runtime, Handle<> valueHandle) {
-  constexpr double maxLength = 9007199254740991.0; // 2**53 - 1
-  auto res = toIntegerOrInfinity(runtime, valueHandle);
-  if (res == ExecutionStatus::EXCEPTION) {
-    return ExecutionStatus::EXCEPTION;
-  }
-  auto len = res->getNumber();
-  if (len <= 0) {
-    len = 0;
-  } else if (len > maxLength) {
-    len = maxLength;
-  }
-  return HermesValue::encodeUntrustedNumberValue(len);
-}
-
-CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
   constexpr double highestIntegralDouble =
       ((uint64_t)1 << std::numeric_limits<double>::digits) - 1;
   auto res = toIntegerOrInfinity(runtime, valueHandle);
@@ -599,12 +598,12 @@ CallResult<uint64_t> toLengthU64(Runtime &runtime, Handle<> valueHandle) {
   } else if (len > highestIntegralDouble) {
     len = highestIntegralDouble;
   }
-  return len;
+  return HermesValue::encodeTrustedNumberValue(len);
 }
 
 CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
   auto value = (valueHandle->isUndefined())
-      ? runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(0))
+      ? runtime.makeHandle(HermesValue::encodeTrustedNumberValue(0))
       : valueHandle;
   auto res = toIntegerOrInfinity(runtime, value);
   if (res == ExecutionStatus::EXCEPTION) {
@@ -615,7 +614,7 @@ CallResult<HermesValue> toIndex(Runtime &runtime, Handle<> valueHandle) {
     return runtime.raiseRangeError("A negative value cannot be an index");
   }
   auto integerIndexHandle =
-      runtime.makeHandle(HermesValue::encodeUntrustedNumberValue(integerIndex));
+      runtime.makeHandle(HermesValue::encodeTrustedNumberValue(integerIndex));
   res = toLength(runtime, integerIndexHandle);
   if (res == ExecutionStatus::EXCEPTION) {
     return ExecutionStatus::EXCEPTION;
@@ -658,7 +657,7 @@ static inline CallResult<HermesValue> toInt(
   }
   double num = res->getNumber();
   T result = static_cast<T>(hermes::truncateToInt32(num));
-  return HermesValue::encodeUntrustedNumberValue(result);
+  return HermesValue::encodeTrustedNumberValue(result);
 }
 
 CallResult<HermesValue> toInt8(Runtime &runtime, Handle<> valueHandle) {
@@ -715,8 +714,7 @@ CallResult<HermesValue> toUInt8Clamp(Runtime &runtime, Handle<> valueHandle) {
     // 2. ReturnIfAbrupt(number)
     return ExecutionStatus::EXCEPTION;
   }
-  return HermesValue::encodeUntrustedNumberValue(
-      toUInt8Clamp(res->getNumber()));
+  return HermesValue::encodeTrustedNumberValue(toUInt8Clamp(res->getNumber()));
 }
 
 CallResult<HermesValue> toUInt16(Runtime &runtime, Handle<> valueHandle) {
@@ -737,9 +735,6 @@ CallResult<Handle<JSObject>> getPrimitivePrototype(
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Object1:
     case HermesValue::ETag::Object2:
       llvm_unreachable("object value");
@@ -772,9 +767,6 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
 #endif // HERMES_SLOW_DEBUG
     case HermesValue::ETag::Empty:
       llvm_unreachable("empty value");
-    case HermesValue::ETag::Native1:
-    case HermesValue::ETag::Native2:
-      llvm_unreachable("native value");
     case HermesValue::ETag::Undefined:
       return runtime.raiseTypeError("Cannot convert undefined value to object");
     case HermesValue::ETag::Null:
@@ -815,9 +807,7 @@ CallResult<HermesValue> toObject(Runtime &runtime, Handle<> valueHandle) {
     default:
       assert(valueHandle->isNumber() && "Unknown tag in toObject.");
       return JSNumber::create(
-                 runtime,
-                 value.getNumber(),
-                 Handle<JSObject>::vmcast(&runtime.numberPrototype))
+                 runtime, value.getNumber(), runtime.numberPrototype)
           .getHermesValue();
   }
 }
@@ -1051,10 +1041,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   while (true) {
     // Combine tags for use in the switch statement. Use NativeValueTag as a
     // placeholder for numbers.
-    assert(
-        !x->isNativeValue() && !x->isEmpty() && "invalid value for comparison");
-    assert(
-        !y->isNativeValue() && !y->isEmpty() && "invalid value for comparison");
+    assert(!x->isEmpty() && !y->isEmpty() && "invalid value for comparison");
 
     // The following macros are used to generate the switch cases using
     // HermesValue::combineETags; an S in the name means it is a single ETag
@@ -1077,9 +1064,9 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
   CASE_M_S(typeA, typeB##2)
 
 // NUMBER_TAG is a "virtual" ETag member that is used to tag numbers (which
-// don't have a tag assigned to them). It reuses ETag::Native1 there will
-// never be any native values in this part of the code.
-#define NUMBER_TAG Native1
+// don't have a tag assigned to them). It reuses ETag::Empty there will
+// never be any empty values in this part of the code.
+#define NUMBER_TAG Empty
 
     // Tag numbers as with the "virtual" ETag member NUMBER_TAG, and use default
     // tag values for everything else.
@@ -1165,7 +1152,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         return y->getBigInt()->compare(static_cast<int32_t>(x->getBool())) == 0;
       }
       CASE_S_M(Bool, Object) {
-        x = HermesValue::encodeUntrustedNumberValue(x->getBool());
+        x = HermesValue::encodeTrustedNumberValue(x->getBool());
         break;
       }
       // 9. If Type(y) is Boolean, return the result of the comparison x == !
@@ -1181,7 +1168,7 @@ abstractEqualityTest_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
         return x->getBigInt()->compare(static_cast<int32_t>(y->getBool())) == 0;
       }
       CASE_M_S(Object, Bool) {
-        y = HermesValue::encodeUntrustedNumberValue(y->getBool());
+        y = HermesValue::encodeTrustedNumberValue(y->getBool());
         break;
       }
       // 10. If Type(x) is either String, Number, BigInt, or Symbol and Type(y)
@@ -1316,7 +1303,7 @@ addOp_RJS(Runtime &runtime, Handle<> xHandle, Handle<> yHandle) {
       return ExecutionStatus::EXCEPTION;
     }
     const double yNum = res->getNumber();
-    return HermesValue::encodeUntrustedNumberValue(xNum + yNum);
+    return HermesValue::encodeTrustedNumberValue(xNum + yNum);
   }
 
   // yPrim is a primitive; therefore it is already a BigInt, or it will never be
@@ -1505,7 +1492,24 @@ getMethod(Runtime &runtime, Handle<> O, Handle<> key) {
   return funcRes;
 }
 
-CallResult<IteratorRecord> getIterator(
+CallResult<CheckedIteratorRecord> getCheckedIterator(
+    Runtime &runtime,
+    Handle<> obj,
+    llvh::Optional<Handle<Callable>> methodOpt) {
+  auto uncheckedIterRecordRes = getIterator(runtime, obj, methodOpt);
+  if (uncheckedIterRecordRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto uncheckedIterRecord = uncheckedIterRecordRes.getValue();
+  if (LLVM_UNLIKELY(!vmisa<Callable>(uncheckedIterRecord.nextMethod.get()))) {
+    return runtime.raiseTypeError("'next' method on iterator must be callable");
+  }
+  return CheckedIteratorRecord{
+      std::move(uncheckedIterRecord.iterator),
+      Handle<Callable>::vmcast(std::move(uncheckedIterRecord.nextMethod))};
+}
+
+CallResult<UncheckedIteratorRecord> getIterator(
     Runtime &runtime,
     Handle<> obj,
     llvh::Optional<Handle<Callable>> methodOpt) {
@@ -1541,23 +1545,18 @@ CallResult<IteratorRecord> getIterator(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // We perform this check prior to returning, because every function in the JS
-  // library which gets an iterator immediately calls the 'next' function.
-  if (!vmisa<Callable>(nextMethodRes->get())) {
-    return runtime.raiseTypeError("'next' method on iterator must be callable");
-  }
-
-  auto nextMethod =
-      Handle<Callable>::vmcast(runtime.makeHandle(std::move(*nextMethodRes)));
-
-  return IteratorRecord{iterator, nextMethod};
+  return UncheckedIteratorRecord{
+      iterator,
+      Handle<HermesValue>::vmcast(
+          runtime.makeHandle(std::move(*nextMethodRes)))};
 }
 
 CallResult<PseudoHandle<JSObject>> iteratorNext(
     Runtime &runtime,
-    const IteratorRecord &iteratorRecord,
+    const CheckedIteratorRecord &iteratorRecord,
     llvh::Optional<Handle<>> value) {
   GCScopeMarkerRAII marker{runtime};
+
   auto resultRes = value
       ? Callable::executeCall1(
             iteratorRecord.nextMethod,
@@ -1584,7 +1583,7 @@ CallResult<PseudoHandle<HermesValue>> iteratorValue(
 
 CallResult<Handle<JSObject>> iteratorStep(
     Runtime &runtime,
-    const IteratorRecord &iteratorRecord) {
+    const CheckedIteratorRecord &iteratorRecord) {
   auto resultRes = iteratorNext(runtime, iteratorRecord);
   if (LLVM_UNLIKELY(resultRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -1601,6 +1600,34 @@ CallResult<Handle<JSObject>> iteratorStep(
   return result;
 }
 
+CallResult<bool> iteratorStepValue(
+    Runtime &runtime,
+    const CheckedIteratorRecord &iteratorRecord,
+    PinnedValue<> *value) {
+  // 1. Let result be ?IteratorStep(iteratorRecord)
+  auto stepRes = iteratorStep(runtime, iteratorRecord);
+  if (LLVM_UNLIKELY(stepRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. If result is DONE, then return DONE
+  // In our implementation, return false when we hit the end of the iterator
+  if (!*stepRes) {
+    return false;
+  }
+
+  // 3. Let value be Completion(IteratorValue(result))
+  // 4. If value is a throw completion, then
+  //   a. Set iteratorRecord.[[Done]] to true
+  auto valueRes = iteratorValue(runtime, *stepRes);
+  if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 5. Return ?value
+  *value = std::move(*valueRes);
+  return true;
+}
+
 ExecutionStatus iteratorClose(
     Runtime &runtime,
     Handle<JSObject> iterator,
@@ -1610,22 +1637,28 @@ ExecutionStatus iteratorClose(
       : ExecutionStatus::EXCEPTION;
 
   // 4. Let innerResult be GetMethod(iterator, "return").
-  // Do this lazily: innerResult is only actually used if GetMethod returns
-  // a callable which, when called, doesn't throw. Defer storing to innerResult
-  // until that point.
   auto returnRes = getMethod(
       runtime,
       iterator,
       runtime.makeHandle(Predefined::getSymbolID(Predefined::returnStr)));
 
-  MutableHandle<> innerResult{runtime};
+  // The only information we need to preserve is whether innerResult is an
+  // exception, or if it contained an object. By default, initialize it to an
+  // exception, which will be overwritten if resultRes is not an exception, and
+  // the call to the closure it references does not throw.
+  CallResult<bool> innerResultIsObject{ExecutionStatus::EXCEPTION};
+
+  // 5. If innerResult.[[Type]] is normal, then
   if (LLVM_LIKELY(returnRes != ExecutionStatus::EXCEPTION)) {
-    if (!vmisa<Callable>(returnRes->getHermesValue())) {
+    // a. Let return be innerResult.[[Value]].
+    // b. If return is undefined, return Completion(completion).
+    if (returnRes->getHermesValue().isUndefined()) {
       runtime.setThrownValue(*completion);
       return completionStatus;
     }
     Handle<Callable> returnFn =
         runtime.makeHandle(vmcast<Callable>(returnRes->getHermesValue()));
+    // c. Set innerResult to Call(return, iterator).
     auto innerResultRes = Callable::executeCall0(returnFn, runtime, iterator);
     if (LLVM_UNLIKELY(innerResultRes == ExecutionStatus::EXCEPTION)) {
       if (isUncatchableError(runtime.getThrownValue())) {
@@ -1634,29 +1667,26 @@ ExecutionStatus iteratorClose(
         // prevent more JS from executing.
         return ExecutionStatus::EXCEPTION;
       }
-      // If the error is catchable, suppress it temporarily below in lieu
-      // of the returnRes exception by writing to innerResultException.
-      // Spec text overwrites the value in `innerResult`.
     } else {
-      innerResult = std::move(*innerResultRes);
+      innerResultIsObject = innerResultRes->getHermesValue().isObject();
     }
   }
   // Runtime::thrownValue now contains the innerResult's exception if it
   // was thrown.
-  // GetMethod error here is deliberately suppressed (no "?" in the spec).
+  // GetMethod error here is deliberately deferred (no "?" in the spec).
   if (completionStatus == ExecutionStatus::EXCEPTION) {
     // 6. If completion.[[Type]] is throw, return Completion(completion).
     // Note: Overrides the innerResult exception.
     runtime.setThrownValue(*completion);
     return ExecutionStatus::EXCEPTION;
   }
-  if (LLVM_UNLIKELY(!runtime.getThrownValue().isEmpty())) {
+  if (LLVM_UNLIKELY(innerResultIsObject == ExecutionStatus::EXCEPTION)) {
     // 7. If innerResult.[[Type]] is throw, return Completion(innerResult).
     // Note: innerResult exception is still in Runtime::thrownValue,
     // so there is no need to set it again.
     return ExecutionStatus::EXCEPTION;
   }
-  if (!innerResult->isObject()) {
+  if (!*innerResultIsObject) {
     // 8. If Type(innerResult.[[Value]]) is not Object,
     //    throw a TypeError exception.
     return runtime.raiseTypeError("iterator.return() did not return an object");
@@ -1664,20 +1694,42 @@ ExecutionStatus iteratorClose(
   return ExecutionStatus::RETURNED;
 }
 
+ExecutionStatus iteratorCloseAndRethrow(
+    Runtime &runtime,
+    Handle<JSObject> iterator) {
+  struct : public Locals {
+    PinnedValue<> completion;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.completion = runtime.getThrownValue();
+  if (isUncatchableError(lv.completion.getHermesValue())) {
+    // If an uncatchable exception was raised, do not swallow it, but instead
+    // propagate it.
+    return ExecutionStatus::EXCEPTION;
+  }
+  runtime.clearThrownValue();
+  auto status = iteratorClose(runtime, iterator, lv.completion);
+  (void)status;
+  assert(
+      status == ExecutionStatus::EXCEPTION && "exception swallowed mistakenly");
+  return ExecutionStatus::EXCEPTION;
+}
+
 CallResult<Handle<JSArray>> iterableToArray(
     Runtime &runtime,
     Handle<HermesValue> items) {
   // IterableToList: 2a. Let iteratorRecord be ? GetIterator(items, sync).
-  CallResult<IteratorRecord> iteratorRecordRes = getIterator(runtime, items);
+  CallResult<CheckedIteratorRecord> iteratorRecordRes =
+      getCheckedIterator(runtime, items);
   if (LLVM_UNLIKELY(iteratorRecordRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  IteratorRecord iteratorRecord = *iteratorRecordRes;
+  CheckedIteratorRecord iteratorRecord = *iteratorRecordRes;
 
   // CreateArrayFromList: 1. Let array be ! ArrayCreate(0).
   auto arrRes = JSArray::create(runtime, 0, 0);
   assert(arrRes != ExecutionStatus::EXCEPTION && "could not create array");
-  Handle<JSArray> array = *arrRes;
+  Handle<JSArray> array = runtime.makeHandle(std::move(*arrRes));
   // CreateArrayFromList: 2. Let n be 0.
   size_t n = 0;
 
@@ -1700,8 +1752,14 @@ CallResult<Handle<JSArray>> iterableToArray(
     }
     // CreateArrayFromList: 3.a Perform ! CreateDataPropertyOrThrow(array, !
     // ToString(𝔽(n)), e).
-    JSArray::setElementAt(
-        array, runtime, n, runtime.makeHandle(std::move(*nextValueRes)));
+    if (LLVM_UNLIKELY(
+            JSArray::setElementAt(
+                array,
+                runtime,
+                n,
+                runtime.makeHandle(std::move(*nextValueRes))) ==
+            ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
     // CreateArrayFromList: 3.b Set n to n + 1.
     n++;
   }
@@ -1770,11 +1828,11 @@ CallResult<Handle<Callable>> speciesConstructor(
   return defaultConstructor;
 }
 
-CallResult<bool> isConstructor(Runtime &runtime, HermesValue value) {
+bool isConstructor(Runtime &runtime, HermesValue value) {
   return isConstructor(runtime, dyn_vmcast<Callable>(value));
 }
 
-CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
+bool isConstructor(Runtime &runtime, Callable *callable) {
   // This is not a complete definition, since ES6 and later define member
   // functions of objects to not be constructors; however, Hermes does not have
   // ES6 classes implemented yet, so we cannot check for that case.
@@ -1782,36 +1840,65 @@ CallResult<bool> isConstructor(Runtime &runtime, Callable *callable) {
     return false;
   }
 
-  // We traverse the BoundFunction target chain to find the eventual target.
-  while (BoundFunction *b = dyn_vmcast<BoundFunction>(callable)) {
-    callable = b->getTarget(runtime);
+  // Traverse through BoundFunction & JSCallableProxy target chain to find the
+  // eventual target.
+  while (true) {
+    if (auto *proxy = dyn_vmcast<JSCallableProxy>(callable)) {
+      callable = proxy->getTarget(runtime);
+      if (!callable) {
+        return false;
+      }
+      continue;
+    }
+    if (auto *bound = dyn_vmcast<BoundFunction>(callable)) {
+      callable = bound->getTarget(runtime);
+      continue;
+    }
+    break;
   }
 
   // If it is a bytecode function, check the flags.
   if (auto *func = dyn_vmcast<JSFunction>(callable)) {
-    auto *cb = func->getCodeBlock(runtime);
-    // Even though it doesn't make sense logically, we need to compile the
-    // function in order to access it flags.
-    if (LLVM_UNLIKELY(cb->lazyCompile(runtime) == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    return !func->getCodeBlock(runtime)->getHeaderFlags().isCallProhibited(
-        true);
+    return !func->getCodeBlock()->getHeaderFlags().isCallProhibited(true);
+  }
+  if (auto *nativeFunc = dyn_vmcast<NativeJSFunction>(callable)) {
+    return nativeFunc->getFunctionInfo()->prohibit_invoke !=
+        ProhibitInvoke::Construct;
   }
 
   // We check for NativeFunction since those are defined to not be
   // constructible, with the exception of NativeConstructor.
-  if (!vmisa<NativeFunction>(callable) || vmisa<NativeConstructor>(callable)) {
+  if (!vmisa<NativeFunction>(callable) ||
+      vmisa<FinalizableNativeFunction>(callable) ||
+      vmisa<NativeConstructor>(callable)) {
     return true;
   }
 
-  // JSCallableProxy is a NativeFunction, but may or may not be a
-  // constructor, so we ask it.
-  if (auto *cproxy = dyn_vmcast<JSCallableProxy>(callable)) {
-    return cproxy->isConstructor(runtime);
-  }
-
   return false;
+}
+
+CallResult<PseudoHandle<JSObject>> ordinaryCreateFromConstructor_RJS(
+    Runtime &runtime,
+    Handle<Callable> constructor,
+    Handle<JSObject> intrinsicDefaultProto) {
+  struct : public Locals {
+    PinnedValue<> proto;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // 2. Let proto be ? Get(constructor, "prototype").
+  auto protoRes = JSObject::getNamed_RJS(
+      constructor, runtime, Predefined::getSymbolID(Predefined::prototype));
+  if (LLVM_UNLIKELY(protoRes == ExecutionStatus::EXCEPTION))
+    return ExecutionStatus::EXCEPTION;
+  lv.proto = std::move(*protoRes);
+
+  // 3. If proto is not an Object, then
+  // b. Set proto to realm's intrinsic object named intrinsicDefaultProto.
+  // 4. Return proto.
+  return JSObject::create(
+      runtime,
+      LLVM_LIKELY(lv.proto->isObject()) ? Handle<JSObject>::vmcast(&lv.proto)
+                                        : intrinsicDefaultProto);
 }
 
 CallResult<bool>
@@ -1918,6 +2005,16 @@ CallResult<bool> instanceOfOperator_RJS(
   if (LLVM_UNLIKELY(instOfHandlerRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+
+  if (LLVM_LIKELY(
+          (*instOfHandlerRes)->getRaw() ==
+          runtime.functionPrototypeSymbolHasInstance.getHermesValue()
+              .getRaw())) {
+    // functionPrototypeSymbolHasInstance is just a passthrough to
+    // ordinaryHasInstance. Avoid the extra function call.
+    return ordinaryHasInstance(runtime, constructor, object);
+  }
+
   auto instOfHandler = runtime.makeHandle(std::move(*instOfHandlerRes));
 
   // 4. If instOfHandler is not undefined, then
@@ -2001,6 +2098,9 @@ CallResult<bool> isArray(Runtime &runtime, JSObject *obj) {
     if (vmisa<JSArray>(obj)) {
       return true;
     }
+    if (vmisa<FastArray>(obj)) {
+      return true;
+    }
     if (LLVM_LIKELY(!obj->isProxyObject())) {
       return false;
     }
@@ -2037,7 +2137,7 @@ ExecutionStatus toPropertyDescriptor(
     Handle<> obj,
     Runtime &runtime,
     DefinePropertyFlags &flags,
-    MutableHandle<> &valueOrAccessor) {
+    MutableHandle<> valueOrAccessor) {
   GCScopeMarkerRAII gcMarker{runtime};
 
   // Verify that the attributes argument is also an object.
@@ -2090,7 +2190,7 @@ ExecutionStatus toPropertyDescriptor(
     if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
-    valueOrAccessor = std::move(*propRes);
+    valueOrAccessor.set(std::move(*propRes));
     flags.setValue = true;
   }
 
@@ -2165,7 +2265,9 @@ ExecutionStatus toPropertyDescriptor(
       return runtime.raiseTypeError(
           "Invalid property descriptor. Can't set both accessor and writable.");
     }
-    valueOrAccessor = PropertyAccessor::create(runtime, getterPtr, setterPtr);
+    valueOrAccessor.set(
+        PropertyAccessor::create(runtime, getterPtr, setterPtr)
+            .getHermesValue());
   }
 
   return ExecutionStatus::RETURNED;
@@ -2287,14 +2389,6 @@ CallResult<HermesValue> objectFromPropertyDescriptor(
   return obj.getHermesValue();
 }
 
-CallResult<HermesValue> numberToBigInt(Runtime &runtime, double number) {
-  if (!isIntegralNumber(number)) {
-    return runtime.raiseRangeError("number is not integral");
-  }
-
-  return BigIntPrimitive::fromDouble(runtime, number);
-}
-
 bool isIntegralNumber(double number) {
   // 1. if Type(argument) is not Number, return false
   // it is a number
@@ -2379,25 +2473,1153 @@ CallResult<HermesValue> thisBigIntValue(Runtime &runtime, Handle<> value) {
   return runtime.raiseTypeError("value is not a bigint");
 }
 
-bool hasRestrictedGlobalProperty(Runtime &runtime, SymbolID N) {
-  Handle<JSObject> globalObject = runtime.getGlobal();
+ExecutionStatus setTemplateObjectProps(
+    Runtime &runtime,
+    Handle<JSObject> templateObj,
+    Handle<JSObject> rawObj) {
+  // Make 'length' property on the raw object read-only.
+  DefinePropertyFlags readOnlyDPF{};
+  readOnlyDPF.setWritable = 1;
+  readOnlyDPF.setConfigurable = 1;
+  readOnlyDPF.writable = 0;
+  readOnlyDPF.configurable = 0;
+  auto readOnlyRes = JSObject::defineOwnProperty(
+      rawObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      readOnlyDPF,
+      Runtime::getUndefinedValue(),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*readOnlyRes)) {
+    return runtime.raiseTypeError(
+        "Failed to set 'length' property on the raw object read-only.");
+  }
+  JSObject::preventExtensions(rawObj.get());
 
-  // 1. Let ObjRec be envRec.[[ObjectRecord]].
-  // 2. Let globalObject be ObjRec.[[BindingObject]].
+  // Set raw object as a read-only non-enumerable property of the template
+  // object.
+  PropertyFlags constantPF{};
+  constantPF.writable = 0;
+  constantPF.configurable = 0;
+  constantPF.enumerable = 0;
+  auto putNewRes = JSObject::defineNewOwnProperty(
+      templateObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::raw),
+      constantPF,
+      rawObj);
+  if (LLVM_UNLIKELY(putNewRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // Make 'length' property on the template object read-only.
+  readOnlyRes = JSObject::defineOwnProperty(
+      templateObj,
+      runtime,
+      Predefined::getSymbolID(Predefined::length),
+      readOnlyDPF,
+      Runtime::getUndefinedValue(),
+      PropOpFlags().plusThrowOnError());
+  if (LLVM_UNLIKELY(readOnlyRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (LLVM_UNLIKELY(!*readOnlyRes)) {
+    return runtime.raiseTypeError(
+        "Failed to set 'length' property on the raw object read-only.");
+  }
+  JSObject::preventExtensions(templateObj.get());
 
-  // 3. Let existingProp be ? globalObject.[[GetOwnProperty]](N).
-  NamedPropertyDescriptor desc;
-  JSObject *existingProp =
-      JSObject::getNamedDescriptorUnsafe(globalObject, runtime, N, desc);
+  return ExecutionStatus::RETURNED;
+}
 
-  // 4. If existingProp is undefined, return false.
-  if (!existingProp) {
-    return false;
+ExecutionStatus getSetRecord(
+    Runtime &runtime,
+    Handle<> obj,
+    double *size,
+    PinnedValue<Callable> *hasMethod,
+    PinnedValue<Callable> *keysMethod) {
+  // 1. If obj is not an Object, throw a TypeError exception
+  if (LLVM_UNLIKELY(!vmisa<JSObject>(*obj))) {
+    return runtime.raiseTypeError("getSetRecord argument is not an Object");
+  }
+  struct : public Locals {
+    PinnedValue<> tmp;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  // 2. Let rawSize be ?Get(obj, "size")
+  auto rawSizeRes = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(obj),
+      runtime,
+      Predefined::getSymbolID(Predefined::size));
+  if (LLVM_UNLIKELY(rawSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*rawSizeRes);
+
+  // 3. Let numSize be ?ToNumber(rawSize)
+  // 4. NOTE: If rawSize is undefined, then numSize will be NaN.
+  auto numSizeRes = toNumber_RJS(runtime, lv.tmp);
+  if (LLVM_UNLIKELY(numSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*numSizeRes);
+  // 5. If numSize is NaN, throw a TypeError exception
+  if (lv.tmp->isNaN()) {
+    return runtime.raiseTypeError("Size of the object cannot be NaN");
+  }
+  // 6. Let intSize be !ToIntegerOrInfinity(numSize)
+  auto intSizeRes = toIntegerOrInfinity(runtime, lv.tmp);
+  if (LLVM_UNLIKELY(intSizeRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
 
-  // 5. If existingProp.[[Configurable]] is true, return false.
-  // 6. Return true.
-  return !desc.flags.configurable;
+  lv.tmp = std::move(*intSizeRes);
+  // 7. If intSize < 0, throw a RangeError
+  if (lv.tmp->getNumber() < 0) {
+    return runtime.raiseRangeError("Size of the object cannot be negative");
+  }
+  *size = lv.tmp->getNumber();
+
+  // 8. Let has be ?Get(obj, "has")
+  auto hasRes = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(obj),
+      runtime,
+      Predefined::getSymbolID(Predefined::has));
+  if (hasRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*hasRes);
+  // 9. If IsCallable(has) is false, throw a TypeError exception
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*lv.tmp))) {
+    return runtime.raiseTypeError(
+        "has property of the object must be callable");
+  }
+  *hasMethod = vmcast<Callable>(*lv.tmp);
+
+  // 10. Let has be ?Get(obj, "keys")
+  auto keysRes = JSObject::getNamed_RJS(
+      Handle<JSObject>::vmcast(obj),
+      runtime,
+      Predefined::getSymbolID(Predefined::keys));
+  if (keysRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  lv.tmp = std::move(*keysRes);
+  // 11. If IsCallable(keys) is false, throw a TypeError exception
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*lv.tmp))) {
+    return runtime.raiseTypeError(
+        "keys property of the object must be callable");
+  }
+  *keysMethod = vmcast<Callable>(*lv.tmp);
+
+  return ExecutionStatus::RETURNED;
 }
+
+namespace {
+
+enum class KeyCoercion { Property, Collection };
+
+/// ES15.0 7.3.35 GroupBy ( items, callback, keyCoercion )
+/// https://tc39.es/ecma262/#sec-groupby
+/// Groups a list of items into an Object based on the results of a callback
+/// which operates on each item.
+/// \param[out] target the JSObject to which to add keyed groups if keyCoercion
+/// is `Property` or a JSMap to which to add keyed groups if keyCoercion is
+/// `Collection`. The keyed groups must always be of type JSArray.
+/// \param items JSArray of ECMAValues to be grouped.
+/// \param callback callback which returns the key per given item.
+/// \return a JSObject if keyCoercion is `Property` or a JSMap if keyCoercion
+/// is `Collection`.
+template <KeyCoercion keyCoercion, class T>
+ExecutionStatus
+groupBy(Runtime &runtime, Handle<T> target, Handle<> items, Handle<> callback) {
+  struct : public Locals {
+    PinnedValue<> key;
+    PinnedValue<JSArray> value;
+    PinnedValue<> tmpValueMaybeArray;
+    PinnedValue<> next;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // 1. Perform ? RequireObjectCoercible(items).
+  if (LLVM_UNLIKELY(
+          checkObjectCoercible(runtime, items) == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  // 2. If IsCallable(callback) is false, throw a TypeError exception.
+  if (LLVM_UNLIKELY(!vmisa<Callable>(*callback))) {
+    return runtime.raiseTypeError("callback must be Callable in groupby");
+  }
+
+  // 3. Let groups be a new empty List.
+  // 4. Let iteratorRecord be ? GetIterator(items, sync).
+  CallResult<CheckedIteratorRecord> iteratorRecordResult =
+      getCheckedIterator(runtime, items);
+
+  if (LLVM_UNLIKELY(iteratorRecordResult == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  const CheckedIteratorRecord &iteratorRecord = *iteratorRecordResult;
+
+  GCScope gcScope(runtime);
+  auto marker = gcScope.createMarker();
+
+  // 5. Let k be 0.
+  uint64_t k = 0;
+
+  // 6. Repeat,
+  while (true) {
+    // a. If k ≥ 2**53 - 1, then
+    if (LLVM_UNLIKELY(k >= ((uint64_t)1 << 53) - 1)) {
+      // i. Let error be ThrowCompletion(a newly created TypeError object).
+      (void)runtime.raiseTypeError("groupBy result out of space");
+
+      // ii. Return ? IteratorClose(iteratorRecord, error).
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+
+    // b. Let next be ? IteratorStepValue(iteratorRecord).
+    auto stepValRes = iteratorStepValue(runtime, iteratorRecord, &lv.next);
+
+    if (LLVM_UNLIKELY(stepValRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    // c. If next is done, then
+    if (!*stepValRes) {
+      // i. Return groups.
+      break;
+    }
+
+    // d. Let value be next.
+    // e. Let key be Completion(Call(callback, undefined, « value, 𝔽(k) »)).
+    auto keyRes = Callable::executeCall2(
+        Handle<Callable>::vmcast(callback),
+        runtime,
+        Runtime::getUndefinedValue(),
+        lv.next.getHermesValue(),
+        HermesValue::encodeTrustedNumberValue(k));
+
+    // f. IfAbruptCloseIterator(key, iteratorRecord).
+    if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
+      return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+    }
+
+    lv.key = std::move(*keyRes);
+
+    // g. If keyCoercion is PROPERTY, then
+    if constexpr (keyCoercion == KeyCoercion::Property) {
+      // i. Set key to Completion(ToPropertyKey(key)).
+      auto keyRes = toPropertyKey(runtime, lv.key);
+
+      // ii. IfAbruptCloseIterator(key, iteratorRecord).
+      if (LLVM_UNLIKELY(keyRes == ExecutionStatus::EXCEPTION)) {
+        return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
+      }
+
+      lv.key = std::move(*keyRes);
+    }
+    // h. Else,
+    else {
+      // i. Assert: keyCoercion is COLLECTION.
+      static_assert(
+          keyCoercion == KeyCoercion::Collection,
+          "keyCoercion must be of type `Collection`");
+
+      // ii. Set key to CanonicalizeKeyedCollectionKey(key).
+      auto key = canonicalizeKeyedCollectionKey(*lv.key);
+
+      lv.key = std::move(key);
+    }
+
+    // i. Perform AddValueToKeyedGroup(groups, key, value).
+    // We deviate from the spec here for performance reasons by acting on the
+    // resulting Map or Object directly, rather than creating an intermediate
+    // hashmap.
+    //
+    // Get the keyed group from the target if it exists, otherwise return
+    // undefined.
+    if constexpr (keyCoercion == KeyCoercion::Property) {
+      auto propValueRes = JSObject::getComputed_RJS(
+          Handle<JSObject>::vmcast(target), runtime, lv.key);
+
+      if (LLVM_UNLIKELY(propValueRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      lv.tmpValueMaybeArray = std::move(*propValueRes);
+    } else {
+      static_assert(
+          keyCoercion == KeyCoercion::Collection,
+          "keyCoercion must be of type `Collection`");
+
+      lv.tmpValueMaybeArray = Handle<JSMap>::vmcast(target)
+                                  ->get(runtime, *lv.key)
+                                  .unboxToHV(runtime);
+    }
+
+    if (lv.tmpValueMaybeArray->isUndefined()) {
+      // If a keyed group does not exist, add key to the result object and
+      // initialize with an empty array.
+      auto emptyArrRes = JSArray::create(runtime, 0, 0);
+
+      if (LLVM_UNLIKELY(emptyArrRes == ExecutionStatus::EXCEPTION)) {
+        return ExecutionStatus::EXCEPTION;
+      }
+
+      lv.value = std::move(*emptyArrRes);
+
+      // Add empty array to keyed group property key.
+      if constexpr (keyCoercion == KeyCoercion::Property) {
+        auto newArrayRes = JSObject::putComputed_RJS(
+            Handle<JSObject>::vmcast(target),
+            runtime,
+            lv.key,
+            lv.value,
+            PropOpFlags().plusThrowOnError());
+
+        if (LLVM_UNLIKELY(newArrayRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      } else {
+        static_assert(
+            keyCoercion == KeyCoercion::Collection,
+            "keyCoercion must be of type `Collection`");
+
+        auto newArrayRes = JSMap::insert(
+            Handle<JSMap>::vmcast(target), runtime, lv.key, lv.value);
+
+        if (LLVM_UNLIKELY(newArrayRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+      }
+    } else {
+      lv.value = Handle<JSArray>::vmcast(&lv.tmpValueMaybeArray);
+    }
+
+    size_t keyedGroupLength = JSArray::getLength(*lv.value, runtime);
+
+    // Append keyed group array with new item that matches the key.
+    auto appendItemRes =
+        JSArray::setElementAt(lv.value, runtime, keyedGroupLength, lv.next);
+
+    if (LLVM_UNLIKELY(appendItemRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    keyedGroupLength++;
+
+    // Increase the length of keyed group array.
+    if (LLVM_UNLIKELY(
+            JSArray::setLengthProperty(lv.value, runtime, keyedGroupLength) ==
+            ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+
+    gcScope.flushToMarker(marker);
+
+    // j. Set k to k + 1.
+    k++;
+  }
+
+  return ExecutionStatus::RETURNED;
+}
+
+} // namespace
+
+ExecutionStatus groupByProperty(
+    Runtime &runtime,
+    Handle<JSObject> target,
+    Handle<> items,
+    Handle<> callback) {
+  return groupBy<KeyCoercion::Property>(runtime, target, items, callback);
+};
+
+ExecutionStatus groupByCollection(
+    Runtime &runtime,
+    Handle<JSMapImpl<CellKind::JSMapKind>> target,
+    Handle<> items,
+    Handle<> callback) {
+  return groupBy<KeyCoercion::Collection>(runtime, target, items, callback);
+};
+
 } // namespace vm
 } // namespace hermes
+
+//======= Static Hermes =======
+
+using namespace hermes::vm;
+
+extern "C" SHLegacyValue _sh_ljs_to_property_key(
+    SHRuntime *shr,
+    const SHLegacyValue *val) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> ret{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    ret =
+        toPropertyKey(runtime, Handle<>(toPHV(val))).toCallResultHermesValue();
+  }
+  if (LLVM_UNLIKELY(ret == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *ret;
+}
+
+extern "C" double _sh_ljs_to_double_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  if (LLVM_LIKELY(pn->isNumber()))
+    return pn->getNumber();
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toNumber_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return cr->getDouble();
+}
+
+extern "C" SHLegacyValue _sh_ljs_to_numeric_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  if (LLVM_LIKELY(pn->isNumber()) || LLVM_LIKELY(pn->isBigInt()))
+    return *pn;
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toNumeric_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *cr;
+}
+
+extern "C" double _sh_ljs_to_int32_rjs(SHRuntime *shr, const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  if (LLVM_LIKELY(pn->isNumber()))
+    return hermes::truncateToInt32(pn->getNumber());
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toInt32_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return cr->getDouble();
+}
+
+extern "C" double _sh_ljs_to_uint32_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  auto *pn = toPHV(n);
+  uint32_t argInt;
+  if (LLVM_LIKELY(_sh_ljs_tryfast_truncate_to_uint32(*n, &argInt))) {
+    return (double)argInt;
+  }
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = toUInt32_RJS(runtime, Handle<>::vmcast(pn));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return cr->getDouble();
+}
+
+#define SH_COMPARISON_OP(name, call, oper)                              \
+  extern "C" bool name(                                                 \
+      SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) { \
+    auto *pa = toPHV(a);                                                \
+    auto *pb = toPHV(b);                                                \
+    if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))          \
+      return pa->getNumber() oper pb->getNumber();                      \
+    Runtime &runtime = getRuntime(shr);                                 \
+    CallResult<bool> cr{false};                                         \
+    {                                                                   \
+      GCScopeMarkerRAII marker{runtime};                                \
+      cr = call(runtime, Handle<>::vmcast(pa), Handle<>::vmcast(pb));   \
+    }                                                                   \
+    if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))                \
+      _sh_throw_current(shr);                                           \
+    return *cr;                                                         \
+  }
+
+SH_COMPARISON_OP(_sh_ljs_less_rjs, lessOp_RJS, <);
+SH_COMPARISON_OP(_sh_ljs_greater_rjs, greaterOp_RJS, >);
+SH_COMPARISON_OP(_sh_ljs_less_equal_rjs, lessEqualOp_RJS, <=);
+SH_COMPARISON_OP(_sh_ljs_greater_equal_rjs, greaterEqualOp_RJS, >=);
+
+/// Perform JS addition with a fastpath for doubles.
+extern "C" SHLegacyValue _sh_ljs_add_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  auto *pa = toPHV(a);
+  auto *pb = toPHV(b);
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))
+    return HermesValue::encodeTrustedNumberValue(
+        pa->getNumber() + pb->getNumber());
+  Runtime &runtime = getRuntime(shr);
+  CallResult<HermesValue> cr{ExecutionStatus::EXCEPTION};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = addOp_RJS(runtime, Handle<>::vmcast(pa), Handle<>::vmcast(pb));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *cr;
+}
+
+namespace {
+inline double doDiv(double x, double y)
+    LLVM_NO_SANITIZE("float-divide-by-zero");
+double doDiv(double x, double y) {
+  // UBSan will complain about float divide by zero as our implementation
+  // of division depends on IEEE 754 float divide by zero. All modern
+  // compilers implement this and there is no trivial work-around without
+  // sacrificing performance and readability.
+  return x / y;
+}
+
+inline double doMod(double x, double y) {
+  // We use fmod here for simplicity. Theoretically fmod behaves slightly
+  // differently than the ECMAScript Spec. fmod applies round-towards-zero for
+  // the remainder when it's not representable by a double; while the spec
+  // requires round-to-nearest. As an example, 5 % 0.7 will give
+  // 0.10000000000000031 using fmod, but using the rounding style described by
+  // the spec, the output should really be 0.10000000000000053. Such difference
+  // can be ignored in practice.
+  return std::fmod(x, y);
+}
+
+inline double doMul(double x, double y) {
+  return x * y;
+}
+
+inline double doSub(double x, double y) {
+  return x - y;
+}
+
+inline double doInc(double d) {
+  return d + 1;
+}
+
+inline double doDec(double d) {
+  return d - 1;
+}
+
+inline int32_t doBitAnd(int32_t x, int32_t y) {
+  return x & y;
+}
+
+inline int32_t doBitOr(int32_t x, int32_t y) {
+  return x | y;
+}
+
+inline int32_t doBitXor(int32_t x, int32_t y) {
+  return x ^ y;
+}
+
+inline int32_t doLShift(uint32_t x, uint32_t y) {
+  return x << y;
+}
+
+inline int32_t doRShift(int32_t x, uint32_t y) {
+  return x >> y;
+}
+
+inline uint32_t doURShift(uint32_t x, uint32_t y) {
+  return x >> y;
+}
+
+using BigIntBinaryOp = CallResult<HermesValue>(
+    Runtime &,
+    Handle<BigIntPrimitive>,
+    Handle<BigIntPrimitive>);
+
+CallResult<HermesValue> doBigIntBinOp(
+    Runtime &runtime,
+    BigIntBinaryOp Oper,
+    Handle<BigIntPrimitive> lhs,
+    Handle<> rhs) {
+  // Cannot use ToBigInt here as it would incorrectly allow boolean/string rhs.
+  CallResult<HermesValue> res = toNumeric_RJS(runtime, rhs);
+  if (res == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  if (!res->isBigInt()) {
+    return runtime.raiseTypeErrorForValue("Cannot convert ", rhs, " to BigInt");
+  }
+  return Oper(runtime, lhs, runtime.makeHandle(res->getBigInt()));
+}
+
+template <auto Oper, auto BigIntOper>
+SHLegacyValue
+binOpImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
+  Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
+  // Fast path, both arguments are numbers.
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))
+    return HermesValue::encodeTrustedNumberValue(
+        Oper(lhs->getNumber(), rhs->getNumber()));
+
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    // Try converting the LHS to a primitive.
+    auto lPrimRes = toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(lPrimRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!lPrimRes->isBigInt())) {
+      // If the LHS is not a BigInt, then perform a number operation, and throw
+      // if that fails.
+      auto lNumRes = toNumber_RJS(runtime, runtime.makeHandle(*lPrimRes));
+      if (LLVM_UNLIKELY(lNumRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto rNumRes = toNumber_RJS(runtime, rhs);
+      if (LLVM_UNLIKELY(rNumRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      return HermesValue::encodeTrustedNumberValue(
+          Oper(lNumRes->getDouble(), rNumRes->getDouble()));
+    }
+    // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
+    // BigInt operation.
+    return doBigIntBinOp(
+        runtime, BigIntOper, runtime.makeHandle(lPrimRes->getBigInt()), rhs);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+template <auto Oper, auto BigIntOper>
+SHLegacyValue incDecOperImpl(SHRuntime *shr, const SHLegacyValue *n) {
+  Handle<> nHandle{toPHV(n)};
+  if (LLVM_LIKELY(nHandle->isNumber()))
+    return HermesValue::encodeTrustedNumberValue(Oper(nHandle->getNumber()));
+
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+
+    // Try converting the argument to a primitive.
+    auto primRes = toPrimitive_RJS(runtime, nHandle, PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(primRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    // If the primitive is not a BigInt, perform a normal number inc/dec.
+    if (LLVM_LIKELY(!primRes->isBigInt())) {
+      auto numRes = toNumber_RJS(runtime, runtime.makeHandle(*primRes));
+      if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      return HermesValue::encodeTrustedNumberValue(Oper(numRes->getNumber()));
+    }
+
+    return BigIntOper(runtime, runtime.makeHandle(primRes->getBigInt()));
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+template <auto Oper, auto BigIntOper>
+SHLegacyValue
+bitOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
+  Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
+  // Fast path, both arguments are numbers.
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b)))
+    return HermesValue::encodeTrustedNumberValue(Oper(
+        hermes::truncateToInt32(lhs->getNumber()),
+        hermes::truncateToInt32(rhs->getNumber())));
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    // Try converting the LHS to a primitive.
+    auto lPrimRes = toPrimitive_RJS(runtime, lhs, PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(lPrimRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!lPrimRes->isBigInt())) {
+      // If the LHS is not a BigInt, then perform a number operation, and throw
+      // if that fails.
+      auto lIntRes = toInt32_RJS(runtime, runtime.makeHandle(*lPrimRes));
+      if (LLVM_UNLIKELY(lIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto rIntRes = toInt32_RJS(runtime, std::move(rhs));
+      if (LLVM_UNLIKELY(rIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      return HermesValue::encodeTrustedNumberValue(Oper(
+          lIntRes->getNumberAs<int32_t>(), rIntRes->getNumberAs<int32_t>()));
+    }
+    // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
+    // BigInt operation.
+    return doBigIntBinOp(
+        runtime, BigIntOper, runtime.makeHandle(lPrimRes->getBigInt()), rhs);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+template <auto Oper, auto ToIntegral, auto BigIntOper>
+SHLegacyValue
+shiftOperImpl(SHRuntime *shr, const SHLegacyValue *a, const SHLegacyValue *b) {
+  Handle<> lhs{toPHV(a)}, rhs{toPHV(b)};
+  // Fast path, both arguments are numbers.
+  if (LLVM_LIKELY(_sh_ljs_are_both_non_nan_numbers(*a, *b))) {
+    auto lnum = hermes::truncateToInt32(lhs->getNumber());
+    uint32_t rnum = hermes::truncateToInt32(rhs->getNumber()) & 0x1f;
+    return HermesValue::encodeTrustedNumberValue(Oper(lnum, rnum));
+  }
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    // Try converting the LHS to a primitive.
+    auto lPrimRes =
+        toPrimitive_RJS(runtime, std::move(lhs), PreferredType::NUMBER);
+    if (LLVM_UNLIKELY(lPrimRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!lPrimRes->isBigInt())) {
+      // If the LHS is not a BigInt, then perform a number operation, and throw
+      // if that fails.
+      auto lIntRes = ToIntegral(runtime, runtime.makeHandle(*lPrimRes));
+      if (LLVM_UNLIKELY(lIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto rIntRes = toUInt32_RJS(runtime, rhs);
+      if (LLVM_UNLIKELY(rIntRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      auto lnum = hermes::truncateToInt32(lIntRes->getNumber());
+      auto rnum = static_cast<uint32_t>(rIntRes->getNumber()) & 0x1f;
+      return HermesValue::encodeTrustedNumberValue((*Oper)(lnum, rnum));
+    }
+    // LHS is a BigInt, try to convert RHS to a BigInt as well and perform a
+    // BigInt operation.
+    return doBigIntBinOp(
+        runtime,
+        BigIntOper,
+        runtime.makeHandle(lPrimRes->getBigInt()),
+        std::move(rhs));
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+} // namespace
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_sub_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doSub, BigIntPrimitive::subtract>(shr, a, b);
+}
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_mul_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doMul, BigIntPrimitive::multiply>(shr, a, b);
+}
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_div_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doDiv, BigIntPrimitive::divide>(shr, a, b);
+}
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_mod_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return binOpImpl<doMod, BigIntPrimitive::remainder>(shr, a, b);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_inc_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  return incDecOperImpl<doInc, BigIntPrimitive::inc>(shr, n);
+}
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_dec_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  return incDecOperImpl<doDec, BigIntPrimitive::dec>(shr, n);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_bit_and_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return bitOperImpl<doBitAnd, BigIntPrimitive::bitwiseAND>(shr, a, b);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_bit_or_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return bitOperImpl<doBitOr, BigIntPrimitive::bitwiseOR>(shr, a, b);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_bit_xor_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return bitOperImpl<doBitXor, BigIntPrimitive::bitwiseXOR>(shr, a, b);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_left_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return shiftOperImpl<doLShift, toUInt32_RJS, BigIntPrimitive::leftShift>(
+      shr, a, b);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_unsigned_right_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return shiftOperImpl<
+      doURShift,
+      toUInt32_RJS,
+      BigIntPrimitive::unsignedRightShift>(shr, a, b);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_right_shift_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  return shiftOperImpl<
+      doRShift,
+      toInt32_RJS,
+      BigIntPrimitive::signedRightShift>(shr, a, b);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_bit_not_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  Handle<> nHandle{toPHV(n)};
+  // Fast path, nHandle is a number.
+  if (nHandle->isNumber())
+    return HermesValue::encodeTrustedNumberValue(
+        ~hermes::truncateToInt32(nHandle->getNumber()));
+  Runtime &runtime = getRuntime(shr);
+  auto res = [&]() -> CallResult<HermesValue> {
+    // Try converting nHandle to a numeric.
+    auto numRes = toNumeric_RJS(runtime, nHandle);
+    if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    // Test for BigInt since it is cheaper than testing for number. If it is a
+    // number, truncate it and perform bitwise not.
+    if (LLVM_LIKELY(!numRes->isBigInt()))
+      return HermesValue::encodeTrustedNumberValue(
+          ~hermes::truncateToInt32(numRes->getNumber()));
+
+    // The result is a BigInt, perform a BigInt bitwise not.
+    auto bigint = runtime.makeHandle(numRes->getBigInt());
+    return BigIntPrimitive::unaryNOT(runtime, bigint);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_minus_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *n) {
+  // Fast path, n is a number.
+  if (LLVM_LIKELY(toPHV(n)->isNumber()))
+    return HermesValue::encodeTrustedNumberValue(-toPHV(n)->getNumber());
+  auto res = [shr, n]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    Handle<> nHandle{toPHV(n)};
+    // Try converting nHandle to a numeric.
+    auto numRes = toNumeric_RJS(runtime, nHandle);
+    if (LLVM_UNLIKELY(numRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    // Test for BigInt since it is cheaper than testing for number. If it is a
+    // number, negate it.
+    if (LLVM_LIKELY(!numRes->isBigInt()))
+      return HermesValue::encodeTrustedNumberValue(-numRes->getNumber());
+
+    // The result is a BigInt, perform a BigInt unary minus.
+    auto bigint = runtime.makeHandle(numRes->getBigInt());
+    return BigIntPrimitive::unaryMinus(runtime, bigint);
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+extern "C" bool _sh_ljs_to_boolean(SHLegacyValue b) {
+  return toBoolean(HermesValue::fromRaw(b.raw));
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" bool _sh_ljs_equal_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *a,
+    const SHLegacyValue *b) {
+  Handle<> aHandle{toPHV(a)}, bHandle{toPHV(b)};
+  CallResult<bool> eqRes{false};
+  {
+    GCScopeMarkerRAII marker(getRuntime(shr));
+    eqRes = abstractEqualityTest_RJS(getRuntime(shr), aHandle, bHandle);
+  }
+  if (LLVM_UNLIKELY(eqRes == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *eqRes;
+}
+
+extern "C" bool _sh_ljs_strict_equal(SHLegacyValue a, SHLegacyValue b) {
+  return strictEqualityTest(
+      HermesValue::fromRaw(a.raw), HermesValue::fromRaw(b.raw));
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_typeof(SHRuntime *shr, SHLegacyValue *v) {
+  return typeOf(getRuntime(shr), Handle<>::vmcast(toPHV(v)));
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" bool _sh_ljs_typeof_is(SHLegacyValue val, uint16_t typesRaw) {
+  hermes::TypeOfIsTypes types(typesRaw);
+  HermesValue hv = HermesValue::fromRaw(val.raw);
+  return matchTypeOfIs(hv, types);
+}
+
+extern "C" SHLegacyValue _sh_ljs_add_empty_string_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *val) {
+  Runtime &runtime = getRuntime(shr);
+  if (LLVM_LIKELY(toPHV(val)->isString())) {
+    return *val;
+  } else {
+    // Slow path, convert to primitive then call toString.
+    auto res = [&runtime, val]() -> CallResult<HermesValue> {
+      GCScopeMarkerRAII marker{runtime};
+      auto res =
+          toPrimitive_RJS(runtime, Handle<>(toPHV(val)), PreferredType::NONE);
+      if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      Handle<> tmpHandle = runtime.makeHandle(*res);
+      auto strRes = toString_RJS(runtime, tmpHandle);
+      if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+
+      return strRes->getHermesValue();
+    }();
+    if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+      _sh_throw_current(shr);
+    return *res;
+  }
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_instance_of_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *object,
+    SHLegacyValue *constructor) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<bool> cr{false};
+  {
+    GCScopeMarkerRAII marker{runtime};
+    cr = instanceOfOperator_RJS(
+        runtime, Handle<>(toPHV(object)), Handle<>(toPHV(constructor)));
+  }
+  if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return _sh_ljs_bool(*cr);
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_iterator_begin_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *src) {
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    GCScopeMarkerRAII marker{runtime};
+    Handle srcHandle{toPHV(src)};
+    if (LLVM_LIKELY(vmisa<JSArray>(*srcHandle))) {
+      // Check if we can take the fast path for array iteration, if the
+      // Symbol.iterator field is unmodified.
+      NamedPropertyDescriptor desc;
+      JSObject *propObj = JSObject::getNamedDescriptorPredefined(
+          Handle<JSArray>::vmcast(srcHandle),
+          runtime,
+          Predefined::SymbolIterator,
+          desc);
+      if (LLVM_LIKELY(propObj)) {
+        auto slotValueRes = JSObject::getNamedSlotValue(
+            createPseudoHandle(propObj), runtime, desc);
+        if (LLVM_UNLIKELY(slotValueRes == ExecutionStatus::EXCEPTION))
+          return ExecutionStatus::EXCEPTION;
+        PseudoHandle<> slotValue = std::move(*slotValueRes);
+        if (LLVM_LIKELY(
+                slotValue->getRaw() ==
+                runtime.arrayPrototypeValues.getHermesValue().getRaw()))
+          return HermesValue::encodeTrustedNumberValue(0);
+      }
+    }
+
+    // Fall back to the general case.
+    CallResult<UncheckedIteratorRecord> iterRecord =
+        getIterator(runtime, srcHandle);
+    if (LLVM_UNLIKELY(iterRecord == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    *src = iterRecord->nextMethod.getHermesValue();
+    return iterRecord->iterator.getHermesValue();
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" SHLegacyValue _sh_ljs_iterator_next_rjs(
+    SHRuntime *shr,
+    SHLegacyValue *iteratorOrIdx,
+    const SHLegacyValue *srcOrNext) {
+  auto res = [&]() -> CallResult<HermesValue> {
+    Runtime &runtime = getRuntime(shr);
+    Handle<> iteratorOrIdxHandle{toPHV(iteratorOrIdx)},
+        srcOrNextHandle{toPHV(srcOrNext)};
+
+    if (LLVM_LIKELY(iteratorOrIdxHandle->isNumber())) {
+      // If the iterator is a number, we can take the fast path for array
+      // iteration.
+      JSArray::size_type i =
+          iteratorOrIdxHandle->getNumberAs<JSArray::size_type>();
+      auto arr = Handle<JSArray>::vmcast(srcOrNextHandle);
+
+      {
+        NoHandleScope noHandles{runtime};
+        NoAllocScope noAlloc{runtime};
+
+        if (i >=
+            JSArray::getLength(vmcast<JSArray>(*srcOrNextHandle), runtime)) {
+          // Finished iterating the array, stop.
+          *iteratorOrIdx = HermesValue::encodeUndefinedValue();
+          return HermesValue::encodeUndefinedValue();
+        }
+        // Fast path: look up the property in indexed storage.
+        // Runs when there is no hole and a regular non-accessor property exists
+        // at the current index, because those are the only properties stored
+        // in indexed storage.
+        // If there is another kind of property we have to call getComputed_RJS.
+        // No need to check the fastIndexProperties flag because the indexed
+        // storage would be deleted and at() would return empty in that case.
+        SmallHermesValue value = arr->at(runtime, i);
+        if (LLVM_LIKELY(!value.isEmpty())) {
+          *iteratorOrIdx = HermesValue::encodeTrustedNumberValue(i + 1);
+          return value.unboxToHV(runtime);
+        }
+      }
+      // Slow path, just run the full getComputedPropertyValue_RJS path.
+      GCScopeMarkerRAII marker{runtime};
+      CallResult<PseudoHandle<>> valueRes =
+          JSObject::getComputed_RJS(arr, runtime, iteratorOrIdxHandle);
+      if (LLVM_UNLIKELY(valueRes == ExecutionStatus::EXCEPTION))
+        return ExecutionStatus::EXCEPTION;
+      *iteratorOrIdx = HermesValue::encodeTrustedNumberValue(i + 1);
+      return valueRes->get();
+    }
+    if (LLVM_UNLIKELY(iteratorOrIdxHandle->isUndefined())) {
+      // In all current use cases of IteratorNext, we check and branch away
+      // from IteratorNext in the case that iterStorage was set to undefined
+      // (which indicates completion of iteration).
+      // If we introduce a use case which allows calling IteratorNext,
+      // then this assert can be removed. For now, this branch just returned
+      // undefined in NDEBUG mode.
+      assert(false && "IteratorNext called on completed iterator");
+      return HermesValue::encodeUndefinedValue();
+    }
+
+    GCScopeMarkerRAII marker{runtime};
+
+    CheckedIteratorRecord iterRecord{
+        Handle<JSObject>::vmcast(iteratorOrIdxHandle),
+        Handle<Callable>::vmcast(srcOrNextHandle)};
+
+    CallResult<PseudoHandle<JSObject>> resultObjRes =
+        iteratorNext(runtime, iterRecord, llvh::None);
+    if (LLVM_UNLIKELY(resultObjRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    Handle<JSObject> resultObj = runtime.makeHandle(std::move(*resultObjRes));
+    CallResult<PseudoHandle<>> doneRes = JSObject::getNamed_RJS(
+        resultObj, runtime, Predefined::getSymbolID(Predefined::done));
+    if (LLVM_UNLIKELY(doneRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+    if (toBoolean(doneRes->get())) {
+      // Done with iteration. Clear the iterator so that subsequent
+      // instructions do not call next() or return().
+      *iteratorOrIdx = HermesValue::encodeUndefinedValue();
+      return HermesValue::encodeUndefinedValue();
+    }
+
+    // Not done iterating, so get the `value` property and return it.
+    CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
+        resultObj, runtime, Predefined::getSymbolID(Predefined::value));
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION))
+      return ExecutionStatus::EXCEPTION;
+
+    return propRes->getHermesValue();
+  }();
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION))
+    _sh_throw_current(shr);
+  return *res;
+}
+
+LLVM_ATTRIBUTE_NOINLINE
+extern "C" void _sh_ljs_iterator_close_rjs(
+    SHRuntime *shr,
+    const SHLegacyValue *iteratorOrIdx,
+    bool ignoreExceptions) {
+  Handle<> iteratorOrIdxHandle{toPHV(iteratorOrIdx)};
+  if (LLVM_LIKELY(!iteratorOrIdxHandle->isObject()))
+    return;
+
+  Runtime &runtime = getRuntime(shr);
+  ExecutionStatus res;
+  {
+    GCScopeMarkerRAII marker{runtime};
+    // The iterator must be closed if it's still an object.
+    // That means it was never an index and is not done iterating (a state
+    // which is indicated by `undefined`).
+    res = iteratorClose(
+        runtime,
+        Handle<JSObject>::vmcast(iteratorOrIdxHandle),
+        Runtime::getEmptyValue());
+  }
+
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    // Ignore the raised exception if necessary.
+    if (ignoreExceptions && !isUncatchableError(*runtime.thrownValue_)) {
+      runtime.clearThrownValue();
+      return;
+    }
+
+    _sh_throw_current(shr);
+  }
+}

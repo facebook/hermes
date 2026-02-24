@@ -4,51 +4,43 @@
 # LICENSE file in the root directory of this source tree.
 
 add_hermes_library(hermesHBCBackend
-  STATIC
-  BackendContext.cpp
   HBC.cpp
-  ISel.cpp
+  ISel.cpp ISel.h
   Bytecode.cpp
   BytecodeStream.cpp
-  BytecodeGenerator.cpp
-  BytecodeDataProvider.cpp
-  BytecodeProviderFromSrc.cpp
+  BytecodeGenerator.cpp BytecodeGenerator.h
+  BCProvider.cpp
+  BCProviderFromSrc.cpp
   BytecodeDisassembler.cpp
   BytecodeFormConverter.cpp
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
+  DebugInfoNonLean.cpp
   Passes.cpp
-  SerializedLiteralGenerator.cpp
-  SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp
   StringKind.cpp
-  TraverseLiteralStrings.cpp
   UniquingFilenameTable.cpp
   UniquingStringLiteralTable.cpp
-  Passes/FuncCallNOpts.cpp
+  LoweringPipelines.cpp LoweringPipelines.h
   Passes/InsertProfilePoint.cpp
-  Passes/LowerBuiltinCalls.cpp
-  Passes/OptEnvironmentInit.cpp
-  LINK_LIBS
+  Passes/OptParentEnvironment.cpp
+  Passes/PeepholeLowering.cpp
+  Passes/ReorderRegisters.cpp
+  LINK_OBJLIBS
   hermesBackend
   hermesInst
   hermesRegex
   hermesSourceMap
   hermesAST
-  hermesPublic
 )
 
 add_hermes_library(hermesHBCBackendLean
-  STATIC
-  BytecodeDataProvider.cpp
+  HBCStub.cpp
+  BCProvider.cpp
   ConsecutiveStringStorage.cpp
   DebugInfo.cpp
-  SerializedLiteralParserBase.cpp
   SimpleBytecodeBuilder.cpp
   UniquingFilenameTable.cpp
-  LINK_LIBS
+  LINK_OBJLIBS
   hermesSupport
-  hermesPublic
 )
-
-target_compile_definitions(hermesHBCBackendLean PUBLIC HERMESVM_LEAN)

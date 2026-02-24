@@ -8,8 +8,17 @@
 #ifndef DEF_VALUE
 #define DEF_VALUE(NAME, PARENT)
 #endif
+#ifndef BEGIN_VALUE
+#define BEGIN_VALUE(NAME, PARENT)
+#endif
+#ifndef END_VALUE
+#define END_VALUE(NAME)
+#endif
+#ifndef DEF_TAG
+#define DEF_TAG(NAME, PARENT)
+#endif
 #ifndef MARK_FIRST
-#define MARK_FIRST(NAME)
+#define MARK_FIRST(NAME, PARENT)
 #endif
 #ifndef MARK_LAST
 #define MARK_LAST(NAME)
@@ -18,146 +27,274 @@
 #ifndef TERMINATOR
 #define TERMINATOR(NAME, PARENT) DEF_VALUE(NAME, PARENT)
 #endif
-
-#if defined(INCLUDE_ALL_INSTRS) || defined(INCLUDE_HBC_INSTRS)
-#define INCLUDE_HBC_BACKEND
+#ifndef BEGIN_TERMINATOR
+#define BEGIN_TERMINATOR(NAME, PARENT) BEGIN_VALUE(NAME, PARENT)
+#endif
+#ifndef END_TERMINATOR
+#define END_TERMINATOR(NAME) END_VALUE(NAME)
 #endif
 
-DEF_VALUE(ThrowIfHasRestrictedGlobalPropertyInst, Instruction)
+BEGIN_VALUE(UnaryOperatorInst, Instruction)
+DEF_TAG(UnaryVoidInst, UnaryOperatorInst)
+DEF_TAG(UnaryMinusInst, UnaryOperatorInst)
+DEF_TAG(UnaryTildeInst, UnaryOperatorInst)
+DEF_TAG(UnaryBangInst, UnaryOperatorInst)
+DEF_TAG(UnaryIncInst, UnaryOperatorInst)
+DEF_TAG(UnaryDecInst, UnaryOperatorInst)
+END_VALUE(UnaryOperatorInst)
 
-MARK_FIRST(ScopeCreationInst)
-DEF_VALUE(ScopeCreationInst, Instruction)
-DEF_VALUE(CreateScopeInst, ScopeCreationInst)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateEnvironmentInst, ScopeCreationInst)
-DEF_VALUE(HBCResolveEnvironment, ScopeCreationInst)
-#endif
-MARK_FIRST(NestedScopeCreationInst)
-DEF_VALUE(NestedScopeCreationInst, ScopeCreationInst)
-DEF_VALUE(CreateInnerScopeInst, NestedScopeCreationInst)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateInnerEnvironmentInst, NestedScopeCreationInst)
-#endif
-MARK_LAST(NestedScopeCreationInst)
-MARK_LAST(ScopeCreationInst)
-
-MARK_FIRST(SingleOperandInst)
-DEF_VALUE(SingleOperandInst, Instruction)
-DEF_VALUE(AddEmptyStringInst, SingleOperandInst)
-DEF_VALUE(AsNumberInst, SingleOperandInst)
-DEF_VALUE(AsNumericInst, SingleOperandInst)
-DEF_VALUE(AsInt32Inst, SingleOperandInst)
-DEF_VALUE(LoadStackInst, SingleOperandInst)
-DEF_VALUE(MovInst, SingleOperandInst)
+DEF_VALUE(TypeOfInst, Instruction)
+DEF_VALUE(TypeOfIsInst, Instruction)
+DEF_VALUE(AddEmptyStringInst, Instruction)
+DEF_VALUE(ToPropertyKeyInst, Instruction)
+DEF_VALUE(AsNumberInst, Instruction)
+DEF_VALUE(AsNumericInst, Instruction)
+DEF_VALUE(AsInt32Inst, Instruction)
+DEF_VALUE(AsUint32Inst, Instruction)
+DEF_VALUE(LoadStackInst, Instruction)
+DEF_VALUE(MovInst, Instruction)
 DEF_VALUE(ImplicitMovInst, Instruction)
-DEF_VALUE(CoerceThisNSInst, SingleOperandInst)
-DEF_VALUE(UnaryOperatorInst, SingleOperandInst)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCLoadConstInst, SingleOperandInst)
-DEF_VALUE(HBCLoadParamInst, SingleOperandInst)
-DEF_VALUE(HBCGetArgumentsLengthInst, SingleOperandInst)
-DEF_VALUE(HBCReifyArgumentsInst, SingleOperandInst)
-DEF_VALUE(HBCSpillMovInst, SingleOperandInst)
-#endif
-MARK_LAST(SingleOperandInst)
+DEF_VALUE(CoerceThisNSInst, Instruction)
+DEF_VALUE(DirectEvalInst, Instruction)
+DEF_VALUE(DeclareGlobalVarInst, Instruction)
+DEF_VALUE(LoadFrameInst, Instruction)
+DEF_VALUE(LoadParamInst, Instruction)
+DEF_VALUE(LIRLoadConstInst, Instruction)
+DEF_VALUE(LIRGetArgumentsLengthInst, Instruction)
+DEF_VALUE(CreatePrivateNameInst, Instruction)
+
+MARK_FIRST(HBCReifyArgumentsInst, Instruction)
+DEF_VALUE(LIRReifyArgumentsStrictInst, HBCReifyArgumentsInst)
+DEF_VALUE(LIRReifyArgumentsLooseInst, HBCReifyArgumentsInst)
+MARK_LAST(HBCReifyArgumentsInst)
+
+DEF_VALUE(LIRSpillMovInst, Instruction)
 
 DEF_VALUE(PhiInst, Instruction)
-DEF_VALUE(BinaryOperatorInst, Instruction)
-MARK_FIRST(StorePropertyInst)
-DEF_VALUE(StorePropertyInst, Instruction)
-DEF_VALUE(TryStoreGlobalPropertyInst, StorePropertyInst)
+
+BEGIN_VALUE(BinaryOperatorInst, Instruction)
+DEF_TAG(BinaryEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryNotEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryStrictlyEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryStrictlyNotEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryLessThanInst, BinaryOperatorInst)
+DEF_TAG(BinaryLessThanOrEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryGreaterThanInst, BinaryOperatorInst)
+DEF_TAG(BinaryGreaterThanOrEqualInst, BinaryOperatorInst)
+DEF_TAG(BinaryLeftShiftInst, BinaryOperatorInst)
+DEF_TAG(BinaryRightShiftInst, BinaryOperatorInst)
+DEF_TAG(BinaryUnsignedRightShiftInst, BinaryOperatorInst)
+DEF_TAG(BinaryAddInst, BinaryOperatorInst)
+DEF_TAG(BinarySubtractInst, BinaryOperatorInst)
+DEF_TAG(BinaryMultiplyInst, BinaryOperatorInst)
+DEF_TAG(BinaryDivideInst, BinaryOperatorInst)
+DEF_TAG(BinaryModuloInst, BinaryOperatorInst)
+DEF_TAG(BinaryOrInst, BinaryOperatorInst)
+DEF_TAG(BinaryXorInst, BinaryOperatorInst)
+DEF_TAG(BinaryAndInst, BinaryOperatorInst)
+DEF_TAG(BinaryExponentiationInst, BinaryOperatorInst)
+DEF_TAG(BinaryInInst, BinaryOperatorInst)
+DEF_TAG(BinaryPrivateInInst, BinaryOperatorInst)
+DEF_TAG(BinaryInstanceOfInst, BinaryOperatorInst)
+END_VALUE(BinaryOperatorInst)
+
+MARK_FIRST(BaseStorePropertyInst, Instruction)
+DEF_VALUE(StorePropertyWithReceiverInst, BaseStorePropertyInst)
+MARK_FIRST(StorePropertyInst, BaseStorePropertyInst)
+DEF_VALUE(StorePropertyLooseInst, StorePropertyInst)
+DEF_VALUE(StorePropertyStrictInst, StorePropertyInst)
 MARK_LAST(StorePropertyInst)
 
-MARK_FIRST(StoreOwnPropertyInst)
-DEF_VALUE(StoreOwnPropertyInst, Instruction)
-DEF_VALUE(StoreNewOwnPropertyInst, StoreOwnPropertyInst)
-MARK_LAST(StoreOwnPropertyInst)
+MARK_FIRST(TryStoreGlobalPropertyInst, BaseStorePropertyInst)
+DEF_VALUE(TryStoreGlobalPropertyLooseInst, TryStoreGlobalPropertyInst)
+DEF_VALUE(TryStoreGlobalPropertyStrictInst, TryStoreGlobalPropertyInst)
+MARK_LAST(TryStoreGlobalPropertyInst)
+MARK_LAST(BaseStorePropertyInst)
 
-DEF_VALUE(StoreGetterSetterInst, Instruction)
-DEF_VALUE(DeletePropertyInst, Instruction)
-MARK_FIRST(LoadPropertyInst)
-DEF_VALUE(LoadPropertyInst, Instruction)
-DEF_VALUE(TryLoadGlobalPropertyInst, LoadPropertyInst)
-MARK_LAST(LoadPropertyInst)
-DEF_VALUE(LoadFrameInst, Instruction)
+DEF_VALUE(DefineOwnPropertyInst, Instruction)
+DEF_VALUE(DefineOwnInDenseArrayInst, Instruction)
+
+DEF_VALUE(DefineOwnGetterSetterInst, Instruction)
+
+DEF_VALUE(AddOwnPrivateFieldInst, Instruction)
+DEF_VALUE(LoadOwnPrivateFieldInst, Instruction)
+DEF_VALUE(StoreOwnPrivateFieldInst, Instruction)
+
+MARK_FIRST(DeletePropertyInst, Instruction)
+DEF_VALUE(DeletePropertyLooseInst, DeletePropertyInst)
+DEF_VALUE(DeletePropertyStrictInst, DeletePropertyInst)
+MARK_LAST(DeletePropertyInst)
+
+MARK_FIRST(BaseLoadPropertyInst, Instruction)
+DEF_VALUE(LoadPropertyInst, BaseLoadPropertyInst)
+DEF_VALUE(LoadPropertyWithReceiverInst, BaseLoadPropertyInst)
+DEF_VALUE(TryLoadGlobalPropertyInst, BaseLoadPropertyInst)
+MARK_LAST(BaseLoadPropertyInst)
+
 DEF_VALUE(StoreStackInst, Instruction)
 DEF_VALUE(StoreFrameInst, Instruction)
 DEF_VALUE(AllocStackInst, Instruction)
-DEF_VALUE(AllocObjectInst, Instruction)
 DEF_VALUE(AllocArrayInst, Instruction)
-DEF_VALUE(CreateArgumentsInst, Instruction)
+DEF_VALUE(AllocFastArrayInst, Instruction)
+
+MARK_FIRST(BaseAllocObjectLiteralInst, Instruction)
+DEF_VALUE(AllocObjectLiteralInst, BaseAllocObjectLiteralInst)
+DEF_VALUE(AllocTypedObjectInst, BaseAllocObjectLiteralInst)
+MARK_LAST(BaseAllocObjectLiteralInst)
+
+DEF_VALUE(GetTemplateObjectInst, Instruction)
 DEF_VALUE(CatchInst, Instruction)
 DEF_VALUE(DebuggerInst, Instruction)
-DEF_VALUE(DirectEvalInst, Instruction)
 DEF_VALUE(CreateRegExpInst, Instruction)
-DEF_VALUE(TryEndInst, Instruction)
 DEF_VALUE(GetNewTargetInst, Instruction)
-DEF_VALUE(ThrowIfEmptyInst, Instruction)
+DEF_VALUE(ThrowIfInst, Instruction)
+DEF_VALUE(ThrowIfThisInitializedInst, Instruction)
 DEF_VALUE(IteratorBeginInst, Instruction)
 DEF_VALUE(IteratorNextInst, Instruction)
 DEF_VALUE(IteratorCloseInst, Instruction)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCStoreToEnvironmentInst, Instruction)
-DEF_VALUE(HBCLoadFromEnvironmentInst, Instruction)
-#endif
-DEF_VALUE(UnreachableInst, Instruction)
 
-MARK_FIRST(CreateFunctionInst)
-DEF_VALUE(CreateFunctionInst, Instruction)
-DEF_VALUE(CreateGeneratorInst, Instruction)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCCreateFunctionInst, CreateFunctionInst)
-DEF_VALUE(HBCCreateGeneratorInst, Instruction)
-#endif
-MARK_LAST(CreateFunctionInst)
-#ifdef HERMES_RUN_WASM
-DEF_VALUE(CallIntrinsicInst, Instruction)
-#endif
+MARK_FIRST(CreateArgumentsInst, Instruction)
+DEF_VALUE(CreateArgumentsLooseInst, CreateArgumentsInst)
+DEF_VALUE(CreateArgumentsStrictInst, CreateArgumentsInst)
+MARK_LAST(CreateArgumentsInst)
 
-MARK_FIRST(TerminatorInst)
-DEF_VALUE(TerminatorInst, Instruction)
+MARK_FIRST(BaseCreateLexicalChildInst, Instruction)
+
+MARK_FIRST(BaseCreateCallableInst, BaseCreateLexicalChildInst)
+DEF_VALUE(CreateFunctionInst, BaseCreateCallableInst)
+DEF_VALUE(CreateClassInst, Instruction)
+MARK_LAST(BaseCreateCallableInst)
+
+DEF_VALUE(CreateGeneratorInst, BaseCreateLexicalChildInst)
+MARK_LAST(BaseCreateLexicalChildInst)
+
+MARK_FIRST(TerminatorInst, Instruction)
 TERMINATOR(BranchInst, TerminatorInst)
 TERMINATOR(ReturnInst, TerminatorInst)
 TERMINATOR(ThrowInst, TerminatorInst)
+TERMINATOR(ThrowTypeErrorInst, TerminatorInst)
 TERMINATOR(SwitchInst, TerminatorInst)
 TERMINATOR(CondBranchInst, TerminatorInst)
 TERMINATOR(GetPNamesInst, TerminatorInst)
 TERMINATOR(GetNextPNameInst, TerminatorInst)
-TERMINATOR(CheckHasInstanceInst, TerminatorInst)
 TERMINATOR(TryStartInst, TerminatorInst)
-TERMINATOR(CompareBranchInst, TerminatorInst)
-TERMINATOR(SwitchImmInst, TerminatorInst)
+TERMINATOR(TryEndInst, TerminatorInst)
+TERMINATOR(BranchIfBuiltinInst, TerminatorInst)
+TERMINATOR(UnreachableInst, TerminatorInst)
+
+BEGIN_TERMINATOR(HBCCompareBranchInst, TerminatorInst)
+// NOTE: the ordering here matches BinaryOperatorInst!
+DEF_TAG(CmpBrEqualInst, HBCCompareBranchInst)
+DEF_TAG(CmpBrNotEqualInst, HBCCompareBranchInst)
+DEF_TAG(CmpBrStrictlyEqualInst, HBCCompareBranchInst)
+DEF_TAG(CmpBrStrictlyNotEqualInst, HBCCompareBranchInst)
+DEF_TAG(CmpBrLessThanInst, HBCCompareBranchInst)
+DEF_TAG(CmpBrLessThanOrEqualInst, HBCCompareBranchInst)
+DEF_TAG(CmpBrGreaterThanInst, HBCCompareBranchInst)
+DEF_TAG(CmpBrGreaterThanOrEqualInst, HBCCompareBranchInst)
+END_TERMINATOR(HBCCompareBranchInst)
+
+BEGIN_TERMINATOR(HBCFCompareBranchInst, Instruction)
+// NOTE: the ordering here matches FCompareInst!
+DEF_TAG(HBCFCmpBrEqualInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrNotEqualInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrLessThanInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrLessThanOrEqualInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrGreaterThanInst, HBCFCompareBranchInst)
+DEF_TAG(HBCFCmpBrGreaterThanOrEqualInst, HBCFCompareBranchInst)
+END_VALUE(HBCFCompareBranchInst)
+
+BEGIN_TERMINATOR(BaseSwitchImmInst, TerminatorInst)
+DEF_VALUE(UIntSwitchImmInst, BaseSwitchImmInst)
+DEF_VALUE(StringSwitchImmInst, BaseSwitchImmInst)
+END_TERMINATOR(BaseSwitchImmInst)
+
 TERMINATOR(SaveAndYieldInst, TerminatorInst)
+
+TERMINATOR(HBCCmpBrTypeOfIsInst, TerminatorInst)
 MARK_LAST(TerminatorInst)
 
-MARK_FIRST(CallInst)
-DEF_VALUE(CallInst, Instruction)
-DEF_VALUE(ConstructInst, CallInst)
-DEF_VALUE(CallBuiltinInst, CallInst)
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCConstructInst, CallInst)
-DEF_VALUE(HBCCallDirectInst, CallInst)
-DEF_VALUE(HBCCallNInst, CallInst)
-#endif
-MARK_LAST(CallInst)
+MARK_FIRST(BaseCallInst, Instruction)
+DEF_VALUE(CallInst, BaseCallInst)
+DEF_VALUE(CallBuiltinInst, BaseCallInst)
+DEF_VALUE(HBCCallWithArgCountInst, BaseCallInst)
+DEF_VALUE(HBCCallNInst, BaseCallInst)
+MARK_LAST(BaseCallInst)
+
+DEF_VALUE(CreateThisInst, Instruction)
+DEF_VALUE(GetConstructedObjectInst, Instruction)
 
 DEF_VALUE(GetBuiltinClosureInst, Instruction)
-DEF_VALUE(StartGeneratorInst, Instruction)
 DEF_VALUE(ResumeGeneratorInst, Instruction)
+
+MARK_FIRST(BaseScopeInst, Instruction)
+DEF_VALUE(GetParentScopeInst, BaseScopeInst)
+DEF_VALUE(CreateScopeInst, BaseScopeInst)
+DEF_VALUE(ResolveScopeInst, BaseScopeInst)
+DEF_VALUE(LIRResolveScopeInst, BaseScopeInst)
+DEF_VALUE(GetClosureScopeInst, BaseScopeInst)
+DEF_VALUE(HBCResolveParentEnvironmentInst, BaseScopeInst)
+DEF_VALUE(HBCCreateFunctionEnvironmentInst, BaseScopeInst)
+MARK_LAST(BaseScopeInst)
 
 // These are target dependent instructions:
 
-#ifdef INCLUDE_HBC_BACKEND
-DEF_VALUE(HBCGetGlobalObjectInst, Instruction)
-DEF_VALUE(HBCGetThisNSInst, Instruction)
-DEF_VALUE(HBCCreateThisInst, Instruction)
-DEF_VALUE(HBCGetArgumentsPropByValInst, Instruction)
-DEF_VALUE(HBCGetConstructedObjectInst, Instruction)
-DEF_VALUE(HBCAllocObjectFromBufferInst, Instruction)
-DEF_VALUE(HBCProfilePointInst, Instruction)
-#endif
+DEF_VALUE(LIRGetThisNSInst, Instruction)
+DEF_VALUE(LIRGetGlobalObjectInst, Instruction)
 
-#undef INCLUDE_HBC_BACKEND
+MARK_FIRST(HBCGetArgumentsPropByValInst, Instruction)
+DEF_VALUE(LIRGetArgumentsPropByValLooseInst, HBCGetArgumentsPropByValInst)
+DEF_VALUE(LIRGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
+MARK_LAST(HBCGetArgumentsPropByValInst)
+
+DEF_VALUE(LIRAllocObjectFromBufferInst, Instruction)
+DEF_VALUE(HBCProfilePointInst, Instruction)
+
+DEF_VALUE(PrLoadInst, Instruction)
+DEF_VALUE(PrStoreInst, Instruction)
+
+DEF_VALUE(FastArrayLoadInst, Instruction)
+DEF_VALUE(FastArrayStoreInst, Instruction)
+DEF_VALUE(FastArrayPushInst, Instruction)
+DEF_VALUE(FastArrayAppendInst, Instruction)
+DEF_VALUE(FastArrayLengthInst, Instruction)
+
+DEF_VALUE(LoadParentNoTrapsInst, Instruction)
+DEF_VALUE(TypedLoadParentInst, Instruction)
+
+BEGIN_VALUE(FUnaryMathInst, Instruction)
+DEF_TAG(FNegate, FUnaryMathInst)
+END_VALUE(FUnaryMathInst)
+
+BEGIN_VALUE(FBinaryMathInst, Instruction)
+DEF_TAG(FAddInst, FBinaryMathInst)
+DEF_TAG(FSubtractInst, FBinaryMathInst)
+DEF_TAG(FMultiplyInst, FBinaryMathInst)
+DEF_TAG(FDivideInst, FBinaryMathInst)
+DEF_TAG(FModuloInst, FBinaryMathInst)
+END_VALUE(FBinaryMathInst)
+
+BEGIN_VALUE(FCompareInst, Instruction)
+DEF_TAG(FEqualInst, FCompareInst)
+DEF_TAG(FNotEqualInst, FCompareInst)
+DEF_TAG(FLessThanInst, FCompareInst)
+DEF_TAG(FLessThanOrEqualInst, FCompareInst)
+DEF_TAG(FGreaterThanInst, FCompareInst)
+DEF_TAG(FGreaterThanOrEqualInst, FCompareInst)
+END_VALUE(FCompareInst)
+
+DEF_VALUE(StringConcatInst, Instruction)
+DEF_VALUE(HBCStringConcatInst, Instruction)
+
+DEF_VALUE(UnionNarrowTrustedInst, Instruction)
+DEF_VALUE(CheckedTypeCastInst, Instruction)
+DEF_VALUE(LIRDeadValueInst, Instruction)
+
+DEF_VALUE(NativeCallInst, Instruction)
+DEF_VALUE(GetNativeRuntimeInst, Instruction)
+
+DEF_VALUE(LazyCompilationDataInst, Instruction)
+DEF_VALUE(EvalCompilationDataInst, Instruction)
 
 // Don't undef these if this file is being included in ValueKinds.def, since
 // these macros are still used after the #include.
@@ -165,5 +302,10 @@ DEF_VALUE(HBCProfilePointInst, Instruction)
 #undef DEF_VALUE
 #undef MARK_FIRST
 #undef MARK_LAST
-#undef TERMINATOR
 #endif
+#undef BEGIN_VALUE
+#undef END_VALUE
+#undef DEF_TAG
+#undef TERMINATOR
+#undef BEGIN_TERMINATOR
+#undef END_TERMINATOR

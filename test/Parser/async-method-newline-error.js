@@ -17,3 +17,4 @@ var o = {
 // CHECK:{{.*}}async-method-newline-error.js:12:3: error: newline not allowed after 'async' in a method definition
 // CHECK-NEXT:  foo() {}
 // CHECK-NEXT:  ^~~
+// CHECK-NEXT:Emitted 1 errors. exiting.

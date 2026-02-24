@@ -12,6 +12,7 @@
 
 import type {
   ArrowFunctionExpression,
+  BinaryExpression,
   BindingName,
   CallExpression,
   ESNode,
@@ -195,4 +196,23 @@ export function iife(
     ...etc(),
   };
   return callExpression(callee, args);
+}
+
+export function typeofExpression(
+  arg: Expression,
+  kind: string,
+): BinaryExpression {
+  return {
+    type: 'BinaryExpression',
+    left: {
+      type: 'UnaryExpression',
+      operator: 'typeof',
+      argument: arg,
+      prefix: true,
+      ...etc(),
+    },
+    right: stringLiteral(kind),
+    operator: '===',
+    ...etc(),
+  };
 }

@@ -6,6 +6,7 @@
  */
 
 // RUN: %hermes %s | %FileCheck --match-full-lines %s
+// RUN: %shermes -exec %s | %FileCheck --match-full-lines %s
 
 // Make sure the sort completes even with an inconsistent comparator.
 [1, 1, 1, 1, 1, 1, 1].sort(function(a, b) { 

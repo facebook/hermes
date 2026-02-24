@@ -10,13 +10,12 @@
 #include "gtest/gtest.h"
 
 #include "EmptyCell.h"
-#include "TestHelpers.h"
+#include "VMRuntimeTestHelpers.h"
 #include "hermes/Support/Compiler.h"
 #include "hermes/Support/OSCompat.h"
 #include "hermes/VM/AlignedHeapSegment.h"
 #include "hermes/VM/GC.h"
 #include "hermes/VM/LimitedStorageProvider.h"
-#include "hermes/VM/PointerBase.h"
 
 #include <deque>
 
@@ -28,22 +27,27 @@ struct GCLazySegmentNCTest : public ::testing::Test {};
 
 using GCLazySegmentNCDeathTest = GCLazySegmentNCTest;
 
-using SegmentCell = EmptyCell<AlignedHeapSegment::maxSize()>;
+using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
+constexpr size_t kSegmentCellStorageSize = FixedSizeHeapSegment::storageSize();
 
-constexpr size_t kHeapSizeHint = AlignedHeapSegment::maxSize() * 10;
+constexpr size_t kHeapSizeHint = FixedSizeHeapSegment::maxSize() * 10;
 const GCConfig kGCConfig = TestGCConfigFixedSize(kHeapSizeHint);
-constexpr size_t kHeapVA = AlignedStorage::size() * 10;
-constexpr size_t kHeapVALimited = kHeapVA / 2 + AlignedStorage::size() - 1;
+constexpr size_t kHeapVA = FixedSizeHeapSegment::storageSize() * 10;
+constexpr size_t kHeapVALimited =
+    kHeapVA / 2 + FixedSizeHeapSegment::storageSize() - 1;
 
 /// We are able to materialize every segment.
 TEST_F(GCLazySegmentNCTest, MaterializeAll) {
   auto runtime = DummyRuntime::create(kGCConfig);
   DummyRuntime &rt = *runtime;
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<SegmentCell> handles[100]; // Sufficient for typical test cases
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
-  auto N = kHeapSizeHint / SegmentCell::size();
+  auto N = kHeapSizeHint / kSegmentCellStorageSize;
   for (size_t i = 0; i < N; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[i] = SegmentCell::create(rt);
   }
 }
 
@@ -54,11 +58,14 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
       DummyRuntime::defaultProvider(), kHeapVALimited);
   auto runtime = DummyRuntime::create(kGCConfig, std::move(provider));
   DummyRuntime &rt = *runtime;
-  GCScope scope{rt};
+  struct : Locals {
+    PinnedValue<SegmentCell> handles[50]; // Sufficient for N/4 allocation
+  } lv;
+  DummyLocalsRAII lraii{rt, &lv};
 
   auto N = kHeapSizeHint / SegmentCell::size() / 4;
   for (size_t i = 0; i < N; ++i) {
-    rt.makeHandle(SegmentCell::create(rt));
+    lv.handles[i] = SegmentCell::create(rt);
   }
 }
 

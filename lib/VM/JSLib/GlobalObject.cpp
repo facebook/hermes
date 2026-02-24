@@ -10,6 +10,8 @@
 /// Initialize the global object ES5.1 15.1
 //===----------------------------------------------------------------------===//
 #include "hermes/Platform/Intl/PlatformIntl.h"
+#include "hermes/Support/FastStrToDouble.h"
+#include "hermes/VM/FastArray.h"
 #include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSDataView.h"
 #include "hermes/VM/JSLib.h"
@@ -27,7 +29,8 @@ namespace hermes {
 namespace vm {
 
 /// ES5.1 15.1.2.4
-CallResult<HermesValue> isNaN(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> isNaN(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -36,7 +39,8 @@ CallResult<HermesValue> isNaN(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// ES5.1 15.1.2.5
-CallResult<HermesValue> isFinite(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> isFinite(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto res = toNumber_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
@@ -46,7 +50,7 @@ CallResult<HermesValue> isFinite(void *, Runtime &runtime, NativeArgs args) {
 }
 
 /// Needed to construct Function.prototype.
-CallResult<HermesValue> emptyFunction(void *, Runtime &, NativeArgs) {
+CallResult<HermesValue> emptyFunction(void *, Runtime &runtime) {
   return HermesValue::encodeUndefinedValue();
 }
 
@@ -61,13 +65,18 @@ static bool isValidRadixChar(char16_t c, int radix) {
 }
 
 /// ES5.1 15.1.2.2 parseInt(string, radix)
-CallResult<HermesValue> parseInt(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> parseInt(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // toString(arg0).
   auto strRes = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(strRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  auto str = runtime.makeHandle(std::move(*strRes));
+  struct : public Locals {
+    PinnedValue<StringPrimitive> str;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.str = std::move(*strRes);
 
   int radix = 10;
   bool stripPrefix = true;
@@ -87,7 +96,7 @@ CallResult<HermesValue> parseInt(void *, Runtime &runtime, NativeArgs args) {
     }
   }
 
-  auto strView = StringPrimitive::createStringView(runtime, str);
+  auto strView = StringPrimitive::createStringView(runtime, lv.str);
   auto begin = strView.begin();
   auto end = strView.end();
 
@@ -128,7 +137,7 @@ CallResult<HermesValue> parseInt(void *, Runtime &runtime, NativeArgs args) {
     return HermesValue::encodeNaNValue();
   }
 
-  return HermesValue::encodeUntrustedNumberValue(
+  return HermesValue::encodeTrustedNumberValue(
       sign * parseIntWithRadix(strView.slice(begin, realEnd), radix));
 }
 
@@ -148,15 +157,20 @@ static bool isPrefix(StringView str1, StringView str2) {
 }
 
 /// ES5.1 15.1.2.3 parseFloat(string)
-CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
+CallResult<HermesValue> parseFloat(void *, Runtime &runtime) {
+  NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // toString(arg0).
   auto res = toString_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
 
-  auto strHandle = runtime.makeHandle(std::move(*res));
-  auto origStr = StringPrimitive::createStringView(runtime, strHandle);
+  struct : public Locals {
+    PinnedValue<StringPrimitive> strHandle;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.strHandle = std::move(*res);
+  auto origStr = StringPrimitive::createStringView(runtime, lv.strHandle);
 
   auto &idTable = runtime.getIdentifierTable();
 
@@ -177,21 +191,21 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::Infinity)),
           str16))) {
-    return HermesValue::encodeUntrustedNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::PositiveInfinity)),
           str16))) {
-    return HermesValue::encodeUntrustedNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
           idTable.getStringView(
               runtime, Predefined::getSymbolID(Predefined::NegativeInfinity)),
           str16))) {
-    return HermesValue::encodeUntrustedNumberValue(
+    return HermesValue::encodeTrustedNumberValue(
         -std::numeric_limits<double>::infinity());
   }
   if (LLVM_UNLIKELY(isPrefix(
@@ -219,34 +233,24 @@ CallResult<HermesValue> parseFloat(void *, Runtime &runtime, NativeArgs args) {
     // Empty string.
     return HermesValue::encodeNaNValue();
   }
-  // Use hermes_g_strtod to figure out the longest prefix that's still valid.
-  // hermes_g_strtod will try to convert the string to int for as long as it
-  // can, and set endPtr to the last location where the prefix so far is still
-  // a valid integer.
   len = i;
-  str8[len] = '\0';
-  char *endPtr;
-  ::hermes_g_strtod(str8.data(), &endPtr);
-  if (endPtr == str8.data()) {
-    // Empty string.
+  Char8StrToDoubleParseResult parseRes = fastStrToDouble(str8);
+  if (!parseRes) {
+    // Empty string or string containing no valid number prefix.
     return HermesValue::encodeNaNValue();
   }
-  // Now we know the prefix untill endPtr is a valid int.
-  *endPtr = '\0';
-  return HermesValue::encodeUntrustedNumberValue(
-      ::hermes_g_strtod(str8.data(), &endPtr));
+  return HermesValue::encodeTrustedNumberValue(parseRes.value);
 }
 
 /// Customized global function. gc() forces a GC collect.
-CallResult<HermesValue> gc(void *, Runtime &runtime, NativeArgs) {
+CallResult<HermesValue> gc(void *, Runtime &runtime) {
   runtime.collect("forced");
   return HermesValue::encodeUndefinedValue();
 }
 
-CallResult<HermesValue>
-throwTypeError(void *ctx, Runtime &runtime, NativeArgs) {
+CallResult<HermesValue> throwTypeError(void *ctx, Runtime &runtime) {
   static const char *TypeErrorMessage[] = {
-      "Restricted in strict mode",
+      "Restricted property cannot be accessed",
       "Dynamic requires are not allowed after static resolution",
   };
 
@@ -261,6 +265,14 @@ throwTypeError(void *ctx, Runtime &runtime, NativeArgs) {
 // "Libhermes.h".
 void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   GCScope gcScope{runtime, "initGlobalObject", 350};
+
+  struct : public Locals {
+    PinnedValue<JSObject> tempHandle;
+    PinnedValue<> value;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  // Initialize constant values
 
   // Not enumerable, not writable, not configurable.
   DefinePropertyFlags constantDPF =
@@ -290,8 +302,15 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       [&](SymbolID name, NativeFunctionPtr functionPtr, unsigned paramCount) {
         gcScope.clearAllHandles();
 
-        auto func = NativeFunction::createWithoutPrototype(
-            runtime, nullptr, functionPtr, name, paramCount);
+        auto func = NativeFunction::create(
+            runtime,
+            runtime.functionPrototype,
+            Runtime::makeNullHandle<Environment>(),
+            nullptr,
+            functionPtr,
+            name,
+            paramCount,
+            Runtime::makeNullHandle<JSObject>());
         runtime.ignoreAllocationFailure(
             JSObject::defineOwnProperty(
                 runtime.getGlobal(), runtime, name, normalDPF, func));
@@ -299,78 +318,70 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       };
 
   // 15.1.1.1 NaN.
+  lv.value = HermesValue::encodeNaNValue();
   runtime.ignoreAllocationFailure(
       JSObject::defineOwnProperty(
           runtime.getGlobal(),
           runtime,
           Predefined::getSymbolID(Predefined::NaN),
           constantDPF,
-          runtime.makeHandle(HermesValue::encodeNaNValue())));
+          lv.value));
 
   // 15.1.1.2 Infinity.
+  lv.value = HermesValue::encodeTrustedNumberValue(
+      std::numeric_limits<double>::infinity());
   runtime.ignoreAllocationFailure(
       JSObject::defineOwnProperty(
           runtime.getGlobal(),
           runtime,
           Predefined::getSymbolID(Predefined::Infinity),
           constantDPF,
-          runtime.makeHandle(
-              HermesValue::encodeUntrustedNumberValue(
-                  std::numeric_limits<double>::infinity()))));
+          lv.value));
 
   // 15.1.1.2 undefined.
+  lv.value = HermesValue::encodeUndefinedValue();
   runtime.ignoreAllocationFailure(
       JSObject::defineOwnProperty(
           runtime.getGlobal(),
           runtime,
           Predefined::getSymbolID(Predefined::undefined),
           constantDPF,
-          runtime.makeHandle(HermesValue::encodeUndefinedValue())));
+          lv.value));
 
-  // "Forward declaration" of Object.prototype. Its properties will be populated
-  // later.
-
-  runtime.objectPrototype =
-      JSObject::create(runtime, Runtime::makeNullHandle<JSObject>())
-          .getHermesValue();
-  runtime.objectPrototypeRawPtr = vmcast<JSObject>(runtime.objectPrototype);
+  // "Forward declaration" of Object.prototype is in the Runtime constructor,
+  // before the global object is allocated.
 
   // "Forward declaration" of Error.prototype. Its properties will be populated
   // later.
-  runtime.ErrorPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.ErrorPrototype = JSObject::create(runtime);
 
 // "Forward declaration" of the prototype for native error types. Their
 // properties will be populated later.
-#define NATIVE_ERROR_TYPE(name)                                       \
-  runtime.name##Prototype =                                           \
-      JSObject::create(                                               \
-          runtime, Handle<JSObject>::vmcast(&runtime.ErrorPrototype)) \
-          .getHermesValue();
+#define NATIVE_ERROR_TYPE(name) \
+  runtime.name##Prototype = JSObject::create(runtime, runtime.ErrorPrototype);
 #define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
-#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+#include "hermes/VM/NativeErrorTypes.def"
 
   // "Forward declaration" of the internal CallSite prototype. Its properties
   // will be populated later.
   runtime.callSitePrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.objectPrototype);
 
   // "Forward declaration" of Function.prototype. Its properties will be
   // populated later.
-  Handle<NativeFunction> funcRes = NativeFunction::create(
+  runtime.functionPrototype = NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.objectPrototype),
+      runtime.objectPrototype,
+      Runtime::makeNullHandle<Environment>(),
       nullptr,
       emptyFunction,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
       Runtime::makeNullHandle<JSObject>());
-  runtime.functionPrototype = funcRes.getHermesValue();
-  runtime.functionPrototypeRawPtr = funcRes.get();
+  runtime.functionPrototypeRawPtr = *runtime.functionPrototype;
   runtime.ignoreAllocationFailure(
       JSObject::defineOwnProperty(
-          Handle<JSObject>::vmcast(&runtime.functionPrototype),
+          runtime.functionPrototype,
           runtime,
           Predefined::getSymbolID(Predefined::length),
           configurableOnlyPDF,
@@ -379,8 +390,9 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   // [[ThrowTypeError]].
   auto throwTypeErrorFunction = NativeFunction::create(
       runtime,
-      Handle<JSObject>::vmcast(&runtime.functionPrototype),
-      (void *)TypeErrorKind::NonStrictOnly,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
+      (void *)TypeErrorKind::RestrictedProperty,
       throwTypeError,
       Predefined::getSymbolID(Predefined::emptyString),
       0,
@@ -396,267 +408,230 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
       runtime, throwTypeErrorFunction, throwTypeErrorFunction);
 
   // Define the 'parseInt' function.
-  runtime.parseIntFunction =
-      defineGlobalFunc(
-          Predefined::getSymbolID(Predefined::parseInt), parseInt, 2)
-          .getHermesValue();
+  runtime.parseIntFunction = defineGlobalFunc(
+      Predefined::getSymbolID(Predefined::parseInt), parseInt, 2);
 
   // Define the 'parseFloat' function.
-  runtime.parseFloatFunction =
-      defineGlobalFunc(
-          Predefined::getSymbolID(Predefined::parseFloat), parseFloat, 1)
-          .getHermesValue();
+  runtime.parseFloatFunction = defineGlobalFunc(
+      Predefined::getSymbolID(Predefined::parseFloat), parseFloat, 1);
 
   // "Forward declaration" of String.prototype. Its properties will be
   // populated later.
-  runtime.stringPrototype =
-      runtime
-          .ignoreAllocationFailure(
-              JSString::create(
-                  runtime,
-                  runtime.getPredefinedStringHandle(Predefined::emptyString),
-                  Handle<JSObject>::vmcast(&runtime.objectPrototype)))
-          .getHermesValue();
+  runtime.stringPrototype = runtime.ignoreAllocationFailure(
+      JSString::create(
+          runtime,
+          runtime.getPredefinedStringHandle(Predefined::emptyString),
+          runtime.objectPrototype));
 
   // "Forward declaration" of BigInt.prototype. Its properties will be
   // populated later.
-  runtime.bigintPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.bigintPrototype = JSObject::create(runtime);
 
   // "Forward declaration" of Number.prototype. Its properties will be
   // populated later.
   runtime.numberPrototype =
-      JSNumber::create(
-          runtime, +0.0, Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+      JSNumber::create(runtime, +0.0, runtime.objectPrototype);
 
   // "Forward declaration" of Boolean.prototype. Its properties will be
   // populated later.
   runtime.booleanPrototype =
-      JSBoolean::create(
-          runtime, false, Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+      JSBoolean::create(runtime, false, runtime.objectPrototype);
 
   // "Forward declaration" of Symbol.prototype. Its properties will be
   // populated later.
-  runtime.symbolPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.symbolPrototype = JSObject::create(runtime);
 
   // "Forward declaration" of Date.prototype. Its properties will be
   // populated later.
-  runtime.datePrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+  runtime.datePrototype = JSObject::create(runtime, runtime.objectPrototype);
 
   // "Forward declaration" of %IteratorPrototype%.
-  runtime.iteratorPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.iteratorPrototype = JSObject::create(runtime);
 
   // "Forward declaration" of Array.prototype. Its properties will be
   // populated later.
-  runtime.arrayPrototype =
-      runtime
-          .ignoreAllocationFailure(
-              JSArray::createNoAllocPropStorage(
-                  runtime,
-                  Handle<JSObject>::vmcast(&runtime.objectPrototype),
-                  JSArray::createClass(
-                      runtime,
-                      Handle<JSObject>::vmcast(&runtime.objectPrototype)),
-                  0,
-                  0))
-          .getHermesValue();
+  runtime.arrayPrototype = runtime.ignoreAllocationFailure(
+      JSArray::createNoAllocPropStorage(
+          runtime,
+          runtime.objectPrototype,
+          JSArray::createClass(runtime, runtime.objectPrototype),
+          0,
+          0));
 
   // Declare the array class.
-  runtime.arrayClass =
-      JSArray::createClass(
-          runtime, Handle<JSObject>::vmcast(&runtime.arrayPrototype))
-          .getHermesValue();
+  runtime.arrayClass = JSArray::createClass(runtime, runtime.arrayPrototype);
+
+  // TODO: Give FastArray its own prototype so methods like push will work.
+  runtime.fastArrayPrototype = *runtime.objectPrototype;
+
+  // Declare the fast array class.
+  runtime.fastArrayClass =
+      FastArray::createClass(runtime, runtime.fastArrayPrototype);
 
   // Declare the regexp match object class.
   runtime.regExpMatchClass =
-      JSRegExp::createMatchClass(
-          runtime, Handle<HiddenClass>::vmcast(&runtime.arrayClass))
-          .getHermesValue();
+      JSRegExp::createMatchClass(runtime, runtime.arrayClass);
 
   // "Forward declaration" of ArrayBuffer.prototype. Its properties will be
   // populated later.
   runtime.arrayBufferPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.objectPrototype);
 
   // "Forward declaration" of DataView.prototype. Its properties will be
   // populated later.
   runtime.dataViewPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.objectPrototype);
 
   // "Forward declaration" of TypedArrayBase.prototype. Its properties will be
   // populated later.
-  runtime.typedArrayBasePrototype = JSObject::create(runtime).getHermesValue();
+  runtime.typedArrayBasePrototype = JSObject::create(runtime);
 
 // Typed arrays
 // NOTE: a TypedArray's prototype is a normal object, not a TypedArray.
-#define TYPED_ARRAY(name, type)                                                \
-  runtime.name##ArrayPrototype =                                               \
-      JSObject::create(                                                        \
-          runtime, Handle<JSObject>::vmcast(&runtime.typedArrayBasePrototype)) \
-          .getHermesValue();
+#define TYPED_ARRAY(name, type)  \
+  runtime.name##ArrayPrototype = \
+      JSObject::create(runtime, runtime.typedArrayBasePrototype);
 #include "hermes/VM/TypedArrays.def"
 
   // "Forward declaration" of Set.prototype. Its properties will be
   // populated later.
-  runtime.setPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.setPrototype = JSObject::create(runtime);
 
-  runtime.setIteratorPrototype =
-      createSetIteratorPrototype(runtime).getHermesValue();
+  runtime.setIteratorPrototype.castAndSetHermesValue<JSObject>(
+      createSetIteratorPrototype(runtime));
 
   // "Forward declaration" of Map.prototype. Its properties will be
   // populated later.
-  runtime.mapPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.mapPrototype = JSObject::create(runtime);
 
-  runtime.mapIteratorPrototype =
-      createMapIteratorPrototype(runtime).getHermesValue();
+  runtime.mapIteratorPrototype.castAndSetHermesValue<JSObject>(
+      createMapIteratorPrototype(runtime));
 
   // "Forward declaration" of RegExp.prototype.
   // ES6: 21.2.5 "The RegExp prototype object is an ordinary object. It is not a
   // RegExp instance..."
-  runtime.regExpPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.objectPrototype))
-          .getHermesValue();
+  runtime.regExpPrototype = JSObject::create(runtime, runtime.objectPrototype);
 
   // "Forward declaration" of WeakMap.prototype.
-  runtime.weakMapPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.weakMapPrototype = JSObject::create(runtime);
 
   // "Forward declaration" of WeakSet.prototype.
-  runtime.weakSetPrototype = JSObject::create(runtime).getHermesValue();
+  runtime.weakSetPrototype = JSObject::create(runtime);
 
   // Only define WeakRef if microtasks are being used.
   if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {
     // "Forward declaration" of WeakRef.prototype.
-    runtime.weakRefPrototype = JSObject::create(runtime).getHermesValue();
+    runtime.weakRefPrototype = JSObject::create(runtime);
   }
 
   // "Forward declaration" of %ArrayIteratorPrototype%.
   runtime.arrayIteratorPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.iteratorPrototype);
 
   // "Forward declaration" of %StringIteratorPrototype%.
   runtime.stringIteratorPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.iteratorPrototype);
 
   // "Forward declaration" of %RegExpStringIteratorPrototype%.
   runtime.regExpStringIteratorPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.iteratorPrototype);
 
   // "Forward declaration" of "Generator prototype object"
   runtime.generatorPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.iteratorPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.iteratorPrototype);
 
   // "Forward declaration" of %GeneratorFunction.prototype%
   runtime.generatorFunctionPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.functionPrototype))
-          .getHermesValue();
+      JSObject::create(runtime, runtime.functionPrototype);
 
   // "Forward declaration" of %AsyncFunction.prototype%
   runtime.asyncFunctionPrototype =
-      JSObject::create(
-          runtime, Handle<JSObject>::vmcast(&runtime.functionPrototype))
-          .getHermesValue();
-
-  // "Forward declaration" of TextEncoder.prototype.
-  runtime.textEncoderPrototype = JSObject::create(runtime).getHermesValue();
+      JSObject::create(runtime, runtime.functionPrototype);
 
   // Object constructor.
-  runtime.objectConstructor = createObjectConstructor(runtime).getHermesValue();
+  runtime.objectConstructor.castAndSetHermesValue<NativeConstructor>(
+      createObjectConstructor(runtime));
 
-  // JSError constructor.
-  runtime.errorConstructor = createErrorConstructor(runtime).getHermesValue();
-
-// All Native Error constructors.
-#define NATIVE_ERROR_TYPE(name)                            \
-  runtime.name##Constructor =                              \
-      create##name##Constructor(runtime).getHermesValue(); \
+// All Error constructors.
+#define ALL_ERROR_TYPE(name)                                          \
+  runtime.name##Constructor.castAndSetHermesValue<NativeConstructor>( \
+      create##name##Constructor(runtime));                            \
   gcScope.clearAllHandles();
-#define AGGREGATE_ERROR_TYPE(name) NATIVE_ERROR_TYPE(name)
-#include "hermes/FrontEndDefs/NativeErrorTypes.def"
+#include "hermes/VM/NativeErrorTypes.def"
 
   // Populate the internal CallSite prototype.
   populateCallSitePrototype(runtime);
 
   // String constructor.
-  createStringConstructor(runtime);
+  runtime.stringConstructor.castAndSetHermesValue<NativeConstructor>(
+      createStringConstructor(runtime));
 
   // BigInt constructor.
   createBigIntConstructor(runtime);
 
   // Function constructor.
-  runtime.functionConstructor =
-      createFunctionConstructor(runtime).getHermesValue();
+  runtime.functionConstructor.castAndSetHermesValue<NativeConstructor>(
+      createFunctionConstructor(runtime));
 
   // Number constructor.
-  createNumberConstructor(runtime);
+  runtime.numberConstructor.castAndSetHermesValue<NativeConstructor>(
+      createNumberConstructor(runtime));
 
   // Boolean constructor.
-  createBooleanConstructor(runtime);
+  runtime.booleanConstructor.castAndSetHermesValue<NativeConstructor>(
+      createBooleanConstructor(runtime));
 
   // Date constructor.
-  createDateConstructor(runtime);
+  runtime.dateConstructor.castAndSetHermesValue<NativeConstructor>(
+      createDateConstructor(runtime));
 
   // RegExp constructor
-  createRegExpConstructor(runtime);
-  runtime.regExpLastInput = HermesValue::encodeUndefinedValue();
-  runtime.regExpLastRegExp = HermesValue::encodeUndefinedValue();
+  runtime.regExpConstructor.castAndSetHermesValue<NativeConstructor>(
+      createRegExpConstructor(runtime));
 
   // Array constructor.
-  createArrayConstructor(runtime);
+  runtime.arrayConstructor.castAndSetHermesValue<NativeConstructor>(
+      createArrayConstructor(runtime));
 
-  if (runtime.hasArrayBuffer()) {
-    // ArrayBuffer constructor.
-    createArrayBufferConstructor(runtime);
+  // ArrayBuffer constructor.
+  runtime.arrayBufferConstructor.castAndSetHermesValue<NativeConstructor>(
+      createArrayBufferConstructor(runtime));
 
-    // DataView constructor.
-    createDataViewConstructor(runtime);
+  // DataView constructor.
+  runtime.dataViewConstructor.castAndSetHermesValue<NativeConstructor>(
+      createDataViewConstructor(runtime));
 
-    // TypedArrayBase constructor.
-    runtime.typedArrayBaseConstructor =
-        createTypedArrayBaseConstructor(runtime).getHermesValue();
+  // TypedArrayBase constructor.
+  runtime.typedArrayBaseConstructor.castAndSetHermesValue<NativeConstructor>(
+      createTypedArrayBaseConstructor(runtime));
 
-#define TYPED_ARRAY(name, type)                                 \
-  runtime.name##ArrayConstructor =                              \
-      create##name##ArrayConstructor(runtime).getHermesValue(); \
+#define TYPED_ARRAY(name, type)                                            \
+  runtime.name##ArrayConstructor.castAndSetHermesValue<NativeConstructor>( \
+      create##name##ArrayConstructor(runtime));                            \
   gcScope.clearAllHandles();
 #include "hermes/VM/TypedArrays.def"
-  } else {
-    gcScope.clearAllHandles();
-  } // hasArrayBuffer
 
   // Set constructor.
-  createSetConstructor(runtime);
+  runtime.setConstructor.castAndSetHermesValue<NativeConstructor>(
+      createSetConstructor(runtime));
 
   // Map constructor.
-  createMapConstructor(runtime);
+  runtime.mapConstructor.castAndSetHermesValue<NativeConstructor>(
+      createMapConstructor(runtime));
 
   // WeakMap constructor.
-  createWeakMapConstructor(runtime);
+  runtime.weakMapConstructor.castAndSetHermesValue<NativeConstructor>(
+      createWeakMapConstructor(runtime));
 
   // WeakSet constructor.
-  createWeakSetConstructor(runtime);
+  runtime.weakSetConstructor.castAndSetHermesValue<NativeConstructor>(
+      createWeakSetConstructor(runtime));
 
   // Only define WeakRef constructor if microtasks are being used.
   if (LLVM_UNLIKELY(runtime.hasMicrotaskQueue())) {
     // WeakRef constructor.
-    createWeakRefConstructor(runtime);
+    runtime.weakRefConstructor.castAndSetHermesValue<NativeConstructor>(
+        createWeakRefConstructor(runtime));
   }
 
   // Symbol constructor.
@@ -675,13 +650,12 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   populateRegExpStringIteratorPrototype(runtime);
 
   // GeneratorFunction constructor (not directly exposed in the global object).
-  createGeneratorFunctionConstructor(runtime);
+  runtime.generatorFunctionConstructor.castAndSetHermesValue<NativeConstructor>(
+      createGeneratorFunctionConstructor(runtime));
 
   // AsyncFunction constructor (not directly exposed in the global object).
-  createAsyncFunctionConstructor(runtime);
-
-  // TextEncoder constructor.
-  createTextEncoderConstructor(runtime);
+  runtime.asyncFunctionConstructor.castAndSetHermesValue<NativeConstructor>(
+      createAsyncFunctionConstructor(runtime));
 
   // %GeneratorPrototype%.
   populateGeneratorPrototype(runtime);
@@ -692,42 +666,47 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
   }
 
   // Define the global Math object
+  lv.tempHandle.castAndSetHermesValue<JSObject>(createMathObject(runtime));
   runtime.ignoreAllocationFailure(
       JSObject::defineOwnProperty(
           runtime.getGlobal(),
           runtime,
           Predefined::getSymbolID(Predefined::Math),
           normalDPF,
-          createMathObject(runtime)));
+          lv.tempHandle));
 
   // Define the global JSON object
+  createJSONObject(runtime, lv.tempHandle);
   runtime.ignoreAllocationFailure(
       JSObject::defineOwnProperty(
           runtime.getGlobal(),
           runtime,
           Predefined::getSymbolID(Predefined::JSON),
           normalDPF,
-          createJSONObject(runtime)));
+          lv.tempHandle));
 
   if (LLVM_UNLIKELY(runtime.hasES6Proxy())) {
     // Define the global Reflect object
+    createReflectObject(runtime, lv.tempHandle);
     runtime.ignoreAllocationFailure(
         JSObject::defineOwnProperty(
             runtime.getGlobal(),
             runtime,
             Predefined::getSymbolID(Predefined::Reflect),
             normalDPF,
-            createReflectObject(runtime)));
+            lv.tempHandle));
   }
 
   // Define the global %HermesInternal object.
+  lv.tempHandle.castAndSetHermesValue<JSObject>(
+      createHermesInternalObject(runtime, jsLibFlags));
   runtime.ignoreAllocationFailure(
       JSObject::defineOwnProperty(
           runtime.getGlobal(),
           runtime,
           Predefined::getSymbolID(Predefined::HermesInternal),
           constantDPF,
-          createHermesInternalObject(runtime, jsLibFlags)));
+          lv.tempHandle));
 
 #ifdef HERMES_ENABLE_DEBUGGER
 
@@ -737,7 +716,7 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           runtime.getGlobal(),
           runtime,
           runtime.getIdentifierTable().registerLazyIdentifier(
-              createASCIIRef("DebuggerInternal")),
+              runtime, createASCIIRef("DebuggerInternal")),
           constantDPF,
           createDebuggerInternalObject(runtime)));
 
@@ -796,46 +775,42 @@ void initGlobalObject(Runtime &runtime, const JSLibFlags &jsLibFlags) {
           normalDPF,
           runtime.getGlobal()));
 
-  // Define the 'require' function.
-  runtime.requireFunction =
-      NativeFunction::create(
+  runtime.ignoreAllocationFailure(
+      JSObject::defineOwnProperty(
+          runtime.getGlobal(),
           runtime,
-          Handle<JSObject>::vmcast(&runtime.functionPrototype),
-          nullptr,
-          require,
-          Predefined::getSymbolID(Predefined::require),
-          1,
-          Runtime::makeNullHandle<JSObject>())
-          .getHermesValue();
+          Predefined::getSymbolID(Predefined::SHBuiltin),
+          constantDPF,
+          Runtime::getUndefinedValue()));
+
+  // Define the 'require' function.
+  runtime.requireFunction = NativeFunction::create(
+      runtime,
+      runtime.functionPrototype,
+      Runtime::makeNullHandle<Environment>(),
+      nullptr,
+      require,
+      Predefined::getSymbolID(Predefined::require),
+      1,
+      Runtime::makeNullHandle<JSObject>());
 
   if (jsLibFlags.enableHermesInternal) {
     // Define the 'gc' function.
     defineGlobalFunc(Predefined::getSymbolID(Predefined::gc), gc, 0);
   }
 
-#ifdef HERMES_ENABLE_IR_INSTRUMENTATION
-  // Define the global __instrument object
-  runtime.ignoreAllocationFailure(
-      JSObject::defineOwnProperty(
-          runtime.getGlobal(),
-          runtime,
-          runtime.getIdentifierTable().registerLazyIdentifier(
-              createASCIIRef("__instrument")),
-          normalDPF,
-          createInstrumentObject(runtime)));
-#endif
-
 #ifdef HERMES_ENABLE_INTL
   // Define the global Intl object
   // TODO T65916424: Consider how we can move this somewhere more modular.
   if (runtime.hasIntl()) {
+    lv.value = intl::createIntlObject(runtime);
     runtime.ignoreAllocationFailure(
         JSObject::defineOwnProperty(
             runtime.getGlobal(),
             runtime,
             Predefined::getSymbolID(Predefined::Intl),
             normalDPF,
-            intl::createIntlObject(runtime)));
+            lv.value));
   }
 #endif
 }

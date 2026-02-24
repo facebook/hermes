@@ -9,6 +9,7 @@
 #define HERMES_VM_IDENTIFIERTABLE_H
 
 #include "hermes/ADT/PtrOrInt.h"
+#include "hermes/ADT/TransparentConservativeVector.h"
 #include "hermes/Support/HashString.h"
 #include "hermes/VM/CallResult.h"
 #include "hermes/VM/GC.h"
@@ -23,11 +24,7 @@
 
 #include "llvh/ADT/BitVector.h"
 #include "llvh/ADT/DenseMap.h"
-#pragma GCC diagnostic push
 
-#ifdef HERMES_COMPILER_SUPPORTS_WSHORTEN_64_TO_32
-#pragma GCC diagnostic ignored "-Wshorten-64-to-32"
-#endif
 namespace hermes {
 namespace vm {
 
@@ -73,6 +70,7 @@ class StringView;
 class IdentifierTable {
   friend class detail::IdentifierHashTable;
   friend class HadesGC;
+  friend struct RuntimeOffsets;
 
  public:
   /// Initialize the identifier table.
@@ -115,13 +113,15 @@ class IdentifierTable {
   /// Register a lazy ASCII identifier from a bytecode module or as predefined
   /// identifier.
   /// This function should only be called during initialization of a module.
-  SymbolID registerLazyIdentifier(ASCIIRef str);
-  SymbolID registerLazyIdentifier(ASCIIRef str, uint32_t hash);
+  SymbolID registerLazyIdentifier(Runtime &runtime, ASCIIRef str);
+  SymbolID
+  registerLazyIdentifier(Runtime &runtime, ASCIIRef str, uint32_t hash);
 
   /// Register a lazy UTF16 identifier from a bytecode module or as predefined
   /// identifier.
-  SymbolID registerLazyIdentifier(UTF16Ref str);
-  SymbolID registerLazyIdentifier(UTF16Ref str, uint32_t hash);
+  SymbolID registerLazyIdentifier(Runtime &runtime, UTF16Ref str);
+  SymbolID
+  registerLazyIdentifier(Runtime &runtime, UTF16Ref str, uint32_t hash);
 
   /// \return the SymbolID of the string primitive \p str.
   CallResult<Handle<SymbolID>> getSymbolHandleFromPrimitive(
@@ -148,14 +148,13 @@ class IdentifierTable {
   void reserve(uint32_t count) {
     lookupVector_.reserve(count);
     hashTable_.reserve(count);
-    markedSymbols_.reserve(count);
   }
 
   /// \return an estimate of the size of additional memory used by this
   /// IdentifierTable.
   size_t additionalMemorySize() const {
     return lookupVector_.capacity() * sizeof(LookupEntry) +
-        hashTable_.additionalMemorySize() + markedSymbols_.getMemorySize();
+        hashTable_.additionalMemorySize();
   }
 
   /// Mark all identifiers for the garbage collector.
@@ -181,13 +180,10 @@ class IdentifierTable {
     return lookupVector_.size();
   }
 
-  /// Remove the mark bit from each symbol.
-  void unmarkSymbols();
-
-  /// Invoked at the end of a GC to free all unmarked symbols.
-  void freeUnmarkedSymbols(
-      const llvh::BitVector &markedSymbols,
-      GC::IDTracker &gc);
+  /// Invoked at the end of a GC to free all unmarked symbols. The function may
+  /// set additional bits in \p markedSymbols to reflect the fact that some
+  /// symbols were not freed.
+  void freeUnmarkedSymbols(llvh::BitVector &markedSymbols, GC::IDTracker &gc);
 
 #ifdef HERMES_SLOW_DEBUG
   /// \return true if the given symbol is a live entry in the identifier
@@ -234,6 +230,8 @@ class IdentifierTable {
   ///   Note that FREE_LIST_END is not a unique value, but it should only
   ///   be used when the union is nullptr, so that's not a problem.
   class LookupEntry {
+    friend struct RuntimeOffsets;
+
     static constexpr uint32_t LAZY_STRING_PRIM_TAG = (uint32_t)(1 << 30) - 1;
     static constexpr uint32_t NON_LAZY_STRING_PRIM_TAG =
         LAZY_STRING_PRIM_TAG - 1;
@@ -367,37 +365,10 @@ class IdentifierTable {
     }
   };
 
-  /// A vector that expands its capacity less aggressively.
-  template <typename T>
-  class ConservativeVector : private std::vector<T> {
-    using Base = std::vector<T>;
-
-   public:
-    using Base::Base;
-    using Base::capacity;
-    using Base::reserve;
-    using Base::size;
-    using Base::operator[];
-    using Base::begin;
-    using Base::end;
-    using Base::resize;
-
-    void emplace_back() {
-      auto cap = capacity();
-      if (size() == cap) {
-        reserve(cap + cap / 4);
-      }
-      Base::emplace_back();
-    }
-  };
-  /// Stores all the entries referenced from the hash table, plus free slots.
-  /// Use ConservativeVector, to waste less space in the common case where
-  /// the number of identifiers created dynamically is small compared to
+  /// Use TransparentConservativeVector, to waste less space in the common case
+  /// where the number of identifiers created dynamically is small compared to
   /// the number of identifiers initialized from the module.
-  ConservativeVector<LookupEntry> lookupVector_;
-
-  /// A bit vector representing if a symbol is new since the last collection.
-  llvh::BitVector markedSymbols_;
+  TransparentConservativeVector<LookupEntry> lookupVector_;
 
   /// The hash table.
   detail::IdentifierHashTable hashTable_{};
@@ -423,10 +394,6 @@ class IdentifierTable {
     return lookupVector_[id];
   }
 
-  /// Marks a symbol as being read, which will ensure it isn't garbage collected
-  /// if a GC is ongoing.
-  void symbolReadBarrier(uint32_t id);
-
   /// Create or lookup a SymbolID from a string \str. If \p primHandle is not
   /// null, it is assumed to be backing str.
   /// \param str Required. The string to to use.
@@ -440,22 +407,20 @@ class IdentifierTable {
       llvh::ArrayRef<T> str,
       Handle<StringPrimitive> primHandle,
       uint32_t hash);
-  template <typename T>
-  CallResult<SymbolID> getOrCreateIdentifier(
-      Runtime &runtime,
-      llvh::ArrayRef<T> str,
-      Handle<StringPrimitive> primHandle) {
-    return getOrCreateIdentifier(
-        runtime, str, primHandle, hermes::hashString(str));
-  }
 
   /// Internal implementation of registerLazyIdentifier().
   template <typename T>
-  SymbolID registerLazyIdentifierImpl(llvh::ArrayRef<T> str, uint32_t hash);
+  SymbolID registerLazyIdentifierImpl(
+      Runtime &runtime,
+      llvh::ArrayRef<T> str,
+      uint32_t hash);
 
   /// Allocate a new SymbolID, and set it to \p str. Update the hash table
   /// location \p hashTableIndex with the ID. \return the new ID.
-  uint32_t allocIDAndInsert(uint32_t hashTableIndex, StringPrimitive *str);
+  uint32_t allocIDAndInsert(
+      Runtime &runtime,
+      uint32_t hashTableIndex,
+      StringPrimitive *str);
 
   /// Free the symbol with the specified index \p index.
   /// The specified symbol must be a valid one (not previously freed).
@@ -487,6 +452,5 @@ class IdentifierTable {
 
 } // end namespace vm
 } // end namespace hermes
-#pragma GCC diagnostic pop
 
 #endif

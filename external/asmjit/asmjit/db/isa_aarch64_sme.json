@@ -1,0 +1,15 @@
+{
+  "instructions": [
+    {"category": "SME", "ext": "SME", "data": [
+      {"inst": "smstart {#sme_mode=1}"                                   , "op": "11010101|00|000011|0100|0|op:2|1|011|11111"            , "imm": "ImmSMEMode(sme_mode)"},
+      {"inst": "smstop {#sme_mode=1}"                                    , "op": "11010101|00|000011|0100|0|op:2|0|011|11111"            , "imm": "ImmSMEMode(sme_mode)"},
+
+      {"inst": "eorbt Zd.t, Zn.t, Zm.t"                                  , "op": "01000101|sz|0|Zm|100100|Zn|Zda"},
+      {"inst": "eortb Zd.t, Zn.t, Zm.t"                                  , "op": "01000101|sz|0|Zm|100101|Zn|Zda"},
+      {"inst": "TODO_psel Pd, Pn, Pm.t[Wv, #imm]"                        , "op": "00100101|sz|0110011100010|Pg|0|Pdn"},
+      {"inst": "revd Zd.Q, Pg/M, Zn.Q"                                   , "op": "00000101|00|101110100|Pg:3|Zn|Zd"},
+      {"inst": "sclamp Zd.t, Zn.t, Zm.t"                                 , "op": "01000100|sz|0|Zm|110000|Zn|Zda"},
+      {"inst": "uclamp Zd.t, Zn.t, Zm.t"                                 , "op": "01000100|sz|0|Zm|110001|Zn|Zda"}
+    ]}
+  ]
+}

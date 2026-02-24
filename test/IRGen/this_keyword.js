@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -hermes-parser -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
-// RUN: %hermes -hermes-parser -dump-ir %s -O
+// RUN: %hermesc -hermes-parser -dump-ir %s | %FileCheckOrRegen %s --match-full-lines
+// RUN: %hermesc -hermes-parser -dump-ir %s -O
 
 function f1() {
   return this;
@@ -19,28 +19,26 @@ function f2(){
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:function global#0()#1 : undefined
-// CHECK-NEXT:globals = [f1, f2]
-// CHECK-NEXT:S{global#0()#1} = []
+// CHECK:function global(): undefined
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{global#0()#1}
-// CHECK-NEXT:  %1 = CreateFunctionInst %f1#0#1()#2, %0
-// CHECK-NEXT:  %2 = StorePropertyInst %1 : closure, globalObject : object, "f1" : string
-// CHECK-NEXT:  %3 = CreateFunctionInst %f2#0#1()#3, %0
-// CHECK-NEXT:  %4 = StorePropertyInst %3 : closure, globalObject : object, "f2" : string
-// CHECK-NEXT:  %5 = ReturnInst undefined : undefined
+// CHECK-NEXT:       DeclareGlobalVarInst "f1": string
+// CHECK-NEXT:       DeclareGlobalVarInst "f2": string
+// CHECK-NEXT:  %2 = CreateFunctionInst (:object) empty: any, empty: any, %f1(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %2: object, globalObject: object, "f1": string
+// CHECK-NEXT:  %4 = CreateFunctionInst (:object) empty: any, empty: any, %f2(): functionCode
+// CHECK-NEXT:       StorePropertyLooseInst %4: object, globalObject: object, "f2": string
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
-// CHECK:function f1#0#1()#2
-// CHECK-NEXT:S{f1#0#1()#2} = []
+// CHECK:function f1(): object
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f1#0#1()#2}
-// CHECK-NEXT:  %1 = ReturnInst %this
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %1 = CoerceThisNSInst (:object) %0: any
+// CHECK-NEXT:       ReturnInst %1: object
 // CHECK-NEXT:function_end
 
-// CHECK:function f2#0#1()#3
-// CHECK-NEXT:S{f2#0#1()#3} = []
+// CHECK:function f2(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = CreateScopeInst %S{f2#0#1()#3}
-// CHECK-NEXT:  %1 = ReturnInst %this
+// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:       ReturnInst %0: any
 // CHECK-NEXT:function_end

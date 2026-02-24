@@ -6,6 +6,7 @@
  */
 
 // RUN: TZ="MST+7" %hermes -O %s | %FileCheck --match-full-lines %s
+// RUN: TZ="MST+7" %shermes -exec %s | %FileCheck --match-full-lines %s
 "use strict";
 
 // Tests are being run under Mountain Standard Time, with DST disabled (TZ var).

@@ -63,6 +63,10 @@ const options = {
   "file-version": { type: "string", default: "0.0.0.0" },
   "windows-sdk-version": { type: "string", default: "" },
   "fake-build": { type: "boolean", default: false },
+  "external-icu": { type: "boolean", default: false },
+  "test262-intl": { type: "boolean", default: false },
+  "intl-provider": { type: "string", default: "" },
+  binskim: { type: "boolean", default: false },
 };
 
 // To access parsed args values, use args.<option-name>.
@@ -137,6 +141,16 @@ Options:
     options["fake-build"].default
   })
                           [Note: This skips actual building and cannot be used to test builds]
+  --external-icu          Download unicode.org ICU DLLs for external ICU testing (default: ${
+    options["external-icu"].default
+  })
+  --test262-intl          Run Test262 intl402 conformance tests via hermes_rt (default: ${
+    options["test262-intl"].default
+  })
+  --intl-provider         Intl provider for --test262-intl: default|winglob|system-icu|host-vtable
+  --binskim               Run BinSkim security validation on shipped binaries (default: ${
+    options.binskim.default
+  })
 
 Examples:
   node ${scriptRelativePath} --configure --no-build        # Configure only, don't build
@@ -172,6 +186,19 @@ for (const [key, value] of Object.entries(args)) {
 // Get the path to vcvarsall.bat.
 // It is used to invoke CMake commands in the targeted MSVC context.
 const vcVarsAllBat = getVCVarsAllBat();
+
+// External ICU download constants (must be before main() for ES module TDZ).
+const externalIcuBaseUrl =
+  "https://github.com/unicode-org/icu/releases/download/release-78.2";
+const externalIcuVersion = 78;
+
+// BinSkim security validation constants.
+// The CI pipeline uses the internal package (Microsoft.CodeAnalysis.BinSkim.Internal)
+// from a private ADO feed. For local builds we use the public nuget.org package
+// which contains the same analysis engine.
+const binskimPackageName = "Microsoft.CodeAnalysis.BinSkim";
+const binskimVersion = "4.4.9";
+const binskimNuGetSource = "https://api.nuget.org/v3/index.json";
 
 main();
 
@@ -211,6 +238,10 @@ function main() {
   console.log(`         file-version: ${args["file-version"]}`);
   console.log(`  windows-sdk-version: ${args["windows-sdk-version"]}`);
   console.log(`           fake-build: ${args["fake-build"]}`);
+  console.log(`         external-icu: ${args["external-icu"]}`);
+  console.log(`         test262-intl: ${args["test262-intl"]}`);
+  console.log(`        intl-provider: ${args["intl-provider"]}`);
+  console.log(`              binskim: ${args.binskim}`);
   console.log();
 
   removeUnusedFilesForComponentGovernance();
@@ -269,6 +300,11 @@ function main() {
       if (args["clean-build"]) {
         cleanBuild(buildParams);
       }
+      // Download external ICU DLLs if requested (before configure).
+      if (args["external-icu"]) {
+        buildParams.externalIcuDir = downloadExternalIcu(buildParams);
+        buildParams.externalIcuVersion = externalIcuVersion;
+      }
       if (args.configure) {
         cmakeConfigure(buildParams);
       }
@@ -280,6 +316,12 @@ function main() {
       }
       if (args.jstest) {
         cmakeJSTest(buildParams);
+      }
+      if (args["test262-intl"]) {
+        runTest262Intl(buildParams);
+      }
+      if (args.binskim) {
+        runBinSkim(buildParams);
       }
     });
   });
@@ -425,6 +467,23 @@ function cmakeConfigure(buildParams) {
     if (targetTriple) {
       genArgs.push(`-DCMAKE_C_FLAGS="-target ${targetTriple}"`);
       genArgs.push(`-DCMAKE_CXX_FLAGS="-target ${targetTriple}"`);
+      genArgs.push(`-DCMAKE_ASM_FLAGS="-target ${targetTriple}"`);
+    }
+  }
+
+  // For ARM64/ARM64EC cross-compilation, CMAKE_SYSTEM_PROCESSOR must be set
+  // so that Boost.Context selects ARM64 assembly files instead of defaulting
+  // to x86_64 based on the host processor (AMD64). This applies to both
+  // Clang and MSVC builds.
+  if (platform === "arm64" || platform === "arm64ec") {
+    genArgs.push("-DCMAKE_SYSTEM_PROCESSOR=ARM64");
+
+    // MSVC ARM64 assembler is called armasm64, not armasm (which is ARM32).
+    // CMake's ASM_ARMASM language detection looks for armasm by default,
+    // so we must point it to the correct executable.
+    // ARM64EC uses Windows Fibers (winfib) so no assembler is needed.
+    if (msvc && platform === "arm64") {
+      genArgs.push("-DCMAKE_ASM_MARMASM_COMPILER=armasm64");
     }
   }
 
@@ -456,6 +515,41 @@ function cmakeConfigure(buildParams) {
     }`,
   );
 
+  // Static Hermes (shermes) invokes an external C compiler at runtime to
+  // compile generated C code. The default is "cc" which doesn't exist on
+  // Windows. Use "clang" since the generated code uses GCC-style flags.
+  genArgs.push('-DSHERMES_CC=clang');
+
+  // When cross-compiling (e.g. x86 on x64 host), shermes must also target the
+  // correct architecture when invoking clang at runtime. The main build gets
+  // this via CMAKE_C_FLAGS, but shermes uses its own SHERMES_CC_SYSCFLAGS.
+  // This applies regardless of the main compiler (Clang or MSVC) because
+  // shermes always invokes clang to compile generated C code.
+  if (platform !== hostCpuArch) {
+    let shermesTarget = "";
+    if (platform === "x86") {
+      shermesTarget = "i686-pc-windows-msvc";
+    } else if (platform === "arm64") {
+      shermesTarget = "aarch64-pc-windows-msvc";
+    }
+    if (shermesTarget) {
+      genArgs.push(`-DSHERMES_CC_SYSCFLAGS="-target ${shermesTarget}"`);
+    }
+  }
+
+  // Pass external ICU path for testing if available, or clear cache value.
+  if (buildParams.externalIcuDir) {
+    genArgs.push(
+      `-DHERMES_EXTERNAL_ICU_DIR="${buildParams.externalIcuDir}"`,
+    );
+    genArgs.push(
+      `-DHERMES_EXTERNAL_ICU_VERSION=${buildParams.externalIcuVersion}`,
+    );
+  } else {
+    genArgs.push(`-DHERMES_EXTERNAL_ICU_DIR=""`);
+    genArgs.push(`-DHERMES_EXTERNAL_ICU_VERSION=""`);
+  }
+
   runCMakeCommand(`cmake ${genArgs.join(" ")} "${sourcesPath}"`, buildParams);
 }
 
@@ -486,6 +580,30 @@ function cmakeTest(buildParams) {
   }
 
   runCMakeCommand("ctest --output-on-failure", buildParams);
+}
+
+// Run Test262 intl402 conformance tests via hermes_rt
+function runTest262Intl(buildParams) {
+  setupJSTestEnvPaths();
+
+  const test262Dir = path.join(sourcesPath, "external", "test262");
+  const binDir = path.join(buildParams.buildPath, "bin");
+  const intlTestDir = path.join(test262Dir, "test", "intl402");
+  const testRunner = path.join(sourcesPath, "utils", "test_runner.py");
+
+  // The Python test runner's Suite.create() detects test suites by looking
+  // for "test262/" (forward slash) in file paths. On Windows, path.join()
+  // produces backslashes, so we must use forward slashes in the paths.
+  const fwd = (p) => p.replace(/\\/g, "/");
+
+  const provider = args["intl-provider"];
+  const providerFlag = provider ? ` --intl-provider ${provider}` : "";
+
+  console.log(`Running Test262 intl402 tests from ${intlTestDir}...`);
+  console.log(`Using hermes_rt from ${binDir}${provider ? `, provider: ${provider}` : ""}`);
+
+  const cmd = `python "${fwd(testRunner)}" --hermes-rt${providerFlag} -b "${fwd(binDir)}" "${fwd(intlTestDir)}"`;
+  execSync(cmd, { stdio: "inherit" });
 }
 
 // Run JS tests via check-hermes target using buildParams
@@ -534,7 +652,7 @@ function runCMakeCommand(command, buildParams) {
   try {
     const vsCommand =
       `"${vcVarsAllBat}" ${getVCVarsAllBatArgs(buildParams)}` +
-      ` && ${command} 2>&1`;
+      ` && ${command}`;
     console.log(`Run command: ${vsCommand}`);
     execSync(vsCommand, { stdio: "inherit", env });
   } catch (error) {
@@ -554,11 +672,14 @@ function isCrossPlatformBuild({ isUwp, hostCpuArch, platform }) {
   // Return true if we either build for UWP or the host architecture does
   // not match the target architecture.
   // x86 can run natively on x64 machines, so it's not considered cross-platform.
+  // ARM64EC runs natively on ARM64, so it's not cross-platform on ARM64 hosts.
   // In true cross-platform cases we must build host specific tools and cannot run unit tests.
   return (
     isUwp ||
     (hostCpuArch === "x64" && platform.startsWith("arm64")) ||
-    (hostCpuArch === "arm64" && platform !== "arm64")
+    (hostCpuArch === "arm64" &&
+      platform !== "arm64" &&
+      platform !== "arm64ec")
   );
 }
 
@@ -575,6 +696,11 @@ function copyBuiltFilesToPkgStaging(buildParams) {
   copyFile("hermes.dll", dllSourcePath, dllStagingPath, copyFileIsOptional);
   copyFile("hermes.lib", dllSourcePath, dllStagingPath, copyFileIsOptional);
   copyFile("hermes.pdb", dllSourcePath, dllStagingPath, copyFileIsOptional);
+
+  // Bundled ICU DLL (optional - only present when HERMES_ENABLE_BUNDLED_ICU=ON)
+  const icuSourcePath = path.join(buildPath, "external", "icu-small");
+  copyFile("hermes-icu.dll", icuSourcePath, dllStagingPath, /*optional=*/true);
+  copyFile("hermes-icu.pdb", icuSourcePath, dllStagingPath, /*optional=*/true);
 
   if (!isCrossPlatformBuild(buildParams)) {
     const toolsSourcePath = path.join(buildPath, "bin");
@@ -599,6 +725,8 @@ function copyFakeFilesToPkgStaging(buildParams) {
   createFakeBinFile(dllStagingPath, "hermes.dll");
   createFakeBinFile(dllStagingPath, "hermes.lib");
   createFakeBinFile(dllStagingPath, "hermes.pdb");
+  createFakeBinFile(dllStagingPath, "hermes-icu.dll");
+  createFakeBinFile(dllStagingPath, "hermes-icu.pdb");
 
   if (!isCrossPlatformBuild(buildParams)) {
     createFakeBinFile(toolsStagingPath, "hermes.exe");
@@ -694,6 +822,12 @@ function packNuGet(runParams) {
   ensureDir(stagingHermesApiPath);
   copyFile("js_runtime_api.h", hermesSharedApiPath, stagingHermesApiPath);
   copyFile("hermes_api.h", hermesSharedApiPath, stagingHermesApiPath);
+
+  // Copy ICU vtable header (for host-provided ICU configuration)
+  const hermesIcuHeaderPath = path.join(
+    sourcesPath, "include", "hermes", "Platform", "Intl"
+  );
+  copyFile("hermes_icu.h", hermesIcuHeaderPath, stagingHermesApiPath);
 
   // Copy license files
   const nugetSourcePath = path.join(sourcesPath, ".ado", "Nuget");
@@ -818,6 +952,7 @@ function getVCVarsAllBatArgs(buildParams) {
         vcArgs += " arm64_amd64";
         break;
       case "arm64":
+      case "arm64ec":
       default:
         vcArgs += " arm64";
         break;
@@ -846,6 +981,214 @@ function ensureDir(dirPath) {
 function deleteDir(dirPath) {
   if (fs.existsSync(dirPath)) {
     fs.rmSync(dirPath, { recursive: true, force: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// External ICU download (unicode.org releases)
+// ---------------------------------------------------------------------------
+
+function getExternalIcuZipName(platform) {
+  switch (platform) {
+    case "x64":
+      return "icu4c-78.2-Win64-MSVC2022.zip";
+    case "x86":
+      return "icu4c-78.2-Win32-MSVC2022.zip";
+    case "arm64":
+    case "arm64ec":
+      return "icu4c-78.2-WinARM64-MSVC2022.zip";
+    default:
+      throw new Error(`Unsupported platform for external ICU: ${platform}`);
+  }
+}
+
+function getExternalIcuBinDir(platform) {
+  switch (platform) {
+    case "x64":
+      return "bin64";
+    case "x86":
+      return "bin";
+    case "arm64":
+    case "arm64ec":
+      return "binARM64";
+    default:
+      throw new Error(`Unsupported platform for external ICU: ${platform}`);
+  }
+}
+
+function downloadExternalIcu(buildParams) {
+  const { buildPath, platform } = buildParams;
+  const extractDir = path.join(buildPath, "external-icu");
+  const binDir = path.join(extractDir, getExternalIcuBinDir(platform));
+
+  // Skip if already extracted.
+  if (fs.existsSync(binDir)) {
+    console.log(`External ICU already present at: ${binDir}`);
+    return binDir;
+  }
+
+  const zipName = getExternalIcuZipName(platform);
+  const url = `${externalIcuBaseUrl}/${zipName}`;
+  const zipPath = path.join(extractDir, zipName);
+
+  ensureDir(extractDir);
+
+  console.log(`Downloading external ICU: ${url}`);
+  execSync(
+    `powershell.exe -NoLogo -NoProfile -Command ` +
+      `"[Net.ServicePointManager]::SecurityProtocol = ` +
+      `[Net.SecurityProtocolType]::Tls12; ` +
+      `Invoke-WebRequest -Uri '${url}' -OutFile '${zipPath}' ` +
+      `-UseBasicParsing"`,
+    { stdio: "inherit" },
+  );
+
+  console.log(`Extracting external ICU to: ${extractDir}`);
+  execSync(
+    `powershell.exe -NoLogo -NoProfile -Command ` +
+      `"Expand-Archive -Path '${zipPath}' ` +
+      `-DestinationPath '${extractDir}' -Force"`,
+    { stdio: "inherit" },
+  );
+
+  // Clean up zip file.
+  if (fs.existsSync(zipPath)) {
+    fs.unlinkSync(zipPath);
+  }
+
+  if (!fs.existsSync(binDir)) {
+    throw new Error(`External ICU bin directory not found: ${binDir}`);
+  }
+
+  console.log(`External ICU ready at: ${binDir}`);
+  return binDir;
+}
+
+// ---------------------------------------------------------------------------
+// BinSkim security validation
+// ---------------------------------------------------------------------------
+
+function ensureNuGet(toolsPath) {
+  // Check if nuget.exe is already in the tools directory.
+  const localNuGet = path.join(toolsPath, "nuget.exe");
+  if (fs.existsSync(localNuGet)) {
+    return localNuGet;
+  }
+
+  // Check if nuget.exe is in PATH.
+  try {
+    const result = execSync("where nuget.exe", { encoding: "utf8" }).trim();
+    if (result) {
+      const firstLine = result.split(/\r?\n/)[0];
+      console.log(`Found nuget.exe in PATH: ${firstLine}`);
+      return firstLine;
+    }
+  } catch {
+    // Not in PATH, download it.
+  }
+
+  // Download nuget.exe from the official distribution.
+  ensureDir(toolsPath);
+  console.log(`Downloading nuget.exe to: ${localNuGet}`);
+  execSync(
+    `powershell.exe -NoLogo -NoProfile -Command ` +
+      `"[Net.ServicePointManager]::SecurityProtocol = ` +
+      `[Net.SecurityProtocolType]::Tls12; ` +
+      `Invoke-WebRequest -Uri 'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe' ` +
+      `-OutFile '${localNuGet}' -UseBasicParsing"`,
+    { stdio: "inherit" },
+  );
+
+  if (!fs.existsSync(localNuGet)) {
+    throw new Error("Failed to download nuget.exe");
+  }
+  return localNuGet;
+}
+
+function runBinSkim(buildParams) {
+  const { buildPath, toolsPath } = buildParams;
+
+  // Determine BinSkim.exe path within the NuGet package.
+  const binskimDir = path.join(toolsPath, "binskim");
+  const binskimPkgDir = path.join(
+    binskimDir,
+    `${binskimPackageName}.${binskimVersion}`,
+  );
+
+  // Find BinSkim.exe under the package tools directory. The runtime folder
+  // name varies by package version (e.g. netcoreapp3.1, net9.0).
+  function findBinskimExe() {
+    const toolsDir = path.join(binskimPkgDir, "tools");
+    if (!fs.existsSync(toolsDir)) return null;
+    for (const runtime of fs.readdirSync(toolsDir)) {
+      const candidate = path.join(toolsDir, runtime, "win-x64", "BinSkim.exe");
+      if (fs.existsSync(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  let binskimExe = findBinskimExe();
+
+  // Install BinSkim NuGet package if not already present.
+  if (!binskimExe) {
+    ensureDir(binskimDir);
+    const nuget = ensureNuGet(toolsPath);
+    console.log(
+      `Installing ${binskimPackageName} ${binskimVersion} from ${binskimNuGetSource}...`,
+    );
+    execSync(
+      `"${nuget}" install ${binskimPackageName}` +
+        ` -Version ${binskimVersion}` +
+        ` -Source "${binskimNuGetSource}"` +
+        ` -OutputDirectory "${binskimDir}"`,
+      { stdio: "inherit" },
+    );
+    binskimExe = findBinskimExe();
+    if (!binskimExe) {
+      throw new Error(
+        `BinSkim.exe not found after install in: ${binskimPkgDir}`,
+      );
+    }
+  }
+
+  // Collect shipped binaries to scan.
+  const candidates = [
+    path.join(buildPath, "API", "hermes_shared", "hermes.dll"),
+    path.join(buildPath, "external", "icu-small", "hermes-icu.dll"),
+    path.join(buildPath, "bin", "hermes.exe"),
+    path.join(buildPath, "bin", "hermesc.exe"),
+  ];
+  const binaries = candidates.filter((f) => fs.existsSync(f));
+
+  if (binaries.length === 0) {
+    console.warn("BinSkim: No binaries found to scan. Skipping.");
+    return;
+  }
+
+  console.log(`\nRunning BinSkim ${binskimVersion} on ${binaries.length} binaries:`);
+  for (const b of binaries) {
+    console.log(`  ${path.basename(b)}`);
+  }
+
+  const fileArgs = binaries.map((b) => `"${b}"`).join(" ");
+  try {
+    execSync(
+      `"${binskimExe}" analyze` +
+        ` --config default` +
+        ` --ignorePdbLoadError` +
+        ` --ignorePELoadErrors True` +
+        ` --hashes` +
+        ` --statistics` +
+        ` --disable-telemetry True` +
+        ` ${fileArgs}`,
+      { stdio: "inherit" },
+    );
+    console.log("\nBinSkim: All rules passed.");
+  } catch (error) {
+    console.error(
+      `\nBinSkim failed with exit code: ${error.status || "unknown"}`,
+    );
+    process.exit(error.status || 1);
   }
 }
 

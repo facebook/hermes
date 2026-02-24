@@ -7,8 +7,10 @@
 
 #include "hermes/BCGen/HBC/BytecodeDisassembler.h"
 
+#include "BytecodeGenerator.h"
+#include "hermes/BCGen/FunctionInfo.h"
 #include "hermes/BCGen/HBC/Bytecode.h"
-#include "hermes/BCGen/HBC/SerializedLiteralGenerator.h"
+#include "hermes/BCGen/SerializedLiteralGenerator.h"
 #include "hermes/FrontEndDefs/Builtins.h"
 #include "hermes/Regex/RegexSerialization.h"
 #include "hermes/Support/JenkinsHash.h"
@@ -24,7 +26,7 @@
 #include "llvh/Support/raw_ostream.h"
 
 using namespace hermes::inst;
-using SLG = hermes::hbc::SerializedLiteralGenerator;
+using SLG = hermes::SerializedLiteralGenerator;
 
 namespace hermes {
 namespace hbc {
@@ -65,11 +67,11 @@ static void dumpFunctionName(
     unsigned funcId,
     const RuntimeFunctionHeader &functionHeader,
     DisassemblyOptions options) {
-  switch (functionHeader.flags().prohibitInvoke) {
-    case FunctionHeaderFlag::ProhibitCall:
+  switch (functionHeader.getFlags().getProhibitInvoke()) {
+    case ProhibitInvoke::Call:
       OS << "Constructor";
       break;
-    case FunctionHeaderFlag::ProhibitConstruct:
+    case ProhibitInvoke::Construct:
       OS << "NCFunction";
       break;
     default:
@@ -78,7 +80,7 @@ static void dumpFunctionName(
   }
 
   auto functionName =
-      bcProvider.getStringRefFromID(functionHeader.functionName());
+      bcProvider.getStringRefFromID(functionHeader.getFunctionName());
   OS << "<" << functionName << ">";
   if ((options & DisassemblyOptions::IncludeFunctionIds) ==
       DisassemblyOptions::IncludeFunctionIds) {
@@ -105,41 +107,58 @@ std::pair<int, SLG::TagType> checkBufferTag(const unsigned char *buff) {
 
 namespace {
 
+/// \return the size of the data indicated by the given tag.
+size_t dataSizeForTag(SLG::TagType tag) {
+  switch (tag) {
+    case SLG::ShortStringTag:
+      return 2;
+    case SLG::LongStringTag:
+      return 4;
+    case SLG::NumberTag:
+      return 8;
+    case SLG::IntegerTag:
+      return 4;
+    case SLG::NullTag:
+    case SLG::UndefinedTag:
+    case SLG::TrueTag:
+    case SLG::FalseTag:
+    default:
+      return 0;
+  }
+}
+
 std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
   std::string rBracket{"]"};
+  size_t numBytes = dataSizeForTag(tag);
   switch (tag) {
-    case SLG::ByteStringTag: {
-      uint8_t val = llvh::support::endian::read<uint8_t, 1>(
-          buff + *ind, llvh::support::endianness::little);
-      *ind += 1;
-      return std::string("[String ") + std::to_string(val) + rBracket;
-    }
     case SLG::ShortStringTag: {
       uint16_t val = llvh::support::endian::read<uint16_t, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 2;
+      *ind += numBytes;
       return std::string("[String ") + std::to_string(val) + rBracket;
     }
     case SLG::LongStringTag: {
       uint32_t val = llvh::support::endian::read<uint32_t, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 4;
+      *ind += numBytes;
       return std::string("[String ") + std::to_string(val) + rBracket;
     }
     case SLG::NumberTag: {
       double val = llvh::support::endian::read<double, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 8;
+      *ind += numBytes;
       return std::string("[double ") + std::to_string(val) + rBracket;
     }
     case SLG::IntegerTag: {
       uint32_t val = llvh::support::endian::read<uint32_t, 1>(
           buff + *ind, llvh::support::endianness::little);
-      *ind += 4;
+      *ind += numBytes;
       return std::string("[int ") + std::to_string(val) + rBracket;
     }
     case SLG::NullTag:
       return "null";
+    case SLG::UndefinedTag:
+      return "undefined";
     case SLG::TrueTag:
       return "true";
     case SLG::FalseTag:
@@ -174,6 +193,14 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  String Kind Entry count: " << bcProvider_->getStringKinds().size()
      << "\n";
   OS << "  RegExp count: " << bcProvider_->getRegExpTable().size() << "\n";
+  OS << "  StringSwitchImm count: "
+     << bcProvider_->getNumStringSwitchImmInstrs() << "\n";
+  OS << "  Key buffer size (bytes): "
+     << bcProvider_->getObjectKeyBuffer().size() << "\n";
+  OS << "  Value buffer size (bytes): "
+     << bcProvider_->getLiteralValueBuffer().size() << "\n";
+  OS << "  Shape table count: " << bcProvider_->getObjectShapeTable().size()
+     << "\n";
   OS << "  Segment ID: " << bcProvider_->getSegmentID() << "\n";
   OS << "  CommonJS module count: " << bcProvider_->getCJSModuleTable().size()
      << "\n";
@@ -182,9 +209,9 @@ void BytecodeDisassembler::disassembleBytecodeFileHeader(raw_ostream &OS) {
   OS << "  Function source count: "
      << bcProvider_->getFunctionSourceTable().size() << "\n";
   OS << "  Bytecode options:\n";
-  OS << "    staticBuiltins: " << bcopts.staticBuiltins << "\n";
+  OS << "    staticBuiltins: " << bcopts.getStaticBuiltins() << "\n";
   OS << "    cjsModulesStaticallyResolved: "
-     << bcopts.cjsModulesStaticallyResolved << "\n";
+     << bcopts.getCjsModulesStaticallyResolved() << "\n";
   OS << "\n";
 }
 
@@ -254,53 +281,66 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
 }
 
 /// NOTE: The output might not show the value of every literal used
-/// by NewArrayWithBuffer (explained in serializeBuffer's header).
-void BytecodeDisassembler::disassembleArrayBuffer(raw_ostream &OS) {
-  auto arrayBuffer = bcProvider_->getArrayBuffer();
-  if (arrayBuffer.size() == 0)
+/// by array/objects (explained in serializeBuffer's header).
+void BytecodeDisassembler::disassembleLiteralValueBuffer(raw_ostream &OS) {
+  auto literalValueBuffer = bcProvider_->getLiteralValueBuffer();
+  if (literalValueBuffer.size() == 0)
     return;
 
-  OS << "Array Buffer:\n";
+  OS << "Literal Value Buffer:\n";
   int ind = 0;
-  while ((size_t)ind < arrayBuffer.size()) {
-    std::pair<int, SLG::TagType> tag = checkBufferTag(arrayBuffer.data() + ind);
+  while ((size_t)ind < literalValueBuffer.size()) {
+    std::pair<int, SLG::TagType> tag =
+        checkBufferTag(literalValueBuffer.data() + ind);
     ind += (tag.first > 0x0f ? 2 : 1);
-    for (int i = 0; i < tag.first; i++) {
-      OS << SLPToString(tag.second, arrayBuffer.data(), &ind) << "\n";
+    // Before reading from the buffer make sure there's enough data left,
+    // to avoid an overflowing read.
+    for (int i = 0; i < tag.first &&
+         (size_t)ind + dataSizeForTag(tag.second) <= literalValueBuffer.size();
+         i++) {
+      OS << SLPToString(tag.second, literalValueBuffer.data(), &ind) << "\n";
     }
   }
+  OS << "\n";
 }
 
 /// NOTE: The output might not show the value of every literal used
 /// by NewObjectWithBuffer (explained in serializeBuffer's header).
-void BytecodeDisassembler::disassembleObjectBuffer(raw_ostream &OS) {
+void BytecodeDisassembler::disassembleObjectKeyBuffer(raw_ostream &OS) {
   auto objKeyBuffer = bcProvider_->getObjectKeyBuffer();
-  auto objValueBuffer = bcProvider_->getObjectValueBuffer();
   if (objKeyBuffer.size() == 0)
     return;
 
   int keyInd = 0;
-  int valInd = 0;
 
   OS << "Object Key Buffer:\n";
   while ((size_t)keyInd < objKeyBuffer.size()) {
     std::pair<int, SLG::TagType> keyTag =
         checkBufferTag(objKeyBuffer.data() + keyInd);
     keyInd += (keyTag.first > 0x0f ? 2 : 1);
-    for (int i = 0; i < keyTag.first; i++) {
+    // Before reading from the buffer make sure there's enough data left,
+    // to avoid an overflowing read.
+    for (int i = 0; i < keyTag.first &&
+         (size_t)keyInd + dataSizeForTag(keyTag.second) <= objKeyBuffer.size();
+         i++) {
       OS << SLPToString(keyTag.second, objKeyBuffer.data(), &keyInd) << "\n";
     }
   }
+  OS << "\n";
+}
 
-  OS << "Object Value Buffer:\n";
-  while ((size_t)valInd < objValueBuffer.size()) {
-    std::pair<int, SLG::TagType> valTag =
-        checkBufferTag(objValueBuffer.data() + valInd);
-    valInd += (valTag.first > 0x0f ? 2 : 1);
-    for (int i = 0; i < valTag.first; i++) {
-      OS << SLPToString(valTag.second, objValueBuffer.data(), &valInd) << "\n";
-    }
+void BytecodeDisassembler::disassembleObjectShapeTable(raw_ostream &OS) {
+  auto objShapeTable = bcProvider_->getObjectShapeTable();
+  if (objShapeTable.size() == 0)
+    return;
+  OS << "Object Shape Table:\n";
+  for (size_t shapeTableIdx = 0, e = objShapeTable.size(); shapeTableIdx < e;
+       shapeTableIdx++) {
+    auto shapeInfo = objShapeTable[shapeTableIdx];
+    OS << shapeTableIdx << "[" << shapeInfo.keyBufferOffset << ", "
+       << shapeInfo.numProps << "]\n";
   }
+  OS << "\n";
 }
 
 /// Converts the given bigint magnitude \p bytes to a string in base 10.
@@ -333,10 +373,6 @@ void BytecodeDisassembler::disassembleBigIntStorage(raw_ostream &OS) {
 
   const uint32_t bigintCount = bcProvider_->getBigIntCount();
 
-  assert(
-      bigintTable.empty() == bigintStorage.empty() &&
-      "inconsistent bigint arrays");
-
   if (bigintTable.empty()) {
     return;
   }
@@ -347,16 +383,10 @@ void BytecodeDisassembler::disassembleBigIntStorage(raw_ostream &OS) {
     const auto &entry = bigintTable[i];
     const uint32_t start = entry.offset;
     const uint32_t count = entry.length;
-    OS << " " << i << "[";
-    if (count == 0) {
-      OS << " " << i << "[empty]";
-    } else {
-      auto bytes = bigintStorage.slice(start, count);
-      const uint32_t end = start + count - 1;
-      OS << " " << i << "[" << end << ".." << start
-         << "]: " << bigintMagnitudeToLengthLimitedString(bytes);
-    }
-    OS << "\n";
+    const int64_t end = (int64_t)start + count - 1;
+    auto bytes = bigintStorage.slice(start, count);
+    OS << " " << i << "[" << start << ".." << end
+       << "]: " << bigintMagnitudeToLengthLimitedString(bytes) << "\n";
   }
 
   OS << "\n";
@@ -435,24 +465,25 @@ void BytecodeDisassembler::disassembleExceptionHandlersPretty(
 
 namespace {
 
-/// Given a SwitchImm instruction, loop through each entry of the associated
+/// Given a UIntSwitchImm instruction, loop through each entry of the associated
 /// jump table.
 /// F: (current index into primary jump table, jump target offset, destination
 /// instruction) -> void.
 template <typename F>
 void switchJumpTableForEach(const inst::Inst *inst, F f) {
-  assert(inst->opCode == inst::OpCode::SwitchImm && "expected SwitchImm");
-  unsigned start = inst->iSwitchImm.op4;
-  unsigned end = inst->iSwitchImm.op5;
+  assert(
+      inst->opCode == inst::OpCode::UIntSwitchImm && "expected UIntSwitchImm");
+  unsigned start = inst->iUIntSwitchImm.op4;
+  unsigned end = inst->iUIntSwitchImm.op5;
   assert(start < end);
   unsigned numberOfEntries = end - start;
 
-  /// Get the current SwitchImm instruction's subview [start, end] start pointer
-  /// from primary jump table. This is the same computation done by the
-  /// interpreter to figure out the start of the jump table view.
+  /// Get the current UIntSwitchImm instruction's subview [start, end]
+  /// start pointer from primary jump table. This is the same computation done
+  /// by the interpreter to figure out the start of the jump table view.
   const auto *curJmpTableView =
       reinterpret_cast<const uint32_t *>(llvh::alignAddr(
-          (const uint8_t *)inst + inst->iSwitchImm.op2, sizeof(uint32_t)));
+          (const uint8_t *)inst + inst->iUIntSwitchImm.op2, sizeof(uint32_t)));
 
   for (unsigned curJmpTableViewOffset = 0;
        curJmpTableViewOffset <= numberOfEntries;
@@ -463,6 +494,35 @@ void switchJumpTableForEach(const inst::Inst *inst, F f) {
       (const uint8_t *)inst + jumpTargetOffset);
   }
 }
+
+template <typename F>
+void stringSwitchTableForEach(const inst::Inst *inst, F f) {
+  assert(
+      inst->opCode == inst::OpCode::StringSwitchImm &&
+      "expected StringSwitchImm");
+  unsigned size = inst->iStringSwitchImm.op5;
+  /// Get the current StringSwitchImm instruction's subview [start,
+  /// end] start pointer from primary string switch table. This is the
+  /// same computation done by the interpreter to figure out the start
+  /// of the jump table view.
+  const auto *curStringSwitchTableView =
+      reinterpret_cast<const StringSwitchTableCase *>(llvh::alignAddr(
+          (const uint8_t *)inst + inst->iStringSwitchImm.op3,
+          alignof(StringSwitchTableCase)));
+
+  for (unsigned curStringSwitchTableViewOffset = 0;
+       curStringSwitchTableViewOffset < size;
+       curStringSwitchTableViewOffset++) {
+    const StringSwitchTableCase &stringSwitchCase =
+        curStringSwitchTableView[curStringSwitchTableViewOffset];
+
+    f(curStringSwitchTableViewOffset,
+      stringSwitchCase.target,
+      stringSwitchCase.caseLabelStringID,
+      (const uint8_t *)inst + stringSwitchCase.target);
+  }
+}
+
 } // namespace
 
 void BytecodeVisitor::visitInstructionsInFunction(unsigned funcId) {
@@ -470,7 +530,7 @@ void BytecodeVisitor::visitInstructionsInFunction(unsigned funcId) {
   RuntimeFunctionHeader functionHeader = bcProvider_->getFunctionHeader(funcId);
   const uint8_t *bytecodeStart = bcProvider_->getBytecode(funcId);
   const uint8_t *bytecodeEnd =
-      bytecodeStart + functionHeader.bytecodeSizeInBytes();
+      bytecodeStart + functionHeader.getBytecodeSizeInBytes();
 
   beforeStart(funcId, bytecodeStart);
   visitInstructionsInBody(
@@ -490,13 +550,25 @@ void BytecodeVisitor::visitInstructionsInBody(
     auto instLength = md.size;
     preVisitInstruction(md.opCode, ip, instLength);
 
-    // Visit branch targets of the SwitchImm instruction.
-    if (op == OpCode::SwitchImm && visitSwitchImmTargets) {
-      switchJumpTableForEach(
-          (inst::Inst const *)ip,
-          [this](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
-            this->visitSwitchImmTargets(jmpIdx, offset, dest);
-          });
+    // Visit branch targets of the SwitchImm instructions.
+    if (visitSwitchImmTargets) {
+      if (op == OpCode::UIntSwitchImm) {
+        switchJumpTableForEach(
+            (inst::Inst const *)ip,
+            [this](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
+              this->visitSwitchImmTargets(jmpIdx, offset, dest);
+            });
+      } else if (op == OpCode::StringSwitchImm) {
+        stringSwitchTableForEach(
+            (inst::Inst const *)ip,
+            [this](
+                uint32_t jmpIdx,
+                int32_t offset,
+                StringID label,
+                const uint8_t *dest) {
+              this->visitSwitchImmTargets(jmpIdx, offset, dest);
+            });
+      }
     }
 
     const uint8_t *operandBuf = ip + sizeof(op);
@@ -614,9 +686,13 @@ void JumpTargetsVisitor::preVisitInstruction(
     const uint8_t *ip,
     int length) {
   switch (opcode) {
-    case OpCode::SwitchImm:
-      // Decode jump table of SwitchImm instruction.
-      switchInsts_.push_back((inst::Inst const *)ip);
+    case OpCode::UIntSwitchImm:
+      // Decode jump table of UIntSwitchImm instruction.
+      uintSwitchImmInsts_.push_back((inst::Inst const *)ip);
+      break;
+    case OpCode::StringSwitchImm:
+      // Decode string switch table of StringSwitchImm instruction.
+      stringSwitchImmInsts_.push_back((inst::Inst const *)ip);
       break;
 
     case OpCode::Ret:
@@ -825,8 +901,8 @@ void PrettyDisassembleVisitor::visitOperand(
 void PrettyDisassembleVisitor::printSourceLineForOffset(uint32_t opcodeOffset) {
   if ((options_ & DisassemblyOptions::IncludeSource) ==
       DisassemblyOptions::IncludeSource) {
-    llvh::Optional<SourceMapTextLocation> sourceLocOpt =
-        bcProvider_->getLocationForAddress(funcId_, opcodeOffset);
+    llvh::Optional<SourceTextLocation> sourceLocOpt =
+        bcProvider_->getSourceTextLocation(funcId_, opcodeOffset);
     if (sourceLocOpt.hasValue()) {
       const std::string &fileNameStr = sourceLocOpt.getValue().fileName;
       os_ << formatString(
@@ -844,16 +920,25 @@ void PrettyDisassembleVisitor::printSourceLineForOffset(uint32_t opcodeOffset) {
 class DisassembleVisitor : public BytecodeVisitor {
  private:
   raw_ostream &os_;
-  std::vector<inst::Inst const *> switchInsts_{};
+  std::vector<inst::Inst const *> uintSwitchImmInsts_{};
+  std::vector<inst::Inst const *> stringSwitchImmInsts_{};
 
  protected:
   void preVisitInstruction(OpCode opcode, const uint8_t *ip, int length) {
     int offset = ip - bcProvider_->getBytecode(funcId_);
     assert(offset >= 0);
     os_ << "[@ " << offset << "] " << getOpCodeString(opcode);
-    if (opcode == OpCode::SwitchImm) {
-      const inst::Inst *inst = (inst::Inst const *)ip;
-      switchInsts_.push_back(inst);
+    switch (opcode) {
+      case OpCode::UIntSwitchImm: {
+        uintSwitchImmInsts_.push_back((inst::Inst const *)ip);
+        break;
+      }
+      case OpCode::StringSwitchImm: {
+        stringSwitchImmInsts_.push_back((inst::Inst const *)ip);
+        break;
+      }
+      default:
+        break;
     }
   }
 
@@ -892,8 +977,11 @@ class DisassembleVisitor : public BytecodeVisitor {
       raw_ostream &os)
       : BytecodeVisitor(bcProvider), os_(os) {}
 
-  std::vector<inst::Inst const *> &getSwitchIntructions() {
-    return switchInsts_;
+  std::vector<inst::Inst const *> &getUIntSwitchImmInstructions() {
+    return uintSwitchImmInsts_;
+  }
+  std::vector<inst::Inst const *> &getStringSwitchImmInstructions() {
+    return stringSwitchImmInsts_;
   }
 };
 
@@ -930,17 +1018,13 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getStringStorage().begin(),
       bcProvider->getStringStorage().end());
   addSection(
-      "Array buffer",
-      bcProvider->getArrayBuffer().begin(),
-      bcProvider->getArrayBuffer().end());
+      "Literal value buffer",
+      bcProvider->getLiteralValueBuffer().begin(),
+      bcProvider->getLiteralValueBuffer().end());
   addSection(
       "Object key buffer",
       bcProvider->getObjectKeyBuffer().begin(),
       bcProvider->getObjectKeyBuffer().end());
-  addSection(
-      "Object value buffer",
-      bcProvider->getObjectValueBuffer().begin(),
-      bcProvider->getObjectValueBuffer().end());
   addSection(
       "BigInt storage",
       bcProvider->getBigIntStorage().begin(),
@@ -959,9 +1043,20 @@ BytecodeSectionWalker::BytecodeSectionWalker(
       bcProvider->getCJSModuleTable().end());
 
   auto firstFuncStart = bcProvider->getBytecode(0);
-  auto firstFuncHeader = bcProvider->getFunctionHeader(0);
-  auto firstFuncInfoStart = bytecodeStart + firstFuncHeader.infoOffset();
   auto debugInfoStart = bytecodeStart + fileHeader->debugInfoOffset;
+
+  // If there is no func info, the func info starts and ends at the debug info
+  // start.
+  auto firstFuncInfoStart = debugInfoStart;
+
+  // Iterate to find the first function that actually has info allocated for it.
+  for (const auto &header : bcProvider->getSmallFunctionHeaders()) {
+    if (header.flags.getOverflowed()) {
+      firstFuncInfoStart = bytecodeStart + header.getLargeHeaderOffset();
+      break;
+    }
+  }
+
   addSection("Function body", firstFuncStart, firstFuncInfoStart);
   addSection("Function info", firstFuncInfoStart, debugInfoStart);
   addSection(
@@ -1040,18 +1135,34 @@ void BytecodeDisassembler::disassembleFunctionPretty(
   disassembleVisitor.visitInstructionsInFunction(funcId);
 
   // Print out switch jump tables, if any.
-  auto &switchInsts = jumpVisitor.getSwitchIntructions();
-  if (!switchInsts.empty()) {
+  auto uintSwitchImmInsts = jumpVisitor.getUIntSwitchImmInstructions();
+  if (!uintSwitchImmInsts.empty()) {
     OS << "\n " << "Jump Tables: \n";
-    for (auto *inst : switchInsts) {
-      OS << "  " << "offset " << inst->iSwitchImm.op2 << "\n";
+    for (auto *inst : uintSwitchImmInsts) {
+      OS << "  " << "offset " << inst->iUIntSwitchImm.op2 << "\n";
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
             OS << "   " << jmpIdx << " : " << "L" << jumpTargets[dest] << "\n";
           });
     }
   }
-
+  auto stringSwitchImmInsts = jumpVisitor.getStringSwitchImmInstructions();
+  if (!stringSwitchImmInsts.empty()) {
+    OS << "\n " << "String Switch Tables: \n";
+    for (auto *inst : stringSwitchImmInsts) {
+      OS << "  " << "offset " << inst->iStringSwitchImm.op3 << "\n";
+      stringSwitchTableForEach(
+          inst,
+          [&](uint32_t idx,
+              int32_t offset,
+              StringID label,
+              const uint8_t *dest) {
+            OS << "   ";
+            disassembleVisitor.dumpOperandString(label, OS);
+            OS << " : " << "L" << jumpTargets[dest] << "\n";
+          });
+    }
+  }
   OS << "\n";
   disassembleExceptionHandlersPretty(funcId, jumpTargets, OS);
 }
@@ -1063,14 +1174,32 @@ void BytecodeDisassembler::disassembleFunctionRaw(
   disassembleVisitor.visitInstructionsInFunction(funcId);
 
   // Print out switch jump tables, if any.
-  auto &switchInsts = disassembleVisitor.getSwitchIntructions();
-  if (!switchInsts.empty()) {
+  auto &uintSwitchImmInsts = disassembleVisitor.getUIntSwitchImmInstructions();
+  if (!uintSwitchImmInsts.empty()) {
     OS << "\n " << "Jump Tables: \n";
-    for (auto *inst : switchInsts) {
-      OS << "  " << "offset " << inst->iSwitchImm.op2 << "\n";
+    for (auto *inst : uintSwitchImmInsts) {
+      OS << "  " << "offset " << inst->iUIntSwitchImm.op2 << "\n";
       switchJumpTableForEach(
           inst, [&](uint32_t jmpIdx, int32_t offset, const uint8_t *dest) {
             OS << "   " << jmpIdx << " : " << offset << "\n";
+          });
+    }
+  }
+
+  // Print out switch jump tables, if any.
+  auto &stringSwitchImmInsts =
+      disassembleVisitor.getStringSwitchImmInstructions();
+  if (!stringSwitchImmInsts.empty()) {
+    OS << "\n " << "String switch Tables: \n";
+    for (auto *inst : stringSwitchImmInsts) {
+      OS << "  " << "offset " << inst->iStringSwitchImm.op3 << "\n";
+      stringSwitchTableForEach(
+          inst,
+          [&](uint32_t idx,
+              int32_t offset,
+              StringID caseLabel,
+              const uint8_t *dest) {
+            OS << "   " << idx << " : " << offset << "\n";
           });
     }
   }
@@ -1124,7 +1253,7 @@ class ObjdumpDisassembleVisitor : public BytecodeVisitor {
 
   void beforeStart(unsigned funcId, const uint8_t *bytecodeStart) override {
     funcId_ = funcId;
-    funcOffset_ = bcProvider_->getFunctionHeader(funcId).offset();
+    funcOffset_ = bcProvider_->getFunctionHeader(funcId).getOffset();
     bytecodeStart_ = bytecodeStart;
     os_ << "\n"
         << llvh::format_hex_no_prefix(funcOffset_, 16) << " <_" << funcId
@@ -1236,8 +1365,9 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
 
   disassembleBytecodeFileHeader(OS);
   disassembleStringStorage(OS);
-  disassembleArrayBuffer(OS);
-  disassembleObjectBuffer(OS);
+  disassembleLiteralValueBuffer(OS);
+  disassembleObjectKeyBuffer(OS);
+  disassembleObjectShapeTable(OS);
   disassembleBigIntStorage(OS);
   disassembleCJSModuleTable(OS);
   disassembleFunctionSourceTable(OS);
@@ -1248,34 +1378,21 @@ void BytecodeDisassembler::disassemble(raw_ostream &OS) {
         bcProvider_->getFunctionHeader(funcId);
 
     dumpFunctionName(OS, *bcProvider_, funcId, functionHeader, options_);
-    OS << "(" << functionHeader.paramCount() << " params, "
-       << functionHeader.frameSize() << " registers, "
-       << static_cast<unsigned int>(functionHeader.environmentSize())
-       << " symbols)";
+    OS << "(" << functionHeader.getParamCount() << " params, "
+       << functionHeader.getFrameSize() << " registers, "
+       << functionHeader.getNumberRegCount() << " numbers, "
+       << functionHeader.getNonPtrRegCount() << " non-pointers" << ")";
     OS << ":\n";
 
     auto *funcDebugOffsets = bcProvider_->getDebugOffsets(funcId);
-    if (functionHeader.flags().hasDebugInfo && funcDebugOffsets != nullptr) {
+    if (functionHeader.getFlags().getHasDebugInfo() &&
+        funcDebugOffsets != nullptr) {
       OS << "Offset in debug table: source ";
       uint32_t debugSourceOffset = funcDebugOffsets->sourceLocations;
       if (debugSourceOffset == DebugOffsets::NO_OFFSET) {
         OS << "none";
       } else {
         OS << llvh::format_hex(debugSourceOffset, 6);
-      }
-      OS << ", scope ";
-      uint32_t debugScopeDescOffset = funcDebugOffsets->scopeDescData;
-      if (debugScopeDescOffset == DebugOffsets::NO_OFFSET) {
-        OS << "none";
-      } else {
-        OS << llvh::format_hex(debugScopeDescOffset, 6);
-      }
-      OS << ", textified callees ";
-      uint32_t textifiedCalleeOffset = funcDebugOffsets->textifiedCallees;
-      if (textifiedCalleeOffset == DebugOffsets::NO_OFFSET) {
-        OS << "none";
-      } else {
-        OS << llvh::format_hex(textifiedCalleeOffset, 6);
       }
       OS << '\n';
     }

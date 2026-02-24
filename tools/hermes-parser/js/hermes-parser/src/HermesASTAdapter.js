@@ -65,7 +65,7 @@ export default class HermesASTAdapter {
       );
     }
 
-    // $FlowExpectedError[incompatible-return] We know this is a program at this point.
+    // $FlowExpectedError[incompatible-type] We know this is a program at this point.
     return resultNode;
   }
 
@@ -125,7 +125,7 @@ export default class HermesASTAdapter {
   }
 
   mapEmpty(_node: HermesNode): HermesNode {
-    // $FlowExpectedError
+    // $FlowExpectedError[incompatible-type]
     return null;
   }
 
@@ -172,17 +172,14 @@ export default class HermesASTAdapter {
 
   getBigIntLiteralValue(bigintString: string): {
     bigint: string,
-    value: $FlowFixMe /* bigint */,
+    value: bigint | null,
   } {
-    // TODO - once we update flow we can remove this
-    declare var BigInt: ?(value: $FlowFixMe) => mixed;
-
     const bigint = bigintString
       // estree spec is to not have a trailing `n` on this property
       // https://github.com/estree/estree/blob/db962bb417a97effcfe9892f87fbb93c81a68584/es2020.md#bigintliteral
       .replace(/n$/, '')
       // `BigInt` doesn't accept numeric separator and `bigint` property should not include numeric separator
-      .replace(/_/, '');
+      .replaceAll('_', '');
     return {
       bigint,
       // coerce the string to a bigint value if supported by the environment

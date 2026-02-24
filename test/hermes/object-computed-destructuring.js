@@ -8,6 +8,7 @@
 // RUN: %hermes %s | %FileCheck %s --match-full-lines
 // RUN: %hermes -O %s | %FileCheck %s --match-full-lines
 // RUN: %hermesc %s -emit-binary -out %t.hbc && %hermes %t.hbc | %FileCheck %s --match-full-lines
+// RUN: %shermes -exec %s | %FileCheck %s --match-full-lines
 
 print('computed destructuring');
 // CHECK-LABEL: computed destructuring

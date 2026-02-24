@@ -10,13 +10,14 @@
 #endif
 
 ROOT_SECTION(Registers)
-ROOT_SECTION(RuntimeInstanceVars)
-ROOT_SECTION(RuntimeModules)
+ROOT_SECTION(Locals)
+ROOT_SECTION(SHLocals)
+ROOT_SECTION(SHUnits)
+ROOT_SECTION(RuntimeFields)
 ROOT_SECTION(CharStrings)
 ROOT_SECTION(StringCycleCheckVisited)
 ROOT_SECTION(Builtins)
 ROOT_SECTION(Jobs)
-ROOT_SECTION(Prototypes)
 // We don't need DebugEnvironment anymore, but keep it for MobileLab.
 ROOT_SECTION(DebugEnvironment)
 ROOT_SECTION(IdentifierTable)
@@ -26,6 +27,7 @@ ROOT_SECTION(WeakRefSlots)
 ROOT_SECTION(SymbolRegistry)
 ROOT_SECTION(SamplingProfiler)
 ROOT_SECTION(CodeCoverageProfiler)
+ROOT_SECTION(Serialization)
 ROOT_SECTION(Custom)
 
 #undef ROOT_SECTION

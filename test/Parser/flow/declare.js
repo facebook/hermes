@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-// RUN: %hermes -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
+// RUN: %hermesc -parse-flow -dump-ast -pretty-json %s | %FileCheck %s --match-full-lines
 
 // CHECK-LABEL: {
 // CHECK-NEXT:   "type": "Program",
@@ -33,6 +33,8 @@ declare opaque type A;
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "typeParameters": null,
 // CHECK-NEXT:       "impltype": null,
+// CHECK-NEXT:       "lowerBound": null,
+// CHECK-NEXT:       "upperBound": null,
 // CHECK-NEXT:       "supertype": null
 // CHECK-NEXT:     },
 

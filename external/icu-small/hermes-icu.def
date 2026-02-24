@@ -1,0 +1,4 @@
+; hermes-icu.dll export definition
+; Single export: returns the hermes_icu_vtable for bundled ICU 78.
+EXPORTS
+    hermes_icu_get_vtable

@@ -82,6 +82,7 @@ import type {
   DeclareOpaqueType,
   DeclareTypeAlias,
   DeclareVariable,
+  Decorator,
   DoWhileStatement,
   EmptyStatement,
   EmptyTypeAnnotation,
@@ -148,6 +149,8 @@ import type {
   MatchExpression,
   MatchExpressionCase,
   MatchIdentifierPattern,
+  MatchInstanceObjectPattern,
+  MatchInstancePattern,
   MatchLiteralPattern,
   MatchMemberPattern,
   MatchObjectPattern,
@@ -162,6 +165,7 @@ import type {
   MetaProperty,
   MethodDefinition,
   MixedTypeAnnotation,
+  NeverTypeAnnotation,
   NewExpression,
   NullableTypeAnnotation,
   NullLiteralTypeAnnotation,
@@ -184,6 +188,13 @@ import type {
   PropertyDefinition,
   QualifiedTypeIdentifier,
   QualifiedTypeofIdentifier,
+  RecordDeclaration,
+  RecordDeclarationBody,
+  RecordDeclarationImplements,
+  RecordDeclarationProperty,
+  RecordDeclarationStaticProperty,
+  RecordExpression,
+  RecordExpressionProperties,
   RestElement,
   ReturnStatement,
   SequenceExpression,
@@ -215,7 +226,9 @@ import type {
   TypeParameterInstantiation,
   TypePredicate,
   UnaryExpression,
+  UndefinedTypeAnnotation,
   UnionTypeAnnotation,
+  UnknownTypeAnnotation,
   UpdateExpression,
   VariableDeclaration,
   VariableDeclarator,
@@ -479,6 +492,11 @@ export function isDeclareTypeAlias(node /*: ESNode | Token */) /*: implies node 
 
 export function isDeclareVariable(node /*: ESNode | Token */) /*: implies node is DeclareVariable */ {
   return node.type === 'DeclareVariable';
+}
+    
+
+export function isDecorator(node /*: ESNode | Token */) /*: implies node is Decorator */ {
+  return node.type === 'Decorator';
 }
     
 
@@ -812,6 +830,16 @@ export function isMatchIdentifierPattern(node /*: ESNode | Token */) /*: implies
 }
     
 
+export function isMatchInstanceObjectPattern(node /*: ESNode | Token */) /*: implies node is MatchInstanceObjectPattern */ {
+  return node.type === 'MatchInstanceObjectPattern';
+}
+    
+
+export function isMatchInstancePattern(node /*: ESNode | Token */) /*: implies node is MatchInstancePattern */ {
+  return node.type === 'MatchInstancePattern';
+}
+    
+
 export function isMatchLiteralPattern(node /*: ESNode | Token */) /*: implies node is MatchLiteralPattern */ {
   return node.type === 'MatchLiteralPattern';
 }
@@ -879,6 +907,11 @@ export function isMethodDefinition(node /*: ESNode | Token */) /*: implies node 
 
 export function isMixedTypeAnnotation(node /*: ESNode | Token */) /*: implies node is MixedTypeAnnotation */ {
   return node.type === 'MixedTypeAnnotation';
+}
+    
+
+export function isNeverTypeAnnotation(node /*: ESNode | Token */) /*: implies node is NeverTypeAnnotation */ {
+  return node.type === 'NeverTypeAnnotation';
 }
     
 
@@ -989,6 +1022,41 @@ export function isQualifiedTypeIdentifier(node /*: ESNode | Token */) /*: implie
 
 export function isQualifiedTypeofIdentifier(node /*: ESNode | Token */) /*: implies node is QualifiedTypeofIdentifier */ {
   return node.type === 'QualifiedTypeofIdentifier';
+}
+    
+
+export function isRecordDeclaration(node /*: ESNode | Token */) /*: implies node is RecordDeclaration */ {
+  return node.type === 'RecordDeclaration';
+}
+    
+
+export function isRecordDeclarationBody(node /*: ESNode | Token */) /*: implies node is RecordDeclarationBody */ {
+  return node.type === 'RecordDeclarationBody';
+}
+    
+
+export function isRecordDeclarationImplements(node /*: ESNode | Token */) /*: implies node is RecordDeclarationImplements */ {
+  return node.type === 'RecordDeclarationImplements';
+}
+    
+
+export function isRecordDeclarationProperty(node /*: ESNode | Token */) /*: implies node is RecordDeclarationProperty */ {
+  return node.type === 'RecordDeclarationProperty';
+}
+    
+
+export function isRecordDeclarationStaticProperty(node /*: ESNode | Token */) /*: implies node is RecordDeclarationStaticProperty */ {
+  return node.type === 'RecordDeclarationStaticProperty';
+}
+    
+
+export function isRecordExpression(node /*: ESNode | Token */) /*: implies node is RecordExpression */ {
+  return node.type === 'RecordExpression';
+}
+    
+
+export function isRecordExpressionProperties(node /*: ESNode | Token */) /*: implies node is RecordExpressionProperties */ {
+  return node.type === 'RecordExpressionProperties';
 }
     
 
@@ -1147,8 +1215,18 @@ export function isUnaryExpression(node /*: ESNode | Token */) /*: implies node i
 }
     
 
+export function isUndefinedTypeAnnotation(node /*: ESNode | Token */) /*: implies node is UndefinedTypeAnnotation */ {
+  return node.type === 'UndefinedTypeAnnotation';
+}
+    
+
 export function isUnionTypeAnnotation(node /*: ESNode | Token */) /*: implies node is UnionTypeAnnotation */ {
   return node.type === 'UnionTypeAnnotation';
+}
+    
+
+export function isUnknownTypeAnnotation(node /*: ESNode | Token */) /*: implies node is UnknownTypeAnnotation */ {
+  return node.type === 'UnknownTypeAnnotation';
 }
     
 
