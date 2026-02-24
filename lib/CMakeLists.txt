@@ -31,6 +31,7 @@ add_hermes_library(hermesOptimizer
   Optimizer/Scalar/Inlining.cpp
   Optimizer/Scalar/InstructionEscapeAnalysis.cpp
   Optimizer/Scalar/TDZDedup.cpp
+  Optimizer/Scalar/PrivateBrandCheckDedup.cpp
   Optimizer/Scalar/StripDebugInsts.cpp
   LINK_OBJLIBS hermesFrontend
 )

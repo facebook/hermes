@@ -16,6 +16,8 @@
 
 #include "llvh/ADT/DenseSet.h"
 
+#include <variant>
+
 STATISTIC(NumTDZDedup, "Number of TDZ instructions eliminated");
 
 namespace hermes {
