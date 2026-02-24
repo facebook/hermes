@@ -49,23 +49,14 @@ class JSONStringifyer {
     /// `value_` for recursions.
     PinnedValue<PropStorage> stackValue;
 
-    /// An additional stack just for operationJO to store `K` for recursions.
-    PinnedValue<PropStorage> stackJO;
-
     /// A temporary handle, to avoid creating new handles when a temporary one
     /// is needed.
     /// Note: this should be used with care because it can be shared among
     /// functions.
     PinnedValue<> tmpHandle;
 
-    /// A second temporary handle for when the first is taken.
-    PinnedValue<> tmpHandle2;
-
     /// Handle used by operationStr to store the value.
     PinnedValue<> operationStrValue;
-
-    /// Handle used by operationJO to store K.
-    PinnedValue<JSArray> operationJOK;
 
     /// The holder argument passed to operationStr.
     /// We define a member variable here to avoid creating a new handle
@@ -106,12 +97,6 @@ class JSONStringifyer {
       return ExecutionStatus::EXCEPTION;
     }
     lv_.stackValue = vmcast<PropStorage>(*arrRes);
-    if (LLVM_UNLIKELY(
-            (arrRes = PropStorage::create(runtime_, 4)) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    lv_.stackJO = vmcast<PropStorage>(*arrRes);
     auto cr = initializeReplacer(replacer);
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -742,6 +727,12 @@ ExecutionStatus JSONStringifyer::operationJA() {
 ExecutionStatus JSONStringifyer::operationJO() {
   GCScopeMarkerRAII marker{runtime_};
 
+  struct : public Locals {
+    /// Handle used by operationJO to store K.
+    PinnedValue<JSArray> operationJOK;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
   // JO.3.
   auto stepBack = depthCount_;
   // JO.4.
@@ -756,7 +747,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
 
   if (lv_.propertyList.get()) {
     // JO.5.
-    lv_.operationJOK = lv_.propertyList.get();
+    lv.operationJOK = lv_.propertyList.get();
   } else {
     // JO.6.
     lv_.tmpHandle = HermesValue::encodeObjectValue(
@@ -772,7 +763,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
       if (cr == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      lv_.operationJOK = **cr;
+      lv.operationJOK = **cr;
     } else {
       CallResult<HermesValue> ownPropRes = enumerableOwnProperties_RJS(
           runtime_,
@@ -781,7 +772,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
       if (ownPropRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      lv_.operationJOK = vmcast<JSArray>(*ownPropRes);
+      lv.operationJOK = vmcast<JSArray>(*ownPropRes);
     }
   }
 
@@ -789,7 +780,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
 
   // JO.8.
   bool hasElement = false;
-  for (uint32_t index = 0, len = lv_.operationJOK->getEndIndex(); index < len;
+  for (uint32_t index = 0, len = lv.operationJOK->getEndIndex(); index < len;
        ++index) {
     // JO.8.a.
     // We are speculating that the Str operation will not return undefined,
@@ -804,7 +795,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
       indent();
     }
 
-    lv_.tmpHandle = lv_.operationJOK->at(runtime_, index).unboxToHV(runtime_);
+    lv_.tmpHandle = lv.operationJOK->at(runtime_, index).unboxToHV(runtime_);
     if (LLVM_UNLIKELY(!lv_.tmpHandle->isString())) {
       // property may come from getOwnPropertyNames, which may contain numbers.
       // getOwnPropertyNames and lv_.propertyList are both only populated
@@ -833,18 +824,9 @@ ExecutionStatus JSONStringifyer::operationJO() {
     lv_.operationStrHolder = vmcast<JSObject>(
         lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
 
-    lv_.tmpHandle2 = lv_.operationJOK.getHermesValue();
-    if (PropStorage::push_back(lv_.stackJO, runtime_, lv_.tmpHandle2) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
-    // Flush just before recursion (propStoragePushBack may create handles).
+    // Flush just before recursion.
     marker.flush();
     auto result = operationStr(*lv_.tmpHandle);
-
-    lv_.operationJOK =
-        vmcast<JSArray>(lv_.stackJO->pop_back(runtime_).getObject(runtime_));
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
