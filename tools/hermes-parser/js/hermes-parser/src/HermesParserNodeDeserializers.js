@@ -90,6 +90,7 @@ function deserializeComponentDeclaration() {
     body: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     rendersType: this.deserializeNode(),
+    async: this.deserializeBoolean(),
   };
 }
 

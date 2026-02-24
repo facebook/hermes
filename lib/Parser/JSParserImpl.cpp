@@ -811,7 +811,8 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclaration(Param param) {
 
   assert(checkDeclaration() && "invalid start for declaration");
 
-  if (check(TokenKind::rw_function) || checkUnescaped(asyncIdent_)) {
+  if (check(TokenKind::rw_function) ||
+      (checkUnescaped(asyncIdent_) && checkAsyncFunction())) {
     auto fdecl = parseFunctionDeclaration(Param{});
     if (!fdecl)
       return None;
@@ -7186,6 +7187,19 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           *optClassDecl,
           new (context_) ESTree::ExportDefaultDeclarationNode(*optClassDecl));
 #if HERMES_PARSE_FLOW
+    } else if (
+        context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
+        checkUnescaped(asyncIdent_) && checkAsyncComponentFlow()) {
+      SMLoc compStart = advance().Start;
+      auto optComponent = parseComponentDeclarationFlow(
+          compStart, /* declare */ false, /* isAsync */ true);
+      if (!optComponent) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optComponent,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optComponent));
     } else if (
         context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
         checkComponentDeclarationFlow()) {

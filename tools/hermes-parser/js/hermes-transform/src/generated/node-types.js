@@ -344,6 +344,7 @@ export type ComponentDeclarationProps = {
     ComponentDeclarationType['typeParameters'],
   >,
   +rendersType?: ?MaybeDetachedNode<ComponentDeclarationType['rendersType']>,
+  +async: ComponentDeclarationType['async'],
 };
 
 export type ComponentParameterProps = {
@@ -1660,6 +1661,7 @@ export function ComponentDeclaration(props: {
       body: asDetachedNodeForCodeGen(props.body),
       typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
       rendersType: asDetachedNodeForCodeGen(props.rendersType),
+      async: props.async,
     },
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));

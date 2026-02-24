@@ -598,7 +598,8 @@ class JSParserImpl {
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow()) {
       if (context_.getParseFlowComponentSyntax() &&
-          checkComponentDeclarationFlow()) {
+          (checkComponentDeclarationFlow() ||
+           (checkUnescaped(asyncIdent_) && checkAsyncComponentFlow()))) {
         return true;
       }
       if (context_.getParseFlowComponentSyntax() &&
@@ -1286,9 +1287,11 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseFlowDeclaration();
   Optional<ESTree::Node *> parseDeclareFLow(SMLoc start);
   bool checkComponentDeclarationFlow();
+  bool checkAsyncComponentFlow();
   Optional<ESTree::Node *> parseComponentDeclarationFlow(
       SMLoc start,
-      bool declare);
+      bool declare,
+      bool isAsync = false);
   bool checkHookDeclarationFlow();
   Optional<ESTree::Node *> parseHookDeclarationFlow(SMLoc start);
 

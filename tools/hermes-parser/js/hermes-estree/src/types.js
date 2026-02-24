@@ -428,6 +428,7 @@ export interface ComponentParameter extends BaseNode {
 
 export interface ComponentDeclaration extends BaseNode {
   +type: 'ComponentDeclaration';
+  +async: boolean;
   +body: BlockStatement;
   +id: Identifier;
   +params: $ReadOnlyArray<ComponentParameterAndRestElement>;

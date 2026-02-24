@@ -42,7 +42,8 @@ component Foo1(foo = '') {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo2(foo: Foo = '') {}
@@ -87,7 +88,8 @@ component Foo2(foo: Foo = '') {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo3(foo as bar: Bar = '') {}
@@ -132,7 +134,8 @@ component Foo3(foo as bar: Bar = '') {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

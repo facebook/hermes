@@ -22,7 +22,8 @@ component Foo1() {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 export default component Foo2() {}
@@ -38,7 +39,8 @@ export default component Foo2() {}
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",
 // CHECK-NEXT:           "body": []
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "async": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -55,7 +57,8 @@ export component Foo3() {}
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",
 // CHECK-NEXT:           "body": []
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "async": false
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "specifiers": [],
 // CHECK-NEXT:       "source": null,
@@ -85,7 +88,8 @@ component Foo1() renders SomeComponent {}
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null
 // CHECK-NEXT:         }
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo1<T>() {}
@@ -111,7 +115,8 @@ component Foo1<T>() {}
 // CHECK-NEXT:             "default": null
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo1() renders SomeComponent | number {}
@@ -145,7 +150,8 @@ component Foo1() renders SomeComponent | number {}
 // CHECK-NEXT:             }
 // CHECK-NEXT:           ]
 // CHECK-NEXT:         }
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo1() renders? SomeComponent {}
@@ -171,7 +177,8 @@ component Foo1() renders? SomeComponent {}
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null
 // CHECK-NEXT:         }
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo1() renders* SomeComponent {}
@@ -197,7 +204,8 @@ component Foo1() renders* SomeComponent {}
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "typeParameters": null
 // CHECK-NEXT:         }
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

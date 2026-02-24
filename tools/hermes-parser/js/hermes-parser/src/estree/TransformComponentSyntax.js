@@ -590,7 +590,7 @@ function mapComponentDeclaration(
     params: props == null ? [] : ref == null ? [props] : [props, ref],
     returnType,
     body: node.body,
-    async: false,
+    async: node.async ?? false,
     generator: false,
     predicate: null,
     loc: node.loc,
