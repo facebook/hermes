@@ -1,6 +1,8 @@
 name: build-hermesc-windows
 
-on: workflow_call
+on:
+  workflow_call:
+  workflow_dispatch:
 
 jobs:
   build-hermesc-windows:
