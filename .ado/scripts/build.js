@@ -370,11 +370,6 @@ function updateHermesVersion() {
     .replace("VERSION 0.12.0", `VERSION ${hermesVersion}`);
   fs.writeFileSync(cmakeListsPath, cmakeContent);
 
-  const packageJsonPath = path.join(sourcesPath, "npm", "package.json");
-  const packageContent = fs
-    .readFileSync(packageJsonPath, "utf8")
-    .replace(/"version": ".*",/, `"version": "${args["semantic-version"]}",`);
-  fs.writeFileSync(packageJsonPath, packageContent);
 
   console.log(`Semantic version set to ${args["semantic-version"]}`);
   console.log(`Hermes version set to ${hermesVersion}`);

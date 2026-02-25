@@ -39,6 +39,7 @@
 /cmake/modules/SourceLink.cmake
 
 # Upstream code excluded to reduce security scan noise
+/npm/
 /unsupported/
 
 # Local-only: tools not in upstream

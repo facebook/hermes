@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@rnx-kit/fork-sync": "^0.2.0"
+    "@rnx-kit/fork-sync": "^0.3.0"
   }
 }
