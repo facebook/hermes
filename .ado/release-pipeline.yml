@@ -55,8 +55,21 @@ extends:
         - script: dotnet nuget list source
           displayName: Show Nuget sources
 
+        - task: AzureCLI@2
+          displayName: Override NuGet credentials with Managed Identity
+          inputs:
+            azureSubscription: 'Office-Hermes-Windows-Bot'
+            scriptType: 'pscore'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              $accessToken = az account get-access-token --query accessToken --resource 499b84ac-1321-427f-aa17-267ca6975798 -o tsv
+              # Set the access token as a secret, so it doesn't get leaked in the logs
+              Write-Host "##vso[task.setsecret]$accessToken"
+              # Override the apitoken of the nuget service connection, for the duration of this stage
+              Write-Host "##vso[task.setendpoint id=29e4c04c-ae69-4453-b9f3-bfef7a4c8d32;field=authParameter;key=apitoken]$accessToken"
+
         - task: 1ES.PublishNuGet@1
-          displayName: NuGet push
+          displayName: NuGet push to ms/react-native-public
           inputs:
             useDotNetTask: true
             packageParentPath: '$(Pipeline.Workspace)/published-packages'
