@@ -213,15 +213,43 @@ class OrderedHashMapBase {
       Handle<Derived> self,
       Runtime &runtime);
 
- protected:
+#ifndef UNIT_TEST
+ private:
+#endif
+
   /// Initial capacity of the hash table. Note that if this changes,
   /// test/hermes/set-iterator.js also needs to be updated because the tests
   /// depends on knowing when rehashes happen.
   static constexpr uint32_t kInitialCapacity = 16;
 
-  void assertInitialized() const {
-    assert(hashTable_.size() > 0 && "Element storage uninitialized.");
-    assert(dataTable_ && "Data Table uninitialized.");
+  /// The multiplier that the hash table grows or shrinks by each rehash.
+  /// Note that if this changes, test/hermes/set-iterator.js also needs to be
+  /// updated because the tests depends on knowing when rehashes happen.
+  static constexpr uint32_t kGrowOrShrinkFactor{2};
+
+  /// Determine if we should shrink the hash table based on the current key
+  /// count and capacity.
+  static bool shouldShrink(uint32_t capacity, uint32_t keyCount) {
+    // Divide the capacity to get the number we want for comparison. Division
+    // ensures there won't be overflow.
+    return keyCount <= capacity / 8 &&
+        capacity > OrderedHashMapBase::kInitialCapacity;
+  }
+
+  /// Determine if we should rehash the hash table based on the current key
+  /// count, delete count and capacity.
+  static constexpr bool
+  shouldRehash(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount) {
+    return (keyCount + deleteCount) >= rehashThreshold(capacity);
+  }
+
+  /// Determine the number of elements (alive and deleted) before a rehash
+  /// should happen.
+  static constexpr uint32_t rehashThreshold(uint32_t capacity) {
+    // `>> 1` means that we're using a load factor of 0.5 Note that if this
+    // changes, test/hermes/set-iterator.js also needs to be updated because the
+    // tests depends on knowing when rehashes happen.
+    return capacity >> 1;
   }
 
  private:
@@ -254,11 +282,6 @@ class OrderedHashMapBase {
   /// Since in the JSMapIteratorImpl finalizer, it needs to mark IteratorIndex
   /// as free, the ManagedChunkedList needs to stay alive for that finalizer.
   std::shared_ptr<ManagedChunkedList<IteratorIndex>> iteratorIndices_{nullptr};
-
-  /// The multiplier that the hash table grows or shrinks by each rehash.
-  /// Note that if this changes, test/hermes/set-iterator.js also needs to be
-  /// updated because the tests depends on knowing when rehashes happen.
-  static constexpr uint32_t kGrowOrShrinkFactor{2};
 
   /// Maximum capacity of the hash table. This is checked in rehash() and we
   /// won't grow the capacity past this number. This is calculated so that the
@@ -330,31 +353,6 @@ class OrderedHashMapBase {
   /// removed entries.
   void updateIteratorIndicesForRehash(Runtime &runtime);
 
-  /// Determine if we should shrink the hash table based on the current key
-  /// count and capacity.
-  static bool shouldShrink(uint32_t capacity, uint32_t keyCount) {
-    // Divide the capacity to get the number we want for comparison. Division
-    // ensures there won't be overflow.
-    return keyCount <= capacity / 8 &&
-        capacity > OrderedHashMapBase::kInitialCapacity;
-  }
-
-  /// Determine if we should rehash the hash table based on the current key
-  /// count, delete count and capacity.
-  static constexpr bool
-  shouldRehash(uint32_t capacity, uint32_t keyCount, uint32_t deleteCount) {
-    return (keyCount + deleteCount) >= rehashThreshold(capacity);
-  }
-
-  /// Determine the number of elements (alive and deleted) before a rehash
-  /// should happen.
-  static constexpr uint32_t rehashThreshold(uint32_t capacity) {
-    // `>> 1` means that we're using a load factor of 0.5 Note that if this
-    // changes, test/hermes/set-iterator.js also needs to be updated because the
-    // tests depends on knowing when rehashes happen.
-    return capacity >> 1;
-  }
-
   /// Calculate the next capacity based on the current capacity and key count.
   /// If there are enough unused capacity, then the next capacity will shrink.
   /// Capacity will grow otherwise. In the case that capacity cannot grow
@@ -424,6 +422,11 @@ class OrderedHashMapBase {
       Handle<> key,
       Handle<> value);
 
+ protected:
+  void assertInitialized() const {
+    assert(hashTable_.size() > 0 && "Element storage uninitialized.");
+    assert(dataTable_ && "Data Table uninitialized.");
+  }
 }; // OrderedHashMapBase
 
 } // namespace vm
