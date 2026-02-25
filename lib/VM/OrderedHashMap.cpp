@@ -326,24 +326,40 @@ void OrderedHashMapBase<BucketType, Derived>::updateIteratorIndicesForRehash(
   // Therefore, IteratorIndex value = 3 will allow the iterator to print the
   // next value, which should be 6.
   iteratorIndices_->forEach([&deletedEntryIndices](IteratorIndex &index) {
-    // Perform the std::lower_bound algorithm to do a binary search to find
-    // the first deleted entry index >= IteratorIndex value. Using the same
+    // Perform the std::upper_bound algorithm to do a binary search to find
+    // the first deleted entry index > IteratorIndex value. Using the same
     // example as above, the \p deletedEntryIndices would be [1 3 5 7].
-    // So for IteratorIndex value = 5, then \p firstEqualOrGreaterIter will
-    // be calculated to be the iterator pointing at index 2 of \p
-    // deletedEntryIndices. We then know the number of deleted entry indices
-    // that appeared before (entry 1 and entry 3).
+    // So for IteratorIndex value = 5, then \p firstGreaterIter will
+    // be calculated to be the iterator pointing at index 3 of \p
+    // deletedEntryIndices (value 7). We then know the number of deleted
+    // entry indices that appeared at or before (entry 1, entry 3, and
+    // entry 5).
+    //
+    // Note that we use upper_bound (>) instead of lower_bound (>=) because the
+    // iterator's current element could itself be deleted (e.g., 5 in the
+    // example, which may happen when the current entry is deleted during a
+    // forEach callback). In that case, the deleted entry at the iterator's
+    // position must also be counted so that the adjusted index is correct.
     //
     // If, however, IteratorIndex value = 8 and there aren't any deleted
-    // entry index that is >= 8, then \p firstEqualOrGreaterIter will be
+    // entry index that is > 8, then \p firstGreaterIter will be
     // deletedEntryIndices.end().
     const uint32_t iteratorIndex = index.getValue();
-    auto firstEqualOrGreaterIter = std::lower_bound(
+    auto firstGreaterIter = std::upper_bound(
         deletedEntryIndices.begin(), deletedEntryIndices.end(), iteratorIndex);
 
-    uint32_t numDeletedBeforeIndex =
-        std::distance(deletedEntryIndices.begin(), firstEqualOrGreaterIter);
-    index.setValue(iteratorIndex - numDeletedBeforeIndex);
+    uint32_t numDeletedAtOrBeforeIndex =
+        std::distance(deletedEntryIndices.begin(), firstGreaterIter);
+    // If all entries up to and including the iterator's position were deleted,
+    // set the index to 0 and set the isFirstIteration flag to true, so that
+    // next iteration will start from 0. This is to avoid the underflow (though
+    // it's well defined behavior), so index always remains valid.
+    if (numDeletedAtOrBeforeIndex == iteratorIndex + 1) {
+      index.setValue(0);
+      index.setIsFirstIteration(true);
+    } else {
+      index.setValue(iteratorIndex - numDeletedAtOrBeforeIndex);
+    }
   });
 }
 
