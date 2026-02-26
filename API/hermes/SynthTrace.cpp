@@ -700,27 +700,12 @@ const char *SynthTrace::nameFromReleaseUnused(::hermes::vm::ReleaseUnused ru) {
   throw std::invalid_argument("Name for ReleaseUnused not recognized");
 }
 
-void SynthTrace::flushRecordsIfNecessary() {
-  if (!json_ || records_.size() < kTraceRecordsToFlush) {
-    return;
-  }
-  flushRecords();
-}
-
-void SynthTrace::flushRecords() {
-  for (const std::unique_ptr<SynthTrace::Record> &rec : records_) {
-    rec->toJSON(*json_);
-  }
-  records_.clear();
-}
-
 void SynthTrace::flushAndDisable(const ::hermes::vm::GCExecTrace &gcTrace) {
   if (!json_) {
     return;
   }
 
-  // First, flush any buffered records, and close the still-open "trace" array.
-  flushRecords();
+  // Close the still-open "trace" array.
   json_->closeArray();
 
   // Now emit the history information, if we're in trace debug mode.
