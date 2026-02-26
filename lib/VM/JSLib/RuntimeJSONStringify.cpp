@@ -344,7 +344,7 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     return ExecutionStatus::EXCEPTION;
   }
   lv_.operationStrValue = propRes->get();
-  return operationStrValue(marker, key);
+  return operationStrValue(marker, *lv_.tmpHandle);
 }
 
 CallResult<bool> JSONStringifyer::operationStrValue(
