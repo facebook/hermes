@@ -432,7 +432,21 @@ class FlowChecker::ParseClassType {
       fieldType = outer_.parseTypeAnnotation(
           llvh::cast<ESTree::TypeAnnotationNode>(prop->_typeAnnotation)
               ->_typeAnnotation);
+    } else if ((llvh::isa<ESTree::NullLiteralNode>(prop->_value) ||
+                llvh::isa<ESTree::NumericLiteralNode>(prop->_value) ||
+                llvh::isa<ESTree::BooleanLiteralNode>(prop->_value) ||
+                llvh::isa<ESTree::StringLiteralNode>(prop->_value) ||
+                llvh::isa<ESTree::RegExpLiteralNode>(prop->_value) ||
+                llvh::isa<ESTree::BigIntLiteralNode>(prop->_value))) {
+      // TODO: Figure out a more general-purpose way to do inference here.
+      // We likely need to share some of the logic of AnnotateScopeDecls,
+      // given that there's IDZ considerations during the inference of each
+      // property's initializer.
+      outer_.visitedInits_.insert(prop->_value);
+      outer_.visitExpression(prop->_value, prop, nullptr);
+      fieldType = outer_.getNodeTypeOrAny(prop->_value);
     } else {
+      // Unable to infer, just assume 'any'.
       fieldType = outer_.flowContext_.getAny();
     }
 

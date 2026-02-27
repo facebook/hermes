@@ -17,7 +17,7 @@ class C0 {
 }
 
 class C1 extends C0 {
-    x = super.m() + 1;
+    x: number = super.m() + 1;
     y: number;
     z: number = this.x + 2;
     constructor() {
@@ -31,13 +31,13 @@ class C1 extends C0 {
 // CHECK:%untyped_function.1 = untyped_function()
 // CHECK-NEXT:%class.2 = class(C0 {
 // CHECK-NEXT:  %homeObject: %class.3
-// CHECK-NEXT:  x: any
+// CHECK-NEXT:  x: number
 // CHECK-NEXT:})
 // CHECK-NEXT:%class_constructor.4 = class_constructor(%class.2)
 // CHECK-NEXT:%class.5 = class(C1 extends %class.2 {
 // CHECK-NEXT:  %constructor: %function.6
 // CHECK-NEXT:  %homeObject: %class.7
-// CHECK-NEXT:  x: any
+// CHECK-NEXT:  x: number
 // CHECK-NEXT:  y: number
 // CHECK-NEXT:  z: number
 // CHECK-NEXT:})
@@ -87,7 +87,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                    ClassDeclaration
 // CHECK-NEXT:                        Id 'C0' [D:E:%d.2 'C0']
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : any
+// CHECK-NEXT:                            ClassProperty : number
 // CHECK-NEXT:                                Id 'x'
 // CHECK-NEXT:                                NumericLiteral : number
 // CHECK-NEXT:                            MethodDefinition : %function.9
@@ -95,18 +95,17 @@ class C1 extends C0 {
 // CHECK-NEXT:                                FunctionExpression : %function.9
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        ReturnStatement
-// CHECK-NEXT:                                            ImplicitCheckedCast : number
-// CHECK-NEXT:                                                BinaryExpression : any
-// CHECK-NEXT:                                                    MemberExpression : any
-// CHECK-NEXT:                                                        ThisExpression : %class.2
-// CHECK-NEXT:                                                        Id 'x'
-// CHECK-NEXT:                                                    BinOp +
-// CHECK-NEXT:                                                    NumericLiteral : number
+// CHECK-NEXT:                                            BinaryExpression : number
+// CHECK-NEXT:                                                MemberExpression : number
+// CHECK-NEXT:                                                    ThisExpression : %class.2
+// CHECK-NEXT:                                                    Id 'x'
+// CHECK-NEXT:                                                BinOp +
+// CHECK-NEXT:                                                NumericLiteral : number
 // CHECK-NEXT:                    ClassDeclaration
 // CHECK-NEXT:                        Id 'C1' [D:E:%d.3 'C1']
 // CHECK-NEXT:                        Id 'C0' [D:E:%d.2 'C0'] : %class_constructor.4
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : any
+// CHECK-NEXT:                            ClassProperty : number
 // CHECK-NEXT:                                Id 'x'
 // CHECK-NEXT:                                BinaryExpression : number
 // CHECK-NEXT:                                    CallExpression : number
