@@ -592,7 +592,7 @@ int TypedFunctionType::_compareImpl(
           other->params_.begin(),
           other->params_.end(),
           [&state](const Param &pa, const Param &pb) {
-            return pa.second->info->compare(pb.second->info, state);
+            return pa.type->info->compare(pb.type->info, state);
           })) {
     return tmp;
   }
@@ -612,7 +612,7 @@ bool TypedFunctionType::_equalsImpl(
   if (params_.size() != other->params_.size())
     return false;
   for (size_t i = 0, e = params_.size(); i < e; ++i) {
-    if (!params_[i].second->info->equals(other->params_[i].second->info, state))
+    if (!params_[i].type->info->equals(other->params_[i].type->info, state))
       return false;
   }
   if (!return_->info->equals(other->return_->info))

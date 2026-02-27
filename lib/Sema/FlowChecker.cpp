@@ -959,7 +959,7 @@ void FlowChecker::visitFunctionLike(
         if (!paramType)
           paramType = flowContext_.getAny();
       } else if (typedFn && i < typedFn->getParams().size()) {
-        paramType = typedFn->getParams()[i].second;
+        paramType = typedFn->getParams()[i].type;
         ++i;
       } else {
         paramType = flowContext_.getAny();
@@ -1531,15 +1531,21 @@ Type *FlowChecker::parseFunctionType(
 
   for (ESTree::Node &n : params) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&n)) {
-      paramsList.emplace_back(
-          Identifier::getFromPointer(id->_name),
-          parseOptionalTypeAnnotation(id->_typeAnnotation));
+      if (id->_optional) {
+        sm_.error(
+            id->getSourceRange(),
+            "optional function parameters not implemented yet");
+      }
+      paramsList.push_back(
+          {Identifier::getFromPointer(id->_name),
+           parseOptionalTypeAnnotation(id->_typeAnnotation),
+           id->_optional});
       isTyped |= (id->_typeAnnotation != nullptr);
     } else {
       sm_.warning(
           n.getSourceRange(),
           "ft: typing of pattern parameters not implemented, :any assumed");
-      paramsList.emplace_back(Identifier(), flowContext_.getAny());
+      paramsList.push_back({Identifier(), flowContext_.getAny(), false});
     }
   }
 
@@ -1552,17 +1558,17 @@ Type *FlowChecker::parseFunctionType(
 
   // Check if the first parameter is "this", since it is treated specially.
   if (!paramsRef.empty() &&
-      paramsRef.front().first.getUnderlyingPointer() == kw_.identThis) {
+      paramsRef.front().name.getUnderlyingPointer() == kw_.identThis) {
     // User is allowed to specify a "this" on a method where it's already known,
     // but it must be the same type as the given type.
     if (thisParamType &&
-        !thisParamType->info->equals(paramsRef.front().second->info)) {
+        !thisParamType->info->equals(paramsRef.front().type->info)) {
       sm_.error(
-          paramsRef.front().second->node->getSourceRange(),
+          paramsRef.front().type->node->getSourceRange(),
           "ft: incompatible 'this' type annotation");
     }
 
-    thisParamType = paramsRef.front().second;
+    thisParamType = paramsRef.front().type;
     paramsRef = paramsRef.drop_front();
   }
 
@@ -1934,8 +1940,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
       return {};
 
     for (size_t i = 0, e = aType->getParams().size(); i < e; ++i) {
-      Type *paramA = aType->getParams()[i].second;
-      Type *paramB = bType->getParams()[i].second;
+      Type *paramA = aType->getParams()[i].type;
+      Type *paramB = bType->getParams()[i].type;
       CanFlowResult flowRes = canAFlowIntoB(paramB, paramA);
       if (!flowRes.canFlow || flowRes.needCheckedCast)
         return {};

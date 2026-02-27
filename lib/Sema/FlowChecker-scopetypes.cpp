@@ -174,7 +174,7 @@ class FlowChecker::FindLoopingTypes {
     if (type->getThisParam()) {
       result |= isTypeLooping(type->getThisParam());
     }
-    for (const auto &[name, paramType] : type->getParams()) {
+    for (const auto &[name, paramType, optional] : type->getParams()) {
       result |= isTypeLooping(paramType);
     }
     return result;
@@ -183,7 +183,7 @@ class FlowChecker::FindLoopingTypes {
   bool isLooping(Type *, NativeFunctionType *type) {
     bool result = false;
     result |= isTypeLooping(type->getReturnType());
-    for (const auto &[name, paramType] : type->getParams()) {
+    for (const auto &[name, paramType, optional] : type->getParams()) {
       result |= isTypeLooping(paramType);
     }
     return result;
@@ -819,7 +819,7 @@ class FlowChecker::DeclareScopeTypes {
       completeForwardType(ftype->getReturnType(), visited);
       if (ftype->getThisParam())
         completeForwardType(ftype->getThisParam(), visited);
-      for (auto &[name, type] : ftype->getParams())
+      for (auto &[name, type, optional] : ftype->getParams())
         completeForwardType(type, visited);
     }
 

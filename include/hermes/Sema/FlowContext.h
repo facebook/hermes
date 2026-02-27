@@ -517,7 +517,14 @@ class BaseFunctionType : public TypeInfo {
 
 class TypedFunctionType : public BaseFunctionType {
  public:
-  using Param = std::pair<Identifier, Type *>;
+  struct Param {
+    /// Name of the parameter.
+    Identifier name;
+    /// Type of the parameter.
+    Type *type;
+    /// Whether the parameter was declared as optional.
+    bool optional;
+  };
 
  private:
   /// Result type.

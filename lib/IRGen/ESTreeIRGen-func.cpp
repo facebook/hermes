@@ -1159,7 +1159,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
             llvh::dyn_cast<flow::TypedFunctionType>(
                 flowContext_.getNodeTypeOrAny(funcNode)->info);
         ftype && paramIndex < ftype->getParams().size()) {
-      jsParam->setType(flowTypeToIRType(ftype->getParams()[paramIndex].second));
+      jsParam->setType(flowTypeToIRType(ftype->getParams()[paramIndex].type));
     }
     Instruction *formalParam = Builder.createLoadParamInst(jsParam);
     curFunction()->jsParams.push_back(formalParam);

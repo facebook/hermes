@@ -896,18 +896,20 @@ Type *FlowChecker::processFunctionTypeAnnotation(
       if (param->_optional) {
         sm_.error(param->getSourceRange(), "unsupported optional parameter");
       }
-      paramsList.emplace_back(
-          Identifier::getFromPointer(id ? id->_name : nullptr),
-          param->_typeAnnotation ? cb(param->_typeAnnotation) : nullptr);
+      paramsList.push_back(
+          {Identifier::getFromPointer(id ? id->_name : nullptr),
+           param->_typeAnnotation ? cb(param->_typeAnnotation) : nullptr,
+           param->_optional});
     } else {
       sm_.warning(
           n.getSourceRange(),
           "ft: typing of pattern parameters not implemented, :any assumed");
       size_t idx = paramsList.size();
-      paramsList.emplace_back(
-          astContext_.getIdentifier(
-              (llvh::Twine("?param_") + llvh::Twine(idx)).str()),
-          flowContext_.getAny());
+      paramsList.push_back(
+          {astContext_.getIdentifier(
+               (llvh::Twine("?param_") + llvh::Twine(idx)).str()),
+           flowContext_.getAny(),
+           false});
     }
   }
 
