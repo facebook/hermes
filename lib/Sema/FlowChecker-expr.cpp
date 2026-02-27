@@ -266,7 +266,8 @@ class FlowChecker::ExprVisitor {
             outer_,
             node,
             arrowInferenceType,
-            outer_.curFunctionContext_->thisParamType};
+            outer_.curFunctionContext_->thisParamType,
+            outer_.curFunctionContext_->newTargetType};
         outer_.visitFunctionLike(node, node->_body, node->_params);
       }
     } else {
@@ -278,6 +279,30 @@ class FlowChecker::ExprVisitor {
       ESTree::Node *parent,
       Type *constraint) {
     return outer_.visit(node);
+  }
+
+  void visit(
+      ESTree::MetaPropertyNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    auto *meta = llvh::cast<ESTree::IdentifierNode>(node->_meta);
+    auto *property = llvh::cast<ESTree::IdentifierNode>(node->_property);
+
+    // Check for new.target.
+    if (meta->_name == outer_.kw_.identNew &&
+        property->_name == outer_.kw_.identTarget) {
+      if (!outer_.curFunctionContext_) {
+        outer_.sm_.error(
+            node->getSourceRange(), "ft: invalid use of new.target");
+        return;
+      }
+
+      outer_.setNodeType(node, outer_.curFunctionContext_->newTargetType);
+      return;
+    }
+
+    // All other meta properties are not supported.
+    outer_.sm_.error(node->getSourceRange(), "ft: unsupported meta property");
   }
 
   void

@@ -136,7 +136,8 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
     return false;
   }
 
-  FunctionContext globalFunc(*this, rootNode, nullptr, flowContext_.getAny());
+  FunctionContext globalFunc(
+      *this, rootNode, nullptr, flowContext_.getAny(), flowContext_.getVoid());
   ScopeRAII scope(*this);
   declareNativeTypes(rootNode->getScope());
   if (!resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope()))
@@ -198,7 +199,8 @@ void FlowChecker::visitNonGenericFunctionDeclaration(
     thisType = typed->getThisParam();
 
   setNodeType(node, declType);
-  FunctionContext functionContext(*this, node, declType, thisType);
+  FunctionContext functionContext(
+      *this, node, declType, thisType, flowContext_.getVoid());
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -247,7 +249,8 @@ void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
   if (auto *typed = llvh::dyn_cast<TypedFunctionType>(ftype->info))
     thisType = typed->getThisParam();
 
-  FunctionContext functionContext(*this, node, ftype, thisType);
+  FunctionContext functionContext(
+      *this, node, ftype, thisType, flowContext_.getVoid());
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -267,7 +270,11 @@ void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
   setNodeType(node, ftype);
 
   FunctionContext functionContext(
-      *this, node, ftype, curFunctionContext_->thisParamType);
+      *this,
+      node,
+      ftype,
+      curFunctionContext_->thisParamType,
+      curFunctionContext_->newTargetType);
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -590,13 +597,13 @@ void FlowChecker::parseClassType(
 }
 
 void FlowChecker::visitClassNode(
-    ESTree::Node *classNode,
+    ESTree::ClassLikeNode *classNode,
     ESTree::ClassBodyNode *body,
     Type *classType) {
   assert(
       llvh::cast<ClassType>(classType->info)->isInitialized() &&
       "trying to typecheck uninitialized class");
-  ClassContext classContext(*this, classType);
+  ClassContext classContext(*this, classType, classNode);
   visitESTreeChildren(*this, body);
 }
 
@@ -672,7 +679,9 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         *this,
         fe,
         curClassContext_->getClassTypeInfo()->getConstructorType(),
-        curClassContext_->classType);
+        curClassContext_->classType,
+        /* newTargetType */
+        curClassContext_->getClassTypeInfo()->getConstructorType());
     visitFunctionLike(fe, fe->_body, fe->_params);
   } else if (node->_key) {
     auto *id = llvh::cast<ESTree::IdentifierNode>(node->_key);
@@ -713,7 +722,11 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
     }
 
     FunctionContext functionContext(
-        *this, fe, funcType, curClassContext_->classType);
+        *this,
+        fe,
+        funcType,
+        curClassContext_->classType,
+        /* newTargetType */ flowContext_.getVoid());
     visitFunctionLike(fe, fe->_body, fe->_params);
   }
 }

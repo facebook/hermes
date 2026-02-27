@@ -314,7 +314,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   /// Run typechecking on the body of a class that we already have the type for.
   void visitClassNode(
-      ESTree::Node *classNode,
+      ESTree::ClassLikeNode *classNode,
       ESTree::ClassBodyNode *body,
       Type *classType);
 
@@ -784,6 +784,10 @@ class FlowChecker::FunctionContext {
   /// FunctionType::thisParamType, because of arrow functions.
   Type *const thisParamType;
 
+  /// The type of "new.target". If nullptr, this is a global function.
+  /// Depending on the compilation mode, usages may be invalid.
+  Type *const newTargetType;
+
   FunctionContext(const FunctionContext &) = delete;
   void operator=(const FunctionContext &) = delete;
 
@@ -792,13 +796,15 @@ class FlowChecker::FunctionContext {
       FlowChecker &outer,
       ESTree::FunctionLikeNode *declCollectorNode,
       Type *functionType,
-      Type *thisParamType)
+      Type *thisParamType,
+      Type *newTargetType)
       : outer_(outer),
         prevContext_(outer.curFunctionContext_),
         declCollector(
             outer.declCollectorMap_.find(declCollectorNode)->second.get()),
         functionType(functionType),
-        thisParamType(thisParamType) {
+        thisParamType(thisParamType),
+        newTargetType(newTargetType) {
     assert(
         outer.declCollectorMap_.count(declCollectorNode) &&
         "no declCollector for this node");
@@ -807,6 +813,11 @@ class FlowChecker::FunctionContext {
 
   ~FunctionContext() {
     outer_.curFunctionContext_ = prevContext_;
+  }
+
+  /// \return the previous FunctionContext.
+  FunctionContext *getPreviousContext() const {
+    return prevContext_;
   }
 };
 
@@ -821,13 +832,19 @@ class FlowChecker::ClassContext {
  public:
   Type *const classType;
 
+  ESTree::ClassLikeNode *const node;
+
   ClassContext(const ClassContext &) = delete;
   void operator=(const ClassContext &) = delete;
 
-  ClassContext(FlowChecker &outer, Type *const classType)
+  ClassContext(
+      FlowChecker &outer,
+      Type *const classType,
+      ESTree::ClassLikeNode *node)
       : outer_(outer),
         prevContext_(outer.curClassContext_),
-        classType(classType) {
+        classType(classType),
+        node(node) {
     outer.curClassContext_ = this;
   }
 
