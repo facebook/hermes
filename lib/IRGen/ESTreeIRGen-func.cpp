@@ -887,6 +887,11 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
 
   bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
   for (sema::Decl *decl : scope->decls) {
+    if (decl->generic) {
+      // Skip generics that aren't specialized.
+      continue;
+    }
+
     Variable *var = nullptr;
     bool init = false;
     switch (decl->kind) {
@@ -1034,6 +1039,11 @@ void ESTreeIRGen::emitHoistedFunctionDeclaration(
 
   sema::Decl *decl =
       getIDDecl(llvh::cast<ESTree::IdentifierNode>(funcDecl->_id));
+
+  if (decl->generic) {
+    // Skip generics that aren't specialized.
+    return;
+  }
 
   // Function-level var-scoped functions may have a previous store of
   // 'undefined', which is now dead. If this isn't a function-level scope, don't
