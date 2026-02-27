@@ -536,7 +536,7 @@ class FlowChecker::ExprVisitor {
             node->_property->getSourceRange(),
             llvh::Twine(
                 "ft: named property access only allowed on objects, found ") +
-                objType->info->getKindName());
+                objType->messageString());
       }
     }
 

@@ -86,7 +86,82 @@ static bool listsMatchSlow(
   return matched.all();
 }
 
+static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
+#if HERMES_PARSE_FLOW
+  if (type->node && llvh::isa<ESTree::TypeAliasNode>(type->node)) {
+    // Return the name along with the kind of the type.
+    if (type->info)
+      os << type->info->getKindName() << " ";
+    os << llvh::cast<ESTree::IdentifierNode>(
+              llvh::cast<ESTree::TypeAliasNode>(type->node)->_id)
+              ->_name->str();
+    return;
+  }
+#endif
+
+  if (!type->info) {
+    os << "unknown";
+    return;
+  }
+
+  if (llvh::isa<ClassType>(type->info)) {
+    // If the class node has a name use that instead.
+    if (type->node && llvh::isa<ESTree::ClassDeclarationNode>(type->node)) {
+      os << "class "
+         << llvh::cast<ESTree::IdentifierNode>(
+                llvh::cast<ESTree::ClassDeclarationNode>(type->node)->_id)
+                ->_name->str();
+    } else {
+      os << "class";
+    }
+    return;
+  }
+
+  if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
+    bool first = true;
+    os << '(';
+    for (const Type *t : unionType->getTypes()) {
+      if (!first) {
+        os << " | ";
+      }
+      messageStringImpl(t, os);
+      first = false;
+    }
+    os << ')';
+    return;
+  }
+
+  if (auto *arrayType = llvh::dyn_cast<ArrayType>(type->info)) {
+    messageStringImpl(arrayType->getElement(), os);
+    os << "[]";
+    return;
+  }
+
+  if (auto *tupleType = llvh::dyn_cast<TupleType>(type->info)) {
+    bool first = true;
+    os << '[';
+    for (const Type *t : tupleType->getTypes()) {
+      if (!first) {
+        os << ", ";
+      }
+      messageStringImpl(t, os);
+      first = false;
+    }
+    os << ']';
+    return;
+  }
+
+  os << type->info->getKindName();
+}
+
 } // anonymous namespace
+
+std::string Type::messageString() const {
+  std::string result;
+  llvh::raw_string_ostream os(result);
+  messageStringImpl(this, os);
+  return os.str();
+}
 
 llvh::StringRef TypeInfo::getKindName() const {
   switch (kind_) {

@@ -948,11 +948,13 @@ void FlowChecker::checkImplicitReturnType(ESTree::FunctionLikeNode *node) {
       sm_.error(
           llvh::cast<ESTree::TypeAnnotationNode>(retAnnotation)
               ->_typeAnnotation->getSourceRange(),
-          "ft: implicitly-returned 'undefined' incompatible with return type");
+          "ft: implicitly-returned 'undefined' incompatible with return type: " +
+              ftype->getReturnType()->messageString());
     } else {
       sm_.error(
           node->getStartLoc(),
-          "ft: implicitly-returned 'undefined' incompatible with return type");
+          "ft: implicitly-returned 'undefined' incompatible with return type: " +
+              ftype->getReturnType()->messageString());
     }
   }
 }

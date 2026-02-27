@@ -176,6 +176,9 @@ class Type {
 
   explicit Type(TypeInfo *info = nullptr, ESTree::Node *node = nullptr)
       : info(info), node(node) {}
+
+  /// \return a string representation of the type suitable for error messages.
+  std::string messageString() const;
 };
 
 class SingletonType : public TypeInfo {
