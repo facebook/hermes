@@ -849,7 +849,8 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       if (!cf.canFlow) {
         sm_.error(
             declarator->getSourceRange(),
-            "ft: incompatible initialization type");
+            "ft: incompatible initialization type: cannot assign " +
+                rt->messageString() + " to " + lt->messageString());
       } else {
         declarator->_init =
             implicitCheckedCast(declarator->_init, rtNarrow, cf);
@@ -862,7 +863,8 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       if (!cf.canFlow) {
         sm_.error(
             declarator->getSourceRange(),
-            "ft: incompatible initialization type");
+            "ft: incompatible initialization type: cannot assign " +
+                rt->messageString() + " to " + lt->messageString());
       } else {
         declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
       }

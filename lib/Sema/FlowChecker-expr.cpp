@@ -1328,7 +1328,9 @@ class FlowChecker::ExprVisitor {
       auto [rtNarrow, cf] = tryNarrowType(rt, lt);
       if (!cf.canFlow) {
         outer_.sm_.error(
-            node->getSourceRange(), "ft: incompatible assignment types");
+            node->getSourceRange(),
+            "ft: incompatible assignment type: cannot implicitly cast from " +
+                rt->messageString() + " to " + lt->messageString());
         res = lt;
       } else {
         node->_right = outer_.implicitCheckedCast(node->_right, rtNarrow, cf);
@@ -1366,7 +1368,9 @@ class FlowChecker::ExprVisitor {
         CanFlowResult cf = canAFlowIntoB(opResType, lt);
         if (!cf.canFlow) {
           outer_.sm_.error(
-              node->getSourceRange(), "ft: incompatible assignment types");
+              node->getSourceRange(),
+              "ft: incompatible assignment type: cannot implicitly cast from " +
+                  rt->messageString() + " to " + lt->messageString());
           res = lt;
         } else if (cf.needCheckedCast) {
           // Insert an ImplicitCheckedCast around the LHS in the

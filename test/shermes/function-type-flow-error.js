@@ -14,7 +14,7 @@ function bar(x: number): number|string { return x; }
 
 // Ensure bar cannot flow into foo.
 foo = bar;
-// CHECK-LABEL: {{.*}}:16:1: error: ft: incompatible assignment types
+// CHECK-LABEL: {{.*}}:16:1: error: ft: incompatible assignment type: cannot implicitly cast from function to function
 // CHECK-NEXT: foo = bar;
 // CHECK-NEXT: ^~~~~~~~~
 

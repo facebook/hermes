@@ -30,7 +30,7 @@ let b: string;
 // CHECK-NEXT:{{.*}}tuple-destr-error.js:17:5: error: ft: cannot destructure tuple, expected 2 elements, found 3
 // CHECK-NEXT:let [v2, v3, v4] = tup;
 // CHECK-NEXT:    ^~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}tuple-destr-error.js:22:1: error: ft: incompatible assignment types
+// CHECK-NEXT:{{.*}}tuple-destr-error.js:22:1: error: ft: incompatible assignment type: cannot implicitly cast from [number, boolean] to [number, string]
 // CHECK-NEXT:[a, b] = tup;
 // CHECK-NEXT:^~~~~~~~~~~~
 // CHECK-NEXT:Emitted 3 errors. exiting.
