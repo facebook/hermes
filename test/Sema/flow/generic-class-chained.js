@@ -81,7 +81,11 @@ class C<T> {
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.10
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.11
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement

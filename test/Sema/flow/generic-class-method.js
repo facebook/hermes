@@ -81,6 +81,8 @@ class C<Props> {
 // CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.10 'b' Let : %class.6
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement

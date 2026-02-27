@@ -110,6 +110,20 @@ let z: Z;
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.10
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.11
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement

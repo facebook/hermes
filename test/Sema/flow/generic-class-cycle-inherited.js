@@ -51,6 +51,8 @@ class B<T> extends A {}
 // CHECK-NEXT:            Scope %s.4
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement

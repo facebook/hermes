@@ -50,6 +50,8 @@ class B {
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement

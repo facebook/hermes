@@ -41,6 +41,8 @@ var d2: B<D>[];
 // CHECK-NEXT:            Decl %d.6 'B' Class : %class_constructor.5
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.4
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement

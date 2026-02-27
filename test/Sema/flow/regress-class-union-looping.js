@@ -37,6 +37,8 @@ type D = [B<D>] | C<number>;
 // CHECK-NEXT:            Decl %d.4 'B' Class : %class_constructor.7
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.4
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
