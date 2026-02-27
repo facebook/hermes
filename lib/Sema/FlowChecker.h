@@ -770,6 +770,7 @@ class FlowChecker::FunctionContext {
 
  public:
   /// The DeclCollector associated with this function.
+  /// nullptr if this function has no declCollector associated.
   const sema::DeclCollector *const declCollector;
 
   /// The external signature of the current function. If nullptr, this is the
@@ -801,13 +802,16 @@ class FlowChecker::FunctionContext {
       : outer_(outer),
         prevContext_(outer.curFunctionContext_),
         declCollector(
-            outer.declCollectorMap_.find(declCollectorNode)->second.get()),
+            declCollectorNode
+                ? outer.declCollectorMap_.find(declCollectorNode)->second.get()
+                : nullptr),
         functionType(functionType),
         thisParamType(thisParamType),
         newTargetType(newTargetType) {
     assert(
+        !declCollectorNode ||
         outer.declCollectorMap_.count(declCollectorNode) &&
-        "no declCollector for this node");
+            "no declCollector for this node");
     outer.curFunctionContext_ = this;
   }
 
@@ -828,6 +832,9 @@ class FlowChecker::ClassContext {
 
   /// The previous context, restored on destruction.
   ClassContext *const prevContext_;
+
+  /// The type of the field initializer function.
+  Type *fieldInitFunctionType_ = nullptr;
 
  public:
   Type *const classType;
@@ -854,6 +861,17 @@ class FlowChecker::ClassContext {
 
   ClassType *getClassTypeInfo() {
     return llvh::cast<ClassType>(classType->info);
+  }
+
+  /// \return the fieldInitFunctionType and create it if it doesn't exist.
+  Type *getOrCreateFieldInitFunctionType() {
+    if (!fieldInitFunctionType_) {
+      fieldInitFunctionType_ = outer_.flowContext_.createType(
+          outer_.flowContext_.createFunction(
+              outer_.flowContext_.getVoid(), classType, {}, false, false),
+          node);
+    }
+    return fieldInitFunctionType_;
   }
 };
 

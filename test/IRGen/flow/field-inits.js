@@ -184,9 +184,11 @@ function f(i: number): number {
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS1: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS5: any, %1: environment
 // CHECK-NEXT:       PrStoreInst 76: number, %0: any, 0: number, "x": string, true: boolean
-// CHECK-NEXT:  %4 = LoadPropertyInst (:any) %0: any, "x": string
-// CHECK-NEXT:  %5 = BinaryAddInst (:any) %4: any, 1: number
-// CHECK-NEXT:       PrStoreInst %5: any, %0: any, 1: number, "y": string, false: boolean
+// CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %0: any, type(object)
+// CHECK-NEXT:  %5 = PrLoadInst (:number) %4: object, 0: number, "x": string
+// CHECK-NEXT:  %6 = BinaryAddInst (:any) %5: number, 1: number
+// CHECK-NEXT:  %7 = CheckedTypeCastInst (:number) %6: any, type(number)
+// CHECK-NEXT:       PrStoreInst %7: number, %0: any, 1: number, "y": string, false: boolean
 // CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 

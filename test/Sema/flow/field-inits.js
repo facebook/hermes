@@ -118,9 +118,9 @@ class C1 extends C0 {
 // CHECK-NEXT:                                Id 'y'
 // CHECK-NEXT:                            ClassProperty : number
 // CHECK-NEXT:                                Id 'z'
-// CHECK-NEXT:                                BinaryExpression : any
-// CHECK-NEXT:                                    MemberExpression : any
-// CHECK-NEXT:                                        ThisExpression : any
+// CHECK-NEXT:                                BinaryExpression : number
+// CHECK-NEXT:                                    MemberExpression : number
+// CHECK-NEXT:                                        ThisExpression : %class.5
 // CHECK-NEXT:                                        Id 'x'
 // CHECK-NEXT:                                    BinOp +
 // CHECK-NEXT:                                    NumericLiteral : number
