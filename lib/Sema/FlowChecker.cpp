@@ -1499,17 +1499,22 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
 Type *FlowChecker::parseUnionTypeAnnotation(
     ESTree::UnionTypeAnnotationNode *node) {
   llvh::SmallVector<Type *, 4> types{};
-  for (auto &n : node->_types)
+  for (auto &n : node->_types) {
     types.push_back(parseTypeAnnotation(&n));
+    // Need to check for looping types here because n may not have been used in
+    // a union before and we need looping information for canonicalizing unions.
+    findLoopingTypes(types.back());
+  }
   return flowContext_.createType(flowContext_.maybeCreateUnion(types), node);
 }
 
 Type *FlowChecker::parseNullableTypeAnnotation(
     ESTree::NullableTypeAnnotationNode *node) {
-  return flowContext_.createType(
-      flowContext_.createPopulatedNullable(
-          parseTypeAnnotation(node->_typeAnnotation)),
-      node);
+  Type *t = parseTypeAnnotation(node->_typeAnnotation);
+  // Need to check for looping types here because n may not have been used in
+  // a union before and we need looping information for canonicalizing unions.
+  findLoopingTypes(t);
+  return flowContext_.createType(flowContext_.createPopulatedNullable(t), node);
 }
 
 Type *FlowChecker::parseArrayTypeAnnotation(
@@ -1939,10 +1944,12 @@ sema::Decl *FlowChecker::specializeGeneric(
   }
 
   return specializeGenericWithParsedTypes(
-      oldDecl, typeArgsNode->getSourceRange(), typeArgTypes, scope);
+             oldDecl, typeArgsNode->getSourceRange(), typeArgTypes, scope)
+      .first;
 }
 
-sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
+std::pair<sema::Decl *, ESTree::Node *>
+FlowChecker::specializeGenericWithParsedTypes(
     sema::Decl *oldDecl,
     SMRange errorRange,
     llvh::ArrayRef<Type *> typeArgTypes,
@@ -1993,7 +2000,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
     if (!specialization) {
       sm_.error(
           errorRange, "failed to create specialization for generic function");
-      return nullptr;
+      return {nullptr, nullptr};
     }
     auto &nodeList = getNodeList(generic.parent);
     nodeList.insert(generic.originalNode->getIterator(), *specialization);
@@ -2050,7 +2057,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
           typeParamsNode, errorRange, typeArgTypes, oldDecl->scope);
       if (!populated) {
         LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
-        return nullptr;
+        return {nullptr, nullptr};
       }
 
       if (auto *func =
@@ -2068,7 +2075,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
     assert(flowContext_.findDeclType(newDecl) && "expected valid type");
   }
 
-  return newDecl;
+  return {newDecl, specialization};
 }
 
 void FlowChecker::resolveCallToGenericFunctionSpecialization(
@@ -2097,7 +2104,8 @@ void FlowChecker::resolveCallToGenericFunctionSpecializationWithParsedTypes(
 
   sema::Decl *newDecl = nullptr;
   newDecl = specializeGenericWithParsedTypes(
-      oldDecl, node->getSourceRange(), typeArgTypes, oldDecl->scope);
+                oldDecl, node->getSourceRange(), typeArgTypes, oldDecl->scope)
+                .first;
 
   if (newDecl) {
     semContext_.setExpressionDecl(callee, newDecl);

@@ -402,6 +402,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// can be compared easily, and don't count as looping union arms.
   class FindLoopingTypes;
 
+  /// Finds looping types reachable from \p type,
+  /// provided all forward generics have been instantiated.
+  void findLoopingTypes(Type *type);
+
   /// Parse all sema declarations type annotations and associate them
   /// with the declarations.
   class AnnotateScopeDecls;
@@ -627,14 +631,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       sema::LexicalScope *scope);
 
   /// If necessary, specialize and typecheck the specialization of a generic
-  /// function.
-  /// \param node the call expression passing the type arguments
+  /// function or class.
   /// \param errorRange used for reporting errors when binding fails.
   /// \param callee the name of the generic being called
-  /// \param oldDecl the original Decl for the non-specialized generic function
-  /// \return the new Decl for the specialization of the function,
-  ///   nullptr on error.
-  sema::Decl *specializeGenericWithParsedTypes(
+  /// \param oldDecl the original Decl for the non-specialized generic
+  /// \return the new Decl for the specialization of the function or class,
+  ///   and the specialization itself, nullptrs on error.
+  std::pair<sema::Decl *, ESTree::Node *> specializeGenericWithParsedTypes(
       sema::Decl *oldDecl,
       SMRange errorRange,
       llvh::ArrayRef<Type *> typeArgTypes,

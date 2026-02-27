@@ -170,6 +170,10 @@ class Type {
   /// JS source.
   ESTree::Node *node = nullptr;
 
+  /// Whether this type is a "looping" type,
+  /// and should be treated specially when used in a union.
+  bool isLooping = false;
+
   explicit Type(TypeInfo *info = nullptr, ESTree::Node *node = nullptr)
       : info(info), node(node) {}
 };
@@ -197,6 +201,7 @@ class SingletonType : public TypeInfo {
   }
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const {
+    assert(getKind() != TypeKind::Generic && "generic type is not hashable");
     return (unsigned)getKind();
   }
 };

@@ -25,31 +25,31 @@ var d: A<string>;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(number | %array.3 | %class.4)
+// CHECK-NEXT:%union.2 = union(number | %class.3 | %array.4)
 // CHECK-NEXT:%union.5 = union(number | %array.6)
-// CHECK-NEXT:%array.3 = array(%union.5)
-// CHECK-NEXT:%class.4 = class(Cls {
+// CHECK-NEXT:%array.4 = array(%union.5)
+// CHECK-NEXT:%class.3 = class(Cls {
 // CHECK-NEXT:  %homeObject: %class.7
 // CHECK-NEXT:  x: number
 // CHECK-NEXT:  y: %union.2
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.8 = class_constructor(%class.4)
 // CHECK-NEXT:%array.6 = array(%union.2)
+// CHECK-NEXT:%class_constructor.8 = class_constructor(%class.3)
 // CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:})
 // CHECK-NEXT:%array.9 = array(number)
-// CHECK-NEXT:%union.10 = union(string | %array.11 | %class.12)
+// CHECK-NEXT:%union.10 = union(string | %class.11 | %array.12)
 // CHECK-NEXT:%union.13 = union(string | %array.14)
-// CHECK-NEXT:%array.11 = array(%union.13)
-// CHECK-NEXT:%class.12 = class(Cls {
+// CHECK-NEXT:%array.12 = array(%union.13)
+// CHECK-NEXT:%class.11 = class(Cls {
 // CHECK-NEXT:  %homeObject: %class.15
 // CHECK-NEXT:  x: string
 // CHECK-NEXT:  y: %union.10
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.16 = class_constructor(%class.12)
+// CHECK-NEXT:%array.14 = array(%union.10)
+// CHECK-NEXT:%class_constructor.16 = class_constructor(%class.11)
 // CHECK-NEXT:%class.15 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.14 = array(%union.10)
 // CHECK-NEXT:%object.17 = object({
 // CHECK-NEXT:})
 

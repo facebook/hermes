@@ -326,6 +326,8 @@ void UnionType::canonicalizeTypes(
       for (Type *nestedElem : unionType->getLoopingTypes()) {
         loopingTypes.push_back(nestedElem);
       }
+    } else if (elemType->isLooping) {
+      loopingTypes.push_back(elemType);
     } else {
       canonicalTypes.push_back(elemType);
     }

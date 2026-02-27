@@ -11,11 +11,11 @@
 // These tests are just to ensure shermes doesn't crash.
 // They can be removed once we support qualified type annotations.
 
-type A = A.B;
+var a: A.B;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}qualified-type-error.js:14:10: error: ft: unsupported type annotation
-// CHECK-NEXT:type A = A.B;
-// CHECK-NEXT:         ^~~
+// CHECK:{{.*}}qualified-type-error-vars.js:14:8: error: ft: unsupported type annotation
+// CHECK-NEXT:var a: A.B;
+// CHECK-NEXT:       ^~~
 // CHECK-NEXT:Emitted 1 errors. exiting.
