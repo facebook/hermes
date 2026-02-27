@@ -1103,6 +1103,18 @@ class FlowChecker::AnnotateScopeDecls {
               annotateDestructuringTarget(declarator, arr, type);
               continue;
             }
+          } else if (
+              auto *obj =
+                  llvh::dyn_cast<ESTree::ObjectPatternNode>(declarator->_id)) {
+            if (obj->_typeAnnotation) {
+              // Found a type annotation on a local variable declaration that
+              // destructures into an object pattern.
+              Type *type = outer.parseTypeAnnotation(
+                  llvh::cast<ESTree::TypeAnnotationNode>(obj->_typeAnnotation)
+                      ->_typeAnnotation);
+              annotateDestructuringTarget(declarator, obj, type);
+              continue;
+            }
           }
         }
       }
@@ -1215,10 +1227,28 @@ class FlowChecker::AnnotateScopeDecls {
             type = inferred;
         }
         annotateDestructuringTarget(declarator, arr, type);
+      } else if (
+          auto *obj =
+              llvh::dyn_cast<ESTree::ObjectPatternNode>(declarator->_id)) {
+        if (outer.flowContext_.findNodeType(obj)) {
+          // This object pattern was already handled in
+          // setTypesForAnnotatedVariables.
+          continue;
+        }
+        Type *type = outer.flowContext_.getAny();
+        if (declarator->_init) {
+          // It's possible to not have an _init if this declarator is part of a
+          // for loop:
+          // for ({x, y} of iterable) {}
+          if (Type *inferred = tryInferInitExpression(declarator))
+            type = inferred;
+        }
+        annotateDestructuringTarget(declarator, obj, type);
       } else {
+        // Fallback for any other pattern types.
         outer.sm_.warning(
             declarator->_id->getSourceRange(),
-            "ft: typing of object declarators not implemented, :any assumed");
+            "ft: typing of pattern declarators not implemented, :any assumed");
       }
     }
   }
@@ -1298,12 +1328,64 @@ class FlowChecker::AnnotateScopeDecls {
               "ft: incompatible type for array pattern, expected tuple");
           continue;
         }
-      } else if (llvh::isa<ESTree::ObjectPatternNode>(node)) {
-        outer.setNodeType(arr, outer.flowContext_.getAny());
-        outer.sm_.warning(
-            node->getSourceRange(),
-            "ft: typing of object declarators not implemented, :any assumed");
-        continue;
+      } else if (auto *obj = llvh::dyn_cast<ESTree::ObjectPatternNode>(node)) {
+        if (auto *objType = llvh::dyn_cast<ExactObjectType>(t->info)) {
+          // Setting the type allows IRGen to query the destructuring kind.
+          outer.setNodeType(obj, t);
+
+          for (ESTree::Node &propNode : obj->_properties) {
+            if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
+              if (prop->_computed) {
+                outer.sm_.error(
+                    prop->_key->getSourceRange(),
+                    "ft: computed properties not supported in destructuring");
+                continue;
+              }
+              auto *keyId = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key);
+              if (!keyId) {
+                outer.sm_.error(
+                    prop->_key->getSourceRange(),
+                    "ft: property key must be an identifier");
+                continue;
+              }
+              auto propName = Identifier::getFromPointer(keyId->_name);
+              auto optFieldIdx = objType->findField(propName);
+              if (!optFieldIdx) {
+                outer.sm_.error(
+                    prop->_key->getSourceRange(),
+                    "ft: property '" + propName.str() +
+                        "' not found in object type");
+                continue;
+              }
+              Type *fieldType = objType->getFields()[*optFieldIdx].type;
+              worklist.emplace_back(prop->_value, fieldType);
+            } else if (
+                auto *rest =
+                    llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
+              outer.sm_.error(
+                  rest->getSourceRange(), "ft: rest elements not supported");
+              continue;
+            }
+          }
+        } else if (llvh::isa<AnyType>(t->info)) {
+          outer.setNodeType(obj, outer.flowContext_.getAny());
+          // Propagate 'any' to all properties.
+          for (ESTree::Node &propNode : obj->_properties) {
+            if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
+              worklist.emplace_back(prop->_value, t);
+            } else if (
+                auto *rest =
+                    llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
+              outer.sm_.error(
+                  rest->getSourceRange(), "ft: rest elements not supported");
+              continue;
+            }
+          }
+        } else {
+          outer.sm_.error(
+              obj->getSourceRange(),
+              "ft: incompatible type for object pattern, expected object type");
+        }
       }
     }
 
