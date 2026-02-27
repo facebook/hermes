@@ -140,10 +140,8 @@ TEST_F(AlignedHeapSegmentTest, Offset) {
 }
 
 TEST_F(AlignedHeapSegmentTest, AdviseUnused) {
-// TODO(T40416012) Re-enable this test on Windows when vm_unused is fixed.
-// Skip this test in Windows because vm_unused has a no-op implementation. Skip
-// it when huge pages are on because we do not return memory to the OS.
-#if !defined(_WINDOWS) && !defined(HERMESVM_ALLOW_HUGE_PAGES)
+// Skip it when huge pages are on because we do not return memory to the OS.
+#if !defined(HERMESVM_ALLOW_HUGE_PAGES)
   const size_t PG_SIZE = oscompat::page_size();
 
   ASSERT_EQ(0, FixedSizeHeapSegment::storageSize() % PG_SIZE);

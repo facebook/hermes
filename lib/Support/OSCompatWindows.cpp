@@ -12,6 +12,8 @@
 #include "hermes/Support/OSCompat.h"
 
 #include <cassert>
+#include <memory>
+#include <vector>
 
 // Include windows.h first because other includes from windows API need it.
 // The blank line after the include is necessary to avoid lint error.
@@ -298,19 +300,12 @@ void vm_unused(void *p, size_t sz) {
       "Precondition: pointer is page-aligned.");
   assert(sz % PS == 0 && "Precondition: size is page-aligned.");
 #endif
-
-  // TODO(T40416012) introduce explicit "commit" in OSCompat abstraction of
-  // virtual memory
-
-  // Do nothing.
-
-  // In POSIX, a mem page implicitly transitions from "reserved" state to
-  // "committed" state on access. However, on Windows, accessing
-  // "reserved" but not "committed" page results in an access violation.
-  // There is no explicit call to transition to "committed" state
-  // in Hermes' virtual memory abstraction.
-  // As a result, even though Windows has an API to transition a page from
-  // "committed" state back to "reserved" state, we can not invoke it here.
+  if (sz == 0)
+    return;
+  // Immediately release physical pages while keeping virtual address space
+  // committed. Pages stay accessible (no access violation on next use) but
+  // contents become undefined. Semantically equivalent to MADV_DONTNEED.
+  DiscardVirtualMemory(p, sz);
 }
 
 void vm_prefetch(void *p, size_t sz) {
@@ -348,7 +343,30 @@ bool vm_madvise(void *p, size_t sz, MAdvice advice) {
 }
 
 llvh::ErrorOr<size_t> vm_footprint(char *start, char *end) {
-  return std::error_code(errno, std::generic_category());
+  const size_t PS = page_size_real();
+  size_t numPages = (end - start) / PS;
+  if (numPages == 0)
+    return static_cast<size_t>(0);
+
+  std::vector<PSAPI_WORKING_SET_EX_INFORMATION> pages(numPages);
+  for (size_t i = 0; i < numPages; i++) {
+    pages[i].VirtualAddress = start + i * PS;
+  }
+
+  if (!QueryWorkingSetEx(
+          GetCurrentProcess(),
+          pages.data(),
+          static_cast<DWORD>(numPages * sizeof(pages[0])))) {
+    return std::error_code(GetLastError(), std::system_category());
+  }
+
+  size_t inRam = 0;
+  for (size_t i = 0; i < numPages; i++) {
+    if (pages[i].VirtualAttributes.Valid) {
+      inRam++;
+    }
+  }
+  return inRam;
 }
 
 int pages_in_ram(const void *p, size_t sz, llvh::SmallVectorImpl<int> *runs) {
@@ -504,9 +522,21 @@ void set_thread_name(const char *name) {
   // Set the thread name for TSAN. It doesn't share the same name mapping as the
   // OS does. This macro expands to nothing if TSAN isn't on.
   TsanThreadName(name);
-  // SetThreadDescription is too new (since Windows 10 version 1607).
-  // Prior to that, the concept of thread names only exists when
-  // a Visual Studio debugger is attached.
+  // SetThreadDescription requires Windows 10 1607+ / Server 2016+.
+  // Resolve dynamically to gracefully degrade on older systems.
+  using SetThreadDescriptionFn = HRESULT(WINAPI *)(HANDLE, PCWSTR);
+  static auto pSetThreadDescription =
+      reinterpret_cast<SetThreadDescriptionFn>(reinterpret_cast<void *>(
+          GetProcAddress(
+              GetModuleHandleW(L"kernel32.dll"), "SetThreadDescription")));
+  if (pSetThreadDescription) {
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, name, -1, nullptr, 0);
+    if (wlen > 0) {
+      auto wname = std::make_unique<wchar_t[]>(wlen);
+      MultiByteToWideChar(CP_UTF8, 0, name, -1, wname.get(), wlen);
+      pSetThreadDescription(GetCurrentThread(), wname.get());
+    }
+  }
 }
 
 static std::chrono::microseconds::rep fromFileTimeToMicros(
@@ -540,10 +570,26 @@ bool thread_page_fault_count(int64_t *outMinorFaults, int64_t *outMajorFaults) {
 }
 
 std::string thread_name() {
-  // SetThreadDescription/GetThreadDescription is too new (since
-  // Windows 10 version 1607).
-  // Prior to that, the concept of thread names only exists when
-  // a Visual Studio debugger is attached.
+  // GetThreadDescription requires Windows 10 1607+ / Server 2016+.
+  // Resolve dynamically to gracefully degrade on older systems.
+  using GetThreadDescriptionFn = HRESULT(WINAPI *)(HANDLE, PWSTR *);
+  static auto pGetThreadDescription =
+      reinterpret_cast<GetThreadDescriptionFn>(reinterpret_cast<void *>(
+          GetProcAddress(
+              GetModuleHandleW(L"kernel32.dll"), "GetThreadDescription")));
+  if (pGetThreadDescription) {
+    PWSTR wname = nullptr;
+    HRESULT hr = pGetThreadDescription(GetCurrentThread(), &wname);
+    if (SUCCEEDED(hr) && wname) {
+      int len = WideCharToMultiByte(
+          CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
+      std::string result(len - 1, '\0');
+      WideCharToMultiByte(
+          CP_UTF8, 0, wname, -1, result.data(), len, nullptr, nullptr);
+      LocalFree(wname);
+      return result;
+    }
+  }
   return "";
 }
 
