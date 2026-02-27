@@ -821,6 +821,10 @@ void ESTreeIRGen::emitFunctionPrologue(
           flowContext_.getNodeTypeOrAny(funcNode)->info);
       ftype && ftype->getThisParam()) {
     thisParam->setType(flowTypeToIRType(ftype->getThisParam()));
+  } else if (curFunction()->typedClassContext.type) {
+    // Field initializers have no FunctionLikeNode, but the 'this' type is
+    // stored in the class.
+    thisParam->setType(flowTypeToIRType(curFunction()->typedClassContext.type));
   }
 
   // Save the "this" parameter. We will delete it later if unused.

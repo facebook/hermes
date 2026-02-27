@@ -348,8 +348,8 @@ Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {
   llvm_unreachable("all cases handled");
 }
 
-Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
-  switch (flowType->info->getKind()) {
+Type ESTreeIRGen::flowTypeToIRType(flow::TypeInfo *flowType) {
+  switch (flowType->getKind()) {
     case flow::TypeKind::Void:
       return Type::createUndefined();
     case flow::TypeKind::Null:
@@ -369,7 +369,7 @@ Type ESTreeIRGen::flowTypeToIRType(flow::Type *flowType) {
     case flow::TypeKind::Union: {
       Type res = Type::createNoType();
       for (flow::Type *elemType :
-           llvh::cast<flow::UnionType>(flowType->info)->getTypes()) {
+           llvh::cast<flow::UnionType>(flowType)->getTypes()) {
         res = Type::unionTy(res, flowTypeToIRType(elemType));
       }
       return res;

@@ -857,7 +857,10 @@ class ESTreeIRGen {
   Value *getDefaultInitValue(flow::Type *type);
 
   /// Convert a Flow type into an IR type.
-  static Type flowTypeToIRType(flow::Type *flowType);
+  static Type flowTypeToIRType(flow::TypeInfo *flowType);
+  static Type flowTypeToIRType(flow::Type *flowType) {
+    return flowTypeToIRType(flowType->info);
+  }
 
   /// @}
 
