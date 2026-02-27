@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## CRITICAL: Never Change the Working Directory
 
@@ -13,118 +13,73 @@ In the rare cases where changing directory is absolutely unavoidable, use a subs
 
 ## Overview
 
-Hermes is a JavaScript engine optimized for fast start-up of React Native apps. It features ahead-of-time static optimization and compact bytecode.
+This is the **hermes-windows** fork of facebook/hermes, adapted for Windows.
+Hermes is a JavaScript engine optimized for fast start-up of React Native apps.
+It features ahead-of-time static optimization and compact bytecode.
+
+The fork syncs with the upstream `static_h` branch.
 
 ## Build Commands
 
-Build directories are typically `cmake-build-debug` and `cmake-build-release` in the source directory, but can be configured elsewhere.
+**CRITICAL: NEVER run cmake or ninja directly.** The build environment requires
+specific Visual Studio environment variables that are set up by the build
+scripts. Always use `build.js` via PowerShell or the `.\dev.ps1` wrapper.
 
-### Configuring the Build
+### PowerShell Wrapper (preferred)
 
-If a build directory is missing, or if requested by the user, configure a new build:
-
-```bash
-# Configure Debug build
-cmake -B cmake-build-debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
-
-# Configure Release build
-cmake -B cmake-build-release -G Ninja -DCMAKE_BUILD_TYPE=Release
+```powershell
+.\dev build --platform x64 --configuration debug
+.\dev build --platform arm64ec --configuration release --binskim
 ```
 
-#### Common CMake Options
+### Direct build.js (alternative)
 
-Pass these with `-D` when configuring, e.g., `cmake -B build -DCMAKE_BUILD_TYPE=Debug -DHERMES_ENABLE_DEBUGGER=ON`
+Use PowerShell to invoke:
 
-**Build Type & Core Options:**
-- `CMAKE_BUILD_TYPE` - Debug or Release (required)
-- `HERMES_ENABLE_DEBUGGER` - Build with debugger support (default: OFF)
-- `HERMES_FACEBOOK_BUILD` - Build Facebook internal version (default: OFF)
-- `HERMES_ENABLE_CONTRIB_EXTENSIONS` - Include community-contributed extensions (default: ON)
-- `HERMES_ENABLE_WERROR` - Treat warnings as errors (default: OFF)
-
-**Sanitizers:**
-- `HERMES_ENABLE_ADDRESS_SANITIZER` - Enable ASan (default: OFF)
-- `HERMES_ENABLE_UNDEFINED_BEHAVIOR_SANITIZER` - Enable UBSan (default: OFF)
-- `HERMES_ENABLE_THREAD_SANITIZER` - Enable TSan (default: OFF)
-
-**GC & Memory:**
-- `HERMESVM_GCKIND` - GC type: MALLOC or HADES (default: HADES)
-- `HERMESVM_HEAP_HV_MODE` - Heap HermesValue encoding mode (default: HEAP_HV_64). See "Heap HermesValue Modes" section below.
-- `HERMESVM_SANITIZE_HANDLES` - Move heap after every alloc to catch stale handles (default: OFF)
-
-**Performance/Debug Tradeoffs:**
-- `HERMES_SLOW_DEBUG` - Enable slow checks in Debug builds (default: ON)
-- `HERMESVM_ALLOW_JIT` - JIT mode: 0 (off), 1 (auto), 2 (force on) (default: 0)
-
-**Compilation Modes:**
-- `HERMESVM_INTERNAL_JAVASCRIPT_NATIVE` - Use natively compiled internal JS instead of bytecode (default: OFF)
-- `HERMES_UNICODE_LITE` - Use internal no-op unicode instead of system libraries (default: OFF)
-
-**External Dependencies:**
-- `HERMES_ALLOW_BOOST_CONTEXT` - Use Boost.Context fibers: 0 (off), 1 (auto), 2 (force on) (default: 1)
-- `JSI_UNSTABLE` - Enable JSI unstable APIs (default: ON)
-- `IMPORT_HOST_COMPILERS` - Import shermes/hermesc from another build for cross-compilation
-
-### Building
-
-```bash
-# Build (Debug)
-cmake --build cmake-build-debug --target hermes
-
-# Build (Release)
-cmake --build cmake-build-release --target hermes
-
-# Run all tests
-cmake --build cmake-build-debug --target check-hermes
-
-# Run single test
-cmake-build-debug/bin/hermes path/to/test.js
-
-# Run tests with sanitizers (requires separate sanitizer build)
-cmake --build cmake-build-test --target check-hermes
-
-# Format code
-arc f
+```powershell
+node .ado/scripts/build.js --platform x64 --configuration debug
+node .ado/scripts/build.js --platform x64 --configuration release
 ```
 
-### Running Tests in Claude Code on macOS
+### Available Platforms
 
-Due to a sandbox limitation in Claude Code on macOS, Python's multiprocessing module cannot create semaphores, causing the lit test runner to fail. This is a bug in the Claude Code sandbox, not in Hermes. To work around this, run tests in single-process mode:
+- `x64` (default) — uses Clang
+- `x86` — uses Clang
+- `arm64` — uses Clang
+- `arm64ec` — uses MSVC (Clang not supported yet)
 
-```bash
-LIT_OPTS="-j1" cmake --build cmake-build-debug --target check-hermes
+### Build Options
+
+```powershell
+# Build specific targets
+node .ado/scripts/build.js --targets hermes_rt,hermes-icu --configuration debug
+
+# Run lit tests (JS regression tests)
+node .ado/scripts/build.js --jstest --configuration debug
+
+# Run Test262 intl tests
+node .ado/scripts/build.js --test262-intl --configuration debug
+
+# Run BinSkim security validation
+node .ado/scripts/build.js --no-build --platform arm64ec --configuration release --binskim
+
+# Configure only (no build)
+node .ado/scripts/build.js --configure --no-build --platform x64
+
+# Clean build
+node .ado/scripts/build.js --clean-build --platform x64
 ```
 
-Since single-process mode is slow (~5 minutes for all tests), use the `LIT_FILTER` environment variable to run only specific tests matching a regex:
+### Build Output
 
-```bash
-# Run only tests matching "Array" in their path
-LIT_OPTS="-j1" LIT_FILTER="Array" cmake --build cmake-build-debug --target check-hermes
+Build output goes to: `out/build/win32-<platform>-<config>/`
 
-# Run only tests in a specific directory
-LIT_OPTS="-j1" LIT_FILTER="BCGen" cmake --build cmake-build-debug --target check-hermes
-```
+### Build Script
 
-This workaround is only needed for Claude Code on macOS. Normal users and CI systems do not need these flags.
-
-### Building a Single File
-
-For faster iteration when modifying a single file `dir1/dir2/file.cpp`:
-
-```bash
-# Find the target the file belongs to
-find cmake-build-debug/ -name file.cpp.o
-
-# Build just that file (example for VM files)
-cmake --build cmake-build-debug --target lib/VM/CMakeFiles/hermesVMRuntime_obj.dir/file.cpp.o
-```
-
-### Inspecting C++ File Structure
-
-```bash
-# List all functions in a file sorted by line number (requires ctags)
-utils/dump-cpp-funcs.sh file.cpp
-```
+The main build script is `.ado/scripts/build.js`. It handles:
+- Visual Studio environment setup via `vcvarsall.bat`
+- CMake configuration with correct flags per platform
+- Building, testing, packaging, and BinSkim validation
 
 ## Code Architecture
 
@@ -154,6 +109,12 @@ The build produces two VM variants: "regular" (full VM with compiler) and "lean"
 - `lib/VM/Operations.cpp`: Core JS operations (typeof, instanceof, etc.)
 - `lib/VM/gcs/`: Garbage collector implementations
 
+### Windows-Specific Files
+
+- `cmake/modules/HermesWindows.cmake`: Windows build configuration (MSVC/Clang flags, security flags, linker flags)
+- `.ado/scripts/build.js`: Main build orchestration script
+- `dev.ps1`: PowerShell developer wrapper
+
 ### Testing
 
 - `test/`: Lit-based integration tests organized by component
@@ -163,12 +124,7 @@ The build produces two VM variants: "regular" (full VM with compiler) and "lean"
 
 Some lit tests use `%FileCheckOrRegen` instead of `%FileCheck`. These are auto-updating tests whose expected output can be regenerated automatically.
 
-If such a test fails due to intentional changes (e.g., changed output format, added runtime modules affecting IDs), and you understand why the failure occurred:
-
-```bash
-# Regenerate expected output for all auto-updating tests
-cmake --build cmake-build-debug --target update-lit
-```
+If such a test fails due to intentional changes (e.g., changed output format, added runtime modules affecting IDs), and you understand why the failure occurred, rebuild with the `update-lit` target.
 
 **Important:** Only use `update-lit` when you understand the cause of the failure. Review the changes to verify they match your expectations. Do not blindly regenerate tests to make them pass.
 
@@ -241,32 +197,6 @@ if (!*protoRes) {
  */
 ```
 
-## Heap HermesValue Modes
-
-The `HERMESVM_HEAP_HV_MODE` CMake option controls how JS values are encoded in memory. This significantly affects memory usage and performance.
-
-### HEAP_HV_64 (default)
-
-All JS values, pointers, and numbers are encoded as 64-bit values using NaN-boxing. This is the simplest mode and works on all platforms.
-
-### HEAP_HV_PREFER32
-
-Enables 32-bit HermesValue encoding when possible, saving memory at the cost of some overhead:
-
-**On 32-bit devices:** JS values and pointers are 32-bit. Numbers that don't fit in 32 bits are boxed in the heap (typically a small percentage in real apps).
-
-**On 64-bit platforms (except iOS):** JS values and pointers are 32-bit offsets into a contiguous (up to) 4GB reserved memory block. All heap memory is allocated within this block.
-
-**On iOS (64-bit):** iOS doesn't allow large virtual address space reservations by default. Hermes allocates memory in 4MB segments anywhere in the 64-bit address space. 32-bit pointers are encoded as a combination of segment table index and offset within the segment. This has more overhead than other platforms but still saves significant memory.
-
-### HEAP_HV_BOXED
-
-Forces boxed doubles on all platforms. Used for testing that all code paths handle boxed doubles correctly.
-
-### Production Defaults
-
-By default, Hermes ships with HV32 (HEAP_HV_PREFER32) on Android for memory savings, and HV64 on iOS for best performance on faster devices.
-
 ## Extensions System
 
 Hermes supports JSI-based extensions that add runtime functionality. Extensions use the stable JSI API rather than internal Hermes APIs, making them easier to maintain.
@@ -292,10 +222,3 @@ Community contributions go in `extensions/contrib/`. These are:
 - May be promoted to core if widely adopted
 
 See `API/hermes/extensions/contrib/README.md` for contributor guidelines.
-
-## Environment-Specific Instructions
-
-This project exists in two environments. The presence of the `facebook/` directory indicates which environment you are in. **Only read the file corresponding to the current environment:**
-
-- If `facebook/` directory exists: Internal Meta repository using Mercurial (hg) and BUCK. Read `facebook/CLAUDE-meta.md` for Meta-specific instructions. Do not read `CLAUDE-github.md`.
-- If `facebook/` directory does not exist: Public GitHub repository using Git. Read `CLAUDE-github.md` for GitHub-specific instructions.

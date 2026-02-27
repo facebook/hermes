@@ -71,7 +71,7 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
   if (r < radix)
     return r;
 
-  return -1U;
+  return ~0U;
 }
 
 
@@ -1683,8 +1683,8 @@ uint64_t APInt::urem(uint64_t RHS) const {
 APInt APInt::srem(const APInt &RHS) const {
   if (isNegative()) {
     if (RHS.isNegative())
-      return -((-(*this)).urem(-RHS));
-    return -((-(*this)).urem(RHS));
+      return 0 - ((-(*this)).urem(-RHS));
+    return 0 - ((-(*this)).urem(RHS));
   }
   if (RHS.isNegative())
     return this->urem(-RHS);
@@ -1694,8 +1694,8 @@ APInt APInt::srem(const APInt &RHS) const {
 int64_t APInt::srem(int64_t RHS) const {
   if (isNegative()) {
     if (RHS < 0)
-      return -((-(*this)).urem(-RHS));
-    return -((-(*this)).urem(RHS));
+      return 0 - ((-(*this)).urem(-RHS));
+    return 0 - ((-(*this)).urem(RHS));
   }
   if (RHS < 0)
     return this->urem(-RHS);
@@ -1862,7 +1862,7 @@ void APInt::sdivrem(const APInt &LHS, int64_t RHS,
       APInt::udivrem(-LHS, RHS, Quotient, R);
       Quotient.negate();
     }
-    R = -R;
+    R = 0 - R;
   } else if (RHS < 0) {
     APInt::udivrem(LHS, -RHS, Quotient, R);
     Quotient.negate();
@@ -2053,7 +2053,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
         N = I;
       } else {
         Str.push_back('-');
-        N = -(uint64_t)I;
+        N = 0 - (uint64_t)I;
       }
     }
 
@@ -2229,11 +2229,11 @@ unsigned APInt::tcLSB(const WordType *parts, unsigned n) {
     }
   }
 
-  return -1U;
+  return ~0U;
 }
 
 /* Returns the bit number of the most significant set bit of a number.
-   If the input number has no bits set -1U is returned.  */
+   If the input number has no bits set ~0U is returned.  */
 unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
   do {
     --n;
@@ -2245,7 +2245,7 @@ unsigned APInt::tcMSB(const WordType *parts, unsigned n) {
     }
   } while (n);
 
-  return -1U;
+  return ~0U;
 }
 
 /* Copy the bit vector of width srcBITS from SRC, starting at bit

@@ -400,8 +400,15 @@ function getTargets(userTargets, configParams) {
     return [...new Set(targetList)].join(" ");
   }
 
-  // If no user targets are specified, fall back to the existing logic
-  return isCrossPlatformBuild(configParams) ? "libshared" : "";
+  // If no user targets are specified, fall back to the existing logic.
+  // Cross-platform builds only build specific targets (not the full set)
+  // because host tools like hermes.exe/hermesc.exe can't run on the host.
+  // Include hermes-icu alongside libshared so bundled ICU is available
+  // (but not for UWP, which uses system ICU via the windowsapp umbrella library).
+  if (isCrossPlatformBuild(configParams)) {
+    return configParams.isUwp ? "libshared" : "libshared hermes-icu";
+  }
+  return "";
 }
 
 function getAppPlatformName(isUwp) {

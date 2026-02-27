@@ -109,16 +109,12 @@ function(hermes_windows_configure_msvc_flags)
     # Debug information
     set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /Zi")
 
+    # Warning level 3 (SDL requirement). CMake 3.15+ policy CMP0092 no longer
+    # adds /W3 to CMAKE_CXX_FLAGS by default, so we add it explicitly.
+    set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /W3")
+
     # Security flags
     set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /GS /DYNAMICBASE /guard:cf /Qspectre /sdl /ZH:SHA_256")
-    
-    # SDL (Security Development Lifecycle) requires these warnings enabled:
-    # Note: Upstream Hermes.cmake disables these with -wd flags, but we override them here
-    # for Windows security compliance. Last flag wins in MSVC.
-    
-    # C4146: Re-enable 'unary minus operator applied to unsigned type, result still unsigned'
-    # Downgrade from error to warning level 3 (promoted to error by /sdl)
-    set(MSVC_CXX_FLAGS "${MSVC_CXX_FLAGS} /w34146")
 
     # Windows-specific warning suppressions for DLL builds
 

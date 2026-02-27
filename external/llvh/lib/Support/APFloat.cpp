@@ -407,7 +407,7 @@ trailingHexadecimalFraction(StringRef::iterator p, StringRef::iterator end,
 
   /* If we ran off the end it is exactly zero or one-half, otherwise
      a little more.  */
-  if (hexDigit == -1U)
+  if (hexDigit == ~0U)
     return digitValue == 0 ? lfExactlyZero: lfExactlyHalf;
   else
     return digitValue == 0 ? lfLessThanHalf: lfMoreThanHalf;
@@ -424,7 +424,7 @@ lostFractionThroughTruncation(const APFloatBase::integerPart *parts,
 
   lsb = APInt::tcLSB(parts, partCount);
 
-  /* Note this is guaranteed true if bits == 0, or LSB == -1U.  */
+  /* Note this is guaranteed true if bits == 0, or LSB == ~0U.  */
   if (bits <= lsb)
     return lfExactlyZero;
   if (bits == lsb + 1)
@@ -522,7 +522,7 @@ ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
       if (~parts[count])
         return ~(APFloatBase::integerPart) 0; /* A lot.  */
 
-    return -parts[0];
+    return 0 - parts[0];
   }
 
   return ~(APFloatBase::integerPart) 0; /* A lot.  */
@@ -642,7 +642,7 @@ writeSignedDecimal (char *dst, int value)
 {
   if (value < 0) {
     *dst++ = '-';
-    dst = writeUnsignedDecimal(dst, -(unsigned) value);
+    dst = writeUnsignedDecimal(dst, 0 - (unsigned) value);
   } else
     dst = writeUnsignedDecimal(dst, value);
 
@@ -2295,7 +2295,7 @@ IEEEFloat::convertFromHexadecimalString(StringRef s,
     }
 
     hex_value = hexDigitValue(*p);
-    if (hex_value == -1U)
+    if (hex_value == ~0U)
       break;
 
     p++;

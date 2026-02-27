@@ -127,24 +127,34 @@ set_property(SOURCE ${ICU_I18N_SOURCES} APPEND PROPERTY
 # Step 6: Compiler flags
 # =============================================================================
 
-# ICU requires exceptions and RTTI
+# ICU requires exceptions and RTTI (unlike most Hermes code which disables
+# both). hermes_update_cxx_flags() reads these variables to set the correct
+# per-compiler flags, avoiding platform-specific if/else here.
+set(HERMES_ENABLE_EH ON)
+set(HERMES_ENABLE_RTTI ON)
+hermes_update_cxx_flags(hermes-icu)
+
+# ICU-specific flags beyond what the global configuration provides.
+# Global CMAKE_CXX_FLAGS (from Hermes.cmake and HermesWindows.cmake) already
+# include /W3, security flags, and common /wd suppressions. We only add what
+# is specific to the vendored ICU code here.
 if(MSVC OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # /utf-8: ICU sources contain UTF-8 encoded Unicode character literals (e.g.
   # u'£', u'₹'). Without this flag MSVC uses the system codepage and fails
   # with C2015 "too many characters in constant".
-  target_compile_options(hermes-icu PRIVATE /EHsc /GR /utf-8)
-else()
-  target_compile_options(hermes-icu PRIVATE -fexceptions -frtti)
-endif()
-
-# Suppress warnings for vendored ICU code (we don't own these sources)
-if(MSVC OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-  target_compile_options(hermes-icu PRIVATE /W0)
+  target_compile_options(hermes-icu PRIVATE /utf-8)
+  # Extra warning suppressions for vendored ICU code not covered by global flags.
+  target_compile_options(hermes-icu PRIVATE
+    /wd4068  # unknown pragma
+    /wd4101  # unreferenced local variable
+    /wd4668  # macro not defined, replacing with '0'
+  )
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+  # Suppress warnings for vendored ICU code (we don't own these sources).
+  # -Wno-unused-parameter is already in global CMAKE_CXX_FLAGS.
   target_compile_options(hermes-icu PRIVATE
     -Wno-deprecated-declarations
     -Wno-sign-compare
-    -Wno-unused-parameter
     -Wno-unused-variable
     -Wno-implicit-fallthrough
     -Wno-missing-field-initializers
@@ -175,6 +185,20 @@ target_sources(hermes-icu PRIVATE
 
 # Security linker flags (BinSkim compliance)
 target_link_options(hermes-icu PRIVATE ${HERMES_EXTRA_LINKER_FLAGS})
+
+# hermes-icu is vendored code with no function-pointer identity concerns, so we
+# can safely enable COMDAT folding (ICF) unlike hermes.dll. The /OPT:ICF here
+# overrides the global /OPT:NOICF inherited from HERMES_EXTRA_LINKER_FLAGS.
+# Both MSVC (link.exe) and Clang (lld-link) support this flag.
+target_link_options(hermes-icu PRIVATE $<$<CONFIG:Release>:LINKER:/OPT:ICF>)
+
+# Enable LTCG (/GL + /LTCG) for MSVC release builds for better optimization
+# of the large ICU codebase. (Clang LTO uses -flto which has different
+# trade-offs and is not enabled here.)
+if(MSVC OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  target_compile_options(hermes-icu PRIVATE $<$<CONFIG:Release>:/GL>)
+  target_link_options(hermes-icu PRIVATE $<$<CONFIG:Release>:LINKER:/LTCG>)
+endif()
 
 # Windows system libraries needed by ICU
 target_link_libraries(hermes-icu PRIVATE advapi32)

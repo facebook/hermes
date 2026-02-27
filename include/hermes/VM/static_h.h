@@ -1608,7 +1608,7 @@ static inline uint64_t _sh_to_uint64_double_or_throw(SHRuntime *shr, double d) {
 /// otherwise throw.
 static inline int64_t _sh_to_int64_double_or_throw(SHRuntime *shr, double d) {
   if (SH_LIKELY(
-          d >= (double)(int64_t)(-1ULL << 53) && d <= (double)(1LL << 53))) {
+          d >= (double)(int64_t)(~0ULL << 53) && d <= (double)(1LL << 53))) {
     return (int64_t)d;
   }
   _sh_throw_type_error_ascii(shr, "number not representable as int64_t");
@@ -1617,7 +1617,7 @@ static inline int64_t _sh_to_int64_double_or_throw(SHRuntime *shr, double d) {
 /// If the int64 value is within representable integer range, convert it,
 /// otherwise throw
 static inline double _sh_to_double_int64_or_throw(SHRuntime *shr, int64_t i) {
-  if (SH_LIKELY(i >= (int64_t)(-1ULL << 53) && i <= (1LL << 53))) {
+  if (SH_LIKELY(i >= (int64_t)(~0ULL << 53) && i <= (1LL << 53))) {
     return (double)i;
   }
   _sh_throw_type_error_ascii(shr, "int64_t not representable as number");

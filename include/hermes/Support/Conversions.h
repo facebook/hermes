@@ -57,7 +57,7 @@ inline int32_t truncateToInt32(double d) {
   if (HERMES_BUILTIN_CONSTANT_P(d)) {
     // Be aggressive on constant path, use the maximum precision bits
     // of double type for range check.
-    if (d >= (int64_t)(-1ULL << 53) && d <= (1LL << 53))
+    if (d >= (int64_t)(~0ULL << 53) && d <= (1LL << 53))
       return (int32_t)(int64_t)d;
     return truncateToInt32SlowPath(d);
   }

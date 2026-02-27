@@ -283,8 +283,15 @@ if(WIN32)
   set(HERMES_ENABLE_INTL ON)
 endif()
 
-set(HERMES_ENABLE_BUNDLED_ICU ON CACHE BOOL
-  "Build bundled hermes-icu.dll with ICU 78 for full Intl support on all Windows versions")
+# UWP (WindowsStore) provides system ICU via the windowsapp umbrella library,
+# so bundled ICU must be disabled to avoid duplicate symbol linker errors.
+if(CMAKE_SYSTEM_NAME STREQUAL "WindowsStore")
+  set(HERMES_ENABLE_BUNDLED_ICU OFF CACHE BOOL
+    "Build bundled hermes-icu.dll (disabled for UWP — system ICU used instead)" FORCE)
+else()
+  set(HERMES_ENABLE_BUNDLED_ICU ON CACHE BOOL
+    "Build bundled hermes-icu.dll with ICU 78 for full Intl support on all Windows versions")
+endif()
 
 set(HERMES_EXTERNAL_ICU_DIR "" CACHE PATH
   "Path to external unicode.org ICU bin directory (for testing)")

@@ -2136,7 +2136,7 @@ OperationStatus exponentiate(
     assert(rhs.numDigits > 0 && "should have handled 0n");
     dst.numDigits = 1;
     // Note that rhs > 0, therefore rhs % 2n === exponent % 2.
-    dst.digits[0] = (firstExponentDigit % 2 == 0) ? 1ull : -1ull;
+    dst.digits[0] = (firstExponentDigit % 2 == 0) ? 1ull : ~0ull;
   } else if (rhs.numDigits > 1 || firstExponentDigit >= BigIntMaxSizeInBits) {
     // At this point, we know that |lhs| >= 2, so any rhs >= BigIntMaxSizeInBits
     // will result in a BigInt that is too large.

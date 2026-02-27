@@ -10,6 +10,10 @@
 /guardian_baselines.gdnbaselines
 /merged-hermes-revision.txt
 
+# Local-only: Claude Code instructions (rewritten for hermes-windows)
+/CLAUDE.md
+/CLAUDE-github.md
+
 # Local-only: developer tools
 /dev.ps1
 /sync-manifest.json

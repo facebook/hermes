@@ -318,9 +318,10 @@ void vm_prefetch(void *p, size_t sz) {
       reinterpret_cast<intptr_t>(p) % page_size() == 0 &&
       "Precondition: pointer is page-aligned.");
 
-  // TODO(T40415796) provide actual "prefetch" implementation
-
-  // Do nothing
+  WIN32_MEMORY_RANGE_ENTRY entry;
+  entry.VirtualAddress = p;
+  entry.NumberOfBytes = sz;
+  PrefetchVirtualMemory(GetCurrentProcess(), 1, &entry, 0);
 }
 
 void vm_name(void *p, size_t sz, const char *name) {
@@ -340,8 +341,10 @@ bool vm_protect(void *p, size_t sz, ProtectMode mode) {
 }
 
 bool vm_madvise(void *p, size_t sz, MAdvice advice) {
-  // Not implemented.
-  return false;
+  WIN32_MEMORY_RANGE_ENTRY entry;
+  entry.VirtualAddress = p;
+  entry.NumberOfBytes = sz;
+  return PrefetchVirtualMemory(GetCurrentProcess(), 1, &entry, 0) != 0;
 }
 
 llvh::ErrorOr<size_t> vm_footprint(char *start, char *end) {

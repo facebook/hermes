@@ -97,7 +97,7 @@ static void write_signed(raw_ostream &S, T N, size_t MinDigits,
     return;
   }
 
-  UnsignedT UN = -(UnsignedT)N;
+  UnsignedT UN = 0 - (UnsignedT)N;
   write_unsigned(S, UN, MinDigits, Style, true);
 }
 

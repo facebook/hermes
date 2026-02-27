@@ -489,7 +489,7 @@ class SignedValueHandler<T, true> {
   Expected<T, ConversionCode> finalize(U value) {
     T rv;
     if (negative_) {
-      rv = T(-value);
+      rv = T(0 - value);
       if (UNLIKELY(rv > 0)) {
         return makeUnexpected(ConversionCode::NEGATIVE_OVERFLOW);
       }

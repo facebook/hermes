@@ -70,14 +70,14 @@ inline unsigned hexDigitValue(char C) {
   if (C >= '0' && C <= '9') return C-'0';
   if (C >= 'a' && C <= 'f') return C-'a'+10U;
   if (C >= 'A' && C <= 'F') return C-'A'+10U;
-  return -1U;
+  return ~0U;
 }
 
 /// Checks if character \p C is one of the 10 decimal digits.
 inline bool isDigit(char C) { return C >= '0' && C <= '9'; }
 
 /// Checks if character \p C is a hexadecimal numeric character.
-inline bool isHexDigit(char C) { return hexDigitValue(C) != -1U; }
+inline bool isHexDigit(char C) { return hexDigitValue(C) != ~0U; }
 
 /// Checks if character \p C is a valid letter as classified by "C" locale.
 inline bool isAlpha(char C) {
