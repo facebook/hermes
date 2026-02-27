@@ -1,0 +1,13 @@
+# This repo does not ship any JavaScript code. All JS/TS files here are
+# test cases, benchmarks, third-party tools, or internal polyfills for the
+# Hermes JS engine. Exclude them from ESLint security scanning to avoid
+# false positives on patterns like eval() and new Function() that are
+# intentionally used in engine test cases.
+benchmarks/
+examples/
+external/
+lib/
+test/
+tools/
+unittests/
+utils/

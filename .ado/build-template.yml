@@ -72,11 +72,12 @@ extends:
       componentgovernance:
         ignoreDirectories: $(Build.SourcesDirectory)\website
       eslint:
-        enableExclusions: true
-        # This repo does not ship any JavaScript code. But it has many test cases for
-        # the Hermes JS engine that fail parsing, have code considered insecure and crash eslint.
-        exclusionPatterns: |
-          '**/*.*'
+        # This repo does not ship any JavaScript code. But it has many test cases
+        # for the Hermes JS engine that fail parsing, have code considered
+        # insecure, and crash ESLint. Exclusions are in .eslintignore at the
+        # repo root. Do NOT use exclusionPatterns: '**/*.*' here because ESLint
+        # errors when all files matching the glob are ignored.
+        enableExclusions: false
       suppression:
         suppressionFile: $(Build.SourcesDirectory)\.ado\guardian\SDL\.gdnsuppress
       codeql:
