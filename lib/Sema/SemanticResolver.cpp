@@ -1762,6 +1762,12 @@ void SemanticResolver::visitFunctionLikeInFunctionContext(
       if (LLVM_UNLIKELY(paramId->_name == kw_.identArguments))
         hasParameterNamedArguments = true;
 
+      if (compile_ && !typed_ &&
+          LLVM_UNLIKELY(paramId->_name == kw_.identThis)) {
+        sm_.error(
+            paramId->getSourceRange(), "'this' parameter requires typed mode");
+      }
+
       validateDeclarationName(Decl::Kind::Parameter, paramId);
 
       Decl *paramDecl = semCtx_.newDeclInScope(

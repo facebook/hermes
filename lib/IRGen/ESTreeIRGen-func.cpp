@@ -1088,6 +1088,9 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   for (sema::Decl *decl : semInfo->getParameterScope()->decls) {
     if (decl->kind != sema::Decl::Kind::Parameter)
       break;
+    // Skip the 'this' parameter, because it's implicit.
+    if (decl->name.getUnderlyingPointer() == kw_.identThis)
+      continue;
 
     LLVM_DEBUG(llvh::dbgs() << "Adding parameter: " << decl->name << "\n");
 
@@ -1117,6 +1120,14 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   for (auto &elem : ESTree::getParams(funcNode)) {
     ESTree::Node *param = &elem;
     ESTree::Node *init = nullptr;
+
+    // Skip the typed 'this' parameter if it exists.
+    // Don't increment paramIndex because 'this' doesn't count.
+    if (auto *idNode = llvh::dyn_cast<ESTree::IdentifierNode>(param);
+        idNode && idNode->_name == kw_.identThis) {
+      continue;
+    }
+
     ++paramIndex;
 
     if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(param)) {
@@ -1165,6 +1176,12 @@ uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
   // Implicit functions, whose funcNode is null, take no arguments.
   if (funcNode) {
     for (auto &param : ESTree::getParams(funcNode)) {
+      // Skip the typed 'this' parameter - it's not a real argument.
+      if (auto *idNode = llvh::dyn_cast<ESTree::IdentifierNode>(&param)) {
+        if (idNode->_name == kw_.identThis) {
+          continue;
+        }
+      }
       if (llvh::isa<ESTree::AssignmentPatternNode>(param) ||
           llvh::isa<ESTree::RestElementNode>(param)) {
         // Found an initializer or a rest parameter, stop counting expected
