@@ -14,7 +14,7 @@ class B {
   func(): void {}
 }
 class C<Props> {
-  vals: B[];
+  vals: [B];
   foo(): void {
     let b: B = this.vals[0];
     b.func();
@@ -35,7 +35,7 @@ class C<Props> {
 // CHECK-NEXT:%class_constructor.8 = class_constructor(%class.6)
 // CHECK-NEXT:%class.9 = class(C {
 // CHECK-NEXT:  %homeObject: %class.10
-// CHECK-NEXT:  vals: %array.11
+// CHECK-NEXT:  vals: %tuple.11
 // CHECK-NEXT:})
 // CHECK-NEXT:%class_constructor.12 = class_constructor(%class.9)
 // CHECK-NEXT:%union.4 = union(null | %class.9)
@@ -45,7 +45,7 @@ class C<Props> {
 // CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:  func [final]: %function.13
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.11 = array(%class.6)
+// CHECK-NEXT:%tuple.11 = tuple(%class.6)
 // CHECK-NEXT:%function.14 = function(this: %class.9): void
 // CHECK-NEXT:%class.10 = class( {
 // CHECK-NEXT:  foo [final]: %function.14
@@ -105,7 +105,7 @@ class C<Props> {
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : %array.11
+// CHECK-NEXT:                            ClassProperty : %tuple.11
 // CHECK-NEXT:                                Id 'vals'
 // CHECK-NEXT:                            MethodDefinition : %function.14
 // CHECK-NEXT:                                Id 'foo'
@@ -114,7 +114,7 @@ class C<Props> {
 // CHECK-NEXT:                                        VariableDeclaration
 // CHECK-NEXT:                                            VariableDeclarator
 // CHECK-NEXT:                                                MemberExpression : %class.6
-// CHECK-NEXT:                                                    MemberExpression : %array.11
+// CHECK-NEXT:                                                    MemberExpression : %tuple.11
 // CHECK-NEXT:                                                        ThisExpression : %class.9
 // CHECK-NEXT:                                                        Id 'vals'
 // CHECK-NEXT:                                                    NumericLiteral : number
