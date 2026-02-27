@@ -206,6 +206,12 @@ class SemanticResolver
       ESTree::Node *parent);
 
   void visit(ESTree::IdentifierNode *identifier, ESTree::Node *parent);
+  void visit(ESTree::ObjectPatternNode *node, ESTree::Node *parent) {
+    visitESTreeNodeList(*this, node->_properties, node);
+  }
+  void visit(ESTree::ArrayPatternNode *node, ESTree::Node *parent) {
+    visitESTreeNodeList(*this, node->_elements, node);
+  }
 
   void visit(ESTree::VariableDeclarationNode *node);
 
