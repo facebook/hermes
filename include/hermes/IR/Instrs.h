@@ -2738,6 +2738,36 @@ class AllocTypedObjectInst : public BaseAllocObjectLiteralInst {
   }
 };
 
+class AllocTypedNonEnumObjectInst : public BaseAllocObjectLiteralInst {
+  AllocTypedNonEnumObjectInst(const AllocTypedNonEnumObjectInst &) = delete;
+  void operator=(const AllocTypedNonEnumObjectInst &) = delete;
+
+ public:
+  explicit AllocTypedNonEnumObjectInst(
+      Value *parentObject,
+      const ObjectPropertyMap &propMap)
+      : BaseAllocObjectLiteralInst(
+            ValueKind::AllocTypedNonEnumObjectInstKind,
+            parentObject,
+            propMap) {}
+  explicit AllocTypedNonEnumObjectInst(
+      const AllocTypedNonEnumObjectInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseAllocObjectLiteralInst(src, operands) {}
+
+  static bool isTyped() {
+    return true;
+  }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocTypedNonEnumObjectInstKind;
+  }
+};
+
 class GetTemplateObjectInst : public Instruction {
   GetTemplateObjectInst(const GetTemplateObjectInst &) = delete;
   void operator=(const GetTemplateObjectInst &) = delete;

@@ -638,6 +638,9 @@ class TypeInferenceImpl {
   Type inferAllocTypedObjectInst(AllocTypedObjectInst *inst) {
     hermes_fatal("typed instruction");
   }
+  Type inferAllocTypedNonEnumObjectInst(AllocTypedNonEnumObjectInst *inst) {
+    hermes_fatal("typed instruction");
+  }
   Type inferCreateArgumentsLooseInst(CreateArgumentsLooseInst *inst) {
     return *inst->getInherentType();
   }

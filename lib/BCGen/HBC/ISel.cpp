@@ -1380,6 +1380,16 @@ void HBCISel::generateAllocTypedObjectInst(
     BCFGen_->emitNewObjectWithParent(result, parentReg);
   }
 }
+void HBCISel::generateAllocTypedNonEnumObjectInst(
+    AllocTypedNonEnumObjectInst *Inst,
+    BasicBlock *) {
+  auto result = encodeValue(Inst);
+  assert(
+      Inst->getKeyValuePairCount() == 0 &&
+      "AllocTypedNonEnumObjectInst with properties should be lowered to LIRAllocTypedNonEnumObjectFromBufferInst");
+  auto parentReg = encodeValue(Inst->getParentObject());
+  BCFGen_->emitNewObjectWithParent(result, parentReg);
+}
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
   auto elementCount = Inst->getElementCount();

@@ -1526,6 +1526,11 @@ bool Verifier::visitAllocTypedObjectInst(
   return true;
 }
 
+bool Verifier::visitAllocTypedNonEnumObjectInst(
+    const hermes::AllocTypedNonEnumObjectInst &Inst) {
+  return true;
+}
+
 bool Verifier::visitLIRGetGlobalObjectInst(const LIRGetGlobalObjectInst &Inst) {
   // Nothing to verify at this point.
   return true;

@@ -1210,6 +1210,14 @@ AllocTypedObjectInst *IRBuilder::createAllocTypedObjectInst(
   return inst;
 }
 
+AllocTypedNonEnumObjectInst *IRBuilder::createAllocTypedNonEnumObjectInst(
+    const AllocTypedNonEnumObjectInst::ObjectPropertyMap &propMap,
+    Value *parentObject) {
+  auto *inst = new AllocTypedNonEnumObjectInst(parentObject, propMap);
+  insert(inst);
+  return inst;
+}
+
 HBCCompareBranchInst *IRBuilder::createHBCCompareBranchInst(
     Value *left,
     Value *right,

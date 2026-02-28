@@ -655,7 +655,17 @@ AllocTypedObjectInst | _
 Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a LIRAllocObjectFromBufferInst.
 Example |  %0 = AllocTypedObjectInst %parent, "prop1" : string, 10 : number
 Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
-Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values. Properties are enumerable.
+Effects | Does not read or write to memory.
+
+### AllocTypedNonEnumObjectInst
+
+AllocTypedNonEnumObjectInst | _
+--- | --- |
+Description | Allocates a new typed object on the heap with non-enumerable properties. Used for home objects (class prototypes with methods). During lowering pass it will be lowered to a LIRAllocTypedNonEnumObjectFromBufferInst.
+Example |  %0 = AllocTypedNonEnumObjectInst %parent, "prop1" : string, 10 : number
+Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of non-enumerable properties, which may include 'uninit' values.
 Effects | Does not read or write to memory.
 
 ### AllocArrayInst

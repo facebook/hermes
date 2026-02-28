@@ -141,6 +141,7 @@ DEF_VALUE(AllocFastArrayInst, Instruction)
 MARK_FIRST(BaseAllocObjectLiteralInst, Instruction)
 DEF_VALUE(AllocObjectLiteralInst, BaseAllocObjectLiteralInst)
 DEF_VALUE(AllocTypedObjectInst, BaseAllocObjectLiteralInst)
+DEF_VALUE(AllocTypedNonEnumObjectInst, BaseAllocObjectLiteralInst)
 MARK_LAST(BaseAllocObjectLiteralInst)
 
 DEF_VALUE(GetTemplateObjectInst, Instruction)

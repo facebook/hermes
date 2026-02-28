@@ -33,7 +33,7 @@ a.foo();
 // CHECK-NEXT:  %6 = CreateFunctionInst (:object) %1: environment, %VS1: any, %A(): functionCode
 // CHECK-NEXT:       StoreFrameInst %1: environment, %6: object, [%VS1.A]: any
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %1: environment, %VS1: any, %foo(): functionCode
-// CHECK-NEXT:  %9 = AllocTypedObjectInst (:object) empty: any, "foo": string, %8: object
+// CHECK-NEXT:  %9 = AllocTypedNonEnumObjectInst (:object) null: null, "foo": string, %8: object
 // CHECK-NEXT:        StoreFrameInst %1: environment, %9: object, [%VS1.?A.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %9: object, %6: object, "prototype": string
 // CHECK-NEXT:  %12 = LoadFrameInst (:any) %1: environment, [%VS1.A]: any

@@ -122,7 +122,7 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
   // Create and populate the "prototype" property (vtable).
   // Must be done even if there are no methods to enable 'instanceof'.
-  Value *vtable = nullptr;
+  Value *vtable;
   if (superClass) {
     auto it = classConstructors_.find(classType->getSuperClassInfo());
     assert(it != classConstructors_.end() && "missing super class constructor");
@@ -133,9 +133,11 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
     // instruction for class creation, but for now we need an object here
     // because we want to use PrLoad on it.
     vtable->setType(Type::createObject());
+  } else {
+    vtable = Builder.getLiteralNull();
   }
-  auto *homeObject =
-      emitTypedClassAllocation(classType->getHomeObjectTypeInfo(), vtable);
+  auto *homeObject = emitTypedClassAllocation(
+      classType->getHomeObjectTypeInfo(), vtable, false);
 
   // Store the home object in a variable so that we can reference it later,
   // e.g. when we emit method calls. Check if we already have a cached entry
@@ -260,7 +262,9 @@ CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
 
 Value *ESTreeIRGen::emitTypedClassAllocation(
     flow::ClassType *classType,
-    Value *parent) {
+    Value *parent,
+    bool propertiesEnumerable) {
+  assert(parent && "parent must be specified");
   // TODO: should create a sealed object, etc.
   AllocTypedObjectInst::ObjectPropertyMap propMap{};
   propMap.resize(classType->getFieldNameMap().size());
@@ -320,7 +324,9 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
     }
   }
 
-  return Builder.createAllocTypedObjectInst(propMap, parent);
+  if (propertiesEnumerable)
+    return Builder.createAllocTypedObjectInst(propMap, parent);
+  return Builder.createAllocTypedNonEnumObjectInst(propMap, parent);
 }
 
 Value *ESTreeIRGen::getDefaultInitValue(flow::Type *type) {

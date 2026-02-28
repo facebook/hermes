@@ -1720,6 +1720,18 @@ class InstrGen {
     }
     os_ << ";\n";
   }
+  void generateAllocTypedNonEnumObjectInst(AllocTypedNonEnumObjectInst &inst) {
+    assert(
+        inst.getKeyValuePairCount() == 0 &&
+        "AllocTypedNonEnumObjectInst with properties should be lowered to LIRAllocTypedNonEnumObjectFromBufferInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_new_object_with_parent(shr, &";
+    generateValue(*inst.getParentObject());
+    os_ << ")";
+    os_ << ";\n";
+  }
   void generateCreateArgumentsLooseInst(CreateArgumentsLooseInst &inst) {
     hermes_fatal("CreateArgumentsLooseInst should have been lowered.");
   }

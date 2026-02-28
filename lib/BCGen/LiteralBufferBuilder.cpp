@@ -13,6 +13,7 @@
 #include "hermes/IR/Instrs.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Inst/InstDecode.h"
+#include "hermes/VM/ObjectAllocKind.h"
 
 namespace hermes::LiteralBufferBuilder::detail {
 /// The key with which to to deduplicate shape table entries in coordToIdx.

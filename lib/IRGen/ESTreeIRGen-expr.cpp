@@ -2624,7 +2624,7 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     auto *proto = Builder.createUnionNarrowTrustedInst(
         Builder.createLoadFrameInst(RSI, it->second.homeObjectVar),
         Type::createObject());
-    Value *newInst = emitTypedClassAllocation(classType, proto);
+    Value *newInst = emitTypedClassAllocation(classType, proto, true);
 
     // Call the constructor, if necessary.  There is always a constructor,
     // either explicit or implicit.  We will load an implicit ctor (for

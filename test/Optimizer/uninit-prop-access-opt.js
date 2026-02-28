@@ -55,12 +55,12 @@ print(f());
 // CHECK-NEXT:  %2 = CreateFunctionInst (:object) %0: environment, %VS0: any, %f(): functionCode
 // CHECK-NEXT:  %3 = CreateFunctionInst (:object) empty: any, empty: any, %O(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: environment, %3: object, [%VS0.O]: object
-// CHECK-NEXT:  %5 = AllocTypedObjectInst (:object) empty: any
+// CHECK-NEXT:  %5 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:       StoreFrameInst %0: environment, %5: object, [%VS0.?O.prototype]: object
 // CHECK-NEXT:       StorePropertyStrictInst %5: object, %3: object, "prototype": string
 // CHECK-NEXT:  %8 = CreateFunctionInst (:object) %0: environment, %VS0: any, %Foo(): functionCode
 // CHECK-NEXT:       StoreFrameInst %0: environment, %8: object, [%VS0.Foo]: undefined|object
-// CHECK-NEXT:  %10 = AllocTypedObjectInst (:object) empty: any
+// CHECK-NEXT:  %10 = AllocTypedNonEnumObjectInst (:object) null: null
 // CHECK-NEXT:        StoreFrameInst %0: environment, %10: object, [%VS0.?Foo.prototype]: object
 // CHECK-NEXT:        StorePropertyStrictInst %10: object, %8: object, "prototype": string
 // CHECK-NEXT:  %13 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string

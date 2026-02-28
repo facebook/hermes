@@ -851,7 +851,10 @@ class ESTreeIRGen {
   /// it.
   /// \param parent the parent object of the newly allocated class, nullptr to
   /// default to the Object prototype.
-  Value *emitTypedClassAllocation(flow::ClassType *classType, Value *parent);
+  Value *emitTypedClassAllocation(
+      flow::ClassType *classType,
+      Value *parent,
+      bool propertiesEnumerable);
 
   /// Return the default init value for the specified type.
   Value *getDefaultInitValue(flow::Type *type);
