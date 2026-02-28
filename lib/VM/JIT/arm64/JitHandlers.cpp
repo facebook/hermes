@@ -107,7 +107,8 @@ SHLegacyValue _interpreter_create_object_from_buffer(
       (CodeBlock *)codeBlock,
       runtime.objectPrototype,
       shapeTableIndex,
-      valBufferOffset);
+      valBufferOffset,
+      ObjectAllocKind::Untyped);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     _sh_throw_current(shr);
   }
@@ -132,7 +133,48 @@ SHLegacyValue _interpreter_create_object_from_buffer_with_parent(
       (CodeBlock *)codeBlock,
       parentHandle,
       shapeTableIndex,
-      valBufferOffset);
+      valBufferOffset,
+      /* isTyped */ ObjectAllocKind::Untyped);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
+SHLegacyValue _interpreter_create_typed_object_from_buffer(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<PseudoHandle<>> res = Interpreter::createObjectFromBuffer(
+      runtime,
+      (CodeBlock *)codeBlock,
+      Handle<JSObject>::dyn_vmcast(Handle<>(toPHV(parent))),
+      shapeTableIndex,
+      valBufferOffset,
+      ObjectAllocKind::TypedEnumerable);
+  if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
+    _sh_throw_current(shr);
+  }
+  return res->getHermesValue();
+}
+
+SHLegacyValue _interpreter_create_typed_non_enum_object_from_buffer(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  Runtime &runtime = getRuntime(shr);
+  CallResult<PseudoHandle<>> res = Interpreter::createObjectFromBuffer(
+      runtime,
+      (CodeBlock *)codeBlock,
+      Handle<JSObject>::dyn_vmcast(Handle<>(toPHV(parent))),
+      shapeTableIndex,
+      valBufferOffset,
+      ObjectAllocKind::TypedNonEnumerable);
   if (LLVM_UNLIKELY(res == ExecutionStatus::EXCEPTION)) {
     _sh_throw_current(shr);
   }
@@ -247,7 +289,8 @@ JSObject *_jit_new_empty_object_for_buffer(
       runtime,
       codeBlock,
       Handle<JSObject>::vmcast(&runtime.objectPrototype),
-      shapeTableIndex);
+      shapeTableIndex,
+      /* isTyped */ ObjectAllocKind::Untyped);
   if (LLVM_UNLIKELY(clazzRes == ExecutionStatus::EXCEPTION))
     _sh_throw_current(&runtime);
   HiddenClass *clazz = *clazzRes;

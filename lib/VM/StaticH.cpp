@@ -1716,15 +1716,14 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_parent(
   return result.getHermesValue();
 }
 
+template <ObjectAllocKind AllocKind>
 static SHLegacyValue createObjectFromBuffer(
     Runtime &runtime,
     SHUnit *unit,
     Handle<JSObject> parent,
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
-  NoLeakHandleScope marker{runtime};
-
-  HiddenClass *clazz;
+  HiddenClass *clazz = nullptr;
   auto *cacheEntry = reinterpret_cast<WeakRoot<HiddenClass> *>(
       &unit->object_literal_class_cache[shapeTableIndex]);
   if (*cacheEntry) {
@@ -1742,38 +1741,59 @@ static SHLegacyValue createObjectFromBuffer(
           HiddenClass::maxNumProperties() + " properties");
       _sh_throw_current(&runtime);
     }
-
-    llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
-    keyBuffer = keyBuffer.slice(shapeInfo->key_buffer_offset);
-
-    clazz = addBufferPropertiesToHiddenClass(
-        runtime,
-        keyBuffer,
-        shapeInfo->num_props,
-        *runtime.getHiddenClassForPrototype(
-            *parent, JSObject::numOverlapSlots<JSObject>()),
-        [unit](StringID id) {
-          return SymbolID::unsafeCreate(unit->symbols[id]);
-        });
-    assert(
-        shapeInfo->num_props == clazz->getNumProperties() &&
-        "numLiterals should match hidden class property count.");
-    // Dictionary mode classes cannot be cached since they can change as the
-    // resulting object is modified.
-    if (LLVM_LIKELY(!clazz->isDictionary()))
-      cacheEntry->set(runtime, clazz);
   }
 
+  NoLeakHandleScope marker{runtime};
   struct : Locals {
     PinnedValue<HiddenClass> clazz;
     PinnedValue<JSObject> obj;
   } lv;
   LocalsRAII lraii{runtime, &lv};
 
+  lv.clazz = clazz;
+  if (!clazz) {
+    const SHShapeTableEntry *shapeInfo =
+        &unit->obj_shape_table[shapeTableIndex];
+    llvh::ArrayRef keyBuffer{unit->obj_key_buffer, unit->obj_key_buffer_size};
+    keyBuffer = keyBuffer.slice(shapeInfo->key_buffer_offset);
+
+    if (isTypedAllocKind(AllocKind)) {
+      bool propertiesEnumerable =
+          AllocKind != ObjectAllocKind::TypedNonEnumerable;
+      lv.clazz =
+          HiddenClass::createForTypedObject(runtime, shapeInfo->num_props);
+      addTypedBufferPropertiesToHiddenClass(
+          runtime,
+          keyBuffer,
+          shapeInfo->num_props,
+          lv.clazz,
+          propertiesEnumerable,
+          [unit](StringID id) {
+            return SymbolID::unsafeCreate(unit->symbols[id]);
+          });
+    } else {
+      lv.clazz = addBufferPropertiesToHiddenClass(
+          runtime,
+          keyBuffer,
+          shapeInfo->num_props,
+          *runtime.getHiddenClassForPrototype(
+              *parent, JSObject::numOverlapSlots<JSObject>()),
+          [unit](StringID id) {
+            return SymbolID::unsafeCreate(unit->symbols[id]);
+          });
+    }
+    assert(
+        shapeInfo->num_props == lv.clazz->getNumProperties() &&
+        "numLiterals should match hidden class property count.");
+    // Dictionary mode classes cannot be cached since they can change as the
+    // resulting object is modified.
+    if (LLVM_LIKELY(!lv.clazz->isDictionary()) || isTypedAllocKind(AllocKind))
+      cacheEntry->set(runtime, *lv.clazz);
+  }
+
   // Create a new object using the built-in constructor or cached hidden class.
   // Note that the built-in constructor is empty, so we don't actually need to
   // call it.
-  lv.clazz = clazz;
   auto numProps = lv.clazz->getNumProperties();
   lv.obj = JSObject::create(runtime, parent, lv.clazz);
 
@@ -1813,6 +1833,11 @@ static SHLegacyValue createObjectFromBuffer(
   SerializedLiteralParser::parseValueBuffer(
       literalValBuffer.slice(valBufferOffset), numProps, v);
 
+  if (isTypedAllocKind(AllocKind)) {
+    // Freeze the object from the perspective of untyped code.
+    lv.obj->markAsTyped();
+  }
+
   return lv.obj.getHermesValue();
 }
 
@@ -1823,8 +1848,12 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer(
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
   auto &runtime = getRuntime(shr);
-  return createObjectFromBuffer(
-      runtime, unit, runtime.objectPrototype, shapeTableIndex, valBufferOffset);
+  return createObjectFromBuffer<ObjectAllocKind::Untyped>(
+      runtime,
+      unit,
+      Handle<JSObject>::vmcast(&runtime.objectPrototype),
+      shapeTableIndex,
+      valBufferOffset);
 }
 
 LLVM_ATTRIBUTE_NOINLINE
@@ -1835,14 +1864,47 @@ extern "C" SHLegacyValue _sh_ljs_new_object_with_buffer_and_parent(
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset) {
   auto &runtime = getRuntime(shr);
-
   auto *parentPHV = toPHV(parent);
   Handle<JSObject> parentHandle = parentPHV->isObject()
       ? Handle<JSObject>::vmcast(parentPHV)
       : parentPHV->isNull()
       ? Runtime::makeNullHandle<JSObject>()
       : Handle<JSObject>::vmcast(&runtime.objectPrototype);
-  return createObjectFromBuffer(
+  return createObjectFromBuffer<ObjectAllocKind::Untyped>(
+      runtime, unit, parentHandle, shapeTableIndex, valBufferOffset);
+}
+
+extern "C" SHLegacyValue _sh_new_typed_object_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  auto &runtime = getRuntime(shr);
+  auto *parentPHV = toPHV(parent);
+  Handle<JSObject> parentHandle = parentPHV->isObject()
+      ? Handle<JSObject>::vmcast(parentPHV)
+      : parentPHV->isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  return createObjectFromBuffer<ObjectAllocKind::TypedEnumerable>(
+      runtime, unit, parentHandle, shapeTableIndex, valBufferOffset);
+}
+
+extern "C" SHLegacyValue _sh_new_typed_non_enum_object_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset) {
+  auto &runtime = getRuntime(shr);
+  auto *parentPHV = toPHV(parent);
+  Handle<JSObject> parentHandle = parentPHV->isObject()
+      ? Handle<JSObject>::vmcast(parentPHV)
+      : parentPHV->isNull()
+      ? Runtime::makeNullHandle<JSObject>()
+      : Handle<JSObject>::vmcast(&runtime.objectPrototype);
+  return createObjectFromBuffer<ObjectAllocKind::TypedNonEnumerable>(
       runtime, unit, parentHandle, shapeTableIndex, valBufferOffset);
 }
 

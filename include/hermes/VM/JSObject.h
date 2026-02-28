@@ -1208,6 +1208,14 @@ class JSObject : public GCCell {
       Runtime &runtime,
       PropOpFlags opFlags = PropOpFlags());
 
+  /// Mark this object as having been created from typed code.
+  /// \pre object was allocated with a typed HiddenClass.
+  void markAsTyped() {
+    flags_.frozen = 1;
+    flags_.sealed = 1;
+    flags_.noExtend = 1;
+  }
+
   /// ES9 9.1.3 [[IsExtensible]] internal method
   /// No properties are can be added.  This also handles the Proxy case.
   static CallResult<bool> isExtensible(
