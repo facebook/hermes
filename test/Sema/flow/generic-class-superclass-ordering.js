@@ -84,36 +84,42 @@ class D {
 // CHECK-NEXT:            Decl %d.7 'A' Class : %class_constructor.9
 // CHECK-NEXT:            Decl %d.8 'A' Class : %class_constructor.13
 // CHECK-NEXT:            Decl %d.9 'B' Class : %class_constructor.19
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
 // CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.10
 // CHECK-NEXT:                Decl %d.11 'a' Parameter
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.11
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:            Scope %s.12
 // CHECK-NEXT:                Decl %d.14 'val' Parameter : %class.6
 // CHECK-NEXT:                Decl %d.15 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:            Scope %s.13
 // CHECK-NEXT:                Decl %d.16 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:            Scope %s.14
 // CHECK-NEXT:                Decl %d.17 'a' Parameter : %class.10
 // CHECK-NEXT:                Decl %d.18 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:            Scope %s.15
 // CHECK-NEXT:                Decl %d.19 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.10
+// CHECK-NEXT:            Scope %s.16
 // CHECK-NEXT:                Decl %d.20 'a' Parameter : %class.10
 // CHECK-NEXT:                Decl %d.21 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.11
+// CHECK-NEXT:            Scope %s.17
 // CHECK-NEXT:                Decl %d.22 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -125,7 +131,7 @@ class D {
 // CHECK-NEXT:                    VariableDeclaration
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            Id 'outer' [D:E:%d.2 'outer']
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.6
 // CHECK-NEXT:                        Id 'A' [D:E:%d.7 'A']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -139,7 +145,7 @@ class D {
 // CHECK-NEXT:                                FunctionExpression : %function.14
 // CHECK-NEXT:                                    Id 'a' [D:E:%d.17 'a']
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.7
 // CHECK-NEXT:                        Id 'A' [D:E:%d.8 'A']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -153,7 +159,7 @@ class D {
 // CHECK-NEXT:                                FunctionExpression : %function.15
 // CHECK-NEXT:                                    Id 'a' [D:E:%d.20 'a']
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.3 'A']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -167,7 +173,7 @@ class D {
 // CHECK-NEXT:                                FunctionExpression
 // CHECK-NEXT:                                    Id 'a' [D:E:%d.11 'a']
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.8
 // CHECK-NEXT:                        Id 'B' [D:E:%d.9 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -183,7 +189,7 @@ class D {
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression : void
 // CHECK-NEXT:                                                Super : %function.11
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.4 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -199,7 +205,7 @@ class D {
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression
 // CHECK-NEXT:                                                Super
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'D' [D:E:%d.5 'D']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            MethodDefinition : %function.3

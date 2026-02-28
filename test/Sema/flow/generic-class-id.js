@@ -59,16 +59,19 @@ const s: string = i2.val;
 // CHECK-NEXT:            Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.8 'ID' Class : %class_constructor.5
 // CHECK-NEXT:            Decl %d.9 'ID' Class : %class_constructor.9
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.10 'val' Parameter
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:                Decl %d.12 'val' Parameter : number
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.14 'val' Parameter : string
 // CHECK-NEXT:                Decl %d.15 'arguments' Var Arguments
 
@@ -78,7 +81,7 @@ const s: string = i2.val;
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'ID' [D:E:%d.8 'ID']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -96,7 +99,7 @@ const s: string = i2.val;
 // CHECK-NEXT:                                                    ThisExpression : %class.2
 // CHECK-NEXT:                                                    Id 'val'
 // CHECK-NEXT:                                                Id 'val' [D:E:%d.12 'val'] : number
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'ID' [D:E:%d.9 'ID']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -114,7 +117,7 @@ const s: string = i2.val;
 // CHECK-NEXT:                                                    ThisExpression : %class.6
 // CHECK-NEXT:                                                    Id 'val'
 // CHECK-NEXT:                                                Id 'val' [D:E:%d.14 'val'] : string
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'ID' [D:E:%d.2 'ID']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

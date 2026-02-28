@@ -42,16 +42,17 @@ class A {
 // CHECK-NEXT:            Decl %d.1 'exports' Parameter : any
 // CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.5
 // CHECK-NEXT:            Decl %d.3 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:                Decl %d.4 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Func strict
-// CHECK-NEXT:                Scope %s.5
+// CHECK-NEXT:                Scope %s.6
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -60,7 +61,7 @@ class A {
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : any

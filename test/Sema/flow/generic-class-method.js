@@ -64,25 +64,29 @@ class C<Props> {
 // CHECK-NEXT:            Decl %d.4 'C' Class
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.6 'C' Class : %class_constructor.12
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:                Decl %d.8 'b' Let
-// CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.10
+// CHECK-NEXT:                Decl %d.8 'b' Let
+// CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.11
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.12
 // CHECK-NEXT:                Decl %d.10 'b' Let : %class.6
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:            Scope %s.13
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -90,19 +94,19 @@ class C<Props> {
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.4
 // CHECK-NEXT:                                Id 'c'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            MethodDefinition : %function.13
 // CHECK-NEXT:                                Id 'func'
 // CHECK-NEXT:                                FunctionExpression : %function.13
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.6
 // CHECK-NEXT:                        Id 'C' [D:E:%d.6 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -126,7 +130,7 @@ class C<Props> {
 // CHECK-NEXT:                                                MemberExpression : %function.13
 // CHECK-NEXT:                                                    Id 'b' [D:E:%d.10 'b'] : %class.6
 // CHECK-NEXT:                                                    Id 'func'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'C' [D:E:%d.4 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

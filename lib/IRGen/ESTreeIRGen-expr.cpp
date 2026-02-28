@@ -953,7 +953,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
     if (!mem->_computed) {
       auto propName = Identifier::getFromPointer(
           llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
-      auto optFieldLookup = classType->findField(propName);
+      auto optFieldLookup = classType->findPublicField(propName);
       if (optFieldLookup) {
         size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
@@ -980,7 +980,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
       }
       // Failed to find a class field, check the home object for methods.
       auto optMethodLookup =
-          classType->getHomeObjectTypeInfo()->findField(propName);
+          classType->getHomeObjectTypeInfo()->findPublicField(propName);
       assert(
           optMethodLookup && "must have typechecked as either method or field");
       size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
@@ -1077,7 +1077,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
   auto propName = Identifier::getFromPointer(
       llvh::cast<ESTree::IdentifierNode>(property)->_name);
   Value *thisValue = genThisExpression();
-  if (auto optFieldLookup = classType->findField(propName)) {
+  if (auto optFieldLookup = classType->findPublicField(propName)) {
     // Found the field on the class, so load it directly from 'this'.
     size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
     return MemberExpressionResult{
@@ -1091,7 +1091,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
   }
   // Failed to find a class field, check the home object for methods.
   auto optMethodLookup =
-      classType->getHomeObjectTypeInfo()->findField(propName);
+      classType->getHomeObjectTypeInfo()->findPublicField(propName);
   assert(optMethodLookup && "must have typechecked as either method or field");
   size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
   // Lookup method on the parent, return thisValue in the result to
@@ -1118,7 +1118,7 @@ void ESTreeIRGen::emitTypedFieldStore(
     Value *value) {
   auto propName = Identifier::getFromPointer(
       llvh::cast<ESTree::IdentifierNode>(prop)->_name);
-  auto optFieldLookup = classType->findField(propName);
+  auto optFieldLookup = classType->findPublicField(propName);
   assert(optFieldLookup && "field lookup must succeed after typechecking");
   size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
   Builder.createPrStoreInst(

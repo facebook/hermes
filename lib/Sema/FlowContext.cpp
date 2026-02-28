@@ -716,18 +716,30 @@ void ClassType::init(
   // Override the fields which have been overridden.
   size_t index = 0;
   for (const auto &f : this->fields_) {
-    fieldNameMap_[f.name] = FieldLookupEntry{this, index++};
+    if (f.isPrivate) {
+      privateFieldNameMap_[f.name] = index++;
+    } else {
+      fieldNameMap_[f.name] = FieldLookupEntry{this, index++};
+    }
   }
 
   markAsInitialized();
 }
 
-hermes::OptValue<ClassType::FieldLookupEntry> ClassType::findField(
+hermes::OptValue<ClassType::FieldLookupEntry> ClassType::findPublicField(
     Identifier id) const {
   auto it = fieldNameMap_.find(id);
   if (it == fieldNameMap_.end())
     return llvh::None;
   return it->second;
+}
+
+hermes::OptValue<ClassType::FieldLookupEntry> ClassType::findPrivateField(
+    Identifier id) {
+  auto it = privateFieldNameMap_.find(id);
+  if (it == privateFieldNameMap_.end())
+    return llvh::None;
+  return FieldLookupEntry{this, it->second};
 }
 
 FlowContext::FlowContext() = default;

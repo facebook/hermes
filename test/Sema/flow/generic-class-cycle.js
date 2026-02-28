@@ -59,16 +59,19 @@ class BBB<T> {
 // CHECK-NEXT:            Decl %d.3 'BBB' Class
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.5 'BBB' Class : %class_constructor.10
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:                Decl %d.7 'root' Parameter
 // CHECK-NEXT:                Decl %d.8 'val' Parameter
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.10 'root' Parameter : %class.2
 // CHECK-NEXT:                Decl %d.11 'val' Parameter : number
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
@@ -79,7 +82,7 @@ class BBB<T> {
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'AAA' [D:E:%d.2 'AAA']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.5
@@ -94,7 +97,7 @@ class BBB<T> {
 // CHECK-NEXT:                                                    ThisExpression : %class.2
 // CHECK-NEXT:                                                    Id 'x'
 // CHECK-NEXT:                                                NullLiteral : null
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'BBB' [D:E:%d.5 'BBB']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -111,7 +114,7 @@ class BBB<T> {
 // CHECK-NEXT:                                            MemberExpression : %union.5
 // CHECK-NEXT:                                                Id 'root' [D:E:%d.10 'root'] : %class.2
 // CHECK-NEXT:                                                Id 'x'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'BBB' [D:E:%d.3 'BBB']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

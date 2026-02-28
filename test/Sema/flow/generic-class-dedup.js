@@ -45,12 +45,14 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:            Decl %d.3 'c1' Var : %class.3
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.5 'C' Class : %class_constructor.6
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.6 'x' Parameter
 // CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.8 'x' Parameter : %union.2
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 
@@ -60,7 +62,7 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'C' [D:E:%d.5 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -78,7 +80,7 @@ c1 = new C<number | string>('abc');
 // CHECK-NEXT:                                                    ThisExpression : %class.3
 // CHECK-NEXT:                                                    Id 'x'
 // CHECK-NEXT:                                                Id 'x' [D:E:%d.8 'x'] : %union.2
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'C' [D:E:%d.2 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

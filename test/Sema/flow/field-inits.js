@@ -61,19 +61,21 @@ class C1 extends C0 {
 // CHECK-NEXT:            Decl %d.2 'C0' Class : %class_constructor.4
 // CHECK-NEXT:            Decl %d.3 'C1' Class : %class_constructor.8
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
 // CHECK-NEXT:                Decl %d.8 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -84,7 +86,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                BlockStatement
 // CHECK-NEXT:                    ExpressionStatement
 // CHECK-NEXT:                        StringLiteral : string
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'C0' [D:E:%d.2 'C0']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : number
@@ -101,7 +103,7 @@ class C1 extends C0 {
 // CHECK-NEXT:                                                    Id 'x'
 // CHECK-NEXT:                                                BinOp +
 // CHECK-NEXT:                                                NumericLiteral : number
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'C1' [D:E:%d.3 'C1']
 // CHECK-NEXT:                        Id 'C0' [D:E:%d.2 'C0'] : %class_constructor.4
 // CHECK-NEXT:                        ClassBody

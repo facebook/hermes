@@ -66,12 +66,15 @@ var d: A<string>;
 // CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.7 'Cls' Class : %class_constructor.8
 // CHECK-NEXT:            Decl %d.8 'Cls' Class : %class_constructor.16
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -120,7 +123,7 @@ var d: A<string>;
 // CHECK-NEXT:                                            Id 'T'
 // CHECK-NEXT:                            GenericTypeAnnotation
 // CHECK-NEXT:                                Id 'T'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'Cls' [D:E:%d.7 'Cls']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -129,7 +132,7 @@ var d: A<string>;
 // CHECK-NEXT:                                Id 'x'
 // CHECK-NEXT:                            ClassProperty : %union.2
 // CHECK-NEXT:                                Id 'y'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'Cls' [D:E:%d.8 'Cls']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -138,7 +141,7 @@ var d: A<string>;
 // CHECK-NEXT:                                Id 'x'
 // CHECK-NEXT:                            ClassProperty : %union.10
 // CHECK-NEXT:                                Id 'y'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'Cls' [D:E:%d.3 'Cls']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

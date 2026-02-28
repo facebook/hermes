@@ -45,10 +45,12 @@ var c2: C_crazy;
 // CHECK-NEXT:            Decl %d.3 'Bar' Class : %class_constructor.7
 // CHECK-NEXT:            Decl %d.4 'c2' Var : %union.8
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -56,10 +58,10 @@ var c2: C_crazy;
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'Foo' [D:E:%d.2 'Foo']
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'Bar' [D:E:%d.3 'Bar']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                    TypeAlias

@@ -133,10 +133,12 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                Decl %d.68 'numArr' Var : %array.12
 // CHECK-NEXT:                Decl %d.69 'strArr' Var : %array.14
 // CHECK-NEXT:                Decl %d.70 'arguments' Var Arguments
-// CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.4
-// CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.5
+// CHECK-NEXT:            Func strict
+// CHECK-NEXT:                Scope %s.6
+// CHECK-NEXT:            Func strict
+// CHECK-NEXT:                Scope %s.7
 // CHECK-NEXT:                    Decl %d.71 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -166,10 +168,10 @@ var strArr: (number | string)[] = ["a", "b", "c", ...numArr];
 // CHECK-NEXT:                                        AssignmentExpression : %array.10
 // CHECK-NEXT:                                            Id 'annotatedArr' [D:E:%d.64 'annotatedArr'] : %array.10
 // CHECK-NEXT:                                            Id 'unionArr' [D:E:%d.63 'unionArr'] : %array.10
-// CHECK-NEXT:                                    ClassDeclaration
+// CHECK-NEXT:                                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                                        Id 'Base' [D:E:%d.65 'Base']
 // CHECK-NEXT:                                        ClassBody
-// CHECK-NEXT:                                    ClassDeclaration
+// CHECK-NEXT:                                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                                        Id 'Derived' [D:E:%d.66 'Derived']
 // CHECK-NEXT:                                        Id 'Base' [D:E:%d.65 'Base'] : %class_constructor.4
 // CHECK-NEXT:                                        ClassBody

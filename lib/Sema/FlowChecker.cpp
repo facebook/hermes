@@ -320,12 +320,23 @@ class FlowChecker::ParseClassType {
       nextFieldLayoutSlotIR = superClassTypeInfo->getFieldNameMap().size();
       nextMethodLayoutSlotIR =
           superClassTypeInfo->getHomeObjectTypeInfo()->getFieldNameMap().size();
+      for (auto *cur = superClassTypeInfo; cur;
+           cur = cur->getSuperClassInfo()) {
+        nextFieldLayoutSlotIR += cur->getPrivateFieldNameMap().size();
+        nextMethodLayoutSlotIR +=
+            cur->getHomeObjectTypeInfo()->getPrivateFieldNameMap().size();
+      }
     }
 
     auto *classBody = llvh::cast<ESTree::ClassBodyNode>(body);
     for (ESTree::Node &node : classBody->_body) {
       if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&node)) {
         Type *fieldType = parseClassProperty(prop);
+        outer_.setNodeType(&node, fieldType);
+      } else if (
+          auto *prop =
+              llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&node)) {
+        Type *fieldType = parseClassPrivateProperty(prop);
         outer_.setNodeType(&node, fieldType);
       } else if (
           auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&node)) {
@@ -413,49 +424,80 @@ class FlowChecker::ParseClassType {
   }
 
   Type *parseClassProperty(ESTree::ClassPropertyNode *prop) {
-    if (prop->_computed || prop->_static || prop->_declare) {
+    if (prop->_computed || prop->_declare || prop->_optional ||
+        prop->_variance) {
+      outer_.sm_.error(
+          prop->getSourceRange(), "ft: unsupported property attributes");
+      return outer_.flowContext_.getAny();
+    }
+    return parseClassPropertyImpl(
+        prop, prop->_key, prop->_value, prop->_static, prop->_typeAnnotation);
+  }
+
+  Type *parseClassPrivateProperty(ESTree::ClassPrivatePropertyNode *prop) {
+    if (prop->_declare || prop->_optional || prop->_variance) {
+      outer_.sm_.error(
+          prop->getSourceRange(), "ft: unsupported property attributes");
+      return outer_.flowContext_.getAny();
+    }
+    return parseClassPropertyImpl(
+        prop, prop->_key, prop->_value, prop->_static, prop->_typeAnnotation);
+  }
+
+  Type *parseClassPropertyImpl(
+      ESTree::Node *prop,
+      ESTree::Node *key,
+      ESTree::Node *value,
+      bool isStatic,
+      ESTree::Node *typeAnnotation) {
+    if (isStatic) {
       outer_.sm_.error(
           prop->getSourceRange(), "ft: unsupported property attributes");
       return outer_.flowContext_.getAny();
     }
 
-    if (!llvh::isa<ESTree::IdentifierNode>(prop->_key)) {
+    bool isPrivate = llvh::isa<ESTree::ClassPrivatePropertyNode>(prop);
+
+    if (!llvh::isa<ESTree::IdentifierNode>(key)) {
       outer_.sm_.error(
           prop->getSourceRange(), "ft: property name must be an identifier");
       return outer_.flowContext_.getAny();
     }
 
-    auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
+    auto *id = llvh::cast<ESTree::IdentifierNode>(key);
+    Identifier name = isPrivate
+        ? outer_.astContext_.getPrivateNameIdentifier(id->_name)
+        : Identifier::getFromPointer(id->_name);
 
     Type *fieldType;
-    if (prop->_typeAnnotation) {
+    if (typeAnnotation) {
       fieldType = outer_.parseTypeAnnotation(
-          llvh::cast<ESTree::TypeAnnotationNode>(prop->_typeAnnotation)
+          llvh::cast<ESTree::TypeAnnotationNode>(typeAnnotation)
               ->_typeAnnotation);
-    } else if ((llvh::isa<ESTree::NullLiteralNode>(prop->_value) ||
-                llvh::isa<ESTree::NumericLiteralNode>(prop->_value) ||
-                llvh::isa<ESTree::BooleanLiteralNode>(prop->_value) ||
-                llvh::isa<ESTree::StringLiteralNode>(prop->_value) ||
-                llvh::isa<ESTree::RegExpLiteralNode>(prop->_value) ||
-                llvh::isa<ESTree::BigIntLiteralNode>(prop->_value))) {
+    } else if ((llvh::isa<ESTree::NullLiteralNode>(value) ||
+                llvh::isa<ESTree::NumericLiteralNode>(value) ||
+                llvh::isa<ESTree::BooleanLiteralNode>(value) ||
+                llvh::isa<ESTree::StringLiteralNode>(value) ||
+                llvh::isa<ESTree::RegExpLiteralNode>(value) ||
+                llvh::isa<ESTree::BigIntLiteralNode>(value))) {
       // TODO: Figure out a more general-purpose way to do inference here.
       // We likely need to share some of the logic of AnnotateScopeDecls,
       // given that there's IDZ considerations during the inference of each
       // property's initializer.
-      outer_.visitedInits_.insert(prop->_value);
-      outer_.visitExpression(prop->_value, prop, nullptr);
-      fieldType = outer_.getNodeTypeOrAny(prop->_value);
+      outer_.visitedInits_.insert(value);
+      outer_.visitExpression(value, prop, nullptr);
+      fieldType = outer_.getNodeTypeOrAny(value);
     } else {
       // Unable to infer, just assume 'any'.
       fieldType = outer_.flowContext_.getAny();
     }
 
     // Check if the field is inherited, and reuse the index.
+    // Private fields are never inherited.
     const ClassType::Field *superField = nullptr;
-    if (superClassType) {
+    if (!isPrivate && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-      auto superIt =
-          superClassTypeInfo->findField(Identifier::getFromPointer(id->_name));
+      auto superIt = superClassTypeInfo->findPublicField(name);
       if (superIt) {
         // Field is inherited.
         superField = superIt->getField();
@@ -468,27 +510,26 @@ class FlowChecker::ParseClassType {
     }
 
     // Check if the field is already declared.
-    auto [it, inserted] = fieldNames.try_emplace(id->_name, prop);
+    auto [it, inserted] =
+        fieldNames.try_emplace(name.getUnderlyingPointer(), prop);
     if (!inserted) {
       outer_.sm_.error(
-          id->getStartLoc(),
-          "ft: field " + id->_name->str() + " already declared");
+          id->getStartLoc(), "ft: field " + name.str() + " already declared");
       outer_.sm_.note(
           it->second->getSourceRange(),
-          "ft: previous declaration of " + id->_name->str());
+          "ft: previous declaration of " + name.str());
       return outer_.flowContext_.getAny();
     }
 
     if (superField) {
+      assert(!isPrivate);
       fields.emplace_back(
-          Identifier::getFromPointer(id->_name),
+          name,
           fieldType,
-          superField->layoutSlotIR);
+          superField->layoutSlotIR,
+          /* isPrivate */ false);
     } else {
-      fields.emplace_back(
-          Identifier::getFromPointer(id->_name),
-          fieldType,
-          nextFieldLayoutSlotIR++);
+      fields.emplace_back(name, fieldType, nextFieldLayoutSlotIR++, isPrivate);
     }
 
     return fieldType;
@@ -505,6 +546,9 @@ class FlowChecker::ParseClassType {
           "ft: type parameters not supported directly on methods");
       return outer_.flowContext_.getAny();
     }
+
+    ESTree::PrivateNameNode *privateNameNode =
+        llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key);
 
     if (method->_kind == outer_.kw_.identConstructor) {
       // Constructor
@@ -546,7 +590,15 @@ class FlowChecker::ParseClassType {
         return outer_.flowContext_.getAny();
       }
 
-      auto *id = llvh::cast<ESTree::IdentifierNode>(method->_key);
+      Identifier name;
+      if (privateNameNode) {
+        name = outer_.astContext_.getPrivateNameIdentifier(
+            llvh::cast<ESTree::IdentifierNode>(privateNameNode->_id)->_name);
+      } else {
+        name = Identifier::getFromPointer(
+            llvh::cast<ESTree::IdentifierNode>(method->_key)->_name);
+      }
+
       Type *methodType = outer_.parseFunctionType(
           fe->_params,
           fe->_returnType,
@@ -556,11 +608,12 @@ class FlowChecker::ParseClassType {
           classType);
 
       // Check if the method is inherited, and reuse the index.
+      // Private fields are never inherited.
       const ClassType::Field *superMethod = nullptr;
-      if (superClassType) {
+      if (!privateNameNode && superClassType) {
         auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-        auto superIt = superClassTypeInfo->getHomeObjectTypeInfo()->findField(
-            Identifier::getFromPointer(id->_name));
+        auto superIt =
+            superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
         if (superIt) {
           // Field is inherited.
           superMethod = superIt->getField();
@@ -572,29 +625,33 @@ class FlowChecker::ParseClassType {
       }
 
       // Check if the method is already declared.
-      auto [it, inserted] = methodNames.try_emplace(id->_name, method);
+      auto [it, inserted] =
+          methodNames.try_emplace(name.getUnderlyingPointer(), method);
       if (!inserted) {
         outer_.sm_.error(
-            id->getStartLoc(),
-            "ft: method " + id->_name->str() + " already declared");
+            method->_key->getStartLoc(),
+            "ft: method " + name.str() + " already declared");
         outer_.sm_.note(
             it->second->getSourceRange(),
-            "ft: previous declaration of " + id->_name->str());
+            "ft: previous declaration of " + name.str());
         return outer_.flowContext_.getAny();
       }
 
       if (superMethod) {
+        assert(privateNameNode == nullptr);
         methods.emplace_back(
-            Identifier::getFromPointer(id->_name),
+            name,
             methodType,
             superMethod->layoutSlotIR,
+            /* isPrivate */ false,
             method);
       } else {
+        // Private methods are not stored in the object,
+        // so they don't use a layout slot.
+        auto layoutSlotIR =
+            privateNameNode != nullptr ? 0 : nextMethodLayoutSlotIR++;
         methods.emplace_back(
-            Identifier::getFromPointer(id->_name),
-            methodType,
-            nextMethodLayoutSlotIR++,
-            method);
+            name, methodType, layoutSlotIR, privateNameNode != nullptr, method);
       }
 
       return methodType;
@@ -698,29 +755,40 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         curClassContext_->getClassTypeInfo()->getConstructorType());
     visitFunctionLike(fe, fe->_body, fe->_params);
   } else if (node->_key) {
-    auto *id = llvh::cast<ESTree::IdentifierNode>(node->_key);
-    // Cast must be valid because all methods were registered as
-    // FunctionType.
-    auto optField = curClassContext_->getClassTypeInfo()
-                        ->getHomeObjectTypeInfo()
-                        ->findField(Identifier::getFromPointer(id->_name));
+    Identifier name;
+    OptValue<ClassType::FieldLookupEntry> optField;
+    if (auto *privateName =
+            llvh::dyn_cast<ESTree::PrivateNameNode>(node->_key)) {
+      name = astContext_.getPrivateNameIdentifier(
+          llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
+      optField = curClassContext_->getClassTypeInfo()
+                     ->getHomeObjectTypeInfo()
+                     ->findPrivateField(name);
+    } else {
+      name = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(node->_key)->_name);
+      optField = curClassContext_->getClassTypeInfo()
+                     ->getHomeObjectTypeInfo()
+                     ->findPublicField(name);
+    }
     if (!optField.hasValue()) {
       // This only happens if the class failed to parse, avoid assertion
       // failures (defensive programming).
       sm_.error(
-          id->getSourceRange(),
-          llvh::Twine("ft: cannot find method: ") + id->_name->str());
+          node->_key->getSourceRange(),
+          llvh::Twine("ft: cannot find method: ") + name.str());
       return;
     }
     Type *funcType = optField->getField()->type;
 
     // Typecheck overriding methods.
+    // Private methods are not inherited, so they don't need to be checked.
     Type *superClassType =
         curClassContext_->getClassTypeInfo()->getSuperClass();
-    if (superClassType) {
+    if (!optField->getField()->isPrivate && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-      auto superIt = superClassTypeInfo->getHomeObjectTypeInfo()->findField(
-          Identifier::getFromPointer(id->_name));
+      auto superIt =
+          superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
       if (superIt) {
         auto *superMethod = superIt->getField();
         // Overriding method's function type must flow into the overridden
@@ -2498,6 +2566,18 @@ UniqueString *FlowChecker::propertyKeyAsIdentifier(ESTree::Node *Key) {
   }
 
   return nullptr;
+}
+
+bool FlowChecker::classTypeIsEnclosing(ClassType *classType) {
+  // Loop through lexically enclosing class contexts.
+  for (const ClassContext *cur = curClassContext_; cur != nullptr;
+       cur = cur->getPrevContext()) {
+    auto *curClass = cur->getClassTypeInfo();
+    if (classType == curClass) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace flow

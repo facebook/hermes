@@ -39,10 +39,12 @@ var d2: B<D>[];
 // CHECK-NEXT:            Decl %d.4 'd2' Var : %array.2
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.6 'B' Class : %class_constructor.5
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -50,14 +52,14 @@ var d2: B<D>[];
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.6 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %array.2
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'B' [D:E:%d.2 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

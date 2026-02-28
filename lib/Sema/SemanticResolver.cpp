@@ -893,6 +893,8 @@ void SemanticResolver::visit(ESTree::ClassDeclarationNode *node) {
     // Classes must be in strict mode.
     llvh::SaveAndRestore<bool> oldStrict{curFunctionInfo()->strict, true};
     ClassContext classCtx(*this, node);
+    ScopeRAII scope{*this, node};
+    collectDeclaredPrivateIdentifiers(node);
     visitESTreeChildren(*this, node);
     if (LLVM_UNLIKELY(recursionDepth_ == 0))
       return;

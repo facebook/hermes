@@ -32,6 +32,19 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
   flow::ClassType *classType = consType->getClassTypeInfo();
 
+  // TODO: Implement IRGen for typed private fields/methods.
+  if (llvh::any_of(
+          classType->getFields(),
+          [](const flow::ClassType::Field &f) { return f.isPrivate; }) ||
+      llvh::any_of(
+          classType->getHomeObjectTypeInfo()->getFields(),
+          [](const flow::ClassType::Field &f) { return f.isPrivate; })) {
+    Mod->getContext().getSourceErrorManager().error(
+        node->getSourceRange(),
+        "private fields are not supported in typed classes");
+    return;
+  }
+
   Value *superClass = nullptr;
   if (node->_superClass) {
     superClass = genExpression(node->_superClass);

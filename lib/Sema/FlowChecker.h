@@ -760,6 +760,16 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \return the identifier that represents the property key, or nullptr if
   ///   the key cannot be converted.
   UniqueString *propertyKeyAsIdentifier(ESTree::Node *Key);
+
+  /// Try to find a an enclosing class.
+  /// Private names can only be used in lexical descendants of the class
+  /// in which they are declared, so this function lets us check that the
+  /// private name is currently visible.
+  ///
+  /// \param classType the LHS of the member expression we're doing the lookup
+  ///   on.
+  /// \return true if the class is found, false otherwise.
+  bool classTypeIsEnclosing(ClassType *classType);
 };
 
 class FlowChecker::FunctionContext {
@@ -859,7 +869,7 @@ class FlowChecker::ClassContext {
     outer_.curClassContext_ = prevContext_;
   }
 
-  ClassType *getClassTypeInfo() {
+  ClassType *getClassTypeInfo() const {
     return llvh::cast<ClassType>(classType->info);
   }
 
@@ -872,6 +882,10 @@ class FlowChecker::ClassContext {
           node);
     }
     return fieldInitFunctionType_;
+  }
+
+  ClassContext *getPrevContext() const {
+    return prevContext_;
   }
 };
 

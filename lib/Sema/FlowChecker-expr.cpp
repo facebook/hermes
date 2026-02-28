@@ -438,15 +438,36 @@ class FlowChecker::ExprVisitor {
             "ft: computed access to class instances not supported");
       } else {
         bool found = false;
-        auto id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        auto optField =
-            classType->findField(Identifier::getFromPointer(id->_name));
+        Identifier name;
+        bool isPrivate;
+        OptValue<ClassType::FieldLookupEntry> optField;
+        if (auto *privateName =
+                llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
+          isPrivate = true;
+          name = outer_.astContext_.getPrivateNameIdentifier(
+              llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
+          if (!outer_.classTypeIsEnclosing(classType)) {
+            outer_.sm_.error(
+                node->_property->getSourceRange(),
+                "ft: private field " + name.str() +
+                    " not visible outside class " +
+                    classType->getClassNameOrDefault());
+          }
+          optField = classType->findPrivateField(name);
+        } else {
+          auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+          isPrivate = false;
+          name = Identifier::getFromPointer(id->_name);
+          optField = classType->findPublicField(name);
+        }
         if (optField) {
           resType = optField->getField()->type;
           found = true;
         } else {
-          auto optMethod = classType->getHomeObjectTypeInfo()->findField(
-              Identifier::getFromPointer(id->_name));
+          OptValue<ClassType::FieldLookupEntry> optMethod;
+          optMethod = isPrivate
+              ? classType->getHomeObjectTypeInfo()->findPrivateField(name)
+              : classType->getHomeObjectTypeInfo()->findPublicField(name);
           if (optMethod) {
             resType = optMethod->getField()->type;
             found = true;
@@ -459,7 +480,7 @@ class FlowChecker::ExprVisitor {
           // TODO: class declaration location.
           outer_.sm_.error(
               node->_property->getSourceRange(),
-              "ft: property " + id->_name->str() + " not defined in class " +
+              "ft: property " + name.str() + " not defined in class " +
                   classType->getClassNameOrDefault());
         }
       }
