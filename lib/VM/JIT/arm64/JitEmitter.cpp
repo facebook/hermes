@@ -3087,7 +3087,7 @@ void Emitter::newObjectWithBuffer(
     bool fast = true;
   } fastPathCheckVisitor{};
 
-  SerializedLiteralParser::parse(
+  SerializedLiteralParser::parseValueBuffer(
       codeBlock_->getRuntimeModule()
           ->getBytecode()
           ->getLiteralValueBuffer()
@@ -3335,7 +3335,7 @@ void Emitter::newObjectWithBuffer(
     }
   } emittingVisitor{*this, xObj, xTmp, xTmp2};
 
-  SerializedLiteralParser::parse(
+  SerializedLiteralParser::parseValueBuffer(
       codeBlock_->getRuntimeModule()
           ->getBytecode()
           ->getLiteralValueBuffer()

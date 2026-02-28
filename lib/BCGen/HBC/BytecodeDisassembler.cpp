@@ -118,7 +118,7 @@ size_t dataSizeForTag(SLG::TagType tag) {
       return 8;
     case SLG::IntegerTag:
       return 4;
-    case SLG::NullTag:
+    case SLG::ValueNullOrKeyPrivateNameTag:
     case SLG::UndefinedTag:
     case SLG::TrueTag:
     case SLG::FalseTag:
@@ -127,7 +127,11 @@ size_t dataSizeForTag(SLG::TagType tag) {
   }
 }
 
-std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
+std::string SLPToString(
+    bool isKeyBuffer,
+    SLG::TagType tag,
+    const unsigned char *buff,
+    int *ind) {
   std::string rBracket{"]"};
   size_t numBytes = dataSizeForTag(tag);
   switch (tag) {
@@ -155,8 +159,9 @@ std::string SLPToString(SLG::TagType tag, const unsigned char *buff, int *ind) {
       *ind += numBytes;
       return std::string("[int ") + std::to_string(val) + rBracket;
     }
-    case SLG::NullTag:
-      return "null";
+    case SLG::ValueNullOrKeyPrivateNameTag:
+      // Keys can't be null, so this is a private name.
+      return isKeyBuffer ? "private" : "null";
     case SLG::UndefinedTag:
       return "undefined";
     case SLG::TrueTag:
@@ -298,7 +303,12 @@ void BytecodeDisassembler::disassembleLiteralValueBuffer(raw_ostream &OS) {
     for (int i = 0; i < tag.first &&
          (size_t)ind + dataSizeForTag(tag.second) <= literalValueBuffer.size();
          i++) {
-      OS << SLPToString(tag.second, literalValueBuffer.data(), &ind) << "\n";
+      OS << SLPToString(
+                /* isKeyBuffer */ false,
+                tag.second,
+                literalValueBuffer.data(),
+                &ind)
+         << "\n";
     }
   }
   OS << "\n";
@@ -323,7 +333,8 @@ void BytecodeDisassembler::disassembleObjectKeyBuffer(raw_ostream &OS) {
     for (int i = 0; i < keyTag.first &&
          (size_t)keyInd + dataSizeForTag(keyTag.second) <= objKeyBuffer.size();
          i++) {
-      OS << SLPToString(keyTag.second, objKeyBuffer.data(), &keyInd) << "\n";
+      OS << SLPToString(true, keyTag.second, objKeyBuffer.data(), &keyInd)
+         << "\n";
     }
   }
   OS << "\n";

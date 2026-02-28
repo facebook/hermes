@@ -128,7 +128,7 @@ void SerializedLiteralGenerator::serializeBuffer(
                                                                   : FalseTag;
         break;
       case ValueKind::LiteralNullKind:
-        newTag = NullTag;
+        newTag = ValueNullOrKeyPrivateNameTag;
         break;
       case ValueKind::LiteralUndefinedKind:
       case ValueKind::LiteralUninitKind:

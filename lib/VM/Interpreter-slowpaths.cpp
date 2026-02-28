@@ -1927,7 +1927,7 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   } v{lv.obj, runtime, curCodeBlock->getRuntimeModule(), 0};
 
   // Visit each value in the given buffer, and set it in the object.
-  SerializedLiteralParser::parse(
+  SerializedLiteralParser::parseValueBuffer(
       curCodeBlock->getRuntimeModule()
           ->getBytecode()
           ->getLiteralValueBuffer()
@@ -2007,7 +2007,7 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
   } v{arr, runtime, curCodeBlock->getRuntimeModule(), 0};
 
   // Visit each serialized value in the given buffer.
-  SerializedLiteralParser::parse(
+  SerializedLiteralParser::parseValueBuffer(
       curCodeBlock->getRuntimeModule()
           ->getBytecode()
           ->getLiteralValueBuffer()

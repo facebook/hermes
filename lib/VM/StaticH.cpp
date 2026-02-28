@@ -1810,7 +1810,7 @@ static SHLegacyValue createObjectFromBuffer(
 
   llvh::ArrayRef literalValBuffer{
       unit->literal_val_buffer, unit->literal_val_buffer_size};
-  SerializedLiteralParser::parse(
+  SerializedLiteralParser::parseValueBuffer(
       literalValBuffer.slice(valBufferOffset), numProps, v);
 
   return lv.obj.getHermesValue();
@@ -1924,7 +1924,7 @@ extern "C" SHLegacyValue _sh_ljs_new_array_with_buffer(
       size_t i;
     } v{arr, runtime, unit, 0};
 
-    SerializedLiteralParser::parse(
+    SerializedLiteralParser::parseValueBuffer(
         arrayBuffer.slice(arrayBufferIndex), numLiterals, v);
 
     return arr.getHermesValue();

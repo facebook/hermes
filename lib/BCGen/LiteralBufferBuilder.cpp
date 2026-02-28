@@ -184,6 +184,7 @@ void Builder::reseedFromBaseBytecode() {
   std::vector<StringTableEntry> valueStrTable;
   struct {
     void visitStringID(uint32_t id) {}
+    void visitPrivateName() {}
     void visitNumber(double d) {}
     void visitNull() {}
     void visitUndefined() {}
@@ -200,7 +201,7 @@ void Builder::reseedFromBaseBytecode() {
                              &valueStrTable,
                              &seenValueBufferEntries](
                                 uint32_t valBufOffset, uint16_t numElements) {
-    auto sizeInBytes = SerializedLiteralParser::parse(
+    auto sizeInBytes = SerializedLiteralParser::parseValueBuffer(
         valueBuf.slice(valBufOffset), numElements, emptyVisitor);
     auto [_, inserted] =
         seenValueBufferEntries.insert({valBufOffset, sizeInBytes});
@@ -280,7 +281,7 @@ void Builder::reseedFromBaseBytecode() {
   for (size_t i = 0, e = objShapeTable_.size(); i < e; ++i) {
     auto numProps = objShapeTable_[i].numProps;
     auto keyBufferOffset = objShapeTable_[i].keyBufferOffset;
-    auto sizeInBytes = SerializedLiteralParser::parse(
+    auto sizeInBytes = SerializedLiteralParser::parseKeyBuffer(
         keyBuf.slice(keyBufferOffset), numProps, emptyVisitor);
     keyStrTable.push_back({keyBufferOffset, (uint32_t)sizeInBytes, false});
     objKeys_.push_back(
