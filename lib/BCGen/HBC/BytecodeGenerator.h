@@ -231,24 +231,6 @@ class BytecodeModuleGenerator {
     bm_.addFunctionSource(functionID, stringID);
   }
 
-  /// Serializes the array of literals given into a compact char buffer.
-  /// The serialization format can be found in:
-  /// include/hermes/BCGen/SerializedLiteralGenerator.h
-  /// This function serializes the literals, and checks to see if the exact
-  /// byte pattern is already present in \buff. If it is, it simply returns
-  /// its offset in \buff. If it isn't, the function appends it and returns
-  /// its offset.
-  /// NOTE: Since it simply does a byte by byte search, it can return indices
-  /// that don't correspond to any previously inserted literals.
-  ///   e.g. When serialized, [int 24833]'s last two bytes are equivalent to
-  ///   [String 1], and if they are added separately, serializeBuffer would
-  ///   return the offset of the last two bytes instead of appending
-  ///   [String 1] to the buffer.
-  uint32_t serializeBuffer(
-      ArrayRef<Literal *> literals,
-      std::vector<unsigned char> &buff,
-      bool isKeyBuffer);
-
   /// For a given instruction \p inst that has an associated serialized literal,
   /// obtain the offset of the literal in the associated buffer. In case of
   /// an object literal, it is a pair of offsets (key and value). In case of

@@ -286,7 +286,16 @@ void BytecodeDisassembler::disassembleStringStorage(raw_ostream &OS) {
 }
 
 /// NOTE: The output might not show the value of every literal used
-/// by array/objects (explained in serializeBuffer's header).
+/// by array/objects.
+///
+/// Since serialization simply does a byte by byte search,
+/// it can return indices that don't correspond to any previously inserted
+/// literals.
+///
+/// e.g. When serialized, [int 24833]'s last two bytes are equivalent to
+/// [String 1], and if they are added separately, serializeBuffer would
+/// return the offset of the last two bytes instead of appending
+/// [String 1] to the buffer.
 void BytecodeDisassembler::disassembleLiteralValueBuffer(raw_ostream &OS) {
   auto literalValueBuffer = bcProvider_->getLiteralValueBuffer();
   if (literalValueBuffer.size() == 0)
