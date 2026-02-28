@@ -148,6 +148,9 @@ llvh::hash_code hash_value(const Value &val, const FuncSharedData &sharedData) {
     case ValueKind::LiteralStringKind:
       hc = hash_value(llvh::cast<LiteralString>(val).getValue().str());
       break;
+    case ValueKind::LiteralPrivateNameKind:
+      hc = hash_value(llvh::cast<LiteralPrivateName>(val).getValue().str());
+      break;
     case ValueKind::LiteralBoolKind:
       hc = (llvh::cast<LiteralBool>(val).getValue() ? 1 : 0);
       break;

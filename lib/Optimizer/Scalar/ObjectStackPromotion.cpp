@@ -51,13 +51,16 @@ bool tryPromoteObject(
       };
 
   // Map from property key string -> slot index.
-  llvh::SmallDenseMap<LiteralString *, size_t> objLayout;
+  // Keys must be either LiteralString or LiteralPrivateName.
+  llvh::SmallDenseMap<Literal *, size_t> objLayout;
   // Populate the object layout, ensuring all property keys are represented as
   // LiteralStrings.
   for (size_t i = 0; i < numElems; ++i) {
     auto *propKey = alloc->getKey(i);
     if (auto *LS = llvh::dyn_cast<LiteralString>(propKey)) {
       objLayout.insert({LS, i});
+    } else if (auto *LPN = llvh::dyn_cast<LiteralPrivateName>(propKey)) {
+      objLayout.insert({LPN, i});
     } else {
       auto *LN = llvh::cast<LiteralNumber>(propKey);
       objLayout.insert({convertNumber(LN), i});
@@ -70,6 +73,9 @@ bool tryPromoteObject(
   auto isInLayout = [&objLayout, &convertNumber](Value *V) -> bool {
     if (auto *LS = llvh::dyn_cast<LiteralString>(V)) {
       return objLayout.count(LS);
+    }
+    if (auto *LPN = llvh::dyn_cast<LiteralPrivateName>(V)) {
+      return objLayout.count(LPN);
     }
     if (auto *LN = llvh::dyn_cast<LiteralNumber>(V)) {
       return objLayout.count(convertNumber(LN));
@@ -162,6 +168,9 @@ bool tryPromoteObject(
       [&stackLocs, &objLayout, &conversionMapping](Literal *propKey) {
         if (auto *LS = llvh::dyn_cast<LiteralString>(propKey)) {
           return stackLocs[objLayout[LS]];
+        }
+        if (auto *LPN = llvh::dyn_cast<LiteralPrivateName>(propKey)) {
+          return stackLocs[objLayout[LPN]];
         }
         auto *LN = llvh::cast<LiteralNumber>(propKey);
         assert(

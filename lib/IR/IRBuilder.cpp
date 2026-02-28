@@ -215,6 +215,10 @@ LiteralString *IRBuilder::getLiteralString(Identifier value) {
   return M->getLiteralString(value);
 }
 
+LiteralPrivateName *IRBuilder::getLiteralPrivateName(Identifier value) {
+  return M->getLiteralPrivateName(value);
+}
+
 LiteralBool *IRBuilder::getLiteralBool(bool value) {
   return M->getLiteralBool(value);
 }
@@ -1272,7 +1276,7 @@ UnreachableInst *IRBuilder::createUnreachableInst() {
 PrLoadInst *IRBuilder::createPrLoadInst(
     Value *object,
     size_t propIndex,
-    LiteralString *propName,
+    Literal *propName,
     Type checkedType) {
   auto *I = new PrLoadInst(
       object, getLiteralNumber((double)propIndex), propName, checkedType);
@@ -1284,7 +1288,7 @@ PrStoreInst *IRBuilder::createPrStoreInst(
     Value *storedValue,
     Value *object,
     size_t propIndex,
-    LiteralString *propName,
+    Literal *propName,
     bool nonPointer) {
   auto *I = new PrStoreInst(
       storedValue,

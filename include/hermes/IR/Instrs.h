@@ -5520,9 +5520,12 @@ class PrLoadInst : public Instruction {
   explicit PrLoadInst(
       Value *object,
       LiteralNumber *propIndex,
-      LiteralString *propName,
+      Literal *propName,
       Type checkedType)
       : Instruction(ValueKind::PrLoadInstKind) {
+    assert(
+        llvh::isa<LiteralString>(propName) ||
+        llvh::isa<LiteralPrivateName>(propName));
     setType(checkedType);
     pushOperand(object);
     pushOperand(propIndex);
@@ -5566,9 +5569,12 @@ class PrStoreInst : public Instruction {
       Value *storedValue,
       Value *object,
       LiteralNumber *propIndex,
-      LiteralString *propName,
+      Literal *propName,
       LiteralBool *nonPointer)
       : Instruction(ValueKind::PrStoreInstKind) {
+    assert(
+        llvh::isa<LiteralString>(propName) ||
+        llvh::isa<LiteralPrivateName>(propName));
     setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);
