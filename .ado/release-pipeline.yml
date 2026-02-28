@@ -3,19 +3,18 @@
 # It releases NuGet packages to the public ms/react-natve ADO feed and to the NuGet.org feed.
 #
 
-trigger: none
 name: Release $(Date:yyyyMMdd).$(Rev:r)
+
+# The triggers are overridden by the ADO pipeline definitions.
+trigger: none
+pr: none
 
 resources:
   pipelines:
-  - pipeline: _microsoft.hermes-windows
-    project: 'ISS'
-    source: 'microsoft.hermes-windows.ci'
-    trigger:
-      branches:
-        include:
-        - main
-        - rnw/*
+  - pipeline: microsoft.hermes-windows
+    project: ISS
+    source: microsoft.hermes-windows.ci
+    trigger: none
 
   repositories:
   - repository: CustomPipelineTemplates
@@ -56,7 +55,7 @@ extends:
         templateContext:
           inputs:
           - input: pipelineArtifact
-            pipeline: _microsoft.hermes-windows
+            pipeline: microsoft.hermes-windows
             artifactName: published-packages
             targetPath: $(Pipeline.Workspace)\published-packages
 
@@ -103,11 +102,17 @@ extends:
         templateContext:
           inputs:
           - input: pipelineArtifact
-            pipeline: _microsoft.hermes-windows
+            pipeline: microsoft.hermes-windows
             artifactName: published-packages
             targetPath: '$(Pipeline.Workspace)/published-packages'
 
         steps:
+        - script: dir /S $(Pipeline.Workspace)\published-packages
+          displayName: Show directory contents
+
+        - script: dotnet nuget list source
+          displayName: Show Nuget sources
+
         - task: AzureKeyVault@2
           inputs:
             azureSubscription: ESRP-JSHost3
@@ -115,20 +120,26 @@ extends:
             SecretsFilter: 'OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi'
             RunAsPreJob: true
 
-        - task: NuGetToolInstaller@1
-          displayName: 'Use NuGet'
+        - task: AzureCLI@2
+          displayName: Override NuGet.org credentials from Key Vault
+          inputs:
+            azureSubscription: ESRP-JSHost3
+            scriptType: 'pscore'
+            scriptLocation: 'inlineScript'
+            inlineScript: |
+              $nugetOrgApiKey = "$(OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi)"
+              # Set the API key as a secret, so it doesn't get leaked in logs.
+              Write-Host "##vso[task.setsecret]$nugetOrgApiKey"
+              # Override the apitoken of the NuGet.org service connection for this job.
+              Write-Host "##vso[task.setendpoint id=f15cbb2b-c0a8-4325-a866-960fa0bec9af;field=authParameter;key=apitoken]$nugetOrgApiKey"
 
-        - script: 'nuget.exe SetApiKey $(OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi)'
-          displayName: 'NuGet SetApiKey (nuget.org)'
-
-        - script: dir /S $(Pipeline.Workspace)\published-packages
-          displayName: Show directory contents
-
-        - script: >
-            nuget.exe push
-            $(Pipeline.Workspace)\published-packages\Microsoft.JavaScript.Hermes.*.nupkg
-            -Source https://api.nuget.org/v3/index.json
-            -SkipDuplicate
-            -NonInteractive
-            -Verbosity Detailed
-          displayName: 'NuGet push (nuget.org)'
+        - task: 1ES.PublishNuGet@1
+          displayName: NuGet push to nuget.org
+          inputs:
+            useDotNetTask: true
+            packageParentPath: '$(Pipeline.Workspace)/published-packages'
+            packagesToPush: '$(Pipeline.Workspace)/published-packages/Microsoft.JavaScript.Hermes.*.nupkg'
+            nuGetFeedType: external
+            publishFeedCredentials: 'nuget.org/cxe/hermes-windows'
+            externalEndpoint: 'nuget.org/cxe/hermes-windows'
+            publishPackageMetadata: true

@@ -218,7 +218,7 @@ extends:
 
             # Sign and publish symbols only for the CI builds and real builds.
           - ${{ if and(eq(parameters.MustPublish, true), eq(parameters.FakeBuild, false)) }}:
-            - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@5
+            - task: EsrpCodeSigning@6
               displayName: CodeSign Binaries
               inputs:
                 connectedServiceName: 'ESRP-JSHost3'
@@ -324,7 +324,7 @@ extends:
 
           # Sign the NuGet packages only for CI builds.
         - ${{ if parameters.MustPublish }}:
-          - task: SFP.build-tasks.custom-build-task-1.EsrpCodeSigning@5
+          - task: EsrpCodeSigning@6
             displayName: CodeSign NuGets
             inputs:
               connectedServiceName: 'ESRP-JSHost3'
