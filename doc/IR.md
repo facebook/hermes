@@ -1035,6 +1035,26 @@ Arguments | %parent is the parent of the new object. The subsequent values are a
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
 Effects | Does not read or write to memory.
 
+### LIRAllocTypedObjectFromBufferInst
+
+LIRAllocTypedObjectFromBufferInst | _
+--- | --- |
+Description | Allocates a new typed class instance on the heap, and initializes it with values from the buffer. Properties are enumerable.
+Example |  %0 = LIRAllocTypedObjectFromBufferInst %parent, %key0, %value0, ...
+Arguments | The %parent is the parent of the result object. The remaining operands are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
+Semantics | The instruction creates a new JavaScript typed object on the heap with an initial list of enumerable properties.
+Effects | Does not read or write to memory.
+
+### LIRAllocTypedNonEnumObjectFromBufferInst
+
+LIRAllocTypedNonEnumObjectFromBufferInst | _
+--- | --- |
+Description | Allocates a new typed class instance on the heap with non-enumerable properties, and initializes it with values from the buffer. Used for home objects (class prototypes).
+Example |  %0 = LIRAllocTypedNonEnumObjectFromBufferInst %parent, %key0, %value0, ...
+Arguments | The %parent is the parent of the result object. The remaining operands are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
+Semantics | The instruction creates a new JavaScript typed object on the heap with an initial list of non-enumerable properties.
+Effects | Does not read or write to memory.
+
 ### HBCCallNInst
 
 HBCCallNInst | _

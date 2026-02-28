@@ -71,6 +71,12 @@ bool LoadConstants::operandMustBeLiteral(Instruction *Inst, unsigned opIndex) {
   if (llvh::isa<LIRAllocObjectFromBufferInst>(Inst))
     return opIndex >= LIRAllocObjectFromBufferInst::FirstKeyIdx;
 
+  if (llvh::isa<LIRAllocTypedObjectFromBufferInst>(Inst))
+    return opIndex >= LIRAllocTypedObjectFromBufferInst::FirstKeyIdx;
+
+  if (llvh::isa<LIRAllocTypedNonEnumObjectFromBufferInst>(Inst))
+    return opIndex >= LIRAllocTypedNonEnumObjectFromBufferInst::FirstKeyIdx;
+
   // All operands of AllocArrayInst are literals.
   if (llvh::isa<AllocArrayInst>(Inst))
     return true;

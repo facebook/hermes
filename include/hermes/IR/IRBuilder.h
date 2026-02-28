@@ -687,6 +687,14 @@ class IRBuilder {
   LIRAllocObjectFromBufferInst *createLIRAllocObjectFromBufferInst(
       Value *parentObj,
       LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
+  LIRAllocTypedObjectFromBufferInst *createLIRAllocTypedObjectFromBufferInst(
+      Value *parentObject,
+      const LIRAllocTypedObjectFromBufferInst::ObjectPropertyMap &propMap);
+  LIRAllocTypedNonEnumObjectFromBufferInst *
+  createLIRAllocTypedNonEnumObjectFromBufferInst(
+      Value *parentObject,
+      const LIRAllocTypedNonEnumObjectFromBufferInst::ObjectPropertyMap
+          &propMap);
 
   HBCCompareBranchInst *createHBCCompareBranchInst(
       Value *left,

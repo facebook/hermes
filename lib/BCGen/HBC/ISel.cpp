@@ -1448,6 +1448,36 @@ void HBCISel::generateLIRAllocObjectFromBufferInst(
   }
 }
 
+void HBCISel::generateLIRAllocTypedObjectFromBufferInst(
+    LIRAllocTypedObjectFromBufferInst *Inst,
+    BasicBlock *next) {
+  auto result = encodeValue(Inst);
+  auto parent = encodeValue(Inst->getParentObject());
+  auto buffIdxs =
+      BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
+  BCFGen_->emitNewTypedObjectWithBuffer(
+      result,
+      parent,
+      buffIdxs.shapeTableIdx,
+      buffIdxs.valueBufferOffset,
+      /* nonEnumerable */ 0);
+}
+
+void HBCISel::generateLIRAllocTypedNonEnumObjectFromBufferInst(
+    LIRAllocTypedNonEnumObjectFromBufferInst *Inst,
+    BasicBlock *next) {
+  auto result = encodeValue(Inst);
+  auto parent = encodeValue(Inst->getParentObject());
+  auto buffIdxs =
+      BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
+  BCFGen_->emitNewTypedObjectWithBuffer(
+      result,
+      parent,
+      buffIdxs.shapeTableIdx,
+      buffIdxs.valueBufferOffset,
+      /* nonEnumerable */ 1);
+}
+
 void HBCISel::generateCatchInst(CatchInst *Inst, BasicBlock *next) {
   auto loc = BCFGen_->emitCatch(encodeValue(Inst));
   relocations_.push_back({loc, Relocation::CatchType, Inst});

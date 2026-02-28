@@ -249,6 +249,8 @@ DEF_VALUE(LIRGetArgumentsPropByValStrictInst, HBCGetArgumentsPropByValInst)
 MARK_LAST(HBCGetArgumentsPropByValInst)
 
 DEF_VALUE(LIRAllocObjectFromBufferInst, Instruction)
+DEF_VALUE(LIRAllocTypedObjectFromBufferInst, Instruction)
+DEF_VALUE(LIRAllocTypedNonEnumObjectFromBufferInst, Instruction)
 DEF_VALUE(HBCProfilePointInst, Instruction)
 
 DEF_VALUE(PrLoadInst, Instruction)

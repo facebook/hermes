@@ -2184,6 +2184,38 @@ class InstrGen {
     os_ << valIdx << ")";
     os_ << ";\n";
   }
+  void generateLIRAllocTypedObjectFromBufferInst(
+      LIRAllocTypedObjectFromBufferInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+
+    auto [shapeIdx, valIdx] =
+        moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
+
+    os_ << " = ";
+    os_ << "_sh_new_typed_object_with_buffer(shr, shUnit, ";
+    generateRegisterPtr(*inst.getParentObject());
+    os_ << ", ";
+    os_ << shapeIdx << ", ";
+    os_ << valIdx;
+    os_ << ");\n";
+  }
+  void generateLIRAllocTypedNonEnumObjectFromBufferInst(
+      LIRAllocTypedNonEnumObjectFromBufferInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+
+    auto [shapeIdx, valIdx] =
+        moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
+
+    os_ << " = ";
+    os_ << "_sh_new_typed_non_enum_object_with_buffer(shr, shUnit, ";
+    generateRegisterPtr(*inst.getParentObject());
+    os_ << ", ";
+    os_ << shapeIdx << ", ";
+    os_ << valIdx;
+    os_ << ");\n";
+  }
   void generateHBCProfilePointInst(HBCProfilePointInst &inst) {
     unimplemented(inst);
   }

@@ -1172,6 +1172,26 @@ LIRAllocObjectFromBufferInst *IRBuilder::createLIRAllocObjectFromBufferInst(
   return inst;
 }
 
+LIRAllocTypedObjectFromBufferInst *
+IRBuilder::createLIRAllocTypedObjectFromBufferInst(
+    Value *parentObject,
+    const LIRAllocTypedObjectFromBufferInst::ObjectPropertyMap &propMap) {
+  auto *inst = new LIRAllocTypedObjectFromBufferInst(parentObject, propMap);
+  insert(inst);
+  return inst;
+}
+
+LIRAllocTypedNonEnumObjectFromBufferInst *
+IRBuilder::createLIRAllocTypedNonEnumObjectFromBufferInst(
+    Value *parentObject,
+    const LIRAllocTypedNonEnumObjectFromBufferInst::ObjectPropertyMap
+        &propMap) {
+  auto *inst =
+      new LIRAllocTypedNonEnumObjectFromBufferInst(parentObject, propMap);
+  insert(inst);
+  return inst;
+}
+
 AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
     const AllocObjectLiteralInst::ObjectPropertyMap &propMap,
     Value *parentObject) {

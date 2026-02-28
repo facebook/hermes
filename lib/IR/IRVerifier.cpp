@@ -1490,6 +1490,32 @@ bool Verifier::visitLIRAllocObjectFromBufferInst(
   return true;
 }
 
+bool Verifier::visitLIRAllocTypedObjectFromBufferInst(
+    const hermes::LIRAllocTypedObjectFromBufferInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getKeyValuePairCount() > 0,
+      "Cannot allocate an empty LIRAllocTypedObjectFromBufferInst");
+  AssertIWithMsg(
+      Inst,
+      !llvh::isa<EmptySentinel>(Inst.getParent()),
+      "LIRAllocTypedObjectFromBufferInst requires a parent object");
+  return true;
+}
+
+bool Verifier::visitLIRAllocTypedNonEnumObjectFromBufferInst(
+    const hermes::LIRAllocTypedNonEnumObjectFromBufferInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getKeyValuePairCount() > 0,
+      "Cannot allocate an empty LIRAllocTypedNonEnumObjectFromBufferInst");
+  AssertIWithMsg(
+      Inst,
+      !llvh::isa<EmptySentinel>(Inst.getParent()),
+      "LIRAllocTypedNonEnumObjectFromBufferInst requires a parent object");
+  return true;
+}
+
 bool Verifier::visitAllocObjectLiteralInst(
     const hermes::AllocObjectLiteralInst &Inst) {
   return true;
