@@ -1,236 +1,2634 @@
 {
-    "hydrated": false,
-    "properties": {
-      "helpUri": "https://eng.ms/docs/microsoft-security/security/azure-security/cloudai-security-fundamentals-engineering/security-integration/guardian-wiki/microsoft-guardian/general/suppressions",
-      "hydrationStatus": "This file does not contain identifying data. It is safe to check into your repo. To hydrate this file with identifying data, run `guardian hydrate --help` and follow the guidance."
+  "hydrated": true,
+  "properties": {
+    "helpUri": "https://eng.ms/docs/microsoft-security/security/azure-security/cloudai-security-fundamentals-engineering/security-integration/guardian-wiki/microsoft-guardian/general/suppressions"
+  },
+  "version": "1.0.0",
+  "suppressionSets": {
+    "default": {
+      "name": "default",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "lastUpdatedDate": "2026-02-27 04:49:49Z"
+    }
+  },
+  "results": {
+    "31b62ba2abc07d8ca602eac786ba2970f8cb9d6b925c4b864bf17f8aa97785d3": {
+      "signature": "31b62ba2abc07d8ca602eac786ba2970f8cb9d6b925c4b864bf17f8aa97785d3",
+      "alternativeSignatures": [
+        "1603c529779a8442b7bd15b9ad9edefaf262f3e61417b7d1f92413eb3cca6205"
+      ],
+      "target": "utils/es5objects.js",
+      "line": 9,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
     },
-    "version": "1.0.0",
-    "suppressionSets": {
-      "default": {
-        "name": "default",
-        "createdDate": "2023-10-20 17:35:00Z",
-        "lastUpdatedDate": "2023-10-20 17:35:00Z"
-      }
+    "a5964e876589e93dbb3f37b7da644cd93481804f436ecca2eddd39bb1b49048d": {
+      "signature": "a5964e876589e93dbb3f37b7da644cd93481804f436ecca2eddd39bb1b49048d",
+      "alternativeSignatures": [
+        "0cecc648f3153113046bf9d751fdc8ba18c10c9e1e1843fdbb7d29ed5dc08ccb"
+      ],
+      "target": "benchmarks/octane/earley-boyer.js",
+      "line": 2263,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
     },
-    "results": {
-      "1e706b5c61ae1d4e5529f54425953c7c38662516e57a38da3bb16a5836570342": {
-        "signature": "1e706b5c61ae1d4e5529f54425953c7c38662516e57a38da3bb16a5836570342",
-        "alternativeSignatures": [
-          "1e0c330b266a141b24783cd448754909c079d77778ca719a87d9103054dc5304"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "5d79e092f586c922e055f72258151b91f377cd1c2c78e27e4fc598c606366f4d": {
-        "signature": "5d79e092f586c922e055f72258151b91f377cd1c2c78e27e4fc598c606366f4d",
-        "alternativeSignatures": [
-          "ffaa4d06391e23afd801662f1d6de75f8533a71ef7624e514a782edf7f3ae625"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "49e8e7ad781283ae8802319892250a4006856d9c3852fee3697782c64ad464a9": {
-        "signature": "49e8e7ad781283ae8802319892250a4006856d9c3852fee3697782c64ad464a9",
-        "alternativeSignatures": [
-          "c56a6292e222ac02fd89569ff3e2c6c8bf5502be01951dfb4501f2d8ce74020f"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "68e113701e747b4059a9049f61fd8a252a85dc5237831c3cfd68f2927d4d2256": {
-        "signature": "68e113701e747b4059a9049f61fd8a252a85dc5237831c3cfd68f2927d4d2256",
-        "alternativeSignatures": [
-          "71cd99f14c24f620a431311e1cafccc72cacd7d672b83b70c0f218274b92e759"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "c70524081a73c41715cdab46358fe6327ff159007354e5b4a668a2425d553824": {
-        "signature": "c70524081a73c41715cdab46358fe6327ff159007354e5b4a668a2425d553824",
-        "alternativeSignatures": [
-          "fad6825e3d348d034b8c80dfd092a0c793840691779fd2243155f28bb06c3900"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "07953f4ddc3f088bdf3148d3ef909fb06cb7007c1a67b6413cb5717c5f331796": {
-        "signature": "07953f4ddc3f088bdf3148d3ef909fb06cb7007c1a67b6413cb5717c5f331796",
-        "alternativeSignatures": [
-          "51ce3ef8dc0762ca60e45a3c8f1c1894ac03fc7d27a43f7436dd4f0247214b53"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "4c903a862062b6c0be808cb40c7f8ee384614c58318daaa672338064cfd03324": {
-        "signature": "4c903a862062b6c0be808cb40c7f8ee384614c58318daaa672338064cfd03324",
-        "alternativeSignatures": [
-          "20e7ffffcaaace21514fb625484e14a3cf8daccd4e0f12d7a2c00ed129dd3656"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "226aba214fcf3af558dcc286091032167a40dcd9e4c2d8725c168e3c8a5c1e98": {
-        "signature": "226aba214fcf3af558dcc286091032167a40dcd9e4c2d8725c168e3c8a5c1e98",
-        "alternativeSignatures": [
-          "615ead8b5e5d4ff04de0c80af408c27b8485e3b35ec3c55c5ba453cb41c72a9e"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "1538e6b629cdd2299dc82c2723cfbb755a6fa56216d3fe0d655c2d5a6f622482": {
-        "signature": "1538e6b629cdd2299dc82c2723cfbb755a6fa56216d3fe0d655c2d5a6f622482",
-        "alternativeSignatures": [
-          "69950da114241fd6f7edc61463e507ab88cea6469fa81e1c14d0448d4ea48eb0"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "3fd4c5fdc46555312b6aaf8fe930019de805bb6a73ab965b90e3f00e14de9b65": {
-        "signature": "3fd4c5fdc46555312b6aaf8fe930019de805bb6a73ab965b90e3f00e14de9b65",
-        "alternativeSignatures": [
-          "3d53fb5648e0e3b2b72d1b885dcac1c080971ae4b8082d375fefe2f3c11157be"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "5f64b8ac17a34721b5915740211a309fd52a362e731d42b8f9824a47bff88b3d": {
-        "signature": "5f64b8ac17a34721b5915740211a309fd52a362e731d42b8f9824a47bff88b3d",
-        "alternativeSignatures": [
-          "8bf4d73f799b5d471656d83f8ad117683febe9a7e6b0ae4acbf50f50c14aca25"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "c053d62182cdc4e98a11591709656e51e8a8e15e1575fd7ea9efad4d6b90f263": {
-        "signature": "c053d62182cdc4e98a11591709656e51e8a8e15e1575fd7ea9efad4d6b90f263",
-        "alternativeSignatures": [
-          "2c9b4f290bde7944441df059c8d642fe2a5c908f68b8e86ead581d35579a988a"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z"
-      },
-      "13faa3c5ffc9880b2599203ad7bc43c2ec9f2d0a0d2c12d0aa49f1e4bdbbea7c": {
-        "signature": "13faa3c5ffc9880b2599203ad7bc43c2ec9f2d0a0d2c12d0aa49f1e4bdbbea7c",
-        "alternativeSignatures": [
-          "c1631e5b06233fc330efe7fba22e1eae575acb04fb3e557b555aaed0661335fd"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "80aced9c74ae9ecbea4507ccac7908a6d0e7e561e47a4c18dc345827fad2718f": {
-        "signature": "80aced9c74ae9ecbea4507ccac7908a6d0e7e561e47a4c18dc345827fad2718f",
-        "alternativeSignatures": [
-          "acd565d11ec7a28950f6630a382b96fc02115d86bde66e71d836a24b225090b2"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "b6d4de22b27b8403bf63595fc6eece5e664fe8e281934736ac86e691f4fddf47": {
-        "signature": "b6d4de22b27b8403bf63595fc6eece5e664fe8e281934736ac86e691f4fddf47",
-        "alternativeSignatures": [
-          "883cc9db2f0d107e990bee4744b3b7dcfc83cd921dac03ff0e55c38543f5a5e5"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "74f956449cb4fae0f37a6c8bcf28f810fac689f0b2ae1e42225d95641b5a78e9": {
-        "signature": "74f956449cb4fae0f37a6c8bcf28f810fac689f0b2ae1e42225d95641b5a78e9",
-        "alternativeSignatures": [
-          "2ca924dd7d234325df80a91257f2b9daa6d6f978ae92ea0ab9c0d004af02c37b"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "702d8a2510ae52f9c3b607a70e73d5b32f2d70318d1a7fec3aa900003f5ddee7": {
-        "signature": "702d8a2510ae52f9c3b607a70e73d5b32f2d70318d1a7fec3aa900003f5ddee7",
-        "alternativeSignatures": [
-          "def4caac6859d9f39bf0dccf329cf9b05ff41f0a65ad003c74c6308a0f24b246"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "ffd5c5d68309dce8c77fd724eb3a73e7cad37b4c065e178f1f88300eb9ed38c1": {
-        "signature": "ffd5c5d68309dce8c77fd724eb3a73e7cad37b4c065e178f1f88300eb9ed38c1",
-        "alternativeSignatures": [
-          "4157adef9e4d056227e0725f6c73b3c9fce8fcc9c0361619c2af4f7059cc4b0f"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "8baaf5ff767c62341270c2de8d59ce1d7284d063c4ff3b465a4a2d0b0954985a": {
-        "signature": "8baaf5ff767c62341270c2de8d59ce1d7284d063c4ff3b465a4a2d0b0954985a",
-        "alternativeSignatures": [
-          "1dd2e0d0f5128da019d184163a991fb56a626cdd2efe9676a4fc3d534f5c92d1"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      },
-      "9d9ea76d83b635307eae485dfd93d1fc26d49c4b4d582b5eafb1f47fb2c7d2a3": {
-        "signature": "9d9ea76d83b635307eae485dfd93d1fc26d49c4b4d582b5eafb1f47fb2c7d2a3",
-        "alternativeSignatures": [
-          "1813c9a83be034c91c85fbebe615f6a7a885a5e4c7138e4939b9b5d802b928e5"
-        ],
-        "memberOf": [
-          "default"
-        ],
-        "createdDate": "2023-10-20 17:35:00Z",
-        "justification": "Issue is with externally supplied runtime files"
-      }
+    "74b9ff5a49e0e5db064767c0767f9a262923ffa2b3c74331b63af39227eb9800": {
+      "signature": "74b9ff5a49e0e5db064767c0767f9a262923ffa2b3c74331b63af39227eb9800",
+      "alternativeSignatures": [
+        "96ee0868f6a609ebbcbd385b9ed0560ac1f63a4885d26dc2e0cf2dc0bad9e0f6"
+      ],
+      "target": "benchmarks/octane/gbemu.js",
+      "line": 817,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "cee167028c0cae13c5e79d6a1dbad22cfbe4e3f772c8a17aadd40a7dd92ab27e": {
+      "signature": "cee167028c0cae13c5e79d6a1dbad22cfbe4e3f772c8a17aadd40a7dd92ab27e",
+      "alternativeSignatures": [
+        "c461c9a6a55064f6e696454a593cf7ef3887151002cb3aa8a90236ccb5e8c78d"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 504,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "23dab13fe3fc97d5a478e04758842713f71525748f44333c4150164ccadc27f1": {
+      "signature": "23dab13fe3fc97d5a478e04758842713f71525748f44333c4150164ccadc27f1",
+      "alternativeSignatures": [
+        "03239f36873cc5955f5a0adab7571de7882d0f4e5d5b74134932de4c400e24cc"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 7700,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "9d31b3b774affa40cc46816378846477f6dad352792446f27b122821ceb8ad33": {
+      "signature": "9d31b3b774affa40cc46816378846477f6dad352792446f27b122821ceb8ad33",
+      "alternativeSignatures": [
+        "54074f6690856bf23bf19ea7fe10623f5b8b354a8d424131e8b340042635f7a1"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8022,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e5ec941176b95a6bd95d081ef36938c228613d8fd9429dfd29d1655cf3d1e48d": {
+      "signature": "e5ec941176b95a6bd95d081ef36938c228613d8fd9429dfd29d1655cf3d1e48d",
+      "alternativeSignatures": [
+        "065e04490a2973bcb9f9632d1cbe3da7db478d52f0dbebfb69e5071b39410849"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8057,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "4c10e6ff8c5d90bc51325a54e90375bdd3f923a889060b8bd872549d3e32acbb": {
+      "signature": "4c10e6ff8c5d90bc51325a54e90375bdd3f923a889060b8bd872549d3e32acbb",
+      "alternativeSignatures": [
+        "875ffc52547df9088fef219771a888691479ad3fb4d37a7ba80f967ba4154349"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8279,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "25b72264f05f82b98fd1d81773db38da3dfef27fcec5fa328b375ddfe59d7dc9": {
+      "signature": "25b72264f05f82b98fd1d81773db38da3dfef27fcec5fa328b375ddfe59d7dc9",
+      "alternativeSignatures": [
+        "7485b478b1d4bee4e1eb7051fddb7897a0e36c0aff3caa88c1f8ff28c7656bcf"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8372,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "3c7a3f29234bc0677162eb25e9772dfdad0a7815b4d780861719dd5a22353328": {
+      "signature": "3c7a3f29234bc0677162eb25e9772dfdad0a7815b4d780861719dd5a22353328",
+      "alternativeSignatures": [
+        "a474f43324ee815dc26f2b3c3313763c4c5f245617466333d09cd241991a85d6"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8374,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "31f0afbee1e34c1778391f0543e5155ddcc2c975fcd9afa166d321143a47feb5": {
+      "signature": "31f0afbee1e34c1778391f0543e5155ddcc2c975fcd9afa166d321143a47feb5",
+      "alternativeSignatures": [
+        "90d6131243450db3416437834cad50df11435cada6bf9f8cb82656da6d8d9452"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8377,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "69d5e2449260a2c950afc7da7be7bc577486c863d4dd683dd2293eb3c62b0c03": {
+      "signature": "69d5e2449260a2c950afc7da7be7bc577486c863d4dd683dd2293eb3c62b0c03",
+      "alternativeSignatures": [
+        "d4e5fb0370d0ab3f1a5d7c80855d53679648cdb2499472110a9214f7779723fc"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8539,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "4ad1b62505228ca2c67f68528ed3489fb00cfb45a11ba69766f0f8f0dfcc4e03": {
+      "signature": "4ad1b62505228ca2c67f68528ed3489fb00cfb45a11ba69766f0f8f0dfcc4e03",
+      "alternativeSignatures": [
+        "776dc42f028e1fed1120b89104cc9438b12762d781c60179a252378b17c954f5"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8548,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "651112bc22fed08879da930995afdb789244cf714acdc7da4fe945a4184851d5": {
+      "signature": "651112bc22fed08879da930995afdb789244cf714acdc7da4fe945a4184851d5",
+      "alternativeSignatures": [
+        "4dc4d2a2cfa9eb8da5e3e30933610b6e946e435cbe107abad8af4af0a0cdf76f"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8774,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "cca7e23c434ed1b1e6bda73378c63998f6538ba2aa4e8ba965d89c4b59b76158": {
+      "signature": "cca7e23c434ed1b1e6bda73378c63998f6538ba2aa4e8ba965d89c4b59b76158",
+      "alternativeSignatures": [
+        "fed7c59139e41e7d39f64c23f904b9544d278f3f4a1b273d738114b694fca5c0"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8788,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "2aee359a9f4d152886c4a377efad89e2ca2ef865349e4b8d5ba290b231f9d078": {
+      "signature": "2aee359a9f4d152886c4a377efad89e2ca2ef865349e4b8d5ba290b231f9d078",
+      "alternativeSignatures": [
+        "bfec53e85f18cb62c1e2a36ee5e748fa84965f02de5293d1cd7db7b328898853"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8826,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "d9bc9a2ebfe608c3b48e7049d70c2e4f9980d93a8c29dae10fb0fff458aaf825": {
+      "signature": "d9bc9a2ebfe608c3b48e7049d70c2e4f9980d93a8c29dae10fb0fff458aaf825",
+      "alternativeSignatures": [
+        "a10d7da0532796c043a187ee2aee76e0344b8dcf8b399876049482a1ce09cd9b"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8850,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "fbd10f54da48f48a4dfb8866228c86464b37d0ef5a58563bdd17b972c66e29d7": {
+      "signature": "fbd10f54da48f48a4dfb8866228c86464b37d0ef5a58563bdd17b972c66e29d7",
+      "alternativeSignatures": [
+        "7e13f92ad387701c8f8bc3de148609ca08de0ede3c5fbd15216bd4556d1e1beb"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8856,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "eab7a35bc981c76bbf328ff9503b46e0f7dabcfcee21c47bf4c09ba93d08808b": {
+      "signature": "eab7a35bc981c76bbf328ff9503b46e0f7dabcfcee21c47bf4c09ba93d08808b",
+      "alternativeSignatures": [
+        "9be404fc1a8961cf190f7894b820428eedee765443f9f6e23aec50b889df47ff"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8879,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "29fc999f27abd9f36ebb2b11b98a0993220c181736d90198743e5d3dcb9bba8c": {
+      "signature": "29fc999f27abd9f36ebb2b11b98a0993220c181736d90198743e5d3dcb9bba8c",
+      "alternativeSignatures": [
+        "33614586d9c130b2a20825fdae90735a8c7786d614d0ed5bfc88319bdf72dc0a"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 8987,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "f0fa5d73ec620ed129a4087ab5064fb66741825a661cf90523c42ddab0dbb065": {
+      "signature": "f0fa5d73ec620ed129a4087ab5064fb66741825a661cf90523c42ddab0dbb065",
+      "alternativeSignatures": [
+        "693454f84e1fe7d4a193b31e25a8b5e748c77db84ee261f8ea99465d9d0ee020"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 9058,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "fc03d4c34a87ebd0028f31d505da2733ff11593c96a0c7c982908ef6e5cb9ed8": {
+      "signature": "fc03d4c34a87ebd0028f31d505da2733ff11593c96a0c7c982908ef6e5cb9ed8",
+      "alternativeSignatures": [
+        "15ad8c450a241bc51b45f3b8c4dc50967520e69264d23a7ed147699486843845"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 9061,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "5184ff7c01d530fd2270016dae38a2c21695878456fec6d9e9352ca377503087": {
+      "signature": "5184ff7c01d530fd2270016dae38a2c21695878456fec6d9e9352ca377503087",
+      "alternativeSignatures": [
+        "3db49cf5b30b96584d848c3ddf557945dca1aba01390805887bb2e47b0215444"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 9130,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "60b2a794ab2a83ab28bf8522c00aa12826bd5f6f1c57b417355b32f592fec6bc": {
+      "signature": "60b2a794ab2a83ab28bf8522c00aa12826bd5f6f1c57b417355b32f592fec6bc",
+      "alternativeSignatures": [
+        "9d2cbbbaa1e1f7dbfb8958b0122b8b8e2e673e620cf7dd69726f499db848e899"
+      ],
+      "target": "benchmarks/octane/mandreel.js",
+      "line": 9148,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "55cd12e821fd91a11dc6d719f848101611bf921abff47a87ccba321fb4b7839b": {
+      "signature": "55cd12e821fd91a11dc6d719f848101611bf921abff47a87ccba321fb4b7839b",
+      "alternativeSignatures": [
+        "eaeb7e0b4a16c6a86258a88b984ece69771f5eedbbabf152c3865274b4d12330"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 511,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "c3fe5ae3ab42e7ad354aa1964ee63f094de9194e1b3dd9216ff4f62961fdfc9e": {
+      "signature": "c3fe5ae3ab42e7ad354aa1964ee63f094de9194e1b3dd9216ff4f62961fdfc9e",
+      "alternativeSignatures": [
+        "54f494cd4288f688018f72add413af1631bb2369edcb25a1787b925b3ab4ff74"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 7707,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "92ba8e77804ae250dd2cc05809a424536e1b8692466b3353e511b87670bd9301": {
+      "signature": "92ba8e77804ae250dd2cc05809a424536e1b8692466b3353e511b87670bd9301",
+      "alternativeSignatures": [
+        "52f24d263de3a4888491dfa685a458cc5d915814b7500b54abf7b538c94ff1ce"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8029,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "5d208dded0881fef1991e2408c69a9ae1aa5dc0df47f657f88c6131a9d1c43d4": {
+      "signature": "5d208dded0881fef1991e2408c69a9ae1aa5dc0df47f657f88c6131a9d1c43d4",
+      "alternativeSignatures": [
+        "857803d61543e53ce0facc79aba313dc3233b788c3b8fa67ee4a0eff31bf5c26"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8064,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "d759b5f394b5c7c569057edb5bc35c9c028103c8972837e4efbf997b6a2355d7": {
+      "signature": "d759b5f394b5c7c569057edb5bc35c9c028103c8972837e4efbf997b6a2355d7",
+      "alternativeSignatures": [
+        "4ed888f0ebcc0cba130274e45d16157bbe59cf7f5d57ffccd067bc63f27867eb"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8286,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "d4a1dc38838dd4803759ae5c6100e1f55dfe62fcb2c883918dfb8cc8671efa72": {
+      "signature": "d4a1dc38838dd4803759ae5c6100e1f55dfe62fcb2c883918dfb8cc8671efa72",
+      "alternativeSignatures": [
+        "c476bf7c26f76eca072f949b2fa1db36cef0adf83d831b1eef234b503d42cf3f"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8379,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "131fe46fafd966669d711f37cf15269c6fd8f10d6c83e85828e003b4d67e39b4": {
+      "signature": "131fe46fafd966669d711f37cf15269c6fd8f10d6c83e85828e003b4d67e39b4",
+      "alternativeSignatures": [
+        "a5dc383d42ff6300bdaa02fb4433e043fd0dedfb5eed260ba9b5f3064cdeb462"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8381,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "70b460c262da9637ebb19c628e36660e6d63102352fac078c22a945aa2df2bda": {
+      "signature": "70b460c262da9637ebb19c628e36660e6d63102352fac078c22a945aa2df2bda",
+      "alternativeSignatures": [
+        "b7411a619bb7a0c4f6a8cb8bb363100c5515a9981a97786fb8c1ffcb775c2c0d"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8384,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "ffefb9da65fd3f922c0a3b90647e79dfc43b6e133ec25219f3e001d4d92072d7": {
+      "signature": "ffefb9da65fd3f922c0a3b90647e79dfc43b6e133ec25219f3e001d4d92072d7",
+      "alternativeSignatures": [
+        "d0078d5b44a6769de39d62db2a4324d3f73dcfe1f46552aaea26e6f62e75956c"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8546,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "4c13b952833197ed3a5f5cf196aaa0ec3fe8dc2f9c3630c01d51a8a481fd95eb": {
+      "signature": "4c13b952833197ed3a5f5cf196aaa0ec3fe8dc2f9c3630c01d51a8a481fd95eb",
+      "alternativeSignatures": [
+        "528b338abcfd3ef8db21e4b58bb802d4103cfb3509973125cf0d8139c660970a"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8555,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "031f09004bf2558ce6b5a5b9100bd28a4d55c147383240f6b84ef028ac9490dc": {
+      "signature": "031f09004bf2558ce6b5a5b9100bd28a4d55c147383240f6b84ef028ac9490dc",
+      "alternativeSignatures": [
+        "3e06e3b6a011185857087b3e441b97f833681bbdce76e38af2bcd1a27da08fc0"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8781,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "933c64a625853b60a42192e5b8a00249868121119ea018224de4a25432f466fe": {
+      "signature": "933c64a625853b60a42192e5b8a00249868121119ea018224de4a25432f466fe",
+      "alternativeSignatures": [
+        "ee82764138d8f7ab7c1c1ab7d09cebe3126d9ce85e3abb54e6e2afafc9f976b8"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8795,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e67785ac5bcf4547cd5f25fe0a8eddf32c1fb064c20c9f05ffef829da0ffed0f": {
+      "signature": "e67785ac5bcf4547cd5f25fe0a8eddf32c1fb064c20c9f05ffef829da0ffed0f",
+      "alternativeSignatures": [
+        "e6a5501e2dfb08cf02901bd68edac354222177f629ebb458af89f431718be263"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8833,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "680f21df8a8752bd9cdf96a8542b74876e26a8b3b6078edebd1c2f3f9789d347": {
+      "signature": "680f21df8a8752bd9cdf96a8542b74876e26a8b3b6078edebd1c2f3f9789d347",
+      "alternativeSignatures": [
+        "10955cf435395524d47f8544799eaacc3c0beada03d9112d91db0f5bc9659618"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8857,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "69ad18d57bda448214e44a15d46d07397982ccf423ab0ba2e6fcb9dfc53ce4a5": {
+      "signature": "69ad18d57bda448214e44a15d46d07397982ccf423ab0ba2e6fcb9dfc53ce4a5",
+      "alternativeSignatures": [
+        "54e1cd3982cf6720dbcbde3b53cb8464f5c0dfe4248431c1243ecae20148b3a2"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8863,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "c352b9521c43ed18d3a8be5d8583cd7e0fdd047984b4511f408477ef62c66193": {
+      "signature": "c352b9521c43ed18d3a8be5d8583cd7e0fdd047984b4511f408477ef62c66193",
+      "alternativeSignatures": [
+        "3d1407f372c0dd7cff6fbc644c932f378c513fd475c7478e66070e29ef7a22ee"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8886,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "0ed1791d353677bedf591c6df7176f8b411a0ad6cdc1b2c5ba7e5fdd81b17781": {
+      "signature": "0ed1791d353677bedf591c6df7176f8b411a0ad6cdc1b2c5ba7e5fdd81b17781",
+      "alternativeSignatures": [
+        "20a86ab984ffa6d34234b22d901a6a0bcdc5eb76332a2b9ee354eae11ffcf508"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 8994,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "b92f65b7d0c937dc3f1df07f5e85abe8b8b5068826a5bd0841c635baceebff42": {
+      "signature": "b92f65b7d0c937dc3f1df07f5e85abe8b8b5068826a5bd0841c635baceebff42",
+      "alternativeSignatures": [
+        "4e1159b9410769690fe135b868b9a76135af17ba9ef941a216f7b1372e2710a0"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 9065,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "7b9e7df655ec983d5e9baa115700dad12bb99686d56bd51c6bc297f172d6559d": {
+      "signature": "7b9e7df655ec983d5e9baa115700dad12bb99686d56bd51c6bc297f172d6559d",
+      "alternativeSignatures": [
+        "9102d11aa8d9589117941a7a75e9c01a79d012be273a4046d3e883b655f4dbfe"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 9068,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e77c564e6a714baba68a1bd24ebcb2fe41a05732305daf61dbc0ea1fad141064": {
+      "signature": "e77c564e6a714baba68a1bd24ebcb2fe41a05732305daf61dbc0ea1fad141064",
+      "alternativeSignatures": [
+        "db120c3e610bdabd9893c685e9894bc5a5d33d019c83de6efa62583e5a9777ad"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 9137,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "d0af122d01aff66c5a83684b44af5e5f91b3bce555a1085e01a24349a52e348a": {
+      "signature": "d0af122d01aff66c5a83684b44af5e5f91b3bce555a1085e01a24349a52e348a",
+      "alternativeSignatures": [
+        "f4d54e4730570cdb94422419fd20687765cbcf3419345a42597ffa57541b4d39"
+      ],
+      "target": "benchmarks/octane/mandreel_latency.js",
+      "line": 9155,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-implied-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "cefc8c788a44eed3210b5d7c398dcffe943cc25f6203c03d116fa5d04850aed7": {
+      "signature": "cefc8c788a44eed3210b5d7c398dcffe943cc25f6203c03d116fa5d04850aed7",
+      "alternativeSignatures": [
+        "48ec4cd154f283909d1bc880e519aad8aa9d4041abc7c3f22a9b0eb5567993a9"
+      ],
+      "target": "benchmarks/octane/pdfjs.js",
+      "line": 517,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "97bc5e554f9e6d2dc21dd4b5b599b78ab7d8ad89a4850b0732bb413120aa3b10": {
+      "signature": "97bc5e554f9e6d2dc21dd4b5b599b78ab7d8ad89a4850b0732bb413120aa3b10",
+      "alternativeSignatures": [
+        "095cb3689ddd5e98c699cebb7f4c237bdd03c3c025eaa9b6e4f2307ca1d2cba0"
+      ],
+      "target": "benchmarks/octane/pdfjs.js",
+      "line": 14967,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-inner-html",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "9afcbc5607bf097f08ffb83d204895f7a5c4ab1fd5c8645a470d0b369c6fc790": {
+      "signature": "9afcbc5607bf097f08ffb83d204895f7a5c4ab1fd5c8645a470d0b369c6fc790",
+      "alternativeSignatures": [
+        "7778ef4b0f5008b0579fce1add076a12de937f5981b6df502e1d61e2744145ff"
+      ],
+      "target": "benchmarks/octane/typescript.js",
+      "line": 5355,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "6202441087ce134af70b082f9a01ea87e0b191a6a60faaef6f8b8849a344cc66": {
+      "signature": "6202441087ce134af70b082f9a01ea87e0b191a6a60faaef6f8b8849a344cc66",
+      "alternativeSignatures": [
+        "81e0e5f865e663c09c6b8611f542c1cb042caa9a11b7eb77b34491fbef275657"
+      ],
+      "target": "benchmarks/octane/typescript.js",
+      "line": 25403,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "7bc4a8c73f2384e3ded45fcb6813789e497729a4616a6fe05a829c08b17a3cfc": {
+      "signature": "7bc4a8c73f2384e3ded45fcb6813789e497729a4616a6fe05a829c08b17a3cfc",
+      "alternativeSignatures": [
+        "5046e38de1d9b6a6ebdf7e677b3490205b2217bb9e16f841a5395431e55c911a"
+      ],
+      "target": "test/AST/for_in_var_init.js",
+      "line": 11,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "01f7a2433835652612c08a073a2ba07d296b8c7186dbf76e09a5c112bf4964c5": {
+      "signature": "01f7a2433835652612c08a073a2ba07d296b8c7186dbf76e09a5c112bf4964c5",
+      "alternativeSignatures": [
+        "166b22bc56c7b7df7e375e11891cab43245b6ba3d00cf06b0fad6af4befff500"
+      ],
+      "target": "test/AST/for_in_var_init.js",
+      "line": 18,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "ce5d9dfac7580a71a2e6806fe5e2882d845bfacfe04b3506eb03ce8bbd8726a1": {
+      "signature": "ce5d9dfac7580a71a2e6806fe5e2882d845bfacfe04b3506eb03ce8bbd8726a1",
+      "alternativeSignatures": [
+        "ec72c16ece67fe574e7e46a25f56059337b104f9ea193d14d31b892cfbab5798"
+      ],
+      "target": "test/hermes/delete-variable-nonstrict.js",
+      "line": 40,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "25075468baed60e8e89f0194d29047f68f27863635449fc0a9e1fbab40f3fdcb": {
+      "signature": "25075468baed60e8e89f0194d29047f68f27863635449fc0a9e1fbab40f3fdcb",
+      "alternativeSignatures": [
+        "9fba0114169afc555bb392c2be677f65f754d6cbd6108d1551fc0dfa7881e695"
+      ],
+      "target": "test/hermes/eval-errors.js",
+      "line": 16,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "a61b13b89393e2d817f7d933fee28a33e951256c42eabd73265d2064a62b8350": {
+      "signature": "a61b13b89393e2d817f7d933fee28a33e951256c42eabd73265d2064a62b8350",
+      "alternativeSignatures": [
+        "68333f6aef7b196ad73446aa18a6f214f70a240eb6fe65ed3f653b7f999f9419"
+      ],
+      "target": "test/hermes/eval-errors.js",
+      "line": 18,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "479af072c9ebb10e3018776d61168a4fee249aad73865a45ed34d3227f897123": {
+      "signature": "479af072c9ebb10e3018776d61168a4fee249aad73865a45ed34d3227f897123",
+      "alternativeSignatures": [
+        "8efcd55a6b49d5a44ccc2a4f9c5a935717ae119ded2141bf80365707cd645710"
+      ],
+      "target": "test/hermes/eval-errors.js",
+      "line": 23,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "0a1b6d23513a34c9714d82b69ec1fdeae259a5a6d65879317a44d985deee4b56": {
+      "signature": "0a1b6d23513a34c9714d82b69ec1fdeae259a5a6d65879317a44d985deee4b56",
+      "alternativeSignatures": [
+        "6af2c7e310ec0605f6b560ae16bdeb9a155ae3bd439a14b4c81ed64292443288"
+      ],
+      "target": "test/hermes/eval-errors.js",
+      "line": 30,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "5a608b856bb722061d1a602ab26d98226e04282e390073fd3b5c623031aef098": {
+      "signature": "5a608b856bb722061d1a602ab26d98226e04282e390073fd3b5c623031aef098",
+      "alternativeSignatures": [
+        "e09840a4e193317e12799c70d016119abc79e828987652c3cdb1da101a0076b9"
+      ],
+      "target": "test/hermes/eval-redefined.js",
+      "line": 13,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "2183371cc9b3d9577332d57ff4926e82ead3c0e1a976dc2f19ac260ddae25d76": {
+      "signature": "2183371cc9b3d9577332d57ff4926e82ead3c0e1a976dc2f19ac260ddae25d76",
+      "alternativeSignatures": [
+        "f06d6f49c9a207e7c9adc0e0fb8f7e8587b3c9199f3edd7ab106f619a2e9906e"
+      ],
+      "target": "test/hermes/eval-redefined.js",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "f13ac7783da83aa333335797b76df6016f92eb5a252f16351286f1f9318a5388": {
+      "signature": "f13ac7783da83aa333335797b76df6016f92eb5a252f16351286f1f9318a5388",
+      "alternativeSignatures": [
+        "60731ae98779cccc4a48b6adc96c4b6a417d1c7f23ce15925ac164b27b9efa2c"
+      ],
+      "target": "test/hermes/eval-redefined.js",
+      "line": 15,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "ba983b80cd5619a05719febad8685c4841fca683e1a37889366d1adad516976b": {
+      "signature": "ba983b80cd5619a05719febad8685c4841fca683e1a37889366d1adad516976b",
+      "alternativeSignatures": [
+        "0f701fae803a327e3d5e2875b1543c496cd4c76794c25be04addeb79c57ffb31"
+      ],
+      "target": "test/hermes/eval-redefined.js",
+      "line": 17,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e456a708b97a4706e4af4c7ecfc7c8800b53c88868dba9d49b2463750617804b": {
+      "signature": "e456a708b97a4706e4af4c7ecfc7c8800b53c88868dba9d49b2463750617804b",
+      "alternativeSignatures": [
+        "5b49b4d5e298732b904d6cdb117dd899487018b99b2b21ddd08a787b73b13d33"
+      ],
+      "target": "test/hermes/eval-redefined.js",
+      "line": 18,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "55cdb7ca888db13427821926a566edceea988fe13e9be1072478524bb7902f32": {
+      "signature": "55cdb7ca888db13427821926a566edceea988fe13e9be1072478524bb7902f32",
+      "alternativeSignatures": [
+        "acdc2b9e194b3cd6d931ed47a829aecfdccfe593016c80a6c6a092040e349977"
+      ],
+      "target": "test/hermes/eval-strict.js",
+      "line": 16,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "8877220afc2b9a82822415f37af66be13424988730f96c29bda9eb537874b184": {
+      "signature": "8877220afc2b9a82822415f37af66be13424988730f96c29bda9eb537874b184",
+      "alternativeSignatures": [
+        "fb9d57bbbce25a5d8446c3a8ea8e133a18cf2c35db5d805b831375742e129543"
+      ],
+      "target": "test/hermes/eval-strict.js",
+      "line": 24,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "a1faa53b18f01008ed2ce08c4182590f74e8049c5502ccfd8b2fb675e671809f": {
+      "signature": "a1faa53b18f01008ed2ce08c4182590f74e8049c5502ccfd8b2fb675e671809f",
+      "alternativeSignatures": [
+        "76bd2ce686dabd69acafb367428787e3f24fd595a9cf68fd9c2379f1fdd5251f"
+      ],
+      "target": "test/hermes/eval-strict.js",
+      "line": 27,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "868e9bc88832f34ae210af270b09407a177918569d99bbd6ad26c90c57cc9073": {
+      "signature": "868e9bc88832f34ae210af270b09407a177918569d99bbd6ad26c90c57cc9073",
+      "alternativeSignatures": [
+        "ab77bef3a91f41d026e2de3a9004263c5f41c42fbd905927d1079a1945dd0329"
+      ],
+      "target": "test/hermes/eval-strict.js",
+      "line": 31,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "fce7e892d73229f4df3f29106ad3fb549b9327dd99cf05a98d0f86abae12aad6": {
+      "signature": "fce7e892d73229f4df3f29106ad3fb549b9327dd99cf05a98d0f86abae12aad6",
+      "alternativeSignatures": [
+        "b60f43afdf76c1d357c7f587e5246f70af5d137f9f0ba87fbcab20aa42915792"
+      ],
+      "target": "test/hermes/eval-strict1.js",
+      "line": 20,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "42ddf7b72be1a46b119a8cda6bcdec1f968d1235fc715681d9107820f011b75d": {
+      "signature": "42ddf7b72be1a46b119a8cda6bcdec1f968d1235fc715681d9107820f011b75d",
+      "alternativeSignatures": [
+        "f161062ad003923cd22400d5c4f96cb0b935b16807846afe593fedb1eec4d536"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 15,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "ba84e8b41d801ffd6039dbca112481f5b76f4e9be0a9e8960bee716003860bd6": {
+      "signature": "ba84e8b41d801ffd6039dbca112481f5b76f4e9be0a9e8960bee716003860bd6",
+      "alternativeSignatures": [
+        "cfde784155a06981ca668521ca2f46dd8666668711846917c67b5df40ed4f917"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 19,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "d792de684a3c067af144bc75d447bed4de4d6b9b255563b93af4b55459995118": {
+      "signature": "d792de684a3c067af144bc75d447bed4de4d6b9b255563b93af4b55459995118",
+      "alternativeSignatures": [
+        "e179e9e57676b075322d9e8f6ee9b6ef64a2a3f642222d167ef98a8c1ba96baa"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 23,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "eae3f7682868051723db28d22b9ab4f5a6368a9fc5fd0025ef9c43be9b1b6e15": {
+      "signature": "eae3f7682868051723db28d22b9ab4f5a6368a9fc5fd0025ef9c43be9b1b6e15",
+      "alternativeSignatures": [
+        "5c6600a1adaa29d917985552fc93b42ea927401c34c7c95ca1ea1fef902cddb0"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 25,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "cfa1ef6072860cfac81ff0a92d6a7753b7900f98726952a94f0e3b3064508fa3": {
+      "signature": "cfa1ef6072860cfac81ff0a92d6a7753b7900f98726952a94f0e3b3064508fa3",
+      "alternativeSignatures": [
+        "b5a53226bc87893deb85a88e707cfdff1b0e3b35cba10e13beba4956ed3414a7"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 28,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "00734cb9eabfbd4d5f76e8c4a3ec7df560dfeca92c6f48a500ed12022a6118f9": {
+      "signature": "00734cb9eabfbd4d5f76e8c4a3ec7df560dfeca92c6f48a500ed12022a6118f9",
+      "alternativeSignatures": [
+        "fd631586d78804b4372199575048d69a4fc6519eb68ca8a21724a491a9c33d56"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 32,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "7305d23e651d89cc67f28d8c4ec2461e65a560e0d2ad9ae3a73309240c018bba": {
+      "signature": "7305d23e651d89cc67f28d8c4ec2461e65a560e0d2ad9ae3a73309240c018bba",
+      "alternativeSignatures": [
+        "ffbab3a7943f748f4f83f15a92cf48e6b710633c4d819bb3456c6938cfe15eb2"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 35,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "40176f14e36696eebeb08ed2b103c69de11c8361fd554f3d936fe8fd7b58ac95": {
+      "signature": "40176f14e36696eebeb08ed2b103c69de11c8361fd554f3d936fe8fd7b58ac95",
+      "alternativeSignatures": [
+        "faec3cca82635dbfaa4c8fab115b38f11f7dea0d7f79fb2b7e5a1591deb4f989"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 38,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "2f77a522018f03e8664833305f893e6992d4811b6856ce0376aeb84d2a85c408": {
+      "signature": "2f77a522018f03e8664833305f893e6992d4811b6856ce0376aeb84d2a85c408",
+      "alternativeSignatures": [
+        "df552b893dc01a9b45029ffbcff37492e32d18077610aca409b76c1846075d9f"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 45,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "284a8a5111fc2de0da535222f512c210bbdcb04c4e91760cea4b2b4bd9b695a0": {
+      "signature": "284a8a5111fc2de0da535222f512c210bbdcb04c4e91760cea4b2b4bd9b695a0",
+      "alternativeSignatures": [
+        "cabdd534a6696986908eba9058f85adae4df4ee1609068473611e6ba3e6270b1"
+      ],
+      "target": "test/hermes/eval.js",
+      "line": 48,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "75576e4770e021472bd81d30c0863a38d1268c84f1247f20cd9f11ab9c406ea6": {
+      "signature": "75576e4770e021472bd81d30c0863a38d1268c84f1247f20cd9f11ab9c406ea6",
+      "alternativeSignatures": [
+        "69edb00f415cefa2e2ca762291729f70e10660dfcbc9ca1a989173ede4484e58"
+      ],
+      "target": "test/hermes/far-environment-access-eval.js",
+      "line": 21,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "019a55df04209ffd28ccc146cd931cddc6716a831681c25b5e267bc55545c0bc": {
+      "signature": "019a55df04209ffd28ccc146cd931cddc6716a831681c25b5e267bc55545c0bc",
+      "alternativeSignatures": [
+        "66ea19665774c53ca1ebe93895e14a64db44518609b239bc6f2b3172fddd4898"
+      ],
+      "target": "test/hermes/global-var-no-clear.js",
+      "line": 11,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "32ce48a14cd372efb3e4367bf9383687865381cea38856e9ebcbf247739a99a4": {
+      "signature": "32ce48a14cd372efb3e4367bf9383687865381cea38856e9ebcbf247739a99a4",
+      "alternativeSignatures": [
+        "86799446f4d53b389ca7077aa70672cee7a03f69b620b56f992a1475b2b59c2f"
+      ],
+      "target": "test/hermes/lazy-gc-eval.js",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "ad8280e385a637e6251a9cad7b89fdb9cf459410b75604ccea57ca5886612fbd": {
+      "signature": "ad8280e385a637e6251a9cad7b89fdb9cf459410b75604ccea57ca5886612fbd",
+      "alternativeSignatures": [
+        "5fdb9f52d38baa2fa1196a0941fe3c2615acb4c0a85625135cf15f5ed1794890"
+      ],
+      "target": "test/hermes/long-string-function.js",
+      "line": 19,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "2f59f039988761d5560f40a4b9aaf05577dc820034ada52611ff0257fc9b130d": {
+      "signature": "2f59f039988761d5560f40a4b9aaf05577dc820034ada52611ff0257fc9b130d",
+      "alternativeSignatures": [
+        "4d3034ab0cf87f2461f0e7f852ae329c86f84dcf5b2ef76390cdd4c2ee2182b0"
+      ],
+      "target": "test/hermes/predefined-var-eval.js",
+      "line": 20,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "115f0c540c8d4b53c0819c9f68f1bb4b8d0560322013e58b18b62e88e5262945": {
+      "signature": "115f0c540c8d4b53c0819c9f68f1bb4b8d0560322013e58b18b62e88e5262945",
+      "alternativeSignatures": [
+        "fc06e1eecb2ec195b2c6980882a22d26aacaffc1e6f18af69a19f674f271461d"
+      ],
+      "target": "test/hermes/prototype.js",
+      "line": 12,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "c2a1d12ab3d72aab0f58509dd24badc030bcb549b1dc1d1b763bb85b01b6ab6c": {
+      "signature": "c2a1d12ab3d72aab0f58509dd24badc030bcb549b1dc1d1b763bb85b01b6ab6c",
+      "alternativeSignatures": [
+        "611dd618b9f40b9cdac4484e2a2fa22df64f1e5ca788888e1ffbd3cac1d92cdd"
+      ],
+      "target": "test/hermes/regress-lazy-hbc-fail.js",
+      "line": 19,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "fce3f2ba6ab7b5b5c69e5bf4f5e5c667c564f0808afb1f27e1f8e112b3304efc": {
+      "signature": "fce3f2ba6ab7b5b5c69e5bf4f5e5c667c564f0808afb1f27e1f8e112b3304efc",
+      "alternativeSignatures": [
+        "1c40a4db4894f6091c8ecf3f8c3def0654e853c0d798a06188fb9ab0934c1482"
+      ],
+      "target": "test/hermes/return-in-global-eval.js",
+      "line": 10,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "14bafd630679db39c9503b50d309cc43af902dab3e9b2efbce45f586896da54c": {
+      "signature": "14bafd630679db39c9503b50d309cc43af902dab3e9b2efbce45f586896da54c",
+      "alternativeSignatures": [
+        "308354dd1816d08de2e159aa222ede50e137a8f2f3b59d71bf7f9c217b6e05ba"
+      ],
+      "target": "test/hermes/return-in-global-eval.js",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "9e7379c4ebdfcc9534a524ecf05e8332c63290632cd95afdc9414ad2edc3a6de": {
+      "signature": "9e7379c4ebdfcc9534a524ecf05e8332c63290632cd95afdc9414ad2edc3a6de",
+      "alternativeSignatures": [
+        "e8223df9660c1efbb14aad89283e5edd001b3646d5764a8354c52ab2167896e1"
+      ],
+      "target": "test/hermes/sampling-profiler.js",
+      "line": 13,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "4036a87d8d50b5647086c606f236aa91a77e2fbaf5b8ffb9899c3553b67e3160": {
+      "signature": "4036a87d8d50b5647086c606f236aa91a77e2fbaf5b8ffb9899c3553b67e3160",
+      "alternativeSignatures": [
+        "8f798cb0a8c7e6690802dda03e756d08cd7f3115b951313ca7f1bddff7648de0"
+      ],
+      "target": "test/hermes/sampling-profiler.js",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "ce60cc45bb38be4be7a1fbf24417a88eca87836499a779a545ade26708b8d230": {
+      "signature": "ce60cc45bb38be4be7a1fbf24417a88eca87836499a779a545ade26708b8d230",
+      "alternativeSignatures": [
+        "7a7e16d27d2b2a0e3d021de37863773bed299efe51e05361fe7c76dbbd43953a"
+      ],
+      "target": "test/hermes/sampling-profiler.js",
+      "line": 15,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "14eccbf4f10e5204b92c2eb04455a78e1c4cde77cb7cb1643660d81fbc6fabaa": {
+      "signature": "14eccbf4f10e5204b92c2eb04455a78e1c4cde77cb7cb1643660d81fbc6fabaa",
+      "alternativeSignatures": [
+        "e2689d9e51c25f8f4819581f82c7ba6c4a6ee25d7b234b6ac35c2560dd5bd994"
+      ],
+      "target": "test/hermes/transient-obj-prop.js",
+      "line": 39,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "1731187b2bdf81e673d5c579b691c878d31c9a2255235095f0dfb9e908bd5d9d": {
+      "signature": "1731187b2bdf81e673d5c579b691c878d31c9a2255235095f0dfb9e908bd5d9d",
+      "alternativeSignatures": [
+        "c3e896b34a5e9cb3238401721034ea243605c9c9f90c6044c62d2c90ca207df4"
+      ],
+      "target": "test/hermes/transient-obj-prop.js",
+      "line": 43,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "f5bf9907c227cbfd3b4e74bdc0d764787835460ed5cbb28ee1761e6690974b6e": {
+      "signature": "f5bf9907c227cbfd3b4e74bdc0d764787835460ed5cbb28ee1761e6690974b6e",
+      "alternativeSignatures": [
+        "7cd9663a77f29b2be5113b2495a38ce5ed24e29b18340db4a7b73ab2d2d500d4"
+      ],
+      "target": "test/hermes/truncate-long-stack.js",
+      "line": 17,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "6aba3424a914bbd19a0b768791712ad3044012d88c17b63e802148ed7b6ab325": {
+      "signature": "6aba3424a914bbd19a0b768791712ad3044012d88c17b63e802148ed7b6ab325",
+      "alternativeSignatures": [
+        "220b87c8322f63dafc704f1afc10f7fb718131156c489ca4facf0b9eeafcf64f"
+      ],
+      "target": "test/hermes/var-declare-accessor.js",
+      "line": 13,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "769424199aac7688a9ec79e4201a73c07a025c2be6e951e76ae0bdc30aad8cf6": {
+      "signature": "769424199aac7688a9ec79e4201a73c07a025c2be6e951e76ae0bdc30aad8cf6",
+      "alternativeSignatures": [
+        "8b2de6155afcbbe1fc50c1f85207a7f64c6b15f71e927c24c732ff83b8d14b17"
+      ],
+      "target": "test/hermes/var-declare-accessor.js",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "416fbfe3b3ef236226c8598496bbdb2361ffeb45c93a9bd167ff1393f939be73": {
+      "signature": "416fbfe3b3ef236226c8598496bbdb2361ffeb45c93a9bd167ff1393f939be73",
+      "alternativeSignatures": [
+        "c1f2d110452be83bb119075d98968ec4ed2ae24fd70edab759cb355a0ad64199"
+      ],
+      "target": "test/hermes/var-declare-accessor.js",
+      "line": 16,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "88bca0f74b9e92151b1bc8ab4aa5efa0d3a44c234363543dd7b44d5e8e9ecd5e": {
+      "signature": "88bca0f74b9e92151b1bc8ab4aa5efa0d3a44c234363543dd7b44d5e8e9ecd5e",
+      "alternativeSignatures": [
+        "fd9a358b179dd301ec2f4b47d2e13cbdd395457e3d05d9e8c30fad2e86b80bce"
+      ],
+      "target": "test/hermes/var-declare-accessor.js",
+      "line": 19,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "56466cd0f50f84bf51c856a694477349add6fb90f3583c5a4cba0695eeb115ed": {
+      "signature": "56466cd0f50f84bf51c856a694477349add6fb90f3583c5a4cba0695eeb115ed",
+      "alternativeSignatures": [
+        "eb23e96bbeaf9aff6752e214df978320f2c66e3bf35c2b0eaa5db0e8024718bd"
+      ],
+      "target": "test/hermes/var-declare-accessor.js",
+      "line": 24,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "323f8078b26ba6e236bbd00c4eec898a41d42a624d9825e2d64cb82bd7b94a15": {
+      "signature": "323f8078b26ba6e236bbd00c4eec898a41d42a624d9825e2d64cb82bd7b94a15",
+      "alternativeSignatures": [
+        "c3c2afd85e0d1cd1a57627ab30e704afb36c1ae3441409e18e5a5da16f822ee4"
+      ],
+      "target": "test/hermes/var-declare-accessor.js",
+      "line": 25,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "b368bcea909062db43b9318c276cdeffba0d7c76499702f74548bf24123c15f5": {
+      "signature": "b368bcea909062db43b9318c276cdeffba0d7c76499702f74548bf24123c15f5",
+      "alternativeSignatures": [
+        "90ac208988606eaea5ae3aec7143ae8372bc7a5302b18375d879898f1b6f2d66"
+      ],
+      "target": "test/IRGen/estree_parse.js",
+      "line": 276,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-inner-html",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "000e69709339abf13d706c3d076404047f0f914a0e674ced14e37bd3316ca133": {
+      "signature": "000e69709339abf13d706c3d076404047f0f914a0e674ced14e37bd3316ca133",
+      "alternativeSignatures": [
+        "d9bcac37e210f04cd4fe1884e14aff1d0d31c5257571e1d14d4fd36ac9032e80"
+      ],
+      "target": "test/IRGen/estree_parse.js",
+      "line": 388,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-inner-html",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "344229bf3160189408d8353b9b33239ea7d7d71ec804cf5c3067bce3ae228749": {
+      "signature": "344229bf3160189408d8353b9b33239ea7d7d71ec804cf5c3067bce3ae228749",
+      "alternativeSignatures": [
+        "1bc8debf500c1e21ce3972db689354d5225e542ea7698a65484d32f7de70a657"
+      ],
+      "target": "test/IRGen/eval.js",
+      "line": 11,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "081864d3f5e8fb25707038f1303bde2d43e465cf8f5dce35ae3a70c0f2f79e77": {
+      "signature": "081864d3f5e8fb25707038f1303bde2d43e465cf8f5dce35ae3a70c0f2f79e77",
+      "alternativeSignatures": [
+        "2096e86f77e78e7d385ccd2fabf6bdb2c7123eeec7e8ee3794d8e5f90e0a3819"
+      ],
+      "target": "test/IRGen/eval.js",
+      "line": 15,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "799e55ee86702e456b93a7692e7292a42cc0c2aacccc31dc6356b8c15e9501d7": {
+      "signature": "799e55ee86702e456b93a7692e7292a42cc0c2aacccc31dc6356b8c15e9501d7",
+      "alternativeSignatures": [
+        "f15d2c603fe958a92a4f6a3d74c0312521c8eb1e9c7ec5d16294b0533e686b94"
+      ],
+      "target": "test/IRGen/eval.js",
+      "line": 19,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "8accd5449a295467d3bc690ade25a7b2b5f793f89ff7a765b14f07b03e658e30": {
+      "signature": "8accd5449a295467d3bc690ade25a7b2b5f793f89ff7a765b14f07b03e658e30",
+      "alternativeSignatures": [
+        "b14b7ab857948e7d6db4f76d4859a4baf612fe2ba2161a621ab61e1417fe14ae"
+      ],
+      "target": "test/IRGen/warning-as-error-selective.js",
+      "line": 51,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "3ef48e795d953e404ba23f8d596b4dd700015f87aa6c3285c49115608968989c": {
+      "signature": "3ef48e795d953e404ba23f8d596b4dd700015f87aa6c3285c49115608968989c",
+      "alternativeSignatures": [
+        "f5c443514b88d2fcf4061cde29583e135bbdeacd14b01ade4e090383b2617bc0"
+      ],
+      "target": "test/Sema/disabled-eval.js",
+      "line": 11,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "0e33ad50c115b2936496f2f886c346cb6573251ee3a75ee031f128550b7593ab": {
+      "signature": "0e33ad50c115b2936496f2f886c346cb6573251ee3a75ee031f128550b7593ab",
+      "alternativeSignatures": [
+        "c24c4c009fe968974615b07d9ffb4691ae52ada3f692f913cdac3ca1d00fe253"
+      ],
+      "target": "test/Sema/eval-warn.js",
+      "line": 12,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "d06d7a7e35550416b58ba285fc536df67f99994cf3f2cf15cbca9a2ecd84b5f0": {
+      "signature": "d06d7a7e35550416b58ba285fc536df67f99994cf3f2cf15cbca9a2ecd84b5f0",
+      "alternativeSignatures": [
+        "ab7e211c7e7bcf33308ed6fe2f5fb82ecc8efa0734b2c7dd03231376a37cb73c"
+      ],
+      "target": "test/Sema/eval-warn.js",
+      "line": 20,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "8ddd0d2f41b993eede637df0a6fbd0058fb8a6637a550c9027ce4d80de5e5f65": {
+      "signature": "8ddd0d2f41b993eede637df0a6fbd0058fb8a6637a550c9027ce4d80de5e5f65",
+      "alternativeSignatures": [
+        "4ebd4ef18ffffcfb0a0f0a16b07f2314c583768be81986e6735f545ad99cb28a"
+      ],
+      "target": "test/shermes/delete-variable-nonstrict.js",
+      "line": 41,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "a175f967f958fe86eec4580a0ad1e996d98400d1f8851c0815b2765a5dcd4318": {
+      "signature": "a175f967f958fe86eec4580a0ad1e996d98400d1f8851c0815b2765a5dcd4318",
+      "alternativeSignatures": [
+        "0c21fe0ed5bfa0ee69dc9f71fac9877d881ff24c8580a7845c4778068df9f2da"
+      ],
+      "target": "test/shermes/eval-redefined.js",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "a3fcc64c1a1f7c60e854897f7c5fd6e42d553484ac855e289c0ab676f58297e6": {
+      "signature": "a3fcc64c1a1f7c60e854897f7c5fd6e42d553484ac855e289c0ab676f58297e6",
+      "alternativeSignatures": [
+        "50642a73a86019d3e2d07b88e47a57f8db319716927a7f83a89c23524cace87c"
+      ],
+      "target": "test/shermes/eval-redefined.js",
+      "line": 15,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "0ee1da1fa77e5fc1514f14834bf4041c32d862faec1ab3e85e4b94c45a5cfcc3": {
+      "signature": "0ee1da1fa77e5fc1514f14834bf4041c32d862faec1ab3e85e4b94c45a5cfcc3",
+      "alternativeSignatures": [
+        "fe7d9973af35f67fe0ab8718ccacef6aa3b9e6a2f08a1af1ba50df53b7177ffb"
+      ],
+      "target": "test/shermes/eval-redefined.js",
+      "line": 16,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "0da46d39c23056db528623767d8abba60af5e163a5bb95d3289a66a5c5f3aaeb": {
+      "signature": "0da46d39c23056db528623767d8abba60af5e163a5bb95d3289a66a5c5f3aaeb",
+      "alternativeSignatures": [
+        "b4c3178556a8e94e4d1bbd6ef080223b4e0d50e601cbda46a81f3912370cff4d"
+      ],
+      "target": "test/shermes/eval-redefined.js",
+      "line": 18,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e24fe4afd36e69c7b37158c17e553d0640f3a63e3371e4e65115b0e80a7e3f80": {
+      "signature": "e24fe4afd36e69c7b37158c17e553d0640f3a63e3371e4e65115b0e80a7e3f80",
+      "alternativeSignatures": [
+        "04cf546af1a54d2a8515329a6cbd66240d499996569db5edd35d1ac9612d2b5c"
+      ],
+      "target": "test/shermes/eval-redefined.js",
+      "line": 19,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "bd2c9316f4a5614196872eeec8569e6db8c4494d382ed5df1ae5c71ff0e8205b": {
+      "signature": "bd2c9316f4a5614196872eeec8569e6db8c4494d382ed5df1ae5c71ff0e8205b",
+      "alternativeSignatures": [
+        "30a8711293630ac4227b7d14b7e99a80729a85fec0631d90754d1a0fd53ed571"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 17,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "07390ea8c1471973e019dfb635b4bb28e0f3edaf04addbb8cebf8034562fcc71": {
+      "signature": "07390ea8c1471973e019dfb635b4bb28e0f3edaf04addbb8cebf8034562fcc71",
+      "alternativeSignatures": [
+        "7f5e46d9f79e12e5f7f80b725291ae4a644f2d47ee37f242e66197b518700cb9"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 21,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e0923858ee6df2419614d13640f09d37d96b41d1801fdb4f26efbe4ca25586ff": {
+      "signature": "e0923858ee6df2419614d13640f09d37d96b41d1801fdb4f26efbe4ca25586ff",
+      "alternativeSignatures": [
+        "8239833074182a41e092514c9f9e98b2875aa62a1ebef7e4d89bc8e4b94adca1"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 25,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "2870addd8906a8660345c28b9d5fa4355b38dd75f7f3b2b4859ced54f4b2042c": {
+      "signature": "2870addd8906a8660345c28b9d5fa4355b38dd75f7f3b2b4859ced54f4b2042c",
+      "alternativeSignatures": [
+        "d91566b1937c650ab1e5c727503218b41b9217865d60fe657a94f12e4c123f85"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 27,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "0722c7e4f0fa50d8f1c6470f5032d19a7d52796bf94cf73bb94f7d225bccf75b": {
+      "signature": "0722c7e4f0fa50d8f1c6470f5032d19a7d52796bf94cf73bb94f7d225bccf75b",
+      "alternativeSignatures": [
+        "217950f34fe09c53154318fef7d37b51949624d09b0d20034089a5001b94b91d"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 30,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "5b11555365ade4a8d7daa5d905b44cdc3d37e9aa8422a59d86503057c98ee23b": {
+      "signature": "5b11555365ade4a8d7daa5d905b44cdc3d37e9aa8422a59d86503057c98ee23b",
+      "alternativeSignatures": [
+        "615c328780efb0a580911b76a9bb4ea82ab712d4ea7f45566a4368309b3a47ea"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 34,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "8e6218255151ec256f9831b882c456f24bb0c630c0934792a0d5e9933fe462b9": {
+      "signature": "8e6218255151ec256f9831b882c456f24bb0c630c0934792a0d5e9933fe462b9",
+      "alternativeSignatures": [
+        "c5f9d8dd01a191d66adea9ba81e8872ab9a047057e39b7753dcfbc2fcb0a4d5d"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 37,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "22c3d25f3e60208183e18b0dc47f053a72659abeca6944e3e865a62df94bbfd7": {
+      "signature": "22c3d25f3e60208183e18b0dc47f053a72659abeca6944e3e865a62df94bbfd7",
+      "alternativeSignatures": [
+        "22e03299e15ab5321cefb7c7894b1c4796222811575a2ded1f9012c38de88f15"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 40,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "3af6c2462e75fecfdf2e6b8294e2aeb93e9739d3afa3ea9bfe0d31b1d54aa86a": {
+      "signature": "3af6c2462e75fecfdf2e6b8294e2aeb93e9739d3afa3ea9bfe0d31b1d54aa86a",
+      "alternativeSignatures": [
+        "faf78c7606b16cfc359599039799e00ca2e06dc610fcaec79a35ca9e8ada0edd"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 47,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "fa0ae6dbc783433f2d564fc4c390b096d23bf0789aa10872e3811f3f18f00fef": {
+      "signature": "fa0ae6dbc783433f2d564fc4c390b096d23bf0789aa10872e3811f3f18f00fef",
+      "alternativeSignatures": [
+        "7b4db71bece791d38d04fdeede8c1f7a424d55a286bf265fd026ed1f43489def"
+      ],
+      "target": "test/shermes/eval.js",
+      "line": 50,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "280faaf24653c415fdf9a74b0b945d4194999d71ee8d7b7bb1dc437617f165e1": {
+      "signature": "280faaf24653c415fdf9a74b0b945d4194999d71ee8d7b7bb1dc437617f165e1",
+      "alternativeSignatures": [
+        "8ce07fa7daf65f7d9b36b5f2d667a8cf27393594ae33aafd5c068f41bdc09bb1"
+      ],
+      "target": "test/shermes/global-var-no-clear.js",
+      "line": 11,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e73fb359965b5b21d1b9282de086f970d10da679033198e5bbc79f1aded16199": {
+      "signature": "e73fb359965b5b21d1b9282de086f970d10da679033198e5bbc79f1aded16199",
+      "alternativeSignatures": [
+        "c56afdfafd6781db0c04a65213989ae837235528bf2fb698f5f2f1a5b8ef581e"
+      ],
+      "target": "test/SourceMap/thrower.js",
+      "line": 33,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "f2b0ba6ab37ad64478dc63488fd4561aeb5b167bd01aa4dc713cc69ac4c88146": {
+      "signature": "f2b0ba6ab37ad64478dc63488fd4561aeb5b167bd01aa4dc713cc69ac4c88146",
+      "alternativeSignatures": [
+        "59a787fd85e37ef1fd17f4d3ae793593f643643564db7a4cd67bc73127c8d30f"
+      ],
+      "target": "tools/hermes/evaluate-line.js",
+      "line": 295,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "ee65595c16f29773ed82af327c19cf44e6f7f05d0266770055065b7d39a89d9b": {
+      "signature": "ee65595c16f29773ed82af327c19cf44e6f7f05d0266770055065b7d39a89d9b",
+      "alternativeSignatures": [
+        "4a1b1aa9824c1680f1e0fcf5f147c20c2de89b3d448fed14254a2eac944e22d9"
+      ],
+      "target": "tools/hermes/evaluate-line.js",
+      "line": 298,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "80a8bb88459bf7f9586f74736ca4c4f1cf95ada0a993da40663d3efb4249c1eb": {
+      "signature": "80a8bb88459bf7f9586f74736ca4c4f1cf95ada0a993da40663d3efb4249c1eb",
+      "alternativeSignatures": [
+        "3303d08b5f3627c00f1a288731d6d0bee2bf4698913763797f580d4c11d973bb"
+      ],
+      "target": "tools/hermes/evaluate-line.js",
+      "line": 302,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "fce8f6d0c8425166b8f2336c2c2f24186188e9e92aee3589cf481c30cfaf2ca8": {
+      "signature": "fce8f6d0c8425166b8f2336c2c2f24186188e9e92aee3589cf481c30cfaf2ca8",
+      "alternativeSignatures": [
+        "34cc2660f0cd3520511b3d43c473bf410d9b043420f06da5be35af5d8d69892a"
+      ],
+      "target": "external/test262/harness/fnGlobalObject.js",
+      "line": 9,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "851d42fbaa078d33cc49d2cefaeadc6db1777d60864d54fb7f2945496e0cf5e6": {
+      "signature": "851d42fbaa078d33cc49d2cefaeadc6db1777d60864d54fb7f2945496e0cf5e6",
+      "alternativeSignatures": [
+        "9abf367344ffa2f101115c416c0162ce379366e20d031d21acd318d8b275c90c"
+      ],
+      "target": "test/hermes/es6-class/es6-class-overflow.js",
+      "line": 11,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "5a53ac2a1897faaab74a8d5d8a85ac3ad8efd2a7a7f1d35527c9d7bc650d9839": {
+      "signature": "5a53ac2a1897faaab74a8d5d8a85ac3ad8efd2a7a7f1d35527c9d7bc650d9839",
+      "alternativeSignatures": [
+        "a48edc01973193e23d4a17f285eeea4f1663d66cfb34fe6130629c26158295c1"
+      ],
+      "target": "test/hermes/source-visibility/with-eval.js",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "1850d65c18d968913264180de6aa76cc587dc119ceb4249b5d65b2112026319e": {
+      "signature": "1850d65c18d968913264180de6aa76cc587dc119ceb4249b5d65b2112026319e",
+      "alternativeSignatures": [
+        "7860f796675ceedfa5dd5a4285dd71a9a76e75a6ce4359bdc607e861d2b73aec"
+      ],
+      "target": "test/hermes/source-visibility/with-eval.js",
+      "line": 18,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "820036fa35afd9a51570847892b8584fbafbb7b1a0524752ce1dbcdbaafc233c": {
+      "signature": "820036fa35afd9a51570847892b8584fbafbb7b1a0524752ce1dbcdbaafc233c",
+      "alternativeSignatures": [
+        "a446a0cbb68eb6bc19ed54bfcb3fb31df19f0c52b4fbdf1bf4f70102e9f19967"
+      ],
+      "target": "test/hermes/source-visibility/with-eval.js",
+      "line": 22,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "67b57ad1f93d86d1e8cea681f824c395a0332232bb726fd888691902e579e1aa": {
+      "signature": "67b57ad1f93d86d1e8cea681f824c395a0332232bb726fd888691902e579e1aa",
+      "alternativeSignatures": [
+        "2b98fcfd914b9abce4d6ee05ac05f6e3be058f858c9733b6b9f0de1dfd478c54"
+      ],
+      "target": "test/hermes/source-visibility/with-eval.js",
+      "line": 26,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "c70b5c742e0efd0875df534fe900915f3b7799f338128682a4452cbeedc73ba1": {
+      "signature": "c70b5c742e0efd0875df534fe900915f3b7799f338128682a4452cbeedc73ba1",
+      "alternativeSignatures": [
+        "94b6a198a4959422d0a1ad2070ce51af29910f21679a1012fa3c1472115bec35"
+      ],
+      "target": "test/Parser/es6/arrow-errors.js",
+      "line": 11,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "05425631041e7df69a78b85ba4e539e01480b916372b6337a678d8c918316a7a": {
+      "signature": "05425631041e7df69a78b85ba4e539e01480b916372b6337a678d8c918316a7a",
+      "alternativeSignatures": [
+        "b6be95f55b0c1f8d9ae3723a214ec6b56c4de41d2a597873106d06e829b9f942"
+      ],
+      "target": "test/Parser/es6/arrow-errors.js",
+      "line": 15,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "1840d1d5684009e5c0d27a0de008e88552c859ae052c7e80f013653cdc7fd007": {
+      "signature": "1840d1d5684009e5c0d27a0de008e88552c859ae052c7e80f013653cdc7fd007",
+      "alternativeSignatures": [
+        "89f94434ac69b1f6798e9a20cebb537dc81dcd893506973193eac5f43f2d3a1b"
+      ],
+      "target": "test/Parser/es6/rest-element-init.js",
+      "line": 13,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "88ebefdb9ba52a5556564f662dddb0aa538cb5402421a9beff01134ab93538ae": {
+      "signature": "88ebefdb9ba52a5556564f662dddb0aa538cb5402421a9beff01134ab93538ae",
+      "alternativeSignatures": [
+        "56497f6afb6321aaacb942aacea65fe06c8135fede139bfb3a2f2c7c9e3d0490"
+      ],
+      "target": "test/SourceMap/translator/prog2/input.ts",
+      "line": 14,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "a426fac412d40c9ed7ab1c67d1af6434f2be01b78fe21480e00e5c5b645ba770": {
+      "signature": "a426fac412d40c9ed7ab1c67d1af6434f2be01b78fe21480e00e5c5b645ba770",
+      "alternativeSignatures": [
+        "4e8f6221f5839dd9f5c68752ca29a04e2a7b0a9402844f98ed496e3164ac3145"
+      ],
+      "target": "benchmarks/bench-runner/resource/test-suites/octane/code-load.js",
+      "line": 72,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "a5af814b0150b321ffd07bed56ea90738a7084fe1e1d7b2f9bd072489f6221f5": {
+      "signature": "a5af814b0150b321ffd07bed56ea90738a7084fe1e1d7b2f9bd072489f6221f5",
+      "alternativeSignatures": [
+        "bb74fc692da12cd668052545332e11b51ea6819ee601dd1dbd39684c1669f4f3"
+      ],
+      "target": "benchmarks/bench-runner/resource/test-suites/octane/earley-boyer.js",
+      "line": 1873,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "f0326420ee09a468a9b302da58cff986c15e1e51eb7af91e1eef37d1b3d73f47": {
+      "signature": "f0326420ee09a468a9b302da58cff986c15e1e51eb7af91e1eef37d1b3d73f47",
+      "alternativeSignatures": [
+        "af9e46b35c7d444aec181b679f1b774bac510b835195de16cc4b2ec50489f80b"
+      ],
+      "target": "benchmarks/bench-runner/resource/test-suites/octane/gbemu.js",
+      "line": 416,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-new-func",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "72a8638aa544504bf429fc9222c633e3c78a23e9aec27a3ee9807c7a2051880e": {
+      "signature": "72a8638aa544504bf429fc9222c633e3c78a23e9aec27a3ee9807c7a2051880e",
+      "alternativeSignatures": [
+        "abc722da9bbb2c3182475ef5107f922945be29dc96da85ba393ead6ea64bfc7c"
+      ],
+      "target": "benchmarks/bench-runner/resource/test-suites/octane/pdfjs.js",
+      "line": 122,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "2c8b9a74c7a8fd36adbf0a5913be4de0eba1f90cf4b58d2dca355ad880b75c4b": {
+      "signature": "2c8b9a74c7a8fd36adbf0a5913be4de0eba1f90cf4b58d2dca355ad880b75c4b",
+      "alternativeSignatures": [
+        "4be6f6a756d6b3b4249722f02bc3d83059074e1de0e734f32efb8b6de0c05bf0"
+      ],
+      "target": "benchmarks/bench-runner/resource/test-suites/octane/pdfjs.js",
+      "line": 14572,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "@microsoft/sdl/no-inner-html",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "e530405d8aced061c8491259a6ac03adbd51fde99858514713069288dc991da3": {
+      "signature": "e530405d8aced061c8491259a6ac03adbd51fde99858514713069288dc991da3",
+      "alternativeSignatures": [
+        "f4e3db6d2665086e2b2bfd75526d4515f8a444a821e7d4640b63d4bb5b1a56e2"
+      ],
+      "target": "benchmarks/bench-runner/resource/test-suites/octane/typescript.js",
+      "line": 4951,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "aa6f39ccb0f2a8c00cabe6df5edba06de0e7d97ef1ca0f9035ab1048b12cf7c2": {
+      "signature": "aa6f39ccb0f2a8c00cabe6df5edba06de0e7d97ef1ca0f9035ab1048b12cf7c2",
+      "alternativeSignatures": [
+        "a0e138512ce5a5a5fb49794380aa865452e2584e54fa232259e1123228bb7dac"
+      ],
+      "target": "benchmarks/bench-runner/resource/test-suites/octane/typescript.js",
+      "line": 24999,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "c97fe2b7ed54aeb4d87b60f10d326ad5af3f00776b5309cdfbb985b13bfeae0e": {
+      "signature": "c97fe2b7ed54aeb4d87b60f10d326ad5af3f00776b5309cdfbb985b13bfeae0e",
+      "alternativeSignatures": [
+        "8c811e69022555fe0bcdda5bb3a9b97f93d9a7b957090b417c29793e2d98a3a5"
+      ],
+      "target": "external/esprima/test_fixtures/expression/assignment/migrated_0001.js",
+      "line": 1,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "a9adcd490140ab14fcba35d7286616e10cc2d9699c16bd05d1613f921eb98e84": {
+      "signature": "a9adcd490140ab14fcba35d7286616e10cc2d9699c16bd05d1613f921eb98e84",
+      "alternativeSignatures": [
+        "7c4030f250b86969164d8087e3fc1945e47cba264eb29ead799d65b17860c0e7"
+      ],
+      "target": "external/esprima/test_fixtures/expression/postfix/migrated_0002.js",
+      "line": 1,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "45b43915d40e4948935b0d3263c2a99f5523f57c86659735e85843c0adfd43e8": {
+      "signature": "45b43915d40e4948935b0d3263c2a99f5523f57c86659735e85843c0adfd43e8",
+      "alternativeSignatures": [
+        "aded56773d85d8635d1562a976ed9f37933dc59a59e7104d98466821bc79e0e3"
+      ],
+      "target": "external/esprima/test_fixtures/expression/postfix/migrated_0003.js",
+      "line": 1,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "78f8012054fc5e27eabd47f420732f62e7ef23e46bfdfad4b3f142959040baab": {
+      "signature": "78f8012054fc5e27eabd47f420732f62e7ef23e46bfdfad4b3f142959040baab",
+      "alternativeSignatures": [
+        "e2710eeeaa4babfecb964d54b11765d4291dce599d1543172276124a856d051e"
+      ],
+      "target": "external/esprima/test_fixtures/expression/unary/migrated_0002.js",
+      "line": 1,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "90406b46e01837a3ef7017c2d9c58f7da23577a17f429b28a94645353b6daf95": {
+      "signature": "90406b46e01837a3ef7017c2d9c58f7da23577a17f429b28a94645353b6daf95",
+      "alternativeSignatures": [
+        "52ba784bff8a396451faa902508ae517d94b6e0349ce8c98ebb5ff934c99e6c4"
+      ],
+      "target": "external/esprima/test_fixtures/expression/unary/migrated_0003.js",
+      "line": 1,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "2218b847b12740e81d9ed95f521734c82eef407e9144c08d4dadedfb253c2d3e": {
+      "signature": "2218b847b12740e81d9ed95f521734c82eef407e9144c08d4dadedfb253c2d3e",
+      "alternativeSignatures": [
+        "b103e508e04fa44cb8320a79e119d6ffbefcc6a11b258352bdcda9e35b4f1103"
+      ],
+      "target": "external/esprima/test_fixtures/statement/variable/migrated_0003.js",
+      "line": 1,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "eeaf254fb9ac6df4e9d754cbabd0d9bcc5036945afb34828a430ff24b5560b0e": {
+      "signature": "eeaf254fb9ac6df4e9d754cbabd0d9bcc5036945afb34828a430ff24b5560b0e",
+      "alternativeSignatures": [
+        "aac4ffc6a4ff3022e59844e50c90bdec5eec6ed09de9c8e9a00162bf5b5e942c"
+      ],
+      "target": "test/SourceMap/translator/prog2/out/data-sm-src.js",
+      "line": 9,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "b3aaaac52083dff4cd45f4d5da4b91a53a47afe96b70821a73d16aab41d22430": {
+      "signature": "b3aaaac52083dff4cd45f4d5da4b91a53a47afe96b70821a73d16aab41d22430",
+      "alternativeSignatures": [
+        "6ad4dae924e9585809befdf1584584a6742ee0e4b2e45fe04b20661777af190a"
+      ],
+      "target": "test/SourceMap/translator/prog2/out/data-sm.js",
+      "line": 9,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "65af88b57b3105da1305b5b21176e0591c58f925539b8380b8b11556a5e10339": {
+      "signature": "65af88b57b3105da1305b5b21176e0591c58f925539b8380b8b11556a5e10339",
+      "alternativeSignatures": [
+        "e5cf328c5990d81549ed73a0057cf8f30f876c58300afe32ba6d89dca0096a74"
+      ],
+      "target": "test/SourceMap/translator/prog2/out/file-sm-src.js",
+      "line": 9,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
+    },
+    "c3829bf662c34f865787288fd6ce05f8ff14996c5980bdc21c4eac421ac4639f": {
+      "signature": "c3829bf662c34f865787288fd6ce05f8ff14996c5980bdc21c4eac421ac4639f",
+      "alternativeSignatures": [
+        "176dfaa11bd00b163d74b9e21f6c783e04083326ffbf878907fe81eedd117a3c"
+      ],
+      "target": "test/SourceMap/translator/prog2/out/file-sm.js",
+      "line": 9,
+      "uriBaseId": "file:///D:/a/_work/1/s/",
+      "memberOf": [
+        "default"
+      ],
+      "tool": "eslint",
+      "ruleId": "no-eval",
+      "createdDate": "2026-02-27 04:49:49Z",
+      "expirationDate": "2026-08-26 00:00:00Z",
+      "justification": "Issue is with externally supplied runtime/test/tool files and non-shipping JavaScript artifacts."
     }
   }
+}

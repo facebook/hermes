@@ -72,14 +72,17 @@ extends:
       componentgovernance:
         ignoreDirectories: $(Build.SourcesDirectory)\website
       eslint:
-        # This repo does not ship any JavaScript code. But it has many test cases
-        # for the Hermes JS engine that fail parsing, have code considered
-        # insecure, and crash ESLint. Exclusions are in .eslintignore at the
-        # repo root. Do NOT use exclusionPatterns: '**/*.*' here because ESLint
-        # errors when all files matching the glob are ignored.
-        enableExclusions: false
+        # This repo does not ship any JavaScript code. All JS/TS files are test
+        # cases, benchmarks, or internal tools. Exclusions are in .eslintignore
+        # at the repo root. enableExclusions must be true so the Guardian task
+        # does not pass --no-ignore to ESLint (which would bypass .eslintignore).
+        enableExclusions: true
+      bandit:
+        # This repo does not ship any Python code. All .py files are build
+        # scripts, test utilities, benchmarks, or external tools (LLVM lit).
+        enabled: false
       suppression:
-        suppressionFile: $(Build.SourcesDirectory)\.ado\guardian\SDL\.gdnsuppress
+        suppressionFile: $(Build.SourcesDirectory)\.ado\guardian\sdl\.gdnsuppress
       codeql:
         compiled:
           enabled: true
