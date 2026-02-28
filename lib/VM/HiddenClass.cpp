@@ -177,6 +177,37 @@ HiddenClass *HiddenClass::createRoot(Runtime &runtime) {
       0);
 }
 
+HiddenClass *HiddenClass::createForTypedObject(
+    Runtime &runtime,
+    uint32_t capacity) {
+  assert(capacity <= maxNumProperties() && "too many properties");
+
+  struct : public Locals {
+    PinnedValue<HiddenClass> self;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  ClassFlags flags{};
+  flags.typed = 1;
+
+  /// Allocate a new class without a parent.
+  /// Start with 0 properties, they'll be added later by the caller of
+  /// createForTypedObject.
+  lv.self = HiddenClass::create(
+      runtime,
+      flags,
+      Runtime::makeNullHandle<HiddenClass>(),
+      SymbolID{},
+      PropertyFlags{},
+      0);
+
+  PseudoHandle<DictPropertyMap> dictRes = runtime.ignoreAllocationFailure(
+      DictPropertyMap::create(runtime, capacity));
+
+  lv.self->propertyMap_.set(runtime, dictRes.get(), runtime.getHeap());
+  return lv.self.get();
+}
+
 HiddenClass *HiddenClass::create(
     Runtime &runtime,
     ClassFlags flags,
@@ -597,6 +628,39 @@ Handle<HiddenClass> HiddenClass::updateProperty(
   selfHandle->propertyMap_.setNull(runtime.getHeap());
 
   return childHandle;
+}
+
+SlotIndex HiddenClass::addNewTypedPublicProperty(
+    Handle<HiddenClass> selfHandle,
+    Runtime &runtime,
+    SymbolID name,
+    bool propertiesEnumerable) {
+  assert(!selfHandle->parent_ && "must be root hidden class");
+  assert(selfHandle->flags_.typed && "must be typed");
+  assert(selfHandle->propertyMap_ && "must have property map allocated");
+
+  struct : public Locals {
+    PinnedValue<DictPropertyMap> propertyMap;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  // Typed properties are not configurable or writable from untyped code.
+  PropertyFlags propFlags = PropertyFlags::defaultNewNamedPropertyFlags();
+  propFlags.writable = false;
+  propFlags.configurable = false;
+  if (!propertiesEnumerable)
+    propFlags.enumerable = false;
+
+  auto isIndexLike =
+      toArrayIndex(runtime.getIdentifierTable().getStringView(runtime, name))
+          .hasValue();
+  selfHandle->flags_ = computeFlags(selfHandle->flags_, propFlags, isIndexLike);
+
+  SlotIndex newSlot = selfHandle->numProperties_++;
+  addToPropertyMap(
+      selfHandle, runtime, name, NamedPropertyDescriptor(propFlags, newSlot));
+
+  return newSlot;
 }
 
 Handle<HiddenClass> HiddenClass::makeAllNonConfigurable(
