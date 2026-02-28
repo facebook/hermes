@@ -490,7 +490,25 @@ LReference ESTreeIRGen::createLRef(ESTree::Node *node, bool declInit) {
       obj = genExpression(ME->_object);
     }
 
-    Value *prop = genMemberExpressionProperty(ME);
+    Value *prop;
+    if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+            flowContext_.getNodeTypeOrAny(ME->_object)->info);
+        classType && !ME->_computed) {
+      // Named types shouldn't bother with genMemberExpressionProperty,
+      // which is intended for untyped code.
+      if (auto *privateName =
+              llvh::dyn_cast<ESTree::PrivateNameNode>(ME->_property)) {
+        // If the property is an identifier, we can use the class type to
+        // determine the property name.
+        prop =
+            Builder.getLiteralPrivateName(getNameFieldFromID(privateName->_id));
+      } else {
+        prop = Builder.getLiteralString(getNameFieldFromID(ME->_property));
+      }
+    } else {
+      prop = genMemberExpressionProperty(ME);
+    }
+
     Value *thisVal = nullptr;
     // `thisVal` should only be set for `super` references.
     if (llvh::isa<ESTree::SuperNode>(ME->_object)) {

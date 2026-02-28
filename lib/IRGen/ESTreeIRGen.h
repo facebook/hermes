@@ -851,9 +851,17 @@ class ESTreeIRGen {
   /// it.
   /// \param parent the parent object of the newly allocated class, nullptr to
   /// default to the Object prototype.
+  /// \param skipPrivateFields whether to skip the private fields.
+  ///   Set to true when the private fields represent methods on the home
+  ///   object which never change and are emitted as Variables, meaning they
+  ///   aren't stored in objects and we shouldn't allocate slots for them at
+  ///   object creation time.
+  /// \param propertiesEnumerable whether properties are enumerable. Set to
+  ///   false for home objects (class prototypes with methods).
   Value *emitTypedClassAllocation(
       flow::ClassType *classType,
       Value *parent,
+      bool skipPrivateFields,
       bool propertiesEnumerable);
 
   /// Return the default init value for the specified type.

@@ -32,19 +32,6 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
 
   flow::ClassType *classType = consType->getClassTypeInfo();
 
-  // TODO: Implement IRGen for typed private fields/methods.
-  if (llvh::any_of(
-          classType->getFields(),
-          [](const flow::ClassType::Field &f) { return f.isPrivate; }) ||
-      llvh::any_of(
-          classType->getHomeObjectTypeInfo()->getFields(),
-          [](const flow::ClassType::Field &f) { return f.isPrivate; })) {
-    Mod->getContext().getSourceErrorManager().error(
-        node->getSourceRange(),
-        "private fields are not supported in typed classes");
-    return;
-  }
-
   Value *superClass = nullptr;
   if (node->_superClass) {
     superClass = genExpression(node->_superClass);
@@ -57,6 +44,28 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   auto popClsContext = llvh::make_scope_exit([&savedClsCtx, this]() {
     curFunction()->typedClassContext = savedClsCtx;
   });
+
+  // Emit private methods as variables.
+  for (auto &[name, idx] :
+       classType->getHomeObjectTypeInfo()->getPrivateFieldNameMap()) {
+    const flow::ClassType::Field &field =
+        classType->getHomeObjectTypeInfo()->getFields()[idx];
+    if (field.isMethod() && field.isPrivate) {
+      auto *funcExpr =
+          llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value);
+      Value *function = genFunctionExpression(funcExpr, field.name);
+      Variable *var = Builder.createVariable(
+          curFunction()->curScope()->getVariableScope(),
+          field.name,
+          flowTypeToIRType(field.type),
+          /* hidden */ true);
+      Builder.createStoreFrameInst(curFunction()->curScope(), function, var);
+      sema::Decl *decl = getIDDecl(
+          llvh::cast<ESTree::IdentifierNode>(
+              llvh::cast<ESTree::PrivateNameNode>(field.method->_key)->_id));
+      setDeclData(decl, var);
+    }
+  }
 
   // Create the implicit field initializer function; store the closure
   // for it in a variable, and save that variable in a table indexed by
@@ -136,8 +145,12 @@ void ESTreeIRGen::genClassDeclaration(ESTree::ClassDeclarationNode *node) {
   } else {
     vtable = Builder.getLiteralNull();
   }
+
   auto *homeObject = emitTypedClassAllocation(
-      classType->getHomeObjectTypeInfo(), vtable, false);
+      classType->getHomeObjectTypeInfo(),
+      vtable,
+      /* skipPrivateFields */ true,
+      /* propertiesEnumerable */ false);
 
   // Store the home object in a variable so that we can reference it later,
   // e.g. when we emit method calls. Check if we already have a cached entry
@@ -263,19 +276,32 @@ CreateFunctionInst *ESTreeIRGen::genTypedImplicitConstructor(
 Value *ESTreeIRGen::emitTypedClassAllocation(
     flow::ClassType *classType,
     Value *parent,
+    bool skipPrivateFields,
     bool propertiesEnumerable) {
   assert(parent && "parent must be specified");
   // TODO: should create a sealed object, etc.
   AllocTypedObjectInst::ObjectPropertyMap propMap{};
-  propMap.resize(classType->getFieldNameMap().size());
 
-  // Generate code for each field, place it in the propMap.
-  for (const auto &it : classType->getFieldNameMap()) {
-    flow::ClassType::FieldLookupEntry entry = it.second;
+  // Number of fields: the number of public properties as well as the number of
+  // private properties of this class and all ancestors combined.
+  size_t numFields = classType->getFieldNameMap().size();
+  if (!skipPrivateFields) {
+    for (auto *cur = classType; cur; cur = cur->getSuperClassInfo()) {
+      numFields += cur->getPrivateFieldNameMap().size();
+    }
+  }
+  propMap.resize(numFields);
+
+  auto addField = [this, &propMap, classType, parent](
+                      const flow::ClassType::FieldLookupEntry &entry) {
     const flow::ClassType::Field &field = *entry.getField();
     assert(
         propMap[field.layoutSlotIR].first == nullptr &&
         "every entry must be filled exactly once");
+
+    Literal *name = field.isPrivate
+        ? Builder.getLiteralPrivateName(field.name)
+        : static_cast<Literal *>(Builder.getLiteralString(field.name));
 
     if (field.isMethod()) {
       // Create the code for the method.
@@ -283,11 +309,10 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
         Value *function = genFunctionExpression(
             llvh::cast<ESTree::FunctionExpressionNode>(field.method->_value),
             field.name);
-        propMap[field.layoutSlotIR] = {
-            Builder.getLiteralString(field.name), function};
+        propMap[field.layoutSlotIR] = {name, function};
         if (auto *CFI = llvh::dyn_cast<CreateFunctionInst>(function)) {
-          // If this field represents a final method, record the IR function so
-          // we can use it to populate the target of calls.
+          // If this field represents a final method, record the IR function
+          // so we can use it to populate the target of calls.
           if (!field.overridden) {
             auto [it, success] =
                 finalMethods_.try_emplace(&field, CFI->getFunctionCode());
@@ -304,13 +329,13 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
         assert(parent && "inherited field without parent ClassType");
         // Method is inherited. Read it from the parent.
         propMap[field.layoutSlotIR] = {
-            Builder.getLiteralString(field.name),
+            name,
             Builder.createPrLoadInst(
                 parent,
                 field.layoutSlotIR,
-                Builder.getLiteralString(field.name),
+                name,
                 flowTypeToIRType(field.type))};
-        continue;
+        return;
       }
     } else {
       // Class element is a field.
@@ -319,8 +344,23 @@ Value *ESTreeIRGen::emitTypedClassAllocation(
       Value *initValue = flowTypeToIRType(field.type).canBePrimitive()
           ? getDefaultInitValue(field.type)
           : Builder.getLiteralUninit();
-      propMap[field.layoutSlotIR] = {
-          Builder.getLiteralString(field.name), initValue};
+      propMap[field.layoutSlotIR] = {name, initValue};
+    }
+  };
+
+  // Generate code for each field, place it in the propMap.
+  for (const auto &it : classType->getFieldNameMap()) {
+    flow::ClassType::FieldLookupEntry entry = it.second;
+    addField(entry);
+  }
+  // Private fields are not stored in the privateFieldNameMap,
+  // so we need to iterate over superclasses to find them.
+  if (!skipPrivateFields) {
+    for (auto *cur = classType; cur; cur = cur->getSuperClassInfo()) {
+      for (const auto &[name, idx] : cur->getPrivateFieldNameMap()) {
+        flow::ClassType::FieldLookupEntry entry{cur, idx};
+        addField(entry);
+      }
     }
   }
 
