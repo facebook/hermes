@@ -438,6 +438,7 @@ export interface ComponentDeclaration extends BaseNode {
 
 export interface HookDeclaration extends BaseNode {
   +type: 'HookDeclaration';
+  +async: boolean;
   +id: Identifier;
   +body: BlockStatement;
   +params: $ReadOnlyArray<FunctionParameter>;

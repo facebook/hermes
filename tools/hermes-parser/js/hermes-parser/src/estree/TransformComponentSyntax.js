@@ -645,7 +645,7 @@ function mapHookDeclaration(node: HookDeclaration): FunctionDeclaration {
     params: node.params,
     returnType: node.returnType,
     body: node.body,
-    async: false,
+    async: node.async ?? false,
     generator: false,
     predicate: null,
     loc: node.loc,

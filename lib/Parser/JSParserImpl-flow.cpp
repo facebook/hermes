@@ -34,6 +34,12 @@ Optional<ESTree::Node *> JSParserImpl::parseFlowDeclaration() {
     return parseComponentDeclarationFlow(start, /* declare */ false);
   }
 
+  if (context_.getParseFlowComponentSyntax() && checkUnescaped(asyncIdent_) &&
+      checkAsyncHookFlow()) {
+    advance(); // consume 'async'
+    return parseHookDeclarationFlow(start, /* isAsync */ true);
+  }
+
   if (context_.getParseFlowComponentSyntax() && checkHookDeclarationFlow()) {
     return parseHookDeclarationFlow(start);
   }
@@ -109,6 +115,16 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareFLow(SMLoc start) {
   }
 
   if (context_.getParseFlowComponentSyntax() && checkHookDeclarationFlow()) {
+    return parseDeclareHookFlow(start);
+  }
+
+  if (context_.getParseFlowComponentSyntax() && checkUnescaped(asyncIdent_) &&
+      checkAsyncHookFlow()) {
+    error(
+        tok_->getStartLoc(),
+        "`async` is not supported for declared hooks. "
+        "Use `declare hook` instead.");
+    advance(); // consume 'async'
     return parseDeclareHookFlow(start);
   }
 
@@ -197,6 +213,19 @@ bool JSParserImpl::checkAsyncComponentFlow() {
   advance();
   bool result =
       !lexer_.isNewLineBeforeCurrentToken() && checkComponentDeclarationFlow();
+  savePoint.restore();
+  return result;
+}
+
+bool JSParserImpl::checkAsyncHookFlow() {
+  // async [no LineTerminator here] hook
+  // ^
+  // Callers must already check check(asyncIdent_).
+  assert(checkUnescaped(asyncIdent_));
+  JSLexer::SavePoint savePoint{&lexer_};
+  advance();
+  bool result =
+      !lexer_.isNewLineBeforeCurrentToken() && checkHookDeclarationFlow();
   savePoint.restore();
   return result;
 }
@@ -747,7 +776,9 @@ bool JSParserImpl::checkHookDeclarationFlow() {
   return optNext.hasValue() && *optNext == TokenKind::identifier;
 }
 
-Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(SMLoc start) {
+Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(
+    SMLoc start,
+    bool isAsync) {
   // hook
   assert(check(hookIdent_));
   advance();
@@ -781,6 +812,8 @@ Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(SMLoc start) {
 
   ESTree::NodeList paramList;
 
+  llvh::SaveAndRestore<bool> saveParamAwait(paramAwait_, isAsync);
+
   if (!parseFormalParameters(Param{}, paramList))
     return None;
 
@@ -811,7 +844,7 @@ Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(SMLoc start) {
   SaveFunctionState saveFunctionState{this};
 
   auto parsedBody = parseFunctionBody(
-      Param{}, false, false, false, JSLexer::AllowRegExp, true);
+      Param{}, false, false, isAsync, JSLexer::AllowRegExp, true);
   if (!parsedBody)
     return None;
   auto *body = parsedBody.getValue();
@@ -820,7 +853,7 @@ Optional<ESTree::Node *> JSParserImpl::parseHookDeclarationFlow(SMLoc start) {
       start,
       body,
       new (context_) ESTree::HookDeclarationNode(
-          *optId, std::move(paramList), body, typeParams, returnType));
+          *optId, std::move(paramList), body, typeParams, returnType, isAsync));
 }
 
 bool JSParserImpl::checkMaybeFlowMatchSlowPath() {
@@ -2568,6 +2601,22 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(SMLoc start) {
               *optFunc, {}, nullptr, true));
     }
     if (context_.getParseFlowComponentSyntax() && checkUnescaped(asyncIdent_) &&
+        checkAsyncHookFlow()) {
+      error(
+          tok_->getStartLoc(),
+          "`async` is not supported for declared hooks. "
+          "Use `declare hook` instead.");
+      advance(); // consume 'async'
+      auto optHook = parseDeclareHookFlow(declareStart);
+      if (!optHook)
+        return None;
+      return setLocation(
+          start,
+          *optHook,
+          new (context_) ESTree::DeclareExportDeclarationNode(
+              *optHook, {}, nullptr, true));
+    }
+    if (context_.getParseFlowComponentSyntax() && checkUnescaped(asyncIdent_) &&
         checkAsyncComponentFlow()) {
       error(
           tok_->getStartLoc(),
@@ -2638,6 +2687,23 @@ Optional<ESTree::Node *> JSParserImpl::parseDeclareExportFlow(SMLoc start) {
         *optFunc,
         new (context_)
             ESTree::DeclareExportDeclarationNode(*optFunc, {}, nullptr, false));
+  }
+
+  if (context_.getParseFlowComponentSyntax() && checkUnescaped(asyncIdent_) &&
+      checkAsyncHookFlow()) {
+    error(
+        tok_->getStartLoc(),
+        "`async` is not supported for declared hooks. "
+        "Use `declare hook` instead.");
+    advance(); // consume 'async'
+    auto optHook = parseDeclareHookFlow(declareStart);
+    if (!optHook)
+      return None;
+    return setLocation(
+        start,
+        *optHook,
+        new (context_)
+            ESTree::DeclareExportDeclarationNode(*optHook, {}, nullptr, false));
   }
 
   if (check(TokenKind::rw_class)) {

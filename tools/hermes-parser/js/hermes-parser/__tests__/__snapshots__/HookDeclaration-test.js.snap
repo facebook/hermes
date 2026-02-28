@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`HookDeclaration Basic Babel 1`] = `
 {
@@ -28,6 +28,7 @@ exports[`HookDeclaration Basic ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -114,6 +115,7 @@ exports[`HookDeclaration Export default hook ESTree 1`] = `
   "body": [
     {
       "declaration": {
+        "async": false,
         "body": {
           "body": [],
           "type": "BlockStatement",
@@ -246,6 +248,7 @@ exports[`HookDeclaration Export named hook ESTree 1`] = `
   "body": [
     {
       "declaration": {
+        "async": false,
         "body": {
           "body": [],
           "type": "BlockStatement",
@@ -386,6 +389,7 @@ exports[`HookDeclaration Params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -461,6 +465,55 @@ exports[`HookDeclaration Params ESTree 1`] = `
 }
 `;
 
+exports[`HookDeclaration async Babel 1`] = `
+{
+  "body": [
+    {
+      "__hookDeclaration": true,
+      "async": true,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "useFoo",
+        "type": "Identifier",
+      },
+      "params": [],
+      "type": "FunctionDeclaration",
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`HookDeclaration async ESTree 1`] = `
+{
+  "body": [
+    {
+      "async": true,
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "useFoo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [],
+      "returnType": null,
+      "type": "HookDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
 exports[`HookDeclaration default params Babel 1`] = `
 {
   "body": [
@@ -516,6 +569,7 @@ exports[`HookDeclaration default params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -626,6 +680,7 @@ exports[`HookDeclaration rest params 2 ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -734,6 +789,7 @@ exports[`HookDeclaration rest params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -810,6 +866,7 @@ exports[`HookDeclaration return type ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -913,6 +970,7 @@ exports[`HookDeclaration type parameters ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",

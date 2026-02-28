@@ -103,6 +103,7 @@ function deserializeHookDeclaration() {
     body: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     returnType: this.deserializeNode(),
+    async: this.deserializeBoolean(),
   };
 }
 

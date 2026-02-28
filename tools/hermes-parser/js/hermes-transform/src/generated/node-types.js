@@ -660,6 +660,7 @@ export type HookDeclarationProps = {
   +body: MaybeDetachedNode<HookDeclarationType['body']>,
   +typeParameters?: ?MaybeDetachedNode<HookDeclarationType['typeParameters']>,
   +returnType?: ?MaybeDetachedNode<HookDeclarationType['returnType']>,
+  +async: HookDeclarationType['async'],
 };
 
 export type HookTypeAnnotationProps = {
@@ -2378,6 +2379,7 @@ export function HookDeclaration(props: {
     body: asDetachedNodeForCodeGen(props.body),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
     returnType: asDetachedNodeForCodeGen(props.returnType),
+    async: props.async,
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;

@@ -22,7 +22,8 @@ hook useFoo1() {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 export default hook useFoo2() {}
@@ -38,7 +39,8 @@ export default hook useFoo2() {}
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",
 // CHECK-NEXT:           "body": []
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "async": false
 // CHECK-NEXT:       }
 // CHECK-NEXT:     },
 
@@ -55,7 +57,8 @@ export hook useFoo3() {}
 // CHECK-NEXT:         "body": {
 // CHECK-NEXT:           "type": "BlockStatement",
 // CHECK-NEXT:           "body": []
-// CHECK-NEXT:         }
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "async": false
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "specifiers": [],
 // CHECK-NEXT:       "source": null,
@@ -79,7 +82,8 @@ hook useFoo4(): string {}
 // CHECK-NEXT:         "typeAnnotation": {
 // CHECK-NEXT:           "type": "StringTypeAnnotation"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 hook useFoo5<T>() {}
@@ -105,7 +109,8 @@ hook useFoo5<T>() {}
 // CHECK-NEXT:             "default": null
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 hook useFoo6(...foo) {}
@@ -127,7 +132,8 @@ hook useFoo6(...foo) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 hook useFoo7(...rest?: Foo) {}
@@ -161,7 +167,8 @@ hook useFoo7(...rest?: Foo) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 hook useFoo8(foo, ...bar) {}
@@ -187,7 +194,8 @@ hook useFoo8(foo, ...bar) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 hook useFoo9(foo: Foo, ...bar: Bar) {}
@@ -235,7 +243,8 @@ hook useFoo9(foo: Foo, ...bar: Bar) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 hook useFoo10(foo: () => void,): number { return; }
@@ -278,7 +287,8 @@ hook useFoo10(foo: () => void,): number { return; }
 // CHECK-NEXT:         "typeAnnotation": {
 // CHECK-NEXT:           "type": "NumberTypeAnnotation"
 // CHECK-NEXT:         }
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 hook useFoo11(): (number => string) {};
@@ -314,7 +324,8 @@ hook useFoo11(): (number => string) {};
 // CHECK-NEXT:           "rest": null,
 // CHECK-NEXT:           "typeParameters": null
 // CHECK-NEXT:         }
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "type": "EmptyStatement"
