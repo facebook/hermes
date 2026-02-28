@@ -1204,8 +1204,7 @@ AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
 AllocTypedObjectInst *IRBuilder::createAllocTypedObjectInst(
     const AllocTypedObjectInst::ObjectPropertyMap &propMap,
     Value *parentObject) {
-  auto *inst = new AllocTypedObjectInst(
-      parentObject ? parentObject : getEmptySentinel(), propMap);
+  auto *inst = new AllocTypedObjectInst(parentObject, propMap);
   insert(inst);
   return inst;
 }

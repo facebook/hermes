@@ -1373,12 +1373,8 @@ void HBCISel::generateAllocTypedObjectInst(
   assert(
       Inst->getKeyValuePairCount() == 0 &&
       "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
-  if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
-    BCFGen_->emitNewObject(result);
-  } else {
-    auto parentReg = encodeValue(Inst->getParentObject());
-    BCFGen_->emitNewObjectWithParent(result, parentReg);
-  }
+  auto parentReg = encodeValue(Inst->getParentObject());
+  BCFGen_->emitNewObjectWithParent(result, parentReg);
 }
 void HBCISel::generateAllocTypedNonEnumObjectInst(
     AllocTypedNonEnumObjectInst *Inst,

@@ -60,14 +60,14 @@ new Foo();
 // CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %2 = LoadFrameInst (:object) %1: environment, [%VS0.?O.prototype]: object
-// CHECK-NEXT:  %3 = LIRAllocObjectFromBufferInst (:object) %2: object, "i": string, 0: number
+// CHECK-NEXT:  %3 = LIRAllocTypedObjectFromBufferInst (:object) %2: object, "i": string, 0: number
 // CHECK-NEXT:  %4 = LIRLoadConstInst (:number) 7: number
 // CHECK-NEXT:       PrStoreInst %4: number, %3: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:       PrStoreInst %3: object, %0: object, 0: number, "o0": string, false: boolean
-// CHECK-NEXT:  %7 = LIRAllocObjectFromBufferInst (:object) %2: object, "i": string, 0: number
+// CHECK-NEXT:  %7 = LIRAllocTypedObjectFromBufferInst (:object) %2: object, "i": string, 0: number
 // CHECK-NEXT:       PrStoreInst %4: number, %7: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:       PrStoreInst %7: object, %0: object, 1: number, "o1": string, false: boolean
-// CHECK-NEXT:  %10 = LIRAllocObjectFromBufferInst (:object) %2: object, "i": string, 0: number
+// CHECK-NEXT:  %10 = LIRAllocTypedObjectFromBufferInst (:object) %2: object, "i": string, 0: number
 // CHECK-NEXT:        PrStoreInst %4: number, %10: object, 0: number, "i": string, true: boolean
 // CHECK-NEXT:        PrStoreInst %10: object, %0: object, 2: number, "o2": string, false: boolean
 // CHECK-NEXT:  %13 = LIRLoadConstInst (:undefined) undefined: undefined

@@ -155,13 +155,13 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   IRBuilder builder(F);
   uint32_t size = allocInst->getKeyValuePairCount();
 
-  // Should not create LIRAllocObjectFromBufferInst for an object with 0
+  // Should not create lowered instruction for an object with 0
   // properties.
   if (size == 0) {
     return false;
   }
 
-  // Replace AllocObjectLiteral with LIRAllocObjectFromBufferInst
+  // Replace AllocObjectLiteral with lowered instruction.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPointAfter(allocInst);
   LIRAllocObjectFromBufferInst::ObjectPropertyMap propMap;
@@ -211,12 +211,22 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
     }
   }
 
-  // Emit LIRAllocObjectFromBufferInst.
+  // Emit lowered instruction.
   // First, we reset insertion location.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createLIRAllocObjectFromBufferInst(
-      allocInst->getParentObject(), propMap);
+
+  Instruction *alloc;
+  if (llvh::isa<AllocTypedNonEnumObjectInst>(allocInst)) {
+    alloc = builder.createLIRAllocTypedNonEnumObjectFromBufferInst(
+        allocInst->getParentObject(), propMap);
+  } else if (llvh::isa<AllocTypedObjectInst>(allocInst)) {
+    alloc = builder.createLIRAllocTypedObjectFromBufferInst(
+        allocInst->getParentObject(), propMap);
+  } else {
+    alloc = builder.createLIRAllocObjectFromBufferInst(
+        allocInst->getParentObject(), propMap);
+  }
 
   allocInst->replaceAllUsesWith(alloc);
   allocInst->eraseFromParent();

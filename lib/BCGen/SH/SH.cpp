@@ -1711,13 +1711,9 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
     // TODO: Utilize sizeHint.
-    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
-      os_ << "_sh_ljs_new_object(shr)";
-    } else {
-      os_ << "_sh_ljs_new_object_with_parent(shr, &";
-      generateValue(*inst.getParentObject());
-      os_ << ")";
-    }
+    os_ << "_sh_ljs_new_object_with_parent(shr, &";
+    generateValue(*inst.getParentObject());
+    os_ << ")";
     os_ << ";\n";
   }
   void generateAllocTypedNonEnumObjectInst(AllocTypedNonEnumObjectInst &inst) {
