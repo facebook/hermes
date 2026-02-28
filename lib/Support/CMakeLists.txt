@@ -26,6 +26,7 @@ add_hermes_library(hermesSupport
         CheckedMalloc.cpp
         Conversions.cpp
         ErrorHandling.cpp
+        FastArraySearch.cpp
         FastDoubleToDecimal.cpp
         FastStrToDouble.cpp
         JSONEmitter.cpp
