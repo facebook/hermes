@@ -10709,7 +10709,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
     const {
       node
     } = path;
-    const parts = [printDeclareToken(path), "component"];
+    const parts = [printDeclareToken(path), node.async ? "async " : "", "component"];
     if (node.id) {
       parts.push(" ", print3("id"));
     }
@@ -10862,7 +10862,7 @@ Expected it to be ${EXPECTED_TYPE_VALUES}.`;
   // src/language-js/print/hook.js
   function printHook(path, options2, print3) {
     const { node } = path;
-    const parts = ["hook"];
+    const parts = [node.async ? "async " : "", "hook"];
     if (node.id) {
       parts.push(" ", print3("id"));
     }

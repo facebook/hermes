@@ -544,7 +544,8 @@ class JSParserImpl {
         return true;
       }
       if (context_.getParseFlowComponentSyntax() &&
-          checkHookDeclarationFlow()) {
+          (checkHookDeclarationFlow() ||
+           (check(asyncIdent_) && checkAsyncHookFlow()))) {
         return true;
       }
       if (check(opaqueIdent_)) {
@@ -1191,7 +1192,10 @@ class JSParserImpl {
       bool declare,
       bool isAsync = false);
   bool checkHookDeclarationFlow();
-  Optional<ESTree::Node *> parseHookDeclarationFlow(SMLoc start);
+  bool checkAsyncHookFlow();
+  Optional<ESTree::Node *> parseHookDeclarationFlow(
+      SMLoc start,
+      bool isAsync = false);
 
   /// This is for parsing the `renders` clause that comes after component
   /// declarations, declared components, and component types, but not for

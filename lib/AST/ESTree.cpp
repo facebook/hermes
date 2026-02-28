@@ -185,7 +185,7 @@ bool isAsync(FunctionLikeNode *node) {
     case NodeKind::ComponentDeclaration:
       return false;
     case NodeKind::HookDeclaration:
-      return false;
+      return cast<HookDeclarationNode>(node)->_async;
 #endif
   }
 }

@@ -336,6 +336,7 @@ unsafe extern "C" {
     pub fn hermes_get_HookDeclaration_body(node: NodePtr) -> NodePtr;
     pub fn hermes_get_HookDeclaration_typeParameters(node: NodePtr) -> NodePtrOpt;
     pub fn hermes_get_HookDeclaration_returnType(node: NodePtr) -> NodePtrOpt;
+    pub fn hermes_get_HookDeclaration_async(node: NodePtr) -> bool;
     // MatchStatement
     pub fn hermes_get_MatchStatement_argument(node: NodePtr) -> NodePtr;
     pub fn hermes_get_MatchStatement_cases(node: NodePtr) -> NodeListRef;

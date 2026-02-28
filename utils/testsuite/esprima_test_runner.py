@@ -188,7 +188,7 @@ class EsprimaTestRunner:
                     "PropertyDefinition",
                 ):
                     ast.setdefault("declare", False)
-                if ast["type"] == "ComponentDeclaration":
+                if ast["type"] in ("ComponentDeclaration", "HookDeclaration"):
                     ast.setdefault("async", False)
             # If it is a template literal, the 'value' field contains
             # the 'cooked' and 'raw' strings, which should be moved.

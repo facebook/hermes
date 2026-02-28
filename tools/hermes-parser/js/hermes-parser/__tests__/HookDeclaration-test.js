@@ -183,4 +183,22 @@ describe('HookDeclaration', () => {
         `);
     });
   });
+
+  describe('async', () => {
+    const code = `
+      async hook useFoo() {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+      expect(await printForSnapshotESTree(code)).toBe(code.trim());
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"async function useFoo() {}"`,
+      );
+    });
+  });
 });

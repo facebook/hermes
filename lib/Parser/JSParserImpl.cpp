@@ -6775,6 +6775,18 @@ Optional<ESTree::Node *> JSParserImpl::parseExportDeclaration() {
           new (context_) ESTree::ExportDefaultDeclarationNode(*optComponent));
     } else if (
         context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
+        check(asyncIdent_) && checkAsyncHookFlow()) {
+      SMLoc hookStart = advance().Start;
+      auto optHook = parseHookDeclarationFlow(hookStart, /* isAsync */ true);
+      if (!optHook) {
+        return None;
+      }
+      return setLocation(
+          startLoc,
+          *optHook,
+          new (context_) ESTree::ExportDefaultDeclarationNode(*optHook));
+    } else if (
+        context_.getParseFlow() && context_.getParseFlowComponentSyntax() &&
         checkHookDeclarationFlow()) {
       auto optHook = parseHookDeclarationFlow(tok_->getStartLoc());
       if (!optHook) {

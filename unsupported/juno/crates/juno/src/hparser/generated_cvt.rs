@@ -141,6 +141,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
           let body = cvt_node_ptr(cvt, gc, hermes_get_HookDeclaration_body(n));
           let type_parameters = cvt_node_ptr_opt(cvt, gc, hermes_get_HookDeclaration_typeParameters(n));
           let return_type = cvt_node_ptr_opt(cvt, gc, hermes_get_HookDeclaration_returnType(n));
+          let is_async = hermes_get_HookDeclaration_async(n);
           let mut template = ast::template::HookDeclaration {
               metadata: ast::TemplateMetadata {range, ..Default::default()},
                   id,
@@ -148,6 +149,7 @@ pub unsafe fn cvt_node_ptr<'parser, 'gc>(
                   body,
                   type_parameters,
                   return_type,
+                  is_async,
           };
           template.metadata.range.end = if nr.source_range.is_empty() { template.metadata.range.start } else { cvt.cvt_smloc(nr.source_range.end.pred()) };
           ast::builder::HookDeclaration::build_template(gc, template)
