@@ -1153,7 +1153,17 @@ CallResult<bool> deleteWithTrap(
     return runtime.raiseTypeError(
         "Delete trap target called, but target property is non-configurable");
   }
-  // 13. Return true.
+  // 13. Let extensibleTarget be ? IsExtensible(target).
+  CallResult<bool> extensibleRes = JSObject::isExtensible(target, runtime);
+  if (LLVM_UNLIKELY(extensibleRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  // 14. If extensibleTarget is false, throw a TypeError exception.
+  if (!*extensibleRes) {
+    return runtime.raiseTypeError(
+        "Delete trap returned true for configurable property on non-extensible target");
+  }
+  // 15. Return true.
   return true;
 }
 
