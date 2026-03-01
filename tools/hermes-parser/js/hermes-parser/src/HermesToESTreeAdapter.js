@@ -14,6 +14,7 @@ import type {ParserOptions} from './ParserOptions';
 import HermesASTAdapter from './HermesASTAdapter';
 import {getModuleDocblock} from './getModuleDocblock';
 
+// eslint-disable-next-line no-unused-vars
 declare var BigInt: ?(value: $FlowFixMe) => mixed;
 
 export default class HermesToESTreeAdapter extends HermesASTAdapter {
