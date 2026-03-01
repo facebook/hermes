@@ -17,11 +17,11 @@ module.exports = {
     es2021: true,
     node: true,
   },
-  plugins: ['eslint-comments', 'fb-flow', 'flowtype'],
+  plugins: ['@eslint-community/eslint-comments', 'fb-flow', 'ft-flow'],
   extends: [
     'eslint:recommended',
-    'plugin:flowtype/recommended',
-    'plugin:eslint-comments/recommended',
+    'plugin:ft-flow/recommended',
+    'plugin:@eslint-community/eslint-comments/recommended',
     'prettier',
   ],
   parser: require.resolve('./hermes-eslint'),
@@ -38,18 +38,31 @@ module.exports = {
       },
     ],
 
-    'eslint-comments/no-unused-disable': 'error',
+    '@eslint-community/eslint-comments/no-unused-disable': 'error',
 
     'fb-flow/flow-enums-default-if-possible': 'error',
     'fb-flow/no-flow-enums-object-mapping': 'error',
     'fb-flow/use-exact-by-default-object-type': 'error',
     'fb-flow/use-indexed-access-type': 'error',
 
-    'flowtype/array-style-complex-type': ['error', 'verbose'],
-    'flowtype/array-style-simple-type': ['error', 'verbose'],
+    'ft-flow/array-style-complex-type': ['error', 'verbose'],
+    'ft-flow/array-style-simple-type': ['error', 'verbose'],
 
     'no-undef': 'off',
-    'flowtype/define-flow-type': 'off',
+    'ft-flow/define-flow-type': 'off',
+
+    // from eslint-config-prettier, but for ft-flow instead of flowtype
+    'ft-flow/boolean-style': 'off',
+    'ft-flow/delimiter-dangle': 'off',
+    'ft-flow/generic-spacing': 'off',
+    'ft-flow/object-type-curly-spacing': 'off',
+    'ft-flow/object-type-delimiter': 'off',
+    'ft-flow/quotes': 'off',
+    'ft-flow/semi': 'off',
+    'ft-flow/space-after-type-colon': 'off',
+    'ft-flow/space-before-generic-bracket': 'off',
+    'ft-flow/space-before-type-colon': 'off',
+    'ft-flow/union-intersection-spacing': 'off',
   },
   overrides: [
     {
