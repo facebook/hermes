@@ -66,6 +66,24 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
     FinalizeNativeFunctionPtr finalizePtr,
     SymbolID name,
     unsigned paramCount) {
+  return create(
+      runtime,
+      context,
+      functionPtr,
+      finalizePtr,
+      name,
+      paramCount,
+      runtime.makeNullHandle<JSObject>());
+}
+
+CallResult<HermesValue> FinalizableNativeFunction::create(
+    Runtime &runtime,
+    void *context,
+    NativeFunctionPtr functionPtr,
+    FinalizeNativeFunctionPtr finalizePtr,
+    SymbolID name,
+    unsigned paramCount,
+    Handle<JSObject> prototypeObjectHandle) {
   auto parentHandle = Handle<JSObject>::vmcast(&runtime.functionPrototype);
 
   auto *cell = runtime.makeAFixed<FinalizableNativeFunction, HasFinalizer::Yes>(
@@ -77,8 +95,6 @@ CallResult<HermesValue> FinalizableNativeFunction::createWithoutPrototype(
       functionPtr,
       finalizePtr);
   auto selfHandle = JSObjectInit::initToHandle(runtime, cell);
-
-  auto prototypeObjectHandle = runtime.makeNullHandle<JSObject>();
 
   auto st = defineNameLengthAndPrototype(
       selfHandle,

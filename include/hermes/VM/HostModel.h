@@ -46,6 +46,21 @@ class FinalizableNativeFunction final : public NativeFunction {
       SymbolID name,
       unsigned paramCount);
 
+  /// Create an instance of FinalizableNativeFunction with a prototype.
+  /// \param functionPtr the host function
+  /// \param finalizePtr the finalizer function
+  /// \param name the name of the function
+  /// \param paramCount number of parameters (excluding `this`)
+  /// \param prototypeObjectHandle the value for .prototype
+  static CallResult<HermesValue> create(
+      Runtime &runtime,
+      void *context,
+      NativeFunctionPtr functionPtr,
+      FinalizeNativeFunctionPtr finalizePtr,
+      SymbolID name,
+      unsigned paramCount,
+      Handle<JSObject> prototypeObjectHandle);
+
   void *getContext() {
     return context_;
   }
