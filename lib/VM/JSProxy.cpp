@@ -1411,6 +1411,23 @@ CallResult<PseudoHandle<JSArray>> JSProxy::ownPropertyKeys(
                         JSMap::insert(lv.map, runtime, valHandle, valHandle) ==
                         ExecutionStatus::EXCEPTION))
                   return ExecutionStatus::EXCEPTION;
+                if (valHandle->isString()) {
+                  Handle<StringPrimitive> str =
+                      Handle<StringPrimitive>::vmcast(valHandle);
+                  OptValue<uint32_t> strAsIndexOpt = toArrayIndex(*str);
+                  // Convert index keys to numbers to match the format
+                  // returned by getOwnPropertyKeys.
+                  if (strAsIndexOpt) {
+                    HermesValue strAsIndexValue =
+                        HermesValue::encodeTrustedNumberValue(
+                            static_cast<double>(strAsIndexOpt.getValue()));
+                    return JSArray::setElementAt(
+                        trapResult,
+                        runtime,
+                        index,
+                        runtime.makeHandle(strAsIndexValue));
+                  }
+                }
                 return JSArray::setElementAt(
                     trapResult, runtime, index, valHandle);
               }) == ExecutionStatus::EXCEPTION)) {
