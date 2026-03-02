@@ -706,6 +706,23 @@ proxyTests(
 
 // Try above test with lazy and non-lazy functions
 
+// ES2025 [[GetOwnProperty]] step 17b: if trap result is non-configurable
+// and non-writable, target property must also be non-writable.
+var gopTarget = {};
+Object.defineProperty(gopTarget, 'x', {
+  configurable: false, writable: true, value: 1
+});
+var gopProxy = new Proxy(gopTarget, {
+  getOwnPropertyDescriptor: function() {
+    return {configurable: false, writable: false, value: 1};
+  }
+});
+assert.throws(function() {
+  Object.getOwnPropertyDescriptor(gopProxy, 'x');
+}, TypeError, "getOwnPropertyDescriptor non-configurable non-writable vs writable target");
+print('getOwnPropertyDescriptor non-writable invariant');
+// CHECK-LABEL: getOwnPropertyDescriptor non-writable invariant
+
 print('defineProperty');
 // CHECK-LABEL: defineProperty
 

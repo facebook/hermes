@@ -982,7 +982,6 @@
     "test262/test/language/expressions/object/fn-name-cover.js",
     "test262/test/language/expressions/object/fn-name-fn.js",
     "test262/test/annexB/built-ins/Object/prototype/__proto__/set-cycle-shadowed.js",
-    "test262/test/built-ins/Proxy/getOwnPropertyDescriptor/resultdesc-is-not-configurable-not-writable-targetdesc-is-writable.js",
     "test262/test/built-ins/Proxy/defineProperty/targetdesc-not-configurable-writable-desc-not-writable.js",
     "test262/test/built-ins/Array/prototype/concat/create-ctor-poisoned.js",
     "test262/test/built-ins/Array/prototype/filter/create-ctor-poisoned.js",
