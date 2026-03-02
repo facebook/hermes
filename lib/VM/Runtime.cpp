@@ -387,6 +387,12 @@ Runtime::Runtime(
   // Initialize the pre-allocated character strings.
   initCharacterStrings();
 
+  // Allocate a sentinel StringPrimitive for Symbol.description.  Symbols
+  // created without a description, so Symbol(undefined), store this sentinel as
+  // their description string.
+  strForSymbolNoDescription = vmcast<StringPrimitive>(ignoreAllocationFailure(
+      StringPrimitive::createLongLived(*this, ASCIIRef("", (size_t)0))));
+
   GCScope scope(*this);
 
   // Explicitly initialize the specialCodeBlockRuntimeModule_ without CJS

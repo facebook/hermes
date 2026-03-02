@@ -70,6 +70,7 @@ RUNTIME_HV_FIELD(regExpPrototype, JSObject)
 RUNTIME_HV_FIELD(typedArrayBaseConstructor, NativeConstructor)
 
 RUNTIME_HV_FIELD(regExpLastInput, StringPrimitive)
+RUNTIME_HV_FIELD(strForSymbolNoDescription, StringPrimitive)
 RUNTIME_HV_FIELD(regExpLastRegExp, JSRegExp)
 
 RUNTIME_HV_FIELD(throwTypeErrorAccessor, PropertyAccessor)
