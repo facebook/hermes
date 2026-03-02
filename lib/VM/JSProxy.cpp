@@ -737,6 +737,16 @@ CallResult<bool> JSProxy::defineOwnProperty(
       return runtime.raiseTypeError(
           "defineProperty trap attempted to define non-configurable property for configurable property in the target");
     }
+    //   c. If IsDataDescriptor(targetDesc) is true,
+    //   targetDesc.[[Configurable]] is false, and targetDesc.[[Writable]] is
+    //   true, then
+    //     i. If Desc has a [[Writable]] field and Desc.[[Writable]] is false,
+    //     throw a TypeError exception.
+    if (!targetDesc.flags.accessor && !targetDesc.flags.configurable &&
+        targetDesc.flags.writable && dpFlags.setWritable && !dpFlags.writable) {
+      return runtime.raiseTypeError(
+          "defineProperty trap attempted to define non-writable property for writable property in the target");
+    }
   }
   // 17. Return true.
   return true;

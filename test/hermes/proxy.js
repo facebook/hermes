@@ -813,6 +813,21 @@ proxyTests(
    [false,
     checkThrows(TypeError)]]);
 
+// ES2025 [[DefineOwnProperty]] step 16c: if target property is a
+// non-configurable writable data property, Desc must not set writable to false.
+var dopTarget = {};
+Object.defineProperty(dopTarget, 'x', {
+  configurable: false, writable: true, value: 5
+});
+var dopProxy = new Proxy(dopTarget, {
+  defineProperty: function() { return true; }
+});
+assert.throws(function() {
+  Object.defineProperty(dopProxy, 'x', {writable: false});
+}, TypeError, "defineProperty non-configurable writable target vs non-writable desc");
+print('defineProperty non-writable invariant');
+// CHECK-LABEL: defineProperty non-writable invariant
+
 print('has');
 // CHECK-LABEL: has
 
