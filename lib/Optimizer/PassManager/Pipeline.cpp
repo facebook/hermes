@@ -93,6 +93,7 @@ void hermes::runFullOptimizationPasses(Module &M) {
   // Run type inference before CSE so that we can better reason about binopt.
   PM.addTypeInference();
   PM.addCSE();
+  PM.addPrivateBrandCheckDedup();
   PM.addTDZDedup();
   PM.addSimplifyCFG();
 
@@ -148,6 +149,7 @@ void hermes::runOptimizationPassesToFixedPoint(Module &M) {
   PM.addObjectMergeNewStores();
   PM.addObjectStackPromotion();
   PM.addCSE();
+  PM.addPrivateBrandCheckDedup();
   PM.addTDZDedup();
   PM.addFuncSigOpts();
 

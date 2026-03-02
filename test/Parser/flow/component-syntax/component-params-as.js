@@ -35,7 +35,8 @@ component Foo1(foo as bar) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo2(foo as bar: Foo) {}
@@ -73,7 +74,8 @@ component Foo2(foo as bar: Foo) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo3('foo' as bar) {}
@@ -100,7 +102,8 @@ component Foo3('foo' as bar) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo4(foo as {bar}) {}
@@ -143,7 +146,8 @@ component Foo4(foo as {bar}) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     },
 
 component Foo5(foo as [bar]) {}
@@ -175,7 +179,8 @@ component Foo5(foo as [bar]) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

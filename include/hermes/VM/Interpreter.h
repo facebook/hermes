@@ -9,6 +9,7 @@
 #define HERMES_VM_INTERPRETER_H
 #include <cstdint>
 
+#include "hermes/VM/ObjectAllocKind.h"
 #include "hermes/VM/Runtime.h"
 
 namespace hermes {
@@ -158,19 +159,23 @@ class Interpreter {
       Runtime &runtime,
       CodeBlock *curCodeBlock,
       Handle<JSObject> parent,
-      unsigned shapeTableIndex);
+      unsigned shapeTableIndex,
+      ObjectAllocKind allocKind);
 
   /// Constructs an object via literal buffers in the bytecode file.
   /// \param parent the parent of the newly created object.
   /// \param shapeTableIndex the index of the shape element.
   /// \param valBufferOffset the first element of the val buffer to read.
+  /// \param parentObject the object to be used as the parent of the new object.
+  /// \param allocKind the kind of allocation being performed.
   /// \return ExecutionStatus::EXCEPTION if the property definitions throw.
   static CallResult<PseudoHandle<>> createObjectFromBuffer(
       Runtime &runtime,
       CodeBlock *curCodeBlock,
       Handle<JSObject> parent,
       unsigned shapeTableIndex,
-      unsigned valBufferOffset);
+      unsigned valBufferOffset,
+      ObjectAllocKind allocKind);
 
   /// Populates an array with literal values from the array buffer.
   /// \param numLiterals the amount of literals to read from the buffer.

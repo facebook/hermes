@@ -40,7 +40,8 @@ hook useFoo1(foo) {
 // CHECK-NEXT:             }
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

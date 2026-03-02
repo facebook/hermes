@@ -1163,6 +1163,12 @@ void JITContext::Compiler::emitNewObjectWithBufferAndParent(
       FR(inst->op1), FR(inst->op2), inst->op3, inst->op4);
 }
 
+inline void JITContext::Compiler::emitNewTypedObjectWithBuffer(
+    const inst::NewTypedObjectWithBufferInst *inst) {
+  em_.newTypedObjectWithBuffer(
+      FR(inst->op1), FR(inst->op2), inst->op3, inst->op4, inst->op5);
+}
+
 inline void JITContext::Compiler::emitNewArray(const inst::NewArrayInst *inst) {
   em_.newArray(FR(inst->op1), inst->op2);
 }

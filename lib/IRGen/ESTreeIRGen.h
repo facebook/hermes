@@ -851,13 +851,27 @@ class ESTreeIRGen {
   /// it.
   /// \param parent the parent object of the newly allocated class, nullptr to
   /// default to the Object prototype.
-  Value *emitTypedClassAllocation(flow::ClassType *classType, Value *parent);
+  /// \param skipPrivateFields whether to skip the private fields.
+  ///   Set to true when the private fields represent methods on the home
+  ///   object which never change and are emitted as Variables, meaning they
+  ///   aren't stored in objects and we shouldn't allocate slots for them at
+  ///   object creation time.
+  /// \param propertiesEnumerable whether properties are enumerable. Set to
+  ///   false for home objects (class prototypes with methods).
+  Value *emitTypedClassAllocation(
+      flow::ClassType *classType,
+      Value *parent,
+      bool skipPrivateFields,
+      bool propertiesEnumerable);
 
   /// Return the default init value for the specified type.
   Value *getDefaultInitValue(flow::Type *type);
 
   /// Convert a Flow type into an IR type.
-  static Type flowTypeToIRType(flow::Type *flowType);
+  static Type flowTypeToIRType(flow::TypeInfo *flowType);
+  static Type flowTypeToIRType(flow::Type *flowType) {
+    return flowTypeToIRType(flowType->info);
+  }
 
   /// @}
 
@@ -1706,12 +1720,6 @@ class ESTreeIRGen {
   ///     should be skipped.
   /// \return the instruction performing the store.
   Instruction *emitStore(Value *storedValue, Value *ptr, bool declInit);
-
-  /// Emit IR to perform a private brand check.
-  /// \param from is the value to query.
-  /// \param brandVal is the value of the private brand name. Brands are only
-  ///     associated with private methods and accessors, not fields.
-  void emitPrivateBrandCheck(Value *from, Value *brandVal);
 
   /// Emit IR to load a private name.
   /// \param from value to perform the lookup on.

@@ -66,6 +66,22 @@ SHLegacyValue _interpreter_create_object_from_buffer_with_parent(
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset);
 
+/// Wrapper around Interpreter::createObjectFromBuffer.
+SHLegacyValue _interpreter_create_typed_object_from_buffer(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
+
+/// Wrapper around Interpreter::createObjectFromBuffer for non-enumerable.
+SHLegacyValue _interpreter_create_typed_non_enum_object_from_buffer(
+    SHRuntime *shr,
+    SHCodeBlock *codeBlock,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
+
 /// Wrapper around Interpreter::createArrayFromBuffer.
 SHLegacyValue _interpreter_create_array_from_buffer(
     SHRuntime *shr,

@@ -552,4 +552,61 @@ TEST_F(HiddenClassTest, ReservedSlots) {
           JSObject::numOverlapSlots<HostObject>()));
 }
 
+TEST_F(HiddenClassTest, TypedObjectTest) {
+  struct : public Locals {
+    PinnedValue<HiddenClass> hc;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  Handle<SymbolID> aHnd = *runtime.getIdentifierTable().getSymbolHandle(
+      runtime, createASCIIRef("a"));
+
+  lv.hc = vmcast<HiddenClass>(HiddenClass::createForTypedObject(runtime, 2));
+  // Shouldn't do anything, the rest of the test should run.
+  lv.hc->clearPropertyMap(runtime.getHeap());
+
+  EXPECT_FALSE(lv.hc->isDictionary());
+  EXPECT_EQ(0, lv.hc->getNumProperties());
+
+  HiddenClass::addNewTypedPrivateProperty(lv.hc, runtime);
+  EXPECT_EQ(1, lv.hc->getNumProperties());
+
+  {
+    // Ensure there's nothing in the property map.
+    uint32_t count = 0;
+    HiddenClass::forEachProperty(
+        lv.hc, runtime, [&count](SymbolID, NamedPropertyDescriptor) {
+          ++count;
+        });
+    EXPECT_EQ(0, count);
+  }
+
+  HiddenClass::addNewTypedPublicProperty(
+      lv.hc, runtime, *aHnd, /* propertiesEnumerable */ true);
+  EXPECT_EQ(2, lv.hc->getNumProperties());
+  {
+    // Ensure there's just one symbol.
+    uint32_t count = 0;
+    HiddenClass::forEachProperty(
+        lv.hc,
+        runtime,
+        [&count, &aHnd](SymbolID name, NamedPropertyDescriptor desc) {
+          EXPECT_EQ(name, *aHnd);
+          EXPECT_TRUE(desc.flags.enumerable);
+          EXPECT_FALSE(desc.flags.writable);
+          EXPECT_FALSE(desc.flags.configurable);
+          ++count;
+        });
+    EXPECT_EQ(1, count);
+  }
+
+  // Make sure we can find the property.
+  {
+    NamedPropertyDescriptor desc;
+    auto pos = HiddenClass::findProperty(
+        createPseudoHandle(*lv.hc), runtime, *aHnd, desc);
+    EXPECT_TRUE(pos.hasValue());
+  }
+}
+
 } // namespace

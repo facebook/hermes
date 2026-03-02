@@ -51,6 +51,7 @@ set(RTSources
   MarkBitArrayNCTest.cpp
   ObjectModelTest.cpp
   OperationsTest.cpp
+  OrderedHashMapTest.cpp
   PredefinedStringsTest.cpp
   PropertyCacheTest.cpp
   ProfileGeneratorTest.cpp

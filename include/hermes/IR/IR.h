@@ -1243,6 +1243,36 @@ class LiteralString : public Literal, public llvh::FoldingSetNode {
   }
 };
 
+/// Typed private property name.
+class LiteralPrivateName : public Literal, public llvh::FoldingSetNode {
+  LiteralPrivateName(const LiteralPrivateName &) = delete;
+  void operator=(const LiteralPrivateName &) = delete;
+  Identifier value;
+
+ public:
+  Identifier getValue() const {
+    return value;
+  }
+
+  explicit LiteralPrivateName(Identifier val)
+      : Literal(ValueKind::LiteralPrivateNameKind), value(val) {
+    // Use 'any' because there's no runtime representation.
+    setType(Type::createAnyType());
+  }
+
+  static void Profile(llvh::FoldingSetNodeID &ID, Identifier value) {
+    ID.AddPointer(value.getUnderlyingPointer());
+  }
+
+  void Profile(llvh::FoldingSetNodeID &ID) const {
+    LiteralPrivateName::Profile(ID, value);
+  }
+
+  static bool classof(const Value *V) {
+    return V->getKind() == ValueKind::LiteralPrivateNameKind;
+  }
+};
+
 class LiteralBool : public Literal {
   LiteralBool(const LiteralBool &) = delete;
   void operator=(const LiteralBool &) = delete;
@@ -2552,6 +2582,7 @@ class Module : public Value {
   ValueOFS<LiteralNumber> literalNumbers_{};
   ValueOFS<LiteralBigInt> literalBigInts_{};
   ValueOFS<LiteralString> literalStrings_{};
+  ValueOFS<LiteralPrivateName> literalPrivateNames_{};
   ValueOFS<GlobalObjectProperty> globalProperties_{};
   ValueOFS<LiteralBuiltinIdx> literalBuiltinIdxs_{};
   ValueOFS<LiteralIRType> literalIRTypes_{};
@@ -2707,6 +2738,9 @@ class Module : public Value {
 
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(Identifier value);
+
+  /// Create a new literal private name of value \p value.
+  LiteralPrivateName *getLiteralPrivateName(Identifier value);
 
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);

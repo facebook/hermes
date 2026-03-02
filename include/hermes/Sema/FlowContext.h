@@ -170,8 +170,15 @@ class Type {
   /// JS source.
   ESTree::Node *node = nullptr;
 
+  /// Whether this type is a "looping" type,
+  /// and should be treated specially when used in a union.
+  bool isLooping = false;
+
   explicit Type(TypeInfo *info = nullptr, ESTree::Node *node = nullptr)
       : info(info), node(node) {}
+
+  /// \return a string representation of the type suitable for error messages.
+  std::string messageString() const;
 };
 
 class SingletonType : public TypeInfo {
@@ -197,6 +204,7 @@ class SingletonType : public TypeInfo {
   }
   /// Calculate the type-specific hash.
   unsigned _hashImpl() const {
+    assert(getKind() != TypeKind::Generic && "generic type is not hashable");
     return (unsigned)getKind();
   }
 };
@@ -509,7 +517,14 @@ class BaseFunctionType : public TypeInfo {
 
 class TypedFunctionType : public BaseFunctionType {
  public:
-  using Param = std::pair<Identifier, Type *>;
+  struct Param {
+    /// Name of the parameter.
+    Identifier name;
+    /// Type of the parameter.
+    Type *type;
+    /// Whether the parameter was declared as optional.
+    bool optional;
+  };
 
  private:
   /// Result type.
@@ -682,12 +697,20 @@ class ClassType : public TypeWithId {
     /// subclasses are processed.
     bool overridden{false};
 
+    /// Whether this is a private field for this class.
+    bool isPrivate;
+
     Field(
         Identifier name,
         Type *type,
         size_t layoutSlotIR,
+        bool isPrivate,
         ESTree::MethodDefinitionNode *method = nullptr)
-        : name(name), type(type), layoutSlotIR(layoutSlotIR), method(method) {}
+        : name(name),
+          type(type),
+          layoutSlotIR(layoutSlotIR),
+          method(method),
+          isPrivate(isPrivate) {}
 
     bool isMethod() const {
       return method != nullptr;
@@ -735,6 +758,13 @@ class ClassType : public TypeWithId {
   /// This also means we can query which class the field exists on easily.
   /// Use a MapVector to make sure it's deterministic to iterate.
   llvh::SmallMapVector<Identifier, FieldLookupEntry, 4> fieldNameMap_{};
+  /// Map from private field name to index in fields_.
+  /// Contains all private fields in this class ONLY (never inherited).
+  /// To know how many fields to allocate for private properties, you must
+  /// also account for all ancestor classes in IRGen (requires iterating through
+  /// superclasses and counting all private fields).
+  /// Use a MapVector to make sure it's deterministic to iterate.
+  llvh::SmallMapVector<Identifier, size_t, 4> privateFieldNameMap_{};
 
   /// Super class, nullptr if this class doesn't extend anything.
   Type *superClass_ = nullptr;
@@ -789,13 +819,25 @@ class ClassType : public TypeWithId {
     return llvh::cast_or_null<ClassType>(
         homeObjectType_ ? homeObjectType_->info : nullptr);
   }
+  /// \return the public field name lookup table.
   const llvh::SmallMapVector<Identifier, FieldLookupEntry, 4> &getFieldNameMap()
       const {
     assert(isInitialized());
     return fieldNameMap_;
   }
-  /// Return the lookup entry of a field, None if it doesn't exist.
-  hermes::OptValue<FieldLookupEntry> findField(Identifier id) const;
+  /// \return the private field name lookup table.
+  const llvh::SmallMapVector<Identifier, size_t, 4> &getPrivateFieldNameMap()
+      const {
+    assert(isInitialized());
+    return privateFieldNameMap_;
+  }
+  /// Lookup a field on this class (includes ancestors).
+  /// \return the lookup entry of a field, None if it doesn't exist.
+  hermes::OptValue<FieldLookupEntry> findPublicField(Identifier id) const;
+
+  /// Lookup an own private field on this class.
+  /// \return the lookup entry of a field, None if it doesn't exist.
+  hermes::OptValue<FieldLookupEntry> findPrivateField(Identifier id);
 
   Type *getSuperClass() const {
     assert(isInitialized());

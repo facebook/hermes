@@ -314,7 +314,7 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
 
   /// Run typechecking on the body of a class that we already have the type for.
   void visitClassNode(
-      ESTree::Node *classNode,
+      ESTree::ClassLikeNode *classNode,
       ESTree::ClassBodyNode *body,
       Type *classType);
 
@@ -401,6 +401,10 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// Recurses through all structural types, stops on nominal types because they
   /// can be compared easily, and don't count as looping union arms.
   class FindLoopingTypes;
+
+  /// Finds looping types reachable from \p type,
+  /// provided all forward generics have been instantiated.
+  void findLoopingTypes(Type *type);
 
   /// Parse all sema declarations type annotations and associate them
   /// with the declarations.
@@ -627,14 +631,13 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
       sema::LexicalScope *scope);
 
   /// If necessary, specialize and typecheck the specialization of a generic
-  /// function.
-  /// \param node the call expression passing the type arguments
+  /// function or class.
   /// \param errorRange used for reporting errors when binding fails.
   /// \param callee the name of the generic being called
-  /// \param oldDecl the original Decl for the non-specialized generic function
-  /// \return the new Decl for the specialization of the function,
-  ///   nullptr on error.
-  sema::Decl *specializeGenericWithParsedTypes(
+  /// \param oldDecl the original Decl for the non-specialized generic
+  /// \return the new Decl for the specialization of the function or class,
+  ///   and the specialization itself, nullptrs on error.
+  std::pair<sema::Decl *, ESTree::Node *> specializeGenericWithParsedTypes(
       sema::Decl *oldDecl,
       SMRange errorRange,
       llvh::ArrayRef<Type *> typeArgTypes,
@@ -757,6 +760,16 @@ class FlowChecker : public ESTree::RecursionDepthTracker<FlowChecker> {
   /// \return the identifier that represents the property key, or nullptr if
   ///   the key cannot be converted.
   UniqueString *propertyKeyAsIdentifier(ESTree::Node *Key);
+
+  /// Try to find a an enclosing class.
+  /// Private names can only be used in lexical descendants of the class
+  /// in which they are declared, so this function lets us check that the
+  /// private name is currently visible.
+  ///
+  /// \param classType the LHS of the member expression we're doing the lookup
+  ///   on.
+  /// \return true if the class is found, false otherwise.
+  bool classTypeIsEnclosing(ClassType *classType);
 };
 
 class FlowChecker::FunctionContext {
@@ -767,6 +780,7 @@ class FlowChecker::FunctionContext {
 
  public:
   /// The DeclCollector associated with this function.
+  /// nullptr if this function has no declCollector associated.
   const sema::DeclCollector *const declCollector;
 
   /// The external signature of the current function. If nullptr, this is the
@@ -781,6 +795,10 @@ class FlowChecker::FunctionContext {
   /// FunctionType::thisParamType, because of arrow functions.
   Type *const thisParamType;
 
+  /// The type of "new.target". If nullptr, this is a global function.
+  /// Depending on the compilation mode, usages may be invalid.
+  Type *const newTargetType;
+
   FunctionContext(const FunctionContext &) = delete;
   void operator=(const FunctionContext &) = delete;
 
@@ -789,21 +807,31 @@ class FlowChecker::FunctionContext {
       FlowChecker &outer,
       ESTree::FunctionLikeNode *declCollectorNode,
       Type *functionType,
-      Type *thisParamType)
+      Type *thisParamType,
+      Type *newTargetType)
       : outer_(outer),
         prevContext_(outer.curFunctionContext_),
         declCollector(
-            outer.declCollectorMap_.find(declCollectorNode)->second.get()),
+            declCollectorNode
+                ? outer.declCollectorMap_.find(declCollectorNode)->second.get()
+                : nullptr),
         functionType(functionType),
-        thisParamType(thisParamType) {
+        thisParamType(thisParamType),
+        newTargetType(newTargetType) {
     assert(
+        !declCollectorNode ||
         outer.declCollectorMap_.count(declCollectorNode) &&
-        "no declCollector for this node");
+            "no declCollector for this node");
     outer.curFunctionContext_ = this;
   }
 
   ~FunctionContext() {
     outer_.curFunctionContext_ = prevContext_;
+  }
+
+  /// \return the previous FunctionContext.
+  FunctionContext *getPreviousContext() const {
+    return prevContext_;
   }
 };
 
@@ -815,16 +843,25 @@ class FlowChecker::ClassContext {
   /// The previous context, restored on destruction.
   ClassContext *const prevContext_;
 
+  /// The type of the field initializer function.
+  Type *fieldInitFunctionType_ = nullptr;
+
  public:
   Type *const classType;
+
+  ESTree::ClassLikeNode *const node;
 
   ClassContext(const ClassContext &) = delete;
   void operator=(const ClassContext &) = delete;
 
-  ClassContext(FlowChecker &outer, Type *const classType)
+  ClassContext(
+      FlowChecker &outer,
+      Type *const classType,
+      ESTree::ClassLikeNode *node)
       : outer_(outer),
         prevContext_(outer.curClassContext_),
-        classType(classType) {
+        classType(classType),
+        node(node) {
     outer.curClassContext_ = this;
   }
 
@@ -832,8 +869,23 @@ class FlowChecker::ClassContext {
     outer_.curClassContext_ = prevContext_;
   }
 
-  ClassType *getClassTypeInfo() {
+  ClassType *getClassTypeInfo() const {
     return llvh::cast<ClassType>(classType->info);
+  }
+
+  /// \return the fieldInitFunctionType and create it if it doesn't exist.
+  Type *getOrCreateFieldInitFunctionType() {
+    if (!fieldInitFunctionType_) {
+      fieldInitFunctionType_ = outer_.flowContext_.createType(
+          outer_.flowContext_.createFunction(
+              outer_.flowContext_.getVoid(), classType, {}, false, false),
+          node);
+    }
+    return fieldInitFunctionType_;
+  }
+
+  ClassContext *getPrevContext() const {
+    return prevContext_;
   }
 };
 
@@ -858,18 +910,20 @@ Type *FlowChecker::processFunctionTypeAnnotation(
       if (param->_optional) {
         sm_.error(param->getSourceRange(), "unsupported optional parameter");
       }
-      paramsList.emplace_back(
-          Identifier::getFromPointer(id ? id->_name : nullptr),
-          param->_typeAnnotation ? cb(param->_typeAnnotation) : nullptr);
+      paramsList.push_back(
+          {Identifier::getFromPointer(id ? id->_name : nullptr),
+           param->_typeAnnotation ? cb(param->_typeAnnotation) : nullptr,
+           param->_optional});
     } else {
       sm_.warning(
           n.getSourceRange(),
           "ft: typing of pattern parameters not implemented, :any assumed");
       size_t idx = paramsList.size();
-      paramsList.emplace_back(
-          astContext_.getIdentifier(
-              (llvh::Twine("?param_") + llvh::Twine(idx)).str()),
-          flowContext_.getAny());
+      paramsList.push_back(
+          {astContext_.getIdentifier(
+               (llvh::Twine("?param_") + llvh::Twine(idx)).str()),
+           flowContext_.getAny(),
+           false});
     }
   }
 

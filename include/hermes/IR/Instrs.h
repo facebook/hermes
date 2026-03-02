@@ -1979,6 +1979,53 @@ class StoreOwnPrivateFieldInst : public Instruction {
   }
 };
 
+class PrivateBrandCheckInst : public Instruction {
+  PrivateBrandCheckInst(const PrivateBrandCheckInst &) = delete;
+  void operator=(const PrivateBrandCheckInst &) = delete;
+
+ public:
+  enum { ObjectIdx, BrandIdx };
+  explicit PrivateBrandCheckInst(Value *object, Value *brand)
+      : Instruction(ValueKind::PrivateBrandCheckInstKind) {
+    assert(
+        brand->getType().isPrivateNameType() &&
+        "brand must be a private name type");
+    setType(Type::createNoType());
+    pushOperand(object);
+    pushOperand(brand);
+  }
+
+  explicit PrivateBrandCheckInst(
+      const PrivateBrandCheckInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  Value *getObject() const {
+    return getOperand(ObjectIdx);
+  }
+  Value *getBrand() const {
+    return getOperand(BrandIdx);
+  }
+
+  static bool hasOutput() {
+    return false;
+  }
+  static bool isTyped() {
+    return false;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    // The instruction may throw (TypeError if brand not found) and reads the
+    // heap (to check if brand is present).
+    return SideEffect{}.setThrow().setReadHeap();
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::PrivateBrandCheckInstKind;
+  }
+};
+
 class AddOwnPrivateFieldInst : public Instruction {
   AddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &) = delete;
   void operator=(const AddOwnPrivateFieldInst &) = delete;
@@ -2419,6 +2466,152 @@ class LIRAllocObjectFromBufferInst : public Instruction {
   }
 };
 
+class LIRAllocTypedObjectFromBufferInst : public Instruction {
+  LIRAllocTypedObjectFromBufferInst(const LIRAllocTypedObjectFromBufferInst &) =
+      delete;
+  void operator=(const LIRAllocTypedObjectFromBufferInst &) = delete;
+
+ public:
+  enum { ParentObjectIdx, FirstKeyIdx, _LastIdx };
+
+  using ObjectPropertyMap =
+      llvh::SmallVector<std::pair<Literal *, Literal *>, 4>;
+
+  /// \sizeHint is a hint for the VM regarding the final size of this object.
+  /// It is the number of entries in the object declaration including
+  /// non-literal ones. \prop_map is all the literal key/value entries.
+  explicit LIRAllocTypedObjectFromBufferInst(
+      Value *parentObject,
+      const ObjectPropertyMap &propMap)
+      : Instruction(ValueKind::LIRAllocTypedObjectFromBufferInstKind) {
+    setType(*getInherentTypeImpl());
+    pushOperand(parentObject);
+    for (size_t i = 0; i < propMap.size(); i++) {
+      pushOperand(propMap[i].first);
+      pushOperand(propMap[i].second);
+    }
+  }
+  explicit LIRAllocTypedObjectFromBufferInst(
+      const LIRAllocTypedObjectFromBufferInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  Value *getParentObject() const {
+    return getOperand(ParentObjectIdx);
+  }
+
+  unsigned getKeyValuePairCount() const {
+    return (getNumOperands() - FirstKeyIdx) / 2;
+  }
+
+  /// \return true if operand \p i represents a key.
+  bool isKeyIndex(size_t i) const {
+    // Alternates key and value starting at FirstKeyIdx.
+    return ((i - FirstKeyIdx) % 2) == 0;
+  }
+
+  /// Return the \index 'd sequential literal key/value pair.
+  std::pair<Literal *, Literal *> getKeyValuePair(unsigned index) const {
+    return std::pair<Literal *, Literal *>{
+        cast<Literal>(getOperand(2 * index + FirstKeyIdx)),
+        cast<Literal>(getOperand(1 + 2 * index + FirstKeyIdx))};
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LIRAllocTypedObjectFromBufferInstKind;
+  }
+};
+
+class LIRAllocTypedNonEnumObjectFromBufferInst : public Instruction {
+  LIRAllocTypedNonEnumObjectFromBufferInst(
+      const LIRAllocTypedNonEnumObjectFromBufferInst &) = delete;
+  void operator=(const LIRAllocTypedNonEnumObjectFromBufferInst &) = delete;
+
+ public:
+  enum { ParentObjectIdx, FirstKeyIdx, _LastIdx };
+
+  using ObjectPropertyMap =
+      llvh::SmallVector<std::pair<Literal *, Literal *>, 4>;
+
+  explicit LIRAllocTypedNonEnumObjectFromBufferInst(
+      Value *parentObject,
+      const ObjectPropertyMap &propMap)
+      : Instruction(ValueKind::LIRAllocTypedNonEnumObjectFromBufferInstKind) {
+    setType(*getInherentTypeImpl());
+    pushOperand(parentObject);
+    for (size_t i = 0; i < propMap.size(); i++) {
+      pushOperand(propMap[i].first);
+      pushOperand(propMap[i].second);
+    }
+  }
+  explicit LIRAllocTypedNonEnumObjectFromBufferInst(
+      const LIRAllocTypedNonEnumObjectFromBufferInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : Instruction(src, operands) {}
+
+  static llvh::Optional<Type> getInherentTypeImpl() {
+    return Type::createObject();
+  }
+
+  static bool hasOutput() {
+    return true;
+  }
+  static bool isTyped() {
+    return true;
+  }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  SideEffect getSideEffectImpl() const {
+    return {};
+  }
+
+  Value *getParentObject() const {
+    return getOperand(ParentObjectIdx);
+  }
+
+  unsigned getKeyValuePairCount() const {
+    return (getNumOperands() - FirstKeyIdx) / 2;
+  }
+
+  /// \return true if operand \p i represents a key.
+  bool isKeyIndex(size_t i) const {
+    return ((i - FirstKeyIdx) % 2) == 0;
+  }
+
+  /// Return the \index 'd sequential literal key/value pair.
+  std::pair<Literal *, Literal *> getKeyValuePair(unsigned index) const {
+    return std::pair<Literal *, Literal *>{
+        cast<Literal>(getOperand(2 * index + FirstKeyIdx)),
+        cast<Literal>(getOperand(1 + 2 * index + FirstKeyIdx))};
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::LIRAllocTypedNonEnumObjectFromBufferInstKind;
+  }
+};
+
 class BaseAllocObjectLiteralInst : public Instruction {
   BaseAllocObjectLiteralInst(const BaseAllocObjectLiteralInst &) = delete;
   void operator=(const BaseAllocObjectLiteralInst &) = delete;
@@ -2542,6 +2735,36 @@ class AllocTypedObjectInst : public BaseAllocObjectLiteralInst {
   static bool classof(const Value *V) {
     ValueKind kind = V->getKind();
     return kind == ValueKind::AllocTypedObjectInstKind;
+  }
+};
+
+class AllocTypedNonEnumObjectInst : public BaseAllocObjectLiteralInst {
+  AllocTypedNonEnumObjectInst(const AllocTypedNonEnumObjectInst &) = delete;
+  void operator=(const AllocTypedNonEnumObjectInst &) = delete;
+
+ public:
+  explicit AllocTypedNonEnumObjectInst(
+      Value *parentObject,
+      const ObjectPropertyMap &propMap)
+      : BaseAllocObjectLiteralInst(
+            ValueKind::AllocTypedNonEnumObjectInstKind,
+            parentObject,
+            propMap) {}
+  explicit AllocTypedNonEnumObjectInst(
+      const AllocTypedNonEnumObjectInst *src,
+      llvh::ArrayRef<Value *> operands)
+      : BaseAllocObjectLiteralInst(src, operands) {}
+
+  static bool isTyped() {
+    return true;
+  }
+  bool acceptsEmptyTypeImpl() const {
+    return true;
+  }
+
+  static bool classof(const Value *V) {
+    ValueKind kind = V->getKind();
+    return kind == ValueKind::AllocTypedNonEnumObjectInstKind;
   }
 };
 
@@ -5297,9 +5520,12 @@ class PrLoadInst : public Instruction {
   explicit PrLoadInst(
       Value *object,
       LiteralNumber *propIndex,
-      LiteralString *propName,
+      Literal *propName,
       Type checkedType)
       : Instruction(ValueKind::PrLoadInstKind) {
+    assert(
+        llvh::isa<LiteralString>(propName) ||
+        llvh::isa<LiteralPrivateName>(propName));
     setType(checkedType);
     pushOperand(object);
     pushOperand(propIndex);
@@ -5343,9 +5569,12 @@ class PrStoreInst : public Instruction {
       Value *storedValue,
       Value *object,
       LiteralNumber *propIndex,
-      LiteralString *propName,
+      Literal *propName,
       LiteralBool *nonPointer)
       : Instruction(ValueKind::PrStoreInstKind) {
+    assert(
+        llvh::isa<LiteralString>(propName) ||
+        llvh::isa<LiteralPrivateName>(propName));
     setType(Type::createNoType());
     pushOperand(storedValue);
     pushOperand(object);

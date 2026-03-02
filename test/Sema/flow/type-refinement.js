@@ -74,34 +74,35 @@ function retval(c: C | null): C {
 // CHECK-NEXT:            hoistedFunction call
 // CHECK-NEXT:            hoistedFunction assign
 // CHECK-NEXT:            hoistedFunction retval
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.5
 // CHECK-NEXT:                Decl %d.8 'cur' Parameter : %union.4
 // CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.10 'cur' Parameter : %union.4
 // CHECK-NEXT:                Decl %d.11 'bar' Var : %function.10
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:                hoistedFunction bar
-// CHECK-NEXT:                Scope %s.6
-// CHECK-NEXT:            Func strict
 // CHECK-NEXT:                Scope %s.7
+// CHECK-NEXT:            Func strict
+// CHECK-NEXT:                Scope %s.8
 // CHECK-NEXT:                    Decl %d.13 'c' Parameter : %class.2
 // CHECK-NEXT:                    Decl %d.14 'cv' Parameter : %union.9
 // CHECK-NEXT:                    Decl %d.15 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:            Scope %s.9
 // CHECK-NEXT:                Decl %d.16 'cur' Parameter : %union.4
 // CHECK-NEXT:                Decl %d.17 'a' Let : %union.4
 // CHECK-NEXT:                Decl %d.18 'c' Let : %class.2
 // CHECK-NEXT:                Decl %d.19 'arguments' Var Arguments
-// CHECK-NEXT:                Scope %s.9
+// CHECK-NEXT:                Scope %s.10
 // CHECK-NEXT:                    Decl %d.20 'b' Let : %class.2
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.10
+// CHECK-NEXT:            Scope %s.11
 // CHECK-NEXT:                Decl %d.21 'c' Parameter : %union.4
 // CHECK-NEXT:                Decl %d.22 'arguments' Var Arguments
 
@@ -111,7 +112,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'C' [D:E:%d.2 'C']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.4
@@ -142,7 +143,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                BlockStatement
 // CHECK-NEXT:                            IfStatement
 // CHECK-NEXT:                                Id 'cur' [D:E:%d.10 'cur'] : %union.4
-// CHECK-NEXT:                                BlockStatement Scope %s.6
+// CHECK-NEXT:                                BlockStatement Scope %s.7
 // CHECK-NEXT:                                    ExpressionStatement
 // CHECK-NEXT:                                        CallExpression : void
 // CHECK-NEXT:                                            Id 'bar' [D:E:%d.11 'bar'] : %function.10
@@ -163,7 +164,7 @@ function retval(c: C | null): C {
 // CHECK-NEXT:                                    Id 'c' [D:E:%d.18 'c']
 // CHECK-NEXT:                            IfStatement
 // CHECK-NEXT:                                Id 'cur' [D:E:%d.16 'cur'] : %union.4
-// CHECK-NEXT:                                BlockStatement Scope %s.9
+// CHECK-NEXT:                                BlockStatement Scope %s.10
 // CHECK-NEXT:                                    VariableDeclaration
 // CHECK-NEXT:                                        VariableDeclarator
 // CHECK-NEXT:                                            ImplicitCheckedCast : %class.2

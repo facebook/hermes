@@ -136,7 +136,8 @@ bool FlowChecker::run(ESTree::ProgramNode *rootNode) {
     return false;
   }
 
-  FunctionContext globalFunc(*this, rootNode, nullptr, flowContext_.getAny());
+  FunctionContext globalFunc(
+      *this, rootNode, nullptr, flowContext_.getAny(), flowContext_.getVoid());
   ScopeRAII scope(*this);
   declareNativeTypes(rootNode->getScope());
   if (!resolveScopeTypesAndAnnotate(rootNode, rootNode->getScope()))
@@ -198,7 +199,8 @@ void FlowChecker::visitNonGenericFunctionDeclaration(
     thisType = typed->getThisParam();
 
   setNodeType(node, declType);
-  FunctionContext functionContext(*this, node, declType, thisType);
+  FunctionContext functionContext(
+      *this, node, declType, thisType, flowContext_.getVoid());
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -247,7 +249,8 @@ void FlowChecker::visit(ESTree::FunctionExpressionNode *node) {
   if (auto *typed = llvh::dyn_cast<TypedFunctionType>(ftype->info))
     thisType = typed->getThisParam();
 
-  FunctionContext functionContext(*this, node, ftype, thisType);
+  FunctionContext functionContext(
+      *this, node, ftype, thisType, flowContext_.getVoid());
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -267,7 +270,11 @@ void FlowChecker::visit(ESTree::ArrowFunctionExpressionNode *node) {
   setNodeType(node, ftype);
 
   FunctionContext functionContext(
-      *this, node, ftype, curFunctionContext_->thisParamType);
+      *this,
+      node,
+      ftype,
+      curFunctionContext_->thisParamType,
+      curFunctionContext_->newTargetType);
   visitFunctionLike(node, node->_body, node->_params);
 }
 
@@ -313,12 +320,23 @@ class FlowChecker::ParseClassType {
       nextFieldLayoutSlotIR = superClassTypeInfo->getFieldNameMap().size();
       nextMethodLayoutSlotIR =
           superClassTypeInfo->getHomeObjectTypeInfo()->getFieldNameMap().size();
+      for (auto *cur = superClassTypeInfo; cur;
+           cur = cur->getSuperClassInfo()) {
+        nextFieldLayoutSlotIR += cur->getPrivateFieldNameMap().size();
+        nextMethodLayoutSlotIR +=
+            cur->getHomeObjectTypeInfo()->getPrivateFieldNameMap().size();
+      }
     }
 
     auto *classBody = llvh::cast<ESTree::ClassBodyNode>(body);
     for (ESTree::Node &node : classBody->_body) {
       if (auto *prop = llvh::dyn_cast<ESTree::ClassPropertyNode>(&node)) {
         Type *fieldType = parseClassProperty(prop);
+        outer_.setNodeType(&node, fieldType);
+      } else if (
+          auto *prop =
+              llvh::dyn_cast<ESTree::ClassPrivatePropertyNode>(&node)) {
+        Type *fieldType = parseClassPrivateProperty(prop);
         outer_.setNodeType(&node, fieldType);
       } else if (
           auto *method = llvh::dyn_cast<ESTree::MethodDefinitionNode>(&node)) {
@@ -406,35 +424,80 @@ class FlowChecker::ParseClassType {
   }
 
   Type *parseClassProperty(ESTree::ClassPropertyNode *prop) {
-    if (prop->_computed || prop->_static || prop->_declare) {
+    if (prop->_computed || prop->_declare || prop->_optional ||
+        prop->_variance) {
+      outer_.sm_.error(
+          prop->getSourceRange(), "ft: unsupported property attributes");
+      return outer_.flowContext_.getAny();
+    }
+    return parseClassPropertyImpl(
+        prop, prop->_key, prop->_value, prop->_static, prop->_typeAnnotation);
+  }
+
+  Type *parseClassPrivateProperty(ESTree::ClassPrivatePropertyNode *prop) {
+    if (prop->_declare || prop->_optional || prop->_variance) {
+      outer_.sm_.error(
+          prop->getSourceRange(), "ft: unsupported property attributes");
+      return outer_.flowContext_.getAny();
+    }
+    return parseClassPropertyImpl(
+        prop, prop->_key, prop->_value, prop->_static, prop->_typeAnnotation);
+  }
+
+  Type *parseClassPropertyImpl(
+      ESTree::Node *prop,
+      ESTree::Node *key,
+      ESTree::Node *value,
+      bool isStatic,
+      ESTree::Node *typeAnnotation) {
+    if (isStatic) {
       outer_.sm_.error(
           prop->getSourceRange(), "ft: unsupported property attributes");
       return outer_.flowContext_.getAny();
     }
 
-    if (!llvh::isa<ESTree::IdentifierNode>(prop->_key)) {
+    bool isPrivate = llvh::isa<ESTree::ClassPrivatePropertyNode>(prop);
+
+    if (!llvh::isa<ESTree::IdentifierNode>(key)) {
       outer_.sm_.error(
           prop->getSourceRange(), "ft: property name must be an identifier");
       return outer_.flowContext_.getAny();
     }
 
-    auto *id = llvh::cast<ESTree::IdentifierNode>(prop->_key);
+    auto *id = llvh::cast<ESTree::IdentifierNode>(key);
+    Identifier name = isPrivate
+        ? outer_.astContext_.getPrivateNameIdentifier(id->_name)
+        : Identifier::getFromPointer(id->_name);
 
     Type *fieldType;
-    if (prop->_typeAnnotation) {
+    if (typeAnnotation) {
       fieldType = outer_.parseTypeAnnotation(
-          llvh::cast<ESTree::TypeAnnotationNode>(prop->_typeAnnotation)
+          llvh::cast<ESTree::TypeAnnotationNode>(typeAnnotation)
               ->_typeAnnotation);
+    } else if ((llvh::isa<ESTree::NullLiteralNode>(value) ||
+                llvh::isa<ESTree::NumericLiteralNode>(value) ||
+                llvh::isa<ESTree::BooleanLiteralNode>(value) ||
+                llvh::isa<ESTree::StringLiteralNode>(value) ||
+                llvh::isa<ESTree::RegExpLiteralNode>(value) ||
+                llvh::isa<ESTree::BigIntLiteralNode>(value))) {
+      // TODO: Figure out a more general-purpose way to do inference here.
+      // We likely need to share some of the logic of AnnotateScopeDecls,
+      // given that there's IDZ considerations during the inference of each
+      // property's initializer.
+      outer_.visitedInits_.insert(value);
+      outer_.visitExpression(value, prop, nullptr);
+      fieldType = outer_.getNodeTypeOrAny(value);
     } else {
+      // Unable to infer, just assume 'any'.
       fieldType = outer_.flowContext_.getAny();
     }
 
     // Check if the field is inherited, and reuse the index.
+    // Private fields are never inherited.
     const ClassType::Field *superField = nullptr;
-    if (superClassType) {
+    if (!isPrivate && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-      auto superIt =
-          superClassTypeInfo->findField(Identifier::getFromPointer(id->_name));
+      auto superIt = superClassTypeInfo->findPublicField(name);
       if (superIt) {
         // Field is inherited.
         superField = superIt->getField();
@@ -447,27 +510,26 @@ class FlowChecker::ParseClassType {
     }
 
     // Check if the field is already declared.
-    auto [it, inserted] = fieldNames.try_emplace(id->_name, prop);
+    auto [it, inserted] =
+        fieldNames.try_emplace(name.getUnderlyingPointer(), prop);
     if (!inserted) {
       outer_.sm_.error(
-          id->getStartLoc(),
-          "ft: field " + id->_name->str() + " already declared");
+          id->getStartLoc(), "ft: field " + name.str() + " already declared");
       outer_.sm_.note(
           it->second->getSourceRange(),
-          "ft: previous declaration of " + id->_name->str());
+          "ft: previous declaration of " + name.str());
       return outer_.flowContext_.getAny();
     }
 
     if (superField) {
+      assert(!isPrivate);
       fields.emplace_back(
-          Identifier::getFromPointer(id->_name),
+          name,
           fieldType,
-          superField->layoutSlotIR);
+          superField->layoutSlotIR,
+          /* isPrivate */ false);
     } else {
-      fields.emplace_back(
-          Identifier::getFromPointer(id->_name),
-          fieldType,
-          nextFieldLayoutSlotIR++);
+      fields.emplace_back(name, fieldType, nextFieldLayoutSlotIR++, isPrivate);
     }
 
     return fieldType;
@@ -484,6 +546,9 @@ class FlowChecker::ParseClassType {
           "ft: type parameters not supported directly on methods");
       return outer_.flowContext_.getAny();
     }
+
+    ESTree::PrivateNameNode *privateNameNode =
+        llvh::dyn_cast<ESTree::PrivateNameNode>(method->_key);
 
     if (method->_kind == outer_.kw_.identConstructor) {
       // Constructor
@@ -525,7 +590,15 @@ class FlowChecker::ParseClassType {
         return outer_.flowContext_.getAny();
       }
 
-      auto *id = llvh::cast<ESTree::IdentifierNode>(method->_key);
+      Identifier name;
+      if (privateNameNode) {
+        name = outer_.astContext_.getPrivateNameIdentifier(
+            llvh::cast<ESTree::IdentifierNode>(privateNameNode->_id)->_name);
+      } else {
+        name = Identifier::getFromPointer(
+            llvh::cast<ESTree::IdentifierNode>(method->_key)->_name);
+      }
+
       Type *methodType = outer_.parseFunctionType(
           fe->_params,
           fe->_returnType,
@@ -535,11 +608,12 @@ class FlowChecker::ParseClassType {
           classType);
 
       // Check if the method is inherited, and reuse the index.
+      // Private fields are never inherited.
       const ClassType::Field *superMethod = nullptr;
-      if (superClassType) {
+      if (!privateNameNode && superClassType) {
         auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-        auto superIt = superClassTypeInfo->getHomeObjectTypeInfo()->findField(
-            Identifier::getFromPointer(id->_name));
+        auto superIt =
+            superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
         if (superIt) {
           // Field is inherited.
           superMethod = superIt->getField();
@@ -551,29 +625,33 @@ class FlowChecker::ParseClassType {
       }
 
       // Check if the method is already declared.
-      auto [it, inserted] = methodNames.try_emplace(id->_name, method);
+      auto [it, inserted] =
+          methodNames.try_emplace(name.getUnderlyingPointer(), method);
       if (!inserted) {
         outer_.sm_.error(
-            id->getStartLoc(),
-            "ft: method " + id->_name->str() + " already declared");
+            method->_key->getStartLoc(),
+            "ft: method " + name.str() + " already declared");
         outer_.sm_.note(
             it->second->getSourceRange(),
-            "ft: previous declaration of " + id->_name->str());
+            "ft: previous declaration of " + name.str());
         return outer_.flowContext_.getAny();
       }
 
       if (superMethod) {
+        assert(privateNameNode == nullptr);
         methods.emplace_back(
-            Identifier::getFromPointer(id->_name),
+            name,
             methodType,
             superMethod->layoutSlotIR,
+            /* isPrivate */ false,
             method);
       } else {
+        // Private methods are not stored in the object,
+        // so they don't use a layout slot.
+        auto layoutSlotIR =
+            privateNameNode != nullptr ? 0 : nextMethodLayoutSlotIR++;
         methods.emplace_back(
-            Identifier::getFromPointer(id->_name),
-            methodType,
-            nextMethodLayoutSlotIR++,
-            method);
+            name, methodType, layoutSlotIR, privateNameNode != nullptr, method);
       }
 
       return methodType;
@@ -590,13 +668,13 @@ void FlowChecker::parseClassType(
 }
 
 void FlowChecker::visitClassNode(
-    ESTree::Node *classNode,
+    ESTree::ClassLikeNode *classNode,
     ESTree::ClassBodyNode *body,
     Type *classType) {
   assert(
       llvh::cast<ClassType>(classType->info)->isInitialized() &&
       "trying to typecheck uninitialized class");
-  ClassContext classContext(*this, classType);
+  ClassContext classContext(*this, classType, classNode);
   visitESTreeChildren(*this, body);
 }
 
@@ -672,32 +750,45 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
         *this,
         fe,
         curClassContext_->getClassTypeInfo()->getConstructorType(),
-        curClassContext_->classType);
+        curClassContext_->classType,
+        /* newTargetType */
+        curClassContext_->getClassTypeInfo()->getConstructorType());
     visitFunctionLike(fe, fe->_body, fe->_params);
   } else if (node->_key) {
-    auto *id = llvh::cast<ESTree::IdentifierNode>(node->_key);
-    // Cast must be valid because all methods were registered as
-    // FunctionType.
-    auto optField = curClassContext_->getClassTypeInfo()
-                        ->getHomeObjectTypeInfo()
-                        ->findField(Identifier::getFromPointer(id->_name));
+    Identifier name;
+    OptValue<ClassType::FieldLookupEntry> optField;
+    if (auto *privateName =
+            llvh::dyn_cast<ESTree::PrivateNameNode>(node->_key)) {
+      name = astContext_.getPrivateNameIdentifier(
+          llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
+      optField = curClassContext_->getClassTypeInfo()
+                     ->getHomeObjectTypeInfo()
+                     ->findPrivateField(name);
+    } else {
+      name = Identifier::getFromPointer(
+          llvh::cast<ESTree::IdentifierNode>(node->_key)->_name);
+      optField = curClassContext_->getClassTypeInfo()
+                     ->getHomeObjectTypeInfo()
+                     ->findPublicField(name);
+    }
     if (!optField.hasValue()) {
       // This only happens if the class failed to parse, avoid assertion
       // failures (defensive programming).
       sm_.error(
-          id->getSourceRange(),
-          llvh::Twine("ft: cannot find method: ") + id->_name->str());
+          node->_key->getSourceRange(),
+          llvh::Twine("ft: cannot find method: ") + name.str());
       return;
     }
     Type *funcType = optField->getField()->type;
 
     // Typecheck overriding methods.
+    // Private methods are not inherited, so they don't need to be checked.
     Type *superClassType =
         curClassContext_->getClassTypeInfo()->getSuperClass();
-    if (superClassType) {
+    if (!optField->getField()->isPrivate && superClassType) {
       auto *superClassTypeInfo = llvh::cast<ClassType>(superClassType->info);
-      auto superIt = superClassTypeInfo->getHomeObjectTypeInfo()->findField(
-          Identifier::getFromPointer(id->_name));
+      auto superIt =
+          superClassTypeInfo->getHomeObjectTypeInfo()->findPublicField(name);
       if (superIt) {
         auto *superMethod = superIt->getField();
         // Overriding method's function type must flow into the overridden
@@ -713,7 +804,11 @@ void FlowChecker::visit(ESTree::MethodDefinitionNode *node) {
     }
 
     FunctionContext functionContext(
-        *this, fe, funcType, curClassContext_->classType);
+        *this,
+        fe,
+        funcType,
+        curClassContext_->classType,
+        /* newTargetType */ flowContext_.getVoid());
     visitFunctionLike(fe, fe->_body, fe->_params);
   }
 }
@@ -849,7 +944,8 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       if (!cf.canFlow) {
         sm_.error(
             declarator->getSourceRange(),
-            "ft: incompatible initialization type");
+            "ft: incompatible initialization type: cannot assign " +
+                rt->messageString() + " to " + lt->messageString());
       } else {
         declarator->_init =
             implicitCheckedCast(declarator->_init, rtNarrow, cf);
@@ -862,7 +958,8 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
       if (!cf.canFlow) {
         sm_.error(
             declarator->getSourceRange(),
-            "ft: incompatible initialization type");
+            "ft: incompatible initialization type: cannot assign " +
+                rt->messageString() + " to " + lt->messageString());
       } else {
         declarator->_init = implicitCheckedCast(declarator->_init, lt, cf);
       }
@@ -872,7 +969,33 @@ void FlowChecker::visit(ESTree::VariableDeclarationNode *node) {
 
 void FlowChecker::visit(ESTree::ClassPropertyNode *node) {
   if (node->_value) {
-    visitExpression(node->_value, node, nullptr);
+    auto it = visitedInits_.find(node->_value);
+    if (it != visitedInits_.end()) {
+      // Already visited during inference.
+      visitedInits_.erase(it);
+    } else {
+      Type *fieldInitFuncType =
+          curClassContext_->getOrCreateFieldInitFunctionType();
+      FunctionContext fieldInitFuncContext{
+          *this,
+          /* declCollectorNode */ nullptr,
+          fieldInitFuncType,
+          llvh::cast<TypedFunctionType>(fieldInitFuncType->info)
+              ->getThisParam(),
+          /* newTargetType */ flowContext_.getVoid()};
+      visitExpression(node->_value, node, nullptr);
+    }
+
+    Type *lt = getNodeTypeOrAny(node);
+    Type *rt = getNodeTypeOrAny(node->_value);
+    CanFlowResult cf = canAFlowIntoB(rt, lt);
+    if (!cf.canFlow) {
+      sm_.error(node->getSourceRange(), "ft: incompatible initialization type");
+      return;
+    }
+    if (cf.needCheckedCast && compile_) {
+      node->_value = implicitCheckedCast(node->_value, lt, cf);
+    }
   }
 }
 
@@ -904,7 +1027,7 @@ void FlowChecker::visitFunctionLike(
         if (!paramType)
           paramType = flowContext_.getAny();
       } else if (typedFn && i < typedFn->getParams().size()) {
-        paramType = typedFn->getParams()[i].second;
+        paramType = typedFn->getParams()[i].type;
         ++i;
       } else {
         paramType = flowContext_.getAny();
@@ -948,11 +1071,13 @@ void FlowChecker::checkImplicitReturnType(ESTree::FunctionLikeNode *node) {
       sm_.error(
           llvh::cast<ESTree::TypeAnnotationNode>(retAnnotation)
               ->_typeAnnotation->getSourceRange(),
-          "ft: implicitly-returned 'undefined' incompatible with return type");
+          "ft: implicitly-returned 'undefined' incompatible with return type: " +
+              ftype->getReturnType()->messageString());
     } else {
       sm_.error(
           node->getStartLoc(),
-          "ft: implicitly-returned 'undefined' incompatible with return type");
+          "ft: implicitly-returned 'undefined' incompatible with return type: " +
+              ftype->getReturnType()->messageString());
     }
   }
 }
@@ -1044,6 +1169,18 @@ class FlowChecker::AnnotateScopeDecls {
                   llvh::cast<ESTree::TypeAnnotationNode>(arr->_typeAnnotation)
                       ->_typeAnnotation);
               annotateDestructuringTarget(declarator, arr, type);
+              continue;
+            }
+          } else if (
+              auto *obj =
+                  llvh::dyn_cast<ESTree::ObjectPatternNode>(declarator->_id)) {
+            if (obj->_typeAnnotation) {
+              // Found a type annotation on a local variable declaration that
+              // destructures into an object pattern.
+              Type *type = outer.parseTypeAnnotation(
+                  llvh::cast<ESTree::TypeAnnotationNode>(obj->_typeAnnotation)
+                      ->_typeAnnotation);
+              annotateDestructuringTarget(declarator, obj, type);
               continue;
             }
           }
@@ -1158,10 +1295,28 @@ class FlowChecker::AnnotateScopeDecls {
             type = inferred;
         }
         annotateDestructuringTarget(declarator, arr, type);
+      } else if (
+          auto *obj =
+              llvh::dyn_cast<ESTree::ObjectPatternNode>(declarator->_id)) {
+        if (outer.flowContext_.findNodeType(obj)) {
+          // This object pattern was already handled in
+          // setTypesForAnnotatedVariables.
+          continue;
+        }
+        Type *type = outer.flowContext_.getAny();
+        if (declarator->_init) {
+          // It's possible to not have an _init if this declarator is part of a
+          // for loop:
+          // for ({x, y} of iterable) {}
+          if (Type *inferred = tryInferInitExpression(declarator))
+            type = inferred;
+        }
+        annotateDestructuringTarget(declarator, obj, type);
       } else {
+        // Fallback for any other pattern types.
         outer.sm_.warning(
             declarator->_id->getSourceRange(),
-            "ft: typing of object declarators not implemented, :any assumed");
+            "ft: typing of pattern declarators not implemented, :any assumed");
       }
     }
   }
@@ -1241,12 +1396,64 @@ class FlowChecker::AnnotateScopeDecls {
               "ft: incompatible type for array pattern, expected tuple");
           continue;
         }
-      } else if (llvh::isa<ESTree::ObjectPatternNode>(node)) {
-        outer.setNodeType(arr, outer.flowContext_.getAny());
-        outer.sm_.warning(
-            node->getSourceRange(),
-            "ft: typing of object declarators not implemented, :any assumed");
-        continue;
+      } else if (auto *obj = llvh::dyn_cast<ESTree::ObjectPatternNode>(node)) {
+        if (auto *objType = llvh::dyn_cast<ExactObjectType>(t->info)) {
+          // Setting the type allows IRGen to query the destructuring kind.
+          outer.setNodeType(obj, t);
+
+          for (ESTree::Node &propNode : obj->_properties) {
+            if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
+              if (prop->_computed) {
+                outer.sm_.error(
+                    prop->_key->getSourceRange(),
+                    "ft: computed properties not supported in destructuring");
+                continue;
+              }
+              auto *keyId = llvh::dyn_cast<ESTree::IdentifierNode>(prop->_key);
+              if (!keyId) {
+                outer.sm_.error(
+                    prop->_key->getSourceRange(),
+                    "ft: property key must be an identifier");
+                continue;
+              }
+              auto propName = Identifier::getFromPointer(keyId->_name);
+              auto optFieldIdx = objType->findField(propName);
+              if (!optFieldIdx) {
+                outer.sm_.error(
+                    prop->_key->getSourceRange(),
+                    "ft: property '" + propName.str() +
+                        "' not found in object type");
+                continue;
+              }
+              Type *fieldType = objType->getFields()[*optFieldIdx].type;
+              worklist.emplace_back(prop->_value, fieldType);
+            } else if (
+                auto *rest =
+                    llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
+              outer.sm_.error(
+                  rest->getSourceRange(), "ft: rest elements not supported");
+              continue;
+            }
+          }
+        } else if (llvh::isa<AnyType>(t->info)) {
+          outer.setNodeType(obj, outer.flowContext_.getAny());
+          // Propagate 'any' to all properties.
+          for (ESTree::Node &propNode : obj->_properties) {
+            if (auto *prop = llvh::dyn_cast<ESTree::PropertyNode>(&propNode)) {
+              worklist.emplace_back(prop->_value, t);
+            } else if (
+                auto *rest =
+                    llvh::dyn_cast<ESTree::RestElementNode>(&propNode)) {
+              outer.sm_.error(
+                  rest->getSourceRange(), "ft: rest elements not supported");
+              continue;
+            }
+          }
+        } else {
+          outer.sm_.error(
+              obj->getSourceRange(),
+              "ft: incompatible type for object pattern, expected object type");
+        }
       }
     }
 
@@ -1392,15 +1599,21 @@ Type *FlowChecker::parseFunctionType(
 
   for (ESTree::Node &n : params) {
     if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&n)) {
-      paramsList.emplace_back(
-          Identifier::getFromPointer(id->_name),
-          parseOptionalTypeAnnotation(id->_typeAnnotation));
+      if (id->_optional) {
+        sm_.error(
+            id->getSourceRange(),
+            "optional function parameters not implemented yet");
+      }
+      paramsList.push_back(
+          {Identifier::getFromPointer(id->_name),
+           parseOptionalTypeAnnotation(id->_typeAnnotation),
+           id->_optional});
       isTyped |= (id->_typeAnnotation != nullptr);
     } else {
       sm_.warning(
           n.getSourceRange(),
           "ft: typing of pattern parameters not implemented, :any assumed");
-      paramsList.emplace_back(Identifier(), flowContext_.getAny());
+      paramsList.push_back({Identifier(), flowContext_.getAny(), false});
     }
   }
 
@@ -1413,17 +1626,17 @@ Type *FlowChecker::parseFunctionType(
 
   // Check if the first parameter is "this", since it is treated specially.
   if (!paramsRef.empty() &&
-      paramsRef.front().first.getUnderlyingPointer() == kw_.identThis) {
+      paramsRef.front().name.getUnderlyingPointer() == kw_.identThis) {
     // User is allowed to specify a "this" on a method where it's already known,
     // but it must be the same type as the given type.
     if (thisParamType &&
-        !thisParamType->info->equals(paramsRef.front().second->info)) {
+        !thisParamType->info->equals(paramsRef.front().type->info)) {
       sm_.error(
-          paramsRef.front().second->node->getSourceRange(),
+          paramsRef.front().type->node->getSourceRange(),
           "ft: incompatible 'this' type annotation");
     }
 
-    thisParamType = paramsRef.front().second;
+    thisParamType = paramsRef.front().type;
     paramsRef = paramsRef.drop_front();
   }
 
@@ -1499,17 +1712,22 @@ Type *FlowChecker::parseTypeAnnotation(ESTree::Node *node) {
 Type *FlowChecker::parseUnionTypeAnnotation(
     ESTree::UnionTypeAnnotationNode *node) {
   llvh::SmallVector<Type *, 4> types{};
-  for (auto &n : node->_types)
+  for (auto &n : node->_types) {
     types.push_back(parseTypeAnnotation(&n));
+    // Need to check for looping types here because n may not have been used in
+    // a union before and we need looping information for canonicalizing unions.
+    findLoopingTypes(types.back());
+  }
   return flowContext_.createType(flowContext_.maybeCreateUnion(types), node);
 }
 
 Type *FlowChecker::parseNullableTypeAnnotation(
     ESTree::NullableTypeAnnotationNode *node) {
-  return flowContext_.createType(
-      flowContext_.createPopulatedNullable(
-          parseTypeAnnotation(node->_typeAnnotation)),
-      node);
+  Type *t = parseTypeAnnotation(node->_typeAnnotation);
+  // Need to check for looping types here because n may not have been used in
+  // a union before and we need looping information for canonicalizing unions.
+  findLoopingTypes(t);
+  return flowContext_.createType(flowContext_.createPopulatedNullable(t), node);
 }
 
 Type *FlowChecker::parseArrayTypeAnnotation(
@@ -1790,8 +2008,8 @@ FlowChecker::CanFlowResult FlowChecker::canAFlowIntoB(
       return {};
 
     for (size_t i = 0, e = aType->getParams().size(); i < e; ++i) {
-      Type *paramA = aType->getParams()[i].second;
-      Type *paramB = bType->getParams()[i].second;
+      Type *paramA = aType->getParams()[i].type;
+      Type *paramB = bType->getParams()[i].type;
       CanFlowResult flowRes = canAFlowIntoB(paramB, paramA);
       if (!flowRes.canFlow || flowRes.needCheckedCast)
         return {};
@@ -1939,10 +2157,12 @@ sema::Decl *FlowChecker::specializeGeneric(
   }
 
   return specializeGenericWithParsedTypes(
-      oldDecl, typeArgsNode->getSourceRange(), typeArgTypes, scope);
+             oldDecl, typeArgsNode->getSourceRange(), typeArgTypes, scope)
+      .first;
 }
 
-sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
+std::pair<sema::Decl *, ESTree::Node *>
+FlowChecker::specializeGenericWithParsedTypes(
     sema::Decl *oldDecl,
     SMRange errorRange,
     llvh::ArrayRef<Type *> typeArgTypes,
@@ -1993,7 +2213,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
     if (!specialization) {
       sm_.error(
           errorRange, "failed to create specialization for generic function");
-      return nullptr;
+      return {nullptr, nullptr};
     }
     auto &nodeList = getNodeList(generic.parent);
     nodeList.insert(generic.originalNode->getIterator(), *specialization);
@@ -2050,7 +2270,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
           typeParamsNode, errorRange, typeArgTypes, oldDecl->scope);
       if (!populated) {
         LLVM_DEBUG(llvh::dbgs() << "Failed to bind type parameters\n");
-        return nullptr;
+        return {nullptr, nullptr};
       }
 
       if (auto *func =
@@ -2068,7 +2288,7 @@ sema::Decl *FlowChecker::specializeGenericWithParsedTypes(
     assert(flowContext_.findDeclType(newDecl) && "expected valid type");
   }
 
-  return newDecl;
+  return {newDecl, specialization};
 }
 
 void FlowChecker::resolveCallToGenericFunctionSpecialization(
@@ -2097,7 +2317,8 @@ void FlowChecker::resolveCallToGenericFunctionSpecializationWithParsedTypes(
 
   sema::Decl *newDecl = nullptr;
   newDecl = specializeGenericWithParsedTypes(
-      oldDecl, node->getSourceRange(), typeArgTypes, oldDecl->scope);
+                oldDecl, node->getSourceRange(), typeArgTypes, oldDecl->scope)
+                .first;
 
   if (newDecl) {
     semContext_.setExpressionDecl(callee, newDecl);
@@ -2345,6 +2566,18 @@ UniqueString *FlowChecker::propertyKeyAsIdentifier(ESTree::Node *Key) {
   }
 
   return nullptr;
+}
+
+bool FlowChecker::classTypeIsEnclosing(ClassType *classType) {
+  // Loop through lexically enclosing class contexts.
+  for (const ClassContext *cur = curClassContext_; cur != nullptr;
+       cur = cur->getPrevContext()) {
+    auto *curClass = cur->getClassTypeInfo();
+    if (classType == curClass) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace flow

@@ -12,7 +12,6 @@
 // They can be removed once we support qualified type annotations.
 
 type A = A.B;
-let a: A.B;
 
 // Auto-generated content below. Please do not modify manually.
 

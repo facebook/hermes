@@ -24,9 +24,9 @@ namespace hermes::SerializedLiteralParser {
 ///   void visitNull();
 ///   void visitBool(bool);
 /// \return the number of bytes read.
-template <typename Visitor>
+template <bool IsKeyBuffer, typename Visitor>
 static size_t
-parse(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
+parseImpl(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
   size_t bufIdx = 0;
 
   while (totalLen) {
@@ -74,25 +74,57 @@ parse(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
           v.visitNumber(val);
         }
         break;
-      case SerializedLiteralGenerator::NullTag:
-        for (size_t i = 0; i < toRead; ++i)
-          v.visitNull();
+      case SerializedLiteralGenerator::ValueNullOrKeyPrivateNameTag:
+        for (size_t i = 0; i < toRead; ++i) {
+          if constexpr (IsKeyBuffer)
+            v.visitPrivateName();
+          else
+            v.visitNull();
+        }
         break;
       case SerializedLiteralGenerator::UndefinedTag:
-        for (size_t i = 0; i < toRead; ++i)
-          v.visitUndefined();
+        if constexpr (!IsKeyBuffer) {
+          for (size_t i = 0; i < toRead; ++i)
+            v.visitUndefined();
+        } else {
+          llvm_unreachable("undefined is only allowed in value buffer");
+        }
         break;
       case SerializedLiteralGenerator::TrueTag:
-        for (size_t i = 0; i < toRead; ++i)
-          v.visitBool(true);
+        if constexpr (!IsKeyBuffer) {
+          for (size_t i = 0; i < toRead; ++i)
+            v.visitBool(true);
+        } else {
+          llvm_unreachable("true is only allowed in value buffer");
+        }
         break;
       case SerializedLiteralGenerator::FalseTag:
-        for (size_t i = 0; i < toRead; ++i)
-          v.visitBool(false);
+        if constexpr (!IsKeyBuffer) {
+          for (size_t i = 0; i < toRead; ++i)
+            v.visitBool(false);
+        } else {
+          llvm_unreachable("false is only allowed in value buffer");
+        }
         break;
     }
   }
   return bufIdx;
+}
+
+/// Parse the key buffer \p buf with the given visitor \p v.
+template <typename Visitor>
+static size_t
+parseKeyBuffer(llvh::ArrayRef<uint8_t> buf, unsigned int totalLen, Visitor &v) {
+  return parseImpl<true>(buf, totalLen, v);
+}
+
+/// Parse the value buffer \p buf with the given visitor \p v.
+template <typename Visitor>
+static size_t parseValueBuffer(
+    llvh::ArrayRef<uint8_t> buf,
+    unsigned int totalLen,
+    Visitor &v) {
+  return parseImpl<false>(buf, totalLen, v);
 }
 
 } // namespace hermes::SerializedLiteralParser

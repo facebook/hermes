@@ -220,20 +220,6 @@ void ESTreeIRGen::emitPrivateNameDeclarations(
   }
 }
 
-void ESTreeIRGen::emitPrivateBrandCheck(Value *from, Value *brandVal) {
-  auto *continueBB = Builder.createBasicBlock(Builder.getFunction());
-  auto *throwBB = Builder.createBasicBlock(Builder.getFunction());
-  Builder.createCondBranchInst(
-      Builder.createBinaryOperatorInst(
-          brandVal, from, ValueKind::BinaryPrivateInInstKind),
-      continueBB,
-      throwBB);
-  Builder.setInsertionBlock(throwBB);
-  Builder.createThrowTypeErrorInst(
-      Builder.getLiteralString("Private element not found"));
-  Builder.setInsertionBlock(continueBB);
-}
-
 Value *ESTreeIRGen::emitPrivateLookup(
     Value *from,
     Value *nameVal,
@@ -245,14 +231,14 @@ Value *ESTreeIRGen::emitPrivateLookup(
     case sema::Decl::Kind::PrivateField:
       return Builder.createLoadOwnPrivateFieldInst(from, nameVal);
     case sema::Decl::Kind::PrivateMethod: {
-      emitPrivateBrandCheck(from, nameVal);
+      Builder.createPrivateBrandCheckInst(from, nameVal);
       auto *entry =
           getDeclDataPrivate<PrivateNameFunctionTable::SingleFunctionEntry>(
               decl);
       return emitLoad(entry->functionObject, false);
     }
     case sema::Decl::Kind::PrivateSetter:
-      emitPrivateBrandCheck(from, nameVal);
+      Builder.createPrivateBrandCheckInst(from, nameVal);
       Builder.createThrowTypeErrorInst(Builder.getLiteralString(
           "No field, method or getter with this name"));
       // Throwing is a terminal instruction, so make a new basic block to place
@@ -271,7 +257,7 @@ Value *ESTreeIRGen::emitPrivateLookup(
           : getDeclDataPrivate<PrivateNameFunctionTable::GetterSetterEntry>(
                 decl)
                 ->getterFunctionObject;
-      emitPrivateBrandCheck(from, nameVal);
+      Builder.createPrivateBrandCheckInst(from, nameVal);
       auto *funcVal = emitLoad(getterFunctionObject, false);
       return Builder.createCallInst(
           funcVal,
@@ -298,7 +284,7 @@ void ESTreeIRGen::emitPrivateStore(
       Builder.createStoreOwnPrivateFieldInst(storedValue, from, nameVal);
       return;
     case sema::Decl::Kind::PrivateMethod: {
-      emitPrivateBrandCheck(from, nameVal);
+      Builder.createPrivateBrandCheckInst(from, nameVal);
       Builder.createThrowTypeErrorInst(
           Builder.getLiteralString("Cannot overwrite a private method."));
       Builder.setInsertionBlock(
@@ -306,7 +292,7 @@ void ESTreeIRGen::emitPrivateStore(
       return;
     }
     case sema::Decl::Kind::PrivateGetter:
-      emitPrivateBrandCheck(from, nameVal);
+      Builder.createPrivateBrandCheckInst(from, nameVal);
       Builder.createThrowTypeErrorInst(
           Builder.getLiteralString("No field or setter with this name"));
       Builder.setInsertionBlock(
@@ -322,7 +308,7 @@ void ESTreeIRGen::emitPrivateStore(
           : getDeclDataPrivate<PrivateNameFunctionTable::GetterSetterEntry>(
                 decl)
                 ->setterFunctionObject;
-      emitPrivateBrandCheck(from, nameVal);
+      Builder.createPrivateBrandCheckInst(from, nameVal);
       auto *funcVal = emitLoad(setterFunctionObject, false);
       Builder.createCallInst(
           funcVal,

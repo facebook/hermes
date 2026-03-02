@@ -344,6 +344,7 @@ export type ComponentDeclarationProps = {
     ComponentDeclarationType['typeParameters'],
   >,
   +rendersType?: ?MaybeDetachedNode<ComponentDeclarationType['rendersType']>,
+  +async: ComponentDeclarationType['async'],
 };
 
 export type ComponentParameterProps = {
@@ -659,6 +660,7 @@ export type HookDeclarationProps = {
   +body: MaybeDetachedNode<HookDeclarationType['body']>,
   +typeParameters?: ?MaybeDetachedNode<HookDeclarationType['typeParameters']>,
   +returnType?: ?MaybeDetachedNode<HookDeclarationType['returnType']>,
+  +async: HookDeclarationType['async'],
 };
 
 export type HookTypeAnnotationProps = {
@@ -1660,6 +1662,7 @@ export function ComponentDeclaration(props: {
       body: asDetachedNodeForCodeGen(props.body),
       typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
       rendersType: asDetachedNodeForCodeGen(props.rendersType),
+      async: props.async,
     },
   );
   setParentPointersInDirectChildren((node: $FlowFixMe));
@@ -2376,6 +2379,7 @@ export function HookDeclaration(props: {
     body: asDetachedNodeForCodeGen(props.body),
     typeParameters: asDetachedNodeForCodeGen(props.typeParameters),
     returnType: asDetachedNodeForCodeGen(props.returnType),
+    async: props.async,
   });
   setParentPointersInDirectChildren((node: $FlowFixMe));
   return node;

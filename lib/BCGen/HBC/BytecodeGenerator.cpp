@@ -311,6 +311,11 @@ static bool isIdOperand(const Instruction *I, unsigned idx) {
       // AllocObjectFromBuffer stores the keys and values as alternating
       // operands, with keys starting first.
       return (idx - LIRAllocObjectFromBufferInst::FirstKeyIdx) % 2 == 0;
+    case ValueKind::LIRAllocTypedObjectFromBufferInstKind:
+      return llvh::cast<LIRAllocTypedObjectFromBufferInst>(I)->isKeyIndex(idx);
+    case ValueKind::LIRAllocTypedNonEnumObjectFromBufferInstKind:
+      return llvh::cast<LIRAllocTypedNonEnumObjectFromBufferInst>(I)
+          ->isKeyIndex(idx);
 
     default:
       return false;

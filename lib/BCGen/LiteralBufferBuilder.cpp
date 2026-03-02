@@ -13,6 +13,52 @@
 #include "hermes/IR/Instrs.h"
 #include "hermes/Inst/Inst.h"
 #include "hermes/Inst/InstDecode.h"
+#include "hermes/VM/ObjectAllocKind.h"
+
+namespace hermes::LiteralBufferBuilder::detail {
+/// The key with which to to deduplicate shape table entries in coordToIdx.
+struct ShapeTableDedupKey {
+  /// The offset of the first key in the key buffer.
+  uint32_t keyBufferOffset;
+  /// The number of properties in the object.
+  uint32_t numProps;
+  /// The kind of allocation.
+  /// We don't share shape table entries between different allocation kinds
+  /// because they use different property flags, make new HiddenClasses, etc.
+  ValueKind allocKind;
+};
+} // namespace hermes::LiteralBufferBuilder::detail
+
+namespace llvh {
+
+using ::hermes::LiteralBufferBuilder::detail::ShapeTableDedupKey;
+template <>
+struct DenseMapInfo<ShapeTableDedupKey> {
+  static inline ShapeTableDedupKey getEmptyKey() {
+    return {
+        DenseMapInfo<uint32_t>::getEmptyKey(),
+        DenseMapInfo<uint32_t>::getEmptyKey(),
+        hermes::ValueKind::AllocObjectLiteralInstKind};
+  }
+  static inline ShapeTableDedupKey getTombstoneKey() {
+    return {
+        DenseMapInfo<uint32_t>::getTombstoneKey(),
+        DenseMapInfo<uint32_t>::getTombstoneKey(),
+        hermes::ValueKind::AllocObjectLiteralInstKind};
+  }
+  static inline unsigned getHashValue(const ShapeTableDedupKey &key) {
+    return hash_combine(
+        key.keyBufferOffset, key.numProps, static_cast<uint8_t>(key.allocKind));
+  }
+  static inline bool isEqual(
+      const ShapeTableDedupKey &lhs,
+      const ShapeTableDedupKey &rhs) {
+    return lhs.keyBufferOffset == rhs.keyBufferOffset &&
+        lhs.numProps == rhs.numProps && lhs.allocKind == rhs.allocKind;
+  }
+};
+
+} // namespace llvh
 
 namespace hermes {
 namespace LiteralBufferBuilder {
@@ -111,6 +157,8 @@ class Builder {
   /// Serialization handlers for different instructions.
   void serializeLiteralFor(AllocArrayInst *AAI);
   void serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB);
+  void serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB);
+  void serializeLiteralFor(LIRAllocTypedNonEnumObjectFromBufferInst *AOFB);
 
   /// Serialize the the input literals \p elements into the UniquedStringVector
   /// \p dest.
@@ -154,9 +202,9 @@ class Builder {
   // module.
   std::vector<ShapeTableEntry> objShapeTable_{};
 
-  /// This maps a <keyBufferOffset, numProps> pair to an element index in \p
-  /// objShapeTable_.
-  llvh::DenseMap<std::pair<uint32_t, uint32_t>, uint32_t> keyOffsetToShapeIdx_;
+  /// This maps a <keyBufferOffset, numProps, allocKind> key to an element index
+  /// in \p objShapeTable_.
+  llvh::DenseMap<detail::ShapeTableDedupKey, uint32_t> keyOffsetToShapeIdx_;
 
   /// Each element is the keys portion of a serialized object literal.
   UniquedStringVector objKeys_{};
@@ -168,9 +216,11 @@ class Builder {
   /// corresponding indices in \c objKeys_/values_. Note that the indicies may
   /// not be the same, since values_ is shared between object and array literal
   /// values.
-  std::vector<std::pair<
-      const LIRAllocObjectFromBufferInst *,
-      std::pair<size_t, size_t>>>
+  /// Instructions must be one of:
+  /// * LIRAllocObjectFromBufferInst
+  /// * LIRAllocTypedObjectFromBufferInst
+  /// * LIRAllocTypedNonEnumObjectFromBufferInst
+  std::vector<std::pair<const Instruction *, std::pair<size_t, size_t>>>
       objInst_{};
 };
 
@@ -184,6 +234,7 @@ void Builder::reseedFromBaseBytecode() {
   std::vector<StringTableEntry> valueStrTable;
   struct {
     void visitStringID(uint32_t id) {}
+    void visitPrivateName() {}
     void visitNumber(double d) {}
     void visitNull() {}
     void visitUndefined() {}
@@ -200,7 +251,7 @@ void Builder::reseedFromBaseBytecode() {
                              &valueStrTable,
                              &seenValueBufferEntries](
                                 uint32_t valBufOffset, uint16_t numElements) {
-    auto sizeInBytes = SerializedLiteralParser::parse(
+    auto sizeInBytes = SerializedLiteralParser::parseValueBuffer(
         valueBuf.slice(valBufOffset), numElements, emptyVisitor);
     auto [_, inserted] =
         seenValueBufferEntries.insert({valBufOffset, sizeInBytes});
@@ -280,14 +331,18 @@ void Builder::reseedFromBaseBytecode() {
   for (size_t i = 0, e = objShapeTable_.size(); i < e; ++i) {
     auto numProps = objShapeTable_[i].numProps;
     auto keyBufferOffset = objShapeTable_[i].keyBufferOffset;
-    auto sizeInBytes = SerializedLiteralParser::parse(
+    auto sizeInBytes = SerializedLiteralParser::parseKeyBuffer(
         keyBuf.slice(keyBufferOffset), numProps, emptyVisitor);
     keyStrTable.push_back({keyBufferOffset, (uint32_t)sizeInBytes, false});
     objKeys_.push_back(
         llvh::StringRef{
             reinterpret_cast<const char *>(keyBuf.data() + keyBufferOffset),
             sizeInBytes});
-    keyOffsetToShapeIdx_.insert({{keyBufferOffset, numProps}, (uint32_t)i});
+    keyOffsetToShapeIdx_.insert(
+        {{keyBufferOffset,
+          numProps,
+          ValueKind::LIRAllocObjectFromBufferInstKind},
+         (uint32_t)i});
   }
   keyStorage_ =
       hbc::ConsecutiveStringStorage{std::move(keyStrTable), keyBuf.vec()};
@@ -343,7 +398,18 @@ LiteralBufferBuilder::Result Builder::generate() {
   for (size_t i = 0, e = objInst_.size(); i != e; ++i) {
     const auto [Inst, indices] = objInst_[i];
     const auto [keyIdx, valIdx] = indices;
-    const uint32_t len = Inst->getKeyValuePairCount();
+    ValueKind allocKind = Inst->getKind();
+    uint32_t len;
+    if (auto *typed = llvh::dyn_cast<LIRAllocTypedObjectFromBufferInst>(Inst)) {
+      len = typed->getKeyValuePairCount();
+    } else if (
+        auto *typedNonEnum =
+            llvh::dyn_cast<LIRAllocTypedNonEnumObjectFromBufferInst>(Inst)) {
+      len = typedNonEnum->getKeyValuePairCount();
+    } else {
+      len = llvh::cast<LIRAllocObjectFromBufferInst>(Inst)
+                ->getKeyValuePairCount();
+    }
     assert(
         literalOffsetMap.count(Inst) == 0 &&
         "instruction literal can't be serialized twice");
@@ -351,7 +417,7 @@ LiteralBufferBuilder::Result Builder::generate() {
     uint32_t valIndexInSet = values_.indexInSet(valIdx);
     uint32_t keyBufferOffset = keyView[keyIndexInSet].getOffset();
     const auto [iter, success] = keyOffsetToShapeIdx_.insert(
-        {{keyBufferOffset, len}, keyOffsetToShapeIdx_.size()});
+        {{keyBufferOffset, len, allocKind}, keyOffsetToShapeIdx_.size()});
     auto shapeID = iter->second;
     if (success) {
       // This is a new entry, add it to the shape table.
@@ -379,6 +445,14 @@ void Builder::traverse() {
           serializeLiteralFor(AAI);
         } else if (
             auto *AOFB = llvh::dyn_cast<LIRAllocObjectFromBufferInst>(&I)) {
+          serializeLiteralFor(AOFB);
+        } else if (
+            auto *AOFB =
+                llvh::dyn_cast<LIRAllocTypedObjectFromBufferInst>(&I)) {
+          serializeLiteralFor(AOFB);
+        } else if (
+            auto *AOFB =
+                llvh::dyn_cast<LIRAllocTypedNonEnumObjectFromBufferInst>(&I)) {
           serializeLiteralFor(AOFB);
         }
       }
@@ -411,6 +485,43 @@ void Builder::serializeLiteralFor(AllocArrayInst *AAI) {
 }
 
 void Builder::serializeLiteralFor(LIRAllocObjectFromBufferInst *AOFB) {
+  unsigned e = AOFB->getKeyValuePairCount();
+  if (!e)
+    return;
+
+  llvh::SmallVector<Literal *, 8> objKeys;
+  llvh::SmallVector<Literal *, 8> objVals;
+  for (unsigned ind = 0; ind != e; ++ind) {
+    auto keyValuePair = AOFB->getKeyValuePair(ind);
+    objKeys.push_back(cast<Literal>(keyValuePair.first));
+    objVals.push_back(cast<Literal>(keyValuePair.second));
+  }
+
+  objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+  serializeInto(objKeys_, objKeys, true);
+  serializeInto(values_, objVals, false);
+}
+
+void Builder::serializeLiteralFor(LIRAllocTypedObjectFromBufferInst *AOFB) {
+  unsigned e = AOFB->getKeyValuePairCount();
+  if (!e)
+    return;
+
+  llvh::SmallVector<Literal *, 8> objKeys;
+  llvh::SmallVector<Literal *, 8> objVals;
+  for (unsigned ind = 0; ind != e; ++ind) {
+    auto keyValuePair = AOFB->getKeyValuePair(ind);
+    objKeys.push_back(cast<Literal>(keyValuePair.first));
+    objVals.push_back(cast<Literal>(keyValuePair.second));
+  }
+
+  objInst_.push_back({AOFB, {objKeys_.size(), values_.size()}});
+  serializeInto(objKeys_, objKeys, true);
+  serializeInto(values_, objVals, false);
+}
+
+void Builder::serializeLiteralFor(
+    LIRAllocTypedNonEnumObjectFromBufferInst *AOFB) {
   unsigned e = AOFB->getKeyValuePairCount();
   if (!e)
     return;

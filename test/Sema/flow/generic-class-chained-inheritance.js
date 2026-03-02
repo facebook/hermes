@@ -73,23 +73,28 @@ class C<T> extends B<T> {
 // CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.7 'B' Class : %class_constructor.8
 // CHECK-NEXT:            Decl %d.8 'C' Class : %class_constructor.13
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.9 'val' Parameter : %class.5
 // CHECK-NEXT:                Decl %d.10 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.9
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.10
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:            Scope %s.11
 // CHECK-NEXT:                Decl %d.12 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:            Scope %s.12
 // CHECK-NEXT:                Decl %d.13 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:            Scope %s.13
 // CHECK-NEXT:                Decl %d.14 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -102,7 +107,7 @@ class C<T> extends B<T> {
 // CHECK-NEXT:                        VariableDeclarator
 // CHECK-NEXT:                            NullLiteral : null
 // CHECK-NEXT:                            Id 'outer' [D:E:%d.2 'outer']
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.3 'A']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            MethodDefinition : %function.9
@@ -110,7 +115,7 @@ class C<T> extends B<T> {
 // CHECK-NEXT:                                FunctionExpression : %function.9
 // CHECK-NEXT:                                    Id 'val' [D:E:%d.9 'val']
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.6
 // CHECK-NEXT:                        Id 'B' [D:E:%d.7 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -125,7 +130,7 @@ class C<T> extends B<T> {
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression
 // CHECK-NEXT:                                                Super
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.4 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -140,7 +145,7 @@ class C<T> extends B<T> {
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression
 // CHECK-NEXT:                                                Super
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.7
 // CHECK-NEXT:                        Id 'C' [D:E:%d.8 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -158,7 +163,7 @@ class C<T> extends B<T> {
 // CHECK-NEXT:                                        ExpressionStatement
 // CHECK-NEXT:                                            CallExpression : void
 // CHECK-NEXT:                                                Super : %function.6
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'C' [D:E:%d.5 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

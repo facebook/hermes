@@ -164,7 +164,8 @@ component Foo(bar: renders A) {}
 // CHECK-NEXT:       "body": {
 // CHECK-NEXT:         "type": "BlockStatement",
 // CHECK-NEXT:         "body": []
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

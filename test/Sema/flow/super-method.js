@@ -60,17 +60,19 @@ class B extends A {
 // CHECK-NEXT:            Decl %d.2 'A' Class : %class_constructor.5
 // CHECK-NEXT:            Decl %d.3 'B' Class : %class_constructor.9
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:                Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:                Decl %d.6 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
 // CHECK-NEXT:                Decl %d.8 'arguments' Var Arguments
 
 // CHECK:Program Scope %s.1
@@ -79,7 +81,7 @@ class B extends A {
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            MethodDefinition : %function.3
@@ -92,7 +94,7 @@ class B extends A {
 // CHECK-NEXT:                                    BlockStatement
 // CHECK-NEXT:                                        ReturnStatement
 // CHECK-NEXT:                                            NumericLiteral : number
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A'] : %class_constructor.5
 // CHECK-NEXT:                        ClassBody

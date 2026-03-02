@@ -106,10 +106,33 @@ let z: Z;
 // CHECK-NEXT:            Decl %d.11 'C' Class : %class_constructor.24
 // CHECK-NEXT:            Decl %d.12 'C' Class : %class_constructor.25
 // CHECK-NEXT:            Decl %d.13 'C' Class : %class_constructor.26
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:            Scope %s.10
+// CHECK-NEXT:            Scope %s.11
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.12
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.13
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.14
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.15
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.16
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.17
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.18
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.19
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.20
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -154,7 +177,7 @@ let z: Z;
 // CHECK-NEXT:                                    UnionTypeAnnotation
 // CHECK-NEXT:                                        NumberTypeAnnotation
 // CHECK-NEXT:                                        StringTypeAnnotation
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'B' [D:E:%d.7 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -163,7 +186,7 @@ let z: Z;
 // CHECK-NEXT:                                Id 'bval'
 // CHECK-NEXT:                            ClassProperty : %union.3
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.6
 // CHECK-NEXT:                        Id 'B' [D:E:%d.8 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -172,7 +195,7 @@ let z: Z;
 // CHECK-NEXT:                                Id 'bval'
 // CHECK-NEXT:                            ClassProperty : %union.3
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.7
 // CHECK-NEXT:                        Id 'B' [D:E:%d.9 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -181,7 +204,7 @@ let z: Z;
 // CHECK-NEXT:                                Id 'bval'
 // CHECK-NEXT:                            ClassProperty : %union.3
 // CHECK-NEXT:                                Id 'x'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'B' [D:E:%d.2 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -194,35 +217,35 @@ let z: Z;
 // CHECK-NEXT:                        Id 'Y'
 // CHECK-NEXT:                        GenericTypeAnnotation
 // CHECK-NEXT:                            Id 'X'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.8
 // CHECK-NEXT:                        Id 'C' [D:E:%d.10 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : number
 // CHECK-NEXT:                                Id 'cval'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.9
 // CHECK-NEXT:                        Id 'C' [D:E:%d.11 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %class.9
 // CHECK-NEXT:                                Id 'cval'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.10
 // CHECK-NEXT:                        Id 'C' [D:E:%d.12 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : string
 // CHECK-NEXT:                                Id 'cval'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.11
 // CHECK-NEXT:                        Id 'C' [D:E:%d.13 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %class.18
 // CHECK-NEXT:                                Id 'cval'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'C' [D:E:%d.3 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

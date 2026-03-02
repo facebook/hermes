@@ -67,7 +67,9 @@ class SerializedLiteralGenerator {
 
   // Since undefined is very rarely used in literals in practice, replacing
   // it with a single byte string tag allows us to save even more space.
-  static constexpr TagType NullTag = 0;
+  // We share the tag between "null" value and private name keys,
+  // since "null" is never a key and private names are never values.
+  static constexpr TagType ValueNullOrKeyPrivateNameTag = 0;
   static constexpr TagType TrueTag = 1 << 4;
   static constexpr TagType FalseTag = 2 << 4;
   static constexpr TagType NumberTag = 3 << 4;

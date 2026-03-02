@@ -86,7 +86,82 @@ static bool listsMatchSlow(
   return matched.all();
 }
 
+static void messageStringImpl(const Type *type, llvh::raw_ostream &os) {
+#if HERMES_PARSE_FLOW
+  if (type->node && llvh::isa<ESTree::TypeAliasNode>(type->node)) {
+    // Return the name along with the kind of the type.
+    if (type->info)
+      os << type->info->getKindName() << " ";
+    os << llvh::cast<ESTree::IdentifierNode>(
+              llvh::cast<ESTree::TypeAliasNode>(type->node)->_id)
+              ->_name->str();
+    return;
+  }
+#endif
+
+  if (!type->info) {
+    os << "unknown";
+    return;
+  }
+
+  if (llvh::isa<ClassType>(type->info)) {
+    // If the class node has a name use that instead.
+    if (type->node && llvh::isa<ESTree::ClassDeclarationNode>(type->node)) {
+      os << "class "
+         << llvh::cast<ESTree::IdentifierNode>(
+                llvh::cast<ESTree::ClassDeclarationNode>(type->node)->_id)
+                ->_name->str();
+    } else {
+      os << "class";
+    }
+    return;
+  }
+
+  if (auto *unionType = llvh::dyn_cast<UnionType>(type->info)) {
+    bool first = true;
+    os << '(';
+    for (const Type *t : unionType->getTypes()) {
+      if (!first) {
+        os << " | ";
+      }
+      messageStringImpl(t, os);
+      first = false;
+    }
+    os << ')';
+    return;
+  }
+
+  if (auto *arrayType = llvh::dyn_cast<ArrayType>(type->info)) {
+    messageStringImpl(arrayType->getElement(), os);
+    os << "[]";
+    return;
+  }
+
+  if (auto *tupleType = llvh::dyn_cast<TupleType>(type->info)) {
+    bool first = true;
+    os << '[';
+    for (const Type *t : tupleType->getTypes()) {
+      if (!first) {
+        os << ", ";
+      }
+      messageStringImpl(t, os);
+      first = false;
+    }
+    os << ']';
+    return;
+  }
+
+  os << type->info->getKindName();
+}
+
 } // anonymous namespace
+
+std::string Type::messageString() const {
+  std::string result;
+  llvh::raw_string_ostream os(result);
+  messageStringImpl(this, os);
+  return os.str();
+}
 
 llvh::StringRef TypeInfo::getKindName() const {
   switch (kind_) {
@@ -326,6 +401,8 @@ void UnionType::canonicalizeTypes(
       for (Type *nestedElem : unionType->getLoopingTypes()) {
         loopingTypes.push_back(nestedElem);
       }
+    } else if (elemType->isLooping) {
+      loopingTypes.push_back(elemType);
     } else {
       canonicalTypes.push_back(elemType);
     }
@@ -515,7 +592,7 @@ int TypedFunctionType::_compareImpl(
           other->params_.begin(),
           other->params_.end(),
           [&state](const Param &pa, const Param &pb) {
-            return pa.second->info->compare(pb.second->info, state);
+            return pa.type->info->compare(pb.type->info, state);
           })) {
     return tmp;
   }
@@ -535,7 +612,7 @@ bool TypedFunctionType::_equalsImpl(
   if (params_.size() != other->params_.size())
     return false;
   for (size_t i = 0, e = params_.size(); i < e; ++i) {
-    if (!params_[i].second->info->equals(other->params_[i].second->info, state))
+    if (!params_[i].type->info->equals(other->params_[i].type->info, state))
       return false;
   }
   if (!return_->info->equals(other->return_->info))
@@ -639,18 +716,30 @@ void ClassType::init(
   // Override the fields which have been overridden.
   size_t index = 0;
   for (const auto &f : this->fields_) {
-    fieldNameMap_[f.name] = FieldLookupEntry{this, index++};
+    if (f.isPrivate) {
+      privateFieldNameMap_[f.name] = index++;
+    } else {
+      fieldNameMap_[f.name] = FieldLookupEntry{this, index++};
+    }
   }
 
   markAsInitialized();
 }
 
-hermes::OptValue<ClassType::FieldLookupEntry> ClassType::findField(
+hermes::OptValue<ClassType::FieldLookupEntry> ClassType::findPublicField(
     Identifier id) const {
   auto it = fieldNameMap_.find(id);
   if (it == fieldNameMap_.end())
     return llvh::None;
   return it->second;
+}
+
+hermes::OptValue<ClassType::FieldLookupEntry> ClassType::findPrivateField(
+    Identifier id) {
+  auto it = privateFieldNameMap_.find(id);
+  if (it == privateFieldNameMap_.end())
+    return llvh::None;
+  return FieldLookupEntry{this, it->second};
 }
 
 FlowContext::FlowContext() = default;

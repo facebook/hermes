@@ -1824,21 +1824,21 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
     Runtime &runtime,
     CodeBlock *curCodeBlock,
     Handle<JSObject> parent,
-    unsigned shapeTableIndex) {
+    unsigned shapeTableIndex,
+    ObjectAllocKind allocKind) {
   RuntimeModule *runtimeModule = curCodeBlock->getRuntimeModule();
-  HiddenClass *clazz;
+  struct : public Locals {
+    PinnedValue<JSObject> obj;
+    PinnedValue<HiddenClass> clazz;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
   if (auto *cachedClazz = runtimeModule->findCachedLiteralHiddenClass(
           runtime, shapeTableIndex)) {
-    clazz = cachedClazz;
+    lv.clazz = cachedClazz;
   } else {
     const auto *shapeInfo =
         &runtimeModule->getBytecode()->getObjectShapeTable()[shapeTableIndex];
-    auto *rootClazz = *runtime.getHiddenClassForPrototype(
-        *parent, JSObject::numOverlapSlots<JSObject>());
-
-    // Ensure that the hidden class does not start out with any properties, so
-    // we just need to check the shape table entry.
-    assert(rootClazz->getNumProperties() == 0);
     if (shapeInfo->numProps > HiddenClass::maxNumProperties()) {
       return runtime.raiseRangeError(
           TwineChar16("Object has more than ") +
@@ -1848,27 +1848,49 @@ CallResult<HiddenClass *> Interpreter::getHiddenClassForBuffer(
     auto keyBuffer = runtimeModule->getBytecode()->getObjectKeyBuffer().slice(
         shapeInfo->keyBufferOffset);
 
-    clazz = addBufferPropertiesToHiddenClass(
-        runtime,
-        keyBuffer,
-        shapeInfo->numProps,
-        rootClazz,
-        [runtimeModule](StringID id) {
-          return runtimeModule->getSymbolIDMustExist(id);
-        });
+    if (isTypedAllocKind(allocKind)) {
+      bool propertiesEnumerable =
+          allocKind != ObjectAllocKind::TypedNonEnumerable;
+      lv.clazz =
+          HiddenClass::createForTypedObject(runtime, shapeInfo->numProps);
+      addTypedBufferPropertiesToHiddenClass(
+          runtime,
+          keyBuffer,
+          shapeInfo->numProps,
+          lv.clazz,
+          propertiesEnumerable,
+          [runtimeModule](StringID id) {
+            return runtimeModule->getSymbolIDMustExist(id);
+          });
+    } else {
+      auto *rootClazz = *runtime.getHiddenClassForPrototype(
+          *runtime.objectPrototype, JSObject::numOverlapSlots<JSObject>());
+
+      // Ensure that the hidden class does not start out with any properties, so
+      // we just need to check the shape table entry.
+      assert(rootClazz->getNumProperties() == 0);
+      lv.clazz = addBufferPropertiesToHiddenClass(
+          runtime,
+          keyBuffer,
+          shapeInfo->numProps,
+          rootClazz,
+          [runtimeModule](StringID id) {
+            return runtimeModule->getSymbolIDMustExist(id);
+          });
+    }
 
     assert(
-        shapeInfo->numProps == clazz->getNumProperties() &&
+        shapeInfo->numProps == lv.clazz->getNumProperties() &&
         "numLiterals should match hidden class property count.");
     // Dictionary mode classes cannot be cached since they can change as the
     // resulting object is modified.
-    if (LLVM_LIKELY(!clazz->isDictionary())) {
+    if (LLVM_LIKELY(!lv.clazz->isDictionary()) || isTypedAllocKind(allocKind)) {
       runtimeModule->setCachedLiteralHiddenClass(
-          runtime, shapeTableIndex, clazz);
+          runtime, shapeTableIndex, *lv.clazz);
     }
   }
 
-  return clazz;
+  return *lv.clazz;
 }
 
 CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
@@ -1876,15 +1898,16 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
     CodeBlock *curCodeBlock,
     Handle<JSObject> parent,
     unsigned shapeTableIndex,
-    unsigned valBufferOffset) {
+    unsigned valBufferOffset,
+    ObjectAllocKind allocKind) {
   struct : public Locals {
     PinnedValue<JSObject> obj;
     PinnedValue<HiddenClass> clazz;
   } lv;
   LocalsRAII lraii(runtime, &lv);
 
-  CallResult<HiddenClass *> clazzRes =
-      getHiddenClassForBuffer(runtime, curCodeBlock, parent, shapeTableIndex);
+  CallResult<HiddenClass *> clazzRes = getHiddenClassForBuffer(
+      runtime, curCodeBlock, parent, shapeTableIndex, allocKind);
   if (LLVM_UNLIKELY(clazzRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
@@ -1927,13 +1950,18 @@ CallResult<PseudoHandle<>> Interpreter::createObjectFromBuffer(
   } v{lv.obj, runtime, curCodeBlock->getRuntimeModule(), 0};
 
   // Visit each value in the given buffer, and set it in the object.
-  SerializedLiteralParser::parse(
+  SerializedLiteralParser::parseValueBuffer(
       curCodeBlock->getRuntimeModule()
           ->getBytecode()
           ->getLiteralValueBuffer()
           .slice(valBufferOffset),
       numLiterals,
       v);
+
+  if (isTypedAllocKind(allocKind)) {
+    // Freeze the object from the perspective of untyped code.
+    lv.obj->markAsTyped();
+  }
 
   return createPseudoHandle(lv.obj.getHermesValue());
 }
@@ -1953,7 +1981,8 @@ ExecutionStatus Interpreter::caseNewObjectWithBufferAndParent(
       curCodeBlock,
       parent,
       ip->iNewObjectWithBufferAndParent.op3,
-      ip->iNewObjectWithBufferAndParent.op4);
+      ip->iNewObjectWithBufferAndParent.op4,
+      ObjectAllocKind::Untyped);
   if (res == ExecutionStatus::EXCEPTION)
     return ExecutionStatus::EXCEPTION;
   O1REG(NewObjectWithBufferAndParent) = res->getHermesValue();
@@ -2007,7 +2036,7 @@ CallResult<PseudoHandle<>> Interpreter::createArrayFromBuffer(
   } v{arr, runtime, curCodeBlock->getRuntimeModule(), 0};
 
   // Visit each serialized value in the given buffer.
-  SerializedLiteralParser::parse(
+  SerializedLiteralParser::parseValueBuffer(
       curCodeBlock->getRuntimeModule()
           ->getBytecode()
           ->getLiteralValueBuffer()

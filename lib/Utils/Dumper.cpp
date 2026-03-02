@@ -169,6 +169,8 @@ void IRPrinter::printValueLabel(Instruction *I, Value *V, unsigned opIndex) {
     os_ << LBI->getValue()->str();
   } else if (auto LS = dyn_cast<LiteralString>(V)) {
     os_ << escapeStr(ctx.toString(LS->getValue()));
+  } else if (auto LS = dyn_cast<LiteralPrivateName>(V)) {
+    os_ << "private " << escapeStr(ctx.toString(LS->getValue()));
   } else if (auto LB = dyn_cast<LiteralBool>(V)) {
     os_ << (LB->getValue() ? "true" : "false");
   } else if (auto LN = dyn_cast<LiteralNumber>(V)) {

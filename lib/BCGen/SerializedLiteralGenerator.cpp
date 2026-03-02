@@ -128,11 +128,15 @@ void SerializedLiteralGenerator::serializeBuffer(
                                                                   : FalseTag;
         break;
       case ValueKind::LiteralNullKind:
-        newTag = NullTag;
+        newTag = ValueNullOrKeyPrivateNameTag;
         break;
       case ValueKind::LiteralUndefinedKind:
       case ValueKind::LiteralUninitKind:
         newTag = UndefinedTag;
+        break;
+      case ValueKind::LiteralPrivateNameKind:
+        assert(isKeyBuffer && "private names can only be keys");
+        newTag = ValueNullOrKeyPrivateNameTag;
         break;
       default:
         hermes_fatal("Invalid Literal Kind");
@@ -179,6 +183,7 @@ void SerializedLiteralGenerator::serializeBuffer(
       case ValueKind::LiteralUndefinedKind:
       case ValueKind::LiteralUninitKind:
       case ValueKind::LiteralNullKind:
+      case ValueKind::LiteralPrivateNameKind:
         /* no-op */
         break;
       default:

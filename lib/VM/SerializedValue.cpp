@@ -1978,6 +1978,8 @@ CallResult<PseudoHandle<ArrayStorage>> prepareTransferListForSerialization(
     //   [[Detached]] internal slot, then throw a "DataCloneError" DOMException.
     // 2. SharedArrayBuffer case: Unsupported
     if (!transferableArrayBuffer) {
+      // Release the NoAllocScope to create the exception.
+      noAlloc.release();
       return runtime.raiseError(
           "Transfer list contains non-transferable value");
     }
@@ -1986,6 +1988,8 @@ CallResult<PseudoHandle<ArrayStorage>> prepareTransferListForSerialization(
     auto hash = runtime.gcStableHashJSObject(transferableArrayBuffer);
     HermesValueInfo hvInfo{transferableHv, hash};
     if (auto it = memoryMap.find_as(hvInfo); it != memoryMap.end()) {
+      // Release the NoAllocScope to create the exception.
+      noAlloc.release();
       return runtime.raiseError("Transfer list contains same value twice");
     }
     // 4. Set memory[transferable] to { [[Type]]: an uninitialized value }.

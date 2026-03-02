@@ -2677,9 +2677,10 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
-                runtime.objectPrototype,
+                Handle<JSObject>::vmcast(&runtime.objectPrototype),
                 ip->iNewObjectWithBuffer.op2,
-                ip->iNewObjectWithBuffer.op3));
+                ip->iNewObjectWithBuffer.op3,
+                /* isTyped */ ObjectAllocKind::Untyped));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -2693,9 +2694,10 @@ tailCall:
             resPH = Interpreter::createObjectFromBuffer(
                 runtime,
                 curCodeBlock,
-                runtime.objectPrototype,
+                Handle<JSObject>::vmcast(&runtime.objectPrototype),
                 ip->iNewObjectWithBufferLong.op2,
-                ip->iNewObjectWithBufferLong.op3));
+                ip->iNewObjectWithBufferLong.op3,
+                /* isTyped */ ObjectAllocKind::Untyped));
         if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
           goto exception;
         }
@@ -2712,6 +2714,26 @@ tailCall:
         if (LLVM_UNLIKELY(status == ExecutionStatus::EXCEPTION))
           goto exception;
         ip = NEXTINST(NewObjectWithBufferAndParent);
+        DISPATCH;
+      }
+
+      CASE(NewTypedObjectWithBuffer) {
+        auto nonEnumerable = ip->iNewTypedObjectWithBuffer.op5;
+        CAPTURE_IP(
+            resPH = Interpreter::createObjectFromBuffer(
+                runtime,
+                curCodeBlock,
+                Handle<JSObject>::dyn_vmcast(
+                    Handle<>(&O2REG(NewTypedObjectWithBuffer))),
+                ip->iNewTypedObjectWithBuffer.op3,
+                ip->iNewTypedObjectWithBuffer.op4,
+                nonEnumerable ? ObjectAllocKind::TypedNonEnumerable
+                              : ObjectAllocKind::TypedEnumerable));
+        if (LLVM_UNLIKELY(resPH == ExecutionStatus::EXCEPTION)) {
+          goto exception;
+        }
+        O1REG(NewTypedObjectWithBuffer) = resPH->get();
+        ip = NEXTINST(NewTypedObjectWithBuffer);
         DISPATCH;
       }
 

@@ -14,7 +14,7 @@ class B {
   func(): void {}
 }
 class C<Props> {
-  vals: B[];
+  vals: [B];
   foo(): void {
     let b: B = this.vals[0];
     b.func();
@@ -35,7 +35,7 @@ class C<Props> {
 // CHECK-NEXT:%class_constructor.8 = class_constructor(%class.6)
 // CHECK-NEXT:%class.9 = class(C {
 // CHECK-NEXT:  %homeObject: %class.10
-// CHECK-NEXT:  vals: %array.11
+// CHECK-NEXT:  vals: %tuple.11
 // CHECK-NEXT:})
 // CHECK-NEXT:%class_constructor.12 = class_constructor(%class.9)
 // CHECK-NEXT:%union.4 = union(null | %class.9)
@@ -45,7 +45,7 @@ class C<Props> {
 // CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:  func [final]: %function.13
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.11 = array(%class.6)
+// CHECK-NEXT:%tuple.11 = tuple(%class.6)
 // CHECK-NEXT:%function.14 = function(this: %class.9): void
 // CHECK-NEXT:%class.10 = class( {
 // CHECK-NEXT:  foo [final]: %function.14
@@ -64,23 +64,29 @@ class C<Props> {
 // CHECK-NEXT:            Decl %d.4 'C' Class
 // CHECK-NEXT:            Decl %d.5 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.6 'C' Class : %class_constructor.12
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.4
-// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.5
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.6
-// CHECK-NEXT:                Decl %d.8 'b' Let
-// CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.10
+// CHECK-NEXT:                Decl %d.8 'b' Let
+// CHECK-NEXT:                Decl %d.9 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.11
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.12
 // CHECK-NEXT:                Decl %d.10 'b' Let : %class.6
 // CHECK-NEXT:                Decl %d.11 'arguments' Var Arguments
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.13
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -88,24 +94,24 @@ class C<Props> {
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            ClassProperty : %union.4
 // CHECK-NEXT:                                Id 'c'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            MethodDefinition : %function.13
 // CHECK-NEXT:                                Id 'func'
 // CHECK-NEXT:                                FunctionExpression : %function.13
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.6
 // CHECK-NEXT:                        Id 'C' [D:E:%d.6 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                            ClassProperty : %array.11
+// CHECK-NEXT:                            ClassProperty : %tuple.11
 // CHECK-NEXT:                                Id 'vals'
 // CHECK-NEXT:                            MethodDefinition : %function.14
 // CHECK-NEXT:                                Id 'foo'
@@ -114,7 +120,7 @@ class C<Props> {
 // CHECK-NEXT:                                        VariableDeclaration
 // CHECK-NEXT:                                            VariableDeclarator
 // CHECK-NEXT:                                                MemberExpression : %class.6
-// CHECK-NEXT:                                                    MemberExpression : %array.11
+// CHECK-NEXT:                                                    MemberExpression : %tuple.11
 // CHECK-NEXT:                                                        ThisExpression : %class.9
 // CHECK-NEXT:                                                        Id 'vals'
 // CHECK-NEXT:                                                    NumericLiteral : number
@@ -124,7 +130,7 @@ class C<Props> {
 // CHECK-NEXT:                                                MemberExpression : %function.13
 // CHECK-NEXT:                                                    Id 'b' [D:E:%d.10 'b'] : %class.6
 // CHECK-NEXT:                                                    Id 'func'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'C' [D:E:%d.4 'C']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

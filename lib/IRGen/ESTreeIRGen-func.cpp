@@ -821,6 +821,10 @@ void ESTreeIRGen::emitFunctionPrologue(
           flowContext_.getNodeTypeOrAny(funcNode)->info);
       ftype && ftype->getThisParam()) {
     thisParam->setType(flowTypeToIRType(ftype->getThisParam()));
+  } else if (curFunction()->typedClassContext.type) {
+    // Field initializers have no FunctionLikeNode, but the 'this' type is
+    // stored in the class.
+    thisParam->setType(flowTypeToIRType(curFunction()->typedClassContext.type));
   }
 
   // Save the "this" parameter. We will delete it later if unused.
@@ -883,6 +887,11 @@ void ESTreeIRGen::emitScopeDeclarations(sema::LexicalScope *scope) {
 
   bool tdz = Mod->getContext().getCodeGenerationSettings().enableTDZ;
   for (sema::Decl *decl : scope->decls) {
+    if (decl->generic) {
+      // Skip generics that aren't specialized.
+      continue;
+    }
+
     Variable *var = nullptr;
     bool init = false;
     switch (decl->kind) {
@@ -1031,6 +1040,11 @@ void ESTreeIRGen::emitHoistedFunctionDeclaration(
   sema::Decl *decl =
       getIDDecl(llvh::cast<ESTree::IdentifierNode>(funcDecl->_id));
 
+  if (decl->generic) {
+    // Skip generics that aren't specialized.
+    return;
+  }
+
   // Function-level var-scoped functions may have a previous store of
   // 'undefined', which is now dead. If this isn't a function-level scope, don't
   // try to delete anything.
@@ -1074,6 +1088,9 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   for (sema::Decl *decl : semInfo->getParameterScope()->decls) {
     if (decl->kind != sema::Decl::Kind::Parameter)
       break;
+    // Skip the 'this' parameter, because it's implicit.
+    if (decl->name.getUnderlyingPointer() == kw_.identThis)
+      continue;
 
     LLVM_DEBUG(llvh::dbgs() << "Adding parameter: " << decl->name << "\n");
 
@@ -1103,6 +1120,14 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
   for (auto &elem : ESTree::getParams(funcNode)) {
     ESTree::Node *param = &elem;
     ESTree::Node *init = nullptr;
+
+    // Skip the typed 'this' parameter if it exists.
+    // Don't increment paramIndex because 'this' doesn't count.
+    if (auto *idNode = llvh::dyn_cast<ESTree::IdentifierNode>(param);
+        idNode && idNode->_name == kw_.identThis) {
+      continue;
+    }
+
     ++paramIndex;
 
     if (auto *rest = llvh::dyn_cast<ESTree::RestElementNode>(param)) {
@@ -1134,7 +1159,7 @@ void ESTreeIRGen::emitParameters(ESTree::FunctionLikeNode *funcNode) {
             llvh::dyn_cast<flow::TypedFunctionType>(
                 flowContext_.getNodeTypeOrAny(funcNode)->info);
         ftype && paramIndex < ftype->getParams().size()) {
-      jsParam->setType(flowTypeToIRType(ftype->getParams()[paramIndex].second));
+      jsParam->setType(flowTypeToIRType(ftype->getParams()[paramIndex].type));
     }
     Instruction *formalParam = Builder.createLoadParamInst(jsParam);
     curFunction()->jsParams.push_back(formalParam);
@@ -1151,6 +1176,12 @@ uint32_t ESTreeIRGen::countExpectedArgumentsIncludingThis(
   // Implicit functions, whose funcNode is null, take no arguments.
   if (funcNode) {
     for (auto &param : ESTree::getParams(funcNode)) {
+      // Skip the typed 'this' parameter - it's not a real argument.
+      if (auto *idNode = llvh::dyn_cast<ESTree::IdentifierNode>(&param)) {
+        if (idNode->_name == kw_.identThis) {
+          continue;
+        }
+      }
       if (llvh::isa<ESTree::AssignmentPatternNode>(param) ||
           llvh::isa<ESTree::RestElementNode>(param)) {
         // Found an initializer or a rest parameter, stop counting expected

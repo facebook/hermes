@@ -1097,6 +1097,14 @@ bool Verifier::visitAddOwnPrivateFieldInst(const AddOwnPrivateFieldInst &Inst) {
   return true;
 }
 
+bool Verifier::visitPrivateBrandCheckInst(const PrivateBrandCheckInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getBrand()->getType().isPrivateNameType(),
+      "PrivateBrandCheckInst::Brand must be a private name");
+  return true;
+}
+
 bool Verifier::visitDefineOwnGetterSetterInst(
     const DefineOwnGetterSetterInst &Inst) {
   AssertIWithMsg(
@@ -1482,6 +1490,32 @@ bool Verifier::visitLIRAllocObjectFromBufferInst(
   return true;
 }
 
+bool Verifier::visitLIRAllocTypedObjectFromBufferInst(
+    const hermes::LIRAllocTypedObjectFromBufferInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getKeyValuePairCount() > 0,
+      "Cannot allocate an empty LIRAllocTypedObjectFromBufferInst");
+  AssertIWithMsg(
+      Inst,
+      !llvh::isa<EmptySentinel>(Inst.getParent()),
+      "LIRAllocTypedObjectFromBufferInst requires a parent object");
+  return true;
+}
+
+bool Verifier::visitLIRAllocTypedNonEnumObjectFromBufferInst(
+    const hermes::LIRAllocTypedNonEnumObjectFromBufferInst &Inst) {
+  AssertIWithMsg(
+      Inst,
+      Inst.getKeyValuePairCount() > 0,
+      "Cannot allocate an empty LIRAllocTypedNonEnumObjectFromBufferInst");
+  AssertIWithMsg(
+      Inst,
+      !llvh::isa<EmptySentinel>(Inst.getParent()),
+      "LIRAllocTypedNonEnumObjectFromBufferInst requires a parent object");
+  return true;
+}
+
 bool Verifier::visitAllocObjectLiteralInst(
     const hermes::AllocObjectLiteralInst &Inst) {
   return true;
@@ -1489,6 +1523,11 @@ bool Verifier::visitAllocObjectLiteralInst(
 
 bool Verifier::visitAllocTypedObjectInst(
     const hermes::AllocTypedObjectInst &Inst) {
+  return true;
+}
+
+bool Verifier::visitAllocTypedNonEnumObjectInst(
+    const hermes::AllocTypedNonEnumObjectInst &Inst) {
   return true;
 }
 

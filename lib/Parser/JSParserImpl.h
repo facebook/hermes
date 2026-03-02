@@ -598,11 +598,13 @@ class JSParserImpl {
 #if HERMES_PARSE_FLOW
     if (context_.getParseFlow()) {
       if (context_.getParseFlowComponentSyntax() &&
-          checkComponentDeclarationFlow()) {
+          (checkComponentDeclarationFlow() ||
+           (checkUnescaped(asyncIdent_) && checkAsyncComponentFlow()))) {
         return true;
       }
       if (context_.getParseFlowComponentSyntax() &&
-          checkHookDeclarationFlow()) {
+          (checkHookDeclarationFlow() ||
+           (checkUnescaped(asyncIdent_) && checkAsyncHookFlow()))) {
         return true;
       }
       if (checkRecordDeclarationFlow()) {
@@ -1286,11 +1288,16 @@ class JSParserImpl {
   Optional<ESTree::Node *> parseFlowDeclaration();
   Optional<ESTree::Node *> parseDeclareFLow(SMLoc start);
   bool checkComponentDeclarationFlow();
+  bool checkAsyncComponentFlow();
   Optional<ESTree::Node *> parseComponentDeclarationFlow(
       SMLoc start,
-      bool declare);
+      bool declare,
+      bool isAsync = false);
   bool checkHookDeclarationFlow();
-  Optional<ESTree::Node *> parseHookDeclarationFlow(SMLoc start);
+  bool checkAsyncHookFlow();
+  Optional<ESTree::Node *> parseHookDeclarationFlow(
+      SMLoc start,
+      bool isAsync = false);
 
   /// This is for parsing the `renders` clause that comes after component
   /// declarations, declared components, and component types, but not for

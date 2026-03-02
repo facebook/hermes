@@ -327,7 +327,7 @@ class UsageCounter : public BytecodeVisitor {
         appendRecord("data:literalbuffer:int", bundleOffset, 4);
         *ind += 4;
       } break;
-      case SLG::NullTag:
+      case SLG::ValueNullOrKeyPrivateNameTag:
       case SLG::UndefinedTag:
       case SLG::TrueTag:
       case SLG::FalseTag:

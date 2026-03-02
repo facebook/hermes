@@ -931,7 +931,25 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::genMemberExpression(
   }
 
   Value *baseValue = genExpression(mem->_object);
-  Value *prop = genMemberExpressionProperty(mem);
+  Value *prop;
+  if (auto *classType = llvh::dyn_cast<flow::ClassType>(
+          flowContext_.getNodeTypeOrAny(mem->_object)->info);
+      classType && !mem->_computed) {
+    // Named types for typed fields with known layout shouldn't bother
+    // with genMemberExpressionProperty, which is intended for untyped code.
+    if (auto *privateName =
+            llvh::dyn_cast<ESTree::PrivateNameNode>(mem->_property)) {
+      // If the property is an identifier, we can use the class type to
+      // determine the property name.
+      prop =
+          Builder.getLiteralPrivateName(getNameFieldFromID(privateName->_id));
+    } else {
+      prop = Builder.getLiteralString(getNameFieldFromID(mem->_property));
+    }
+  } else {
+    prop = genMemberExpressionProperty(mem);
+  }
+
   switch (op) {
     case MemberExpressionOperation::Load:
       return emitMemberLoad(mem, baseValue, prop);
@@ -951,9 +969,25 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
   if (auto *classType = llvh::dyn_cast<flow::ClassType>(
           flowContext_.getNodeTypeOrAny(mem->_object)->info)) {
     if (!mem->_computed) {
-      auto propName = Identifier::getFromPointer(
-          llvh::cast<ESTree::IdentifierNode>(mem->_property)->_name);
-      auto optFieldLookup = classType->findField(propName);
+      Identifier propIdent;
+      Literal *propName;
+      OptValue<flow::ClassType::FieldLookupEntry> optFieldLookup;
+      bool isPrivate;
+      if (auto *privateName =
+              llvh::dyn_cast<ESTree::PrivateNameNode>(mem->_property)) {
+        // If the property is an identifier, we can use the class type to
+        // determine the property name.
+        isPrivate = true;
+        propIdent = Mod->getContext().getPrivateNameIdentifier(
+            getNameFieldFromID(privateName->_id).getUnderlyingPointer());
+        optFieldLookup = classType->findPrivateField(propIdent);
+        propName = Builder.getLiteralPrivateName(propIdent);
+      } else {
+        isPrivate = false;
+        propIdent = getNameFieldFromID(mem->_property);
+        optFieldLookup = classType->findPublicField(propIdent);
+        propName = Builder.getLiteralString(propIdent);
+      }
       if (optFieldLookup) {
         size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
         Type irType = flowTypeToIRType(optFieldLookup->getField()->type);
@@ -961,26 +995,38 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
         if (irType.canBePrimitive()) {
           // If the type can be a primitive, it will have a default value that
           // doesn't need IDZ.
-          inst = Builder.createPrLoadInst(
-              baseValue,
-              fieldIndex,
-              Builder.getLiteralString(propName),
-              irType);
+          inst =
+              Builder.createPrLoadInst(baseValue, fieldIndex, propName, irType);
         } else {
           // IDZ needed for object types.
           inst = Builder.createThrowIfInst(
               Builder.createPrLoadInst(
                   baseValue,
                   fieldIndex,
-                  Builder.getLiteralString(propName),
+                  propName,
                   Type::unionTy(irType, Type::createUninit())),
               Type::createUninit());
         }
         return MemberExpressionResult{inst, nullptr, baseValue};
       }
       // Failed to find a class field, check the home object for methods.
-      auto optMethodLookup =
-          classType->getHomeObjectTypeInfo()->findField(propName);
+      if (isPrivate) {
+        // Private methods are stored in variables instead of on the object.
+        OptValue<flow::ClassType::FieldLookupEntry> optMethodLookup =
+            classType->getHomeObjectTypeInfo()->findPrivateField(propIdent);
+        auto *privateName = llvh::cast<ESTree::PrivateNameNode>(mem->_property);
+        sema::Decl *decl =
+            getIDDecl(llvh::cast<ESTree::IdentifierNode>(privateName->_id));
+        Variable *var = llvh::cast<Variable>(getDeclData(decl));
+        Instruction *scope = emitResolveScopeInstIfNeeded(var->getParent());
+        return MemberExpressionResult{
+            Builder.createLoadFrameInst(scope, var),
+            finalMethods_.lookup(optMethodLookup->getField()),
+            baseValue};
+      }
+
+      OptValue<flow::ClassType::FieldLookupEntry> optMethodLookup =
+          classType->getHomeObjectTypeInfo()->findPublicField(propIdent);
       assert(
           optMethodLookup && "must have typechecked as either method or field");
       size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
@@ -990,7 +1036,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitMemberLoad(
           Builder.createPrLoadInst(
               Builder.createTypedLoadParentInst(baseValue),
               methodIndex,
-              Builder.getLiteralString(propName),
+              propName,
               flowTypeToIRType(optMethodLookup->getField()->type)),
           finalMethods_.lookup(optMethodLookup->getField()),
           baseValue};
@@ -1077,7 +1123,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
   auto propName = Identifier::getFromPointer(
       llvh::cast<ESTree::IdentifierNode>(property)->_name);
   Value *thisValue = genThisExpression();
-  if (auto optFieldLookup = classType->findField(propName)) {
+  if (auto optFieldLookup = classType->findPublicField(propName)) {
     // Found the field on the class, so load it directly from 'this'.
     size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
     return MemberExpressionResult{
@@ -1091,7 +1137,7 @@ ESTreeIRGen::MemberExpressionResult ESTreeIRGen::emitTypedSuperLoad(
   }
   // Failed to find a class field, check the home object for methods.
   auto optMethodLookup =
-      classType->getHomeObjectTypeInfo()->findField(propName);
+      classType->getHomeObjectTypeInfo()->findPublicField(propName);
   assert(optMethodLookup && "must have typechecked as either method or field");
   size_t methodIndex = optMethodLookup->getField()->layoutSlotIR;
   // Lookup method on the parent, return thisValue in the result to
@@ -1116,16 +1162,25 @@ void ESTreeIRGen::emitTypedFieldStore(
     ESTree::Node *prop,
     Value *object,
     Value *value) {
-  auto propName = Identifier::getFromPointer(
-      llvh::cast<ESTree::IdentifierNode>(prop)->_name);
-  auto optFieldLookup = classType->findField(propName);
+  Literal *propName;
+  OptValue<flow::ClassType::FieldLookupEntry> optFieldLookup;
+  if (auto *privateName = llvh::dyn_cast<ESTree::PrivateNameNode>(prop)) {
+    Identifier name = Mod->getContext().getPrivateNameIdentifier(
+        getNameFieldFromID(privateName->_id).getUnderlyingPointer());
+    optFieldLookup = classType->findPrivateField(name);
+    propName = Builder.getLiteralPrivateName(name);
+  } else {
+    Identifier name = getNameFieldFromID(prop);
+    optFieldLookup = classType->findPublicField(name);
+    propName = Builder.getLiteralString(name);
+  }
   assert(optFieldLookup && "field lookup must succeed after typechecking");
   size_t fieldIndex = optFieldLookup->getField()->layoutSlotIR;
   Builder.createPrStoreInst(
       value,
       object,
       fieldIndex,
-      Builder.getLiteralString(propName),
+      propName,
       flowTypeToIRType(optFieldLookup->getField()->type).isNonPtr());
 }
 
@@ -2624,7 +2679,11 @@ Value *ESTreeIRGen::genNewExpr(ESTree::NewExpressionNode *N) {
     auto *proto = Builder.createUnionNarrowTrustedInst(
         Builder.createLoadFrameInst(RSI, it->second.homeObjectVar),
         Type::createObject());
-    Value *newInst = emitTypedClassAllocation(classType, proto);
+    Value *newInst = emitTypedClassAllocation(
+        classType,
+        proto,
+        /* skipPrivateFields */ false,
+        /* propertiesEnumerable */ true);
 
     // Call the constructor, if necessary.  There is always a constructor,
     // either explicit or implicit.  We will load an implicit ctor (for

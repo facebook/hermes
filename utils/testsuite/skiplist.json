@@ -983,7 +983,6 @@
     "test262/test/language/expressions/object/fn-name-fn.js",
     "test262/test/annexB/built-ins/Object/prototype/__proto__/set-cycle-shadowed.js",
     "test262/test/built-ins/Proxy/getOwnPropertyDescriptor/resultdesc-is-not-configurable-not-writable-targetdesc-is-writable.js",
-    "test262/test/built-ins/Proxy/deleteProperty/targetdesc-is-configurable-target-is-not-extensible.js",
     "test262/test/built-ins/Proxy/defineProperty/targetdesc-not-configurable-writable-desc-not-writable.js",
     "test262/test/built-ins/Array/prototype/concat/create-ctor-poisoned.js",
     "test262/test/built-ins/Array/prototype/filter/create-ctor-poisoned.js",
@@ -2694,7 +2693,6 @@
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/BigInt/key-is-canonical-invalid-index-prototype-chain-set.js",
     "test262/test/built-ins/TypedArrayConstructors/internals/Set/BigInt/key-is-canonical-invalid-index-reflect-set.js",
     "test262/test/staging/sm/Proxy/proxy-no-receiver-overwrite.js",
-    "test262/test/staging/sm/Proxy/delete-non-extensible.js",
     "test262/test/staging/sm/Proxy/revoked-get-function-realm-typeerror.js",
     "test262/test/staging/sm/Proxy/define-writable-as-non-writable.js",
     "test262/test/staging/sm/Proxy/proxy-with-revoked-arguments.js",
@@ -3028,7 +3026,10 @@
     "test262/test/staging/sm/extensions/newer-type-functions-caller-arguments.js",
     "test262/test/staging/sm/class/classConstructorNoCall.js",
     "test262/test/staging/sm/class/methodInstallation.js",
-    "test262/test/staging/sm/object/method-non-constructor.js"
+    "test262/test/staging/sm/object/method-non-constructor.js",
+    "test262/test/staging/sm/Array/toLocaleString-01.js",
+    "test262/test/staging/sm/Function/redefine-arguments-length.js",
+    "test262/test/staging/sm/Math/expm1-monotonicity.js"
   ],
   "lazy_skip_list": [
     "test262/test/language/statements/try/scope-catch-param-lex-close.js"
@@ -4719,7 +4720,18 @@
         "paths": [
           "test262/test/built-ins/RegExp/",
           "test262/test/built-ins/decodeURI/",
-          "test262/test/built-ins/decodeURIComponent/"
+          "test262/test/built-ins/decodeURIComponent/",
+          "test262/test/staging/sm/String/fromCodePoint.js",
+          "test262/test/staging/sm/Proxy/ownkeys-linear.js",
+          "test262/test/built-ins/TypedArray/prototype/copyWithin/coerced-values-end-detached-prototype.js",
+          "test262/test/built-ins/TypedArray/prototype/copyWithin/coerced-values-end-detached.js",
+          "test262/test/built-ins/TypedArray/prototype/copyWithin/coerced-values-start-detached.js",
+          "test262/test/staging/sm/Array/toSpliced-dense.js",
+          "test262/test/staging/sm/TypedArray/element-setting-converts-using-ToNumber.js",
+          "test262/test/staging/sm/Date/two-digit-years.js",
+          "test262/test/staging/sm/Proxy/ownkeys-linear.js",
+          "test262/test/staging/sm/String/fromCodePoint.js",
+          "test262/test/staging/sm/TypedArray/set-same-buffer-different-source-target-types.js"
         ],
         "comment": "These tests are extremely slow on Windows with ASAN enabled. So disable them for now."
       }

@@ -54,7 +54,8 @@ hook useMyHook() {
 // CHECK-NEXT:             "async": false
 // CHECK-NEXT:           }
 // CHECK-NEXT:         ]
-// CHECK-NEXT:       }
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "async": false
 // CHECK-NEXT:     }
 
 // CHECK-NEXT:   ]

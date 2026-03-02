@@ -215,6 +215,10 @@ LiteralString *IRBuilder::getLiteralString(Identifier value) {
   return M->getLiteralString(value);
 }
 
+LiteralPrivateName *IRBuilder::getLiteralPrivateName(Identifier value) {
+  return M->getLiteralPrivateName(value);
+}
+
 LiteralBool *IRBuilder::getLiteralBool(bool value) {
   return M->getLiteralBool(value);
 }
@@ -694,6 +698,13 @@ AddOwnPrivateFieldInst *IRBuilder::createAddOwnPrivateFieldInst(
   insert(inst);
   return inst;
 }
+PrivateBrandCheckInst *IRBuilder::createPrivateBrandCheckInst(
+    Value *object,
+    Value *brand) {
+  auto *inst = new PrivateBrandCheckInst(object, brand);
+  insert(inst);
+  return inst;
+}
 
 DefineOwnGetterSetterInst *IRBuilder::createDefineOwnGetterSetterInst(
     Value *storedGetter,
@@ -1165,6 +1176,26 @@ LIRAllocObjectFromBufferInst *IRBuilder::createLIRAllocObjectFromBufferInst(
   return inst;
 }
 
+LIRAllocTypedObjectFromBufferInst *
+IRBuilder::createLIRAllocTypedObjectFromBufferInst(
+    Value *parentObject,
+    const LIRAllocTypedObjectFromBufferInst::ObjectPropertyMap &propMap) {
+  auto *inst = new LIRAllocTypedObjectFromBufferInst(parentObject, propMap);
+  insert(inst);
+  return inst;
+}
+
+LIRAllocTypedNonEnumObjectFromBufferInst *
+IRBuilder::createLIRAllocTypedNonEnumObjectFromBufferInst(
+    Value *parentObject,
+    const LIRAllocTypedNonEnumObjectFromBufferInst::ObjectPropertyMap
+        &propMap) {
+  auto *inst =
+      new LIRAllocTypedNonEnumObjectFromBufferInst(parentObject, propMap);
+  insert(inst);
+  return inst;
+}
+
 AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
     const AllocObjectLiteralInst::ObjectPropertyMap &propMap,
     Value *parentObject) {
@@ -1177,8 +1208,15 @@ AllocObjectLiteralInst *IRBuilder::createAllocObjectLiteralInst(
 AllocTypedObjectInst *IRBuilder::createAllocTypedObjectInst(
     const AllocTypedObjectInst::ObjectPropertyMap &propMap,
     Value *parentObject) {
-  auto *inst = new AllocTypedObjectInst(
-      parentObject ? parentObject : getEmptySentinel(), propMap);
+  auto *inst = new AllocTypedObjectInst(parentObject, propMap);
+  insert(inst);
+  return inst;
+}
+
+AllocTypedNonEnumObjectInst *IRBuilder::createAllocTypedNonEnumObjectInst(
+    const AllocTypedNonEnumObjectInst::ObjectPropertyMap &propMap,
+    Value *parentObject) {
+  auto *inst = new AllocTypedNonEnumObjectInst(parentObject, propMap);
   insert(inst);
   return inst;
 }
@@ -1238,7 +1276,7 @@ UnreachableInst *IRBuilder::createUnreachableInst() {
 PrLoadInst *IRBuilder::createPrLoadInst(
     Value *object,
     size_t propIndex,
-    LiteralString *propName,
+    Literal *propName,
     Type checkedType) {
   auto *I = new PrLoadInst(
       object, getLiteralNumber((double)propIndex), propName, checkedType);
@@ -1250,7 +1288,7 @@ PrStoreInst *IRBuilder::createPrStoreInst(
     Value *storedValue,
     Value *object,
     size_t propIndex,
-    LiteralString *propName,
+    Literal *propName,
     bool nonPointer) {
   auto *I = new PrStoreInst(
       storedValue,

@@ -1248,6 +1248,20 @@ SHERMES_EXPORT SHLegacyValue _sh_ljs_new_object_with_buffer_and_parent(
     uint32_t shapeTableIndex,
     uint32_t valBufferOffset);
 
+SHERMES_EXPORT SHLegacyValue _sh_new_typed_object_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
+
+SHERMES_EXPORT SHLegacyValue _sh_new_typed_non_enum_object_with_buffer(
+    SHRuntime *shr,
+    SHUnit *unit,
+    SHLegacyValue *parent,
+    uint32_t shapeTableIndex,
+    uint32_t valBufferOffset);
+
 /// \p size the size of the resultant array.
 SHERMES_EXPORT SHLegacyValue _sh_ljs_new_array(SHRuntime *shr, uint32_t size);
 

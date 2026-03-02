@@ -594,4 +594,24 @@ component Foo(bar: mixed = Foo, ref: any) {
       `);
     });
   });
+
+  describe('async', () => {
+    const code = `
+      async component Foo() {}
+    `;
+
+    test('ESTree', async () => {
+      expect(await parseForSnapshotESTree(code)).toMatchSnapshot();
+      // TODO: Enable print round-trip test once prettier fork supports
+      // async component syntax.
+      // expect(await printForSnapshotESTree(code)).toBe(code.trim());
+    });
+
+    test('Babel', async () => {
+      expect(await parseForSnapshotBabel(code)).toMatchSnapshot();
+      expect(await printForSnapshotBabel(code)).toMatchInlineSnapshot(
+        `"async function Foo(): React.Node {}"`,
+      );
+    });
+  });
 });

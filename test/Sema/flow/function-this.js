@@ -17,7 +17,7 @@ f = g;
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}function-this.js:14:1: error: ft: incompatible assignment types
+// CHECK:{{.*}}function-this.js:14:1: error: ft: incompatible assignment type: cannot implicitly cast from untyped function to function
 // CHECK-NEXT:f = g;
 // CHECK-NEXT:^~~~~
 // CHECK-NEXT:Emitted 1 errors. exiting.

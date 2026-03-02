@@ -250,14 +250,10 @@ function simpleMethods() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS11.o]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS11.o]: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:privateName) %0: environment, [%VS2.?instance_brand_B]: privateName
-// CHECK-NEXT:  %6 = BinaryPrivateInInst (:any) %5: privateName, %4: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst (:object) %0: environment, [%VS2.#m1]: object
-// CHECK-NEXT:  %9 = CallInst (:any) %8: object, empty: any, false: boolean, empty: any, undefined: undefined, %4: any
-// CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:        ThrowTypeErrorInst "Private element not found": string
+// CHECK-NEXT:       PrivateBrandCheckInst %4: any, %5: privateName
+// CHECK-NEXT:  %7 = LoadFrameInst (:object) %0: environment, [%VS2.#m1]: object
+// CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, false: boolean, empty: any, undefined: undefined, %4: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end
 
 // CHECK:scope %VS12 []
@@ -279,12 +275,8 @@ function simpleMethods() {
 // CHECK-NEXT:       StoreFrameInst %1: environment, %2: any, [%VS13.o]: any
 // CHECK-NEXT:  %4 = LoadFrameInst (:any) %1: environment, [%VS13.o]: any
 // CHECK-NEXT:  %5 = LoadFrameInst (:privateName) %0: environment, [%VS2.?static_brand_B]: privateName
-// CHECK-NEXT:  %6 = BinaryPrivateInInst (:any) %5: privateName, %4: any
-// CHECK-NEXT:       CondBranchInst %6: any, %BB1, %BB2
-// CHECK-NEXT:%BB1:
-// CHECK-NEXT:  %8 = LoadFrameInst (:object) %0: environment, [%VS2.#m3]: object
-// CHECK-NEXT:  %9 = CallInst (:any) %8: object, empty: any, false: boolean, empty: any, undefined: undefined, %4: any
-// CHECK-NEXT:        ReturnInst undefined: undefined
-// CHECK-NEXT:%BB2:
-// CHECK-NEXT:        ThrowTypeErrorInst "Private element not found": string
+// CHECK-NEXT:       PrivateBrandCheckInst %4: any, %5: privateName
+// CHECK-NEXT:  %7 = LoadFrameInst (:object) %0: environment, [%VS2.#m3]: object
+// CHECK-NEXT:  %8 = CallInst (:any) %7: object, empty: any, false: boolean, empty: any, undefined: undefined, %4: any
+// CHECK-NEXT:       ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

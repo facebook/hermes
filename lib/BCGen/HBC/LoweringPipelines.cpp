@@ -49,6 +49,9 @@ void lowerModuleIR(Module *M, const BytecodeGenerationOptions &options) {
     PM.addPass(createOptParentEnvironment());
   }
 
+  // LowerPrivateBrandCheck produces ThrowTypeErrorInst, which is lowered by
+  // PeepholeLowering. Therefore, LowerPrivateBrandCheck must run before.
+  PM.addPass(createLowerPrivateBrandCheck());
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.

@@ -1192,6 +1192,12 @@ void HBCISel::generateAddOwnPrivateFieldInst(
   BCFGen_->emitAddOwnPrivateBySym(objReg, valueReg, symReg);
 }
 
+void HBCISel::generatePrivateBrandCheckInst(
+    PrivateBrandCheckInst *Inst,
+    BasicBlock *next) {
+  hermes_fatal("PrivateBrandCheckInst should have been lowered.");
+}
+
 void HBCISel::generateDefineOwnGetterSetterInst(
     DefineOwnGetterSetterInst *Inst,
     BasicBlock *next) {
@@ -1367,12 +1373,18 @@ void HBCISel::generateAllocTypedObjectInst(
   assert(
       Inst->getKeyValuePairCount() == 0 &&
       "AllocTypedObjectInst with properties should be lowered to LIRAllocObjectFromBufferInst");
-  if (llvh::isa<EmptySentinel>(Inst->getParentObject())) {
-    BCFGen_->emitNewObject(result);
-  } else {
-    auto parentReg = encodeValue(Inst->getParentObject());
-    BCFGen_->emitNewObjectWithParent(result, parentReg);
-  }
+  auto parentReg = encodeValue(Inst->getParentObject());
+  BCFGen_->emitNewObjectWithParent(result, parentReg);
+}
+void HBCISel::generateAllocTypedNonEnumObjectInst(
+    AllocTypedNonEnumObjectInst *Inst,
+    BasicBlock *) {
+  auto result = encodeValue(Inst);
+  assert(
+      Inst->getKeyValuePairCount() == 0 &&
+      "AllocTypedNonEnumObjectInst with properties should be lowered to LIRAllocTypedNonEnumObjectFromBufferInst");
+  auto parentReg = encodeValue(Inst->getParentObject());
+  BCFGen_->emitNewObjectWithParent(result, parentReg);
 }
 void HBCISel::generateAllocArrayInst(AllocArrayInst *Inst, BasicBlock *next) {
   auto dstReg = encodeValue(Inst);
@@ -1440,6 +1452,36 @@ void HBCISel::generateLIRAllocObjectFromBufferInst(
     BCFGen_->emitNewObjectWithBufferLong(
         result, buffIdxs.shapeTableIdx, buffIdxs.valueBufferOffset);
   }
+}
+
+void HBCISel::generateLIRAllocTypedObjectFromBufferInst(
+    LIRAllocTypedObjectFromBufferInst *Inst,
+    BasicBlock *next) {
+  auto result = encodeValue(Inst);
+  auto parent = encodeValue(Inst->getParentObject());
+  auto buffIdxs =
+      BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
+  BCFGen_->emitNewTypedObjectWithBuffer(
+      result,
+      parent,
+      buffIdxs.shapeTableIdx,
+      buffIdxs.valueBufferOffset,
+      /* nonEnumerable */ 0);
+}
+
+void HBCISel::generateLIRAllocTypedNonEnumObjectFromBufferInst(
+    LIRAllocTypedNonEnumObjectFromBufferInst *Inst,
+    BasicBlock *next) {
+  auto result = encodeValue(Inst);
+  auto parent = encodeValue(Inst->getParentObject());
+  auto buffIdxs =
+      BCFGen_->getBytecodeModuleGenerator().serializedLiteralOffsetFor(Inst);
+  BCFGen_->emitNewTypedObjectWithBuffer(
+      result,
+      parent,
+      buffIdxs.shapeTableIdx,
+      buffIdxs.valueBufferOffset,
+      /* nonEnumerable */ 1);
 }
 
 void HBCISel::generateCatchInst(CatchInst *Inst, BasicBlock *next) {

@@ -49,23 +49,14 @@ class JSONStringifyer {
     /// `value_` for recursions.
     PinnedValue<PropStorage> stackValue;
 
-    /// An additional stack just for operationJO to store `K` for recursions.
-    PinnedValue<PropStorage> stackJO;
-
     /// A temporary handle, to avoid creating new handles when a temporary one
     /// is needed.
     /// Note: this should be used with care because it can be shared among
     /// functions.
     PinnedValue<> tmpHandle;
 
-    /// A second temporary handle for when the first is taken.
-    PinnedValue<> tmpHandle2;
-
     /// Handle used by operationStr to store the value.
     PinnedValue<> operationStrValue;
-
-    /// Handle used by operationJO to store K.
-    PinnedValue<JSArray> operationJOK;
 
     /// The holder argument passed to operationStr.
     /// We define a member variable here to avoid creating a new handle
@@ -106,12 +97,6 @@ class JSONStringifyer {
       return ExecutionStatus::EXCEPTION;
     }
     lv_.stackValue = vmcast<PropStorage>(*arrRes);
-    if (LLVM_UNLIKELY(
-            (arrRes = PropStorage::create(runtime_, 4)) ==
-            ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    lv_.stackJO = vmcast<PropStorage>(*arrRes);
     auto cr = initializeReplacer(replacer);
     if (LLVM_UNLIKELY(cr == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -141,6 +126,18 @@ class JSONStringifyer {
   /// \return whether the result is not undefined.
   CallResult<bool> operationStr(HermesValue key);
 
+  /// Serialize the value in lv_.operationStrValue. This is a helper for
+  /// operationStr that performs the actual serialization after the value has
+  /// been retrieved from the holder. It can also be called directly when the
+  /// value is already available.
+  /// \p key is the property key for this value, used by the replacer function
+  /// and toJSON. The holder must be set in lv_.operationStrHolder by the
+  /// caller.
+  /// \return whether the result is not undefined.
+  CallResult<bool> operationStrValue(
+      GCScopeMarkerRAII &marker,
+      HermesValue key);
+
   /// Implement the abstract operation Quote(value).
   /// It wraps a String value in double quotes and escapes characters within it.
   void operationQuote(StringView value);
@@ -154,6 +151,30 @@ class JSONStringifyer {
   /// is always the current last element in lv_.stackValue.
   /// It serializes an object.
   ExecutionStatus operationJO();
+
+  /// Templated helper for operationJO that processes properties. UseFastPath
+  /// indicates that the given object is 'simple', and we can iterate its
+  /// properties directly, which were collected in \p operationJOKFast.
+  ///
+  /// \param objHandle Object handle for the object being stringified.
+  /// \param operationJOK Property keys for the slow path (propertyList,
+  ///   accessors, proxies). Only used when UseFastPath is false.
+  /// \param operationJOKFast Property keys for the fast path (simple objects).
+  /// \param operationJOKFastIndices 1:1 mapping from each element in
+  ///   operationJOKFast to its slot index.
+  /// \param originalClazz The original HiddenClass, used to detect if the
+  ///   object's shape changed. Only used when UseFastPath is true.
+  /// \param stepBack The depth count to restore after processing.
+  /// \param beginningLoc The output location at the start of the object.
+  template <bool UseFastPath>
+  ExecutionStatus operationJOProcessProperties(
+      Handle<JSObject> objHandle,
+      Handle<JSArray> operationJOK,
+      Handle<ArrayStorageSmall> operationJOKFast,
+      llvh::ArrayRef<SlotIndex> operationJOKFastIndices,
+      Handle<HiddenClass> originalClazz,
+      uint32_t stepBack,
+      size_t beginningLoc);
 
   /// Append '\n' and indent to output_.
   /// The indent is constructed according to depthCount_.
@@ -314,22 +335,28 @@ ExecutionStatus JSONStringifyer::initializeSpace(Handle<> space) {
 }
 
 CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
-  struct : public Locals {
-    PinnedValue<> hValueHV;
-    PinnedValue<Callable> toJSON;
-  } lv;
-  LocalsRAII lraii(runtime_, &lv);
-
   GCScopeMarkerRAII marker{runtime_};
-  lv_.tmpHandle = key;
-
   // Str.1: access holder[key].
+  lv_.tmpHandle = key;
   auto propRes = JSObject::getComputed_RJS(
       lv_.operationStrHolder, runtime_, lv_.tmpHandle);
   if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv_.operationStrValue = propRes->get();
+  return operationStrValue(marker, *lv_.tmpHandle);
+}
+
+CallResult<bool> JSONStringifyer::operationStrValue(
+    GCScopeMarkerRAII &marker,
+    HermesValue key) {
+  struct : public Locals {
+    PinnedValue<> hValueHV;
+    PinnedValue<Callable> toJSON;
+  } lv;
+  LocalsRAII lraii(runtime_, &lv);
+
+  lv_.tmpHandle = key;
 
   // Str.2. If Type(value) is Object or BigInt, then
   lv.hValueHV = *lv_.operationStrValue;
@@ -347,12 +374,12 @@ CallResult<bool> JSONStringifyer::operationStr(HermesValue key) {
     auto valueObj = Handle<JSObject>::vmcast(&lv.hValueHV);
     // Str.2.
     // Str.2.a: check if toJSON exists in value.
-    if (LLVM_UNLIKELY(
-            (propRes = JSObject::getNamedWithReceiver_RJS(
-                 valueObj,
-                 runtime_,
-                 Predefined::getSymbolID(Predefined::toJSON),
-                 lv_.operationStrValue)) == ExecutionStatus::EXCEPTION)) {
+    auto propRes = JSObject::getNamedWithReceiver_RJS(
+        valueObj,
+        runtime_,
+        Predefined::getSymbolID(Predefined::toJSON),
+        lv_.operationStrValue);
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     // Str.2.b: check if toJSON is a Callable.
@@ -724,6 +751,20 @@ ExecutionStatus JSONStringifyer::operationJA() {
 ExecutionStatus JSONStringifyer::operationJO() {
   GCScopeMarkerRAII marker{runtime_};
 
+  struct : public Locals {
+    /// Property keys (slow path).
+    PinnedValue<JSArray> operationJOK;
+    /// Object being stringified.
+    PinnedValue<JSObject> objHandle;
+    /// Property keys (fast path).
+    PinnedValue<ArrayStorageSmall> operationJOKFast;
+    /// Original HiddenClass for detecting shape changes.
+    PinnedValue<HiddenClass> originalClazz;
+  } lv;
+  /// Slot indices corresponding to operationJOKFast entries.
+  std::vector<SlotIndex> operationJOKFastIndices;
+  LocalsRAII lraii(runtime_, &lv);
+
   // JO.3.
   auto stepBack = depthCount_;
   // JO.4.
@@ -736,43 +777,127 @@ ExecutionStatus JSONStringifyer::operationJO() {
   auto beginningLoc = output_.size();
   indent();
 
+  bool useFastPath = false;
+
+  // Get the object we're stringifying from the stack.
+  lv.objHandle = vmcast<JSObject>(
+      lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
+
   if (lv_.propertyList.get()) {
     // JO.5.
-    lv_.operationJOK = lv_.propertyList.get();
+    lv.operationJOK = lv_.propertyList.get();
   } else {
     // JO.6.
-    lv_.tmpHandle = HermesValue::encodeObjectValue(
-        lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
-    if (LLVM_LIKELY(
-            !Handle<JSObject>::vmcast(&lv_.tmpHandle)->isProxyObject())) {
-      // enumerableOwnProperties_RJS is the spec definition, and is
-      // used below on proxies so the correct traps get called.  In
-      // the common case of a non-proxy object, we can do less work by
-      // calling getOwnPropertyNames.
-      auto cr = JSObject::getOwnPropertyNames(
-          Handle<JSObject>::vmcast(&lv_.tmpHandle), runtime_, true);
-      if (cr == ExecutionStatus::EXCEPTION) {
-        return ExecutionStatus::EXCEPTION;
+    if (LLVM_LIKELY(!lv.objHandle->isProxyObject())) {
+      HiddenClass *clazz = lv.objHandle->getClass(runtime_);
+      // Check if object has any indexed properties via the virtual table
+      // (e.g., TypedArrays store indices separately from HiddenClass).
+      auto [beginIdx, endIdx] =
+          JSObject::getOwnIndexedRange(*lv.objHandle, runtime_);
+      bool hasIndexedElements = beginIdx < endIdx;
+      if (LLVM_LIKELY(
+              !clazz->isDictionaryNoCache() && !clazz->getMayHaveAccessor() &&
+              !clazz->getHasIndexLikeProperties() && !hasIndexedElements)) {
+        // Fast path: iterate the HiddenClass directly and collect enumerable
+        // property names and slot indices.
+        useFastPath = true;
+        lv.originalClazz = clazz;
+        auto numElements = clazz->getNumProperties();
+        auto propRes =
+            ArrayStorageSmall::create(runtime_, numElements, numElements);
+        if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lv.operationJOKFast = vmcast<ArrayStorageSmall>(*propRes);
+        operationJOKFastIndices.reserve(numElements);
+        ArrayStorageSmall::size_type i = 0;
+        HiddenClass::forEachProperty(
+            lv.originalClazz,
+            runtime_,
+            [&runtime = runtime_, &lv, &i, &operationJOKFastIndices](
+                SymbolID id, NamedPropertyDescriptor desc) {
+              if (!desc.flags.enumerable)
+                return;
+              if (desc.flags.privateName)
+                return;
+              if (!isPropertyNamePrimitive(id))
+                return;
+              StringPrimitive *prim = runtime.getStringPrimFromSymbolID(id);
+              auto shv = SmallHermesValue::encodeStringValue(prim, runtime);
+              lv.operationJOKFast->set(i, shv, runtime.getHeap());
+              // Store the slot index for direct access later.
+              operationJOKFastIndices.push_back(desc.slot);
+              ++i;
+            });
+        // Resize to actual count since we may have skipped properties.
+        ArrayStorageSmall::resizeWithinCapacity(
+            lv.operationJOKFast.get(), runtime_, i);
+      } else {
+        // Slow path: object may have accessors or index-like properties.
+        // enumerableOwnProperties_RJS is the spec definition, and is
+        // used below on proxies so the correct traps get called. In
+        // the common case of a non-proxy object, we can do less work by
+        // calling getOwnPropertyNames.
+        auto cr = JSObject::getOwnPropertyNames(lv.objHandle, runtime_, true);
+        if (cr == ExecutionStatus::EXCEPTION) {
+          return ExecutionStatus::EXCEPTION;
+        }
+        lv.operationJOK = **cr;
       }
-      lv_.operationJOK = **cr;
     } else {
       CallResult<HermesValue> ownPropRes = enumerableOwnProperties_RJS(
-          runtime_,
-          Handle<JSObject>::vmcast(&lv_.tmpHandle),
-          EnumerableOwnPropertiesKind::Key);
+          runtime_, lv.objHandle, EnumerableOwnPropertiesKind::Key);
       if (ownPropRes == ExecutionStatus::EXCEPTION) {
         return ExecutionStatus::EXCEPTION;
       }
-      lv_.operationJOK = vmcast<JSArray>(*ownPropRes);
+      lv.operationJOK = vmcast<JSArray>(*ownPropRes);
     }
   }
 
   marker.flush();
 
+  if (useFastPath) {
+    return operationJOProcessProperties<true>(
+        lv.objHandle,
+        lv.operationJOK,
+        lv.operationJOKFast,
+        operationJOKFastIndices,
+        lv.originalClazz,
+        stepBack,
+        beginningLoc);
+  } else {
+    return operationJOProcessProperties<false>(
+        lv.objHandle,
+        lv.operationJOK,
+        lv.operationJOKFast,
+        operationJOKFastIndices,
+        lv.originalClazz,
+        stepBack,
+        beginningLoc);
+  }
+}
+
+template <bool UseFastPath>
+ExecutionStatus JSONStringifyer::operationJOProcessProperties(
+    Handle<JSObject> objHandle,
+    Handle<JSArray> operationJOK,
+    Handle<ArrayStorageSmall> operationJOKFast,
+    llvh::ArrayRef<SlotIndex> operationJOKFastIndices,
+    Handle<HiddenClass> originalClazz,
+    uint32_t stepBack,
+    size_t beginningLoc) {
+  GCScopeMarkerRAII marker{runtime_};
+
   // JO.8.
   bool hasElement = false;
-  for (uint32_t index = 0, len = lv_.operationJOK->getEndIndex(); index < len;
-       ++index) {
+  uint32_t len;
+  if constexpr (UseFastPath) {
+    len = operationJOKFast->size();
+  } else {
+    len = operationJOK->getEndIndex();
+  }
+
+  for (uint32_t index = 0; index < len; ++index) {
     // JO.8.a.
     // We are speculating that the Str operation will not return undefined,
     // and just append the key/value pair to the output. If it turns out
@@ -786,11 +911,15 @@ ExecutionStatus JSONStringifyer::operationJO() {
       indent();
     }
 
-    lv_.tmpHandle = lv_.operationJOK->at(runtime_, index).unboxToHV(runtime_);
+    if constexpr (UseFastPath) {
+      lv_.tmpHandle = operationJOKFast->at(index).unboxToHV(runtime_);
+    } else {
+      lv_.tmpHandle = operationJOK->at(runtime_, index).unboxToHV(runtime_);
+    }
     if (LLVM_UNLIKELY(!lv_.tmpHandle->isString())) {
-      // property may come from getOwnPropertyNames, which may contain numbers.
-      // getOwnPropertyNames and lv_.propertyList are both only populated
-      // with strings, numbers, and undefined only.
+      // property may come from getOwnPropertyNames, which may contain
+      // numbers. getOwnPropertyNames and lv_.propertyList are both only
+      // populated with strings, numbers, and undefined only.
       // None of them are objects, so toString cannot throw.
       assert(!lv_.tmpHandle->isObject() && "property name is an object");
       auto status = toString_RJS(runtime_, lv_.tmpHandle);
@@ -811,22 +940,27 @@ ExecutionStatus JSONStringifyer::operationJO() {
       output_.push_back(u' ');
     }
 
-    // JO.9.a.
-    lv_.operationStrHolder = vmcast<JSObject>(
-        lv_.stackValue->at(lv_.stackValue->size() - 1).getObject(runtime_));
-
-    lv_.tmpHandle2 = lv_.operationJOK.getHermesValue();
-    if (PropStorage::push_back(lv_.stackJO, runtime_, lv_.tmpHandle2) ==
-        ExecutionStatus::EXCEPTION) {
-      return ExecutionStatus::EXCEPTION;
+    CallResult<bool> result{false};
+    if (LLVM_LIKELY(
+            UseFastPath &&
+            objHandle->getClass(runtime_) == originalClazz.get())) {
+      // Fast path: object's class hasn't changed, use direct slot access.
+      SlotIndex slotIndex = operationJOKFastIndices[index];
+      auto shv =
+          JSObject::getNamedSlotValueUnsafe(*objHandle, runtime_, slotIndex);
+      lv_.operationStrValue = shv.unboxToHV(runtime_);
+      // Set up operationStrHolder for replacer function and toJSON calls.
+      lv_.operationStrHolder = objHandle.get();
+      // Flush just before recursion.
+      marker.flush();
+      result = operationStrValue(marker, *lv_.tmpHandle);
+    } else {
+      // Slow path: use getComputed_RJS via operationStr.
+      lv_.operationStrHolder = objHandle.get();
+      // Flush just before recursion.
+      marker.flush();
+      result = operationStr(*lv_.tmpHandle);
     }
-
-    // Flush just before recursion (propStoragePushBack may create handles).
-    marker.flush();
-    auto result = operationStr(*lv_.tmpHandle);
-
-    lv_.operationJOK =
-        vmcast<JSArray>(lv_.stackJO->pop_back(runtime_).getObject(runtime_));
 
     if (LLVM_UNLIKELY(result == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
@@ -839,6 +973,7 @@ ExecutionStatus JSONStringifyer::operationJO() {
       hasElement = true;
     }
   }
+
   // It's important to reset depthCount_ first, because the last
   // indent before } should be the old indent.
   depthCount_ = stepBack;

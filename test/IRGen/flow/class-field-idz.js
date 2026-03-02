@@ -76,30 +76,25 @@ return C;
 
 // CHECK:function method(): any
 // CHECK-NEXT:%BB0:
-// CHECK-NEXT:  %0 = LoadParamInst (:any) %<this>: any
+// CHECK-NEXT:  %0 = LoadParamInst (:object) %<this>: object
 // CHECK-NEXT:  %1 = GetParentScopeInst (:environment) %VS0: any, %parentScope: environment
 // CHECK-NEXT:  %2 = CreateScopeInst (:environment) %VS3: any, %1: environment
 // CHECK-NEXT:  %3 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %4 = CheckedTypeCastInst (:object) %0: any, type(object)
-// CHECK-NEXT:  %5 = PrLoadInst (:number) %4: object, 0: number, "p1": string
-// CHECK-NEXT:  %6 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: number
-// CHECK-NEXT:  %7 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %8 = CheckedTypeCastInst (:object) %0: any, type(object)
-// CHECK-NEXT:  %9 = PrLoadInst (:number|object) %8: object, 1: number, "p2": string
-// CHECK-NEXT:  %10 = CallInst (:any) %7: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %9: number|object
-// CHECK-NEXT:  %11 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %12 = CheckedTypeCastInst (:object) %0: any, type(object)
-// CHECK-NEXT:  %13 = PrLoadInst (:undefined|object) %12: object, 2: number, "p3": string
-// CHECK-NEXT:  %14 = CallInst (:any) %11: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %13: undefined|object
-// CHECK-NEXT:  %15 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %16 = CheckedTypeCastInst (:object) %0: any, type(object)
-// CHECK-NEXT:  %17 = PrLoadInst (:uninit|object) %16: object, 3: number, "p4": string
+// CHECK-NEXT:  %4 = PrLoadInst (:number) %0: object, 0: number, "p1": string
+// CHECK-NEXT:  %5 = CallInst (:any) %3: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %4: number
+// CHECK-NEXT:  %6 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %7 = PrLoadInst (:number|object) %0: object, 1: number, "p2": string
+// CHECK-NEXT:  %8 = CallInst (:any) %6: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %7: number|object
+// CHECK-NEXT:  %9 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %10 = PrLoadInst (:undefined|object) %0: object, 2: number, "p3": string
+// CHECK-NEXT:  %11 = CallInst (:any) %9: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %10: undefined|object
+// CHECK-NEXT:  %12 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %13 = PrLoadInst (:uninit|object) %0: object, 3: number, "p4": string
+// CHECK-NEXT:  %14 = ThrowIfInst (:object) %13: uninit|object, type(uninit)
+// CHECK-NEXT:  %15 = CallInst (:any) %12: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %14: object
+// CHECK-NEXT:  %16 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
+// CHECK-NEXT:  %17 = PrLoadInst (:uninit|object) %0: object, 4: number, "p5": string
 // CHECK-NEXT:  %18 = ThrowIfInst (:object) %17: uninit|object, type(uninit)
-// CHECK-NEXT:  %19 = CallInst (:any) %15: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %18: object
-// CHECK-NEXT:  %20 = TryLoadGlobalPropertyInst (:any) globalObject: object, "print": string
-// CHECK-NEXT:  %21 = CheckedTypeCastInst (:object) %0: any, type(object)
-// CHECK-NEXT:  %22 = PrLoadInst (:uninit|object) %21: object, 4: number, "p5": string
-// CHECK-NEXT:  %23 = ThrowIfInst (:object) %22: uninit|object, type(uninit)
-// CHECK-NEXT:  %24 = CallInst (:any) %20: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %23: object
+// CHECK-NEXT:  %19 = CallInst (:any) %16: any, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %18: object
 // CHECK-NEXT:        ReturnInst undefined: undefined
 // CHECK-NEXT:function_end

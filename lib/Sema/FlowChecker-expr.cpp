@@ -120,8 +120,7 @@ void FlowChecker::matchConstraintToType(
         worklist.insert({constraintFn->getThisParam(), typeFn->getThisParam()});
         for (size_t i = 0, e = constraintFn->getParams().size(); i < e; ++i) {
           worklist.insert(
-              {constraintFn->getParams()[i].second,
-               typeFn->getParams()[i].second});
+              {constraintFn->getParams()[i].type, typeFn->getParams()[i].type});
         }
         worklist.insert(
             {constraintFn->getReturnType(), typeFn->getReturnType()});
@@ -210,13 +209,13 @@ class FlowChecker::ExprVisitor {
       for (const auto &param : node->_params) {
         // Default is 'any', but try to get a narrower type if possible.
         TypedFunctionType::Param typedFnParam{
-            Identifier{}, outer_.flowContext_.getAny()};
+            Identifier{}, outer_.flowContext_.getAny(), false};
 
         if (auto *id = llvh::dyn_cast<ESTree::IdentifierNode>(&param)) {
-          typedFnParam.first = Identifier::getFromPointer(id->_name);
+          typedFnParam.name = Identifier::getFromPointer(id->_name);
           if (id->_typeAnnotation) {
             // Use explicit type annotation that was provided.
-            typedFnParam.second =
+            typedFnParam.type =
                 outer_.parseOptionalTypeAnnotation(id->_typeAnnotation);
             if (i < constraintFnType->getParams().size()) {
               // Attempt to populate the constraint type with the explicit type.
@@ -225,12 +224,12 @@ class FlowChecker::ExprVisitor {
               // to a placeholder function type like `A => B` and infer that `A`
               // is number.
               outer_.matchConstraintToType(
-                  constraintFnType->getParams()[i].second, typedFnParam.second);
+                  constraintFnType->getParams()[i].type, typedFnParam.type);
             }
           } else if (i < constraintFnType->getParams().size()) {
             // No type annotation, but there's a constraint type, so use that.
             // Add the name of the parameter for better errors.
-            typedFnParam.second = constraintFnType->getParams()[i].second;
+            typedFnParam.type = constraintFnType->getParams()[i].type;
           }
         } else {
           outer_.sm_.warning(
@@ -266,7 +265,8 @@ class FlowChecker::ExprVisitor {
             outer_,
             node,
             arrowInferenceType,
-            outer_.curFunctionContext_->thisParamType};
+            outer_.curFunctionContext_->thisParamType,
+            outer_.curFunctionContext_->newTargetType};
         outer_.visitFunctionLike(node, node->_body, node->_params);
       }
     } else {
@@ -278,6 +278,30 @@ class FlowChecker::ExprVisitor {
       ESTree::Node *parent,
       Type *constraint) {
     return outer_.visit(node);
+  }
+
+  void visit(
+      ESTree::MetaPropertyNode *node,
+      ESTree::Node *parent,
+      Type *constraint) {
+    auto *meta = llvh::cast<ESTree::IdentifierNode>(node->_meta);
+    auto *property = llvh::cast<ESTree::IdentifierNode>(node->_property);
+
+    // Check for new.target.
+    if (meta->_name == outer_.kw_.identNew &&
+        property->_name == outer_.kw_.identTarget) {
+      if (!outer_.curFunctionContext_) {
+        outer_.sm_.error(
+            node->getSourceRange(), "ft: invalid use of new.target");
+        return;
+      }
+
+      outer_.setNodeType(node, outer_.curFunctionContext_->newTargetType);
+      return;
+    }
+
+    // All other meta properties are not supported.
+    outer_.sm_.error(node->getSourceRange(), "ft: unsupported meta property");
   }
 
   void
@@ -414,15 +438,36 @@ class FlowChecker::ExprVisitor {
             "ft: computed access to class instances not supported");
       } else {
         bool found = false;
-        auto id = llvh::cast<ESTree::IdentifierNode>(node->_property);
-        auto optField =
-            classType->findField(Identifier::getFromPointer(id->_name));
+        Identifier name;
+        bool isPrivate;
+        OptValue<ClassType::FieldLookupEntry> optField;
+        if (auto *privateName =
+                llvh::dyn_cast<ESTree::PrivateNameNode>(node->_property)) {
+          isPrivate = true;
+          name = outer_.astContext_.getPrivateNameIdentifier(
+              llvh::cast<ESTree::IdentifierNode>(privateName->_id)->_name);
+          if (!outer_.classTypeIsEnclosing(classType)) {
+            outer_.sm_.error(
+                node->_property->getSourceRange(),
+                "ft: private field " + name.str() +
+                    " not visible outside class " +
+                    classType->getClassNameOrDefault());
+          }
+          optField = classType->findPrivateField(name);
+        } else {
+          auto *id = llvh::cast<ESTree::IdentifierNode>(node->_property);
+          isPrivate = false;
+          name = Identifier::getFromPointer(id->_name);
+          optField = classType->findPublicField(name);
+        }
         if (optField) {
           resType = optField->getField()->type;
           found = true;
         } else {
-          auto optMethod = classType->getHomeObjectTypeInfo()->findField(
-              Identifier::getFromPointer(id->_name));
+          OptValue<ClassType::FieldLookupEntry> optMethod;
+          optMethod = isPrivate
+              ? classType->getHomeObjectTypeInfo()->findPrivateField(name)
+              : classType->getHomeObjectTypeInfo()->findPublicField(name);
           if (optMethod) {
             resType = optMethod->getField()->type;
             found = true;
@@ -435,7 +480,7 @@ class FlowChecker::ExprVisitor {
           // TODO: class declaration location.
           outer_.sm_.error(
               node->_property->getSourceRange(),
-              "ft: property " + id->_name->str() + " not defined in class " +
+              "ft: property " + name.str() + " not defined in class " +
                   classType->getClassNameOrDefault());
         }
       }
@@ -536,7 +581,7 @@ class FlowChecker::ExprVisitor {
             node->_property->getSourceRange(),
             llvh::Twine(
                 "ft: named property access only allowed on objects, found ") +
-                objType->info->getKindName());
+                objType->messageString());
       }
     }
 
@@ -1328,7 +1373,9 @@ class FlowChecker::ExprVisitor {
       auto [rtNarrow, cf] = tryNarrowType(rt, lt);
       if (!cf.canFlow) {
         outer_.sm_.error(
-            node->getSourceRange(), "ft: incompatible assignment types");
+            node->getSourceRange(),
+            "ft: incompatible assignment type: cannot implicitly cast from " +
+                rt->messageString() + " to " + lt->messageString());
         res = lt;
       } else {
         node->_right = outer_.implicitCheckedCast(node->_right, rtNarrow, cf);
@@ -1366,7 +1413,9 @@ class FlowChecker::ExprVisitor {
         CanFlowResult cf = canAFlowIntoB(opResType, lt);
         if (!cf.canFlow) {
           outer_.sm_.error(
-              node->getSourceRange(), "ft: incompatible assignment types");
+              node->getSourceRange(),
+              "ft: incompatible assignment type: cannot implicitly cast from " +
+                  rt->messageString() + " to " + lt->messageString());
           res = lt;
         } else if (cf.needCheckedCast) {
           // Insert an ImplicitCheckedCast around the LHS in the
@@ -1528,7 +1577,7 @@ class FlowChecker::ExprVisitor {
       size_t i = 0;
       for (ESTree::Node &argNode : node->_arguments) {
         // Constrain types of arguments before visiting when possible.
-        Type *argConstraint = i < params.size() ? params[i].second : nullptr;
+        Type *argConstraint = i < params.size() ? params[i].type : nullptr;
         // Don't bother with error reporting here, we'll report them later
         // when we actually try to typecheck the arguments.
         visitESTreeNodeNoReplace(*this, &argNode, node, argConstraint);
@@ -1694,9 +1743,8 @@ class FlowChecker::ExprVisitor {
 
     size_t i = 0;
     for (auto e = call->_arguments.end(); it != e; ++it) {
-      Type *constraint = i < ftype->getParams().size()
-          ? ftype->getParams()[i].second
-          : nullptr;
+      Type *constraint =
+          i < ftype->getParams().size() ? ftype->getParams()[i].type : nullptr;
       visitESTreeNodeNoReplace(*this, &*it, call, constraint);
       ++i;
     }
@@ -2203,15 +2251,15 @@ class FlowChecker::ExprVisitor {
       }
 
       const TypedFunctionType::Param &param = params[argIndex];
-      Type *expectedType = param.second;
+      Type *expectedType = param.type;
       Type *argType = outer_.getNodeTypeOrAny(arg);
       auto [argTypeNarrow, cf] = tryNarrowType(argType, expectedType);
 
       if (!cf.canFlow) {
-        if (param.first.isValid()) {
+        if (param.name.isValid()) {
           outer_.sm_.error(
               arg->getSourceRange(),
-              "ft: " + calleeName + " parameter '" + param.first.str() +
+              "ft: " + calleeName + " parameter '" + param.name.str() +
                   "' type mismatch");
         } else {
           outer_.sm_.error(

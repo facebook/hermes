@@ -46,6 +46,7 @@ exports[`ComponentDeclaration Basic ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -256,6 +257,7 @@ exports[`ComponentDeclaration Complex params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -484,6 +486,7 @@ exports[`ComponentDeclaration default params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -670,6 +673,7 @@ exports[`ComponentDeclaration destructure params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -870,6 +874,7 @@ exports[`ComponentDeclaration normal and rest params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -1092,6 +1097,7 @@ exports[`ComponentDeclaration normal and rest params with nested rest ESTree 1`]
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -1339,6 +1345,7 @@ exports[`ComponentDeclaration ref and normal params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -1573,6 +1580,7 @@ exports[`ComponentDeclaration ref and normal params default exported ESTree 1`] 
   "body": [
     {
       "declaration": {
+        "async": false,
         "body": {
           "body": [],
           "type": "BlockStatement",
@@ -1820,6 +1828,7 @@ exports[`ComponentDeclaration ref and normal params named exported ESTree 1`] = 
   "body": [
     {
       "declaration": {
+        "async": false,
         "body": {
           "body": [],
           "type": "BlockStatement",
@@ -2060,6 +2069,7 @@ exports[`ComponentDeclaration ref and normal params with hoisting (recursive) ES
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [
           {
@@ -2539,6 +2549,7 @@ exports[`ComponentDeclaration ref and normal params with hoisting ESTree 1`] = `
       "type": "ExpressionStatement",
     },
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -2615,6 +2626,7 @@ exports[`ComponentDeclaration ref and normal params with hoisting ESTree 1`] = `
       "type": "ExpressionStatement",
     },
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -3042,6 +3054,7 @@ exports[`ComponentDeclaration ref and normal params within block ESTree 1`] = `
       "body": {
         "body": [
           {
+            "async": false,
             "body": {
               "body": [],
               "type": "BlockStatement",
@@ -3138,6 +3151,7 @@ exports[`ComponentDeclaration ref and normal params within block ESTree 1`] = `
       "consequent": {
         "body": [
           {
+            "async": false,
             "body": {
               "body": [],
               "type": "BlockStatement",
@@ -3440,6 +3454,7 @@ exports[`ComponentDeclaration ref and normal params within case ESTree 1`] = `
         {
           "consequent": [
             {
+              "async": false,
               "body": {
                 "body": [],
                 "type": "BlockStatement",
@@ -3675,6 +3690,7 @@ exports[`ComponentDeclaration ref param ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -3848,6 +3864,7 @@ exports[`ComponentDeclaration ref param renamed ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4036,6 +4053,7 @@ exports[`ComponentDeclaration ref param renamed destructure ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4235,6 +4253,7 @@ exports[`ComponentDeclaration ref param with default ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4337,6 +4356,7 @@ exports[`ComponentDeclaration renders maybe type ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4416,6 +4436,7 @@ exports[`ComponentDeclaration renders star type ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4495,6 +4516,7 @@ exports[`ComponentDeclaration renders type (complex) ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4589,6 +4611,7 @@ exports[`ComponentDeclaration renders type ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4749,6 +4772,7 @@ exports[`ComponentDeclaration rest params ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4787,6 +4811,7 @@ exports[`ComponentDeclaration rest params ESTree 1`] = `
       "typeParameters": null,
     },
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -4983,6 +5008,7 @@ exports[`ComponentDeclaration type parameters ESTree 1`] = `
 {
   "body": [
     {
+      "async": false,
       "body": {
         "body": [],
         "type": "BlockStatement",
@@ -5061,6 +5087,73 @@ exports[`ComponentDeclaration type parameters ESTree 1`] = `
         ],
         "type": "TypeParameterDeclaration",
       },
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration async ESTree 1`] = `
+{
+  "body": [
+    {
+      "async": true,
+      "body": {
+        "body": [],
+        "type": "BlockStatement",
+      },
+      "id": {
+        "name": "Foo",
+        "optional": false,
+        "type": "Identifier",
+        "typeAnnotation": null,
+      },
+      "params": [],
+      "rendersType": null,
+      "type": "ComponentDeclaration",
+      "typeParameters": null,
+    },
+  ],
+  "type": "Program",
+}
+`;
+
+exports[`ComponentDeclaration async Babel 1`] = `
+{
+  "body": [
+    {
+      "__componentDeclaration": true,
+      "async": true,
+      "body": {
+        "body": [],
+        "directives": [],
+        "type": "BlockStatement",
+      },
+      "generator": false,
+      "id": {
+        "name": "Foo",
+        "type": "Identifier",
+      },
+      "params": [],
+      "returnType": {
+        "type": "TypeAnnotation",
+        "typeAnnotation": {
+          "id": {
+            "id": {
+              "name": "Node",
+              "type": "Identifier",
+            },
+            "qualification": {
+              "name": "React",
+              "type": "Identifier",
+            },
+            "type": "QualifiedTypeIdentifier",
+          },
+          "type": "GenericTypeAnnotation",
+          "typeParameters": null,
+        },
+      },
+      "type": "FunctionDeclaration",
     },
   ],
   "type": "Program",

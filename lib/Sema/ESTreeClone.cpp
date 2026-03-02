@@ -314,6 +314,30 @@ class Cloner {
       getDecoration<ScopeDecorationBase>(newNode)->setScope(curNewScope_);
       curNewScope_ = curNewScope_->parentScope;
     }
+
+    // Copy ClassLikeDecoration synthetic FunctionInfos.
+    // This must be done after ScopeDecorationBase handling has restored
+    // curNewScope_ to the parent scope, because the synthetic functions
+    // use the enclosing function/scope as their parent.
+    if (auto *classDec = getDecoration<ClassLikeDecoration>(oldNode)) {
+      auto *newClassDec = getDecoration<ClassLikeDecoration>(newNode);
+      auto cloneSyntheticFunc =
+          [this](FunctionInfo *oldFunc) -> FunctionInfo * {
+        if (!oldFunc)
+          return nullptr;
+        FunctionInfo *newFunc = semContext_.prepareClonedFunction(
+            oldFunc, curNewFunction_, curNewScope_);
+        semContext_.prepareClonedScope(
+            oldFunc->getFunctionBodyScope(), newFunc, curNewScope_);
+        return newFunc;
+      };
+      newClassDec->implicitCtorFunctionInfo =
+          cloneSyntheticFunc(classDec->implicitCtorFunctionInfo);
+      newClassDec->instanceElementsInitFunctionInfo =
+          cloneSyntheticFunc(classDec->instanceElementsInitFunctionInfo);
+      newClassDec->staticElementsInitFunctionInfo =
+          cloneSyntheticFunc(classDec->staticElementsInitFunctionInfo);
+    }
   }
 
   /// Clone the \p node.

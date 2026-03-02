@@ -90,6 +90,7 @@ function deserializeComponentDeclaration() {
     body: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     rendersType: this.deserializeNode(),
+    async: this.deserializeBoolean(),
   };
 }
 
@@ -102,6 +103,7 @@ function deserializeHookDeclaration() {
     body: this.deserializeNode(),
     typeParameters: this.deserializeNode(),
     returnType: this.deserializeNode(),
+    async: this.deserializeBoolean(),
   };
 }
 

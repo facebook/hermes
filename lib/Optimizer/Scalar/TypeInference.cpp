@@ -582,6 +582,9 @@ class TypeInferenceImpl {
   Type inferAddOwnPrivateFieldInst(AddOwnPrivateFieldInst *inst) {
     return Type::createNoType();
   }
+  Type inferPrivateBrandCheckInst(PrivateBrandCheckInst *inst) {
+    return Type::createNoType();
+  }
 
   Type inferDefineOwnGetterSetterInst(DefineOwnGetterSetterInst *inst) {
     return Type::createNoType();
@@ -633,6 +636,9 @@ class TypeInferenceImpl {
     return *inst->getInherentType();
   }
   Type inferAllocTypedObjectInst(AllocTypedObjectInst *inst) {
+    hermes_fatal("typed instruction");
+  }
+  Type inferAllocTypedNonEnumObjectInst(AllocTypedNonEnumObjectInst *inst) {
     hermes_fatal("typed instruction");
   }
   Type inferCreateArgumentsLooseInst(CreateArgumentsLooseInst *inst) {
@@ -858,6 +864,14 @@ class TypeInferenceImpl {
   }
   Type inferLIRAllocObjectFromBufferInst(LIRAllocObjectFromBufferInst *inst) {
     return *inst->getInherentType();
+  }
+  Type inferLIRAllocTypedObjectFromBufferInst(
+      LIRAllocTypedObjectFromBufferInst *inst) {
+    hermes_fatal("typed instruction");
+  }
+  Type inferLIRAllocTypedNonEnumObjectFromBufferInst(
+      LIRAllocTypedNonEnumObjectFromBufferInst *inst) {
+    hermes_fatal("typed instruction");
   }
   Type inferHBCProfilePointInst(HBCProfilePointInst *inst) {
     return Type::createNoType();

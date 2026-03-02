@@ -93,6 +93,7 @@ DEFINE_OPCODE_3(NewObjectWithBufferLong, Reg8, UInt32, UInt32)
 DEFINE_VALUE_BUFFER_USER(NewObjectWithBuffer)
 DEFINE_VALUE_BUFFER_USER(NewObjectWithBufferLong)
 
+
 /// Create an object from a static map of values, setting its parent.
 /// Arg1 is the destination.
 /// Arg2 is the parent.
@@ -100,6 +101,17 @@ DEFINE_VALUE_BUFFER_USER(NewObjectWithBufferLong)
 /// Arg4 is the offset in the object val buffer table.
 DEFINE_OPCODE_4(NewObjectWithBufferAndParent, Reg8, Reg8, UInt32, UInt32)
 DEFINE_VALUE_BUFFER_USER(NewObjectWithBufferAndParent)
+
+/// Create a typed object from a static map of values, for typed classes.
+/// The result will have properties which are readonly from legacy JS,
+/// only mutable via PutOwnBySlotIdx, and some which may be private
+/// (only visible to GetOwnBySlotIdx via typed code).
+/// Arg1 is the destination.
+/// Arg2 is the parent.
+/// Arg3 is the index in the object shape table.
+/// Arg4 is the index in the object val buffer table.
+/// Arg5 is non-zero if properties should be non-enumerable.
+DEFINE_OPCODE_5(NewTypedObjectWithBuffer, Reg8, Reg8, UInt32, UInt32, UInt8)
 
 /// Create a new, empty Object using the built-in constructor (regardless of
 /// whether it was overridden).

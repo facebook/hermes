@@ -997,6 +997,10 @@ LiteralString *Module::getLiteralString(Identifier value) {
   return literalStrings_.getOrEmplace(value).first;
 }
 
+LiteralPrivateName *Module::getLiteralPrivateName(Identifier value) {
+  return literalPrivateNames_.getOrEmplace(value).first;
+}
+
 LiteralBool *Module::getLiteralBool(bool value) {
   if (value)
     return &literalTrue;

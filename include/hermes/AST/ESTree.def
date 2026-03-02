@@ -76,23 +76,25 @@ ESTREE_IGNORE_IF_EMPTY(FunctionDeclaration, predicate)
 
 #if HERMES_PARSE_FLOW
 
-ESTREE_NODE_5_ARGS(
+ESTREE_NODE_6_ARGS(
     ComponentDeclaration, FunctionLike,
     NodePtr, id, false,
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, typeParameters, true,
-    NodePtr, rendersType, true)
+    NodePtr, rendersType, true,
+    NodeBoolean, async, false)
 ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(ComponentDeclaration, rendersType)
 
-ESTREE_NODE_5_ARGS(
+ESTREE_NODE_6_ARGS(
     HookDeclaration, FunctionLike,
     NodePtr, id, false,
     NodeList, params, false,
     NodePtr, body, false,
     NodePtr, typeParameters, true,
-    NodePtr, returnType, true)
+    NodePtr, returnType, true,
+    NodeBoolean, async, false)
 ESTREE_IGNORE_IF_EMPTY(HookDeclaration, typeParameters)
 ESTREE_IGNORE_IF_EMPTY(HookDeclaration, returnType)
 

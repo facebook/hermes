@@ -171,6 +171,9 @@ class IRBuilder {
   /// Create a new literal string of value \p value.
   LiteralString *getLiteralString(Identifier value);
 
+  /// Create a new literal private name of value \p value.
+  LiteralPrivateName *getLiteralPrivateName(Identifier value);
+
   /// Create a new literal bool of value \p value.
   LiteralBool *getLiteralBool(bool value);
 
@@ -476,6 +479,9 @@ class IRBuilder {
       Value *storedValue,
       Value *object,
       Value *property);
+  PrivateBrandCheckInst *createPrivateBrandCheckInst(
+      Value *object,
+      Value *brand);
 
   DefineOwnGetterSetterInst *createDefineOwnGetterSetterInst(
       Value *storedGetter,
@@ -520,6 +526,10 @@ class IRBuilder {
 
   AllocTypedObjectInst *createAllocTypedObjectInst(
       const AllocTypedObjectInst::ObjectPropertyMap &propMap,
+      Value *parentObject);
+
+  AllocTypedNonEnumObjectInst *createAllocTypedNonEnumObjectInst(
+      const AllocTypedNonEnumObjectInst::ObjectPropertyMap &propMap,
       Value *parentObject);
 
   AllocFastArrayInst *createAllocFastArrayInst(LiteralNumber *sizeHint);
@@ -684,6 +694,14 @@ class IRBuilder {
   LIRAllocObjectFromBufferInst *createLIRAllocObjectFromBufferInst(
       Value *parentObj,
       LIRAllocObjectFromBufferInst::ObjectPropertyMap prop_map);
+  LIRAllocTypedObjectFromBufferInst *createLIRAllocTypedObjectFromBufferInst(
+      Value *parentObject,
+      const LIRAllocTypedObjectFromBufferInst::ObjectPropertyMap &propMap);
+  LIRAllocTypedNonEnumObjectFromBufferInst *
+  createLIRAllocTypedNonEnumObjectFromBufferInst(
+      Value *parentObject,
+      const LIRAllocTypedNonEnumObjectFromBufferInst::ObjectPropertyMap
+          &propMap);
 
   HBCCompareBranchInst *createHBCCompareBranchInst(
       Value *left,
@@ -712,7 +730,7 @@ class IRBuilder {
   PrLoadInst *createPrLoadInst(
       Value *object,
       size_t propIndex,
-      LiteralString *propName,
+      Literal *propName,
       Type checkedType);
 
   /// \param nonPointer can be set to true when it is known that both the old
@@ -721,7 +739,7 @@ class IRBuilder {
       Value *storedValue,
       Value *object,
       size_t propIndex,
-      LiteralString *propName,
+      Literal *propName,
       bool nonPointer);
 
   FastArrayLoadInst *

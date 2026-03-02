@@ -43,14 +43,19 @@ class B<T> extends A {}
 // CHECK-NEXT:            Decl %d.3 'B' Class
 // CHECK-NEXT:            Decl %d.4 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.5 'B' Class : %class_constructor.7
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
 // CHECK-NEXT:                Decl %d.6 'b' Parameter : %class.5
 // CHECK-NEXT:                Decl %d.7 'arguments' Var Arguments
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.7
 // CHECK-NEXT:        Func strict
-// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:            Scope %s.8
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.9
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -58,7 +63,7 @@ class B<T> extends A {}
 // CHECK-NEXT:            FunctionExpression : %untyped_function.1
 // CHECK-NEXT:                Id 'exports' [D:E:%d.1 'exports']
 // CHECK-NEXT:                BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A']
 // CHECK-NEXT:                        ClassBody
 // CHECK-NEXT:                            MethodDefinition : %function.8
@@ -66,13 +71,13 @@ class B<T> extends A {}
 // CHECK-NEXT:                                FunctionExpression : %function.8
 // CHECK-NEXT:                                    Id 'b' [D:E:%d.6 'b']
 // CHECK-NEXT:                                    BlockStatement
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'B' [D:E:%d.5 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
 // CHECK-NEXT:                        Id 'A' [D:E:%d.2 'A'] : %class_constructor.4
 // CHECK-NEXT:                        ClassBody
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'B' [D:E:%d.3 'B']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

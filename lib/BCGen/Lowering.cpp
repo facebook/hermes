@@ -13,6 +13,7 @@
 #include "hermes/IR/IRBuilder.h"
 #include "hermes/IR/Instrs.h"
 #include "hermes/Inst/Inst.h"
+#include "hermes/Optimizer/Scalar/Utils.h"
 
 #define DEBUG_TYPE "lowering"
 
@@ -154,13 +155,13 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
   IRBuilder builder(F);
   uint32_t size = allocInst->getKeyValuePairCount();
 
-  // Should not create LIRAllocObjectFromBufferInst for an object with 0
+  // Should not create lowered instruction for an object with 0
   // properties.
   if (size == 0) {
     return false;
   }
 
-  // Replace AllocObjectLiteral with LIRAllocObjectFromBufferInst
+  // Replace AllocObjectLiteral with lowered instruction.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPointAfter(allocInst);
   LIRAllocObjectFromBufferInst::ObjectPropertyMap propMap;
@@ -201,21 +202,27 @@ bool LowerAllocObjectLiteral::lowerAllocObjectBuffer(
         // If we haven't encountered a numeric property, we can store
         // directly into a slot.
         builder.createPrStoreInst(
-            propVal,
-            allocInst,
-            i,
-            cast<LiteralString>(propKey),
-            propVal->getType().isNonPtr());
+            propVal, allocInst, i, propKey, propVal->getType().isNonPtr());
       }
     }
   }
 
-  // Emit LIRAllocObjectFromBufferInst.
+  // Emit lowered instruction.
   // First, we reset insertion location.
   builder.setLocation(allocInst->getLocation());
   builder.setInsertionPoint(allocInst);
-  auto *alloc = builder.createLIRAllocObjectFromBufferInst(
-      allocInst->getParentObject(), propMap);
+
+  Instruction *alloc;
+  if (llvh::isa<AllocTypedNonEnumObjectInst>(allocInst)) {
+    alloc = builder.createLIRAllocTypedNonEnumObjectFromBufferInst(
+        allocInst->getParentObject(), propMap);
+  } else if (llvh::isa<AllocTypedObjectInst>(allocInst)) {
+    alloc = builder.createLIRAllocTypedObjectFromBufferInst(
+        allocInst->getParentObject(), propMap);
+  } else {
+    alloc = builder.createLIRAllocObjectFromBufferInst(
+        allocInst->getParentObject(), propMap);
+  }
 
   allocInst->replaceAllUsesWith(alloc);
   allocInst->eraseFromParent();
@@ -504,6 +511,63 @@ bool LowerCondBranch::runOnFunction(Function *F) {
     }
   }
   return changed;
+}
+
+Pass *hermes::createLowerPrivateBrandCheck() {
+  class ThisPass : public FunctionPass {
+   public:
+    explicit ThisPass() : FunctionPass("LowerPrivateBrandCheck") {}
+
+    bool runOnFunction(Function *F) override {
+      IRBuilder builder{F};
+      bool changed = false;
+
+      // Collect all PrivateBrandCheckInst first to avoid iterator invalidation
+      // when splitting blocks.
+      llvh::SmallVector<PrivateBrandCheckInst *, 4> brandChecks;
+      for (auto &BB : *F) {
+        for (auto &I : BB) {
+          if (auto *PBC = llvh::dyn_cast<PrivateBrandCheckInst>(&I)) {
+            brandChecks.push_back(PBC);
+          }
+        }
+      }
+
+      for (auto *PBC : brandChecks) {
+        auto *currentBB = PBC->getParent();
+
+        auto *continueBB =
+            splitBasicBlock(currentBB, std::next(PBC->getIterator()));
+
+        auto *throwBB = builder.createBasicBlock(F);
+
+        builder.setInsertionPoint(PBC);
+
+        auto *checkResult = builder.createBinaryOperatorInst(
+            PBC->getBrand(),
+            PBC->getObject(),
+            ValueKind::BinaryPrivateInInstKind);
+
+        builder.createCondBranchInst(checkResult, continueBB, throwBB);
+
+        builder.setInsertionBlock(throwBB);
+        builder.createThrowTypeErrorInst(
+            builder.getLiteralString("Private element not found"));
+
+        PBC->eraseFromParent();
+        changed = true;
+      }
+
+      // Fix up catch targets for any ThrowTypeErrorInst we created inside
+      // try blocks.
+      if (changed) {
+        fixupCatchTargets(F);
+      }
+
+      return changed;
+    }
+  };
+  return new ThisPass();
 }
 
 #undef DEBUG_TYPE

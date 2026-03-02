@@ -10,7 +10,10 @@
 
 #include "hermes/BCGen/SerializedLiteralParser.h"
 #include "hermes/VM/HiddenClass.h"
+#include "hermes/VM/Operations.h"
 #include "hermes/VM/Runtime.h"
+
+#include "llvh/ADT/ArrayRef.h"
 
 namespace hermes {
 namespace vm {
@@ -47,6 +50,9 @@ HiddenClass *addBufferPropertiesToHiddenClass(
       clazz = addResult->first;
       marker.flush();
     }
+    void visitPrivateName() {
+      hermes_fatal("private string IDs unimplemented");
+    }
     void visitNumber(double d) {
       tmpHandleKey = HermesValue::encodeTrustedNumberValue(d);
       // valueToSymbolID cannot fail because the key is known to be uint32.
@@ -59,15 +65,6 @@ HiddenClass *addBufferPropertiesToHiddenClass(
       clazz = addResult->first;
       marker.flush();
     }
-    void visitNull() {
-      llvm_unreachable("Keys cannot be null");
-    }
-    void visitUndefined() {
-      llvm_unreachable("Keys cannot be undefined");
-    }
-    void visitBool(bool b) {
-      llvm_unreachable("Keys cannot be boolean");
-    }
 
     PinnedValue<HiddenClass> &clazz;
     PinnedValue<> &tmpHandleKey;
@@ -77,9 +74,69 @@ HiddenClass *addBufferPropertiesToHiddenClass(
   } v{lv.clazz, lv.tmpKey, marker, runtime, std::move(getSym)};
 
   // Visit each literal in the buffer and add it as a property.
-  SerializedLiteralParser::parse(buffer, numProps, v);
+  SerializedLiteralParser::parseKeyBuffer(buffer, numProps, v);
 
   return *lv.clazz;
+}
+
+/// Add the keys in \p buffer to the hidden class \p clazz.
+/// \param buffer the key buffer starting at the first key to add.
+/// \param numProps the number of keys to add.
+/// \param clazz the typed HiddenClass to add the keys to. It must
+///   be for a typed object.
+/// \param propertiesEnumerable if false, properties will not be enumerable.
+/// \param getSym a function to convert a StringID to a SymbolID.
+template <typename F>
+void addTypedBufferPropertiesToHiddenClass(
+    Runtime &runtime,
+    llvh::ArrayRef<uint8_t> buffer,
+    uint32_t numProps,
+    Handle<HiddenClass> clazz,
+    bool propertiesEnumerable,
+    F getSym) {
+  struct : public Locals {
+    PinnedValue<> tmpKey;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+
+  GCScopeMarkerRAII marker{runtime};
+  // Set up the visitor to populate keys in the hidden class.
+  struct {
+    void visitStringID(StringID id) {
+      auto sym = getSym(id);
+      HiddenClass::addNewTypedPublicProperty(
+          clazz, runtime, sym, propertiesEnumerable);
+      marker.flush();
+    }
+    void visitPrivateName() {
+      HiddenClass::addNewTypedPrivateProperty(clazz, runtime);
+      marker.flush();
+    }
+    void visitNumber(double d) {
+      tmpHandleKey = HermesValue::encodeTrustedNumberValue(d);
+      // valueToSymbolID cannot fail because the key is known to be uint32.
+      Handle<SymbolID> symHandle = *valueToSymbolID(runtime, tmpHandleKey);
+      HiddenClass::addNewTypedPublicProperty(
+          clazz, runtime, *symHandle, propertiesEnumerable);
+      marker.flush();
+    }
+
+    Handle<HiddenClass> clazz;
+    PinnedValue<> &tmpHandleKey;
+    GCScopeMarkerRAII &marker;
+    Runtime &runtime;
+    bool propertiesEnumerable;
+    F getSym;
+  } v{clazz,
+      lv.tmpKey,
+      marker,
+      runtime,
+      propertiesEnumerable,
+      std::move(getSym)};
+
+  assert(clazz->isTyped() && "typed objects require a typed HiddenClass");
+
+  SerializedLiteralParser::parseKeyBuffer(buffer, numProps, v);
 }
 
 } // namespace vm

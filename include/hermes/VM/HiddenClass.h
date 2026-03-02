@@ -55,6 +55,11 @@ struct ClassFlags {
   /// property is set and then deleted, this will still be set to true.
   uint8_t mayHaveAccessor : 1;
 
+  /// This is not in dictionary mode, but it is a class allocated
+  /// for a typed object, which means it doesn't have any transitions and the
+  /// property map must never be null.
+  uint8_t typed : 1;
+
   ClassFlags() {
     ::memset(this, 0, sizeof(*this));
   }
@@ -114,7 +119,19 @@ struct ClassFlags {
 /// The desired effect is that only "leaf" classes have property maps and normal
 /// property assignment doesn't create a map at all in the intermediate states
 /// (except the first time).
-class HiddenClass;
+///
+/// Typed Private Properties
+/// ========================
+///
+/// Typed objects are always created as orphans, not in dictionary mode,
+/// and are never transitioned to from any other HiddenClass.
+/// Properties are added during allocation and then never again.
+///
+/// Typed objects may have private properties.
+/// These properties have no names, because they can't be accessed by name,
+/// only by slot index which is known at compile time. They are still
+/// represented here in the HiddenClass by incrementing numProperties_,
+/// but they have no entry in the DictPropertyMap.
 namespace detail {
 /// Encode a transition from a hidden class to a child, keyed on the
 /// name of the property and its property flags.
@@ -336,6 +353,13 @@ class HiddenClass final : public GCCell {
   /// is a starting point for a hierarchy.
   static HiddenClass *createRoot(Runtime &runtime);
 
+  /// Create a "root" hidden class for a typed object - one that doesn't define
+  /// any properties yet but reserves space for a property map.
+  /// \param capacity the number of properties in the typed object,
+  ///  used to reserve space in the property map.
+  /// \pre capacity < maxNumProperties().
+  static HiddenClass *createForTypedObject(Runtime &runtime, uint32_t capacity);
+
   /// \return true if this hidden class is guaranteed to be a leaf.
   /// It can return false negatives, so it should only be used for stats
   /// reporting and such.
@@ -383,6 +407,10 @@ class HiddenClass final : public GCCell {
     return flags_.mayHaveAccessor;
   }
 
+  bool isTyped() const {
+    return flags_.typed;
+  }
+
   /// \return The for-in cache if one has been set, otherwise nullptr.
   ArrayStorageSmall *getForInCache(Runtime &runtime) const {
     return forInCache_.get(runtime);
@@ -396,10 +424,10 @@ class HiddenClass final : public GCCell {
     forInCache_.setNull(runtime.getHeap());
   }
 
-  /// Reset the property map, unless this class is in dictionary mode.
+  /// Reset the property map, unless this class is in dictionary mode or typed.
   /// May be called by the GC for any HiddenClass not in a Handle.
   void clearPropertyMap(GC &gc) {
-    if (!isDictionary())
+    if (!isDictionary() && !isTyped())
       propertyMap_.setNull(gc);
   }
 
@@ -413,6 +441,7 @@ class HiddenClass final : public GCCell {
   /// the property map or creating new hidden classes (even implicitly).
   /// A marker for the current gcScope is obtained in the beginning and the
   /// scope is flushed after every callback.
+  /// NOTE: Does NOT include typed private properties, which have no names.
   template <typename CallbackFunction>
   static void forEachProperty(
       Handle<HiddenClass> selfHandle,
@@ -494,6 +523,26 @@ class HiddenClass final : public GCCell {
       Runtime &runtime,
       PropertyPos pos,
       PropertyFlags newFlags);
+
+  /// Add a property to the HiddenClass (does not allocate a new HiddenClass).
+  /// \param propertiesEnumerable if false, the property will not be enumerable.
+  /// \return the index of the property.
+  static SlotIndex addNewTypedPublicProperty(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime,
+      SymbolID name,
+      bool propertiesEnumerable);
+
+  /// Add an unnamed private property to the typed HiddenClass.
+  /// \return the index of the property.
+  static SlotIndex addNewTypedPrivateProperty(
+      Handle<HiddenClass> selfHandle,
+      Runtime &runtime) {
+    assert(!selfHandle->parent_ && "must be root hidden class");
+    assert(selfHandle->flags_.typed && "must be typed");
+    SlotIndex newSlot = selfHandle->numProperties_++;
+    return newSlot;
+  }
 
   /// Mark all properties as non-configurable.
   /// \return the resulting class

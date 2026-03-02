@@ -16,13 +16,13 @@ function foo(t: {x: number}): void {
 
 // Auto-generated content below. Please do not modify manually.
 
-// CHECK:{{.*}}exact-object-error.js:11:7: error: ft: incompatible initialization type
+// CHECK:{{.*}}exact-object-error.js:11:7: error: ft: incompatible initialization type: cannot assign object to object
 // CHECK-NEXT:  let a: {y: number} = t;
 // CHECK-NEXT:      ^~~~~~~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}exact-object-error.js:12:7: error: ft: incompatible initialization type
+// CHECK-NEXT:{{.*}}exact-object-error.js:12:7: error: ft: incompatible initialization type: cannot assign object to object
 // CHECK-NEXT:  let b: {x: string} = t;
 // CHECK-NEXT:      ^~~~~~~~~~~~~~~~~~
-// CHECK-NEXT:{{.*}}exact-object-error.js:13:7: error: ft: incompatible initialization type
+// CHECK-NEXT:{{.*}}exact-object-error.js:13:7: error: ft: incompatible initialization type: cannot assign object to object
 // CHECK-NEXT:  let c: {x: number, y: string} = t;
 // CHECK-NEXT:      ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // CHECK-NEXT:{{.*}}exact-object-error.js:14:28: error: ft: incompatible property type for 'x'

@@ -223,6 +223,12 @@ def normalize_esprima_ast(ast: JSON) -> JSON:
             if "decorators" in ast:
                 if len(ast["decorators"]) == 0:
                     del ast["decorators"]
+        if ast["type"] == "ComponentDeclaration":
+            if "async" not in ast:
+                ast["async"] = False
+        if ast["type"] == "HookDeclaration":
+            if "async" not in ast:
+                ast["async"] = False
     # If it is a template literal, the 'value' field contains
     # the 'cooked' and 'raw' strings, which should be moved.
     if "type" in ast and ast["type"] == "TemplateLiteral" and "quasis" in ast:

@@ -1385,6 +1385,9 @@ class InstrGen {
     generateRegisterPtr(*inst.getStoredValue());
     os_ << ");\n";
   }
+  void generatePrivateBrandCheckInst(PrivateBrandCheckInst &inst) {
+    hermes_fatal("PrivateBrandCheckInst should have been lowered");
+  }
   void generateDefineOwnGetterSetterInst(DefineOwnGetterSetterInst &inst) {
     os_.indent(2);
     os_ << "_sh_ljs_define_own_getter_setter_by_val(";
@@ -1708,13 +1711,21 @@ class InstrGen {
     generateRegister(inst);
     os_ << " = ";
     // TODO: Utilize sizeHint.
-    if (llvh::isa<EmptySentinel>(inst.getParentObject())) {
-      os_ << "_sh_ljs_new_object(shr)";
-    } else {
-      os_ << "_sh_ljs_new_object_with_parent(shr, &";
-      generateValue(*inst.getParentObject());
-      os_ << ")";
-    }
+    os_ << "_sh_ljs_new_object_with_parent(shr, &";
+    generateValue(*inst.getParentObject());
+    os_ << ")";
+    os_ << ";\n";
+  }
+  void generateAllocTypedNonEnumObjectInst(AllocTypedNonEnumObjectInst &inst) {
+    assert(
+        inst.getKeyValuePairCount() == 0 &&
+        "AllocTypedNonEnumObjectInst with properties should be lowered to LIRAllocTypedNonEnumObjectFromBufferInst");
+    os_.indent(2);
+    generateRegister(inst);
+    os_ << " = ";
+    os_ << "_sh_ljs_new_object_with_parent(shr, &";
+    generateValue(*inst.getParentObject());
+    os_ << ")";
     os_ << ";\n";
   }
   void generateCreateArgumentsLooseInst(CreateArgumentsLooseInst &inst) {
@@ -2181,6 +2192,38 @@ class InstrGen {
     os_ << valIdx << ")";
     os_ << ";\n";
   }
+  void generateLIRAllocTypedObjectFromBufferInst(
+      LIRAllocTypedObjectFromBufferInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+
+    auto [shapeIdx, valIdx] =
+        moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
+
+    os_ << " = ";
+    os_ << "_sh_new_typed_object_with_buffer(shr, shUnit, ";
+    generateRegisterPtr(*inst.getParentObject());
+    os_ << ", ";
+    os_ << shapeIdx << ", ";
+    os_ << valIdx;
+    os_ << ");\n";
+  }
+  void generateLIRAllocTypedNonEnumObjectFromBufferInst(
+      LIRAllocTypedNonEnumObjectFromBufferInst &inst) {
+    os_.indent(2);
+    generateRegister(inst);
+
+    auto [shapeIdx, valIdx] =
+        moduleGen_.literalBuffers.serializedLiteralOffsetFor(&inst);
+
+    os_ << " = ";
+    os_ << "_sh_new_typed_non_enum_object_with_buffer(shr, shUnit, ";
+    generateRegisterPtr(*inst.getParentObject());
+    os_ << ", ";
+    os_ << shapeIdx << ", ";
+    os_ << valIdx;
+    os_ << ");\n";
+  }
   void generateHBCProfilePointInst(HBCProfilePointInst &inst) {
     unimplemented(inst);
   }
@@ -2555,6 +2598,9 @@ class InstrGen {
 bool lowerModuleIR(Module *M, bool optimize) {
   PassManager PM("SH Lower");
   PM.addLowerGeneratorFunction();
+  // LowerPrivateBrandCheck produces ThrowTypeErrorInst, which is lowered by
+  // PeepholeLowering. Therefore, LowerPrivateBrandCheck must run before.
+  PM.addPass(createLowerPrivateBrandCheck());
   // Lowering ExponentiationOperator and ThrowTypeError (in PeepholeLowering)
   // needs to run before LowerBuiltinCalls because it introduces calls to
   // HermesInternal.

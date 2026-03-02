@@ -25,31 +25,31 @@ var d: A<string>;
 // Auto-generated content below. Please do not modify manually.
 
 // CHECK:%untyped_function.1 = untyped_function()
-// CHECK-NEXT:%union.2 = union(number | %array.3 | %class.4)
+// CHECK-NEXT:%union.2 = union(number | %class.3 | %array.4)
 // CHECK-NEXT:%union.5 = union(number | %array.6)
-// CHECK-NEXT:%array.3 = array(%union.5)
-// CHECK-NEXT:%class.4 = class(Cls {
+// CHECK-NEXT:%array.4 = array(%union.5)
+// CHECK-NEXT:%class.3 = class(Cls {
 // CHECK-NEXT:  %homeObject: %class.7
 // CHECK-NEXT:  x: number
 // CHECK-NEXT:  y: %union.2
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.8 = class_constructor(%class.4)
 // CHECK-NEXT:%array.6 = array(%union.2)
+// CHECK-NEXT:%class_constructor.8 = class_constructor(%class.3)
 // CHECK-NEXT:%class.7 = class( {
 // CHECK-NEXT:})
 // CHECK-NEXT:%array.9 = array(number)
-// CHECK-NEXT:%union.10 = union(string | %array.11 | %class.12)
+// CHECK-NEXT:%union.10 = union(string | %class.11 | %array.12)
 // CHECK-NEXT:%union.13 = union(string | %array.14)
-// CHECK-NEXT:%array.11 = array(%union.13)
-// CHECK-NEXT:%class.12 = class(Cls {
+// CHECK-NEXT:%array.12 = array(%union.13)
+// CHECK-NEXT:%class.11 = class(Cls {
 // CHECK-NEXT:  %homeObject: %class.15
 // CHECK-NEXT:  x: string
 // CHECK-NEXT:  y: %union.10
 // CHECK-NEXT:})
-// CHECK-NEXT:%class_constructor.16 = class_constructor(%class.12)
+// CHECK-NEXT:%array.14 = array(%union.10)
+// CHECK-NEXT:%class_constructor.16 = class_constructor(%class.11)
 // CHECK-NEXT:%class.15 = class( {
 // CHECK-NEXT:})
-// CHECK-NEXT:%array.14 = array(%union.10)
 // CHECK-NEXT:%object.17 = object({
 // CHECK-NEXT:})
 
@@ -66,8 +66,15 @@ var d: A<string>;
 // CHECK-NEXT:            Decl %d.6 'arguments' Var Arguments
 // CHECK-NEXT:            Decl %d.7 'Cls' Class : %class_constructor.8
 // CHECK-NEXT:            Decl %d.8 'Cls' Class : %class_constructor.16
-// CHECK-NEXT:        Func strict
 // CHECK-NEXT:            Scope %s.3
+// CHECK-NEXT:            Scope %s.4
+// CHECK-NEXT:            Scope %s.5
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.6
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.7
+// CHECK-NEXT:        Func strict
+// CHECK-NEXT:            Scope %s.8
 
 // CHECK:Program Scope %s.1
 // CHECK-NEXT:    ExpressionStatement
@@ -116,7 +123,7 @@ var d: A<string>;
 // CHECK-NEXT:                                            Id 'T'
 // CHECK-NEXT:                            GenericTypeAnnotation
 // CHECK-NEXT:                                Id 'T'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.4
 // CHECK-NEXT:                        Id 'Cls' [D:E:%d.7 'Cls']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -125,7 +132,7 @@ var d: A<string>;
 // CHECK-NEXT:                                Id 'x'
 // CHECK-NEXT:                            ClassProperty : %union.2
 // CHECK-NEXT:                                Id 'y'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.5
 // CHECK-NEXT:                        Id 'Cls' [D:E:%d.8 'Cls']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter
@@ -134,7 +141,7 @@ var d: A<string>;
 // CHECK-NEXT:                                Id 'x'
 // CHECK-NEXT:                            ClassProperty : %union.10
 // CHECK-NEXT:                                Id 'y'
-// CHECK-NEXT:                    ClassDeclaration
+// CHECK-NEXT:                    ClassDeclaration Scope %s.3
 // CHECK-NEXT:                        Id 'Cls' [D:E:%d.3 'Cls']
 // CHECK-NEXT:                        TypeParameterDeclaration
 // CHECK-NEXT:                            TypeParameter

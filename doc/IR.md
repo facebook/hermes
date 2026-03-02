@@ -608,6 +608,16 @@ Arguments | *%value* is the value to be stored. *%object* must be an object. *%p
 Semantics | This instruction is used to initialize private fields on objects. As such it implements ES2024 7.3.27 PrivateFieldAdd- except this instruction will assume that the property being added does not already exist.
 Effects | May read and write memory.
 
+### PrivateBrandCheckInst
+
+PrivateBrandCheckInst | _
+--- | --- |
+Description | Check that an object has a private brand installed.
+Example |   `PrivateBrandCheckInst %object, %brand : privateName`
+Arguments | *%object* is the object to check. *%brand* must be a private name representing the brand to look for.
+Semantics | This instruction implements the brand check for private methods and accessors. It throws a TypeError if the brand is not present on the object.
+Effects | May read memory and throw.
+
 ### DefineOwnGetterSetterInst
 
 DefineOwnGetterSetterInst | _
@@ -645,7 +655,17 @@ AllocTypedObjectInst | _
 Description | Allocates a new typed object on the heap. During lowering pass it will be lowered to either an AllocObjectInst or a LIRAllocObjectFromBufferInst.
 Example |  %0 = AllocTypedObjectInst %parent, "prop1" : string, 10 : number
 Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
-Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties, which may include 'uninit' values. Properties are enumerable.
+Effects | Does not read or write to memory.
+
+### AllocTypedNonEnumObjectInst
+
+AllocTypedNonEnumObjectInst | _
+--- | --- |
+Description | Allocates a new typed object on the heap with non-enumerable properties. Used for home objects (class prototypes with methods). During lowering pass it will be lowered to a LIRAllocTypedNonEnumObjectFromBufferInst.
+Example |  %0 = AllocTypedNonEnumObjectInst %parent, "prop1" : string, 10 : number
+Arguments | %parent is the parent of the new object, and the other operands are alternating (Literal*, value*) pairs which represent the properties and their keys in the typed class.
+Semantics | The instruction creates a new JavaScript object on the heap with an initial list of non-enumerable properties, which may include 'uninit' values.
 Effects | Does not read or write to memory.
 
 ### AllocArrayInst
@@ -1023,6 +1043,26 @@ Description | Allocates a new JavaScript object on the heap, and initializes it 
 Example |  %0 = LIRAllocObjectFromBufferInst %parent, %value0, %value1, ...
 Arguments | %parent is the parent of the new object. The subsequent values are all literal values, with alternating keys and values. Non-serializable values will be inserted into the array separately.
 Semantics | The instruction creates a new JavaScript object on the heap with an initial list of properties.
+Effects | Does not read or write to memory.
+
+### LIRAllocTypedObjectFromBufferInst
+
+LIRAllocTypedObjectFromBufferInst | _
+--- | --- |
+Description | Allocates a new typed class instance on the heap, and initializes it with values from the buffer. Properties are enumerable.
+Example |  %0 = LIRAllocTypedObjectFromBufferInst %parent, %key0, %value0, ...
+Arguments | The %parent is the parent of the result object. The remaining operands are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
+Semantics | The instruction creates a new JavaScript typed object on the heap with an initial list of enumerable properties.
+Effects | Does not read or write to memory.
+
+### LIRAllocTypedNonEnumObjectFromBufferInst
+
+LIRAllocTypedNonEnumObjectFromBufferInst | _
+--- | --- |
+Description | Allocates a new typed class instance on the heap with non-enumerable properties, and initializes it with values from the buffer. Used for home objects (class prototypes).
+Example |  %0 = LIRAllocTypedNonEnumObjectFromBufferInst %parent, %key0, %value0, ...
+Arguments | The %parent is the parent of the result object. The remaining operands are all literal values, with alternating keys and values. Non-literal values will be inserted into the array separately.
+Semantics | The instruction creates a new JavaScript typed object on the heap with an initial list of non-enumerable properties.
 Effects | Does not read or write to memory.
 
 ### HBCCallNInst

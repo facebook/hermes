@@ -1123,6 +1123,21 @@ for (let func of [proxy => delete proxy.prop,
      [true, checkThrows(TypeError)]]);
 }
 
+// ES2025 [[Delete]] step 14: non-extensible target with configurable
+// property must throw TypeError even when trap returns true.
+var nonExtTarget = {};
+Object.defineProperty(nonExtTarget, 'x', {
+  value: 42, writable: true, enumerable: true, configurable: true
+});
+Object.preventExtensions(nonExtTarget);
+var nonExtProxy = new Proxy(nonExtTarget, {
+  deleteProperty: function() { return true; }
+});
+assert.throws(function() { delete nonExtProxy.x; }, TypeError,
+  "delete configurable prop on non-extensible target");
+print('delete non-extensible');
+// CHECK-LABEL: delete non-extensible
+
 print('ownKeys');
 // CHECK-LABEL: ownKeys
 

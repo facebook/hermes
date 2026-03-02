@@ -2809,6 +2809,18 @@ TEST_P(HermesSerializationTest, SerializeWithTransferDetachedArrayBuffer) {
       serializationInterface->serializeWithTransfer(obj, transferArr), JSError);
 }
 
+TEST_P(HermesSerializationTest, SerializeWithTransferThrows) {
+  /// Try to transfer a non-transferable value
+  auto transferArr =
+      eval("var transferArr = ['strings are non-transferable']; transferArr")
+          .asObject(*rt)
+          .asArray(*rt);
+
+  auto val = Value::undefined();
+  EXPECT_THROW(
+      serializationInterface->serializeWithTransfer(val, transferArr), JSError);
+}
+
 INSTANTIATE_TEST_CASE_P(
     Runtimes,
     HermesSerializationTest,
