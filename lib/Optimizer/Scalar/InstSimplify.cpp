@@ -789,6 +789,17 @@ class InstSimplifyImpl {
     return nullptr;
   }
 
+  Value *simplifyToPropertyKey(ToPropertyKeyInst *TPK) {
+    auto *op = TPK->getSingleOperand();
+
+    // ToPropertyKey is an identity operation for strings and symbols.
+    if (op->getType().isStringType() || op->getType().isSymbolType()) {
+      return op;
+    }
+
+    return nullptr;
+  }
+
   Value *simplifyCoerceThisNS(CoerceThisNSInst *coerce) {
     auto *operand = coerce->getSingleOperand();
 
@@ -1093,6 +1104,8 @@ class InstSimplifyImpl {
         return simplifyAsUint32(cast<AsUint32Inst>(I));
       case ValueKind::AddEmptyStringInstKind:
         return simplifyAddEmptyString(cast<AddEmptyStringInst>(I));
+      case ValueKind::ToPropertyKeyInstKind:
+        return simplifyToPropertyKey(cast<ToPropertyKeyInst>(I));
       case ValueKind::PhiInstKind:
         return simplifyPhiInst(cast<PhiInst>(I));
       case ValueKind::CondBranchInstKind:
