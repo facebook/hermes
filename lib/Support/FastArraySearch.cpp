@@ -103,7 +103,10 @@ int64_t searchU32Impl(
   uint32x4_t needle = vdupq_n_u32(target);
   // Per-lane bit values used to collapse comparison lanes into a scalar
   // bitmask on a hit: AND the all-ones/zero lanes with {1,2,4,8} then sum.
-  static constexpr uint32x4_t kLaneBits = {1, 2, 4, 8};
+  // MSVC doesn't support constexpr initializer for NEON vector types so we
+  // use vld1q here.
+  static constexpr uint32_t kLaneBitsArr[] = {1, 2, 4, 8};
+  static const uint32x4_t kLaneBits = vld1q_u32(kLaneBitsArr);
   size_t numChunks = len / 4;
   for (size_t c = 0; c < numChunks; ++c) {
     size_t base = Reverse ? end - (c + 1) * 4 : start + c * 4;
