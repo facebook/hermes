@@ -4766,12 +4766,7 @@ CallResult<HermesValue> arrayPrototypeWith(void *, Runtime &runtime) {
   while (k < len) {
     gcScope.flushToMarker(marker);
 
-    // 9a. Let Pk be the result of ? Get(O, ! ToString(k)).
-    auto PkRes = getIndexed_RJS(runtime, lv.O, k);
-    if (LLVM_UNLIKELY(PkRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-
+    // 9a. Let Pk be ! ToString(𝔽(k)).
     // 9b. If k is actualIndex, let fromValue be value.
     if (k == actualIndex) {
       lv.fromValue = args.getArgHandle(1);

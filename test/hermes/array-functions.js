@@ -1080,3 +1080,18 @@ try {
 var obj = {length: 2 ** 32};
 try { Array.prototype.with.call(obj, 0, 123) } catch (e) { print(e.name) }
 // CHECK-NEXT: RangeError
+// Ensure Get(O, k) is only called once per non-replaced index (no double-fetch).
+var getCounts = {};
+var proxy = new Proxy([10, 20, 30], {
+  get: function(target, prop) {
+    if (prop === 'length') return target.length;
+    var idx = Number(prop);
+    if (idx >= 0 && idx === (idx | 0)) {
+      getCounts[prop] = (getCounts[prop] || 0) + 1;
+    }
+    return target[prop];
+  }
+});
+Array.prototype.with.call(proxy, 1, 99);
+print(getCounts[0], getCounts[1], getCounts[2]);
+// CHECK-NEXT: 1 undefined 1
