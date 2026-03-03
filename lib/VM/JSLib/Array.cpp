@@ -1150,7 +1150,10 @@ CallResult<HermesValue> arrayPrototypeJoin(void *, Runtime &runtime) {
     // [0..fastPathEnd) will not be populated until we encounter an object
     // (since its toString has side effects).
 
-    auto arrRes = JSArray::StorageType::create(runtime, len, len);
+    if (LLVM_UNLIKELY(len > UINT32_MAX))
+      return runtime.raiseRangeError("Array is too large for join");
+    auto arrRes =
+        JSArray::StorageType::create(runtime, (uint32_t)len, (uint32_t)len);
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
     lv.strings.castAndSetHermesValue<JSArray::StorageType>(*arrRes);
