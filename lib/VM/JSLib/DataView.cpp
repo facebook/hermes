@@ -208,6 +208,12 @@ CallResult<HermesValue> dataViewConstructor(void *, Runtime &runtime) {
     return ExecutionStatus::EXCEPTION;
   }
   auto offset = res->getNumberAs<uint64_t>();
+  // ES2025 25.3.2.1 Step 4. If IsDetachedBuffer(buffer) is true, throw a
+  // TypeError exception.
+  if (!buffer->attached()) {
+    return runtime.raiseTypeError(
+        "Cannot construct DataView on a detached ArrayBuffer");
+  }
   // 6. Let bufferByteLength be buffer.[[ArrayBufferByteLength]].
   auto bufferByteLength = buffer->size();
   // 7. If offset > bufferByteLength, throw a RangeError exception.
@@ -237,6 +243,12 @@ CallResult<HermesValue> dataViewConstructor(void *, Runtime &runtime) {
           "[byteLength]): byteOffset + byteLength must be "
           "<= the length of the buffer");
     }
+  }
+  // ES2025 25.3.2.1 Step 11. If IsDetachedBuffer(buffer) is true, throw a
+  // TypeError exception.
+  if (!buffer->attached()) {
+    return runtime.raiseTypeError(
+        "Cannot construct DataView on a detached ArrayBuffer");
   }
   lv.self->setBuffer(runtime, *buffer, offset, viewByteLength);
   return lv.self.getHermesValue();

@@ -1196,7 +1196,6 @@
     "test262/test/built-ins/TypedArrayConstructors/from/iter-next-error.js",
     "test262/test/built-ins/ArrayBuffer/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/DataView/custom-proto-access-detaches-buffer.js",
-    "test262/test/built-ins/DataView/detached-buffer.js",
     "test262/test/built-ins/DataView/prototype/byteLength/detached-buffer.js",
     "test262/test/built-ins/DataView/prototype/byteLength/instance-has-detached-buffer.js",
     "test262/test/built-ins/DataView/prototype/byteOffset/detached-buffer.js",
