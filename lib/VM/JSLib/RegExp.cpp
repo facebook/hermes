@@ -1904,6 +1904,13 @@ CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
     uint64_t nCaptures = lengthRes->getNumberAs<uint64_t>();
     // c. Let nCaptures be max(nCaptures − 1, 0).
     nCaptures = nCaptures > 0 ? nCaptures - 1 : 0;
+
+    // Throw RangeError if nCaptures exceeds uint32_t, since
+    // ArrayStorageSmall::create() takes uint32_t capacity and the loop below
+    // would run for an impractical number of iterations.
+    if (LLVM_UNLIKELY(nCaptures > UINT32_MAX)) {
+      return runtime.raiseRangeError("Too many capture groups in exec result");
+    }
     // d. Let matched be ToString(Get(result, "0")).
     // e. ReturnIfAbrupt(matched).
     propRes = getIndexed_RJS(runtime, lv.result, 0);
@@ -1941,7 +1948,8 @@ CallResult<HermesValue> regExpPrototypeSymbolReplace(void *, Runtime &runtime) {
     // Match the type of nCaptures.
     uint64_t n = 1;
     // k. Let captures be an empty List.
-    arrRes = ArrayStorageSmall::create(runtime, nCaptures);
+    arrRes =
+        ArrayStorageSmall::create(runtime, static_cast<uint32_t>(nCaptures));
     if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }

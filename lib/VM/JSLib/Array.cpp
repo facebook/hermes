@@ -1863,9 +1863,14 @@ CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
   }
   uint64_t len = *intRes;
 
+  // No sort implementation can handle lengths exceeding UINT32_MAX: quickSort
+  // takes uint32_t, and even iterating over that many indices is impractical.
+  if (LLVM_UNLIKELY(len > UINT32_MAX))
+    return runtime.raiseRangeError("Array sort length exceeds uint32_t");
+
   // If we are not sorting a regular dense array, use a special routine which
-  // first copies all properties into an array.
-  // Proxies  and host objects however are excluded because they are weird.
+  // first copies all existing properties into an array and sorts that.
+  // Proxies and host objects however are excluded because they are weird.
   if (!lv.O->isProxyObject() && !lv.O->isHostObject() &&
       !lv.O->hasFastIndexProperties())
     return sortSparse(runtime, lv.O, compareFn, len);
@@ -1876,7 +1881,10 @@ CallResult<HermesValue> arrayPrototypeSort(void *, Runtime &runtime) {
   // Use our custom sort routine. We can't use std::sort because it performs
   // optimizations that allow it to bypass calls to std::swap, but our swap
   // function is special, since it needs to use the internal Object functions.
-  if (LLVM_UNLIKELY(quickSort(&sm, 0u, len) == ExecutionStatus::EXCEPTION))
+  assert(len <= UINT32_MAX && "sort length exceeds uint32_t");
+  if (LLVM_UNLIKELY(
+          quickSort(&sm, 0u, static_cast<uint32_t>(len)) ==
+          ExecutionStatus::EXCEPTION))
     return ExecutionStatus::EXCEPTION;
 
   return lv.O.getHermesValue();
