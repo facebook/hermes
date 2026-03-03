@@ -1,6 +1,7 @@
 #
 # The Release pipeline entry point.
-# It releases NuGet packages to the public ms/react-natve ADO feed and to the NuGet.org feed.
+# It releases NuGet packages to the public ms/react-native ADO feed and to
+# the NuGet.org feed.
 #
 
 name: Release $(Date:yyyyMMdd).$(Rev:r)
@@ -43,14 +44,12 @@ extends:
         suppressionFile: $(Build.SourcesDirectory)\.ado\guardian\sdl\.gdnsuppress
 
     stages:
-    - stage: ms_react_native_nuget_publish
-      displayName: Nuget ms/react-native feed
+    - stage: nuget_publish
+      displayName: Nuget publish
 
       jobs:
       - job: ms_react_native_nuget_job
-        displayName: Publish Nuget to ms/react-native
-        condition: succeeded()
-        timeoutInMinutes: 0
+        displayName: Publish Nuget to ms/react-native-public
 
         templateContext:
           inputs:
@@ -63,13 +62,11 @@ extends:
         - script: dir /S $(Pipeline.Workspace)\published-packages
           displayName: Show directory contents
 
-        - script: dotnet nuget list source
-          displayName: Show Nuget sources
-
         - task: AzureCLI@2
           displayName: Override NuGet credentials with Managed Identity
           inputs:
             azureSubscription: 'Office-Hermes-Windows-Bot'
+            visibleAzLogin: false
             scriptType: 'pscore'
             scriptLocation: 'inlineScript'
             inlineScript: |
@@ -90,14 +87,9 @@ extends:
             externalEndpoint: 'Nuget - ms/react-native-public'
             publishPackageMetadata: true
 
-    - stage: nuget_org_publish
-      displayName: Nuget nuget.org feed
 
-      jobs:
       - job: nuget_org_job
-        displayName: Publish Nuget to nuget.org
-        condition: succeeded()
-        timeoutInMinutes: 0
+        displayName: Publish NuGet to nuget.org
 
         templateContext:
           inputs:
@@ -110,33 +102,33 @@ extends:
         - script: dir /S $(Pipeline.Workspace)\published-packages
           displayName: Show directory contents
 
-        - script: dotnet nuget list source
-          displayName: Show Nuget sources
-
         - task: AzureKeyVault@2
           inputs:
             azureSubscription: ESRP-JSHost3
             KeyVaultName: OGX-JSHost-KV
             SecretsFilter: 'OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi'
-            RunAsPreJob: true
 
-        - task: AzureCLI@2
-          displayName: Override NuGet.org credentials from Key Vault
+        - task: PowerShell@2
+          displayName: Inject NuGet.org API key into endpoint
           inputs:
-            azureSubscription: ESRP-JSHost3
-            scriptType: 'pscore'
-            scriptLocation: 'inlineScript'
-            inlineScript: |
+            targetType: 'inline'
+            script: |
               $nugetOrgApiKey = "$(OGX-JSHost-Nuget-org-API-key-Microsoft-JavaScript-NodeApi)"
+              if ([string]::IsNullOrWhiteSpace($nugetOrgApiKey)) {
+                throw "NuGet.org API key is missing or empty."
+              }
               # Set the API key as a secret, so it doesn't get leaked in logs.
               Write-Host "##vso[task.setsecret]$nugetOrgApiKey"
-              # Override the apitoken of the NuGet.org service connection for this job.
-              Write-Host "##vso[task.setendpoint id=f15cbb2b-c0a8-4325-a866-960fa0bec9af;field=authParameter;key=apitoken]$nugetOrgApiKey"
+              # 1ES.PublishNuGet (NuGetCommand path) reads NUGETKEY from
+              # endpoint auth parameters for this external endpoint.
+              Write-Host "##vso[task.setendpoint id=f15cbb2b-c0a8-4325-a866-960fa0bec9af;field=authParameter;key=nugetkey]$nugetOrgApiKey"
 
         - task: 1ES.PublishNuGet@1
           displayName: NuGet push to nuget.org
           inputs:
-            useDotNetTask: true
+            # Keep this false: DotNetCoreCLI path does not work with this key
+            # wiring for nuget.org in this pipeline.
+            useDotNetTask: false
             packageParentPath: '$(Pipeline.Workspace)/published-packages'
             packagesToPush: '$(Pipeline.Workspace)/published-packages/Microsoft.JavaScript.Hermes.*.nupkg'
             nuGetFeedType: external
