@@ -4570,7 +4570,7 @@ CallResult<HermesValue> arrayPrototypeToSpliced(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double len = lenRes.getValue();
+  uint64_t len = lenRes.getValue();
 
   // 3. Let relativeIndex be ? ToIntegerOrInfinity(index).
   auto relativeStartRes = toIntegerOrInfinity(runtime, args.getArgHandle(0));
@@ -4585,7 +4585,7 @@ CallResult<HermesValue> arrayPrototypeToSpliced(void *, Runtime &runtime) {
   // 0).
   // 6. Else, let actualStart be min(relativeStart, len).
   double actualStart = relativeStart < 0 ? std::max(len + relativeStart, 0.0)
-                                         : std::min(relativeStart, len);
+                                         : std::min(relativeStart, (double)len);
 
   uint32_t argCount = args.getArgCount();
   uint64_t actualSkipCount;
@@ -4622,12 +4622,10 @@ CallResult<HermesValue> arrayPrototypeToSpliced(void *, Runtime &runtime) {
   }
 
   // 11. Let newLen be len + insertCount - actualSkipCount.
-  auto lenAfterInsert = len + insertCount - actualSkipCount;
+  uint64_t lenAfterInsert = len + insertCount - actualSkipCount;
 
-  // 12. If newLen > 253 - 1, throw a TypeError exception.
-  if (LLVM_UNLIKELY(
-          // lenAfterInsert < len ||
-          lenAfterInsert - actualSkipCount > (1LLU << 53) - 1)) {
+  // 12. If newLen > 2^53 - 1, throw a TypeError exception.
+  if (LLVM_UNLIKELY(lenAfterInsert > (1LLU << 53) - 1)) {
     return runtime.raiseTypeError(
         "Array.prototype.toSpliced result out of space");
   }
