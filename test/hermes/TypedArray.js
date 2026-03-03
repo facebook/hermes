@@ -1122,6 +1122,28 @@ cons.forEach(function(ta) {
   assert.equal(1 / x[1], +Infinity);
 })();
 
+// NaN must sort to the end.
+(function nanSort() {
+  var a = new Float64Array([NaN, -Infinity, 0, Infinity, 1, -1, NaN]);
+  a.sort();
+  assert.equal(a[0], -Infinity);
+  assert.equal(a[1], -1);
+  assert.equal(a[2], 0);
+  assert.equal(a[3], 1);
+  assert.equal(a[4], Infinity);
+  assert.equal(a[5], NaN);
+  assert.equal(a[6], NaN);
+
+  var b = new Float32Array([NaN, 3, -0, 0, NaN, -3]);
+  b.sort();
+  assert.equal(b[0], -3);
+  assert.equal(1 / b[1], -Infinity); // -0
+  assert.equal(b[2], 0);
+  assert.equal(b[3], 3);
+  assert.equal(b[4], NaN);
+  assert.equal(b[5], NaN);
+})();
+
 /// @}
 
 /// @name TypedArray.prototype.set
