@@ -96,6 +96,13 @@ class IdentifierTable {
     return getSymbolHandle(runtime, str, hermes::hashString(str));
   }
 
+  /// Like getSymbolHandle, but returns SymbolID directly without allocating
+  /// a GCScope handle.
+  CallResult<SymbolID>
+  getSymbolID(Runtime &runtime, UTF16Ref str, uint32_t hash);
+  CallResult<SymbolID>
+  getSymbolID(Runtime &runtime, ASCIIRef str, uint32_t hash);
+
   /// Given a UTF16 string \p str, if an equal string is already in the table,
   /// return it as a StringPrimitive, otherwise return nullptr.
   StringPrimitive *getExistingStringPrimitiveOrNull(

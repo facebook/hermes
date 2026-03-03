@@ -365,6 +365,7 @@ CallResult<HermesValue> RuntimeJSONParser<Kind>::parseValue() {
     // arrays or objects. If we see that there are more elements or properties
     // left to parse, we break out of this loop, and continue in the top loop.
     while (true) {
+      gcScope.flushToMarker(marker);
       if (std::holds_alternative<RootCtx>(curContext)) {
         return lv.curVal.getHermesValue();
       } else if (auto *objCtx = std::get_if<ObjectCtx>(&curContext)) {

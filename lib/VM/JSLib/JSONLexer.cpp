@@ -271,11 +271,11 @@ ExecutionStatus JSONLexer<Kind>::scanString() {
       }
       ++iter_.cur;
       if constexpr (ForKey::value) {
-        auto symRes = runtime_.getIdentifierTable().getSymbolHandle(
-            runtime_, strRef, hash);
+        auto symRes =
+            runtime_.getIdentifierTable().getSymbolID(runtime_, strRef, hash);
         if (symRes == ExecutionStatus::EXCEPTION)
           return ExecutionStatus::EXCEPTION;
-        token_.setSymbol(symRes->get());
+        token_.setSymbol(*symRes);
         return ExecutionStatus::RETURNED;
       }
       auto strRes = StringPrimitive::create(runtime_, strRef);
@@ -320,11 +320,11 @@ ExecutionStatus JSONLexer<Kind>::scanString() {
       // Reached the end of string.
       ++iter_.cur;
       if constexpr (ForKey::value) {
-        auto symRes = runtime_.getIdentifierTable().getSymbolHandle(
+        auto symRes = runtime_.getIdentifierTable().getSymbolID(
             runtime_, llvh::ArrayRef<char16_t>{escapedStr}, hash);
         if (symRes == ExecutionStatus::EXCEPTION)
           return ExecutionStatus::EXCEPTION;
-        token_.setSymbol(symRes->get());
+        token_.setSymbol(*symRes);
         return ExecutionStatus::RETURNED;
       }
       auto strRes = StringPrimitive::create(

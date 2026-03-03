@@ -60,6 +60,18 @@ CallResult<Handle<SymbolID>> IdentifierTable::getSymbolHandle(
   return runtime.makeHandle(*cr);
 }
 
+CallResult<SymbolID>
+IdentifierTable::getSymbolID(Runtime &runtime, UTF16Ref str, uint32_t hash) {
+  return getOrCreateIdentifier(
+      runtime, str, Runtime::makeNullHandle<StringPrimitive>(), hash);
+}
+
+CallResult<SymbolID>
+IdentifierTable::getSymbolID(Runtime &runtime, ASCIIRef str, uint32_t hash) {
+  return getOrCreateIdentifier(
+      runtime, str, Runtime::makeNullHandle<StringPrimitive>(), hash);
+}
+
 SymbolID IdentifierTable::registerLazyIdentifier(
     Runtime &runtime,
     ASCIIRef str) {
