@@ -114,11 +114,12 @@ try {
 // CHECK-NEXT: Non-iterable: TypeError
 
 // Test type checking - multiple arguments
-// Note: test262 expects this to throw TypeError (should only accept 1 arg)
-// Current polyfill implementation accepts multiple args (uses first, ignores rest)
-// TODO: Make Math.sumPrecise reject multiple arguments per spec
-print(Math.sumPrecise([1, 2], [3, 4]));
-// CHECK-NEXT: 3
+try {
+  Math.sumPrecise([1, 2], [3, 4]);
+} catch(e) {
+  print('Multiple args:', e.name);
+}
+// CHECK-NEXT: Multiple args: TypeError
 
 // Test with Set (another iterable type)
 print(Math.sumPrecise(new Set([1, 2, 3])));
