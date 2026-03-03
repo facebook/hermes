@@ -845,7 +845,7 @@ HermesABIUint8PtrOrError get_arraybuffer_data(
         "Cannot get data block of detached ArrayBuffer.";
     return abi::createUint8PtrOrError(HermesABIErrorCodeNativeException);
   }
-  return abi::createUint8PtrOrError(ab->getDataBlock(runtime));
+  return abi::createUint8PtrOrError(ab->getDataBlock());
 }
 
 HermesABISizeTOrError get_arraybuffer_size(

@@ -2879,7 +2879,7 @@ uint8_t *HermesRuntimeImpl::data(const jsi::ArrayBuffer &arr) {
   auto ab = arrayBufferHandle(arr);
   if (LLVM_UNLIKELY(!ab->attached()))
     throw jsi::JSINativeException("ArrayBuffer is detached.");
-  return ab->getDataBlock(runtime_);
+  return ab->getDataBlock();
 }
 
 jsi::Value HermesRuntimeImpl::getValueAtIndex(const jsi::Array &arr, size_t i) {

@@ -670,8 +670,8 @@ CallResult<HermesValue> typedArrayPrototypeSetTypedArray(
   }
   // Since `src` is immutable, put the rest of the function into a continuation
   // to be called with a different `src` parameter.
-  if (self->getBuffer(runtime)->getDataBlock(runtime) !=
-      src->getBuffer(runtime)->getDataBlock(runtime)) {
+  if (self->getBuffer(runtime)->getDataBlock() !=
+      src->getBuffer(runtime)->getDataBlock()) {
     if (JSTypedArrayBase::setToCopyOfTypedArray(
             runtime, self, offset, src, 0, srcLength) ==
         ExecutionStatus::EXCEPTION) {

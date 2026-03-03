@@ -112,7 +112,7 @@ void JSArrayBuffer::copyDataBlockBytes(
     return;
   }
   assert(
-      dst->getDataBlock(runtime) != src->getDataBlock(runtime) &&
+      dst->getDataBlock() != src->getDataBlock() &&
       "Cannot copy into the same block, must be different blocks");
   assert(
       srcIndex + count <= src->size() &&
@@ -121,10 +121,7 @@ void JSArrayBuffer::copyDataBlockBytes(
       dstIndex + count <= dst->size() &&
       "Cannot copy more data into a block than it has space for");
   // Copy from the other buffer.
-  memcpy(
-      dst->getDataBlock(runtime) + dstIndex,
-      src->getDataBlock(runtime) + srcIndex,
-      count);
+  memcpy(dst->getDataBlock() + dstIndex, src->getDataBlock() + srcIndex, count);
 }
 
 JSArrayBuffer::JSArrayBuffer(
