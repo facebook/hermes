@@ -63,6 +63,10 @@ parse("015");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character in number: 1
 parse("+5");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: +
+parse("-");
+//CHECK-NEXT: SyntaxError: JSON Parse error: No digits after minus sign in JSON number
+parse("[-]");
+//CHECK-NEXT: SyntaxError: JSON Parse error: No digits after minus sign in JSON number
 parse("[5,]");
 //CHECK-NEXT: SyntaxError: JSON Parse error: Unexpected character: ]
 parse("[0x5]");

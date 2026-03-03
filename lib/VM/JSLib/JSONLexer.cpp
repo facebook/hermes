@@ -188,6 +188,10 @@ ExecutionStatus JSONLexer<Kind>::scanNumber() {
   if (*iter_.cur == '-') {
     multiplier = -1;
     ++iter_.cur;
+    // If there is a leading minus sign, there must be a digit following it.
+    if (LLVM_UNLIKELY(!hasChar() || *iter_.cur < '0' || *iter_.cur > '9')) {
+      return error("No digits after minus sign in JSON number");
+    }
   }
 
   bool isTrivialInteger = true;
