@@ -10,7 +10,7 @@
 
 'use strict';
 
-const { defineConfig, globalIgnores } = require('eslint/config');
+const {defineConfig, globalIgnores} = require('eslint/config');
 const js = require('@eslint/js');
 const globals = require('globals');
 const eslintComments = require('@eslint-community/eslint-plugin-eslint-comments/configs');
@@ -34,10 +34,7 @@ module.exports = defineConfig([
   eslintComments.recommended,
   prettier,
   {
-    files: [
-      '**/*.js',
-      '**/*.js.flow',
-    ],
+    files: ['**/*.js', '**/*.js.flow'],
     languageOptions: {
       parser: require('./hermes-eslint'),
       globals: {
