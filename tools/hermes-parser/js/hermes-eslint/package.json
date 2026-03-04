@@ -15,8 +15,13 @@
     "README.md"
   ],
   "dependencies": {
-    "esrecurse": "^4.3.0",
     "hermes-estree": "0.34.0",
     "hermes-parser": "0.34.0"
+  },
+  "devDependencies": {
+    "esrecurse": "^4.3.0"
+  },
+  "peerDependencies": {
+    "eslint": "^8.57.1 || ^9.0.0 || ^10.0.0"
   }
 }
