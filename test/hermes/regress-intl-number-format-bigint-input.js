@@ -10,15 +10,17 @@
 // REQUIRES: intl
 
 // Ensures Hermes Intl's NumberFormat doesn't crash on BigInt inputs to
-// format.
+// format and returns correct results.
 var referenceNumberFormat = new Intl.NumberFormat("en", undefined);
 
-try {
-  referenceNumberFormat.format(0n);
-} catch (err) {
-}
+// format() should not throw for BigInt inputs.
+referenceNumberFormat.format(0n);
+referenceNumberFormat.format(2n);
+referenceNumberFormat.format(BigInt('2'));
+referenceNumberFormat.format(BigInt('-42'));
 
-try {
-  referenceNumberFormat.formatToParts(0n);
-} catch (err) {
-}
+// formatToParts() should not throw for BigInt inputs.
+referenceNumberFormat.formatToParts(0n);
+referenceNumberFormat.formatToParts(2n);
+referenceNumberFormat.formatToParts(BigInt('2'));
+referenceNumberFormat.formatToParts(BigInt('-42'));

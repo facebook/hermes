@@ -12,6 +12,7 @@
 #ifdef HERMES_ENABLE_INTL
 
 #include "hermes/VM/ArrayLike.h"
+#include "hermes/VM/BigIntPrimitive.h"
 #include "hermes/VM/JSLib/DateUtil.h"
 #include "hermes/VM/PrimitiveBox.h"
 #include "hermes/VM/Runtime.h"
@@ -1354,14 +1355,23 @@ CallResult<HermesValue> intlNumberFormatFormat(void *, Runtime &runtime) {
           numberFormatHandle->getDecoration());
   assert(numberFormat && "Intl.NumberFormat platform part is nullptr");
 
-  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
-  // Hermes' Intl doesn't. Thus use toNumber.
-  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
+  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  double x;
+  if (xRes->isBigInt()) {
+    auto bigint = runtime.makeHandle(xRes->getBigInt());
+    CallResult<double> dRes = bigint->toDouble(runtime);
+    if (LLVM_UNLIKELY(dRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    x = *dRes;
+  } else {
+    x = xRes->getNumber();
+  }
   return StringPrimitive::createEfficient(
-      runtime, numberFormat->format(xRes->getNumber()));
+      runtime, numberFormat->format(x));
 }
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
@@ -1419,14 +1429,23 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
     return ExecutionStatus::EXCEPTION;
   }
 
-  // TODO(T150198421): This should be toNumeric as Hermes supports BigInt, but
-  // Hermes' Intl doesn't. Thus use toNumber.
-  CallResult<HermesValue> xRes = toNumber_RJS(runtime, args.getArgHandle(0));
+  CallResult<HermesValue> xRes = toNumeric_RJS(runtime, args.getArgHandle(0));
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
+  double x;
+  if (xRes->isBigInt()) {
+    auto bigint = runtime.makeHandle(xRes->getBigInt());
+    CallResult<double> dRes = bigint->toDouble(runtime);
+    if (LLVM_UNLIKELY(dRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    x = *dRes;
+  } else {
+    x = xRes->getNumber();
+  }
   return partsToJS(
-      runtime, (*numberFormatRes)->formatToParts(xRes->getNumber()));
+      runtime, (*numberFormatRes)->formatToParts(x));
 }
 
 CallResult<HermesValue> intlNumberFormatPrototypeResolvedOptions(
