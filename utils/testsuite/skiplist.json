@@ -2845,8 +2845,6 @@
     "test262/test/staging/sm/extensions/regress-650753.js",
     "test262/test/staging/sm/extensions/arguments-property-access-in-function.js",
     "test262/test/built-ins/Math/sumPrecise/not-a-constructor.js",
-    "test262/test/built-ins/Math/sumPrecise/throws-on-non-number.js",
-    "test262/test/built-ins/Math/sumPrecise/prop-desc.js",
     "test262/test/staging/sm/statements/property-reference-self-assignment.js",
     "test262/test/staging/sm/statements/try-completion.js",
     "test262/test/staging/sm/statements/for-in-with-gc-and-unvisited-deletion.js",
