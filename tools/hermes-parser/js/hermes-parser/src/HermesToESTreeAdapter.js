@@ -162,7 +162,7 @@ export default class HermesToESTreeAdapter extends HermesASTAdapter {
     let value;
     try {
       value = new RegExp(pattern, flags);
-    } catch (e) {
+    } catch {
       value = null;
     }
 
