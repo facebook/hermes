@@ -1341,6 +1341,18 @@ CallResult<HermesValue> intlNumberFormatSupportedLocalesOf(
       runtime, args);
 }
 
+/// Convert the result of toNumeric_RJS to a double. If the value is a BigInt,
+/// it is converted to double via BigIntPrimitive::toDouble().
+static CallResult<double> numericToDouble(
+    Runtime &runtime,
+    HermesValue numericValue) {
+  if (numericValue.isBigInt()) {
+    auto bigint = runtime.makeHandle(numericValue.getBigInt());
+    return bigint->toDouble(runtime);
+  }
+  return numericValue.getNumber();
+}
+
 CallResult<HermesValue> intlNumberFormatFormat(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   auto *nf = vmcast<NativeFunction>(
@@ -1359,19 +1371,12 @@ CallResult<HermesValue> intlNumberFormatFormat(void *, Runtime &runtime) {
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double x;
-  if (xRes->isBigInt()) {
-    auto bigint = runtime.makeHandle(xRes->getBigInt());
-    CallResult<double> dRes = bigint->toDouble(runtime);
-    if (LLVM_UNLIKELY(dRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    x = *dRes;
-  } else {
-    x = xRes->getNumber();
+  CallResult<double> x = numericToDouble(runtime, *xRes);
+  if (LLVM_UNLIKELY(x == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
   return StringPrimitive::createEfficient(
-      runtime, numberFormat->format(x));
+      runtime, numberFormat->format(*x));
 }
 
 CallResult<HermesValue> intlNumberFormatPrototypeFormatGetter(
@@ -1433,19 +1438,12 @@ CallResult<HermesValue> intlNumberFormatPrototypeFormatToParts(
   if (LLVM_UNLIKELY(xRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  double x;
-  if (xRes->isBigInt()) {
-    auto bigint = runtime.makeHandle(xRes->getBigInt());
-    CallResult<double> dRes = bigint->toDouble(runtime);
-    if (LLVM_UNLIKELY(dRes == ExecutionStatus::EXCEPTION)) {
-      return ExecutionStatus::EXCEPTION;
-    }
-    x = *dRes;
-  } else {
-    x = xRes->getNumber();
+  CallResult<double> x = numericToDouble(runtime, *xRes);
+  if (LLVM_UNLIKELY(x == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
   }
   return partsToJS(
-      runtime, (*numberFormatRes)->formatToParts(x));
+      runtime, (*numberFormatRes)->formatToParts(*x));
 }
 
 CallResult<HermesValue> intlNumberFormatPrototypeResolvedOptions(
