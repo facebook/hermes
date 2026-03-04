@@ -1342,13 +1342,30 @@ CallResult<HermesValue> intlNumberFormatSupportedLocalesOf(
 }
 
 /// Convert the result of toNumeric_RJS to a double. If the value is a BigInt,
-/// it is converted to double via BigIntPrimitive::toDouble().
+/// it is converted to double via BigIntPrimitive::toDouble(), but only if the
+/// conversion is exact.
 static CallResult<double> numericToDouble(
     Runtime &runtime,
     HermesValue numericValue) {
   if (numericValue.isBigInt()) {
     auto bigint = runtime.makeHandle(numericValue.getBigInt());
-    return bigint->toDouble(runtime);
+    CallResult<double> numberRes = bigint->toDouble(runtime);
+    if (LLVM_UNLIKELY(numberRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    if (LLVM_UNLIKELY(!std::isfinite(*numberRes))) {
+      return runtime.raiseRangeError("BigInt value is too large to format");
+    }
+    CallResult<HermesValue> roundtripBigIntRes =
+        BigIntPrimitive::fromDouble(runtime, *numberRes);
+    if (LLVM_UNLIKELY(roundtripBigIntRes == ExecutionStatus::EXCEPTION)) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto roundtripBigInt = runtime.makeHandle(roundtripBigIntRes->getBigInt());
+    if (LLVM_UNLIKELY(bigint->compare(roundtripBigInt.get()) != 0)) {
+      return runtime.raiseRangeError("Cannot format BigInt with precision loss");
+    }
+    return *numberRes;
   }
   return numericValue.getNumber();
 }

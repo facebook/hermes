@@ -24,3 +24,24 @@ referenceNumberFormat.formatToParts(0n);
 referenceNumberFormat.formatToParts(2n);
 referenceNumberFormat.formatToParts(BigInt('2'));
 referenceNumberFormat.formatToParts(BigInt('-42'));
+
+// BigInt values that cannot be represented exactly as Number are rejected to
+// avoid silent precision loss in the platform formatting layer.
+var largeBigInt = 9007199254740993n; // Number.MAX_SAFE_INTEGER + 2
+try {
+  referenceNumberFormat.format(largeBigInt);
+  throw new Error("Expected RangeError for imprecise BigInt format()");
+} catch (e) {
+  if (!(e instanceof RangeError)) {
+    throw e;
+  }
+}
+
+try {
+  referenceNumberFormat.formatToParts(largeBigInt);
+  throw new Error("Expected RangeError for imprecise BigInt formatToParts()");
+} catch (e) {
+  if (!(e instanceof RangeError)) {
+    throw e;
+  }
+}
