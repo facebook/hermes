@@ -153,6 +153,10 @@ class ScopeManager {
     return null;
   }
 
+  addGlobals(names: Array<string>): void {
+    this.globalScope?.addVariables(names);
+  }
+
   _assertCurrentScope(): Scope {
     if (this.currentScope == null) {
       throw new Error('currentScope was unexpectedly null.');
