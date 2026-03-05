@@ -136,6 +136,7 @@ BCProviderFromSrc::create(
   context->setEnableEval(true);
   context->setEnableES6BlockScoping(compileFlags.enableES6BlockScoping);
   context->setEnableAsyncGenerators(compileFlags.enableAsyncGenerators);
+  context->setParseTS(compileFlags.enableTS);
   context->setPreemptiveFunctionCompilationThreshold(
       compileFlags.preemptiveFunctionCompilationThreshold);
   context->setPreemptiveFileCompilationThreshold(
