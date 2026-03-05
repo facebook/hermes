@@ -331,8 +331,15 @@ cl::opt<bool> ParseTS(
     cl::desc("Parse TypeScript"),
     cl::init(false),
     cl::cat(CompilerCategory));
+
+cl::opt<bool> TransformTS(
+    "transform-ts",
+    cl::desc("Strip erasable TypeScript syntax (implies --parse-ts)"),
+    cl::init(false),
+    cl::cat(CompilerCategory));
 #else
 const bool ParseTS = false;
+const bool TransformTS = false;
 #endif
 
 hermes::CompilerRuntimeFlags compilerRuntimeFlags;
@@ -633,6 +640,11 @@ std::shared_ptr<Context> createContext() {
   if (codeGenOpts.dumpIRBetweenPasses)
     context->createPersistentIRNamer();
 
+  if (cli::TransformTS && cli::Typed) {
+    llvh::errs() << "error: --transform-ts is incompatible with typed mode\n";
+    return nullptr;
+  }
+
   // Typed mode forces strict mode.
   if (cli::Typed && !cli::StrictMode && cli::StrictMode.getNumOccurrences()) {
     llvh::errs() << "error: types are incompatible with loose mode\n";
@@ -677,6 +689,10 @@ std::shared_ptr<Context> createContext() {
     cli::ParseTS = true;
   if (cli::ParseTS)
     context->setParseTS(true);
+  if (cli::TransformTS) {
+    context->setParseTS(true);
+    context->setTransformTS(true);
+  }
 #endif
 
   if (!cli::ParseFlow && !cli::ParseTS && cli::Typed) {

@@ -7,10 +7,20 @@
 
 #include "hermes/AST/TransformAST.h"
 #include "hermes/AST/AsyncGenerator.h"
+#if HERMES_PARSE_TS
+#include "hermes/AST/StripTS.h"
+#endif
 
 namespace hermes {
 
 ESTree::Node *transformASTForCompilation(Context &context, ESTree::Node *root) {
+#if HERMES_PARSE_TS
+  if (context.getTransformTS()) {
+    root = stripTS(context, root);
+    if (!root)
+      return nullptr;
+  }
+#endif
   if (context.getEnableAsyncGenerators()) {
     root = transformAsyncGenerators(context, root);
   }

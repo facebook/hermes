@@ -529,6 +529,12 @@ static opt<bool> ParseTS(
     desc("Parse TypeScript"),
     init(false),
     cat(CompilerCategory));
+
+static opt<bool> TransformTS(
+    "transform-ts",
+    desc("Strip erasable TypeScript syntax (implies --parse-ts)"),
+    init(false),
+    cat(CompilerCategory));
 #endif
 
 static CLFlag StaticRequire(
@@ -1054,6 +1060,11 @@ bool validateFlags() {
     err("error: CommonJS modules are not supported in typed mode");
   }
 
+#if HERMES_PARSE_TS
+  if (cl::TransformTS && cl::Typed)
+    err("error: --transform-ts is incompatible with typed mode");
+#endif
+
   return !errored;
 }
 
@@ -1228,6 +1239,10 @@ std::shared_ptr<Context> createContext(
 #if HERMES_PARSE_TS
   if (cl::ParseTS) {
     context->setParseTS(true);
+  }
+  if (cl::TransformTS) {
+    context->setParseTS(true);
+    context->setTransformTS(true);
   }
 #endif
 
