@@ -44,7 +44,7 @@ extern "C" {
 ///                                                      -- callerFramePtr
 /// \endverbatim
 ///
-/// The registers in the range [stackPtr .. calleeFramePtr-1] belong to the
+/// The registers in the range [calleeFramePtr+1 .. stackPtr] belong to the
 /// callee frame. In other words, in the table above the negative offsets are
 /// in the callee frame and the non-negative ones are in the caller frame.
 ///
@@ -54,8 +54,8 @@ extern "C" {
 /// [previousFrame..calleeClosureOrCB] and the arguments [this, arg0..argN].
 ///
 /// This is the sequence of events when performing a call:
-/// - The caller allocates enough space for [previousFrame..argN] by subtracting
-/// from the stack pointer. (That doesn't need to happen immediately before the
+/// - The caller allocates enough space for [previousFrame..argN] by adding
+/// to the stack pointer. (That doesn't need to happen immediately before the
 /// call.)
 /// - The caller populates "argN..arg0" and "this".
 /// - The caller populates calleeClosureOrCB, newTarget and argCount.
@@ -66,7 +66,7 @@ extern "C" {
 /// - Execution is transferred to callee.
 /// - The callee updates the global "frame" register to point to the top of the
 /// stack, i.e. the row labelled "0" in the table.
-/// - The callee allocates registers in this frame by subtracting from the stack
+/// - The callee allocates registers in this frame by adding to the stack
 /// pointer and continues execution.
 ///
 /// When performing a return, the sequence is simpler:
