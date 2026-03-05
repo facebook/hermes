@@ -21,6 +21,14 @@
 # 3. Finally, it moved the resulted file to the `InternalBytecode`.
 
 
+if [ "$1" != "--force" ]; then
+  echo "ERROR: This script is deprecated." >&2
+  echo "The upstream 'promise' npm package (v8.3.0) is no longer maintained." >&2
+  echo "Make changes directly in lib/InternalJavaScript/01-Promise.js instead." >&2
+  echo "To force execution anyway, pass --force." >&2
+  exit 1
+fi
+
 SCRIPT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 BC_DIR="${SCRIPT}/../lib/InternalJavaScript"
