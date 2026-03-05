@@ -566,33 +566,33 @@ class TypedArraySortModel : public SortModel {
   }
 };
 
-/// ::qsort comparator for integer typed array elements.
-template <typename T>
-int intComparator(const void *a, const void *b) {
-  T va = *static_cast<const T *>(a);
-  T vb = *static_cast<const T *>(b);
-  return (va > vb) - (va < vb);
-}
+namespace {
 
-/// ::qsort comparator for floating-point typed array elements.
+/// ::qsort comparator for typed array elements.
 template <typename T>
-int floatComparator(const void *a, const void *b) {
-  T va = *static_cast<const T *>(a);
-  T vb = *static_cast<const T *>(b);
-  // NaN sorts after everything.
-  bool aNaN = std::isnan(va);
-  bool bNaN = std::isnan(vb);
-  if (LLVM_UNLIKELY(aNaN)) {
-    if (LLVM_UNLIKELY(bNaN))
-      return 0;
-    return 1;
-  } else if (LLVM_UNLIKELY(bNaN)) {
-    return -1;
+int qsortComparator(const void *a, const void *b) {
+  if constexpr (std::is_floating_point_v<T>) {
+    T va = *static_cast<const T *>(a);
+    T vb = *static_cast<const T *>(b);
+    // NaN sorts after everything.
+    bool aNaN = std::isnan(va);
+    bool bNaN = std::isnan(vb);
+    if (LLVM_UNLIKELY(aNaN)) {
+      if (LLVM_UNLIKELY(bNaN))
+        return 0;
+      return 1;
+    } else if (LLVM_UNLIKELY(bNaN)) {
+      return -1;
+    }
+    // -0 < +0.
+    if (LLVM_UNLIKELY(va == 0 && vb == 0))
+      return std::signbit(vb) - std::signbit(va);
+    return (va > vb) - (va < vb);
+  } else {
+    T va = *static_cast<const T *>(a);
+    T vb = *static_cast<const T *>(b);
+    return (va > vb) - (va < vb);
   }
-  // -0 < +0.
-  if (LLVM_UNLIKELY(va == 0 && vb == 0))
-    return std::signbit(vb) - std::signbit(va);
-  return (va > vb) - (va < vb);
 }
 
 /// Sort typed array elements directly using ::qsort.
@@ -601,18 +601,17 @@ void typedArraySortDirect(
     CellKind kind,
     JSTypedArrayBase::size_type len) {
   switch (kind) {
-#define TYPED_ARRAY(name, type)                                \
-  case CellKind::name##ArrayKind:                              \
-    if constexpr (std::is_floating_point_v<type>)              \
-      ::qsort(data, len, sizeof(type), floatComparator<type>); \
-    else                                                       \
-      ::qsort(data, len, sizeof(type), intComparator<type>);   \
+#define TYPED_ARRAY(name, type)                              \
+  case CellKind::name##ArrayKind:                            \
+    ::qsort(data, len, sizeof(type), qsortComparator<type>); \
     break;
 #include "hermes/VM/TypedArrays.def"
     default:
       llvm_unreachable("Unknown TypedArray kind");
   }
 }
+
+} // namespace
 
 // ES7 22.2.3.23.1
 CallResult<HermesValue> typedArrayPrototypeSetObject(
