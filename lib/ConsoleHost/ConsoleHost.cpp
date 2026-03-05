@@ -13,7 +13,10 @@
 #include "hermes/Support/UTF8.h"
 #include "hermes/VM/Callable.h"
 #include "hermes/VM/Domain.h"
+#include "hermes/VM/JSArray.h"
+#include "hermes/VM/JSArrayBuffer.h"
 #include "hermes/VM/JSObject.h"
+#include "hermes/VM/JSTypedArray.h"
 #include "hermes/VM/NativeArgs.h"
 #include "hermes/VM/Profiler/SamplingProfiler.h"
 #include "hermes/VM/Runtime.h"
@@ -203,6 +206,128 @@ static vm::CallResult<vm::HermesValue> clearTimeout(
   }
   consoleHost->clearTask(args.getArg(0).getNumberAs<uint32_t>());
   return HermesValue::encodeUndefinedValue();
+}
+
+/// Synchronously read a file and return its contents as a Uint8Array.
+static vm::CallResult<vm::HermesValue> hermescliLoadFile(
+    void *,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  using namespace vm;
+
+  if (args.getArgCount() < 1 || !args.getArg(0).isString()) {
+    return runtime.raiseTypeError("loadFile requires a string path argument");
+  }
+
+  auto str = Handle<StringPrimitive>::vmcast(args.getArgHandle(0));
+  auto jsPath = StringPrimitive::createStringView(runtime, str);
+  std::string path;
+  llvh::SmallVector<char16_t, 64> buf;
+  convertUTF16ToUTF8WithReplacements(path, jsPath.getUTF16Ref(buf));
+
+  auto fileBufRes = llvh::MemoryBuffer::getFile(path);
+  if (!fileBufRes) {
+    return runtime.raiseTypeError(
+        TwineChar16("Failed to open file: ") + llvh::StringRef(path));
+  }
+
+  size_t len = (*fileBufRes)->getBufferSize();
+  auto result = Uint8Array::allocate(runtime, len);
+  if (result == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+  auto ta = result.getValue();
+  std::memcpy(ta->data(runtime), (*fileBufRes)->getBufferStart(), len);
+
+  return HermesValue::encodeObjectValue(*ta);
+}
+
+/// Load and execute HBC bytecode from a Uint8Array or ArrayBuffer.
+/// Returns the result of the top-level function.
+static vm::CallResult<vm::HermesValue> hermescliLoadHBC(
+    void *,
+    vm::Runtime &runtime) {
+  vm::NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
+  using namespace vm;
+
+  uint8_t *data = nullptr;
+  size_t len = 0;
+
+  if (auto *ta = dyn_vmcast<JSTypedArrayBase>(args.getArg(0))) {
+    data = ta->data(runtime);
+    len = ta->getByteLength();
+  } else if (auto *ab = dyn_vmcast<JSArrayBuffer>(args.getArg(0))) {
+    data = ab->getDataBlock();
+    len = ab->size();
+  } else {
+    return runtime.raiseTypeError(
+        "loadHBC requires a Uint8Array or ArrayBuffer argument");
+  }
+
+  // Copy the data into an OwnedMemoryBuffer.
+  auto ownedBuf =
+      std::make_unique<OwnedMemoryBuffer>(llvh::MemoryBuffer::getMemBufferCopy(
+          llvh::StringRef(reinterpret_cast<const char *>(data), len)));
+
+  auto ret = hbc::BCProviderFromBuffer::createBCProviderFromBuffer(
+      std::move(ownedBuf));
+  if (!ret.first) {
+    return runtime.raiseTypeError(
+        TwineChar16("Error deserializing bytecode: ") +
+        llvh::StringRef(ret.second));
+  }
+
+  Handle<Domain> domain = runtime.makeHandle(Domain::create(runtime));
+
+  RuntimeModuleFlags flags;
+  flags.persistent = true;
+
+  return runtime.runBytecode(
+      std::move(ret.first),
+      flags,
+      /*sourceURL*/ "",
+      Runtime::makeNullHandle<Environment>(),
+      domain);
+}
+
+/// Return an array of extra CLI arguments passed after the script filename.
+static vm::CallResult<vm::HermesValue> hermescliGetScriptArgs(
+    void *ctx,
+    vm::Runtime &runtime) {
+  using namespace vm;
+  auto *consoleHost = reinterpret_cast<ConsoleHostContext *>(ctx);
+  const auto &scriptArgs = consoleHost->scriptArgs_;
+  auto len = static_cast<JSArray::size_type>(scriptArgs.size());
+
+  auto arrayRes = JSArray::create(runtime, len, len);
+  if (arrayRes == ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  struct : public Locals {
+    PinnedValue<JSArray> arr;
+  } lv;
+  LocalsRAII lraii(runtime, &lv);
+  lv.arr = std::move(*arrayRes);
+
+  if (lv.arr->setStorageEndIndex(lv.arr, runtime, len) ==
+      ExecutionStatus::EXCEPTION) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  for (JSArray::size_type i = 0; i < len; ++i) {
+    GCScopeMarkerRAII marker{runtime};
+    auto strRes = StringPrimitive::createEfficient(
+        runtime, llvh::createASCIIRef(scriptArgs[i].c_str()));
+    if (strRes == ExecutionStatus::EXCEPTION) {
+      return ExecutionStatus::EXCEPTION;
+    }
+    auto shv = SmallHermesValue::encodeStringValue(
+        vmcast<StringPrimitive>(*strRes), runtime);
+    JSArray::unsafeSetExistingElementAt(*lv.arr, runtime, i, shv);
+  }
+
+  return HermesValue::encodeObjectValue(*lv.arr);
 }
 
 /// The test262 testsuite requires below harness symbols:
@@ -418,6 +543,56 @@ void installConsoleBindings(
           lv.print));
 
   initTest262Harness(runtime);
+
+  // Register hermescli object with test utility functions, gated on the
+  // -Xhermes-internal-test-methods flag.
+  if (ctx.enableTestMethods_) {
+    vm::Handle<vm::JSObject> hermescliObj =
+        runtime.makeHandle(vm::JSObject::create(runtime));
+
+    auto defineMethod = [&](const char *name,
+                            vm::NativeFunctionPtr functionPtr,
+                            void *context,
+                            unsigned paramCount) {
+      vm::GCScopeMarkerRAII marker{runtime};
+      auto sym = runtime
+                     .ignoreAllocationFailure(
+                         runtime.getIdentifierTable().getSymbolHandle(
+                             runtime, llvh::createASCIIRef(name)))
+                     .get();
+      auto func = vm::NativeFunction::create(
+          runtime,
+          runtime.functionPrototype,
+          vm::Runtime::makeNullHandle<vm::Environment>(),
+          context,
+          functionPtr,
+          sym,
+          paramCount,
+          vm::Runtime::makeNullHandle<vm::JSObject>());
+      auto res = vm::JSObject::defineOwnProperty(
+          hermescliObj, runtime, sym, normalDPF, func);
+      (void)res;
+      assert(
+          res != vm::ExecutionStatus::EXCEPTION && *res &&
+          "hermescli.defineOwnProperty() failed");
+    };
+
+    defineMethod("loadFile", hermescliLoadFile, nullptr, 1);
+    defineMethod("loadHBC", hermescliLoadHBC, nullptr, 1);
+    defineMethod("getScriptArgs", hermescliGetScriptArgs, &ctx, 0);
+
+    runtime.ignoreAllocationFailure(
+        vm::JSObject::defineOwnProperty(
+            runtime.getGlobal(),
+            runtime,
+            runtime
+                .ignoreAllocationFailure(
+                    runtime.getIdentifierTable().getSymbolHandle(
+                        runtime, llvh::createASCIIRef("hermescli")))
+                .get(),
+            normalDPF,
+            hermescliObj));
+  }
 }
 
 // If a function body might throw C++ exceptions other than
@@ -503,6 +678,9 @@ bool executeHBCBytecodeImpl(
 
   vm::GCScope scope(*runtime);
   ConsoleHostContext ctx{*runtime};
+  ctx.enableTestMethods_ =
+      options.runtimeConfig.getEnableHermesInternalTestMethods();
+  ctx.scriptArgs_ = options.scriptArgs;
 
   installConsoleBindings(*runtime, ctx, statSampler.get(), filename);
 

@@ -60,6 +60,10 @@ struct Flags : public cli::VMOnlyRuntimeFlags {
 
 Flags flags;
 
+/// Extra positional arguments after '--' that are passed to the script
+/// via hermescli.getScriptArgs().
+std::vector<std::string> scriptArgsFromCL;
+
 } // namespace
 
 /// Execute Hermes bytecode \p bytecode, respecting command line arguments.
@@ -147,6 +151,9 @@ static int executeHBCBytecodeFromCL(
   options.sampleProfiling = flags.SampleProfiling;
   options.sampleProfilingFreq = flags.SampleProfilingFreq;
   options.heapTimeline = flags.HeapTimeline;
+
+  options.scriptArgs = scriptArgsFromCL;
+
 #ifdef HERMES_ENABLE_PERF_PROF
   std::string jitdumpFile;
   if (flags.PerfProf) {
@@ -240,6 +247,19 @@ int main(int argc, char **argv) {
   // Enable the microtask queue in the CLI by default.
   flags.MicrotaskQueue.setInitialValue(true);
 
+  // Extract script arguments after '--' before LLVM command line parsing,
+  // so they are not interpreted as input filenames. These are made available
+  // to JS via hermescli.getScriptArgs().
+  int clArgc = argc;
+  for (int i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--") == 0) {
+      for (int j = i + 1; j < argc; ++j)
+        scriptArgsFromCL.emplace_back(argv[j]);
+      clArgc = i;
+      break;
+    }
+  }
+
   driver::VMFeatures vmFeatures;
 #ifdef HERMES_ENABLE_DEBUGGER
   vmFeatures.debugger = true;
@@ -255,7 +275,7 @@ int main(int argc, char **argv) {
   llvh::cl::AddExtraVersionPrinter([vmFeatures](llvh::raw_ostream &s) {
     driver::printHermesCompilerVMVersion(s, &vmFeatures);
   });
-  llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
+  llvh::cl::ParseCommandLineOptions(clArgc, argv, "Hermes driver\n");
 
   if (cl::InputFilenames.size() == 0) {
     return repl(getReplRuntimeConfig());

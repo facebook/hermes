@@ -38,6 +38,12 @@ class ConsoleHostContext {
   uint32_t nextTaskId_{1};
 
  public:
+  /// Whether -Xhermes-internal-test-methods was set.
+  bool enableTestMethods_{false};
+
+  /// Extra CLI arguments after the script filename.
+  std::vector<std::string> scriptArgs_;
+
   /// Registers the ConsoleHostContext roots with \p runtime.
   ConsoleHostContext(vm::Runtime &runtime);
 
@@ -184,6 +190,9 @@ struct ExecuteOptions {
 
   /// Start tracking heap objects before executing bytecode.
   bool heapTimeline{false};
+
+  /// Extra positional CLI arguments after the script filename.
+  std::vector<std::string> scriptArgs;
 };
 
 /// Executes the HBC bytecode provided in HermesVM.
