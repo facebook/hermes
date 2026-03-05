@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMESVM_GC_MALLOC
+#include "hermes/VM/sh_config.h"
+
+#if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
 
 #include "gtest/gtest.h"
 
@@ -70,4 +72,4 @@ TEST_F(GCLazySegmentNCTest, MaterializeEnough) {
 }
 
 } // namespace
-#endif // !HERMESVM_GC_MALLOC
+#endif // !HERMESVM_GCVALUE_MALLOC

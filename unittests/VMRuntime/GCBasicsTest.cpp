@@ -36,8 +36,8 @@ struct GCBasicsTest : public ::testing::Test {
 };
 
 // Hades doesn't report its stats the same way as other GCs.
-#if !defined(NDEBUG) && !defined(HERMESVM_GC_HADES) && \
-    !defined(HERMESVM_SANITIZE_HANDLES)
+#if !defined(NDEBUG) && (HERMESVM_GCKIND != _HERMESVM_GCVALUE_HADES) && \
+    HERMESVM_SANITIZE_HANDLES == 0
 TEST_F(GCBasicsTest, SmokeTest) {
   auto &gc = rt.getHeap();
   GCBase::HeapInfo info;
@@ -256,7 +256,7 @@ TEST_F(GCBasicsTest, WeakRefTest) {
   wr2.releaseSlot();
   wr3.releaseSlot();
 }
-#endif // !NDEBUG && !HERMESVM_GC_HADES
+#endif // !NDEBUG && !HERMESVM_GCVALUE_HADES
 
 TEST_F(GCBasicsTest, WeakRootTest) {
   GC &gc = rt.getHeap();
@@ -397,7 +397,7 @@ TEST(GCCallbackTest, TestCallbackInvoked) {
   }
 }
 
-#ifndef HERMESVM_GC_MALLOC
+#if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
 TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   using SegmentCell = EmptyCell<FixedSizeHeapSegment::maxSize()>;
   constexpr size_t kSegmentCellStorageSize =
@@ -439,11 +439,11 @@ TEST(GCBasicsTestNCGen, TestIDPersistsAcrossMultipleCollections) {
   // There should have been one old gen collection.
   EXPECT_GT(newHeapInfo.numCollections, oldHeapInfo.numCollections);
 }
-#endif // #ifdef HERMESVM_GC_MALLOC
+#endif // #if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
 
 // handlesan allows allocation beyond the max heap size limit, so we need to
 // disable it here.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
   // An object with this size requires large allocation support to successfully
   // allocate within HadesGC. This should fit into a JumboHeapSegment with size
@@ -495,7 +495,7 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
     }
     rt.getHeap().getHeapInfo(heapInfo);
     ASSERT_EQ(heapInfo.totalAllocatedBytes, expectedTotalAllocBytes);
-#ifndef HERMESVM_GC_MALLOC
+#if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
     // YG + 1 normal OG segment (created when evacuation) + 1 jumbo heap segment
     // (with size equals to 2 * kSegmentUnitSize).
     ASSERT_EQ(heapInfo.heapSize, 4 * FixedSizeHeapSegment::kSegmentUnitSize);
@@ -523,7 +523,7 @@ TEST(LargeAllocationBigHeapTest, LOABasicOperations) {
     lv.l1 = LargeDummyObject::create(kMaxHeapSize / 3 + 8, rt.getHeap());
     lv.l2 = LargeDummyObject::create(kMaxHeapSize / 3, rt.getHeap());
     ASSERT_NE(lv.l2.get(), nullptr);
-#ifdef HERMESVM_GC_MALLOC
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_MALLOC
     auto expectedSize = heapAlignSize(kMaxHeapSize / 3);
 #else
     auto expectedSize =

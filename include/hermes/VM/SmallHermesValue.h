@@ -315,7 +315,7 @@ class HermesValue32 {
   /// \return true if the double can be encoded as a compressed HV64.
   static bool canInlineCompressibleOrNumberHV64(HermesValue hv) {
     assert(hv.isNumberOrCompressible() && "hv must be number or compressible");
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
     // If Handle-San is enabled, always box doubles on the heap. This ensures
     // that callers have to treat a HermesValue32 containing a number as a
     // pointer.

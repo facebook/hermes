@@ -1024,7 +1024,7 @@ size_t Runtime::mallocSize() const {
       identifierTable_.additionalMemorySize();
 }
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
 void Runtime::potentiallyMoveHeap() {
   // Do a dummy allocation which could force a heap move if handle sanitization
   // is on.

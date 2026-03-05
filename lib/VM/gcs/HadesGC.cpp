@@ -1697,7 +1697,7 @@ void HadesGC::prepareCompactee(bool forceCompaction) {
   if (promoteYGToOG_)
     return;
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
   // Handle-SAN forces a compaction to move some OG objects.
   if (sanitizeRate_)
     forceCompaction = true;

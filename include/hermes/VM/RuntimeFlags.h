@@ -8,6 +8,8 @@
 #ifndef HERMES_VM_RUNTIMEFLAGS_H
 #define HERMES_VM_RUNTIMEFLAGS_H
 
+#include "hermes/VM/sh_config.h"
+
 #include "llvh/ADT/StringRef.h"
 #include "llvh/Support/CommandLine.h"
 
@@ -48,7 +50,7 @@ struct VMOnlyRuntimeFlags {
           "enabled, this causes accesses via stale pointers into the heap to "
           "be sanitized."),
       llvh::cl::cat(GCCategory),
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
       llvh::cl::init(0.01)
 #else
       llvh::cl::init(0.0),
@@ -63,7 +65,7 @@ struct VMOnlyRuntimeFlags {
           "A negative value means to choose the seed at random"),
       llvh::cl::cat(GCCategory),
       llvh::cl::init(-1)
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
           ,
       llvh::cl::Hidden
 #endif

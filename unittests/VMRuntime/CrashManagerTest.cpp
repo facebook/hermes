@@ -82,7 +82,7 @@ class TestCrashManager : public CrashManager {
   std::unordered_map<std::string, std::string> contextualCustomData_;
 };
 
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 
 /// We are able to materialize every segment.
 TEST(CrashManagerTest, HeapExtentsCorrect) {
@@ -112,7 +112,7 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
     lv.handles[8 + i] = SegmentCell::create(rt);
   }
 
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
   static constexpr char numberedSegmentFmt[] = "XYZ:HeapSegment:%d";
   static constexpr std::string_view ygSegmentName = "XYZ:HeapSegment:YG";
 
@@ -148,13 +148,14 @@ TEST(CrashManagerTest, HeapExtentsCorrect) {
   }
   EXPECT_EQ(1, numHeapSegmentsYG);
   EXPECT_LE(25, numHeapSegmentsNumbered);
-#endif // HERMESVM_GC_HADES
+#endif // HERMESVM_GCVALUE_HADES
 }
 #endif // HERMESVM_SANITIZE_HANDLES
 
 // When handlesan is ON, more collections are triggered and we might observe
 // different custom data in CrashManager, so disable it here.
-#if defined(HERMESVM_GC_HADES) && !defined(HERMESVM_SANITIZE_HANDLES)
+#if (HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES) && \
+    HERMESVM_SANITIZE_HANDLES == 0
 TEST(CrashManagerTest, PromotedYGHasCorrectName) {
   // Turn on the "direct to OG" allocation feature.
   GCConfig gcConfig = GCConfig::Builder(kTestGCConfigBuilder)

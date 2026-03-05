@@ -44,7 +44,6 @@
 #include "hermes/Utils/CompilerRuntimeFlags.h"
 #include "hermes/Utils/Dumper.h"
 #include "hermes/Utils/Options.h"
-#include "hermes/VM/JIT/Config.h"
 
 #include "llvh/Support/CommandLine.h"
 #include "llvh/Support/Debug.h"
@@ -2217,32 +2216,28 @@ CompileResult processSourceFiles(
 
 /// Print the Hermes version to the stream \p s, outputting the \p vmStr (which
 /// may be empty).
-/// \param features when true, print the list of enabled features.
+/// \param vmFeatures when non-null, print the list of enabled features.
 void printHermesVersion(
     llvh::raw_ostream &s,
     const char *vmStr = "",
-    bool features = true) {
+    const VMFeatures *vmFeatures = nullptr) {
   s << "Hermes JavaScript compiler" << vmStr << ".\n"
 #ifdef HERMES_RELEASE_VERSION
     << "  Hermes release version: " << HERMES_RELEASE_VERSION << "\n"
 #endif
     << "  HBC bytecode version: " << hermes::hbc::BYTECODE_VERSION << "\n"
     << "\n";
-  if (features) {
-    s << "  Features:\n"
-#ifdef HERMES_ENABLE_DEBUGGER
-      << "    Debugger\n"
-#endif
-#ifdef HERMESVM_CONTIGUOUS_HEAP
-      << "    Contiguous Heap\n"
-#endif
-#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
-      << "    Unicode RegExp Property Escapes\n"
-#endif
-#if HERMESVM_JIT
-      << "    JIT\n"
-#endif
-      << "    Zip file input\n";
+  if (vmFeatures) {
+    s << "  Features:\n";
+    if (vmFeatures->debugger)
+      s << "    Debugger\n";
+    if (vmFeatures->contiguousHeap)
+      s << "    Contiguous Heap\n";
+    if (vmFeatures->unicodeRegExpPropertyEscapes)
+      s << "    Unicode RegExp Property Escapes\n";
+    if (vmFeatures->jit)
+      s << "    JIT\n";
+    s << "    Zip file input\n";
   }
 }
 
@@ -2251,8 +2246,10 @@ void printHermesVersion(
 namespace hermes {
 namespace driver {
 
-void printHermesCompilerVMVersion(llvh::raw_ostream &s) {
-  printHermesVersion(s, " and Virtual Machine");
+void printHermesCompilerVMVersion(
+    llvh::raw_ostream &s,
+    const VMFeatures *vmFeatures) {
+  printHermesVersion(s, " and Virtual Machine", vmFeatures);
 }
 void printHermesCompilerVersion(llvh::raw_ostream &s) {
   printHermesVersion(s);

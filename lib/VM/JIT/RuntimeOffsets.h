@@ -64,7 +64,7 @@ struct RuntimeOffsets {
 
   static constexpr uint32_t hiddenClassLazyJITId =
       offsetof(HiddenClass, lazyJITId_);
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
   static constexpr uint32_t runtimeHadesYGLevel =
       offsetof(Runtime, heap_.youngGen_.level_);
   static constexpr uint32_t runtimeHadesYGEnd =

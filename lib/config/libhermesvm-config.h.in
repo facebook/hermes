@@ -24,6 +24,24 @@
 #ifndef HERMES_IS_MOBILE_BUILD
 #cmakedefine HERMES_IS_MOBILE_BUILD
 #endif
+
+// GC kind constants.
+#define _HERMESVM_GCVALUE_HADES 0
+#define _HERMESVM_GCVALUE_MALLOC 1
+#define _HERMESVM_GCVALUE_RUNTIME 2
+
+#ifndef HERMESVM_GCKIND
+#define HERMESVM_GCKIND _HERMESVM_GCVALUE_@HERMESVM_GCKIND@
+#endif
+
+#ifndef HERMESVM_ALLOW_JIT
+#define HERMESVM_ALLOW_JIT @HERMESVM_ALLOW_JIT@
+#endif
+
+#ifndef HERMESVM_SANITIZE_HANDLES
+#cmakedefine01 HERMESVM_SANITIZE_HANDLES
+#endif
+
 /// The value of `sizeof(void *)` as an integer for used by the preprocessor.
 #define HERMESVM_SIZEOF_VOID_P   @CMAKE_SIZEOF_VOID_P@
 

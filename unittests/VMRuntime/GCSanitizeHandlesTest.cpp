@@ -5,11 +5,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#include "hermes/VM/sh_config.h"
+
+#if HERMESVM_SANITIZE_HANDLES != 0
 
 // TODO (T25686322): In non-Malloc GCs, handle sanitization doesn't fully move
 // the heap on every alloc.
-#ifdef HERMESVM_GC_MALLOC
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_MALLOC
 
 #include "VMRuntimeTestHelpers.h"
 #include "gtest/gtest.h"

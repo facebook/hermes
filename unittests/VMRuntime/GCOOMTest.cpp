@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HERMESVM_GC_MALLOC
+#include "hermes/VM/sh_config.h"
+
+#if HERMESVM_GCKIND != _HERMESVM_GCVALUE_MALLOC
 
 #include "gtest/gtest.h"
 
@@ -58,7 +60,7 @@ static void exceedMaxHeap(
 // heap segment. And if mmap storage provider is used, there's no limit on the
 // number of segments as well. For simplicity, just disable these tests under
 // handlesan.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 TEST(GCOOMDeathTest, Fragmentation) {
   EXPECT_OOM(exceedMaxHeap());
 }

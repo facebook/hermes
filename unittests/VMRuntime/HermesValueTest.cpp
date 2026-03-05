@@ -52,7 +52,7 @@ TEST(HermesValueTest, ConstexprTagsTest) {
 
 using HermesValueRuntimeTest = RuntimeTestFixture;
 
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 TEST_F(HermesValueRuntimeTest, SimpleSmokeTest) {
   // Encode the null value.
   {

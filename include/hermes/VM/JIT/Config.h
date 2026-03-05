@@ -8,11 +8,13 @@
 #ifndef HERMES_VM_JIT_CONFIG_H
 #define HERMES_VM_JIT_CONFIG_H
 
+#include "hermes/VM/sh_config.h"
+
 #ifdef HERMESVM_JIT
 #error HERMESVM_JIT must only be defined by this file
 #endif
 
-#ifndef HERMESVM_ALLOW_JIT
+#if HERMESVM_ALLOW_JIT == 0
 #define HERMESVM_JIT 0
 #elif HERMESVM_ALLOW_JIT == 2
 #define HERMESVM_JIT 1

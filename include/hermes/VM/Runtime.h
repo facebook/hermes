@@ -2383,7 +2383,7 @@ inline CrashManager &Runtime::getCrashManager() {
   return *crashMgr_;
 }
 
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
 inline void Runtime::potentiallyMoveHeap() {}
 #endif
 

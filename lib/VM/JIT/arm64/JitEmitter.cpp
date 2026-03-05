@@ -2792,7 +2792,7 @@ void Emitter::bumpAllocAndUnpoison(
     const a64::GpX &xTemp1,
     const a64::GpX &xTemp2,
     const asmjit::Label &slowPathLab) {
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
   // Load the current YG level and end address.
   a.ldr(xOut, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGLevel));
   a.ldr(xTemp1, a64::Mem(xRuntime, RuntimeOffsets::runtimeHadesYGEnd));
@@ -3131,7 +3131,7 @@ void Emitter::newObjectWithBuffer(
   freeReg(hwTmp2);
 
   // Load the HiddenClass from the cache.
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
   // First check the read barrier.
   emit_load_from_base_offset<1, true>(
       a, xTmp, xRuntime, xTmp2, RuntimeOffsets::runtimeHadesOGMarkingBarriers);
@@ -3275,7 +3275,7 @@ void Emitter::newObjectWithBuffer(
       // the indirect property storage.
       if (i == JSObject::DIRECT_PROPERTY_SLOTS) {
         // We know alloc2InYoung succeded so we can just advance the pointer.
-#ifdef HERMESVM_GC_HADES
+#if HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES
         em.a.add(xObj, xObj, heapAlignSize(cellSize<JSObject>()));
 #else
         emit_load_cp(

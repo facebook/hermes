@@ -240,7 +240,21 @@ int main(int argc, char **argv) {
   // Enable the microtask queue in the CLI by default.
   flags.MicrotaskQueue.setInitialValue(true);
 
-  llvh::cl::AddExtraVersionPrinter(driver::printHermesCompilerVMVersion);
+  driver::VMFeatures vmFeatures;
+#ifdef HERMES_ENABLE_DEBUGGER
+  vmFeatures.debugger = true;
+#endif
+#ifdef HERMESVM_CONTIGUOUS_HEAP
+  vmFeatures.contiguousHeap = true;
+#endif
+#ifdef HERMES_ENABLE_UNICODE_REGEXP_PROPERTY_ESCAPES
+  vmFeatures.unicodeRegExpPropertyEscapes = true;
+#endif
+  vmFeatures.jit = HERMESVM_JIT;
+
+  llvh::cl::AddExtraVersionPrinter([vmFeatures](llvh::raw_ostream &s) {
+    driver::printHermesCompilerVMVersion(s, &vmFeatures);
+  });
   llvh::cl::ParseCommandLineOptions(argc, argv, "Hermes driver\n");
 
   if (cl::InputFilenames.size() == 0) {

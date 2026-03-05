@@ -1514,7 +1514,7 @@ class GCBase {
   friend class NoAllocScope;
 #endif
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
   /// \return true if we should run handle sanitization and the coin flip with
   /// probability sanitizeRate_ has passed.
   bool shouldSanitizeHandles();

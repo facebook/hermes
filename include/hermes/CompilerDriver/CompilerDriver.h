@@ -77,6 +77,14 @@ struct CompileResult {
   /* implicit */ CompileResult(CompileStatus status) : status(status) {}
 };
 
+/// VM features to report in version output.
+struct VMFeatures {
+  bool debugger = false;
+  bool contiguousHeap = false;
+  bool unicodeRegExpPropertyEscapes = false;
+  bool jit = false;
+};
+
 /// Return the type of operation we're about to perform.
 OutputFormatKind outputFormatFromCommandLineOptions();
 
@@ -85,7 +93,10 @@ OutputFormatKind outputFormatFromCommandLineOptions();
 CompileResult compileFromCommandLineOptions();
 
 /// Print the Hermes version (with VM) to the given stream \p s.
-void printHermesCompilerVMVersion(llvh::raw_ostream &s);
+/// \param vmFeatures describes which VM features are compiled in.
+void printHermesCompilerVMVersion(
+    llvh::raw_ostream &s,
+    const VMFeatures *vmFeatures);
 
 /// Print the Hermes version (without VM) to the given stream \p s.
 void printHermesCompilerVersion(llvh::raw_ostream &s);

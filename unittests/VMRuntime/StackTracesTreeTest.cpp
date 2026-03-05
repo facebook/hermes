@@ -10,8 +10,7 @@
 
 // Enabling Handle-SAN can create additional allocations, which will invalidate
 // the expected outputs in this test.
-#if defined(HERMES_MEMORY_INSTRUMENTATION) && \
-    !defined(HERMESVM_SANITIZE_HANDLES)
+#if defined(HERMES_MEMORY_INSTRUMENTATION) && HERMESVM_SANITIZE_HANDLES == 0
 
 #include "TestHelpers1.h"
 #include "VMRuntimeTestHelpers.h"
@@ -906,4 +905,4 @@ TEST_F(StackTracesTreeTest, WithSourceMap) {
 } // namespace hermes
 
 #endif // defined(HERMES_MEMORY_INSTRUMENTATION) && \
-       // !defined(HERMESVM_SANITIZE_HANDLES)
+       // HERMESVM_SANITIZE_HANDLES == 0

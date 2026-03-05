@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#if defined(HERMESVM_GC_HADES) && defined(NDEBUG) && \
+#include "hermes/VM/sh_config.h"
+
+#if (HERMESVM_GCKIND == _HERMESVM_GCVALUE_HADES) && defined(NDEBUG) && \
     !defined(HERMESVM_ALLOW_HUGE_PAGES)
 
 #include "gtest/gtest.h"

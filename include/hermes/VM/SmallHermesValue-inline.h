@@ -73,7 +73,7 @@ double HermesValue32::getBoxedDouble(PointerBase &pb) const {
 /* static */ HermesValue32 HermesValue32::encodeHermesValue(
     HermesValue hv,
     Runtime &runtime) {
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
   // When Handle-SAN is on, make a double so that this function always
   // allocates. Note we can't do this for pointer values since they would get
   // invalidated.

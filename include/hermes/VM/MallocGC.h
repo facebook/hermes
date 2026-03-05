@@ -44,7 +44,7 @@ class MallocGC final : public GCBase {
     /// GCCell::getAllocatedSizeSlow().
     uint32_t cellSize;
 
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
     /// If non-null, contains a pointer to the new location where this cell will
     /// be after the collection is over.
     /// Only used in handle sanitization when pointers are moved.
@@ -70,7 +70,7 @@ class MallocGC final : public GCBase {
 
     void markWithForwardingPointer(CellHeader *newLocation) {
       mark();
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
       forwardingPtr_ = newLocation;
 #else
       llvm_unreachable(
@@ -81,7 +81,7 @@ class MallocGC final : public GCBase {
     void unmark() {
       assert(isMarked() && "Unmarking an already unmarked pointer");
       marked_ = false;
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
       forwardingPtr_ = nullptr;
 #endif
     }
@@ -96,7 +96,7 @@ class MallocGC final : public GCBase {
 
     CellHeader *getForwardingPointer() {
       assert(isMarked() && "Getting forwarding pointer from unmarked pointer");
-#ifdef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES != 0
       assert(forwardingPtr_ && "Accessing a null forwarding pointer");
       return forwardingPtr_;
 #else

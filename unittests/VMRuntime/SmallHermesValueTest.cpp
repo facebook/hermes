@@ -129,7 +129,7 @@ TEST_F(SmallHermesValueRuntimeTest, SmiTest) {
     auto SHV = SmallHermesValue::encodeHermesValue(
         HermesValue::encodeTrustedNumberValue(i), runtime);
 // When Handle-SAN is enabled, we put all numbers on the heap.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
     EXPECT_FALSE(SHV.isPointer());
 #endif
     auto HV = SHV.unboxToHV(runtime);
@@ -157,7 +157,7 @@ TEST_F(SmallHermesValueRuntimeTest, EncodeNumberTest) {
     double d = static_cast<double>(i);
     auto SHV = SmallHermesValue::encodeNumberValue(d, runtime);
 // When Handle-SAN is enabled, we put all numbers on the heap.
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
     EXPECT_FALSE(SHV.isPointer());
 #endif
     auto HV = SHV.unboxToHV(runtime);
@@ -254,7 +254,7 @@ TEST_F(SmallHermesValueRuntimeTest, EncodeDecodeAsHV64) {
   // SHV of compressible Number
   {
     SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(0.0, runtime);
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
     ASSERT_TRUE(SHV.isInlinedDouble());
 #endif
     HermesValue HV = SHV.encodeAsHermesValue();
@@ -321,7 +321,7 @@ TEST_F(SmallHermesValueRuntimeTest, EncodeDecodeAsHV64) {
   {
     SmallHermesValue SHV = SmallHermesValue::encodeNumberValue(0.0, runtime);
     HermesValue HV = SHV.encodeAsHermesValue();
-#ifndef HERMESVM_SANITIZE_HANDLES
+#if HERMESVM_SANITIZE_HANDLES == 0
     ASSERT_TRUE(SHV.isInlinedDouble());
     EXPECT_TRUE(HV.isNumber());
 #else
