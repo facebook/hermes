@@ -68,7 +68,7 @@
 # undef BOOST_CONTEXT_NO_CXX14_INTEGER_SEQUENCE
 #endif
 // workaroud: MSVC 14 does not provide macros to test for compile-time integer sequence
-#if defined(_MSC_VER) && _MSC_VER > 1800 // _MSC_VER == 1800 -> MS Visual Studio 2013
+#if _MSC_VER > 1800 // _MSC_VER == 1800 -> MS Visual Studio 2013
 # undef BOOST_CONTEXT_NO_INDEX_SEQUENCE
 #endif
 // workaround: Xcode clang feature detection
@@ -79,7 +79,7 @@
 #endif
 
 // workaroud: MSVC 14 does support constexpr
-#if defined(_MSC_VER) && _MSC_VER > 1800 // _MSC_VER == 1800 -> MS Visual Studio 2013
+#if _MSC_VER > 1800 // _MSC_VER == 1800 -> MS Visual Studio 2013
 # undef BOOST_NO_CXX11_CONSTEXPR
 #endif
 

@@ -13,8 +13,3 @@ bz2.
 7. Rename the `boost` namespace to `hoost` using a preprocessor define.
 8. Rename the `xxx_fcontext()` globals to have a `hoost_` prefix.
 9. Change the include path from `boost/` to `hoost/`.
-10. Define `BOOST_CONTEXT_SHADOW_STACK` to 0 when not on CET-enabled Linux, to
-    suppress `-Wundef` warnings. Upstream only defines it inside
-    `#if defined(__CET__) && defined(__unix__)`, leaving it undefined elsewhere.
-11. Guard `_MSC_VER` checks in `hoost/context/detail/config.hpp` with
-    `defined(_MSC_VER)` to suppress `-Wundef` warnings on non-MSVC compilers.
