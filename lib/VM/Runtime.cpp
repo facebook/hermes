@@ -282,6 +282,7 @@ Runtime::Runtime(
       verifyEvalIR(runtimeConfig.getVerifyEvalIR()),
       optimizedEval(runtimeConfig.getOptimizedEval()),
       asyncBreakCheckInEval(runtimeConfig.getAsyncBreakCheckInEval()),
+      test262(runtimeConfig.getTest262()),
       traceMode(runtimeConfig.getSynthTraceMode()),
       serializationValues_(
           runtimeConfig.getGCConfig().getOccupancyTarget(),

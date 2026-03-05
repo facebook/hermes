@@ -440,13 +440,6 @@ CLFlag StripFunctionNames(
     "Strip function names to reduce string table size",
     CompilerCategory);
 
-cl::opt<bool> Test262(
-    "test262",
-    cl::init(false),
-    cl::desc(
-        "Increase compliance with test262 by moving more checks to runtime"),
-    cl::cat(CompilerCategory));
-
 cl::opt<bool> EnableTDZ(
     "Xenable-tdz",
     cl::init(false),
@@ -589,10 +582,11 @@ void setWarningsAreErrorsFromFlags(SourceErrorManager &sm) {
 /// \return the Context.
 std::shared_ptr<Context> createContext() {
   CodeGenerationSettings codeGenOpts;
-  codeGenOpts.test262 = cli::Test262;
+  codeGenOpts.test262 = cli::compilerRuntimeFlags.Test262;
   // Test262 enables TDZ checking by default, unless the latter has been
   // specified explicitly.
-  codeGenOpts.enableTDZ = cli::Test262 && !cli::EnableTDZ.getNumOccurrences()
+  codeGenOpts.enableTDZ =
+      cli::compilerRuntimeFlags.Test262 && !cli::EnableTDZ.getNumOccurrences()
       ? true
       : cli::EnableTDZ;
   codeGenOpts.dumpRegisterInterval = cli::DumpRegisterInterval;

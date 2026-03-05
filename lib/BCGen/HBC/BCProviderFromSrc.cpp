@@ -103,6 +103,7 @@ BCProviderFromSrc::create(
       "The input buffer must be null terminated");
 
   CodeGenerationSettings codeGenOpts{};
+  codeGenOpts.test262 = compileFlags.test262;
 
   OptimizationSettings optSettings;
   // If the optional value is not set, the parser will automatically detect

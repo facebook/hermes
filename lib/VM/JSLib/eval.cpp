@@ -44,6 +44,7 @@ CallResult<HermesValue> evalInEnvironment(
       utf8code.size() >= compileFlags.preemptiveFileCompilationThreshold;
   compileFlags.enableES6BlockScoping = runtime.hasES6BlockScoping();
   compileFlags.enableAsyncGenerators = runtime.hasAsyncGenerators();
+  compileFlags.test262 = runtime.test262;
   compileFlags.requireSingleFunction = singleFunction;
 #ifdef HERMES_ENABLE_DEBUGGER
   // Required to allow stepping and examining local variables in eval'd code

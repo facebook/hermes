@@ -873,6 +873,8 @@ class Runtime : public RuntimeBase, public HandleRootOwner {
   const bool optimizedEval : 1;
   /// Whether to emit async break check instructions in eval().
   const bool asyncBreakCheckInEval : 1;
+  /// Whether to increase compliance with test262.
+  const bool test262 : 1;
 
   const SynthTraceMode traceMode;
 
