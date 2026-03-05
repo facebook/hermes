@@ -15,7 +15,7 @@ add_library(shermes_console_a STATIC ConsoleBindings.cpp)
 target_link_libraries(shermes_console_a PRIVATE hermesvm_a)
 set(HERMES_ENABLE_EH OFF)
 
-set(SHERMES_CC "cc" CACHE STRING "C compiler to invoke")
+set(SHERMES_CC "${CMAKE_C_COMPILER}" CACHE STRING "C compiler to invoke")
 set(SHERMES_CC_SYSCFLAGS "" CACHE STRING "C compiler system flags")
 set(SHERMES_CC_SYSLDFLAGS "" CACHE STRING "C compiler system linker flags")
 set(SHERMES_CC_INCLUDE_PATH
