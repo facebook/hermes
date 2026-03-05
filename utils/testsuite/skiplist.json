@@ -149,7 +149,6 @@
         "test262/test/language/statements/class/async-gen-method-static/dflt-params-trailing-comma.js",
         "test262/test/language/statements/class/async-gen-method-static/params-trailing-comma-multiple.js",
         "test262/test/language/statements/class/async-gen-method-static/params-trailing-comma-single.js",
-        "test262/test/built-ins/AsyncFromSyncIteratorPrototype/throw/iterator-result-rejected-promise-close.js",
         "test262/test/built-ins/AsyncGeneratorFunction/invoked-as-constructor-no-arguments.js",
         "test262/test/built-ins/AsyncGeneratorFunction/prototype/not-callable.js",
         "test262/test/built-ins/AsyncGeneratorFunction/name.js",

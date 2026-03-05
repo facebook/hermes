@@ -112,6 +112,57 @@ class AsyncGenerator : public TransformationsBase {
       return;
     }
 
+    if (yieldExpr->_delegate) {
+      // Transform:  yield* expr
+      //        to:  yield* _asyncGeneratorDelegate(expr)
+      //
+      // Problem: this async generator has been converted to a regular
+      // generator. IRGen compiles `yield*` via genYieldStarExpr, which
+      // calls emitGetIteratorSlow → Symbol.iterator. But the argument
+      // is typically an async iterable that only has Symbol.asyncIterator,
+      // so the lookup returns undefined → TypeError.
+      //
+      // Solution: _asyncGeneratorDelegate (04-AsyncIterator.js) wraps the
+      // async iterable in a sync iterator facade. The wrapper's next/throw/
+      // return methods call the corresponding method on the inner async
+      // iterator and wrap the resulting promise in OverloadYield(promise, 1)
+      // (kind=1 = delegate). The wrapper exposes Symbol.iterator, so IRGen's
+      // sync yield* protocol works.
+      //
+      // At runtime, the outer AsyncGenerator driver (AsyncGenerator.resume)
+      // sees the OverloadYield with kind=1, resolves the promise, and if
+      // the inner iterator is not done, feeds the resolved {value, done}
+      // back into the generator. The wrapper's "waiting" flag causes the
+      // next call to return that result directly, completing the sync
+      // iteration step. The cycle repeats until the inner iterator is done.
+      //
+      // Special case: yield* await expr
+      //   The await must resolve before delegation. visit() only recurses
+      //   into children of _argument, so a direct AwaitExpression isn't
+      //   transformed. We handle it explicitly:
+      //     yield* await expr
+      //       → yield* _asyncGeneratorDelegate(yield
+      //       _awaitAsyncGenerator(expr))
+      //   The inner yield awaits the promise via the AsyncGenerator driver,
+      //   then the resolved iterable is passed to _asyncGeneratorDelegate.
+      visit(yieldExpr->_argument);
+      ESTree::Node *delegateArg = yieldExpr->_argument;
+      if (auto *awaitExpr = llvh::dyn_cast_or_null<ESTree::AwaitExpressionNode>(
+              delegateArg)) {
+        auto *awaitCall = makeHermesInternalCall(
+            yieldExpr,
+            "_awaitAsyncGenerator",
+            NodeVector{awaitExpr->_argument});
+        delegateArg = createTransformedNode<ESTree::YieldExpressionNode>(
+            yieldExpr, awaitCall, false);
+      }
+      auto *delegateCall = makeHermesInternalCall(
+          yieldExpr, "_asyncGeneratorDelegate", NodeVector{delegateArg});
+      *ppNode = createTransformedNode<ESTree::YieldExpressionNode>(
+          yieldExpr, delegateCall, true);
+      return;
+    }
+
     auto awaitExpr = llvh::dyn_cast_or_null<ESTree::AwaitExpressionNode>(
         yieldExpr->_argument);
     if (awaitExpr) {
