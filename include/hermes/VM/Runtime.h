@@ -1905,7 +1905,7 @@ class ScopedNativeCallFrame {
         callee,
         newTarget);
     frame_.getThisArgRef() = thisArg;
-#if HERMES_SLOW_DEBUG
+#ifdef HERMES_SLOW_DEBUG
     // Poison the initial arguments to ensure the caller sets all of them before
     // a GC.
     assert(!overflowed_ && "Overflow should return early");
