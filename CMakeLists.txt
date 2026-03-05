@@ -768,11 +768,10 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_subdirectory(external/llvh)
+add_subdirectory(external)
 add_subdirectory(utils/hermes-lit)
 add_subdirectory(lib)
 add_subdirectory(public)
-add_subdirectory(external)
 add_subdirectory(API)
 add_subdirectory(android/intltest/java/com/facebook/hermes/test)
 
