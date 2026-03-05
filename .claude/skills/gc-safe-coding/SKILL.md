@@ -21,7 +21,9 @@ may trigger GC, unless documented otherwise or named with `_noalloc`/`_nogc`.
 Functions with `_RJS` suffix invoke JavaScript recursively and always trigger
 GC.
 
-**All raw pointers to GC objects must be rooted before any GC safepoint.**
+**All raw pointers and PseudoHandles to GC objects must be rooted before any
+GC safepoint.** `PseudoHandle<T>` is *not* a root — it is just as dangerous as
+a raw pointer across a safepoint.
 
 ## Rooting local values: use Locals + PinnedValue (required for new code)
 
@@ -83,8 +85,12 @@ allocated (via `makeHandle()`, `makeMutableHandle()`, or `Handle<>`/
 
 ## Checklist for writing / reviewing GC-safe code
 
-1. **No raw pointers across GC safepoints.** Every pointer to a GC object must
-   be stored in a `PinnedValue` before any call that takes `Runtime &` or is `_RJS`.
+1. **No raw pointers or PseudoHandles across GC safepoints.** Every pointer to
+   a GC object — including values held in `PseudoHandle<T>` — must be stored in
+   a `PinnedValue` before any call that takes `Runtime &` or is `_RJS`.
+   Watch for multi-step creation patterns: if `Foo::create()` returns a
+   `PseudoHandle` and the next line calls `Bar::create(runtime)`, the first
+   `PseudoHandle` is stale after the second allocation.
 2. **Use Locals, not GCScope.** New code must not introduce `GCScope` or
    `makeHandle()`. Declare a `struct : public Locals` with `PinnedValue` fields
    and a `LocalsRAII`.
