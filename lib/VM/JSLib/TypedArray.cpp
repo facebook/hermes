@@ -600,6 +600,7 @@ void typedArraySortDirect(
     uint8_t *data,
     CellKind kind,
     JSTypedArrayBase::size_type len) {
+  assert(data && "data must be non-null");
   switch (kind) {
 #define TYPED_ARRAY(name, type)                              \
   case CellKind::name##ArrayKind:                            \
@@ -1716,7 +1717,7 @@ CallResult<HermesValue> typedArrayPrototypeSort(void *, Runtime &runtime) {
     TypedArraySortModel sm(runtime, self, compareFn);
     if (LLVM_UNLIKELY(quickSort(&sm, 0, len) == ExecutionStatus::EXCEPTION))
       return ExecutionStatus::EXCEPTION;
-  } else {
+  } else if (len > 0) {
     typedArraySortDirect(self->data(runtime), self->getKind(), len);
   }
   return self.getHermesValue();
