@@ -27,6 +27,13 @@ escaping consistent with gtest's `char*`/`wchar_t*` string printing.
 Patch: `./utils/unittest/googletest/patches/gtest-printers-char16.patch`.
 
 
+Suppressed `-Wundef` warnings in `gtest.h` and `gmock.h` by wrapping the
+header contents with `#pragma GCC diagnostic push/ignored/pop`. These headers
+use `#if` on macros that may not be defined, which is harmless but noisy under
+`-Wundef`. Files modified:
+- `./utils/unittest/googletest/include/gtest/gtest.h`
+- `./utils/unittest/googlemock/include/gmock/gmock.h`
+
 ## LIT patches
 
 In order to fix some Windows python3 problems, it was necessary to pull in some
@@ -58,3 +65,12 @@ To avoid conflicts when linking with mainline LLVM, the namespace and include di
 manually renamed to `llvh`. That left renaming some C public symbols. Unused files under `llvh-c/`
 were removed and lastly a manual rename of the remaining global symbols was performed. The last
 step is recorded in `patches/rename-c-interface.patch`.
+
+## abi-breaking.h
+
+Upstream LLVM generates `abi-breaking.h` via CMake's `configure_file()`,
+defining `LLVM_ENABLE_ABI_BREAKING_CHECKS` and `LLVM_ENABLE_REVERSE_ITERATION`.
+LLVH does not use the LLVM build system, so `include/llvh/Config/abi-breaking.h`
+is a hand-written header that defines both macros to 0. Without these
+definitions, `#if LLVM_ENABLE_ABI_BREAKING_CHECKS` silently evaluates to 0
+(correct behavior, but produces `-Wundef` warnings).

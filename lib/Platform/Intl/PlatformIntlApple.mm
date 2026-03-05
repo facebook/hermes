@@ -799,7 +799,8 @@ bool isWellFormedUnitIdentifier(std::u16string_view unitIdentifier) {
 NSUnit *unitIdentifierToNSUnit(const std::u16string &unitId) {
   static const std::pair<std::u16string_view, NSUnit *> units[] = {
       {u"acre", NSUnitArea.acres},
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+    __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
       {u"bit", NSUnitInformationStorage.bits},
       {u"byte", NSUnitInformationStorage.bytes},
 #endif
@@ -810,7 +811,8 @@ NSUnit *unitIdentifierToNSUnit(const std::u16string &unitId) {
       {u"fluid-ounce", NSUnitVolume.fluidOunces},
       {u"foot", NSUnitLength.feet},
       {u"gallon", NSUnitVolume.gallons},
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+    __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
       {u"gigabit", NSUnitInformationStorage.gigabits},
       {u"gigabyte", NSUnitInformationStorage.gigabytes},
 #endif
@@ -819,7 +821,8 @@ NSUnit *unitIdentifierToNSUnit(const std::u16string &unitId) {
       {u"hectare", NSUnitArea.hectares},
       {u"hour", NSUnitDuration.hours},
       {u"inch", NSUnitLength.inches},
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+    __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
       {u"kilobit", NSUnitInformationStorage.kilobits},
       {u"kilobyte", NSUnitInformationStorage.kilobytes},
 #endif
@@ -827,7 +830,8 @@ NSUnit *unitIdentifierToNSUnit(const std::u16string &unitId) {
       {u"kilometer", NSUnitLength.kilometers},
       {u"kilometer-per-hour", NSUnitSpeed.kilometersPerHour},
       {u"liter", NSUnitVolume.liters},
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+    __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
       {u"megabit", NSUnitInformationStorage.megabits},
       {u"megabyte", NSUnitInformationStorage.megabytes},
 #endif
@@ -839,18 +843,21 @@ NSUnit *unitIdentifierToNSUnit(const std::u16string &unitId) {
       {u"mile-scandinavian", NSUnitLength.scandinavianMiles},
       {u"milliliter", NSUnitVolume.milliliters},
       {u"millimeter", NSUnitLength.millimeters},
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+    __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
       {u"millisecond", NSUnitDuration.milliseconds},
 #endif
       {u"minute", NSUnitDuration.minutes},
       {u"ounce", NSUnitMass.ounces},
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+    __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
       {u"petabyte", NSUnitInformationStorage.petabytes},
 #endif
       {u"pound", NSUnitMass.poundsMass},
       {u"second", NSUnitDuration.seconds},
       {u"stone", NSUnitMass.stones},
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
+#if defined(__IPHONE_OS_VERSION_MIN_REQUIRED) && \
+    __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_13_0
       {u"terabit", NSUnitInformationStorage.terabits},
       {u"terabyte", NSUnitInformationStorage.terabytes},
 #endif

@@ -369,6 +369,21 @@ if (MSVC)
   endforeach (flag)
 endif (MSVC)
 
+# Enable -Werror=undef for Hermes-owned directories to catch missing config
+# includes. Called from subdirectory CMakeLists.txt files (lib/, tools/, etc.).
+# On GCC < 13 C++, #pragma GCC diagnostic ignored "-Wundef" doesn't suppress
+# -Werror=undef (compiler bug fixed in GCC 13), so we only enable it for C++
+# when the compiler is not affected.
+macro(hermes_enable_werror_undef)
+  if (GCC_COMPATIBLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=undef")
+    if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+             CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13))
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=undef")
+    endif()
+  endif()
+endmacro()
+
 if (GCC_COMPATIBLE)
   # Don't add -Wall for clang-cl, because it maps -Wall to -Weverything for
   # MSVC compatibility.  /W4 is added above instead.

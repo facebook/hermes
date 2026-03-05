@@ -3,6 +3,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+hermes_enable_werror_undef()
+
 if(HERMES_ENABLE_DEBUGGER)
   # Some inspector sources need to be built without RTTI because they consume
   # internal data structures compiled without RTTI.

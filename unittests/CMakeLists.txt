@@ -3,6 +3,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+hermes_enable_werror_undef()
+
 add_custom_target(HermesUnitTests)
 set_target_properties(HermesUnitTests PROPERTIES FOLDER "Tests")
 

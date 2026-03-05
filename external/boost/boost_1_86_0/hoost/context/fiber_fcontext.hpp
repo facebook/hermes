@@ -52,6 +52,8 @@
 #ifndef SHADOW_STACK_SET_TOKEN
 #  define SHADOW_STACK_SET_TOKEN 0x1
 #endif
+#else
+#  define BOOST_CONTEXT_SHADOW_STACK 0
 #endif
 
 #if defined(BOOST_MSVC)

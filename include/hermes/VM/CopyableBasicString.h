@@ -29,7 +29,8 @@ namespace vm {
 // the size were different, say 16 bytes on android, we would add
 // a padding field to the CopyableBasicString class, under the
 // HERMESVM_API_TRACE_ANDROID_REPLAY preprocessor variable.
-#if !_ITERATOR_DEBUG_LEVEL && !defined(HERMESVM_API_TRACE_ANDROID_REPLAY)
+#if (!defined(_ITERATOR_DEBUG_LEVEL) || !_ITERATOR_DEBUG_LEVEL) && \
+    !defined(HERMESVM_API_TRACE_ANDROID_REPLAY)
 
 /// Strings whose length is smaller than this should never be stored in a
 /// CopyableBasicString. This is to protect against a small string optimization

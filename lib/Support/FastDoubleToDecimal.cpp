@@ -7,7 +7,12 @@
 
 #include "hermes/Support/FastDoubleToDecimal.h"
 
+// dragonbox uses #if on internal macros that may not be defined, triggering
+// -Wundef. Suppress it for this external header.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wundef"
 #include "dragonbox/dragonbox.h"
+#pragma GCC diagnostic pop
 
 #include <cmath>
 

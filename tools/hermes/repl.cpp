@@ -30,7 +30,7 @@
 #include "hermes/hermes.h"
 #include "jsi/jsi.h"
 
-#if HAVE_LIBREADLINE
+#ifdef HAVE_LIBREADLINE
 #include <readline/history.h>
 #include <readline/readline.h>
 #endif
@@ -46,7 +46,7 @@
 
 #define C_STRING(x) #x
 
-#if HAVE_LIBREADLINE
+#ifdef HAVE_LIBREADLINE
 static const std::string kHistoryFileBaseName = ".hermes_history";
 static const int kHistoryMaxEntries = 500;
 #endif
@@ -127,7 +127,7 @@ static ReadResult readInputLine(const char *prompt, std::string &line) {
   action.sa_handler = handleSignal;
   ::sigaction(SIGINT, &action, &oldAction);
 
-#if HAVE_LIBREADLINE
+#ifdef HAVE_LIBREADLINE
   if (oscompat::isatty(STDIN_FILENO)) {
     char *rl = ::readline(prompt);
     action.sa_handler = oldAction.sa_handler;
@@ -291,7 +291,7 @@ static bool needsAnotherLine(llvh::StringRef input) {
   return !stack.empty();
 }
 
-#if HAVE_LIBREADLINE
+#ifdef HAVE_LIBREADLINE
 // Load history file or create it
 static std::error_code loadHistoryFile(llvh::SmallString<128> &historyFile) {
   if (!llvh::sys::path::home_directory(historyFile)) {
@@ -374,7 +374,7 @@ int repl(const vm::RuntimeConfig &config) {
 
   runtime->getHeap().runtimeWillExecute();
 
-#if HAVE_LIBREADLINE
+#ifdef HAVE_LIBREADLINE
   llvh::SmallString<128> historyFile{};
   auto historyErr = loadHistoryFile(historyFile);
   if (historyErr && historyErr.value() != ENOENT) {
@@ -396,7 +396,7 @@ int repl(const vm::RuntimeConfig &config) {
         (readResult == ReadResult::INTERRUPT && code.empty())) {
       // EOF or user exit on non-continuation line.
       llvh::outs() << '\n';
-#if HAVE_LIBREADLINE
+#ifdef HAVE_LIBREADLINE
       if (history_length > 0) {
         ::stifle_history(kHistoryMaxEntries);
         ::write_history(historyFile.c_str());
