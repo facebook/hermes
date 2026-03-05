@@ -1582,6 +1582,11 @@ class ESTreeIRGen {
       IteratorRecordSlow iteratorRecord,
       bool ignoreInnerException);
 
+  /// Wrap a value with _awaitAsyncGenerator() for use in transformed async
+  /// generators. Creates an OverloadYield object that the AsyncGenerator
+  /// runtime recognizes as an internal await (not a user-visible yield).
+  Value *emitAwaitAsyncGenerator(Value *value);
+
   /// ES2018 7.4.7 AsyncIteratorClose
   /// https://www.ecma-international.org/ecma-262/9.0/index.html#sec-asynciteratorclose
   ///

@@ -979,6 +979,13 @@ void ESTreeIRGen::genAsyncForOfStatement(
     ESTree::ForOfStatementNode *forOfStmt) {
   auto *outerScope = curFunction()->curScope();
 
+  // In an async generator's inner generator, the driver is AsyncGenerator
+  // which needs OverloadYield wrapping for internal awaits. In a plain async
+  // function's inner generator, the driver is spawnAsync which handles raw
+  // yields directly.
+  bool needsOverloadYield = curFunction()->function->isInnerGenerator() &&
+      !curFunction()->function->isFromAsyncFunction();
+
   // If block scoping is enabled, check if anything in the loop might capture,
   // so we know whether to create inner scopes for the loop.
   bool createInnerScopes = Mod->getContext().getEnableES6BlockScoping() &&
@@ -1011,7 +1018,9 @@ void ESTreeIRGen::genAsyncForOfStatement(
   // loop. This stays outside the SurroundingTry below because exceptions in
   // `.next()` should not call `.return()` on the iterator.
   Builder.setInsertionBlock(getNextBlock);
-  auto *nextResult = genYieldOrAwaitExpr(emitIteratorNextSlow(iteratorRecord));
+  auto *rawNext = emitIteratorNextSlow(iteratorRecord);
+  auto *nextResult = genYieldOrAwaitExpr(
+      needsOverloadYield ? emitAwaitAsyncGenerator(rawNext) : rawNext);
   auto *done = emitIteratorCompleteSlow(nextResult);
   Builder.createCondBranchInst(done, exitBlock, bodyBlock);
 

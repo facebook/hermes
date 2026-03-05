@@ -618,6 +618,16 @@ ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetIteratorSlow(Value *obj) {
   return {iterator, nextMethod};
 }
 
+Value *ESTreeIRGen::emitAwaitAsyncGenerator(Value *value) {
+  auto *fn = Builder.createGetBuiltinClosureInst(
+      BuiltinMethod::HermesBuiltin_awaitAsyncGenerator);
+  return Builder.createCallInst(
+      fn,
+      Builder.getLiteralUndefined(),
+      Builder.getLiteralUndefined(),
+      {value});
+}
+
 ESTreeIRGen::IteratorRecordSlow ESTreeIRGen::emitGetAsyncIteratorSlow(
     Value *obj) {
   auto *makeAsyncIterator = Builder.createGetBuiltinClosureInst(
@@ -656,6 +666,10 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
     hermes::irgen::ESTreeIRGen::IteratorRecordSlow iteratorRecord,
     bool ignoreInnerException,
     bool isAsyncIterator) {
+  bool needsOverloadYield = isAsyncIterator &&
+      curFunction()->function->isInnerGenerator() &&
+      !curFunction()->function->isFromAsyncFunction();
+
   auto *haveReturn = Builder.createBasicBlock(Builder.getFunction());
   auto *noReturn = Builder.createBasicBlock(Builder.getFunction());
 
@@ -673,8 +687,12 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
     emitTryCatchScaffolding(
         noReturn,
         // emitBody.
-        [this, returnMethod, &iteratorRecord, isAsyncIterator, astNode](
-            BasicBlock *catchBlock) {
+        [this,
+         returnMethod,
+         &iteratorRecord,
+         isAsyncIterator,
+         astNode,
+         needsOverloadYield](BasicBlock *catchBlock) {
           SurroundingTry thisTry{
               curFunction(),
               astNode,
@@ -690,7 +708,9 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
               iteratorRecord.iterator,
               {});
           if (isAsyncIterator)
-            genYieldOrAwaitExpr(callResult);
+            genYieldOrAwaitExpr(
+                needsOverloadYield ? emitAwaitAsyncGenerator(callResult)
+                                   : callResult);
         },
         // emitNormalCleanup.
         []() {},
@@ -707,7 +727,11 @@ void ESTreeIRGen::_emitIteratorCloseImpl(
         iteratorRecord.iterator,
         {});
     emitEnsureObject(
-        isAsyncIterator ? genYieldOrAwaitExpr(callResult) : callResult,
+        isAsyncIterator
+            ? genYieldOrAwaitExpr(
+                  needsOverloadYield ? emitAwaitAsyncGenerator(callResult)
+                                     : callResult)
+            : callResult,
         "iterator.return() did not return an object");
     Builder.createBranchInst(noReturn);
   }
