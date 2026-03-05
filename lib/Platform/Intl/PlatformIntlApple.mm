@@ -2025,6 +2025,7 @@ class NumberFormatApple : public NumberFormat {
   Options resolvedOptions() noexcept;
 
   std::u16string format(double number) noexcept;
+  std::u16string format(const std::string &numberString) noexcept;
 
  private:
   // https://402.ecma-international.org/8.0/#sec-properties-of-intl-numberformat-instances
@@ -2628,12 +2629,40 @@ std::u16string NumberFormatApple::format(double number) noexcept {
       [nsNumberFormatter_ stringFromNumber:[NSNumber numberWithDouble:number]]);
 }
 
+std::u16string NumberFormatApple::format(
+    const std::string &numberString) noexcept {
+  NSString *nsStr =
+      [NSString stringWithUTF8String:numberString.c_str()];
+  if (nsMeasurementFormatter_) {
+    assert(style_ == u"unit");
+    // NSMeasurement requires a doubleValue; fall back to double conversion.
+    double d = [nsStr doubleValue];
+    auto m = [[NSMeasurement alloc] initWithDoubleValue:d unit:nsUnit_];
+    return nsStringToU16String(
+        [nsMeasurementFormatter_ stringFromMeasurement:m]);
+  }
+  NSDecimalNumber *decimalNumber =
+      [NSDecimalNumber decimalNumberWithString:nsStr];
+  return nsStringToU16String(
+      [nsNumberFormatter_ stringFromNumber:decimalNumber]);
+}
+
 std::u16string NumberFormat::format(double number) noexcept {
   return static_cast<NumberFormatApple *>(this)->format(number);
 }
 
+std::u16string NumberFormat::format(
+    const std::string &numberString) noexcept {
+  return static_cast<NumberFormatApple *>(this)->format(numberString);
+}
+
 std::vector<std::unordered_map<std::u16string, std::u16string>>
 NumberFormat::formatToParts(double number) noexcept {
+  llvm_unreachable("formatToParts is unimplemented on Apple platforms");
+}
+
+std::vector<std::unordered_map<std::u16string, std::u16string>>
+NumberFormat::formatToParts(const std::string &numberString) noexcept {
   llvm_unreachable("formatToParts is unimplemented on Apple platforms");
 }
 
