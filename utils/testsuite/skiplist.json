@@ -595,9 +595,6 @@
         "test262/test/built-ins/Promise/any/resolve-before-loop-exit-from-same.js",
         "test262/test/built-ins/Promise/any/resolve-before-loop-exit.js",
         "test262/test/built-ins/Promise/any/resolve-from-same-thenable.js",
-        "test262/test/built-ins/Promise/any/invoke-resolve-error-close.js",
-        "test262/test/built-ins/Promise/any/invoke-then-error-close.js",
-        "test262/test/built-ins/Promise/any/invoke-then-get-error-close.js",
         "test262/test/built-ins/Promise/executor-function-extensible.js",
         "test262/test/built-ins/Promise/executor-function-length.js",
         "test262/test/built-ins/Promise/executor-function-name.js",
@@ -671,10 +668,7 @@
         "test/built-ins/Promise/prototype/then/capability-executor-not-callable.js",
         "test/built-ins/Promise/race/ctx-ctor.js",
         "test/built-ins/Promise/reject/ctx-ctor.js",
-        "test/built-ins/Promise/resolve/ctx-ctor.js",
-        "test/built-ins/Promise/race/invoke-resolve-error-close.js",
-        "test/built-ins/Promise/race/invoke-then-error-close.js",
-        "test/built-ins/Promise/race/invoke-then-get-error-close.js"
+        "test/built-ins/Promise/resolve/ctx-ctor.js"
       ],
       "comment": "We support Promise but not every features of it."
     },
