@@ -1419,6 +1419,9 @@ HermesABIBoolOrError drain_microtasks(HermesABIRuntime *abiRt, int) {
   // Clear strong references to objects retained by WeakRef accesses.
   runtime.clearKeptObjects();
 
+  // Run the callback for dead registered targets.
+  runtime.cleanUpFinalizationCallbacks();
+
   // drainJobs currently drains the entire queue, unless there is an exception,
   // so always return true.
   // TODO(T89426441): Support max_hint.

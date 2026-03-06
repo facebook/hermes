@@ -30,6 +30,7 @@
 #include "hermes/VM/JSArray.h"
 #include "hermes/VM/JSCallableProxy.h"
 #include "hermes/VM/JSError.h"
+#include "hermes/VM/JSFinalizationRegistry.h"
 #include "hermes/VM/JSLib.h"
 #include "hermes/VM/JSLib/JSLibStorage.h"
 #include "hermes/VM/JSMapImpl.h"
@@ -772,6 +773,9 @@ void Runtime::markWeakRoots(WeakRootAcceptor &acceptor, bool markLongLived) {
     for (auto &entry : fixedReadPropCache_) {
       acceptor.acceptWeak(entry.clazz);
     }
+  }
+  for (auto &registry : finalizationRegistries_) {
+    acceptor.acceptWeak(registry);
   }
   for (auto &rm : runtimeModuleList_)
     rm.markWeakRoots(acceptor, markLongLived);
@@ -2032,6 +2036,47 @@ ExecutionStatus Runtime::addToKeptObjects(Handle<> obj) {
 
 void Runtime::clearKeptObjects() {
   keptObjects_ = nullptr;
+}
+
+void Runtime::addFinalizationRegistry(JSFinalizationRegistry *registry) {
+  finalizationRegistries_.emplace_back(registry, *this);
+}
+
+ExecutionStatus Runtime::cleanUpFinalizationCallbacks() {
+  struct : Locals {
+    PinnedValue<JSFinalizationRegistry> registry;
+  } lv;
+  LocalsRAII lraii{*this, &lv};
+
+  // Iterate each registry to run the callback (if it has dead registered
+  // targets). This is conservative but still compliant with the spec. We don't
+  // immediately enqueue a cleanup task when a registered target is dead,
+  // instead, we iterate all registries in a single step at microtask
+  // checkpoint.
+  // Don't cache the size because cleanup() call in the loop may add new
+  // entries. Use index-based iteration because adding new entries can
+  // invalidate iterators.
+  for (size_t i = 0; i < finalizationRegistries_.size();) {
+    // Check if the pointer is null. This registry could have been freed by the
+    // GC when running last cleanup.
+    WeakRoot<JSFinalizationRegistry> &element = finalizationRegistries_[i];
+    if (element) {
+      auto *frPtr = element.get(*this, getHeap());
+      lv.registry = frPtr;
+      if (JSFinalizationRegistry::cleanup(lv.registry, *this) ==
+          ExecutionStatus::EXCEPTION)
+        return ExecutionStatus::EXCEPTION;
+      ++i;
+    } else {
+      // Swap with the last element and pop it out.
+      // We don't need a read barrier here because if the read weak root is
+      // freed later by the GC, we will just skip it because it's dead and it's
+      // spec compliant to do so.
+      element = finalizationRegistries_.back().getNoBarrierUnsafe();
+      finalizationRegistries_.pop_back();
+    }
+  }
+  return ExecutionStatus::RETURNED;
 }
 
 uint64_t Runtime::gcStableHashHermesValue(HermesValue value) {

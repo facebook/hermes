@@ -138,7 +138,9 @@ class JSFinalizationRegistry final : public JSObject {
       Handle<HiddenClass> clazz,
       Handle<Callable> cleanupCallback)
       : JSObject(runtime, *parent, *clazz),
-        cleanupCallback_(runtime, *cleanupCallback, runtime.getHeap()) {}
+        cleanupCallback_(runtime, *cleanupCallback, runtime.getHeap()) {
+    runtime.addFinalizationRegistry(this);
+  }
 
  private:
   /// The cleanup callback [[CleanupCallback]].
