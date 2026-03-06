@@ -283,6 +283,41 @@ class PinnedValue : private PinnedHermesValue {
   }
 };
 
+/// A specialization of PinnedValue that is used to hold special HermesValue:
+/// those directly encode a SmallHermesValue. This has very limited uses so it
+/// does not provide the same set of methods as the templated PinnedValue.
+template <>
+class PinnedValue<SmallHermesValue> : private PinnedHermesValue {
+ public:
+  PinnedValue() : PinnedValue(SmallHermesValue::encodeUndefinedValue()) {}
+
+  /// Copy and move constructors are disabled, to avoid accidentally passing
+  /// PinnedValue by value, since its location must always be known to the GC.
+  PinnedValue(const PinnedValue &) = delete;
+  PinnedValue(PinnedValue &&) = delete;
+
+  /// Encode \p val directly into the underlying PinnedHermesValue.
+  /// Require explicit construction to avoid accidentally passing a
+  /// SmallHermesValue to a function takes PinnedValue<SmallHermesValue>.
+  explicit PinnedValue(SmallHermesValue val)
+      : PinnedHermesValue(val.encodeAsHermesValue()) {}
+
+  PinnedValue &operator=(PinnedValue &&) = default;
+  PinnedValue &operator=(const PinnedValue &other) = default;
+  ~PinnedValue() = default;
+
+  /// Encode \p val directly into the underlying PinnedHermesValue.
+  PinnedValue &operator=(SmallHermesValue val) {
+    setNoBarrier(val.encodeAsHermesValue());
+    return *this;
+  }
+
+  /// \return The SmallHermesValue held by this PinnedValue.
+  SmallHermesValue getSmallHermesValue() const {
+    return SmallHermesValue::decodeFromHermesValue(*this);
+  }
+};
+
 /// A HermesValue in the current GCScope which is trackable by the GC and will
 /// be correctly marked and updated if objects are moved. The value is valid
 /// while the owning GCScope object is alive.

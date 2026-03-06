@@ -584,9 +584,21 @@ void Runtime::markRoots(RootAcceptorWithNames &acceptor, bool markLongLived) {
     MarkRootsPhaseTimer timer(*this, RootAcceptor::Section::Locals);
     acceptor.beginRootSection(RootAcceptor::Section::Locals);
     for (Locals *locals = vmLocals; locals; locals = locals->prev) {
-      PinnedHermesValue *pinned = locals->locals();
-      for (size_t i = 0, e = locals->numLocals; i < e; ++i)
-        acceptor.acceptNullable(pinned[i]);
+      for (size_t i = 0, e = locals->numLocals; i < e; ++i) {
+        auto &phv = locals->locals()[i];
+#ifdef HERMESVM_BOXED_DOUBLES
+        if (LLVM_UNLIKELY(phv.isRawHV32())) {
+          PinnedSmallHermesValue sphv{
+              SmallHermesValue::decodeFromHermesValue(phv)};
+          // The encoded HV32 can't be null pointer.
+          acceptor.accept(sphv);
+          phv = sphv.encodeAsHermesValue();
+        } else
+#endif
+        {
+          acceptor.acceptNullable(phv);
+        }
+      }
     }
     acceptor.endRootSection();
   }

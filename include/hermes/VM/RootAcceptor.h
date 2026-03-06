@@ -49,7 +49,19 @@ struct RootAcceptor : public RootSectionAcceptor {
   virtual void accept(const RootSymbolID &sym) = 0;
   template <typename T>
   void acceptNullablePV(PinnedValue<T> &pv) {
-    acceptNullable(pv);
+    // If \p pv actually holds an encoded SmallHermesValue, we need to decode it
+    // first, then write it back after visiting.
+    if constexpr (std::is_same_v<T, SmallHermesValue>) {
+      PinnedSmallHermesValue pshv = pv.getSmallHermesValue();
+      assert(
+          (!pshv.isPointer() || pshv.getPointer()) &&
+          "The held SHV can't be null pointer");
+      // The held SHV can't be null pointer.
+      accept(pshv);
+      pv = pshv;
+    } else {
+      acceptNullable(pv);
+    }
   }
 
   /// When we want to call an acceptor on "raw" root pointers of
