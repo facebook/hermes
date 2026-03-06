@@ -22,7 +22,17 @@ const VTable FinalizationRecord::vt{VTable(
     false,
     FinalizationRecord::_finalizeImpl,
     nullptr,
-    nullptr)};
+    nullptr
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+    ,
+    VTable::HeapSnapshotMetadata{
+        HeapSnapshot::NodeType::Object,
+        nullptr,
+        FinalizationRecord::_snapshotAddEdgesImpl,
+        nullptr,
+        nullptr}
+#endif
+    )};
 
 /* static */
 void FinalizationRecord::_finalizeImpl(GCCell *cell, GC &) {
@@ -35,8 +45,28 @@ void FinalizationRecord::_finalizeImpl(GCCell *cell, GC &) {
 void FinalizationRecordBuildMeta(const GCCell *cell, Metadata::Builder &mb) {
   const auto *self = static_cast<const FinalizationRecord *>(cell);
   mb.setVTable(&FinalizationRecord::vt);
-  mb.addField(&self->heldValue);
+  mb.addField("HeldValue", &self->heldValue);
 }
+
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+/* static */
+void FinalizationRecord::_snapshotAddEdgesImpl(
+    GCCell *cell,
+    GC &gc,
+    HeapSnapshot &snap) {
+  auto *const self = reinterpret_cast<FinalizationRecord *>(cell);
+  if (!self->target.isEmpty() && self->target.isValid()) {
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Weak, "Target", self->target.getNodeID(gc));
+  }
+  if (!self->unregisterToken.isEmpty() && self->unregisterToken.isValid()) {
+    snap.addNamedEdge(
+        HeapSnapshot::EdgeType::Weak,
+        "UnregisterToken",
+        self->unregisterToken.getNodeID(gc));
+  }
+}
+#endif
 
 /* static */
 HermesValue FinalizationRecord::create(
@@ -80,8 +110,8 @@ void JSFinalizationRegistryBuildMeta(
   JSObjectBuildMeta(cell, mb);
   const auto *self = static_cast<const JSFinalizationRegistry *>(cell);
   mb.setVTable(&JSFinalizationRegistry::vt);
-  mb.addField(&self->cleanupCallback_);
-  mb.addField(&self->cells_);
+  mb.addField("CleanupCallback", &self->cleanupCallback_);
+  mb.addField("Cells", &self->cells_);
 }
 
 /* static */

@@ -36,6 +36,10 @@ class FinalizationRecord : public GCCell {
   /// Free this record and WeakRefSlots it holds.
   static void _finalizeImpl(GCCell *cell, GC &gc);
 
+#ifdef HERMES_MEMORY_INSTRUMENTATION
+  static void _snapshotAddEdgesImpl(GCCell *cell, GC &gc, HeapSnapshot &snap);
+#endif
+
   static HermesValue create(
       Runtime &runtime,
       Handle<> target,
