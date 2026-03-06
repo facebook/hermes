@@ -43,6 +43,7 @@ set(source_files
   JSTypedArray.cpp
   JSWeakMapImpl.cpp
   JSWeakRef.cpp
+  JSFinalizationRegistry.cpp
   LimitedStorageProvider.cpp
   DecoratedObject.cpp
   HostModel.cpp
