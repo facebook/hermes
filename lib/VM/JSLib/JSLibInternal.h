@@ -356,6 +356,9 @@ HermesValue createWeakSetConstructor(Runtime &runtime);
 /// Create the WeakRef constructor and populate methods.
 HermesValue createWeakRefConstructor(Runtime &runtime);
 
+/// Create the FinalizationRegistry constructor and populate methods.
+HermesValue createFinalizationRegistryConstructor(Runtime &runtime);
+
 /// Create the Symbol constructor and populate methods.
 void createSymbolConstructor(Runtime &runtime);
 

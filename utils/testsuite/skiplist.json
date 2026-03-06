@@ -108,6 +108,12 @@
   "skip_list": [
     {
       "paths": [
+        "test262/test/built-ins/FinalizationRegistry/prototype/cleanupSome/"
+      ],
+      "comment": "FinalizationRegistry.prototype.cleanupSome is not supported yet."
+    },
+    {
+      "paths": [
         "test262/test/language/expressions/async-generator/early-errors-expression-binding-identifier-arguments.js",
         "test262/test/language/expressions/async-generator/early-errors-expression-binding-identifier-eval.js",
         "test262/test/language/statements/for-await-of/async-func-decl-dstr-array-elem-init-simple-no-strict.js",
@@ -3605,14 +3611,10 @@
     },
     {
       "paths": [
-        "mjsunit/harmony/regress/regress-crbug-1372500.js",
-        "mjsunit/weakrefs/basics.js",
         "mjsunit/weakrefs/minor-gc-weak-unregistertoken.js",
-        "mjsunit/weakrefs/symbol-as-weakref-target.js",
         "mjsunit/weakrefs/weak-unregistertoken.js",
         "mjsunit/weakrefs/weak-cell-basics.js",
         "mjsunit/weakrefs/cleanup-is-not-a-microtask.js",
-        "mjsunit/regress/regress-372298921.js",
         "mjsunit/weakrefs/cleanup.js",
         "mjsunit/weakrefs/finalizationregistry-and-weakref.js",
         "mjsunit/weakrefs/finalizationregistry-independent-lifetime-multiple.js",
@@ -3654,7 +3656,7 @@
         "mjsunit/weakrefs/unregister-many.js",
         "mjsunit/weakrefs/unregister-when-cleanup-already-scheduled.js"
       ],
-      "comment": "Finalization Registry"
+      "comment": "Finalization Registry tests that use V8 specific gc()."
     },
     {
       "paths": [
@@ -4612,8 +4614,6 @@
     "caller",
     "decorators",
     "dynamic-import",
-    "FinalizationGroup",
-    "FinalizationRegistry",
     "import-assertions",
     "regexp-unicode-property-escapes",
     "resizable-arraybuffer",

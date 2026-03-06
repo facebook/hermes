@@ -129,6 +129,7 @@ set(source_files
   JSLib/WeakMap.cpp
   JSLib/WeakRef.cpp
   JSLib/WeakSet.cpp
+  JSLib/FinalizationRegistry.cpp
   JSLib/print.cpp
   JSLib/eval.cpp
   JSLib/escape.cpp

@@ -69,8 +69,7 @@ CallResult<HermesValue> weakRefConstructor(void *, Runtime &runtime) {
   NativeArgs args = runtime.getCurrentFrame().getNativeArgs();
   // 1. If NewTarget is undefined, throw a TypeError exception.
   if (!args.isConstructorCall()) {
-    return runtime.raiseTypeError(
-        "WeakRef() called in function context instead of constructor");
+    return runtime.raiseTypeError("Constructor WeakRef requires 'new'");
   }
 
   auto target = args.getArgHandle(0);
