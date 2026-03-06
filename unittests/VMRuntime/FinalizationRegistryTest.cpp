@@ -187,4 +187,148 @@ TEST_F(FinalizationRegistryTest, CleanupTest) {
   ASSERT_EQ(getCounter(), 6);
 }
 
+TEST_F(FinalizationRegistryTest, IndexReuseTest) {
+  // Test edge cases of the index reuse mechanism:
+  // 1. Unregister all → register one (shrink → grow path)
+  // 2. Interleaved register/unregister operations
+
+  struct : Locals {
+    PinnedValue<JSFinalizationRegistry> fr;
+    PinnedValue<Callable> callable;
+    PinnedValue<JSObject> heldValue;
+    PinnedValue<> target;
+    PinnedValue<JSObject> token0;
+    PinnedValue<JSObject> token1;
+    PinnedValue<JSObject> token2;
+    PinnedValue<JSObject> token3;
+    PinnedValue<JSObject> token4;
+    PinnedValue<ArrayStorage> storage;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  // Create cleanup callback that counts invocations
+  auto callableRes = eval(runtime, R"#(
+    globalThis.counter = 0;
+    function cleanup() { globalThis.counter += 1; }
+    cleanup
+  )#");
+  ASSERT_FALSE(isException(callableRes));
+  lv.callable.castAndSetHermesValue<Callable>(*callableRes);
+
+  auto counterSym = *runtime.getIdentifierTable().getSymbolHandle(
+      runtime, createASCIIRef("counter"));
+  auto getCounter = [this, counterSym]() {
+    auto result =
+        JSObject::getNamed_RJS(runtime.getGlobal(), runtime, *counterSym);
+    return (*result)->getNumberAs<int>();
+  };
+
+  auto frRes = JSFinalizationRegistry::create(
+      runtime, runtime.arrayPrototype, lv.callable);
+  lv.fr = std::move(frRes);
+
+  // Create storage for tokens and targets we want to keep alive
+  auto storageRes = ArrayStorage::create(runtime, 15, 15);
+  ASSERT_FALSE(isException(storageRes));
+  lv.storage = vmcast<ArrayStorage>(*storageRes);
+
+  // Case 1: Unregister all → register one.
+  // Tests shrink → grow path.
+  {
+    // Register 8 cells
+    for (size_t i = 0; i < 8; ++i) {
+      lv.target = JSObject::create(runtime);
+      lv.heldValue = JSObject::create(runtime);
+      lv.token0 = JSObject::create(runtime);
+      lv.storage->set(
+          i,
+          HermesValue::encodeObjectValue(lv.token0.get()),
+          runtime.getHeap());
+
+      JSFinalizationRegistry::registerCell(
+          lv.fr, runtime, lv.target, lv.heldValue, lv.token0);
+    }
+
+    // Unregister all.
+    for (size_t i = 0; i < 8; ++i) {
+      lv.token0 = vmcast<JSObject>(lv.storage->at(i));
+      ASSERT_TRUE(lv.fr->unregisterCells(runtime, lv.token0));
+      lv.storage->set(
+          i, HermesValue::encodeUndefinedValue(), runtime.getHeap());
+    }
+
+    runtime.collect("test");
+    // Should shrink unused entries.
+    runtime.cleanUpFinalizationCallbacks();
+    // All registered cells have been unregistered.
+    ASSERT_EQ(getCounter(), 0);
+
+    // Register one - should work correctly after shrinking.
+    lv.target = JSObject::create(runtime);
+    lv.heldValue = JSObject::create(runtime);
+    lv.token0 = JSObject::create(runtime);
+    JSFinalizationRegistry::registerCell(
+        lv.fr, runtime, lv.target, lv.heldValue, lv.token0);
+
+    // Verify it's properly registered by trying to unregister.
+    ASSERT_TRUE(lv.fr->unregisterCells(runtime, lv.token0));
+  }
+
+  // Case 2: Interleaved register/unregister operations.
+  // This tests that index reuse works correctly with mixed operations.
+  {
+    // Register cell 0.
+    lv.target = JSObject::create(runtime);
+    lv.heldValue = JSObject::create(runtime);
+    lv.token0 = JSObject::create(runtime);
+    JSFinalizationRegistry::registerCell(
+        lv.fr, runtime, lv.target, lv.heldValue, lv.token0);
+
+    // Register cell 1.
+    lv.target = JSObject::create(runtime);
+    lv.heldValue = JSObject::create(runtime);
+    lv.token1 = JSObject::create(runtime);
+    JSFinalizationRegistry::registerCell(
+        lv.fr, runtime, lv.target, lv.heldValue, lv.token1);
+
+    // Unregister cell 0.
+    ASSERT_TRUE(lv.fr->unregisterCells(runtime, lv.token0));
+
+    // Register cell 2.
+    lv.target = JSObject::create(runtime);
+    lv.heldValue = JSObject::create(runtime);
+    lv.token2 = JSObject::create(runtime);
+    JSFinalizationRegistry::registerCell(
+        lv.fr, runtime, lv.target, lv.heldValue, lv.token2);
+
+    // Register cell 3.
+    lv.target = JSObject::create(runtime);
+    lv.heldValue = JSObject::create(runtime);
+    lv.token3 = JSObject::create(runtime);
+    JSFinalizationRegistry::registerCell(
+        lv.fr, runtime, lv.target, lv.heldValue, lv.token3);
+
+    // Unregister cell 1.
+    ASSERT_TRUE(lv.fr->unregisterCells(runtime, lv.token1));
+    // Unregister cell 3.
+    ASSERT_TRUE(lv.fr->unregisterCells(runtime, lv.token3));
+
+    // Register cell 4.
+    lv.target = JSObject::create(runtime);
+    lv.heldValue = JSObject::create(runtime);
+    lv.token4 = JSObject::create(runtime);
+    JSFinalizationRegistry::registerCell(
+        lv.fr, runtime, lv.target, lv.heldValue, lv.token4);
+
+    // Verify we can unregister the remaining cells (2 and 4)
+    ASSERT_TRUE(lv.fr->unregisterCells(runtime, lv.token2));
+    ASSERT_TRUE(lv.fr->unregisterCells(runtime, lv.token4));
+  }
+
+  // Verify no cleanup happened (all were unregistered, none died).
+  runtime.collect("test");
+  runtime.cleanUpFinalizationCallbacks();
+  ASSERT_EQ(getCounter(), 0);
+}
+
 } // namespace

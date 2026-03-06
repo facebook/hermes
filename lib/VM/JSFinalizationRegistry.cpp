@@ -124,7 +124,8 @@ ExecutionStatus JSFinalizationRegistry::cleanup(
   for (size_t i = 0; i < lv.cells->size(); ++i) {
     auto element = lv.cells->at(i);
     // This element may be unregistered or cleaned up before.
-    if (element.isEmpty())
+    // Free slots are not objects (they contain a NativeUInt32 index).
+    if (!element.isObject())
       continue;
     lv.record = vmcast<FinalizationRecord>(element);
 
@@ -133,7 +134,8 @@ ExecutionStatus JSFinalizationRegistry::cleanup(
       continue;
 
     // ES16 9.12.b Free this record since the target is dead.
-    lv.cells->set(i, HermesValue::encodeEmptyValue(), runtime.getHeap());
+    self->free(runtime, i);
+    self->numUsedCells_ -= 1;
 
     GCScopeMarkerRAII gcScopeMarker{gcScope};
     // ES16 9.12.c Run the callback with the held value.
@@ -142,9 +144,11 @@ ExecutionStatus JSFinalizationRegistry::cleanup(
         runtime,
         Runtime::getUndefinedValue(),
         lv.record->heldValue);
+
     if (result == ExecutionStatus::EXCEPTION)
       return ExecutionStatus::EXCEPTION;
   }
+  tryShrink(self, runtime);
   return ExecutionStatus::RETURNED;
 }
 
@@ -184,6 +188,12 @@ ExecutionStatus JSFinalizationRegistry::registerCell(
   lv.record =
       FinalizationRecord::create(runtime, target, heldValue, unregisterToken);
   MutableHandle<StorageType> cellsHandle{lv.cells};
+  self->numUsedCells_ += 1;
+  if (auto freeIndex = self->useFreeIndex(runtime)) {
+    // Use the free index.
+    lv.cells->set(*freeIndex, *lv.record, runtime.getHeap());
+    return ExecutionStatus::RETURNED;
+  }
   // Add a new FinalizationRecord to the vector.
   if (LLVM_UNLIKELY(
           StorageType::push_back(cellsHandle, runtime, lv.record) ==
@@ -217,7 +227,8 @@ bool JSFinalizationRegistry::unregisterCells(
   for (size_t i = 0, e = cellsRef.size(); i < e; ++i) {
     HermesValue element = cellsRef.at(i);
     // This element may be unregistered or cleaned up before.
-    if (element.isEmpty())
+    // Free slots contain NativeUInt32 values.
+    if (!element.isObject())
       continue;
     auto *record = vmcast<FinalizationRecord>(element);
     // Check if the unregisterToken on this record is Empty (not specified)
@@ -228,11 +239,95 @@ bool JSFinalizationRegistry::unregisterCells(
     // we can directly compare raw bits.
     if (unregisterToken->getRaw() ==
         record->unregisterToken.getNoBarrierUnsafe(runtime).getRaw()) {
-      cellsRef.set(i, HermesValue::encodeEmptyValue(), runtime.getHeap());
+      free(runtime, i);
+      --numUsedCells_;
       removed = true;
     }
   }
   return removed;
+}
+
+OptValue<JSFinalizationRegistry::StorageIndex>
+JSFinalizationRegistry::useFreeIndex(Runtime &runtime) {
+  if (!nextFree_)
+    return llvh::None;
+  StorageIndex current = *nextFree_;
+  StorageType &cellsRef = *cells_.getNonNull(runtime);
+  StorageIndex nextIndex =
+      static_cast<StorageIndex>(cellsRef.at(current).getNativeUInt32());
+  // End of list is marked by self-reference (value == index).
+  if (nextIndex == current) {
+    nextFree_ = llvh::None;
+  } else {
+    nextFree_ = nextIndex;
+  }
+  return current;
+}
+
+void JSFinalizationRegistry::free(Runtime &runtime, StorageIndex freedIndex) {
+  StorageType &cellsRef = *cells_.getNonNull(runtime);
+  // Store the current nextFree_ value at the freed slot.
+  // If there's no previous free slot, store freedIndex itself (self-reference
+  // marks end of list).
+  StorageIndex valueToStore = nextFree_ ? *nextFree_ : freedIndex;
+  cellsRef.set(
+      freedIndex,
+      HermesValue::encodeNativeUInt32(valueToStore),
+      runtime.getHeap());
+  // Update nextFree_ to point to this freed slot.
+  nextFree_ = freedIndex;
+}
+
+/* static */
+void JSFinalizationRegistry::tryShrink(
+    Handle<JSFinalizationRegistry> self,
+    Runtime &runtime) {
+  StorageType *cells = self->cells_.getNonNull(runtime);
+  auto arrSize = cells->size();
+  if ((double)self->numUsedCells_ / arrSize >= kOccupancyRatio)
+    return;
+
+  StorageType::size_type newSize =
+      std::max(self->numUsedCells_ * 2, kInitCapacity);
+  // No need to shrink if the size is the same (this happens when size is still
+  // kInitCapacity).
+  if (newSize == arrSize)
+    return;
+
+  struct : Locals {
+    PinnedValue<StorageType> oldCells;
+    PinnedValue<StorageType> newCells;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+
+  lv.oldCells = cells;
+  auto newCellsRes = StorageType::create(runtime, newSize);
+  // If allocation fails, just skip shrinking, it's not required.
+  if (LLVM_UNLIKELY(newCellsRes == ExecutionStatus::EXCEPTION)) {
+    runtime.clearThrownValue();
+    return;
+  }
+  lv.newCells = vmcast<StorageType>(*newCellsRes);
+
+  // Copy alive elements from old cells to new cells.
+  NoAllocScope noAlloc{runtime};
+  [[maybe_unused]] StorageIndex destIndex = 0;
+  for (StorageIndex i = 0, e = lv.oldCells->size(); i < e; ++i) {
+    HermesValue element = lv.oldCells->at(i);
+    if (element.isObject()) {
+      lv.newCells->pushWithinCapacity(runtime, element);
+      ++destIndex;
+    }
+  }
+
+  assert(
+      destIndex == self->numUsedCells_ &&
+      "Must copy exactly numUsedCells_ elements");
+  assert(destIndex < newSize && "Must have extra free entries in new array");
+
+  // Update the registry to use the new cells array.
+  self->cells_.setNonNull(runtime, *lv.newCells, runtime.getHeap());
+  self->nextFree_ = llvh::None;
 }
 
 } // namespace vm

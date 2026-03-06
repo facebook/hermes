@@ -82,6 +82,7 @@ class FinalizationRecord : public GCCell {
 class JSFinalizationRegistry final : public JSObject {
  public:
   using StorageType = ArrayStorage;
+  using StorageIndex = StorageType::size_type;
 
   static const ObjectVTable vt;
 
@@ -143,6 +144,21 @@ class JSFinalizationRegistry final : public JSObject {
   }
 
  private:
+  /// Get a free index from the free list. If none is available, return
+  /// llvh::None. If there is one, return the index and update \ref nextFree_
+  /// to the next free index in the free list.
+  OptValue<StorageIndex> useFreeIndex(Runtime &runtime);
+
+  /// Push a freed index onto the free list. The freed slot will store the
+  /// previous nextFree_ value (or its own index if there was none, marking
+  /// end of list), and nextFree_ will be updated to point to this index.
+  void free(Runtime &runtime, StorageIndex freedIndex);
+
+  /// Resize \ref cells_ to numUsedCells_ * 2 if the current occupancy ratio is
+  /// lower than kOccupancyRatio. Allocates a new storage array and copies
+  /// alive elements to it.
+  static void tryShrink(Handle<JSFinalizationRegistry> self, Runtime &runtime);
+
   /// The cleanup callback [[CleanupCallback]].
   /// This is a GCPointer to ensure it's traced by GC.
   GCPointer<Callable> cleanupCallback_;
@@ -150,8 +166,21 @@ class JSFinalizationRegistry final : public JSObject {
   /// Registration cells [[Cells]].
   GCPointer<StorageType> cells_{nullptr};
 
+  /// The most recently freed index. The cell at this index contains a
+  /// NativeUInt32:
+  /// - If the value equals the index itself, this is the last free slot.
+  /// - Otherwise, the value is the index of the next free slot in the list.
+  OptValue<StorageType::size_type> nextFree_{llvh::None};
+
+  /// Number of used cells in \ref cells_.
+  StorageIndex numUsedCells_{0};
+
   /// Initial capacity for cells_.
-  static constexpr size_t kInitCapacity = 4;
+  static constexpr StorageIndex kInitCapacity = 4;
+
+  /// If the ratio of occupied targets to the size of cells_ is smaller than
+  /// this ratio, we perform a shrink operation.
+  static constexpr double kOccupancyRatio = 0.25;
 };
 
 } // namespace vm
