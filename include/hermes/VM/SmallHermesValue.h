@@ -621,6 +621,25 @@ using GCSmallHermesValue = GCHermesValueImpl<SmallHermesValue>;
 using GCSmallHermesValueInLargeObj =
     GCHermesValueInLargeObjImpl<SmallHermesValue>;
 
+/// A SmallHermesValue which is stored in non-moveable memory and is known to
+/// the garbage collector.
+class PinnedSmallHermesValue : public SmallHermesValue {
+ public:
+  constexpr PinnedSmallHermesValue()
+      : PinnedSmallHermesValue(encodeUndefinedValue()) {}
+  explicit constexpr PinnedSmallHermesValue(SmallHermesValue v)
+      : SmallHermesValue(v) {}
+  constexpr PinnedSmallHermesValue(const PinnedSmallHermesValue &) = default;
+  PinnedSmallHermesValue &operator=(const PinnedSmallHermesValue &phv) {
+    setNoBarrier(phv);
+    return *this;
+  }
+  PinnedSmallHermesValue &operator=(const SmallHermesValue &shv) {
+    setNoBarrier(shv);
+    return *this;
+  }
+} HERMES_ATTRIBUTE_WARN_UNUSED_VARIABLES;
+
 } // end namespace vm
 } // end namespace hermes
 

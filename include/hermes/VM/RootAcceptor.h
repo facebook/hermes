@@ -43,6 +43,9 @@ struct RootAcceptor : public RootSectionAcceptor {
   virtual void accept(PinnedHermesValue &hv) = 0;
   /// Same as the above, but allows the HermesValue to store a nullptr value.
   virtual void acceptNullable(PinnedHermesValue &hv) = 0;
+  /// Accept a PinnedSmallHermesValue root. SmallHermesValue cannot encode a
+  /// null pointer, so there is no nullable variant.
+  virtual void accept(PinnedSmallHermesValue &shv) = 0;
   virtual void accept(const RootSymbolID &sym) = 0;
   template <typename T>
   void acceptNullablePV(PinnedValue<T> &pv) {
@@ -71,8 +74,12 @@ struct RootAcceptorWithNames : public RootAcceptor {
   void acceptNullable(PinnedHermesValue &hv) final {
     acceptNullable(hv, nullptr);
   }
+  void accept(PinnedSmallHermesValue &shv) final {
+    accept(shv, nullptr);
+  }
   virtual void accept(PinnedHermesValue &hv, const char *name) = 0;
   virtual void acceptNullable(PinnedHermesValue &hv, const char *name) = 0;
+  virtual void accept(PinnedSmallHermesValue &shv, const char *name) = 0;
 
   void accept(const RootSymbolID &sym) final {
     accept(sym, nullptr);
@@ -122,6 +129,9 @@ struct DroppingAcceptor final : public RootAcceptorWithNames {
   }
   void acceptNullable(PinnedHermesValue &hv, const char *) override {
     acceptor.acceptNullable(hv);
+  }
+  void accept(PinnedSmallHermesValue &shv, const char *) override {
+    acceptor.accept(shv);
   }
 
   void accept(const RootSymbolID &sym, const char *) override {

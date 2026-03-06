@@ -26,6 +26,7 @@ struct CheckHeapWellFormedAcceptor final : public RootAcceptor,
   void accept(GCCell *&ptr) override;
   void accept(PinnedHermesValue &hv) override;
   void acceptNullable(PinnedHermesValue &hv) override;
+  void accept(PinnedSmallHermesValue &shv) override;
   void accept(const RootSymbolID &sym) override;
   void acceptWeak(WeakRootBase &ptr) override;
   void acceptWeakSym(WeakRootSymbolID &ws) override;

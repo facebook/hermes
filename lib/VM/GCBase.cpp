@@ -168,6 +168,9 @@ struct SnapshotAcceptor : public RootAcceptorWithNames {
   void acceptNullable(PinnedHermesValue &hv, const char *name) override {
     acceptHV(hv, name);
   }
+  void accept(PinnedSmallHermesValue &shv, const char *name) override {
+    acceptSHV(shv, name);
+  }
   void accept(const RootSymbolID &sym, const char *name) override {
     acceptSym(sym, name);
   }
@@ -1765,6 +1768,12 @@ void GCBase::sizeDiagnosticCensus(size_t allocatedBytes) {
           hv,
           diagnostic.stats.breakdown["HermesValue"],
           sizeof(PinnedHermesValue));
+    }
+    void accept(PinnedSmallHermesValue &shv) override {
+      acceptHV(
+          shv.toHV(pointerBase_),
+          diagnostic.stats.breakdown["SmallHermesValue"],
+          sizeof(PinnedSmallHermesValue));
     }
     void accept(GCHermesValueBase &hv) {
       acceptHV(

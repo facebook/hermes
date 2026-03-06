@@ -129,6 +129,9 @@ struct MallocGC::MarkingAcceptor final : public RootAcceptor,
   void acceptNullable(PinnedHermesValue &hv) override {
     acceptHV(hv);
   }
+  void accept(PinnedSmallHermesValue &shv) override {
+    acceptSHV(shv);
+  }
   void accept(const RootSymbolID &sym) override {
     acceptSym(sym);
   }
