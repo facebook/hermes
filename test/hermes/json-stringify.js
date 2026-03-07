@@ -219,3 +219,26 @@ print(JSON.stringify(9.999999999999998e15));
 // CHECK-NEXT: 9999999999999998
 print(JSON.stringify(1.111111111111111e-10));
 // CHECK-NEXT: 1.111111111111111e-10
+
+// toJSON shrinks array during stringify.
+var shrinkArr = [];
+for (var i = 0; i < 10; i++) shrinkArr[i] = i;
+shrinkArr[0] = { toJSON: function() { shrinkArr.length = 1; return "shrunk"; } };
+print(JSON.stringify(shrinkArr));
+// CHECK-NEXT: ["shrunk",null,null,null,null,null,null,null,null,null]
+
+// Delete creates hole during stringify.
+var holeArr = [0, 1, 2, 3, 4];
+holeArr[0] = { toJSON: function() { delete holeArr[3]; return "ok"; } };
+print(JSON.stringify(holeArr));
+// CHECK-NEXT: ["ok",1,2,null,4]
+
+// Array stringify with replacer function.
+var replArr = [1, 2, 3];
+print(JSON.stringify(replArr, function(k, v) {
+  if (typeof v === 'number') {
+    return v + 1;
+  }
+  return v;
+}));
+// CHECK-NEXT: [2,3,4]
