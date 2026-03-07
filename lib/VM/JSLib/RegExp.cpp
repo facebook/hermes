@@ -981,7 +981,6 @@ regExpFlagPropertyGetter(void *ctx, Runtime &runtime, NativeArgs args) {
       return HermesValue::encodeBoolValue(syntaxFlags.hasIndices);
     default:
       llvm_unreachable("Invalid flag passed to regExpFlagPropertyGetter");
-      return HermesValue::encodeEmptyValue();
   }
 }
 

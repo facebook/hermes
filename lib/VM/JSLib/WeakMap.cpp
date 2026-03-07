@@ -116,7 +116,7 @@ weakMapConstructor(void *, Runtime &runtime, NativeArgs args) {
   Handle<> one = HandleRootOwner::getOneValue();
   auto marker = gcScope.createMarker();
 
-  for (;;) {
+  while (true) {
     gcScope.flushToMarker(marker);
     auto nextRes = iteratorStep(runtime, iteratorRecord);
     if (LLVM_UNLIKELY(nextRes == ExecutionStatus::EXCEPTION)) {
@@ -156,8 +156,6 @@ weakMapConstructor(void *, Runtime &runtime, NativeArgs args) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
-
-  return selfHandle.getHermesValue();
 }
 
 CallResult<HermesValue>

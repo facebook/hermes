@@ -857,7 +857,7 @@ bool JSLexer::isCurrentTokenADirective() {
   // - A block comment. Consume it and continue.
   // - Anything else. We consume nothing and fail.
 
-  for (;;) {
+  while (true) {
     assert(ptr <= bufferEnd_ && "lexing past end of input");
 
     switch (*((const unsigned char *)ptr)) {
@@ -949,9 +949,6 @@ bool JSLexer::isCurrentTokenADirective() {
       }
     }
   }
-
-  // We arrive here if we matched a directive. 'ptr' is the final character.
-  return true;
 }
 
 const Token *JSLexer::rescanRBraceInTemplateLiteral() {

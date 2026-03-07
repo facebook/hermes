@@ -164,8 +164,6 @@ std::string IdentifierTable::convertSymbolToUTF8(SymbolID id) {
   } else {
     llvm_unreachable("Invalid symbol given");
   }
-  // To avoid compiler warnings.
-  return "";
 }
 
 void IdentifierTable::markIdentifiers(RootAcceptor &acceptor, GC &gc) {

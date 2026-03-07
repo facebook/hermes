@@ -311,8 +311,6 @@ class ES6ClassesTransformations {
     }
 
     llvm_unreachable("Unsupported Node Kind");
-
-    return node;
   }
 
   template <typename T>

@@ -102,7 +102,7 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
   auto iteratorRecord = *iterRes;
 
   auto marker = gcScope.createMarker();
-  for (;;) {
+  while (true) {
     gcScope.flushToMarker(marker);
     CallResult<Handle<JSObject>> nextRes =
         iteratorStep(runtime, iteratorRecord);
@@ -126,8 +126,6 @@ weakSetConstructor(void *, Runtime &runtime, NativeArgs args) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
-
-  return HermesValue::encodeUndefinedValue();
 }
 
 CallResult<HermesValue>

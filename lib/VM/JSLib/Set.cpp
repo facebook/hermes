@@ -175,7 +175,7 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
 
   // Check the length of the array after every iteration,
   // to allow for the fact that the length could be modified during iteration.
-  for (;;) {
+  while (true) {
     gcScope.flushToMarker(marker);
     CallResult<Handle<JSObject>> nextRes =
         iteratorStep(runtime, iteratorRecord);
@@ -200,8 +200,6 @@ setConstructor(void *, Runtime &runtime, NativeArgs args) {
       return iteratorCloseAndRethrow(runtime, iteratorRecord.iterator);
     }
   }
-
-  return selfHandle.getHermesValue();
 }
 
 // ES12 23.2.3.1 Set.prototype.add ( value )

@@ -84,7 +84,6 @@ void SerialExecutor::run() {
 void *SerialExecutor::threadMain(void *p) {
   static_cast<SerialExecutor *>(p)->run();
   pthread_exit(nullptr);
-  return nullptr;
 }
 #endif
 

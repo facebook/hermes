@@ -650,8 +650,6 @@ hermesBuiltinArraySpread(void *, Runtime &runtime, NativeArgs args) {
     nextIndex =
         HermesValue::encodeUntrustedNumberValue(nextIndex->getNumber() + 1);
   }
-
-  return nextIndex.getHermesValue();
 }
 
 /// \code

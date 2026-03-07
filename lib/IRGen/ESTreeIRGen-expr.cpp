@@ -813,7 +813,6 @@ static llvh::StringRef propertyKeyAsString(
   }
 
   llvm_unreachable("Don't know this kind of property key");
-  return llvh::StringRef();
 }
 
 Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {

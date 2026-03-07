@@ -22,7 +22,6 @@ Instruction *InsertProfilePoint::findInsertionPoint(BasicBlock &BB) const {
     }
   }
   llvm_unreachable("terminator instruction is missing in basic block.");
-  return nullptr;
 }
 
 bool InsertProfilePoint::runOnFunction(Function *F) {

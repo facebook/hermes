@@ -1222,7 +1222,6 @@ LabelDecorationBase *SemanticValidator::getLabelDecorationBase(
   if (auto *LabS = dyn_cast<LabeledStatementNode>(node))
     return LabS;
   llvm_unreachable("invalid node type");
-  return nullptr;
 }
 
 void SemanticValidator::recursionDepthExceeded(Node *n) {
