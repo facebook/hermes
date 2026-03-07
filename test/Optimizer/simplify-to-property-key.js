@@ -45,6 +45,7 @@ function toPropertyKeyAny(s) {
 // CHECK-NEXT:  %3 = CreateClassInst (:object) empty: any, empty: any, %C(): functionCode, empty: any, %2: object
 // CHECK-NEXT:  %4 = LoadStackInst (:object) %2: object
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %""(): functionCode
+// CHECK-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.setFunctionName]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object, %1: string, 0: number
 // CHECK-NEXT:       DefineOwnPropertyInst %5: object, %4: object, %1: string, false: boolean
 // CHECK-NEXT:       ReturnInst %3: object
 // CHECK-NEXT:function_end
@@ -57,6 +58,7 @@ function toPropertyKeyAny(s) {
 // CHECK-NEXT:  %3 = LoadStackInst (:object) %1: object
 // CHECK-NEXT:  %4 = ToPropertyKeyInst (:string|symbol) %0: any
 // CHECK-NEXT:  %5 = CreateFunctionInst (:object) empty: any, empty: any, %" 1#"(): functionCode
+// CHECK-NEXT:  %6 = CallBuiltinInst (:any) [HermesBuiltin.setFunctionName]: number, empty: any, false: boolean, empty: any, undefined: undefined, undefined: undefined, %5: object, %4: string|symbol, 0: number
 // CHECK-NEXT:       DefineOwnPropertyInst %5: object, %3: object, %4: string|symbol, false: boolean
 // CHECK-NEXT:       ReturnInst %2: object
 // CHECK-NEXT:function_end

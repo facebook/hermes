@@ -708,20 +708,6 @@
     },
     {
       "paths": [
-        "test262/test/language/expressions/object/fn-name-class.js",
-        "test262/test/language/expressions/object/method-definition/fn-name-fn.js",
-        "test262/test/language/expressions/object/method-definition/fn-name-gen.js",
-        "test262/test/language/expressions/object/method-definition/generator-name-prop-symbol.js",
-        "test262/test/language/expressions/object/method-definition/name-name-prop-symbol.js",
-        "test262/test/language/statements/class/definition/fn-name-accessor-get.js",
-        "test262/test/language/statements/class/definition/fn-name-accessor-set.js",
-        "test262/test/language/statements/class/definition/fn-name-gen-method.js",
-        "test262/test/language/statements/class/definition/fn-name-method.js"
-      ],
-      "comment": "Computed properties on function methods need special names: T208569602"
-    },
-    {
-      "paths": [
         "CVEs/CVE-2016-7194.js"
       ],
       "comment": "Fails due to a bug in Hermes Function.apply(): T28044390"
@@ -971,11 +957,6 @@
     "test262/test/language/statements/for/head-lhs-let.js",
     "test262/test/harness/assert-throws-early-syntaxerror.js",
     "test262/test/language/global-code/script-decl-lex-var.js",
-    "test262/test/language/expressions/object/fn-name-accessor-get.js",
-    "test262/test/language/expressions/object/fn-name-accessor-set.js",
-    "test262/test/language/expressions/object/fn-name-arrow.js",
-    "test262/test/language/expressions/object/fn-name-cover.js",
-    "test262/test/language/expressions/object/fn-name-fn.js",
     "test262/test/annexB/built-ins/Object/prototype/__proto__/set-cycle-shadowed.js",
     "test262/test/built-ins/Array/prototype/concat/create-ctor-poisoned.js",
     "test262/test/built-ins/Array/prototype/filter/create-ctor-poisoned.js",
@@ -1252,7 +1233,6 @@
     "test262/test/built-ins/Date/parse/time-value-maximum-range.js",
     "test262/test/built-ins/Date/parse/year-zero.js",
     "mjsunit/string-replace-gc.js",
-    "test262/test/language/expressions/object/fn-name-gen.js",
     "test262/test/built-ins/Object/defineProperties/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/freeze/proxy-no-ownkeys-returned-keys-order.js",
     "test262/test/built-ins/Object/freeze/proxy-with-defineProperty-handler.js",

@@ -1593,9 +1593,32 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
     auto *prop = cast<ESTree::PropertyNode>(&P);
 
     if (prop->_computed) {
-      // TODO (T46136220): Set the .name property for anonymous functions that
-      // are values for computed property keys.
+      // If true, we need to set the "name" property of the value being
+      // generated.
+      bool needsSetFunctionName = false;
+      int prefix = 0;
+      if (prop->_method) {
+        needsSetFunctionName = true;
+      } else if (prop->_kind == kw_.identSet || prop->_kind == kw_.identGet) {
+        needsSetFunctionName = true;
+        prefix = prop->_kind == kw_.identGet ? 1 : 2;
+      } else {
+        auto *valueNode = prop->_value;
+        if (auto *fe =
+                llvh::dyn_cast<ESTree::FunctionExpressionNode>(valueNode)) {
+          needsSetFunctionName = !fe->_id;
+        } else if (llvh::isa<ESTree::ArrowFunctionExpressionNode>(valueNode)) {
+          needsSetFunctionName = true;
+        } else if (
+            auto *ce = llvh::dyn_cast<ESTree::ClassExpressionNode>(valueNode)) {
+          needsSetFunctionName = !ce->_id;
+        }
+      }
+
       auto *key = genExpression(prop->_key);
+      Value *propKey =
+          needsSetFunctionName ? Builder.createToPropertyKeyInst(key) : key;
+
       Value *value;
       if (prop->_method) {
         value = genFunctionExpression(
@@ -1616,23 +1639,29 @@ Value *ESTreeIRGen::genObjectExpr(ESTree::ObjectExpressionNode *Expr) {
       } else {
         value = genExpression(prop->_value, Identifier{});
       }
+
+      if (needsSetFunctionName) {
+        genBuiltinCall(
+            BuiltinMethod::HermesBuiltin_setFunctionName,
+            {value, propKey, Builder.getLiteralNumber(prefix)});
+      }
       if (prop->_kind == kw_.identGet) {
         Builder.createDefineOwnGetterSetterInst(
             value,
             Builder.getLiteralUndefined(),
             Obj,
-            key,
+            propKey,
             IRBuilder::PropEnumerable::Yes);
       } else if (prop->_kind == kw_.identSet) {
         Builder.createDefineOwnGetterSetterInst(
             Builder.getLiteralUndefined(),
             value,
             Obj,
-            key,
+            propKey,
             IRBuilder::PropEnumerable::Yes);
       } else {
         Builder.createDefineOwnPropertyInst(
-            value, Obj, key, IRBuilder::PropEnumerable::Yes);
+            value, Obj, propKey, IRBuilder::PropEnumerable::Yes);
       }
       continue;
     }
