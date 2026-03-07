@@ -135,6 +135,33 @@ When adding or modifying Windows-specific features:
 4.  **Document**: If you introduce a new high-level strategy, update this
     document.
 
+## Preparing Local Development Environment
+
+- Github Desktop (recommemded but not required)
+- Python
+  - `winget install 9NQ7512CXL7T`
+  - `py install [--update]`
+- Tools included in azure devbox
+  - Git for Windows
+  - Powershell 7 (included in azure devbox)
+    - `winget install Microsoft.Powershell` to install if not present
+  - Visual Studio 2026, but currently using v143 build tools
+    - Open vsinstaller, click `modify` in 2026 followed by `individual components`, install in total 4 packages:
+      - C++ AST for latest v143 build tools with Spectre Mitigation (ARM64)/(x86 & x64)
+      - MSVC v143 - VS 2022 C++ ARM64/ARM64EC//x64/x86 Spectre-mitigated libs
+      - After upgrading to v145 package names are completely different
+  - Visual Studio Code
+    - Install `CMake Tools` (by Microsoft) and `C++ TestMate`
+
+### Getting Started
+
+- Open `x64 Native Tools Command Prompt for VS` and launch `code` from there.
+- Follow [TestingWindowsWithVSCode.md](./TestingWindowsWithVSCode.md) to build and run unit test.
+  - In `CMake` tab choose `Ninja + Clang (Debug)` in `PROJECT STATUS/Configure` before first using.
+  - Click the `Build All Projects` button in `PROJECT OUTLINE` (ignore warnings in C++ code).
+  - In `Testing` tab click the `Run Tests` button. Only available when the code compiles.
+- If everything runs smoothly, you will see all test cases turned green.
+
 ## References
 
 - **Upstream Hermes**: https://github.com/facebook/hermes
