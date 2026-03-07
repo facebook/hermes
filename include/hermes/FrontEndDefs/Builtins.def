@@ -151,6 +151,8 @@ PRIVATE_BUILTIN(exportAll)
 PRIVATE_BUILTIN(exponentiationOperator)
 PRIVATE_BUILTIN(initRegexNamedGroups)
 
+PRIVATE_BUILTIN(setFunctionName)
+
 PRIVATE_BUILTIN(functionPrototypeApply)
 PRIVATE_BUILTIN(functionPrototypeCall)
 
