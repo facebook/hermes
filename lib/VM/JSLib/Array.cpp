@@ -29,6 +29,32 @@ namespace vm {
 //===----------------------------------------------------------------------===//
 /// Array.
 
+static inline CallResult<uint64_t>
+lengthOfArrayLike(Runtime &runtime, Handle<JSObject> O, Handle<JSArray> jsArr) {
+  if (LLVM_LIKELY(jsArr)) {
+    // Fast path for getting the length.
+    return JSArray::getLength(jsArr.get(), runtime);
+  }
+  struct : Locals {
+    PinnedValue<> lenProp;
+  } lv;
+  LocalsRAII lraii{runtime, &lv};
+  // Slow path
+  CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
+      O, runtime, Predefined::getSymbolID(Predefined::length));
+  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  lv.lenProp = std::move(*propRes);
+  auto lenRes = toLength(runtime, lv.lenProp);
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
+    return ExecutionStatus::EXCEPTION;
+  }
+
+  return lenRes->getNumber();
+}
+
 HermesValue createArrayConstructor(Runtime &runtime) {
   auto arrayPrototype = Handle<JSArray>::vmcast(&runtime.arrayPrototype);
 
@@ -634,42 +660,45 @@ CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
   auto cycleScope = llvh::make_scope_exit(
       [&lv, &runtime] { runtime.removeVisitedObject(*lv.array); });
 
-  auto propRes = JSObject::getNamed_RJS(
-      lv.array, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
+  // 2. Let len be ? LengthOfArrayLike(O).
+  auto lenRes = lengthOfArrayLike(
+      runtime,
+      lv.array,
+      vmisa<JSArray>(*lv.array) ? Handle<JSArray>::vmcast(&lv.array)
+                                : Runtime::makeNullHandle<JSArray>());
+  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
-  lv.lenProp = std::move(*propRes);
-  auto intRes = toUInt32_RJS(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(intRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
+  uint64_t len = *lenRes;
+  if (len == 0) {
+    return emptyString.getHermesValue();
   }
-  uint32_t len = intRes->getNumber();
+  // We use a JSArray to store intermediate strings, which is limited to
+  // uint32_t elements.
+  if (len > UINT32_MAX) {
+    return runtime.raiseRangeError("invalid array length");
+  }
+  uint32_t len32 = static_cast<uint32_t>(len);
 
   // TODO: Get a list-separator String for the host environment's locale.
   // Use a comma as a separator for now, as JSC does.
   const char16_t separator = u',';
 
   // Final size of the result string. Initialize to account for the separators.
-  SafeUInt32 size(len - 1);
-
-  if (len == 0) {
-    return emptyString.getHermesValue();
-  }
+  SafeUInt32 size(len32 - 1);
 
   // Array to store each of the strings of the elements.
-  auto arrRes = JSArray::create(runtime, len, len);
+  auto arrRes = JSArray::create(runtime, len32, len32);
   if (LLVM_UNLIKELY(arrRes == ExecutionStatus::EXCEPTION)) {
     return ExecutionStatus::EXCEPTION;
   }
   lv.strings = std::move(*arrRes);
 
   auto marker = gcScope.createMarker();
-  for (uint32_t i = 0; i < len; ++i) {
+  for (uint32_t i = 0; i < len32; ++i) {
+    auto propRes = getIndexed_RJS(runtime, lv.array, i);
     gcScope.flushToMarker(marker);
-    if (LLVM_UNLIKELY(
-            (propRes = getIndexed_RJS(runtime, lv.array, i)) ==
-            ExecutionStatus::EXCEPTION)) {
+    if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
       return ExecutionStatus::EXCEPTION;
     }
     lv.E = std::move(*propRes);
@@ -748,39 +777,13 @@ CallResult<HermesValue> arrayPrototypeToLocaleString(void *, Runtime &runtime) {
   }
   lv.strElement = lv.strings->at(runtime, 0).getString(runtime);
   builder->appendStringPrim(lv.strElement);
-  for (uint32_t j = 1; j < len; ++j) {
+  for (uint32_t j = 1; j < len32; ++j) {
     // Every element after the first needs a separator before it.
     builder->appendCharacter(separator);
     lv.strElement = lv.strings->at(runtime, j).getString(runtime);
     builder->appendStringPrim(lv.strElement);
   }
   return HermesValue::encodeStringValue(*builder->getStringPrimitive());
-}
-
-static inline CallResult<uint64_t>
-lengthOfArrayLike(Runtime &runtime, Handle<JSObject> O, Handle<JSArray> jsArr) {
-  if (LLVM_LIKELY(jsArr)) {
-    // Fast path for getting the length.
-    return JSArray::getLength(jsArr.get(), runtime);
-  }
-  struct : Locals {
-    PinnedValue<> lenProp;
-  } lv;
-  LocalsRAII lraii{runtime, &lv};
-  // Slow path
-  CallResult<PseudoHandle<>> propRes = JSObject::getNamed_RJS(
-      O, runtime, Predefined::getSymbolID(Predefined::length));
-  if (LLVM_UNLIKELY(propRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  lv.lenProp = std::move(*propRes);
-  auto lenRes = toLength(runtime, lv.lenProp);
-  if (LLVM_UNLIKELY(lenRes == ExecutionStatus::EXCEPTION)) {
-    return ExecutionStatus::EXCEPTION;
-  }
-
-  return lenRes->getNumber();
 }
 
 // 23.1.3.1
