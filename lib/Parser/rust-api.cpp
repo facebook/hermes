@@ -501,6 +501,8 @@ struct ParserFlags {
   bool strictMode = false;
   /// Enable JSX parsing.
   bool enableJSX = false;
+  /// Enable Flow match parsing.
+  bool parseFlowMatch = false;
   /// Dialect control.
   ParserDialect dialect = ParserDialect::JavaScript;
   /// Store doc-comment block at the top of the file.
@@ -660,6 +662,7 @@ hermes_parser_parse(ParserFlags flags, const char *source, size_t len) {
 
   parserCtx->context_.setStrictMode(flags.strictMode);
   parserCtx->context_.setParseJSX(flags.enableJSX);
+  parserCtx->context_.setParseFlowMatch(flags.parseFlowMatch);
 
   if (len == 0 || source[len - 1] != 0) {
     parserCtx->addError("Input is not zero terminated");

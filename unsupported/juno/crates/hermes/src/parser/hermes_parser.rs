@@ -52,6 +52,8 @@ pub struct ParserFlags {
     pub strict_mode: bool,
     /// Enable JSX parsing.
     pub enable_jsx: bool,
+    /// Enable Flow match parsing.
+    pub parse_flow_match: bool,
     /// Dialect control.
     pub dialect: ParserDialect,
     /// Store doc-comment block at the top of the file.
@@ -65,6 +67,7 @@ impl Default for ParserFlags {
         ParserFlags {
             strict_mode: false,
             enable_jsx: false,
+            parse_flow_match: false,
             dialect: ParserDialect::JavaScript,
             store_doc_block: false,
             store_comments: false,
@@ -427,6 +430,7 @@ var foo; // Comment 2
             ParserFlags {
                 strict_mode: false,
                 enable_jsx: false,
+                parse_flow_match: false,
                 dialect: ParserDialect::JavaScript,
                 store_doc_block: false,
                 store_comments: true,
