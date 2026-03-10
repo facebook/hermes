@@ -11,6 +11,8 @@
 /// Each search function processes the array in 128-bit (16-byte) chunks using
 /// SIMD, then falls back to scalar for the remaining tail elements.  The number
 /// of elements per chunk depends on the element width:
+///   - uint8_t:  16 elements per chunk
+///   - uint16_t:  8 elements per chunk
 ///   - uint32_t:  4 elements per chunk
 ///   - uint64_t:  2 elements per chunk
 ///
@@ -20,8 +22,8 @@
 ///   3. Compare element-wise: result lanes are all-ones on match, zero
 ///      otherwise (vceqq_*).
 ///   4. Quick any-match check:
-///      - For u32: vmaxvq_u32 reduces the comparison vector to its maximum
-///        lane value.  Non-zero means at least one lane matched.
+///      - For u8/u16/u32: vmaxvq_* reduces the comparison vector to its
+///        maximum lane value.  Non-zero means at least one lane matched.
 ///      - For u64: extract individual lanes (vgetq_lane_u64) since there are
 ///        only 2 lanes.
 ///   5. On a hit, collapse to a scalar bitmask by ANDing the comparison lanes
@@ -38,9 +40,12 @@
 ///      corresponds to one *byte* of the 128-bit result (_mm_movemask_epi8).
 ///      Non-zero means at least one lane matched.
 ///   5. On a hit, find the matching element position from the bitmask:
-///      each u32 element produces 4 mask bits, so countTrailingZeros(mask) / 4
-///      gives the element index.  For reverse searches, countLeadingZeros is
-///      used to find the highest set bit instead.
+///      - For u8: each element produces exactly 1 mask bit, so
+///        countTrailingZeros(mask) gives the byte (= element) index directly.
+///      - For u16: each element produces 2 mask bits, so divide by 2.
+///      - For u32: each element produces 4 mask bits, so divide by 4.
+///      For reverse searches, countLeadingZeros is used to find the highest
+///      set bit instead.
 ///
 /// For u64 on SSE2, there is no _mm_cmpeq_epi64 intrinsic, so the search
 /// falls through to the scalar path.
@@ -56,7 +61,7 @@ namespace hermes {
 namespace {
 
 /// Scalar linear search over [start, end) of \p arr for \p target.
-/// \tparam T the element type (uint32_t or uint64_t).
+/// \tparam T the element type.
 /// \tparam Reverse when true, search backward returning the last match;
 ///   when false, search forward returning the first match.
 /// \return the index of the match, or -1 if not found.
@@ -76,6 +81,180 @@ scalarSearch(llvh::ArrayRef<T> arr, size_t start, size_t end, T target) {
     }
   }
   return -1;
+}
+
+//===----------------------------------------------------------------------===//
+// u8 search implementation
+//===----------------------------------------------------------------------===//
+
+/// SIMD-accelerated linear search over [start, end) of a uint8_t array.
+/// Uses NEON (aarch64) or SSE2 (x86-64) when available, with a scalar tail
+/// for remaining elements.
+/// \tparam Reverse when true, search backward returning the last match;
+///   when false, search forward returning the first match.
+/// \return the index of the match, or -1 if not found.
+template <bool Reverse>
+int64_t searchU8Impl(
+    llvh::ArrayRef<uint8_t> arr,
+    size_t start,
+    size_t end,
+    uint8_t target) {
+  assert(start <= end && "start must be <= end");
+  assert(end <= arr.size() && "end exceeds array bounds");
+  size_t len = end - start;
+
+#ifdef HERMES_SIMD_NEON
+  // Broadcast target into all sixteen 8-bit lanes.
+  uint8x16_t needle = vdupq_n_u8(target);
+  // Per-lane bit values for collapsing comparison lanes into a scalar bitmask
+  // on a hit.  Since each lane is only 8 bits, the maximum power-of-2 is
+  // 128 = 2^7, so we process the 16 lanes as two groups of 8.
+  // MSVC doesn't support constexpr initializer for NEON vector types so we
+  // use vld1 here.
+  static constexpr uint8_t kLaneBitsArr[] = {1, 2, 4, 8, 16, 32, 64, 128};
+  static const uint8x8_t kLaneBits = vld1_u8(kLaneBitsArr);
+  size_t numChunks = len / 16;
+  for (size_t c = 0; c < numChunks; ++c) {
+    size_t base = Reverse ? end - (c + 1) * 16 : start + c * 16;
+    // Load 16 consecutive bytes.
+    uint8x16_t data = vld1q_u8(arr.data() + base);
+    // Per-lane equality: matching lanes become 0xFF, others 0.
+    uint8x16_t cmp = vceqq_u8(data, needle);
+    // Quick rejection: horizontal max is zero when no lane matched.
+    if (vmaxvq_u8(cmp)) {
+      // Collapse to a 16-bit scalar mask: split into two 8-lane halves,
+      // AND each with {1,2,4,8,16,32,64,128}, sum each half to get an
+      // 8-bit mask, then combine into a 16-bit mask.
+      uint8_t lo = vaddv_u8(vand_u8(vget_low_u8(cmp), kLaneBits));
+      uint8_t hi = vaddv_u8(vand_u8(vget_high_u8(cmp), kLaneBits));
+      uint16_t mask = lo | (static_cast<uint16_t>(hi) << 8);
+      if constexpr (Reverse)
+        return static_cast<int64_t>(
+            base + (15 - llvh::countLeadingZeros(mask)));
+      else
+        return static_cast<int64_t>(base + llvh::countTrailingZeros(mask));
+    }
+  }
+  size_t tailLen = len % 16;
+#elif defined(HERMES_SIMD_SSE2)
+  // Broadcast target into all sixteen 8-bit lanes.
+  __m128i needle = _mm_set1_epi8(static_cast<char>(target));
+  size_t numChunks = len / 16;
+  for (size_t c = 0; c < numChunks; ++c) {
+    size_t base = Reverse ? end - (c + 1) * 16 : start + c * 16;
+    __m128i data =
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(arr.data() + base));
+    // Per-lane equality: matching lanes become 0xFF, others 0.
+    __m128i cmp = _mm_cmpeq_epi8(data, needle);
+    // Each byte produces exactly 1 mask bit, so the mask bit position
+    // equals the element index directly.
+    unsigned mask = static_cast<unsigned>(_mm_movemask_epi8(cmp));
+    if (mask) {
+      if constexpr (Reverse) {
+        // Highest set bit = last matching byte index.
+        unsigned pos = 31 - llvh::countLeadingZeros(mask);
+        return static_cast<int64_t>(base + pos);
+      } else {
+        unsigned pos = llvh::countTrailingZeros(mask);
+        return static_cast<int64_t>(base + pos);
+      }
+    }
+  }
+  size_t tailLen = len % 16;
+#else
+  size_t tailLen = len;
+#endif
+
+  // Scalar tail.
+  if constexpr (Reverse)
+    return scalarSearch<uint8_t, true>(arr, start, start + tailLen, target);
+  else
+    return scalarSearch<uint8_t, false>(arr, end - tailLen, end, target);
+}
+
+//===----------------------------------------------------------------------===//
+// u16 search implementation
+//===----------------------------------------------------------------------===//
+
+/// SIMD-accelerated linear search over [start, end) of a uint16_t array.
+/// Uses NEON (aarch64) or SSE2 (x86-64) when available, with a scalar tail
+/// for remaining elements.
+/// \tparam Reverse when true, search backward returning the last match;
+///   when false, search forward returning the first match.
+/// \return the index of the match, or -1 if not found.
+template <bool Reverse>
+int64_t searchU16Impl(
+    llvh::ArrayRef<uint16_t> arr,
+    size_t start,
+    size_t end,
+    uint16_t target) {
+  assert(start <= end && "start must be <= end");
+  assert(end <= arr.size() && "end exceeds array bounds");
+  size_t len = end - start;
+
+#ifdef HERMES_SIMD_NEON
+  // Broadcast target into all eight 16-bit lanes.
+  uint16x8_t needle = vdupq_n_u16(target);
+  // Per-lane bit values for collapsing comparison lanes into a scalar bitmask
+  // on a hit.
+  // MSVC doesn't support constexpr initializer for NEON vector types so we
+  // use vld1q here.
+  static constexpr uint16_t kLaneBitsArr[] = {1, 2, 4, 8, 16, 32, 64, 128};
+  static const uint16x8_t kLaneBits = vld1q_u16(kLaneBitsArr);
+  size_t numChunks = len / 8;
+  for (size_t c = 0; c < numChunks; ++c) {
+    size_t base = Reverse ? end - (c + 1) * 8 : start + c * 8;
+    // Load 8 consecutive uint16_t elements.
+    uint16x8_t data = vld1q_u16(arr.data() + base);
+    // Per-lane equality: matching lanes become 0xFFFF, others 0.
+    uint16x8_t cmp = vceqq_u16(data, needle);
+    // Quick rejection: horizontal max is zero when no lane matched.
+    if (vmaxvq_u16(cmp)) {
+      // Collapse to an 8-bit scalar mask: AND with {1,2,4,...,128} and sum,
+      // then use ctz/clz to find the first/last match.
+      uint16_t mask = vaddvq_u16(vandq_u16(cmp, kLaneBits));
+      if constexpr (Reverse)
+        return static_cast<int64_t>(
+            base + (15 - llvh::countLeadingZeros(mask)));
+      else
+        return static_cast<int64_t>(base + llvh::countTrailingZeros(mask));
+    }
+  }
+  size_t tailLen = len % 8;
+#elif defined(HERMES_SIMD_SSE2)
+  // Broadcast target into all eight 16-bit lanes.
+  __m128i needle = _mm_set1_epi16(static_cast<short>(target));
+  size_t numChunks = len / 8;
+  for (size_t c = 0; c < numChunks; ++c) {
+    size_t base = Reverse ? end - (c + 1) * 8 : start + c * 8;
+    __m128i data =
+        _mm_loadu_si128(reinterpret_cast<const __m128i *>(arr.data() + base));
+    // Per-lane equality: matching lanes become 0xFFFF, others 0.
+    __m128i cmp = _mm_cmpeq_epi16(data, needle);
+    // Each 16-bit lane produces 2 mask bits, so divide the bit
+    // position by 2 to get the element index.
+    unsigned mask = static_cast<unsigned>(_mm_movemask_epi8(cmp));
+    if (mask) {
+      if constexpr (Reverse) {
+        // Highest set bit / 2 = last matching element index.
+        unsigned pos = (31 - llvh::countLeadingZeros(mask)) / 2;
+        return static_cast<int64_t>(base + pos);
+      } else {
+        unsigned pos = llvh::countTrailingZeros(mask) / 2;
+        return static_cast<int64_t>(base + pos);
+      }
+    }
+  }
+  size_t tailLen = len % 8;
+#else
+  size_t tailLen = len;
+#endif
+
+  // Scalar tail.
+  if constexpr (Reverse)
+    return scalarSearch<uint16_t, true>(arr, start, start + tailLen, target);
+  else
+    return scalarSearch<uint16_t, false>(arr, end - tailLen, end, target);
 }
 
 //===----------------------------------------------------------------------===//
@@ -226,6 +405,38 @@ int64_t searchU64Impl(
 //===----------------------------------------------------------------------===//
 // Public API
 //===----------------------------------------------------------------------===//
+
+int64_t searchU8(
+    llvh::ArrayRef<uint8_t> arr,
+    size_t start,
+    size_t end,
+    uint8_t target) {
+  return searchU8Impl<false>(arr, start, end, target);
+}
+
+int64_t searchReverseU8(
+    llvh::ArrayRef<uint8_t> arr,
+    size_t start,
+    size_t end,
+    uint8_t target) {
+  return searchU8Impl<true>(arr, start, end, target);
+}
+
+int64_t searchU16(
+    llvh::ArrayRef<uint16_t> arr,
+    size_t start,
+    size_t end,
+    uint16_t target) {
+  return searchU16Impl<false>(arr, start, end, target);
+}
+
+int64_t searchReverseU16(
+    llvh::ArrayRef<uint16_t> arr,
+    size_t start,
+    size_t end,
+    uint16_t target) {
+  return searchU16Impl<true>(arr, start, end, target);
+}
 
 int64_t searchU32(
     llvh::ArrayRef<uint32_t> arr,
